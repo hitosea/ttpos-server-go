@@ -29,6 +29,7 @@ type ShopCashierColumns struct {
 	ApiSecret    string //
 	CompanyAbbr  string // 公司缩写
 	Branch       string // 分支
+	SiteCode     string // 站点编码
 }
 
 // shopCashierColumns holds the columns for the table erp_shop_cashier.
@@ -41,6 +42,7 @@ var shopCashierColumns = ShopCashierColumns{
 	ApiSecret:    "api_secret",
 	CompanyAbbr:  "company_abbr",
 	Branch:       "branch",
+	SiteCode:     "site_code",
 }
 
 // NewShopCashierDao creates and returns a new DAO object for table data access.

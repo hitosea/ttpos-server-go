@@ -31,7 +31,7 @@ create_db:
 up:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose.yml up -d --build;\
+	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose-dev.yml up -d --build;\
 	set +o allexport;
 
 
@@ -48,7 +48,7 @@ mid:
 run:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	. ../.env && docker compose -f ./docker-compose.yml -f ./docker-compose.mid.yml up -d ;\
+	. ../.env && docker compose -f ./docker-compose-dev.yml -f ./docker-compose.mid.yml up -d ;\
 	set +o allexport;
 
 # 构建并运行 ttpos-manager 服务
@@ -70,6 +70,11 @@ run.erp:
 .PHONY: run.takeout
 run.takeout:
 	@cd app/ttpos-takeout && gf run main.go
+
+ # 构建并运行 ttpos-message 服务
+.PHONY: run.message
+run.message:
+	@cd app/ttpos-message && gf run main.go
 
 # 迁移升级所有应用的数据库
 .PHONY: migrate

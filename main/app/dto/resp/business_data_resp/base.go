@@ -285,3 +285,107 @@ type BusinessDataHome struct {
 	TotalOrderNum          int        `json:"total_order_num"`           // 总订单数
 	MemberData             MemberData `json:"member_data"`               // 会员数据
 }
+
+// 营业数据 - 后厨效率分析
+type BusinessDataKitchenEfficiencyAnalysis struct {
+	Meta dto.PageResponse                `json:"meta"` // 元数据
+	List []KitchenEfficiencyAnalysisItem `json:"list"` // 后厨效率分析
+}
+
+// 营业数据 - 后厨效率分析 - 单条
+type KitchenEfficiencyAnalysisItem struct {
+	ProductPackageUuid uint64             `json:"product_package_uuid"` // 商品包UUID
+	ProductName        dto.LocaleResponse `json:"product_name"`         // 商品名称
+	CategoryName       dto.LocaleResponse `json:"category_name"`        // 分类名称
+	Min                float64            `json:"min"`                  // 最短出品时长
+	Max                float64            `json:"max"`                  // 最长出品时长
+	Avg                float64            `json:"avg"`                  // 平均出品时长
+
+	exist bool `json:"exist"` // 是否存在
+}
+
+func (item *KitchenEfficiencyAnalysisItem) SetExist(exist bool) {
+	item.exist = exist
+}
+
+func (item *KitchenEfficiencyAnalysisItem) GetExist() bool {
+	return item.exist
+}
+
+type BusinessDataKitchenEfficiencyAnalysisAvg struct {
+	Avg float64 `json:"avg"` // 平均出品时长,单位:秒
+}
+
+type KitchenProductionDetail struct {
+	Meta dto.PageResponse              `json:"meta"` // 元数据
+	List []KitchenProductionDetailItem `json:"list"` // 后厨菜品出品明细
+}
+
+// 后厨菜品出品明细 - 单条
+type KitchenProductionDetailItem struct {
+	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
+	FlavorName     dto.LocaleResponse `json:"flavor_name"`      // 规格名称
+	CategoryName   dto.LocaleResponse `json:"category_name"`    // 分类名称
+	Number         float64            `json:"number"`           // 完成数量
+	CreateTime     int64              `json:"create_time"`      // 下单时间
+	MakeFinishTime int64              `json:"make_finish_time"` // 制作完成时间
+	MakeDuration   int64              `json:"make_duration"`    // 制作时长,单位:秒
+	SendFinishTime int64              `json:"send_finish_time"` // 传菜完成时间
+	SendDuration   int64              `json:"send_duration"`    // 传菜时长,单位:秒
+	FinishTime     int64              `json:"finish_time"`      // 完成时间
+	AllDuration    int64              `json:"all_duration"`     // 总时长,单位:秒
+}
+
+// 营业数据 - 时段营业统计
+type BusinessTimePeriod struct {
+	Meta dto.PageResponse         `json:"meta"` // 元数据
+	List []BusinessTimePeriodItem `json:"list"` // 时段营业统计
+}
+
+// 营业数据 - 时段营业统计 - 单条
+type BusinessTimePeriodItem struct {
+	TimePeriod         string  `json:"time_period"`           // 时段, 00:00-01:00
+	OrderAmount        float64 `json:"order_amount"`          // 订单金额
+	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
+	PayAmount          float64 `json:"pay_amount"`            // 实付金额
+	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 实付金额人均
+	OrderNum           int64   `json:"order_num"`             // 订单数量
+	MealNum            int64   `json:"meal_num"`              // 用餐人数
+}
+
+// 营业数据 - 综合运营统计
+type StatisticsSummary struct {
+	Meta dto.PageResponse        `json:"meta"` // 元数据
+	List []StatisticsSummaryItem `json:"list"` // 综合运营统计
+}
+
+// 营业数据 - 综合运营统计 - 单条
+type StatisticsSummaryItem struct {
+	Date               string  `json:"date"`                  // 日期
+	OrderAmount        float64 `json:"order_amount"`          // 订单金额
+	PayAmount          float64 `json:"pay_amount"`            // 实付金额
+	OrderNum           int64   `json:"order_num"`             // 订单数量
+	MealNum            int64   `json:"meal_num"`              // 用餐人数
+	DeskNum            int64   `json:"desk_num"`              // 桌台数
+	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
+	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 实付金额人均
+	OrderAmountAvg     float64 `json:"order_amount_avg"`      // 订单金额平均
+	PayAmountAvg       float64 `json:"pay_amount_avg"`        // 实付金额平均
+	InstantOrderAmount float64 `json:"instant_order_amount"`  // 点餐订单金额
+	DeskOrderAmount    float64 `json:"desk_order_amount"`     // 桌台订单金额
+	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 外送订单金额
+}
+
+// 营业数据 - 支付方式统计
+type StatisticsPaymentMethod struct {
+	Meta dto.PageResponse              `json:"meta"` // 元数据
+	List []StatisticsPaymentMethodItem `json:"list"` // 支付方式统计
+}
+
+// 营业数据 - 支付方式统计 - 单条
+type StatisticsPaymentMethodItem struct {
+	Date          string  `json:"date"`           // 日期
+	PaymentName   string  `json:"payment_name"`   // 支付方式名称
+	PaymentNum    int     `json:"payment_num"`    // 支付次数
+	PaymentAmount float64 `json:"payment_amount"` // 支付金额
+}

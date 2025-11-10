@@ -3,6 +3,7 @@ package buying
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -249,4 +250,89 @@ func (s *sBuying) buildUpdatePurchaseOrderData(ctx context.Context, req *buying.
 	}
 
 	return updateData, nil
+}
+
+// CreatePurchaseOrderFromSalesOrder 从销售订单创建采购订单
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 创建采购订单请求参数
+//
+// 返回：
+//   - res: 采购订单信息
+//   - err: 错误信息
+func (s *sBuying) CreatePurchaseOrderFromSalesOrder(ctx context.Context, req *dto.CreatePurchaseOrderFromSalesOrderReq) (res *erp.PurchaseOrder, err error) {
+	// 调用 ERPNext 的 make_mapped_doc 方法，从销售订单生成采购订单
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodMakeMappedDoc,
+	}, g.MapStrStr{
+		"method":      erp.ApiMethodCreateInnerPurchaseOrder,
+		"source_name": req.SourceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建内部采购订单失败")
+	}
+
+	// 解析响应数据
+	j := resp
+	purchaseOrder := &erp.PurchaseOrder{}
+	j.GetJson("data").Scan(&purchaseOrder)
+
+	// 设置预计交付日期
+	if req.ScheduleDate != "" {
+		purchaseOrder.ScheduleDate = req.ScheduleDate
+		for _, item := range purchaseOrder.Items {
+			item.ScheduleDate = req.ScheduleDate
+		}
+	}
+
+	// 设置目标仓库
+	if req.TargetWarehouse != "" {
+		purchaseOrder.SetWarehouse = req.TargetWarehouse
+	} else {
+		// 获取默认仓库
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, purchaseOrder.Company, "")
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询默认仓库失败")
+		}
+		purchaseOrder.SetWarehouse = warehouse.Name
+	}
+
+	// 设置采购价格表
+	if req.BuyingPriceList != "" {
+		purchaseOrder.BuyingPriceList = req.BuyingPriceList
+	} else {
+		// 获取默认采购价格表
+		defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, purchaseOrder.Company)
+		if err != nil {
+			g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", purchaseOrder.Company)
+			defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+			if err != nil {
+				return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
+			}
+		}
+		purchaseOrder.BuyingPriceList = defaultPriceList.BuyingPriceList
+	}
+
+	// 设置供应商（如果提供）
+	if req.Supplier != "" {
+		purchaseOrder.Supplier = req.Supplier
+	}
+
+	// 创建采购订单
+	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseOrder, purchaseOrder)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建采购订单失败")
+	}
+
+	// 解析响应数据
+	j = resp
+	j.GetJson("data").Scan(&purchaseOrder)
+
+	// 提交订单
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusSubmitted)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交采购订单失败")
+	}
+
+	return purchaseOrder, nil
 }

@@ -132,14 +132,6 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 	createSupplierReq.Code = strings.ToUpper(createSupplierReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	supplierRepo := repository.NewSupplierRepo(db)
-	// 检查供应商名称是否重复
-	exists, err := supplierRepo.IsNameExists(createSupplierReq.Name, 0)
-	if err != nil {
-		return errors.WithMessage(err, "检查供应商名称失败")
-	}
-	if exists {
-		return errors.New("供应商名称已存在")
-	}
 	// 检查供应商编码是否重复
 	codeExists, err := supplierRepo.IsCodeExists(createSupplierReq.Code, 0)
 	if err != nil {
@@ -197,15 +189,6 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 
 	if !isEditable(ctx, supplier.HeadquarterUuid) {
 		return errors.New("供应商不可编辑")
-	}
-
-	// 检查供应商名称是否重复（排除自己）
-	exists, err := supplierRepo.IsNameExists(updateSupplierReq.Name, updateSupplierReq.Uuid)
-	if err != nil {
-		return errors.WithMessage(err, "检查供应商名称失败")
-	}
-	if exists {
-		return errors.New("供应商名称已存在")
 	}
 
 	// 检查供应商编码是否重复（排除自己）
@@ -401,7 +384,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	var headquarterSuppliers []model.Supplier
 	var headquarter model.CompanySetting
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -452,25 +435,34 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			if erpSupplier.Disabled {
 				status = 0
 			}
+			// 是否内部供应商
+			isInternalSupplier := 0
+			if erpSupplier.IsInternalSupplier {
+				isInternalSupplier = 1
+			}
 			if supplier.Uuid == 0 { // 新建供应商
 				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{
-					Name:         name,
-					Address:      address,
-					ContactName:  contactName,
-					ContactPhone: contactPhone,
-					ErpCode:      erpSupplier.Name,
-					Status:       status,
-					Code:         code,
+					Name:               name,
+					Address:            address,
+					ContactName:        contactName,
+					ContactPhone:       contactPhone,
+					ErpCode:            erpSupplier.Name,
+					Status:             status,
+					Code:               code,
+					RepresentsCompany:  erpSupplier.RepresentsCompany,
+					IsInternalSupplier: isInternalSupplier,
 				})
 			} else { // 更新供应商
 				tx.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-					"name":          name,
-					"code":          code,
-					"status":        status,
-					"address":       address,
-					"contact_name":  contactName,
-					"contact_phone": contactPhone,
-					"delete_time":   0, // 恢复为未删除
+					"name":                 name,
+					"code":                 code,
+					"status":               status,
+					"address":              address,
+					"contact_name":         contactName,
+					"contact_phone":        contactPhone,
+					"represents_company":   erpSupplier.RepresentsCompany,
+					"is_internal_supplier": isInternalSupplier,
+					"delete_time":          0, // 恢复为未删除
 				})
 			}
 		}
@@ -484,16 +476,18 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 						UpdateTime: headquarterSupplier.UpdateTime,
 						DeleteTime: headquarterSupplier.DeleteTime,
 					},
-					Name:            headquarterSupplier.Name,
-					Code:            headquarterSupplier.Code,
-					Status:          headquarterSupplier.Status,
-					Address:         headquarterSupplier.Address,
-					ContactName:     headquarterSupplier.ContactName,
-					ContactPhone:    headquarterSupplier.ContactPhone,
-					Position:        headquarterSupplier.Position,
-					StaffUuid:       headquarterSupplier.StaffUuid,
-					ErpCode:         headquarterSupplier.ErpCode,
-					HeadquarterUuid: headquarter.Uuid,
+					Name:               headquarterSupplier.Name,
+					Code:               headquarterSupplier.Code,
+					Status:             headquarterSupplier.Status,
+					Address:            headquarterSupplier.Address,
+					ContactName:        headquarterSupplier.ContactName,
+					ContactPhone:       headquarterSupplier.ContactPhone,
+					Position:           headquarterSupplier.Position,
+					StaffUuid:          headquarterSupplier.StaffUuid,
+					ErpCode:            headquarterSupplier.ErpCode,
+					RepresentsCompany:  headquarterSupplier.RepresentsCompany,
+					IsInternalSupplier: headquarterSupplier.IsInternalSupplier,
+					HeadquarterUuid:    headquarter.Uuid,
 				})
 			}
 		}

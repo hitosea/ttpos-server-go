@@ -45,7 +45,7 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 	}
 
 	// 上传到谷歌云
-	go func() {
+	utils.Go(func() {
 		// 设置10秒超时
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel() // 确保资源释放
@@ -86,7 +86,7 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 			fmt.Println("测试上传失败", err)
 			return
 		}
-	}()
+	})
 
 	model.Data = fileName
 	return fileName

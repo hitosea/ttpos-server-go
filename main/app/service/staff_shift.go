@@ -403,17 +403,19 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			"finally_login_uuid": 0,
 		})
 
-		go func() {
+		utils.Go(func() {
 			// 创建交班快照
 			err = s.CreateShiftSnapshot(ctx.Copy(), shiftLog)
 			if err != nil {
 				ctx.Log().Error("交班-创建交班快照失败", zap.Error(err))
 			}
-		}()
+		})
 
 		//
-		go websocket.PushClient(staff.CompanyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
-			"update_time": time.Now().Unix(),
+		utils.Go(func() {
+			websocket.PushClient(staff.CompanyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+				"update_time": time.Now().Unix(),
+			})
 		})
 
 		return nil
@@ -882,7 +884,8 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	}
 
 	// 获取交班详情
-	businessSrv := NewBusinessSrvImpl(s.statisticsSrv)
+	// uploadFileSrv := service.NewUploadFileSrv(s.dbm)
+	businessSrv := NewBusinessSrv(s.statisticsSrv, nil)
 	businessData, err := businessSrv.CountBusiness(ctx, req.BusinessDataCountReq{
 		QueryStartTime: log.ShiftStartTime,
 		QueryEndTime:   log.ShiftEndTime,

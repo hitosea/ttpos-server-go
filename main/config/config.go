@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"ttpos-server-go/pkg/otlp"
 	"ttpos-server-go/pkg/rocketmq"
 
 	"github.com/jinzhu/copier"
@@ -25,6 +26,7 @@ var Google GoogleConf
 var Nacos NacosConf
 
 var Rocketmq rocketmq.Config
+var Otlp *otlp.OtlpConfig
 
 func Init() error {
 	// 加载 .env 文件
@@ -60,6 +62,7 @@ func Init() error {
 		AesSecretKey:  "",
 	}
 
+	Otlp = otlp.LoadOtlpConfig(opt)
 	return nil
 }
 
@@ -194,8 +197,13 @@ func serverConf(opt copier.Option) {
 	serverPort := viper.GetString("SERVER_PORT")
 	if debugServerPort := viper.GetString("DEBUG_SERVER_PORT"); debugServerPort != "" &&
 		viper.GetString("SERVER_MODE") == "debug" {
-		if _, err := os.Stat("/.dockerenv"); err != nil {
-			serverPort = viper.GetString("DEBUG_SERVER_PORT")
+		if execPath, err := os.Executable(); err == nil {
+			execName := strings.ToLower(execPath)
+			if strings.Contains(execName, "__debug_bin") || strings.Contains(execName, "dlv") {
+				serverPort = debugServerPort
+			}
+		} else if _, err := os.Stat("/.dockerenv"); err != nil {
+			serverPort = debugServerPort
 		}
 	}
 	//

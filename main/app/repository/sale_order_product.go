@@ -11,6 +11,7 @@ import (
 
 type ISaleOrderProductRepo interface {
 	ISaleOrderProductQueryRepo
+	GetSaleOrderProductsByUuidIn(uuids []uint64, opts ...DBOption) ([]*model.SaleOrderProduct, error) // 根据uuid列表获取销售订单商品
 	CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error)
 	CreateSaleOrderProductAndBomAndAttribute(model model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
@@ -22,13 +23,16 @@ type ISaleOrderProductRepo interface {
 	DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error
 	DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error // 批量删除销售订单商品。delete_time赋值为当前时间
 	DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error    // 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
-	Update(data map[string]interface{}, opts ...DBOption) error        // 更新订单商品
+	Update(data map[string]any, opts ...DBOption) error                // 更新订单商品
+
+	WithSaleOrderProductAll() DBOption
 }
 
 // ISaleOrderProductQueryRepo 销售订单商品查询
 
 type ISaleOrderProductQueryRepo interface {
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
+	GetSaleOrderProductsByUuids(uuids []uint64) ([]*model.SaleOrderProduct, error)                                                   // 根据Uuid列表获取销售订单商品
 	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
 	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                        // 根据销售订单uuid获取销售订单商品
 	GetSaleOrderProductUuidsByProductBomUuids(saleOrderUuid uint64, productBomUuids []uint64) ([]uint64, error)                      // 通过规格商品uuid列表获取销售订单商品uuid列表
@@ -58,6 +62,19 @@ func (r *saleOrderProductRepo) GetSaleOrderProducts(opts ...DBOption) ([]*model.
 		return saleOrderProducts, result.Error
 	}
 
+	return saleOrderProducts, nil
+}
+
+// 根据套餐uuid列表获取套餐下所有子商品 不考虑删除状态
+func (r *saleOrderProductRepo) GetSaleOrderProductsByUuidIn(uuids []uint64, opts ...DBOption) ([]*model.SaleOrderProduct, error) {
+	var saleOrderProducts []*model.SaleOrderProduct
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Where("uuid IN ?", uuids).Find(&saleOrderProducts).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	return saleOrderProducts, nil
 }
 
@@ -179,6 +196,16 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 	return &model, nil
 }
 
+// GetSaleOrderProductsByUuids 根据Uuid列表获取销售订单商品
+func (r *saleOrderProductRepo) GetSaleOrderProductsByUuids(uuids []uint64) ([]*model.SaleOrderProduct, error) {
+	db := r.db
+	var models []*model.SaleOrderProduct
+	if err := db.Where("uuid in (?)", uuids).Find(&models).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return models, nil
+}
+
 // CreateSaleOrderProductReasons 批量创建销售订单商品原因
 func (r *saleOrderProductRepo) CreateSaleOrderProductReasons(
 	saleOrderUuid uint64,
@@ -249,7 +276,7 @@ func (r *saleOrderProductRepo) DeleteSaleOrderProductBySaleBillUuid(saleBillUuid
 }
 
 // Update 更新
-func (r *saleOrderProductRepo) Update(data map[string]interface{}, opts ...DBOption) error {
+func (r *saleOrderProductRepo) Update(data map[string]any, opts ...DBOption) error {
 	db := r.db.Model(&model.SaleOrderProduct{})
 
 	for _, opt := range opts {
@@ -309,4 +336,21 @@ func (r *saleOrderProductRepo) GetSaleOrderProductBySaleOrderProductUuids(saleOr
 		return nil, errors.WithMessage(err)
 	}
 	return models, nil
+}
+
+// WithSaleOrderProductAll 关联销售订单商品
+func (r *saleOrderProductRepo) WithSaleOrderProductAll() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName").
+			Preload("SaleOrderProductBoms", NotDeleted).
+			Preload("SaleOrderProductBoms.ProductBom").
+			Preload("SaleOrderProductBoms.ProductBom.ProductFlavor").
+			Preload("SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName").
+			Preload("SaleOrderProductBoms.ProductBom.ProductSauce").
+			Preload("SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName").
+			Preload("SaleOrderProductAttributes", NotDeleted).
+			Preload("SaleOrderProductAttributes.ProductAttribute").
+			Preload("SaleOrderProductAttributes.ProductAttribute.MultiLanguageName").
+			Preload("SaleBill")
+	}
 }

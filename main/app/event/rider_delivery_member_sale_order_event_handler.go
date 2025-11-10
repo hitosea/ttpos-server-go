@@ -56,7 +56,7 @@ func riderDeliveryMemberSaleOrderEventHandler() {
 			}
 
 			// 创建“骑手接单”操作记录
-			go func() {
+			utils.Go(func() {
 				payload.RiderName = riderName
 				payload.RiderPhone = riderPhone
 				if payload.RiderName == "" {
@@ -86,7 +86,7 @@ func riderDeliveryMemberSaleOrderEventHandler() {
 					return
 				}
 				logger.Logger.Info(fmt.Sprintf("操作记录:骑手取货完成 %+v", payload), zap.Uint64("record", uuid))
-			}()
+			})
 
 			// 设置sort排序
 			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrder.Uuid, constant.MemberSaleOrderSortRiderDelivering); err != nil {

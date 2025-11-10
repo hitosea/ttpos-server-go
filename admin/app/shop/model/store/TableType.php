@@ -132,20 +132,6 @@ class TableType extends TableTypeModel
             $this->error = '最多人数不可小于最少人数';
             return false;
         }
-        if ($scene === self::FORM_SCENE_ADD) {
-            //查询桌号是否存在
-            $count = $this->where('name', '=', $data['type_name'])->count();
-            if ($count) {
-                $this->error = '桌号类型名已存在';
-                return false;
-            }
-        } else {
-            $count = $this->where('name', '=', $data['type_name'])->where('uuid', '<>', $data['type_id'])->count();
-            if ($count) {
-                $this->error = '桌号类型名已存在';
-                return false;
-            }
-        }
         return true;
     }
 }

@@ -67,6 +67,7 @@ func (*SavePosInvoiceConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (e
 		}).Update(); err != nil {
 			return gerror.Wrapf(err, "保存发票失败，更新日志记录失败")
 		}
+		//TODO 可能存在新的错误信息更新不上来的情况
 		return gerror.Wrapf(err, "保存发票失败，异步保存发票失败")
 	}
 	if resp != nil {

@@ -26,6 +26,8 @@ type IUploadFileSrv interface {
 	UploadImage(ctx context.Context, fileReader io.Reader, fileName string, fileSize int64, groupId uint64, source string) (*resp.UploadFileResp, error)
 	// UploadVideo 上传视频
 	UploadVideo(ctx context.Context, fileReader io.Reader, fileName string, fileSize int64, groupId uint64, maxSize int) (*resp.UploadFileResp, error)
+	// UploadDocument 上传文档（PDF、Word、Excel等）
+	UploadDocument(ctx context.Context, fileReader io.Reader, fileName string, fileSize int64, groupId uint64) (*resp.UploadFileResp, error)
 	// GetUploadFile 获取文件
 	GetUploadFile(ctx context.Context, uuid uint64) (*resp.UploadFileResp, error)
 }
@@ -248,6 +250,35 @@ func (s *UploadFileSrvImpl) getFileExtension(fileName string) string {
 // getFileNameWithoutExt 获取不含扩展名的文件名
 func (s *UploadFileSrvImpl) getFileNameWithoutExt(fileName string) string {
 	return strings.TrimSuffix(fileName, filepath.Ext(fileName))
+}
+
+// UploadDocument 上传文档（PDF、Word、Excel等）
+func (s *UploadFileSrvImpl) UploadDocument(ctx context.Context, fileReader io.Reader, fileName string, fileSize int64, groupId uint64) (*resp.UploadFileResp, error) {
+	// 验证文件类型
+	extension := strings.ToLower(filepath.Ext(fileName))
+	if extension != "" && extension[0] == '.' {
+		extension = extension[1:]
+	}
+
+	allowedExts := []string{"pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png", "gif"}
+	if !s.isAllowedExtension(extension, allowedExts) {
+		return nil, fmt.Errorf("仅支持PDF、Word、Excel、JPG、PNG、GIF格式")
+	}
+
+	// 检查文件大小（20MB = 20 * 1024 * 1024 bytes）
+	maxSizeBytes := int64(20 * 1024 * 1024)
+	if fileSize > maxSizeBytes {
+		return nil, fmt.Errorf("文件大小不能超过20MB")
+	}
+
+	// 确定文件类型
+	fileType := "document"
+	imageExts := []string{"jpg", "jpeg", "png", "gif"}
+	if s.isAllowedExtension(extension, imageExts) {
+		fileType = "image"
+	}
+
+	return s.uploadFile(ctx, fileReader, fileName, fileSize, groupId, fileType, 0)
 }
 
 // generateUuid 生成UUID

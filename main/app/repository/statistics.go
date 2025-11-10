@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
@@ -33,6 +34,9 @@ type IStatisticsRepo interface {
 	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                         // 统计免单支付
 	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                               // 统计免单支付天数
 	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                         // 统计取消订单
+	CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData)                  // 统计营业时段
+	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                           // 统计综合运用数据
+	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)         // 统计支付方式
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
@@ -936,4 +940,259 @@ func (r *StatisticsRepo) CountCancelOrder(opts ...DBOption) model.StatisticsCanc
 		Find(&result)
 
 	return result
+}
+
+// CountBusinessTimePeriodRepoReq 统计营业时段请求
+type CountBusinessTimePeriodReq struct {
+	StartTime, EndTime           int64 // 查询开始时间, 查询结束时间
+	PeriodSeconds                int   // 时段: 1=15分钟, 2=30分钟, 3=1小时
+	IsCreateTime                 bool  // 是否是创建时间
+	PageNo, PageSize             int   // 页码, 每页大小
+	IsDesk, IsInstant, IsTakeout bool  // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
+}
+
+// CountBusinessTimePeriod 统计营业时段
+func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData) {
+	// 确定时间字段
+	timeField := "sb.finish_time"
+	if req.IsCreateTime {
+		timeField = "sb.create_time"
+	}
+
+	// 构建基础查询条件
+	baseQuery := r.db.Table("ttpos_sale_bill AS sb").
+		Joins("LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?", constant.NotDeleted, constant.SaleOrderStatusFinish).
+		Joins("LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = ?", constant.NotDeleted).
+		Where("sb.delete_time = ?", constant.NotDeleted).
+		Where("sb.status = ?", constant.SaleBillStatusComplete).
+		Where(fmt.Sprintf("%s >= ?", timeField), req.StartTime).
+		Where(fmt.Sprintf("%s <= ?", timeField), req.EndTime)
+
+	if req.IsDesk || req.IsInstant || req.IsTakeout {
+		var billTypeList []uint
+		if req.IsDesk {
+			billTypeList = append(billTypeList, constant.SaleBillTypeDesk)
+		}
+		if req.IsInstant {
+			billTypeList = append(billTypeList, constant.SaleBillTypeInstant)
+		}
+		if req.IsTakeout {
+			billTypeList = append(billTypeList, constant.SaleBillTypeTakeout)
+		}
+		baseQuery.Where("sb.bill_type IN (?)", billTypeList)
+	}
+
+	// 1. 计算总时段数
+	var total int64
+	countQuery := baseQuery.
+		Select(fmt.Sprintf("COUNT(DISTINCT FLOOR(%s / %d))", timeField, req.PeriodSeconds))
+	countQuery.Count(&total)
+
+	// 2. 查询时段数据（使用子查询优化）
+	var result []model.StatisticsBusinessTimePeriodData
+
+	// 构建主查询SQL
+	mainQuery := fmt.Sprintf(`
+		SELECT 
+			FLOOR(%s / %d) * %d AS period_start_time,
+			SUM(so.origin_amount) AS order_amount,
+			SUM(so.payment_amount) AS pay_amount,
+			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
+			COUNT(DISTINCT so.uuid) AS order_num
+		FROM ttpos_sale_bill AS sb
+		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0 AND so.status = 1
+		LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = 0
+		WHERE sb.delete_time = 0
+			AND sb.status = ?
+			AND %s >= ?
+			AND %s <= ?
+	`, timeField, req.PeriodSeconds, req.PeriodSeconds, timeField, timeField)
+
+	// 添加额外的查询条件
+	args := []any{constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
+
+	if req.IsDesk || req.IsInstant || req.IsTakeout {
+		var billTypeList []uint
+		if req.IsDesk {
+			billTypeList = append(billTypeList, constant.SaleBillTypeDesk)
+		}
+		if req.IsInstant {
+			billTypeList = append(billTypeList, constant.SaleBillTypeInstant)
+		}
+		if req.IsTakeout {
+			billTypeList = append(billTypeList, constant.SaleBillTypeTakeout)
+		}
+		mainQuery += " AND sb.bill_type IN (?)"
+		args = append(args, billTypeList)
+	}
+
+	// 分组、排序和分页
+	mainQuery += `
+		GROUP BY period_start_time
+		ORDER BY period_start_time ASC
+		LIMIT ? OFFSET ?
+	`
+
+	args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+
+	// 执行查询
+	r.db.Raw(mainQuery, args...).Scan(&result)
+
+	return total, result
+}
+
+// CountBusinessSummaryReq 统计综合运用请求
+type CountBusinessSummaryReq struct {
+	StartTime int64 // 查询开始时间戳
+	EndTime   int64 // 查询结束时间戳
+	Cycle     int   // 周期: 0=按日、1=按月
+}
+
+// CountBusinessSummary 统计综合运用
+func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData) {
+	var result []model.StatisticsBusinessSummaryData
+
+	// 根据周期类型确定日期格式
+	var dateFormat string
+	if req.Cycle == 1 {
+		dateFormat = "%Y-%m" // 按月
+	} else {
+		dateFormat = "%Y-%m-%d" // 按日
+	}
+
+	// 构建查询SQL
+	query := fmt.Sprintf(`
+		SELECT 
+			FROM_UNIXTIME(sb.finish_time, '%s') AS date,
+			SUM(so.origin_amount) AS order_amount,
+			SUM(so.payment_amount) AS pay_amount,
+			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
+			COUNT(DISTINCT so.uuid) AS order_num,
+			SUM(sb.meal_num) AS meal_num,
+			COUNT(DISTINCT CASE WHEN sb.desk_uuid > 0 THEN sb.desk_uuid END) AS desk_num,
+			SUM(IF(sb.bill_type = 0, so.origin_amount, 0)) as desk_order_amount,
+			SUM(IF(sb.bill_type = 1, so.origin_amount, 0)) as instant_order_amount,
+			SUM(IF(sb.bill_type = 2, so.origin_amount, 0)) as takeout_order_amount
+		FROM ttpos_sale_bill AS sb
+		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?
+		LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = ?
+		WHERE sb.delete_time = ?
+			AND sb.status = ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
+		GROUP BY date
+		ORDER BY date ASC
+	`, dateFormat)
+
+	// 执行查询
+	r.db.Raw(query,
+		constant.NotDeleted, constant.SaleOrderStatusFinish,
+		constant.NotDeleted,
+		constant.NotDeleted, constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+	).Scan(&result)
+
+	// 计算总数
+	var total int64
+	r.db.Raw(fmt.Sprintf(`
+		SELECT COUNT(DISTINCT FROM_UNIXTIME(sb.finish_time, '%s'))
+		FROM ttpos_sale_bill AS sb
+		WHERE sb.delete_time = ?
+			AND sb.status = ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
+	`, dateFormat),
+		constant.NotDeleted, constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+	).Scan(&total)
+
+	return total, result
+}
+
+// CountBusinessPaymentMethodReq 统计收款数据请求
+type CountBusinessPaymentMethodReq struct {
+	StartTime                    int64    // 查询开始时间戳
+	EndTime                      int64    // 查询结束时间戳
+	Cycle                        int      // 周期: 0=按日、1=按月
+	PageNo, PageSize             int      // 页码, 每页大小
+	IsDesk, IsInstant, IsTakeout bool     // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
+	PaymentMethodList            []uint64 // 支付方式列表: 空=全部
+}
+
+// CountBusinessPaymentMethod 统计收款数据
+func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData) {
+	var result []model.StatisticsBusinessPaymentMethodData
+
+	// 根据周期类型确定日期格式
+	var dateFormat string
+	if req.Cycle == 1 {
+		dateFormat = "%Y-%m" // 按月
+	} else {
+		dateFormat = "%Y-%m-%d" // 按日
+	}
+
+	// 构建基础查询
+	baseQuery := `
+		FROM ttpos_payment_order AS po
+		LEFT JOIN ttpos_sale_order AS so ON po.related_uuid = so.uuid AND so.delete_time = 0
+		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = 0
+		WHERE po.delete_time = 0
+			AND po.related_type = 0
+			AND po.status = 1
+			AND po.create_time >= ?
+			AND po.create_time <= ?
+	`
+
+	args := []any{req.StartTime, req.EndTime}
+
+	// 订单类型筛选
+	if req.IsDesk || req.IsInstant || req.IsTakeout {
+		billTypes := []uint{}
+		if req.IsDesk {
+			billTypes = append(billTypes, constant.SaleBillTypeDesk)
+		}
+		if req.IsInstant {
+			billTypes = append(billTypes, constant.SaleBillTypeInstant)
+		}
+		if req.IsTakeout {
+			billTypes = append(billTypes, constant.SaleBillTypeTakeout)
+		}
+		baseQuery += " AND sb.bill_type IN (?)"
+		args = append(args, billTypes)
+	}
+
+	// 支付方式筛选
+	if len(req.PaymentMethodList) > 0 {
+		baseQuery += " AND po.payment_method_uuid IN (?)"
+		args = append(args, req.PaymentMethodList)
+	}
+
+	// 计算总数
+	var total int64
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT CONCAT(FROM_UNIXTIME(po.create_time, '%s'), '_', po.payment_method_uuid))
+		%s
+	`, dateFormat, baseQuery)
+	r.db.Raw(countQuery, args...).Scan(&total)
+
+	// 查询数据（带分页）
+	dataQuery := fmt.Sprintf(`
+		SELECT 
+			FROM_UNIXTIME(po.create_time, '%s') AS date,
+			po.payment_method_name AS payment_name,
+			COUNT(po.uuid) AS payment_num,
+			SUM(po.payment_amount) AS payment_amount
+		%s
+		GROUP BY date, po.payment_method_uuid, po.payment_method_name
+		ORDER BY date ASC, po.payment_method_uuid ASC
+		LIMIT ? OFFSET ?
+	`, dateFormat, baseQuery)
+
+	// 复制args并添加分页参数
+	dataArgs := make([]any, len(args))
+	copy(dataArgs, args)
+	dataArgs = append(dataArgs, req.PageSize, (req.PageNo-1)*req.PageSize)
+	r.db.Raw(dataQuery, dataArgs...).Scan(&result)
+
+	return total, result
 }

@@ -63,7 +63,7 @@ func (s *sMessage) SendMessage(ctx context.Context, in *dto.SendMessageInput) (o
 
 	// 查询模板信息
 	var template *dto.MessageTemplateDTO
-	template, err = s.GetTemplateById(ctx, in.TemplateId)
+	template, err = s.GetTemplateByUUId(ctx, in.TemplateUuid)
 	if err != nil {
 		out.Success = false
 		out.Message = consts.ErrMsgTemplateNotFound
@@ -110,6 +110,7 @@ func (s *sMessage) SendMessage(ctx context.Context, in *dto.SendMessageInput) (o
 	record := &dto.MessageRecordDTO{
 		Uuid:         in.MessageUuid,
 		TemplateId:   in.TemplateId,
+		TemplateUuid: in.TemplateUuid,
 		MessageType:  in.MessageType,
 		Recipient:    in.Recipient,
 		Subject:      subject,
@@ -301,6 +302,22 @@ func (s *sMessage) GetTemplateById(ctx context.Context, templateId uint64) (*dto
 	var template *dto.MessageTemplateDTO
 	err := g.DB().Model("message_template").
 		Where("id", templateId).
+		Where("deleted_at", 0).
+		Scan(&template)
+	if err != nil {
+		return nil, gerror.Wrap(err, "查询模板失败")
+	}
+	if template == nil {
+		return nil, gerror.New(consts.ErrMsgTemplateNotFound)
+	}
+	return template, nil
+}
+
+// GetTemplateByUUId 根据UUID获取模板
+func (s *sMessage) GetTemplateByUUId(ctx context.Context, templateUuid string) (*dto.MessageTemplateDTO, error) {
+	var template *dto.MessageTemplateDTO
+	err := g.DB().Model("message_template").
+		Where("uuid", templateUuid).
 		Where("deleted_at", 0).
 		Scan(&template)
 	if err != nil {

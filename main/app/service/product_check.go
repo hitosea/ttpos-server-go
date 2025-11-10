@@ -4,7 +4,6 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
-	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -76,15 +75,6 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, loc
 	if !localeName.CheckLenLocal(storeLanguages, 150) {
 		return errors.New("名称长度不能超过150")
 	}
-	checkService := NewCheckNameSrv(s.dbm)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   uuid,
-		Source: constant.CheckNameSourceProduct,
-		Names:  checkService.MakeCheckNameList(ctx, localeName),
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 	return nil
 }
 
@@ -97,15 +87,6 @@ func (s *productCheckSrv) CheckMaterialName(ctx context.Context, uuid uint64, lo
 	}
 	if !localeName.CheckLenLocal(storeLanguages, 150) {
 		return errors.New("名称长度不能超过150")
-	}
-	checkService := NewCheckNameSrv(s.dbm)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   uuid,
-		Source: constant.CheckNameSourceMaterial,
-		Names:  checkService.MakeCheckNameList(ctx, localeName),
-	})
-	if exists {
-		return errors.New("名称已存在")
 	}
 	return nil
 }
@@ -668,13 +649,7 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 					}
 				}
 			}
-			products = append(products, CheckProductPackageGroupProductResult{
-				Uuid:     product.Uuid,
-				BomUuid:  product.BomUuid,
-				Num:      product.Num,
-				Sort:     product.Sort,
-				IsDelete: product.IsDelete,
-			})
+			products = append(products, CheckProductPackageGroupProductResult(product))
 		}
 		groups = append(groups, CheckProductPackageGroupResult{
 			Uuid:       group.Uuid,

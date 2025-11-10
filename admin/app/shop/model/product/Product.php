@@ -45,11 +45,6 @@ class Product extends ProductModel
             $this->errorData = $msg;
             return false;
         }
-        // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, 0)) {
-            $this->error = !$isPackage ? '商品名称已存在' : '套餐名称已存在';
-            return false;
-        }
         $data['content'] = isset($data['content']) ? $data['content'] : '';
         $data['alone_grade_equity'] = isset($data['alone_grade_equity']) ? json_decode($data['alone_grade_equity'], true) : '';
         $data['app_id'] = self::$app_id;
@@ -146,7 +141,6 @@ class Product extends ProductModel
                 $this->error = '套餐分组最多只能设置5个';
                 return false;
             }
-            $existGroupNames = [];
             foreach ($packageGroup as &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
@@ -156,11 +150,6 @@ class Product extends ProductModel
                     $this->errorData = $msg;
                     return false;
                 }
-                if (in_array($groupName, $existGroupNames)) {
-                    $this->error = '分组名称不能重复';
-                    return false;
-                }
-                $existGroupNames[] = $groupName;
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {
@@ -403,11 +392,6 @@ class Product extends ProductModel
             $this->errorData = $msg;
             return false;
         }
-        // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, $this['shop_supplier_id'] ?? 0, $this['product_id'] ?? 0)) {
-            $this->error = !$isPackage ? '商品名称已存在' : '套餐名称已存在';
-            return false;
-        }
 
         $data['spec_type'] = isset($data['spec_type']) ? $data['spec_type'] : $this['spec_type'];
         $data['content'] = isset($data['content']) ? $data['content'] : '';
@@ -505,7 +489,6 @@ class Product extends ProductModel
                 $this->error = '套餐分组最多只能设置5个';
                 return false;
             }
-            $existGroupNames = [];
             foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
@@ -515,11 +498,6 @@ class Product extends ProductModel
                     $this->errorData = $msg;
                     return false;
                 }
-                if (in_array($groupName, $existGroupNames)) {
-                    $this->error = '分组名称不能重复';
-                    return false;
-                }
-                $existGroupNames[] = $groupName;
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {

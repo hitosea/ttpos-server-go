@@ -90,6 +90,7 @@ class AuthService
         '/setting/paytype/defaultPay',
         '/setting/business/freeTag',
         '/setting/business/returnReason',
+        '/setting/business/orderRemark',
         '/setting/business/qrcode',
 
         // 采购管理

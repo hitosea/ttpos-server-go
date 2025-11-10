@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
@@ -55,13 +56,13 @@ func (t *printerTask) Execute() {
 			end = len(companies)
 		}
 		// 处理当前批次的公司
-		go func() {
+		utils.Go(func() {
 			batch := companies[i:end]
 			for _, company := range batch {
 				// 使用闭包捕获变量
 				t.sendPrinter(company.Uuid)
 			}
-		}()
+		})
 	}
 }
 
@@ -159,7 +160,7 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 
 	// 递归执行
 	if printerLog.Status == 1 && printerLog.Num < 3 {
-		go func() {
+		utils.Go(func() {
 			defer func() {
 				if r := recover(); r != nil {
 					log.Printf("打印任务panic: %v", r)
@@ -176,6 +177,6 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 				log.Printf("打印任务超时，取消重试")
 				return
 			}
-		}()
+		})
 	}
 }

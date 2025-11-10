@@ -32,6 +32,7 @@ build:
 	@$(call update_env_and_run)
 	@echo "🗄️  运行数据库迁移..."
 	@make migrate
+	@make rmi
 	@echo "✅ 构建完成"
 
 #重新构建中台模块
@@ -133,11 +134,25 @@ add-ver:
 think:
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think $(filter-out $@,$(MAKECMDGOALS)) 
 
-# 监听今天的日志
+# 监听今天的日志（格式化输出，带颜色高亮）
 log:
-	@echo "🔍 监听今天的日志..."
-	tail -f -n 500 ./main/log/$$(date +%Y-%m-%d).log
+	@echo "🔍 监听今天的日志（紧凑JSON）..."
+	@tail -f -n 500 ./main/log/$$(date +%Y-%m-%d).log | while IFS= read -r line; do \
+		echo "$$line" | jq -R -r '. as $$raw | try (fromjson | "[\(.time)] [\(.level)] \(.caller) - \(.msg) | 错误: \(.error // .err // "无")") catch $$raw' 2>/dev/null; \
+	done
 
 # 添加物品库存
 add-item-stock:
 	cd main && go run ./main.go add-item-stock
+
+# 添加父级公司UUID路径
+add-parent-company-uuid:
+	cd main && go run ./main.go add-parent-company-uuid
+
+# 删除 dangling 镜像
+rmi:
+	docker rmi $$(docker images -qf "dangling=true")
+
+# 删除所有镜像
+chown-all:
+	sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go

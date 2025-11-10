@@ -181,8 +181,13 @@ func (p *PrinterRepoImpl) PrintingDishes(
 					data := p.getPrintReturnProductContent(printerItem, billInfo, newProducts)
 					if data != "" {
 						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
-							PrinterType:   printerType,
-							PrinterConfig: printerItem.Printer.ConfigJson,
+							PrinterType: printerType,
+							PrinterConfig: func() string {
+								if printerItem.Printer != nil {
+									return printerItem.Printer.ConfigJson
+								}
+								return ""
+							}(),
 						}, model.PrinterLog{
 							PrintMethod:        printMethod,
 							RelatedType:        0,
@@ -210,8 +215,13 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						exportation := func(product printer_model.OrderProduct) {
 							if data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, *saleOrder, product); data != "" {
 								_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
-									PrinterType:   printerType,
-									PrinterConfig: printerItem.Printer.ConfigJson,
+									PrinterType: printerType,
+									PrinterConfig: func() string {
+										if printerItem.Printer != nil {
+											return printerItem.Printer.ConfigJson
+										}
+										return ""
+									}(),
 								}, model.PrinterLog{
 									PrintMethod:        printMethod,
 									RelatedType:        0,

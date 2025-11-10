@@ -572,9 +572,11 @@ func (p *PaymentRepo) HandleRefundCallback(sign string, callbackReq req.LianLian
 	}
 
 	// Desk - AfterUpdate 更新桌台后的逻辑 - 推送桌台更新
-	go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_REFUND_STATE, map[string]interface{}{
-		"uuid":        orderAmount.Uuid,
-		"update_time": orderAmount.BaseModel.UpdateTime,
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_REFUND_STATE, map[string]interface{}{
+			"uuid":        orderAmount.Uuid,
+			"update_time": orderAmount.BaseModel.UpdateTime,
+		})
 	})
 
 	return nil

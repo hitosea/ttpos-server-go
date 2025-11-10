@@ -66,10 +66,6 @@ func (s *sCrm) CreateAddress(ctx context.Context, req *crm.CreateAddressReq) (re
 
 	// 解析响应获取创建的地址名称
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析创建地址响应失败")
-	}
-
 	addressName := j.Get("data.name").String()
 	if addressName == "" {
 		return nil, gerror.New("创建地址失败，未获取到地址名称")
@@ -168,10 +164,6 @@ func (s *sCrm) queryAddressList(ctx context.Context, filters [][]string, req *cr
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析地址列表响应失败")
-	}
-
 	// 转换为地址信息列表
 	dataArray := j.GetJsons("data")
 	addressList := make([]*crm.AddressInfo, 0, len(dataArray))
@@ -206,10 +198,6 @@ func (s *sCrm) queryAddressDetail(ctx context.Context, name string) (*crm.Addres
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析地址详情响应失败")
-	}
-
 	data := j.GetJson("data")
 	if data.IsNil() {
 		return nil, gerror.New("地址不存在")

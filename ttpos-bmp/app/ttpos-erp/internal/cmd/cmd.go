@@ -5,6 +5,7 @@ import (
 	"os"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/callback"
+	"ttpos-bmp/internal/pkg/otlp"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
@@ -21,6 +22,9 @@ var (
 		Usage: "main",
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+			// 初始化OTLP
+			shutdownOtlp := otlp.InitOtlp()
+			defer shutdownOtlp(ctx)
 			s := g.Server()
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)

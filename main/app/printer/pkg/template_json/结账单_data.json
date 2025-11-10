@@ -25,7 +25,7 @@
         "pay_time": "2025-09-24 10:01:37",
         "products": [
             {
-                "name": "十三香小龙虾",
+                "name": "小龙虾",
                 "price_num": "1,180*65",
                 "price": "1,180",
                 "num": 65,
@@ -42,24 +42,7 @@
                 "is_buffet_product": false
             },
             {
-                "name": "苦蕨菜",
-                "price_num": "0.01*2",
-                "price": "0.01",
-                "num": 2,
-                "subtotal": "0.02",
-                "attrs": "份",
-                "attr": "份",
-                "sauce_names": "加料",
-                "flavor_name": "规格",
-                "is_delay": false,
-                "is_buffet": false,
-                "is_gift": false,
-                "is_package": false,
-                "is_sub_product": false,
-                "is_buffet_product": false
-            },
-            {
-                "name": "套餐01",
+                "name": "套餐",
                 "price_num": "98.61*1",
                 "price": "98.61",
                 "num": 1,
@@ -76,7 +59,7 @@
                 "is_buffet_product": false
             },
             {
-                "name": "空运阳澄湖大闸蟹",
+                "name": "大闸蟹",
                 "price_num": "1",
                 "price": "520",
                 "num": 1,

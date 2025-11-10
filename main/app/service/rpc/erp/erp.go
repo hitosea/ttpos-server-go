@@ -5,6 +5,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
@@ -21,6 +22,7 @@ import (
 
 type IErpSrv interface {
 	GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
+	BuildCompanyUuidMap(companies []resp.ErpnextSiteCompany) map[uint64][]uint64
 	InitShop(ctx pkgCtx.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
 	GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error)
 	GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error)
@@ -40,8 +42,8 @@ type IErpSrv interface {
 	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
 
 	// 采购单
-	SaveMaterialRequest(ctx pkgCtx.Context, companySetting model.CompanySetting, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+	SaveMaterialRequest(ctx pkgCtx.Context, companySetting model.CompanySetting, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error)
 	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
@@ -49,6 +51,9 @@ type IErpSrv interface {
 	SubmitStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SaveStockReconciliationReq) (*stock.SaveStockReconciliationResp, error)
 	ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationResp, error)
 	RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error)
+
+	// 调拨单
+	SaveMaterialTransfer(ctx pkgCtx.Context, companySetting model.CompanySetting, saveMaterialTransferReq *material_transfer.MaterialTransferReq) (*material_transfer.MaterialTransferResp, error)
 
 	// 供应商
 	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)                                                          // 获取内部供应商

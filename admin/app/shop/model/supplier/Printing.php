@@ -50,11 +50,6 @@ class Printing extends PrintingModel
      */
     public function add($data)
     {
-        $detail = $this->where('name', '=', $data['name'])->find();
-        if ($detail) {
-            $this->error = '名称已存在';
-            return false;
-        }
         // 开启事务
         $this->startTrans();
         try {
@@ -132,13 +127,6 @@ class Printing extends PrintingModel
             // 设置锁，120秒过期
             Cache::set($lockKey, $lockValue, 120);
 
-            // 名称已存在
-            $detail = $this->where('name', '=', $data['name'])->where('id', '<>', $this['id'])->find();
-            if ($detail) {
-                Cache::delete($lockKey);
-                $this->error = '名称已存在';
-                return false;
-            }
             // 物理删除打印机
             $this->printingItem()->withTrashed()->chunk(500, function ($items) {
                 foreach ($items as $item) {

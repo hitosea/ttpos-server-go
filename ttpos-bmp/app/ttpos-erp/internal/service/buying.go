@@ -61,6 +61,15 @@ type (
 		//   - res: 更新采购订单响应
 		//   - err: 错误信息
 		UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePurchaseOrderReq) (res *buying.UpdatePurchaseOrderResp, err error)
+		// CreatePurchaseOrderFromSalesOrder 从销售订单创建采购订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 创建采购订单请求参数
+		//
+		// 返回：
+		//   - res: 采购订单信息
+		//   - err: 错误信息
+		CreatePurchaseOrderFromSalesOrder(ctx context.Context, req *dto.CreatePurchaseOrderFromSalesOrderReq) (res *erp.PurchaseOrder, err error)
 	}
 	ISupplier interface {
 		// GetInnerSupplierList 获取内部供应商列表

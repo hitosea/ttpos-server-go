@@ -79,6 +79,7 @@ type ISrv interface {
 	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
+	GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp                                                               // 获取支付方式列表
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -1557,7 +1558,7 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 }
 
 func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateStoreSetting) error {
-	saasDB := s.dbm.GetDB(0)
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyUuid := ctx.GetCompanyUuid()
 	companyDB := s.dbm.GetDB(companyUuid)
 
@@ -1573,14 +1574,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		return errors.WithMessage(err)
 	}
 	company := ctx.GetCompany()
-
-	// 判断saas库中商家名称是否已存在
-	saasCompanyRepo := repository.NewCompanyRepo(saasDB)
-	saasCompany, _ := saasCompanyRepo.GetCompany(saasCompanyRepo.WhereName(storeSettingReq.Name), saasCompanyRepo.WhereNotUuid(companyUuid))
-
-	if saasCompany.Uuid != 0 {
-		return errors.New("商家名称已存在")
-	}
 
 	// 时区在时区列表中
 	timeZoneList := storeSetting.TimeZoneList
@@ -1878,8 +1871,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	tc.TagClear("cashier")
 
 	// 推送配置更新
-	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	return nil
@@ -1947,9 +1942,17 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	tc.TagClear("cashier")
 
 	// 推送配置更新
-	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
+
+	// 将本店非当前安全库存类型的预警记录删除
+	err = s.dbm.GetDB(companyUuid).Model(&model.MaterialStockAlertLog{}).Where("alert_type != ?", businessSetting.SafetyStockType).Update("delete_time", time.Now().Unix()).Error
+	if err != nil {
+		logger.Logger.Error("删除本店非当前安全库存类型的预警记录失败", zap.Error(err))
+	}
 
 	return nil
 }
@@ -1977,11 +1980,26 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
+	var headquarterRequiredParentCompanyApproval, headquarterViaParentCompanyWarehouse string
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.HeadquarterUuid > 0 {
+		ctx2 := ctx.Copy()
+		ctx2.SetCompanyUuid(companySetting.HeadquarterUuid)
+		headquarterBusinessSetting, err := s.GetBusinessSetting(ctx2)
+		if err != nil {
+			return setting.ShopBusiness{}, errors.WithMessage(err)
+		}
+		headquarterRequiredParentCompanyApproval = headquarterBusinessSetting.RequiredParentCompanyApproval
+		headquarterViaParentCompanyWarehouse = headquarterBusinessSetting.ViaParentCompanyWarehouse
+	}
+
 	return setting.ShopBusiness{
-		Business:              businessSetting,
-		FreeReasonCount:       int(freeReasonCount),
-		ReturnFoodReasonCount: int(returnFoodReasonCount),
-		OrderRemarkCount:      int(orderRemarkCount),
+		Business:                                 businessSetting,
+		FreeReasonCount:                          int(freeReasonCount),
+		ReturnFoodReasonCount:                    int(returnFoodReasonCount),
+		OrderRemarkCount:                         int(orderRemarkCount),
+		HeadquarterRequiredParentCompanyApproval: headquarterRequiredParentCompanyApproval,
+		HeadquarterViaParentCompanyWarehouse:     headquarterViaParentCompanyWarehouse,
 	}, nil
 }
 
@@ -2007,4 +2025,24 @@ func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Bu
 	token := fmt.Sprintf("%x.%s", hash, base64.StdEncoding.EncodeToString([]byte(qrcodeString)))
 
 	return base64.StdEncoding.EncodeToString([]byte(token))
+}
+
+// GetPaymentMethodList 获取支付方式列表
+func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp {
+	commonRepo := repository.NewCommonRepo()
+	paymentRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
+	paymentMethodList := paymentRepo.GetPaymentMethodList(
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.SortWithSort("asc"),
+		commonRepo.SortWithCreateTime("desc"),
+	)
+
+	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
+	for _, paymentMethod := range paymentMethodList {
+		list = append(list, setting.PaymentMethod{
+			Uuid: paymentMethod.Uuid,
+			Name: paymentMethod.Name,
+		})
+	}
+	return setting.PaymentMethodListResp{List: list}
 }

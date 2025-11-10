@@ -206,7 +206,14 @@ func (p *ImgTemplateParser) parseRows(img *ImgFont, rows [][]ImgTemplateBlock, l
 // getNextValidBlock 获取下一行有效的block
 func (p *ImgTemplateParser) validBlock(block ImgTemplateBlock) bool {
 	// 如果设置了不显示空值，且值为空或零，则返回空字符串
-	if block.BlockAttr.NotShowEmpty && p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
+	if block.BlockAttr.NotShowEmpty {
+		if block.BlockType == "label" {
+			if p.getLabel(block.BlockLabel) == "" {
+				return false
+			}
+		} else if p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
+			return false
+		}
 		return false
 	}
 	// 检查条件显示

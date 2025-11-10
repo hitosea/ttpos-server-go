@@ -38,9 +38,7 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
+
 	purchaseOrder := &erp.PurchaseOrder{}
 	j.GetJson("data").Scan(purchaseOrder)
 	//修改货币类型
@@ -98,11 +96,8 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 	salesOrder := &erp.SaleOrder{}
-	j.GetJson("data").Scan(salesOrder)
+	j.GetJson("data").Scan(&salesOrder)
 	// 发货时间
 	salesOrder.DeliveryDate = req.DeliveryDate
 	for _, item := range salesOrder.Items {
@@ -144,7 +139,7 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 
 	// 解析响应数据
 	j = resp
-	j.GetJson("data").Scan(salesOrder)
+	j.GetJson("data").Scan(&salesOrder)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
@@ -167,9 +162,7 @@ func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *d
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析发货单响应失败")
-	}
+
 	deliveryNote := &erp.DeliveryNote{}
 	j.GetJson("data").Scan(&deliveryNote)
 
@@ -204,9 +197,6 @@ func (*sBuying) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrd
 	purchaseOrder := &erp.PurchaseOrder{}
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 	j.GetJson("data").Scan(purchaseOrder)
 	return purchaseOrder, nil
 }
@@ -225,25 +215,24 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 
 	receipt := &erp.PurchaseReceipt{}
 	j.GetJson("data").Scan(receipt)
 
 	//根据入参调整item
-	receiptItems := make([]erp.PurchaseReceiptItem, 0)
-	for _, item := range receipt.Items {
-		for _, itemReq := range req.Items {
-			if item.ItemCode == itemReq.ItemCode {
-				item.Qty = itemReq.Qty
-				receiptItems = append(receiptItems, item)
-				break
+	if req.Items != nil && len(req.Items) > 0 {
+		receiptItems := make([]erp.PurchaseReceiptItem, 0)
+		for _, item := range receipt.Items {
+			for _, itemReq := range req.Items {
+				if item.ItemCode == itemReq.ItemCode {
+					item.Qty = itemReq.Qty
+					receiptItems = append(receiptItems, item)
+					break
+				}
 			}
 		}
+		receipt.Items = receiptItems
 	}
-	receipt.Items = receiptItems
 
 	//创建采购收货订单
 	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receipt)
@@ -304,10 +293,6 @@ func (s *sBuying) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurch
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单列表响应失败")
-	}
-
 	// 转换为采购订单列表
 	purchaseOrderList := make([]*buying.PurchaseOrderListItem, 0)
 	dataArray := j.GetJsons("data")

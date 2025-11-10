@@ -158,10 +158,23 @@ func (PurchaseOrderItem) TableName() string {
 func (poi *PurchaseOrderItem) SetNil() {
 	poi.PurchaseOrder = PurchaseOrder{}
 	poi.Material = nil
+	poi.Units = []PurchaseOrderItemUnit{}
 }
 
 func (item PurchaseOrderItem) GetConversionRateNum() float64 {
 	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
+}
+
+func (item PurchaseOrderItem) GetUnitsTotalConversionRateNum() float64 {
+	actualNum := 0.0
+	if len(item.Units) > 0 {
+		for _, unit := range item.Units {
+			actualNum += unit.GetConversionRateNum()
+		}
+	} else if item.BaseUnitUuid != 0 {
+		actualNum += item.GetConversionRateNum()
+	}
+	return actualNum
 }
 
 // GetCompletionRate 获取到货完成率
@@ -304,10 +317,23 @@ func (item PurchaseReceiptOrderItem) GetActualNum() float64 {
 	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
 }
 
+func (item PurchaseReceiptOrderItem) GetUnitsTotalConversionRateNum() float64 {
+	actualNum := 0.0
+	if len(item.Units) > 0 {
+		for _, unit := range item.Units {
+			actualNum += unit.GetActualNum()
+		}
+	} else {
+		actualNum += item.GetActualNum()
+	}
+	return actualNum
+}
+
 // PurchaseOrderItemUnit 采购申请物品单位表 ttpos_purchase_order_item_unit
 type PurchaseOrderItemUnit struct {
 	BaseModel
 	ItemUuid           uint64  `gorm:"column:item_uuid;type:bigint(20) unsigned;not null;default:0;comment:ItemID;index:idx_item_uuid" json:"item_uuid"`
+	PurchaseOrderUuid  uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请UUID;index:idx_purchase_order_uuid" json:"purchase_order_uuid"`
 	Num                float64 `gorm:"column:num;type:decimal(22,4);not null;default:0.0000;comment:数量" json:"num"`
 	ArrivalNum         float64 `gorm:"column:arrival_num;type:decimal(22,4);not null;default:0.0000;comment:到货数量" json:"arrival_num"`
 	UnitUuid           uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:单位ID" json:"unit_uuid"`
@@ -326,18 +352,22 @@ func (PurchaseOrderItemUnit) TableName() string {
 	return "ttpos_purchase_order_item_unit"
 }
 
+func (item PurchaseOrderItemUnit) GetConversionRateNum() float64 {
+	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
+}
+
 // PurchaseReceiptOrderItemUnit 收货单物品单位表 ttpos_purchase_receipt_order_item_unit
 type PurchaseReceiptOrderItemUnit struct {
 	BaseModel
-	ItemUuid           uint64  `gorm:"column:item_uuid;type:bigint(20) unsigned;not null;default:0;comment:ItemID;index:idx_item_uuid" json:"item_uuid"`
-	Num                float64 `gorm:"column:num;type:decimal(22,4);not null;default:0.0000;comment:数量" json:"num"`
-	ArrivalNum         float64 `gorm:"column:arrival_num;type:decimal(22,4);not null;default:0.0000;comment:到货数量" json:"arrival_num"`
-	UnitUuid           uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:单位ID" json:"unit_uuid"`
-	UnitName           string  `gorm:"column:unit_name;type:text;comment:单位名称" json:"unit_name"`
-	UnitConversionRate float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1.0000;comment:基准单位转换率。申请数量*转换率=基准单位申请数量" json:"unit_conversion_rate"`
-	BaseUnitUuid       uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
-	BaseUnitName       string  `gorm:"column:base_unit_name;type:text;comment:基准单位名称" json:"base_unit_name"`
-	ErpnextUom         string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
+	ItemUuid                 uint64  `gorm:"column:item_uuid;type:bigint(20) unsigned;not null;default:0;comment:ItemID;index:idx_item_uuid" json:"item_uuid"`
+	PurchaseReceiptOrderUuid uint64  `gorm:"column:purchase_receipt_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:收货单UUID;index:idx_purchase_receipt_order_uuid" json:"purchase_receipt_order_uuid"`
+	Num                      float64 `gorm:"column:num;type:decimal(22,4);not null;default:0.0000;comment:数量" json:"num"`
+	UnitUuid                 uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:单位ID" json:"unit_uuid"`
+	UnitName                 string  `gorm:"column:unit_name;type:text;comment:单位名称" json:"unit_name"`
+	UnitConversionRate       float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1.0000;comment:基准单位转换率。申请数量*转换率=基准单位申请数量" json:"unit_conversion_rate"`
+	BaseUnitUuid             uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
+	BaseUnitName             string  `gorm:"column:base_unit_name;type:text;comment:基准单位名称" json:"base_unit_name"`
+	ErpnextUom               string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
 
 	// 关联关系
 	PurchaseReceiptOrderItem PurchaseReceiptOrderItem `gorm:"foreignKey:ItemUuid;references:Uuid" json:"purchase_receipt_order_item,omitempty"`
@@ -346,4 +376,8 @@ type PurchaseReceiptOrderItemUnit struct {
 // TableName 指定表名
 func (PurchaseReceiptOrderItemUnit) TableName() string {
 	return "ttpos_purchase_receipt_order_item_unit"
+}
+
+func (item PurchaseReceiptOrderItemUnit) GetActualNum() float64 {
+	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
 }

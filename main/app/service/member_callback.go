@@ -75,7 +75,7 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 				ctx.Log().Error("骑手接单回调时，订单号不合法", zap.Error(err))
 				return errors.WithMessage(err, "骑手接单回调时，订单号不合法")
 			}
-			go func() {
+			utils.Go(func() {
 				s.bus.PublishRiderAcceptMemberSaleOrderEvent(event.RiderAcceptMemberSaleOrderPayload{
 					BasePayload: event.BasePayload{
 						Ctx:         ctx,
@@ -83,7 +83,7 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 					},
 					MemberSaleOrderUuid: memberSaleOrderUuid,
 				})
-			}()
+			})
 			return nil
 		}
 		// 当状态“正在前往送货 OTW to delivery”时，触发“骑手完成取餐”事件
@@ -93,7 +93,7 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 				ctx.Log().Error("骑手完成取餐回调时，订单号不合法", zap.Error(err))
 				return errors.WithMessage(err, "骑手完成取餐回调时，订单号不合法")
 			}
-			go func() {
+			utils.Go(func() {
 				s.bus.PublishRiderDeliveryMemberSaleOrderEvent(event.RiderDeliveryMemberSaleOrderPayload{
 					BasePayload: event.BasePayload{
 						Ctx:         ctx,
@@ -101,7 +101,7 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 					},
 					MemberSaleOrderUuid: memberSaleOrderUuid,
 				})
-			}()
+			})
 			return nil
 		}
 		// 当状态“已完成 Completed”时，触发“骑手送达”事件

@@ -5,6 +5,9 @@ connect_timeout = 30
 skip-host-cache
 skip-name-resolve
 skip-external-locking
+
+# 允许从任何目录加载文件
+secure_file_priv = ""
  
 binlog_cache_size = 256K
 thread_stack = 512K

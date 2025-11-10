@@ -130,6 +130,18 @@ func (model *Material) GetImage(baseUrl string) string {
 	return ""
 }
 
+// GetRelatedMaterialUuids 获取关联材料UUID列表
+func (model *Material) GetRelatedMaterialUuids() []uint64 {
+	relatedMaterialUuids := make([]uint64, 0)
+	for _, relatedMaterial := range model.RelatedMaterialList {
+		if relatedMaterial.IsDelete() || relatedMaterial.IsUsed == 0 {
+			continue
+		}
+		relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
+	}
+	return relatedMaterialUuids
+}
+
 // MaterialUnit 原料单位表 ttpos_material_unit
 type MaterialUnit struct {
 	BaseModel

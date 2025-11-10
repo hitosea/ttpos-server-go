@@ -117,6 +117,7 @@ func (c *Controller) SavePurchaseReceipt(ctx context.Context, req *buying.SavePu
 			ItemName: item.ItemName,
 			ItemCode: item.ItemCode,
 			StockUom: item.StockUom,
+			Uom:      item.Uom,
 			Qty:      item.Qty,
 		})
 	}

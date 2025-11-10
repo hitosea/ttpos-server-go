@@ -70,3 +70,9 @@ mailgun:
   apiBase: "https://api.mailgun.net/v3"               # Mailgun API 基础地址
   timeout: 30                                         # 请求超时时间（秒）
 
+# 调用链监控配置
+otlp:
+  enabled: true
+  serviceName: "ttpos-message"
+  endpoint: "103.63.136.110:32481"
+  path: "/v1/traces"

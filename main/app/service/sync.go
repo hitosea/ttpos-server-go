@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
@@ -174,7 +175,9 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 	if syncReq.IsSyncExecute {
 		s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
 	} else {
-		go s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
+		utils.Go(func() {
+			s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
+		})
 	}
 
 	message := "数据同步已启动"
@@ -227,13 +230,15 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 		// 未报错才记录上次同步完成时间
 		if !isExceptionOccurred {
 			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-			s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
 		}
 		// 推送websocket
-		go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
-			"task_uuid":             syncTask.Uuid,
-			"is_exception_occurred": isExceptionOccurred,
-			"sync_time":             time.Now().Unix(),
+		utils.Go(func() {
+			websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
+				"task_uuid":             syncTask.Uuid,
+				"is_exception_occurred": isExceptionOccurred,
+				"sync_time":             time.Now().Unix(),
+			})
 		})
 	}()
 
@@ -275,7 +280,7 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 	// 更新公司的最后同步时间
 	if finalStatus == constant.SyncTaskStatusSuccess {
 		s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
-		s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
+		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
 	}
 }
 

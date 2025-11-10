@@ -268,7 +268,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 
 	// 发卡可能会送积分，赠送余额
 	if memberPointsChanged || memberBalanceChanged {
-		go func() {
+		utils.Go(func() {
 			if memberBalanceChanged {
 				// 发布"会员余额变动"事件
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
@@ -292,7 +292,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 					},
 				})
 			}
-		}()
+		})
 	}
 
 	if err != nil {
@@ -616,7 +616,7 @@ func (s *memberSrv) GenerateRandomNickname() string {
 		nickname = nickname[len(nickname)-9:]
 	}
 	// 为了进一步确保唯一性，如果前面的算法生成重复，使用UUID方案
-	memberRepo := saas.NewMemberRepo(s.dbm.GetDB(0))
+	memberRepo := saas.NewMemberRepo(s.dbm.GetDB(constant.DefaultDB))
 	if memberRepo.CheckNicknameExists(nickname) {
 		retryCount := 0
 		for memberRepo.CheckNicknameExists(nickname) && retryCount < 10 {

@@ -215,15 +215,6 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			for _, unit := range item.Material.NotBaseUnitList {
 				unitList = append(unitList, resp.PurchaseOrderItemMaterialUnit{
 					Uuid: unit.Uuid,
-					Name: func() string {
-						if unit.Unit == nil {
-							return ""
-						}
-						if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
-							return ""
-						}
-						return unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-					}(),
 					LocaleName: func() dto.LocaleResponse {
 						if unit.Unit == nil {
 							return dto.LocaleResponse{}
@@ -233,9 +224,50 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 						}
 						return unit.Unit.MultiLanguageName.GetNames()
 					}(),
-					ConversionRate: unit.ConversionRate,
 				})
 			}
+			return unitList
+		}(item)
+		// 单位列表
+		itemInfo.Units = func(item model.PurchaseOrderItem) []resp.PurchaseOrderItemUnit {
+			unitList := []resp.PurchaseOrderItemUnit{}
+			if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
+				unitList = append(unitList, resp.PurchaseOrderItemUnit{
+					Num:        item.Num,
+					ArrivalNum: item.ArrivalNum,
+					UnitUuid:   item.UnitUuid,
+					LocaleName: *language.JsonToLocaleResponse(item.UnitName),
+				})
+			} else {
+				for _, unit := range item.Units {
+					unitList = append(unitList, resp.PurchaseOrderItemUnit{
+						Num:        unit.Num,
+						ArrivalNum: unit.ArrivalNum,
+						UnitUuid:   unit.UnitUuid,
+						LocaleName: func() dto.LocaleResponse {
+							if item.Material == nil {
+								return *language.JsonToLocaleResponse(unit.UnitName)
+							}
+							if len(item.Material.NotBaseUnitList) == 0 {
+								return *language.JsonToLocaleResponse(unit.UnitName)
+							}
+							for _, materialUnit := range item.Material.NotBaseUnitList {
+								if materialUnit.Uuid == unit.UnitUuid {
+									if materialUnit.Unit == nil {
+										return *language.JsonToLocaleResponse(materialUnit.Name)
+									}
+									if materialUnit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+										return materialUnit.Unit.MultiLanguageName.GetNames()
+									}
+									return materialUnit.Unit.MultiLanguageName.GetNames()
+								}
+							}
+							return *language.JsonToLocaleResponse(unit.UnitName)
+						}(),
+					})
+				}
+			}
+
 			return unitList
 		}(item)
 		detailResp.Items = append(detailResp.Items, itemInfo)
@@ -249,7 +281,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 	ctx context.Context,
 	req req.PurchaseOrderCreateReq,
 ) (resp.PurchaseOrderCreateResp, error) {
-	// 加锁
+	// // 加锁
 	s.lock.LockUuidString(req.SupplierErpCode + strconv.FormatInt(req.OrderTime, 10))
 	defer s.lock.UnlockUuidString(req.SupplierErpCode + strconv.FormatInt(req.OrderTime, 10))
 
@@ -335,11 +367,12 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 				UnitList:     item.UnitList,
 			})
 		}
-		items, err := s.validator.buildPurchaseOrderItems(tx, purchaseOrder.Uuid, itemReqs)
+		items, _, err := s.validator.buildPurchaseOrderItems(tx, purchaseOrder.Uuid, itemReqs)
 		if err != nil {
 			return err
 		}
 
+		// 创建采购申请明细
 		err = purchaseOrderItemRepo.CreateBatch(items)
 		if err != nil {
 			return errors.WithMessage(errors.New("创建采购申请明细失败"), err.Error())
@@ -458,11 +491,12 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 				UnitList:     item.UnitList,
 			})
 		}
-		items, err := s.validator.buildPurchaseOrderItems(tx, purchaseOrder.Uuid, itemReqs)
+		items, _, err := s.validator.buildPurchaseOrderItems(tx, purchaseOrder.Uuid, itemReqs)
 		if err != nil {
 			return err
 		}
 
+		// 创建采购申请明细
 		err = purchaseOrderItemRepo.CreateBatch(items)
 		if err != nil {
 			return errors.WithMessage(errors.New("创建采购申请明细失败"), err.Error())
@@ -800,7 +834,6 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 		// 整单复制到总部
 		subUuid := purchaseOrder.Uuid
 		headquarterPurchaseOrder := model.PurchaseOrder{}
-
 		err := copier.Copy(&headquarterPurchaseOrder, purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(errors.New("复制总部采购订单失败"), err.Error())
@@ -817,7 +850,6 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 		headquarterPurchaseOrder.SubUuid = subUuid
 		headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 		headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
-
 		err = repository.NewPurchaseOrderRepo(hqTx).Create(&headquarterPurchaseOrder)
 		if err != nil {
 			logger.Logger.Error("创建总部采购申请失败", zap.Error(err))
@@ -825,6 +857,7 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 		}
 
 		// 创建总部采购申请明细
+		hqMaterialRepo := repository.NewMaterialRepo(hqTx)
 		var headquarterItems []model.PurchaseOrderItem
 		for _, item := range purchaseOrder.Items {
 			headquarterItem := model.PurchaseOrderItem{}
@@ -834,7 +867,8 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 				return errors.WithMessage(errors.New("复制总部物品明细失败"), err.Error())
 			}
 
-			material, err := repository.NewMaterialRepo(hqTx).GetMaterialByErpCode(item.MaterialCode)
+			// 查询物料
+			material, err := hqMaterialRepo.GetMaterialByErpCode(item.MaterialCode)
 			if err != nil {
 				logger.Logger.Error("总部不存在该物料", zap.String("物料编码", item.MaterialCode), zap.Error(err))
 				return errors.New(fmt.Sprintf(
@@ -849,6 +883,23 @@ func (s *purchaseOrderSrv) handleSubShopApproval(
 			headquarterItem.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
 			headquarterItem.MaterialUuid = material.Uuid
 			headquarterItem.Material = nil
+			headquarterItem.Units = make([]model.PurchaseOrderItemUnit, 0)
+			// 复制单位列表
+			if len(item.Units) > 0 {
+				for _, unit := range item.Units {
+					itemUnit := model.PurchaseOrderItemUnit{}
+					err := copier.Copy(&itemUnit, unit)
+					if err != nil {
+						logger.Logger.Error("复制总部物品单位失败", zap.Error(err))
+						return errors.WithMessage(errors.New("复制总部物品单位失败"), err.Error())
+					}
+					itemUnit.BaseModel.ID = 0
+					itemUnit.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
+					itemUnit.BaseUnitUuid = material.UnitUuid
+					headquarterItem.Units = append(headquarterItem.Units, itemUnit)
+				}
+			}
+			// 添加到总部采购申请明细列表
 			headquarterItems = append(headquarterItems, headquarterItem)
 		}
 
@@ -912,23 +963,40 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	// 构建物料请求项
 	stockItems := make([]*stock.MaterialRequestItem, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
-		erpnextUom := item.ErpnextUom
-		if erpnextUom == "" {
-			materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
-			if err != nil {
-				return "", errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
+		if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
+			if item.Num <= 0 {
+				continue
 			}
-			if materialUnit.Unit == nil {
-				return "", errors.New("查询物品原始单位失败")
+			erpnextUom := item.ErpnextUom
+			if erpnextUom == "" {
+				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+				if err != nil {
+					return "", errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
+				}
+				if materialUnit.Unit == nil {
+					return "", errors.New("查询物品原始单位失败")
+				}
+				erpnextUom = materialUnit.Unit.ErpnextUom
 			}
-			erpnextUom = materialUnit.Unit.ErpnextUom
+			stockItems = append(stockItems, &stock.MaterialRequestItem{
+				ItemCode:     item.MaterialCode,
+				Qty:          item.Num,
+				ScheduleDate: purchaseOrder.ExpectArrivalTime,
+				Uom:          erpnextUom,
+			})
+		} else {
+			for _, unit := range item.Units {
+				if unit.Num <= 0 {
+					continue
+				}
+				stockItems = append(stockItems, &stock.MaterialRequestItem{
+					ItemCode:     item.MaterialCode,
+					Qty:          unit.Num,
+					ScheduleDate: purchaseOrder.ExpectArrivalTime,
+					Uom:          unit.ErpnextUom,
+				})
+			}
 		}
-		stockItems = append(stockItems, &stock.MaterialRequestItem{
-			ItemCode:     item.MaterialCode,
-			Qty:          item.Num,
-			ScheduleDate: purchaseOrder.ExpectArrivalTime,
-			Uom:          erpnextUom,
-		})
 	}
 
 	// 获取子公司数据库
@@ -987,28 +1055,39 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 	// 构建采购订单项
 	stockItems := make([]*buying.PurchaseOrderItemInput, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
-		// 获取实际数量
-		actualNum := item.GetConversionRateNum()
-		if actualNum <= 0 {
-			continue
-		}
-		//
-		erpnextUom := item.ErpnextUom
-		if erpnextUom == "" {
-			materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
-			if err != nil {
-				return "", errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
+		actualNum := 0.0
+		if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
+			// 获取实际数量
+			actualNum = item.GetConversionRateNum()
+			if actualNum <= 0 {
+				continue
 			}
-			if materialUnit.Unit == nil {
-				return "", errors.New("查询物品原始单位失败")
+			//
+			erpnextUom := item.ErpnextUom
+			if erpnextUom == "" {
+				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+				if err != nil {
+					return "", errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
+				}
+				if materialUnit.Unit == nil {
+					return "", errors.New("查询物品原始单位失败")
+				}
+				erpnextUom = materialUnit.Unit.ErpnextUom
 			}
-			erpnextUom = materialUnit.Unit.ErpnextUom
+		} else {
+			for _, unit := range item.Units {
+				unitActualNum := unit.GetConversionRateNum()
+				if unitActualNum <= 0 {
+					continue
+				}
+				actualNum += unitActualNum
+				stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
+					ItemCode: item.MaterialCode,
+					Qty:      unit.Num,
+					Uom:      item.ErpnextUom,
+				})
+			}
 		}
-		stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
-			ItemCode: item.MaterialCode,
-			Qty:      item.Num,
-			Uom:      erpnextUom,
-		})
 
 		// 添加到本店的在途仓库
 		if transitWarehouse != nil {

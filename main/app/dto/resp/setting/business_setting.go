@@ -31,6 +31,9 @@ type Business struct {
 	BatchProductUuids []uint64 `json:"batch_product_uuids"` // 分批商品UUID列表
 	BatchTagNum       uint     `json:"batch_tag_num"`       // 分批类型数量
 	SafetyStockType   string   `json:"safety_stock_type"`   // 安全库存类型 1-门店维度 2-仓库维度，默认为1
+
+	RequiredParentCompanyApproval string `json:"required_parent_company_approval"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
+	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
 }
 
 type ShopBusiness struct {
@@ -38,6 +41,9 @@ type ShopBusiness struct {
 	FreeReasonCount       int `json:"free_reason_count"`        // 免单原因数量
 	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
 	OrderRemarkCount      int `json:"order_remark_count"`       // 整单备注原因数量
+
+	HeadquarterRequiredParentCompanyApproval string `json:"headquarter_required_parent_company_approval"` // 总部调拨规则-经过上级门店审批 "0"-否 "1"-是
+	HeadquarterViaParentCompanyWarehouse     string `json:"headquarter_via_parent_company_warehouse"`     // 总部调拨规则-经过上级门店仓库 "0"-否 "1"-是
 }
 
 // 是否开启了分批送厨商品
@@ -53,6 +59,16 @@ func (resp *Business) IsAutoClearDesk() bool {
 func (resp *Business) GetDeliveryPriceRatio() float64 {
 	value := float64(resp.DeliveryPriceRatio)
 	return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64() // 取值范围为0.01-3
+}
+
+// 是否需要经过上级门店审批
+func (resp *Business) IsRequiredParentCompanyApproval() bool {
+	return resp.RequiredParentCompanyApproval == "1"
+}
+
+// 是否经过上级门店仓库
+func (resp *Business) IsViaParentCompanyWarehouse() bool {
+	return resp.ViaParentCompanyWarehouse == "1"
 }
 
 type ZeroingMethodItem MethodItem

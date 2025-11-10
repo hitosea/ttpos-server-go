@@ -8,6 +8,9 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // 秒级任务
@@ -26,6 +29,11 @@ func NewDelPrintTask(dbm *database.DBManager, cache cache.Cache) *delPrintTask {
 
 // Execute 执行任务
 func (t *delPrintTask) Execute() {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Logger.Error("删除打印日志定时任务,发生panic: %v", zap.Any("panic", r))
+		}
+	}()
 	// 根据 APP 表实例化数据库连接，并左关联 CompanySetting
 	prefix := config.Database.TablePrefix
 	var companies []model.Company

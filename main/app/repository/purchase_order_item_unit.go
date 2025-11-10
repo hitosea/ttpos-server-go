@@ -9,6 +9,7 @@ import (
 // IPurchaseOrderItemUnitRepo 采购订单明细单位Repository接口
 type IPurchaseOrderItemUnitRepo interface {
 	CreateBatch(items []model.PurchaseOrderItemUnit) error
+	Update(item model.PurchaseOrderItemUnit) error
 	GetByUuid(uuid uint64) (*model.PurchaseOrderItemUnit, error)
 	GetList(opts ...DBOption) ([]model.PurchaseOrderItemUnit, error)
 	WhereUuid(uuid uint64) DBOption
@@ -27,6 +28,11 @@ func NewPurchaseOrderItemUnitRepo(db *gorm.DB) IPurchaseOrderItemUnitRepo {
 // CreateBatch 批量创建采购订单明细单位
 func (r *PurchaseOrderItemUnitRepoImpl) CreateBatch(items []model.PurchaseOrderItemUnit) error {
 	return r.db.CreateInBatches(items, 100).Error
+}
+
+// Update 更新采购订单明细单位
+func (r *PurchaseOrderItemUnitRepoImpl) Update(item model.PurchaseOrderItemUnit) error {
+	return r.db.Where("uuid = ?", item.Uuid).Updates(item).Error
 }
 
 // GetByUuid 根据UUID获取采购订单明细单位

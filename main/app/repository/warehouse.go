@@ -21,6 +21,7 @@ type IWarehouseRepo interface {
 	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 	GetDefaultWarehouse() (*model.Warehouse, error)
 	GetTransitWarehouse() (*model.Warehouse, error)
+	GetNormalWarehouse() ([]model.Warehouse, error)
 	GetByCode(code string, opts ...DBOption) (*model.Warehouse, error)
 	GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error)
 	Get(opts ...DBOption) ([]model.Warehouse, error)
@@ -156,6 +157,16 @@ func (r *WarehouseRepoImpl) GetTransitWarehouse() (*model.Warehouse, error) {
 	var warehouse model.Warehouse
 	err := r.db.Model(&model.Warehouse{}).Where("type = 'transit'").First(&warehouse).Error
 	return &warehouse, err
+}
+
+// GetNormalWarehouse 获取普通仓库
+func (r *WarehouseRepoImpl) GetNormalWarehouse() ([]model.Warehouse, error) {
+	var warehouses []model.Warehouse
+	err := r.db.Model(&model.Warehouse{}).Where("type = 'normal'").
+		Preload("MultiLanguageName").
+		Scopes(NotDeleted).
+		Find(&warehouses).Error
+	return warehouses, err
 }
 
 // GetByCode 根据编码获取仓库

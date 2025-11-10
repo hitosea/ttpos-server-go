@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/constant"
+
 // ProductLabel 商品标签表 ttpos_product_label
 type ProductLabel struct {
 	BaseModel
@@ -14,4 +16,21 @@ type ProductLabel struct {
 
 	// 关联的商品列表
 	ProductPackages []ProductPackage `gorm:"foreignKey:product_label_uuid;references:uuid"`
+}
+
+// 判读是否应该显示标签
+func (model *ProductLabel) ShouldShow(source string) bool {
+	switch source {
+	case constant.SourceCashier: // 收银端
+		return model.IsShowCashier == 1
+	case constant.SourceTablet: // 平板端
+		return model.IsShowTablet == 1
+	case constant.SourceAssistant: // 助手端
+		return model.IsShowAssistant == 1
+	case constant.SourceH5: // H5
+		return model.IsShowH5 == 1
+	case constant.SourceMember: // 外送端
+		return model.IsShowDelivery == 1
+	}
+	return false
 }

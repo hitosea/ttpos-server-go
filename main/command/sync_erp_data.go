@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
@@ -72,15 +73,6 @@ var syncErpDataCmd = &cobra.Command{
 			fmt.Printf("%s 错误: 公司UUID必须是有效的数字，当前值: %s%s\n", redColor, companyIdStr, resetColor)
 			return
 		}
-
-		// 初始化目标数据库连接
-		targetSaas, err := database.NewMySQLConnection(config.Database, "saas")
-		if err != nil {
-			fmt.Printf("%s %s %s\n", redColor, err, resetColor)
-			fmt.Printf("%s 错误: 连接数据库失败, 检查是否正确配置了数据库信息，以及 -c 参数是否正确 %s\n", redColor, resetColor)
-			return
-		}
-		targetSaasDB = targetSaas
 
 		// 初始化数据库
 		companyDB, err := database.NewMySQLConnection(config.Database, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid))
@@ -147,9 +139,10 @@ var syncErpDataCmd = &cobra.Command{
 		localeSrv := service.NewLocaleSrv()
 		settingSrv := setting.NewSrv(dbm, cache)
 		translateSrv := service.NewTranslateSrv(dbm, cache)
+		messageSrv := message.NewIMessageSrv(dbm)
 		supplierSrv := service.NewSupplierSrv(dbm)
 		productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
-		materialSrv := service.NewMaterialSrv(dbm, localeSrv, settingSrv, translateSrv)
+		materialSrv := service.NewMaterialSrv(dbm, localeSrv, settingSrv, translateSrv, messageSrv)
 		warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 		syncSrv := service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv)
 

@@ -12,7 +12,6 @@ import (
 	"time"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
-	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -23,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/otlp"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/validator"
@@ -78,6 +78,11 @@ var rootCommand = &cobra.Command{
 		}
 		//初始化服务发现
 		cloud.Init()
+
+		// 初始化 OTLP 调用链跟踪
+		if err := otlp.Init(context.Background(), config.Otlp); err != nil {
+			logger.Logger.Error("Failed to initialize OpenTelemetry", zap.Error(err))
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()
@@ -117,6 +122,13 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	pprof.Register(r)
 	// 添加中间件
 	r.Use(middleware.Cors())
+
+	// 开启 OTLP 调用链跟踪
+	if config.Otlp.Enabled {
+		r.Use(otlp.OtlpMiddleware(config.Otlp.ServiceName))
+		// 添加记录特殊headers中间件
+		r.Use(otlp.RecordSpecialHeaders())
+	}
 	// 添加请求参数日志中间件
 	if config.Server.Mode == "debug" {
 		r.Use(middleware.Recovery(logger.Logger, config.Server.Mode))
@@ -139,12 +151,12 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	}
 
 	// 启动服务器的 goroutine
-	go func() {
+	utils.Go(func() {
 		logger.Logger.Info("HTTP 服务器启动", zap.String("port", config.Server.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Logger.Fatal("HTTP 服务器启动失败", zap.Error(err))
 		}
-	}()
+	})
 
 	// 等待中断信号来优雅关闭服务器
 	gracefulShutdown(srv)
@@ -189,6 +201,13 @@ func gracefulShutdown(srv *http.Server) {
 		logger.Logger.Info("Nacos 客户端已关闭")
 	}
 
+	//关闭 OTLP
+	if err := otlp.Shutdown(ctx); err != nil {
+		logger.Logger.Error("OTLP 关闭失败", zap.Error(err))
+	} else {
+		logger.Logger.Info("OTLP 已关闭")
+	}
+
 	// 关闭数据库连接
 	logger.Logger.Info("正在关闭数据库连接...")
 	database.CloseAll()
@@ -217,19 +236,21 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
 	})
 
-	// 每分钟执行翻译任务
+	// 每15分钟
+	// _, _ = c.AddFunc("0 */15 * * * *", func() {
 	_, _ = c.AddFunc("0 * * * * *", func() {
-		logger.Logger.Info("开始执行翻译任务")
-		service.NewTranslateSrv(dbm, cache).TranslateAll()
+		tasks.NewKitchenEfficiencyAnalysisTask(dbm, cache).Execute()
+	})
+
+	// 每分钟执行翻译任务
+	_, _ = c.AddFunc("15 * * * * *", func() {
+		tasks.NewTranslateWhenSyncTask(dbm, cache).Execute()
 	})
 
 	// 每分钟执行检查物品库存任务
-	// _, _ = c.AddFunc("0 * * * * *", func() {
-	// 	logger.Logger.Info("开始执行检查物品库存任务")
-	// 	settingSrv := setting.NewSrv(dbm, cache)
-	// 	translateSrv := service.NewTranslateSrv(dbm, cache)
-	// 	service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv).CheckMaterialSafetyStock(pkgCtx.NewDefaultContext(), 0)
-	// })
+	_, _ = c.AddFunc("30 * * * * *", func() {
+		tasks.NewCheckMaterialStockTask(dbm, cache).Execute()
+	})
 
 	// 启动定时器
 	c.Start()

@@ -221,7 +221,14 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		branchName  string
 		adminEmail  = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
 		companyName string
+		siteCode    string
 	)
+
+	// 从 ctx 中获取站点编码
+	siteCode = service.Rpc().GetSiteCode(ctx)
+	g.Log().Info(ctx, "获取站点编码", g.Map{
+		"site_code": siteCode,
+	})
 
 	// 根据公司缩写获取公司名称
 	companyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
@@ -275,6 +282,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 			ApiSecret:    apiSecret,
 			CompanyAbbr:  req.CompanyAbbr,
 			Branch:       branchName,
+			SiteCode:     siteCode,
 		})
 		if err != nil {
 			return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
@@ -438,9 +446,7 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 
 	// 解析响应数据获取API密钥
 	j := resp
-	if err != nil {
-		return "", "", gerror.Wrapf(err, "解析生成API密钥响应失败")
-	}
+
 	apiSecret = j.Get("data.api_secret").String()
 
 	// 获取用户信息

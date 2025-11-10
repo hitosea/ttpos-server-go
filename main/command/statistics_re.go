@@ -341,20 +341,23 @@ func statisticsReAllOrder(companies []model.Company) error {
 			for _, bill := range saleBills {
 				wg.Add(1)
 				guard <- struct{}{}
-				go func(bill *model.SaleBill) {
-					defer wg.Done()
-					defer func() { <-guard }()
-					err := service.NewStatisticsSrv().SaveSale(ctx, service.SaveSaleReq{
-						SaleBillUuid: bill.Uuid,
-						OnlyDelete:   false,
-					})
-					if err != nil {
-						fmt.Printf("%s销售订单 %d 统计失败: %v%s\n", redColor, bill.Uuid, err, resetColor)
-						pageFail++
-					} else {
-						pageSuccess++
-					}
-				}(bill)
+				utils.Go(func() {
+					func(bill *model.SaleBill) {
+						defer wg.Done()
+						defer func() { <-guard }()
+						err := service.NewStatisticsSrv().SaveSale(ctx, service.SaveSaleReq{
+							SaleBillUuid: bill.Uuid,
+							OnlyDelete:   false,
+						})
+						if err != nil {
+							fmt.Printf("%s销售订单 %d 统计失败: %v%s\n", redColor, bill.Uuid, err, resetColor)
+							pageFail++
+						} else {
+							pageSuccess++
+						}
+					}(bill)
+				})
+
 			}
 			wg.Wait()
 			totalSuccess += pageSuccess
@@ -406,20 +409,22 @@ func statisticsReAllOrder(companies []model.Company) error {
 			for _, order := range rechargeOrders {
 				wg2.Add(1)
 				guard <- struct{}{}
-				go func(order model.MemberRechargeOrder) {
-					defer wg2.Done()
-					defer func() { <-guard }()
-					err := service.NewStatisticsSrv().SaveMember(ctx, service.SaveMemberReq{
-						MemberRechargeOrderUuid: order.Uuid,
-						OnlyDelete:              false,
-					})
-					if err != nil {
-						fmt.Printf("%s充值订单 %d 统计失败: %v%s\n", redColor, order.Uuid, err, resetColor)
-						pageFail2++
-					} else {
-						pageSuccess2++
-					}
-				}(order)
+				utils.Go(func() {
+					func(order model.MemberRechargeOrder) {
+						defer wg2.Done()
+						defer func() { <-guard }()
+						err := service.NewStatisticsSrv().SaveMember(ctx, service.SaveMemberReq{
+							MemberRechargeOrderUuid: order.Uuid,
+							OnlyDelete:              false,
+						})
+						if err != nil {
+							fmt.Printf("%s充值订单 %d 统计失败: %v%s\n", redColor, order.Uuid, err, resetColor)
+							pageFail2++
+						} else {
+							pageSuccess2++
+						}
+					}(order)
+				})
 			}
 			wg2.Wait()
 			totalSuccess2 += pageSuccess2

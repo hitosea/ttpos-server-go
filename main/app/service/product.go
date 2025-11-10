@@ -69,16 +69,18 @@ type ImportErrorDetail struct {
 // pushImportProgress 推送导入进度到前端
 func (s *productSrv) pushImportProgress(companyUuid uint64, deviceSn string, data ImportProgressData) {
 	data.Time = time.Now().Unix()
-	go websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_PRODUCT, map[string]any{
-		"time":     data.Time,
-		"status":   data.Status,
-		"progress": data.Progress,
-		"total":    data.Total,
-		"current":  data.Current,
-		"success":  data.Success,
-		"failed":   data.Failed,
-		"error":    data.Error,
-		"errors":   data.Errors,
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_PRODUCT, map[string]any{
+			"time":     data.Time,
+			"status":   data.Status,
+			"progress": data.Progress,
+			"total":    data.Total,
+			"current":  data.Current,
+			"success":  data.Success,
+			"failed":   data.Failed,
+			"error":    data.Error,
+			"errors":   data.Errors,
+		})
 	})
 }
 
@@ -494,10 +496,12 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 			// 构建标签信息
 			var labelInfo product_resp.ProductLabelInfo
 			if product.ProductLabelUuid > 0 && product.ProductLabel.Uuid > 0 {
-				labelInfo = product_resp.ProductLabelInfo{
-					Uuid:  product.ProductLabel.Uuid,
-					Name:  product.ProductLabel.Name,
-					Style: product.ProductLabel.Style,
+				if product.ProductLabel.ShouldShow(ctx.GetSource()) {
+					labelInfo = product_resp.ProductLabelInfo{
+						Uuid:  product.ProductLabel.Uuid,
+						Name:  product.ProductLabel.Name,
+						Style: product.ProductLabel.Style,
+					}
 				}
 			}
 
@@ -866,13 +870,6 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 			return errors.New("名称长度不能超过50")
 		}
 	}
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceCategory,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 	if addReq.Status != 0 && addReq.Status != 1 {
 		return errors.New("分类状态不正确")
 	}
@@ -1018,14 +1015,6 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 		if !checkService.CheckNameLength(ctx, name.Text, 50) {
 			return errors.New("名称长度不能超过50")
 		}
-	}
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceCategory,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productCategory.MultiLanguageNameUuid).Updates(map[string]any{
@@ -1423,7 +1412,7 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 		}
 		// 重新排序
 		productRepo := repository.NewProductRepo(tx)
-		productCategories := make([]model.ProductCategory, 0)
+		var productCategories []model.ProductCategory
 		if productCategory.IsSpecial == 1 {
 			productCategories, _ = productRepo.GetProductCategoryList(
 				commonRepo.WhereBySoftDelete(),
@@ -1436,8 +1425,8 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 			)
 		}
 		sorts := make(map[uint64]int)
-		for i, productCategory := range productCategories {
-			sorts[productCategory.Uuid] = i + 1
+		for i, category := range productCategories {
+			sorts[category.Uuid] = i + 1
 		}
 		err = productRepo.BatchUpdateSort(&model.ProductCategory{}, sorts)
 		if err != nil {
@@ -1510,7 +1499,10 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 					TrName:   category.MultiLanguageName.TrName,
 					SvName:   category.MultiLanguageName.SvName,
 				}
-				multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+				_, err = multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "创建多语言名称失败")
+				}
 				maxSort, err := productRepo.GetProductCategoryMaxSort(
 					commonRepo.WhereBySoftDelete(),
 					productRepo.WhereParentUuid(category.ParentUuid),
@@ -1557,7 +1549,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						DeleteTime: category.DeleteTime,
 					},
 					Name:                  category.Name,
-					MultiLanguageNameUuid: subShopCategory.MultiLanguageNameUuid,
+					MultiLanguageNameUuid: category.MultiLanguageNameUuid,
 					Status:                category.Status,
 					ParentUuid:            category.ParentUuid,
 					IsSpecial:             category.IsSpecial,
@@ -1566,6 +1558,46 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 				})
 				if err != nil {
 					return errors.WithMessage(err, "更新分类失败")
+				}
+				multiLanguageName, err := multiLanguageNameRepo.GetMultiLanguageNameByUuid(category.MultiLanguageNameUuid)
+				if err != nil || multiLanguageName.Uuid == 0 {
+					newMultiLanguageName := model.MultiLanguageName{
+						BaseModel: model.BaseModel{
+							Uuid:       category.MultiLanguageNameUuid,
+							CreateTime: category.CreateTime,
+							UpdateTime: category.UpdateTime,
+							DeleteTime: category.DeleteTime,
+						},
+						EnName:   category.MultiLanguageName.EnName,
+						ZhName:   category.MultiLanguageName.ZhName,
+						ZhTwName: category.MultiLanguageName.ZhTwName,
+						ThName:   category.MultiLanguageName.ThName,
+						MyName:   category.MultiLanguageName.MyName,
+						JaName:   category.MultiLanguageName.JaName,
+						KoName:   category.MultiLanguageName.KoName,
+						TrName:   category.MultiLanguageName.TrName,
+						SvName:   category.MultiLanguageName.SvName,
+					}
+					_, err = multiLanguageNameRepo.CreateMultiLanguageName(newMultiLanguageName)
+					if err != nil {
+						return errors.WithMessage(err, "创建多语言名称失败")
+					}
+
+				} else {
+					err = multiLanguageNameRepo.UpdateMultiLanguageName(category.MultiLanguageNameUuid, model.MultiLanguageName{
+						EnName:   category.MultiLanguageName.EnName,
+						ZhName:   category.MultiLanguageName.ZhName,
+						ZhTwName: category.MultiLanguageName.ZhTwName,
+						ThName:   category.MultiLanguageName.ThName,
+						MyName:   category.MultiLanguageName.MyName,
+						JaName:   category.MultiLanguageName.JaName,
+						KoName:   category.MultiLanguageName.KoName,
+						TrName:   category.MultiLanguageName.TrName,
+						SvName:   category.MultiLanguageName.SvName,
+					})
+					if err != nil {
+						return errors.WithMessage(err, "更新多语言名称失败")
+					}
 				}
 				if ctx.GetCompany().IsOpenErp() {
 					if changeCode {
@@ -1977,15 +2009,6 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 		return errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceUnit,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 	// 获取当前最大的排序值
 	var maxSort int
 	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
@@ -2184,17 +2207,6 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 
 	if !isEditable(ctx, productUnit.HeadquarterUuid) {
 		return errors.New("单位不可编辑")
-	}
-	// 检查名称是否存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editUnitReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editUnitReq.Uuid,
-		Source: constant.CheckNameSourceUnit,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -2480,16 +2492,6 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		return errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceSauce,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
-
 	if len(addReq.ProductPackageUuids) > 0 {
 		productRepo := repository.NewProductRepo(db)
 		// 检查商品是否存在
@@ -2592,18 +2594,6 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
-
-	// 判断名称是否存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceSauce,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 
 	// 获取商品加料
 	productSauce, err := productRepo.GetProductSauce(
@@ -2982,16 +2972,6 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			return errors.New("属性值名称不能为空")
 		}
 	}
-	// 检查名称是否存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceAttributeGroup,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("属性组名称已存在")
-	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -3176,16 +3156,6 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceFlavor,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
-
 	maxSort, err := productRepo.GetProductFlavorMaxSort(
 		commonRepo.WhereBySoftDelete(),
 	)
@@ -3314,6 +3284,9 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 				})
 
 				setting, err := s.settingSrv.GetCompanySetting(ctx)
+				if err != nil {
+					return errors.WithMessage(err, "获取公司设置失败")
+				}
 				// 开启库存管理
 				if setting.SaleStock == 1 {
 					// 添加入库
@@ -3447,18 +3420,6 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		}
 	}
 
-	// 检查名称是否已存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceAttributeGroup,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("属性组名称已存在")
-	}
-
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -3520,7 +3481,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	}
 
 	// 原商品包属性组、商品包属性
-	productPackageAttributeGroups, err := productRepo.GetProductPackageAttributeGroups(
+	productPackageAttributeGroups, _ := productRepo.GetProductPackageAttributeGroups(
 		productRepo.WhereProductAttributeGroupUuid(attributeGroup.Uuid),
 		productRepo.WithProductPackageAttributes(),
 	)
@@ -3808,17 +3769,6 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 		return errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceFlavor,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
-
 	lang := ctx.GetLanguage()
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
@@ -4734,7 +4684,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.IsShowH5 = strings.Contains(item.Shows, "5")
 		products.IsShowDelivery = strings.Contains(item.Shows, "6")
 		// 验证是否已经存在
-		products.LocaleNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
+		products.LocaleNameIsExist = dto.LocaleResponse{}
 		// 验证条形码存在性检查
 		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0)
 		// 添加到列表
@@ -4810,12 +4760,6 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 
 	// 预验证阶段 - 检查商品名称和条形码是否已存在
 	for _, item := range reqs.List {
-		// 验证是否已经存在
-		productNameIsExist := repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
-		if !productNameIsExist.IsNull() {
-			s.systemLock.UnlockUuidString(lockKey)
-			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称已存在"))
-		}
 		// 验证条形码存在性检查
 		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
 			s.systemLock.UnlockUuidString(lockKey)
@@ -4873,7 +4817,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 	}
 
 	// 异步导入
-	go func() {
+	utils.Go(func() {
 		defer s.systemLock.UnlockUuidString(lockKey)
 
 		totalCount := len(lists)
@@ -4941,7 +4885,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		time.Sleep(500 * time.Millisecond)
 		progressData.Time = time.Now().Unix()
 		s.pushImportProgress(companyUuid, deviceSn, progressData)
-	}()
+	})
 
 	return nil
 }
@@ -5163,7 +5107,8 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			Flavors: product_resp.ProductShopListItemFlavorListResp{
 				List: flavors,
 			},
-			NumType: productPackage.NumType,
+			NumType:    productPackage.NumType,
+			IsEditable: isEditable(ctx, productPackage.HeadquarterUuid),
 		}
 
 		productList = append(productList, productItem)
@@ -6225,6 +6170,9 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 	warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 	warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
 	setting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取公司设置失败")
+	}
 
 	// flavorListResult.Flavors 根据IsDelete排序，如果IsDelete=true，则排在前面，优先删除，然后再添加
 	sort.Slice(params.FlavorListResult.Flavors, func(i, j int) bool {
@@ -7006,7 +6954,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	var headquarter model.CompanySetting
 	var headquarterUnits []model.ProductUnit
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -7164,7 +7112,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 		return nil
 	}
 	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
@@ -7253,7 +7201,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 		return nil
 	}
 	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
@@ -7262,9 +7210,12 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
 
 	var existsMultiLanguageUuids []uint64
-	s.dbm.GetDB(companySetting.CompanyUuid).Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+			// 删除属性值多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttribute{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
+			// 删除属性组多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
 			// 删除属性值
 			tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
 			// 删除属性组

@@ -648,6 +648,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品数量',
     `init_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '初始送厨数量，退菜后，init_num肯定大于num',
     `flavor_name` TEXT COMMENT '规格名称,不随后台改变',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM ID',
     `product_attribute_names` text COMMENT '商品属性名称,多个属性名用逗号分隔,不随后台改变',
     `product_sauces_names` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品加料名称,多个加料名用逗号分隔,不随后台改变',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待制作 1-制作中 2-已完成 3-已退菜',
@@ -665,6 +666,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `is_batch` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是分批商品, 0-否 1-是',
     `batch_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '分批时间(时间戳)，表示该商品实际送厨到厨房的时间',
     `batch_tag_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '分批类型UUID',
+    -- 效率分析相关
+    `make_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '制作时长(秒)',
+    `send_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '传菜时长(秒)',
+    `all_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '总时长(秒)',
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -939,6 +944,28 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_category` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料分类表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_material_stock_alert_log` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `message_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '消息UUID，每次发送时随机生成',
+    `company_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '公司UUID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料UUID',
+    `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库UUID，0表示全部维度',
+    `alert_type` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '预警类型：1-公司维度 2-仓库维度',
+    `current_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0 COMMENT '当前库存数量',
+    `safety_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0 COMMENT '安全库存数量',
+    `last_alert_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '上次预警时间（时间戳）',
+    `alert_count` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '预警次数',
+    `send_status` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '发送状态：0-待发送 1-发送成功 2-发送失败',
+    `recipient` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '收件人邮箱（多个用逗号分隔）',
+    `error_message` text COMMENT '错误信息',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_company_material_warehouse` (`company_uuid`, `material_uuid`, `warehouse_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '物料库存预警邮件记录表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料单位ID',
@@ -1019,6 +1046,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请物品单位ID',
     `item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'ItemID',
+    `purchase_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请UUID',
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '数量',
     `arrival_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '到货数量',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
@@ -1031,7 +1059,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item_unit` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`),
-    KEY `idx_item_uuid` (`item_uuid`)
+    KEY `idx_item_uuid` (`item_uuid`),
+    KEY `idx_purchase_order_uuid` (`purchase_order_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请物品单位表';
 
 -- 收货单
@@ -1085,13 +1114,28 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单物品表';
 
+-- 收货单附件表
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_file` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '附件关联ID',
+    `receipt_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单UUID',
+    `file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件UUID',
+    `sort_order` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_receipt_order_uuid` (`receipt_order_uuid`),
+    KEY `idx_file_uuid` (`file_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单附件表';
+
 -- 收货单物品单位表
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单物品单位ID',
     `item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'ItemID',
+    `purchase_receipt_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单UUID',
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '数量',
-    `arrival_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '到货数量',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `unit_name` TEXT COMMENT '单位名称',
     `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1.0000 COMMENT '基准单位转换率。申请数量*转换率=基准单位申请数量',
@@ -1102,7 +1146,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item_unit` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`),
-    KEY `idx_item_uuid` (`item_uuid`)
+    KEY `idx_item_uuid` (`item_uuid`),
+    KEY `idx_purchase_receipt_order_uuid` (`purchase_receipt_order_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单物品单位表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card` (
@@ -1756,6 +1801,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
     `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
+    `represents_company` varchar(255) NOT NULL DEFAULT '' COMMENT '代表公司',
+    `is_internal_supplier` int NOT NULL DEFAULT 0 COMMENT '是否内部供应商：0-否；1-是',
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1890,7 +1937,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     UNIQUE KEY `unique_uuid` (`uuid`),
     INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
     INDEX `idx_material_uuid` (`material_uuid`),
-    INDEX `idx_product_bom_uuid` (`product_bom_uuid`)
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
@@ -2264,6 +2312,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `erpnext_branch_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext分支名称',
     `erpnext_pos_profile_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext Pos Profile名称',
     `erpnext_admin_email` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 管理员邮箱',
+    `parent_company_uuids` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '父级公司UUID路径，从根节点到父节点，逗号分隔',
+    `has_children` INT(10) NOT NULL DEFAULT 0 COMMENT '是否含有子节点: 0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -3222,5 +3272,206 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_supplier` (
   KEY `idx_delete_time` (`delete_time`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='原料供应商关联表';
+
+-- 调拨单主表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
+  `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号TR+12位数字',
+  `erp_order_no` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP调拨单号（销售单号）',
+  `transfer_type` int(4) NOT NULL DEFAULT 1 COMMENT '调拨类型：1-调入 2-调出',
+  `sender_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '发货门店UUID',
+  `sender_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '发货门店名称',
+  `receiver_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '收货门店UUID',
+  `receiver_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '收货门店名称',
+  `out_warehouse_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '出库仓库ERP编码',
+  `out_warehouse_name` text COMMENT '出库仓库名称',
+  `in_warehouse_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '入库仓库ERP编码',
+  `in_warehouse_name` text COMMENT '入库仓库名称',
+  `order_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '单据日期（提交时间戳）',
+  `submit_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交时间',
+  `status` int(4) NOT NULL DEFAULT 0 COMMENT '状态：0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成',
+  `creator_uuid` bigint NOT NULL DEFAULT 0 COMMENT '创建人UUID',
+  `creator_name` varchar(100) NOT NULL DEFAULT '' COMMENT '创建人姓名',
+  `next_approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '下一个审批门店UUID',
+  `next_approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '下一个审批门店名称',
+  `remark` text COMMENT '备注',
+  `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
+  `erp_resp` text COMMENT 'ERP响应数据',
+  `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',
+  `receipt_order_erp_resp` text COMMENT '收货单ERP响应数据',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_company_uuid` (`company_uuid`),
+  KEY `idx_headquarter_uuid` (`headquarter_uuid`),
+  KEY `idx_order_no` (`order_no`),
+  KEY `idx_sender_company_uuid` (`sender_company_uuid`),
+  KEY `idx_receiver_company_uuid` (`receiver_company_uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_delete_time` (`delete_time`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单主表';
+
+-- 调拨单明细表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `transfer_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+  `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
+  `material_uuid` bigint NOT NULL DEFAULT 0 COMMENT '物品UUID',
+  `material_code` varchar(255) NOT NULL DEFAULT '' COMMENT '物品编码',
+  `material_name` text COMMENT '物品名称JSON',
+  `material_internal_code` varchar(255) NOT NULL DEFAULT '' COMMENT '物品内部编码',
+  `valuation` decimal(20,8) NOT NULL DEFAULT 0.00000000 COMMENT '估值单价（基准单位）',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  KEY `idx_company_uuid` (`company_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单明细表';
+
+-- 调拨单明细单位表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_item_unit` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `item_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单明细UUID',
+  `transfer_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+  `unit_uuid` bigint NOT NULL DEFAULT 0 COMMENT '单位UUID',
+  `unit_name` text COMMENT '单位名称JSON',
+  `unit_conversion_rate` decimal(12,4) NOT NULL DEFAULT 1.0000 COMMENT '单位转换率',
+  `num` decimal(22,4) NOT NULL DEFAULT 0.0000 COMMENT '调拨数量',
+  `erpnext_uom` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP单位',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_item_uuid` (`item_uuid`),
+  KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单明细单位表';
+
+-- 调拨单审批流程表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_approval` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `transfer_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+  `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
+  `approval_type` varchar(50) NOT NULL DEFAULT '' COMMENT '审批类型：initiator-发起人公司 sender-发货门店 sender_parent-发货门店上级 receiver_parent-收货门店上级 receiver-收货门店',
+  `approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '审批门店UUID',
+  `approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '审批门店名称',
+  `sequence` int(10) NOT NULL DEFAULT 0 COMMENT '审批顺序，从1开始',
+  `status` int(4) NOT NULL DEFAULT 0 COMMENT '审批状态：0-待审批 1-已通过 2-已驳回 3-已跳过',
+  `approver_uuid` bigint NOT NULL DEFAULT 0 COMMENT '审批人UUID',
+  `approver_name` varchar(100) NOT NULL DEFAULT '' COMMENT '审批人姓名',
+  `approve_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '审批时间',
+  `reject_reason` text COMMENT '驳回原因',
+  `is_required` int(4) NOT NULL DEFAULT 1 COMMENT '是否必须审批：0-否 1-是',
+  `remark` text COMMENT '备注',
+  `is_via_company_warehouse` int(4) NOT NULL DEFAULT 0 COMMENT '是否通过公司仓库：0-否 1-是',
+  `erpnext_company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP公司简称',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+  KEY `idx_approval_company_uuid` (`approval_company_uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_sequence` (`sequence`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单审批流程表';
+
+-- 调拨单操作日志表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_log` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `transfer_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+  `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `action` varchar(50) NOT NULL DEFAULT '' COMMENT '操作动作：create/submit/approve/reject/receive',
+  `action_desc` varchar(255) NOT NULL DEFAULT '' COMMENT '操作描述',
+  `old_status` int(4) NOT NULL DEFAULT 0 COMMENT '操作前状态',
+  `new_status` int(4) NOT NULL DEFAULT 0 COMMENT '操作后状态',
+  `operator_uuid` bigint NOT NULL DEFAULT 0 COMMENT '操作人UUID',
+  `operator_name` varchar(100) NOT NULL DEFAULT '' COMMENT '操作人姓名',
+  `operator_role` varchar(50) NOT NULL DEFAULT '' COMMENT '操作人角色：sender/sender_parent/receiver_parent/receiver',
+  `content` text COMMENT '操作内容详情JSON',
+  `remark` text COMMENT '备注',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+  KEY `idx_operator_uuid` (`operator_uuid`),
+  KEY `idx_action` (`action`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单操作日志表';
+
+-- 导出记录表
+CREATE TABLE IF NOT EXISTS `ttpos_export_record` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '导出记录UUID',
+  `export_type` int NOT NULL DEFAULT 0 COMMENT '导出类型: 1-时段营业统计, 2-综合运营统计, 3-营业应收统计, 4-菜品出品明细, 5-菜品出品详情',
+  `export_name` varchar(200) NOT NULL DEFAULT '' COMMENT '导出文件名称',
+  `file_uuid` bigint NOT NULL DEFAULT 0 COMMENT '文件UUID，关联ttpos_file表',
+  `status` int NOT NULL DEFAULT 0 COMMENT '状态: 0-导出中, 1-导出成功, 2-导出失败',
+  `error_msg` text COMMENT '错误信息',
+  `export_params` text COMMENT '导出参数JSON',
+  `staff_uuid` bigint NOT NULL DEFAULT 0 COMMENT '操作员工UUID',
+  `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
+  KEY `idx_export_type` (`export_type`),
+  KEY `idx_status` (`status`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='导出记录表';
+
+-- 后厨效率分析表
+CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `product_package_uuid` bigint NOT NULL DEFAULT 0 COMMENT '商品包UUID',
+    `min` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最短出品时长',
+    `max` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最长出品时长',
+    `avg` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '平均出品时长',
+    `total` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '总出品时长',
+    `count` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '出品次数',
+    `date` int(10) NOT NULL DEFAULT 0 COMMENT '统计日期,某天零点的时间戳.一个商品一天只有唯一的一条记录',
+    `date_string` varchar(255) NOT NULL DEFAULT '' COMMENT '统计日期,某天零点的时间戳.一个商品一天只有唯一的一条记录',
+    `timezone` varchar(255) NOT NULL DEFAULT '' COMMENT '时区',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    UNIQUE KEY `unique_product_package_date` (`product_package_uuid`, `date`),
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后厨效率分析表';
+
+-- 任务中心表
+CREATE TABLE IF NOT EXISTS `ttpos_task` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+    `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+    `type` varchar(50) NOT NULL DEFAULT '' COMMENT '任务类型',
+    `status` int(4) NOT NULL DEFAULT 0 COMMENT '任务状态',
+    `params` text COMMENT '任务参数',
+    `result` text COMMENT '任务结果',
+    `error` text COMMENT '任务错误',
+    `log` text COMMENT '任务日志',
+    `priority` int(10) NOT NULL DEFAULT 0 COMMENT '优先级,数字越大优先级越高',
+    `is_read` int(10) NOT NULL DEFAULT 0 COMMENT '是否已读,0:未读,1:已读',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务中心表';
 
 SET FOREIGN_KEY_CHECKS = 1;
