@@ -412,8 +412,8 @@ func (h *statisticsHandler) CountBusinessTimePeriod(c *gin.Context) {
 	helper.Success(c, businessTimePeriodData)
 }
 
-// CountBusinessComprehensive 综合运营统计
-// @Summary 综合运营统计
+// CountBusinessComprehensive 统计综合运营数据
+// @Summary 统计综合运营数据
 // @Description 移动端-报表-营业报表-综合运营统计
 // @Tags 商家端.报表
 // @Accept json
@@ -433,9 +433,9 @@ func (h *statisticsHandler) CountBusinessSummary(c *gin.Context) {
 	helper.Success(c, businessSummary)
 }
 
-// CountBusinessPaymentMethod 统计营业收款统计
-// @Summary 统计营业收款统计
-// @Description 统计营业收款统计
+// CountBusinessPaymentMethod 统计营业收款数据
+// @Summary 统计营业收款数据
+// @Description 统计营业收款数据
 // @Tags 商家端.报表
 // @Accept json
 // @Produce json

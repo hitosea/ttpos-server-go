@@ -30503,7 +30503,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 统计营业收款统计
+      description: 统计营业收款数据
       parameters:
       - description: 统计参数
         in: body
@@ -30525,7 +30525,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计营业收款统计
+      summary: 统计营业收款数据
       tags:
       - 商家端.报表
   /shop/statistics/business/payment_method/export:
@@ -30578,7 +30578,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 综合运营统计
+      summary: 统计综合运营数据
       tags:
       - 商家端.报表
   /shop/statistics/business/summary/export:

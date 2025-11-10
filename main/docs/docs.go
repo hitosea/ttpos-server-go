@@ -25860,7 +25860,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "统计营业收款统计",
+                "description": "统计营业收款数据",
                 "consumes": [
                     "application/json"
                 ],
@@ -25870,7 +25870,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.报表"
                 ],
-                "summary": "统计营业收款统计",
+                "summary": "统计营业收款数据",
                 "parameters": [
                     {
                         "description": "统计参数",
@@ -25960,7 +25960,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.报表"
                 ],
-                "summary": "综合运营统计",
+                "summary": "统计综合运营数据",
                 "parameters": [
                     {
                         "description": "统计参数",
