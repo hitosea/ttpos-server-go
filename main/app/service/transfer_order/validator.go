@@ -172,7 +172,7 @@ func (v *transferOrderValidator) validateOrderItemStockNotEnough(
 			}
 		}
 		if availableNum.LessThan(decimal.NewFromFloat(item.GetUnitsTotalConversionRateNum())) {
-			notEnoughItemNames = append(notEnoughItemNames, item.MaterialName)
+			notEnoughItemNames = append(notEnoughItemNames, language.JsonToLocaleResponse(item.MaterialName).GetLocale(ctx.GetLanguage()))
 		}
 	}
 	if len(notEnoughItemNames) > 0 {

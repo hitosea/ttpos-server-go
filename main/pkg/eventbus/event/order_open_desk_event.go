@@ -9,15 +9,14 @@ import (
 )
 
 type BasePayload struct {
-	Ctx                 context.Context `json:"-"`
-	CompanyUuid         uint64          `json:"-"`
-	ProductionOrderUuid uint64          `json:"-"`
-	Source              string          `json:"-"`
-	SaleBillUuid        uint64          `json:"-"`
-	SaleOrderUuid       uint64          `json:"-"`
-	H5OrderUuid         uint64          `json:"-"`
-	OperatorUuid        int64           `json:"-"` // -1 是系统平台； -2 是用户； 正数 是员工
-	Staff               model.Staff     `json:"-"`
+	Ctx           context.Context `json:"-"`
+	CompanyUuid   uint64          `json:"-"`
+	Source        string          `json:"-"`
+	SaleBillUuid  uint64          `json:"-"`
+	SaleOrderUuid uint64          `json:"-"`
+	H5OrderUuid   uint64          `json:"-"`
+	OperatorUuid  int64           `json:"-"` // -1 是系统平台； -2 是用户； 正数 是员工
+	Staff         model.Staff     `json:"-"`
 	// 会员端订单时，MemberSaleOrderUuid 是外送订单Uuid
 	MemberSaleOrderUuid uint64 `json:"-"`
 	MemberUuid          uint64 `json:"-"`
