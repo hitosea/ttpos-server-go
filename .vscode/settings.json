@@ -9,9 +9,6 @@
 
     // ===== Todo Tree 插件配置 =====
     "todo-tree.general.statusBar": "total",
-    "todo-tree.general.automaticGitRefreshInterval": 5,
-    "todo-tree.general.periodicRefreshInterval": 1,
-    "todo-tree.general.showActivityBarBadge": true,
     "todo-tree.general.tags": ["BUG", "NOTE", "FIXME", "TODO", "HACK"],
     "todo-tree.highlights.useColourScheme": true,
     "todo-tree.tree.expanded": true,
@@ -50,4 +47,88 @@
 
     // ===== 保存时自动运行 =====
     "go.lintOnSave": "workspace",
+
+    // ===== PHP语言配置 =====
+    "php.executablePath": "/usr/bin/php",
+    "php.validate.executablePath": "/usr/bin/php",
+    "php.validate.enable": true,
+    "php.validate.run": "onType",
+
+    // ===== 远程管理端口自动转发 =====
+    "remote.autoForwardPorts": true,
+    "remote.autoForwardPortsSource": "process",
+    "remote.forwardOnOpen": true,
+    "remote.restoreForwardedPorts": true,  
+    "remote.localPortHost": "allInterfaces", 
+    "remote.portsAttributes": {
+        "8080": {
+            "label": "Go API服务(dev)", 
+            "onAutoForward": "silent",
+            "protocol": "http"
+        },
+        "8888": {
+            "label": "TTPOS主服务", 
+            "onAutoForward": "silent",
+            "protocol": "http"
+        },
+        "8082": {
+            "label": "RocketMQ Dashboard", 
+            "onAutoForward": "silent",
+            "protocol": "http"
+        },
+        "8848": {
+            "label": "Nacos", 
+            "onAutoForward": "silent",
+            "protocol": "http"
+        },
+        "3306": {
+            "label": "MySQL服务", 
+            "onAutoForward": "silent"
+        },
+        "13306": {
+            "label": "MySQL服务", 
+            "onAutoForward": "silent"
+        },
+        "6379": {
+            "label": "Redis服务", 
+            "onAutoForward": "silent"
+        },
+        "8091": {
+            "label": "HTTP检测服务", 
+            "onAutoForward": "silent"
+        },
+        //忽略端口范围配置
+        "2112": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "2113": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "6060": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "8443": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "9848": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "9000-11010": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "13337-18080": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "20000-65378": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        }
+    }
   }

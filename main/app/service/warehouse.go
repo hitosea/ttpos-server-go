@@ -494,11 +494,13 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 
 	// 类型
 	typeStrMap := map[int]string{
-		constant.WarehouseInOutLogScenePurchase: "purchase",
-		constant.WarehouseInOutLogSceneSale:     "sale",
-		constant.WarehouseInOutLogSceneDelivery: "delivery",
-		constant.WarehouseInOutLogSceneProfitIn: "profit_in",
-		constant.WarehouseInOutLogSceneLossOut:  "loss_out",
+		constant.WarehouseInOutLogScenePurchase:    "purchase",
+		constant.WarehouseInOutLogSceneSale:        "sale",
+		constant.WarehouseInOutLogSceneDelivery:    "delivery",
+		constant.WarehouseInOutLogSceneProfitIn:    "profit_in",
+		constant.WarehouseInOutLogSceneLossOut:     "loss_out",
+		constant.WarehouseInOutLogSceneTransferIn:  "transfer_in",
+		constant.WarehouseInOutLogSceneTransferOut: "transfer_out",
 	}
 
 	// 格式化日期
@@ -1078,6 +1080,9 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 	}
 	otherOrgs := make([]resp.OtherOrgResp, 0, len(suppliers))
 	for _, supplier := range suppliers {
+		if supplier.IsInternalSupplier == 1 {
+			continue
+		}
 		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
 			Name:          supplier.Name,
 			Code:          fmt.Sprintf("%s:%s", OtherOrgCodeSupplierErpCode, supplier.ErpCode), // 供应商erp编码前缀

@@ -48,15 +48,14 @@ func (r *TransferOrderCreateReq) Validate() error {
 			return errors.New("入库仓库不能为空")
 		}
 	}
-	if len(r.Items) == 0 {
-		return errors.New("调拨明细不能为空")
-	}
-	for i, item := range r.Items {
-		if item.MaterialUuid == 0 {
-			return errors.New(fmt.Sprintf("第%d项物品不能为空", i+1))
-		}
-		if len(item.Units) == 0 {
-			return errors.New(fmt.Sprintf("第%d项物品单位不能为空", i+1))
+	if len(r.Items) > 0 {
+		for i, item := range r.Items {
+			if item.MaterialUuid == 0 {
+				return errors.New(fmt.Sprintf("第%d项物品不能为空", i+1))
+			}
+			if len(item.Units) == 0 {
+				return errors.New(fmt.Sprintf("第%d项物品单位不能为空", i+1))
+			}
 		}
 	}
 	return nil
@@ -93,16 +92,15 @@ func (r *TransferOrderUpdateReq) Validate() error {
 	if r.SenderCompanyUuid != 0 && r.ReceiverCompanyUuid != 0 && r.SenderCompanyUuid == r.ReceiverCompanyUuid {
 		return errors.New("发货门店和收货门店不能相同")
 	}
-	if len(r.Items) == 0 {
-		return errors.New("调拨明细不能为空")
-	}
 	if len(r.Items) > 0 {
-		for i, item := range r.Items {
-			if item.MaterialUuid == 0 {
-				return errors.New(fmt.Sprintf("第%d项物品不能为空", i+1))
-			}
-			if len(item.Units) == 0 {
-				return errors.New(fmt.Sprintf("第%d项物品单位不能为空", i+1))
+		if len(r.Items) > 0 {
+			for i, item := range r.Items {
+				if item.MaterialUuid == 0 {
+					return errors.New(fmt.Sprintf("第%d项物品不能为空", i+1))
+				}
+				if len(item.Units) == 0 {
+					return errors.New(fmt.Sprintf("第%d项物品单位不能为空", i+1))
+				}
 			}
 		}
 	}
@@ -116,7 +114,8 @@ type TransferOrderDetailReq struct {
 
 // TransferOrderSubmitReq 提交调拨单请求
 type TransferOrderSubmitReq struct {
-	Uuid uint64 `json:"uuid"` // 调拨单UUID
+	Uuid      uint64 `json:"uuid"`       // 调拨单UUID
+	IsConfirm bool   `json:"is_confirm"` // 是否确认提交（移除禁用物品）
 }
 
 func (r *TransferOrderSubmitReq) Validate() error {
@@ -132,6 +131,7 @@ type TransferOrderApproveReq struct {
 	Remark              string `json:"remark" binding:"omitempty,max=500"` // 审批备注
 	OutWarehouseErpCode string `json:"out_warehouse_erp_code"`             // 出库仓库ERP编码
 	InWarehouseErpCode  string `json:"in_warehouse_erp_code"`              // 入库仓库ERP编码
+	IsConfirm           bool   `json:"is_confirm"`                         // 是否确认审核
 }
 
 func (r *TransferOrderApproveReq) Validate() error {
@@ -145,6 +145,7 @@ func (r *TransferOrderApproveReq) Validate() error {
 type TransferOrderRejectReq struct {
 	Uuid         uint64 `json:"uuid" binding:"required,min=1"`                  // 调拨单UUID
 	RejectReason string `json:"reject_reason" binding:"required,min=1,max=500"` // 驳回原因
+	IsConfirm    bool   `json:"is_confirm"`                                     // 是否确认驳回
 }
 
 func (r *TransferOrderRejectReq) Validate() error {

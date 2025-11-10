@@ -82,6 +82,7 @@ func (s *transferOrderSrv) GetTransferOrderList(
 ) (resp.TransferOrderListResp, error) {
 	// 获取总部数据库
 	db := s.dbm.GetDB(constant.DefaultDB)
+	companyUuid := ctx.GetCompanyUuid()
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
 
 	// 查询数据
@@ -109,6 +110,20 @@ func (s *transferOrderSrv) GetTransferOrderList(
 		if err := copier.Copy(toInfo, &to); err != nil {
 			continue
 		}
+		// 是否可审批
+		toInfo.IsCanApprove = func() bool {
+			if to.Status == constant.TransferOrderStatusPending {
+				return to.NextApprovalCompanyUuid == companyUuid
+			}
+			return false
+		}()
+		// 是否可收货
+		toInfo.IsCanReceive = func() bool {
+			if to.Status == constant.TransferOrderStatusReceiving && to.ReceiverCompanyUuid == companyUuid {
+				return true
+			}
+			return false
+		}()
 		// 转换仓库名称
 		toInfo.OutWarehouseName = *language.JsonToLocaleResponse(to.OutWarehouseName)
 		toInfo.InWarehouseName = *language.JsonToLocaleResponse(to.InWarehouseName)
@@ -163,6 +178,14 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	detailResp.OutWarehouseName = *language.JsonToLocaleResponse(transferOrder.OutWarehouseName)
 	detailResp.InWarehouseName = *language.JsonToLocaleResponse(transferOrder.InWarehouseName)
 
+	// 是否可收货
+	detailResp.IsCanReceive = func() bool {
+		if transferOrder.Status == constant.TransferOrderStatusReceiving && transferOrder.ReceiverCompanyUuid == ctx.GetCompanyUuid() {
+			return true
+		}
+		return false
+	}()
+
 	// 是否可审批
 	detailResp.IsCanApprove = func() bool {
 		if transferOrder.Status == constant.TransferOrderStatusPending {
@@ -180,7 +203,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	}()
 
 	// 获取当前审批节点
-	if transferOrder.Status == constant.TransferOrderStatusPending && (transferOrder.OutWarehouseErpCode == "" || transferOrder.InWarehouseErpCode == "") {
+	if detailResp.IsCanApprove && transferOrder.Status == constant.TransferOrderStatusPending && (transferOrder.OutWarehouseErpCode == "" || transferOrder.InWarehouseErpCode == "") {
 		currentApproval, err := repository.NewTransferOrderApprovalRepo(db).GetCurrentApproval(req.Uuid, transferOrder.NextApprovalCompanyUuid)
 		if err != nil {
 			if err != gorm.ErrRecordNotFound {
@@ -206,8 +229,27 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	}
 
 	// 待收货时 - 入库仓库永远都可以选择
-	if transferOrder.Status == constant.TransferOrderStatusReceiving {
+	if detailResp.IsCanReceive {
 		detailResp.IsNeedSelectInWarehouse = true
+	}
+
+	// 待提交时 - 获取其他店库存
+	var warehouseItems []model.WarehouseItem
+	if transferOrder.Status == constant.TransferOrderStatusDraft {
+		otherDb := s.dbm.GetDB(transferOrder.SenderCompanyUuid)
+		if otherDb == nil {
+			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
+		}
+		// 当前库存
+		erpCodes := []string{}
+		for _, item := range transferOrder.Items {
+			erpCodes = append(erpCodes, item.MaterialCode)
+		}
+		warehouseItemList, err := repository.NewWarehouseItemRepo(otherDb).GetNormalByMaterialCodes(erpCodes, transferOrder.OutWarehouseErpCode)
+		if err != nil {
+			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取物品库存失败"), err.Error())
+		}
+		warehouseItems = warehouseItemList
 	}
 
 	// 转换明细数据
@@ -216,6 +258,15 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		itemInfo := resp.TransferOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
 		itemInfo.MaterialName = *language.JsonToLocaleResponse(item.MaterialName)
+
+		// AvailableNum
+		availableNum := decimal.NewFromFloat(0)
+		for _, warehouseItem := range warehouseItems {
+			if item.MaterialCode == warehouseItem.MaterialCode {
+				availableNum = availableNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
+			}
+		}
+		itemInfo.AvailableNum = availableNum.InexactFloat64()
 
 		// 转换单位列表
 		itemInfo.Units = make([]resp.TransferOrderItemUnitInfo, 0, len(item.Units))
@@ -356,10 +407,10 @@ func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transfe
 	transferOrderItemRepoTx := repository.NewTransferOrderItemRepo(tx)
 	transferOrderItemUnitRepoTx := repository.NewTransferOrderItemUnitRepo(tx)
 	// 先删除旧明细
-	if err := transferOrderItemRepoTx.DeleteByTransferOrderUuid(transferOrderUuid); err != nil {
+	if err := transferOrderItemRepoTx.DeleteByTransferOrderUuidPhysical(transferOrderUuid); err != nil {
 		return errors.WithMessage(errors.New("删除旧明细失败"), err.Error())
 	}
-	if err := transferOrderItemUnitRepoTx.DeleteByTransferOrderUuid(transferOrderUuid); err != nil {
+	if err := transferOrderItemUnitRepoTx.DeleteByTransferOrderUuidPhysical(transferOrderUuid); err != nil {
 		return errors.WithMessage(errors.New("删除旧单位明细失败"), err.Error())
 	}
 	// 如果有明细更新
@@ -496,12 +547,11 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		inWarehouse = warehouse
 	}
 
-	// 验证物品状态
-	materials, _, err := s.validator.validateMaterialStatus(ctx, db, req.Items, true)
+	// 获取物品列表
+	materials, _, _, err := s.helper.GetMaterials(ctx, db, req.Items)
 	if err != nil {
-		return resp.TransferOrderCreateResp{}, err
+		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("获取物品列表失败"), err.Error())
 	}
-
 	// 生成调拨单编号
 	orderNo := s.helper.GenerateOrderNo(db)
 
@@ -537,8 +587,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			Remark:              req.Remark,
 			ItemCount:           len(req.Items),
 		}
-		transferOrderRepoTx := repository.NewTransferOrderRepo(tx)
-		if err := transferOrderRepoTx.Create(transferOrder); err != nil {
+		if err := repository.NewTransferOrderRepo(tx).Create(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单失败"), err.Error())
 		}
 
@@ -658,8 +707,8 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		inWarehouse = warehouse
 	}
 
-	// 验证物品状态
-	materials, _, err := s.validator.validateMaterialStatus(ctx, db, req.Items, true)
+	// 获取物品列表
+	materials, _, _, err := s.helper.GetMaterials(ctx, db, req.Items)
 	if err != nil {
 		return err
 	}
@@ -685,6 +734,7 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 		transferOrder.InWarehouseName = inWarehouse.Name
 		transferOrder.Remark = req.Remark
+		transferOrder.SetNil()
 		if err := transferOrderRepo.Update(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("更新调拨单失败"), err.Error())
 		}
@@ -753,21 +803,21 @@ func (s *transferOrderSrv) DeleteTransferOrder(
 // SubmitTransferOrder 提交调拨单
 func (s *transferOrderSrv) SubmitTransferOrder(
 	ctx context.Context,
-	req req.TransferOrderSubmitReq,
+	reqs req.TransferOrderSubmitReq,
 ) error {
-	if err := req.Validate(); err != nil {
+	if err := reqs.Validate(); err != nil {
 		return err
 	}
 
 	// 加锁
-	s.lock.LockUuid(req.Uuid)
-	defer s.lock.UnlockUuid(req.Uuid)
+	s.lock.LockUuid(reqs.Uuid)
+	defer s.lock.UnlockUuid(reqs.Uuid)
 
 	db := ctx.GetDB()
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
 
 	// 查询调拨单
-	transferOrder, err := transferOrderRepo.GetByUuid(req.Uuid, transferOrderRepo.WithItems())
+	transferOrder, err := transferOrderRepo.GetByUuid(reqs.Uuid, transferOrderRepo.WithItems())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("调拨单不存在")
@@ -780,13 +830,106 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 		return errors.New("只有待提交状态的调拨单才能提交")
 	}
 
+	if len(transferOrder.Items) == 0 {
+		return errors.New("物品列表为空，请先添加物品再操作")
+	}
+
+	// 验证单位数量是否全部为0
+	if !reqs.IsConfirm {
+		if err := s.validator.validateOrderItemUnitNumZero(ctx, transferOrder.Items); err != nil {
+			return err
+		}
+	}
+
+	// 验证物品库存
+	if notEnoughItemNames, err := s.validator.validateOrderItemStockNotEnough(ctx, s.dbm, transferOrder); err != nil {
+		if notEnoughItemNames != nil && len(notEnoughItemNames) > 0 {
+			if transferOrder.TransferType == 1 {
+				return errors.NewWithCodeAndData(
+					constant.CodeErrorConfirmClose,
+					notEnoughItemNames,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可出库数量不足。\n\n请更换发货门店"), s.helper.joinNames(notEnoughItemNames)),
+				)
+			} else {
+				return errors.NewWithCodeAndData(
+					constant.CodeErrorConfirmClose,
+					notEnoughItemNames,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可调拨数量不足。\n\n请更换出库仓库"), s.helper.joinNames(notEnoughItemNames)),
+				)
+			}
+		} else {
+			return err
+		}
+	}
+
+	// 获取物品列表并验证物品状态
+	var materials []model.Material
+	if !reqs.IsConfirm {
+		_, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
+		if err != nil {
+			if len(disabledMaterialNames) > 0 {
+				return errors.NewWithCode(
+					constant.CodeErrorConfirmRequest,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(disabledMaterialNames)),
+				)
+			}
+			if len(notFoundMaterialNames) > 0 {
+				return errors.NewWithCode(
+					constant.CodeErrorConfirmRequest,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(notFoundMaterialNames)),
+				)
+			}
+			return err
+		} else {
+			return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认提交此单据吗？")
+		}
+	} else {
+		materialList, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
+		if err != nil && len(disabledMaterialNames) == 0 && len(notFoundMaterialNames) == 0 {
+			return err
+		}
+		materials = materialList
+	}
+
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
+		itemCount := 0
+
+		// 如果用户确认提交，删除单位数量为0的物品
+		transferOrderItemRepo := repository.NewTransferOrderItemRepo(tx)
+		transferOrderItemUnitRepo := repository.NewTransferOrderItemUnitRepo(tx)
+		for _, item := range transferOrder.Items {
+			isDeleteItem := true
+			for _, material := range materials {
+				if material.Uuid == item.MaterialUuid && (material.DeleteTime == 0 && material.Status && item.GetUnitsTotalConversionRateNum() > 0) {
+					isDeleteItem = false
+				}
+			}
+			if isDeleteItem {
+				if err := transferOrderItemRepo.DeletePhysical(item.Uuid); err != nil {
+					return errors.WithMessage(errors.New("删除调拨单明细失败"), err.Error())
+				}
+				if err := transferOrderItemUnitRepo.DeleteByItemUuidPhysical(item.Uuid); err != nil {
+					return errors.WithMessage(errors.New("删除调拨单明细失败"), err.Error())
+				}
+			} else {
+				itemCount += 1
+				for _, unit := range item.Units {
+					if unit.Num <= 0 {
+						if err := transferOrderItemUnitRepo.DeletePhysical(unit.Uuid); err != nil {
+							return errors.WithMessage(errors.New("删除调拨单明细失败"), err.Error())
+						}
+					}
+				}
+			}
+		}
+
 		// 更新状态为待审核
 		transferOrder.Status = constant.TransferOrderStatusPending
 		transferOrder.SubmitTime = time.Now().Unix()
 		transferOrder.NextApprovalCompanyUuid = ctx.GetCompanyUuid()
 		transferOrder.NextApprovalCompanyName = ctx.GetCompany().Name
+		transferOrder.ItemCount = itemCount
 		if err := repository.NewTransferOrderRepo(tx).Update(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
 		}
@@ -798,7 +941,7 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionSubmit, "提交调拨单", constant.TransferOrderStatusDraft, constant.TransferOrderStatusPending); err != nil {
+		if err := s.helper.CreateLog(ctx, db, reqs.Uuid, constant.TransferActionSubmit, "提交调拨单", constant.TransferOrderStatusDraft, constant.TransferOrderStatusPending); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
@@ -863,17 +1006,69 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 	// 如果入库仓库为空，且当前审批节点为发货门店上级，则无审批权限
 	if currentApproval.ApprovalType == constant.TransferApprovalTypeSender {
 		if req.OutWarehouseErpCode == "" {
-			return errors.New("请选择出库仓库")
+			return errors.NewWithCode(constant.CodeErrorConfirmClose, "请选择出库仓库")
 		}
 		transferOrder.OutWarehouseErpCode = req.OutWarehouseErpCode
+		warehouse, err := repository.NewWarehouseRepo(ctx.GetDB()).GetByErpCode(req.OutWarehouseErpCode)
+		if err != nil {
+			return errors.WithMessage(errors.New("出库仓库不存在"), err.Error())
+		}
+		if warehouse == nil {
+			return errors.New("出库仓库不存在")
+		}
+		transferOrder.OutWarehouseName = warehouse.Name
+
+		// 验证物品库存
+		if notEnoughItemNames, err := s.validator.validateOrderItemStockNotEnough(ctx, s.dbm, transferOrder); err != nil {
+			if notEnoughItemNames != nil && len(notEnoughItemNames) > 0 {
+				return errors.NewWithCode(
+					constant.CodeErrorConfirmClose,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可出库数量不足。\n\n请补充库存"), s.helper.joinNames(notEnoughItemNames)),
+				)
+			} else {
+				return err
+			}
+		}
 	}
 
 	// 如果入库仓库为空，且当前审批节点为收货门店上级，则无审批权限
 	if currentApproval.ApprovalType == constant.TransferApprovalTypeReceiver {
 		if req.InWarehouseErpCode == "" {
-			return errors.New("请选择入库仓库")
+			return errors.NewWithCode(constant.CodeErrorConfirmClose, "请选择入库仓库")
 		}
 		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
+		warehouse, err := repository.NewWarehouseRepo(ctx.GetDB()).GetByErpCode(req.InWarehouseErpCode)
+		if err != nil {
+			return errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
+		}
+		if warehouse == nil {
+			return errors.New("入库仓库不存在")
+		}
+		transferOrder.InWarehouseName = warehouse.Name
+
+		// 验证物品库存
+		if notEnoughItemNames, err := s.validator.validateOrderItemStockNotEnough(ctx, s.dbm, transferOrder); err != nil {
+			if notEnoughItemNames != nil && len(notEnoughItemNames) > 0 {
+				return errors.NewWithCode(
+					constant.CodeErrorConfirmClose,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可出库数量不足。\n\n请联系发货门店"), s.helper.joinNames(notEnoughItemNames)),
+				)
+			} else {
+				return err
+			}
+		}
+	}
+
+	// 验证物品状态
+	if currentApproval.ApprovalType == constant.TransferApprovalTypeSender || currentApproval.ApprovalType == constant.TransferApprovalTypeReceiver {
+		if err := s.validator.ValidateMaterialsByCodes(ctx, ctx.GetDB(), transferOrder.Items); err != nil {
+			return err
+		}
+	}
+
+	// 需要用户再次确认审核
+	if !req.IsConfirm {
+		return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认审核此单据吗？")
 	}
 
 	// 开始事务
@@ -926,29 +1121,44 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 
 		if newStatus == constant.TransferOrderStatusReceiving {
 			// 进入在途仓库存
-			if err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder); err != nil {
+			dbs, err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder)
+			if err != nil {
 				logger.Logger.Error("更新在途仓库存失败", zap.Error(err))
-				return err
+				return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
 			}
-
 			// 调用erp接口
 			if ctx.GetCompany().IsOpenErp() {
 				erpResp, err := s.helper.SaveMaterialTransfer(ctx, s.dbm, tx, transferOrder)
 				if err != nil {
 					logger.Logger.Error("调用erp接口失败", zap.Error(err))
+					for _, db := range dbs {
+						db.Rollback()
+					}
 					return err
 				}
 				// 更新调拨单状态
-				transferOrder.ErpOrderNo = erpResp.FromReceipt.SoNo
+				transferOrder.ErpOrderNo = erpResp.FromReceipt.PoNo
 				transferOrder.ErpResp = utils.ToJson(erpResp)
 				if err := transferOrderRepoTx.Update(transferOrder); err != nil {
 					logger.Logger.Error("更新调拨单ERP响应数据失败", zap.Error(err))
+					for _, db := range dbs {
+						db.Rollback()
+					}
 					return errors.WithMessage(errors.New("更新调拨单ERP响应数据失败"), err.Error())
 				}
 				// 复制数据到总部
 				if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
 					logger.Logger.Error("复制数据到总部失败", zap.Error(err))
+					for _, db := range dbs {
+						db.Rollback()
+					}
 					return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
+				}
+			}
+			for _, db := range dbs {
+				if err := db.Commit().Error; err != nil {
+					logger.Logger.Error("提交事务失败", zap.Error(err))
+					return errors.WithMessage(errors.New("提交事务失败"), err.Error())
 				}
 			}
 		}
@@ -1017,6 +1227,11 @@ func (s *transferOrderSrv) RejectTransferOrder(
 		return errors.New("无审批权限")
 	}
 
+	// 需要用户再次确认审核
+	if !req.IsConfirm {
+		return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认驳回此单据吗？")
+	}
+
 	// 开始事务
 	staff := ctx.GetStaff()
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -1076,10 +1291,9 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return err
 	}
 
-	transferOrderRepo := repository.NewTransferOrderRepo(db)
-
 	// 查询调拨单
-	transferOrder, err := transferOrderRepo.GetByUuid(req.Uuid)
+	transferOrderRepo := repository.NewTransferOrderRepo(db)
+	transferOrder, err := transferOrderRepo.GetByUuid(req.Uuid, transferOrderRepo.WithItems())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("调拨单不存在")
@@ -1097,28 +1311,70 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return errors.New("无收货权限")
 	}
 
+	// 验证入库仓库
 	if req.InWarehouseErpCode == "" {
-		return errors.New("请选择入库仓库")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "请选择入库仓库")
+	} else {
+		warehouse, err := repository.NewWarehouseRepo(ctx.GetDB()).GetByErpCode(req.InWarehouseErpCode)
+		if err != nil {
+			return errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
+		}
+		if warehouse == nil {
+			return errors.New("入库仓库不存在")
+		}
+		transferOrder.InWarehouseName = warehouse.Name
+	}
+
+	// 验证物品状态
+	if err := s.validator.ValidateMaterialsByCodes(ctx, ctx.GetDB(), transferOrder.Items); err != nil {
+		return err
 	}
 
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
+		transferOrderRepository := repository.NewTransferOrderRepo(tx)
 		// 更新调拨单为已完成状态
 		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 		transferOrder.Status = constant.TransferOrderStatusCompleted
-		if err := transferOrderRepo.Update(transferOrder); err != nil {
+		if err := transferOrderRepository.Update(transferOrder); err != nil {
+			logger.Logger.Error("更新调拨单状态失败", zap.Error(err))
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
 		}
 
 		// 复制数据到总部
 		if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
+			logger.Logger.Error("复制数据到总部失败", zap.Error(err))
 			return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
 		}
 
-		// 移动在途库存
-		if err := s.helper.MoveStockInTransit(ctx, s.dbm, tx, transferOrder); err != nil {
+		// 移动在途库存到目标仓库
+		targetDbTx, err := s.helper.MoveStockToTargetWarehouse(ctx, s.dbm, tx, transferOrder)
+		if err != nil {
 			logger.Logger.Error("移动在途库存失败", zap.Error(err))
-			return errors.WithMessage(errors.New("移动在途库存失败"), err.Error())
+			return err
+		}
+
+		// 调用erp接口
+		if ctx.GetCompany().IsOpenErp() {
+			erpResp, err := s.helper.SavePurchaseReceipt(ctx, s.dbm, tx, transferOrder)
+			if err != nil {
+				logger.Logger.Error("调用erp接口失败", zap.Error(err))
+				targetDbTx.Rollback()
+				return err
+			}
+			transferOrder.ReceiptOrderErpCode = erpResp.PurchaseReceipt.PurchaseReceiptName
+			transferOrder.ReceiptOrderErpResp = utils.ToJson(erpResp)
+			if err := transferOrderRepository.Update(transferOrder); err != nil {
+				logger.Logger.Error("更新调拨单ERP响应数据失败", zap.Error(err))
+				targetDbTx.Rollback()
+				return errors.WithMessage(errors.New("更新调拨单ERP响应数据失败"), err.Error())
+			}
+		}
+
+		// 提交事务
+		if err := targetDbTx.Commit().Error; err != nil {
+			logger.Logger.Error("提交事务失败", zap.Error(err))
+			return errors.WithMessage(errors.New("提交事务失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -1259,6 +1515,9 @@ func (s *transferOrderSrv) GetTransferOrderWarehouseList(
 	// 转换响应数据
 	list := make([]resp.TransferOrderWarehouseItem, 0, len(warehouses))
 	for _, warehouse := range warehouses {
+		if warehouse.IsHeadquarter() {
+			continue
+		}
 		item := resp.TransferOrderWarehouseItem{
 			ErpCode: warehouse.ErpCode,
 			Type:    warehouse.Type,

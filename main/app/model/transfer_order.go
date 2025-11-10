@@ -53,7 +53,9 @@ type TransferOrder struct {
 	ItemCount int `gorm:"column:item_count;type:int;default:0;comment:物品种类数量" json:"item_count"`
 
 	// ERP响应数据
-	ErpResp string `gorm:"column:erp_resp;type:text;comment:ERP响应数据" json:"erp_resp"`
+	ErpResp             string `gorm:"column:erp_resp;type:text;comment:ERP响应数据" json:"erp_resp"`
+	ReceiptOrderErpCode string `gorm:"column:receipt_order_erp_code;type:varchar(255);default:'';comment:收货单ERP编码" json:"receipt_order_erp_code"`
+	ReceiptOrderErpResp string `gorm:"column:receipt_order_erp_resp;type:text;comment:收货单ERP响应数据" json:"receipt_order_erp_resp"`
 
 	// 关联模型
 	Items     []*TransferOrderItem     `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"items,omitempty"`

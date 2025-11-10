@@ -1937,7 +1937,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     UNIQUE KEY `unique_uuid` (`uuid`),
     INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
     INDEX `idx_material_uuid` (`material_uuid`),
-    INDEX `idx_product_bom_uuid` (`product_bom_uuid`)
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
@@ -3299,6 +3300,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
   `remark` text COMMENT '备注',
   `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
   `erp_resp` text COMMENT 'ERP响应数据',
+  `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',
+  `receipt_order_erp_resp` text COMMENT '收货单ERP响应数据',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',

@@ -76,10 +76,10 @@ services:
     image: redis:6
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - ./docker/redis/data:/data
-      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
     restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.13
 
   redis-proxy:
     container_name: "saas-redis-proxy-${APP_ID}"

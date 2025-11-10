@@ -1521,10 +1521,8 @@ func (s *businessSrv) CountBusinessTimePeriod(ctx context.Context, req req.Busin
 
 	// 构建返回列表
 	businessTimePeriodList := make([]business_data_resp.BusinessTimePeriodItem, 0, len(businessTimePeriodData.BusinessTimePeriodList))
-	for i, period := range businessTimePeriodData.BusinessTimePeriodList {
-		no := (req.PageNo-1)*req.PageSize + i + 1
+	for _, period := range businessTimePeriodData.BusinessTimePeriodList {
 		businessTimePeriodList = append(businessTimePeriodList, business_data_resp.BusinessTimePeriodItem{
-			No:                 no,
 			TimePeriod:         period.TimePeriod,
 			OrderAmount:        period.OrderAmount,
 			OrderAmountMealAvg: period.OrderAmountMealAvg,
@@ -1552,10 +1550,8 @@ func (s *businessSrv) CountBusinessComprehensiveOperations(ctx context.Context, 
 
 	// 构建返回列表
 	businessComprehensiveOperationsList := make([]business_data_resp.StatisticsComprehensiveOperationsItem, 0, len(businessComprehensiveOperationsData.StatisticsComprehensiveList))
-	for i, item := range businessComprehensiveOperationsData.StatisticsComprehensiveList {
-		no := (req.PageNo-1)*req.PageSize + i + 1
+	for _, item := range businessComprehensiveOperationsData.StatisticsComprehensiveList {
 		businessComprehensiveOperationsList = append(businessComprehensiveOperationsList, business_data_resp.StatisticsComprehensiveOperationsItem{
-			No:                 no,
 			Date:               item.Date,
 			OrderAmount:        item.OrderAmount,
 			PayAmount:          item.PayAmount,
@@ -1589,10 +1585,8 @@ func (s *businessSrv) CountBusinessPaymentMethod(ctx context.Context, req req.St
 
 	// 构建返回列表
 	businessPaymentMethodList := make([]business_data_resp.StatisticsPaymentMethodItem, 0, len(businessPaymentMethodData.StatisticsPaymentMethodList))
-	for i, item := range businessPaymentMethodData.StatisticsPaymentMethodList {
-		no := (req.PageNo-1)*req.PageSize + i + 1
+	for _, item := range businessPaymentMethodData.StatisticsPaymentMethodList {
 		businessPaymentMethodList = append(businessPaymentMethodList, business_data_resp.StatisticsPaymentMethodItem{
-			No:            no,
 			Date:          item.Date,
 			PaymentName:   item.PaymentName,
 			PaymentNum:    int(item.PaymentNum),

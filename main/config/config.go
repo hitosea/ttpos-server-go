@@ -197,8 +197,13 @@ func serverConf(opt copier.Option) {
 	serverPort := viper.GetString("SERVER_PORT")
 	if debugServerPort := viper.GetString("DEBUG_SERVER_PORT"); debugServerPort != "" &&
 		viper.GetString("SERVER_MODE") == "debug" {
-		if _, err := os.Stat("/.dockerenv"); err != nil {
-			serverPort = viper.GetString("DEBUG_SERVER_PORT")
+		if execPath, err := os.Executable(); err == nil {
+			execName := strings.ToLower(execPath)
+			if strings.Contains(execName, "__debug_bin") || strings.Contains(execName, "dlv") {
+				serverPort = debugServerPort
+			}
+		} else if _, err := os.Stat("/.dockerenv"); err != nil {
+			serverPort = debugServerPort
 		}
 	}
 	//

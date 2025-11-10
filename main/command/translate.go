@@ -77,7 +77,7 @@ func execute() {
 			if !info.IsDir() &&
 				strings.HasSuffix(path, ".go") &&
 				!strings.HasSuffix(path, "docs.go") &&
-				!strings.Contains(path, "trans") &&
+				!strings.Contains(path, "trans/") &&
 				!strings.Contains(path, "_test.go") &&
 				!strings.Contains(path, "old_model") &&
 				!strings.Contains(path, "command") &&
@@ -108,7 +108,7 @@ func execute() {
 		var filteredTexts []string
 		for text := range chineseTextMap {
 			if _, exists := zhData[text]; !exists {
-				if strings.Contains(text, "\\n") {
+				if strings.Contains(text, "\\n") && !strings.Contains(text, "\\n\\n") {
 					continue
 				}
 				filteredTexts = append(filteredTexts, text)

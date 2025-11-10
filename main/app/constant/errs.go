@@ -11,23 +11,24 @@ const (
 	CodeSuccessOpenCashBox = 200 // 成功-并打开钱箱
 	CodeSuccess            = 0   // 成功
 
-	CodeFail         = -1  // 失败
-	CodeSystemError  = -2  // 系统错误
-	CodeParamError   = -3  // 参数错误
-	CodeNetworkError = -4  // 网络错误
-	CodeTimeoutError = -5  // 超时错误
-	CodeVersionError = -6  // 版本错误
-	UnknownError     = -99 // 未知错误
-
-	CodeUnauthorized      = -100 // 未授权
-	CodeTokenExpired      = -101 // Token过期
-	CodeTokenInvalid      = -102 // Token无效
-	CodeAccessDenied      = -103 // 拒绝访问
-	CodeAccountDisabled   = -104 // 账号已禁用
-	CodeNeedLogin         = -105 // 需要登录
-	CodeLoginFailed       = -106 // 登录失败
-	CodeCashierNotLogin   = -107 // 点餐助手绑定的收银机未登录
-	CodeCashierHandedOver = -108 // 已交班
+	CodeFail                = -1   // 失败
+	CodeSystemError         = -2   // 系统错误
+	CodeParamError          = -3   // 参数错误
+	CodeNetworkError        = -4   // 网络错误
+	CodeTimeoutError        = -5   // 超时错误
+	CodeVersionError        = -6   // 版本错误
+	CodeErrorConfirmClose   = -11  // 需要弹窗提示，点击确定 关闭弹窗
+	CodeErrorConfirmRequest = -12  // 需要弹窗提示，点击确定之后传 is_confirm 为 true 到当前接口再此请求接口
+	UnknownError            = -99  // 未知错误
+	CodeUnauthorized        = -100 // 未授权
+	CodeTokenExpired        = -101 // Token过期
+	CodeTokenInvalid        = -102 // Token无效
+	CodeAccessDenied        = -103 // 拒绝访问
+	CodeAccountDisabled     = -104 // 账号已禁用
+	CodeNeedLogin           = -105 // 需要登录
+	CodeLoginFailed         = -106 // 登录失败
+	CodeCashierNotLogin     = -107 // 点餐助手绑定的收银机未登录
+	CodeCashierHandedOver   = -108 // 已交班
 
 	CodeCashierOrderMethodNotOpen = -110 //
 	CodeCashierLoginLimit         = -111 // 收银机登录已达上限
@@ -105,6 +106,11 @@ const (
 // 采购订单业务错误码
 const (
 	CodePurchaseOrderSupplierDisabled = -901 // 供应商已禁用
+)
+
+// 调拨订单业务错误码
+const (
+	CodeTransferOrderItemUnitNumZero = -805 // 调拨单明细单位数量为0，提交后将移除对应物品
 )
 
 type ParseCodeOrderCheckOption struct {

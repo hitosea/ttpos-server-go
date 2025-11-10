@@ -14,8 +14,11 @@ type ITransferOrderItemUnitRepo interface {
 	CreateBatch(units []*model.TransferOrderItemUnit) error
 	Update(unit *model.TransferOrderItemUnit) error
 	Delete(uuid uint64) error
+	DeletePhysical(uuid uint64) error
 	DeleteByItemUuid(itemUuid uint64) error
+	DeleteByItemUuidPhysical(itemUuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
+	DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.TransferOrderItemUnit, error)
 	GetListByItemUuid(itemUuid uint64) ([]model.TransferOrderItemUnit, error)
 	GetListByTransferOrderUuid(transferOrderUuid uint64) ([]model.TransferOrderItemUnit, error)
@@ -50,12 +53,26 @@ func (r *TransferOrderItemUnitRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.TransferOrderItemUnit{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
 }
 
+func (r *TransferOrderItemUnitRepoImpl) DeletePhysical(uuid uint64) error {
+	return r.db.Model(&model.TransferOrderItemUnit{}).Where("uuid = ?", uuid).Delete(&model.TransferOrderItemUnit{}).Error
+}
+
 func (r *TransferOrderItemUnitRepoImpl) DeleteByItemUuid(itemUuid uint64) error {
 	return r.db.Model(&model.TransferOrderItemUnit{}).Where("item_uuid = ?", itemUuid).Update("delete_time", time.Now().Unix()).Error
 }
 
+func (r *TransferOrderItemUnitRepoImpl) DeleteByItemUuidPhysical(itemUuid uint64) error {
+	return r.db.Model(&model.TransferOrderItemUnit{}).Where("item_uuid = ?", itemUuid).Delete(&model.TransferOrderItemUnit{}).Error
+}
+
 func (r *TransferOrderItemUnitRepoImpl) DeleteByTransferOrderUuid(transferOrderUuid uint64) error {
 	return r.db.Model(&model.TransferOrderItemUnit{}).Where("transfer_order_uuid = ?", transferOrderUuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+func (r *TransferOrderItemUnitRepoImpl) DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error {
+	return r.db.Model(&model.TransferOrderItemUnit{}).
+		Where("transfer_order_uuid = ?", transferOrderUuid).
+		Delete(&model.TransferOrderItemUnit{}).Error
 }
 
 func (r *TransferOrderItemUnitRepoImpl) GetByUuid(uuid uint64) (*model.TransferOrderItemUnit, error) {

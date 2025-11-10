@@ -158,7 +158,7 @@ type BusinessTimePeriodReq struct {
 	StatisticsType int   `form:"statistics_type" json:"statistics_type"`   // 统计类型， 0=开台时间、 1=结账时间
 }
 
-// StatisticsComprehensiveOperationsReq 统计综合运用请求
+// StatisticsComprehensiveOperationsReq 统计综合运营请求
 type StatisticsComprehensiveOperationsReq struct {
 	dto.PageReq          // 分页参数
 	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳

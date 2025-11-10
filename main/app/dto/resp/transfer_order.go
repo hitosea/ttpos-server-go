@@ -33,6 +33,7 @@ type TransferOrderInfo struct {
 	CreateTime               int                `json:"create_time"`                  // 创建时间
 	UpdateTime               int                `json:"update_time"`                  // 更新时间
 	IsCanApprove             bool               `json:"is_can_approve"`               // 是否可审批
+	IsCanReceive             bool               `json:"is_can_receive"`               // 是否可收货
 	IsNeedSelectOutWarehouse bool               `json:"is_need_select_out_warehouse"` // 是否需要选择出库仓库
 	IsNeedSelectInWarehouse  bool               `json:"is_need_select_in_warehouse"`  // 是否需要选择入库仓库
 }
@@ -40,8 +41,7 @@ type TransferOrderInfo struct {
 // TransferOrderDetailResp 调拨单详情响应
 type TransferOrderDetailResp struct {
 	TransferOrderInfo
-	Items []TransferOrderItemInfo `json:"items"` // 调拨明细
-	// Approvals  []TransferOrderApprovalInfo `json:"approvals"`   // 审批流程
+	Items      []TransferOrderItemInfo `json:"items"`       // 调拨明细
 	RejectInfo TransferOrderRejectInfo `json:"reject_info"` // 驳回信息
 }
 
@@ -53,6 +53,7 @@ type TransferOrderItemInfo struct {
 	MaterialName         dto.LocaleResponse          `json:"material_name"`          // 物品名称
 	MaterialInternalCode string                      `json:"material_internal_code"` // 物品内部编码
 	Valuation            float64                     `json:"valuation"`              // 估值单价（基准单位）
+	AvailableNum         float64                     `json:"available_num"`          // 可用库存数量
 	Units                []TransferOrderItemUnitInfo `json:"units"`                  // 单位列表
 }
 

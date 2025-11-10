@@ -54,11 +54,13 @@ const (
 
 // WarehouseInOutLogType 出入库日志类型
 const (
-	WarehouseInOutLogTypePurchase = "purchase"  // 采购入库 0
-	WarehouseInOutLogTypeSale     = "sale"      // 销售出库 1
-	WarehouseInOutLogTypeDelivery = "delivery"  // 发货出库 2
-	WarehouseInOutLogTypeProfitIn = "profit_in" // 盘盈入库 3
-	WarehouseInOutLogTypeLossOut  = "loss_out"  // 盘亏出库 4
+	WarehouseInOutLogTypePurchase    = "purchase"     // 采购入库 0
+	WarehouseInOutLogTypeSale        = "sale"         // 销售出库 1
+	WarehouseInOutLogTypeDelivery    = "delivery"     // 发货出库 2
+	WarehouseInOutLogTypeProfitIn    = "profit_in"    // 盘盈入库 3
+	WarehouseInOutLogTypeLossOut     = "loss_out"     // 盘亏出库 4
+	WarehouseInOutLogTypeTransferIn  = "transfer_in"  // 调拨入库 5
+	WarehouseInOutLogTypeTransferOut = "transfer_out" // 调拨出库 6
 )
 
 const (
@@ -99,6 +101,10 @@ func WarehouseInOutLogTypeToInt(typ string) int {
 		return 3
 	case WarehouseInOutLogTypeLossOut:
 		return 4
+	case WarehouseInOutLogTypeTransferIn:
+		return 5
+	case WarehouseInOutLogTypeTransferOut:
+		return 6
 	}
 	return -1
 }

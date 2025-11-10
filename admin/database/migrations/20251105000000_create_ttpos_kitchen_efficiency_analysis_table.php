@@ -18,6 +18,11 @@ class CreateTTPOSKitchenEfficiencyAnalysisTable extends Migrator
      */
     public function change()
     {
+        // 检查表是否已经存在
+        if ($this->hasTable('kitchen_efficiency_analysis')) {
+            return;
+        }
+
         $table = $this->table('kitchen_efficiency_analysis', [
             'comment' => '后厨效率分析表',
             'engine' => 'InnoDB',
@@ -47,17 +52,5 @@ class CreateTTPOSKitchenEfficiencyAnalysisTable extends Migrator
 
         $table->create();
     }
-
-    /**
-     * Down Method.
-     *
-     * @return void
-     */
-    public function down()
-    {
-        // 检查表是否存在，如果存在则删除
-        if ($this->hasTable('kitchen_efficiency_analysis')) {
-            $this->dropTable('kitchen_efficiency_analysis');
-        }
-    }
+    
 }

@@ -45,7 +45,7 @@ type IStatisticsSrv interface {
 	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                                                             // 统计班次退款金额
 	CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp                                                                      // 统计取消订单
 	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) CountBusinessTimePeriodResp                                       // 统计营业时段
-	CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp // 统计综合运用
+	CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp // 统计综合运营
 	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp                               // 统计支付方式
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                                                                         // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                                                                                          // 保存销售
@@ -2074,13 +2074,13 @@ func (s *statisticsSrv) formatTimePeriod(timestamp int64, periodSeconds int, tim
 		endTime.Format("15:04"))
 }
 
-// StatisticsComprehensiveOperationsResp 统计综合运用响应
+// StatisticsComprehensiveOperationsResp 统计综合运营响应
 type StatisticsComprehensiveOperationsResp struct {
-	TotalStatisticsComprehensiveNum int64                                   `json:"total_statistics_comprehensive_num"` // 总综合运用统计数
-	StatisticsComprehensiveList     []StatisticsComprehensiveOperationsItem `json:"statistics_comprehensive_list"`      // 综合运用统计列表
+	TotalStatisticsComprehensiveNum int64                                   `json:"total_statistics_comprehensive_num"` // 总综合运营统计数
+	StatisticsComprehensiveList     []StatisticsComprehensiveOperationsItem `json:"statistics_comprehensive_list"`      // 综合运营统计列表
 }
 
-// StatisticsComprehensiveOperationsItem 统计综合运用列表
+// StatisticsComprehensiveOperationsItem 统计综合运营列表
 type StatisticsComprehensiveOperationsItem struct {
 	Date               string  `json:"date"`                  // 日期
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额
@@ -2097,7 +2097,7 @@ type StatisticsComprehensiveOperationsItem struct {
 	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 外送订单金额
 }
 
-// CountBusinessComprehensiveOperations 统计综合运用
+// CountBusinessComprehensiveOperations 统计综合运营
 func (s *statisticsSrv) CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp {
 	// 获取数据库连接
 	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())

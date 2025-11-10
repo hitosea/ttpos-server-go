@@ -6,7 +6,9 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +27,7 @@ type IWarehouseItemRepo interface {
 	GetByWarehouseUuid(warehouseUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
+	GetByWarehouseAndMaterialOrCreate(warehouseUuid, materialUuid uint64, materialCode string, valuation float64, opts ...DBOption) (*model.WarehouseItem, error)
 	GetByMaterialCode(materialCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseErpCode(warehouseErpCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetListWithWarehouseInfo(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error)
@@ -182,6 +185,39 @@ func (r *WarehouseItemRepoImpl) GetByWarehouseAndMaterial(warehouseUuid, materia
 		return nil, err
 	}
 	return &warehouseItem, nil
+}
+
+// GetByWarehouseAndMaterialOrCreate 根据仓库UUID和商品UUID获取库存记录，如果不存在则创建
+func (r *WarehouseItemRepoImpl) GetByWarehouseAndMaterialOrCreate(
+	warehouseUuid, materialUuid uint64,
+	materialCode string,
+	valuation float64,
+	opts ...DBOption,
+) (*model.WarehouseItem, error) {
+	// 查找或创建仓库商品库存记录
+	warehouseItem, err := r.GetByWarehouseAndMaterial(warehouseUuid, materialUuid, opts...)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 没有找到记录时创建新记录
+			newWarehouseItem := &model.WarehouseItem{
+				WarehouseUuid: warehouseUuid,
+				MaterialUuid:  materialUuid,
+				MaterialCode:  materialCode,
+				Stock:         0,
+				ReservedStock: 0,
+				Valuation:     valuation,
+			}
+			err = r.Create(newWarehouseItem)
+			if err != nil {
+				logger.Logger.Error("recordErpStockInLog-Create", zap.Any("newWarehouseItem", newWarehouseItem), zap.Any("err", err))
+				return nil, errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
+			}
+			warehouseItem = newWarehouseItem
+		} else {
+			return nil, err
+		}
+	}
+	return warehouseItem, nil
 }
 
 // GetByMaterialCode 根据商品编码获取库存列表

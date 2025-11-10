@@ -412,9 +412,9 @@ func (h *statisticsHandler) CountBusinessTimePeriod(c *gin.Context) {
 	helper.Success(c, businessTimePeriodData)
 }
 
-// CountBusinessComprehensive 统计综合运用
-// @Summary 统计综合运用
-// @Description 移动端-报表-营业报表-综合运用统计
+// CountBusinessComprehensive 综合运营统计
+// @Summary 综合运营统计
+// @Description 移动端-报表-营业报表-综合运营统计
 // @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
@@ -516,7 +516,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/kitchen/production_detail/export", wrapper.ExportKitchenProductionDetail)         // 导出后厨菜品出品明细
 		privateApi.GET("/statistics/kitchen/efficiency_analysis/export", wrapper.ExportKitchenEfficiencyAnalysis)     // 导出后厨效率分析
 		privateApi.GET("/statistics/business/time_period", wrapper.CountBusinessTimePeriod)                           // 统计营业时段数据，移动端-报表-营业报表-时段营业统计
-		privateApi.GET("/statistics/business/comprehensive_operations", wrapper.CountBusinessComprehensiveOperations) // 统计综合运用, 移动端-报表-营业报表-综合运用统计
+		privateApi.GET("/statistics/business/comprehensive_operations", wrapper.CountBusinessComprehensiveOperations) // 综合运营统计, 移动端-报表-营业报表-综合运营统计
 		privateApi.GET("/statistics/business/payment_method", wrapper.CountBusinessPaymentMethod)                     // 统计支付方式, 移动端-报表-营业报表-支付方式统计
 	}
 }
