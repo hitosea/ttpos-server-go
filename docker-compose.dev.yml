@@ -48,17 +48,18 @@ services:
 
   db:
     container_name: "saas-db-${APP_ID}"
-    image: "mariadb:10.11.6"
+    image: "mysql:8.0-debian"
     volumes:
       - ./docker/mysql/data:/var/lib/mysql
-      - ./docker/mysql/conf.d:/etc/mysql/conf.d
+      # - ./docker/mysql/conf.d:/etc/mysql/conf.d/
       - ./docker/mysql/repassword.sh:/etc/mysql/repassword.sh
       - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
       - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh
-      - ./docker/mysql/init.d:/docker-entrypoint-initdb.d/
+      # - ./docker/mysql/init.d:/docker-entrypoint-initdb.d/
     ports:
       - "${DB_PORT_OPEN:-}:3306"
     environment:
+      # 兼容旧的脚本
       MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
       MARIADB_DATABASE: "${DB_DATABASE}"
       MARIADB_USER: "${DB_USERNAME}"
@@ -66,6 +67,13 @@ services:
       MARIADB_PREFIX: "${DB_PREFIX}"
       MARIADB_HOST: "${DB_HOST}"
       MARIADB_PORT: "${DB_PORT}"
+      # 兼容旧的脚本
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      TZ: "Asia/Bangkok"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: always
     networks:
       saas-network:
