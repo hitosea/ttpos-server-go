@@ -1918,7 +1918,7 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 			Data:        result,
 		})
 		if err != nil {
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": err.Error(),
 			}); err != nil {
@@ -2107,7 +2107,7 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 			Data:        result,
 		})
 		if err != nil {
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": err.Error(),
 			}); err != nil {
@@ -2302,7 +2302,7 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 			Data:        result,
 		})
 		if err != nil {
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": err.Error(),
 			}); err != nil {
