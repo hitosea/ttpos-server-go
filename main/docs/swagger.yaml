@@ -592,9 +592,6 @@ definitions:
       meal_num:
         description: 用餐人数
         type: integer
-      "no":
-        description: 序号
-        type: integer
       order_amount:
         description: 订单金额
         type: number
@@ -781,19 +778,46 @@ definitions:
         description: 销售金额
         type: number
     type: object
-  business_data_resp.StatisticsComprehensiveOperations:
+  business_data_resp.StatisticsPaymentMethod:
     properties:
       list:
-        description: 综合运用统计
+        description: 支付方式统计
         items:
-          $ref: '#/definitions/business_data_resp.StatisticsComprehensiveOperationsItem'
+          $ref: '#/definitions/business_data_resp.StatisticsPaymentMethodItem'
         type: array
       meta:
         allOf:
         - $ref: '#/definitions/dto.PageResponse'
         description: 元数据
     type: object
-  business_data_resp.StatisticsComprehensiveOperationsItem:
+  business_data_resp.StatisticsPaymentMethodItem:
+    properties:
+      date:
+        description: 日期
+        type: string
+      payment_amount:
+        description: 支付金额
+        type: number
+      payment_name:
+        description: 支付方式名称
+        type: string
+      payment_num:
+        description: 支付次数
+        type: integer
+    type: object
+  business_data_resp.StatisticsSummary:
+    properties:
+      list:
+        description: 综合运营统计
+        items:
+          $ref: '#/definitions/business_data_resp.StatisticsSummaryItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 元数据
+    type: object
+  business_data_resp.StatisticsSummaryItem:
     properties:
       date:
         description: 日期
@@ -809,9 +833,6 @@ definitions:
         type: number
       meal_num:
         description: 用餐人数
-        type: integer
-      "no":
-        description: 序号
         type: integer
       order_amount:
         description: 订单金额
@@ -837,36 +858,6 @@ definitions:
       takeout_order_amount:
         description: 外送订单金额
         type: number
-    type: object
-  business_data_resp.StatisticsPaymentMethod:
-    properties:
-      list:
-        description: 支付方式统计
-        items:
-          $ref: '#/definitions/business_data_resp.StatisticsPaymentMethodItem'
-        type: array
-      meta:
-        allOf:
-        - $ref: '#/definitions/dto.PageResponse'
-        description: 元数据
-    type: object
-  business_data_resp.StatisticsPaymentMethodItem:
-    properties:
-      date:
-        description: 日期
-        type: string
-      "no":
-        description: 序号
-        type: integer
-      payment_amount:
-        description: 支付金额
-        type: number
-      payment_name:
-        description: 支付方式名称
-        type: string
-      payment_num:
-        description: 支付次数
-        type: integer
     type: object
   dto.LanguageItem:
     properties:
@@ -6859,27 +6850,6 @@ definitions:
     required:
     - list
     type: object
-  req.StatisticsComprehensiveOperationsReq:
-    properties:
-      cycle:
-        description: '周期: 0=按日、1=按月'
-        type: integer
-      page_no:
-        description: 页码
-        minimum: 1
-        type: integer
-      page_size:
-        description: 每页大小
-        maximum: 1100
-        minimum: 1
-        type: integer
-      query_end_time:
-        description: 查询结束时间戳
-        type: integer
-      query_start_time:
-        description: 查询开始时间戳
-        type: integer
-    type: object
   req.StatisticsPaymentMethodReq:
     properties:
       cycle:
@@ -6906,6 +6876,27 @@ definitions:
       payment_method_list:
         description: '支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割'
         type: string
+      query_end_time:
+        description: 查询结束时间戳
+        type: integer
+      query_start_time:
+        description: 查询开始时间戳
+        type: integer
+    type: object
+  req.StatisticsSummaryReq:
+    properties:
+      cycle:
+        description: '周期: 0=按日、1=按月'
+        type: integer
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
       query_end_time:
         description: 查询结束时间戳
         type: integer
@@ -7139,6 +7130,9 @@ definitions:
       in_warehouse_erp_code:
         description: 入库仓库ERP编码
         type: string
+      is_confirm:
+        description: 是否确认审核
+        type: boolean
       out_warehouse_erp_code:
         description: 出库仓库ERP编码
         type: string
@@ -7253,6 +7247,9 @@ definitions:
     type: object
   req.TransferOrderRejectReq:
     properties:
+      is_confirm:
+        description: 是否确认驳回
+        type: boolean
       reject_reason:
         description: 驳回原因
         maxLength: 500
@@ -7268,6 +7265,9 @@ definitions:
     type: object
   req.TransferOrderSubmitReq:
     properties:
+      is_confirm:
+        description: 是否确认提交（移除禁用物品）
+        type: boolean
       uuid:
         description: 调拨单UUID
         type: integer
@@ -13684,6 +13684,9 @@ definitions:
       is_can_approve:
         description: 是否可审批
         type: boolean
+      is_can_receive:
+        description: 是否可收货
+        type: boolean
       is_need_select_in_warehouse:
         description: 是否需要选择入库仓库
         type: boolean
@@ -13726,8 +13729,7 @@ definitions:
       reject_info:
         allOf:
         - $ref: '#/definitions/resp.TransferOrderRejectInfo'
-        description: Approvals  []TransferOrderApprovalInfo `json:"approvals"`   //
-          审批流程
+        description: 驳回信息
       remark:
         description: 备注
         type: string
@@ -13774,6 +13776,9 @@ definitions:
         description: 入库仓库名称
       is_can_approve:
         description: 是否可审批
+        type: boolean
+      is_can_receive:
+        description: 是否可收货
         type: boolean
       is_need_select_in_warehouse:
         description: 是否需要选择入库仓库
@@ -13836,6 +13841,9 @@ definitions:
     type: object
   resp.TransferOrderItemInfo:
     properties:
+      available_num:
+        description: 可用库存数量
+        type: number
       material_code:
         description: 物品编码
         type: string
@@ -14850,6 +14858,22 @@ definitions:
       is_table_order:
         description: 桌台用餐
         type: string
+    type: object
+  setting.PaymentMethod:
+    properties:
+      name:
+        description: 支付方式名称
+        type: string
+      uuid:
+        description: 支付方式UUID
+        type: integer
+    type: object
+  setting.PaymentMethodListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/setting.PaymentMethod'
+        type: array
     type: object
   setting.PrintItem:
     properties:
@@ -30009,6 +30033,28 @@ paths:
       summary: 编辑整单备注
       tags:
       - 商家端.业务设置
+  /shop/setting/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.PaymentMethodListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式列表
+      tags:
+      - 商家端.支付管理
   /shop/setting/return_food_reason:
     delete:
       consumes:
@@ -30453,40 +30499,11 @@ paths:
       summary: 统计营业数据，移动管理端首页-店内概况
       tags:
       - 商家端.营业数据
-  /shop/statistics/business/comprehensive_operations:
-    get:
-      consumes:
-      - application/json
-      description: 移动端-报表-营业报表-综合运用统计
-      parameters:
-      - description: 统计参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.StatisticsComprehensiveOperationsReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 统计数据
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/business_data_resp.StatisticsComprehensiveOperations'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 统计综合运用
-      tags:
-      - 商家端.营业数据
   /shop/statistics/business/payment_method:
     get:
       consumes:
       - application/json
-      description: 统计支付方式
+      description: 统计营业收款统计
       parameters:
       - description: 统计参数
         in: body
@@ -30508,9 +30525,86 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计支付方式
+      summary: 统计营业收款统计
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
+  /shop/statistics/business/payment_method/export:
+    get:
+      consumes:
+      - application/json
+      description: 导出营业收款统计
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsPaymentMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出营业收款统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/business/summary:
+    get:
+      consumes:
+      - application/json
+      description: 移动端-报表-营业报表-综合运营统计
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsSummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.StatisticsSummary'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 综合运营统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/business/summary/export:
+    get:
+      consumes:
+      - application/json
+      description: 导出综合运营统计
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsSummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出综合运营统计
+      tags:
+      - 商家端.报表
   /shop/statistics/business/time_period:
     get:
       consumes:
@@ -30539,7 +30633,31 @@ paths:
       - JwtToken: []
       summary: 统计营业时段数据
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
+  /shop/statistics/business/time_period/export:
+    get:
+      consumes:
+      - application/json
+      description: 移动端-报表-营业报表-导出时段营业统计
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BusinessTimePeriodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出营业时段数据
+      tags:
+      - 商家端.报表
   /shop/statistics/export:
     get:
       consumes:
@@ -30626,7 +30744,7 @@ paths:
       - JwtToken: []
       summary: 统计后厨效率分析
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
   /shop/statistics/kitchen/efficiency_analysis/avg:
     get:
       consumes:
@@ -30655,7 +30773,7 @@ paths:
       - JwtToken: []
       summary: 统计后厨效率分析平均时长
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
   /shop/statistics/kitchen/efficiency_analysis/export:
     get:
       consumes:
@@ -30684,7 +30802,7 @@ paths:
       - JwtToken: []
       summary: 导出后厨效率分析
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
   /shop/statistics/kitchen/production_detail:
     get:
       consumes:
@@ -30713,7 +30831,7 @@ paths:
       - JwtToken: []
       summary: 统计后厨菜品出品明细
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
   /shop/statistics/kitchen/production_detail/export:
     get:
       consumes:
@@ -30742,7 +30860,7 @@ paths:
       - JwtToken: []
       summary: 导出后厨菜品出品明细
       tags:
-      - 商家端.营业数据
+      - 商家端.报表
   /shop/statistics/payment_method:
     get:
       consumes:

@@ -25055,6 +25055,46 @@
                 }
             }
         },
+        "/shop/setting/payment_method/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "获取支付方式列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.PaymentMethodListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/return_food_reason": {
             "get": {
                 "security": [
@@ -25807,57 +25847,6 @@
                 }
             }
         },
-        "/shop/statistics/business/comprehensive_operations": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "移动端-报表-营业报表-综合运用统计",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.营业数据"
-                ],
-                "summary": "统计综合运用",
-                "parameters": [
-                    {
-                        "description": "统计参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.StatisticsComprehensiveOperationsReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "统计数据",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/business_data_resp.StatisticsComprehensiveOperations"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/shop/statistics/business/payment_method": {
             "get": {
                 "security": [
@@ -25865,7 +25854,7 @@
                         "JwtToken": []
                     }
                 ],
-                "description": "统计支付方式",
+                "description": "统计营业收款统计",
                 "consumes": [
                     "application/json"
                 ],
@@ -25873,9 +25862,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
-                "summary": "统计支付方式",
+                "summary": "统计营业收款统计",
                 "parameters": [
                     {
                         "description": "统计参数",
@@ -25909,6 +25898,135 @@
                 }
             }
         },
+        "/shop/statistics/business/payment_method/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "导出营业收款统计",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出营业收款统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsPaymentMethodReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/business/summary": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "移动端-报表-营业报表-综合运营统计",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "综合运营统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsSummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.StatisticsSummary"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/business/summary/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "导出综合运营统计",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出综合运营统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsSummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/business/time_period": {
             "get": {
                 "security": [
@@ -25924,7 +26042,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
                 "summary": "统计营业时段数据",
                 "parameters": [
@@ -25955,6 +26073,45 @@
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/business/time_period/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "移动端-报表-营业报表-导出时段营业统计",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出营业时段数据",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessTimePeriodReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -26077,7 +26234,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
                 "summary": "统计后厨效率分析",
                 "parameters": [
@@ -26128,7 +26285,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
                 "summary": "统计后厨效率分析平均时长",
                 "parameters": [
@@ -26179,7 +26336,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
                 "summary": "导出后厨效率分析",
                 "parameters": [
@@ -26230,7 +26387,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
                 "summary": "统计后厨菜品出品明细",
                 "parameters": [
@@ -26281,7 +26438,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.营业数据"
+                    "商家端.报表"
                 ],
                 "summary": "导出后厨菜品出品明细",
                 "parameters": [
@@ -30645,10 +30802,6 @@
                     "description": "用餐人数",
                     "type": "integer"
                 },
-                "no": {
-                    "description": "序号",
-                    "type": "integer"
-                },
                 "order_amount": {
                     "description": "订单金额",
                     "type": "number"
@@ -30924,14 +31077,14 @@
                 }
             }
         },
-        "business_data_resp.StatisticsComprehensiveOperations": {
+        "business_data_resp.StatisticsPaymentMethod": {
             "type": "object",
             "properties": {
                 "list": {
-                    "description": "综合运用统计",
+                    "description": "支付方式统计",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/business_data_resp.StatisticsComprehensiveOperationsItem"
+                        "$ref": "#/definitions/business_data_resp.StatisticsPaymentMethodItem"
                     }
                 },
                 "meta": {
@@ -30944,7 +31097,48 @@
                 }
             }
         },
-        "business_data_resp.StatisticsComprehensiveOperationsItem": {
+        "business_data_resp.StatisticsPaymentMethodItem": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "description": "日期",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_num": {
+                    "description": "支付次数",
+                    "type": "integer"
+                }
+            }
+        },
+        "business_data_resp.StatisticsSummary": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "综合运营统计",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.StatisticsSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "元数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "business_data_resp.StatisticsSummaryItem": {
             "type": "object",
             "properties": {
                 "date": {
@@ -30965,10 +31159,6 @@
                 },
                 "meal_num": {
                     "description": "用餐人数",
-                    "type": "integer"
-                },
-                "no": {
-                    "description": "序号",
                     "type": "integer"
                 },
                 "order_amount": {
@@ -31002,51 +31192,6 @@
                 "takeout_order_amount": {
                     "description": "外送订单金额",
                     "type": "number"
-                }
-            }
-        },
-        "business_data_resp.StatisticsPaymentMethod": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "description": "支付方式统计",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/business_data_resp.StatisticsPaymentMethodItem"
-                    }
-                },
-                "meta": {
-                    "description": "元数据",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.PageResponse"
-                        }
-                    ]
-                }
-            }
-        },
-        "business_data_resp.StatisticsPaymentMethodItem": {
-            "type": "object",
-            "properties": {
-                "date": {
-                    "description": "日期",
-                    "type": "string"
-                },
-                "no": {
-                    "description": "序号",
-                    "type": "integer"
-                },
-                "payment_amount": {
-                    "description": "支付金额",
-                    "type": "number"
-                },
-                "payment_name": {
-                    "description": "支付方式名称",
-                    "type": "string"
-                },
-                "payment_num": {
-                    "description": "支付次数",
-                    "type": "integer"
                 }
             }
         },
@@ -39803,34 +39948,6 @@
                 }
             }
         },
-        "req.StatisticsComprehensiveOperationsReq": {
-            "type": "object",
-            "properties": {
-                "cycle": {
-                    "description": "周期: 0=按日、1=按月",
-                    "type": "integer"
-                },
-                "page_no": {
-                    "description": "页码",
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "page_size": {
-                    "description": "每页大小",
-                    "type": "integer",
-                    "maximum": 1100,
-                    "minimum": 1
-                },
-                "query_end_time": {
-                    "description": "查询结束时间戳",
-                    "type": "integer"
-                },
-                "query_start_time": {
-                    "description": "查询开始时间戳",
-                    "type": "integer"
-                }
-            }
-        },
         "req.StatisticsPaymentMethodReq": {
             "type": "object",
             "properties": {
@@ -39864,6 +39981,34 @@
                 "payment_method_list": {
                     "description": "支付方式列表: 空=全部, 多个用\"uuid1,uuid2,uuid3,,,\"分割",
                     "type": "string"
+                },
+                "query_end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "query_start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StatisticsSummaryReq": {
+            "type": "object",
+            "properties": {
+                "cycle": {
+                    "description": "周期: 0=按日、1=按月",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
                 },
                 "query_end_time": {
                     "description": "查询结束时间戳",
@@ -40192,6 +40337,10 @@
                     "description": "入库仓库ERP编码",
                     "type": "string"
                 },
+                "is_confirm": {
+                    "description": "是否确认审核",
+                    "type": "boolean"
+                },
                 "out_warehouse_erp_code": {
                     "description": "出库仓库ERP编码",
                     "type": "string"
@@ -40350,6 +40499,10 @@
                 "uuid"
             ],
             "properties": {
+                "is_confirm": {
+                    "description": "是否确认驳回",
+                    "type": "boolean"
+                },
                 "reject_reason": {
                     "description": "驳回原因",
                     "type": "string",
@@ -40366,6 +40519,10 @@
         "req.TransferOrderSubmitReq": {
             "type": "object",
             "properties": {
+                "is_confirm": {
+                    "description": "是否确认提交（移除禁用物品）",
+                    "type": "boolean"
+                },
                 "uuid": {
                     "description": "调拨单UUID",
                     "type": "integer"
@@ -49897,6 +50054,10 @@
                     "description": "是否可审批",
                     "type": "boolean"
                 },
+                "is_can_receive": {
+                    "description": "是否可收货",
+                    "type": "boolean"
+                },
                 "is_need_select_in_warehouse": {
                     "description": "是否需要选择入库仓库",
                     "type": "boolean"
@@ -49953,7 +50114,7 @@
                     "type": "integer"
                 },
                 "reject_info": {
-                    "description": "Approvals  []TransferOrderApprovalInfo `json:\"approvals\"`   // 审批流程",
+                    "description": "驳回信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.TransferOrderRejectInfo"
@@ -50023,6 +50184,10 @@
                 },
                 "is_can_approve": {
                     "description": "是否可审批",
+                    "type": "boolean"
+                },
+                "is_can_receive": {
+                    "description": "是否可收货",
                     "type": "boolean"
                 },
                 "is_need_select_in_warehouse": {
@@ -50110,6 +50275,10 @@
         "resp.TransferOrderItemInfo": {
             "type": "object",
             "properties": {
+                "available_num": {
+                    "description": "可用库存数量",
+                    "type": "number"
+                },
                 "material_code": {
                     "description": "物品编码",
                     "type": "string"
@@ -51590,6 +51759,30 @@
                 "is_table_order": {
                     "description": "桌台用餐",
                     "type": "string"
+                }
+            }
+        },
+        "setting.PaymentMethod": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "setting.PaymentMethodListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.PaymentMethod"
+                    }
                 }
             }
         },
