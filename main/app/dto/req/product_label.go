@@ -23,9 +23,6 @@ func (r *ProductLabelAddReq) Validate() error {
 	if r.Name == "" {
 		return errors.New("标签名称不能为空")
 	}
-	if len(r.ProductPackageUuids) == 0 {
-		return errors.New("最少需选择1个商品")
-	}
 	return nil
 }
 
@@ -49,9 +46,6 @@ func (r *ProductLabelEditReq) Validate() error {
 	}
 	if r.Name == "" {
 		return errors.New("标签名称不能为空")
-	}
-	if len(r.ProductPackageUuids) == 0 {
-		return errors.New("最少需选择1个商品")
 	}
 	return nil
 }
