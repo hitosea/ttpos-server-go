@@ -158,6 +158,7 @@ func (PurchaseOrderItem) TableName() string {
 func (poi *PurchaseOrderItem) SetNil() {
 	poi.PurchaseOrder = PurchaseOrder{}
 	poi.Material = nil
+	poi.Units = []PurchaseOrderItemUnit{}
 }
 
 func (item PurchaseOrderItem) GetConversionRateNum() float64 {

@@ -198,13 +198,6 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 
 			// 确认收货时，更新采购申请明细的到货数量
 			if req.IsConfirm {
-				orderItem.ArrivalNum = newArrivalNum
-				err = purchaseOrderItemRepo.Update(orderItem)
-				if err != nil {
-					logger.Logger.Error("CreatePurchaseReceiptOrder-Update", zap.Any("orderItem", orderItem), zap.Any("err", err))
-					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())
-				}
-
 				// 更新采购申请明细单位到货数量
 				for _, unit := range itemReq.UnitList {
 					for _, orderItemUnit := range orderItem.Units {
@@ -216,6 +209,15 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 							}
 						}
 					}
+				}
+
+				// 更新采购申请明细的到货数量
+				orderItem.ArrivalNum = newArrivalNum
+				orderItem.SetNil()
+				err = purchaseOrderItemRepo.Update(orderItem)
+				if err != nil {
+					logger.Logger.Error("CreatePurchaseReceiptOrder-Update", zap.Any("orderItem", orderItem), zap.Any("err", err))
+					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())
 				}
 
 				// 收集需要更新的总部采购明细信息
@@ -318,6 +320,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		receiptOrderItemRepo := repository.NewPurchaseReceiptOrderItemRepo(tx)
+		purchaseOrderItemUnitRepo := repository.NewPurchaseOrderItemUnitRepo(tx)
 
 		// 查询收货单
 		receiptOrder, err := receiptOrderRepo.GetByUuid(req.Uuid)
@@ -430,7 +433,22 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 
 			// 更新采购申请明细的到货数量
 			if req.IsConfirm {
+				// 更新采购申请明细单位到货数量
+				for _, unit := range itemReq.UnitList {
+					for _, orderItemUnit := range purchaseOrderItem.Units {
+						if orderItemUnit.UnitUuid == unit.Uuid {
+							orderItemUnit.ArrivalNum = orderItemUnit.ArrivalNum + unit.Num
+							err = purchaseOrderItemUnitRepo.Update(orderItemUnit)
+							if err != nil {
+								return errors.WithMessage(errors.New("更新采购申请明细单位失败"), err.Error())
+							}
+						}
+					}
+				}
+
+				// 更新采购申请明细的到货数量
 				purchaseOrderItem.ArrivalNum = newArrivalNum
+				purchaseOrderItem.SetNil()
 				err = purchaseOrderItemRepo.Update(purchaseOrderItem)
 				if err != nil {
 					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())

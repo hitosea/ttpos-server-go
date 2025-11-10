@@ -32,7 +32,7 @@ func (r *PurchaseOrderItemUnitRepoImpl) CreateBatch(items []model.PurchaseOrderI
 
 // Update 更新采购订单明细单位
 func (r *PurchaseOrderItemUnitRepoImpl) Update(item model.PurchaseOrderItemUnit) error {
-	return r.db.Save(&item).Error
+	return r.db.Where("uuid = ?", item.Uuid).Updates(item).Error
 }
 
 // GetByUuid 根据UUID获取采购订单明细单位

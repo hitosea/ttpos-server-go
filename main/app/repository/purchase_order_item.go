@@ -65,7 +65,7 @@ func (r *PurchaseOrderItemRepoImpl) CreateBatch(items []model.PurchaseOrderItem)
 
 // Update 更新采购订单明细
 func (r *PurchaseOrderItemRepoImpl) Update(item *model.PurchaseOrderItem) error {
-	return r.db.Save(item).Error
+	return r.db.Where("uuid = ?", item.Uuid).Updates(item).Error
 }
 
 // Delete 删除采购订单明细

@@ -350,13 +350,7 @@
                                     "width": 100,
                                     "not_show_empty": true
                                 },
-                                "conditions": [
-                                    {
-                                        "field": "custom_text",
-                                        "operator": "not_empty",
-                                        "value": 0
-                                    }
-                                ]
+                                "conditions": []
                             }
                         ]
                     ]

@@ -156,22 +156,31 @@ func (v *purchaseOrderValidator) validateReceiptQuantityNew(
 	unitList []req.PurchaseReceiptItemMaterialUnitReq,
 ) (error, float64) {
 	reqNum := 0.0
-	for _, unit := range unitList {
-		for _, orderItemUnit := range orderItem.Units {
-			if orderItemUnit.UnitUuid == unit.Uuid {
-				newArrivalNum := orderItemUnit.ArrivalNum + unit.Num
-				if newArrivalNum > orderItemUnit.Num {
-					return errors.New(
-						fmt.Sprintf(
-							i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
-							language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
-							orderItemUnit.Num,
-							orderItemUnit.ArrivalNum,
-							unit.Num,
-						),
-					), reqNum
+	if len(orderItem.Units) == 0 && orderItem.BaseUnitUuid != 0 {
+		for _, unit := range unitList {
+			reqNum += unit.Num
+		}
+		if reqNum > orderItem.Num {
+			return errors.New(fmt.Sprintf("物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）", language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()), orderItem.Num, orderItem.ArrivalNum, reqNum)), reqNum
+		}
+	} else {
+		for _, unit := range unitList {
+			for _, orderItemUnit := range orderItem.Units {
+				if orderItemUnit.UnitUuid == unit.Uuid {
+					newArrivalNum := orderItemUnit.ArrivalNum + unit.Num
+					if newArrivalNum > orderItemUnit.Num {
+						return errors.New(
+							fmt.Sprintf(
+								i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+								language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+								orderItemUnit.Num,
+								orderItemUnit.ArrivalNum,
+								unit.Num,
+							),
+						), reqNum
+					}
+					reqNum += unit.Num
 				}
-				reqNum += unit.Num
 			}
 		}
 	}

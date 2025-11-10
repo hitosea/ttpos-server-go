@@ -298,17 +298,22 @@ func (h *purchaseOrderHelper) batchUpdateHeadquarterItems(
 		for _, unit := range itemUpdate.UnitList {
 			headquarterItemUnit, err := info.ItemUnitRepo.GetByUuid(unit.Uuid)
 			if err != nil {
-				return errors.WithMessage(errors.New("获取总部采购申请明细单位失败"), err.Error())
+				if err != gorm.ErrRecordNotFound {
+					return errors.WithMessage(errors.New("获取总部采购申请明细单位失败"), err.Error())
+				}
 			}
-			headquarterItemUnit.ArrivalNum = headquarterItemUnit.ArrivalNum + unit.Num
-			err = info.ItemUnitRepo.Update(*headquarterItemUnit)
-			if err != nil {
-				return errors.WithMessage(errors.New("更新总部采购申请明细单位到货数量失败"), err.Error())
+			if headquarterItemUnit != nil {
+				headquarterItemUnit.ArrivalNum = headquarterItemUnit.ArrivalNum + unit.Num
+				err = info.ItemUnitRepo.Update(*headquarterItemUnit)
+				if err != nil {
+					return errors.WithMessage(errors.New("更新总部采购申请明细单位到货数量失败"), err.Error())
+				}
 			}
 		}
 
 		// 更新到货数量
 		headquarterItem.ArrivalNum = itemUpdate.NewArrivalNum
+		headquarterItem.SetNil()
 		err = info.ItemRepo.Update(headquarterItem)
 		if err != nil {
 			return errors.WithMessage(

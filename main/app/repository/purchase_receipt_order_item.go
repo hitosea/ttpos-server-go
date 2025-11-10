@@ -54,7 +54,7 @@ func (r *PurchaseReceiptOrderItemRepoImpl) CreateBatch(items []model.PurchaseRec
 
 // Update 更新收货明细
 func (r *PurchaseReceiptOrderItemRepoImpl) Update(item *model.PurchaseReceiptOrderItem) error {
-	return r.db.Save(item).Error
+	return r.db.Where("uuid = ?", item.Uuid).Updates(item).Error
 }
 
 // Delete 删除收货明细
