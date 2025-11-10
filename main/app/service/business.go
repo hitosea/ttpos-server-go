@@ -51,8 +51,11 @@ type IBusinessSrv interface {
 	ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) error                                                                          // 导出后厨菜品出品明细
 	StatsKitchenEfficiencyAnalysis(ctx context.Context) (string, error)                                                                                                   // 统计后厨效率分析
 	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) business_data_resp.BusinessTimePeriod                                                     // 统计营业时段数据
-	CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) business_data_resp.StatisticsComprehensiveOperations          // 统计综合运用数据
-	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) business_data_resp.StatisticsPaymentMethod                                        // 统计支付方式数据
+	CountBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) business_data_resp.StatisticsSummary                                                          // 统计综合运用数据
+	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) business_data_resp.StatisticsPaymentMethod                                        // 统计收款数据
+	ExportBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) error                                                                                    // 导出时段营业统计数据
+	ExportBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) error                                                                                        // 导出综合运营统计数据
+	ExportBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) error                                                                            // 导出收款统计数据
 }
 
 // businessSrv 收银服务结构体
@@ -1545,15 +1548,15 @@ func (s *businessSrv) CountBusinessTimePeriod(ctx context.Context, req req.Busin
 	}
 }
 
-// CountBusinessComprehensiveOperations 统计综合运用
-func (s *businessSrv) CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) business_data_resp.StatisticsComprehensiveOperations {
+// CountBusinessSummary 统计综合运营
+func (s *businessSrv) CountBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) business_data_resp.StatisticsSummary {
 	// 调用统计服务
-	businessComprehensiveOperationsData := s.statisticsSrv.CountBusinessComprehensiveOperations(ctx, req)
+	businessSummaryData := s.statisticsSrv.CountBusinessSummary(ctx, req)
 
 	// 构建返回列表
-	businessComprehensiveOperationsList := make([]business_data_resp.StatisticsComprehensiveOperationsItem, 0, len(businessComprehensiveOperationsData.StatisticsComprehensiveList))
-	for _, item := range businessComprehensiveOperationsData.StatisticsComprehensiveList {
-		businessComprehensiveOperationsList = append(businessComprehensiveOperationsList, business_data_resp.StatisticsComprehensiveOperationsItem{
+	businessSummaryList := make([]business_data_resp.StatisticsSummaryItem, 0, len(businessSummaryData.StatisticsComprehensiveList))
+	for _, item := range businessSummaryData.StatisticsComprehensiveList {
+		businessSummaryList = append(businessSummaryList, business_data_resp.StatisticsSummaryItem{
 			Date:               item.Date,
 			OrderAmount:        item.OrderAmount,
 			PayAmount:          item.PayAmount,
@@ -1570,17 +1573,17 @@ func (s *businessSrv) CountBusinessComprehensiveOperations(ctx context.Context, 
 		})
 	}
 
-	return business_data_resp.StatisticsComprehensiveOperations{
+	return business_data_resp.StatisticsSummary{
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
-			Total:    businessComprehensiveOperationsData.TotalStatisticsComprehensiveNum,
+			Total:    businessSummaryData.TotalStatisticsComprehensiveNum,
 		},
-		List: businessComprehensiveOperationsList,
+		List: businessSummaryList,
 	}
 }
 
-// CountBusinessPaymentMethod 统计支付方式
+// CountBusinessPaymentMethod 统计收款数据
 func (s *businessSrv) CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) business_data_resp.StatisticsPaymentMethod {
 	// 调用统计服务
 	businessPaymentMethodData := s.statisticsSrv.CountBusinessPaymentMethod(ctx, req)
@@ -1849,4 +1852,574 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, r
 	}
 
 	return &resp.FileExportResp{FileUuid: res.Uuid}, nil // 返回文件UUID
+}
+
+// 导出时段营业统计数据
+func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.BusinessTimePeriodReq) error {
+	db := ctx.GetDB()
+	// 判断是否还有正在导出的任务
+	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeBusinessData)
+	if err != nil {
+		return err
+	}
+	if oldRecord != nil {
+		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+	}
+
+	request.PageNo = 1
+	request.PageSize = 1000 // 最多导出1000条数据
+	result := s.CountBusinessTimePeriod(ctx, request)
+	if result.Meta.Total == 0 {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Business Time Period Statistics",
+		ZhName:   "时段营业统计",
+		ZhTwName: "時段營業統計",
+		ThName:   "สถิติยอดขายตามช่วงเวลา",
+		MyName:   "အချိန်အပိုင်းအခြားအလိုက်ရောင်းအားစာရင်း",
+		JaName:   "時間帯別売上統計",
+		KoName:   "영업시간대별 통계",
+		TrName:   "Zaman Dilimi Satış İstatistikleri",
+		SvName:   "Försäljningsstatistik per tidsperiod",
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
+	fileName := fmt.Sprintf("%s%s.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), dateString)
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeBusinessData,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	err = repository.NewExportRecordRepo(db).Create(record)
+	if err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		_, err := s.ExportBusinessTimePeriodTask(ctx, ExportBusinessTimePeriodTaskParams{
+			Record:      *record,
+			FillNameMul: fileNameMul,
+			Data:        result,
+		})
+		if err != nil {
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出时段营业统计数据失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+	})
+
+	return nil
+}
+
+// 导出时段营业统计数据参数
+type ExportBusinessTimePeriodTaskParams struct {
+	Record      model.ExportRecord                    // 导出记录
+	FillNameMul model.MultiLanguageName               // 多语言名称
+	Data        business_data_resp.BusinessTimePeriod // 数据
+}
+
+// 导出时段营业统计数据
+func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params ExportBusinessTimePeriodTaskParams) (*resp.FileExportResp, error) {
+	db := ctx.GetDB()
+
+	// 根据语言获取表头
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"时段", "订单金额", "实付金额", "订单量", "用餐人数", "订单金额人均", "实付金额人均",
+		},
+		"en": { // 英文
+			"Time Period", "Order Amount", "Paid Amount", "Order Count", "Number of Diners", "Order Amount Per Person", "Paid Amount Per Person",
+		},
+		"th": { // 泰语
+			"ช่วงเวลา", "ยอดคำสั่งซื้อ", "ยอดชำระเงิน", "จำนวนออเดอร์", "จำนวนลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดชำระเงินต่อคน",
+		},
+		"zhtw": { // 繁体中文
+			"時段", "訂單金額", "實付金額", "訂單量", "用餐人數", "訂單金額人均", "實付金額人均",
+		},
+		"ja": { // 日语
+			"時間帯", "注文金額", "支払い金額", "注文数", "来店人数", "一人当たり注文金額", "一人当たり支払い金額",
+		},
+		"ko": { // 韩语
+			"시간대", "주문 금액", "실제 결제 금액", "주문 건수", "식사 인원", "인당 주문 금액", "인당 실제 결제 금액",
+		},
+		"my": { // 缅甸语
+			"အချိန်အပိုင်းအခြား", "အော်ဒါအလုံးစုံပမာဏ", "ပေးစာငွေ", "အော်ဒါအရေအတွက်", "စားသုံးသူအရေအတွက်", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးစာငွေ",
+		},
+		"tr": { // 土耳其语
+			"Zaman Dilimi", "Sipariş Tutarı", "Ödenen Tutar", "Sipariş Sayısı", "Yemek Yiyen Kişi Sayısı", "Kişi Başı Sipariş Tutarı", "Kişi Başı Ödenen Tutar",
+		},
+		"sv": { // 瑞典语
+			"Tidsperiod", "Orderbelopp", "Betalt Belopp", "Antal Order", "Antal Gäster", "Orderbelopp per Person", "Betalt Belopp per Person",
+		},
+	}
+	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
+	sheetName := params.FillNameMul.GetNameByLang(ctx.GetLanguage())
+	// 创建一个新的工作表
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	lang := ctx.GetLanguage()
+	// 设置表头
+	headers := func() []string {
+		headers := headerMap[lang]
+		if headers == nil {
+			headers = headerMap["en"]
+		}
+		return headers
+	}() // 根据语言获取表头
+
+	// 写入表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1) // 从第一行开始
+		xlsxFile.SetCellValue(sheetName, cell, header)
+		// 设置样式，加粗表头
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
+	}
+
+	// 写入数据
+	for rowIdx, item := range params.Data.List {
+		// 数据从第二行开始写入
+		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.TimePeriod)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OrderNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountMealAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountMealAvg))
+	}
+
+	// 自动调整列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, params.Record.ExportName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.NewExportRecordRepo(db).Update(params.Record.Uuid, map[string]any{
+		"file_uuid": res.Uuid,
+		"status":    model.ExportStatusSuccess,
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
+}
+
+// 导出综合运营统计数据
+func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.StatisticsSummaryReq) error {
+	db := ctx.GetDB()
+	// 判断是否还有正在导出的任务
+	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeBusinessDataSummary)
+	if err != nil {
+		return err
+	}
+	if oldRecord != nil {
+		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+	}
+
+	request.PageNo = 1
+	request.PageSize = 1000 // 最多导出1000条数据
+	result := s.CountBusinessSummary(ctx, request)
+	if result.Meta.Total == 0 {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Business Comprehensive Operations Statistics",
+		ZhName:   "综合运营统计",
+		ZhTwName: "綜合營運統計",
+		ThName:   "สถิติการดำเนินงานแบบองค์รวม",
+		MyName:   "စုပေါင်းလုပ်ငန်းဆောင်ရွက်မှုစာရင်း",
+		JaName:   "総合運営統計",
+		KoName:   "종합 운영 통계",
+		TrName:   "Kapsamlı İşletme İstatistikleri",
+		SvName:   "Statistik för omfattande verksamhet",
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
+	fileName := fmt.Sprintf("%s%s.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), dateString)
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeBusinessDataSummary,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	err = repository.NewExportRecordRepo(db).Create(record)
+	if err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		_, err := s.ExportBusinessSummaryTask(ctx, ExportBusinessSummaryTaskParams{
+			Record:      *record,
+			FillNameMul: fileNameMul,
+			Data:        result,
+		})
+		if err != nil {
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出综合运营统计数据失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+	})
+
+	return nil
+}
+
+// 导出综合运营统计数据参数
+type ExportBusinessSummaryTaskParams struct {
+	Record      model.ExportRecord                   // 导出记录
+	FillNameMul model.MultiLanguageName              // 多语言名称
+	Data        business_data_resp.StatisticsSummary // 数据
+}
+
+// 导出综合运营统计数据
+func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params ExportBusinessSummaryTaskParams) (*resp.FileExportResp, error) {
+	db := ctx.GetDB()
+
+	// 根据语言获取表头
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"营业日", "订单金额", "实付金额", "订单量", "用餐人数", "消费桌数", "订单金额人均", "实付金额人均", "订单金额单均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
+		},
+		"en": { // 英文 (根据中文翻译)
+			"Business Day", "Order Amount", "Paid Amount", "Order Count", "Number of Diners", "Number of Tables Consumed", "Order Amount Per Person", "Paid Amount Per Person", "Order Amount Per Order", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
+		},
+		"th": { // 泰语 (根据中文翻译)
+			"วันดำเนินธุรกิจ", "ยอดคำสั่งซื้อ", "ยอดชำระเงิน", "จำนวนออเดอร์", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ยอดคำสั่งซื้อต่อคน", "ยอดชำระเงินต่อคน", "ยอดคำสั่งซื้อต่อบิล", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
+		},
+		"zhtw": { // 繁体中文 (根据中文翻译)
+			"營業日", "訂單金額", "實付金額", "訂單量", "用餐人數", "消費桌數", "訂單金額人均", "實付金額人均", "訂單金額單均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
+		},
+		"ja": { // 日语 (根据中文翻译)
+			"営業日", "注文金額", "支払い金額", "注文数", "来店人数", "利用テーブル数", "一人当たり注文金額", "一人当たり支払い金額", "一件当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
+		},
+		"ko": { // 韩语 (根据中文翻译)
+			"영업일", "주문 금액", "실제 결제 금액", "주문 건수", "식사 인원", "소비 테이블 수", "인당 주문 금액", "인당 실제 결제 금액", "주문당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
+		},
+		"my": { // 缅甸语 (根据中文翻译)
+			"လုပ်ငန်းသက်တမ်းနေ့", "အော်ဒါစုစုပေါင်းပမာဏ", "ပေးသွင်းငွေ", "အော်ဒါအရေအတွက်", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
+		},
+		"tr": { // 土耳其语 (根据中文翻译)
+			"İşletme Günü", "Sipariş Tutarı", "Ödenen Tutar", "Sipariş Sayısı", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Kişi Başına Sipariş Tutarı", "Kişi Başına Ödenen Tutar", "Sipariş Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
+		},
+		"sv": { // 瑞典语 (根据中文翻译)
+			"Affärsdag", "Orderbelopp", "Betalt Belopp", "Antal Order", "Antal Gäster", "Antal Konsumerade Bord", "Orderbelopp per Person", "Betalt Belopp per Person", "Orderbelopp per Order", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
+		},
+	}
+	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
+	sheetName := params.FillNameMul.GetNameByLang(ctx.GetLanguage())
+	// 创建一个新的工作表
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	lang := ctx.GetLanguage()
+	// 设置表头
+	headers := func() []string {
+		headers := headerMap[lang]
+		if headers == nil {
+			headers = headerMap["en"]
+		}
+		return headers
+	}() // 根据语言获取表头
+
+	// 写入表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1) // 从第一行开始
+		xlsxFile.SetCellValue(sheetName, cell, header)
+		// 设置样式，加粗表头
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
+	}
+
+	// 写入数据
+	for rowIdx, item := range params.Data.List {
+		// 数据从第二行开始写入
+		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OrderNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountMealAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountMealAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.InstantOrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.DeskOrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.TakeoutOrderAmount))
+	}
+
+	// 自动调整列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, params.Record.ExportName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.NewExportRecordRepo(db).Update(params.Record.Uuid, map[string]any{
+		"file_uuid": res.Uuid,
+		"status":    model.ExportStatusSuccess,
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
+}
+
+// 导出收款数据
+func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request req.StatisticsPaymentMethodReq) error {
+	db := ctx.GetDB()
+	// 判断是否还有正在导出的任务
+	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeBusinessDataPaymentMethod)
+	if err != nil {
+		return err
+	}
+	if oldRecord != nil {
+		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+	}
+
+	request.PageNo = 1
+	request.PageSize = 1000 // 最多导出1000条数据
+	result := s.CountBusinessPaymentMethod(ctx, request)
+	if result.Meta.Total == 0 {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Business Payment Statistics",
+		ZhName:   "营业收款统计",
+		ZhTwName: "營業收款統計",
+		ThName:   "สถิติการชำระเงินของธุรกิจ",
+		MyName:   "လုပ်ငန်းငွေလက်ခံမှုစာရင်း",
+		JaName:   "営業入金統計",
+		KoName:   "영업 수금 통계",
+		TrName:   "İşletme Tahsilat İstatistikleri",
+		SvName:   "Företagets betalningsstatistik",
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
+	fileName := fmt.Sprintf("%s%s.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), dateString)
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeBusinessDataPaymentMethod,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	err = repository.NewExportRecordRepo(db).Create(record)
+	if err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		_, err := s.ExportBusinessPaymentMethodTask(ctx, ExportBusinessPaymentMethodTaskParams{
+			Record:      *record,
+			FillNameMul: fileNameMul,
+			Data:        result,
+		})
+		if err != nil {
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出营业收款统计数据失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+	})
+
+	return nil
+}
+
+// 导出收款数据参数
+type ExportBusinessPaymentMethodTaskParams struct {
+	Record      model.ExportRecord                         // 导出记录
+	FillNameMul model.MultiLanguageName                    // 多语言名称
+	Data        business_data_resp.StatisticsPaymentMethod // 数据
+}
+
+// 导出营业收款统计数据
+func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, params ExportBusinessPaymentMethodTaskParams) (*resp.FileExportResp, error) {
+	db := ctx.GetDB()
+
+	// 根据语言获取表头
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"营业日", "支付方式", "次数", "收款小记",
+		},
+		"en": { // 英文（根据中文翻译）
+			"Business Day", "Payment Method", "Count", "Summary of Receipts",
+		},
+		"th": { // 泰语（根据中文翻译）
+			"วันดำเนินธุรกิจ", "วิธีการชำระเงิน", "จำนวนครั้ง", "สรุปการรับเงิน",
+		},
+		"zhtw": { // 繁體中文（根据中文翻译）
+			"營業日", "支付方式", "次數", "收款小記",
+		},
+		"ja": { // 日语（根据中文翻译）
+			"営業日", "支払方法", "回数", "入金概要",
+		},
+		"ko": { // 韩语（根据中文翻译）
+			"영업일", "결제 방식", "횟수", "수납 요약",
+		},
+		"my": { // 缅甸语（根据中文翻译）
+			"လုပ်ငန်းသက်တမ်းနေ့", "ငွေပေးချေမှုနည်းလမ်း", "အကြိမ်အရေအတွက်", "ငွေလက်ခံမှုအကျဉ်းချုပ်",
+		},
+		"tr": { // 土耳其语（根据中文翻译）
+			"İşletme Günü", "Ödeme Yöntemi", "Adet", "Tahsilat Özeti",
+		},
+		"sv": { // 瑞典语（根据中文翻译）
+			"Affärsdag", "Betalningsmetod", "Antal", "Sammanfattning av mottagna betalningar",
+		},
+	}
+	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
+	sheetName := params.FillNameMul.GetNameByLang(ctx.GetLanguage())
+	// 创建一个新的工作表
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	lang := ctx.GetLanguage()
+	// 设置表头
+	headers := func() []string {
+		headers := headerMap[lang]
+		if headers == nil {
+			headers = headerMap["en"]
+		}
+		return headers
+	}() // 根据语言获取表头
+
+	// 写入表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1) // 从第一行开始
+		xlsxFile.SetCellValue(sheetName, cell, header)
+		// 设置样式，加粗表头
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
+	}
+
+	// 写入数据
+	for rowIdx, item := range params.Data.List {
+		// 数据从第二行开始写入
+		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.PaymentName)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.PaymentNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), fmt.Sprintf("%.2f", item.PaymentAmount))
+	}
+
+	// 自动调整列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, params.Record.ExportName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.NewExportRecordRepo(db).Update(params.Record.Uuid, map[string]any{
+		"file_uuid": res.Uuid,
+		"status":    model.ExportStatusSuccess,
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
 }

@@ -158,15 +158,15 @@ type BusinessTimePeriodReq struct {
 	StatisticsType int   `form:"statistics_type" json:"statistics_type"`   // 统计类型， 0=开台时间、 1=结账时间
 }
 
-// StatisticsComprehensiveOperationsReq 统计综合运营请求
-type StatisticsComprehensiveOperationsReq struct {
+// StatisticsSummaryReq 统计综合运营请求
+type StatisticsSummaryReq struct {
 	dto.PageReq          // 分页参数
 	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   int64 `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
 	Cycle          int   `form:"cycle" json:"cycle"`                       // 周期: 0=按日、1=按月
 }
 
-// StatisticsPaymentMethodReq 统计支付方式请求
+// StatisticsPaymentMethodReq 统计收款数据请求
 type StatisticsPaymentMethodReq struct {
 	dto.PageReq              // 分页参数
 	QueryStartTime    int64  `form:"query_start_time" json:"query_start_time"`       // 查询开始时间戳

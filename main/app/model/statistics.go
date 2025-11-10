@@ -341,8 +341,8 @@ type StatisticsBusinessTimePeriodData struct {
 	MealNum         sql.NullInt64   `gorm:"column:meal_num;comment:用餐人数"`
 }
 
-// StatisticsBusinessComprehensiveOperationsData 综合运用统计数据
-type StatisticsBusinessComprehensiveOperationsData struct {
+// StatisticsBusinessSummaryData 综合运营统计数据
+type StatisticsBusinessSummaryData struct {
 	Date               sql.NullString  `gorm:"column:date;comment:日期"`
 	OrderAmount        sql.NullFloat64 `gorm:"column:order_amount;comment:订单金额"`
 	PayAmount          sql.NullFloat64 `gorm:"column:pay_amount;comment:实付金额"`

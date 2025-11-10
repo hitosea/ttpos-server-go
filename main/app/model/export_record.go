@@ -3,7 +3,7 @@ package model
 const (
 	ExportTypeBusinessData              = 1 // 时段营业统计
 	ExportTypeBusinessDataSummary       = 2 // 综合运营统计
-	ExportTypeBusinessDataIncome        = 3 // 营业应收统计
+	ExportTypeBusinessDataPaymentMethod = 3 // 营业收款统计
 	ExportTypeKitchenProductionDetail   = 4 // 菜品出品明细
 	ExportTypeKitchenEfficiencyAnalysis = 5 // 菜品出品详情
 )

@@ -293,7 +293,7 @@ func (h *statisticsHandler) CountHome(c *gin.Context) {
 // CountKitchenEfficiencyAnalysis 统计后厨效率分析
 // @Summary 统计后厨效率分析
 // @Description 统计后厨效率分析
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -318,7 +318,7 @@ func (h *statisticsHandler) CountKitchenEfficiencyAnalysis(c *gin.Context) {
 // CountKitchenEfficiencyAnalysisAvg 统计后厨效率分析平均时长
 // @Summary 统计后厨效率分析平均时长
 // @Description 统计后厨效率分析平均时长
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -343,7 +343,7 @@ func (h *statisticsHandler) CountKitchenEfficiencyAnalysisAvg(c *gin.Context) {
 // CountKitchenProductionDetail 统计后厨菜品出品明细
 // @Summary 统计后厨菜品出品明细
 // @Description 统计后厨菜品出品明细
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -368,7 +368,7 @@ func (h *statisticsHandler) CountKitchenProductionDetail(c *gin.Context) {
 // ExportKitchenProductionDetail 导出后厨菜品出品明细
 // @Summary 导出后厨菜品出品明细
 // @Description 导出后厨菜品出品明细
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -393,7 +393,7 @@ func (h *statisticsHandler) ExportKitchenProductionDetail(c *gin.Context) {
 // CountBusinessTimePeriod 统计营业时段数据
 // @Summary 统计营业时段数据
 // @Description 移动端-报表-营业报表-时段营业统计
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -415,28 +415,28 @@ func (h *statisticsHandler) CountBusinessTimePeriod(c *gin.Context) {
 // CountBusinessComprehensive 综合运营统计
 // @Summary 综合运营统计
 // @Description 移动端-报表-营业报表-综合运营统计
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.StatisticsComprehensiveOperationsReq true "统计参数"
-// @Success 200 {object} dto.Response{data=business_data_resp.StatisticsComprehensiveOperations} "统计数据"
-// @Router /shop/statistics/business/comprehensive_operations [get]
-func (h *statisticsHandler) CountBusinessComprehensiveOperations(c *gin.Context) {
+// @param data body req.StatisticsSummaryReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.StatisticsSummary} "统计数据"
+// @Router /shop/statistics/business/summary [get]
+func (h *statisticsHandler) CountBusinessSummary(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var req req.StatisticsComprehensiveOperationsReq
+	var req req.StatisticsSummaryReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-	businessComprehensiveOperationsData := h.businessSrv.CountBusinessComprehensiveOperations(ctx, req)
-	helper.Success(c, businessComprehensiveOperationsData)
+	businessSummary := h.businessSrv.CountBusinessSummary(ctx, req)
+	helper.Success(c, businessSummary)
 }
 
-// CountBusinessPaymentMethod 统计支付方式
-// @Summary 统计支付方式
-// @Description 统计支付方式
-// @Tags 商家端.营业数据
+// CountBusinessPaymentMethod 统计营业收款统计
+// @Summary 统计营业收款统计
+// @Description 统计营业收款统计
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -457,7 +457,7 @@ func (h *statisticsHandler) CountBusinessPaymentMethod(c *gin.Context) {
 // ExportKitchenEfficiencyAnalysis 导出后厨效率分析
 // @Summary 导出后厨效率分析
 // @Description 导出后厨效率分析
-// @Tags 商家端.营业数据
+// @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -472,6 +472,81 @@ func (h *statisticsHandler) ExportKitchenEfficiencyAnalysis(c *gin.Context) {
 		return
 	}
 	err := h.businessSrv.ExportKitchenEfficiencyAnalysis(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// ExportBusinessTimePeriod 导出营业时段数据
+// @Summary 导出营业时段数据
+// @Description 移动端-报表-营业报表-导出时段营业统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessTimePeriodReq true "统计参数"
+// @Success 200 {object} dto.Response "统计数据"
+// @Router /shop/statistics/business/time_period/export [get]
+func (h *statisticsHandler) ExportBusinessTimePeriod(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessTimePeriodReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	err := h.businessSrv.ExportBusinessTimePeriod(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// ExportBusinessSummary 导出综合运营统计
+// @Summary 导出综合运营统计
+// @Description 导出综合运营统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.StatisticsSummaryReq true "统计参数"
+// @Success 200 {object} dto.Response "统计数据"
+// @Router /shop/statistics/business/summary/export [get]
+func (h *statisticsHandler) ExportBusinessSummary(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.StatisticsSummaryReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	err := h.businessSrv.ExportBusinessSummary(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// ExportBusinessPaymentMethod 导出营业收款统计
+// @Summary 导出营业收款统计
+// @Description 导出营业收款统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.StatisticsPaymentMethodReq true "统计参数"
+// @Success 200 {object} dto.Response "统计数据"
+// @Router /shop/statistics/business/payment_method/export [get]
+func (h *statisticsHandler) ExportBusinessPaymentMethod(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.StatisticsPaymentMethodReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	err := h.businessSrv.ExportBusinessPaymentMethod(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -499,24 +574,27 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/statistics/business", wrapper.CountBusiness)                                                 // 统计营业数据，移动管理端首页-店内概况
-		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)                                      // 统计支付方式
-		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory)                                  // 统计商品分类
-		privateApi.GET("/statistics/product", wrapper.CountProduct)                                                   // 统计商品
-		privateApi.GET("/statistics/area", wrapper.CountArea)                                                         // 统计区域，移动管理端首页-区域数据
-		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)                                          // 统计商品排行，移动管理端首页-销量、销售额排行
-		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)                                        // 统计商品销售
-		privateApi.GET("/statistics/7days", wrapper.Count7Days)                                                       // 统计7天
-		privateApi.GET("/statistics/export", wrapper.CountExport)                                                     // 统计导出
-		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount)                             // 统计班次退款金额
-		privateApi.GET("/statistics/home", wrapper.CountHome)                                                         // 统计首页
-		privateApi.GET("/statistics/kitchen/efficiency_analysis", wrapper.CountKitchenEfficiencyAnalysis)             // 统计后厨效率分析
-		privateApi.GET("/statistics/kitchen/efficiency_analysis/avg", wrapper.CountKitchenEfficiencyAnalysisAvg)      // 统计后厨效率分析平均时长
-		privateApi.GET("/statistics/kitchen/production_detail", wrapper.CountKitchenProductionDetail)                 // 后厨菜品出品明细
-		privateApi.GET("/statistics/kitchen/production_detail/export", wrapper.ExportKitchenProductionDetail)         // 导出后厨菜品出品明细
-		privateApi.GET("/statistics/kitchen/efficiency_analysis/export", wrapper.ExportKitchenEfficiencyAnalysis)     // 导出后厨效率分析
-		privateApi.GET("/statistics/business/time_period", wrapper.CountBusinessTimePeriod)                           // 统计营业时段数据，移动端-报表-营业报表-时段营业统计
-		privateApi.GET("/statistics/business/comprehensive_operations", wrapper.CountBusinessComprehensiveOperations) // 综合运营统计, 移动端-报表-营业报表-综合运营统计
-		privateApi.GET("/statistics/business/payment_method", wrapper.CountBusinessPaymentMethod)                     // 统计支付方式, 移动端-报表-营业报表-支付方式统计
+		privateApi.GET("/statistics/business", wrapper.CountBusiness)                                             // 统计营业数据，移动管理端首页-店内概况
+		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)                                  // 统计支付方式
+		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory)                              // 统计商品分类
+		privateApi.GET("/statistics/product", wrapper.CountProduct)                                               // 统计商品
+		privateApi.GET("/statistics/area", wrapper.CountArea)                                                     // 统计区域，移动管理端首页-区域数据
+		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)                                      // 统计商品排行，移动管理端首页-销量、销售额排行
+		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)                                    // 统计商品销售
+		privateApi.GET("/statistics/7days", wrapper.Count7Days)                                                   // 统计7天
+		privateApi.GET("/statistics/export", wrapper.CountExport)                                                 // 统计导出
+		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount)                         // 统计班次退款金额
+		privateApi.GET("/statistics/home", wrapper.CountHome)                                                     // 统计首页
+		privateApi.GET("/statistics/kitchen/efficiency_analysis", wrapper.CountKitchenEfficiencyAnalysis)         // 统计后厨效率分析
+		privateApi.GET("/statistics/kitchen/efficiency_analysis/avg", wrapper.CountKitchenEfficiencyAnalysisAvg)  // 统计后厨效率分析平均时长
+		privateApi.GET("/statistics/kitchen/production_detail", wrapper.CountKitchenProductionDetail)             // 后厨菜品出品明细
+		privateApi.GET("/statistics/kitchen/production_detail/export", wrapper.ExportKitchenProductionDetail)     // 导出后厨菜品出品明细
+		privateApi.GET("/statistics/kitchen/efficiency_analysis/export", wrapper.ExportKitchenEfficiencyAnalysis) // 导出后厨效率分析
+		privateApi.GET("/statistics/business/time_period", wrapper.CountBusinessTimePeriod)                       // 统计营业时段数据，移动端-报表-营业报表-时段营业统计
+		privateApi.GET("/statistics/business/summary", wrapper.CountBusinessSummary)                              // 综合运营统计, 移动端-报表-营业报表-综合运营统计
+		privateApi.GET("/statistics/business/payment_method", wrapper.CountBusinessPaymentMethod)                 // 统计支付方式, 移动端-报表-营业报表-支付方式统计
+		privateApi.GET("/statistics/business/time_period/export", wrapper.ExportBusinessTimePeriod)               // 导出营业时段数据, 移动端-报表-营业报表-时段营业统计
+		privateApi.GET("/statistics/business/summary/export", wrapper.ExportBusinessSummary)                      // 导出综合运营统计, 移动端-报表-营业报表-综合运营统计
+		privateApi.GET("/statistics/business/payment_method/export", wrapper.ExportBusinessPaymentMethod)         // 导出营业收款统计, 移动端-报表-营业报表-支付方式统计
 	}
 }

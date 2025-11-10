@@ -22,34 +22,34 @@ import (
 
 // IStatisticsSrv 统计服务接口
 type IStatisticsSrv interface {
-	CountSale(ctx context.Context, req CountReq) CountSaleResp                                                                                    // 统计销售
-	CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp                                                           // 统计销售天数
-	CountPayment(ctx context.Context, req CountReq) CountPaymentResp                                                                              // 统计支付
-	CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp                                                     // 统计支付天数
-	CountTax(ctx context.Context, req CountReq) []CountTaxResp                                                                                    // 统计税类
-	CountCategory(ctx context.Context, req CountReq) CountCategoryResp                                                                            // 统计分类
-	CountProduct(ctx context.Context, req CountReq) []CountProductResp                                                                            // 统计商品
-	CountArea(ctx context.Context, req CountReq) []CountAreaResp                                                                                  // 统计区域
-	CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp                                                           // 统计区域天数
-	Count7Days(ctx context.Context, req CountReq) Count7DaysResp                                                                                  // 统计销售天数
-	CountMemberNum(ctx context.Context, req CountReq) int64                                                                                       // 统计会员数量
-	CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp                                                 // 统计会员数量天数
-	CountMember(ctx context.Context, req CountReq) CountMemberResp                                                                                // 统计会员
-	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp                                                                        // 统计会员支付
-	CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp                                               // 统计会员支付天数
-	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp                                                                      // 统计未结订单
-	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp                                                                      // 统计商品销售
-	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp                                                                      // 统计免单支付
-	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp                                             // 统计免单支付天数
-	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                                                                       // 统计导出
-	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                                                             // 统计班次退款金额
-	CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp                                                                      // 统计取消订单
-	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) CountBusinessTimePeriodResp                                       // 统计营业时段
-	CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp // 统计综合运营
-	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp                               // 统计支付方式
-	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                                                                         // 统计商品排行
-	SaveSale(ctx context.Context, req SaveSaleReq) error                                                                                          // 保存销售
-	SaveMember(ctx context.Context, req SaveMemberReq) error                                                                                      // 保存会员
+	CountSale(ctx context.Context, req CountReq) CountSaleResp                                                      // 统计销售
+	CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp                             // 统计销售天数
+	CountPayment(ctx context.Context, req CountReq) CountPaymentResp                                                // 统计支付
+	CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp                       // 统计支付天数
+	CountTax(ctx context.Context, req CountReq) []CountTaxResp                                                      // 统计税类
+	CountCategory(ctx context.Context, req CountReq) CountCategoryResp                                              // 统计分类
+	CountProduct(ctx context.Context, req CountReq) []CountProductResp                                              // 统计商品
+	CountArea(ctx context.Context, req CountReq) []CountAreaResp                                                    // 统计区域
+	CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp                             // 统计区域天数
+	Count7Days(ctx context.Context, req CountReq) Count7DaysResp                                                    // 统计销售天数
+	CountMemberNum(ctx context.Context, req CountReq) int64                                                         // 统计会员数量
+	CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp                   // 统计会员数量天数
+	CountMember(ctx context.Context, req CountReq) CountMemberResp                                                  // 统计会员
+	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp                                          // 统计会员支付
+	CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp                 // 统计会员支付天数
+	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp                                        // 统计未结订单
+	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp                                        // 统计商品销售
+	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp                                        // 统计免单支付
+	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp               // 统计免单支付天数
+	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                                         // 统计导出
+	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                               // 统计班次退款金额
+	CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp                                        // 统计取消订单
+	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) CountBusinessTimePeriodResp         // 统计营业时段
+	CountBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) StatisticsSummaryResp                   // 统计综合运营
+	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp // 统计收款数据
+	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                                           // 统计商品排行
+	SaveSale(ctx context.Context, req SaveSaleReq) error                                                            // 保存销售
+	SaveMember(ctx context.Context, req SaveMemberReq) error                                                        // 保存会员
 }
 
 // statisticsSrv 统计服务实现
@@ -2074,14 +2074,14 @@ func (s *statisticsSrv) formatTimePeriod(timestamp int64, periodSeconds int, tim
 		endTime.Format("15:04"))
 }
 
-// StatisticsComprehensiveOperationsResp 统计综合运营响应
-type StatisticsComprehensiveOperationsResp struct {
-	TotalStatisticsComprehensiveNum int64                                   `json:"total_statistics_comprehensive_num"` // 总综合运营统计数
-	StatisticsComprehensiveList     []StatisticsComprehensiveOperationsItem `json:"statistics_comprehensive_list"`      // 综合运营统计列表
+// StatisticsSummaryResp 统计综合运营响应
+type StatisticsSummaryResp struct {
+	TotalStatisticsComprehensiveNum int64                   `json:"total_statistics_comprehensive_num"` // 总综合运营统计数
+	StatisticsComprehensiveList     []StatisticsSummaryItem `json:"statistics_comprehensive_list"`      // 综合运营统计列表
 }
 
-// StatisticsComprehensiveOperationsItem 统计综合运营列表
-type StatisticsComprehensiveOperationsItem struct {
+// StatisticsSummaryItem 统计综合运营列表
+type StatisticsSummaryItem struct {
 	Date               string  `json:"date"`                  // 日期
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额
 	PayAmount          float64 `json:"pay_amount"`            // 实付金额
@@ -2097,8 +2097,8 @@ type StatisticsComprehensiveOperationsItem struct {
 	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 外送订单金额
 }
 
-// CountBusinessComprehensiveOperations 统计综合运营
-func (s *statisticsSrv) CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp {
+// CountBusinessSummary 统计综合运营
+func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) StatisticsSummaryResp {
 	// 获取数据库连接
 	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
 
@@ -2110,14 +2110,14 @@ func (s *statisticsSrv) CountBusinessComprehensiveOperations(ctx context.Context
 	}
 
 	// 调用Repository层查询
-	total, dataList := statisticsRepo.CountBusinessComprehensiveOperations(repository.CountBusinessComprehensiveOperationsReq{
+	total, dataList := statisticsRepo.CountBusinessSummary(repository.CountBusinessSummaryReq{
 		StartTime: req.QueryStartTime,
 		EndTime:   req.QueryEndTime,
 		Cycle:     req.Cycle,
 	})
 
 	// 构建返回列表
-	list := make([]StatisticsComprehensiveOperationsItem, 0, len(dataList))
+	list := make([]StatisticsSummaryItem, 0, len(dataList))
 	for _, data := range dataList {
 		// 计算实付金额
 		payAmount := decimal.NewFromFloat(data.PayAmount.Float64).Sub(decimal.NewFromFloat(data.RefundAmount.Float64))
@@ -2137,7 +2137,7 @@ func (s *statisticsSrv) CountBusinessComprehensiveOperations(ctx context.Context
 			payAmountAvgDec = payAmount.Div(decimal.NewFromInt(data.OrderNum.Int64))
 		}
 
-		item := StatisticsComprehensiveOperationsItem{
+		item := StatisticsSummaryItem{
 			Date:               data.Date.String,
 			OrderAmount:        data.OrderAmount.Float64,
 			PayAmount:          payAmount.InexactFloat64(),
@@ -2156,19 +2156,19 @@ func (s *statisticsSrv) CountBusinessComprehensiveOperations(ctx context.Context
 		list = append(list, item)
 	}
 
-	return StatisticsComprehensiveOperationsResp{
+	return StatisticsSummaryResp{
 		TotalStatisticsComprehensiveNum: total,
 		StatisticsComprehensiveList:     list,
 	}
 }
 
-// StatisticsPaymentMethodResp 统计支付方式响应
+// StatisticsPaymentMethodResp 统计收款数据响应
 type StatisticsPaymentMethodResp struct {
 	TotalStatisticsPaymentMethodNum int64                             `json:"total_statistics_payment_method_num"` // 总支付方式统计数
 	StatisticsPaymentMethodList     []StatisticsPaymentMethodListResp `json:"statistics_payment_method_list"`      // 支付方式统计列表
 }
 
-// StatisticsPaymentMethodListResp 统计支付方式列表响应
+// StatisticsPaymentMethodListResp 统计收款数据列表响应
 type StatisticsPaymentMethodListResp struct {
 	Date          string  `json:"date"`           // 日期
 	PaymentName   string  `json:"payment_name"`   // 支付方式名称
@@ -2176,7 +2176,7 @@ type StatisticsPaymentMethodListResp struct {
 	PaymentAmount float64 `json:"payment_amount"` // 支付金额
 }
 
-// CountBusinessPaymentMethod 统计支付方式
+// CountBusinessPaymentMethod 统计收款数据
 func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp {
 	// 获取数据库连接
 	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())

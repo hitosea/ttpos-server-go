@@ -353,14 +353,14 @@ type BusinessTimePeriodItem struct {
 	MealNum            int64   `json:"meal_num"`              // 用餐人数
 }
 
-// 营业数据 - 综合运用统计
-type StatisticsComprehensiveOperations struct {
-	Meta dto.PageResponse                        `json:"meta"` // 元数据
-	List []StatisticsComprehensiveOperationsItem `json:"list"` // 综合运用统计
+// 营业数据 - 综合运营统计
+type StatisticsSummary struct {
+	Meta dto.PageResponse        `json:"meta"` // 元数据
+	List []StatisticsSummaryItem `json:"list"` // 综合运营统计
 }
 
-// 营业数据 - 综合运用统计 - 单条
-type StatisticsComprehensiveOperationsItem struct {
+// 营业数据 - 综合运营统计 - 单条
+type StatisticsSummaryItem struct {
 	Date               string  `json:"date"`                  // 日期
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额
 	PayAmount          float64 `json:"pay_amount"`            // 实付金额
