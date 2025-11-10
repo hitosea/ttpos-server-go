@@ -600,9 +600,13 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	}
 
 	// 获取采购单位
-	purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-	if err != nil {
-		return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+	var purchaseUnitUuid uint64
+	if request.PurchaseUom != "" {
+		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+		}
+		purchaseUnitUuid = purchaseUnit.Uuid
 	}
 
 	var material *model.Material
@@ -653,7 +657,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			BarcodeValue:     request.BarcodeValue,
 			UnitUuid:         productUnit.Uuid,
 			UnitList:         unitList,
-			PurchaseUnitUuid: purchaseUnit.Uuid,
+			PurchaseUnitUuid: purchaseUnitUuid,
 			CostUnitUuid:     productUnit.Uuid,
 			InternalCode:     request.InternalCode,
 		}
@@ -1266,9 +1270,13 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		}
 
 		// 采购单位
-		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+		var purchaseUnitUuid uint64
+		if request.PurchaseUom != "" {
+			purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+			if err != nil {
+				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+			}
+			purchaseUnitUuid = purchaseUnit.Uuid
 		}
 
 		// 同步单位
@@ -1291,7 +1299,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 					return errors.WithMessage(err, "更新基准单位失败")
 				}
 				saveUnitUuids = append(saveUnitUuids, material.Unit.Uuid)
-				if productUnit.Uuid == purchaseUnit.Uuid {
+				if productUnit.Uuid == purchaseUnitUuid {
 					updateData["purchase_unit_uuid"] = material.Unit.Uuid
 				}
 			} else {
@@ -1308,7 +1316,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 						return errors.WithMessage(err, "更新非基准单位失败")
 					}
 					saveUnitUuids = append(saveUnitUuids, existUnit.Uuid)
-					if productUnit.Uuid == purchaseUnit.Uuid {
+					if productUnit.Uuid == purchaseUnitUuid {
 						updateData["purchase_unit_uuid"] = existUnit.Uuid
 					}
 				} else {
@@ -1323,7 +1331,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 						return errors.WithMessage(err, "创建非基准单位失败")
 					}
 					saveUnitUuids = append(saveUnitUuids, uuid)
-					if productUnit.Uuid == purchaseUnit.Uuid {
+					if productUnit.Uuid == purchaseUnitUuid {
 						updateData["purchase_unit_uuid"] = uuid
 					}
 				}
