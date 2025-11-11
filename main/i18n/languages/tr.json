@@ -101,6 +101,7 @@
   "下单叫号，到店取餐": "Sipariş verin, numaranızı arayın ve yemeğinizi mağazadan alın",
   "下单商品不能为空": "Sipariş edilen ürün boş olamaz",
   "下单失败": "Sipariş başarısız oldu",
+  "下单失败,请联系商家": "Sipariş verilemedi, lütfen satıcıyla iletişime geçin",
   "下单成功": "başarıyla sipariş edildi",
   "下单扫码h5订单失败": "Sipariş vermek için H5 siparişi taraması başarısız oldu",
   "下单时间": "Sipariş zamanı",
