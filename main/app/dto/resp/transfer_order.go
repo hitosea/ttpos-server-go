@@ -11,6 +11,8 @@ type TransferOrderListResp struct {
 // TransferOrderInfo 调拨单信息
 type TransferOrderInfo struct {
 	Uuid                     uint64             `json:"uuid"`                         // 调拨单UUID
+	CompanyUuid              uint64             `json:"company_uuid"`                 // 所属公司UUID (发起门店)
+	CompanyName              string             `json:"company_name"`                 // 所属公司名称 (发起门店)
 	OrderNo                  string             `json:"order_no"`                     // 单据编号
 	ErpOrderNo               string             `json:"erp_order_no"`                 // ERP调拨单号
 	TransferType             int                `json:"transfer_type"`                // 调拨类型: 1-调入 2-调出

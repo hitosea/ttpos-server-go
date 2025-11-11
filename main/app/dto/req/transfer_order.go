@@ -143,17 +143,14 @@ func (r *TransferOrderApproveReq) Validate() error {
 
 // TransferOrderRejectReq 驳回调拨单请求
 type TransferOrderRejectReq struct {
-	Uuid         uint64 `json:"uuid" binding:"required,min=1"`                  // 调拨单UUID
-	RejectReason string `json:"reject_reason" binding:"required,min=1,max=500"` // 驳回原因
-	IsConfirm    bool   `json:"is_confirm"`                                     // 是否确认驳回
+	Uuid         uint64 `json:"uuid" binding:"required,min=1"` // 调拨单UUID
+	RejectReason string `json:"reject_reason"`                 // 驳回原因
+	IsConfirm    bool   `json:"is_confirm"`                    // 是否确认驳回
 }
 
 func (r *TransferOrderRejectReq) Validate() error {
 	if r.Uuid == 0 {
 		return errors.New("调拨单UUID不能为空")
-	}
-	if r.RejectReason == "" {
-		return errors.New("驳回原因不能为空")
 	}
 	return nil
 }

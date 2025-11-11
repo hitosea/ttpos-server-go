@@ -1284,6 +1284,12 @@ func (h *transferOrderHelper) GetMaterials(
 		return materials, disabledMaterialNames, notFoundMaterialNames, errors.WithMessage(errors.New("批量查询物品失败"), err.Error())
 	}
 
+	// 转换为指针数组
+	materials = make([]model.Material, 0, len(dbMaterials))
+	for _, material := range dbMaterials {
+		materials = append(materials, *material)
+	}
+
 	// 构建 map 用于快速查找
 	materialMap := make(map[uint64]*model.Material, len(dbMaterials))
 	for i := range dbMaterials {
