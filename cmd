@@ -259,7 +259,7 @@ if [ $# -gt 0 ]; then
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
         # 
-        sleep 2
+        sleep 10
         create=`run_exec db "sh /etc/mysql/create_saas.sh"`
         echo -e "$create"
         run_exec php "php think migrate:run"

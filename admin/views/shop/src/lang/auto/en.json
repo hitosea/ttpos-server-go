@@ -2152,5 +2152,16 @@
     "请选择打印档口": "Please select a print counter",
     "整单备注": "Remarks for the entire sheet",
     "单品备注": "Item Remark",
-    "整单备注：这是整单备注备注": "Order Note: This is the order note."
+    "整单备注：这是整单备注备注": "Order Note: This is the order note.",
+    "-子菜名称1": "-Sub dish name 1",
+    "大份": "Large portion",
+    "加辣": "Add spicy",
+    "-子菜名称2": "-Sub dish name 2",
+    "打印优化": "Print optimization",
+    "流畅": "Smooth",
+    "稳定": "Stable",
+    "兼容": "Compatible",
+    "流畅：设备状态良好时选择此模式，可最大化打印效率": "Smooth: Select this mode when the device is in good condition to maximize printing efficiency.",
+    "稳定：遇到偶尔卡顿时切换到此模式，确保订单稳定输出": "Stable: Switch to this mode when occasional lag occurs to ensure stable order output.",
+    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Compatibility: Use when device performance is insufficient to ensure every order is printed completely"
 }

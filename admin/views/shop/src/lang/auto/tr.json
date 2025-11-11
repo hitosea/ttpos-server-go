@@ -1907,5 +1907,16 @@
     "请选择打印档口": "Lütfen yazdırma tezgahını seçin",
     "整单备注": "Tüm fiş için not",
     "单品备注": "Ürün notu",
-    "整单备注：这是整单备注备注": "Sipariş Notu: Bu, siparişin genel notudur."
+    "整单备注：这是整单备注备注": "Sipariş Notu: Bu, siparişin genel notudur.",
+    "-子菜名称1": "-Alt yemek adı 1",
+    "大份": "Büyük porsiyon",
+    "加辣": "Acılı ekle",
+    "-子菜名称2": "-Alt yemek adı 2",
+    "打印优化": "Baskı optimizasyonu",
+    "流畅": "Akıcı",
+    "稳定": "Kararlı",
+    "兼容": "Uyumlu",
+    "流畅：设备状态良好时选择此模式，可最大化打印效率": "Akıcı: Cihaz durumu iyi olduğunda bu modu seçin, baskı verimliliğini en üst düzeye çıkarır",
+    "稳定：遇到偶尔卡顿时切换到此模式，确保订单稳定输出": "Kararlı: Ara sıra takılma yaşandığında bu moda geçin, siparişlerin istikrarlı bir şekilde çıktısını sağlayın",
+    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Uyumluluk: Cihaz performansı yetersiz olduğunda kullanılır, her siparişin eksiksiz yazdırılmasını garanti eder"
 }
