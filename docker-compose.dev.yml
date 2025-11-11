@@ -51,7 +51,7 @@ services:
     image: "mysql:8.0"
     volumes:
       - ./docker/mysql/data:/var/lib/mysql
-      # - ./docker/mysql/conf.d:/etc/mysql/conf.d/
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d/
       - ./docker/mysql/repassword.sh:/etc/mysql/repassword.sh
       - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
       - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh

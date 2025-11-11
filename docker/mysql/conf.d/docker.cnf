@@ -1,18 +1,15 @@
 [mysqld]
-wait_timeout = 28800		
+wait_timeout = 28800
 connect_timeout = 30
 
 skip-host-cache
 skip-name-resolve
 skip-external-locking
-
-# 允许从任何目录加载文件
-secure_file_priv = ""
  
 binlog_cache_size = 256K
 thread_stack = 512K
 join_buffer_size = 8192K
-query_cache_type = 0
+#query_cache_type = 1
 max_heap_table_size = 2048M
 default_storage_engine = InnoDB
 performance_schema_max_table_instances = 400
@@ -26,19 +23,16 @@ read_buffer_size = 4096K
 read_rnd_buffer_size = 2048K
 myisam_sort_buffer_size = 8M
 thread_cache_size = 256
-query_cache_size = 0
+#query_cache_size = 384M
 tmp_table_size = 2048M
-sql-mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
-group_concat_max_len = 1048576
+sql-mode=STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION
 
 max_connections = 65535
 max_connect_errors = 100
 open_files_limit = 65535
 
-log-bin=mysql-bin
-binlog_format=mixed
-server-id = 1
-expire_logs_days = 10
+
+expire_logs_days = 5
 slow_query_log=1
 slow-query-log-file=/var/lib/mysql/mysql-slow.log
 long_query_time=3
@@ -51,6 +45,8 @@ innodb_lock_wait_timeout = 50
 innodb_max_dirty_pages_pct = 90
 innodb_read_io_threads = 2
 innodb_write_io_threads = 2
+
+group_concat_max_len = 1048576
 
 [mysqldump]
 quick
