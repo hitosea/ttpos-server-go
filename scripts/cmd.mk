@@ -227,16 +227,13 @@ check-db-host-open-mysql:
 
 # HTTP调试代理管理
 start-http-debug-proxy:
-	@echo "🔍 启动HTTP调试代理容器..."
-	@echo "📦 检查HTTP调试代理镜像..."
 	@if ! docker images | grep -q "602666178/http-proxy-debug-view"; then \
 		echo "📥 镜像不存在，正在拉取..." && \
-		docker pull 602666178/http-proxy-debug-view:latest && \
-		echo "✅ 镜像拉取成功" || echo "⚠️ 镜像拉取失败"; \
+		docker pull 602666178/http-proxy-debug-view:latest \
 	else \
 		echo "✅ 镜像已存在，跳过拉取"; \
 	fi
-	SERVER_PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
+	@SERVER_PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
 	if [ "$$SERVER_PORT" = "" ]; then \
 		SERVER_PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
 	fi; \
