@@ -37,6 +37,7 @@ nacos:
     group: DEFAULT_GROUP
 
 app:
+  aesKey: IesahquufojahCaiceet7Pha
   serviceUrl: $ERP_SERVICE_URL
   erpnext:
     serviceUrl: $NEXTERP_SERVICE_URL
