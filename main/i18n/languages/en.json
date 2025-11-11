@@ -101,6 +101,7 @@
   "下单叫号，到店取餐": "Place an order, call your number, and pick up your meal at the store",
   "下单商品不能为空": "Ordered items cannot be empty",
   "下单失败": "Order placement failed",
+  "下单失败,请联系商家": "Order failed, please contact the merchant",
   "下单成功": "Successfully ordered",
   "下单扫码h5订单失败": "Failed to scan H5 order when placing order",
   "下单时间": "Order time",

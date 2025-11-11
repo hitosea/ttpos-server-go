@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
-	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
-	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -56,27 +54,23 @@ func GetClient(ctx context.Context) *gclient.Client {
 	var c = g.Client()
 	m := grpcx.Ctx.IncomingMap(ctx)
 	if m.Contains(consts.ContextSiteCode) {
-		var site *entity.Site
-		dao.Site.Ctx(ctx).Where(dao.Site.Columns().SiteCode, m.GetVar(consts.ContextSiteCode)).Limit(1).Scan(&site)
-		if site != nil {
-			c.SetPrefix(site.SiteUrl)
-			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret))
+		serviceAuthorization, err := Rpc.GetAndProcessSiteAuthorization(ctx, m.GetVar(consts.ContextSiteCode).String())
+		if err != nil {
+			g.Log().Errorf(ctx, "获取站点授权信息失败: %v", err)
 		} else {
-			g.Log().Errorf(ctx, "根据站点编码[%s]查询站点信息失败", m.GetVar(consts.ContextSiteCode))
+			c.SetPrefix(serviceAuthorization.SiteUrl)
+			c.SetHeader("Authorization", serviceAuthorization.Authorization)
 		}
 	} else {
 		c.SetPrefix(g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.serviceUrl").String())
 	}
 	//替代指定用户调用服务
 	if ctx.Value(consts.ContextFakeUser) != nil {
-		// 从上下文获取用户信息
-		cashier := &entity.ShopCashier{}
-		err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CashierEmail, ctx.Value(consts.ContextFakeUser)).Limit(1).Scan(&cashier)
-		if err != nil || cashier == nil {
-			g.Log().Errorf(ctx, "根据收银员邮箱[%s]查询收银员信息失败", ctx.Value(consts.ContextFakeUser))
+		cashierAuthorization, err := Rpc.GetAndProcessCashierAuthorization(ctx, ctx.Value(consts.ContextFakeUser).(string))
+		if err != nil {
+			g.Log().Errorf(ctx, "获取收银员授权信息失败: %v", err)
 		} else {
-			//取不到收银员apikey的话会写空，请求会异常(算特性）
-			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret))
+			c.SetHeader("Authorization", cashierAuthorization)
 		}
 	}
 
