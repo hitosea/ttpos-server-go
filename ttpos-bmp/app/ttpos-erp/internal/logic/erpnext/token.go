@@ -13,6 +13,7 @@ import (
 
 	"github.com/gogf/gf/v2/encoding/gbase64"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 const (
@@ -45,10 +46,14 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 
 		// 判断是否为 base64 编码
 		if isBase64Encoded(site.ApiSecret) {
+			apiSecret, err := crypto.Decrypt(ctx, site.ApiSecret)
+			if err != nil {
+				return nil, gerror.Wrapf(err, "解密 api_secret 失败: %s", site.SiteCode)
+			}
 			// 已经是 base64 编码，直接返回
 			return &SiteAuthorization{
 				SiteUrl:       site.SiteUrl,
-				Authorization: fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret),
+				Authorization: fmt.Sprintf("token %s:%s", site.ApiKey, apiSecret),
 			}, nil
 		}
 
@@ -66,7 +71,7 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 		}
 		return &SiteAuthorization{
 			SiteUrl:       site.SiteUrl,
-			Authorization: fmt.Sprintf("token %s:%s", site.ApiKey, encodedSecret),
+			Authorization: fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret),
 		}, nil
 	}, 30*time.Second)
 
@@ -77,7 +82,7 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 	if value == nil || value.IsNil() {
 		return nil, gerror.New("获取到的 api_secret 为空")
 	}
-
+	g.Log().Infof(ctx, "获取缓存认证信息:%v", value.Val())
 	return value.Val().(*SiteAuthorization), nil
 }
 
@@ -102,8 +107,12 @@ func (s *sRpc) GetAndProcessCashierAuthorization(ctx context.Context, cashierEma
 
 		// 判断是否为 base64 编码
 		if isBase64Encoded(cashier.ApiSecret) {
+			apiSecret, err := crypto.Decrypt(ctx, cashier.ApiSecret)
+			if err != nil {
+				return nil, gerror.Wrapf(err, "解密收银员 api_secret 失败: %v", cashier)
+			}
 			// 已经是 base64 编码，直接返回
-			return fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret), nil
+			return fmt.Sprintf("token %s:%s", cashier.ApiKey, apiSecret), nil
 		}
 
 		// 不是 base64 编码，需要加密并编码
@@ -118,7 +127,8 @@ func (s *sRpc) GetAndProcessCashierAuthorization(ctx context.Context, cashierEma
 		if err != nil {
 			return nil, gerror.Wrapf(err, "保存加密后的 api_secret 失败")
 		}
-		return encodedSecret, nil
+		return fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret), nil
+
 	}, 30*time.Second)
 
 	if err != nil {
