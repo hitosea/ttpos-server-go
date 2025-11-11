@@ -83,7 +83,7 @@ services:
     container_name: "ttpos-bmp-message-${APP_ID}"
     build:
       args:
-        MODULE: erp
+        MODULE: message
         HTTP_PORT: 14041
         RPC_PORT: 14042
     image: ttpos-bmp-message
