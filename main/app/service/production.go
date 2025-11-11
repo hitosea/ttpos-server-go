@@ -198,25 +198,9 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 
 func (s *productionSrv) getNotNullProductionListResp() resp.ProductionListWithPagination {
 	return resp.ProductionListWithPagination{
-		List: []resp.ProductionGroup{
-			{
-				LocaleName: &dto.LocaleResponse{},
-				ProductionList: resp.ProductionList{
-					List: make([]resp.ProductionItem, 0),
-				},
-				OrderRemark: resp.OrderRemarkRes{
-					List: make([]resp.OrderRemarkResItem, 0),
-				},
-			},
-		},
+		List: make([]resp.ProductionGroup, 0),
 		FinishedList: resp.ProductionList{
-			List: []resp.ProductionItem{
-				{
-					OrderRemark: resp.OrderRemarkRes{
-						List: make([]resp.OrderRemarkResItem, 0),
-					},
-				},
-			},
+			List: make([]resp.ProductionItem, 0),
 		},
 	}
 }
@@ -466,17 +450,7 @@ func (s *productionSrv) GetHistory(ctx context.Context, req req.HistoryReq) (res
 
 // 根据销售账单分组
 func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct, mode *uint) []resp.ProductionGroup {
-	notNullRes := []resp.ProductionGroup{
-		{
-			LocaleName: &dto.LocaleResponse{},
-			ProductionList: resp.ProductionList{
-				List: make([]resp.ProductionItem, 0),
-			},
-			OrderRemark: resp.OrderRemarkRes{
-				List: make([]resp.OrderRemarkResItem, 0),
-			},
-		},
-	}
+	notNullRes := make([]resp.ProductionGroup, 0)
 	// 获取门店业务设置
 	businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
 	if errGet != nil {
