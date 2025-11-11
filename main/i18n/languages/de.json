@@ -101,6 +101,7 @@
   "下单叫号，到店取餐": "Bestellen, Nummer ziehen und das Essen im Laden abholen",
   "下单商品不能为空": "Bestellte Artikel dürfen nicht leer sein",
   "下单失败": "Bestellung fehlgeschlagen",
+  "下单失败,请联系商家": "Bestellung fehlgeschlagen, bitte kontaktieren Sie den Händler",
   "下单成功": "Bestellung erfolgreich aufgegeben",
   "下单扫码h5订单失败": "H5-Bestellung per QR-Code fehlgeschlagen",
   "下单时间": "Bestellzeit",

@@ -101,6 +101,7 @@
   "下单叫号，到店取餐": "Beställ, ta nummer, hämta i butik",
   "下单商品不能为空": "Beställda varor får inte vara tomma",
   "下单失败": "Beställning misslyckades",
+  "下单失败,请联系商家": "Order misslyckades, vänligen kontakta säljaren",
   "下单成功": "Beställning lyckades",
   "下单扫码h5订单失败": "Misslyckades med att lägga H5-beställning via QR-kod",
   "下单时间": "Beställningstid",
