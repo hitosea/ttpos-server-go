@@ -1,6 +1,6 @@
 LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
 ifeq ($(LOCAL_IP),)
-	LOCAL_IP := $(shell ifconfig | grep "inet " | grep "172.1" | awk '{print $$2}' | head -n 1)
+	LOCAL_IP := $(shell scripts/get_ip.sh)
 endif
 GO_PATH := $(shell go env GOPATH)
 
