@@ -48,7 +48,7 @@ services:
 
   db:
     container_name: "saas-db-${APP_ID}"
-    image: "mysql:8.0-debian"
+    image: "mysql:8.0"
     volumes:
       - ./docker/mysql/data:/var/lib/mysql
       # - ./docker/mysql/conf.d:/etc/mysql/conf.d/
