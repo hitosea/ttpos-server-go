@@ -399,6 +399,18 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 					List: packageGroupList,
 				},
 			}
+			// 构建标签信息
+			var labelInfo product_resp.ProductLabelInfo
+			if product.ProductLabelUuid > 0 && product.ProductLabel.Uuid > 0 {
+				if product.ProductLabel.ShouldShow(ctx.GetSource()) {
+					labelInfo = product_resp.ProductLabelInfo{
+						Uuid:  product.ProductLabel.Uuid,
+						Name:  product.ProductLabel.Name,
+						Style: product.ProductLabel.Style,
+					}
+				}
+			}
+			packageItem.Label = labelInfo
 			if len(flavors) > 0 {
 				packageItem.Price = flavors[0].Price
 				list = append(list, packageItem)
