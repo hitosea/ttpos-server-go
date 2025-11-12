@@ -29,6 +29,7 @@ type ISupplierRepo interface {
 	WhereNotDeleted() DBOption
 	WhereErpCodeNot(erpCode string) DBOption
 	WhereStatus(status int) DBOption
+	WhereExcludeInternalSupplierWithoutHeadquarter() DBOption
 }
 
 // SupplierRepoImpl 供应商Repository实现
@@ -185,6 +186,13 @@ func (r *SupplierRepoImpl) WhereNotDeleted() DBOption {
 func (r *SupplierRepoImpl) WhereStatus(status int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WhereExcludeInternalSupplierWithoutHeadquarter 排除内部供应商且没有总部的数据
+func (r *SupplierRepoImpl) WhereExcludeInternalSupplierWithoutHeadquarter() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("NOT (is_internal_supplier = ? AND headquarter_uuid = ?)", 1, 0)
 	}
 }
 

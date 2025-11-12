@@ -56,6 +56,10 @@ func (s *supplierSrv) GetSupplierList(ctx context.Context, req req.SupplierListR
 	supplierRepo := repository.NewSupplierRepo(db)
 	// 构建查询选项
 	var opts []repository.DBOption
+
+	// 排除is_internal_supplier=1且headquarter_uuid=0的数据
+	opts = append(opts, supplierRepo.WhereExcludeInternalSupplierWithoutHeadquarter())
+
 	// 名称编码筛选
 	if req.Keyword != "" {
 		opts = append(opts, supplierRepo.WhereNameOrCodeLike(req.Keyword))
@@ -122,8 +126,9 @@ func (s *supplierSrv) GetSupplier(ctx context.Context, req req.SupplierReq) (res
 	}, nil
 }
 
+// hasRelatedPurchaseOrder 检查供应商是否有关联的采购订单
 func (s *supplierSrv) hasRelatedPurchaseOrder(_ context.Context, supplier *model.Supplier) bool {
-	return supplier.PurchaseOrders != nil && len(supplier.PurchaseOrders) > 0
+	return len(supplier.PurchaseOrders) > 0
 }
 
 // CreateSupplier 创建供应商
@@ -421,7 +426,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			if name == "" {
 				name = erpSupplier.SupplierName
 			}
-			supplier, _ := supplierMap[erpSupplier.Name]
+			supplier := supplierMap[erpSupplier.Name]
 			address := supplier.Address
 			contactName := supplier.ContactName
 			contactPhone := supplier.ContactPhone
@@ -497,6 +502,10 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 
 		return nil
 	})
+
+	if err != nil {
+		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
+	}
 
 	// 同步供应商物品关联关系
 	erpSrv := erp.NewIErpSrv(s.dbm)

@@ -1137,6 +1137,15 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		FROM ttpos_payment_order AS po
 		LEFT JOIN ttpos_sale_order AS so ON po.related_uuid = so.uuid AND so.delete_time = 0
 		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = 0
+		LEFT JOIN (
+			SELECT
+				payment_order_uuid,
+				SUM(amount) AS refund_amount
+			FROM ttpos_return_order_amount
+			WHERE delete_time = 0
+				AND refund_status = 1
+			GROUP BY payment_order_uuid
+		) AS roa ON roa.payment_order_uuid = po.uuid
 		WHERE po.delete_time = 0
 			AND po.related_type = 0
 			AND po.status = 1
@@ -1182,7 +1191,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 			FROM_UNIXTIME(po.create_time, '%s') AS date,
 			po.payment_method_name AS payment_name,
 			COUNT(po.uuid) AS payment_num,
-			SUM(po.payment_amount) AS payment_amount
+			SUM(po.amount - IFNULL(roa.refund_amount, 0)) AS payment_amount
 		%s
 		GROUP BY date, po.payment_method_uuid, po.payment_method_name
 		ORDER BY date ASC, po.payment_method_uuid ASC
