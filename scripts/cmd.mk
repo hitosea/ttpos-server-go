@@ -98,14 +98,15 @@ help:
 init-env:
 	@echo "🔍 初始化env文件"
 	@corepack enable
-	@if [ ! -f ".env" ]; then \
+	if [ ! -f ".env" ]; then \
 		cp .env.example .env; \
 		echo "Created .env file from .env.example"; \
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 	fi
-	@if [ -f ".env" ]; then \
+	@echo "🔍 检查 .env 文件是否存在"
+	if [ -f ".env" ]; then \
 		sed -i.bak 's/^DB_HOST=.*/DB_HOST=db/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PORT=.*/DB_PORT=3306/' .env && rm .env.bak; \
 		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
@@ -125,7 +126,7 @@ init-bmp-env:
 		sed -i.bak 's/^ROCKETMQ_BROKER_ADDR=.*/ROCKETMQ_BROKER_ADDR=10.0.11.41:10911/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
 	@echo "🔍 检查 ttpos-bmp/.env 文件是否存在"
-	@if [ -f "ttpos-bmp/.env" ]; then \
+	if [ -f "ttpos-bmp/.env" ]; then \
 		sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		if [ -f ".env" ]; then \
 			echo "🔄 从上级目录的 .env 文件同步数据库密码..."; \
