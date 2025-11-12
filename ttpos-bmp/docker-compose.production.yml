@@ -80,13 +80,13 @@ services:
 #        ipv4_address: 10.0.10.43
   # 消息中心模块
   bmp-message:
-    container_name: hub.hitosea.com/ttpos-server/ttpos-server-message:${IMAGE_VERSION}
+    container_name: "ttpos-bmp-message-${APP_ID}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-message:${IMAGE_VERSION}
     build:
       args:
         MODULE: message
         HTTP_PORT: 14041
         RPC_PORT: 14042
-    image: ttpos-bmp-message
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14042"  #生产环境调成服务IP
       SW_AGENT_NAME: "ttpos-bmp-message"
