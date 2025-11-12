@@ -48,12 +48,6 @@
     // ===== 保存时自动运行 =====
     "go.lintOnSave": "workspace",
 
-    // ===== PHP语言配置 =====
-    "php.executablePath": "/usr/bin/php",
-    "php.validate.executablePath": "/usr/bin/php",
-    "php.validate.enable": true,
-    "php.validate.run": "onType",
-
     // ===== 远程管理端口自动转发 =====
     "remote.autoForwardPorts": true,
     "remote.autoForwardPortsSource": "process",
