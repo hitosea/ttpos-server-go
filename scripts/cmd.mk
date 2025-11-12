@@ -249,7 +249,7 @@ start-http-debug-proxy:
 		-e PROXY_PORT=8080 \
 		-e WEB_PORT=8091 \
 		--restart unless-stopped \
-		602666178/http-proxy-debug-view:latest > /dev/null 2>&1 || \
+		weifashi/http-debug-proxy > /dev/null 2>&1 || \
 		(echo "⚠️  HTTP调试代理容器已存在，正在重启..." && \
 		docker rm -f http-debug-proxy > /dev/null 2>&1 && \
 		docker run -d \
@@ -260,7 +260,7 @@ start-http-debug-proxy:
 			-e PROXY_PORT=8080 \
 			-e WEB_PORT=8091 \
 			--restart unless-stopped \
-			602666178/http-proxy-debug-view:latest > /dev/null 2>&1); \
+			weifashi/http-debug-proxy:latest > /dev/null 2>&1); \
 	echo "✅ HTTP调试代理已启动 - 代理端口: $$PROXY_PORT, 调试界面: http://localhost:8091"
 
 stop-http-debug-proxy:
