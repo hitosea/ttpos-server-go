@@ -1042,6 +1042,18 @@ func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.Kitch
 		return nil, err
 	}
 
+	// 如果没有商品bom_uuid且有查询条件时(关键词不为空、分类不为空),则返回空数据
+	if len(productBomUuids) == 0 && (req.Keyword != "" || len(req.CategoryUuids) > 0) {
+		return &business_data_resp.KitchenProductionDetail{
+			List: make([]business_data_resp.KitchenProductionDetailItem, 0),
+			Meta: dto.PageResponse{
+				PageNo:   req.PageNo,
+				PageSize: req.PageSize,
+				Total:    0,
+			},
+		}, nil
+	}
+
 	opts := []repository.DBOption{
 		repository.CommonRepo.Preload(
 			repository.WithPreload{
