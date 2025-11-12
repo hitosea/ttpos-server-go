@@ -3328,6 +3328,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_item` (
   `material_code` varchar(255) NOT NULL DEFAULT '' COMMENT '物品编码',
   `material_name` text COMMENT '物品名称JSON',
   `material_internal_code` varchar(255) NOT NULL DEFAULT '' COMMENT '物品内部编码',
+  `material_barcode_value` varchar(255) NOT NULL DEFAULT '' COMMENT '物品条码值',
   `valuation` decimal(20,8) NOT NULL DEFAULT 0.00000000 COMMENT '估值单价（基准单位）',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',

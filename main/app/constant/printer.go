@@ -39,6 +39,8 @@ const (
 	// 收银打印机
 	PrinterTypeCashierCompax = "CASHIER_COMPAX" // Compax 收银打印机 80mm 自带
 	PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
+	// IMIN打印机
+	PrinterTypeCashierImmin = "CASHIER_IMMIN" // IMIN 收银打印机 80mm 自带
 )
 
 // 打印类型

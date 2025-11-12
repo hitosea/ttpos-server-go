@@ -177,7 +177,11 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	/* *
 	 * 芯烨打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+	if slices.Contains([]string{
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCashierImmin,
+	}, printerType) {
 		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			tmpInfo,

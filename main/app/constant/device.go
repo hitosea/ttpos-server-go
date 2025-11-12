@@ -34,8 +34,43 @@ const (
 	BrandD2SPlus        = "D2s_PLUS"          //自带打印机的 商米收银机器
 	BrandD2sPlus2ndStgl = "D2s_PLUS_2nd_STGL" //自带打印机的 商米收银机器
 	BrandT2MINIS        = "T2mini_s"          //自带打印机的 商米小屏收银机器
+	BrandD1             = "D1"                //自带打印机的 IMIN收银机器
+	BrandD4             = "D4"                //自带打印机的 IMIN收银机器
 )
 
-var BrandsAll = []string{BrandA11500, BrandA11510P, BrandT2S, BrandT2MINIS, BrandT2, BrandD2SPlus, BrandD2S, BrandD2sPlus2ndStgl} // 所有的机器
-var BrandsPrints = []string{BrandA11510P, BrandT2S, BrandT2MINIS, BrandT2, BrandD2SPlus, BrandD2S, BrandD2sPlus2ndStgl}           // 所有带打印机的机器
-var SunmiAllPrints = []string{BrandT2, BrandT2S, BrandT2MINIS, BrandD2SPlus, BrandD2S, BrandD2sPlus2ndStgl}                       // 商米所有带打印机的机器
+// 所有的机器
+var BrandsAll = []string{
+	BrandA11500,
+	BrandA11510P,
+	BrandT2S,
+	BrandT2MINIS,
+	BrandT2,
+	BrandD2SPlus,
+	BrandD2S,
+	BrandD2sPlus2ndStgl,
+	BrandD1,
+	BrandD4,
+}
+
+// 所有带打印机的机器
+var BrandsPrints = []string{
+	BrandA11510P,
+	BrandT2S,
+	BrandT2MINIS,
+	BrandT2,
+	BrandD2SPlus,
+	BrandD2S,
+	BrandD2sPlus2ndStgl,
+	BrandD1,
+	BrandD4,
+}
+
+// 商米所有带打印机的机器
+var SunmiAllPrints = []string{
+	BrandT2,
+	BrandT2S,
+	BrandT2MINIS,
+	BrandD2SPlus,
+	BrandD2S,
+	BrandD2sPlus2ndStgl,
+}

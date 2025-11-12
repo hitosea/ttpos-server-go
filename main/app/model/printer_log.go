@@ -146,6 +146,7 @@ func (model *PrinterLog) IsCashierPrinter() bool {
 	return slices.Contains([]string{
 		constant.PrinterTypeCashierCompax,
 		constant.PrinterTypeCashierSunmi,
+		constant.PrinterTypeCashierImmin,
 	}, model.PrinterType) || !slices.Contains([]string{
 		constant.PrinterTypeFeiEYun,
 		constant.PrinterTypeFeiEYunTag,
