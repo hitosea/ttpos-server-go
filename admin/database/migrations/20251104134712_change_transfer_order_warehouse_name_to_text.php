@@ -5,6 +5,9 @@ use Phinx\Db\Adapter\MysqlAdapter;
 
 class ChangeTransferOrderWarehouseNameToText extends Migrator
 {
+    // 迁移目标
+    const TARGET = 'main';
+    
     /**
      * 修改 ttpos_transfer_order 表的 out_warehouse_name 和 in_warehouse_name 字段类型为 text
      */
