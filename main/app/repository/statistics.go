@@ -998,7 +998,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 			SUM(so.origin_amount) AS order_amount,
 			SUM(so.payment_amount) AS pay_amount,
 			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
-			COUNT(DISTINCT so.uuid) AS order_num,
+			COUNT(DISTINCT so.sale_bill_uuid) AS order_num,
 			SUM(sb.meal_num) AS meal_num
 		FROM ttpos_sale_bill AS sb
 		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0 AND so.status = 1
@@ -1068,7 +1068,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 			SUM(so.origin_amount) AS order_amount,
 			SUM(so.payment_amount) AS pay_amount,
 			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
-			COUNT(DISTINCT so.uuid) AS order_num,
+			COUNT(DISTINCT so.sale_bill_uuid) AS order_num,
 			SUM(sb.meal_num) AS meal_num,
 			COUNT(DISTINCT CASE WHEN sb.desk_uuid > 0 THEN sb.desk_uuid END) AS desk_num,
 			SUM(IF(sb.bill_type = 0, so.origin_amount, 0)) as desk_order_amount,
