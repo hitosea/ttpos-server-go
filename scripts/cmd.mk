@@ -233,12 +233,13 @@ start-http-debug-proxy:
 	else \
 		echo "✅ 镜像已存在，跳过拉取"; \
 	fi
-	@SERVER_PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
+	@NGINX_PORT=$$(grep '^NGINX_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8888"); \
+	SERVER_PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
 	if [ "$$SERVER_PORT" = "" ]; then \
 		SERVER_PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
 	fi; \
 	PROXY_PORT=$$((SERVER_PORT + 1)); \
-	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT"; \
+	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT,http://$(LOCAL_IP):$$NGINX_PORT"; \
 	echo "🎯 目标URL: $$TARGET_URL, 代理端口: $$PROXY_PORT"; \
 	docker run -d \
 		--name http-debug-proxy \

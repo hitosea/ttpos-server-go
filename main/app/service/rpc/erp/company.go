@@ -131,31 +131,47 @@ func buildTreeRecursively(companies []resp.ErpnextSiteCompany, parentName string
 	return result
 }
 
-// BuildCompanyUuidMap 递归遍历公司树，收集所有IsUsed=true的节点的UUID和父级路径映射关系
-// 返回 map[uuid][]parent_company_uuids，其中父级路径从根节点到直接父节点（例如：C -> B -> A，则A的父级树是[C, B]）
-func (s *erpSrv) BuildCompanyUuidMap(companies []resp.ErpnextSiteCompany) map[uint64][]uint64 {
-	result := make(map[uint64][]uint64)
+// CompanyInfo 公司信息结构体
+type CompanyInfo struct {
+	CompanyAbbr string // 公司缩写
+	CompanyUuid uint64 // 公司UUID
+}
+
+// BuildCompanyUuidMap 递归遍历公司树，收集所有IsUsed=true的节点的CompanyAbbr和父级路径映射关系
+// 返回 map[company_abbr][]CompanyInfo，其中父级路径从根节点到直接父节点（例如：C -> B -> A，则A的父级树是[C的信息, B的信息]）
+func (s *erpSrv) buildCompanyAbbrMap(companies []resp.ErpnextSiteCompany) (map[string][]CompanyInfo, map[string]uint64) {
+	result := make(map[string][]CompanyInfo)
+
+	companyAbbrUuidMap := make(map[string]uint64)
+	for _, company := range companies {
+		companyAbbrUuidMap[company.CompanyAbbr] = company.CompanyUuid
+	}
 
 	// 递归遍历函数，parentPath 是从根节点到当前节点的父节点的路径
-	var traverse func([]resp.ErpnextSiteCompany, []uint64)
-	traverse = func(companyList []resp.ErpnextSiteCompany, parentPath []uint64) {
+	var traverse func([]resp.ErpnextSiteCompany, []CompanyInfo)
+	traverse = func(companyList []resp.ErpnextSiteCompany, parentPath []CompanyInfo) {
 		for _, company := range companyList {
 			// 如果该公司已被使用，则添加到映射中
-			if company.IsUsed && company.CompanyUuid != 0 {
+			if company.IsUsed && company.CompanyAbbr != "" {
+				companyAbbrUuidMap[company.CompanyAbbr] = company.CompanyUuid
 				// 复制父级路径，避免引用问题
-				path := make([]uint64, len(parentPath))
+				path := make([]CompanyInfo, len(parentPath))
 				copy(path, parentPath)
-				result[company.CompanyUuid] = path
+				result[company.CompanyAbbr] = path
 			}
 
-			// 递归处理子公司，将当前公司UUID添加到路径中
+			// 递归处理子公司，将当前公司信息添加到路径中
 			if len(company.Children) > 0 {
 				// 构建新的父级路径
-				newPath := make([]uint64, len(parentPath))
+				newPath := make([]CompanyInfo, len(parentPath))
 				copy(newPath, parentPath)
-				// 只有当前节点有UUID时才添加到路径中
-				if company.CompanyUuid != 0 {
-					newPath = append(newPath, company.CompanyUuid)
+				// 只有当前节点有CompanyAbbr时才添加到路径中
+				if company.CompanyAbbr != "" {
+					companyAbbrUuidMap[company.CompanyAbbr] = company.CompanyUuid
+					newPath = append(newPath, CompanyInfo{
+						CompanyAbbr: company.CompanyAbbr,
+						CompanyUuid: company.CompanyUuid,
+					})
 				}
 				traverse(company.Children, newPath)
 			}
@@ -163,7 +179,7 @@ func (s *erpSrv) BuildCompanyUuidMap(companies []resp.ErpnextSiteCompany) map[ui
 	}
 
 	// 开始遍历，初始父级路径为空
-	traverse(companies, []uint64{})
+	traverse(companies, []CompanyInfo{})
 
-	return result
+	return result, companyAbbrUuidMap
 }
