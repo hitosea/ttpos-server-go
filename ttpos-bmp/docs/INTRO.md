@@ -113,3 +113,4 @@ make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5
 - 根级 `README.MD`：总览与命令说明
 - `MIGRATION_QUICK_START.md`：迁移快速上手
 - GoFrame 文档：`https://goframe.org.cn`
+- 每个模块(app)下的 docs 目录包含了模块的详细功能说明, 新增的服务描述记录在 features 目录下 , 修订的记录在 changelog 目录下
