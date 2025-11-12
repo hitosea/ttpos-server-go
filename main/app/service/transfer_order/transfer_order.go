@@ -1528,7 +1528,7 @@ func (s *transferOrderSrv) GetTransferOrderWarehouseList(
 	// 转换响应数据
 	list := make([]resp.TransferOrderWarehouseItem, 0, len(warehouses))
 	for _, warehouse := range warehouses {
-		if warehouse.IsHeadquarter() {
+		if warehouse.IsHeadquarter() || warehouse.IsDisabled() {
 			continue
 		}
 		item := resp.TransferOrderWarehouseItem{
