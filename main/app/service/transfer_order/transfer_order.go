@@ -314,7 +314,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		copier.Copy(&approvalInfo, &approval)
 
 		// 只保留第一个驳回信息（因为永远只能有一个驳回）
-		if detailResp.RejectInfo.Title == "" && approval.Status == constant.TransferApprovalRejected && approval.RejectReason != "" {
+		if detailResp.RejectInfo.Title == "" && approval.Status == constant.TransferApprovalRejected {
 			title := approvalTypeText[approval.ApprovalType]
 
 			// 如果同一个上级门店，显示为"上级门店驳回"
@@ -368,11 +368,16 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 	}
 
 	// 调入单 - 发货门店
-	if res.List != nil && len(res.List) > 0 && listReq.SenderCompanyUuid != 0 && listReq.SenderCompanyUuid != companyUuid {
-		otherDb := s.dbm.GetDB(listReq.SenderCompanyUuid)
-		if otherDb == nil {
-			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
+	if res.List != nil && len(res.List) > 0 {
+		var otherDb = ctx.GetDB()
+		// 如果发货门店不是本店，则获取其他店的数据库
+		if listReq.SenderCompanyUuid != 0 && listReq.SenderCompanyUuid != companyUuid {
+			otherDb = s.dbm.GetDB(listReq.SenderCompanyUuid)
+			if otherDb == nil {
+				return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
+			}
 		}
+		// 获取物品列表
 		erpCodes := []string{}
 		for _, item := range res.List {
 			erpCodes = append(erpCodes, item.ErpCode)
