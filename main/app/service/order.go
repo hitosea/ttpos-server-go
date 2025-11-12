@@ -5903,7 +5903,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				}
 				materialStockNum := flavorMaterial.Material.GetStockNum()
 				if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
-					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
+					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
 				}
 			}
 		}
@@ -6307,7 +6307,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 			}
 			materialStockNum := flavorMaterial.Material.GetStockNum()
 			if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
-				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
 			}
 		}
 	}
