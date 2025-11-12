@@ -22,7 +22,7 @@ import (
 
 type IErpSrv interface {
 	GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
-	BuildCompanyUuidMap(companies []resp.ErpnextSiteCompany) map[uint64][]uint64
+	UpdateTtposCompanyParentUuids(siteCode string) error
 	InitShop(ctx pkgCtx.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
 	GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error)
 	GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error)

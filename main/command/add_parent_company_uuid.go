@@ -3,12 +3,7 @@ package command
 import (
 	"fmt"
 	"log"
-	"slices"
-	"strconv"
-	"strings"
 	"ttpos-server-go/app/cloud"
-	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
@@ -19,8 +14,6 @@ import (
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
-
-	pkgCtx "ttpos-server-go/pkg/context"
 )
 
 func init() {
@@ -72,45 +65,10 @@ var addParentCompanyUuidCmd = &cobra.Command{
 		}
 
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
-
-		// 获取erp company
-		erpnextSiteCompanyReq := req.ErpnextSiteCompanyReq{
-			SiteCode: siteCode,
-		}
-		ctx := pkgCtx.NewContext()
-		// 调用erpnext服务，获取公司名称
-		companyResp, err := erp.NewIErpSrv(dbm).GetCompanyList(ctx, erpnextSiteCompanyReq)
+		err := erp.NewIErpSrv(dbm).UpdateTtposCompanyParentUuids(siteCode)
 		if err != nil {
-			fmt.Printf("%s %s %s\n", redColor, err, resetColor)
+			fmt.Printf("%s 更新父级路径失败 %s\n", redColor, resetColor)
 			return
-		}
-
-		// 遍历所有节点，如果IsUsed为true，则获取所有父级树的parent_company_uuid，以map[uuid][]parent_company_uuid形式存储
-		companyUuidMap := erp.NewIErpSrv(dbm).BuildCompanyUuidMap(companyResp.List)
-
-		for uuid, parentUuids := range companyUuidMap {
-			hasChildren := 0
-			for _, parentUuids2 := range companyUuidMap {
-				if slices.Contains(parentUuids2, uuid) {
-					hasChildren = 1
-					break
-				}
-			}
-			parentCompanyUuids := make([]string, len(parentUuids))
-			for i, parentUuid := range parentUuids {
-				parentCompanyUuids[i] = strconv.FormatUint(parentUuid, 10)
-			}
-			slices.Reverse(parentCompanyUuids)
-			parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
-
-			dbm.GetDB(0).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
-				"parent_company_uuids": parentCompanyUuidsStr,
-				"has_children":         hasChildren,
-			})
-			dbm.GetDB(uuid).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
-				"parent_company_uuids": parentCompanyUuidsStr,
-				"has_children":         hasChildren,
-			})
 		}
 
 		fmt.Printf("%s 数据更新完成 %s\n", greenColor, resetColor)

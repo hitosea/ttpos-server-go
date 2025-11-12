@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/repository"
 	cc "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -166,44 +167,69 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
 	})
 
-	// ##### 更新父级公司UUID树 #####
-	companyResp, err := NewIErpSrv(s.dbm).GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
-		SiteCode: initShopReq.SiteCode,
+	utils.SafeGo(func() {
+		err := s.UpdateTtposCompanyParentUuids(initShopReq.SiteCode)
+		if err != nil {
+			logger.Logger.Error("InitShop-UpdateParentUuids", zap.Any("err", err), zap.String("site_code", initShopReq.SiteCode))
+		}
 	})
-	if err != nil {
-		logger.Logger.Error("InitShop-GetCompanyList", zap.Any("err", err), zap.String("site_code", initShopReq.SiteCode))
-	}
-	// 遍历所有节点，如果IsUsed为true，则获取所有父级树的parent_company_uuid，以map[uuid][]parent_company_uuid形式存储，用于构建公司树
-	companyUuidMap := NewIErpSrv(s.dbm).BuildCompanyUuidMap(companyResp.List)
-	for uuid, parentUuids := range companyUuidMap {
-		if uuid != company.Uuid {
-			continue
-		}
-		hasChildren := 0
-		for _, parentUuids2 := range companyUuidMap {
-			if slices.Contains(parentUuids2, uuid) {
-				hasChildren = 1
-				break
-			}
-		}
-		parentCompanyUuids := make([]string, len(parentUuids))
-		for i, parentUuid := range parentUuids {
-			parentCompanyUuids[i] = strconv.FormatUint(parentUuid, 10)
-		}
-		slices.Reverse(parentCompanyUuids)
-		parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
-		s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
-			"parent_company_uuids": parentCompanyUuidsStr,
-			"has_children":         hasChildren,
-		})
-		s.dbm.GetDB(uuid).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
-			"parent_company_uuids": parentCompanyUuidsStr,
-			"has_children":         hasChildren,
-		})
-	}
 
 	return resp.InitShopResp{
 		BranchName: response.BranchName,
 		AdminEmail: response.AdminEmail,
 	}, nil
+}
+
+func (s *erpSrv) UpdateTtposCompanyParentUuids(siteCode string) error {
+	// 获取erp company
+	erpnextSiteCompanyReq := req.ErpnextSiteCompanyReq{
+		SiteCode: siteCode,
+	}
+	ctx := cc.NewContext()
+	// 调用erpnext服务，获取公司名称
+	companyResp, err := s.GetCompanyList(ctx, erpnextSiteCompanyReq)
+	if err != nil {
+		return err
+	}
+	// 遍历所有节点，如果IsUsed为true，则获取所有父级树的parent_company_uuid，以map[uuid][]CompanyInfo形式存储
+	companyAbbrMap, companyAbbrUuidMap := s.buildCompanyAbbrMap(companyResp.List)
+	for companyAbbr, parentCompanyInfos := range companyAbbrMap {
+		hasChildren := 0
+		// 检查当前UUID是否在其他公司的父级路径中（判断是否有子公司）
+		for _, parentCompanyInfos2 := range companyAbbrMap {
+			for _, info := range parentCompanyInfos2 {
+				if info.CompanyAbbr == companyAbbr {
+					hasChildren = 1
+					break
+				}
+			}
+			if hasChildren == 1 {
+				break
+			}
+		}
+		// 从 CompanyInfo 中提取 UUID 并转换为字符串
+		parentCompanyUuids := make([]string, 0)
+		for _, info := range parentCompanyInfos {
+			if info.CompanyUuid == 0 {
+				continue
+			}
+			parentCompanyUuids = append(parentCompanyUuids, strconv.FormatUint(info.CompanyUuid, 10))
+		}
+
+		slices.Reverse(parentCompanyUuids)
+		parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
+
+		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(map[string]any{
+			"parent_company_uuids": parentCompanyUuidsStr,
+			"has_children":         hasChildren,
+		})
+		uuid := companyAbbrUuidMap[companyAbbr]
+		if uuid > 0 {
+			s.dbm.GetDB(uuid).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(map[string]any{
+				"parent_company_uuids": parentCompanyUuidsStr,
+				"has_children":         hasChildren,
+			})
+		}
+	}
+	return nil
 }
