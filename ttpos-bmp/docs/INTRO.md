@@ -35,7 +35,7 @@ TTPOS 业务中台（ttpos-bmp）是为餐饮零售场景打造的 Go 微服务�
   - internal/：模块内部实现（boot、controller、logic、dao、model、service 等）
   - manifest/：模块配置模板、部署清单、protobuf、sql 迁移脚本
   - main.go、Makefile：模块入口与构建脚本
-- internal/pkg：中台通用能力（加解密、队列封装、Nacos、OTLP、缓存、中间件等）
+- internal/pkg：中台通用能力（加解密、队列封装、Nacos、OTLP、缓存、中间件
 - Makefile：根级开发与部署命令集合
 - README.MD：总览与使用说明
 
@@ -113,4 +113,4 @@ make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5
 - 根级 `README.MD`：总览与命令说明
 - `MIGRATION_QUICK_START.md`：迁移快速上手
 - GoFrame 文档：`https://goframe.org.cn`
-- 每个模块(app)下的 docs 目录包含了模块的详细功能说明, 新增的服务描述记录在 features 目录下 , 修订的记录在 changelog 目录下
+- 每个模块名称目录包含了模块的详细功能说明, 新增的服务描述记录在 features 目录下 , 修订的记录在 changelog 目录下
