@@ -174,7 +174,7 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		}
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceCategory,
+		Source: constant.CheckNameSourceWarehouse,
 		Names:  names,
 	})
 	if exists {

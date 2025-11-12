@@ -5088,9 +5088,10 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 				// 套餐
 				if productBom.ProductFlavorUuid == 0 && productBom.ProductSauceUuid == 0 {
 					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
-						Uuid:       productBom.Uuid,
-						LocaleName: productPackage.MultiLanguageName.GetNames(),
-						Price:      productBom.Price,
+						Uuid:         productBom.Uuid,
+						LocaleName:   productPackage.MultiLanguageName.GetNames(),
+						Price:        productBom.Price,
+						InternalCode: productBom.InternalCode,
 					})
 				}
 			}

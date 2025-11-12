@@ -15167,7 +15167,7 @@ definitions:
         description: 翻译后的中文繁体
         type: string
     type: object
-host: 10.144.144.5:8080
+host: 10.144.144.4:8080
 info:
   contact: {}
   description: 点餐系统服务端接口文档
