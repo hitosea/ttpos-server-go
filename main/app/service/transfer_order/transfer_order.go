@@ -426,6 +426,10 @@ func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transfe
 				break
 			}
 		}
+		if material.Uuid == 0 {
+			return errors.WithMessage(errors.New(fmt.Sprintf("物品UUID:%d不存在", itemReq.MaterialUuid)), fmt.Sprintf("物品UUID:%d不存在", itemReq.MaterialUuid))
+		}
+
 		item := &model.TransferOrderItem{
 			TransferOrderUuid:    transferOrderUuid,
 			CompanyUuid:          companyUuid,
@@ -488,6 +492,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 
 	db := ctx.GetDB()
 	companyUuid := ctx.GetCompanyUuid()
+	companyName := ctx.GetCompany().Name
 	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
 
 	// 加锁防止并发创建（使用字符串锁保护编号生成）
@@ -569,6 +574,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 				Uuid: transferOrderUuid,
 			},
 			CompanyUuid:         companyUuid,
+			CompanyName:         companyName,
 			HeadquarterUuid:     headquarterUuid,
 			OrderNo:             orderNo,
 			TransferType:        req.TransferType,
@@ -630,6 +636,7 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 
 	db := ctx.GetDB()
 	companyUuid := ctx.GetCompanyUuid()
+	companyName := ctx.GetCompany().Name
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
 
 	// 查询调拨单
@@ -725,6 +732,7 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		// 更新主表
 		transferOrder.OrderTime = req.OrderTime
 		transferOrder.ItemCount = len(req.Items)
+		transferOrder.CompanyName = companyName
 		transferOrder.SenderCompanyUuid = req.SenderCompanyUuid
 		transferOrder.SenderCompanyName = senderCompany.Name
 		transferOrder.ReceiverCompanyUuid = req.ReceiverCompanyUuid
@@ -865,7 +873,7 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 	// 获取物品列表并验证物品状态
 	var materials []model.Material
 	if !reqs.IsConfirm {
-		_, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
+		materialList, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
 		if err != nil {
 			if len(disabledMaterialNames) > 0 {
 				return errors.NewWithCode(
@@ -880,9 +888,8 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 				)
 			}
 			return err
-		} else {
-			return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认提交此单据吗？")
 		}
+		materials = materialList
 	} else {
 		materialList, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
 		if err != nil && len(disabledMaterialNames) == 0 && len(notFoundMaterialNames) == 0 {
@@ -982,6 +989,10 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 		return errors.WithMessage(errors.New("查询调拨单失败"), err.Error())
 	}
 
+	if len(transferOrder.Items) == 0 {
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "调拨单明细不能为空")
+	}
+
 	// 验证状态
 	if transferOrder.Status != constant.TransferOrderStatusPending {
 		return errors.New("只有待审核状态的调拨单才能审批")
@@ -1067,9 +1078,9 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 	}
 
 	// 需要用户再次确认审核
-	if !req.IsConfirm {
-		return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认审核此单据吗？")
-	}
+	// if !req.IsConfirm {
+	// 	return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认审核此单据吗？")
+	// }
 
 	// 开始事务
 	staff := ctx.GetStaff()
@@ -1113,15 +1124,9 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
 		}
 
-		// 复制数据到总部
-		if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
-			logger.Logger.Error("复制数据到总部失败", zap.Error(err))
-			return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
-		}
-
 		if newStatus == constant.TransferOrderStatusReceiving {
 			// 进入在途仓库存
-			dbs, err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder)
+			dbList, err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder)
 			if err != nil {
 				logger.Logger.Error("更新在途仓库存失败", zap.Error(err))
 				return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
@@ -1131,8 +1136,8 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 				erpResp, err := s.helper.SaveMaterialTransfer(ctx, s.dbm, tx, transferOrder)
 				if err != nil {
 					logger.Logger.Error("调用erp接口失败", zap.Error(err))
-					for _, db := range dbs {
-						db.Rollback()
+					for _, dbs := range dbList {
+						dbs.Rollback()
 					}
 					return err
 				}
@@ -1141,25 +1146,31 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 				transferOrder.ErpResp = utils.ToJson(erpResp)
 				if err := transferOrderRepoTx.Update(transferOrder); err != nil {
 					logger.Logger.Error("更新调拨单ERP响应数据失败", zap.Error(err))
-					for _, db := range dbs {
-						db.Rollback()
+					for _, dbs := range dbList {
+						dbs.Rollback()
 					}
 					return errors.WithMessage(errors.New("更新调拨单ERP响应数据失败"), err.Error())
 				}
 				// 复制数据到总部
 				if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
 					logger.Logger.Error("复制数据到总部失败", zap.Error(err))
-					for _, db := range dbs {
-						db.Rollback()
+					for _, dbs := range dbList {
+						dbs.Rollback()
 					}
 					return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
 				}
 			}
-			for _, db := range dbs {
-				if err := db.Commit().Error; err != nil {
+			for _, dbs := range dbList {
+				if err := dbs.Commit().Error; err != nil {
 					logger.Logger.Error("提交事务失败", zap.Error(err))
 					return errors.WithMessage(errors.New("提交事务失败"), err.Error())
 				}
+			}
+		} else {
+			// 复制数据到总部
+			if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
+				logger.Logger.Error("复制数据到总部失败", zap.Error(err))
+				return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
 			}
 		}
 
@@ -1228,9 +1239,9 @@ func (s *transferOrderSrv) RejectTransferOrder(
 	}
 
 	// 需要用户再次确认审核
-	if !req.IsConfirm {
-		return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认驳回此单据吗？")
-	}
+	// if !req.IsConfirm {
+	// 	return errors.NewWithCode(constant.CodeErrorConfirmRequest, "确认驳回此单据吗？")
+	// }
 
 	// 开始事务
 	staff := ctx.GetStaff()
@@ -1257,8 +1268,10 @@ func (s *transferOrderSrv) RejectTransferOrder(
 		}
 
 		// 复制数据到总部
-		if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
-			return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
+		if currentApproval.Sequence != 1 {
+			if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
+				return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
+			}
 		}
 
 		// 记录操作日志

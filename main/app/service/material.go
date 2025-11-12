@@ -292,6 +292,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		// 响应格式
 		respMaterial := material_resp.Material{
 			Uuid:               material.Uuid,
+			MaterialUuid:       material.Uuid,
 			Name:               material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			LocaleName:         material.MultiLanguageName.GetNames(),
 			ErpCode:            material.Code,

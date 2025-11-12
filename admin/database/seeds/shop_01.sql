@@ -3278,6 +3278,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
   `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司名称',
   `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
   `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号TR+12位数字',
   `erp_order_no` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP调拨单号（销售单号）',

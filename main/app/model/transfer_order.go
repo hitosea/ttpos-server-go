@@ -12,6 +12,7 @@ import (
 type TransferOrder struct {
 	BaseModel
 	CompanyUuid     uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
+	CompanyName     string `gorm:"column:company_name;type:varchar(255);default:'';comment:所属公司名称" json:"company_name"`
 	HeadquarterUuid uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
 	OrderNo         string `gorm:"column:order_no;type:varchar(255);default:'';comment:单据编号TR+12位数字" json:"order_no"`
 	ErpOrderNo      string `gorm:"column:erp_order_no;type:varchar(255);default:'';comment:ERP调拨单号（销售单号）" json:"erp_order_no"`
