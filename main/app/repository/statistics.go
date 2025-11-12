@@ -998,7 +998,8 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 			SUM(so.origin_amount) AS order_amount,
 			SUM(so.payment_amount) AS pay_amount,
 			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
-			COUNT(DISTINCT so.uuid) AS order_num
+			COUNT(DISTINCT so.uuid) AS order_num,
+			SUM(sb.meal_num) AS meal_num
 		FROM ttpos_sale_bill AS sb
 		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0 AND so.status = 1
 		LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = 0
