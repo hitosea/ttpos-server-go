@@ -168,7 +168,7 @@ func (v *transferOrderValidator) validateOrderItemStockNotEnough(
 		availableNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range warehouseItemList {
 			if item.MaterialCode == warehouseItem.MaterialCode {
-				availableNum = availableNum.Add(availableNum)
+				availableNum = availableNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
 			}
 		}
 		if availableNum.LessThan(decimal.NewFromFloat(item.GetUnitsTotalConversionRateNum())) {

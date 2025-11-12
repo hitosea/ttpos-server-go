@@ -7,6 +7,7 @@ import (
 // Material 物品信息
 type Material struct {
 	Uuid               uint64                `json:"uuid"`                 // 物品UUID
+	MaterialUuid       uint64                `json:"material_uuid"`        // 原料UUID
 	Name               string                `json:"name"`                 // 物品名称
 	LocaleName         dto.LocaleResponse    `json:"locale_name"`          // 物品名称
 	ErpCode            string                `json:"erp_code"`             // erp编码

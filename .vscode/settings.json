@@ -98,6 +98,10 @@
             "onAutoForward": "silent"
         },
         //忽略端口范围配置
+        "8079": {
+            "label": "HTTP检测服务", 
+            "onAutoForward": "silent"
+        },
         "2112": {
             "label": "忽略",
             "onAutoForward": "ignore"
