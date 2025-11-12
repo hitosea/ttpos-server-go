@@ -1070,6 +1070,9 @@ func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.Kitch
 
 	productionDataList := make([]business_data_resp.KitchenProductionDetailItem, 0)
 	for _, productionOrderProduct := range productionOrderProducts {
+		if productionOrderProduct.SaleOrderProduct.IsPackageProduct() {
+			continue // 跳过套餐商品
+		}
 		item := business_data_resp.KitchenProductionDetailItem{
 			ProductName:    productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
 			FlavorName:     productionOrderProduct.SaleOrderProduct.GetFlavorName(),
