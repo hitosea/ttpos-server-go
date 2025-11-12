@@ -1116,7 +1116,7 @@ func (s *businessSrv) getKitchenProductionDetailProductBomUuids(ctx context.Cont
 	productBomUuids := []uint64{}
 	// 根据Keyword(商品名称)查询所有商品的product_bom_uuid
 	if req.Keyword != "" {
-		productBomUuidsByName, err := repository.NewProductRepo(db).GetProductBomUuidsByKeyword(req.Keyword)
+		productBomUuidsByName, err := repository.NewProductRepo(db).GetProductBomUuidsByKeyword(req.Keyword, ctx.GetLanguage())
 		if err != nil {
 			return nil, err
 		}

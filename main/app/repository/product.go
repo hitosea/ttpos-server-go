@@ -134,7 +134,7 @@ type IProductQueryRepo interface {
 	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
 	GetProductShopMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品最大排序
 
-	GetProductBomUuidsByKeyword(keyword string) ([]uint64, error)               // 根据Keyword(商品名称)查询所有商品的product_bom_uuid
+	GetProductBomUuidsByKeyword(keyword string, lang string) ([]uint64, error)  // 根据Keyword(商品名称)查询所有商品的product_bom_uuid
 	GetProductBomUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID查询所有商品的product_bom_uuid
 	GetProductBomUuidsByInternalCode(internalCode string) ([]uint64, error)     // 根据内部编码查询所有商品的product_bom_uuid
 
@@ -1448,10 +1448,13 @@ func (r *productRepo) GetProductUnitByErpnextUom(erpnextUom string) (*model.Prod
 }
 
 // GetProductBomUuidsByKeyword 根据Keyword(商品名称)查询所有商品的product_bom_uuid
-func (r *productRepo) GetProductBomUuidsByKeyword(keyword string) ([]uint64, error) {
+func (r *productRepo) GetProductBomUuidsByKeyword(keyword string, lang string) ([]uint64, error) {
 	// 根据name查询product_package表
 	var productPackageUuids []uint64
-	err := r.db.Model(&model.ProductPackage{}).Where("delete_time = ?", constant.NotDeleted).Where("name LIKE ?", "%"+keyword+"%").Select("uuid").Find(&productPackageUuids).Error
+	err := r.db.Model(&model.ProductPackage{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where(fmt.Sprintf("name->> '%s' LIKE ?", fmt.Sprintf("$.%s", lang)), "%"+keyword+"%").
+		Pluck("uuid", &productPackageUuids).Error
 	if err != nil {
 		if strings.Contains(err.Error(), "record not found") {
 			return nil, nil
