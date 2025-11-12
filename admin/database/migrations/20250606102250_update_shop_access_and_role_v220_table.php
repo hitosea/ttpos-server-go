@@ -94,7 +94,7 @@ class UpdateShopAccessAndRoleV220Table extends Migrator
 
             $existingData = $query->find();
             if ($existingData) {
-                $query->update($item);
+                // $query->update($item);
             } else {
                 $db->name($tableName)->insert($item);
             }

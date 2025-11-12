@@ -51,12 +51,13 @@ class Google extends Server
         // 图片上传
         $fileMimeType = $this->file->getMime();
         if ($thumb && strpos($fileMimeType, 'image') !== false) {
+            /** @var \GdImage $image */
             $image = Image::open($this->file)->thumb($thumb, $thumb, Image::THUMB_SCALING)->getImg();
             ob_start();
-            imagepng($image->getImg());
+            imagepng($image);
             $imageData = ob_get_contents();
             ob_end_clean();
-            imagedestroy($image->getImg());
+            imagedestroy($image);
         } else {
             $imageData = fopen($realPath, 'r');
         }
