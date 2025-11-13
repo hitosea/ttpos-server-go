@@ -802,7 +802,7 @@ transferOrderSrv
 ## 📚 相关文档
 
 - [物品管理](../material/material_service.md)
-- [仓库管理](../warehouse/warehouse_management.md)
+- [仓库管理](warehouse.md)
 - [ERP集成](../erp/erp_integration.md)
 - [审批流程设计](../approval/approval_flow.md)
 

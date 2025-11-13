@@ -1031,8 +1031,8 @@ func (c *Controller) ViewReceiptFiles(ctx *gin.Context) {
 
 ## 📚 相关文档
 
-- [File Service](./file_service.md) - 文件上传和管理
-- [Purchase Receipt Order Service](./purchase_receipt_order_service.md) - 收货单管理
+- [文件上传服务](upload_file.md) - 文件上传和管理
+- [采购收货单服务](purchase_receipt_order.md) - 收货单管理
 
 ---
 

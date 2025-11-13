@@ -895,11 +895,10 @@ authSrv
 
 ## 📚 相关文档
 
-- [JWT 认证机制](../auth/jwt.md)
-- [权限管理系统](../permission/role_access.md)
-- [设备管理](../device/device_management.md)
+- [权限管理系统](role_access.md)
+- [设备管理](device.md)
 - [交班管理](../shift/staff_shift.md)
-- [系统设置](../setting/setting_service.md)
+- [系统设置](setting.md)
 
 ---
 
