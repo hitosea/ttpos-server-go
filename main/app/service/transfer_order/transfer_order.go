@@ -349,6 +349,16 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("参数验证失败"), err.Error())
 	}
 
+	// 空响应
+	materialListResp := material_resp.MaterialListWithPaginationResp{
+		List: make([]material_resp.Material, 0),
+		Meta: dto.PageResponse{
+			PageNo:   listReq.PageNo,
+			PageSize: listReq.PageSize,
+			Total:    0,
+		},
+	}
+
 	// 本店UUID
 	companySetting := ctx.GetCompanySetting()
 	companyUuid := ctx.GetCompanyUuid()
@@ -356,7 +366,7 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 	// 获取本店的物品列表
 	var materialListReq req.MaterialListReq
 	if err := copier.Copy(&materialListReq, &listReq); err != nil {
-		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
+		return materialListResp, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 	materialListReq.CategoryUuids = materialListReq.GetCategoryUuids() // 获取有效分类UUID列表。 /api/v1/shop/material/list?category_uuids&keyword&page_no=1&page_size=1000&status 时，CategoryUuids会有一个0值，是无效的
 	materialListReq.OutWarehouseErpCode = listReq.OutWarehouseErpCode
@@ -365,7 +375,7 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 	res, err := s.materialSrv.GetMaterialList(ctx, materialListReq)
 	// 处理错误
 	if err != nil {
-		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("查询调拨单物品列表失败"), err.Error())
+		return materialListResp, errors.WithMessage(errors.New("查询调拨单物品列表失败"), err.Error())
 	}
 
 	// 调入单 - 发货门店
@@ -373,7 +383,7 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 		// 如果发货门店不是本店，则获取其他店的数据库
 		otherDb := s.dbm.GetDB(listReq.SenderCompanyUuid)
 		if otherDb == nil {
-			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
+			return materialListResp, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
 		}
 		// 获取物品列表
 		erpCodes := []string{}
@@ -384,7 +394,7 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 		warehouseItemRepo := repository.NewWarehouseItemRepo(otherDb)
 		warehouseItems, err := warehouseItemRepo.GetNormalByMaterialCodes(erpCodes, listReq.OutWarehouseErpCode)
 		if err != nil {
-			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取物品库存失败"), err.Error())
+			return materialListResp, errors.WithMessage(errors.New("获取物品库存失败"), err.Error())
 		}
 		materialList := []material_resp.Material{}
 		for _, item := range res.List {
@@ -398,6 +408,10 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 			materialList = append(materialList, item)
 		}
 		res.List = materialList
+	}
+
+	if res.List == nil {
+		res.List = make([]material_resp.Material, 0)
 	}
 
 	return res, nil

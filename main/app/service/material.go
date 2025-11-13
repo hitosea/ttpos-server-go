@@ -173,7 +173,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		dbOptions = append(dbOptions, commonRepo.WhereByStatus(uint(req.Status)))
 	}
 	if len(req.MaterialUuids) > 0 {
-		dbOptions = append(dbOptions, commonRepo.WhereInMaterialUuids(req.MaterialUuids))
+		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.MaterialUuids))
 	}
 	// 预加载关联数据
 	dbOptions = append(dbOptions, commonRepo.Preload(
