@@ -360,6 +360,7 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 	}
 	materialListReq.CategoryUuids = materialListReq.GetCategoryUuids() // 获取有效分类UUID列表。 /api/v1/shop/material/list?category_uuids&keyword&page_no=1&page_size=1000&status 时，CategoryUuids会有一个0值，是无效的
 	materialListReq.OutWarehouseErpCode = listReq.OutWarehouseErpCode
+	materialListReq.MaterialUuids = listReq.MaterialUuids
 	materialListReq.PurchaseType = utils.IfInt(companySetting.IsHeadquarter(), 1, 2)
 	res, err := s.materialSrv.GetMaterialList(ctx, materialListReq)
 	// 处理错误
