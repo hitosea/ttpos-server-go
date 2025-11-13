@@ -36,9 +36,9 @@ type ISyncSrv interface {
 | 4 | 单位 | `SyncTaskTypeUnit` | 单位同步 | `productSrv.SyncUnit` |
 | 5 | 物品 | `SyncTaskTypeMaterial` | 物品同步 | `materialSrv.SyncMaterial` |
 | 6 | 仓库 | `SyncTaskTypeWarehouse` | 仓库同步 | `warehouseSrv.SyncWarehouse` |
-| 7 | 口味 | `SyncTaskTypeFlavor` | 口味同步 | `productSrv.SyncProductFlavor` |
+| 7 | 规格 | `SyncTaskTypeFlavor` | 规格同步 | `productSrv.SyncProductFlavor` |
 | 8 | 属性 | `SyncTaskTypeAttribute` | 属性同步 | `productSrv.SyncAttributeGroup` |
-| 9 | 酱料 | `SyncTaskTypeSauce` | 酱料同步 | `productSrv.SyncSauce` |
+| 9 | 加料 | `SyncTaskTypeSauce` | 加料同步 | `productSrv.SyncSauce` |
 | 10 | 商品 | `SyncTaskTypeProduct` | 商品同步 | `productSrv.SyncProduct` |
 | 11 | BOM卡 | `SyncTaskTypeBomCard` | BOM卡同步 | `materialSrv.SyncProductBomCard` |
 | 12 | 供应商 | `SyncTaskTypeSupplier` | 供应商同步 | `supplierSrv.SyncSupplier` |
@@ -140,7 +140,7 @@ type SyncSrv struct {
 - **WarehouseSrv**: 仓库、库存同步
 - **MaterialSrv**: 物品、物品分类、BOM卡同步
 - **SupplierSrv**: 供应商同步
-- **ProductSrv**: 商品、商品分类、税率、单位、口味、属性、酱料、套餐图片同步
+- **ProductSrv**: 商品、商品分类、税率、单位、规格、属性、加料、套餐图片同步
 
 ## 核心流程
 
@@ -922,9 +922,9 @@ utils.Go(func() {
    - `SyncProductShopCategory`: 同步商品分类
    - `SyncProductTax`: 同步税率
    - `SyncUnit`: 同步单位
-   - `SyncProductFlavor`: 同步口味
+   - `SyncProductFlavor`: 同步规格
    - `SyncAttributeGroup`: 同步属性组
-   - `SyncSauce`: 同步酱料
+   - `SyncSauce`: 同步加料
    - `SyncProduct`: 同步商品
    - `SyncProductStockByBomCard`: 同步商品库存
    - `SyncProductPackageImage`: 同步套餐图片
@@ -1019,9 +1019,9 @@ resp, err := syncSrv.GetTaskDetail(ctx, req.SyncTaskDetailReq{
     ├─ 单位同步     → 创建子任务 → 执行 → 更新状态
     ├─ 物品同步     → 创建子任务 → 执行 → 更新状态
     ├─ 仓库同步     → 创建子任务 → 执行 → 更新状态
-    ├─ 口味同步     → 创建子任务 → 执行 → 更新状态
+    ├─ 规格同步     → 创建子任务 → 执行 → 更新状态
     ├─ 属性同步     → 创建子任务 → 执行 → 更新状态
-    ├─ 酱料同步     → 创建子任务 → 执行 → 更新状态
+    ├─ 加料同步     → 创建子任务 → 执行 → 更新状态
     ├─ 商品同步     → 创建子任务 → 执行 → 更新状态
     ├─ BOM卡同步    → 创建子任务 → 执行 → 更新状态
     ├─ 供应商同步   → 创建子任务 → 执行 → 更新状态
