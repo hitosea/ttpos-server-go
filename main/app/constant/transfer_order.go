@@ -84,3 +84,9 @@ const (
 	TransferApprovalNotRequired = 0 // 非必须
 	TransferApprovalRequired    = 1 // 必须
 )
+
+// 是否通过公司仓库
+const (
+	TransferApprovalIsViaCompanyWarehouse    = "1" // 通过公司仓库
+	TransferApprovalIsNotViaCompanyWarehouse = "0" // 不通过公司仓库
+)

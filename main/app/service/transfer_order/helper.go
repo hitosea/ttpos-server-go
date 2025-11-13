@@ -234,7 +234,7 @@ func (h *transferOrderHelper) CreateApproval(
 			"company_uuid":             myCompanyUuid,
 			"company":                  myCompany,
 			"erpnext_company_abbr":     myCompanySetting.ErpnextCompanyAbbr,
-			"is_via_company_warehouse": "1",
+			"is_via_company_warehouse": constant.TransferApprovalIsViaCompanyWarehouse,
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
 					return constant.TransferApprovalTypeReceiver
@@ -248,10 +248,13 @@ func (h *transferOrderHelper) CreateApproval(
 			"company":              myParentCompany,
 			"erpnext_company_abbr": myParentCompanySetting.ErpnextCompanyAbbr,
 			"is_via_company_warehouse": func() string {
-				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
-					return "1"
+				if myParentCompanyUuid == theOtherParentCompanyUuid {
+					return constant.TransferApprovalIsNotViaCompanyWarehouse
 				}
-				return "0"
+				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
+					return constant.TransferApprovalIsViaCompanyWarehouse
+				}
+				return constant.TransferApprovalIsNotViaCompanyWarehouse
 			}(),
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
@@ -274,10 +277,13 @@ func (h *transferOrderHelper) CreateApproval(
 			"company":              theOtherParentCompany,
 			"erpnext_company_abbr": theOtherParentCompanySetting.ErpnextCompanyAbbr,
 			"is_via_company_warehouse": func() string {
-				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || theOtherParentBusinessSetting.IsViaParentCompanyWarehouse() {
-					return "1"
+				if theOtherParentCompanyUuid == theOtherCompanyUuid {
+					return constant.TransferApprovalIsNotViaCompanyWarehouse
 				}
-				return "0"
+				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || theOtherParentBusinessSetting.IsViaParentCompanyWarehouse() {
+					return constant.TransferApprovalIsViaCompanyWarehouse
+				}
+				return constant.TransferApprovalIsNotViaCompanyWarehouse
 			}(),
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
@@ -299,7 +305,7 @@ func (h *transferOrderHelper) CreateApproval(
 			"company_uuid":             theOtherCompanyUuid,
 			"company":                  theOtherCompany,
 			"erpnext_company_abbr":     theOtherCompanySetting.ErpnextCompanyAbbr,
-			"is_via_company_warehouse": "1",
+			"is_via_company_warehouse": constant.TransferApprovalIsViaCompanyWarehouse,
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
 					return constant.TransferApprovalTypeSender
@@ -1176,7 +1182,10 @@ func (h *transferOrderHelper) MoveStockToTargetWarehouse(
 					return constant.WarehouseInOutLogSceneTransferIn
 				}(),
 				WarehouseUuid: func() uint64 {
-					if transitWarehouse != nil {
+					if inTargetWarehouse != nil && logType == constant.WarehouseInOutLogLogTypeIn {
+						return inTargetWarehouse.Uuid
+					}
+					if transitWarehouse != nil && logType == constant.WarehouseInOutLogLogTypeOut {
 						return transitWarehouse.Uuid
 					}
 					return 0
