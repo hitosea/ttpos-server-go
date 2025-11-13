@@ -665,6 +665,9 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		ToParentCompanyAbbr:   receiverParentCompanyAbbr,
 		ToParentBranch:        receiverParentBranch,
 	}
+
+	logger.Logger.Info("调用erp接口保存调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
+
 	erpResp, err := erp.NewIErpSrv(dbm).SaveMaterialTransfer(ctx, senderCompanySetting, materialTransferReq)
 	if err != nil {
 		logger.Logger.Error("调用erp接口失败 - 审批通过调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
