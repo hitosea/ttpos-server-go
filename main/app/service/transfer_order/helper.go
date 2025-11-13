@@ -1216,9 +1216,13 @@ func (h *transferOrderHelper) SavePurchaseReceipt(
 	db *gorm.DB,
 	transferOrder *model.TransferOrder,
 ) (*buying.SavePurchaseReceiptResp, error) {
+	erpResp := transferOrder.GetErpResp()
+	if erpResp == nil {
+		return nil, errors.New("获取ERP响应数据失败")
+	}
 	// 调用erp接口
 	erpReq := buying.SavePurchaseReceiptReq{
-		PurchaseOrderName: transferOrder.ErpOrderNo,
+		PurchaseOrderName: erpResp.ToReceipt.PoNo,
 		Items:             make([]*buying.PurchaseOrderItem, 0, len(transferOrder.Items)),
 	}
 	for _, item := range transferOrder.Items {
