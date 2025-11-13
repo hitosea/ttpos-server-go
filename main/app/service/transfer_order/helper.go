@@ -591,7 +591,7 @@ func (h *transferOrderHelper) ConvertTransferOrderItemsToMaterialTransferItems(i
 // 调用erp接口保存调拨单
 func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm *database.DBManager, db *gorm.DB, transferOrder *model.TransferOrder) (*material_transfer.MaterialTransferResp, error) {
 	// 获取当前公司总部下所有公司的设置
-	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(ctx.GetCompanySetting().HeadquarterUuid)
+	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(transferOrder.HeadquarterUuid)
 	if err != nil {
 		logger.Logger.Error("获取总部下所有公司的设置失败", zap.Error(err))
 		return nil, errors.WithMessage(errors.New("获取总部下所有公司的设置失败"), err.Error())
