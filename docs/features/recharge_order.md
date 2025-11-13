@@ -1359,10 +1359,10 @@ if sumPaymentAmount < order.RechargeAmount {
 
 ## 📚 相关文档
 
-- [Member Service](./member_service.md) - 会员服务
-- [Payment Method Service](./payment_method_service.md) - 支付方式服务
+- [Member Service](member.md) - 会员服务
+- [支付方式服务](payment_method.md) - 支付方式服务
 - [Cash Box Service](./cash_box_service.md) - 钱箱服务
-- [SMS Service](./sms_service.md) - 短信服务
+- [短信服务](sms.md) - 短信服务
 
 ---
 
