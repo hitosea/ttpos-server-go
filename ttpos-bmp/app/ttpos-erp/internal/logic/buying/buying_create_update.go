@@ -301,9 +301,7 @@ func (s *sBuying) CreatePurchaseOrderFromSalesOrder(ctx context.Context, req *dt
 		purchaseOrder.SetWarehouse = warehouse.Name
 	}
 	for _, item := range purchaseOrder.Items {
-		if len(item.Warehouse) == 0 {
-			item.Warehouse = purchaseOrder.SetWarehouse
-		}
+		item.Warehouse = purchaseOrder.SetWarehouse
 	}
 
 	// 设置采购价格表
