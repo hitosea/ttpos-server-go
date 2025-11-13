@@ -131,7 +131,7 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	}
 	// 添加请求参数日志中间件
 	if config.Server.Mode == "debug" {
-		r.Use(middleware.Recovery(logger.Logger, config.Server.Mode))
+		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
 		r.Use(middleware.RequestLogger(logger.Logger))
 	} else {
 		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
