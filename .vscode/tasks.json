@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-        "label": "Go项目-构建Main",
+        "label": "Go项目 > 构建Main",
         "type": "shell",
         "command": "make",
         "args": [
@@ -25,7 +25,7 @@
         ]
     },
     {
-        "label": "Go项目-查看日志",
+        "label": "Go项目 > 查看日志",
         "type": "shell",
         "command": "make",
         "args": [
@@ -45,7 +45,7 @@
         ]
     },
     {
-        "label": "Go项目-生成Swagger文档",
+        "label": "Go项目 > 生成Swagger文档",
         "type": "shell",
         "command": "make",
         "args": [
@@ -62,47 +62,7 @@
         }
     },
     {
-        "label": "Go项目-前端构建",
-        "type": "shell",
-        "command": "make",
-        "args": [
-            "build-web"
-        ],
-        "options": {
-            "cwd": "${workspaceFolder}/admin/views/admin"
-        },
-        "group": "build",
-        "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared",
-            "showReuseMessage": true,
-            "clear": false
-        }
-    },
-    {
-        "label": "Go项目-构建中台",
-        "type": "shell",
-        "command": "make",
-        "args": [
-            "install-bmp"
-        ],
-        "group": "build",
-        "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared",
-            "showReuseMessage": true,
-            "clear": false
-        },
-        "problemMatcher": [
-            "$go"
-        ]
-    },
-    {
-        "label": "Go项目-项目翻译",
+        "label": "Go项目 > 项目翻译",
         "type": "shell",
         "command": "make",
         "args": [
@@ -122,13 +82,72 @@
         ]
     },
     {
-        "label": "Go项目-生成数据库迁移文件",
+        "label": "Go项目 > 生成数据库迁移文件",
         "type": "shell",
         "command": "make",
         "args": [
             "migrate"
         ],
         "group": "build",
-    }
+    },
+    {
+        "label": "Go项目 > 容器管理 > 重启所有容器",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "restart"
+        ],
+        "group": "build"
+    },
+    {
+        "label": "Go项目 > 容器管理 > 停止所有容器",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "down"
+        ],
+        "group": "build"
+    },
+    {
+        "label": "Go项目 > 容器管理 > up -d",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "up"
+        ],
+        "group": "build"
+    },
+    {
+        "label": "BMP项目 > 构建",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "install-bmp"
+        ],
+        "group": "build",
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
+        },
+        "problemMatcher": [
+            "$go"
+        ]
+    },
+    {
+        "label": "BMP项目 > 生成Protobuf文件",
+        "type": "shell",
+        "command": "make",
+        "options": {
+            "cwd": "${workspaceFolder}/ttpos-bmp"
+        },
+        "args": [
+            "pb"
+        ],
+        "group": "build"
+    },
 ]
 } 

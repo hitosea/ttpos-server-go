@@ -120,6 +120,32 @@ services:
       ttpos-bmp-mid_bmp-mid-network:
       bmp-network:
         ipv4_address: 10.0.10.44
+
+  # WebSocket服务模块
+  bmp-websocket:
+    container_name: "ttpos-bmp-websocket-${APP_ID}"
+    build:
+      args:
+        MODULE: websocket
+        HTTP_PORT: 14051
+        RPC_PORT: 14052
+    image: ttpos-bmp-websocket
+    environment:
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14052"  #生产环境调成服务IP
+      SW_AGENT_NAME: "ttpos-bmp-websocket"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    volumes:
+      - ./app/ttpos-websocket/manifest/config:/app/config  #生产环境根据需要调整
+    restart: always
+    ports:
+      - "14051:14051"  # HTTP端口（WebSocket升级）
+      - "14052:14052"  # gRPC端口
+    networks:
+      ttpos-bmp-mid_bmp-mid-network:
+      bmp-network:
+        ipv4_address: 10.0.10.45
+        
 networks:
   ttpos-bmp-mid_bmp-mid-network:
     external: true
