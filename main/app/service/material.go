@@ -172,6 +172,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	if req.Status != 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByStatus(uint(req.Status)))
 	}
+	if len(req.MaterialUuids) > 0 {
+		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.MaterialUuids))
+	}
 	// 预加载关联数据
 	dbOptions = append(dbOptions, commonRepo.Preload(
 		repository.WithPreload{

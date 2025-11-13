@@ -198,6 +198,7 @@ type TransferOrderMaterialListReq struct {
 	Keyword             string   `form:"keyword" json:"keyword"`                               // 关键字
 	Status              int      `form:"status" json:"status"`                                 // 状态，0-全部 1-启用 2-停用
 	CategoryUuids       []uint64 `form:"category_uuids" json:"category_uuids"`                 // 分类UUID列表,多选时
+	MaterialUuids       []uint64 `form:"material_uuids" json:"material_uuids"`                 // 物品UUID列表,多选时
 	ReceiverCompanyUuid uint64   `form:"receiver_company_uuid" json:"receiver_company_uuid"`   // 收货门店UUID
 	SenderCompanyUuid   uint64   `form:"sender_company_uuid" json:"sender_company_uuid"`       // 发货门店UUID
 	OutWarehouseErpCode string   `form:"out_warehouse_erp_code" json:"out_warehouse_erp_code"` // 出库仓库ERP编码

@@ -124,6 +124,7 @@ func (h *transferOrderHelper) GetCompanySetting(
 		}
 	}
 	if companySetting.Uuid == 0 {
+		logger.Logger.Error("获取公司设置失败", zap.Uint64("company_uuid", companyUuid))
 		return model.CompanySetting{}, errors.WithMessage(errors.New("获取公司设置失败"), "公司不存在")
 	}
 	// 返回公司设置和业务设置
@@ -260,6 +261,9 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeSenderParent
 			}(),
 			"status": func() int {
+				if myParentCompanyUuid == theOtherParentCompanyUuid {
+					return constant.TransferApprovalSkipped
+				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || myParentBusinessSetting.IsRequiredParentCompanyApproval() {
 					return constant.TransferApprovalPending
 				}
@@ -283,7 +287,7 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeReceiverParent
 			}(),
 			"status": func() int {
-				if myParentCompanyUuid == theOtherParentCompanyUuid {
+				if theOtherParentCompanyUuid == theOtherCompanyUuid {
 					return constant.TransferApprovalSkipped
 				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || theOtherParentBusinessSetting.IsRequiredParentCompanyApproval() {
@@ -549,10 +553,10 @@ func (h *transferOrderHelper) handleErpError(ctx ttposContext.Context, err error
 		if itemName != "" {
 			return errors.NewWithCode(
 				constant.CodeErrorConfirmClose,
-				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 库存不足，请补充库存"), itemName),
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可出库数量不足。\n\n请联系发货门店"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodeErrorConfirmClose, "物品库存不足，请补充库存")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "的可出库数量不足。\n\n请联系发货门店")
 	}
 	// 未知错误
 	return errors.NewWithCode(constant.CodeErrorConfirmClose,
@@ -587,7 +591,7 @@ func (h *transferOrderHelper) ConvertTransferOrderItemsToMaterialTransferItems(i
 // 调用erp接口保存调拨单
 func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm *database.DBManager, db *gorm.DB, transferOrder *model.TransferOrder) (*material_transfer.MaterialTransferResp, error) {
 	// 获取当前公司总部下所有公司的设置
-	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(ctx.GetCompanySetting().HeadquarterUuid)
+	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(transferOrder.HeadquarterUuid)
 	if err != nil {
 		logger.Logger.Error("获取总部下所有公司的设置失败", zap.Error(err))
 		return nil, errors.WithMessage(errors.New("获取总部下所有公司的设置失败"), err.Error())

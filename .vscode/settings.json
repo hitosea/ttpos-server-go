@@ -21,7 +21,10 @@
 
     // ===== 文件排除显示 =====
     "files.exclude": {
-      "**/trans/**/*test.go": true
+      "**/trans/**/*test.go": true,
+      ".husky": true,
+      ".github": true,
+      "node_modules": true,
     },
 
     // ===== 拼写检查 =====
