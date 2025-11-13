@@ -40,6 +40,18 @@ make run.erp
 
 ```
 
+### ERP 数据迁移
+
+ERP 历史数据/结构迁移脚本位于 `app/ttpos-erp/manifest/erp-migrate`：
+
+```bash
+# 单版本目录迁移（按指定目录执行）
+make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5
+
+# 全量版本迁移（遍历根目录下所有版本子目录）
+make erp.migrate-all SITE_CODE=1 BASE_DIR=./manifest/erp-migrate
+```
+
 ## 数据库迁移
 
 本项目使用 `golang-migrate` 进行数据库迁移管理，所有迁移脚本都放在 `manifest/sql` 目录中。
@@ -83,6 +95,7 @@ ttpos-bmp/
     - 门店 shop 模块 14011:http 14012:grpc
     - erp 模块 14021:http 14022:grpc
     - 外送 takeout模块 14031:http 14032:grpc
+    - 消息 message 模块 14041:http 14042:grpc
 
 4. 如果有数据库变更,可以通过本各app下的 make db_up.docker 或者主工程的 make migrate 升级迁移数据库变更
 5. 构建容器
