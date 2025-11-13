@@ -553,10 +553,10 @@ func (h *transferOrderHelper) handleErpError(ctx ttposContext.Context, err error
 		if itemName != "" {
 			return errors.NewWithCode(
 				constant.CodeErrorConfirmClose,
-				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 库存不足，请补充库存"), itemName),
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可出库数量不足。\n\n请联系发货门店"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodeErrorConfirmClose, "物品库存不足，请补充库存")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "的可出库数量不足。\n\n请联系发货门店")
 	}
 	// 未知错误
 	return errors.NewWithCode(constant.CodeErrorConfirmClose,
