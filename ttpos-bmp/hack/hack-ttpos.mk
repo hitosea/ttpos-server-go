@@ -122,6 +122,35 @@ erp.migrate:
 	@cd app/ttpos-erp && gf run main.go --args "migrate --siteCode $(SITE_CODE) --dirBase $(DIR_BASE)"
 	@echo "✅ ERP数据迁移执行完成!"
 
+
+# 执行所有版本目录的ERP数据迁移
+# 使用方法: make erp.migrate-all SITE_CODE=1 BASE_DIR=./manifest/erp-migrate
+# 参数说明:
+#   SITE_CODE: ERP站点代码，默认为 1
+#   BASE_DIR:  迁移根目录路径，默认为 ./manifest/erp-migrate
+.PHONY: erp.migrate-all
+erp.migrate-all:
+	@if [ -z "$(SITE_CODE)" ]; then \
+		echo "❌ 错误: 请提供 SITE_CODE 参数"; \
+		echo "📖 使用方法: make erp.migrate-all SITE_CODE=1 BASE_DIR=./manifest/erp-migrate"; \
+		echo "📋 示例:"; \
+		echo "   make erp.migrate-all SITE_CODE=1 BASE_DIR=./manifest/erp-migrate"; \
+		exit 1; \
+	fi
+	@if [ -z "$(BASE_DIR)" ]; then \
+		echo "❌ 错误: 请提供 BASE_DIR 参数"; \
+		echo "📖 使用方法: make erp.migrate-all SITE_CODE=1 BASE_DIR=./manifest/erp-migrate"; \
+		echo "📋 示例:"; \
+		echo "   make erp.migrate-all SITE_CODE=1 BASE_DIR=./manifest/erp-migrate"; \
+		exit 1; \
+	fi
+	@echo "🚀 开始执行ERP全量数据迁移..."
+	@echo "📍 站点代码: $(SITE_CODE)"
+	@echo "📁 迁移根目录: $(BASE_DIR)"
+	@cd app/ttpos-erp && gf run main.go --args "migrate-all --siteCode $(SITE_CODE) --dirBase $(BASE_DIR)"
+	@echo "✅ ERP全量数据迁移执行完成!"
+
+
 # 更新所有topic
 .PHONY: update-topic
 update-topic:

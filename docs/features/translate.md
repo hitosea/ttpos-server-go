@@ -52,9 +52,9 @@ type ITranslateSrv interface {
 | `ProductUnit` | `product_unit` | 商品单位 |
 | `Warehouse` | `warehouse` | 仓库 |
 | `Material` | `material` | 物品（原材料）|
-| `ProductFlavor` | `product_flavor` | 商品规格/口味 |
+| `ProductFlavor` | `product_flavor` | 商品规格 |
 | `ProductAttribute` | `product_attribute` | 商品属性 |
-| `ProductSauce` | `product_sauce` | 加料/酱料 |
+| `ProductSauce` | `product_sauce` | 加料 |
 | `ProductPackage` | `product_package` | 商品套餐 |
 | `ProductBomCard` | `product_bom_card` | 成本卡（BOM卡）|
 

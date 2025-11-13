@@ -119,10 +119,10 @@ type CheckNameItem struct {
 | `CheckNameSourceProductPackageGroup` | 2 | 商品套餐组 | 暂未实现 |
 | `CheckNameSourceProduct` | 3 | 商品 | `ttpos_product_package` |
 | `CheckNameSourceCategory` | 4 | 商品分类 | `ttpos_product_category` |
-| `CheckNameSourceSauce` | 5 | 酱料 | `ttpos_product_sauce` |
+| `CheckNameSourceSauce` | 5 | 加料 | `ttpos_product_sauce` |
 | `CheckNameSourceAttribute` | 6 | 商品属性 | `ttpos_product_attribute` |
 | `CheckNameSourceAttributeGroup` | 7 | 属性组 | `ttpos_product_attribute_group` |
-| `CheckNameSourceFlavor` | 8 | 口味 | `ttpos_product_flavor` |
+| `CheckNameSourceFlavor` | 8 | 规格 | `ttpos_product_flavor` |
 | `CheckNameSourceMaterial` | 9 | 原料 | `ttpos_material` |
 | `CheckNameSourceMaterialCategory` | 10 | 原料分类 | `ttpos_material_category` |
 | `CheckNameSourceMaterialUnit` | 11 | 原料单位 | `ttpos_material_unit` |

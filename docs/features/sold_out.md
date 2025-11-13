@@ -113,7 +113,7 @@ type SoldOut struct {
 
 **关键点**:
 1. 使用 `GetSoldOutWithPagination` 从数据库获取沽清商品
-2. 预加载关联数据（产品包、口味、多语言名称）
+2. 预加载关联数据（产品包、规格、多语言名称）
 3. 转换为响应格式，提供多语言名称支持
 
 ---
@@ -307,7 +307,7 @@ func NewSoldOutSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) ISoldOutSr
   - `1`: 已沽清
 
 ### ProductBom 概念
-- **ProductBom** (Bill of Materials): 商品物料清单，代表商品的特定规格或口味
+- **ProductBom** (Bill of Materials): 商品物料清单，代表商品的特定规格
 - 一个商品（Product）可以有多个规格（Bom）
 - 沽清是在 Bom 级别进行管理的，而不是商品级别
 
