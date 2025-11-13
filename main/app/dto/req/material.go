@@ -55,13 +55,14 @@ type MaterialCategorySortItemReq struct {
 
 // MaterialListReq 物品列表查询
 type MaterialListReq struct {
-	dto.PageReq               // 分页参数
-	Keyword          string   `form:"keyword" json:"keyword"`                       // 关键字
-	Status           int      `form:"status" json:"status"`                         // 状态，0-全部 1-启用 2-停用
-	CategoryUuids    []uint64 `form:"category_uuids" json:"category_uuids"`         // 分类UUID列表,多选时
-	WarehouseErpCode string   `form:"warehouse_erp_code" json:"warehouse_erp_code"` // 仓库编码
-	PurchaseType     int      `form:"purchase_type" json:"purchase_type"`           // 采购类型，0-全部 1-门店 2-总部
-	SupplierErpCode  string   `form:"supplier_erp_code" json:"supplier_erp_code"`   // 供应商编码
+	dto.PageReq                  // 分页参数
+	Keyword             string   `form:"keyword" json:"keyword"`                               // 关键字
+	Status              int      `form:"status" json:"status"`                                 // 状态，0-全部 1-启用 2-停用
+	CategoryUuids       []uint64 `form:"category_uuids" json:"category_uuids"`                 // 分类UUID列表,多选时
+	WarehouseErpCode    string   `form:"warehouse_erp_code" json:"warehouse_erp_code"`         // 仓库编码
+	PurchaseType        int      `form:"purchase_type" json:"purchase_type"`                   // 采购类型，0-全部 1-门店 2-总部
+	SupplierErpCode     string   `form:"supplier_erp_code" json:"supplier_erp_code"`           // 供应商编码
+	OutWarehouseErpCode string   `form:"out_warehouse_erp_code" json:"out_warehouse_erp_code"` // 出库仓库编码
 }
 
 func (r *MaterialListReq) GetCategoryUuids() []uint64 {

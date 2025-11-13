@@ -151,6 +151,7 @@ type TransferOrderItem struct {
 	MaterialCode         string `gorm:"column:material_code;type:varchar(255);default:'';comment:物品编码" json:"material_code"`
 	MaterialName         string `gorm:"column:material_name;type:text;comment:物品名称JSON" json:"material_name"`
 	MaterialInternalCode string `gorm:"column:material_internal_code;type:varchar(255);default:'';comment:物品内部编码" json:"material_internal_code"`
+	MaterialBarcodeValue string `gorm:"column:material_barcode_value;type:varchar(255);default:'';comment:物品条码值" json:"material_barcode_value"`
 
 	// 价格
 	Valuation float64 `gorm:"column:valuation;type:decimal(20,8);default:0.00000000;comment:估值单价（基准单位）" json:"valuation"`

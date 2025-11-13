@@ -195,12 +195,12 @@ type TransferOrderLogListReq struct {
 // TransferOrderMaterialListReq 调拨单物品列表查询
 type TransferOrderMaterialListReq struct {
 	dto.PageReq                  // 分页参数
-	Keyword             string   `form:"keyword" json:"keyword"`                                                   // 关键字
-	Status              int      `form:"status" json:"status"`                                                     // 状态，0-全部 1-启用 2-停用
-	CategoryUuids       []uint64 `form:"category_uuids" json:"category_uuids"`                                     // 分类UUID列表,多选时
-	ReceiverCompanyUuid uint64   `form:"receiver_company_uuid" json:"receiver_company_uuid"`                       // 收货门店UUID
-	SenderCompanyUuid   uint64   `form:"sender_company_uuid" json:"sender_company_uuid"`                           // 发货门店UUID
-	OutWarehouseErpCode string   `json:"out_warehouse_erp_code" form:"out_warehouse_erp_code" binding:"omitempty"` // 出库仓库ERP编码
+	Keyword             string   `form:"keyword" json:"keyword"`                               // 关键字
+	Status              int      `form:"status" json:"status"`                                 // 状态，0-全部 1-启用 2-停用
+	CategoryUuids       []uint64 `form:"category_uuids" json:"category_uuids"`                 // 分类UUID列表,多选时
+	ReceiverCompanyUuid uint64   `form:"receiver_company_uuid" json:"receiver_company_uuid"`   // 收货门店UUID
+	SenderCompanyUuid   uint64   `form:"sender_company_uuid" json:"sender_company_uuid"`       // 发货门店UUID
+	OutWarehouseErpCode string   `form:"out_warehouse_erp_code" json:"out_warehouse_erp_code"` // 出库仓库ERP编码
 }
 
 func (r *TransferOrderMaterialListReq) Validate() error {

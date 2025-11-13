@@ -258,7 +258,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		itemInfo := resp.TransferOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
 		itemInfo.MaterialName = *language.JsonToLocaleResponse(item.MaterialName)
-
+		itemInfo.MaterialBarcode = item.MaterialBarcodeValue
 		// AvailableNum
 		availableNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range warehouseItems {
@@ -350,6 +350,7 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 	}
 
 	// 本店UUID
+	companySetting := ctx.GetCompanySetting()
 	companyUuid := ctx.GetCompanyUuid()
 
 	// 获取本店的物品列表
@@ -358,9 +359,8 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 	materialListReq.CategoryUuids = materialListReq.GetCategoryUuids() // 获取有效分类UUID列表。 /api/v1/shop/material/list?category_uuids&keyword&page_no=1&page_size=1000&status 时，CategoryUuids会有一个0值，是无效的
-	materialListReq.PurchaseType = 2
-	materialListReq.SupplierErpCode = ""
-	materialListReq.WarehouseErpCode = ""
+	materialListReq.OutWarehouseErpCode = listReq.OutWarehouseErpCode
+	materialListReq.PurchaseType = utils.IfInt(companySetting.IsHeadquarter(), 1, 2)
 	res, err := s.materialSrv.GetMaterialList(ctx, materialListReq)
 	// 处理错误
 	if err != nil {
@@ -368,14 +368,11 @@ func (s *transferOrderSrv) GetTransferOrderMaterialList(
 	}
 
 	// 调入单 - 发货门店
-	if res.List != nil && len(res.List) > 0 {
-		var otherDb = ctx.GetDB()
+	if res.List != nil && len(res.List) > 0 && listReq.SenderCompanyUuid != 0 && listReq.SenderCompanyUuid != companyUuid {
 		// 如果发货门店不是本店，则获取其他店的数据库
-		if listReq.SenderCompanyUuid != 0 && listReq.SenderCompanyUuid != companyUuid {
-			otherDb = s.dbm.GetDB(listReq.SenderCompanyUuid)
-			if otherDb == nil {
-				return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
-			}
+		otherDb := s.dbm.GetDB(listReq.SenderCompanyUuid)
+		if otherDb == nil {
+			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
 		}
 		// 获取物品列表
 		erpCodes := []string{}
@@ -443,6 +440,7 @@ func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transfe
 			MaterialCode:         material.Code,
 			MaterialName:         material.Name,
 			MaterialInternalCode: material.InternalCode,
+			MaterialBarcodeValue: material.BarcodeValue,
 			Valuation:            material.GetValuation(),
 		}
 
@@ -1140,7 +1138,6 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			if ctx.GetCompany().IsOpenErp() {
 				erpResp, err := s.helper.SaveMaterialTransfer(ctx, s.dbm, tx, transferOrder)
 				if err != nil {
-					logger.Logger.Error("调用erp接口失败", zap.Error(err))
 					for _, dbs := range dbList {
 						dbs.Rollback()
 					}

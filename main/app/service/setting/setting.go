@@ -477,6 +477,9 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			} else if slices.Contains([]string{constant.BrandA11510P}, brand) {
 				// compax打印机
 				printerType = constant.PrinterTypeCashierCompax
+			} else if slices.Contains([]string{constant.BrandD1, constant.BrandD4}, brand) {
+				// imin打印机
+				printerType = constant.PrinterTypeCashierImmin
 			} else {
 				// 未知打印机
 				printerType = ""

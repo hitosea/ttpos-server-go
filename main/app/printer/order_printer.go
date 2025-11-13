@@ -212,7 +212,11 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	 * 芯烨打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
+	if slices.Contains([]string{
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCashierImmin,
+	}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printType,

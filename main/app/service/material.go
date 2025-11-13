@@ -256,6 +256,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		transitNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range material.WarehouseItems {
 			if warehouseItem.Warehouse != nil {
+				if req.OutWarehouseErpCode != "" && warehouseItem.Warehouse.ErpCode != req.OutWarehouseErpCode {
+					continue
+				}
 				if warehouseItem.Warehouse.IsTransit() {
 					transitNum = transitNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
 				} else {

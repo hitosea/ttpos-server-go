@@ -53,6 +53,7 @@ type TransferOrderItemInfo struct {
 	MaterialUuid         uint64                      `json:"material_uuid"`          // 物品UUID
 	MaterialCode         string                      `json:"material_code"`          // 物品编码
 	MaterialName         dto.LocaleResponse          `json:"material_name"`          // 物品名称
+	MaterialBarcode      string                      `json:"material_barcode"`       // 条形码值
 	MaterialInternalCode string                      `json:"material_internal_code"` // 物品内部编码
 	Valuation            float64                     `json:"valuation"`              // 估值单价（基准单位）
 	AvailableNum         float64                     `json:"available_num"`          // 可用库存数量
