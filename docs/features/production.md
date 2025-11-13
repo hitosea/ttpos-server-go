@@ -1141,8 +1141,8 @@ utils.Go(func() {
 
 ## 📚 相关文档
 
-- [Setting Service](./setting_service.md) - 获取厨显设置
-- [Order Service](./order_service.md) - 订单管理
+- [系统设置](setting.md) - 获取厨显设置
+- [Order Service](./order.md) - 订单管理
 - [WebSocket Service](../pkg/websocket/websocket_service.md) - 实时推送
 - [Event Bus](../pkg/eventbus/eventbus.md) - 事件总线
 

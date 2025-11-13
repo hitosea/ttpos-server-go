@@ -797,8 +797,8 @@ purchaseOrderSrv
 ## 📚 相关文档
 
 - [物品管理](../material/material_service.md)
-- [仓库管理](../warehouse/warehouse_management.md)
-- [供应商管理](../supplier/supplier_management.md)
+- [仓库管理](warehouse.md)
+- [供应商管理](supplier.md)
 - [ERP集成](../erp/erp_integration.md)
 - [调拨单管理](./transfer_order.md)
 
