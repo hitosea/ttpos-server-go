@@ -1047,18 +1047,19 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 
 	// 如果入库仓库为空，且当前审批节点为收货门店上级，则无审批权限
 	if currentApproval.ApprovalType == constant.TransferApprovalTypeReceiver {
-		if req.InWarehouseErpCode == "" {
-			return errors.NewWithCode(constant.CodeErrorConfirmClose, "请选择入库仓库")
+
+		// 如果入库仓库不为空，则更新入库仓库信息
+		if req.InWarehouseErpCode != "" {
+			transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
+			warehouse, err := repository.NewWarehouseRepo(ctx.GetDB()).GetByErpCode(req.InWarehouseErpCode)
+			if err != nil {
+				return errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
+			}
+			if warehouse == nil {
+				return errors.New("入库仓库不存在")
+			}
+			transferOrder.InWarehouseName = warehouse.Name
 		}
-		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
-		warehouse, err := repository.NewWarehouseRepo(ctx.GetDB()).GetByErpCode(req.InWarehouseErpCode)
-		if err != nil {
-			return errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
-		}
-		if warehouse == nil {
-			return errors.New("入库仓库不存在")
-		}
-		transferOrder.InWarehouseName = warehouse.Name
 
 		// 验证物品库存
 		if notEnoughItemNames, err := s.validator.validateOrderItemStockNotEnough(ctx, s.dbm, transferOrder); err != nil {
