@@ -124,6 +124,7 @@ func (h *transferOrderHelper) GetCompanySetting(
 		}
 	}
 	if companySetting.Uuid == 0 {
+		logger.Logger.Error("获取公司设置失败", zap.Uint64("company_uuid", companyUuid))
 		return model.CompanySetting{}, errors.WithMessage(errors.New("获取公司设置失败"), "公司不存在")
 	}
 	// 返回公司设置和业务设置
@@ -260,6 +261,9 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeSenderParent
 			}(),
 			"status": func() int {
+				if myParentCompanyUuid == theOtherParentCompanyUuid {
+					return constant.TransferApprovalSkipped
+				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || myParentBusinessSetting.IsRequiredParentCompanyApproval() {
 					return constant.TransferApprovalPending
 				}
@@ -283,7 +287,7 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeReceiverParent
 			}(),
 			"status": func() int {
-				if myParentCompanyUuid == theOtherParentCompanyUuid {
+				if theOtherParentCompanyUuid == theOtherCompanyUuid {
 					return constant.TransferApprovalSkipped
 				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || theOtherParentBusinessSetting.IsRequiredParentCompanyApproval() {
