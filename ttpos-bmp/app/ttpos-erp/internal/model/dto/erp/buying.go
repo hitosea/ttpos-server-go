@@ -298,11 +298,11 @@ type PurchaseOrder struct {
 	InWords     string `json:"in_words,omitempty"`      // 金额大写
 
 	// 关联数据
-	PricingRules    []interface{}       `json:"pricing_rules,omitempty"`    // 定价规则
-	SuppliedItems   []interface{}       `json:"supplied_items,omitempty"`   // 供应项目
-	PaymentSchedule []PaymentSchedule   `json:"payment_schedule,omitempty"` // 付款计划
-	Items           []PurchaseOrderItem `json:"items,omitempty"`            // 项目
-	Taxes           []interface{}       `json:"taxes,omitempty"`            // 税费
+	PricingRules    []interface{}        `json:"pricing_rules,omitempty"`    // 定价规则
+	SuppliedItems   []interface{}        `json:"supplied_items,omitempty"`   // 供应项目
+	PaymentSchedule []PaymentSchedule    `json:"payment_schedule,omitempty"` // 付款计划
+	Items           []*PurchaseOrderItem `json:"items,omitempty"`            // 项目
+	Taxes           []interface{}        `json:"taxes,omitempty"`            // 税费
 
 }
 
