@@ -168,9 +168,9 @@ func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.
 	}
 
 	// 构建项目列表
-	items := make([]erp.PurchaseOrderItem, 0, len(req.Items))
+	items := make([]*erp.PurchaseOrderItem, 0, len(req.Items))
 	for _, item := range req.Items {
-		itemData := erp.PurchaseOrderItem{
+		itemData := &erp.PurchaseOrderItem{
 			ItemCode: item.ItemCode,
 			Qty:      item.Qty,
 		}
@@ -180,6 +180,10 @@ func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.
 		}
 		if len(item.Uom) > 0 {
 			itemData.Uom = item.Uom
+		}
+
+		if len(purchaseOrderData.SetWarehouse) > 0 {
+			itemData.Warehouse = purchaseOrderData.SetWarehouse
 		}
 
 		items = append(items, itemData)
@@ -295,6 +299,11 @@ func (s *sBuying) CreatePurchaseOrderFromSalesOrder(ctx context.Context, req *dt
 			return nil, gerror.Wrapf(err, "查询默认仓库失败")
 		}
 		purchaseOrder.SetWarehouse = warehouse.Name
+	}
+	for _, item := range purchaseOrder.Items {
+		if len(item.Warehouse) == 0 {
+			item.Warehouse = purchaseOrder.SetWarehouse
+		}
 	}
 
 	// 设置采购价格表
