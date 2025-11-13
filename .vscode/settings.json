@@ -99,6 +99,18 @@
             "label": "HTTP检测服务", 
             "onAutoForward": "silent"
         },
+        "8843": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "8807": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
+        "8880": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
         "2112": {
             "label": "忽略",
             "onAutoForward": "ignore"

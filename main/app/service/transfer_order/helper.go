@@ -112,7 +112,6 @@ func (h *transferOrderHelper) CreateLog(
 
 // 获取总部下所有公司的设置
 func (h *transferOrderHelper) GetCompanySetting(
-	ctx ttposContext.Context,
 	allCompanySettings []model.CompanySetting,
 	companyUuid uint64,
 ) (model.CompanySetting, error) {
@@ -600,7 +599,7 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 	// 发货门店
 	senderCompanySetting := model.CompanySetting{}
 	if transferOrder.SenderCompanyUuid != 0 {
-		companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, transferOrder.SenderCompanyUuid)
+		companySetting, err := h.GetCompanySetting(allCompanySettings, transferOrder.SenderCompanyUuid)
 		if err != nil {
 			logger.Logger.Error("获取公司设置失败", zap.Error(err))
 			return nil, errors.WithMessage(errors.New("获取公司设置失败"), err.Error())
@@ -611,7 +610,7 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 	// 收货门店
 	receiverCompanySetting := model.CompanySetting{}
 	if transferOrder.ReceiverCompanyUuid != 0 {
-		companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, transferOrder.ReceiverCompanyUuid)
+		companySetting, err := h.GetCompanySetting(allCompanySettings, transferOrder.ReceiverCompanyUuid)
 		if err != nil {
 			logger.Logger.Error("获取公司设置失败", zap.Error(err))
 			return nil, errors.WithMessage(errors.New("获取公司设置失败"), err.Error())
@@ -631,19 +630,25 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		return nil, errors.WithMessage(errors.New("查询审批流程失败"), err.Error())
 	}
 	for _, approval := range approvals {
-		if approval.ApprovalType == constant.TransferApprovalTypeSenderParent && approval.IsViaCompanyWarehouseBool() {
-			companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, approval.ApprovalCompanyUuid)
-			if err == nil {
-				senderParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
-				senderParentBranch = companySetting.ErpnextBranchName
-			}
+		if !approval.IsViaCompanyWarehouseBool() {
+			continue
 		}
-		if approval.ApprovalType == constant.TransferApprovalTypeReceiverParent && approval.IsViaCompanyWarehouseBool() {
-			companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, approval.ApprovalCompanyUuid)
-			if err != nil {
-				receiverParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
-				receiverParentBranch = companySetting.ErpnextBranchName
-			}
+		if approval.ApprovalType != constant.TransferApprovalTypeSenderParent && approval.ApprovalType != constant.TransferApprovalTypeReceiverParent {
+			continue
+		}
+		// 获取公司设置
+		companySetting, err := h.GetCompanySetting(allCompanySettings, approval.ApprovalCompanyUuid)
+		if err != nil {
+			return nil, err
+		}
+		// 设置父级公司简称和分支名称
+		if approval.ApprovalType == constant.TransferApprovalTypeSenderParent {
+			senderParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
+			senderParentBranch = companySetting.ErpnextBranchName
+		}
+		if approval.ApprovalType == constant.TransferApprovalTypeReceiverParent {
+			receiverParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
+			receiverParentBranch = companySetting.ErpnextBranchName
 		}
 	}
 
@@ -660,6 +665,9 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		ToParentCompanyAbbr:   receiverParentCompanyAbbr,
 		ToParentBranch:        receiverParentBranch,
 	}
+
+	logger.Logger.Info("调用erp接口保存调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
+
 	erpResp, err := erp.NewIErpSrv(dbm).SaveMaterialTransfer(ctx, senderCompanySetting, materialTransferReq)
 	if err != nil {
 		logger.Logger.Error("调用erp接口失败 - 审批通过调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
