@@ -148,7 +148,7 @@ func (h *transferOrderHelper) GetCompanySettings(
 		return model.Company{}, model.CompanySetting{}, respSetting.Business{}, errors.WithMessage(errors.New("获取公司失败"), err.Error())
 	}
 	// 获取公司设置
-	companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, companyUuid)
+	companySetting, err := h.GetCompanySetting(allCompanySettings, companyUuid)
 	if err != nil {
 		return model.Company{}, model.CompanySetting{}, respSetting.Business{}, errors.WithMessage(errors.New("获取公司设置失败"), err.Error())
 	}
