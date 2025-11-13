@@ -994,19 +994,28 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 	// 构建主查询SQL
 	mainQuery := fmt.Sprintf(`
 		SELECT 
-			FLOOR(%s / %d) * %d AS period_start_time,
-			SUM(so.origin_amount) AS order_amount,
-			SUM(so.payment_amount) AS pay_amount,
-			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
-			COUNT(DISTINCT so.sale_bill_uuid) AS order_num,
-			SUM(sb.meal_num) AS meal_num
-		FROM ttpos_sale_bill AS sb
-		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0 AND so.status = 1
-		LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = 0
-		WHERE sb.delete_time = 0
-			AND sb.status = ?
-			AND %s >= ?
-			AND %s <= ?
+			period_start_time,
+			SUM(order_amount) AS order_amount,
+			SUM(pay_amount) AS pay_amount,
+			SUM(refund_amount) AS refund_amount,
+			COUNT(DISTINCT sale_bill_uuid) AS order_num,
+			SUM(meal_num) AS meal_num
+		FROM (
+			SELECT 
+				FLOOR(%s / %d) * %d AS period_start_time,
+				SUM(so.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
+				SUM(so.payment_amount) AS pay_amount,
+				SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
+				sb.uuid AS sale_bill_uuid,
+				MAX(sb.meal_num) AS meal_num
+			FROM ttpos_sale_bill AS sb
+			LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0 AND so.status = 1
+			LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = 0
+			LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = 0 AND mso.status = 7
+			WHERE sb.delete_time = 0
+				AND sb.status = ?
+				AND %s >= ?
+				AND %s <= ?
 	`, timeField, req.PeriodSeconds, req.PeriodSeconds, timeField, timeField)
 
 	// 添加额外的查询条件
@@ -1027,6 +1036,12 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 		args = append(args, billTypeList)
 	}
 
+	// 完成子查询
+	mainQuery += `
+			GROUP BY period_start_time, sb.uuid
+		) AS subquery
+	`
+
 	// 分组、排序和分页
 	mainQuery += `
 		GROUP BY period_start_time
@@ -1042,14 +1057,15 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 	return total, result
 }
 
-// CountBusinessSummaryReq 统计综合运用请求
+// CountBusinessSummaryReq 统计综合运营请求
 type CountBusinessSummaryReq struct {
-	StartTime int64 // 查询开始时间戳
-	EndTime   int64 // 查询结束时间戳
-	Cycle     int   // 周期: 0=按日、1=按月
+	StartTime        int64 // 查询开始时间戳
+	EndTime          int64 // 查询结束时间戳
+	Cycle            int   // 周期: 0=按日、1=按月
+	PageNo, PageSize int   // 页码, 每页大小
 }
 
-// CountBusinessSummary 统计综合运用
+// CountBusinessSummary 统计综合运营
 func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData) {
 	var result []model.StatisticsBusinessSummaryData
 
@@ -1061,39 +1077,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 		dateFormat = "%Y-%m-%d" // 按日
 	}
 
-	// 构建查询SQL
-	query := fmt.Sprintf(`
-		SELECT 
-			FROM_UNIXTIME(sb.finish_time, '%s') AS date,
-			SUM(so.origin_amount) AS order_amount,
-			SUM(so.payment_amount) AS pay_amount,
-			SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
-			COUNT(DISTINCT so.sale_bill_uuid) AS order_num,
-			SUM(sb.meal_num) AS meal_num,
-			COUNT(DISTINCT CASE WHEN sb.desk_uuid > 0 THEN sb.desk_uuid END) AS desk_num,
-			SUM(IF(sb.bill_type = 0, so.origin_amount, 0)) as desk_order_amount,
-			SUM(IF(sb.bill_type = 1, so.origin_amount, 0)) as instant_order_amount,
-			SUM(IF(sb.bill_type = 2, so.origin_amount, 0)) as takeout_order_amount
-		FROM ttpos_sale_bill AS sb
-		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?
-		LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = ?
-		WHERE sb.delete_time = ?
-			AND sb.status = ?
-			AND sb.finish_time >= ?
-			AND sb.finish_time <= ?
-		GROUP BY date
-		ORDER BY date ASC
-	`, dateFormat)
-
-	// 执行查询
-	r.db.Raw(query,
-		constant.NotDeleted, constant.SaleOrderStatusFinish,
-		constant.NotDeleted,
-		constant.NotDeleted, constant.SaleBillStatusComplete,
-		req.StartTime, req.EndTime,
-	).Scan(&result)
-
-	// 计算总数
+	// 1. 计算总数
 	var total int64
 	r.db.Raw(fmt.Sprintf(`
 		SELECT COUNT(DISTINCT FROM_UNIXTIME(sb.finish_time, '%s'))
@@ -1106,6 +1090,56 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 		constant.NotDeleted, constant.SaleBillStatusComplete,
 		req.StartTime, req.EndTime,
 	).Scan(&total)
+
+	// 2. 构建查询SQL
+	query := fmt.Sprintf(`
+		SELECT 
+			date,
+			SUM(order_amount) AS order_amount,
+			SUM(pay_amount) AS pay_amount,
+			SUM(refund_amount) AS refund_amount,
+			COUNT(DISTINCT sale_bill_uuid) AS order_num,
+			SUM(meal_num) AS meal_num,
+			COUNT(CASE WHEN desk_uuid > 0 THEN desk_uuid END) AS desk_num,
+			SUM(desk_order_amount) AS desk_order_amount,
+			SUM(instant_order_amount) AS instant_order_amount,
+			SUM(takeout_order_amount) AS takeout_order_amount
+		FROM (
+			SELECT 
+				FROM_UNIXTIME(sb.finish_time, '%s') AS date,
+				SUM(so.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
+				SUM(so.payment_amount) AS pay_amount,
+				SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
+				sb.uuid AS sale_bill_uuid,
+				MAX(sb.meal_num) AS meal_num,
+				MAX(sb.desk_uuid) AS desk_uuid,
+				SUM(IF(sb.bill_type = 0, so.origin_amount, 0)) as desk_order_amount,
+				SUM(IF(sb.bill_type = 1, so.origin_amount, 0)) as instant_order_amount,
+				SUM(IF(sb.bill_type = 2, so.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount
+			FROM ttpos_sale_bill AS sb
+			LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?
+			LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = ?
+			LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
+			WHERE sb.delete_time = ?
+				AND sb.status = ?
+				AND sb.finish_time >= ?
+				AND sb.finish_time <= ?
+			GROUP BY date, sb.uuid
+		) AS subquery
+		GROUP BY date
+		ORDER BY date ASC
+		LIMIT ? OFFSET ?
+	`, dateFormat)
+
+	// 执行查询
+	r.db.Raw(query,
+		constant.NotDeleted, constant.SaleOrderStatusFinish,
+		constant.NotDeleted,
+		constant.NotDeleted, constant.MemberSaleOrderStatusCompleted,
+		constant.NotDeleted, constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+		req.PageSize, (req.PageNo-1)*req.PageSize,
+	).Scan(&result)
 
 	return total, result
 }

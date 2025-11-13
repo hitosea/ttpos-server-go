@@ -2022,12 +2022,12 @@ func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params E
 		// 数据从第二行开始写入
 		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.TimePeriod)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmount))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.OrderAmount)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.PayAmount)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OrderNum)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.MealNum)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountMealAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountMealAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), item.PayAmountMealAvg)
 	}
 
 	// 自动调整列宽
@@ -2211,18 +2211,18 @@ func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params Expo
 		// 数据从第二行开始写入
 		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.Date)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmount))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.OrderAmount)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.PayAmount)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OrderNum)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.MealNum)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.DeskNum)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountMealAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("H%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountMealAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("I%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("J%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("K%d", offsetRow), fmt.Sprintf("%.2f", item.InstantOrderAmount))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("L%d", offsetRow), fmt.Sprintf("%.2f", item.DeskOrderAmount))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("M%d", offsetRow), fmt.Sprintf("%.2f", item.TakeoutOrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("H%d", offsetRow), item.PayAmountMealAvg)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("I%d", offsetRow), item.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("J%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("K%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("L%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("M%d", offsetRow), item.TakeoutOrderAmount)
 	}
 
 	// 自动调整列宽
@@ -2408,7 +2408,7 @@ func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, param
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.Date)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.PaymentName)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.PaymentNum)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), fmt.Sprintf("%.2f", item.PaymentAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.PaymentAmount)
 	}
 
 	// 自动调整列宽
