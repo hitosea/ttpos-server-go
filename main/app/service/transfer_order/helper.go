@@ -1247,10 +1247,11 @@ func (h *transferOrderHelper) SavePurchaseReceipt(
 				continue
 			}
 			erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
-				ItemCode: item.MaterialCode,
-				ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
-				Uom:      unit.ErpnextUom,
-				Qty:      unit.Num,
+				ItemCode:  item.MaterialCode,
+				ItemName:  language.JsonToLocaleResponse(item.MaterialName).EN,
+				Uom:       unit.ErpnextUom,
+				Qty:       unit.Num,
+				Warehouse: transferOrder.InWarehouseErpCode,
 			})
 		}
 	}

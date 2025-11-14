@@ -231,10 +231,15 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 		gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
 		for _, itemReq := range req.Items {
 			if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
+				_warehouse := receipt.SetWarehouse
+				if len(itemReq.Warehouse) > 0 {
+					_warehouse = itemReq.Warehouse
+				}
 				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
-					ItemCode: itemReq.ItemCode,
-					Qty:      itemReq.Qty,
-					Uom:      itemReq.Uom,
+					ItemCode:  itemReq.ItemCode,
+					Qty:       itemReq.Qty,
+					Uom:       itemReq.Uom,
+					Warehouse: _warehouse,
 				})
 			}
 		}

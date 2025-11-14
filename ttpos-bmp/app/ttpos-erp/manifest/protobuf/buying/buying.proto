@@ -137,6 +137,7 @@ message PurchaseOrderItem {
   string stock_uom = 3; // 物品库存单位，可选
   double qty = 4; // 物品数量,必填
   string uom = 5; //物品单位
+  string warehouse =6 ; //收货仓库，可选
 }
 
 
