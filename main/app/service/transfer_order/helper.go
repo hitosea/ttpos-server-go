@@ -180,15 +180,18 @@ func (h *transferOrderHelper) CreateApproval(
 
 	// 当前公司的设置
 	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		headquarterUuid = companySetting.CompanyUuid
+	}
 
 	// 获取当前公司总部下所有公司的设置
-	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(companySetting.HeadquarterUuid)
+	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(headquarterUuid)
 	if err != nil {
 		return errors.WithMessage(errors.New("获取总部下所有公司的设置失败"), err.Error())
 	}
 
 	// 获取总部门店业务设置
-	headquarterUuid := companySetting.HeadquarterUuid
 	_, _, headquarterBusinessSetting, err := h.GetCompanySettings(ctx, dbm, allCompanySettings, settingSrv, headquarterUuid)
 	if err != nil {
 		return err

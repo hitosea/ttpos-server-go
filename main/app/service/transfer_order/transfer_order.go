@@ -161,7 +161,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return resp.TransferOrderDetailResp{}, errors.New("调拨单不存在")
+			return resp.TransferOrderDetailResp{}, errors.New("调拨单已被删除")
 		}
 		logger.Logger.Error("查询调拨单详情失败", zap.Error(err))
 		return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("查询调拨单详情失败"), err.Error())
@@ -969,7 +969,7 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 		// 创建审批流程
 		if err := s.helper.CreateApproval(ctx, tx, s.dbm, transferOrder); err != nil {
 			logger.Logger.Error("创建审批失败", zap.Error(err))
-			return errors.WithMessage(errors.New("创建审批失败"), err.Error())
+			return err
 		}
 
 		// 记录操作日志
