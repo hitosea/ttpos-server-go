@@ -76,9 +76,9 @@ func (s *sDeliveryNote) CreateDeliveryNote(ctx context.Context, req *delivery_no
 	}
 
 	// 构建明细项目
-	itemList := make([]erp.DeliveryNoteItem, 0)
+	itemList := make([]*erp.DeliveryNoteItem, 0)
 	for _, item := range req.Items {
-		itemData := erp.DeliveryNoteItem{
+		itemData := &erp.DeliveryNoteItem{
 			ItemCode: item.ItemCode,
 			Qty:      item.Qty,
 			Uom:      item.Uom,
@@ -452,7 +452,7 @@ func (s *sDeliveryNote) CreateDeliveryNoteFromSaleOrder(ctx context.Context, req
 	} else if req.SourceWarehouse != "" {
 		// 如果没有指定目标仓库但指定了源仓库，使用源仓库作为目标仓库
 		deliveryNoteData.SetWarehouse = req.SourceWarehouse
-	} else {
+	} else if deliveryNoteData.SetWarehouse == "" {
 		// 获取默认仓库
 		company, err := service.Company().GetCompany(ctx, deliveryNoteData.Company)
 		if err == nil && company != nil {

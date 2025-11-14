@@ -20,6 +20,7 @@ message MaterialTransferReq {
   string from_parent_branch = 11; // 调出方父级公司分店名称,可选
   string to_parent_company_abbr = 12; // 调入方父级公司缩写,可选
   string to_parent_branch = 13; // 调入方父级公司分店名称,可选
+  string ref_no=14 ; //调用方引用编号，如调拨发起单号，可选，用于跟踪
 }
 
 
