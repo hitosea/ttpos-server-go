@@ -7,7 +7,7 @@ server:
   swaggerPath: "/swagger"           # Swagger文档路径
   
   # 日志配置
-  logPath:       "/var/log/ttpos-websocket"  # 服务日志存储目录
+  logPath:       "./log"  # 服务日志存储目录
   logStdout:     true                        # 是否输出日志到终端
   accessLogEnabled: true                     # 是否开启访问日志
   errorLogEnabled:  true                     # 是否开启错误日志
@@ -24,7 +24,7 @@ server:
 grpc:
   name:    "ttpos-websocket"        # 服务名称
   address: ":14052"                  # gRPC服务监听地址
-  logPath: "/var/log/ttpos-websocket/grpc"  # gRPC日志目录
+  logPath: "./log/grpc"  # gRPC日志目录
   logStdout: true                   # 是否输出gRPC日志到终端
 
 # 数据库配置
@@ -40,9 +40,9 @@ database:
     
 # 日志配置
 logger:
-  level:  "$LOG_LEVEL"              # 日志级别：all, debug, info, warn, error
+  level:  "all"              # 日志级别：all, debug, info, warn, error
   stdout: true                      # 是否输出到终端
-  path:   "/var/log/ttpos-websocket"  # 日志文件存储目录
+  path:   "./log/websocket"  # 日志文件存储目录
   file:   "{Y-m-d}.log"             # 日志文件格式
   rotate: "daily"                   # 日志轮转策略：daily, size
   rotateSize: "100M"                # 按大小轮转时的文件大小
