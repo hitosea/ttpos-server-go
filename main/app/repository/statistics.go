@@ -1222,6 +1222,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 构建基础查询
 	baseQuery := `
 		FROM ttpos_payment_order AS po
+		LEFT JOIN ttpos_payment_method AS pm ON po.payment_method_uuid = pm.uuid
 		LEFT JOIN ttpos_sale_order AS so ON po.related_uuid = so.uuid AND so.delete_time = 0
 		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = 0
 		LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = 0
@@ -1288,12 +1289,12 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	dataQuery := fmt.Sprintf(`
 		SELECT 
 			FROM_UNIXTIME(po.create_time, '%s') AS date,
-			po.payment_method_name AS payment_name,
+			pm.payment_name AS payment_name,
 			COUNT(po.uuid) AS payment_num,
 			SUM(po.amount - IFNULL(roa.refund_amount, 0)) AS payment_amount
 		%s
-		GROUP BY date, po.payment_method_uuid, po.payment_method_name
-		ORDER BY date ASC, po.payment_method_uuid ASC
+		GROUP BY date, po.payment_method_uuid
+		ORDER BY date ASC, pm.sort ASC, pm.create_time DESC
 		LIMIT ? OFFSET ?
 	`, dateFormat, baseQuery)
 
