@@ -2043,8 +2043,9 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
 	for _, paymentMethod := range paymentMethodList {
 		list = append(list, setting.PaymentMethod{
-			Uuid: paymentMethod.Uuid,
-			Name: paymentMethod.Name,
+			Uuid:        paymentMethod.Uuid,
+			Name:        paymentMethod.Name,
+			PaymentName: paymentMethod.PaymentName,
 		})
 	}
 	return setting.PaymentMethodListResp{List: list}
