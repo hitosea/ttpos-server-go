@@ -963,6 +963,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 	baseQuery := r.db.Table("ttpos_sale_bill AS sb").
 		Joins("LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?", constant.NotDeleted, constant.SaleOrderStatusFinish).
 		Joins("LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = ?", constant.NotDeleted).
+		Joins("LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?", constant.NotDeleted, 7).
 		Where("sb.delete_time = ?", constant.NotDeleted).
 		Where("sb.status = ?", constant.SaleBillStatusComplete).
 		Where(fmt.Sprintf("%s >= ?", timeField), req.StartTime).
@@ -980,6 +981,11 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 			billTypeList = append(billTypeList, constant.SaleBillTypeTakeout)
 		}
 		baseQuery.Where("sb.bill_type IN (?)", billTypeList)
+	}
+
+	// 对于外送订单，需要确保 mso.status = 7（mso 必须存在且 status = 7）
+	if req.IsTakeout {
+		baseQuery.Where("(sb.bill_type != ? OR (sb.bill_type = ? AND mso.status IS NOT NULL AND mso.status = ?))", constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout, 7)
 	}
 
 	// 1. 计算总时段数
@@ -1036,6 +1042,12 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 		args = append(args, billTypeList)
 	}
 
+	// 对于外送订单，需要确保 mso.status = 7（mso 必须存在且 status = 7）
+	if req.IsTakeout {
+		mainQuery += " AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.status IS NOT NULL AND mso.status = ?))"
+		args = append(args, constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout, 7)
+	}
+
 	// 完成子查询
 	mainQuery += `
 			GROUP BY period_start_time, sb.uuid
@@ -1079,16 +1091,23 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 
 	// 1. 计算总数
 	var total int64
-	r.db.Raw(fmt.Sprintf(`
+	totalQuery := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT FROM_UNIXTIME(sb.finish_time, '%s'))
 		FROM ttpos_sale_bill AS sb
+		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?
+		LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
 		WHERE sb.delete_time = ?
 			AND sb.status = ?
 			AND sb.finish_time >= ?
 			AND sb.finish_time <= ?
-	`, dateFormat),
+			AND (sb.bill_type != ? OR (sb.bill_type = ? AND so.uuid IS NOT NULL AND mso.uuid IS NOT NULL))
+	`, dateFormat)
+	r.db.Raw(totalQuery,
+		constant.NotDeleted, constant.SaleOrderStatusFinish,
+		constant.NotDeleted, constant.MemberSaleOrderStatusCompleted,
 		constant.NotDeleted, constant.SaleBillStatusComplete,
 		req.StartTime, req.EndTime,
+		constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout,
 	).Scan(&total)
 
 	// 2. 构建查询SQL
@@ -1124,6 +1143,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 				AND sb.status = ?
 				AND sb.finish_time >= ?
 				AND sb.finish_time <= ?
+				AND (sb.bill_type != ? OR (sb.bill_type = ? AND so.uuid IS NOT NULL AND mso.uuid IS NOT NULL))
 			GROUP BY date, sb.uuid
 		) AS subquery
 		GROUP BY date
@@ -1138,6 +1158,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 		constant.NotDeleted, constant.MemberSaleOrderStatusCompleted,
 		constant.NotDeleted, constant.SaleBillStatusComplete,
 		req.StartTime, req.EndTime,
+		constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout,
 		req.PageSize, (req.PageNo-1)*req.PageSize,
 	).Scan(&result)
 
@@ -1171,6 +1192,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		FROM ttpos_payment_order AS po
 		LEFT JOIN ttpos_sale_order AS so ON po.related_uuid = so.uuid AND so.delete_time = 0
 		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = 0
+		LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = 0
 		LEFT JOIN (
 			SELECT
 				payment_order_uuid,
@@ -1185,9 +1207,20 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 			AND po.status = 1
 			AND po.create_time >= ?
 			AND po.create_time <= ?
+			AND sb.status = ?
+			AND so.status = ?
+			AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.uuid IS NOT NULL AND mso.status = ?))
 	`
 
-	args := []any{req.StartTime, req.EndTime}
+	args := []any{
+		req.StartTime,
+		req.EndTime,
+		constant.SaleBillStatusComplete,
+		constant.SaleOrderStatusFinish,
+		constant.SaleBillTypeTakeout,
+		constant.SaleBillTypeTakeout,
+		constant.MemberSaleOrderStatusCompleted,
+	}
 
 	// 订单类型筛选
 	if req.IsDesk || req.IsInstant || req.IsTakeout {
