@@ -114,12 +114,6 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			}(),
 		}
 
-		err = receiptOrderRepo.Create(receiptOrder)
-		if err != nil {
-			logger.Logger.Error("CreatePurchaseReceiptOrder-Create", zap.Any("receiptOrder", receiptOrder), zap.Any("err", err))
-			return errors.WithMessage(errors.New("创建收货单失败"))
-		}
-
 		// 创建收货明细并更新采购申请明细的到货数量
 		var receiptItems []model.PurchaseReceiptOrderItem
 		for _, itemReq := range req.Items {
@@ -238,6 +232,14 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		}
 		if len(receiptItems) == 0 {
 			return errors.New("收货数量不能为0")
+		}
+
+		// 创建收货单
+		receiptOrder.Num = float64(len(receiptItems))
+		err = receiptOrderRepo.Create(receiptOrder)
+		if err != nil {
+			logger.Logger.Error("CreatePurchaseReceiptOrder-Create", zap.Any("receiptOrder", receiptOrder), zap.Any("err", err))
+			return errors.WithMessage(errors.New("创建收货单失败"), err.Error())
 		}
 
 		// 批量创建收货明细
@@ -494,6 +496,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 			return errors.WithMessage(errors.New("更新收货单状态失败"), err.Error())
 		}
 		receiptOrder.Items = receiptItems
+		receiptOrder.Num = float64(len(receiptItems))
 
 		// 批量更新总部采购申请明细
 		if headquarterInfo != nil && len(headquarterInfo.ItemsToUpdate) > 0 {

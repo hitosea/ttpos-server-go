@@ -90,11 +90,11 @@ type DeliveryNote struct {
 	InWords     string `json:"in_words,omitempty"`      // 金额大写
 
 	// 关联数据
-	Items        []DeliveryNoteItem `json:"items,omitempty"`         // 项目
-	PricingRules []interface{}      `json:"pricing_rules,omitempty"` // 定价规则
-	PackedItems  []interface{}      `json:"packed_items,omitempty"`  // 包装项目
-	SalesTeam    []interface{}      `json:"sales_team,omitempty"`    // 销售团队
-	Taxes        []interface{}      `json:"taxes,omitempty"`         // 税费
+	Items        []*DeliveryNoteItem `json:"items,omitempty"`         // 项目
+	PricingRules []interface{}       `json:"pricing_rules,omitempty"` // 定价规则
+	PackedItems  []interface{}       `json:"packed_items,omitempty"`  // 包装项目
+	SalesTeam    []interface{}       `json:"sales_team,omitempty"`    // 销售团队
+	Taxes        []interface{}       `json:"taxes,omitempty"`         // 税费
 }
 
 // DeliveryNoteItem 送货单明细项

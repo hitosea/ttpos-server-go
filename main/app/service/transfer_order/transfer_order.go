@@ -161,7 +161,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return resp.TransferOrderDetailResp{}, errors.New("调拨单不存在")
+			return resp.TransferOrderDetailResp{}, errors.New("调拨单已被删除")
 		}
 		logger.Logger.Error("查询调拨单详情失败", zap.Error(err))
 		return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("查询调拨单详情失败"), err.Error())
@@ -501,42 +501,46 @@ func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transfe
 // CreateTransferOrder 创建调拨单
 func (s *transferOrderSrv) CreateTransferOrder(
 	ctx context.Context,
-	req req.TransferOrderCreateReq,
+	reqs req.TransferOrderCreateReq,
 ) (resp.TransferOrderCreateResp, error) {
 	// 验证请求参数
-	if err := req.Validate(); err != nil {
+	if err := reqs.Validate(); err != nil {
 		return resp.TransferOrderCreateResp{}, err
 	}
 
 	db := ctx.GetDB()
 	companyUuid := ctx.GetCompanyUuid()
 	companyName := ctx.GetCompany().Name
-	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		headquarterUuid = companyUuid
+	}
 
 	// 加锁防止并发创建（使用字符串锁保护编号生成）
-	lockKey := fmt.Sprintf("transfer_order_create_%d_%d", companyUuid, req.TransferType)
+	lockKey := fmt.Sprintf("transfer_order_create_%d_%d", companyUuid, reqs.TransferType)
 	s.lock.LockUuidString(lockKey)
 	defer s.lock.UnlockUuidString(lockKey)
 
 	// 设置发货门店和收货门店
-	if req.TransferType == 1 {
-		req.ReceiverCompanyUuid = companyUuid
+	if reqs.TransferType == 1 {
+		reqs.ReceiverCompanyUuid = companyUuid
 	} else {
-		req.SenderCompanyUuid = companyUuid
+		reqs.SenderCompanyUuid = companyUuid
 	}
 
 	// 判断发货门店和收货门店是否存在
 	senderCompany := model.Company{}
-	if req.SenderCompanyUuid != 0 {
-		company, err := repository.NewCompanyRepo(s.dbm.GetDB(req.SenderCompanyUuid)).GetCompany()
+	if reqs.SenderCompanyUuid != 0 {
+		company, err := repository.NewCompanyRepo(s.dbm.GetDB(reqs.SenderCompanyUuid)).GetCompany()
 		if err != nil {
 			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("查询发货门店失败"), err.Error())
 		}
 		senderCompany = company
 	}
 	receiverCompany := model.Company{}
-	if req.ReceiverCompanyUuid != 0 {
-		company, err := repository.NewCompanyRepo(s.dbm.GetDB(req.ReceiverCompanyUuid)).GetCompany()
+	if reqs.ReceiverCompanyUuid != 0 {
+		company, err := repository.NewCompanyRepo(s.dbm.GetDB(reqs.ReceiverCompanyUuid)).GetCompany()
 		if err != nil {
 			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("查询收货门店失败"), err.Error())
 		}
@@ -546,8 +550,8 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	// 判断仓库是否存在
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	outWarehouse := &model.Warehouse{}
-	if req.OutWarehouseErpCode != "" {
-		warehouse, err := warehouseRepo.GetByErpCode(req.OutWarehouseErpCode)
+	if reqs.OutWarehouseErpCode != "" {
+		warehouse, err := warehouseRepo.GetByErpCode(reqs.OutWarehouseErpCode)
 		if err != nil {
 			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
 		}
@@ -559,8 +563,8 @@ func (s *transferOrderSrv) CreateTransferOrder(
 
 	// 判断入库仓库是否存在
 	inWarehouse := &model.Warehouse{}
-	if req.InWarehouseErpCode != "" {
-		warehouse, err := warehouseRepo.GetByErpCode(req.InWarehouseErpCode)
+	if reqs.InWarehouseErpCode != "" {
+		warehouse, err := warehouseRepo.GetByErpCode(reqs.InWarehouseErpCode)
 		if err != nil {
 			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
 		}
@@ -571,7 +575,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	}
 
 	// 获取物品列表
-	materials, _, _, err := s.helper.GetMaterials(ctx, db, req.Items)
+	materials, _, _, err := s.helper.GetMaterials(ctx, db, reqs.Items)
 	if err != nil {
 		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("获取物品列表失败"), err.Error())
 	}
@@ -595,28 +599,28 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			CompanyName:         companyName,
 			HeadquarterUuid:     headquarterUuid,
 			OrderNo:             orderNo,
-			TransferType:        req.TransferType,
-			SenderCompanyUuid:   req.SenderCompanyUuid,
+			TransferType:        reqs.TransferType,
+			SenderCompanyUuid:   reqs.SenderCompanyUuid,
 			SenderCompanyName:   senderCompany.Name,
-			ReceiverCompanyUuid: req.ReceiverCompanyUuid,
+			ReceiverCompanyUuid: reqs.ReceiverCompanyUuid,
 			ReceiverCompanyName: receiverCompany.Name,
-			OutWarehouseErpCode: req.OutWarehouseErpCode,
+			OutWarehouseErpCode: reqs.OutWarehouseErpCode,
 			OutWarehouseName:    outWarehouse.Name,
-			InWarehouseErpCode:  req.InWarehouseErpCode,
+			InWarehouseErpCode:  reqs.InWarehouseErpCode,
 			InWarehouseName:     inWarehouse.Name,
-			OrderTime:           req.OrderTime,
+			OrderTime:           reqs.OrderTime,
 			Status:              constant.TransferOrderStatusDraft,
 			CreatorUuid:         ctx.GetStaffUuid(),
 			CreatorName:         ctx.GetStaff().RealName,
-			Remark:              req.Remark,
-			ItemCount:           len(req.Items),
+			Remark:              reqs.Remark,
+			ItemCount:           len(reqs.Items),
 		}
 		if err := repository.NewTransferOrderRepo(tx).Create(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单失败"), err.Error())
 		}
 
 		// 创建调拨单明细
-		if err := s.createItems(ctx, tx, transferOrder.Uuid, req.Items, materials); err != nil {
+		if err := s.createItems(ctx, tx, transferOrder.Uuid, reqs.Items, materials); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
 
@@ -625,6 +629,13 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
+		// 提交调拨单
+		if reqs.IsSubmit {
+			ctx.SetDB(tx)
+			if err = s.SubmitTransferOrder(ctx, req.TransferOrderSubmitReq{Uuid: transferOrder.Uuid, IsConfirm: true}); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 
@@ -962,7 +973,7 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 		// 创建审批流程
 		if err := s.helper.CreateApproval(ctx, tx, s.dbm, transferOrder); err != nil {
 			logger.Logger.Error("创建审批失败", zap.Error(err))
-			return errors.WithMessage(errors.New("创建审批失败"), err.Error())
+			return err
 		}
 
 		// 记录操作日志
@@ -1354,6 +1365,7 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 			return errors.New("入库仓库不存在")
 		}
 		transferOrder.InWarehouseName = warehouse.Name
+		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 	}
 
 	// 验证物品状态
@@ -1365,7 +1377,6 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 	err = db.Transaction(func(tx *gorm.DB) error {
 		transferOrderRepository := repository.NewTransferOrderRepo(tx)
 		// 更新调拨单为已完成状态
-		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 		transferOrder.Status = constant.TransferOrderStatusCompleted
 		if err := transferOrderRepository.Update(transferOrder); err != nil {
 			logger.Logger.Error("更新调拨单状态失败", zap.Error(err))
@@ -1501,7 +1512,7 @@ func (s *transferOrderSrv) GetTransferOrderCompanyList(
 
 	// 获取总部下的所有门店
 	headquarterUuid := companySetting.HeadquarterUuid
-	if headquarterUuid == 0 {
+	if companySetting.IsHeadquarter() {
 		headquarterUuid = currentCompanyUuid
 	}
 

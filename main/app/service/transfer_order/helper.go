@@ -178,17 +178,16 @@ func (h *transferOrderHelper) CreateApproval(
 	approvalRepo := repository.NewTransferOrderApprovalRepo(db)
 	settingSrv := setting.NewSrvImpl(dbm, cache.Global)
 
-	// 当前公司的设置
-	companySetting := ctx.GetCompanySetting()
+	// 总部UUID
+	headquarterUuid := transferOrder.HeadquarterUuid
 
 	// 获取当前公司总部下所有公司的设置
-	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(companySetting.HeadquarterUuid)
+	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(headquarterUuid)
 	if err != nil {
 		return errors.WithMessage(errors.New("获取总部下所有公司的设置失败"), err.Error())
 	}
 
 	// 获取总部门店业务设置
-	headquarterUuid := companySetting.HeadquarterUuid
 	_, _, headquarterBusinessSetting, err := h.GetCompanySettings(ctx, dbm, allCompanySettings, settingSrv, headquarterUuid)
 	if err != nil {
 		return err
@@ -247,15 +246,6 @@ func (h *transferOrderHelper) CreateApproval(
 			"company_uuid":         myParentCompanyUuid,
 			"company":              myParentCompany,
 			"erpnext_company_abbr": myParentCompanySetting.ErpnextCompanyAbbr,
-			"is_via_company_warehouse": func() string {
-				if myParentCompanyUuid == theOtherParentCompanyUuid {
-					return constant.TransferApprovalIsNotViaCompanyWarehouse
-				}
-				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
-					return constant.TransferApprovalIsViaCompanyWarehouse
-				}
-				return constant.TransferApprovalIsNotViaCompanyWarehouse
-			}(),
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
 					return constant.TransferApprovalTypeReceiverParent
@@ -263,7 +253,7 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeSenderParent
 			}(),
 			"status": func() int {
-				if myParentCompanyUuid == theOtherParentCompanyUuid {
+				if myParentCompanyUuid == theOtherParentCompanyUuid || myParentCompanyUuid == theOtherCompanyUuid {
 					return constant.TransferApprovalSkipped
 				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || myParentBusinessSetting.IsRequiredParentCompanyApproval() {
@@ -271,20 +261,20 @@ func (h *transferOrderHelper) CreateApproval(
 				}
 				return constant.TransferApprovalSkipped
 			}(),
+			"is_via_company_warehouse": func() string {
+				if myParentCompanyUuid == theOtherParentCompanyUuid || myParentCompanyUuid == theOtherCompanyUuid {
+					return constant.TransferApprovalIsNotViaCompanyWarehouse
+				}
+				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
+					return constant.TransferApprovalIsViaCompanyWarehouse
+				}
+				return constant.TransferApprovalIsNotViaCompanyWarehouse
+			}(),
 		},
 		3: {
 			"company_uuid":         theOtherParentCompanyUuid,
 			"company":              theOtherParentCompany,
 			"erpnext_company_abbr": theOtherParentCompanySetting.ErpnextCompanyAbbr,
-			"is_via_company_warehouse": func() string {
-				if theOtherParentCompanyUuid == theOtherCompanyUuid {
-					return constant.TransferApprovalIsNotViaCompanyWarehouse
-				}
-				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || theOtherParentBusinessSetting.IsViaParentCompanyWarehouse() {
-					return constant.TransferApprovalIsViaCompanyWarehouse
-				}
-				return constant.TransferApprovalIsNotViaCompanyWarehouse
-			}(),
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
 					return constant.TransferApprovalTypeSenderParent
@@ -292,13 +282,22 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeReceiverParent
 			}(),
 			"status": func() int {
-				if theOtherParentCompanyUuid == theOtherCompanyUuid {
+				if theOtherParentCompanyUuid == theOtherCompanyUuid || theOtherParentCompanyUuid == myCompanyUuid {
 					return constant.TransferApprovalSkipped
 				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || theOtherParentBusinessSetting.IsRequiredParentCompanyApproval() {
 					return constant.TransferApprovalPending
 				}
 				return constant.TransferApprovalSkipped
+			}(),
+			"is_via_company_warehouse": func() string {
+				if theOtherParentCompanyUuid == theOtherCompanyUuid || theOtherParentCompanyUuid == myCompanyUuid {
+					return constant.TransferApprovalIsNotViaCompanyWarehouse
+				}
+				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || theOtherParentBusinessSetting.IsViaParentCompanyWarehouse() {
+					return constant.TransferApprovalIsViaCompanyWarehouse
+				}
+				return constant.TransferApprovalIsNotViaCompanyWarehouse
 			}(),
 		},
 		4: {
@@ -670,6 +669,7 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		FromParentBranch:      senderParentBranch,
 		ToParentCompanyAbbr:   receiverParentCompanyAbbr,
 		ToParentBranch:        receiverParentBranch,
+		RefNo:                 transferOrder.OrderNo,
 	}
 
 	logger.Logger.Info("调用erp接口保存调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
@@ -1246,10 +1246,11 @@ func (h *transferOrderHelper) SavePurchaseReceipt(
 				continue
 			}
 			erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
-				ItemCode: item.MaterialCode,
-				ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
-				Uom:      unit.ErpnextUom,
-				Qty:      unit.Num,
+				ItemCode:  item.MaterialCode,
+				ItemName:  language.JsonToLocaleResponse(item.MaterialName).EN,
+				Uom:       unit.ErpnextUom,
+				Qty:       unit.Num,
+				Warehouse: transferOrder.InWarehouseErpCode,
 			})
 		}
 	}

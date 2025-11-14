@@ -108,10 +108,6 @@ services:
     build:
       dockerfile: main/Dockerfile-dev
     image: ttpos-server-go
-    environment:
-      SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos}"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env

@@ -998,6 +998,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 	var result []model.StatisticsBusinessTimePeriodData
 
 	// 构建主查询SQL
+	// 使用子查询先对 ro 进行聚合，避免因为 ro 有多条记录导致 so 重复计算
 	mainQuery := fmt.Sprintf(`
 		SELECT 
 			period_start_time,
@@ -1009,15 +1010,30 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 		FROM (
 			SELECT 
 				FLOOR(%s / %d) * %d AS period_start_time,
-				SUM(so.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
-				SUM(so.payment_amount) AS pay_amount,
-				SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
+				SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
+				SUM(so_agg.payment_amount) AS pay_amount,
+				SUM(IFNULL(ro_summary.refund_amount, 0)) AS refund_amount,
 				sb.uuid AS sale_bill_uuid,
 				MAX(sb.meal_num) AS meal_num
 			FROM ttpos_sale_bill AS sb
-			LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0 AND so.status = 1
-			LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = 0
-			LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = 0 AND mso.status = 7
+			LEFT JOIN (
+				SELECT 
+					so.sale_bill_uuid,
+					so.uuid AS so_uuid,
+					so.origin_amount,
+					so.payment_amount
+				FROM ttpos_sale_order AS so
+				WHERE so.delete_time = 0 AND so.status = 1
+			) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
+			LEFT JOIN (
+				SELECT 
+					related_order_uuid,
+					SUM(refund_amount) AS refund_amount
+				FROM ttpos_return_order
+				WHERE delete_time = 0
+				GROUP BY related_order_uuid
+			) AS ro_summary ON so_agg.so_uuid = ro_summary.related_order_uuid
+			LEFT JOIN ttpos_member_sale_order AS mso ON so_agg.so_uuid = mso.sale_order_uuid AND mso.delete_time = 0 AND mso.status = 7
 			WHERE sb.delete_time = 0
 				AND sb.status = ?
 				AND %s >= ?
@@ -1111,6 +1127,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 	).Scan(&total)
 
 	// 2. 构建查询SQL
+	// 使用子查询先对 ro 进行聚合，避免因为 ro 有多条记录导致 so 重复计算
 	query := fmt.Sprintf(`
 		SELECT 
 			date,
@@ -1126,24 +1143,39 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 		FROM (
 			SELECT 
 				FROM_UNIXTIME(sb.finish_time, '%s') AS date,
-				SUM(so.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
-				SUM(so.payment_amount) AS pay_amount,
-				SUM(IFNULL(ro.refund_amount, 0)) AS refund_amount,
+				SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
+				SUM(so_agg.payment_amount) AS pay_amount,
+				SUM(IFNULL(ro_summary.refund_amount, 0)) AS refund_amount,
 				sb.uuid AS sale_bill_uuid,
 				MAX(sb.meal_num) AS meal_num,
 				MAX(sb.desk_uuid) AS desk_uuid,
-				SUM(IF(sb.bill_type = 0, so.origin_amount, 0)) as desk_order_amount,
-				SUM(IF(sb.bill_type = 1, so.origin_amount, 0)) as instant_order_amount,
-				SUM(IF(sb.bill_type = 2, so.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount
+				SUM(IF(sb.bill_type = 0, so_agg.origin_amount, 0)) as desk_order_amount,
+				SUM(IF(sb.bill_type = 1, so_agg.origin_amount, 0)) as instant_order_amount,
+				SUM(IF(sb.bill_type = 2, so_agg.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount
 			FROM ttpos_sale_bill AS sb
-			LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?
-			LEFT JOIN ttpos_return_order AS ro ON so.uuid = ro.related_order_uuid AND ro.delete_time = ?
-			LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
+			LEFT JOIN (
+				SELECT 
+					so.sale_bill_uuid,
+					so.uuid AS so_uuid,
+					so.origin_amount,
+					so.payment_amount
+				FROM ttpos_sale_order AS so
+				WHERE so.delete_time = ? AND so.status = ?
+			) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
+			LEFT JOIN (
+				SELECT 
+					related_order_uuid,
+					SUM(refund_amount) AS refund_amount
+				FROM ttpos_return_order
+				WHERE delete_time = ?
+				GROUP BY related_order_uuid
+			) AS ro_summary ON so_agg.so_uuid = ro_summary.related_order_uuid
+			LEFT JOIN ttpos_member_sale_order AS mso ON so_agg.so_uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
 			WHERE sb.delete_time = ?
 				AND sb.status = ?
 				AND sb.finish_time >= ?
 				AND sb.finish_time <= ?
-				AND (sb.bill_type != ? OR (sb.bill_type = ? AND so.uuid IS NOT NULL AND mso.uuid IS NOT NULL))
+				AND (sb.bill_type != ? OR (sb.bill_type = ? AND so_agg.so_uuid IS NOT NULL AND mso.uuid IS NOT NULL))
 			GROUP BY date, sb.uuid
 		) AS subquery
 		GROUP BY date
@@ -1190,6 +1222,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 构建基础查询
 	baseQuery := `
 		FROM ttpos_payment_order AS po
+		LEFT JOIN ttpos_payment_method AS pm ON po.payment_method_uuid = pm.uuid
 		LEFT JOIN ttpos_sale_order AS so ON po.related_uuid = so.uuid AND so.delete_time = 0
 		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = 0
 		LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = 0
@@ -1256,12 +1289,12 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	dataQuery := fmt.Sprintf(`
 		SELECT 
 			FROM_UNIXTIME(po.create_time, '%s') AS date,
-			po.payment_method_name AS payment_name,
+			pm.payment_name AS payment_name,
 			COUNT(po.uuid) AS payment_num,
 			SUM(po.amount - IFNULL(roa.refund_amount, 0)) AS payment_amount
 		%s
-		GROUP BY date, po.payment_method_uuid, po.payment_method_name
-		ORDER BY date ASC, po.payment_method_uuid ASC
+		GROUP BY date, po.payment_method_uuid
+		ORDER BY date ASC, pm.sort ASC, pm.create_time DESC
 		LIMIT ? OFFSET ?
 	`, dateFormat, baseQuery)
 

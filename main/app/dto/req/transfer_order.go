@@ -27,6 +27,7 @@ type TransferOrderCreateReq struct {
 	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code"`                        // 入库仓库ERP编码
 	Remark              string                       `json:"remark"`                                       // 备注
 	Items               []TransferOrderItemCreateReq `json:"items"`                                        // 调拨明细
+	IsSubmit            bool                         `json:"is_submit"`                                    // 是否提交
 }
 
 func (r *TransferOrderCreateReq) Validate() error {
