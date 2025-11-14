@@ -13856,6 +13856,9 @@ definitions:
       available_num:
         description: 可用库存数量
         type: number
+      material_barcode:
+        description: 条形码值
+        type: string
       material_code:
         description: 物品编码
         type: string
@@ -31613,6 +31616,12 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: 物品UUID列表,多选时
+        in: query
+        items:
+          type: integer
+        name: material_uuids
+        type: array
       - description: 出库仓库ERP编码
         in: query
         name: out_warehouse_erp_code

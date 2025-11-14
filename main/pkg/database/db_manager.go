@@ -104,10 +104,14 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 		}
 	}
 
+	dbName := "saas"
+	if index > 0 {
+		dbName = fmt.Sprintf("%s%d", constant.DBNamePrefix, index)
+	}
 	// 不存在，尝试连接
-	companyDB, err := m.getConnection(m.conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, index)) // 比如：shop1724054084 数据库
+	companyDB, err := m.getConnection(m.conf, dbName) // 比如：shop1724054084 数据库 或 saas 库
 	if err != nil {
-		log.Printf("Error connecting to database for company %d: %s\n", index, err)
+		log.Printf("Error connecting to database for %s: %s\n", dbName, err)
 		return nil
 	}
 

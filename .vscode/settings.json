@@ -58,6 +58,10 @@
     "remote.restoreForwardedPorts": true,  
     "remote.localPortHost": "allInterfaces", 
     "remote.portsAttributes": {
+        "1-65378": {
+            "label": "忽略",
+            "onAutoForward": "ignore"
+        },
         "8080": {
             "label": "Go API服务(dev)", 
             "onAutoForward": "silent",
@@ -94,54 +98,9 @@
             "label": "HTTP检测服务", 
             "onAutoForward": "silent"
         },
-        //忽略端口范围配置
         "8079": {
             "label": "HTTP检测服务", 
             "onAutoForward": "silent"
         },
-        "8843": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "8807": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "8880": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "2112": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "2113": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "6060": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "8443": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "9848": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "9000-11010": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "13337-18080": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        },
-        "20000-65378": {
-            "label": "忽略",
-            "onAutoForward": "ignore"
-        }
     }
   }
