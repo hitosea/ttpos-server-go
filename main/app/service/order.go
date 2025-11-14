@@ -5842,6 +5842,7 @@ type InnerParams struct {
 	MemberDiscountRate     float64 // 会员折扣率
 	MemberCardDiscountRate float64 // 会员卡折扣率
 	CustomDiscountRate     float64 // 自定义折扣率
+	IsTabletAddAndCooking  bool    // 是否是平台的加购并送厨
 }
 
 func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrderProductParams, options ...func(option *ActionAddOption)) ([]*model.SaleOrderProduct, error) {
@@ -6116,6 +6117,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 			// 如果该商品是套餐，则新建套餐子商品
 			if saleOrderProduct.ProductType == constant.ProductTypePackage {
+				innerParams.IsTabletAddAndCooking = true
 				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType)
 				if err != nil {
 					return nil, errors.WithMessage(err)
@@ -6408,6 +6410,8 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		CustomDiscountRate:     innerParams.CustomDiscountRate,
 		Sauces:                 sauces,
 		Num:                    product.Num,
+		UnitNum:                product.UnitNum,
+		IsTabletAddAndCooking:  innerParams.IsTabletAddAndCooking,
 		NumType:                productPackage.NumType,
 		PackageSubProductParams: func() string {
 			if product.GetIsPackageProduct() {

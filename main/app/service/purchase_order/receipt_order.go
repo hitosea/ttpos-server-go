@@ -847,7 +847,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 					erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
 						ItemCode: item.MaterialCode,
 						ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
-						StockUom: language.JsonToLocaleResponse(unit.UnitName).EN,
+						Uom:      unit.ErpnextUom,
 						Qty:      unit.Num,
 					})
 				}
@@ -855,7 +855,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 				erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
 					ItemCode: item.MaterialCode,
 					ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
-					StockUom: language.JsonToLocaleResponse(item.UnitName).EN,
+					Uom:      item.ErpnextUom,
 					Qty:      item.Num,
 				})
 			}

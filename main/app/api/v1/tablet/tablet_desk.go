@@ -176,6 +176,7 @@ func (h *DeskHandler) OrderCartProductAddAndCooking(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+	params.FormatPackageSubProductParams()
 	failedData, err := h.orderSrv.TabletAddAndCooking(ctx, params)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
