@@ -644,13 +644,6 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 		if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
 			return errors.New("未开启高级模版打印")
 		}
-		exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(customizeInfo.Uuid, editPrinterCustomizeReq.Name)
-		if err != nil {
-			return errors.WithMessage(errors.New("检查打印机定制名称是否存在失败"), err.Error())
-		}
-		if exists {
-			return errors.New("高级模版名称已存在")
-		}
 	}
 	//
 	testData, err := s.GetTestData(ctx, template.Name)
@@ -750,14 +743,6 @@ func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCu
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(createPrinterCustomizeReq.TemplateId)
 	if err != nil {
 		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
-	}
-	// 检查打印机定制名称是否存在
-	exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(0, createPrinterCustomizeReq.Name)
-	if err != nil {
-		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("检查打印机定制名称是否存在失败"), err.Error())
-	}
-	if exists {
-		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("高级模版名称已存在"))
 	}
 	// 创建打印机定制
 	customizeUuid, err := utils.GetID()
