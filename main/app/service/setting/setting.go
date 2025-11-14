@@ -2034,8 +2034,7 @@ func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Bu
 func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp {
 	commonRepo := repository.NewCommonRepo()
 	paymentRepo := repository.NewPaymentMethodRepo(ctx.GetDB())
-	paymentMethodList := paymentRepo.GetPaymentMethodList(
-		commonRepo.WhereBySoftDelete(),
+	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
 	)
