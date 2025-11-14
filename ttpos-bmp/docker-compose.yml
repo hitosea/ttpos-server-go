@@ -10,9 +10,6 @@ services:
     image: ttpos-bmp-takeout
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14032"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-takeout"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-takeout/manifest/config:/app/config  #生产环境根据需要调整
     restart: always
@@ -58,9 +55,6 @@ services:
     image: ttpos-bmp-erp
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14022"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-erp"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-erp/manifest/config:/app/config  #生产环境根据需要调整
     restart: always
@@ -105,9 +99,6 @@ services:
     image: ttpos-bmp-message
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14042"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-message"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-message/manifest/config:/app/config  #生产环境根据需要调整
     restart: always
