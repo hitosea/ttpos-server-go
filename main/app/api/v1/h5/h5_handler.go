@@ -651,13 +651,15 @@ func (h *Handler) ConfirmOrder(c *gin.Context) {
 		helper.ErrorWithData(c, constant.CodeFail, failedData, err)
 		return
 	}
-	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithOrderedH5ProductWithReject())
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, res)
+	// 暂时不返回已下单商品列表，避免影响接口性能.因为前端没有使用这个数据
+	// res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithOrderedH5ProductWithReject())
+	// if err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	// 	return
+	// }
+	// // 返回结果
+	// helper.Success(c, res)
+	helper.Success(c, nil)
 }
 
 // GetDeskBuffetProductList 处理获取自助餐商品列表

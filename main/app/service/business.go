@@ -1092,11 +1092,21 @@ func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.Kitch
 			Number:         productionOrderProduct.Num,
 			CreateTime:     productionOrderProduct.CreateTime,
 			MakeFinishTime: productionOrderProduct.MadeTime,
-			MakeDuration:   productionOrderProduct.MakeDuration,
-			SendFinishTime: int64(productionOrderProduct.FinishedTime),
-			SendDuration:   productionOrderProduct.SendDuration,
-			FinishTime:     int64(productionOrderProduct.FinishedTime),
-			AllDuration:    productionOrderProduct.AllDuration,
+			MakeDuration: func() int64 {
+				if productionOrderProduct.SendDuration == 0 { // 如果上菜时间大于0,则返回0,表示关闭了智能后厨
+					return 0
+				}
+				return productionOrderProduct.MakeDuration
+			}(),
+			SendFinishTime: func() int64 {
+				if productionOrderProduct.SendDuration > 0 { // 如果上菜时间大于0,则返回上菜完成时间
+					return int64(productionOrderProduct.FinishedTime)
+				}
+				return 0
+			}(),
+			SendDuration: productionOrderProduct.SendDuration,
+			FinishTime:   int64(productionOrderProduct.FinishedTime),
+			AllDuration:  productionOrderProduct.AllDuration,
 		}
 		productionDataList = append(productionDataList, item)
 	}

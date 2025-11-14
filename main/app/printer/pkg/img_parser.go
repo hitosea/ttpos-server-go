@@ -354,7 +354,7 @@ func (p *ImgTemplateParser) parseRow(
 			columns := make([]ColumnConfig, 0, len(blocks))
 			for _, block := range blocks {
 				// 检查条件显示
-				if !p.checkConditions(block.Conditions) {
+				if block.BlockAttr.Disabled || !p.checkConditions(block.Conditions) {
 					continue
 				}
 				lineHeight := block.BlockAttr.LineHeight

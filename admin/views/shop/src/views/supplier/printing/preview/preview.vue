@@ -186,6 +186,7 @@
           {{ $t(item.name) }}
         </div>
       </div>
+      <div v-if="customize_uuid && customize_uuid != 0" class="text-center mb-12">{{ $t('如调整自定义模板，请前往桌面端操作') }}</div>
       <div class="box-border" v-if="imgUrl">
         <p class="title-name">
           <img style="width: 100%; height: 100%" :src="imgUrl" alt="" class="logo" />
@@ -801,8 +802,8 @@
   .box-border .Invoice-h4 {
     margin-bottom: 0;
   }
-  
-  .text-order—remark{
+
+  .text-order—remark {
     font-size: 24px;
     font-weight: 700;
     color: var(--el-color-black);

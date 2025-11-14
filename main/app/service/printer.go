@@ -15,7 +15,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
-	"ttpos-server-go/app/printer/pkg/template_json"
+	template_info "ttpos-server-go/app/printer/pkg/template"
 	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -46,6 +46,11 @@ type IPrinterSrv interface {
 const (
 	DefaultTemplateName = "门店-默认模版"
 	TemplatePngPath     = "app/printer/pkg/text/tmp/printer/complex_template_test.png"
+)
+
+const (
+	TemplateNameBilling    = "结账单"
+	TemplateNamePreBilling = "预结账单"
 )
 
 type printerSrv struct {
@@ -414,7 +419,7 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 // GetTestData 获取测试数据
 func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[string]interface{}, error) {
 	// 从JSON文件读取测试数据
-	testDataBytes, err := template_json.GetTemplateJsonData(templateName + "_data.json")
+	testDataBytes, err := template_info.GetTemplateDataJsonData(templateName)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("读取测试数据文件失败"), err.Error())
 	}
@@ -505,7 +510,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 
 // GetTemplateJSONStr 获取模板JSON字符串
 func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string) (string, error) {
-	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_tmp.json")
+	templateJSON, err := template_info.GetTemplateJsonData(templateName)
 	if err != nil {
 		return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 	}
@@ -514,7 +519,7 @@ func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string
 
 // GetTemplateConfigInfo 获取模板配置信息
 func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName string, isAdv bool) (string, error) {
-	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_config.json")
+	templateJSON, err := template_info.GetTemplateConfigJsonData(templateName)
 	if err != nil {
 		return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 	}
