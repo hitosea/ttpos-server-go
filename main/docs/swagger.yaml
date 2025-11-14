@@ -5563,6 +5563,9 @@ definitions:
         items:
           type: integer
         type: array
+      unit_num:
+        description: 单位数量. 目前只有平板的加购并送厨使用该字段
+        type: number
     required:
     - num
     type: object
@@ -5587,6 +5590,9 @@ definitions:
         items:
           type: integer
         type: array
+      unit_num:
+        description: 一个套餐的单个子商品的数量
+        type: number
     type: object
   req.ProductSauceAddReq:
     properties:
