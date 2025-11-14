@@ -305,10 +305,11 @@ class Supplier extends BaseModel
             } else {
                 $setting = SettingModel::detail(SettingEnum::STORE, $data->shop_supplier_id);
                 $settingLanguages = ($setting->values['language'] ?? []);
-                foreach ($settingLanguages as &$language) {
+                foreach ($settingLanguages as $k => $language) {
                     if (!in_array($language['name'], $languages)) {
-                        $language['name'] = '';
-                        $language['value'] = '-';
+                        unset($settingLanguages[$k]);
+                        // $language['name'] = '';
+                        // $language['value'] = '-';
                     }
                 }
             }
