@@ -168,7 +168,7 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
 					// 如果材料被禁用，则跳过，不扣减库存
-					if relatedMaterial.Material.Status == false {
+					if relatedMaterial.Material == nil || relatedMaterial.Material.Status == false {
 						continue
 					}
 					uom := relatedMaterial.BaseUnitUom
