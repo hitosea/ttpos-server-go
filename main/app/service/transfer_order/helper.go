@@ -670,6 +670,7 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		FromParentBranch:      senderParentBranch,
 		ToParentCompanyAbbr:   receiverParentCompanyAbbr,
 		ToParentBranch:        receiverParentBranch,
+		RefNo:                 transferOrder.OrderNo,
 	}
 
 	logger.Logger.Info("调用erp接口保存调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
