@@ -690,4 +690,5 @@ type PurchaseReceipt struct {
 	SuppliedItems []interface{}          `json:"supplied_items,omitempty"` // 供应项目
 	Items         []*PurchaseReceiptItem `json:"items,omitempty"`          // 项目
 	Taxes         []interface{}          `json:"taxes,omitempty"`          // 税费
+	SetWarehouse  string                 `json:"set_warehouse,omitempty"`
 }
