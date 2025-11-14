@@ -112,7 +112,6 @@ func (h *transferOrderHelper) CreateLog(
 
 // 获取总部下所有公司的设置
 func (h *transferOrderHelper) GetCompanySetting(
-	ctx ttposContext.Context,
 	allCompanySettings []model.CompanySetting,
 	companyUuid uint64,
 ) (model.CompanySetting, error) {
@@ -124,6 +123,7 @@ func (h *transferOrderHelper) GetCompanySetting(
 		}
 	}
 	if companySetting.Uuid == 0 {
+		logger.Logger.Error("获取公司设置失败", zap.Uint64("company_uuid", companyUuid))
 		return model.CompanySetting{}, errors.WithMessage(errors.New("获取公司设置失败"), "公司不存在")
 	}
 	// 返回公司设置和业务设置
@@ -148,7 +148,7 @@ func (h *transferOrderHelper) GetCompanySettings(
 		return model.Company{}, model.CompanySetting{}, respSetting.Business{}, errors.WithMessage(errors.New("获取公司失败"), err.Error())
 	}
 	// 获取公司设置
-	companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, companyUuid)
+	companySetting, err := h.GetCompanySetting(allCompanySettings, companyUuid)
 	if err != nil {
 		return model.Company{}, model.CompanySetting{}, respSetting.Business{}, errors.WithMessage(errors.New("获取公司设置失败"), err.Error())
 	}
@@ -234,7 +234,7 @@ func (h *transferOrderHelper) CreateApproval(
 			"company_uuid":             myCompanyUuid,
 			"company":                  myCompany,
 			"erpnext_company_abbr":     myCompanySetting.ErpnextCompanyAbbr,
-			"is_via_company_warehouse": "1",
+			"is_via_company_warehouse": constant.TransferApprovalIsViaCompanyWarehouse,
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
 					return constant.TransferApprovalTypeReceiver
@@ -248,10 +248,13 @@ func (h *transferOrderHelper) CreateApproval(
 			"company":              myParentCompany,
 			"erpnext_company_abbr": myParentCompanySetting.ErpnextCompanyAbbr,
 			"is_via_company_warehouse": func() string {
-				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
-					return "1"
+				if myParentCompanyUuid == theOtherParentCompanyUuid {
+					return constant.TransferApprovalIsNotViaCompanyWarehouse
 				}
-				return "0"
+				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
+					return constant.TransferApprovalIsViaCompanyWarehouse
+				}
+				return constant.TransferApprovalIsNotViaCompanyWarehouse
 			}(),
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
@@ -260,6 +263,9 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeSenderParent
 			}(),
 			"status": func() int {
+				if myParentCompanyUuid == theOtherParentCompanyUuid {
+					return constant.TransferApprovalSkipped
+				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || myParentBusinessSetting.IsRequiredParentCompanyApproval() {
 					return constant.TransferApprovalPending
 				}
@@ -271,10 +277,13 @@ func (h *transferOrderHelper) CreateApproval(
 			"company":              theOtherParentCompany,
 			"erpnext_company_abbr": theOtherParentCompanySetting.ErpnextCompanyAbbr,
 			"is_via_company_warehouse": func() string {
-				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || theOtherParentBusinessSetting.IsViaParentCompanyWarehouse() {
-					return "1"
+				if theOtherParentCompanyUuid == theOtherCompanyUuid {
+					return constant.TransferApprovalIsNotViaCompanyWarehouse
 				}
-				return "0"
+				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || theOtherParentBusinessSetting.IsViaParentCompanyWarehouse() {
+					return constant.TransferApprovalIsViaCompanyWarehouse
+				}
+				return constant.TransferApprovalIsNotViaCompanyWarehouse
 			}(),
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
@@ -283,7 +292,7 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeReceiverParent
 			}(),
 			"status": func() int {
-				if myParentCompanyUuid == theOtherParentCompanyUuid {
+				if theOtherParentCompanyUuid == theOtherCompanyUuid {
 					return constant.TransferApprovalSkipped
 				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || theOtherParentBusinessSetting.IsRequiredParentCompanyApproval() {
@@ -296,7 +305,7 @@ func (h *transferOrderHelper) CreateApproval(
 			"company_uuid":             theOtherCompanyUuid,
 			"company":                  theOtherCompany,
 			"erpnext_company_abbr":     theOtherCompanySetting.ErpnextCompanyAbbr,
-			"is_via_company_warehouse": "1",
+			"is_via_company_warehouse": constant.TransferApprovalIsViaCompanyWarehouse,
 			"approval_type": func() string {
 				if transferOrder.TransferType == 1 {
 					return constant.TransferApprovalTypeSender
@@ -549,10 +558,10 @@ func (h *transferOrderHelper) handleErpError(ctx ttposContext.Context, err error
 		if itemName != "" {
 			return errors.NewWithCode(
 				constant.CodeErrorConfirmClose,
-				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 库存不足，请补充库存"), itemName),
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的可出库数量不足。\n\n请联系发货门店"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodeErrorConfirmClose, "物品库存不足，请补充库存")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "的可出库数量不足。\n\n请联系发货门店")
 	}
 	// 未知错误
 	return errors.NewWithCode(constant.CodeErrorConfirmClose,
@@ -587,7 +596,7 @@ func (h *transferOrderHelper) ConvertTransferOrderItemsToMaterialTransferItems(i
 // 调用erp接口保存调拨单
 func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm *database.DBManager, db *gorm.DB, transferOrder *model.TransferOrder) (*material_transfer.MaterialTransferResp, error) {
 	// 获取当前公司总部下所有公司的设置
-	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(ctx.GetCompanySetting().HeadquarterUuid)
+	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(transferOrder.HeadquarterUuid)
 	if err != nil {
 		logger.Logger.Error("获取总部下所有公司的设置失败", zap.Error(err))
 		return nil, errors.WithMessage(errors.New("获取总部下所有公司的设置失败"), err.Error())
@@ -596,7 +605,7 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 	// 发货门店
 	senderCompanySetting := model.CompanySetting{}
 	if transferOrder.SenderCompanyUuid != 0 {
-		companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, transferOrder.SenderCompanyUuid)
+		companySetting, err := h.GetCompanySetting(allCompanySettings, transferOrder.SenderCompanyUuid)
 		if err != nil {
 			logger.Logger.Error("获取公司设置失败", zap.Error(err))
 			return nil, errors.WithMessage(errors.New("获取公司设置失败"), err.Error())
@@ -607,7 +616,7 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 	// 收货门店
 	receiverCompanySetting := model.CompanySetting{}
 	if transferOrder.ReceiverCompanyUuid != 0 {
-		companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, transferOrder.ReceiverCompanyUuid)
+		companySetting, err := h.GetCompanySetting(allCompanySettings, transferOrder.ReceiverCompanyUuid)
 		if err != nil {
 			logger.Logger.Error("获取公司设置失败", zap.Error(err))
 			return nil, errors.WithMessage(errors.New("获取公司设置失败"), err.Error())
@@ -627,19 +636,25 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		return nil, errors.WithMessage(errors.New("查询审批流程失败"), err.Error())
 	}
 	for _, approval := range approvals {
-		if approval.ApprovalType == constant.TransferApprovalTypeSenderParent && approval.IsViaCompanyWarehouseBool() {
-			companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, approval.ApprovalCompanyUuid)
-			if err == nil {
-				senderParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
-				senderParentBranch = companySetting.ErpnextBranchName
-			}
+		if !approval.IsViaCompanyWarehouseBool() {
+			continue
 		}
-		if approval.ApprovalType == constant.TransferApprovalTypeReceiverParent && approval.IsViaCompanyWarehouseBool() {
-			companySetting, err := h.GetCompanySetting(ctx, allCompanySettings, approval.ApprovalCompanyUuid)
-			if err != nil {
-				receiverParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
-				receiverParentBranch = companySetting.ErpnextBranchName
-			}
+		if approval.ApprovalType != constant.TransferApprovalTypeSenderParent && approval.ApprovalType != constant.TransferApprovalTypeReceiverParent {
+			continue
+		}
+		// 获取公司设置
+		companySetting, err := h.GetCompanySetting(allCompanySettings, approval.ApprovalCompanyUuid)
+		if err != nil {
+			return nil, err
+		}
+		// 设置父级公司简称和分支名称
+		if approval.ApprovalType == constant.TransferApprovalTypeSenderParent {
+			senderParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
+			senderParentBranch = companySetting.ErpnextBranchName
+		}
+		if approval.ApprovalType == constant.TransferApprovalTypeReceiverParent {
+			receiverParentCompanyAbbr = companySetting.ErpnextCompanyAbbr
+			receiverParentBranch = companySetting.ErpnextBranchName
 		}
 	}
 
@@ -656,6 +671,9 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 		ToParentCompanyAbbr:   receiverParentCompanyAbbr,
 		ToParentBranch:        receiverParentBranch,
 	}
+
+	logger.Logger.Info("调用erp接口保存调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
+
 	erpResp, err := erp.NewIErpSrv(dbm).SaveMaterialTransfer(ctx, senderCompanySetting, materialTransferReq)
 	if err != nil {
 		logger.Logger.Error("调用erp接口失败 - 审批通过调拨单", zap.Any("materialTransferReq", utils.ToJsonString(materialTransferReq)))
@@ -1164,7 +1182,10 @@ func (h *transferOrderHelper) MoveStockToTargetWarehouse(
 					return constant.WarehouseInOutLogSceneTransferIn
 				}(),
 				WarehouseUuid: func() uint64 {
-					if transitWarehouse != nil {
+					if inTargetWarehouse != nil && logType == constant.WarehouseInOutLogLogTypeIn {
+						return inTargetWarehouse.Uuid
+					}
+					if transitWarehouse != nil && logType == constant.WarehouseInOutLogLogTypeOut {
 						return transitWarehouse.Uuid
 					}
 					return 0
@@ -1204,9 +1225,13 @@ func (h *transferOrderHelper) SavePurchaseReceipt(
 	db *gorm.DB,
 	transferOrder *model.TransferOrder,
 ) (*buying.SavePurchaseReceiptResp, error) {
+	erpResp := transferOrder.GetErpResp()
+	if erpResp == nil {
+		return nil, errors.New("获取ERP响应数据失败")
+	}
 	// 调用erp接口
 	erpReq := buying.SavePurchaseReceiptReq{
-		PurchaseOrderName: transferOrder.ErpOrderNo,
+		PurchaseOrderName: erpResp.ToReceipt.PoNo,
 		Items:             make([]*buying.PurchaseOrderItem, 0, len(transferOrder.Items)),
 	}
 	for _, item := range transferOrder.Items {

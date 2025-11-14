@@ -28,5 +28,18 @@
             "console": "integratedTerminal",
             "showLog": true
         },
+        {
+            "name": "调试 ttpos-erp 模块",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/ttpos-bmp/app/ttpos-erp/main.go",
+            "cwd": "${workspaceFolder}/ttpos-bmp/app/ttpos-erp",
+            "env": {
+                "GF_DEBUG": "true"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        }
     ]
 }

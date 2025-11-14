@@ -27762,6 +27762,15 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "物品UUID列表,多选时",
+                        "name": "material_uuids",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "出库仓库ERP编码",
                         "name": "out_warehouse_erp_code",
@@ -50283,6 +50292,10 @@ const docTemplate = `{
                 "available_num": {
                     "description": "可用库存数量",
                     "type": "number"
+                },
+                "material_barcode": {
+                    "description": "条形码值",
+                    "type": "string"
                 },
                 "material_code": {
                     "description": "物品编码",

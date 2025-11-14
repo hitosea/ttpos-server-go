@@ -2114,6 +2114,8 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 		StartTime: req.QueryStartTime,
 		EndTime:   req.QueryEndTime,
 		Cycle:     req.Cycle,
+		PageNo:    utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:  utils.IfInt(req.PageSize > 0, req.PageSize, 10),
 	})
 
 	// 构建返回列表

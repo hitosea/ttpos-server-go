@@ -13,7 +13,6 @@ import (
 
 	"github.com/gogf/gf/v2/encoding/gbase64"
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
 )
 
 const (
@@ -82,7 +81,6 @@ func (s *sRpc) GetAndProcessSiteAuthorization(ctx context.Context, siteCode stri
 	if value == nil || value.IsNil() {
 		return nil, gerror.New("获取到的 api_secret 为空")
 	}
-	g.Log().Infof(ctx, "获取缓存认证信息:%v", value.Val())
 	return value.Val().(*SiteAuthorization), nil
 }
 

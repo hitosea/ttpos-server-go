@@ -113,7 +113,7 @@ func (r *materialStockAlertLogRepo) ShouldSendAlert(companyUuid, materialUuid, w
 		if log.SendStatus == model.SendStatusSuccess {
 			// 检查是否超过24小时
 			now := time.Now().Unix()
-			if now-int64(log.LastAlertTime) < 24*60*60 {
+			if now-int64(log.LastAlertTime) < 10*60 {
 				// 24小时内不发送第2次
 				return false, log, nil
 			}

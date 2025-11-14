@@ -413,10 +413,11 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 
 	for _, item := range req.Items {
 		saleOrderItems = append(saleOrderItems, dtoSelling.SalesOrderItem{
-			ItemCode: item.ItemCode,
-			Qty:      item.Qty,
-			Uom:      item.Uom,
-			Rate:     item.Rate,
+			ItemCode:  item.ItemCode,
+			Qty:       item.Qty,
+			Uom:       item.Uom,
+			Rate:      item.Rate,
+			Warehouse: req.FromWarehouse,
 		})
 		purchaseOrderItems = append(purchaseOrderItems, &buying.PurchaseOrderItemInput{
 			ItemCode: item.ItemCode,
