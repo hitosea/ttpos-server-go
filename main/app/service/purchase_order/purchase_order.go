@@ -1074,6 +1074,11 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 				}
 				erpnextUom = materialUnit.Unit.ErpnextUom
 			}
+			stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
+				ItemCode: item.MaterialCode,
+				Qty:      item.Num,
+				Uom:      erpnextUom,
+			})
 		} else {
 			for _, unit := range item.Units {
 				unitActualNum := unit.GetConversionRateNum()
@@ -1084,7 +1089,7 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 				stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
 					ItemCode: item.MaterialCode,
 					Qty:      unit.Num,
-					Uom:      item.ErpnextUom,
+					Uom:      unit.ErpnextUom,
 				})
 			}
 		}
