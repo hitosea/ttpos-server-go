@@ -124,11 +124,9 @@ services:
 
   redis-proxy:
     container_name: "saas-redis-proxy-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-redis-proxy:${IMAGE_VERSION}
+    image: hitosea2020/redis-proxy:latest
     volumes:
       - .env:/var/.env
-    depends_on:
-      - redis
     restart: always
     networks:
       saas-network:
