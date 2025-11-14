@@ -178,12 +178,8 @@ func (h *transferOrderHelper) CreateApproval(
 	approvalRepo := repository.NewTransferOrderApprovalRepo(db)
 	settingSrv := setting.NewSrvImpl(dbm, cache.Global)
 
-	// 当前公司的设置
-	companySetting := ctx.GetCompanySetting()
-	headquarterUuid := companySetting.HeadquarterUuid
-	if companySetting.IsHeadquarter() {
-		headquarterUuid = companySetting.CompanyUuid
-	}
+	// 总部UUID
+	headquarterUuid := transferOrder.HeadquarterUuid
 
 	// 获取当前公司总部下所有公司的设置
 	allCompanySettings, err := repository.NewCompanySettingRepo(dbm.GetDB(0)).GetAllByHeadquarterUuid(headquarterUuid)

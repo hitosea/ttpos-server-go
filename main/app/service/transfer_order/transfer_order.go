@@ -511,7 +511,11 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	db := ctx.GetDB()
 	companyUuid := ctx.GetCompanyUuid()
 	companyName := ctx.GetCompany().Name
-	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	companySetting := ctx.GetCompanySetting()
+	headquarterUuid := companySetting.HeadquarterUuid
+	if companySetting.IsHeadquarter() {
+		headquarterUuid = companyUuid
+	}
 
 	// 加锁防止并发创建（使用字符串锁保护编号生成）
 	lockKey := fmt.Sprintf("transfer_order_create_%d_%d", companyUuid, reqs.TransferType)
@@ -1508,7 +1512,7 @@ func (s *transferOrderSrv) GetTransferOrderCompanyList(
 
 	// 获取总部下的所有门店
 	headquarterUuid := companySetting.HeadquarterUuid
-	if headquarterUuid == 0 {
+	if companySetting.IsHeadquarter() {
 		headquarterUuid = currentCompanyUuid
 	}
 
