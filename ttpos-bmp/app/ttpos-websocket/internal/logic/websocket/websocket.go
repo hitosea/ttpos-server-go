@@ -313,8 +313,8 @@ func (s *sWebSocket) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// 设置一个定时器来发送ping消息
-	ticker := time.NewTicker(10 * time.Second)
+	// 设置一个定时器来发送ping消息 - 调整为25秒，确保在读取超时前有活动
+	ticker := time.NewTicker(25 * time.Second)
 	defer ticker.Stop()
 
 	// 创建连接专用的context
@@ -373,8 +373,12 @@ func (s *sWebSocket) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Reque
 			break
 		}
 
-		// 设置读取超时
-		ws.SetReadDeadline(time.Now().Add(30 * time.Second))
+		// 检查连接状态 - 通过尝试设置读取截止时间来验证连接是否有效
+		// 设置为2分钟，给客户端更充足的时间（ping间隔25秒 + 缓冲时间1分钟30秒）
+		if err := ws.SetReadDeadline(time.Now().Add(2 * time.Minute)); err != nil {
+			g.Log().Warning(ctx, "WebSocket连接已失效", "device_id", newConn.DeviceId, "error", err)
+			break
+		}
 
 		// 读取消息
 		_, msg, err := ws.ReadMessage()
@@ -386,7 +390,13 @@ func (s *sWebSocket) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Reque
 				continue
 			}
 
-			// 检查是否是超时或连接关闭错误
+			// 检查连接状态，如果连接已关闭则退出
+			if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure) {
+				g.Log().Info(ctx, "WebSocket连接已关闭", "device_id", newConn.DeviceId, "close_code", err)
+				break
+			}
+
+			// 检查是否是意外关闭
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				g.Log().Warning(ctx, "WebSocket连接异常关闭", err, "device_id", newConn.DeviceId)
 			} else {
@@ -545,11 +555,6 @@ func (s *sWebSocket) handleMessage(ctx context.Context, ws *websocket.Conn, msg 
 		return
 	}
 
-	// 上报USB打印机数据
-	if clientMessage.Type == consts.ClientMessageTypeUsbPrintReport && newConn.SourceClient == consts.SourceCashier {
-		s.reportUsbPrinter(ctx, newConn, clientMessage)
-	}
-
 	// 上报LAN打印机数据
 	if clientMessage.Type == consts.ClientMessageTypeLanPrintReport && newConn.SourceClient == consts.SourceCashier {
 		s.reportLanPrinter(ctx, newConn, clientMessage)
@@ -588,33 +593,6 @@ func (s *sWebSocket) handleReply(ctx context.Context, msgId uint) {
 	if err != nil {
 		g.Log().Warning(ctx, "删除消息记录失败", err, "msg_id", msgId)
 	}
-}
-
-// reportUsbPrinter 上报USB打印机数据
-func (s *sWebSocket) reportUsbPrinter(ctx context.Context, newConn *ConnectionInfo, clientMessage ClientMessage) {
-	// 解析打印机数据
-	dataJson, err := json.Marshal(clientMessage.Data)
-	if err != nil {
-		g.Log().Warning(ctx, "解析打印机数据失败", err)
-		return
-	}
-
-	usbPrinters := []UsbPrinter{}
-	err = json.Unmarshal(dataJson, &usbPrinters)
-	if err != nil {
-		g.Log().Warning(ctx, "解析USB打印机数据失败", err)
-		return
-	}
-
-	g.Log().Info(ctx, "收到USB打印机上报",
-		"device_id", newConn.DeviceId,
-		"count", len(usbPrinters),
-	)
-
-	// TODO: 实现USB打印机数据处理逻辑
-	// 1. 查询数据库中已有的打印机
-	// 2. 更新打印机状态
-	// 3. 新增打印机记录
 }
 
 // reportLanPrinter 上报LAN打印机数据

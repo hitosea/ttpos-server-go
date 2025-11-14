@@ -76,6 +76,11 @@ run.takeout:
 run.message:
 	@cd app/ttpos-message && gf run main.go
 
+# 构建并运行 ttpos-websocket 服务
+.PHONY: run.websocket
+run.websocket:
+	@cd app/ttpos-websocket && gf run main.go
+
 # 迁移升级所有应用的数据库
 .PHONY: migrate
 migrate:
@@ -85,6 +90,7 @@ migrate:
 	#@cd app/ttpos-shop  && make db_up.docker
 	@cd app/ttpos-erp  && make db_up.docker
 	@cd app/ttpos-message  && make db_up.docker
+	@cd app/ttpos-websocket  && make db_up.docker
 	@make update-topic
 
 

@@ -20,6 +20,30 @@ server:
   graceful: true                    # 是否启用优雅关闭
   gracefulTimeout: 5                # 优雅关闭超时时间（秒）
 
+# WebSocket 特定配置
+websocket:
+  # 连接配置
+  maxConnections: 10000             # 最大连接数
+  readBufferSize: 4096              # 读缓冲区大小（字节）
+  writeBufferSize: 4096             # 写缓冲区大小（字节）
+  
+  # 超时配置
+  handshakeTimeout: "10s"           # 握手超时时间
+  readTimeout: "60s"                # 读取超时时间
+  writeTimeout: "10s"               # 写入超时时间
+  
+  # 心跳配置
+  pingInterval: "30s"               # Ping 间隔时间
+  pongTimeout: "10s"                # Pong 超时时间
+  
+  # 消息配置
+  maxMessageSize: 1048576           # 最大消息大小（1MB）
+  enableCompression: true           # 是否启用压缩
+  
+  # 认证配置
+  enableAuth: true                  # 是否启用连接认证
+  authTimeout: "5s"                 # 认证超时时间
+
 # gRPC服务配置
 grpc:
   name:    "ttpos-websocket"        # 服务名称
