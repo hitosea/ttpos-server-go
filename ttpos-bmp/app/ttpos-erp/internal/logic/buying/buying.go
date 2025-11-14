@@ -217,14 +217,14 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	j := resp
 
 	receipt := &erp.PurchaseReceipt{}
-	j.GetJson("data").Scan(receipt)
+	j.GetJson("data").Scan(&receipt)
 
 	//根据入参调整item
 	if req.Items != nil && len(req.Items) > 0 {
 		receiptItems := make([]erp.PurchaseReceiptItem, 0)
 		for _, item := range receipt.Items {
 			for _, itemReq := range req.Items {
-				if item.ItemCode == itemReq.ItemCode {
+				if item.ItemCode == itemReq.ItemCode && item.Uom == itemReq.Uom {
 					item.Qty = itemReq.Qty
 					receiptItems = append(receiptItems, item)
 					break
@@ -242,7 +242,7 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 
 	// 解析响应数据
 	j = resp
-	j.GetJson("data").Scan(receipt)
+	j.GetJson("data").Scan(&receipt)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseReceipt, receipt.Name, erp.DocstatusSubmitted)

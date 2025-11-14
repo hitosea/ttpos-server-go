@@ -1083,10 +1083,11 @@ func (x *PurchaseOrderInfo) GetItems() []*PurchaseOrderItem {
 
 type PurchaseOrderItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码,必填"` // 物品编码,必填
-	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称"`    // 物品名称
-	StockUom      string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"物品单位"`    // 物品单位
-	Qty           float64                `protobuf:"fixed64,4,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量,必填"`                         // 物品数量,必填
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码,必填"`   // 物品编码,必填
+	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称"`      // 物品名称
+	StockUom      string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"物品库存单位，可选"` // 物品库存单位，可选
+	Qty           float64                `protobuf:"fixed64,4,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量,必填"`                           // 物品数量,必填
+	Uom           string                 `protobuf:"bytes,5,opt,name=uom,proto3" json:"uom,omitempty" dc:"物品单位"`                                //物品单位
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1147,6 +1148,13 @@ func (x *PurchaseOrderItem) GetQty() float64 {
 		return x.Qty
 	}
 	return 0
+}
+
+func (x *PurchaseOrderItem) GetUom() string {
+	if x != nil {
+		return x.Uom
+	}
+	return ""
 }
 
 type PurchaseReceiptInfo struct {
@@ -2370,12 +2378,13 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\rsupplier_name\x18\x02 \x01(\tR\fsupplierName\x12!\n" +
 	"\fper_received\x18\x03 \x01(\x01R\vperReceived\x12#\n" +
 	"\rschedule_date\x18\x04 \x01(\tR\fscheduleDate\x12/\n" +
-	"\x05items\x18\x05 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\"|\n" +
+	"\x05items\x18\x05 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\"\x8e\x01\n" +
 	"\x11PurchaseOrderItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x1b\n" +
 	"\tstock_uom\x18\x03 \x01(\tR\bstockUom\x12\x10\n" +
-	"\x03qty\x18\x04 \x01(\x01R\x03qty\"|\n" +
+	"\x03qty\x18\x04 \x01(\x01R\x03qty\x12\x10\n" +
+	"\x03uom\x18\x05 \x01(\tR\x03uom\"|\n" +
 	"\x13PurchaseReceiptInfo\x122\n" +
 	"\x15purchase_receipt_name\x18\x01 \x01(\tR\x13purchaseReceiptName\x121\n" +
 	"\x05items\x18\x02 \x03(\v2\x1b.buying.PurchaseReceiptItemR\x05items\"\x90\x01\n" +
