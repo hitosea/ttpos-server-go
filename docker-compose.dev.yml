@@ -96,6 +96,8 @@ services:
     volumes:
       - .env:/var/.env
     restart: always
+    depends_on:
+      - redis
     networks:
       saas-network:
         ipv4_address: 10.0.0.17
