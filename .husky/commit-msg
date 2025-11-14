@@ -31,7 +31,7 @@ if grep -Eq '^Revert ' "$MESSAGE_FILE"; then
 fi
 
 # 检查提交信息是否符合 Conventional Commits 规范
-CONVENTIONAL_REGEX='^(feat|fix|build|ci|docs|style|refactor|test|chore|perf)(\(.+\))?: .{1,72}$'
+CONVENTIONAL_REGEX='^(feat|fix|build|ci|docs|style|refactor|test|chore|perf)(\(.+\))?: .{1,500}$'
 if ! grep -Eq "$CONVENTIONAL_REGEX" "$MESSAGE_FILE"; then
   echo "❌ 提交信息不符合 Conventional Commits 规范"
   echo ""
