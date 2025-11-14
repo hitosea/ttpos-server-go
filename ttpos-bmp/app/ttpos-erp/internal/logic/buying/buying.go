@@ -7,6 +7,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
+	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -221,14 +222,20 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 
 	//根据入参调整item
 	if req.Items != nil && len(req.Items) > 0 {
-		receiptItems := make([]erp.PurchaseReceiptItem, 0)
+		receiptItems := make([]*erp.PurchaseReceiptItem, 0)
+		//获取采购单中所有物品编码
+		purchaseItemCodeList := make([]string, len(receipt.Items))
 		for _, item := range receipt.Items {
-			for _, itemReq := range req.Items {
-				if item.ItemCode == itemReq.ItemCode && item.Uom == itemReq.Uom {
-					item.Qty = itemReq.Qty
-					receiptItems = append(receiptItems, item)
-					break
-				}
+			purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
+		}
+		gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
+		for _, itemReq := range req.Items {
+			if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
+				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
+					ItemCode: itemReq.ItemCode,
+					Qty:      itemReq.Qty,
+					Uom:      itemReq.Uom,
+				})
 			}
 		}
 		receipt.Items = receiptItems
