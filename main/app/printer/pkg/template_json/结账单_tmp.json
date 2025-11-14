@@ -1866,7 +1866,7 @@
         [
             {
                 "group_block_id": "amount_due_information",
-                "block_id": "order.payment_commission_fee",
+                "block_id": "order.free_amount",
                 "block_type": "label:auto:value",
                 "block_label": {
                     "de": "Kostenloser Bestellbetrag",
@@ -1904,7 +1904,7 @@
                 },
                 "conditions": [
                     {
-                        "field": "order.check_out_zero_fee",
+                        "field": "order.free_amount",
                         "operator": "not_empty",
                         "value": 0
                     }
