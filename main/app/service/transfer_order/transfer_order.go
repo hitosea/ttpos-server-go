@@ -1354,6 +1354,7 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 			return errors.New("入库仓库不存在")
 		}
 		transferOrder.InWarehouseName = warehouse.Name
+		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 	}
 
 	// 验证物品状态
@@ -1365,7 +1366,6 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 	err = db.Transaction(func(tx *gorm.DB) error {
 		transferOrderRepository := repository.NewTransferOrderRepo(tx)
 		// 更新调拨单为已完成状态
-		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 		transferOrder.Status = constant.TransferOrderStatusCompleted
 		if err := transferOrderRepository.Update(transferOrder); err != nil {
 			logger.Logger.Error("更新调拨单状态失败", zap.Error(err))
