@@ -38098,6 +38098,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "unit_num": {
+                    "description": "单位数量. 目前只有平板的加购并送厨使用该字段",
+                    "type": "number"
                 }
             }
         },
@@ -38129,6 +38133,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "unit_num": {
+                    "description": "一个套餐的单个子商品的数量",
+                    "type": "number"
                 }
             }
         },

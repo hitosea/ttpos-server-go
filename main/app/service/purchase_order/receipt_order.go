@@ -140,6 +140,9 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			} else {
 				reqNum = num
 			}
+			if reqNum == 0 {
+				continue
+			}
 
 			// 更新采购申请明细的到货数量
 			newArrivalNum := orderItem.ArrivalNum + reqNum
@@ -161,6 +164,9 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 				for _, unit := range itemReq.UnitList {
 					for _, orderItemUnit := range orderItem.Units {
 						if orderItemUnit.UnitUuid == unit.Uuid {
+							if unit.Num == 0 {
+								continue
+							}
 							units = append(units, model.PurchaseReceiptOrderItemUnit{
 								ItemUuid:                 orderItem.Uuid,
 								PurchaseReceiptOrderUuid: receiptOrder.Uuid,
@@ -229,6 +235,9 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 					})
 				}
 			}
+		}
+		if len(receiptItems) == 0 {
+			return errors.New("收货数量不能为0")
 		}
 
 		// 批量创建收货明细

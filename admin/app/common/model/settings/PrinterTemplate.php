@@ -45,9 +45,9 @@ class PrinterTemplate extends BaseModel
     public function setTemplate($data)
     {
         $customizeData = '';
+        PrinterCustomize::where('template_id', $this->id)->update(['is_use' => 0]);
         if ($data['tmp_uuid'] ?? 0) {
             $customizeData = PrinterCustomize::where('uuid', $data['tmp_uuid'])->value('data') ?: '';
-            PrinterCustomize::where('template_id', $this->id)->update(['is_use' => 0]);
             PrinterCustomize::where('uuid', $data['tmp_uuid'])->update(['is_use' => 1]);
         }
         return $this->save([

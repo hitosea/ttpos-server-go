@@ -14,6 +14,7 @@ type PaymentMethodListResp struct {
 
 // PaymentMethod 支付方式
 type PaymentMethod struct {
-	Uuid uint64 `json:"uuid"` // 支付方式UUID
-	Name string `json:"name"` // 支付方式名称
+	Uuid        uint64 `json:"uuid"`         // 支付方式UUID
+	Name        string `json:"name"`         // 支付方式名称
+	PaymentName string `json:"payment_name"` // 支付名称
 }
