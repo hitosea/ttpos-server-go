@@ -90,7 +90,15 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		}
 
 		// 创建收货单
+		receiptOrderUuid, err := utils.GetID()
+		if err != nil {
+			logger.Logger.Error("生成雪花ID失败", zap.Error(err))
+			return errors.WithMessage(err)
+		}
 		receiptOrder := &model.PurchaseReceiptOrder{
+			BaseModel: model.BaseModel{
+				Uuid: receiptOrderUuid,
+			},
 			OrderNo:                s.helper.generateReceiptNo(tx, ctx.GetCompanySetting().Timezone),
 			Status:                 utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending),
 			PurchaseOrderUuid:      req.PurchaseOrderUuid,
