@@ -134,10 +134,15 @@ make build
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `DB_LINK` | 数据库连接字符串 | - |
-| `DB_DEBUG` | 数据库调试模式 | `false` |
-| `REDIS_ADDRESS` | Redis 地址 | `127.0.0.1:6379` |
+| `DB_HOST` | 数据库主机地址 | `127.0.0.1` |
+| `DB_PORT_OPEN` | 数据库端口 | `3306` |
+| `DB_USERNAME` | 数据库用户名 | `root` |
+| `DB_PASSWORD` | 数据库密码 | - |
+| `DB_DATABASE` | 数据库名称 | `websocket` |
+| `REDIS_HOST` | Redis 主机地址 | `127.0.0.1` |
+| `REDIS_PORT` | Redis 端口 | `6379` |
 | `REDIS_PASSWORD` | Redis 密码 | - |
+| `REDIS_DB` | Redis 数据库索引 | `0` |
 | `NACOS_ADDRESS` | Nacos 地址 | `127.0.0.1:8848` |
 | `NACOS_NAMESPACE` | Nacos 命名空间 | `public` |
 | `LOG_LEVEL` | 日志级别 | `info` |
@@ -279,8 +284,15 @@ docker run -d \
   --name ttpos-websocket \
   -p 8080:8080 \
   -p 9090:9090 \
-  -e DB_LINK="mysql:root:password@tcp(mysql:3306)/ttpos" \
-  -e REDIS_ADDRESS="redis:6379" \
+  -e DB_HOST="mysql" \
+  -e DB_PORT_OPEN="3306" \
+  -e DB_USERNAME="root" \
+  -e DB_PASSWORD="password" \
+  -e DB_DATABASE="saas" \
+  -e REDIS_HOST="redis" \
+  -e REDIS_PORT="6379" \
+  -e REDIS_PASSWORD="" \
+  -e REDIS_DB="0" \
   -e NACOS_ADDRESS="nacos:8848" \
   ttpos-websocket:latest
 ```

@@ -117,18 +117,18 @@ services:
       saas-network:
         ipv4_address: 10.0.0.18
 
-  websocket:
-    container_name: "saas-websocket-${APP_ID}"
-    build:
-      context: ./websocket
-      dockerfile: Dockerfile
-    image: ttpos-server-websocket
-    volumes:
-      - .env:/var/.env
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.15
+  # websocket:
+  #   container_name: "saas-websocket-${APP_ID}"
+  #   build:
+  #     context: ./websocket
+  #     dockerfile: Dockerfile
+  #   image: ttpos-server-websocket
+  #   volumes:
+  #     - .env:/var/.env
+  #   restart: always
+  #   networks:
+  #     saas-network:
+  #       ipv4_address: 10.0.0.15
         
 networks:
   saas-network:

@@ -78,6 +78,8 @@ github.com/gogf/gf/contrib/trace/otlphttp/v2 v2.9.4/go.mod h1:MbIU4D0dn9yaOIP0OU
 github.com/gogf/gf/v2 v2.9.4 h1:6vleEWypot9WBPncP2GjbpgAUeG6Mzb1YESb9nPMkjY=
 github.com/gogf/gf/v2 v2.9.4/go.mod h1:Ukl+5HUH9S7puBmNLR4L1zUqeRwi0nrW4OigOknEztU=
 github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d/go.mod h1:nnjvkQ9ptGaCkuDUx6wNykzzlUixGxvkme+H/lnzb+A=
+github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9vvo=
+github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/golang/mock v1.3.1/go.mod h1:sBzyDLLjw3U8JLTeZvSv8jJB+tU5PVekmnlKIyFUx0Y=
 github.com/golang/mock v1.6.0 h1:ErTB+efbowRARo13NNdxyJji2egdxLGQhRaY+DUumQc=
 github.com/golang/mock v1.6.0/go.mod h1:p6yTPP+5HYm5mzsMV8JkE6ZKdX+/wYM6Hr+LicevLPs=

@@ -7,7 +7,7 @@
 // 	protoc        v3.21.12
 // source: websocket/websocket.proto
 
-package websocket
+package v1
 
 import (
 	reflect "reflect"
@@ -29,14 +29,15 @@ const (
 // 用于向 WebSocket 客户端推送消息
 type PushMessageReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty"`      // 公司UUID，必填
-	StaffUuid     uint64                 `protobuf:"varint,2,opt,name=staff_uuid,json=staffUuid,proto3" json:"staff_uuid,omitempty"`            // 员工UUID，0表示推送给所有员工
-	NotStaffUuid  uint64                 `protobuf:"varint,3,opt,name=not_staff_uuid,json=notStaffUuid,proto3" json:"not_staff_uuid,omitempty"` // 排除的员工UUID，0表示不排除
-	SourceClient  string                 `protobuf:"bytes,4,opt,name=source_client,json=sourceClient,proto3" json:"source_client,omitempty"`    // 来源客户端（shop/cashier/tablet/kitchen/assistant/H5/*）
-	DeviceId      string                 `protobuf:"bytes,5,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`                // 设备ID，*表示所有设备
-	NotDeviceId   string                 `protobuf:"bytes,6,opt,name=not_device_id,json=notDeviceId,proto3" json:"not_device_id,omitempty"`     // 排除的设备ID
-	MessageType   string                 `protobuf:"bytes,7,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`       // 消息类型（update_order/customer_call/print_data等）
-	Data          string                 `protobuf:"bytes,8,opt,name=data,proto3" json:"data,omitempty"`                                        // 消息数据（JSON格式）
+	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty" dc:"公司UUID，必填"`                                           // 公司UUID，必填
+	StaffUuid     uint64                 `protobuf:"varint,2,opt,name=staff_uuid,json=staffUuid,proto3" json:"staff_uuid,omitempty" dc:"员工UUID，0表示推送给所有员工"`                                         // 员工UUID，0表示推送给所有员工
+	NotStaffUuid  uint64                 `protobuf:"varint,3,opt,name=not_staff_uuid,json=notStaffUuid,proto3" json:"not_staff_uuid,omitempty" dc:"排除的员工UUID，0表示不排除"`                               // 排除的员工UUID，0表示不排除
+	SourceClient  string                 `protobuf:"bytes,4,opt,name=source_client,json=sourceClient,proto3" json:"source_client,omitempty" dc:"来源客户端（shop/cashier/tablet/kitchen/assistant/H5/*）"` // 来源客户端（shop/cashier/tablet/kitchen/assistant/H5/*）
+	DeviceId      string                 `protobuf:"bytes,5,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty" dc:"设备ID，*表示所有设备"`                                                  // 设备ID，*表示所有设备
+	NotDeviceId   string                 `protobuf:"bytes,6,opt,name=not_device_id,json=notDeviceId,proto3" json:"not_device_id,omitempty" dc:"排除的设备ID"`                                            // 排除的设备ID
+	MessageType   string                 `protobuf:"bytes,7,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty" dc:"消息类型（update_order/customer_call/print_data等）"`         // 消息类型（update_order/customer_call/print_data等）
+	MessageKey    string                 `protobuf:"bytes,8,opt,name=message_key,json=messageKey,proto3" json:"message_key,omitempty" dc:"消息键，用于防抖去重，相同key的消息会进行防抖处理"`                              // 消息键，用于防抖去重，相同key的消息会进行防抖处理
+	Data          string                 `protobuf:"bytes,9,opt,name=data,proto3" json:"data,omitempty" dc:"消息数据（JSON格式）"`                                                                          // 消息数据（JSON格式）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -120,6 +121,13 @@ func (x *PushMessageReq) GetMessageType() string {
 	return ""
 }
 
+func (x *PushMessageReq) GetMessageKey() string {
+	if x != nil {
+		return x.MessageKey
+	}
+	return ""
+}
+
 func (x *PushMessageReq) GetData() string {
 	if x != nil {
 		return x.Data
@@ -131,9 +139,9 @@ func (x *PushMessageReq) GetData() string {
 // 返回推送结果
 type PushMessageResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`                      // 推送是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                       // 响应消息描述
-	PushCount     int32                  `protobuf:"varint,3,opt,name=push_count,json=pushCount,proto3" json:"push_count,omitempty"` // 成功推送的连接数
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty" dc:"推送是否成功"`                        // 推送是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty" dc:"响应消息描述"`                         // 响应消息描述
+	PushCount     int32                  `protobuf:"varint,3,opt,name=push_count,json=pushCount,proto3" json:"push_count,omitempty" dc:"成功推送的连接数"` // 成功推送的连接数
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -192,7 +200,7 @@ func (x *PushMessageResp) GetPushCount() int32 {
 // 获取连接统计请求消息
 type GetConnectionStatsReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty"` // 公司UUID，可选，0表示获取所有公司
+	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty" dc:"公司UUID，可选，0表示获取所有公司"` // 公司UUID，可选，0表示获取所有公司
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -237,9 +245,9 @@ func (x *GetConnectionStatsReq) GetCompanyUuid() uint64 {
 // 获取连接统计响应消息
 type GetConnectionStatsResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 查询是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // 响应消息描述
-	Stats         *ConnectionStats       `protobuf:"bytes,3,opt,name=stats,proto3" json:"stats,omitempty"`      // 连接统计信息
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty" dc:"查询是否成功"` // 查询是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty" dc:"响应消息描述"`  // 响应消息描述
+	Stats         *ConnectionStats       `protobuf:"bytes,3,opt,name=stats,proto3" json:"stats,omitempty" dc:"连接统计信息"`      // 连接统计信息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -298,10 +306,10 @@ func (x *GetConnectionStatsResp) GetStats() *ConnectionStats {
 // 连接统计信息
 type ConnectionStats struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	TotalConnections int32                  `protobuf:"varint,1,opt,name=total_connections,json=totalConnections,proto3" json:"total_connections,omitempty"`                                                       // 总连接数
-	ByCompany        map[uint64]int32       `protobuf:"bytes,2,rep,name=by_company,json=byCompany,proto3" json:"by_company,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 按公司统计
-	BySource         map[string]int32       `protobuf:"bytes,3,rep,name=by_source,json=bySource,proto3" json:"by_source,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`     // 按来源统计
-	ByDevice         map[string]int32       `protobuf:"bytes,4,rep,name=by_device,json=byDevice,proto3" json:"by_device,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`     // 按设备统计
+	TotalConnections int32                  `protobuf:"varint,1,opt,name=total_connections,json=totalConnections,proto3" json:"total_connections,omitempty" dc:"总连接数"`                                                        // 总连接数
+	ByCompany        map[uint64]int32       `protobuf:"bytes,2,rep,name=by_company,json=byCompany,proto3" json:"by_company,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value" dc:"按公司统计"` // 按公司统计
+	BySource         map[string]int32       `protobuf:"bytes,3,rep,name=by_source,json=bySource,proto3" json:"by_source,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value" dc:"按来源统计"`     // 按来源统计
+	ByDevice         map[string]int32       `protobuf:"bytes,4,rep,name=by_device,json=byDevice,proto3" json:"by_device,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value" dc:"按设备统计"`     // 按设备统计
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -367,9 +375,9 @@ func (x *ConnectionStats) GetByDevice() map[string]int32 {
 // 检查设备在线请求消息
 type CheckDeviceOnlineReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty"`   // 公司UUID，必填
-	SourceClient  string                 `protobuf:"bytes,2,opt,name=source_client,json=sourceClient,proto3" json:"source_client,omitempty"` // 来源客户端，必填
-	DeviceId      string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`             // 设备ID，必填
+	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty" dc:"公司UUID，必填"`  // 公司UUID，必填
+	SourceClient  string                 `protobuf:"bytes,2,opt,name=source_client,json=sourceClient,proto3" json:"source_client,omitempty" dc:"来源客户端，必填"` // 来源客户端，必填
+	DeviceId      string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty" dc:"设备ID，必填"`              // 设备ID，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -428,10 +436,10 @@ func (x *CheckDeviceOnlineReq) GetDeviceId() string {
 // 检查设备在线响应消息
 type CheckDeviceOnlineResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`                                 // 查询是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                                  // 响应消息描述
-	IsOnline      bool                   `protobuf:"varint,3,opt,name=is_online,json=isOnline,proto3" json:"is_online,omitempty"`               // 是否在线
-	LastHeartbeat string                 `protobuf:"bytes,4,opt,name=last_heartbeat,json=lastHeartbeat,proto3" json:"last_heartbeat,omitempty"` // 最后心跳时间
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty" dc:"查询是否成功"`                                 // 查询是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty" dc:"响应消息描述"`                                  // 响应消息描述
+	IsOnline      bool                   `protobuf:"varint,3,opt,name=is_online,json=isOnline,proto3" json:"is_online,omitempty" dc:"是否在线"`                 // 是否在线
+	LastHeartbeat string                 `protobuf:"bytes,4,opt,name=last_heartbeat,json=lastHeartbeat,proto3" json:"last_heartbeat,omitempty" dc:"最后心跳时间"` // 最后心跳时间
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -497,9 +505,9 @@ func (x *CheckDeviceOnlineResp) GetLastHeartbeat() string {
 // 关闭连接请求消息
 type CloseConnectionReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty"`   // 公司UUID，必填
-	SourceClient  string                 `protobuf:"bytes,2,opt,name=source_client,json=sourceClient,proto3" json:"source_client,omitempty"` // 来源客户端，可选
-	DeviceId      string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`             // 设备ID，可选
+	CompanyUuid   uint64                 `protobuf:"varint,1,opt,name=company_uuid,json=companyUuid,proto3" json:"company_uuid,omitempty" dc:"公司UUID，必填"`  // 公司UUID，必填
+	SourceClient  string                 `protobuf:"bytes,2,opt,name=source_client,json=sourceClient,proto3" json:"source_client,omitempty" dc:"来源客户端，可选"` // 来源客户端，可选
+	DeviceId      string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty" dc:"设备ID，可选"`              // 设备ID，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -558,9 +566,9 @@ func (x *CloseConnectionReq) GetDeviceId() string {
 // 关闭连接响应消息
 type CloseConnectionResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`                            // 关闭是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                             // 响应消息描述
-	ClosedCount   int32                  `protobuf:"varint,3,opt,name=closed_count,json=closedCount,proto3" json:"closed_count,omitempty"` // 关闭的连接数
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty" dc:"关闭是否成功"`                            // 关闭是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty" dc:"响应消息描述"`                             // 响应消息描述
+	ClosedCount   int32                  `protobuf:"varint,3,opt,name=closed_count,json=closedCount,proto3" json:"closed_count,omitempty" dc:"关闭的连接数"` // 关闭的连接数
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -620,7 +628,7 @@ var File_websocket_websocket_proto protoreflect.FileDescriptor
 
 const file_websocket_websocket_proto_rawDesc = "" +
 	"\n" +
-	"\x19websocket/websocket.proto\x12\twebsocket\"\x95\x02\n" +
+	"\x19websocket/websocket.proto\x12\twebsocket\"\xb6\x02\n" +
 	"\x0ePushMessageReq\x12!\n" +
 	"\fcompany_uuid\x18\x01 \x01(\x04R\vcompanyUuid\x12\x1d\n" +
 	"\n" +
@@ -629,8 +637,10 @@ const file_websocket_websocket_proto_rawDesc = "" +
 	"\rsource_client\x18\x04 \x01(\tR\fsourceClient\x12\x1b\n" +
 	"\tdevice_id\x18\x05 \x01(\tR\bdeviceId\x12\"\n" +
 	"\rnot_device_id\x18\x06 \x01(\tR\vnotDeviceId\x12!\n" +
-	"\fmessage_type\x18\a \x01(\tR\vmessageType\x12\x12\n" +
-	"\x04data\x18\b \x01(\tR\x04data\"d\n" +
+	"\fmessage_type\x18\a \x01(\tR\vmessageType\x12\x1f\n" +
+	"\vmessage_key\x18\b \x01(\tR\n" +
+	"messageKey\x12\x12\n" +
+	"\x04data\x18\t \x01(\tR\x04data\"d\n" +
 	"\x0fPushMessageResp\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1d\n" +

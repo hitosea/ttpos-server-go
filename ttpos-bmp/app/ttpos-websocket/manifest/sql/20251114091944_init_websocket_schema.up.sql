@@ -3,7 +3,6 @@
 -- websocket_msg 表：WebSocket 消息记录表
 CREATE TABLE IF NOT EXISTS `websocket_msg` (
     `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `uuid` bigint(20) NOT NULL DEFAULT 0 COMMENT '消息唯一标识',
     `company_uuid` bigint(20) NOT NULL DEFAULT 0 COMMENT '公司UUID',
     `uid` varchar(100) NOT NULL DEFAULT '' COMMENT '用户/设备标识',
     `msg` text NOT NULL COMMENT '消息内容（JSON格式）',
@@ -15,7 +14,6 @@ CREATE TABLE IF NOT EXISTS `websocket_msg` (
     `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间（软删除）',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `idx_uuid` (`uuid`),
     KEY `idx_company_uid` (`company_uuid`, `uid`),
     KEY `idx_status` (`status`),
     KEY `idx_create_time` (`create_time`),

@@ -10,6 +10,7 @@ type PushMessageInput struct {
 	DeviceId     string `json:"device_id"`      // 设备ID
 	NotDeviceId  string `json:"not_device_id"`  // 排除的设备ID
 	MessageType  string `json:"message_type"`   // 消息类型
+	MessageKey   string `json:"message_key"`    // 消息键，用于防抖去重
 	Data         string `json:"data"`           // 消息数据（JSON格式）
 }
 

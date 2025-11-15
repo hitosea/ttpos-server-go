@@ -54,7 +54,7 @@ var websocketMsgColumns = websocketMsgDaoColumns{
 func newWebsocketMsgDao() *websocketMsgDao {
 	return &websocketMsgDao{
 		group:   "default",
-		table:   "ttpos_websocket_msg",
+		table:   "websocket_msg",
 		columns: websocketMsgColumns,
 	}
 }

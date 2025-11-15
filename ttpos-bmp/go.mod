@@ -14,6 +14,8 @@ require (
 	github.com/gogf/gf/contrib/registry/nacos/v2 v2.9.4
 	github.com/gogf/gf/contrib/rpc/grpcx/v2 v2.9.4
 	github.com/gogf/gf/contrib/trace/otlphttp/v2 v2.9.4
+	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/mailgun/mailgun-go/v4 v4.23.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
@@ -21,6 +23,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.8
+	ttpos-api v0.0.0
 )
 
 require (
@@ -48,7 +51,6 @@ require (
 	github.com/gogf/gf/contrib/registry/file/v2 v2.9.4 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
@@ -99,3 +101,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	stathat.com/c/consistent v1.0.0 // indirect
 )
+
+replace ttpos-api => ../ttpos-api

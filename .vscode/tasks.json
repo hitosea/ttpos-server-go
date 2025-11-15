@@ -118,7 +118,7 @@
         "group": "build"
     },
     {
-        "label": "BMP项目 > 构建",
+        "label": "BMP项目 > 构建中台服务",
         "type": "shell",
         "command": "make",
         "args": [

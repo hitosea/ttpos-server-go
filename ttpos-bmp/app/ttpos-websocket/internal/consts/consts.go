@@ -97,8 +97,8 @@ const (
 
 // WebSocket 连接状态代码
 const (
-	CodeSuccess = 1 // 成功
-	CodeFail    = 0 // 失败
+	CodeSuccess = 200 // 成功
+	CodeFail    = 500 // 失败
 )
 
 // WebSocket 客户端消息类型

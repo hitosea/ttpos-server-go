@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+关于项目docs的目录规则
+1. main项目存在 ./docs中
+2. ttpos-bmp/* 项目存在在 ttpos-bmp/docs中，ttpos-bmp下的所有子模块都不需要存放
+3. ai 读写时请安装这个规则去做

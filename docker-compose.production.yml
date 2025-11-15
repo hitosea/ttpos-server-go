@@ -99,15 +99,15 @@ services:
       saas-network:
         ipv4_address: 10.0.0.14
 
-  websocket:
-    container_name: "saas-websocket-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
-    volumes:
-      - .env:/var/.env
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.15
+  # websocket:
+  #   container_name: "saas-websocket-${APP_ID}"
+  #   image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
+  #   volumes:
+  #     - .env:/var/.env
+  #   restart: always
+  #   networks:
+  #     saas-network:
+  #       ipv4_address: 10.0.0.15
 
   mysql-proxy:
     container_name: "saas-mysql-proxy-${APP_ID}"
@@ -141,3 +141,7 @@ networks:
       config:
         - subnet: 10.0.0.0/24
           gateway: 10.0.0.1
+
+  bmp-network:
+    external: true
+    name: ttpos-bmp_bmp-network

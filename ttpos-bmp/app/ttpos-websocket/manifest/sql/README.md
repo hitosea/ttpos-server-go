@@ -15,6 +15,27 @@
    - 支持消息状态追踪和离线消息处理
    - 包含完整的索引设计用于性能优化
 
+### 20251115173527_add_device_online_table
+- **up.sql**: 创建设备在线记录表
+- **down.sql**: 回滚设备在线记录表
+
+#### 包含的表
+1. **device_online**: 设备在线状态记录表
+   - 记录设备的连接和断开状态
+   - 跟踪设备心跳时间
+   - 存储设备连接的详细信息（IP地址、用户代理等）
+   - 支持设备在线状态查询和统计
+
+### 20251115174023_remove_uuid_fields
+- **up.sql**: 删除 device_online 和 websocket_msg 表的 uuid 字段
+- **down.sql**: 回滚 uuid 字段删除操作
+
+#### 变更内容
+1. 删除 **device_online** 表的 uuid 字段及其唯一索引
+2. 删除 **websocket_msg** 表的 uuid 字段及其唯一索引
+3. 使用 connection_key 作为 device_online 表的唯一标识
+4. 使用 id 作为 websocket_msg 表的唯一标识
+
 ## 使用方法
 
 ### 本地开发环境
@@ -53,7 +74,6 @@ make migrate
 
 #### 字段说明
 - `id`: 主键ID，自增长
-- `uuid`: 消息唯一标识，用于去重和追踪
 - `company_uuid`: 公司UUID，数据隔离
 - `uid`: 用户/设备标识
 - `msg`: 消息内容（JSON格式）
@@ -67,12 +87,46 @@ make migrate
 
 #### 索引设计
 - `PRIMARY KEY (id)`: 主键索引
-- `UNIQUE KEY idx_uuid (uuid)`: 消息唯一性索引
 - `KEY idx_company_uid (company_uuid, uid)`: 公司用户复合索引
 - `KEY idx_status (status)`: 状态查询索引
 - `KEY idx_create_time (create_time)`: 时间查询索引
 - `KEY idx_type (type)`: 消息类型索引
 - `KEY idx_source_client (source_client)`: 客户端类型索引
+
+### device_online 表
+用于记录设备在线状态，支持：
+- 设备连接状态追踪
+- 心跳时间监控
+- 连接历史记录
+- 多公司数据隔离
+- 性能优化索引
+
+#### 字段说明
+- `id`: 主键ID，自增长
+- `company_uuid`: 公司UUID，数据隔离
+- `staff_uuid`: 员工UUID
+- `device_id`: 设备ID
+- `source_client`: 来源客户端（pos/tablet/kitchen/h5/mobile）
+- `connection_key`: 连接唯一标识
+- `status`: 在线状态（0-离线，1-在线）
+- `connect_time`: 连接时间戳
+- `disconnect_time`: 断开时间戳
+- `last_heartbeat_time`: 最后心跳时间戳
+- `ip_address`: 客户端IP地址
+- `user_agent`: 用户代理信息
+- `create_time`: 创建时间戳
+- `update_time`: 更新时间戳
+- `delete_time`: 删除时间戳（软删除）
+
+#### 索引设计
+- `PRIMARY KEY (id)`: 主键索引
+- `UNIQUE KEY idx_connection_key (connection_key)`: 连接唯一性索引
+- `KEY idx_company_device (company_uuid, device_id)`: 公司设备复合索引
+- `KEY idx_status (status)`: 状态查询索引
+- `KEY idx_staff_uuid (staff_uuid)`: 员工查询索引
+- `KEY idx_source_client (source_client)`: 客户端类型索引
+- `KEY idx_last_heartbeat (last_heartbeat_time)`: 心跳时间索引
+- `KEY idx_connect_time (connect_time)`: 连接时间索引
 
 ## 注意事项
 

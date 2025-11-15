@@ -45,7 +45,8 @@ message PushMessageReq {
   string device_id = 5;          // 设备ID，*表示所有设备
   string not_device_id = 6;      // 排除的设备ID
   string message_type = 7;       // 消息类型（update_order/customer_call/print_data等）
-  string data = 8;               // 消息数据（JSON格式）
+  string message_key = 8;        // 消息键，用于防抖去重，相同key的消息会进行防抖处理
+  string data = 9;               // 消息数据（JSON格式）
 }
 
 // 推送消息响应消息

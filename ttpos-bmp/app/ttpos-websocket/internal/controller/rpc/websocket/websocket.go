@@ -57,6 +57,7 @@ func (c *Controller) PushMessage(ctx context.Context, req *v1.PushMessageReq) (r
 		DeviceId:     req.DeviceId,
 		NotDeviceId:  req.NotDeviceId,
 		MessageType:  req.MessageType,
+		MessageKey:   req.MessageKey,
 		Data:         req.Data,
 	}
 

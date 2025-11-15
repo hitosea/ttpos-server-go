@@ -71,12 +71,12 @@ func TestMessageTypeConstants(t *testing.T) {
 
 // TestCodeConstants 测试状态码常量
 func TestCodeConstants(t *testing.T) {
-	if CodeSuccess != 1 {
-		t.Errorf("CodeSuccess = %d; 期望 1", CodeSuccess)
+	if CodeSuccess != 200 {
+		t.Errorf("CodeSuccess = %d; 期望 200", CodeSuccess)
 	}
 
-	if CodeFail != 0 {
-		t.Errorf("CodeFail = %d; 期望 0", CodeFail)
+	if CodeFail != 500 {
+		t.Errorf("CodeFail = %d; 期望 500", CodeFail)
 	}
 }
 

@@ -21,7 +21,13 @@ import (
 	"ttpos-bmp/app/ttpos-websocket/internal/dao"
 	"ttpos-bmp/app/ttpos-websocket/internal/model/do"
 	"ttpos-bmp/app/ttpos-websocket/internal/model/dto"
+	"ttpos-bmp/app/ttpos-websocket/internal/model/entity"
 	"ttpos-bmp/app/ttpos-websocket/internal/service"
+	"ttpos-bmp/app/ttpos-websocket/utility"
+	"ttpos-bmp/internal/pkg/queue"
+
+	"ttpos-api/ttpos-websocket/constant"
+	ttposWebsocketMsg "ttpos-api/ttpos-websocket/message"
 )
 
 // sWebSocket WebSocket 业务逻辑实现
@@ -41,6 +47,90 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+}
+
+// StartRedisSubscriber 启动 Redis 订阅者
+// 在服务启动时调用，订阅 websocket_msg_push 频道
+func StartRedisSubscriber(ctx context.Context) {
+	g.Log().Info(ctx, "启动Redis订阅者")
+
+	// 使用 GoFrame Redis 订阅
+	conn, _, err := g.Redis().Subscribe(ctx, "websocket_msg_push")
+	if err != nil {
+		g.Log().Error(ctx, "订阅Redis频道失败", err)
+		return
+	}
+	defer conn.Close(ctx)
+
+	// 循环接收消息
+	for {
+		select {
+		case <-ctx.Done():
+			g.Log().Info(ctx, "Redis订阅者已停止")
+			return
+		default:
+			// 接收订阅消息
+			msg, err := conn.ReceiveMessage(ctx)
+			if err != nil {
+				if err == context.Canceled || err == context.DeadlineExceeded {
+					g.Log().Info(ctx, "Redis订阅者已停止")
+					return
+				}
+				g.Log().Error(ctx, "接收Redis消息失败", err)
+				time.Sleep(100 * time.Millisecond) // 错误时等待一下再重试
+				continue
+			}
+
+			if msg == nil {
+				continue
+			}
+
+			g.Log().Debug(ctx, "收到Redis消息", "payload", msg.Payload)
+
+			// 解析消息
+			var pushInput dto.PushMessageInput
+			if err := json.Unmarshal([]byte(msg.Payload), &pushInput); err != nil {
+				g.Log().Error(ctx, "解析Redis消息失败", err, "payload", msg.Payload)
+				continue
+			}
+
+			// 处理推送消息（在本节点推送）
+			if err := service.Websocket().(*sWebSocket).processPushMessage(ctx, &pushInput); err != nil {
+				g.Log().Error(ctx, "处理推送消息失败", err)
+			}
+		}
+	}
+}
+
+// 防抖相关的全局变量
+var (
+	// 基于MessageKey的细粒度锁映射
+	messageKeyMutexes = sync.Map{} // map[string]*sync.Mutex
+	// 保护messageKeyMutexes的锁
+	mutexMapLock sync.Mutex
+)
+
+// getMessageKeyMutex 获取指定MessageKey的专用锁
+func getMessageKeyMutex(messageKey string) *sync.Mutex {
+	// 先尝试获取已存在的锁
+	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
+		return mutex.(*sync.Mutex)
+	}
+
+	// 如果不存在，需要创建新锁
+	mutexMapLock.Lock()
+	defer mutexMapLock.Unlock()
+
+	// 双重检查，防止并发创建
+	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
+		return mutex.(*sync.Mutex)
+	}
+
+	// 创建新锁并存储
+	newMutex := &sync.Mutex{}
+	messageKeyMutexes.Store(messageKey, newMutex)
+
+	return newMutex
 }
 
 // ConnectionInfo WebSocket 连接信息
@@ -125,23 +215,64 @@ func (s *sWebSocket) PushMessage(ctx context.Context, in *dto.PushMessageInput) 
 		"message_type", in.MessageType,
 		"source_client", in.SourceClient,
 		"device_id", in.DeviceId,
+		"message_key", in.MessageKey,
 	)
 
+	// 如果设置了 MessageKey，启用防抖机制
+	if in.MessageKey != "" {
+		// 异步处理防抖逻辑
+		go s.handleDebouncedPush(ctx, in)
+
+		out.Success = true
+		out.Message = "消息已加入防抖队列"
+		out.PushCount = 0
+		return out, nil
+	}
+
+	// 没有 MessageKey，直接推送
+	return s.directPushMessage(ctx, in)
+}
+
+// directPushMessage 直接推送消息（无防抖）
+// 注意：在集群环境下，通过 Redis 发布消息到所有节点
+func (s *sWebSocket) directPushMessage(ctx context.Context, in *dto.PushMessageInput) (out *dto.PushMessageOutput, err error) {
+	out = &dto.PushMessageOutput{}
+
+	// 将消息序列化为 JSON
+	dataBytes, err := json.Marshal(in)
+	if err != nil {
+		return out, gerror.Wrap(err, "序列化消息失败")
+	}
+
+	// 通过 Redis 发布消息到所有节点
+	_, err = g.Redis().Publish(ctx, "websocket_msg_push", string(dataBytes))
+	if err != nil {
+		g.Log().Error(ctx, "发布消息到Redis失败", err)
+		return out, gerror.Wrap(err, "发布消息失败")
+	}
+
+	g.Log().Info(ctx, "消息已发布到Redis", "message_type", in.MessageType)
+
+	out.Success = true
+	out.Message = "消息已发布"
+	out.PushCount = 0 // 由订阅者处理，这里无法统计
+
+	return out, nil
+}
+
+// processPushMessage 处理推送消息（由 Redis 订阅者调用）
+// 这个方法在每个节点上执行，推送到本节点的 WebSocket 连接
+func (s *sWebSocket) processPushMessage(ctx context.Context, in *dto.PushMessageInput) error {
 	// 1. 先删后加 - 同一个类型，只保留最新的
 	if err := s.deleteOldMessages(ctx, in); err != nil {
 		g.Log().Warning(ctx, "删除旧消息失败", err)
 	}
 
-	// 2. 收集匹配的连接
+	// 2. 收集匹配的连接（只在本节点）
 	matchedConnections := s.collectMatchedConnections(in)
 
-	g.Log().Info(ctx, "找到匹配连接",
-		"count", len(matchedConnections),
-		"message_type", in.MessageType,
-	)
-
 	// 3. 批量处理匹配的连接
-	pushCount := int32(0)
+	pushCount := 0
 	for _, conn := range matchedConnections {
 		if err := s.pushToConnection(ctx, conn, in); err != nil {
 			g.Log().Warning(ctx, "推送到连接失败", err, "device_id", conn.DeviceId)
@@ -150,11 +281,89 @@ func (s *sWebSocket) PushMessage(ctx context.Context, in *dto.PushMessageInput) 
 		}
 	}
 
-	out.Success = true
-	out.Message = "推送成功"
-	out.PushCount = pushCount
+	return nil
+}
 
-	return out, nil
+// handleDebouncedPush 处理防抖推送
+// 实现防抖机制：在900ms内如果有相同MessageKey的新消息，则取消旧消息的推送
+func (s *sWebSocket) handleDebouncedPush(ctx context.Context, in *dto.PushMessageInput) {
+	// 创建独立的context用于防抖逻辑，避免因原始context取消导致Redis操作失败
+	// 保留原始context的trace信息用于日志关联
+	debounceCtx := context.Background()
+
+	// 生成唯一的UUID标识本次推送
+	pushUUID := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	// 获取MessageKey专用锁
+	keyMutex := getMessageKeyMutex(in.MessageKey)
+	keyMutex.Lock()
+
+	// 设置当前推送的UUID到Redis，过期时间2秒
+	_, err := g.Redis().Set(debounceCtx, in.MessageKey, pushUUID)
+	if err != nil {
+		g.Log().Error(debounceCtx, "设置Redis防抖键失败", err, "message_key", in.MessageKey)
+		keyMutex.Unlock()
+		return
+	}
+	_, err = g.Redis().Expire(debounceCtx, in.MessageKey, 2)
+	if err != nil {
+		g.Log().Error(debounceCtx, "设置Redis过期时间失败", err, "message_key", in.MessageKey)
+	}
+
+	// 获取计数器
+	countKey := fmt.Sprintf("%s_count", in.MessageKey)
+	count, _ := g.Redis().Get(debounceCtx, countKey)
+	countInt := count.Int64()
+
+	// 增加计数器
+	_, err = g.Redis().Set(debounceCtx, countKey, countInt+1)
+	if err != nil {
+		g.Log().Error(debounceCtx, "设置计数器失败", err, "count_key", countKey)
+	}
+	_, err = g.Redis().Expire(debounceCtx, countKey, 2)
+	if err != nil {
+		g.Log().Error(debounceCtx, "设置计数器过期时间失败", err, "count_key", countKey)
+	}
+
+	keyMutex.Unlock()
+
+	// 等待900毫秒，观察是否有新的推送请求
+	time.Sleep(900 * time.Millisecond)
+
+	// 检查是否应该推送
+	shouldPush := true
+
+	// 如果计数小于等于10次，检查UUID是否被更新
+	if countInt <= 10 {
+		keyMutex.Lock()
+		currentUUID, _ := g.Redis().Get(debounceCtx, in.MessageKey)
+		if currentUUID.String() != pushUUID {
+			// UUID已被更新，说明有新的推送请求，取消本次推送
+			shouldPush = false
+			g.Log().Info(debounceCtx, "防抖取消推送", "message_key", in.MessageKey, "reason", "有新的推送请求")
+		}
+		keyMutex.Unlock()
+	}
+
+	// 如果不应该推送，直接返回
+	if !shouldPush {
+		return
+	}
+
+	// 清理计数器
+	keyMutex.Lock()
+	_, err = g.Redis().Del(debounceCtx, countKey)
+	if err != nil {
+		g.Log().Warning(debounceCtx, "删除计数器失败", err, "count_key", countKey)
+	}
+	keyMutex.Unlock()
+
+	// 执行实际推送（使用独立的context）
+	g.Log().Info(debounceCtx, "防抖推送消息", "message_key", in.MessageKey)
+	_, err = s.directPushMessage(debounceCtx, in)
+	if err != nil {
+		g.Log().Error(ctx, "防抖推送失败", err, "message_key", in.MessageKey)
+	}
 }
 
 // GetConnectionStats 获取连接统计信息
@@ -275,6 +484,8 @@ func (s *sWebSocket) CloseConnection(ctx context.Context, in *dto.CloseConnectio
 			if conn, ok := value.(ConnectionInfo); ok {
 				conn.ws.Close()
 				WsClients.Delete(key)
+				// 更新设备离线状态
+				s.updateDeviceOffline(ctx, key.(string))
 				out.ClosedCount++
 			}
 		}
@@ -283,6 +494,79 @@ func (s *sWebSocket) CloseConnection(ctx context.Context, in *dto.CloseConnectio
 	g.Log().Info(ctx, "关闭连接完成", "closed_count", out.ClosedCount)
 
 	return out, nil
+}
+
+// CloseAllConnections 关闭所有 WebSocket 连接
+// 用于服务优雅关闭时清理所有连接
+// 参数：
+//   - ctx: 上下文对象
+//
+// 返回：
+//   - closedCount: 关闭的连接数量
+func CloseAllConnections(ctx context.Context) int {
+	g.Log().Info(ctx, "开始关闭所有 WebSocket 连接")
+
+	closedCount := 0
+	var keysToClose []interface{}
+
+	// 1. 收集所有连接
+	WsClients.Range(func(key, value interface{}) bool {
+		keysToClose = append(keysToClose, key)
+		return true
+	})
+
+	// 2. 发送关闭消息并关闭连接
+	for _, key := range keysToClose {
+		if value, ok := WsClients.Load(key); ok {
+			if conn, ok := value.(ConnectionInfo); ok {
+				// 尝试发送关闭消息给客户端
+				closeMessage := ClientMessage{
+					Type: "server_shutdown",
+					Data: map[string]interface{}{
+						"message": "服务器正在关闭，连接即将断开",
+						"time":    time.Now().Format("2006-01-02 15:04:05"),
+					},
+				}
+
+				// 使用写锁保护
+				conn.writeMutex.Lock()
+				// 设置写入超时
+				conn.ws.SetWriteDeadline(time.Now().Add(2 * time.Second))
+				// 尝试发送关闭通知
+				if err := conn.ws.WriteJSON(closeMessage); err != nil {
+					g.Log().Warning(ctx, "发送关闭通知失败", err, "device_id", conn.DeviceId)
+				}
+				conn.writeMutex.Unlock()
+
+				// 发送 WebSocket 关闭帧
+				conn.ws.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "服务器关闭"),
+					time.Now().Add(time.Second),
+				)
+
+				// 关闭连接
+				conn.ws.Close()
+
+				// 从连接池中删除
+				WsClients.Delete(key)
+
+				// 更新设备离线状态
+				New().updateDeviceOffline(ctx, key.(string))
+
+				closedCount++
+
+				g.Log().Debug(ctx, "已关闭连接",
+					"company_uuid", conn.CompanyUuid,
+					"source_client", conn.SourceClient,
+					"device_id", conn.DeviceId,
+				)
+			}
+		}
+	}
+
+	g.Log().Info(ctx, "所有 WebSocket 连接已关闭", "total_closed", closedCount)
+	return closedCount
 }
 
 // HandleConnections GoFrame HTTP处理器（适配器）
@@ -343,11 +627,13 @@ func (s *sWebSocket) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Reque
 			ws.Close()
 		}
 
-		// 从连接池中移除
+		// 从连接池中移除并更新离线状态
 		WsClients.Range(func(key, value interface{}) bool {
 			if conn, ok := value.(ConnectionInfo); ok {
 				if conn.ws == ws {
 					WsClients.Delete(key)
+					// 更新设备离线状态
+					s.updateDeviceOffline(context.Background(), key.(string))
 					return false
 				}
 			}
@@ -433,13 +719,31 @@ func (s *sWebSocket) handleConnectionSuccess(ctx context.Context, ws *websocket.
 		return nil
 	}
 
-	// TODO: 验证token和设备绑定
-	// 这里需要从数据库查询设备信息和验证token
-	// 暂时使用简化逻辑
+	// 验证token
+	// 使用 GoFrame 框架的配置管理获取 JWT 密钥
+	jwtSecret := g.Cfg().MustGet(ctx, "jwt.secret").String()
+	if jwtSecret == "" {
+		g.Log().Error(ctx, "JWT密钥未配置")
+		ws.Close()
+		return nil
+	}
 
-	companyUuid := uint64(1) // TODO: 从token解析
-	staffUuid := uint64(1)   // TODO: 从token解析
-	deviceId := "device_1"   // TODO: 从token解析
+	claims, err := utility.ParseToken(token, jwtSecret)
+	if err != nil {
+		// 创建临时连接信息用于安全写入
+		tempConn := &ConnectionInfo{ws: ws, writeMutex: &sync.Mutex{}}
+		safeWriteMessage(tempConn, websocket.TextMessage, getMsgData(PushMessage{
+			Event: "connect",
+			State: consts.CodeFail,
+			Msg:   "Token Error",
+		}), 5*time.Second)
+		ws.Close()
+		return nil
+	}
+
+	companyUuid := claims.CompanyUuid
+	staffUuid := claims.StaffUuid
+	deviceId := claims.DeviceId
 
 	// 允许一个设备最多存在三个连接
 	connCount := 0
@@ -486,6 +790,61 @@ func (s *sWebSocket) handleConnectionSuccess(ctx context.Context, ws *websocket.
 	connKey := fmt.Sprintf("%d_%s_%s_%d", companyUuid, client, deviceId, time.Now().UnixNano())
 	WsClients.Store(connKey, *newConn)
 
+	// 获取客户端IP地址
+	ipAddress := getClientIP(r)
+	userAgent := r.UserAgent()
+
+	// 创建或更新设备在线记录（同一设备只保留一条记录）
+	nowTime := int(time.Now().Unix())
+
+	// 先查询是否已存在该设备的记录
+	var existingRecord *entity.DeviceOnline
+	err = dao.DeviceOnline.Ctx(ctx).
+		Where(dao.DeviceOnline.Columns().CompanyUuid, companyUuid).
+		Where(dao.DeviceOnline.Columns().DeviceId, deviceId).
+		Where(dao.DeviceOnline.Columns().SourceClient, client).
+		Scan(&existingRecord)
+
+	if err == nil && existingRecord != nil {
+		// 记录已存在，更新为在线状态
+		_, err = dao.DeviceOnline.Ctx(ctx).
+			Where(dao.DeviceOnline.Columns().Id, existingRecord.Id).
+			Update(do.DeviceOnline{
+				StaffUuid:         int64(staffUuid),
+				ConnectionKey:     connKey,
+				Status:            1, // 在线
+				ConnectTime:       nowTime,
+				LastHeartbeatTime: nowTime,
+				IpAddress:         ipAddress,
+				UserAgent:         userAgent,
+				UpdateTime:        nowTime,
+			})
+		if err != nil {
+			g.Log().Warning(ctx, "更新设备在线记录失败", err, "device_id", deviceId)
+		}
+	} else {
+		// 记录不存在，创建新记录
+		deviceOnlineRecord := &do.DeviceOnline{
+			CompanyUuid:       int64(companyUuid),
+			StaffUuid:         int64(staffUuid),
+			DeviceId:          deviceId,
+			SourceClient:      client,
+			ConnectionKey:     connKey,
+			Status:            1, // 在线
+			ConnectTime:       nowTime,
+			LastHeartbeatTime: nowTime,
+			IpAddress:         ipAddress,
+			UserAgent:         userAgent,
+			CreateTime:        nowTime,
+			UpdateTime:        nowTime,
+		}
+
+		_, err = dao.DeviceOnline.Ctx(ctx).Data(deviceOnlineRecord).Insert()
+		if err != nil {
+			g.Log().Warning(ctx, "创建设备在线记录失败", err, "device_id", deviceId)
+		}
+	}
+
 	// 监听关闭事件
 	ws.SetCloseHandler(func(code int, text string) error {
 		WsClients.Range(func(key, value interface{}) bool {
@@ -495,6 +854,8 @@ func (s *sWebSocket) handleConnectionSuccess(ctx context.Context, ws *websocket.
 					conn.DeviceId == deviceId &&
 					conn.ws == ws {
 					WsClients.Delete(key)
+					// 更新设备在线记录为离线状态
+					s.updateDeviceOffline(context.Background(), connKey)
 					return false
 				}
 			}
@@ -564,6 +925,7 @@ func (s *sWebSocket) handleMessage(ctx context.Context, ws *websocket.Conn, msg 
 // handleHeartbeat 处理心跳消息
 func (s *sWebSocket) handleHeartbeat(ctx context.Context, newConn *ConnectionInfo) {
 	// 更新心跳时间
+	var connKey string
 	WsClients.Range(func(key, value interface{}) bool {
 		if conn, ok := value.(ConnectionInfo); ok {
 			if conn.CompanyUuid == newConn.CompanyUuid &&
@@ -573,11 +935,17 @@ func (s *sWebSocket) handleHeartbeat(ctx context.Context, newConn *ConnectionInf
 				updatedConn := conn
 				updatedConn.LastHeartbeat = time.Now().Format(time.RFC3339)
 				WsClients.Store(key, updatedConn)
+				connKey = key.(string)
 				return false
 			}
 		}
 		return true
 	})
+
+	// 更新数据库中的心跳时间
+	if connKey != "" {
+		s.updateDeviceHeartbeat(ctx, connKey)
+	}
 
 	g.Log().Debug(ctx, "收到心跳消息", "device_id", newConn.DeviceId)
 }
@@ -616,7 +984,67 @@ func (s *sWebSocket) reportLanPrinter(ctx context.Context, newConn *ConnectionIn
 		"count", len(lanPrinters),
 	)
 
-	// TODO: 实现LAN打印机数据处理逻辑
+	// 发布 LAN 打印机上报消息到 MQ
+	s.publishLanPrinterReport(ctx, newConn, lanPrinters)
+}
+
+// publishLanPrinterReport 发布 LAN 打印机上报消息到 MQ
+// 将收银机上报的局域网打印机信息发布到消息队列，供其他服务消费
+// 参数：
+//   - ctx: 上下文对象
+//   - conn: WebSocket 连接信息
+//   - printers: LAN 打印机列表
+func (s *sWebSocket) publishLanPrinterReport(ctx context.Context, conn *ConnectionInfo, printers []LanPrinter) {
+	// 转换打印机列表为 ttpos-api 定义的结构体
+	apiPrinters := make([]ttposWebsocketMsg.LanPrinterInfo, 0, len(printers))
+	for _, p := range printers {
+		apiPrinters = append(apiPrinters, ttposWebsocketMsg.LanPrinterInfo{
+			IP:     p.Ip,
+			Port:   p.Port,
+			Status: p.Status,
+			Remark: p.Remark,
+		})
+	}
+
+	// 创建消息体（使用 ttpos-api 定义的结构体）
+	now := time.Now()
+	message := ttposWebsocketMsg.NewLanPrinterReportMessage(
+		conn.CompanyUuid,
+		conn.StaffUuid,
+		conn.DeviceId,
+		conn.SourceClient,
+		apiPrinters,
+	)
+	message.ReportTime = now.Format("2006-01-02 15:04:05")
+	message.Timestamp = now.Unix()
+
+	// 验证消息
+	if err := message.Validate(); err != nil {
+		g.Log().Error(ctx, "LAN 打印机上报消息验证失败", err,
+			"company_uuid", conn.CompanyUuid,
+			"device_id", conn.DeviceId,
+			"printer_count", len(printers),
+		)
+		return
+	}
+
+	// 发布到消息队列
+	// Topic: constant.TopicLanPrinterReport
+	if err := queue.PushWithContext(ctx, constant.TopicLanPrinterReport, message); err != nil {
+		g.Log().Error(ctx, "发布 LAN 打印机上报消息失败", err,
+			"company_uuid", conn.CompanyUuid,
+			"device_id", conn.DeviceId,
+			"printer_count", len(printers),
+		)
+		return
+	}
+
+	g.Log().Info(ctx, "LAN 打印机上报消息已发布到 MQ",
+		"company_uuid", conn.CompanyUuid,
+		"device_id", conn.DeviceId,
+		"printer_count", len(printers),
+		"topic", constant.TopicLanPrinterReport,
+	)
 }
 
 // checkHeartbeatTimeout 检查心跳超时的连接并断开
@@ -780,4 +1208,87 @@ func fixJSONFormat(data []byte) []byte {
 	str = strings.ReplaceAll(str, `: lan_print_report`, `: "lan_print_report"`)
 
 	return []byte(str)
+}
+
+// updateDeviceHeartbeat 更新设备心跳时间
+// 在数据库中更新设备的最后心跳时间
+func (s *sWebSocket) updateDeviceHeartbeat(ctx context.Context, connectionKey string) {
+	nowTime := int(time.Now().Unix())
+	_, err := dao.DeviceOnline.Ctx(ctx).
+		Where(dao.DeviceOnline.Columns().ConnectionKey, connectionKey).
+		Where(dao.DeviceOnline.Columns().Status, 1).
+		Update(do.DeviceOnline{
+			LastHeartbeatTime: nowTime,
+			UpdateTime:        nowTime,
+		})
+	if err != nil {
+		g.Log().Warning(ctx, "更新设备心跳时间失败", err, "connection_key", connectionKey)
+	}
+}
+
+// updateDeviceOffline 更新设备为离线状态
+// 在数据库中标记设备为离线状态
+func (s *sWebSocket) updateDeviceOffline(ctx context.Context, connectionKey string) {
+	nowTime := int(time.Now().Unix())
+	_, err := dao.DeviceOnline.Ctx(ctx).
+		Where(dao.DeviceOnline.Columns().ConnectionKey, connectionKey).
+		Update(do.DeviceOnline{
+			Status:         0, // 离线
+			DisconnectTime: nowTime,
+			UpdateTime:     nowTime,
+		})
+	if err != nil {
+		g.Log().Warning(ctx, "更新设备离线状态失败", err, "connection_key", connectionKey)
+	}
+}
+
+// updateDeviceOfflineByInfo 通过设备信息更新设备为离线状态
+// 用于无法获取 connection_key 的场景
+func (s *sWebSocket) updateDeviceOfflineByInfo(ctx context.Context, companyUuid uint64, deviceId, sourceClient string) {
+	nowTime := int(time.Now().Unix())
+	_, err := dao.DeviceOnline.Ctx(ctx).
+		Where(dao.DeviceOnline.Columns().CompanyUuid, companyUuid).
+		Where(dao.DeviceOnline.Columns().DeviceId, deviceId).
+		Where(dao.DeviceOnline.Columns().SourceClient, sourceClient).
+		Update(do.DeviceOnline{
+			Status:         0, // 离线
+			DisconnectTime: nowTime,
+			UpdateTime:     nowTime,
+		})
+	if err != nil {
+		g.Log().Warning(ctx, "更新设备离线状态失败", err,
+			"company_uuid", companyUuid,
+			"device_id", deviceId,
+			"source_client", sourceClient,
+		)
+	}
+}
+
+// getClientIP 获取客户端真实IP地址
+// 优先从代理头中获取，如果没有则从RemoteAddr获取
+func getClientIP(r *http.Request) string {
+	// 尝试从 X-Forwarded-For 头获取
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip != "" {
+		// X-Forwarded-For 可能包含多个IP，取第一个
+		ips := strings.Split(ip, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// 尝试从 X-Real-IP 头获取
+	ip = r.Header.Get("X-Real-IP")
+	if ip != "" {
+		return ip
+	}
+
+	// 从 RemoteAddr 获取
+	ip = r.RemoteAddr
+	// RemoteAddr 格式为 "IP:Port"，需要去掉端口
+	if idx := strings.LastIndex(ip, ":"); idx != -1 {
+		ip = ip[:idx]
+	}
+
+	return ip
 }
