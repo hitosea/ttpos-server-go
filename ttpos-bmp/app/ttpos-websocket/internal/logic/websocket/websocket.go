@@ -49,90 +49,6 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// StartRedisSubscriber 启动 Redis 订阅者
-// 在服务启动时调用，订阅 websocket_msg_push 频道
-func StartRedisSubscriber(ctx context.Context) {
-	g.Log().Info(ctx, "启动Redis订阅者")
-
-	// 使用 GoFrame Redis 订阅
-	conn, _, err := g.Redis().Subscribe(ctx, "websocket_msg_push")
-	if err != nil {
-		g.Log().Error(ctx, "订阅Redis频道失败", err)
-		return
-	}
-	defer conn.Close(ctx)
-
-	// 循环接收消息
-	for {
-		select {
-		case <-ctx.Done():
-			g.Log().Info(ctx, "Redis订阅者已停止")
-			return
-		default:
-			// 接收订阅消息
-			msg, err := conn.ReceiveMessage(ctx)
-			if err != nil {
-				if err == context.Canceled || err == context.DeadlineExceeded {
-					g.Log().Info(ctx, "Redis订阅者已停止")
-					return
-				}
-				g.Log().Error(ctx, "接收Redis消息失败", err)
-				time.Sleep(100 * time.Millisecond) // 错误时等待一下再重试
-				continue
-			}
-
-			if msg == nil {
-				continue
-			}
-
-			g.Log().Debug(ctx, "收到Redis消息", "payload", msg.Payload)
-
-			// 解析消息
-			var pushInput dto.PushMessageInput
-			if err := json.Unmarshal([]byte(msg.Payload), &pushInput); err != nil {
-				g.Log().Error(ctx, "解析Redis消息失败", err, "payload", msg.Payload)
-				continue
-			}
-
-			// 处理推送消息（在本节点推送）
-			if err := service.Websocket().(*sWebSocket).processPushMessage(ctx, &pushInput); err != nil {
-				g.Log().Error(ctx, "处理推送消息失败", err)
-			}
-		}
-	}
-}
-
-// 防抖相关的全局变量
-var (
-	// 基于MessageKey的细粒度锁映射
-	messageKeyMutexes = sync.Map{} // map[string]*sync.Mutex
-	// 保护messageKeyMutexes的锁
-	mutexMapLock sync.Mutex
-)
-
-// getMessageKeyMutex 获取指定MessageKey的专用锁
-func getMessageKeyMutex(messageKey string) *sync.Mutex {
-	// 先尝试获取已存在的锁
-	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
-		return mutex.(*sync.Mutex)
-	}
-
-	// 如果不存在，需要创建新锁
-	mutexMapLock.Lock()
-	defer mutexMapLock.Unlock()
-
-	// 双重检查，防止并发创建
-	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
-		return mutex.(*sync.Mutex)
-	}
-
-	// 创建新锁并存储
-	newMutex := &sync.Mutex{}
-	messageKeyMutexes.Store(messageKey, newMutex)
-
-	return newMutex
-}
-
 // ConnectionInfo WebSocket 连接信息
 type ConnectionInfo struct {
 	CompanyUuid   uint64          `json:"company_uuid"`   // 公司UUID
@@ -190,6 +106,14 @@ func init() {
 	go checkHeartbeatTimeout()
 }
 
+// 防抖相关的全局变量
+var (
+	// 基于MessageKey的细粒度锁映射
+	messageKeyMutexes = sync.Map{} // map[string]*sync.Mutex
+	// 保护messageKeyMutexes的锁
+	mutexMapLock sync.Mutex
+)
+
 // PushMessage 推送消息到客户端
 // 根据条件筛选连接并推送消息
 // 参数：
@@ -245,7 +169,7 @@ func (s *sWebSocket) directPushMessage(ctx context.Context, in *dto.PushMessageI
 	}
 
 	// 通过 Redis 发布消息到所有节点
-	_, err = g.Redis().Publish(ctx, "websocket_msg_push", string(dataBytes))
+	_, err = g.Redis().Publish(ctx, consts.ChannelWebsocketMsgPush, string(dataBytes))
 	if err != nil {
 		g.Log().Error(ctx, "发布消息到Redis失败", err)
 		return out, gerror.Wrap(err, "发布消息失败")
@@ -1291,4 +1215,27 @@ func getClientIP(r *http.Request) string {
 	}
 
 	return ip
+}
+
+// getMessageKeyMutex 获取指定MessageKey的专用锁
+func getMessageKeyMutex(messageKey string) *sync.Mutex {
+	// 先尝试获取已存在的锁
+	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
+		return mutex.(*sync.Mutex)
+	}
+
+	// 如果不存在，需要创建新锁
+	mutexMapLock.Lock()
+	defer mutexMapLock.Unlock()
+
+	// 双重检查，防止并发创建
+	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
+		return mutex.(*sync.Mutex)
+	}
+
+	// 创建新锁并存储
+	newMutex := &sync.Mutex{}
+	messageKeyMutexes.Store(messageKey, newMutex)
+
+	return newMutex
 }

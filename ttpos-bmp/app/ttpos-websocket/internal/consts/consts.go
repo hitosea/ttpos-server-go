@@ -109,9 +109,7 @@ const (
 	ClientMessageTypeLanPrintReport = "lan_print_report" // LAN打印机上报
 )
 
-// 打印机类型常量
+// websocket_msg_push 频道
 const (
-	PrinterTypeXprinterLan = "XPRINTER_LAN" // 芯烨网络打印机
-	PrinterTypeGpC200IV    = "GP_C200IV"    // 佳博C200IV标签机
-	PrinterTypeGpD300I     = "GP_D300I"     // 佳博D300I小票机
+	ChannelWebsocketMsgPush = "websocket_msg_push" // 推送消息频道
 )

@@ -102,27 +102,6 @@ func TestClientMessageTypeConstants(t *testing.T) {
 	}
 }
 
-// TestPrinterTypeConstants 测试打印机类型常量
-func TestPrinterTypeConstants(t *testing.T) {
-	tests := []struct {
-		name     string
-		constant string
-		expected string
-	}{
-		{"PrinterTypeXprinterLan", PrinterTypeXprinterLan, "XPRINTER_LAN"},
-		{"PrinterTypeGpC200IV", PrinterTypeGpC200IV, "GP_C200IV"},
-		{"PrinterTypeGpD300I", PrinterTypeGpD300I, "GP_D300I"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.constant != tt.expected {
-				t.Errorf("%s = %s; 期望 %s", tt.name, tt.constant, tt.expected)
-			}
-		})
-	}
-}
-
 // TestConstantsUniqueness 测试常量的唯一性
 func TestConstantsUniqueness(t *testing.T) {
 	// 测试来源类型唯一性
