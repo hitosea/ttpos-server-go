@@ -1,0 +1,484 @@
+# Git 提交和分支管理规范
+
+> 本规范适用于所有代码提交和分支管理
+
+## 📋 重要说明
+
+**项目已有完整的Git提交规范文档**，详见：
+- **根目录的 `COMMIT_CONVENTION.md`** - 完整的Git提交规范和分支管理策略
+
+本文档是对该规范的补充和实践指南。
+
+## 🎯 核心原则
+
+### 1. 提交信息规范
+
+✅ **使用 Conventional Commits 规范**
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### 2. 提交类型（Type）
+
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| `feat` | 新功能 | `feat(auth): 添加用户登录功能` |
+| `fix` | 修复Bug | `fix(order): 修复订单金额计算错误` |
+| `docs` | 文档变更 | `docs: 更新API文档` |
+| `style` | 代码格式 | `style: 统一代码缩进格式` |
+| `refactor` | 重构 | `refactor(service): 重构用户服务层代码` |
+| `perf` | 性能优化 | `perf(query): 优化数据库查询性能` |
+| `test` | 测试相关 | `test(user): 添加用户模块单元测试` |
+| `build` | 构建系统 | `build: 升级GoFrame到v2.9.0` |
+| `ci` | CI配置 | `ci: 添加自动部署脚本` |
+| `chore` | 其他变更 | `chore: 更新.gitignore` |
+
+## 🌿 分支管理
+
+### 1. 分支类型
+
+| 分支类型 | 命名格式 | 说明 | 示例 |
+|---------|----------|------|------|
+| 主分支 | `main` | 生产环境分支 | `main` |
+| 开发分支 | `develop` | 开发主分支 | `develop` |
+| 功能分支 | `feature/*` | 新功能开发 | `feature/user-login` |
+| 修复分支 | `hotfix/*` | 紧急Bug修复 | `hotfix/order-calculation` |
+| 发布分支 | `release/*` | 版本发布准备 | `release/v2.0.0` |
+
+### 2. 分支工作流
+
+```
+main (生产环境)
+  ↑
+  └── release/v2.0.0 (发布准备)
+        ↑
+        └── develop (开发主分支)
+              ↑
+              ├── feature/user-login (功能1)
+              ├── feature/order-payment (功能2)
+              └── feature/product-search (功能3)
+
+hotfix/fix-critical-bug (紧急修复)
+  ↓
+main (直接修复生产问题)
+```
+
+## 📝 提交规范详解
+
+### 1. 基础提交示例
+
+✅ **正确的提交信息**
+```bash
+# 新功能
+git commit -m "feat(auth): 添加JWT令牌刷新功能"
+
+# 修复Bug
+git commit -m "fix(order): 修复订单状态更新失败的问题"
+
+# 文档更新
+git commit -m "docs: 更新README安装说明"
+
+# 代码格式
+git commit -m "style: 统一使用gofmt格式化代码"
+
+# 重构
+git commit -m "refactor(service): 优化用户服务代码结构"
+
+# 性能优化
+git commit -m "perf(cache): 添加Redis缓存提升查询性能"
+
+# 测试
+git commit -m "test(payment): 添加支付模块集成测试"
+
+# 构建
+git commit -m "build: 升级依赖包版本"
+
+# 其他
+git commit -m "chore: 更新.gitignore忽略规则"
+```
+
+❌ **错误的提交信息**
+```bash
+# ❌ 缺少type
+git commit -m "添加用户登录功能"
+
+# ❌ type错误
+git commit -m "add(auth): 添加用户登录功能"
+
+# ❌ 缺少subject
+git commit -m "feat(auth):"
+
+# ❌ subject太短
+git commit -m "feat: 修复"
+
+# ❌ 使用中文type
+git commit -m "新功能(auth): 添加用户登录"
+```
+
+### 2. 详细提交示例
+
+✅ **包含详细描述的提交**
+```bash
+git commit -m "feat(message): 添加Mailgun邮件发送功能
+
+- 集成Mailgun SDK
+- 实现邮件发送服务
+- 添加消息队列支持
+- 完善错误处理和日志记录
+
+相关文档: docs/MAILGUN_USAGE.md"
+```
+
+### 3. Revert 提交
+
+✅ **恢复之前的提交**
+```bash
+git revert <commit-hash>
+# 自动生成: Revert "feat(auth): 添加用户登录功能"
+```
+
+## 🔄 工作流程
+
+### 1. 功能开发流程
+
+```bash
+# 1. 从develop创建功能分支
+git checkout develop
+git pull origin develop
+git checkout -b feature/user-login
+
+# 2. 开发功能并提交
+git add .
+git commit -m "feat(auth): 添加用户登录功能"
+
+# 3. 推送到远程
+git push origin feature/user-login
+
+# 4. 创建Pull Request
+# 在GitHub/GitLab上创建PR，从feature/user-login到develop
+
+# 5. Code Review通过后合并
+# 合并后删除功能分支
+git checkout develop
+git pull origin develop
+git branch -d feature/user-login
+git push origin --delete feature/user-login
+```
+
+### 2. Bug修复流程
+
+```bash
+# 1. 从develop创建修复分支
+git checkout develop
+git pull origin develop
+git checkout -b fix/order-amount
+
+# 2. 修复Bug并提交
+git add .
+git commit -m "fix(order): 修复订单金额计算错误"
+
+# 3. 推送并创建PR
+git push origin fix/order-amount
+# 创建PR到develop
+
+# 4. 合并后删除分支
+git checkout develop
+git pull origin develop
+git branch -d fix/order-amount
+```
+
+### 3. 紧急修复流程
+
+```bash
+# 1. 从main创建hotfix分支
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-security-fix
+
+# 2. 修复问题并提交
+git add .
+git commit -m "fix(security): 修复SQL注入漏洞"
+
+# 3. 合并到main和develop
+git checkout main
+git merge hotfix/critical-security-fix
+git push origin main
+
+git checkout develop
+git merge hotfix/critical-security-fix
+git push origin develop
+
+# 4. 删除hotfix分支
+git branch -d hotfix/critical-security-fix
+```
+
+### 4. 发布流程
+
+```bash
+# 1. 从develop创建release分支
+git checkout develop
+git pull origin develop
+git checkout -b release/v2.0.0
+
+# 2. 准备发布（更新版本号、文档等）
+git add .
+git commit -m "chore(release): 准备v2.0.0发布"
+
+# 3. 合并到main
+git checkout main
+git merge release/v2.0.0
+git tag -a v2.0.0 -m "Release v2.0.0"
+git push origin main --tags
+
+# 4. 合并回develop
+git checkout develop
+git merge release/v2.0.0
+git push origin develop
+
+# 5. 删除release分支
+git branch -d release/v2.0.0
+```
+
+## 🔍 Code Review 检查清单
+
+### 提交前自查
+
+- [ ] 代码符合命名规范
+- [ ] 添加了必要的注释（中文）
+- [ ] 错误处理正确
+- [ ] API响应格式统一
+- [ ] 添加了单元测试（如需要）
+- [ ] 性能考虑（查询优化、缓存等）
+- [ ] 安全检查（SQL注入、XSS等）
+- [ ] 日志记录合理
+- [ ] 提交信息符合规范
+
+### Review 要点
+
+- [ ] 代码逻辑正确
+- [ ] 没有明显的性能问题
+- [ ] 没有安全隐患
+- [ ] 代码可读性好
+- [ ] 测试覆盖充分
+- [ ] 文档更新完整
+
+## 🛠️ Git 常用命令
+
+### 1. 分支操作
+
+```bash
+# 查看所有分支
+git branch -a
+
+# 创建并切换分支
+git checkout -b feature/new-feature
+
+# 切换分支
+git checkout develop
+
+# 删除本地分支
+git branch -d feature/old-feature
+
+# 删除远程分支
+git push origin --delete feature/old-feature
+
+# 重命名分支
+git branch -m old-name new-name
+```
+
+### 2. 提交操作
+
+```bash
+# 查看状态
+git status
+
+# 添加文件
+git add .
+git add file1.go file2.go
+
+# 提交
+git commit -m "feat(user): 添加用户管理功能"
+
+# 修改最后一次提交
+git commit --amend
+
+# 查看提交历史
+git log --oneline
+git log --graph --oneline --all
+```
+
+### 3. 同步操作
+
+```bash
+# 拉取最新代码
+git pull origin develop
+
+# 推送代码
+git push origin feature/new-feature
+
+# 拉取并变基
+git pull --rebase origin develop
+```
+
+### 4. 撤销操作
+
+```bash
+# 撤销工作区修改
+git checkout -- file.go
+
+# 撤销暂存区
+git reset HEAD file.go
+
+# 撤销提交（保留修改）
+git reset --soft HEAD~1
+
+# 撤销提交（不保留修改）
+git reset --hard HEAD~1
+
+# 恢复某个提交
+git revert <commit-hash>
+```
+
+### 5. 合并操作
+
+```bash
+# 合并分支
+git merge feature/new-feature
+
+# 变基
+git rebase develop
+
+# 解决冲突后继续
+git add .
+git rebase --continue
+
+# 中止变基
+git rebase --abort
+```
+
+## 🚫 禁止操作
+
+### 严格禁止
+
+❌ **不要做以下操作**：
+```bash
+# ❌ 强制推送到main/master
+git push --force origin main
+
+# ❌ 直接在main分支开发
+git checkout main
+# 开发代码...
+
+# ❌ 提交包含敏感信息
+git add .env
+git commit -m "添加配置文件"
+
+# ❌ 跳过钩子
+git commit --no-verify
+
+# ❌ 修改已推送的历史
+git push --force
+```
+
+## 📚 参考资料
+
+### 官方文档
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)
+- [Git官方文档](https://git-scm.com/doc)
+
+### 项目文档
+- [COMMIT_CONVENTION.md](/COMMIT_CONVENTION.md) - 完整的提交规范
+- [HUSKY_GUIDE.md](/HUSKY_GUIDE.md) - Git钩子使用指南
+
+## 💡 最佳实践
+
+### 1. 提交频率
+
+✅ **推荐做法**：
+- 完成一个小功能就提交一次
+- 提交应该是原子性的（一个提交只做一件事）
+- 每天至少提交一次代码
+
+❌ **不推荐做法**：
+- 一次提交包含多个不相关的修改
+- 几天才提交一次代码
+- 提交未完成的功能
+
+### 2. 提交信息
+
+✅ **推荐做法**：
+- 使用英文type，中文subject
+- 描述清晰、简洁
+- 说明做了什么，为什么这样做
+
+❌ **不推荐做法**：
+- 提交信息过于简单："修复"、"更新"
+- 提交信息过于冗长
+- 提交信息与实际修改不符
+
+### 3. 分支管理
+
+✅ **推荐做法**：
+- 及时删除已合并的分支
+- 定期同步develop分支
+- 功能分支保持小而专注
+
+❌ **不推荐做法**：
+- 长期不合并的功能分支
+- 在功能分支上开发多个不相关功能
+- 不删除已合并的分支
+
+## 🔧 工具配置
+
+### 1. Git配置
+
+```bash
+# 配置用户信息
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# 配置编辑器
+git config --global core.editor "vim"
+
+# 配置别名
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+git config --global alias.lg "log --graph --oneline --all"
+```
+
+### 2. .gitignore
+
+✅ **项目已配置 .gitignore**
+```gitignore
+# IDE
+.idea/
+.vscode/
+
+# 构建产物
+bin/
+tmp/
+__debug_*
+
+# 日志
+*.log
+
+# 环境配置
+.env
+
+# 依赖
+node_modules/
+vendor/
+```
+
+---
+
+**最后更新**: 2025-11-16  
+**维护者**: TTPOS Team  
+**参考**: /COMMIT_CONVENTION.md

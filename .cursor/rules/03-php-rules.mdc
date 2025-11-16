@@ -1,0 +1,866 @@
+# PHP 开发规范
+
+> 本规范适用于 `admin/` 目录下的 PHP 代码开发，基于 ThinkPHP 6.0 框架
+
+## 📋 目录
+
+1. [项目结构](#项目结构)
+2. [命名规范](#命名规范)
+3. [MVC架构](#mvc架构)
+4. [数据库操作](#数据库操作)
+5. [验证器使用](#验证器使用)
+6. [API文档规范](#api文档规范)
+7. [错误处理](#错误处理)
+8. [中间件开发](#中间件开发)
+
+## 项目结构
+
+```
+admin/
+├── app/
+│   ├── admin/              # 管理后台模块
+│   │   ├── controller/     # 控制器
+│   │   ├── model/          # 模型
+│   │   ├── service/        # 服务层
+│   │   ├── validate/       # 验证器
+│   │   └── middleware/     # 中间件
+│   ├── shop/               # 店铺后台模块
+│   │   ├── controller/     # 控制器
+│   │   ├── model/          # 模型
+│   │   ├── service/        # 服务层
+│   │   └── validate/       # 验证器
+│   └── common/             # 共享代码
+│       ├── controller/     # 公共控制器
+│       ├── model/          # 公共模型
+│       ├── service/        # 公共服务
+│       ├── library/        # 类库
+│       └── middleware/     # 公共中间件
+├── config/                 # 配置文件
+├── database/               # 数据库
+│   ├── migrations/         # 迁移文件
+│   └── seeds/              # 种子文件
+├── views/                  # 前端代码（Vue3）
+│   ├── admin/              # 管理后台前端
+│   └── shop/               # 店铺后台前端
+└── public/                 # 公共资源
+```
+
+## 命名规范
+
+### 1. 类命名
+
+✅ **正确**: 使用大驼峰命名（PascalCase）
+```php
+<?php
+namespace app\admin\controller;
+
+class UserController extends Controller
+{
+    // ...
+}
+
+class OrderService
+{
+    // ...
+}
+
+class ProductModel extends BaseModel
+{
+    // ...
+}
+```
+
+❌ **错误**:
+```php
+class user_controller          // ❌ 下划线命名
+class userController           // ❌ 小驼峰
+class User_Controller          // ❌ 混合命名
+```
+
+### 2. 方法命名
+
+✅ **正确**: 使用小驼峰命名（camelCase）
+```php
+class UserController
+{
+    public function getUserList()
+    {
+        // ...
+    }
+    
+    public function createUser()
+    {
+        // ...
+    }
+    
+    public function updateUserInfo()
+    {
+        // ...
+    }
+}
+```
+
+❌ **错误**:
+```php
+public function get_user_list()    // ❌ 下划线命名
+public function GetUserList()      // ❌ 大驼峰
+```
+
+### 3. 变量命名
+
+✅ **正确**: 使用小驼峰命名（camelCase）
+```php
+$userId = 1;
+$userName = 'test';
+$orderList = [];
+$productInfo = [];
+```
+
+❌ **错误**:
+```php
+$user_id = 1;                  // ❌ 下划线命名
+$UserName = 'test';            // ❌ 大驼峰
+```
+
+### 4. 常量命名
+
+✅ **正确**: 使用全大写+下划线
+```php
+const ORDER_STATUS_PENDING = 0;
+const ORDER_STATUS_PAID = 1;
+const MAX_PAGE_SIZE = 100;
+```
+
+## MVC架构
+
+### 1. 控制器层（Controller）
+
+✅ **正确的控制器结构**
+```php
+<?php
+namespace app\admin\controller;
+
+use app\admin\model\User;
+use app\admin\service\UserService;
+use app\admin\validate\UserValidate;
+use think\Request;
+use hg\apidoc\annotation as Apidoc;
+
+/**
+ * 用户管理控制器
+ * @Apidoc\Title("用户管理")
+ * @Apidoc\Group("admin")
+ */
+class UserController extends Controller
+{
+    /**
+     * 获取用户列表
+     * @Apidoc\Title("获取用户列表")
+     * @Apidoc\Method("GET")
+     * @Apidoc\Param("page", type="int", require=false, desc="页码")
+     * @Apidoc\Param("page_size", type="int", require=false, desc="每页数量")
+     * @Apidoc\Returned("list", type="array", desc="用户列表")
+     * @Apidoc\Returned("meta", type="object", desc="分页信息")
+     */
+    public function getUserList(Request $request)
+    {
+        // 获取参数
+        $page = $request->param('page', 1);
+        $pageSize = $request->param('page_size', 20);
+        
+        // 调用服务层
+        $userService = new UserService();
+        $result = $userService->getUserList($page, $pageSize);
+        
+        // 返回响应
+        return $this->renderSuccess($result);
+    }
+    
+    /**
+     * 创建用户
+     * @Apidoc\Title("创建用户")
+     * @Apidoc\Method("POST")
+     * @Apidoc\Param("username", type="string", require=true, desc="用户名")
+     * @Apidoc\Param("email", type="string", require=true, desc="邮箱")
+     * @Apidoc\Param("password", type="string", require=true, desc="密码")
+     */
+    public function createUser(Request $request)
+    {
+        // 参数验证
+        $data = $request->post();
+        $validate = new UserValidate();
+        if (!$validate->scene('create')->check($data)) {
+            return $this->renderError($validate->getError());
+        }
+        
+        // 调用服务层
+        $userService = new UserService();
+        $result = $userService->createUser($data);
+        
+        return $this->renderSuccess($result, '创建成功');
+    }
+}
+```
+
+### 2. 服务层（Service）
+
+✅ **正确的服务层结构**
+```php
+<?php
+namespace app\admin\service;
+
+use app\admin\model\User;
+use think\facade\Db;
+
+/**
+ * 用户服务类
+ */
+class UserService
+{
+    /**
+     * 获取用户列表
+     * @param int $page 页码
+     * @param int $pageSize 每页数量
+     * @return array
+     */
+    public function getUserList($page = 1, $pageSize = 20)
+    {
+        // 查询数据
+        $list = User::where('delete_time', 0)
+            ->page($page, $pageSize)
+            ->order('create_time', 'desc')
+            ->select()
+            ->toArray();
+        
+        // 获取总数
+        $total = User::where('delete_time', 0)->count();
+        
+        return [
+            'list' => $list,
+            'meta' => [
+                'page_no' => $page,
+                'page_size' => $pageSize,
+                'total' => $total,
+            ],
+        ];
+    }
+    
+    /**
+     * 创建用户
+     * @param array $data 用户数据
+     * @return array
+     * @throws \Exception
+     */
+    public function createUser($data)
+    {
+        // 开启事务
+        Db::startTrans();
+        try {
+            // 创建用户
+            $user = User::create([
+                'uuid' => $this->generateUuid(),
+                'username' => $data['username'],
+                'email' => $data['email'],
+                'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+                'create_time' => time(),
+                'update_time' => time(),
+            ]);
+            
+            // 其他业务逻辑...
+            
+            // 提交事务
+            Db::commit();
+            
+            return [
+                'user_id' => $user->id,
+                'uuid' => $user->uuid,
+            ];
+        } catch (\Exception $e) {
+            // 回滚事务
+            Db::rollback();
+            throw $e;
+        }
+    }
+    
+    /**
+     * 生成UUID
+     * @return int
+     */
+    private function generateUuid()
+    {
+        // UUID生成逻辑
+        return time() . rand(1000, 9999);
+    }
+}
+```
+
+### 3. 模型层（Model）
+
+✅ **正确的模型结构**
+```php
+<?php
+namespace app\admin\model;
+
+use app\common\model\BaseModel;
+
+/**
+ * 用户模型
+ */
+class User extends BaseModel
+{
+    // 表名
+    protected $name = 'user';
+    
+    // 主键
+    protected $pk = 'id';
+    
+    // 字段类型转换
+    protected $type = [
+        'id' => 'integer',
+        'uuid' => 'integer',
+        'status' => 'integer',
+        'create_time' => 'integer',
+        'update_time' => 'integer',
+        'delete_time' => 'integer',
+    ];
+    
+    // 自动时间戳
+    protected $autoWriteTimestamp = false;
+    
+    // 软删除字段
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
+    
+    /**
+     * 获取器 - 格式化创建时间
+     * @param $value
+     * @return string
+     */
+    public function getCreateTimeAttr($value)
+    {
+        return $value > 0 ? date('Y-m-d H:i:s', $value) : '';
+    }
+    
+    /**
+     * 修改器 - 密码加密
+     * @param $value
+     * @return string
+     */
+    public function setPasswordAttr($value)
+    {
+        return password_hash($value, PASSWORD_DEFAULT);
+    }
+    
+    /**
+     * 搜索器 - 用户名搜索
+     * @param $query
+     * @param $value
+     */
+    public function searchUsernameAttr($query, $value)
+    {
+        $query->where('username', 'like', '%' . $value . '%');
+    }
+    
+    /**
+     * 关联 - 用户角色
+     * @return \think\model\relation\HasMany
+     */
+    public function roles()
+    {
+        return $this->hasMany(UserRole::class, 'user_id', 'id');
+    }
+}
+```
+
+## 数据库操作
+
+### 1. 查询操作
+
+✅ **正确的查询方式**
+```php
+// 查询单条
+$user = User::where('id', 1)->find();
+
+// 查询多条
+$users = User::where('status', 1)
+    ->where('delete_time', 0)
+    ->select();
+
+// 分页查询
+$users = User::where('status', 1)
+    ->page($page, $pageSize)
+    ->select();
+
+// 关联查询
+$user = User::with(['roles'])->find(1);
+
+// 聚合查询
+$count = User::where('status', 1)->count();
+$sum = User::where('status', 1)->sum('amount');
+
+// 使用搜索器
+$users = User::withSearch(['username'], ['username' => 'test'])->select();
+```
+
+### 2. 插入操作
+
+✅ **正确的插入方式**
+```php
+// 单条插入
+$user = User::create([
+    'uuid' => $uuid,
+    'username' => 'test',
+    'email' => 'test@example.com',
+    'create_time' => time(),
+    'update_time' => time(),
+]);
+
+// 批量插入
+User::insertAll([
+    ['username' => 'user1', 'email' => 'user1@example.com'],
+    ['username' => 'user2', 'email' => 'user2@example.com'],
+]);
+```
+
+### 3. 更新操作
+
+✅ **正确的更新方式**
+```php
+// 更新单条
+User::where('id', 1)->update([
+    'username' => 'new_name',
+    'update_time' => time(),
+]);
+
+// 更新多条
+User::where('status', 0)->update([
+    'status' => 1,
+    'update_time' => time(),
+]);
+
+// 自增自减
+User::where('id', 1)->inc('login_count')->update();
+User::where('id', 1)->dec('balance', 10)->update();
+```
+
+### 4. 删除操作
+
+✅ **正确的删除方式（软删除）**
+```php
+// 软删除
+User::where('id', 1)->update(['delete_time' => time()]);
+
+// 使用模型软删除
+$user = User::find(1);
+$user->delete();
+
+// 查询包含软删除的数据
+$users = User::withTrashed()->select();
+
+// 只查询软删除的数据
+$users = User::onlyTrashed()->select();
+```
+
+### 5. 事务操作
+
+✅ **正确的事务使用**
+```php
+use think\facade\Db;
+
+// 方式1：手动控制
+Db::startTrans();
+try {
+    // 业务逻辑
+    User::create($userData);
+    Order::create($orderData);
+    
+    Db::commit();
+} catch (\Exception $e) {
+    Db::rollback();
+    throw $e;
+}
+
+// 方式2：闭包自动控制
+Db::transaction(function () use ($userData, $orderData) {
+    User::create($userData);
+    Order::create($orderData);
+});
+```
+
+## 验证器使用
+
+### 1. 验证器定义
+
+✅ **正确的验证器结构**
+```php
+<?php
+namespace app\admin\validate;
+
+use think\Validate;
+
+/**
+ * 用户验证器
+ */
+class UserValidate extends Validate
+{
+    // 验证规则
+    protected $rule = [
+        'username' => 'require|length:2,20|unique:user',
+        'email' => 'require|email|unique:user',
+        'password' => 'require|length:6,20',
+        'phone' => 'mobile',
+        'age' => 'number|between:1,150',
+    ];
+    
+    // 错误消息
+    protected $message = [
+        'username.require' => '用户名不能为空',
+        'username.length' => '用户名长度为2-20个字符',
+        'username.unique' => '用户名已存在',
+        'email.require' => '邮箱不能为空',
+        'email.email' => '邮箱格式不正确',
+        'email.unique' => '邮箱已存在',
+        'password.require' => '密码不能为空',
+        'password.length' => '密码长度为6-20个字符',
+        'phone.mobile' => '手机号格式不正确',
+        'age.number' => '年龄必须是数字',
+        'age.between' => '年龄必须在1-150之间',
+    ];
+    
+    // 验证场景
+    protected $scene = [
+        'create' => ['username', 'email', 'password'],
+        'update' => ['username', 'email'],
+        'login' => ['username', 'password'],
+    ];
+}
+```
+
+### 2. 验证器使用
+
+✅ **在控制器中使用验证器**
+```php
+public function createUser(Request $request)
+{
+    $data = $request->post();
+    
+    // 使用验证器
+    $validate = new UserValidate();
+    if (!$validate->scene('create')->check($data)) {
+        return $this->renderError($validate->getError());
+    }
+    
+    // 业务逻辑
+    // ...
+}
+```
+
+## API文档规范
+
+### 1. ApiDoc注解
+
+✅ **正确的ApiDoc注解**
+```php
+<?php
+namespace app\admin\controller;
+
+use hg\apidoc\annotation as Apidoc;
+
+/**
+ * @Apidoc\Title("用户管理")
+ * @Apidoc\Group("admin")
+ * @Apidoc\Sort(100)
+ */
+class UserController extends Controller
+{
+    /**
+     * 获取用户列表
+     * @Apidoc\Title("获取用户列表")
+     * @Apidoc\Desc("获取所有用户的列表信息")
+     * @Apidoc\Url("/api/v1/admin/user/list")
+     * @Apidoc\Method("GET")
+     * @Apidoc\Param("page", type="int", require=false, default="1", desc="页码")
+     * @Apidoc\Param("page_size", type="int", require=false, default="20", desc="每页数量")
+     * @Apidoc\Param("keyword", type="string", require=false, desc="搜索关键词")
+     * @Apidoc\Returned("code", type="int", desc="状态码")
+     * @Apidoc\Returned("message", type="string", desc="提示信息")
+     * @Apidoc\Returned("data", type="object", desc="返回数据", children={
+     *     @Apidoc\Returned("list", type="array", desc="用户列表", children={
+     *         @Apidoc\Returned("id", type="int", desc="用户ID"),
+     *         @Apidoc\Returned("username", type="string", desc="用户名"),
+     *         @Apidoc\Returned("email", type="string", desc="邮箱"),
+     *     }),
+     *     @Apidoc\Returned("meta", type="object", desc="分页信息", children={
+     *         @Apidoc\Returned("page_no", type="int", desc="当前页码"),
+     *         @Apidoc\Returned("page_size", type="int", desc="每页数量"),
+     *         @Apidoc\Returned("total", type="int", desc="总数"),
+     *     })
+     * })
+     */
+    public function getUserList(Request $request)
+    {
+        // 实现
+    }
+}
+```
+
+## 错误处理
+
+### 1. 统一响应格式
+
+✅ **正确的响应方式**
+```php
+<?php
+namespace app\common\controller;
+
+use think\Controller;
+
+class BaseController extends Controller
+{
+    /**
+     * 成功响应
+     * @param mixed $data 数据
+     * @param string $message 消息
+     * @param int $code 状态码
+     * @return \think\response\Json
+     */
+    protected function renderSuccess($data = [], $message = 'success', $code = 1)
+    {
+        return json([
+            'code' => $code,
+            'message' => $message,
+            'data' => $data ?: (object)[],
+        ]);
+    }
+    
+    /**
+     * 失败响应
+     * @param string $message 错误消息
+     * @param int $code 错误码
+     * @param mixed $data 数据
+     * @return \think\response\Json
+     */
+    protected function renderError($message = 'error', $code = 0, $data = [])
+    {
+        return json([
+            'code' => $code,
+            'message' => $message,
+            'data' => $data ?: (object)[],
+        ]);
+    }
+}
+```
+
+### 2. 异常处理
+
+✅ **正确的异常处理**
+```php
+<?php
+namespace app\common\exception;
+
+use think\exception\Handle;
+use think\Response;
+use Throwable;
+
+/**
+ * 自定义异常处理类
+ */
+class ExceptionHandler extends Handle
+{
+    /**
+     * 渲染异常
+     * @param Throwable $e
+     * @return Response
+     */
+    public function render($request, Throwable $e): Response
+    {
+        // 开发环境显示详细错误
+        if (config('app.app_debug')) {
+            return parent::render($request, $e);
+        }
+        
+        // 生产环境返回友好提示
+        return json([
+            'code' => 0,
+            'message' => '系统错误，请稍后重试',
+            'data' => (object)[],
+        ]);
+    }
+}
+```
+
+## 中间件开发
+
+### 1. 中间件定义
+
+✅ **正确的中间件结构**
+```php
+<?php
+namespace app\admin\middleware;
+
+use Closure;
+use think\Request;
+use think\Response;
+
+/**
+ * 权限验证中间件
+ */
+class AuthMiddleware
+{
+    /**
+     * 处理请求
+     * @param Request $request
+     * @param Closure $next
+     * @return Response
+     */
+    public function handle(Request $request, Closure $next)
+    {
+        // 获取token
+        $token = $request->header('Authorization');
+        
+        // 验证token
+        if (empty($token)) {
+            return json([
+                'code' => 401,
+                'message' => '未登录',
+                'data' => (object)[],
+            ]);
+        }
+        
+        // 解析token并验证权限
+        // ...
+        
+        // 继续执行
+        return $next($request);
+    }
+}
+```
+
+### 2. 中间件注册
+
+✅ **在配置文件中注册**
+```php
+<?php
+// config/middleware.php
+
+return [
+    // 全局中间件
+    \app\common\middleware\AllowOrigin::class,
+    
+    // 路由中间件
+    'auth' => \app\admin\middleware\AuthMiddleware::class,
+    'check' => \app\admin\middleware\CheckMiddleware::class,
+];
+```
+
+## 注释规范
+
+### 1. 类注释
+
+✅ **正确的类注释**
+```php
+/**
+ * 用户服务类
+ * 
+ * 提供用户相关的业务逻辑处理
+ * 
+ * @author TTPOS Team
+ * @date 2025-11-16
+ */
+class UserService
+{
+    // ...
+}
+```
+
+### 2. 方法注释
+
+✅ **正确的方法注释**
+```php
+/**
+ * 获取用户列表
+ * 
+ * @param int $page 页码
+ * @param int $pageSize 每页数量
+ * @param array $where 查询条件
+ * @return array 返回用户列表和分页信息
+ * @throws \Exception 查询失败时抛出异常
+ */
+public function getUserList($page = 1, $pageSize = 20, $where = [])
+{
+    // ...
+}
+```
+
+## 代码风格
+
+### 1. PSR规范
+
+✅ **遵循PSR-2代码风格**
+```php
+<?php
+namespace app\admin\controller;
+
+use think\Request;
+
+class UserController extends Controller
+{
+    public function index(Request $request)
+    {
+        $page = $request->param('page', 1);
+        
+        if ($page < 1) {
+            return $this->renderError('页码错误');
+        }
+        
+        return $this->renderSuccess();
+    }
+}
+```
+
+### 2. 代码格式化
+
+- 使用4个空格缩进（不使用Tab）
+- 左花括号另起一行
+- 每行代码不超过120个字符
+- 方法之间空一行
+
+## 性能优化
+
+### 1. 查询优化
+
+✅ **使用索引和缓存**
+```php
+// 使用索引字段查询
+$user = User::where('uuid', $uuid)->find();
+
+// 使用缓存
+$cacheKey = 'user_' . $userId;
+$user = cache($cacheKey);
+if (!$user) {
+    $user = User::find($userId);
+    cache($cacheKey, $user, 3600);
+}
+```
+
+### 2. 避免N+1查询
+
+✅ **使用预加载**
+```php
+// ❌ N+1查询
+$users = User::select();
+foreach ($users as $user) {
+    $roles = $user->roles;  // 每次都查询数据库
+}
+
+// ✅ 预加载
+$users = User::with(['roles'])->select();
+foreach ($users as $user) {
+    $roles = $user->roles;  // 已经加载好了
+}
+```
+
+---
+
+**最后更新**: 2025-11-16  
+**维护者**: TTPOS Team
