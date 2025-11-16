@@ -122,7 +122,7 @@
         "type": "shell",
         "command": "make",
         "args": [
-            "install-bmp"
+            "bmp-install"
         ],
         "group": "build",
         "presentation": {

@@ -5,26 +5,26 @@ include ./scripts/cmd.mk
 install:
 	@make init-env
 	@make build-web
-	# @make redis-clear-data-node-conf
+	@make redis-clear-data-node-conf
 	# 启动容器
 	@echo "🗄️  启动容器..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "🗄️  初始化php项目..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
 	@$(call update_env_and_run)
-	@make install-bmp
+	@make bmp-install
 	@echo "✅ 初始化完成"
 
 # 初始化中台模块
-install-bmp:
+bmp-install:
 	@echo "🗄️  初始化中台模块..."
-	@make init-bmp-env
+	@make bmp-init-env
 	@cd ttpos-bmp && make update-ip && make conf && make mid && make migrate && make up
 
 # 重新构建项目
 build:
 	@make build-web
-	# @make redis-clear-data-node-conf
+	@make redis-clear-data-node-conf
 	@echo "🐳 构建 Docker 容器..."
 	@cd ./main && GOOS=linux GOARCH=amd64 go build -o main main.go
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
@@ -76,8 +76,8 @@ restart:
 
 # docker-compose up -d
 up:
-	# @make redis-clear-data-node-conf > /dev/null 2>&1
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
+	@make redis-clear-data-node-conf
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 	@echo "🔍 启动HTTP调试代理..."
 	@make start-http-debug-proxy
 

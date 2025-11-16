@@ -13,7 +13,12 @@ endef
 # 定义一个函数来更新环境变量并执行脚本
 define update_env_and_run
 	sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
-	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
+	DB_PORT_VALUE=$$(grep '^DB_PORT_OPEN=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
+	if [ "$$DB_PORT_VALUE" != "" ]; then \
+		sed -i.bak "s/^DB_PORT=.*/DB_PORT=$$DB_PORT_VALUE/" .env && rm .env.bak; \
+	fi;
+	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' .env && rm .env.bak;
+	sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' .env && rm .env.bak;
 	if grep -q '^REDIS_CLUSTER_ANNOUNCE_IP=' .env; then \
 		sed -i.bak 's/^REDIS_CLUSTER_ANNOUNCE_IP=.*/REDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)/' .env && rm .env.bak; \
 	else \
@@ -36,14 +41,23 @@ help:
 	@echo "🚀 项目管理命令"
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install" "初始化项目（首次安装）"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install-bmp" "初始化中台模块"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build" "重新构建项目"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "init-env" "初始化env文件"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "restart" "重启容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "up" "启动Docker容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "down" "停止Docker容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "ps" "查看容器状态"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "mod-tidy" "整理依赖"
 	@echo ""
+	@echo "🚀 中台管理命令"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "bmp-init-env" "初始化中台env文件"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "bmp-install" "初始化并启动中台模块"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "bmp-conf" "配置中台模块"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "bmp-migrate" "迁移中台模块"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "bmp-up" "启动中台模块"
+	@echo ""
+
 	@printf "\033[1;32m"
 	@echo "🔧 开发命令"
 	@printf "\033[0m"
@@ -98,7 +112,7 @@ help:
 init-env:
 	@echo "🔍 初始化env文件"
 	@corepack enable
-	if [ ! -f ".env" ]; then \
+	@if [ ! -f ".env" ]; then \
 		cp .env.example .env; \
 		echo "Created .env file from .env.example"; \
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
@@ -106,13 +120,9 @@ init-env:
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 	fi
 	@echo "🔍 检查 .env 文件是否存在"
-	if [ -f ".env" ]; then \
-		sed -i.bak 's/^DB_HOST=.*/DB_HOST=db/' .env && rm .env.bak; \
-		sed -i.bak 's/^DB_PORT=.*/DB_PORT=3306/' .env && rm .env.bak; \
-		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
-	fi
+	$(call update_env_and_run);
 
-init-bmp-env:
+bmp-init-env:
 	@echo "🔍 初始化中台env文件"
 	@if [ ! -f "ttpos-bmp/.env" ]; then \
 		cp ttpos-bmp/.env.example ttpos-bmp/.env; \
@@ -126,7 +136,7 @@ init-bmp-env:
 		sed -i.bak 's/^ROCKETMQ_BROKER_ADDR=.*/ROCKETMQ_BROKER_ADDR=10.0.11.41:10911/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
 	@echo "🔍 检查 ttpos-bmp/.env 文件是否存在"
-	if [ -f "ttpos-bmp/.env" ]; then \
+	@if [ -f "ttpos-bmp/.env" ]; then \
 		sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		if [ -f ".env" ]; then \
 			echo "🔄 从上级目录的 .env 文件同步数据库密码..."; \
@@ -146,9 +156,25 @@ init-bmp-env:
 				echo "✅ 已同步 DB_USERNAME"; \
 			fi; \
 		fi; \
-		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		sed -i.bak 's/^GRPC_ENDPOINTS=.*/GRPC_ENDPOINTS=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
+
+# 配置中台模块
+bmp-conf:
+	@make bmp-init-env
+	@cd ttpos-bmp && make update-ip && make conf
+
+# 迁移中台模块
+bmp-migrate:
+	@make bmp-init-env
+	@cd ttpos-bmp && make update-ip && make conf && make migrate
+
+# 启动中台模块
+bmp-up:
+	@make bmp-init-env
+	@cd ttpos-bmp && make update-ip && make conf && make mid && make migrate && make up
 
 # 构建前端
 build-web:
@@ -206,9 +232,9 @@ add-version:
 
 # 清空redis的cluster的data-*目录
 redis-clear-data-node-conf:
-	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-1 > /dev/null 2>&1
-	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-2 > /dev/null 2>&1
-	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-3 > /dev/null 2>&1
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-1
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-2
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-3
 	rm -rf ./docker/redis/cluster/data-*
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;

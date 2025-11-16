@@ -139,8 +139,9 @@ make build
 | `DB_USERNAME` | 数据库用户名 | `root` |
 | `DB_PASSWORD` | 数据库密码 | - |
 | `DB_DATABASE` | 数据库名称 | `websocket` |
-| `REDIS_HOST` | Redis 主机地址 | `127.0.0.1` |
-| `REDIS_PORT` | Redis 端口 | `6379` |
+| `REDIS_ADDRESSES` | Redis 集群地址（多个地址用逗号分隔） | `127.0.0.1:7001,127.0.0.1:7002,127.0.0.1:7003` |
+| `REDIS_HOST` | Redis 主机地址（单机模式） | `127.0.0.1` |
+| `REDIS_PORT` | Redis 端口（单机模式） | `6379` |
 | `REDIS_PASSWORD` | Redis 密码 | - |
 | `REDIS_DB` | Redis 数据库索引 | `0` |
 | `NACOS_ADDRESS` | Nacos 地址 | `127.0.0.1:8848` |

@@ -26,10 +26,6 @@
    - 存储设备连接的详细信息（IP地址、用户代理等）
    - 支持设备在线状态查询和统计
 
-### 20251115174023_remove_uuid_fields
-- **up.sql**: 删除 device_online 和 websocket_msg 表的 uuid 字段
-- **down.sql**: 回滚 uuid 字段删除操作
-
 #### 变更内容
 1. 删除 **device_online** 表的 uuid 字段及其唯一索引
 2. 删除 **websocket_msg** 表的 uuid 字段及其唯一索引

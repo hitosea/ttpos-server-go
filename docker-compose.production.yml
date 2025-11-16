@@ -40,11 +40,9 @@ services:
     links:
       - php
       - golang
-      - websocket
     depends_on:
       - php
       - golang
-      - websocket
       - redis-proxy
       - mysql-proxy
     restart: unless-stopped

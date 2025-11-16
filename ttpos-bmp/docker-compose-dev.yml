@@ -90,6 +90,7 @@ services:
   #    networks:
   #      bmp-network:
   #        ipv4_address: 10.0.10.43
+  
   # 消息中心模块
   bmp-message:
     container_name: "ttpos-bmp-message-${APP_ID}"
