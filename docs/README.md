@@ -4,6 +4,14 @@
 
 ---
 
+## 📋 文档迁移和待办
+
+- **[📝 快速参考](./QUICK_START.md)** - 5分钟了解文档体系现状和待办
+- [文档缺失清单](./MISSING_DOCS_REPORT.md) - 对比前端仓库的详细缺失盘点（51+个文档）
+- [明天的工作计划](./TODO_NEXT.md) - 3天完成 P0 文档的具体行动计划
+
+---
+
 ## 📖 目录导航
 
 ### 🤖 [Agent 专用](./agent/)
@@ -48,15 +56,15 @@
 
 ### 我想...
 
-| 场景 | 查看 |
-|---|---|
-| **开发新功能** | [功能开发工作流](./agent/workflows/feature-development.md) |
-| **修复Bug** | [Bug修复工作流](./agent/workflows/bug-fixing.md) |
-| **创建数据库迁移** | [数据库迁移工作流](./agent/workflows/database-migration.md) |
-| **开发gRPC服务** | [微服务集成工作流](./agent/workflows/microservice-integration.md) |
-| **对接第三方API** | [API对接工作流](./agent/workflows/api-integration.md) |
-| **了解项目架构** | [架构设计文档](./human/architecture/) |
-| **学习开发规范** | [Go规范](../.cursor/rules/golang.mdc) / [PHP规范](../.cursor/rules/php.mdc) |
+| 场景               | 查看                                                                        |
+| ------------------ | --------------------------------------------------------------------------- |
+| **开发新功能**     | [功能开发工作流](./agent/workflows/feature-development.md)                  |
+| **修复Bug**        | [Bug修复工作流](./agent/workflows/bug-fixing.md)                            |
+| **创建数据库迁移** | [数据库迁移工作流](./agent/workflows/database-migration.md)                 |
+| **开发gRPC服务**   | [微服务集成工作流](./agent/workflows/microservice-integration.md)           |
+| **对接第三方API**  | [API对接工作流](./agent/workflows/api-integration.md)                       |
+| **了解项目架构**   | [架构设计文档](./human/architecture/)                                       |
+| **学习开发规范**   | [Go规范](../.cursor/rules/golang.mdc) / [PHP规范](../.cursor/rules/php.mdc) |
 
 ---
 
