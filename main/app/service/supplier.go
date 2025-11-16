@@ -326,6 +326,9 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 			if supplier.ErpCode == constant.ErpHeadquartersSupplierCode {
 				continue
 			}
+			if !supplier.IsNormalSupplier() {
+				continue
+			}
 		} else {
 			// 内部采购 去掉非总部
 			if supplier.ErpCode != constant.ErpHeadquartersSupplierCode {
