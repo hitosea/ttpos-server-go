@@ -313,6 +313,7 @@ class Supplier extends BaseModel
                     }
                 }
             }
+            $settingLanguages = array_values($settingLanguages);
             $company = App::where('uuid', $companyUuid)->find();
             $logo = $company->logo ?: '';
             (new SettingModel)->edit(SettingEnum::STORE, [
