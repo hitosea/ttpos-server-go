@@ -1,16 +1,5 @@
 {
   "mcpServers": {
-    "SpecWorkflow": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@pimzino/spec-workflow-mcp@latest",
-        "./",
-        "--dashboard",
-        "--port",
-        "60030"
-      ]
-    },
     "DooTask": {
       "url": "http://localhost:22224/mcp"
     },
