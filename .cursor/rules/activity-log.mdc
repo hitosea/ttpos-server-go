@@ -1,0 +1,249 @@
+---
+alwaysApply: true
+description: 自动记录团队活动日志
+priority: 10
+---
+
+# 活动日志自动记录
+
+> 在执行指令或工作流时自动记录到团队日志
+
+---
+
+## 核心规则
+
+### 记录时机
+
+**必须记录的场景：**
+
+1. **Cursor 指令调用**
+   - `/propose`
+   - `/create-spec`
+   - `/onboard`
+   - `/create-api-doc`
+   - `/create-*-test`
+
+2. **工作流执行**
+   - 识别到"开始功能开发"
+   - 识别到"Bug修复完成"
+   - 识别到"API对接完成"
+   - 识别到"Graphiti记录"
+
+### 记录方式
+
+```python
+# 伪代码
+def log_activity(action, target, note=""):
+    today = get_today()  # 2025-11-16
+    month = get_month()  # 2025-11
+    user = get_git_user()  # 从 git config user.name 获取
+    time = get_time()  # HH:mm
+    
+    # 文件路径
+    log_file = f"docs/team/activities/{month}/{today}.md"
+    
+    # 如果文件不存在，创建并添加表头
+    if not exists(log_file):
+        create_log_file(log_file)
+    
+    # 追加一行记录
+    append_line(
+        log_file,
+        f"| {time} | @{user} | {action} | {target} | ✅ | {note} |"
+    )
+```
+
+---
+
+## 记录格式
+
+### 日志文件结构
+
+```markdown
+# {YYYY-MM-DD} 活动日志
+
+| 时间  | 成员    | 活动     | 目标     | 状态 | 备注     |
+| ----- | ------- | -------- | -------- | ---- | -------- |
+| HH:mm | @用户名 | 活动类型 | 具体内容 | ✅    | 简短说明 |
+```
+
+### 活动类型映射
+
+| 触发场景                 | 活动类型          | 目标              | 备注        |
+| ------------------------ | ----------------- | ----------------- | ----------- |
+| `/propose feature-name`  | `/propose`        | feature-name      | 创建提案    |
+| `/create-spec spec-name` | `/create-spec`    | spec-name         | 创建Spec    |
+| `/onboard quick`         | `/onboard`        | quick             | 快速入门    |
+| `/create-api-doc module` | `/create-api-doc` | module            | 创建API文档 |
+| 执行功能开发工作流       | `功能开发`        | spec-name         | 工作流执行  |
+| 完成Bug修复              | `Bug修复`         | issue-description | 问题已解决  |
+| 记录Graphiti Episode     | `Graphiti记录`    | episode-name      | 知识记录    |
+
+---
+
+## 执行逻辑
+
+### Step 1: 识别触发
+
+```yaml
+IF 用户调用 Cursor 指令 THEN
+  识别指令名称和参数
+  
+IF 用户表达符合工作流模式 THEN
+  识别工作流类型
+  
+IF 创建了 Graphiti Episode THEN
+  识别 Episode 名称
+```
+
+### Step 2: 准备数据
+
+```yaml
+获取:
+  - 当前日期和时间
+  - Git 用户名 (git config user.name)
+  - 活动类型
+  - 目标对象
+  - 简短备注
+```
+
+### Step 3: 写入日志
+
+```yaml
+检查文件:
+  IF docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md 不存在 THEN
+    创建文件
+    写入表头
+  
+追加记录:
+  在表格中追加一行
+  
+静默执行:
+  不向用户显示"已记录日志"的消息
+  除非用户明确询问
+```
+
+---
+
+## 特殊处理
+
+### 避免重复记录
+
+```yaml
+IF 同一分钟内相同活动 THEN
+  跳过记录
+```
+
+### Git 冲突处理
+
+```yaml
+记录时不要:
+  ❌ 自动 git add
+  ❌ 自动 git commit
+  
+只做:
+  ✅ 写入文件
+  ✅ 让开发者自己提交
+```
+
+### 获取用户名
+
+```yaml
+优先级:
+  1. git config user.name
+  2. 系统用户名
+  3. "未知用户"
+```
+
+---
+
+## 示例场景
+
+### 场景 1: 调用 /create-spec
+
+```
+用户: "/create-spec story-pos-quick-payment"
+
+AI 执行:
+  1. 创建 Spec 文件
+  2. 填充内容
+  3. 记录日志:
+     | 14:30 | @张三 | /create-spec | story-pos-quick-payment | ✅ | 创建Spec |
+
+AI 回复:
+  "✅ Spec 已创建: docs/shared/specs/story-pos-quick-payment/"
+  
+  (不提及日志记录，静默完成)
+```
+
+### 场景 2: 功能开发工作流
+
+```
+用户: "我要开始实现 story-pos-quick-payment 功能"
+
+AI 识别:
+  - 关键词: "开始实现"
+  - 工作流: 功能开发
+  - 目标: story-pos-quick-payment
+
+AI 执行:
+  1. 查阅 specs/ 读取任务
+  2. 开始引导开发
+  3. 记录日志:
+     | 15:00 | @张三 | 功能开发 | story-pos-quick-payment | 🚧 | 开始开发 |
+
+AI 回复:
+  "好的，让我们开始实现 story-pos-quick-payment..."
+```
+
+### 场景 3: Graphiti 记录
+
+```
+用户: "记录这个支付超时的解决方案到 Graphiti"
+
+AI 执行:
+  1. 创建 Graphiti Episode
+  2. 记录日志:
+     | 16:30 | @张三 | Graphiti记录 | qa-payment-timeout | ✅ | 记录经验 |
+
+AI 回复:
+  "✅ 已记录到 Graphiti: qa-payment-timeout"
+```
+
+---
+
+## 实现注意事项
+
+1. **性能优化**
+   - 文件写入要快速（几毫秒）
+   - 不影响主要任务执行
+   - 不消耗额外 token（预设逻辑）
+
+2. **错误处理**
+   - 如果写入失败，静默忽略
+   - 不要因为日志记录失败而中断主任务
+   - 可以在日志中记录失败信息供调试
+
+3. **文件管理**
+   - 自动创建月份目录
+   - 自动创建日期文件
+   - 保持文件格式一致
+
+---
+
+## 禁止事项
+
+❌ 不要在每次记录后提示用户"已记录日志"
+❌ 不要自动 git commit
+❌ 不要因日志失败而中断任务
+❌ 不要记录琐碎的对话和查询
+❌ 不要消耗额外 token 做分析
+
+---
+
+## 相关文档
+
+- 团队协作总览: `docs/team/README.md`
+- 日志文件位置: `docs/team/activities/{YYYY-MM}/`
+
+---
