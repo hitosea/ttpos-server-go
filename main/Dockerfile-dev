@@ -13,6 +13,10 @@ COPY  ttpos-bmp/app/ttpos-manager/api  app/ttpos-manager/api
 COPY  ttpos-bmp/app/ttpos-message/api  app/ttpos-message/api
 COPY  ttpos-bmp/app/ttpos-websocket/api  app/ttpos-websocket/api
 
+# 复制ttpos-api 模块
+WORKDIR /ttpos-api
+COPY  ttpos-api/  ./
+
 # 设置工作目录
 WORKDIR /app
 

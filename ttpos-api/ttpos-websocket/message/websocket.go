@@ -2,8 +2,8 @@
 package message
 
 import (
+	"time"
 	"ttpos-api/common/message"
-	commonMsg "ttpos-api/common/message"
 	"ttpos-api/ttpos-websocket/constant"
 )
 
@@ -26,7 +26,6 @@ type LanPrinterReportMessage struct {
 	SourceClient string           `json:"source_client"` // 来源客户端（cashier/kitchen/waiter）
 	Printers     []LanPrinterInfo `json:"printers"`      // 打印机列表
 	ReportTime   string           `json:"report_time"`   // 上报时间（格式化字符串）
-	Timestamp    int64            `json:"timestamp"`     // 上报时间戳（Unix时间戳）
 }
 
 // NewLanPrinterReportMessage 创建 LAN 打印机上报消息
@@ -38,6 +37,7 @@ func NewLanPrinterReportMessage(companyUUID, staffUUID uint64, deviceID, sourceC
 		DeviceID:     deviceID,
 		SourceClient: sourceClient,
 		Printers:     printers,
+		ReportTime:   time.Now().Format(time.DateTime),
 	}
 }
 
@@ -55,22 +55,5 @@ func (m *LanPrinterReportMessage) Validate() error {
 	if m.DeviceID == "" {
 		return constant.ErrDeviceIDRequired
 	}
-	if m.SourceClient == "" {
-		return constant.ErrSourceClientRequired
-	}
-	if len(m.Printers) == 0 {
-		return constant.ErrPrintersRequired
-	}
-
-	// 验证打印机信息
-	for i, printer := range m.Printers {
-		if printer.IP == "" {
-			return commonMsg.NewValidationError("printers[%d].ip", "打印机IP地址不能为空", i)
-		}
-		if printer.Port <= 0 || printer.Port > 65535 {
-			return commonMsg.NewValidationError("printers[%d].port", "打印机端口号必须在1-65535之间", i)
-		}
-	}
-
 	return nil
 }

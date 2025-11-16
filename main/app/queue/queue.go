@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	websocketConstant "ttpos-api/ttpos-websocket/constant"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
@@ -15,9 +16,8 @@ const TAKEOUT = "takeout"
 const MEMBER_ORDER_CANCEL = "member_order_cancel"
 
 const (
-	TopicItemChange       = "erp-item-change"
-	TopicDocChange        = "erp-doc-change"
-	TopicLanPrinterReport = "lan-printer-report"
+	TopicItemChange = "erp-item-change"
+	TopicDocChange  = "erp-doc-change"
 )
 
 var manager *rocketmq.Manager
@@ -43,9 +43,9 @@ func Init() {
 	}
 
 	// 订阅 LAN 打印机上报消息
-	err = manager.Subscribe(config.Rocketmq.GroupName, TopicLanPrinterReport, lanPrinterReportHandler)
+	err = manager.Subscribe(config.Rocketmq.GroupName, websocketConstant.TopicLanPrinterReport, lanPrinterReportHandler)
 	if err != nil {
-		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicLanPrinterReport))
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", websocketConstant.TopicLanPrinterReport))
 	}
 
 }

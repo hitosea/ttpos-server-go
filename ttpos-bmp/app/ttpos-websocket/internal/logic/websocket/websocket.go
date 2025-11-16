@@ -931,7 +931,6 @@ func (s *sWebSocket) publishLanPrinterReport(ctx context.Context, conn *Connecti
 	}
 
 	// 创建消息体（使用 ttpos-api 定义的结构体）
-	now := time.Now()
 	message := ttposWebsocketMsg.NewLanPrinterReportMessage(
 		conn.CompanyUuid,
 		conn.StaffUuid,
@@ -939,8 +938,6 @@ func (s *sWebSocket) publishLanPrinterReport(ctx context.Context, conn *Connecti
 		conn.SourceClient,
 		apiPrinters,
 	)
-	message.ReportTime = now.Format("2006-01-02 15:04:05")
-	message.Timestamp = now.Unix()
 
 	// 验证消息
 	if err := message.Validate(); err != nil {

@@ -7,26 +7,26 @@ import (
 
 	"google.golang.org/grpc"
 
-	"ttpos-bmp/app/ttpos-websocket/api/websocket"
+	v1 "ttpos-bmp/app/ttpos-websocket/api/websocket"
 	"ttpos-server-go/app/cloud"
 )
 
 // GrpcClient WebSocket gRPC 客户端
 type GrpcClient struct {
 	conn   *grpc.ClientConn
-	client websocket.WebSocketClient
+	client v1.WebSocketClient
 }
 
 var defaultClient *GrpcClient
 
 // NewWebSocketClient 创建 WebSocket gRPC 客户端（使用 Nacos 服务发现）
 // 返回：WebSocket客户端、gRPC连接、错误信息
-func NewWebSocketClient() (websocket.WebSocketClient, *grpc.ClientConn, error) {
+func NewWebSocketClient() (v1.WebSocketClient, *grpc.ClientConn, error) {
 	conn, err := cloud.GetRpcConnWithName(cloud.WebSocketServiceName)
 	if err != nil {
 		return nil, nil, err
 	}
-	return websocket.NewWebSocketClient(conn), conn, nil
+	return v1.NewWebSocketClient(conn), conn, nil
 }
 
 // PushClient 推送消息的便捷函数（保持向后兼容）
@@ -58,7 +58,7 @@ func PushClient(companyUuid uint64, sourceClient, deviceId, messageType string, 
 	}
 
 	// 调用 gRPC 接口
-	resp, err := client.PushMessage(ctx, &websocket.PushMessageReq{
+	resp, err := client.PushMessage(ctx, &v1.PushMessageReq{
 		CompanyUuid:  companyUuid,
 		StaffUuid:    0,
 		NotStaffUuid: 0,
@@ -96,7 +96,7 @@ func (c *GrpcClient) PushMessage(ctx context.Context, companyUuid uint64, source
 	}
 
 	// 调用 gRPC 接口
-	resp, err := c.client.PushMessage(ctx, &websocket.PushMessageReq{
+	resp, err := c.client.PushMessage(ctx, &v1.PushMessageReq{
 		CompanyUuid:  companyUuid,
 		StaffUuid:    0, // 0表示推送给所有员工
 		NotStaffUuid: 0,
@@ -142,7 +142,7 @@ func (c *GrpcClient) PushMessageWithOptions(ctx context.Context, options *PushOp
 	}
 
 	// 调用 gRPC 接口
-	resp, err := c.client.PushMessage(ctx, &websocket.PushMessageReq{
+	resp, err := c.client.PushMessage(ctx, &v1.PushMessageReq{
 		CompanyUuid:  options.CompanyUuid,
 		StaffUuid:    options.StaffUuid,
 		NotStaffUuid: options.NotStaffUuid,
@@ -165,8 +165,8 @@ func (c *GrpcClient) PushMessageWithOptions(ctx context.Context, options *PushOp
 }
 
 // GetConnectionStats 获取连接统计信息
-func (c *GrpcClient) GetConnectionStats(ctx context.Context, companyUuid uint64) (*websocket.ConnectionStats, error) {
-	resp, err := c.client.GetConnectionStats(ctx, &websocket.GetConnectionStatsReq{
+func (c *GrpcClient) GetConnectionStats(ctx context.Context, companyUuid uint64) (*v1.ConnectionStats, error) {
+	resp, err := c.client.GetConnectionStats(ctx, &v1.GetConnectionStatsReq{
 		CompanyUuid: companyUuid,
 	})
 
@@ -183,7 +183,7 @@ func (c *GrpcClient) GetConnectionStats(ctx context.Context, companyUuid uint64)
 
 // CheckDeviceOnline 检查设备是否在线
 func (c *GrpcClient) CheckDeviceOnline(ctx context.Context, companyUuid uint64, sourceClient, deviceId string) (bool, error) {
-	resp, err := c.client.CheckDeviceOnline(ctx, &websocket.CheckDeviceOnlineReq{
+	resp, err := c.client.CheckDeviceOnline(ctx, &v1.CheckDeviceOnlineReq{
 		CompanyUuid:  companyUuid,
 		SourceClient: sourceClient,
 		DeviceId:     deviceId,
@@ -202,7 +202,7 @@ func (c *GrpcClient) CheckDeviceOnline(ctx context.Context, companyUuid uint64, 
 
 // CloseConnection 关闭指定连接
 func (c *GrpcClient) CloseConnection(ctx context.Context, companyUuid uint64, sourceClient, deviceId string) (int32, error) {
-	resp, err := c.client.CloseConnection(ctx, &websocket.CloseConnectionReq{
+	resp, err := c.client.CloseConnection(ctx, &v1.CloseConnectionReq{
 		CompanyUuid:  companyUuid,
 		SourceClient: sourceClient,
 		DeviceId:     deviceId,

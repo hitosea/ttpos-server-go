@@ -1,6 +1,6 @@
 LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
 ifeq ($(LOCAL_IP),)
-	LOCAL_IP := $(shell scripts/get_ip.sh)
+	LOCAL_IP := $(shell ttpos-scripts/get_ip.sh)
 endif
 GO_PATH := $(shell go env GOPATH)
 
@@ -24,7 +24,7 @@ define update_env_and_run
 	else \
 		echo '\nREDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)' >> .env; \
 	fi;
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
+	chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh up -d
 	@make start-http-debug-proxy
 endef
 
@@ -232,10 +232,11 @@ add-version:
 
 # 清空redis的cluster的data-*目录
 redis-clear-data-node-conf:
-	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-1
-	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-2
-	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-3
-	rm -rf ./docker/redis/cluster/data-*
+	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-1
+	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-2
+	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-3
+	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1
+	@sudo rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;
 check-db-host-open-mysql:

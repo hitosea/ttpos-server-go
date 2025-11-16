@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"ttpos-server-go/config"
 )
 
@@ -107,7 +108,13 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 	// 判断当前是否在容器内执行
 	url := fmt.Sprintf("http://127.0.0.1:%s/ws/push", os.Getenv("NGINX_PORT"))
 	if _, err := os.Stat("/.dockerenv"); err == nil {
-		url = "http://nginx/ws/push"
+		if execPath, err := os.Executable(); err == nil {
+			if !strings.Contains(strings.ToLower(execPath), "__debug_bin") {
+				url = "http://nginx/ws/push"
+			}
+		} else {
+			url = "http://nginx/ws/push"
+		}
 	}
 
 	// 构建请求体

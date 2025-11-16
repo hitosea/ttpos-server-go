@@ -55,10 +55,14 @@ require (
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.10
+	ttpos-api v0.0.0
 	ttpos-bmp v0.0.0
 )
 
-replace ttpos-bmp => ../ttpos-bmp
+replace (
+	ttpos-api => ../ttpos-api
+	ttpos-bmp => ../ttpos-bmp
+)
 
 require (
 	cel.dev/expr v0.24.0 // indirect

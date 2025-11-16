@@ -22,7 +22,4 @@ var (
 
 	// ErrSourceClientRequired 来源客户端不能为空
 	ErrSourceClientRequired = errors.New("来源客户端不能为空")
-
-	// ErrPrintersRequired 打印机列表不能为空
-	ErrPrintersRequired = errors.New("打印机列表不能为空")
 )
