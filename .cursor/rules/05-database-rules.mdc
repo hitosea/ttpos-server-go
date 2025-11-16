@@ -287,6 +287,8 @@ php think migrate:create CreateProductTable
 
 ### 2. 迁移文件结构
 
+⚠️ **重要**：迁移文件中的表名**不需要**添加 `ttpos_` 前缀，框架会自动处理。
+
 ✅ **正确的迁移文件**：
 ```php
 <?php
@@ -301,12 +303,12 @@ class CreateProductTable extends Migrator
      */
     public function change()
     {
-        // 检查表是否存在
-        if ($this->hasTable('ttpos_product')) {
+        // 检查表是否存在（注意：表名不带 ttpos_ 前缀）
+        if ($this->hasTable('product')) {
             return;
         }
         
-        $table = $this->table('ttpos_product', [
+        $table = $this->table('product', [
             'engine' => 'InnoDB',
             'collation' => 'utf8mb4_unicode_ci',
             'comment' => '商品表',
@@ -328,13 +330,22 @@ class CreateProductTable extends Migrator
 }
 ```
 
+❌ **错误**：不要在迁移文件中添加 `ttpos_` 前缀
+```php
+// ❌ 错误示例
+if ($this->hasTable('ttpos_product')) {  // 不要加 ttpos_ 前缀
+    return;
+}
+$table = $this->table('ttpos_product', [...]);  // 不要加 ttpos_ 前缀
+```
+
 ### 3. 添加字段迁移
 
-✅ **正确**：检查字段是否存在
+✅ **正确**：检查字段是否存在（表名不带 `ttpos_` 前缀）
 ```php
 public function change()
 {
-    $table = $this->table('ttpos_product');
+    $table = $this->table('product');  // 注意：不带 ttpos_ 前缀
     
     // 检查字段是否存在
     if (!$table->hasColumn('category_id')) {
