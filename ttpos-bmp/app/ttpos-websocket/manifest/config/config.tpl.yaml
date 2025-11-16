@@ -125,3 +125,23 @@ redis:
     readTimeout: "1s"                      # 读取超时时间
     writeTimeout: "1s"                     # 写入超时时间
 
+# 消息队列
+queue:
+  switch: true                                        # 队列开关，可选：true|false，默认为true
+  driver: "rocketmq"                                      # 队列驱动，可选：redis|rocketmq，默认为redis
+  groupName: "ttpos-websocket"                                  # mq群组名称
+  poolSize: 20                                          # 消息处理线程池大小，默认20
+  # redis，默认使用全局redis运行队列
+  redis:
+    timeout: 0                                        # 队列超时时间以秒为单位，0表示永不超时。如果队列在设定的超时时间内没有被消费，则会被销毁
+  rocketmq:
+    endpoint: "$ROCKETMQ_ENDPOINT"                   #代理接入点 新版v5客户端支持
+    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]                  # nameSrvAdder+端口，支持多个
+    accessKey: "$ROCKETMQ_ACCESS_KEY"                                      # 选填。如果开启了acl控制就必填
+    secretKey: "$ROCKETMQ_SECRET_KEY"                                      # 选填。如果开启了acl控制就必填
+    brokerAddr: "$ROCKETMQ_BROKER_ADDR"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
+    retry: 3                                           # 重试次数
+    logLevel: "warn"        #rocketmq 客户端输出日志级别,和logger.queue 区分开来 debug|warn|error|fatal
+    invisibleDuration: 25   #invisibleDuration should > 20s
+    awaitDuration: 5      # maximum waiting time for receive func
+    unitName: "" # 消费者单元名称，默认使用GUID

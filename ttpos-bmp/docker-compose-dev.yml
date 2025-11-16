@@ -3,6 +3,8 @@ services:
   bmp-takeout:
     container_name: "ttpos-bmp-takeout-${APP_ID}"
     build:
+      context: ..
+      dockerfile: ttpos-bmp/Dockerfile
       args:
         MODULE: takeout
         HTTP_PORT: 14031
@@ -49,6 +51,8 @@ services:
   bmp-erp:
     container_name: "ttpos-bmp-erp-${APP_ID}"
     build:
+      context: ..
+      dockerfile: ttpos-bmp/Dockerfile
       args:
         MODULE: erp
         HTTP_PORT: 14021
@@ -95,6 +99,8 @@ services:
   bmp-message:
     container_name: "ttpos-bmp-message-${APP_ID}"
     build:
+      context: ..
+      dockerfile: ttpos-bmp/Dockerfile
       args:
         MODULE: message
         HTTP_PORT: 14041
@@ -117,6 +123,8 @@ services:
   bmp-websocket:
     container_name: "ttpos-bmp-websocket-${APP_ID}"
     build:
+      context: ..
+      dockerfile: ttpos-bmp/Dockerfile
       args:
         MODULE: websocket
         HTTP_PORT: 14051

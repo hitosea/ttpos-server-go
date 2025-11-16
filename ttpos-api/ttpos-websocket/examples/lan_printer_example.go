@@ -79,7 +79,7 @@ func LanPrinterReportConsumerExample() {
 	// 模拟从队列接收到的 JSON 数据
 	jsonData := []byte(`{
 		"message_id": "550e8400-e29b-41d4-a716-446655440000",
-		"topic": "lan_printer_report",
+		"topic": "lan-printer-report",
 		"timestamp": 1731689130,
 		"version": "1.0",
 		"company_uuid": "8609817471094784",

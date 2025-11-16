@@ -10,3 +10,5 @@ close-pos-entry
 redo-pos
 #发送消息
 ttpos-message-send
+#LAN 打印机上报
+lan-printer-report

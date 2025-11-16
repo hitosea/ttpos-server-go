@@ -24,11 +24,11 @@ LAN 打印机上报功能允许收银机客户端通过 WebSocket 连接上报�
 
 3. **发布到 MQ**
    - 构建标准消息格式
-   - 发布到 `lan_printer_report` 主题
+   - 发布到 `lan-printer-report` 主题
    - 记录发布日志
 
 4. **其他服务消费**
-   - 订阅 `lan_printer_report` 主题
+   - 订阅 `lan-printer-report` 主题
    - 处理打印机信息
    - 更新数据库或执行其他业务逻辑
 
@@ -175,7 +175,7 @@ type LanPrinterReportMessage struct {
 
 ### Topic 信息
 
-- **Topic 名称**: `lan_printer_report`
+- **Topic 名称**: `lan-printer-report`
 - **消息类型**: JSON
 - **持久化**: 是
 - **消费模式**: 集群消费
@@ -185,7 +185,7 @@ type LanPrinterReportMessage struct {
 ```go
 // 订阅 LAN 打印机上报消息
 func subscribeLanPrinterReport(ctx context.Context) error {
-    return queue.Subscribe(ctx, "lan_printer_report", func(ctx context.Context, mqMsg queue.MqMsg) error {
+    return queue.Subscribe(ctx, "lan-printer-report", func(ctx context.Context, mqMsg queue.MqMsg) error {
         // 解析消息
         var message map[string]interface{}
         if err := json.Unmarshal(mqMsg.Body, &message); err != nil {
@@ -219,7 +219,7 @@ func subscribeLanPrinterReport(ctx context.Context) error {
        company_uuid=8609817471094784 
        device_id=cashier_001 
        printer_count=2 
-       topic=lan_printer_report
+       topic=lan-printer-report
 ```
 
 ### 发布失败日志

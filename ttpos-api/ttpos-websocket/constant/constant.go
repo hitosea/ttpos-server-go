@@ -4,7 +4,7 @@ package constant
 // Topic 常量定义
 const (
 	// 用于收银机上报局域网内的打印机信息
-	TopicLanPrinterReport = "lan_printer_report"
+	TopicLanPrinterReport = "lan-printer-report"
 )
 
 // GetAllTopics 获取所有 ttpos-websocket 的 Topic
