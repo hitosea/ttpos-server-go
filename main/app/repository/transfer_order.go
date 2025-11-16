@@ -174,9 +174,9 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 				OR a.next_approval_company_uuid = %d 
 				OR EXISTS (
 					SELECT 1 FROM saas.ttpos_transfer_order_approval b
-					WHERE b.transfer_order_uuid = a.uuid
+					WHERE b.transfer_order_uuid = a.uuid 
 					AND b.approval_company_uuid = %d
-					AND b.status IN (1, 2)
+					AND b.status IN (1, 2, 3)
 					AND b.delete_time = 0
 				)
 			) %s

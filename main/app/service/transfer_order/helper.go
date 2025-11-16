@@ -253,7 +253,7 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalTypeSenderParent
 			}(),
 			"status": func() int {
-				if myParentCompanyUuid == theOtherParentCompanyUuid || myParentCompanyUuid == theOtherCompanyUuid {
+				if myCompanyUuid == myParentCompanyUuid || myParentCompanyUuid == theOtherParentCompanyUuid || myParentCompanyUuid == theOtherCompanyUuid {
 					return constant.TransferApprovalSkipped
 				}
 				if headquarterBusinessSetting.IsRequiredParentCompanyApproval() || myParentBusinessSetting.IsRequiredParentCompanyApproval() {
@@ -262,7 +262,7 @@ func (h *transferOrderHelper) CreateApproval(
 				return constant.TransferApprovalSkipped
 			}(),
 			"is_via_company_warehouse": func() string {
-				if myParentCompanyUuid == theOtherParentCompanyUuid || myParentCompanyUuid == theOtherCompanyUuid {
+				if myCompanyUuid == myParentCompanyUuid || myParentCompanyUuid == theOtherParentCompanyUuid || myParentCompanyUuid == theOtherCompanyUuid {
 					return constant.TransferApprovalIsNotViaCompanyWarehouse
 				}
 				if headquarterBusinessSetting.IsViaParentCompanyWarehouse() || myParentBusinessSetting.IsViaParentCompanyWarehouse() {
