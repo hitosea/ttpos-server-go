@@ -1067,7 +1067,6 @@ func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExi
 // GetOtherOrgList 获取对方机构列表
 func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error) {
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
 	supplierRepo := repository.NewSupplierRepo(db)
 
 	// 获取供应商列表
@@ -1080,7 +1079,7 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 	}
 	otherOrgs := make([]resp.OtherOrgResp, 0, len(suppliers))
 	for _, supplier := range suppliers {
-		if supplier.IsInternalSupplier == 1 {
+		if !supplier.IsNormalSupplier() && !supplier.IsHeadquartersSupplier() {
 			continue
 		}
 		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
@@ -1090,19 +1089,16 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 		})
 	}
 
-	//
-	if companySetting.IsHeadquarter() {
-		// 获取公司列表
-		companies, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetListByHeadquarterUuid(ctx.GetCompanyUuid())
-		if err != nil {
-			return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
-		}
-		for _, company := range companies {
-			otherOrgs = append(otherOrgs, resp.OtherOrgResp{
-				Name: company.Name,
-				Code: fmt.Sprintf("%s:%s", OtherOrgCodeCompanyUuid, strconv.FormatUint(company.Uuid, 10)), // 公司uuid前缀
-			})
-		}
+	// 获取公司列表
+	companies, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetAllSubShopsAndHeadquarterListByCompanyUuid(ctx.GetCompanyUuid())
+	if err != nil {
+		return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
+	}
+	for _, company := range companies {
+		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
+			Name: company.Name,
+			Code: fmt.Sprintf("%s:%s", OtherOrgCodeCompanyUuid, strconv.FormatUint(company.Uuid, 10)), // 公司uuid前缀
+		})
 	}
 
 	return resp.OtherOrgListResp{List: otherOrgs}, nil
