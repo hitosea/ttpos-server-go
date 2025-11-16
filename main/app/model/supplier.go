@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/constant"
+
 // Supplier 供应商表 ttpos_supplier
 type Supplier struct {
 	BaseModel
@@ -18,4 +20,13 @@ type Supplier struct {
 
 	// purchase order 表的supplier_erp_code 关联supplier的erp_code
 	PurchaseOrders []*PurchaseOrder `gorm:"foreignKey:SupplierErpCode;references:ErpCode"`
+}
+
+func (s Supplier) IsHeadquartersSupplier() bool {
+	return s.ErpCode == constant.ErpHeadquartersSupplierCode
+}
+
+// 普通供应商
+func (s Supplier) IsNormalSupplier() bool {
+	return s.IsInternalSupplier == 0
 }
