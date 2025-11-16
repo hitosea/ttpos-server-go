@@ -1,0 +1,748 @@
+# 安全开发规范
+
+> 本规范适用于所有模块的安全开发
+
+## 📋 目录
+
+1. [认证授权](#认证授权)
+2. [数据验证](#数据验证)
+3. [SQL注入防护](#sql注入防护)
+4. [XSS防护](#xss防护)
+5. [CSRF防护](#csrf防护)
+6. [密码安全](#密码安全)
+7. [敏感数据处理](#敏感数据处理)
+8. [API安全](#api安全)
+
+## 认证授权
+
+### 1. JWT认证
+
+✅ **正确的JWT实现**
+```go
+// 生成Token
+func GenerateToken(userId uint64) (string, error) {
+    claims := jwt.MapClaims{
+        "user_id": userId,
+        "exp":     time.Now().Add(time.Hour * 2).Unix(),
+        "iat":     time.Now().Unix(),
+    }
+    
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    return token.SignedString([]byte(config.JWTSecret))
+}
+
+// 验证Token
+func VerifyToken(tokenString string) (*jwt.Token, error) {
+    return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("unexpected signing method")
+        }
+        return []byte(config.JWTSecret), nil
+    })
+}
+```
+
+❌ **错误做法**
+```go
+// ❌ 不要在Token中存储敏感信息
+claims := jwt.MapClaims{
+    "user_id":  userId,
+    "password": password,  // ❌ 不要存储密码
+    "api_key":  apiKey,    // ❌ 不要存储密钥
+}
+
+// ❌ 不要使用弱密钥
+token.SignedString([]byte("123456"))  // ❌ 密钥太弱
+```
+
+### 2. 权限验证
+
+✅ **基于角色的访问控制（RBAC）**
+```go
+// 权限验证中间件
+func CheckPermission(permission string) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        userId := c.GetUint64("user_id")
+        
+        // 检查用户是否有权限
+        hasPermission, err := permissionService.CheckUserPermission(userId, permission)
+        if err != nil || !hasPermission {
+            c.JSON(403, gin.H{
+                "code":    403,
+                "message": "无权限访问",
+                "data":    gin.H{},
+            })
+            c.Abort()
+            return
+        }
+        
+        c.Next()
+    }
+}
+
+// 使用
+router.DELETE("/api/v1/users/:id", CheckPermission("user.delete"), userController.Delete)
+```
+
+### 3. 会话管理
+
+✅ **安全的会话管理**
+```go
+// 设置会话超时
+const SessionTimeout = 2 * time.Hour
+
+// 刷新会话
+func RefreshSession(userId uint64) error {
+    sessionKey := fmt.Sprintf("session:%d", userId)
+    return redis.Expire(sessionKey, SessionTimeout)
+}
+
+// 登出时清除会话
+func Logout(userId uint64) error {
+    sessionKey := fmt.Sprintf("session:%d", userId)
+    return redis.Del(sessionKey)
+}
+```
+
+## 数据验证
+
+### 1. 输入验证
+
+✅ **严格验证所有输入**
+```go
+// Go - 使用验证标签
+type CreateUserReq struct {
+    Username string `json:"username" binding:"required,min=2,max=20,alphanum"`
+    Email    string `json:"email" binding:"required,email"`
+    Phone    string `json:"phone" binding:"omitempty,len=11,numeric"`
+    Age      int    `json:"age" binding:"required,min=1,max=150"`
+}
+
+// 自定义验证
+func (req *CreateUserReq) Validate() error {
+    // 用户名不能包含特殊字符
+    if strings.ContainsAny(req.Username, "!@#$%^&*()") {
+        return errors.New("用户名不能包含特殊字符")
+    }
+    
+    // 手机号格式验证
+    if req.Phone != "" {
+        matched, _ := regexp.MatchString(`^1[3-9]\d{9}$`, req.Phone)
+        if !matched {
+            return errors.New("手机号格式不正确")
+        }
+    }
+    
+    return nil
+}
+```
+
+```php
+// PHP - 使用验证器
+class UserValidate extends Validate
+{
+    protected $rule = [
+        'username' => 'require|length:2,20|alphaNum',
+        'email'    => 'require|email',
+        'phone'    => 'mobile',
+        'age'      => 'require|number|between:1,150',
+    ];
+    
+    protected $message = [
+        'username.require'  => '用户名不能为空',
+        'username.alphaNum' => '用户名只能包含字母和数字',
+        'email.email'       => '邮箱格式不正确',
+    ];
+}
+```
+
+### 2. 白名单验证
+
+✅ **使用白名单而非黑名单**
+```go
+// ✅ 白名单验证
+var allowedSortFields = map[string]bool{
+    "id":          true,
+    "create_time": true,
+    "update_time": true,
+    "username":    true,
+}
+
+func ValidateSortField(field string) error {
+    if !allowedSortFields[field] {
+        return errors.New("不支持的排序字段")
+    }
+    return nil
+}
+
+// ❌ 黑名单验证（不推荐）
+var blockedFields = []string{"password", "token"}
+```
+
+## SQL注入防护
+
+### 1. 使用参数化查询
+
+✅ **正确的数据库查询**
+```go
+// Go - 使用参数化查询
+db.Where("username = ?", username).First(&user)
+db.Where("id IN ?", ids).Find(&users)
+
+// 复杂查询
+db.Where("username = ? AND status = ?", username, status).Find(&users)
+```
+
+```php
+// PHP - 使用参数化查询
+User::where('username', $username)->find();
+User::whereIn('id', $ids)->select();
+```
+
+❌ **错误做法 - 字符串拼接**
+```go
+// ❌ 危险！容易SQL注入
+query := fmt.Sprintf("SELECT * FROM users WHERE username = '%s'", username)
+db.Raw(query).Scan(&users)
+
+// ❌ 危险！
+db.Where("username = '" + username + "'").Find(&users)
+```
+
+```php
+// ❌ 危险！
+$sql = "SELECT * FROM users WHERE username = '$username'";
+Db::query($sql);
+```
+
+### 2. ORM使用
+
+✅ **使用ORM框架**
+```go
+// GORM
+db.Model(&User{}).Where("status = ?", 1).Find(&users)
+
+// 预加载
+db.Preload("Orders").Find(&users)
+```
+
+```php
+// ThinkPHP
+User::where('status', 1)->select();
+
+// 关联查询
+User::with(['orders'])->select();
+```
+
+## XSS防护
+
+### 1. 输出转义
+
+✅ **转义HTML输出**
+```go
+import "html"
+
+// 转义HTML
+safeContent := html.EscapeString(userInput)
+
+// 在模板中自动转义
+{{ .Content }}  // 自动转义
+```
+
+```php
+// PHP
+echo htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8');
+
+// 在模板中
+{$content|raw}  // 不转义（谨慎使用）
+{$content}      // 自动转义
+```
+
+```vue
+<!-- Vue - 自动转义 -->
+<div>{{ userInput }}</div>
+
+<!-- 不转义（谨慎使用） -->
+<div v-html="trustedContent"></div>
+```
+
+### 2. Content Security Policy
+
+✅ **设置CSP头**
+```go
+// 设置CSP响应头
+c.Header("Content-Security-Policy", 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline';")
+```
+
+### 3. 富文本处理
+
+✅ **使用白名单过滤**
+```go
+import "github.com/microcosm-cc/bluemonday"
+
+// 创建策略
+p := bluemonday.UGCPolicy()
+
+// 清理HTML
+safeHTML := p.Sanitize(userHTML)
+```
+
+## CSRF防护
+
+### 1. CSRF Token
+
+✅ **使用CSRF Token**
+```go
+// 生成CSRF Token
+func GenerateCSRFToken() string {
+    b := make([]byte, 32)
+    rand.Read(b)
+    return base64.URLEncoding.EncodeToString(b)
+}
+
+// 验证CSRF Token
+func VerifyCSRFToken(token string, sessionToken string) bool {
+    return token == sessionToken
+}
+
+// 中间件
+func CSRFMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        if c.Request.Method != "GET" {
+            token := c.GetHeader("X-CSRF-Token")
+            sessionToken := c.GetString("csrf_token")
+            
+            if token == "" || token != sessionToken {
+                c.JSON(403, gin.H{
+                    "code":    403,
+                    "message": "CSRF验证失败",
+                    "data":    gin.H{},
+                })
+                c.Abort()
+                return
+            }
+        }
+        c.Next()
+    }
+}
+```
+
+### 2. SameSite Cookie
+
+✅ **设置SameSite属性**
+```go
+c.SetCookie(
+    "session_id",
+    sessionId,
+    3600,
+    "/",
+    "example.com",
+    true,  // Secure
+    true,  // HttpOnly
+)
+
+// 设置SameSite
+c.SetSameSite(http.SameSiteStrictMode)
+```
+
+## 密码安全
+
+### 1. 密码加密
+
+✅ **使用bcrypt加密**
+```go
+import "golang.org/x/crypto/bcrypt"
+
+// 加密密码
+func HashPassword(password string) (string, error) {
+    bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+    return string(bytes), err
+}
+
+// 验证密码
+func CheckPassword(password, hash string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+    return err == nil
+}
+```
+
+```php
+// PHP
+// 加密密码
+$hash = password_hash($password, PASSWORD_DEFAULT);
+
+// 验证密码
+$isValid = password_verify($password, $hash);
+```
+
+❌ **错误做法**
+```go
+// ❌ 不要使用MD5
+hash := md5.Sum([]byte(password))
+
+// ❌ 不要使用SHA1
+hash := sha1.Sum([]byte(password))
+
+// ❌ 不要明文存储
+user.Password = password
+```
+
+### 2. 密码策略
+
+✅ **强密码要求**
+```go
+func ValidatePassword(password string) error {
+    if len(password) < 8 {
+        return errors.New("密码长度至少8位")
+    }
+    
+    // 包含大写字母
+    if !regexp.MustCompile(`[A-Z]`).MatchString(password) {
+        return errors.New("密码必须包含大写字母")
+    }
+    
+    // 包含小写字母
+    if !regexp.MustCompile(`[a-z]`).MatchString(password) {
+        return errors.New("密码必须包含小写字母")
+    }
+    
+    // 包含数字
+    if !regexp.MustCompile(`[0-9]`).MatchString(password) {
+        return errors.New("密码必须包含数字")
+    }
+    
+    // 包含特殊字符
+    if !regexp.MustCompile(`[!@#$%^&*]`).MatchString(password) {
+        return errors.New("密码必须包含特殊字符")
+    }
+    
+    return nil
+}
+```
+
+### 3. 密码重置
+
+✅ **安全的密码重置**
+```go
+// 生成重置Token
+func GenerateResetToken(userId uint64) (string, error) {
+    token := uuid.New().String()
+    key := fmt.Sprintf("reset_token:%d", userId)
+    
+    // 存储到Redis，15分钟过期
+    err := redis.Set(key, token, 15*time.Minute)
+    return token, err
+}
+
+// 验证重置Token
+func VerifyResetToken(userId uint64, token string) bool {
+    key := fmt.Sprintf("reset_token:%d", userId)
+    storedToken, err := redis.Get(key)
+    
+    if err != nil || storedToken != token {
+        return false
+    }
+    
+    // 使用后立即删除
+    redis.Del(key)
+    return true
+}
+```
+
+## 敏感数据处理
+
+### 1. 数据脱敏
+
+✅ **敏感信息脱敏**
+```go
+// 手机号脱敏
+func MaskPhone(phone string) string {
+    if len(phone) != 11 {
+        return phone
+    }
+    return phone[:3] + "****" + phone[7:]
+}
+
+// 邮箱脱敏
+func MaskEmail(email string) string {
+    parts := strings.Split(email, "@")
+    if len(parts) != 2 {
+        return email
+    }
+    
+    name := parts[0]
+    if len(name) > 2 {
+        name = name[:2] + "***"
+    }
+    
+    return name + "@" + parts[1]
+}
+
+// 身份证脱敏
+func MaskIDCard(idCard string) string {
+    if len(idCard) != 18 {
+        return idCard
+    }
+    return idCard[:6] + "********" + idCard[14:]
+}
+```
+
+### 2. 日志脱敏
+
+✅ **日志中不记录敏感信息**
+```go
+// ✅ 正确
+logger.Info("用户登录", 
+    zap.Uint64("user_id", userId),
+    zap.String("username", username),
+)
+
+// ❌ 错误 - 不要记录密码
+logger.Info("用户登录",
+    zap.String("username", username),
+    zap.String("password", password),  // ❌
+)
+```
+
+### 3. 数据加密
+
+✅ **敏感数据加密存储**
+```go
+import "crypto/aes"
+import "crypto/cipher"
+
+// AES加密
+func Encrypt(plaintext string, key []byte) (string, error) {
+    block, err := aes.NewCipher(key)
+    if err != nil {
+        return "", err
+    }
+    
+    gcm, err := cipher.NewGCM(block)
+    if err != nil {
+        return "", err
+    }
+    
+    nonce := make([]byte, gcm.NonceSize())
+    rand.Read(nonce)
+    
+    ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+    return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+// AES解密
+func Decrypt(ciphertext string, key []byte) (string, error) {
+    data, err := base64.StdEncoding.DecodeString(ciphertext)
+    if err != nil {
+        return "", err
+    }
+    
+    block, err := aes.NewCipher(key)
+    if err != nil {
+        return "", err
+    }
+    
+    gcm, err := cipher.NewGCM(block)
+    if err != nil {
+        return "", err
+    }
+    
+    nonceSize := gcm.NonceSize()
+    nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+    
+    plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+    return string(plaintext), err
+}
+```
+
+## API安全
+
+### 1. 限流
+
+✅ **实施速率限制**
+```go
+import "golang.org/x/time/rate"
+
+// 创建限流器
+var limiter = rate.NewLimiter(rate.Limit(100), 200) // 每秒100个请求，突发200
+
+// 限流中间件
+func RateLimitMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        if !limiter.Allow() {
+            c.JSON(429, gin.H{
+                "code":    429,
+                "message": "请求过于频繁，请稍后再试",
+                "data":    gin.H{},
+            })
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
+}
+```
+
+### 2. IP白名单
+
+✅ **限制IP访问**
+```go
+var allowedIPs = map[string]bool{
+    "192.168.1.1": true,
+    "10.0.0.1":    true,
+}
+
+func IPWhitelistMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        clientIP := c.ClientIP()
+        
+        if !allowedIPs[clientIP] {
+            c.JSON(403, gin.H{
+                "code":    403,
+                "message": "IP不在白名单中",
+                "data":    gin.H{},
+            })
+            c.Abort()
+            return
+        }
+        
+        c.Next()
+    }
+}
+```
+
+### 3. HTTPS
+
+✅ **强制使用HTTPS**
+```go
+// 重定向到HTTPS
+func RedirectToHTTPS() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        if c.Request.Header.Get("X-Forwarded-Proto") != "https" {
+            httpsURL := "https://" + c.Request.Host + c.Request.RequestURI
+            c.Redirect(301, httpsURL)
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
+}
+```
+
+## 文件上传安全
+
+### 1. 文件类型验证
+
+✅ **验证文件类型**
+```go
+var allowedExtensions = map[string]bool{
+    ".jpg":  true,
+    ".jpeg": true,
+    ".png":  true,
+    ".gif":  true,
+    ".pdf":  true,
+}
+
+func ValidateFileType(filename string) error {
+    ext := strings.ToLower(filepath.Ext(filename))
+    
+    if !allowedExtensions[ext] {
+        return errors.New("不支持的文件类型")
+    }
+    
+    return nil
+}
+
+// 验证MIME类型
+func ValidateMIMEType(file multipart.File) error {
+    buffer := make([]byte, 512)
+    _, err := file.Read(buffer)
+    if err != nil {
+        return err
+    }
+    
+    mimeType := http.DetectContentType(buffer)
+    
+    allowedMIMEs := map[string]bool{
+        "image/jpeg": true,
+        "image/png":  true,
+        "image/gif":  true,
+        "application/pdf": true,
+    }
+    
+    if !allowedMIMEs[mimeType] {
+        return errors.New("不支持的文件类型")
+    }
+    
+    return nil
+}
+```
+
+### 2. 文件大小限制
+
+✅ **限制文件大小**
+```go
+const MaxFileSize = 10 * 1024 * 1024 // 10MB
+
+func ValidateFileSize(size int64) error {
+    if size > MaxFileSize {
+        return errors.New("文件大小超过限制")
+    }
+    return nil
+}
+```
+
+### 3. 文件名处理
+
+✅ **安全的文件名**
+```go
+import "github.com/google/uuid"
+
+// 生成安全的文件名
+func GenerateSafeFilename(originalFilename string) string {
+    ext := filepath.Ext(originalFilename)
+    return uuid.New().String() + ext
+}
+
+// 清理文件名
+func SanitizeFilename(filename string) string {
+    // 移除路径分隔符
+    filename = strings.ReplaceAll(filename, "/", "")
+    filename = strings.ReplaceAll(filename, "\\", "")
+    filename = strings.ReplaceAll(filename, "..", "")
+    
+    return filename
+}
+```
+
+## 安全检查清单
+
+### 开发阶段
+
+- [ ] 所有输入都经过验证
+- [ ] 使用参数化查询防止SQL注入
+- [ ] 输出进行HTML转义防止XSS
+- [ ] 实施CSRF防护
+- [ ] 密码使用bcrypt加密
+- [ ] 敏感数据加密存储
+- [ ] 实施权限验证
+- [ ] 添加速率限制
+- [ ] 日志不记录敏感信息
+
+### 部署阶段
+
+- [ ] 使用HTTPS
+- [ ] 设置安全响应头
+- [ ] 配置防火墙
+- [ ] 定期更新依赖
+- [ ] 关闭不必要的端口
+- [ ] 配置备份策略
+- [ ] 设置监控告警
+
+---
+
+**最后更新**: 2025-11-16  
+**维护者**: TTPOS Team

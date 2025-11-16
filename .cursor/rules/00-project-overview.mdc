@@ -1,0 +1,307 @@
+# TTPOS 项目总览
+
+## 🏗️ 项目简介
+
+TTPOS（TableTop Point of Sale）是一个现代化的餐饮收银系统，采用微服务架构设计，支持多端点餐、桌台管理、会员服务、外送配送等完整的餐饮业务场景。
+
+### 核心定位
+- **行业定位**: 餐饮行业一体化解决方案
+- **技术定位**: 微服务架构 + 模块化单体
+- **业务定位**: 收银 + ERP + 会员 + 外卖
+- **规模目标**: 从50商户扩展到500商户
+
+## 📦 项目结构
+
+```
+ttpos-server-go/
+├── main/                    # 主服务（Go + Gin）- 核心业务
+├── admin/                   # 管理后台（PHP + ThinkPHP）
+├── ttpos-bmp/              # 业务中台（Go + GoFrame）
+│   ├── ttpos-erp/          # ERP服务
+│   ├── ttpos-manager/      # 管理服务
+│   ├── ttpos-message/      # 消息服务
+│   ├── ttpos-shop/         # 店铺服务
+│   ├── ttpos-takeout/      # 外卖服务
+│   └── ttpos-websocket/    # WebSocket服务
+├── ttpos-api/              # API定义（共享）
+├── docker/                 # Docker配置
+├── docs/                   # 项目文档
+├── .cursor/                # Cursor AI 配置
+└── ttpos-scripts/          # 工具脚本
+```
+
+## 🎯 技术栈
+
+### 后端技术
+| 模块 | 语言 | 框架 | 数据库 | 缓存 |
+|------|------|------|--------|------|
+| Main | Go 1.23+ | Gin | MySQL 8.0+ | Redis 6.0+ |
+| Admin | PHP 8.0+ | ThinkPHP 6.0 | MySQL 8.0+ | Redis 6.0+ |
+| BMP | Go 1.23+ | GoFrame 2.x | MySQL 8.0+ | Redis 6.0+ |
+
+### 前端技术
+| 端 | 技术栈 | UI框架 |
+|----|--------|--------|
+| 管理后台 | Vue 3 + TypeScript + Vite | Element Plus |
+| 店铺后台 | Vue 3 + TypeScript + Vite | Element Plus |
+
+### 基础设施
+- **容器化**: Docker + Docker Compose
+- **消息队列**: RabbitMQ + RocketMQ
+- **服务注册**: Nacos
+- **链路追踪**: OpenTelemetry + SkyWalking
+- **监控**: Prometheus + Grafana
+- **API网关**: APISIX（规划中）
+
+## 🔄 架构模式
+
+### 1. Main模块（模块化单体）
+```
+main/
+├── app/
+│   ├── api/              # API层（路由处理）
+│   ├── service/          # 服务层（业务逻辑）
+│   ├── repository/       # 仓储层（数据访问）
+│   ├── model/            # 模型层（数据结构）
+│   ├── dto/              # 数据传输对象
+│   ├── constant/         # 常量定义
+│   ├── errors/           # 错误处理
+│   └── event/            # 事件处理
+├── pkg/                  # 基础设施包
+├── middleware/           # 中间件
+└── router/               # 路由配置
+```
+
+**设计模式**: 
+- 分层架构（Controller → Service → Repository）
+- 依赖注入
+- 事件驱动
+
+### 2. BMP模块（微服务）
+```
+ttpos-bmp/app/ttpos-erp/
+├── api/                  # API定义（protobuf）
+├── internal/
+│   ├── controller/       # 控制器（HTTP + gRPC）
+│   ├── logic/            # 业务逻辑
+│   ├── dao/              # 数据访问（自动生成）
+│   ├── model/            # 数据模型
+│   └── service/          # 服务接口（自动生成）
+└── manifest/
+    ├── config/           # 配置文件
+    ├── protobuf/         # protobuf定义
+    └── sql/              # 数据库迁移
+```
+
+**设计模式**:
+- GoFrame标准结构
+- gRPC通信
+- DDD领域驱动（规划中）
+
+### 3. Admin模块（传统MVC）
+```
+admin/
+├── app/
+│   ├── admin/            # 管理后台
+│   │   ├── controller/   # 控制器
+│   │   ├── model/        # 模型
+│   │   ├── service/      # 服务
+│   │   └── validate/     # 验证器
+│   ├── shop/             # 店铺后台
+│   └── common/           # 共享代码
+├── config/               # 配置
+├── database/             # 数据库迁移
+└── views/                # 前端代码
+    ├── admin/            # 管理后台前端（Vue3）
+    └── shop/             # 店铺后台前端（Vue3）
+```
+
+## 🗄️ 数据库架构
+
+### 多租户模式
+- **独立数据库**: 每个商户一个独立数据库
+- **命名规则**: `ttpos_shop_{shop_id}`
+- **共享表**: 系统配置、字典等存储在主库
+
+### 表命名规范
+- **前缀**: `ttpos_`
+- **命名**: 小写+下划线（snake_case）
+- **示例**: `ttpos_product`, `ttpos_sale_order`
+
+### 字段规范
+- **主键**: `id` (bigint, 自增)
+- **UUID**: `uuid` (bigint, 唯一标识)
+- **时间**: `create_time`, `update_time`, `delete_time` (int, Unix时间戳)
+- **金额**: `decimal(20,8)` 或 `decimal(14,2)`
+- **软删除**: `delete_time = 0` 表示未删除
+
+## 🔌 服务通信
+
+### 内部通信
+```
+Main ←→ BMP-ERP (gRPC)
+Main ←→ BMP-Message (gRPC)
+Main ←→ BMP-Takeout (gRPC)
+Admin ←→ Main (HTTP API)
+Frontend ←→ Admin (HTTP API)
+Frontend ←→ Main (HTTP API)
+```
+
+### 事件通信
+- **内存事件总线**: Main模块内部（同步/异步）
+- **RocketMQ**: 跨服务异步通信
+- **WebSocket**: 实时推送
+
+## 🚀 部署架构
+
+### 开发环境
+```
+Docker Compose
+├── nginx (反向代理)
+├── php-fpm (Admin服务)
+├── golang (Main服务)
+├── mysql (数据库)
+├── redis-cluster (缓存集群)
+└── nacos (服务注册)
+```
+
+### 生产环境
+```
+Kubernetes
+├── Ingress (入口)
+├── API Gateway (APISIX)
+├── Services (多实例)
+├── MySQL Cluster (主从)
+├── Redis Cluster (集群)
+├── RabbitMQ Cluster
+└── Monitoring (Prometheus + Grafana)
+```
+
+## 📊 核心业务流程
+
+### 1. 点餐流程
+```
+顾客扫码 → 选择商品 → 提交订单 → 支付 → 
+厨房接单 → 制作 → 完成 → 送餐 → 结账
+```
+
+### 2. 收银流程
+```
+开台 → 点餐 → 加菜 → 结账 → 支付 → 
+打印小票 → 关台 → 统计
+```
+
+### 3. 库存流程
+```
+采购入库 → 库存同步 → 销售出库 → 
+库存预警 → 盘点 → 调拨
+```
+
+## 🎯 性能指标
+
+### 当前指标（50商户）
+- **QPS**: ~500
+- **P99延迟**: ~800ms
+- **DB连接数**: ~550
+- **并发用户**: ~1000
+
+### 目标指标（500商户）
+- **QPS**: ~5000
+- **P99延迟**: <200ms
+- **DB连接数**: <250
+- **并发用户**: ~10000
+
+## 📝 开发规范
+
+### 命名规范
+- **Go**: 驼峰命名（camelCase/PascalCase）
+- **PHP**: 驼峰命名（camelCase/PascalCase）
+- **Vue**: 驼峰命名（camelCase/PascalCase）
+- **URL**: 蛇形命名（snake_case）
+- **数据库**: 蛇形命名（snake_case）
+
+### 注释规范
+- **所有代码**: 使用中文注释
+- **导出函数**: 必须添加注释
+- **复杂逻辑**: 添加详细说明
+
+### 错误处理
+- **Go**: 返回error，不使用panic
+- **PHP**: 抛出异常
+- **前端**: try-catch处理
+
+## 🔒 安全规范
+
+### 认证授权
+- **JWT**: 无状态Token认证
+- **RBAC**: 基于角色的访问控制
+- **权限验证**: 每个接口验证权限
+
+### 数据安全
+- **SQL注入**: 使用参数化查询
+- **XSS防护**: 输入输出过滤
+- **密码**: 加密存储（bcrypt）
+
+## 📚 相关文档
+
+### 必读文档
+1. [Go Main模块规范](./01-go-main-rules.mdc)
+2. [Go BMP模块规范](./02-go-bmp-rules.mdc)
+3. [PHP开发规范](./03-php-rules.mdc)
+4. [Vue开发规范](./04-vue-rules.mdc)
+5. [数据库规范](./05-database-rules.mdc)
+
+### 参考文档
+- [API设计规范](./06-api-rules.mdc)
+- [测试规范](./07-testing-rules.mdc)
+- [Git提交规范](./08-git-rules.mdc)
+- [Docker部署规范](./09-docker-rules.mdc)
+- [安全规范](./10-security-rules.mdc)
+- [性能优化规范](./11-performance-rules.mdc)
+
+## 🎓 学习路径
+
+### 新成员入门（第1周）
+1. 阅读本文档，了解项目架构
+2. 搭建开发环境（`make install`）
+3. 运行项目，熟悉功能
+4. 阅读对应模块的开发规范
+
+### 深入学习（第2-4周）
+1. 研究核心业务代码
+2. 学习框架和工具
+3. 完成简单功能开发
+4. 参与代码审查
+
+### 独立开发（第5周+）
+1. 独立完成功能开发
+2. 遵循开发规范
+3. 编写测试代码
+4. 参与架构讨论
+
+## 💡 最佳实践
+
+### 开发流程
+1. 创建功能分支
+2. 编写代码和测试
+3. 自查代码质量
+4. 提交PR
+5. 代码审查
+6. 合并主分支
+
+### 代码质量
+- **可读性**: 清晰的命名和注释
+- **可测试性**: 编写单元测试
+- **可维护性**: 遵循设计模式
+- **性能**: 注意性能优化
+
+### 团队协作
+- **沟通**: 及时沟通问题
+- **文档**: 更新相关文档
+- **分享**: 分享经验和技巧
+- **互助**: 帮助团队成员
+
+---
+
+**最后更新**: 2025-11-16  
+**维护者**: TTPOS Team
