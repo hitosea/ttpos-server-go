@@ -39,12 +39,12 @@
 | 技术设计   | [design-template.md](./templates/design-template.md)                         | 技术方案       |
 | 任务分解   | [tasks-template.md](./templates/tasks-template.md)                           | 任务清单       |
 | 问题排查   | [troubleshooting-guide.md](./templates/troubleshooting-guide.md)             | 故障处理       |
-| 技术决策   | [decision-record.md](./templates/decision-record.md)                         | ADR 记录       |
+| 技术决策   | 待补充（模板未提供）                                                         | ADR 记录       |
 | 需求提案   | [proposal-template.md](./templates/proposal-template.md)                     | 需求提案       |
 | 数据库迁移 | [database-migration-template.md](./templates/database-migration-template.md) | PHP Phinx 迁移 |
 | gRPC 服务  | [grpc-service-template.md](./templates/grpc-service-template.md)             | Protobuf 定义  |
-| 迁移指南   | [migration-guide.md](./templates/migration-guide.md)                         | 版本迁移       |
-| 测试报告   | [test-report-template.md](./templates/test-report-template.md)               | 测试报告       |
+| 迁移指南   | 待补充（模板未提供）                                                         | 版本迁移       |
+| 测试报告   | 待补充（模板未提供）                                                         | 测试报告       |
 
 ### [Graphiti 草稿](./graphiti/)
 

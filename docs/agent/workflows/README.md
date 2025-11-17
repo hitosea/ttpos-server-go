@@ -45,7 +45,7 @@
 | 步骤             | 查阅                                            |
 | ---------------- | ----------------------------------------------- |
 | Spec 文档创建    | `../../.cursor/rules/specs.mdc`                 |
-| Go 代码实现规范  | `../../.cursor/rules/golang.mdc`                |
+| Go 代码实现规范  | `../../.cursor/rules/go-main.mdc`               |
 | PHP 代码实现规范 | `../../.cursor/rules/php.mdc`                   |
 | Vue 前端规范     | `../../.cursor/rules/vue.mdc`                   |
 | 数据库迁移规范   | `../../.cursor/rules/php.mdc` (迁移部分)        |
@@ -142,7 +142,7 @@ graph TD
 
 ### 开发规范
 
-- [Go 开发规范](../../.cursor/rules/golang.mdc)
+- [Go 开发规范](../../.cursor/rules/go-main.mdc)
 - [PHP 开发规范](../../.cursor/rules/php.mdc)
 - [Vue 开发规范](../../.cursor/rules/vue.mdc)
 - [GoFrame 规范](../../ttpos-bmp/.cursor/rules/go-rules.mdc)

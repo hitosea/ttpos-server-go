@@ -458,7 +458,7 @@ episode_body: |
 
 ### 规范文件
 
-- `.cursor/rules/golang.mdc` - Go 规范
+- `.cursor/rules/go-main.mdc` - Go 规范
 - `.cursor/rules/php.mdc` - PHP 规范
 - `ttpos-bmp/.cursor/rules/go-rules.mdc` - GoFrame 规范
 - `ttpos-bmp/.cursor/rules/proto-rules.mdc` - Protobuf 规范

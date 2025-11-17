@@ -68,7 +68,7 @@
 | **开发 gRPC 服务** | [微服务集成工作流](./agent/workflows/microservice-integration.md)             |
 | **对接第三方 API** | [API 对接工作流](./agent/workflows/api-integration.md)                        |
 | **了解项目架构**   | [架构设计文档](./human/architecture/)                                         |
-| **学习开发规范**   | [Go 规范](../.cursor/rules/golang.mdc) / [PHP 规范](../.cursor/rules/php.mdc) |
+| **学习开发规范**   | [Go 规范](../.cursor/rules/go-main.mdc) / [PHP 规范](../.cursor/rules/php.mdc) |
 
 ---
 
@@ -105,7 +105,7 @@ ELSE
 
 - [Agent 速查表](../AGENT.md) - 所有规则的压缩映射表
 - [工作流导航](../.cursor/rules/workflows.mdc) - 场景识别和流程导航
-- [Go 开发规范](../.cursor/rules/golang.mdc)
+- [Go 开发规范](../.cursor/rules/go-main.mdc)
 - [PHP 开发规范](../.cursor/rules/php.mdc)
 - [Vue 开发规范](../.cursor/rules/vue.mdc)
 

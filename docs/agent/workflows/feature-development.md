@@ -22,7 +22,7 @@
 - [ ] Docker 环境已配置
 - [ ] 已了解项目架构和规范
 
-参考: `README.md`, `.cursor/rules/golang.mdc`, `.cursor/rules/php.mdc`
+参考: `README.md`, `.cursor/rules/go-main.mdc`, `.cursor/rules/php.mdc`
 
 ---
 
@@ -123,7 +123,7 @@ git checkout -b feature/story-{module}-{feature}
 
    ```yaml
    IF Language == "Go (main/)" THEN
-     参考: .cursor/rules/golang.mdc
+     参考: .cursor/rules/go-main.mdc
      目录: main/app/
 
    ELSE IF Language == "Go (ttpos-bmp)" THEN
@@ -210,7 +210,7 @@ git checkout -b feature/story-{module}-{feature}
 - data 不能是 null 或数组
 - 所有注释使用中文
 
-参考: `.cursor/rules/golang.mdc`, `.cursor/rules/php.mdc`
+参考: `.cursor/rules/go-main.mdc`, `.cursor/rules/php.mdc`
 
 ---
 
@@ -352,7 +352,7 @@ git push origin feature/story-{module}-{feature}
 - 必须是 `{code, message, data{list, meta}}`
 - 分页信息放在 meta 中
 
-详见: `.cursor/rules/golang.mdc`
+详见: `.cursor/rules/go-main.mdc`
 
 ---
 
@@ -361,7 +361,7 @@ git push origin feature/story-{module}-{feature}
 ### 规范文件
 
 - `AGENT.md` - Agent 速查表
-- `.cursor/rules/golang.mdc` - Go 开发规范 ⭐⭐⭐
+- `.cursor/rules/go-main.mdc` - Go 开发规范 ⭐⭐⭐
 - `.cursor/rules/php.mdc` - PHP 开发规范 ⭐⭐⭐
 - `.cursor/rules/vue.mdc` - Vue 开发规范
 - `ttpos-bmp/.cursor/rules/go-rules.mdc` - GoFrame 规范

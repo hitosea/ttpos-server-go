@@ -201,7 +201,7 @@ public function getOrder($id) {
 - [ ] 错误处理完整
 - [ ] 注释清晰（使用中文）
 
-参考: `.cursor/rules/golang.mdc`, `.cursor/rules/php.mdc`
+参考: `.cursor/rules/go-main.mdc`, `.cursor/rules/php.mdc`
 
 ---
 
@@ -419,7 +419,7 @@ cd admin && composer install --no-dev
 
 ### 规范文件
 
-- `.cursor/rules/golang.mdc` - Go 规范
+- `.cursor/rules/go-main.mdc` - Go 规范
 - `.cursor/rules/php.mdc` - PHP 规范
 - `.cursor/rules/version.mdc` - Git 工作流
 

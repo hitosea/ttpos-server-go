@@ -458,7 +458,7 @@ Migration: {timestamp}_add_order_table"
 ### 规范文件
 
 - `.cursor/rules/php.mdc` - PHP 迁移文件规范 ⭐⭐⭐
-- `.cursor/rules/golang.mdc` - Go model 规范
+- `.cursor/rules/go-main.mdc` - Go model 规范
 
 ### 模板
 

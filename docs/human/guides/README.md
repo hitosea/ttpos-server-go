@@ -41,7 +41,7 @@
 ## 🔗 相关资源
 
 ### 规范文件
-- [Go 开发规范](../../../.cursor/rules/golang.mdc)
+- [Go 开发规范](../../../.cursor/rules/go-main.mdc)
 - [PHP 开发规范](../../../.cursor/rules/php.mdc)
 - [Vue 开发规范](../../../.cursor/rules/vue.mdc)
 
