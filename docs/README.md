@@ -60,14 +60,14 @@
 
 ### 我想...
 
-| 场景               | 查看                                                                          |
-| ------------------ | ----------------------------------------------------------------------------- |
-| **开发新功能**     | [功能开发工作流](./agent/workflows/feature-development.md)                    |
-| **修复 Bug**       | [Bug 修复工作流](./agent/workflows/bug-fixing.md)                             |
-| **创建数据库迁移** | [数据库迁移工作流](./agent/workflows/database-migration.md)                   |
-| **开发 gRPC 服务** | [微服务集成工作流](./agent/workflows/microservice-integration.md)             |
-| **对接第三方 API** | [API 对接工作流](./agent/workflows/api-integration.md)                        |
-| **了解项目架构**   | [架构设计文档](./human/architecture/)                                         |
+| 场景               | 查看                                                                           |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **开发新功能**     | [功能开发工作流](./agent/workflows/feature-development.md)                     |
+| **修复 Bug**       | [Bug 修复工作流](./agent/workflows/bug-fixing.md)                              |
+| **创建数据库迁移** | [数据库迁移工作流](./agent/workflows/database-migration.md)                    |
+| **开发 gRPC 服务** | [微服务集成工作流](./agent/workflows/microservice-integration.md)              |
+| **对接第三方 API** | [API 对接工作流](./agent/workflows/api-integration.md)                         |
+| **了解项目架构**   | [架构设计文档](./human/architecture/)                                          |
 | **学习开发规范**   | [Go 规范](../.cursor/rules/go-main.mdc) / [PHP 规范](../.cursor/rules/php.mdc) |
 
 ---
