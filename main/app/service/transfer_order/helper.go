@@ -1342,12 +1342,6 @@ func (h *transferOrderHelper) GetMaterials(
 		}
 
 	}
-	if len(disabledMaterialNames) > 0 {
-		return materials, disabledMaterialNames, notFoundMaterialNames, nil
-	}
-	if len(notFoundMaterialNames) > 0 {
-		return materials, disabledMaterialNames, notFoundMaterialNames, nil
-	}
 	return materials, disabledMaterialNames, notFoundMaterialNames, nil
 }
 
