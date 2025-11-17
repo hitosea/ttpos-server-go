@@ -1,52 +1,63 @@
 ---
 alwaysApply: true
+description: 项目概览
 ---
-用中文跟我对话
 
-# 介绍
+# 项目概览
+
+1. 用中文跟我对话
+2. 优先查阅 `AGENT.md`
+
+## 基本信息
+
 1. 这是一个餐饮行业使用的收银系统
 2. 这是系统的后端仓库, 基于 thinkphp, golang, gin 开发
 3. 我使用了 mod 来管理我的工作区
-4. 所有都是资深级别的php, golang, mysql, redis, nginx, docker 开发工程师
+4. 所有都是资深级别的 php, golang, mysql, redis, nginx, docker 开发工程师
 
-# 集群部署
+## 集群部署
+
 1. 采用高可用的集群部署方案
 2. 数据库集群
-3. redis集群
-4. api集群
-5. 只有php项目才会用到 redis-proxy 容器
-
-# 项目目录结构
+3. redis 集群
+4. api 集群
+5. 只有 php 项目才会用到 redis-proxy 容器
 
 ## 主要目录说明
 
 ### admin/
-PHP后端管理模块，基于ThinkPHP框架开发，提供系统管理功能。
+
+PHP 后端管理模块，基于 ThinkPHP 框架开发，提供系统管理功能。
+
 - **app/**: 应用代码目录，包含控制器、模型、视图等
 - **config/**: 配置文件目录，包含数据库、缓存、队列等配置
-- **public/**: Web根目录，包含入口文件和静态资源
+- **public/**: Web 根目录，包含入口文件和静态资源
 - **route/**: 路由定义目录
 - **extend/**: 扩展类库目录
 - **database/**: 数据库相关文件，包含迁移和种子文件
 
 ### main/
-Go语言主服务模块，基于Gin框架开发，提供核心业务API。
+
+Go 语言主服务模块，基于 Gin 框架开发，提供核心业务 API。
+
 - **app/**: 应用代码目录
-  - **api/**: API接口定义
+  - **api/**: API 接口定义
   - **constant/**: 常量定义
   - **dto/**: 数据传输对象
   - **model/**: 数据模型
   - **errors/**: 错误处理
   - **event/**: 事件处理
-- **Dockerfile**: Docker容器构建文件
+- **Dockerfile**: Docker 容器构建文件
 
 ### ttpos-bmp/
-Go语言微服务模块，基于GoFrame框架开发，提供企业资源规划(ERP)和管理功能。
-- **app/ttpos-erp/**: ERP服务模块
-  - **api/**: 接口定义层，包含gRPC服务接口定义
+
+Go 语言微服务模块，基于 GoFrame 框架开发，提供企业资源规划(ERP)和管理功能。
+
+- **app/ttpos-erp/**: ERP 服务模块
+  - **api/**: 接口定义层，包含 gRPC 服务接口定义
   - **internal/**: 内部实现代码
     - **boot/**: 启动加载逻辑
-    - **controller/**: 控制器层，包含HTTP和gRPC控制器
+    - **controller/**: 控制器层，包含 HTTP 和 gRPC 控制器
     - **dao/**: 数据访问层（框架自动生成）
     - **logic/**: 业务逻辑层
     - **model/**: 数据模型层
@@ -56,28 +67,34 @@ Go语言微服务模块，基于GoFrame框架开发，提供企业资源规划(E
     - **service/**: 服务接口（框架自动生成）
   - **manifest/**: 配置清单
     - **config/**: 配置文件模板
-    - **protobuf/**: protobuf定义文件
+    - **protobuf/**: protobuf 定义文件
     - **sql/**: 数据库迁移脚本
 - **app/ttpos-manager/**: 管理服务模块，提供系统管理功能
-- **.cursor/rules/**: ttpos-bmp项目专用的开发规范
-  - **go-rules.mdc**: Go代码开发规范
-  - **proto-rules.mdc**: Protobuf开发规范
+- **.cursor/rules/**: ttpos-bmp 项目专用的开发规范
+  - **go-rules.mdc**: Go 代码开发规范
+  - **proto-rules.mdc**: Protobuf 开发规范
 
 ### docker/
-Docker容器配置目录，包含各服务的容器配置。
-- **mysql/**: MySQL数据库容器配置
-- **redis/**: Redis缓存容器配置
-- **nginx/**: Nginx反向代理容器配置
-- **php/**: PHP-FPM容器配置
-- **golang/**: Go应用容器配置
+
+Docker 容器配置目录，包含各服务的容器配置。
+
+- **mysql/**: MySQL 数据库容器配置
+- **redis/**: Redis 缓存容器配置
+- **nginx/**: Nginx 反向代理容器配置
+- **php/**: PHP-FPM 容器配置
+- **golang/**: Go 应用容器配置
 
 ### docs/
+
 项目文档目录，包含功能说明和重构计划。
+
 - **features/**: 功能特性文档
 - **refactor/**: 系统重构文档
 
 ### .vscode/
-VS Code开发环境配置。
+
+VS Code 开发环境配置。
+
 - **launch.json**: 调试配置
 - **settings.json**: 编辑器设置
 - **tasks.json**: 任务配置
@@ -85,14 +102,15 @@ VS Code开发环境配置。
 ## 开发规范
 
 ### ttpos-bmp 项目规范
+
 ttpos-bmp 项目有自己的专用开发规范，详见：
-- `ttpos-bmp/.cursor/rules/go-rules.mdc`: Go代码开发规范
-- `ttpos-bmp/.cursor/rules/proto-rules.mdc`: Protobuf开发规范
+
+- `ttpos-bmp/.cursor/rules/go-rules.mdc`: Go 代码开发规范
+- `ttpos-bmp/.cursor/rules/proto-rules.mdc`: Protobuf 开发规范
 
 ### 通用规范
+
 - 所有代码提交前必须通过格式化和静态检查
-- 数据库迁移脚本统一放在对应模块的manifest/sql目录下
+- 数据库迁移脚本统一放在对应模块的 manifest/sql 目录下
 - 配置文件使用模板形式，敏感信息通过环境变量注入
 - 所有服务必须支持集群部署和水平扩展
-
-
