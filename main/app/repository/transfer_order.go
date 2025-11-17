@@ -159,12 +159,6 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 	companyUuid := query.CompanyUuid
 	shopDbName := fmt.Sprintf("shop%d", companyUuid)
 
-	// 构建统计总数的SQL
-	baseApprovalSQL := ""
-	if slices.Contains(query.MyRole, "approver") {
-		baseApprovalSQL += fmt.Sprintf(" AND (b.approval_company_uuid = %d) ", companyUuid)
-	}
-
 	baseSQL := fmt.Sprintf(`
 		SELECT * FROM (
 			SELECT a.* FROM saas.ttpos_transfer_order a
@@ -179,7 +173,7 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 					AND b.status IN (1, 2, 3)
 					AND b.delete_time = 0
 				)
-			) %s
+			) 
 			AND a.delete_time = 0
 
 			UNION
@@ -188,7 +182,7 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 			WHERE delete_time = 0
 		) t
 		GROUP BY uuid
-	`, companyUuid, companyUuid, companyUuid, companyUuid, baseApprovalSQL, shopDbName)
+	`, companyUuid, companyUuid, companyUuid, companyUuid, shopDbName)
 
 	// 包裹查询结果
 	baseSQL = fmt.Sprintf("SELECT * FROM (%s) t WHERE delete_time = 0 ", baseSQL)
@@ -236,6 +230,15 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 			}
 			if slices.Contains(query.MyRole, "receiver") {
 				baseSQL += fmt.Sprintf(" receiver_company_uuid = %d OR ", companyUuid)
+			}
+			if slices.Contains(query.MyRole, "approver") {
+				baseSQL += fmt.Sprintf(` EXISTS (
+					SELECT 1 FROM saas.ttpos_transfer_order_approval b
+					WHERE b.transfer_order_uuid = t.uuid 
+					AND b.approval_company_uuid = %d
+					AND b.delete_time = 0
+					AND b.approval_type in ('sender_parent', 'receiver_parent')
+				) OR`, companyUuid)
 			}
 			baseSQL += fmt.Sprintf(" 0 = 1 )")
 		}
