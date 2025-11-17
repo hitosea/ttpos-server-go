@@ -39,7 +39,7 @@
   - Purpose: 定义数据库表结构
   - Requirements: {需求编号}
   - Leverage: 现有迁移文件: `admin/database/migrations/`，参考模板: `docs/agent/templates/database-migration-template.md`
-  - Prompt: Role: Database Engineer | Task: 创建 ttpos_{table_name} 表的迁移文件，遵循 requirements.md 中的数据库设计 | Context: 必须包含 id, uuid, create_time, update_time, delete_time 字段，时间字段使用 int 类型，金额字段使用 decimal(20,8) | Restrictions: 遵循 .cursor/rules/database.mdc，迁移前检查表是否存在 | Success: 迁移文件创建成功，字段定义正确
+  - Prompt: Role: Database Engineer | Task: 创建 ttpos\_{table_name} 表的迁移文件，遵循 requirements.md 中的数据库设计 | Context: 必须包含 id, uuid, create_time, update_time, delete_time 字段，时间字段使用 int 类型，金额字段使用 decimal(20,8) | Restrictions: 遵循 .cursor/rules/database.mdc，迁移前检查表是否存在 | Success: 迁移文件创建成功，字段定义正确
 
 - [ ] 1.2 执行数据库迁移
 
@@ -56,7 +56,7 @@
   - Purpose: 定义 Go 数据模型，与数据库表对应
   - Requirements: {需求编号}
   - Leverage: 现有 Model: `main/app/model/`，迁移文件: Task 1.1
-  - Prompt: Role: Go Developer | Task: 创建 {ModelName} 结构体，映射到 ttpos_{table_name} 表 | Context: 使用 gorm 标签，包含所有字段，实现 TableName() 方法 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: Model 创建成功，字段映射正确
+  - Prompt: Role: Go Developer | Task: 创建 {ModelName} 结构体，映射到 ttpos\_{table_name} 表 | Context: 使用 gorm 标签，包含所有字段，实现 TableName() 方法 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: Model 创建成功，字段映射正确
 
 - [ ] 1.4 更新 Seeds 文件（可选）
 
@@ -86,7 +86,7 @@
   - Purpose: 实现数据访问逻辑
   - Requirements: {需求编号}
   - Leverage: 现有 Repository 实现: `main/app/repository/*_repo.go`，使用选项模式
-  - Prompt: Role: Go Developer with GORM expertise | Task: 实现 {Name}RepoImpl，使用选项模式实现灵活查询 | Context: 只持有 db *gorm.DB，实现所有接口方法和选项方法 | Restrictions: 不能持有 DBManager，使用 GORM，软删除(delete_time=0) | Success: Repository 实现完整，选项模式正确，软删除正确
+  - Prompt: Role: Go Developer with GORM expertise | Task: 实现 {Name}RepoImpl，使用选项模式实现灵活查询 | Context: 只持有 db \*gorm.DB，实现所有接口方法和选项方法 | Restrictions: 不能持有 DBManager，使用 GORM，软删除(delete_time=0) | Success: Repository 实现完整，选项模式正确，软删除正确
 
 - [ ] 2.3 编写 Repository 单元测试
 
@@ -138,7 +138,7 @@
   - Purpose: 确保 Service 业务逻辑正确
   - Requirements: {需求编号}
   - Leverage: 现有测试: `main/app/service/*_srv_test.go`
-  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 {Name}Srv 编写单元测试，覆盖率 ≥ 70% | Context: 测试业务逻辑，测试错误处理，测试事务管理 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 70%（Payment/Order相关100%），所有测试通过
+  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 {Name}Srv 编写单元测试，覆盖率 ≥ 70% | Context: 测试业务逻辑，测试错误处理，测试事务管理 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 70%（Payment/Order 相关 100%），所有测试通过
 
 ### API 层
 
@@ -316,7 +316,7 @@
   - File: `docs/shared/api/{module}_api.md`, `CHANGELOG.md`
   - Purpose: 确保文档与代码同步
   - Requirements: 文档要求
-  - Leverage: `docs/agent/templates/api-doc.md`
+  - Leverage: `docs/agent/templates/api-doc-template.md`
   - Prompt: Role: Technical Writer | Task: 更新相关文档 | Context: API 文档, 数据库文档, CHANGELOG | Restrictions: 文档准确完整 | Success: 所有文档已更新
 
 ---
@@ -501,7 +501,15 @@ Success Criteria:
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 在执行任务过程中若总结出经验或规避策略，请记录 Episode，并在 tasks.md 尾部更新 `Related Episode`。
+
+---
+
 **模板版本**: v1.0.0  
 **最后更新**: 2025-11-17  
 **维护者**: 后端开发组
-

@@ -298,6 +298,15 @@
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 提醒：需求评审或范围调整若形成经验，应同步更新 Episode 并在 Proposal/Spec 互链。
+
+---
+
 **版本**: v1.0.0  
 **创建日期**: {YYYY-MM-DD}  
 **作者**: {团队/个人}  

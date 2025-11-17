@@ -152,7 +152,7 @@ integrations/{service}/
 
 ### API 文档规范
 
-参考 [API规范](../../.cursor/rules/golang.mdc) 中的 API 响应规范
+参考 [API规范](../../.cursor/rules/go-main.mdc) 中的 API 响应规范
 
 **关键规范：**
 - URL 使用 snake_case (不用 kebab-case)
@@ -171,7 +171,7 @@ integrations/{service}/
 
 ### 规范文档
 - [Spec规范](../../.cursor/rules/specs.mdc)
-- [Go开发规范](../../.cursor/rules/golang.mdc)
+- [Go开发规范](../../.cursor/rules/go-main.mdc)
 - [PHP开发规范](../../.cursor/rules/php.mdc)
 
 ### 项目指导

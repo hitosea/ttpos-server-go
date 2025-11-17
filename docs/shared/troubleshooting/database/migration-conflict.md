@@ -22,7 +22,7 @@ Status: Deprecated
 
 1. **回滚并定位冲突**
    ```bash
-   cd /Users/benbige/Projects/ttpos-server-go/admin
+   cd path/ttpos-server-go/admin
    php think migrate:status          # 查看执行顺序
    php think migrate:rollback --step=1
    ```

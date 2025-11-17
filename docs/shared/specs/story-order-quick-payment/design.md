@@ -462,6 +462,14 @@ func (api *QuickPaymentAPI) QuickPay(c *gin.Context) {
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 活动日志：`docs/team/activities/2025-11/2025-11-17.md`
+- 当设计结论可复用或踩坑较多时，沉淀 Episode 并在此更新名称，保持 Spec ↔ Graphiti 互链。
+
+---
+
 **版本**: v1.0.0  
 **创建日期**: 2025-11-17  
 **作者**: 后端开发组  

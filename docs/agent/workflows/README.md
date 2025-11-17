@@ -15,6 +15,7 @@
 | **功能开发**   | [feature-development.md](./feature-development.md)       | 新增功能、优化功能   | 2-5 天   |
 | **Bug 修复**   | [bug-fixing.md](./bug-fixing.md)                         | 修复缺陷、解决问题   | 0.5-2 天 |
 | **API 对接**   | [api-integration.md](./api-integration.md)               | 第三方集成、接口开发 | 1-3 天   |
+| **链接回写**   | [proposal-spec-linking.md](./proposal-spec-linking.md)   | Proposal↔Spec 双向链 | 0.5 天   |
 
 ### 后端专属工作流（P0）
 
@@ -44,7 +45,7 @@
 | 步骤             | 查阅                                            |
 | ---------------- | ----------------------------------------------- |
 | Spec 文档创建    | `../../.cursor/rules/specs.mdc`                 |
-| Go 代码实现规范  | `../../.cursor/rules/golang.mdc`                |
+| Go 代码实现规范  | `../../.cursor/rules/go-main.mdc`               |
 | PHP 代码实现规范 | `../../.cursor/rules/php.mdc`                   |
 | Vue 前端规范     | `../../.cursor/rules/vue.mdc`                   |
 | 数据库迁移规范   | `../../.cursor/rules/php.mdc` (迁移部分)        |
@@ -141,7 +142,7 @@ graph TD
 
 ### 开发规范
 
-- [Go 开发规范](../../.cursor/rules/golang.mdc)
+- [Go 开发规范](../../.cursor/rules/go-main.mdc)
 - [PHP 开发规范](../../.cursor/rules/php.mdc)
 - [Vue 开发规范](../../.cursor/rules/vue.mdc)
 - [GoFrame 规范](../../ttpos-bmp/.cursor/rules/go-rules.mdc)
@@ -150,6 +151,15 @@ graph TD
 ### 文档模板
 
 - [文档模板目录](../templates/) - 标准化文档模板
+
+---
+
+## Graphiti & 活动日志
+
+- 所有工作流在执行完关键节点后，应在文档末尾的“Graphiti & 活动日志”区域填入 `Related Episode`。
+- Episode 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 典型触发：Bug 排查 >30min、复杂数据库迁移、第三方对接踩坑、微服务治理经验、新人 Onboarding 回顾等。
 
 ---
 

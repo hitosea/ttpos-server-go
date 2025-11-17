@@ -16,37 +16,44 @@
 ## 📂 目录结构
 
 ### [学习指南](./guides/)
-**用途：** 开发者入门和最佳实践
+**用途：** 开发者入门和最佳实践  
+**已提供：**
+- [go-main-development.md](./guides/go-main-development.md)
+- [go-bmp-development.md](./guides/go-bmp-development.md)
+- [php-development.md](./guides/php-development.md)
+- [api-design-guide.md](./guides/api-design-guide.md)
+- [database-guide.md](./guides/database-guide.md)
+- [security-guide.md](./guides/security-guide.md)
+- [cursor-commands.md](./guides/cursor-commands.md)
+- [documentation-guide.md](./guides/documentation-guide.md)
 
-[待补充 by @开发者]
-
-推荐内容：
-- 快速开始指南
-- 开发环境配置
-- 常见问题解答
-- Cursor 指令使用
+**待补充：** [by @doc-team]（快速开始 & 常见问题）
 
 ### [架构设计](./architecture/)
-**用途：** 系统架构和技术文档
+**用途：** 系统架构和技术文档  
+**主要文档：**
+- [overview.md](./architecture/overview.md) - 架构总览
+- [go-main-architecture.md](./architecture/go-main-architecture.md) - Go Main 设计
+- [php-architecture.md](./architecture/php-architecture.md) - PHP 模块
+- [go-bmp-architecture.md](./architecture/go-bmp-architecture.md) - 微服务架构
+- [database-design.md](./architecture/database-design.md) - 数据库设计
+- [event_bus_design.md](./architecture/event_bus_design.md) - 事件总线
 
-包含内容：
-- [实体模型](./architecture/entities/) - 18个数据模型文档
-- [架构设计](./architecture/) - 系统架构文档
-- [重构计划](./architecture/refactor/) - 10个重构文档
-- [功能特性](./architecture/features/) - 功能特性参考文档
+**子目录：**
+- [entities/](./architecture/entities/) - 数据模型
+- [features/](./architecture/features/) - 功能特性
 
 ### [业务知识](./business/)
-**用途：** 业务规则和工作流程
+**用途：** 业务规则和工作流程  
+**主要内容：**
+- [glossary.md](./business/glossary.md) - 餐饮术语
+- [workflows/](./business/workflows/) - 订单与外送业务流程
 
-包含内容：
-- [业务术语](./business/) - 餐饮行业术语
-- [业务流程](./business/workflows/) - 业务工作流
-- [业务规则](./business/rules/) - 业务逻辑规则
+**待补充：** [by @product-team]（业务规则专篇）
 
 ### [技术决策](./decisions/)
-**用途：** ADR (Architecture Decision Records)
-
-[待补充 by @开发者]
+**用途：** ADR (Architecture Decision Records)  
+**当前状态：** 目录已建立，ADR 文档待补充 [by @arch-team]
 
 推荐格式：
 ```
@@ -66,7 +73,7 @@
 | **数据模型** | [实体模型](./architecture/entities/) |
 | **业务流程** | [业务知识](./business/) |
 | **技术决策** | [技术决策](./decisions/) |
-| **重构计划** | [重构文档](./architecture/refactor/) |
+| **功能特性** | [功能特性](./architecture/features/) |
 
 ### 我想理解...
 
@@ -151,7 +158,7 @@ Q&A
 - [Agent模板](../agent/templates/) - 结构化模板（Agent专用）
 
 ### 核心规范
-- [Go开发规范](../../.cursor/rules/golang.mdc)
+- [Go开发规范](../../.cursor/rules/go-main.mdc)
 - [PHP开发规范](../../.cursor/rules/php.mdc)
 - [Vue开发规范](../../.cursor/rules/vue.mdc)
 

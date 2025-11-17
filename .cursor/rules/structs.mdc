@@ -160,7 +160,8 @@ docker/                 # Docker 配置
 docs/                   # 项目文档
 ├── agent/              # 🤖 Agent 专用
 │   ├── workflows/      # 工作流清单
-│   └── templates/      # 模板
+│   ├── templates/      # 模板
+│   └── graphiti/       # Graphiti Episode 草稿
 ├── human/              # 👤 人类专用
 │   ├── guides/         # 开发指南
 │   ├── architecture/   # 架构设计
@@ -171,7 +172,8 @@ docs/                   # 项目文档
 │   └── troubleshooting/# 问题排查
 └── team/               # 👥 团队协作
     ├── proposals/      # 需求提案
-    └── activities/     # 活动日志
+    ├── activities/     # 活动日志
+    └── reports/        # 评估与复盘
 
 .cursor/                # Cursor AI 配置
 ├── rules/              # 开发规范
