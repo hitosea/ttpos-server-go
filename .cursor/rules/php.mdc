@@ -1,0 +1,161 @@
+---
+alwaysApply: false
+description: PHP 核心约束
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 命名规范
+
+| 类型 | 规则        | 示例                |
+| ---- | ----------- | ------------------- |
+| 类   | PascalCase  | `UserController`    |
+| 方法 | camelCase   | `getUserList()`     |
+| 变量 | camelCase   | `$userId`           |
+| 常量 | UPPER_SNAKE | `ORDER_STATUS_PAID` |
+
+### MVC 分层
+
+```php
+Controller  // 参数接收、调用 Service、返回响应
+    ↓
+Service     // 业务逻辑、事务管理
+    ↓
+Model       // 数据库操作、关联查询
+```
+
+---
+
+## 🏗️ 开发模式
+
+### 控制器
+
+```php
+public function getUserList(Request $request)
+{
+    // 1. 获取参数
+    $page = $request->param('page', 1);
+
+    // 2. 参数验证
+    $validate = new UserValidate();
+    if (!$validate->check($data)) {
+        return $this->renderError($validate->getError());
+    }
+
+    // 3. 调用服务层
+    $userService = new UserService();
+    $result = $userService->getUserList($page);
+
+    // 4. 返回响应
+    return $this->renderSuccess($result);
+}
+```
+
+### 服务层
+
+```php
+public function createUser($data)
+{
+    Db::startTrans();
+    try {
+        $user = User::create($data);
+        Db::commit();
+        return ['user_id' => $user->id];
+    } catch (\Exception $e) {
+        Db::rollback();
+        throw $e;
+    }
+}
+```
+
+### 模型层
+
+```php
+class User extends BaseModel
+{
+    protected $name = 'user';
+    protected $deleteTime = 'delete_time';
+
+    // 关联
+    public function roles()
+    {
+        return $this->hasMany(UserRole::class);
+    }
+}
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发前
+
+- [ ] 阅读 [PHP 架构](../../docs/human/architecture/php-architecture.md)
+- [ ] 理解 MVC 分层
+- [ ] 熟悉 ThinkPHP 6.0
+
+### 编码时
+
+- [ ] 使用 camelCase 命名方法和变量
+- [ ] Controller 不写业务逻辑
+- [ ] Service 管理事务
+- [ ] Model 使用软删除
+- [ ] 使用验证器验证参数
+
+### 提交前
+
+- [ ] 代码格式化（PSR-2）
+- [ ] 测试通过
+- [ ] ApiDoc 注释完整
+
+---
+
+## 📋 常用模式
+
+### 验证器
+
+```php
+protected $rule = [
+    'username' => 'require|length:2,20',
+    'email' => 'require|email',
+];
+
+protected $message = [
+    'username.require' => '用户名不能为空',
+];
+```
+
+### ApiDoc 注解
+
+```php
+/**
+ * @Apidoc\Title("获取用户列表")
+ * @Apidoc\Method("GET")
+ * @Apidoc\Param("page", type="int")
+ * @Apidoc\Returned("code", type="int")
+ */
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                     | 原因           |
+| ------------------------ | -------------- |
+| ❌ Controller 写业务逻辑 | 违反 MVC 分层  |
+| ❌ 不用验证器            | 安全风险       |
+| ❌ 硬删除数据            | 必须用软删除   |
+| ❌ 不写 ApiDoc           | API 文档不完整 |
+
+---
+
+## 📖 详细文档
+
+- [PHP 架构设计](../../docs/human/architecture/php-architecture.md)
+- [PHP 开发指南](../../docs/human/guides/php-development.md)
+- [API 设计指南](../../docs/human/guides/api-design-guide.md)
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

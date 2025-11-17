@@ -1,0 +1,174 @@
+---
+alwaysApply: false
+description: Vue 3 前端开发规范
+---
+
+# Vue 3 前端开发规范
+
+> 🤖 **受众**: AI Agent  
+> 📖 **用途**: Vue 3 前端开发的核心约束和快速索引
+
+---
+
+## 📚 快速索引
+
+| 我要...          | 查阅文档                                                    |
+| ---------------- | ----------------------------------------------------------- |
+| 学习详细开发规范 | [前端开发详细文档]（待补充）                                |
+| 查看 API 调用    | [API 设计指南](../../docs/human/guides/api-design-guide.md) |
+
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 技术栈
+
+- **Vue 3.x** + TypeScript
+- **Vite** 构建工具
+- **Pinia** 状态管理
+- **Element Plus** UI 组件库
+
+### 命名规范
+
+| 类型      | 规则        | 示例            |
+| --------- | ----------- | --------------- |
+| 文件      | PascalCase  | `UserList.vue`  |
+| 组件      | PascalCase  | `<UserList />`  |
+| 变量/函数 | camelCase   | `userName`      |
+| 常量      | UPPER_SNAKE | `MAX_PAGE_SIZE` |
+
+---
+
+## 🏗️ 组件开发
+
+### 使用 Composition API
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from "vue";
+import { getUserListApi } from "@/api/user";
+
+const userList = ref([]);
+const loading = ref(false);
+
+const getUserList = async () => {
+  try {
+    loading.value = true;
+    const res = await getUserListApi();
+    userList.value = res.data.list;
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  getUserList();
+});
+</script>
+```
+
+### Props 和 Emits
+
+```typescript
+interface Props {
+  userId: number;
+  userName?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  userName: "",
+});
+
+interface Emits {
+  (e: "update", value: string): void;
+}
+
+const emit = defineEmits<Emits>();
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发前
+
+- [ ] 熟悉 Vue 3 Composition API
+- [ ] 了解 TypeScript 类型定义
+- [ ] 熟悉 Element Plus 组件
+
+### 编码时
+
+- [ ] 使用 `<script setup>` 语法
+- [ ] 定义 TypeScript 类型
+- [ ] 使用 try-catch 处理异步
+- [ ] 组件保持单一职责
+- [ ] 不使用 Options API
+
+### 提交前
+
+- [ ] ESLint 检查通过
+- [ ] Prettier 格式化
+- [ ] 测试通过
+
+---
+
+## 📋 常用模式
+
+### API 调用
+
+```typescript
+// ✅ 使用 async/await
+const getUserList = async () => {
+  try {
+    const res = await getUserListApi();
+    userList.value = res.data.list;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// ❌ 不使用 .then().catch()
+getUserListApi().then().catch();
+```
+
+### Pinia Store
+
+```typescript
+export const useUserStore = defineStore("user", () => {
+  const userInfo = ref<User | null>(null);
+  const token = ref("");
+
+  const isLogin = computed(() => !!token.value);
+
+  const setUserInfo = (user: User) => {
+    userInfo.value = user;
+  };
+
+  return { userInfo, token, isLogin, setUserInfo };
+});
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                    | 原因                       |
+| ----------------------- | -------------------------- |
+| ❌ 使用 Options API     | 项目统一用 Composition API |
+| ❌ 不定义类型           | 必须用 TypeScript          |
+| ❌ 使用 .then().catch() | 必须用 async/await         |
+| ❌ 单个组件过长         | 保持单一职责               |
+
+---
+
+## 📖 详细文档
+
+- [Vue 3 官方文档](https://cn.vuejs.org/)
+- [Element Plus 文档](https://element-plus.org/)
+- [Pinia 文档](https://pinia.vuejs.org/)
+- [API 设计指南](../../docs/human/guides/api-design-guide.md)
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

@@ -12,16 +12,20 @@ priority: 1
 
 ## 场景识别 → 执行命令
 
-| 用户说...                      | 识别为     | 立即执行                                                               | 涉及文件/目录                  | 参考规范               |
-| ------------------------------ | ---------- | ---------------------------------------------------------------------- | ------------------------------ | ---------------------- |
-| "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/ | specs.mdc              |
-| "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/{}/tasks.md` → 逐任务执行                             | shared/specs/, main/, admin/   | golang.mdc, php.mdc    |
-| "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | golang.mdc             |
-| "集成 XX" "对接 XX" "API"      | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档               | integrations/, shared/api/     | golang.mdc             |
-| "迁移数据库" "新增表" "改字段" | 数据库迁移 | 创建迁移文件 → 更新 model → 更新 seeds                                 | admin/database/migrations/     | php.mdc                |
-| "gRPC" "微服务" "ttpos-bmp"    | 微服务集成 | 查 ttpos-bmp 文档 → 定义 Protobuf → 注册服务                           | ttpos-bmp/                     | go-rules.mdc           |
-| "慢" "卡顿" "优化性能"         | 性能优化   | 分析瓶颈 → 优化 → 验证 → 记录                                          | 相关代码                       | golang.mdc             |
-| "新人" "入职" "不熟悉"         | 新成员     | `/onboard quick` → 推送必读清单                                        | .cursor/rules/, docs/          | intro.mdc, structs.mdc |
+| 用户说...                      | 识别为     | 立即执行                                                               | 涉及文件/目录                  | 参考规范        |
+| ------------------------------ | ---------- | ---------------------------------------------------------------------- | ------------------------------ | --------------- |
+| "新人" "入职" "不熟悉"         | 新成员入职 | `/onboard quick` → 推送必读清单                                        | agent/workflows/onboarding.md  | intro.mdc       |
+| "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/ | specs.mdc       |
+| "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/{}/tasks.md` → 逐任务执行                             | shared/specs/, main/, admin/   | go-main/php.mdc |
+| "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | go-main.mdc     |
+| "集成 XX" "对接 XX" "API"      | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档               | integrations/, shared/api/     | api.mdc         |
+| "迁移数据库" "新增表" "改字段" | 数据库迁移 | 创建迁移文件 → 更新 model → 更新 seeds                                 | admin/database/migrations/     | database.mdc    |
+| "gRPC" "微服务" "ttpos-bmp"    | 微服务集成 | 查 ttpos-bmp 文档 → 定义 Protobuf → 注册服务                           | ttpos-bmp/                     | go-bmp.mdc      |
+| "慢" "卡顿" "优化性能"         | 性能优化   | 分析瓶颈 → 优化 → 验证 → 记录                                          | 相关代码                       | go-main.mdc     |
+| "前端开发" "Vue 组件" "页面"   | 前端开发   | 读 `shared/specs/{}/tasks.md` → 实现组件 → 测试                        | admin/views/                   | vue.mdc         |
+| "安全审查" "漏洞" "SQL 注入"   | 安全检查   | 查 security.mdc → 检查代码 → 修复 → 测试                               | 所有代码                       | security.mdc    |
+| "提交代码" "git commit"        | Git 提交   | 查 version.mdc → 写提交信息 → 推送                                     | .git/                          | version.mdc     |
+| "新人" "入职" "不熟悉"         | 新成员     | `/onboard quick` → 推送必读清单                                        | .cursor/rules/, docs/          | intro.mdc       |
 
 ---
 
@@ -40,67 +44,30 @@ priority: 1
 | **变量**     | camelCase                    | `userName`, `isLoading`                   | 小驼峰                                                           |
 | **常量**     | UPPER_SNAKE_CASE             | `API_BASE_URL`                            | 全大写+下划线                                                    |
 
-### Go Service/Repository 模式 (必须遵守)
+### Go Service/Repository (必须遵守)
 
 ```go
-// ✅ 接口定义（以I开头）
-type IOrderSrv interface {
-    CreateOrder(ctx context.Context, req req.CreateOrderReq) (*resp.OrderResp, error)
-}
+// ✅ 接口以 I 开头，实现以 Impl 结尾
+type IOrderSrv interface { }
+type OrderSrvImpl struct { }
 
-// ✅ 实现（以Impl结尾）
-type OrderSrvImpl struct {
-    dbm        *database.DBManager
-    memberSrv  IMemberSrv  // 服务依赖其他服务
-}
+// ✅ Service 依赖其他 Service
+memberSrv IMemberSrv
 
-// ✅ 构造函数
-func NewOrderSrv(dbm *database.DBManager, memberSrv IMemberSrv) IOrderSrv {
-    return &OrderSrvImpl{
-        dbm:       dbm,
-        memberSrv: memberSrv,
-    }
-}
-
-// ✅ Repository 只接收 db 实例（不是 dbm）
-type IOrderRepo interface {
-    CreateOrder(order model.Order) (uint64, error)
-}
-
-type OrderRepoImpl struct {
-    db *gorm.DB  // 只能传入db实例
-}
+// ✅ Repository 只持有 db (不是 dbm)
+db *gorm.DB
 ```
 
 ### API 响应规范 (必须遵守)
 
-```go
-// ✅ 正确的响应格式
-{
-  "code": 1,
-  "message": "success",
-  "data": {
-    "list": [{"foo": "bar"}],
-    "meta": {
-      "page_no": 1,
-      "page_size": 20,
-      "total": 100
-    }
-  }
-}
+```json
+// ✅ data 必须是对象
+{"code": 1, "message": "success", "data": {}}
+{"code": 1, "message": "success", "data": {"list": []}}
 
-// ❌ 错误：data 不能是 null 或数组
-{
-  "code": 1,
-  "message": "success",
-  "data": null  // 错误！
-}
-
-{
-  "code": 1,
-  "message": "success",
-  "data": []  // 错误！应该是 {"list": []}
-}
+// ❌ data 不能是 null 或数组
+{"data": null}  // 错误
+{"data": []}    // 错误
 ```
 
 ### 代码风格 (必须遵守)
@@ -123,31 +90,16 @@ type OrderRepoImpl struct {
 | **payment 相关**         | **100%**   | 高风险   |
 | **order 相关**           | **100%**   | 高风险   |
 
-### 数据库迁移 (必须遵守)
+### 数据库规范 (必须遵守)
 
 ```php
-// ✅ PHP Phinx 迁移文件规范
-class AddOrderTable extends Migration {
-    public function change() {
-        // 检查表是否存在
-        if (!$this->hasTable('order')) {
-            $table = $this->table('order', ['comment' => '订单表']);
-            $table->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => 'UUID'])
-                  ->addColumn('order_no', 'string', ['limit' => 50, 'comment' => '订单号'])
-                  ->addColumn('amount', 'decimal', ['precision' => 20, 'scale' => 8, 'comment' => '金额'])
-                  ->addColumn('create_time', 'integer', ['default' => 0, 'comment' => '创建时间'])
-                  ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间'])
-                  ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间'])
-                  ->create();
-        }
-    }
-}
+// ✅ 必须字段
+uuid, create_time, update_time, delete_time
 
-// 字段规范：
-// - 时间字段: int 类型, _time 结尾, 默认值 0
-// - 金额字段: decimal(20,8)
-// - UUID字段: biginteger, 默认值 0
-// - 必须字段: uuid, create_time, update_time, delete_time
+// ✅ 字段类型
+时间: int 类型, _time 结尾, 默认值 0
+金额: decimal(20,8)
+UUID: biginteger, 默认值 0
 ```
 
 ---
@@ -326,67 +278,11 @@ AI 辅助实现 →
 
 ---
 
-## 文件路径映射（多语言环境）
-
-### Go 主服务 (main/)
-
-```
-main/app/
-├── controller/     # API 控制器
-├── service/        # 业务逻辑
-├── repository/     # 数据访问
-├── model/          # 数据模型
-├── dto/            # 数据传输对象
-│   ├── req/        # 请求参数
-│   └── resp/       # 响应数据
-├── constant/       # 常量定义
-├── errors/         # 错误定义
-└── event/          # 事件处理器
-```
-
-### Go 微服务 (ttpos-bmp/)
-
-```
-ttpos-bmp/app/ttpos-*/
-├── api/                    # API 接口定义
-├── internal/
-│   ├── controller/
-│   │   ├── http/           # HTTP 控制器
-│   │   └── rpc/            # gRPC 控制器
-│   ├── logic/              # 业务逻辑
-│   ├── dao/                # 数据访问 (自动生成)
-│   └── model/
-│       ├── entity/         # 数据实体 (自动生成)
-│       ├── do/             # 数据对象 (自动生成)
-│       └── dto/            # 数据传输对象
-└── manifest/
-    ├── protobuf/           # Protobuf 定义
-    └── sql/                # 数据库迁移
-```
-
-### PHP 后台 (admin/)
-
-```
-admin/
-├── app/
-│   ├── admin/              # 管理模块
-│   ├── cashier/            # 收银模块
-│   ├── shop/               # 门店模块
-│   └── common/             # 公共模块
-├── database/
-│   ├── migrations/         # 数据库迁移文件
-│   └── seeds/              # 种子文件
-└── views/                  # 前端视图
-    ├── admin/              # 管理后台前端
-    └── shop/               # 门店前端
-```
-
----
-
 ## 快速命令映射
 
 | 用户需求       | Agent 执行命令                           | 后续操作                           |
 | -------------- | ---------------------------------------- | ---------------------------------- |
+| 新成员入职     | `/onboard quick`                         | 推送必读清单和入职路径             |
 | 创建提案       | `/propose quick-payment`                 | 自动创建并填充基本信息             |
 | 创建 Spec      | `/create-spec story-order-quick-payment` | 自动创建 requirements/design/tasks |
 | 创建数据库迁移 | 创建 PHP Phinx 迁移文件                  | 同步更新 Go model 和 seeds         |
@@ -397,26 +293,37 @@ admin/
 
 ## 关键文件清单 (按优先级)
 
-### P0 (必读)
+### P0 (必读 - 薄层规则)
 
-1. `AGENT.md` (本文件)
-2. `.cursor/rules/workflows.mdc`
-3. `.cursor/rules/golang.mdc`
-4. `.cursor/rules/php.mdc`
+1. `AGENT.md` (本文件 - 核心速查)
+2. `.cursor/rules/intro.mdc` (项目快速入门)
+3. `.cursor/rules/structs.mdc` (项目结构快速定位)
+4. `.cursor/rules/workflows.mdc` (工作流导航)
+5. `.cursor/rules/go-main.mdc` (Go Main 核心约束)
+6. `.cursor/rules/php.mdc` (PHP 核心约束)
+7. `.cursor/rules/api.mdc` (API 核心约束)
+8. `.cursor/rules/database.mdc` (数据库开发规范)
+9. `.cursor/rules/security.mdc` (安全开发规范)
+10. `.cursor/rules/vue.mdc` (Vue 前端开发规范)
 
-### P1 (按需查阅)
+### P1 (按需查阅 - 详细文档)
 
-5. `.cursor/rules/vue.mdc`
-6. `.cursor/rules/styles.mdc`
-7. `ttpos-bmp/.cursor/rules/go-rules.mdc` (GoFrame 专用)
-8. `ttpos-bmp/.cursor/rules/proto-rules.mdc` (Protobuf 专用)
-9. `docs/agent/workflows/{workflow}.md`
+7. `docs/human/architecture/overview.md` (系统架构总览)
+8. `docs/human/guides/go-main-development.md` (Go 详细开发指南)
+9. `docs/human/guides/php-development.md` (PHP 详细开发指南)
+10. `docs/human/guides/api-design-guide.md` (API 设计详细指南)
+11. `docs/human/guides/database-guide.md` (数据库开发详细指南)
+12. `ttpos-bmp/.cursor/rules/go-rules.mdc` (GoFrame 专用规范)
+13. `ttpos-bmp/.cursor/rules/proto-rules.mdc` (Protobuf 专用规范)
 
-### P2 (必要时)
+### P2 (必要时 - 深入学习)
 
-10. `.spec-workflow/steering/*.md`
-11. `docs/shared/specs/README.md`
-12. `docs/agent/templates/`
+14. `docs/human/architecture/*.md` (各模块架构设计)
+15. `docs/human/business/glossary.md` (业务术语表)
+16. `docs/shared/specs/README.md` (功能规格说明)
+17. `docs/shared/api/conventions.md` (API 规范速查)
+18. `docs/agent/workflows/` (待补充 - Agent 工作流)
+19. `docs/agent/templates/` (待补充 - Agent 模板)
 
 ---
 
@@ -429,36 +336,6 @@ admin/
 5. 根据 Sprint 节点和 IF-THEN 规则主动提醒
 6. 耗时 >30 分钟的问题记录到 Graphiti
 7. 数据库迁移必须同步更新 Go model 和 seeds
-
----
-
-## 后端特有检查清单
-
-### 功能开发检查
-
-- [ ] API 响应格式符合规范（data 不能为 null 或数组）
-- [ ] 分页信息在 meta 中
-- [ ] URL 使用 snake_case
-- [ ] 所有注释使用中文
-- [ ] 不使用 panic，返回 error
-- [ ] Swagger 文档已生成
-
-### 数据库迁移检查
-
-- [ ] 数据库迁移文件已创建
-- [ ] Go model 已同步更新 (main/app/model/)
-- [ ] seeds 文件已更新 (admin/database/seeds/)
-- [ ] 时间字段使用 int 类型，\_time 结尾
-- [ ] 金额字段使用 decimal(20,8)
-- [ ] 已添加必须字段 (uuid, create_time, update_time, delete_time)
-
-### 微服务集成检查
-
-- [ ] Protobuf 文件已定义
-- [ ] gRPC 代码已生成
-- [ ] 服务已注册到 Nacos
-- [ ] API 文档已创建
-- [ ] 服务调用测试已通过
 
 ---
 
@@ -585,14 +462,12 @@ ELSE
 - [ ] 明确受众 (🤖 Agent / 👤 人类 / 📚 共用)
 - [ ] 确定位置 (workflows/ / guides/ / templates/ / ...)
 - [ ] 确定风格 (Agent 视角 / 人类视角)
-- [ ] 确定语言标识 (Go / PHP / Vue)
 
 ### During 创建
 
 - [ ] 遵循对应风格
 - [ ] Agent 文档: <300 行 + 结构化
 - [ ] 人类文档: 详细 + 包含 WHY
-- [ ] 多语言文档: 添加适用语言标识
 
 ### After 创建
 

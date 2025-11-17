@@ -62,13 +62,6 @@
                   },
                   message: $t('请输入名称'),
                 },
-                {
-                  required: true,
-                  validator: () => {
-                    return checkName(item.name, index) ? true : false;
-                  },
-                  message: $t('名称已存在，请勿重复输入'),
-                },
               ]"
             >
               <el-input type="text" :maxlength="50" style="margin-top: 16px; width: 100%" v-model="item.name" :placeholder="$t('请输入名称')"></el-input>

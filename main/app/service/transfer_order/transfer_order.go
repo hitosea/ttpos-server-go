@@ -632,7 +632,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		// 提交调拨单
 		if reqs.IsSubmit {
 			ctx.SetDB(tx)
-			if err = s.SubmitTransferOrder(ctx, req.TransferOrderSubmitReq{Uuid: transferOrder.Uuid, IsConfirm: true}); err != nil {
+			if err = s.SubmitTransferOrder(ctx, req.TransferOrderSubmitReq{Uuid: transferOrder.Uuid, IsConfirm: reqs.IsConfirm}); err != nil {
 				return err
 			}
 		}
@@ -904,24 +904,24 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 	if !reqs.IsConfirm {
 		materialList, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
 		if err != nil {
-			if len(disabledMaterialNames) > 0 {
-				return errors.NewWithCode(
-					constant.CodeErrorConfirmRequest,
-					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(disabledMaterialNames)),
-				)
-			}
-			if len(notFoundMaterialNames) > 0 {
-				return errors.NewWithCode(
-					constant.CodeErrorConfirmRequest,
-					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(notFoundMaterialNames)),
-				)
-			}
 			return err
+		}
+		if len(disabledMaterialNames) > 0 {
+			return errors.NewWithCode(
+				constant.CodeErrorConfirmRequest,
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(disabledMaterialNames)),
+			)
+		}
+		if len(notFoundMaterialNames) > 0 {
+			return errors.NewWithCode(
+				constant.CodeErrorConfirmRequest,
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(notFoundMaterialNames)),
+			)
 		}
 		materials = materialList
 	} else {
-		materialList, disabledMaterialNames, notFoundMaterialNames, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
-		if err != nil && len(disabledMaterialNames) == 0 && len(notFoundMaterialNames) == 0 {
+		materialList, _, _, err := s.helper.GetMaterials(ctx, db, s.helper.ConvertTransferOrderItemsToRequestItems(transferOrder))
+		if err != nil {
 			return err
 		}
 		materials = materialList
