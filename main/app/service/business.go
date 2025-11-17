@@ -997,7 +997,7 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysis(ctx context.Context, req re
 
 	// 排序
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].GetIndex() < list[j].GetIndex()
+		return list[i].GetIndex() > list[j].GetIndex()
 	})
 
 	// 分页返回
