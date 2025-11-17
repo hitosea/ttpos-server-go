@@ -4,7 +4,7 @@
 
 **创建日期**: 2025-11-16  
 **预计开始**: 2025-11-17  
-**预计完成**: 2025-11-19 (3天完成 P0)
+**预计完成**: 2025-11-19 (3 天完成 P0)
 
 ---
 
@@ -19,7 +19,7 @@
 
 ## 🎯 Day 1: Agent 核心 (2025-11-17)
 
-### 上午: Phase 1 - Agent 核心模板 (4个)
+### 上午: Phase 1 - Agent 核心模板 (4 个)
 
 ```bash
 # 创建文件
@@ -31,12 +31,14 @@ touch docs/agent/templates/proposal-template.md
 ```
 
 **参考源文件**:
+
 - `/Users/ben/projects/ttpos-flutter/docs/agent/templates/requirements-template.md`
 - `/Users/ben/projects/ttpos-flutter/docs/agent/templates/design-template.md`
 - `/Users/ben/projects/ttpos-flutter/docs/agent/templates/tasks-template.md`
 - `/Users/ben/projects/ttpos-flutter/docs/agent/templates/proposal-template.md`
 
 **适配要点**:
+
 - 将 Flutter/Dart 代码示例改为 Go/PHP/Vue
 - 添加数据库设计部分
 - 添加 API 设计部分 (REST + gRPC)
@@ -46,7 +48,7 @@ touch docs/agent/templates/proposal-template.md
 
 ---
 
-### 下午: Phase 2 - 测试流程工作流 (3个)
+### 下午: Phase 2 - 测试流程工作流 (3 个)
 
 ```bash
 # 创建文件
@@ -56,11 +58,13 @@ touch docs/agent/workflows/defect-management.md
 ```
 
 **参考源文件**:
+
 - `/Users/ben/projects/ttpos-flutter/docs/agent/workflows/test-submission.md`
 - `/Users/ben/projects/ttpos-flutter/docs/agent/workflows/test-verification.md`
 - `/Users/ben/projects/ttpos-flutter/docs/agent/workflows/defect-management.md`
 
 **适配要点**:
+
 - 测试环境配置 (Docker, MySQL, Redis, Nacos)
 - API 测试工具 (Postman, curl, grpcurl)
 - 测试覆盖率要求 (Go: go test -cover, PHP: PHPUnit)
@@ -72,7 +76,7 @@ touch docs/agent/workflows/defect-management.md
 
 ## 🎯 Day 2: 人类核心 (2025-11-18)
 
-### 上午: Phase 3 - 核心架构文档 (3个)
+### 上午: Phase 3 - 核心架构文档 (3 个)
 
 ```bash
 # 创建文件
@@ -82,11 +86,13 @@ touch docs/human/architecture/code-style-guide.md
 ```
 
 **参考源文件**:
+
 - `/Users/ben/projects/ttpos-flutter/docs/human/architecture/overview.md`
 - `/Users/ben/projects/ttpos-flutter/docs/human/architecture/modules.md`
-- `/Users/ben/projects/ttpos-flutter/docs/human/architecture/code-style-guide.md` (632行)
+- `/Users/ben/projects/ttpos-flutter/docs/human/architecture/code-style-guide.md` (632 行)
 
 **适配要点**:
+
 - overview: 三语言架构图 (Go/PHP/Vue)
 - modules: main、admin、ttpos-bmp 关系说明
 - code-style-guide: 参考 .cursor/rules/golang.mdc 和 php.mdc 扩展
@@ -95,7 +101,7 @@ touch docs/human/architecture/code-style-guide.md
 
 ---
 
-### 下午: Phase 4 - 测试标准体系 (6个)
+### 下午: Phase 4 - 测试标准体系 (6 个)
 
 ```bash
 # 创建目录和文件
@@ -111,9 +117,11 @@ touch docs/human/testing/standards/model-testing.md
 ```
 
 **参考源文件**:
+
 - `/Users/ben/projects/ttpos-flutter/docs/human/testing/`
 
 **适配要点**:
+
 - api-testing: REST API 和 gRPC 测试
 - service-testing: Go Service 层测试 (Mock、Table-Driven)
 - controller-testing: Go Gin 和 PHP ThinkPHP 控制器测试
@@ -125,7 +133,7 @@ touch docs/human/testing/standards/model-testing.md
 
 ## 🎯 Day 3: 共享文档 (2025-11-19)
 
-### Phase 5 - 共享文档核心 (4个)
+### Phase 5 - 共享文档核心 (4 个)
 
 ```bash
 # 创建文件
@@ -136,12 +144,14 @@ touch docs/human/guides/installation.md
 ```
 
 **参考源文件**:
+
 - `/Users/ben/projects/ttpos-flutter/docs/shared/api/conventions.md`
 - `/Users/ben/projects/ttpos-flutter/docs/shared/troubleshooting/common-issues.md`
 - `/Users/ben/projects/ttpos-flutter/docs/human/business/glossary.md`
 - `/Users/ben/projects/ttpos-flutter/docs/human/guides/installation.md`
 
 **适配要点**:
+
 - conventions.md: REST API 和 gRPC 规范，响应格式
 - common-issues.md: 数据库、Redis、Nacos、gRPC 常见问题
 - glossary.md: 后端术语 + 餐饮业务术语
@@ -154,15 +164,18 @@ touch docs/human/guides/installation.md
 ## 📊 进度跟踪
 
 ### Day 1 (2025-11-17)
-- [ ] Phase 1: Agent 核心模板 (4个)
-- [ ] Phase 2: 测试流程工作流 (3个)
+
+- [ ] Phase 1: Agent 核心模板 (4 个)
+- [ ] Phase 2: 测试流程工作流 (3 个)
 
 ### Day 2 (2025-11-18)
-- [ ] Phase 3: 核心架构文档 (3个)
-- [ ] Phase 4: 测试标准体系 (6个)
+
+- [ ] Phase 3: 核心架构文档 (3 个)
+- [ ] Phase 4: 测试标准体系 (6 个)
 
 ### Day 3 (2025-11-19)
-- [ ] Phase 5: 共享文档核心 (4个)
+
+- [ ] Phase 5: 共享文档核心 (4 个)
 
 **总计**: 20 个 P0 文档
 
@@ -171,6 +184,7 @@ touch docs/human/guides/installation.md
 ## 🔧 工作方式建议
 
 ### 方式 1: 从前端复制并适配
+
 ```bash
 # 示例
 cp /Users/ben/projects/ttpos-flutter/docs/agent/templates/requirements-template.md \
@@ -180,6 +194,7 @@ cp /Users/ben/projects/ttpos-flutter/docs/agent/templates/requirements-template.
 ```
 
 ### 方式 2: 让 Agent 帮助
+
 ```
 告诉 Agent:
 "参考前端的 requirements-template.md，为后端创建一个适配版本，
@@ -187,6 +202,7 @@ cp /Users/ben/projects/ttpos-flutter/docs/agent/templates/requirements-template.
 ```
 
 ### 方式 3: 组合方式（推荐）
+
 1. 先从前端复制
 2. 让 Agent 自动适配
 3. 人工审查和补充
@@ -196,6 +212,7 @@ cp /Users/ben/projects/ttpos-flutter/docs/agent/templates/requirements-template.
 ## ✅ 完成标准
 
 每个文档需要达到：
+
 - ✅ 格式符合规范（受众标识 🤖/👤/📚）
 - ✅ 代码示例适配后端技术栈
 - ✅ 交叉引用正确
@@ -207,19 +224,22 @@ cp /Users/ben/projects/ttpos-flutter/docs/agent/templates/requirements-template.
 ## 📚 参考资源
 
 ### 前端文档位置
+
 ```
 /Users/ben/projects/ttpos-flutter/docs/
 ```
 
 ### 后端规范文件
+
 ```
-.cursor/rules/AGENT_QUICK_REF.mdc
+AGENT.md
 .cursor/rules/golang.mdc
 .cursor/rules/php.mdc
 .cursor/rules/vue.mdc
 ```
 
 ### 详细缺失报告
+
 ```
 docs/MISSING_DOCS_REPORT.md
 ```
@@ -229,6 +249,7 @@ docs/MISSING_DOCS_REPORT.md
 ## 🎯 成功指标
 
 完成后应实现：
+
 1. ✅ Agent 可以使用 `/create-spec` 创建 Spec
 2. ✅ Agent 可以使用 `/propose` 创建提案
 3. ✅ Agent 可以执行测试流程工作流
@@ -240,6 +261,7 @@ docs/MISSING_DOCS_REPORT.md
 ## 💡 小贴士
 
 ### 适配时注意
+
 - 将 "Flutter" 改为 "Go/PHP/Vue"
 - 将 "GetX" 改为 "Go Service/Repository"
 - 将 "Dio" 改为 "Gin/ThinkPHP HTTP Client"
@@ -248,12 +270,14 @@ docs/MISSING_DOCS_REPORT.md
 - 添加微服务相关内容
 
 ### 可直接复用
+
 - 通用流程说明
 - 文档结构
 - 检查清单逻辑
 - 命名规范
 
 ### 需要重写
+
 - 代码示例
 - 技术细节
 - 工具链说明
@@ -264,4 +288,3 @@ docs/MISSING_DOCS_REPORT.md
 **开始日期**: 2025-11-17  
 **预计完成**: 2025-11-19  
 **加油！** 💪
-

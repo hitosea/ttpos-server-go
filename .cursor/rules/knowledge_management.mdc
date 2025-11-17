@@ -9,39 +9,39 @@ description: 项目知识管理核心规范（后端版）
 
 ## 知识三层架构
 
-| 层级 | 适用场景 | 存储方式 | 查询方式 |
-|---|---|---|---|
-| **Graphiti** | 经验、问答、最佳实践 | Cursor MCP | 自然语言搜索 |
-| **docs/** | API、架构、规范、流程 | Markdown 文件 | 文件路径 + grep |
-| **代码注释** | 实现细节、算法解释 | 源代码注释（中文） | codebase_search |
+| 层级         | 适用场景              | 存储方式           | 查询方式        |
+| ------------ | --------------------- | ------------------ | --------------- |
+| **Graphiti** | 经验、问答、最佳实践  | Cursor MCP         | 自然语言搜索    |
+| **docs/**    | API、架构、规范、流程 | Markdown 文件      | 文件路径 + grep |
+| **代码注释** | 实现细节、算法解释    | 源代码注释（中文） | codebase_search |
 
 ---
 
 ## Sprint 时间触发器
 
-| 时间节点 | Agent 自动动作 |
-|---|---|
-| **Day 0** | Sprint 计划提醒 + 知识回顾 |
-| **Day 3** | 中期进度检查 |
-| **Day 7** | 中期回顾提醒 |
-| **Day 10** | 知识记录提醒 |
-| **Day 13** | Sprint 评审提醒 |
-| **Day 14** | Sprint 回顾 + 知识沉淀 |
+| 时间节点   | Agent 自动动作             |
+| ---------- | -------------------------- |
+| **Day 0**  | Sprint 计划提醒 + 知识回顾 |
+| **Day 3**  | 中期进度检查               |
+| **Day 7**  | 中期回顾提醒               |
+| **Day 10** | 知识记录提醒               |
+| **Day 13** | Sprint 评审提醒            |
+| **Day 14** | Sprint 回顾 + 知识沉淀     |
 
 ---
 
 ## IF-THEN 自动触发器
 
-| 条件 (IF) | Agent 动作 (THEN) | 优先级 |
-|---|---|---|
-| 耗时 > 30 分钟 | 建议记录到 Graphiti | P1 |
-| 架构决策讨论 | 建议创建 ADR 文档 | P0 |
-| 完成新功能 | 建议创建 API 文档 | P1 |
-| 数据库迁移 | 建议创建迁移文档 | P0 |
-| 修改共享模块 | 提醒更新文档 | P2 |
-| 遇到复杂问题 | 建议创建 troubleshooting 文档 | P1 |
-| 集成第三方服务 | 建议创建 integration 文档 | P1 |
-| 创建 gRPC 服务 | 建议创建 API 文档 | P0 |
+| 条件 (IF)      | Agent 动作 (THEN)             | 优先级 |
+| -------------- | ----------------------------- | ------ |
+| 耗时 > 30 分钟 | 建议记录到 Graphiti           | P1     |
+| 架构决策讨论   | 建议创建 ADR 文档             | P0     |
+| 完成新功能     | 建议创建 API 文档             | P1     |
+| 数据库迁移     | 建议创建迁移文档              | P0     |
+| 修改共享模块   | 提醒更新文档                  | P2     |
+| 遇到复杂问题   | 建议创建 troubleshooting 文档 | P1     |
+| 集成第三方服务 | 建议创建 integration 文档     | P1     |
+| 创建 gRPC 服务 | 建议创建 API 文档             | P0     |
 
 ---
 
@@ -55,16 +55,16 @@ description: 项目知识管理核心规范（后端版）
 
 ### 查询意图映射
 
-| 查询意图 | 第1层 | 第2层 | 第3层 | 第4层 |
-|---|---|---|---|---|
-| 如何/怎么做 | Graphiti(经验) | docs/shared/specs/ | codebase_search | web_search |
-| 为什么/原因 | Graphiti(决策) | docs/human/decisions/ | git log | web_search |
-| 什么是/定义 | Graphiti(概念) | docs/human/business/ | 代码注释 | web_search |
-| 哪里/位置 | codebase_search | docs/human/architecture/ | grep | - |
-| API/接口 | read_file | Graphiti(经验) | grep | web_search |
-| 错误/问题 | Graphiti(排查) | docs/shared/troubleshooting/ | git log | web_search |
-| 数据库/迁移 | Graphiti(database) | admin/database/migrations/ | grep | web_search |
-| gRPC/微服务 | Graphiti(microservice) | ttpos-bmp/ | grep | web_search |
+| 查询意图    | 第 1 层                | 第 2 层                      | 第 3 层         | 第 4 层    |
+| ----------- | ---------------------- | ---------------------------- | --------------- | ---------- |
+| 如何/怎么做 | Graphiti(经验)         | docs/shared/specs/           | codebase_search | web_search |
+| 为什么/原因 | Graphiti(决策)         | docs/human/decisions/        | git log         | web_search |
+| 什么是/定义 | Graphiti(概念)         | docs/human/business/         | 代码注释        | web_search |
+| 哪里/位置   | codebase_search        | docs/human/architecture/     | grep            | -          |
+| API/接口    | read_file              | Graphiti(经验)               | grep            | web_search |
+| 错误/问题   | Graphiti(排查)         | docs/shared/troubleshooting/ | git log         | web_search |
+| 数据库/迁移 | Graphiti(database)     | admin/database/migrations/   | grep            | web_search |
+| gRPC/微服务 | Graphiti(microservice) | ttpos-bmp/                   | grep            | web_search |
 
 ---
 
@@ -115,6 +115,7 @@ ttpos-business         # 业务逻辑
 【建议】这个问题的解决过程很有价值，建议记录到知识图谱：
 
 **Episode 草稿**
+
 - 名称: {type}-{topic}-{YYYY-MM}
 - 分组: ttpos-{category}
 - 技术栈: Go / PHP / Vue
@@ -131,6 +132,7 @@ ttpos-business         # 业务逻辑
 **建议路径**: docs/human/decisions/{YYYY-MM-DD}-{title}.md
 
 我可以：
+
 1. 生成 ADR 模板
 2. 基于对话生成草稿
 3. 仅记录到 Graphiti
@@ -144,6 +146,7 @@ ttpos-business         # 业务逻辑
 【提醒】修改了数据库结构，需要同步：
 
 必须更新:
+
 - [ ] PHP 迁移文件 (admin/database/migrations/)
 - [ ] Go Model (main/app/model/)
 - [ ] Seeds 文件 (admin/database/seeds/shop_01.sql)
@@ -160,13 +163,13 @@ ttpos-business         # 业务逻辑
 - ❌ 不要记录正在实施中的 Spec
 - ❌ 不要记录未验证的解决方案
 - ❌ 不要重复记录相同问题
-- ❌ 不要混淆技术栈（Go/PHP/Vue要明确标识）
+- ❌ 不要混淆技术栈（Go/PHP/Vue 要明确标识）
 
 ---
 
 ## 相关资源
 
-- [Agent速查表](./AGENT_QUICK_REF.mdc)
+- [Agent 速查表](./AGENT.md)
 - [工作流导航](./workflows.mdc)
 - [文档创建规范](./documentation.mdc)
 
