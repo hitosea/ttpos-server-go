@@ -225,21 +225,25 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 		receiptItems := make([]*erp.PurchaseReceiptItem, 0)
 		//获取采购单中所有物品编码
 		purchaseItemCodeList := make([]string, len(receipt.Items))
+		_warehouse := receipt.SetWarehouse
 		for _, item := range receipt.Items {
 			purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
+			if len(item.Warehouse) > 0 {
+				_warehouse = item.Warehouse
+			}
 		}
 		gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
 		for _, itemReq := range req.Items {
 			if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
-				_warehouse := receipt.SetWarehouse
 				if len(itemReq.Warehouse) > 0 {
 					_warehouse = itemReq.Warehouse
 				}
 				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
-					ItemCode:  itemReq.ItemCode,
-					Qty:       itemReq.Qty,
-					Uom:       itemReq.Uom,
-					Warehouse: _warehouse,
+					ItemCode:      itemReq.ItemCode,
+					Qty:           itemReq.Qty,
+					Uom:           itemReq.Uom,
+					Warehouse:     _warehouse,
+					PurchaseOrder: req.PurchaseOrderName,
 				})
 			}
 		}
