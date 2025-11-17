@@ -103,7 +103,7 @@ ELSE
 
 ### 核心规范 (必读)
 
-- [Agent 速查表](../AGENT.md) - 所有规则的压缩映射表
+- [Agent 速查表](../AGENTS.md) - 所有规则的压缩映射表
 - [工作流导航](../.cursor/rules/workflows.mdc) - 场景识别和流程导航
 - [Go 开发规范](../.cursor/rules/go-main.mdc)
 - [PHP 开发规范](../.cursor/rules/php.mdc)
@@ -142,7 +142,7 @@ ELSE
 
 ## 🆘 需要帮助？
 
-1. **优先查阅** [Agent 速查表](../AGENT.md)
+1. **优先查阅** [Agent 速查表](../AGENTS.md)
 2. **搜索 Graphiti** 查询历史经验
 3. **查看工作流** 找到对应的执行步骤
 4. **参考模板** 使用标准文档模板

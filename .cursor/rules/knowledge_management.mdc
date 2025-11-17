@@ -32,24 +32,24 @@ description: 项目知识管理核心规范（后端版）
 
 ## IF-THEN 自动触发器
 
-| 条件 (IF)      | Agent 动作 (THEN)                                     | 优先级 |
-| -------------- | ----------------------------------------------------- | ------ |
+| 条件 (IF)      | Agent 动作 (THEN)                                                 | 优先级 |
+| -------------- | ----------------------------------------------------------------- | ------ |
 | 耗时 > 30 分钟 | 建议记录到 Graphiti（`docs/agent/templates/graphiti-episode.md`） | P1     |
-| 架构决策讨论   | 建议创建 ADR 文档                                     | P0     |
-| 完成新功能     | 建议创建 API 文档                                     | P1     |
-| 数据库迁移     | 建议创建迁移文档                                      | P0     |
-| 修改共享模块   | 提醒更新文档                                          | P2     |
-| 遇到复杂问题   | 在 `docs/shared/troubleshooting/` 创建指南 + Graphiti Episode | P1     |
-| 集成第三方服务 | 建议创建 integration 文档                             | P1     |
-| 创建 gRPC 服务 | 建议创建 API 文档                                     | P0     |
+| 架构决策讨论   | 建议创建 ADR 文档                                                 | P0     |
+| 完成新功能     | 建议创建 API 文档                                                 | P1     |
+| 数据库迁移     | 建议创建迁移文档                                                  | P0     |
+| 修改共享模块   | 提醒更新文档                                                      | P2     |
+| 遇到复杂问题   | 在 `docs/shared/troubleshooting/` 创建指南 + Graphiti Episode     | P1     |
+| 集成第三方服务 | 建议创建 integration 文档                                         | P1     |
+| 创建 gRPC 服务 | 建议创建 API 文档                                                 | P0     |
 
 ### 文档落点速查
 
-| 场景                               | 静态文档                               | 模板/指南                                      |
-| ---------------------------------- | -------------------------------------- | ---------------------------------------------- |
-| 排查类问题                         | `docs/shared/troubleshooting/`         | `docs/agent/templates/troubleshooting-guide.md` |
-| Episode 沉淀 / 经验总结            | Graphiti Episode                       | `docs/agent/templates/graphiti-episode.md`     |
-| 文档与 Episode 互链（强制）        | 在文档末尾增加 `Related Episode: ...` | `.cursor/rules/knowledge_management.mdc` 本节  |
+| 场景                        | 静态文档                              | 模板/指南                                       |
+| --------------------------- | ------------------------------------- | ----------------------------------------------- |
+| 排查类问题                  | `docs/shared/troubleshooting/`        | `docs/agent/templates/troubleshooting-guide.md` |
+| Episode 沉淀 / 经验总结     | Graphiti Episode                      | `docs/agent/templates/graphiti-episode.md`      |
+| 文档与 Episode 互链（强制） | 在文档末尾增加 `Related Episode: ...` | `.cursor/rules/knowledge_management.mdc` 本节   |
 
 ---
 
@@ -179,7 +179,7 @@ ttpos-business         # 业务逻辑
 
 ## 相关资源
 
-- [Agent 速查表](./AGENT.md)
+- [Agent 速查表](./AGENTS.md)
 - [工作流导航](./workflows.mdc)
 - [文档创建规范](./documentation.mdc)
 

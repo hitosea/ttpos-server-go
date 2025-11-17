@@ -97,7 +97,7 @@ touch requirements.md design.md tasks.md
 ### 规范
 
 - [Spec 规范](../../../.cursor/rules/specs.mdc)
-- [Agent 速查表](../../../AGENT.md)
+- [Agent 速查表](../../../AGENTS.md)
 
 ---
 

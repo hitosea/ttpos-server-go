@@ -172,7 +172,7 @@ docs/
 ## 检索优先级 (强制顺序)
 
 ```
-1. 本速查表 (AGENT.md)
+1. 本速查表 (AGENTS.md)
 2. Graphiti (经验类问题: "如何" "为什么" "踩坑")
 3. .cursor/rules/*.mdc (规范核心清单)
 4. docs/ (详细文档、完整示例)
@@ -298,7 +298,7 @@ AI 辅助实现 →
 
 ### P0 (必读 - 薄层规则)
 
-1. `AGENT.md` (本文件 - 核心速查)
+1. `AGENTS.md` (本文件 - 核心速查)
 2. `.cursor/rules/intro.mdc` (项目快速入门)
 3. `.cursor/rules/structs.mdc` (项目结构快速定位)
 4. `.cursor/rules/workflows.mdc` (工作流导航)

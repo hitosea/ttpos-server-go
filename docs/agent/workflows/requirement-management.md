@@ -292,7 +292,7 @@
 
 ### Agent 规范
 
-- `AGENT.md` - Agent 速查表
+- `AGENTS.md` - Agent 速查表
 - `.cursor/rules/specs.mdc` - Spec 命名规范
 - `.cursor/rules/scrum_story_point.mdc` - SP 评估规范
 

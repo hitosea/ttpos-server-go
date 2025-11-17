@@ -360,7 +360,7 @@ git push origin feature/story-{module}-{feature}
 
 ### 规范文件
 
-- `AGENT.md` - Agent 速查表
+- `AGENTS.md` - Agent 速查表
 - `.cursor/rules/go-main.mdc` - Go 开发规范 ⭐⭐⭐
 - `.cursor/rules/php.mdc` - PHP 开发规范 ⭐⭐⭐
 - `.cursor/rules/vue.mdc` - Vue 开发规范

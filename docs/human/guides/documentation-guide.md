@@ -1,7 +1,7 @@
 # 文档编写指南（后端版）
 
 > 👤 **受众**：人类开发者、技术写作者  
-> 🎯 **目的**：在 `AGENT.md` → `.cursor/rules/documentation.mdc` → `docs/**` 的体系下，提供可操作的详细说明，确保各类文档有据可依、互相关联。
+> 🎯 **目的**：在 `AGENTS.md` → `.cursor/rules/documentation.mdc` → `docs/**` 的体系下，提供可操作的详细说明，确保各类文档有据可依、互相关联。
 
 ---
 
@@ -142,7 +142,7 @@
 
 ## 8. 相关资源
 
-- `AGENT.md` – 场景映射与命令指南。
+- `AGENTS.md` – 场景映射与命令指南。
 - `.cursor/rules/documentation.mdc` – 薄层规范与模板映射。
 - `.cursor/rules/knowledge_management.mdc` – Graphiti 规则与 IF-THEN 触发器。
 - `docs/team/reports/document-system-assessment-2025-11-17.md` – 文档体系评估报告。

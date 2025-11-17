@@ -250,7 +250,7 @@ graph TD
 
 ### 核心规范
 
-- [Agent 速查表](../../../AGENT.md)
+- [Agent 速查表](../../../AGENTS.md)
 - [Spec 规范](../../../.cursor/rules/specs.mdc)
 - [工作流导航](../../../.cursor/rules/workflows.mdc)
 - [文档创建规范](../../../.cursor/rules/documentation.mdc)

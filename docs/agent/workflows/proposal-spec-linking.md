@@ -106,7 +106,7 @@ docs/shared/specs/story-{module}-{feature}/
 
 ## 相关资源
 
-- `AGENT.md` – 场景识别与命令表。
+- `AGENTS.md` – 场景识别与命令表。
 - `.cursor/rules/specs.mdc` – Spec 命名与结构规范。
 - `.cursor/rules/documentation.mdc` – 模板与角色分工。
 - `.cursor/rules/knowledge_management.mdc` – Graphiti & 活动日志规范。
