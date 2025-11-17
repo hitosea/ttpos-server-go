@@ -12,12 +12,13 @@
 - [x] `requirements-template.md` - 需求规格模板（后端版）
 - [x] `design-template.md` - 技术设计模板（后端版）
 - [x] `tasks-template.md` - 任务分解模板（后端版）
+- [x] `graphiti-episode.md` - Graphiti Episode 模板（知识沉淀）
 
-### 后端专属模板（待创建）
+### 后端专属模板（进行中）
 
 - [ ] `database-migration-template.md` - 数据库迁移模板
 - [ ] `api-doc-template.md` - API 文档模板
-- [ ] `troubleshooting-template.md` - 问题排查模板
+- [x] `troubleshooting-guide.md` - 问题排查模板
 - [ ] `grpc-service-template.md` - gRPC 服务模板
 
 ---

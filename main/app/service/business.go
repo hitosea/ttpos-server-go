@@ -1203,7 +1203,7 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysis(ctx context.Context, reque
 		return err
 	}
 	if result.Meta.Total > 1000 {
-		return errors.WithMessage(errors.New("最多导出1000条数据"))
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
 	fileNameMap := map[string]string{
@@ -1333,7 +1333,7 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 		return err
 	}
 	if count > 1000 {
-		return errors.WithMessage(errors.New("最多导出1000条数据"))
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
 	fileNameMap := map[string]string{
@@ -1920,11 +1920,12 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
 	}
 
-	request.PageNo = 1
-	request.PageSize = 1000 // 最多导出1000条数据
 	result := s.CountBusinessTimePeriod(ctx, request)
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+	if result.Meta.Total > 1000 {
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
 	fileNameMul := model.MultiLanguageName{
@@ -1969,7 +1970,7 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 		_, err := s.ExportBusinessTimePeriodTask(ctx, ExportBusinessTimePeriodTaskParams{
 			Record:      *record,
 			FillNameMul: fileNameMul,
-			Data:        result,
+			Request:     request,
 		})
 		if err != nil {
 			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
@@ -1987,14 +1988,18 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 
 // 导出时段营业统计数据参数
 type ExportBusinessTimePeriodTaskParams struct {
-	Record      model.ExportRecord                    // 导出记录
-	FillNameMul model.MultiLanguageName               // 多语言名称
-	Data        business_data_resp.BusinessTimePeriod // 数据
+	Request     req.BusinessTimePeriodReq // 请求参数
+	Record      model.ExportRecord        // 导出记录
+	FillNameMul model.MultiLanguageName   // 多语言名称
 }
 
 // 导出时段营业统计数据
 func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params ExportBusinessTimePeriodTaskParams) (*resp.FileExportResp, error) {
 	db := ctx.GetDB()
+
+	params.Request.PageNo = 1
+	params.Request.PageSize = 1000
+	result := s.CountBusinessTimePeriod(ctx, params.Request)
 
 	// 根据语言获取表头
 	headerMap := map[string][]string{
@@ -2057,7 +2062,7 @@ func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params E
 	}
 
 	// 写入数据
-	for rowIdx, item := range params.Data.List {
+	for rowIdx, item := range result.List {
 		// 数据从第二行开始写入
 		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.TimePeriod)
@@ -2109,11 +2114,12 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
 	}
 
-	request.PageNo = 1
-	request.PageSize = 1000 // 最多导出1000条数据
 	result := s.CountBusinessSummary(ctx, request)
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+	if result.Meta.Total > 1000 {
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
 	fileNameMul := model.MultiLanguageName{
@@ -2158,7 +2164,7 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 		_, err := s.ExportBusinessSummaryTask(ctx, ExportBusinessSummaryTaskParams{
 			Record:      *record,
 			FillNameMul: fileNameMul,
-			Data:        result,
+			Request:     request,
 		})
 		if err != nil {
 			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
@@ -2176,14 +2182,18 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 
 // 导出综合运营统计数据参数
 type ExportBusinessSummaryTaskParams struct {
-	Record      model.ExportRecord                   // 导出记录
-	FillNameMul model.MultiLanguageName              // 多语言名称
-	Data        business_data_resp.StatisticsSummary // 数据
+	Request     req.StatisticsSummaryReq // 请求参数
+	Record      model.ExportRecord       // 导出记录
+	FillNameMul model.MultiLanguageName  // 多语言名称
 }
 
 // 导出综合运营统计数据
 func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params ExportBusinessSummaryTaskParams) (*resp.FileExportResp, error) {
 	db := ctx.GetDB()
+
+	params.Request.PageNo = 1
+	params.Request.PageSize = 1000
+	result := s.CountBusinessSummary(ctx, params.Request)
 
 	// 根据语言获取表头
 	headerMap := map[string][]string{
@@ -2246,7 +2256,7 @@ func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params Expo
 	}
 
 	// 写入数据
-	for rowIdx, item := range params.Data.List {
+	for rowIdx, item := range result.List {
 		// 数据从第二行开始写入
 		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.Date)
@@ -2304,11 +2314,12 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
 	}
 
-	request.PageNo = 1
-	request.PageSize = 100 // 最多导出1000条数据
 	result := s.CountBusinessPaymentMethod(ctx, request)
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+	if result.Meta.Total > 1000 {
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
 	fileNameMul := model.MultiLanguageName{
@@ -2353,7 +2364,7 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 		_, err := s.ExportBusinessPaymentMethodTask(ctx, ExportBusinessPaymentMethodTaskParams{
 			Record:      *record,
 			FillNameMul: fileNameMul,
-			Data:        result,
+			Request:     request,
 		})
 		if err != nil {
 			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
@@ -2371,14 +2382,18 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 
 // 导出收款数据参数
 type ExportBusinessPaymentMethodTaskParams struct {
-	Record      model.ExportRecord                         // 导出记录
-	FillNameMul model.MultiLanguageName                    // 多语言名称
-	Data        business_data_resp.StatisticsPaymentMethod // 数据
+	Request     req.StatisticsPaymentMethodReq // 请求参数
+	Record      model.ExportRecord             // 导出记录
+	FillNameMul model.MultiLanguageName        // 多语言名称
 }
 
 // 导出营业收款统计数据
 func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, params ExportBusinessPaymentMethodTaskParams) (*resp.FileExportResp, error) {
 	db := ctx.GetDB()
+
+	params.Request.PageNo = 1
+	params.Request.PageSize = 1000
+	result := s.CountBusinessPaymentMethod(ctx, params.Request)
 
 	// 根据语言获取表头
 	headerMap := map[string][]string{
@@ -2441,7 +2456,7 @@ func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, param
 	}
 
 	// 写入数据
-	for rowIdx, item := range params.Data.List {
+	for rowIdx, item := range result.List {
 		// 数据从第二行开始写入
 		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.Date)
