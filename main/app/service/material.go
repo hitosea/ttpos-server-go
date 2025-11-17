@@ -940,12 +940,14 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 
 	// 获取采购单位
 	var purchaseUom string
-	purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "获取采购单位失败")
-	}
-	if purchaseUnit.Unit != nil {
-		purchaseUom = purchaseUnit.Unit.ErpnextUom
+	if material.PurchaseUnitUuid != 0 {
+		purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "获取采购单位失败")
+		}
+		if purchaseUnit.Unit != nil {
+			purchaseUom = purchaseUnit.Unit.ErpnextUom
+		}
 	}
 
 	materialAddErpReq := &req.MaterialAddErpReq{

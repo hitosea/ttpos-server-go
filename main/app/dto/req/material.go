@@ -161,9 +161,6 @@ func (r *MaterialAddReq) Validate() error {
 	if r.UnitUuid == 0 {
 		return errors.WithMessage(errors.New("基准单位不能为空"))
 	}
-	if r.PurchaseUnitUuid == 0 {
-		return errors.WithMessage(errors.New("采购单位不能为空"))
-	}
 	if r.CostUnitUuid == 0 {
 		return errors.WithMessage(errors.New("成本单位不能为空"))
 	}
@@ -305,9 +302,6 @@ func (r *MaterialEditReq) Validate() error {
 	}
 	if r.CategoryUuid == 0 {
 		return errors.WithMessage(errors.New("分类不能为空"))
-	}
-	if r.PurchaseUnitUuid == 0 {
-		return errors.WithMessage(errors.New("采购单位不能为空"))
 	}
 	if r.CostUnitUuid == 0 {
 		return errors.WithMessage(errors.New("成本单位不能为空"))
