@@ -28,6 +28,7 @@ type TransferOrderCreateReq struct {
 	Remark              string                       `json:"remark"`                                       // 备注
 	Items               []TransferOrderItemCreateReq `json:"items"`                                        // 调拨明细
 	IsSubmit            bool                         `json:"is_submit"`                                    // 是否提交
+	IsConfirm           bool                         `json:"is_confirm"`                                   // 是否确认提交
 }
 
 func (r *TransferOrderCreateReq) Validate() error {
