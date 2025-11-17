@@ -2163,5 +2163,6 @@
     "兼容": "Compatible",
     "流畅：设备状态良好时选择此模式，可最大化打印效率": "Smooth: Select this mode when the device is in good condition to maximize printing efficiency.",
     "稳定：遇到偶尔卡顿时切换到此模式，确保订单稳定输出": "Stable: Switch to this mode when occasional lag occurs to ensure stable order output.",
-    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Compatibility: Use when device performance is insufficient to ensure every order is printed completely"
+    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Compatibility: Use when device performance is insufficient to ensure every order is printed completely",
+    "如调整自定义模板，请前往桌面端操作": "To adjust a custom template, please operate on the desktop version"
 }
