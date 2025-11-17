@@ -373,11 +373,13 @@ class App extends AppModel
                 ], 60);
 
                 if (!$res) {
-                    return $this->renderError('请求失败');
+                    $this->error = '请求失败';
+                    return false;
                 }
                 $res = json_decode($res, true);
                 if ($res['code'] != 0) {
-                    return $this->renderError($res['message']);
+                    $this->error = $res['message'];
+                    return false;
                 }
             }
 

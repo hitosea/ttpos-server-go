@@ -30,7 +30,8 @@ type ProductRequest struct {
 	ProductPackageGroupUuid uint64 `json:"product_package_group_uuid"` // 套餐分组UUID
 	// 普通商品的参数
 	EditProductReq
-	Num float64 `json:"num"` // 商品数量
+	Num     float64 `json:"num"`      // 商品数量
+	UnitNum float64 `json:"unit_num"` // 一个套餐的单个子商品的数量
 }
 
 type OrderCartProductFlavorAndAttributeChangeReq struct {
@@ -102,10 +103,20 @@ type TabletOrderCartProductAddReq struct {
 	IgnoreMust    bool            `json:"ignore_must"`                            // 是否忽略必点方案
 }
 
+func (req *TabletOrderCartProductAddReq) FormatPackageSubProductParams() {
+	for _, product := range req.Products {
+		for j := range product.Products {
+			subProduct := &product.Products[j]
+			subProduct.Num = subProduct.UnitNum * product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
+		}
+	}
+}
+
 // ProductParams 商品参数
 type ProductParams struct {
 	FlavorProductBomUuid            uint64           `json:"flavor_product_bom_uuid"`             // 商品规格uuid
 	Num                             float64          `json:"num"  binding:"required"`             // 数量数量
+	UnitNum                         float64          `json:"unit_num"`                            // 单位数量. 目前只有平板的加购并送厨使用该字段
 	Price                           *float64         `json:"price"`                               // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
 	IsBuffet                        *bool            `json:"is_buffet"`                           // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息

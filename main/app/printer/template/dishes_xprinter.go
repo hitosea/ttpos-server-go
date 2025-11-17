@@ -1248,95 +1248,111 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		[]int{0, pkg.AlignRight, 0},
 	)
 
-	// 处理产品
-	for _, product := range products {
-		// 设置行间距
-		printer.SetLineSpacing(45)
-		// 打包商品
-		wrapText := ""
-		if product.IsWrap {
-			wrapText = "(" + t.base.Translate("打包") + ") "
-		}
-		// 套餐
-		packageText := ""
-		if product.ProductType > constant.ProductTypeProduct {
-			packageText = t.base.Translate("套餐") + "-"
-		}
-		// 处理自助餐文本
-		buffetText := ""
-		if buffetSignOpen == "1" {
-			if product.IsBuffet {
-				buffetText = t.base.Translate("自助餐") + "-"
+	isMultiProduct := len(products) > 0
+	var processProducts func(products printer_model.Products, isSubProduct bool)
+	processProducts = func(products printer_model.Products, isSubProduct bool) {
+		// 处理产品
+		for _, product := range products {
+			// 设置行间距
+			printer.SetLineSpacing(45)
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
 			}
-		}
-		// 产品名称
-		productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			// 套餐
+			packageText := ""
+			if product.ProductType > constant.ProductTypeProduct && !isMultiProduct {
+				packageText = t.base.Translate("套餐") + "-"
+			}
+			// 处理自助餐文本
+			buffetText := ""
+			if buffetSignOpen == "1" {
+				if product.IsBuffet {
+					buffetText = t.base.Translate("自助餐") + "-"
+				}
+			}
+			// 产品名称
+			productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			// 是否是套餐子商品
+			if isSubProduct {
+				productName = "--" + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			}
 
-		// 设置字符大小和行间距
-		if printerType == PrinterTypeXPrinterWifi {
-			printer.SetLineSpacing(120)
-		} else {
-			printer.SetLineSpacing(60)
-		}
-
-		// 打印产品名称和数量
-		printer.SetCharacterSize(2, 2)
-		productNum := "x" + t.base.FloatToString(product.TotalNum)
-		if len(productNum) >= 3 {
-			if isSunmi {
-				printer.SetupColumns(
-					[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
-					[]int{0, pkg.AlignRight, 0},
-				)
-				printer.PrintInColumns(productName, productNum)
+			// 设置字符大小和行间距
+			if printerType == PrinterTypeXPrinterWifi {
+				printer.SetLineSpacing(120)
 			} else {
-				w := 20 - (len(productNum) - 3)
-				printer.AppendText(t.base.PrintText(
-					productName, "", productNum,
-					w, w, 0, 0, 2,
-				))
+				printer.SetLineSpacing(60)
+			}
+
+			// 打印产品名称和数量
+			printer.SetCharacterSize(2, 2)
+			productNum := "x" + t.base.FloatToString(product.TotalNum)
+			if len(productNum) >= 3 {
+				if isSunmi {
+					printer.SetupColumns(
+						[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+						[]int{0, pkg.AlignRight, 0},
+					)
+					printer.PrintInColumns(productName, productNum)
+				} else {
+					w := 20 - (len(productNum) - 3)
+					printer.AppendText(t.base.PrintText(
+						productName, "", productNum,
+						w, w, 0, 0, 2,
+					))
+					printer.LineFeed()
+				}
+			} else {
+				printer.PrintInColumns(productName, productNum)
+			}
+			printer.SetCharacterSize(1, 1)
+
+			// 恢复默认行间距
+			printer.RestoreDefaultLineSpacing()
+
+			// 换行
+			if printerType != PrinterTypeXPrinterLan {
 				printer.LineFeed()
 			}
-		} else {
-			printer.PrintInColumns(productName, productNum)
-		}
-		printer.SetCharacterSize(1, 1)
 
-		// 恢复默认行间距
-		printer.RestoreDefaultLineSpacing()
-
-		// 换行
-		if printerType != PrinterTypeXPrinterLan {
-			printer.LineFeed()
-		}
-
-		// 分割处理属性
-		for _, attr := range product.ProductAttrList {
-			printer.AppendText(attr.GetLocale(t.base.Lang))
-			if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(40)
-			} else {
-				printer.SetLineSpacing(22)
+			// 分割处理属性
+			for _, attr := range product.ProductAttrList {
+				if attr.GetLocale(t.base.Lang) != "" {
+					printer.AppendText(attr.GetLocale(t.base.Lang))
+					if printerType == PrinterTypeXPrinterWifi {
+						printer.SetLineSpacing(40)
+					} else {
+						printer.SetLineSpacing(22)
+					}
+					printer.LineFeed(2)
+					// 恢复默认行间距
+					printer.RestoreDefaultLineSpacing()
+				}
 			}
-			printer.LineFeed(2)
-			// 恢复默认行间距
-			printer.RestoreDefaultLineSpacing()
-		}
 
-		// 处理备注
-		if product.Remark != "" {
-			printer.AppendText(product.Remark)
-			printer.SetCharacterSize(1, 1)
-			if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(40)
-			} else {
-				printer.SetLineSpacing(22)
+			// 处理备注
+			if product.Remark != "" {
+				printer.AppendText(product.Remark)
+				printer.SetCharacterSize(1, 1)
+				if printerType == PrinterTypeXPrinterWifi {
+					printer.SetLineSpacing(40)
+				} else {
+					printer.SetLineSpacing(22)
+				}
+				printer.LineFeed(2)
+				// 恢复默认行间距
+				printer.RestoreDefaultLineSpacing()
 			}
-			printer.LineFeed(2)
-			// 恢复默认行间距
-			printer.RestoreDefaultLineSpacing()
+
+			// 打印套餐子商品
+			if len(product.SubProducts) > 0 {
+				processProducts(product.SubProducts, true)
+			}
 		}
 	}
+	processProducts(products, false)
 
 	// 打印额外行
 	printer.LineFeed(2)

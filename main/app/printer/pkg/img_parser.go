@@ -206,7 +206,14 @@ func (p *ImgTemplateParser) parseRows(img *ImgFont, rows [][]ImgTemplateBlock, l
 // getNextValidBlock 获取下一行有效的block
 func (p *ImgTemplateParser) validBlock(block ImgTemplateBlock) bool {
 	// 如果设置了不显示空值，且值为空或零，则返回空字符串
-	if block.BlockAttr.NotShowEmpty && p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
+	if block.BlockAttr.NotShowEmpty {
+		if block.BlockType == "label" {
+			if p.getLabel(block.BlockLabel) == "" {
+				return false
+			}
+		} else if p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
+			return false
+		}
 		return false
 	}
 	// 检查条件显示
@@ -347,7 +354,7 @@ func (p *ImgTemplateParser) parseRow(
 			columns := make([]ColumnConfig, 0, len(blocks))
 			for _, block := range blocks {
 				// 检查条件显示
-				if !p.checkConditions(block.Conditions) {
+				if block.BlockAttr.Disabled || !p.checkConditions(block.Conditions) {
 					continue
 				}
 				lineHeight := block.BlockAttr.LineHeight
@@ -586,35 +593,6 @@ func (p *ImgTemplateParser) getLabel(labels interface{}) string {
 				label = labelStr
 			}
 		}
-
-		// 回退到中文
-		if label == "" {
-			if l, exists := labelsMap["zh"]; exists {
-				if labelStr, ok := l.(string); ok && labelStr != "" {
-					label = labelStr
-				}
-			}
-		}
-
-		// 回退到英文
-		if label == "" {
-			if l, exists := labelsMap["en"]; exists {
-				if labelStr, ok := l.(string); ok && labelStr != "" {
-					label = labelStr
-				}
-			}
-		}
-
-		// 返回第一个可用的标签
-		if label == "" {
-			for _, l := range labelsMap {
-				if labelStr, ok := l.(string); ok && labelStr != "" {
-					label = labelStr
-					break
-				}
-			}
-		}
-
 		// 处理标签中的变量替换
 		return p.replaceVariables(label)
 	}
@@ -622,26 +600,10 @@ func (p *ImgTemplateParser) getLabel(labels interface{}) string {
 	// 如果是map[string]string类型（向后兼容）
 	if labelsMap, ok := labels.(map[string]string); ok {
 		var label string
-
 		// 获取当前语言的标签
 		if l, exists := labelsMap[p.baseData.Language]; exists && l != "" {
 			label = l
-		} else if l, exists := labelsMap["zh"]; exists && l != "" {
-			// 回退到中文
-			label = l
-		} else if l, exists := labelsMap["en"]; exists && l != "" {
-			// 回退到英文
-			label = l
-		} else {
-			// 返回第一个可用的标签
-			for _, l := range labelsMap {
-				if l != "" {
-					label = l
-					break
-				}
-			}
 		}
-
 		// 处理标签中的变量替换
 		return p.replaceVariables(label)
 	}

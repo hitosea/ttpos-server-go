@@ -2222,6 +2222,39 @@ export const previewData = {
                 font22: true,
                 flexWidth: true,
             },
+            {
+                name:  $t('这是备注这是备注这是备注'),
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: '&nbsp;&nbsp;&nbsp;&nbsp;' + $t('-子菜名称1'),
+                label: 'X1',
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: '&nbsp;&nbsp;&nbsp;&nbsp;' + $t('大份'),
+                font16Small: true,
+            },
+            {
+                name: '&nbsp;&nbsp;&nbsp;&nbsp;' + $t('加辣'),
+                font16Small: true,
+            },
+            {
+                name: '&nbsp;&nbsp;&nbsp;&nbsp;' + $t('-子菜名称2'),
+                label: 'X1',
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: '&nbsp;&nbsp;&nbsp;&nbsp;' + $t('大份'),
+                font16Small: true,
+            },
+            {
+                name: '&nbsp;&nbsp;&nbsp;&nbsp;' + $t('加辣'),
+                font16Small: true,
+            },
         ],
     ],
     fifteen: [

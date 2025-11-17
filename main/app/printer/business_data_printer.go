@@ -94,6 +94,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 		PrintingTime:      printerLogData.PrintingTime,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 		TradeNo:           printerLogData.GetTradeNo(p.ctx.GetCompanyUuid()),
+		PrintChunkSize:    printerLogData.GetPrintChunkSize(),
 	}, nil
 }
 
@@ -157,7 +158,8 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 		constant.PrinterTypeGpCloud,
-		constant.BrandA11510P,
+		constant.PrinterTypeCashierCompax,
+		constant.PrinterTypeCashierImmin,
 	}, printerType) {
 		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(
 			printerInfo,

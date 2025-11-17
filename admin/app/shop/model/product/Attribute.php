@@ -89,20 +89,10 @@ class Attribute extends AttributeModel
             $maxSort = $this->where('attribute_group_uuid', $parent_id)->max('sort');
             $data['sort'] = $maxSort + 1;
             $model = $this;
-            $isExist = $this->where('attribute_group_uuid', '>', 0)->where('name', $attribute_name)->count();
-            if ($isExist) {
-                $this->error = '名称已存在';
-                return false;
-            }
         } else {
             $model = new AttributeGroup;
             $maxSort = $model->max('sort');
             $data['sort'] = $maxSort + 1;
-            $isExist = $model->where('name', $attribute_name)->count();
-            if ($isExist) {
-                $this->error = '名称已存在';
-                return false;
-            }
         }
         //
         $data['name'] = $attribute_name;
@@ -122,11 +112,6 @@ class Attribute extends AttributeModel
         }
         $parent_id = $this['attribute_group_uuid'] ?? 0;
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
-        $isExist = $this->where('name', $attribute_name)->where('uuid', '<>', $this['uuid'])->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
         //
         $data['name'] = $attribute_name;
         $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($attribute_name, $this['multi_language_name_uuid']);

@@ -4,6 +4,7 @@ import "sync"
 
 const (
 	DailySalesOutboundSummaryLock = 1 // 每日销售出库汇总锁
+	KitchenEfficiencyAnalysisLock = 2 // 后厨效率分析锁
 )
 
 type Lock interface {

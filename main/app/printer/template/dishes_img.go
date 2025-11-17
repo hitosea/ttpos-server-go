@@ -744,60 +744,76 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	img.LineFeed(1)
 	img.SetTextLineHeight(50)
 
-	// 商品和数量
-	for _, product := range products {
+	isMultiProduct := len(products) > 0
+	var processProducts func(products printer_model.Products, isSubProduct bool)
+	processProducts = func(products printer_model.Products, isSubProduct bool) {
+		// 商品和数量
+		for _, product := range products {
 
-		// 打包商品
-		wrapText := ""
-		if product.IsWrap {
-			wrapText = "(" + t.base.Translate("打包") + ") "
-		}
-		// 套餐
-		packageText := ""
-		if product.ProductType > constant.ProductTypeProduct {
-			packageText = t.base.Translate("套餐") + "-"
-		}
-		// 处理自助餐文本
-		buffetText := ""
-		if buffetSignOpen == "1" {
-			if product.IsBuffet {
-				buffetText = t.base.Translate("自助餐") + "-"
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
 			}
-		}
+			// 套餐
+			packageText := ""
+			if product.ProductType > constant.ProductTypeProduct && !isMultiProduct {
+				packageText = t.base.Translate("套餐") + "-"
+			}
+			// 处理自助餐文本
+			buffetText := ""
+			if buffetSignOpen == "1" {
+				if product.IsBuffet {
+					buffetText = t.base.Translate("自助餐") + "-"
+				}
+			}
+			// 产品名称
+			productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			// 是否是套餐子商品
+			if isSubProduct {
+				productName = "--" + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			}
 
-		// 产品名称
-		productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
-		// 套餐-
-		img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 90, 64))
-		img.LineFeed(1, 12)
-
-		// 打印产品名称和数量
-		totalNum := "X" + t.base.FloatToString(product.TotalNum)
-		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
-		)
-		if t.base.Lang == "my" {
+			// 设置行间距
+			img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 90, 64))
 			img.LineFeed(1, 12)
-		}
 
-		// 分割处理属性
-		for _, attr := range product.ProductAttrList {
-			img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 50, 40))
-			img.AppendText(attr.GetLocale(t.base.Lang))
-			img.LineFeed(1, 50)
-		}
+			// 打印产品名称和数量
+			totalNum := "X" + t.base.FloatToString(product.TotalNum)
+			productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+			)
+			if t.base.Lang == "my" {
+				img.LineFeed(1, 12)
+			}
 
-		if product.Remark != "" {
-			img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
-			img.AppendText(product.Remark)
-			img.LineFeed(1, 50)
-		}
+			// 分割处理属性
+			for _, attr := range product.ProductAttrList {
+				if attr.GetLocale(t.base.Lang) != "" {
+					img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 50, 40))
+					img.AppendText(attr.GetLocale(t.base.Lang))
+					img.LineFeed(1, 50)
+				}
+			}
 
-		img.LineFeed(1, 12)
-		img.SetTextLineHeight(50)
+			if product.Remark != "" {
+				img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
+				img.AppendText(product.Remark)
+				img.LineFeed(1, 50)
+			}
+
+			// 打印套餐子商品
+			if len(product.SubProducts) > 0 {
+				processProducts(product.SubProducts, true)
+			}
+
+			img.LineFeed(1, 12)
+			img.SetTextLineHeight(50)
+		}
 	}
+	processProducts(products, false)
 
 	// 设置行间距
 	img.SetTextLineHeight(50)

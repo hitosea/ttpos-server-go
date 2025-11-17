@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -517,6 +518,21 @@ func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// GetPaymentMethodList 获取支付方式列表
+// @Summary 获取支付方式列表
+// @Description 获取支付方式列表
+// @Tags 商家端.支付管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.PaymentMethodListResp}
+// @Router /shop/setting/payment_method/list [get]
+func (h *SettingHandler) GetPaymentMethodList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result := h.settingSrv.GetPaymentMethodList(ctx)
+	helper.Success(c, result)
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -529,9 +545,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
+	messageSrv := message.NewIMessageSrv(dbm)
 	supplierSrv := service.NewSupplierSrv(dbm)
 	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache, translateSrv)
-	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv)
+	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv, messageSrv)
 	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 	wrapper := &SettingHandler{
 		settingSrv:    settingSrv,
@@ -559,6 +576,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/order_remark/add", wrapper.AddOrderRemark)              // 新增整单备注
 		privateApi.POST("/setting/order_remark/edit", wrapper.EditOrderRemark)            // 编辑整单备注
 		privateApi.DELETE("/setting/order_remark", wrapper.DeleteOrderRemark)             // 删除整单备注
+		privateApi.GET("/setting/payment_method/list", wrapper.GetPaymentMethodList)      // 获取支付方式列表
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码

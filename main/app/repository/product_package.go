@@ -27,6 +27,7 @@ type IProductPackageQueryRepo interface {
 	SetProductPackageBatch(uuids []uint64, isBatch uint) error                                            // 将is_batch设置为1或0
 	GetProductPackageListByUuidsAndIsBatch(uuids []uint64, isBatch uint) ([]*model.ProductPackage, error) // 根据uuid列表和is_batch查询商品包列表
 	GetProductPackageListByIsBatch(isBatch uint) ([]*model.ProductPackage, error)                         // 根据is_batch查询商品包列表
+	GetProductPackageUuidsByIsPackage() ([]uint64, error)                                                 // 查询所有套餐的uuid列表
 
 	WithMultiLanguageName(opts ...DBOption) DBOption                      // 预加载多语言名称
 	WithProductBoms(opts ...DBOption) DBOption                            // 预加载商品bom
@@ -38,6 +39,7 @@ type IProductPackageQueryRepo interface {
 	WithProductPackageGroups(opts ...DBOption) DBOption                   // 预加载商品套餐组
 	WithProductPackageGroupItems(opts ...DBOption) DBOption               // 预加载商品套餐组商品
 	WithProductPackageGroupMultiLanguageName(opts ...DBOption) DBOption   // 预加载商品套餐组多语言名称
+	WithProductLabel(opts ...DBOption) DBOption                           // 预加载商品标签
 }
 
 type productPackageRepoImpl struct {
@@ -369,4 +371,26 @@ func (r *productPackageRepoImpl) WithProductCategoryMultiLanguageName(opts ...DB
 			return db
 		})
 	}
+}
+
+// WithProductLabel 预加载商品标签
+func (r *productPackageRepoImpl) WithProductLabel(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductLabel", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// 查询所有套餐的uuid列表
+func (r *productPackageRepoImpl) GetProductPackageUuidsByIsPackage() ([]uint64, error) {
+	var productPackageUuids []uint64
+	err := r.db.Model(&model.ProductPackage{}).Where("delete_time = ?", 0).Where("product_type = ?", 1).Select("uuid").Scan(&productPackageUuids).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackageUuids, nil
 }

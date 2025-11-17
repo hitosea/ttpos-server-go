@@ -80,7 +80,7 @@ func riderCompletedMemberSaleOrderEventHandler() {
 			}
 
 			// 创建“骑手接单”操作记录
-			go func() {
+			utils.Go(func() {
 				record := model.SaleOrderOperationRecord{
 					Source:        constant.SourceRider, // 骑手端
 					Action:        constant.OrderFinishMemberSaleOrder,
@@ -97,20 +97,20 @@ func riderCompletedMemberSaleOrderEventHandler() {
 					return
 				}
 				logger.Logger.Info(fmt.Sprintf("操作记录:配送完成，订单完成 %+v", payload), zap.Uint64("record", uuid))
-			}()
+			})
 
 			// 外送订单完结时, 发布"统计"事件
-			go func() {
+			utils.Go(func() {
 				event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
 					BasePayload: event.BasePayload{ // 统计
 						Ctx: payload.Ctx,
 					},
 					SaleBillUuid: memberSaleOrder.SaleBillUuid,
 				})
-			}()
+			})
 
 			// 发送奖励
-			go func() {
+			utils.Go(func() {
 				// 当前销售账单数据
 				saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrder.Uuid))
 				if errSaleBill != nil {
@@ -130,10 +130,10 @@ func riderCompletedMemberSaleOrderEventHandler() {
 					},
 					SaleBill: saleBill,
 				})
-			}()
+			})
 
 			// 更新会员消费金额和消费次数
-			go func() {
+			utils.Go(func() {
 				if err := repository.NewMemberRepo(db).IncConsumptionAmount(memberSaleOrder.MemberUuid, memberSaleOrder.GetActualConsumptionAmount()); err != nil {
 					logger.Logger.Error("更新会员消费金额和消费次数-更新会员消费金额失败", zap.Error(err))
 					return
@@ -142,7 +142,7 @@ func riderCompletedMemberSaleOrderEventHandler() {
 					logger.Logger.Error("更新会员消费金额和消费次数-更新会员消费次数失败", zap.Error(err))
 					return
 				}
-			}()
+			})
 		})
 
 		// 发放积分
@@ -185,14 +185,16 @@ func riderCompletedMemberSaleOrderEventHandler() {
 					return
 				}
 
-				go func() {
+				utils.Go(func() {
 					//  处理"积分变动"事件
 					HandleMemberPoints(db)
 
 					// 处理会员升级
 					memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}), cache.Global)
-					go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
-				}()
+					utils.Go(func() {
+						memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
+					})
+				})
 			}
 		})
 	})

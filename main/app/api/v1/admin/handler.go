@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -192,7 +193,8 @@ func (h *Handler) AddPaymentMethod(c *gin.Context) {
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	settingSrv := setting.NewSrv(dbm, cache)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
-	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv)
+	messageSrv := message.NewIMessageSrv(dbm)
+	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv, messageSrv)
 	wrapper := &Handler{
 		dbm:          dbm,
 		warehouseSrv: service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv),

@@ -1,53 +1,148 @@
 {
-    "search.exclude": {
-      "**/.next": true,
-      "**/dist": true,
-      "**/node_modules": false,
-      "**/node_modules/**": true,
-      "**/vendor": true
+  "search.exclude": {
+    "**/.next": true,
+    "**/dist": true,
+    "**/node_modules": false,
+    "**/node_modules/**": true,
+    "**/vendor": true
+  },
+
+  // ===== Todo Tree 插件配置 =====
+  "todo-tree.general.statusBar": "total",
+  "todo-tree.general.tags": ["BUG", "NOTE", "FIXME", "TODO", "HACK"],
+  "todo-tree.highlights.useColourScheme": true,
+  "todo-tree.tree.expanded": true,
+  "todo-tree.tree.groupedByTag": true,
+  "todo-tree.tree.showCountsInTree": true,
+  "todo-tree.tree.tagsOnly": false,
+  "todo-tree.tree.disableCompactFolders": true,
+  "todo-tree.tree.scanMode": "workspace only",
+  "todo-tree.tree.buttons.export": true,
+
+  // ===== 文件排除显示 =====
+  "files.exclude": {
+    "**/trans/**/*test.go": true,
+    ".husky": true,
+    ".github": true,
+    "node_modules": true
+  },
+
+  // ===== 拼写检查 =====
+  "cSpell.words": [
+    "biginteger",
+    "Boms",
+    "Codesoft",
+    "Compax",
+    "cryptor",
+    "CSSH",
+    "CSSQ",
+    "delayqueue",
+    "destek",
+    "ederiz",
+    "Erpnext",
+    "eventbus",
+    "gonic",
+    "gorm",
+    "gormio",
+    "Graphiti",
+    "grpcx",
+    "Howbest",
+    "için",
+    "IFNULL",
+    "IMIN",
+    "Immin",
+    "iptal",
+    "jinzhu",
+    "lianlian",
+    "mağaza",
+    "Phinx",
+    "Printnr",
+    "Qrcode",
+    "repassword",
+    "sağlar",
+    "shopspring",
+    "SHRK",
+    "Sistem",
+    "skootar",
+    "Sunmi",
+    "tarafından",
+    "teşekkür",
+    "tinyint",
+    "TPHY",
+    "Tpls",
+    "ttpos",
+    "uoms",
+    "Uoms",
+    "varchar",
+    "Wechat",
+    "Xprinter",
+    "zhtw",
+    "Zhuhai",
+    "Ziyaretiniz",
+    "ขอบคุณที่แวะมาหากัน",
+    "สนับสนุนโดย",
+    "ကုန်စည်",
+    "ပမာဏ"
+  ],
+
+  // ===== Go语言配置 =====
+  "gopls": {
+    "ui.diagnostic.staticcheck": false // 禁用静态分析检查
+  },
+
+  // ===== 保存时自动运行 =====
+  "go.lintOnSave": "workspace",
+
+  // ===== 远程管理端口自动转发 =====
+  "remote.autoForwardPorts": true,
+  "remote.autoForwardPortsSource": "process",
+  "remote.forwardOnOpen": true,
+  "remote.restoreForwardedPorts": true,
+  "remote.localPortHost": "allInterfaces",
+  "remote.portsAttributes": {
+    "1-65378": {
+      "label": "忽略",
+      "onAutoForward": "ignore"
     },
-
-    // ===== Todo Tree 插件配置 =====
-    "todo-tree.general.statusBar": "total",
-    "todo-tree.general.automaticGitRefreshInterval": 5,
-    "todo-tree.general.periodicRefreshInterval": 1,
-    "todo-tree.general.showActivityBarBadge": true,
-    "todo-tree.general.tags": ["BUG", "NOTE", "FIXME", "TODO", "HACK"],
-    "todo-tree.highlights.useColourScheme": true,
-    "todo-tree.tree.expanded": true,
-    "todo-tree.tree.groupedByTag": true,
-    "todo-tree.tree.showCountsInTree": true,
-    "todo-tree.tree.tagsOnly": false,
-    "todo-tree.tree.disableCompactFolders": true,
-    "todo-tree.tree.scanMode": "workspace only",
-    "todo-tree.tree.buttons.export": true,
-
-    // ===== 文件排除显示 =====
-    "files.exclude": {
-      "**/trans/**/*test.go": true
+    "8080": {
+      "label": "Go API服务(dev)",
+      "onAutoForward": "silent",
+      "protocol": "http"
     },
-
-    // ===== 拼写检查 =====
-    "cSpell.words": [
-      "ttpos",
-      "zhtw",
-      "eventbus", "gormio", "shopspring", "gorm",  "cryptor",
-      "tinyint", "varchar", "lianlian",
-      "Sunmi", "Xprinter", "Compax", "Codesoft", "Printnr",
-      "Qrcode", "Wechat", "jinzhu", "Boms",
-      "ขอบคุณที่แวะมาหากัน", "สนับสนุนโดย",
-      "Ziyaretiniz", "için", "teşekkür", "ederiz",
-      "mağaza", "tarafından", "Sistem", "iptal",
-      "destek", "sağlar", "ကုန်စည်", "ပမာဏ", "gonic",
-      "delayqueue", "skootar", "repassword", "Phinx", "biginteger", "Erpnext",
-      "IFNULL", "CSSQ", "TPHY",  "CSSH", "SHRK", "CSSH", "grpcx", "Uoms", "uoms"
-    ],
-
-    // ===== Go语言配置 =====
-    "gopls": {
-      "ui.diagnostic.staticcheck": false,   // 禁用静态分析检查
+    "8888": {
+      "label": "TTPOS主服务",
+      "onAutoForward": "silent",
+      "protocol": "http"
     },
-
-    // ===== 保存时自动运行 =====
-    "go.lintOnSave": "workspace",
+    "8082": {
+      "label": "RocketMQ Dashboard",
+      "onAutoForward": "silent",
+      "protocol": "http"
+    },
+    "8848": {
+      "label": "Nacos",
+      "onAutoForward": "silent",
+      "protocol": "http"
+    },
+    "3306": {
+      "label": "MySQL服务",
+      "onAutoForward": "silent"
+    },
+    "13306": {
+      "label": "MySQL服务",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis服务",
+      "onAutoForward": "silent"
+    },
+    "8091": {
+      "label": "HTTP检测服务",
+      "onAutoForward": "silent"
+    },
+    "8079": {
+      "label": "HTTP检测服务",
+      "onAutoForward": "silent"
+    }
   }
+}

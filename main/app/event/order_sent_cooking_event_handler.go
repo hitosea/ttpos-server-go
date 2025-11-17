@@ -42,7 +42,7 @@ func sentCookingEventHandler() {
 			}
 			payload.Products = products
 
-			go func() {
+			utils.Go(func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
@@ -51,7 +51,7 @@ func sentCookingEventHandler() {
 					payload.SaleOrderUuid,
 					products,
 				)
-			}()
+			})
 		})
 
 		// 创建操作记录

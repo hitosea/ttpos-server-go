@@ -1,7 +1,7 @@
 package version
 
 var (
-	Version = "2.8.1"
-	CommitSHA = "2b0c82fad"
-	BuildTime = "2025-10-27"
+	Version   = "2.9.0"
+	CommitSHA = "3a59c8e87"
+	BuildTime = "2025-11-17"
 )

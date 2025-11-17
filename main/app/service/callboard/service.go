@@ -201,7 +201,7 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 		return nil, err
 	}
 
-	utils.SafeGo(func() {
+	utils.Go(func() {
 		maxScore := time.Now().Add(-7 * 24 * time.Hour).Unix() // 删除7天前的数据
 		s.removeExpireMemberFromQueues(cachekey.GetPreparingQueueKey(companyUuid), maxScore)
 		s.removeExpireMemberFromQueues(cachekey.GetPreparedQueueKey(companyUuid), maxScore)

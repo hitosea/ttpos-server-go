@@ -37,6 +37,7 @@ nacos:
     group: DEFAULT_GROUP
 
 app:
+  aesKey: IesahquufojahCaiceet7Pha
   serviceUrl: $ERP_SERVICE_URL
   erpnext:
     serviceUrl: $NEXTERP_SERVICE_URL
@@ -46,7 +47,7 @@ app:
     core:
       pos_price_list:
         default:
-          buying_price_list: "Buying - External"
+          buying_price_list: "Buying - Internal"
           selling_price_list: "Selling - Internal"
 
 # 消息队列
@@ -69,3 +70,10 @@ queue:
     invisibleDuration: 25   #invisibleDuration should > 20s
     awaitDuration: 5      # maximum waiting time for receive func
     unitName: "" # 消费者单元名称，默认使用GUID
+
+# 调用链监控配置
+otlp:
+  enabled: false
+  serviceName: "ttpos-erp"
+  endpoint: "10.0.11.43:4318"
+  path: "/v1/traces"

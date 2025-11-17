@@ -239,7 +239,8 @@ func (r *printerLogRepo) GetShiftPrinterData(companyUuid uint64, deviceSn string
 				}
 				return printerLog.Printer.EnableStatusCheck
 			}(),
-			TradeNo: printerLog.GetTradeNo(companyUuid),
+			TradeNo:        printerLog.GetTradeNo(companyUuid),
+			PrintChunkSize: printerLog.GetPrintChunkSize(),
 		}
 	}
 

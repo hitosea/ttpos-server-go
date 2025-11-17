@@ -75,6 +75,22 @@ func ErrorWithData(c *gin.Context, code int, data any, err error) {
 	FailWithData(c, code, data, nil, messages...)
 }
 
+// ErrorAutoWithData 返回错误携带数据
+func ErrorAutoWithData(c *gin.Context, code int, err error) {
+	if config.Server.Mode == constant.ServerModeRelease {
+		err = pkgerrors.Cause(err)
+	}
+	messages := []string{err.Error()}
+	var appErr errors.AppError
+	if pkgerrors.As(err, &appErr) {
+		code = appErr.GetCode()
+		if len(appErr.Replace) > 0 {
+			messages = append(messages, appErr.Replace...)
+		}
+	}
+	FailWithData(c, code, appErr.GetData(), nil, messages...)
+}
+
 // Success 返回成功
 func Success(c *gin.Context, data any, message ...string) {
 	msg := "请求成功"

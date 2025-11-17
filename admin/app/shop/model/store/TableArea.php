@@ -73,10 +73,6 @@ class TableArea extends TableAreaModel
      */
     public function add($data)
     {
-        // 表单验证
-        if (!$this->validateForm($data, self::FORM_SCENE_ADD)) {
-            return false;
-        }
         $data['uuid'] = createUuid();
         $data['name'] = $data['area_name'] ?? '';
         return self::create($data);
@@ -87,10 +83,6 @@ class TableArea extends TableAreaModel
      */
     public function edit($data)
     {
-        // 表单验证
-        if (!$this->validateForm($data, self::FORM_SCENE_EDIT)) {
-            return false;
-        }
         $data['name'] = $data['area_name'] ?? '';
         return $this->save($data);
     }

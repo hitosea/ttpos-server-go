@@ -1,50 +1,174 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: Vue 3 前端开发规范
 ---
-1.前端文件的文件目录是 /admin/views/admin和/admin/views/shop
-2.用中文和我对话
 
-1. 代码风格
-必须使用 ESLint + Prettier 统一代码风格。
-组件文件统一使用 .vue 后缀，采用 单文件组件（SFC）格式。
-变量、方法、组件名统一使用小驼峰（camelCase），组件文件名用大驼峰（PascalCase）。
-必须使用 中文注释，注释要准确描述代码意图。
-2. 组件开发
-新组件必须使用 <script setup> 语法，禁止使用 Vue2 的 Options API。
-组件 props、emits 必须使用 defineProps、defineEmits 显式声明类型。
-组件必须有明确的 props 类型和默认值。
-组件必须拆分为小而精的功能单元，禁止大杂烩。
-组件必须有必要的单元测试或手动测试用例。
-3. 状态管理
-推荐使用 Pinia 或 Vuex4，禁止直接跨组件传递数据。
-业务相关状态优先放在页面组件内，跨页面/全局状态才放到 store。
-4. API 调用
-所有 API 调用必须通过统一的 api 目录下的模块进行，禁止在组件内直接写 axios/fetch。
-API 返回数据必须做类型校验和异常处理。
-5. UI 规范
-必须使用 Element Plus 组件库，禁止混用其他 UI 库。
-表单校验规则必须写在 rules 变量中，且与表单字段一一对应。
-所有弹窗、表单、按钮等必须有 loading 状态，防止重复提交。
-所有表单、弹窗必须支持国际化（i18n）。
-6. 国际化
-文本内容必须通过 $t('xxx') 实现国际化，禁止写死中文。
-组件/页面新增的文案必须同步到语言包。
-7. 目录结构
-页面组件放在 views/，通用组件放在 components/，api 放在 api/。
-业务模块必须有独立目录，禁止所有文件堆在一起。
-8. 代码提交
-必须写清晰的 commit message，推荐使用英文+中文描述。
-禁止提交未通过 lint 检查的代码。
-禁止提交调试代码（如 console.log）。
-9. 其他
-禁止直接操作 DOM，必须通过 Vue 的响应式系统。
-禁止在模板中写复杂表达式，复杂逻辑必须放到 setup 里。
-禁止在组件外部直接修改 props。
-10. 代码从vue2改为vue3时
-使用api的时候 从.then .catch 改为 try{} catch。
-proxy从vue引入getCurrentInstance, this.$filter.isAuth 替换成proxy.$filter.isAuth。
-国际化（i18n）直接使用$t('')包住中文就可以。
-国际化（i18n）script 标签里面的也可以直接使用$t(''),this.$t('')无须proxy.$t('')。
-script 标签里面的方法，函数吗，变量，需要加分号结束。
-el-form 表单的例如ref="form"的时候，需要改为ref="formRef" 这样不会和他的数据form冲突。
-每个方法如果没有加上注释，也帮我加上一些必要的注释。
+# Vue 3 前端开发规范
+
+> 🤖 **受众**: AI Agent  
+> 📖 **用途**: Vue 3 前端开发的核心约束和快速索引
+
+---
+
+## 📚 快速索引
+
+| 我要...          | 查阅文档                                                    |
+| ---------------- | ----------------------------------------------------------- |
+| 学习详细开发规范 | [前端开发详细文档]（待补充）                                |
+| 查看 API 调用    | [API 设计指南](../../docs/human/guides/api-design-guide.md) |
+
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 技术栈
+
+- **Vue 3.x** + TypeScript
+- **Vite** 构建工具
+- **Pinia** 状态管理
+- **Element Plus** UI 组件库
+
+### 命名规范
+
+| 类型      | 规则        | 示例            |
+| --------- | ----------- | --------------- |
+| 文件      | PascalCase  | `UserList.vue`  |
+| 组件      | PascalCase  | `<UserList />`  |
+| 变量/函数 | camelCase   | `userName`      |
+| 常量      | UPPER_SNAKE | `MAX_PAGE_SIZE` |
+
+---
+
+## 🏗️ 组件开发
+
+### 使用 Composition API
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from "vue";
+import { getUserListApi } from "@/api/user";
+
+const userList = ref([]);
+const loading = ref(false);
+
+const getUserList = async () => {
+  try {
+    loading.value = true;
+    const res = await getUserListApi();
+    userList.value = res.data.list;
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  getUserList();
+});
+</script>
+```
+
+### Props 和 Emits
+
+```typescript
+interface Props {
+  userId: number;
+  userName?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  userName: "",
+});
+
+interface Emits {
+  (e: "update", value: string): void;
+}
+
+const emit = defineEmits<Emits>();
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发前
+
+- [ ] 熟悉 Vue 3 Composition API
+- [ ] 了解 TypeScript 类型定义
+- [ ] 熟悉 Element Plus 组件
+
+### 编码时
+
+- [ ] 使用 `<script setup>` 语法
+- [ ] 定义 TypeScript 类型
+- [ ] 使用 try-catch 处理异步
+- [ ] 组件保持单一职责
+- [ ] 不使用 Options API
+
+### 提交前
+
+- [ ] ESLint 检查通过
+- [ ] Prettier 格式化
+- [ ] 测试通过
+
+---
+
+## 📋 常用模式
+
+### API 调用
+
+```typescript
+// ✅ 使用 async/await
+const getUserList = async () => {
+  try {
+    const res = await getUserListApi();
+    userList.value = res.data.list;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// ❌ 不使用 .then().catch()
+getUserListApi().then().catch();
+```
+
+### Pinia Store
+
+```typescript
+export const useUserStore = defineStore("user", () => {
+  const userInfo = ref<User | null>(null);
+  const token = ref("");
+
+  const isLogin = computed(() => !!token.value);
+
+  const setUserInfo = (user: User) => {
+    userInfo.value = user;
+  };
+
+  return { userInfo, token, isLogin, setUserInfo };
+});
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                    | 原因                       |
+| ----------------------- | -------------------------- |
+| ❌ 使用 Options API     | 项目统一用 Composition API |
+| ❌ 不定义类型           | 必须用 TypeScript          |
+| ❌ 使用 .then().catch() | 必须用 async/await         |
+| ❌ 单个组件过长         | 保持单一职责               |
+
+---
+
+## 📖 详细文档
+
+- [Vue 3 官方文档](https://cn.vuejs.org/)
+- [Element Plus 文档](https://element-plus.org/)
+- [Pinia 文档](https://pinia.vuejs.org/)
+- [API 设计指南](../../docs/human/guides/api-design-guide.md)
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

@@ -14,9 +14,10 @@ type ICompanySettingRepo interface {
 
 	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
-	UpdateSmsQuota(companyUuid uint64, quota int) error // 扣减公司的短信余额
+	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) // 获取总部下所有公司的设置
+	UpdateSmsQuota(companyUuid uint64, quota int) error                             // 扣减公司的短信余额
 
-	GetErpnextCompanyAbbrs(opts ...DBOption) ([]string, error)
+	GetErpnextCompanyAbbrUuidMap(opts ...DBOption) (map[string]uint64, error)
 }
 
 func NewCompanySettingRepo(db *gorm.DB) ICompanySettingRepo {
@@ -44,6 +45,15 @@ func (r *companySettingRepo) UpdateSmsQuota(companyUuid uint64, quota int) error
 	return nil
 }
 
+func (r *companySettingRepo) GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) {
+	var companySettings []model.CompanySetting
+	err := r.db.Model(&model.CompanySetting{}).Scopes(NotDeleted).Where("headquarter_uuid = ? or (company_uuid = ? and headquarter_uuid = 0)", headquarterUuid, headquarterUuid).Find(&companySettings).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return companySettings, nil
+}
+
 func (r *companySettingRepo) WhereErpnextCompanyAbbr(erpCompanyAbbr string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erpnext_company_abbr = ?", erpCompanyAbbr)
@@ -60,14 +70,21 @@ func (r *companySettingRepo) GetOne(opts ...DBOption) (model.CompanySetting, err
 	return companySetting, err
 }
 
-func (r *companySettingRepo) GetErpnextCompanyAbbrs(opts ...DBOption) ([]string, error) {
-	var erpnextCompanyAbbrs []string
-	db := r.db.Model(&model.CompanySetting{})
+func (r *companySettingRepo) GetErpnextCompanyAbbrUuidMap(opts ...DBOption) (map[string]uint64, error) {
+	var companySettings []model.CompanySetting
+	db := r.db.Model(&model.CompanySetting{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Pluck("erpnext_company_abbr", &erpnextCompanyAbbrs).Error
-	return erpnextCompanyAbbrs, errors.WithMessage(err)
+	err := db.Find(&companySettings).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	erpCompanyAbbrUuidMap := make(map[string]uint64)
+	for _, companySetting := range companySettings {
+		erpCompanyAbbrUuidMap[companySetting.ErpnextCompanyAbbr] = companySetting.CompanyUuid
+	}
+	return erpCompanyAbbrUuidMap, nil
 }
 
 func (r *companySettingRepo) WhereErpnextCompanyAbbrNotEmpty() DBOption {

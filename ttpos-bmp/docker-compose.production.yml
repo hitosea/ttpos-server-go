@@ -5,9 +5,6 @@ services:
     image: hub.hitosea.com/ttpos-server/ttpos-server-takeout:${IMAGE_VERSION}
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14032"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-takeout"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-takeout/manifest/config:/app/config  #生产环境根据需要调整
       - ../docker/bmp-takeout/logs:/app/log  #生产环境根据需要调整
@@ -45,9 +42,6 @@ services:
     image: hub.hitosea.com/ttpos-server/ttpos-server-erp:${IMAGE_VERSION}
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14022"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-erp"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-erp/manifest/config:/app/config  #生产环境根据需要调整
       - ../docker/bmp-erp/logs:/app/log  #生产环境根据需要调整
@@ -81,17 +75,9 @@ services:
   # 消息中心模块
   bmp-message:
     container_name: "ttpos-bmp-message-${APP_ID}"
-    build:
-      args:
-        MODULE: erp
-        HTTP_PORT: 14041
-        RPC_PORT: 14042
-    image: ttpos-bmp-message
+    image: hub.hitosea.com/ttpos-server/ttpos-server-message:${IMAGE_VERSION}
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14042"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-message"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-message/manifest/config:/app/config  #生产环境根据需要调整
       - ../docker/bmp-message/logs:/app/log  #生产环境根据需要调整

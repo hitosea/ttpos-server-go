@@ -1,6 +1,6 @@
 LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
 ifeq ($(LOCAL_IP),)
-	LOCAL_IP := $(shell ifconfig | grep "inet " | grep "172.1" | awk '{print $$2}' | head -n 1)
+	LOCAL_IP := $(shell scripts/get_ip.sh)
 endif
 GO_PATH := $(shell go env GOPATH)
 
@@ -74,6 +74,8 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "statistics-re" "重新统计数据"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "skootar-update-status" "更新Skootar状态"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "think" "执行think命令"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "chown-all" "修改文件权限"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "rmi-all" "删除所有无用镜像"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "📦 版本管理"
@@ -95,7 +97,7 @@ help:
 # 初始化项目
 init-env:
 	@echo "🔍 初始化env文件"
-	corepack enable
+	@corepack enable
 	if [ ! -f ".env" ]; then \
 		cp .env.example .env; \
 		echo "Created .env file from .env.example"; \
@@ -112,7 +114,7 @@ init-env:
 
 init-bmp-env:
 	@echo "🔍 初始化中台env文件"
-	if [ ! -f "ttpos-bmp/.env" ]; then \
+	@if [ ! -f "ttpos-bmp/.env" ]; then \
 		cp ttpos-bmp/.env.example ttpos-bmp/.env; \
 		echo "Created ttpos-bmp/.env file from ttpos-bmp/.env.example"; \
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
@@ -144,8 +146,7 @@ init-bmp-env:
 				echo "✅ 已同步 DB_USERNAME"; \
 			fi; \
 		fi; \
-		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
-		sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		sed -i.bak 's/^GRPC_ENDPOINTS=.*/GRPC_ENDPOINTS=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
 
@@ -226,21 +227,19 @@ check-db-host-open-mysql:
 
 # HTTP调试代理管理
 start-http-debug-proxy:
-	@echo "🔍 启动HTTP调试代理容器..."
-	@echo "📦 检查HTTP调试代理镜像..."
 	@if ! docker images | grep -q "602666178/http-proxy-debug-view"; then \
 		echo "📥 镜像不存在，正在拉取..." && \
-		docker pull 602666178/http-proxy-debug-view:latest && \
-		echo "✅ 镜像拉取成功" || echo "⚠️ 镜像拉取失败"; \
+		docker pull 602666178/http-proxy-debug-view:latest \
 	else \
 		echo "✅ 镜像已存在，跳过拉取"; \
 	fi
+	@NGINX_PORT=$$(grep '^NGINX_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8888"); \
 	SERVER_PORT=$$(grep '^DEBUG_SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
 	if [ "$$SERVER_PORT" = "" ]; then \
 		SERVER_PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
 	fi; \
 	PROXY_PORT=$$((SERVER_PORT + 1)); \
-	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT"; \
+	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT,http://$(LOCAL_IP):$$NGINX_PORT"; \
 	echo "🎯 目标URL: $$TARGET_URL, 代理端口: $$PROXY_PORT"; \
 	docker run -d \
 		--name http-debug-proxy \
@@ -250,7 +249,7 @@ start-http-debug-proxy:
 		-e PROXY_PORT=8080 \
 		-e WEB_PORT=8091 \
 		--restart unless-stopped \
-		602666178/http-proxy-debug-view:latest > /dev/null 2>&1 || \
+		weifashi/http-debug-proxy > /dev/null 2>&1 || \
 		(echo "⚠️  HTTP调试代理容器已存在，正在重启..." && \
 		docker rm -f http-debug-proxy > /dev/null 2>&1 && \
 		docker run -d \
@@ -261,7 +260,7 @@ start-http-debug-proxy:
 			-e PROXY_PORT=8080 \
 			-e WEB_PORT=8091 \
 			--restart unless-stopped \
-			602666178/http-proxy-debug-view:latest > /dev/null 2>&1); \
+			weifashi/http-debug-proxy:latest > /dev/null 2>&1); \
 	echo "✅ HTTP调试代理已启动 - 代理端口: $$PROXY_PORT, 调试界面: http://localhost:8091"
 
 stop-http-debug-proxy:

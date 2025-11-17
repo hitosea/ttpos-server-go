@@ -56,7 +56,9 @@ func orderReverseSettleEventHandler() {
 			for _, saleOrder := range saleBill.SaleOrders {
 				if saleOrder.ConsumerUuid != 0 {
 					// 处理会员升级
-					go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
+					utils.Go(func() {
+						memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
+					})
 				}
 			}
 		})

@@ -155,7 +155,8 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-	businessSrv := service.NewBusinessSrv(statisticsSrv)
+	uploadFileSrv := service.NewUploadFileSrv(dbm)
+	businessSrv := service.NewBusinessSrv(statisticsSrv, uploadFileSrv)
 
 	wrapper := &statisticsHandler{
 		businessSrv: businessSrv,

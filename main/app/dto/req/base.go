@@ -120,4 +120,8 @@ type UpdateBusinessSetting struct {
 	StartSerialNo         string `json:"start_serial_no" binding:"required"`                       // 开始序列号
 	IsBatch               string `json:"is_batch" binding:"required,oneof=0 1"`                    // 是否是分批商品 0-否 1-是
 	SafetyStockType       string `json:"safety_stock_type" binding:"required,oneof=1 2"`           // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
+
+	// 调拨规则
+	RequiredParentCompanyApproval string `json:"required_parent_company_approval" binding:"omitempty,oneof=0 1"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
+	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse" binding:"omitempty,oneof=0 1"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
 }

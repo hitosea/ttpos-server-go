@@ -158,10 +158,10 @@ func (d *RedSyncLock) TryLockUuidString(uuid string) bool {
 func (d *RedSyncLock) UnlockUuidString(uuid string) {
 	unlock, err := d.getUuidLockString(uuid).Unlock()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 	if !unlock {
-		panic("unlock failed")
+		fmt.Println(err)
 	}
 }
 

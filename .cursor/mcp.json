@@ -1,18 +1,20 @@
 {
   "mcpServers": {
-    "spec-workflow-ttpos-server-go": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@pimzino/spec-workflow-mcp@latest",
-        "./",
-        "--AutoStartDashboard",
-        "--port",
-        "60030"
-      ]
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp",
+      "headers": {}
     },
-    "DooTask": {
-        "url": "http://localhost:22224/mcp"
+    "Context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {}
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp",
+      "headers": {}
+    },
+    "Graphiti": {
+      "url": "https://graph.hitosea.com/mcp/?group_id=ttpos"
     }
   }
 }

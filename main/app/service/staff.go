@@ -2,6 +2,7 @@ package service
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -92,7 +93,7 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	if staff.Uuid == 0 {
 		return errors.New("获取员工失败"), exists
 	}
-	saasDB := s.dbm.GetDB(0)
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
 	// 手机号、邮箱必填，可以这样判断
 	existsCompanyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsernameOrPhone(updateReq.Username, updateReq.Phone), companyStaffRepo.WhereNotUuid(updateReq.Uuid))
@@ -101,10 +102,6 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	}
 	if existsCompanyStaff.Phone == updateReq.Phone {
 		exists = append(exists, "phone")
-	}
-	existsStaff, _ := staffRepo.GetStaff(staffRepo.WhereRealName(updateReq.RealName), staffRepo.WhereNotUuid(updateReq.Uuid))
-	if existsStaff.Uuid != 0 {
-		exists = append(exists, "real_name")
 	}
 	if len(exists) > 0 {
 		return errors.New("此内容已被占用"), exists
@@ -159,9 +156,11 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	tc.TagClear("cashier")
 
 	// 推送配置更新
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
-		"staff_uuid":  updateReq.Uuid,
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
+			"staff_uuid":  updateReq.Uuid,
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	return nil, exists
@@ -169,7 +168,7 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 
 // AddStaff 添加员工
 func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error, []string) {
-	saasDB := s.dbm.GetDB(0)
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
 	existsCompanyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsernameOrPhone(addReq.Username, addReq.Phone))
 	var exists []string
@@ -181,14 +180,6 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	staffRepo := repository.NewStaffRepo(db)
-	staff, _ := staffRepo.GetStaff(staffRepo.WhereRealName(addReq.RealName))
-	if staff.Uuid != 0 {
-		exists = append(exists, "real_name")
-	}
-	if len(exists) > 0 {
-		return errors.New("此内容已被占用"), exists
-	}
 	// 判断角色是否存在
 	roleRepo := repository.NewRoleRepo(db)
 	roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(addReq.Roles)}...)
@@ -208,7 +199,7 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	// 保存saas库
 	saasDB.Model(&model.CompanyStaff{}).Create(&companyStaff)
 
-	staff = model.Staff{
+	staff := model.Staff{
 		CompanyUuid: ctx.GetCompanyUuid(),
 		Username:    addReq.Username,
 		RealName:    addReq.RealName,

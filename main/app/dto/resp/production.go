@@ -27,6 +27,8 @@ type ProductionItem struct {
 	InitNum               float64            `json:"init_num"`                // 送厨商品初始数量
 	CreateTime            int64              `json:"create_time"`             // 送厨时间
 	FinishedTime          int64              `json:"finished_time"`           // 完成时间
+	MakeDuration          int64              `json:"make_duration"`           // 制作时长(秒)
+	SendDuration          int64              `json:"send_duration"`           // 传菜时长(秒)
 	ProductAttributeNames dto.LocaleResponse `json:"product_attribute_names"` // 商品属性
 	Remark                string             `json:"remark"`                  // 备注
 	IsSaleBillDeleted     bool               `json:"is_sale_bill_deleted"`    // 销售账单是否已删除

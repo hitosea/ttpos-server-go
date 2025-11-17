@@ -9,6 +9,7 @@ type MessageRecord struct {
 	Id           uint64 `json:"id"           orm:"id"            description:"消息ID"`                          // 消息ID
 	Uuid         string `json:"uuid"         orm:"uuid"          description:"消息UUID"`                        // 消息UUID
 	TemplateId   uint64 `json:"templateId"   orm:"template_id"   description:"模板ID"`                          // 模板ID
+	TemplateUuid string `json:"templateUuid" orm:"template_uuid" description:"模板UUID"`                        // 模板UUID
 	MessageType  string `json:"messageType"  orm:"message_type"  description:"消息类型(email/sms)"`               // 消息类型(email/sms)
 	Recipient    string `json:"recipient"    orm:"recipient"     description:"接收人"`                           // 接收人
 	Subject      string `json:"subject"      orm:"subject"       description:"消息主题"`                          // 消息主题

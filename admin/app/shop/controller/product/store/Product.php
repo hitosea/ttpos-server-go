@@ -489,8 +489,8 @@ class Product extends Controller
                     }
                 }
                 // 验证是否已经存在
-                $val['product_name_is_exist'] = CheckService::checkNameExist('product', $productName, $shop_supplier_id);
-                $val['img_name_is_exist'] = $val['img_name'] ? CheckService::checkNameExist('product_img', ['exist' => $val['img_name']], $shop_supplier_id)['exist'] : false;
+                $val['product_name_is_exist'] = false;
+                $val['img_name_is_exist'] = false;
                 $val['barcode_is_exist'] = CheckService::checkNameExist('product_bom_barcode', ['exist' => $val['barcode']], $shop_supplier_id)['exist'];
             } catch (\Throwable $th) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __($th->getMessage()));
@@ -514,17 +514,6 @@ class Product extends Controller
             return $this->renderError(__('行') . '[' . (implode(',', $duplicateRows)) . ']: ' . __('商品条码不能重复'), compact('duplicateRows'));
         };
         // die;
-        foreach ($list as $key => &$val) {
-            if (in_array(true, $val['product_name_is_exist'])) {
-                return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品名称已存在'), $val);
-            }
-            if ($val['img_name_is_exist'] == true) {
-                return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('图片名称已存在'), $val);
-            }
-            if ($val['barcode_is_exist'] == true) {
-                return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品条码已存在'), $val);
-            }
-        }
 
         // 多规格合并
         $lists = [];
@@ -560,16 +549,6 @@ class Product extends Controller
             //
             $lists[$md5Key]['sku'] = $sku;
         }
-
-        // 验证值是否存在重覆
-        foreach ($langKeys as $langKey) {
-            if ($duplicateRows = ArrayHelp::findDuplicateIds($productNames, $langKey)) {
-                return $this->renderError(__('行') . '[' . (implode(',', $duplicateRows)) . ']: ' . __('商品名称不能重复'), compact('duplicateRows'));
-            };
-        }
-        if ($duplicateRows = ArrayHelp::findDuplicateIds($lists, 'img_name')) {
-            return $this->renderError(__('行') . '[' . (implode(',', $duplicateRows)) . ']: ' . __('图片名称不能重复'), compact('duplicateRows'));
-        };
 
         // 验证数据id 是否存在
         foreach ($lists as $key => &$val) {

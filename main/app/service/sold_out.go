@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 )
 
@@ -82,10 +83,12 @@ func (s *soldOutSrv) CancelSoldOut(companyUuid uint64, productBomUuid uint64) er
 		return errors.WithMessage(err, "取消沽清商品失败")
 	}
 	// 推送沽清商品
-	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
-		"type":         "update",
-		"product_uuid": productBomUuid,
-		"update_time":  time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
+			"type":         "update",
+			"product_uuid": productBomUuid,
+			"update_time":  time.Now().Unix(),
+		})
 	})
 	return nil
 }
@@ -101,10 +104,12 @@ func (s *soldOutSrv) CancelAllSoldOut(companyUuid uint64) error {
 	}
 
 	// 推送沽清商品
-	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
-		"type":         "update",
-		"product_uuid": 0,
-		"update_time":  time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
+			"type":         "update",
+			"product_uuid": 0,
+			"update_time":  time.Now().Unix(),
+		})
 	})
 	return nil
 }
@@ -123,10 +128,12 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 			return errors.WithMessage(err, "沽清商品失败")
 		}
 		// 推送沽清商品
-		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
-			"type":         "update",
-			"product_uuid": item.ProductBomUuid,
-			"update_time":  time.Now().Unix(),
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
+				"type":         "update",
+				"product_uuid": item.ProductBomUuid,
+				"update_time":  time.Now().Unix(),
+			})
 		})
 	}
 	return nil

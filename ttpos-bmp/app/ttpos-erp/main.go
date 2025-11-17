@@ -18,5 +18,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	err = cmd.Main.AddCommand(cmd.ErpAllMigrate)
+	if err != nil {
+		panic(err)
+	}
 	cmd.Main.Run(gctx.GetInitCtx())
 }

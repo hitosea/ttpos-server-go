@@ -257,11 +257,6 @@ class AttributeGroup extends BaseModel
             return false;
         }
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
-        $isExist = $this->where('name', $attribute_name)->where('uuid', '<>', $this['uuid'])->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
         //
         $data['name'] = $attribute_name;
         $data['multi_language_name_uuid'] = (new MultiLanguageName())->saveNames($attribute_name, $this['multi_language_name_uuid']);

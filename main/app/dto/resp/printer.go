@@ -7,7 +7,7 @@ import (
 type PrinterData struct {
 	Uuid              uint64 `json:"uuid"`                // 打印日志Uuid
 	Data              string `json:"data"`                // 打印数据
-	PrintMethod       int    `json:"print_method"`        // 打印方式 1文本打印, 2图片打印'
+	PrintMethod       int    `json:"print_method"`        // 打印方式 1文本打印, 2图片打印
 	Copies            uint   `json:"copies"`              // 打印机.份数
 	PrinterType       string `json:"printer_type"`        // 打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线 , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)
 	PrinterConfig     string `json:"printer_config"`      // 打印机.配置
@@ -16,6 +16,7 @@ type PrinterData struct {
 	PrintingTime      int64  `json:"printing_time"`       // 打印耗时
 	EnableStatusCheck int    `json:"enable_status_check"` // 是否启用状态检查
 	TradeNo           string `json:"trade_no"`            // 交易号
+	PrintChunkSize    int    `json:"print_chunk_size"`    // 打印分片大小
 }
 
 type PrinterDataList struct {
@@ -104,4 +105,8 @@ type ConfigInfoResp struct {
 
 type PreviewPrinterCustomizeResp struct {
 	ImageUrl string `json:"image_url"` // 图片URL
+}
+
+type CreatePrinterCustomizeResp struct {
+	CustomizeUuid uint64 `json:"customize_uuid"` // 定制UUID
 }

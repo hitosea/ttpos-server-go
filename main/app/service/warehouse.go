@@ -174,7 +174,7 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		}
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceCategory,
+		Source: constant.CheckNameSourceWarehouse,
 		Names:  names,
 	})
 	if exists {
@@ -494,11 +494,13 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 
 	// 类型
 	typeStrMap := map[int]string{
-		constant.WarehouseInOutLogScenePurchase: "purchase",
-		constant.WarehouseInOutLogSceneSale:     "sale",
-		constant.WarehouseInOutLogSceneDelivery: "delivery",
-		constant.WarehouseInOutLogSceneProfitIn: "profit_in",
-		constant.WarehouseInOutLogSceneLossOut:  "loss_out",
+		constant.WarehouseInOutLogScenePurchase:    "purchase",
+		constant.WarehouseInOutLogSceneSale:        "sale",
+		constant.WarehouseInOutLogSceneDelivery:    "delivery",
+		constant.WarehouseInOutLogSceneProfitIn:    "profit_in",
+		constant.WarehouseInOutLogSceneLossOut:     "loss_out",
+		constant.WarehouseInOutLogSceneTransferIn:  "transfer_in",
+		constant.WarehouseInOutLogSceneTransferOut: "transfer_out",
 	}
 
 	// 格式化日期
@@ -752,7 +754,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	var headquarter model.CompanySetting
 	var headquarterWarehouses []model.Warehouse
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -1065,7 +1067,6 @@ func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExi
 // GetOtherOrgList 获取对方机构列表
 func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error) {
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
 	supplierRepo := repository.NewSupplierRepo(db)
 
 	// 获取供应商列表
@@ -1078,6 +1079,9 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 	}
 	otherOrgs := make([]resp.OtherOrgResp, 0, len(suppliers))
 	for _, supplier := range suppliers {
+		if !supplier.IsNormalSupplier() && !supplier.IsHeadquartersSupplier() {
+			continue
+		}
 		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
 			Name:          supplier.Name,
 			Code:          fmt.Sprintf("%s:%s", OtherOrgCodeSupplierErpCode, supplier.ErpCode), // 供应商erp编码前缀
@@ -1085,19 +1089,16 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 		})
 	}
 
-	//
-	if companySetting.IsHeadquarter() {
-		// 获取公司列表
-		companies, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetListByHeadquarterUuid(ctx.GetCompanyUuid())
-		if err != nil {
-			return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
-		}
-		for _, company := range companies {
-			otherOrgs = append(otherOrgs, resp.OtherOrgResp{
-				Name: company.Name,
-				Code: fmt.Sprintf("%s:%s", OtherOrgCodeCompanyUuid, strconv.FormatUint(company.Uuid, 10)), // 公司uuid前缀
-			})
-		}
+	// 获取公司列表
+	companies, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetAllSubShopsAndHeadquarterListByCompanyUuid(ctx.GetCompanyUuid())
+	if err != nil {
+		return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
+	}
+	for _, company := range companies {
+		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
+			Name: company.Name,
+			Code: fmt.Sprintf("%s:%s", OtherOrgCodeCompanyUuid, strconv.FormatUint(company.Uuid, 10)), // 公司uuid前缀
+		})
 	}
 
 	return resp.OtherOrgListResp{List: otherOrgs}, nil

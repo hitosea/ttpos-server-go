@@ -1401,21 +1401,17 @@ func (i *ImgFont) AppendQrcodeDisableBorder(data string, size int, margin int, i
 	// 调整图片大小
 	if size > 0 && (width != size || height != size) {
 		// 使用resize包来调整图片大小
-		resized := resize.Resize(uint(size), uint(height*size/width), qrImg, resize.Lanczos3)
-
-		// 转换为image.Image接口
-		qrImg = resized
-
+		qrImg = resize.Resize(uint(size), uint(size), qrImg, resize.Lanczos3)
 		// 更新尺寸
-		width = size
-		height = height * size / width
+		width = qrImg.Bounds().Dx()
+		height = qrImg.Bounds().Dy()
 	}
 
 	// 计算二维码位置 (水平居中)
 	x := (i.ImageWidth - width) / 2
 
 	// 添加高度
-	i.expandImageHeight(i.Image.Bounds().Dy() + height + 100)
+	i.expandImageHeight(i.Image.Bounds().Dy() + height + 200)
 
 	// 将二维码绘制到目标图像上
 	draw.Draw(
@@ -1427,7 +1423,7 @@ func (i *ImgFont) AppendQrcodeDisableBorder(data string, size int, margin int, i
 	)
 
 	// 更新文本总高度和最后一行已使用宽度
-	i.TextTotalHeight += height - 40
+	i.TextTotalHeight += height
 	i.TextLastLineUsedWidth += width
 
 	// 添加换行
@@ -1797,8 +1793,6 @@ func (i *ImgFont) expandImageHeight(newHeight int) {
 
 	// 显式清空原图片引用，帮助GC回收
 	oldImage = nil
-
-	// 使用全局字体管理器，无需本地清理
 }
 
 // Save 保存图像并返回打印数据

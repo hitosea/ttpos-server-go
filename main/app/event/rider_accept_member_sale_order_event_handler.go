@@ -60,7 +60,7 @@ func riderAcceptMemberSaleOrderEventHandler() {
 			}
 
 			// 创建“骑手接单”操作记录
-			go func() {
+			utils.Go(func() {
 				payload.RiderName = riderName
 				payload.RiderPhone = riderPhone
 				if payload.RiderName == "" {
@@ -95,7 +95,7 @@ func riderAcceptMemberSaleOrderEventHandler() {
 				if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrder.Uuid, constant.MemberSaleOrderSortRiderAccepting); err != nil {
 					payload.Ctx.Log().Error("更新会员端销售订单-骑手接单排序失败", zap.Error(err))
 				}
-			}()
+			})
 		})
 	})
 }

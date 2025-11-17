@@ -222,4 +222,7 @@ const (
 
 	// DefaultStockReconciliationSeries 默认库存盘点命名序列
 	DefaultStockReconciliationSeries = "MAT-RECO-.YYYY.-"
+
+	// DefaultDeliveryNoteSeries 默认送货单命名序列
+	DefaultDeliveryNoteSeries = "MAT-DN-.YYYY.-"
 )

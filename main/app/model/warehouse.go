@@ -22,3 +22,12 @@ type Warehouse struct {
 func (w Warehouse) IsTransit() bool {
 	return w.Type == "transit"
 }
+
+func (w Warehouse) IsHeadquarter() bool {
+	return w.HeadquarterUuid > 0
+}
+
+// 是否禁用
+func (w Warehouse) IsDisabled() bool {
+	return w.Status == 0
+}

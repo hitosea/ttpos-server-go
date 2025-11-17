@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
@@ -217,9 +218,27 @@ func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateD
 //   - err: 错误信息
 func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *setup.InitShopResp, err error) {
 	var (
-		branchName string
-		adminEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
+		branchName  string
+		adminEmail  = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
+		companyName string
+		siteCode    string
 	)
+
+	// 从 ctx 中获取站点编码
+	siteCode = service.Rpc().GetSiteCode(ctx)
+	g.Log().Info(ctx, "获取站点编码", g.Map{
+		"site_code": siteCode,
+	})
+
+	// 根据公司缩写获取公司名称
+	companyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		g.Log().Error(ctx, "查询公司名称失败", g.Map{
+			"company_abbr": req.CompanyAbbr,
+			"error":        err,
+		})
+		return nil, gerror.Wrapf(err, "查询公司失败")
+	}
 
 	// 创建分支
 	branchName, err = s.CreateBranch(ctx, req)
@@ -263,6 +282,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 			ApiSecret:    apiSecret,
 			CompanyAbbr:  req.CompanyAbbr,
 			Branch:       branchName,
+			SiteCode:     siteCode,
 		})
 		if err != nil {
 			return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
@@ -340,6 +360,32 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		if err != nil {
 			return nil, gerror.Wrapf(err, "添加供应商内部交易对象失败")
 		}
+
+		//为实现调拨功能，每个新增的门店都属于内部供应商
+		supplierCount, err := service.Supplier().CountSupplier(ctx, &erp.Supplier{
+			IsInternalSupplier: true,
+			RepresentsCompany:  companyName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询供应商数量失败")
+		}
+		if supplierCount > 0 {
+			g.Log().Infof(ctx, "供应商已初始化,%s", branchName)
+			//return nil, gerror.New("供应商已初始化，不能重复初始化")
+		} else {
+			_, err = service.Supplier().CreateSupplier(ctx, &buying.CreateSupplierReq{
+				Supplier: &buying.SupplierData{
+					AliasName:          branchName,
+					Branch:             branchName,
+					CompanyAbbr:        req.CompanyAbbr,
+					IsInternalSupplier: true,
+				},
+			})
+			if err != nil {
+				return nil, gerror.Wrapf(err, "创建供应商失败")
+			}
+		}
+
 	}
 
 	return &setup.InitShopResp{
@@ -400,9 +446,7 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 
 	// 解析响应数据获取API密钥
 	j := resp
-	if err != nil {
-		return "", "", gerror.Wrapf(err, "解析生成API密钥响应失败")
-	}
+
 	apiSecret = j.Get("data.api_secret").String()
 
 	// 获取用户信息

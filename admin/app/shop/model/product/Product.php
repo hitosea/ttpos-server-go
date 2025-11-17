@@ -45,11 +45,6 @@ class Product extends ProductModel
             $this->errorData = $msg;
             return false;
         }
-        // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, 0)) {
-            $this->error = !$isPackage ? '商品名称已存在' : '套餐名称已存在';
-            return false;
-        }
         $data['content'] = isset($data['content']) ? $data['content'] : '';
         $data['alone_grade_equity'] = isset($data['alone_grade_equity']) ? json_decode($data['alone_grade_equity'], true) : '';
         $data['app_id'] = self::$app_id;
@@ -146,7 +141,6 @@ class Product extends ProductModel
                 $this->error = '套餐分组最多只能设置5个';
                 return false;
             }
-            $existGroupNames = [];
             foreach ($packageGroup as &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
@@ -156,11 +150,6 @@ class Product extends ProductModel
                     $this->errorData = $msg;
                     return false;
                 }
-                if (in_array($groupName, $existGroupNames)) {
-                    $this->error = '分组名称不能重复';
-                    return false;
-                }
-                $existGroupNames[] = $groupName;
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {
@@ -267,7 +256,7 @@ class Product extends ProductModel
         $data['sauce_max_selection'] = $data['feed_max_select'] ?? 0; // 小料最大选择数量
         $data['describe'] = $data['selling_point'] ?? ''; // 商品卖点
         $data['open_discount'] = $data['is_enable_grade'] ?? 0; // 是否开启会员折扣, 0-否 1-是
-        $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;; // 价格
+        $data['price'] = $isPackage ? $data['price'] : ($data['sku'][0]['purchase_price'] ?? 0); // 价格
         $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
         $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
         $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
@@ -403,11 +392,6 @@ class Product extends ProductModel
             $this->errorData = $msg;
             return false;
         }
-        // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, $this['shop_supplier_id'] ?? 0, $this['product_id'] ?? 0)) {
-            $this->error = !$isPackage ? '商品名称已存在' : '套餐名称已存在';
-            return false;
-        }
 
         $data['spec_type'] = isset($data['spec_type']) ? $data['spec_type'] : $this['spec_type'];
         $data['content'] = isset($data['content']) ? $data['content'] : '';
@@ -505,7 +489,6 @@ class Product extends ProductModel
                 $this->error = '套餐分组最多只能设置5个';
                 return false;
             }
-            $existGroupNames = [];
             foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
@@ -515,11 +498,6 @@ class Product extends ProductModel
                     $this->errorData = $msg;
                     return false;
                 }
-                if (in_array($groupName, $existGroupNames)) {
-                    $this->error = '分组名称不能重复';
-                    return false;
-                }
-                $existGroupNames[] = $groupName;
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {
@@ -682,8 +660,7 @@ class Product extends ProductModel
         // 是否显示外送
         $isShowDelivery = isset($data['is_show_delivery']) ? ($data['is_show_delivery'] == 0 ? 2 : $data['is_show_delivery']) : 2;
 
-        // 更新产品包
-        $this->save([
+        $updateData = [
             'name' => $data['product_name'], // 产品包名称
             'image_name' => $data['img_name'] ?? '', // 产品包图片名称
             'image_file_uuid' => $fileId, // 产品包图片文件id
@@ -710,7 +687,13 @@ class Product extends ProductModel
             'open_overall_discount' => $data['open_overall_discount'], // 是否开启整单折扣: 0-否, 1-是
             'printer_tag_uuid' => $data['label_id'] ?? 0, // 打印机标签
             'supplier_uuid' => $data['erp_supplier_id'] ?? 0, // 供应商uuid
-        ]);
+        ];
+        if ($this->product_type == 1) {
+            $updateData['price'] = $data['price'];
+        }
+
+        // 更新产品包
+        $this->save($updateData);
         // 更新产品包多语言
         $multiLanguageName = new MultiLanguageName();
         $multiLanguageName->saveNames($data['product_name'], $this['multi_language_name_uuid']);

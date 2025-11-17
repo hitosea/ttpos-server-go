@@ -1,5 +1,5 @@
 # 使用官方Go语言镜像作为基础镜像
-FROM apache/skywalking-go:0.5.0-go1.23 AS builder
+FROM golang:1.23 AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -16,6 +16,7 @@ COPY  ttpos-bmp/app/ttpos-takeout/api  app/ttpos-takeout/api
 COPY  ttpos-bmp/app/ttpos-erp/api  app/ttpos-erp/api
 COPY  ttpos-bmp/app/ttpos-shop/api  app/ttpos-shop/api
 COPY  ttpos-bmp/app/ttpos-manager/api  app/ttpos-manager/api
+COPY  ttpos-bmp/app/ttpos-message/api  app/ttpos-message/api
 
 WORKDIR /app
 
@@ -37,11 +38,6 @@ RUN chmod +x main
 
 # 使用轻量级的镜像来运行应用
 FROM ubuntu:latest
-
-ENV SW_AGENT_NAME=ttpos-server-main
-ENV SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE=103.63.136.110:30435
-ENV SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL=20
-
 
 # 安装 ca-certificates 和 curl
 RUN apt-get update && apt-get install -y ca-certificates curl golang

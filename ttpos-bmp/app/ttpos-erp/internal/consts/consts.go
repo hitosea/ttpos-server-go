@@ -70,3 +70,16 @@ const (
 	//默认盘点单号 MAT-RECO-0000-00000
 	DefaultStockReconciliationName = "MAT-RECO-0000-00000"
 )
+
+const (
+	DefaultCustomerGroupName = "System Add"
+	DefaultSupplierGroupName = "System Add"
+
+	DefaultDeliveryDate   = "2035-12-31"
+	DefaultRequiredByDate = "2035-12-31"
+
+	//需求默认调拨都使用此价格列表
+	DefaultTransferPriceList = "Standard Buying"
+	//默认销售价格列表
+	DefaultSellingPriceList = "Standard Selling"
+)

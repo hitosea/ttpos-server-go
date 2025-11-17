@@ -121,5 +121,23 @@
             "$go"
         ]
     },
+    {
+        "label": "Go项目-生成数据库迁移文件",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "migrate"
+        ],
+        "group": "build",
+    },
+    {
+        "label": "Go项目-更新 MCP Token",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "update-mcp-token"
+        ],
+        "group": "build",
+    }
 ]
 } 

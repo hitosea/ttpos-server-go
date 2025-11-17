@@ -1,7 +1,6 @@
 package shop
 
 import (
-	builtinerrors "errors"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -12,6 +11,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +20,8 @@ import (
 type PurchaseHandler struct {
 	authSrv          service.IAuthSrv
 	purchaseOrderSrv purchase_order.IPurchaseOrderSrv
+	uploadFileSrv    service.IUploadFileSrv
+	receiptFileSrv   service.IPurchaseReceiptFileSrv
 }
 
 // GetPurchaseOrderList 获取采购订单列表
@@ -180,15 +182,7 @@ func (h *PurchaseHandler) SubmitPurchaseOrder(c *gin.Context) {
 
 	err := h.purchaseOrderSrv.SubmitPurchaseOrder(ctx, statusReq)
 	if err != nil {
-		var appErr errors.AppError
-		if builtinerrors.As(err, &appErr) {
-			code := appErr.GetCode()
-			if code == constant.CodeMaterialDisabled { // 物品已禁用，请修改物品状态
-				helper.ErrorWithData(c, code, appErr.GetData(), err)
-				return
-			}
-		}
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
 
@@ -216,15 +210,7 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 
 	err := h.purchaseOrderSrv.ApprovePurchaseOrder(ctx, approveReq)
 	if err != nil {
-		var appErr errors.AppError
-		if builtinerrors.As(err, &appErr) {
-			code := appErr.GetCode()
-			if code == constant.CodeMaterialDisabled || code == constant.CodeWarehouseStockNotEnough { // 物品已禁用，请修改物品状态
-				helper.ErrorWithData(c, code, appErr.GetData(), err)
-				return
-			}
-		}
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
 
@@ -378,6 +364,83 @@ func (h *PurchaseHandler) CancelPurchaseReceipt(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// UploadDocument 上传文档
+// @Summary 上传文档
+// @Description 上传文档附件（支持PDF、Word、Excel、图片等）
+// @Tags 商家端.采购管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param file formData file true "文件"
+// @Param group_id formData int false "分组ID"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/file/upload_document [post]
+func (h *PurchaseHandler) UploadDocument(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "请选择要上传的文件"))
+		return
+	}
+
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "打开文件失败"))
+		return
+	}
+	defer src.Close()
+
+	// 获取分组ID
+	groupId := uint64(0)
+	if groupIdStr := c.PostForm("group_id"); groupIdStr != "" {
+		if id, err := utils.StringToUint64(groupIdStr); err == nil {
+			groupId = id
+		}
+	}
+
+	// 上传文档
+	resp, err := h.uploadFileSrv.UploadDocument(ctx, src, file.Filename, file.Size, groupId)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
+// DeleteReceiptFile 删除收货单附件
+// @Summary 删除收货单附件
+// @Description 删除收货单的指定附件（仅草稿状态）
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.DeleteReceiptFileReq true "删除附件请求参数"
+// @Success 200 {object} dto.Response "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/receipt/file [delete]
+func (h *PurchaseHandler) DeleteReceiptFile(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var deleteReq req.DeleteReceiptFileReq
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, nil)
+		return
+	}
+
+	err := h.receiptFileSrv.DeleteReceiptFile(ctx, deleteReq.FileUuid, deleteReq.ReceiptOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
 func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -391,14 +454,18 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 	// 采购服务
 	purchaseOrderSrv := purchase_order.NewPurchaseOrderSrv(dbm)
+	uploadFileSrv := service.NewUploadFileSrv(dbm)
+	receiptFileSrv := service.NewPurchaseReceiptFileSrv(dbm)
 
 	wrapper := &PurchaseHandler{
 		authSrv:          authSrv,
 		purchaseOrderSrv: purchaseOrderSrv,
+		uploadFileSrv:    uploadFileSrv,
+		receiptFileSrv:   receiptFileSrv,
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck("2.9.0"), middleware.Auth(authSrv, dbm))
 	{
 		// 采购订单管理
 		privateApi.GET("/purchase/order/list", wrapper.GetPurchaseOrderList)
@@ -415,5 +482,9 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
 		privateApi.DELETE("/purchase/receipt/cancel", wrapper.CancelPurchaseReceipt)
+
+		// 收货单附件管理
+		privateApi.POST("/file/upload_document", wrapper.UploadDocument)
+		privateApi.DELETE("/purchase/receipt/file", wrapper.DeleteReceiptFile)
 	}
 }

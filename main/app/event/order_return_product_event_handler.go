@@ -30,7 +30,7 @@ func cancelSaleOrderProductEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 
 			// 创建退菜操作记录
-			go func() {
+			utils.Go(func() {
 				orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 				record := model.SaleOrderOperationRecord{
 					Source:        payload.Source,
@@ -48,10 +48,10 @@ func cancelSaleOrderProductEventHandler() {
 					return
 				}
 				logger.Logger.Info(fmt.Sprintf("操作记录:退菜 %+v", payload), zap.Uint64("record", uuid))
-			}()
+			})
 
 			// 创建退菜打印记录
-			go func() {
+			utils.Go(func() {
 				products := printer_model.OrderProduct{}
 				copier.Copy(&products, payload)
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
@@ -60,7 +60,7 @@ func cancelSaleOrderProductEventHandler() {
 					payload.SaleOrderUuid,
 					[]printer_model.OrderProduct{products},
 				)
-			}()
+			})
 		})
 		event.NewSystemBus().SubscribeCancelSaleOrderProductEvent(func(payload event.CancelSaleOrderProductPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)

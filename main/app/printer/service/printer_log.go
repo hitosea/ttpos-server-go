@@ -373,7 +373,8 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 				}
 				return log.Printer.EnableStatusCheck
 			}(),
-			TradeNo: log.GetTradeNo(companyUuid),
+			TradeNo:        log.GetTradeNo(companyUuid),
+			PrintChunkSize: log.GetPrintChunkSize(),
 		})
 	}
 
@@ -456,7 +457,8 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			}
 			return printerLog.Printer.EnableStatusCheck
 		}(),
-		TradeNo: printerLog.GetRandomTradeNo(),
+		TradeNo:        printerLog.GetRandomTradeNo(),
+		PrintChunkSize: printerLog.GetPrintChunkSize(),
 	}, nil
 }
 
@@ -525,13 +527,13 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
-		go func() {
+		utils.Go(func() {
 			if printerLog.Printer == nil {
 				printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 				printerLog.Printer = printerLogRepo.GetPrinter(printerLogRepo.WhereUuid(printerLog.PrinterUuid))
 			}
 			printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
-		}()
+		})
 	}
 
 	return printerLog, nil
@@ -580,6 +582,7 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 		TradeNo:           fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(strings.Replace(uuid.New().String(), "-", "", -1)))[:8]),
+		PrintChunkSize:    4096 * 2, // 4KB
 	}, nil
 }
 
@@ -652,5 +655,6 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		PrintingTime:      200,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 		TradeNo:           fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(strings.Replace(uuid.New().String(), "-", "", -1)))[:8]),
+		PrintChunkSize:    10 * 1024 * 1024, // 10MB
 	}, nil
 }

@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 )
@@ -21,7 +22,7 @@ func finishMenuEventHandler() {
 			if len(payload.Products) == 0 {
 				return
 			}
-			go func() {
+			utils.Go(func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
 				repo := printer.NewPrinterRepo(payload.Ctx, "")
@@ -32,7 +33,7 @@ func finishMenuEventHandler() {
 					payload.SaleOrderUuid,
 					products,
 				)
-			}()
+			})
 		})
 
 	})

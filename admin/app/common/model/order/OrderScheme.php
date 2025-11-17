@@ -188,10 +188,6 @@ class OrderScheme extends BaseModel
             $this->error = '方案名称不能超过50个字符';
             return false;
         }
-        if ($this->checkNameExist($params['name'], 0, $id)) {
-            $this->error = '方案名称已存在';
-            return false;
-        }
 
         // 使用渠道 10-点餐方式 20-桌台方式
         if (empty($params['use_channel'])) {

@@ -1,0 +1,246 @@
+---
+alwaysApply: false
+description: Git 提交和版本管理规范
+---
+
+# Git 提交和版本管理规范
+
+> 本规范适用于所有代码提交和分支管理
+
+---
+
+## 📋 提交消息格式
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Type 类型
+
+| 类型       | 说明     | 示例                                    |
+| ---------- | -------- | --------------------------------------- |
+| `feat`     | 新功能   | `feat(auth): 添加用户登录功能`          |
+| `fix`      | 修复 Bug | `fix(order): 修复订单金额计算错误`      |
+| `docs`     | 文档变更 | `docs: 更新API文档`                     |
+| `style`    | 代码格式 | `style: 统一代码缩进格式`               |
+| `refactor` | 重构     | `refactor(service): 重构用户服务层代码` |
+| `perf`     | 性能优化 | `perf(query): 优化数据库查询性能`       |
+| `test`     | 测试相关 | `test(user): 添加用户模块单元测试`      |
+| `build`    | 构建系统 | `build: 升级GoFrame到v2.9.0`            |
+| `ci`       | CI 配置  | `ci: 添加自动部署脚本`                  |
+| `chore`    | 其他变更 | `chore: 更新.gitignore`                 |
+
+### Scope 范围
+
+**后端模块**: main, admin, ttpos-bmp, ttpos-erp, ttpos-manager  
+**前端模块**: admin-views, shop-views  
+**通用范围**: auth, order, product, member, payment, api, db, cache, docs, ci
+
+### Subject 规则
+
+- ✅ 使用祈使句："添加"而不是"已添加"
+- ✅ 首字母小写
+- ✅ 不超过 50 个字符
+- ✅ 不以句号结尾
+- ✅ 说明"做了什么"
+
+---
+
+## 🌿 分支管理
+
+### 分支类型
+
+| 分支类型 | 命名格式    | 说明          | 示例                       |
+| -------- | ----------- | ------------- | -------------------------- |
+| 主分支   | `main`      | 生产环境分支  | `main`                     |
+| 开发分支 | `develop`   | 开发主分支    | `develop`                  |
+| 功能分支 | `feature/*` | 新功能开发    | `feature/user-login`       |
+| 修复分支 | `hotfix/*`  | 紧急 Bug 修复 | `hotfix/order-calculation` |
+| 发布分支 | `release/*` | 版本发布准备  | `release/v2.0.0`           |
+
+### 分支工作流
+
+```
+main (生产环境)
+  ↑
+  └── release/v2.0.0 (发布准备)
+        ↑
+        └── develop (开发主分支)
+              ↑
+              ├── feature/user-login (功能1)
+              ├── feature/order-payment (功能2)
+              └── feature/product-search (功能3)
+
+hotfix/fix-critical-bug (紧急修复)
+  ↓
+main (直接修复生产问题)
+```
+
+---
+
+## ✅ 提交示例
+
+### 正确示例
+
+```bash
+# 新功能
+git commit -m "feat(auth): 添加JWT令牌刷新功能"
+
+# 修复Bug
+git commit -m "fix(order): 修复订单状态更新失败的问题"
+
+# 重构
+git commit -m "refactor(service): 优化用户服务代码结构"
+```
+
+### 错误示例
+
+```bash
+# ❌ 缺少type
+git commit -m "添加用户登录功能"
+
+# ❌ type错误
+git commit -m "add(auth): 添加用户登录功能"
+
+# ❌ subject太短
+git commit -m "feat: 修复"
+```
+
+### 包含详细描述
+
+```bash
+git commit -m "feat(message): 添加Mailgun邮件发送功能
+
+- 集成Mailgun SDK
+- 实现邮件发送服务
+- 添加消息队列支持
+- 完善错误处理和日志记录
+
+相关文档: docs/MAILGUN_USAGE.md"
+```
+
+---
+
+## 🔍 提交前检查清单
+
+### 代码质量
+
+- [ ] 代码符合命名规范
+- [ ] 添加了必要的注释（中文）
+- [ ] 错误处理正确
+- [ ] API 响应格式统一（data 必须是对象）
+- [ ] URL 使用 snake_case
+- [ ] 不使用 panic，返回 error
+
+### 测试与安全
+
+- [ ] 添加了单元测试（如需要）
+- [ ] 安全检查（SQL 注入、XSS 等）
+- [ ] 性能考虑（查询优化、缓存等）
+- [ ] 日志记录合理
+
+### 提交规范
+
+- [ ] 提交信息符合 Conventional Commits
+- [ ] 提交是原子性的（一个提交只做一件事）
+- [ ] 文档已更新（如需要）
+
+---
+
+## 📋 Code Review 要点
+
+- [ ] 代码逻辑正确
+- [ ] 没有明显的性能问题
+- [ ] 没有安全隐患
+- [ ] 代码可读性好
+- [ ] 测试覆盖充分
+- [ ] 文档更新完整
+
+---
+
+## 🚫 禁止操作
+
+**严格禁止以下操作**：
+
+| 禁止操作                          | 原因       |
+| --------------------------------- | ---------- |
+| ❌ `git push --force origin main` | 破坏主分支 |
+| ❌ 直接在 main 分支开发           | 违反工作流 |
+| ❌ 提交包含敏感信息（.env）       | 安全风险   |
+| ❌ `git commit --no-verify`       | 跳过钩子   |
+| ❌ 修改已推送的历史               | 破坏协作   |
+
+---
+
+## 🔄 快速工作流
+
+### 功能开发
+
+```bash
+# 创建功能分支 → 开发 → 提交 → PR → 合并 → 删除分支
+git checkout -b feature/xxx
+git commit -m "feat(xxx): 添加功能"
+git push origin feature/xxx
+# 创建 PR 到 develop
+```
+
+### Bug 修复
+
+```bash
+# 创建修复分支 → 修复 → 提交 → PR → 合并 → 删除分支
+git checkout -b fix/xxx
+git commit -m "fix(xxx): 修复问题"
+git push origin fix/xxx
+# 创建 PR 到 develop
+```
+
+### 紧急修复（Hotfix）
+
+```bash
+# 从 main 创建 → 修复 → 合并到 main 和 develop
+git checkout -b hotfix/xxx
+git commit -m "fix(xxx): 修复紧急问题"
+# 合并到 main 和 develop
+```
+
+📖 **详细工作流程**: 查看 `docs/human/guides/git-workflow.md`（待创建）
+
+---
+
+## 💡 最佳实践速查
+
+### 提交频率
+
+- ✅ 完成一个小功能就提交
+- ✅ 提交是原子性的
+- ❌ 一次提交包含多个不相关修改
+
+### 提交信息
+
+- ✅ 英文 type + 中文 subject
+- ✅ 描述清晰简洁
+- ❌ 过于简单："修复"、"更新"
+
+### 分支管理
+
+- ✅ 及时删除已合并的分支
+- ✅ 定期同步 develop 分支
+- ❌ 长期不合并的功能分支
+
+---
+
+## 📚 参考资源
+
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)
+- [HUSKY_GUIDE.md](/HUSKY_GUIDE.md) - Git 钩子使用指南
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team  
+**文件大小**: 约 180 行（薄层规范）

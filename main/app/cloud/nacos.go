@@ -12,6 +12,8 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/nacos"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 var nacosClient *nacos.NacosClient
@@ -22,6 +24,7 @@ type ServiceName string
 const (
 	TakeOutServiceName ServiceName = "ttpos-takeout"
 	ErpServiceName     ServiceName = "ttpos-erp"
+	MessageServiceName ServiceName = "ttpos-message"
 )
 
 func Init() {
@@ -80,7 +83,13 @@ func GetRpcConnWithName(serviceName ServiceName) (conn *grpc.ClientConn, err err
 		return nil, err
 	}
 	// 1. 建立gRPC连接（开发环境使用Insecure，生产环境建议配置TLS）
-	conn, err = grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	//    同时接入 OpenTelemetry 客户端拦截器以自动创建与传播 trace
+	conn, err = grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		// 已使用 NewClientHandler 统一处理，增加调用链跟踪
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		return nil, errors.New("连接服务gRPC端点失败: %v", addr)
 	}

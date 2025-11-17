@@ -10,6 +10,9 @@ type ErpnextSiteCompany struct {
 	ParentCompany string               `json:"parent_company"`
 	IsUsed        bool                 `json:"is_used"`  // 是否已被使用
 	Children      []ErpnextSiteCompany `json:"children"` // 子公司列表，用于树形结构
+
+	ParentCompanyUuid uint64 `json:"parent_company_uuid"` // ttpos父公司UUID
+	CompanyUuid       uint64 `json:"company_uuid"`        // ttpos公司UUID
 }
 
 type InitShopResp struct {

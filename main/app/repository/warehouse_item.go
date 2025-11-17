@@ -3,9 +3,12 @@ package repository
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -17,18 +20,22 @@ type IWarehouseItemRepo interface {
 	Update(warehouseItem *model.WarehouseItem) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
+	GetNormalByMaterialCodes(materialCodes []string, warehouseErpCode string) ([]model.WarehouseItem, error)
 
 	// 查询操作
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error)
 	GetByWarehouseUuid(warehouseUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
+	GetByWarehouseAndMaterialOrCreate(warehouseUuid, materialUuid uint64, materialCode string, valuation float64, opts ...DBOption) (*model.WarehouseItem, error)
 	GetByMaterialCode(materialCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseErpCode(warehouseErpCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetListWithWarehouseInfo(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error)
 	// 通过物品UUID获取该物品在各个仓库的库存情况
 	GetWarehouseItems(opts ...DBOption) ([]*model.WarehouseItem, error)
 	GetWarehouseItemsByMaterialUuid(materialUuid uint64) ([]*model.WarehouseItem, error)
+	// 获取在途仓库库存
+	GetTransitWarehouseItemByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, materialCode string, valuation float64) (*model.WarehouseItem, error)
 
 	// 库存操作
 	UpdateStock(uuid uint64, stock, reservedStock float64) error
@@ -106,6 +113,21 @@ func (r *WarehouseItemRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model
 	return &warehouseItem, nil
 }
 
+// GetNormalByMaterialCodes 根据物料编码获取仓库商品库存列表
+func (r *WarehouseItemRepoImpl) GetNormalByMaterialCodes(materialCodes []string, warehouseErpCode string) ([]model.WarehouseItem, error) {
+	var warehouseItems []model.WarehouseItem
+	query := r.db.Model(&model.WarehouseItem{}).
+		Joins("JOIN ttpos_warehouse ON ttpos_warehouse_item.warehouse_uuid = ttpos_warehouse.uuid").
+		Where("ttpos_warehouse_item.material_code IN (?)", materialCodes).
+		Where("ttpos_warehouse.type != ?", constant.WarehouseTypeTransit).
+		Where("ttpos_warehouse.delete_time = ?", 0)
+	if warehouseErpCode != "" {
+		query = query.Where("ttpos_warehouse.erp_code = ?", warehouseErpCode)
+	}
+	err := query.Find(&warehouseItems).Error
+	return warehouseItems, err
+}
+
 // GetListWithPagination 分页获取仓库商品库存列表
 func (r *WarehouseItemRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error) {
 	var warehouseItems []model.WarehouseItem
@@ -163,6 +185,39 @@ func (r *WarehouseItemRepoImpl) GetByWarehouseAndMaterial(warehouseUuid, materia
 		return nil, err
 	}
 	return &warehouseItem, nil
+}
+
+// GetByWarehouseAndMaterialOrCreate 根据仓库UUID和商品UUID获取库存记录，如果不存在则创建
+func (r *WarehouseItemRepoImpl) GetByWarehouseAndMaterialOrCreate(
+	warehouseUuid, materialUuid uint64,
+	materialCode string,
+	valuation float64,
+	opts ...DBOption,
+) (*model.WarehouseItem, error) {
+	// 查找或创建仓库商品库存记录
+	warehouseItem, err := r.GetByWarehouseAndMaterial(warehouseUuid, materialUuid, opts...)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 没有找到记录时创建新记录
+			newWarehouseItem := &model.WarehouseItem{
+				WarehouseUuid: warehouseUuid,
+				MaterialUuid:  materialUuid,
+				MaterialCode:  materialCode,
+				Stock:         0,
+				ReservedStock: 0,
+				Valuation:     valuation,
+			}
+			err = r.Create(newWarehouseItem)
+			if err != nil {
+				logger.Logger.Error("recordErpStockInLog-Create", zap.Any("newWarehouseItem", newWarehouseItem), zap.Any("err", err))
+				return nil, errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
+			}
+			warehouseItem = newWarehouseItem
+		} else {
+			return nil, err
+		}
+	}
+	return warehouseItem, nil
 }
 
 // GetByMaterialCode 根据商品编码获取库存列表
@@ -339,6 +394,17 @@ func (r *WarehouseItemRepoImpl) GetWarehouseItemsByMaterialUuid(materialUuid uin
 			WithPreload{
 				Query: "Warehouse.MultiLanguageName",
 			},
+			WithPreload{
+				Query: "Material.NotBaseUnitList",
+				Args: []any{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Where("delete_time = ?", constant.NotDeleted)
+					},
+				},
+			},
+			WithPreload{
+				Query: "Material.NotBaseUnitList.Unit.MultiLanguageName",
+			},
 		),
 	)
 }
@@ -484,4 +550,36 @@ func (r *WarehouseItemRepoImpl) GetMaterialStockByWarehouse(materialUuids []uint
 	}
 
 	return results, nil
+}
+
+// GetTransitWarehouseItemByWarehouseAndMaterial 获取在途仓库库存
+func (r *WarehouseItemRepoImpl) GetTransitWarehouseItemByWarehouseAndMaterial(
+	warehouseUuid, materialUuid uint64,
+	materialCode string,
+	valuation float64,
+) (*model.WarehouseItem, error) {
+	warehouseItem, err := r.GetByWarehouseAndMaterial(
+		warehouseUuid,
+		materialUuid,
+	)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 没有找到记录时创建新记录
+			newWarehouseItem := &model.WarehouseItem{
+				WarehouseUuid: warehouseUuid,
+				MaterialUuid:  materialUuid,
+				MaterialCode:  materialCode,
+				Stock:         0,
+				Valuation:     valuation,
+			}
+			err = r.Create(newWarehouseItem)
+			if err != nil {
+				return nil, errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
+			}
+			warehouseItem = newWarehouseItem
+		} else {
+			return nil, errors.WithMessage(errors.New("查询在途仓库库存失败"), err.Error())
+		}
+	}
+	return warehouseItem, nil
 }

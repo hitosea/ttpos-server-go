@@ -1,0 +1,172 @@
+---
+alwaysApply: false
+description: 数据库开发规范
+---
+
+# 数据库开发规范
+
+> 🤖 **受众**: AI Agent  
+> 📖 **用途**: 数据库设计和操作的核心约束
+
+---
+
+## 📚 快速索引
+
+| 我要...          | 查阅文档                                                           |
+| ---------------- | ------------------------------------------------------------------ |
+| 了解数据库架构   | [数据库架构设计](../../docs/human/architecture/database-design.md) |
+| 学习详细开发规范 | [数据库开发指南](../../docs/human/guides/database-guide.md)        |
+
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 多租户架构
+
+**每个商户一个独立数据库**
+
+```
+shop8267304538112000     # 商户1数据库
+shop8609817471094784     # 商户2数据库
+saas                     # 系统主库
+```
+
+### 命名规范
+
+| 类型   | 规则          | 示例                     |
+| ------ | ------------- | ------------------------ |
+| 数据库 | shop{商户 ID} | `shop8267304538112000`   |
+| 表名   | ttpos\_前缀   | `ttpos_product`          |
+| 字段   | snake_case    | `user_id`, `create_time` |
+| 索引   | uk*/idx*前缀  | `uk_uuid`, `idx_status`  |
+
+---
+
+## 🗄️ 必需字段
+
+**每个表必须包含**：
+
+```sql
+`id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+`create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+`update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+`delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
+PRIMARY KEY (`id`),
+UNIQUE KEY `uk_uuid` (`uuid`)
+```
+
+---
+
+## 📋 字段规范
+
+### 时间字段 - 使用 int
+
+```sql
+`create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间'
+```
+
+**原因**：
+
+- 占用空间小（4 字节）
+- 不受时区影响
+- 便于计算
+
+### 金额字段 - 使用 decimal
+
+```sql
+-- 高精度（8位小数）
+`amount` decimal(20,8) NOT NULL DEFAULT 0.00000000
+
+-- 普通金额（2位小数）
+`price` decimal(14,2) NOT NULL DEFAULT 0.00
+```
+
+**为什么不用 float/double?** 精度丢失
+
+### UUID 字段 - 使用 bigint
+
+```sql
+`uuid` bigint unsigned NOT NULL DEFAULT 0
+```
+
+---
+
+## 🔍 关键检查点
+
+### 设计表时
+
+- [ ] 包含必需字段（id, uuid, create_time, update_time, delete_time）
+- [ ] 时间字段用 int 类型
+- [ ] 金额字段用 decimal 类型
+- [ ] UUID 字段用 bigint 类型
+- [ ] 表名使用 ttpos\_ 前缀
+- [ ] 字段名使用 snake_case
+
+### 创建索引时
+
+- [ ] 主键索引
+- [ ] UUID 唯一索引
+- [ ] 查询频繁字段添加索引
+- [ ] 复合索引注意顺序
+
+### 迁移文件
+
+- [ ] 检查表是否存在
+- [ ] 检查字段是否存在
+- [ ] 包含注释说明
+
+---
+
+## 📋 常用模式
+
+### 创建表模板
+
+```sql
+CREATE TABLE IF NOT EXISTS `ttpos_product` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `name` varchar(100) NOT NULL DEFAULT '' COMMENT '商品名称',
+    `price` decimal(14,2) NOT NULL DEFAULT 0.00 COMMENT '价格',
+    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
+```
+
+### 软删除查询
+
+```sql
+-- 查询未删除数据
+SELECT * FROM ttpos_user WHERE delete_time = 0;
+
+-- 软删除
+UPDATE ttpos_user SET delete_time = 1699999999 WHERE id = 1;
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                     | 原因         |
+| ------------------------ | ------------ |
+| ❌ 时间字段用 datetime   | 必须用 int   |
+| ❌ 金额字段用 float      | 精度丢失     |
+| ❌ 缺少必需字段          | 不符合规范   |
+| ❌ 表名不加 ttpos\_ 前缀 | 命名规范     |
+| ❌ 硬删除数据            | 必须用软删除 |
+
+---
+
+## 📖 详细文档
+
+- [数据库架构设计](../../docs/human/architecture/database-design.md)
+- [数据库开发指南](../../docs/human/guides/database-guide.md)
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

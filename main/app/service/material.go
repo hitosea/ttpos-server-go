@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	v1 "ttpos-bmp/app/ttpos-message/api/message"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -17,6 +18,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -101,19 +103,21 @@ type materialSrv struct {
 	translateSrv ITranslateSrv       // 翻译服务
 	localeSrv    ILocaleSrv          // 多语言名称服务
 	settingSrv   setting.ISrv        // 设置服务
+	messageSrv   message.IMessageSrv // 消息服务
 	systemLock   lock.Lock           // 系统锁
 }
 
-func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv) IMaterialSrv {
-	return NewMaterialSrvImpl(dbm, localeSrv, settingSrv, translateSrv)
+func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv, messageSrv message.IMessageSrv) IMaterialSrv {
+	return NewMaterialSrvImpl(dbm, localeSrv, settingSrv, translateSrv, messageSrv)
 }
 
-func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv) IMaterialSrv {
+func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv, messageSrv message.IMessageSrv) IMaterialSrv {
 	return &materialSrv{
 		dbm:          dbm,
 		translateSrv: translateSrv,
 		localeSrv:    localeSrv,
 		settingSrv:   settingSrv,
+		messageSrv:   messageSrv,
 		systemLock:   lock.NewSystemLock(),
 	}
 }
@@ -121,16 +125,18 @@ func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSr
 // pushMaterialImportProgress 推送物品导入进度到前端
 func (s *materialSrv) pushMaterialImportProgress(companyUuid uint64, deviceSn string, data MaterialImportProgressData) {
 	data.Time = time.Now().Unix()
-	go websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_MATERIAL, map[string]any{
-		"time":     data.Time,
-		"status":   data.Status,
-		"progress": data.Progress,
-		"total":    data.Total,
-		"current":  data.Current,
-		"success":  data.Success,
-		"failed":   data.Failed,
-		"error":    data.Error,
-		"errors":   data.Errors,
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_MATERIAL, map[string]any{
+			"time":     data.Time,
+			"status":   data.Status,
+			"progress": data.Progress,
+			"total":    data.Total,
+			"current":  data.Current,
+			"success":  data.Success,
+			"failed":   data.Failed,
+			"error":    data.Error,
+			"errors":   data.Errors,
+		})
 	})
 }
 
@@ -152,7 +158,6 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 
 	// WarehouseErpCode 根据仓库ERP编码过滤
-	// FIXME: 没有看到产品说按仓库，现在只先按是否同步物品进行
 	if req.PurchaseType == 2 {
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 			return db.Where("headquarter_uuid > ?", 0)
@@ -166,6 +171,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 	if req.Status != 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByStatus(uint(req.Status)))
+	}
+	if len(req.MaterialUuids) > 0 {
+		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.MaterialUuids))
 	}
 	// 预加载关联数据
 	dbOptions = append(dbOptions, commonRepo.Preload(
@@ -251,6 +259,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		transitNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range material.WarehouseItems {
 			if warehouseItem.Warehouse != nil {
+				if req.OutWarehouseErpCode != "" && warehouseItem.Warehouse.ErpCode != req.OutWarehouseErpCode {
+					continue
+				}
 				if warehouseItem.Warehouse.IsTransit() {
 					transitNum = transitNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
 				} else {
@@ -258,21 +269,48 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 		}
+		stockNum := num.Add(availableNum).Add(transitNum).InexactFloat64()
+
+		// 非基准单位的库存数
+		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
+		for _, unit := range material.NotBaseUnitList {
+			if unit.IsDelete() || unit.IsDefault == 1 {
+				continue
+			}
+			notBasicUnitStocks = append(notBasicUnitStocks, material_resp.NotBasicUnitStock{
+				LocaleName: func() dto.LocaleResponse {
+					if unit.Unit == nil { // 没有关联单位，则使用名称
+						name := model.NewMultiLanguageName(unit.Name)
+						return name.GetNames()
+					}
+					return unit.Unit.MultiLanguageName.GetNames()
+				}(),
+				Num: func() float64 {
+					if unit.ConversionRate == 0 {
+						return 0
+					}
+					return decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}(),
+				ConversionRate: unit.ConversionRate,
+			})
+		}
 
 		// 响应格式
 		respMaterial := material_resp.Material{
-			Uuid:         material.Uuid,
-			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			LocaleName:   material.MultiLanguageName.GetNames(),
-			ErpCode:      material.Code,
-			InternalCode: material.InternalCode,
-			BarcodeValue: material.BarcodeValue,
-			Num:          num.Add(availableNum).Add(transitNum).InexactFloat64(),
-			SafetyStock:  material.SafetyStock,
-			AvailableNum: availableNum.InexactFloat64(),
-			TransitNum:   transitNum.InexactFloat64(),
-			CategoryUuid: material.CategoryUuid,
-			Image:        material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
+			Uuid:               material.Uuid,
+			MaterialUuid:       material.Uuid,
+			Name:               material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			LocaleName:         material.MultiLanguageName.GetNames(),
+			ErpCode:            material.Code,
+			InternalCode:       material.InternalCode,
+			BarcodeValue:       material.BarcodeValue,
+			Num:                stockNum,
+			SafetyStock:        material.SafetyStock,
+			AvailableNum:       availableNum.InexactFloat64(),
+			TransitNum:         transitNum.InexactFloat64(),
+			NotBasicUnitStocks: material_resp.NotBasicUnitStockList{List: notBasicUnitStocks},
+			CategoryUuid:       material.CategoryUuid,
+			Image:              material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
 			Status: func() int {
 				if material.Status {
 					return 1
@@ -383,21 +421,26 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
 	}
 	return material_resp.MaterialDetailResp{
-		Uuid:                   material.Uuid,
-		LocaleName:             material.MultiLanguageName.GetNames(),
-		Code:                   material.Code,
-		CategoryUuid:           material.CategoryUuid,
-		CategoryName:           material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		Status:                 int(utils.BoolToUint(material.Status)),
-		Valuation:              material.Valuation,
-		BarcodeValue:           material.BarcodeValue,
-		InternalCode:           material.InternalCode,
-		SafetyStock:            material.SafetyStock,
-		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		UnitUuid:               material.UnitUuid,
-		FromUnitUuid:           fromUnitUuid,
-		UnitList:               material_resp.MaterialUnitListResp{List: unitList},
-		PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Uuid:         material.Uuid,
+		LocaleName:   material.MultiLanguageName.GetNames(),
+		Code:         material.Code,
+		CategoryUuid: material.CategoryUuid,
+		CategoryName: material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Status:       int(utils.BoolToUint(material.Status)),
+		Valuation:    material.Valuation,
+		BarcodeValue: material.BarcodeValue,
+		InternalCode: material.InternalCode,
+		SafetyStock:  material.SafetyStock,
+		UnitName:     material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitUuid:     material.UnitUuid,
+		FromUnitUuid: fromUnitUuid,
+		UnitList:     material_resp.MaterialUnitListResp{List: unitList},
+		PurchaseUnitName: func() string {
+			if material.PurchaseUnit == nil {
+				return ""
+			}
+			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+		}(),
 		PurchaseUnitUuid:       material.PurchaseUnitUuid,
 		FromPurchaseUnitUuid:   fromPurchaseUnitUuid,
 		CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
@@ -432,18 +475,42 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 		if warehouseItem.Warehouse != nil {
 			localeName = warehouseItem.Warehouse.MultiLanguageName.GetNames()
 		}
+		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
+		for _, unit := range warehouseItem.Material.NotBaseUnitList {
+			notBasicUnitStock := material_resp.NotBasicUnitStock{
+				LocaleName: func() dto.LocaleResponse {
+					if unit.Unit == nil { // 没有关联单位，则使用名称
+						name := model.NewMultiLanguageName(unit.Name)
+						return name.GetNames()
+					}
+					return unit.Unit.MultiLanguageName.GetNames()
+				}(),
+				Num: func() float64 {
+					if unit.ConversionRate == 0 {
+						return 0
+					}
+					return decimal.NewFromFloat(warehouseItem.Stock).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}(),
+				ConversionRate: unit.ConversionRate,
+			}
+			notBasicUnitStocks = append(notBasicUnitStocks, notBasicUnitStock)
+		}
 		warehouseList = append(warehouseList, material_resp.Warehouse{
 			Uuid:       warehouseItem.WarehouseUuid,
 			LocaleName: localeName,
 			Num:        warehouseItem.Stock,
+			NotBasicUnitStockList: material_resp.NotBasicUnitStockList{
+				List: notBasicUnitStocks,
+			},
 		})
 		amount = amount.Add(decimal.NewFromFloat(warehouseItem.Stock))
 	}
 
 	return material_resp.MaterialStockDetailResp{
-		Uuid:       req.Uuid,
-		LocaleName: material.MultiLanguageName.GetNames(),
-		Code:       material.Code,
+		Uuid:         req.Uuid,
+		LocaleName:   material.MultiLanguageName.GetNames(),
+		Code:         material.Code,
+		InternalCode: material.InternalCode,
 		Warehouses: material_resp.WarehouseList{
 			Amount: amount.InexactFloat64(),
 			List:   warehouseList,
@@ -467,14 +534,6 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 			if !checkService.CheckNameLength(ctx, name.Text, 50) {
 				return errors.New("名称长度不能超过50")
 			}
-		}
-		// 检查物品类别名称是否已存在
-		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Source: constant.CheckNameSourceMaterialCategory,
-			Names:  names,
-		})
-		if exists {
-			return errors.New("名称已存在")
 		}
 
 		// 检查物品类别编码是否已存在
@@ -553,9 +612,13 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	}
 
 	// 获取采购单位
-	purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-	if err != nil {
-		return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+	var purchaseUnitUuid uint64
+	if request.PurchaseUom != "" {
+		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+		}
+		purchaseUnitUuid = purchaseUnit.Uuid
 	}
 
 	var material *model.Material
@@ -606,7 +669,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			BarcodeValue:     request.BarcodeValue,
 			UnitUuid:         productUnit.Uuid,
 			UnitList:         unitList,
-			PurchaseUnitUuid: purchaseUnit.Uuid,
+			PurchaseUnitUuid: purchaseUnitUuid,
 			CostUnitUuid:     productUnit.Uuid,
 			InternalCode:     request.InternalCode,
 		}
@@ -882,12 +945,14 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 
 	// 获取采购单位
 	var purchaseUom string
-	purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "获取采购单位失败")
-	}
-	if purchaseUnit.Unit != nil {
-		purchaseUom = purchaseUnit.Unit.ErpnextUom
+	if material.PurchaseUnitUuid != 0 {
+		purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "获取采购单位失败")
+		}
+		if purchaseUnit.Unit != nil {
+			purchaseUom = purchaseUnit.Unit.ErpnextUom
+		}
 	}
 
 	materialAddErpReq := &req.MaterialAddErpReq{
@@ -1219,9 +1284,13 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		}
 
 		// 采购单位
-		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
-		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+		var purchaseUnitUuid uint64
+		if request.PurchaseUom != "" {
+			purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+			if err != nil {
+				return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
+			}
+			purchaseUnitUuid = purchaseUnit.Uuid
 		}
 
 		// 同步单位
@@ -1244,7 +1313,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 					return errors.WithMessage(err, "更新基准单位失败")
 				}
 				saveUnitUuids = append(saveUnitUuids, material.Unit.Uuid)
-				if productUnit.Uuid == purchaseUnit.Uuid {
+				if productUnit.Uuid == purchaseUnitUuid {
 					updateData["purchase_unit_uuid"] = material.Unit.Uuid
 				}
 			} else {
@@ -1261,7 +1330,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 						return errors.WithMessage(err, "更新非基准单位失败")
 					}
 					saveUnitUuids = append(saveUnitUuids, existUnit.Uuid)
-					if productUnit.Uuid == purchaseUnit.Uuid {
+					if productUnit.Uuid == purchaseUnitUuid {
 						updateData["purchase_unit_uuid"] = existUnit.Uuid
 					}
 				} else {
@@ -1276,7 +1345,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 						return errors.WithMessage(err, "创建非基准单位失败")
 					}
 					saveUnitUuids = append(saveUnitUuids, uuid)
-					if productUnit.Uuid == purchaseUnit.Uuid {
+					if productUnit.Uuid == purchaseUnitUuid {
 						updateData["purchase_unit_uuid"] = uuid
 					}
 				}
@@ -1520,15 +1589,6 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 			return errors.New("名称长度不能超过50")
 		}
 	}
-	// 检查物品类别名称是否已存在
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   request.Uuid,
-		Source: constant.CheckNameSourceMaterialCategory,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 
 	// 检查物品类别编码是否已存在
 	if request.Code != "" {
@@ -1552,7 +1612,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	}
 
 	// 异步执行同步erp物品，避免阻塞主线程造成前端请求超时
-	go func() {
+	utils.Go(func() {
 		// 如果修改了物品编码，同步更新所有关联了这个分类的erp物品
 		if ctx.GetCompany().IsOpenErp() {
 			if changeCode {
@@ -1622,7 +1682,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 				}
 			}
 		}
-	}()
+	})
 	return nil
 }
 
@@ -2517,7 +2577,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 	}
 
 	// 异步导入
-	go func() {
+	utils.Go(func() {
 		defer s.systemLock.UnlockUuidString(lockKey)
 
 		totalCount := len(reqs.List)
@@ -2590,7 +2650,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		time.Sleep(500 * time.Millisecond)
 		progressData.Time = time.Now().Unix()
 		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
-	}()
+	})
 
 	return nil
 }
@@ -2882,6 +2942,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					CostUnitUuid:          material.CostUnitUuid,
 					Price:                 material.Price,
 					StockNum:              material.StockNum,
+					SafetyStock:           material.SafetyStock, // 安全库存跟随总部
 					ActualSaleNum:         material.ActualSaleNum,
 					BarcodeValue:          material.BarcodeValue,
 					InternalCode:          material.InternalCode,
@@ -3499,7 +3560,7 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 
 	var companyUuids []uint64
 	if companyUuid == 0 {
-		s.dbm.GetDB(0).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
+		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
 	} else {
 		companyUuids = append(companyUuids, companyUuid)
 	}
@@ -3515,21 +3576,23 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 	// 分批处理每个公司的安全库存检查
 	for _, cid := range companyUuids {
 		wg.Add(1)
-		go func(companyId uint64) {
-			defer wg.Done()
+		utils.Go(func() {
+			func(companyId uint64) {
+				defer wg.Done()
 
-			// 获取信号量，控制并发数
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
 
-			// 获取Context副本用于协程
-			ctxCopy := ctx.Copy()
+				// 获取Context副本用于协程
+				ctxCopy := ctx.Copy()
 
-			// 处理单个公司的安全库存检查
-			if err := s.checkCompanySafetyStock(ctxCopy, companyId); err != nil {
-				errChan <- err
-			}
-		}(cid)
+				// 处理单个公司的安全库存检查
+				if err := s.checkCompanySafetyStock(ctxCopy, companyId); err != nil {
+					errChan <- err
+				}
+			}(cid)
+		})
 	}
 
 	// 等待所有协程完成
@@ -3550,21 +3613,276 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 	return nil
 }
 
+type SendParams struct {
+	CompanyUuid   uint64
+	CompanyName   string
+	MaterialUuid  uint64
+	MaterialName  string
+	WarehouseUuid uint64
+	WarehouseName string
+	CurrentStock  float64
+	SafetyStock   float64
+	MaterialUnit  string
+	TriggerTime   time.Time
+}
+
+// sendStockAlertEmail 发送库存预警邮件（带重试机制）
+// 参数：
+//   - ctx: 上下文
+//   - alertType: 预警类型
+//   - sendReq: 发送参数
+func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, sendReq *SendParams) {
+	// 获取预警记录repository
+	alertLogRepo := repository.NewMaterialStockAlertLogRepo(s.dbm.GetDB(sendReq.CompanyUuid))
+
+	// 判断是否需要发送预警邮件
+	shouldSend, existingLog, err := alertLogRepo.ShouldSendAlert(sendReq.CompanyUuid, sendReq.MaterialUuid, sendReq.WarehouseUuid)
+	if err != nil {
+		logger.Logger.Error("检查是否需要发送预警邮件失败",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+			zap.Uint64("material_uuid", sendReq.MaterialUuid),
+			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+			zap.Error(err),
+		)
+		return
+	}
+
+	if !shouldSend {
+		// 记录跳过原因
+		var skipReason string
+		var alertCount uint32 = 0
+		if existingLog != nil {
+			alertCount = existingLog.AlertCount
+			if alertCount >= 2 {
+				skipReason = "已发送2次预警邮件，不再发送"
+			} else {
+				skipReason = "24小时内已发送过预警邮件，等待24小时后发送第2次"
+			}
+		} else {
+			skipReason = "跳过发送预警邮件"
+		}
+		logger.Logger.Info(skipReason,
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+			zap.Uint64("material_uuid", sendReq.MaterialUuid),
+			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+			zap.Uint32("alert_count", alertCount),
+		)
+		return
+	}
+
+	// 获取收件人邮箱（从设置中获取，这里暂时使用配置，实际应从数据库获取）
+	recipient := s.getStockAlertRecipient(ctx, sendReq.CompanyUuid)
+	if recipient == "" {
+		logger.Logger.Warn("未配置库存预警邮箱，跳过发送",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+		)
+		return
+	}
+
+	triggerTime := sendReq.TriggerTime.Format("15:04, January 2, 2006")
+	triggerDate := sendReq.TriggerTime.Format("January 2, 2006")
+	// 准备邮件内容
+	var subject, messageArgs, templateUuid string
+	if sendReq.WarehouseUuid == 0 { // 公司维度
+		templateUuid = constant.TplCompanySafetyStockAlert
+		messageArgs = fmt.Sprintf(`{"company":"%s","material":"%s","current_stock":"%s %s","safety_stock":"%s %s","time":"%s","date":"%s"}`,
+			sendReq.CompanyName, sendReq.MaterialName, utils.FormatFloat(sendReq.CurrentStock), sendReq.MaterialUnit, utils.FormatFloat(sendReq.SafetyStock), sendReq.MaterialUnit, triggerTime, triggerDate)
+		subject = fmt.Sprintf("[Alert] %s - Insufficient Safety Stock of %s!", sendReq.CompanyName, sendReq.MaterialName)
+	} else {
+		templateUuid = constant.TplWarehouseSafetyStockAlert // 仓库维度
+		messageArgs = fmt.Sprintf(`{"company":"%s","material":"%s","warehouse":"%s","current_stock":"%s %s","safety_stock":"%s %s","time":"%s","date":"%s"}`,
+			sendReq.CompanyName, sendReq.MaterialName, sendReq.WarehouseName, utils.FormatFloat(sendReq.CurrentStock), sendReq.MaterialUnit, utils.FormatFloat(sendReq.SafetyStock), sendReq.MaterialUnit, triggerTime, triggerDate)
+		subject = fmt.Sprintf("[Alert] %s - %s - Insufficient Safety Stock of %s!", sendReq.CompanyName, sendReq.WarehouseName, sendReq.MaterialName)
+	}
+
+	messageUuid, _ := utils.GetID()
+	// 构建发送请求
+	sendMessageReq := &v1.SendMessageReq{
+		MessageUuid:  strconv.FormatUint(messageUuid, 10),
+		TemplateUuid: templateUuid,
+		MessageArgs:  messageArgs,
+		MessageType:  "email",
+		Recipient:    recipient,
+		Subject:      subject,
+		CompanyUuid:  strconv.FormatUint(sendReq.CompanyUuid, 10),
+		OperatorUuid: recipient,
+	}
+
+	// 尝试发送邮件，失败时重试2次（共3次）
+	maxRetries := 2
+	var lastErr error
+	sendSuccess := false
+
+	for i := 0; i <= maxRetries; i++ {
+		if i > 0 {
+			logger.Logger.Info("重试发送库存预警邮件",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.Int("retry_count", i),
+			)
+			time.Sleep(time.Second * 2) // 重试前等待2秒
+		}
+
+		_, err = s.messageSrv.SendMessage(ctx.GetContext(), sendMessageReq)
+		if err == nil {
+			sendSuccess = true
+			logger.Logger.Info("库存预警邮件发送成功",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.String("material_name", sendReq.MaterialName),
+				zap.String("recipient", recipient),
+			)
+			break
+		}
+
+		lastErr = err
+		logger.Logger.Warn("库存预警邮件发送失败",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+			zap.Uint64("material_uuid", sendReq.MaterialUuid),
+			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+			zap.Int("retry_count", i),
+			zap.Error(err),
+		)
+	}
+
+	// 创建或更新预警记录
+	now := uint64(time.Now().Unix())
+	if existingLog == nil {
+		// 创建新记录
+		newLog := &model.MaterialStockAlertLog{
+			CompanyUuid:   sendReq.CompanyUuid,
+			MessageUuid:   messageUuid,
+			MaterialUuid:  sendReq.MaterialUuid,
+			WarehouseUuid: sendReq.WarehouseUuid,
+			AlertType:     alertType,
+			CurrentStock:  sendReq.CurrentStock,
+			SafetyStock:   sendReq.SafetyStock,
+			Recipient:     recipient,
+		}
+
+		if sendSuccess {
+			// 只有发送成功时才设置计数和时间
+			newLog.AlertCount = 1
+			newLog.LastAlertTime = now
+			newLog.SendStatus = model.SendStatusSuccess
+		} else {
+			// 发送失败时计数为0，不设置发送时间，以便重试
+			newLog.AlertCount = 0
+			newLog.LastAlertTime = 0
+			newLog.SendStatus = model.SendStatusFailed
+			if lastErr != nil {
+				newLog.ErrorMessage = lastErr.Error()
+			}
+		}
+
+		err = alertLogRepo.CreateAlertLog(newLog)
+		if err != nil {
+			logger.Logger.Error("创建预警记录失败",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.Error(err),
+			)
+		}
+	} else {
+		// 更新现有记录
+		existingLog.CurrentStock = sendReq.CurrentStock
+		existingLog.SafetyStock = sendReq.SafetyStock
+		existingLog.Recipient = recipient
+		existingLog.MessageUuid = messageUuid
+
+		if sendSuccess {
+			// 只有发送成功时才更新计数和时间
+			existingLog.AlertCount++
+			existingLog.LastAlertTime = now
+			existingLog.SendStatus = model.SendStatusSuccess
+			existingLog.ErrorMessage = ""
+		} else {
+			// 发送失败时不增加计数，不更新发送时间，以便重试
+			existingLog.SendStatus = model.SendStatusFailed
+			if lastErr != nil {
+				existingLog.ErrorMessage = lastErr.Error()
+			}
+		}
+
+		err = alertLogRepo.UpdateAlertLog(existingLog)
+		if err != nil {
+			logger.Logger.Error("更新预警记录失败",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.Error(err),
+			)
+		}
+	}
+}
+
+// getStockAlertRecipient 获取库存预警邮件收件人
+// 从staff表中查询is_super=1的记录，获取user_name字段（邮箱）
+func (s *materialSrv) getStockAlertRecipient(ctx context.Context, companyUuid uint64) string {
+	// 获取数据库连接
+	db := s.dbm.GetDB(companyUuid)
+	staffRepo := repository.NewStaffRepo(db)
+
+	// 查询该公司所有is_super=1的员工
+	staffs := staffRepo.GetStaffs(
+		staffRepo.WhereIsSuper(1),
+	)
+
+	if len(staffs) == 0 {
+		logger.Logger.Warn("未找到超级管理员，无法获取预警邮箱",
+			zap.Uint64("company_uuid", companyUuid),
+		)
+		return ""
+	}
+
+	// 收集所有超级管理员的邮箱（Username字段存储邮箱）
+	var emails []string
+	for _, staff := range staffs {
+		if staff.Username != "" {
+			emails = append(emails, staff.Username)
+		}
+	}
+
+	if len(emails) == 0 {
+		logger.Logger.Warn("超级管理员的邮箱为空",
+			zap.Uint64("company_uuid", companyUuid),
+		)
+		return ""
+	}
+
+	return emails[0]
+}
+
 // checkCompanySafetyStock 检查单个公司的物料安全库存
 func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid uint64) error {
 	// 设置上下文信息
 	ctx.SetCompanyUuid(companyUuid)
 	ctx.SetLog(logger.Logger)
 
-	// 获取公司默认语言
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
-	companySetting := companySettingRepo.Get()
+	company, err := repository.NewCompanyRepo(s.dbm.GetDB(companyUuid)).GetCompanyInfoByUuid(companyUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询公司信息失败")
+	}
+	companySetting := company.CompanySetting
+	if companySetting == nil {
+		return errors.WithMessage(errors.New("公司设置为空"), "公司设置为空")
+	}
+
+	tz := utils.SetTimezone(companySetting.GetTimezone())
+	now := tz.Now()
+
 	defaultLanguage := companySetting.GetDefaultLanguage()
+	companyName := company.Name
 
 	// 检查是否有safety_stock不为空的物品
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(companyUuid))
 	materialList := materialRepo.GetMaterialList(repository.NotDeleted, materialRepo.WithMultiLanguageName(), func(db *gorm.DB) *gorm.DB {
 		return db.Where("safety_stock IS NOT NULL")
+	}, func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Unit")
 	})
 	if len(materialList) == 0 {
 		return nil
@@ -3582,8 +3900,9 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 		materialUuids = append(materialUuids, material.Uuid)
 	}
 
-	// 创建仓库物品repository
+	// 创建仓库物品repository和预警记录repository
 	warehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(companyUuid))
+	alertLogRepo := repository.NewMaterialStockAlertLogRepo(s.dbm.GetDB(companyUuid))
 
 	if businessSetting.SafetyStockType == "1" { // 门店维度
 		// 获取所有物料在非在途仓库中的总库存
@@ -3594,6 +3913,19 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 
 		// 检查每个物料的库存是否低于安全库存
 		for _, material := range materialList {
+			unit := material.Unit
+			var unitName string
+			if unit != nil {
+				unitName = model.NewMultiLanguageName(unit.Name).GetNames().EN
+				if unitName == "" {
+					unitName = model.NewMultiLanguageName(unit.Name).GetNameByLang(defaultLanguage)
+				}
+			}
+			materialName := material.MultiLanguageName.GetNames().EN
+			if materialName == "" {
+				materialName = material.MultiLanguageName.GetNameByLang(defaultLanguage)
+			}
+
 			totalStock := stockMap[material.Uuid] // 如果没有记录，默认为0
 			if material.SafetyStock != nil && totalStock < *material.SafetyStock {
 				// 库存低于安全库存，记录日志
@@ -3605,7 +3937,33 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 					zap.Float64("safety_stock", *material.SafetyStock),
 				)
 
-				// TODO: 可以在这里添加其他处理，如发送通知、创建预警等
+				// 发送库存预警邮件（异步）
+				utils.Go(func() {
+					s.sendStockAlertEmail(
+						ctx.Copy(),
+						model.AlertTypeCompany,
+						&SendParams{
+							CompanyUuid:  companyUuid,
+							CompanyName:  companyName,
+							MaterialUuid: material.Uuid,
+							MaterialName: materialName,
+							CurrentStock: totalStock,
+							SafetyStock:  *material.SafetyStock,
+							MaterialUnit: unitName,
+							TriggerTime:  now,
+						},
+					)
+				})
+			} else if material.SafetyStock != nil && totalStock >= *material.SafetyStock {
+				// 库存已恢复正常，清除预警记录
+				err := alertLogRepo.ClearAlertLog(companyUuid, material.Uuid, 0)
+				if err != nil {
+					logger.Logger.Error("清除预警记录失败",
+						zap.Uint64("company_uuid", companyUuid),
+						zap.Uint64("material_uuid", material.Uuid),
+						zap.Error(err),
+					)
+				}
 			}
 		}
 
@@ -3625,10 +3983,42 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 			stockByWarehouseMap[result.MaterialUuid][result.WarehouseUuid] = result.Stock
 		}
 
+		warehouseNameMap := make(map[uint64]string)
 		// 检查每个物料在每个仓库的库存是否低于安全库存
 		for _, material := range materialList {
+			unit := material.Unit
+			var unitName string
+			if unit != nil {
+				unitName = model.NewMultiLanguageName(unit.Name).GetNames().EN
+				if unitName == "" {
+					unitName = model.NewMultiLanguageName(unit.Name).GetNameByLang(defaultLanguage)
+				}
+			}
+
+			materialName := material.MultiLanguageName.GetNames().EN
+			if materialName == "" {
+				materialName = material.MultiLanguageName.GetNameByLang(defaultLanguage)
+			}
 			warehouseStocks := stockByWarehouseMap[material.Uuid]
 			for warehouseUuid, stock := range warehouseStocks {
+				warehouseName, exists := warehouseNameMap[warehouseUuid]
+				if !exists {
+					var warehouse model.Warehouse
+					err := s.dbm.GetDB(companyUuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Where("uuid = ?", warehouseUuid).Find(&warehouse).Error
+					if err != nil {
+						logger.Logger.Error("查询仓库失败",
+							zap.Uint64("company_uuid", companyUuid),
+							zap.Uint64("warehouse_uuid", warehouseUuid),
+							zap.Error(err),
+						)
+						continue
+					}
+					warehouseName = warehouse.MultiLanguageName.GetNames().EN
+					if warehouseName == "" {
+						warehouseName = warehouse.MultiLanguageName.GetNameByLang(defaultLanguage)
+					}
+					warehouseNameMap[warehouseUuid] = warehouseName
+				}
 				if material.SafetyStock != nil && stock < *material.SafetyStock {
 					// 库存低于安全库存，记录日志
 					logger.Logger.Warn("物料仓库库存低于安全库存",
@@ -3639,8 +4029,36 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 						zap.Float64("current_stock", stock),
 						zap.Float64("safety_stock", *material.SafetyStock),
 					)
-
-					// TODO: 可以在这里添加其他处理，如发送通知、创建预警等
+					// 发送库存预警邮件（异步）
+					utils.Go(func() {
+						s.sendStockAlertEmail(
+							ctx.Copy(),
+							model.AlertTypeWarehouse,
+							&SendParams{
+								CompanyUuid:   companyUuid,
+								CompanyName:   companyName,
+								MaterialUuid:  material.Uuid,
+								MaterialName:  materialName,
+								WarehouseUuid: warehouseUuid,
+								WarehouseName: warehouseName,
+								CurrentStock:  stock,
+								SafetyStock:   *material.SafetyStock,
+								MaterialUnit:  unitName,
+								TriggerTime:   now,
+							},
+						)
+					})
+				} else if material.SafetyStock != nil && stock >= *material.SafetyStock {
+					// 库存已恢复正常，清除预警记录
+					err := alertLogRepo.ClearAlertLog(companyUuid, material.Uuid, warehouseUuid)
+					if err != nil {
+						logger.Logger.Error("清除预警记录失败",
+							zap.Uint64("company_uuid", companyUuid),
+							zap.Uint64("material_uuid", material.Uuid),
+							zap.Uint64("warehouse_uuid", warehouseUuid),
+							zap.Error(err),
+						)
+					}
 				}
 			}
 		}

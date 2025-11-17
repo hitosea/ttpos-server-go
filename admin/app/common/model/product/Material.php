@@ -285,11 +285,6 @@ class Material extends BaseModel
             $this->errorData = $msg;
             return false;
         }
-        // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, 0)) {
-            $this->error = '商品名称已存在';
-            return false;
-        }
         // 判断图片id是否存在
         $images = isset($data['image']) ? $data['image'] : [];
         $imageIds = array_map(function ($image) {
@@ -378,11 +373,6 @@ class Material extends BaseModel
         if ($status === true) {
             $this->error = '商品名称长度不能超过150个字符';
             $this->errorData = $msg;
-            return false;
-        }
-        // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, 0, $this['product_id'] ?? 0)) {
-            $this->error = '商品名称已存在';
             return false;
         }
         // 判断图片id是否存在

@@ -579,11 +579,13 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	}
 
 	if memberPointsChanged {
-		go s.memberSrv.HandleMemberUpgrade(companyUuid, member.Uuid)
+		utils.Go(func() {
+			s.memberSrv.HandleMemberUpgrade(companyUuid, member.Uuid)
+		})
 	}
 
 	// 打印充值单
-	go func() {
+	utils.Go(func() {
 		order := rechargeOrderRepo.GetRechargeOrder(
 			rechargeOrderRepo.WithMember(),
 			rechargeOrderRepo.WithStaff(),
@@ -595,7 +597,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		if err != nil {
 			logger.Logger.Error("打印充值单失败", zap.Error(err))
 		}
-	}()
+	})
 
 	// 发送结账短信
 	{
@@ -604,7 +606,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		if err != nil {
 			ctx.Log().Info("停止发送短信（充值），获取会员失败", zap.Error(errors.WithMessage(err)))
 		} else {
-			go func() {
+			utils.Go(func() {
 				if member != nil {
 					smsReq := sms.MemberRechargeRequest{
 						Company:       ctx.GetCompany().Name,
@@ -620,10 +622,10 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 						ctx.Log().Info("发送充值短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
 					}
 				}
-			}()
+			})
 		}
 	}
-	go func() {
+	utils.Go(func() {
 		// 发布“会员余额变动”事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
@@ -642,16 +644,16 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				OperatorUuid: int64(ctx.GetStaffUuid()),
 			},
 		})
-	}()
+	})
 	// 发布“统计”事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
 			BasePayload: event.BasePayload{ // 统计
 				Ctx: ctx,
 			},
 			MemberRechargeOrderUuid: order.Uuid,
 		})
-	}()
+	})
 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
 }
@@ -1526,7 +1528,9 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 	}
 
 	if memberPointsChanged {
-		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
+		utils.Go(func() {
+			s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
+		})
 	}
 
 	// 发送短信
@@ -1536,7 +1540,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		if err != nil {
 			ctx.Log().Info("停止发送短信（充值反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
 		} else {
-			go func() {
+			utils.Go(func() {
 				if member != nil && member.Phone != "" {
 					smsReq := sms.MemberRechargeRefundRequest{
 						Company:        ctx.GetCompany().Name,
@@ -1550,12 +1554,12 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 						ctx.Log().Info("发送充值反结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
 					}
 				}
-			}()
+			})
 		}
 	}
 
 	// 发布“统计”事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
 			BasePayload: event.BasePayload{ // 统计
 				Ctx: ctx,
@@ -1563,9 +1567,9 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			MemberRechargeOrderUuid: order.Uuid,
 			OnlyDelete:              true,
 		})
-	}()
+	})
 
-	go func() {
+	utils.Go(func() {
 		// 发布“会员余额变动”事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
@@ -1584,7 +1588,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				OperatorUuid: int64(ctx.GetStaffUuid()),
 			},
 		})
-	}()
+	})
 
 	return nil
 }
@@ -1857,7 +1861,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 					AccountName:           returnOrder.AccountName,
 				}
 				if lianLianPayCount > 1 {
-					go func() {
+					utils.Go(func() {
 						payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
 						if err != nil {
 							returnOrderAmount.RefundStatus = 2
@@ -1874,7 +1878,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 							fmt.Println("更新退款状态失败", err)
 							logger.Logger.Error("更新退款状态失败", zap.Error(err))
 						}
-					}()
+					})
 				} else {
 					payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
 					if err != nil {
@@ -1939,7 +1943,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 
 	// 发送短信
 	if deductionMoney > 0 {
-		go func() {
+		utils.Go(func() {
 			// 获取最新的会员信息
 			member, err := repository.NewMemberRepo(db).GetMemberByUuid(order.Member.Uuid)
 			if err != nil {
@@ -1960,18 +1964,18 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 					}
 				}
 			}
-		}()
+		})
 	}
 
 	// 发布“统计”事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
 			BasePayload: event.BasePayload{ // 统计
 				Ctx: ctx,
 			},
 			MemberRechargeOrderUuid: order.Uuid,
 		})
-	}()
+	})
 
 	if isExistCashPay {
 		return errors.NewWithCode(constant.CodeSuccessOpenCashBox, "请求成功")

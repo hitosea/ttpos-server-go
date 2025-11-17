@@ -313,7 +313,7 @@ func (s *loginSrv) VisitorLogin(ctx context.Context, loginReq req.VisitorLoginRe
 			return nil, errors.WithMessage(err, "创建游客失败")
 		}
 
-		if err := saas.NewMemberRepo(s.dbm.GetDB(0)).CreateMember(&saas_model.Member{
+		if err := saas.NewMemberRepo(s.dbm.GetDB(constant.DefaultDB)).CreateMember(&saas_model.Member{
 			CompanyUuid: companyUuid,
 			Nickname:    nickname,
 			IsVisitor:   true,

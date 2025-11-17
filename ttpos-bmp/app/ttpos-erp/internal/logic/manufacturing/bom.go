@@ -78,9 +78,6 @@ func (s *sBom) GetBom(ctx context.Context, req *manufacturing.GetBomReq) (res *e
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析BOM信息响应失败")
-	}
 	bomInfo := &erp.Bom{}
 	gconv.Structs(j.GetJson("data"), &bomInfo)
 

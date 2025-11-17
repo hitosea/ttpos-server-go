@@ -55,4 +55,7 @@ const (
 	KdsModeDefault     uint = 0 // 默认，传菜模式
 	KdsModeMake        uint = 1 // 制作模式
 	KdsModeMakeAndSend uint = 2 // 制作+传菜模式
+
+	ReqModeSend = KdsModeDefault // 请求参数,传菜模式
+	ReqModeMake = KdsModeMake    // 请求参数,制作模式
 )

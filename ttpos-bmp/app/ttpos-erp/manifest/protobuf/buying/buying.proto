@@ -81,6 +81,7 @@ message ListSuppliersReq {
   int32 page_no = 9; // 页码，从1开始
   int32 page_size = 10; // 每页数量
   string sub_company_abbr = 11; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
+  string represents_company = 12; // 代表公司，可选
 }
 
 // 获取供应商列表响应消息
@@ -133,8 +134,10 @@ message PurchaseOrderInfo {
 message PurchaseOrderItem {
   string item_code = 1; // 物品编码,必填
   string item_name = 2; // 物品名称
-  string stock_uom = 3; // 物品单位
+  string stock_uom = 3; // 物品库存单位，可选
   double qty = 4; // 物品数量,必填
+  string uom = 5; //物品单位
+  string warehouse =6 ; //收货仓库，可选
 }
 
 
@@ -146,8 +149,9 @@ message PurchaseReceiptInfo {
 message PurchaseReceiptItem {
   string item_code = 1; // 物品编码,必填
   string item_name = 2; // 物品名称
-  string stock_uom = 3; // 物品单位
-  double qty = 4; // 物品数量,必填
+  string stock_uom = 3; // 物品库存单位
+  string uom = 4; // 物品收货单位
+  double qty = 5; // 物品数量,必填
 }
 
 message SavePurchaseReceiptReq {

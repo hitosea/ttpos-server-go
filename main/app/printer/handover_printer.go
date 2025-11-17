@@ -103,6 +103,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 		PrintingTime:      printerLogData.PrintingTime,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 		TradeNo:           printerLogData.GetTradeNo(p.ctx.GetCompanyUuid()),
+		PrintChunkSize:    printerLogData.GetPrintChunkSize(),
 	}, nil
 }
 
@@ -174,7 +175,11 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	/* *
 	 * 芯烨打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+	if slices.Contains([]string{
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCashierImmin,
+	}, printerType) {
 		return template.NewHandoverXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			tmp,

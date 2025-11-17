@@ -24,6 +24,7 @@ type MessageRecordColumns struct {
 	Id           string // 消息ID
 	Uuid         string // 消息UUID
 	TemplateId   string // 模板ID
+	TemplateUuid string // 模板UUID
 	MessageType  string // 消息类型(email/sms)
 	Recipient    string // 接收人
 	Subject      string // 消息主题
@@ -45,6 +46,7 @@ var messageRecordColumns = MessageRecordColumns{
 	Id:           "id",
 	Uuid:         "uuid",
 	TemplateId:   "template_id",
+	TemplateUuid: "template_uuid",
 	MessageType:  "message_type",
 	Recipient:    "recipient",
 	Subject:      "subject",

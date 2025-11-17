@@ -15,7 +15,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
-	"ttpos-server-go/app/printer/pkg/template_json"
+	template_info "ttpos-server-go/app/printer/pkg/template"
 	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -38,7 +38,7 @@ type IPrinterSrv interface {
 	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error                                              // 编辑打印机定制
 	PreviewPrinterCustomize(ctx context.Context, previewPrinterCustomizeReq req.PreviewPrinterCustomizeReq) (resp.PreviewPrinterCustomizeResp, error) // 预览打印机定制
 	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                           // 删除打印机定制
-	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error                                        // 创建打印机定制
+	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) (resp.CreatePrinterCustomizeResp, error)     // 创建打印机定制
 	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                              // 使用打印机定制
 	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
 }
@@ -46,6 +46,11 @@ type IPrinterSrv interface {
 const (
 	DefaultTemplateName = "门店-默认模版"
 	TemplatePngPath     = "app/printer/pkg/text/tmp/printer/complex_template_test.png"
+)
+
+const (
+	TemplateNameBilling    = "结账单"
+	TemplateNamePreBilling = "预结账单"
 )
 
 type printerSrv struct {
@@ -287,31 +292,31 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 		GroupType: 1,
 		List:      make([]resp.PrintTemplate, 0),
 	})
-	groups = append(groups, resp.PrintTemplateGroup{
-		LocaleName: dto.LocaleResponse{
-			ZH:   "厨房小票",
-			EN:   "Kitchen Menu",
-			TH:   "เมนูอาหาร",
-			JA:   "キッチンメニュー",
-			KO:   "주방 메뉴",
-			MY:   "Resipi Makanan",
-			TR:   "Yemek Menüsü",
-			SV:   "Maträtmeny",
-			ZHTW: "廚房菜單",
-		},
-		GroupType: 2,
-		List:      make([]resp.PrintTemplate, 0),
-	})
+	// groups = append(groups, resp.PrintTemplateGroup{
+	// 	LocaleName: dto.LocaleResponse{
+	// 		ZH:   "厨房小票",
+	// 		EN:   "Kitchen Menu",
+	// 		TH:   "เมนูอาหาร",
+	// 		JA:   "キッチンメニュー",
+	// 		KO:   "주방 메뉴",
+	// 		MY:   "Resipi Makanan",
+	// 		TR:   "Yemek Menüsü",
+	// 		SV:   "Maträtmeny",
+	// 		ZHTW: "廚房菜單",
+	// 	},
+	// 	GroupType: 2,
+	// 	List:      make([]resp.PrintTemplate, 0),
+	// })
 
 	// 模版ID列表
 	templateOrders := []uint64{
-		constant.PrinterTemplatePreBilling,    // 预结账单
-		constant.PrinterTemplateBilling,       // 结账单
-		constant.PrinterTemplateInvoice,       // 发票
-		constant.PrinterTemplateRecharge,      // 充值单
-		constant.PrinterTemplateBusiness,      // 营业数据
-		constant.PrinterTemplateHandoverSheet, // 交班单
-		constant.PrinterTemplateTakeoutOrder,  // 外送单
+		constant.PrinterTemplatePreBilling, // 预结账单
+		constant.PrinterTemplateBilling,    // 结账单
+		// constant.PrinterTemplateInvoice,       // 发票
+		// constant.PrinterTemplateRecharge,      // 充值单
+		// constant.PrinterTemplateBusiness,      // 营业数据
+		// constant.PrinterTemplateHandoverSheet, // 交班单
+		// constant.PrinterTemplateTakeoutOrder,  // 外送单
 	}
 	templateKitchen := []uint64{
 		constant.PrinterTemplateOneDishOneMenu, // 一菜一单
@@ -414,7 +419,7 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 // GetTestData 获取测试数据
 func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[string]interface{}, error) {
 	// 从JSON文件读取测试数据
-	testDataBytes, err := template_json.GetTemplateJsonData(templateName + "_data.json")
+	testDataBytes, err := template_info.GetTemplateDataJsonData(templateName)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("读取测试数据文件失败"), err.Error())
 	}
@@ -422,7 +427,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 	if err := json.Unmarshal(testDataBytes, &testData); err != nil {
 		return nil, errors.WithMessage(errors.New("解析测试数据JSON失败"), err.Error())
 	}
-	if testData["store"] != nil && testData["store"].(map[string]interface{})["logo"] != nil {
+	if testData["store"] != nil {
 		settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
 		storeSetting, err := settingSrv.GetStoreSetting(ctx)
 		if err != nil {
@@ -436,9 +441,68 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 		if err != nil {
 			return nil, errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
 		}
-		logoAddr := template.NewPrinterTemplate(ctx, settingSrv, &storeSetting, &printerSetting, &currencySetting, false, ctx.GetLanguage()).GetLogoAddr()
-		if logoAddr != "" {
-			testData["store"].(map[string]interface{})["logo"] = logoAddr
+		if testData["store"].(map[string]interface{})["logo"] != nil {
+			logoAddr := template.NewPrinterTemplate(ctx, settingSrv, &storeSetting, &printerSetting, &currencySetting, false, ctx.GetLanguage()).GetLogoAddr()
+			if logoAddr != "" {
+				testData["store"].(map[string]interface{})["logo"] = logoAddr
+			}
+		}
+		if testData["store"].(map[string]interface{})["name"] != nil {
+			testData["store"].(map[string]interface{})["name"] = i18n.Translate(ctx.GetLanguage(), "店铺名称")
+		}
+		if testData["store"].(map[string]interface{})["address"] != nil {
+			testData["store"].(map[string]interface{})["address"] = i18n.Translate(ctx.GetLanguage(), "商家地址商家地址商家地址商家地址商家地址")
+		}
+		if testData["store"].(map[string]interface{})["company"] != nil {
+			testData["store"].(map[string]interface{})["company"] = i18n.Translate(ctx.GetLanguage(), "公司名称公司名称公司名称公司名称公司名称公司名称公司名称")
+		}
+		if testData["store"].(map[string]interface{})["company_addr"] != nil {
+			testData["store"].(map[string]interface{})["company_addr"] = i18n.Translate(ctx.GetLanguage(), "公司地址公司地址公司地址公司地址")
+		}
+	}
+	if testData["order"] != nil {
+		if testData["order"].(map[string]interface{})["remark"] != nil {
+			testData["order"].(map[string]interface{})["remark"] = i18n.Translate(ctx.GetLanguage(), "开桌备注")
+		}
+		if testData["order"].(map[string]interface{})["products"] != nil {
+			switch products := testData["order"].(map[string]interface{})["products"].(type) {
+			case []interface{}:
+				for _, p := range products {
+					product, ok := p.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					if v, ok := product["attrs"].(string); ok {
+						product["attrs"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["attr"].(string); ok {
+						product["attr"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["sauce_names"].(string); ok {
+						product["sauce_names"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["flavor_name"].(string); ok {
+						product["flavor_name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["name"].(string); ok {
+						product["name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+				}
+			}
+		}
+		if testData["order"].(map[string]interface{})["payment_methods"] != nil {
+			switch methods := testData["order"].(map[string]interface{})["payment_methods"].(type) {
+			case []interface{}:
+				for _, m := range methods {
+					paymentMethod, ok := m.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					if v, ok := paymentMethod["name"].(string); ok {
+						paymentMethod["name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+				}
+			}
 		}
 	}
 	return testData, nil
@@ -446,7 +510,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 
 // GetTemplateJSONStr 获取模板JSON字符串
 func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string) (string, error) {
-	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_tmp.json")
+	templateJSON, err := template_info.GetTemplateJsonData(templateName)
 	if err != nil {
 		return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 	}
@@ -455,7 +519,7 @@ func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string
 
 // GetTemplateConfigInfo 获取模板配置信息
 func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName string, isAdv bool) (string, error) {
-	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_config.json")
+	templateJSON, err := template_info.GetTemplateConfigJsonData(templateName)
 	if err != nil {
 		return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 	}
@@ -580,13 +644,6 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 		if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
 			return errors.New("未开启高级模版打印")
 		}
-		exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(customizeInfo.Uuid, editPrinterCustomizeReq.Name)
-		if err != nil {
-			return errors.WithMessage(errors.New("检查打印机定制名称是否存在失败"), err.Error())
-		}
-		if exists {
-			return errors.New("高级模版名称已存在")
-		}
 	}
 	//
 	testData, err := s.GetTestData(ctx, template.Name)
@@ -675,29 +732,34 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, customizeUuid u
 }
 
 // CreatePrinterCustomize 创建打印机定制
-func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error {
+func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) (resp.CreatePrinterCustomizeResp, error) {
 	db := ctx.GetDB()
 	// 检查是否开启高级模版打印
 	if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
-		return errors.New("未开启高级模版打印")
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("未开启高级模版打印"))
 	}
 	// 检查模板是否存在
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(createPrinterCustomizeReq.TemplateId)
 	if err != nil {
-		return errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
 	}
 	// 创建打印机定制
+	customizeUuid, err := utils.GetID()
+	if err != nil {
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("生成雪花ID失败"), err.Error())
+	}
 	err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
+		BaseModel:  model.BaseModel{Uuid: customizeUuid},
 		Name:       createPrinterCustomizeReq.Name,
 		Data:       createPrinterCustomizeReq.Data,
 		TemplateId: template.ID,
 		IsAdv:      1,
 	})
 	if err != nil {
-		return errors.WithMessage(errors.New("创建打印机定制失败"), err.Error())
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("创建打印机定制失败"), err.Error())
 	}
-	return nil
+	return resp.CreatePrinterCustomizeResp{CustomizeUuid: customizeUuid}, nil
 }
 
 // UsePrinterCustomize 使用打印机定制
@@ -847,11 +909,10 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 								dataRows = make([]interface{}, 0)
 							}
 
-							// 将每个 template block 作为单独的数组添加到 data_rows
-							// 格式：data_rows = [[block1], [block2], [block3]]
-							for _, templateBlock := range templateBlocks {
-								dataRows = append(dataRows, []interface{}{templateBlock})
-							}
+							// templateBlocks 是二维数组：[[第1行blocks], [第2行blocks]]
+							// 直接展开添加到 data_rows，保持每一行作为一个数组
+							// 结果：data_rows = [[第1行blocks], [第2行blocks]]
+							dataRows = append(dataRows, templateBlocks...)
 
 							groupBlockMap["data_rows"] = dataRows
 						}
@@ -913,33 +974,81 @@ func (s *printerSrv) extractBlocksRecursive(rows []interface{}, blocksByGroupBlo
 			continue
 		}
 
-		// 遍历每行的blocks
+		// 检查当前行是否所有blocks都有相同的 group_block_id
+		var currentGroupId string
+		allSameGroup := true
+		blocksInRow := make([]interface{}, 0)
+
+		// 第一遍遍历：检查是否同组，并收集blocks
 		for _, blockInterface := range rowArray {
 			block, ok := blockInterface.(map[string]interface{})
 			if !ok {
-				continue
+				allSameGroup = false
+				break
 			}
 
 			if block["block_type"] == "blank_line" {
 				continue
 			}
 
-			// 获取 group_block_id（这是配置文件中 block_id 的值）
 			groupBlockId, exists := block["group_block_id"].(string)
 			if !exists || groupBlockId == "" {
-				// 如果没有 group_block_id，尝试递归检查是否有嵌套的 rows
+				allSameGroup = false
+				break
+			}
+
+			if currentGroupId == "" {
+				currentGroupId = groupBlockId
+			} else if currentGroupId != groupBlockId {
+				allSameGroup = false
+				break
+			}
+
+			blocksInRow = append(blocksInRow, block)
+		}
+
+		// 如果当前行所有blocks都是同一个 group_block_id，将这一行作为一个数组添加
+		if allSameGroup && currentGroupId != "" && len(blocksInRow) > 0 {
+			// 将当前行的blocks作为一个独立的数组添加到该组
+			// 格式：blocksByGroupBlockId["commodity"] = [[第1行blocks], [第2行blocks]]
+			blocksByGroupBlockId[currentGroupId] = append(blocksByGroupBlockId[currentGroupId], blocksInRow)
+
+			// 处理嵌套的 rows
+			for _, blockInterface := range rowArray {
+				block, _ := blockInterface.(map[string]interface{})
 				if nestedRows, ok := block["rows"].([]interface{}); ok {
 					s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
 				}
-				continue
 			}
+		} else {
+			// 如果不是同一组，按原来的逻辑单独处理每个block
+			for _, blockInterface := range rowArray {
+				block, ok := blockInterface.(map[string]interface{})
+				if !ok {
+					continue
+				}
 
-			// 将 block 添加到对应的 group_block_id 数组中
-			blocksByGroupBlockId[groupBlockId] = append(blocksByGroupBlockId[groupBlockId], block)
+				if block["block_type"] == "blank_line" {
+					continue
+				}
 
-			// 如果有嵌套的 rows，也递归处理
-			if nestedRows, ok := block["rows"].([]interface{}); ok {
-				s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+				// 获取 group_block_id（这是配置文件中 block_id 的值）
+				groupBlockId, exists := block["group_block_id"].(string)
+				if !exists || groupBlockId == "" {
+					// 如果没有 group_block_id，尝试递归检查是否有嵌套的 rows
+					if nestedRows, ok := block["rows"].([]interface{}); ok {
+						s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+					}
+					continue
+				}
+
+				// 单个block也作为一个数组添加（保持格式统一）
+				blocksByGroupBlockId[groupBlockId] = append(blocksByGroupBlockId[groupBlockId], []interface{}{block})
+
+				// 如果有嵌套的 rows，也递归处理
+				if nestedRows, ok := block["rows"].([]interface{}); ok {
+					s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+				}
 			}
 		}
 	}

@@ -127,21 +127,27 @@ func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
 		if model.DeskUuid > 0 {
 			// 推送订单更新
-			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
-				"sale_bill_uuid": model.Uuid,
-				"desk_uuid":      model.DeskUuid,
-				"update_time":    model.BaseModel.UpdateTime,
+			utils.Go(func() {
+				websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+					"sale_bill_uuid": model.Uuid,
+					"desk_uuid":      model.DeskUuid,
+					"update_time":    model.BaseModel.UpdateTime,
+				})
 			})
 			// 推送桌台更新
-			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
-				"desk_uuid":   model.DeskUuid,
-				"update_time": model.BaseModel.UpdateTime,
+			utils.Go(func() {
+				websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
+					"desk_uuid":   model.DeskUuid,
+					"update_time": model.BaseModel.UpdateTime,
+				})
 			})
 		} else if model.MemberSaleOrderUuid == 0 {
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
-				"sale_bill_uuid": model.Uuid,
-				"desk_uuid":      model.DeskUuid,
-				"update_time":    model.BaseModel.UpdateTime,
+			utils.Go(func() {
+				websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+					"sale_bill_uuid": model.Uuid,
+					"desk_uuid":      model.DeskUuid,
+					"update_time":    model.BaseModel.UpdateTime,
+				})
 			})
 		}
 	}
@@ -156,9 +162,15 @@ func (model *CustomerCall) AfterCreate(tx *gorm.DB) (err error) {
 			"desk_uuid":          model.DeskUuid,
 			"update_time":        model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
-		go websocket.PushClient(companyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
-		go websocket.PushClient(companyUuid, websocket.SourceKitchen, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		})
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		})
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceKitchen, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		})
 	}
 	return nil
 }
@@ -169,16 +181,18 @@ func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
 		return
 	}
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(
-			companyUuid,
-			websocket.SourceCashier,
-			utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, websocket.SourceAll),
-			websocket.PRINT_DATA,
-			map[string]interface{}{
-				"print_log_uuid": model.Uuid,
-				"update_time":    model.BaseModel.UpdateTime,
-			},
-		)
+		utils.Go(func() {
+			websocket.PushClient(
+				companyUuid,
+				websocket.SourceCashier,
+				utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, websocket.SourceAll),
+				websocket.PRINT_DATA,
+				map[string]interface{}{
+					"print_log_uuid": model.Uuid,
+					"update_time":    model.BaseModel.UpdateTime,
+				},
+			)
+		})
 	}
 	return nil
 }
@@ -192,8 +206,12 @@ func (model *H5Order) AfterCreate(tx *gorm.DB) (err error) {
 			"desk_uuid":          model.DeskUuid,
 			"update_time":        model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
+		})
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		})
 	}
 	return nil
 }
@@ -206,8 +224,12 @@ func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
 			"desk_uuid":     model.DeskUuid,
 			"update_time":   model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
+		})
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		})
 	}
 	return nil
 }
@@ -219,7 +241,9 @@ func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
 			"desk_uuid":   model.BaseModel.Uuid,
 			"update_time": model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
+		})
 	}
 	return nil
 }
@@ -233,17 +257,19 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 
 	// 如果订单状态大于待商家接单，则推送呼叫消息
 	if model.Status > constant.MemberSaleOrderStatusPendingPayment {
-		go websocket.PushClient(
-			companyUuid,
-			websocket.SourceCashier,
-			websocket.SourceAll,
-			websocket.UPDATE_MEMBER_SALE_ORDER,
-			map[string]interface{}{
-				"member_sale_order_uuid": model.BaseModel.Uuid,
-				"status":                 model.Status,
-				"update_time":            model.BaseModel.UpdateTime,
-			},
-		)
+		utils.Go(func() {
+			websocket.PushClient(
+				companyUuid,
+				websocket.SourceCashier,
+				websocket.SourceAll,
+				websocket.UPDATE_MEMBER_SALE_ORDER,
+				map[string]interface{}{
+					"member_sale_order_uuid": model.BaseModel.Uuid,
+					"status":                 model.Status,
+					"update_time":            model.BaseModel.UpdateTime,
+				},
+			)
+		})
 	}
 
 	// 只有以下状态的订单才需要推送websocket消息
@@ -253,16 +279,18 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 		constant.MemberSaleOrderStatusPendingRiderPickup,
 		constant.MemberSaleOrderStatusCancelled,
 	}, model.Status) {
-		go websocket.PushClient(
-			companyUuid,
-			websocket.SourceCashier,
-			websocket.SourceAll,
-			websocket.CUSTOMER_CALL,
-			map[string]interface{}{
-				"status":      model.Status,
-				"update_time": model.BaseModel.UpdateTime,
-			},
-		)
+		utils.Go(func() {
+			websocket.PushClient(
+				companyUuid,
+				websocket.SourceCashier,
+				websocket.SourceAll,
+				websocket.CUSTOMER_CALL,
+				map[string]interface{}{
+					"status":      model.Status,
+					"update_time": model.BaseModel.UpdateTime,
+				},
+			)
+		})
 	}
 
 	return nil
@@ -276,7 +304,9 @@ func (model *ProductPackage) AfterUpdate(tx *gorm.DB) (err error) {
 			"type":         "update",
 			"update_time":  model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, data)
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, data)
+		})
 	}
 	return nil
 }
@@ -289,7 +319,9 @@ func (model *ProductCategory) AfterUpdate(tx *gorm.DB) (err error) {
 			"type":          "update",
 			"update_time":   model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CATEGORY, data)
+		utils.Go(func() {
+			websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CATEGORY, data)
+		})
 	}
 	return nil
 }

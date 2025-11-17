@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/shopspring/decimal"
@@ -287,10 +288,12 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					return errors.WithMessage(err, "更新账单失败")
 				}
 			} else {
-				go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
-					"sale_bill_uuid": saleBill.Uuid,
-					"desk_uuid":      saleBill.DeskUuid,
-					"update_time":    saleBill.UpdateTime,
+				utils.Go(func() {
+					websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+						"sale_bill_uuid": saleBill.Uuid,
+						"desk_uuid":      saleBill.DeskUuid,
+						"update_time":    saleBill.UpdateTime,
+					})
 				})
 			}
 
@@ -354,36 +357,40 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 
 		// 发起“送厨”操作的事件
-		go s.bus.PublishSentCookingEvent(event.SentCookingPayload{
-			BasePayload: event.BasePayload{ // 送厨
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  saleBill.Uuid,
-				SaleOrderUuid: saleOrderUuid,
-				H5OrderUuid:   h5OrderUuid,
-				OperatorUuid:  int64(ctx.GetStaffUuid()),
-			},
-			Products: func() event.Products {
-				products := make(event.Products, 0)
-				for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
-					// 套餐子商品不显示送厨记录
-					if unCookingSaleOrderProduct.IsPackageSubProduct() {
-						continue
+		utils.Go(func() {
+			s.bus.PublishSentCookingEvent(event.SentCookingPayload{
+				BasePayload: event.BasePayload{ // 送厨
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  saleBill.Uuid,
+					SaleOrderUuid: saleOrderUuid,
+					H5OrderUuid:   h5OrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				Products: func() event.Products {
+					products := make(event.Products, 0)
+					for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+						// 套餐子商品不显示送厨记录
+						if unCookingSaleOrderProduct.IsPackageSubProduct() {
+							continue
+						}
+						products = append(products, s.convertToEventOrderProduct(
+							unCookingSaleOrderProduct,
+							saleBill,
+							saleBill.GetSaleOrder(saleOrderUuid),
+						))
 					}
-					products = append(products, s.convertToEventOrderProduct(
-						unCookingSaleOrderProduct,
-						saleBill,
-						saleBill.GetSaleOrder(saleOrderUuid),
-					))
-				}
-				return products
-			}(),
+					return products
+				}(),
+			})
 		})
 
 		// 送厨成功后，推送更新订单
-		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
-			"update_time": time.Now().Unix(),
+		utils.Go(func() {
+			websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+				"update_time": time.Now().Unix(),
+			})
 		})
 	}
 	return nil, nil
@@ -677,6 +684,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 				params := req.ProductParams{
 					FlavorProductBomUuid:            subProductParam.EditProductReq.FlavorUuid,
 					Num:                             subProductParam.Num,
+					UnitNum:                         subProductParam.UnitNum,
 					ProductPackageAttributeUuidList: subProductParam.EditProductReq.AttributeUuidList,
 					ProductPackageGroupUuid:         subProductParam.ProductPackageGroupUuid,
 					Operation:                       "add",

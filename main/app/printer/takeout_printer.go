@@ -117,6 +117,7 @@ func (p *PrinterRepoImpl) PrintingTakeoutOrder(
 		PrintingTime:      printerLogData.PrintingTime,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 		TradeNo:           printerLogData.GetTradeNo(p.ctx.GetCompanyUuid()),
+		PrintChunkSize:    printerLogData.GetPrintChunkSize(),
 	}, nil
 }
 
@@ -178,7 +179,11 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	/* *
 	 * 芯烨打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
+	if slices.Contains([]string{
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCashierImmin,
+	}, settingPrinterInfo.PrinterType) {
 		return template.NewTakeoutOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			tmp,

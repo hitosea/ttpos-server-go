@@ -189,8 +189,9 @@
 
   // 删除单个
   const deleteClick = async (id) => {
+
     try {
-      await proxy.$ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+      await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
         type: 'warning',
       });
 

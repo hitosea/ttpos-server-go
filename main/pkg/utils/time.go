@@ -352,3 +352,16 @@ func IsTimeInRange(targetTime, startTime, endTime string) (bool, error) {
 	// 判断目标时间是否在范围内
 	return target.After(start.Add(-time.Minute)) && target.Before(end.Add(time.Minute)), nil
 }
+
+// 将整数100转为1min40s的格式
+func FormatIntToTime(seconds int64) string {
+	minutes := seconds / 60
+	remainingSeconds := seconds % 60
+	if minutes == 0 {
+		return fmt.Sprintf("%ds", remainingSeconds)
+	}
+	if remainingSeconds == 0 {
+		return fmt.Sprintf("%dmin", minutes)
+	}
+	return fmt.Sprintf("%dmin%ds", minutes, remainingSeconds)
+}

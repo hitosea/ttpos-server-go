@@ -168,7 +168,7 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
 					// 如果材料被禁用，则跳过，不扣减库存
-					if relatedMaterial.Material.Status == false {
+					if relatedMaterial.Material == nil || relatedMaterial.Material.Status == false {
 						continue
 					}
 					uom := relatedMaterial.BaseUnitUom
@@ -1540,6 +1540,8 @@ type DefaultSaleOrderProduct struct {
 	Attribute               []Attribute
 	IsAcceptOrder           uint    // 是否接单
 	Num                     float64 // 数量
+	UnitNum                 float64 // 单位数量,套餐子商品
+	IsTabletAddAndCooking   bool    // 是否是平台的加购并送厨
 	NumType                 uint    // 数量类型
 	Remark                  string  // 备注
 	PackageUuid             uint64  // 套餐uuid
@@ -1598,7 +1600,10 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	}
 	// 套餐子商品，设置单位数量
 	if def.ProductType == constant.ProductTypePackageSubProduct {
-		product.UnitNum = def.Num
+		product.UnitNum = def.Num // 直接加购时num和unitNum是一样的,由于历史原因在该场景下unitNum未传值,故用num替代
+	}
+	if def.ProductType == constant.ProductTypePackageSubProduct && def.IsTabletAddAndCooking { // 如果是平板的加购和送厨的话,unitNum和num不一样
+		product.UnitNum = def.UnitNum
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购

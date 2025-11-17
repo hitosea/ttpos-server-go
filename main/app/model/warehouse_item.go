@@ -12,4 +12,5 @@ type WarehouseItem struct {
 
 	// 关联模型
 	Warehouse *Warehouse `gorm:"foreignKey:WarehouseUuid;references:Uuid" json:"warehouse,omitempty"`
+	Material  *Material  `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 }

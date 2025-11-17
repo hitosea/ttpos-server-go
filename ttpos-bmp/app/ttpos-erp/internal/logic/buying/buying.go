@@ -7,6 +7,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
+	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -38,9 +39,7 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
+
 	purchaseOrder := &erp.PurchaseOrder{}
 	j.GetJson("data").Scan(purchaseOrder)
 	//修改货币类型
@@ -98,11 +97,8 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 	salesOrder := &erp.SaleOrder{}
-	j.GetJson("data").Scan(salesOrder)
+	j.GetJson("data").Scan(&salesOrder)
 	// 发货时间
 	salesOrder.DeliveryDate = req.DeliveryDate
 	for _, item := range salesOrder.Items {
@@ -144,7 +140,7 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 
 	// 解析响应数据
 	j = resp
-	j.GetJson("data").Scan(salesOrder)
+	j.GetJson("data").Scan(&salesOrder)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
@@ -167,9 +163,7 @@ func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *d
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析发货单响应失败")
-	}
+
 	deliveryNote := &erp.DeliveryNote{}
 	j.GetJson("data").Scan(&deliveryNote)
 
@@ -204,9 +198,6 @@ func (*sBuying) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrd
 	purchaseOrder := &erp.PurchaseOrder{}
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 	j.GetJson("data").Scan(purchaseOrder)
 	return purchaseOrder, nil
 }
@@ -225,25 +216,39 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 
 	receipt := &erp.PurchaseReceipt{}
-	j.GetJson("data").Scan(receipt)
+	j.GetJson("data").Scan(&receipt)
 
 	//根据入参调整item
-	receiptItems := make([]erp.PurchaseReceiptItem, 0)
-	for _, item := range receipt.Items {
-		for _, itemReq := range req.Items {
-			if item.ItemCode == itemReq.ItemCode {
-				item.Qty = itemReq.Qty
-				receiptItems = append(receiptItems, item)
-				break
+	if req.Items != nil && len(req.Items) > 0 {
+		receiptItems := make([]*erp.PurchaseReceiptItem, 0)
+		//获取采购单中所有物品编码
+		purchaseItemCodeList := make([]string, len(receipt.Items))
+		_warehouse := receipt.SetWarehouse
+		for _, item := range receipt.Items {
+			purchaseItemCodeList = append(purchaseItemCodeList, item.ItemCode)
+			if len(item.Warehouse) > 0 {
+				_warehouse = item.Warehouse
 			}
 		}
+		gPurchaseItemCodeList := garray.NewStrArrayFrom(purchaseItemCodeList)
+		for _, itemReq := range req.Items {
+			if gPurchaseItemCodeList.Contains(itemReq.ItemCode) {
+				if len(itemReq.Warehouse) > 0 {
+					_warehouse = itemReq.Warehouse
+				}
+				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
+					ItemCode:      itemReq.ItemCode,
+					Qty:           itemReq.Qty,
+					Uom:           itemReq.Uom,
+					Warehouse:     _warehouse,
+					PurchaseOrder: req.PurchaseOrderName,
+				})
+			}
+		}
+		receipt.Items = receiptItems
 	}
-	receipt.Items = receiptItems
 
 	//创建采购收货订单
 	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receipt)
@@ -253,7 +258,7 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 
 	// 解析响应数据
 	j = resp
-	j.GetJson("data").Scan(receipt)
+	j.GetJson("data").Scan(&receipt)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseReceipt, receipt.Name, erp.DocstatusSubmitted)
@@ -304,10 +309,6 @@ func (s *sBuying) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurch
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单列表响应失败")
-	}
-
 	// 转换为采购订单列表
 	purchaseOrderList := make([]*buying.PurchaseOrderListItem, 0)
 	dataArray := j.GetJsons("data")

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -15,6 +17,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/jinzhu/copier"
@@ -65,15 +68,15 @@ func (s *productionSrv) getMode(ctx context.Context, reqMode uint) (*uint, error
 		}
 		switch device.KdsMode {
 		case constant.KdsModeDefault: // 单传菜模式，只接受 req.Mode = 0
-			if reqMode != 0 {
+			if reqMode != constant.ReqModeSend {
 				return nil, errors.WithMessage(errors.New("本机不支持查看待制作的菜品"))
 			}
 		case constant.KdsModeMake: // 仅制作模式，只接受 req.Mode = 1
-			if reqMode != 1 {
+			if reqMode != constant.ReqModeMake {
 				return nil, errors.WithMessage(errors.New("本机不支持查看待传菜的菜品"))
 			}
 		case constant.KdsModeMakeAndSend: // 制作+传菜模式，只接受 req.Mode = 1 or req.Mode = 0
-			if reqMode != 1 && reqMode != 0 {
+			if reqMode != constant.ReqModeMake && reqMode != constant.ReqModeSend {
 				return nil, errors.WithMessage(errors.New("本机不支持查看当前状态的菜品"))
 			}
 		}
@@ -198,25 +201,9 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 
 func (s *productionSrv) getNotNullProductionListResp() resp.ProductionListWithPagination {
 	return resp.ProductionListWithPagination{
-		List: []resp.ProductionGroup{
-			{
-				LocaleName: &dto.LocaleResponse{},
-				ProductionList: resp.ProductionList{
-					List: make([]resp.ProductionItem, 0),
-				},
-				OrderRemark: resp.OrderRemarkRes{
-					List: make([]resp.OrderRemarkResItem, 0),
-				},
-			},
-		},
+		List: make([]resp.ProductionGroup, 0),
 		FinishedList: resp.ProductionList{
-			List: []resp.ProductionItem{
-				{
-					OrderRemark: resp.OrderRemarkRes{
-						List: make([]resp.OrderRemarkResItem, 0),
-					},
-				},
-			},
+			List: make([]resp.ProductionItem, 0),
 		},
 	}
 }
@@ -466,17 +453,7 @@ func (s *productionSrv) GetHistory(ctx context.Context, req req.HistoryReq) (res
 
 // 根据销售账单分组
 func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct, mode *uint) []resp.ProductionGroup {
-	notNullRes := []resp.ProductionGroup{
-		{
-			LocaleName: &dto.LocaleResponse{},
-			ProductionList: resp.ProductionList{
-				List: make([]resp.ProductionItem, 0),
-			},
-			OrderRemark: resp.OrderRemarkRes{
-				List: make([]resp.OrderRemarkResItem, 0),
-			},
-		},
-	}
+	notNullRes := make([]resp.ProductionGroup, 0)
 	// 获取门店业务设置
 	businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
 	if errGet != nil {
@@ -485,7 +462,8 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 	}
 	groups := make([]resp.ProductionGroup, 0, len(limitProducts))
 	language := ctx.GetLanguage()
-	modeMake := mode != nil && *mode == constant.KdsModeMake
+	modeMake := mode != nil && *mode == constant.ReqModeMake
+	modeSend := mode != nil && *mode == constant.ReqModeSend
 	for _, paginatedProduct := range limitProducts {
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0) // 生产单商品列表
@@ -542,6 +520,12 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			}
 			if modeMake {
 				item.FinishedTime = product.MadeTime
+				item.MakeDuration = product.MakeDuration
+			}
+			if modeSend {
+				item.SendDuration = func() int64 {
+					return product.SendDuration + product.MakeDuration // 海杉说:上菜历史页面中,总耗时 = 传菜时长 + 制作时长
+				}()
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
@@ -579,60 +563,147 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 }
 
 // 更新生产单套餐商品状态
-func (s *productionSrv) updatePackageProduct(tx *gorm.DB, saleOrderProductUuid uint64) error {
+func (s *productionSrv) updatePackageProduct(tx *gorm.DB, saleOrderProductUuids []uint64, finishedTime int64) error {
 	saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
-	saleOrderProduct, err := saleOrderProductRepo.GetSaleOrderProductByUuid(saleOrderProductUuid)
+	saleOrderProducts, err := saleOrderProductRepo.GetSaleOrderProductsByUuids(saleOrderProductUuids)
 	if err != nil {
 		return err
 	}
-	if !saleOrderProduct.IsPackageSubProduct() {
+
+	var packageUuids []uint64
+	for _, saleOrderProduct := range saleOrderProducts {
+		if !saleOrderProduct.IsPackageSubProduct() || slices.Contains(packageUuids, saleOrderProduct.PackageUuid) {
+			continue
+		}
+		packageUuids = append(packageUuids, saleOrderProduct.PackageUuid)
+	}
+	if len(packageUuids) == 0 {
 		return nil
 	}
 
-	productionRepo := repository.NewProductionRepo(tx)
-	// 根据销售单套餐uuid获取送厨单子商品商品，不存在子商品一半状态是退菜
-	productionProducts, err := productionRepo.GetProductsByPackageUuid(saleOrderProduct.PackageUuid)
-	if err != nil {
-		return err
-	}
-	for _, productionProduct := range productionProducts {
-		if productionProduct.Status == constant.ProductionOrderProductStatusCooking {
-			// 修改生产单套餐商品为制作中
-			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.PackageUuid)}, map[string]any{
-				"status":        constant.ProductionOrderProductStatusCooking,
-				"finished_time": 0,
-			}); err != nil {
-				return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+	for _, packageUuid := range packageUuids {
+		productionRepo := repository.NewProductionRepo(tx)
+		// 根据销售单套餐uuid获取送厨单子商品商品，不存在子商品一半状态是退菜
+		// packageUuid := saleOrderProduct.PackageUuid // 套餐商品在saleOrderProduct表的uuid
+		productionProducts, err := productionRepo.GetProductsByPackageUuid(packageUuid)
+		if err != nil {
+			return err
+		}
+		for _, productionProduct := range productionProducts {
+			if productionProduct.Status == constant.ProductionOrderProductStatusCooking {
+				// 修改生产单套餐商品为制作中
+				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(packageUuid)}, map[string]any{
+					"status":        constant.ProductionOrderProductStatusCooking,
+					"finished_time": 0,
+					"make_duration": 0, // 清空时长记录
+					"all_duration":  0,
+					// 清空平均值
+					"avg_make_duration": 0,
+					"avg_send_duration": 0,
+					"avg_all_duration":  0,
+				}); err != nil {
+					return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+				}
+				return nil // 套餐子商品状态是制作中，直接返回. 只要有一个子商品未制作完成，则套餐商品状态就为制作中
 			}
-			return nil
+		}
+		// 如果套餐下所有子商品都已制作完成(都不是制作中)，则修改生产单套餐商品为制作完成.
+		// 并记录套餐的制作耗时,现在时间-送厨时间
+		var makeDuration int64 = 0
+		if len(productionProducts) > 0 {
+			createTime := productionProducts[0].GetCreateTime()
+			if finishedTime > createTime {
+				makeDuration = finishedTime - createTime
+			}
+		}
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(packageUuid)}, map[string]any{
+			"status":        constant.ProductionOrderProductStatusFinished,
+			"finished_time": time.Now().Unix(),
+			"make_duration": makeDuration,
+			"all_duration":  makeDuration,
+			// 计算制作时长平均值. 平均值 = make_duration / num
+			"avg_make_duration": gorm.Expr("? / num", makeDuration),
+			// 计算总时长平均值. 平均值 = make_duration / num
+			"avg_all_duration": gorm.Expr("? / num", makeDuration),
+		}); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
 		}
 	}
-	// 修改生产单套餐商品为制作完成
-	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.PackageUuid)}, map[string]any{
-		"status":        constant.ProductionOrderProductStatusFinished,
-		"finished_time": time.Now().Unix(),
-	}); err != nil {
-		return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
-	}
+
 	return nil
 }
 
 // Finish 完成制作
 func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	var allProductUuids, productUuids []uint64 // allProductUuids: 所有菜品ID列表，包括确认退菜的菜品; productUuids: 要完成的菜品ID列表
+	if req.ProductUuid != 0 {
+		productUuids = append(productUuids, req.ProductUuid)
+	}
+	if len(req.ProductUuids) > 0 {
+		productUuids = append(productUuids, req.ProductUuids...)
+	}
+	allProductUuids = append(allProductUuids, productUuids...)
+	if len(req.ConfirmReturnProductUuids) > 0 {
+		allProductUuids = append(allProductUuids, req.ConfirmReturnProductUuids...)
+	}
+	if len(allProductUuids) == 0 {
+		return errors.New("送厨商品ID不能为空")
+	}
 	productionRepo := repository.NewProductionRepo(db)
-	product, _ := productionRepo.GetProduct(
-		productionRepo.WhereProductUuid(req.ProductUuid),
-		productionRepo.WithSaleOrderProductAll(),
-	)
-	if product.Uuid == 0 {
+	allProducts, _ := productionRepo.GetProductsByUuids(allProductUuids, productionRepo.WithSaleOrderProductAll())
+	if len(allProducts) != len(allProductUuids) {
 		return errors.New("订单商品不存在")
 	}
-	if product.Status != constant.ProductionOrderProductStatusCooking {
-		return errors.New("订单商品未送厨")
+
+	// 要完成的菜品
+	products := make([]model.ProductionOrderProduct, 0)
+	// 要完成的菜品关联的销售订单商品ID列表
+	var saleOrderProductUuids []uint64
+	for _, product := range allProducts {
+		if slices.Contains(productUuids, product.Uuid) {
+			if product.Status != constant.ProductionOrderProductStatusCooking {
+				return errors.New("订单商品未送厨")
+			}
+			if !(product.Num > 0) {
+				return errors.New("订单商品数量为0")
+			}
+			if !slices.Contains(saleOrderProductUuids, product.SaleOrderProductUuid) {
+				saleOrderProductUuids = append(saleOrderProductUuids, product.SaleOrderProductUuid)
+			}
+			products = append(products, product)
+		}
+		if slices.Contains(req.ConfirmReturnProductUuids, product.Uuid) {
+			if product.Num > 0 {
+				return errors.New("订单商品数量大于0")
+			}
+		}
 	}
-	if !(product.Num > 0) {
-		return errors.New("订单商品数量为0")
+
+	confirmReturn := func(tx *gorm.DB) error {
+		if len(req.ConfirmReturnProductUuids) > 0 {
+			productionRepo := repository.NewProductionRepo(tx)
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuidIn(req.ConfirmReturnProductUuids)}, map[string]any{
+				"delete_time": time.Now().Unix(),
+			}); err != nil {
+				return errors.ErrInternal
+			}
+		}
+		return nil
+	}
+
+	// 只有确认退菜的商品，直接确认退菜
+	if len(products) == 0 {
+		if err := confirmReturn(db); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+		}
+		// 恢复制作后，推送更新厨显
+		utils.Go(func() {
+			websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+				"update_time": time.Now().Unix(),
+			})
+		})
+		return nil
 	}
 
 	mode, err := s.getMode(ctx, req.Mode)
@@ -644,23 +715,44 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 	if mode != nil {
 		switch *mode {
 		case constant.KdsModeMake: // 制作模式
-			if product.MakeStatus == constant.ProductionOrderProductMakeStatusFinished {
-				return errors.New("订单商品已制作完成")
+			for _, product := range products {
+				if product.MakeStatus == constant.ProductionOrderProductMakeStatusFinished {
+					return errors.New("订单商品已制作完成")
+				}
 			}
-			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
-				"make_status": constant.ProductionOrderProductMakeStatusFinished,
-				"made_time":   time.Now().Unix(),
-			}); err != nil {
-				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
-			}
-			// 完成制作后，推送更新厨显
-			go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-				"update_time": time.Now().Unix(),
+			nowTime := time.Now().Unix()
+			err := db.Transaction(func(tx *gorm.DB) error {
+				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuidIn(productUuids)}, map[string]any{
+					"make_status":   constant.ProductionOrderProductMakeStatusFinished,
+					"made_time":     nowTime,
+					"make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN ? - batch_time ELSE ? - create_time END", nowTime, nowTime),
+					// 计算制作时长平均值. 平均值 = make_duration / num
+					"avg_make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN (? - batch_time) / num ELSE (? - create_time) / num END", nowTime, nowTime),
+				}); err != nil {
+					return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+				}
+				if err := confirmReturn(tx); err != nil {
+					return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+				}
+				return nil
 			})
+			if err != nil {
+				return err
+			}
+
+			// 完成制作后，推送更新厨显
+			utils.Go(func() {
+				websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+					"update_time": time.Now().Unix(),
+				})
+			})
+
 			return nil
 		case constant.KdsModeDefault: // 传菜模式
-			if product.MakeStatus != constant.ProductionOrderProductMakeStatusFinished {
-				return errors.New("订单商品未制作完成")
+			for _, product := range products {
+				if product.MakeStatus != constant.ProductionOrderProductMakeStatusFinished {
+					return errors.New("订单商品未制作完成")
+				}
 			}
 		default:
 			return errors.New("不支持的工作模式")
@@ -671,72 +763,211 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		productionRepo := repository.NewProductionRepo(tx)
-		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
-			"status":        constant.ProductionOrderProductStatusFinished,
-			"finished_time": finishedTime,
-		}); err != nil {
-			return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+		if mode != nil {
+			// 如果开启智能厨显，则计算传菜时长. 当前时间-制作完成时间
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuidIn(productUuids)}, map[string]any{
+				"status":        constant.ProductionOrderProductStatusFinished,
+				"finished_time": finishedTime,
+				"send_duration": gorm.Expr(`CASE 
+					WHEN made_time = 0 THEN 
+						CASE 
+							WHEN is_batch = 1 THEN ? - batch_time 
+							ELSE ? - create_time 
+						END
+					ELSE ? - made_time 
+				END`, finishedTime, finishedTime, finishedTime),
+				// 计算传菜时长平均值. 平均值 = send_duration / num
+				"avg_send_duration": gorm.Expr(`CASE 
+					WHEN made_time = 0 THEN 
+						CASE 
+							WHEN is_batch = 1 THEN (? - batch_time) / num 
+							ELSE (? - create_time) / num 
+						END
+					ELSE (? - made_time )/ num
+				END`, finishedTime, finishedTime, finishedTime),
+				"all_duration": gorm.Expr(`make_duration + CASE 
+					WHEN made_time = 0 THEN 
+						CASE 
+							WHEN is_batch = 1 THEN ? - batch_time 
+							ELSE ? - create_time 
+						END
+					ELSE ? - made_time 
+				END`, finishedTime, finishedTime, finishedTime),
+				// 计算总时长平均值. 平均值 = avg_make_duration + avg_send_duration
+				"avg_all_duration": gorm.Expr(`avg_make_duration + CASE 
+					WHEN made_time = 0 THEN 
+						CASE 
+							WHEN is_batch = 1 THEN (? - batch_time) / num 
+							ELSE (? - create_time) / num 
+						END
+					ELSE (? - made_time )/ num
+				END`, finishedTime, finishedTime, finishedTime),
+			}); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+			}
+		} else {
+			// 如果没有开启智能厨显，则计算制作时长
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuidIn(productUuids)}, map[string]any{
+				"status":        constant.ProductionOrderProductStatusFinished,
+				"finished_time": finishedTime,
+				"make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN ? - batch_time ELSE ? - create_time END", finishedTime, finishedTime),
+				"all_duration":  gorm.Expr("CASE WHEN is_batch = 1 THEN ? - batch_time ELSE ? - create_time END", finishedTime, finishedTime),
+				// 计算制作时长平均值. 平均值 = make_duration / num
+				"avg_make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN (? - batch_time) / num ELSE (? - create_time) / num END", finishedTime, finishedTime),
+				// 计算总时长平均值. 平均值 = make_duration / num
+				"avg_all_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN (? - batch_time) / num ELSE (? - create_time) / num END", finishedTime, finishedTime),
+			}); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+			}
 		}
-		if err := s.updatePackageProduct(tx, product.SaleOrderProductUuid); err != nil {
-			return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+
+		if len(saleOrderProductUuids) > 0 {
+			if err := s.updatePackageProduct(tx, saleOrderProductUuids, finishedTime); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+			}
+		}
+
+		if err := confirmReturn(tx); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 		}
 		return nil
 	})
 	if err != nil {
-		return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+		return err
 	}
 
 	// 完成制作事件
-	go func() {
-		if product.SaleOrderProduct.ID == 0 {
-			return
+	utils.Go(func() {
+		// 把 products  按 SaleBillUuid 分组
+		productsBySaleBillUuid := make(map[uint64][]model.ProductionOrderProduct, 0)
+		for _, product := range products {
+			productsBySaleBillUuid[product.SaleBillUuid] = append(productsBySaleBillUuid[product.SaleBillUuid], product)
 		}
-		event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
-			BasePayload: event.BasePayload{
-				Ctx:                 ctx,
-				CompanyUuid:         ctx.GetCompanyUuid(),
-				ProductionOrderUuid: product.ProductionOrderUuid,
-				Source:              ctx.GetSource(),
-				SaleBillUuid:        product.SaleBillUuid,
-				SaleOrderUuid:       product.SaleOrderProductUuid,
-			},
-			FinishedTime: finishedTime,
-			Products: event.Products{
-				{
-					OrderProductId:        product.Uuid,
-					ProductId:             product.ProductPackageUuid,
-					ProductName:           product.SaleOrderProduct.MultiLanguageName.GetNames(),
-					ProductType:           product.SaleOrderProduct.ProductType,
-					ProductAttr:           product.SaleOrderProduct.GetAttributeName(),
-					ProductAttrList:       product.SaleOrderProduct.GetAttributeNameList(),
-					ProductSauceNamesList: product.SaleOrderProduct.GetSauceNamesList(),
-					TotalNum:              product.SaleOrderProduct.Num,
-					NumType:               product.SaleOrderProduct.NumType,
-					IsBuffet:              product.SaleOrderProduct.IsBuffet == 1,
-					IsWrap: func() bool {
-						if product.SaleBill.IsTakeout() && product.SaleBill.MemberSaleOrderUuid == 0 {
-							return true
-						}
-						return product.SaleOrderProduct.IsWrapProduct()
-					}(),
-					Remark: product.SaleOrderProduct.Remark,
+		// 获取套餐商品
+		if len(req.ProductUuids) > 0 {
+			packageSubProductUuidMap := make(map[uint64]bool)
+			for _, product := range products {
+				if product.SaleOrderProduct.IsPackageSubProduct() {
+					packageSubProductUuidMap[product.SaleOrderProduct.PackageUuid] = true
+				}
+			}
+			packageSubProductUuids := make([]uint64, 0, len(packageSubProductUuidMap))
+			for uuid := range packageSubProductUuidMap {
+				packageSubProductUuids = append(packageSubProductUuids, uuid)
+			}
+			if len(packageSubProductUuids) > 0 {
+				productionRepo := repository.NewSaleOrderProductRepo(db)
+				saleOrderProducts, err := productionRepo.GetSaleOrderProductsByUuidIn(packageSubProductUuids, productionRepo.WithSaleOrderProductAll())
+				if err != nil {
+					logger.Logger.Error("获取套餐子商品失败", zap.Error(err))
+				} else {
+					for _, saleOrderProduct := range saleOrderProducts {
+						productsBySaleBillUuid[saleOrderProduct.SaleBillUuid] = append(productsBySaleBillUuid[saleOrderProduct.SaleBillUuid], model.ProductionOrderProduct{
+							BaseModel: model.BaseModel{
+								Uuid: saleOrderProduct.Uuid,
+							},
+							ProductPackageUuid: saleOrderProduct.PackageUuid,
+							SaleOrderProduct:   *saleOrderProduct,
+							SaleBill:           *saleOrderProduct.SaleBill,
+						})
+					}
+				}
+			}
+		}
+		for saleBillUuid, products := range productsBySaleBillUuid {
+			event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  saleBillUuid,
+					SaleOrderUuid: saleBillUuid,
 				},
-			},
-		})
-	}()
+				FinishedTime: finishedTime,
+				Products: func() event.Products {
+					orderProducts := make(event.Products, 0)
+					for _, product := range products {
+						if product.SaleOrderProduct.ID == 0 {
+							continue
+						}
+						// 套餐子商品不显示送厨记录
+						if len(req.ProductUuids) > 0 && product.SaleOrderProduct.IsPackageSubProduct() {
+							continue
+						}
+						orderProducts = append(orderProducts, s.convertToEventOrderProduct(&product, products))
+					}
+					return orderProducts
+				}(),
+			})
+		}
+	})
 
 	// 完成制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
+
 	// 完成制作后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
-		"update_time":    time.Now().Unix(),
-		"sale_bill_uuid": product.SaleBillUuid,
-		"desk_uuid":      product.SaleBill.DeskUuid,
+	utils.Go(func() {
+		pushedMap := make(map[string]bool)
+		for _, product := range products {
+			key := fmt.Sprintf("%d-%d", product.SaleBillUuid, product.SaleBill.DeskUuid)
+			if _, ok := pushedMap[key]; !ok {
+				pushedMap[key] = true
+				websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
+					"update_time":    time.Now().Unix(),
+					"sale_bill_uuid": product.SaleBillUuid,
+					"desk_uuid":      product.SaleBill.DeskUuid,
+				})
+			}
+		}
 	})
 	return nil
 
+}
+
+// 转换器
+func (s *productionSrv) convertToEventOrderProduct(product *model.ProductionOrderProduct, products []model.ProductionOrderProduct) event.OrderProduct {
+	orderProduct := event.OrderProduct{
+		OrderProductId:        product.Uuid,
+		ProductId:             product.ProductPackageUuid,
+		ProductName:           product.SaleOrderProduct.MultiLanguageName.GetNames(),
+		ProductType:           product.SaleOrderProduct.ProductType,
+		ProductAttr:           product.SaleOrderProduct.GetAttributeName(),
+		ProductAttrList:       product.SaleOrderProduct.GetAttributeNameList(),
+		ProductSauceNamesList: product.SaleOrderProduct.GetSauceNamesList(),
+		TotalNum:              product.SaleOrderProduct.Num,
+		NumType:               product.SaleOrderProduct.NumType,
+		IsBuffet:              product.SaleOrderProduct.IsBuffet == 1,
+		IsWrap: func() bool {
+			if product.SaleBill.IsTakeout() && product.SaleBill.MemberSaleOrderUuid == 0 {
+				return true
+			}
+			return product.SaleOrderProduct.IsWrapProduct()
+		}(),
+		Remark: func() string {
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				return ""
+			}
+			return product.SaleOrderProduct.Remark
+		}(),
+	}
+	// 如果是套餐主商品，添加子商品
+	if product.SaleOrderProduct.IsPackageProduct() && products != nil && len(products) > 0 {
+		subProducts := make([]event.OrderProduct, 0)
+		for _, subProduct := range products {
+			if subProduct.SaleOrderProduct.IsDelete() {
+				continue
+			}
+			if subProduct.SaleOrderProduct.PackageUuid == product.SaleOrderProduct.Uuid {
+				subProducts = append(subProducts, s.convertToEventOrderProduct(&subProduct, nil))
+			}
+		}
+		orderProduct.SubProducts = subProducts
+	}
+	return orderProduct
 }
 
 // Recovery 恢复制作
@@ -763,14 +994,23 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 			return errors.New("该菜品已传菜，不可恢复！")
 		}
 		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
-			"make_status": constant.ProductionOrderProductMakeStatusDefault,
-			"made_time":   0,
+			"make_status":   constant.ProductionOrderProductMakeStatusDefault,
+			"made_time":     0,
+			"make_duration": 0, // 清空时长记录
+			"send_duration": 0,
+			"all_duration":  0,
+			// 清空平均值
+			"avg_make_duration": 0,
+			"avg_send_duration": 0,
+			"avg_all_duration":  0,
 		}); err != nil {
 			return errors.WithMessage(errors.New("恢复送厨单商品制作状态失败"), err.Error())
 		}
 		// 恢复制作后，推送更新厨显
-		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-			"update_time": time.Now().Unix(),
+		utils.Go(func() {
+			websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+				"update_time": time.Now().Unix(),
+			})
 		})
 		return nil
 	}
@@ -780,13 +1020,36 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		productionRepo := repository.NewProductionRepo(tx)
-		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
-			"status":        constant.ProductionOrderProductStatusCooking,
-			"finished_time": 0,
-		}); err != nil {
-			return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+		if mode != nil {
+			// 如果是智能厨显时,取消传菜则清空sent_time、all_time
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
+				"status":        constant.ProductionOrderProductStatusCooking,
+				"finished_time": 0,
+				"send_duration": 0,
+				"all_duration":  0,
+				// 清空平均值
+				"avg_make_duration": 0,
+				"avg_send_duration": 0,
+				"avg_all_duration":  0,
+			}); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+			}
+		} else {
+			// 如果不是智能厨显时,取消制作完成则清空make_time、all_time
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
+				"status":        constant.ProductionOrderProductStatusCooking,
+				"finished_time": 0,
+				"make_duration": 0,
+				"all_duration":  0,
+				// 清空平均值
+				"avg_make_duration": 0,
+				"avg_send_duration": 0,
+				"avg_all_duration":  0,
+			}); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+			}
 		}
-		if err := s.updatePackageProduct(tx, product.SaleOrderProductUuid); err != nil {
+		if err := s.updatePackageProduct(tx, []uint64{product.SaleOrderProductUuid}, 0); err != nil {
 			return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
 		}
 		return nil
@@ -796,14 +1059,18 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 	// 恢复制作后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
-		"update_time":    time.Now().Unix(),
-		"sale_bill_uuid": product.SaleBillUuid,
-		"desk_uuid":      product.SaleBill.DeskUuid,
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
+			"update_time":    time.Now().Unix(),
+			"sale_bill_uuid": product.SaleBillUuid,
+			"desk_uuid":      product.SaleBill.DeskUuid,
+		})
 	})
 	return nil
 }
@@ -825,9 +1092,12 @@ func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) e
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
+
 	return nil
 }
 
@@ -863,8 +1133,10 @@ func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint6
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 	return nil
 }

@@ -2,9 +2,9 @@ package erp
 
 import (
 	"errors"
-	"slices"
 	companyApi "ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
@@ -53,10 +53,15 @@ func (s *erpSrv) GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.Er
 		return resp.ErpnextSiteCompanyResp{}, err
 	}
 
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
-	erpnextCompanyAbbrs, err := companySettingRepo.GetErpnextCompanyAbbrs(companySettingRepo.WhereErpnextCompanyAbbrNotEmpty(), companySettingRepo.WhereSiteCode(erpnextSiteCompanyReq.SiteCode))
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB))
+	erpnextCompanyAbbrUuidMap, err := companySettingRepo.GetErpnextCompanyAbbrUuidMap(companySettingRepo.WhereErpnextCompanyAbbrNotEmpty(), companySettingRepo.WhereSiteCode(erpnextSiteCompanyReq.SiteCode))
 	if err != nil {
 		return companyResp, errors.New("获取公司列表失败")
+	}
+
+	erpCompanyNameAbbrMap := make(map[string]string)
+	for _, company := range response.CompanyList {
+		erpCompanyNameAbbrMap[company.CompanyName] = company.CompanyAbbr
 	}
 
 	var companyList []resp.ErpnextSiteCompany
@@ -65,8 +70,14 @@ func (s *erpSrv) GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.Er
 			CompanyName:   company.CompanyName,
 			CompanyAbbr:   company.CompanyAbbr,
 			ParentCompany: company.ParentCompany,
-			IsUsed:        slices.Contains(erpnextCompanyAbbrs, company.CompanyAbbr),
-			Children:      []resp.ErpnextSiteCompany{},
+			IsUsed: func() bool {
+				_, ok := erpnextCompanyAbbrUuidMap[company.CompanyAbbr]
+				return ok
+			}(),
+			Children: []resp.ErpnextSiteCompany{},
+
+			ParentCompanyUuid: erpnextCompanyAbbrUuidMap[erpCompanyNameAbbrMap[company.ParentCompany]],
+			CompanyUuid:       erpnextCompanyAbbrUuidMap[company.CompanyAbbr],
 		})
 	}
 
@@ -118,4 +129,57 @@ func buildTreeRecursively(companies []resp.ErpnextSiteCompany, parentName string
 	}
 
 	return result
+}
+
+// CompanyInfo 公司信息结构体
+type CompanyInfo struct {
+	CompanyAbbr string // 公司缩写
+	CompanyUuid uint64 // 公司UUID
+}
+
+// BuildCompanyUuidMap 递归遍历公司树，收集所有IsUsed=true的节点的CompanyAbbr和父级路径映射关系
+// 返回 map[company_abbr][]CompanyInfo，其中父级路径从根节点到直接父节点（例如：C -> B -> A，则A的父级树是[C的信息, B的信息]）
+func (s *erpSrv) buildCompanyAbbrMap(companies []resp.ErpnextSiteCompany) (map[string][]CompanyInfo, map[string]uint64) {
+	result := make(map[string][]CompanyInfo)
+
+	companyAbbrUuidMap := make(map[string]uint64)
+	for _, company := range companies {
+		companyAbbrUuidMap[company.CompanyAbbr] = company.CompanyUuid
+	}
+
+	// 递归遍历函数，parentPath 是从根节点到当前节点的父节点的路径
+	var traverse func([]resp.ErpnextSiteCompany, []CompanyInfo)
+	traverse = func(companyList []resp.ErpnextSiteCompany, parentPath []CompanyInfo) {
+		for _, company := range companyList {
+			// 如果该公司已被使用，则添加到映射中
+			if company.IsUsed && company.CompanyAbbr != "" {
+				companyAbbrUuidMap[company.CompanyAbbr] = company.CompanyUuid
+				// 复制父级路径，避免引用问题
+				path := make([]CompanyInfo, len(parentPath))
+				copy(path, parentPath)
+				result[company.CompanyAbbr] = path
+			}
+
+			// 递归处理子公司，将当前公司信息添加到路径中
+			if len(company.Children) > 0 {
+				// 构建新的父级路径
+				newPath := make([]CompanyInfo, len(parentPath))
+				copy(newPath, parentPath)
+				// 只有当前节点有CompanyAbbr时才添加到路径中
+				if company.CompanyAbbr != "" {
+					companyAbbrUuidMap[company.CompanyAbbr] = company.CompanyUuid
+					newPath = append(newPath, CompanyInfo{
+						CompanyAbbr: company.CompanyAbbr,
+						CompanyUuid: company.CompanyUuid,
+					})
+				}
+				traverse(company.Children, newPath)
+			}
+		}
+	}
+
+	// 开始遍历，初始父级路径为空
+	traverse(companies, []CompanyInfo{})
+
+	return result, companyAbbrUuidMap
 }

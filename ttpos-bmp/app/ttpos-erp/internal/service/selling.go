@@ -24,6 +24,69 @@ type (
 		GetLatestReceivePosInvoice(ctx context.Context, req *do.ReceivePosInvoice) (*entity.ReceivePosInvoice, error)
 	}
 	ISelling interface {
+		// CreateSalesOrder 创建销售订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 销售订单信息
+		//
+		// 返回：
+		//   - *dtoSelling.SalesOrder: 创建后的销售订单信息
+		//   - error: 错误信息
+		CreateSalesOrder(ctx context.Context, req *dtoSelling.SalesOrder) (*dtoSelling.SalesOrder, error)
+		// UpdateSalesOrder 更新销售订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 销售订单名称
+		//   - req: 更新的销售订单信息
+		//
+		// 返回：
+		//   - *dtoSelling.SalesOrder: 更新后的销售订单信息
+		//   - error: 错误信息
+		UpdateSalesOrder(ctx context.Context, name string, req *dtoSelling.SalesOrder) (*dtoSelling.SalesOrder, error)
+		// GetSalesOrder 获取销售订单信息
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 销售订单名称
+		//
+		// 返回：
+		//   - *dtoSelling.SalesOrder: 销售订单信息
+		//   - error: 错误信息
+		GetSalesOrder(ctx context.Context, name string) (*dtoSelling.SalesOrder, error)
+		// GetSalesOrderList 获取销售订单列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 查询参数
+		//
+		// 返回：
+		//   - []*dtoSelling.SalesOrder: 销售订单列表
+		//   - error: 错误信息
+		GetSalesOrderList(ctx context.Context, req *dtoSelling.SalesOrderListReq) ([]*dtoSelling.SalesOrder, error)
+		// CountSalesOrder 统计销售订单数量
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 查询参数
+		//
+		// 返回：
+		//   - int: 销售订单数量
+		//   - error: 错误信息
+		CountSalesOrder(ctx context.Context, req *dtoSelling.SalesOrderListReq) (int, error)
+		// CancelSalesOrder 删除销售订单（取消订单）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 销售订单名称
+		//
+		// 返回：
+		//   - error: 错误信息
+		CancelSalesOrder(ctx context.Context, name string) error
+		// SubmitSalesOrder 提交销售订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 销售订单名称
+		//
+		// 返回：
+		//   - *dtoSelling.SalesOrder: 提交后的销售订单信息
+		//   - error: 错误信息
+		SubmitSalesOrder(ctx context.Context, name string) (*dtoSelling.SalesOrder, error)
 		// GetPosProfileList 查询POS配置文件列表
 		// 参数：
 		//   - ctx: 上下文对象
@@ -187,6 +250,24 @@ type (
 		//   - *erp.Customer: 客户信息
 		//   - error: 错误信息
 		GetCustomer(ctx context.Context, name string) (*erp.Customer, error)
+		// AddCompanyToCustomer 将公司添加到客户的允许交易公司列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - customer: 客户信息
+		//   - companyName: 要添加的公司名称
+		//
+		// 返回：
+		//   - error: 错误信息
+		AddCompanyToCustomer(ctx context.Context, customer *erp.Customer, companyName string) error
+		// ListCustomers 获取客户列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取客户列表请求参数，包含分页和过滤条件
+		//
+		// 返回：
+		//   - []*erp.Customer: 客户列表
+		//   - error: 错误信息
+		ListCustomers(ctx context.Context, req *dtoSelling.ListCustomersReq) ([]*erp.Customer, error)
 	}
 )
 

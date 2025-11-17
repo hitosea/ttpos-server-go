@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/utils"
 )
 
 var once_change_member_points_event_handler sync.Once
@@ -15,10 +16,10 @@ func changeMemberPointsEventHandler() {
 	once_change_member_points_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeChangeMemberPointsEvent(func(payload event.ChangeMemberPointsPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			go func() {
+			utils.Go(func() {
 				time.Sleep(1 * time.Second)
 				HandleMemberPoints(db)
-			}()
+			})
 		})
 	})
 }

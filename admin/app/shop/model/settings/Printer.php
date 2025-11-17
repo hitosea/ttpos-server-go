@@ -21,10 +21,6 @@ class Printer extends PrinterModel
             $this->error = '打印机数量已达上限，如有需要，请联系销售代表';
             return false;
         }
-        if ($this->where('name', '=', $data['printer_name'])->count()) {
-            $this->error = '打印机名称已存在';
-            return false;
-        }
         $printerType = $data['printer_type'];
         $type = PrinterType::getPrinterTypeByKey($printerType);
         if (!$type) {
@@ -43,6 +39,7 @@ class Printer extends PrinterModel
         $data['width'] = $data['width'] ?? 80; // 纸张宽度，默认80mm
         $data['enable_status_check'] = $data['enable_status_check'] ?? 1; // 是否启用状态检查，默认开启
         $data['enable_sound'] = $data['enable_sound'] ?? 1; // 是否启用打印提示音，默认开启
+        $data['print_speed'] = $data['print_speed'] ?? 2; // 打印速度，默认稳定模式
         $data['printer_type_uuid'] = $type['uuid'];
         $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
         if (!$this->save($data)) {
@@ -57,10 +54,6 @@ class Printer extends PrinterModel
      */
     public function edit($data)
     {
-        if ($this->where('name', '=', $data['printer_name'])->where('uuid', '<>', $data['printer_id'])->count()) {
-            $this->error = '打印机名称已存在';
-            return false;
-        }
         $printerType = $data['printer_type'];
         $type = PrinterType::getPrinterTypeByKey($printerType);
         if (!$type) {
@@ -78,6 +71,7 @@ class Printer extends PrinterModel
         $data['width'] = $data['width'] ?? 80; // 纸张宽度，默认80mm
         $data['enable_status_check'] = $data['enable_status_check'] ?? 1; // 是否启用状态检查，默认开启
         $data['enable_sound'] = $data['enable_sound'] ?? 1; // 是否启用打印提示音，默认开启
+        $data['print_speed'] = $data['print_speed'] ?? 2; // 打印速度，默认稳定模式
         $data['printer_type_uuid'] = $type['uuid'];
         if (!empty($data[$printerType]) && $this->is_usb != 1) {
             $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);

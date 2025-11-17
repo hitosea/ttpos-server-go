@@ -3,6 +3,7 @@ package erp
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
@@ -15,6 +16,7 @@ import (
 	"ttpos-server-go/app/repository"
 	cc "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -29,7 +31,7 @@ func NewErpSetupClient() (setup.SetupServiceClient, *grpc.ClientConn, error) {
 }
 
 func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error) {
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB))
 	// 判断是否已经有店铺
 	companySetting, _ := companySettingRepo.GetOne(companySettingRepo.WhereErpnextCompanyAbbr(initShopReq.CompanyAbbr), companySettingRepo.WhereSiteCode(initShopReq.SiteCode), repository.NotDeleted)
 	if companySetting.Uuid != 0 {
@@ -37,7 +39,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	}
 
 	// 判断商家是否存在
-	companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(0))
+	companyRepo := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB))
 	company, _ := companyRepo.GetCompanyInfoByUuid(initShopReq.CompanyUuid)
 	if company.Uuid == 0 {
 		return resp.InitShopResp{}, errors.New("商家不存在")
@@ -58,7 +60,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	// 连锁店-总部关联处理
 	if headquarterAbbr != "" {
 		var headquarter model.CompanySetting
-		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", initShopReq.SiteCode, initShopReq.HeadquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
+		s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", initShopReq.SiteCode, initShopReq.HeadquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
 		headquarterUuid = headquarter.Uuid
 	}
 
@@ -67,13 +69,13 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, err
 	}
 	defer conn.Close()
-	req := &setup.InitShopReq{
+	initReq := &setup.InitShopReq{
 		ShopName:    company.Name,
 		CompanyAbbr: initShopReq.CompanyAbbr,
 		ShopUuid:    strconv.FormatUint(initShopReq.CompanyUuid, 10),
 		AdminUuid:   strconv.FormatUint(staff.Uuid, 10),
 	}
-	result, err := client.InitShop(WithSiteCode(context.Background(), initShopReq.SiteCode), req)
+	result, err := client.InitShop(WithSiteCode(context.Background(), initShopReq.SiteCode), initReq)
 	if err != nil {
 		return resp.InitShopResp{}, err
 	}
@@ -110,10 +112,10 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	}
 
 	// 更新saas库
-	s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
+	s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
 		"is_enable_erp": 1,
 	})
-	s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("company_uuid = ?", company.Uuid).Updates(map[string]any{
+	s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("company_uuid = ?", company.Uuid).Updates(map[string]any{
 		"erpnext_site_code":        initShopReq.SiteCode,
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
 		"erpnext_branch_name":      response.BranchName,
@@ -165,8 +167,69 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
 	})
 
+	utils.SafeGo(func() {
+		err := s.UpdateTtposCompanyParentUuids(initShopReq.SiteCode)
+		if err != nil {
+			logger.Logger.Error("InitShop-UpdateParentUuids", zap.Any("err", err), zap.String("site_code", initShopReq.SiteCode))
+		}
+	})
+
 	return resp.InitShopResp{
 		BranchName: response.BranchName,
 		AdminEmail: response.AdminEmail,
 	}, nil
+}
+
+func (s *erpSrv) UpdateTtposCompanyParentUuids(siteCode string) error {
+	// 获取erp company
+	erpnextSiteCompanyReq := req.ErpnextSiteCompanyReq{
+		SiteCode: siteCode,
+	}
+	ctx := cc.NewContext()
+	// 调用erpnext服务，获取公司名称
+	companyResp, err := s.GetCompanyList(ctx, erpnextSiteCompanyReq)
+	if err != nil {
+		return err
+	}
+	// 遍历所有节点，如果IsUsed为true，则获取所有父级树的parent_company_uuid，以map[uuid][]CompanyInfo形式存储
+	companyAbbrMap, companyAbbrUuidMap := s.buildCompanyAbbrMap(companyResp.List)
+	for companyAbbr, parentCompanyInfos := range companyAbbrMap {
+		hasChildren := 0
+		// 检查当前UUID是否在其他公司的父级路径中（判断是否有子公司）
+		for _, parentCompanyInfos2 := range companyAbbrMap {
+			for _, info := range parentCompanyInfos2 {
+				if info.CompanyAbbr == companyAbbr {
+					hasChildren = 1
+					break
+				}
+			}
+			if hasChildren == 1 {
+				break
+			}
+		}
+		// 从 CompanyInfo 中提取 UUID 并转换为字符串
+		parentCompanyUuids := make([]string, 0)
+		for _, info := range parentCompanyInfos {
+			if info.CompanyUuid == 0 {
+				continue
+			}
+			parentCompanyUuids = append(parentCompanyUuids, strconv.FormatUint(info.CompanyUuid, 10))
+		}
+
+		slices.Reverse(parentCompanyUuids)
+		parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
+
+		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(map[string]any{
+			"parent_company_uuids": parentCompanyUuidsStr,
+			"has_children":         hasChildren,
+		})
+		uuid := companyAbbrUuidMap[companyAbbr]
+		if uuid > 0 {
+			s.dbm.GetDB(uuid).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", siteCode, companyAbbr).Updates(map[string]any{
+				"parent_company_uuids": parentCompanyUuidsStr,
+				"has_children":         hasChildren,
+			})
+		}
+	}
+	return nil
 }
