@@ -14,6 +14,7 @@ priority: 1
 
 | 用户说...                      | 识别为     | 立即执行                                                               | 涉及文件/目录                  | 参考规范        |
 | ------------------------------ | ---------- | ---------------------------------------------------------------------- | ------------------------------ | --------------- |
+| "新人" "入职" "不熟悉"         | 新成员入职 | `/onboard quick` → 推送必读清单                                        | agent/workflows/onboarding.md  | intro.mdc       |
 | "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/ | specs.mdc       |
 | "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/{}/tasks.md` → 逐任务执行                             | shared/specs/, main/, admin/   | go-main/php.mdc |
 | "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | go-main.mdc     |
@@ -281,6 +282,7 @@ AI 辅助实现 →
 
 | 用户需求       | Agent 执行命令                           | 后续操作                           |
 | -------------- | ---------------------------------------- | ---------------------------------- |
+| 新成员入职     | `/onboard quick`                         | 推送必读清单和入职路径             |
 | 创建提案       | `/propose quick-payment`                 | 自动创建并填充基本信息             |
 | 创建 Spec      | `/create-spec story-order-quick-payment` | 自动创建 requirements/design/tasks |
 | 创建数据库迁移 | 创建 PHP Phinx 迁移文件                  | 同步更新 Go model 和 seeds         |
