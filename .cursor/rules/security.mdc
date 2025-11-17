@@ -1,0 +1,162 @@
+---
+alwaysApply: false
+description: 安全开发规范
+---
+
+# 安全开发规范
+
+> 🤖 **受众**: AI Agent  
+> 📖 **用途**: 安全开发的核心约束和快速检查
+
+---
+
+## 📚 快速索引
+
+| 我要...          | 查阅文档                                                  |
+| ---------------- | --------------------------------------------------------- |
+| 学习详细安全规范 | [安全开发指南](../../docs/human/guides/security-guide.md) |
+
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 认证授权
+
+```go
+// ✅ JWT Token 结构
+{
+  "user_id": 123,
+  "exp": 1699999999,
+  "iat": 1699900000
+}
+
+// ❌ 不要在 Token 中存储敏感信息
+{
+  "password": "xxx",  // ❌ 危险
+  "api_key": "xxx"    // ❌ 危险
+}
+```
+
+---
+
+## 🛡️ 安全检查点
+
+### 1. 输入验证
+
+```go
+// ✅ 严格验证
+type CreateUserReq struct {
+    Username string `binding:"required,min=2,max=20,alphanum"`
+    Email    string `binding:"required,email"`
+    Age      int    `binding:"required,min=1,max=150"`
+}
+```
+
+### 2. SQL 注入防护
+
+```go
+// ✅ 参数化查询
+db.Where("username = ?", username).First(&user)
+
+// ❌ 字符串拼接 - 危险！
+query := fmt.Sprintf("SELECT * FROM users WHERE username = '%s'", username)
+```
+
+### 3. XSS 防护
+
+```go
+// ✅ 转义输出
+import "html"
+safeContent := html.EscapeString(userInput)
+
+// Vue 自动转义
+<div>{{ userInput }}</div>
+```
+
+### 4. 密码安全
+
+```go
+// ✅ 使用 bcrypt
+import "golang.org/x/crypto/bcrypt"
+hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发时
+
+- [ ] 所有输入都进行验证
+- [ ] 使用参数化查询
+- [ ] 输出进行转义
+- [ ] 密码使用 bcrypt 加密
+- [ ] Token 不包含敏感信息
+- [ ] 敏感数据不记录日志
+
+### 部署时
+
+- [ ] 关闭调试模式
+- [ ] 使用 HTTPS
+- [ ] 配置 CORS
+- [ ] 实现限流
+- [ ] 配置防火墙
+
+---
+
+## 📋 常用模式
+
+### 参数验证（白名单）
+
+```go
+// ✅ 使用白名单
+var allowedFields = map[string]bool{
+    "id": true,
+    "name": true,
+    "create_time": true,
+}
+
+if !allowedFields[field] {
+    return errors.New("不支持的字段")
+}
+```
+
+### 权限验证
+
+```go
+func CheckPermission(permission string) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        if !hasPermission(c, permission) {
+            c.JSON(403, gin.H{"message": "无权限"})
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
+}
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                  | 原因         |
+| --------------------- | ------------ |
+| ❌ SQL 字符串拼接     | SQL 注入风险 |
+| ❌ Token 存储敏感信息 | 安全风险     |
+| ❌ 密码明文存储       | 必须加密     |
+| ❌ 不验证输入         | 安全漏洞     |
+| ❌ 直接输出用户输入   | XSS 风险     |
+| ❌ 敏感信息记录日志   | 信息泄露     |
+
+---
+
+## 📖 详细文档
+
+- [安全开发详细指南](../../docs/human/guides/security-guide.md) - 完整的安全规范
+- [API 设计指南](../../docs/human/guides/api-design-guide.md) - API 安全设计
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team
