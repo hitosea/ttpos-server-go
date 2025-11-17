@@ -48,9 +48,7 @@
                         validator: (rule, value, callback) => {
                           if (!scope.row.product_name[item.key]) {
                             callback(new Error($t('请输入商品名称')));
-                          } else if (scope.row.product_name_is_exist[item.key]) {
-                            callback(new Error($t('此名称已存在')));
-                          } else {
+                          }  else {
                             callback();
                           }
                         },
