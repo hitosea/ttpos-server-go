@@ -693,7 +693,7 @@
       product_name_is_exist,
       category_id: [categoryList.value[0]?.category_id] || '', // 所属分类
       deduct_stock_type: 10, // 库存计算方式
-      num_type: 0, // 数量计算方法, 0-整数 1-小数
+      num_type: '1', // 数量计算方法, 0-整数 1-小数
       unit_id: unitList.value[0]?.unit_id || '', // 商品单位
       spec_id: specList.value[0]?.spec_id || '', // 规格名称
       img_name: '', // 图片名称
@@ -714,6 +714,7 @@
       limit_num: 0, // 限购数量
       is_enable_grade: '1', // 会员折扣
       row: tableData.value.length + 1,
+      open_overall_discount: '1', // 整单折扣
     });
     tablePageData();
   };
