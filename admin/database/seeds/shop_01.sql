@@ -644,7 +644,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order` (
 CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT COMMENT '名称',
     `num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品数量',
     `init_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '初始送厨数量，退菜后，init_num肯定大于num',
     `flavor_name` TEXT COMMENT '规格名称,不随后台改变',
@@ -670,6 +670,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `make_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '制作时长(秒)',
     `send_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '传菜时长(秒)',
     `all_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '总时长(秒)',
+    `avg_make_duration` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '制作时长平均值(秒)',
+    `avg_send_duration` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '传菜时长平均值(秒)',
+    `avg_all_duration` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '总时长平均值(秒)',
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -3440,6 +3443,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
     `product_package_uuid` bigint NOT NULL DEFAULT 0 COMMENT '商品包UUID',
+    `is_package` int(10) NOT NULL DEFAULT 0 COMMENT '是否是套餐',
     `min` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最短出品时长',
     `max` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最长出品时长',
     `avg` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '平均出品时长',

@@ -212,6 +212,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		// 采购单位列表
 		itemInfo.UnitList = func(item model.PurchaseOrderItem) []resp.PurchaseOrderItemMaterialUnit {
 			unitList := []resp.PurchaseOrderItemMaterialUnit{}
+			if item.Material == nil {
+				return unitList
+			}
 			for _, unit := range item.Material.NotBaseUnitList {
 				unitList = append(unitList, resp.PurchaseOrderItemMaterialUnit{
 					Uuid: unit.Uuid,

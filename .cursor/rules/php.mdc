@@ -1,24 +1,161 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: PHP 核心约束
 ---
-#关于目录
-1. php相关的文件目录是 /admin
 
-#关于迁移文件或者数据库
-1. 新增字段中有关时间的, 都用int类型并以_time结尾, 类型是int,  默认值是0
-2. 新增字段中有关金额的,都用decimal(20,8)类型
-3. 新增迁移文件的时候都判断一下表或者字段是否已经存在, 如果存在, 则不要新增
-4. 都用中文注释, 不要用英文注释
-5. 都添加uuid字段, 类型是biginteger, 默认值是0, 不要用bigint类型
-6. 都添加create_time, update_time, delete_time字段, 类型是int, 默认值是0, 不要用datetime类型
-7. 所有的迁移文件都写在php中，不要写在go中
-8. 新增迁移文件的时候，文件名的前缀我希望是保持跟其他一致， 比如20250721370408_add_table_name_table.php 前缀为shell执行date +%Y%m%d%H%M%S的结果
-9. 在迁移文件中新增表或者删除字段的时候，也要同步改动 seeds/shop_01.sql 文件。../main/app/model/ 目录下也有对应的模型文件，也要同步改动
-10. 迁移文件不用写表的前缀 "ttpos_"
-11. 新增表的时候一定要加上表名注释
-12. 强制要求 $table->addColumn 方法里面的内容不需要换行
-13. 迁移文件添加修改text字段类型，不要设置默认值
+## ⚡ 核心约束（必须遵守）
 
-#关于接口
-1. 接口都用中文注释, 不要用英文注释
-2. php接口，都基于其他接口都添加apidoc注释，头部引用 use hg\apidoc\annotation as Apidoc;
+### 命名规范
+
+| 类型 | 规则        | 示例                |
+| ---- | ----------- | ------------------- |
+| 类   | PascalCase  | `UserController`    |
+| 方法 | camelCase   | `getUserList()`     |
+| 变量 | camelCase   | `$userId`           |
+| 常量 | UPPER_SNAKE | `ORDER_STATUS_PAID` |
+
+### MVC 分层
+
+```php
+Controller  // 参数接收、调用 Service、返回响应
+    ↓
+Service     // 业务逻辑、事务管理
+    ↓
+Model       // 数据库操作、关联查询
+```
+
+---
+
+## 🏗️ 开发模式
+
+### 控制器
+
+```php
+public function getUserList(Request $request)
+{
+    // 1. 获取参数
+    $page = $request->param('page', 1);
+
+    // 2. 参数验证
+    $validate = new UserValidate();
+    if (!$validate->check($data)) {
+        return $this->renderError($validate->getError());
+    }
+
+    // 3. 调用服务层
+    $userService = new UserService();
+    $result = $userService->getUserList($page);
+
+    // 4. 返回响应
+    return $this->renderSuccess($result);
+}
+```
+
+### 服务层
+
+```php
+public function createUser($data)
+{
+    Db::startTrans();
+    try {
+        $user = User::create($data);
+        Db::commit();
+        return ['user_id' => $user->id];
+    } catch (\Exception $e) {
+        Db::rollback();
+        throw $e;
+    }
+}
+```
+
+### 模型层
+
+```php
+class User extends BaseModel
+{
+    protected $name = 'user';
+    protected $deleteTime = 'delete_time';
+
+    // 关联
+    public function roles()
+    {
+        return $this->hasMany(UserRole::class);
+    }
+}
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发前
+
+- [ ] 阅读 [PHP 架构](../../docs/human/architecture/php-architecture.md)
+- [ ] 理解 MVC 分层
+- [ ] 熟悉 ThinkPHP 6.0
+
+### 编码时
+
+- [ ] 使用 camelCase 命名方法和变量
+- [ ] Controller 不写业务逻辑
+- [ ] Service 管理事务
+- [ ] Model 使用软删除
+- [ ] 使用验证器验证参数
+
+### 提交前
+
+- [ ] 代码格式化（PSR-2）
+- [ ] 测试通过
+- [ ] ApiDoc 注释完整
+
+---
+
+## 📋 常用模式
+
+### 验证器
+
+```php
+protected $rule = [
+    'username' => 'require|length:2,20',
+    'email' => 'require|email',
+];
+
+protected $message = [
+    'username.require' => '用户名不能为空',
+];
+```
+
+### ApiDoc 注解
+
+```php
+/**
+ * @Apidoc\Title("获取用户列表")
+ * @Apidoc\Method("GET")
+ * @Apidoc\Param("page", type="int")
+ * @Apidoc\Returned("code", type="int")
+ */
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                     | 原因           |
+| ------------------------ | -------------- |
+| ❌ Controller 写业务逻辑 | 违反 MVC 分层  |
+| ❌ 不用验证器            | 安全风险       |
+| ❌ 硬删除数据            | 必须用软删除   |
+| ❌ 不写 ApiDoc           | API 文档不完整 |
+
+---
+
+## 📖 详细文档
+
+- [PHP 架构设计](../../docs/human/architecture/php-architecture.md)
+- [PHP 开发指南](../../docs/human/guides/php-development.md)
+- [API 设计指南](../../docs/human/guides/api-design-guide.md)
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

@@ -4,6 +4,7 @@ package model
 type KitchenEfficiencyAnalysis struct {
 	BaseModel
 	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;type:bigint(20) unsigned;not null" json:"product_package_uuid"` // 商品包UUID
+	IsPackage          int     `gorm:"column:is_package;type:int(10) not null;default:0" json:"is_package"`                       // 是否是套餐: 0-否, 1-是
 	Min                float64 `gorm:"column:min;type:int(10) unsigned;not null" json:"min"`                                      // 最短出品时长
 	Max                float64 `gorm:"column:max;type:int(10) unsigned;not null" json:"max"`                                      // 最长出品时长
 	Avg                float64 `gorm:"column:avg;type:int(10) unsigned;not null" json:"avg"`                                      // 平均出品时长

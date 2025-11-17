@@ -38,7 +38,7 @@ class AddParentTreeFieldsToCompanySetting extends Migrator
         }
         // 添加has_children字段
         if (!$table->hasColumn('has_children')) {
-            $table->addColumn('has_children', 'integer', ['default' => 0, 'comment' => '是否含有子节点: 0-否 1-是', 'after' => 'parent_company_uuids']);
+            $table->addColumn('has_children', 'integer', ['null' => false, 'default' => 0, 'comment' => '是否含有子节点: 0-否 1-是', 'after' => 'parent_company_uuids']);
         }
         $table->update();
     }

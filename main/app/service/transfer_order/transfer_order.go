@@ -632,7 +632,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		// 提交调拨单
 		if reqs.IsSubmit {
 			ctx.SetDB(tx)
-			if err = s.SubmitTransferOrder(ctx, req.TransferOrderSubmitReq{Uuid: transferOrder.Uuid, IsConfirm: true}); err != nil {
+			if err = s.SubmitTransferOrder(ctx, req.TransferOrderSubmitReq{Uuid: transferOrder.Uuid, IsConfirm: reqs.IsConfirm}); err != nil {
 				return err
 			}
 		}

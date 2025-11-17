@@ -32,6 +32,7 @@ func Init() error {
 	// 加载 .env 文件
 	err := godotenv.Load("../.env")
 	if err != nil {
+		fmt.Printf("error loading .env file: %v\n", err)
 		return fmt.Errorf("error loading .env file: %v", err)
 	}
 	// 加载环境变量到 viper

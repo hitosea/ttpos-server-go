@@ -107,8 +107,21 @@ func (r *kitchenEfficiencyAnalysisRepo) GetKitchenEfficiencyAnalysisAvg(startTim
 		Avg float64 `json:"avg"`
 	}
 	var avgResult KitchenEfficiencyAnalysisAvg
-	db := r.db.Model(&model.KitchenEfficiencyAnalysis{}).Where("date >= ?", startTime).Where("date <= ?", endTime)
-	err := db.Select("AVG(avg) as avg").First(&avgResult).Error
+
+	/*
+		SELECT
+			IF(t1.count = 0, 0, t1.total / t1.count) AS avg
+		FROM
+			(SELECT IFNULL(sum(total), 0) AS total, IFNULL(sum(count), 0) AS count FROM ttpos_kitchen_efficiency_analysis WHERE is_package = 0 AND `date`>= 1763308800 AND date<= 1763308801) AS t1
+	*/
+
+	dataQuery := `
+		SELECT
+			IF(t1.count = 0, 0, t1.total / t1.count) AS avg
+		FROM
+			(SELECT IFNULL(sum(total), 0) AS total, IFNULL(sum(count), 0) AS count FROM ttpos_kitchen_efficiency_analysis WHERE is_package = 0 AND date>= ? AND date<= ?) AS t1
+	`
+	err := r.db.Raw(dataQuery, startTime, endTime).First(&avgResult).Error
 	if err != nil {
 		return 0, err
 	}
@@ -118,11 +131,50 @@ func (r *kitchenEfficiencyAnalysisRepo) GetKitchenEfficiencyAnalysisAvg(startTim
 // 计算某个商品某天的后厨效率
 func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(startTime, endTime int64) ([]*model.KitchenEfficiencyAnalysis, error) {
 	var kitchenEfficiencyAnalysisList []*model.KitchenEfficiencyAnalysis
-	db := r.db.Model(&model.ProductionOrderProduct{}).Where("finished_time >= ?", startTime).Where("finished_time <= ?", endTime).
-		Where("delete_time = 0").
-		Where("status = 2").      // 状态: 2-已完成
-		Where("all_duration > 0") // 该功能之前的数据都是0,不查询之前的数据
-	err := db.Select("product_package_uuid,MIN(all_duration) AS min , MAX(all_duration) AS max ,AVG(all_duration) AS avg, sum(all_duration) AS total, sum(num) AS 'count'").Group("product_package_uuid").Find(&kitchenEfficiencyAnalysisList).Error
+	/*
+		SELECT t1.product_package_uuid,  t1.min , t1.max, t1.total ,t1.`count`, IF(t1.count = 0,0, t1.total /t1.`count`) AS `avg`   FROM (
+			SELECT
+				product_package_uuid,
+				MIN(all_duration) AS min,
+				MAX(all_duration) AS max,
+				sum(all_duration) AS total,
+				sum(num) AS 'count'
+			FROM
+				`ttpos_production_order_product`
+			WHERE
+				finished_time >= 1763308800
+				AND finished_time <= 1763395199
+				AND delete_time = 0
+				AND STATUS = 2
+				AND all_duration > 0
+			GROUP BY
+				`product_package_uuid`
+			) AS t1
+	*/
+
+	// 查询数据（带分页）
+	dataQuery := `
+				SELECT t1.product_package_uuid,  t1.min , t1.max, t1.total ,t1.count, IF(t1.count = 0,0, t1.total /t1.count) AS avg   FROM (
+			SELECT
+				product_package_uuid,
+				MIN(all_duration) AS min,
+				MAX(all_duration) AS max,
+				sum(all_duration) AS total,
+				sum(num) AS 'count'
+			FROM
+				ttpos_production_order_product
+			WHERE
+				finished_time >= ?
+				AND finished_time <= ?
+				AND delete_time = 0
+				AND STATUS = 2
+				AND all_duration > 0
+			GROUP BY
+				product_package_uuid
+			) AS t1
+	`
+	// 复制args并添加分页参数
+	err := r.db.Raw(dataQuery, startTime, endTime).Find(&kitchenEfficiencyAnalysisList).Error
 	if err != nil {
 		return nil, err
 	}

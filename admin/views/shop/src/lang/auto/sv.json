@@ -2146,7 +2146,7 @@
     "打印提示音": "Utskriftsaviseringston",
     "打印档口：": "Utskriftsdisk:",
     "请选择打印档口": "Vänligen välj utskriftsdisk",
-    "整单备注": "Anmärkning för hela dokumentet",
+    "整单备注": "Orderanteckningar",
     "单品备注": "Produktanmärkning",
     "整单备注：这是整单备注备注": "Orderanmärkning: Detta är orderns anmärkning.",
     "-子菜名称1": "-Underrätt namn 1",
@@ -2159,5 +2159,6 @@
     "兼容": "Kompatibel",
     "流畅：设备状态良好时选择此模式，可最大化打印效率": "Smidig: Välj detta läge när enheten är i gott skick för att maximera utskriftseffektiviteten.",
     "稳定：遇到偶尔卡顿时切换到此模式，确保订单稳定输出": "Stabil: Byt till detta läge vid tillfälliga fördröjningar för att säkerställa stabil orderutskrift.",
-    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Kompatibilitet: Används när enhetens prestanda är otillräcklig för att säkerställa att varje order skrivs ut komplett"
+    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Kompatibilitet: Används när enhetens prestanda är otillräcklig för att säkerställa att varje order skrivs ut komplett",
+    "如调整自定义模板，请前往桌面端操作": "Om du vill justera en anpassad mall, gör det på skrivbordsversionen"
 }

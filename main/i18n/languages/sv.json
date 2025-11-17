@@ -2453,7 +2453,7 @@
   "数量格式错误，请输入小数点后4位，范围：0-99999999": "Felaktigt antalformat, ange 4 decimaler, intervall: 0-99999999",
   "数量限制": "Antalsbegränsning",
   "整单取消": "Avbryt hela beställningen",
-  "整单备注": "Anmärkning för hela dokumentet",
+  "整单备注": "Orderanteckningar",
   "整单备注不存在": "Orderkommentar finns inte",
   "整单备注信息不存在": "Orderns kommentar finns inte",
   "整单备注数量不能超过100个": "Antalet orderkommentarer får inte överstiga 100",
