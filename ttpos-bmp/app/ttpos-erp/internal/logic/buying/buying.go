@@ -236,10 +236,11 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 					_warehouse = itemReq.Warehouse
 				}
 				receiptItems = append(receiptItems, &erp.PurchaseReceiptItem{
-					ItemCode:  itemReq.ItemCode,
-					Qty:       itemReq.Qty,
-					Uom:       itemReq.Uom,
-					Warehouse: _warehouse,
+					ItemCode:      itemReq.ItemCode,
+					Qty:           itemReq.Qty,
+					Uom:           itemReq.Uom,
+					Warehouse:     _warehouse,
+					PurchaseOrder: req.PurchaseOrderName,
 				})
 			}
 		}
