@@ -670,6 +670,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `make_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '制作时长(秒)',
     `send_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '传菜时长(秒)',
     `all_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '总时长(秒)',
+    `avg_make_duration` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '制作时长平均值(秒)',
+    `avg_send_duration` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '传菜时长平均值(秒)',
+    `avg_all_duration` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '总时长平均值(秒)',
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
