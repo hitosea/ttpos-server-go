@@ -421,21 +421,26 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
 	}
 	return material_resp.MaterialDetailResp{
-		Uuid:                   material.Uuid,
-		LocaleName:             material.MultiLanguageName.GetNames(),
-		Code:                   material.Code,
-		CategoryUuid:           material.CategoryUuid,
-		CategoryName:           material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		Status:                 int(utils.BoolToUint(material.Status)),
-		Valuation:              material.Valuation,
-		BarcodeValue:           material.BarcodeValue,
-		InternalCode:           material.InternalCode,
-		SafetyStock:            material.SafetyStock,
-		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		UnitUuid:               material.UnitUuid,
-		FromUnitUuid:           fromUnitUuid,
-		UnitList:               material_resp.MaterialUnitListResp{List: unitList},
-		PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Uuid:         material.Uuid,
+		LocaleName:   material.MultiLanguageName.GetNames(),
+		Code:         material.Code,
+		CategoryUuid: material.CategoryUuid,
+		CategoryName: material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Status:       int(utils.BoolToUint(material.Status)),
+		Valuation:    material.Valuation,
+		BarcodeValue: material.BarcodeValue,
+		InternalCode: material.InternalCode,
+		SafetyStock:  material.SafetyStock,
+		UnitName:     material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitUuid:     material.UnitUuid,
+		FromUnitUuid: fromUnitUuid,
+		UnitList:     material_resp.MaterialUnitListResp{List: unitList},
+		PurchaseUnitName: func() string {
+			if material.PurchaseUnit == nil {
+				return ""
+			}
+			return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+		}(),
 		PurchaseUnitUuid:       material.PurchaseUnitUuid,
 		FromPurchaseUnitUuid:   fromPurchaseUnitUuid,
 		CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
