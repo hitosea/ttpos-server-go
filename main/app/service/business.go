@@ -1453,6 +1453,17 @@ func (s *businessSrv) StatsKitchenEfficiencyAnalysis(ctx context.Context) (strin
 
 	logger.Logger.Info("统计当天后厨效率分析数据", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.String("timezone", timezone), zap.String("dateString", dateString), zap.Int64("startTime", startTime), zap.Int64("endTime", endTime))
 
+	// 查询所有套餐
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	productPackageUuids, err := productPackageRepo.GetProductPackageUuidsByIsPackage()
+	if err != nil {
+		return "", err
+	}
+	packageUuidMap := make(map[uint64]bool) // 套餐uuid列表
+	for _, productPackageUuid := range productPackageUuids {
+		packageUuidMap[productPackageUuid] = true
+	}
+
 	// 统计当天各个商品的后厨效率分析数据
 	kitchenEfficiencyAnalysisRepo := repository.NewKitchenEfficiencyAnalysisRepo(db)
 	kitchenEfficiencyAnalysis, err := kitchenEfficiencyAnalysisRepo.CalculateKitchenEfficiencyAnalysis(startTime, endTime)
@@ -1503,6 +1514,13 @@ func (s *businessSrv) StatsKitchenEfficiencyAnalysis(ctx context.Context) (strin
 				Date:               startTime,
 				DateString:         dateString,
 				Timezone:           timezone,
+
+				IsPackage: func() int { // 是否是套餐
+					if _, ok := packageUuidMap[item.ProductPackageUuid]; ok {
+						return 1
+					}
+					return 0
+				}(),
 			}
 			createList = append(createList, item)
 		}

@@ -107,8 +107,21 @@ func (r *kitchenEfficiencyAnalysisRepo) GetKitchenEfficiencyAnalysisAvg(startTim
 		Avg float64 `json:"avg"`
 	}
 	var avgResult KitchenEfficiencyAnalysisAvg
-	db := r.db.Model(&model.KitchenEfficiencyAnalysis{}).Where("date >= ?", startTime).Where("date <= ?", endTime)
-	err := db.Select("AVG(avg) as avg").First(&avgResult).Error
+
+	/*
+		SELECT
+			IF(t1.count = 0, 0, t1.total / t1.count) AS avg
+		FROM
+			(SELECT IFNULL(sum(total), 0) AS total, IFNULL(sum(count), 0) AS count FROM ttpos_kitchen_efficiency_analysis WHERE is_package = 0 AND `date`>= 1763308800 AND date<= 1763308801) AS t1
+	*/
+
+	dataQuery := `
+		SELECT
+			IF(t1.count = 0, 0, t1.total / t1.count) AS avg
+		FROM
+			(SELECT IFNULL(sum(total), 0) AS total, IFNULL(sum(count), 0) AS count FROM ttpos_kitchen_efficiency_analysis WHERE is_package = 0 AND date>= ? AND date<= ?) AS t1
+	`
+	err := r.db.Raw(dataQuery, startTime, endTime).First(&avgResult).Error
 	if err != nil {
 		return 0, err
 	}
