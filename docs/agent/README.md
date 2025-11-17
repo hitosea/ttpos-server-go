@@ -34,7 +34,7 @@
 
 | 模板类型   | 文件                                                                         | 适用场景       |
 | ---------- | ---------------------------------------------------------------------------- | -------------- |
-| API 文档   | [api-doc.md](./templates/api-doc.md)                                         | API 接口文档   |
+| API 文档   | [api-doc-template.md](./templates/api-doc-template.md)                       | API 接口文档   |
 | 需求规格   | [requirements-template.md](./templates/requirements-template.md)             | 需求定义       |
 | 技术设计   | [design-template.md](./templates/design-template.md)                         | 技术方案       |
 | 任务分解   | [tasks-template.md](./templates/tasks-template.md)                           | 任务清单       |
@@ -45,6 +45,18 @@
 | gRPC 服务  | [grpc-service-template.md](./templates/grpc-service-template.md)             | Protobuf 定义  |
 | 迁移指南   | [migration-guide.md](./templates/migration-guide.md)                         | 版本迁移       |
 | 测试报告   | [test-report-template.md](./templates/test-report-template.md)               | 测试报告       |
+
+### [Graphiti 草稿](./graphiti/)
+
+**用途：** 存放基于 `docs/agent/templates/graphiti-episode.md` 生成的 Episode 草稿，准备通过 MCP 入库。  
+**使用场景：**
+- 耗时 >30 分钟的排障/设计
+- 需要跨团队复用的经验
+- 重大决策沉淀
+
+**互链要求：**
+- 在相关文档末尾添加 `Related Episode: {name}`
+- 在 Episode `Related Docs` 中列出对应 Spec / Troubleshooting / Report
 
 ---
 

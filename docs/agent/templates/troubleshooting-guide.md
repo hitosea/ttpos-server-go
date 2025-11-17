@@ -53,7 +53,7 @@
 
 ```bash
 # 示例：检查数据库连接
-cd /Users/benbige/Projects/ttpos-server-go/main
+cd path/ttpos-server-go/main
 go run cmd/check_db/main.go
 ```
 

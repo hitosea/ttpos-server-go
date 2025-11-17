@@ -163,7 +163,7 @@
   - File: `docs/shared/api/order_api.md`, `CHANGELOG.md`
   - Purpose: 更新API文档和变更日志
   - Requirements: 文档要求
-  - Leverage: `docs/agent/templates/api-doc.md`
+  - Leverage: `docs/agent/templates/api-doc-template.md`
   - Success: 所有文档已更新
 
 ---
@@ -255,6 +255,14 @@ Success Criteria:
 - 并发安全
 - 缓存逻辑正确
 ```
+
+---
+
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 活动日志：`docs/team/activities/2025-11/2025-11-17.md`
+- 当执行任务中形成复盘/优化建议时，及时沉淀 Episode 并在本节更新名称。
 
 ---
 

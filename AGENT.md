@@ -114,6 +114,7 @@ UUID: biginteger, 默认值 0
 | **填充模板**              | `docs/agent/templates/*.md`                     | 结构化表单                     |
 | **记录排查指南**          | `docs/agent/templates/troubleshooting-guide.md` | 创建/更新 troubleshooting 文档 |
 | **记录 Graphiti Episode** | `docs/agent/templates/graphiti-episode.md`      | Graphiti 入库模板              |
+| **Graphiti 草稿**         | `docs/agent/graphiti/`                          | Episode 草稿仓库               |
 | **查看指令**              | `.cursor/commands/*.md`                         | 指令参数和用法                 |
 | **查看规范**              | `.cursor/rules/*.mdc`                           | 规则速查                       |
 | **执行任务**              | `docs/shared/specs/*/tasks.md`                  | 任务逐条执行                   |

@@ -25,6 +25,7 @@
 - 开发环境配置
 - 常见问题解答
 - Cursor 指令使用
+- [文档编写指南](./guides/documentation-guide.md)
 
 ### [架构设计](./architecture/)
 **用途：** 系统架构和技术文档

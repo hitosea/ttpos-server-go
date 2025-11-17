@@ -379,5 +379,14 @@ git push origin feature/story-{module}-{feature}
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 提醒：当某个任务耗时 >30 分钟或总结出复用模式/踩坑时，填写 Episode，并在 Spec/PR/报告中互链。
+
+---
+
 **最后更新**: 2025-11-16
 **维护者**: 后端开发组

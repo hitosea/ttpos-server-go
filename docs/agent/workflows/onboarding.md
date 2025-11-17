@@ -384,7 +384,7 @@ func (s *practiceSrvImpl) GetMessage(ctx *gin.Context) (string, error) {
     if err := someOperation(); err != nil {
         return "", errors.WithMessage(err, "操作失败")
     }
-    
+
     // ✅ 不使用 panic，返回 error
     return "Hello, TTPOS!", nil
 }
@@ -631,10 +631,10 @@ Ctrl/Cmd + Shift + F
 
 **A**: 核心区别：
 
-| 层级       | 职责                 | 依赖                     | 持有对象    |
-| ---------- | -------------------- | ------------------------ | ----------- |
-| Service    | 业务逻辑、事务管理   | 其他 Service 接口        | DBManager   |
-| Repository | 数据访问、SQL 查询   | 无（只操作数据库）       | db 实例     |
+| 层级       | 职责               | 依赖               | 持有对象  |
+| ---------- | ------------------ | ------------------ | --------- |
+| Service    | 业务逻辑、事务管理 | 其他 Service 接口  | DBManager |
+| Repository | 数据访问、SQL 查询 | 无（只操作数据库） | db 实例   |
 
 **错误示例** ❌:
 
@@ -727,7 +727,15 @@ type orderSrv struct {
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 建议在完成 Onboarding 或总结学习路径/踩坑后记录 Episode，帮助下一位新同学更快上手。
+
+---
+
 **最后更新**: 2025-11-17  
 **维护者**: 后端开发组  
 **版本**: v1.0.0 - 后端版初始版本
-

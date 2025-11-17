@@ -13,6 +13,7 @@
 ### Go Main 规范 (go-main.mdc)
 
 [说明设计如何遵循 Go Main 开发规范]
+
 - Service 只依赖其他 Service 接口
 - Repository 只持有 db 实例
 - URL 使用 snake_case
@@ -22,6 +23,7 @@
 ### Go BMP 规范 (go-bmp.mdc)
 
 [如涉及微服务，说明如何遵循 GoFrame 规范]
+
 - 禁止修改 dao/entity/do/ 目录
 - gRPC 服务注册到 Nacos
 - 遵循 GoFrame 项目结构
@@ -29,6 +31,7 @@
 ### PHP 规范 (php.mdc)
 
 [如涉及 PHP，说明如何遵循规范]
+
 - 遵循 MVC 分层
 - Controller 不写业务逻辑
 - 使用验证器验证参数
@@ -36,6 +39,7 @@
 ### API 设计规范 (api.mdc)
 
 [说明 API 设计如何遵循规范]
+
 - URL 使用 snake_case
 - 响应格式统一
 - data 不能为 null 或数组
@@ -43,6 +47,7 @@
 ### 数据库规范 (database.mdc)
 
 [说明数据库设计如何遵循规范]
+
 - 必需字段完整
 - 时间字段使用 int
 - 金额字段使用 decimal
@@ -73,6 +78,7 @@
 ### 分层设计原则
 
 **Go Main 三层架构**:
+
 ```
 API 层 (Controller/API)
   ↓ 依赖
@@ -82,6 +88,7 @@ API 层 (Controller/API)
 ```
 
 **依赖规则**:
+
 - ✅ 上层可依赖下层
 - ❌ 禁止下层依赖上层
 - ❌ 禁止跨层调用
@@ -102,6 +109,7 @@ graph TD
 ### 模块划分
 
 #### Go Main 模块
+
 - **API 层**: `main/app/api/` - 路由处理、参数校验
 - **Service 层**: `main/app/service/` - 业务逻辑、事务管理
 - **Repository 层**: `main/app/repository/` - 数据访问、数据库操作
@@ -111,6 +119,7 @@ graph TD
   - `resp/` - 响应数据
 
 #### Go BMP 模块（如适用）
+
 - **HTTP Controller**: `ttpos-{service}/internal/controller/http/` - HTTP 接口
 - **RPC Controller**: `ttpos-{service}/internal/controller/rpc/` - gRPC 接口
 - **Logic 层**: `ttpos-{service}/internal/logic/` - 业务逻辑
@@ -121,12 +130,14 @@ graph TD
   - `dto/` - 数据传输对象（手动编写 ✅）
 
 #### PHP Admin 模块（如适用）
+
 - **Controller 层**: `admin/app/{admin|shop}/controller/` - 控制器
 - **Service 层**: `admin/app/{admin|shop}/service/` - 业务逻辑
 - **Model 层**: `admin/app/{admin|shop}/model/` - 数据模型
 - **Validate 层**: `admin/app/{admin|shop}/validate/` - 参数验证
 
 #### Vue 前端模块（如适用）
+
 - **Pages**: `admin/views/{admin|shop}/pages/` - 页面
 - **Components**: `admin/views/{admin|shop}/components/` - 组件
 - **API**: `admin/views/{admin|shop}/api/` - API 封装
@@ -157,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_{table_name}` (
 **字段说明**:
 | 字段 | 类型 | 说明 | 约束 |
 |------|------|------|------|
-| id | bigint unsigned | 主键ID | AUTO_INCREMENT |
+| id | bigint unsigned | 主键 ID | AUTO_INCREMENT |
 | uuid | bigint unsigned | 唯一标识 | DEFAULT 0, UNIQUE |
 | {field_name} | {type} | {说明} | {约束} |
 | create_time | int | 创建时间 | DEFAULT 0 |
@@ -165,6 +176,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_{table_name}` (
 | delete_time | int | 删除时间 | DEFAULT 0 |
 
 **索引设计**:
+
 - 主键索引: `PRIMARY KEY (id)`
 - 唯一索引: `UNIQUE KEY uk_uuid (uuid)`
 - 普通索引: `KEY idx_{field} ({field})`
@@ -178,6 +190,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_{table_name}` (
 ### 数据库迁移
 
 **迁移脚本**:
+
 ```bash
 # 创建迁移文件
 cd admin
@@ -188,6 +201,7 @@ php think migrate:run
 ```
 
 **同步 Go Model**:
+
 ```bash
 # 在 main/app/model/ 中创建对应的 Go 结构体
 ```
@@ -274,9 +288,10 @@ type PageMeta struct {
 #### API 1: {API 名称}
 
 **请求**:
+
 - **URL**: `/api/v1/{module}/{action}`
 - **Method**: `POST` / `GET` / `PUT` / `DELETE`
-- **Headers**: 
+- **Headers**:
   ```json
   {
     "Authorization": "Bearer {token}",
@@ -291,6 +306,7 @@ type PageMeta struct {
   ```
 
 **响应**:
+
 ```json
 {
   "code": 1,
@@ -303,6 +319,7 @@ type PageMeta struct {
 ```
 
 **错误响应**:
+
 ```json
 {
   "code": 0,
@@ -348,6 +365,7 @@ message {Data} {
 ```
 
 **生成代码**:
+
 ```bash
 cd ttpos-bmp/app/ttpos-{service}
 make dao
@@ -397,7 +415,7 @@ func New{Name}Srv(
 func (s *{name}Srv) Create(ctx *gin.Context, req *dto_req.{Name}CreateReq) (*dto_resp.{Name}Resp, error) {
     // 获取 Repository
     {name}Repo := repository.New{Name}Repo(s.dbm.GetDB(ctx))
-    
+
     // 业务逻辑
     {name} := &model.{ModelName}{
         Uuid:       pkg_uuid.GenerateUuid(),
@@ -405,12 +423,12 @@ func (s *{name}Srv) Create(ctx *gin.Context, req *dto_req.{Name}CreateReq) (*dto
         CreateTime: time.Now().Unix(),
         UpdateTime: time.Now().Unix(),
     }
-    
+
     // 保存数据
     if err := {name}Repo.Create({name}); err != nil {
         return nil, errors.WithMessage(err, "创建失败")
     }
-    
+
     // 发布事件（如需要）
     go func() {
         event.NewSystemBus().Publish{Name}CreatedEvent(
@@ -423,7 +441,7 @@ func (s *{name}Srv) Create(ctx *gin.Context, req *dto_req.{Name}CreateReq) (*dto
             },
         )
     }()
-    
+
     // 返回响应
     return &dto_resp.{Name}Resp{
         Uuid:       {name}.Uuid,
@@ -448,7 +466,7 @@ type I{Name}Repo interface {
     GetByUuid(uuid uint64, options ...DBOption) (*model.{ModelName}, error)
     GetList(options ...DBOption) ([]*model.{ModelName}, int64, error)
     Delete(uuid uint64) error
-    
+
     // 选项方法
     WhereUuid(uuid uint64) DBOption
     Where{Field}({field} {Type}) DBOption
@@ -475,11 +493,11 @@ func (r *{Name}RepoImpl) Create({name} *model.{ModelName}) error {
 func (r *{Name}RepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*model.{ModelName}, error) {
     var {name} model.{ModelName}
     db := r.db.Where("delete_time = ?", 0)
-    
+
     for _, option := range options {
         db = option(db)
     }
-    
+
     if err := db.Where("uuid = ?", uuid).First(&{name}).Error; err != nil {
         return nil, err
     }
@@ -489,21 +507,21 @@ func (r *{Name}RepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*model.{Mo
 func (r *{Name}RepoImpl) GetList(options ...DBOption) ([]*model.{ModelName}, int64, error) {
     var list []*model.{ModelName}
     var total int64
-    
+
     db := r.db.Where("delete_time = ?", 0)
-    
+
     for _, option := range options {
         db = option(db)
     }
-    
+
     if err := db.Model(&model.{ModelName}{}).Count(&total).Error; err != nil {
         return nil, 0, err
     }
-    
+
     if err := db.Find(&list).Error; err != nil {
         return nil, 0, err
     }
-    
+
     return list, total, nil
 }
 
@@ -540,13 +558,13 @@ func (api *{Name}API) Create(c *gin.Context) {
         helper.ErrorWithDetail(c, constant.CodeInvalidParam, err)
         return
     }
-    
+
     resp, err := api.{name}Srv.Create(c, &req)
     if err != nil {
         helper.ErrorWithDetail(c, constant.CodeFail, err)
         return
     }
-    
+
     helper.Success(c, gin.H{
         "data": resp,
     })
@@ -562,11 +580,13 @@ func (api *{Name}API) Create(c *gin.Context) {
 ### Redis 缓存
 
 **缓存策略**:
+
 - **Key 命名**: `ttpos:{module}:{type}:{id}`
 - **过期时间**: 根据业务场景设置
 - **更新策略**: Cache-Aside Pattern
 
 **示例**:
+
 ```go
 // 缓存读取
 key := fmt.Sprintf("ttpos:{module}:{name}:%d", uuid)
@@ -636,17 +656,20 @@ return data
 
 ### 单元测试
 
-**目标覆盖率**: 
+**目标覆盖率**:
+
 - main/app/service: 70%+
 - main/app/repository: 80%+
 - **Payment/Order 相关: 100%**（高风险）
 
 **测试内容**:
+
 - Service 业务逻辑
 - Repository 数据访问
 - DTO 数据转换
 
 **示例**:
+
 ```go
 // main/app/service/{name}_service_test.go
 func Test{Name}Service_Create(t *testing.T) {
@@ -657,6 +680,7 @@ func Test{Name}Service_Create(t *testing.T) {
 ### API 测试
 
 **测试内容**:
+
 - API 接口调用
 - 参数验证
 - 响应格式
@@ -665,6 +689,7 @@ func Test{Name}Service_Create(t *testing.T) {
 ### 集成测试
 
 **测试流程**:
+
 - 端到端业务流程
 - 数据库事务
 - 缓存一致性
@@ -676,16 +701,19 @@ func Test{Name}Service_Create(t *testing.T) {
 ### 优化策略
 
 1. **数据库优化**:
+
    - 添加索引
    - 优化 SQL 查询
    - 使用连接池
 
 2. **缓存优化**:
+
    - Redis 缓存热点数据
    - 缓存预热
    - 缓存穿透防护
 
 3. **并发控制**:
+
    - UUID 锁防止并发冲突
    - 事务隔离级别
 
@@ -753,8 +781,16 @@ func Test{Name}Service_Create(t *testing.T) {
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 在技术方案评审、关键架构决策或踩坑总结后，立即补充 Episode 并在设计文档尾部互链。
+
+---
+
 **版本**: v1.0.0  
 **创建日期**: {YYYY-MM-DD}  
 **作者**: {团队/个人}  
 **审核者**: {审核者}
-

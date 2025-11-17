@@ -310,5 +310,14 @@
 
 ---
 
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 动作：需求完成评审/拆分后，如发现可复用经验或决策沉淀，立即创建 Episode，并在 Proposal/Spec 文末互链。
+
+---
+
 **最后更新**: 2025-11-16  
 **维护者**: 产品组 + 后端开发组

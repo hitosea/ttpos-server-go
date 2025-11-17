@@ -73,6 +73,12 @@ cd docs/shared/specs/story-order-quick-payment
 touch requirements.md design.md tasks.md
 ```
 
+### Graphiti & 活动日志
+
+- 每个 Spec 的 `requirements.md`、`design.md`、`tasks.md` 底部必须包含 `Graphiti & 活动日志` 段落。
+- Related Episode 使用 `docs/agent/templates/graphiti-episode.md` 模板生成草稿后填入名称。
+- 同步在 `docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md` 中记录创建/更新动作。
+
 ---
 
 ## 🔗 相关资源

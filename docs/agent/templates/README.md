@@ -14,12 +14,12 @@
 - [x] `tasks-template.md` - 任务分解模板（后端版）
 - [x] `graphiti-episode.md` - Graphiti Episode 模板（知识沉淀）
 
-### 后端专属模板（进行中）
+### 后端专属模板（✅ 已完成）
 
-- [ ] `database-migration-template.md` - 数据库迁移模板
-- [ ] `api-doc-template.md` - API 文档模板
+- [x] `database-migration-template.md` - 数据库迁移模板
+- [x] `api-doc-template.md` - API 文档模板
 - [x] `troubleshooting-guide.md` - 问题排查模板
-- [ ] `grpc-service-template.md` - gRPC 服务模板
+- [x] `grpc-service-template.md` - gRPC 服务模板
 
 ---
 

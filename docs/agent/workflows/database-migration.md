@@ -7,16 +7,19 @@
 ## 📋 概述
 
 ### 适用场景
+
 - 新增数据库表
 - 修改表结构（添加/删除/修改字段）
 - 创建索引
 - 数据迁移
 
 ### 预计时间
+
 - 简单迁移（新增表）: 0.5-1 小时
 - 复杂迁移（多表关联）: 1-2 小时
 
 ### 核心原则
+
 **所有数据库迁移文件统一在 PHP 中管理（admin/database/migrations/），同时同步更新 Go model**
 
 ---
@@ -24,7 +27,7 @@
 ## 完整流程
 
 ```
-设计表结构 → 创建迁移文件 (PHP) → 编写迁移代码 → 
+设计表结构 → 创建迁移文件 (PHP) → 编写迁移代码 →
 更新 Go model → 更新 seeds 文件 → 执行迁移 → 验证数据 → 提交代码
 ```
 
@@ -39,16 +42,16 @@
 ```markdown
 ## 订单表 (order)
 
-| 字段名 | 类型 | 长度 | 默认值 | 注释 |
-| --- | --- | --- | --- | --- |
-| id | biginteger | 主键 | 自增 | 主键ID |
-| uuid | biginteger | - | 0 | UUID |
-| order_no | string | 50 | '' | 订单号 |
-| amount | decimal | 20,8 | 0 | 订单金额 |
-| status | tinyinteger | - | 0 | 订单状态 |
-| create_time | integer | - | 0 | 创建时间 |
-| update_time | integer | - | 0 | 更新时间 |
-| delete_time | integer | - | 0 | 删除时间 |
+| 字段名      | 类型        | 长度 | 默认值 | 注释     |
+| ----------- | ----------- | ---- | ------ | -------- |
+| id          | biginteger  | 主键 | 自增   | 主键 ID  |
+| uuid        | biginteger  | -    | 0      | UUID     |
+| order_no    | string      | 50   | ''     | 订单号   |
+| amount      | decimal     | 20,8 | 0      | 订单金额 |
+| status      | tinyinteger | -    | 0      | 订单状态 |
+| create_time | integer     | -    | 0      | 创建时间 |
+| update_time | integer     | -    | 0      | 更新时间 |
+| delete_time | integer     | -    | 0      | 删除时间 |
 ```
 
 #### 字段规范（必须遵守）
@@ -86,18 +89,20 @@ UUID字段:
 #### 生成迁移文件
 
 ```bash
-cd /Users/ben/projects/ttpos-server-go/admin
+cd path/ttpos-server-go/admin
 
 # 创建迁移文件（文件名前缀会自动生成时间戳）
 php think make:migration AddOrderTable
 ```
 
 **文件命名规范**:
+
 - 前缀: `date +%Y%m%d%H%M%S` 的结果
 - 格式: `{timestamp}_add_{table_name}_table.php`
 - 示例: `20250721370408_add_order_table.php`
 
 #### 检查清单
+
 - [ ] 迁移文件已创建
 - [ ] 文件名符合规范
 - [ ] 文件位置: `admin/database/migrations/`
@@ -127,7 +132,7 @@ class AddOrderTable extends AbstractMigration
                 'primary_key' => ['id'],
                 'comment' => '订单表', // 表注释（必须）
             ]);
-            
+
             $table->addColumn('id', 'biginteger', ['identity' => true, 'comment' => '主键ID'])
                   ->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => 'UUID'])
                   ->addColumn('order_no', 'string', ['limit' => 50, 'default' => '', 'comment' => '订单号'])
@@ -151,7 +156,7 @@ class AddOrderTable extends AbstractMigration
 public function change()
 {
     $table = $this->table('order');
-    
+
     // 检查字段是否存在
     if (!$table->hasColumn('remark')) {
         $table->addColumn('remark', 'text', ['comment' => '备注', 'after' => 'status'])
@@ -166,7 +171,7 @@ public function change()
 public function change()
 {
     $table = $this->table('order');
-    
+
     // 检查字段是否存在
     if ($table->hasColumn('old_field')) {
         $table->removeColumn('old_field')
@@ -176,7 +181,8 @@ public function change()
 ```
 
 #### 关键规范
-- [ ] 表名不加前缀 "ttpos_"
+
+- [ ] 表名不加前缀 "ttpos\_"
 - [ ] 必须添加表注释
 - [ ] 迁移前检查表/字段是否存在
 - [ ] 所有 addColumn 不要换行
@@ -213,16 +219,17 @@ func (Order) TableName() string {
 
 #### 类型映射
 
-| PHP (Phinx) | MySQL | Go (GORM) |
-| --- | --- | --- |
-| biginteger | BIGINT | uint64 |
-| integer | INT | int32 |
-| tinyinteger | TINYINT | uint8 |
-| string | VARCHAR | string |
-| text | TEXT | string |
-| decimal(20,8) | DECIMAL | float64 |
+| PHP (Phinx)   | MySQL   | Go (GORM) |
+| ------------- | ------- | --------- |
+| biginteger    | BIGINT  | uint64    |
+| integer       | INT     | int32     |
+| tinyinteger   | TINYINT | uint8     |
+| string        | VARCHAR | string    |
+| text          | TEXT    | string    |
+| decimal(20,8) | DECIMAL | float64   |
 
 #### 检查清单
+
 - [ ] Go Model 已创建/更新
 - [ ] 字段类型映射正确
 - [ ] 添加了 gorm 标签
@@ -277,7 +284,7 @@ VALUES
 #### 运行迁移命令
 
 ```bash
-cd /Users/ben/projects/ttpos-server-go/admin
+cd path/ttpos-server-go/admin
 
 # 执行迁移
 php think migrate:run
@@ -319,7 +326,7 @@ php think migrate:rollback -t {timestamp}
 // 测试 Model
 func TestOrderModel(t *testing.T) {
     db := database.GetDB()
-    
+
     order := &model.Order{
         UUID:       1001,
         OrderNo:    "TEST001",
@@ -327,10 +334,10 @@ func TestOrderModel(t *testing.T) {
         Status:     1,
         CreateTime: time.Now().Unix(),
     }
-    
+
     err := db.Create(order).Error
     assert.NoError(t, err)
-    
+
     // 查询验证
     var result model.Order
     err = db.Where("uuid = ?", 1001).First(&result).Error
@@ -340,6 +347,7 @@ func TestOrderModel(t *testing.T) {
 ```
 
 #### 检查清单
+
 - [ ] 表已创建
 - [ ] 字段类型正确
 - [ ] 索引已创建
@@ -372,30 +380,35 @@ Migration: {timestamp}_add_order_table"
 ## 检查清单
 
 ### 设计阶段
+
 - [ ] 表结构已设计
 - [ ] 字段规范已确认
 - [ ] 索引已设计
 
 ### 迁移文件
+
 - [ ] 迁移文件已创建
 - [ ] 迁移前检查表/字段存在性
 - [ ] 字段规范正确（时间 int，金额 decimal）
-- [ ] 必须字段已添加 (uuid, *_time)
+- [ ] 必须字段已添加 (uuid, \*\_time)
 - [ ] 表注释已添加
 - [ ] 所有注释使用中文
 
 ### Go Model
+
 - [ ] Go Model 已创建/更新
 - [ ] 字段类型映射正确
 - [ ] gorm 标签正确
 - [ ] TableName() 已实现
 
 ### Seeds
+
 - [ ] shop_01.sql 已更新
 - [ ] 建表语句正确
 - [ ] 测试数据已添加（可选）
 
 ### 执行验证
+
 - [ ] 迁移执行成功
 - [ ] 表结构正确
 - [ ] Go Model 可以正常操作
@@ -406,25 +419,33 @@ Migration: {timestamp}_add_order_table"
 ## 常见问题
 
 ### Q: 为什么所有迁移都在 PHP 中？
-**A**: 
+
+**A**:
+
 - 统一管理，避免混乱
 - PHP Phinx 功能强大
 - Go model 只需同步更新
 
 ### Q: 时间字段为什么用 int 不用 datetime？
-**A**: 
+
+**A**:
+
 - 跨时区兼容性好
 - 存储效率高
 - 便于计算和比较
 
 ### Q: 金额字段为什么用 decimal(20,8)？
-**A**: 
+
+**A**:
+
 - 避免浮点数精度问题
 - 支持大金额和高精度
 - 行业标准
 
 ### Q: 如何处理旧数据迁移？
-**A**: 
+
+**A**:
+
 1. 创建单独的迁移文件
 2. 在 change() 方法中编写数据处理逻辑
 3. 使用 SQL 批量更新
@@ -435,17 +456,28 @@ Migration: {timestamp}_add_order_table"
 ## 相关资源
 
 ### 规范文件
+
 - `.cursor/rules/php.mdc` - PHP 迁移文件规范 ⭐⭐⭐
 - `.cursor/rules/golang.mdc` - Go model 规范
 
 ### 模板
+
 - `docs/agent/templates/database-migration-template.md` - 迁移模板
 
 ### 文档
+
 - `docs/human/architecture/entities/` - 实体模型文档
+
+---
+
+## Graphiti & 活动日志
+
+- Related Episode: `[待补充]`
+- 模板：`docs/agent/templates/graphiti-episode.md`
+- 活动日志：`docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md`
+- 建议：复杂迁移或需要特殊回滚方案时沉淀 Episode，并在 Spec/design 中互链。
 
 ---
 
 **最后更新**: 2025-11-16  
 **维护者**: 后端开发组
-

@@ -44,7 +44,7 @@
 
 ```bash
 # 示例：回滚最近一次迁移
-cd /Users/benbige/Projects/ttpos-server-go/admin && php think migrate:rollback --step=1
+cd path/ttpos-server-go/admin && php think migrate:rollback --step=1
 ```
 
 ```go
