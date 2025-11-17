@@ -59,6 +59,8 @@ func newRedisCache(conf Config) Cache {
 		defer cancel()
 		_, err := client.Ping(ctx).Result()
 		if err != nil {
+			fmt.Printf("[FATAL] Redis connection failed: %v\n", err)
+			fmt.Printf("[FATAL] Redis address: %s:%s\n", conf.Host, conf.Port)
 			log.Fatal("initRedis client.Ping err: ", err)
 		}
 	} else {
@@ -81,6 +83,8 @@ func newRedisCache(conf Config) Cache {
 		defer cancel()
 		_, errPing := clusterClient.Ping(ctx).Result()
 		if errPing != nil {
+			fmt.Printf("[FATAL] Redis cluster connection failed: %v\n", errPing)
+			fmt.Printf("[FATAL] Redis cluster addresses: %v\n", addressList)
 			log.Fatal("initClusterRedis client.Ping err: ", errPing)
 		}
 	}
