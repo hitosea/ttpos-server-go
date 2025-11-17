@@ -2453,7 +2453,7 @@
   "数量格式错误，请输入小数点后4位，范围：0-99999999": "Miktar formatı hatalı, lütfen 4 ondalık basamak girin, aralık: 0-99999999",
   "数量限制": "Miktar sınırı",
   "整单取消": "Tam Sipariş İptali",
-  "整单备注": "Tüm fiş için not",
+  "整单备注": "Sipariş Notları",
   "整单备注不存在": "Siparişin genel notu mevcut değil",
   "整单备注信息不存在": "Siparişin tamamına ait not bilgisi mevcut değil",
   "整单备注数量不能超过100个": "Toplam sipariş notu sayısı 100'ü geçemez",
