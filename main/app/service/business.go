@@ -2299,7 +2299,7 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 	}
 
 	request.PageNo = 1
-	request.PageSize = 1000 // 最多导出1000条数据
+	request.PageSize = 100 // 最多导出1000条数据
 	result := s.CountBusinessPaymentMethod(ctx, request)
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
