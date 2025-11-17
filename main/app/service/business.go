@@ -1924,7 +1924,7 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
 	}
-	if result.Meta.Total > 5 {
+	if result.Meta.Total > 1000 {
 		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
@@ -1998,7 +1998,7 @@ func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params E
 	db := ctx.GetDB()
 
 	params.Request.PageNo = 1
-	params.Request.PageSize = 5
+	params.Request.PageSize = 1000
 	result := s.CountBusinessTimePeriod(ctx, params.Request)
 
 	// 根据语言获取表头
@@ -2118,7 +2118,7 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
 	}
-	if result.Meta.Total > 5 {
+	if result.Meta.Total > 1000 {
 		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
@@ -2192,7 +2192,7 @@ func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params Expo
 	db := ctx.GetDB()
 
 	params.Request.PageNo = 1
-	params.Request.PageSize = 5
+	params.Request.PageSize = 1000
 	result := s.CountBusinessSummary(ctx, params.Request)
 
 	// 根据语言获取表头
@@ -2318,7 +2318,7 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
 	}
-	if result.Meta.Total > 5 {
+	if result.Meta.Total > 1000 {
 		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
@@ -2392,7 +2392,7 @@ func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, param
 	db := ctx.GetDB()
 
 	params.Request.PageNo = 1
-	params.Request.PageSize = 5
+	params.Request.PageSize = 1000
 	result := s.CountBusinessPaymentMethod(ctx, params.Request)
 
 	// 根据语言获取表头
