@@ -108,15 +108,17 @@ UUID: biginteger, 默认值 0
 
 ### 🤖 Agent 优先（执行清单）
 
-| 我需要...        | 文件路径                                        | 用途           |
-| ---------------- | ----------------------------------------------- | -------------- |
-| **执行工作流**   | `docs/agent/workflows/*.md`                     | 步骤检查清单   |
-| **填充模板**     | `docs/agent/templates/*.md`                     | 结构化表单     |
-| **查看指令**     | `.cursor/commands/*.md`                         | 指令参数和用法 |
-| **查看规范**     | `.cursor/rules/*.mdc`                           | 规则速查       |
-| **执行任务**     | `docs/shared/specs/*/tasks.md`                  | 任务逐条执行   |
-| **创建需求提案** | `docs/team/proposals/{YYYY-MM-DD}-{name}`       | `/propose`     |
-| **创建功能规格** | `docs/shared/specs/{level}-{module}-{feature}/` | `/create-spec` |
+| 我需要...                 | 文件路径                                        | 用途                           |
+| ------------------------- | ----------------------------------------------- | ------------------------------ |
+| **执行工作流**            | `docs/agent/workflows/*.md`                     | 步骤检查清单                   |
+| **填充模板**              | `docs/agent/templates/*.md`                     | 结构化表单                     |
+| **记录排查指南**          | `docs/agent/templates/troubleshooting-guide.md` | 创建/更新 troubleshooting 文档 |
+| **记录 Graphiti Episode** | `docs/agent/templates/graphiti-episode.md`      | Graphiti 入库模板              |
+| **查看指令**              | `.cursor/commands/*.md`                         | 指令参数和用法                 |
+| **查看规范**              | `.cursor/rules/*.mdc`                           | 规则速查                       |
+| **执行任务**              | `docs/shared/specs/*/tasks.md`                  | 任务逐条执行                   |
+| **创建需求提案**          | `docs/team/proposals/{YYYY-MM-DD}-{name}`       | `/propose`                     |
+| **创建功能规格**          | `docs/shared/specs/{level}-{module}-{feature}/` | `/create-spec`                 |
 
 ### 👤 人类优先（学习资料）
 
@@ -213,7 +215,7 @@ AI 辅助实现 →
   └─ 未找到 →
       查日志 (SkyWalking) →
       定位代码 → 修复 → 测试 →
-      记录 (troubleshooting/ + Graphiti) → 提交
+      记录 (docs/shared/troubleshooting/ + Graphiti Episode 模板) → 提交
 ```
 
 ### API 对接流程

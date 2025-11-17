@@ -302,6 +302,15 @@ type KitchenEfficiencyAnalysisItem struct {
 	Avg                float64            `json:"avg"`                  // 平均出品时长
 
 	exist bool `json:"exist"` // 是否存在
+	index int  `json:"index"` // 排序
+}
+
+func (item *KitchenEfficiencyAnalysisItem) SetIndex(index int) {
+	item.index = index
+}
+
+func (item *KitchenEfficiencyAnalysisItem) GetIndex() int {
+	return item.index
 }
 
 func (item *KitchenEfficiencyAnalysisItem) SetExist(exist bool) {

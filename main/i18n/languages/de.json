@@ -3449,6 +3449,7 @@
   "登录设备已达上限，请在其他设备上退出登录或联系销售代表": "Die maximale Anzahl angemeldeter Geräte wurde erreicht. Bitte melden Sie sich auf anderen Geräten ab oder kontaktieren Sie Ihren Vertriebsmitarbeiter.",
   "登录账号已存在": "Das Login-Konto existiert bereits",
   "登录过期": "Anmeldung abgelaufen",
+  "的可出库数量不足。\n\n请联系发货门店": "Nicht genügend verfügbare Lagerbestände für den Versand von.",
   "的对象": "Objekt von",
   "的对象消费税": "Verbrauchssteuer auf das Objekt",
   "的物品库存不足": "Unzureichender Lagerbestand des Artikels",
