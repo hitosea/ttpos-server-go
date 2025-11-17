@@ -92,6 +92,7 @@ class AuthService
         '/setting/business/returnReason',
         '/setting/business/orderRemark',
         '/setting/business/qrcode',
+        '/setting/business/companyQrcode',
 
         // 采购管理
         '/purchase/ErpPurchaseOrder/adjust',
