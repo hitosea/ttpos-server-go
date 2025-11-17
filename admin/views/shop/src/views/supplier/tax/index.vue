@@ -54,8 +54,6 @@
                   validator: (rule, value, callback) => {
                     if (!value) {
                       callback(new Error($t('请输入名称')));
-                    } else if (form.add_tax_category.some((cat) => cat.name === value && cat.id !== item.id)) {
-                      callback(new Error($t('此名称已存在')));
                     } else {
                       callback();
                     }
