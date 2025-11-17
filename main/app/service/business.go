@@ -1720,8 +1720,19 @@ func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req
 		},
 	}
 	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
-	xlsxFile := excelize.NewFile()                                                                         // 修改这里，直接使用 NewFile()
-	sheetName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	xlsxFile := excelize.NewFile()
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",     // 英文
+		ZhName:   "报表",         // 中文
+		ZhTwName: "報表",         // 繁体中文
+		ThName:   "รายงาน",     // 泰语
+		MyName:   "အစီရင်ခံစာ", // 缅甸语
+		JaName:   "レポート",       // 日语
+		KoName:   "보고서",        // 韩语
+		TrName:   "Rapor",      // 土耳其语
+		SvName:   "Rapport",    // 瑞典语
+	} // 修改这里，直接使用 NewFile()
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -1843,9 +1854,20 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, r
 			"Namn", "Kategori", "Kortaste Produktionstid", "Längsta Produktionstid", "Genomsnittlig Produktionstid",
 		},
 	}
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",     // 英文
+		ZhName:   "报表",         // 中文
+		ZhTwName: "報表",         // 繁体中文
+		ThName:   "รายงาน",     // 泰语
+		MyName:   "အစီရင်ခံစာ", // 缅甸语
+		JaName:   "レポート",       // 日语
+		KoName:   "보고서",        // 韩语
+		TrName:   "Rapor",      // 土耳其语
+		SvName:   "Rapport",    // 瑞典语
+	}
 	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
 	xlsxFile := excelize.NewFile()                                                                         // 修改这里，直接使用 NewFile()
-	sheetName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -1933,7 +1955,7 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 		ZhName:   "时段营业统计",
 		ZhTwName: "時段營業統計",
 		ThName:   "สถิติยอดขายตามช่วงเวลา",
-		MyName:   "အချိန်အပိုင်းအခြားအလိုက်ရောင်းအားစာရင်း",
+		MyName:   "Business Time Period Statistics",
 		JaName:   "時間帯別売上統計",
 		KoName:   "영업시간대별 통계",
 		TrName:   "Zaman Dilimi Satış İstatistikleri",
@@ -1945,9 +1967,7 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 	if err != nil {
 		return err
 	}
-	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
-	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
-	fileName := fmt.Sprintf("%s%s.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), dateString)
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -2032,7 +2052,19 @@ func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params E
 		},
 	}
 	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
-	sheetName := params.FillNameMul.GetNameByLang(ctx.GetLanguage())
+
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",     // 英文
+		ZhName:   "报表",         // 中文
+		ZhTwName: "報表",         // 繁体中文
+		ThName:   "รายงาน",     // 泰语
+		MyName:   "အစီရင်ခံစာ", // 缅甸语
+		JaName:   "レポート",       // 日语
+		KoName:   "보고서",        // 韩语
+		TrName:   "Rapor",      // 土耳其语
+		SvName:   "Rapport",    // 瑞典语
+	}
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -2139,9 +2171,7 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 	if err != nil {
 		return err
 	}
-	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
-	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
-	fileName := fmt.Sprintf("%s%s.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), dateString)
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -2226,7 +2256,18 @@ func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params Expo
 		},
 	}
 	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
-	sheetName := params.FillNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",     // 英文
+		ZhName:   "报表",         // 中文
+		ZhTwName: "報表",         // 繁体中文
+		ThName:   "รายงาน",     // 泰语
+		MyName:   "အစီရင်ခံစာ", // 缅甸语
+		JaName:   "レポート",       // 日语
+		KoName:   "보고서",        // 韩语
+		TrName:   "Rapor",      // 土耳其语
+		SvName:   "Rapport",    // 瑞典语
+	}
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -2339,9 +2380,7 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 	if err != nil {
 		return err
 	}
-	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
-	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
-	fileName := fmt.Sprintf("%s%s.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), dateString)
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -2426,7 +2465,18 @@ func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, param
 		},
 	}
 	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
-	sheetName := params.FillNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",     // 英文
+		ZhName:   "报表",         // 中文
+		ZhTwName: "報表",         // 繁体中文
+		ThName:   "รายงาน",     // 泰语
+		MyName:   "အစီရင်ခံစာ", // 缅甸语
+		JaName:   "レポート",       // 日语
+		KoName:   "보고서",        // 韩语
+		TrName:   "Rapor",      // 土耳其语
+		SvName:   "Rapport",    // 瑞典语
+	}
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
