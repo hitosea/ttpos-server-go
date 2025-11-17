@@ -14,7 +14,7 @@
       "headers": {}
     },
     "Graphiti": {
-      "url": "https://graph.hitosea.com/mcp"
+      "url": "https://graph.hitosea.com/mcp/?group_id=ttpos"
     }
   }
 }
