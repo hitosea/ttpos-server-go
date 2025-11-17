@@ -1,0 +1,192 @@
+---
+alwaysApply: false
+description: Go Main 核心约束
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 命名规范
+
+| 类型        | 规则            | 示例                     |
+| ----------- | --------------- | ------------------------ |
+| 结构体      | 大驼峰，ID 大写 | `StaffId`, `StaffName`   |
+| URL         | snake_case      | `/api/v1/order_info`     |
+| 包名/文件名 | snake_case      | `member_service.go`      |
+| 接口        | I 开头          | `IOrderRepo`, `IUserSrv` |
+| 实现        | Impl 结尾       | `OrderRepoImpl`          |
+
+### API 响应格式
+
+**data 必须是对象，不能是 null 或数组**
+
+```go
+// ✅ 正确
+helper.Success(c, gin.H{})
+helper.Success(c, gin.H{"list": []})
+
+// ❌ 错误
+helper.Success(c, nil)
+helper.Success(c, []string{})
+```
+
+### 错误处理
+
+- ✅ **必须返回 error**，不使用 panic
+- ✅ **使用** `errors.WithMessage` 包装错误
+
+```go
+// ✅ 正确
+return nil, errors.WithMessage(err, "查询失败")
+
+// ❌ 错误
+panic(err)
+```
+
+---
+
+## 🏗️ 分层设计约束
+
+### Service 层
+
+- ✅ **只能依赖其他 Service 接口**
+- ✅ **持有 DBManager**
+- ❌ **不能直接依赖 Repository**
+
+```go
+type orderSrv struct {
+    dbm        *database.DBManager  // ✅
+    memberSrv  IMemberSrv            // ✅
+    memberRepo IMemberRepo           // ❌ 错误
+}
+```
+
+### Repository 层
+
+- ✅ **只能持有 db 实例**
+- ❌ **不能持有 DBManager**
+- ✅ **使用选项模式**
+
+```go
+type OrderRepoImpl struct {
+    db  *gorm.DB           // ✅ 正确
+    dbm *database.DBManager // ❌ 错误
+}
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发前
+
+- [ ] 阅读 [Go Main 架构](../../docs/human/architecture/go-main-architecture.md)
+- [ ] 理解分层设计原则
+- [ ] 熟悉命名规范
+
+### 编码时
+
+- [ ] URL 使用 snake_case
+- [ ] 结构体 ID 字段大写
+- [ ] Service 只依赖 Service 接口
+- [ ] Repository 只持有 db 实例
+- [ ] data 不能为 null 或数组
+- [ ] 所有错误都 return，不 panic
+- [ ] 使用 `errors.WithMessage` 包装错误
+
+### 提交前
+
+- [ ] `go mod tidy` 整理依赖
+- [ ] `go fmt` 格式化代码
+- [ ] `go vet` 检查问题
+- [ ] 测试通过
+- [ ] 代码已 review
+
+---
+
+## 📋 常用模式
+
+### Service 构造函数
+
+```go
+func NewOrderSrv(
+    dbm *database.DBManager,
+    orderRepo repository.IOrderRepo,
+    memberSrv IMemberSrv,
+) IOrderSrv {
+    return &orderSrv{
+        dbm:       dbm,
+        orderRepo: orderRepo,
+        memberSrv: memberSrv,
+    }
+}
+```
+
+### Repository 选项模式
+
+```go
+func (r *OrderRepoImpl) WhereUuid(uuid uint64) DBOption {
+    return func(db *gorm.DB) *gorm.DB {
+        return db.Where("uuid = ?", uuid)
+    }
+}
+
+// 使用
+order, err := orderRepo.GetOrder(
+    orderRepo.WhereUuid(orderUuid),
+    orderRepo.WhereStatus(1),
+)
+```
+
+### 事件发布
+
+```go
+    go func() {
+    event.NewSystemBus().PublishOrderCreatedEvent(
+        event.OrderCreatedPayload{
+            BasePayload: event.BasePayload{
+                Ctx: ctx,
+                CompanyUuid: ctx.GetCompanyUuid(),
+            },
+            OrderUuid: orderUuid,
+        },
+    )
+}()
+```
+
+### UUID 锁
+
+```go
+    s.systemLock.LockUuid(deskUuid)
+    defer s.systemLock.UnlockUuid(deskUuid)
+
+    // 业务逻辑
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                         | 原因                  |
+| ---------------------------- | --------------------- |
+| ❌ URL 用 kebab-case         | 项目统一用 snake_case |
+| ❌ data 返回 null            | 前端无法统一处理      |
+| ❌ data 返回数组             | 必须是对象            |
+| ❌ 使用 panic                | 必须 return error     |
+| ❌ Service 依赖 Repository   | 只能依赖 Service      |
+| ❌ Repository 持有 DBManager | 只能持有 db           |
+| ❌ 跨层调用                  | 必须遵循分层          |
+
+---
+
+## 📖 详细文档
+
+- [Go Main 架构设计](../../docs/human/architecture/go-main-architecture.md) - 深入理解架构
+- [Go Main 开发指南](../../docs/human/guides/go-main-development.md) - 详细开发规范
+- [API 设计指南](../../docs/human/guides/api-design-guide.md) - API 设计详解
+- [数据库开发指南](../../docs/human/guides/database-guide.md) - 数据库操作
+- [安全开发指南](../../docs/human/guides/security-guide.md) - 安全规范
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

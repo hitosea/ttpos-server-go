@@ -30,16 +30,16 @@ git commit -m "feat(module): 添加新功能"
 
 ### 常用类型（type）
 
-| 类型 | 说明 | 示例 |
-|------|------|------|
-| `feat` | ✨ 新功能 | `feat(auth): 添加用户登录` |
-| `fix` | 🐛 修复 Bug | `fix(order): 修复订单计算错误` |
-| `docs` | 📝 文档 | `docs: 更新 README` |
-| `refactor` | ♻️ 重构 | `refactor(user): 优化用户服务` |
-| `perf` | ⚡ 性能 | `perf(query): 优化数据库查询` |
-| `style` | 💄 格式 | `style: 统一代码格式` |
-| `test` | ✅ 测试 | `test(api): 添加 API 测试` |
-| `chore` | 🔧 其他 | `chore: 更新依赖包` |
+| 类型       | 说明        | 示例                           |
+| ---------- | ----------- | ------------------------------ |
+| `feat`     | ✨ 新功能   | `feat(auth): 添加用户登录`     |
+| `fix`      | 🐛 修复 Bug | `fix(order): 修复订单计算错误` |
+| `docs`     | 📝 文档     | `docs: 更新 README`            |
+| `refactor` | ♻️ 重构     | `refactor(user): 优化用户服务` |
+| `perf`     | ⚡ 性能     | `perf(query): 优化数据库查询`  |
+| `style`    | 💄 格式     | `style: 统一代码格式`          |
+| `test`     | ✅ 测试     | `test(api): 添加 API 测试`     |
+| `chore`    | 🔧 其他     | `chore: 更新依赖包`            |
 
 ### 分支命名规范
 
@@ -100,6 +100,7 @@ git commit -m "feat(auth):添加登录"
 ```
 
 **解决方案**:
+
 ```bash
 # 重命名分支
 git branch -m test-branch feature/test-branch
@@ -112,6 +113,7 @@ git branch -m test-branch feature/test-branch
 ```
 
 **解决方案**:
+
 ```bash
 # 使用正确格式重新提交
 git commit -m "feat(module): 正确的提交信息"
@@ -133,7 +135,6 @@ git commit --no-verify -m "你的提交信息"
 
 ## 📖 详细文档
 
-- [提交规范详细说明](./COMMIT_CONVENTION.md)
 - [Husky 配置说明](./.husky/README.md)
 - [安装指南](./.husky/INSTALLATION.md)
 

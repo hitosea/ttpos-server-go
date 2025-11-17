@@ -1,0 +1,173 @@
+---
+alwaysApply: false
+description: API 设计规范
+---
+
+# API 设计规范
+
+> 🤖 **受众**: AI Agent  
+> 📖 **用途**: API 设计的核心约束和快速参考
+
+---
+
+## 📚 快速索引
+
+| 我要...           | 查阅文档                                                    |
+| ----------------- | ----------------------------------------------------------- |
+| 学习详细 API 设计 | [API 设计指南](../../docs/human/guides/api-design-guide.md) |
+| 快速查看规范      | [API 规范速查](../../docs/shared/api/conventions.md)        |
+
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### URL 命名 - snake_case
+
+```
+✅ /api/v1/user_profiles
+✅ /api/v1/order_items
+
+❌ /api/v1/userProfiles   # camelCase
+❌ /api/v1/user-profiles  # kebab-case
+```
+
+### 响应格式
+
+**data 必须是对象，不能是 null 或数组**
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {}
+}
+```
+
+```json
+// ❌ 错误
+{"data": null}
+{"data": []}
+
+// ✅ 正确
+{"data": {}}
+{"data": {"list": []}}
+```
+
+---
+
+## 📋 API 设计规则
+
+### URL 设计
+
+```
+✅ 使用名词单数 + 操作后缀
+GET  /api/v1/order/list
+GET  /api/v1/order/info
+POST /api/v1/order/create
+POST /api/v1/order/cancel
+
+❌ 不使用 RESTful 风格
+GET  /api/v1/orders
+GET  /api/v1/orders/123
+```
+
+### HTTP 方法
+
+| 方法   | 用途      | 示例                          |
+| ------ | --------- | ----------------------------- |
+| GET    | 获取资源  | `GET /api/v1/order/list`      |
+| POST   | 创建/执行 | `POST /api/v1/order/create`   |
+| PUT    | 完整更新  | `PUT /api/v1/order/update`    |
+| DELETE | 删除      | `DELETE /api/v1/order/delete` |
+
+---
+
+## 🔍 关键检查点
+
+### 设计 API 时
+
+- [ ] URL 使用 snake_case
+- [ ] 使用名词单数 + 操作后缀
+- [ ] data 必须是对象
+- [ ] 包含版本号 /api/v1/
+
+### 编写响应时
+
+- [ ] code: 1 表示成功，0 表示失败
+- [ ] message: 提示信息
+- [ ] data: 必须是对象 `{}`
+- [ ] 分页信息放在 meta 中
+
+### 返回数据时
+
+- [ ] Go: 使用 helper.Success()
+- [ ] PHP: 使用 renderSuccess()
+- [ ] 空数据返回 `{}`，不返回 null
+
+---
+
+## 📋 常用模式
+
+### Go 返回响应
+
+```go
+// ✅ 正确
+helper.Success(c, gin.H{})
+helper.Success(c, gin.H{"list": []})
+helper.ErrorWithDetail(c, constant.CodeFail, err)
+
+// ❌ 错误
+c.JSON(200, data)  // 不要直接用 c.JSON
+```
+
+### PHP 返回响应
+
+```php
+// ✅ 正确
+return $this->renderSuccess($data);
+return $this->renderSuccess([]);
+return $this->renderError('错误信息');
+```
+
+### 分页响应
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "list": [...],
+    "meta": {
+      "page_no": 1,
+      "page_size": 20,
+      "total": 100
+    }
+  }
+}
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                 | 原因                  |
+| -------------------- | --------------------- |
+| ❌ URL 用 kebab-case | 项目统一用 snake_case |
+| ❌ data 返回 null    | 前端无法统一处理      |
+| ❌ data 返回数组     | 必须是对象            |
+| ❌ 使用 RESTful 风格 | 项目用操作后缀        |
+| ❌ 直接用 c.JSON     | 必须用 helper         |
+
+---
+
+## 📖 详细文档
+
+- [API 设计详细指南](../../docs/human/guides/api-design-guide.md) - 完整的 API 设计规范
+- [API 规范速查](../../docs/shared/api/conventions.md) - 快速参考
+- [Go Main 开发指南](../../docs/human/guides/go-main-development.md) - Go API 实现
+- [PHP 开发指南](../../docs/human/guides/php-development.md) - PHP API 实现
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team

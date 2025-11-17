@@ -644,7 +644,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order` (
 CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT COMMENT '名称',
     `num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品数量',
     `init_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '初始送厨数量，退菜后，init_num肯定大于num',
     `flavor_name` TEXT COMMENT '规格名称,不随后台改变',

@@ -1,0 +1,185 @@
+---
+alwaysApply: false
+description: Go BMP 模块开发规范
+---
+
+# Go BMP 模块开发规范
+
+> 🤖 **受众**: AI Agent  
+> 📖 **用途**: Go BMP 模块（GoFrame）的核心开发约束和快速索引
+
+---
+
+## 📚 快速索引
+
+| 我要...            | 查阅文档                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| 了解架构设计       | [Go BMP 架构](../../docs/human/architecture/go-bmp-architecture.md)                      |
+| 学习详细开发规范   | [Go BMP 开发指南](../../docs/human/guides/go-bmp-development.md)                         |
+| 查看 Protobuf 规范 | [ttpos-bmp/.cursor/rules/proto-rules.mdc](../../ttpos-bmp/.cursor/rules/proto-rules.mdc) |
+| 了解 GoFrame 框架  | [GoFrame 官方文档](https://goframe.org.cn)                                               |
+
+---
+
+## ⚠️ 重要说明
+
+**ttpos-bmp 项目有自己的专用开发规范**，详见：
+
+- `ttpos-bmp/.cursor/rules/go-rules.mdc` - Go 代码开发规范
+- `ttpos-bmp/.cursor/rules/proto-rules.mdc` - Protobuf 开发规范
+
+本文档仅提供项目级统一说明和快速索引。
+
+---
+
+## ⚡ 核心约束（必须遵守）
+
+### 自动生成文件 - 禁止修改
+
+**严禁手动修改以下目录**：
+
+```
+❌ internal/dao/          # 数据访问层
+❌ internal/model/do/     # 数据对象
+❌ internal/model/entity/ # 数据实体
+❌ internal/service/      # 服务接口
+```
+
+**识别标识**：包含此注释的文件不要修改
+
+```go
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+```
+
+### 手动编写目录
+
+```
+✅ internal/logic/        # 业务逻辑实现
+✅ internal/controller/   # 控制器实现
+✅ internal/model/dto/    # 数据传输对象
+✅ internal/consts/       # 常量定义
+✅ manifest/protobuf/     # protobuf 定义
+✅ manifest/sql/          # 数据库迁移脚本
+```
+
+---
+
+## 🏗️ 服务层设计
+
+### 单例模式
+
+```go
+// 服务实现
+type sUser struct{}
+
+var insUser = sUser{}
+
+func User() *sUser {
+    return &insUser
+}
+
+func init() {
+    service.RegisterUser(User())
+}
+```
+
+---
+
+## 🗄️ 数据库操作
+
+### 使用 DAO 层
+
+```go
+// 查询
+var user *entity.User
+err := dao.User.Ctx(ctx).Where(dao.User.Columns().Id, userId).Scan(&user)
+
+// 插入
+userId, err := dao.User.Ctx(ctx).Data(do.User{
+    Username: "test",
+}).InsertAndGetId()
+
+// 事务
+err := g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+    _, err := dao.User.Ctx(ctx).TX(tx).Data(userData).Insert()
+    return err
+})
+```
+
+---
+
+## 📝 错误处理
+
+### 使用 gerror
+
+```go
+import "github.com/gogf/gf/v2/errors/gerror"
+
+// ✅ 正确
+err := gerror.New("用户不存在")
+err = gerror.Wrap(originalErr, "获取用户失败")
+
+// ❌ 错误
+err := errors.New("用户不存在")  // 不要用标准库 errors
+```
+
+---
+
+## 🔍 关键检查点
+
+### 开发前
+
+- [ ] 阅读 [Go BMP 架构](../../docs/human/architecture/go-bmp-architecture.md)
+- [ ] 查看 ttpos-bmp 项目专用规范
+- [ ] 理解 GoFrame 框架
+
+### 编码时
+
+- [ ] 不要修改自动生成的文件
+- [ ] 使用 gerror 处理错误
+- [ ] 业务逻辑写在 logic/ 目录
+- [ ] 使用 dao 层操作数据库
+
+### 提交前
+
+- [ ] 检查是否误改了自动生成文件
+- [ ] 运行测试
+- [ ] 代码格式化
+
+---
+
+## 🎨 代码生成
+
+```bash
+# 生成 DAO 和 Model
+cd app/ttpos-erp
+make dao
+
+# 生成 gRPC 代码
+make proto
+```
+
+---
+
+## 🚫 禁止事项
+
+| 禁止                          | 原因                   |
+| ----------------------------- | ---------------------- |
+| ❌ 修改 dao/do/entity/service | 自动生成，修改会被覆盖 |
+| ❌ 使用标准库 errors          | 必须用 gerror          |
+| ❌ 使用 panic                 | 必须 return error      |
+| ❌ 参考 main/ 目录代码        | 框架不同，规范不同     |
+
+---
+
+## 📖 详细文档
+
+- [Go BMP 架构设计](../../docs/human/architecture/go-bmp-architecture.md) - 深入理解架构
+- [Go BMP 开发指南](../../docs/human/guides/go-bmp-development.md) - 详细开发规范
+- [GoFrame 官方文档](https://goframe.org.cn) - 框架详细文档
+- [ttpos-bmp 专用规范](../../ttpos-bmp/.cursor/rules/) - 项目专用规范
+
+---
+
+**最后更新**: 2025-11-17  
+**维护者**: TTPOS Team
