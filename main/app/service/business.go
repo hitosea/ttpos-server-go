@@ -959,12 +959,13 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysis(ctx context.Context, req re
 	}
 	productPackageUuids := make([]uint64, 0)
 	efficiencyAnalysisDataList := make(map[uint64]*business_data_resp.KitchenEfficiencyAnalysisItem)
-	for _, product := range productList {
+	for index, product := range productList {
 		efficiencyAnalysisDataList[product.Uuid] = &business_data_resp.KitchenEfficiencyAnalysisItem{
 			ProductPackageUuid: product.Uuid,
 			ProductName:        product.MultiLanguageName.GetNames(),
 			CategoryName:       product.ProductCategory.MultiLanguageName.GetNames(),
 		}
+		efficiencyAnalysisDataList[product.Uuid].SetIndex(index)
 		productPackageUuids = append(productPackageUuids, product.Uuid)
 	}
 
@@ -993,6 +994,11 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysis(ctx context.Context, req re
 			list = append(list, *efficiencyAnalysisData)
 		}
 	}
+
+	// 排序
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].GetIndex() < list[j].GetIndex()
+	})
 
 	// 分页返回
 	pageNo := req.PageNo
