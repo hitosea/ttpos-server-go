@@ -40,9 +40,12 @@ type ProductionOrderProduct struct {
 	BatchTime    int64  `gorm:"column:batch_time;type:int(10) unsigned;default:0;comment:分批时间(时间戳)，表示该商品实际送厨到厨房的时间;NOT NULL" json:"batch_time"`
 	IsBatch      uint8  `gorm:"column:is_batch;type:tinyint(1);default:0;comment:是否是分批商品, 0-否 1-是;NOT NULL" json:"is_batch"`
 	// 效率分析相关
-	MakeDuration int64 `gorm:"column:make_duration;type:int(10) unsigned;default:0;comment:制作时长(秒);NOT NULL" json:"make_duration"`
-	SendDuration int64 `gorm:"column:send_duration;type:int(10) unsigned;default:0;comment:传菜时长(秒);NOT NULL" json:"send_duration"`
-	AllDuration  int64 `gorm:"column:all_duration;type:int(10) unsigned;default:0;comment:总时长(秒);NOT NULL" json:"all_duration"`
+	MakeDuration    int64   `gorm:"column:make_duration;type:int(10) unsigned;default:0;comment:制作时长(秒);NOT NULL" json:"make_duration"`
+	SendDuration    int64   `gorm:"column:send_duration;type:int(10) unsigned;default:0;comment:传菜时长(秒);NOT NULL" json:"send_duration"`
+	AllDuration     int64   `gorm:"column:all_duration;type:int(10) unsigned;default:0;comment:总时长(秒);NOT NULL" json:"all_duration"`
+	AvgMakeDuration float64 `gorm:"column:avg_make_duration;type:decimal(22,4);default:0.00;comment:制作时长平均值(秒);NOT NULL" json:"avg_make_duration"`
+	AvgSendDuration float64 `gorm:"column:avg_send_duration;type:decimal(22,4);default:0.00;comment:传菜时长平均值(秒);NOT NULL" json:"avg_send_duration"`
+	AvgAllDuration  float64 `gorm:"column:avg_all_duration;type:decimal(22,4);default:0.00;comment:总时长平均值(秒);NOT NULL" json:"avg_all_duration"`
 
 	ProductionOrderMaterials []*ProductionOrderMaterial `gorm:"foreignKey:ProductionOrderProductUuid;references:Uuid" json:"production_order_materials"`
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`

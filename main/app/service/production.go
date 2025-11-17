@@ -600,6 +600,10 @@ func (s *productionSrv) updatePackageProduct(tx *gorm.DB, saleOrderProductUuids 
 					"finished_time": 0,
 					"make_duration": 0, // 清空时长记录
 					"all_duration":  0,
+					// 清空平均值
+					"avg_make_duration": 0,
+					"avg_send_duration": 0,
+					"avg_all_duration":  0,
 				}); err != nil {
 					return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
 				}
@@ -620,6 +624,10 @@ func (s *productionSrv) updatePackageProduct(tx *gorm.DB, saleOrderProductUuids 
 			"finished_time": time.Now().Unix(),
 			"make_duration": makeDuration,
 			"all_duration":  makeDuration,
+			// 计算制作时长平均值. 平均值 = make_duration / num
+			"avg_make_duration": gorm.Expr("? / num", makeDuration),
+			// 计算总时长平均值. 平均值 = make_duration / num
+			"avg_all_duration": gorm.Expr("? / num", makeDuration),
 		}); err != nil {
 			return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
 		}
@@ -721,6 +729,8 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 					"make_status":   constant.ProductionOrderProductMakeStatusFinished,
 					"made_time":     nowTime,
 					"make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN ? - batch_time ELSE ? - create_time END", nowTime, nowTime),
+					// 计算制作时长平均值. 平均值 = make_duration / num
+					"avg_make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN (? - batch_time) / num ELSE (? - create_time) / num END", nowTime, nowTime),
 				}); err != nil {
 					return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 				}
@@ -769,6 +779,15 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 						END
 					ELSE ? - made_time 
 				END`, finishedTime, finishedTime, finishedTime),
+				// 计算传菜时长平均值. 平均值 = send_duration / num
+				"avg_send_duration": gorm.Expr(`CASE 
+					WHEN made_time = 0 THEN 
+						CASE 
+							WHEN is_batch = 1 THEN (? - batch_time) / num 
+							ELSE (? - create_time) / num 
+						END
+					ELSE (? - made_time )/ num
+				END`, finishedTime, finishedTime, finishedTime),
 				"all_duration": gorm.Expr(`make_duration + CASE 
 					WHEN made_time = 0 THEN 
 						CASE 
@@ -776,6 +795,15 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 							ELSE ? - create_time 
 						END
 					ELSE ? - made_time 
+				END`, finishedTime, finishedTime, finishedTime),
+				// 计算总时长平均值. 平均值 = avg_make_duration + avg_send_duration
+				"avg_all_duration": gorm.Expr(`avg_make_duration + CASE 
+					WHEN made_time = 0 THEN 
+						CASE 
+							WHEN is_batch = 1 THEN (? - batch_time) / num 
+							ELSE (? - create_time) / num 
+						END
+					ELSE (? - made_time )/ num
 				END`, finishedTime, finishedTime, finishedTime),
 			}); err != nil {
 				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
@@ -787,6 +815,10 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 				"finished_time": finishedTime,
 				"make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN ? - batch_time ELSE ? - create_time END", finishedTime, finishedTime),
 				"all_duration":  gorm.Expr("CASE WHEN is_batch = 1 THEN ? - batch_time ELSE ? - create_time END", finishedTime, finishedTime),
+				// 计算制作时长平均值. 平均值 = make_duration / num
+				"avg_make_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN (? - batch_time) / num ELSE (? - create_time) / num END", finishedTime, finishedTime),
+				// 计算总时长平均值. 平均值 = make_duration / num
+				"avg_all_duration": gorm.Expr("CASE WHEN is_batch = 1 THEN (? - batch_time) / num ELSE (? - create_time) / num END", finishedTime, finishedTime),
 			}); err != nil {
 				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 			}
@@ -918,7 +950,12 @@ func (s *productionSrv) convertToEventOrderProduct(product *model.ProductionOrde
 			}
 			return product.SaleOrderProduct.IsWrapProduct()
 		}(),
-		Remark: product.SaleOrderProduct.Remark,
+		Remark: func() string {
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				return ""
+			}
+			return product.SaleOrderProduct.Remark
+		}(),
 	}
 	// 如果是套餐主商品，添加子商品
 	if product.SaleOrderProduct.IsPackageProduct() && products != nil && len(products) > 0 {
@@ -965,6 +1002,10 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 			"make_duration": 0, // 清空时长记录
 			"send_duration": 0,
 			"all_duration":  0,
+			// 清空平均值
+			"avg_make_duration": 0,
+			"avg_send_duration": 0,
+			"avg_all_duration":  0,
 		}); err != nil {
 			return errors.WithMessage(errors.New("恢复送厨单商品制作状态失败"), err.Error())
 		}
@@ -989,6 +1030,10 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 				"finished_time": 0,
 				"send_duration": 0,
 				"all_duration":  0,
+				// 清空平均值
+				"avg_make_duration": 0,
+				"avg_send_duration": 0,
+				"avg_all_duration":  0,
 			}); err != nil {
 				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 			}
@@ -999,6 +1044,10 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 				"finished_time": 0,
 				"make_duration": 0,
 				"all_duration":  0,
+				// 清空平均值
+				"avg_make_duration": 0,
+				"avg_send_duration": 0,
+				"avg_all_duration":  0,
 			}); err != nil {
 				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 			}
