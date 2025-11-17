@@ -3449,6 +3449,7 @@
   "登录设备已达上限，请在其他设备上退出登录或联系销售代表": "Login devices have reached the limit; please log out from other devices or contact a sales representative.",
   "登录账号已存在": "Login account already exists",
   "登录过期": "Login expired",
+  "的可出库数量不足。\n\n请联系发货门店": "Insufficient available stock for outbound of.",
   "的对象": "The object of",
   "的对象消费税": "Object consumption tax",
   "的物品库存不足": "Insufficient stock of the item",
