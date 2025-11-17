@@ -74,6 +74,7 @@ var rootCommand = &cobra.Command{
 		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL, config.SMS.ProjectName)
 		// 检查短信客户端配置
 		if err := sms.GetSMSClient().CheckConfig(); err != nil {
+			fmt.Printf("[FATAL] Failed to check SMS client config: %v\n", err)
 			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
 		}
 		//初始化服务发现
@@ -81,6 +82,7 @@ var rootCommand = &cobra.Command{
 
 		// 初始化 OTLP 调用链跟踪
 		if err := otlp.Init(context.Background(), config.Otlp); err != nil {
+			fmt.Printf("[FATAL] Failed to initialize OpenTelemetry: %v\n", err)
 			logger.Logger.Error("Failed to initialize OpenTelemetry", zap.Error(err))
 		}
 	},
@@ -154,6 +156,7 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	utils.Go(func() {
 		logger.Logger.Info("HTTP 服务器启动", zap.String("port", config.Server.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			fmt.Printf("[FATAL] HTTP 服务器启动失败: %v\n", err)
 			logger.Logger.Fatal("HTTP 服务器启动失败", zap.Error(err))
 		}
 	})

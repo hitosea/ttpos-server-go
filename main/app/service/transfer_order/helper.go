@@ -1343,18 +1343,10 @@ func (h *transferOrderHelper) GetMaterials(
 
 	}
 	if len(disabledMaterialNames) > 0 {
-		return materials, disabledMaterialNames, notFoundMaterialNames, errors.NewWithCodeAndData(
-			constant.CodeErrorConfirmClose,
-			disabledMaterialNames,
-			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n请修改物品状态"), h.joinNames(disabledMaterialNames)),
-		)
+		return materials, disabledMaterialNames, notFoundMaterialNames, nil
 	}
 	if len(notFoundMaterialNames) > 0 {
-		return materials, disabledMaterialNames, notFoundMaterialNames, errors.NewWithCodeAndData(
-			constant.CodeErrorConfirmClose,
-			notFoundMaterialNames,
-			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。"), h.joinNames(notFoundMaterialNames)),
-		)
+		return materials, disabledMaterialNames, notFoundMaterialNames, nil
 	}
 	return materials, disabledMaterialNames, notFoundMaterialNames, nil
 }

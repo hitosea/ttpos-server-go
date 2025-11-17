@@ -950,7 +950,12 @@ func (s *productionSrv) convertToEventOrderProduct(product *model.ProductionOrde
 			}
 			return product.SaleOrderProduct.IsWrapProduct()
 		}(),
-		Remark: product.SaleOrderProduct.Remark,
+		Remark: func() string {
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				return ""
+			}
+			return product.SaleOrderProduct.Remark
+		}(),
 	}
 	// 如果是套餐主商品，添加子商品
 	if product.SaleOrderProduct.IsPackageProduct() && products != nil && len(products) > 0 {

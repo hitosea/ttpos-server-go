@@ -207,6 +207,13 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 	}
 
 	if query.OrderTimeStart > 0 && query.OrderTimeEnd > 0 {
+		// 判断如果是毫秒级别的时间戳，则转换为秒级别的时间戳
+		if query.OrderTimeStart > 1000000000000 {
+			query.OrderTimeStart = query.OrderTimeStart / 1000
+		}
+		if query.OrderTimeEnd > 1000000000000 {
+			query.OrderTimeEnd = query.OrderTimeEnd / 1000
+		}
 		baseSQL += fmt.Sprintf(" AND order_time >= %d AND order_time <= %d ", query.OrderTimeStart, query.OrderTimeEnd)
 	}
 
