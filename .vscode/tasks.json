@@ -129,6 +129,15 @@
             "migrate"
         ],
         "group": "build",
+    },
+    {
+        "label": "Go项目-更新 MCP Token",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "update-mcp-token"
+        ],
+        "group": "build",
     }
 ]
 } 
