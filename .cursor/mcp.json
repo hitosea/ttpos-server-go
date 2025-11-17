@@ -1,8 +1,5 @@
 {
   "mcpServers": {
-    "DooTask": {
-      "url": "http://localhost:22224/mcp"
-    },
     "Sentry": {
       "url": "https://mcp.sentry.dev/mcp",
       "headers": {}
@@ -16,8 +13,8 @@
       "url": "https://mcp.exa.ai/mcp",
       "headers": {}
     },
-    "graphiti": {
-      "url": "http://10.144.144.7:18000/mcp"
+    "Graphiti": {
+      "url": "https://graph.hitosea.com/mcp"
     }
   }
 }

@@ -3443,6 +3443,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
     `product_package_uuid` bigint NOT NULL DEFAULT 0 COMMENT '商品包UUID',
+    `is_package` int(10) NOT NULL DEFAULT 0 COMMENT '是否是套餐',
     `min` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最短出品时长',
     `max` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最长出品时长',
     `avg` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '平均出品时长',

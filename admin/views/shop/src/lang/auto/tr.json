@@ -1918,5 +1918,6 @@
     "兼容": "Uyumlu",
     "流畅：设备状态良好时选择此模式，可最大化打印效率": "Akıcı: Cihaz durumu iyi olduğunda bu modu seçin, baskı verimliliğini en üst düzeye çıkarır",
     "稳定：遇到偶尔卡顿时切换到此模式，确保订单稳定输出": "Kararlı: Ara sıra takılma yaşandığında bu moda geçin, siparişlerin istikrarlı bir şekilde çıktısını sağlayın",
-    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Uyumluluk: Cihaz performansı yetersiz olduğunda kullanılır, her siparişin eksiksiz yazdırılmasını garanti eder"
+    "兼容：设备性能不足时使用，保证每张订单都能完整打印": "Uyumluluk: Cihaz performansı yetersiz olduğunda kullanılır, her siparişin eksiksiz yazdırılmasını garanti eder",
+    "如调整自定义模板，请前往桌面端操作": "Özel şablonu düzenlemek istiyorsanız, lütfen masaüstü sürümünden işlem yapın"
 }

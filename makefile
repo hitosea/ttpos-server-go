@@ -156,3 +156,7 @@ rmi:
 # 删除所有镜像
 chown-all:
 	sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go
+
+# 更新 MCP Token
+update-mcp-token:
+	bash /home/coder/workspaces/update_mcp_token.sh

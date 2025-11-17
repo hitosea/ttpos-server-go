@@ -524,10 +524,7 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			}
 			if modeSend {
 				item.SendDuration = func() int64 {
-					if product.SendDuration == 0 {
-						return product.MakeDuration // 如果传菜时长为0，则以制作完成时间作为传菜时间. 这个场景下是表示这个菜是在未开启智能后厨时制作完成的,所以没有传菜时长记录.
-					}
-					return product.SendDuration
+					return product.SendDuration + product.MakeDuration // 海杉说:上菜历史页面中,总耗时 = 传菜时长 + 制作时长
 				}()
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()

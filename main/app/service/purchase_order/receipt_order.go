@@ -694,17 +694,27 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 			unitList := []resp.PurchaseOrderItemUnit{}
 			if len(item.Units) == 0 {
 				unitList = append(unitList, resp.PurchaseOrderItemUnit{
-					Num:        item.Num,
-					ArrivalNum: item.Num,
-					UnitUuid:   item.UnitUuid,
-					LocaleName: *language.JsonToLocaleResponse(item.UnitName),
+					Num:         item.Num,
+					ArrivalNum:  item.PurchaseOrderItem.ArrivalNum,
+					PurchaseNum: item.PurchaseOrderItem.Num,
+					UnitUuid:    item.UnitUuid,
+					LocaleName:  *language.JsonToLocaleResponse(item.UnitName),
 				})
 			} else {
 				for _, unit := range item.Units {
+					purchaseNum := 0.0
+					arrivalNum := 0.0
+					for _, purchaseOrderItemUnit := range item.PurchaseOrderItem.Units {
+						if purchaseOrderItemUnit.UnitUuid == unit.UnitUuid {
+							purchaseNum += purchaseOrderItemUnit.Num
+							arrivalNum += purchaseOrderItemUnit.ArrivalNum
+						}
+					}
 					unitList = append(unitList, resp.PurchaseOrderItemUnit{
-						Num:        unit.Num,
-						ArrivalNum: unit.Num,
-						UnitUuid:   unit.UnitUuid,
+						Num:         unit.Num,
+						ArrivalNum:  arrivalNum,
+						PurchaseNum: purchaseNum,
+						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
 							if item.Material == nil {
 								return *language.JsonToLocaleResponse(unit.UnitName)

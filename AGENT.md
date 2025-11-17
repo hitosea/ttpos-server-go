@@ -12,16 +12,16 @@ priority: 1
 
 ## 场景识别 → 执行命令
 
-| 用户说...                      | 识别为     | 立即执行                                                            | 涉及文件/目录                    | 参考规范                 |
-| ------------------------------ | ---------- | ------------------------------------------------------------------- | -------------------------------- | ------------------------ |
-| "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/   | specs.mdc                |
-| "实现功能" "开发XX" "新增XX"   | 功能开发   | 读 `shared/specs/{}/tasks.md` → 逐任务执行                          | shared/specs/, main/, admin/     | golang.mdc, php.mdc      |
-| "报错" "bug" "崩溃" "异常"     | Bug修复    | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                             | shared/troubleshooting/, main/   | golang.mdc               |
-| "集成XX" "对接XX" "API"        | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档            | integrations/, shared/api/       | golang.mdc               |
-| "迁移数据库" "新增表" "改字段" | 数据库迁移 | 创建迁移文件 → 更新 model → 更新 seeds                             | admin/database/migrations/       | php.mdc                  |
-| "gRPC" "微服务" "ttpos-bmp"    | 微服务集成 | 查 ttpos-bmp 文档 → 定义 Protobuf → 注册服务                       | ttpos-bmp/                       | go-rules.mdc             |
-| "慢" "卡顿" "优化性能"         | 性能优化   | 分析瓶颈 → 优化 → 验证 → 记录                                       | 相关代码                         | golang.mdc               |
-| "新人" "入职" "不熟悉"         | 新成员     | `/onboard quick` → 推送必读清单                                     | .cursor/rules/, docs/            | intro.mdc, structs.mdc   |
+| 用户说...                      | 识别为     | 立即执行                                                               | 涉及文件/目录                  | 参考规范               |
+| ------------------------------ | ---------- | ---------------------------------------------------------------------- | ------------------------------ | ---------------------- |
+| "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/ | specs.mdc              |
+| "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/{}/tasks.md` → 逐任务执行                             | shared/specs/, main/, admin/   | golang.mdc, php.mdc    |
+| "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | golang.mdc             |
+| "集成 XX" "对接 XX" "API"      | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档               | integrations/, shared/api/     | golang.mdc             |
+| "迁移数据库" "新增表" "改字段" | 数据库迁移 | 创建迁移文件 → 更新 model → 更新 seeds                                 | admin/database/migrations/     | php.mdc                |
+| "gRPC" "微服务" "ttpos-bmp"    | 微服务集成 | 查 ttpos-bmp 文档 → 定义 Protobuf → 注册服务                           | ttpos-bmp/                     | go-rules.mdc           |
+| "慢" "卡顿" "优化性能"         | 性能优化   | 分析瓶颈 → 优化 → 验证 → 记录                                          | 相关代码                       | golang.mdc             |
+| "新人" "入职" "不熟悉"         | 新成员     | `/onboard quick` → 推送必读清单                                        | .cursor/rules/, docs/          | intro.mdc, structs.mdc |
 
 ---
 
@@ -29,16 +29,16 @@ priority: 1
 
 ### 命名规范
 
-| 类型         | 格式                      | 示例                         | 规则                                                      |
-| ------------ | ------------------------- | ---------------------------- | --------------------------------------------------------- |
-| **Spec**     | `{level}-{module}-{feature}` | `story-order-quick-payment`  | level: story/task, module: order/member/..., feature: kebab-case |
-| **Proposal** | `{YYYY-MM-DD}-{feature}`  | `2025-11-16-quick-payment`   | 存放: docs/team/proposals/                                     |
-| **Go类名**   | PascalCase                | `OrderController`, `UserService` | 大驼峰，接口以I开头                                      |
-| **PHP类名**  | PascalCase                | `OrderController`, `UserService` | 大驼峰                                                    |
-| **文件名**   | snake_case                | `order_controller.go`, `user_service.php` | 小写+下划线                               |
-| **URL**      | snake_case                | `/api/v1/order/cart_info`    | 蛇形命名，不用kebab-case                                  |
-| **变量**     | camelCase                 | `userName`, `isLoading`      | 小驼峰                                                    |
-| **常量**     | UPPER_SNAKE_CASE          | `API_BASE_URL`               | 全大写+下划线                                             |
+| 类型         | 格式                         | 示例                                      | 规则                                                             |
+| ------------ | ---------------------------- | ----------------------------------------- | ---------------------------------------------------------------- |
+| **Spec**     | `{level}-{module}-{feature}` | `story-order-quick-payment`               | level: story/task, module: order/member/..., feature: kebab-case |
+| **Proposal** | `{YYYY-MM-DD}-{feature}`     | `2025-11-16-quick-payment`                | 存放: docs/team/proposals/                                       |
+| **Go 类名**  | PascalCase                   | `OrderController`, `UserService`          | 大驼峰，接口以 I 开头                                            |
+| **PHP 类名** | PascalCase                   | `OrderController`, `UserService`          | 大驼峰                                                           |
+| **文件名**   | snake_case                   | `order_controller.go`, `user_service.php` | 小写+下划线                                                      |
+| **URL**      | snake_case                   | `/api/v1/order/cart_info`                 | 蛇形命名，不用 kebab-case                                        |
+| **变量**     | camelCase                    | `userName`, `isLoading`                   | 小驼峰                                                           |
+| **常量**     | UPPER_SNAKE_CASE             | `API_BASE_URL`                            | 全大写+下划线                                                    |
 
 ### Go Service/Repository 模式 (必须遵守)
 
@@ -78,12 +78,12 @@ type OrderRepoImpl struct {
 // ✅ 正确的响应格式
 {
   "code": 1,
-  "message": "success", 
+  "message": "success",
   "data": {
     "list": [{"foo": "bar"}],
     "meta": {
       "page_no": 1,
-      "page_size": 20, 
+      "page_size": 20,
       "total": 100
     }
   }
@@ -97,7 +97,7 @@ type OrderRepoImpl struct {
 }
 
 {
-  "code": 1, 
+  "code": 1,
   "message": "success",
   "data": []  // 错误！应该是 {"list": []}
 }
@@ -105,13 +105,13 @@ type OrderRepoImpl struct {
 
 ### 代码风格 (必须遵守)
 
-| 规则          | 正确                                                   | 错误                  |
-| ------------- | ------------------------------------------------------ | --------------------- |
-| **不用panic** | `return nil, errors.New("错误")` | `panic("错误")`       |
-| **URL命名**   | `/api/v1/order/cart_info` | `/api/v1/order/cart-info` |
-| **日志输出**  | `logger.Logger.Error()` (Go) <br> 中文注释 | `print()`, 英文注释   |
-| **错误处理**  | `catch (error, stackTrace)` | `catch (error)` |
-| **接口命名**  | `IUserService` | `UserService` (interface) |
+| 规则           | 正确                                       | 错误                      |
+| -------------- | ------------------------------------------ | ------------------------- |
+| **不用 panic** | `return nil, errors.New("错误")`           | `panic("错误")`           |
+| **URL 命名**   | `/api/v1/order/cart_info`                  | `/api/v1/order/cart-info` |
+| **日志输出**   | `logger.Logger.Error()` (Go) <br> 中文注释 | `print()`, 英文注释       |
+| **错误处理**   | `catch (error, stackTrace)`                | `catch (error)`           |
+| **接口命名**   | `IUserService`                             | `UserService` (interface) |
 
 ### 测试覆盖率 (P0)
 
@@ -120,8 +120,8 @@ type OrderRepoImpl struct {
 | **main/app/service/**    | ≥70%       | P0       |
 | **main/app/repository/** | ≥80%       | P0       |
 | **ttpos-bmp/logic/**     | ≥70%       | P1       |
-| **payment相关**          | **100%**   | 高风险   |
-| **order相关**            | **100%**   | 高风险   |
+| **payment 相关**         | **100%**   | 高风险   |
+| **order 相关**           | **100%**   | 高风险   |
 
 ### 数据库迁移 (必须遵守)
 
@@ -156,36 +156,36 @@ class AddOrderTable extends Migration {
 
 ### 🤖 Agent 优先（执行清单）
 
-| 我需要...        | 文件路径                                    | 用途           |
-| ---------------- | ------------------------------------------- | -------------- |
-| **执行工作流**   | `docs/agent/workflows/*.md`                 | 步骤检查清单   |
-| **填充模板**     | `docs/agent/templates/*.md`                 | 结构化表单     |
-| **查看指令**     | `.cursor/commands/*.md`                     | 指令参数和用法 |
-| **查看规范**     | `.cursor/rules/*.mdc`                       | 规则速查       |
-| **执行任务**     | `docs/shared/specs/*/tasks.md`              | 任务逐条执行   |
-| **创建需求提案** | `docs/team/proposals/{YYYY-MM-DD}-{name}`   | `/propose`     |
-| **创建功能规格** | `docs/shared/specs/{level}-{module}-{feature}/`| `/create-spec` |
+| 我需要...        | 文件路径                                        | 用途           |
+| ---------------- | ----------------------------------------------- | -------------- |
+| **执行工作流**   | `docs/agent/workflows/*.md`                     | 步骤检查清单   |
+| **填充模板**     | `docs/agent/templates/*.md`                     | 结构化表单     |
+| **查看指令**     | `.cursor/commands/*.md`                         | 指令参数和用法 |
+| **查看规范**     | `.cursor/rules/*.mdc`                           | 规则速查       |
+| **执行任务**     | `docs/shared/specs/*/tasks.md`                  | 任务逐条执行   |
+| **创建需求提案** | `docs/team/proposals/{YYYY-MM-DD}-{name}`       | `/propose`     |
+| **创建功能规格** | `docs/shared/specs/{level}-{module}-{feature}/` | `/create-spec` |
 
 ### 👤 人类优先（学习资料）
 
-| 我需要...    | 文件路径                                | 用途         |
-| ------------ | --------------------------------------- | ------------ |
-| **学习指南** | `docs/human/guides/*.md`                | 详细教程     |
-| **架构设计** | `docs/human/architecture/*.md`          | 系统设计原理 |
-| **业务知识** | `docs/human/business/*.md`              | 业务理解     |
-| **技术决策** | `docs/human/decisions/`                 | ADR记录      |
-| **提案写作** | `docs/team/proposals/README.md`         | 提案指南     |
+| 我需要...    | 文件路径                        | 用途         |
+| ------------ | ------------------------------- | ------------ |
+| **学习指南** | `docs/human/guides/*.md`        | 详细教程     |
+| **架构设计** | `docs/human/architecture/*.md`  | 系统设计原理 |
+| **业务知识** | `docs/human/business/*.md`      | 业务理解     |
+| **技术决策** | `docs/human/decisions/`         | ADR 记录     |
+| **提案写作** | `docs/team/proposals/README.md` | 提案指南     |
 
 ### 📚 共用资源（Agent + 人类）
 
-| 我需要...      | 文件路径                            | 用途       |
-| -------------- | ----------------------------------- | ---------- |
-| **功能规格**   | `docs/shared/specs/story-*-*/`      | 需求和设计 |
-| **API文档**    | `docs/shared/api/*.md`              | 接口查询   |
-| **问题排查**   | `docs/shared/troubleshooting/*.md`  | 故障处理   |
-| **第三方集成** | `docs/shared/integrations/`         | 集成文档   |
-| **记录经验**   | Graphiti                            | MCP add    |
-| **查询历史**   | Graphiti                            | MCP search |
+| 我需要...      | 文件路径                           | 用途       |
+| -------------- | ---------------------------------- | ---------- |
+| **功能规格**   | `docs/shared/specs/story-*-*/`     | 需求和设计 |
+| **API 文档**   | `docs/shared/api/*.md`             | 接口查询   |
+| **问题排查**   | `docs/shared/troubleshooting/*.md` | 故障处理   |
+| **第三方集成** | `docs/shared/integrations/`        | 集成文档   |
+| **记录经验**   | Graphiti                           | MCP add    |
+| **查询历史**   | Graphiti                           | MCP search |
 
 ### 📖 目录导航索引
 
@@ -217,7 +217,7 @@ docs/
 ## 检索优先级 (强制顺序)
 
 ```
-1. 本速查表 (.cursor/rules/AGENT_QUICK_REF.mdc)
+1. 本速查表 (AGENT.md)
 2. Graphiti (经验类问题: "如何" "为什么" "踩坑")
 3. .cursor/rules/*.mdc (规范核心清单)
 4. docs/ (详细文档、完整示例)
@@ -232,8 +232,8 @@ docs/
 ### 需求管理流程
 
 ```
-想法 → /propose → 填写提案 → 需求评审 → 
-  ├─ 批准 → /create-spec → 填写 requirements/design/tasks → SP评估 → 
+想法 → /propose → 填写提案 → 需求评审 →
+  ├─ 批准 → /create-spec → 填写 requirements/design/tasks → SP评估 →
   │   ├─ SP ≤ 5 → 进 Sprint → 开发
   │   └─ SP > 5 → 拆分 Spec → 重新评估
   └─ 拒绝 → 归档
@@ -258,9 +258,9 @@ AI 辅助实现 →
 ```
 问题现象 → 搜 Graphiti (历史问题) →
   ├─ 找到 → 复用方案 → 验证 → 提交
-  └─ 未找到 → 
+  └─ 未找到 →
       查日志 (SkyWalking) →
-      定位代码 → 修复 → 测试 → 
+      定位代码 → 修复 → 测试 →
       记录 (troubleshooting/ + Graphiti) → 提交
 ```
 
@@ -312,7 +312,7 @@ AI 辅助实现 →
 ### PHP 代码规则
 
 - 数据库迁移文件统一在 PHP 中管理
-- 时间字段: int 类型, _time 结尾, 默认值 0
+- 时间字段: int 类型, \_time 结尾, 默认值 0
 - 金额字段: decimal(20,8)
 - 必须字段: uuid, create_time, update_time, delete_time
 - 迁移前检查表/字段是否已存在
@@ -385,13 +385,13 @@ admin/
 
 ## 快速命令映射
 
-| 用户需求        | Agent 执行命令                          | 后续操作                           |
-| --------------- | --------------------------------------- | ---------------------------------- |
-| 创建提案        | `/propose quick-payment`                | 自动创建并填充基本信息             |
-| 创建 Spec       | `/create-spec story-order-quick-payment`| 自动创建 requirements/design/tasks |
-| 创建数据库迁移  | 创建 PHP Phinx 迁移文件                 | 同步更新 Go model 和 seeds         |
-| 创建 gRPC 服务  | 定义 Protobuf → 生成代码                | 注册到 Nacos                       |
-| 创建 API 文档   | `/create-api-doc order`                 | 自动扫描代码生成文档               |
+| 用户需求       | Agent 执行命令                           | 后续操作                           |
+| -------------- | ---------------------------------------- | ---------------------------------- |
+| 创建提案       | `/propose quick-payment`                 | 自动创建并填充基本信息             |
+| 创建 Spec      | `/create-spec story-order-quick-payment` | 自动创建 requirements/design/tasks |
+| 创建数据库迁移 | 创建 PHP Phinx 迁移文件                  | 同步更新 Go model 和 seeds         |
+| 创建 gRPC 服务 | 定义 Protobuf → 生成代码                 | 注册到 Nacos                       |
+| 创建 API 文档  | `/create-api-doc order`                  | 自动扫描代码生成文档               |
 
 ---
 
@@ -399,7 +399,7 @@ admin/
 
 ### P0 (必读)
 
-1. `.cursor/rules/AGENT_QUICK_REF.mdc` (本文件)
+1. `AGENT.md` (本文件)
 2. `.cursor/rules/workflows.mdc`
 3. `.cursor/rules/golang.mdc`
 4. `.cursor/rules/php.mdc`
@@ -448,7 +448,7 @@ admin/
 - [ ] 数据库迁移文件已创建
 - [ ] Go model 已同步更新 (main/app/model/)
 - [ ] seeds 文件已更新 (admin/database/seeds/)
-- [ ] 时间字段使用 int 类型，_time 结尾
+- [ ] 时间字段使用 int 类型，\_time 结尾
 - [ ] 金额字段使用 decimal(20,8)
 - [ ] 已添加必须字段 (uuid, create_time, update_time, delete_time)
 
@@ -473,12 +473,12 @@ IF 文档主要给 Agent 阅读 THEN
   受众: 🤖 Agent
   位置: docs/agent/workflows/ 或 docs/agent/templates/
   风格: Agent 视角
-  
+
 ELSE IF 文档主要给人类学习 THEN
   受众: 👤 人类
   位置: docs/human/guides/ 或 docs/human/architecture/ 或 docs/human/business/
   风格: 人类视角
-  
+
 ELSE
   受众: 📚 共用
   位置: docs/shared/specs/ 或 docs/shared/api/ 或 docs/shared/troubleshooting/
@@ -501,8 +501,7 @@ ELSE
   - 无"为什么"
   - 只有"做什么"和"怎么做"
 
-示例:
-  ✅ "检查 tasks.md 全部 [x]"
+示例: ✅ "检查 tasks.md 全部 [x]"
   ✅ "IF SP > 5 THEN 拆分"
   ❌ "为了确保代码质量，我们需要..."
   ❌ "这样做的好处是..."
@@ -524,8 +523,7 @@ ELSE
   - 设计权衡
   - 最佳实践
 
-示例:
-  ✅ "我们选择 Gin 框架是因为..."
+示例: ✅ "我们选择 Gin 框架是因为..."
   ✅ "这个设计权衡考虑了..."
   ✅ "完整的代码示例如下..."
 ```
@@ -533,14 +531,14 @@ ELSE
 ### 创建新文档时的决策树
 
 ```
-需要创建文档 → 
-  谁会读? → Agent → 
-    放哪? → 
+需要创建文档 →
+  谁会读? → Agent →
+    放哪? →
       执行流程? → docs/agent/workflows/
       模板? → docs/agent/templates/
       指令? → .cursor/commands/
     风格? → Agent 视角 ✓
-    
+
   谁会读? → 人类 →
     放哪? →
       学习教程? → docs/human/guides/
@@ -548,7 +546,7 @@ ELSE
       业务知识? → docs/human/business/
       示例参考? → docs/human/examples/
     风格? → 人类视角 ✓
-    
+
   谁会读? → 都会读 →
     放哪? →
       功能规格? → docs/shared/specs/
@@ -583,18 +581,21 @@ ELSE
 ## 📋 执行清单（创建文档时）
 
 ### Before 创建
+
 - [ ] 明确受众 (🤖 Agent / 👤 人类 / 📚 共用)
 - [ ] 确定位置 (workflows/ / guides/ / templates/ / ...)
 - [ ] 确定风格 (Agent 视角 / 人类视角)
 - [ ] 确定语言标识 (Go / PHP / Vue)
 
 ### During 创建
+
 - [ ] 遵循对应风格
 - [ ] Agent 文档: <300 行 + 结构化
 - [ ] 人类文档: 详细 + 包含 WHY
 - [ ] 多语言文档: 添加适用语言标识
 
 ### After 创建
+
 - [ ] 在目录 README.md 中添加索引
 - [ ] 在本文件中添加路径（如需要）
 - [ ] 在相关工作流中建立引用
