@@ -1086,12 +1086,17 @@ func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.Kitch
 			continue // 跳过套餐商品
 		}
 		item := business_data_resp.KitchenProductionDetailItem{
-			ProductName:    productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
-			FlavorName:     productionOrderProduct.SaleOrderProduct.GetFlavorName(),
-			CategoryName:   productionOrderProduct.ProductCategory.MultiLanguageName.GetNames(),
-			Number:         productionOrderProduct.Num,
-			CreateTime:     productionOrderProduct.CreateTime,
-			MakeFinishTime: productionOrderProduct.MadeTime,
+			ProductName:  productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
+			FlavorName:   productionOrderProduct.SaleOrderProduct.GetFlavorName(),
+			CategoryName: productionOrderProduct.ProductCategory.MultiLanguageName.GetNames(),
+			Number:       productionOrderProduct.Num,
+			CreateTime:   productionOrderProduct.CreateTime,
+			MakeFinishTime: func() int64 {
+				if productionOrderProduct.SendDuration == 0 { // 如果上菜时间大于0,则返回0,表示关闭了智能后厨
+					return 0
+				}
+				return productionOrderProduct.MadeTime
+			}(),
 			MakeDuration: func() int64 {
 				if productionOrderProduct.SendDuration == 0 { // 如果上菜时间大于0,则返回0,表示关闭了智能后厨
 					return 0
@@ -2294,7 +2299,7 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 	}
 
 	request.PageNo = 1
-	request.PageSize = 1000 // 最多导出1000条数据
+	request.PageSize = 100 // 最多导出1000条数据
 	result := s.CountBusinessPaymentMethod(ctx, request)
 	if result.Meta.Total == 0 {
 		return errors.WithMessage(errors.New("没有数据需要导出"))
