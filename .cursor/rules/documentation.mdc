@@ -1,0 +1,244 @@
+---
+alwaysApply: false
+description: 文档创建规范
+---
+
+# 文档创建规范
+
+详细说明: `docs/human/guides/documentation-guide.md`
+
+---
+
+## 核心原则
+
+### 强制模板
+
+- ✅ 所有文档必须基于 `docs/agent/templates/` 中的标准模板
+- ✅ 模板字段不可删除，缺失内容标注 `[待补充 by @责任人]`
+- ✅ 创建前必须识别文档类型，选择正确模板
+
+### 角色分工
+
+**AI 职责
+1. 识别文档需求
+2. 选择合适模板
+3. 创建文档并自动填充已知信息
+4. 标注待补充字段
+
+**开发者职责
+1. 审核 AI 创建的文档
+2. 补充业务内容
+3. 确认完成
+
+---
+
+## 文档类型映射表
+
+| 文档类型           | 模板                          | 存放位置                                 | 示例                          |
+| ------------------ | ----------------------------- | ---------------------------------------- | ----------------------------- |
+| **API 接口**       | `api-template.md`             | `docs/shared/api/{module}_api.md`               | `order_api.md`                |
+| **架构设计**       | `architecture-template.md`    | `docs/human/architecture/{topic}.md`           | `pos-architecture.md`         |
+| **问题排查**       | `troubleshooting-template.md` | `docs/shared/troubleshooting/{issue}.md`        | `payment-timeout.md`          |
+| **技术决策 (ADR)** | `adr-template.md`             | `docs/human/decisions/{YYYY-MM-DD}-{title}.md` | `2025-11-16-choose-getx.md`   |
+| **集成指南**       | `integration-template.md`     | `docs/shared/integrations/{service}/`           | `wechat-pay/setup.md`         |
+| **版本迁移**       | `migration-template.md`       | `docs/shared/migration/v{old}-to-v{new}.md`     | `v2.0-to-v2.1.md`             |
+| **功能规格**       | `requirements-template.md`    | `docs/shared/specs/{level}-{app}-{feature}/`    | `story-pos-quick-payment/`    |
+| **需求提案**       | `proposal-template.md`        | `docs/team/proposals/{YYYY-MM-DD}-{name}.md`  | `2025-11-16-quick-payment.md` |
+
+
+---
+
+## 文档创建流程
+
+```mermaid
+graph TD
+    A[识别文档需求] --> B{选择文档类型}
+    B --> C[复制模板到目标位置]
+    C --> D[自动填充基本信息]
+    D --> E[标注待补充字段]
+    E --> F[通知开发者审核]
+    F --> G[开发者补充内容]
+    G --> H[完成]
+```
+
+### 自动填充规则
+
+| 字段           | 填充方式             | 示例                         |
+| -------------- | -------------------- | ---------------------------- |
+| `{功能名称}`   | 从文件名/参数提取    | quick-payment → 快捷支付功能 |
+| `{YYYY-MM-DD}` | 当前日期             | 2025-11-16                   |
+| `{终端}`       | 从 spec-name 提取    | story-pos-xxx → POS 端       |
+| `{负责人}`     | Git 配置读取         | `git config user.name`       |
+| `{版本号}`     | 从 pubspec.yaml 读取 | 2.1.0                        |
+
+
+---
+
+## 意图识别规则
+
+| 用户表达            | 文档类型          | 模板                          |
+| ------------------- | ----------------- | ----------------------------- |
+| "需要 API 文档"     | API Documentation | `api-template.md`             |
+| "记录架构决策"      | ADR               | `adr-template.md`             |
+| "如何排查 XXX 问题" | Troubleshooting   | `troubleshooting-template.md` |
+| "集成 XXX 服务"     | Integration       | `integration-template.md`     |
+| "Breaking Changes"  | Migration         | `migration-template.md`       |
+| "新增功能 XXX"      | Spec              | `requirements-template.md`    |
+| "有个想法 XXX"      | Proposal          | `proposal-template.md`        |
+
+---
+
+## 特殊场景处理
+
+### 场景 1: API 文档
+
+**触发条件 用户提到 "API 接口"、"接口文档"
+
+**执行步骤
+1. 选择 `api-template.md`
+2. 创建 `docs/shared/api/{module}_api.md`
+3. 自动填充模块名、日期、版本号
+4. 标注待补充: 接口列表、参数、响应、错误码
+
+**模板关键章节
+- 概述
+- API 列表
+- 代码示例
+- 注意事项
+
+
+### 场景 2: ADR
+
+**触发条件 用户讨论技术选型、架构决策
+
+**执行步骤
+1. 选择 `adr-template.md`
+2. 创建 `docs/human/decisions/{YYYY-MM-DD}-{title}.md`
+3. 自动填充日期、决策者
+4. 标注待补充: 背景、考虑的方案、决策原因、影响
+
+**模板关键章节
+- 背景
+- 考虑的方案
+- 最终决策
+- 影响范围
+
+
+### 场景 3: Troubleshooting
+
+**触发条件 用户遇到问题并解决后，耗时 >30 分钟
+
+**执行步骤
+1. 选择 `troubleshooting-template.md`
+2. 创建 `docs/shared/troubleshooting/{category}/{issue}.md`
+3. 自动填充问题现象、错误信息
+4. 标注待补充: 根本原因、解决方案、预防措施
+
+**模板关键章节
+- 问题现象
+- 根本原因
+- 解决方案
+- 预防措施
+
+
+### 场景 4: Integration
+
+**触发条件 用户集成第三方服务
+
+**执行步骤
+1. 选择 `integration-template.md`
+2. 创建 `docs/shared/integrations/{service}/` 目录
+3. 创建 README.md, setup.md, api-reference.md
+4. 标注待补充: 配置步骤、API 文档、常见问题
+
+**目录结构
+```
+docs/shared/integrations/{service}/
+├── README.md           # 概述
+├── setup.md           # 环境配置
+├── api-reference.md   # API 参考
+└── troubleshooting.md # 常见问题
+```
+
+
+### 场景 5: Migration
+
+**触发条件 Breaking Changes、版本升级
+
+**执行步骤
+1. 选择 `migration-template.md`
+2. 创建 `docs/shared/migration/v{old}-to-v{new}.md`
+3. 自动填充版本号、日期
+4. 标注待补充: Breaking Changes、迁移步骤、回滚方案
+
+**模板关键章节
+- Breaking Changes
+- 迁移步骤
+- 回滚方案
+
+
+---
+
+## 文档质量检查清单
+
+### 创建时检查
+
+- [ ] 模板完整
+- [ ] 信息准确
+- [ ] 格式规范
+- [ ] 示例充分
+- [ ] 更新日期
+- [ ] 交叉引用
+
+### 维护时检查
+
+- [ ] 内容时效
+- [ ] 链接有效
+- [ ] 代码可用
+- [ ] 补充问题
+- [ ] 更新日期
+
+---
+
+## Cursor 指令集成
+
+文档创建可通过 Cursor 指令自动化：
+
+| 指令              | 用途          | 文档类型                         |
+| ----------------- | ------------- | -------------------------------- |
+| `/propose`        | 创建需求提案  | Proposal                         |
+| `/create-spec`    | 创建功能规格  | Spec (requirements/design/tasks) |
+| `/create-api-doc` | 创建 API 文档 | API Documentation                |
+
+
+---
+
+## 禁止事项
+
+- ❌ 不使用模板，自由创建文档
+- ❌ 删除模板中的必填字段
+- ❌ 创建冗余文档
+- ❌ 使用非标准的文档格式
+- ❌ 忘记填写"最后更新"日期
+- ❌ 忘记建立交叉引用
+
+---
+
+## 相关文档
+
+### 核心规范
+
+- 详细指南 `docs/human/guides/documentation-guide.md` 
+- 知识管理 `.cursor/rules/knowledge_management.mdc`
+- Spec 规范 `.cursor/rules/specs.mdc`
+
+### 模板文件
+
+- 📁 **所有模板 `docs/agent/templates/`
+- API 模板 `api-template.md`
+- ADR 模板 `adr-template.md`
+- 问题排查模板 `troubleshooting-template.md`
+- 集成模板 `integration-template.md`
+- 迁移模板 `migration-template.md`
+
+---

@@ -1,0 +1,203 @@
+---
+alwaysApply: false
+description: Spec 命名和结构规范
+---
+
+# Spec 规范
+
+
+---
+
+## 命名格式
+
+```
+{level}-{app}-{feature}
+```
+
+**参数
+- `{level}`: `story` (用户故事) | `task` (技术任务)
+- `{app}`: pos | shop | kds | qds | assistant | tablet | mobile | menu | member | `all`
+- `{feature}`: kebab-case
+
+**示例
+```
+story-pos-quick-payment               # POS端快捷支付
+task-shop-report-export               # Shop端报表导出
+story-all-connectivity-indicator      # 全应用网络指示器
+```
+
+
+---
+
+## 最小细粒度原则 
+
+### 核心原则
+
+**按应用垂直拆分 Spec**
+
+```yaml
+❌ 错误:
+story-pos-shop-kds-order-sync  # 跨3个应用，难以控制SP
+
+✅ 正确:
+story-pos-order-sync    # POS端，SP3
+story-shop-order-sync   # Shop端，SP3
+story-kds-order-sync    # KDS端，SP3
+```
+
+### 为什么
+
+1. **独立交付 每个应用可独立开发、测试、部署
+2. **并行开发 不同团队可同时开发
+3. **SP 可控 单应用 Spec 的 SP 更容易 ≤5
+4. **职责清晰 每个 Spec 有明确的负责团队
+
+
+---
+
+## 跨应用场景处理
+
+### 场景 A: 相似功能，不同实现
+
+**拆分为多个 Spec
+```
+story-pos-category-display
+story-assistant-category-display
+story-tablet-category-display
+```
+
+### 场景 B: 完全相同功能和实现
+
+**使用 all
+```
+story-all-connectivity-indicator      # 共享代码
+```
+
+### 场景 C: 后端功能
+
+**使用 task-all
+```
+task-all-api-refactor                 # API 重构
+task-all-database-migration          # 数据库迁移
+```
+
+
+---
+
+## Spec 目录结构
+
+```
+docs/shared/specs/{level}-{app}-{feature}/
+├── requirements.md    # 需求规格说明
+├── design.md          # 技术设计文档
+└── tasks.md           # 实施任务分解
+```
+
+### 文件模板
+
+- `docs/agent/templates/requirements-template.md`
+- `docs/agent/templates/design-template.md`
+- `docs/agent/templates/tasks-template.md`
+
+---
+
+## 与 Scrum Story Point 的关系
+
+### 黄金规则
+
+**只有 SP ≤ 5 的需求才能进入 Sprint**
+
+### SP 评估流程
+
+1. 技术复杂度评估
+2. 功能复杂度评估
+3. 因素加成
+4. 团队评审
+
+### 如果 SP > 5
+
+**必须拆分** → 按最小细粒度拆分
+
+
+---
+
+## Spec 与 Proposal 的关联
+
+### 关联机制
+
+```
+/propose quick-payment → 需求评审 → /create-spec story-pos-quick-payment
+                                              ↓
+                                        自动关联 Proposal
+```
+
+### 双向链接
+
+- Proposal → Spec
+- Spec → Proposal
+
+
+---
+
+## 创建 Spec
+
+### 使用指令
+
+```bash
+/create-spec story-pos-quick-payment
+```
+
+**功能
+- ✅ 创建目录和文件
+- ✅ 自动填充基本信息
+- ✅ 智能关联 Proposal
+- ✅ 回写 Proposal 状态
+
+
+---
+
+## 命名规范清单
+
+### ✅ 允许
+
+- 单个单词: `payment`, `category`, `report`
+- 多个单词: `quick-payment`, `category-display`
+- 使用 `all`: `story-all-dark-mode`
+
+### ❌ 禁止
+
+- 使用数字代替: ~~`feature1`~~ → `quick-payment`
+- 使用缩写: ~~`cat-disp`~~ → `category-display`
+- 过长名称: ~~`product-category-display-with-search-and-filter`~~ → 拆分
+
+---
+
+## 完整示例
+
+参考: `docs/shared/specs/example-story-pos-quick-payment/`
+
+包含:
+- ✅ 标准目录结构
+- ✅ 完整 requirements.md
+- ✅ 完整 design.md
+- ✅ 完整 tasks.md
+- ✅ Proposal 关联示例
+
+---
+
+## 相关文档
+
+### 核心规范
+
+- 详细指南 `docs/shared/specs/README.md` 
+- SP 评估 `.cursor/rules/scrum_story_point.mdc`
+- 需求管理 `docs/agent/workflows/requirement-management.md`
+- Proposal 关联 `docs/agent/workflows/proposal-spec-linking.md`
+
+### 指令集
+
+- 🔧 `/propose` - 创建需求提案
+- 🔧 `/create-spec` - 创建 Spec 文档
+- 🔧 `/check-tasks` - 检查任务进度
+
+---
