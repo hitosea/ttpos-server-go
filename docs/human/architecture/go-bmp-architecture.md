@@ -1,22 +1,23 @@
-# Go BMP 模块开发规范
+# Go BMP 模块架构设计
 
-> 本规范适用于 `ttpos-bmp/` 目录下的 Go 代码开发，基于 GoFrame v2.x 框架
+> 👤 **受众**: 人类开发者  
+> 📖 **用途**: 深入理解 Go BMP 模块（基于 GoFrame）的架构设计
 
-## 📋 重要说明
+---
 
-**ttpos-bmp 项目有自己的专用开发规范**，详见：
-- `ttpos-bmp/.cursor/rules/go-rules.mdc` - Go代码开发规范
-- `ttpos-bmp/.cursor/rules/proto-rules.mdc` - Protobuf开发规范
+## 📋 架构概览
 
-本文档是对这些规范的补充和项目级别的统一说明。
+Go BMP (Business Middle Platform) 模块是基于 **GoFrame v2.x** 框架开发的微服务集群，提供 ERP、消息、外卖等业务中台服务。
 
-## 🏗️ 框架说明
+### 核心特点
 
-本项目使用 [GoFrame](https://github.com/gogf/gf) v2.x 框架开发，这是一个功能强大、易于使用的Go应用开发框架。
+1. **GoFrame 框架**: 功能强大、标准化的 Go 框架
+2. **gRPC 通信**: 服务间使用 gRPC 高性能通信
+3. **Nacos 注册**: 服务注册与发现
+4. **代码生成**: dao/entity/service 自动生成
+5. **标准结构**: 遵循 GoFrame 标准目录结构
 
-### 参考资料
-- GoFrame 官方文档：https://goframe.org.cn
-- GoFrame API 文档：https://pkg.go.dev/github.com/gogf/gf/v2
+---
 
 ## 📦 模块结构
 
@@ -29,11 +30,9 @@ ttpos-bmp/
 │   ├── ttpos-shop/         # 店铺服务
 │   ├── ttpos-takeout/      # 外卖服务
 │   └── ttpos-websocket/    # WebSocket服务
-├── go.mod
-└── go.sum
 ```
 
-### 标准模块结构（以ttpos-erp为例）
+### 标准服务结构（以 ttpos-erp 为例）
 
 ```
 app/ttpos-erp/
@@ -47,13 +46,13 @@ app/ttpos-erp/
 │   ├── controller/        # 控制器层
 │   │   ├── http/          # HTTP控制器
 │   │   └── rpc/           # gRPC控制器
-│   ├── dao/               # 数据访问层（⚠️ 自动生成，禁止手动修改）
+│   ├── dao/               # 数据访问层（⚠️ 自动生成）
 │   ├── logic/             # 业务逻辑层
 │   ├── model/             # 数据模型层
-│   │   ├── do/            # 数据对象（⚠️ 自动生成，禁止手动修改）
-│   │   ├── dto/           # 数据传输对象（手动定义）
-│   │   └── entity/        # 数据实体（⚠️ 自动生成，禁止手动修改）
-│   └── service/           # 服务接口（⚠️ 自动生成，禁止手动修改）
+│   │   ├── do/            # 数据对象（⚠️ 自动生成）
+│   │   ├── dto/           # 数据传输对象（手动）
+│   │   └── entity/        # 数据实体（⚠️ 自动生成）
+│   └── service/           # 服务接口（⚠️ 自动生成）
 ├── manifest/              # 配置清单
 │   ├── config/            # 配置文件模板
 │   ├── protobuf/          # protobuf定义文件
@@ -61,9 +60,11 @@ app/ttpos-erp/
 └── main.go                # 启动入口
 ```
 
+---
+
 ## ⚠️ 重要规则
 
-### 1. 自动生成文件 - 禁止手动修改
+### 自动生成文件 - 禁止手动修改
 
 以下目录的文件由 GoFrame 框架自动生成，**严禁手动修改**：
 
@@ -74,12 +75,12 @@ app/ttpos-erp/
 ❌ internal/service/      # 服务接口
 ```
 
-**识别标识**：包含以下注释的文件不要修改
+**识别标识**: 包含以下注释的文件不要修改
 ```go
 // Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
 ```
 
-### 2. 手动编写的代码
+### 手动编写的代码
 
 以下目录的代码需要手动编写：
 
@@ -92,47 +93,56 @@ app/ttpos-erp/
 ✅ manifest/sql/          # 数据库迁移脚本
 ```
 
+---
+
 ## 🎯 服务层设计模式
 
 ### 1. 服务接口和实现
 
-✅ **正确的服务实现模式**
+GoFrame 使用单例模式管理服务：
+
 ```go
-// 服务实现（在 logic/ 目录）
+// internal/logic/user/user.go
+
+// 服务实现
 type sUser struct{}
 
-// 单例模式
+// 单例实例
 var (
     insUser = sUser{}
 )
 
+// 获取服务实例
 func User() *sUser {
     return &insUser
 }
 
+// 初始化时注册到服务容器
 func init() {
-    service.RegisterUser(User())  // 注册到服务容器
+    service.RegisterUser(User())
 }
 
 // 实现业务逻辑
 func (s *sUser) GetUser(ctx context.Context, req *user.GetUserReq) (*user.GetUserResp, error) {
-    // 业务逻辑实现
-    var user *entity.User
-    err := dao.User.Ctx(ctx).Where(dao.User.Columns().Id, req.UserId).Scan(&user)
+    // 使用 dao 层查询数据
+    var userEntity *entity.User
+    err := dao.User.Ctx(ctx).
+        Where(dao.User.Columns().Id, req.UserId).
+        Scan(&userEntity)
+    
     if err != nil {
         return nil, err
     }
     
     return &user.GetUserResp{
-        UserId:   user.Id,
-        Username: user.Username,
+        UserId:   userEntity.Id,
+        Username: userEntity.Username,
     }, nil
 }
 ```
 
 ### 2. 依赖注入
 
-✅ **通过参数传递依赖**
 ```go
 type sOrder struct {
     userLogic *sUser
@@ -145,21 +155,27 @@ func Order() *sOrder {
 }
 ```
 
+---
+
 ## 🗄️ 数据库操作
 
 ### 1. 使用 DAO 层
 
-✅ **正确的数据库操作方式**
+GoFrame 通过 `dao` 包自动生成数据访问代码：
+
 ```go
 // 查询操作
 var user *entity.User
-err := dao.User.Ctx(ctx).Where(dao.User.Columns().Id, userId).Scan(&user)
+err := dao.User.Ctx(ctx).
+    Where(dao.User.Columns().Id, userId).
+    Scan(&user)
 
 // 插入操作
-userId, err := dao.User.Ctx(ctx).Data(do.User{
-    Username: "test",
-    Email:    "test@example.com",
-}).InsertAndGetId()
+userId, err := dao.User.Ctx(ctx).
+    Data(do.User{
+        Username: "test",
+        Email:    "test@example.com",
+    }).InsertAndGetId()
 
 // 更新操作
 _, err := dao.User.Ctx(ctx).
@@ -176,7 +192,6 @@ _, err := dao.User.Ctx(ctx).
 
 ### 2. 事务处理
 
-✅ **使用事务**
 ```go
 err := g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
     // 在事务中执行多个操作
@@ -189,15 +204,17 @@ err := g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
     if err != nil {
         return err
     }
+    
     return nil
 })
 ```
 
+---
+
 ## 📝 错误处理
 
-### 1. 使用 gerror 包
+### 使用 gerror 包
 
-✅ **GoFrame 错误处理**
 ```go
 import "github.com/gogf/gf/v2/errors/gerror"
 
@@ -214,12 +231,13 @@ err = gerror.Newf("用户ID %d 不存在", userID)
 err = gerror.Wrapf(originalErr, "更新用户 %d 失败", userID)
 ```
 
-### 2. 错误处理最佳实践
-
+**原则**:
 - ✅ 使用 `gerror` 包，不要使用标准库的 `errors`
 - ✅ 错误信息使用中文
 - ✅ 在业务逻辑层包装错误，添加业务含义
 - ❌ 避免使用 `panic`
+
+---
 
 ## 🔧 配置管理
 
@@ -242,7 +260,6 @@ logger:
 
 ### 2. 配置读取
 
-✅ **读取配置**
 ```go
 import "github.com/gogf/gf/v2/frame/g"
 
@@ -251,18 +268,19 @@ serverAddr := g.Cfg().MustGet(ctx, "server.address").String()
 dbConfig := g.Cfg().MustGet(ctx, "database.default").Map()
 ```
 
+---
+
 ## 📋 日志规范
 
-### 1. 日志使用
+### 日志使用
 
-✅ **使用 GoFrame 日志**
 ```go
 import "github.com/gogf/gf/v2/frame/g"
 
 // 不同级别的日志
 g.Log().Debug(ctx, "调试信息")
 g.Log().Info(ctx, "普通信息")
-g.Log().Warning(ctx, "警告信息") 
+g.Log().Warning(ctx, "警告信息")
 g.Log().Error(ctx, "错误信息", err)
 g.Log().Fatal(ctx, "致命错误", err)
 
@@ -270,12 +288,13 @@ g.Log().Fatal(ctx, "致命错误", err)
 g.Log().Infof(ctx, "用户 %d 执行了 %s 操作", userId, action)
 ```
 
-### 2. 日志最佳实践
-
+**最佳实践**:
 - ✅ 必须传递 `context` 参数，便于链路追踪
 - ✅ 错误日志包含完整的错误信息
 - ✅ 使用结构化日志记录关键业务操作
 - ❌ 敏感信息不要记录到日志中
+
+---
 
 ## 🗃️ 数据库迁移规范
 
@@ -287,12 +306,12 @@ g.Log().Infof(ctx, "用户 %d 执行了 %s 操作", userId, action)
 
 ### 2. 字段规范
 
-- **时间字段**：使用 `int` 类型，以 `_time` 结尾，默认值 0
-- **金额字段**：使用 `decimal(14,2)` 类型
-- **必需字段**：
-  - `uuid`（string，默认 `guuid.S()`）
-  - `create_time`、`update_time`、`delete_time`（int，默认 0）
-- **检查存在性**：新增表/字段前需判断是否已存在
+- **时间字段**: 使用 `int` 类型，以 `_time` 结尾，默认值 0
+- **金额字段**: 使用 `decimal(14,2)` 类型
+- **必需字段**:
+  - `uuid` (string，默认 `guuid.S()`)
+  - `create_time`、`update_time`、`delete_time` (int，默认 0)
+- **检查存在性**: 新增表/字段前需判断是否已存在
 
 ### 3. 迁移示例
 
@@ -313,6 +332,8 @@ CREATE TABLE IF NOT EXISTS `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 ```
 
+---
+
 ## 🔌 gRPC 服务开发
 
 ### 1. Protobuf 定义
@@ -321,7 +342,6 @@ CREATE TABLE IF NOT EXISTS `user` (
 
 ### 2. gRPC 控制器
 
-✅ **gRPC 控制器实现**
 ```go
 // internal/controller/rpc/user.go
 package rpc
@@ -343,6 +363,8 @@ func (c *cUser) GetUserInfo(ctx context.Context, req *user.GetUserInfoReq) (*use
 }
 ```
 
+---
+
 ## 🔗 服务注册（Nacos）
 
 ### 1. 服务注册配置
@@ -362,7 +384,6 @@ nacos:
 
 ### 2. 服务发现
 
-✅ **调用其他服务**
 ```go
 import "github.com/gogf/gf/contrib/registry/nacos/v2"
 
@@ -373,6 +394,8 @@ conn, err := grpc.Dial(
     grpc.WithResolvers(nacos.NewResolver()),
 )
 ```
+
+---
 
 ## 🎨 代码生成
 
@@ -392,70 +415,7 @@ cd app/ttpos-erp
 make proto
 ```
 
-## 📊 性能优化
-
-### 1. 数据库查询优化
-
-✅ **使用合适的索引**
-```go
-// 使用索引字段查询
-dao.User.Ctx(ctx).Where(dao.User.Columns().Username, username).One()
-
-// 避免全表扫描
-dao.User.Ctx(ctx).Where("email LIKE ?", "%@example.com%").All() // ❌
-dao.User.Ctx(ctx).Where(dao.User.Columns().Email, email).All()  // ✅
-```
-
-### 2. 使用缓存
-
-✅ **使用 GoFrame 缓存**
-```go
-import "github.com/gogf/gf/v2/os/gcache"
-
-// 设置缓存
-gcache.Set(ctx, "user:"+userId, userData, time.Hour)
-
-// 获取缓存
-value, err := gcache.Get(ctx, "user:"+userId)
-```
-
-## 🔒 安全规范
-
-### 1. 输入验证
-
-✅ **使用验证标签**
-```go
-type CreateUserReq struct {
-    Username string `v:"required|length:2,20#用户名不能为空|用户名长度为2-20个字符"`
-    Email    string `v:"required|email#邮箱不能为空|邮箱格式不正确"`
-    Age      int    `v:"required|between:1,150#年龄不能为空|年龄必须在1-150之间"`
-}
-```
-
-### 2. SQL注入防护
-
-✅ **使用参数化查询**
-```go
-// ✅ 正确：使用参数化查询
-dao.User.Ctx(ctx).Where("username = ?", username).One()
-
-// ❌ 错误：字符串拼接
-dao.User.Ctx(ctx).Where("username = '" + username + "'").One()
-```
-
-## 📚 开发参考
-
-### 优先参考文档
-1. `ttpos-bmp/README.MD` - 项目说明
-2. `ttpos-bmp/MIGRATION_QUICK_START.md` - 迁移快速开始
-3. `ttpos-bmp/.cursor/rules/go-rules.mdc` - Go开发规范
-4. `ttpos-bmp/.cursor/rules/proto-rules.mdc` - Protobuf规范
-5. GoFrame 官方文档
-
-### 注意事项
-- ❌ 分析处理 ttpos-bmp 代码时，不要参考 `main/` 目录下的代码
-- ✅ 遵循 GoFrame 框架的标准结构和最佳实践
-- ✅ 使用框架提供的工具和命令
+---
 
 ## 🚀 快速开始
 
@@ -500,6 +460,16 @@ make run  # 启动服务
 
 ---
 
-**最后更新**: 2025-11-16  
+## 相关文档
+
+- [Go BMP 开发指南](../guides/go-bmp-development.md) - 详细的开发规范
+- [Protobuf 规范](../../ttpos-bmp/.cursor/rules/proto-rules.mdc) - Protobuf 开发规范
+- [GoFrame 官方文档](https://goframe.org.cn) - 框架详细文档
+- [微服务集成](./microservices.md) - 微服务架构设计
+
+---
+
+**最后更新**: 2025-11-17  
 **维护者**: TTPOS Team  
-**参考**: ttpos-bmp/.cursor/rules/
+**版本**: v1.0
+
