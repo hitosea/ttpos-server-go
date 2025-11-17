@@ -135,8 +135,8 @@ func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(start
 		SELECT t1.product_package_uuid,  t1.min , t1.max, t1.total ,t1.`count`, IF(t1.count = 0,0, t1.total /t1.`count`) AS `avg`   FROM (
 			SELECT
 				product_package_uuid,
-				MIN(avg_all_duration) AS min,
-				MAX(avg_all_duration) AS max,
+				MIN(all_duration) AS min,
+				MAX(all_duration) AS max,
 				sum(all_duration) AS total,
 				sum(num) AS 'count'
 			FROM
@@ -157,8 +157,8 @@ func (r *kitchenEfficiencyAnalysisRepo) CalculateKitchenEfficiencyAnalysis(start
 				SELECT t1.product_package_uuid,  t1.min , t1.max, t1.total ,t1.count, IF(t1.count = 0,0, t1.total /t1.count) AS avg   FROM (
 			SELECT
 				product_package_uuid,
-				MIN(avg_all_duration) AS min,
-				MAX(avg_all_duration) AS max,
+				MIN(all_duration) AS min,
+				MAX(all_duration) AS max,
 				sum(all_duration) AS total,
 				sum(num) AS 'count'
 			FROM
