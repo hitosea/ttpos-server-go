@@ -240,8 +240,8 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	})
 
 	// 每15分钟
-	// _, _ = c.AddFunc("0 */15 * * * *", func() {
-	_, _ = c.AddFunc("0 * * * * *", func() {
+	_, _ = c.AddFunc("0 */15 * * * *", func() {
+		// _, _ = c.AddFunc("0 * * * * *", func() {
 		tasks.NewKitchenEfficiencyAnalysisTask(dbm, cache).Execute()
 	})
 
