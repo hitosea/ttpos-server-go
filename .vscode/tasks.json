@@ -8,21 +8,7 @@
         "args": [
             "build"
         ],
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared",
-            "showReuseMessage": true,
-            "clear": false
-        },
-        "problemMatcher": [
-            "$go"
-        ]
+        "group": "build",
     },
     {
         "label": "Go项目-查看日志",
@@ -86,20 +72,9 @@
         "type": "shell",
         "command": "make",
         "args": [
-            "install-bmp"
+            "bmp-install"
         ],
         "group": "build",
-        "presentation": {
-            "echo": true,
-            "reveal": "always",
-            "focus": false,
-            "panel": "shared",
-            "showReuseMessage": true,
-            "clear": false
-        },
-        "problemMatcher": [
-            "$go"
-        ]
     },
     {
         "label": "Go项目-项目翻译",

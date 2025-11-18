@@ -7,7 +7,7 @@ fi
 
 if [ -z "$LOCAL_IP" ] ;then
   # 兼容 coder 环境
-  LOCAL_IP=$(../scripts/get_ip.sh)
+  LOCAL_IP=$(../ttpos-scripts/get_ip.sh)
 fi
 
 ENV_FILE=../.env
