@@ -1,9 +1,3 @@
----
-alwaysApply: true
-description: Agent 速查表（后端版）
-priority: 1
----
-
 # Agent 速查表
 
 > 本文件包含所有核心规则的压缩映射表。遇到任何问题优先查阅此文件。
