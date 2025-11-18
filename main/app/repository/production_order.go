@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -282,23 +283,23 @@ func (r *productionRepo) WhereProductPackageInPrinter(productPrinterUuid uint64)
 // WhereSaleBillInPrinterRegions 销售账单在打印机关联区域中（子查询优化，避免IN子句过长）
 func (r *productionRepo) WhereSaleBillInPrinterRegions(productPrinterUuid uint64, versionGte240 bool) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
+		var deskRegionUuids, deskUuids []uint64
+		// 根据商品打印规则获取桌台区域Uuid
+		r.db.Model(&model.ProductPrinterRegion{}).Scopes(NotDeleted).Where("product_printer_uuid = ?", productPrinterUuid).Pluck("desk_region_uuid", &deskRegionUuids)
+		if len(deskRegionUuids) != 0 {
+			// 根据桌台区域获取桌台Uuid
+			r.db.Model(&model.Desk{}).Scopes(NotDeleted).Where("region_uuid in (?)", deskRegionUuids).Pluck("uuid", &deskUuids)
+			// 如果桌台区域包含0，则添加0到桌台Uuid列表
+			if slices.Contains(deskRegionUuids, 0) {
+				deskUuids = append(deskUuids, 0)
+			}
+		}
 		prefix := config.Database.TablePrefix
-		// 子查询1：获取打印机关联的区域UUID
-		regionSubQuery := r.db.Table(prefix+"product_printer_region").
-			Select("desk_region_uuid").
-			Where("product_printer_uuid = ?", productPrinterUuid).
-			Scopes(NotDeleted)
-
-		// 子查询2：获取区域关联的桌台UUID
-		deskSubQuery := r.db.Table(prefix+"desk").
-			Select("uuid").
-			Scopes(NotDeleted).
-			Where("region_uuid IN (?) OR region_uuid = 0", regionSubQuery)
-
-		// 子查询3：获取桌台关联的销售账单UUID
-		billSubQuery := r.db.Table(prefix+"sale_bill").
-			Select("uuid").
-			Where("desk_uuid IN (?)", deskSubQuery)
+		// 获取销售账单UUID
+		billSubQuery := r.db.Table(prefix + "sale_bill").Select("uuid")
+		if len(deskUuids) != 0 {
+			billSubQuery = billSubQuery.Where("desk_uuid IN (?)", deskUuids)
+		}
 
 		// 根据版本号决定过滤条件
 		if versionGte240 {
