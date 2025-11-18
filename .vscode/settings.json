@@ -119,7 +119,7 @@
       "onAutoForward": "silent",
       "protocol": "http"
     },
-    "8848": {
+    "18080": {
       "label": "Nacos",
       "onAutoForward": "silent",
       "protocol": "http"

@@ -82,31 +82,14 @@ logger:
   stdoutColorDisabled: false        # 是否禁用终端颜色输出
   writerColorEnable: false          # 是否启用日志文件颜色
 
-# Nacos配置中心
+# Nacos 配置
 nacos:
-  address:      "$NACOS_ADDRESS"           # Nacos服务地址
-  scheme:       "http"                     # 协议：http/https
-  contextPath:  "/nacos"                   # Nacos上下文路径
-  namespace:    "$NACOS_NAMESPACE"         # 命名空间ID
-  timeoutMs:    5000                       # 超时时间（毫秒）
-  logLevel:     "info"                     # 日志级别
-  
-  # 配置中心
+  server:
+    ip: $NACOS_SERVER_IP
+    port: $NACOS_SERVER_PORT
   config:
-    dataId:  "ttpos-websocket.yaml"        # 配置文件DataId
-    group:   "$NACOS_CONFIG_GROUP"         # 配置分组
-  
-  # 服务注册与发现
-  discovery:
-    serviceName: "ttpos-websocket"         # 服务名称
-    groupName:   "$NACOS_SERVICE_GROUP"    # 服务分组
-    clusterName: "DEFAULT"                 # 集群名称
-    weight:      1.0                       # 权重
-    enable:      true                      # 是否启用
-    healthy:     true                      # 健康状态
-    ephemeral:   true                      # 是否临时实例
-    metadata:
-      version: "$SERVICE_VERSION"          # 服务版本
+    dataId: ttpos-websocket.yaml
+    group: DEFAULT_GROUP
 
 # Redis配置
 redis:

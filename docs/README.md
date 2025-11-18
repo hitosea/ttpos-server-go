@@ -56,6 +56,86 @@
 
 ---
 
+## 📁 目录结构
+
+```
+docs/
+├── agent/                    # 🤖 Agent 专用文档
+│   ├── workflows/            #   工作流执行清单
+│   │   ├── feature-development.md      # 功能开发工作流
+│   ├── templates/            #   文档模板
+│   │   ├── api-doc-template.md         # API 文档模板
+│   └── graphiti/             #   Graphiti 草稿仓库
+│       └── *.md              #   待入库的经验文档
+│
+├── human/                    # 👤 人类专用文档
+│   ├── guides/               #   学习指南
+│   │   ├── go-main-development.md      # Go Main 开发指南
+│   │   ├── go-bmp-development.md       # Go BMP 开发指南
+│   │   ├── php-development.md          # PHP 开发指南
+│   │   ├── database-guide.md           # 数据库指南
+│   │   ├── api-design-guide.md         # API 设计指南
+│   │   ├── security-guide.md           # 安全开发指南
+│   │   └── documentation-guide.md       # 文档编写指南
+│   ├── architecture/         #   架构设计文档
+│   │   ├── overview.md                 # 架构总览
+│   │   ├── go-main-architecture.md    # Go Main 架构
+│   │   ├── go-bmp-architecture.md      # Go BMP 架构
+│   │   ├── php-architecture.md         # PHP 架构
+│   │   ├── modules.md                  # 模块划分
+│   │   ├── database-design.md          # 数据库设计
+│   │   ├── entities/                   # 实体设计
+│   │   │   ├── relationships.md        # 实体关系
+│   │   │   └── *.md                    # 各实体详细设计
+│   │   └── features/                    # 功能设计
+│   │       └── *.md                    # 各功能详细设计
+│   ├── business/             #   业务知识
+│   │   ├── glossary.md                 # 业务术语表
+│   │   └── workflows/                  # 业务流程
+│   │       ├── order-flow.md           # 订单流程
+│   │       └── *.md                    # 其他业务流程
+│   └── decisions/            #   技术决策记录 (ADR)
+│       └── *.md              #   各技术决策文档
+│
+├── shared/                   # 📚 共用资源
+│   ├── specs/                #   功能规格文档
+│   │   └── story-*/           #   各功能规格目录
+│   │       ├── requirements.md         # 需求文档
+│   │       ├── design.md               # 设计文档
+│   │       └── tasks.md                # 任务清单
+│   ├── api/                   #   API 文档
+│   │   └── conventions.md              # API 约定
+│   ├── troubleshooting/      #   问题排查指南
+│   │   ├── database/                   # 数据库问题
+│   │   ├── payment/                     # 支付问题
+│   │   └── *.md                        # 其他问题排查
+│   └── integrations/         #   第三方集成文档
+│       ├── lineman/                    # LINE MAN 集成
+│       └── neo4j/                      # Neo4j 集成
+│
+├── team/                     # 👥 团队协作
+│   ├── proposals/            #   需求提案
+│   │   └── YYYY-MM-DD-*.md   #   按日期组织的提案
+│   ├── activities/           #   活动日志
+│   │   └── YYYY-MM/          #   按月组织的日志
+│   │       └── YYYY-MM-DD.md #   每日活动记录
+│   └── reports/              #   团队报告
+│       └── *.md              #   各类评估和报告
+│
+└── others/                   # 📦 其他文档
+    └── *.md                  #   临时或待分类文档
+```
+
+### 目录说明
+
+- **agent/**: AI Agent 自动化执行的工作流和模板，采用检查清单和决策树风格
+- **human/**: 供开发者学习和参考的详细文档，包含 WHY 和 HOW 的完整解释
+- **shared/**: Agent 和人类都需要访问的共享资源，如功能规格、API 文档等
+- **team/**: 团队协作相关文档，包括提案、活动日志和报告
+- **others/**: 临时存放或待分类的文档
+
+---
+
 ## 🚀 快速开始
 
 ### 我想...
