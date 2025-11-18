@@ -22,7 +22,16 @@ func StartRedisSubscriber(ctx context.Context) {
 		g.Log().Error(ctx, "订阅Redis频道失败", err)
 		return
 	}
-	defer conn.Close(ctx)
+
+	defer func() {
+		if r := recover(); r != nil {
+			g.Log().Error(ctx, "Redis订阅者异常", r)
+		}
+		conn.Close(ctx)
+		// 延迟3秒重连
+		time.Sleep(3 * time.Second)
+		StartRedisSubscriber(ctx)
+	}()
 
 	// 循环接收消息
 	for {
