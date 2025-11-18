@@ -16,6 +16,7 @@ __debug_*
 
 /vendor/
 /node_modules/
+/certificate
 
 # 编译和构建文件
 *.exe

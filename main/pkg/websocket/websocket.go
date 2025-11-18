@@ -1,16 +1,10 @@
 package websocket
 
 import (
-	"bytes"
-	"crypto/md5"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
+
+	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
+	"go.uber.org/zap"
 )
 
 // 源类型
@@ -67,95 +61,12 @@ const (
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
-func PushClient(company_uuid uint64, source_client, device_id, message_type string, data map[string]any) error {
-	var jsonData []byte
-	// 计算包含关键参数的MD5值
-	if message_type == UPDATE_ORDER {
-		jsonData = fmt.Appendf(nil, "%d", data["sale_bill_uuid"])
-	}
-
-	// 创建缓存键
-	var cacheKey string
-	// 更新桌台的时候
-	if message_type == UPDATE_DESK {
-		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
-		md5Sum := fmt.Sprintf("%x", md5.Sum([]byte(key)))
-		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
-	} else if message_type == PRINT_DATA {
-		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
-		var updateTime string
-		// 安全地获取更新时间，支持多种可能的键名和类型
-		if updateTimeVal, exists := data["update_times"]; exists {
-			switch v := updateTimeVal.(type) {
-			case int64:
-				updateTime = strconv.FormatInt(v, 10)
-			case int:
-				updateTime = strconv.FormatInt(int64(v), 10)
-			case string:
-				updateTime = v
-			default:
-				updateTime = fmt.Sprintf("%v", v)
-			}
+func PushClient(companyUuid uint64, sourceClient, deviceId, messageType string, data map[string]any) error {
+	utils.Go(func() {
+		err := PushClients(companyUuid, sourceClient, deviceId, messageType, data)
+		if err != nil {
+			logger.Error("推送消息失败", zap.Error(err))
 		}
-		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), []byte(updateTime)...)))
-		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
-	} else {
-		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
-		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
-		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
-	}
-
-	// 判断当前是否在容器内执行
-	url := fmt.Sprintf("http://127.0.0.1:%s/ws/push", os.Getenv("NGINX_PORT"))
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		if execPath, err := os.Executable(); err == nil {
-			if !strings.Contains(strings.ToLower(execPath), "__debug_bin") {
-				url = "http://nginx/ws/push"
-			}
-		} else {
-			url = "http://nginx/ws/push"
-		}
-	}
-
-	// 构建请求体
-	payload := map[string]interface{}{
-		"company_uuid":  company_uuid,
-		"source_client": source_client,
-		"device_id":     device_id,
-		"message_type":  message_type,
-		"message_key":   cacheKey,
-		"data":          data,
-	}
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		fmt.Printf("Failed to marshal payload: %v", err)
-		log.Printf("Failed to marshal payload: %v", err)
-		return err
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		fmt.Printf("Failed to create request: %v", err)
-		log.Printf("Failed to create request: %v", err)
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-KEY", config.JWT.Secret)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Failed to send request: %v", err)
-		log.Printf("Failed to send request: %v", err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Received non-OK response: %s %s", resp.Status, url)
-		log.Printf("Received non-OK response: %s %s", resp.Status, url)
-		return fmt.Errorf("received non-OK response: %s", resp.Status)
-	}
-
+	})
 	return nil
 }

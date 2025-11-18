@@ -19,8 +19,6 @@ type GrpcClient struct {
 	client v1.WebSocketClient
 }
 
-var defaultClient *GrpcClient
-
 // NewWebSocketClient 创建 WebSocket gRPC 客户端（使用 Nacos 服务发现）
 // 返回：WebSocket客户端、gRPC连接、错误信息
 func NewWebSocketClient() (v1.WebSocketClient, *grpc.ClientConn, error) {
@@ -38,13 +36,8 @@ func NewWebSocketClient() (v1.WebSocketClient, *grpc.ClientConn, error) {
 //   - deviceId: 设备ID
 //   - messageType: 消息类型
 //   - data: 消息数据
-func PushClient(companyUuid uint64, sourceClient, deviceId, messageType string, data map[string]interface{}) error {
+func PushClients(companyUuid uint64, sourceClient, deviceId, messageType string, data map[string]interface{}) error {
 	ctx := context.Background()
-
-	// 如果全局客户端已初始化，使用全局客户端
-	if defaultClient != nil {
-		return defaultClient.PushMessage(ctx, companyUuid, sourceClient, deviceId, messageType, data)
-	}
 
 	// 否则每次创建新的客户端连接（推荐在启动时初始化全局客户端）
 	client, conn, err := NewWebSocketClient()
