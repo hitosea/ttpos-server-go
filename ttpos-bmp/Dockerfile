@@ -6,13 +6,20 @@ ARG MODULE=takeout
 ARG HTTP_PORT=14031
 ARG RPC_PORT=14032
 # 设置工作目录
-WORKDIR /app/ttpos-bmp
+WORKDIR /app
 
 # 设置代理
 ENV GOPROXY=https://goproxy.cn,direct
 RUN go install github.com/gogf/gf/cmd/gf/v2@latest
-# 复制源代码
-COPY . .
+
+# 复制 ttpos-api 依赖模块
+COPY ttpos-api/ ./ttpos-api/
+
+# 复制 ttpos-bmp 源代码
+COPY ttpos-bmp/ ./ttpos-bmp/
+
+# 切换到 ttpos-bmp 工作目录
+WORKDIR /app/ttpos-bmp
 
 # 下载依赖，这一步会生成缓存，在依赖有变化时才会重新下载
 RUN  go mod download
@@ -40,7 +47,7 @@ WORKDIR /app
 
 # 复制编译好的二进制文件到新镜像
 COPY --from=builder /app/ttpos-bmp/app/ttpos-$MODULE/bin/ttpos-$MODULE .
-COPY manifest/deploy/entrypoint.sh ./
+COPY --from=builder /app/ttpos-bmp/manifest/deploy/entrypoint.sh ./
 
 ENV GRPC_ENDPOINTS=""
 # 生成 Core Dump 文件

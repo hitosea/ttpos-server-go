@@ -22,9 +22,10 @@ var nacosClient *nacos.NacosClient
 type ServiceName string
 
 const (
-	TakeOutServiceName ServiceName = "ttpos-takeout"
-	ErpServiceName     ServiceName = "ttpos-erp"
-	MessageServiceName ServiceName = "ttpos-message"
+	TakeOutServiceName   ServiceName = "ttpos-takeout"
+	ErpServiceName       ServiceName = "ttpos-erp"
+	MessageServiceName   ServiceName = "ttpos-message"
+	WebSocketServiceName ServiceName = "ttpos-websocket"
 )
 
 func Init() {

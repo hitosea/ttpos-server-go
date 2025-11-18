@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	websocketConstant "ttpos-api/ttpos-websocket/constant"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
@@ -37,9 +38,14 @@ func Init() {
 
 	//订阅消息
 	err = manager.Subscribe(config.Rocketmq.GroupName, TopicItemChange, erpItemChangeHandler)
-
 	if err != nil {
-		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err))
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicItemChange))
+	}
+
+	// 订阅 LAN 打印机上报消息
+	err = manager.Subscribe(config.Rocketmq.GroupName, websocketConstant.TopicLanPrinterReport, lanPrinterReportHandler)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", websocketConstant.TopicLanPrinterReport))
 	}
 
 }

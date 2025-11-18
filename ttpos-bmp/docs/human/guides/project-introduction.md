@@ -8,6 +8,7 @@ TTPOS 业务中台（ttpos-bmp）是为餐饮零售场景打造的 Go 微服务�
 - ERP 模块（ttpos-erp）：进销存、生产制造、价格体系、仓库与库存
 - 外送模块（ttpos-takeout）：第三方外送对接、订单派送、回调处理
 - 消息模块（ttpos-message）：统一消息中心（邮件/短信），异步队列发送、模板渲染、状态追踪
+- WebSocket 模块（ttpos-websocket）：实时通信服务，支持双向消息推送、连接管理、消息广播
 
 上述模块均为独立应用，具备各自的 HTTP/gRPC 服务与部署产物，可单独开发与发布。
 
@@ -29,8 +30,19 @@ TTPOS 业务中台（ttpos-bmp）是为餐饮零售场景打造的 Go 微服务�
   - 发送追踪：记录请求/响应与错误日志，便于审计与排错
 - 端口（默认，可按环境调整）：http:14041，grpc:14042
 
+### ttpos-websocket 模块简介
+- 定位：为各业务域提供实时通信能力（WebSocket + gRPC），统一连接管理与消息推送，支持点对点和广播消息
+- 能力：
+  - WebSocket 连接：提供 /ws 端点进行 WebSocket 升级
+  - 消息推送：支持向指定连接或全部连接推送消息
+  - 连接管理：自动处理连接建立、断开、心跳检测
+  - 消息存储：记录 WebSocket 消息日志，便于追踪与调试
+  - gRPC 接口：提供远程调用接口供其他服务推送消息
+  - 广播支持：支持向多个连接同时推送消息
+- 端口（默认，可按环境调整）：http:14051，grpc:14052
+
 ### 目录结构概览（节选）
-- app/ttpos-erp、app/ttpos-manager、app/ttpos-shop、app/ttpos-takeout：各业务模块
+- app/ttpos-erp、app/ttpos-manager、app/ttpos-shop、app/ttpos-takeout、app/ttpos-websocket：各业务模块
   - api/：接口定义与 gRPC 生成代码
   - internal/：模块内部实现（boot、controller、logic、dao、model、service 等）
   - manifest/：模块配置模板、部署清单、protobuf、sql 迁移脚本
@@ -56,6 +68,7 @@ make run.manager   # http:14001  grpc:14002
 make run.shop      # http:14011  grpc:14012
 make run.erp       # http:14021  grpc:14022
 make run.takeout   # http:14031  grpc:14032
+make run.websocket # http:14051  grpc:14052
 ```
 4) 健康检查
 ```bash
@@ -90,12 +103,13 @@ make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5
   - erp：14021/http，14022/grpc
   - takeout：14031/http，14032/grpc
   - message：14041/http，14042/grpc
+  - websocket：14051/http，14052/grpc
 
 ### 部署指引（简要）
 1) 准备 `.env` 并执行 `make conf` 生成配置  
 2) 可选：`make migrate` 升级数据库  
 3) 构建镜像：
-   - `docker compose build bmp-manager|bmp-shop|bmp-erp|bmp-takeout`
+   - `docker compose build bmp-manager|bmp-shop|bmp-erp|bmp-takeout|bmp-websocket`
    - 或 `docker compose build` 全量构建
 4) 确认容器将生成的 `manifest/config/config.yaml` 挂载到容器 `/app/config/config.yaml`
 5) 配置网关/反向代理（示例：`docker/nginx/conf.d/ttpos-bmp.conf`）指向各模块 HTTP 端口

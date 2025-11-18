@@ -1,0 +1,147 @@
+# WebSocket 服务配置文件模板
+
+# HTTP服务器配置
+server:
+  address:     ":14051"              # HTTP服务监听地址（用于WebSocket升级）
+  openapiPath: "/api.json"          # OpenAPI接口文档路径
+  swaggerPath: "/swagger"           # Swagger文档路径
+  
+  # 日志配置
+  logPath:       "./log"  # 服务日志存储目录
+  logStdout:     true                        # 是否输出日志到终端
+  accessLogEnabled: true                     # 是否开启访问日志
+  errorLogEnabled:  true                     # 是否开启错误日志
+  
+  # 性能配置
+  maxHeaderBytes: "20KB"            # 最大请求头大小
+  clientMaxBodySize: "50MB"         # 客户端最大请求体大小
+  
+  # 优雅关闭
+  graceful: true                    # 是否启用优雅关闭
+  gracefulTimeout: 5                # 优雅关闭超时时间（秒）
+
+# WebSocket 特定配置
+websocket:
+  # 连接配置
+  maxConnections: 10000             # 最大连接数
+  readBufferSize: 4096              # 读缓冲区大小（字节）
+  writeBufferSize: 4096             # 写缓冲区大小（字节）
+  
+  # 超时配置
+  handshakeTimeout: "10s"           # 握手超时时间
+  readTimeout: "60s"                # 读取超时时间
+  writeTimeout: "10s"               # 写入超时时间
+  
+  # 心跳配置
+  pingInterval: "30s"               # Ping 间隔时间
+  pongTimeout: "10s"                # Pong 超时时间
+  
+  # 消息配置
+  maxMessageSize: 1048576           # 最大消息大小（1MB）
+  enableCompression: true           # 是否启用压缩
+  
+  # 认证配置
+  enableAuth: true                  # 是否启用连接认证
+  authTimeout: "5s"                 # 认证超时时间
+
+# JWT 配置
+jwt:
+  secret: "$JWT_SECRET"             # JWT 密钥（环境变量）
+  expire: 86400                     # Token 过期时间（秒），默认24小时
+
+# gRPC服务配置
+grpc:
+  name:    "ttpos-websocket"        # 服务名称
+  address: ":14052"                  # gRPC服务监听地址
+  logPath: "./log/grpc"  # gRPC日志目录
+  logStdout: true                   # 是否输出gRPC日志到终端
+
+# 数据库配置
+database:
+  default:
+    link:  "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/websocket"  # 数据库连接字符串
+    debug: false                               # 是否开启调试模式
+    charset: "utf8mb4"                         # 字符集
+    dryRun: false                              # 是否空跑（不执行SQL）
+    maxIdle: 10                                # 最大空闲连接数
+    maxOpen: 100                               # 最大打开连接数
+    maxLifetime: "30s"                         # 连接最大存活时间
+    
+# 日志配置
+logger:
+  level:  "all"              # 日志级别：all, debug, info, warn, error
+  stdout: true                      # 是否输出到终端
+  path:   "./log/websocket"  # 日志文件存储目录
+  file:   "{Y-m-d}.log"             # 日志文件格式
+  rotate: "daily"                   # 日志轮转策略：daily, size
+  rotateSize: "100M"                # 按大小轮转时的文件大小
+  rotateBackupLimit: 10             # 保留的历史日志文件数量
+  rotateBackupExpire: "30d"         # 历史日志文件保留时间
+  rotateBackupCompress: 0           # 历史日志文件压缩级别（0-9，0不压缩）
+  rotateCheckInterval: "1h"         # 轮转检查时间间隔
+  stdoutColorDisabled: false        # 是否禁用终端颜色输出
+  writerColorEnable: false          # 是否启用日志文件颜色
+
+# Nacos配置中心
+nacos:
+  address:      "$NACOS_ADDRESS"           # Nacos服务地址
+  scheme:       "http"                     # 协议：http/https
+  contextPath:  "/nacos"                   # Nacos上下文路径
+  namespace:    "$NACOS_NAMESPACE"         # 命名空间ID
+  timeoutMs:    5000                       # 超时时间（毫秒）
+  logLevel:     "info"                     # 日志级别
+  
+  # 配置中心
+  config:
+    dataId:  "ttpos-websocket.yaml"        # 配置文件DataId
+    group:   "$NACOS_CONFIG_GROUP"         # 配置分组
+  
+  # 服务注册与发现
+  discovery:
+    serviceName: "ttpos-websocket"         # 服务名称
+    groupName:   "$NACOS_SERVICE_GROUP"    # 服务分组
+    clusterName: "DEFAULT"                 # 集群名称
+    weight:      1.0                       # 权重
+    enable:      true                      # 是否启用
+    healthy:     true                      # 健康状态
+    ephemeral:   true                      # 是否临时实例
+    metadata:
+      version: "$SERVICE_VERSION"          # 服务版本
+
+# Redis配置
+redis:
+  default:
+    address: "$REDIS_ADDRESSES"            # Redis地址（集群模式使用逗号分隔多个地址，如：host1:port1,host2:port2,host3:port3）
+    password: "$REDIS_PASSWORD"            # 密码
+    db: $REDIS_DB                          # 数据库索引
+    cluster: true                          # 是否为集群模式
+    minIdle: 5                             # 最小空闲连接数
+    maxIdle: 20                            # 最大空闲连接数
+    maxActive: 100                         # 最大活动连接数
+    idleTimeout: "60s"                     # 空闲超时时间
+    maxConnLifetime: "90s"                 # 连接最大存活时间
+    waitTimeout: "1s"                      # 等待超时时间
+    dialTimeout: "1s"                      # 拨号超时时间
+    readTimeout: "1s"                      # 读取超时时间
+    writeTimeout: "1s"                     # 写入超时时间
+
+# 消息队列
+queue:
+  switch: true                                        # 队列开关，可选：true|false，默认为true
+  driver: "rocketmq"                                      # 队列驱动，可选：redis|rocketmq，默认为redis
+  groupName: "ttpos-websocket"                                  # mq群组名称
+  poolSize: 20                                          # 消息处理线程池大小，默认20
+  # redis，默认使用全局redis运行队列
+  redis:
+    timeout: 0                                        # 队列超时时间以秒为单位，0表示永不超时。如果队列在设定的超时时间内没有被消费，则会被销毁
+  rocketmq:
+    endpoint: "$ROCKETMQ_ENDPOINT"                   #代理接入点 新版v5客户端支持
+    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]                  # nameSrvAdder+端口，支持多个
+    accessKey: "$ROCKETMQ_ACCESS_KEY"                                      # 选填。如果开启了acl控制就必填
+    secretKey: "$ROCKETMQ_SECRET_KEY"                                      # 选填。如果开启了acl控制就必填
+    brokerAddr: "$ROCKETMQ_BROKER_ADDR"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
+    retry: 3                                           # 重试次数
+    logLevel: "warn"        #rocketmq 客户端输出日志级别,和logger.queue 区分开来 debug|warn|error|fatal
+    invisibleDuration: 25   #invisibleDuration should > 20s
+    awaitDuration: 5      # maximum waiting time for receive func
+    unitName: "" # 消费者单元名称，默认使用GUID

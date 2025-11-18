@@ -40,11 +40,9 @@ services:
     links:
       - php
       - golang
-      - websocket
     depends_on:
       - php
       - golang
-      - websocket
       - redis-proxy
       - mysql-proxy
     restart: unless-stopped
@@ -99,15 +97,15 @@ services:
       saas-network:
         ipv4_address: 10.0.0.14
 
-  websocket:
-    container_name: "saas-websocket-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
-    volumes:
-      - .env:/var/.env
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.15
+  # websocket:
+  #   container_name: "saas-websocket-${APP_ID}"
+  #   image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
+  #   volumes:
+  #     - .env:/var/.env
+  #   restart: always
+  #   networks:
+  #     saas-network:
+  #       ipv4_address: 10.0.0.15
 
   mysql-proxy:
     container_name: "saas-mysql-proxy-${APP_ID}"
@@ -124,12 +122,12 @@ services:
 
   redis-proxy:
     container_name: "saas-redis-proxy-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-redis-proxy:${IMAGE_VERSION}
+    image: hitosea2020/redis-proxy:latest
     volumes:
       - .env:/var/.env
+    restart: always
     depends_on:
       - redis
-    restart: always
     networks:
       saas-network:
         ipv4_address: 10.0.0.17
@@ -141,3 +139,7 @@ networks:
       config:
         - subnet: 10.0.0.0/24
           gateway: 10.0.0.1
+
+  bmp-network:
+    external: true
+    name: ttpos-bmp_bmp-network

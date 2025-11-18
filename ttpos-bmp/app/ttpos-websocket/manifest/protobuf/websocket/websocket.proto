@@ -1,0 +1,108 @@
+// WebSocket 服务 Protobuf 定义文件
+// 用于定义 WebSocket 消息推送相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+
+package websocket;
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-websocket/api/websocket/v1";
+
+// WebSocket 服务接口定义
+// 提供 WebSocket 连接管理和消息推送相关的 gRPC 服务方法
+service WebSocket {
+  // 推送消息到客户端
+  // 根据条件筛选连接并推送消息
+  // 参数：推送消息请求参数
+  // 返回：推送结果
+  rpc PushMessage(PushMessageReq) returns (PushMessageResp);
+  
+  // 获取连接统计信息
+  // 返回当前所有 WebSocket 连接的统计数据
+  // 参数：空请求
+  // 返回：连接统计信息
+  rpc GetConnectionStats(GetConnectionStatsReq) returns (GetConnectionStatsResp);
+  
+  // 检查设备是否在线
+  // 根据公司UUID和设备ID检查设备是否在线
+  // 参数：设备信息
+  // 返回：在线状态
+  rpc CheckDeviceOnline(CheckDeviceOnlineReq) returns (CheckDeviceOnlineResp);
+  
+  // 关闭指定连接
+  // 根据条件关闭 WebSocket 连接
+  // 参数：关闭连接请求
+  // 返回：关闭结果
+  rpc CloseConnection(CloseConnectionReq) returns (CloseConnectionResp);
+}
+
+// 推送消息请求消息
+// 用于向 WebSocket 客户端推送消息
+message PushMessageReq {
+  uint64 company_uuid = 1;       // 公司UUID，必填
+  uint64 staff_uuid = 2;         // 员工UUID，0表示推送给所有员工
+  uint64 not_staff_uuid = 3;     // 排除的员工UUID，0表示不排除
+  string source_client = 4;      // 来源客户端（shop/cashier/tablet/kitchen/assistant/H5/*）
+  string device_id = 5;          // 设备ID，*表示所有设备
+  string not_device_id = 6;      // 排除的设备ID
+  string message_type = 7;       // 消息类型（update_order/customer_call/print_data等）
+  string message_key = 8;        // 消息键，用于防抖去重，相同key的消息会进行防抖处理
+  string data = 9;               // 消息数据（JSON格式）
+}
+
+// 推送消息响应消息
+// 返回推送结果
+message PushMessageResp {
+  bool success = 1;              // 推送是否成功
+  string message = 2;            // 响应消息描述
+  int32 push_count = 3;          // 成功推送的连接数
+}
+
+// 获取连接统计请求消息
+message GetConnectionStatsReq {
+  uint64 company_uuid = 1;       // 公司UUID，可选，0表示获取所有公司
+}
+
+// 获取连接统计响应消息
+message GetConnectionStatsResp {
+  bool success = 1;              // 查询是否成功
+  string message = 2;            // 响应消息描述
+  ConnectionStats stats = 3;     // 连接统计信息
+}
+
+// 连接统计信息
+message ConnectionStats {
+  int32 total_connections = 1;                      // 总连接数
+  map<uint64, int32> by_company = 2;                // 按公司统计
+  map<string, int32> by_source = 3;                 // 按来源统计
+  map<string, int32> by_device = 4;                 // 按设备统计
+}
+
+// 检查设备在线请求消息
+message CheckDeviceOnlineReq {
+  uint64 company_uuid = 1;       // 公司UUID，必填
+  string source_client = 2;      // 来源客户端，必填
+  string device_id = 3;          // 设备ID，必填
+}
+
+// 检查设备在线响应消息
+message CheckDeviceOnlineResp {
+  bool success = 1;              // 查询是否成功
+  string message = 2;            // 响应消息描述
+  bool is_online = 3;            // 是否在线
+  string last_heartbeat = 4;     // 最后心跳时间
+}
+
+// 关闭连接请求消息
+message CloseConnectionReq {
+  uint64 company_uuid = 1;       // 公司UUID，必填
+  string source_client = 2;      // 来源客户端，可选
+  string device_id = 3;          // 设备ID，可选
+}
+
+// 关闭连接响应消息
+message CloseConnectionResp {
+  bool success = 1;              // 关闭是否成功
+  string message = 2;            // 响应消息描述
+  int32 closed_count = 3;        // 关闭的连接数
+}
+
