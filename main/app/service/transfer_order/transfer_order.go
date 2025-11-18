@@ -144,10 +144,10 @@ func (s *transferOrderSrv) GetTransferOrderList(
 // GetTransferOrderDetail 获取调拨单详情
 func (s *transferOrderSrv) GetTransferOrderDetail(
 	ctx context.Context,
-	req req.TransferOrderDetailReq,
+	reqs req.TransferOrderDetailReq,
 ) (resp.TransferOrderDetailResp, error) {
 	// 获取调拨单数据库
-	db, err := s.helper.GetOrderDb(ctx, s.dbm, req.Uuid)
+	db, err := s.helper.GetOrderDb(ctx, s.dbm, reqs.Uuid)
 	if err != nil {
 		return resp.TransferOrderDetailResp{}, err
 	}
@@ -155,7 +155,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	// 查询调拨单详情
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
 	transferOrder, err := transferOrderRepo.GetByUuid(
-		req.Uuid,
+		reqs.Uuid,
 		transferOrderRepo.WithItems(),
 		transferOrderRepo.WithApprovals(),
 	)
@@ -204,7 +204,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 
 	// 获取当前审批节点
 	if detailResp.IsCanApprove && transferOrder.Status == constant.TransferOrderStatusPending && (transferOrder.OutWarehouseErpCode == "" || transferOrder.InWarehouseErpCode == "") {
-		currentApproval, err := repository.NewTransferOrderApprovalRepo(db).GetCurrentApproval(req.Uuid, transferOrder.NextApprovalCompanyUuid)
+		currentApproval, err := repository.NewTransferOrderApprovalRepo(db).GetCurrentApproval(reqs.Uuid, transferOrder.NextApprovalCompanyUuid)
 		if err != nil {
 			if err != gorm.ErrRecordNotFound {
 				return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("查询审批节点失败"), err.Error())
@@ -234,6 +234,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	}
 
 	// 待提交时 - 获取其他店库存
+	var materialListResp material_resp.MaterialListWithPaginationResp
 	var warehouseItems []model.WarehouseItem
 	if transferOrder.Status == constant.TransferOrderStatusDraft {
 		otherDb := s.dbm.GetDB(transferOrder.SenderCompanyUuid)
@@ -250,6 +251,23 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取物品库存失败"), err.Error())
 		}
 		warehouseItems = warehouseItemList
+
+		// 获取本店的物品列表
+		var materialListReq req.MaterialListReq
+		materialUuids := []uint64{}
+		for _, item := range transferOrder.Items {
+			materialUuids = append(materialUuids, item.MaterialUuid)
+		}
+		if len(materialUuids) > 0 {
+			materialListReq.PageNo = 1
+			materialListReq.PageSize = 2000
+			materialListReq.MaterialUuids = materialUuids
+			materials, err := s.materialSrv.GetMaterialList(ctx, materialListReq)
+			if err != nil {
+				return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取物品列表失败"), err.Error())
+			}
+			materialListResp = materials
+		}
 	}
 
 	// 转换明细数据
@@ -277,6 +295,17 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 			itemInfo.Units = append(itemInfo.Units, unitInfo)
 		}
 
+		// 原始单位列表
+		if materialListResp.List != nil && len(materialListResp.List) > 0 {
+			for _, material := range materialListResp.List {
+				if material.Uuid == item.MaterialUuid {
+					itemInfo.UnitList = material.UnitList
+					break
+				}
+			}
+		}
+
+		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
