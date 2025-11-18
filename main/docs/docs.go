@@ -40377,6 +40377,14 @@ const docTemplate = `{
                     "description": "入库仓库ERP编码",
                     "type": "string"
                 },
+                "is_confirm": {
+                    "description": "是否确认提交",
+                    "type": "boolean"
+                },
+                "is_submit": {
+                    "description": "是否提交",
+                    "type": "boolean"
+                },
                 "items": {
                     "description": "调拨明细",
                     "type": "array",
@@ -47561,7 +47569,11 @@ const docTemplate = `{
                     ]
                 },
                 "num": {
-                    "description": "数量",
+                    "description": "本次数量",
+                    "type": "number"
+                },
+                "purchase_num": {
+                    "description": "采购数量",
                     "type": "number"
                 },
                 "unit_uuid": {
@@ -51793,6 +51805,10 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_name": {
+                    "description": "支付名称",
                     "type": "string"
                 },
                 "uuid": {

@@ -92,14 +92,23 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	if err != nil {
 		return notNullResp, err
 	}
-	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
-	if err != nil || len(productPackageUuids) == 0 {
-		return emptyRes, err
+
+	// 获取厨显设备信息
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	deviceRepo := repository.NewDeviceRepo(db)
+	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
+	if err != nil {
+		return notNullResp, errors.ErrInternal
 	}
-	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	if device.ProductPrinterUuid == 0 {
+		return notNullResp, nil
+	}
+
+	// 使用子查询优化，避免 IN 子句过长
+	productionRepo := repository.NewProductionRepo(db)
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
-	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
-	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
+	productPackageUuidOpt := productionRepo.WhereProductPackageInPrinter(device.ProductPrinterUuid)
+	saleBillUuidOpt := productionRepo.WhereSaleBillInPrinterRegions(device.ProductPrinterUuid, ctx.Version(context.GTE, "2.4.0"))
 
 	limitedProductOpts := []repository.DBOption{
 		statusOpt,
@@ -162,43 +171,6 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	}, nil
 }
 
-func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Context) ([]uint64, []uint64, resp.ProductionListWithPagination, error) {
-	var productPackageUuids, saleBillUuids []uint64
-	emptyResp := s.getNotNullProductionListResp()
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	// 获取厨显设备信息
-	deviceRepo := repository.NewDeviceRepo(db)
-	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
-	if err != nil {
-		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
-	}
-	if device.ProductPrinterUuid == 0 {
-		return productPackageUuids, saleBillUuids, emptyResp, nil
-	}
-	// 厨显绑定了商品打印机
-	// 从商品打印设置中获取打印机关联的商品Uuid
-	productPrinterRepo := repository.NewProductPrinterRepo(db)
-	productPackageUuids, err = productPrinterRepo.GetProductPackageUuids(productPrinterRepo.WhereProductPrinterUuid(device.ProductPrinterUuid))
-	if err != nil {
-		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
-	}
-
-	var opt repository.DBOption
-	// 如果版本号大于等于2.4.0，则获取厨显端未确认退菜整单的账单Uuid；否则获取未被删除的账单Uuid
-	if ctx.Version(context.GTE, "2.4.0") {
-		opt = productPrinterRepo.WhereSaleBillIsKitchenConfirm(0)
-	} else {
-		opt = productPrinterRepo.WhereSaleBillNotDeletedOrIsNotCanceled() // 未被删除的，未整单取消的
-	}
-
-	// 从商品打印设置中获取区域ID，根据区域ID获取销售账单Uuid
-	saleBillUuids, err = productPrinterRepo.GetProductionSaleBillUuid(device.ProductPrinterUuid, opt)
-	if err != nil {
-		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
-	}
-	return productPackageUuids, saleBillUuids, emptyResp, nil
-}
-
 func (s *productionSrv) getNotNullProductionListResp() resp.ProductionListWithPagination {
 	return resp.ProductionListWithPagination{
 		List: make([]resp.ProductionGroup, 0),
@@ -215,15 +187,24 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	if err != nil {
 		return notNullResp, err
 	}
-	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
-	if err != nil || len(productPackageUuids) == 0 {
-		return emptyRes, err
+
+	// 获取厨显设备信息
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	deviceRepo := repository.NewDeviceRepo(db)
+	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
+	if err != nil {
+		return notNullResp, errors.ErrInternal
 	}
+	if device.ProductPrinterUuid == 0 {
+		return notNullResp, nil
+	}
+
 	language := ctx.GetLanguage()
-	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	// 使用子查询优化，避免 IN 子句过长
+	productionRepo := repository.NewProductionRepo(db)
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
-	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
-	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
+	productPackageUuidOpt := productionRepo.WhereProductPackageInPrinter(device.ProductPrinterUuid)
+	saleBillUuidOpt := productionRepo.WhereSaleBillInPrinterRegions(device.ProductPrinterUuid, ctx.Version(context.GTE, "2.4.0"))
 	limitedProductOpts := []repository.DBOption{
 		statusOpt,
 		productPackageUuidOpt,
