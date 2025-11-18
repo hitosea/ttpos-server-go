@@ -15,7 +15,8 @@
 6. [事件总线](#事件总线)
 7. [并发控制](#并发控制)
 8. [数据库管理](#数据库管理)
-9. [设计原则](#设计原则)
+9. [缓存管理](#缓存管理)
+10. [设计原则](#设计原则)
 
 ---
 
@@ -739,6 +740,98 @@ func (s *orderSrv) CreateOrder(ctx context.Context) error {
 - ✅ **Service 层持有 DBManager**
 - ✅ **Repository 层只持有 db 实例**
 - ❌ **Repository 不能持有 DBManager**
+
+---
+
+## 缓存管理
+
+### Redis 缓存 Key 管理
+
+**核心原则**: 所有缓存 key 必须统一使用全局常量管理，禁止硬编码。
+
+**实现方式**:
+
+在 `app/constant/` 目录下创建缓存 key 常量文件：
+
+```go
+// app/constant/cache_key.go
+package constant
+
+const (
+    // 订单相关缓存
+    CacheKeyOrderInfo    = "order:info:%d"        // 订单详情，参数：orderUuid
+    CacheKeyOrderList    = "order:list:%d:%d"     // 订单列表，参数：companyUuid, page
+    CacheKeyOrderStatus  = "order:status:%d"       // 订单状态，参数：orderUuid
+    
+    // 商品相关缓存
+    CacheKeyProductInfo  = "product:info:%d"       // 商品详情，参数：productUuid
+    CacheKeyProductList  = "product:list:%d"      // 商品列表，参数：companyUuid
+    
+    // 会员相关缓存
+    CacheKeyMemberInfo   = "member:info:%d"        // 会员信息，参数：memberUuid
+    CacheKeyMemberPoints = "member:points:%d"      // 会员积分，参数：memberUuid
+    
+    // 桌台相关缓存
+    CacheKeyDeskInfo     = "desk:info:%d"         // 桌台信息，参数：deskUuid
+    CacheKeyDeskStatus   = "desk:status:%d"       // 桌台状态，参数：deskUuid
+)
+```
+
+**使用示例**:
+
+```go
+// ✅ 正确：使用常量
+import "ttpos-server-go/app/constant"
+
+func (s *orderSrv) GetOrderInfo(ctx context.Context, orderUuid uint64) (*resp.OrderInfoResp, error) {
+    // 构建缓存 key
+    cacheKey := fmt.Sprintf(constant.CacheKeyOrderInfo, orderUuid)
+    
+    // 从缓存获取
+    var orderInfo resp.OrderInfoResp
+    if err := s.cache.Get(ctx, cacheKey, &orderInfo); err == nil {
+        return &orderInfo, nil
+    }
+    
+    // 缓存未命中，从数据库查询
+    // ...
+    
+    // 写入缓存
+    s.cache.Set(ctx, cacheKey, orderInfo, time.Hour)
+    
+    return &orderInfo, nil
+}
+```
+
+```go
+// ❌ 错误：硬编码缓存 key
+func (s *orderSrv) GetOrderInfo(ctx context.Context, orderUuid uint64) (*resp.OrderInfoResp, error) {
+    // ❌ 禁止硬编码
+    cacheKey := fmt.Sprintf("order:info:%d", orderUuid)
+    
+    // ...
+}
+```
+
+**命名规范**:
+
+1. **前缀分类**: 使用模块前缀，如 `order:`, `product:`, `member:`
+2. **功能标识**: 使用功能标识，如 `:info`, `:list`, `:status`
+3. **参数占位**: 使用 `%d` 或 `%s` 作为参数占位符
+4. **常量命名**: 使用 `CacheKey` 前缀，大驼峰命名
+
+**规范**:
+- ✅ **所有缓存 key 必须在 `app/constant/cache_key.go` 中定义**
+- ✅ **使用 `fmt.Sprintf` 构建带参数的 key**
+- ✅ **缓存 key 命名清晰，包含模块和功能信息**
+- ❌ **禁止在代码中硬编码缓存 key 字符串**
+- ❌ **禁止使用字符串拼接构建缓存 key**
+
+**优势**:
+- 统一管理，便于维护和修改
+- 避免 key 冲突和拼写错误
+- 提高代码可读性和可维护性
+- 便于全局搜索和替换
 
 ---
 

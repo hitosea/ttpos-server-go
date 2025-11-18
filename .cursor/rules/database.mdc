@@ -112,6 +112,9 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 迁移文件
 
+- [ ] **文件命名**: 使用 `date +%Y%m%d%H%M%S` 命令生成时间戳前缀，格式：`{YYYYMMDDHHMMSS}_{操作描述}.php`
+  - 示例：`20250721370408_add_table_name_table.php`
+  - 必须使用 shell 命令 `date +%Y%m%d%H%M%S` 生成，保持与其他迁移文件一致
 - [ ] 检查表是否存在
 - [ ] 检查字段是否存在
 - [ ] 包含注释说明
