@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm"
 )
@@ -14,7 +15,6 @@ type IProductionOrderRepo interface {
 	CreateProductionOrder(order *model.ProductionOrder) error // 创建生产订单
 	WhereProductStatus(status uint) DBOption                  // 生产商品状态
 	WhereUuid(uuid uint64) DBOption                           // Uuid 条件
-	WhereProductPackageUuidIn(uuids []uint64) DBOption        // 商品ID条件
 	WhereProductFinishedTime(finishedTime int64) DBOption     // 生产商品完成时间条件
 	WhereProductMadeTime(madeTime int64) DBOption             // 生产商品制作时间条件
 	WhereProductMakeStatus(finishStatus []uint) DBOption      // 制作状态
@@ -27,6 +27,9 @@ type IProductionOrderRepo interface {
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
 	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
 	WhereIsNotBatchOrBatchTimeGT0() DBOption                  // 非分批商品、或者分批已送厨商品
+
+	WhereProductPackageInPrinter(productPrinterUuid uint64) DBOption                      // 商品在打印机关联中（子查询优化）
+	WhereSaleBillInPrinterRegions(productPrinterUuid uint64, versionGte240 bool) DBOption // 销售账单在打印机关联区域中（子查询优化）
 
 	SaleBillUuidOpt() DBOption                                                                                                                            // 历史上菜条件
 	WithSaleOrderProductAll() DBOption                                                                                                                    // 关联销售订单商品
@@ -207,13 +210,6 @@ func (r *productionRepo) WhereUuid(uuid uint64) DBOption {
 	}
 }
 
-// WhereProductPackageUuidIn 商品ID条件
-func (r *productionRepo) WhereProductPackageUuidIn(uuids []uint64) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("product_package_uuid in (?)", uuids)
-	}
-}
-
 // WhereProductFinishedTime 生产商品完成时间条件
 func (r *productionRepo) WhereProductFinishedTime(finishedTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -260,6 +256,59 @@ func (r *productionRepo) WhereSaleOrderProductUuid(uuid uint64) DBOption {
 func (r *productionRepo) WhereSaleBillUuidIn(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_bill_uuid in (?)", uuids)
+	}
+}
+
+// WhereProductPackageInPrinter 商品在打印机关联中（子查询优化，避免IN子句过长）
+func (r *productionRepo) WhereProductPackageInPrinter(productPrinterUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		prefix := config.Database.TablePrefix
+		// 子查询：获取打印机关联的商品包UUID
+		subQuery := r.db.Table(prefix+"product_printer_product_item").
+			Select("product_package_uuid").
+			Where("product_printer_uuid = ?", productPrinterUuid).
+			Scopes(NotDeleted).
+			Where("product_package_uuid NOT IN (?)",
+				// 排除不在厨显显示的商品
+				r.db.Table(prefix+"product_package").
+					Select("uuid").
+					Where("is_show_kitchen = ?", 0).
+					Scopes(NotDeleted))
+
+		return db.Where("product_package_uuid IN (?)", subQuery)
+	}
+}
+
+// WhereSaleBillInPrinterRegions 销售账单在打印机关联区域中（子查询优化，避免IN子句过长）
+func (r *productionRepo) WhereSaleBillInPrinterRegions(productPrinterUuid uint64, versionGte240 bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		prefix := config.Database.TablePrefix
+		// 子查询1：获取打印机关联的区域UUID
+		regionSubQuery := r.db.Table(prefix+"product_printer_region").
+			Select("desk_region_uuid").
+			Where("product_printer_uuid = ?", productPrinterUuid).
+			Scopes(NotDeleted)
+
+		// 子查询2：获取区域关联的桌台UUID
+		deskSubQuery := r.db.Table(prefix+"desk").
+			Select("uuid").
+			Scopes(NotDeleted).
+			Where("region_uuid IN (?) OR region_uuid = 0", regionSubQuery)
+
+		// 子查询3：获取桌台关联的销售账单UUID
+		billSubQuery := r.db.Table(prefix+"sale_bill").
+			Select("uuid").
+			Where("desk_uuid IN (?)", deskSubQuery)
+
+		// 根据版本号决定过滤条件
+		if versionGte240 {
+			// 2.4.0 及以上版本：厨显端未确认退菜整单的账单
+			billSubQuery = billSubQuery.Where("is_kitchen_confirm = ?", 0)
+		} else {
+			// 2.4.0 之前版本：未被删除的，未整单取消的
+			billSubQuery = billSubQuery.Scopes(NotDeleted).Where("status <> ?", constant.SaleBillStatusCanceled)
+		}
+		return db.Where("sale_bill_uuid IN (?)", billSubQuery)
 	}
 }
 
