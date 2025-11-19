@@ -152,15 +152,196 @@ UPDATE ttpos_user SET delete_time = 1699999999 WHERE id = 1;
 
 ---
 
+## 🌍 多语言支持
+
+### 多语言表（ttpos_multi_language_name）
+
+**所有需要多语言的实体，必须通过 `multi_language_name_uuid` 字段关联 `ttpos_multi_language_name` 表**
+
+```sql
+CREATE TABLE IF NOT EXISTS `ttpos_multi_language_name` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    `en_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '英文名称',
+    `zh_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '中文名称',
+    `zh_tw_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '繁体中文名称',
+    `th_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '泰语名称',
+    `my_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '缅甸语名称',
+    `ja_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '日语名称',
+    `ko_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '韩语名称',
+    `tr_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '土耳其语名称',
+    `sv_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '瑞典语名称',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '多语言名称表';
+```
+
+### 支持的语言
+
+| 语言代码 | 字段名        | 说明     |
+| -------- | ------------- | -------- |
+| `en`     | `en_name`     | 英文     |
+| `zh`     | `zh_name`     | 中文简体 |
+| `zhtw`   | `zh_tw_name`  | 中文繁体 |
+| `th`     | `th_name`     | 泰语     |
+| `my`     | `my_name`     | 缅甸语   |
+| `ja`     | `ja_name`     | 日语     |
+| `ko`     | `ko_name`     | 韩语     |
+| `tr`     | `tr_name`     | 土耳其语 |
+| `sv`     | `sv_name`     | 瑞典语   |
+
+### 关联使用模式
+
+**业务表必须包含两个字段：**
+
+1. **`name` VARCHAR(1000)** - 存储 JSON 格式的多语言数据（冗余存储，便于快速查询）
+2. **`multi_language_name_uuid` BIGINT** - 关联 `ttpos_multi_language_name` 表
+
+```sql
+CREATE TABLE `ttpos_material` (
+    `uuid` bigint(20) NOT NULL,
+    `name` VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '原料名称（JSON格式）',
+    `multi_language_name_uuid` bigint(20) NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    -- 其他字段...
+    PRIMARY KEY (`uuid`),
+    KEY `idx_multi_language_name_uuid` (`multi_language_name_uuid`)
+) COMMENT='原料表';
+```
+
+**name 字段存储格式（JSON）：**
+
+```json
+{
+    "en": "Apple",
+    "zh": "苹果",
+    "th": "แอปเปิล",
+    "zh-tw": "蘋果",
+    "ja": "りんご",
+    "ko": "사과",
+    "my": "ပန်းသီး",
+    "tr": "Elma",
+    "sv": "Äpple"
+}
+```
+
+### 查询多语言数据
+
+**使用 JOIN 关联查询：**
+
+```sql
+-- 示例：查询商品及其多语言名称
+SELECT p.*, m.zh_name, m.en_name, m.th_name
+FROM ttpos_product_package p
+JOIN ttpos_multi_language_name m ON p.multi_language_name_uuid = m.uuid
+WHERE m.delete_time = 0 AND p.delete_time = 0;
+```
+
+### Go 代码操作
+
+**创建多语言名称：**
+
+```go
+// 1. 创建多语言名称记录
+multiLanguageName := model.MultiLanguageName{
+    BaseModel: model.BaseModel{Uuid: uuid.GenerateUUID()},
+    ZhName:    "苹果",
+    EnName:    "Apple",
+    ThName:    "แอปเปิล",
+    // ... 其他语言
+}
+multiLangUuid, err := repo.CreateMultiLanguageName(multiLanguageName)
+
+// 2. 准备 name 字段（JSON格式）
+nameJson := `{"zh":"苹果","en":"Apple","th":"แอปเปิล","zh-tw":"蘋果","ja":"りんご","ko":"사과","my":"ပန်းသီး","tr":"Elma","sv":"Äpple"}`
+
+// 3. 关联到业务表
+material := model.Material{
+    BaseModel:             model.BaseModel{Uuid: uuid.GenerateUUID()},
+    Name:                  nameJson,  // JSON格式多语言
+    MultiLanguageNameUuid: multiLangUuid,  // 关联UUID
+    // ... 其他字段
+}
+```
+
+**查询时关联获取：**
+
+```go
+// 方式1: 直接使用业务表的 name 字段（推荐，性能更好）
+var material model.Material
+db.First(&material, "uuid = ?", materialUuid)
+// material.Name 包含完整的多语言JSON
+
+// 方式2: JOIN 查询多语言表（用于需要按语言过滤或更新的场景）
+var material model.Material
+db.Model(&model.Material{}).
+    Joins("JOIN ttpos_multi_language_name ON ttpos_material.multi_language_name_uuid = ttpos_multi_language_name.uuid").
+    Where("ttpos_material.uuid = ?", materialUuid).
+    Where("ttpos_multi_language_name.delete_time = 0").
+    First(&material)
+```
+
+### PHP 代码操作
+
+**保存多语言名称：**
+
+```php
+// 新增
+$names = [
+    'zh' => '商品名称',
+    'en' => 'Product Name',
+    'th' => 'ชื่อสินค้า',
+    // ... 其他语言
+];
+$uuid = (new MultiLanguageName())->saveNames($names);
+
+// 更新
+$uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
+```
+
+### 📋 多语言检查清单
+
+**设计表时：**
+
+- [ ] 需要多语言的表必须包含 **两个字段**：
+  - `name` VARCHAR(1000) - 存储 JSON 格式的多语言数据
+  - `multi_language_name_uuid` BIGINT UNSIGNED - 关联多语言表
+- [ ] 添加索引：`KEY idx_multi_language_name_uuid (multi_language_name_uuid)`
+
+**编写代码时：**
+
+- [ ] 先创建/更新 `ttpos_multi_language_name` 记录
+- [ ] 将多语言数据转换为 JSON 格式赋值给业务表的 `name` 字段
+- [ ] 将返回的 uuid 赋值给业务表的 `multi_language_name_uuid`
+
+**常见应用场景：**
+
+- 商品名称（product_package）
+- 商品分类（product_category）
+- 商品单位（product_unit）
+- 商品属性（product_attribute）
+- 商品口味（product_flavor）
+- 商品酱料（product_sauce）
+- 原料名称（material）
+- 原料分类（material_category）
+- 仓库名称（warehouse）
+- 标签名称（batch_tag）
+
+---
+
 ## 🚫 禁止事项
 
-| 禁止                     | 原因         |
-| ------------------------ | ------------ |
-| ❌ 时间字段用 datetime   | 必须用 int   |
-| ❌ 金额字段用 float      | 精度丢失     |
-| ❌ 缺少必需字段          | 不符合规范   |
-| ❌ 表名不加 ttpos\_ 前缀 | 命名规范     |
-| ❌ 硬删除数据            | 必须用软删除 |
+| 禁止                                        | 原因                   |
+| ------------------------------------------- | ---------------------- |
+| ❌ 时间字段用 datetime                      | 必须用 int             |
+| ❌ 金额字段用 float                         | 精度丢失               |
+| ❌ 缺少必需字段                             | 不符合规范             |
+| ❌ 表名不加 ttpos\_ 前缀                    | 命名规范               |
+| ❌ 硬删除数据                               | 必须用软删除           |
+| ❌ 多语言表缺少 name 或 multi_language_name_uuid | 必须同时包含两个字段   |
+| ❌ name 字段不存储 JSON 格式                | 必须是完整的 JSON      |
+| ❌ name 字段长度小于 1000                   | 必须使用 VARCHAR(1000) |
 
 ---
 
@@ -168,8 +349,9 @@ UPDATE ttpos_user SET delete_time = 1699999999 WHERE id = 1;
 
 - [数据库架构设计](../../docs/human/architecture/database-design.md)
 - [数据库开发指南](../../docs/human/guides/database-guide.md)
+- [多语言名称检查](../../docs/human/architecture/features/check_name.md)
 
 ---
 
-**最后更新**: 2025-11-17  
+**最后更新**: 2025-11-19  
 **维护者**: TTPOS Team
