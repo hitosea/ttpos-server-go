@@ -34,10 +34,17 @@ priority: 10
 ```python
 # 伪代码
 def log_activity(action, target, note=""):
-    today = get_today()  # 2025-11-16
-    month = get_month()  # 2025-11
+    # 使用时区（Asia/Shanghai）获取当前时间
+    import pytz
+    from datetime import datetime
+    
+    china_tz = pytz.timezone('Asia/Shanghai')
+    now = datetime.now(china_tz)
+    
+    today = now.strftime('%Y-%m-%d')  # 2025-11-16
+    month = now.strftime('%Y-%m')     # 2025-11
+    time = now.strftime('%H:%M')      # HH:mm (Asia/Shanghai时区)
     user = get_git_user()  # 从 git config user.name 获取
-    time = get_time()  # HH:mm
     
     # 文件路径
     log_file = f"docs/team/activities/{month}/{today}.md"
@@ -52,6 +59,8 @@ def log_activity(action, target, note=""):
         f"| {time} | @{user} | {action} | {target} | ✅ | {note} |"
     )
 ```
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+read_file
 
 ---
 
