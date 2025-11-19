@@ -257,7 +257,7 @@ check-db-host-open-mysql:
 start-http-debug-proxy:
 	@if ! docker images | grep -q "602666178/http-proxy-debug-view"; then \
 		echo "📥 镜像不存在，正在拉取..." && \
-		docker pull 602666178/http-proxy-debug-view:latest \
+		docker pull 602666178/http-proxy-debug-view:latest; \
 	else \
 		echo "✅ 镜像已存在，跳过拉取"; \
 	fi
