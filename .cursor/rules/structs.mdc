@@ -11,19 +11,19 @@ description: 项目结构快速定位
 
 ## 快速定位
 
-| 我要找...                | 路径                              |
-| ------------------------ | --------------------------------- |
-| **Go Main 核心业务**     | `main/app/`                       |
-| **PHP 管理后台**         | `admin/app/admin/`                |
-| **PHP 店铺后台**         | `admin/app/shop/`                 |
-| **Go BMP 微服务**        | `ttpos-bmp/app/ttpos-*/`          |
-| **前端管理后台**         | `admin/views/admin/`              |
-| **前端店铺后台**         | `admin/views/shop/`               |
-| **数据库迁移**           | `admin/database/migrations/`      |
-| **Docker 配置**          | `docker/`                         |
-| **项目文档**             | `docs/`                           |
-| **API 定义**             | `ttpos-api/`                      |
-| **工具脚本**             | `ttpos-scripts/`, `scripts/`      |
+| 我要找...            | 路径                         |
+| -------------------- | ---------------------------- |
+| **Go Main 核心业务** | `main/app/`                  |
+| **PHP 管理后台**     | `admin/app/admin/`           |
+| **PHP 店铺后台**     | `admin/app/shop/`            |
+| **Go BMP 微服务**    | `ttpos-bmp/app/ttpos-*/`     |
+| **前端管理后台**     | `admin/views/admin/`         |
+| **前端店铺后台**     | `admin/views/shop/`          |
+| **数据库迁移**       | `admin/database/migrations/` |
+| **Docker 配置**      | `docker/`                    |
+| **项目文档**         | `docs/`                      |
+| **API 定义**         | `ttpos-api/`                 |
+| **工具脚本**         | `ttpos-scripts/`, `scripts/` |
 
 ---
 
@@ -107,6 +107,7 @@ ttpos-*/
 ## 🔌 服务通信
 
 ### 内部通信
+
 ```
 Main ←→ BMP-ERP (gRPC)
 Main ←→ BMP-Message (gRPC)
@@ -117,7 +118,8 @@ Frontend ←→ Main (HTTP API)
 ```
 
 ### 事件通信
-- **内存事件总线**: Main模块内部（同步/异步）
+
+- **内存事件总线**: Main 模块内部（同步/异步）
 - **RocketMQ**: 跨服务异步通信
 - **WebSocket**: 实时推送
 
@@ -141,6 +143,7 @@ API 层 (Controller/API)
 - ❌ 禁止循环依赖
 
 **特殊规则**：
+
 - ✅ Service 可以依赖其他 Service
 - ❌ Service 不能依赖 Repository
 - ❌ Repository 不能持有 DBManager（只持有 db）
@@ -183,16 +186,58 @@ docs/                   # 项目文档
 
 ---
 
+## 服务对象与终端视角（与 ttpos-flutter 对齐）
+
+从业务使用者的角度看，系统面向多个前端终端提供能力（如 `pos`、`shop`、`kds`、`qds`、`assistant`、`tablet`、`mobile`、`menu`、`member` 等）。这些终端的 UI 与交互主要在 `ttpos-flutter` 仓库和本仓库的前端代码中实现，本仓库中的 `main`、`admin`、`ttpos-bmp` 等模块，则通过 HTTP API、gRPC、消息队列与 WebSocket 为其提供统一的后端支撑。
+
+- **C 端终端**（顾客 / 会员使用，如 `mobile`、`menu`、`member`）
+
+  - 主要消费订单、菜品、营销、会员等能力
+  - 通过 Nginx 反向代理访问 `main`/`ttpos-bmp` 提供的接口，部分场景配合 `ttpos-websocket` 做实时状态推送
+  - 相关改动重点关注「下单/支付闭环」与「会员资产（积分/储值/优惠券）」的一致性
+
+- **B 端终端**（门店与总部内部使用，如 `pos`、`assistant`、`tablet`、`shop`、`kds`、`qds`）
+  - 通过 `admin` + `main` + `ttpos-bmp` 组合提供的 API、报表与配置服务完成日常经营
+  - 涉及收银流程、出餐流转、门店配置的改动往往会同时影响多个终端，属于高风险或中高风险区域
+
+在进行后端设计和改动时，应先明确：
+
+1. 这个改动会影响到**哪些终端**（pos/shop/kds/qds/assistant/tablet/mobile/menu/member）？
+2. 这些终端背后的**用户角色**是谁（顾客、收银员、店长、运营、后厨等）？
+3. 是否触及**资金闭环或会员资产**，以及是否可能导致多终端之间的状态不一致？
+
+### 终端与 API 路径快速映射（main 模块）
+
+> 仅列出主调用入口，所有终端的登录/鉴权等通用能力由 `/api/v1/passport` 提供。
+
+| 终端          | 主要 API 前缀       | Go 路由分组            | 说明            |
+| ------------- | ------------------- | ---------------------- | --------------- |
+| **pos**       | `/api/v1/cashier`   | `app/api/v1/cashier`   | 收银端          |
+| **shop**      | `/api/v1/shop`      | `app/api/v1/shop`      | 商家/门店管理端 |
+| **kds**       | `/api/v1/kitchen`   | `app/api/v1/kitchen`   | 厨房端（厨显）  |
+| **qds**       | `/api/v1/callboard` | `app/api/v1/callboard` | 排号叫号端      |
+| **assistant** | `/api/v1/assistant` | `app/api/v1/assistant` | 点餐助手端      |
+| **tablet**    | `/api/v1/tablet`    | `app/api/v1/tablet`    | 平板端          |
+| **mobile**    | `/api/v1/h5`        | `app/api/v1/h5`        | H5 扫码点餐端   |
+| **menu**      | `/api/v1/menu`      | `app/api/v1/menu`      | 电子菜单端      |
+| **member**    | `/api/v1/member`    | `app/api/v1/member`    | 会员端          |
+
+其他内部或管理向 API 前缀（如 `/api/v1/admin`、`/api/v1/internal`）主要面向管理后台或服务间调用，通常不直接暴露给终端用户界面。
+
+只有在终端视角与 API 路径层面都澄清上述问题，才能更准确地评估改动风险等级，并选择合适的发布与回滚策略；如需查看各终端更细粒度的场景与风险说明，请参考 `ttpos-flutter` 仓库中的 `intro.mdc` 与 `structs.mdc`。
+
+---
+
 ## 禁止依赖
 
-| 禁止                             | 原因                     |
-| -------------------------------- | ------------------------ |
-| Service → Repository             | Service 只能依赖 Service |
-| Repository → Service             | 不能向上依赖             |
-| Controller → Repository          | 必须通过 Service         |
+| 禁止                                 | 原因                     |
+| ------------------------------------ | ------------------------ |
+| Service → Repository                 | Service 只能依赖 Service |
+| Repository → Service                 | 不能向上依赖             |
+| Controller → Repository              | 必须通过 Service         |
 | ttpos-bmp 修改 dao/entity/do/service | 自动生成，修改会被覆盖   |
-| API 层包含业务逻辑               | 职责单一                 |
-| Repository 持有 DBManager        | 只能持有 db 实例         |
+| API 层包含业务逻辑                   | 职责单一                 |
+| Repository 持有 DBManager            | 只能持有 db 实例         |
 
 ---
 
