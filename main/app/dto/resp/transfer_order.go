@@ -1,6 +1,9 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp/material_resp"
+)
 
 // TransferOrderListResp 调拨单列表响应
 type TransferOrderListResp struct {
@@ -49,15 +52,16 @@ type TransferOrderDetailResp struct {
 
 // TransferOrderItemInfo 调拨单明细信息
 type TransferOrderItemInfo struct {
-	Uuid                 uint64                      `json:"uuid"`                   // 明细UUID
-	MaterialUuid         uint64                      `json:"material_uuid"`          // 物品UUID
-	MaterialCode         string                      `json:"material_code"`          // 物品编码
-	MaterialName         dto.LocaleResponse          `json:"material_name"`          // 物品名称
-	MaterialBarcode      string                      `json:"material_barcode"`       // 条形码值
-	MaterialInternalCode string                      `json:"material_internal_code"` // 物品内部编码
-	Valuation            float64                     `json:"valuation"`              // 估值单价（基准单位）
-	AvailableNum         float64                     `json:"available_num"`          // 可用库存数量
-	Units                []TransferOrderItemUnitInfo `json:"units"`                  // 单位列表
+	Uuid                 uint64                       `json:"uuid"`                   // 明细UUID
+	MaterialUuid         uint64                       `json:"material_uuid"`          // 物品UUID
+	MaterialCode         string                       `json:"material_code"`          // 物品编码
+	MaterialName         dto.LocaleResponse           `json:"material_name"`          // 物品名称
+	MaterialBarcode      string                       `json:"material_barcode"`       // 条形码值
+	MaterialInternalCode string                       `json:"material_internal_code"` // 物品内部编码
+	Valuation            float64                      `json:"valuation"`              // 估值单价（基准单位）
+	AvailableNum         float64                      `json:"available_num"`          // 可用库存数量
+	Units                []TransferOrderItemUnitInfo  `json:"units"`                  // 单位列表
+	UnitList             []material_resp.MaterialUnit `json:"unit_list"`              // 单位列表
 }
 
 // TransferOrderItemUnitInfo 调拨单明细单位信息
