@@ -679,11 +679,6 @@ func (s *orderSrv) GetOrderCartProductBatchCookingList(ctx context.Context, req 
 		})
 	}
 
-	// 分批类型列表按 sort 排序，优先级高的在前
-	sort.Slice(batchCookingSaleOrderProductsTags, func(i, j int) bool {
-		return batchCookingSaleOrderProductsTags[i].Sort < batchCookingSaleOrderProductsTags[j].Sort
-	})
-
 	// 排序
 	batchCookingSaleOrderProductsList = sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProductsList)
 

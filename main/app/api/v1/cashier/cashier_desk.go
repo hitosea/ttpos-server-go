@@ -1936,7 +1936,6 @@ func (h *DeskHandler) GetDeskMapLayout(c *gin.Context) {
 	helper.Success(c, layoutDetail, "获取成功")
 }
 
-
 // ChangeBatchTag 更换分批类型（前置模式）
 // @Summary 更换分批类型
 // @Description 更换未送厨商品的分批类型（前置模式）
@@ -1956,13 +1955,13 @@ func (h *DeskHandler) ChangeBatchTag(c *gin.Context) {
 		return
 	}
 	// 更换分批类型
-	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
+	err := h.orderSrv.ChangeBatchTag(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, res)
+	helper.Success(c, gin.H{})
 }
 
 // GetBatchTagList 获取分批类型列表
