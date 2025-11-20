@@ -17,6 +17,7 @@ use app\common\enum\settings\SettingEnum;
 use app\common\service\qrcode\AuthService;
 use app\common\model\store\MultiLanguageName;
 use app\shop\model\settings\Setting as SettingModel;
+use app\common\model\shop\User as UserModel;
 
 /**
  * 门店业务设置（v1.0.7）
@@ -81,6 +82,41 @@ class Business extends Controller
             return $this->renderError('当前没有权限使用此功能');
         }
 
+        // 验证敏感操作设置参数
+        $discountNeedPassword = $data['discount_need_password'] ?? '';
+        if ($discountNeedPassword !== '' && !in_array($discountNeedPassword, ['0', '1'])) {
+            return $this->renderError('折扣权限验证开关参数错误');
+        }
+        $refundNeedPassword = $data['refund_need_password'] ?? '';
+        if ($refundNeedPassword !== '' && !in_array($refundNeedPassword, ['0', '1'])) {
+            return $this->renderError('退款权限验证开关参数错误');
+        }
+
+        // 验证授权员工ID有效性
+        $discountAuthorizedStaffIds = $data['discount_authorized_staff_ids'] ?? [];
+        if (!is_array($discountAuthorizedStaffIds)) {
+            $discountAuthorizedStaffIds = [];
+        }
+        $validDiscountStaffIds = [];
+        foreach ($discountAuthorizedStaffIds as $staffId) {
+            $staffIdInt = intval($staffId);
+            if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+                $validDiscountStaffIds[] = $staffIdInt;
+            }
+        }
+
+        $refundAuthorizedStaffIds = $data['refund_authorized_staff_ids'] ?? [];
+        if (!is_array($refundAuthorizedStaffIds)) {
+            $refundAuthorizedStaffIds = [];
+        }
+        $validRefundStaffIds = [];
+        foreach ($refundAuthorizedStaffIds as $staffId) {
+            $staffIdInt = intval($staffId);
+            if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+                $validRefundStaffIds[] = $staffIdInt;
+            }
+        }
+
         $arr = [
             'zeroing_method' => $data['zeroing_method'] ?? 0,
             'checkout_zeroing_method' => $data['checkout_zeroing_method'] ?? 0,
@@ -95,6 +131,24 @@ class Business extends Controller
             'delivery_price_ratio' => $deliveryPriceRation,
             'start_serial_no' => $data['start_serial_no'] ?? '0001',
         ];
+
+        // 添加敏感操作设置字段
+        if ($discountNeedPassword !== '') {
+            $arr['discount_need_password'] = $discountNeedPassword;
+        }
+        if (!empty($validDiscountStaffIds)) {
+            $arr['discount_authorized_staff_ids'] = $validDiscountStaffIds;
+        } elseif (isset($data['discount_authorized_staff_ids'])) {
+            $arr['discount_authorized_staff_ids'] = [];
+        }
+        if ($refundNeedPassword !== '') {
+            $arr['refund_need_password'] = $refundNeedPassword;
+        }
+        if (!empty($validRefundStaffIds)) {
+            $arr['refund_authorized_staff_ids'] = $validRefundStaffIds;
+        } elseif (isset($data['refund_authorized_staff_ids'])) {
+            $arr['refund_authorized_staff_ids'] = [];
+        }
         if ($update_style_time) {
             $arr['dish_card_style_time'] = time() . '';
         }

@@ -41378,12 +41378,27 @@ const docTemplate = `{
                     "maximum": 300,
                     "minimum": 1
                 },
+                "discount_authorized_staff_ids": {
+                    "description": "折扣操作授权员工ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "discount_method": {
                     "description": "折扣计算方式: 10-按百分比 20-直接减免",
                     "type": "string",
                     "enum": [
                         "10",
                         "20"
+                    ]
+                },
+                "discount_need_password": {
+                    "description": "敏感操作设置",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
                     ]
                 },
                 "dish_card_style": {
@@ -41445,6 +41460,21 @@ const docTemplate = `{
                 "opening_hours": {
                     "description": "营业时间格式正则验证：HH:MM-HH:MM",
                     "type": "string"
+                },
+                "refund_authorized_staff_ids": {
+                    "description": "退款操作授权员工ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "refund_need_password": {
+                    "description": "退款操作是否需要密码 0-否 1-是",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
                 },
                 "required_parent_company_approval": {
                     "description": "调拨规则",
@@ -52157,8 +52187,19 @@ const docTemplate = `{
                     "description": "外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%",
                     "type": "integer"
                 },
+                "discount_authorized_staff_ids": {
+                    "description": "折扣操作授权员工ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "discount_method": {
                     "description": "折扣计算方式 10-按百分比 20-直接减免",
+                    "type": "string"
+                },
+                "discount_need_password": {
+                    "description": "敏感操作设置",
                     "type": "string"
                 },
                 "dish_card_style": {
@@ -52213,6 +52254,17 @@ const docTemplate = `{
                 },
                 "qr_code": {
                     "description": "电子菜单二维码校验失效值，6位数数字",
+                    "type": "string"
+                },
+                "refund_authorized_staff_ids": {
+                    "description": "退款操作授权员工ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "refund_need_password": {
+                    "description": "退款操作是否需要密码 0-否 1-是",
                     "type": "string"
                 },
                 "required_parent_company_approval": {
@@ -52836,8 +52888,19 @@ const docTemplate = `{
                     "description": "外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%",
                     "type": "integer"
                 },
+                "discount_authorized_staff_ids": {
+                    "description": "折扣操作授权员工ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "discount_method": {
                     "description": "折扣计算方式 10-按百分比 20-直接减免",
+                    "type": "string"
+                },
+                "discount_need_password": {
+                    "description": "敏感操作设置",
                     "type": "string"
                 },
                 "dish_card_style": {
@@ -52908,6 +52971,17 @@ const docTemplate = `{
                 },
                 "qr_code": {
                     "description": "电子菜单二维码校验失效值，6位数数字",
+                    "type": "string"
+                },
+                "refund_authorized_staff_ids": {
+                    "description": "退款操作授权员工ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "refund_need_password": {
+                    "description": "退款操作是否需要密码 0-否 1-是",
                     "type": "string"
                 },
                 "required_parent_company_approval": {

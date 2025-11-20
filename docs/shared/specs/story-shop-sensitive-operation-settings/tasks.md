@@ -13,9 +13,9 @@
 ## 📊 进度总览
 
 **总任务数**: 15  
-**已完成**: 0  
+**已完成**: 13  
 **进行中**: -  
-**完成率**: 0%
+**完成率**: 87%
 
 **说明**: 新管理端无前端，仅实现后端接口；商家后台实现后端接口和Vue前端。
 
@@ -25,7 +25,7 @@
 
 ### DTO 层
 
-- [ ] 1.1 扩展 UpdateBusinessSetting DTO，添加敏感操作设置字段
+- [x] 1.1 扩展 UpdateBusinessSetting DTO，添加敏感操作设置字段
 
   - File: `main/app/dto/req/base.go`
   - Purpose: 在业务设置 DTO 中添加敏感操作设置字段
@@ -35,7 +35,7 @@
 
 ### Service 层
 
-- [ ] 1.2 扩展 Setting Service，支持敏感操作设置字段
+- [x] 1.2 扩展 Setting Service，支持敏感操作设置字段
 
   - File: `main/app/service/setting/setting.go`
   - Purpose: 在 EditBusinessSetting 方法中处理新增的敏感操作设置字段
@@ -43,7 +43,7 @@
   - Leverage: 现有的 `EditBusinessSetting` 方法，使用 `copier.CopyWithOption` 自动复制字段
   - Prompt: Role: Go Developer | Task: 确保 EditBusinessSetting 方法正确处理新增的敏感操作设置字段 | Context: 新增字段会通过 copier.CopyWithOption 自动复制到 businessSetting 中，无需额外处理 | Restrictions: 遵循 .cursor/rules/go-main.mdc，Service 只依赖其他 Service 接口 | Success: Service 扩展完成，新字段正确保存到数据库
 
-- [ ] 1.3 验证授权员工ID有效性（Go）
+- [x] 1.3 验证授权员工ID有效性（Go）
 
   - File: `main/app/service/setting/setting.go`
   - Purpose: 确保保存的授权员工ID在系统中存在
@@ -57,7 +57,7 @@
 
 ### Controller 层
 
-- [ ] 1.1 扩展 Business Controller，添加敏感操作设置字段处理
+- [x] 1.1 扩展 Business Controller，添加敏感操作设置字段处理
 
   - File: `admin/app/shop/controller/setting/Business.php`
   - Purpose: 在业务设置保存时处理新增的敏感操作设置字段
@@ -65,7 +65,7 @@
   - Leverage: 现有 Business Controller 的 `index()` 方法，参考 `is_need_password` 字段的处理方式
   - Prompt: Role: PHP Developer with ThinkPHP expertise | Task: 在 Business Controller 的 index() 方法中添加敏感操作设置字段的处理逻辑 | Context: 需要处理 discount_need_password, discount_authorized_staff_ids, refund_need_password, refund_authorized_staff_ids 四个字段，参考现有的 is_need_password 字段处理方式 | Restrictions: 遵循 .cursor/rules/php.mdc，Controller 不写业务逻辑，只做参数处理和调用 Model | Success: Controller 扩展完成，新字段正确保存到数据库
 
-- [ ] 1.2 添加参数验证
+- [x] 1.2 添加参数验证
 
   - File: `admin/app/shop/controller/setting/Business.php`
   - Purpose: 验证敏感操作设置字段的合法性
@@ -73,7 +73,7 @@
   - Leverage: 现有参数验证逻辑
   - Prompt: Role: PHP Developer | Task: 添加敏感操作设置字段的参数验证 | Context: discount_need_password 和 refund_need_password 必须是 0 或 1，discount_authorized_staff_ids 和 refund_authorized_staff_ids 必须是数组 | Restrictions: 遵循 .cursor/rules/php.mdc | Success: 参数验证正确，无效数据被过滤
 
-- [ ] 1.3 验证授权员工ID有效性
+- [x] 1.3 验证授权员工ID有效性
 
   - File: `admin/app/shop/controller/setting/Business.php`
   - Purpose: 确保保存的授权员工ID在系统中存在
@@ -89,7 +89,7 @@
 
 ### API 封装
 
-- [ ] 3.1 扩展商家后台业务设置 API 封装
+- [x] 3.1 扩展商家后台业务设置 API 封装
 
   - File: `admin/views/shop/src/api/setting.js`（或相应文件）
   - Purpose: 封装商家后台业务设置获取和保存的 API 调用
@@ -99,7 +99,7 @@
 
 ### 页面组件（商家后台）
 
-- [ ] 3.2 扩展商家后台业务设置页面，添加敏感操作设置区域
+- [x] 3.2 扩展商家后台业务设置页面，添加敏感操作设置区域
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`（或相应文件）
   - Purpose: 在商家后台业务设置页面中添加敏感操作设置区域
@@ -107,7 +107,7 @@
   - Leverage: 现有的业务设置页面结构
   - Prompt: Role: Frontend Developer with Vue 3 expertise | Task: 在业务设置页面中添加敏感操作设置卡片区域 | Context: 使用 Element Plus 的 Card 组件，参考现有设置项的布局 | Restrictions: 遵循 .cursor/rules/vue.mdc，使用 Composition API | Success: 页面结构正确，样式统一
 
-- [ ] 3.3 实现折扣权限开关（商家后台）
+- [x] 3.3 实现折扣权限开关（商家后台）
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`
   - Purpose: 实现折扣操作权限验证开关
@@ -115,7 +115,7 @@
   - Leverage: Element Plus 的 Radio 组件，参考 `is_need_password` 的实现
   - Prompt: Role: Frontend Developer with Vue 3 expertise | Task: 实现折扣权限验证开关，支持开启/关闭 | Context: 使用 el-radio-group，选项为"需要密码"和"无需密码"，参考 is_need_password 的实现 | Restrictions: 遵循 .cursor/rules/vue.mdc | Success: 开关功能正常，状态正确保存和显示
 
-- [ ] 3.4 实现退款权限开关（商家后台）
+- [x] 3.4 实现退款权限开关（商家后台）
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`
   - Purpose: 实现退款操作权限验证开关
@@ -123,7 +123,7 @@
   - Leverage: Element Plus 的 Radio 组件，参考折扣权限开关的实现
   - Prompt: Role: Frontend Developer with Vue 3 expertise | Task: 实现退款权限验证开关，支持开启/关闭 | Context: 使用 el-radio-group，选项为"需要密码"和"无需密码"，参考折扣权限开关的实现 | Restrictions: 遵循 .cursor/rules/vue.mdc | Success: 开关功能正常，状态正确保存和显示
 
-- [ ] 3.5 实现折扣授权员工选择器（商家后台）
+- [x] 3.5 实现折扣授权员工选择器（商家后台）
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`
   - Purpose: 实现折扣操作授权员工多选选择器
@@ -131,7 +131,7 @@
   - Leverage: Element Plus 的 Select 组件（支持多选和搜索）
   - Prompt: Role: Frontend Developer with Vue 3 expertise | Task: 实现折扣授权员工多选选择器，支持搜索和筛选 | Context: 使用 el-select 组件，设置 multiple 和 filterable 属性，仅在 discount_need_password 为 1 时显示 | Restrictions: 遵循 .cursor/rules/vue.mdc | Success: 选择器功能正常，支持多选和搜索，已选员工正确显示
 
-- [ ] 3.6 实现退款授权员工选择器（商家后台）
+- [x] 3.6 实现退款授权员工选择器（商家后台）
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`
   - Purpose: 实现退款操作授权员工多选选择器
@@ -139,7 +139,7 @@
   - Leverage: Element Plus 的 Select 组件，参考折扣授权员工选择器的实现
   - Prompt: Role: Frontend Developer with Vue 3 expertise | Task: 实现退款授权员工多选选择器，支持搜索和筛选 | Context: 使用 el-select 组件，设置 multiple 和 filterable 属性，仅在 refund_need_password 为 1 时显示，参考折扣授权员工选择器的实现 | Restrictions: 遵循 .cursor/rules/vue.mdc | Success: 选择器功能正常，支持多选和搜索，已选员工正确显示
 
-- [ ] 3.7 加载员工列表（商家后台）
+- [x] 3.7 加载员工列表（商家后台）
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`
   - Purpose: 在页面加载时获取员工列表，供选择器使用
@@ -147,7 +147,7 @@
   - Leverage: 现有的员工列表 API（`admin/views/shop/src/api/auth.js` 或相应文件）
   - Prompt: Role: Frontend Developer with Vue 3 expertise | Task: 在页面加载时调用员工列表 API，获取员工数据 | Context: 使用 onMounted 钩子，调用员工列表 API，将数据存储到响应式变量中 | Restrictions: 遵循 .cursor/rules/vue.mdc | Success: 员工列表正确加载，选择器可以正常使用
 
-- [ ] 3.8 实现设置保存逻辑（商家后台）
+- [x] 3.8 实现设置保存逻辑（商家后台）
 
   - File: `admin/views/shop/src/pages/setting/business/index.vue`
   - Purpose: 实现敏感操作设置的保存逻辑
