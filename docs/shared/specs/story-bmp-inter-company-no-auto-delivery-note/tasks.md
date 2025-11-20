@@ -88,23 +88,6 @@
   - Leverage: 现有 `service.Document()` 实现，ERPNext API 文档
   - Prompt: Role: Go Developer with ERPNext API expertise | Task: 在 `service.Document()` 中实现 `List(ctx, doctype, params)` 方法 | Context: 调用 ERPNext 的查询 API，支持 filters 和 fields 参数，处理响应和错误 | Restrictions: 遵循 `ttpos-bmp/.cursor/rules/go-rules.mdc`，返回 *gjson.Json 类型 | Success: List 方法实现完成，可成功查询 ERPNext 文档列表
 
-### 2.2 实现删除自动创建 Delivery Note 的逻辑
-
-- [ ] 2.2.1 实现 `removeAutoCreatedDeliveryNote` 方法
-
-  - File: `ttpos-bmp/app/ttpos-erp/internal/logic/buying/buying.go`
-  - Purpose: 查询并删除销售订单自动创建的 Draft 状态 Delivery Note
-  - Requirements: Requirement 1.3
-  - Leverage: Task 2.1.1, 2.1.2 的实现，`service.Document()` 服务
-  - Prompt: Role: Go Developer with ERPNext integration expertise | Task: 实现 `removeAutoCreatedDeliveryNote(ctx, salesOrderName)` 方法，查询并删除指定销售订单自动创建的 Draft 状态 Delivery Note | Context: 使用 `service.Document().List()` 查询，使用 `service.Document().Delete()` 删除，只删除 docstatus=0 (Draft) 的发货单 | Restrictions: 遵循 `erpnext.mdc` - 不修改 ERPNext 源码，遵循 `go-rules.mdc`，记录详细日志 | Success: 方法实现完成，可成功删除自动创建的 Draft Delivery Note
-
-- [ ] 2.2.2 修改 `CreateInnerSaleOrderFromPurchaseOrder` 方法
-
-  - File: `ttpos-bmp/app/ttpos-erp/internal/logic/buying/buying.go`
-  - Purpose: 在销售订单提交后，调用删除逻辑
-  - Requirements: Requirement 1.1, 1.3, 1.4
-  - Leverage: Task 2.2.1 的实现，现有代码 (lines 86-151)
-  - Prompt: Role: Go Developer with business logic expertise | Task: 修改 `CreateInnerSaleOrderFromPurchaseOrder`，在提交销售订单后，异步调用 `removeAutoCreatedDeliveryNote` 删除自动创建的 Delivery Note | Context: 使用 `go func()` 异步执行，等待 2 秒后删除（确保 ERPNext 完成自动创建），删除失败只记录警告日志，不影响主流程 | Restrictions: 遵循 `erpnext.mdc` 和 `go-rules.mdc`，不使用 panic，返回 error | Success: 修改完成，提交销售订单后不会有自动创建的 Draft Delivery Note
 
 ### 2.3 验证手动创建接口
 

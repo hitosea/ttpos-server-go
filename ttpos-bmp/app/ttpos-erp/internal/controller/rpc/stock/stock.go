@@ -72,8 +72,8 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
 
-		saleOrder := &erp.SaleOrder{}
-		if saleOrder, err = service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
+		// saleOrder := &erp.SaleOrder{}
+		if _, err = service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
 			SourceName:      purchaseOrder.Name,
 			DeliveryDate:    requiredBy,
 			SourceWarehouse: req.SourceWarehouse,
@@ -86,20 +86,21 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		}
 
 		//直接创建发货单，后续接入物流方
+		// update: 需求36978 调整
 
-		_, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
-			SourceName:      saleOrder.Name,
-			SourceWarehouse: req.SourceWarehouse,
-			//TargetWarehouse: "", // TODO 取在途仓
-		})
-		if err != nil {
-			g.Log().Warningf(ctx, "创建发货单失败，回退之前创建的内部销售订单及材料申请:%s, %s\n %v", saleOrder.Name, resp.MaterialRequestName, err)
-			service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, saleOrder.Name, erp.DocstatusCancelled)
-			service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
-			service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
+		// _, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
+		// 	SourceName:      saleOrder.Name,
+		// 	SourceWarehouse: req.SourceWarehouse,
+		// 	//TargetWarehouse: "", // TODO 取在途仓
+		// })
+		// if err != nil {
+		// 	g.Log().Warningf(ctx, "创建发货单失败，回退之前创建的内部销售订单及材料申请:%s, %s\n %v", saleOrder.Name, resp.MaterialRequestName, err)
+		// 	service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, saleOrder.Name, erp.DocstatusCancelled)
+		// 	service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
+		// 	service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
 
-			return rpc.ApiError(err.Error()), nil
-		}
+		// 	return rpc.ApiError(err.Error()), nil
+		// }
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil
