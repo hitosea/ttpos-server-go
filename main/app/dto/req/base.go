@@ -119,7 +119,7 @@ type UpdateBusinessSetting struct {
 	DeliveryPriceRatio    uint   `json:"delivery_price_ratio" binding:"required,gte=1,lte=300"`    // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
 	StartSerialNo         string `json:"start_serial_no" binding:"required"`                       // 开始序列号
 	IsBatch               string `json:"is_batch" binding:"required,oneof=0 1"`                    // 是否是分批商品 0-否 1-是
-	BatchCookingMode      string `json:"batch_cooking_mode" binding:"required,oneof=pre post"`     // 分批模式 pre-前置模式 post-后置模式，默认为post
+	BatchCookingMode      string `json:"batch_cooking_mode"`                                       // 分批模式 pre-前置模式 post-后置模式，默认为post
 	SafetyStockType       string `json:"safety_stock_type" binding:"required,oneof=1 2"`           // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 
 	// 调拨规则
