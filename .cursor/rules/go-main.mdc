@@ -42,6 +42,41 @@ return nil, errors.WithMessage(err, "查询失败")
 panic(err)
 ```
 
+### 常量定义规范
+
+- ✅ **所有常量必须在 `constant` 包中定义**
+- ✅ **禁止在代码中使用字面量（magic numbers/strings）**
+- ✅ **使用常量或枚举替代字面量**
+
+```go
+// ✅ 正确 - 在 constant/order.go 中定义
+const (
+    OrderStatusPending  = 0
+    OrderStatusComplete = 1
+    OrderStatusCanceled = 2
+)
+
+// 在代码中使用
+if order.Status == constant.OrderStatusPending {
+    // ...
+}
+
+// ❌ 错误 - 使用字面量
+if order.Status == 0 {
+    // ...
+}
+
+// ❌ 错误 - 字符串字面量
+if order.Source == "instant" {
+    // ...
+}
+
+// ✅ 正确 - 使用常量
+if order.Source == constant.OrderSourceInstant {
+    // ...
+}
+```
+
 ---
 
 ## 🏗️ 分层设计约束
@@ -92,6 +127,7 @@ type OrderRepoImpl struct {
 - [ ] data 不能为 null 或数组
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
+- [ ] 常量必须在 constant 包中定义，禁止使用字面量
 
 ### 提交前
 
@@ -175,6 +211,7 @@ order, err := orderRepo.GetOrder(
 | ❌ Service 依赖 Repository   | 只能依赖 Service      |
 | ❌ Repository 持有 DBManager | 只能持有 db           |
 | ❌ 跨层调用                  | 必须遵循分层          |
+| ❌ 使用字面量常量             | 必须在 constant 包中定义 |
 
 ---
 
