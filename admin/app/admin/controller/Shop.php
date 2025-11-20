@@ -97,6 +97,8 @@ class Shop extends Controller
      * @Apidoc\Param("printer_limit", type="int", require=true, default="", desc="打印机上限 -1等于无限制")
      * @Apidoc\Param("languages", type="array", require=true, default="", desc="支持语言")
      * @Apidoc\Param("timezone", type="string", require=true, default="", desc="时区")
+     * @Apidoc\Param("enable_table_map", type="int", require=false, default=0, desc="是否启用桌台地图能力: 0不开启, 1开启")
+     * @Apidoc\Param("enable_data_management", type="int", require=false, default=0, desc="是否启用数据管理能力: 0不开启, 1开启")
      */
     public function add(AppValidate $validate)
     {
@@ -174,6 +176,8 @@ class Shop extends Controller
      * @Apidoc\Param("printer_limit", type="int", require=true, default="", desc="打印机上限 -1等于无限制")
      * @Apidoc\Param("languages", type="array", require=true, default="", desc="支持语言")
      * @Apidoc\Param("timezone", type="string", require=true, default="", desc="时区")
+     * @Apidoc\Param("enable_table_map", type="int", require=false, default=0, desc="是否启用桌台地图能力: 0不开启, 1开启")
+     * @Apidoc\Param("enable_data_management", type="int", require=false, default=0, desc="是否启用数据管理能力: 0不开启, 1开启")
      * @Apidoc\Returned("app_id",type="int", desc="id")
      */
     public function edit()

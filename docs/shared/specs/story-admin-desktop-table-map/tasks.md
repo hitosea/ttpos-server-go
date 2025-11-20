@@ -13,9 +13,9 @@
 ## 📊 进度总览
 
 **总任务数**: 30（Phase 1: 5 + Phase 2: 10 + Phase 3: 11 + Phase 4: 4）  
-**已完成**: 0  
-**进行中**: -  
-**完成率**: 0%
+**已完成**: 5  
+**进行中**: Phase 2  
+**完成率**: 17%
 
 > 实际开发过程中，请在完成任务时同步维护以上统计，并更新对应任务的勾选状态。
 
@@ -25,7 +25,7 @@
 
 > 根据 `structs.mdc`，本阶段涉及 **Admin 模块 - 管理后台**（PHP + ThinkPHP + Vue 3）
 
-- [ ] 1.1 商家表新增能力开关字段
+- [x] 1.1 商家表新增能力开关字段
 
   - **Module**: Admin - 数据库迁移
   - **File**: `admin/database/migrations/{YYYYMMDDHHMMSS}_alter_ttpos_merchant_add_table_map_fields.php`
@@ -34,7 +34,7 @@
   - **Leverage**: 现有商家相关迁移文件；模板: `docs/agent/templates/database-migration-template.md`
   - **Prompt**: Role: Database Engineer | Task: 为 ttpos_merchant 表新增桌台地图/数据管理能力字段，遵循数据库规范 | Context: 必须包含默认值，兼容历史数据，迁移可重复执行 | Restrictions: 遵循 `.cursor/rules/database.mdc`，谨慎处理生产环境影响 | Success: 字段新增成功，现有数据不受影响
 
-- [ ] 1.2 商家 Model 同步字段
+- [x] 1.2 商家 Model 同步字段
 
   - **Module**: Admin - 管理后台 Model
   - **File**: `admin/app/admin/model/Merchant.php`
@@ -43,7 +43,7 @@
   - **Leverage**: 现有字段定义模式
   - **Prompt**: Role: PHP Developer | Task: 在 Merchant Model 中添加 enable_table_map 和 enable_data_management 字段定义 | Context: 遵循 ThinkPHP Model 规范 | Restrictions: 遵循 `.cursor/rules/php.mdc` | Success: 字段可正常读写
 
-- [ ] 1.3 商家 Service 增加字段处理逻辑
+- [x] 1.3 商家 Service 增加字段处理逻辑
 
   - **Module**: Admin - 管理后台 Service
   - **File**: `admin/app/admin/service/MerchantService.php`
@@ -52,7 +52,7 @@
   - **Leverage**: 现有商家 Service 方法
   - **Prompt**: Role: PHP Developer | Task: 在 MerchantService 的 create/update 方法中增加桌台地图开关字段处理 | Context: 业务逻辑放在 Service 层 | Restrictions: 遵循 `.cursor/rules/php.mdc`，Controller 不包含业务逻辑 | Success: 字段可通过 Service 正确保存和读取
 
-- [ ] 1.4 商家 Validate 增加字段验证
+- [x] 1.4 商家 Validate 增加字段验证
 
   - **Module**: Admin - 管理后台 Validate
   - **File**: `admin/app/admin/validate/MerchantValidate.php`

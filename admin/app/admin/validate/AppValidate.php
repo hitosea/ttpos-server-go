@@ -50,6 +50,9 @@ class AppValidate extends  BaseValidate
         'is_open_local_print|是否开启本地打印服务' => 'require|in:0,1',
         // v2.0.0
         'is_open_tax|是否开启税务对接' => 'require|in:0,1,2,3,4,5,6,7,8,9,10',
+        // v2.10.0
+        'enable_table_map|是否启用桌台地图能力' => 'in:0,1',
+        'enable_data_management|是否启用数据管理能力' => 'in:0,1',
     ];
 
     protected $message = [
@@ -103,6 +106,9 @@ class AppValidate extends  BaseValidate
             'is_open_tax',
             // v2.4.0
             'coordinates',
+            // v2.10.0
+            'enable_table_map',
+            'enable_data_management',
         ],
         'edit' => [
             'app_id',
@@ -141,6 +147,9 @@ class AppValidate extends  BaseValidate
             'is_open_tax',
             // v2.4.0
             'coordinates',
+            // v2.10.0
+            'enable_table_map',
+            'enable_data_management',
         ],
         'id' => [
             'app_id',

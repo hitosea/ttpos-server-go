@@ -115,6 +115,7 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 - [ ] **文件命名**: 使用 `date +%Y%m%d%H%M%S` 命令生成时间戳前缀，格式：`{YYYYMMDDHHMMSS}_{操作描述}.php`
   - 示例：`20250721370408_add_table_name_table.php`
   - 必须使用 shell 命令 `date +%Y%m%d%H%M%S` 生成，保持与其他迁移文件一致
+- [ ] **TARGET 常量**: 涉及 `company_setting` 和 `company` 表的迁移，必须添加 `const TARGET = 'all';`
 - [ ] 检查表是否存在
 - [ ] 检查字段是否存在
 - [ ] 包含注释说明
@@ -122,6 +123,46 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 ---
 
 ## 📋 常用模式
+
+### 迁移文件模板
+
+**涉及 company_setting 和 company 表的迁移（必须添加 TARGET = 'all'）：**
+
+```php
+<?php
+use think\migration\Migrator;
+
+class AddTableMapFieldsToCompanySetting extends Migrator
+{
+    // 迁移目标：所有商户数据库
+    const TARGET = 'all';
+    
+    public function change()
+    {
+        // 检查表是否存在
+        if ($this->hasTable('company_setting')) {
+            $table = $this->table('company_setting');
+            
+            // 检查字段是否不存在
+            if (!$table->hasColumn('enable_table_map')) {
+                $table->addColumn('enable_table_map', 'integer', [
+                    'limit' => 3,
+                    'default' => 0,
+                    'null' => false,
+                    'comment' => '是否启用桌台地图能力：0-否；1-是'
+                ]);
+            }
+            
+            $table->update();
+        }
+    }
+}
+```
+
+**TARGET 常量说明：**
+- `const TARGET = 'all';` - 应用到所有商户数据库（company、company_setting 表必须）
+- `const TARGET = 'main';` - 仅应用到 saas 主库（系统级表）
+- 不设置 - 应用到当前配置的数据库（普通业务表）
 
 ### 创建表模板
 
@@ -342,6 +383,7 @@ $uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
 | ❌ 多语言表缺少 name 或 multi_language_name_uuid | 必须同时包含两个字段   |
 | ❌ name 字段不存储 JSON 格式                | 必须是完整的 JSON      |
 | ❌ name 字段长度小于 1000                   | 必须使用 VARCHAR(1000) |
+| ❌ company_setting/company 表迁移未添加 TARGET | 必须添加 `const TARGET = 'all';` |
 
 ---
 
