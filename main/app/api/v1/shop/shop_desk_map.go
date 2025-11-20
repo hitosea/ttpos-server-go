@@ -36,7 +36,7 @@ type DeskMapHandler struct {
 func (h *DeskMapHandler) GetAreaList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	list, err := h.deskMapSrv.GetAreaListWithStatus(ctx.GetDbId())
+	list, err := h.deskMapSrv.GetAreaListWithStatus(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -64,7 +64,7 @@ func (h *DeskMapHandler) GetLayoutDetail(c *gin.Context) {
 		return
 	}
 
-	detail, err := h.deskMapSrv.GetLayoutDetail(ctx.GetDbId(), detailReq.AreaUuid)
+	detail, err := h.deskMapSrv.GetLayoutDetail(ctx, detailReq.AreaUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -92,7 +92,7 @@ func (h *DeskMapHandler) SaveLayout(c *gin.Context) {
 		return
 	}
 
-	if err := h.deskMapSrv.SaveLayout(ctx.GetDbId(), saveReq); err != nil {
+	if err := h.deskMapSrv.SaveLayout(ctx, saveReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

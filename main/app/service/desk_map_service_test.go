@@ -1,16 +1,19 @@
 package service
 
 import (
+	stdcontext "context"
 	"encoding/json"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"gorm.io/driver/sqlite"
@@ -29,7 +32,8 @@ func TestDeskMapService_GetAreaListWithStatus(t *testing.T) {
 
 	// 场景1: 无区域时返回空列表
 	srv := NewDeskMapSrv(dbm)
-	result, err := srv.GetAreaListWithStatus(1)
+	ctx := createTestContext(t, dbm)
+	result, err := srv.GetAreaListWithStatus(ctx)
 	if err != nil {
 		t.Fatalf("GetAreaListWithStatus failed: %v", err)
 	}
@@ -41,7 +45,7 @@ func TestDeskMapService_GetAreaListWithStatus(t *testing.T) {
 	area1 := createTestArea(t, dbm, "测试区域1", 1)
 	createTestDesks(t, dbm, area1.Uuid, 5)
 
-	result, err = srv.GetAreaListWithStatus(1)
+	result, err = srv.GetAreaListWithStatus(ctx)
 	if err != nil {
 		t.Fatalf("GetAreaListWithStatus failed: %v", err)
 	}
@@ -64,7 +68,7 @@ func TestDeskMapService_GetAreaListWithStatus(t *testing.T) {
 	// 场景3: 创建布局后状态应为 set
 	createTestLayout(t, dbm, area1.Uuid)
 
-	result, err = srv.GetAreaListWithStatus(1)
+	result, err = srv.GetAreaListWithStatus(ctx)
 	if err != nil {
 		t.Fatalf("GetAreaListWithStatus failed: %v", err)
 	}
@@ -76,7 +80,7 @@ func TestDeskMapService_GetAreaListWithStatus(t *testing.T) {
 	area2 := createTestArea(t, dbm, "测试区域2", 0) // sort=0 应排在前面
 	createTestDesks(t, dbm, area2.Uuid, 3)
 
-	result, err = srv.GetAreaListWithStatus(1)
+	result, err = srv.GetAreaListWithStatus(ctx)
 	if err != nil {
 		t.Fatalf("GetAreaListWithStatus failed: %v", err)
 	}
@@ -103,9 +107,10 @@ func TestDeskMapService_GetLayoutDetail(t *testing.T) {
 	defer cleanupTestData(t, dbm)
 
 	srv := NewDeskMapSrv(dbm)
+	ctx := createTestContext(t, dbm)
 
 	// 场景1: 区域不存在 - 应返回错误
-	_, err := srv.GetLayoutDetail(1, 99999999)
+	_, err := srv.GetLayoutDetail(ctx, 99999999)
 	if err == nil {
 		t.Error("Expected error for non-existent area, got nil")
 	}
@@ -115,7 +120,7 @@ func TestDeskMapService_GetLayoutDetail(t *testing.T) {
 	desk1 := createTestDeskWithDetails(t, dbm, area1.Uuid, "A01", 1)
 	desk2 := createTestDeskWithDetails(t, dbm, area1.Uuid, "A02", 2)
 
-	result, err := srv.GetLayoutDetail(1, area1.Uuid)
+	result, err := srv.GetLayoutDetail(ctx, area1.Uuid)
 	if err != nil {
 		t.Fatalf("GetLayoutDetail failed: %v", err)
 	}
@@ -171,7 +176,7 @@ func TestDeskMapService_GetLayoutDetail(t *testing.T) {
 	}
 	createTestLayoutWithData(t, dbm, area1.Uuid, layoutData)
 
-	result, err = srv.GetLayoutDetail(1, area1.Uuid)
+	result, err = srv.GetLayoutDetail(ctx, area1.Uuid)
 	if err != nil {
 		t.Fatalf("GetLayoutDetail failed: %v", err)
 	}
@@ -216,6 +221,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 	defer cleanupTestData(t, dbm)
 
 	srv := NewDeskMapSrv(dbm)
+	ctx := createTestContext(t, dbm)
 
 	// 场景1: 区域不存在 - 应返回错误
 	invalidReq := req.DeskMapSaveLayoutReq{
@@ -232,7 +238,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 		},
 	}
 
-	err := srv.SaveLayout(1, invalidReq)
+	err := srv.SaveLayout(ctx, invalidReq)
 	if err == nil {
 		t.Error("Expected error for non-existent area, got nil")
 	}
@@ -258,7 +264,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 		},
 	}
 
-	err = srv.SaveLayout(1, saveReq)
+	err = srv.SaveLayout(ctx, saveReq)
 	if err != nil {
 		t.Fatalf("SaveLayout (create) failed: %v", err)
 	}
@@ -307,7 +313,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 		},
 	}
 
-	err = srv.SaveLayout(1, saveReq2)
+	err = srv.SaveLayout(ctx, saveReq2)
 	if err != nil {
 		t.Fatalf("SaveLayout (update) failed: %v", err)
 	}
@@ -341,7 +347,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 		},
 	}
 
-	err = srv.SaveLayout(1, invalidShapeReq)
+	err = srv.SaveLayout(ctx, invalidShapeReq)
 	if err == nil {
 		t.Error("Expected error for invalid shape, got nil")
 	}
@@ -352,7 +358,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 		Desks:    []req.DeskMapLayoutDeskReq{},
 	}
 
-	err = srv.SaveLayout(1, emptyReq)
+	err = srv.SaveLayout(ctx, emptyReq)
 	if err == nil {
 		t.Error("Expected error for empty desks, got nil")
 	}
@@ -367,15 +373,16 @@ func setupTestDB(t *testing.T) *database.DBManager {
 	// 创建 SQLite 内存数据库，禁用外键约束以简化测试
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
+		SkipDefaultTransaction:                   true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
 
 	// 手动创建表结构（SQLite 兼容版本）
-	// 由于 model 中使用了 MySQL 特定的类型（如 unsigned），我们需要手动创建表
+	// 注意：GORM 默认使用复数形式的表名
 	err = db.Exec(`
-		CREATE TABLE ttpos_desk_region (
+		CREATE TABLE desk_regions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			uuid INTEGER DEFAULT 0,
 			create_time INTEGER DEFAULT 0,
@@ -386,11 +393,11 @@ func setupTestDB(t *testing.T) *database.DBManager {
 		)
 	`).Error
 	if err != nil {
-		t.Fatalf("Failed to create desk_region table: %v", err)
+		t.Fatalf("Failed to create desk_regions table: %v", err)
 	}
 
 	err = db.Exec(`
-		CREATE TABLE ttpos_desk (
+		CREATE TABLE desks (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			uuid INTEGER DEFAULT 0,
 			create_time INTEGER DEFAULT 0,
@@ -410,11 +417,28 @@ func setupTestDB(t *testing.T) *database.DBManager {
 		)
 	`).Error
 	if err != nil {
-		t.Fatalf("Failed to create desk table: %v", err)
+		t.Fatalf("Failed to create desks table: %v", err)
 	}
 
 	err = db.Exec(`
-		CREATE TABLE ttpos_desk_map_layout (
+		CREATE TABLE desk_types (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid INTEGER DEFAULT 0,
+			create_time INTEGER DEFAULT 0,
+			update_time INTEGER DEFAULT 0,
+			delete_time INTEGER DEFAULT 0,
+			name TEXT DEFAULT '',
+			range_min INTEGER DEFAULT 0,
+			range_max INTEGER DEFAULT 0,
+			status INTEGER DEFAULT 0
+		)
+	`).Error
+	if err != nil {
+		t.Fatalf("Failed to create desk_types table: %v", err)
+	}
+
+	err = db.Exec(`
+		CREATE TABLE desk_map_layout (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			uuid INTEGER DEFAULT 0,
 			create_time INTEGER DEFAULT 0,
@@ -429,7 +453,7 @@ func setupTestDB(t *testing.T) *database.DBManager {
 	}
 
 	// 创建唯一索引
-	err = db.Exec(`CREATE UNIQUE INDEX uk_area_uuid ON ttpos_desk_map_layout(area_uuid)`).Error
+	err = db.Exec(`CREATE UNIQUE INDEX uk_area_uuid ON desk_map_layout(area_uuid)`).Error
 	if err != nil {
 		t.Fatalf("Failed to create unique index: %v", err)
 	}
@@ -442,22 +466,25 @@ func setupTestDB(t *testing.T) *database.DBManager {
 	// 需要初始化 lock, lastCheck, checkInterval 字段
 	dbmValue := reflect.ValueOf(dbm).Elem()
 
-	// 设置 lock 字段
+	// 设置 lock 字段（使用 unsafe 来设置私有字段）
 	lockField := dbmValue.FieldByName("lock")
-	if lockField.IsValid() && lockField.CanSet() {
-		lockField.Set(reflect.ValueOf(&sync.Mutex{}))
+	if lockField.IsValid() {
+		reflect.NewAt(lockField.Type(), unsafe.Pointer(lockField.UnsafeAddr())).
+			Elem().Set(reflect.ValueOf(&sync.Mutex{}))
 	}
 
 	// 设置 lastCheck 字段
 	lastCheckField := dbmValue.FieldByName("lastCheck")
-	if lastCheckField.IsValid() && lastCheckField.CanSet() {
-		lastCheckField.Set(reflect.ValueOf(make(map[uint64]time.Time)))
+	if lastCheckField.IsValid() {
+		reflect.NewAt(lastCheckField.Type(), unsafe.Pointer(lastCheckField.UnsafeAddr())).
+			Elem().Set(reflect.ValueOf(make(map[uint64]time.Time)))
 	}
 
 	// 设置 checkInterval 字段
 	checkIntervalField := dbmValue.FieldByName("checkInterval")
-	if checkIntervalField.IsValid() && checkIntervalField.CanSet() {
-		checkIntervalField.Set(reflect.ValueOf(10 * time.Second))
+	if checkIntervalField.IsValid() {
+		reflect.NewAt(checkIntervalField.Type(), unsafe.Pointer(checkIntervalField.UnsafeAddr())).
+			Elem().Set(reflect.ValueOf(10 * time.Second))
 	}
 
 	return dbm
@@ -473,9 +500,22 @@ func cleanupTestData(t *testing.T, dbm *database.DBManager) {
 	}
 
 	// 清理所有测试数据
-	db.Exec("DELETE FROM ttpos_desk_map_layout")
-	db.Exec("DELETE FROM ttpos_desk")
-	db.Exec("DELETE FROM ttpos_desk_region")
+	db.Exec("DELETE FROM desk_map_layout")
+	db.Exec("DELETE FROM desks")
+	db.Exec("DELETE FROM desk_regions")
+	db.Exec("DELETE FROM desk_types")
+}
+
+// createTestContext 创建测试上下文
+func createTestContext(t *testing.T, dbm *database.DBManager) context.Context {
+	t.Helper()
+
+	db := dbm.GetDB(constant.MockDB)
+	ctx := context.NewContext(
+		context.WithContext(stdcontext.Background()),
+	)
+	ctx.SetDB(db)
+	return ctx
 }
 
 // createTestArea 创建测试区域
@@ -483,10 +523,18 @@ func createTestArea(t *testing.T, dbm *database.DBManager, name string, sort uin
 	t.Helper()
 
 	db := dbm.GetDB(constant.MockDB)
+	// 生成简单的测试 UUID
+	var maxID uint64
+	db.Model(&model.DeskRegion{}).Select("COALESCE(MAX(uuid), 0)").Scan(&maxID)
+
 	area := &model.DeskRegion{
 		Name: name,
 		Sort: sort,
 	}
+	area.Uuid = maxID + 1
+	area.CreateTime = int64(time.Now().Unix())
+	area.UpdateTime = int64(time.Now().Unix())
+
 	if err := db.Create(area).Error; err != nil {
 		t.Fatalf("Failed to create test area: %v", err)
 	}
@@ -498,12 +546,20 @@ func createTestDesks(t *testing.T, dbm *database.DBManager, areaUuid uint64, cou
 	t.Helper()
 
 	db := dbm.GetDB(constant.MockDB)
+	// 获取当前最大 UUID
+	var maxID uint64
+	db.Model(&model.Desk{}).Select("COALESCE(MAX(uuid), 0)").Scan(&maxID)
+
 	for i := 1; i <= count; i++ {
 		desk := &model.Desk{
 			DeskNo:     string(rune('A' + i - 1)),
 			RegionUuid: areaUuid,
 			Sort:       uint(i),
 		}
+		desk.Uuid = maxID + uint64(i)
+		desk.CreateTime = int64(time.Now().Unix())
+		desk.UpdateTime = int64(time.Now().Unix())
+
 		if err := db.Create(desk).Error; err != nil {
 			t.Fatalf("Failed to create test desk: %v", err)
 		}
@@ -515,6 +571,10 @@ func createTestDeskWithDetails(t *testing.T, dbm *database.DBManager, areaUuid u
 	t.Helper()
 
 	db := dbm.GetDB(constant.MockDB)
+	// 生成简单的测试 UUID
+	var maxID uint64
+	db.Model(&model.Desk{}).Select("COALESCE(MAX(uuid), 0)").Scan(&maxID)
+
 	desk := &model.Desk{
 		DeskNo:     deskNo,
 		RegionUuid: areaUuid,
@@ -522,6 +582,10 @@ func createTestDeskWithDetails(t *testing.T, dbm *database.DBManager, areaUuid u
 		Status:     constant.DeskStatusClose,
 		IsDisable:  0,
 	}
+	desk.Uuid = maxID + 1
+	desk.CreateTime = int64(time.Now().Unix())
+	desk.UpdateTime = int64(time.Now().Unix())
+
 	if err := db.Create(desk).Error; err != nil {
 		t.Fatalf("Failed to create test desk: %v", err)
 	}
@@ -555,10 +619,18 @@ func createTestLayoutWithData(t *testing.T, dbm *database.DBManager, areaUuid ui
 		t.Fatalf("Failed to marshal layout data: %v", err)
 	}
 
+	// 生成简单的测试 UUID
+	var maxID uint64
+	db.Model(&model.DeskMapLayout{}).Select("COALESCE(MAX(uuid), 0)").Scan(&maxID)
+
 	layout := &model.DeskMapLayout{
 		AreaUuid:   areaUuid,
 		LayoutJson: string(layoutJSON),
 	}
+	layout.Uuid = maxID + 1
+	layout.CreateTime = int64(time.Now().Unix())
+	layout.UpdateTime = int64(time.Now().Unix())
+
 	if err := db.Create(layout).Error; err != nil {
 		t.Fatalf("Failed to create test layout: %v", err)
 	}

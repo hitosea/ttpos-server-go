@@ -1824,6 +1824,9 @@ definitions:
     type: object
   product_resp.BatchTag:
     properties:
+      abbreviation:
+        description: 名称缩写
+        type: string
       color:
         description: 颜色值，如#FF0000
         type: string
@@ -1862,6 +1865,9 @@ definitions:
     type: object
   product_resp.BatchTagDetail:
     properties:
+      abbreviation:
+        description: 名称缩写
+        type: string
       color:
         description: 颜色值，如#FF0000
         type: string
@@ -3230,6 +3236,9 @@ definitions:
     type: object
   req.BatchTagAddReq:
     properties:
+      abbreviation:
+        description: 名称缩写
+        type: string
       color:
         description: 颜色值，如#FF0000
         type: string
@@ -3251,6 +3260,9 @@ definitions:
     type: object
   req.BatchTagEditReq:
     properties:
+      abbreviation:
+        description: 名称缩写
+        type: string
       color:
         description: 颜色值，如#FF0000
         type: string
@@ -15834,18 +15846,24 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取当前商户的桌台地图布局数据，用于地图模式展示
+      description: 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表
+      parameters:
+      - description: 区域UUID，不传则返回区域列表
+        format: int64
+        in: query
+        name: area_uuid
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 返回区域布局详情（传入area_uuid）
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.DeskMapAreaListResp'
+                  $ref: '#/definitions/resp.DeskMapLayoutResp'
               type: object
       security:
       - JwtToken: []
@@ -18350,18 +18368,24 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取当前商户的桌台地图布局数据，用于地图模式展示
+      description: 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表
+      parameters:
+      - description: 区域UUID，不传则返回区域列表
+        format: int64
+        in: query
+        name: area_uuid
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 返回区域布局详情（传入area_uuid）
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.DeskMapAreaListResp'
+                  $ref: '#/definitions/resp.DeskMapLayoutResp'
               type: object
       security:
       - JwtToken: []

@@ -192,7 +192,7 @@ Content-Type: application/json
 
 **基础 URL**: `/api/v1/cashier/desk_map`
 
-#### 2.1 获取布局
+#### 2.1 获取区域列表（不传 area_uuid）
 
 ```bash
 # 请求
@@ -208,7 +208,7 @@ Authorization: Bearer {token}
       {
         "area_uuid": 123,
         "area_name": "大厅",
-        "table_count": 20,
+        "desk_count": 20,
         "layout_status": "set"
       }
     ]
@@ -217,15 +217,65 @@ Authorization: Bearer {token}
 ```
 
 **测试用例**:
-- ✅ 正常获取布局
+- ✅ 正常获取区域列表
 - ✅ 未配置布局时返回空列表
+- ✅ 未登录返回 401
+
+#### 2.2 获取区域详细布局（传入 area_uuid）
+
+```bash
+# 请求
+GET /api/v1/cashier/desk/map/layout?area_uuid=123
+Authorization: Bearer {token}
+
+# 预期响应
+{
+  "code": 1,
+  "message": "获取成功",
+  "data": {
+    "area": {
+      "area_uuid": 123,
+      "area_name": "大厅"
+    },
+    "desks": [
+      {
+        "desk_uuid": 111,
+        "desk_name": "A01",
+        "range_min": 2,
+        "range_max": 4,
+        "selected": true
+      }
+    ],
+    "layout": {
+      "desks": [
+        {
+          "desk_uuid": 111,
+          "shape": "circle",
+          "range_min": 2,
+          "range_max": 4,
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 80,
+          "rotation": 0
+        }
+      ]
+    }
+  }
+}
+```
+
+**测试用例**:
+- ✅ 正常获取区域详细布局
+- ✅ area_uuid 不存在返回错误
+- ✅ 未配置布局时返回空 layout
 - ✅ 未登录返回 401
 
 ### 3. 点餐助手端 API 测试
 
 **基础 URL**: `/api/v1/assistant/desk_map`
 
-#### 3.1 获取布局
+#### 3.1 获取区域列表（不传 area_uuid）
 
 ```bash
 # 请求
@@ -241,7 +291,7 @@ Authorization: Bearer {token}
       {
         "area_uuid": 123,
         "area_name": "大厅",
-        "table_count": 20,
+        "desk_count": 20,
         "layout_status": "set"
       }
     ]
@@ -250,8 +300,58 @@ Authorization: Bearer {token}
 ```
 
 **测试用例**:
-- ✅ 正常获取布局
+- ✅ 正常获取区域列表
 - ✅ 未配置布局时返回空列表
+- ✅ 未登录返回 401
+
+#### 3.2 获取区域详细布局（传入 area_uuid）
+
+```bash
+# 请求
+GET /api/v1/assistant/desk/map/layout?area_uuid=123
+Authorization: Bearer {token}
+
+# 预期响应
+{
+  "code": 1,
+  "message": "获取成功",
+  "data": {
+    "area": {
+      "area_uuid": 123,
+      "area_name": "大厅"
+    },
+    "desks": [
+      {
+        "desk_uuid": 111,
+        "desk_name": "A01",
+        "range_min": 2,
+        "range_max": 4,
+        "selected": true
+      }
+    ],
+    "layout": {
+      "desks": [
+        {
+          "desk_uuid": 111,
+          "shape": "circle",
+          "range_min": 2,
+          "range_max": 4,
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 80,
+          "rotation": 0
+        }
+      ]
+    }
+  }
+}
+```
+
+**测试用例**:
+- ✅ 正常获取区域详细布局
+- ✅ area_uuid 不存在返回错误
+- ✅ 未配置布局时返回空 layout
 - ✅ 未登录返回 401
 
 ---

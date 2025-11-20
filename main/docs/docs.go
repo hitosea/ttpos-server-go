@@ -805,7 +805,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示",
+                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -816,9 +816,18 @@ const docTemplate = `{
                     "点餐助手端.桌台"
                 ],
                 "summary": "获取桌台地图布局",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "区域UUID，不传则返回区域列表",
+                        "name": "area_uuid",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "返回区域布局详情（传入area_uuid）",
                         "schema": {
                             "allOf": [
                                 {
@@ -828,7 +837,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.DeskMapAreaListResp"
+                                            "$ref": "#/definitions/resp.DeskMapLayoutResp"
                                         }
                                     }
                                 }
@@ -5109,7 +5118,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示",
+                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -5120,9 +5129,18 @@ const docTemplate = `{
                     "收银端.桌台"
                 ],
                 "summary": "获取桌台地图布局",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "区域UUID，不传则返回区域列表",
+                        "name": "area_uuid",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "返回区域布局详情（传入area_uuid）",
                         "schema": {
                             "allOf": [
                                 {
@@ -5132,7 +5150,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.DeskMapAreaListResp"
+                                            "$ref": "#/definitions/resp.DeskMapLayoutResp"
                                         }
                                     }
                                 }
@@ -32902,6 +32920,10 @@ const docTemplate = `{
         "product_resp.BatchTag": {
             "type": "object",
             "properties": {
+                "abbreviation": {
+                    "description": "名称缩写",
+                    "type": "string"
+                },
                 "color": {
                     "description": "颜色值，如#FF0000",
                     "type": "string"
@@ -32959,6 +32981,10 @@ const docTemplate = `{
         "product_resp.BatchTagDetail": {
             "type": "object",
             "properties": {
+                "abbreviation": {
+                    "description": "名称缩写",
+                    "type": "string"
+                },
                 "color": {
                     "description": "颜色值，如#FF0000",
                     "type": "string"
@@ -35033,6 +35059,10 @@ const docTemplate = `{
                 "locale_name"
             ],
             "properties": {
+                "abbreviation": {
+                    "description": "名称缩写",
+                    "type": "string"
+                },
                 "color": {
                     "description": "颜色值，如#FF0000",
                     "type": "string"
@@ -35067,6 +35097,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "abbreviation": {
+                    "description": "名称缩写",
+                    "type": "string"
+                },
                 "color": {
                     "description": "颜色值，如#FF0000",
                     "type": "string"

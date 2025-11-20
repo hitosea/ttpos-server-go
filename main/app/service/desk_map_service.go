@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
@@ -17,9 +18,9 @@ import (
 //
 // @version v2.10.0
 type IDeskMapSrv interface {
-	GetAreaListWithStatus(dbId uint64) (resp.DeskMapAreaListResp, error)
-	GetLayoutDetail(dbId uint64, areaUuid uint64) (resp.DeskMapLayoutResp, error)
-	SaveLayout(dbId uint64, req req.DeskMapSaveLayoutReq) error
+	GetAreaListWithStatus(ctx context.Context) (resp.DeskMapAreaListResp, error)
+	GetLayoutDetail(ctx context.Context, areaUuid uint64) (resp.DeskMapLayoutResp, error)
+	SaveLayout(ctx context.Context, req req.DeskMapSaveLayoutReq) error
 }
 
 // deskMapSrv 桌台地图服务实现
@@ -40,8 +41,8 @@ func NewDeskMapSrvImpl(dbm *database.DBManager) IDeskMapSrv {
 }
 
 // GetAreaListWithStatus 获取区域列表及地图配置状态
-func (s *deskMapSrv) GetAreaListWithStatus(dbId uint64) (resp.DeskMapAreaListResp, error) {
-	db := s.dbm.GetDB(dbId)
+func (s *deskMapSrv) GetAreaListWithStatus(ctx context.Context) (resp.DeskMapAreaListResp, error) {
+	db := ctx.GetDB()
 
 	// 获取所有区域
 	deskRegionRepo := repository.NewDeskRegionRepo(db)
@@ -92,8 +93,8 @@ func (s *deskMapSrv) GetAreaListWithStatus(dbId uint64) (resp.DeskMapAreaListRes
 }
 
 // GetLayoutDetail 获取某区域布局详情
-func (s *deskMapSrv) GetLayoutDetail(dbId uint64, areaUuid uint64) (resp.DeskMapLayoutResp, error) {
-	db := s.dbm.GetDB(dbId)
+func (s *deskMapSrv) GetLayoutDetail(ctx context.Context, areaUuid uint64) (resp.DeskMapLayoutResp, error) {
+	db := ctx.GetDB()
 
 	// 获取区域信息
 	deskRegionRepo := repository.NewDeskRegionRepo(db)
@@ -188,8 +189,8 @@ func (s *deskMapSrv) GetLayoutDetail(dbId uint64, areaUuid uint64) (resp.DeskMap
 }
 
 // SaveLayout 保存区域布局
-func (s *deskMapSrv) SaveLayout(dbId uint64, req req.DeskMapSaveLayoutReq) error {
-	db := s.dbm.GetDB(dbId)
+func (s *deskMapSrv) SaveLayout(ctx context.Context, req req.DeskMapSaveLayoutReq) error {
+	db := ctx.GetDB()
 
 	// 验证请求参数
 	if err := req.Validate(); err != nil {
