@@ -814,7 +814,18 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
 			BatchTagName: func() dto.LocaleResponse {
 				if saleOrderProduct.BatchTag != nil {
-					return saleOrderProduct.BatchTag.MultiLanguageName.GetNames()
+					// return saleOrderProduct.BatchTag.MultiLanguageName.GetNames()
+					return dto.LocaleResponse{
+						ZH:   saleOrderProduct.BatchTag.Abbreviation,
+						TH:   saleOrderProduct.BatchTag.Abbreviation,
+						EN:   saleOrderProduct.BatchTag.Abbreviation,
+						ZHTW: saleOrderProduct.BatchTag.Abbreviation,
+						JA:   saleOrderProduct.BatchTag.Abbreviation,
+						KO:   saleOrderProduct.BatchTag.Abbreviation,
+						MY:   saleOrderProduct.BatchTag.Abbreviation,
+						TR:   saleOrderProduct.BatchTag.Abbreviation,
+						SV:   saleOrderProduct.BatchTag.Abbreviation,
+					}
 				}
 				return dto.LocaleResponse{}
 			}(),
