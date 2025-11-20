@@ -26,10 +26,11 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv   service.IDeskSrv
-	orderSrv  service.IOrderSrv
-	memberSrv service.IMemberSrv
-	otherSrv  service.IOtherSrv
+	deskSrv    service.IDeskSrv
+	deskMapSrv service.IDeskMapSrv
+	orderSrv   service.IOrderSrv
+	memberSrv  service.IMemberSrv
+	otherSrv   service.IOtherSrv
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -1892,6 +1893,28 @@ func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDeskMapLayout 获取桌台地图布局
+// @Summary 获取桌台地图布局
+// @Description 获取当前商户的桌台地图布局数据，用于地图模式展示
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.DeskMapAreaListResp}
+// @Router /assistant/desk/map/layout [get]
+func (h *DeskHandler) GetDeskMapLayout(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+
+	// 获取区域列表及布局状态
+	list, err := h.deskMapSrv.GetAreaListWithStatus(companyUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, list, "获取成功")
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1910,7 +1933,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 
 	// 创建处理程序
+	deskMapSrv := service.NewDeskMapSrv(dbm)
 	wrapper := DeskHandler{
+		deskMapSrv: deskMapSrv,
 		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 		orderSrv:  orderSrv,
 		memberSrv: service.NewMemberSrv(dbm, cache),
@@ -1975,5 +2000,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                                            // 完成桌台
 		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
+
+		// 桌台地图相关接口
+		privateApi.GET("/desk/map/layout", wrapper.GetDeskMapLayout) // 获取桌台地图布局
 	}
 }

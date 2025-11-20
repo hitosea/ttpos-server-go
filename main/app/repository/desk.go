@@ -39,6 +39,8 @@ type IDeskQueryRepo interface {
 	GetAvailableDeskList() ([]*model.Desk, error)                            // 获取所有空闲的桌台
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)       //
 	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                      // 通过uuid获取桌台的记录信息
+	GetDeskCountsByRegion() (map[uint64]int64, error)                        // 获取按区域分组的桌台数量
+	GetDesksByRegionUuid(regionUuid uint64) ([]model.Desk, error)            // 按区域查询桌台列表
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {
@@ -307,4 +309,45 @@ func (r *deskRepo) GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, er
 	return desk, r.db.Model(&model.Desk{}).Where("uuid = ? AND delete_time = ?", deskUuid, constant.NotDeleted).Preload("SaleBill", func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", constant.SaleBillStatusPending)
 	}).First(&desk).Error
+}
+
+// GetDeskCountsByRegion 获取按区域分组的桌台数量
+func (r *deskRepo) GetDeskCountsByRegion() (map[uint64]int64, error) {
+	var results []struct {
+		RegionUuid uint64
+		Count      int64
+	}
+
+	err := r.db.Model(&model.Desk{}).
+		Select("region_uuid, COUNT(*) as count").
+		Where("delete_time = ?", 0).
+		Group("region_uuid").
+		Find(&results).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询桌台数量失败")
+	}
+
+	// 转换为 map
+	countMap := make(map[uint64]int64)
+	for _, result := range results {
+		countMap[result.RegionUuid] = result.Count
+	}
+
+	return countMap, nil
+}
+
+// GetDesksByRegionUuid 按区域查询桌台列表
+func (r *deskRepo) GetDesksByRegionUuid(regionUuid uint64) ([]model.Desk, error) {
+	var desks []model.Desk
+
+	err := r.db.Model(&model.Desk{}).
+		Where("region_uuid = ? AND delete_time = ?", regionUuid, 0).
+		Find(&desks).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询桌台列表失败")
+	}
+
+	return desks, nil
 }

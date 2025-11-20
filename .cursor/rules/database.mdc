@@ -112,6 +112,12 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 迁移文件
 
+**TARGET 常量说明：**
+- [ ] `const TARGET = 'all';` - 应用到所有商户数据库和saas主库（系统级表） （company、company_setting 表必须）
+- [ ] `const TARGET = 'main';` - 仅应用到 saas 主库（系统级表）
+- 不设置 - 仅应用到所有商户数据库（普通业务表）
+
+**约束：**
 - [ ] **文件命名**: 使用 `date +%Y%m%d%H%M%S` 命令生成时间戳前缀，格式：`{YYYYMMDDHHMMSS}_{操作描述}.php`
   - 示例：`20250721370408_add_table_name_table.php`
   - 必须使用 shell 命令 `date +%Y%m%d%H%M%S` 生成，保持与其他迁移文件一致
@@ -119,6 +125,14 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 - [ ] 检查表是否存在
 - [ ] 检查字段是否存在
 - [ ] 包含注释说明
+- [ ] 在迁移文件中新增表或者删除字段的时候，也要同步改动 seeds/shop_01.sql 文件。../main/app/model/ 目录下也有对应的模型文件，也要同步改动
+- [ ] 存在 `const TARGET = 'all';` 标识的时候，新建的表才需要添加 `company_uuid` 字段但不是必须的，其他时候一定不需要添加
+- [ ] 强制要求 $table->addColumn 方法里面的内容不需要换行
+
+**执行迁移：**
+```bash
+make migrate
+```
 
 ---
 
@@ -126,16 +140,12 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 迁移文件模板
 
-**涉及 company_setting 和 company 表的迁移（必须添加 TARGET = 'all'）：**
-
 ```php
 <?php
 use think\migration\Migrator;
 
 class AddTableMapFieldsToCompanySetting extends Migrator
 {
-    // 迁移目标：所有商户数据库
-    const TARGET = 'all';
     
     public function change()
     {
@@ -158,11 +168,6 @@ class AddTableMapFieldsToCompanySetting extends Migrator
     }
 }
 ```
-
-**TARGET 常量说明：**
-- `const TARGET = 'all';` - 应用到所有商户数据库（company、company_setting 表必须）
-- `const TARGET = 'main';` - 仅应用到 saas 主库（系统级表）
-- 不设置 - 应用到当前配置的数据库（普通业务表）
 
 ### 创建表模板
 

@@ -35,11 +35,11 @@ description: 项目结构快速定位
 
 ```text
 .
-├── main/           # Go Main 核心后端（Gin 单体）
 ├── admin/          # PHP 管理后台 + 店铺后台（ThinkPHP）
+├── main/           # Go Main 核心后端（Gin 单体）
+├── ttpos-flutter/  # 多终端 Flutter 前端工程 / 新管理端（对接的是main，与php没有关联关系）
 ├── ttpos-bmp/      # Go BMP 业务中台微服务（GoFrame）
 ├── ttpos-api/      # 公共 API / SDK 定义与复用代码
-├── ttpos-flutter/  # 多终端 Flutter 前端工程 / 新管理端
 ├── ttpos-scripts/  # 脚本与运维工具（独立仓库式管理）
 ├── docker/         # Docker / Compose / 中间件配置
 ├── docs/           # 文档体系（与 AGENTS.md 说明保持一致）

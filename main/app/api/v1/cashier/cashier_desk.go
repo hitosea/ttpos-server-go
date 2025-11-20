@@ -30,10 +30,11 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv   service.IDeskSrv   // 主服务
-	memberSrv service.IMemberSrv // 会员服务
-	orderSrv  service.IOrderSrv  // 订单服务
-	otherSrv  service.IOtherSrv  // 其他服务
+	deskSrv    service.IDeskSrv    // 主服务
+	deskMapSrv service.IDeskMapSrv // 桌台地图服务
+	memberSrv  service.IMemberSrv  // 会员服务
+	orderSrv   service.IOrderSrv   // 订单服务
+	otherSrv   service.IOtherSrv   // 其他服务
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -1904,6 +1905,28 @@ func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDeskMapLayout 获取桌台地图布局
+// @Summary 获取桌台地图布局
+// @Description 获取当前商户的桌台地图布局数据，用于地图模式展示
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.DeskMapAreaListResp}
+// @Router /cashier/desk/map/layout [get]
+func (h *DeskHandler) GetDeskMapLayout(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+
+	// 获取区域列表及布局状态
+	list, err := h.deskMapSrv.GetAreaListWithStatus(companyUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, list, "获取成功")
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1921,12 +1944,14 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
+	deskMapSrv := service.NewDeskMapSrv(dbm)
 	// 初始化处理器
 	wrapper := DeskHandler{
-		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
-		memberSrv: memberSrv,
-		orderSrv:  orderSrv,
-		otherSrv:  otherSrv,
+		deskSrv:    service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		deskMapSrv: deskMapSrv,
+		memberSrv:  memberSrv,
+		orderSrv:   orderSrv,
+		otherSrv:   otherSrv,
 	}
 
 	// 需要认证
@@ -1992,5 +2017,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
 		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
+
+		// 桌台地图相关接口
+		privateApi.GET("/desk/map/layout", wrapper.GetDeskMapLayout) // 获取桌台地图布局
 	}
 }

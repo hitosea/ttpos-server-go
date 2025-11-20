@@ -47,7 +47,7 @@
   ↓ HTTP API
 新管理端配置 (admin/app/shop/) 
   ↓ 数据库写入
-布局数据 (ttpos_table_map_layout)
+布局数据 (ttpos_desk_map_layout)
   ↓ HTTP API 读取
 终端展示 (main/app/api/v1/{cashier,assistant}/)
   ↓ Flutter 渲染
@@ -83,7 +83,7 @@
 
 ### API 设计规范 (api.mdc)
 
-- URL 使用 snake_case，如 `/api/v1/admin/table_map/layout`；
+- URL 使用 snake_case，如 `/api/v1/admin/desk_map/layout`；
 - 响应格式统一 `{code, message, data{}}`；
 - data 字段为对象，不为 null 或数组；
 - 分页信息统一放在 `meta` 中。
@@ -97,17 +97,10 @@
 
 ---
 
-## 🔄 代码复用分析
-
-### 可复用的现有组件（待开发阶段具体检索）
-
-- **桌台/区域管理相关 Model & Service**: `admin/app/*` 下现有桌台、区域管理模块，可直接复用基础数据结构和业务校验。
-- **多终端桌台列表接口**: 终端当前使用的桌台列表/状态接口可作为数据源，地图模式以相同数据为基础，仅变更展示方式。
-
 ### 集成点
 
 - 云平台商家表：在现有商家信息表基础上新增能力开关字段；
-- Admin 新管理端：在餐厅/桌台管理模块下挂载「桌台地图」配置功能；
+- Mian 新管理端：在餐厅/桌台管理模块下挂载「桌台地图」配置功能；
 - 终端（收银机/点餐助手）：在现有桌台列表页增加地图模式入口，并新增布局数据加载接口。
 
 ---
@@ -140,7 +133,7 @@ API 层 (Controller/API)
 
 **后端实现路径**（PHP + ThinkPHP）：
 - **Model**: `admin/app/admin/model/Merchant.php` - 扩展商家表字段
-  - 新增：`enable_table_map`, `enable_data_management`
+  - 新增：`enable_desk_map`, `enable_data_management`
 - **Service**: `admin/app/admin/service/MerchantService.php` - 商家能力开关业务逻辑
 - **Controller**: `admin/app/admin/controller/MerchantController.php` - 商家管理接口
 - **Validate**: `admin/app/admin/validate/MerchantValidate.php` - 参数验证器
@@ -150,36 +143,41 @@ API 层 (Controller/API)
 - `admin/views/admin/components/` - 可复用的开关组件
 
 **数据库迁移**：
-- `admin/database/migrations/{YYYYMMDDHHMMSS}_alter_ttpos_merchant_add_table_map_fields.php`
+- `admin/database/migrations/{YYYYMMDDHHMMSS}_alter_ttpos_merchant_add_desk_map_fields.php`
 
 #### 新管理端-桌面端（餐厅管理）
 
 根据 `structs.mdc` 新管理端映射规则：
 
 **涉及终端**：
-- `shop` (商家/门店管理端)：但注意这里指的是**新管理端-桌面端**（在 `ttpos-flutter/apps/shop`），不是旧的 `admin/views/shop`
+- `shop` (商家/门店管理端)：**新管理端-桌面端**（在 `ttpos-flutter/apps/shop`），不是旧的 `admin/views/shop`
 
-**后端实现路径**（PHP + ThinkPHP）：
-- **Controller**: `admin/app/shop/controller/TableMapController.php`
-  - `index()`：获取区域+状态列表
-  - `edit()`：获取某区域桌台基础信息 + 布局信息
-  - `saveLayout()`：保存布局
-- **Service**: `admin/app/shop/service/TableMapService.php` - 桌台地图配置业务逻辑
-- **Model**: `admin/app/shop/model/TableMapLayout.php` - 桌台布局数据模型
-- **Validate**: `admin/app/shop/validate/TableMapValidate.php` - 布局数据验证器
+**后端实现路径**（Go Main 模块）：
+- **API 前缀**: `/api/v1/shop/desk_map`
+- **API 层**: `main/app/api/v1/shop/desk_map_api.go`
+  - `GetAreaList()`：获取区域+状态列表
+  - `GetLayoutDetail()`：获取某区域桌台基础信息 + 布局信息
+  - `SaveLayout()`：保存布局
+- **Service 层**: `main/app/service/desk_map_service.go` - 桌台地图配置业务逻辑
+- **Repository 层**: `main/app/repository/desk_map_repository.go` - 桌台布局数据访问
+- **Model**: `main/app/model/desk_map_layout.go` - 桌台布局数据模型
+- **DTO**: 
+  - `main/app/dto/req/desk_map_req.go` - 请求参数
+  - `main/app/dto/resp/desk_map_resp.go` - 响应数据
 
 **前端实现路径**（ttpos-flutter 仓库）：
 - `ttpos-flutter/apps/shop/` - 新管理端-桌面端
   - 桌台地图配置页面与画布编辑组件
 
 **数据库迁移**：
-- `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_table_map_layout_table.php`
+- `admin/database/migrations/{YYYYMMDDHHMMSS}_create_desk_map_layout_table.php`
 
-**PHP 规范遵循**：
-- ✅ Controller 只做参数获取/校验与结果返回
+**Go Main 规范遵循**：
+- ✅ API 层只做参数绑定/校验与结果返回
 - ✅ 业务逻辑放在 Service 层
-- ✅ 使用验证器验证参数
+- ✅ 数据访问通过 Repository 层
 - ✅ 使用软删除（`delete_time` 字段）
+- ✅ 遵循三层依赖架构：API → Service → Repository
 
 #### 终端（收银机/点餐助手）
 
@@ -191,17 +189,17 @@ API 层 (Controller/API)
 
 **后端实现路径**（Go Main 模块）：
 - **API 层**: 
-  - `main/app/api/v1/cashier/table_map_api.go` - 收银端桌台地图接口
-  - `main/app/api/v1/assistant/table_map_api.go` - 点餐助手端桌台地图接口
+  - `main/app/api/v1/cashier/desk_map_api.go` - 收银端桌台地图接口
+  - `main/app/api/v1/assistant/desk_map_api.go` - 点餐助手端桌台地图接口
 - **Service 层**: 
-  - `main/app/service/table_map_service.go` - 桌台地图业务逻辑（可复用现有 `table_service.go`）
+  - `main/app/service/desk_map_service.go` - 桌台地图业务逻辑（可复用现有 `table_service.go`）
 - **Repository 层**: 
-  - `main/app/repository/table_map_repository.go` - 桌台布局数据访问
+  - `main/app/repository/desk_map_repository.go` - 桌台布局数据访问
 - **Model 层**: 
-  - `main/app/model/table_map_layout.go` - 桌台布局数据模型
+  - `main/app/model/desk_map_layout.go` - 桌台布局数据模型
 - **DTO 层**:
-  - `main/app/dto/req/table_map_req.go` - 请求参数
-  - `main/app/dto/resp/table_map_resp.go` - 响应数据
+  - `main/app/dto/req/desk_map_req.go` - 请求参数
+  - `main/app/dto/resp/desk_map_resp.go` - 响应数据
 
 **前端实现路径**（ttpos-flutter 仓库）：
 - `ttpos-flutter/apps/pos/` - 收银端地图模式组件
@@ -223,7 +221,7 @@ API 层 (Controller/API)
 
 - 表：`ttpos_merchant`（假设）
 - 新增字段：
-  - `enable_table_map` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力';
+  - `enable_desk_map` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力';
   - `enable_data_management` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力';
 
 索引：  
@@ -231,7 +229,7 @@ API 层 (Controller/API)
 
 ### 表 2: 区域桌台布局表
 
-- 表：`ttpos_table_map_layout`
+- 表：`ttpos_desk_map_layout`
 
 核心字段（示例）：
 
@@ -294,7 +292,7 @@ API 层 (Controller/API)
 
 #### API 1: 获取区域列表及地图配置状态
 
-- **URL**: `/api/v1/admin/table_map/areas`
+- **URL**: `/api/v1/admin/desk_map/areas`
 - **Method**: `GET`
 - **Request Params**:
   - `company_uuid`（可从登录上下文获取）
@@ -319,7 +317,7 @@ API 层 (Controller/API)
 
 #### API 2: 获取某区域布局详情
 
-- **URL**: `/api/v1/admin/table_map/layout_detail`
+- **URL**: `/api/v1/admin/desk_map/layout_detail`
 - **Method**: `GET`
 - **Request Params**:
   - `area_uuid` (required)
@@ -351,7 +349,7 @@ API 层 (Controller/API)
 
 #### API 3: 保存区域布局
 
-- **URL**: `/api/v1/admin/table_map/save_layout`
+- **URL**: `/api/v1/admin/desk_map/save_layout`
 - **Method**: `POST`
 - **Body**:
 
@@ -395,7 +393,7 @@ API 层 (Controller/API)
 
 #### API 4: 获取桌台地图布局（终端）
 
-- **URL**: `/api/v1/terminal/table_map/layout`
+- **URL**: `/api/v1/terminal/desk_map/layout`
 - **Method**: `GET`
 - **Params**:
   - `area_uuid`（可选，默认所有区域）
@@ -424,14 +422,14 @@ API 层 (Controller/API)
 
 ### 后端 Service（示例：PHP）
 
-- `TableMapService`
+- `DeskMapService`
   - `getAreaListWithStatus($companyUuid)`
   - `getAreaLayoutDetail($companyUuid, $areaUuid)`
   - `saveAreaLayout($companyUuid, $areaUuid, $layoutData)`
 
 ### 前端组件（新管理端）
 
-- 页面：`AdminTableMapPage`
+- 页面：`AdminDeskMapPage`
   - 子组件：
     - `AreaListPanel`：区域列表及状态；
     - `TableListPanel`：区域桌台列表 + 勾选；
@@ -439,7 +437,7 @@ API 层 (Controller/API)
 
 ### 前端组件（终端）
 
-- 页面：`TableMapView`
+- 页面：`DeskMapView`
   - 提供模式切换（列表/地图）；
   - 使用已有桌台状态颜色体系，避免新增一套。
 
@@ -448,7 +446,7 @@ API 层 (Controller/API)
 ## ⚡ 缓存与性能
 
 - 布局数据读多写少，可在终端侧增加短期缓存（如内存/本地存储），但后端暂不强制 Redis 缓存；
-- 若后续性能瓶颈明显，可为布局查询增加 Redis 缓存，Key 形如：`ttpos:table_map:layout:{company_uuid}:{area_uuid}`。
+- 若后续性能瓶颈明显，可为布局查询增加 Redis 缓存，Key 形如：`ttpos:desk_map:layout:{company_uuid}:{area_uuid}`。
 
 ---
 
@@ -463,7 +461,7 @@ API 层 (Controller/API)
 
 ## 🧪 测试策略（概要）
 
-- 单元测试：对 `TableMapService` 主要方法进行覆盖，验证布局读写与状态判断逻辑；
+- 单元测试：对 `DeskMapService` 主要方法进行覆盖，验证布局读写与状态判断逻辑；
 - API 测试：覆盖 Admin 配置接口与终端布局获取接口；
 - 集成测试：模拟从云平台开启开关 → Admin 配置布局 → 终端拉取并展示的完整链路；
 - 前端：对画布核心交互（拖拽、缩放、保存）进行 E2E 或手动测试。

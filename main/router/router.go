@@ -104,6 +104,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache) // 调拨单
 
 			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache) // 导出记录
+
+			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache) // 桌台地图
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
