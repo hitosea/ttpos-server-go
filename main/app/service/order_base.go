@@ -218,6 +218,36 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}, nil
 }
 
+// SetOrderSource 设置销售账单订单来源
+func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orderSourceUuid uint64) error {
+	if saleBillUuid == 0 {
+		return errors.New("销售账单 UUID 不能为空")
+	}
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(saleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	return repository.NewSaleBillRepo(db).UpdateOrderSource(saleBillUuid, orderSourceUuid)
+}
+
+// SetNationality 设置销售账单国籍
+func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nationalityUuid uint64) error {
+	if saleBillUuid == 0 {
+		return errors.New("销售账单 UUID 不能为空")
+	}
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(saleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	return repository.NewSaleBillRepo(db).UpdateNationality(saleBillUuid, nationalityUuid)
+}
+
 // IsCellCancelOrder 判断订单是否可以取消
 func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error) {
 	dbId := ctx.GetDbId()

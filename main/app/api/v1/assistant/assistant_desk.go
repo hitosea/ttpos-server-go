@@ -177,6 +177,31 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SetNationality 设置桌台订单国籍
+// @Summary 设置桌台订单国籍
+// @Description 设置当前桌台订单的国籍信息
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetNationalityReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/set_nationality [post]
+func (h *DeskHandler) SetNationality(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetNationalityReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // OrderProductRemark 处理桌台订单商品备注
 // @Summary 桌台订单商品备注
 // @Description 桌台订单商品备注
@@ -1958,6 +1983,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                                  // 获取桌台详情
 		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                                                  // 定时获取桌台信息
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                             // 创建桌台订单(开桌)
+		privateApi.POST("/desk/set_nationality", wrapper.SetNationality)                                                   // 设置桌台订单国籍
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                                       // 向购物车添加商品
 		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐
 		privateApi.GET("/desk/order/cart/product/flavor_and_attribute", wrapper.OrderCartProductFlavorAndAttribute)        // 查询购物车商品“规格/属性”

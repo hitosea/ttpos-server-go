@@ -26,13 +26,15 @@ type SaleBill struct {
 	IsSplitOrder uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
 
 	// 订单类型字段
-	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
-	DiningMethod    uint  `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
-	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
-	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
-	BuffetStartTime int64 `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
-	DelayDuration   uint  `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
-	DelayStartTime  int64 `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
+	BillType        uint   `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
+	DiningMethod    uint   `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
+	OrderSourceUuid uint64 `gorm:"column:order_source_uuid;type:bigint(20);default:0;comment:订单来源UUID（0=店内，>0=外卖）" json:"order_source_uuid"`
+	NationalityUuid uint64 `gorm:"column:nationality_uuid;type:bigint(20);default:0;comment:国籍UUID（0=未记录）" json:"nationality_uuid"`
+	IsBuffet        uint   `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
+	BuffetDuration  uint   `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
+	BuffetStartTime int64  `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
+	DelayDuration   uint   `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
+	DelayStartTime  int64  `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
 
 	NonOrderingTime   uint `gorm:"default:0;comment:不可下单时间（分钟）"`
 	ReminderOrderTime uint `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
@@ -103,6 +105,8 @@ type SaleBill struct {
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 	BatchTag        *BatchTag         `gorm:"foreignKey:BatchTagUuid;references:uuid"`
+	OrderSource     *OrderSource      `gorm:"foreignKey:OrderSourceUuid;references:uuid"`
+	Nationality     *Nationality      `gorm:"foreignKey:NationalityUuid;references:uuid"`
 }
 
 // 获取自助餐套餐名称

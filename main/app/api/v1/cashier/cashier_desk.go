@@ -156,6 +156,56 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SetOrderSource 设置桌台订单来源
+// @Summary 设置桌台订单来源
+// @Description 将目标订单标记为某个外卖渠道，可从桌台流程触发
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetOrderSourceReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/set_order_source [post]
+func (h *DeskHandler) SetOrderSource(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetOrderSourceReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	if err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// SetNationality 设置桌台订单国籍
+// @Summary 设置桌台订单国籍
+// @Description 设置当前桌台订单的国籍信息
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetNationalityReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/set_nationality [post]
+func (h *DeskHandler) SetNationality(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetNationalityReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // CloseDesk 处理关闭桌台
 // @Summary 关闭桌台
 // @Description 关闭桌台
@@ -2027,6 +2077,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                                            // 完成桌台（清台）
 		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                                // 切换桌台（转台）
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                             // 创建桌台订单(开桌)
+		privateApi.POST("/desk/set_order_source", wrapper.SetOrderSource)                                                  // 设置桌台订单来源
+		privateApi.POST("/desk/set_nationality", wrapper.SetNationality)                                                   // 设置桌台订单国籍
 		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                                  // 合并桌台
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                                     // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                                        // 删除桌台订单商品

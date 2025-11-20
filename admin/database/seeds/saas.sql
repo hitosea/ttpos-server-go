@@ -224,6 +224,8 @@ CREATE TABLE `ttpos_company_setting` (
     `is_open_tablet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
     `is_open_h5` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
     `is_open_assistant` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
+    `enable_table_map` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力：0-否；1-是',
+    `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `is_open_kitchen_kds` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',

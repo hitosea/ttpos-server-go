@@ -11,7 +11,7 @@
 | **创建日期**      | 2025-11-19                                                                                                                                   |
 | **负责人**        | {姓名}                                                                                                                                       |
 | **目标 Sprint**   | v2.10.0                                                                                                                                      |
-| **涉及技术栈**    | [x] Go (main/) [ ] Go (ttpos-bmp/) [x] PHP (admin/) [x] Vue (admin/views/) [x] Flutter (ttpos-flutter/)                                    |
+| **涉及技术栈**    | [x] Go (main/) [ ] Go (ttpos-bmp/) [x] PHP (admin/ - 仅数据库迁移) [ ] Vue (admin/views/) [x] Flutter (ttpos-flutter/)                                    |
 | **UI 原型**       | [墨刀原型](https://modao.cc/proto/NYlDfREZt0gr57g5xvn9XE/sharing?view_mode=read_only&screen=rbpUwSqjkR28u5f0y)                               |
 
 ---
@@ -49,6 +49,8 @@
 
 **用户故事**: 作为 商户管理员，我想在新管理端业务设置中配置外卖来源，以便收银端可以选择订单来源。
 
+**技术实现**: 新管理端（Flutter）调用 Main 模块（Go）的配置管理 API。
+
 #### 验收标准
 
 1. **WHEN** 管理员进入「业务设置」页面 **THEN** 系统展示「外卖管理」配置模块，包含功能开关和外卖来源列表。
@@ -71,6 +73,8 @@
 ### Requirement 2: 新管理端-业务设置-国籍管理（对应任务 36914）
 
 **用户故事**: 作为 商户管理员，我想在新管理端业务设置中配置国籍选项，以便收银端可以记录顾客国籍。
+
+**技术实现**: 新管理端（Flutter）调用 Main 模块（Go）的配置管理 API。
 
 #### 验收标准
 

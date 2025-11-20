@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `serial_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌位编号 (点餐流水号)',
     `bill_type` INT(10) NOT NULL DEFAULT 0 COMMENT '账单类型, 0-桌台订单、1-点餐订单、2-会员端订单',
     `dining_method` INT(10) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食(店内就餐) 1-打包',
+    `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖）',
+    `nationality_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '国籍UUID（0=未记录）',
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_lock` INT(10) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',
@@ -77,6 +79,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_deletetime_uuid_id` (`delete_time`, `uuid`, `id`),
     INDEX `idx_uuid_hidebilltime_id` (`uuid`, `hide_bill_time`, `id`),
+    INDEX `idx_order_source_uuid` (`order_source_uuid`),
+    INDEX `idx_nationality_uuid` (`nationality_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单表';
 
@@ -742,6 +746,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台信息表';
+
+-- 桌台地图布局表
+CREATE TABLE IF NOT EXISTS `ttpos_desk_map_layout` (
+    `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '布局UUID',
+    `area_uuid` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '区域UUID',
+    `layout_json` TEXT NOT NULL COMMENT '画布布局JSON（含桌台坐标、尺寸、样式等）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（软删除）',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    UNIQUE KEY `uk_area_uuid` (`area_uuid`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '桌台地图布局表';
 
 -- 销售账单操作记录表
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_operation_record` (
@@ -2256,6 +2275,36 @@ CREATE TABLE IF NOT EXISTS `ttpos_multi_language_name` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '多语言名称表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_order_source` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称UUID',
+    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
+    `status` INT(3) NOT NULL DEFAULT 1 COMMENT '状态：1-启用；0-禁用',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    INDEX `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
+    INDEX `idx_delete_time` (`delete_time`),
+    INDEX `idx_status` (`status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '外卖来源配置表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_nationality` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称UUID',
+    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
+    `status` INT(3) NOT NULL DEFAULT 1 COMMENT '状态：1-启用；0-禁用',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    INDEX `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
+    INDEX `idx_delete_time` (`delete_time`),
+    INDEX `idx_status` (`status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '国籍配置表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_company` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '集团ID',
@@ -2287,6 +2336,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `is_open_tablet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
     `is_open_h5` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
     `is_open_assistant` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
+    `enable_table_map` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力：0-否；1-是',
+    `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `is_open_kitchen_kds` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
@@ -2294,6 +2345,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `is_open_advanced_ticket_print` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启高级票据打印模板: 0不开启, 1开启',
     `is_open_coupon` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启优惠券: 0不开启, 1开启',
     `is_open_marketing` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启营销活动: 0不开启, 1开启',
+    `enable_order_source` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用外卖来源：0-否；1-是',
+    `enable_nationality` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用国籍记录：0-否；1-是',
     `enable_sms` INT(11) NOT NULL DEFAULT 0 COMMENT '是否启用短信功能：0-否；1-是',
     `sms_quota` INT(11) NOT NULL DEFAULT 0 COMMENT '短信配额',
     `cash_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '收银机上限',

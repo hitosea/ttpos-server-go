@@ -149,6 +149,56 @@ func (h *InstantHandler) ShowOrder(c *gin.Context) {
 	helper.Success(c, shopCart)
 }
 
+// SetOrderSource 设置点餐订单来源
+// @Summary 设置点餐订单来源
+// @Description 将点餐订单标记为某个外卖渠道
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetOrderSourceReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/set_order_source [post]
+func (h *InstantHandler) SetOrderSource(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetOrderSourceReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	if err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// SetNationality 设置点餐订单国籍
+// @Summary 设置点餐订单国籍
+// @Description 设置当前点餐订单的国籍信息
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetNationalityReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/set_nationality [post]
+func (h *InstantHandler) SetNationality(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetNationalityReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // OrderList 处理显示点餐订单列表（取单列表）
 // @Summary 显示点餐订单列表（取单列表）
 // @Description 显示点餐订单列表（取单列表）
@@ -1636,6 +1686,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                                         // 取消点餐订单
 		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                                             // 隐藏点餐订单（挂单）
 		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                                             // 显示点餐订单（取单）
+		privateApi.POST("/instant/set_order_source", wrapper.SetOrderSource)                                                  // 设置点餐订单来源
+		privateApi.POST("/instant/set_nationality", wrapper.SetNationality)                                                   // 设置点餐订单国籍
 		privateApi.GET("/instant/order/list", wrapper.OrderList)                                                              // 显示点餐订单列表（取单列表）
 		privateApi.POST("/instant/order/takeout", wrapper.OrderTakeout)                                                       // 打包
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                                        // 删除点餐订单商品

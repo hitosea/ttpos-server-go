@@ -12,7 +12,7 @@
 
 ## 📊 进度总览
 
-**总任务数**: 25（Phase 1: 6 + Phase 2: 6 + Phase 3: 5 + Phase 4: 4 + Phase 5: 4）  
+**总任务数**: 25（Phase 1: 6 + Phase 2: 6 + Phase 3: 6 + Phase 4: 4 + Phase 5: 3）  
 **已完成**: 0  
 **进行中**: -  
 **完成率**: 0%
@@ -91,73 +91,96 @@
 
 ---
 
-## Phase 2: 后台配置管理（Admin 模块 - PHP）
+## Phase 2: 配置管理接口（Main 模块 - Go）
 
-> 根据 `structs.mdc`，本阶段涉及 **Admin 模块 - 店铺后台**（PHP + ThinkPHP）：`admin/app/shop/`
+> 根据 `structs.mdc`，新管理端（Flutter）应调用 **Main 模块的 Go 接口**：`main/app/api/v1/shop/`
 
-- [ ] 2.1 新增外卖来源 Model
+- [ ] 2.1 新增外卖来源 Model（Go Main）
 
-  - **Module**: Admin - 店铺后台 Model
-  - **File**: `admin/app/shop/model/OrderSource.php`
-  - **Purpose**: 映射 `ttpos_order_source` 表
+  - **Module**: Main - Model 层
+  - **File**: `main/app/model/order_source.go`
+  - **Purpose**: 定义外卖来源数据模型
   - **Requirements**: R1.1-R1.6
-  - **Leverage**: 现有类似配置类 Model
-  - **Prompt**: Role: PHP Developer | Task: 创建 OrderSource Model 映射配置表 | Context: 使用 ThinkPHP Model 规范，关联多语言表 | Restrictions: 遵循 `.cursor/rules/php.mdc` | Success: Model 可正常读写配置数据
+  - **Leverage**: 现有配置类 Model
+  - **Prompt**: Role: Go Developer | Task: 创建 OrderSource Model 映射配置表 | Context: 遵循 Go Main Model 规范 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: 字段可正常读写
 
-- [ ] 2.2 新增外卖来源 Service
+- [ ] 2.2 新增外卖来源 Repository（Go Main）
 
-  - **Module**: Admin - 店铺后台 Service
-  - **File**: `admin/app/shop/service/OrderSourceService.php`
-  - **Purpose**: 封装外卖来源增删改查逻辑
+  - **Module**: Main - Repository 层
+  - **File**: `main/app/repository/order_source_repository.go`
+  - **Purpose**: 外卖来源数据访问层
+  - **Requirements**: R1.1-R1.6
+  - **Leverage**: 现有 Repository 模式
+  - **Key Points**: 
+    - `FindList()` - 查询列表（JOIN ttpos_multi_language_name）
+    - `FindByUuid(uuid)` - 根据 UUID 查询
+    - `Create(model)` - 创建记录
+    - `Update(model)` - 更新记录
+    - `SoftDelete(uuid)` - 软删除
+    - `CountOrdersBySourceUuid(uuid)` - 统计订单数量
+  - **Prompt**: Role: Go Developer | Task: 创建 OrderSourceRepository 数据访问层 | Context: Repository 只持有 db 实例，不依赖其他层 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: Repository 方法可正常调用
+
+- [ ] 2.3 新增外卖来源 Service（Go Main）
+
+  - **Module**: Main - Service 层
+  - **File**: `main/app/service/order_source_service.go`
+  - **Purpose**: 封装外卖来源业务逻辑
   - **Requirements**: R1.1-R1.6
   - **Leverage**: 现有配置管理 Service 模式
   - **Key Points**: 
-    - `getList()` - JOIN ttpos_multi_language_name 获取名称
-    - `create($data)` - 先创建多语言名称，再创建外卖来源
-    - `update($uuid, $data)` - 更新多语言名称
-    - `delete($uuid)` - 软删除前校验是否有订单使用
-  - **Prompt**: Role: PHP Developer | Task: 创建 OrderSourceService，实现配置管理业务逻辑 | Context: 业务逻辑放在 Service 层，依赖多语言名称 Service | Restrictions: 遵循 `.cursor/rules/php.mdc`，Controller 不包含业务逻辑 | Success: Service 方法可正常调用
+    - `GetList()` - 获取外卖来源列表
+    - `Create(req)` - 创建外卖来源（先创建多语言名称，再创建外卖来源）
+    - `Update(uuid, req)` - 更新外卖来源（更新多语言名称）
+    - `Delete(uuid)` - 软删除前校验是否有订单使用
+    - `CheckCanDelete(uuid)` - 校验是否可删除
+  - **Prompt**: Role: Go Developer | Task: 创建 OrderSourceService 业务逻辑层 | Context: Service 可依赖其他 Service（如 MultiLanguageNameService） | Restrictions: 遵循 `.cursor/rules/go-main.mdc`，不使用 panic，返回 error | Success: Service 方法可正常调用
 
-- [ ] 2.3 新增外卖来源 Controller 和路由
+- [ ] 2.4 新增外卖来源 DTO（Go Main）
 
-  - **Module**: Admin - 店铺后台 Controller
-  - **File**: `admin/app/shop/controller/OrderSourceController.php`
+  - **Module**: Main - DTO 层
+  - **File**: `main/app/dto/req/order_source_req.go`, `main/app/dto/resp/order_source_resp.go`
+  - **Purpose**: 定义外卖来源请求和响应数据结构
+  - **Requirements**: R1.1-R1.6
+  - **Leverage**: 现有 DTO 示例
+  - **Prompt**: Role: Go Developer | Task: 创建外卖来源相关 DTO | Context: 遵循 Go Main DTO 规范 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: DTO 结构清晰合理
+
+- [ ] 2.5 新增外卖来源 API 和路由（Go Main）
+
+  - **Module**: Main - API 层
+  - **File**: `main/app/api/v1/shop/order_source_api.go`
   - **Purpose**: 提供外卖来源管理 API（list, create, update, delete）
   - **Requirements**: R1.1-R1.6
-  - **Leverage**: 现有 Controller 示例
-  - **Prompt**: Role: PHP Developer | Task: 创建 OrderSourceController，实现配置管理接口 | Context: Controller 只做参数获取/校验与结果返回 | Restrictions: 遵循 `.cursor/rules/php.mdc` 和 `.cursor/rules/api.mdc` | Success: API 接口可正常调用
+  - **Leverage**: 现有 API 示例
+  - **Key Points**:
+    - `GetList()` - GET `/api/v1/shop/order_source/list`
+    - `Create()` - POST `/api/v1/shop/order_source/create`
+    - `Update()` - POST `/api/v1/shop/order_source/update`
+    - `Delete()` - POST `/api/v1/shop/order_source/delete`
+  - **Prompt**: Role: Go Developer | Task: 创建 OrderSourceAPI 接口层 | Context: API → Service 严格分层，URL 使用 snake_case | Restrictions: 遵循 `.cursor/rules/go-main.mdc` 和 `.cursor/rules/api.mdc` | Success: API 接口可正常调用
 
-- [ ] 2.4 新增国籍 Model
+- [ ] 2.6 新增国籍 Model/Repository/Service/DTO/API（Go Main）
 
-  - **Module**: Admin - 店铺后台 Model
-  - **File**: `admin/app/shop/model/Nationality.php`
-  - **Purpose**: 映射 `ttpos_nationality` 表
+  - **Module**: Main - 完整分层
+  - **Files**: 
+    - `main/app/model/nationality.go`
+    - `main/app/repository/nationality_repository.go`
+    - `main/app/service/nationality_service.go`
+    - `main/app/dto/req/nationality_req.go`
+    - `main/app/dto/resp/nationality_resp.go`
+    - `main/app/api/v1/shop/nationality_api.go`
+  - **Purpose**: 国籍管理完整实现
   - **Requirements**: R2.1-R2.7
-  - **Leverage**: 2.1 的 Model 结构，几乎一致
-
-- [ ] 2.5 新增国籍 Service
-
-  - **Module**: Admin - 店铺后台 Service
-  - **File**: `admin/app/shop/service/NationalityService.php`
-  - **Purpose**: 封装国籍增删改查逻辑
-  - **Requirements**: R2.1-R2.7
-  - **Leverage**: 2.2 的 Service 模式
-
-- [ ] 2.6 新增国籍 Controller 和路由
-
-  - **Module**: Admin - 店铺后台 Controller
-  - **File**: `admin/app/shop/controller/NationalityController.php`
-  - **Purpose**: 提供国籍管理 API（list, create, update, delete）
-  - **Requirements**: R2.1-R2.7
-  - **Leverage**: 2.3 的 Controller 模式
+  - **Leverage**: 2.1-2.5 的实现模式，结构几乎一致
+  - **Key Points**: API 路径为 `/api/v1/shop/nationality/*`
 
 ---
 
-## Phase 3: 终端订单创建扩展（Main 模块 - Go）
+## Phase 3: 终端订单创建和查询扩展（Main 模块 - Go）
 
 > 根据 `structs.mdc`，本阶段涉及：
 > - **Main 模块**（Go + Gin）：`main/app/api/v1/{cashier,assistant}/`
 > - 扩展订单创建接口，增加订单来源和国籍参数
+> - 同时为终端提供配置列表查询接口
 
 - [ ] 3.1 扩展订单 Model（Go Main）
 
@@ -168,15 +191,7 @@
   - **Leverage**: 现有订单模型
   - **Prompt**: Role: Go Developer | Task: 在订单模型中增加订单来源和国籍字段 | Context: 遵循 Go Main Model 规范 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: 字段可正常读写
 
-- [ ] 3.2 新增外卖来源和国籍 Model（Go Main）
-
-  - **Module**: Main - Model 层
-  - **File**: `main/app/model/order_source.go`, `main/app/model/nationality.go`
-  - **Purpose**: 定义外卖来源和国籍数据模型（用于查询配置）
-  - **Requirements**: R3, R4
-  - **Leverage**: 现有配置类 Model
-
-- [ ] 3.3 扩展订单 DTO（Go Main）
+- [ ] 3.2 扩展订单 DTO（Go Main）
 
   - **Module**: Main - DTO 层
   - **File**: `main/app/dto/req/order_req.go`, `main/app/dto/resp/order_resp.go`
@@ -185,17 +200,30 @@
   - **Leverage**: 现有 DTO 示例
   - **Prompt**: Role: Go Developer | Task: 扩展订单相关 DTO，增加订单来源和国籍字段 | Context: 遵循 Go Main DTO 规范 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: DTO 结构清晰合理
 
+- [ ] 3.3 扩展订单 Repository（Go Main）
+
+  - **Module**: Main - Repository 层
+  - **File**: `main/app/repository/order_repository.go`
+  - **Purpose**: 扩展订单创建和查询方法，处理订单来源和国籍字段
+  - **Requirements**: R3, R4, R5
+  - **Leverage**: 现有订单 Repository
+  - **Key Points**: 
+    - 订单创建时保存 order_source_uuid 和 nationality_uuid
+    - 订单详情查询时 JOIN 多语言表获取名称
+  - **Prompt**: Role: Go Developer | Task: 扩展 OrderRepository，增加订单来源和国籍字段处理 | Context: Repository 只持有 db 实例 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: Repository 方法可正常调用
+
 - [ ] 3.4 扩展订单 Service（Go Main）
 
   - **Module**: Main - Service 层
   - **File**: `main/app/service/order_service.go`
-  - **Purpose**: 扩展订单创建方法，处理订单来源和国籍字段
+  - **Purpose**: 扩展订单创建和查询方法，处理订单来源和国籍字段
   - **Requirements**: R3, R4, R5
   - **Leverage**: 现有订单创建逻辑
   - **Key Points**: 
     - 参数校验：order_source_uuid 和 nationality_uuid 可选
     - 默认值处理：0 表示未记录
-  - **Prompt**: Role: Go Developer | Task: 扩展 OrderService 订单创建方法，增加订单来源和国籍处理 | Context: Service 可依赖其他 Service | Restrictions: 遵循 `.cursor/rules/go-main.mdc`，不使用 panic，返回 error | Success: 订单创建成功记录订单来源和国籍
+    - 订单详情需返回订单来源和国籍名称
+  - **Prompt**: Role: Go Developer | Task: 扩展 OrderService 订单创建和查询方法，增加订单来源和国籍处理 | Context: Service 可依赖 OrderSourceService、NationalityService | Restrictions: 遵循 `.cursor/rules/go-main.mdc`，不使用 panic，返回 error | Success: 订单创建成功记录订单来源和国籍
 
 - [ ] 3.5 扩展订单 API（Go Main）
 
@@ -204,7 +232,20 @@
   - **Purpose**: 扩展订单创建和详情接口，支持订单来源和国籍字段
   - **Requirements**: R3, R4, R5
   - **Leverage**: 现有订单 API
-  - **Prompt**: Role: Go Developer | Task: 扩展订单创建和详情接口，增加订单来源和国籍参数/响应 | Context: API → Service → Repository 严格分层 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` 和 `.cursor/rules/api.mdc`，URL 使用 snake_case | Success: 接口可正常调用
+  - **Prompt**: Role: Go Developer | Task: 扩展订单创建和详情接口，增加订单来源和国籍参数/响应 | Context: API → Service 严格分层 | Restrictions: 遵循 `.cursor/rules/go-main.mdc` 和 `.cursor/rules/api.mdc`，URL 使用 snake_case | Success: 接口可正常调用
+
+- [ ] 3.6 为终端提供配置列表查询 API（Go Main）
+
+  - **Module**: Main - API 层
+  - **File**: `main/app/api/v1/cashier/order_source_api.go`, `main/app/api/v1/cashier/nationality_api.go` 或复用 shop 的接口
+  - **Purpose**: 终端（pos、assistant）查询外卖来源和国籍列表
+  - **Requirements**: R3, R4
+  - **Key Points**: 
+    - GET `/api/v1/cashier/order_source/list`
+    - GET `/api/v1/cashier/nationality/list`
+    - 只返回启用且未删除的配置
+    - 按 sort 排序
+  - **Prompt**: Role: Go Developer | Task: 为终端提供配置列表查询接口 | Context: 复用 OrderSourceService 和 NationalityService | Restrictions: 遵循 `.cursor/rules/go-main.mdc` | Success: 终端可获取配置列表
 
 ---
 
@@ -264,43 +305,39 @@
 
 ## Phase 5: 测试与优化
 
-- [ ] 5.1 后端单元测试
+- [ ] 5.1 后端单元测试（Go Main）
 
-  - **File**: 对应 Service/Model 测试文件
+  - **File**: 对应 Service 测试文件
   - **Purpose**: 覆盖核心业务逻辑（配置管理、订单创建扩展）
   - **Requirements**: 所有
   - **Key Points**: 
     - Service 层测试覆盖率 ≥ 70%
+    - 测试 OrderSourceService、NationalityService 的 CRUD
+    - 测试 OrderService 的订单创建和查询扩展
     - 测试多语言关联查询
     - 测试软删除校验
 
-- [ ] 5.2 API 集成测试
+- [ ] 5.2 API 集成测试（Go Main）
 
   - **File**: 对应 API 测试文件
-  - **Purpose**: 覆盖配置管理接口 + 订单创建/详情接口
+  - **Purpose**: 覆盖所有新增和扩展的接口
   - **Requirements**: 所有
   - **Key Points**: 
-    - 测试配置 CRUD 流程
-    - 测试订单创建带订单来源和国籍
-    - 测试订单详情返回正确名称
+    - 测试配置管理接口（/api/v1/shop/order_source/*, /api/v1/shop/nationality/*）
+    - 测试终端配置查询接口（/api/v1/cashier/order_source/list, /api/v1/cashier/nationality/list）
+    - 测试订单创建接口（带订单来源和国籍参数）
+    - 测试订单详情接口（返回订单来源和国籍名称）
 
-- [ ] 5.3 数据兼容性测试
+- [ ] 5.3 数据兼容性和多语言测试
 
-  - **Purpose**: 测试历史订单在各终端的显示效果
-  - **Requirements**: R5
+  - **Purpose**: 测试历史订单显示、多语言显示
+  - **Requirements**: R5, R2.6, R2.7
   - **Key Points**: 
-    - 历史订单（无订单来源和国籍）显示「未记录」
-    - 已删除配置仍显示原名称
-    - 不影响订单其他功能
-
-- [ ] 5.4 多语言测试
-
-  - **Purpose**: 测试国籍名称在不同语言环境下的显示
-  - **Requirements**: R2.6, R2.7
-  - **Key Points**: 
-    - 中文、英文、泰语环境下显示正确
+    - 历史订单（无订单来源和国籍）显示「未记录」或默认值
+    - 已删除配置仍显示原名称（软删除）
+    - 国籍名称在中文、英文、泰语环境下显示正确
     - 多语言表 JOIN 查询正确
-    - 新增配置支持多语言输入
+    - 不影响订单其他功能
 
 ---
 
@@ -338,12 +375,14 @@
 - [ ] 包含注释说明
 - [ ] 可重复执行
 
-**编写代码时：**
+**编写代码时（Go Main 模块）：**
 
-- [ ] 先创建/更新 `ttpos_multi_language_name` 记录
+- [ ] 创建配置时，先调用 MultiLanguageNameService 创建多语言名称记录
 - [ ] 将返回的 uuid 赋值给业务表的 `multi_language_name_uuid`
-- [ ] 查询时使用 JOIN 关联 `ttpos_multi_language_name` 表
-- [ ] 删除配置时使用软删除，避免历史订单数据丢失
+- [ ] 查询时使用 JOIN 关联 `ttpos_multi_language_name` 表获取名称
+- [ ] 更新配置时，调用 MultiLanguageNameService 更新多语言名称
+- [ ] 删除配置时使用软删除（设置 delete_time），避免历史订单数据丢失
+- [ ] Service 层依赖其他 Service（如 MultiLanguageNameService），不直接操作数据库
 
 ---
 
