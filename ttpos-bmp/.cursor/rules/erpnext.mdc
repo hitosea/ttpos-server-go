@@ -6,3 +6,4 @@ alwaysApply: true
 - 与erpnext交互时通过 ttpos-erp/internal/logic/erpnext 下的通用服务生成新的 logic服务
 - 与erpnext交互时通过输入输出的json 生成的struct 在 model/dto 包中
 - 生成与与erpnext交互时生成的服务，通常都包含 Create /Update /Delete /ChangeStatus /Count 方法
+- erpnext 自有的数据结构在 https://github.com/frappe/erpnext/blob/develop/erpnext/[应用]/doctype/[模块]/[模块].json 参考
