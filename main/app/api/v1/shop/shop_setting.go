@@ -1,7 +1,9 @@
 package shop
 
 import (
+	"errors"
 	"strconv"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -533,6 +535,154 @@ func (h *SettingHandler) GetPaymentMethodList(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// SaveCashierSetting 保存收银机设置
+// @Summary 保存收银机设置
+// @Description 保存收银机设置，包括副屏相关配置
+// @Tags 商家端.收银机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveCashierSettingReq true "保存收银机设置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/cashier [post]
+func (h *SettingHandler) SaveCashierSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var cashierSettingReq req.SaveCashierSettingReq
+	if err := c.ShouldBindJSON(&cashierSettingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 参数验证
+	if err := cashierSettingReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 调用 Service 层保存
+	err := h.settingSrv.EditCashierSetting(ctx, cashierSettingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
+// UploadCashierCarousel 上传收银机轮播内容（图片/视频）
+// @Summary 上传收银机轮播内容
+// @Description 上传收银机副屏轮播内容，支持图片（JPG、JPEG、PNG、WEBP，<15MB）和视频（MP4，<30MB）
+// @Tags 商家端.收银机设置
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param file formData file true "文件"
+// @Param file_type formData string false "文件类型：image 或 video，不传则自动识别"
+// @Param group_id formData int false "分组ID"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
+// @Router /shop/setting/cashier/carousel/upload [post]
+func (h *SettingHandler) UploadCashierCarousel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 打开文件
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	defer fileReader.Close()
+
+	// 获取文件类型参数（可选，如果不传则根据文件扩展名自动识别）
+	fileTypeParam := c.PostForm("file_type")
+
+	// 获取文件扩展名
+	fileName := file.Filename
+	extension := ""
+	if len(fileName) > 0 {
+		dotIndex := -1
+		for i := len(fileName) - 1; i >= 0; i-- {
+			if fileName[i] == '.' {
+				dotIndex = i
+				break
+			}
+		}
+		if dotIndex >= 0 && dotIndex < len(fileName)-1 {
+			extension = fileName[dotIndex+1:]
+		}
+	}
+	extension = strings.ToLower(extension)
+
+	// 获取分组ID
+	groupId := uint64(0)
+	if groupIdStr := c.PostForm("group_id"); groupIdStr != "" {
+		if id, err := strconv.ParseUint(groupIdStr, 10, 64); err == nil {
+			groupId = id
+		}
+	}
+
+	var uploadFileResp *resp.UploadFileResp
+
+	// 根据文件类型或扩展名判断是图片还是视频
+	if fileTypeParam == "image" || (fileTypeParam == "" && (extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "webp")) {
+		// 图片上传：JPG、JPEG、PNG、WEBP，<15MB
+		allowedExts := []string{"jpg", "jpeg", "png", "webp"}
+		isAllowed := false
+		for _, ext := range allowedExts {
+			if extension == ext {
+				isAllowed = true
+				break
+			}
+		}
+		if !isAllowed {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("图片仅支持JPG、JPEG、PNG、WEBP格式"))
+			return
+		}
+
+		// 检查文件大小：15MB
+		maxSizeBytes := int64(15 * 1024 * 1024)
+		if file.Size > maxSizeBytes {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("图片文件大小不能超过15MB"))
+			return
+		}
+
+		uploadFileResp, err = h.uploadFileSrv.UploadImage(ctx, fileReader, fileName, file.Size, groupId, "shop")
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	} else if fileTypeParam == "video" || (fileTypeParam == "" && extension == "mp4") {
+		// 视频上传：MP4，<30MB
+		if extension != "mp4" {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("视频仅支持MP4格式"))
+			return
+		}
+
+		// 检查文件大小：30MB
+		maxSizeBytes := int64(30 * 1024 * 1024)
+		if file.Size > maxSizeBytes {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("视频文件大小不能超过30MB"))
+			return
+		}
+
+		uploadFileResp, err = h.uploadFileSrv.UploadVideo(ctx, fileReader, fileName, file.Size, groupId, 30)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	} else {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("不支持的文件格式，图片支持JPG、JPEG、PNG、WEBP，视频支持MP4"))
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -560,9 +710,11 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.POST("/setting/store", wrapper.SaveStoreSetting)       // 保存门店设置
-		privateApi.POST("/setting/business", wrapper.SaveBusinessSetting) // 保存业务设置
-		privateApi.GET("/setting/business", wrapper.GetBusinessSetting)   // 获取业务设置
+		privateApi.POST("/setting/store", wrapper.SaveStoreSetting)                        // 保存门店设置
+		privateApi.POST("/setting/business", wrapper.SaveBusinessSetting)                  // 保存业务设置
+		privateApi.GET("/setting/business", wrapper.GetBusinessSetting)                    // 获取业务设置
+		privateApi.POST("/setting/cashier", wrapper.SaveCashierSetting)                    // 保存收银机设置
+		privateApi.POST("/setting/cashier/carousel/upload", wrapper.UploadCashierCarousel) // 上传收银机轮播内容
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因

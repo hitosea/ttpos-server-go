@@ -150,9 +150,9 @@ CREATE TABLE `setting` (
 ```json
 {
   "carousel": [],  // 轮播内容（未点餐时，已存在，最多15个）
-  "no_order_carousel_interval": 10,  // 未点餐时轮播间隔（新增，默认10秒）
+  "no_order_carousel_interval": "10",  // 未点餐时轮播间隔（新增，默认10秒）
   "order_display_mode": "carousel",  // 点餐时展示模式（新增，默认carousel）
-  "order_carousel_interval": 10,  // 点餐时轮播间隔（新增，默认10秒）
+  "order_carousel_interval": "10",  // 点餐时轮播间隔（新增，默认10秒）
   "is_auto_send": "0",
   "order_method": {...},
   ...
@@ -162,9 +162,9 @@ CREATE TABLE `setting` (
 **新增字段说明**:
 | 字段 | 类型 | 说明 | 默认值 | 约束 |
 |------|------|------|--------|------|
-| no_order_carousel_interval | int | 未点餐时轮播间隔(秒) | 10 | 范围10-120 |
+| no_order_carousel_interval | string | 未点餐时轮播间隔(秒) | "10" | 范围10-120 |
 | order_display_mode | string | 点餐时展示模式 | "carousel" | carousel/order/order_carousel |
-| order_carousel_interval | int | 点餐时轮播间隔(秒) | 10 | 范围10-120 |
+| order_carousel_interval | string | 点餐时轮播间隔(秒) | "10" | 范围10-120 |
 
 **轮播内容数量限制**:
 - 轮播内容（`carousel`）最多支持15个图片或视频
@@ -189,9 +189,9 @@ CREATE TABLE `setting` (
 // main/app/dto/resp/setting/cashier_setting.go
 type CashierResp struct {
     Carousel               []CarouselItem     `json:"carousel"`                   // 上传后的轮播内容url（图片 + 视频）- 已存在
-    NoOrderCarouselInterval int              `json:"no_order_carousel_interval"` // 未点餐时轮播间隔(秒) - 新增
+    NoOrderCarouselInterval string            `json:"no_order_carousel_interval"` // 未点餐时轮播间隔(秒) - 新增
     OrderDisplayMode       string            `json:"order_display_mode"`         // 点餐时展示模式 - 新增
-    OrderCarouselInterval  int               `json:"order_carousel_interval"`    // 点餐时轮播间隔(秒) - 新增
+    OrderCarouselInterval  string            `json:"order_carousel_interval"`    // 点餐时轮播间隔(秒) - 新增
     // ... 其他现有字段
     IsAutoSend             string             `json:"is_auto_send"`
     OrderMethod            OrderMethod        `json:"order_method"`
@@ -202,50 +202,81 @@ type CashierResp struct {
 **新增字段说明**:
 | 字段 | 类型 | JSON字段 | 说明 | 默认值 |
 |------|------|----------|------|--------|
-| NoOrderCarouselInterval | int | no_order_carousel_interval | 未点餐时轮播间隔(秒) | 10 |
+| NoOrderCarouselInterval | string | no_order_carousel_interval | 未点餐时轮播间隔(秒) | "10" |
 | OrderDisplayMode | string | order_display_mode | 点餐时展示模式 | "carousel" |
-| OrderCarouselInterval | int | order_carousel_interval | 点餐时轮播间隔(秒) | 10 |
+| OrderCarouselInterval | string | order_carousel_interval | 点餐时轮播间隔(秒) | "10" |
 
 ### DTO 扩展
 
-**说明**: 不需要创建新的 DTO，只需要扩展现有的收银机设置请求和响应结构。
+**说明**: 需要在 main 模块中创建收银机设置请求 DTO。
 
-#### PHP 请求扩展
+#### Go Request DTO
 
-在 `admin/app/shop/controller/setting/Terminal.php` 的保存接口中，扩展请求参数：
+在 `main/app/dto/req/cashier_setting.go` 中创建请求结构：
 
-```php
-// 新增请求参数（在现有 carousel 等参数基础上扩展）
-    $no_order_carousel_interval = $data['no_order_carousel_interval'] ?? 10;  // 未点餐时轮播间隔
-$order_display_mode = $data['order_display_mode'] ?? 'carousel';  // 点餐时展示模式
-    $order_carousel_interval = $data['order_carousel_interval'] ?? 10;  // 点餐时轮播间隔
-
-// 轮播内容数量限制：最多15个
-$carousels = $data['carousel'] ?? [];
-if (count($carousels) > 15) {
-    return $this->renderError('轮播内容最多15个');
+```go
+// SaveCashierSettingReq 保存收银机设置请求
+type SaveCashierSettingReq struct {
+    Carousel                []setting.CarouselItem `json:"carousel"`                  // 轮播内容（已存在，最多15个）
+    NoOrderCarouselInterval string                 `json:"no_order_carousel_interval"` // 未点餐时轮播间隔（新增）
+    OrderDisplayMode        string                 `json:"order_display_mode"`         // 点餐时展示模式（新增）
+    OrderCarouselInterval   string                 `json:"order_carousel_interval"`    // 点餐时轮播间隔（新增）
 }
 
-// 参数验证
-if ($no_order_carousel_interval < 10 || $no_order_carousel_interval > 120) {
-    return $this->renderError('未点餐时轮播间隔必须在10-120秒之间');
+// Validate 验证收银机设置请求参数
+func (r *SaveCashierSettingReq) Validate() error {
+    // 轮播内容数量限制：最多15个
+    if len(r.Carousel) > 15 {
+        return errs.WithMessage(errors.New("轮播内容最多15个"))
+    }
+    
+    // 参数验证：未点餐时轮播间隔（范围 10-120，默认 "10"）
+    if r.NoOrderCarouselInterval == "" || r.NoOrderCarouselInterval == "0" {
+        // 默认值（空字符串或"0"时设置为"10"）
+        r.NoOrderCarouselInterval = "10"
+    } else {
+        interval, err := strconv.Atoi(r.NoOrderCarouselInterval)
+        if err != nil {
+            return errs.WithMessage(errors.New("未点餐时轮播间隔格式错误"))
+        }
+        if interval < 10 || interval > 120 {
+            return errs.WithMessage(errors.New("未点餐时轮播间隔必须在10-120秒之间"))
+        }
+    }
+    
+    // 参数验证：点餐时展示模式（枚举值 carousel/order/order_carousel，默认 carousel）
+    if r.OrderDisplayMode != "" {
+        validModes := []string{"carousel", "order", "order_carousel"}
+        if !slices.Contains(validModes, r.OrderDisplayMode) {
+            return errs.WithMessage(errors.New("点餐时展示模式无效"))
+        }
+    } else {
+        r.OrderDisplayMode = "carousel"
+    }
+    
+    // 参数验证：点餐时轮播间隔（范围 10-120，默认 "10"）
+    if r.OrderCarouselInterval == "" || r.OrderCarouselInterval == "0" {
+        // 默认值（空字符串或"0"时设置为"10"）
+        r.OrderCarouselInterval = "10"
+    } else {
+        interval, err := strconv.Atoi(r.OrderCarouselInterval)
+        if err != nil {
+            return errs.WithMessage(errors.New("点餐时轮播间隔格式错误"))
+        }
+        if interval < 10 || interval > 120 {
+            return errs.WithMessage(errors.New("点餐时轮播间隔必须在10-120秒之间"))
+        }
+    }
+    
+    return nil
 }
-if (!in_array($order_display_mode, ['carousel', 'order', 'order_carousel'])) {
-    return $this->renderError('点餐时展示模式无效');
-}
-if ($order_carousel_interval < 10 || $order_carousel_interval > 120) {
-    return $this->renderError('点餐时轮播间隔必须在10-120秒之间');
-}
-
-// 保存到设置数组
-$arr = [
-    'carousel' => $carousels,  // 已存在
-    'no_order_carousel_interval' => $no_order_carousel_interval,  // 新增
-    'order_display_mode' => $order_display_mode,  // 新增
-    'order_carousel_interval' => $order_carousel_interval,  // 新增
-    // ... 其他现有字段
-];
 ```
+
+**参数验证**（在 DTO 的 `Validate()` 方法中）:
+- `NoOrderCarouselInterval`: 字符串类型，空字符串或"0"时设置为默认值"10"，否则转换为 int 后验证范围 10-120
+- `OrderDisplayMode`: 枚举值 carousel/order/order_carousel，默认 carousel
+- `OrderCarouselInterval`: 字符串类型，空字符串或"0"时设置为默认值"10"，否则转换为 int 后验证范围 10-120
+- `Carousel`: 数组长度最多 15
 
 ---
 
@@ -253,32 +284,90 @@ $arr = [
 
 ### 扩展现有接口
 
-**说明**: 不需要创建新接口，只需要扩展现有的收银机设置接口。
+**说明**: 新管理端接口在 main 模块中创建，收银端接口扩展现有接口。
 
-#### API 1: 扩展收银机设置保存接口（PHP）
+#### API 1: 上传收银机轮播内容接口（Go Main）
 
-**现有接口**: `admin/app/shop/controller/setting/Terminal.php` - `save()` 方法
+**新接口**: `main/app/api/v1/shop/shop_setting.go` - `UploadCashierCarousel()` 方法
 
-**扩展请求参数**:
+**请求**:
 
-- **URL**: `/index.php/shop/setting.Terminal/save`（现有接口）
+- **URL**: `/api/v1/shop/setting/cashier/carousel/upload`
 - **Method**: `POST`
-- **Body**（在现有参数基础上扩展）:
+- **Content-Type**: `multipart/form-data`
+- **Headers**:
   ```json
   {
-    "carousel": [...],  // 已存在
-      "no_order_carousel_interval": 10,  // 新增：未点餐时轮播间隔
+    "Authorization": "Bearer {token}"
+  }
+  ```
+- **Body** (form-data):
+  - `file` (file, 必填): 上传的文件
+  - `file_type` (string, 可选): 文件类型，`image` 或 `video`，不传则根据文件扩展名自动识别
+  - `group_id` (int, 可选): 分组ID
+
+- **文件格式要求**:
+  - **图片**: 支持 JPG、JPEG、PNG、WEBP 格式，文件大小 < 15MB
+  - **视频**: 支持 MP4 格式，文件大小 < 30MB
+
+- **响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "success",
+    "data": {
+      "uuid": 123456,
+      "file_path": "https://...",
+      "real_name": "example.jpg",
+      "file_type": "image",
+      "file_size": 1024000,
+      "extension": "jpg",
+      ...
+    }
+  }
+  ```
+
+**实现说明**:
+- API Handler: `main/app/api/v1/shop/shop_setting.go` - `UploadCashierCarousel`
+- Service: `main/app/service/upload_file.go` - `UploadImage` / `UploadVideo`
+- 文件类型自动识别：根据文件扩展名或 `file_type` 参数判断
+- 文件大小验证：在 API 层进行验证，图片 < 15MB，视频 < 30MB
+- 文件格式验证：在 Service 层进行验证
+- 缩略图处理：上传图片时传入 `source="shop"` 参数，不生成缩略图（上传原始图片）
+
+---
+
+#### API 2: 创建收银机设置保存接口（Go Main）
+
+**新接口**: `main/app/api/v1/shop/shop_setting.go` - `SaveCashierSetting()` 方法
+
+**请求**:
+
+- **URL**: `/api/v1/shop/setting/cashier`
+- **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json"
+  }
+  ```
+- **Body**:
+  ```json
+  {
+    "carousel": [...],  // 已存在，最多15个
+    "no_order_carousel_interval": "10",  // 新增：未点餐时轮播间隔
     "order_display_mode": "carousel",  // 新增：点餐时展示模式
-      "order_carousel_interval": 10,  // 新增：点餐时轮播间隔
+    "order_carousel_interval": "10",  // 新增：点餐时轮播间隔
     // ... 其他现有参数
   }
   ```
 
-**响应**（保持不变）:
+**响应**:
 ```json
 {
   "code": 1,
-  "message": "操作成功",
+  "message": "保存成功",
   "data": {}
 }
 ```
@@ -298,9 +387,9 @@ $arr = [
     "message": "success",
     "data": {
       "carousel": [...],  // 已存在
-      "no_order_carousel_interval": 10,  // 新增
+      "no_order_carousel_interval": "10",  // 新增
       "order_display_mode": "carousel",  // 新增
-      "order_carousel_interval": 10,  // 新增
+      "order_carousel_interval": "10",  // 新增
       // ... 其他现有字段
     }
   }
@@ -329,15 +418,15 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
         // ... 错误处理 ...
     }
     
-    // 扩展：解析新增字段，设置默认值
-    if cashier.NoOrderCarouselInterval == 0 {
-        cashier.NoOrderCarouselInterval = 10  // 默认值
+    // 扩展：解析新增字段，设置默认值（空字符串或"0"时设置为默认值）
+    if cashier.NoOrderCarouselInterval == "" || cashier.NoOrderCarouselInterval == "0" {
+        cashier.NoOrderCarouselInterval = "10"  // 默认值
     }
     if cashier.OrderDisplayMode == "" {
         cashier.OrderDisplayMode = "carousel"  // 默认值
     }
-    if cashier.OrderCarouselInterval == 0 {
-        cashier.OrderCarouselInterval = 10  // 默认值
+    if cashier.OrderCarouselInterval == "" || cashier.OrderCarouselInterval == "0" {
+        cashier.OrderCarouselInterval = "10"  // 默认值
     }
     
     // ... 现有代码（处理 carousel 等）...
@@ -346,58 +435,53 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 }
 ```
 
-### PHP Controller 层扩展
+### Go API 层扩展（新管理端）
 
-#### 扩展 Terminal Controller
+#### 创建或扩展收银机设置接口
 
-**现有文件**: `admin/app/shop/controller/setting/Terminal.php`
+**文件**: `main/app/api/v1/shop/shop_setting.go`
 
-**扩展 save() 方法**:
+**创建 SaveCashierSetting 方法**:
 
-```php
-public function save()
-{
-    $data = $this->request->post();
-    
-    // ... 现有参数验证和处理 ...
-    
-    // 扩展：新增字段处理
-    $no_order_carousel_interval = $data['no_order_carousel_interval'] ?? 10;
-    $order_display_mode = $data['order_display_mode'] ?? 'carousel';
-    $order_carousel_interval = $data['order_carousel_interval'] ?? 10;
-    
-    // 轮播内容数量限制：最多15个
-    $carousels = $data['carousel'] ?? [];
-    if (count($carousels) > 15) {
-        return $this->renderError('轮播内容最多15个');
+```go
+// SaveCashierSetting 保存收银机设置
+// @Summary 保存收银机设置
+// @Description 保存收银机设置，包括副屏相关配置
+// @Tags 商家端.收银机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveCashierSettingReq true "保存收银机设置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/cashier [post]
+func (h *SettingHandler) SaveCashierSetting(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    var cashierSettingReq req.SaveCashierSettingReq
+    if err := c.ShouldBindJSON(&cashierSettingReq); err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, err)
+        return
     }
     
-    // 参数验证
-    if ($no_order_carousel_interval < 10 || $no_order_carousel_interval > 120) {
-        return $this->renderError('未点餐时轮播间隔必须在10-120秒之间');
-    }
-    if (!in_array($order_display_mode, ['carousel', 'order', 'order_carousel'])) {
-        return $this->renderError('点餐时展示模式无效');
-    }
-    if ($order_carousel_interval < 10 || $order_carousel_interval > 120) {
-        return $this->renderError('点餐时轮播间隔必须在10-120秒之间');
+    // 参数验证（调用 DTO 的 Validate() 方法）
+    if err := cashierSettingReq.Validate(); err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, err)
+        return
     }
     
-    // 保存到设置数组
-    $arr = [
-        'carousel' => $carousels,  // 已存在
-        'no_order_carousel_interval' => $no_order_carousel_interval,  // 新增
-        'order_display_mode' => $order_display_mode,  // 新增
-        'order_carousel_interval' => $order_carousel_interval,  // 新增
-        // ... 其他现有字段 ...
-    ];
-    
-    // 调用现有保存方法
-    if ($model->edit(SettingEnum::CASHIER, $arr, $shop_supplier_id)) {
-        return $this->renderSuccess('操作成功');
+    // 调用 Service 层保存
+    err := h.settingSrv.EditCashierSetting(ctx, cashierSettingReq)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, err)
+        return
     }
-    return $this->renderError('操作失败');
+    helper.Success(c, "保存成功")
 }
+```
+
+**注册路由**（在 `RegisterSettingHandlers` 函数中）:
+
+```go
+privateApi.POST("/setting/cashier", wrapper.SaveCashierSetting)  // 保存收银机设置
 ```
 
 ---
@@ -521,26 +605,40 @@ cache.Global.Del(cacheKey)
 
 ### Phase 1: 数据结构扩展
 
-- [ ] 扩展 `CashierResp` 结构体（`main/app/dto/resp/setting/cashier_setting.go`）
-  - 添加 `NoOrderCarouselInterval int`
+- [x] 扩展 `CashierResp` 结构体（`main/app/dto/resp/setting/cashier_setting.go`）
+  - 添加 `NoOrderCarouselInterval string`
   - 添加 `OrderDisplayMode string`
-  - 添加 `OrderCarouselInterval int`
-- [ ] 扩展 PHP 设置默认值（`admin/app/common/model/settings/Setting.php`）
+  - 添加 `OrderCarouselInterval string`
+- [x] 扩展 PHP 设置默认值（`admin/app/common/model/settings/Setting.php`）
   - 在 `cashier` 默认值中添加新字段
 
 ### Phase 2: Go Service 扩展
 
-- [ ] 扩展 `GetCashierSetting` 方法（`main/app/service/setting/setting.go`）
+- [x] 扩展 `GetCashierSetting` 方法（`main/app/service/setting/setting.go`）
   - 解析 JSON 中的新字段
   - 设置默认值（未配置时）
   - 返回扩展后的结构体
-
-### Phase 3: PHP Controller 扩展
-
-- [ ] 扩展 `Terminal::save()` 方法（`admin/app/shop/controller/setting/Terminal.php`）
-  - 接收新字段参数
-  - 参数验证（范围、枚举值）
+- [x] 创建 `EditCashierSetting` 方法（`main/app/service/setting/setting.go`）
+  - 获取现有收银机设置
+  - 更新新字段
   - 保存到设置 JSON
+
+### Phase 3: Go API 层扩展（新管理端）
+
+- [x] 创建 `UploadCashierCarousel` API Handler（`main/app/api/v1/shop/shop_setting.go`）
+  - 支持图片上传（JPG、JPEG、PNG、WEBP，<15MB）
+  - 支持视频上传（MP4，<30MB）
+  - 自动识别文件类型（根据扩展名或 file_type 参数）
+  - 文件大小和格式验证
+  - 图片上传时传入 `source="shop"` 参数，不生成缩略图
+- [x] 创建 `SaveCashierSetting` API Handler（`main/app/api/v1/shop/shop_setting.go`）
+  - 接收 `SaveCashierSettingReq` DTO
+  - 调用 DTO 的 `Validate()` 方法进行参数验证
+  - 调用 Service 层的 `EditCashierSetting` 方法保存
+- [x] 创建 `SaveCashierSettingReq` Request DTO（`main/app/dto/req/cashier_setting.go`）
+  - 包含新字段参数
+  - 实现 `Validate()` 方法进行参数验证
+- [x] 注册 API 路由（`POST /api/v1/shop/setting/cashier/carousel/upload`、`POST /api/v1/shop/setting/cashier`）
 
 ### Phase 4: 测试
 

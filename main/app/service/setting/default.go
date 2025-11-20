@@ -48,21 +48,24 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 
 			IsOpenCashierPassword: "1", // 是否开启钱箱密码 0-关闭 1-开启
 
-			IsAutoLockScreen:       "1",                       // 是否开启自动锁屏 0-关闭 1-开启
-			AutoLockScreen:         "300",                     // 自动锁屏（秒），默认5分钟
-			IsShowScanSoldOut:      1,                         // 扫码点餐是否显示售罄商品 0-不显示 1-显示
-			IsShowAssistantSoldOut: 1,                         // 点餐助手是否显示售罄商品 0-不显示 1-显示
-			LanguageList:           languageList,              // 语言列表
-			Language:               []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-			DefaultLanguage:        defaultLanguage,           // 默认语言
-			IsAutoOrder:            "0",                       // 是否自动接单
-			AutoOrderLimit:         "1000",                    // 自动接单金额上限
-			IsAutoVoice:            "0",                       // 是否开启自动接单语音播报
-			IsAutoMemberOrder:      "0",                       // 是否自动接单会员订单 0-关闭 1-开启
-			AutoMemberOrderLimit:   "1000",                    // 自动接单会员订单金额上限
-			IsAutoVoiceMemberOrder: "0",                       // 是否开启自动接单会员订单语音播报
-			MenuShowSoldOut:        "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
-			MemberShowSoldOut:      "1",                       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+			IsAutoLockScreen:        "1",                       // 是否开启自动锁屏 0-关闭 1-开启
+			AutoLockScreen:          "300",                     // 自动锁屏（秒），默认5分钟
+			IsShowScanSoldOut:       1,                         // 扫码点餐是否显示售罄商品 0-不显示 1-显示
+			IsShowAssistantSoldOut:  1,                         // 点餐助手是否显示售罄商品 0-不显示 1-显示
+			LanguageList:            languageList,              // 语言列表
+			Language:                []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage:         defaultLanguage,           // 默认语言
+			IsAutoOrder:             "0",                       // 是否自动接单
+			AutoOrderLimit:          "1000",                    // 自动接单金额上限
+			IsAutoVoice:             "0",                       // 是否开启自动接单语音播报
+			IsAutoMemberOrder:       "0",                       // 是否自动接单会员订单 0-关闭 1-开启
+			AutoMemberOrderLimit:    "1000",                    // 自动接单会员订单金额上限
+			IsAutoVoiceMemberOrder:  "0",                       // 是否开启自动接单会员订单语音播报
+			MenuShowSoldOut:         "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+			MemberShowSoldOut:       "1",                       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+			NoOrderCarouselInterval: "10",                      // 未点餐时轮播间隔(秒)
+			OrderDisplayMode:        "carousel",                // 点餐时展示模式 carousel/order/order_carousel
+			OrderCarouselInterval:   "10",                      // 点餐时轮播间隔(秒)
 		},
 		AdvancedPassword: "666888", // 高级设置密码
 		CashierPassword:  "666888", // 钱箱密码

@@ -12,42 +12,42 @@
 
 ## 📊 进度总览
 
-**总任务数**: 6  
-**已完成**: 0  
+**总任务数**: 10  
+**已完成**: 8  
 **进行中**: -  
-**完成率**: 0%
+**完成率**: 80%
 
 ---
 
 ## Phase 1: 数据结构扩展
 
-- [ ] 1.1 扩展 CashierResp 结构体
+- [x] 1.1 扩展 CashierResp 结构体
 
   - File: `main/app/dto/resp/setting/cashier_setting.go`
   - Purpose: 添加新字段到收银机设置响应结构体
   - Requirements: Requirement 1, Requirement 2, Requirement 3
   - Leverage: 现有结构体: `main/app/dto/resp/setting/cashier_setting.go`
-  - Prompt: Role: Go Developer | Task: 在 CashierResp 结构体中添加三个新字段：NoOrderCarouselInterval int, OrderDisplayMode string, OrderCarouselInterval int | Context: 使用 json 标签，字段名使用 snake_case | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 结构体扩展成功，字段定义正确
+  - Prompt: Role: Go Developer | Task: 在 CashierResp 结构体中添加三个新字段：NoOrderCarouselInterval string, OrderDisplayMode string, OrderCarouselInterval string | Context: 使用 json 标签，字段名使用 snake_case | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 结构体扩展成功，字段定义正确
 
-- [ ] 1.2 扩展 PHP 设置默认值
+- [x] 1.2 扩展 PHP 设置默认值
 
   - File: `admin/app/common/model/settings/Setting.php`
   - Purpose: 在收银机设置默认值中添加新字段
   - Requirements: Requirement 1, Requirement 2, Requirement 3
   - Leverage: 现有默认值: `admin/app/common/model/settings/Setting.php` 中的 `SettingEnum::CASHIER`
-  - Prompt: Role: PHP Developer | Task: 在 cashier 设置的默认值数组中添加三个新字段：no_order_carousel_interval => 10, order_display_mode => 'carousel', order_carousel_interval => 10 | Context: 添加到 values 数组中 | Restrictions: 遵循 .cursor/rules/php.mdc | Success: 默认值扩展成功
+  - Prompt: Role: PHP Developer | Task: 在 cashier 设置的默认值数组中添加三个新字段：no_order_carousel_interval => '10', order_display_mode => 'carousel', order_carousel_interval => '10' | Context: 添加到 values 数组中 | Restrictions: 遵循 .cursor/rules/php.mdc | Success: 默认值扩展成功
 
 ---
 
 ## Phase 2: Go Service 扩展
 
-- [ ] 2.1 扩展 GetCashierSetting 方法
+- [x] 2.1 扩展 GetCashierSetting 方法
 
   - File: `main/app/service/setting/setting.go`
   - Purpose: 在获取收银机设置时解析并返回新字段
   - Requirements: Requirement 4
   - Leverage: 现有方法: `main/app/service/setting/setting.go` - `GetCashierSetting()`
-  - Prompt: Role: Go Developer | Task: 在 GetCashierSetting 方法中，解析 JSON 时读取新字段（no_order_carousel_interval, order_display_mode, order_carousel_interval），如果字段不存在则设置默认值 | Context: 在 json.Unmarshal 之后，设置默认值逻辑之前添加 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 方法扩展成功，新字段正确解析和返回
+  - Prompt: Role: Go Developer | Task: 在 GetCashierSetting 方法中，解析 JSON 时读取新字段（no_order_carousel_interval, order_display_mode, order_carousel_interval），如果字段不存在、为空字符串或为"0"则设置默认值（字符串类型："10" 或 "carousel"） | Context: 在 json.Unmarshal 之后，设置默认值逻辑之前添加 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 方法扩展成功，新字段正确解析和返回
 
 - [ ] 2.2 编写 Service 单元测试
 
@@ -59,23 +59,39 @@
 
 ---
 
-## Phase 3: PHP Controller 扩展
+## Phase 3: Go API 层扩展（新管理端）
 
-- [ ] 3.1 扩展 Terminal::save() 方法
+- [x] 3.1 创建 SaveCashierSetting API Handler
 
-  - File: `admin/app/shop/controller/setting/Terminal.php`
-  - Purpose: 在保存收银机设置时接收和保存新字段
-  - Requirements: Requirement 1, Requirement 2, Requirement 3
-  - Leverage: 现有方法: `admin/app/shop/controller/setting/Terminal.php` - `save()`
-  - Prompt: Role: PHP Developer with ThinkPHP expertise | Task: 在 save() 方法中接收三个新参数（no_order_carousel_interval, order_display_mode, order_carousel_interval），进行参数验证，然后保存到设置数组 | Context: 参数验证：no_order_carousel_interval 和 order_carousel_interval 范围10-120，order_display_mode 枚举值 carousel/order/order_carousel，轮播内容（carousel）数量最多15个 | Restrictions: 遵循 .cursor/rules/php.mdc，使用验证器 | Success: 方法扩展成功，参数验证正确
+  - File: `main/app/api/v1/shop/shop_setting.go`
+  - Purpose: 在 main 模块中创建收银机设置保存接口
+  - Requirements: Requirement 0, Requirement 1, Requirement 2, Requirement 3
+  - Leverage: 现有 API: `main/app/api/v1/shop/shop_setting.go`，Service: `main/app/service/setting/setting.go`
+  - Prompt: Role: Go Developer with Gin framework expertise | Task: 在 shop_setting.go 中创建 SaveCashierSetting 方法，接收 SaveCashierSettingReq DTO，调用 DTO 的 Validate() 方法进行参数验证，调用 Service 层的 EditCashierSetting 方法保存 | Context: 参数验证通过 DTO 的 Validate() 方法完成，包括 no_order_carousel_interval 和 order_carousel_interval 范围10-120，order_display_mode 枚举值 carousel/order/order_carousel，轮播内容（carousel）数量最多15个 | Restrictions: 遵循 .cursor/rules/go-main.mdc，URL 使用 snake_case，data 必须是对象 | Success: API 创建成功，调用 DTO 验证方法，调用 Service 保存方法
 
-- [ ] 3.2 编写 Controller 单元测试
+- [x] 3.3 创建 Request DTO
 
-  - File: `admin/app/shop/controller/setting/TerminalTest.php`
-  - Purpose: 测试扩展后的 save() 方法
-  - Requirements: Requirement 1, Requirement 2, Requirement 3
-  - Leverage: 现有测试（如有）
-  - Prompt: Role: QA Engineer with PHP testing expertise | Task: 为扩展后的 save() 方法编写测试，测试参数验证和保存逻辑 | Context: 测试正常保存，测试参数验证失败场景 | Restrictions: 遵循 .cursor/rules/php.mdc | Success: 测试通过
+  - File: `main/app/dto/req/cashier_setting.go`
+  - Purpose: 定义收银机设置保存请求 DTO，包含 Validate() 方法进行参数验证
+  - Requirements: Requirement 0
+  - Leverage: 现有 DTO: `main/app/dto/req/`
+  - Prompt: Role: Go Developer | Task: 创建 SaveCashierSettingReq 结构体，包含 carousel、no_order_carousel_interval（string类型）、order_display_mode、order_carousel_interval（string类型）字段，并实现 Validate() 方法进行参数验证 | Context: 使用 json 标签，字段名使用 snake_case，Validate() 方法处理轮播间隔字段时：如果为空字符串或"0"则设置为默认值"10"，否则将字符串转换为 int 后验证范围（10-120），验证展示模式枚举值（carousel/order/order_carousel），验证轮播内容数量限制（最多15个） | Restrictions: 遵循 .cursor/rules/go-main.mdc，使用 errors.WithMessage 返回错误，使用 strconv.Atoi 转换字符串 | Success: DTO 创建成功，Validate() 方法实现正确
+
+- [x] 3.4 注册 API 路由
+
+  - File: `main/app/api/v1/shop/shop_setting.go` - `RegisterSettingHandlers` 函数
+  - Purpose: 注册收银机设置保存接口路由
+  - Requirements: Requirement 0
+  - Leverage: 现有路由注册: `main/app/api/v1/shop/shop_setting.go`
+  - Success: 路由注册成功，路径为 `/api/v1/shop/setting/cashier/carousel/upload` 和 `/api/v1/shop/setting/cashier`
+
+- [ ] 3.5 编写 API 单元测试
+
+  - File: `main/app/api/v1/shop/shop_setting_test.go`
+  - Purpose: 测试 SaveCashierSetting API
+  - Requirements: Requirement 0, Requirement 1, Requirement 2, Requirement 3
+  - Leverage: 现有测试: `main/app/api/v1/shop/*_test.go`
+  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 SaveCashierSetting API 编写测试，测试 DTO 的 Validate() 方法验证逻辑和保存逻辑 | Context: 测试正常保存，测试 Validate() 方法参数验证失败场景（轮播内容数量限制、轮播间隔范围、展示模式枚举值），测试 Service 层保存逻辑 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试通过
 
 ---
 
