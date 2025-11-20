@@ -582,6 +582,11 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		defaultBusiness.BatchTagNum = uint(batchTagNum)
 	}
 
+	// 确保 BatchCookingMode 有默认值
+	if defaultBusiness.BatchCookingMode == "" {
+		defaultBusiness.BatchCookingMode = constant.BatchCookingModePost
+	}
+
 	return defaultBusiness, nil
 }
 

@@ -69,6 +69,7 @@ type OrderCartProductAddReq struct {
 	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Price             *float64 `json:"price"`           // 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
 	IsBuffet          *bool    `json:"is_buffet"`       // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
+	BatchTagUuid      uint64   `json:"batch_tag_uuid"`  // 分批类型UUID, 可选（前置模式时使用）
 	// 后端内部使用的参数
 	isH5Product bool `json:"-"` // 是否是H5商品
 }
@@ -135,6 +136,7 @@ type ProductParams struct {
 	subProducts         []ProductParams `json:"sub_products"`           // 套餐子商品列表。当商品是套餐商品时，该字段有值
 	isPackageSubProduct bool            `json:"is_package_sub_product"` // 是否是套餐子商品
 	packageUuid         uint64          `json:"package_uuid"`           // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
+	BatchTagUuid        uint64          `json:"batch_tag_uuid"`         // 分批类型UUID, 可选（前置模式时使用）
 }
 
 func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {

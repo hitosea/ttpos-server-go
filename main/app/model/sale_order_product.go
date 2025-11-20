@@ -1549,6 +1549,7 @@ type DefaultSaleOrderProduct struct {
 	ProductType             uint8   // 商品类型
 	PackageSubProductParams string  // 套餐子商品参数
 	IsBatch                 uint8   // 是否是分批商品 0-否 1-是
+	BatchTagUuid            uint64  // 分批类型UUID, 前置模式时使用
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -1597,6 +1598,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		ProductType:                def.ProductType,
 		PackageSubProductParams:    def.PackageSubProductParams,
 		IsBatch:                    def.IsBatch,
+		BatchTagUuid:               def.BatchTagUuid,
 	}
 	// 套餐子商品，设置单位数量
 	if def.ProductType == constant.ProductTypePackageSubProduct {
@@ -1713,7 +1715,7 @@ func (model *SaleOrderProduct) UpdateSign() {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid-分批类型uuid
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1763,7 +1765,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -1776,11 +1778,12 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
 		model.PackageUuid,
+		model.BatchTagUuid, // 分批类型UUID. 前置模式下，加购时就设置，用于区分相同商品但不同分批类型
 	)
 }
 
 // GeneratePackageSign 生成商品套餐签名. 相同的商品套餐，商品套餐签名相同,用于取消拆单时合并商品。
-// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
+// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-分批类型uuid
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1804,7 +1807,7 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d",
 		packageUuid,
 		model.PackageSubProductParams,
 		model.Remark,
@@ -1816,6 +1819,7 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 		reasonStr,
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
+		model.BatchTagUuid,  // 分批类型UUID. 前置模式下，加购时就设置，用于区分相同商品但不同分批类型
 	)
 }
 

@@ -49,6 +49,10 @@ func (r *BatchTagRepoImpl) GetBatchTags(opts ...DBOption) ([]*model.BatchTag, er
 func (r *BatchTagRepoImpl) GetBatchTagList() ([]*model.BatchTag, error) {
 	opts := []DBOption{
 		NotDeleted,
+		// 根据sort 排序
+		CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Order("sort ASC")
+		}),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "MultiLanguageName",

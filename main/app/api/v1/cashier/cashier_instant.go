@@ -26,9 +26,10 @@ import (
 
 // InstantHandler 收银点餐处理程序
 type InstantHandler struct {
-	orderSrv  service.IOrderSrv  // 订单服务
-	memberSrv service.IMemberSrv // 会员服务
-	otherSrv  service.IOtherSrv  // 其他服务
+	orderSrv   service.IOrderSrv   // 订单服务
+	memberSrv  service.IMemberSrv // 会员服务
+	otherSrv   service.IOtherSrv  // 其他服务
+	productSrv service.IProductSrv // 产品服务
 }
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
@@ -1550,6 +1551,29 @@ func (h *InstantHandler) OrderCartProductBatchCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetBatchTagList 获取分批类型列表
+// @Summary 获取分批类型列表
+// @Description 获取分批类型列表，按 sort 排序，优先级高的在前
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=product_resp.BatchTagList}
+// @Router /cashier/instant/batch_tag/list [get]
+func (h *InstantHandler) GetBatchTagList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 调用 Service 层获取分批类型列表
+	batchTagList, err := h.productSrv.GetBatchTagList(ctx, req.BatchTagListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, batchTagList)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1567,11 +1591,14 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{
-		orderSrv:  orderSrv,  // 订单服务
-		memberSrv: memberSrv, // 会员服务
-		otherSrv:  otherSrv,  // 其他服务
+		orderSrv:   orderSrv,   // 订单服务
+		memberSrv:  memberSrv,  // 会员服务
+		otherSrv:   otherSrv,   // 其他服务
+		productSrv: productSrv, // 产品服务
 	}
 
 	// 需要认证
@@ -1625,5 +1652,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/instant/order/member/list", wrapper.GetOrderMemberList)                                              // 获取订单会员列表
 		privateApi.GET("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
+		privateApi.GET("/instant/batch_tag/list", wrapper.GetBatchTagList)                                                      // 获取分批类型列表
 	}
 }

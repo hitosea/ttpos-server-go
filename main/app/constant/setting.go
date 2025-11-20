@@ -59,3 +59,9 @@ const (
 	ReqModeSend = KdsModeDefault // 请求参数,传菜模式
 	ReqModeMake = KdsModeMake    // 请求参数,制作模式
 )
+
+// 分批送厨模式
+const (
+	BatchCookingModePre  = "pre"  // 前置关联模式：商品选购时就关联分批类型
+	BatchCookingModePost = "post" // 后置关联模式：商品下单后在送厨弹窗中选择类型（默认）
+)

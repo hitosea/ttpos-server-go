@@ -97,6 +97,7 @@ type IOrderSrv interface {
 	OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error)    // 查询购物车商品“规格/属性”
 	OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error)            // 修改购物车商品“规格/属性”
 	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)   // 向购物车添加商品
+	ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                        // 更换分批类型（前置模式）
 
 	// cooking
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                                                                                                                  // 获取点餐必点方案
@@ -1751,6 +1752,42 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		flavorPrice := flavorProductBom.Price
+		isBatch := func() uint8 {
+			if businessSetting.OpenIsBatch() {
+				if productPackage.IsBatchBool() {
+					return 1
+				}
+			}
+			return 0
+		}()
+
+		// 前置模式下，处理分批类型UUID
+		batchTagUuid := uint64(0)
+		if businessSetting.BatchCookingMode == constant.BatchCookingModePre && isBatch == 1 {
+			batchTagRepo := repository.NewBatchTagRepo(db)
+			if product.BatchTagUuid > 0 {
+				// 验证 batch_tag_uuid 的有效性
+				_, err := batchTagRepo.GetBatchTagInfo(product.BatchTagUuid)
+				if err != nil {
+					return nil, errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
+				}
+				batchTagUuid = product.BatchTagUuid
+			} else {
+				// 如果未提供，使用默认分批类型（排序第一的类型）
+				batchTags, err := batchTagRepo.GetBatchTagList()
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				if len(batchTags) > 0 {
+					// 按 sort 排序，获取排序第一的类型
+					sort.Slice(batchTags, func(i, j int) bool {
+						return batchTags[i].Sort < batchTags[j].Sort
+					})
+					batchTagUuid = batchTags[0].Uuid
+				}
+			}
+		}
+
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 			DeviceId:               deviceSn,
 			Name:                   productPackage.Name,
@@ -1789,14 +1826,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
 			Remark:        product.Remark,
-			IsBatch: func() uint8 {
-				if businessSetting.OpenIsBatch() {
-					if productPackage.IsBatchBool() {
-						return 1
-					}
-				}
-				return 0
-			}(),
+			IsBatch:       isBatch,
+			BatchTagUuid:  batchTagUuid,
 		}, &productPackage, product.Operation)
 
 		// 设置必点信息

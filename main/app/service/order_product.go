@@ -2131,6 +2131,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 				ProductPackageAttributeUuidList: request.AttributeUuidList,
 				Operation:                       request.Operation,
 				MustPlanUuid:                    request.MustPlanUuid,
+				BatchTagUuid:                    request.BatchTagUuid,
 			},
 		},
 		IsH5Product: request.IsH5Product(),
@@ -2156,5 +2157,84 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
 		return nil, errors.WithMessage(err)
 	}
+	return shopCart, nil
+}
+
+// ChangeBatchTag 更换分批类型（前置模式）
+func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// 验证参数
+	if err := req.Validate(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+
+	// 获取业务设置，判断是否为前置模式
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if businessSetting.BatchCookingMode != constant.BatchCookingModePre {
+		return nil, errors.New("当前不是前置模式，不支持更换分批类型")
+	}
+
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	// 验证新的 batch_tag_uuid 的有效性
+	batchTagRepo := repository.NewBatchTagRepo(db)
+	_, err = batchTagRepo.GetBatchTagInfo(req.BatchTagUuid)
+	if err != nil {
+		return nil, errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
+	}
+
+	// 获取要更换的商品列表
+	saleOrderProducts := make([]*model.SaleOrderProduct, 0)
+	for _, productUuid := range req.SaleOrderProductUuids {
+		product := saleBill.GetSaleOrderProductByUuid(productUuid)
+		if product == nil {
+			continue
+		}
+		// 验证商品是否已送厨（已送厨则不允许修改）
+		if product.IsCookingProduct() {
+			return nil, errors.New("商品已送厨，不能修改分批类型")
+		}
+		// 验证商品是否为分批商品
+		if !product.IsBatchBool() {
+			return nil, errors.New("商品不是分批商品，不能修改分批类型")
+		}
+		saleOrderProducts = append(saleOrderProducts, product)
+	}
+
+	if len(saleOrderProducts) == 0 {
+		return nil, errors.New("未找到要更换的商品")
+	}
+
+	// 更新商品的分批类型关联
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		for _, product := range saleOrderProducts {
+			product.BatchTagUuid = req.BatchTagUuid
+			// 更新签名（因为签名包含 batch_tag_uuid）
+			product.UpdateSign()
+		}
+		// 更新数据库
+		if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(saleOrderProducts); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取更新后的购物车信息
+	shopCart, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	return shopCart, nil
 }

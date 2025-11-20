@@ -30,10 +30,11 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv   service.IDeskSrv   // 主服务
-	memberSrv service.IMemberSrv // 会员服务
-	orderSrv  service.IOrderSrv  // 订单服务
-	otherSrv  service.IOtherSrv  // 其他服务
+	deskSrv    service.IDeskSrv    // 主服务
+	memberSrv  service.IMemberSrv  // 会员服务
+	orderSrv   service.IOrderSrv   // 订单服务
+	otherSrv   service.IOtherSrv   // 其他服务
+	productSrv service.IProductSrv // 产品服务
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -1904,6 +1905,57 @@ func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// ChangeBatchTag 更换分批类型（前置模式）
+// @Summary 更换分批类型
+// @Description 更换未送厨商品的分批类型（前置模式）
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ChangeBatchTagReq true "更换分批类型请求"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/desk/order/cart/batch/change_tag [post]
+func (h *DeskHandler) ChangeBatchTag(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.ChangeBatchTagReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 更换分批类型
+	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetBatchTagList 获取分批类型列表
+// @Summary 获取分批类型列表
+// @Description 获取分批类型列表，按 sort 排序，优先级高的在前
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=product_resp.BatchTagList}
+// @Router /cashier/desk/batch_tag/list [get]
+func (h *DeskHandler) GetBatchTagList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 调用 Service 层获取分批类型列表
+	batchTagList, err := h.productSrv.GetBatchTagList(ctx, req.BatchTagListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, batchTagList)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1921,12 +1973,15 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 	// 初始化处理器
 	wrapper := DeskHandler{
-		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
-		memberSrv: memberSrv,
-		orderSrv:  orderSrv,
-		otherSrv:  otherSrv,
+		deskSrv:    service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		memberSrv:  memberSrv,
+		orderSrv:   orderSrv,
+		otherSrv:   otherSrv,
+		productSrv: productSrv,
 	}
 
 	// 需要认证
@@ -1992,5 +2047,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
 		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
+		privateApi.POST("/desk/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型（前置模式）
+		privateApi.GET("/desk/batch_tag/list", wrapper.GetBatchTagList)                                                    // 获取分批类型列表
 	}
 }
