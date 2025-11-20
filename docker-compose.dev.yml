@@ -36,6 +36,7 @@ services:
       - ./docker/nginx:/etc/nginx/conf.d
       - ./admin/public:/var/www/public
       - ./docs:/var/www/docs
+      - ./main/docs:/var/www/main/docs/
     links:
       - php
       - golang

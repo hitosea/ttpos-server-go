@@ -572,23 +572,86 @@ type PageResponse struct {
 
 ## 数据库操作
 
-### 1. 使用 DBManager
+### 1. 分层职责
 
-**规则**: Service 层使用 DBManager 获取数据库连接
+**核心规则**: Service 层不能直接操作 model，必须通过 Repository
 
 ✅ **正确示例**:
 ```go
 type orderSrv struct {
-    dbm *database.DBManager  // 持有 DBManager
+    dbm       *database.DBManager  // 持有 DBManager
+    orderRepo repository.IOrderRepo // 持有自己领域的 Repository
 }
 
-func (s *orderSrv) CreateOrder(ctx context.Context) error {
-    // 根据 Context 获取对应商户的数据库
+// ✅ 正确：通过 Repository 操作 model
+func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
+    // 构建 model
+    order := model.Order{
+        CompanyUuid: ctx.GetCompanyUuid(),
+        ProductId:   req.ProductId,
+        Quantity:    req.Quantity,
+    }
+    
+    // 通过 Repository 创建
+    orderUuid, err := s.orderRepo.CreateOrder(order)
+    if err != nil {
+        return errors.WithMessage(err, "创建订单失败")
+    }
+    
+    return nil
+}
+```
+
+❌ **错误示例**:
+```go
+type orderSrv struct {
+    dbm *database.DBManager  // 持有 DBManager
+    // ❌ 没有依赖 Repository
+}
+
+// ❌ 错误：Service 直接操作 model
+func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
     db := s.dbm.GetDB(ctx.GetDbId())
     
-    // 使用 db 进行操作
+    order := model.Order{
+        CompanyUuid: ctx.GetCompanyUuid(),
+        ProductId:   req.ProductId,
+        Quantity:    req.Quantity,
+    }
+    
+    // ❌ 直接使用 db 操作 model
     err := db.Create(&order).Error
     return errors.WithMessage(err, "创建订单失败")
+}
+```
+
+**为什么要这样做？**
+
+1. **职责分离**: Service 关注业务逻辑，Repository 关注数据访问
+2. **可测试性**: Repository 可以被 mock，方便单元测试
+3. **可维护性**: 数据库操作集中在 Repository，易于修改和优化
+4. **复用性**: Repository 方法可以被多个 Service 复用
+
+---
+
+### 2. 使用 DBManager
+
+**规则**: Service 层持有 DBManager，但不直接使用它操作 model
+
+✅ **正确示例**:
+```go
+type orderSrv struct {
+    dbm       *database.DBManager
+    orderRepo repository.IOrderRepo
+}
+
+// Service 构造函数
+func NewOrderSrv(dbm *database.DBManager) IOrderSrv {
+    return &orderSrv{
+        dbm: dbm,
+        // 创建 Repository 时传入 db 实例
+        orderRepo: repository.NewOrderRepo(dbm.GetDB(defaultDbId)),
+    }
 }
 ```
 
@@ -607,7 +670,7 @@ type OrderRepoImpl struct {
 
 ---
 
-### 2. 预加载避免 N+1 查询
+### 3. 预加载避免 N+1 查询
 
 **规则**: 使用 Preload 预加载关联数据
 
@@ -643,7 +706,7 @@ func (r *orderRepo) GetOrderWithProducts(orderUuid uint64) (*model.Order, error)
 
 ---
 
-### 3. 使用索引和分页
+### 4. 使用索引和分页
 
 ✅ **正确示例**:
 ```go

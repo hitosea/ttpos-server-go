@@ -158,7 +158,7 @@ add-parent-company-uuid:
 rmi:
 	docker rmi $$(docker images -qf "dangling=true")
 
-# 删除所有镜像
+# 授权所有文件
 chown-all:
 	sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go
 
