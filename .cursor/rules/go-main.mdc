@@ -108,6 +108,43 @@ type OrderRepoImpl struct {
 }
 ```
 
+### API 层（app/api/v1）
+
+- ✅ **只能调用 Service 接口**
+- ✅ **只负责参数校验、调用 Service、返回响应**
+- ❌ **不能引用 repository 包**
+- ❌ **不能编写业务逻辑，业务逻辑必须在 service 目录下编写**
+
+```go
+// ✅ 正确 - API 层只负责调用 Service
+func (h *OrderHandler) CreateOrder(c *gin.Context) {
+    var req dto.CreateOrderReq
+    if err := c.ShouldBindJSON(&req); err != nil {
+        helper.Error(c, err)
+        return
+    }
+    
+    result, err := h.orderSrv.CreateOrder(c, req)
+    if err != nil {
+        helper.Error(c, err)
+        return
+    }
+    
+    helper.Success(c, result)
+}
+
+// ❌ 错误 - API 层引用 repository
+import "app/repository"  // ❌ 禁止
+
+// ❌ 错误 - API 层编写业务逻辑
+func (h *OrderHandler) CreateOrder(c *gin.Context) {
+    // ❌ 不应该在这里写业务逻辑
+    order := &model.Order{...}
+    db.Create(order)  // ❌ 错误
+    // 应该调用 h.orderSrv.CreateOrder()
+}
+```
+
 ---
 
 ## 🔍 关键检查点
@@ -124,6 +161,8 @@ type OrderRepoImpl struct {
 - [ ] 结构体 ID 字段大写
 - [ ] Service 只依赖 Service 接口
 - [ ] Repository 只持有 db 实例
+- [ ] API 层不引用 repository 包
+- [ ] API 层不编写业务逻辑，只调用 Service
 - [ ] data 不能为 null 或数组
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
@@ -210,6 +249,8 @@ order, err := orderRepo.GetOrder(
 | ❌ 使用 panic                | 必须 return error     |
 | ❌ Service 依赖 Repository   | 只能依赖 Service      |
 | ❌ Repository 持有 DBManager | 只能持有 db           |
+| ❌ API 层引用 repository 包  | 只能调用 Service      |
+| ❌ API 层编写业务逻辑        | 业务逻辑应在 Service 层 |
 | ❌ 跨层调用                  | 必须遵循分层          |
 | ❌ 使用字面量常量             | 必须在 constant 包中定义 |
 
