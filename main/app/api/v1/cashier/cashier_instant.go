@@ -27,8 +27,8 @@ import (
 // InstantHandler 收银点餐处理程序
 type InstantHandler struct {
 	orderSrv   service.IOrderSrv   // 订单服务
-	memberSrv  service.IMemberSrv // 会员服务
-	otherSrv   service.IOtherSrv  // 其他服务
+	memberSrv  service.IMemberSrv  // 会员服务
+	otherSrv   service.IOtherSrv   // 其他服务
 	productSrv service.IProductSrv // 产品服务
 }
 
@@ -1574,6 +1574,34 @@ func (h *InstantHandler) GetBatchTagList(c *gin.Context) {
 	helper.Success(c, batchTagList)
 }
 
+// ChangeBatchTag 更换分批类型（前置模式）
+// @Summary 更换分批类型
+// @Description 更换未送厨商品的分批类型（前置模式）
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ChangeBatchTagReq true "更换分批类型请求"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/instant/order/cart/batch/change_tag [post]
+func (h *InstantHandler) ChangeBatchTag(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.ChangeBatchTagReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 更换分批类型
+	err := h.orderSrv.ChangeBatchTag(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1652,6 +1680,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/instant/order/member/list", wrapper.GetOrderMemberList)                                              // 获取订单会员列表
 		privateApi.GET("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
-		privateApi.GET("/instant/batch_tag/list", wrapper.GetBatchTagList)                                                      // 获取分批类型列表
+		privateApi.GET("/instant/batch_tag/list", wrapper.GetBatchTagList)                                                    // 获取分批类型列表
+		privateApi.POST("/instant/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型
 	}
 }

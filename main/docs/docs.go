@@ -4884,6 +4884,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/batch_tag/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取分批类型列表，按 sort 排序，优先级高的在前",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取分批类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.BatchTagList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/change": {
             "post": {
                 "security": [
@@ -5450,6 +5490,57 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/cart/batch/change_tag": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更换未送厨商品的分批类型（前置模式）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "更换分批类型",
+                "parameters": [
+                    {
+                        "description": "更换分批类型请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ChangeBatchTagReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -8206,6 +8297,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/batch_tag/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取分批类型列表，按 sort 排序，优先级高的在前",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "获取分批类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.BatchTagList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/cancel": {
             "post": {
                 "security": [
@@ -8241,6 +8372,57 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/cart/batch/change_tag": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更换未送厨商品的分批类型（前置模式）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "更换分批类型",
+                "parameters": [
+                    {
+                        "description": "更换分批类型请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ChangeBatchTagReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     }
                 }
             }
@@ -35414,6 +35596,31 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ChangeBatchTagReq": {
+            "type": "object",
+            "required": [
+                "batch_tag_uuid",
+                "sale_bill_uuid",
+                "sale_order_product_uuids"
+            ],
+            "properties": {
+                "batch_tag_uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                },
+                "sale_order_product_uuids": {
+                    "description": "销售订单商品UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "req.ChangeDeskReq": {
             "type": "object",
             "required": [
@@ -36789,6 +36996,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "batch_tag_uuid": {
+                    "description": "分批类型UUID, 可选（前置模式时使用）",
+                    "type": "integer"
                 },
                 "flavor_uuid": {
                     "description": "某个规格商品ID",
@@ -38409,6 +38620,10 @@ const docTemplate = `{
                 "num"
             ],
             "properties": {
+                "batch_tag_uuid": {
+                    "description": "分批类型UUID, 可选（前置模式时使用）",
+                    "type": "integer"
+                },
                 "flavor_product_bom_uuid": {
                     "description": "商品规格uuid",
                     "type": "integer"
@@ -41025,6 +41240,7 @@ const docTemplate = `{
         "req.UpdateBusinessSetting": {
             "type": "object",
             "required": [
+                "batch_cooking_mode",
                 "checkout_zeroing_method",
                 "delivery_price_ratio",
                 "discount_method",
@@ -41041,6 +41257,14 @@ const docTemplate = `{
                 "zeroing_method"
             ],
             "properties": {
+                "batch_cooking_mode": {
+                    "description": "分批模式 pre-前置模式 post-后置模式，默认为post",
+                    "type": "string",
+                    "enum": [
+                        "pre",
+                        "post"
+                    ]
+                },
                 "checkout_zeroing_method": {
                     "description": "结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义",
                     "type": "string",
@@ -51806,6 +52030,10 @@ const docTemplate = `{
         "setting.Business": {
             "type": "object",
             "properties": {
+                "batch_cooking_mode": {
+                    "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
+                    "type": "string"
+                },
                 "batch_product_uuids": {
                     "description": "分批商品UUID列表",
                     "type": "array",
@@ -52469,6 +52697,10 @@ const docTemplate = `{
         "setting.ShopBusiness": {
             "type": "object",
             "properties": {
+                "batch_cooking_mode": {
+                    "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
+                    "type": "string"
+                },
                 "batch_product_uuids": {
                     "description": "分批商品UUID列表",
                     "type": "array",

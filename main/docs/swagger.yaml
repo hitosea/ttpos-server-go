@@ -3489,6 +3489,24 @@ definitions:
         description: 异常备注
         type: string
     type: object
+  req.ChangeBatchTagReq:
+    properties:
+      batch_tag_uuid:
+        description: 分批类型UUID
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_product_uuids:
+        description: 销售订单商品UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - batch_tag_uuid
+    - sale_bill_uuid
+    - sale_order_product_uuids
+    type: object
   req.ChangeDeskReq:
     properties:
       desk_uuid:
@@ -4445,6 +4463,9 @@ definitions:
         items:
           type: integer
         type: array
+      batch_tag_uuid:
+        description: 分批类型UUID, 可选（前置模式时使用）
+        type: integer
       flavor_uuid:
         description: 某个规格商品ID
         type: integer
@@ -5577,6 +5598,9 @@ definitions:
     type: object
   req.ProductParams:
     properties:
+      batch_tag_uuid:
+        description: 分批类型UUID, 可选（前置模式时使用）
+        type: integer
       flavor_product_bom_uuid:
         description: 商品规格uuid
         type: integer
@@ -7420,6 +7444,12 @@ definitions:
     type: object
   req.UpdateBusinessSetting:
     properties:
+      batch_cooking_mode:
+        description: 分批模式 pre-前置模式 post-后置模式，默认为post
+        enum:
+        - pre
+        - post
+        type: string
       checkout_zeroing_method:
         description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
         enum:
@@ -7515,6 +7545,7 @@ definitions:
         - "4"
         type: string
     required:
+    - batch_cooking_mode
     - checkout_zeroing_method
     - delivery_price_ratio
     - discount_method
@@ -14691,6 +14722,9 @@ definitions:
     type: object
   setting.Business:
     properties:
+      batch_cooking_mode:
+        description: '分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"'
+        type: string
       batch_product_uuids:
         description: 分批商品UUID列表
         items:
@@ -15155,6 +15189,9 @@ definitions:
     type: object
   setting.ShopBusiness:
     properties:
+      batch_cooking_mode:
+        description: '分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"'
+        type: string
       batch_product_uuids:
         description: 分批商品UUID列表
         items:
@@ -18221,6 +18258,28 @@ paths:
       summary: 解密活动二维码
       tags:
       - 收银端.基础信息
+  /cashier/desk/batch_tag/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型列表，按 sort 排序，优先级高的在前
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/product_resp.BatchTagList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批类型列表
+      tags:
+      - 收银端.桌台
   /cashier/desk/change:
     post:
       consumes:
@@ -18565,6 +18624,35 @@ paths:
       security:
       - JwtToken: []
       summary: 取消桌台订单
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/cart/batch/change_tag:
+    post:
+      consumes:
+      - application/json
+      description: 更换未送厨商品的分批类型（前置模式）
+      parameters:
+      - description: 更换分批类型请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ChangeBatchTagReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 更换分批类型
       tags:
       - 收银端.桌台
   /cashier/desk/order/cart/batch/cooking:
@@ -20156,6 +20244,28 @@ paths:
       summary: 拒单
       tags:
       - 收银端.接单相关
+  /cashier/instant/batch_tag/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型列表，按 sort 排序，优先级高的在前
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/product_resp.BatchTagList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批类型列表
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/cancel:
     post:
       consumes:
@@ -20178,6 +20288,35 @@ paths:
       security:
       - JwtToken: []
       summary: 取消点餐订单
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/batch/change_tag:
+    post:
+      consumes:
+      - application/json
+      description: 更换未送厨商品的分批类型（前置模式）
+      parameters:
+      - description: 更换分批类型请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ChangeBatchTagReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 更换分批类型
       tags:
       - 收银端.点餐
   /cashier/instant/order/cart/batch/cooking:
