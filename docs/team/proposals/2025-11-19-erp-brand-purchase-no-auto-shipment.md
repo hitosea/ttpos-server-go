@@ -12,7 +12,7 @@
 | **日期**      | 2025-11-19 |
 | **目标版本**  | v2.1.0     |
 | **状态**      | ✅ 已批准 → 已创建 Spec     |
-| **关联 Spec** | [task-bmp-inter-company-no-auto-delivery-note](../../shared/specs/task-bmp-inter-company-no-auto-delivery-note/) |
+| **关联 Spec** | [story-bmp-inter-company-no-auto-delivery-note](../../shared/specs/story-bmp-inter-company-no-auto-delivery-note/) |
 | **任务编号**  | 36978      |
 
 ---
@@ -227,10 +227,10 @@ Inter Company Sales Order 提交(Submit) → 完成（不创建发货单）
 
 **下一步行动**：
 
-- [x] 创建 Spec：`task-bmp-inter-company-no-auto-delivery-note`（已完成 2025-11-19）
+- [x] 创建 Spec：`story-bmp-inter-company-no-auto-delivery-note`（已完成 2025-11-19）
 - [ ] 分配负责人：rikugun
 - [ ] 目标 Sprint：Sprint 待定
-- [ ] 开始开发：按照 `docs/shared/specs/task-bmp-inter-company-no-auto-delivery-note/tasks.md` 执行
+- [ ] 开始开发：按照 `docs/shared/specs/story-bmp-inter-company-no-auto-delivery-note/tasks.md` 执行
 
 ---
 

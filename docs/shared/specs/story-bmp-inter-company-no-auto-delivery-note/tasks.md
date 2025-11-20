@@ -227,16 +227,16 @@
 
 ```bash
 # 查看总任务数
-grep -c "^- \[" docs/shared/specs/task-bmp-inter-company-no-auto-delivery-note/tasks.md
+grep -c "^- \[" docs/shared/specs/story-bmp-inter-company-no-auto-delivery-note/tasks.md
 
 # 查看已完成任务数
-grep -c "^- \[x\]" docs/shared/specs/task-bmp-inter-company-no-auto-delivery-note/tasks.md
+grep -c "^- \[x\]" docs/shared/specs/story-bmp-inter-company-no-auto-delivery-note/tasks.md
 
 # 查看未完成任务数
-grep -c "^- \[ \]" docs/shared/specs/task-bmp-inter-company-no-auto-delivery-note/tasks.md
+grep -c "^- \[ \]" docs/shared/specs/story-bmp-inter-company-no-auto-delivery-note/tasks.md
 
 # 计算完成率
-echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/task-bmp-inter-company-no-auto-delivery-note/tasks.md) * 100 / $(grep -c "^- \[" docs/shared/specs/task-bmp-inter-company-no-auto-delivery-note/tasks.md)" | bc
+echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/story-bmp-inter-company-no-auto-delivery-note/tasks.md) * 100 / $(grep -c "^- \[" docs/shared/specs/story-bmp-inter-company-no-auto-delivery-note/tasks.md)" | bc
 ```
 
 ### 执行流程
