@@ -93,10 +93,11 @@ func (p *PackageProductDetail) GetCanEdit() bool {
 
 // ProductBatchType 分批类型
 type BatchTag struct {
-	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
-	Color      string             `json:"color"`       // 颜色值，如#FF0000
-	Sort       int                `json:"sort"`        // 排序，数字越小越靠前
+	Uuid         uint64             `json:"uuid"`         // 分批类型UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`  // 分批类型名称，多语言
+	Abbreviation string             `json:"abbreviation"` // 名称缩写
+	Color        string             `json:"color"`        // 颜色值，如#FF0000
+	Sort         int                `json:"sort"`         // 排序，数字越小越靠前
 }
 
 // BatchTagList 分批类型列表
@@ -106,10 +107,11 @@ type BatchTagList struct {
 
 // ProductBatchTypeDetail 分批类型详情
 type BatchTagDetail struct {
-	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
-	Color      string             `json:"color"`       // 颜色值，如#FF0000
-	Sort       int                `json:"sort"`        // 排序，数字越小越靠前
+	Uuid         uint64             `json:"uuid"`         // 分批类型UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`  // 分批类型名称，多语言
+	Abbreviation string             `json:"abbreviation"` // 名称缩写
+	Color        string             `json:"color"`        // 颜色值，如#FF0000
+	Sort         int                `json:"sort"`         // 排序，数字越小越靠前
 }
 
 // BatchTagList 分批类型列表
