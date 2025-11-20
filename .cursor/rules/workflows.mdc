@@ -16,16 +16,42 @@ lastUpdate: 2025-11-16
 
 ---
 
+## 目录组织规范
+
+**约束**: `docs/agent/workflows/` 必须使用模块目录划分，禁止平铺文件
+
+```
+docs/agent/workflows/
+├── requirement/          # 需求管理相关
+│   ├── management.md
+│   └── proposal.md
+├── development/          # 开发相关
+│   ├── feature.md
+│   ├── bug-fixing.md
+│   └── testing.md
+├── integration/          # 集成相关
+│   ├── api.md
+│   ├── microservice.md
+│   └── third-party.md
+└── database/             # 数据库相关
+    ├── migration.md
+    └── optimization.md
+```
+
+**原因**: 随着工作流数量增加，平铺文件难以维护和查找，模块化目录结构更清晰
+
+---
+
 ## 工作流索引
 
-| 优先级 | 工作流         | 文档路径                                                                                                   | 适用场景              | 预计时间 |
-| ------ | -------------- | ---------------------------------------------------------------------------------------------------------- | --------------------- | -------- |
-| P0     | **需求管理**   | [docs/agent/workflows/requirement-management.md](../../docs/agent/workflows/requirement-management.md)     | 需求发起、评审、确认  | 0.5-1 天 |
-| P0     | **功能开发**   | [docs/agent/workflows/feature-development.md](../../docs/agent/workflows/feature-development.md)           | 新增功能、优化功能    | 2-5 天   |
-| P0     | **Bug 修复**   | [docs/agent/workflows/bug-fixing.md](../../docs/agent/workflows/bug-fixing.md)                             | 修复缺陷、解决问题    | 0.5-2 天 |
-| P0     | **API 对接**   | [docs/agent/workflows/api-integration.md](../../docs/agent/workflows/api-integration.md)                   | 第三方集成、接口开发  | 1-3 天   |
-| P0     | **数据库迁移** | [docs/agent/workflows/database-migration.md](../../docs/agent/workflows/database-migration.md)             | 新增表、修改字段      | 0.5-1 天 |
-| P1     | **微服务集成** | [docs/agent/workflows/microservice-integration.md](../../docs/agent/workflows/microservice-integration.md) | gRPC 服务、Nacos 注册 | 2-4 天   |
+| 优先级 | 工作流         | 文档路径                                                                                                         | 适用场景              | 预计时间 |
+| ------ | -------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------- | -------- |
+| P0     | **需求管理**   | [docs/agent/workflows/requirement/management.md](../../docs/agent/workflows/requirement/management.md)           | 需求发起、评审、确认  | 0.5-1 天 |
+| P0     | **功能开发**   | [docs/agent/workflows/development/feature.md](../../docs/agent/workflows/development/feature.md)                 | 新增功能、优化功能    | 2-5 天   |
+| P0     | **Bug 修复**   | [docs/agent/workflows/development/bug-fixing.md](../../docs/agent/workflows/development/bug-fixing.md)           | 修复缺陷、解决问题    | 0.5-2 天 |
+| P0     | **API 对接**   | [docs/agent/workflows/integration/api.md](../../docs/agent/workflows/integration/api.md)                         | 第三方集成、接口开发  | 1-3 天   |
+| P0     | **数据库迁移** | [docs/agent/workflows/database/migration.md](../../docs/agent/workflows/database/migration.md)                   | 新增表、修改字段      | 0.5-1 天 |
+| P1     | **微服务集成** | [docs/agent/workflows/integration/microservice.md](../../docs/agent/workflows/integration/microservice.md)       | gRPC 服务、Nacos 注册 | 2-4 天   |
 
 ---
 
@@ -37,7 +63,7 @@ lastUpdate: 2025-11-16
 
 **执行流程**
 
-1. 查阅 [需求管理工作流](../../docs/agent/workflows/requirement-management.md)
+1. 查阅 [需求管理工作流](../../docs/agent/workflows/requirement/management.md)
 2. 按照 10 步流程执行 (详见文档)
 3. **核心流程** Proposal → 评审 → Spec → SP 评估
    - Step 1: `/propose {feature-name}` 创建提案
@@ -68,7 +94,7 @@ lastUpdate: 2025-11-16
 
 **执行流程**
 
-1. 查阅 [功能开发工作流](../../docs/agent/workflows/feature-development.md)
+1. 查阅 [功能开发工作流](../../docs/agent/workflows/development/feature.md)
 2. 按照 8 步流程执行 (详见文档)
 3. **核心流程** 任务驱动开发
    - Step 3: 创建 Spec (使用 `docs/agent/templates/` 中的模板)
@@ -94,7 +120,7 @@ lastUpdate: 2025-11-16
 
 **执行流程**
 
-1. 查阅 [Bug 修复工作流](../../docs/agent/workflows/bug-fixing.md)
+1. 查阅 [Bug 修复工作流](../../docs/agent/workflows/development/bug-fixing.md)
 2. 按照 6 步流程执行 (详见文档)
 3. 涉及的规范:
    - `knowledge_management.mdc` - 4 层检索 (查历史问题)
@@ -109,7 +135,7 @@ lastUpdate: 2025-11-16
 
 **执行流程**
 
-1. 查阅 [API 对接工作流](../../docs/agent/workflows/api-integration.md)
+1. 查阅 [API 对接工作流](../../docs/agent/workflows/integration/api.md)
 2. 按照 7 步流程执行 (详见文档)
 3. 涉及的规范:
    - `golang.mdc` - Go API 封装规范
@@ -123,7 +149,7 @@ lastUpdate: 2025-11-16
 
 **执行流程**
 
-1. 查阅 [数据库迁移工作流](../../docs/agent/workflows/database-migration.md)
+1. 查阅 [数据库迁移工作流](../../docs/agent/workflows/database/migration.md)
 2. 按照 8 步流程执行 (详见文档)
 3. **核心流程** PHP Phinx 迁移 + Go Model 同步
    - Step 1: 设计表结构
@@ -151,7 +177,7 @@ lastUpdate: 2025-11-16
 
 **执行流程**
 
-1. 查阅 [微服务集成工作流](../../docs/agent/workflows/microservice-integration.md)
+1. 查阅 [微服务集成工作流](../../docs/agent/workflows/integration/microservice.md)
 2. 按照 10 步流程执行 (详见文档)
 3. **核心流程** Protobuf → 代码生成 → 服务注册
    - Step 1: 定义 Protobuf 文件
@@ -198,13 +224,13 @@ lastUpdate: 2025-11-16
 
 ### 我想知道...
 
-| 问题                 | 查阅                                                                       |
-| -------------------- | -------------------------------------------------------------------------- |
-| 如何开始一个新功能？ | [功能开发工作流](../../docs/agent/workflows/feature-development.md)        |
-| Bug 修复的完整流程？ | [Bug 修复工作流](../../docs/agent/workflows/bug-fixing.md)                 |
-| 如何对接第三方 API？ | [API 对接工作流](../../docs/agent/workflows/api-integration.md)            |
-| 如何创建数据库迁移？ | [数据库迁移工作流](../../docs/agent/workflows/database-migration.md)       |
-| 如何开发 gRPC 服务？ | [微服务集成工作流](../../docs/agent/workflows/microservice-integration.md) |
+| 问题                 | 查阅                                                                             |
+| -------------------- | -------------------------------------------------------------------------------- |
+| 如何开始一个新功能？ | [功能开发工作流](../../docs/agent/workflows/development/feature.md)              |
+| Bug 修复的完整流程？ | [Bug 修复工作流](../../docs/agent/workflows/development/bug-fixing.md)           |
+| 如何对接第三方 API？ | [API 对接工作流](../../docs/agent/workflows/integration/api.md)                  |
+| 如何创建数据库迁移？ | [数据库迁移工作流](../../docs/agent/workflows/database/migration.md)             |
+| 如何开发 gRPC 服务？ | [微服务集成工作流](../../docs/agent/workflows/integration/microservice.md)       |
 
 ### 我在某个步骤卡住了...
 

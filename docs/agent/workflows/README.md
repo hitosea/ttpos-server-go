@@ -8,21 +8,21 @@
 
 ### 核心工作流（P0）
 
-| 工作流         | 文件                                                     | 适用场景             | 预计时间 |
-| -------------- | -------------------------------------------------------- | -------------------- | -------- |
-| **新成员入职** | [onboarding.md](./onboarding.md)                         | 新成员快速上手       | 4-6 天   |
-| **需求管理**   | [requirement-management.md](./requirement-management.md) | 需求发起、评审、确认 | 0.5-1 天 |
-| **功能开发**   | [feature-development.md](./feature-development.md)       | 新增功能、优化功能   | 2-5 天   |
-| **Bug 修复**   | [bug-fixing.md](./bug-fixing.md)                         | 修复缺陷、解决问题   | 0.5-2 天 |
-| **API 对接**   | [api-integration.md](./api-integration.md)               | 第三方集成、接口开发 | 1-3 天   |
-| **链接回写**   | [proposal-spec-linking.md](./proposal-spec-linking.md)   | Proposal↔Spec 双向链 | 0.5 天   |
+| 工作流         | 文件                                                         | 适用场景             | 预计时间 |
+| -------------- | ------------------------------------------------------------ | -------------------- | -------- |
+| **新成员入职** | [onboarding.md](./onboarding.md)                             | 新成员快速上手       | 4-6 天   |
+| **需求管理**   | [requirement/management.md](./requirement/management.md)     | 需求发起、评审、确认 | 0.5-1 天 |
+| **功能开发**   | [development/feature.md](./development/feature.md)           | 新增功能、优化功能   | 2-5 天   |
+| **Bug 修复**   | [development/bug-fixing.md](./development/bug-fixing.md)     | 修复缺陷、解决问题   | 0.5-2 天 |
+| **API 对接**   | [integration/api.md](./integration/api.md)                   | 第三方集成、接口开发 | 1-3 天   |
+| **链接回写**   | [requirement/linking.md](./requirement/linking.md)           | Proposal↔Spec 双向链 | 0.5 天   |
 
 ### 后端专属工作流（P0）
 
-| 工作流         | 文件                                                         | 适用场景              | 预计时间 |
-| -------------- | ------------------------------------------------------------ | --------------------- | -------- |
-| **数据库迁移** | [database-migration.md](./database-migration.md)             | 新增表、修改字段      | 0.5-1 天 |
-| **微服务集成** | [microservice-integration.md](./microservice-integration.md) | gRPC 服务、Nacos 注册 | 2-4 天   |
+| 工作流         | 文件                                                             | 适用场景              | 预计时间 |
+| -------------- | ---------------------------------------------------------------- | --------------------- | -------- |
+| **数据库迁移** | [database/migration.md](./database/migration.md)                 | 新增表、修改字段      | 0.5-1 天 |
+| **微服务集成** | [integration/microservice.md](./integration/microservice.md)     | gRPC 服务、Nacos 注册 | 2-4 天   |
 
 ---
 
@@ -30,15 +30,15 @@
 
 ### 我想知道...
 
-| 问题                 | 查阅                                              |
-| -------------------- | ------------------------------------------------- |
-| 新成员如何快速上手？ | [新成员入职工作流](./onboarding.md)               |
-| 如何开始一个新功能？ | [功能开发工作流](./feature-development.md)        |
-| Bug 修复的完整流程？ | [Bug 修复工作流](./bug-fixing.md)                 |
-| 如何对接第三方 API？ | [API 对接工作流](./api-integration.md)            |
-| 如何创建数据库迁移？ | [数据库迁移工作流](./database-migration.md)       |
-| 如何开发 gRPC 服务？ | [微服务集成工作流](./microservice-integration.md) |
-| 如何管理需求？       | [需求管理工作流](./requirement-management.md)     |
+| 问题                 | 查阅                                                      |
+| -------------------- | --------------------------------------------------------- |
+| 新成员如何快速上手？ | [新成员入职工作流](./onboarding.md)                       |
+| 如何开始一个新功能？ | [功能开发工作流](./development/feature.md)                |
+| Bug 修复的完整流程？ | [Bug 修复工作流](./development/bug-fixing.md)             |
+| 如何对接第三方 API？ | [API 对接工作流](./integration/api.md)                    |
+| 如何创建数据库迁移？ | [数据库迁移工作流](./database/migration.md)               |
+| 如何开发 gRPC 服务？ | [微服务集成工作流](./integration/microservice.md)         |
+| 如何管理需求？       | [需求管理工作流](./requirement/management.md)             |
 
 ### 我在某个步骤卡住了...
 
@@ -86,32 +86,32 @@ graph TD
 ### 场景 0: 产品经理提出需求
 
 **关键词**: "有个想法" "能不能做" "提个需求"  
-**工作流**: [需求管理](./requirement-management.md)
+**工作流**: [需求管理](./requirement/management.md)
 
 ### 场景 1: 开发者实现功能
 
 **关键词**: "新增" "添加" "实现" "开发"  
-**工作流**: [功能开发](./feature-development.md)
+**工作流**: [功能开发](./development/feature.md)
 
 ### 场景 3: 用户报告 Bug
 
 **关键词**: "错误" "报错" "bug" "崩溃"  
-**工作流**: [Bug 修复](./bug-fixing.md)
+**工作流**: [Bug 修复](./development/bug-fixing.md)
 
 ### 场景 4: 第三方 API 集成
 
 **关键词**: "集成" "对接" "API" "第三方"  
-**工作流**: [API 对接](./api-integration.md)
+**工作流**: [API 对接](./integration/api.md)
 
 ### 场景 5: 数据库迁移
 
 **关键词**: "迁移数据库" "新增表" "修改字段"  
-**工作流**: [数据库迁移](./database-migration.md)
+**工作流**: [数据库迁移](./database/migration.md)
 
 ### 场景 6: 微服务集成
 
 **关键词**: "gRPC" "微服务" "ttpos-bmp" "Nacos"  
-**工作流**: [微服务集成](./microservice-integration.md)
+**工作流**: [微服务集成](./integration/microservice.md)
 
 ---
 

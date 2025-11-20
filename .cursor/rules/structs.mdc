@@ -13,6 +13,9 @@ description: 项目结构快速定位
 
 | 我要找...            | 路径                         |
 | -------------------- | ---------------------------- |
+| **新前端管理后台**   | `ttpos-flutter/apps/shop`     |
+| **新前端管理后台**   | `ttpos-flutter/apps/shop`    |
+| **新前端管理后台**   | `ttpos-flutter/apps/shop`     |
 | **Go Main 核心业务** | `main/app/`                  |
 | **PHP 管理后台**     | `admin/app/admin/`           |
 | **PHP 店铺后台**     | `admin/app/shop/`            |
@@ -23,7 +26,35 @@ description: 项目结构快速定位
 | **Docker 配置**      | `docker/`                    |
 | **项目文档**         | `docs/`                      |
 | **API 定义**         | `ttpos-api/`                 |
-| **工具脚本**         | `ttpos-scripts/`, `scripts/` |
+| **工具脚本**         | `ttpos-scripts/`             |
+---
+
+## 根目录结构与目录命名规则（当前仓库）
+
+> 本仓库是一个多模块单体 + 多项目仓库，顶层目录已经约定俗成，**禁止随意新增新的一级目录**。
+
+```text
+.
+├── main/           # Go Main 核心后端（Gin 单体）
+├── admin/          # PHP 管理后台 + 店铺后台（ThinkPHP）
+├── ttpos-bmp/      # Go BMP 业务中台微服务（GoFrame）
+├── ttpos-api/      # 公共 API / SDK 定义与复用代码
+├── ttpos-flutter/  # 多终端 Flutter 前端工程 / 新管理端
+├── ttpos-scripts/  # 脚本与运维工具（独立仓库式管理）
+├── docker/         # Docker / Compose / 中间件配置
+├── docs/           # 文档体系（与 AGENTS.md 说明保持一致）
+└── 其他文件         # 仓库级配置（makefile、compose 文件、README 等）
+```
+
+**目录规则与约束：**
+
+- **禁止新增一级目录**：如需新增模块，优先在现有模块内扩展，例如：
+  - Go 业务 → 放在 `main/app/` 或 `ttpos-bmp/app/ttpos-*/` 下
+  - PHP 业务 → 放在 `admin/app/{admin,shop,common}/` 下
+  - 新管理端 → 优先 `ttpos-flutter/apps/shop` 中
+- **文档统一放在 `docs/`**，按 `agent/human/shared/team` 分类，不在源码目录里随意新建 `docs/`。
+- **脚本优先放在模块内的 `scripts/` 或根 `ttpos-scripts/`**，不要在任意目录下散落脚本文件。
+- **调试/临时文件禁止入库**：如本地证书、日志、临时导出文件等，统一走 `.gitignore` 或放在 `runtime/` / `tmp/`。
 
 ---
 
@@ -67,7 +98,7 @@ admin/
 │   └── seeds/              # 种子文件
 └── views/                  # 前端代码（Vue3）
     ├── admin/              # 管理后台前端
-    └── shop/               # 店铺后台前端
+    └── shop/               # 店铺后台前端 (它不是新的管理员端)
 ```
 
 ### 3. BMP 模块（Go + GoFrame）

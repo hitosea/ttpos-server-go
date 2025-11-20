@@ -33,7 +33,7 @@
 | PHP 与数据库规范   | `.cursor/rules/php.mdc` · `.cursor/rules/database.mdc`                             |
 | API 与安全规范     | `.cursor/rules/api.mdc` · `.cursor/rules/security.mdc`                             |
 | 前端/Vue 规范      | `.cursor/rules/vue.mdc`                                                            |
-| BMP/Proto 规范     | `ttpos-bmp/.cursor/rules/go-rules.mdc` · `ttpos-bmp/.cursor/rules/proto-rules.mdc` |
+| BMP/Proto 规范     | `ttpos-bmp/.cursor/rules/go-rules.mdc` · `ttpos-bmp/.cursor/rules/proto-rules.mdc`  · `ttpos-bmp/.cursor/rules/*` |
 | 文档与版本规范     | `.cursor/rules/documentation.mdc` · `.cursor/rules/version.mdc`                    |
 
 ---

@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+- 涉及erpnext的需求，不需要修改 erpnext的源代码，也不要使用erpnext 的server scripts 功能。 通过修改 ttpos-erp 模块的代码来实现
+- 与erpnext交互时通过 ttpos-erp/internal/logic/erpnext 下的通用服务生成新的 logic服务
+- 与erpnext交互时通过输入输出的json 生成的struct 在 model/dto 包中
+- 生成与与erpnext交互时生成的服务，通常都包含 Create /Update /Delete /ChangeStatus /Count 方法
