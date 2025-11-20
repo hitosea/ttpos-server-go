@@ -80,6 +80,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			shop.RegisterBaseHandlers(shopGroup, dbm, cache)
 			shop.RegisterOrderHandlers(shopGroup, dbm, cache)
+			shop.RegisterOrderImportHandlers(shopGroup, dbm, cache)
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
