@@ -7888,10 +7888,11 @@ func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListRe
 	list := make([]product_resp.BatchTag, len(batchTags))
 	for i, batchType := range batchTags {
 		list[i] = product_resp.BatchTag{
-			Uuid:       batchType.Uuid,
-			LocaleName: batchType.MultiLanguageName.GetNames(),
-			Color:      batchType.Color,
-			Sort:       batchType.Sort,
+			Uuid:         batchType.Uuid,
+			LocaleName:   batchType.MultiLanguageName.GetNames(), // 已在 v2.9.0 实现
+			Abbreviation: batchType.Abbreviation,
+			Color:        batchType.Color,
+			Sort:         batchType.Sort,
 		}
 	}
 
@@ -7913,10 +7914,11 @@ func (s *productSrv) GetBatchTag(ctx context.Context, req req.BatchTagReq) (*pro
 	}
 
 	return &product_resp.BatchTagDetail{
-		Uuid:       batchTag.Uuid,
-		LocaleName: batchTag.MultiLanguageName.GetNames(),
-		Color:      batchTag.Color,
-		Sort:       batchTag.Sort,
+		Uuid:         batchTag.Uuid,
+		LocaleName:   batchTag.MultiLanguageName.GetNames(), // 已在 v2.9.0 实现
+		Abbreviation: batchTag.Abbreviation,
+		Color:        batchTag.Color,
+		Sort:         batchTag.Sort,
 	}, nil
 }
 
@@ -7925,6 +7927,15 @@ func (s *productSrv) AddBatchTag(ctx context.Context, req req.BatchTagAddReq) er
 	db := s.dbm.GetDB(ctx.GetDbId())
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		batchTagRepo := repository.NewBatchTagRepo(tx)
+
+		// 验证缩写字段（必填，长度 1-10 个字符）
+		if req.Abbreviation == "" {
+			return errors.New("名称缩写不能为空")
+		}
+		if len(req.Abbreviation) > 10 {
+			return errors.New("名称缩写不能超过10个字符")
+		}
+
 		// 检查颜色是否已被使用
 		if batchTagRepo.CheckColorExists(req.Color, 0) {
 			return errors.New("该颜色已被其他分批类型使用")
@@ -7949,6 +7960,7 @@ func (s *productSrv) AddBatchTag(ctx context.Context, req req.BatchTagAddReq) er
 		batchTag := model.BatchTag{
 			Name:                  req.LocaleName.ToJson(),
 			MultiLanguageNameUuid: multiLanguageNameUuid,
+			Abbreviation:          req.Abbreviation,
 			Color:                 req.Color,
 			Sort:                  nextSort,
 		}
@@ -7977,6 +7989,14 @@ func (s *productSrv) EditBatchTag(ctx context.Context, req req.BatchTagEditReq) 
 			return errors.WithMessage(err, "获取分批类型详情失败")
 		}
 
+		// 验证缩写字段（必填，长度 1-10 个字符）
+		if req.Abbreviation == "" {
+			return errors.New("名称缩写不能为空")
+		}
+		if len(req.Abbreviation) > 10 {
+			return errors.New("名称缩写不能超过10个字符")
+		}
+
 		// 检查颜色是否已被其他分批类型使用（排除自己）
 		if batchTagRepo.CheckColorExists(req.Color, req.Uuid) {
 			return errors.New("该颜色已被其他分批类型使用")
@@ -7989,6 +8009,7 @@ func (s *productSrv) EditBatchTag(ctx context.Context, req req.BatchTagEditReq) 
 		// 更新分批类型
 		batchTag.Color = req.Color
 		batchTag.Name = req.LocaleName.ToJson()
+		batchTag.Abbreviation = req.Abbreviation
 		err = batchTagRepo.UpdateBatchTag(*batchTag)
 		if err != nil {
 			return errors.WithMessage(err, "更新分批类型失败")

@@ -608,15 +608,17 @@ type BatchTagReq struct {
 
 // ProductBatchTypeAddReq 分批类型添加请求
 type BatchTagAddReq struct {
-	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
-	Color      string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
+	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
+	Abbreviation string             `json:"abbreviation"`                   // 名称缩写
+	Color        string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
 }
 
 // ProductBatchTypeEditReq 分批类型编辑请求
 type BatchTagEditReq struct {
-	Uuid       uint64             `json:"uuid" binding:"required"`        // 分批类型UUID
-	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
-	Color      string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
+	Uuid         uint64             `json:"uuid" binding:"required"`        // 分批类型UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
+	Abbreviation string             `json:"abbreviation"`                   // 名称缩写
+	Color        string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
 }
 
 // ProductBatchTypeDeleteReq 分批类型删除请求
