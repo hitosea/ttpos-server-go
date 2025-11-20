@@ -117,6 +117,8 @@ export interface ShowAddType {
   is_open_marketing?: number; // 是否开启营销活动: 0不开启, 1开启
   is_open_advanced_ticket_print?: number; // 是否开启高级票据打印: 0不开启, 1开启
   coordinates?: string; // 经纬度
+  enable_table_map?: number; // 是否启用桌台地图能力: 0不开启, 1开启
+  enable_data_management?: number; // 是否启用数据管理能力: 0不开启, 1开启
 }
 
 // 添加商家

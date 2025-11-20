@@ -181,6 +181,51 @@ SELECT * FROM ttpos_order WHERE status = 1;
 
 ## 迁移文件
 
+### 迁移目标设置（TARGET）
+
+**涉及 `company_setting` 和 `company` 表的迁移文件，必须添加 `const TARGET = 'all';`**
+
+这些表的数据需要同步到所有商户数据库，因此必须指定迁移目标为 `all`。
+
+```php
+<?php
+use think\migration\Migrator;
+
+class AddTableMapFieldsToCompanySetting extends Migrator
+{
+    // 迁移目标：所有商户数据库
+    const TARGET = 'all';
+    
+    public function change()
+    {
+        // 检查表是否存在
+        if ($this->hasTable('company_setting')) {
+            $table = $this->table('company_setting');
+            
+            // 检查字段是否不存在，如果不存在则添加
+            if (!$table->hasColumn('enable_table_map')) {
+                $table->addColumn('enable_table_map', 'integer', [
+                    'limit' => 3,
+                    'default' => 0,
+                    'null' => false,
+                    'comment' => '是否启用桌台地图能力：0-否；1-是'
+                ]);
+            }
+            
+            $table->update();
+        }
+    }
+}
+```
+
+**TARGET 常量说明：**
+
+| 常量值   | 说明                         | 适用场景                  |
+| -------- | ---------------------------- | ------------------------- |
+| `'all'`  | 应用到所有商户数据库         | company、company_setting  |
+| `'main'` | 仅应用到 saas 主库           | 系统级表                  |
+| 不设置   | 应用到当前配置的数据库（默认） | 普通业务表                |
+
 ### PHP 迁移（admin/）
 
 ```php
