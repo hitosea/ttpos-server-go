@@ -237,6 +237,26 @@ docs/                   # 项目文档
 2. 这些终端背后的**用户角色**是谁（顾客、收银员、店长、运营、后厨等）？
 3. 是否触及**资金闭环或会员资产**，以及是否可能导致多终端之间的状态不一致？
 
+### 前端技术栈说明
+
+**重要规则：架构图和文档中应明确前端技术栈，避免混淆**
+
+- ✅ **新管理端（Shop）**: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/shop`
+- ✅ **所有用户端终端**（pos/kds/qds/assistant/tablet/mobile/menu/member）: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/`
+- ✅ **旧管理后台和店铺后台**: 使用 **Vue 3 + TypeScript**，位于 `admin/views/`
+
+**架构图规范**：
+
+- ❌ **禁止使用** "Vue Frontend" 作为通用前端标识（容易误解）
+- ✅ **推荐使用** "新管理端 (Flutter)" 或 "Shop Management Frontend (Flutter)"
+- ✅ **或使用** 具体终端名称（如 "Shop App (Flutter)"）
+
+**文档规范**：
+
+- 在 Spec 文档中明确说明前端技术栈
+- 新管理端功能应标注为 Flutter，不是 Vue
+- 旧管理后台功能应标注为 Vue3
+
 ### 终端与 API 路径快速映射（main 模块）
 
 > 仅列出主调用入口，所有终端的登录/鉴权等通用能力由 `/api/v1/passport` 提供。
