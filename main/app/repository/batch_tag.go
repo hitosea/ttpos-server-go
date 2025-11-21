@@ -134,8 +134,9 @@ func (r *BatchTagRepoImpl) CheckColorExists(color string, uuid uint64) bool {
 // 更新分批类型
 func (r *BatchTagRepoImpl) UpdateBatchTag(batchTag model.BatchTag) error {
 	return r.db.Model(&model.BatchTag{}).Where("uuid = ?", batchTag.Uuid).Updates(map[string]any{
-		"color": batchTag.Color,
-		"name":  batchTag.Name,
+		"color":        batchTag.Color,
+		"name":         batchTag.Name,
+		"abbreviation": batchTag.Abbreviation,
 	}).Error
 }
 
