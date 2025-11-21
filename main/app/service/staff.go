@@ -133,6 +133,9 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 		update["password"] = utils.EncryptPassword(updateReq.Password)
 		update["password_change_time"] = time.Now().Unix()
 	}
+	if updateReq.PermissionPassword != "" {
+		update["permission_password"] = utils.EncryptPassword(updateReq.PermissionPassword)
+	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		staffRepo := repository.NewStaffRepo(tx)
@@ -200,13 +203,14 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	saasDB.Model(&model.CompanyStaff{}).Create(&companyStaff)
 
 	staff := model.Staff{
-		CompanyUuid: ctx.GetCompanyUuid(),
-		Username:    addReq.Username,
-		RealName:    addReq.RealName,
-		Phone:       addReq.Phone,
-		Password:    utils.EncryptPassword(addReq.Password),
-		IsDisable:   0,
-		IsSuper:     0,
+		CompanyUuid:       ctx.GetCompanyUuid(),
+		Username:          addReq.Username,
+		RealName:          addReq.RealName,
+		Phone:             addReq.Phone,
+		Password:          utils.EncryptPassword(addReq.Password),
+		PermissionPassword: utils.EncryptPassword(addReq.PermissionPassword),
+		IsDisable:         0,
+		IsSuper:           0,
 	}
 	// 确保关联得上
 	staff.Uuid = companyStaff.Uuid

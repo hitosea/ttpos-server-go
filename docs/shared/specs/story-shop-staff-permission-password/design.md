@@ -131,7 +131,7 @@ graph TD
 ```sql
 -- 新增字段：权限密码
 ALTER TABLE `ttpos_staff` 
-ADD COLUMN `permission_password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '权限密码（加密存储）' 
+ADD COLUMN `permission_password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '权限密码（加密存储），默认值666888' 
 AFTER `password`;
 ```
 
@@ -139,7 +139,12 @@ AFTER `password`;
 
 | 字段 | 类型 | 说明 | 约束 |
 |------|------|------|------|
-| permission_password | varchar(255) | 权限密码（加密存储） | DEFAULT '' |
+| permission_password | varchar(255) | 权限密码（加密存储） | NOT NULL DEFAULT '' |
+
+**迁移文件说明**:
+- 迁移文件：`admin/database/migrations/20251121014418_add_permission_password_field_to_staff_table.php`
+- 字段不允许为空，默认值为空字符串
+- 迁移时会为已存在的员工记录设置默认权限密码（加密后的 666888）
 
 **索引设计**:
 
