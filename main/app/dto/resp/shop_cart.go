@@ -323,6 +323,7 @@ type Product struct {
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
 	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
 	IsBatch             bool               `json:"is_batch"`              // 是否是分批商品
+	ShowDelayTag        bool               `json:"show_delay_tag"`        // 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
 	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
 	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
 	BatchTagColor       string             `json:"batch_tag_color"`       // 分批类型颜色

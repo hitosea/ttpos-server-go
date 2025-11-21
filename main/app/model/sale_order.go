@@ -811,6 +811,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 			},
 			CanEdit:      saleOrderProduct.IsCanEdit(),
 			IsBatch:      saleOrderProduct.IsBatchBool(),
+			ShowDelayTag: saleOrderProduct.IsPreCooking() && saleOrderProduct.BatchTagUuid != 0, // 如果商品是分批商品，且被标记分批类型，且处于预送厨阶段，则显示延迟送厨标签
 			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
 			BatchTagName: func() dto.LocaleResponse {
 				if saleOrderProduct.BatchTag != nil {
