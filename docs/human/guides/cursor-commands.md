@@ -36,9 +36,11 @@
 **使用方式**:
 
 ```bash
-/propose quick-payment       # 创建快速支付功能提案
-/propose report-export       # 创建报表导出功能提案
-/propose dark-mode           # 创建深色模式提案
+/propose quick-payment                    # 创建快速支付功能提案
+/propose report-export                    # 创建报表导出功能提案
+/propose dark-mode                        # 创建深色模式提案
+/propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
+/propose feature-name DooTask #36917      # 支持 DooTask # 格式
 ```
 
 **功能特点**:
@@ -47,6 +49,12 @@
 - ✅ 自动填充日期、提案人信息
 - ✅ 创建目录 `docs/team/proposals/{YYYY-MM-DD}-{feature-name}.md`
 - ✅ 提供 Scrum 评审清单
+- ✅ **自动读取 DooTask 任务**（当提供任务编号时）
+  - 自动获取任务标题、描述、需求详情
+  - 将任务内容填充到提案的"背景和动机"、"解决方案概述"等章节
+  - 自动在"关联任务"字段中记录任务编号
+  - 将任务内容作为上下文信息，供后续对话使用
+  - 将任务内容作为上下文信息，供后续对话使用
 
 **详见**: `.cursor/commands/propose.md`
 
