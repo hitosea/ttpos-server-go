@@ -148,8 +148,9 @@ type OrderRepoImpl struct {
 
 - ✅ **只能调用 Service 接口**
 - ✅ **只负责参数校验、调用 Service、返回响应**
-- ❌ **不能引用 repository 包**
-- ❌ **不能编写业务逻辑，业务逻辑必须在 service 目录下编写**
+- ❌ **严禁引用 repository 包**（违反分层架构，必须通过 Service 层）
+- ❌ **严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
+- ❌ **禁止在 app/api/v1 目录下的任何子目录中引用 repository 包**
 
 ```go
 // ✅ 正确 - API 层只负责调用 Service
@@ -200,8 +201,9 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 - [ ] Service 只依赖自己领域的 Repository
 - [ ] Service 通过 Repository 操作 model，不直接操作
 - [ ] Repository 只持有 db 实例
-- [ ] API 层不引用 repository 包
-- [ ] API 层不编写业务逻辑，只调用 Service
+- [ ] **API 层（app/api/v1 及其所有子目录）严禁引用 repository 包**
+- [ ] **API 层严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
+- [ ] API 层只负责参数校验、调用 Service、返回响应
 - [ ] data 不能为 null 或数组
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
@@ -290,8 +292,8 @@ order, err := orderRepo.GetOrder(
 | ❌ Service 使用 dbm.GetDB(dbId)     | 必须使用 ctx.GetDB()        |
 | ❌ Service 跨领域依赖 Repository    | 只能依赖自己领域的 Repo     |
 | ❌ Service 直接操作 model           | 必须通过 Repository         |
-| ❌ API 层引用 repository 包  | 只能调用 Service      |
-| ❌ API 层编写业务逻辑        | 业务逻辑应在 Service 层 |
+| ❌ **API 层（app/api/v1 及其所有子目录）引用 repository 包** | **严禁违反，必须通过 Service 层** |
+| ❌ **API 层编写业务逻辑**        | **严禁违反，所有业务逻辑必须在 Service 层实现** |
 | ❌ Repository 持有 DBManager        | 只能持有 db                 |
 | ❌ 跨层调用                         | 必须遵循分层                |
 | ❌ 使用字面量常量             | 必须在 constant 包中定义 |
