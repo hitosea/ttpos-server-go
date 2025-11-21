@@ -500,6 +500,24 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 
 // InstantOrderCartProductCooking 送厨购物车商品
 func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error) {
+	defer func() { // 送厨结束后，执行分批送厨
+		// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
+		if ctx.GetSource() == constant.SourceAssistant {
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				ctx.Log().Info("获取业务设置失败,导致不能分批送厨", zap.Error(err))
+			} else if businessSetting.BatchCookingMode == constant.BatchCookingModePre {
+				// 异步执行分批送厨，不阻塞流程
+				utils.Go(func() {
+					ctx := ctx.Copy()
+					if err := s.AutoSendCookingByPriority(ctx, req.SaleBillUuid); err != nil {
+						ctx.Log().Error("分批送厨失败", zap.Error(err))
+					}
+				})
+			}
+		}
+	}()
+
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid)
 		defer s.lock.UnlockUuid(req.SaleBillUuid)

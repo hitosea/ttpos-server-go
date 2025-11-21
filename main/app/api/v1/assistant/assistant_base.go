@@ -22,6 +22,7 @@ type BaseHandler struct {
 	paymentMethodSrv service.IPaymentMethodSrv
 	otherSrv         service.IOtherSrv
 	deviceSrv        service.IDeviceSrv
+	productSrv       service.IProductSrv
 }
 
 // GetLanguage 语言
@@ -227,6 +228,29 @@ func (h *BaseHandler) EditSetting(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetBatchTagList 获取分批类型列表
+// @Summary 获取分批类型列表
+// @Description 获取分批类型列表，按 sort 排序，优先级高的在前
+// @Tags 点餐助手端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=product_resp.BatchTagList}
+// @Router /assistant/batch_tag/list [get]
+func (h *BaseHandler) GetBatchTagList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 调用 Service 层获取分批类型列表
+	batchTagList, err := h.productSrv.GetBatchTagList(ctx, req.BatchTagListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, batchTagList)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -240,6 +264,9 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	localeSrv := service.NewLocaleSrv()
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 
 	wrapper := &BaseHandler{
 		authSrv:          authSrv,
@@ -247,6 +274,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		paymentMethodSrv: paymentMethodSrv,
 		otherSrv:         otherSrv,
 		deviceSrv:        deviceSrv,
+		productSrv:       productSrv,
 	}
 
 	// 需要认证
@@ -262,5 +290,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/return_reason", wrapper.GetReturnReason)                    // 获取退菜原因
 		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)          // 获取退菜原因
 		privateApi.POST("/setting", wrapper.EditSetting)                             // 修改机器备注
+		privateApi.GET("/batch_tag/list", wrapper.GetBatchTagList)                   // 获取分批类型列表
 	}
 }

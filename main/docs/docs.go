@@ -283,6 +283,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/batch_tag/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取分批类型列表，按 sort 排序，优先级高的在前",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.基础信息"
+                ],
+                "summary": "获取分批类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/product_resp.BatchTagList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/bind_cashier": {
             "post": {
                 "security": [
@@ -48607,6 +48647,10 @@ const docTemplate = `{
                 },
                 "show_batch_tag": {
                     "description": "是否显示分批类型",
+                    "type": "boolean"
+                },
+                "show_delay_tag": {
+                    "description": "是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态",
                     "type": "boolean"
                 },
                 "status": {

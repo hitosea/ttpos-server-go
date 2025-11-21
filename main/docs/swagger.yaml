@@ -11816,6 +11816,9 @@ definitions:
       show_batch_tag:
         description: 是否显示分批类型
         type: boolean
+      show_delay_tag:
+        description: 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
+        type: boolean
       status:
         description: '0: 未送厨 1:已送厨 2:制作完成（出餐）'
         type: integer
@@ -15820,6 +15823,28 @@ paths:
       security:
       - JwtToken: []
       summary: 基本信息
+      tags:
+      - 点餐助手端.基础信息
+  /assistant/batch_tag/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型列表，按 sort 排序，优先级高的在前
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/product_resp.BatchTagList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批类型列表
       tags:
       - 点餐助手端.基础信息
   /assistant/bind_cashier:

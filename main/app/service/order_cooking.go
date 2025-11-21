@@ -760,3 +760,91 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 	}
 	return shopCart, nil
 }
+
+// AutoSendCookingByPriority 智能送厨：自动按优先级送厨（前置模式）
+// 每次调用只送一批（一个类型），优先级最高的类型
+func (s *orderSrv) AutoSendCookingByPriority(ctx context.Context, saleBillUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取销售账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 获取所有预送厨商品
+	preCookingProducts := saleBill.GetSaleOrderProductPreCooking()
+	if len(preCookingProducts) == 0 {
+		// 没有预送厨商品，直接返回
+		return nil
+	}
+
+	// 获取分批类型列表（用于获取 sort 排序）
+	batchTagRepo := repository.NewBatchTagRepo(db)
+	batchTags, err := batchTagRepo.GetBatchTagList()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 构建分批类型UUID到Sort的映射
+	batchTagSortMap := make(map[uint64]int)
+	for _, batchTag := range batchTags {
+		batchTagSortMap[batchTag.Uuid] = batchTag.Sort
+	}
+
+	// 按分批类型分组预送厨商品
+	typeGroups := make(map[uint64][]*model.SaleOrderProduct)
+	for _, product := range preCookingProducts {
+		if product.BatchTagUuid > 0 {
+			typeGroups[product.BatchTagUuid] = append(typeGroups[product.BatchTagUuid], product)
+		}
+	}
+
+	if len(typeGroups) == 0 {
+		// 没有有效的分批类型，直接返回
+		return nil
+	}
+
+	// 找出优先级最高的类型（sort 最小的类型）
+	var highestPriorityType uint64 = 0
+	var minSort int = 999999
+	for batchTagUuid, products := range typeGroups {
+		if len(products) > 0 {
+			sort := batchTagSortMap[batchTagUuid]
+			if sort < minSort {
+				minSort = sort
+				highestPriorityType = batchTagUuid
+			}
+		}
+	}
+
+	if highestPriorityType == 0 {
+		// 没有找到有效的分批类型，直接返回
+		return nil
+	}
+
+	// 获取该类型的所有商品UUID
+	productUuids := make([]uint64, 0)
+	for _, product := range typeGroups[highestPriorityType] {
+		productUuids = append(productUuids, product.Uuid)
+	}
+
+	// 获取第一个销售订单UUID
+	var saleOrderUuid uint64 = 0
+	if len(saleBill.SaleOrders) > 0 {
+		saleOrderUuid = saleBill.SaleOrders[0].Uuid
+	}
+	if saleOrderUuid == 0 {
+		return errors.New("销售订单不存在")
+	}
+
+	// 调用分批送厨接口，送厨该类型的所有商品
+	_, err = s.OrderCartProductBatchCooking(ctx, req.OrderCartProductBatchCookingReq{
+		SaleBillUuid:          saleBillUuid,
+		SaleOrderUuid:         saleOrderUuid,
+		SaleOrderProductUuids: productUuids,
+		BatchTagUuid:          highestPriorityType,
+	})
+
+	return errors.WithMessage(err)
+}
