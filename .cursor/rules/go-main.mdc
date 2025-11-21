@@ -153,6 +153,7 @@ if order.Source == constant.OrderSourceInstant {
 
 ### Service 层
 
+- ✅ **接口定义（IxxxSrv）和实现（xxxSrv）必须放在同一个文件中**
 - ✅ **接口第一个参数必须使用 `ctx context.Context`**
 - ✅ **通过 `db := ctx.GetDB()` 获取数据库连接**
 - ✅ **只能依赖其他 Service 接口**
@@ -162,12 +163,28 @@ if order.Source == constant.OrderSourceInstant {
 - ❌ **不能直接操作 model，必须通过 Repository**
 
 ```go
+// ✅ 正确：接口和实现在同一个文件中
+// 文件：order_srv.go
+package service
+
+type IOrderSrv interface {
+    CreateOrder(ctx context.Context, req req.CreateOrderReq) error
+}
+
 type orderSrv struct {
     dbm        *database.DBManager  // ✅ 持有 DBManager（极少使用）
     orderRepo  IOrderRepo            // ✅ 自己领域的 Repository
     memberSrv  IMemberSrv            // ✅ 其他领域的 Service 接口
     memberRepo IMemberRepo           // ❌ 不能依赖其他领域的 Repository
 }
+
+// ❌ 错误：接口和实现分开在不同文件
+// 文件：i_order_srv.go
+// type IOrderSrv interface { ... }
+
+// 文件：order_srv.go
+// type orderSrv struct { ... }
+```
 
 // ❌ 错误：没有 ctx 参数
 func (s *orderSrv) CreateOrder(req req.CreateOrderReq) error {
@@ -266,6 +283,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 
 - [ ] URL 使用 snake_case
 - [ ] 结构体 ID 字段大写
+- [ ] **Service 接口定义（IxxxSrv）和实现（xxxSrv）必须放在同一个文件中**
 - [ ] Service 接口第一个参数必须是 ctx context.Context
 - [ ] Service 方法内使用 ctx.GetDB() 获取数据库连接
 - [ ] Service 只依赖自己领域的 Repository
@@ -360,6 +378,7 @@ order, err := orderRepo.GetOrder(
 | ❌ data 返回数组                    | 必须是对象                  |
 | ❌ 多语言字段使用字符串、map 或自定义结构 | 必须使用 `dto.LocaleResponse` |
 | ❌ 使用 panic                       | 必须 return error           |
+| ❌ **Service 接口和实现分开在不同文件** | **必须放在同一个文件中** |
 | ❌ Service 接口第一个参数不是 ctx   | 必须是 context.Context      |
 | ❌ Service 使用 dbm.GetDB(dbId)     | 必须使用 ctx.GetDB()        |
 | ❌ Service 跨领域依赖 Repository    | 只能依赖自己领域的 Repo     |
