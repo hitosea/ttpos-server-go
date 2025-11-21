@@ -29,6 +29,76 @@ helper.Success(c, nil)
 helper.Success(c, []string{})
 ```
 
+### 多语言字段响应规范
+
+**所有 API 接口返回多语言字段时，必须使用 `dto.LocaleResponse` 结构**
+
+**规则：**
+
+- ✅ **必须使用** `dto.LocaleResponse` 结构体
+- ❌ **禁止使用** 字符串、map 或其他自定义结构
+- ✅ **包含所有支持的语言字段**：ZH, TH, EN, ZHTW, JA, KO, MY, TR, SV
+
+**示例：**
+
+```go
+// ✅ 正确 - 使用 dto.LocaleResponse
+type ProductResp struct {
+    Uuid    uint64            `json:"uuid"`
+    Name    dto.LocaleResponse `json:"name"`    // 多语言名称
+    Remark  dto.LocaleResponse `json:"remark"`  // 多语言备注
+}
+
+// 在 Service 中构建响应
+func (s *productSrv) GetProduct(ctx context.Context, uuid uint64) (*ProductResp, error) {
+    // 从 model.MultiLanguageName 转换
+    localeSrv := service.NewLocaleSrv()
+    localeResp := localeSrv.GetLocaleNames(multiLanguageName)
+    
+    return &ProductResp{
+        Uuid:   uuid,
+        Name:   localeResp,  // ✅ 使用 LocaleResponse
+        Remark: localeResp,
+    }, nil
+}
+
+// ❌ 错误 - 使用字符串
+type ProductResp struct {
+    Name string `json:"name"`  // ❌ 错误
+}
+
+// ❌ 错误 - 使用 map
+type ProductResp struct {
+    Name map[string]string `json:"name"`  // ❌ 错误
+}
+
+// ❌ 错误 - 使用自定义结构
+type ProductResp struct {
+    Name struct {
+        ZH string `json:"zh"`
+        EN string `json:"en"`
+    } `json:"name"`  // ❌ 错误，应使用 dto.LocaleResponse
+}
+```
+
+**从 JSON 字符串转换：**
+
+```go
+// 从数据库的 name 字段（JSON 格式）转换为 LocaleResponse
+import "ttpos-server-go/pkg/language"
+
+jsonStr := `{"zh":"苹果","en":"Apple","th":"แอปเปิล"}`
+localeResp := language.JsonToLocaleResponse(jsonStr)  // 返回 *dto.LocaleResponse
+```
+
+**从 model.MultiLanguageName 转换：**
+
+```go
+// 使用 LocaleSrv 转换
+localeSrv := service.NewLocaleSrv()
+localeResp := localeSrv.GetLocaleNames(multiLanguageName)  // 返回 dto.LocaleResponse
+```
+
 ### 错误处理
 
 - ✅ **必须返回 error**，不使用 panic
@@ -205,6 +275,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 - [ ] **API 层严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
 - [ ] API 层只负责参数校验、调用 Service、返回响应
 - [ ] data 不能为 null 或数组
+- [ ] **多语言字段必须使用 `dto.LocaleResponse` 结构，禁止使用字符串、map 或自定义结构**
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
 - [ ] 常量必须在 constant 包中定义，禁止使用字面量
@@ -287,6 +358,7 @@ order, err := orderRepo.GetOrder(
 | ❌ URL 用 kebab-case                | 项目统一用 snake_case       |
 | ❌ data 返回 null                   | 前端无法统一处理            |
 | ❌ data 返回数组                    | 必须是对象                  |
+| ❌ 多语言字段使用字符串、map 或自定义结构 | 必须使用 `dto.LocaleResponse` |
 | ❌ 使用 panic                       | 必须 return error           |
 | ❌ Service 接口第一个参数不是 ctx   | 必须是 context.Context      |
 | ❌ Service 使用 dbm.GetDB(dbId)     | 必须使用 ctx.GetDB()        |
