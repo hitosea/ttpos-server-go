@@ -16,7 +16,7 @@
 
 ## 📋 概述
 
-在打印单中添加外卖标识，当订单为外卖订单时，在打印单的标题和订单号前显示外卖标识，帮助后厨和收银人员快速识别外卖订单。
+在打印单中添加外卖标识，当订单为外卖订单时，在打印单的标题和桌号/序号前显示外卖标识，帮助后厨和收银人员快速识别外卖订单。
 
 ## 🎯 产品对齐
 
@@ -39,14 +39,14 @@
 #### 验收标准
 
 1. **WHEN** 订单为外卖订单 **THEN** 出菜单标题"出菜单"旁边 **SHALL** 显示"(外卖)"标识
-2. **WHEN** 订单为外卖订单 **THEN** 订单号前 **SHALL** 显示外卖标识
+2. **WHEN** 订单为外卖订单 **THEN** 桌号/序号前 **SHALL** 显示外卖标识
 3. **WHEN** 订单为外卖订单 **THEN** 外卖标识 **SHALL** 支持多语言显示
 
 #### 具体要求
 
-- [ ] 1.1 在 `dishes_img.go` 的 `OutMenuTemplate` 方法中，当 `order.IsTakeoutBill()` 为 true 时，在"出菜单"标题后添加"(外卖)"标识
-- [ ] 1.2 在 `dishes_xprinter.go` 的 `OutMenuTemplate` 方法中，当 `order.IsTakeoutBill()` 为 true 时，在"出菜单"标题后添加"(外卖)"标识
-- [ ] 1.3 在订单号显示时，如果是外卖订单，在订单号前添加外卖标识（使用 `t.base.Translate("外卖")`）
+- [ ] 1.1 在 `dishes_img.go` 的 `OutMenuTemplate` 方法中，当 `order.IsOrderSourceTakeout()` 为 true 时，在"出菜单"标题后添加"(外卖)"标识
+- [ ] 1.2 在 `dishes_xprinter.go` 的 `OutMenuTemplate` 方法中，当 `order.IsOrderSourceTakeout()` 为 true 时，在"出菜单"标题后添加"(外卖)"标识
+- [ ] 1.3 在桌号/序号显示时，如果是外卖订单，在桌号/序号前添加外卖标识（使用 `t.base.Translate("外卖")`）
 - [ ] 1.4 外卖标识需要支持多语言（中文、英文、日语、韩语、泰语、缅甸语、土耳其语、老挝语、瑞典语等）
 
 ---
@@ -57,13 +57,13 @@
 
 #### 验收标准
 
-1. **WHEN** 订单为外卖订单 **THEN** 一菜一单的订单号前 **SHALL** 显示外卖标识
+1. **WHEN** 订单为外卖订单 **THEN** 一菜一单的桌号/序号前 **SHALL** 显示外卖标识
 
 #### 具体要求
 
-- [ ] 2.1 在 `dishes_codesoft.go` 的 `OneDishOneOrder` 方法中，订单号前添加外卖标识
-- [ ] 2.2 在 `dishes_img.go` 的 `OneDishOneOrder` 方法中（如存在），订单号前添加外卖标识
-- [ ] 2.3 在 `dishes_xprinter.go` 的 `OneDishOneOrder` 方法中（如存在），订单号前添加外卖标识
+- [ ] 2.1 在 `dishes_codesoft.go` 的 `OneDishOneOrder` 方法中，桌号/序号前添加外卖标识
+- [ ] 2.2 在 `dishes_img.go` 的 `OneDishOneOrder` 方法中（如存在），桌号/序号前添加外卖标识
+- [ ] 2.3 在 `dishes_xprinter.go` 的 `OneDishOneOrder` 方法中（如存在），桌号/序号前添加外卖标识
 
 ---
 
@@ -73,13 +73,13 @@
 
 #### 验收标准
 
-1. **WHEN** 订单为外卖订单 **THEN** 整单打印的订单号前 **SHALL** 显示外卖标识
+1. **WHEN** 订单为外卖订单 **THEN** 整单打印的桌号/序号前 **SHALL** 显示外卖标识
 
 #### 具体要求
 
-- [ ] 3.1 在 `dishes_codesoft.go` 的 `CompleteOrder` 方法中，订单号前添加外卖标识
-- [ ] 3.2 在 `dishes_img.go` 的 `CompleteOrder` 方法中，订单号前添加外卖标识
-- [ ] 3.3 在 `dishes_xprinter.go` 的 `CompleteOrder` 方法中（如存在），订单号前添加外卖标识
+- [ ] 3.1 在 `dishes_codesoft.go` 的 `CompleteOrder` 方法中，桌号/序号前添加外卖标识
+- [ ] 3.2 在 `dishes_img.go` 的 `CompleteOrder` 方法中，桌号/序号前添加外卖标识
+- [ ] 3.3 在 `dishes_xprinter.go` 的 `CompleteOrder` 方法中（如存在），桌号/序号前添加外卖标识
 
 ---
 
@@ -90,14 +90,14 @@
 #### 验收标准
 
 1. **WHEN** 订单为外卖订单 **THEN** 退菜单标题"退菜单"旁边 **SHALL** 显示"(外卖)"标识
-2. **WHEN** 订单为外卖订单 **THEN** 退菜单的订单号前 **SHALL** 显示外卖标识
+2. **WHEN** 订单为外卖订单 **THEN** 退菜单的桌号/序号前 **SHALL** 显示外卖标识
 
 #### 具体要求
 
-- [ ] 4.1 在 `dishes_img.go` 的 `ReturnMenuTemplate` 方法中，当 `order.IsTakeoutBill()` 为 true 时，在"退菜单"标题后添加"(外卖)"标识
-- [ ] 4.2 在 `dishes_xprinter.go` 的 `ReturnMenuTemplate` 方法中，当 `order.IsTakeoutBill()` 为 true 时，在"退菜单"标题后添加"(外卖)"标识
-- [ ] 4.3 在 `dishes_img.go` 的 `ReturnMenuTemplate` 方法中，订单号前添加外卖标识
-- [ ] 4.4 在 `dishes_xprinter.go` 的 `ReturnMenuTemplate` 方法中，订单号前添加外卖标识
+- [ ] 4.1 在 `dishes_img.go` 的 `ReturnMenuTemplate` 方法中，当 `order.IsOrderSourceTakeout()` 为 true 时，在"退菜单"标题后添加"(外卖)"标识
+- [ ] 4.2 在 `dishes_xprinter.go` 的 `ReturnMenuTemplate` 方法中，当 `order.IsOrderSourceTakeout()` 为 true 时，在"退菜单"标题后添加"(外卖)"标识
+- [ ] 4.3 在 `dishes_img.go` 的 `ReturnMenuTemplate` 方法中，桌号/序号前添加外卖标识
+- [ ] 4.4 在 `dishes_xprinter.go` 的 `ReturnMenuTemplate` 方法中，桌号/序号前添加外卖标识
 
 ---
 
@@ -108,14 +108,14 @@
 #### 验收标准
 
 1. **WHEN** 订单为外卖订单 **THEN** 预结账单标题"预结账单"旁边 **SHALL** 显示"(外卖)"标识
-2. **WHEN** 订单为外卖订单 **THEN** 预结账单的订单号前 **SHALL** 显示外卖标识
+2. **WHEN** 订单为外卖订单 **THEN** 预结账单的桌号/序号前 **SHALL** 显示外卖标识
 
 #### 具体要求
 
 - [ ] 5.1 在 `statement_order_img.go` 的 `GetPrintContent` 方法中，当 `printOrderType == constant.PrinterTemplatePreBilling` 且订单为外卖订单时，在"预结账单"标题后添加"(外卖)"标识
 - [ ] 5.2 在 `statement_order_xprinter.go` 的 `GetPrintContent` 方法中，当 `printType == constant.PrinterTemplatePreBilling` 且订单为外卖订单时，在"预结账单"标题后添加"(外卖)"标识
 - [ ] 5.3 在 `statement_order_codesoft.go` 的 `GetPrintContent` 方法中，当 `printType == constant.PrinterTemplatePreBilling` 且订单为外卖订单时，在"预结账单"标题后添加"(外卖)"标识
-- [ ] 5.4 在所有预结账单模板中，订单号前添加外卖标识
+- [ ] 5.4 在所有预结账单模板中，桌号/序号前添加外卖标识
 
 ---
 
@@ -126,14 +126,14 @@
 #### 验收标准
 
 1. **WHEN** 订单为外卖订单 **THEN** 结账单标题"结账单"旁边 **SHALL** 显示"(外卖)"标识
-2. **WHEN** 订单为外卖订单 **THEN** 结账单的订单号前 **SHALL** 显示外卖标识
+2. **WHEN** 订单为外卖订单 **THEN** 结账单的桌号/序号前 **SHALL** 显示外卖标识
 
 #### 具体要求
 
 - [ ] 6.1 在 `statement_order_img.go` 的 `GetPrintContent` 方法中，当 `printOrderType == constant.PrinterTemplateBilling` 且订单为外卖订单时，在"结账单"标题后添加"(外卖)"标识
 - [ ] 6.2 在 `statement_order_xprinter.go` 的 `GetPrintContent` 方法中，当 `printType == constant.PrinterTemplateBilling` 且订单为外卖订单时，在"结账单"标题后添加"(外卖)"标识
 - [ ] 6.3 在 `statement_order_codesoft.go` 的 `GetPrintContent` 方法中，当 `printType == constant.PrinterTemplateBilling` 且订单为外卖订单时，在"结账单"标题后添加"(外卖)"标识
-- [ ] 6.4 在所有结账单模板中，订单号前添加外卖标识
+- [ ] 6.4 在所有结账单模板中，桌号/序号前添加外卖标识
 
 ---
 
@@ -144,15 +144,15 @@
 #### 验收标准
 
 1. **WHEN** 订单为外卖订单 **THEN** 发票标题"发票"旁边 **SHALL** 显示"(外卖)"标识
-2. **WHEN** 订单为外卖订单 **THEN** 发票的订单号前 **SHALL** 显示外卖标识
+2. **WHEN** 订单为外卖订单 **THEN** 发票的桌号/序号前 **SHALL** 显示外卖标识
 
 #### 具体要求
 
 - [ ] 7.1 在 `statement_order_img.go` 的 `GetPrintContent` 方法中，当 `printOrderType == constant.PrinterTemplateInvoice` 且订单为外卖订单时，在"发票"标题后添加"(外卖)"标识
 - [ ] 7.2 在 `statement_order_xprinter.go` 的 `GetPrintContent` 方法中，当 `printType == constant.PrinterTemplateInvoice` 且订单为外卖订单时，在"发票"标题后添加"(外卖)"标识
 - [ ] 7.3 在 `statement_order_codesoft.go` 的 `GetPrintContent` 方法中，当 `printType == constant.PrinterTemplateInvoice` 且订单为外卖订单时，在"发票"标题后添加"(外卖)"标识
-- [ ] 7.4 在 `invoice_img.go`、`invoice_xprinter.go`、`invoice_codesoft.go` 等发票专用模板中，标题和订单号前添加外卖标识
-- [ ] 7.5 在所有发票模板中，订单号前添加外卖标识
+- [ ] 7.4 在 `invoice_img.go`、`invoice_xprinter.go`、`invoice_codesoft.go` 等发票专用模板中，标题和桌号/序号前添加外卖标识
+- [ ] 7.5 在所有发票模板中，桌号/序号前添加外卖标识
 
 ---
 
@@ -222,13 +222,13 @@
 
 ### 功能验收
 
-1. **出菜单外卖标识**: 外卖订单的出菜单标题旁显示"(外卖)"标识，订单号前显示外卖标识
-2. **一菜一单外卖标识**: 外卖订单的一菜一单订单号前显示外卖标识
-3. **整单打印外卖标识**: 外卖订单的整单打印订单号前显示外卖标识
-4. **退菜单外卖标识**: 外卖订单的退菜单标题旁显示"(外卖)"标识，订单号前显示外卖标识
-5. **预结账单外卖标识**: 外卖订单的预结账单标题旁显示"(外卖)"标识，订单号前显示外卖标识
-6. **结账单外卖标识**: 外卖订单的结账单标题旁显示"(外卖)"标识，订单号前显示外卖标识
-7. **发票外卖标识**: 外卖订单的发票标题旁显示"(外卖)"标识，订单号前显示外卖标识
+1. **出菜单外卖标识**: 外卖订单的出菜单标题旁显示"(外卖)"标识，桌号/序号前显示外卖标识
+2. **一菜一单外卖标识**: 外卖订单的一菜一单桌号/序号前显示外卖标识
+3. **整单打印外卖标识**: 外卖订单的整单打印桌号/序号前显示外卖标识
+4. **退菜单外卖标识**: 外卖订单的退菜单标题旁显示"(外卖)"标识，桌号/序号前显示外卖标识
+5. **预结账单外卖标识**: 外卖订单的预结账单标题旁显示"(外卖)"标识，桌号/序号前显示外卖标识
+6. **结账单外卖标识**: 外卖订单的结账单标题旁显示"(外卖)"标识，桌号/序号前显示外卖标识
+7. **发票外卖标识**: 外卖订单的发票标题旁显示"(外卖)"标识，桌号/序号前显示外卖标识
 8. **交班单外卖标识**: 包含外卖订单数据的交班单标题旁显示"(外卖)"标识
 9. **营业数据单外卖标识**: 包含外卖订单数据的营业数据单标题旁显示"(外卖)"标识
 10. **多语言支持**: 外卖标识在所有支持的语言中正确显示
@@ -250,7 +250,7 @@
 
 - 必须使用现有的打印模板结构
 - 复用现有的翻译方法 `t.base.Translate()`
-- 复用现有的订单判断方法 `order.IsTakeoutBill()`
+- 复用现有的订单判断方法 `order.IsOrderSourceTakeout()`
 - 不使用 panic，返回 error
 
 ### 业务约束
@@ -275,7 +275,7 @@
 
 ### 业务依赖
 
-- 订单模型需要支持 `IsTakeoutBill()` 方法（已存在）
+- 订单模型需要支持 `IsOrderSourceTakeout()` 方法（已存在）
 
 ---
 

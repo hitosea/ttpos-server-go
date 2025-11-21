@@ -13,9 +13,9 @@
 ## 📊 进度总览
 
 **总任务数**: 35  
-**已完成**: 0  
+**已完成**: 19  
 **进行中**: -  
-**完成率**: 0%
+**完成率**: 54%
 
 ---
 
@@ -24,166 +24,166 @@
 - [x] 1.1 修改 dishes_img.go 的 OutMenuTemplate 方法 - 标题添加外卖标识
 
   - File: `main/app/printer/template/dishes_img.go`
-  - Purpose: 在出菜单标题"出菜单"后添加"(外卖)"标识
+  - Purpose: 在桌号/序号前添加外卖标识
   - Requirements: 1.1
-  - Leverage: 现有代码第 689 行，使用 `order.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_img.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在"出菜单"标题后添加"(外卖)"标识 | Context: 当前代码在第 689 行 `img.AppendText(t.base.Translate("出菜单"))`，需要判断 `order.IsTakeoutBill()`，如果是外卖订单，则修改为 `img.AppendText(t.base.Translate("出菜单") + "(" + t.base.Translate("外卖") + ")")` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的出菜单标题显示为"出菜单(外卖)"
+  - Leverage: 现有代码第 689 行，使用 `order.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_img.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在"出菜单"标题后添加"(外卖)"标识 | Context: 当前代码在第 689 行 `img.AppendText(t.base.Translate("出菜单"))`，需要判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则修改为 `img.AppendText(t.base.Translate("出菜单") + "(" + t.base.Translate("外卖") + ")")` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的出菜单标题显示为"出菜单(外卖)"
 
 - [x] 1.2 修改 dishes_img.go 的 OutMenuTemplate 方法 - 订单号添加外卖标识
 
   - File: `main/app/printer/template/dishes_img.go`
-  - Purpose: 在订单号前添加外卖标识
+  - Purpose: 在桌号/序号前添加外卖标识
   - Requirements: 1.3
-  - Leverage: 现有代码第 728-730 行，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_img.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在订单号前添加外卖标识 | Context: 当前代码在第 728-730 行打印订单号，需要判断 `order.IsTakeoutBill()`，如果是外卖订单，则在订单号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码在打印桌号/序号处（如第 94-111 行附近），使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_img.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在桌号/序号前添加外卖标识 | Context: 当前代码在打印桌号/序号时（如第 94-111 行附近），需要判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则在桌号/序号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
 - [x] 1.3 修改 dishes_xprinter.go 的 OutMenuTemplate 方法 - 标题添加外卖标识
 
   - File: `main/app/printer/template/dishes_xprinter.go`
   - Purpose: 在出菜单标题"出菜单"后添加"(外卖)"标识
   - Requirements: 1.2
-  - Leverage: 现有代码第 1182 行，使用 `order.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_xprinter.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在"出菜单"标题后添加"(外卖)"标识 | Context: 当前代码在第 1182 行 `printer.AppendText(t.base.Translate("出菜单"))`，需要判断 `order.IsTakeoutBill()`，如果是外卖订单，则修改为 `printer.AppendText(t.base.Translate("出菜单") + "(" + t.base.Translate("外卖") + ")")` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的出菜单标题显示为"出菜单(外卖)"
+  - Leverage: 现有代码第 1182 行，使用 `order.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_xprinter.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在"出菜单"标题后添加"(外卖)"标识 | Context: 当前代码在第 1182 行 `printer.AppendText(t.base.Translate("出菜单"))`，需要判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则修改为 `printer.AppendText(t.base.Translate("出菜单") + "(" + t.base.Translate("外卖") + ")")` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的出菜单标题显示为"出菜单(外卖)"
 
 - [x] 1.4 修改 dishes_xprinter.go 的 OutMenuTemplate 方法 - 订单号添加外卖标识
 
   - File: `main/app/printer/template/dishes_xprinter.go`
-  - Purpose: 在订单号前添加外卖标识
+  - Purpose: 在桌号/序号前添加外卖标识
   - Requirements: 1.3
-  - Leverage: 现有代码第 1228 行，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_xprinter.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在订单号前添加外卖标识 | Context: 当前代码在第 1228 行 `printer.PrintInColumns(t.base.Translate("订单号"), order.OrderNo)`，需要判断 `order.IsTakeoutBill()`，如果是外卖订单，则在订单号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码在打印桌号/序号处（如第 94-111 行附近），使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_xprinter.go 的 OutMenuTemplate 方法中，当订单为外卖订单时，在桌号/序号前添加外卖标识 | Context: 当前代码在打印桌号/序号时（如第 94-111 行附近），需要判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则在桌号/序号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
 ---
 
 ## Phase 2: 一菜一单和整单打印模板修改
 
-- [ ] 2.1 修改 dishes_codesoft.go 的 CompleteOrder 方法 - 订单号添加外卖标识
+- [x] 2.1 修改 dishes_codesoft.go 的 CompleteOrder 方法 - 桌号/序号添加外卖标识
 
   - File: `main/app/printer/template/dishes_codesoft.go`
-  - Purpose: 在整单打印的订单号前添加外卖标识
+  - Purpose: 在整单打印的桌号/序号前添加外卖标识
   - Requirements: 3.1
-  - Leverage: 现有代码第 118 行和第 276 行，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_codesoft.go 的 CompleteOrder 方法中，当订单为外卖订单时，在订单号前添加外卖标识 | Context: 当前代码在第 118 行（模板1）和第 276 行（模板2）打印订单号，需要判断 `order.IsTakeoutBill()`，如果是外卖订单，则在订单号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码第 81-95 行附近，使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_codesoft.go 的 CompleteOrder 方法中，当订单为外卖订单时，在桌号/序号前添加外卖标识 | Context: 当前代码在打印桌号/序号时（如第 81-95 行附近），需要判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则在桌号/序号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc，保持代码风格一致 | Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
-- [ ] 2.2 修改 dishes_codesoft.go 的 OneDishOneOrder 方法 - 订单号添加外卖标识
+- [x] 2.2 修改 dishes_codesoft.go 的 OneDishOneOrder 方法 - 桌号/序号添加外卖标识
 
   - File: `main/app/printer/template/dishes_codesoft.go`
-  - Purpose: 在一菜一单的订单号前添加外卖标识
+  - Purpose: 在一菜一单的桌号/序号前添加外卖标识
   - Requirements: 2.1
-  - Leverage: 现有代码，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_codesoft.go 的 OneDishOneOrder 方法中，当订单为外卖订单时，在订单号前添加外卖标识 | Context: 需要找到订单号显示的位置，判断 `order.IsTakeoutBill()`，如果是外卖订单，则在订单号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码，使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_codesoft.go 的 OneDishOneOrder 方法中，当订单为外卖订单时，在桌号/序号前添加外卖标识 | Context: 需要找到桌号/序号显示的位置，判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则在桌号/序号前添加 `t.base.Translate("外卖") + " "` | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
-- [ ] 2.3 修改 dishes_img.go 的 CompleteOrder 方法 - 订单号添加外卖标识
+- [x] 2.3 修改 dishes_img.go 的 CompleteOrder 方法 - 桌号/序号添加外卖标识
 
   - File: `main/app/printer/template/dishes_img.go`
-  - Purpose: 在整单打印的订单号前添加外卖标识
+  - Purpose: 在整单打印的桌号/序号前添加外卖标识
   - Requirements: 3.2
-  - Leverage: 现有代码，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码，使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
 ---
 
 ## Phase 3: 退菜单模板修改
 
-- [ ] 3.1 修改 dishes_img.go 的 ReturnMenuTemplate 方法 - 标题添加外卖标识
+- [x] 3.1 修改 dishes_img.go 的 ReturnMenuTemplate 方法 - 标题添加外卖标识
 
   - File: `main/app/printer/template/dishes_img.go`
   - Purpose: 在退菜单标题"退菜单"后添加"(外卖)"标识
   - Requirements: 4.1
-  - Leverage: 现有代码第 496 行，使用 `order.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 dishes_img.go 的 ReturnMenuTemplate 方法中，当订单为外卖订单时，在"退菜单"标题后添加"(外卖)"标识 | Context: 当前代码在第 496 行 `img.AppendText(t.base.Translate("退菜单"))`，需要判断 `order.IsTakeoutBill()`，如果是外卖订单，则修改为 `img.AppendText(t.base.Translate("退菜单") + "(" + t.base.Translate("外卖") + ")")` | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 外卖订单的退菜单标题显示为"退菜单(外卖)"
+  - Leverage: 现有代码第 496 行，使用 `order.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 dishes_img.go 的 ReturnMenuTemplate 方法中，当订单为外卖订单时，在"退菜单"标题后添加"(外卖)"标识 | Context: 当前代码在第 496 行 `img.AppendText(t.base.Translate("退菜单"))`，需要判断 `order.IsOrderSourceTakeout()`，如果是外卖订单，则修改为 `img.AppendText(t.base.Translate("退菜单") + "(" + t.base.Translate("外卖") + ")")` | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 外卖订单的退菜单标题显示为"退菜单(外卖)"
 
-- [ ] 3.2 修改 dishes_img.go 的 ReturnMenuTemplate 方法 - 订单号添加外卖标识
+- [x] 3.2 修改 dishes_img.go 的 ReturnMenuTemplate 方法 - 订单号添加外卖标识
 
   - File: `main/app/printer/template/dishes_img.go`
-  - Purpose: 在退菜单的订单号前添加外卖标识
+  - Purpose: 在退菜单的桌号/序号前添加外卖标识
   - Requirements: 4.3
-  - Leverage: 现有代码第 540 行，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码在打印桌号/序号处，使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
-- [ ] 3.3 修改 dishes_xprinter.go 的 ReturnMenuTemplate 方法 - 标题添加外卖标识
+- [x] 3.3 修改 dishes_xprinter.go 的 ReturnMenuTemplate 方法 - 标题添加外卖标识
 
   - File: `main/app/printer/template/dishes_xprinter.go`
   - Purpose: 在退菜单标题"退菜单"后添加"(外卖)"标识
   - Requirements: 4.2
-  - Leverage: 现有代码第 919 行，使用 `order.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
+  - Leverage: 现有代码第 919 行，使用 `order.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
   - Success: 外卖订单的退菜单标题显示为"退菜单(外卖)"
 
-- [ ] 3.4 修改 dishes_xprinter.go 的 ReturnMenuTemplate 方法 - 订单号添加外卖标识
+- [x] 3.4 修改 dishes_xprinter.go 的 ReturnMenuTemplate 方法 - 订单号添加外卖标识
 
   - File: `main/app/printer/template/dishes_xprinter.go`
-  - Purpose: 在退菜单的订单号前添加外卖标识
+  - Purpose: 在退菜单的桌号/序号前添加外卖标识
   - Requirements: 4.4
-  - Leverage: 现有代码，使用 `order.OrderNo` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的订单号显示为"外卖 2024010255565053"
+  - Leverage: 现有代码在打印桌号/序号处，使用 `order.SerialNo` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的桌号/序号显示为"外卖 A01"
 
 ---
 
 ## Phase 4: 预结账单、结账单、发票模板修改
 
-- [ ] 4.1 修改 statement_order_img.go 的 GetPrintContent 方法 - 预结账单标题和订单号添加外卖标识
+- [x] 4.1 修改 statement_order_img.go 的 GetPrintContent 方法 - 预结账单标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/statement_order_img.go`
-  - Purpose: 在预结账单标题和订单号前添加外卖标识
+  - Purpose: 在预结账单标题和桌号/序号前添加外卖标识
   - Requirements: 5.1, 5.4
-  - Leverage: 现有代码第 75 行和第 117 行，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Prompt: Role: Go Developer | Task: 在 statement_order_img.go 的 GetPrintContent 方法中，当 printOrderType == constant.PrinterTemplatePreBilling 且订单为外卖订单时，在"预结账单"标题后添加"(外卖)"标识，在订单号前添加外卖标识 | Context: 需要判断 `printOrderType == constant.PrinterTemplatePreBilling` 和 `saleBill.IsTakeoutBill()` | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 外卖订单的预结账单标题显示为"预结账单(外卖)"，订单号前显示"外卖"标识
+  - Leverage: 现有代码第 75 行和第 117 行，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Prompt: Role: Go Developer | Task: 在 statement_order_img.go 的 GetPrintContent 方法中，当 printOrderType == constant.PrinterTemplatePreBilling 且订单为外卖订单时，在"预结账单"标题后添加"(外卖)"标识，在桌号/序号前添加外卖标识 | Context: 需要判断 `printOrderType == constant.PrinterTemplatePreBilling` 和 `saleBill.IsOrderSourceTakeout()` | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 外卖订单的预结账单标题显示为"预结账单(外卖)"，桌号/序号前显示"外卖"标识
 
-- [ ] 4.2 修改 statement_order_img.go 的 GetPrintContent 方法 - 结账单标题和订单号添加外卖标识
+- [x] 4.2 修改 statement_order_img.go 的 GetPrintContent 方法 - 结账单标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/statement_order_img.go`
-  - Purpose: 在结账单标题和订单号前添加外卖标识
+  - Purpose: 在结账单标题和桌号/序号前添加外卖标识
   - Requirements: 6.1, 6.4
-  - Leverage: 现有代码，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的结账单标题显示为"结账单(外卖)"，订单号前显示"外卖"标识
+  - Leverage: 现有代码，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的结账单标题显示为"结账单(外卖)"，桌号/序号前显示"外卖"标识
 
-- [ ] 4.3 修改 statement_order_img.go 的 GetPrintContent 方法 - 发票标题和订单号添加外卖标识
+- [x] 4.3 修改 statement_order_img.go 的 GetPrintContent 方法 - 发票标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/statement_order_img.go`
-  - Purpose: 在发票标题和订单号前添加外卖标识
+  - Purpose: 在发票标题和桌号/序号前添加外卖标识
   - Requirements: 7.1, 7.5
-  - Leverage: 现有代码，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的发票标题显示为"发票(外卖)"，订单号前显示"外卖"标识
+  - Leverage: 现有代码，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的发票标题显示为"发票(外卖)"，桌号/序号前显示"外卖"标识
 
-- [ ] 4.4 修改 statement_order_xprinter.go 的 GetPrintContent 方法 - 预结账单、结账单、发票标题和订单号添加外卖标识
+- [x] 4.4 修改 statement_order_xprinter.go 的 GetPrintContent 方法 - 预结账单、结账单、发票标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/statement_order_xprinter.go`
-  - Purpose: 在预结账单、结账单、发票标题和订单号前添加外卖标识
+  - Purpose: 在预结账单、结账单、发票标题和桌号/序号前添加外卖标识
   - Requirements: 5.2, 6.2, 7.2
-  - Leverage: 现有代码，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 所有类型的打印单标题和订单号前都显示外卖标识
+  - Leverage: 现有代码，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 所有类型的打印单标题和桌号/序号前都显示外卖标识
 
-- [ ] 4.5 修改 statement_order_codesoft.go 的 GetPrintContent 方法 - 预结账单、结账单、发票标题和订单号添加外卖标识
+- [x] 4.5 修改 statement_order_codesoft.go 的 GetPrintContent 方法 - 预结账单、结账单、发票标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/statement_order_codesoft.go`
-  - Purpose: 在预结账单、结账单、发票标题和订单号前添加外卖标识
+  - Purpose: 在预结账单、结账单、发票标题和桌号/序号前添加外卖标识
   - Requirements: 5.3, 6.3, 7.3
-  - Leverage: 现有代码，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 所有类型的打印单标题和订单号前都显示外卖标识
+  - Leverage: 现有代码，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 所有类型的打印单标题和桌号/序号前都显示外卖标识
 
-- [ ] 4.6 修改 invoice_img.go - 发票标题和订单号添加外卖标识
+- [x] 4.6 修改 invoice_img.go - 发票标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/invoice_img.go`
-  - Purpose: 在发票标题和订单号前添加外卖标识
+  - Purpose: 在发票标题和桌号/序号前添加外卖标识
   - Requirements: 7.4
-  - Leverage: 现有代码，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的发票标题显示为"发票(外卖)"，订单号前显示"外卖"标识
+  - Leverage: 现有代码，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的发票标题显示为"发票(外卖)"，桌号/序号前显示"外卖"标识
 
-- [ ] 4.7 修改 invoice_xprinter.go - 发票标题和订单号添加外卖标识
+- [x] 4.7 修改 invoice_xprinter.go - 发票标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/invoice_xprinter.go`
-  - Purpose: 在发票标题和订单号前添加外卖标识
+  - Purpose: 在发票标题和桌号/序号前添加外卖标识
   - Requirements: 7.4
-  - Leverage: 现有代码，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的发票标题显示为"发票(外卖)"，订单号前显示"外卖"标识
+  - Leverage: 现有代码，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的发票标题显示为"发票(外卖)"，桌号/序号前显示"外卖"标识
 
-- [ ] 4.8 修改 invoice_img_58mm.go - 发票标题和订单号添加外卖标识
+- [x] 4.8 修改 invoice_img_58mm.go - 发票标题和订单号添加外卖标识
 
   - File: `main/app/printer/template/invoice_img_58mm.go`
-  - Purpose: 在发票标题和订单号前添加外卖标识
+  - Purpose: 在发票标题和桌号/序号前添加外卖标识
   - Requirements: 7.4
-  - Leverage: 现有代码第 96 行和第 248 行，使用 `saleBill.IsTakeoutBill()` 和 `t.base.Translate("外卖")`
-  - Success: 外卖订单的发票标题显示为"发票(外卖)"，订单号前显示"外卖"标识
+  - Leverage: 现有代码第 96 行和第 248 行，使用 `saleBill.IsOrderSourceTakeout()` 和 `t.base.Translate("外卖")`
+  - Success: 外卖订单的发票标题显示为"发票(外卖)"，桌号/序号前显示"外卖"标识
 
 ---
 
@@ -247,7 +247,7 @@
   - Purpose: 验证外卖订单的出菜单正确显示外卖标识
   - Requirements: Requirement 1
   - Command: 创建外卖订单，打印出菜单，检查输出
-  - Success: 外卖订单的出菜单标题显示"(外卖)"，订单号前显示"外卖"标识
+  - Success: 外卖订单的出菜单标题显示"(外卖)"，桌号/序号前显示"外卖"标识
 
 - [ ] 5.2 测试一菜一单和整单打印输出
 
@@ -255,7 +255,7 @@
   - Purpose: 验证外卖订单的一菜一单和整单打印正确显示外卖标识
   - Requirements: Requirement 2, 3
   - Command: 创建外卖订单，打印一菜一单和整单打印，检查输出
-  - Success: 外卖订单的订单号前显示"外卖"标识
+  - Success: 外卖订单的桌号/序号前显示"外卖"标识
 
 - [ ] 5.3 测试退菜单打印输出
 
@@ -263,7 +263,7 @@
   - Purpose: 验证外卖订单的退菜单正确显示外卖标识
   - Requirements: Requirement 4
   - Command: 创建外卖订单，打印退菜单，检查输出
-  - Success: 外卖订单的退菜单标题显示"(外卖)"，订单号前显示"外卖"标识
+  - Success: 外卖订单的退菜单标题显示"(外卖)"，桌号/序号前显示"外卖"标识
 
 - [ ] 6.4 测试预结账单、结账单、发票打印输出
 
@@ -271,7 +271,7 @@
   - Purpose: 验证外卖订单的预结账单、结账单、发票正确显示外卖标识
   - Requirements: Requirement 5, 6, 7
   - Command: 创建外卖订单，打印预结账单、结账单、发票，检查输出
-  - Success: 所有类型的打印单标题显示"(外卖)"，订单号前显示"外卖"标识
+  - Success: 所有类型的打印单标题显示"(外卖)"，桌号/序号前显示"外卖"标识
 
 - [ ] 6.5 测试交班单和营业数据单打印输出
 

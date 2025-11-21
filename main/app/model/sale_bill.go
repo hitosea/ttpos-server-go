@@ -295,6 +295,14 @@ func (model *SaleBill) IsOrderSourceTakeout() bool {
 	return model.OrderSourceUuid > 0
 }
 
+// 获取订单来源为外卖的文本
+func (model *SaleBill) GetOrderSourceTakeoutText() string {
+	if model.IsOrderSourceTakeout() {
+		return "外卖"
+	}
+	return ""
+}
+
 // 销售账单是否已经使用了通用优惠券
 func (model *SaleBill) IsCommonCouponUsed() (bool, uint64) {
 	for _, saleOrder := range model.SaleOrders {

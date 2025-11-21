@@ -94,7 +94,11 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 	printer.AppendText(lineSpacing)
 	printer.LineFeed(2)
 	printer.SetCharacterSize(2, 2)
-	printer.AppendText(t.base.Translate("发票"))
+	invoiceTitle := t.base.Translate("发票")
+	if saleBill.IsOrderSourceTakeout() {
+		invoiceTitle += "(" + t.base.Translate("外卖") + ")"
+	}
+	printer.AppendText(invoiceTitle)
 	printer.SetCharacterSize(1, 1)
 	printer.LineFeed(1)
 	printer.AppendText(lineSpacing)

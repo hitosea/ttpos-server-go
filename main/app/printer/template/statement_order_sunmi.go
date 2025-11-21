@@ -58,6 +58,9 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(saleBill.GetOrderSourceTakeoutText())
+
 	// 是否自己打印
 	isOneself := printerType != constant.PrinterTypeSunmiLan && printerType != constant.PrinterTypeSunmiCloud
 
@@ -111,10 +114,10 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			printer.SetLineSpacing(70)
 		}
 		if saleBill.DeskUuid > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed(1)
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed(1)
 		}
 		//
@@ -169,7 +172,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			} else {
 				printer.SetLineSpacing(70)
 			}
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed()
 			if isOneself {
 				printer.SetLineSpacing(20)
@@ -182,7 +185,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			} else {
 				printer.SetLineSpacing(70)
 			}
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed()
 		}
 		//
@@ -260,10 +263,10 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			printer.SetLineSpacing(70)
 		}
 		if saleBill.DeskUuid > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed()
 		}
 		//

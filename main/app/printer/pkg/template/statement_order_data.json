@@ -17,6 +17,7 @@
         "serial_no": "A9",
         "serial_nos": "桌号: A9 (5人)",
         "order_no": "202509242875625440",
+        "is_order_source_takeout": true,
         "meal_num": 5,
         "remark": "开桌备注",
         "cashier_name": "0001",

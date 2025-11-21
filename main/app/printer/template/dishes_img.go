@@ -48,6 +48,9 @@ func (t *dishesImgTemplate) CompleteOrder(
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
 	img.SetAlignment(pkg.AlignCenter)
@@ -56,20 +59,21 @@ func (t *dishesImgTemplate) CompleteOrder(
 	img.SetFontSize(30)
 
 	// 桌号
+	serialNoText := order.SerialNo
 	if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语
 		spacing := 50
-		if t.base.IsMyText(order.SerialNo) {
+		if t.base.IsMyText(serialNoText) {
 			spacing = 68
 		}
 		img.SetTextLineHeight(spacing)
-		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
+		img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1, 20)
 	} else if order.IsTakeoutBill() {
-		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+		img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
 	} else {
-		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 	}
 
 	// 整单备注
@@ -172,6 +176,9 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		}
 	}
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+
 	if tmp == 2 {
 		img.SetAlignment(pkg.AlignCenter)
 		img.SetImagePadding(0) // 确保没有填充
@@ -179,20 +186,21 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		img.SetFontSize(30)
 
 		// 桌号
+		serialNoText := order.SerialNo
 		if order.DeskUuid > 0 {
 			// 判断文字是否包含缅甸语
 			spacing := 50
-			if t.base.IsMyText(order.SerialNo) {
+			if t.base.IsMyText(serialNoText) {
 				spacing = 68
 			}
 			img.SetTextLineHeight(spacing)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, mealNumStr))
 			img.SetTextLineHeight(45)
 			img.LineFeed(1, 20)
 		} else if order.IsTakeoutBill() {
-			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
+			img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 		} else {
-			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
+			img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText)
 		}
 
 		// 整单备注
@@ -324,18 +332,19 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		img.SetFontSize(32)
 
 		// 桌号
+		serialNoText := order.SerialNo
 		if order.DeskUuid > 0 {
 			spacing := 50
-			if t.base.IsMyText(order.SerialNo) {
+			if t.base.IsMyText(serialNoText) {
 				spacing = 68
 			}
 			img.SetTextLineHeight(spacing)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, mealNumStr))
 			img.SetTextLineHeight(45)
 		} else if order.IsTakeoutBill() {
-			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
+			img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 		} else {
-			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
+			img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText)
 		}
 
 		// 整单备注
@@ -483,6 +492,9 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
 	img.SetAlignment(pkg.AlignCenter)
@@ -493,7 +505,8 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.AppendText("***************************")
 		img.LineFeed(1, 40)
 	}
-	img.AppendText(t.base.Translate("退菜单"))
+	menuTitle := t.base.Translate("退菜单")
+	img.AppendText(menuTitle)
 	if tmp == 2 {
 		img.LineFeed(1, 48)
 		img.AppendText("***************************")
@@ -501,20 +514,21 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	img.LineFeed(1, 68)
 
 	// 桌号
+	serialNoText := order.SerialNo
 	if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语
 		spacing := 50
-		if t.base.IsMyText(order.SerialNo) {
+		if t.base.IsMyText(serialNoText) {
 			spacing = 68
 		}
 		img.SetTextLineHeight(spacing)
-		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
+		img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
 	} else if order.IsTakeoutBill() {
-		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+		img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
 	} else {
-		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 	}
 
 	// 整单备注
@@ -679,6 +693,8 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	if order.MealNum > 0 {
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
 
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
@@ -691,7 +707,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 	// 桌号
 	if order.IsTakeoutBill() {
-		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+		img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语
 		spacing := 50
@@ -699,11 +715,11 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 			spacing = 68
 		}
 		img.SetTextLineHeight(spacing)
-		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
+		img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
 	} else {
-		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
 
 	// 整单备注

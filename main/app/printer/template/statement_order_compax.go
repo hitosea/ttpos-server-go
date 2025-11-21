@@ -56,6 +56,9 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(saleBill.GetOrderSourceTakeoutText())
+
 	// 宽度
 	width := 48
 	leftWidth := 28
@@ -96,9 +99,9 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.AppendText("\x1D\x21\x01")
 		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 		}
 		printer.LineFeed(1)
 		//
@@ -131,11 +134,11 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
 			printer.SetLineSpacing(50)
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.SetLineSpacing(50)
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed()
 		}
 		printer.LineFeed()
@@ -198,10 +201,10 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
 		if saleBill.DeskUuid > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed()
 		}
 		//

@@ -60,6 +60,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(saleBill.GetOrderSourceTakeoutText())
+
 	//  创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
 	img.SetTextLineHeight(50)
@@ -69,13 +72,15 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 	if temp != 3 && temp != 4 && temp != 5 {
 		img.SetAlignment(pkg.AlignLeft)
+		var title string
 		if printOrderType == constant.PrinterTemplateInvoice {
-			img.AppendText(t.base.Translate("发票"))
+			title = t.base.Translate("发票")
 		} else if printOrderType == constant.PrinterTemplatePreBilling {
-			img.AppendText(t.base.Translate("预结账单"))
+			title = t.base.Translate("预结账单")
 		} else {
-			img.AppendText(t.base.Translate("结账单"))
+			title = t.base.Translate("结账单")
 		}
+		img.AppendText(title)
 		img.LineFeed(1, 50)
 	}
 	img.SetAlignment(pkg.AlignCenter)
@@ -90,22 +95,23 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1, 10)
 		img.RecoverDefaultTextLineHeight()
 		img.SetAlignment(pkg.AlignLeft)
+		serialNoText := saleBill.SerialNo
 		if saleBill.DeskUuid > 0 {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
 			spacing := 50
-			if t.base.IsMyText(saleBill.SerialNo) {
+			if t.base.IsMyText(serialNoText) {
 				spacing = 68
 			}
 			img.SetTextLineHeight(spacing)
-			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, orderName, mealNumStr))
 			img.RecoverDefaultTextLineHeight()
 			img.SetFontSize(20)
 			img.LineFeed(1)
 		} else if saleBill.SerialNo != "" {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), serialNoText, orderName))
 			img.SetFontSize(20)
 			img.LineFeed(1)
 		}
@@ -144,13 +150,13 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				spacing = 68
 			}
 			img.SetTextLineHeight(spacing)
-			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			img.LineFeed(1, 80)
 			img.RecoverDefaultTextLineHeight()
 		} else {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			img.SetFontSize(20)
 			img.LineFeed(1, 80)
 		}
@@ -182,13 +188,15 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontWeight(2)
 		img.SetFontSize(26)
 		img.SetTextLineHeight(50)
+		var title string
 		if printOrderType == constant.PrinterTemplateInvoice {
-			img.AppendText(t.base.Translate("发票"))
+			title = t.base.Translate("发票")
 		} else if printOrderType == constant.PrinterTemplatePreBilling {
-			img.AppendText(t.base.Translate("预结账单"))
+			title = t.base.Translate("预结账单")
 		} else {
-			img.AppendText(t.base.Translate("结账单"))
+			title = t.base.Translate("结账单")
 		}
+		img.AppendText(title)
 		img.RecoverDefaultTextLineHeight()
 		img.SetFontSize(20)
 		img.SetFontWeight(1)
@@ -264,21 +272,22 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.AppendSplitLine()
 		img.RecoverDefaultTextLineHeight()
 		img.SetAlignment(pkg.AlignLeft)
+		serialNoText := saleBill.SerialNo
 		if saleBill.DeskUuid > 0 {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
-			if t.base.IsMy(saleBill.SerialNo) {
+			if t.base.IsMy(serialNoText) {
 				img.SetTextLineHeight(68)
 			} else {
 				img.SetTextLineHeight(50)
 			}
-			img.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, orderName, mealNumStr))
 			img.RecoverDefaultTextLineHeight()
 			img.LineFeed(1, 60)
 		} else {
 			img.SetFontWeight(2)
 			img.SetFontSize(28)
-			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), serialNoText, orderName))
 			img.RecoverDefaultTextLineHeight()
 			img.LineFeed(1)
 			img.LineFeed(1, 12)

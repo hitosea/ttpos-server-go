@@ -66,6 +66,7 @@ type StatementOrderInfoData struct {
 	PaymentName            string                    `json:"payment_name"`              // 支付方式名称
 	PaymentQrcode          string                    `json:"payment_qrcode"`            // 支付方式二维码
 	Barcode                string                    `json:"barcode"`                   // 条形码
+	IsOrderSourceTakeout   bool                      `json:"is_order_source_takeout"`   // 是否订单来源为外卖
 }
 
 // StatementBuffetData 自助餐数据结构体

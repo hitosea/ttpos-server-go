@@ -4,7 +4,7 @@
 
 ## 📋 概述
 
-在现有的打印模板中添加外卖标识显示逻辑，当订单为外卖订单时，在打印单标题和订单号前显示外卖标识。涉及所有打印单类型：出菜单、一菜一单、整单打印、退菜单、预结账单、结账单、发票。主要涉及以下打印模板文件：
+在现有的打印模板中添加外卖标识显示逻辑，当订单为外卖订单时，在打印单标题和桌号/序号前显示外卖标识。涉及所有打印单类型：出菜单、一菜一单、整单打印、退菜单、预结账单、结账单、发票。主要涉及以下打印模板文件：
 
 - **菜品打印模板**: `dishes_img.go`、`dishes_xprinter.go`、`dishes_codesoft.go`
 - **订单打印模板**: `statement_order_img.go`、`statement_order_xprinter.go`、`statement_order_codesoft.go`、`statement_order_compax.go`、`statement_order_sunmi.go`
@@ -18,7 +18,7 @@
 
 - 保持现有代码结构，不引入新的依赖
 - 复用现有的翻译方法 `t.base.Translate()`
-- 复用现有的订单判断方法 `order.IsTakeoutBill()`
+- 复用现有的订单判断方法 `order.IsOrderSourceTakeout()`
 - 不使用 panic，返回 error
 
 ---
@@ -28,7 +28,7 @@
 ### 可复用的现有组件
 
 - **翻译方法**: `t.base.Translate("外卖")` - 支持多语言翻译
-- **订单判断**: `order.IsTakeoutBill()` - 判断是否为外卖订单
+- **订单判断**: `order.IsOrderSourceTakeout()` - 判断是否为外卖订单（订单来源为外卖）
 - **打印模板结构**: 现有的 `OutMenuTemplate`、`CompleteOrder`、`OneDishOneOrder` 方法
 
 ### 集成点
@@ -57,57 +57,57 @@
 #### 菜品打印模板
 
 1. **`main/app/printer/template/dishes_img.go`**
-   - `OutMenuTemplate` 方法：在"出菜单"标题后添加外卖标识，在订单号前添加外卖标识
-   - `ReturnMenuTemplate` 方法：在"退菜单"标题后添加外卖标识，在订单号前添加外卖标识
-   - `CompleteOrder` 方法：在订单号前添加外卖标识
-   - `OneDishOneOrder` 方法（如存在）：在订单号前添加外卖标识
+   - `OutMenuTemplate` 方法：在"出菜单"标题后添加外卖标识，在桌号/序号前添加外卖标识
+   - `ReturnMenuTemplate` 方法：在"退菜单"标题后添加外卖标识，在桌号/序号前添加外卖标识
+   - `CompleteOrder` 方法：在桌号/序号前添加外卖标识
+   - `OneDishOneOrder` 方法（如存在）：在桌号/序号前添加外卖标识
 
 2. **`main/app/printer/template/dishes_xprinter.go`**
-   - `OutMenuTemplate` 方法：在"出菜单"标题后添加外卖标识，在订单号前添加外卖标识
-   - `ReturnMenuTemplate` 方法：在"退菜单"标题后添加外卖标识，在订单号前添加外卖标识
-   - `CompleteOrder` 方法（如存在）：在订单号前添加外卖标识
-   - `OneDishOneOrder` 方法（如存在）：在订单号前添加外卖标识
+   - `OutMenuTemplate` 方法：在"出菜单"标题后添加外卖标识，在桌号/序号前添加外卖标识
+   - `ReturnMenuTemplate` 方法：在"退菜单"标题后添加外卖标识，在桌号/序号前添加外卖标识
+   - `CompleteOrder` 方法（如存在）：在桌号/序号前添加外卖标识
+   - `OneDishOneOrder` 方法（如存在）：在桌号/序号前添加外卖标识
 
 3. **`main/app/printer/template/dishes_codesoft.go`**
-   - `CompleteOrder` 方法：在订单号前添加外卖标识
-   - `OneDishOneOrder` 方法：在订单号前添加外卖标识
+   - `CompleteOrder` 方法：在桌号/序号前添加外卖标识
+   - `OneDishOneOrder` 方法：在桌号/序号前添加外卖标识
 
 #### 订单打印模板（预结账单、结账单、发票）
 
 4. **`main/app/printer/template/statement_order_img.go`**
-   - `GetPrintContent` 方法：根据 `printOrderType` 判断类型，在标题后添加外卖标识，在订单号前添加外卖标识
+   - `GetPrintContent` 方法：根据 `printOrderType` 判断类型，在标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 5. **`main/app/printer/template/statement_order_xprinter.go`**
-   - `GetPrintContent` 方法：根据 `printType` 判断类型，在标题后添加外卖标识，在订单号前添加外卖标识
+   - `GetPrintContent` 方法：根据 `printType` 判断类型，在标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 6. **`main/app/printer/template/statement_order_codesoft.go`**
-   - `GetPrintContent` 方法：根据 `printType` 判断类型，在标题后添加外卖标识，在订单号前添加外卖标识
+   - `GetPrintContent` 方法：根据 `printType` 判断类型，在标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 7. **`main/app/printer/template/statement_order_compax.go`**（如需要）
-   - `GetPrintContent` 方法：在标题和订单号前添加外卖标识
+   - `GetPrintContent` 方法：在标题和桌号/序号前添加外卖标识
 
 8. **`main/app/printer/template/statement_order_sunmi.go`**（如需要）
-   - `GetPrintContent` 方法：在标题和订单号前添加外卖标识
+   - `GetPrintContent` 方法：在标题和桌号/序号前添加外卖标识
 
 #### 发票专用模板
 
 9. **`main/app/printer/template/invoice_img.go`**
-   - 在"发票"标题后添加外卖标识，在订单号前添加外卖标识
+   - 在"发票"标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 10. **`main/app/printer/template/invoice_xprinter.go`**
-    - 在"发票"标题后添加外卖标识，在订单号前添加外卖标识
+    - 在"发票"标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 11. **`main/app/printer/template/invoice_codesoft.go`**（如需要）
-    - 在"发票"标题后添加外卖标识，在订单号前添加外卖标识
+    - 在"发票"标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 12. **`main/app/printer/template/invoice_compax.go`**（如需要）
-    - 在"发票"标题后添加外卖标识，在订单号前添加外卖标识
+    - 在"发票"标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 13. **`main/app/printer/template/invoice_sunmi.go`**（如需要）
-    - 在"发票"标题后添加外卖标识，在订单号前添加外卖标识
+    - 在"发票"标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 14. **`main/app/printer/template/invoice_img_58mm.go`**
-    - 在"发票"标题后添加外卖标识，在订单号前添加外卖标识
+    - 在"发票"标题后添加外卖标识，在桌号/序号前添加外卖标识
 
 #### 交班单模板
 
@@ -147,7 +147,7 @@
 
 ## 📊 数据模型
 
-无需修改数据模型，使用现有的 `model.SaleBill` 和 `order.IsTakeoutBill()` 方法。
+无需修改数据模型，使用现有的 `model.SaleBill` 和 `order.IsOrderSourceTakeout()` 方法。
 
 ---
 
@@ -165,34 +165,40 @@ img.AppendText(t.base.Translate("出菜单"))
 
 // 修改后
 menuTitle := t.base.Translate("出菜单")
-if order.IsTakeoutBill() {
+if order.IsOrderSourceTakeout() {
     menuTitle += "(" + t.base.Translate("外卖") + ")"
 }
 img.AppendText(menuTitle)
 ```
 
-### 方案 2: 订单号前添加外卖标识
+### 方案 2: 桌号/序号前添加外卖标识
 
-**位置**: 所有打印模板的订单号显示处
+**位置**: 所有打印模板的桌号/序号显示处
 
 **实现**:
 
 ```go
-// 当前代码（第 728-730 行）
-img.PrintInColumns(
-    pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 280, Align: pkg.AlignLeft},
-    pkg.ColumnConfig{Text: order.OrderNo, Width: 0, Align: pkg.AlignRight},
-)
+// 当前代码（桌号/序号显示处，如第 94-111 行）
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+}
 
 // 修改后
-orderNoText := order.OrderNo
-if order.IsTakeoutBill() {
-    orderNoText = t.base.Translate("外卖") + " " + orderNoText
+serialNoText := order.SerialNo
+if order.IsOrderSourceTakeout() {
+    serialNoText = t.base.Translate("外卖") + " " + serialNoText
 }
-img.PrintInColumns(
-    pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 280, Align: pkg.AlignLeft},
-    pkg.ColumnConfig{Text: orderNoText, Width: 0, Align: pkg.AlignRight},
-)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + serialNoText + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + serialNoText + "\n")
+}
 ```
 
 ### 方案 3: 交班单和营业数据单标题添加外卖标识
@@ -250,30 +256,36 @@ img.AppendText(t.base.Translate("出菜单"))
 
 // 修改后
 menuTitle := t.base.Translate("出菜单")
-if order.IsTakeoutBill() {
+if order.IsOrderSourceTakeout() {
     menuTitle += "(" + t.base.Translate("外卖") + ")"
 }
 img.AppendText(menuTitle)
 ```
 
-**修改点 2**: 订单号前添加外卖标识（约第 728-730 行）
+**修改点 2**: 桌号/序号前添加外卖标识（约第 94-111 行附近）
 
 ```go
 // 修改前
-img.PrintInColumns(
-    pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 280, Align: pkg.AlignLeft},
-    pkg.ColumnConfig{Text: order.OrderNo, Width: 0, Align: pkg.AlignRight},
-)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+}
 
 // 修改后
-orderNoText := order.OrderNo
-if order.IsTakeoutBill() {
-    orderNoText = t.base.Translate("外卖") + " " + orderNoText
+serialNoText := order.SerialNo
+if order.IsOrderSourceTakeout() {
+    serialNoText = t.base.Translate("外卖") + " " + serialNoText
 }
-img.PrintInColumns(
-    pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 280, Align: pkg.AlignLeft},
-    pkg.ColumnConfig{Text: orderNoText, Width: 0, Align: pkg.AlignRight},
-)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + serialNoText + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + serialNoText + "\n")
+}
 ```
 
 ### dishes_xprinter.go - OutMenuTemplate
@@ -286,40 +298,64 @@ printer.AppendText(t.base.Translate("出菜单"))
 
 // 修改后
 menuTitle := t.base.Translate("出菜单")
-if order.IsTakeoutBill() {
+if order.IsOrderSourceTakeout() {
     menuTitle += "(" + t.base.Translate("外卖") + ")"
 }
 printer.AppendText(menuTitle)
 ```
 
-**修改点 2**: 订单号前添加外卖标识（约第 1228 行）
+**修改点 2**: 桌号/序号前添加外卖标识（约第 94-111 行附近）
 
 ```go
 // 修改前
-printer.PrintInColumns(t.base.Translate("订单号"), order.OrderNo)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+}
 
 // 修改后
-orderNoText := order.OrderNo
-if order.IsTakeoutBill() {
-    orderNoText = t.base.Translate("外卖") + " " + orderNoText
+serialNoText := order.SerialNo
+if order.IsOrderSourceTakeout() {
+    serialNoText = t.base.Translate("外卖") + " " + serialNoText
 }
-printer.PrintInColumns(t.base.Translate("订单号"), orderNoText)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + serialNoText + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + serialNoText + "\n")
+}
 ```
 
 ### dishes_codesoft.go（可选）
 
-**修改点**: CompleteOrder 和 OneDishOneOrder 方法的订单号显示处
+**修改点**: CompleteOrder 和 OneDishOneOrder 方法的桌号/序号显示处
 
 ```go
 // 修改前
-printer.PrintInColumns(t.base.Translate("订单号"), order.OrderNo)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+}
 
 // 修改后
-orderNoText := order.OrderNo
-if order.IsTakeoutBill() {
-    orderNoText = t.base.Translate("外卖") + " " + orderNoText
+serialNoText := order.SerialNo
+if order.IsOrderSourceTakeout() {
+    serialNoText = t.base.Translate("外卖") + " " + serialNoText
 }
-printer.PrintInColumns(t.base.Translate("订单号"), orderNoText)
+if order.DeskUuid > 0 {
+    printer.AppendText(t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
+} else if order.IsTakeoutBill() {
+    printer.AppendText(t.base.Translate("外送") + ": " + serialNoText + "\n")
+} else {
+    printer.AppendText(t.base.Translate("取单号") + ": " + serialNoText + "\n")
+}
 ```
 
 ---

@@ -56,6 +56,9 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(saleBill.GetOrderSourceTakeoutText())
+
 	// 宽度
 	width := 48
 	// 左侧宽度
@@ -65,13 +68,18 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	printer := pkg.NewPrinter(567)
 	if temp != 3 && temp != 4 && temp != 5 {
 		printer.SetAlignment(pkg.AlignLeft)
+		var title string
 		if printType == constant.PrinterTemplateInvoice {
-			printer.AppendText(t.base.Translate("发票"))
+			title = t.base.Translate("发票")
 		} else if printType == constant.PrinterTemplatePreBilling {
-			printer.AppendText(t.base.Translate("预结账单"))
+			title = t.base.Translate("预结账单")
 		} else {
-			printer.AppendText(t.base.Translate("结账单"))
+			title = t.base.Translate("结账单")
 		}
+		if saleBill.IsOrderSourceTakeout() {
+			title += "(" + t.base.Translate("外卖") + ")"
+		}
+		printer.AppendText(title)
 		printer.LineFeed(2)
 	}
 
@@ -93,10 +101,11 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.SetCharacterSize(1, 1)
 		printer.AppendText("\x1D\x21\x01")
 		printer.SetPrintModes(true, true, false)
+		serialNoText := saleBill.SerialNo
 		if saleBill.DeskUuid > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, orderName, mealNumStr))
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), serialNoText, orderName))
 		}
 		if t.base.Lang != "th" {
 			printer.SetLineSpacing(50)
@@ -136,13 +145,14 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.SetCharacterSize(1, 1)
 		printer.AppendText("\x1D\x21\x01")
 		printer.SetPrintModes(true, true, false)
+		serialNoText := saleBill.SerialNo
 		if saleBill.DeskUuid > 0 {
 			printer.SetLineSpacing(50)
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, orderName, mealNumStr))
 			printer.SetLineSpacing(50)
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), serialNoText, orderName))
 			printer.LineFeed()
 		}
 		printer.SetCharacterSize(1, 1)
@@ -160,13 +170,15 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		//
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
+		var title string
 		if printType == constant.PrinterTemplateInvoice {
-			printer.AppendText(t.base.Translate("发票"))
+			title = t.base.Translate("发票")
 		} else if printType == constant.PrinterTemplatePreBilling {
-			printer.AppendText(t.base.Translate("预结账单"))
+			title = t.base.Translate("预结账单")
 		} else {
-			printer.AppendText(t.base.Translate("结账单"))
+			title = t.base.Translate("结账单")
 		}
+		printer.AppendText(title)
 		printer.SetPrintModes(false, false, false)
 		printer.SetCharacterSize(1, 1)
 		printer.LineFeed()
@@ -262,11 +274,12 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
+		serialNoText := saleBill.SerialNo
 		if saleBill.DeskUuid > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s%s", orderSourceTakeoutText, t.base.Translate("桌号"), serialNoText, orderName, mealNumStr))
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {
-			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("取单号"), serialNoText, orderName))
 			printer.LineFeed()
 		}
 		if t.base.Lang != "th" {

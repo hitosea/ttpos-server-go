@@ -342,6 +342,29 @@
                 "group_block_id": "table_no_order_no",
                 "block_id": "order.serial_no",
                 "block_type": "label:value",
+                "block_expand_labels": [
+                    {
+                        "text": {
+                            "de": "(Takeaway) ",
+                            "en": "(Food Delivery) ",
+                            "ja": "(出前) ",
+                            "ko": "(배달) ",
+                            "my": "(အစားအစာ ပို့ဆောင်ခြင်း) ",
+                            "sv": "(Takeaway) ",
+                            "th": "(อาหาร) ",
+                            "tr": "(Paket Servis) ",
+                            "zh": "(外卖) ",
+                            "zhtw": "(外賣) "
+                        },
+                        "conditions": [
+                            {
+                                "field": "order.is_order_source_takeout",
+                                "operator": "not_empty",
+                                "value": 0
+                            }
+                        ]
+                    }
+                ],
                 "block_label": {
                     "de": "Tisch Nr/Bestell Nr: ",
                     "en": "Table No/Order No: ",
