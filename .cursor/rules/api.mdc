@@ -152,21 +152,56 @@ GET  /api/v1/orders/123
 - [ ] PHP: 使用 renderSuccess()
 - [ ] 空数据返回 `{}`，不返回 null
 
-### 多语言字段
+### 多语言字段（请求和响应）
 
-- [ ] 由前端添加上来的多语言字段，统一使用 `dto.LocaleResponse` 类型
-- [ ] 多语言字段名称统一使用 `LocaleName`（参考 `main/app/dto/req/product.go`）
+- [ ] **所有多语言字段（请求参数和响应参数）必须使用 `dto.LocaleResponse` 类型**
+- [ ] **多语言字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式命名**（如 `LocaleName`、`LocaleAttributeName`、`LocaleUnitName` 等）
+- [ ] ❌ **禁止使用** 字符串、map[string]string 或其他自定义结构
+- [ ] ❌ **禁止使用** `Name`、`AttributeName` 等不带 `Locale` 前缀的字段名
 
 ```go
-// ✅ 正确
+// ✅ 正确 - 请求参数
 type ExampleReq struct {
     LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称（多语言）
 }
 
-// ❌ 错误
+// ✅ 正确 - 响应参数（基础名称）
+type ExampleResp struct {
+    Uuid       uint64             `json:"uuid"`
+    LocaleName dto.LocaleResponse `json:"locale_name"` // 名称（多语言）
+}
+
+// ✅ 正确 - 响应参数（带描述的名称）
+type ProductResp struct {
+    Uuid                uint64             `json:"uuid"`
+    LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称（多语言）
+    LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 属性名称（多语言）
+    LocaleUnitName      dto.LocaleResponse `json:"locale_unit_name"`      // 单位名称（多语言）
+}
+
+// ❌ 错误 - 字段名缺少 Locale 前缀
 type ExampleReq struct {
-    Name map[string]string `json:"name"` // 不要使用 map[string]string
-    Names map[string]string `json:"names"` // 不要使用 names
+    Name dto.LocaleResponse `json:"name"` // ❌ 错误，应使用 LocaleName
+}
+
+// ❌ 错误 - 字段名缺少 Locale 前缀
+type ExampleResp struct {
+    AttributeName dto.LocaleResponse `json:"attribute_name"` // ❌ 错误，应使用 LocaleAttributeName
+}
+
+// ❌ 错误 - 请求参数使用 map
+type ExampleReq struct {
+    Name map[string]string `json:"name"` // ❌ 错误，应使用 dto.LocaleResponse
+}
+
+// ❌ 错误 - 请求参数使用字符串
+type ExampleReq struct {
+    Name string `json:"name"` // ❌ 错误，应使用 dto.LocaleResponse
+}
+
+// ❌ 错误 - 响应参数使用 map
+type ExampleResp struct {
+    Name map[string]string `json:"name"` // ❌ 错误，应使用 dto.LocaleResponse
 }
 ```
 
@@ -269,8 +304,8 @@ resp := ProductResp{
 | ❌ data 返回数组            | 必须是对象                |
 | ❌ 使用 RESTful 风格        | 项目用操作后缀            |
 | ❌ 直接用 c.JSON            | 必须用 helper             |
-| ❌ 多语言用 map[string]string | 必须用 dto.LocaleResponse |
-| ❌ 多语言字段名不是 LocaleName | 统一使用 LocaleName       |
+| ❌ **多语言字段（请求参数和响应参数）使用 map[string]string、字符串或自定义结构** | **必须用 dto.LocaleResponse** |
+| ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
 
 ---
 

@@ -29,24 +29,28 @@ helper.Success(c, nil)
 helper.Success(c, []string{})
 ```
 
-### 多语言字段响应规范
+### 多语言字段规范（请求和响应）
 
-**所有 API 接口返回多语言字段时，必须使用 `dto.LocaleResponse` 结构**
+**所有 API 接口的多语言字段，无论是请求参数还是响应参数，都必须使用 `dto.LocaleResponse` 结构**
 
 **规则：**
 
 - ✅ **必须使用** `dto.LocaleResponse` 结构体
+- ✅ **字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式**（如 `LocaleName`、`LocaleAttributeName`、`LocaleUnitName` 等）
 - ❌ **禁止使用** 字符串、map 或其他自定义结构
+- ❌ **禁止使用** `Name`、`AttributeName` 等不带 `Locale` 前缀的字段名
 - ✅ **包含所有支持的语言字段**：ZH, TH, EN, ZHTW, JA, KO, MY, TR, SV
+- ✅ **请求参数和响应参数都必须使用** `dto.LocaleResponse`
 
-**示例：**
+**响应参数示例：**
 
 ```go
-// ✅ 正确 - 使用 dto.LocaleResponse
+// ✅ 正确 - 响应参数使用 dto.LocaleResponse 和正确的字段命名
 type ProductResp struct {
-    Uuid    uint64            `json:"uuid"`
-    Name    dto.LocaleResponse `json:"name"`    // 多语言名称
-    Remark  dto.LocaleResponse `json:"remark"`  // 多语言备注
+    Uuid          uint64            `json:"uuid"`
+    LocaleName    dto.LocaleResponse `json:"locale_name"`    // 多语言名称
+    LocaleRemark  dto.LocaleResponse `json:"locale_remark"`  // 多语言备注
+    LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 属性名称（多语言）
 }
 
 // 在 Service 中构建响应
@@ -56,23 +60,60 @@ func (s *productSrv) GetProduct(ctx context.Context, uuid uint64) (*ProductResp,
     localeResp := localeSrv.GetLocaleNames(multiLanguageName)
     
     return &ProductResp{
-        Uuid:   uuid,
-        Name:   localeResp,  // ✅ 使用 LocaleResponse
-        Remark: localeResp,
+        Uuid:          uuid,
+        LocaleName:    localeResp,  // ✅ 使用 LocaleResponse 和正确的字段名
+        LocaleRemark:  localeResp,
     }, nil
 }
+```
 
-// ❌ 错误 - 使用字符串
+**请求参数示例：**
+
+```go
+// ✅ 正确 - 请求参数使用 dto.LocaleResponse 和正确的字段命名
+type ProductCreateReq struct {
+    LocaleName    dto.LocaleResponse `json:"locale_name" binding:"required"`    // 多语言名称
+    LocaleRemark  dto.LocaleResponse `json:"locale_remark"`                      // 多语言备注
+}
+
+// ❌ 错误 - 字段名缺少 Locale 前缀
+type ProductCreateReq struct {
+    Name dto.LocaleResponse `json:"name" binding:"required"`  // ❌ 错误，应使用 LocaleName
+}
+
+// ❌ 错误 - 请求参数使用字符串
+type ProductCreateReq struct {
+    Name string `json:"name" binding:"required"`  // ❌ 错误，应使用 dto.LocaleResponse
+}
+
+// ❌ 错误 - 请求参数使用 map
+type ProductCreateReq struct {
+    Name map[string]string `json:"name" binding:"required"`  // ❌ 错误
+}
+
+// ❌ 错误 - 请求参数使用自定义结构
+type ProductCreateReq struct {
+    Name struct {
+        ZH string `json:"zh"`
+        EN string `json:"en"`
+    } `json:"name" binding:"required"`  // ❌ 错误，应使用 dto.LocaleResponse
+}
+```
+
+**响应参数错误示例：**
+
+```go
+// ❌ 错误 - 响应参数使用字符串
 type ProductResp struct {
     Name string `json:"name"`  // ❌ 错误
 }
 
-// ❌ 错误 - 使用 map
+// ❌ 错误 - 响应参数使用 map
 type ProductResp struct {
     Name map[string]string `json:"name"`  // ❌ 错误
 }
 
-// ❌ 错误 - 使用自定义结构
+// ❌ 错误 - 响应参数使用自定义结构
 type ProductResp struct {
     Name struct {
         ZH string `json:"zh"`
@@ -97,6 +138,24 @@ localeResp := language.JsonToLocaleResponse(jsonStr)  // 返回 *dto.LocaleRespo
 // 使用 LocaleSrv 转换
 localeSrv := service.NewLocaleSrv()
 localeResp := localeSrv.GetLocaleNames(multiLanguageName)  // 返回 dto.LocaleResponse
+```
+
+**前端请求示例：**
+
+```json
+{
+  "name": {
+    "zh": "苹果",
+    "en": "Apple",
+    "th": "แอปเปิล",
+    "zhtw": "蘋果",
+    "ja": "りんご",
+    "ko": "사과",
+    "my": "ပန်းသီး",
+    "tr": "Elma",
+    "sv": "Äpple"
+  }
+}
 ```
 
 ### 错误处理
@@ -162,6 +221,8 @@ if order.Source == constant.OrderSourceInstant {
 - ✅ **使用带调用链跟踪的DB，通过DBManager.GetDBWithContext() 获取DB实例**
 - ❌ **不能直接依赖其他领域的 Repository**
 - ❌ **不能直接操作 model，必须通过 Repository**
+- ❌ **禁止直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法**
+- ✅ **所有数据库操作必须通过 Repository 层封装后再调用**
 
 ```go
 // ✅ 正确：接口和实现在同一个文件中
@@ -206,6 +267,25 @@ func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) erro
     return db.Create(&order).Error  // ❌ 直接操作 model
 }
 
+// ❌ 错误：直接使用 db.Model、db.Create 等方法
+func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
+    db := ctx.GetDB()
+    
+    // ❌ 错误：直接使用 db.Model().Create()
+    if err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error; err != nil {
+        return err
+    }
+    
+    // ❌ 错误：直接使用 db.Model().Where().Updates()
+    if err := db.Model(&model.MultiLanguageName{}).
+        Where("uuid = ?", uuid).
+        Updates(map[string]interface{}{...}).Error; err != nil {
+        return err
+    }
+    
+    return nil
+}
+
 // ✅ 正确：使用 ctx.GetDB() 并通过 Repository 操作
 func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
     db := ctx.GetDB()
@@ -215,6 +295,166 @@ func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) erro
     if err != nil {
         return errors.WithMessage(err, "创建订单失败")
     }
+    return nil
+}
+
+// ✅ 正确：所有数据库操作都通过 Repository
+func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
+    db := ctx.GetDB()
+    
+    // ✅ 正确：通过 Repository 创建多语言名称
+    multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(db)
+    multiLanguageName := model.MultiLanguageName{...}
+    if err := multiLanguageNameRepo.Create(&multiLanguageName); err != nil {
+        return errors.WithMessage(err, "创建多语言名称失败")
+    }
+    
+    // ✅ 正确：通过 Repository 更新多语言名称
+    if err := multiLanguageNameRepo.UpdateByUuid(uuid, updates); err != nil {
+        return errors.WithMessage(err, "更新多语言名称失败")
+    }
+    
+    return nil
+}
+```
+
+### Service 层事务使用规范
+
+- ✅ **多个数据库操作必须使用事务包裹**，确保原子性
+- ✅ **涉及多个表的数据修改操作必须使用事务**
+- ✅ **删除操作涉及关联数据时必须使用事务**
+- ✅ **更新操作涉及多个步骤时必须使用事务**
+- ✅ **优先使用 `repository.CommonRepo.Transaction()` 方法**
+- ✅ **事务中必须使用 `tx` 创建 Repository 实例**
+- ✅ **事务中返回 error 会自动回滚，返回 nil 会自动提交**
+- ❌ **禁止在事务中手动调用 `tx.Commit()` 或 `tx.Rollback()`**
+
+**何时需要使用事务：**
+
+1. **创建操作**：创建主记录 + 创建关联记录（如创建活动 + 创建规则）
+2. **更新操作**：更新主记录 + 更新/删除关联记录（如更新活动 + 删除旧规则 + 创建新规则）
+3. **删除操作**：删除主记录 + 删除关联记录（如删除活动 + 删除规则）
+4. **复杂业务逻辑**：涉及多个表的数据修改，需要保证一致性
+
+**事务使用示例：**
+
+```go
+// ✅ 正确：使用 repository.CommonRepo.Transaction
+func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
+    db := ctx.GetDB()
+    
+    // 多个数据库操作，必须使用事务
+    if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+        // 1. 创建多语言名称（使用 tx 创建 Repository）
+        multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+        multiLanguageName := model.MultiLanguageName{...}
+        if err := multiLanguageNameRepo.Create(&multiLanguageName); err != nil {
+            return errors.WithMessage(err, "创建多语言名称失败")
+        }
+        
+        // 2. 创建活动（使用 tx 创建 Repository）
+        activityRepo := repository.NewFullReductionActivityRepo(tx)
+        activity := &model.FullReductionActivity{...}
+        if err := activityRepo.Create(activity); err != nil {
+            return errors.WithMessage(err, "创建活动失败")
+        }
+        
+        // 3. 创建规则（使用 tx 创建 Repository）
+        ruleRepo := repository.NewFullReductionActivityRuleRepo(tx)
+        for _, ruleReq := range req.Rules {
+            rule := &model.FullReductionActivityRule{...}
+            if err := ruleRepo.Create(rule); err != nil {
+                return errors.WithMessage(err, "创建规则失败")
+            }
+        }
+        
+        // 返回 nil 自动提交，返回 error 自动回滚
+        return nil
+    }); err != nil {
+        return err
+    }
+    
+    return nil
+}
+
+// ✅ 正确：也可以使用 db.Transaction（GORM 标准方法）
+func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
+    db := ctx.GetDB()
+    
+    if err := db.Transaction(func(tx *gorm.DB) error {
+        // 在事务中执行多个操作
+        orderRepo := repository.NewOrderRepo(tx)
+        if err := orderRepo.CreateOrder(order); err != nil {
+            return errors.WithMessage(err, "创建订单失败")
+        }
+        
+        productRepo := repository.NewProductRepo(tx)
+        if err := productRepo.UpdateStock(productUuid, -quantity); err != nil {
+            return errors.WithMessage(err, "更新库存失败")
+        }
+        
+        return nil  // 自动提交
+    }); err != nil {
+        return err
+    }
+    
+    return nil
+}
+
+// ❌ 错误：多个数据库操作没有使用事务
+func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
+    db := ctx.GetDB()
+    
+    // ❌ 错误：多个操作没有事务包裹，可能导致数据不一致
+    // ❌ 同时错误：直接使用 db.Model().Create()，应该通过 Repository
+    multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(db)
+    if err := multiLanguageNameRepo.Create(&multiLanguageName); err != nil {
+        return err
+    }
+    
+    activityRepo := repository.NewFullReductionActivityRepo(db)
+    if err := activityRepo.Create(activity); err != nil {
+        return err  // 如果这里失败，上面的 multiLanguageName 已经创建了，数据不一致
+    }
+    
+    return nil
+}
+
+// ❌ 错误：事务中使用了 db 而不是 tx
+func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
+    db := ctx.GetDB()
+    
+    if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+        // ❌ 错误：在事务中使用了 db 而不是 tx
+        activityRepo := repository.NewFullReductionActivityRepo(db)  // ❌ 应该用 tx
+        if err := activityRepo.Create(activity); err != nil {
+            return err
+        }
+        return nil
+    }); err != nil {
+        return err
+    }
+    
+    return nil
+}
+
+// ❌ 错误：在事务中手动提交或回滚
+func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
+    db := ctx.GetDB()
+    
+    if err := db.Transaction(func(tx *gorm.DB) error {
+        // ... 业务逻辑
+        
+        // ❌ 错误：不要手动提交，Transaction 会自动处理
+        if err := tx.Commit().Error; err != nil {
+            return err
+        }
+        
+        return nil
+    }); err != nil {
+        return err
+    }
+    
     return nil
 }
 ```
@@ -289,12 +529,18 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 - [ ] Service 方法内使用 ctx.GetDB() 获取数据库连接
 - [ ] Service 只依赖自己领域的 Repository
 - [ ] Service 通过 Repository 操作 model，不直接操作
+- [ ] **禁止直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法**
+- [ ] **所有数据库操作必须通过 Repository 层封装后再调用**
+- [ ] **多个数据库操作必须使用事务包裹（创建/更新/删除涉及多个表时）**
+- [ ] **事务中必须使用 `tx` 创建 Repository 实例，不能使用 `db`**
+- [ ] **事务中不要手动调用 `tx.Commit()` 或 `tx.Rollback()`**
 - [ ] Repository 只持有 db 实例
 - [ ] **API 层（app/api/v1 及其所有子目录）严禁引用 repository 包**
 - [ ] **API 层严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
 - [ ] API 层只负责参数校验、调用 Service、返回响应
 - [ ] data 不能为 null 或数组
-- [ ] **多语言字段必须使用 `dto.LocaleResponse` 结构，禁止使用字符串、map 或自定义结构**
+- [ ] **多语言字段（请求参数和响应参数）必须使用 `dto.LocaleResponse` 结构，禁止使用字符串、map 或自定义结构**
+- [ ] **多语言字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式，禁止使用 `Name` 等不带 `Locale` 前缀的字段名**
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
 - [ ] 常量必须在 constant 包中定义，禁止使用字面量
@@ -377,13 +623,18 @@ order, err := orderRepo.GetOrder(
 | ❌ URL 用 kebab-case                | 项目统一用 snake_case       |
 | ❌ data 返回 null                   | 前端无法统一处理            |
 | ❌ data 返回数组                    | 必须是对象                  |
-| ❌ 多语言字段使用字符串、map 或自定义结构 | 必须使用 `dto.LocaleResponse` |
+| ❌ **多语言字段（请求参数和响应参数）使用字符串、map 或自定义结构** | **必须使用 `dto.LocaleResponse`** |
+| ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
 | ❌ 使用 panic                       | 必须 return error           |
 | ❌ **Service 接口和实现分开在不同文件** | **必须放在同一个文件中** |
 | ❌ Service 接口第一个参数不是 ctx   | 必须是 context.Context      |
 | ❌ Service 使用 dbm.GetDB(dbId)     | 必须使用 ctx.GetDB()        |
 | ❌ Service 跨领域依赖 Repository    | 只能依赖自己领域的 Repo     |
 | ❌ Service 直接操作 model           | 必须通过 Repository         |
+| ❌ **直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法** | **必须通过 Repository 层封装** |
+| ❌ **多个数据库操作不使用事务包裹** | **必须使用事务保证原子性** |
+| ❌ **事务中使用 `db` 而不是 `tx` 创建 Repository** | **必须使用 `tx` 才能保证在同一个事务中** |
+| ❌ **事务中手动调用 `tx.Commit()` 或 `tx.Rollback()`** | **Transaction 方法会自动处理，手动调用会导致错误** |
 | ❌ **API 层（app/api/v1 及其所有子目录）引用 repository 包** | **严禁违反，必须通过 Service 层** |
 | ❌ **API 层编写业务逻辑**        | **严禁违反，所有业务逻辑必须在 Service 层实现** |
 | ❌ Repository 持有 DBManager        | 只能持有 db                 |
