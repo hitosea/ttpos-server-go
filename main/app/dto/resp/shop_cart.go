@@ -148,17 +148,19 @@ func (item *OrderRemarkItem) GetOrderRemarkResponse() dto.LocaleResponse {
 
 // 桌台购物车
 type ShopCart struct {
-	SaleBillUuid  uint64               `json:"sale_bill_uuid"`         // 销售账单ID
-	Takeout       *bool                `json:"takeout,omitempty"`      // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
-	IsDeskOrder   bool                 `json:"is_desk_order"`          // 购物车类型 true:桌台购物车 false:点餐购物车
-	IsLock        bool                 `json:"is_lock"`                // 购物车是否锁定 true:锁定 false:未锁定
-	Desk          *DeskInfo            `json:"desk,omitempty"`         // 桌台信息
-	Buffet        *BuffetInfo          `json:"buffet,omitempty"`       // 自助餐信息
-	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"`   // 必点方案列表信息
-	DiningMethod  uint                 `json:"dining_method"`          // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
-	SaleOrderList []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
-	UpdateTime    int64                `json:"update_time"`            // 更新时间
-	OrderRemark   *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
+	SaleBillUuid    uint64               `json:"sale_bill_uuid"`         // 销售账单ID
+	Takeout         *bool                `json:"takeout,omitempty"`      // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
+	IsDeskOrder     bool                 `json:"is_desk_order"`          // 购物车类型 true:桌台购物车 false:点餐购物车
+	IsLock          bool                 `json:"is_lock"`                // 购物车是否锁定 true:锁定 false:未锁定
+	OrderSourceUuid uint64               `json:"order_source_uuid"`      // 订单来源UUID（0=店内）
+	NationalityUuid uint64               `json:"nationality_uuid"`       // 国籍UUID（0=未记录）
+	Desk            *DeskInfo            `json:"desk,omitempty"`         // 桌台信息
+	Buffet          *BuffetInfo          `json:"buffet,omitempty"`       // 自助餐信息
+	MustPlans       *ProductMustPlanList `json:"must_plans,omitempty"`   // 必点方案列表信息
+	DiningMethod    uint                 `json:"dining_method"`          // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
+	SaleOrderList   []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
+	UpdateTime      int64                `json:"update_time"`            // 更新时间
+	OrderRemark     *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 

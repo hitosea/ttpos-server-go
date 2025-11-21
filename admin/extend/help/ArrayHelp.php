@@ -209,7 +209,7 @@ class ArrayHelp
             ) {
                 $data[$key] = self::arrayMergeMultiple($array1[$key], $array2[$key]);
             } else {
-                $data[$key] = isset($array2[$key]) ? $array2[$key] : $array1[$key];
+                $data[$key] = isset($array2[$key]) ? $array2[$key] : ($array1[$key] ?? '');
             }
         }
         return $data;
