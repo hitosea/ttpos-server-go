@@ -100,18 +100,19 @@ type MaterialCategoryEditReq struct {
 
 // MaterialAddReq 添加物品请求
 type MaterialAddReq struct {
-	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
-	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
-	Status           int                `json:"status"`             // 状态，1-启用 0-停用
-	Valuation        float64            `json:"valuation"`          // 估值率
-	InitStock        float64            `json:"init_stock"`         // 期初库存
-	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
-	UnitUuid         uint64             `json:"unit_uuid"`          // 基准单位UUID
-	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表
-	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
-	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
-	InternalCode     string             `json:"internal_code"`      // 内部编码
-	SafetyStock      *float64           `json:"safety_stock"`       // 安全库存数量
+	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 物品名称
+	CategoryUuid         uint64             `json:"category_uuid"`          // 分类UUID
+	Status               int                `json:"status"`                 // 状态，1-启用 0-停用
+	Valuation            float64            `json:"valuation"`              // 估值率
+	InitStock            float64            `json:"init_stock"`             // 期初库存
+	BarcodeValue         string             `json:"barcode_value"`          // 条形码值
+	UnitUuid             uint64             `json:"unit_uuid"`              // 基准单位UUID
+	UnitList             []MaterialUnitReq  `json:"unit_list"`              // 单位列表
+	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`     // 采购单位UUID
+	CostUnitUuid         uint64             `json:"cost_unit_uuid"`         // 成本单位UUID
+	InternalCode         string             `json:"internal_code"`          // 内部编码
+	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
+	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
 	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
@@ -280,17 +281,18 @@ type MaterialUnitReq struct {
 
 // MaterialEditReq 编辑物品请求
 type MaterialEditReq struct {
-	Uuid             uint64             `json:"uuid"`               // 物品UUID
-	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
-	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
-	Status           int                `json:"status"`             // 状态，1-启用 0-停用
-	Valuation        float64            `json:"valuation"`          // 估值率
-	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
-	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表,新增的非基准单位
-	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
-	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
-	InternalCode     string             `json:"internal_code"`      // 内部编码
-	SafetyStock      *float64           `json:"safety_stock"`       // 安全库存数量
+	Uuid                 uint64             `json:"uuid"`                   // 物品UUID
+	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 物品名称
+	CategoryUuid         uint64             `json:"category_uuid"`          // 分类UUID
+	Status               int                `json:"status"`                 // 状态，1-启用 0-停用
+	Valuation            float64            `json:"valuation"`              // 估值率
+	BarcodeValue         string             `json:"barcode_value"`          // 条形码值
+	UnitList             []MaterialUnitReq  `json:"unit_list"`              // 单位列表,新增的非基准单位
+	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`     // 采购单位UUID
+	CostUnitUuid         uint64             `json:"cost_unit_uuid"`         // 成本单位UUID
+	InternalCode         string             `json:"internal_code"`          // 内部编码
+	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
+	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
 }
 
 func (r *MaterialEditReq) Validate() error {
@@ -341,6 +343,22 @@ type MaterialDeleteReq struct {
 type MaterialStatusReq struct {
 	Uuids  []uint64 `json:"uuids" binding:"required"` // 物品UUID
 	Status int      `json:"status"`                   // 状态，1-启用 0-停用
+}
+
+// MaterialBatchUpdateVisibleReq 批量更新物品可见性请求
+type MaterialBatchUpdateVisibleReq struct {
+	Uuids                []uint64 `json:"uuids" binding:"required"`                  // 物品UUID列表
+	AllowSubstoreVisible int      `json:"allow_substore_visible" binding:"required"` // 允许子店可见：1-允许，0-不允许
+}
+
+func (r *MaterialBatchUpdateVisibleReq) Validate() error {
+	if len(r.Uuids) == 0 {
+		return errors.WithMessage(errors.New("物品UUID列表不能为空"))
+	}
+	if r.AllowSubstoreVisible != 0 && r.AllowSubstoreVisible != 1 {
+		return errors.WithMessage(errors.New("allow_substore_visible 值必须为 0 或 1"))
+	}
+	return nil
 }
 
 // MaterialUnitListReq 获取物品单位列表请求

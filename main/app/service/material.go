@@ -74,6 +74,7 @@ type IMaterialSrv interface {
 	UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq) error
 	DeleteMaterial(ctx context.Context, req req.MaterialDeleteReq) error
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
+	UpdateMaterialVisibleBatch(ctx context.Context, req req.MaterialBatchUpdateVisibleReq) (int, error) // 批量更新物品可见性，返回更新数量
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
 	GetMaterialCategoryDetail(ctx context.Context, req req.MaterialCategoryDetailReq) (*material_resp.MaterialCategory, error)
@@ -143,6 +144,7 @@ func (s *materialSrv) pushMaterialImportProgress(companyUuid uint64, deviceSn st
 // GetMaterialList 获取物品列表
 func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListReq) (material_resp.MaterialListWithPaginationResp, error) {
 	dbId := ctx.GetDbId()
+	companySetting := ctx.GetCompanySetting()
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
 
 	// 构建查询选项
@@ -175,6 +177,12 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	if len(req.MaterialUuids) > 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.MaterialUuids))
 	}
+
+	// 子店查询时自动过滤不可见物品
+	if companySetting.IsSubShop() {
+		dbOptions = append(dbOptions, materialRepo.WhereAllowSubstoreVisible(1))
+	}
+
 	// 预加载关联数据
 	dbOptions = append(dbOptions, commonRepo.Preload(
 		repository.WithPreload{
@@ -888,6 +896,13 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		NotBaseUnitList: notBaseUnitList,
 		Unit:            &unit,
 		InternalCode:    request.InternalCode,
+		AllowSubstoreVisible: func() int {
+			// 如果前端版本号小于 2.10，则都等于 1
+			if ctx.Version(context.LT, "2.10.0") {
+				return 1
+			}
+			return request.AllowSubstoreVisible
+		}(),
 	}
 
 	// 设置总部ID
@@ -1105,6 +1120,13 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 					return request.CostUnitUuid
 				}
 				return unitMap[request.CostUnitUuid]
+			}(),
+			AllowSubstoreVisible: func() int {
+				// 如果前端版本号小于 2.10，则都等于 1
+				if ctx.Version(context.LT, "2.10.0") {
+					return 1
+				}
+				return request.AllowSubstoreVisible
 			}(),
 		}
 
@@ -1480,6 +1502,58 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 	}
 
 	return nil
+}
+
+// UpdateMaterialVisibleBatch 批量更新物品可见性
+func (s *materialSrv) UpdateMaterialVisibleBatch(ctx context.Context, request req.MaterialBatchUpdateVisibleReq) (int, error) {
+	// 验证请求参数
+	if err := request.Validate(); err != nil {
+		return 0, errors.WithMessage(err)
+	}
+
+	// 检查权限：仅总店可以更新可见性
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() {
+		return 0, errors.WithMessage(errors.New("子店无权修改物品可见性设置"))
+	}
+
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+
+	var updatedCount int64
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		materialRepo := repository.NewMaterialRepo(tx)
+
+		// 检查物品是否存在且不是总部物品（总部物品不能修改）
+		materials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
+		if err != nil {
+			return errors.WithMessage(err, "获取物品详情失败")
+		}
+
+		// 过滤掉总部物品
+		validUuids := make([]uint64, 0)
+		for _, material := range materials {
+			if !material.IsHeadquarter() {
+				validUuids = append(validUuids, material.Uuid)
+			}
+		}
+
+		if len(validUuids) == 0 {
+			return errors.WithMessage(errors.New("没有可更新的物品（总部物品不能修改）"))
+		}
+
+		// 批量更新可见性
+		if err := materialRepo.UpdateMaterialVisibleBatch(validUuids, request.AllowSubstoreVisible); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		updatedCount = int64(len(validUuids))
+		return nil
+	}); err != nil {
+		return 0, errors.WithMessage(err)
+	}
+
+	return int(updatedCount), nil
 }
 
 // GetMaterialCategoryList 获取物品类别列表
@@ -2949,6 +3023,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					Status:                material.Status,
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
 					WarehouseUuid:         material.WarehouseUuid,
+					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 				})
 				multiLanguageName := material.MultiLanguageName
 				addMultiLanguageNameList = append(addMultiLanguageNameList, model.MultiLanguageName{

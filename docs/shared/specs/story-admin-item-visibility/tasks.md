@@ -21,7 +21,7 @@
 
 ## Phase 1: 数据库设计和迁移
 
-- [ ] 1.1 创建数据库迁移文件
+- [x] 1.1 创建数据库迁移文件
 
   - File: `admin/database/migrations/{YYYYMMDDHHMMSS}_add_allow_substore_visible_to_material_table.php`
   - Purpose: 在 ttpos_material 表中添加 allow_substore_visible 字段
@@ -38,7 +38,7 @@
   - Command: `cd admin && php think migrate:run`
   - Success: 迁移执行成功，字段已添加
 
-- [ ] 1.3 更新 Go Model
+- [x] 1.3 更新 Go Model
 
   - File: `main/app/model/material.go`
   - Purpose: 在 Material 结构体中添加 AllowSubstoreVisible 字段
@@ -60,7 +60,7 @@
 
 ### Repository 层
 
-- [ ] 2.1 添加可见性过滤选项方法
+- [x] 2.1 添加可见性过滤选项方法
 
   - File: `main/app/repository/material_repo.go`
   - Purpose: 添加 WhereAllowSubstoreVisible 选项方法
@@ -70,7 +70,7 @@
 
 ### Service 层
 
-- [ ] 2.2 修改同步逻辑，同步可见性字段
+- [x] 2.2 修改同步逻辑，同步可见性字段
 
   - File: `main/app/service/material.go`
   - Purpose: 在 SyncMaterial 方法中同步 allow_substore_visible 字段
@@ -78,7 +78,7 @@
   - Leverage: 现有同步逻辑: `main/app/service/material.go` 的 `SyncMaterial` 方法（第 2778 行）
   - Prompt: Role: Go Developer with business logic expertise | Task: 修改 SyncMaterial 方法，在同步总部物品到子店时，同步 allow_substore_visible 字段 | Context: 在同步逻辑中，将总部的 allow_substore_visible 值同步到子店 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不影响现有同步逻辑 | Success: 同步逻辑修改成功，可见性字段正确同步
 
-- [ ] 2.3 添加可见性过滤逻辑
+- [x] 2.3 添加可见性过滤逻辑
 
   - File: `main/app/service/material.go`
   - Purpose: 在物品查询方法中添加可见性过滤逻辑（子店自动过滤）
@@ -88,7 +88,7 @@
 
 ### API 层
 
-- [ ] 2.4 修改物品列表查询接口，自动应用可见性过滤
+- [x] 2.4 修改物品列表查询接口，自动应用可见性过滤
 
   - File: `main/app/api/material_api.go`
   - Purpose: 物品列表查询接口自动应用可见性过滤（子店）
@@ -104,7 +104,7 @@
   - Leverage: 现有 API: `main/app/api/material_api.go`
   - Prompt: Role: Go Developer with Gin framework expertise | Task: 添加更新物品可见性设置的接口，检查用户权限（仅总店可用） | Context: URL: /api/v1/material/update_visible，POST 方法，参数: uuid, allow_substore_visible | Restrictions: 遵循 .cursor/rules/api.mdc，检查权限 | Success: API 接口创建成功，权限检查正确
 
-- [ ] 2.6 添加批量更新物品可见性接口（总店）
+- [x] 2.6 添加批量更新物品可见性接口（总店）
 
   - File: `main/app/api/material_api.go`
   - Purpose: 添加批量更新物品可见性设置的接口（仅总店可用）
@@ -188,7 +188,7 @@
 
 ## Phase 5: 业务模块可见性过滤
 
-- [ ] 5.1 修改成本卡相关接口，添加可见性过滤
+- [x] 5.1 修改成本卡相关接口，添加可见性过滤
 
   - File: `main/app/api/cost_card_api.go` 或相关文件
   - Purpose: 子店查询成本卡时过滤不可见物品
@@ -196,7 +196,7 @@
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
   - Success: 成本卡接口过滤成功
 
-- [ ] 5.2 修改采购申请相关接口，添加可见性过滤
+- [x] 5.2 修改采购申请相关接口，添加可见性过滤
 
   - File: `main/app/api/purchase_apply_api.go` 或相关文件
   - Purpose: 子店查询采购申请时过滤不可见物品
@@ -204,7 +204,7 @@
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
   - Success: 采购申请接口过滤成功
 
-- [ ] 5.3 修改采购收货相关接口，添加可见性过滤
+- [x] 5.3 修改采购收货相关接口，添加可见性过滤
 
   - File: `main/app/api/purchase_receive_api.go` 或相关文件
   - Purpose: 子店查询采购收货时过滤不可见物品
@@ -212,23 +212,23 @@
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
   - Success: 采购收货接口过滤成功
 
-- [ ] 5.4 修改品牌采购相关接口，添加可见性过滤
+- [x] 5.4 修改品牌采购相关接口，添加可见性过滤
 
   - File: `main/app/api/brand_purchase_api.go` 或相关文件
   - Purpose: 子店查询品牌采购时过滤不可见物品
   - Requirements: 3.5
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
-  - Success: 品牌采购接口过滤成功
+  - Success: 品牌采购接口过滤成功（已通过采购申请接口覆盖）
 
-- [ ] 5.5 修改品采收货相关接口，添加可见性过滤
+- [x] 5.5 修改品采收货相关接口，添加可见性过滤
 
   - File: `main/app/api/brand_purchase_receive_api.go` 或相关文件
   - Purpose: 子店查询品采收货时过滤不可见物品
   - Requirements: 3.6
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
-  - Success: 品采收货接口过滤成功
+  - Success: 品采收货接口过滤成功（已通过采购收货接口覆盖）
 
-- [ ] 5.6 修改盘点单相关接口，添加可见性过滤
+- [x] 5.6 修改盘点单相关接口，添加可见性过滤
 
   - File: `main/app/api/inventory_check_api.go` 或相关文件
   - Purpose: 子店查询盘点单时过滤不可见物品
@@ -236,7 +236,7 @@
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
   - Success: 盘点单接口过滤成功
 
-- [ ] 5.7 修改调拨单相关接口，添加可见性过滤
+- [x] 5.7 修改调拨单相关接口，添加可见性过滤
 
   - File: `main/app/api/transfer_api.go` 或相关文件
   - Purpose: 子店查询调拨单时过滤不可见物品
@@ -244,7 +244,7 @@
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
   - Success: 调拨单接口过滤成功
 
-- [ ] 5.8 修改库存查询相关接口，添加可见性过滤
+- [x] 5.8 修改库存查询相关接口，添加可见性过滤
 
   - File: `main/app/api/stock_query_api.go` 或相关文件
   - Purpose: 子店查询库存时过滤不可见物品
@@ -252,7 +252,7 @@
   - Leverage: 现有接口，Task 2.3 的过滤逻辑
   - Success: 库存查询接口过滤成功
 
-- [ ] 5.9 修改出入库明细表相关接口，添加可见性过滤
+- [x] 5.9 修改出入库明细表相关接口，添加可见性过滤
 
   - File: `main/app/api/stock_detail_api.go` 或相关文件
   - Purpose: 子店查询出入库明细时过滤不可见物品
