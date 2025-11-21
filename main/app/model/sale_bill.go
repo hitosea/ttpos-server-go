@@ -290,6 +290,11 @@ func (model *SaleBill) IsTakeoutBill() bool {
 	return model.BillType == constant.SaleBillTypeTakeout || model.MemberSaleOrderUuid != 0
 }
 
+// 是否是订单来源为外卖的订单
+func (model *SaleBill) IsOrderSourceTakeout() bool {
+	return model.OrderSourceUuid > 0
+}
+
 // 销售账单是否已经使用了通用优惠券
 func (model *SaleBill) IsCommonCouponUsed() (bool, uint64) {
 	for _, saleOrder := range model.SaleOrders {

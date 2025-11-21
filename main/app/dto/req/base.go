@@ -127,8 +127,12 @@ type UpdateBusinessSetting struct {
 	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse" binding:"omitempty,oneof=0 1"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
 
 	// 敏感操作设置
-	DiscountNeedPassword      string   `json:"discount_need_password" binding:"omitempty,oneof=0 1"`      // 折扣操作是否需要密码 0-否 1-是
-	DiscountAuthorizedStaffIds []uint64 `json:"discount_authorized_staff_ids"`                            // 折扣操作授权员工ID列表
-	RefundNeedPassword        string   `json:"refund_need_password" binding:"omitempty,oneof=0 1"`      // 退款操作是否需要密码 0-否 1-是
-	RefundAuthorizedStaffIds  []uint64 `json:"refund_authorized_staff_ids"`                              // 退款操作授权员工ID列表
+	DiscountNeedPassword       string   `json:"discount_need_password" binding:"omitempty,oneof=0 1"` // 折扣操作是否需要密码 0-否 1-是
+	DiscountAuthorizedStaffIds []uint64 `json:"discount_authorized_staff_ids"`                        // 折扣操作授权员工ID列表
+	RefundNeedPassword         string   `json:"refund_need_password" binding:"omitempty,oneof=0 1"`   // 退款操作是否需要密码 0-否 1-是
+	RefundAuthorizedStaffIds   []uint64 `json:"refund_authorized_staff_ids"`                          // 退款操作授权员工ID列表
+
+	// 外卖来源和国籍功能开关
+	EnableOrderSource string `json:"enable_order_source" binding:"omitempty,oneof=0 1"` // 外卖功能开关 0-关闭 1-开启
+	EnableNationality string `json:"enable_nationality" binding:"omitempty,oneof=0 1"`  // 国籍功能开关 0-关闭 1-开启
 }

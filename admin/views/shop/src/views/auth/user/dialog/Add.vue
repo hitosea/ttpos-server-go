@@ -22,6 +22,12 @@
       <el-form-item for="no_click" :label="$t('确认密码')" :maxlength="16" prop="confirm_password"
         ><el-input v-model="form.confirm_password" :placeholder="$t('请输入确认密码')" type="password"></el-input
       ></el-form-item>
+      <el-form-item for="no_click" :label="$t('权限密码')" prop="permission_password">
+        <el-input v-model="form.permission_password" :maxlength="8" :placeholder="$t('请输入权限密码（必填）')" type="password"></el-input>
+        <div class="tips">
+          {{ $t('密码必须为 4 - 8 位数字') }}
+        </div>
+      </el-form-item>
       <el-form-item for="no_click" :label="$t('姓名')" prop="real_name">
         <el-input v-model="form.real_name" :maxlength="50" :placeholder="$t('请输入姓名')"></el-input>
       </el-form-item>
@@ -69,6 +75,16 @@
           callback();
         }
       };
+
+      let validatePermissionPassword = (rule, value, callback) => {
+        if (!value) {
+          callback(new Error($t('权限密码不能为空')));
+        } else if (!/^\d{4,8}$/.test(value)) {
+          callback(new Error($t('密码必须为 4 - 8 位数字')));
+        } else {
+          callback();
+        }
+      };
       return {
         /*左边长度*/
         formLabelWidth: '120px',
@@ -81,6 +97,7 @@
           user_name: '',
           phone: '',
           access_id: [],
+          permission_password: '',
         },
         /*form验证*/
         formRules: {
@@ -123,6 +140,13 @@
             {
               required: true,
               message: $t('请输入姓名'),
+              trigger: ['blur', 'change'],
+            },
+          ],
+          permission_password: [
+            {
+              required: true,
+              validator: validatePermissionPassword,
               trigger: ['blur', 'change'],
             },
           ],
@@ -173,6 +197,7 @@
         this.form = {
           user_name: '',
           access_id: [],
+          permission_password: '',
         };
         if (e) {
           this.$emit('close', {

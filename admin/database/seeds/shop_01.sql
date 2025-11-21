@@ -2440,6 +2440,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff` (
     `company_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '集团ID',
     `username` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '用户名',
     `password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '登录密码',
+    `permission_password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '权限密码（加密存储）',
     `phone` VARCHAR(20) DEFAULT '' COMMENT '手机号',
     `password_change_count` INT(11) DEFAULT 0 COMMENT '修改密码次数',
     `password_change_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改密码时间',

@@ -52,11 +52,11 @@
 
 #### 具体要求
 
-- [ ] 1.1 在 `ttpos_staff` 表中新增 `permission_password` 字段（varchar(255)，加密存储）
-- [ ] 1.2 在 Go Model（`main/app/model/staff.go`）中添加权限密码字段
-- [ ] 1.3 在 DTO（`main/app/dto/req/staff.go`）中添加权限密码字段和验证规则（AddStaffReq 中必填，UpdateStaffReq 中非必填）
-- [ ] 1.4 在 Service（`main/app/service/staff.go`）中添加权限密码处理逻辑（加密存储）
-- [ ] 1.5 在 API（`main/app/api/v1/shop/shop_staff.go`）中支持权限密码字段的保存和查询
+- [x] 1.1 在 `ttpos_staff` 表中新增 `permission_password` 字段（varchar(255) NOT NULL DEFAULT ''，加密存储）
+- [x] 1.2 在 Go Model（`main/app/model/staff.go`）中添加权限密码字段
+- [x] 1.3 在 DTO（`main/app/dto/req/staff.go`）中添加权限密码字段和验证规则（AddStaffReq 中必填，UpdateStaffReq 中非必填）
+- [x] 1.4 在 Service（`main/app/service/staff.go`）中添加权限密码处理逻辑（加密存储）
+- [x] 1.5 在 API（`main/app/api/v1/shop/shop_staff.go`）中支持权限密码字段的保存和查询（通过 DTO 自动支持）
 
 ---
 
@@ -76,10 +76,10 @@
 
 #### 具体要求
 
-- [ ] 2.1 在 PHP Model（`admin/app/shop/model/auth/User.php`）中添加权限密码字段处理
-- [ ] 2.2 在 Controller（`admin/app/shop/controller/`）中添加权限密码验证逻辑
-- [ ] 2.3 使用 `salt_hash()` 函数加密权限密码（与登录密码加密方式一致）
-- [ ] 2.4 在员工添加/编辑方法中处理权限密码字段
+- [x] 2.1 在 PHP Model（`admin/app/shop/model/auth/User.php`）中添加权限密码字段处理
+- [x] 2.2 在验证器（`admin/extend/help/ValidateHelp.php`）中添加权限密码格式验证逻辑
+- [x] 2.3 使用 `salt_hash()` 函数加密权限密码（与登录密码加密方式一致）
+- [x] 2.4 在员工添加/编辑方法中处理权限密码字段
 
 ---
 
@@ -96,10 +96,10 @@
 
 #### 具体要求
 
-- [ ] 3.1 前端验证：在输入框失去焦点时验证格式
-- [ ] 3.2 后端验证：在保存前验证格式（Go和PHP都需要）
-- [ ] 3.3 验证规则：使用正则表达式 `/^\d{4,8}$/` 验证
-- [ ] 3.4 错误提示：统一提示"密码必须为 4 - 8 位数字"
+- [x] 3.1 前端验证：在输入框失去焦点时验证格式（商家后台已实现）
+- [x] 3.2 后端验证：在保存前验证格式（Go和PHP都已实现）
+- [x] 3.3 验证规则：使用正则表达式 `/^\d{4,8}$/` 验证
+- [x] 3.4 错误提示：统一提示"密码必须为 4 - 8 位数字"
 
 ---
 
@@ -117,12 +117,12 @@
 
 #### 具体要求
 
-- [ ] 4.1 前端页面：新建员工时权限密码输入框为必填项，显示必填标识
-- [ ] 4.2 前端页面：编辑员工时权限密码输入框显示为空或占位符（不回显原密码），非必填项
-- [ ] 4.3 前端验证：新建时权限密码必填验证，编辑时权限密码非必填
-- [ ] 4.4 后端处理（新建）：权限密码必填，如果为空则返回错误
-- [ ] 4.5 后端处理（编辑）：如果前端未传权限密码或为空，不更新权限密码字段（保持原值）
-- [ ] 4.6 两个终端（新管理端和商家后台）都需要实现此逻辑
+- [x] 4.1 前端页面：新建员工时权限密码输入框为必填项，显示必填标识（商家后台已实现）
+- [x] 4.2 前端页面：编辑员工时权限密码输入框显示为空或占位符（不回显原密码），非必填项（商家后台已实现）
+- [x] 4.3 前端验证：新建时权限密码必填验证，编辑时权限密码非必填（商家后台已实现）
+- [x] 4.4 后端处理（新建）：权限密码必填，如果为空则返回错误（Go和PHP都已实现）
+- [x] 4.5 后端处理（编辑）：如果前端未传权限密码或为空，不更新权限密码字段（保持原值）（Go和PHP都已实现）
+- [x] 4.6 两个终端（新管理端和商家后台）都需要实现此逻辑（后端已实现，前端商家后台已实现）
 
 ---
 
@@ -148,10 +148,12 @@
 
 ### 数据库设计要求
 
-- [ ] 在 `ttpos_staff` 表中新增 `permission_password` 字段
-- [ ] 字段类型：`varchar(255)`，用于存储加密后的密码
-- [ ] 字段默认值：NULL（不设置默认值，由代码逻辑处理）
-- [ ] 参考: `.cursor/rules/database.mdc` - 数据库开发规范
+- [x] 在 `ttpos_staff` 表中新增 `permission_password` 字段
+- [x] 字段类型：`varchar(255)`，用于存储加密后的密码
+- [x] 字段约束：`NOT NULL DEFAULT ''`（不允许为空，默认值为空字符串）
+- [x] 迁移文件：`admin/database/migrations/20251121014418_add_permission_password_field_to_staff_table.php`
+- [x] Seeds 文件：已更新 `admin/database/seeds/shop_01.sql`
+- [x] 参考: `.cursor/rules/database.mdc` - 数据库开发规范
 
 ### 性能要求
 

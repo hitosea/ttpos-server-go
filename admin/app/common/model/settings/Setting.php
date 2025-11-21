@@ -1263,7 +1263,12 @@ class Setting extends BaseModel
                     'delivery_price_ratio' => 100,
                     'is_batch' => '0', // 是否是分批商品 0-否 1-是
                     'batch_product_uuids' => [], // 分批商品UUID列表
-                    'batch_tag_num' => 0  // 分批类型数量
+                    'batch_tag_num' => 0,  // 分批类型数量
+
+                    // 外卖功能开关 0-关闭 1-开启
+                    'enable_order_source' => '0',
+                    // 国籍功能开关 0-关闭 1-开启
+                    'enable_nationality' => '0',
                 ],
             ],
         ];

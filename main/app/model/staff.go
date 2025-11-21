@@ -11,6 +11,7 @@ type Staff struct {
 	CompanyUuid         uint64 `gorm:"column:company_uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	Username            string `gorm:"column:username;type:varchar(255);comment:用户名;NOT NULL" json:"username"`
 	Password            string `gorm:"column:password;type:varchar(255);comment:登录密码;NOT NULL" json:"password"`
+	PermissionPassword  string `gorm:"column:permission_password;type:varchar(255);comment:权限密码（加密存储）" json:"-"`
 	Phone               string `gorm:"column:phone;type:varchar(20);comment:手机号" json:"phone"`
 	PasswordChangeCount int    `gorm:"column:password_change_count;type:int(11);default:0;comment:修改密码次数" json:"password_change_count"`
 	PasswordChangeTime  int64  `gorm:"column:password_change_time;type:int(10) unsigned;default:0;comment:修改密码时间;NOT NULL" json:"password_change_time"`

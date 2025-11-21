@@ -146,4 +146,15 @@ class ValidateHelp
     {
         return preg_match('/^[a-zA-Z0-9]{1,48}$/', $input) === 1;
     }
+
+    /**
+     * 验证权限密码，必须为 4-8 位数字
+     *
+     * @param string $input
+     * @return bool
+     */
+    public static function validatePermissionPassword($input)
+    {
+        return preg_match('/^\d{4,8}$/', $input) === 1;
+    }
 }

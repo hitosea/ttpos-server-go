@@ -1747,16 +1747,18 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	takeout := shopCart.SaleBill.IsTakeout()
 	orderRemark, _ := shopCart.SaleBill.GetOrderRemarkRes()
 	shopCartInfo := &resp.ShopCart{
-		SaleBillUuid:  saleBillUuid,
-		IsDeskOrder:   shopCart.IsDeskShopCart(),
-		IsLock:        shopCart.SaleBill.IsLockStatus(),
-		Takeout:       &takeout,
-		Desk:          nil,
-		Buffet:        nil,
-		DiningMethod:  shopCart.SaleBill.DiningMethod,
-		SaleOrderList: saleOrderList,
-		UpdateTime:    shopCart.SaleBill.UpdateTime,
-		OrderRemark:   orderRemark,
+		SaleBillUuid:    saleBillUuid,
+		IsDeskOrder:     shopCart.IsDeskShopCart(),
+		IsLock:          shopCart.SaleBill.IsLockStatus(),
+		OrderSourceUuid: shopCart.SaleBill.OrderSourceUuid,
+		NationalityUuid: shopCart.SaleBill.NationalityUuid,
+		Takeout:         &takeout,
+		Desk:            nil,
+		Buffet:          nil,
+		DiningMethod:    shopCart.SaleBill.DiningMethod,
+		SaleOrderList:   saleOrderList,
+		UpdateTime:      shopCart.SaleBill.UpdateTime,
+		OrderRemark:     orderRemark,
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {
