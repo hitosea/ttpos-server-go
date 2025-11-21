@@ -204,6 +204,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			Attributes:         attrList,
 			ItemGroupName:      itemGroupCodeName,
 			VariantOf:          itemInfo.VariantOf,
+			NotForSale:         itemInfo.CustomNotForSale,
 		})
 	}
 
