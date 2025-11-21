@@ -36,7 +36,6 @@ type Business struct {
 	RequiredParentCompanyApproval string `json:"required_parent_company_approval"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
 	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
 
-	// 敏感操作设置
 	DiscountNeedPassword       string   `json:"discount_need_password"`        // 折扣操作是否需要密码 0-否 1-是
 	DiscountAuthorizedStaffIds []uint64 `json:"discount_authorized_staff_ids"` // 折扣操作授权员工ID列表
 	RefundNeedPassword         string   `json:"refund_need_password"`          // 退款操作是否需要密码 0-否 1-是
