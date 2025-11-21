@@ -110,6 +110,7 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.18
+      bmp-network:
 
 networks:
   saas-network:
