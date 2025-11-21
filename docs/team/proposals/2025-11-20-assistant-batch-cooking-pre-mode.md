@@ -11,8 +11,8 @@
 | **提案人** | xiezhihuan   |
 | **日期**   | 2025-11-20   |
 | **目标版本** | v2.10.0 |
-| **状态**   | 待评审   |
-| **关联 Spec** | -      |
+| **状态**   | 已创建 Spec   |
+| **关联 Spec** | [story-assistant-batch-cooking-pre-mode](../../shared/specs/story-assistant-batch-cooking-pre-mode/)      |
 | **关联任务** | DooTask #36921 |
 
 ---
@@ -158,7 +158,7 @@
 
 **下一步行动**：
 
-- [ ] 创建 Spec：`story-assistant-batch-cooking-pre-mode`
+- [x] 创建 Spec：`story-assistant-batch-cooking-pre-mode` ✅ 已完成
 - [ ] 分配负责人：{姓名}
 - [ ] 目标 Sprint：Sprint {N}
 
