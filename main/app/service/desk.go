@@ -785,10 +785,18 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 
 // MergeDesk 合并桌台
 func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	systemLock := lock.NewSystemLock()
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		// 禁止并发操作
+		systemLock.LockUuid(req.SaleBillUuid)
+		systemLock.LockUuid(companyUuid)
+		// 按相反顺序解锁
+		defer func() {
+			systemLock.UnlockUuid(companyUuid)
+			systemLock.UnlockUuid(req.SaleBillUuid)
+		}()
 		ctx.AddLock()
 	}
 
@@ -802,6 +810,9 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+	}
+	if saleBill.IsCanceled() {
+		return nil, nil, errors.New("当前订单已取消，不支持合并桌台")
 	}
 
 	// 点餐助手，拆单后不可以修改人数
@@ -823,6 +834,10 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	saleBillList := []model.SaleBill{}
 	deskNos := []string{}
 	for _, deskUuid := range req.DeskUuids {
+		// 跳过当前桌台，避免关闭当前桌台
+		if deskUuid == saleBill.DeskUuid {
+			continue
+		}
 		desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(deskUuid)
 		if errDesk != nil {
 			return nil, nil, errors.WithMessage(errDesk, "获取桌台信息失败")
@@ -862,6 +877,11 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	}
 	if len(deskMergeCheckRes.List) > 0 {
 		return nil, &deskMergeCheckRes, errors.New(errDeskMsg)
+	}
+
+	// 如果没有需要合并的桌台，直接返回
+	if len(saleBillList) == 0 {
+		return nil, nil, errors.New("没有可合并的桌台")
 	}
 
 	resp := &resp.DeskMergeShopCartResp{}
