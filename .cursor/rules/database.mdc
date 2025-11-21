@@ -31,6 +31,13 @@ shop8609817471094784     # 商户2数据库
 saas                     # 系统主库
 ```
 
+**重要约束：**
+
+- ❌ **禁止在业务表中添加 `company_uuid` 字段**
+- ✅ **原因**：每个商户使用独立的数据库实例，数据天然隔离，无需通过 `company_uuid` 字段区分商户
+- ✅ **适用场景**：所有商户业务表（如订单、商品、活动等）
+- ⚠️ **例外**：仅系统主库（saas）中的跨商户表需要 `company_uuid` 字段
+
 ### 命名规范
 
 | 类型   | 规则          | 示例                     |
@@ -39,6 +46,27 @@ saas                     # 系统主库
 | 表名   | ttpos\_前缀   | `ttpos_product`          |
 | 字段   | snake_case    | `user_id`, `create_time` |
 | 索引   | uk*/idx*前缀  | `uk_uuid`, `idx_status`  |
+
+**外键 UUID 字段命名规范：**
+
+- ✅ **必须使用完整表名**：`{完整表名}_uuid`
+- ❌ **禁止使用缩写或简写**：不能使用 `prod_uuid`、`usr_uuid` 等
+
+**示例：**
+
+| 关联表名                | 正确字段名                          | 错误示例              |
+| ----------------------- | ----------------------------------- | --------------------- |
+| `ttpos_product`         | `product_uuid`                      | ❌ `prod_uuid`         |
+| `ttpos_user`           | `user_uuid`                         | ❌ `usr_uuid`          |
+| `ttpos_order`          | `order_uuid`                        | ❌ `ord_uuid`          |
+| `ttpos_multi_language_name` | `multi_language_name_uuid`      | ❌ `mln_uuid`          |
+| `ttpos_product_category` | `product_category_uuid`          | ❌ `prod_cat_uuid`      |
+
+**说明：**
+
+- 字段名中的表名部分应去除 `ttpos_` 前缀
+- 例如：`ttpos_product` 表对应的外键字段为 `product_uuid`，而不是 `ttpos_product_uuid`
+- 必须使用完整的表名（去除前缀后），不能使用任何形式的缩写
 
 ---
 
@@ -90,6 +118,32 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 `uuid` bigint unsigned NOT NULL DEFAULT 0
 ```
 
+### 布尔字段 - 使用 int
+
+**禁止使用 boolean 类型，统一使用 int**
+
+```sql
+-- ✅ 正确
+`is_disabled` int NOT NULL DEFAULT 0 COMMENT '是否失效（0=否，1=是）'
+`is_all_day` int NOT NULL DEFAULT 0 COMMENT '是否全天（0=否，1=是）'
+
+-- ❌ 错误
+`is_disabled` boolean NOT NULL DEFAULT false
+`is_all_day` boolean NOT NULL DEFAULT true
+```
+
+**原因：**
+- MySQL 中 boolean 类型实际上是 tinyint(1) 的别名
+- 统一使用 int 类型，保持一致性
+- 便于扩展（如需要三态：0/1/2）
+- 避免不同数据库系统的兼容性问题
+
+**规范：**
+- ✅ 使用 `int` 类型
+- ✅ 默认值：`0`（否）或 `1`（是）
+- ✅ 注释中明确说明：`0=否，1=是` 或 `0=否，1=是，2=待定` 等
+- ❌ 禁止使用 `boolean`、`bool`、`tinyint(1)` 类型
+
 ---
 
 ## 🔍 关键检查点
@@ -100,8 +154,10 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 - [ ] 时间字段用 int 类型
 - [ ] 金额字段用 decimal 类型
 - [ ] UUID 字段用 bigint 类型
+- [ ] **布尔字段用 int 类型，禁止使用 boolean 类型**
 - [ ] 表名使用 ttpos\_ 前缀
 - [ ] 字段名使用 snake_case
+- [ ] 外键 UUID 字段使用完整表名（去除 ttpos\_ 前缀），禁止使用缩写或简写
 
 ### 创建索引时
 
@@ -385,8 +441,10 @@ $uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
 | ------------------------------------------- | ---------------------- |
 | ❌ 时间字段用 datetime                      | 必须用 int             |
 | ❌ 金额字段用 float                         | 精度丢失               |
+| ❌ **布尔字段用 boolean 类型**              | **必须用 int 类型**    |
 | ❌ 缺少必需字段                             | 不符合规范             |
 | ❌ 表名不加 ttpos\_ 前缀                    | 命名规范               |
+| ❌ 外键 UUID 字段使用缩写或简写             | 必须使用完整表名       |
 | ❌ 硬删除数据                               | 必须用软删除           |
 | ❌ 多语言表缺少 name 或 multi_language_name_uuid | 必须同时包含两个字段   |
 | ❌ name 字段不存储 JSON 格式                | 必须是完整的 JSON      |

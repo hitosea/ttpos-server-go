@@ -1,0 +1,42 @@
+package resp
+
+import "ttpos-server-go/app/dto"
+
+// FullReductionActivityResp 满减活动响应
+type FullReductionActivityResp struct {
+	Uuid              uint64                        `json:"uuid"`
+	Name              dto.LocaleResponse            `json:"name"` // 多语言名称，使用 LocaleResponse（必须）
+	StartDate         int64                         `json:"start_date"`
+	EndDate           int64                         `json:"end_date"`
+	StartTime         string                        `json:"start_time"`
+	EndTime           string                        `json:"end_time"`
+	IsAllDay          int                           `json:"is_all_day"`
+	ReductionType     int                           `json:"reduction_type"`
+	ReductionTypeName string                        `json:"reduction_type_name"` // 阶梯满减/循环满减
+	IsDisabled        int                           `json:"is_disabled"`
+	Status            string                        `json:"status"` // ongoing, not_started, ended
+	Rules             []FullReductionActivityRuleResp `json:"rules"`
+	CreateTime        int64                         `json:"create_time"`
+	UpdateTime        int64                         `json:"update_time"`
+}
+
+// FullReductionActivityRuleResp 满减活动规则响应
+type FullReductionActivityRuleResp struct {
+	Uuid           uint64  `json:"uuid"`
+	Threshold      float64 `json:"threshold"`
+	ReductionAmount float64 `json:"reduction_amount"`
+}
+
+// FullReductionActivityListResp 满减活动列表响应
+type FullReductionActivityListResp struct {
+	List []*FullReductionActivityResp `json:"list"`
+	Meta *PageMeta                    `json:"meta"`
+}
+
+// PageMeta 分页元数据
+type PageMeta struct {
+	PageNo   int   `json:"page_no"`
+	PageSize int   `json:"page_size"`
+	Total    int64 `json:"total"`
+}
+

@@ -45,6 +45,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 	if err != nil {
 		return nil, err
 	}
+	enableGormTracing(db, dbName)
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, err

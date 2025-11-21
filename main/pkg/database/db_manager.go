@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+	bizctx "ttpos-server-go/pkg/context"
 )
 
 type DBManager struct {
@@ -118,6 +119,21 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	m.dbs[index] = companyDB
 	m.lastCheck[index] = time.Now() // 记录检查时间
 	return companyDB
+}
+
+// GetDBWithContext 返回绑定业务上下文的 *gorm.DB，确保数据库操作继承 trace/span 信息
+func (m *DBManager) GetDBWithContext(ctx bizctx.Context) *gorm.DB {
+	if ctx == nil {
+		return nil
+	}
+	db := m.GetDB(ctx.GetDbId())
+	if db == nil {
+		return nil
+	}
+	if stdCtx := ctx.GetContext(); stdCtx != nil {
+		return db.WithContext(stdCtx)
+	}
+	return db
 }
 
 func (m *DBManager) MustGetDB(idx uint64) (*gorm.DB, error) {

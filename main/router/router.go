@@ -32,8 +32,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		c.String(http.StatusOK, "healthy")
 	})
 	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
-		rpc.TestCompanyList()
-		rpc.TestEstimateDistance()
+		rpc.TestCompanyList(c.Request.Context())
+		rpc.TestEstimateDistance(c.Request.Context())
 		c.String(http.StatusOK, "Success")
 	})
 	r.GET("api/add_multi_language_name_uuid", func(c *gin.Context) {
@@ -103,6 +103,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache)             // 桌台地图
 			shop.RegisterNationalityRoutes(shopGroup, dbm, cache)           // 国籍管理
 			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)           // 外卖来源管理
+			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache) // 满减活动管理
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
