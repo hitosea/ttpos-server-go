@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
@@ -49,7 +50,7 @@ func LoadOtlpConfig(opt copier.Option) *OtlpConfig {
 		Endpoint:      "localhost:4318",
 		Path:          "/v1/traces",
 		Enabled:       false,
-		SamplingRatio: 0.1,
+		SamplingRatio: 1,
 		SlowQueryMs:   200,
 	}
 
@@ -126,7 +127,7 @@ func Init(ctx context.Context, config *OtlpConfig) error {
 	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(samplingRatio))
 
 	tracerProvider = sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(exporter, sdktrace.WithMaxExportBatchSize(512), sdktrace.WithBatchTimeout(3*time.Second)),
 		sdktrace.WithResource(res),
 		sdktrace.WithSampler(sampler),
 	)
