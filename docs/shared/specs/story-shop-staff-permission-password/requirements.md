@@ -8,7 +8,7 @@
 | ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | **来源 Proposal** | [docs/team/proposals/2025-11-19-staff-permission-password.md](../../../team/proposals/2025-11-19-staff-permission-password.md) |
 | **创建日期**      | 2025-11-19                                                                                                 |
-| **负责人**        | {姓名}                                                                                                       |
+| **负责人**        | 曾振华、何翔                                                                                                       |
 | **目标 Sprint**   | Sprint {N}                                                                                                   |
 | **涉及技术栈**    | [x] Go (main/) [ ] Go (ttpos-bmp/) [x] PHP (admin/) [x] Vue (admin/views/)                                   |
 
