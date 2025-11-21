@@ -159,6 +159,7 @@ if order.Source == constant.OrderSourceInstant {
 - ✅ **只能依赖其他 Service 接口**
 - ✅ **持有 DBManager**（仅在极少数需要切换数据库时使用）
 - ✅ **可以依赖自己领域的 Repository 接口**
+- ✅ **使用带调用链跟踪的DB，通过DBManager.GetDBWithContext() 获取DB实例**
 - ❌ **不能直接依赖其他领域的 Repository**
 - ❌ **不能直接操作 model，必须通过 Repository**
 

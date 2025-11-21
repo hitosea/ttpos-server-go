@@ -531,6 +531,11 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 			Items:       erpItems,
 		})
 		if err != nil {
+			logger.Logger.Error("提交盘点单失败", zap.Error(err))
+			// 检查是否是仓库禁用错误
+			if strings.Contains(err.Error(), "Disabled Warehouse") {
+				return errors.New("仓库状态已关闭，请修改仓库状态")
+			}
 			// 提取物品名称
 			itemName := s.extractName("Item", "is disabled", err.Error())
 			for _, item := range stockReconciliation.StockReconciliationItems {
@@ -611,6 +616,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 		stockReconciliationRepo.WhereUuid(req.Uuid),
 		stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
 		stockReconciliationRepo.WithStockReconciliationItemsMaterialBaseUnit(),
+		stockReconciliationRepo.WithWarehouse(),
 	}
 	// 查询盘点单
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
@@ -624,6 +630,11 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 	// 只有已提交状态的盘点单才能审核
 	if stockReconciliation.Status != constant.StockReconciliationStatusSubmitted {
 		return nil, errors.New("当前状态不允许审核")
+	}
+
+	// 检查仓库是否被禁用
+	if stockReconciliation.Warehouse != nil && stockReconciliation.Warehouse.IsDisabled() {
+		return nil, errors.New("仓库状态已关闭，请修改仓库状态")
 	}
 
 	disabledMaterials := make([]dto.LocaleResponse, 0)
@@ -737,6 +748,11 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				StockReconciliationName: stockReconciliation.ErpCode,
 			})
 			if err != nil {
+				logger.Logger.Error("审核盘点单失败", zap.Error(err))
+				// 检查是否是仓库禁用错误
+				if strings.Contains(err.Error(), "Disabled Warehouse") {
+					return errors.WithMessage(errors.New("仓库状态已关闭，请修改仓库状态"), err.Error())
+				}
 				return errors.WithMessage(errors.New("审核盘点单失败"), err.Error())
 			}
 		}
@@ -846,7 +862,7 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	if req.Purpose != 1 && req.Purpose != 2 {
 		return nil, nil, errors.New("盘点目的参数错误")
 	}
-	// 判断仓库是否存在，且类型为normal
+	// 判断仓库是否存在，且类型为normal，且未被禁用
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	warehouse, err := warehouseRepo.GetByUuid(warehouseUuid)
 	if err != nil {
@@ -854,6 +870,9 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	}
 	if warehouse == nil || warehouse.Type != constant.WarehouseTypeNormal {
 		return nil, nil, errors.New("仓库参数错误")
+	}
+	if warehouse.IsDisabled() {
+		return nil, nil, errors.New("仓库状态已关闭，请修改仓库状态")
 	}
 
 	// 判断盘点物品明细列表是否正确，要求所有物品均为仓库内的物品，且单位均为仓库内物品的单位

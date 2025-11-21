@@ -45,8 +45,8 @@ func TestEcho(c *gin.Context) (res *echo.EchoResponse, err error) {
 	return
 }
 
-func TestEstimateDistance() (*resp.TakeoutDistanceResp, error) {
-	res, err := takeout.NewTakeoutSrv().EstimateDistance(context.Background(), &req.TakeoutDistanceReq{
+func TestEstimateDistance(ctx context.Context) (*resp.TakeoutDistanceResp, error) {
+	res, err := takeout.NewTakeoutSrv().EstimateDistance(ctx, &req.TakeoutDistanceReq{
 		ProviderName: "skootar",
 		Address: []*req.TakeoutAddress{
 			{
@@ -151,13 +151,13 @@ func TestCancelOrder() error {
 	return nil
 }
 
-func TestCompanyList() error {
+func TestCompanyList(ctx context.Context) error {
 	client, conn, err := erp.NewErpSellingClient()
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
-	result, err := client.GetPosProfileList(erp.WithSiteCode(context.Background(), "2"), &selling.PosProfileReq{
+	result, err := client.GetPosProfileList(erp.WithSiteCode(ctx, "2"), &selling.PosProfileReq{
 		CompanyAbbr: "wallace-pjd",
 	})
 	if err != nil {

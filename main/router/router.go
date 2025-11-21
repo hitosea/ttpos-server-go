@@ -32,8 +32,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		c.String(http.StatusOK, "healthy")
 	})
 	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
-		rpc.TestCompanyList()
-		rpc.TestEstimateDistance()
+		rpc.TestCompanyList(c.Request.Context())
+		rpc.TestEstimateDistance(c.Request.Context())
 		c.String(http.StatusOK, "Success")
 	})
 	r.GET("api/add_multi_language_name_uuid", func(c *gin.Context) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
@@ -21,15 +22,18 @@ import (
 )
 
 type OtlpConfig struct {
-	ServiceName string `json:"serviceName"`
-	Endpoint    string `json:"endpoint"`
-	Path        string `json:"path"`
-	LogHeaders  string `json:"logHeaders"`
-	Enabled     bool   `json:"enabled"`
+	ServiceName   string  `json:"serviceName"`
+	Endpoint      string  `json:"endpoint"`
+	Path          string  `json:"path"`
+	LogHeaders    string  `json:"logHeaders"`
+	Enabled       bool    `json:"enabled"`
+	SamplingRatio float64 `json:"samplingRatio"`
+	SlowQueryMs   int     `json:"slowQueryMs"`
 }
 
 var (
 	tracerProvider *sdktrace.TracerProvider
+	currentConfig  *OtlpConfig
 	Inited         = false // 是否已初始化
 	logHeaders     []string
 )
@@ -42,18 +46,22 @@ var (
 //   - *OtlpConfig: OTLP 配置对象
 func LoadOtlpConfig(opt copier.Option) *OtlpConfig {
 	otlpConfig := &OtlpConfig{
-		ServiceName: "ttpos-main",
-		Endpoint:    "localhost:4318",
-		Path:        "/v1/traces",
-		Enabled:     false,
+		ServiceName:   "ttpos-main",
+		Endpoint:      "localhost:4318",
+		Path:          "/v1/traces",
+		Enabled:       false,
+		SamplingRatio: 1,
+		SlowQueryMs:   200,
 	}
 
 	err := copier.CopyWithOption(otlpConfig, OtlpConfig{
-		ServiceName: viper.GetString("OTLP_SERVICE_NAME"),
-		Endpoint:    viper.GetString("OTLP_ENDPOINT"),
-		Path:        viper.GetString("OTLP_PATH"),
-		LogHeaders:  viper.GetString("OTLP_LOG_HEADERS"),
-		Enabled:     viper.GetBool("OTLP_ENABLED"),
+		ServiceName:   viper.GetString("OTLP_SERVICE_NAME"),
+		Endpoint:      viper.GetString("OTLP_ENDPOINT"),
+		Path:          viper.GetString("OTLP_PATH"),
+		LogHeaders:    viper.GetString("OTLP_LOG_HEADERS"),
+		Enabled:       viper.GetBool("OTLP_ENABLED"),
+		SamplingRatio: viper.GetFloat64("OTLP_SAMPLING_RATIO"),
+		SlowQueryMs:   viper.GetInt("OTLP_SLOW_QUERY_MS"),
 	}, opt)
 	if err != nil {
 		log.Printf("[OTLP] Config error: %v", err)
@@ -75,10 +83,16 @@ func Init(ctx context.Context, config *OtlpConfig) error {
 		log.Println("[OTLP] Config is nil, skipping initialization")
 		return nil
 	}
+	if !config.Enabled {
+		log.Println("[OTLP] Disabled, skipping initialization")
+		return nil
+	}
 	// 配置特殊 headers 记录
 	if config.LogHeaders != "" {
 		logHeaders = strings.Split(config.LogHeaders, ",")
 	}
+
+	currentConfig = config
 
 	// 创建 OTLP HTTP Exporter
 	exporter, err := otlptracehttp.New(ctx,
@@ -103,10 +117,19 @@ func Init(ctx context.Context, config *OtlpConfig) error {
 	}
 
 	// 创建 TracerProvider
+	samplingRatio := config.SamplingRatio
+	if samplingRatio < 0 {
+		samplingRatio = 0
+	}
+	if samplingRatio > 1 {
+		samplingRatio = 1
+	}
+	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(samplingRatio))
+
 	tracerProvider = sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(exporter, sdktrace.WithMaxExportBatchSize(512), sdktrace.WithBatchTimeout(3*time.Second)),
 		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()), // 生产环境可调整采样率
+		sdktrace.WithSampler(sampler),
 	)
 
 	// 设置全局 TracerProvider
@@ -134,6 +157,11 @@ func Shutdown(ctx context.Context) error {
 		return tracerProvider.Shutdown(ctx)
 	}
 	return nil
+}
+
+// Config 返回当前 OTLP 配置
+func Config() *OtlpConfig {
+	return currentConfig
 }
 
 // OtlpMiddleware 返回一个 Gin 的 OpenTelemetry 中间件，用于自动生成 trace

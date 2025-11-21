@@ -14,7 +14,7 @@ import (
 )
 
 func NewSQLiteConnection(conf config.DatabaseConf) (*gorm.DB, error) {
-	return gorm.Open(sqlite.Open(conf.Database), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(conf.Database), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   conf.TablePrefix, // 表名前缀z
 			SingularTable: true,             // 使用单一表名, eg. `User` => `user`
@@ -28,4 +28,9 @@ func NewSQLiteConnection(conf config.DatabaseConf) (*gorm.DB, error) {
 			},
 		),
 	})
+	if err != nil {
+		return nil, err
+	}
+	enableGormTracing(db, conf.Database)
+	return db, nil
 }

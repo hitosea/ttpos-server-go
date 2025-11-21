@@ -42378,6 +42378,22 @@
                         "1"
                     ]
                 },
+                "enable_nationality": {
+                    "description": "国籍功能开关 0-关闭 1-开启",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                },
+                "enable_order_source": {
+                    "description": "外卖来源和国籍功能开关",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                },
                 "free_method": {
                     "description": "免单计算方式: 10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费",
                     "type": "string",
@@ -50948,6 +50964,10 @@
                         }
                     ]
                 },
+                "nationality_uuid": {
+                    "description": "国籍UUID（0=未记录）",
+                    "type": "integer"
+                },
                 "order_remark": {
                     "description": "整单备注信息",
                     "allOf": [
@@ -50955,6 +50975,10 @@
                             "$ref": "#/definitions/resp.OrderRemarkRes"
                         }
                     ]
+                },
+                "order_source_uuid": {
+                    "description": "订单来源UUID（0=店内）",
+                    "type": "integer"
                 },
                 "product": {
                     "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
@@ -53295,6 +53319,14 @@
                     "description": "菜品卡片样式最后更新时间",
                     "type": "string"
                 },
+                "enable_nationality": {
+                    "description": "国籍功能开关 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "enable_order_source": {
+                    "description": "外卖来源和国籍功能开关",
+                    "type": "string"
+                },
                 "free_method": {
                     "description": "免单计算方式",
                     "type": "string"
@@ -53996,6 +54028,14 @@
                     "description": "菜品卡片样式最后更新时间",
                     "type": "string"
                 },
+                "enable_nationality": {
+                    "description": "国籍功能开关 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "enable_order_source": {
+                    "description": "外卖来源和国籍功能开关",
+                    "type": "string"
+                },
                 "free_method": {
                     "description": "免单计算方式",
                     "type": "string"
@@ -54042,6 +54082,10 @@
                     "description": "取消订单/退菜 0-无需密码 1-需要密码",
                     "type": "string"
                 },
+                "nationality_count": {
+                    "description": "国籍管理数量",
+                    "type": "integer"
+                },
                 "no_clear_table": {
                     "description": "结账后不清台 0-清台 1-不清台",
                     "type": "string"
@@ -54052,6 +54096,10 @@
                 },
                 "order_remark_count": {
                     "description": "整单备注原因数量",
+                    "type": "integer"
+                },
+                "order_source_count": {
+                    "description": "外卖来源管理数量",
                     "type": "integer"
                 },
                 "qr_code": {
