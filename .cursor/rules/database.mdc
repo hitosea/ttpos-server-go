@@ -118,6 +118,32 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 `uuid` bigint unsigned NOT NULL DEFAULT 0
 ```
 
+### 布尔字段 - 使用 int
+
+**禁止使用 boolean 类型，统一使用 int**
+
+```sql
+-- ✅ 正确
+`is_disabled` int NOT NULL DEFAULT 0 COMMENT '是否失效（0=否，1=是）'
+`is_all_day` int NOT NULL DEFAULT 0 COMMENT '是否全天（0=否，1=是）'
+
+-- ❌ 错误
+`is_disabled` boolean NOT NULL DEFAULT false
+`is_all_day` boolean NOT NULL DEFAULT true
+```
+
+**原因：**
+- MySQL 中 boolean 类型实际上是 tinyint(1) 的别名
+- 统一使用 int 类型，保持一致性
+- 便于扩展（如需要三态：0/1/2）
+- 避免不同数据库系统的兼容性问题
+
+**规范：**
+- ✅ 使用 `int` 类型
+- ✅ 默认值：`0`（否）或 `1`（是）
+- ✅ 注释中明确说明：`0=否，1=是` 或 `0=否，1=是，2=待定` 等
+- ❌ 禁止使用 `boolean`、`bool`、`tinyint(1)` 类型
+
 ---
 
 ## 🔍 关键检查点
@@ -128,6 +154,7 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 - [ ] 时间字段用 int 类型
 - [ ] 金额字段用 decimal 类型
 - [ ] UUID 字段用 bigint 类型
+- [ ] **布尔字段用 int 类型，禁止使用 boolean 类型**
 - [ ] 表名使用 ttpos\_ 前缀
 - [ ] 字段名使用 snake_case
 - [ ] 外键 UUID 字段使用完整表名（去除 ttpos\_ 前缀），禁止使用缩写或简写
@@ -414,6 +441,7 @@ $uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
 | ------------------------------------------- | ---------------------- |
 | ❌ 时间字段用 datetime                      | 必须用 int             |
 | ❌ 金额字段用 float                         | 精度丢失               |
+| ❌ **布尔字段用 boolean 类型**              | **必须用 int 类型**    |
 | ❌ 缺少必需字段                             | 不符合规范             |
 | ❌ 表名不加 ttpos\_ 前缀                    | 命名规范               |
 | ❌ 外键 UUID 字段使用缩写或简写             | 必须使用完整表名       |
