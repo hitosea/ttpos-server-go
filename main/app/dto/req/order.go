@@ -116,6 +116,18 @@ type OrderIsCellCloseReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
 }
 
+// OrderSetOrderSourceReq 设置订单来源
+type OrderSetOrderSourceReq struct {
+	SaleBillUuid    uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	OrderSourceUuid uint64 `json:"order_source_uuid"`                 // 订单来源UUID
+}
+
+// OrderSetNationalityReq 设置订单国籍
+type OrderSetNationalityReq struct {
+	SaleBillUuid    uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	NationalityUuid uint64 `json:"nationality_uuid"`                  // 国籍UUID
+}
+
 // OrderProductDeleteReq 删除订单商品
 type OrderProductDeleteReq struct {
 	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID

@@ -145,3 +145,19 @@ func (l *LocaleResponse) GetMd5() string {
 func (l *LocaleResponse) GetNames() []string {
 	return []string{l.ZH, l.TH, l.EN, l.ZHTW, l.JA, l.KO, l.MY, l.TR, l.SV}
 }
+
+// ToMultiLanguageUpdateMap 转换为 MultiLanguageName 更新 map
+func (l *LocaleResponse) ToMultiLanguageUpdateMap(updateTime int64) map[string]interface{} {
+	return map[string]interface{}{
+		"zh_name":     l.ZH,
+		"en_name":     l.EN,
+		"th_name":     l.TH,
+		"zh_tw_name":  l.ZHTW,
+		"my_name":     l.MY,
+		"ja_name":     l.JA,
+		"ko_name":     l.KO,
+		"tr_name":     l.TR,
+		"sv_name":     l.SV,
+		"update_time": updateTime,
+	}
+}

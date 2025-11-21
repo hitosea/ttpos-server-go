@@ -122,10 +122,13 @@ UNIQUE KEY `uk_uuid` (`uuid`)
   - 示例：`20250721370408_add_table_name_table.php`
   - 必须使用 shell 命令 `date +%Y%m%d%H%M%S` 生成，保持与其他迁移文件一致
 - [ ] **TARGET 常量**: 涉及 `company_setting` 和 `company` 表的迁移，必须添加 `const TARGET = 'all';`
+- [ ] **表名引用**: "强制要求,强制要求,强制要求" 在迁移文件中引用表名时，不需要添加 `ttpos_` 前缀（实际数据库表已包含该前缀）
+  - ✅ 正确：`$this->hasTable('company_setting')`
 - [ ] 检查表是否存在
 - [ ] 检查字段是否存在
 - [ ] 包含注释说明
-- [ ] 在迁移文件中新增表或者删除字段的时候，也要同步改动 seeds/shop_01.sql 文件。../main/app/model/ 目录下也有对应的模型文件，也要同步改动
+- [ ] **同步更新 `admin/database/seeds/shop_01.sql`**： "强制要求,强制要求,强制要求" 任何迁移文件的数据库变更（新增表、删除表、新增字段、删除字段、修改字段等）都必须同步反映到 `shop_01.sql` 文件中，确保种子数据与最新表结构一致, 有初始化数据的也添加到shop_init_data.sql中
+- [ ] **同步更新模型文件**：如果变更涉及业务表，需同步更新 `../main/app/model/` 目录下对应的模型文件
 - [ ] 存在 `const TARGET = 'all';` 标识的时候，新建的表才需要添加 `company_uuid` 字段但不是必须的，其他时候一定不需要添加
 - [ ] 强制要求 $table->addColumn 方法里面的内容不需要换行
 

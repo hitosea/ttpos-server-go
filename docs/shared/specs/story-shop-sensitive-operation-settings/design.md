@@ -183,9 +183,9 @@ CREATE TABLE `setting` (
 | 字段 | 类型 | 说明 | 约束 |
 |------|------|------|------|
 | discount_need_password | int | 折扣操作是否需要密码 | 0-否, 1-是 |
-| discount_authorized_staff_ids | array | 折扣操作授权员工ID列表 | JSON 数组 |
+| discount_authorized_staff_ids | array | 折扣操作授权员工ID列表 | JSON 数组，元素为整数类型（int64） |
 | refund_need_password | int | 退款操作是否需要密码 | 0-否, 1-是 |
-| refund_authorized_staff_ids | array | 退款操作授权员工ID列表 | JSON 数组 |
+| refund_authorized_staff_ids | array | 退款操作授权员工ID列表 | JSON 数组，元素为整数类型（int64） |
 
 **索引设计**:
 
@@ -262,15 +262,71 @@ $refundAuthorizedStaffIds = $setting['refund_authorized_staff_ids'] ?? [];
 
 ```php
 // admin/app/shop/controller/setting/Business.php
-$data = [
-    'discount_need_password' => $request->param('discount_need_password', 0),
-    'discount_authorized_staff_ids' => $request->param('discount_authorized_staff_ids', []),
-    'refund_need_password' => $request->param('refund_need_password', 0),
-    'refund_authorized_staff_ids' => $request->param('refund_authorized_staff_ids', []),
+// 验证敏感操作设置参数
+$discountNeedPassword = $data['discount_need_password'] ?? '';
+if ($discountNeedPassword !== '' && !in_array($discountNeedPassword, ['0', '1'])) {
+    return $this->renderError('折扣权限验证开关参数错误');
+}
+$refundNeedPassword = $data['refund_need_password'] ?? '';
+if ($refundNeedPassword !== '' && !in_array($refundNeedPassword, ['0', '1'])) {
+    return $this->renderError('退款权限验证开关参数错误');
+}
+
+// 验证授权员工ID有效性并转换为整数类型
+$discountAuthorizedStaffIds = $data['discount_authorized_staff_ids'] ?? [];
+if (!is_array($discountAuthorizedStaffIds)) {
+    $discountAuthorizedStaffIds = [];
+}
+$validDiscountStaffIds = [];
+foreach ($discountAuthorizedStaffIds as $staffId) {
+    $staffIdInt = intval($staffId);
+    if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+        $validDiscountStaffIds[] = $staffIdInt; // 转换为整数类型（int64）
+    }
+}
+
+$refundAuthorizedStaffIds = $data['refund_authorized_staff_ids'] ?? [];
+if (!is_array($refundAuthorizedStaffIds)) {
+    $refundAuthorizedStaffIds = [];
+}
+$validRefundStaffIds = [];
+foreach ($refundAuthorizedStaffIds as $staffId) {
+    $staffIdInt = intval($staffId);
+    if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+        $validRefundStaffIds[] = $staffIdInt; // 转换为整数类型（int64）
+    }
+}
+
+$arr = [
+    // ... 其他字段 ...
 ];
+
+// 添加敏感操作设置字段
+if ($discountNeedPassword !== '') {
+    $arr['discount_need_password'] = $discountNeedPassword;
+}
+if (!empty($validDiscountStaffIds)) {
+    $arr['discount_authorized_staff_ids'] = $validDiscountStaffIds; // 整数数组
+} elseif (isset($data['discount_authorized_staff_ids'])) {
+    $arr['discount_authorized_staff_ids'] = [];
+}
+if ($refundNeedPassword !== '') {
+    $arr['refund_need_password'] = $refundNeedPassword;
+}
+if (!empty($validRefundStaffIds)) {
+    $arr['refund_authorized_staff_ids'] = $validRefundStaffIds; // 整数数组
+} elseif (isset($data['refund_authorized_staff_ids'])) {
+    $arr['refund_authorized_staff_ids'] = [];
+}
+
 $model = new SettingModel;
-$model->edit(SettingEnum::BUSINESS, $data);
+$model->edit(SettingEnum::BUSINESS, $arr, $shop_supplier_id);
 ```
+
+**注意事项**:
+- 授权员工ID数组中的每个元素必须转换为整数类型（int64），使用 `intval()` 函数
+- 验证员工ID有效性时，需要检查 `$staffIdInt > 0` 确保是有效的正整数
+- 无效的员工ID会被自动过滤，只保存有效的员工ID
 
 ---
 
@@ -507,26 +563,79 @@ public function index()
     $model = new SettingModel;
     $data = $this->request->param();
     
+    // 验证敏感操作设置参数
+    $discountNeedPassword = $data['discount_need_password'] ?? '';
+    if ($discountNeedPassword !== '' && !in_array($discountNeedPassword, ['0', '1'])) {
+        return $this->renderError('折扣权限验证开关参数错误');
+    }
+    $refundNeedPassword = $data['refund_need_password'] ?? '';
+    if ($refundNeedPassword !== '' && !in_array($refundNeedPassword, ['0', '1'])) {
+        return $this->renderError('退款权限验证开关参数错误');
+    }
+
+    // 验证授权员工ID有效性并转换为整数类型（int64）
+    $discountAuthorizedStaffIds = $data['discount_authorized_staff_ids'] ?? [];
+    if (!is_array($discountAuthorizedStaffIds)) {
+        $discountAuthorizedStaffIds = [];
+    }
+    $validDiscountStaffIds = [];
+    foreach ($discountAuthorizedStaffIds as $staffId) {
+        $staffIdInt = intval($staffId);
+        if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+            $validDiscountStaffIds[] = $staffIdInt; // 转换为整数类型
+        }
+    }
+
+    $refundAuthorizedStaffIds = $data['refund_authorized_staff_ids'] ?? [];
+    if (!is_array($refundAuthorizedStaffIds)) {
+        $refundAuthorizedStaffIds = [];
+    }
+    $validRefundStaffIds = [];
+    foreach ($refundAuthorizedStaffIds as $staffId) {
+        $staffIdInt = intval($staffId);
+        if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+            $validRefundStaffIds[] = $staffIdInt; // 转换为整数类型
+        }
+    }
+    
     // 现有字段处理...
     $arr = [
         'zeroing_method' => $data['zeroing_method'] ?? 0,
         'checkout_zeroing_method' => $data['checkout_zeroing_method'] ?? 0,
         // ... 其他现有字段
-        
-        // 新增字段
-        'discount_need_password' => $data['discount_need_password'] ?? 0,
-        'discount_authorized_staff_ids' => $data['discount_authorized_staff_ids'] ?? [],
-        'refund_need_password' => $data['refund_need_password'] ?? 0,
-        'refund_authorized_staff_ids' => $data['refund_authorized_staff_ids'] ?? [],
     ];
     
-    if ($model->edit(SettingEnum::BUSINESS, $arr)) {
+    // 添加敏感操作设置字段
+    if ($discountNeedPassword !== '') {
+        $arr['discount_need_password'] = $discountNeedPassword;
+    }
+    if (!empty($validDiscountStaffIds)) {
+        $arr['discount_authorized_staff_ids'] = $validDiscountStaffIds; // 整数数组
+    } elseif (isset($data['discount_authorized_staff_ids'])) {
+        $arr['discount_authorized_staff_ids'] = [];
+    }
+    if ($refundNeedPassword !== '') {
+        $arr['refund_need_password'] = $refundNeedPassword;
+    }
+    if (!empty($validRefundStaffIds)) {
+        $arr['refund_authorized_staff_ids'] = $validRefundStaffIds; // 整数数组
+    } elseif (isset($data['refund_authorized_staff_ids'])) {
+        $arr['refund_authorized_staff_ids'] = [];
+    }
+    
+    if ($model->edit(SettingEnum::BUSINESS, $arr, $shop_supplier_id)) {
         return $this->renderSuccess('保存成功');
     }
     
     return $this->renderError('保存失败');
 }
 ```
+
+**关键实现点**:
+- 使用 `intval()` 将员工ID转换为整数类型（int64），确保与 Go 后端的 `[]uint64` 类型一致
+- 验证 `$staffIdInt > 0` 确保是有效的正整数
+- 使用 `UserModel::checkUserExist()` 验证员工ID是否存在
+- 无效的员工ID会被自动过滤，只保存有效的员工ID
 
 ### Model 层
 
@@ -674,17 +783,18 @@ if (Cache::has($key)) {
   }
   ```
 
-#### 场景 2: 员工ID不存在
+#### 场景 2: 员工ID不存在或类型错误
 
-- **处理方式**: 前端验证，后端过滤无效ID
-- **用户影响**: 仅保存有效的员工ID
+- **处理方式**: 前端验证，后端过滤无效ID并转换为整数类型
+- **用户影响**: 仅保存有效的员工ID（整数类型）
 - **代码示例**:
   ```php
-  // 验证员工ID是否存在
+  // 验证员工ID是否存在并转换为整数类型（int64）
   $validStaffIds = [];
   foreach ($data['discount_authorized_staff_ids'] as $staffId) {
-      if (User::where('uuid', $staffId)->count() > 0) {
-          $validStaffIds[] = $staffId;
+      $staffIdInt = intval($staffId);
+      if ($staffIdInt > 0 && UserModel::checkUserExist($staffIdInt)) {
+          $validStaffIds[] = $staffIdInt; // 转换为整数类型
       }
   }
   $arr['discount_authorized_staff_ids'] = $validStaffIds;

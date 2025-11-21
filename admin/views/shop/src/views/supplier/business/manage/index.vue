@@ -149,6 +149,89 @@
       <el-form-item for="no_click" :label="$t('起始流水号')" prop="start_serial_no" :rules="[{ required: true, message: '' }]" class="start-serial-no">
         <el-input v-model="form.start_serial_no" :placeholder="$t('请输入起始流水号')" class="max-w400" @input="form.start_serial_no = form.start_serial_no.replace(/[^0-9]/g, '')" />
       </el-form-item>
+
+      <!-- 敏感操作设置 -->
+      <el-form-item class="sensitive-operation-wrapper" label-width="0">
+        <el-card class="sensitive-operation-card" shadow="never">
+          <template #header>
+            <span>{{ $t('敏感操作设置') }}</span>
+          </template>
+          
+          <div class="sensitive-operation-content">
+            <!-- 折扣操作权限设置 -->
+            <el-form-item for="no_click" :label="$t('折扣操作权限验证')" prop="discount_need_password">
+              <el-radio-group v-model="form.discount_need_password">
+                <el-radio :label="1">{{ $t('需要密码') }}</el-radio>
+                <el-radio :label="0">{{ $t('无需密码') }}</el-radio>
+              </el-radio-group>
+              <div class="tips">
+                {{ $t('开启后，进行折扣操作时需要密码验证或授权员工验证') }}
+              </div>
+            </el-form-item>
+            
+            <el-form-item 
+              v-if="form.discount_need_password == 1" 
+              for="no_click" 
+              :label="$t('折扣授权员工')"
+            >
+              <el-select
+                v-model="form.discount_authorized_staff_ids"
+                multiple
+                filterable
+                :placeholder="$t('请选择授权员工')"
+                class="max-w400"
+              >
+                <el-option
+                  v-for="staff in staffList"
+                  :key="staff.uuid"
+                  :label="staff.real_name || staff.user_name"
+                  :value="staff.uuid"
+                >
+                </el-option>
+              </el-select>
+              <div class="tips">
+                {{ $t('选择授权员工后，这些员工可以进行折扣操作的授权验证') }}
+              </div>
+            </el-form-item>
+
+            <!-- 退款操作权限设置 -->
+            <el-form-item for="no_click" :label="$t('退款操作权限验证')" prop="refund_need_password">
+              <el-radio-group v-model="form.refund_need_password">
+                <el-radio :label="1">{{ $t('需要密码') }}</el-radio>
+                <el-radio :label="0">{{ $t('无需密码') }}</el-radio>
+              </el-radio-group>
+              <div class="tips">
+                {{ $t('开启后，进行退款操作时需要密码验证或授权员工验证') }}
+              </div>
+            </el-form-item>
+            
+            <el-form-item 
+              v-if="form.refund_need_password == 1" 
+              for="no_click" 
+              :label="$t('退款授权员工')"
+            >
+              <el-select
+                v-model="form.refund_authorized_staff_ids"
+                multiple
+                filterable
+                :placeholder="$t('请选择授权员工')"
+                class="max-w400"
+              >
+                <el-option
+                  v-for="staff in staffList"
+                  :key="staff.uuid"
+                  :label="staff.real_name || staff.user_name"
+                  :value="staff.uuid"
+                >
+                </el-option>
+              </el-select>
+              <div class="tips">
+                {{ $t('选择授权员工后，这些员工可以进行退款操作的授权验证') }}
+              </div>
+            </el-form-item>
+          </div>
+        </el-card>
+      </el-form-item>
     </el-form>
     <!--提交-->
     <div class="common-button-wrapper">
@@ -202,6 +285,7 @@
 </template>
 <script>
   import SettingApi from '@/api/setting.js';
+  import AuthApi from '@/api/auth.js';
   import { useUserStore } from '@/store';
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
   import ManageFreeReason from './ManageFreeReason.vue';
@@ -246,7 +330,13 @@
           opening_hours: '',
           delivery_price_ratio: 100,
           start_serial_no: '0001',
+          // 敏感操作设置
+          discount_need_password: 0,
+          discount_authorized_staff_ids: [],
+          refund_need_password: 0,
+          refund_authorized_staff_ids: [],
         },
+        staffList: [], // 员工列表
         company_link: '',
         formRules: {
           zeroing_method: [
@@ -347,6 +437,7 @@
     },
     created() {
       this.getData();
+      this.getStaffList();
     },
     methods: {
       /*获取列表*/
@@ -392,6 +483,16 @@
               : [];
             self.form.start_serial_no = data.data.vars.values.start_serial_no || '0001';
             self.form.delivery_price_ratio = Number(data.data.vars.values.delivery_price_ratio) || 100;
+
+            // 敏感操作设置
+            self.form.discount_need_password = Number(data.data.vars.values.discount_need_password) || 0;
+            self.form.discount_authorized_staff_ids = Array.isArray(data.data.vars.values.discount_authorized_staff_ids) 
+              ? data.data.vars.values.discount_authorized_staff_ids.map(id => Number(id))
+              : [];
+            self.form.refund_need_password = Number(data.data.vars.values.refund_need_password) || 0;
+            self.form.refund_authorized_staff_ids = Array.isArray(data.data.vars.values.refund_authorized_staff_ids)
+              ? data.data.vars.values.refund_authorized_staff_ids.map(id => Number(id))
+              : [];
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
             self.returnReasonCount = Number(data.data.return_reason_count) || 0;
@@ -471,6 +572,22 @@
       updateOpeningHours(value) {
         this.form.opening_hours = value;
       },
+
+      /*获取员工列表*/
+      getStaffList() {
+        let self = this;
+        let params = {
+          page: 1,
+          list_rows: 1000, // 获取所有员工
+        };
+        AuthApi.userList(params, true)
+          .then((data) => {
+            self.staffList = data.data.list.data || [];
+          })
+          .catch((error) => {
+            console.error('获取员工列表失败', error);
+          });
+      },
     },
   };
 </script>
@@ -513,5 +630,23 @@
   }
   .max-w400 {
     max-width: 400px;
+  }
+  .sensitive-operation-wrapper {
+    width: 100%;
+    :deep(.el-form-item__content) {
+      width: 100%;
+    }
+  }
+  .sensitive-operation-card {
+    width: 100%;
+    margin-top: 20px;
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+  }
+  .sensitive-operation-content {
+    :deep(.el-form-item) {
+      margin-bottom: 22px;
+    }
   }
 </style>

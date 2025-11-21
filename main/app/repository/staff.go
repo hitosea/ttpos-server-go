@@ -13,6 +13,7 @@ type IStaffRepo interface {
 	WithRoles() DBOption               // 关联角色
 
 	WhereUuid(uuid uint64) DBOption         // Uuid 条件
+	WhereUuids(uuids []uint64) DBOption    // Uuid 列表条件
 	WhereUsername(username string) DBOption // 用户名条件
 	WhereCashierOnline() DBOption           // 收银机在线条件
 	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
@@ -88,6 +89,15 @@ func (r *StaffRepo) WithDevice(source string) DBOption {
 func (r *StaffRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+func (r *StaffRepo) WhereUuids(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(uuids) == 0 {
+			return db.Where("1 = 0") // 空列表返回空结果
+		}
+		return db.Where("uuid IN ?", uuids)
 	}
 }
 

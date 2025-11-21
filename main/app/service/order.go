@@ -47,6 +47,8 @@ type IOrderSrv interface {
 	// base
 	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                             // 创建点餐订单
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                       // 创建桌台订单
+	SetOrderSource(ctx context.Context, saleBillUuid uint64, orderSourceUuid uint64) error                                                   // 设置订单来源
+	SetNationality(ctx context.Context, saleBillUuid uint64, nationalityUuid uint64) error                                                   // 设置订单国籍
 	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                      // 判断桌台是否可取消
 	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                              // 挂单
 	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                             // 显示订单

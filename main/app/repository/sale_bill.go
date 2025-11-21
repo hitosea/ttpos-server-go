@@ -23,6 +23,8 @@ type ISaleBillRepo interface {
 	UpdateDutyNo(saleBillUuid uint64, dutyNo string) error                     // 更新销售账单的当班编号
 	UpdateSaleBillSerialNo(saleBillUuid uint64, serialNo string) error         // 更新销售账单的流水号
 	UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagUuid uint64) error // 更新销售账单的分批类型UUID
+	UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error
+	UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error
 }
 
 // ISaleBillQueryRepo 销售账单的查询接口。
@@ -353,5 +355,19 @@ func (r *saleBillRepo) UpdateSaleBillSerialNo(saleBillUuid uint64, serialNo stri
 func (r *saleBillRepo) UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
 		BatchTagUuid: batchTagUuid,
+	}).Error
+}
+
+// UpdateOrderSource 更新销售账单的订单来源
+func (r *saleBillRepo) UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		OrderSourceUuid: orderSourceUuid,
+	}).Error
+}
+
+// UpdateNationality 更新销售账单的国籍
+func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		NationalityUuid: nationalityUuid,
 	}).Error
 }

@@ -25,7 +25,8 @@
     ".husky": true,
     ".github": true,
     "node_modules": true,
-    "certificate": true
+    "certificate.pem": true,
+    "ttpos-flutter": true,
   },
 
   // ===== 拼写检查 =====

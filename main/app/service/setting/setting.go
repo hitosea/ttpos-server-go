@@ -1963,6 +1963,30 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	// 更新businessSetting
 	copier.CopyWithOption(&businessSetting, businessSettingReq, copier.Option{IgnoreEmpty: true})
 
+	// 验证授权员工ID有效性
+	db := s.dbm.GetDB(companyUuid)
+	staffRepo := repository.NewStaffRepo(db)
+
+	// 验证折扣授权员工ID
+	if len(businessSettingReq.DiscountAuthorizedStaffIds) > 0 {
+		validStaffs := staffRepo.GetStaffs(staffRepo.WhereUuids(businessSettingReq.DiscountAuthorizedStaffIds))
+		validStaffIds := make([]uint64, 0, len(validStaffs))
+		for _, staff := range validStaffs {
+			validStaffIds = append(validStaffIds, staff.Uuid)
+		}
+		businessSetting.DiscountAuthorizedStaffIds = validStaffIds
+	}
+
+	// 验证退款授权员工ID
+	if len(businessSettingReq.RefundAuthorizedStaffIds) > 0 {
+		validStaffs := staffRepo.GetStaffs(staffRepo.WhereUuids(businessSettingReq.RefundAuthorizedStaffIds))
+		validStaffIds := make([]uint64, 0, len(validStaffs))
+		for _, staff := range validStaffs {
+			validStaffIds = append(validStaffIds, staff.Uuid)
+		}
+		businessSetting.RefundAuthorizedStaffIds = validStaffIds
+	}
+
 	// 删除不需要的列表字段
 	businessSetting.ZeroingMethodList = []setting.ZeroingMethodItem{}
 	businessSetting.CheckoutZeroingMethodList = []setting.CheckoutZeroingMethodItem{}

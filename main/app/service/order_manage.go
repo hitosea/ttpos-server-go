@@ -647,9 +647,33 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			IsBuffet:      saleBill.IsBuffet == constant.SaleBillIsBuffetYes,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
-			PayTypes:      saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),
-			SaleOrders:    orderList,
-			Remark:        saleBill.Remark,
+			OrderSourceUuid: func() uint64 {
+				if saleBill.OrderSource != nil {
+					return saleBill.OrderSource.Uuid
+				}
+				return 0
+			}(),
+			OrderSourceName: func() string {
+				if saleBill.OrderSource != nil {
+					return saleBill.OrderSource.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				}
+				return ""
+			}(),
+			NationalityUuid: func() uint64 {
+				if saleBill.Nationality != nil {
+					return saleBill.Nationality.Uuid
+				}
+				return 0
+			}(),
+			NationalityName: func() string {
+				if saleBill.Nationality != nil {
+					return saleBill.Nationality.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				}
+				return ""
+			}(),
+			PayTypes:   saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),
+			SaleOrders: orderList,
+			Remark:     saleBill.Remark,
 		},
 		OperationLog: struct {
 			List []resp.OrderOperationLog `json:"list"`

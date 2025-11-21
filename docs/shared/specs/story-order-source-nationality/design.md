@@ -33,24 +33,23 @@
 
 | 模块 | 技术栈 | 主要路径 | 变更类型 |
 | ---- | ------ | -------- | -------- |
-| **Admin - 店铺后台** | PHP + ThinkPHP | `admin/app/shop/` | 配置管理 API + Service + Model |
-| **Main - 核心业务** | Go + Gin | `main/app/api/v1/{cashier,assistant}/` | 订单创建/查询接口扩展 |
+| **Admin - 数据库迁移** | PHP + ThinkPHP | `admin/database/migrations/` | 仅数据库迁移和数据初始化 |
+| **Main - 核心业务** | Go + Gin | `main/app/api/v1/{shop,cashier,assistant}/` | 配置管理 API + 订单创建/查询接口扩展 |
 | **前端 - 新管理端** | Flutter | `ttpos-flutter/apps/shop/` | 业务设置页增加配置界面 |
 | **前端 - 收银端** | Flutter | `ttpos-flutter/apps/pos/` | 点餐方式增加外卖选项、国籍选择、订单详情 |
 | **前端 - 点餐助手** | Flutter | `ttpos-flutter/apps/assistant/` | 点餐/桌台增加国籍选择 |
-| **数据库** | MySQL 8.0+ | `admin/database/migrations/` | 新增配置表 + 订单表字段扩展 |
 
 ### 服务通信链路
 
 ```
-新管理端配置 (admin/app/shop/) 
-  ↓ 数据库写入
-配置数据 (ttpos_order_source, ttpos_nationality)
-  ↓ HTTP API 读取
-终端展示 (main/app/api/v1/{cashier,assistant}/)
+新管理端配置 (ttpos-flutter/apps/shop/)
+  ↓ HTTP API (main/app/api/v1/shop/)
+配置数据写入 (ttpos_order_source, ttpos_nationality)
+  ↓ HTTP API 读取 (main/app/api/v1/{shop,cashier,assistant}/)
+终端展示配置列表
   ↓ Flutter 渲染
 用户选择 (ttpos-flutter/apps/{pos,assistant}/)
-  ↓ HTTP API 写入
+  ↓ HTTP API 写入 (main/app/api/v1/{cashier,assistant}/)
 订单数据 (ttpos_order 扩展字段)
   ↓ HTTP API 读取
 订单详情展示 (ttpos-flutter/apps/{pos,shop}/)
@@ -139,58 +138,75 @@ API 层 (Controller/API)
 
 ### 模块划分（初步）
 
-#### 新管理端-外卖来源管理（Admin 模块 - 店铺后台）
+#### 新管理端-外卖来源管理（Main 模块 - Go）
 
-根据 `structs.mdc` Admin 模块结构：
+根据 `structs.mdc`，新管理端（Flutter）调用 Main 模块的 Go 接口：
 
-**后端实现路径**（PHP + ThinkPHP）：
-- **Model**: `admin/app/shop/model/OrderSource.php` - 外卖来源数据模型
+**后端实现路径**（Go + Gin）：
+- **API 层**: `main/app/api/v1/shop/order_source_api.go` - 外卖来源管理接口
+  - `GetList()` - 获取列表
+  - `Create()` - 创建
+  - `Update()` - 更新
+  - `Delete()` - 删除
+- **Service 层**: `main/app/service/order_source_service.go` - 外卖来源业务逻辑
+  - `GetList()` - 获取外卖来源列表（JOIN ttpos_multi_language_name）
+  - `Create(req)` - 创建外卖来源（先创建多语言名称，再创建外卖来源）
+  - `Update(uuid, req)` - 更新外卖来源（更新多语言名称）
+  - `Delete(uuid)` - 软删除外卖来源（需校验是否有订单使用）
+  - `CheckCanDelete(uuid)` - 校验是否可删除
+- **Repository 层**: `main/app/repository/order_source_repository.go` - 外卖来源数据访问
+  - `FindList()` - 查询列表
+  - `FindByUuid(uuid)` - 根据 UUID 查询
+  - `Create(model)` - 创建记录
+  - `Update(model)` - 更新记录
+  - `SoftDelete(uuid)` - 软删除
+  - `CountOrdersBySourceUuid(uuid)` - 统计订单数量
+- **Model 层**: `main/app/model/order_source.go` - 外卖来源数据模型
   - 表：`ttpos_order_source`
   - 字段：`id`, `uuid`, `multi_language_name_uuid`, `sort`, `status`, `create_time`, `update_time`, `delete_time`
-- **Service**: `admin/app/shop/service/OrderSourceService.php` - 外卖来源业务逻辑
-  - `getList()` - 获取外卖来源列表（JOIN ttpos_multi_language_name）
-  - `create($data)` - 创建外卖来源（先创建多语言名称，再创建外卖来源）
-  - `update($uuid, $data)` - 更新外卖来源（更新多语言名称）
-  - `delete($uuid)` - 软删除外卖来源（需校验是否有订单使用）
-- **Controller**: `admin/app/shop/controller/OrderSourceController.php` - 外卖来源管理接口
-  - `index()` - 获取列表
-  - `create()` - 创建
-  - `update()` - 更新
-  - `delete()` - 删除
-- **Validate**: `admin/app/shop/validate/OrderSourceValidate.php` - 参数验证器
+- **DTO 层**:
+  - `main/app/dto/req/order_source_req.go` - 请求参数
+  - `main/app/dto/resp/order_source_resp.go` - 响应数据
 
 **前端实现路径**（Flutter）：
 - `ttpos-flutter/apps/shop/lib/pages/business_settings/` - 业务设置页
   - 外卖来源配置界面（开关 + 列表 + 增删改查）
 
-**数据库迁移**：
+**数据库迁移**（Admin 模块）：
 - `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_order_source_table.php`
 
-**PHP 规范遵循**：
-- ✅ Controller 只做参数获取/校验与结果返回
-- ✅ 业务逻辑放在 Service 层
-- ✅ 使用验证器验证参数
-- ✅ 使用软删除（`delete_time` 字段）
+**Go Main 规范遵循**：
+- ✅ API → Service → Repository 严格分层
+- ✅ Service 可依赖其他 Service（如 MultiLanguageNameService）
+- ✅ Repository 只持有 db 实例
+- ✅ URL 使用 snake_case
+- ✅ 不使用 panic，统一返回 error
 
-#### 新管理端-国籍管理（Admin 模块 - 店铺后台）
+#### 新管理端-国籍管理（Main 模块 - Go）
 
-**后端实现路径**（PHP + ThinkPHP）：
-- **Model**: `admin/app/shop/model/Nationality.php` - 国籍数据模型
+根据 `structs.mdc`，新管理端（Flutter）调用 Main 模块的 Go 接口：
+
+**后端实现路径**（Go + Gin）：
+- **API 层**: `main/app/api/v1/shop/nationality_api.go` - 国籍管理接口
+- **Service 层**: `main/app/service/nationality_service.go` - 国籍业务逻辑
+  - `GetList()` - 获取国籍列表（JOIN ttpos_multi_language_name）
+  - `Create(req)` - 创建国籍（先创建多语言名称，再创建国籍）
+  - `Update(uuid, req)` - 更新国籍（更新多语言名称）
+  - `Delete(uuid)` - 软删除国籍（需校验是否有订单使用）
+  - `CheckCanDelete(uuid)` - 校验是否可删除
+- **Repository 层**: `main/app/repository/nationality_repository.go` - 国籍数据访问
+- **Model 层**: `main/app/model/nationality.go` - 国籍数据模型
   - 表：`ttpos_nationality`
   - 字段：`id`, `uuid`, `multi_language_name_uuid`, `sort`, `status`, `create_time`, `update_time`, `delete_time`
-- **Service**: `admin/app/shop/service/NationalityService.php` - 国籍业务逻辑
-  - `getList()` - 获取国籍列表（JOIN ttpos_multi_language_name）
-  - `create($data)` - 创建国籍（先创建多语言名称，再创建国籍）
-  - `update($uuid, $data)` - 更新国籍（更新多语言名称）
-  - `delete($uuid)` - 软删除国籍（需校验是否有订单使用）
-- **Controller**: `admin/app/shop/controller/NationalityController.php` - 国籍管理接口
-- **Validate**: `admin/app/shop/validate/NationalityValidate.php` - 参数验证器
+- **DTO 层**:
+  - `main/app/dto/req/nationality_req.go` - 请求参数
+  - `main/app/dto/resp/nationality_resp.go` - 响应数据
 
 **前端实现路径**（Flutter）：
 - `ttpos-flutter/apps/shop/lib/pages/business_settings/` - 业务设置页
   - 国籍配置界面（开关 + 列表 + 增删改查）
 
-**数据库迁移**：
+**数据库迁移**（Admin 模块）：
 - `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_nationality_table.php`
 
 #### 收银端-订单创建扩展（Main 模块）
@@ -386,13 +402,13 @@ API 层 (Controller/API)
 
 以下以 REST 风格描述，实际路径按现有项目规范微调。
 
-### Admin 新管理端-外卖来源管理
+### 新管理端-外卖来源管理（Main 模块）
 
 #### API 1: 获取外卖来源列表
 
-- **URL**: `/api/v1/admin/order_source/list`
+- **URL**: `/api/v1/shop/order_source/list`
 - **Method**: `GET`
-- **Request Params**: 无（商户信息从登录上下文/数据库连接获取）
+- **Request Params**: 无（商户信息从登录上下文获取）
 - **Response**:
 
 ```json
@@ -414,7 +430,7 @@ API 层 (Controller/API)
 
 #### API 2: 创建外卖来源
 
-- **URL**: `/api/v1/admin/order_source/create`
+- **URL**: `/api/v1/shop/order_source/create`
 - **Method**: `POST`
 - **Body**:
 
@@ -447,7 +463,7 @@ API 层 (Controller/API)
 
 #### API 3: 更新外卖来源
 
-- **URL**: `/api/v1/admin/order_source/update`
+- **URL**: `/api/v1/shop/order_source/update`
 - **Method**: `POST`
 - **Body**:
 
@@ -467,7 +483,7 @@ API 层 (Controller/API)
 
 #### API 4: 删除外卖来源
 
-- **URL**: `/api/v1/admin/order_source/delete`
+- **URL**: `/api/v1/shop/order_source/delete`
 - **Method**: `POST`
 - **Body**:
 
@@ -492,15 +508,15 @@ API 层 (Controller/API)
 - 删除前需校验是否有订单使用该来源，有则返回错误提示
 - 使用软删除，`delete_time` 记录删除时间
 
-### Admin 新管理端-国籍管理
+### 新管理端-国籍管理（Main 模块）
 
-API 设计与外卖来源管理类似，路径为 `/api/v1/admin/nationality/*`
+API 设计与外卖来源管理类似，路径为 `/api/v1/shop/nationality/*`
 
-### 终端-外卖来源和国籍列表查询
+### 终端-外卖来源和国籍列表查询（Main 模块）
 
 #### API 5: 获取外卖来源列表（终端）
 
-- **URL**: `/api/v1/terminal/order_source/list`
+- **URL**: `/api/v1/cashier/order_source/list` 或 `/api/v1/assistant/order_source/list`
 - **Method**: `GET`
 - **Params**: 无（商户信息从登录上下文获取）
 - **Response**:
@@ -529,9 +545,9 @@ API 设计与外卖来源管理类似，路径为 `/api/v1/admin/nationality/*`
 
 #### API 6: 获取国籍列表（终端）
 
-API 设计与外卖来源列表类似，路径为 `/api/v1/terminal/nationality/list`
+API 设计与外卖来源列表类似，路径为 `/api/v1/cashier/nationality/list` 或 `/api/v1/assistant/nationality/list`
 
-### 终端-订单创建扩展
+### 终端-订单创建扩展（Main 模块）
 
 #### API 7: 创建订单（扩展参数）
 
@@ -560,7 +576,7 @@ API 设计与外卖来源列表类似，路径为 `/api/v1/terminal/nationality/
 }
 ```
 
-### 终端-订单详情扩展
+### 终端-订单详情扩展（Main 模块）
 
 #### API 8: 获取订单详情（扩展字段）
 
@@ -600,19 +616,19 @@ API 设计与外卖来源列表类似，路径为 `/api/v1/terminal/nationality/
 
 ## 🧩 组件和接口（高层）
 
-### 后端 Service（示例：PHP）
+### 后端 Service（Go Main 模块）
 
 - `OrderSourceService`
-  - `getList()` - 获取外卖来源列表（JOIN ttpos_multi_language_name）
-  - `create($data)` - 创建外卖来源（先创建多语言名称）
-  - `update($uuid, $data)` - 更新外卖来源（更新多语言名称）
-  - `delete($uuid)` - 软删除外卖来源
-  - `checkCanDelete($uuid)` - 校验是否可删除（是否有订单使用）
+  - `GetList()` - 获取外卖来源列表（JOIN ttpos_multi_language_name）
+  - `Create(req)` - 创建外卖来源（先创建多语言名称）
+  - `Update(uuid, req)` - 更新外卖来源（更新多语言名称）
+  - `Delete(uuid)` - 软删除外卖来源
+  - `CheckCanDelete(uuid)` - 校验是否可删除（是否有订单使用）
 
 - `NationalityService`
   - 方法同 OrderSourceService，处理国籍数据
 
-- `OrderService`（Go Main）
+- `OrderService`
   - `CreateOrder(req *dto.CreateOrderReq)` - 扩展订单创建方法
   - `GetOrderDetail(orderUuid uint64)` - 扩展订单详情查询
 

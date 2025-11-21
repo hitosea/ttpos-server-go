@@ -57,7 +57,7 @@ description: API 设计规范
 
 ## 📋 API 设计规则
 
-### 路由注册（强制）
+### 路由注册（强制，强制，强制）
 
 **每个 API 文件必须包含注册函数**
 
@@ -75,6 +75,7 @@ func Register*Handlers(router gin.IRouter, dbm *database.DBManager, cache cache.
     }
     
     // 3. 注册路由
+    // middleware.Auth(authSrv, dbm) (强制)
     privateApi := router.Group("", middleware.Auth(authSrv, dbm))
     {
         privateApi.GET("/example/list", handler.GetList)
@@ -151,6 +152,24 @@ GET  /api/v1/orders/123
 - [ ] PHP: 使用 renderSuccess()
 - [ ] 空数据返回 `{}`，不返回 null
 
+### 多语言字段
+
+- [ ] 由前端添加上来的多语言字段，统一使用 `dto.LocaleResponse` 类型
+- [ ] 多语言字段名称统一使用 `LocaleName`（参考 `main/app/dto/req/product.go`）
+
+```go
+// ✅ 正确
+type ExampleReq struct {
+    LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称（多语言）
+}
+
+// ❌ 错误
+type ExampleReq struct {
+    Name map[string]string `json:"name"` // 不要使用 map[string]string
+    Names map[string]string `json:"names"` // 不要使用 names
+}
+```
+
 ---
 
 ## 📋 常用模式
@@ -193,19 +212,65 @@ return $this->renderError('错误信息');
 }
 ```
 
+### 多语言字段
+
+```go
+// DTO 定义
+type ProductReq struct {
+    LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品名称（多语言）
+    Price      float64             `json:"price"`                          // 价格
+}
+
+// 前端提交的 JSON
+{
+  "locale_name": {
+    "zh": "商品名称",
+    "th": "ชื่อสินค้า",
+    "en": "Product Name",
+    "zhtw": "商品名稱",
+    "ja": "商品名",
+    "ko": "상품명",
+    "my": "ကုန်ပစ္စည်းအမည်",
+    "tr": "Ürün Adı",
+    "sv": "Produktnamn"
+  },
+  "price": 100.00
+}
+```
+
+**返回数据时**
+
+```go
+// 响应 DTO
+type ProductResp struct {
+    Uuid       uint64             `json:"uuid"`        // 商品UUID
+    LocaleName dto.LocaleResponse `json:"locale_name"` // 商品名称（多语言）
+    Price      float64            `json:"price"`       // 价格
+}
+
+// 从 Model 转换
+resp := ProductResp{
+    Uuid:       product.Uuid,
+    LocaleName: product.MultiLanguageName.GetLocaleResponse(), // 从数据库获取
+    Price:      product.Price,
+}
+```
+
 ---
 
 ## 🚫 禁止事项
 
-| 禁止                      | 原因                  |
-| ------------------------- | --------------------- |
-| ❌ API 文件无注册函数     | 路由无法生效          |
-| ❌ 注册函数未在 router 调用 | 路由无法生效          |
-| ❌ URL 用 kebab-case      | 项目统一用 snake_case |
-| ❌ data 返回 null         | 前端无法统一处理      |
-| ❌ data 返回数组          | 必须是对象            |
-| ❌ 使用 RESTful 风格      | 项目用操作后缀        |
-| ❌ 直接用 c.JSON          | 必须用 helper         |
+| 禁止                        | 原因                      |
+| --------------------------- | ------------------------- |
+| ❌ API 文件无注册函数       | 路由无法生效              |
+| ❌ 注册函数未在 router 调用 | 路由无法生效              |
+| ❌ URL 用 kebab-case        | 项目统一用 snake_case     |
+| ❌ data 返回 null           | 前端无法统一处理          |
+| ❌ data 返回数组            | 必须是对象                |
+| ❌ 使用 RESTful 风格        | 项目用操作后缀            |
+| ❌ 直接用 c.JSON            | 必须用 helper             |
+| ❌ 多语言用 map[string]string | 必须用 dto.LocaleResponse |
+| ❌ 多语言字段名不是 LocaleName | 统一使用 LocaleName       |
 
 ---
 
@@ -218,5 +283,5 @@ return $this->renderError('错误信息');
 
 ---
 
-**最后更新**: 2025-11-17  
+**最后更新**: 2025-11-20  
 **维护者**: TTPOS Team
