@@ -7462,6 +7462,13 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 						logger.Logger.Error("更新商品包失败", zap.String("item_code", erpProduct.ItemCode), zap.Any("updateData", updateData), zap.Error(err))
 						continue
 					}
+					if !erpProduct.NotForSale {
+						err = multiLanguageNameRepo.UpdateMultiLanguageNameData(map[string]any{"delete_time": 0}, commonRepo.WhereByUuid(existsProductPackage.MultiLanguageNameUuid))
+						if err != nil {
+							logger.Logger.Error("更新商品包多语言数据失败", zap.String("item_code", erpProduct.ItemCode), zap.Any("updateData", map[string]any{"delete_time": 0}), zap.Error(err))
+							continue
+						}
+					}
 				}
 			} else {
 				// 商品规格
@@ -7546,15 +7553,14 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
 		subProductPackageRepo := repository.NewProductPackageRepo(db)
 		headProductPackageList, err := productPackageRepo.GetProductPackageList(
-			commonRepo.WhereBySoftDelete(),
 			commonRepo.WhereByHeadquarterUuid(0),
-			productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
-			productPackageRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
-			productPackageRepo.WithProductPackageAttributeGroups(commonRepo.WhereBySoftDelete()),
-			productPackageRepo.WithProductPackageAttributeGroupAttributes(commonRepo.WhereBySoftDelete()),
-			productPackageRepo.WithProductPackageGroups(commonRepo.WhereBySoftDelete()),
-			productPackageRepo.WithProductPackageGroupItems(commonRepo.WhereBySoftDelete()),
-			productPackageRepo.WithProductPackageGroupMultiLanguageName(commonRepo.WhereBySoftDelete()),
+			productPackageRepo.WithMultiLanguageName(),
+			productPackageRepo.WithProductBoms(),
+			productPackageRepo.WithProductPackageAttributeGroups(),
+			productPackageRepo.WithProductPackageAttributeGroupAttributes(),
+			productPackageRepo.WithProductPackageGroups(),
+			productPackageRepo.WithProductPackageGroupItems(),
+			productPackageRepo.WithProductPackageGroupMultiLanguageName(),
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部商品包列表失败")
@@ -7572,6 +7578,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			// 创建时间和更新时间
 			createTime := productPackage.CreateTime
 			updateTime := productPackage.UpdateTime
+			deleteTime := productPackage.DeleteTime
 			// 获取商品包的实际销量, 如果子店存在该商品包且创建时间相同，则使用子店的实际销量 或者 创建时间小于等于1760516651且公司uuid等于7171274190848000，则使用总店的实际销量
 			actualSaleNum := float64(0)
 			// 查询子店是否存在该商品包
@@ -7586,7 +7593,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			}
 			// 创建商品包
 			newProductPackageList = append(newProductPackageList, model.ProductPackage{
-				BaseModel:             model.BaseModel{Uuid: productPackage.Uuid, CreateTime: createTime, UpdateTime: updateTime},
+				BaseModel: model.BaseModel{
+					Uuid:       productPackage.Uuid,
+					CreateTime: createTime,
+					UpdateTime: updateTime,
+					DeleteTime: deleteTime,
+				},
 				Name:                  productPackage.MultiLanguageName.ToJson(),
 				ErpCode:               productPackage.ErpCode,
 				MultiLanguageNameUuid: productPackage.MultiLanguageNameUuid,
@@ -7622,21 +7634,31 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				HeadquarterUuid:       companySetting.HeadquarterUuid,
 			})
 			newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
-				BaseModel: model.BaseModel{Uuid: productPackage.MultiLanguageName.Uuid, CreateTime: createTime, UpdateTime: updateTime},
-				EnName:    productPackage.MultiLanguageName.EnName,
-				ZhName:    productPackage.MultiLanguageName.ZhName,
-				ZhTwName:  productPackage.MultiLanguageName.ZhTwName,
-				ThName:    productPackage.MultiLanguageName.ThName,
-				MyName:    productPackage.MultiLanguageName.MyName,
-				JaName:    productPackage.MultiLanguageName.JaName,
-				KoName:    productPackage.MultiLanguageName.KoName,
-				TrName:    productPackage.MultiLanguageName.TrName,
-				SvName:    productPackage.MultiLanguageName.SvName,
+				BaseModel: model.BaseModel{
+					Uuid:       productPackage.MultiLanguageName.Uuid,
+					CreateTime: createTime,
+					UpdateTime: updateTime,
+					DeleteTime: deleteTime,
+				},
+				EnName:   productPackage.MultiLanguageName.EnName,
+				ZhName:   productPackage.MultiLanguageName.ZhName,
+				ZhTwName: productPackage.MultiLanguageName.ZhTwName,
+				ThName:   productPackage.MultiLanguageName.ThName,
+				MyName:   productPackage.MultiLanguageName.MyName,
+				JaName:   productPackage.MultiLanguageName.JaName,
+				KoName:   productPackage.MultiLanguageName.KoName,
+				TrName:   productPackage.MultiLanguageName.TrName,
+				SvName:   productPackage.MultiLanguageName.SvName,
 			})
 			delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.MultiLanguageName.Uuid)
 			for _, productBom := range productPackage.ProductBoms {
 				newProductBomList = append(newProductBomList, model.ProductBom{
-					BaseModel:          model.BaseModel{Uuid: productBom.Uuid, CreateTime: productBom.CreateTime, UpdateTime: productBom.UpdateTime},
+					BaseModel: model.BaseModel{
+						Uuid:       productBom.Uuid,
+						CreateTime: productBom.CreateTime,
+						UpdateTime: productBom.UpdateTime,
+						DeleteTime: productBom.DeleteTime,
+					},
 					PurchasePrice:      productBom.PurchasePrice,
 					Price:              productBom.Price,
 					Name:               productBom.Name,
@@ -7657,7 +7679,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			}
 			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
 				newProductPackageAttributeGroupList = append(newProductPackageAttributeGroupList, model.ProductPackageAttributeGroup{
-					BaseModel:                 model.BaseModel{Uuid: productPackageAttributeGroup.Uuid, CreateTime: productPackageAttributeGroup.CreateTime, UpdateTime: productPackageAttributeGroup.UpdateTime},
+					BaseModel: model.BaseModel{
+						Uuid:       productPackageAttributeGroup.Uuid,
+						CreateTime: productPackageAttributeGroup.CreateTime,
+						UpdateTime: productPackageAttributeGroup.UpdateTime,
+						DeleteTime: productPackageAttributeGroup.DeleteTime,
+					},
 					IsMust:                    productPackageAttributeGroup.IsMust,
 					MaxSelection:              productPackageAttributeGroup.MaxSelection,
 					ProductPackageUuid:        productPackageAttributeGroup.ProductPackageUuid,
@@ -7665,7 +7692,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				})
 				for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
 					newProductPackageAttributeList = append(newProductPackageAttributeList, model.ProductPackageAttribute{
-						BaseModel:                        model.BaseModel{Uuid: productPackageAttribute.Uuid, CreateTime: productPackageAttribute.CreateTime, UpdateTime: productPackageAttribute.UpdateTime},
+						BaseModel: model.BaseModel{
+							Uuid:       productPackageAttribute.Uuid,
+							CreateTime: productPackageAttribute.CreateTime,
+							UpdateTime: productPackageAttribute.UpdateTime,
+							DeleteTime: productPackageAttribute.DeleteTime,
+						},
 						ProductPackageAttributeGroupUuid: productPackageAttribute.ProductPackageAttributeGroupUuid,
 						AttributeUuid:                    productPackageAttribute.AttributeUuid,
 						IsDefaultSelected:                productPackageAttribute.IsDefaultSelected,
@@ -7674,14 +7706,24 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			}
 			for _, productPackageGroup := range productPackage.ProductPackageGroups {
 				newProductPackageGroupList = append(newProductPackageGroupList, model.ProductPackageGroup{
-					BaseModel:             model.BaseModel{Uuid: productPackageGroup.Uuid, CreateTime: productPackageGroup.CreateTime, UpdateTime: productPackageGroup.UpdateTime},
+					BaseModel: model.BaseModel{
+						Uuid:       productPackageGroup.Uuid,
+						CreateTime: productPackageGroup.CreateTime,
+						UpdateTime: productPackageGroup.UpdateTime,
+						DeleteTime: productPackageGroup.DeleteTime,
+					},
 					Name:                  productPackageGroup.MultiLanguageName.ToJson(),
 					ProductPackageUuid:    productPackageGroup.ProductPackageUuid,
 					MultiLanguageNameUuid: productPackageGroup.MultiLanguageName.Uuid,
 				})
 				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
 					newProductPackageGroupItemList = append(newProductPackageGroupItemList, model.ProductPackageGroupItem{
-						BaseModel:               model.BaseModel{Uuid: productPackageGroupItem.Uuid, CreateTime: productPackageGroupItem.CreateTime, UpdateTime: productPackageGroupItem.UpdateTime},
+						BaseModel: model.BaseModel{
+							Uuid:       productPackageGroupItem.Uuid,
+							CreateTime: productPackageGroupItem.CreateTime,
+							UpdateTime: productPackageGroupItem.UpdateTime,
+							DeleteTime: productPackageGroupItem.DeleteTime,
+						},
 						ProductPackageGroupUuid: productPackageGroupItem.ProductPackageGroupUuid,
 						RelatedUuid:             productPackageGroupItem.RelatedUuid,
 						ProductBomUuid:          productPackageGroupItem.ProductBomUuid,
@@ -7690,16 +7732,21 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					})
 				}
 				newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
-					BaseModel: model.BaseModel{Uuid: productPackageGroup.MultiLanguageName.Uuid, CreateTime: productPackageGroup.CreateTime, UpdateTime: productPackageGroup.UpdateTime},
-					EnName:    productPackageGroup.MultiLanguageName.EnName,
-					ZhName:    productPackageGroup.MultiLanguageName.ZhName,
-					ZhTwName:  productPackageGroup.MultiLanguageName.ZhTwName,
-					ThName:    productPackageGroup.MultiLanguageName.ThName,
-					MyName:    productPackageGroup.MultiLanguageName.MyName,
-					JaName:    productPackageGroup.MultiLanguageName.JaName,
-					KoName:    productPackageGroup.MultiLanguageName.KoName,
-					TrName:    productPackageGroup.MultiLanguageName.TrName,
-					SvName:    productPackageGroup.MultiLanguageName.SvName,
+					BaseModel: model.BaseModel{
+						Uuid:       productPackageGroup.MultiLanguageName.Uuid,
+						CreateTime: productPackageGroup.CreateTime,
+						UpdateTime: productPackageGroup.UpdateTime,
+						DeleteTime: productPackageGroup.DeleteTime,
+					},
+					EnName:   productPackageGroup.MultiLanguageName.EnName,
+					ZhName:   productPackageGroup.MultiLanguageName.ZhName,
+					ZhTwName: productPackageGroup.MultiLanguageName.ZhTwName,
+					ThName:   productPackageGroup.MultiLanguageName.ThName,
+					MyName:   productPackageGroup.MultiLanguageName.MyName,
+					JaName:   productPackageGroup.MultiLanguageName.JaName,
+					KoName:   productPackageGroup.MultiLanguageName.KoName,
+					TrName:   productPackageGroup.MultiLanguageName.TrName,
+					SvName:   productPackageGroup.MultiLanguageName.SvName,
 				})
 				delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackageGroup.MultiLanguageName.Uuid)
 			}
@@ -7722,15 +7769,14 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			delProductPackageGroupItemUuid := make([]uint64, 0)
 
 			subProductPackageList, err := productPackageRepo.GetProductPackageList(
-				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
-				productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
-				productPackageRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
-				productPackageRepo.WithProductPackageAttributeGroups(commonRepo.WhereBySoftDelete()),
-				productPackageRepo.WithProductPackageAttributeGroupAttributes(commonRepo.WhereBySoftDelete()),
-				productPackageRepo.WithProductPackageGroups(commonRepo.WhereBySoftDelete()),
-				productPackageRepo.WithProductPackageGroupItems(commonRepo.WhereBySoftDelete()),
-				productPackageRepo.WithProductPackageGroupMultiLanguageName(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithMultiLanguageName(),
+				productPackageRepo.WithProductBoms(),
+				productPackageRepo.WithProductPackageAttributeGroups(),
+				productPackageRepo.WithProductPackageAttributeGroupAttributes(),
+				productPackageRepo.WithProductPackageGroups(),
+				productPackageRepo.WithProductPackageGroupItems(),
+				productPackageRepo.WithProductPackageGroupMultiLanguageName(),
 			)
 			if err != nil {
 				return errors.WithMessage(err, "获取子店商品列表失败")

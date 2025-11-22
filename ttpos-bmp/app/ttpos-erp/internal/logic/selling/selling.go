@@ -508,9 +508,10 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 		return nil, gerror.Wrapf(err, "获取期间发票失败")
 	}
 
-	if req.InvoiceCount > 0 && req.InvoiceCount != int64(len(invoices)) {
-		return nil, gerror.Newf("关账订单数(%d)与请求订单数(%d)不一致", len(invoices), req.InvoiceCount)
-	}
+	//如果请求订单数大于0，且请求订单数小于发票数，则返回错误。 ttpos订单如果包含物品和商品，在erpnext上会有2个pos invoice
+	// if req.InvoiceCount > 0 && req.InvoiceCount < int64(len(invoices)) {
+	// 	return nil, gerror.Newf("关账订单数(%d)与请求订单数(%d)不一致", len(invoices), req.InvoiceCount)
+	// }
 
 	// 将发票记录到关帐信息
 	reqInfo.PosTransactions = s.buildPosTransactions(invoices)

@@ -311,6 +311,18 @@ func (*ClosePosEntryConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (er
 		return gerror.Wrap(err, "查询关账异步记录失败")
 	}
 
+	count, err := dao.ReceivePosInvoice.Ctx(ctx).Where(g.Map{
+		dao.ReceivePosInvoice.Columns().Docstatus:        0,
+		dao.ReceivePosInvoice.Columns().OpenPosEntryName: cachedRecord.PosOpenEntryName,
+		dao.ReceivePosInvoice.Columns().SiteCode:         cachedRecord.SiteCode,
+	}).Count()
+	if err != nil {
+		return gerror.Wrapf(err, "查询POS发票未处理完的处理失败")
+	}
+	if count > 0 {
+		return gerror.New("POS发票还有未处理完的处理，不允许提交")
+	}
+
 	reqBuf, err := gbase64.DecodeString(cachedRecord.ReqMessage)
 	if err != nil {
 		return gerror.Wrap(err, "解码请求参数失败")
