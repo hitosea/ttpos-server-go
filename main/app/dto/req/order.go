@@ -64,6 +64,9 @@ type OrderReturnReq struct {
 	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
 	// 手动退款积分
 	Points float64 `json:"points"` // 积分。当手动退积分时，需要传积分数量。
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // OrderReReturnReq 订单重新退款
@@ -159,6 +162,9 @@ type OrderAmountChangeReq struct {
 	SaleBillUuid  uint64  `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
 	SaleOrderUuid uint64  `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
 	Price         float64 `json:"price"`                              // 改价
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // Validate 验证参数
@@ -178,6 +184,9 @@ type OrderDiscountReq struct {
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单UUID
 	Discount      float64 `json:"discount"`        // 打折。0-100之间
 	DiscountType  int     `json:"discount_type"`   // 打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // Validate 验证参数
@@ -234,6 +243,9 @@ type OrderZeroRuleReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
 	ZeroRule      int    `json:"zero_rule"`       // 抹零规则
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // Validate 验证参数
@@ -355,4 +367,10 @@ type CashBoxBalanceChangeReq struct {
 	Amount      float64 `json:"amount"`       // 变动的金额。 正数为增加，负数为减少
 	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID; 用餐订单反结账的时候，关联的是用餐订单的ID
 	OrderNo     string  `json:"order_no"`     // 订单编号
+}
+
+// VerifyPasswordForSensitiveOperationReq 敏感操作密码验证请求
+type VerifyPasswordForSensitiveOperationReq struct {
+	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"` // 授权员工账号（邮箱或手机号）
+	Password               string `json:"password" binding:"required"`                 // 权限密码
 }

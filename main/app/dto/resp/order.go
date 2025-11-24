@@ -247,6 +247,16 @@ type OrderBuffetResp struct {
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表
 }
 
+// CheckAuthorizationResp 检查授权响应
+type CheckAuthorizationResp struct {
+	HasPermission bool `json:"has_permission"` // 是否有权限: true-有权限, false-无权限
+}
+
+// VerifyPasswordResp 密码验证响应
+type VerifyPasswordResp struct {
+	Verified bool `json:"verified"` // 验证结果: true-成功, false-失败
+}
+
 // DeskBuffetCustomerType 自助餐顾客类型
 type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid

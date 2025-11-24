@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type OrderHandler struct {
@@ -68,6 +69,35 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetProductPackageDetail 获取商品选购详情
+// @Summary 获取商品选购详情
+// @Description 获取商品选购详情
+// @Tags 点餐助手端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetProductPackageDetailReq true "商品选购详情参数"
+// @Success 200 {object} dto.Response{data=resp.ProductPackageDetailRes}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/order/product/package/detail [get]
+func (h *OrderHandler) GetProductPackageDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetProductPackageDetailReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取商品选购详情", zap.Any("params", params))
+	productPackage, err := h.orderSrv.GetProductPackageDetail(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, productPackage)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -92,6 +122,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose) // 判断订单是否可关闭
+		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)                      // 判断订单是否可关闭
+		privateApi.GET("/order/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 	}
 }

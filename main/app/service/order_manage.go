@@ -953,12 +953,47 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 }
 
 // ReturnOrder 退款订单
-func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int) {
+func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) (error, int) {
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
+	}
+
+	// 授权验证（退款操作）
+	var authorizedStaff *model.Staff
+	if request.AuthorizedStaffAccount != "" && request.AuthorizedStaffPassword != "" {
+		// 如果提供了授权参数，需要验证
+		verifyReq := req.VerifyPasswordForSensitiveOperationReq{
+			AuthorizedStaffAccount: request.AuthorizedStaffAccount,
+			Password:               request.AuthorizedStaffPassword,
+		}
+		verified, err := s.VerifyPasswordForRefund(ctx, verifyReq)
+		if err != nil {
+			return errors.WithMessage(err, "授权验证失败"), constant.CodeFail
+		}
+		if !verified {
+			return errors.New("授权验证失败"), constant.CodeFail
+		}
+		// 获取授权员工信息
+		db := s.dbm.GetDB(ctx.GetDbId())
+		staffRepo := repository.NewStaffRepo(db)
+		staff, err := staffRepo.GetStaff(staffRepo.WhereUsername(request.AuthorizedStaffAccount))
+		if err == nil && staff.Uuid > 0 {
+			authorizedStaff = &staff
+		}
+	} else {
+		// 检查当前员工是否在退款授权名单中
+		hasPermission, err := s.CheckAuthorizationForRefund(ctx)
+		if err != nil {
+			return errors.WithMessage(err), constant.CodeFail
+		}
+		if !hasPermission {
+			return errors.New("需要授权验证"), constant.CodeFail
+		}
+		staff := ctx.GetStaff()
+		authorizedStaff = &staff
 	}
 
 	// 获取门店设置
@@ -971,18 +1006,18 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
 	// 获取销售账单信息
-	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(request.SaleBillUuid)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
 
 	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return errors.WithMessage(errors.New("找不到销售订单")), constant.CodeFail
 	}
 
-	if req.Points > saleOrder.GetManualReturnPoints() {
+	if request.Points > saleOrder.GetManualReturnPoints() {
 		return errors.WithMessage(errors.New("退款积分不能大于最大可退积分")), constant.CodeFail
 	}
 
@@ -992,7 +1027,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	saleOrderBuffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0) // 退款自助餐延迟商品列表
 	numMap := make(map[uint64]float64)                                            // 每个退款商品的退货数量
 	// 整单退款
-	if len(req.Products) == 0 {
+	if len(request.Products) == 0 {
 		returnType = constant.ReturnOrderRefundTypeTotal
 		// 整单退款，退款商品列表为销售订单商品列表.
 		// 注意：要判断订单商品是否还有可退货数量
@@ -1022,12 +1057,12 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	}
 	// 部分退款
 	isPartReturn := false // 部分退款时，如果有赠菜，先不传给erp
-	if len(req.Products) > 0 {
+	if len(request.Products) > 0 {
 		returnType = constant.ReturnOrderRefundTypePart
 		isPartReturn = true
 		// 获取退款商品列表
 		saleOrderProductUuids := make([]uint64, 0)
-		for _, product := range req.Products {
+		for _, product := range request.Products {
 			saleOrderProductUuids = append(saleOrderProductUuids, product.SaleOrderProductUuid)
 			numMap[product.SaleOrderProductUuid] = product.Num
 		}
@@ -1083,7 +1118,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	// 如果是会员端订单，则需要根据配送费计算可退款金额
 	deliveryFee := 0.0
 	if ctx.GetScene() == constant.SceneMemberOrder {
-		memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnlyBySaleBillUuid(req.SaleBillUuid)
+		memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnlyBySaleBillUuid(request.SaleBillUuid)
 		if err != nil {
 			return errors.WithMessage(err), constant.CodeFail
 		}
@@ -1117,12 +1152,12 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	// 是否存在QrPromptPay支付
 	if returnOrder.IsExistQrPromptPay() {
-		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
+		if request.BankCode == "" || request.AccountNo == "" || request.AccountName == "" {
 			return errors.WithMessage(errors.New("请选择银行")), constant.CodeReturnOrderBank
 		}
-		returnOrder.BankCode = req.BankCode
-		returnOrder.AccountNo = req.AccountNo
-		returnOrder.AccountName = req.AccountName
+		returnOrder.BankCode = request.BankCode
+		returnOrder.AccountNo = request.AccountNo
+		returnOrder.AccountName = request.AccountName
 	}
 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
@@ -1221,8 +1256,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		if saleOrder.ConsumerUuid > 0 {
 			// 手动退积分
 			if saleOrder.CanManualReturnPoints() {
-				if req.Points > 0 {
-					points := req.Points
+				if request.Points > 0 {
+					points := request.Points
 					// 开始手动退积分
 					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 					if err != nil {
@@ -1251,7 +1286,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					points = saleOrder.GetManualReturnPoints()
 				}
 				// 如果退款类型为整单退款，则退还积分剩余未退的积分
-				if len(req.Products) == 0 {
+				if len(request.Products) == 0 {
 					points = saleOrder.GetManualReturnPoints()
 				}
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
@@ -1282,7 +1317,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				return errors.WithMessage(err)
 			}
 			// 如果是整单退款，则减少会员累计消费次数
-			if len(req.Products) == 0 {
+			if len(request.Products) == 0 {
 
 			}
 		}
@@ -1345,7 +1380,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					Ctx:          ctx,
 					CompanyUuid:  ctx.GetCompanyUuid(),
 					Source:       ctx.GetSource(),
-					SaleBillUuid: req.SaleBillUuid,
+					SaleBillUuid: request.SaleBillUuid,
 					OperatorUuid: int64(ctx.GetStaffUuid()),
 				},
 			})
@@ -1360,7 +1395,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					Ctx:          ctx,
 					CompanyUuid:  ctx.GetCompanyUuid(),
 					Source:       ctx.GetSource(),
-					SaleBillUuid: req.SaleBillUuid,
+					SaleBillUuid: request.SaleBillUuid,
 					OperatorUuid: int64(ctx.GetStaffUuid()),
 				},
 			})
@@ -1457,6 +1492,16 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		})
 	}
 
+	// 构建授权员工信息（如果使用了授权验证）
+	var authorizedStaffInfo *event.AuthorizedStaffInfo
+	if authorizedStaff != nil {
+		authorizedStaffInfo = &event.AuthorizedStaffInfo{
+			Uuid:  authorizedStaff.Uuid,
+			Name:  authorizedStaff.RealName,
+			Email: authorizedStaff.Username,
+		}
+	}
+
 	utils.Go(func() {
 		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
 			SaleBill: saleBill,
@@ -1468,9 +1513,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				SaleOrderUuid: saleOrder.Uuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			Products:   products,
-			PayTypes:   payTypes,
-			RefundType: returnType,
+			Products:        products,
+			PayTypes:        payTypes,
+			RefundType:      returnType,
+			AuthorizedStaff: authorizedStaffInfo,
 		})
 	})
 	// 发布"统计"事件
@@ -2294,4 +2340,165 @@ func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleB
 		return nil, errors.WithMessage(err)
 	}
 	return &newSaleBillSetting, nil
+}
+
+// CheckAuthorization 检查授权
+// 检查当前员工是否有权限进行折扣操作（整单改价、打折、抹零）
+func (s *orderSrv) CheckAuthorization(ctx context.Context) (bool, error) {
+	// 1. 获取当前员工信息
+	currentStaff := ctx.GetStaff()
+	if currentStaff.Uuid == 0 {
+		return false, errors.New("未找到当前员工信息")
+	}
+
+	// 2. 获取业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return false, errors.WithMessage(err, "获取业务设置失败")
+	}
+
+	// 3. 检查折扣操作是否开启密码验证（整单改价、打折、抹零共用）
+	discountNeedPassword := businessSetting.DiscountNeedPassword == "1"
+	refundNeedPassword := businessSetting.RefundNeedPassword == "1"
+	discountAuthorizedStaffIds := businessSetting.DiscountAuthorizedStaffIds
+
+	// 4. 如果未开启密码验证，返回有权限
+	if !discountNeedPassword && !refundNeedPassword {
+		return true, nil
+	}
+
+	// 5. 检查当前员工是否在授权名单中
+	for _, staffId := range discountAuthorizedStaffIds {
+		if staffId == currentStaff.Uuid {
+			return true, nil
+		}
+	}
+
+	// 6. 不在授权名单中，返回无权限
+	return false, nil
+}
+
+// VerifyPassword 密码验证
+// 验证授权员工账号和密码（用于折扣操作：整单改价、打折、抹零）
+func (s *orderSrv) VerifyPassword(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error) {
+	// 1. 根据账号（邮箱或手机号）查找员工
+	db := s.dbm.GetDB(ctx.GetDbId())
+	staffRepo := repository.NewStaffRepo(db)
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUsername(req.AuthorizedStaffAccount))
+	if err != nil || staff.Uuid == 0 {
+		if err != nil {
+			ctx.Log().Info("VerifyPassword", zap.Any("companyUuid", ctx.GetCompanyUuid()), zap.Any("req", req), zap.Error(errors.WithMessage(err)))
+		}
+		return false, errors.New("不是权限员工，请确认信息")
+	}
+
+	// 2. 获取业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return false, errors.WithMessage(err, "获取业务设置失败")
+	}
+
+	// 3. 检查员工是否在授权名单中（退款操作的授权名单）
+	authorizedStaffIds := businessSetting.RefundAuthorizedStaffIds
+
+	isAuthorized := false
+	for _, staffId := range authorizedStaffIds {
+		if staffId == staff.Uuid {
+			isAuthorized = true
+			break
+		}
+	}
+
+	if !isAuthorized {
+		return false, errors.New("不是权限员工，请确认信息")
+	}
+
+	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
+	encryptedPassword := utils.EncryptPassword(req.Password)
+	if staff.PermissionPassword != encryptedPassword {
+		return false, errors.New("密码错误")
+	}
+
+	// 5. 返回验证结果
+	return true, nil
+}
+
+// CheckAuthorizationForRefund 检查退款授权
+// 检查当前员工是否有权限进行退款操作
+func (s *orderSrv) CheckAuthorizationForRefund(ctx context.Context) (bool, error) {
+	// 1. 获取当前员工信息
+	currentStaff := ctx.GetStaff()
+	if currentStaff.Uuid == 0 {
+		return false, errors.New("未找到当前员工信息")
+	}
+
+	// 2. 获取业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return false, errors.WithMessage(err, "获取业务设置失败")
+	}
+
+	// 3. 检查退款操作是否开启密码验证
+	refundNeedPassword := businessSetting.RefundNeedPassword == "1"
+	refundAuthorizedStaffIds := businessSetting.RefundAuthorizedStaffIds
+
+	// 4. 如果未开启密码验证，返回有权限
+	if !refundNeedPassword {
+		return true, nil
+	}
+
+	// 5. 检查当前员工是否在授权名单中
+	for _, staffId := range refundAuthorizedStaffIds {
+		if staffId == currentStaff.Uuid {
+			return true, nil
+		}
+	}
+
+	// 6. 不在授权名单中，返回无权限
+	return false, nil
+}
+
+// VerifyPasswordForRefund 退款密码验证
+// 验证授权员工账号和密码（用于退款操作）
+func (s *orderSrv) VerifyPasswordForRefund(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error) {
+	// 1. 根据账号（邮箱或手机号）查找员工
+	db := s.dbm.GetDB(ctx.GetDbId())
+	staffRepo := repository.NewStaffRepo(db)
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUsername(req.AuthorizedStaffAccount))
+	if err != nil || staff.Uuid == 0 {
+		if err != nil {
+			ctx.Log().Info("VerifyPasswordForRefund", zap.Any("companyUuid", ctx.GetCompanyUuid()), zap.Any("req", req), zap.Error(errors.WithMessage(err)))
+		}
+		return false, errors.New("不是权限员工，请确认信息")
+	}
+
+	// 2. 获取业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return false, errors.WithMessage(err, "获取业务设置失败")
+	}
+
+	// 3. 检查员工是否在授权名单中（退款操作的授权名单）
+	authorizedStaffIds := businessSetting.RefundAuthorizedStaffIds
+
+	isAuthorized := false
+	for _, staffId := range authorizedStaffIds {
+		if staffId == staff.Uuid {
+			isAuthorized = true
+			break
+		}
+	}
+
+	if !isAuthorized {
+		return false, errors.New("不是权限员工，请确认信息")
+	}
+
+	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
+	encryptedPassword := utils.EncryptPassword(req.Password)
+	if staff.PermissionPassword != encryptedPassword {
+		return false, errors.New("密码错误")
+	}
+
+	// 5. 返回验证结果
+	return true, nil
 }

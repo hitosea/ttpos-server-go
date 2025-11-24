@@ -233,6 +233,61 @@ func (h *OrderHandler) ReverseSettleInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CheckAuthorization 检查授权
+// @Summary 检查授权
+// @Description 检查当前员工是否有权限进行折扣/退款操作
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CheckAuthorizationResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/check_authorization [post]
+func (h *OrderHandler) CheckAuthorization(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 调用 Service 检查授权
+	hasPermission, err := h.orderSrv.CheckAuthorization(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, resp.CheckAuthorizationResp{
+		HasPermission: hasPermission,
+	})
+}
+
+// VerifyPassword 密码验证
+// @Summary 密码验证
+// @Description 验证授权员工账号和密码
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.VerifyPasswordReq true "密码验证参数"
+// @Success 200 {object} dto.Response{data=resp.VerifyPasswordResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/verify_password [post]
+func (h *OrderHandler) VerifyPassword(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.VerifyPasswordForSensitiveOperationReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	// 调用 Service 验证密码
+	verified, err := h.orderSrv.VerifyPassword(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, resp.VerifyPasswordResp{
+		Verified: verified,
+	})
+}
+
 // ReverseSettle 处理反结账
 // @Summary 反结账
 // @Description 反结账
@@ -436,18 +491,20 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/order/list", wrapper.GetCashierOrderList)         // 获取订单列表
-		privateApi.GET("/order/info", wrapper.GetOrderInfo)                // 获取订单详情
-		privateApi.POST("/order/cancel", wrapper.CancelOrder)              // 取消订单
-		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)           // 获取退款弹窗信息
-		privateApi.POST("/order/return", wrapper.ReturnOrder)              // 整单退款或部分退款
-		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)         // 重新退款
-		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo) // 获取反结账弹窗信息
-		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)    // 反结账
-		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)            // 删除订单
-		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)        // 判断订单是否可关闭
-		privateApi.POST("/order/print", wrapper.OrderPrint)                // 打印
-		privateApi.POST("/order/print/invoice", wrapper.OrderPrintInvoice) // 打印发票
-		privateApi.GET("/order/invoice", wrapper.OrderInvoiceInfo)         // 获取发票信息
+		privateApi.GET("/order/list", wrapper.GetCashierOrderList)                // 获取订单列表
+		privateApi.GET("/order/info", wrapper.GetOrderInfo)                       // 获取订单详情
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)                     // 取消订单
+		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)                  // 获取退款弹窗信息
+		privateApi.POST("/order/return", wrapper.ReturnOrder)                     // 整单退款或部分退款
+		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)                // 重新退款
+		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo)        // 获取反结账弹窗信息
+		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)           // 反结账
+		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)                   // 删除订单
+		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)               // 判断订单是否可关闭
+		privateApi.POST("/order/print", wrapper.OrderPrint)                       // 打印
+		privateApi.POST("/order/print/invoice", wrapper.OrderPrintInvoice)        // 打印发票
+		privateApi.GET("/order/invoice", wrapper.OrderInvoiceInfo)                // 获取发票信息
+		privateApi.POST("/order/check_authorization", wrapper.CheckAuthorization) // 检查授权
+		privateApi.POST("/order/verify_password", wrapper.VerifyPassword)         // 密码验证
 	}
 }
