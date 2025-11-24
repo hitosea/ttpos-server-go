@@ -26929,6 +26929,44 @@ const docTemplate = `{
             }
         },
         "/shop/setting/cashier": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取收银机副屏设置，仅返回副屏相关配置（轮播内容、点餐时轮播内容、轮播间隔、展示模式）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.收银机设置"
+                ],
+                "summary": "获取收银机设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.CashierSecondaryScreenResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -42787,6 +42825,13 @@ const docTemplate = `{
                     "description": "未点餐时轮播间隔(秒)，范围10-120，默认10",
                     "type": "string"
                 },
+                "order_carousel": {
+                    "description": "点餐时轮播内容（最多15个）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
                 "order_carousel_interval": {
                     "description": "点餐时轮播间隔(秒)，范围10-120，默认10",
                     "type": "string"
@@ -55213,6 +55258,13 @@ const docTemplate = `{
                     "description": "未点餐时轮播间隔(秒)",
                     "type": "string"
                 },
+                "order_carousel": {
+                    "description": "点餐时轮播内容（图片+视频，最多15个）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
                 "order_carousel_interval": {
                     "description": "点餐时轮播间隔(秒)",
                     "type": "string"
@@ -55243,6 +55295,37 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.Server"
                         }
                     ]
+                }
+            }
+        },
+        "setting.CashierSecondaryScreenResp": {
+            "type": "object",
+            "properties": {
+                "carousel": {
+                    "description": "轮播内容（已存在，最多15个）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
+                "no_order_carousel_interval": {
+                    "description": "未点餐时轮播间隔(秒)",
+                    "type": "string"
+                },
+                "order_carousel": {
+                    "description": "点餐时轮播内容（最多15个）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
+                "order_carousel_interval": {
+                    "description": "点餐时轮播间隔(秒)",
+                    "type": "string"
+                },
+                "order_display_mode": {
+                    "description": "点餐时展示模式 carousel/order/order_carousel",
+                    "type": "string"
                 }
             }
         },

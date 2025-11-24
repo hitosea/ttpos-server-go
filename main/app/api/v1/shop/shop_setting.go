@@ -8,9 +8,10 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc/message"
-	"ttpos-server-go/app/service/setting"
+	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -22,7 +23,7 @@ import (
 // AuthHandler 认证鉴权控制器
 type SettingHandler struct {
 	syncSrv       service.ISyncSrv
-	settingSrv    setting.ISrv
+	settingSrv    settingSrv.ISrv
 	otherSrv      service.IOtherSrv
 	uploadFileSrv service.IUploadFileSrv
 	dataManageSrv service.IDataManageSrv
@@ -536,6 +537,33 @@ func (h *SettingHandler) GetPaymentMethodList(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// GetCashierSetting 获取收银机设置
+// @Summary 获取收银机设置
+// @Description 获取收银机副屏设置，仅返回副屏相关配置（轮播内容、点餐时轮播内容、轮播间隔、展示模式）
+// @Tags 商家端.收银机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.CashierSecondaryScreenResp}
+// @Router /shop/setting/cashier [get]
+func (h *SettingHandler) GetCashierSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	cashierSetting, err := h.settingSrv.GetCashierSetting(ctx, nil)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 只返回副屏相关的字段
+	resp := setting.CashierSecondaryScreenResp{
+		Carousel:                cashierSetting.Carousel,
+		NoOrderCarouselInterval: cashierSetting.NoOrderCarouselInterval,
+		OrderDisplayMode:        cashierSetting.OrderDisplayMode,
+		OrderCarousel:           cashierSetting.OrderCarousel,
+		OrderCarouselInterval:   cashierSetting.OrderCarouselInterval,
+	}
+	helper.Success(c, resp)
+}
+
 // SaveCashierSetting 保存收银机设置
 // @Summary 保存收银机设置
 // @Description 保存收银机设置，包括副屏相关配置
@@ -731,7 +759,7 @@ func (h *SettingHandler) SetDataManage(c *gin.Context) {
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
-	settingSrv := setting.NewSrv(dbm, cache)
+	settingSrv := settingSrv.NewSrv(dbm, cache)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
@@ -759,6 +787,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/store", wrapper.SaveStoreSetting)                        // 保存门店设置
 		privateApi.POST("/setting/business", wrapper.SaveBusinessSetting)                  // 保存业务设置
 		privateApi.GET("/setting/business", wrapper.GetBusinessSetting)                    // 获取业务设置
+		privateApi.GET("/setting/cashier", wrapper.GetCashierSetting)                      // 获取收银机设置
 		privateApi.POST("/setting/cashier", wrapper.SaveCashierSetting)                    // 保存收银机设置
 		privateApi.POST("/setting/cashier/carousel/upload", wrapper.UploadCashierCarousel) // 上传收银机轮播内容
 

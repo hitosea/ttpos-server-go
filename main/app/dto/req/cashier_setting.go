@@ -14,6 +14,7 @@ type SaveCashierSettingReq struct {
 	Carousel                []setting.CarouselItem `json:"carousel"`                   // 轮播内容（已存在，最多15个）
 	NoOrderCarouselInterval string                 `json:"no_order_carousel_interval"` // 未点餐时轮播间隔(秒)，范围10-120，默认10
 	OrderDisplayMode        string                 `json:"order_display_mode"`         // 点餐时展示模式 carousel/order/order_carousel，默认carousel
+	OrderCarousel           []setting.CarouselItem `json:"order_carousel"`             // 点餐时轮播内容（最多15个）
 	OrderCarouselInterval   string                 `json:"order_carousel_interval"`    // 点餐时轮播间隔(秒)，范围10-120，默认10
 }
 
@@ -22,6 +23,11 @@ func (r *SaveCashierSettingReq) Validate() error {
 	// 轮播内容数量限制：最多15个
 	if len(r.Carousel) > 15 {
 		return errs.WithMessage(errors.New("轮播内容最多15个"))
+	}
+
+	// 点餐时轮播内容数量限制：最多15个
+	if len(r.OrderCarousel) > 15 {
+		return errs.WithMessage(errors.New("点餐时轮播内容最多15个"))
 	}
 
 	// 参数验证：未点餐时轮播间隔

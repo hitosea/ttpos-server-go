@@ -337,7 +337,46 @@ func (r *SaveCashierSettingReq) Validate() error {
 
 ---
 
-#### API 2: 创建收银机设置保存接口（Go Main）
+#### API 2: 获取收银机设置接口（Go Main）
+
+**新接口**: `main/app/api/v1/shop/shop_setting.go` - `GetCashierSetting()` 方法
+
+**请求**:
+
+- **URL**: `/api/v1/shop/setting/cashier`
+- **Method**: `GET`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}"
+  }
+  ```
+
+**响应**:
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "carousel": [...],  // 轮播内容列表（图片+视频，最多15个）
+    "no_order_carousel_interval": "10",  // 未点餐时轮播间隔（字符串，单位：秒）
+    "order_display_mode": "carousel",  // 点餐时展示模式（carousel/order/order_carousel）
+    "order_carousel_interval": "10"  // 点餐时轮播间隔（字符串，单位：秒）
+  }
+}
+```
+
+**响应结构体**: `CashierSecondaryScreenResp`（`main/app/dto/resp/setting/cashier_setting.go`），仅包含副屏相关的四个字段。
+
+**实现说明**:
+- API Handler: `main/app/api/v1/shop/shop_setting.go` - `GetCashierSetting`
+- Response DTO: `main/app/dto/resp/setting/cashier_setting.go` - `CashierSecondaryScreenResp`
+- Service: `main/app/service/setting/setting.go` - `GetCashierSetting`
+- 从 Service 层获取完整设置后，仅提取副屏相关字段返回
+
+---
+
+#### API 3: 保存收银机设置接口（Go Main）
 
 **新接口**: `main/app/api/v1/shop/shop_setting.go` - `SaveCashierSetting()` 方法
 
@@ -372,7 +411,9 @@ func (r *SaveCashierSettingReq) Validate() error {
 }
 ```
 
-#### API 2: 扩展收银机设置查询接口（Go）
+---
+
+#### API 4: 扩展收银机设置查询接口（收银端）
 
 **现有接口**: `main/app/service/setting/setting.go` - `GetCashierSetting()` 方法
 
@@ -437,7 +478,54 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 
 ### Go API 层扩展（新管理端）
 
-#### 创建或扩展收银机设置接口
+#### 创建获取收银机设置接口
+
+**文件**: `main/app/api/v1/shop/shop_setting.go`
+
+**创建 GetCashierSetting 方法**:
+
+```go
+// GetCashierSetting 获取收银机设置
+// @Summary 获取收银机设置
+// @Description 获取收银机副屏设置，仅返回副屏相关配置（轮播内容、轮播间隔、展示模式）
+// @Tags 商家端.收银机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.CashierSecondaryScreenResp}
+// @Router /shop/setting/cashier [get]
+func (h *SettingHandler) GetCashierSetting(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    cashierSetting, err := h.settingSrv.GetCashierSetting(ctx, nil)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, err)
+        return
+    }
+    // 只返回副屏相关的四个字段
+    resp := setting.CashierSecondaryScreenResp{
+        Carousel:                cashierSetting.Carousel,
+        NoOrderCarouselInterval: cashierSetting.NoOrderCarouselInterval,
+        OrderDisplayMode:        cashierSetting.OrderDisplayMode,
+        OrderCarouselInterval:   cashierSetting.OrderCarouselInterval,
+    }
+    helper.Success(c, resp)
+}
+```
+
+**创建 Response DTO**:
+
+```go
+// main/app/dto/resp/setting/cashier_setting.go
+// CashierSecondaryScreenResp 收银机副屏设置响应（仅包含副屏相关字段）
+type CashierSecondaryScreenResp struct {
+    Carousel                []CarouselItem `json:"carousel"`                   // 轮播内容（已存在，最多15个）
+    NoOrderCarouselInterval string         `json:"no_order_carousel_interval"` // 未点餐时轮播间隔(秒)
+    OrderDisplayMode        string         `json:"order_display_mode"`         // 点餐时展示模式 carousel/order/order_carousel
+    OrderCarouselInterval   string         `json:"order_carousel_interval"`    // 点餐时轮播间隔(秒)
+}
+```
+
+#### 创建保存收银机设置接口
 
 **文件**: `main/app/api/v1/shop/shop_setting.go`
 

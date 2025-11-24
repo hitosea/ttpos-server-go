@@ -31,6 +31,7 @@ type CashierResp struct {
 	MemberShowSoldOut       string             `json:"member_show_sold_out"`       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	NoOrderCarouselInterval string             `json:"no_order_carousel_interval"` // 未点餐时轮播间隔(秒)
 	OrderDisplayMode        string             `json:"order_display_mode"`         // 点餐时展示模式 carousel/order/order_carousel
+	OrderCarousel           []CarouselItem     `json:"order_carousel"`             // 点餐时轮播内容（图片+视频，最多15个）
 	OrderCarouselInterval   string             `json:"order_carousel_interval"`    // 点餐时轮播间隔(秒)
 }
 
@@ -51,6 +52,15 @@ type Cashier struct {
 	AdvancedPassword string `json:"advanced_password"` // 高级设置密码
 	CashierPassword  string `json:"cashier_password"`  // 钱箱密码
 	LockPassword     string `json:"lock_password"`     // 锁屏密码
+}
+
+// CashierSecondaryScreenResp 收银机副屏设置响应（仅包含副屏相关字段）
+type CashierSecondaryScreenResp struct {
+	Carousel                []CarouselItem `json:"carousel"`                   // 轮播内容（已存在，最多15个）
+	NoOrderCarouselInterval string         `json:"no_order_carousel_interval"` // 未点餐时轮播间隔(秒)
+	OrderDisplayMode        string         `json:"order_display_mode"`         // 点餐时展示模式 carousel/order/order_carousel
+	OrderCarousel           []CarouselItem `json:"order_carousel"`             // 点餐时轮播内容（最多15个）
+	OrderCarouselInterval   string         `json:"order_carousel_interval"`    // 点餐时轮播间隔(秒)
 }
 
 type OrderMethod struct {
