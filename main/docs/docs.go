@@ -49603,6 +49603,10 @@ const docTemplate = `{
         "resp.PaymentMethodAmount": {
             "type": "object",
             "properties": {
+                "activity_amount": {
+                    "description": "满减活动抵扣金额",
+                    "type": "number"
+                },
                 "code": {
                     "description": "支付方式代码。",
                     "type": "integer"
