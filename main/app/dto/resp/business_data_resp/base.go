@@ -98,7 +98,7 @@ type BusinessDataAll struct {
 	AllTableMinOrderPrice float64 `json:"all_table_min_order_price"` // 总桌数最小订单金额
 	AllTableMaxOrderPrice float64 `json:"all_table_max_order_price"` // 总桌数最大订单金额
 	AllTablePeopleAvg     float64 `json:"all_table_people_avg"`      // 总桌数人均
-	// 收银方式
+	// 收银方式 - 店内 (不包含外送和外卖)
 	AllCashierOrderNum      int     `json:"all_cashier_order_num"`       // 收银方式订单数
 	AllCashierMinOrderPrice float64 `json:"all_cashier_min_order_price"` // 收银方式最小订单金额
 	AllCashierMaxOrderPrice float64 `json:"all_cashier_max_order_price"` // 收银方式最大订单金额
@@ -108,6 +108,11 @@ type BusinessDataAll struct {
 	AllTakeoutMinOrderPrice float64 `json:"all_takeout_min_order_price"` // 总外送最小订单金额
 	AllTakeoutMaxOrderPrice float64 `json:"all_takeout_max_order_price"` // 总外送最大订单金额
 	AllTakeoutAvgOrderPrice float64 `json:"all_takeout_avg_order_price"` // 总外送平均订单金额
+	// 外卖数据
+	AllTakeawayOrderNum      int     `json:"all_takeaway_order_num"`       // 点餐方式-外卖订单数
+	AllTakeawayMinOrderPrice float64 `json:"all_takeaway_min_order_price"` // 点餐方式-外卖最小订单金额
+	AllTakeawayMaxOrderPrice float64 `json:"all_takeaway_max_order_price"` // 点餐方式-外卖最大订单金额
+	AllTakeawayAvgOrderPrice float64 `json:"all_takeaway_avg_order_price"` // 点餐方式-外卖平均订单金额
 	// 未结账数据
 	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 未结账数据 - 总订单数
 	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 未结账数据 - 总金额

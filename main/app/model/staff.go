@@ -203,6 +203,10 @@ type StaffShiftSnapshotOrder struct {
 	CashierMinOrderPrice    float64                        `json:"cashier_min_order_price"`
 	CashierMaxOrderPrice    float64                        `json:"cashier_max_order_price"`
 	CashierAvgOrderPrice    float64                        `json:"cashier_avg_order_price"`
+	TakeawayOrderNum        int                            `json:"takeaway_order_num"`
+	TakeawayMinOrderPrice   float64                        `json:"takeaway_min_order_price"`
+	TakeawayMaxOrderPrice   float64                        `json:"takeaway_max_order_price"`
+	TakeawayAvgOrderPrice   float64                        `json:"takeaway_avg_order_price"`
 	GiftPoints              float64                        `json:"gift_points"`
 	GiftMoney               float64                        `json:"gift_money"`
 	RechargeAmount          float64                        `json:"recharge_amount"`
