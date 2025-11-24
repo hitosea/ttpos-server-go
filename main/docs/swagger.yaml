@@ -4083,6 +4083,21 @@ definitions:
         description: 销售账单UUID, 必填
         type: integer
     type: object
+  req.InstantOrderPaymentActivityReq:
+    properties:
+      full_reduction_activity_uuid:
+        description: 满减活动UUID, 0表示取消活动
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID, 必填
+        type: integer
+    required:
+    - sale_bill_uuid
+    - sale_order_uuid
+    type: object
   req.InstantOrderPaymentCancelReq:
     properties:
       payment_order_uuid:
@@ -4098,7 +4113,7 @@ definitions:
   req.InstantOrderPaymentCouponReq:
     properties:
       coupon_requirement:
-        description: 优惠券类型, 必填。通用优惠券“none”或会员优惠券“marketing”
+        description: 优惠券类型, 必填。通用优惠券"none"或会员优惠券"marketing"
         type: string
       coupon_uuid:
         description: 优惠券UUID, 必填。通用优惠券或会员优惠券的uuid
@@ -8250,6 +8265,15 @@ definitions:
         description: 是否开启自动接单语音播报 0-否；1-是
         type: string
     type: object
+  resp.ActivityRule:
+    properties:
+      discount:
+        description: 减价金额
+        type: number
+      threshold:
+        description: 满减阈值
+        type: number
+    type: object
   resp.Ads:
     properties:
       list:
@@ -9518,6 +9542,55 @@ definitions:
           $ref: '#/definitions/resp.ProductFlavor'
         type: array
     type: object
+  resp.FullReductionActivityItem:
+    properties:
+      activity_type:
+        description: 活动类型：1-阶梯满减，2-循环满减
+        type: integer
+      discount_amount:
+        description: 抵扣金额（如果已选中）
+        type: number
+      end_date:
+        description: 结束日期
+        type: string
+      end_time:
+        description: 结束时间（HH:mm）
+        type: string
+      is_all_day:
+        description: 是否全天
+        type: boolean
+      is_available:
+        description: 是否可用
+        type: boolean
+      is_selected:
+        description: 是否已选中
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 活动多语言名称
+      rules:
+        description: 活动规则列表
+        items:
+          $ref: '#/definitions/resp.ActivityRule'
+        type: array
+      start_date:
+        description: 开始日期
+        type: string
+      start_time:
+        description: 开始时间（HH:mm）
+        type: string
+      uuid:
+        description: 活动UUID
+        type: integer
+    type: object
+  resp.FullReductionActivityList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.FullReductionActivityItem'
+        type: array
+    type: object
   resp.FullReductionActivityListResp:
     properties:
       list:
@@ -10127,6 +10200,10 @@ definitions:
     type: object
   resp.InstantOrderPaymentInfoResp:
     properties:
+      activity_list:
+        allOf:
+        - $ref: '#/definitions/resp.FullReductionActivityList'
+        description: 满减活动列表
       amounts:
         allOf:
         - $ref: '#/definitions/resp.PaymentMethodAmountList'
@@ -17480,6 +17557,37 @@ paths:
       summary: 确认必点商品
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/payment/activity:
+    post:
+      consumes:
+      - application/json
+      description: 选择或取消满减活动
+      parameters:
+      - description: 选择或取消满减活动参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentActivityReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 选择或取消满减活动
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/payment/cancel:
     post:
       consumes:
@@ -20340,6 +20448,37 @@ paths:
       summary: 确认必点商品
       tags:
       - 收银端.桌台
+  /cashier/desk/order/payment/activity:
+    post:
+      consumes:
+      - application/json
+      description: 选择或取消满减活动
+      parameters:
+      - description: 选择或取消满减活动参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentActivityReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 选择或取消满减活动
+      tags:
+      - 收银端.桌台.结账
   /cashier/desk/order/payment/cancel:
     post:
       consumes:
