@@ -525,6 +525,37 @@ func (h *DeskHandler) OrderPaymentCancel(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentActivity 选择或取消满减活动
+// @Summary 选择或取消满减活动
+// @Description 选择或取消满减活动
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentActivityReq true "选择或取消满减活动参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/payment/activity [post]
+func (h *DeskHandler) OrderPaymentActivity(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面选择或取消满减活动接口请求")
+
+	var req req.InstantOrderPaymentActivityReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	ctx.Log().Info("选择或取消满减活动", zap.Any("params", req))
+
+	res, err := h.orderSrv.OrderPaymentActivity(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, res)
+}
+
 // OrderPaymentFinish 完成销售订单的付款结账
 // @Summary 完成销售订单的付款结账
 // @Description 完成销售订单的付款结账
@@ -2011,6 +2042,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                                            // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                               // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/coupon", wrapper.OrderPaymentCoupon)                                          // 选择或取消优惠券
+		privateApi.POST("/desk/order/payment/activity", wrapper.OrderPaymentActivity)                                      // 选择或取消满减活动
 		privateApi.POST("/desk/order/payment/points", wrapper.OrderPaymentPoints)                                          // 设置订单的抵扣积分数量
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                                          // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                                          // 撤销一个支付单

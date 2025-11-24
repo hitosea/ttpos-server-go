@@ -48,6 +48,9 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 		return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
 	}
 
+	// 更换会员后自动取消满减活动选择
+	saleOrder.SetActivityCancel()
+
 	// 取消会员余额支付
 	if saleOrder.ConsumerUuid == 0 {
 		memberBalancePayment := saleOrder.GetMemberBalancePayment()
@@ -124,6 +127,9 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 		return nil, false, errors.WithMessage(err, "取消销售订单会员优惠券失败")
 	}
+
+	// 更换会员后自动取消满减活动选择
+	saleOrder.SetActivityCancel()
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, false, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")

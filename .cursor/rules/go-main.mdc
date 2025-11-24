@@ -171,6 +171,59 @@ return nil, errors.WithMessage(err, "查询失败")
 panic(err)
 ```
 
+### 协程使用规范
+
+- ✅ **所有 go func 协程都必须使用 `utils.Go` 方法**
+- ✅ **`utils.Go` 方法已内置 recover 机制，自动捕获 panic 并记录日志**
+- ❌ **禁止直接使用 `go func() { ... }()`**
+- ❌ **禁止在协程中手动编写 recover（`utils.Go` 已包含）**
+
+```go
+// ✅ 正确 - 使用 utils.Go 启动协程
+import "ttpos-server-go/pkg/utils"
+
+utils.Go(func() {
+    event.NewSystemBus().PublishOrderCreatedEvent(
+        event.OrderCreatedPayload{
+            BasePayload: event.BasePayload{
+                Ctx: ctx,
+                CompanyUuid: ctx.GetCompanyUuid(),
+            },
+            OrderUuid: orderUuid,
+        },
+    )
+})
+
+// ✅ 正确 - 异步处理任务
+utils.Go(func() {
+    // 业务逻辑，即使发生 panic 也不会导致主程序崩溃
+    doSomething()
+})
+
+// ❌ 错误 - 直接使用 go func()
+go func() {
+    // 如果这里发生 panic，可能导致整个程序崩溃
+    doSomething()
+}()
+
+// ❌ 错误 - 手动编写 recover（utils.Go 已包含）
+go func() {
+    defer func() {
+        if r := recover(); r != nil {
+            // 手动处理...
+        }
+    }()
+    doSomething()
+}()
+```
+
+**关键点：**
+
+- **自动化 panic 捕获**：`utils.Go` 自动集成 `defer` + `recover` 机制，无需手动编写
+- **统一日志记录**：所有捕获的 panic 都会通过 `logger.Logger.Error` 记录，包含 panic 值和完整的堆栈信息
+- **提高健壮性**：确保单个协程的 panic 不会导致整个应用程序崩溃
+- **简化开发**：开发者无需在每个协程中手动编写 recover 代码
+
 ### 常量定义规范
 
 - ✅ **所有常量必须在 `constant` 包中定义**
@@ -664,6 +717,7 @@ type InstantOrderSaleOrderDeleteReq struct {
 - [ ] **多语言字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式，禁止使用 `Name` 等不带 `Locale` 前缀的字段名**
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
+- [ ] **所有 go func 协程必须使用 `utils.Go` 方法，禁止直接使用 `go func()`**
 - [ ] 常量必须在 constant 包中定义，禁止使用字面量
 
 ### 提交前
@@ -713,7 +767,9 @@ order, err := orderRepo.GetOrder(
 ### 事件发布
 
 ```go
-    go func() {
+import "ttpos-server-go/pkg/utils"
+
+utils.Go(func() {
     event.NewSystemBus().PublishOrderCreatedEvent(
         event.OrderCreatedPayload{
             BasePayload: event.BasePayload{
@@ -723,7 +779,7 @@ order, err := orderRepo.GetOrder(
             OrderUuid: orderUuid,
         },
     )
-}()
+})
 ```
 
 ### UUID 锁
@@ -747,6 +803,8 @@ order, err := orderRepo.GetOrder(
 | ❌ **多语言字段（请求参数和响应参数）使用字符串、map 或自定义结构** | **必须使用 `dto.LocaleResponse`** |
 | ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
 | ❌ 使用 panic                       | 必须 return error           |
+| ❌ **直接使用 `go func() { ... }()` 启动协程** | **必须使用 `utils.Go` 方法** |
+| ❌ **在协程中手动编写 recover**     | **`utils.Go` 已包含 recover** |
 | ❌ **Service 接口和实现分开在不同文件** | **必须放在同一个文件中** |
 | ❌ Service 接口第一个参数不是 ctx   | 必须是 context.Context      |
 | ❌ Service 使用 dbm.GetDB(dbId)     | 必须使用 ctx.GetDB()        |

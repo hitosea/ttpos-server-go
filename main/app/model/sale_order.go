@@ -593,6 +593,7 @@ func (model *SaleOrder) IsSettled() bool {
 // 清除结账信息
 func (model *SaleOrder) ClearSettleInfo() {
 	model.CouponAmount = 0
+	model.SetActivityCancel()
 	model.PaymentAmount = 0
 	model.ChangeAmount = 0
 	model.ZeroCheckoutFee = 0
@@ -1258,6 +1259,7 @@ type BuffetUuidMapBuffetCustomerTypes struct {
 
 type FinalAmount struct {
 	CouponAmount         float64 // 优惠券金额
+	ActivityAmount       float64 // 满减活动抵扣金额
 	PaymentAmount        float64 // 已支付的金额
 	ChangeAmount         float64 // 找零金额
 	ZeroCheckoutFee      float64 // 结账抹零金额

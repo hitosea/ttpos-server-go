@@ -559,6 +559,44 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errors.New("无法查询到销售订单")
 	}
 
+	// 如果选择了活动，验证活动有效性
+	if saleOrder.FullReductionActivityUuid > 0 {
+		now := time.Now().Unix()
+		activityRepo := repository.NewFullReductionActivityRepo(db)
+		activity, err := activityRepo.GetByUuid(saleOrder.FullReductionActivityUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询活动失败")
+		}
+		if activity == nil {
+			return nil, errors.New("活动信息已经变更，请重新确认")
+		}
+
+		// 验证活动有效性
+		status := activity.GetStatus(now, "")
+		if status != constant.ActivityStatusInProgress {
+			return nil, errors.New("活动信息已经变更，请重新确认")
+		}
+
+		// 判断活动是否在适用时段内
+		if !s.isActivityInTimeRange(ctx, activity, now) {
+			return nil, errors.New("活动信息已经变更，请重新确认")
+		}
+
+		// 重新计算活动抵扣金额（确保金额正确）
+		discountAmount, activityMessage, err := s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+		}
+
+		if discountAmount == 0 {
+			return nil, errors.New("活动可抵扣金额为0，请重新确认")
+		}
+
+		// 更新活动信息
+		saleOrder.ActivityAmount = discountAmount
+		saleOrder.FullReductionActivityMessage = activityMessage
+	}
+
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -657,6 +695,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
 	final := model.FinalAmount{
 		CouponAmount:         saleOrder.CalcCouponExchangeAmount(),
+		ActivityAmount:       saleOrder.ActivityAmount, // 满减活动抵扣金额
 		PaymentAmount:        totalPay,
 		ChangeAmount:         changeAmount,
 		ZeroCheckoutFee:      saleOrder.CalcCheckOutZeroFee(),
@@ -1116,6 +1155,9 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		return nil, errors.WithMessage(err, "取消销售订单优惠券失败")
 	}
 
+	// 清空活动字段（免单时清空活动选择）
+	saleOrder.SetActivityCancel()
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建免单原因
 		if len(freeOrderReasons) > 0 {
@@ -1528,7 +1570,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill) (resp.FullReductionActivityList, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	now := time.Now().Unix()
-	
+
 	// 查询有效日期内的活动（进行中的活动）
 	activityRepo := repository.NewFullReductionActivityRepo(db)
 	activities, _, err := activityRepo.GetList(
@@ -1541,33 +1583,33 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 
 	// 计算订单金额（用于判断是否满足满减条件）
 	orderAmount := saleOrder.GetAmountValue() // 积分抵扣后的应收金额
-	
+
 	// 获取当前选中的活动UUID
 	selectedActivityUuid := saleOrder.FullReductionActivityUuid
-	
+
 	// 判断订单是否已部分支付
 	hasPartialPayment := len(saleOrder.PaymentOrders) > 0
-	
+
 	// 判断积分抵扣后最终应收是否为0
 	finalAmount := saleOrder.GetAmountValue() - saleOrder.PayPointsAmount
 	isFinalAmountZero := finalAmount <= 0
-	
+
 	// 构建活动列表响应
 	activityItems := make([]resp.FullReductionActivityItem, 0, len(activities))
-	
+
 	for _, activity := range activities {
 		// 判断活动是否在适用时段内
-		isInTimeRange := s.isActivityInTimeRange(activity, now)
-		
+		isInTimeRange := s.isActivityInTimeRange(ctx, activity, now)
+
 		// 判断订单金额是否达到满减条件
 		meetsThreshold := s.checkActivityThreshold(activity, orderAmount)
-		
+
 		// 判断活动是否可用
 		isAvailable := isInTimeRange && meetsThreshold && !hasPartialPayment && !isFinalAmountZero
-		
+
 		// 判断活动是否已选中
 		isSelected := activity.Uuid == selectedActivityUuid
-		
+
 		// 计算活动抵扣金额（如果已选中）
 		discountAmount := 0.0
 		if isSelected {
@@ -1578,7 +1620,7 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 				discountAmount = 0.0
 			}
 		}
-		
+
 		// 构建活动规则列表
 		rules := make([]resp.ActivityRule, 0, len(activity.Rules))
 		for _, rule := range activity.Rules {
@@ -1587,17 +1629,17 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 				Discount:  rule.ReductionAmount,
 			})
 		}
-		
+
 		// 获取多语言名称
 		var localeName dto.LocaleResponse
 		if activity.MultiLanguageName.Uuid > 0 {
 			localeName = activity.MultiLanguageName.GetNames()
 		}
-		
+
 		// 格式化日期
 		startDate := time.Unix(activity.StartDate, 0).Format("2006-01-02")
 		endDate := time.Unix(activity.EndDate, 0).Format("2006-01-02")
-		
+
 		activityItem := resp.FullReductionActivityItem{
 			Uuid:           activity.Uuid,
 			LocaleName:     localeName,
@@ -1608,14 +1650,14 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 			EndTime:        activity.EndTime,
 			IsAllDay:       activity.IsAllDay == 1,
 			Rules:          rules,
-			IsAvailable:   isAvailable,
-			IsSelected:    isSelected,
+			IsAvailable:    isAvailable,
+			IsSelected:     isSelected,
 			DiscountAmount: discountAmount,
 		}
-		
+
 		activityItems = append(activityItems, activityItem)
 	}
-	
+
 	// 排序：可用时间范围内显示在前，不在可用时间范围内的活动在后
 	sort.Slice(activityItems, func(i, j int) bool {
 		// 如果可用性不同，可用的在前
@@ -1625,23 +1667,27 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 		// 如果都可用或都不可用，按创建时间排序（这里简化处理，可以后续优化）
 		return activityItems[i].Uuid < activityItems[j].Uuid
 	})
-	
+
 	return resp.FullReductionActivityList{
 		List: activityItems,
 	}, nil
 }
 
 // isActivityInTimeRange 判断活动是否在适用时段内
-func (s *orderSrv) isActivityInTimeRange(activity *model.FullReductionActivity, now int64) bool {
+func (s *orderSrv) isActivityInTimeRange(ctx context.Context, activity *model.FullReductionActivity, now int64) bool {
 	// 如果是全天，直接返回true
 	if activity.IsAllDay == 1 {
 		return true
 	}
-	
-	// 获取当前时间（HH:mm格式）
-	nowTime := time.Unix(now, 0)
-	currentTimeStr := nowTime.Format("15:04")
-	
+
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := companySetting.GetTimezone()
+	timeUtil := utils.Timezone(timezone)
+
+	// 使用商家时区获取当前时间（HH:mm格式）
+	currentTimeStr := timeUtil.FormatUnixTime(now, "15:04")
+
 	// 比较时间字符串
 	return currentTimeStr >= activity.StartTime && currentTimeStr <= activity.EndTime
 }
@@ -1651,7 +1697,7 @@ func (s *orderSrv) checkActivityThreshold(activity *model.FullReductionActivity,
 	if len(activity.Rules) == 0 {
 		return false
 	}
-	
+
 	// 找到最小的阈值
 	minThreshold := activity.Rules[0].Threshold
 	for _, rule := range activity.Rules {
@@ -1659,14 +1705,14 @@ func (s *orderSrv) checkActivityThreshold(activity *model.FullReductionActivity,
 			minThreshold = rule.Threshold
 		}
 	}
-	
+
 	return orderAmount >= minThreshold
 }
 
 // calculateActivityDiscount 计算活动抵扣金额
 func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *model.SaleOrder, activityUuid uint64) (float64, string, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
-	
+
 	// 查询活动详情
 	activityRepo := repository.NewFullReductionActivityRepo(db)
 	activity, err := activityRepo.GetByUuid(activityUuid)
@@ -1676,14 +1722,14 @@ func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *mod
 	if activity == nil {
 		return 0, "", errors.New("活动不存在")
 	}
-	
+
 	// 计算订单金额（积分抵扣后的应收金额）
 	orderAmount := saleOrder.GetAmountValue()
-	
+
 	// 根据活动类型计算抵扣金额
 	var discountAmount float64
 	var activityMessage string
-	
+
 	if activity.ReductionType == constant.FullReductionTypeStep {
 		// 阶梯满减：找到满足条件的最大规则
 		maxDiscount := 0.0
@@ -1709,12 +1755,12 @@ func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *mod
 			}
 		}
 	}
-	
+
 	// 如果扣减金额大于订单金额，则最终扣减金额为订单金额
 	if discountAmount > orderAmount {
 		discountAmount = orderAmount
 	}
-	
+
 	return discountAmount, activityMessage, nil
 }
 
@@ -1774,7 +1820,7 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 		}
 
 		// 判断活动是否在适用时段内
-		if !s.isActivityInTimeRange(activity, now) {
+		if !s.isActivityInTimeRange(ctx, activity, now) {
 			return nil, errors.New("活动不在适用时段内")
 		}
 
@@ -1804,21 +1850,23 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 		saleOrder.AutoPointsExchange = 0
 	} else {
 		// 取消活动
-		saleOrder.FullReductionActivityUuid = 0
-		saleOrder.FullReductionActivityMessage = ""
-		saleOrder.ActivityAmount = 0
+		saleOrder.SetActivityCancel()
 	}
+
+	// 记录使用活动前的订单金额
+	oldPrice := saleOrder.GetAmountValue()
 
 	// 使用事务更新订单
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 更新订单的活动相关字段
-		updateFields := map[string]interface{}{
-			"full_reduction_activity_uuid":  saleOrder.FullReductionActivityUuid,
-			"full_reduction_activity_message": saleOrder.FullReductionActivityMessage,
-			"activity_amount":                saleOrder.ActivityAmount,
-			"auto_points_exchange":           saleOrder.AutoPointsExchange,
-		}
-		if err := tx.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrder.Uuid).Updates(updateFields).Error; err != nil {
+		saleOrderRepo := repository.NewSaleOrderRepo(tx)
+		if err := saleOrderRepo.UpdateSaleOrderActivity(
+			saleOrder.Uuid,
+			saleOrder.FullReductionActivityUuid,
+			saleOrder.FullReductionActivityMessage,
+			saleOrder.ActivityAmount,
+			saleOrder.AutoPointsExchange,
+		); err != nil {
 			return errors.WithMessage(err, "更新订单活动信息失败")
 		}
 
@@ -1839,6 +1887,32 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
+
+	// 获取更新后的订单金额
+	saleOrder = saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+	newPrice := saleOrder.GetAmountValue()
+
+	// 发布活动事件
+	utils.Go(func() {
+		event.NewSystemBus().PublishActivitySaleOrderEvent(event.ActivitySaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  req.SaleBillUuid,
+				SaleOrderUuid: req.SaleOrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			FullReductionActivityUuid:    saleOrder.FullReductionActivityUuid,
+			FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
+			ActivityAmount:               saleOrder.ActivityAmount,
+			OldPrice:                     oldPrice,
+			NewPrice:                     newPrice,
+		})
+	})
 
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)

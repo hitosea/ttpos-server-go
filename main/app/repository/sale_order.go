@@ -21,6 +21,7 @@ type ISaleOrderRepo interface {
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 	DeleteSaleOrder(saleOrderUuid uint64) error
 	UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error
+	UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error // 更新销售订单的满减活动信息
 }
 
 // ISaleOrderQueryRepo 销售账单查询
@@ -125,5 +126,14 @@ func (r *saleOrderRepo) UpdateSaleOrderErpInvoice(saleOrderUuid uint64, products
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
 		"erp_products_invoice_name": productsInvoiceName,
 		"erp_material_invoice_name": materialInvoiceName,
+	}).Error
+}
+
+func (r *saleOrderRepo) UpdateSaleOrderActivity(saleOrderUuid uint64, fullReductionActivityUuid uint64, fullReductionActivityMessage string, activityAmount float64, autoPointsExchange uint) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"full_reduction_activity_uuid":    fullReductionActivityUuid,
+		"full_reduction_activity_message": fullReductionActivityMessage,
+		"activity_amount":                 activityAmount,
+		"auto_points_exchange":            autoPointsExchange,
 	}).Error
 }

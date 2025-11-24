@@ -152,6 +152,7 @@ const (
 	OrderProductMove         = "PRODUCT_MOVE"          // 转菜
 	OrderDiscount            = "DISCOUNT"              // 优惠折扣
 	OrderCancelDiscount      = "CANCEL_DISCOUNT"       // 撤销优惠折扣
+	OrderActivity            = "ACTIVITY"              // 满减活动
 	OrderSettle              = "SETTLE"                // 结账
 	OrderFreeSale            = "FREE_SALE"             // 免单
 	OrderReverseSettle       = "REVERSE_SETTLE"        // 反结账

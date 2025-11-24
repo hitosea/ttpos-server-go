@@ -136,6 +136,7 @@ type IOrderSrv interface {
 	// pay
 	OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error)                                     // 使用优惠券 或 取消优惠券
 	OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error)                                     // 设置订单的抵扣积分数量
+	OrderPaymentActivity(ctx context.Context, req req.InstantOrderPaymentActivityReq) (*resp.InstantOrderPaymentInfoResp, error)                                 // 选择或取消满减活动
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                        // 获取支付二维码
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 给销售订单创建一个支付单
 	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                              // 撤销一个支付单

@@ -79,6 +79,8 @@ func init() {
 	freeSaleOrderEventHandler()
 	// 自动注册"订单打折"事件处理器
 	discountSaleOrderEventHandler()
+	// 自动注册"满减活动"事件处理器
+	activitySaleOrderEventHandler()
 	// 自动注册"改价打折"事件处理器
 	discountChangePriceSaleOrderEventHandler()
 	// 自动注册"零元打折"事件处理器

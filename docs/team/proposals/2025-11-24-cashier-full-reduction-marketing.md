@@ -11,9 +11,9 @@
 | **提案人** | zh   |
 | **日期**   | 2025-11-24   |
 | **目标版本** | v2.10.0 |
-| **状态**   | 待评审   |
+| **状态**   | 已创建 Spec   |
 | **关联任务** | DooTask #36941 |
-| **关联 Spec** | -      |
+| **关联 Spec** | [story-pos-full-reduction-marketing](../../shared/specs/story-pos-full-reduction-marketing/)      |
 
 ---
 
@@ -179,19 +179,21 @@
 
 ### 评审结论
 
-- [ ] ✅ **批准**：进入技术方案设计阶段
+- [x] ✅ **批准**：进入技术方案设计阶段
 - [ ] 🔄 **修改后批准**：需补充以下内容
 - [ ] ❌ **拒绝**：不符合产品规划或优先级
 
 **评审意见**：
 
 ```
-[记录评审会议的关键讨论和决策]
+已创建 Spec: story-pos-full-reduction-marketing
+涉及终端：POS 收银端、Assistant 助手端
+技术栈：Go (main/)
 ```
 
 **下一步行动**：
 
-- [ ] 创建 Spec：`story-cashier-full-reduction-marketing`
+- [x] 创建 Spec：`story-pos-full-reduction-marketing`
 - [ ] 分配负责人：{待分配}
 - [ ] 目标 Sprint：Sprint {待定}
 

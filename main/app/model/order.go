@@ -49,6 +49,7 @@ type SaleBillCalc struct {
 	DiscountFee       float64 `json:"discount_fee"`        // 折扣费用=销售订单的折扣费用之和
 	MemberDiscountFee float64 `json:"member_discount_fee"` // 会员折扣费用=销售订单的会员折扣费用之和
 	GiftAmount        float64 `json:"gift_amount"`         // 赠菜金额=销售订单的赠菜金额之和
+	ActivityAmount    float64 `json:"activity_amount"`    // 满减活动抵扣金额=销售订单的活动抵扣金额之和
 	FreeAmount        float64 `json:"free_amount"`         // 免单金额=销售订单的免单金额之和
 
 	ProductOriginalAmount float64 `json:"product_original_amount"` //

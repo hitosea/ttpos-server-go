@@ -83,9 +83,9 @@ type InstantOrderPaymentCouponReq struct {
 
 // InstantOrderPaymentActivityReq 选择或取消满减活动请求
 type InstantOrderPaymentActivityReq struct {
-	SaleBillUuid            uint64 `json:"sale_bill_uuid" binding:"required"`             // 销售账单UUID, 必填
-	SaleOrderUuid           uint64 `json:"sale_order_uuid" binding:"required"`            // 销售订单UUID, 必填
-	FullReductionActivityUuid uint64 `json:"full_reduction_activity_uuid"`                  // 满减活动UUID, 0表示取消活动
+	SaleBillUuid              uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID, 必填
+	SaleOrderUuid             uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID, 必填
+	FullReductionActivityUuid uint64 `json:"full_reduction_activity_uuid"`       // 满减活动UUID, 0表示取消活动
 }
 
 // InstantOrderPaymentCreateReq 创建一个支付单请求
@@ -295,7 +295,7 @@ func (r *OrderCartProductBatchCookingReq) Validate() error {
 type ChangeBatchTagReq struct {
 	SaleBillUuid          uint64   `json:"sale_bill_uuid" binding:"required"`           // 销售账单UUID
 	SaleOrderProductUuids []uint64 `json:"sale_order_product_uuids" binding:"required"` // 销售订单商品UUID列表
-	BatchTagUuid          uint64   `json:"batch_tag_uuid" binding:"required"`          // 分批类型UUID
+	BatchTagUuid          uint64   `json:"batch_tag_uuid" binding:"required"`           // 分批类型UUID
 }
 
 func (r *ChangeBatchTagReq) Validate() error {
