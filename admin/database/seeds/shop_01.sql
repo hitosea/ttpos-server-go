@@ -3516,7 +3516,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
     UNIQUE KEY `unique_uuid` (`uuid`),
     UNIQUE KEY `unique_product_package_date` (`product_package_uuid`, `date`),
     PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后厨效率分析表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后厨效率分析表';
 
 -- 满减活动表
 CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity` (
