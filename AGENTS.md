@@ -23,18 +23,28 @@
 
 ---
 
+## 跨仓库协作
+
+当需要查阅前端代码、接口定义、交互实现或跨仓库引用时：
+
+1. 读取根目录下的 `.agents` 文件
+2. 获取 `FRONTEND_PATH` 等配置的绝对路径
+3. 使用 `read_file` 或 `list_dir` 或其他 MCP 服务的工具访问该绝对路径下的文件
+
+---
+
 ## 规范速链
 
-| 主题               | 查看                                                                               |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| 项目入门与结构     | `.cursor/rules/intro.mdc` · `.cursor/rules/structs.mdc`                            |
-| 工作流与知识管理   | `.cursor/rules/workflows.mdc` · `.cursor/rules/knowledge_management.mdc`           |
-| 命名/Go 主项目规范 | `.cursor/rules/go-main.mdc`                                                        |
-| PHP 与数据库规范   | `.cursor/rules/php.mdc` · `.cursor/rules/database.mdc`                             |
-| API 与安全规范     | `.cursor/rules/api.mdc` · `.cursor/rules/security.mdc`                             |
-| 前端/Vue 规范      | `.cursor/rules/vue.mdc`                                                            |
-| BMP/Proto 规范     | `ttpos-bmp/.cursor/rules/go-rules.mdc` · `ttpos-bmp/.cursor/rules/proto-rules.mdc`  · `ttpos-bmp/.cursor/rules/*` |
-| 文档与版本规范     | `.cursor/rules/documentation.mdc` · `.cursor/rules/version.mdc`                    |
+| 主题               | 查看                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| 项目入门与结构     | `.cursor/rules/intro.mdc` · `.cursor/rules/structs.mdc`                                                          |
+| 工作流与知识管理   | `.cursor/rules/workflows.mdc` · `.cursor/rules/knowledge_management.mdc`                                         |
+| 命名/Go 主项目规范 | `.cursor/rules/go-main.mdc`                                                                                      |
+| PHP 与数据库规范   | `.cursor/rules/php.mdc` · `.cursor/rules/database.mdc`                                                           |
+| API 与安全规范     | `.cursor/rules/api.mdc` · `.cursor/rules/security.mdc`                                                           |
+| 前端/Vue 规范      | `.cursor/rules/vue.mdc`                                                                                          |
+| BMP/Proto 规范     | `ttpos-bmp/.cursor/rules/go-rules.mdc` · `ttpos-bmp/.cursor/rules/proto-rules.mdc` · `ttpos-bmp/.cursor/rules/*` |
+| 文档与版本规范     | `.cursor/rules/documentation.mdc` · `.cursor/rules/version.mdc`                                                  |
 
 ---
 

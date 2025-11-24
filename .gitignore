@@ -55,3 +55,6 @@ admin/public/shop
 # MCP Servers
 .spec-workflow/session.json
 certificate
+
+# Agent 相关
+.agents
