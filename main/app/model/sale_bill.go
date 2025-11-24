@@ -107,6 +107,7 @@ type SaleBill struct {
 	BatchTag        *BatchTag         `gorm:"foreignKey:BatchTagUuid;references:uuid"`
 	OrderSource     *OrderSource      `gorm:"foreignKey:OrderSourceUuid;references:uuid"`
 	Nationality     *Nationality      `gorm:"foreignKey:NationalityUuid;references:uuid"`
+	DataManage      *DataManage       `gorm:"foreignKey:DataUuid;references:uuid"`
 }
 
 // 获取自助餐套餐名称

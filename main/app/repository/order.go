@@ -21,6 +21,7 @@ type IOrderRepo interface {
 	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                          // 创建销售账单设置
 	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                            // 更新销售账单设置
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                            // 创建订单
+	CountSaleBill(opts ...DBOption) (int64, error)                                                                             // 统计销售单数据
 	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)      // 创建销售订单自助餐顾客类型
 	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                              // 删除销售订单自助餐顾客类型
 	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)      // 创建销售订单自助餐加钟
@@ -191,6 +192,17 @@ func (r *orderRepo) CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, err
 	return model, nil
 }
 
+// CountSaleBill 统计销售单数据
+func (r *orderRepo) CountSaleBill(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.SaleBill{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, err
+}
+
 // CreateSaleOrderBuffetCustomerType 创建销售订单自助餐顾客类型
 func (r *orderRepo) CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error) {
 	err := r.db.Create(&model).Error
@@ -263,17 +275,19 @@ func (r *orderRepo) GetOrderNum(opts ...DBOption) (int64, error) {
 
 // GetCashierOrderListWithPaginationType 获取收银台订单列表-参数
 type GetCashierOrderListWithPaginationType struct {
-	PageNo           int    // 页码
-	PageSize         int    // 页面大小
-	OrderNo          string // 订单编号
-	DateType         int    // 时间类型,-1=全部、0=今天、1=昨天、2=本周
-	EnableCreateTime bool   // 是否启用创建时间
-	EnablePayTime    bool   // 是否启用支付时间
-	QueryStartTime   uint   // 查询开始时间
-	QueryEndTime     uint   // 查询结束时间
-	Status           int    // 订单状态,-1=全部、0=待支付、1=已支付、2=已取消、3=已完成
-	BillType         int    // 订单类型,-1=全部、0=餐单、1=外卖
-	DiningMethod     int    // 用餐方式,-1=全都、 0-堂食 1-打包
+	PageNo              int    // 页码
+	PageSize            int    // 页面大小
+	OrderNo             string // 订单编号
+	DateType            int    // 时间类型,-1=全部、0=今天、1=昨天、2=本周
+	EnableCreateTime    bool   // 是否启用创建时间
+	EnablePayTime       bool   // 是否启用支付时间
+	QueryStartTime      uint   // 查询开始时间
+	QueryEndTime        uint   // 查询结束时间
+	Status              int    // 订单状态,-1=全部、0=待支付、1=已支付、2=已取消、3=已完成
+	BillType            int    // 订单类型,-1=全部、0=餐单、1=外卖
+	DiningMethod        int    // 用餐方式,-1=全都、 0-堂食 1-打包
+	IsOnlyDataManage    int    // 是否只包含数据管理, 0-不包含、1-包含
+	IsContainDataManage int    // 是否包含数据管理, 0-不包含、1-包含
 }
 
 // MonthlyOrderRank 每月订单排名信息
@@ -298,7 +312,7 @@ func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPagination
 		if param.DiningMethod != -1 {
 			db = db.Where("dining_method = ?", param.DiningMethod)
 		}
-		//  日期类型 -1-全都 1-今天 2-昨天 3-本周
+		//  日期类型 -1-全都 1-今天 2-昨天 3-本周 4-本月 5-本年 6-近7天 7-上个月
 		if param.DateType >= 0 && param.DateType <= 3 {
 			var startTime, endTime int64
 			switch param.DateType {
@@ -308,6 +322,14 @@ func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPagination
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeYesterday)
 			case constant.OrderDateTypeWeek: // 本周
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
+			case constant.OrderDateTypeMonth: // 本月
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisMonth)
+			case constant.OrderDateTypeYear: // 本年
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisYear)
+			case constant.OrderDateTypeLastWeek: // 近7天
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeLastWeek)
+			case constant.OrderDateTypeLastMonth: // 上个月
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeLastMonth)
 			}
 			// db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
 			param.QueryStartTime = uint(startTime)
@@ -358,10 +380,8 @@ func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPagination
 func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType, tz string) (lists []model.SaleBill, total int64, dbOption DBOption, err error) {
 	// 额外条件
 	dbOption = r.getOrderListDBOption(param, tz)
-	//
-	lists, total, err = r.GetOrderListWithPagination(
-		param.PageNo,
-		param.PageSize,
+
+	opts := []DBOption{
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "SaleOrders",
@@ -377,6 +397,12 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			},
 			WithPreload{
 				Query: "SaleOrders.Member",
+			},
+			WithPreload{
+				Query: "DataManage",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereByType(model.DataManageTypeOrder)),
+				},
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
@@ -395,6 +421,32 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 				return db
 			}
 		}(),
+	}
+	if param.IsOnlyDataManage == 0 {
+		if param.IsContainDataManage == 0 {
+			opts = append(opts,
+				func() DBOption {
+					return func(db *gorm.DB) *gorm.DB {
+						return db.Where("uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ?)", model.DataManageTypeOrder)
+					}
+				}(),
+			)
+		}
+	} else {
+		opts = append(opts,
+			func() DBOption {
+				return func(db *gorm.DB) *gorm.DB {
+					return db.Where("uuid IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ?)", model.DataManageTypeOrder)
+				}
+			}(),
+		)
+	}
+
+	//
+	lists, total, err = r.GetOrderListWithPagination(
+		param.PageNo,
+		param.PageSize,
+		opts...,
 	)
 	if err != nil {
 		return nil, 0, dbOption, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)

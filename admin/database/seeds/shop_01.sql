@@ -2319,6 +2319,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company` (
     `auth_start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '授权开始时间(时间戳)',
     `old_company_id` int(11) NOT NULL DEFAULT 0 COMMENT '原商家ID',
     `is_enable_erp` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否启用ERP: 0不启用, 1启用',
+    `is_enable_data_manage` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否启用数据管理: 0不启用, 1启用',
     `last_sync_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '上次同步erp数据完成时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -2449,6 +2450,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff` (
     `password_change_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改密码时间',
     `real_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '姓名',
     `is_super` INT(10) NOT NULL DEFAULT 0 COMMENT '是否为超级管理员0不是,1是',
+    `has_data_permission` TINYINT(3) NOT NULL DEFAULT 0 COMMENT '是否有数据管理权限0否1是',
     `user_type` INT(10) NOT NULL DEFAULT 0 COMMENT '账号类型0总台1门店',
     `is_disable` INT(10) NOT NULL DEFAULT 0 COMMENT '是否禁用1禁用,0未禁用',
     `bind_key` VARCHAR(255) DEFAULT '' COMMENT '绑定的设备key',
@@ -3556,5 +3558,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity_rule` (
     KEY `idx_threshold` (`threshold`),
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='满减活动规则表';
+
+-- 数据管理表
+CREATE TABLE IF NOT EXISTS `ttpos_data_manage` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '主键UUID',
+    `type` int(10) NOT NULL DEFAULT 0 COMMENT '数据类型 0订单',
+    `data_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '数据UUID',
+    `staff_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '员工UUID',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_type_data_uuid` (`type`, `data_uuid`),
+    KEY `idx_staff_uuid` (`staff_uuid`),
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据管理表';
 
 SET FOREIGN_KEY_CHECKS = 1;

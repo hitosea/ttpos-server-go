@@ -31,6 +31,7 @@ type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 	IsCellPrint         bool `json:"is_cell_print"`          // 是否可打印小票
 	IsCellDelete        bool `json:"is_cell_delete"`         // 是否可删除
 	IsCellInvoice       bool `json:"is_cell_invoice"`        // 是否可打印发票
+	IsCellShow          bool `json:"is_cell_show"`           // 是否显示
 }
 
 // BillLists 订单列表响应
@@ -53,10 +54,11 @@ type BillLists struct {
 
 type OrderListMeta struct {
 	dto.PageResponse
-	TotalNum    int64 `json:"total_num"`    // 总数量
-	UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
-	CompleteNum int64 `json:"complete_num"` // 已完成数量
-	CancelNum   int64 `json:"cancel_num"`   // 已取消数量
+	TotalNum      int64   `json:"total_num"`      // 总数量
+	UnpaidNum     int64   `json:"unpaid_num"`     // 待付款数量
+	CompleteNum   int64   `json:"complete_num"`   // 已完成数量
+	CancelNum     int64   `json:"cancel_num"`     // 已取消数量
+	PaymentAmount float64 `json:"payment_amount"` // 实付金额
 }
 
 // OrderListPaginationResp 订单列表分页响应

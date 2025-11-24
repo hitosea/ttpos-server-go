@@ -28,16 +28,18 @@ type StaffHandler struct {
 // @Security JwtToken
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
+// @Param is_filter_super query int false "是否过滤超级管理员"
+// @Param keyword query string false "关键词, 姓名、邮箱、手机号"
 // @Success 200 {object} dto.Response{data=resp.StaffListPaginationResp}
 // @Router /shop/staff/list [get]
 func (h *StaffHandler) GetStaffList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var pageReq dto.PageReq
-	if err := c.ShouldBindQuery(&pageReq); err != nil {
-		helper.HandleValidationError(c, err, pageReq, dto.PageReqMessage)
+	var getStaffListReq req.GetStaffListReq
+	if err := c.ShouldBindQuery(&getStaffListReq); err != nil {
+		helper.HandleValidationError(c, err, getStaffListReq, req.GetStaffListReqReqMessage)
 		return
 	}
-	res, err := h.staffSrv.PaginateGetStaffs(ctx, pageReq)
+	res, err := h.staffSrv.PaginateGetStaffs(ctx, getStaffListReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
 		return

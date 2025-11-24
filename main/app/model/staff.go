@@ -17,6 +17,7 @@ type Staff struct {
 	PasswordChangeTime  int64  `gorm:"column:password_change_time;type:int(10) unsigned;default:0;comment:修改密码时间;NOT NULL" json:"password_change_time"`
 	RealName            string `gorm:"column:real_name;type:varchar(255);comment:姓名;NOT NULL" json:"real_name"`
 	IsSuper             int    `gorm:"column:is_super;type:tinyint(3);default:0;comment:是否为超级管理员0不是,1是;NOT NULL" json:"is_super"`
+	HasDataPermission   int    `gorm:"column:has_data_permission;type:tinyint(3);default:0;comment:是否有数据管理权限0否1是;NOT NULL" json:"has_data_permission"`
 	UserType            int    `gorm:"column:user_type;type:tinyint(1);default:0;comment:账号类型0总台1门店;NOT NULL" json:"user_type"`
 	IsDisable           int    `gorm:"column:is_disable;type:tinyint(3);default:0;comment:是否禁用1禁用,0未禁用;NOT NULL" json:"is_disable"`
 	BindKey             string `gorm:"column:bind_key;type:varchar(255);comment:绑定的设备key" json:"bind_key"`

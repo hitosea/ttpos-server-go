@@ -62,6 +62,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			IsCellPrint:         !isSplit,
 			IsCellInvoice:       !isSplit && bill.Status == constant.SaleBillStatusComplete,
 			IsCellDelete:        bill.Status == constant.SaleBillStatusCanceled,
+			IsCellShow:          bill.DataManage == nil,
 		}
 		// 拆单
 		if isSplit {
@@ -190,6 +191,8 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 	unpaidNum := getOrderNum(constant.SaleBillStatusPending)
 	completeNum := getOrderNum(constant.SaleBillStatusComplete)
 	cancelNum := getOrderNum(constant.SaleBillStatusCanceled)
+	// 获取实付金额
+	paymentAmountDec := decimal.NewFromFloat(0)
 
 	// 返回响应对象
 	return resp.OrderListPaginationResp{
@@ -200,10 +203,11 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 				PageSize: req.PageSize,
 				Total:    total,
 			},
-			TotalNum:    unpaidNum + completeNum + cancelNum,
-			UnpaidNum:   unpaidNum,
-			CompleteNum: completeNum,
-			CancelNum:   cancelNum,
+			TotalNum:      unpaidNum + completeNum + cancelNum,
+			UnpaidNum:     unpaidNum,
+			CompleteNum:   completeNum,
+			CancelNum:     cancelNum,
+			PaymentAmount: paymentAmountDec.Round(2).InexactFloat64(),
 		},
 	}, nil
 }

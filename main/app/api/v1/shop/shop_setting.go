@@ -25,6 +25,7 @@ type SettingHandler struct {
 	settingSrv    setting.ISrv
 	otherSrv      service.IOtherSrv
 	uploadFileSrv service.IUploadFileSrv
+	dataManageSrv service.IDataManageSrv
 }
 
 // SaveStoreSetting 保存门店设置
@@ -683,6 +684,50 @@ func (h *SettingHandler) UploadCashierCarousel(c *gin.Context) {
 	helper.Success(c, uploadFileResp)
 }
 
+// GetDataManage 获取数据管理
+// @Summary 获取数据管理
+// @Description 获取数据管理
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.GetDataManageResp}
+// @Router /shop/setting/data_manage [get]
+func (h *SettingHandler) GetDataManage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result, err := h.dataManageSrv.GetDataManage(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// SetDataManage 设置数据管理
+// @Summary 设置数据管理
+// @Description 设置数据管理
+// @Tags 商家端.数据管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SetDataManageReq true "设置数据管理"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/data_manage/set [post]
+func (h *SettingHandler) SetDataManage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var setDataManageReq req.SetDataManageReq
+	if err := c.ShouldBindJSON(&setDataManageReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.dataManageSrv.SetDataManage(ctx, setDataManageReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "设置成功")
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -705,6 +750,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		otherSrv:      otherSrv,
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
 		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv),
+		dataManageSrv: service.NewDataManageSrv(dbm),
 	}
 
 	// 需要认证
@@ -737,5 +783,8 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/sync", wrapper.Sync)                         // 获取总部最新数据
 		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)     // 获取同步任务列表
 		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail) // 获取同步任务详情
+		// 数据管理
+		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
+		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理
 	}
 }
