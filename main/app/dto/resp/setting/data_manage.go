@@ -3,8 +3,10 @@ package setting
 // GetDataManageInfoResp 获取数据管理信息响应
 type GetDataManageResp struct {
 	IsEnableDataManage bool                 `json:"is_enable_data_manage"` // 状态: false-关闭 true-开启
-	StaffCount         int64                `json:"staff_count"`           // 操作人员数量
-	OrderCount         int64                `json:"order_count"`           // 订单数量
+	StaffCount         int                  `json:"staff_count"`           // 操作人员数量
+	OrderCount         int                  `json:"order_count"`           // 订单数量
+	StaffUuids         []uint64             `json:"staff_uuids"`           // 操作人员UUID列表
+	OrderUuids         []uint64             `json:"order_uuids"`           // 订单UUID列表
 	Statistics         DataManageStatistics `json:"statistics"`            // 统计信息
 }
 

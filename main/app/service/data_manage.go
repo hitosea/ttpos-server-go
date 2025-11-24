@@ -56,22 +56,25 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	dataManageRepo := repository.NewDataManageRepo(db)
 	statisticsRepo := repository.NewStatisticsRepo(db)
 
+	staffUuids := []uint64{}
+	orderUuids := []uint64{}
+
 	// 获取操作人员数量
-	staffCount, err := staffRepo.CountStaff(
+	staffs := staffRepo.GetStaffs(
 		staffRepo.WhereIsSuper(0),
 		staffRepo.WhereHasDataPermission(1),
 		commonRepo.WhereBySoftDelete(),
 	)
-	if err != nil {
-		return nil, errors.New("获取数据管理信息失败")
+	for _, staff := range staffs {
+		staffUuids = append(staffUuids, staff.Uuid)
 	}
 
 	// 获取订单数量
-	orderCount, err := dataManageRepo.Count(
+	dataManages := dataManageRepo.List(
 		dataManageRepo.WhereByType(model.DataManageTypeOrder),
 	)
-	if err != nil {
-		return nil, errors.New("获取数据管理信息失败")
+	for _, dataManage := range dataManages {
+		orderUuids = append(orderUuids, dataManage.DataUuid)
 	}
 
 	// 获取统计信息
@@ -88,8 +91,10 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 
 	return &setting_resp.GetDataManageResp{
 		IsEnableDataManage: company.IsOpenDataManage(),
-		StaffCount:         staffCount,
-		OrderCount:         orderCount,
+		StaffCount:         len(staffUuids),
+		OrderCount:         len(orderUuids),
+		StaffUuids:         staffUuids,
+		OrderUuids:         orderUuids,
 		Statistics: setting_resp.DataManageStatistics{
 			SaleAmount:     statisticsData.TotalSaleAmount.Float64,
 			ReceivedPrice:  statisticsData.TotalReceivedAmount.Float64,

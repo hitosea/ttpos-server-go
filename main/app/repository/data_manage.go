@@ -11,6 +11,7 @@ type IDataManageRepo interface {
 	WhereByType(typ int) DBOption // 根据数据类型查询
 
 	Count(opts ...DBOption) (int64, error)         // 统计数据管理数据
+	List(opts ...DBOption) []model.DataManage      // 查询数据管理数据
 	Creates(dataManages []*model.DataManage) error // 批量创建数据管理数据
 	Delete(opts ...DBOption) error                 // 删除数据管理数据
 }
@@ -50,6 +51,17 @@ func (r *dataManageRepo) Count(opts ...DBOption) (int64, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+// List 查询数据管理数据
+func (r *dataManageRepo) List(opts ...DBOption) []model.DataManage {
+	var dataManages []model.DataManage
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Find(&dataManages)
+	return dataManages
 }
 
 // Delete 删除数据管理数据
