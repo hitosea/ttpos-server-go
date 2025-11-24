@@ -36,6 +36,8 @@ grpc:
 # Nacos 配置
 nacos:
   server:
+    addresses: "$NACOS_SERVER_ADDRESSES"  # 多实例配置（格式：host1:port1,host2:port2,host3:port3），优先使用
+    # 兼容旧配置（单实例）
     ip: $NACOS_SERVER_IP
     port: $NACOS_SERVER_PORT
   config:

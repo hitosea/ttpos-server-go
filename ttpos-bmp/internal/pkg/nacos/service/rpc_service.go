@@ -105,10 +105,57 @@ func (s *rpcServer) InitHttp(ctx context.Context) {
 	//.SetGroupName("DEFAULT_GROUP"))
 }
 
+// GetNacosAddress 获取 Nacos 地址（支持多实例，返回逗号分隔的地址字符串）
+// GoFrame nacos.New() 支持逗号分隔的多个地址，格式：host1:port1,host2:port2,host3:port3
+// Nacos SDK 会自动处理多实例连接、故障转移和负载均衡
 func GetNacosAddress(ctx context.Context) string {
+	// 优先使用 addresses 配置（多实例）
+	if addresses := g.Cfg().MustGetWithEnv(ctx, "nacos.server.addresses", "").String(); len(addresses) > 0 {
+		// 验证地址格式
+		addressList := gstr.Split(addresses, ",")
+		validAddresses := make([]string, 0, len(addressList))
+		for _, addr := range addressList {
+			addr = gstr.Trim(addr)
+			if isValidAddress(addr) {
+				validAddresses = append(validAddresses, addr)
+			} else {
+				g.Log().Warningf(ctx, "无效的 Nacos 地址格式，将忽略: %s", addr)
+			}
+		}
+		if len(validAddresses) > 0 {
+			result := gstr.Join(validAddresses, ",")
+			g.Log().Infof(ctx, "使用多实例 Nacos 配置: %s", result)
+			return result
+		}
+		g.Log().Warningf(ctx, "多实例配置中没有有效地址，将使用单实例配置")
+	}
+
+	// 兼容单实例配置
 	nacosServerIp := g.Cfg().MustGetWithEnv(ctx, "nacos.server.ip")
 	nacosServerPort := g.Cfg().MustGetWithEnv(ctx, "nacos.server.port")
 	address := fmt.Sprintf("%v:%v", nacosServerIp, nacosServerPort)
-	g.Log().Debugf(ctx, "注册中心配置: %v:%v", nacosServerIp, nacosServerPort)
+	g.Log().Debugf(ctx, "使用单实例 Nacos 配置: %s", address)
 	return address
+}
+
+// isValidAddress 验证 Nacos 地址格式是否正确
+// 地址格式应为 host:port
+func isValidAddress(addr string) bool {
+	if len(addr) == 0 {
+		return false
+	}
+	parts := gstr.Split(addr, ":")
+	if len(parts) != 2 {
+		return false
+	}
+	// 验证 host 不为空
+	if len(gstr.Trim(parts[0])) == 0 {
+		return false
+	}
+	// 验证 port 不为空
+	port := gstr.Trim(parts[1])
+	if len(port) == 0 {
+		return false
+	}
+	return true
 }
