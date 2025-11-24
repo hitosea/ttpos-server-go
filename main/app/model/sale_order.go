@@ -67,20 +67,25 @@ type SaleOrder struct {
 	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,4);default:0;comment:积分抵扣汇率,1积分抵扣多少元" json:"points_exchange_rate"`
 	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
 
+	// 满减活动
+	FullReductionActivityUuid uint64 `gorm:"column:full_reduction_activity_uuid;type:bigint(20);default:0;comment:订单使用的满减活动UUID" json:"full_reduction_activity_uuid"`
+
 	// 结账完成后才记录的字段
-	CouponAmount         float64 `gorm:"column:coupon_amount;type:decimal(12,2);default:0;comment:优惠券抵扣金额，实际抵扣金额" json:"coupon_amount"`
-	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
-	ChangeAmount         float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
-	ZeroCheckoutFee      float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
-	FinalPrice           float64 `gorm:"column:final_price;type:decimal(12,2);default:0;comment:最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额" json:"final_price"`
-	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
-	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
-	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
-	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例或每人赠送积分数量。赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
-	GiftPointsType       uint8   `gorm:"column:gift_points_type;type:tinyint(1);default:0;comment:赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送" json:"gift_points_type"`
-	MemberLevelName      string  `gorm:"column:member_level_name;type:varchar(255);default:'';comment:会员等级名称" json:"member_level_name"`
-	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
-	Unit                 string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
+	CouponAmount                 float64 `gorm:"column:coupon_amount;type:decimal(12,2);default:0;comment:优惠券抵扣金额，实际抵扣金额" json:"coupon_amount"`
+	ActivityAmount               float64 `gorm:"column:activity_amount;type:decimal(20,8);default:0;comment:满减活动抵扣金额（结账完成后记录）" json:"activity_amount"`
+	FullReductionActivityMessage string  `gorm:"column:full_reduction_activity_message;type:varchar(255);default:'';comment:满减规则信息（如\"满200减20\"）" json:"full_reduction_activity_message"`
+	PaymentAmount                float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
+	ChangeAmount                 float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
+	ZeroCheckoutFee              float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
+	FinalPrice                   float64 `gorm:"column:final_price;type:decimal(12,2);default:0;comment:最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额" json:"final_price"`
+	PaymentCommissionFee         float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
+	GiftAmount                   float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
+	GiftPoints                   float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
+	GiftPointsRate               float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例或每人赠送积分数量。赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
+	GiftPointsType               uint8   `gorm:"column:gift_points_type;type:tinyint(1);default:0;comment:赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送" json:"gift_points_type"`
+	MemberLevelName              string  `gorm:"column:member_level_name;type:varchar(255);default:'';comment:会员等级名称" json:"member_level_name"`
+	MemberBalance                float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
+	Unit                         string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
 
 	// erp相关
 	ErpProductsInvoiceName string  `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称;NOT NULL" json:"erp_products_invoice_name"`

@@ -173,6 +173,7 @@ type InstantOrderPaymentInfoResp struct {
 	PaymentMethods PaymentMethodList       `json:"payment_methods"`           // 支付方式列表
 	Amounts        PaymentMethodAmountList `json:"amounts"`                   // 支付方式列表及订单金额信息
 	PointsExchange PointsExchangeInfo      `json:"points_exchange,omitempty"` // 积分抵扣信息
+	ActivityList   FullReductionActivityList `json:"activity_list"`            // 满减活动列表
 }
 
 type CouponList struct {
@@ -345,4 +346,31 @@ type InstantOrderMember struct {
 type InstantOrderMemberExtra struct {
 	IsCheckout        bool `json:"is_checkout"`         // 是否结账
 	IsPartialCheckout bool `json:"is_partial_checkout"` // 是否部分结账
+}
+
+// FullReductionActivityList 满减活动列表
+type FullReductionActivityList struct {
+	List []FullReductionActivityItem `json:"list"`
+}
+
+// FullReductionActivityItem 满减活动项
+type FullReductionActivityItem struct {
+	Uuid           uint64             `json:"uuid"`             // 活动UUID
+	LocaleName     dto.LocaleResponse `json:"locale_name"`      // 活动多语言名称
+	ActivityType   uint               `json:"activity_type"`    // 活动类型：1-阶梯满减，2-循环满减
+	StartDate      string             `json:"start_date"`       // 开始日期
+	EndDate        string             `json:"end_date"`         // 结束日期
+	StartTime      string             `json:"start_time"`       // 开始时间（HH:mm）
+	EndTime        string             `json:"end_time"`         // 结束时间（HH:mm）
+	IsAllDay       bool               `json:"is_all_day"`       // 是否全天
+	Rules           []ActivityRule     `json:"rules"`            // 活动规则列表
+	IsAvailable    bool               `json:"is_available"`     // 是否可用
+	IsSelected     bool               `json:"is_selected"`      // 是否已选中
+	DiscountAmount float64            `json:"discount_amount"`  // 抵扣金额（如果已选中）
+}
+
+// ActivityRule 活动规则
+type ActivityRule struct {
+	Threshold float64 `json:"threshold"` // 满减阈值
+	Discount  float64 `json:"discount"`  // 减价金额
 }

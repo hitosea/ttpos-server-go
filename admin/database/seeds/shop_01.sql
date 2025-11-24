@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `custom_discount_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '自定义折扣费用,关联销售订单的会员折扣费用之和',
     `member_discount_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '会员折扣费用,关联销售订单的会员折扣费用之和',
     `gift_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '赠菜金额,关联销售订单的赠菜金额之和',
+    `activity_amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '满减活动抵扣金额（所有sale_order的满减扣减金额总和）',
     `free_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '免单金额,关联销售订单的免单金额之和',
 
     `payment_commission_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '支付手续费,多次支付的支付手续费之和',
@@ -115,8 +116,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `pay_points_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '抵扣金额,积分 抵扣了多少金额',
     `points_exchange_rate` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
     `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
+    -- 满减活动
+    `full_reduction_activity_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单使用的满减活动UUID',
     -- 结账完成后才记录的字段
     `coupon_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '优惠券抵扣金额,抵扣了多少金额',
+    `activity_amount` DECIMAL(20, 8) NOT NULL DEFAULT 0 COMMENT '满减活动抵扣金额（结账完成后记录）',
+    `full_reduction_activity_message` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '满减规则信息（如"满200减20"）',
     `payment_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
     `change_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '找零金额,结账完成后才记录',
     `zero_checkout_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
