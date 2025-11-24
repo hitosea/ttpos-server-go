@@ -130,13 +130,13 @@ type ProductParams struct {
 	Products                        []ProductRequest `json:"products"`                            // 套餐商品请求列表。当商品是套餐商品时，该字段有值
 	ProductPackageUuid              uint64           `json:"product_package_uuid"`                // 套餐商品uuid。当商品是套餐商品时，该字段有值
 
-	isPackageProduct        bool   `json:"is_package_product"`         // 是否是套餐商品
-	packageSubProductParams string `json:"package_sub_product_params"` // 套餐子商品参数（JSON格式）
+	isPackageProduct        bool   // 是否是套餐商品
+	packageSubProductParams string // 套餐子商品参数（JSON格式）
 
-	subProducts         []ProductParams `json:"sub_products"`           // 套餐子商品列表。当商品是套餐商品时，该字段有值
-	isPackageSubProduct bool            `json:"is_package_sub_product"` // 是否是套餐子商品
-	packageUuid         uint64          `json:"package_uuid"`           // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
-	BatchTagUuid        uint64          `json:"batch_tag_uuid"`         // 分批类型UUID, 可选（前置模式时使用）
+	subProducts         []ProductParams // 套餐子商品列表。当商品是套餐商品时，该字段有值
+	isPackageSubProduct bool            // 是否是套餐子商品
+	packageUuid         uint64          // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
+	BatchTagUuid        uint64          `json:"batch_tag_uuid"` // 分批类型UUID, 可选（前置模式时使用）
 }
 
 func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {

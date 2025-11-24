@@ -11,7 +11,7 @@ type MaterialCategoryAddReq struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
 	Code       string             `json:"code"`        // 物品类别编码
 
-	uuid uint64 `json:"uuid"` // 物品类别UUID。用于内部方法调用时
+	uuid uint64 // 物品类别UUID。用于内部方法调用时
 }
 
 func (r *MaterialCategoryAddReq) GetUuid() uint64 {
