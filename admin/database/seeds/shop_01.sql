@@ -471,6 +471,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_batch_tag` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '分批类型名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    `abbreviation` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称缩写',
     `color` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '颜色,如#FF0000',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序(数字越小越靠前)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -925,7 +926,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
 CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
-    `name` VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '原料名称',
+    `name` TEXT COMMENT '原料名称',
     `code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料编码',
     `valuation` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '估值率',
     `init_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '期初库存',
@@ -993,7 +994,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_stock_alert_log` (
 CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料单位ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料单位名称',
+    `name` TEXT COMMENT '原料单位名称',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '转换率',
     `from_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克',
@@ -2248,7 +2249,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_food_reason` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '退菜原因表';
 
-CREATE TABLE IF NOT EXISTS `order_remark` (
+CREATE TABLE IF NOT EXISTS `ttpos_order_remark` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '整单备注ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
@@ -3202,6 +3203,7 @@ CREATE TABLE `ttpos_warehouse_item` (
   `material_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '物品UUID',
   `material_code` varchar(255) DEFAULT '' COMMENT '物品编码',
   `stock` decimal(22,8) DEFAULT 0.00 COMMENT '库存数量',
+  `valuation` decimal(22,8) DEFAULT 0.00 COMMENT '估值单价',
   `reserved_stock` decimal(22,8) DEFAULT 0.00 COMMENT '预留库存数量',
   `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间',

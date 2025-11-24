@@ -165,3 +165,7 @@ chown-all:
 # 更新 MCP Token
 update-mcp-token:
 	bash /home/coder/workspaces/update_mcp_token.sh
+
+# 验证数据库结构
+verify-db-structure:
+	cd ./main && go run main.go verify-db-structure

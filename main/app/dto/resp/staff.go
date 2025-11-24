@@ -36,7 +36,11 @@ type Role struct {
 }
 
 type RoleDetailResp struct {
-	Uuid        uint64   `json:"uuid"`         // 角色UUID
-	AccessUuids []uint64 `json:"access_uuids"` // 权限ID列表
-	Name        string   `json:"name"`         // 角色名称
+	Uuid              uint64   `json:"uuid"`                // 角色UUID
+	AccessUuids       []uint64 `json:"access_uuids"`        // 权限ID列表
+	Name              string   `json:"name"`                // 角色名称
+	StaffCount        int      `json:"staff_count"`         // 关联员工数量
+	StaffUuids        []uint64 `json:"staff_uuids"`         // 关联员工UUID列表（编辑时返回）
+	SelectedLeafCount int      `json:"selected_leaf_count"` // 已选择叶子节点权限数量
+	TotalLeafCount    int      `json:"total_leaf_count"`    // 公司管理APP、收银机、点餐助手三个权限组的叶子节点数量之和
 }

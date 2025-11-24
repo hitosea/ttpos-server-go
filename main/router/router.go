@@ -86,6 +86,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterAuthHandlers(shopGroup, dbm, cache)                // 认证
 			shop.RegisterStaffHandlers(shopGroup, dbm, cache)               // 管理员管理
+			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                 // 角色管理
 			shop.RegisterSettingHandlers(shopGroup, dbm, cache)             // 设置
 			shop.RegisterProductHandlers(shopGroup, dbm, cache)             // 商品
 			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)        // 商品标签

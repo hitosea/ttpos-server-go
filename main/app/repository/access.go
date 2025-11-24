@@ -40,7 +40,7 @@ func (r *accessRepo) GetPermissions(opts ...DBOption) ([]model.Access, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Order("sort asc, create_time asc").Find(&access).Error
+	err := db.Order("sort asc, create_time asc, id asc").Find(&access).Error
 	return access, errors.WithMessage(err)
 }
 
