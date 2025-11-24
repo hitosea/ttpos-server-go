@@ -840,6 +840,12 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 			cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
 		}
 	}
+	// 点餐时轮播图/视频处理
+	if len(cashier.OrderCarousel) > 0 && ginContext != nil {
+		for i, item := range cashier.OrderCarousel {
+			cashier.OrderCarousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
+		}
+	}
 	defaultCashier := s.getDefaultCashier(languageList)
 	// 接单语音，设备本地处理，不需要合并
 	cashier.IsAutoVoice = ""
@@ -860,6 +866,9 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 
 	if len(defaultCashier.Carousel) == 0 {
 		defaultCashier.Carousel = make([]setting.CarouselItem, 0)
+	}
+	if len(defaultCashier.OrderCarousel) == 0 {
+		defaultCashier.OrderCarousel = make([]setting.CarouselItem, 0)
 	}
 	if len(defaultCashier.LanguageList) == 0 {
 		defaultCashier.LanguageList = make([]dto.LanguageItem, 0)
@@ -1488,6 +1497,11 @@ func (s *Srv) EditCashierSetting(ctx context.Context, cashierSettingReq req.Save
 	// 更新点餐时展示模式
 	if cashierSettingReq.OrderDisplayMode != "" {
 		cashierSetting.OrderDisplayMode = cashierSettingReq.OrderDisplayMode
+	}
+
+	// 更新点餐时轮播内容
+	if cashierSettingReq.OrderCarousel != nil {
+		cashierSetting.OrderCarousel = cashierSettingReq.OrderCarousel
 	}
 
 	// 更新点餐时轮播间隔（Validate() 已处理 "0" 和空字符串的情况，统一设置为 "10"）

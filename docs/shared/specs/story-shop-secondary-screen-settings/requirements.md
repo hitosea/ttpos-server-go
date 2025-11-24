@@ -63,32 +63,49 @@
 
 1. **WHEN** 商户管理员在新管理端打开收银机设置页面 **THEN** 系统 **SHALL** 显示副屏设置相关配置项
 2. **WHEN** 管理员配置副屏设置并保存 **THEN** 系统 **SHALL** 通过 main 模块的 API 接口保存到数据库
-3. **WHEN** 管理员查看收银机设置 **THEN** 系统 **SHALL** 显示已保存的副屏配置信息
+3. **WHEN** 管理员查看收银机设置 **THEN** 系统 **SHALL** 通过 `GET /api/v1/shop/setting/cashier` 接口返回已保存的副屏配置信息，包含字段（`carousel`, `no_order_carousel_interval`, `order_display_mode`, `order_carousel`, `order_carousel_interval`）
 
 #### 具体要求
 
 - [x] 0.1 在 main 模块中创建收银机设置保存接口（`main/app/api/v1/shop/shop_setting.go` - `SaveCashierSetting`）
-- [x] 0.2 创建 Request DTO（`main/app/dto/req/cashier_setting.go` - `SaveCashierSettingReq`），包含新字段参数（`carousel`, `no_order_carousel_interval`, `order_display_mode`, `order_carousel_interval`）
-- [x] 0.3 在 DTO 中实现 `Validate()` 方法，进行参数验证（范围检查、枚举值验证、轮播内容数量限制）
+- [x] 0.2 创建 Request DTO（`main/app/dto/req/cashier_setting.go` - `SaveCashierSettingReq`），包含新字段参数（`carousel`, `no_order_carousel_interval`, `order_display_mode`, `order_carousel`, `order_carousel_interval`）
+- [x] 0.3 在 DTO 中实现 `Validate()` 方法，进行参数验证（范围检查、枚举值验证、轮播内容数量限制：`carousel` 和 `order_carousel` 最多15个）
 - [x] 0.4 创建 Service 层方法（`main/app/service/setting/setting.go` - `EditCashierSetting`），保存到 `setting` 表的 `cashier` 配置 JSON 中
 - [x] 0.5 注册 API 路由（`POST /api/v1/shop/setting/cashier`）
 - [x] 0.6 创建文件上传接口（`POST /api/v1/shop/setting/cashier/carousel/upload`），支持图片和视频上传
-- [ ] 0.7 前端页面展示新配置项（由前端团队实现，本次不涉及）
+- [x] 0.7 创建获取收银机设置接口（`GET /api/v1/shop/setting/cashier`），仅返回副屏相关的字段（`carousel`, `no_order_carousel_interval`, `order_display_mode`, `order_carousel`, `order_carousel_interval`）
+- [x] 0.8 创建 Response DTO（`main/app/dto/resp/setting/cashier_setting.go` - `CashierSecondaryScreenResp`），仅包含副屏相关字段
+- [ ] 0.9 前端页面展示新配置项（由前端团队实现，本次不涉及）
 
 **接口说明**：
 
-**接口 1: 保存收银机设置**
+**接口 1: 获取收银机设置**
+- **接口路径**: `/api/v1/shop/setting/cashier`（main 模块）
+- **请求方法**: GET
+- **响应格式**: 标准 API 响应格式（`{code, message, data{CashierSecondaryScreenResp}}`）
+- **响应数据**: `CashierSecondaryScreenResp` 结构体，仅包含副屏相关的字段：
+  - `carousel` - 轮播内容列表（图片+视频，最多15个）
+  - `no_order_carousel_interval` - 未点餐时轮播间隔（字符串，单位：秒）
+  - `order_display_mode` - 点餐时展示模式（carousel/order/order_carousel）
+  - `order_carousel` - 点餐时轮播内容列表（图片+视频，最多15个）
+  - `order_carousel_interval` - 点餐时轮播间隔（字符串，单位：秒）
+- **实现位置**: 
+  - API Handler: `main/app/api/v1/shop/shop_setting.go` - `GetCashierSetting`
+  - Response DTO: `main/app/dto/resp/setting/cashier_setting.go` - `CashierSecondaryScreenResp`
+  - Service: `main/app/service/setting/setting.go` - `GetCashierSetting`
+
+**接口 2: 保存收银机设置**
 - **接口路径**: `/api/v1/shop/setting/cashier`（main 模块）
 - **请求方法**: POST
-- **请求参数**: `SaveCashierSettingReq` DTO，包含 `carousel`、`no_order_carousel_interval`（字符串类型）、`order_display_mode`、`order_carousel_interval`（字符串类型）字段
-- **参数验证**: 在 DTO 的 `Validate()` 方法中进行验证（轮播内容数量限制、轮播间隔字符串转 int 后范围验证、展示模式枚举值）。空字符串或"0"时自动设置为默认值"10"
+- **请求参数**: `SaveCashierSettingReq` DTO，包含 `carousel`、`no_order_carousel_interval`（字符串类型）、`order_display_mode`、`order_carousel`、`order_carousel_interval`（字符串类型）字段
+- **参数验证**: 在 DTO 的 `Validate()` 方法中进行验证（轮播内容数量限制：`carousel` 和 `order_carousel` 最多15个、轮播间隔字符串转 int 后范围验证、展示模式枚举值）。空字符串或"0"时自动设置为默认值"10"
 - **响应格式**: 标准 API 响应格式（`{code, message, data{}}`）
 - **实现位置**: 
   - API Handler: `main/app/api/v1/shop/shop_setting.go` - `SaveCashierSetting`
   - Request DTO: `main/app/dto/req/cashier_setting.go` - `SaveCashierSettingReq`
   - Service: `main/app/service/setting/setting.go` - `EditCashierSetting`
 
-**接口 2: 上传收银机轮播内容**
+**接口 3: 上传收银机轮播内容**
 - **接口路径**: `/api/v1/shop/setting/cashier/carousel/upload`（main 模块）
 - **请求方法**: POST
 - **Content-Type**: `multipart/form-data`
@@ -269,9 +286,11 @@
 1. **未点餐时轮播间隔**: 支持设置未点餐时轮播间隔（字符串格式，10-120秒，默认"10"），通过 `SaveCashierSettingReq.Validate()` 验证（字符串转 int 后验证范围），保存到 `cashier.no_order_carousel_interval`
 2. **点餐时展示模式**: 支持设置点餐时展示模式（carousel/order/order_carousel），通过 `SaveCashierSettingReq.Validate()` 验证，保存到 `cashier.order_display_mode`
 3. **点餐时轮播间隔**: 支持设置点餐时轮播间隔（字符串格式，10-120秒，默认"10"），通过 `SaveCashierSettingReq.Validate()` 验证（字符串转 int 后验证范围），保存到 `cashier.order_carousel_interval`
-4. **轮播内容数量限制**: 轮播内容（carousel）最多15个图片或视频，在 `SaveCashierSettingReq.Validate()` 方法中进行数量验证
-5. **配置获取**: 收银端通过现有 `GetCashierSetting` 接口能够正确获取扩展后的副屏配置信息（包含新增字段）
-6. **代码架构**: DTO 层包含 `Validate()` 方法，API 层调用验证方法，Service 层处理业务逻辑，符合分层设计原则
+4. **轮播内容数量限制**: 轮播内容（`carousel` 和 `order_carousel`）最多15个图片或视频，在 `SaveCashierSettingReq.Validate()` 方法中进行数量验证
+5. **点餐时轮播内容**: 支持设置点餐时轮播内容（`order_carousel`），结构和 `carousel` 一致，保存到 `cashier.order_carousel`
+6. **配置获取（新管理端）**: 新管理端通过 `GET /api/v1/shop/setting/cashier` 接口能够正确获取副屏配置信息，返回字段包括（`carousel`, `no_order_carousel_interval`, `order_display_mode`, `order_carousel`, `order_carousel_interval`），使用 `CashierSecondaryScreenResp` 响应结构体
+7. **配置获取（收银端）**: 收银端通过现有 `GetCashierSetting` 接口能够正确获取扩展后的副屏配置信息（包含新增字段，包括 `order_carousel`）
+8. **代码架构**: DTO 层包含 `Validate()` 方法，API 层调用验证方法，Service 层处理业务逻辑，符合分层设计原则
 
 ### 测试验收
 
@@ -321,8 +340,9 @@
 - 现有收银机设置服务：`main/app/service/setting/setting.go` - `GetCashierSetting` 方法
 - 现有设置存储：`setting` 表，key 为 `cashier`，values 为 JSON 格式
 - 现有轮播内容：`cashier.carousel` 字段（已存在，无需修改）
-- 新管理端 API：已在 `main/app/api/v1/shop/shop_setting.go` 中创建 `SaveCashierSetting` Handler
+- 新管理端 API：已在 `main/app/api/v1/shop/shop_setting.go` 中创建 `SaveCashierSetting` 和 `GetCashierSetting` Handler
 - Request DTO：`main/app/dto/req/cashier_setting.go` - `SaveCashierSettingReq`（包含 `Validate()` 方法）
+- Response DTO：`main/app/dto/resp/setting/cashier_setting.go` - `CashierSecondaryScreenResp`（仅包含副屏相关四个字段）
 - Service 方法：`main/app/service/setting/setting.go` - `EditCashierSetting` 方法
 
 ### 服务依赖
