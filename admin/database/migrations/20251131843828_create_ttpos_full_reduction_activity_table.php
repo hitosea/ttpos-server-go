@@ -39,8 +39,8 @@ class CreateTTPOSFullReductionActivityTable extends Migrator
         $table->addColumn('multi_language_name_uuid', 'biginteger', ['comment' => '多语言名称UUID', 'default' => 0, 'signed' => false]);
         $table->addColumn('start_date', 'integer', ['comment' => '活动开始日期（时间戳，当天00:00:00）', 'default' => 0, 'signed' => false]);
         $table->addColumn('end_date', 'integer', ['comment' => '活动结束日期（时间戳，当天23:59:59）', 'default' => 0, 'signed' => false]);
-        $table->addColumn('start_time', 'string', ['limit' => 10, 'comment' => '适用时间开始（格式：HH:mm，如09:00）', 'default' => '']);
-        $table->addColumn('end_time', 'string', ['limit' => 10, 'comment' => '适用时间结束（格式：HH:mm，如22:00）', 'default' => '']);
+        $table->addColumn('start_time', 'string', ['limit' => 255, 'comment' => '适用时间开始（格式：HH:mm，如09:00）', 'default' => '']);
+        $table->addColumn('end_time', 'string', ['limit' => 255, 'comment' => '适用时间结束（格式：HH:mm，如22:00）', 'default' => '']);
         $table->addColumn('is_all_day', 'integer', ['comment' => '是否全天（1=全天，0=特定时段）', 'default' => 0]);
         $table->addColumn('reduction_type', 'integer', ['comment' => '满减方式（0=阶梯满减，1=循环满减）', 'default' => 0]);
         $table->addColumn('is_disabled', 'integer', ['comment' => '是否失效（1=失效，0=未失效）', 'default' => 0]);

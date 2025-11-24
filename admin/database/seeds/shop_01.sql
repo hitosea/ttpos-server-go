@@ -3516,24 +3516,43 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
     PRIMARY KEY (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后厨效率分析表';
 
--- 任务中心表
-CREATE TABLE IF NOT EXISTS `ttpos_task` (
-    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
-    `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
-    `type` varchar(50) NOT NULL DEFAULT '' COMMENT '任务类型',
-    `status` int(4) NOT NULL DEFAULT 0 COMMENT '任务状态',
-    `params` text COMMENT '任务参数',
-    `result` text COMMENT '任务结果',
-    `error` text COMMENT '任务错误',
-    `log` text COMMENT '任务日志',
-    `priority` int(10) NOT NULL DEFAULT 0 COMMENT '优先级,数字越大优先级越高',
-    `is_read` int(10) NOT NULL DEFAULT 0 COMMENT '是否已读,0:未读,1:已读',
+-- 满减活动表
+CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `name` varchar(1000) NOT NULL DEFAULT '' COMMENT '活动名称（JSON格式）',
+    `multi_language_name_uuid` bigint NOT NULL DEFAULT 0 COMMENT '多语言名称UUID',
+    `start_date` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '活动开始日期（时间戳，当天00:00:00）',
+    `end_date` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '活动结束日期（时间戳，当天23:59:59）',
+    `start_time` varchar(255) NOT NULL DEFAULT '' COMMENT '适用时间开始（格式：HH:mm，如09:00）',
+    `end_time` varchar(255) NOT NULL DEFAULT '' COMMENT '适用时间结束（格式：HH:mm，如22:00）',
+    `is_all_day` int(10) NOT NULL DEFAULT 0 COMMENT '是否全天（1=全天，0=特定时段）',
+    `reduction_type` int(10) NOT NULL DEFAULT 0 COMMENT '满减方式（0=阶梯满减，1=循环满减）',
+    `is_disabled` int(10) NOT NULL DEFAULT 0 COMMENT '是否失效（1=失效，0=未失效）',
     `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_start_date` (`start_date`),
+    KEY `idx_end_date` (`end_date`),
+    KEY `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
     PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务中心表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='满减活动表';
+
+-- 满减活动规则表
+CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity_rule` (
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `full_reduction_activity_uuid` bigint NOT NULL DEFAULT 0 COMMENT '活动UUID',
+    `threshold` decimal(22,4) unsigned NOT NULL DEFAULT 0 COMMENT '阈值（满减条件，如满200减20中的200）',
+    `reduction_amount` decimal(22,4) unsigned NOT NULL DEFAULT 0 COMMENT '扣减值（满减金额，如满200减20中的20）',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_full_reduction_activity_uuid` (`full_reduction_activity_uuid`),
+    KEY `idx_threshold` (`threshold`),
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='满减活动规则表';
 
 SET FOREIGN_KEY_CHECKS = 1;
