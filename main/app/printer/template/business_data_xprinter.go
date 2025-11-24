@@ -271,7 +271,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		// 收银方式
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, false, false)
-		printer.AppendText(t.base.Translate("点餐方式"))
+		printer.AppendText(t.base.Translate("点餐方式-店内"))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		printer.SetAlignment(pkg.AlignLeft)
@@ -281,6 +281,21 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.All.AllCashierAvgOrderPrice), width))
 		printer.LineFeed(1)
+		// 收银方式-外卖
+		if businessData.All.AllTakeawayOrderNum > 0 {
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.SetPrintModes(true, false, false)
+			printer.AppendText(t.base.Translate("点餐方式-外卖"))
+			printer.SetPrintModes(false, false, false)
+			printer.LineFeed(1)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.PrintText(t.base.Translate("订单数"), "", fmt.Sprintf("%.0f", float64(businessData.All.AllTakeawayOrderNum)), width))
+			printer.LineFeed(1)
+			printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.AllTakeawayMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.AllTakeawayMaxOrderPrice)), width-differenceWidth))
+			printer.LineFeed(1)
+			printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.All.AllTakeawayAvgOrderPrice), width))
+			printer.LineFeed(1)
+		}
 		// 支付方式
 		printer.AppendText("------------------------------------------------")
 		printer.SetPrintModes(true, false, false)

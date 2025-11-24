@@ -19,10 +19,10 @@ import (
 )
 
 type IStaffSrv interface {
-	PaginateGetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error) // 员工列表
-	AddStaff(ctx context.Context, addReq req.AddStaffReq) (error, []string)                           // 添加员工
-	UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq) (error, []string)                  // 修改员工
-	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error)                  // 角色列表
+	PaginateGetStaffs(ctx context.Context, getStaffListReq req.GetStaffListReq) (resp.StaffListPaginationResp, error) // 员工列表
+	AddStaff(ctx context.Context, addReq req.AddStaffReq) (error, []string)                                           // 添加员工
+	UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq) (error, []string)                                  // 修改员工
+	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error)                                  // 角色列表
 }
 
 type staffSrv struct {
@@ -44,10 +44,18 @@ func NewStaffSrv(dbm *database.DBManager, cache cache.Cache, roleAccessSrv IRole
 }
 
 // PaginateGetStaffs 获取员工列表
-func (s *staffSrv) PaginateGetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error) {
+func (s *staffSrv) PaginateGetStaffs(ctx context.Context, getStaffListReq req.GetStaffListReq) (resp.StaffListPaginationResp, error) {
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(ctx.GetDbId()))
 
-	staffs, total, err := staffRepo.PaginateGetStaffs(pageReq.PageNo, pageReq.PageSize, staffRepo.WithRoles())
+	opts := []repository.DBOption{staffRepo.WithRoles()}
+	if getStaffListReq.IsFilteSuper == 1 {
+		opts = append(opts, staffRepo.WhereIsSuper(0))
+	}
+	if getStaffListReq.Keyword != "" {
+		opts = append(opts, staffRepo.WhereRealNameOrUsernameOrPhone(getStaffListReq.Keyword))
+	}
+
+	staffs, total, err := staffRepo.PaginateGetStaffs(getStaffListReq.PageNo, getStaffListReq.PageSize, opts...)
 	if err != nil {
 		return resp.StaffListPaginationResp{}, errors.WithMessage(errors.New("获取员工列表失败"), err.Error())
 	}
@@ -63,21 +71,22 @@ func (s *staffSrv) PaginateGetStaffs(ctx context.Context, pageReq dto.PageReq) (
 			})
 		}
 		staffList = append(staffList, resp.Staff{
-			Uuid:       staff.Uuid,
-			Username:   staff.Username,
-			Phone:      staff.Phone,
-			RealName:   staff.RealName,
-			Roles:      roles,
-			IsDisable:  staff.IsDisable,
-			IsSuper:    staff.IsSuper,
-			CreateTime: staff.CreateTime,
+			Uuid:              staff.Uuid,
+			Username:          staff.Username,
+			Phone:             staff.Phone,
+			RealName:          staff.RealName,
+			Roles:             roles,
+			IsDisable:         staff.IsDisable,
+			IsSuper:           staff.IsSuper,
+			HasDataPermission: staff.HasDataPermission == 1,
+			CreateTime:        staff.CreateTime,
 		})
 	}
 	return resp.StaffListPaginationResp{
 		List: staffList,
 		Meta: dto.PageResponse{
-			PageNo:   pageReq.PageNo,
-			PageSize: pageReq.PageSize,
+			PageNo:   getStaffListReq.PageNo,
+			PageSize: getStaffListReq.PageSize,
 			Total:    total,
 		},
 	}, nil
@@ -203,14 +212,14 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	saasDB.Model(&model.CompanyStaff{}).Create(&companyStaff)
 
 	staff := model.Staff{
-		CompanyUuid:       ctx.GetCompanyUuid(),
-		Username:          addReq.Username,
-		RealName:          addReq.RealName,
-		Phone:             addReq.Phone,
-		Password:          utils.EncryptPassword(addReq.Password),
+		CompanyUuid:        ctx.GetCompanyUuid(),
+		Username:           addReq.Username,
+		RealName:           addReq.RealName,
+		Phone:              addReq.Phone,
+		Password:           utils.EncryptPassword(addReq.Password),
 		PermissionPassword: utils.EncryptPassword(addReq.PermissionPassword),
-		IsDisable:         0,
-		IsSuper:           0,
+		IsDisable:          0,
+		IsSuper:            0,
 	}
 	// 确保关联得上
 	staff.Uuid = companyStaff.Uuid

@@ -557,7 +557,7 @@ type RoleAccess struct {
 }
 ```
 
-> **注意**: 该接口返回所有权限组（包含管理APP、收银机、点餐助手等），但排除"管理后台"分组（通过 `excludeRouteNames` 参数控制）。
+> **注意**: 该接口**只返回**"管理APP"、"收银机"、"点餐助手"三个权限组，排除"管理后台"分组。通过 `includeRouteNames` 参数指定需要返回的权限组。
 
 **实现要点**:
 
@@ -566,7 +566,13 @@ type RoleAccess struct {
    func (h *RoleHandler) GetPermissionGroup(c *gin.Context) {
        ctx := helper.GetContext(c)
        
-       permissionGroup, err := h.roleSrv.GetCompanyPermissionGroup(ctx, []constant.RouteName{constant.ShopRouteName})
+       // 只返回"管理APP"、"收银机"、"点餐助手"三个权限组
+       permissionGroup, err := h.roleSrv.GetCompanyPermissionGroup(ctx,
+           []constant.RouteName{
+               constant.ShopAppRouteName,   // "管理APP"
+               constant.CashierRouteName,   // "收银机"
+               constant.AssistantRouteName, // "点餐助手"
+           })
        if err != nil {
            helper.ErrorWithDetail(c, constant.CodeSystemError, err)
            return
@@ -578,8 +584,32 @@ type RoleAccess struct {
 
 2. Service 层方法签名：
    ```go
-   func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
+   func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
    ```
+
+3. Service 层实现（`role_access.go`）：
+   ```go
+   func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+       // ... 获取权限数据 ...
+       
+       // 构建权限树形结构
+       roots := s.buildPermissionTreeWithoutFilter(permissions)
+       for _, root := range roots {
+           // 只返回"管理APP"、"收银机"、"点餐助手"
+           if !slices.Contains(includeRouteNames, constant.RouteName(root.Name)) {
+               continue
+           }
+           groupPermission.List = append(groupPermission.List, root)
+       }
+       
+       return groupPermission, nil
+   }
+   ```
+
+**权限组过滤逻辑**:
+- 通过 `includeRouteNames` 参数指定需要返回的权限组
+- 在构建权限树后，遍历根节点，只保留名称匹配 `includeRouteNames` 的权限组
+- 当前固定返回三个权限组：管理APP、收银机、点餐助手
 
 3. 注册路由：
    ```go
@@ -741,7 +771,7 @@ type IRoleSrv interface {
 	CreateRole(ctx context.Context, createReq req.AddRoleReq) (*resp.Role, error)                                        // 创建角色
 	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error                                                   // 更新角色
 	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error                                                   // 删除角色
-	GetCompanyPermissionGroup(ctx context.Context, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error) // 获取店铺权限树（用于角色权限配置）
+	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) // 获取店铺权限树（用于角色权限配置）
 }
 ```
 
@@ -787,9 +817,9 @@ func (s *roleSrv) DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) e
 	// 4. 软删除角色
 }
 
-func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
 	company := ctx.GetCompany()
-	return s.roleAccessSrv.GetCompanyPermissionGroup(company.Uuid, excludeRouteNames)
+	return s.roleAccessSrv.GetCompanyPermissionGroup(company.Uuid, includeRouteNames)
 }
 ```
 

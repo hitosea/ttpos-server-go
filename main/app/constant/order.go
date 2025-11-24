@@ -18,6 +18,8 @@ const (
 	OrderDateTypeWeek      = 2  // 本周
 	OrderDateTypeMonth     = 3  // 本月
 	OrderDateTypeYear      = 4  // 本年
+	OrderDateTypeLastWeek  = 5  // 近7天
+	OrderDateTypeLastMonth = 6  // 上个月
 )
 
 const (

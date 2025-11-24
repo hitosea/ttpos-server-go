@@ -13424,7 +13424,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月",
                         "name": "date_type",
                         "in": "query"
                     },
@@ -13444,6 +13444,18 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
                         "name": "enable_pay_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否包含数据管理, 0-不包含、1-包含",
+                        "name": "is_contain_data_manage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否只包含数据管理, 0-不包含、1-包含",
+                        "name": "is_only_data_manage",
                         "in": "query"
                     },
                     {
@@ -13526,7 +13538,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月",
                         "name": "date_type",
                         "in": "query"
                     },
@@ -13546,6 +13558,18 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
                         "name": "enable_pay_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否包含数据管理, 0-不包含、1-包含",
+                        "name": "is_contain_data_manage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否只包含数据管理, 0-不包含、1-包含",
+                        "name": "is_only_data_manage",
                         "in": "query"
                     },
                     {
@@ -22196,7 +22220,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月",
                         "name": "date_type",
                         "in": "query"
                     },
@@ -22216,6 +22240,18 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
                         "name": "enable_pay_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否包含数据管理, 0-不包含、1-包含",
+                        "name": "is_contain_data_manage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否只包含数据管理, 0-不包含、1-包含",
+                        "name": "is_only_data_manage",
                         "in": "query"
                     },
                     {
@@ -22426,7 +22462,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月",
                         "name": "date_type",
                         "in": "query"
                     },
@@ -22446,6 +22482,18 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
                         "name": "enable_pay_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否包含数据管理, 0-不包含、1-包含",
+                        "name": "is_contain_data_manage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否只包含数据管理, 0-不包含、1-包含",
+                        "name": "is_only_data_manage",
                         "in": "query"
                     },
                     {
@@ -26872,6 +26920,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/data_manage": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取数据管理",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "获取数据管理",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.GetDataManageResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/data_manage/set": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置数据管理",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.数据管理"
+                ],
+                "summary": "设置数据管理",
+                "parameters": [
+                    {
+                        "description": "设置数据管理",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SetDataManageReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/free_reason": {
             "get": {
                 "security": [
@@ -27789,6 +27916,18 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "每页条数",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否过滤超级管理员",
+                        "name": "is_filter_super",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键词, 姓名、邮箱、手机号",
+                        "name": "keyword",
                         "in": "query"
                     }
                 ],
@@ -32228,7 +32367,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "all_cashier_order_num": {
-                    "description": "收银方式",
+                    "description": "收银方式 - 店内 (不包含外送和外卖)",
                     "type": "integer"
                 },
                 "all_table_avg_order_price": {
@@ -32253,6 +32392,22 @@ const docTemplate = `{
                 },
                 "all_table_people_num": {
                     "description": "总桌数人数",
+                    "type": "integer"
+                },
+                "all_takeaway_avg_order_price": {
+                    "description": "点餐方式-外卖平均订单金额",
+                    "type": "number"
+                },
+                "all_takeaway_max_order_price": {
+                    "description": "点餐方式-外卖最大订单金额",
+                    "type": "number"
+                },
+                "all_takeaway_min_order_price": {
+                    "description": "点餐方式-外卖最小订单金额",
+                    "type": "number"
+                },
+                "all_takeaway_order_num": {
+                    "description": "外卖数据",
                     "type": "integer"
                 },
                 "all_takeout_avg_order_price": {
@@ -42539,6 +42694,29 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SetDataManageReq": {
+            "type": "object",
+            "properties": {
+                "is_enable_data_manage": {
+                    "description": "是否启用数据管理",
+                    "type": "boolean"
+                },
+                "sale_bill_uuids": {
+                    "description": "销售单UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "staff_uuids": {
+                    "description": "员工UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "req.SetDefaultWarehouseReq": {
             "type": "object",
             "required": [
@@ -44376,6 +44554,10 @@ const docTemplate = `{
                 },
                 "is_cell_reverse_settle": {
                     "description": "是否可反结账",
+                    "type": "boolean"
+                },
+                "is_cell_show": {
+                    "description": "是否显示",
                     "type": "boolean"
                 }
             }
@@ -48447,6 +48629,10 @@ const docTemplate = `{
                     "description": "每页大小",
                     "type": "integer"
                 },
+                "payment_amount": {
+                    "description": "实付金额",
+                    "type": "number"
+                },
                 "total": {
                     "description": "总数",
                     "type": "integer"
@@ -52378,6 +52564,10 @@ const docTemplate = `{
                     "description": "创建时间",
                     "type": "integer"
                 },
+                "has_data_permission": {
+                    "description": "是否有数据管理权限",
+                    "type": "boolean"
+                },
                 "is_disable": {
                     "description": "是否禁用",
                     "type": "integer"
@@ -54908,6 +55098,71 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.DataManageStatistics": {
+            "type": "object",
+            "properties": {
+                "business_amount": {
+                    "description": "营业收入",
+                    "type": "number"
+                },
+                "discount": {
+                    "description": "优惠折扣",
+                    "type": "number"
+                },
+                "discount_member": {
+                    "description": "会员折扣",
+                    "type": "number"
+                },
+                "discount_ratio": {
+                    "description": "优惠占比",
+                    "type": "number"
+                },
+                "free_amount": {
+                    "description": "免单总额",
+                    "type": "number"
+                },
+                "free_count": {
+                    "description": "免单数量",
+                    "type": "number"
+                },
+                "give_amount": {
+                    "description": "赠菜金额",
+                    "type": "number"
+                },
+                "give_count": {
+                    "description": "赠菜数量",
+                    "type": "number"
+                },
+                "payment_fee": {
+                    "description": "支付手续费",
+                    "type": "number"
+                },
+                "product_count": {
+                    "description": "商品数量",
+                    "type": "number"
+                },
+                "received_price": {
+                    "description": "实收金额",
+                    "type": "number"
+                },
+                "refund_amount": {
+                    "description": "退款金额",
+                    "type": "number"
+                },
+                "sale_amount": {
+                    "description": "总销售额",
+                    "type": "number"
+                },
+                "service_fee": {
+                    "description": "服务费",
+                    "type": "number"
+                },
+                "tax": {
+                    "description": "税费",
+                    "type": "number"
+                }
+            }
+        },
         "setting.FreeMethodItem": {
             "type": "object",
             "properties": {
@@ -54916,6 +55171,31 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "setting.GetDataManageResp": {
+            "type": "object",
+            "properties": {
+                "is_enable_data_manage": {
+                    "description": "状态: false-关闭 true-开启",
+                    "type": "boolean"
+                },
+                "order_count": {
+                    "description": "订单数量",
+                    "type": "integer"
+                },
+                "staff_count": {
+                    "description": "操作人员数量",
+                    "type": "integer"
+                },
+                "statistics": {
+                    "description": "统计信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.DataManageStatistics"
+                        }
+                    ]
                 }
             }
         },

@@ -46,6 +46,10 @@ const (
 	DayTypeToday     DayType = "today"
 	DayTypeYesterday DayType = "yesterday"
 	DayTypeThisWeek  DayType = "this_week"
+	DayTypeThisMonth DayType = "this_month"
+	DayTypeThisYear  DayType = "this_year"
+	DayTypeLastWeek  DayType = "last_week"
+	DayTypeLastMonth DayType = "last_month"
 )
 
 func SetTimezone(timezone string) TimeUtil {
@@ -209,6 +213,22 @@ func (t Timezone) GetTimeRange(dayType DayType) (int64, int64, error) {
 		weekStart := todayStart.Add(-time.Duration(weekday-1) * 24 * time.Hour)
 		weekEnd := weekStart.Add(7 * 24 * time.Hour).Add(-time.Second)
 		return weekStart.Unix(), weekEnd.Unix(), nil
+	case DayTypeThisMonth:
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
+		monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Second)
+		return monthStart.Unix(), monthEnd.Unix(), nil
+	case DayTypeThisYear:
+		yearStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, loc)
+		yearEnd := yearStart.AddDate(1, 0, 0).Add(-time.Second)
+		return yearStart.Unix(), yearEnd.Unix(), nil
+	case DayTypeLastWeek:
+		lastWeekStart := todayStart.Add(-7 * 24 * time.Hour)
+		lastWeekEnd := lastWeekStart.Add(7 * 24 * time.Hour).Add(-time.Second)
+		return lastWeekStart.Unix(), lastWeekEnd.Unix(), nil
+	case DayTypeLastMonth:
+		lastMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc).AddDate(0, -1, 0)
+		lastMonthEnd := lastMonthStart.AddDate(0, 1, 0).Add(-time.Second)
+		return lastMonthStart.Unix(), lastMonthEnd.Unix(), nil
 	default:
 		return 0, 0, errors.New("typ error")
 	}

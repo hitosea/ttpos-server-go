@@ -64,7 +64,7 @@ definitions:
         description: 收银方式最小订单金额
         type: number
       all_cashier_order_num:
-        description: 收银方式
+        description: 收银方式 - 店内 (不包含外送和外卖)
         type: integer
       all_table_avg_order_price:
         description: 总桌数平均订单金额
@@ -83,6 +83,18 @@ definitions:
         type: number
       all_table_people_num:
         description: 总桌数人数
+        type: integer
+      all_takeaway_avg_order_price:
+        description: 点餐方式-外卖平均订单金额
+        type: number
+      all_takeaway_max_order_price:
+        description: 点餐方式-外卖最大订单金额
+        type: number
+      all_takeaway_min_order_price:
+        description: 点餐方式-外卖最小订单金额
+        type: number
+      all_takeaway_order_num:
+        description: 外卖数据
         type: integer
       all_takeout_avg_order_price:
         description: 总外送平均订单金额
@@ -7144,6 +7156,22 @@ definitions:
       recharge:
         type: number
     type: object
+  req.SetDataManageReq:
+    properties:
+      is_enable_data_manage:
+        description: 是否启用数据管理
+        type: boolean
+      sale_bill_uuids:
+        description: 销售单UUID列表
+        items:
+          type: integer
+        type: array
+      staff_uuids:
+        description: 员工UUID列表
+        items:
+          type: integer
+        type: array
+    type: object
   req.SetDefaultWarehouseReq:
     properties:
       uuid:
@@ -8451,6 +8479,9 @@ definitions:
         type: boolean
       is_cell_reverse_settle:
         description: 是否可反结账
+        type: boolean
+      is_cell_show:
+        description: 是否显示
         type: boolean
     type: object
   resp.BillListsOrder:
@@ -11134,6 +11165,9 @@ definitions:
       page_size:
         description: 每页大小
         type: integer
+      payment_amount:
+        description: 实付金额
+        type: number
       total:
         description: 总数
         type: integer
@@ -13796,6 +13830,9 @@ definitions:
       create_time:
         description: 创建时间
         type: integer
+      has_data_permission:
+        description: 是否有数据管理权限
+        type: boolean
       is_disable:
         description: 是否禁用
         type: integer
@@ -15540,12 +15577,76 @@ definitions:
         description: 副货币显示位置 0-金额前 1-金额后
         type: string
     type: object
+  setting.DataManageStatistics:
+    properties:
+      business_amount:
+        description: 营业收入
+        type: number
+      discount:
+        description: 优惠折扣
+        type: number
+      discount_member:
+        description: 会员折扣
+        type: number
+      discount_ratio:
+        description: 优惠占比
+        type: number
+      free_amount:
+        description: 免单总额
+        type: number
+      free_count:
+        description: 免单数量
+        type: number
+      give_amount:
+        description: 赠菜金额
+        type: number
+      give_count:
+        description: 赠菜数量
+        type: number
+      payment_fee:
+        description: 支付手续费
+        type: number
+      product_count:
+        description: 商品数量
+        type: number
+      received_price:
+        description: 实收金额
+        type: number
+      refund_amount:
+        description: 退款金额
+        type: number
+      sale_amount:
+        description: 总销售额
+        type: number
+      service_fee:
+        description: 服务费
+        type: number
+      tax:
+        description: 税费
+        type: number
+    type: object
   setting.FreeMethodItem:
     properties:
       key:
         type: string
       name:
         type: string
+    type: object
+  setting.GetDataManageResp:
+    properties:
+      is_enable_data_manage:
+        description: '状态: false-关闭 true-开启'
+        type: boolean
+      order_count:
+        description: 订单数量
+        type: integer
+      staff_count:
+        description: 操作人员数量
+        type: integer
+      statistics:
+        allOf:
+        - $ref: '#/definitions/setting.DataManageStatistics'
+        description: 统计信息
     type: object
   setting.GiftMethodItem:
     properties:
@@ -23809,7 +23910,7 @@ paths:
         in: query
         name: bill_type
         type: integer
-      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月
         in: query
         name: date_type
         type: integer
@@ -23825,6 +23926,14 @@ paths:
         in: query
         name: enable_pay_time
         type: boolean
+      - description: 是否包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_contain_data_manage
+        type: integer
+      - description: 是否只包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_only_data_manage
+        type: integer
       - description: 订单编号
         in: query
         name: order_no
@@ -23876,7 +23985,7 @@ paths:
         in: query
         name: bill_type
         type: integer
-      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月
         in: query
         name: date_type
         type: integer
@@ -23892,6 +24001,14 @@ paths:
         in: query
         name: enable_pay_time
         type: boolean
+      - description: 是否包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_contain_data_manage
+        type: integer
+      - description: 是否只包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_only_data_manage
+        type: integer
       - description: 订单编号
         in: query
         name: order_no
@@ -29052,7 +29169,7 @@ paths:
         in: query
         name: bill_type
         type: integer
-      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月
         in: query
         name: date_type
         type: integer
@@ -29068,6 +29185,14 @@ paths:
         in: query
         name: enable_pay_time
         type: boolean
+      - description: 是否包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_contain_data_manage
+        type: integer
+      - description: 是否只包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_only_data_manage
+        type: integer
       - description: 订单编号
         in: query
         name: order_no
@@ -29199,7 +29324,7 @@ paths:
         in: query
         name: bill_type
         type: integer
-      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+      - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月
         in: query
         name: date_type
         type: integer
@@ -29215,6 +29340,14 @@ paths:
         in: query
         name: enable_pay_time
         type: boolean
+      - description: 是否包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_contain_data_manage
+        type: integer
+      - description: 是否只包含数据管理, 0-不包含、1-包含
+        in: query
+        name: is_only_data_manage
+        type: integer
       - description: 订单编号
         in: query
         name: order_no
@@ -31906,6 +32039,52 @@ paths:
       summary: 上传收银机轮播内容
       tags:
       - 商家端.收银机设置
+  /shop/setting/data_manage:
+    get:
+      consumes:
+      - application/json
+      description: 获取数据管理
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.GetDataManageResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取数据管理
+      tags:
+      - 商家端.数据管理
+  /shop/setting/data_manage/set:
+    post:
+      consumes:
+      - application/json
+      description: 设置数据管理
+      parameters:
+      - description: 设置数据管理
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SetDataManageReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 设置数据管理
+      tags:
+      - 商家端.数据管理
   /shop/setting/free_reason:
     delete:
       consumes:
@@ -32454,6 +32633,14 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: 是否过滤超级管理员
+        in: query
+        name: is_filter_super
+        type: integer
+      - description: 关键词, 姓名、邮箱、手机号
+        in: query
+        name: keyword
+        type: string
       produces:
       - application/json
       responses:
