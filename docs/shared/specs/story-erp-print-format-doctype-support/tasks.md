@@ -13,15 +13,15 @@
 ## 📊 进度总览
 
 **总任务数**: 13  
-**已完成**: 0  
+**已完成**: 10  
 **进行中**: -  
-**完成率**: 0%
+**完成率**: 77%
 
 ---
 
 ## Phase 1: 数据结构定义
 
-- [ ] 1.1 定义 Print Format DTO
+- [x] 1.1 定义 Print Format DTO
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/model/dto/erp/print_format.go`
   - Purpose: 定义 Print Format 相关的数据结构
@@ -29,15 +29,15 @@
   - Leverage: 现有 DTO: `ttpos-bmp/app/ttpos-erp/internal/model/dto/erp/`，ERPNext Print Format 标准结构
   - Prompt: Role: Go Developer | Task: 创建 Print Format DTO 结构体 | Context: 包含 PrintFormatListReq, PrintFormatCreateUpdateReq, PrintFormatDetailResp, PrintFormatListResp | Restrictions: 遵循 .cursor/rules/go-bmp.mdc | Success: DTO 定义完整，字段映射正确
 
-- [ ] 1.2 定义常量
+- [x] 1.2 定义常量
 
-  - File: `ttpos-bmp/app/ttpos-erp/internal/model/dto/erp/print_format.go`
+  - File: `ttpos-bmp/app/ttpos-erp/internal/model/dto/erp/consts.go`
   - Purpose: 定义 Print Format 相关常量
   - Requirements: 所有功能需求
   - Code: `const DocTypePrintFormat = "Print Format"`
   - Success: 常量定义正确
 
-- [ ] 1.3 生成 Print Format 迁移文档
+- [x] 1.3 生成 Print Format 迁移文档
 
   - File: `ttpos-bmp/app/ttpos-erp/manifest/erp-migrate/v2.9/02_print_format/` (新建目录)
   - Purpose: 从 CSV 文件生成 Print Format 迁移 JSON 文档
@@ -69,7 +69,7 @@
 
 ## Phase 2: Logic 实现
 
-- [ ] 2.1 创建 Print Format Logic 文件
+- [x] 2.1 创建 Print Format Logic 文件
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 创建 Print Format Logic 服务文件
@@ -77,7 +77,7 @@
   - Leverage: 现有 Logic: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/doctype.go`，design.md 中的完整实现代码
   - Prompt: Role: Go Developer | Task: 创建 print_format.go 文件，定义 sPrintFormat 结构体和 PrintFormat 变量 | Context: 参考 doctype.go 的实现模式 | Restrictions: 遵循 .cursor/rules/go-bmp.mdc | Success: 文件创建成功，结构体定义正确
 
-- [ ] 2.2 实现 Meta 方法
+- [x] 2.2 实现 Meta 方法
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 实现 Print Format 元数据查询
@@ -85,7 +85,7 @@
   - Leverage: design.md 中的 Meta 实现代码
   - Prompt: Role: Go Developer | Task: 实现 Meta 方法，调用 service.Doctype().Meta | Context: DocType 为 "Print Format" | Restrictions: 错误处理使用 gerror.Wrapf | Success: Meta 方法实现正确，错误处理完善
 
-- [ ] 2.3 实现 List 方法
+- [x] 2.3 实现 List 方法
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 实现 Print Format 列表查询
@@ -93,7 +93,7 @@
   - Leverage: design.md 中的 List 实现代码，参考 selling/sale_order.go 的列表查询实现
   - Prompt: Role: Go Developer | Task: 实现 List 方法，支持按 DocType 过滤和分页 | Context: 调用 service.Document().List，解析响应数据 | Restrictions: 错误处理使用 gerror.Wrapf | Success: List 方法实现正确，支持过滤和分页
 
-- [ ] 2.4 实现 Get 方法
+- [x] 2.4 实现 Get 方法
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 实现 Print Format 详情查询
@@ -101,7 +101,7 @@
   - Leverage: design.md 中的 Get 实现代码，参考 selling/sale_order.go 的详情查询实现
   - Prompt: Role: Go Developer | Task: 实现 Get 方法，根据名称查询 Print Format 详情 | Context: 调用 service.Document().Get，解析响应数据 | Restrictions: 参数验证，错误处理使用 gerror.Wrapf | Success: Get 方法实现正确，包含参数验证
 
-- [ ] 2.5 实现 Create 方法
+- [x] 2.5 实现 Create 方法
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 实现 Print Format 创建
@@ -109,7 +109,7 @@
   - Leverage: design.md 中的 Create 实现代码，参考 selling/sale_order.go 的创建实现
   - Prompt: Role: Go Developer | Task: 实现 Create 方法，创建新的 Print Format | Context: 调用 service.Document().Create，参数验证 | Restrictions: 参数验证，错误处理使用 gerror.Wrapf | Success: Create 方法实现正确，包含参数验证
 
-- [ ] 2.6 实现 Update 方法
+- [x] 2.6 实现 Update 方法
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 实现 Print Format 更新
@@ -117,7 +117,7 @@
   - Leverage: design.md 中的 Update 实现代码，参考 selling/sale_order.go 的更新实现
   - Prompt: Role: Go Developer | Task: 实现 Update 方法，更新现有的 Print Format | Context: 调用 service.Document().Update，然后调用 Get 获取更新后的信息 | Restrictions: 参数验证，错误处理使用 gerror.Wrapf | Success: Update 方法实现正确，包含参数验证
 
-- [ ] 2.7 实现 Delete 方法
+- [x] 2.7 实现 Delete 方法
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/erpnext/print_format.go`
   - Purpose: 实现 Print Format 删除
@@ -125,14 +125,14 @@
   - Leverage: design.md 中的 Delete 实现代码
   - Prompt: Role: Go Developer | Task: 实现 Delete 方法，删除 Print Format | Context: 调用 service.Document().Delete | Restrictions: 参数验证，错误处理使用 gerror.Wrapf | Success: Delete 方法实现正确，包含参数验证
 
-- [ ] 2.8 注册到 Logic
+- [x] 2.8 注册到 Logic
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/logic.go`
   - Purpose: 确保 print_format.go 被导入
   - Requirements: 所有功能需求
   - Leverage: 现有 logic.go 文件
   - Code: 确保 `_ "ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"` 已存在（应该已经存在）
-  - Success: Logic 注册成功
+  - Success: Logic 注册成功（已通过 erpnext 包导入）
 
 ---
 
