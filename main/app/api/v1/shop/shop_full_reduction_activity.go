@@ -1,6 +1,7 @@
 package shop
 
 import (
+	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -38,13 +39,13 @@ func (h *FullReductionActivityHandler) Create(c *gin.Context) {
 		return
 	}
 
-	result, err := h.fullReductionActivitySrv.Create(ctx, &createReq)
+	err := h.fullReductionActivitySrv.Create(ctx, &createReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, result, "创建成功")
+	helper.Success(c, gin.H{}, "创建成功")
 }
 
 // Update 更新满减活动
@@ -71,7 +72,7 @@ func (h *FullReductionActivityHandler) Update(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, nil, "更新成功")
+	helper.Success(c, gin.H{}, "更新成功")
 }
 
 // GetByUuid 获取满减活动详情
@@ -81,19 +82,21 @@ func (h *FullReductionActivityHandler) Update(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.FullReductionActivityGetReq true "获取活动"
+// @Param uuid query int true "活动UUID"
 // @Success 200 {object} dto.Response{data=resp.FullReductionActivityResp}
-// @Router /shop/full_reduction_activity/get [post]
+// @Router /shop/full_reduction_activity/get [get]
 func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	var getReq req.FullReductionActivityGetReq
-	if err := c.ShouldBindJSON(&getReq); err != nil {
-		helper.HandleValidationError(c, err, getReq, nil)
+	// GET 请求使用 Query 参数
+	uuidStr := c.Query("uuid")
+	uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+	if err != nil || uuid == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
 		return
 	}
 
-	result, err := h.fullReductionActivitySrv.GetByUuid(ctx, getReq.Uuid)
+	result, err := h.fullReductionActivitySrv.GetByUuid(ctx, uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -109,19 +112,29 @@ func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.FullReductionActivityListReq true "获取列表"
+// @Param page_no query int true "页码"
+// @Param page_size query int true "每页条数"
+// @Param status query string false "状态 all-全部 in_progress-进行中 not_start-未开始 end-已结束"
 // @Success 200 {object} dto.Response{data=resp.FullReductionActivityListResp}
-// @Router /shop/full_reduction_activity/list [post]
+// @Router /shop/full_reduction_activity/list [get]
 func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	var listReq req.FullReductionActivityListReq
-	if err := c.ShouldBindJSON(&listReq); err != nil {
-		helper.HandleValidationError(c, err, listReq, nil)
-		return
+	// GET 请求使用 Query 参数
+	pageNoStr := c.DefaultQuery("page_no", "1")
+	pageSizeStr := c.DefaultQuery("page_size", "20")
+	status := c.Query("status")
+
+	pageNo, _ := strconv.Atoi(pageNoStr)
+	pageSize, _ := strconv.Atoi(pageSizeStr)
+
+	listReq := &req.FullReductionActivityListReq{
+		PageNo:   pageNo,
+		PageSize: pageSize,
+		Status:   status,
 	}
 
-	result, err := h.fullReductionActivitySrv.GetList(ctx, &listReq)
+	result, err := h.fullReductionActivitySrv.GetList(ctx, listReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -137,24 +150,26 @@ func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.FullReductionActivityDeleteReq true "删除活动"
+// @Param uuid query int true "活动UUID"
 // @Success 200 {object} dto.Response
-// @Router /shop/full_reduction_activity/delete [post]
+// @Router /shop/full_reduction_activity/delete [delete]
 func (h *FullReductionActivityHandler) Delete(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	var deleteReq req.FullReductionActivityDeleteReq
-	if err := c.ShouldBindJSON(&deleteReq); err != nil {
-		helper.HandleValidationError(c, err, deleteReq, nil)
+	// DELETE 请求参数通过 Query 传递
+	uuidStr := c.Query("uuid")
+	uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+	if err != nil || uuid == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
 		return
 	}
 
-	if err := h.fullReductionActivitySrv.Delete(ctx, deleteReq.Uuid); err != nil {
+	if err := h.fullReductionActivitySrv.Delete(ctx, uuid); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, nil, "删除成功")
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // Disable 失效满减活动
@@ -181,7 +196,7 @@ func (h *FullReductionActivityHandler) Disable(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, nil, "失效成功")
+	helper.Success(c, gin.H{}, "失效成功")
 }
 
 // RegisterFullReductionActivityRoutes 注册满减活动路由
@@ -204,12 +219,16 @@ func RegisterFullReductionActivityRoutes(router gin.IRouter, dbm *database.DBMan
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
+		// ✅ GET：获取信息（列表、详情）
+		privateApi.GET("/full_reduction_activity/list", handler.GetList)
+		privateApi.GET("/full_reduction_activity/get", handler.GetByUuid)
+
+		// ✅ POST：创建和修改数据
 		privateApi.POST("/full_reduction_activity/create", handler.Create)
 		privateApi.POST("/full_reduction_activity/update", handler.Update)
-		privateApi.POST("/full_reduction_activity/get", handler.GetByUuid)
-		privateApi.POST("/full_reduction_activity/list", handler.GetList)
-		privateApi.POST("/full_reduction_activity/delete", handler.Delete)
 		privateApi.POST("/full_reduction_activity/disable", handler.Disable)
+
+		// ✅ DELETE：删除数据
+		privateApi.DELETE("/full_reduction_activity/delete", handler.Delete)
 	}
 }
-

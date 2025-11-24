@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/constant"
+
 // FullReductionActivity 满减活动表
 type FullReductionActivity struct {
 	BaseModel
@@ -14,8 +16,8 @@ type FullReductionActivity struct {
 	IsDisabled            int    `gorm:"column:is_disabled;type:tinyint(1);default:0;comment:'是否失效（1=失效，0=未失效）'" json:"is_disabled"`
 
 	// 关联
-	MultiLanguageName MultiLanguageName                `gorm:"foreignKey:multi_language_name_uuid;references:uuid" json:"multi_language_name,omitempty"`
-	Rules             []FullReductionActivityRule      `gorm:"foreignKey:full_reduction_activity_uuid;references:uuid" json:"rules,omitempty"`
+	MultiLanguageName MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid" json:"multi_language_name,omitempty"`
+	Rules             []FullReductionActivityRule `gorm:"foreignKey:full_reduction_activity_uuid;references:uuid" json:"rules,omitempty"`
 }
 
 func (*FullReductionActivity) TableName() string {
@@ -26,16 +28,15 @@ func (*FullReductionActivity) TableName() string {
 func (m *FullReductionActivity) GetStatus(now int64, timezone string) string {
 	// 如果已失效，返回已结束
 	if m.IsDisabled == 1 {
-		return "ended"
+		return constant.ActivityStatusEnded
 	}
 
 	// 根据当前时间和活动日期判断状态
 	if now < m.StartDate {
-		return "not_started"
+		return constant.ActivityStatusNotStarted
 	}
 	if now > m.EndDate {
-		return "ended"
+		return constant.ActivityStatusEnded
 	}
-	return "ongoing"
+	return constant.ActivityStatusInProgress
 }
-

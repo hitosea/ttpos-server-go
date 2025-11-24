@@ -101,24 +101,86 @@ shopGroup := apiV1.Group("/shop")
 
 ```
 ✅ 使用名词单数 + 操作后缀
-GET  /api/v1/order/list
-GET  /api/v1/order/info
-POST /api/v1/order/create
-POST /api/v1/order/cancel
+GET    /api/v1/order/list          # 获取列表
+GET    /api/v1/order/info          # 获取详情
+POST   /api/v1/order/create        # 创建
+POST   /api/v1/order/update        # 更新
+DELETE /api/v1/order/delete        # 删除
 
 ❌ 不使用 RESTful 风格
 GET  /api/v1/orders
 GET  /api/v1/orders/123
 ```
 
-### HTTP 方法
+### HTTP 方法（RESTful API 规范）
 
-| 方法   | 用途      | 示例                          |
-| ------ | --------- | ----------------------------- |
-| GET    | 获取资源  | `GET /api/v1/order/list`      |
-| POST   | 创建/执行 | `POST /api/v1/order/create`   |
-| PUT    | 完整更新  | `PUT /api/v1/order/update`    |
-| DELETE | 删除      | `DELETE /api/v1/order/delete` |
+**必须遵循以下规则：**
+
+| 方法   | 用途           | 示例                          | 说明                    |
+| ------ | -------------- | ----------------------------- | ----------------------- |
+| GET    | 获取信息       | `GET /api/v1/order/list`      | 查询、列表、详情        |
+| POST   | 创建/修改数据  | `POST /api/v1/order/create`    | 创建、更新、执行操作    |
+| DELETE | 删除数据       | `DELETE /api/v1/order/delete` | 删除操作                |
+| PUT    | **禁止使用**   | -                             | **项目禁止使用 PUT 方法** |
+
+**规则说明：**
+
+1. ✅ **GET 请求**：用于获取信息（查询、列表、详情）
+   ```go
+   // ✅ 正确：获取列表使用 GET
+   privateApi.GET("/full_reduction_activity/list", handler.GetList)
+   
+   // ✅ 正确：获取详情使用 GET（参数通过 Query 传递）
+   privateApi.GET("/full_reduction_activity/get", handler.GetByUuid)
+   ```
+
+2. ✅ **POST 请求**：用于创建和修改数据
+   ```go
+   // ✅ 正确：创建使用 POST
+   privateApi.POST("/full_reduction_activity/create", handler.Create)
+   
+   // ✅ 正确：更新使用 POST
+   privateApi.POST("/full_reduction_activity/update", handler.Update)
+   ```
+
+3. ✅ **DELETE 请求**：用于删除数据
+   ```go
+   // ✅ 正确：删除使用 DELETE
+   privateApi.DELETE("/full_reduction_activity/delete", handler.Delete)
+   ```
+
+4. ❌ **PUT 请求**：禁止使用
+   ```go
+   // ❌ 错误：禁止使用 PUT
+   privateApi.PUT("/full_reduction_activity/update", handler.Update)
+   ```
+
+**GET 请求参数传递：**
+
+```go
+// ✅ 正确：GET 请求使用 Query 参数
+func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
+    uuidStr := c.Query("uuid")  // 从 Query 获取参数
+    uuid, _ := strconv.ParseUint(uuidStr, 10, 64)
+    // ...
+}
+
+// ✅ 正确：GET 请求列表使用 Query 参数
+func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
+    pageNoStr := c.DefaultQuery("page_no", "1")
+    pageSizeStr := c.DefaultQuery("page_size", "20")
+    status := c.Query("status")
+    // ...
+}
+
+// ❌ 错误：GET 请求使用 Body 传递参数
+func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
+    var getReq req.FullReductionActivityGetReq
+    if err := c.ShouldBindJSON(&getReq); err != nil {  // ❌ GET 不应该用 Body
+        // ...
+    }
+}
+```
 
 ---
 
@@ -138,6 +200,11 @@ GET  /api/v1/orders/123
 - [ ] 使用名词单数 + 操作后缀
 - [ ] data 必须是对象
 - [ ] 包含版本号 /api/v1/
+- [ ] **获取信息使用 GET 请求（查询、列表、详情）**
+- [ ] **创建和修改数据使用 POST 请求**
+- [ ] **删除数据使用 DELETE 请求**
+- [ ] **禁止使用 PUT 请求**
+- [ ] **GET 请求参数通过 Query 传递，不使用 Body**
 
 ### 编写响应时
 
@@ -208,6 +275,175 @@ type ExampleResp struct {
 ---
 
 ## 📋 常用模式
+
+### RESTful API 路由注册示例
+
+```go
+// ✅ 正确：遵循 RESTful API 规范
+func RegisterFullReductionActivityRoutes(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+    handler := &FullReductionActivityHandler{
+        fullReductionActivitySrv: service.NewFullReductionActivitySrv(dbm),
+    }
+    
+    privateApi := router.Group("", middleware.Auth(authSrv, dbm))
+    {
+        // ✅ GET：获取信息（列表、详情）
+        privateApi.GET("/full_reduction_activity/list", handler.GetList)
+        privateApi.GET("/full_reduction_activity/get", handler.GetByUuid)
+        
+        // ✅ POST：创建和修改数据
+        privateApi.POST("/full_reduction_activity/create", handler.Create)
+        privateApi.POST("/full_reduction_activity/update", handler.Update)
+        
+        // ✅ DELETE：删除数据
+        privateApi.DELETE("/full_reduction_activity/delete", handler.Delete)
+        
+        // ❌ 错误：禁止使用 PUT
+        // privateApi.PUT("/full_reduction_activity/update", handler.Update)
+    }
+}
+```
+
+### GET 请求处理示例
+
+```go
+// ✅ 正确：GET 请求使用 Query 参数
+func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    
+    // 从 Query 获取参数
+    uuidStr := c.Query("uuid")
+    uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+    if err != nil || uuid == 0 {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
+        return
+    }
+    
+    result, err := h.fullReductionActivitySrv.GetByUuid(ctx, uuid)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, result, "获取成功")
+}
+
+// ✅ 正确：GET 请求列表使用 Query 参数
+func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    
+    // 从 Query 获取参数
+    pageNoStr := c.DefaultQuery("page_no", "1")
+    pageSizeStr := c.DefaultQuery("page_size", "20")
+    status := c.Query("status")
+    
+    pageNo, _ := strconv.Atoi(pageNoStr)
+    pageSize, _ := strconv.Atoi(pageSizeStr)
+    
+    listReq := &req.FullReductionActivityListReq{
+        PageNo:   pageNo,
+        PageSize: pageSize,
+        Status:   status,
+    }
+    
+    result, err := h.fullReductionActivitySrv.GetList(ctx, listReq)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, result, "获取成功")
+}
+
+// ❌ 错误：GET 请求不应该使用 Body
+func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
+    var getReq req.FullReductionActivityGetReq
+    if err := c.ShouldBindJSON(&getReq); err != nil {  // ❌ GET 不应该用 Body
+        helper.HandleValidationError(c, err, getReq, nil)
+        return
+    }
+    // ...
+}
+```
+
+### POST 请求处理示例
+
+```go
+// ✅ 正确：POST 请求用于创建数据
+func (h *FullReductionActivityHandler) Create(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    
+    var createReq req.FullReductionActivityCreateReq
+    if err := c.ShouldBindJSON(&createReq); err != nil {
+        helper.HandleValidationError(c, err, createReq, nil)
+        return
+    }
+    
+    err := h.fullReductionActivitySrv.Create(ctx, &createReq)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, nil, "创建成功")
+}
+
+// ✅ 正确：POST 请求用于更新数据
+func (h *FullReductionActivityHandler) Update(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    
+    var updateReq req.FullReductionActivityUpdateReq
+    if err := c.ShouldBindJSON(&updateReq); err != nil {
+        helper.HandleValidationError(c, err, updateReq, nil)
+        return
+    }
+    
+    if err := h.fullReductionActivitySrv.Update(ctx, &updateReq); err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, nil, "更新成功")
+}
+```
+
+### DELETE 请求处理示例
+
+```go
+// ✅ 正确：DELETE 请求用于删除数据
+func (h *FullReductionActivityHandler) Delete(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    
+    // DELETE 请求参数可以通过 Query 或 Body 传递
+    // 方式1：通过 Query 传递
+    uuidStr := c.Query("uuid")
+    uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+    if err != nil || uuid == 0 {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
+        return
+    }
+    
+    // 方式2：通过 Body 传递（也允许）
+    // var deleteReq req.FullReductionActivityDeleteReq
+    // if err := c.ShouldBindJSON(&deleteReq); err != nil {
+    //     helper.HandleValidationError(c, err, deleteReq, nil)
+    //     return
+    // }
+    
+    if err := h.fullReductionActivitySrv.Delete(ctx, uuid); err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, nil, "删除成功")
+}
+
+// ❌ 错误：删除不应该使用 POST
+func (h *FullReductionActivityHandler) Delete(c *gin.Context) {
+    // ❌ 错误：删除应该使用 DELETE 方法，不应该用 POST
+    // 应该在路由注册时使用 privateApi.DELETE(...)
+}
+```
 
 ### Go 返回响应
 
@@ -304,6 +540,10 @@ resp := ProductResp{
 | ❌ data 返回数组            | 必须是对象                |
 | ❌ 使用 RESTful 风格        | 项目用操作后缀            |
 | ❌ 直接用 c.JSON            | 必须用 helper             |
+| ❌ **获取信息使用 POST 请求** | **必须使用 GET 请求** |
+| ❌ **删除数据使用 POST 请求** | **必须使用 DELETE 请求** |
+| ❌ **使用 PUT 请求** | **项目禁止使用 PUT 方法** |
+| ❌ **GET 请求使用 Body 传递参数** | **GET 请求参数必须通过 Query 传递** |
 | ❌ **多语言字段（请求参数和响应参数）使用 map[string]string、字符串或自定义结构** | **必须用 dto.LocaleResponse** |
 | ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
 

@@ -510,6 +510,123 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 }
 ```
 
+### API 层请求参数解析规范
+
+**在 `app/api/v1` 目录下的 handler 中，必须根据 HTTP 方法使用对应的参数解析方式：**
+
+#### GET 请求
+
+- ✅ **必须使用 `ShouldBindQuery` 解析查询参数**
+- ✅ **Req 结构体字段必须使用 `form` tag**
+- ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
+
+```go
+// ✅ 正确 - GET 请求参数解析
+func (h *OrderHandler) GetPaymentQrcode(c *gin.Context) {
+    ctx := helper.NewContext(c)
+    
+    params := req.InstantOrderPaymentQrcodeReq{}
+    if err := c.ShouldBindQuery(&params); err != nil {
+        helper.HandleValidationError(c, err, params, nil)
+        return
+    }
+    
+    // 调用 Service
+    res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, res)
+}
+
+// Req 结构体定义（在 dto/req 包中）
+type InstantOrderPaymentQrcodeReq struct {
+    SaleBillUuid      uint64  `form:"sale_bill_uuid" json:"sale_bill_uuid"`           // ✅ 使用 form tag
+    SaleOrderUuid     uint64  `form:"sale_order_uuid" json:"sale_order_uuid"`       // ✅ 使用 form tag
+    PaymentMethodUuid uint64  `form:"payment_method_uuid" json:"payment_method_uuid"` // ✅ 使用 form tag
+    PaymentAmount     float64 `form:"payment_amount" json:"payment_amount"`           // ✅ 使用 form tag
+}
+```
+
+#### POST 请求
+
+- ✅ **必须使用 `ShouldBindJSON` 解析 JSON 请求体**
+- ✅ **Req 结构体字段必须使用 `json` tag**
+- ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
+
+```go
+// ✅ 正确 - POST 请求参数解析
+func (h *OrderHandler) SetPaymentZeroRule(c *gin.Context) {
+    ctx := helper.NewContext(c)
+    
+    params := req.InstantOrderPaymentZeroRuleReq{}
+    if err := c.ShouldBindJSON(&params); err != nil {
+        helper.HandleValidationError(c, err, params, nil)
+        return
+    }
+    
+    // 调用 Service
+    res, err := h.orderSrv.SetPaymentZeroRule(ctx, params)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, res)
+}
+
+// Req 结构体定义（在 dto/req 包中）
+type InstantOrderPaymentZeroRuleReq struct {
+    SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // ✅ 使用 json tag
+    SaleOrderUuid uint64 `json:"sale_order_uuid"` // ✅ 使用 json tag
+    ZeroRule      int    `json:"zero_rule"`       // ✅ 使用 json tag
+}
+```
+
+#### DELETE 请求
+
+- ✅ **必须使用 `ShouldBindQuery` 解析查询参数**
+- ✅ **Req 结构体字段必须使用 `form` tag**
+- ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
+
+```go
+// ✅ 正确 - DELETE 请求参数解析
+func (h *OrderHandler) DeleteSaleOrder(c *gin.Context) {
+    ctx := helper.NewContext(c)
+    
+    params := req.InstantOrderSaleOrderDeleteReq{}
+    if err := c.ShouldBindQuery(&params); err != nil {
+        helper.HandleValidationError(c, err, params, nil)
+        return
+    }
+    
+    // 调用 Service
+    res, err := h.orderSrv.InstantOrderSaleOrderDelete(ctx, params)
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+        return
+    }
+    
+    helper.Success(c, res)
+}
+
+// Req 结构体定义（在 dto/req 包中）
+type InstantOrderSaleOrderDeleteReq struct {
+    SaleBillUuid  uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid"`  // ✅ 使用 form tag
+    SaleOrderUuid uint64 `form:"sale_order_uuid" json:"sale_order_uuid"` // ✅ 使用 form tag
+}
+```
+
+**总结：**
+
+| HTTP 方法 | 解析方法          | Req 结构体 tag | 错误处理                          |
+| --------- | ----------------- | -------------- | --------------------------------- |
+| GET       | `ShouldBindQuery` | `form`         | `helper.HandleValidationError`    |
+| POST      | `ShouldBindJSON`  | `json`         | `helper.HandleValidationError`    |
+| DELETE    | `ShouldBindQuery` | `form`         | `helper.HandleValidationError`    |
+
 ---
 
 ## 🔍 关键检查点
@@ -538,6 +655,10 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 - [ ] **API 层（app/api/v1 及其所有子目录）严禁引用 repository 包**
 - [ ] **API 层严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
 - [ ] API 层只负责参数校验、调用 Service、返回响应
+- [ ] **GET 请求必须使用 `ShouldBindQuery` 解析，Req 结构体字段使用 `form` tag**
+- [ ] **POST 请求必须使用 `ShouldBindJSON` 解析，Req 结构体字段使用 `json` tag**
+- [ ] **DELETE 请求必须使用 `ShouldBindQuery` 解析，Req 结构体字段使用 `form` tag**
+- [ ] **所有请求参数解析错误必须使用 `helper.HandleValidationError(c, err, params, nil)` 处理**
 - [ ] data 不能为 null 或数组
 - [ ] **多语言字段（请求参数和响应参数）必须使用 `dto.LocaleResponse` 结构，禁止使用字符串、map 或自定义结构**
 - [ ] **多语言字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式，禁止使用 `Name` 等不带 `Locale` 前缀的字段名**
@@ -637,6 +758,10 @@ order, err := orderRepo.GetOrder(
 | ❌ **事务中手动调用 `tx.Commit()` 或 `tx.Rollback()`** | **Transaction 方法会自动处理，手动调用会导致错误** |
 | ❌ **API 层（app/api/v1 及其所有子目录）引用 repository 包** | **严禁违反，必须通过 Service 层** |
 | ❌ **API 层编写业务逻辑**        | **严禁违反，所有业务逻辑必须在 Service 层实现** |
+| ❌ **GET 请求使用 `ShouldBindJSON` 或 Req 结构体使用 `json` tag** | **必须使用 `ShouldBindQuery` 和 `form` tag** |
+| ❌ **DELETE 请求使用 `ShouldBindJSON` 或 Req 结构体使用 `json` tag** | **必须使用 `ShouldBindQuery` 和 `form` tag** |
+| ❌ **POST 请求使用 `ShouldBindQuery` 或 Req 结构体使用 `form` tag** | **必须使用 `ShouldBindJSON` 和 `json` tag** |
+| ❌ **请求参数解析错误不使用 `helper.HandleValidationError`** | **必须统一使用 `helper.HandleValidationError(c, err, params, nil)`** |
 | ❌ Repository 持有 DBManager        | 只能持有 db                 |
 | ❌ 跨层调用                         | 必须遵循分层                |
 | ❌ 使用字面量常量             | 必须在 constant 包中定义 |

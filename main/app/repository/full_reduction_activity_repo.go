@@ -118,13 +118,13 @@ func (r *FullReductionActivityRepoImpl) WhereUuid(uuid uint64) DBOption {
 func (r *FullReductionActivityRepoImpl) WhereStatus(status string, now int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		switch status {
-		case "ongoing":
+		case constant.ActivityStatusInProgress:
 			// 进行中：当前时间在活动日期范围内，且未失效
 			return db.Where("start_date <= ? AND end_date >= ? AND is_disabled = ?", now, now, 0)
-		case "not_started":
+		case constant.ActivityStatusNotStarted:
 			// 未开始：当前时间小于开始日期，且未失效
 			return db.Where("start_date > ? AND is_disabled = ?", now, 0)
-		case "ended":
+		case constant.ActivityStatusEnded:
 			// 已结束：当前时间大于结束日期，或已失效
 			return db.Where("end_date < ? OR is_disabled = ?", now, 1)
 		default:
