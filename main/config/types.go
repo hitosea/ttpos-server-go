@@ -91,8 +91,9 @@ type GoogleBucketConf struct {
 
 // NacosConf Nacos配置结构体
 type NacosConf struct {
-	Host      string // nacos服务地址
-	Port      int    // nacos端口
+	Addresses string // 多实例配置（格式：host1:port1,host2:port2,host3:port3），优先使用
+	Host      string // nacos服务地址（兼容旧配置）
+	Port      int    // nacos端口（兼容旧配置）
 	Namespace string // 命名空间
 	Username  string // 用户名
 	Password  string // 密码

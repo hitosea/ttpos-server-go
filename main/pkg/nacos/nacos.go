@@ -2,6 +2,9 @@ package nacos
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
@@ -35,15 +38,60 @@ func NewNacosClient(nacosConfig config.NacosConf) (*NacosClient, error) {
 		constant.WithPassword(nacosConfig.Password),
 	)
 
-	//create ServerConfig
-	sc := []constant.ServerConfig{
-		*constant.NewServerConfig(nacosConfig.Host, uint64(nacosConfig.Port)),
+	// 解析多个地址，创建多个 ServerConfig
+	var serverConfigs []constant.ServerConfig
+	if len(nacosConfig.Addresses) > 0 {
+		// 多实例配置
+		addresses := strings.Split(nacosConfig.Addresses, ",")
+		validCount := 0
+		for _, addr := range addresses {
+			addr = strings.TrimSpace(addr)
+			parts := strings.Split(addr, ":")
+			if len(parts) == 2 {
+				host := strings.TrimSpace(parts[0])
+				portStr := strings.TrimSpace(parts[1])
+				if len(host) > 0 && len(portStr) > 0 {
+					port, err := strconv.ParseUint(portStr, 10, 64)
+					if err == nil {
+						serverConfigs = append(serverConfigs,
+							*constant.NewServerConfig(host, port))
+						validCount++
+					} else {
+						logger.Logger.Warn("无效的 Nacos 端口格式，将忽略",
+							zap.String("address", addr), zap.Error(err))
+					}
+				}
+			} else {
+				logger.Logger.Warn("无效的 Nacos 地址格式，将忽略",
+					zap.String("address", addr))
+			}
+		}
+		if validCount > 0 {
+			logger.Logger.Info("使用多实例 Nacos 配置",
+				zap.Int("count", validCount),
+				zap.String("addresses", nacosConfig.Addresses))
+		} else {
+			logger.Logger.Warn("多实例配置中没有有效地址，将使用单实例配置")
+			// 回退到单实例配置
+			serverConfigs = []constant.ServerConfig{
+				*constant.NewServerConfig(nacosConfig.Host, uint64(nacosConfig.Port)),
+			}
+		}
+	} else {
+		// 单实例配置（向后兼容）
+		serverConfigs = []constant.ServerConfig{
+			*constant.NewServerConfig(nacosConfig.Host, uint64(nacosConfig.Port)),
+		}
+		logger.Logger.Debug("使用单实例 Nacos 配置",
+			zap.String("host", nacosConfig.Host),
+			zap.Int("port", nacosConfig.Port))
 	}
+
 	// 创建配置客户端
 	configClient, err := clients.NewConfigClient(
 		vo.NacosClientParam{
 			ClientConfig:  &cc,
-			ServerConfigs: sc,
+			ServerConfigs: serverConfigs,
 		},
 	)
 	if err != nil {
@@ -53,7 +101,7 @@ func NewNacosClient(nacosConfig config.NacosConf) (*NacosClient, error) {
 	namingClient, err := clients.NewNamingClient(
 		vo.NacosClientParam{
 			ClientConfig:  &cc,
-			ServerConfigs: sc,
+			ServerConfigs: serverConfigs,
 		},
 	)
 	if err != nil {
