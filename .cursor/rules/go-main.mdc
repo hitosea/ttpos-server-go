@@ -203,6 +203,7 @@ description: Go Main 核心约束
 - [ ] `go vet` 检查问题
 - [ ] 测试通过
 - [ ] 代码已 review
+- [ ] **如果添加了 SQL 迁移文件，必须同步更新 `admin/database/seeds/shop_01.sql` 文件**（新增表、删除表、新增字段、删除字段、修改字段等都必须同步反映）
 
 ---
 
@@ -242,6 +243,7 @@ description: Go Main 核心约束
 | ❌ Repository 持有 DBManager        | 只能持有 db                 |
 | ❌ 跨层调用                         | 必须遵循分层                |
 | ❌ 使用字面量常量             | 必须在 constant 包中定义 |
+| ❌ **添加 SQL 迁移文件后不更新 `shop_01.sql`** | **必须同步更新，确保种子数据与最新表结构一致** |
 
 ---
 

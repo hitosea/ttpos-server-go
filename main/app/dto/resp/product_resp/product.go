@@ -47,11 +47,13 @@ type ProductPackageGroupList struct {
 
 // ProductPackageGroup 套餐分组
 type ProductPackageGroup struct {
-	Uuid       uint64             `json:"uuid"`        // 套餐分组UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 套餐分组名称
-	IsFull     bool               `json:"is_full"`     // 是否选满
-	Num        int                `json:"num"`         // 套餐商品数量
-	Products   ProductList        `json:"products"`    // 套餐商品列表
+	Uuid          uint64             `json:"uuid"`           // 套餐分组UUID
+	LocaleName    dto.LocaleResponse `json:"locale_name"`     // 套餐分组名称
+	GroupType     int                `json:"group_type"`      // 分组类型 0-固定 1-可选
+	OptionalCount int                `json:"optional_count"`  // 可选数量
+	IsFull        bool               `json:"is_full"`         // 是否选满
+	Num           int                `json:"num"`             // 套餐商品数量
+	Products      ProductList        `json:"products"`       // 套餐商品列表
 }
 
 // 判断套餐分组是否选满
@@ -72,9 +74,10 @@ type ProductList struct {
 
 // PackageProductDetail 套餐商品详情
 type PackageProductDetail struct {
-	Detail  Product `json:"detail"`   // 商品详情
-	Num     float64 `json:"num"`      // 商品数量，分组中item的数量
-	CanEdit bool    `json:"can_edit"` // 是否可以编辑
+	Detail   Product `json:"detail"`    // 商品详情
+	Num      float64 `json:"num"`       // 商品数量，分组中item的数量
+	AddPrice float64 `json:"add_price"` // 加价金额
+	CanEdit  bool    `json:"can_edit"`  // 是否可以编辑
 }
 
 // 判断是否可以编辑。无需选择属性的商品，不可以编辑

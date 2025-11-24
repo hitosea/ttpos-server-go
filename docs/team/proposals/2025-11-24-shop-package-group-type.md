@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 待评审   |
 | **关联任务** | DooTask #36913 |
-| **关联 Spec** | -      |
+| **关联 Spec** | [docs/shared/specs/story-shop-package-group-type/](../shared/specs/story-shop-package-group-type/)      |
 
 ---
 
@@ -243,7 +243,7 @@ AddPrice float64 `json:"add_price"` // 加价金额，默认0
 
 **下一步行动**：
 
-- [ ] 创建 Spec：`story-shop-package-group-type`
+- [x] 创建 Spec：`story-shop-package-group-type` ✅
 - [ ] 分配负责人：{姓名}
 - [ ] 目标 Sprint：Sprint 待定
 

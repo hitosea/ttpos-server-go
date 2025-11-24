@@ -334,7 +334,8 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							},
 							Describe: product.Describe,
 						},
-						Num: item.Num,
+						Num:      item.Num,
+						AddPrice: item.AddPrice,
 					}
 					productDetail.CanEdit = productDetail.GetCanEdit() // 是否可以编辑
 
@@ -342,9 +343,11 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				}
 
 				packageGroup := product_resp.ProductPackageGroup{
-					Uuid:       group.Uuid,
-					LocaleName: group.MultiLanguageName.GetNames(),
-					Num:        len(productList),
+					Uuid:          group.Uuid,
+					LocaleName:    group.MultiLanguageName.GetNames(),
+					GroupType:     group.GroupType,
+					OptionalCount: group.OptionalCount,
+					Num:           len(productList),
 					Products: product_resp.ProductList{
 						List: productList,
 					},
@@ -5486,14 +5489,22 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			var products []CheckProductPackageGroupProductParam
 			for _, product := range group.Products {
 				products = append(products, CheckProductPackageGroupProductParam{
-					BomUuid: product.BomUuid,
-					Num:     product.Num,
-					Sort:    product.Sort,
+					BomUuid:  product.BomUuid,
+					Num:      product.Num,
+					Sort:     product.Sort,
+					AddPrice: product.AddPrice,
 				})
 			}
+			groupType := group.GroupType
+			optionalCount := group.OptionalCount
+			if groupType == 0 {
+				optionalCount = len(group.Products)
+			}
 			groups = append(groups, CheckProductPackageGroupParam{
-				LocaleName: group.LocaleName,
-				Products:   products,
+				LocaleName:    group.LocaleName,
+				GroupType:     groupType,
+				OptionalCount: optionalCount,
+				Products:      products,
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
@@ -5779,14 +5790,22 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 					BomUuid:  product.BomUuid,
 					Num:      product.Num,
 					Sort:     product.Sort,
+					AddPrice: product.AddPrice,
 					IsDelete: product.IsDelete,
 				})
 			}
+			groupType := group.GroupType
+			optionalCount := group.OptionalCount
+			if groupType == 0 {
+				optionalCount = len(group.Products)
+			}
 			groups = append(groups, CheckProductPackageGroupParam{
-				Uuid:       group.Uuid,
-				LocaleName: group.LocaleName,
-				Products:   products,
-				IsDelete:   group.IsDelete,
+				Uuid:          group.Uuid,
+				LocaleName:    group.LocaleName,
+				GroupType:     groupType,
+				OptionalCount: optionalCount,
+				Products:      products,
+				IsDelete:      group.IsDelete,
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
@@ -6754,6 +6773,8 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					Name:                  group.LocaleName.ToJson(),
 					MultiLanguageNameUuid: multiLanguageNameUuid,
 					ProductPackageUuid:    productPackageUuid,
+					GroupType:             group.GroupType,
+					OptionalCount:         group.OptionalCount,
 				})
 				if err != nil {
 					return errors.WithMessage(err, "保存套餐组失败")
@@ -6774,6 +6795,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 						ProductBomUuid:          item.BomUuid,
 						Num:                     float64(item.Num),
 						Sort:                    item.Sort,
+						AddPrice:                item.AddPrice,
 					})
 				}
 			} else {
@@ -6800,7 +6822,9 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					return errors.WithMessage(err, "保存多语言名称失败")
 				}
 				err = productPackageGroupRepo.UpdateProductPackageGroup(map[string]any{
-					"name": group.LocaleName.ToJson(),
+					"name":           group.LocaleName.ToJson(),
+					"group_type":     group.GroupType,
+					"optional_count": group.OptionalCount,
 				}, commonRepo.WhereByUuid(group.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新套餐组失败")
@@ -6830,6 +6854,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 								ProductBomUuid:          item.BomUuid,
 								Num:                     float64(item.Num),
 								Sort:                    item.Sort,
+								AddPrice:                item.AddPrice,
 							})
 							if err != nil {
 								return errors.WithMessage(err, "保存套餐组商品失败")
@@ -6840,6 +6865,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 								"product_bom_uuid": item.BomUuid,
 								"num":              item.Num,
 								"sort":             item.Sort,
+								"add_price":        item.AddPrice,
 							}, commonRepo.WhereByUuid(item.Uuid))
 							if err != nil {
 								return errors.WithMessage(err, "更新套餐组商品失败")
