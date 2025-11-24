@@ -8109,6 +8109,18 @@ definitions:
         description: 选择的打印机SN
         type: string
     type: object
+  req.VerifyPasswordForSensitiveOperationReq:
+    properties:
+      authorized_staff_account:
+        description: 授权员工账号（邮箱或手机号）
+        type: string
+      password:
+        description: 权限密码
+        type: string
+    required:
+    - authorized_staff_account
+    - password
+    type: object
   req.VerifyPasswordReq:
     properties:
       password:
@@ -18309,6 +18321,30 @@ paths:
       summary: 获取在线收银机
       tags:
       - 点餐助手端.基础信息
+  /assistant/order/check_authorization:
+    post:
+      consumes:
+      - application/json
+      description: 检查当前员工是否有权限进行敏感操作（折扣/退款）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckAuthorizationResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 检查授权
+      tags:
+      - 点餐助手端.订单
   /assistant/order/is_cell_close:
     get:
       consumes:
@@ -18368,6 +18404,37 @@ paths:
       security:
       - JwtToken: []
       summary: 获取商品选购详情
+      tags:
+      - 点餐助手端.订单
+  /assistant/order/verify_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证授权员工账号和密码（用于敏感操作）
+      parameters:
+      - description: 密码验证参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordForSensitiveOperationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.VerifyPasswordResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 密码验证
       tags:
       - 点餐助手端.订单
   /assistant/order_source/list:

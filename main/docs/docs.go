@@ -3987,6 +3987,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/order/check_authorization": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查当前员工是否有权限进行敏感操作（折扣/退款）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.订单"
+                ],
+                "summary": "检查授权",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CheckAuthorizationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/order/is_cell_close": {
             "get": {
                 "security": [
@@ -4077,6 +4120,60 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.ProductPackageDetailRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/order/verify_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证授权员工账号和密码（用于敏感操作）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.订单"
+                ],
+                "summary": "密码验证",
+                "parameters": [
+                    {
+                        "description": "密码验证参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordForSensitiveOperationReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.VerifyPasswordResp"
                                         }
                                     }
                                 }
@@ -43759,6 +43856,23 @@ const docTemplate = `{
                 },
                 "selected_sn": {
                     "description": "选择的打印机SN",
+                    "type": "string"
+                }
+            }
+        },
+        "req.VerifyPasswordForSensitiveOperationReq": {
+            "type": "object",
+            "required": [
+                "authorized_staff_account",
+                "password"
+            ],
+            "properties": {
+                "authorized_staff_account": {
+                    "description": "授权员工账号（邮箱或手机号）",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "权限密码",
                     "type": "string"
                 }
             }
