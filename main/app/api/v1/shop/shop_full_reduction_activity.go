@@ -1,7 +1,6 @@
 package shop
 
 import (
-	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -88,15 +87,14 @@ func (h *FullReductionActivityHandler) Update(c *gin.Context) {
 func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	// GET 请求使用 Query 参数
-	uuidStr := c.Query("uuid")
-	uuid, err := strconv.ParseUint(uuidStr, 10, 64)
-	if err != nil || uuid == 0 {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
+	// GET 请求必须使用 ShouldBindQuery 解析查询参数
+	params := req.FullReductionActivityGetReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 
-	result, err := h.fullReductionActivitySrv.GetByUuid(ctx, uuid)
+	result, err := h.fullReductionActivitySrv.GetByUuid(ctx, params.Uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -112,29 +110,22 @@ func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param page_no query int true "页码"
-// @Param page_size query int true "每页条数"
+// @Param page_no query int false "页码" default(1)
+// @Param page_size query int false "每页条数" default(20)
 // @Param status query string false "状态 all-全部 in_progress-进行中 not_start-未开始 end-已结束"
 // @Success 200 {object} dto.Response{data=resp.FullReductionActivityListResp}
 // @Router /shop/full_reduction_activity/list [get]
 func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	// GET 请求使用 Query 参数
-	pageNoStr := c.DefaultQuery("page_no", "1")
-	pageSizeStr := c.DefaultQuery("page_size", "20")
-	status := c.Query("status")
-
-	pageNo, _ := strconv.Atoi(pageNoStr)
-	pageSize, _ := strconv.Atoi(pageSizeStr)
-
-	listReq := &req.FullReductionActivityListReq{
-		PageNo:   pageNo,
-		PageSize: pageSize,
-		Status:   status,
+	// GET 请求必须使用 ShouldBindQuery 解析查询参数
+	params := req.FullReductionActivityListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
 	}
 
-	result, err := h.fullReductionActivitySrv.GetList(ctx, listReq)
+	result, err := h.fullReductionActivitySrv.GetList(ctx, &params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -156,15 +147,14 @@ func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 func (h *FullReductionActivityHandler) Delete(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	// DELETE 请求参数通过 Query 传递
-	uuidStr := c.Query("uuid")
-	uuid, err := strconv.ParseUint(uuidStr, 10, 64)
-	if err != nil || uuid == 0 {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
+	// DELETE 请求必须使用 ShouldBindQuery 解析查询参数
+	params := req.FullReductionActivityDeleteReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 
-	if err := h.fullReductionActivitySrv.Delete(ctx, uuid); err != nil {
+	if err := h.fullReductionActivitySrv.Delete(ctx, params.Uuid); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
@@ -219,16 +209,11 @@ func RegisterFullReductionActivityRoutes(router gin.IRouter, dbm *database.DBMan
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		// ✅ GET：获取信息（列表、详情）
 		privateApi.GET("/full_reduction_activity/list", handler.GetList)
 		privateApi.GET("/full_reduction_activity/get", handler.GetByUuid)
-
-		// ✅ POST：创建和修改数据
 		privateApi.POST("/full_reduction_activity/create", handler.Create)
 		privateApi.POST("/full_reduction_activity/update", handler.Update)
 		privateApi.POST("/full_reduction_activity/disable", handler.Disable)
-
-		// ✅ DELETE：删除数据
 		privateApi.DELETE("/full_reduction_activity/delete", handler.Delete)
 	}
 }

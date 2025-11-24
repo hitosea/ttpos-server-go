@@ -20346,7 +20346,7 @@ const docTemplate = `{
             }
         },
         "/shop/full_reduction_activity/delete": {
-            "post": {
+            "delete": {
                 "security": [
                     {
                         "JwtToken": []
@@ -20365,13 +20365,11 @@ const docTemplate = `{
                 "summary": "删除满减活动",
                 "parameters": [
                     {
-                        "description": "删除活动",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.FullReductionActivityDeleteReq"
-                        }
+                        "type": "integer",
+                        "description": "活动UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -20424,7 +20422,7 @@ const docTemplate = `{
             }
         },
         "/shop/full_reduction_activity/get": {
-            "post": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
@@ -20443,13 +20441,11 @@ const docTemplate = `{
                 "summary": "获取满减活动详情",
                 "parameters": [
                     {
-                        "description": "获取活动",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.FullReductionActivityGetReq"
-                        }
+                        "type": "integer",
+                        "description": "活动UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -20475,7 +20471,7 @@ const docTemplate = `{
             }
         },
         "/shop/full_reduction_activity/list": {
-            "post": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
@@ -20494,13 +20490,24 @@ const docTemplate = `{
                 "summary": "获取满减活动列表",
                 "parameters": [
                     {
-                        "description": "获取列表",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.FullReductionActivityListReq"
-                        }
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态 all-全部 in_progress-进行中 not_start-未开始 end-已结束",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -37374,7 +37381,7 @@ const docTemplate = `{
             "required": [
                 "end_date",
                 "is_all_day",
-                "name",
+                "locale_name",
                 "reduction_type",
                 "rules",
                 "start_date"
@@ -37391,9 +37398,13 @@ const docTemplate = `{
                     "description": "1=全天，0=特定时段",
                     "type": "integer"
                 },
-                "name": {
-                    "description": "JSON格式多语言名称，前端发送 JSON 字符串",
-                    "type": "string"
+                "locale_name": {
+                    "description": "多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "reduction_type": {
                     "description": "0=阶梯满减，1=循环满减",
@@ -37415,17 +37426,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.FullReductionActivityDeleteReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "type": "integer"
-                }
-            }
-        },
         "req.FullReductionActivityDisableReq": {
             "type": "object",
             "required": [
@@ -37434,36 +37434,6 @@ const docTemplate = `{
             "properties": {
                 "uuid": {
                     "type": "integer"
-                }
-            }
-        },
-        "req.FullReductionActivityGetReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "type": "integer"
-                }
-            }
-        },
-        "req.FullReductionActivityListReq": {
-            "type": "object",
-            "required": [
-                "page_no",
-                "page_size"
-            ],
-            "properties": {
-                "page_no": {
-                    "type": "integer"
-                },
-                "page_size": {
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "all, ongoing, not_started, ended",
-                    "type": "string"
                 }
             }
         },
@@ -37491,7 +37461,7 @@ const docTemplate = `{
             "required": [
                 "end_date",
                 "is_all_day",
-                "name",
+                "locale_name",
                 "reduction_type",
                 "rules",
                 "start_date",
@@ -37507,9 +37477,13 @@ const docTemplate = `{
                 "is_all_day": {
                     "type": "integer"
                 },
-                "name": {
-                    "description": "JSON格式多语言名称，前端发送 JSON 字符串",
-                    "type": "string"
+                "locale_name": {
+                    "description": "多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "reduction_type": {
                     "type": "integer"
@@ -45315,7 +45289,7 @@ const docTemplate = `{
                 "is_disabled": {
                     "type": "integer"
                 },
-                "name": {
+                "locale_name": {
                     "description": "多语言名称，使用 LocaleResponse（必须）",
                     "allOf": [
                         {
@@ -45343,7 +45317,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "ongoing, not_started, ended",
+                    "description": "in_progress, not_start, end",
                     "type": "string"
                 },
                 "update_time": {

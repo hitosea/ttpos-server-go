@@ -3912,9 +3912,10 @@ definitions:
       is_all_day:
         description: 1=全天，0=特定时段
         type: integer
-      name:
-        description: JSON格式多语言名称，前端发送 JSON 字符串
-        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 多语言名称
       reduction_type:
         description: 0=阶梯满减，1=循环满减
         type: integer
@@ -3931,17 +3932,10 @@ definitions:
     required:
     - end_date
     - is_all_day
-    - name
+    - locale_name
     - reduction_type
     - rules
     - start_date
-    type: object
-  req.FullReductionActivityDeleteReq:
-    properties:
-      uuid:
-        type: integer
-    required:
-    - uuid
     type: object
   req.FullReductionActivityDisableReq:
     properties:
@@ -3949,26 +3943,6 @@ definitions:
         type: integer
     required:
     - uuid
-    type: object
-  req.FullReductionActivityGetReq:
-    properties:
-      uuid:
-        type: integer
-    required:
-    - uuid
-    type: object
-  req.FullReductionActivityListReq:
-    properties:
-      page_no:
-        type: integer
-      page_size:
-        type: integer
-      status:
-        description: all, ongoing, not_started, ended
-        type: string
-    required:
-    - page_no
-    - page_size
     type: object
   req.FullReductionActivityRuleCreateReq:
     properties:
@@ -3992,9 +3966,10 @@ definitions:
         type: string
       is_all_day:
         type: integer
-      name:
-        description: JSON格式多语言名称，前端发送 JSON 字符串
-        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 多语言名称
       reduction_type:
         type: integer
       rules:
@@ -4011,7 +3986,7 @@ definitions:
     required:
     - end_date
     - is_all_day
-    - name
+    - locale_name
     - reduction_type
     - rules
     - start_date
@@ -9427,7 +9402,7 @@ definitions:
         type: integer
       is_disabled:
         type: integer
-      name:
+      locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 多语言名称，使用 LocaleResponse（必须）
@@ -9445,7 +9420,7 @@ definitions:
       start_time:
         type: string
       status:
-        description: ongoing, not_started, ended
+        description: in_progress, not_start, end
         type: string
       update_time:
         type: integer
@@ -27823,17 +27798,16 @@ paths:
       tags:
       - 商家端.满减活动
   /shop/full_reduction_activity/delete:
-    post:
+    delete:
       consumes:
       - application/json
       description: 删除满减活动
       parameters:
-      - description: 删除活动
-        in: body
-        name: data
+      - description: 活动UUID
+        in: query
+        name: uuid
         required: true
-        schema:
-          $ref: '#/definitions/req.FullReductionActivityDeleteReq'
+        type: integer
       produces:
       - application/json
       responses:
@@ -27871,17 +27845,16 @@ paths:
       tags:
       - 商家端.满减活动
   /shop/full_reduction_activity/get:
-    post:
+    get:
       consumes:
       - application/json
       description: 根据UUID获取满减活动详情
       parameters:
-      - description: 获取活动
-        in: body
-        name: data
+      - description: 活动UUID
+        in: query
+        name: uuid
         required: true
-        schema:
-          $ref: '#/definitions/req.FullReductionActivityGetReq'
+        type: integer
       produces:
       - application/json
       responses:
@@ -27900,17 +27873,25 @@ paths:
       tags:
       - 商家端.满减活动
   /shop/full_reduction_activity/list:
-    post:
+    get:
       consumes:
       - application/json
       description: 获取满减活动列表
       parameters:
-      - description: 获取列表
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.FullReductionActivityListReq'
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 状态 all-全部 in_progress-进行中 not_start-未开始 end-已结束
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:

@@ -120,17 +120,16 @@ func (r *FullReductionActivityRepoImpl) WhereStatus(status string, now int64) DB
 		switch status {
 		case constant.ActivityStatusInProgress:
 			// 进行中：当前时间在活动日期范围内，且未失效
-			return db.Where("start_date <= ? AND end_date >= ? AND is_disabled = ?", now, now, 0)
+			return db.Where("start_date <= ? AND end_date >= ? AND is_disabled = ?", now, now, constant.No)
 		case constant.ActivityStatusNotStarted:
 			// 未开始：当前时间小于开始日期，且未失效
-			return db.Where("start_date > ? AND is_disabled = ?", now, 0)
+			return db.Where("start_date > ? AND is_disabled = ?", now, constant.No)
 		case constant.ActivityStatusEnded:
 			// 已结束：当前时间大于结束日期，或已失效
-			return db.Where("end_date < ? OR is_disabled = ?", now, 1)
+			return db.Where("end_date < ? OR is_disabled = ?", now, constant.Yes)
 		default:
 			// 全部：不添加额外条件
 			return db
 		}
 	}
 }
-

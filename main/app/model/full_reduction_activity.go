@@ -1,6 +1,8 @@
 package model
 
-import "ttpos-server-go/app/constant"
+import (
+	"ttpos-server-go/app/constant"
+)
 
 // FullReductionActivity 满减活动表
 type FullReductionActivity struct {
@@ -27,7 +29,7 @@ func (*FullReductionActivity) TableName() string {
 // GetStatus 获取活动状态（进行中/未开始/已结束）
 func (m *FullReductionActivity) GetStatus(now int64, timezone string) string {
 	// 如果已失效，返回已结束
-	if m.IsDisabled == 1 {
+	if m.IsDisabled == constant.Yes {
 		return constant.ActivityStatusEnded
 	}
 

@@ -65,19 +65,18 @@ func (req *FullReductionActivityUpdateReq) Validate() error {
 
 // FullReductionActivityGetReq 获取满减活动请求
 type FullReductionActivityGetReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"`
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"`
 }
 
 // FullReductionActivityListReq 获取满减活动列表请求
 type FullReductionActivityListReq struct {
-	PageNo   int    `json:"page_no" binding:"required"`
-	PageSize int    `json:"page_size" binding:"required"`
-	Status   string `json:"status"` // all, in_progress, not_start, end
+	dto.PageReq        // 分页参数
+	Status      string `form:"status" json:"status"` // all, in_progress, not_start, end
 }
 
 // FullReductionActivityDeleteReq 删除满减活动请求
 type FullReductionActivityDeleteReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"`
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"`
 }
 
 // FullReductionActivityDisableReq 失效满减活动请求

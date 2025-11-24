@@ -19,11 +19,11 @@ class CreateTTPOSFullReductionActivityTable extends Migrator
     public function change()
     {
         // 检查表是否已经存在
-        if ($this->hasTable('ttpos_full_reduction_activity')) {
+        if ($this->hasTable('full_reduction_activity')) {
             return;
         }
 
-        $table = $this->table('ttpos_full_reduction_activity', [
+        $table = $this->table('full_reduction_activity', [
             'comment' => '满减活动表',
             'engine' => 'InnoDB',
             'encoding' => 'utf8mb4',

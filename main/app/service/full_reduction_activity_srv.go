@@ -267,7 +267,7 @@ func (s *fullReductionActivitySrv) GetList(ctx context.Context, req *req.FullRed
 	}
 
 	// 根据状态筛选
-	if req.Status != "" && req.Status != "all" {
+	if req.Status != "" && req.Status != constant.ActivityStatusAll {
 		opts = append(opts, activityRepo.WhereStatus(req.Status, now))
 	}
 
@@ -396,9 +396,9 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 	status := activity.GetStatus(now, timezone)
 
 	// 获取满减方式名称
-	reductionTypeName := "阶梯满减"
-	if activity.ReductionType == constant.FullReductionTypeCycle {
-		reductionTypeName = "循环满减"
+	reductionTypeName := constant.FullReductionTypeNames[activity.ReductionType]
+	if reductionTypeName == "" {
+		reductionTypeName = "未知类型"
 	}
 
 	return &resp.FullReductionActivityResp{
