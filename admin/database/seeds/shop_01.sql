@@ -2249,7 +2249,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_food_reason` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '退菜原因表';
 
-CREATE TABLE IF NOT EXISTS `order_remark` (
+CREATE TABLE IF NOT EXISTS `ttpos_order_remark` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '整单备注ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
