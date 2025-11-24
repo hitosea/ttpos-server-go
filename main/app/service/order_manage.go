@@ -962,38 +962,9 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 	}
 
 	// 授权验证（退款操作）
-	var authorizedStaff *model.Staff
-	if request.AuthorizedStaffAccount != "" && request.AuthorizedStaffPassword != "" {
-		// 如果提供了授权参数，需要验证
-		verifyReq := req.VerifyPasswordForSensitiveOperationReq{
-			AuthorizedStaffAccount: request.AuthorizedStaffAccount,
-			Password:               request.AuthorizedStaffPassword,
-		}
-		verified, err := s.VerifyPasswordForRefund(ctx, verifyReq)
-		if err != nil {
-			return errors.WithMessage(err, "授权验证失败"), constant.CodeFail
-		}
-		if !verified {
-			return errors.New("授权验证失败"), constant.CodeFail
-		}
-		// 获取授权员工信息
-		db := s.dbm.GetDB(ctx.GetDbId())
-		staffRepo := repository.NewStaffRepo(db)
-		staff, err := staffRepo.GetStaff(staffRepo.WhereUsername(request.AuthorizedStaffAccount))
-		if err == nil && staff.Uuid > 0 {
-			authorizedStaff = &staff
-		}
-	} else {
-		// 检查当前员工是否在退款授权名单中
-		hasPermission, err := s.CheckAuthorizationForRefund(ctx)
-		if err != nil {
-			return errors.WithMessage(err), constant.CodeFail
-		}
-		if !hasPermission {
-			return errors.New("需要授权验证"), constant.CodeFail
-		}
-		staff := ctx.GetStaff()
-		authorizedStaff = &staff
+	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeRefund, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
 	}
 
 	// 获取门店设置
@@ -2501,4 +2472,72 @@ func (s *orderSrv) VerifyPasswordForRefund(ctx context.Context, req req.VerifyPa
 
 	// 5. 返回验证结果
 	return true, nil
+}
+
+// SensitiveOperationType 敏感操作类型
+type SensitiveOperationType string
+
+const (
+	SensitiveOperationTypeDiscount SensitiveOperationType = "discount" // 折扣操作（整单改价、打折、抹零）
+	SensitiveOperationTypeRefund   SensitiveOperationType = "refund"   // 退款操作
+)
+
+// AuthorizeSensitiveOperation 授权敏感操作
+// 统一的授权验证方法，用于折扣操作和退款操作
+// 返回授权员工信息，如果当前员工有权限则返回当前员工信息
+func (s *orderSrv) AuthorizeSensitiveOperation(ctx context.Context, operationType SensitiveOperationType, authorizedStaffAccount, authorizedStaffPassword string) (*model.Staff, error) {
+	// 如果提供了授权参数，需要验证
+	if authorizedStaffAccount != "" && authorizedStaffPassword != "" {
+		verifyReq := req.VerifyPasswordForSensitiveOperationReq{
+			AuthorizedStaffAccount: authorizedStaffAccount,
+			Password:               authorizedStaffPassword,
+		}
+
+		var verified bool
+		var err error
+
+		// 根据操作类型选择不同的验证方法
+		if operationType == SensitiveOperationTypeRefund {
+			verified, err = s.VerifyPasswordForRefund(ctx, verifyReq)
+		} else {
+			verified, err = s.VerifyPassword(ctx, verifyReq)
+		}
+
+		if err != nil {
+			return nil, errors.WithMessage(err, "授权验证失败")
+		}
+		if !verified {
+			return nil, errors.New("授权验证失败")
+		}
+
+		// 获取授权员工信息
+		db := s.dbm.GetDB(ctx.GetDbId())
+		staffRepo := repository.NewStaffRepo(db)
+		staff, err := staffRepo.GetStaff(staffRepo.WhereUsername(authorizedStaffAccount))
+		if err != nil || staff.Uuid == 0 {
+			return nil, errors.New("获取授权员工信息失败")
+		}
+		return &staff, nil
+	}
+
+	// 如果没有提供授权参数，检查当前员工是否在授权名单中
+	var hasPermission bool
+	var err error
+
+	if operationType == SensitiveOperationTypeRefund {
+		hasPermission, err = s.CheckAuthorizationForRefund(ctx)
+	} else {
+		hasPermission, err = s.CheckAuthorization(ctx)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if !hasPermission {
+		return nil, errors.New("需要授权验证")
+	}
+
+	// 当前员工有权限，返回当前员工信息
+	staff := ctx.GetStaff()
+	return &staff, nil
 }

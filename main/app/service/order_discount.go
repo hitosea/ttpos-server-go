@@ -123,21 +123,27 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 }
 
 // OrderAmountChange  修改订单金额，整单改价
-func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmountChangeReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
-	if err := req.Validate(); err != nil {
+	// 授权验证（折扣操作：整单改价）
+	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := request.Validate(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 当前销售账单数据
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
@@ -147,23 +153,33 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
 	// 获取当前销售订单信息
-	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
 
 	// 设置整单改价金额
-	saleOrder.SetCustomAmount(req.Price)
+	saleOrder.SetCustomAmount(request.Price)
 	oldPrice := saleOrder.GetOriginAmount()
 
 	// 整单改价后，整单折扣会取消，需要重新计算订单商品的金额
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 构建授权员工信息（如果使用了授权验证）
+	var authorizedStaffInfo *event.AuthorizedStaffInfo
+	if authorizedStaff != nil {
+		authorizedStaffInfo = &event.AuthorizedStaffInfo{
+			Uuid:  authorizedStaff.Uuid,
+			Name:  authorizedStaff.RealName,
+			Email: authorizedStaff.Username,
+		}
 	}
 
 	// 发布"改价"事件
@@ -173,19 +189,20 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
+				SaleBillUuid:  request.SaleBillUuid,
+				SaleOrderUuid: request.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
 			OldPrice:        oldPrice, // 旧价格为订单的原始应收金额
-			NewPrice:        req.Price,
+			NewPrice:        request.Price,
 			DiscountType:    constant.DiscountOperationLogTypeChangePriceSaleOrder, // 整单改价的类型值
-			SpecialDiscount: decimal.NewFromFloat(oldPrice).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
+			SpecialDiscount: decimal.NewFromFloat(oldPrice).Sub(decimal.NewFromFloat(request.Price)).InexactFloat64(),
+			AuthorizedStaff: authorizedStaffInfo,
 		})
 	})
 
 	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -194,21 +211,27 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 }
 
 // OrderDiscount  修改订单折扣
-func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
-	if err := req.Validate(); err != nil {
+	// 授权验证（折扣操作：打折）
+	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := request.Validate(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 当前销售账单数据
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
@@ -218,12 +241,12 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	}
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
 	// 获取当前销售订单信息
-	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
@@ -237,7 +260,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	// 在折扣之前计算会员打折后金额。必须在设置折扣之前获取，否则amount值已经改变了
 	memberDiscountAmount := saleOrder.GetMemberDiscountAmount()
 	// 设置整单折扣率
-	saleOrder.SetCustomDiscount(req.GetDiscount())
+	saleOrder.SetCustomDiscount(request.GetDiscount())
 
 	// 获取最新的设置
 	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false)
@@ -249,6 +272,16 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 		return nil, errors.WithMessage(err)
 	}
 
+	// 构建授权员工信息（如果使用了授权验证）
+	var authorizedStaffInfo *event.AuthorizedStaffInfo
+	if authorizedStaff != nil {
+		authorizedStaffInfo = &event.AuthorizedStaffInfo{
+			Uuid:  authorizedStaff.Uuid,
+			Name:  authorizedStaff.RealName,
+			Email: authorizedStaff.Username,
+		}
+	}
+
 	// 发布"整单打折"事件
 	utils.Go(func() {
 		discountAmount := saleOrder.CustomDiscountFee
@@ -257,20 +290,21 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
+				SaleBillUuid:  request.SaleBillUuid,
+				SaleOrderUuid: request.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
 			OldPrice:        memberDiscountAmount, // 旧价格为订单的会员折扣后的金额。如果没有会员折扣，则旧价格为订单应收金额
 			NewPrice:        saleOrder.GetAmount(),
 			DiscountType:    constant.DiscountOperationLogTypeDiscountSaleOrder,
-			RoundingRate:    req.GetPercentDiscount(),
+			RoundingRate:    request.GetPercentDiscount(),
 			SpecialDiscount: discountAmount,
+			AuthorizedStaff: authorizedStaffInfo,
 		})
 	})
 
 	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -279,21 +313,27 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 }
 
 // OrderZeroRule  修改订单抹零规则
-func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error) {
+func (s *orderSrv) OrderZeroRule(ctx context.Context, request req.OrderZeroRuleReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
-	if err := req.Validate(); err != nil {
+	// 授权验证（折扣操作：抹零）
+	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := request.Validate(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 当前销售账单数据
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
@@ -302,22 +342,32 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 		return nil, errors.WithMessage(errors.New("当前订单已拆单，请前去收银机操作"))
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, req.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDiscount, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
 	// 获取当前销售订单信息
-	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
 
 	// 设置整单改价金额
-	saleOrder.SetZeroRule(req.ZeroRule)
+	saleOrder.SetZeroRule(request.ZeroRule)
 
 	// 计算并保存销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 构建授权员工信息（如果使用了授权验证）
+	var authorizedStaffInfo *event.AuthorizedStaffInfo
+	if authorizedStaff != nil {
+		authorizedStaffInfo = &event.AuthorizedStaffInfo{
+			Uuid:  authorizedStaff.Uuid,
+			Name:  authorizedStaff.RealName,
+			Email: authorizedStaff.Username,
+		}
 	}
 
 	// 发布"订单抹零"事件
@@ -327,18 +377,19 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
+				SaleBillUuid:  request.SaleBillUuid,
+				SaleOrderUuid: request.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
 			DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
-			RoundingType:    req.ZeroRule,
+			RoundingType:    request.ZeroRule,
 			SpecialDiscount: saleOrder.ZeroFee, // ZeroFee这个字段是算好的抹零优惠金额。先计算好订单应付金额，再根据抹零规格进行抹零得到的结果
+			AuthorizedStaff: authorizedStaffInfo,
 		})
 	})
 
 	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
