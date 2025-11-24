@@ -20,6 +20,8 @@ type IFullReductionActivityRepo interface {
 	// 选项方法
 	WhereUuid(uuid uint64) DBOption
 	WhereStatus(status string, now int64) DBOption
+	Limit(limit int) DBOption
+	Offset(offset int) DBOption
 }
 
 // NewFullReductionActivityRepo 创建满减活动仓库
@@ -77,16 +79,16 @@ func (r *FullReductionActivityRepoImpl) GetList(options ...DBOption) ([]*model.F
 
 	db := r.db.Model(&model.FullReductionActivity{}).Where("delete_time = ?", constant.NotDeleted)
 
-	for _, option := range options {
-		db = option(db)
-	}
-
 	// 获取总数
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
 
-	// 获取列表
+	for _, option := range options {
+		db = option(db)
+	}
+
+	// 获取列表（应用分页）
 	err := db.
 		Preload("Rules", "delete_time = ?", constant.NotDeleted).
 		Preload("MultiLanguageName", "delete_time = ?", constant.NotDeleted).
@@ -131,5 +133,19 @@ func (r *FullReductionActivityRepoImpl) WhereStatus(status string, now int64) DB
 			// 全部：不添加额外条件
 			return db
 		}
+	}
+}
+
+// Limit 限制查询数量
+func (r *FullReductionActivityRepoImpl) Limit(limit int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Limit(limit)
+	}
+}
+
+// Offset 偏移量
+func (r *FullReductionActivityRepoImpl) Offset(offset int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Offset(offset)
 	}
 }

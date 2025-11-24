@@ -16,8 +16,6 @@ type FullReductionActivityResp struct {
 	IsDisabled        int                             `json:"is_disabled"`
 	Status            string                          `json:"status"` // in_progress, not_start, end
 	Rules             []FullReductionActivityRuleResp `json:"rules"`
-	CreateTime        int64                           `json:"create_time"`
-	UpdateTime        int64                           `json:"update_time"`
 }
 
 // FullReductionActivityRuleResp 满减活动规则响应

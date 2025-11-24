@@ -43,7 +43,7 @@ type FullReductionActivityUpdateReq struct {
 	EndDate       int64                                `json:"end_date" binding:"required"`
 	StartTime     string                               `json:"start_time"`
 	EndTime       string                               `json:"end_time"`
-	IsAllDay      int                                  `json:"is_all_day" binding:"required"`
+	IsAllDay      int                                  `json:"is_all_day"`
 	ReductionType int                                  `json:"reduction_type" binding:"required"`
 	Rules         []FullReductionActivityRuleCreateReq `json:"rules" binding:"required,min=1"`
 }

@@ -38,6 +38,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.2
+	github.com/uptrace/opentelemetry-go-extra/otelgorm v0.3.2
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	github.com/xuri/excelize/v2 v2.9.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.63.0
@@ -135,7 +136,6 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tiendc/go-deepcopy v1.6.0 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
-	github.com/uptrace/opentelemetry-go-extra/otelgorm v0.3.2 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.1 // indirect

@@ -271,6 +271,11 @@ func (s *fullReductionActivitySrv) GetList(ctx context.Context, req *req.FullRed
 		opts = append(opts, activityRepo.WhereStatus(req.Status, now))
 	}
 
+	// 添加分页选项
+	offset := (req.PageNo - 1) * req.PageSize
+	opts = append(opts, activityRepo.Offset(offset))
+	opts = append(opts, activityRepo.Limit(req.PageSize))
+
 	// 获取列表
 	activities, total, err := activityRepo.GetList(opts...)
 	if err != nil {
@@ -414,7 +419,5 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 		IsDisabled:        activity.IsDisabled,
 		Status:            status,
 		Rules:             rules,
-		CreateTime:        activity.CreateTime,
-		UpdateTime:        activity.UpdateTime,
 	}, nil
 }
