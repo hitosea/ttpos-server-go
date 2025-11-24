@@ -259,6 +259,11 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 
 		EnableOrderSource: "0", // 外卖功能开关 0-关闭 1-开启
 		EnableNationality: "0", // 国籍功能开关 0-关闭 1-开启
+
+		DiscountNeedPassword:       "0",        // 折扣操作是否需要密码 0-否 1-是
+		DiscountAuthorizedStaffIds: []uint64{}, // 折扣操作授权员工ID列表
+		RefundNeedPassword:         "0",        // 退款操作是否需要密码 0-否 1-是
+		RefundAuthorizedStaffIds:   []uint64{}, // 退款操作授权员工ID列表
 	}
 
 }

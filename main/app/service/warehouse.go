@@ -1124,12 +1124,22 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 		warehouseItemMap[warehouseItem.MaterialUuid] = *warehouseItem
 	}
 
+	// 构建查询选项
+	var materialOpts []repository.DBOption
+	materialOpts = append(materialOpts, repository.NewCommonRepo().WhereByStatus(uint(1)))
+	materialOpts = append(materialOpts, repository.NotDeleted)
+
+	// 子店查询时自动过滤不可见物品
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() {
+		materialOpts = append(materialOpts, materialRepo.WhereAllowSubstoreVisible(1))
+	}
+
 	// 获取物品列表
 	paginatedMaterials, total, err := materialRepo.GetMaterialListWithPagination(
 		req.PageNo,
 		req.PageSize,
-		repository.NewCommonRepo().WhereByStatus(uint(1)),
-		repository.NotDeleted,
+		materialOpts...,
 	)
 
 	// 获取所有物品UUID

@@ -48,6 +48,7 @@ type IMaterialRepo interface {
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error                       // 批量修改物品状态
+	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
 	AddActualSaleNum(materialUuid uint64, saleNum float64) error                      // 增加材料销量
 	GetMaterialByErpCode(erpCode string, opts ...DBOption) (*model.Material, error)   // 根据erp_code获取物品
@@ -71,6 +72,7 @@ type IMaterialRepo interface {
 	WithUnit() DBOption
 	WithMultiLanguageName(opts ...DBOption) DBOption
 	WithNotBaseUnitList(opts ...DBOption) DBOption
+	WhereAllowSubstoreVisible(visible int) DBOption // 可见性过滤选项方法
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -118,6 +120,13 @@ func (r *MaterialRepoImpl) WithNotBaseUnitList(opts ...DBOption) DBOption {
 			}
 			return db
 		}).Preload("NotBaseUnitList.Unit")
+	}
+}
+
+// WhereAllowSubstoreVisible 可见性过滤选项方法
+func (r *MaterialRepoImpl) WhereAllowSubstoreVisible(visible int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("(allow_substore_visible = ? or headquarter_uuid = ?)", visible, 0)
 	}
 }
 
@@ -481,6 +490,14 @@ func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, 
 func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "批量修改物品状态失败")
+	}
+	return nil
+}
+
+// UpdateMaterialVisibleBatch 批量更新物品可见性
+func (r *MaterialRepoImpl) UpdateMaterialVisibleBatch(uuids []uint64, visible int) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("allow_substore_visible", visible).Error; err != nil {
+		return errors.WithMessage(err, "批量更新物品可见性失败")
 	}
 	return nil
 }

@@ -16,6 +16,7 @@ type IMultiLanguageNameRepo interface {
 	CreateMultiLanguageNameDUPLICATE(multiLanguageName model.MultiLanguageName) (uint64, error) // 创建或更新多语言名称（ON DUPLICATE KEY UPDATE）
 	CreateMultiLanguageNameList(multiLanguageNames []model.MultiLanguageName) error             // 创建多语言名称列表
 	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error         // 更新多语言名称
+	UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error                    // 更新多语言名称数据
 	DeleteMultiLanguageName(id uint64) error                                                    // 删除多语言名称
 	DestroyMultiLanguageName(opts ...DBOption) error                                            // 销毁多语言名称
 }
@@ -108,6 +109,19 @@ func (r *MultiLanguageNameRepoImpl) UpdateMultiLanguageName(uuid uint64, multiLa
 		"tr_name":    multiLanguageName.TrName,
 		"sv_name":    multiLanguageName.SvName,
 	}).Error // 更新数据库中的多语言名称
+}
+
+// UpdateMultiLanguageNameData 更新多语言名称数据
+func (r *MultiLanguageNameRepoImpl) UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Model(&model.MultiLanguageName{}).Updates(data).Error
+	if err != nil {
+		return errors.WithMessage(err, "更新多语言名称数据失败")
+	}
+	return nil
 }
 
 // DeleteMultiLanguageName 删除多语言名称

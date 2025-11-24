@@ -20,6 +20,3 @@ temp.yaml
 **/hack/config.yaml
 app/**/internal/controller/rpc/api/api.go
 
-# 生成的bin 文件不要
-app/ttpos-erp
-ttpos-erp

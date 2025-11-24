@@ -564,6 +564,13 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		defaultBusiness.FreeMethodList = make([]setting.FreeMethodItem, 0)
 	}
 
+	if len(defaultBusiness.DiscountAuthorizedStaffIds) == 0 {
+		defaultBusiness.DiscountAuthorizedStaffIds = make([]uint64, 0)
+	}
+	if len(defaultBusiness.RefundAuthorizedStaffIds) == 0 {
+		defaultBusiness.RefundAuthorizedStaffIds = make([]uint64, 0)
+	}
+
 	// 分批商品相关
 	{
 		db := s.dbm.GetDB(ctx.GetCompanyUuid())
@@ -574,6 +581,9 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 			return business, errors.WithMessage(err)
 		}
 		defaultBusiness.BatchProductUuids = batchProductUuids
+		if len(defaultBusiness.BatchProductUuids) == 0 {
+			defaultBusiness.BatchProductUuids = make([]uint64, 0)
+		}
 
 		// 分批类型数量
 		batchTagNum, err := repository.NewBatchTagRepo(db).GetBatchTagCount()
