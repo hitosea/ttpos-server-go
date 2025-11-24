@@ -2327,7 +2327,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_company` (
     `auth_start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '授权开始时间(时间戳)',
     `old_company_id` int(11) NOT NULL DEFAULT 0 COMMENT '原商家ID',
     `is_enable_erp` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否启用ERP: 0不启用, 1启用',
-    `is_enable_data_manage` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否启用数据管理: 0不启用, 1启用',
     `last_sync_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '上次同步erp数据完成时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

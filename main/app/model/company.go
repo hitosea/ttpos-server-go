@@ -15,16 +15,15 @@ import (
 // Company 集团表 ttpos_company
 type Company struct {
 	BaseModel
-	Name               string `gorm:"column:name;type:varchar(255);comment:集团名称;NOT NULL" json:"name"`
-	Logo               string `gorm:"column:logo;type:varchar(255);comment:logo;NOT NULL" json:"logo"`
-	ExpireTime         int64  `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
-	AuthDay            int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
-	Status             int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
-	AuthStartTime      int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
-	OldCompanyId       int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
-	IsEnableErp        int    `gorm:"column:is_enable_erp;type:int(10);default:0;comment:是否启用ERP: 0不启用, 1启用;NOT NULL" json:"is_enable_erp"`
-	IsEnableDataManage int    `gorm:"column:is_enable_data_manage;type:int(10);default:0;comment:是否启用数据管理: 0不启用, 1启用;NOT NULL" json:"is_enable_data_manage"`
-	LastSyncTime       int64  `gorm:"column:last_sync_time;type:int(10);default:0;comment:上次同步erp数据完成时间;NOT NULL" json:"last_sync_time"`
+	Name          string `gorm:"column:name;type:varchar(255);comment:集团名称;NOT NULL" json:"name"`
+	Logo          string `gorm:"column:logo;type:varchar(255);comment:logo;NOT NULL" json:"logo"`
+	ExpireTime    int64  `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
+	AuthDay       int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
+	Status        int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
+	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
+	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
+	IsEnableErp   int    `gorm:"column:is_enable_erp;type:int(10);default:0;comment:是否启用ERP: 0不启用, 1启用;NOT NULL" json:"is_enable_erp"`
+	LastSyncTime  int64  `gorm:"column:last_sync_time;type:int(10);default:0;comment:上次同步erp数据完成时间;NOT NULL" json:"last_sync_time"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
@@ -44,10 +43,6 @@ func (company *Company) IsOpenErp(phase ...int) bool {
 
 func (company *Company) IsOpenErpPhase3() bool {
 	return company.IsOpenErp(3)
-}
-
-func (company *Company) IsOpenDataManage() bool {
-	return company.IsEnableDataManage == 1
 }
 
 func (company *Company) GetLogo(baseURL string) string {

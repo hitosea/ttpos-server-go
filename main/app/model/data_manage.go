@@ -9,3 +9,8 @@ type DataManage struct {
 	DataUuid  uint64 `gorm:"column:data_uuid;type:bigint(20) unsigned;default:0;comment:数据UUID;NOT NULL" json:"data_uuid"`
 	StaffUuid uint64 `gorm:"column:staff_uuid;type:bigint(20) unsigned;default:0;comment:员工UUID;NOT NULL" json:"staff_uuid"`
 }
+
+// DataManageSetting
+type DataManageSetting struct {
+	IsEnableDataManage bool `json:"is_enable_data_manage"` // 状态: false-关闭 true-开启
+}

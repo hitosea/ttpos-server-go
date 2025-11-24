@@ -2,11 +2,13 @@ package service
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	shop_req "ttpos-server-go/app/dto/req"
 	setting_resp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -19,7 +21,8 @@ import (
 
 // DataManageSrv 数据管理服务
 type DataManageSrv struct {
-	dbm *database.DBManager
+	dbm        *database.DBManager
+	settingSrv settingSrv.ISrv
 }
 
 // IDataManageSrv数据管理服务接口
@@ -29,14 +32,15 @@ type IDataManageSrv interface {
 }
 
 // NewDataManageSrvImpl 创建数据管理服务
-func NewDataManageSrv(dbm *database.DBManager) IDataManageSrv {
-	return NewDataManageSrvImpl(dbm)
+func NewDataManageSrv(dbm *database.DBManager, settingSrv settingSrv.ISrv) IDataManageSrv {
+	return NewDataManageSrvImpl(dbm, settingSrv)
 }
 
 // NewDataManageSrvImpl 创建数据管理服务实现
-func NewDataManageSrvImpl(dbm *database.DBManager) IDataManageSrv {
+func NewDataManageSrvImpl(dbm *database.DBManager, settingSrv settingSrv.ISrv) IDataManageSrv {
 	return &DataManageSrv{
-		dbm: dbm,
+		dbm:        dbm,
+		settingSrv: settingSrv,
 	}
 }
 
@@ -49,7 +53,7 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	}
 
 	// 获取数据管理信息
-	company := ctx.GetCompany()
+	setting := s.settingSrv.GetDataManageSetting(ctx)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	staffRepo := repository.NewStaffRepo(db)
@@ -90,7 +94,7 @@ func (s *DataManageSrv) GetDataManage(ctx context.Context) (*setting_resp.GetDat
 	}
 
 	return &setting_resp.GetDataManageResp{
-		IsEnableDataManage: company.IsOpenDataManage(),
+		IsEnableDataManage: setting.IsEnableDataManage,
 		StaffCount:         len(staffUuids),
 		OrderCount:         len(orderUuids),
 		StaffUuids:         staffUuids,
@@ -128,31 +132,28 @@ func (s *DataManageSrv) SetDataManage(ctx context.Context, req shop_req.SetDataM
 		return errors.New("已选择订单，不可关闭")
 	}
 
+	// 获取数据管理设置
+	setting := s.settingSrv.GetDataManageSetting(ctx)
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	err = db.Transaction(func(tx *gorm.DB) error {
-		companyRepo := repository.NewCompanyRepo(tx)
 		staffRepo := repository.NewStaffRepo(tx)
 		dataManageRepo := repository.NewDataManageRepo(tx)
 
 		// 更新公司数据管理状态
-		err := companyRepo.UpdateCompany(ctx.GetCompanyUuid(), map[string]any{
-			"is_enable_data_manage": utils.IfInt(req.IsEnableDataManage, 1, 0),
-		})
+		setting.IsEnableDataManage = req.IsEnableDataManage
+		s.settingSrv.UpdateSetting(ctx, constant.SettingDataManage, setting)
 		if err != nil {
 			return err
 		}
 
 		// 更新员工数据管理权限
-		err = staffRepo.Updates(map[string]any{
-			"has_data_permission": 0,
-		}, staffRepo.WhereHasDataPermission(1))
+		err = staffRepo.Updates(map[string]any{"has_data_permission": 0}, staffRepo.WhereHasDataPermission(1))
 		if err != nil {
 			return err
 		}
 		if len(req.StaffUuids) > 0 {
-			err = staffRepo.Updates(map[string]any{
-				"has_data_permission": 1,
-			}, staffRepo.WhereUuids(req.StaffUuids))
+			err = staffRepo.Updates(map[string]any{"has_data_permission": 1}, staffRepo.WhereUuids(req.StaffUuids))
 			if err != nil {
 				return err
 			}
