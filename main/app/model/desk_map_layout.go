@@ -8,7 +8,7 @@ package model
 // @version v2.10.0
 type DeskMapLayout struct {
 	BaseModel
-	AreaUuid   uint64 `gorm:"column:area_uuid;type:bigint(20) unsigned;default:0;comment:'区域UUID';NOT NULL;uniqueIndex:uk_area_uuid" json:"area_uuid"`
+	RegionUuid uint64 `gorm:"column:region_uuid;type:bigint(20) unsigned;default:0;comment:'区域UUID';NOT NULL;uniqueIndex:uk_region_uuid" json:"region_uuid"`
 	LayoutJson string `gorm:"column:layout_json;type:text;comment:'画布布局JSON（含桌台坐标、尺寸、样式等）';NOT NULL" json:"layout_json"`
 }
 

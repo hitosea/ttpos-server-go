@@ -16,13 +16,13 @@ import (
 type IDeskMapLayoutRepo interface {
 	IDeskMapLayoutQueryRepo
 	CreateLayout(layout model.DeskMapLayout) (uint64, error)
-	UpdateLayout(areaUuid uint64, layout model.DeskMapLayout) error
-	DeleteLayout(areaUuid uint64) error
+	UpdateLayout(regionUuid uint64, layout model.DeskMapLayout) error
+	DeleteLayout(regionUuid uint64) error
 }
 
 // IDeskMapLayoutQueryRepo 桌台地图布局查询接口
 type IDeskMapLayoutQueryRepo interface {
-	FindByAreaUuid(areaUuid uint64) (*model.DeskMapLayout, error)
+	FindByRegionUuid(regionUuid uint64) (*model.DeskMapLayout, error)
 	FindAll() ([]model.DeskMapLayout, error)
 }
 
@@ -41,20 +41,20 @@ type DeskMapLayoutRepoImpl struct {
 	db *gorm.DB
 }
 
-// FindByAreaUuid 根据区域UUID查找布局
-func (r *DeskMapLayoutRepoImpl) FindByAreaUuid(areaUuid uint64) (*model.DeskMapLayout, error) {
+// FindByRegionUuid 根据区域UUID查找布局
+func (r *DeskMapLayoutRepoImpl) FindByRegionUuid(regionUuid uint64) (*model.DeskMapLayout, error) {
 	var layout model.DeskMapLayout
 	err := r.db.Model(&model.DeskMapLayout{}).
-		Where("area_uuid = ? AND delete_time = ?", areaUuid, 0).
+		Where("region_uuid = ? AND delete_time = ?", regionUuid, 0).
 		First(&layout).Error
-	
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil // 未找到记录返回 nil，不报错
 		}
 		return nil, errors.WithMessage(err)
 	}
-	
+
 	return &layout, nil
 }
 
@@ -64,7 +64,7 @@ func (r *DeskMapLayoutRepoImpl) FindAll() ([]model.DeskMapLayout, error) {
 	err := r.db.Model(&model.DeskMapLayout{}).
 		Where("delete_time = ?", 0).
 		Find(&layouts).Error
-	
+
 	return layouts, errors.WithMessage(err)
 }
 
@@ -77,23 +77,22 @@ func (r *DeskMapLayoutRepoImpl) CreateLayout(layout model.DeskMapLayout) (uint64
 }
 
 // UpdateLayout 更新布局
-func (r *DeskMapLayoutRepoImpl) UpdateLayout(areaUuid uint64, layout model.DeskMapLayout) error {
+func (r *DeskMapLayoutRepoImpl) UpdateLayout(regionUuid uint64, layout model.DeskMapLayout) error {
 	err := r.db.Model(&model.DeskMapLayout{}).
-		Where("area_uuid = ? AND delete_time = ?", areaUuid, 0).
+		Where("region_uuid = ? AND delete_time = ?", regionUuid, 0).
 		Updates(map[string]interface{}{
 			"layout_json": layout.LayoutJson,
 			"update_time": layout.UpdateTime,
 		}).Error
-	
+
 	return errors.WithMessage(err)
 }
 
 // DeleteLayout 软删除布局
-func (r *DeskMapLayoutRepoImpl) DeleteLayout(areaUuid uint64) error {
+func (r *DeskMapLayoutRepoImpl) DeleteLayout(regionUuid uint64) error {
 	err := r.db.Model(&model.DeskMapLayout{}).
-		Where("area_uuid = ? AND delete_time = ?", areaUuid, 0).
+		Where("region_uuid = ? AND delete_time = ?", regionUuid, 0).
 		Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error
-	
+
 	return errors.WithMessage(err)
 }
-

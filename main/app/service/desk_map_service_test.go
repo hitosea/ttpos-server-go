@@ -52,11 +52,11 @@ func TestDeskMapService_GetAreaListWithStatus(t *testing.T) {
 	if len(result.List) != 1 {
 		t.Fatalf("Expected 1 area, got %d", len(result.List))
 	}
-	if result.List[0].AreaUuid != area1.Uuid {
-		t.Errorf("Expected area_uuid %d, got %d", area1.Uuid, result.List[0].AreaUuid)
+	if result.List[0].RegionUuid != area1.Uuid {
+		t.Errorf("Expected region_uuid %d, got %d", area1.Uuid, result.List[0].RegionUuid)
 	}
-	if result.List[0].AreaName != "测试区域1" {
-		t.Errorf("Expected area_name '测试区域1', got '%s'", result.List[0].AreaName)
+	if result.List[0].RegionName != "测试区域1" {
+		t.Errorf("Expected region_name '测试区域1', got '%s'", result.List[0].RegionName)
 	}
 	if result.List[0].DeskCount != 5 {
 		t.Errorf("Expected desk_count 5, got %d", result.List[0].DeskCount)
@@ -88,11 +88,11 @@ func TestDeskMapService_GetAreaListWithStatus(t *testing.T) {
 		t.Fatalf("Expected 2 areas, got %d", len(result.List))
 	}
 	// 验证排序: sort=0 的区域应该在前面
-	if result.List[0].AreaName != "测试区域2" {
-		t.Errorf("Expected first area '测试区域2', got '%s'", result.List[0].AreaName)
+	if result.List[0].RegionName != "测试区域2" {
+		t.Errorf("Expected first region '测试区域2', got '%s'", result.List[0].RegionName)
 	}
-	if result.List[1].AreaName != "测试区域1" {
-		t.Errorf("Expected second area '测试区域1', got '%s'", result.List[1].AreaName)
+	if result.List[1].RegionName != "测试区域1" {
+		t.Errorf("Expected second region '测试区域1', got '%s'", result.List[1].RegionName)
 	}
 }
 
@@ -126,11 +126,11 @@ func TestDeskMapService_GetLayoutDetail(t *testing.T) {
 	}
 
 	// 验证区域信息
-	if result.Area.AreaUuid != area1.Uuid {
-		t.Errorf("Expected area_uuid %d, got %d", area1.Uuid, result.Area.AreaUuid)
+	if result.Region.RegionUuid != area1.Uuid {
+		t.Errorf("Expected region_uuid %d, got %d", area1.Uuid, result.Region.RegionUuid)
 	}
-	if result.Area.AreaName != "测试区域1" {
-		t.Errorf("Expected area_name '测试区域1', got '%s'", result.Area.AreaName)
+	if result.Region.RegionName != "测试区域1" {
+		t.Errorf("Expected region_name '测试区域1', got '%s'", result.Region.RegionName)
 	}
 
 	// 验证桌台列表
@@ -225,7 +225,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 
 	// 场景1: 区域不存在 - 应返回错误
 	invalidReq := req.DeskMapSaveLayoutReq{
-		AreaUuid: 99999999,
+		RegionUuid: 99999999,
 		Desks: []req.DeskMapLayoutDeskReq{
 			{
 				DeskUuid: 123,
@@ -249,7 +249,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 	desk2 := createTestDeskWithDetails(t, dbm, area.Uuid, "A02", 2)
 
 	saveReq := req.DeskMapSaveLayoutReq{
-		AreaUuid: area.Uuid,
+		RegionUuid: area.Uuid,
 		Desks: []req.DeskMapLayoutDeskReq{
 			{
 				DeskUuid: desk1.Uuid,
@@ -272,7 +272,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 	// 验证布局已创建
 	db := dbm.GetDB(1)
 	var layout model.DeskMapLayout
-	err = db.Where("area_uuid = ?", area.Uuid).First(&layout).Error
+	err = db.Where("region_uuid = ?", area.Uuid).First(&layout).Error
 	if err != nil {
 		t.Fatalf("Failed to find created layout: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 
 	// 场景3: 再次保存（更新）- 应成功更新现有布局
 	saveReq2 := req.DeskMapSaveLayoutReq{
-		AreaUuid: area.Uuid,
+		RegionUuid: area.Uuid,
 		Desks: []req.DeskMapLayoutDeskReq{
 			{
 				DeskUuid: desk1.Uuid,
@@ -320,7 +320,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 
 	// 验证布局已更新
 	var updatedLayout model.DeskMapLayout
-	err = db.Where("area_uuid = ?", area.Uuid).First(&updatedLayout).Error
+	err = db.Where("region_uuid = ?", area.Uuid).First(&updatedLayout).Error
 	if err != nil {
 		t.Fatalf("Failed to find updated layout: %v", err)
 	}
@@ -336,7 +336,7 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 
 	// 场景4: 验证错误 - 形状错误应返回错误
 	invalidShapeReq := req.DeskMapSaveLayoutReq{
-		AreaUuid: area.Uuid,
+		RegionUuid: area.Uuid,
 		Desks: []req.DeskMapLayoutDeskReq{
 			{
 				DeskUuid: desk1.Uuid,
@@ -354,8 +354,8 @@ func TestDeskMapService_SaveLayout(t *testing.T) {
 
 	// 场景5: 空布局 - 应返回错误（布局数据不能为空）
 	emptyReq := req.DeskMapSaveLayoutReq{
-		AreaUuid: area.Uuid,
-		Desks:    []req.DeskMapLayoutDeskReq{},
+		RegionUuid: area.Uuid,
+		Desks:      []req.DeskMapLayoutDeskReq{},
 	}
 
 	err = srv.SaveLayout(ctx, emptyReq)
@@ -444,7 +444,7 @@ func setupTestDB(t *testing.T) *database.DBManager {
 			create_time INTEGER DEFAULT 0,
 			update_time INTEGER DEFAULT 0,
 			delete_time INTEGER DEFAULT 0,
-			area_uuid INTEGER DEFAULT 0,
+			region_uuid INTEGER DEFAULT 0,
 			layout_json TEXT DEFAULT ''
 		)
 	`).Error
@@ -453,7 +453,7 @@ func setupTestDB(t *testing.T) *database.DBManager {
 	}
 
 	// 创建唯一索引
-	err = db.Exec(`CREATE UNIQUE INDEX uk_area_uuid ON desk_map_layout(area_uuid)`).Error
+	err = db.Exec(`CREATE UNIQUE INDEX uk_region_uuid ON desk_map_layout(region_uuid)`).Error
 	if err != nil {
 		t.Fatalf("Failed to create unique index: %v", err)
 	}
@@ -542,7 +542,7 @@ func createTestArea(t *testing.T, dbm *database.DBManager, name string, sort uin
 }
 
 // createTestDesks 批量创建测试桌台
-func createTestDesks(t *testing.T, dbm *database.DBManager, areaUuid uint64, count int) {
+func createTestDesks(t *testing.T, dbm *database.DBManager, RegionUuid uint64, count int) {
 	t.Helper()
 
 	db := dbm.GetDB(constant.MockDB)
@@ -553,7 +553,7 @@ func createTestDesks(t *testing.T, dbm *database.DBManager, areaUuid uint64, cou
 	for i := 1; i <= count; i++ {
 		desk := &model.Desk{
 			DeskNo:     string(rune('A' + i - 1)),
-			RegionUuid: areaUuid,
+			RegionUuid: RegionUuid,
 			Sort:       uint(i),
 		}
 		desk.Uuid = maxID + uint64(i)
@@ -567,7 +567,7 @@ func createTestDesks(t *testing.T, dbm *database.DBManager, areaUuid uint64, cou
 }
 
 // createTestDeskWithDetails 创建带详细信息的测试桌台
-func createTestDeskWithDetails(t *testing.T, dbm *database.DBManager, areaUuid uint64, deskNo string, sort uint) *model.Desk {
+func createTestDeskWithDetails(t *testing.T, dbm *database.DBManager, RegionUuid uint64, deskNo string, sort uint) *model.Desk {
 	t.Helper()
 
 	db := dbm.GetDB(constant.MockDB)
@@ -577,7 +577,7 @@ func createTestDeskWithDetails(t *testing.T, dbm *database.DBManager, areaUuid u
 
 	desk := &model.Desk{
 		DeskNo:     deskNo,
-		RegionUuid: areaUuid,
+		RegionUuid: RegionUuid,
 		Sort:       sort,
 		Status:     constant.DeskStatusClose,
 		IsDisable:  0,
@@ -593,7 +593,7 @@ func createTestDeskWithDetails(t *testing.T, dbm *database.DBManager, areaUuid u
 }
 
 // createTestLayout 创建简单的测试布局
-func createTestLayout(t *testing.T, dbm *database.DBManager, areaUuid uint64) *model.DeskMapLayout {
+func createTestLayout(t *testing.T, dbm *database.DBManager, RegionUuid uint64) *model.DeskMapLayout {
 	t.Helper()
 
 	layoutData := map[string]interface{}{
@@ -606,11 +606,11 @@ func createTestLayout(t *testing.T, dbm *database.DBManager, areaUuid uint64) *m
 			},
 		},
 	}
-	return createTestLayoutWithData(t, dbm, areaUuid, layoutData)
+	return createTestLayoutWithData(t, dbm, RegionUuid, layoutData)
 }
 
 // createTestLayoutWithData 创建带指定数据的测试布局
-func createTestLayoutWithData(t *testing.T, dbm *database.DBManager, areaUuid uint64, layoutData map[string]interface{}) *model.DeskMapLayout {
+func createTestLayoutWithData(t *testing.T, dbm *database.DBManager, RegionUuid uint64, layoutData map[string]interface{}) *model.DeskMapLayout {
 	t.Helper()
 
 	db := dbm.GetDB(constant.MockDB)
@@ -624,7 +624,7 @@ func createTestLayoutWithData(t *testing.T, dbm *database.DBManager, areaUuid ui
 	db.Model(&model.DeskMapLayout{}).Select("COALESCE(MAX(uuid), 0)").Scan(&maxID)
 
 	layout := &model.DeskMapLayout{
-		AreaUuid:   areaUuid,
+		RegionUuid: RegionUuid,
 		LayoutJson: string(layoutJSON),
 	}
 	layout.Uuid = maxID + 1

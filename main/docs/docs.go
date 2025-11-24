@@ -845,7 +845,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表",
+                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入region_uuid参数，返回该区域的详细布局；否则返回所有区域列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -861,13 +861,13 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64",
                         "description": "区域UUID，不传则返回区域列表",
-                        "name": "area_uuid",
+                        "name": "region_uuid",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "返回区域布局详情（传入area_uuid）",
+                        "description": "返回区域布局详情（传入region_uuid）",
                         "schema": {
                             "allOf": [
                                 {
@@ -5332,7 +5332,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表",
+                "description": "获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入region_uuid参数，返回该区域的详细布局；否则返回所有区域列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -5348,13 +5348,13 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64",
                         "description": "区域UUID，不传则返回区域列表",
-                        "name": "area_uuid",
+                        "name": "region_uuid",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "返回区域布局详情（传入area_uuid）",
+                        "description": "返回区域布局详情（传入region_uuid）",
                         "schema": {
                             "allOf": [
                                 {
@@ -20066,7 +20066,7 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64",
                         "description": "区域UUID",
-                        "name": "area_uuid",
+                        "name": "region_uuid",
                         "in": "query",
                         "required": true
                     }
@@ -20678,6 +20678,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.MaterialAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/batch_update_visible": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量更新物品可见性设置（仅总店可用）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "批量更新物品可见性",
+                "parameters": [
+                    {
+                        "description": "批量更新物品可见性请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialBatchUpdateVisibleReq"
                         }
                     }
                 ],
@@ -37178,20 +37217,20 @@ const docTemplate = `{
         "req.DeskMapSaveLayoutReq": {
             "type": "object",
             "required": [
-                "area_uuid",
-                "desks"
+                "desks",
+                "region_uuid"
             ],
             "properties": {
-                "area_uuid": {
-                    "description": "区域UUID",
-                    "type": "integer"
-                },
                 "desks": {
                     "description": "桌台布局数据",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/req.DeskMapLayoutDeskReq"
                     }
+                },
+                "region_uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -37460,7 +37499,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "end_date",
-                "is_all_day",
                 "locale_name",
                 "reduction_type",
                 "rules",
@@ -37892,6 +37930,10 @@ const docTemplate = `{
         "req.MaterialAddReq": {
             "type": "object",
             "properties": {
+                "allow_substore_visible": {
+                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "type": "integer"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -37946,6 +37988,26 @@ const docTemplate = `{
                 "valuation": {
                     "description": "估值率",
                     "type": "number"
+                }
+            }
+        },
+        "req.MaterialBatchUpdateVisibleReq": {
+            "type": "object",
+            "required": [
+                "allow_substore_visible",
+                "uuids"
+            ],
+            "properties": {
+                "allow_substore_visible": {
+                    "description": "允许子店可见：1-允许，0-不允许",
+                    "type": "integer"
+                },
+                "uuids": {
+                    "description": "物品UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -38034,6 +38096,10 @@ const docTemplate = `{
         "req.MaterialEditReq": {
             "type": "object",
             "properties": {
+                "allow_substore_visible": {
+                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "type": "integer"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -39528,6 +39594,10 @@ const docTemplate = `{
                 "related_uuid"
             ],
             "properties": {
+                "allow_substore_visible": {
+                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "type": "integer"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -44252,9 +44322,17 @@ const docTemplate = `{
                     "description": "是否开启自助餐功能: 0不开启, 1开启",
                     "type": "integer"
                 },
+                "is_open_data_management": {
+                    "description": "是否开启数据管理功能",
+                    "type": "boolean"
+                },
                 "is_open_h5_order": {
                     "description": "是否开启扫码接单功能: 0不开启, 1开启",
                     "type": "integer"
+                },
+                "is_open_map": {
+                    "description": "是否开启地图",
+                    "type": "boolean"
                 },
                 "is_open_member": {
                     "description": "是否开启会员功能: 0不开启, 1开启",
@@ -44743,11 +44821,11 @@ const docTemplate = `{
         "resp.DeskMapAreaInfo": {
             "type": "object",
             "properties": {
-                "area_name": {
+                "region_name": {
                     "description": "区域名称",
                     "type": "string"
                 },
-                "area_uuid": {
+                "region_uuid": {
                     "description": "区域UUID",
                     "type": "integer"
                 }
@@ -44756,14 +44834,6 @@ const docTemplate = `{
         "resp.DeskMapAreaItem": {
             "type": "object",
             "properties": {
-                "area_name": {
-                    "description": "区域名称",
-                    "type": "string"
-                },
-                "area_uuid": {
-                    "description": "区域UUID",
-                    "type": "integer"
-                },
                 "desk_count": {
                     "description": "桌台数量",
                     "type": "integer"
@@ -44771,6 +44841,14 @@ const docTemplate = `{
                 "layout_status": {
                     "description": "布局状态: set-已配置, unset-未配置",
                     "type": "string"
+                },
+                "region_name": {
+                    "description": "区域名称",
+                    "type": "string"
+                },
+                "region_uuid": {
+                    "description": "区域UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -44801,14 +44879,6 @@ const docTemplate = `{
         "resp.DeskMapLayoutResp": {
             "type": "object",
             "properties": {
-                "area": {
-                    "description": "区域信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.DeskMapAreaInfo"
-                        }
-                    ]
-                },
                 "desks": {
                     "description": "桌台列表",
                     "type": "array",
@@ -44821,6 +44891,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.DeskMapLayoutData"
+                        }
+                    ]
+                },
+                "region": {
+                    "description": "区域信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DeskMapAreaInfo"
                         }
                     ]
                 }
@@ -44983,6 +45061,10 @@ const docTemplate = `{
         "resp.DeskRegion": {
             "type": "object",
             "properties": {
+                "is_open_map": {
+                    "description": "是否开启地图",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "餐桌区域名称",
                     "type": "string"
@@ -45274,9 +45356,6 @@ const docTemplate = `{
         "resp.FullReductionActivityResp": {
             "type": "object",
             "properties": {
-                "create_time": {
-                    "type": "integer"
-                },
                 "end_date": {
                     "type": "integer"
                 },
@@ -45319,9 +45398,6 @@ const docTemplate = `{
                 "status": {
                     "description": "in_progress, not_start, end",
                     "type": "string"
-                },
-                "update_time": {
-                    "type": "integer"
                 },
                 "uuid": {
                     "type": "integer"
@@ -53842,7 +53918,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "discount_need_password": {
-                    "description": "敏感操作设置",
+                    "description": "折扣操作是否需要密码 0-否 1-是",
                     "type": "string"
                 },
                 "dish_card_style": {
@@ -54551,7 +54627,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "discount_need_password": {
-                    "description": "敏感操作设置",
+                    "description": "折扣操作是否需要密码 0-否 1-是",
                     "type": "string"
                 },
                 "dish_card_style": {

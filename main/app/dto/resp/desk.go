@@ -55,8 +55,9 @@ type BatchTagRes struct {
 }
 
 type DeskRegion struct {
-	Uuid uint64 `json:"uuid"` // 餐桌区域ID
-	Name string `json:"name"` // 餐桌区域名称
+	Uuid      uint64 `json:"uuid"`        // 餐桌区域ID
+	Name      string `json:"name"`        // 餐桌区域名称
+	IsOpenMap bool   `json:"is_open_map"` // 是否开启地图
 }
 
 type DeskType struct {

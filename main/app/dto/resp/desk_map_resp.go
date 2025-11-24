@@ -7,8 +7,8 @@ package resp
 //
 // @version v2.10.0
 type DeskMapAreaItem struct {
-	AreaUuid     uint64 `json:"area_uuid"`     // 区域UUID
-	AreaName     string `json:"area_name"`     // 区域名称
+	RegionUuid   uint64 `json:"region_uuid"`   // 区域UUID
+	RegionName   string `json:"region_name"`   // 区域名称
 	DeskCount    uint   `json:"desk_count"`    // 桌台数量
 	LayoutStatus string `json:"layout_status"` // 布局状态: set-已配置, unset-未配置
 }
@@ -44,15 +44,15 @@ type DeskMapTableItem struct {
 //
 // @version v2.10.0
 type DeskMapLayoutResp struct {
-	Area   DeskMapAreaInfo    `json:"area"`   // 区域信息
+	Region DeskMapAreaInfo    `json:"region"` // 区域信息
 	Desks  []DeskMapTableItem `json:"desks"`  // 桌台列表
 	Layout DeskMapLayoutData  `json:"layout"` // 布局数据
 }
 
 // DeskMapAreaInfo 区域信息
 type DeskMapAreaInfo struct {
-	AreaUuid uint64 `json:"area_uuid"` // 区域UUID
-	AreaName string `json:"area_name"` // 区域名称
+	RegionUuid uint64 `json:"region_uuid"` // 区域UUID
+	RegionName string `json:"region_name"` // 区域名称
 }
 
 // DeskMapLayoutData 布局数据（JSON 解析后的结构）

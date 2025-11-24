@@ -9,7 +9,7 @@ import "ttpos-server-go/app/errors"
 //
 // @version v2.10.0
 type DeskMapLayoutDetailReq struct {
-	AreaUuid uint64 `form:"area_uuid" binding:"required"` // 区域UUID
+	RegionUuid uint64 `form:"region_uuid" binding:"required"` // 区域UUID
 }
 
 // DeskMapSaveLayoutReq 保存区域布局请求
@@ -19,8 +19,8 @@ type DeskMapLayoutDetailReq struct {
 //
 // @version v2.10.0
 type DeskMapSaveLayoutReq struct {
-	AreaUuid uint64                 `json:"area_uuid" binding:"required"` // 区域UUID
-	Desks    []DeskMapLayoutDeskReq `json:"desks" binding:"required"`     // 桌台布局数据
+	RegionUuid uint64                 `json:"region_uuid" binding:"required"` // 区域UUID
+	Desks      []DeskMapLayoutDeskReq `json:"desks" binding:"required"`       // 桌台布局数据
 }
 
 // DeskMapLayoutDeskReq 单个桌台的布局信息
@@ -38,7 +38,7 @@ type DeskMapLayoutDeskReq struct {
 
 // Validate 验证布局数据
 func (req *DeskMapSaveLayoutReq) Validate() error {
-	if req.AreaUuid == 0 {
+	if req.RegionUuid == 0 {
 		return errors.New("区域UUID不能为空")
 	}
 	if len(req.Desks) == 0 {

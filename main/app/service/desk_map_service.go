@@ -58,10 +58,10 @@ func (s *deskMapSrv) GetAreaListWithStatus(ctx context.Context) (resp.DeskMapAre
 		return resp.DeskMapAreaListResp{}, errors.WithMessage(err)
 	}
 
-	// 创建布局映射表（area_uuid -> 是否已配置）
+	// 创建布局映射表（region_uuid -> 是否已配置）
 	layoutMap := make(map[uint64]bool)
 	for _, layout := range layouts {
-		layoutMap[layout.AreaUuid] = true
+		layoutMap[layout.RegionUuid] = true
 	}
 
 	// 获取桌台数量（按区域分组）
@@ -80,8 +80,8 @@ func (s *deskMapSrv) GetAreaListWithStatus(ctx context.Context) (resp.DeskMapAre
 		}
 
 		list = append(list, resp.DeskMapAreaItem{
-			AreaUuid:     region.Uuid,
-			AreaName:     region.Name,
+			RegionUuid:   region.Uuid,
+			RegionName:   region.Name,
 			DeskCount:    uint(deskCountMap[region.Uuid]),
 			LayoutStatus: layoutStatus,
 		})
@@ -137,7 +137,7 @@ func (s *deskMapSrv) GetLayoutDetail(ctx context.Context, areaUuid uint64) (resp
 
 	// 获取布局数据
 	layoutRepo := repository.NewDeskMapLayoutRepo(db)
-	layout, err := layoutRepo.FindByAreaUuid(areaUuid)
+	layout, err := layoutRepo.FindByRegionUuid(areaUuid)
 	if err != nil {
 		return resp.DeskMapLayoutResp{}, errors.WithMessage(err)
 	}
@@ -179,9 +179,9 @@ func (s *deskMapSrv) GetLayoutDetail(ctx context.Context, areaUuid uint64) (resp
 	}
 
 	return resp.DeskMapLayoutResp{
-		Area: resp.DeskMapAreaInfo{
-			AreaUuid: targetRegion.Uuid,
-			AreaName: targetRegion.Name,
+		Region: resp.DeskMapAreaInfo{
+			RegionUuid: targetRegion.Uuid,
+			RegionName: targetRegion.Name,
 		},
 		Desks:  tables,
 		Layout: layoutData,
@@ -224,7 +224,7 @@ func (s *deskMapSrv) SaveLayout(ctx context.Context, req req.DeskMapSaveLayoutRe
 	layoutRepo := repository.NewDeskMapLayoutRepo(db)
 
 	// 检查是否已存在布局
-	existingLayout, err := layoutRepo.FindByAreaUuid(req.AreaUuid)
+	existingLayout, err := layoutRepo.FindByRegionUuid(req.RegionUuid)
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (s *deskMapSrv) SaveLayout(ctx context.Context, req req.DeskMapSaveLayoutRe
 	if existingLayout == nil {
 		// 创建新布局
 		newLayout := model.DeskMapLayout{
-			AreaUuid:   req.AreaUuid,
+			RegionUuid: req.RegionUuid,
 			LayoutJson: string(layoutJSON),
 		}
 		_, err = layoutRepo.CreateLayout(newLayout)
@@ -241,5 +241,5 @@ func (s *deskMapSrv) SaveLayout(ctx context.Context, req req.DeskMapSaveLayoutRe
 
 	// 更新现有布局
 	existingLayout.LayoutJson = string(layoutJSON)
-	return layoutRepo.UpdateLayout(req.AreaUuid, *existingLayout)
+	return layoutRepo.UpdateLayout(req.RegionUuid, *existingLayout)
 }

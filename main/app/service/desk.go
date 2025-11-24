@@ -23,7 +23,7 @@ import (
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
 	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)         // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
+	GetDeskRegionAndTypeList(ctx context.Context) (resp.DeskRegionAndTypeListWithPaginationResp, error)                 // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
 	GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error)                   // 获取桌台详情-用于定时轮询
 	GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.H5DeskPing, error)               // 获取桌台详情-用于h5定时轮询
@@ -68,10 +68,13 @@ func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrd
 }
 
 // GetDeskRegionAndTypeList 获取收银机点餐页面产品类别列表
-func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
+func (s *deskSrv) GetDeskRegionAndTypeList(ctx context.Context) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
+	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
+
 	// 获取列表
-	regions, _ := repository.NewDeskRegionRepo(s.dbm.GetDB(dbId)).GetDeskRegionList()
-	types, _ := repository.NewDeskTypeRepo(s.dbm.GetDB(dbId)).GetDeskTypeList()
+	repo := repository.NewDeskRegionRepo(db)
+	regions, _ := repo.GetDeskRegionList(repo.WithDeskMapLayout())
 
 	// 转换为响应对象
 	deskRegionResp := make([]resp.DeskRegion, len(regions))
@@ -79,9 +82,17 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 		deskRegionResp[i] = resp.DeskRegion{
 			Uuid: region.Uuid,
 			Name: region.Name,
+			IsOpenMap: func() bool {
+				if companySetting.IsOpenTableMap() && region.DeskMapLayout != nil {
+					return true
+				}
+				return false
+			}(),
 		}
 	}
 
+	// 获取桌台类型列表
+	types, _ := repository.NewDeskTypeRepo(db).GetDeskTypeList()
 	deskTypeResp := make([]resp.DeskType, len(types))
 	for i, type_ := range types {
 		deskTypeResp[i] = resp.DeskType{

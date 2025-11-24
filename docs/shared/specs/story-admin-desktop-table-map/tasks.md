@@ -86,7 +86,7 @@
   - **Purpose**: 定义 `desk_map_layout` 表结构
   - **Requirements**: R1.1-R1.6
   - **Leverage**: design.md 中数据库设计章节；现有迁移文件
-  - **Prompt**: Role: Database Engineer | Task: 创建桌台布局表，包含 uuid, area_uuid, layout_json 等字段 | Context: 遵循数据库规范，包含标准字段（id, uuid, create_time, update_time, delete_time） | Restrictions: 遵循 `.cursor/rules/database.mdc` | Success: 表创建成功，索引合理
+  - **Prompt**: Role: Database Engineer | Task: 创建桌台布局表，包含 uuid, region_uuid, layout_json 等字段 | Context: 遵循数据库规范，包含标准字段（id, uuid, create_time, update_time, delete_time） | Restrictions: 遵循 `.cursor/rules/database.mdc` | Success: 表创建成功，索引合理
 
 - [x] 2.2 新增布局 Model (Go)
 

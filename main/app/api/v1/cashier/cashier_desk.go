@@ -49,9 +49,9 @@ type DeskHandler struct {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
-	companyId := helper.GetCompanyUuid(c)
+	ctx := helper.GetContext(c)
 	// 处理获取桌台的区域和类型的逻辑
-	res, err := h.deskSrv.GetDeskRegionAndTypeList(companyId)
+	res, err := h.deskSrv.GetDeskRegionAndTypeList(ctx)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -1958,19 +1958,19 @@ func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
 
 // GetDeskMapLayout 获取桌台地图布局
 // @Summary 获取桌台地图布局
-// @Description 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表
+// @Description 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入region_uuid参数，返回该区域的详细布局；否则返回所有区域列表
 // @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param area_uuid query uint64 false "区域UUID，不传则返回区域列表"
-// @Success 200 {object} dto.Response{data=resp.DeskMapAreaListResp} "返回区域列表（未传area_uuid）"
-// @Success 200 {object} dto.Response{data=resp.DeskMapLayoutResp} "返回区域布局详情（传入area_uuid）"
+// @Param region_uuid query uint64 false "区域UUID，不传则返回区域列表"
+// @Success 200 {object} dto.Response{data=resp.DeskMapAreaListResp} "返回区域列表（未传region_uuid）"
+// @Success 200 {object} dto.Response{data=resp.DeskMapLayoutResp} "返回区域布局详情（传入region_uuid）"
 // @Router /cashier/desk/map/layout [get]
 func (h *DeskHandler) GetDeskMapLayout(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	// 检查是否传入了 area_uuid 参数
+	// 检查是否传入了 region_uuid 参数
 	var detailReq req.DeskMapLayoutDetailReq
 	if err := c.ShouldBindQuery(&detailReq); err != nil {
 		helper.HandleValidationError(c, err, detailReq, nil)
@@ -1978,7 +1978,7 @@ func (h *DeskHandler) GetDeskMapLayout(c *gin.Context) {
 	}
 
 	// 获取指定区域的详细布局
-	layoutDetail, err := h.deskMapSrv.GetLayoutDetail(ctx, detailReq.AreaUuid)
+	layoutDetail, err := h.deskMapSrv.GetLayoutDetail(ctx, detailReq.RegionUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

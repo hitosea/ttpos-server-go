@@ -3770,17 +3770,17 @@ definitions:
     type: object
   req.DeskMapSaveLayoutReq:
     properties:
-      area_uuid:
-        description: 区域UUID
-        type: integer
       desks:
         description: 桌台布局数据
         items:
           $ref: '#/definitions/req.DeskMapLayoutDeskReq'
         type: array
+      region_uuid:
+        description: 区域UUID
+        type: integer
     required:
-    - area_uuid
     - desks
+    - region_uuid
     type: object
   req.DeskOrderCreateReq:
     properties:
@@ -3985,7 +3985,6 @@ definitions:
         type: integer
     required:
     - end_date
-    - is_all_day
     - locale_name
     - reduction_type
     - rules
@@ -4267,6 +4266,9 @@ definitions:
     type: object
   req.MaterialAddReq:
     properties:
+      allow_substore_visible:
+        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
+        type: integer
       barcode_value:
         description: 条形码值
         type: string
@@ -4306,6 +4308,20 @@ definitions:
       valuation:
         description: 估值率
         type: number
+    type: object
+  req.MaterialBatchUpdateVisibleReq:
+    properties:
+      allow_substore_visible:
+        description: 允许子店可见：1-允许，0-不允许
+        type: integer
+      uuids:
+        description: 物品UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - allow_substore_visible
+    - uuids
     type: object
   req.MaterialCategoryAddReq:
     properties:
@@ -4362,6 +4378,9 @@ definitions:
     type: object
   req.MaterialEditReq:
     properties:
+      allow_substore_visible:
+        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
+        type: integer
       barcode_value:
         description: 条形码值
         type: string
@@ -5394,6 +5413,9 @@ definitions:
     type: object
   req.ProductBomCardImportReq:
     properties:
+      allow_substore_visible:
+        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
+        type: integer
       barcode_value:
         description: 条形码值
         type: string
@@ -8693,9 +8715,15 @@ definitions:
       is_open_buffet:
         description: '是否开启自助餐功能: 0不开启, 1开启'
         type: integer
+      is_open_data_management:
+        description: 是否开启数据管理功能
+        type: boolean
       is_open_h5_order:
         description: '是否开启扫码接单功能: 0不开启, 1开启'
         type: integer
+      is_open_map:
+        description: 是否开启地图
+        type: boolean
       is_open_member:
         description: '是否开启会员功能: 0不开启, 1开启'
         type: integer
@@ -9041,27 +9069,27 @@ definitions:
     type: object
   resp.DeskMapAreaInfo:
     properties:
-      area_name:
+      region_name:
         description: 区域名称
         type: string
-      area_uuid:
+      region_uuid:
         description: 区域UUID
         type: integer
     type: object
   resp.DeskMapAreaItem:
     properties:
-      area_name:
-        description: 区域名称
-        type: string
-      area_uuid:
-        description: 区域UUID
-        type: integer
       desk_count:
         description: 桌台数量
         type: integer
       layout_status:
         description: '布局状态: set-已配置, unset-未配置'
         type: string
+      region_name:
+        description: 区域名称
+        type: string
+      region_uuid:
+        description: 区域UUID
+        type: integer
     type: object
   resp.DeskMapAreaListResp:
     properties:
@@ -9081,10 +9109,6 @@ definitions:
     type: object
   resp.DeskMapLayoutResp:
     properties:
-      area:
-        allOf:
-        - $ref: '#/definitions/resp.DeskMapAreaInfo'
-        description: 区域信息
       desks:
         description: 桌台列表
         items:
@@ -9094,6 +9118,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.DeskMapLayoutData'
         description: 布局数据
+      region:
+        allOf:
+        - $ref: '#/definitions/resp.DeskMapAreaInfo'
+        description: 区域信息
     type: object
   resp.DeskMapLayoutTable:
     properties:
@@ -9192,6 +9220,9 @@ definitions:
     type: object
   resp.DeskRegion:
     properties:
+      is_open_map:
+        description: 是否开启地图
+        type: boolean
       name:
         description: 餐桌区域名称
         type: string
@@ -9392,8 +9423,6 @@ definitions:
     type: object
   resp.FullReductionActivityResp:
     properties:
-      create_time:
-        type: integer
       end_date:
         type: integer
       end_time:
@@ -9422,8 +9451,6 @@ definitions:
       status:
         description: in_progress, not_start, end
         type: string
-      update_time:
-        type: integer
       uuid:
         type: integer
     type: object
@@ -15148,7 +15175,7 @@ definitions:
         description: 折扣计算方式 10-按百分比 20-直接减免
         type: string
       discount_need_password:
-        description: 敏感操作设置
+        description: 折扣操作是否需要密码 0-否 1-是
         type: string
       dish_card_style:
         description: 菜品卡片样式 0-无图模式 1-图片模式
@@ -15646,7 +15673,7 @@ definitions:
         description: 折扣计算方式 10-按百分比 20-直接减免
         type: string
       discount_need_password:
-        description: 敏感操作设置
+        description: 折扣操作是否需要密码 0-否 1-是
         type: string
       dish_card_style:
         description: 菜品卡片样式 0-无图模式 1-图片模式
@@ -16359,18 +16386,18 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表
+      description: 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入region_uuid参数，返回该区域的详细布局；否则返回所有区域列表
       parameters:
       - description: 区域UUID，不传则返回区域列表
         format: int64
         in: query
-        name: area_uuid
+        name: region_uuid
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: 返回区域布局详情（传入area_uuid）
+          description: 返回区域布局详情（传入region_uuid）
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
@@ -18978,18 +19005,18 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入area_uuid参数，返回该区域的详细布局；否则返回所有区域列表
+      description: 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入region_uuid参数，返回该区域的详细布局；否则返回所有区域列表
       parameters:
       - description: 区域UUID，不传则返回区域列表
         format: int64
         in: query
-        name: area_uuid
+        name: region_uuid
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: 返回区域布局详情（传入area_uuid）
+          description: 返回区域布局详情（传入region_uuid）
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
@@ -27627,7 +27654,7 @@ paths:
       - description: 区域UUID
         format: int64
         in: query
-        name: area_uuid
+        name: region_uuid
         required: true
         type: integer
       produces:
@@ -28004,6 +28031,30 @@ paths:
       security:
       - JwtToken: []
       summary: 添加物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/batch_update_visible:
+    post:
+      consumes:
+      - application/json
+      description: 批量更新物品可见性设置（仅总店可用）
+      parameters:
+      - description: 批量更新物品可见性请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialBatchUpdateVisibleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量更新物品可见性
       tags:
       - 商家端.物品管理
   /shop/material/category/add:

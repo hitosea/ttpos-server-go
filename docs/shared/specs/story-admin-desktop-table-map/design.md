@@ -236,7 +236,7 @@ API 层 (Controller/API)
 - `id` bigint unsigned AUTO_INCREMENT
 - `uuid` bigint unsigned NOT NULL DEFAULT 0
 - `company_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '商户 UUID'
-- `area_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '区域 UUID'
+- `region_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '区域 UUID'
 - `layout_json` text NOT NULL COMMENT '画布布局 JSON（含桌台坐标、尺寸、样式等）'
 - `create_time` int NOT NULL DEFAULT 0
 - `update_time` int NOT NULL DEFAULT 0
@@ -245,7 +245,7 @@ API 层 (Controller/API)
 索引设计：
 
 - PK: `PRIMARY KEY (id)`
-- 唯一索引：`UNIQUE KEY uk_company_area (company_uuid, area_uuid)`
+- 唯一索引：`UNIQUE KEY uk_company_area (company_uuid, region_uuid)`
 
 说明：
 
@@ -261,7 +261,7 @@ API 层 (Controller/API)
 
 ```json
 {
-  "area_uuid": 123,
+  "region_uuid": 123,
   "tables": [
     {
       "table_uuid": 111,
@@ -305,7 +305,7 @@ API 层 (Controller/API)
   "data": {
     "list": [
       {
-        "area_uuid": 123,
+        "region_uuid": 123,
         "area_name": "大厅",
         "table_count": 20,
         "layout_status": "set"   // set / unset
@@ -320,7 +320,7 @@ API 层 (Controller/API)
 - **URL**: `/api/v1/admin/desk_map/layout_detail`
 - **Method**: `GET`
 - **Request Params**:
-  - `area_uuid` (required)
+  - `region_uuid` (required)
 - **Response**:
 
 ```json
@@ -329,7 +329,7 @@ API 层 (Controller/API)
   "message": "success",
   "data": {
     "area": {
-      "area_uuid": 123,
+      "region_uuid": 123,
       "area_name": "大厅"
     },
     "tables": [
@@ -355,7 +355,7 @@ API 层 (Controller/API)
 
 ```json
 {
-  "area_uuid": 123,
+  "region_uuid": 123,
   "layout": {
     "tables": [
       {
@@ -396,7 +396,7 @@ API 层 (Controller/API)
 - **URL**: `/api/v1/terminal/desk_map/layout`
 - **Method**: `GET`
 - **Params**:
-  - `area_uuid`（可选，默认所有区域）
+  - `region_uuid`（可选，默认所有区域）
 - **Response**:
 
 ```json
@@ -446,13 +446,13 @@ API 层 (Controller/API)
 ## ⚡ 缓存与性能
 
 - 布局数据读多写少，可在终端侧增加短期缓存（如内存/本地存储），但后端暂不强制 Redis 缓存；
-- 若后续性能瓶颈明显，可为布局查询增加 Redis 缓存，Key 形如：`ttpos:desk_map:layout:{company_uuid}:{area_uuid}`。
+- 若后续性能瓶颈明显，可为布局查询增加 Redis 缓存，Key 形如：`ttpos:desk_map:layout:{company_uuid}:{region_uuid}`。
 
 ---
 
 ## 🚨 错误处理与安全
 
-- 后端接口严格校验 `company_uuid`、`area_uuid` 权限，避免跨商家/跨门店访问；
+- 后端接口严格校验 `company_uuid`、`region_uuid` 权限，避免跨商家/跨门店访问；
 - 所有接口需通过现有鉴权中间件；
 - 对布局 JSON 进行结构校验，防止异常数据导致终端渲染崩溃；
 - 出错时记录详细日志，返回统一错误码与友好提示。

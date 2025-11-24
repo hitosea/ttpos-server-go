@@ -751,14 +751,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
 CREATE TABLE IF NOT EXISTS `ttpos_desk_map_layout` (
     `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `uuid` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '布局UUID',
-    `area_uuid` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '区域UUID',
+    `region_uuid` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '区域UUID',
     `layout_json` TEXT NOT NULL COMMENT '画布布局JSON（含桌台坐标、尺寸、样式等）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（软删除）',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_uuid` (`uuid`),
-    UNIQUE KEY `uk_area_uuid` (`area_uuid`),
+    UNIQUE KEY `uk_region_uuid` (`region_uuid`),
     KEY `idx_delete_time` (`delete_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '桌台地图布局表';
 

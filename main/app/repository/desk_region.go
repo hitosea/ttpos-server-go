@@ -18,7 +18,9 @@ type IDeskRegionRepo interface {
 
 // IDeskRegionQueryRepo 桌台区域查询
 type IDeskRegionQueryRepo interface {
-	GetDeskRegionList() ([]model.DeskRegion, error)
+	GetDeskRegionList(opts ...DBOption) ([]model.DeskRegion, error)
+
+	WithDeskMapLayout() DBOption
 }
 
 func NewDeskRegionRepo(db *gorm.DB) IDeskRegionRepo {
@@ -35,10 +37,17 @@ type DeskRegionRepoImpl struct {
 }
 
 // GetDeskRegionList 获取桌台区域列表，排除逻辑删除的桌台区域
-func (r *DeskRegionRepoImpl) GetDeskRegionList() ([]model.DeskRegion, error) {
+func (r *DeskRegionRepoImpl) GetDeskRegionList(opts ...DBOption) ([]model.DeskRegion, error) {
 	var deskRegions []model.DeskRegion
-	err := r.db.Model(&model.DeskRegion{}).Where("delete_time = ?", 0).Find(&deskRegions).Error
-	return deskRegions, errors.WithMessage(err)
+	db := r.db.Model(&model.DeskRegion{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Where("delete_time = ?", 0).Find(&deskRegions).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return deskRegions, nil
 }
 
 // UpdateDeskRegion 更新桌台区域
@@ -61,4 +70,13 @@ func (r *DeskRegionRepoImpl) CreateDeskRegion(deskRegion model.DeskRegion) (uint
 // DeleteDeskRegion 软删除桌台区域
 func (r *DeskRegionRepoImpl) DeleteDeskRegion(id uint) error {
 	return r.db.Model(&model.DeskRegion{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// WithDeskMapLayout 预加载桌台地图布局
+func (r *DeskRegionRepoImpl) WithDeskMapLayout() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DeskMapLayout", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		})
+	}
 }

@@ -52,7 +52,7 @@ func (h *DeskMapHandler) GetAreaList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param area_uuid query uint64 true "区域UUID"
+// @Param region_uuid query uint64 true "区域UUID"
 // @Success 200 {object} dto.Response{data=resp.DeskMapLayoutResp}
 // @Router /shop/desk/map/layout_detail [get]
 func (h *DeskMapHandler) GetLayoutDetail(c *gin.Context) {
@@ -64,7 +64,7 @@ func (h *DeskMapHandler) GetLayoutDetail(c *gin.Context) {
 		return
 	}
 
-	detail, err := h.deskMapSrv.GetLayoutDetail(ctx, detailReq.AreaUuid)
+	detail, err := h.deskMapSrv.GetLayoutDetail(ctx, detailReq.RegionUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

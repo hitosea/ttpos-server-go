@@ -96,7 +96,7 @@ Authorization: Bearer {token}
   "data": {
     "list": [
       {
-        "area_uuid": 123,
+        "region_uuid": 123,
         "area_name": "大厅",
         "table_count": 20,
         "layout_status": "set"
@@ -116,7 +116,7 @@ Authorization: Bearer {token}
 
 ```bash
 # 请求
-GET /api/v1/shop/desk/map/layout_detail?area_uuid=123
+GET /api/v1/shop/desk/map/layout_detail?region_uuid=123
 Authorization: Bearer {token}
 
 # 预期响应
@@ -125,8 +125,8 @@ Authorization: Bearer {token}
   "message": "获取成功",
   "data": {
     "area": {
-      "area_uuid": 123,
-      "area_name": "大厅"
+      "region_uuid": 123,
+      "region_name": "大厅"
     },
     "tables": [
       {
@@ -157,7 +157,7 @@ Authorization: Bearer {token}
 **测试用例**:
 - ✅ 正常获取布局详情
 - ✅ 区域不存在返回错误
-- ✅ area_uuid 参数缺失返回错误
+- ✅ region_uuid 参数缺失返回错误
 - ✅ 未配置布局时返回空布局
 
 #### 1.3 保存布局
@@ -169,7 +169,7 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "area_uuid": 123,
+  "region_uuid": 123,
   "layout_json": "{\"tables\":[{\"table_uuid\":111,\"shape\":\"circle\",\"capacity\":4,\"x\":100,\"y\":200,\"width\":80,\"height\":80,\"rotation\":0}]}"
 }
 
@@ -185,14 +185,14 @@ Content-Type: application/json
 - ✅ 首次保存（创建）
 - ✅ 再次保存（更新）
 - ✅ JSON 格式错误返回错误
-- ✅ area_uuid 参数缺失返回错误
+- ✅ region_uuid 参数缺失返回错误
 - ✅ layout_json 为空返回错误
 
 ### 2. 收银端 API 测试
 
 **基础 URL**: `/api/v1/cashier/desk_map`
 
-#### 2.1 获取区域列表（不传 area_uuid）
+#### 2.1 获取区域列表（不传 region_uuid）
 
 ```bash
 # 请求
@@ -206,8 +206,8 @@ Authorization: Bearer {token}
   "data": {
     "list": [
       {
-        "area_uuid": 123,
-        "area_name": "大厅",
+        "region_uuid": 123,
+        "region_name": "大厅",
         "desk_count": 20,
         "layout_status": "set"
       }
@@ -221,11 +221,11 @@ Authorization: Bearer {token}
 - ✅ 未配置布局时返回空列表
 - ✅ 未登录返回 401
 
-#### 2.2 获取区域详细布局（传入 area_uuid）
+#### 2.2 获取区域详细布局（传入 region_uuid）
 
 ```bash
 # 请求
-GET /api/v1/cashier/desk/map/layout?area_uuid=123
+GET /api/v1/cashier/desk/map/layout?region_uuid=123
 Authorization: Bearer {token}
 
 # 预期响应
@@ -234,8 +234,8 @@ Authorization: Bearer {token}
   "message": "获取成功",
   "data": {
     "area": {
-      "area_uuid": 123,
-      "area_name": "大厅"
+      "region_uuid": 123,
+      "region_name": "大厅"
     },
     "desks": [
       {
@@ -267,7 +267,7 @@ Authorization: Bearer {token}
 
 **测试用例**:
 - ✅ 正常获取区域详细布局
-- ✅ area_uuid 不存在返回错误
+- ✅ region_uuid 不存在返回错误
 - ✅ 未配置布局时返回空 layout
 - ✅ 未登录返回 401
 
@@ -275,7 +275,7 @@ Authorization: Bearer {token}
 
 **基础 URL**: `/api/v1/assistant/desk_map`
 
-#### 3.1 获取区域列表（不传 area_uuid）
+#### 3.1 获取区域列表（不传 region_uuid）
 
 ```bash
 # 请求
@@ -289,7 +289,7 @@ Authorization: Bearer {token}
   "data": {
     "list": [
       {
-        "area_uuid": 123,
+        "region_uuid": 123,
         "area_name": "大厅",
         "desk_count": 20,
         "layout_status": "set"
@@ -304,11 +304,11 @@ Authorization: Bearer {token}
 - ✅ 未配置布局时返回空列表
 - ✅ 未登录返回 401
 
-#### 3.2 获取区域详细布局（传入 area_uuid）
+#### 3.2 获取区域详细布局（传入 region_uuid）
 
 ```bash
 # 请求
-GET /api/v1/assistant/desk/map/layout?area_uuid=123
+GET /api/v1/assistant/desk/map/layout?region_uuid=123
 Authorization: Bearer {token}
 
 # 预期响应
@@ -317,7 +317,7 @@ Authorization: Bearer {token}
   "message": "获取成功",
   "data": {
     "area": {
-      "area_uuid": 123,
+      "region_uuid": 123,
       "area_name": "大厅"
     },
     "desks": [
@@ -350,7 +350,7 @@ Authorization: Bearer {token}
 
 **测试用例**:
 - ✅ 正常获取区域详细布局
-- ✅ area_uuid 不存在返回错误
+- ✅ region_uuid 不存在返回错误
 - ✅ 未配置布局时返回空 layout
 - ✅ 未登录返回 401
 
@@ -479,7 +479,7 @@ SHOW INDEX FROM desk_map_layout;
 -- 预期索引:
 -- - PRIMARY (id)
 -- - uk_uuid (uuid) UNIQUE
--- - uk_area_uuid (area_uuid) UNIQUE
+-- - uk_region_uuid (region_uuid) UNIQUE
 -- - idx_delete_time (delete_time)
 ```
 

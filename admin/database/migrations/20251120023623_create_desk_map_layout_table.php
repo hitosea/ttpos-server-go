@@ -65,7 +65,7 @@ class CreateDeskMapLayoutTable extends Migrator
                     'comment' => '布局UUID'
                 ])
                 // 区域UUID
-                ->addColumn('area_uuid', 'biginteger', [
+                ->addColumn('region_uuid', 'biginteger', [
                     'limit' => 20,
                     'signed' => false,
                     'default' => 0,
@@ -107,9 +107,9 @@ class CreateDeskMapLayoutTable extends Migrator
                     'name' => 'uk_uuid'
                 ])
                 // 添加唯一索引：一个区域只能有一个布局配置
-                ->addIndex(['area_uuid'], [
+                ->addIndex(['region_uuid'], [
                     'unique' => true,
-                    'name' => 'uk_area_uuid'
+                    'name' => 'uk_region_uuid'
                 ])
                 // 添加普通索引：软删除查询
                 ->addIndex(['delete_time'], [

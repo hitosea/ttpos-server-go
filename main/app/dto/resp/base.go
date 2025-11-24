@@ -107,17 +107,19 @@ func NewProductPrinterList() ProductPrinterList {
 }
 
 type Company struct {
-	Uuid           uint64 `json:"uuid"`              // 商家UUID
-	Name           string `json:"name"`              // 商家名称
-	Logo           string `json:"logo"`              // 商家logo
-	TimeZone       string `json:"time_zone"`         // 时区，形如 Asia/Shanghai
-	ExpireTime     int64  `json:"expire_time"`       // 店铺到期时间，0表示没有过期时间
-	IsOpenMember   int    `json:"is_open_member"`    // 是否开启会员功能: 0不开启, 1开启
-	IsOpenBuffet   int    `json:"is_open_buffet"`    // 是否开启自助餐功能: 0不开启, 1开启
-	IsOpenH5Order  int    `json:"is_open_h5_order"`  // 是否开启扫码接单功能: 0不开启, 1开启
-	IsOpenOldOrder int    `json:"is_open_old_order"` // 是否开启旧订单功能: 0不开启, 1开启
-	IsOpenRider    bool   `json:"is_open_rider"`     // 是否开启外送
-	IsEnableErp    bool   `json:"is_show_inventory"` // 是否显示移动管理端进销存功能
+	Uuid                 uint64 `json:"uuid"`                    // 商家UUID
+	Name                 string `json:"name"`                    // 商家名称
+	Logo                 string `json:"logo"`                    // 商家logo
+	TimeZone             string `json:"time_zone"`               // 时区，形如 Asia/Shanghai
+	ExpireTime           int64  `json:"expire_time"`             // 店铺到期时间，0表示没有过期时间
+	IsOpenMember         int    `json:"is_open_member"`          // 是否开启会员功能: 0不开启, 1开启
+	IsOpenBuffet         int    `json:"is_open_buffet"`          // 是否开启自助餐功能: 0不开启, 1开启
+	IsOpenH5Order        int    `json:"is_open_h5_order"`        // 是否开启扫码接单功能: 0不开启, 1开启
+	IsOpenOldOrder       int    `json:"is_open_old_order"`       // 是否开启旧订单功能: 0不开启, 1开启
+	IsOpenRider          bool   `json:"is_open_rider"`           // 是否开启外送
+	IsEnableErp          bool   `json:"is_show_inventory"`       // 是否显示移动管理端进销存功能
+	IsOpenMap            bool   `json:"is_open_map"`             // 是否开启地图
+	IsOpenDataManagement bool   `json:"is_open_data_management"` // 是否开启数据管理功能
 }
 
 type Permission struct {
