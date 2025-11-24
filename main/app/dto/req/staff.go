@@ -71,20 +71,54 @@ var AddStaffRequestMessage = map[string]string{
 }
 
 type AddRoleReq struct {
-	Name        string   `json:"name" binding:"required"`         // 角色名称
-	AccessUuids []uint64 `json:"access_uuids" binding:"required"` // 权限ID列表
+	Name        string   `json:"name" binding:"required,min=1,max=50"`        // 角色名称，1-50字符
+	AccessUuids []uint64 `json:"access_uuids" binding:"required,min=1,dive"`  // 权限ID列表，至少选择一个
+}
+
+var AddRoleRequestMessage = map[string]string{
+	"name.required":        "角色名称不能为空",
+	"name.min":             "角色名称至少1个字符",
+	"name.max":             "角色名称不能超过50个字符",
+	"access_uuids.required": "权限列表不能为空",
+	"access_uuids.min":      "至少选择一个权限",
 }
 
 type UpdateRoleReq struct {
-	Uuid        uint64   `json:"uuid" binding:"required"`         // 角色ID
-	Name        string   `json:"name" binding:"required"`         // 角色名称
-	AccessUuids []uint64 `json:"access_uuids" binding:"required"` // 权限ID列表
+	Uuid        uint64   `json:"uuid" binding:"required"`                     // 角色ID
+	Name        string   `json:"name" binding:"required,min=1,max=50"`        // 角色名称，1-50字符
+	AccessUuids []uint64 `json:"access_uuids" binding:"required,min=1,dive"`  // 权限ID列表，至少选择一个
+	StaffUuids  []uint64 `json:"staff_uuids"`                                // 员工ID列表（编辑时关联员工），可选
+}
+
+var UpdateRoleRequestMessage = map[string]string{
+	"uuid.required":        "角色ID不能为空",
+	"name.required":       "角色名称不能为空",
+	"name.min":            "角色名称至少1个字符",
+	"name.max":            "角色名称不能超过50个字符",
+	"access_uuids.required": "权限列表不能为空",
+	"access_uuids.min":      "至少选择一个权限",
+}
+
+type GetRoleDetailReq struct {
+	Uuid uint64 `form:"uuid" binding:"required"` // 角色UUID
+}
+
+var GetRoleDetailRequestMessage = map[string]string{
+	"uuid.required": "角色UUID不能为空",
 }
 
 type DeleteRoleReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 角色ID
 }
 
+var DeleteRoleRequestMessage = map[string]string{
+	"uuid.required": "角色ID不能为空",
+}
+
 type GetRoleReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 角色ID
+}
+
+var GetRoleRequestMessage = map[string]string{
+	"uuid.required": "角色ID不能为空",
 }
