@@ -55489,9 +55489,23 @@ const docTemplate = `{
                     "description": "订单数量",
                     "type": "integer"
                 },
+                "order_uuids": {
+                    "description": "订单UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "staff_count": {
                     "description": "操作人员数量",
                     "type": "integer"
+                },
+                "staff_uuids": {
+                    "description": "操作人员UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "statistics": {
                     "description": "统计信息",
