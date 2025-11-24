@@ -1,6 +1,8 @@
 package boot
 
 import (
+	"context"
+
 	"ttpos-bmp/internal/pkg/cache"
 	"ttpos-bmp/utility/uuid"
 
@@ -12,9 +14,15 @@ var (
 )
 
 func init() {
-	InitRpc(ctx)
-	InitConsumer(ctx)
+	// 基础初始化（不启动服务器）
 	uuid.InitIdGenerator(ctx)
 	//设置缓存
 	cache.SetAdapter(ctx)
+}
+
+// InitServer 初始化服务器相关组件（RPC、Consumer等）
+// 只在需要启动服务器的命令中调用（如 Main 命令）
+func InitServer(ctx context.Context) {
+	InitRpc(ctx)
+	InitConsumer(ctx)
 }

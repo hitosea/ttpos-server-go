@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"ttpos-bmp/app/ttpos-erp/internal/boot"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/callback"
 	"ttpos-bmp/internal/pkg/otlp"
@@ -24,6 +25,8 @@ var (
 		Usage: "main",
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+			// 初始化服务器组件（RPC、Consumer等）
+			boot.InitServer(ctx)
 			// 初始化OTLP
 			shutdownOtlp := otlp.InitOtlp()
 			defer shutdownOtlp(ctx)
