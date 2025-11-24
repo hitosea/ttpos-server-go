@@ -1,0 +1,511 @@
+<div class="po-wrapper">
+
+    {% set company = frappe.get_doc("Company", doc.company) %} {% set
+    company_addr_name = doc.company_address %} {% if not company_addr_name %} {%
+    set company_addr_name = frappe.db.get_value( "Dynamic Link", {"link_doctype":
+    "Company", "link_name": doc.company}, "parent" ) %} {% endif %} {% set
+    company_address = frappe.utils.get_address_display(company_addr_name) if
+    company_addr_name else "" %} {% set currency = doc.currency or
+    company.default_currency %} {% set subtotal = doc.total or doc.base_total or 0
+    %} {% set grand_total = doc.grand_total or doc.base_grand_total or 0 %} {% set
+    taxes_total = doc.total_taxes_and_charges or doc.base_total_taxes_and_charges
+    or 0 %} {% set discount_amount = doc.discount_amount or 0 %} {% set taxes =
+    doc.taxes or [] %} {% set vat = namespace(value=0) %} {% for tax in taxes %}
+    {% set tax_amount = tax.tax_amount or tax.base_tax_amount or 0 %} {% if "VAT"
+    in (tax.description or "").upper() %} {% set vat.value = vat.value +
+    tax_amount %} {% endif %} {% endfor %} {% set other_charges = taxes_total -
+    vat.value %}
+  
+    <div class="top-section">
+      <div class="title-row">
+        <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" /> 
+        <div class="po-title">PURCHASE RECEIPT</div>
+      </div>
+      <div class="header-grid">
+        <div class="company-block">
+          <div class="company-info">
+            <strong>{{ doc.company }}</strong><br />
+          {{ (company_address or "989 AIA EAST GATEWAY BUILDING, ROOM NO.1101-1102, 11TH FLOOR, DEBARATANA RD.,BANGNA NUEA, BANGNA, BANGKOK 10260 ") | replace("BUILDING,", "BUILDING,<br />") | replace("DEBARATANA RD.,", "DEBARATANA RD.,<br />") | safe }}<br />
+  
+            PHONE&nbsp;:&nbsp;{{ company.phone_no or company.phone or '082-168-8984' }}
+          </div>
+        </div>
+        <div class="meta-block">
+          <table class="meta-table">
+            <tr>
+              <td class="meta-label">TABULATION DATE</td>
+              <td>
+                {{ frappe.format_value(doc.transaction_date, {"fieldtype":"Date"}) }}
+              </td>
+            </tr>
+            <tr>
+              <td class="meta-label">ORDER NUMBER</td>
+              <td>{{ doc.name }}</td>
+            </tr>
+            <tr>
+              <td class="meta-label">DELIVERY DATE</td>
+              <td>
+                {{ frappe.format_value(doc.schedule_date, {"fieldtype":"Date"}) }}
+              </td>
+            </tr>
+            <tr>
+              <td class="meta-label">PAYMENT TERMS</td>
+              <td>{{ doc.payment_terms or '30 DAYS' }}</td>
+            </tr>
+            <tr>
+              <td class="meta-label">VENDOR CODE</td>
+              <td>{{ doc.supplier or '—' }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="header-divider"></div>
+    </div>
+  
+    <div class="info-row">
+      <div class="info-block">
+        <div class="title">VENDOR</div>
+        <div class="body">
+          <strong>{{ doc.supplier_name or doc.supplier  }}</strong><br />
+          {{ doc.supplier_address_display or "" }}<br />
+        </div>
+      </div>
+      <div class="info-block">
+        <div class="title">WAREHOUSE INFORMATION</div>
+        <div class="body">
+          {{ doc.set_warehouse or '' }}<br />
+        </div>
+      </div>
+    </div>
+  
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="col-no">NO.</th>
+          <th class="col-code">CODE</th>
+          <th class="col-description">DESCRIPTION</th>
+          <th class="col-qty">QUANTITY</th>
+          <th class="col-unit">UNIT</th>
+          <th class="col-price">PRICE / UNIT</th>
+          <th class="col-total">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in doc.items %}
+        <tr>
+          <td class="col-no">{{ row.idx }}</td>
+          <td class="col-code">{{ row.custom_internal_code or row.item_code }}</td>
+          <td class="col-description">{{ row.description or row.item_name }}</td>
+          <td class="col-qty">
+            {{ frappe.format_value(row.qty, {"fieldtype":"Float"}) }}
+          </td>
+          <td class="col-unit">{{ row.uom }}</td>
+          <td class="col-price">
+            {{ frappe.format_value(row.rate, {"fieldtype":"Currency", "currency":
+            currency}) }}
+          </td>
+          <td class="col-total">
+            {{ frappe.format_value(row.amount or row.base_amount,
+            {"fieldtype":"Currency", "currency": currency}) }}
+          </td>
+        </tr>
+        {% endfor %} {% set max_rows = 12 %} {% set blank_rows = max_rows -
+        (doc.items|length or 0) %} {% for i in range(blank_rows if blank_rows > 0
+        else 0) %}
+        <tr>
+          <td class="col-no">&nbsp;</td>
+          <td class="col-code"></td>
+          <td class="col-description"></td>
+          <td class="col-qty"></td>
+          <td class="col-unit"></td>
+          <td class="col-price"></td>
+          <td class="col-total"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  
+    <div class="comments-grid">
+      <div class="comments-block">
+        <div class="title">COMMENTS OR SPECIAL INSTRUCTIONS</div>
+        <div class="body">{{ (doc.remarks or '&nbsp;') | safe }}</div>
+      </div>
+      <table class="summary-table">
+        <tr>
+          <td>SUBTOTAL</td>
+          <td>
+            {{ frappe.format_value(subtotal, {"fieldtype":"Currency", "currency":
+            currency}) }}
+          </td>
+        </tr>
+        <tr>
+          <td>VAT 7%</td>
+          <td>
+            {{ frappe.format_value(vat.value, {"fieldtype":"Currency", "currency":
+            currency}) }}
+          </td>
+        </tr>
+        <tr>
+          <td>DISCOUNT</td>
+          <td>
+            {{ frappe.format_value(discount_amount, {"fieldtype":"Currency",
+            "currency": currency}) }}
+          </td>
+        </tr>
+        <tr>
+          <td>OTHER</td>
+          <td>
+            {{ frappe.format_value(other_charges, {"fieldtype":"Currency",
+            "currency": currency}) }}
+          </td>
+        </tr>
+        <tr>
+          <td>TOTAL</td>
+          <td>
+            {{ frappe.format_value(grand_total, {"fieldtype":"Currency",
+            "currency": currency}) }}
+          </td>
+        </tr>
+      </table>
+    </div>
+  
+    <div class="shelf-life">
+      <div class="title">SHELF LIFE</div>
+      <div class="body">
+        {{ doc.custom_shelf_life_note or '' }}
+      </div>
+    </div>
+    <div class="shelf-life delivery">
+      <div class="title">Product Delivery Terms
+      </div>
+      <div class="body">
+        {{ doc.custom_shelf_life_note or '' }}
+      </div>
+    </div>
+    <div class="shelf-life delivery transfer">
+      <div class="title">Product Transfer Terms  
+      </div>
+      <div class="body">
+        {{ doc.custom_shelf_life_note or '' }}
+      </div>
+    </div>
+  
+    <div class="signature-grid">
+      <div>
+        <div class="line"></div>
+        <strong>EXECUTED / CHECKED BY</strong>
+        <span>DATE&nbsp;:&nbsp;......................</span>
+      </div>
+      <div>
+        <div class="line"></div>
+        <strong>APPROVED BY</strong>
+        <span>DATE&nbsp;:&nbsp;......................</span>
+      </div>
+      <div>
+        <div class="line"></div>
+        <strong>RECEIVED BY</strong>
+        <span>DATE&nbsp;:&nbsp;......................</span>
+      </div>
+    </div>
+  
+    <div class="note">
+      <div>If you have any questions about this purchase receipt, please contact</div>					
+      <div>K.Wimolwan (GiF) / Purchasing / Tel.082-168-8984 / e-mail : Wimolwan.n@wallacethailand.com</div>								
+      <div>K.Henry, K.Adam / Accounting  / Tel.063-412-0672 / e-mail : henry@wallacethailand.com, adam@wallacethailand.com</div>								
+    </div>    
+  
+  </div>
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm 10mm;
+    }
+  
+    html,
+    body {
+      width: 210mm;
+      margin: 0;
+      font-family: "Arial", sans-serif;
+      color: #000;
+    }
+  
+    .po-wrapper {
+      width: 190mm;
+      max-width: 190mm;
+      margin: 0 auto;
+      padding: 6mm 8mm 8mm;
+      box-sizing: border-box;
+      font-size: 11px;
+    }
+  
+    .top-section {
+      margin-bottom: 12px;
+    }
+  
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 30px;
+    }
+  
+    .title-row .logo {
+      width: 95px;
+      height: auto;
+      position: absolute;
+      left: 0;
+    }
+  
+    .po-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      flex: 1;
+    }
+  
+    .header-grid {
+      display: grid;
+      grid-template-columns: 2.2fr 1.4fr;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+  
+    .company-block {
+      display: flex;
+      flex-direction: column;
+    }
+  
+    .company-info {
+      font-size: 10px;
+      line-height: 1.5;
+      text-transform: uppercase;
+      margin-top: 30px;
+    }
+  
+    .company-info strong {
+      font-size: 14px;
+    }
+  
+    .header-divider {
+      border-bottom: 2px solid #006400;
+      width: 100%;
+      margin-top: 8px;
+    }
+  
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+  
+    .meta-table td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+    }
+  
+    .meta-table td:last-child {
+      color: #d32f2f;
+      font-weight: 500;
+    }
+  
+    .meta-label {
+      font-weight: 600;
+      width: 55%;
+    }
+  
+    .info-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+  
+    .info-block {
+      border: 1px solid #000;
+    }
+  
+    .info-block .title {
+      background: #dcdcdc;
+      font-weight: 600;
+      padding: 4px 6px;
+      letter-spacing: 0.5px;
+    }
+  
+    .info-block .body {
+      min-height: 12px;
+      padding: 6px;
+      font-size: 10px;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+  
+    .info-block .body strong {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 2px;
+    }
+  
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 10px;
+      table-layout: fixed;
+    }
+  
+    .items-table th,
+    .items-table td {
+      border: 1px solid #000;
+      padding: 4px 5px;
+    }
+  
+    .items-table th {
+      background: #dcdcdc;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+  
+    .items-table thead {
+      display: table-header-group;
+    }
+  
+    .col-no {
+      width: 35px;
+      text-align: center;
+    }
+  
+    .col-code {
+      width: 90px;
+      word-break: break-all;
+      word-wrap: break-word;
+    }
+  
+    .col-description {
+      word-break: break-all;
+      word-wrap: break-word;
+    }
+  
+    .col-qty {
+      width: 70px;
+      text-align: center;
+    }
+  
+    .col-unit {
+      width: 60px;
+      text-align: center;
+    }
+  
+    .col-price,
+    .col-total {
+      width: 80px;
+      text-align: right;
+    }
+  
+    .comments-grid {
+      display: grid;
+      grid-template-columns: 2.2fr 0.9fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+  
+    .comments-block {
+      border: 1px solid #000;
+      min-height: 70px;
+    }
+  
+    .comments-block .title {
+      background: #dcdcdc;
+      font-weight: 600;
+      padding: 4px 6px;
+      text-transform: uppercase;
+    }
+  
+    .comments-block .body {
+      padding: 6px;
+      min-height: 50px;
+    }
+  
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+  
+    .summary-table td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+    }
+  
+    .summary-table td:first-child {
+      text-align: right;
+      font-weight: 600;
+    }
+  
+    .summary-table tr:last-child td {
+      font-weight: 700;
+      background: #f4f4f4;
+    }
+  
+    
+    .shelf-life {
+      display: flex;
+      margin-top: 12px;
+      border: 1px solid #000;
+      border-bottom: none;
+    }
+    .delivery{
+      margin-top: 0px;
+    }
+    .delivery.transfer{
+      border-bottom: 1px solid #000;
+    }
+  
+    .shelf-life .title {
+      background: #dcdcdc;
+      padding: 4px 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+  
+    .shelf-life .body {
+      padding: 6px;
+      font-size: 10px;
+    }
+  
+    .note {
+      margin-top: 30px;
+      font-size: 9px;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    .note div {
+      text-align: center;
+    }
+  
+    .signature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      text-align: center;
+      margin-top: 30px;
+      font-size: 10px;
+    }
+  
+    .signature-grid .line {
+      border-top: 1px dotted #000;
+      padding-top: 6px;
+      /* min-height: 10px; */
+    }
+  
+    .signature-grid span {
+      display: block;
+      margin-top: 6px;
+    }
+  </style>
+  
+  
