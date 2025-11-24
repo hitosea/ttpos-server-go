@@ -19,15 +19,7 @@ description: Go Main 核心约束
 
 **data 必须是对象，不能是 null 或数组**
 
-```go
-// ✅ 正确
-helper.Success(c, gin.H{})
-helper.Success(c, gin.H{"list": []})
-
-// ❌ 错误
-helper.Success(c, nil)
-helper.Success(c, []string{})
-```
+完整代码示例请参考：`docs/agent/workflows/development/api-response-examples.md`
 
 ### 多语言字段规范（请求和响应）
 
@@ -42,134 +34,15 @@ helper.Success(c, []string{})
 - ✅ **包含所有支持的语言字段**：ZH, TH, EN, ZHTW, JA, KO, MY, TR, SV
 - ✅ **请求参数和响应参数都必须使用** `dto.LocaleResponse`
 
-**响应参数示例：**
+完整代码示例请参考：`docs/agent/workflows/development/locale-field-examples.md`
 
-```go
-// ✅ 正确 - 响应参数使用 dto.LocaleResponse 和正确的字段命名
-type ProductResp struct {
-    Uuid          uint64            `json:"uuid"`
-    LocaleName    dto.LocaleResponse `json:"locale_name"`    // 多语言名称
-    LocaleRemark  dto.LocaleResponse `json:"locale_remark"`  // 多语言备注
-    LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 属性名称（多语言）
-}
-
-// 在 Service 中构建响应
-func (s *productSrv) GetProduct(ctx context.Context, uuid uint64) (*ProductResp, error) {
-    // 从 model.MultiLanguageName 转换
-    localeSrv := service.NewLocaleSrv()
-    localeResp := localeSrv.GetLocaleNames(multiLanguageName)
-    
-    return &ProductResp{
-        Uuid:          uuid,
-        LocaleName:    localeResp,  // ✅ 使用 LocaleResponse 和正确的字段名
-        LocaleRemark:  localeResp,
-    }, nil
-}
-```
-
-**请求参数示例：**
-
-```go
-// ✅ 正确 - 请求参数使用 dto.LocaleResponse 和正确的字段命名
-type ProductCreateReq struct {
-    LocaleName    dto.LocaleResponse `json:"locale_name" binding:"required"`    // 多语言名称
-    LocaleRemark  dto.LocaleResponse `json:"locale_remark"`                      // 多语言备注
-}
-
-// ❌ 错误 - 字段名缺少 Locale 前缀
-type ProductCreateReq struct {
-    Name dto.LocaleResponse `json:"name" binding:"required"`  // ❌ 错误，应使用 LocaleName
-}
-
-// ❌ 错误 - 请求参数使用字符串
-type ProductCreateReq struct {
-    Name string `json:"name" binding:"required"`  // ❌ 错误，应使用 dto.LocaleResponse
-}
-
-// ❌ 错误 - 请求参数使用 map
-type ProductCreateReq struct {
-    Name map[string]string `json:"name" binding:"required"`  // ❌ 错误
-}
-
-// ❌ 错误 - 请求参数使用自定义结构
-type ProductCreateReq struct {
-    Name struct {
-        ZH string `json:"zh"`
-        EN string `json:"en"`
-    } `json:"name" binding:"required"`  // ❌ 错误，应使用 dto.LocaleResponse
-}
-```
-
-**响应参数错误示例：**
-
-```go
-// ❌ 错误 - 响应参数使用字符串
-type ProductResp struct {
-    Name string `json:"name"`  // ❌ 错误
-}
-
-// ❌ 错误 - 响应参数使用 map
-type ProductResp struct {
-    Name map[string]string `json:"name"`  // ❌ 错误
-}
-
-// ❌ 错误 - 响应参数使用自定义结构
-type ProductResp struct {
-    Name struct {
-        ZH string `json:"zh"`
-        EN string `json:"en"`
-    } `json:"name"`  // ❌ 错误，应使用 dto.LocaleResponse
-}
-```
-
-**从 JSON 字符串转换：**
-
-```go
-// 从数据库的 name 字段（JSON 格式）转换为 LocaleResponse
-import "ttpos-server-go/pkg/language"
-
-jsonStr := `{"zh":"苹果","en":"Apple","th":"แอปเปิล"}`
-localeResp := language.JsonToLocaleResponse(jsonStr)  // 返回 *dto.LocaleResponse
-```
-
-**从 model.MultiLanguageName 转换：**
-
-```go
-// 使用 LocaleSrv 转换
-localeSrv := service.NewLocaleSrv()
-localeResp := localeSrv.GetLocaleNames(multiLanguageName)  // 返回 dto.LocaleResponse
-```
-
-**前端请求示例：**
-
-```json
-{
-  "name": {
-    "zh": "苹果",
-    "en": "Apple",
-    "th": "แอปเปิล",
-    "zhtw": "蘋果",
-    "ja": "りんご",
-    "ko": "사과",
-    "my": "ပန်းသီး",
-    "tr": "Elma",
-    "sv": "Äpple"
-  }
-}
-```
 
 ### 错误处理
 
 - ✅ **必须返回 error**，不使用 panic
 - ✅ **使用** `errors.WithMessage` 包装错误
 
-```go
-// ✅ 正确
-return nil, errors.WithMessage(err, "查询失败")
-
-// ❌ 错误
-panic(err)
-```
+完整代码示例请参考：`docs/agent/workflows/development/error-handling-examples.md`
 
 ### 协程使用规范
 
@@ -178,45 +51,6 @@ panic(err)
 - ❌ **禁止直接使用 `go func() { ... }()`**
 - ❌ **禁止在协程中手动编写 recover（`utils.Go` 已包含）**
 
-```go
-// ✅ 正确 - 使用 utils.Go 启动协程
-import "ttpos-server-go/pkg/utils"
-
-utils.Go(func() {
-    event.NewSystemBus().PublishOrderCreatedEvent(
-        event.OrderCreatedPayload{
-            BasePayload: event.BasePayload{
-                Ctx: ctx,
-                CompanyUuid: ctx.GetCompanyUuid(),
-            },
-            OrderUuid: orderUuid,
-        },
-    )
-})
-
-// ✅ 正确 - 异步处理任务
-utils.Go(func() {
-    // 业务逻辑，即使发生 panic 也不会导致主程序崩溃
-    doSomething()
-})
-
-// ❌ 错误 - 直接使用 go func()
-go func() {
-    // 如果这里发生 panic，可能导致整个程序崩溃
-    doSomething()
-}()
-
-// ❌ 错误 - 手动编写 recover（utils.Go 已包含）
-go func() {
-    defer func() {
-        if r := recover(); r != nil {
-            // 手动处理...
-        }
-    }()
-    doSomething()
-}()
-```
-
 **关键点：**
 
 - **自动化 panic 捕获**：`utils.Go` 自动集成 `defer` + `recover` 机制，无需手动编写
@@ -224,40 +58,15 @@ go func() {
 - **提高健壮性**：确保单个协程的 panic 不会导致整个应用程序崩溃
 - **简化开发**：开发者无需在每个协程中手动编写 recover 代码
 
+完整代码示例请参考：`docs/agent/workflows/development/goroutine-examples.md`
+
 ### 常量定义规范
 
 - ✅ **所有常量必须在 `constant` 包中定义**
 - ✅ **禁止在代码中使用字面量（magic numbers/strings）**
 - ✅ **使用常量或枚举替代字面量**
 
-```go
-// ✅ 正确 - 在 constant/order.go 中定义
-const (
-    OrderStatusPending  = 0
-    OrderStatusComplete = 1
-    OrderStatusCanceled = 2
-)
-
-// 在代码中使用
-if order.Status == constant.OrderStatusPending {
-    // ...
-}
-
-// ❌ 错误 - 使用字面量
-if order.Status == 0 {
-    // ...
-}
-
-// ❌ 错误 - 字符串字面量
-if order.Source == "instant" {
-    // ...
-}
-
-// ✅ 正确 - 使用常量
-if order.Source == constant.OrderSourceInstant {
-    // ...
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/constant-examples.md`
 
 ---
 
@@ -277,99 +86,7 @@ if order.Source == constant.OrderSourceInstant {
 - ❌ **禁止直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法**
 - ✅ **所有数据库操作必须通过 Repository 层封装后再调用**
 
-```go
-// ✅ 正确：接口和实现在同一个文件中
-// 文件：order_srv.go
-package service
-
-type IOrderSrv interface {
-    CreateOrder(ctx context.Context, req req.CreateOrderReq) error
-}
-
-type orderSrv struct {
-    dbm        *database.DBManager  // ✅ 持有 DBManager（极少使用）
-    orderRepo  IOrderRepo            // ✅ 自己领域的 Repository
-    memberSrv  IMemberSrv            // ✅ 其他领域的 Service 接口
-    memberRepo IMemberRepo           // ❌ 不能依赖其他领域的 Repository
-}
-
-// ❌ 错误：接口和实现分开在不同文件
-// 文件：i_order_srv.go
-// type IOrderSrv interface { ... }
-
-// 文件：order_srv.go
-// type orderSrv struct { ... }
-```
-
-// ❌ 错误：没有 ctx 参数
-func (s *orderSrv) CreateOrder(req req.CreateOrderReq) error {
-    // ...
-}
-
-// ❌ 错误：使用 dbm.GetDB(dbId) 而不是 ctx.GetDB()
-func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
-    db := s.dbm.GetDB(ctx.GetDbId())  // ❌ 应该用 ctx.GetDB()
-    orderRepo := repository.NewOrderRepo(db)
-    // ...
-}
-
-// ❌ 错误：Service 直接操作 model
-func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
-    db := ctx.GetDB()
-    order := model.Order{...}
-    return db.Create(&order).Error  // ❌ 直接操作 model
-}
-
-// ❌ 错误：直接使用 db.Model、db.Create 等方法
-func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-    db := ctx.GetDB()
-    
-    // ❌ 错误：直接使用 db.Model().Create()
-    if err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error; err != nil {
-        return err
-    }
-    
-    // ❌ 错误：直接使用 db.Model().Where().Updates()
-    if err := db.Model(&model.MultiLanguageName{}).
-        Where("uuid = ?", uuid).
-        Updates(map[string]interface{}{...}).Error; err != nil {
-        return err
-    }
-    
-    return nil
-}
-
-// ✅ 正确：使用 ctx.GetDB() 并通过 Repository 操作
-func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
-    db := ctx.GetDB()
-    orderRepo := repository.NewOrderRepo(db)
-    order := model.Order{...}
-    orderUuid, err := orderRepo.CreateOrder(order)  // ✅ 通过 Repository
-    if err != nil {
-        return errors.WithMessage(err, "创建订单失败")
-    }
-    return nil
-}
-
-// ✅ 正确：所有数据库操作都通过 Repository
-func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-    db := ctx.GetDB()
-    
-    // ✅ 正确：通过 Repository 创建多语言名称
-    multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(db)
-    multiLanguageName := model.MultiLanguageName{...}
-    if err := multiLanguageNameRepo.Create(&multiLanguageName); err != nil {
-        return errors.WithMessage(err, "创建多语言名称失败")
-    }
-    
-    // ✅ 正确：通过 Repository 更新多语言名称
-    if err := multiLanguageNameRepo.UpdateByUuid(uuid, updates); err != nil {
-        return errors.WithMessage(err, "更新多语言名称失败")
-    }
-    
-    return nil
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/service-layer-examples.md`
 
 ### Service 层事务使用规范
 
@@ -389,128 +106,7 @@ func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullRedu
 3. **删除操作**：删除主记录 + 删除关联记录（如删除活动 + 删除规则）
 4. **复杂业务逻辑**：涉及多个表的数据修改，需要保证一致性
 
-**事务使用示例：**
-
-```go
-// ✅ 正确：使用 repository.CommonRepo.Transaction
-func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-    db := ctx.GetDB()
-    
-    // 多个数据库操作，必须使用事务
-    if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-        // 1. 创建多语言名称（使用 tx 创建 Repository）
-        multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
-        multiLanguageName := model.MultiLanguageName{...}
-        if err := multiLanguageNameRepo.Create(&multiLanguageName); err != nil {
-            return errors.WithMessage(err, "创建多语言名称失败")
-        }
-        
-        // 2. 创建活动（使用 tx 创建 Repository）
-        activityRepo := repository.NewFullReductionActivityRepo(tx)
-        activity := &model.FullReductionActivity{...}
-        if err := activityRepo.Create(activity); err != nil {
-            return errors.WithMessage(err, "创建活动失败")
-        }
-        
-        // 3. 创建规则（使用 tx 创建 Repository）
-        ruleRepo := repository.NewFullReductionActivityRuleRepo(tx)
-        for _, ruleReq := range req.Rules {
-            rule := &model.FullReductionActivityRule{...}
-            if err := ruleRepo.Create(rule); err != nil {
-                return errors.WithMessage(err, "创建规则失败")
-            }
-        }
-        
-        // 返回 nil 自动提交，返回 error 自动回滚
-        return nil
-    }); err != nil {
-        return err
-    }
-    
-    return nil
-}
-
-// ✅ 正确：也可以使用 db.Transaction（GORM 标准方法）
-func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
-    db := ctx.GetDB()
-    
-    if err := db.Transaction(func(tx *gorm.DB) error {
-        // 在事务中执行多个操作
-        orderRepo := repository.NewOrderRepo(tx)
-        if err := orderRepo.CreateOrder(order); err != nil {
-            return errors.WithMessage(err, "创建订单失败")
-        }
-        
-        productRepo := repository.NewProductRepo(tx)
-        if err := productRepo.UpdateStock(productUuid, -quantity); err != nil {
-            return errors.WithMessage(err, "更新库存失败")
-        }
-        
-        return nil  // 自动提交
-    }); err != nil {
-        return err
-    }
-    
-    return nil
-}
-
-// ❌ 错误：多个数据库操作没有使用事务
-func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-    db := ctx.GetDB()
-    
-    // ❌ 错误：多个操作没有事务包裹，可能导致数据不一致
-    // ❌ 同时错误：直接使用 db.Model().Create()，应该通过 Repository
-    multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(db)
-    if err := multiLanguageNameRepo.Create(&multiLanguageName); err != nil {
-        return err
-    }
-    
-    activityRepo := repository.NewFullReductionActivityRepo(db)
-    if err := activityRepo.Create(activity); err != nil {
-        return err  // 如果这里失败，上面的 multiLanguageName 已经创建了，数据不一致
-    }
-    
-    return nil
-}
-
-// ❌ 错误：事务中使用了 db 而不是 tx
-func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-    db := ctx.GetDB()
-    
-    if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-        // ❌ 错误：在事务中使用了 db 而不是 tx
-        activityRepo := repository.NewFullReductionActivityRepo(db)  // ❌ 应该用 tx
-        if err := activityRepo.Create(activity); err != nil {
-            return err
-        }
-        return nil
-    }); err != nil {
-        return err
-    }
-    
-    return nil
-}
-
-// ❌ 错误：在事务中手动提交或回滚
-func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) error {
-    db := ctx.GetDB()
-    
-    if err := db.Transaction(func(tx *gorm.DB) error {
-        // ... 业务逻辑
-        
-        // ❌ 错误：不要手动提交，Transaction 会自动处理
-        if err := tx.Commit().Error; err != nil {
-            return err
-        }
-        
-        return nil
-    }); err != nil {
-        return err
-    }
-    
-    return nil
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/transaction-examples.md`
 
 ### Repository 层
 
@@ -518,12 +114,7 @@ func (s *orderSrv) CreateOrder(ctx context.Context, req req.CreateOrderReq) erro
 - ❌ **不能持有 DBManager**
 - ✅ **使用选项模式**
 
-```go
-type OrderRepoImpl struct {
-    db  *gorm.DB           // ✅ 正确
-    dbm *database.DBManager // ❌ 错误
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/repository-layer-examples.md`
 
 ### API 层（app/api/v1）
 
@@ -533,35 +124,7 @@ type OrderRepoImpl struct {
 - ❌ **严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
 - ❌ **禁止在 app/api/v1 目录下的任何子目录中引用 repository 包**
 
-```go
-// ✅ 正确 - API 层只负责调用 Service
-func (h *OrderHandler) CreateOrder(c *gin.Context) {
-    var req dto.CreateOrderReq
-    if err := c.ShouldBindJSON(&req); err != nil {
-        helper.Error(c, err)
-        return
-    }
-
-    result, err := h.orderSrv.CreateOrder(c, req)
-    if err != nil {
-        helper.Error(c, err)
-        return
-    }
-
-    helper.Success(c, result)
-}
-
-// ❌ 错误 - API 层引用 repository
-import "app/repository"  // ❌ 禁止
-
-// ❌ 错误 - API 层编写业务逻辑
-func (h *OrderHandler) CreateOrder(c *gin.Context) {
-    // ❌ 不应该在这里写业务逻辑
-    order := &model.Order{...}
-    db.Create(order)  // ❌ 错误
-    // 应该调用 h.orderSrv.CreateOrder()
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/api-layer-examples.md`
 
 ### API 层请求参数解析规范
 
@@ -573,104 +136,17 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 - ✅ **Req 结构体字段必须使用 `form` tag**
 - ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
 
-```go
-// ✅ 正确 - GET 请求参数解析
-func (h *OrderHandler) GetPaymentQrcode(c *gin.Context) {
-    ctx := helper.NewContext(c)
-    
-    params := req.InstantOrderPaymentQrcodeReq{}
-    if err := c.ShouldBindQuery(&params); err != nil {
-        helper.HandleValidationError(c, err, params, nil)
-        return
-    }
-    
-    // 调用 Service
-    res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
-    if err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, res)
-}
-
-// Req 结构体定义（在 dto/req 包中）
-type InstantOrderPaymentQrcodeReq struct {
-    SaleBillUuid      uint64  `form:"sale_bill_uuid" json:"sale_bill_uuid"`           // ✅ 使用 form tag
-    SaleOrderUuid     uint64  `form:"sale_order_uuid" json:"sale_order_uuid"`       // ✅ 使用 form tag
-    PaymentMethodUuid uint64  `form:"payment_method_uuid" json:"payment_method_uuid"` // ✅ 使用 form tag
-    PaymentAmount     float64 `form:"payment_amount" json:"payment_amount"`           // ✅ 使用 form tag
-}
-```
-
 #### POST 请求
 
 - ✅ **必须使用 `ShouldBindJSON` 解析 JSON 请求体**
 - ✅ **Req 结构体字段必须使用 `json` tag**
 - ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
 
-```go
-// ✅ 正确 - POST 请求参数解析
-func (h *OrderHandler) SetPaymentZeroRule(c *gin.Context) {
-    ctx := helper.NewContext(c)
-    
-    params := req.InstantOrderPaymentZeroRuleReq{}
-    if err := c.ShouldBindJSON(&params); err != nil {
-        helper.HandleValidationError(c, err, params, nil)
-        return
-    }
-    
-    // 调用 Service
-    res, err := h.orderSrv.SetPaymentZeroRule(ctx, params)
-    if err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, res)
-}
-
-// Req 结构体定义（在 dto/req 包中）
-type InstantOrderPaymentZeroRuleReq struct {
-    SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // ✅ 使用 json tag
-    SaleOrderUuid uint64 `json:"sale_order_uuid"` // ✅ 使用 json tag
-    ZeroRule      int    `json:"zero_rule"`       // ✅ 使用 json tag
-}
-```
-
 #### DELETE 请求
 
 - ✅ **必须使用 `ShouldBindQuery` 解析查询参数**
 - ✅ **Req 结构体字段必须使用 `form` tag**
 - ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
-
-```go
-// ✅ 正确 - DELETE 请求参数解析
-func (h *OrderHandler) DeleteSaleOrder(c *gin.Context) {
-    ctx := helper.NewContext(c)
-    
-    params := req.InstantOrderSaleOrderDeleteReq{}
-    if err := c.ShouldBindQuery(&params); err != nil {
-        helper.HandleValidationError(c, err, params, nil)
-        return
-    }
-    
-    // 调用 Service
-    res, err := h.orderSrv.InstantOrderSaleOrderDelete(ctx, params)
-    if err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, res)
-}
-
-// Req 结构体定义（在 dto/req 包中）
-type InstantOrderSaleOrderDeleteReq struct {
-    SaleBillUuid  uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid"`  // ✅ 使用 form tag
-    SaleOrderUuid uint64 `form:"sale_order_uuid" json:"sale_order_uuid"` // ✅ 使用 form tag
-}
-```
 
 **总结：**
 
@@ -732,64 +208,7 @@ type InstantOrderSaleOrderDeleteReq struct {
 
 ## 📋 常用模式
 
-### Service 构造函数
-
-```go
-func NewOrderSrv(
-    dbm *database.DBManager,
-    orderRepo repository.IOrderRepo,
-    memberSrv IMemberSrv,
-) IOrderSrv {
-    return &orderSrv{
-        dbm:       dbm,
-        orderRepo: orderRepo,
-        memberSrv: memberSrv,
-    }
-}
-```
-
-### Repository 选项模式
-
-```go
-func (r *OrderRepoImpl) WhereUuid(uuid uint64) DBOption {
-    return func(db *gorm.DB) *gorm.DB {
-        return db.Where("uuid = ?", uuid)
-    }
-}
-
-// 使用
-order, err := orderRepo.GetOrder(
-    orderRepo.WhereUuid(orderUuid),
-    orderRepo.WhereStatus(1),
-)
-```
-
-### 事件发布
-
-```go
-import "ttpos-server-go/pkg/utils"
-
-utils.Go(func() {
-    event.NewSystemBus().PublishOrderCreatedEvent(
-        event.OrderCreatedPayload{
-            BasePayload: event.BasePayload{
-                Ctx: ctx,
-                CompanyUuid: ctx.GetCompanyUuid(),
-            },
-            OrderUuid: orderUuid,
-        },
-    )
-})
-```
-
-### UUID 锁
-
-```go
-    s.systemLock.LockUuid(deskUuid)
-    defer s.systemLock.UnlockUuid(deskUuid)
-
-    // 业务逻辑
-```
+常用开发模式示例请参考：`docs/agent/workflows/development/common-patterns-examples.md`
 
 ---
 
