@@ -40,6 +40,9 @@ class AddWarehouses extends Migrator
     {
         $db = Db::connect(Db::getConfig('default'), true);
         $company = $db->name("company")->where("delete_time", 0)->find();
+        if (!$company) {
+            return;
+        }
 
         $host = Env::get('DB_HOST');
         $port = Env::get('DB_PORT');

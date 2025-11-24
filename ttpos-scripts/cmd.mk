@@ -295,6 +295,10 @@ stop-http-debug-proxy:
 	@echo "🛑 停止HTTP调试代理容器..."
 	@docker rm -f http-debug-proxy > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
 
+# 运行数据库迁移
+php-migrate:
+	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh php-migrate
+
 # 处理额外参数（不包含第一个目标）
 ifneq ($(words $(MAKECMDGOALS)),1)
 .PHONY: $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS))

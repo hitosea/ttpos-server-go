@@ -81,6 +81,21 @@ run_exec() {
     fi
 }
 
+run_exec_system() {
+    local container=$1
+    local cmd=$2
+    local name=`docker_name $container`
+    if [ -z "$name" ]; then
+        echo -e "${Error} ${RedBG} 没有找到 $container 容器! ${Font}"
+        exit 1
+    fi
+    if [ "$container" = "mariadb" ] || [ "$container" = "nginx" ] || [ "$container" = "redis" ]; then
+        docker exec "$name" /bin/sh -c "$cmd"
+    else
+        docker exec "$name" /bin/bash -c "$cmd"
+    fi
+}
+
 #
 run_mysql() {
     username="root"
@@ -266,6 +281,9 @@ if [ $# -gt 0 ]; then
     elif [[ "$1" == "think" ]]; then
         shift 1
         e="php think $@" && run_exec php "$e"
+    elif [[ "$1" == "php-migrate" ]]; then
+        shift 1
+        e="php think migrate:run" && run_exec_system php "$e"
     elif [[ "$1" == "composer" ]]; then
         shift 1
         e="composer $@" && run_exec php "$e"

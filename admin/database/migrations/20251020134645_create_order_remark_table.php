@@ -32,12 +32,12 @@ class CreateOrderRemarkTable extends Migrator
         // 整单备注表
         if (!$this->hasTable('order_remark')) {
             $table = $this->table('order_remark', ['comment' => '整单备注表']);
-            $table->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => '整单备注ID'])
+            $table->addColumn('uuid', 'biginteger', ['default' => 0, 'signed' => false, 'comment' => '整单备注ID'])
                 ->addColumn('name', 'string', ['limit' => 255, 'default' => '', 'comment' => '名称'])
-                ->addColumn('multi_language_name_uuid', 'biginteger', ['default' => 0, 'comment' => '多语言名称ID'])
-                ->addColumn('create_time', 'integer', ['default' => 0, 'comment' => '创建时间(时间戳)'])
-                ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间(时间戳)'])
-                ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间(时间戳)'])
+                ->addColumn('multi_language_name_uuid', 'biginteger', ['default' => 0, 'signed' => false, 'comment' => '多语言名称ID'])
+                ->addColumn('create_time', 'integer', ['default' => 0, 'signed' => false, 'comment' => '创建时间(时间戳)'])
+                ->addColumn('update_time', 'integer', ['default' => 0, 'signed' => false, 'comment' => '更新时间(时间戳)'])
+                ->addColumn('delete_time', 'integer', ['default' => 0, 'signed' => false, 'comment' => '删除时间(时间戳)'])
                 ->addIndex(['uuid'], ['unique' => true])
                 ->create();
         }
