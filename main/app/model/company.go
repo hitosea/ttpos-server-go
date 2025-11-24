@@ -84,7 +84,6 @@ type CompanySetting struct {
 	IsOpenTablet              int    `gorm:"column:is_open_tablet;type:int(11);default:0;comment:是否开启平板: 0不开启, 1开启;NOT NULL" json:"is_open_tablet"`
 	IsOpenH5                  int    `gorm:"column:is_open_h5;type:int(11);default:0;comment:是否开启扫码H5: 0不开启, 1开启;NOT NULL" json:"is_open_scan"`
 	IsOpenAssistant           int    `gorm:"column:is_open_assistant;type:int(11);default:0;comment:是否开启点餐助手: 0不开启, 1开启;NOT NULL" json:"is_open_assistant"`
-	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否启用数据管理能力：0-否；1-是;NOT NULL" json:"enable_data_management"`
 	IsOpenKitchenKds          int    `gorm:"column:is_open_kitchen_kds;type:int(11);default:0;comment:是否开启后厨KDS: 0不开启, 1开启;NOT NULL" json:"is_open_kitchen_kds"`
 	IsOpenBuffet              int    `gorm:"column:is_open_buffet;type:int(11);default:0;comment:是否开启自助餐: 0不开启, 1开启;NOT NULL" json:"is_open_buffet"`
 	EnableSms                 int    `gorm:"column:enable_sms;type:int(11);default:0;comment:是否启用短信功能：0-否；1-是;NOT NULL" json:"enable_sms"`
