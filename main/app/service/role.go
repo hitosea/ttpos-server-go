@@ -19,7 +19,7 @@ type IRoleSrv interface {
 	CreateRole(ctx context.Context, createReq req.AddRoleReq) (*resp.Role, error)                                        // 创建角色
 	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error                                                   // 更新角色
 	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error                                                   // 删除角色
-	GetCompanyPermissionGroup(ctx context.Context, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error) // 获取店铺权限树（用于角色权限配置）
+	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) // 获取店铺权限树（用于角色权限配置）
 }
 
 type roleSrv struct {
@@ -266,7 +266,7 @@ func (s *roleSrv) DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) e
 }
 
 // GetCompanyPermissionGroup 获取店铺权限树（用于角色权限配置）
-func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
 	company := ctx.GetCompany()
-	return s.roleAccessSrv.GetCompanyPermissionGroup(company.Uuid, excludeRouteNames)
+	return s.roleAccessSrv.GetCompanyPermissionGroup(company.Uuid, includeRouteNames)
 }

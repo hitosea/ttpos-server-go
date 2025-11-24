@@ -69,7 +69,7 @@
 
 - [x] 0.5.1 创建获取权限树 API 接口 `/api/v1/shop/permission_tree`（在 shop_staff.go 中）
 - [x] 0.5.1.1 创建获取权限组 API 接口 `/api/v1/shop/permission_group`（在 shop_role.go 中，用于角色权限配置）
-- [x] 0.5.2 调用 `roleAccessSrv.GetCompanyPermissionGroup(companyUuid, excludeRouteNames)` 获取店铺权限树（不依赖员工）
+- [x] 0.5.2 调用 `roleAccessSrv.GetCompanyPermissionGroup(companyUuid, includeRouteNames)` 获取店铺权限树（不依赖员工），传入 `includeRouteNames` 参数指定需要返回的权限组
 - [x] 0.5.3 返回格式为 `PermissionGroup`，包含所有权限组的树形结构
 - [x] 0.5.4 权限数据经过筛选（根据商户类型、ERP对接状态、渠道营收统计配置）
 - [x] 0.5.5 接口需要身份验证（JWT Token）
@@ -77,10 +77,15 @@
 - [x] 0.5.7 调用 `roleAccessSrv.GetRolePermissions(roleUuid, companyUuid)` 获取角色权限列表
 
 **技术说明**:
-- Service 层新增 `GetCompanyPermissionGroup` 方法（不依赖员工，只依赖店铺设置），接受 `excludeRouteNames` 参数用于排除指定路由组
+- Service 层新增 `GetCompanyPermissionGroup` 方法（不依赖员工，只依赖店铺设置），接受 `includeRouteNames` 参数用于指定需要返回的权限组
 - Service 层新增 `GetRolePermissions` 方法（获取角色的权限UUID列表）
 - `/api/v1/shop/permission_tree` 接口在 `shop_staff.go` 中实现，返回不包含"管理后台"的权限树
-- `/api/v1/shop/permission_group` 接口在 `shop_role.go` 中实现，用于角色权限配置，通过 `excludeRouteNames` 参数排除"管理后台"分组
+- `/api/v1/shop/permission_group` 接口在 `shop_role.go` 中实现，用于角色权限配置，通过 `includeRouteNames` 参数指定返回"管理APP"、"收银机"、"点餐助手"三个权限组
+
+**实现细节**:
+- API 层调用时传入三个权限组常量：`constant.ShopAppRouteName`（"管理APP"）、`constant.CashierRouteName`（"收银机"）、`constant.AssistantRouteName`（"点餐助手"）
+- Service 层在构建权限树后，遍历根节点，只保留名称匹配 `includeRouteNames` 的权限组
+- 代码位置：`main/app/service/role_access.go:312-315`，通过 `slices.Contains` 判断权限组名称是否在允许列表中
 
 ---
 

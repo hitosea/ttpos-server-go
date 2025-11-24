@@ -21,7 +21,7 @@ type IRoleAccessSrv interface {
 	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error)
 	GetPermissionGroup(staffUuid, companyUuid uint64) (resp.PermissionGroup, error)
 	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
-	GetCompanyPermissionGroup(companyUuid uint64, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
+	GetCompanyPermissionGroup(companyUuid uint64, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
 }
 
 func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
@@ -261,7 +261,7 @@ func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]strin
 }
 
 // GetCompanyPermissionTree 获取店铺的所有权限树（不依赖员工，用于角色权限配置）
-func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, excludeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
 	db := s.dbm.GetDB(companyUuid)
 	accessRepo := repository.NewAccessRepo(db)
 	companySettingRepo := repository.NewCompanySettingRepo(db)
@@ -309,8 +309,8 @@ func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, excludeRou
 	// 构建权限树形结构
 	roots := s.buildPermissionTreeWithoutFilter(permissions)
 	for _, root := range roots {
-		// 过滤掉"管理后台"分组，只返回"管理APP"、"收银机"、"点餐助手"
-		if slices.Contains(excludeRouteNames, constant.RouteName(root.Name)) {
+		// 只返回"管理APP"、"收银机"、"点餐助手"
+		if !slices.Contains(includeRouteNames, constant.RouteName(root.Name)) {
 			continue
 		}
 

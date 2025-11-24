@@ -137,7 +137,8 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 func (h *RoleHandler) GetPermissionGroup(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	permissionGroup, err := h.roleSrv.GetCompanyPermissionGroup(ctx, []constant.RouteName{constant.ShopRouteName})
+	permissionGroup, err := h.roleSrv.GetCompanyPermissionGroup(ctx,
+		[]constant.RouteName{constant.ShopAppRouteName, constant.CashierRouteName, constant.AssistantRouteName})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
 		return
