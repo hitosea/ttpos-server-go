@@ -30,6 +30,7 @@ type OrderListReq struct {
 	Status              int    `form:"status,default=-1"`                // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
 	BillType            int    `form:"bill_type,default=-1"`             // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
 	DiningMethod        int    `form:"dining_method,default=-1"`         // 用餐方式, -1=全都、 0-堂食 1-打包
+	SaleBillUuids       string `form:"sale_bill_uuids"`                  // 销售账单UUID列表，多个UUID用逗号分隔
 	IsOnlyDataManage    int    `form:"is_only_data_manage,default=0"`    // 是否只包含数据管理, 0-不包含、1-包含
 	IsContainDataManage int    `form:"is_contain_data_manage,default=0"` // 是否包含数据管理, 0-不包含、1-包含
 }

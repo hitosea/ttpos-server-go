@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -286,6 +287,7 @@ type GetCashierOrderListWithPaginationType struct {
 	Status              int    // 订单状态,-1=全部、0=待支付、1=已支付、2=已取消、3=已完成
 	BillType            int    // 订单类型,-1=全部、0=餐单、1=外卖
 	DiningMethod        int    // 用餐方式,-1=全都、 0-堂食 1-打包
+	SaleBillUuids       string // 销售账单UUID列表，多个UUID用逗号分隔
 	IsOnlyDataManage    int    // 是否只包含数据管理, 0-不包含、1-包含
 	IsContainDataManage int    // 是否包含数据管理, 0-不包含、1-包含
 }
@@ -422,21 +424,20 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			}
 		}(),
 	}
-	if param.IsOnlyDataManage == 0 {
-		if param.IsContainDataManage == 0 {
-			opts = append(opts,
-				func() DBOption {
-					return func(db *gorm.DB) *gorm.DB {
-						return db.Where("uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ?)", model.DataManageTypeOrder)
-					}
-				}(),
-			)
+	if param.SaleBillUuids != "" {
+		uuidList := strings.Split(param.SaleBillUuids, ",")
+		uuids := []uint64{}
+		for _, uuid := range uuidList {
+			uuid, _ := strconv.ParseUint(uuid, 10, 64)
+			uuids = append(uuids, uint64(uuid))
 		}
-	} else {
+		opts = append(opts, CommonRepo.WhereInUuids(uuids))
+	}
+	if param.IsOnlyDataManage == 0 && param.IsContainDataManage == 0 {
 		opts = append(opts,
 			func() DBOption {
 				return func(db *gorm.DB) *gorm.DB {
-					return db.Where("uuid IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ?)", model.DataManageTypeOrder)
+					return db.Where("uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ?)", model.DataManageTypeOrder)
 				}
 			}(),
 		)
