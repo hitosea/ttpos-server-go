@@ -305,6 +305,8 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2859080880128000, 'name' => '副屏设置', 'path' => 'secondary_screen_setting', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 票据样式设置
             ['uuid' => 2859106045952000, 'name' => '票据样式设置', 'path' => 'ticket_style_setting', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 桌台地图
+            ['uuid' => 2859106045952001, 'name' => '桌台地图', 'path' => 'desk_map', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 3, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 默认票据模板
             ['uuid' => 2859131211776000, 'name' => '默认票据模板', 'path' => 'default_ticket_template', 'api_path' => '', 'parent_uuid' => 2859106045952000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 编辑
@@ -321,6 +323,8 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2859231875072000, 'name' => '删除', 'path' => 'advanced_ticket_template_delete', 'api_path' => '', 'parent_uuid' => 2859181543424000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 使用
             ['uuid' => 2859252846592000, 'name' => '使用', 'path' => 'advanced_ticket_template_use', 'api_path' => '', 'parent_uuid' => 2859181543424000, 'sort' => 4, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 编辑
+            ['uuid' => 2859252846592001, 'name' => '编辑', 'path' => 'desk_map_edit', 'api_path' => '', 'parent_uuid' => 2859106045952001, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 其他
             ['uuid' => 2859273818112000, 'name' => '其他', 'path' => 'other', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 6, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 各端设置
@@ -509,6 +513,8 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859345121280000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859361898496000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859387064320000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859106045952001', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859252846592001', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859412230144000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859433201664000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859449978880000', 'create_time' => time()],
