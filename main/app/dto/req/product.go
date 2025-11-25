@@ -459,18 +459,20 @@ type ProductShopAddPackageReq struct {
 
 // ProductShopAddPackageGroupReq 套餐分组添加请求
 type ProductShopAddPackageGroupReq struct {
-	LocaleName    dto.LocaleResponse                     `json:"locale_name" binding:"required"` // 套餐分组名称
-	GroupType     int                                    `json:"group_type"`                      // 分组类型 0-固定 1-可选，默认0
+	LocaleName    dto.LocaleResponse                     `json:"locale_name" binding:"required"`   // 套餐分组名称
+	GroupType     int                                    `json:"group_type"`                       // 分组类型 0-固定 1-可选，默认0
 	OptionalCount int                                    `json:"optional_count"`                   // 可选数量（可选分组时有效），默认1
 	Products      []ProductShopAddPackageGroupProductReq `json:"products" binding:"required,dive"` // 套餐分组商品列表
 }
 
 // ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
 type ProductShopAddPackageGroupProductReq struct {
-	BomUuid  uint64  `json:"bom_uuid" binding:"required"` // 商品BOM UUID
-	Num      float64 `json:"num" binding:"required,min=0"`      // 商品数量
-	Sort     int     `json:"sort" binding:"required"`     // 商品排序
-	AddPrice float64 `json:"add_price"`                    // 加价金额，默认0
+	BomUuid    uint64  `json:"bom_uuid" binding:"required"`  // 商品BOM UUID
+	Num        float64 `json:"num" binding:"required,min=0"` // 商品数量
+	Sort       int     `json:"sort" binding:"required"`      // 商品排序
+	AddPrice   float64 `json:"add_price"`                    // 加价金额，默认0
+	IsRequired int     `json:"is_required"`                  // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`                   // 默认选中 0-默认不选中 1-默认选中
 }
 
 // ProductShopEditReq 商品编辑请求
@@ -568,7 +570,7 @@ type ProductShopEditPackageReq struct {
 
 // ProductShopEditPackageGroupReq 套餐分组编辑请求
 type ProductShopEditPackageGroupReq struct {
-	Uuid          uint64                                  `json:"uuid"`          // 套餐分组UUID
+	Uuid          uint64                                  `json:"uuid"`           // 套餐分组UUID
 	LocaleName    dto.LocaleResponse                      `json:"locale_name"`    // 套餐分组名称
 	GroupType     int                                     `json:"group_type"`     // 分组类型 0-固定 1-可选
 	OptionalCount int                                     `json:"optional_count"` // 可选数量（可选分组时有效）
@@ -578,12 +580,14 @@ type ProductShopEditPackageGroupReq struct {
 
 // ProductShopEditPackageGroupProductReq 套餐分组商品编辑请求
 type ProductShopEditPackageGroupProductReq struct {
-	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
-	Num      float64 `json:"num"`       // 商品数量
-	Sort     int     `json:"sort"`      // 商品排序
-	AddPrice float64 `json:"add_price"` // 加价金额，默认0
-	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid       uint64  `json:"uuid"`        // 套餐商品UUID
+	BomUuid    uint64  `json:"bom_uuid"`    // 商品BOM UUID
+	Num        float64 `json:"num"`         // 商品数量
+	Sort       int     `json:"sort"`        // 商品排序
+	AddPrice   float64 `json:"add_price"`   // 加价金额，默认0
+	IsRequired int     `json:"is_required"` // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`  // 默认选中 0-默认不选中 1-默认选中
+	IsDelete   bool    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 // ProductShopDeleteReq 商品删除请求

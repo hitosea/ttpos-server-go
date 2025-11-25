@@ -1476,6 +1476,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_group_item` (
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '数量',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `add_price` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '加价金额，表示该商品需要加价多少钱',
+    `is_required` INT(10) NOT NULL DEFAULT 0 COMMENT '必选 0-不必选 1-必选',
+    `is_default` INT(10) NOT NULL DEFAULT 0 COMMENT '默认选中 0-默认不选中 1-默认选中',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -553,12 +553,14 @@ type CheckProductPackageGroupParam struct {
 }
 
 type CheckProductPackageGroupProductParam struct {
-	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
-	Num      float64 `json:"num"`       // 商品数量
-	Sort     int     `json:"sort"`      // 商品排序
-	AddPrice float64 `json:"add_price"` // 加价金额，默认0
-	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid       uint64  `json:"uuid"`        // 套餐商品UUID
+	BomUuid    uint64  `json:"bom_uuid"`    // 商品BOM UUID
+	Num        float64 `json:"num"`         // 商品数量
+	Sort       int     `json:"sort"`        // 商品排序
+	AddPrice   float64 `json:"add_price"`   // 加价金额，默认0
+	IsRequired int     `json:"is_required"` // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`  // 默认选中 0-默认不选中 1-默认选中
+	IsDelete   bool    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 type CheckProductPackageResult struct {
@@ -577,12 +579,14 @@ type CheckProductPackageGroupResult struct {
 }
 
 type CheckProductPackageGroupProductResult struct {
-	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
-	Num      float64 `json:"num"`       // 商品数量
-	Sort     int     `json:"sort"`      // 商品排序
-	AddPrice float64 `json:"add_price"` // 加价金额，默认0
-	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid       uint64  `json:"uuid"`        // 套餐商品UUID
+	BomUuid    uint64  `json:"bom_uuid"`    // 商品BOM UUID
+	Num        float64 `json:"num"`         // 商品数量
+	Sort       int     `json:"sort"`        // 商品排序
+	AddPrice   float64 `json:"add_price"`   // 加价金额，默认0
+	IsRequired int     `json:"is_required"` // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`  // 默认选中 0-默认不选中 1-默认选中
+	IsDelete   bool    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error) {
@@ -639,6 +643,8 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 			}
 		}
 		products := make([]CheckProductPackageGroupProductResult, 0)
+		requiredCount := 0
+		defaultCount := 0
 		for _, product := range group.Products {
 			if isDelete {
 				product.IsDelete = true
@@ -654,6 +660,29 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 					}
 				}
 				if !product.IsDelete {
+					// 验证必选和默认选中字段
+					if product.IsRequired != 0 && product.IsRequired != 1 {
+						return nil, errors.New("必选字段必须为0（不必选）或1（必选）")
+					}
+					if product.IsDefault != 0 && product.IsDefault != 1 {
+						return nil, errors.New("默认选中字段必须为0（不默认选中）或1（默认选中）")
+					}
+					// 固定分组时，必选和默认选中必须为0
+					if group.GroupType == 0 {
+						if product.IsRequired != 0 {
+							return nil, errors.New("固定分组的必选必须为0")
+						}
+						if product.IsDefault != 0 {
+							return nil, errors.New("固定分组的默认选中必须为0")
+						}
+					}
+					// 统计必选和默认选中数量
+					if product.IsRequired == 1 {
+						requiredCount++
+					}
+					if product.IsDefault == 1 {
+						defaultCount++
+					}
 					// 验证加价金额
 					if product.AddPrice < 0 {
 						return nil, errors.New("加价金额不能为负数")
@@ -678,6 +707,15 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 				}
 			}
 			products = append(products, CheckProductPackageGroupProductResult(product))
+		}
+		// 验证必选数量不能大于可选数量
+		if !isDelete && group.GroupType == 1 {
+			if requiredCount > group.OptionalCount {
+				return nil, errors.New("必选数量不能大于可选数量")
+			}
+			if defaultCount > group.OptionalCount {
+				return nil, errors.New("默认数量不能大于可选数量")
+			}
 		}
 		groups = append(groups, CheckProductPackageGroupResult{
 			Uuid:          group.Uuid,

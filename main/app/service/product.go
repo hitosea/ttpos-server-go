@@ -334,8 +334,10 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							},
 							Describe: product.Describe,
 						},
-						Num:      item.Num,
-						AddPrice: item.AddPrice,
+						Num:        item.Num,
+						AddPrice:   item.AddPrice,
+						IsRequired: item.IsRequired,
+						IsDefault:  item.IsDefault,
 					}
 					productDetail.CanEdit = productDetail.GetCanEdit() // 是否可以编辑
 
@@ -6796,6 +6798,8 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 						Num:                     float64(item.Num),
 						Sort:                    item.Sort,
 						AddPrice:                item.AddPrice,
+						IsRequired:              item.IsRequired,
+						IsDefault:               item.IsDefault,
 					})
 				}
 			} else {
@@ -6855,6 +6859,8 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 								Num:                     float64(item.Num),
 								Sort:                    item.Sort,
 								AddPrice:                item.AddPrice,
+								IsRequired:              item.IsRequired,
+								IsDefault:               item.IsDefault,
 							})
 							if err != nil {
 								return errors.WithMessage(err, "保存套餐组商品失败")
@@ -6866,6 +6872,8 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 								"num":              item.Num,
 								"sort":             item.Sort,
 								"add_price":        item.AddPrice,
+								"is_required":      item.IsRequired,
+								"is_default":       item.IsDefault,
 							}, commonRepo.WhereByUuid(item.Uuid))
 							if err != nil {
 								return errors.WithMessage(err, "更新套餐组商品失败")
