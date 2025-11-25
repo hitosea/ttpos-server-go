@@ -637,9 +637,9 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 			if group.GroupType == 1 && group.OptionalCount < 1 {
 				return nil, errors.New("可选数量必须 >= 1")
 			}
-			// 验证可选数量不能大于商品总数
-			if group.OptionalCount > len(group.Products) {
-				return nil, errors.New("可选数量不能大于分组内商品总数")
+			// 验证可选数量不能小于1
+			if group.OptionalCount < 1 {
+				return nil, errors.WithMessage(errors.New("可选数量不能小于1"))
 			}
 		}
 		products := make([]CheckProductPackageGroupProductResult, 0)

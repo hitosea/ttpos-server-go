@@ -5491,10 +5491,12 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			var products []CheckProductPackageGroupProductParam
 			for _, product := range group.Products {
 				products = append(products, CheckProductPackageGroupProductParam{
-					BomUuid:  product.BomUuid,
-					Num:      product.Num,
-					Sort:     product.Sort,
-					AddPrice: product.AddPrice,
+					BomUuid:    product.BomUuid,
+					Num:        product.Num,
+					Sort:       product.Sort,
+					AddPrice:   product.AddPrice,
+					IsRequired: product.IsRequired,
+					IsDefault:  product.IsDefault,
 				})
 			}
 			groupType := group.GroupType
@@ -5788,12 +5790,14 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			var products []CheckProductPackageGroupProductParam
 			for _, product := range group.Products {
 				products = append(products, CheckProductPackageGroupProductParam{
-					Uuid:     product.Uuid,
-					BomUuid:  product.BomUuid,
-					Num:      product.Num,
-					Sort:     product.Sort,
-					AddPrice: product.AddPrice,
-					IsDelete: product.IsDelete,
+					Uuid:       product.Uuid,
+					BomUuid:    product.BomUuid,
+					Num:        product.Num,
+					Sort:       product.Sort,
+					AddPrice:   product.AddPrice,
+					IsRequired: product.IsRequired,
+					IsDefault:  product.IsDefault,
+					IsDelete:   product.IsDelete,
 				})
 			}
 			groupType := group.GroupType
@@ -7749,6 +7753,8 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					Name:                  productPackageGroup.MultiLanguageName.ToJson(),
 					ProductPackageUuid:    productPackageGroup.ProductPackageUuid,
 					MultiLanguageNameUuid: productPackageGroup.MultiLanguageName.Uuid,
+					GroupType:             productPackageGroup.GroupType,
+					OptionalCount:         productPackageGroup.OptionalCount,
 				})
 				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
 					newProductPackageGroupItemList = append(newProductPackageGroupItemList, model.ProductPackageGroupItem{
@@ -7763,6 +7769,9 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 						ProductBomUuid:          productPackageGroupItem.ProductBomUuid,
 						Num:                     productPackageGroupItem.Num,
 						Sort:                    productPackageGroupItem.Sort,
+						AddPrice:                productPackageGroupItem.AddPrice,
+						IsRequired:              productPackageGroupItem.IsRequired,
+						IsDefault:               productPackageGroupItem.IsDefault,
 					})
 				}
 				newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
