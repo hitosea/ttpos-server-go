@@ -182,6 +182,7 @@ description: Go Main 核心约束
 - [ ] **多个数据库操作必须使用事务包裹（创建/更新/删除涉及多个表时）**
 - [ ] **事务中必须使用 `tx` 创建 Repository 实例，不能使用 `db`**
 - [ ] **事务中不要手动调用 `tx.Commit()` 或 `tx.Rollback()`**
+- [ ] **错误必须使用 `errors.WithMessage` 包装错误消息**
 - [ ] Repository 只持有 db 实例
 - [ ] **API 层（app/api/v1 及其所有子目录）严禁引用 repository 包**
 - [ ] **API 层严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**

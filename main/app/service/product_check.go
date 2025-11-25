@@ -19,6 +19,7 @@ import (
 type IProductCheckSrv interface {
 	CheckProductType(typ int) error                                                                                             // 检查商品类型
 	CheckProductName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                     // 检查商品名称
+	CheckProductSellingPoint(ctx context.Context, localeName dto.LocaleResponse) error                                          // 检查商品卖点
 	CheckMaterialName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                    // 检查物品名称
 	CheckProductCategory(db *gorm.DB, categoryUuid uint64) error                                                                // 检查商品分类
 	CheckProductUnique(db *gorm.DB, uuid uint64) error                                                                          // 检查商品唯一性
@@ -74,6 +75,17 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, loc
 	}
 	if !localeName.CheckLenLocal(storeLanguages, 150) {
 		return errors.New("名称长度不能超过150")
+	}
+	return nil
+}
+
+func (s *productCheckSrv) CheckProductSellingPoint(ctx context.Context, localeName dto.LocaleResponse) error {
+	if localeName.IsNull() {
+		return nil
+	}
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !localeName.CheckLenLocal(storeLanguages, 500) {
+		return errors.New("卖点长度不能超过500")
 	}
 	return nil
 }
