@@ -6800,12 +6800,12 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					if err != nil || bom.ID == 0 {
 						return errors.WithMessage(err, "获取商品bom失败")
 					}
-					// 固定分组时，强制 IsRequired 和 IsDefault 为 1
+					// 固定分组时，强制 IsRequired 和 IsDefault 为 0
 					isRequired := item.IsRequired
 					isDefault := item.IsDefault
 					if group.GroupType == 0 {
-						isRequired = 1
-						isDefault = 1
+						isRequired = 0
+						isDefault = 0
 					}
 					itemUuid, _ := utils.GetID()
 					productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
@@ -6867,12 +6867,12 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 						if err != nil || bom.ID == 0 {
 							return errors.WithMessage(err, "获取商品bom失败")
 						}
-						// 固定分组时，强制 IsRequired 和 IsDefault 为 1
+						// 固定分组时，强制 IsRequired 和 IsDefault 为 0
 						isRequired := item.IsRequired
 						isDefault := item.IsDefault
 						if group.GroupType == 0 {
-							isRequired = 1
-							isDefault = 1
+							isRequired = 0
+							isDefault = 0
 						}
 						if item.Uuid == 0 {
 							itemUuid, _ := utils.GetID()

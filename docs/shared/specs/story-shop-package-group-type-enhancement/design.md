@@ -125,8 +125,8 @@ ADD COLUMN `is_default` INT(10) NOT NULL DEFAULT 0 COMMENT '默认选中 0-默�
 - 可选分组时，必选数量不能大于可选数量
 - 可选分组时，默认数量不能大于可选数量
 - **固定分组强制规则**: 
-  - 保存数据时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 1
-  - 接口返回时，固定分组的商品强制返回 `is_required=1` 和 `is_default=1`
+  - 保存数据时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 0（固定分组本身已经固定，不需要额外标记必选和默认选中）
+  - 接口返回时，固定分组的商品强制返回 `is_required=1` 和 `is_default=1`（前端展示时统一按必选和默认选中处理）
 
 **索引设计**:
 - 无需新增索引（现有索引已足够）
@@ -564,35 +564,36 @@ products = append(products, product_resp.ProductPackageSubProduct{
 
 **关键代码片段**:
 ```go
-// 固定分组时，强制 IsRequired 和 IsDefault 为 1
+// 固定分组时，强制 IsRequired 和 IsDefault 为 0
 isRequired := item.IsRequired
 isDefault := item.IsDefault
 if group.GroupType == 0 {
-    isRequired = 1
-    isDefault = 1
+    isRequired = 0
+    isDefault = 0
 }
 
 // 创建新商品时
 productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
     // ... 其他字段 ...
     AddPrice:   item.AddPrice,
-    IsRequired: isRequired, // ⭐ 已实现（固定分组强制写入1）
-    IsDefault:  isDefault,  // ⭐ 已实现（固定分组强制写入1）
+    IsRequired: isRequired, // ⭐ 已实现（固定分组强制写入0）
+    IsDefault:  isDefault,  // ⭐ 已实现（固定分组强制写入0）
 })
 
 // 更新现有商品时
 productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
     // ... 其他字段 ...
     "add_price":   item.AddPrice,
-    "is_required": isRequired, // ⭐ 已实现（固定分组强制写入1）
-    "is_default":  isDefault,  // ⭐ 已实现（固定分组强制写入1）
+    "is_required": isRequired, // ⭐ 已实现（固定分组强制写入0）
+    "is_default":  isDefault,  // ⭐ 已实现（固定分组强制写入0）
 }, commonRepo.WhereByUuid(item.Uuid))
 ```
 
 **固定分组强制写入逻辑**: 
-- 新建套餐时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 1
-- 编辑套餐时，固定分组的新增或更新商品都会强制将 `is_required` 和 `is_default` 写入为 1
-- 即使前端传入了其他值，也会被强制修正为 1，确保数据库中固定分组的数据一致性
+- 新建套餐时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 0（固定分组本身已经固定，不需要额外标记必选和默认选中）
+- 编辑套餐时，固定分组的新增或更新商品都会强制将 `is_required` 和 `is_default` 写入为 0
+- 即使前端传入了其他值，也会被强制修正为 0，确保数据库中固定分组的数据一致性
+- **注意**: 虽然数据库中存储为 0，但接口返回时会强制返回 1，以满足前端展示需求
 
 ---
 
@@ -619,12 +620,14 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
 
 ### 4. 固定分组强制规则
 
-- **保存数据时**: 固定分组（`group_type=0`）的商品，无论前端传入什么值，都会强制将 `is_required` 和 `is_default` 写入为 1
+- **保存数据时**: 固定分组（`group_type=0`）的商品，无论前端传入什么值，都会强制将 `is_required` 和 `is_default` 写入为 0
+  - 原因：固定分组本身已经固定，不需要额外标记必选和默认选中
+  - 实现位置: `main/app/service/product.go:SaveProductPackageGroup()` 函数
 - **接口返回时**: 固定分组的商品，无论数据库中存储的值是什么，都会强制返回 `is_required=1` 和 `is_default=1`
-- **实现位置**:
-  - 保存逻辑: `main/app/service/product.go:SaveProductPackageGroup()` 函数
-  - 返回逻辑: `main/app/service/product.go:FormatProducts()` 函数（商品列表接口）
-  - 返回逻辑: `main/app/model/product.go:GetRespPackageSubProductGroupList()` 方法（商品详情接口）
+  - 原因：前端展示时统一按必选和默认选中处理，提供一致的用户体验
+  - 实现位置:
+    - `main/app/service/product.go:FormatProducts()` 函数（商品列表接口）
+    - `main/app/model/product.go:GetRespPackageSubProductGroupList()` 方法（商品详情接口）
 
 ---
 
@@ -680,8 +683,8 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
    - 文件: `main/app/dto/resp/product_resp/product.go`
 
 6. ✅ **Service 层**: 
-   - 套餐创建逻辑: `SaveProductPackageGroup` 函数中已保存必选和默认选中字段（固定分组强制写入1）
-   - 套餐编辑逻辑: `SaveProductPackageGroup` 函数中已更新必选和默认选中字段（固定分组强制写入1）
+   - 套餐创建逻辑: `SaveProductPackageGroup` 函数中已保存必选和默认选中字段（固定分组强制写入0）
+   - 套餐编辑逻辑: `SaveProductPackageGroup` 函数中已更新必选和默认选中字段（固定分组强制写入0）
    - 商品列表查询: `FormatProducts` 函数中已返回必选和默认选中字段（固定分组强制返回1）
    - 商品详情查询: `GetRespPackageSubProductGroupList` 方法中已返回分组类型、可选数量、必选和默认选中字段（固定分组强制返回1）
    - 同步功能: `SyncProduct` 函数中已同步必选和默认选中字段
@@ -721,7 +724,7 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
 
 ---
 
-**版本**: v1.1.0  
+**版本**: v1.2.0  
 **创建日期**: 2025-11-25  
 **最后更新**: 2025-12-01  
 **维护者**: 开发组
@@ -729,6 +732,12 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
 ---
 
 ## 📝 更新日志
+
+### v1.2.0 (2025-12-01)
+
+- ✅ **修改**: 固定分组保存逻辑调整
+  - 保存数据时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 0（固定分组本身已经固定，不需要额外标记）
+  - 接口返回时，固定分组的商品强制返回 `is_required=1` 和 `is_default=1`（前端展示统一处理）
 
 ### v1.1.0 (2025-12-01)
 
