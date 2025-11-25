@@ -19,7 +19,7 @@
         <Ingredients ref="IngredientsRef" v-if="form.model.type == 10" @validateField="validateField"></Ingredients>
 
         <!--高级设置-->
-        <Buyset></Buyset>
+        <Buyset ref="BuysetRef" ></Buyset>
       </div>
       <!--提交-->
       <div class="common-button-wrapper">
@@ -64,7 +64,7 @@
 </template>
 
 <script setup>
-  import { ref, reactive, provide, onMounted, getCurrentInstance } from 'vue';
+  import { ref, reactive, provide, onMounted, getCurrentInstance, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { ElMessage } from 'element-plus';
   import ProductApi from '@/api/product.js';
@@ -192,7 +192,7 @@
       {
         group_name: JSON.parse(languageData),
         group_type: 0, // 0-固定套餐 1-可选套餐
-        optional_count :0, // 可选套餐数量
+        optional_count: 0, // 可选套餐数量
         product_list: [],
       },
     ],
@@ -210,7 +210,7 @@
   const AttrRef = ref(null);
   const IngredientsRef = ref(null);
   const tiaoRef = ref(null);
-
+  const BuysetRef = ref(null);
   // 提供form给子组件
   provide('form', form);
 
@@ -252,6 +252,7 @@
         try {
           form.model.product_name = JSON.parse(form.model.product_name || '{}');
         } catch (e) {}
+
 
         form.category.map((item) => {
           if (form.model.category_id == item.category_id && item.child.length > 0) {
@@ -384,6 +385,13 @@
           form.model.package_stock = form.model.package.package_stock;
           form.model.is_open_stock = form.model.package.is_open_stock;
         }
+        
+        try {
+            form.model.selling_point_i18n = JSON.parse(form.model.selling_point_i18n);
+        } catch (e) {
+          console.log(e);
+        }
+
       } catch (error) {
         console.log(error);
       }
@@ -515,8 +523,8 @@
               sort: product.sort,
               item_id: product.item_id || 0,
               add_price: product.add_price, // 加价
-              is_required :product.is_required, // 是否必选
-              is_default :product.is_default, // 是否默认
+              is_required: product.is_required, // 是否必选
+              is_default: product.is_default, // 是否默认
             });
           });
           group.product_list = productList;
@@ -525,6 +533,11 @@
         params.sku = [];
         // 套餐类型不显示外送
         params.is_show_delivery = 0;
+      }
+
+      // 处理商品卖点
+      if (BuysetRef.value && BuysetRef.value.uniqueNameFormAreaTextRef && BuysetRef.value.uniqueNameFormAreaTextRef.data) {
+        params.selling_point_i18n = JSON.stringify(BuysetRef.value.uniqueNameFormAreaTextRef.data);
       }
 
       //库存变动的时候

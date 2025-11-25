@@ -287,6 +287,11 @@
       // 将等级列表转换为json
       params.alone_grade_equity = convertJson(form.gradeList);
 
+      // 处理商品卖点
+      if (form.model.selling_point_i18n) {
+        params.selling_point = JSON.stringify(form.model.selling_point_i18n);
+      }
+
       // 调用接口添加产品
       try {
         await ProductApi.storeAddProduct(
