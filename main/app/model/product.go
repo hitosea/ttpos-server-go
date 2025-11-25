@@ -377,6 +377,8 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,
 				Price:            product.ProductBom.Price,
+				IsRequired:       product.IsRequired,
+				IsDefault:        product.IsDefault,
 			})
 		}
 		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{

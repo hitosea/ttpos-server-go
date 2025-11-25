@@ -487,6 +487,8 @@ type ProductPackageSubProduct struct {
 	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
 	Num              float64            `json:"num"`                // 套餐子商品数量
 	Price            float64            `json:"price"`              // 套餐子商品价格
+	IsRequired       int                `json:"is_required"`       // 必选 0-不必选 1-必选
+	IsDefault        int                `json:"is_default"`        // 默认选中 0-默认不选中 1-默认选中
 }
 
 type ProductPrinter struct {
