@@ -8,7 +8,7 @@
 
 - **分层基线**：对 `AGENTS.md` 与 `.cursor/rules`、`docs/` 目录的引用关系进行映射。
 - **规则巡检**：重点检查 `documentation.mdc`, `knowledge_management.mdc`, `workflows.mdc`, `specs.mdc`, `structs.mdc`。
-- **厚层抽样**：阅读 `docs/agent/workflows/*`, `docs/agent/templates/*`, `docs/human/README.md`, `docs/human/guides/go-main-development.md`, `docs/shared/specs/story-order-quick-payment/`。
+- **厚层抽样**：阅读 `docs/agent/workflows/*`, `docs/agent/templates/*`, `docs/human/README.md`, `docs/human/guides/go-main-development.md`, `docs/shared/specs/active/story-order-quick-payment/`。
 - **链路演练**：沿着 `Proposal → Spec → Tasks → 工作流 → 知识沉淀` 走查一次（以快捷支付 Story 为例）。
 - **Graphiti 规划**：基于 `docs/agent/templates/graphiti-episode.md` 输出可入库的 Episode 草稿。
 
@@ -67,7 +67,7 @@
 
 ### 4.3 共享 Spec 示例
 
-- `docs/shared/specs/story-order-quick-payment` 中的 `requirements.md`, `design.md`, `tasks.md` 遵循模板，且 `requirements.md` 已链接对应 Proposal。
+- `docs/shared/specs/active/story-order-quick-payment` 中的 `requirements.md`, `design.md`, `tasks.md` 遵循模板，且 `requirements.md` 已链接对应 Proposal。
 - `design.md` 与 `tasks.md` 多处引用 `.cursor/rules`，说明厚层文档能够回指薄层规范。
 - 仍缺 `Related Episode` 标记及 Graphiti 记录，未满足 `knowledge_management.mdc` 的互链要求。
 
@@ -75,8 +75,8 @@
 
 ## 5. 需求 → 沉淀链路验证（快捷支付 Story）
 
-1. **Proposal**：`docs/team/proposals/2025-11-16-quick-payment.md`（链接已在 `requirements.md` 中体现）。
-2. **Spec**：`docs/shared/specs/story-order-quick-payment/` 结构完整，`tasks.md` 任务可直接映射到 Go/PHP/Vue 代码路径。
+1. **Proposal**：`docs/team/proposals/2025-11/quick-payment.md`（链接已在 `requirements.md` 中体现）。
+2. **Spec**：`docs/shared/specs/active/story-order-quick-payment/` 结构完整，`tasks.md` 任务可直接映射到 Go/PHP/Vue 代码路径。
 3. **执行工作流**：`AGENTS.md` → `workflows.mdc` → `docs/agent/workflows/feature-development.md`，提供任务循环和检查清单。
 4. **文档更新**：`tasks.md` 要求更新 `docs/shared/api/order_api.md` 与 CHANGELOG，但缺少 API 模板指导。
 5. **知识沉淀**：`knowledge_management.mdc` 要求耗时 >30 分钟的问题记录 Graphiti，但 Story 文档未提示或挂链。

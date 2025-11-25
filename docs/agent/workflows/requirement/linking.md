@@ -25,7 +25,7 @@
 
 ## Step 1: 识别提案
 
-1. 打开 `docs/team/proposals/{YYYY-MM-DD}-{feature}.md`。
+1. 打开 `docs/team/proposals/{YYYY-MM}/{feature}.md`。
 2. 确认提案包含：
    - 背景/价值/风险
    - 评审结论（批准/修改/拒绝）
@@ -43,7 +43,7 @@
 生成目录：
 
 ```
-docs/shared/specs/story-{module}-{feature}/
+docs/shared/specs/active/story-{module}-{feature}/
 ├── requirements.md
 ├── design.md
 └── tasks.md
@@ -59,7 +59,7 @@ docs/shared/specs/story-{module}-{feature}/
 
 - 更新 `关联 Spec` 字段：
   ```markdown
-  **关联 Spec** | [story-order-quick-payment](../shared/specs/story-order-quick-payment/)
+  **关联 Spec** | [story-order-quick-payment](../../../shared/specs/active/story-order-quick-payment/)
   ```
 - 如需跟踪多个 Spec，使用列表形式。
 
@@ -67,7 +67,7 @@ docs/shared/specs/story-{module}-{feature}/
 
 - 在 `requirements.md` 页首添加 Proposal 引用（示例）：
   ```markdown
-  | 来源 Proposal | [docs/team/proposals/2025-11-16-quick-payment.md](../../../team/proposals/2025-11-16-quick-payment.md) |
+  | 来源 Proposal | [docs/team/proposals/2025-11/quick-payment.md](../../../../team/proposals/2025-11/quick-payment.md) |
   ```
 - 在 `design.md` / `tasks.md` 的基础信息部分同步引用，保证文件单独打开时也能定位 Proposal。
 

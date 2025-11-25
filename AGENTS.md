@@ -10,13 +10,13 @@
 | ------------------------------ | ---------- | ---------------------------------------------------------------------- | ------------------------------ | --------------- |
 | "新人" "入职" "不熟悉"         | 新成员入职 | `/onboard quick` → 推送必读清单                                        | agent/workflows/onboarding.md  | intro.mdc       |
 | "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/ | specs.mdc       |
-| "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/{}/tasks.md` → 逐任务执行                             | shared/specs/, main/, admin/   | go-main/php.mdc |
+| "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/active/{}/tasks.md` → 逐任务执行                      | shared/specs/, main/, admin/   | go-main/php.mdc |
 | "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | go-main.mdc     |
 | "集成 XX" "对接 XX" "API"      | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档               | integrations/, shared/api/     | api.mdc         |
 | "迁移数据库" "新增表" "改字段" | 数据库迁移 | 创建迁移文件 → 更新 model → 更新 seeds                                 | admin/database/migrations/     | database.mdc    |
 | "gRPC" "微服务" "ttpos-bmp"    | 微服务集成 | 查 ttpos-bmp 文档 → 定义 Protobuf → 注册服务                           | ttpos-bmp/                     | go-bmp.mdc      |
 | "慢" "卡顿" "优化性能"         | 性能优化   | 分析瓶颈 → 优化 → 验证 → 记录                                          | 相关代码                       | go-main.mdc     |
-| "前端开发" "Vue 组件" "页面"   | 前端开发   | 读 `shared/specs/{}/tasks.md` → 实现组件 → 测试                        | admin/views/                   | vue.mdc         |
+| "前端开发" "Vue 组件" "页面"   | 前端开发   | 读 `shared/specs/active/{}/tasks.md` → 实现组件 → 测试                 | admin/views/                   | vue.mdc         |
 | "安全审查" "漏洞" "SQL 注入"   | 安全检查   | 查 security.mdc → 检查代码 → 修复 → 测试                               | 所有代码                       | security.mdc    |
 | "提交代码" "git commit"        | Git 提交   | 查 version.mdc → 写提交信息 → 推送                                     | .git/                          | version.mdc     |
 | "新人" "入职" "不熟悉"         | 新成员     | `/onboard quick` → 推送必读清单                                        | .cursor/rules/, docs/          | intro.mdc       |
@@ -62,9 +62,11 @@
 | **Graphiti 草稿**         | `docs/agent/graphiti/`                          | Episode 草稿仓库               |
 | **查看指令**              | `.cursor/commands/*.md`                         | 指令参数和用法                 |
 | **查看规范**              | `.cursor/rules/*.mdc`                           | 规则速查                       |
-| **执行任务**              | `docs/shared/specs/*/tasks.md`                  | 任务逐条执行                   |
-| **创建需求提案**          | `docs/team/proposals/{YYYY-MM-DD}-{name}`       | `/propose`                     |
-| **创建功能规格**          | `docs/shared/specs/{level}-{module}-{feature}/` | `/create-spec`                 |
+| **执行任务**              | `docs/shared/specs/active/*/tasks.md`                  | 任务逐条执行                   |
+| **创建需求提案**          | `docs/team/proposals/{YYYY-MM}/{name}.md`              | `/propose`                     |
+| **创建功能规格**          | `docs/shared/specs/active/{level}-{module}-{feature}/` | `/create-spec`                 |
+| **归档 Spec**             | `docs/shared/specs/archived/{version}/`                | `/archive-spec`                |
+| **废弃 Spec**             | `docs/shared/specs/deprecated/`                        | `/deprecate-spec`              |
 
 ### 👤 人类优先（学习资料）
 

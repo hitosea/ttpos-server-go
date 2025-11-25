@@ -6,7 +6,7 @@
 
 | 项目              | 内容                                                                                                         |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| **来源 Proposal** | [docs/team/proposals/{YYYY-MM-DD}-{feature-name}.md](../../../team/proposals/{YYYY-MM-DD}-{feature-name}.md) |
+| **来源 Proposal** | [docs/team/proposals/{YYYY-MM}/{feature-name}.md](../../../../team/proposals/{YYYY-MM}/{feature-name}.md) |
 | **创建日期**      | {YYYY-MM-DD}                                                                                                 |
 | **负责人**        | {姓名}                                                                                                       |
 | **目标 Sprint**   | Sprint {N}                                                                                                   |

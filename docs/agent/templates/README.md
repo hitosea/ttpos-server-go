@@ -57,13 +57,13 @@
 #### Step 1: 创建目录
 
 ```bash
-mkdir -p docs/shared/specs/story-{module}-{feature}
+mkdir -p docs/shared/specs/active/story-{module}-{feature}
 ```
 
 #### Step 2: 复制模板
 
 ```bash
-cd docs/shared/specs/story-{module}-{feature}
+cd docs/shared/specs/active/story-{module}-{feature}
 
 # 复制并重命名
 cp ../../agent/templates/requirements-template.md requirements.md
@@ -93,7 +93,7 @@ cp ../../agent/templates/tasks-template.md tasks.md
 
 查看完整的 Spec 示例：
 
-**示例**: `docs/shared/specs/story-order-quick-payment/`
+**示例**: `docs/shared/specs/active/story-order-quick-payment/`
 
 包含：
 
@@ -128,10 +128,10 @@ graph TD
 
 | 我需要...      | 使用模板                       | 示例                                                        |
 | -------------- | ------------------------------ | ----------------------------------------------------------- |
-| 发起需求       | proposal-template.md           | docs/team/proposals/2025-11-16-quick-payment.md             |
-| 定义详细需求   | requirements-template.md       | docs/shared/specs/story-order-quick-payment/requirements.md |
-| 设计技术方案   | design-template.md             | docs/shared/specs/story-order-quick-payment/design.md       |
-| 分解开发任务   | tasks-template.md              | docs/shared/specs/story-order-quick-payment/tasks.md        |
+| 发起需求       | proposal-template.md           | docs/team/proposals/2025-11/quick-payment.md                       |
+| 定义详细需求   | requirements-template.md       | docs/shared/specs/active/story-order-quick-payment/requirements.md |
+| 设计技术方案   | design-template.md             | docs/shared/specs/active/story-order-quick-payment/design.md       |
+| 分解开发任务   | tasks-template.md              | docs/shared/specs/active/story-order-quick-payment/tasks.md        |
 | 创建数据库迁移 | database-migration-template.md | admin/database/migrations/20251117\_\*.php                  |
 | 记录 API 接口  | api-doc-template.md            | docs/shared/api/order_api.md                                |
 | 排查问题       | troubleshooting-template.md    | docs/shared/troubleshooting/payment-timeout.md              |

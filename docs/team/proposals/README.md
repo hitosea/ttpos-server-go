@@ -4,6 +4,21 @@
 
 ---
 
+## 📂 目录结构
+
+```
+docs/team/proposals/
+├── 2025-11/                    # 按月份组织
+│   ├── quick-payment.md
+│   ├── member-integration.md
+│   └── ...
+├── 2025-12/
+│   └── ...
+└── README.md
+```
+
+---
+
 ## 📋 说明
 
 本目录存放需求提案文档，记录从想法到需求确认的过程。
@@ -14,14 +29,16 @@
 
 ### 格式
 ```
-{YYYY-MM-DD}-{feature-name}.md
+docs/team/proposals/{YYYY-MM}/{feature-name}.md
 ```
 
 ### 示例
 ```
-2025-11-16-quick-payment.md
-2025-11-16-member-integration.md
+2025-11/quick-payment.md
+2025-11/member-integration.md
 ```
+
+> 文件名不再包含日期前缀，因为已按月份目录组织。
 
 ---
 
@@ -29,8 +46,8 @@
 
 ```
 想法 → 创建提案 → 需求评审 → 
-  ├─ 批准 → 创建 Spec → 进入开发
-  └─ 拒绝 → 归档（标注原因）
+  ├─ 批准 → 创建 Spec → 进入开发 → 上线 → /archive-spec
+  └─ 拒绝/取消 → 归档（标注原因）或 /deprecate-spec
 ```
 
 ---
@@ -44,8 +61,8 @@
 
 ### 手动创建
 ```bash
-cd docs/team/proposals
-touch 2025-11-16-quick-payment.md
+mkdir -p docs/team/proposals/2025-11
+touch docs/team/proposals/2025-11/quick-payment.md
 ```
 
 ---
