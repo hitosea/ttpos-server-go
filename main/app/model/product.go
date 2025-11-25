@@ -189,6 +189,7 @@ type ProductPackage struct {
 	Sort                  uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum              uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe              string `gorm:"default:'';column:describe;comment:'卖点描述'"`
+	Detail                string `gorm:"type:longtext;column:detail;comment:'商品详情（富文本）'"`
 
 	ActualSaleNum float64 `gorm:"default:0.0000;column:actual_sale_num;comment:'实际销量。每次卖出时,实际销量增加'"`
 

@@ -527,6 +527,7 @@ type ProductDetailResp struct {
 	UnitUuid     uint64             `json:"unit_uuid"`     // 商品单位UUID
 	UnitName     string             `json:"unit_name"`     // 商品单位名称
 	Price        *float64           `json:"price"`         // 商品价格,套餐的价格
+	Detail       string             `json:"detail"`        // 商品详情（富文本）
 
 	Flavors                 ProductFlavorList                 `json:"flavors"`                    // 商品规格列表
 	Sauces                  ProductSauceList                  `json:"sauces"`                     // 商品小料列表

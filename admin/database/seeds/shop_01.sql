@@ -1409,6 +1409,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `sauce_required` INT(10) NOT NULL DEFAULT 0 COMMENT '是否必选小料, 0-否 1-是',
     `sauce_max_selection` INT(11) NOT NULL DEFAULT 0 COMMENT '小料最大选择数量',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '卖点描述',
+    `detail` LONGTEXT COMMENT '商品详情（富文本）',
     `price` DECIMAL(22, 2) NOT NULL DEFAULT 0 COMMENT '套餐价格',
     `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
     `open_discount` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员折扣, 0-否 1-是',
