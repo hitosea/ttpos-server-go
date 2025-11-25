@@ -264,3 +264,8 @@ type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
 	MealNum uint   `json:"meal_num"` // 就餐人数
 }
+
+// GetPaymentAmountResp 获取支付金额响应
+type GetPaymentAmountResp struct {
+	PaymentAmount float64 `json:"payment_amount"` // 支付金额
+}
