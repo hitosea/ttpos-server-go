@@ -197,7 +197,7 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 		activity.UpdateTime = currentTime
 
 		activityRepoTx := repository.NewFullReductionActivityRepo(tx)
-		if err := activityRepoTx.Update(activity); err != nil {
+		if err := activityRepoTx.UpdateActivity(activity); err != nil {
 			return errors.WithMessage(err, "更新活动失败")
 		}
 
@@ -370,7 +370,7 @@ func (s *fullReductionActivitySrv) Disable(ctx context.Context, uuid uint64) err
 	activity.IsDisabled = constant.Yes
 	activity.UpdateTime = currentTime
 
-	if err := activityRepo.Update(activity); err != nil {
+	if err := activityRepo.UpdateDisabled(activity); err != nil {
 		return errors.WithMessage(err, "失效活动失败")
 	}
 

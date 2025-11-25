@@ -618,3 +618,5 @@ func (s *ProductService) validateRequiredCount(requiredCount, optionalCount, tot
 **创建日期**: 2025-11-24  
 **维护者**: 开发组
 
+
+

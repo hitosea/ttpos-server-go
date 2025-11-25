@@ -13,6 +13,9 @@ import (
 type IFullReductionActivityRepo interface {
 	Create(activity *model.FullReductionActivity) error
 	Update(activity *model.FullReductionActivity, options ...DBOption) error
+	UpdateByMap(uuid uint64, data map[string]interface{}) error
+	UpdateActivity(activity *model.FullReductionActivity) error
+	UpdateDisabled(activity *model.FullReductionActivity) error
 	GetByUuid(uuid uint64, options ...DBOption) (*model.FullReductionActivity, error)
 	GetList(options ...DBOption) ([]*model.FullReductionActivity, int64, error)
 	Delete(uuid uint64) error
@@ -39,13 +42,55 @@ func (r *FullReductionActivityRepoImpl) Create(activity *model.FullReductionActi
 	return errors.WithMessage(r.db.Create(activity).Error)
 }
 
-// Update 更新满减活动
+// Update 更新满减活动（不推荐，建议使用 UpdateByMap）
 func (r *FullReductionActivityRepoImpl) Update(activity *model.FullReductionActivity, options ...DBOption) error {
 	db := r.db.Model(&model.FullReductionActivity{})
 	for _, option := range options {
 		db = option(db)
 	}
+	// 使用 Updates 更新非零值字段
+	// 注意：零值字段（如 IsAllDay=0）不会被更新，建议使用 UpdateByMap 方法
 	return errors.WithMessage(db.Where("uuid = ?", activity.Uuid).Updates(activity).Error)
+}
+
+// UpdateByMap 使用 map 更新满减活动
+// 使用 map 可以更新零值字段，如 IsAllDay 从 1 变成 0
+func (r *FullReductionActivityRepoImpl) UpdateByMap(uuid uint64, data map[string]interface{}) error {
+	return errors.WithMessage(
+		r.db.Model(&model.FullReductionActivity{}).
+			Where("uuid = ?", uuid).
+			Updates(data).Error,
+	)
+}
+
+// UpdateActivity 更新满减活动基本信息（推荐）
+func (r *FullReductionActivityRepoImpl) UpdateActivity(activity *model.FullReductionActivity) error {
+	return errors.WithMessage(
+		r.db.Model(&model.FullReductionActivity{}).
+			Where("uuid = ?", activity.Uuid).
+			Updates(map[string]interface{}{
+				"name":           activity.Name,
+				"start_date":     activity.StartDate,
+				"end_date":       activity.EndDate,
+				"start_time":     activity.StartTime,
+				"end_time":       activity.EndTime,
+				"is_all_day":     activity.IsAllDay,
+				"reduction_type": activity.ReductionType,
+				"update_time":    activity.UpdateTime,
+			}).Error,
+	)
+}
+
+// UpdateDisabled 更新满减活动失效状态
+func (r *FullReductionActivityRepoImpl) UpdateDisabled(activity *model.FullReductionActivity) error {
+	return errors.WithMessage(
+		r.db.Model(&model.FullReductionActivity{}).
+			Where("uuid = ?", activity.Uuid).
+			Updates(map[string]interface{}{
+				"is_disabled": activity.IsDisabled,
+				"update_time": activity.UpdateTime,
+			}).Error,
+	)
 }
 
 // GetByUuid 根据UUID获取满减活动
