@@ -1006,7 +1006,7 @@ return data
 - **代码示例**:
   ```go
   if req.StartDate < time.Now().Unix() {
-      return nil, errors.New("活动日期不可选择以前的日期")
+      return nil, errors.WithMessage(errors.New("活动日期不可选择以前的日期"), "活动日期不可选择以前的日期")
   }
   ```
 
@@ -1015,7 +1015,24 @@ return data
 - **处理方式**: 前端提示确认，后端记录操作日志
 - **用户影响**: 用户需要确认后才能保存
 
-#### 场景 3: 活动规则计算错误
+#### 场景 3: 已结束和已失效的活动不可编辑
+
+- **处理方式**: 返回业务错误，提示"已结束的活动不可编辑"或"已失效的活动不可编辑"
+- **用户影响**: 用户看到错误提示，无法保存编辑
+- **代码示例**:
+  ```go
+  // 检查活动状态：已结束和已失效的活动不可编辑
+  if activity.IsDisabled == constant.Yes {
+      return errors.WithMessage(errors.New("已失效的活动不可编辑"), "已失效的活动不可编辑")
+  }
+  now := time.Now().Unix()
+  status := activity.GetStatus(now, "")
+  if status == constant.ActivityStatusEnded {
+      return errors.WithMessage(errors.New("已结束的活动不可编辑"), "已结束的活动不可编辑")
+  }
+  ```
+
+#### 场景 4: 活动规则计算错误
 
 - **处理方式**: 详细日志记录，返回错误
 - **用户影响**: 用户看到错误提示

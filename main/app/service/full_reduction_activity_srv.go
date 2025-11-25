@@ -159,7 +159,17 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 		return errors.WithMessage(err, "查找活动失败")
 	}
 	if activity == nil {
-		return errors.New("活动不存在")
+		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
+	}
+
+	// 检查活动状态：已结束和已失效的活动不可编辑
+	if activity.IsDisabled == constant.Yes {
+		return errors.WithMessage(errors.New("已失效的活动不可编辑"), "已失效的活动不可编辑")
+	}
+	now := time.Now().Unix()
+	status := activity.GetStatus(now, "")
+	if status == constant.ActivityStatusEnded {
+		return errors.WithMessage(errors.New("已结束的活动不可编辑"), "已结束的活动不可编辑")
 	}
 
 	// 如果是阶梯满减，需要排序
@@ -248,7 +258,7 @@ func (s *fullReductionActivitySrv) GetByUuid(ctx context.Context, uuid uint64) (
 		return nil, errors.WithMessage(err, "获取活动失败")
 	}
 	if activity == nil {
-		return nil, errors.New("活动不存在")
+		return nil, errors.WithMessage(errors.New("活动不存在"), "活动不存在")
 	}
 
 	return s.buildResp(ctx, activity)
@@ -312,14 +322,14 @@ func (s *fullReductionActivitySrv) Delete(ctx context.Context, uuid uint64) erro
 		return errors.WithMessage(err, "查找活动失败")
 	}
 	if activity == nil {
-		return errors.New("活动不存在")
+		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
 	}
 
 	// 检查活动状态，进行中的活动不可删除
 	now := time.Now().Unix()
 	status := activity.GetStatus(now, "")
 	if status == constant.ActivityStatusInProgress {
-		return errors.New("进行中的活动不可删除")
+		return errors.WithMessage(errors.New("进行中的活动不可删除"), "进行中的活动不可删除")
 	}
 
 	// 多个数据库操作，必须使用事务
@@ -356,14 +366,14 @@ func (s *fullReductionActivitySrv) Disable(ctx context.Context, uuid uint64) err
 		return errors.WithMessage(err, "查找活动失败")
 	}
 	if activity == nil {
-		return errors.New("活动不存在")
+		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
 	}
 
 	// 检查活动状态，已结束的活动不可失效
 	now := time.Now().Unix()
 	status := activity.GetStatus(now, "")
 	if status == constant.ActivityStatusEnded {
-		return errors.New("已结束的活动不可失效")
+		return errors.WithMessage(errors.New("已结束的活动不可失效"), "已结束的活动不可失效")
 	}
 
 	// 更新活动状态

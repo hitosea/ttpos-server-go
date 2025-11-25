@@ -374,6 +374,7 @@ type ProductShopStatusReq struct {
 type ProductShopAddReq struct {
 	Type                int                               `json:"type"`                  // 商品类型 0-商品 1-套餐
 	LocaleName          dto.LocaleResponse                `json:"locale_name"`           // 商品名称
+	SellingPoint        dto.LocaleResponse                `json:"selling_point"`         // 商品卖点（多语言，可选）
 	CategoryUuid        uint64                            `json:"category_uuid"`         // 商品分类UUID
 	UnitUuid            uint64                            `json:"unit_uuid"`             // 商品单位UUID
 	Flavors             []ProductShopAddFlavorReq         `json:"flavors"`               // 商品规格列表
@@ -481,6 +482,7 @@ type ProductShopEditReq struct {
 	Uuid                uint64                             `json:"uuid"`                  // 商品UUID
 	Type                int                                `json:"type"`                  // 商品类型 0-商品 1-套餐
 	LocaleName          dto.LocaleResponse                 `json:"locale_name"`           // 商品名称
+	SellingPoint        dto.LocaleResponse                 `json:"selling_point"`         // 商品卖点（多语言，可选）
 	CategoryUuid        uint64                             `json:"category_uuid"`         // 商品分类UUID
 	UnitUuid            uint64                             `json:"unit_uuid"`             // 商品单位UUID
 	Flavors             []ProductShopEditFlavorReq         `json:"flavors"`               // 商品规格列表

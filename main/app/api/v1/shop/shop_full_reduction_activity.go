@@ -124,7 +124,15 @@ func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
+	// 如果没有分页信息的话,默认分页信息为1,99999
+	if params.PageNo == 0 {
+		params.PageNo = 1
+	}
+	if params.PageSize == 0 {
+		params.PageSize = 99999
+	}
 
+	// 获取满减活动列表
 	result, err := h.fullReductionActivitySrv.GetList(ctx, &params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
