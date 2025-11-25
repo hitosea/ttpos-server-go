@@ -389,6 +389,7 @@ type ProductShopAddReq struct {
 	Package             ProductShopAddPackageReq          `json:"package"`               // 商品套餐
 	Row                 int                               `json:"row"`                   // 行号
 	ProductPrinterUuids []uint64                          `json:"product_printer_uuids"` // 商品打印机列表
+	Detail              string                            `json:"detail"`                // 商品详情（富文本）
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
@@ -494,6 +495,7 @@ type ProductShopEditReq struct {
 	Discount            ProductShopEditDiscountReq         `json:"discount"`              // 商品折扣设置
 	Package             ProductShopEditPackageReq          `json:"package"`               // 商品套餐
 	ProductPrinterUuids []uint64                           `json:"product_printer_uuids"` // 商品打印机列表
+	Detail              string                             `json:"detail"`                // 商品详情（富文本）
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求

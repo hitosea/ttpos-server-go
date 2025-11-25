@@ -138,6 +138,8 @@
       package_group: [
         {
           group_name: JSON.parse(languageData),
+          group_type: 0, // 0-固定套餐 1-可选套餐
+          optional_count :0, // 可选套餐数量
           product_list: [],
         },
       ],
@@ -260,6 +262,8 @@
       if (params.type == 30) {
         params.package_group.forEach((group) => {
           group.group_name = JSON.stringify(group.group_name);
+          group.group_type = group.group_type || 0;
+          group.optional_count = group.optional_count || 0;
           // group.product_list 只需要保留product_id、num、sort，其他字段删除
           let productList = [];
           group.product_list.forEach((product) => {
@@ -267,6 +271,9 @@
               product_id: product.product_id,
               num: product.num,
               sort: product.sort,
+              add_price: product.add_price, // 加价
+              is_required :product.is_required, // 是否必选
+              is_default :product.is_default, // 是否默认
             });
           });
           group.product_list = productList;

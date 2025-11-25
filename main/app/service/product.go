@@ -5224,6 +5224,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		UnitUuid:     productPackage.ProductUnit.Uuid,
 		UnitName:     productPackage.ProductUnit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		Price:        &productPackage.Price,
+		Detail:       productPackage.Detail,
 
 		TakeoutTaxUuid: productPackage.TakeoutTax.Uuid,
 		TakeoutTaxName: productPackage.TakeoutTax.Name,
@@ -6050,6 +6051,7 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 		"price":                 price,
 		"open_discount":         req.Discount.IsEnableMemberDiscount,
 		"open_overall_discount": req.Discount.IsEnableOverallDiscount,
+		"detail":                req.Detail,
 	}, commonRepo.WhereByUuid(productPackage.Uuid))
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存商品包失败")
@@ -6186,6 +6188,7 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		ProductType:           uint(request.Type),
 		OpenDiscount:          uint(request.Discount.IsEnableMemberDiscount),
 		OpenOverallDiscount:   &openOverallDiscount,
+		Detail:                request.Detail,
 	}
 	err = productPackageRepo.CreateProductPackage(productPackage)
 	if err != nil {
@@ -7682,6 +7685,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				Sort:                  productPackage.Sort,
 				LimitNum:              productPackage.LimitNum,
 				Describe:              productPackage.Describe,
+				Detail:                productPackage.Detail,
 				ActualSaleNum:         actualSaleNum,
 				Price:                 productPackage.Price,
 				ProductType:           productPackage.ProductType,
