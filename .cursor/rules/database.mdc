@@ -14,12 +14,27 @@ description: 数据库开发规范
 
 | 我要...          | 查阅文档                                                           |
 | ---------------- | ------------------------------------------------------------------ |
+| 查看代码示例     | [数据库开发规范 - 代码示例](./database-examples.mdc)              |
 | 了解数据库架构   | [数据库架构设计](../../docs/human/architecture/database-design.md) |
 | 学习详细开发规范 | [数据库开发指南](../../docs/human/guides/database-guide.md)        |
 
 ---
 
 ## ⚡ 核心约束（必须遵守）
+
+### 迁移文件与种子数据同步
+
+**强制要求：创建迁移文件必须同步更新 `shop_01.sql`**
+
+- ✅ **必须同步**：任何迁移文件的数据库变更（新增表、删除表、新增字段、删除字段、修改字段、修改字段类型、修改索引等）都必须同步反映到 `admin/database/seeds/shop_01.sql` 文件中
+- ✅ **目的**：确保种子数据与最新表结构一致，新商户初始化时使用正确的表结构
+- ✅ **执行时机**：创建迁移文件时立即同步更新 `shop_01.sql`
+- ✅ **初始化数据**：如有初始化数据，需同时添加到 `shop_init_data.sql` 中
+
+**示例：**
+- 创建迁移文件 `20251125094923_add_add_price_to_sale_order_product_table.php` 添加字段
+- 必须同步修改 `admin/database/seeds/shop_01.sql` 中 `ttpos_sale_order_product` 表的定义
+- 确保新增字段在种子文件中存在且定义一致
 
 ### 多租户架构
 
@@ -74,15 +89,15 @@ saas                     # 系统主库
 
 **每个表必须包含**：
 
-```sql
-`id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-`uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
-`create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
-`update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
-`delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
-PRIMARY KEY (`id`),
-UNIQUE KEY `uk_uuid` (`uuid`)
-```
+> 📖 **完整示例**: 参见 [必需字段示例](./database-examples.mdc#必需字段示例)
+
+- `id` - 主键ID（bigint unsigned AUTO_INCREMENT）
+- `uuid` - 唯一标识（bigint unsigned）
+- `create_time` - 创建时间（int）
+- `update_time` - 更新时间（int）
+- `delete_time` - 删除时间（int）
+- PRIMARY KEY (`id`)
+- UNIQUE KEY `uk_uuid` (`uuid`)
 
 ---
 
@@ -90,9 +105,7 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 时间字段 - 使用 int
 
-```sql
-`create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间'
-```
+> 📖 **完整示例**: 参见 [时间字段示例](./database-examples.mdc#时间字段)
 
 **原因**：
 
@@ -102,35 +115,19 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 金额字段 - 使用 decimal
 
-```sql
--- 高精度（8位小数）
-`amount` decimal(20,8) NOT NULL DEFAULT 0.00000000
-
--- 普通金额（2位小数）
-`price` decimal(14,2) NOT NULL DEFAULT 0.00
-```
+> 📖 **完整示例**: 参见 [金额字段示例](./database-examples.mdc#金额字段)
 
 **为什么不用 float/double?** 精度丢失
 
 ### UUID 字段 - 使用 bigint
 
-```sql
-`uuid` bigint unsigned NOT NULL DEFAULT 0
-```
+> 📖 **完整示例**: 参见 [UUID 字段示例](./database-examples.mdc#uuid-字段)
 
 ### 布尔字段 - 使用 int
 
 **禁止使用 boolean 类型，统一使用 int**
 
-```sql
--- ✅ 正确
-`is_disabled` int NOT NULL DEFAULT 0 COMMENT '是否失效（0=否，1=是）'
-`is_all_day` int NOT NULL DEFAULT 0 COMMENT '是否全天（0=否，1=是）'
-
--- ❌ 错误
-`is_disabled` boolean NOT NULL DEFAULT false
-`is_all_day` boolean NOT NULL DEFAULT true
-```
+> 📖 **完整示例**: 参见 [布尔字段示例](./database-examples.mdc#布尔字段)
 
 **原因：**
 - MySQL 中 boolean 类型实际上是 tinyint(1) 的别名
@@ -147,6 +144,14 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 ---
 
 ## 🔍 关键检查点
+
+### 创建迁移文件时（必须检查）
+
+- [ ] **同步更新 `admin/database/seeds/shop_01.sql`**：任何数据库变更都必须同步反映到种子文件
+- [ ] **同步更新模型文件**：如果变更涉及业务表，需同步更新 `../main/app/model/` 目录下对应的模型文件
+- [ ] 检查表是否存在
+- [ ] 检查字段是否存在
+- [ ] 包含注释说明
 
 ### 设计表时
 
@@ -183,7 +188,11 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 - [ ] 检查表是否存在
 - [ ] 检查字段是否存在
 - [ ] 包含注释说明
-- [ ] **同步更新 `admin/database/seeds/shop_01.sql`**： "强制要求,强制要求,强制要求" 任何迁移文件的数据库变更（新增表、删除表、新增字段、删除字段、修改字段等）都必须同步反映到 `shop_01.sql` 文件中，确保种子数据与最新表结构一致, 有初始化数据的也添加到shop_init_data.sql中
+- [ ] **⚠️ 强制要求：同步更新 `admin/database/seeds/shop_01.sql`**
+  - 任何迁移文件的数据库变更（新增表、删除表、新增字段、删除字段、修改字段、修改字段类型、修改索引等）都必须同步反映到 `shop_01.sql` 文件中
+  - 确保种子数据与最新表结构一致
+  - 有初始化数据的也添加到 `shop_init_data.sql` 中
+  - **这是必须执行的步骤，不能遗漏**
 - [ ] **同步更新模型文件**：如果变更涉及业务表，需同步更新 `../main/app/model/` 目录下对应的模型文件
 - [ ] 存在 `const TARGET = 'all';` 标识的时候，新建的表才需要添加 `company_uuid` 字段但不是必须的，其他时候一定不需要添加
 - [ ] 强制要求 $table->addColumn 方法里面的内容不需要换行
@@ -197,63 +206,19 @@ make migrate
 
 ## 📋 常用模式
 
+> 📖 **完整示例**: 参见 [常用模式示例](./database-examples.mdc#常用模式示例)
+
 ### 迁移文件模板
 
-```php
-<?php
-use think\migration\Migrator;
-
-class AddTableMapFieldsToCompanySetting extends Migrator
-{
-    
-    public function change()
-    {
-        // 检查表是否存在
-        if ($this->hasTable('company_setting')) {
-            $table = $this->table('company_setting');
-            
-            // 检查字段是否不存在
-            if (!$table->hasColumn('enable_table_map')) {
-                $table->addColumn('enable_table_map', 'integer', [
-                    'limit' => 3,
-                    'default' => 0,
-                    'null' => false,
-                    'comment' => '是否启用桌台地图能力：0-否；1-是'
-                ]);
-            }
-            
-            $table->update();
-        }
-    }
-}
-```
+> 📖 **完整示例**: 参见 [迁移文件模板](./database-examples.mdc#迁移文件模板)
 
 ### 创建表模板
 
-```sql
-CREATE TABLE IF NOT EXISTS `ttpos_product` (
-    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
-    `name` varchar(100) NOT NULL DEFAULT '' COMMENT '商品名称',
-    `price` decimal(14,2) NOT NULL DEFAULT 0.00 COMMENT '价格',
-    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
-    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
-    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_uuid` (`uuid`),
-    KEY `idx_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
-```
+> 📖 **完整示例**: 参见 [创建表模板](./database-examples.mdc#创建表模板)
 
 ### 软删除查询
 
-```sql
--- 查询未删除数据
-SELECT * FROM ttpos_user WHERE delete_time = 0;
-
--- 软删除
-UPDATE ttpos_user SET delete_time = 1699999999 WHERE id = 1;
-```
+> 📖 **完整示例**: 参见 [软删除查询](./database-examples.mdc#软删除查询)
 
 ---
 
@@ -263,25 +228,7 @@ UPDATE ttpos_user SET delete_time = 1699999999 WHERE id = 1;
 
 **所有需要多语言的实体，必须通过 `multi_language_name_uuid` 字段关联 `ttpos_multi_language_name` 表**
 
-```sql
-CREATE TABLE IF NOT EXISTS `ttpos_multi_language_name` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `en_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '英文名称',
-    `zh_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '中文名称',
-    `zh_tw_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '繁体中文名称',
-    `th_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '泰语名称',
-    `my_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '缅甸语名称',
-    `ja_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '日语名称',
-    `ko_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '韩语名称',
-    `tr_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '土耳其语名称',
-    `sv_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '瑞典语名称',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '多语言名称表';
-```
+> 📖 **完整示例**: 参见 [多语言表定义](./database-examples.mdc#多语言表定义)
 
 ### 支持的语言
 
@@ -304,106 +251,25 @@ CREATE TABLE IF NOT EXISTS `ttpos_multi_language_name` (
 1. **`name` VARCHAR(1000)** - 存储 JSON 格式的多语言数据（冗余存储，便于快速查询）
 2. **`multi_language_name_uuid` BIGINT** - 关联 `ttpos_multi_language_name` 表
 
-```sql
-CREATE TABLE `ttpos_material` (
-    `uuid` bigint(20) NOT NULL,
-    `name` VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '原料名称（JSON格式）',
-    `multi_language_name_uuid` bigint(20) NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    -- 其他字段...
-    PRIMARY KEY (`uuid`),
-    KEY `idx_multi_language_name_uuid` (`multi_language_name_uuid`)
-) COMMENT='原料表';
-```
+> 📖 **完整示例**: 参见 [业务表多语言字段示例](./database-examples.mdc#业务表多语言字段示例)
 
 **name 字段存储格式（JSON）：**
 
-```json
-{
-    "en": "Apple",
-    "zh": "苹果",
-    "th": "แอปเปิล",
-    "zh-tw": "蘋果",
-    "ja": "りんご",
-    "ko": "사과",
-    "my": "ပန်းသီး",
-    "tr": "Elma",
-    "sv": "Äpple"
-}
-```
+> 📖 **完整示例**: 参见 [name 字段存储格式](./database-examples.mdc#name-字段存储格式json)
 
 ### 查询多语言数据
 
 **使用 JOIN 关联查询：**
 
-```sql
--- 示例：查询商品及其多语言名称
-SELECT p.*, m.zh_name, m.en_name, m.th_name
-FROM ttpos_product_package p
-JOIN ttpos_multi_language_name m ON p.multi_language_name_uuid = m.uuid
-WHERE m.delete_time = 0 AND p.delete_time = 0;
-```
+> 📖 **完整示例**: 参见 [查询多语言数据](./database-examples.mdc#查询多语言数据)
 
 ### Go 代码操作
 
-**创建多语言名称：**
-
-```go
-// 1. 创建多语言名称记录
-multiLanguageName := model.MultiLanguageName{
-    BaseModel: model.BaseModel{Uuid: uuid.GenerateUUID()},
-    ZhName:    "苹果",
-    EnName:    "Apple",
-    ThName:    "แอปเปิล",
-    // ... 其他语言
-}
-multiLangUuid, err := repo.CreateMultiLanguageName(multiLanguageName)
-
-// 2. 准备 name 字段（JSON格式）
-nameJson := `{"zh":"苹果","en":"Apple","th":"แอปเปิล","zh-tw":"蘋果","ja":"りんご","ko":"사과","my":"ပန်းသီး","tr":"Elma","sv":"Äpple"}`
-
-// 3. 关联到业务表
-material := model.Material{
-    BaseModel:             model.BaseModel{Uuid: uuid.GenerateUUID()},
-    Name:                  nameJson,  // JSON格式多语言
-    MultiLanguageNameUuid: multiLangUuid,  // 关联UUID
-    // ... 其他字段
-}
-```
-
-**查询时关联获取：**
-
-```go
-// 方式1: 直接使用业务表的 name 字段（推荐，性能更好）
-var material model.Material
-db.First(&material, "uuid = ?", materialUuid)
-// material.Name 包含完整的多语言JSON
-
-// 方式2: JOIN 查询多语言表（用于需要按语言过滤或更新的场景）
-var material model.Material
-db.Model(&model.Material{}).
-    Joins("JOIN ttpos_multi_language_name ON ttpos_material.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-    Where("ttpos_material.uuid = ?", materialUuid).
-    Where("ttpos_multi_language_name.delete_time = 0").
-    First(&material)
-```
+> 📖 **完整示例**: 参见 [Go 代码操作示例](./database-examples.mdc#go-代码操作示例)
 
 ### PHP 代码操作
 
-**保存多语言名称：**
-
-```php
-// 新增
-$names = [
-    'zh' => '商品名称',
-    'en' => 'Product Name',
-    'th' => 'ชื่อสินค้า',
-    // ... 其他语言
-];
-$uuid = (new MultiLanguageName())->saveNames($names);
-
-// 更新
-$uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
-```
+> 📖 **完整示例**: 参见 [PHP 代码操作示例](./database-examples.mdc#php-代码操作示例)
 
 ### 📋 多语言检查清单
 
@@ -439,6 +305,7 @@ $uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
 
 | 禁止                                        | 原因                   |
 | ------------------------------------------- | ---------------------- |
+| ❌ **创建迁移文件后不同步更新 `shop_01.sql`** | **必须同步更新种子文件** |
 | ❌ 时间字段用 datetime                      | 必须用 int             |
 | ❌ 金额字段用 float                         | 精度丢失               |
 | ❌ **布尔字段用 boolean 类型**              | **必须用 int 类型**    |
@@ -455,6 +322,7 @@ $uuid = (new MultiLanguageName())->saveNames($names, $existingUuid);
 
 ## 📖 详细文档
 
+- [数据库开发规范 - 代码示例](./database-examples.mdc)
 - [数据库架构设计](../../docs/human/architecture/database-design.md)
 - [数据库开发指南](../../docs/human/guides/database-guide.md)
 - [多语言名称检查](../../docs/human/architecture/features/check_name.md)
