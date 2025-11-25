@@ -288,6 +288,29 @@ git push origin feature/story-{module}-{feature}
 
 ---
 
+## Step 8: 归档 Spec (发布后)
+
+功能上线后，执行归档：
+
+```bash
+/archive-spec @story-{module}-{feature} --version v2.10
+```
+
+### 归档条件
+
+- [ ] `tasks.md` 中所有任务已完成 `[x]`
+- [ ] 功能已上线并验证通过
+
+### 归档效果
+
+- 移动 Spec 到 `archived/{version}/`
+- 更新关联 Proposal 状态为"已完成 - 已发布"
+- 添加归档标记到 `requirements.md`
+
+**详见**: `.cursor/commands/archive-spec.md`
+
+---
+
 ## 检查清单 (Checklist)
 
 ### 任务分析
