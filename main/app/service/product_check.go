@@ -667,15 +667,6 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 					if product.IsDefault != 0 && product.IsDefault != 1 {
 						return nil, errors.New("默认选中字段必须为0（不默认选中）或1（默认选中）")
 					}
-					// 固定分组时，必选和默认选中必须为0
-					if group.GroupType == 0 {
-						if product.IsRequired != 0 {
-							return nil, errors.New("固定分组的必选必须为0")
-						}
-						if product.IsDefault != 0 {
-							return nil, errors.New("固定分组的默认选中必须为0")
-						}
-					}
 					// 统计必选和默认选中数量
 					if product.IsRequired == 1 {
 						requiredCount++

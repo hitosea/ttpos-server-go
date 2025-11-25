@@ -125,7 +125,7 @@
   - Purpose: 在套餐创建/编辑时验证必选和默认选中的业务规则
   - Requirements: 6.1, 6.2, 6.3, 6.4
   - Leverage: 现有 Service: `main/app/service/product.go`，参考现有验证逻辑
-  - Prompt: Role: Go Developer | Task: 实现 validateRequiredAndDefault 函数，验证必选和默认选中的业务规则 | Context: 1. 固定分组时，is_required 和 is_default 必须为0；2. 可选分组时，必选数量不能大于可选数量；3. 可选分组时，默认数量不能大于可选数量；验证失败时返回明确的错误提示 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 验证逻辑正确，错误提示明确
+  - Prompt: Role: Go Developer | Task: 实现 validateRequiredAndDefault 函数，验证必选和默认选中的业务规则 | Context: 1. 可选分组时，必选数量不能大于可选数量；2. 可选分组时，默认数量不能大于可选数量；验证失败时返回明确的错误提示 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 验证逻辑正确，错误提示明确
 
 ---
 
@@ -137,7 +137,7 @@
   - Purpose: 在创建套餐接口中增加 is_required 和 is_default 字段的参数验证
   - Requirements: 3.4, 3.5
   - Status: ✅ 已完成 - 验证逻辑在 `CheckProductPackage` 函数中实现，API 层通过 Service 层调用验证
-  - Implementation: 验证逻辑在 Service 层的 `product_check.go:CheckProductPackage()` 中实现，包括字段值验证（0或1）、固定分组限制、必选/默认数量验证
+  - Implementation: 验证逻辑在 Service 层的 `product_check.go:CheckProductPackage()` 中实现，包括字段值验证（0或1）、必选/默认数量验证（仅可选分组）
 
 - [x] 4.2 扩展编辑套餐接口 - 参数验证
 

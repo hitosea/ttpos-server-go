@@ -121,10 +121,12 @@ ADD COLUMN `is_default` INT(10) NOT NULL DEFAULT 0 COMMENT '默认选中 0-默�
 - 种子文件: `admin/database/seeds/shop_01.sql` 已同步更新
 
 **字段规则**:
-- 固定分组时，`is_required` 和 `is_default` 必须为0
-- 可选分组时，可以设置 `is_required` 和 `is_default`
-- 必选数量不能大于可选数量
-- 默认数量不能大于可选数量
+- 固定分组和可选分组都可以设置 `is_required` 和 `is_default`
+- 可选分组时，必选数量不能大于可选数量
+- 可选分组时，默认数量不能大于可选数量
+- **固定分组强制规则**: 
+  - 保存数据时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 1
+  - 接口返回时，固定分组的商品强制返回 `is_required=1` 和 `is_default=1`
 
 **索引设计**:
 - 无需新增索引（现有索引已足够）
@@ -224,7 +226,6 @@ type ProductShopAddPackageGroupProductReq struct {
 **参数验证**:
 - `is_required`: 必须为 0 或 1
 - `is_default`: 必须为 0 或 1
-- 固定分组时，`is_required` 和 `is_default` 必须为0
 - 可选分组时，必选数量不能大于可选数量
 - 可选分组时，默认数量不能大于可选数量
 
@@ -450,10 +451,9 @@ type ProductPackageSubProduct struct {
 
 **验证逻辑**:
 1. 验证 `is_required` 和 `is_default` 字段值必须为 0 或 1
-2. 固定分组时，验证 `is_required` 和 `is_default` 必须为0
-3. 可选分组时，统计必选数量和默认数量
-4. 验证必选数量不能大于可选数量
-5. 验证默认数量不能大于可选数量
+2. 可选分组时，统计必选数量和默认数量
+3. 验证必选数量不能大于可选数量（仅可选分组）
+4. 验证默认数量不能大于可选数量（仅可选分组）
 
 **关键代码片段**:
 ```go
@@ -464,22 +464,23 @@ if product.IsRequired != 0 && product.IsRequired != 1 {
 if product.IsDefault != 0 && product.IsDefault != 1 {
     return nil, errors.New("默认选中字段必须为0（不默认选中）或1（默认选中）")
 }
-// 固定分组时，必选和默认选中必须为0
-if group.GroupType == 0 {
-    if product.IsRequired != 0 {
-        return nil, errors.New("固定分组的必选必须为0")
-    }
-    if product.IsDefault != 0 {
-        return nil, errors.New("固定分组的默认选中必须为0")
-    }
+// 统计必选和默认选中数量
+if product.IsRequired == 1 {
+    requiredCount++
 }
-// 验证必选数量不能大于可选数量
-if requiredCount > group.OptionalCount {
-    return nil, errors.New("必选数量不能大于可选数量")
+if product.IsDefault == 1 {
+    defaultCount++
 }
-// 验证默认数量不能大于可选数量
-if defaultCount > group.OptionalCount {
-    return nil, errors.New("默认数量不能大于可选数量")
+// ... 其他验证 ...
+
+// 验证必选数量不能大于可选数量（仅可选分组）
+if !isDelete && group.GroupType == 1 {
+    if requiredCount > group.OptionalCount {
+        return nil, errors.New("必选数量不能大于可选数量")
+    }
+    if defaultCount > group.OptionalCount {
+        return nil, errors.New("默认数量不能大于可选数量")
+    }
 }
 ```
 
@@ -493,15 +494,24 @@ if defaultCount > group.OptionalCount {
 
 **关键代码片段**:
 ```go
+// 固定分组时，IsRequired 和 IsDefault 返回 1
+isRequired := item.IsRequired
+isDefault := item.IsDefault
+if group.GroupType == 0 {
+    isRequired = 1
+    isDefault = 1
+}
 productDetail := product_resp.PackageProductDetail{
     Detail: product_resp.Product{...},
     Num:        item.Num,
     AddPrice:   item.AddPrice,
-    IsRequired: item.IsRequired, // ⭐ 已实现
-    IsDefault:  item.IsDefault,  // ⭐ 已实现
+    IsRequired: isRequired, // ⭐ 已实现（固定分组强制返回1）
+    IsDefault:  isDefault,  // ⭐ 已实现（固定分组强制返回1）
 }
 productDetail.CanEdit = productDetail.GetCanEdit()
 ```
+
+**固定分组强制返回逻辑**: 固定分组（`group_type=0`）时，无论数据库中存储的值是什么，接口返回时都会强制将 `is_required` 和 `is_default` 设置为 1。
 
 #### 3.3 商品详情接口扩展
 
@@ -511,6 +521,14 @@ productDetail.CanEdit = productDetail.GetCanEdit()
 
 **关键代码片段**:
 ```go
+// 固定分组时，IsRequired 和 IsDefault 返回 1
+isRequired := product.IsRequired
+isDefault := product.IsDefault
+if packageSubProductGroup.GroupType == 0 {
+    isRequired = 1
+    isDefault = 1
+}
+
 // 构建分组信息
 packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
     Uuid:          packageSubProductGroup.Uuid,
@@ -531,10 +549,12 @@ products = append(products, product_resp.ProductPackageSubProduct{
     FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
     Num:              product.Num,
     Price:            product.ProductBom.Price,
-    IsRequired:       product.IsRequired, // ⭐ 已实现
-    IsDefault:        product.IsDefault,  // ⭐ 已实现
+    IsRequired:       isRequired, // ⭐ 已实现（固定分组强制返回1）
+    IsDefault:        isDefault,  // ⭐ 已实现（固定分组强制返回1）
 })
 ```
+
+**固定分组强制返回逻辑**: 固定分组（`group_type=0`）时，无论数据库中存储的值是什么，接口返回时都会强制将 `is_required` 和 `is_default` 设置为 1。
 
 #### 3.4 套餐创建和编辑逻辑扩展
 
@@ -544,22 +564,35 @@ products = append(products, product_resp.ProductPackageSubProduct{
 
 **关键代码片段**:
 ```go
+// 固定分组时，强制 IsRequired 和 IsDefault 为 1
+isRequired := item.IsRequired
+isDefault := item.IsDefault
+if group.GroupType == 0 {
+    isRequired = 1
+    isDefault = 1
+}
+
 // 创建新商品时
 productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
     // ... 其他字段 ...
     AddPrice:   item.AddPrice,
-    IsRequired: item.IsRequired, // ⭐ 已实现
-    IsDefault:  item.IsDefault,  // ⭐ 已实现
+    IsRequired: isRequired, // ⭐ 已实现（固定分组强制写入1）
+    IsDefault:  isDefault,  // ⭐ 已实现（固定分组强制写入1）
 })
 
 // 更新现有商品时
 productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
     // ... 其他字段 ...
     "add_price":   item.AddPrice,
-    "is_required": item.IsRequired, // ⭐ 已实现
-    "is_default":  item.IsDefault,  // ⭐ 已实现
+    "is_required": isRequired, // ⭐ 已实现（固定分组强制写入1）
+    "is_default":  isDefault,  // ⭐ 已实现（固定分组强制写入1）
 }, commonRepo.WhereByUuid(item.Uuid))
 ```
+
+**固定分组强制写入逻辑**: 
+- 新建套餐时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 1
+- 编辑套餐时，固定分组的新增或更新商品都会强制将 `is_required` 和 `is_default` 写入为 1
+- 即使前端传入了其他值，也会被强制修正为 1，确保数据库中固定分组的数据一致性
 
 ---
 
@@ -570,22 +603,28 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
 - 必选商品必须选择才能下单
 - 必选商品在顾客选择时自动选中且不可取消
 - 必选商品必须保持至少1份（减最后一份时提示："必选商品不可删除"）
-- 必选数量不能大于可选数量
-- 固定分组时，`is_required` 必须为0
+- 可选分组时，必选数量不能大于可选数量
 
 ### 2. 默认选中规则
 
 - 默认选中商品在用户选购时默认选中，但可以取消
 - 用户可以自由增加或减少默认选中商品的数量
-- 默认数量不能大于可选数量
-- 固定分组时，`is_default` 必须为0
+- 可选分组时，默认数量不能大于可选数量
 
 ### 3. 验证规则
 
-- 创建/编辑套餐时，验证必选数量 <= 可选数量
-- 创建/编辑套餐时，验证默认数量 <= 可选数量
-- 创建/编辑套餐时，验证固定分组的必选和默认选中必须为0
+- 创建/编辑套餐时，验证必选数量 <= 可选数量（仅可选分组）
+- 创建/编辑套餐时，验证默认数量 <= 可选数量（仅可选分组）
 - 验证失败时返回明确的错误提示
+
+### 4. 固定分组强制规则
+
+- **保存数据时**: 固定分组（`group_type=0`）的商品，无论前端传入什么值，都会强制将 `is_required` 和 `is_default` 写入为 1
+- **接口返回时**: 固定分组的商品，无论数据库中存储的值是什么，都会强制返回 `is_required=1` 和 `is_default=1`
+- **实现位置**:
+  - 保存逻辑: `main/app/service/product.go:SaveProductPackageGroup()` 函数
+  - 返回逻辑: `main/app/service/product.go:FormatProducts()` 函数（商品列表接口）
+  - 返回逻辑: `main/app/model/product.go:GetRespPackageSubProductGroupList()` 方法（商品详情接口）
 
 ---
 
@@ -641,10 +680,10 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
    - 文件: `main/app/dto/resp/product_resp/product.go`
 
 6. ✅ **Service 层**: 
-   - 套餐创建逻辑: `SaveProductPackageGroup` 函数中已保存必选和默认选中字段
-   - 套餐编辑逻辑: `SaveProductPackageGroup` 函数中已更新必选和默认选中字段
-   - 商品列表查询: `FormatProducts` 函数中已返回必选和默认选中字段
-   - 商品详情查询: `GetRespPackageSubProductGroupList` 方法中已返回分组类型、可选数量、必选和默认选中字段
+   - 套餐创建逻辑: `SaveProductPackageGroup` 函数中已保存必选和默认选中字段（固定分组强制写入1）
+   - 套餐编辑逻辑: `SaveProductPackageGroup` 函数中已更新必选和默认选中字段（固定分组强制写入1）
+   - 商品列表查询: `FormatProducts` 函数中已返回必选和默认选中字段（固定分组强制返回1）
+   - 商品详情查询: `GetRespPackageSubProductGroupList` 方法中已返回分组类型、可选数量、必选和默认选中字段（固定分组强制返回1）
    - 同步功能: `SyncProduct` 函数中已同步必选和默认选中字段
 
 7. ✅ **业务逻辑验证**: 
@@ -652,9 +691,8 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
    - 函数: `CheckProductPackage`
    - 验证内容:
      - 字段值验证（0或1）
-     - 固定分组限制（必选和默认选中必须为0）
-     - 必选数量验证（不能大于可选数量）
-     - 默认数量验证（不能大于可选数量）
+     - 必选数量验证（可选分组时，不能大于可选数量）
+     - 默认数量验证（可选分组时，不能大于可选数量）
 
 8. ✅ **API 层**: 
    - 创建套餐接口: 通过 Service 层调用验证逻辑
@@ -683,8 +721,26 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
 
 ---
 
-**版本**: v1.0.0  
+**版本**: v1.1.0  
 **创建日期**: 2025-11-25  
-**最后更新**: 2025-11-25  
+**最后更新**: 2025-12-01  
 **维护者**: 开发组
+
+---
+
+## 📝 更新日志
+
+### v1.1.0 (2025-12-01)
+
+- ✅ **新增**: 固定分组强制规则
+  - 保存数据时，固定分组（`group_type=0`）的商品强制将 `is_required` 和 `is_default` 写入为 1
+  - 接口返回时，固定分组的商品强制返回 `is_required=1` 和 `is_default=1`
+  - 实现位置:
+    - `main/app/service/product.go:SaveProductPackageGroup()` - 保存逻辑
+    - `main/app/service/product.go:FormatProducts()` - 商品列表返回逻辑
+    - `main/app/model/product.go:GetRespPackageSubProductGroupList()` - 商品详情返回逻辑
+
+### v1.0.0 (2025-11-25)
+
+- ✅ 初始版本：实现套餐分组类型增强功能（必选和默认选中）
 

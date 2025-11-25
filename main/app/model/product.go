@@ -369,6 +369,13 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 			if product.IsDelete() {
 				continue
 			}
+			// 固定分组时，IsRequired 和 IsDefault 返回 1
+			isRequired := product.IsRequired
+			isDefault := product.IsDefault
+			if packageSubProductGroup.GroupType == 0 {
+				isRequired = 1
+				isDefault = 1
+			}
 			products = append(products, product_resp.ProductPackageSubProduct{
 				Uuid:             product.Uuid,
 				BomUuid:          product.ProductBomUuid,
@@ -377,8 +384,8 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,
 				Price:            product.ProductBom.Price,
-				IsRequired:       product.IsRequired,
-				IsDefault:        product.IsDefault,
+				IsRequired:       isRequired,
+				IsDefault:        isDefault,
 			})
 		}
 		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
