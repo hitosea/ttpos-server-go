@@ -10,10 +10,10 @@ type FullReductionActivityCreateReq struct {
 	LocaleName    dto.LocaleResponse                   `json:"locale_name" binding:"required"` // 多语言名称
 	StartDate     int64                                `json:"start_date" binding:"required"`
 	EndDate       int64                                `json:"end_date" binding:"required"`
-	StartTime     string                               `json:"start_time"`                        // HH:mm格式
-	EndTime       string                               `json:"end_time"`                          // HH:mm格式
-	IsAllDay      int                                  `json:"is_all_day" binding:"required"`     // 1=全天，0=特定时段
-	ReductionType int                                  `json:"reduction_type" binding:"required"` // 0=阶梯满减，1=循环满减
+	StartTime     string                               `json:"start_time"`     // HH:mm格式
+	EndTime       string                               `json:"end_time"`       // HH:mm格式
+	IsAllDay      int                                  `json:"is_all_day"`     // 1=全天，0=特定时段
+	ReductionType int                                  `json:"reduction_type"` // 0=阶梯满减，1=循环满减
 	Rules         []FullReductionActivityRuleCreateReq `json:"rules" binding:"required,min=1"`
 }
 
