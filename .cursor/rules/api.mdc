@@ -53,49 +53,27 @@ description: API 设计规范
 {"data": {"list": []}}
 ```
 
+### 删除接口 - DELETE 方法
+
+**所有删除操作必须使用 DELETE HTTP 方法**
+
+**详细说明和代码示例**：参见 [API 设计指南 - DELETE 方法](../../docs/human/guides/api-design-guide.md#delete-方法---删除接口规范) 章节
+
+### 切片初始化规范
+
+**响应体中的切片必须使用 `make` 初始化，避免返回 null**
+
+**详细代码示例**：参见 [API 设计指南 - 切片初始化规范](../../docs/human/guides/api-design-guide.md#切片初始化规范) 章节
+
 ---
 
 ## 📋 API 设计规则
 
 ### 路由注册（强制，强制，强制）
 
-**每个 API 文件必须包含注册函数**
+**每个 API 文件必须包含注册函数，并在 router.go 中调用**
 
-```go
-// ✅ 正确：包含注册函数
-func Register*Handlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
-    // 1. 初始化所有依赖服务
-    captchaSrv := service.NewCaptchaSrv(cache)
-    settingSrv := setting.NewSrv(dbm, cache)
-    authSrv := service.NewAuthSrv(...)
-    
-    // 2. 创建 Handler 实例
-    handler := &ExampleHandler{
-        exampleSrv: service.NewExampleSrv(dbm),
-    }
-    
-    // 3. 注册路由
-    // middleware.Auth(authSrv, dbm) (强制)
-    privateApi := router.Group("", middleware.Auth(authSrv, dbm))
-    {
-        privateApi.GET("/example/list", handler.GetList)
-        privateApi.POST("/example/create", handler.Create)
-    }
-}
-
-// ❌ 错误：没有注册函数
-// API 文件必须有 Register*Handlers 函数
-```
-
-**注册函数必须在 router.go 中调用**
-
-```go
-// router/router.go
-shopGroup := apiV1.Group("/shop")
-{
-    shop.RegisterExampleHandlers(shopGroup, dbm, cache)  // ✅ 必须调用
-}
-```
+**详细代码示例**：参见 [API 设计指南 - 路由注册](../../docs/human/guides/api-design-guide.md#路由注册) 章节
 
 ### URL 设计
 
@@ -125,62 +103,12 @@ GET  /api/v1/orders/123
 
 **规则说明：**
 
-1. ✅ **GET 请求**：用于获取信息（查询、列表、详情）
-   ```go
-   // ✅ 正确：获取列表使用 GET
-   privateApi.GET("/full_reduction_activity/list", handler.GetList)
-   
-   // ✅ 正确：获取详情使用 GET（参数通过 Query 传递）
-   privateApi.GET("/full_reduction_activity/get", handler.GetByUuid)
-   ```
+- ✅ **GET 请求**：用于获取信息（查询、列表、详情），参数通过 Query 传递
+- ✅ **POST 请求**：用于创建和修改数据，参数通过 Body 传递
+- ✅ **DELETE 请求**：用于删除数据，参数可通过 Query 或 Body 传递
+- ❌ **PUT 请求**：禁止使用
 
-2. ✅ **POST 请求**：用于创建和修改数据
-   ```go
-   // ✅ 正确：创建使用 POST
-   privateApi.POST("/full_reduction_activity/create", handler.Create)
-   
-   // ✅ 正确：更新使用 POST
-   privateApi.POST("/full_reduction_activity/update", handler.Update)
-   ```
-
-3. ✅ **DELETE 请求**：用于删除数据
-   ```go
-   // ✅ 正确：删除使用 DELETE
-   privateApi.DELETE("/full_reduction_activity/delete", handler.Delete)
-   ```
-
-4. ❌ **PUT 请求**：禁止使用
-   ```go
-   // ❌ 错误：禁止使用 PUT
-   privateApi.PUT("/full_reduction_activity/update", handler.Update)
-   ```
-
-**GET 请求参数传递：**
-
-```go
-// ✅ 正确：GET 请求使用 Query 参数
-func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
-    uuidStr := c.Query("uuid")  // 从 Query 获取参数
-    uuid, _ := strconv.ParseUint(uuidStr, 10, 64)
-    // ...
-}
-
-// ✅ 正确：GET 请求列表使用 Query 参数
-func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
-    pageNoStr := c.DefaultQuery("page_no", "1")
-    pageSizeStr := c.DefaultQuery("page_size", "20")
-    status := c.Query("status")
-    // ...
-}
-
-// ❌ 错误：GET 请求使用 Body 传递参数
-func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
-    var getReq req.FullReductionActivityGetReq
-    if err := c.ShouldBindJSON(&getReq); err != nil {  // ❌ GET 不应该用 Body
-        // ...
-    }
-}
-```
+**详细代码示例**：参见 [API 设计指南 - HTTP 方法](../../docs/human/guides/api-design-guide.md#http-方法) 和 [代码示例](../../docs/human/guides/api-design-guide.md#代码示例) 章节
 
 ---
 
@@ -218,6 +146,7 @@ func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
 - [ ] Go: 使用 helper.Success()
 - [ ] PHP: 使用 renderSuccess()
 - [ ] 空数据返回 `{}`，不返回 null
+- [ ] **Go 响应体中的切片必须使用 `make` 初始化，避免返回 null**
 
 ### 多语言字段（请求和响应）
 
@@ -226,306 +155,19 @@ func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
 - [ ] ❌ **禁止使用** 字符串、map[string]string 或其他自定义结构
 - [ ] ❌ **禁止使用** `Name`、`AttributeName` 等不带 `Locale` 前缀的字段名
 
-```go
-// ✅ 正确 - 请求参数
-type ExampleReq struct {
-    LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称（多语言）
-}
-
-// ✅ 正确 - 响应参数（基础名称）
-type ExampleResp struct {
-    Uuid       uint64             `json:"uuid"`
-    LocaleName dto.LocaleResponse `json:"locale_name"` // 名称（多语言）
-}
-
-// ✅ 正确 - 响应参数（带描述的名称）
-type ProductResp struct {
-    Uuid                uint64             `json:"uuid"`
-    LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称（多语言）
-    LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 属性名称（多语言）
-    LocaleUnitName      dto.LocaleResponse `json:"locale_unit_name"`      // 单位名称（多语言）
-}
-
-// ❌ 错误 - 字段名缺少 Locale 前缀
-type ExampleReq struct {
-    Name dto.LocaleResponse `json:"name"` // ❌ 错误，应使用 LocaleName
-}
-
-// ❌ 错误 - 字段名缺少 Locale 前缀
-type ExampleResp struct {
-    AttributeName dto.LocaleResponse `json:"attribute_name"` // ❌ 错误，应使用 LocaleAttributeName
-}
-
-// ❌ 错误 - 请求参数使用 map
-type ExampleReq struct {
-    Name map[string]string `json:"name"` // ❌ 错误，应使用 dto.LocaleResponse
-}
-
-// ❌ 错误 - 请求参数使用字符串
-type ExampleReq struct {
-    Name string `json:"name"` // ❌ 错误，应使用 dto.LocaleResponse
-}
-
-// ❌ 错误 - 响应参数使用 map
-type ExampleResp struct {
-    Name map[string]string `json:"name"` // ❌ 错误，应使用 dto.LocaleResponse
-}
-```
+**详细代码示例**：参见 [API 设计指南 - 多语言字段示例](../../docs/human/guides/api-design-guide.md#多语言字段示例) 章节
 
 ---
 
-## 📋 常用模式
+## 📋 代码示例
 
-### RESTful API 路由注册示例
+**所有详细的代码示例已移至** [API 设计指南 - 代码示例](../../docs/human/guides/api-design-guide.md#代码示例) 章节，包括：
 
-```go
-// ✅ 正确：遵循 RESTful API 规范
-func RegisterFullReductionActivityRoutes(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
-    handler := &FullReductionActivityHandler{
-        fullReductionActivitySrv: service.NewFullReductionActivitySrv(dbm),
-    }
-    
-    privateApi := router.Group("", middleware.Auth(authSrv, dbm))
-    {
-        // ✅ GET：获取信息（列表、详情）
-        privateApi.GET("/full_reduction_activity/list", handler.GetList)
-        privateApi.GET("/full_reduction_activity/get", handler.GetByUuid)
-        
-        // ✅ POST：创建和修改数据
-        privateApi.POST("/full_reduction_activity/create", handler.Create)
-        privateApi.POST("/full_reduction_activity/update", handler.Update)
-        
-        // ✅ DELETE：删除数据
-        privateApi.DELETE("/full_reduction_activity/delete", handler.Delete)
-        
-        // ❌ 错误：禁止使用 PUT
-        // privateApi.PUT("/full_reduction_activity/update", handler.Update)
-    }
-}
-```
-
-### GET 请求处理示例
-
-```go
-// ✅ 正确：GET 请求使用 Query 参数
-func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
-    ctx := helper.GetContext(c)
-    
-    // 从 Query 获取参数
-    uuidStr := c.Query("uuid")
-    uuid, err := strconv.ParseUint(uuidStr, 10, 64)
-    if err != nil || uuid == 0 {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
-        return
-    }
-    
-    result, err := h.fullReductionActivitySrv.GetByUuid(ctx, uuid)
-    if err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, result, "获取成功")
-}
-
-// ✅ 正确：GET 请求列表使用 Query 参数
-func (h *FullReductionActivityHandler) GetList(c *gin.Context) {
-    ctx := helper.GetContext(c)
-    
-    // 从 Query 获取参数
-    pageNoStr := c.DefaultQuery("page_no", "1")
-    pageSizeStr := c.DefaultQuery("page_size", "20")
-    status := c.Query("status")
-    
-    pageNo, _ := strconv.Atoi(pageNoStr)
-    pageSize, _ := strconv.Atoi(pageSizeStr)
-    
-    listReq := &req.FullReductionActivityListReq{
-        PageNo:   pageNo,
-        PageSize: pageSize,
-        Status:   status,
-    }
-    
-    result, err := h.fullReductionActivitySrv.GetList(ctx, listReq)
-    if err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, result, "获取成功")
-}
-
-// ❌ 错误：GET 请求不应该使用 Body
-func (h *FullReductionActivityHandler) GetByUuid(c *gin.Context) {
-    var getReq req.FullReductionActivityGetReq
-    if err := c.ShouldBindJSON(&getReq); err != nil {  // ❌ GET 不应该用 Body
-        helper.HandleValidationError(c, err, getReq, nil)
-        return
-    }
-    // ...
-}
-```
-
-### POST 请求处理示例
-
-```go
-// ✅ 正确：POST 请求用于创建数据
-func (h *FullReductionActivityHandler) Create(c *gin.Context) {
-    ctx := helper.GetContext(c)
-    
-    var createReq req.FullReductionActivityCreateReq
-    if err := c.ShouldBindJSON(&createReq); err != nil {
-        helper.HandleValidationError(c, err, createReq, nil)
-        return
-    }
-    
-    err := h.fullReductionActivitySrv.Create(ctx, &createReq)
-    if err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, nil, "创建成功")
-}
-
-// ✅ 正确：POST 请求用于更新数据
-func (h *FullReductionActivityHandler) Update(c *gin.Context) {
-    ctx := helper.GetContext(c)
-    
-    var updateReq req.FullReductionActivityUpdateReq
-    if err := c.ShouldBindJSON(&updateReq); err != nil {
-        helper.HandleValidationError(c, err, updateReq, nil)
-        return
-    }
-    
-    if err := h.fullReductionActivitySrv.Update(ctx, &updateReq); err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, nil, "更新成功")
-}
-```
-
-### DELETE 请求处理示例
-
-```go
-// ✅ 正确：DELETE 请求用于删除数据
-func (h *FullReductionActivityHandler) Delete(c *gin.Context) {
-    ctx := helper.GetContext(c)
-    
-    // DELETE 请求参数可以通过 Query 或 Body 传递
-    // 方式1：通过 Query 传递
-    uuidStr := c.Query("uuid")
-    uuid, err := strconv.ParseUint(uuidStr, 10, 64)
-    if err != nil || uuid == 0 {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.New("uuid 参数错误"))
-        return
-    }
-    
-    // 方式2：通过 Body 传递（也允许）
-    // var deleteReq req.FullReductionActivityDeleteReq
-    // if err := c.ShouldBindJSON(&deleteReq); err != nil {
-    //     helper.HandleValidationError(c, err, deleteReq, nil)
-    //     return
-    // }
-    
-    if err := h.fullReductionActivitySrv.Delete(ctx, uuid); err != nil {
-        helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-        return
-    }
-    
-    helper.Success(c, nil, "删除成功")
-}
-
-// ❌ 错误：删除不应该使用 POST
-func (h *FullReductionActivityHandler) Delete(c *gin.Context) {
-    // ❌ 错误：删除应该使用 DELETE 方法，不应该用 POST
-    // 应该在路由注册时使用 privateApi.DELETE(...)
-}
-```
-
-### Go 返回响应
-
-```go
-// ✅ 正确
-helper.Success(c, gin.H{})
-helper.Success(c, gin.H{"list": []})
-helper.ErrorWithDetail(c, constant.CodeFail, err)
-
-// ❌ 错误
-c.JSON(200, data)  // 不要直接用 c.JSON
-```
-
-### PHP 返回响应
-
-```php
-// ✅ 正确
-return $this->renderSuccess($data);
-return $this->renderSuccess([]);
-return $this->renderError('错误信息');
-```
-
-### 分页响应
-
-```json
-{
-  "code": 1,
-  "message": "success",
-  "data": {
-    "list": [...],
-    "meta": {
-      "page_no": 1,
-      "page_size": 20,
-      "total": 100
-    }
-  }
-}
-```
-
-### 多语言字段
-
-```go
-// DTO 定义
-type ProductReq struct {
-    LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品名称（多语言）
-    Price      float64             `json:"price"`                          // 价格
-}
-
-// 前端提交的 JSON
-{
-  "locale_name": {
-    "zh": "商品名称",
-    "th": "ชื่อสินค้า",
-    "en": "Product Name",
-    "zhtw": "商品名稱",
-    "ja": "商品名",
-    "ko": "상품명",
-    "my": "ကုန်ပစ္စည်းအမည်",
-    "tr": "Ürün Adı",
-    "sv": "Produktnamn"
-  },
-  "price": 100.00
-}
-```
-
-**返回数据时**
-
-```go
-// 响应 DTO
-type ProductResp struct {
-    Uuid       uint64             `json:"uuid"`        // 商品UUID
-    LocaleName dto.LocaleResponse `json:"locale_name"` // 商品名称（多语言）
-    Price      float64            `json:"price"`       // 价格
-}
-
-// 从 Model 转换
-resp := ProductResp{
-    Uuid:       product.Uuid,
-    LocaleName: product.MultiLanguageName.GetLocaleResponse(), // 从数据库获取
-    Price:      product.Price,
-}
-```
+- 路由注册完整示例
+- GET/POST/DELETE 请求处理示例
+- 响应处理示例（Go/PHP）
+- 多语言字段使用示例
+- 分页响应格式示例
 
 ---
 
@@ -546,6 +188,7 @@ resp := ProductResp{
 | ❌ **GET 请求使用 Body 传递参数** | **GET 请求参数必须通过 Query 传递** |
 | ❌ **多语言字段（请求参数和响应参数）使用 map[string]string、字符串或自定义结构** | **必须用 dto.LocaleResponse** |
 | ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
+| ❌ **响应体中的切片未使用 make 初始化** | **必须使用 make 初始化，避免返回 null** |
 
 ---
 
