@@ -90,7 +90,7 @@ func (s *roleSrv) GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDeta
 	staffUuids, _ := staffRoleRepo.GetStaffUuidsByRoleUuid(role.Uuid)
 
 	// 获取权限树（排除管理后台）
-	permissionGroup, err := s.GetCompanyPermissionGroup(ctx, []constant.RouteName{constant.ShopRouteName})
+	permissionGroup, err := s.GetCompanyPermissionGroup(ctx, []constant.RouteName{constant.ShopAppRouteName, constant.CashierRouteName, constant.AssistantRouteName})
 	if err != nil {
 		return resp.RoleDetailResp{}, errors.WithMessage(err, "获取权限树失败")
 	}
