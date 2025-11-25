@@ -224,9 +224,9 @@ docs/                   # 项目文档
 
 ## 服务对象与终端视角（与 ttpos-flutter 对齐）
 
-从业务使用者的角度看，系统面向多个前端终端提供能力（如 `pos`、`shop`、`kds`、`qds`、`assistant`、`tablet`、`mobile`、`menu`、`member` 等）。这些终端的 UI 与交互主要在 `ttpos-flutter` 仓库和本仓库的前端代码中实现，本仓库中的 `main`、`admin`、`ttpos-bmp` 等模块，则通过 HTTP API、gRPC、消息队列与 WebSocket 为其提供统一的后端支撑。
+从业务使用者的角度看，系统面向多个前端终端提供能力（如 `pos`、`shop`、`kds`、`qds`、`assistant`、`tablet`、`kiosk`、`mobile`、`menu`、`member` 等）。这些终端的 UI 与交互主要在 `ttpos-flutter` 仓库和本仓库的前端代码中实现，本仓库中的 `main`、`admin`、`ttpos-bmp` 等模块，则通过 HTTP API、gRPC、消息队列与 WebSocket 为其提供统一的后端支撑。
 
-- **C 端终端**（顾客 / 会员使用，如 `mobile`、`menu`、`member`）
+- **C 端终端**（顾客 / 会员使用，如 `kiosk`、`mobile`、`menu`、`member`）
 
   - 主要消费订单、菜品、营销、会员等能力
   - 通过 Nginx 反向代理访问 `main`/`ttpos-bmp` 提供的接口，部分场景配合 `ttpos-websocket` 做实时状态推送
@@ -238,7 +238,7 @@ docs/                   # 项目文档
 
 在进行后端设计和改动时，应先明确：
 
-1. 这个改动会影响到**哪些终端**（pos/shop/kds/qds/assistant/tablet/mobile/menu/member）？
+1. 这个改动会影响到**哪些终端**（pos/shop/kds/qds/assistant/tablet/kiosk/mobile/menu/member）？
 2. 这些终端背后的**用户角色**是谁（顾客、收银员、店长、运营、后厨等）？
 3. 是否触及**资金闭环或会员资产**，以及是否可能导致多终端之间的状态不一致？
 
@@ -247,7 +247,7 @@ docs/                   # 项目文档
 **重要规则：架构图和文档中应明确前端技术栈，避免混淆**
 
 - ✅ **新管理端（Shop）**: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/shop`
-- ✅ **所有用户端终端**（pos/kds/qds/assistant/tablet/mobile/menu/member）: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/`
+- ✅ **所有用户端终端**（pos/kds/qds/assistant/tablet/kiosk/mobile/menu/member）: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/`
 - ✅ **旧管理后台和店铺后台**: 使用 **Vue 3 + TypeScript**，位于 `admin/views/`
 
 **架构图规范**：
@@ -277,6 +277,7 @@ docs/                   # 项目文档
 | **mobile**    | `/api/v1/h5`        | `app/api/v1/h5`        | H5 扫码点餐端   |
 | **menu**      | `/api/v1/menu`      | `app/api/v1/menu`      | 电子菜单端      |
 | **member**    | `/api/v1/member`    | `app/api/v1/member`    | 会员端          |
+| **kiosk**     | `/api/v1/kiosk`     | `app/api/v1/kiosk`     | 自助点餐机      |
 
 其他内部或管理向 API 前缀（如 `/api/v1/admin`、`/api/v1/internal`）主要面向管理后台或服务间调用，通常不直接暴露给终端用户界面。
 
