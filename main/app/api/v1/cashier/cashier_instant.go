@@ -1652,6 +1652,37 @@ func (h *InstantHandler) ChangeBatchTag(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderPaymentActivity 选择或取消满减活动
+// @Summary 选择或取消满减活动
+// @Description 选择或取消满减活动
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentActivityReq true "选择或取消满减活动参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/payment/activity [post]
+func (h *InstantHandler) OrderPaymentActivity(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面选择或取消满减活动接口请求")
+
+	var activityReq req.InstantOrderPaymentActivityReq
+	if err := c.ShouldBindJSON(&activityReq); err != nil {
+		helper.HandleValidationError(c, err, activityReq, nil)
+		return
+	}
+	ctx.Log().Info("选择或取消满减活动", zap.Any("params", activityReq))
+	// 选择或取消满减活动
+	res, err := h.orderSrv.OrderPaymentActivity(ctx, activityReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1734,5 +1765,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
 		privateApi.GET("/instant/batch_tag/list", wrapper.GetBatchTagList)                                                    // 获取分批类型列表
 		privateApi.POST("/instant/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型
+		privateApi.POST("/instant/order/payment/activity", wrapper.OrderPaymentActivity)                                      // 选择或取消满减活动
 	}
 }
