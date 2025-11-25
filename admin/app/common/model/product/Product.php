@@ -163,16 +163,27 @@ class Product extends BaseModel
 
     public function getSellingPointI18nAttr($value, $data = [])
     {
+        $default = [
+            'zh' => '',
+            'en' => '',
+            'zhtw' => '',
+            'th' => '',
+            'my' => '',
+            'ja' => '',
+            'ko' => '',
+            'tr' => '',
+            'sv' => '',
+        ];
         $uuid = $data['describe_multi_language_name_uuid'] ?? 0;
         if (empty($uuid)) {
-            return [];
+            return json_encode($default);
         }
         $names = (new MultiLanguageName)->getNames($uuid);
         if (empty($names)) {
-            return [];
+            return json_encode($default);
         }
         $decoded = json_decode($names, true);
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded) ? json_encode($decoded) : json_encode($default);
     }
     public function getIsEnableGradeAttr($value, $data = [])
     {
