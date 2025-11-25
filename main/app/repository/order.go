@@ -424,7 +424,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			}
 		}(),
 	}
-	if param.SaleBillUuids != "" {
+	if param.IsOnlyDataManage == 1 {
 		uuidList := strings.Split(param.SaleBillUuids, ",")
 		uuids := []uint64{}
 		for _, uuid := range uuidList {
