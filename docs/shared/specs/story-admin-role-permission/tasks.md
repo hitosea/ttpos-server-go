@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 23（仅 Go 代码）  
-**已完成**: 17（Phase 0 + Phase 0.5 + Phase 1 + Phase 2 + Phase 3）  
+**总任务数**: 24（仅 Go 代码）  
+**已完成**: 18（Phase 0 + Phase 0.5 + Phase 1 + Phase 2 + Phase 3 + WebSocket推送）  
 **进行中**: -  
-**完成率**: 74%
+**完成率**: 75%
 
 > **注意**: 本 Spec 仅涉及 Go Main 模块开发，不涉及 PHP Admin 和 Vue 前端模块。
 
@@ -196,6 +196,15 @@
   - **Leverage**: 现有 Service: `main/app/service/role_access.go`（权限筛选逻辑），Task 2.1-2.4 的实现
   - **Status**: ✅ 已完成，实现了完整的角色 CRUD 业务逻辑，包括角色名称验证、角色关联员工检查、权限更新、员工关联管理等功能。在 GetRoleDetail 中实现了叶子节点统计功能（已选择叶子节点数量和管理APP、收银机、点餐助手三个权限组的叶子节点数量之和）
 
+- [x] 2.6.1 在 UpdateRole 方法中添加 WebSocket 推送
+
+  - **Module**: Main - Service 层
+  - **File**: `main/app/service/role.go`
+  - **Purpose**: 在更新角色权限成功后推送 WebSocket 通知到前端
+  - **Requirements**: R2.8
+  - **Leverage**: 现有 WebSocket 推送: `main/app/service/staff.go:172-176`，`main/pkg/websocket/websocket.go`
+  - **Status**: ✅ 已完成，在 UpdateRole 方法中添加了 WebSocket 推送逻辑，使用 `websocket.PushClient` 异步推送 `UPDATE_PERMISSION` 消息，数据包含 `update_time` 和 `role_uuid`。仅在更新权限时推送，创建和删除角色不推送。
+
 - [ ] 2.7 编写 Service 单元测试
 
   - **Module**: Main - Service 层测试
@@ -214,7 +223,7 @@
   - **Purpose**: 实现角色管理 HTTP API 接口
   - **Requirements**: R1.1-R3.4
   - **Leverage**: 现有 API: `main/app/api/v1/shop/*_api.go`，Task 2.5-2.6 的 Service
-  - **Status**: ✅ 已完成，创建了 RoleHandler，实现了 GetRoleDetail, CreateRole, UpdateRole, DeleteRole, GetPermissionGroup 接口，URL 使用 snake_case。GetPermissionGroup 接口通过 `includeRouteNames` 参数指定返回"管理APP"、"收银机"、"点餐助手"三个权限组。注意：GetRoleList 已移除（角色列表功能在其他地方实现）
+  - **Status**: ✅ 已完成，创建了 RoleHandler，实现了 GetRoleDetail, CreateRole, UpdateRole, DeleteRole, GetPermissionGroup 接口，URL 使用 snake_case。DeleteRole 接口使用 DELETE 方法，参数通过请求体传递（`/api/v1/shop/role/delete`，Body: `{"uuid": xxx}`）。GetPermissionGroup 接口通过 `includeRouteNames` 参数指定返回"管理APP"、"收银机"、"点餐助手"三个权限组。注意：GetRoleList 已移除（角色列表功能在其他地方实现）
 
 - [x] 2.9 注册 API 路由
 

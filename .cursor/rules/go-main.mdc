@@ -19,6 +19,8 @@ description: Go Main 核心约束
 
 **data 必须是对象，不能是 null 或数组**
 
+**响应体中的切片必须使用 `make` 初始化，避免返回 null**
+
 完整代码示例请参考：`docs/agent/workflows/development/api-response-examples.md`
 
 ### 多语言字段规范（请求和响应）
@@ -144,8 +146,8 @@ description: Go Main 核心约束
 
 #### DELETE 请求
 
-- ✅ **必须使用 `ShouldBindQuery` 解析查询参数**
-- ✅ **Req 结构体字段必须使用 `form` tag**
+- ✅ **必须使用 `ShouldBindJSON` 解析查询参数**
+- ✅ **Req 结构体字段必须使用 `json` tag**
 - ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
 
 **总结：**
@@ -154,7 +156,7 @@ description: Go Main 核心约束
 | --------- | ----------------- | -------------- | --------------------------------- |
 | GET       | `ShouldBindQuery` | `form`         | `helper.HandleValidationError`    |
 | POST      | `ShouldBindJSON`  | `json`         | `helper.HandleValidationError`    |
-| DELETE    | `ShouldBindQuery` | `form`         | `helper.HandleValidationError`    |
+| DELETE    | `ShouldBindJSON` | `json`         | `helper.HandleValidationError`    |
 
 ---
 

@@ -113,6 +113,15 @@
             "update-mcp-token"
         ],
         "group": "build",
+    },
+    {
+        "label": "Go项目-验证数据库结构",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "verify-db-structure"
+        ],
+        "group": "build",
     }
 ]
 } 

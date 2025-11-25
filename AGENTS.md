@@ -40,6 +40,7 @@
 | 项目入门与结构     | `.cursor/rules/intro.mdc` · `.cursor/rules/structs.mdc`                                                          |
 | 工作流与知识管理   | `.cursor/rules/workflows.mdc` · `.cursor/rules/knowledge_management.mdc`                                         |
 | 命名/Go 主项目规范 | `.cursor/rules/go-main.mdc`                                                                                      |
+| 打印模块规范       | `.cursor/rules/go-printer.mdc`                                                                                   |
 | PHP 与数据库规范   | `.cursor/rules/php.mdc` · `.cursor/rules/database.mdc`                                                           |
 | API 与安全规范     | `.cursor/rules/api.mdc` · `.cursor/rules/security.mdc`                                                           |
 | 前端/Vue 规范      | `.cursor/rules/vue.mdc`                                                                                          |

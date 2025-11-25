@@ -27,6 +27,7 @@
     "node_modules": true,
     "certificate.pem": true,
     "ttpos-flutter": true,
+    "certificate": true,
   },
 
   // ===== 拼写检查 =====
@@ -84,7 +85,8 @@
     "ขอบคุณที่แวะมาหากัน",
     "สนับสนุนโดย",
     "ကုန်စည်",
-    "ပမာဏ"
+    "ပမာဏ",
+    "apikey"
   ],
 
   // ===== Go语言配置 =====

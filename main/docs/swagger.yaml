@@ -24235,6 +24235,10 @@ paths:
         in: query
         name: query_start_time
         type: integer
+      - description: 销售账单UUID列表，多个UUID用逗号分隔
+        in: query
+        name: sale_bill_uuids
+        type: string
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
         name: status
@@ -24310,6 +24314,10 @@ paths:
         in: query
         name: query_start_time
         type: integer
+      - description: 销售账单UUID列表，多个UUID用逗号分隔
+        in: query
+        name: sale_bill_uuids
+        type: string
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
         name: status
@@ -29494,6 +29502,10 @@ paths:
         in: query
         name: query_start_time
         type: integer
+      - description: 销售账单UUID列表，多个UUID用逗号分隔
+        in: query
+        name: sale_bill_uuids
+        type: string
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
         name: status
@@ -29649,6 +29661,10 @@ paths:
         in: query
         name: query_start_time
         type: integer
+      - description: 销售账单UUID列表，多个UUID用逗号分隔
+        in: query
+        name: sale_bill_uuids
+        type: string
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
         name: status
@@ -32141,7 +32157,7 @@ paths:
       tags:
       - 商家端.员工账号
   /shop/role/delete:
-    post:
+    delete:
       consumes:
       - application/json
       description: 删除角色（已关联员工的角色无法删除）

@@ -17,6 +17,7 @@ description: 项目结构快速定位
 | **新前端管理后台**   | `ttpos-flutter/apps/shop`    |
 | **新前端管理后台**   | `ttpos-flutter/apps/shop`     |
 | **Go Main 核心业务** | `main/app/`                  |
+| **打印模块（Main）** | `main/app/printer/` 详见 `go-printer.mdc` |
 | **PHP 管理后台**     | `admin/app/admin/`           |
 | **PHP 店铺后台**     | `admin/app/shop/`            |
 | **Go BMP 微服务**    | `ttpos-bmp/app/ttpos-*/`     |
@@ -75,7 +76,11 @@ main/app/
 │   └── resp/         # 响应数据
 ├── constant/         # 常量定义
 ├── errors/           # 错误处理
-└── event/            # 事件处理
+├── event/            # 事件处理
+└── printer/          # 打印模块（详见 .cursor/rules/go-printer.mdc）
+    ├── template/          # 标准打印模板（硬编码，按打印机型号）
+    ├── template_struct/   # 打印数据结构定义
+    └── pkg/               # 打印引擎和自定义模板配置
 ```
 
 ### 2. Admin 模块（PHP + ThinkPHP）
@@ -98,7 +103,7 @@ admin/
 │   └── seeds/              # 种子文件
 └── views/                  # 前端代码（Vue3）
     ├── admin/              # 管理后台前端
-    └── shop/               # 店铺后台前端 (它不是新的管理员端)
+    └── shop/               # 店铺后台前端 (它不是新的管理后台)
 ```
 
 ### 3. BMP 模块（Go + GoFrame）
