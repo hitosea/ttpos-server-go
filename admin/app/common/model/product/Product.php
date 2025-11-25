@@ -1574,12 +1574,17 @@ class Product extends BaseModel
                         'stock_num' => $item['productBom']['stock_num'], // 商品库存
                         'num' => intval($item['num']), // 商品数量
                         'sort' => $item['sort'], // 排序
+                        'add_price' => floatval($item['add_price'] ?? 0), // 加价金额
+                        'is_required' => intval($item['is_required'] ?? 0), // 是否必选 0-否 1-是
+                        'is_default' => intval($item['is_default'] ?? 0), // 是否默认 0-否 1-是
                     ];
                 }
                 $result['package_group'][] = [
                     'group_id' => $group['uuid'], // 套餐分组uuid
                     'group_name' => $group['name'], // 套餐分组名称
                     'group_name_text' => $group['group_name_text'], // 套餐分组名称
+                    'group_type' => intval($group['group_type'] ?? 0), // 分组类型 0-固定 1-可选
+                    'optional_count' => intval($group['optional_count'] ?? 0), // 可选数量
                     'product_list' => $productList, // 套餐分组商品列表
                 ];
             }

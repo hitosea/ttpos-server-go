@@ -142,10 +142,15 @@ class Product extends Controller
      *   @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
      *   @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *      @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
+     *      @Apidoc\Param("group_type", type="int", require=true, desc="套餐分组类型，0-固定，1-可选"),
+     *      @Apidoc\Param("optional_count", type="int", require=true, desc="套餐可选数量"),
      *      @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children = {
      *          @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
      *          @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
      *          @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
+     *          @Apidoc\Param("add_price", type="decimal", require=true, desc="加价金额"),
+     *          @Apidoc\Param("is_required", type="int", require=true, desc="是否必选，0-否，1-是"),
+     *          @Apidoc\Param("is_default", type="int", require=true, desc="是否默认，0-否，1-是"),
      *      }),
      *   }),
      * })
@@ -239,11 +244,16 @@ class Product extends Controller
      *  @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *     @Apidoc\Param("group_id", type="int", require=true, desc="套餐分组id"),
      *     @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
+     *     @Apidoc\Param("group_type", type="int", require=true, desc="套餐分组类型，0-固定，1-可选"),
+     *     @Apidoc\Param("optional_count", type="int", require=true, desc="套餐可选数量"),
      *     @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children = {
      *         @Apidoc\Param("item_id", type="int", require=true, desc="套餐分组商品id"),
      *         @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
      *         @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
      *         @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
+     *         @Apidoc\Param("add_price", type="decimal", require=true, desc="加价金额"),
+     *         @Apidoc\Param("is_required", type="int", require=true, desc="是否必选，0-否，1-是"),
+     *         @Apidoc\Param("is_default", type="int", require=true, desc="是否默认，0-否，1-是"),
      *     }),
      *   }),
      * })

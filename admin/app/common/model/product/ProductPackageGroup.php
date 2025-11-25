@@ -53,26 +53,53 @@ class ProductPackageGroup extends BaseModel
 
         $packageGroup = $data['package_group'] ?? [];
         foreach ($packageGroup as $item) {
+            // 支持 group_type 和 optional_count 字段
             $groupUuid = createUuid();
             $multiLanguageNameUuid = (new MultiLanguageName)->saveNames($item['group_name']);
+            $groupData = [
+                'group_type' => $item['group_type'] ?? 0, // 分组类型 0-固定 1-可选
+                'optional_count' => $item['optional_count'] ?? 0, // 可选数量
+            ];
+            
+            // 数据校验：当 group_type 为可选时，检查必选数量是否大于可选数量
+            if (($groupData['group_type'] ?? 0) == 1) {
+                $requiredCount = 0;
+                $groupProductList = $item['product_list'] ?? [];
+                foreach ($groupProductList as $groupItem) {
+                    if (($groupItem['is_required'] ?? 0) == 1) {
+                        $requiredCount++;
+                    }
+                }
+                $optionalCount = $groupData['optional_count'] ?? 0;
+                if ($requiredCount > $optionalCount) {
+                    throw new \Exception('必选不可大于可选数量');
+                }
+            }
+            
             $insertGroups[] = [
                 'uuid' => $groupUuid, // 套餐分组uuid
                 'name' => $item['group_name'], // 套餐分组名称
                 'multi_language_name_uuid' => $multiLanguageNameUuid, // 多语言名称uuid
                 'product_package_uuid' => $product['uuid'], // 套餐uuid
+                'group_type' => $groupData['group_type'], // 分组类型
+                'optional_count' => $groupData['optional_count'], // 可选数量
                 'create_time' => time(), // 创建时间
                 'update_time' => time(), // 更新时间
             ];
             $productIds = array_column($item['product_list'], 'product_id');
             $productBoms = ProductBom::whereIn('uuid', $productIds)->column('product_package_uuid', 'uuid');
             foreach ($item['product_list'] as $productItem) {
+                // 支持 is_required、is_default、add_price 字段，num 字段默认值为 1
                 $insertGroupItems[] = [
                     'uuid' => createUuid(), // 套餐分组商品uuid
                     'product_package_group_uuid' => $groupUuid, // 套餐分组uuid
                     'related_uuid' => $productBoms[$productItem['product_id']], // product_package_uuid
                     'product_bom_uuid' => $productItem['product_id'], // product_bom_uuid
-                    'num' => $productItem['num'] ?: 0, // 商品数量
-                    'sort' => $productItem['sort'] ?: 0, // 排序
+                    'num' => $productItem['num'] ?? 1, // 商品数量，默认值为 1
+                    'sort' => $productItem['sort'] ?? 0, // 排序
+                    'add_price' => $productItem['add_price'] ?? 0, // 加价金额，默认值为 0
+                    'is_required' => $productItem['is_required'] ?? 0, // 是否必选 0-否 1-是，默认值为 0
+                    'is_default' => $productItem['is_default'] ?? 0, // 是否默认 0-否 1-是，默认值为 0
                     'create_time' => time(), // 创建时间
                     'update_time' => time(), // 更新时间
                 ];
@@ -96,9 +123,12 @@ class ProductPackageGroup extends BaseModel
         // 新增或编辑套餐分组
         $groupList = $data['package_group'];
         foreach ($groupList as $item) {
+            // 支持 group_type 和 optional_count 字段
             $groupData = [
                 'name' => $item['group_name'], // 套餐分组名称
                 'product_package_uuid' => $product['uuid'], // 套餐uuid
+                'group_type' => $item['group_type'] ?? 0, // 分组类型 0-固定 1-可选
+                'optional_count' => $item['optional_count'] ?? 0, // 可选数量
             ];
             $groupUuid = $item['group_id'] ?? 0;
             if ($groupUuid == 0) {
@@ -121,15 +151,34 @@ class ProductPackageGroup extends BaseModel
                 }
             }
             $groupItemList = $item['product_list'] ?? [];
+            
+            // 数据校验：当 group_type 为可选时，检查必选数量是否大于可选数量
+            if (($groupData['group_type'] ?? 0) == 1) {
+                $requiredCount = 0;
+                foreach ($groupItemList as $groupItem) {
+                    if (($groupItem['is_required'] ?? 0) == 1) {
+                        $requiredCount++;
+                    }
+                }
+                $optionalCount = $groupData['optional_count'] ?? 0;
+                if ($requiredCount > $optionalCount) {
+                    throw new \Exception('必选不可大于可选数量');
+                }
+            }
+            
             $productIds = array_column($groupItemList, 'product_id');
             $productBoms = ProductBom::whereIn('uuid', $productIds)->column('product_package_uuid', 'uuid');
             foreach ($groupItemList as $item) {
+                // 支持 is_required、is_default、add_price 字段，num 字段默认值为 1
                 $itemData = [
                     'product_package_group_uuid' => $group['uuid'], // 套餐分组uuid 
                     'related_uuid' => $productBoms[$item['product_id']], // product_package_uuid
                     'product_bom_uuid' => $item['product_id'], // product_bom_uuid
-                    'num' => $item['num'] ?: 0, // 商品数量
-                    'sort' => $item['sort'] ?: 0, // 排序
+                    'num' => $item['num'] ?? 1, // 商品数量，默认值为 1
+                    'sort' => $item['sort'] ?? 0, // 排序
+                    'add_price' => $item['add_price'] ?? 0, // 加价金额，默认值为 0
+                    'is_required' => $item['is_required'] ?? 0, // 是否必选 0-否 1-是，默认值为 0
+                    'is_default' => $item['is_default'] ?? 0, // 是否默认 0-否 1-是，默认值为 0
                 ];
                 $groupItemId = $item['item_id'] ?? 0;
                 if ($groupItemId == 0) {
