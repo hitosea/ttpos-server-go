@@ -18,6 +18,7 @@ __debug_*
 /node_modules/
 /certificate
 /ttpos-flutter
+/pay-server
 
 # 编译和构建文件
 *.exe
