@@ -162,6 +162,16 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 		return errors.New("活动不存在")
 	}
 
+	// 检查活动状态：已结束和已失效的活动不可编辑
+	if activity.IsDisabled == constant.Yes {
+		return errors.WithMessage(errors.New("已失效的活动不可编辑"), "已失效的活动不可编辑")
+	}
+	now := time.Now().Unix()
+	status := activity.GetStatus(now, "")
+	if status == constant.ActivityStatusEnded {
+		return errors.WithMessage(errors.New("已结束的活动不可编辑"), "已结束的活动不可编辑")
+	}
+
 	// 如果是阶梯满减，需要排序
 	rules := req.Rules
 	if req.ReductionType == constant.FullReductionTypeStep {
