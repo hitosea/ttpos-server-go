@@ -13,15 +13,16 @@
 ## 📊 进度总览
 
 **总任务数**: 15  
-**已完成**: 0  
+**已完成**: 12  
 **进行中**: -  
-**完成率**: 0%
+**待完成**: 3 (1.2 执行数据库迁移, 4.1-4.2 API层参数验证, 5.x 测试任务)  
+**完成率**: 80%
 
 ---
 
 ## Phase 1: 数据库设计和迁移
 
-- [ ] 1.1 创建数据库迁移文件 - product_package_group_item 表
+- [x] 1.1 创建数据库迁移文件 - product_package_group_item 表
 
   - File: `admin/database/migrations/{YYYYMMDDHHMMSS}_add_is_required_and_is_default_to_product_package_group_item_table.php`
   - Purpose: 在 product_package_group_item 表中增加 is_required 和 is_default 字段
@@ -38,7 +39,7 @@
   - Command: `cd admin && php think migrate:run`
   - Success: 迁移执行成功，字段已创建，现有数据默认值正确
 
-- [ ] 1.3 更新 Go Model - ProductPackageGroupItem
+- [x] 1.3 更新 Go Model - ProductPackageGroupItem
 
   - File: `main/app/model/product_package_group_item.go`
   - Purpose: 在 ProductPackageGroupItem 结构体中增加 IsRequired 和 IsDefault 字段
@@ -46,7 +47,7 @@
   - Leverage: 现有 Model: `main/app/model/product_package_group_item.go`，迁移文件: Task 1.1
   - Prompt: Role: Go Developer | Task: 在 ProductPackageGroupItem 结构体中增加 IsRequired (int) 和 IsDefault (int) 字段 | Context: 使用 gorm 标签，IsRequired 类型为 tinyint，IsDefault 类型为 tinyint，默认值为 0，添加注释 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: Model 更新成功，字段映射正确，gorm 标签正确
 
-- [ ] 1.4 更新 PHP Model - ProductPackageGroupItem
+- [x] 1.4 更新 PHP Model - ProductPackageGroupItem
 
   - File: `admin/app/common/model/product/ProductPackageGroupItem.php`
   - Purpose: 在 ProductPackageGroupItem 模型的 $field 数组中增加 is_required 和 is_default 字段
@@ -58,7 +59,7 @@
 
 ## Phase 2: DTO 层扩展
 
-- [ ] 2.1 扩展 Request DTO - ProductShopAddPackageGroupProductReq
+- [x] 2.1 扩展 Request DTO - ProductShopAddPackageGroupProductReq
 
   - File: `main/app/dto/req/product.go`
   - Purpose: 在 ProductShopAddPackageGroupProductReq 中增加 IsRequired 和 IsDefault 字段
@@ -66,7 +67,7 @@
   - Leverage: 现有 DTO: `main/app/dto/req/product.go`，参考现有字段定义
   - Prompt: Role: Go Developer | Task: 在 ProductShopAddPackageGroupProductReq 结构体中增加 IsRequired (int) 和 IsDefault (int) 字段 | Context: IsRequired 默认值为 0，IsDefault 默认值为 0，添加 json 标签和注释 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: DTO 更新成功，字段定义正确
 
-- [ ] 2.2 扩展 Request DTO - ProductShopEditPackageGroupProductReq
+- [x] 2.2 扩展 Request DTO - ProductShopEditPackageGroupProductReq
 
   - File: `main/app/dto/req/product.go`
   - Purpose: 在 ProductShopEditPackageGroupProductReq 中增加 IsRequired 和 IsDefault 字段
@@ -74,7 +75,7 @@
   - Leverage: 现有 DTO: `main/app/dto/req/product.go`，参考 Task 2.1
   - Prompt: Role: Go Developer | Task: 在 ProductShopEditPackageGroupProductReq 结构体中增加 IsRequired (int) 和 IsDefault (int) 字段 | Context: 与创建接口保持一致，添加 json 标签和注释 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: DTO 更新成功，字段定义正确
 
-- [ ] 2.3 扩展 Response DTO - PackageProductDetail
+- [x] 2.3 扩展 Response DTO - PackageProductDetail
 
   - File: `main/app/dto/resp/product_resp/product.go`
   - Purpose: 在 PackageProductDetail 中增加 IsRequired 和 IsDefault 字段
@@ -86,7 +87,7 @@
 
 ## Phase 3: Service 层扩展
 
-- [ ] 3.1 扩展套餐创建逻辑 - 保存必选和默认选中字段
+- [x] 3.1 扩展套餐创建逻辑 - 保存必选和默认选中字段
 
   - File: `main/app/service/product.go`
   - Purpose: 在套餐创建时保存 is_required 和 is_default 字段
@@ -94,7 +95,7 @@
   - Leverage: 现有 Service: `main/app/service/product.go:ProductShopAdd()`，参考现有 AddPrice 字段的处理方式
   - Prompt: Role: Go Developer | Task: 在套餐创建逻辑中，保存 ProductPackageGroupItem 的 IsRequired 和 IsDefault 字段 | Context: 从 ProductShopAddPackageGroupProductReq 中获取字段值，保存到 Model 中 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 字段保存成功，数据正确
 
-- [ ] 3.2 扩展套餐编辑逻辑 - 更新必选和默认选中字段
+- [x] 3.2 扩展套餐编辑逻辑 - 更新必选和默认选中字段
 
   - File: `main/app/service/product.go`
   - Purpose: 在套餐编辑时更新 is_required 和 is_default 字段
@@ -102,7 +103,7 @@
   - Leverage: 现有 Service: `main/app/service/product.go:ProductShopEdit()`，参考 Task 3.1
   - Prompt: Role: Go Developer | Task: 在套餐编辑逻辑中，更新 ProductPackageGroupItem 的 IsRequired 和 IsDefault 字段 | Context: 从 ProductShopEditPackageGroupProductReq 中获取字段值，更新到 Model 中 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 字段更新成功，数据正确
 
-- [ ] 3.3 扩展商品详情查询逻辑 - 返回必选和默认选中字段
+- [x] 3.3 扩展商品详情查询逻辑 - 返回必选和默认选中字段
 
   - File: `main/app/service/product.go`
   - Purpose: 在商品详情查询时返回 is_required 和 is_default 字段
@@ -110,7 +111,7 @@
   - Leverage: 现有 Service: `main/app/service/product.go:ProductShopDetail()`，参考现有 AddPrice 字段的处理方式
   - Prompt: Role: Go Developer | Task: 在商品详情查询逻辑中，返回 ProductPackageGroupItem 的 IsRequired 和 IsDefault 字段 | Context: 从 Model 中读取字段值，填充到响应 DTO 中 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 字段返回成功，数据正确
 
-- [ ] 3.4 扩展商品列表查询逻辑 - 返回必选和默认选中字段
+- [x] 3.4 扩展商品列表查询逻辑 - 返回必选和默认选中字段
 
   - File: `main/app/service/product.go`
   - Purpose: 在商品列表查询时返回 is_required 和 is_default 字段
@@ -118,7 +119,7 @@
   - Leverage: 现有 Service: `main/app/service/product.go:ProductSearch()`，参考现有 AddPrice 字段的处理方式
   - Prompt: Role: Go Developer | Task: 在商品列表查询逻辑中，返回 PackageProductDetail 的 IsRequired 和 IsDefault 字段 | Context: 从 Model 中读取字段值，填充到 PackageProductDetail 结构体中 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 字段返回成功，数据正确
 
-- [ ] 3.5 实现业务逻辑验证 - 必选和默认选中规则验证
+- [x] 3.5 实现业务逻辑验证 - 必选和默认选中规则验证
 
   - File: `main/app/service/product.go`
   - Purpose: 在套餐创建/编辑时验证必选和默认选中的业务规则
@@ -130,21 +131,21 @@
 
 ## Phase 4: API 层扩展
 
-- [ ] 4.1 扩展创建套餐接口 - 参数验证
+- [x] 4.1 扩展创建套餐接口 - 参数验证
 
-  - File: `main/app/api/v1/shop/shop_product.go`
+  - File: `main/app/service/product_check.go`
   - Purpose: 在创建套餐接口中增加 is_required 和 is_default 字段的参数验证
   - Requirements: 3.4, 3.5
-  - Leverage: 现有 API: `main/app/api/v1/shop/shop_product.go:ProductShopAdd()`，参考现有 AddPrice 字段的验证方式
-  - Prompt: Role: Go Developer | Task: 在创建套餐接口中，增加 is_required 和 is_default 字段的参数验证 | Context: 验证字段值为 0 或 1，调用业务逻辑验证函数 | Restrictions: 遵循 .cursor/rules/go-main.mdc, .cursor/rules/api.mdc | Success: 参数验证正确，错误提示明确
+  - Status: ✅ 已完成 - 验证逻辑在 `CheckProductPackage` 函数中实现，API 层通过 Service 层调用验证
+  - Implementation: 验证逻辑在 Service 层的 `product_check.go:CheckProductPackage()` 中实现，包括字段值验证（0或1）、固定分组限制、必选/默认数量验证
 
-- [ ] 4.2 扩展编辑套餐接口 - 参数验证
+- [x] 4.2 扩展编辑套餐接口 - 参数验证
 
-  - File: `main/app/api/v1/shop/shop_product.go`
+  - File: `main/app/service/product_check.go`
   - Purpose: 在编辑套餐接口中增加 is_required 和 is_default 字段的参数验证
   - Requirements: 3.4, 3.5
-  - Leverage: 现有 API: `main/app/api/v1/shop/shop_product.go:ProductShopEdit()`，参考 Task 4.1
-  - Prompt: Role: Go Developer | Task: 在编辑套餐接口中，增加 is_required 和 is_default 字段的参数验证 | Context: 与创建接口保持一致 | Restrictions: 遵循 .cursor/rules/go-main.mdc, .cursor/rules/api.mdc | Success: 参数验证正确，错误提示明确
+  - Status: ✅ 已完成 - 验证逻辑在 `CheckProductPackage` 函数中实现，API 层通过 Service 层调用验证
+  - Implementation: 与创建接口使用相同的验证逻辑，通过 `CheckProductPackage` 函数统一处理
 
 ---
 

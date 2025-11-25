@@ -105,15 +105,20 @@ graph TD
 
 ```sql
 ALTER TABLE `ttpos_product_package_group_item` 
-ADD COLUMN `is_required` TINYINT NOT NULL DEFAULT 0 COMMENT '必选 0-不必选 1-必选' AFTER `add_price`,
-ADD COLUMN `is_default` TINYINT NOT NULL DEFAULT 0 COMMENT '默认选中 0-默认不选中 1-默认选中' AFTER `is_required`;
+ADD COLUMN `is_required` INT(10) NOT NULL DEFAULT 0 COMMENT '必选 0-不必选 1-必选' AFTER `add_price`,
+ADD COLUMN `is_default` INT(10) NOT NULL DEFAULT 0 COMMENT '默认选中 0-默认不选中 1-默认选中' AFTER `is_required`;
 ```
 
 **字段说明**:
 | 字段 | 类型 | 说明 | 约束 |
 |------|------|------|------|
-| is_required | TINYINT | 必选（0-不必选，1-必选） | DEFAULT 0 |
-| is_default | TINYINT | 默认选中（0-不默认选中，1-默认选中） | DEFAULT 0 |
+| is_required | INT(10) | 必选（0-不必选，1-必选） | DEFAULT 0 |
+| is_default | INT(10) | 默认选中（0-不默认选中，1-默认选中） | DEFAULT 0 |
+
+**实现说明**: 
+- 实际实现中使用 `INT(10)` 类型（与迁移文件一致）
+- 迁移文件: `admin/database/migrations/20251125112939_add_is_required_and_is_default_to_product_package_group_item_table.php`
+- 种子文件: `admin/database/seeds/shop_01.sql` 已同步更新
 
 **字段规则**:
 - 固定分组时，`is_required` 和 `is_default` 必须为0
@@ -249,6 +254,11 @@ type ProductShopEditPackageGroupProductReq struct {
 
 在套餐分组商品的响应中返回 `is_required` 和 `is_default` 字段。
 
+**实现说明**:
+- 扩展了 `ProductPackageSubProduct` 结构体，添加了 `IsRequired` 和 `IsDefault` 字段
+- 在 `GetRespPackageSubProductGroupList()` 方法中返回这些字段
+- 响应路径: `PackageSubProductGroups.List[].Products.List[].IsRequired` 和 `IsDefault`
+
 ### 2. 收银端接口
 
 #### 2.1 商品列表接口
@@ -327,8 +337,8 @@ type ProductPackageGroupItem struct {
 	Num                     float64 `json:"num" gorm:"type:decimal(12,4);not null;default:0;comment:数量"`
 	Sort                    int     `json:"sort" gorm:"index:idx_sort;not null;default:0;comment:排序"`
 	AddPrice                float64 `json:"add_price" gorm:"type:decimal(22,4);not null;default:0.00;comment:加价金额，表示该商品需要加价多少钱"`
-	IsRequired              int     `json:"is_required" gorm:"type:tinyint;not null;default:0;comment:必选 0-不必选 1-必选"` // ⭐ 新增
-	IsDefault               int     `json:"is_default" gorm:"type:tinyint;not null;default:0;comment:默认选中 0-默认不选中 1-默认选中"` // ⭐ 新增
+	IsRequired              int     `json:"is_required" gorm:"type:int(10);not null;default:0;comment:必选 0-不必选 1-必选"` // ⭐ 新增
+	IsDefault               int     `json:"is_default" gorm:"type:int(10);not null;default:0;comment:默认选中 0-默认不选中 1-默认选中"` // ⭐ 新增
 
 	ProductBom          *ProductBom          `gorm:"foreignKey:product_bom_uuid;references:uuid"`
 	ProductPackage      *ProductPackage      `gorm:"foreignKey:related_uuid;references:uuid"`
@@ -351,11 +361,13 @@ protected $field = [
     'add_price',
     'is_required',  // ⭐ 新增
     'is_default',   // ⭐ 新增
-    'created_at',
-    'updated_at',
-    'deleted_at',
+    'create_time',
+    'update_time',
+    'delete_time',
 ];
 ```
+
+**说明**: PHP Model 已更新，添加了 `is_required` 和 `is_default` 字段到 `$field` 数组中。
 
 ### 2. DTO 层扩展
 
@@ -405,44 +417,44 @@ type PackageProductDetail struct {
 
 #### 3.1 业务逻辑验证
 
-**文件**: `main/app/service/product.go`
+**文件**: `main/app/service/product_check.go`
 
 在套餐创建和编辑时，增加必选和默认选中的验证逻辑：
 
+**实现位置**: `CheckProductPackage` 函数中
+
+**验证逻辑**:
+1. 验证 `is_required` 和 `is_default` 字段值必须为 0 或 1
+2. 固定分组时，验证 `is_required` 和 `is_default` 必须为0
+3. 可选分组时，统计必选数量和默认数量
+4. 验证必选数量不能大于可选数量
+5. 验证默认数量不能大于可选数量
+
+**关键代码片段**:
 ```go
-// 验证必选和默认选中规则
-func (s *ProductService) validateRequiredAndDefault(group *model.ProductPackageGroup, items []*model.ProductPackageGroupItem) error {
-	// 固定分组时，必选和默认选中必须为0
-	if group.GroupType == 0 {
-		for _, item := range items {
-			if item.IsRequired != 0 || item.IsDefault != 0 {
-				return errors.New("固定分组的必选和默认选中必须为0")
-			}
-		}
-		return nil
-	}
-
-	// 可选分组时，验证必选数量和默认数量
-	requiredCount := 0
-	defaultCount := 0
-	for _, item := range items {
-		if item.IsRequired == 1 {
-			requiredCount++
-		}
-		if item.IsDefault == 1 {
-			defaultCount++
-		}
-	}
-
-	if requiredCount > group.OptionalCount {
-		return errors.New("必选数量不能大于可选数量")
-	}
-
-	if defaultCount > group.OptionalCount {
-		return errors.New("默认数量不能大于可选数量")
-	}
-
-	return nil
+// 验证必选和默认选中字段
+if product.IsRequired != 0 && product.IsRequired != 1 {
+    return nil, errors.New("必选字段必须为0（不必选）或1（必选）")
+}
+if product.IsDefault != 0 && product.IsDefault != 1 {
+    return nil, errors.New("默认选中字段必须为0（不默认选中）或1（默认选中）")
+}
+// 固定分组时，必选和默认选中必须为0
+if group.GroupType == 0 {
+    if product.IsRequired != 0 {
+        return nil, errors.New("固定分组的必选必须为0")
+    }
+    if product.IsDefault != 0 {
+        return nil, errors.New("固定分组的默认选中必须为0")
+    }
+}
+// 验证必选数量不能大于可选数量
+if requiredCount > group.OptionalCount {
+    return nil, errors.New("必选数量不能大于可选数量")
+}
+// 验证默认数量不能大于可选数量
+if defaultCount > group.OptionalCount {
+    return nil, errors.New("默认数量不能大于可选数量")
 }
 ```
 
@@ -452,15 +464,64 @@ func (s *ProductService) validateRequiredAndDefault(group *model.ProductPackageG
 
 在构建 `PackageProductDetail` 时，增加 `is_required` 和 `is_default` 字段：
 
+**实现位置**: `FormatProducts` 函数中
+
+**关键代码片段**:
 ```go
 productDetail := product_resp.PackageProductDetail{
-	Detail:     productDetailResp,
-	Num:        item.Num,
-	AddPrice:   item.AddPrice,
-	IsRequired: item.IsRequired, // ⭐ 新增
-	IsDefault:  item.IsDefault,  // ⭐ 新增
-	CanEdit:    canEdit,
+    Detail: product_resp.Product{...},
+    Num:        item.Num,
+    AddPrice:   item.AddPrice,
+    IsRequired: item.IsRequired, // ⭐ 已实现
+    IsDefault:  item.IsDefault,  // ⭐ 已实现
 }
+productDetail.CanEdit = productDetail.GetCanEdit()
+```
+
+#### 3.3 商品详情接口扩展
+
+**文件**: `main/app/model/product.go`
+
+在 `GetRespPackageSubProductGroupList()` 方法中，返回 `is_required` 和 `is_default` 字段：
+
+**关键代码片段**:
+```go
+products = append(products, product_resp.ProductPackageSubProduct{
+    Uuid:             product.Uuid,
+    BomUuid:          product.ProductBomUuid,
+    ProductUuid:      product.ProductPackage.Uuid,
+    LocaleName:       product.ProductPackage.MultiLanguageName.GetNames(),
+    FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
+    Num:              product.Num,
+    Price:            product.ProductBom.Price,
+    IsRequired:       product.IsRequired, // ⭐ 已实现
+    IsDefault:        product.IsDefault,  // ⭐ 已实现
+})
+```
+
+#### 3.4 套餐创建和编辑逻辑扩展
+
+**文件**: `main/app/service/product.go`
+
+在 `SaveProductPackageGroup` 函数中，保存和更新 `is_required` 和 `is_default` 字段：
+
+**关键代码片段**:
+```go
+// 创建新商品时
+productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
+    // ... 其他字段 ...
+    AddPrice:   item.AddPrice,
+    IsRequired: item.IsRequired, // ⭐ 已实现
+    IsDefault:  item.IsDefault,  // ⭐ 已实现
+})
+
+// 更新现有商品时
+productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
+    // ... 其他字段 ...
+    "add_price":   item.AddPrice,
+    "is_required": item.IsRequired, // ⭐ 已实现
+    "is_default":  item.IsDefault,  // ⭐ 已实现
+}, commonRepo.WhereByUuid(item.Uuid))
 ```
 
 ---
@@ -516,7 +577,76 @@ productDetail := product_resp.PackageProductDetail{
 
 ---
 
+## ✅ 实现状态
+
+### 已完成的功能
+
+1. ✅ **数据库迁移文件**: 已创建迁移文件和种子文件
+   - 迁移文件: `admin/database/migrations/20251125112939_add_is_required_and_is_default_to_product_package_group_item_table.php`
+   - 种子文件: `admin/database/seeds/shop_01.sql` 已同步更新
+
+2. ✅ **Go Model**: `ProductPackageGroupItem` 已添加 `IsRequired` 和 `IsDefault` 字段
+   - 文件: `main/app/model/product_package_group_item.go`
+   - 字段类型: `int`，gorm 标签: `type:int(10)`
+
+3. ✅ **PHP Model**: `ProductPackageGroupItem` 已添加字段到 `$field` 数组
+   - 文件: `admin/app/common/model/product/ProductPackageGroupItem.php`
+
+4. ✅ **Request DTO**: 
+   - `ProductShopAddPackageGroupProductReq` 已扩展
+   - `ProductShopEditPackageGroupProductReq` 已扩展
+   - 文件: `main/app/dto/req/product.go`
+
+5. ✅ **Response DTO**: 
+   - `PackageProductDetail` 已扩展（商品列表接口）
+   - `ProductPackageSubProduct` 已扩展（商品详情接口）
+   - 文件: `main/app/dto/resp/product_resp/product.go`
+
+6. ✅ **Service 层**: 
+   - 套餐创建逻辑: `SaveProductPackageGroup` 函数中已保存必选和默认选中字段
+   - 套餐编辑逻辑: `SaveProductPackageGroup` 函数中已更新必选和默认选中字段
+   - 商品列表查询: `FormatProducts` 函数中已返回必选和默认选中字段
+   - 商品详情查询: `GetRespPackageSubProductGroupList` 方法中已返回必选和默认选中字段
+   - 同步功能: `SyncProduct` 函数中已同步必选和默认选中字段
+
+7. ✅ **业务逻辑验证**: 
+   - 文件: `main/app/service/product_check.go`
+   - 函数: `CheckProductPackage`
+   - 验证内容:
+     - 字段值验证（0或1）
+     - 固定分组限制（必选和默认选中必须为0）
+     - 必选数量验证（不能大于可选数量）
+     - 默认数量验证（不能大于可选数量）
+
+8. ✅ **API 层**: 
+   - 创建套餐接口: 通过 Service 层调用验证逻辑
+   - 编辑套餐接口: 通过 Service 层调用验证逻辑
+   - 商品详情接口: 已返回必选和默认选中字段
+   - 商品列表接口: 已返回必选和默认选中字段
+
+### 待完成的任务
+
+1. ⏳ **数据库迁移执行**: 需要手动执行迁移命令
+   ```bash
+   cd admin && php think migrate:run
+   ```
+
+2. ⏳ **测试任务**: Phase 5 的单元测试、集成测试和端到端测试
+   - 单元测试: Model 字段映射测试
+   - 集成测试: API 接口测试
+   - 端到端测试: 完整流程测试
+
+### 实现说明
+
+- **验证逻辑位置**: 业务逻辑验证在 `main/app/service/product_check.go:CheckProductPackage()` 函数中实现，API 层通过 Service 层调用验证，符合 Go Main 三层架构规范
+- **字段类型**: 数据库使用 `INT(10)` 类型（与迁移文件一致），Go Model 使用 `int` 类型
+- **向后兼容**: 所有新增字段都有默认值（0），现有数据不受影响
+- **代码复用**: 复用了现有的套餐创建、编辑和查询流程，最小化代码变更
+
+---
+
 **版本**: v1.0.0  
 **创建日期**: 2025-11-25  
+**最后更新**: 2025-11-25  
 **维护者**: 开发组
 
