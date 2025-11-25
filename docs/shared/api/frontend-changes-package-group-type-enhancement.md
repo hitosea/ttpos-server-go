@@ -701,8 +701,8 @@
 
 ## 📚 相关文档
 
-- 需求文档: `docs/shared/specs/story-shop-package-group-type-enhancement/requirements.md`
-- 设计文档: `docs/shared/specs/story-shop-package-group-type-enhancement/design.md`
+- 需求文档: `docs/shared/specs/active/story-shop-package-group-type-enhancement/requirements.md`
+- 设计文档: `docs/shared/specs/active/story-shop-package-group-type-enhancement/design.md`
 - 套餐分组类型功能文档: `docs/shared/api/frontend-changes-package-group-type.md`
 - API 文档: Swagger UI (`/apidoc/index.html`)
 

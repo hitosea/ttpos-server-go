@@ -367,7 +367,7 @@
 
 ```bash
 # 查看总任务数
-grep -c "^- \[" docs/shared/specs/story-{module}-{feature}/tasks.md
+grep -c "^- \[" docs/shared/specs/active/story-{module}-{feature}/tasks.md
 
 # 查看已完成任务数
 grep -c "^- \[x\]" docs/shared/specs/story-{module}-{feature}/tasks.md
@@ -376,7 +376,7 @@ grep -c "^- \[x\]" docs/shared/specs/story-{module}-{feature}/tasks.md
 grep -c "^- \[ \]" docs/shared/specs/story-{module}-{feature}/tasks.md
 
 # 计算完成率
-echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/story-{module}-{feature}/tasks.md) * 100 / $(grep -c "^- \[" docs/shared/specs/story-{module}-{feature}/tasks.md)" | bc
+echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/story-{module}-{feature}/tasks.md) * 100 / $(grep -c "^- \[" docs/shared/specs/active/story-{module}-{feature}/tasks.md)" | bc
 ```
 
 ### 执行流程

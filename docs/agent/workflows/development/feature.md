@@ -7,7 +7,7 @@
 ## 流程概览
 
 ```
-历史搜索 → SP评估 → 创建Spec → 选择技术栈 → 代码实现 → 测试 → 提测 → 验收 → 上线
+历史搜索 → SP评估 → 创建Spec → 选择技术栈 → 代码实现 → 测试 → 提测 → 验收 → 上线 → 归档
 ```
 
 **时间**: SP1-3: 1-2 天, SP5: 2-3 天
@@ -77,7 +77,7 @@ ELSE 继续 Step 3
 ### 创建文件
 
 ```bash
-docs/shared/specs/story-{module}-{feature}/
+docs/shared/specs/active/story-{module}-{feature}/
 ├── requirements.md  # 需求+AC
 ├── design.md        # 设计+架构
 └── tasks.md         # 任务清单 ⭐

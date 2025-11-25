@@ -440,8 +440,8 @@
 
 ## 📚 相关文档
 
-- 需求文档: `docs/shared/specs/story-shop-package-group-type/requirements.md`
-- 设计文档: `docs/shared/specs/story-shop-package-group-type/design.md`
+- 需求文档: `docs/shared/specs/active/story-shop-package-group-type/requirements.md`
+- 设计文档: `docs/shared/specs/active/story-shop-package-group-type/design.md`
 - API 文档: Swagger UI (`/apidoc/index.html`)
 
 ---

@@ -19,7 +19,7 @@
 - **Related Docs**（相对路径）：
   - `docs/agent/workflows/feature-development.md`
   - `docs/human/README.md`
-  - `docs/shared/specs/story-order-quick-payment/requirements.md`
+  - `docs/shared/specs/active/story-order-quick-payment/requirements.md`
 - **Related Tickets/Specs**：
   - `story-order-quick-payment`
 

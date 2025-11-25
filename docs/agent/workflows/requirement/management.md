@@ -35,9 +35,9 @@
 ```
 想法 → /propose → 填写提案 → 需求评审 →
   ├─ 批准 → /create-spec → 填写 requirements/design/tasks → SP评估 →
-  │   ├─ SP ≤ 5 → 进 Sprint → 开发
+  │   ├─ SP ≤ 5 → 进 Sprint → 开发 → 上线 → /archive-spec
   │   └─ SP > 5 → 拆分 Spec → 重新评估
-  └─ 拒绝 → 归档
+  └─ 拒绝/取消 → 归档 或 /deprecate-spec
 ```
 
 ---
@@ -53,7 +53,7 @@
 /propose quick-payment
 ```
 
-**输出产物**: `docs/team/proposals/{YYYY-MM-DD}-quick-payment.md`
+**输出产物**: `docs/team/proposals/{YYYY-MM}/quick-payment.md`
 
 **检查清单**:
 
@@ -123,7 +123,7 @@
 /create-spec story-order-quick-payment
 ```
 
-**输出产物**: `docs/shared/specs/story-order-quick-payment/`
+**输出产物**: `docs/shared/specs/active/story-order-quick-payment/`
 
 - `requirements.md` - 需求规格
 - `design.md` - 技术设计

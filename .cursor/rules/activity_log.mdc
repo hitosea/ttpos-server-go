@@ -191,7 +191,7 @@ AI 执行:
      | 14:30 | /create-spec | story-pos-quick-payment | ✅ | 创建Spec |
 
 AI 回复:
-  "✅ Spec 已创建: docs/shared/specs/story-pos-quick-payment/"
+  "✅ Spec 已创建: docs/shared/specs/active/story-pos-quick-payment/"
 
   (不提及日志记录，静默完成)
 ```
