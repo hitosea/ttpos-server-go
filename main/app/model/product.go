@@ -382,8 +382,10 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 			})
 		}
 		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
-			Uuid:       packageSubProductGroup.Uuid,
-			LocaleName: packageSubProductGroup.MultiLanguageName.GetNames(),
+			Uuid:          packageSubProductGroup.Uuid,
+			LocaleName:    packageSubProductGroup.MultiLanguageName.GetNames(),
+			GroupType:     packageSubProductGroup.GroupType,
+			OptionalCount: packageSubProductGroup.OptionalCount,
 			Products: product_resp.ProductPackageSubProductList{
 				List: products,
 			},

@@ -487,8 +487,8 @@ type ProductPackageSubProduct struct {
 	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
 	Num              float64            `json:"num"`                // 套餐子商品数量
 	Price            float64            `json:"price"`              // 套餐子商品价格
-	IsRequired       int                `json:"is_required"`       // 必选 0-不必选 1-必选
-	IsDefault        int                `json:"is_default"`        // 默认选中 0-默认不选中 1-默认选中
+	IsRequired       int                `json:"is_required"`        // 必选 0-不必选 1-必选
+	IsDefault        int                `json:"is_default"`         // 默认选中 0-默认不选中 1-默认选中
 }
 
 type ProductPrinter struct {
@@ -502,9 +502,11 @@ type ProductPackageSubProductList struct {
 }
 
 type ProductPackageSubProductGroup struct {
-	Uuid       uint64                       `json:"uuid"`        // 套餐子商品分组UUID
-	LocaleName dto.LocaleResponse           `json:"locale_name"` // 套餐子商品分组名称
-	Products   ProductPackageSubProductList `json:"products"`    // 套餐子商品列表
+	Uuid          uint64                       `json:"uuid"`           // 套餐子商品分组UUID
+	LocaleName    dto.LocaleResponse           `json:"locale_name"`    // 套餐子商品分组名称
+	GroupType     int                          `json:"group_type"`     // 分组类型 0-固定 1-可选
+	OptionalCount int                          `json:"optional_count"` // 可选数量，表示本组商品中要求选择多少个商品
+	Products      ProductPackageSubProductList `json:"products"`       // 套餐子商品列表
 }
 
 type ProductPackageSubProductGroupList struct {

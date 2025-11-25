@@ -159,9 +159,53 @@
 
 **响应格式变更**:
 
-商品详情接口主要用于查看商品信息。对于套餐商品，分组信息会在商品列表接口中返回（见下方说明）。
+在套餐商品的响应中，`package_sub_product_groups.list[]` 数组中每个分组对象新增以下字段：
 
-**注意**: 商品详情接口返回的 `package_sub_product_groups` 是套餐子商品分组列表，用于展示，不包含必选和默认选中字段。编辑套餐时请使用商品列表接口或创建/编辑接口返回的数据。
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "package_sub_product_groups": {
+      "list": [
+        {
+          "uuid": 789012,
+          "locale_name": {
+            "zh": "饮料",
+            "th": "Drink"
+          },
+          "group_type": 1,              // ⭐ 新增：分组类型 0-固定 1-可选
+          "optional_count": 2,          // ⭐ 新增：可选数量
+          "products": {
+            "list": [
+              {
+                "uuid": 345678,
+                "bom_uuid": 123456,
+                "product_uuid": 111222,
+                "num": 1,
+                "price": 0,
+                "is_required": 1,    // ⭐ 新增：必选
+                "is_default": 0      // ⭐ 新增：默认选中
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+**字段说明**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `group_type` | int | 分组类型：0-固定，1-可选 |
+| `optional_count` | int | 可选数量，表示本组商品中要求选择多少个商品 |
+| `is_required` | int | 必选：0-不必选，1-必选 |
+| `is_default` | int | 默认选中：0-不默认选中，1-默认选中 |
+
+**注意**: 商品详情接口返回的 `package_sub_product_groups` 现在包含完整的分组信息（分组类型、可选数量、必选和默认选中），可以用于编辑套餐时的数据回显。
 
 ---
 

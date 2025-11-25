@@ -252,12 +252,15 @@ type ProductShopEditPackageGroupProductReq struct {
 
 **响应数据扩展**:
 
-在套餐分组商品的响应中返回 `is_required` 和 `is_default` 字段。
+在套餐分组商品的响应中返回 `group_type`、`optional_count`、`is_required` 和 `is_default` 字段。
 
 **实现说明**:
+- 扩展了 `ProductPackageSubProductGroup` 结构体，添加了 `GroupType` 和 `OptionalCount` 字段
 - 扩展了 `ProductPackageSubProduct` 结构体，添加了 `IsRequired` 和 `IsDefault` 字段
 - 在 `GetRespPackageSubProductGroupList()` 方法中返回这些字段
-- 响应路径: `PackageSubProductGroups.List[].Products.List[].IsRequired` 和 `IsDefault`
+- 响应路径: 
+  - `PackageSubProductGroups.List[].GroupType` 和 `OptionalCount`
+  - `PackageSubProductGroups.List[].Products.List[].IsRequired` 和 `IsDefault`
 
 ### 2. 收银端接口
 
@@ -402,7 +405,7 @@ type ProductShopEditPackageGroupProductReq struct {
 **文件**: `main/app/dto/resp/product_resp/product.go`
 
 ```go
-// PackageProductDetail 套餐商品详情
+// PackageProductDetail 套餐商品详情（商品列表接口使用）
 type PackageProductDetail struct {
 	Detail     Product `json:"detail"`      // 商品详情
 	Num        float64 `json:"num"`         // 商品数量，分组中item的数量
@@ -410,6 +413,28 @@ type PackageProductDetail struct {
 	IsRequired int     `json:"is_required"` // ⭐ 新增：必选 0-不必选 1-必选
 	IsDefault  int     `json:"is_default"`  // ⭐ 新增：默认选中 0-默认不选中 1-默认选中
 	CanEdit    bool    `json:"can_edit"`    // 是否可以编辑
+}
+
+// ProductPackageSubProductGroup 套餐子商品分组（商品详情接口使用）
+type ProductPackageSubProductGroup struct {
+	Uuid          uint64                       `json:"uuid"`           // 套餐子商品分组UUID
+	LocaleName    dto.LocaleResponse           `json:"locale_name"`    // 套餐子商品分组名称
+	GroupType     int                          `json:"group_type"`     // ⭐ 新增：分组类型 0-固定 1-可选
+	OptionalCount int                          `json:"optional_count"` // ⭐ 新增：可选数量，表示本组商品中要求选择多少个商品
+	Products      ProductPackageSubProductList `json:"products"`       // 套餐子商品列表
+}
+
+// ProductPackageSubProduct 套餐子商品（商品详情接口使用）
+type ProductPackageSubProduct struct {
+	Uuid             uint64             `json:"uuid"`               // 套餐子商品UUID
+	BomUuid          uint64             `json:"bom_uuid"`           // 商品BOM UUID
+	ProductUuid      uint64             `json:"product_uuid"`       // 商品UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐子商品名称
+	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
+	Num              float64            `json:"num"`                // 套餐子商品数量
+	Price            float64            `json:"price"`              // 套餐子商品价格
+	IsRequired       int                `json:"is_required"`       // ⭐ 新增：必选 0-不必选 1-必选
+	IsDefault        int                `json:"is_default"`        // ⭐ 新增：默认选中 0-默认不选中 1-默认选中
 }
 ```
 
@@ -482,10 +507,22 @@ productDetail.CanEdit = productDetail.GetCanEdit()
 
 **文件**: `main/app/model/product.go`
 
-在 `GetRespPackageSubProductGroupList()` 方法中，返回 `is_required` 和 `is_default` 字段：
+在 `GetRespPackageSubProductGroupList()` 方法中，返回 `group_type`、`optional_count`、`is_required` 和 `is_default` 字段：
 
 **关键代码片段**:
 ```go
+// 构建分组信息
+packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
+    Uuid:          packageSubProductGroup.Uuid,
+    LocaleName:    packageSubProductGroup.MultiLanguageName.GetNames(),
+    GroupType:     packageSubProductGroup.GroupType,     // ⭐ 已实现
+    OptionalCount: packageSubProductGroup.OptionalCount, // ⭐ 已实现
+    Products: product_resp.ProductPackageSubProductList{
+        List: products,
+    },
+})
+
+// 构建商品信息
 products = append(products, product_resp.ProductPackageSubProduct{
     Uuid:             product.Uuid,
     BomUuid:          product.ProductBomUuid,
@@ -598,15 +635,16 @@ productPackageGroupRepo.UpdateProductPackageGroupItem(map[string]any{
    - 文件: `main/app/dto/req/product.go`
 
 5. ✅ **Response DTO**: 
-   - `PackageProductDetail` 已扩展（商品列表接口）
-   - `ProductPackageSubProduct` 已扩展（商品详情接口）
+   - `PackageProductDetail` 已扩展（商品列表接口，添加了 `IsRequired` 和 `IsDefault` 字段）
+   - `ProductPackageSubProductGroup` 已扩展（商品详情接口，添加了 `GroupType` 和 `OptionalCount` 字段）
+   - `ProductPackageSubProduct` 已扩展（商品详情接口，添加了 `IsRequired` 和 `IsDefault` 字段）
    - 文件: `main/app/dto/resp/product_resp/product.go`
 
 6. ✅ **Service 层**: 
    - 套餐创建逻辑: `SaveProductPackageGroup` 函数中已保存必选和默认选中字段
    - 套餐编辑逻辑: `SaveProductPackageGroup` 函数中已更新必选和默认选中字段
    - 商品列表查询: `FormatProducts` 函数中已返回必选和默认选中字段
-   - 商品详情查询: `GetRespPackageSubProductGroupList` 方法中已返回必选和默认选中字段
+   - 商品详情查询: `GetRespPackageSubProductGroupList` 方法中已返回分组类型、可选数量、必选和默认选中字段
    - 同步功能: `SyncProduct` 函数中已同步必选和默认选中字段
 
 7. ✅ **业务逻辑验证**: 
