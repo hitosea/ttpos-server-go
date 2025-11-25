@@ -18,6 +18,7 @@ import (
 type IProductRepo interface {
 	IProductQueryRepo
 	WithMultiLanguageName(opts ...DBOption) DBOption                                              // 预加载多语言名称
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption                                      // 预加载卖点多语言
 	WithProductUnit() DBOption                                                                    // 预加载产品单位
 	WithProductUnitMultiLanguageName() DBOption                                                   // 预加载产品单位多语言名称
 	WithProductBoms(opts ...DBOption) DBOption                                                    // 预加载产品Boms
@@ -168,6 +169,7 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 
 	preloads := []DBOption{
 		r.WithMultiLanguageName(),
+		r.WithDescribeMultiLanguageName(),
 		r.WithProductUnit(),
 		r.WithProductUnitMultiLanguageName(),
 		r.WithProductBoms(),
@@ -247,6 +249,17 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 	}
 
 	return preloads
+}
+
+func (r *productRepo) WithDescribeMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DescribeMultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
 }
 
 // 查询商家是否存在商品套餐

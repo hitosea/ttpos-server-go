@@ -297,6 +297,84 @@ func WithTakeoutDiscountRate(rate float64, taxFeeType uint8) FormatProductsFn {
 }
 
 // FormatProducts 格式化产品列表
+var sellingPointLocaleOrder = []string{
+	string(dto.LocaleZH),
+	string(dto.LocaleZHTW),
+	string(dto.LocaleEN),
+	string(dto.LocaleTH),
+	string(dto.LocaleMY),
+	string(dto.LocaleJA),
+	string(dto.LocaleKO),
+	string(dto.LocaleTR),
+	string(dto.LocaleSV),
+}
+
+func localeResponseToModel(locale dto.LocaleResponse) model.MultiLanguageName {
+	return model.MultiLanguageName{
+		ZhName:   locale.ZH,
+		ThName:   locale.TH,
+		EnName:   locale.EN,
+		ZhTwName: locale.ZHTW,
+		JaName:   locale.JA,
+		KoName:   locale.KO,
+		MyName:   locale.MY,
+		TrName:   locale.TR,
+		SvName:   locale.SV,
+	}
+}
+
+func fallbackSellingPointLocale(locale dto.LocaleResponse) string {
+	for _, lang := range sellingPointLocaleOrder {
+		if value := locale.GetLocale(lang); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func saveSellingPointMultiLanguage(repo repository.IMultiLanguageNameRepo, currentUuid uint64, locale dto.LocaleResponse) (uint64, string, error) {
+	if locale.IsNull() {
+		if currentUuid == 0 {
+			return 0, "", nil
+		}
+		if err := repo.UpdateMultiLanguageName(currentUuid, localeResponseToModel(locale)); err != nil {
+			return currentUuid, "", err
+		}
+		return currentUuid, "", nil
+	}
+
+	data := localeResponseToModel(locale)
+	if currentUuid == 0 {
+		uuid, err := repo.CreateMultiLanguageName(data)
+		if err != nil {
+			return 0, "", err
+		}
+		return uuid, fallbackSellingPointLocale(locale), nil
+	}
+	if err := repo.UpdateMultiLanguageName(currentUuid, data); err != nil {
+		return currentUuid, "", err
+	}
+	return currentUuid, fallbackSellingPointLocale(locale), nil
+}
+
+func resolveProductSellingPoint(product model.ProductPackage, lang string) (string, dto.LocaleResponse) {
+	locale := product.DescribeMultiLanguageName.GetNames()
+	if product.DescribeMultiLanguageNameUuid == 0 || product.DescribeMultiLanguageName.IsNullName() {
+		locale = dto.LocaleResponse{}
+	}
+	if locale.IsNull() && product.Describe != "" {
+		locale.SetLocale(string(dto.LocaleZH), product.Describe)
+	}
+	sellingPoint := locale.GetLocale(lang)
+	if sellingPoint == "" {
+		sellingPoint = fallbackSellingPointLocale(locale)
+		if sellingPoint == "" {
+			sellingPoint = product.Describe
+		}
+	}
+	return sellingPoint, locale
+}
+
 func FormatProducts(ctx context.Context, products []model.ProductPackage, options ...FormatProductsFn) []product_resp.Product {
 	var option FormatProductsOption
 	for _, fn := range options {
@@ -5280,6 +5358,10 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		HeadquarterUuid: productPackage.HeadquarterUuid,
 	}
 
+	sellingPoint, sellingPointI18n := resolveProductSellingPoint(*productPackage, ctx.GetLanguage())
+	productDetailResp.SellingPoint = sellingPoint
+	productDetailResp.SellingPointI18n = sellingPointI18n
+
 	return &productDetailResp, nil
 }
 
@@ -5398,6 +5480,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	// 检查商品名称
 	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
 		return errors.WithMessage(err, "检查商品名称失败")
+	}
+	if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
+		return errors.WithMessage(err, "检查商品卖点失败")
 	}
 	// 检查商品分类
 	if err := productCheckSrv.CheckProductCategory(db, req.CategoryUuid); err != nil {
@@ -5661,6 +5746,9 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	}
 	// 检查商品名称
 	if err := productCheckSrv.CheckProductName(ctx, req.Uuid, req.LocaleName); err != nil {
+		return nil, nil, err
+	}
+	if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
 		return nil, nil, err
 	}
 	// 检查商品分类
@@ -6026,6 +6114,12 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
 	}
+	describeUuid, describeValue, err := saveSellingPointMultiLanguage(multiLanguageNameRepo, productPackage.DescribeMultiLanguageNameUuid, req.SellingPoint)
+	if err != nil {
+		return nil, errors.WithMessage(err, "保存卖点多语言失败")
+	}
+	productPackage.DescribeMultiLanguageNameUuid = describeUuid
+
 	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
 	companySetting := ctx.GetCompanySetting()
@@ -6033,25 +6127,27 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 		isShowDelivery = 0
 	}
 	err = productPackageRepo.UpdateProductPackage(map[string]any{
-		"name":                  req.LocaleName.ToJson(),
-		"image_file_uuid":       req.ImageFileUuid,
-		"deduct_stock_type":     req.DeductStockType,
-		"num_type":              req.NumType,
-		"unit_uuid":             req.UnitUuid,
-		"dine_tax_uuid":         req.Tax.DineUuid,
-		"category_uuid":         req.CategoryUuid,
-		"takeout_tax_uuid":      req.Tax.TakeoutUuid,
-		"status":                req.Status,
-		"is_show_cashier":       req.Show.IsShowCashier,
-		"is_show_tablet":        req.Show.IsShowTablet,
-		"is_show_kitchen":       req.Show.IsShowKitchen,
-		"is_show_assistant":     req.Show.IsShowAssistant,
-		"is_show_h5":            req.Show.IsShowH5,
-		"is_show_delivery":      isShowDelivery,
-		"price":                 price,
-		"open_discount":         req.Discount.IsEnableMemberDiscount,
-		"open_overall_discount": req.Discount.IsEnableOverallDiscount,
-		"detail":                req.Detail,
+		"name":                              req.LocaleName.ToJson(),
+		"image_file_uuid":                   req.ImageFileUuid,
+		"deduct_stock_type":                 req.DeductStockType,
+		"num_type":                          req.NumType,
+		"unit_uuid":                         req.UnitUuid,
+		"dine_tax_uuid":                     req.Tax.DineUuid,
+		"category_uuid":                     req.CategoryUuid,
+		"takeout_tax_uuid":                  req.Tax.TakeoutUuid,
+		"status":                            req.Status,
+		"is_show_cashier":                   req.Show.IsShowCashier,
+		"is_show_tablet":                    req.Show.IsShowTablet,
+		"is_show_kitchen":                   req.Show.IsShowKitchen,
+		"is_show_assistant":                 req.Show.IsShowAssistant,
+		"is_show_h5":                        req.Show.IsShowH5,
+		"is_show_delivery":                  isShowDelivery,
+		"price":                             price,
+		"open_discount":                     req.Discount.IsEnableMemberDiscount,
+		"open_overall_discount":             req.Discount.IsEnableOverallDiscount,
+		"detail":                            req.Detail,
+		"describe":                          describeValue,
+		"describe_multi_language_name_uuid": describeUuid,
 	}, commonRepo.WhereByUuid(productPackage.Uuid))
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存商品包失败")
@@ -6082,6 +6178,11 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 	multiLanguageNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(*multiLanguageName)
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
+	}
+
+	describeUuid, describeValue, err := saveSellingPointMultiLanguage(multiLanguageNameRepo, 0, request.SellingPoint)
+	if err != nil {
+		return nil, errors.WithMessage(err, "保存卖点多语言失败")
 	}
 	// 保存商品包
 	maxSort, err := productRepo.GetProductShopMaxSort(
@@ -6166,29 +6267,31 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 			CreateTime: time.Now().Unix(),
 			UpdateTime: time.Now().Unix(),
 		},
-		Name:                  request.LocaleName.ToJson(),
-		ErpCode:               erpCode,
-		MultiLanguageNameUuid: multiLanguageNameUuid,
-		ImageFileUuid:         request.ImageFileUuid,
-		DeductStockType:       uint(request.DeductStockType),
-		NumType:               uint(request.NumType),
-		UnitUuid:              request.UnitUuid,
-		DineTaxUuid:           request.Tax.DineUuid,
-		CategoryUuid:          request.CategoryUuid,
-		TakeoutTaxUuid:        request.Tax.TakeoutUuid,
-		Status:                uint(request.Status),
-		IsShowCashier:         uint(request.Show.IsShowCashier),
-		IsShowTablet:          uint(request.Show.IsShowTablet),
-		IsShowKitchen:         uint(request.Show.IsShowKitchen),
-		IsShowAssistant:       uint(request.Show.IsShowAssistant),
-		IsShowH5:              uint(request.Show.IsShowH5),
-		IsShowDelivery:        isShowDelivery,
-		Sort:                  uint(sort),
-		Price:                 price,
-		ProductType:           uint(request.Type),
-		OpenDiscount:          uint(request.Discount.IsEnableMemberDiscount),
-		OpenOverallDiscount:   &openOverallDiscount,
-		Detail:                request.Detail,
+		Name:                          request.LocaleName.ToJson(),
+		ErpCode:                       erpCode,
+		MultiLanguageNameUuid:         multiLanguageNameUuid,
+		ImageFileUuid:                 request.ImageFileUuid,
+		DeductStockType:               uint(request.DeductStockType),
+		NumType:                       uint(request.NumType),
+		UnitUuid:                      request.UnitUuid,
+		DineTaxUuid:                   request.Tax.DineUuid,
+		CategoryUuid:                  request.CategoryUuid,
+		TakeoutTaxUuid:                request.Tax.TakeoutUuid,
+		Status:                        uint(request.Status),
+		IsShowCashier:                 uint(request.Show.IsShowCashier),
+		IsShowTablet:                  uint(request.Show.IsShowTablet),
+		IsShowKitchen:                 uint(request.Show.IsShowKitchen),
+		IsShowAssistant:               uint(request.Show.IsShowAssistant),
+		IsShowH5:                      uint(request.Show.IsShowH5),
+		IsShowDelivery:                isShowDelivery,
+		Sort:                          uint(sort),
+		Price:                         price,
+		ProductType:                   uint(request.Type),
+		OpenDiscount:                  uint(request.Discount.IsEnableMemberDiscount),
+		OpenOverallDiscount:           &openOverallDiscount,
+		Detail:                        request.Detail,
+		Describe:                      describeValue,
+		DescribeMultiLanguageNameUuid: describeUuid,
 	}
 	err = productPackageRepo.CreateProductPackage(productPackage)
 	if err != nil {
@@ -7661,40 +7764,41 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					UpdateTime: updateTime,
 					DeleteTime: deleteTime,
 				},
-				Name:                  productPackage.MultiLanguageName.ToJson(),
-				ErpCode:               productPackage.ErpCode,
-				MultiLanguageNameUuid: productPackage.MultiLanguageNameUuid,
-				ImageName:             productPackage.ImageName,
-				ImageFileUuid:         productPackage.ImageFileUuid,
-				DeductStockType:       productPackage.DeductStockType,
-				NumType:               productPackage.NumType,
-				UnitUuid:              productPackage.UnitUuid,
-				DineTaxUuid:           productPackage.DineTaxUuid,
-				CategoryUuid:          productPackage.CategoryUuid,
-				TakeoutTaxUuid:        productPackage.TakeoutTaxUuid,
-				SpecialCategoryUuid:   productPackage.SpecialCategoryUuid,
-				PrinterTagUuid:        productPackage.PrinterTagUuid,
-				SupplierUuid:          productPackage.SupplierUuid,
-				Status:                productPackage.Status,
-				IsShowCashier:         productPackage.IsShowCashier,
-				IsShowTablet:          productPackage.IsShowTablet,
-				IsShowKitchen:         productPackage.IsShowKitchen,
-				IsShowAssistant:       productPackage.IsShowAssistant,
-				IsShowH5:              productPackage.IsShowH5,
-				IsShowDelivery:        productPackage.IsShowDelivery,
-				Sort:                  productPackage.Sort,
-				LimitNum:              productPackage.LimitNum,
-				Describe:              productPackage.Describe,
-				Detail:                productPackage.Detail,
-				ActualSaleNum:         actualSaleNum,
-				Price:                 productPackage.Price,
-				ProductType:           productPackage.ProductType,
-				SauceRequired:         productPackage.SauceRequired,
-				SauceMaxSelection:     productPackage.SauceMaxSelection,
-				OpenDiscount:          productPackage.OpenDiscount,
-				OpenOverallDiscount:   productPackage.OpenOverallDiscount,
-				IsBatch:               productPackage.IsBatch,
-				HeadquarterUuid:       companySetting.HeadquarterUuid,
+				Name:                          productPackage.MultiLanguageName.ToJson(),
+				ErpCode:                       productPackage.ErpCode,
+				MultiLanguageNameUuid:         productPackage.MultiLanguageNameUuid,
+				ImageName:                     productPackage.ImageName,
+				ImageFileUuid:                 productPackage.ImageFileUuid,
+				DeductStockType:               productPackage.DeductStockType,
+				NumType:                       productPackage.NumType,
+				UnitUuid:                      productPackage.UnitUuid,
+				DineTaxUuid:                   productPackage.DineTaxUuid,
+				CategoryUuid:                  productPackage.CategoryUuid,
+				TakeoutTaxUuid:                productPackage.TakeoutTaxUuid,
+				SpecialCategoryUuid:           productPackage.SpecialCategoryUuid,
+				PrinterTagUuid:                productPackage.PrinterTagUuid,
+				SupplierUuid:                  productPackage.SupplierUuid,
+				Status:                        productPackage.Status,
+				IsShowCashier:                 productPackage.IsShowCashier,
+				IsShowTablet:                  productPackage.IsShowTablet,
+				IsShowKitchen:                 productPackage.IsShowKitchen,
+				IsShowAssistant:               productPackage.IsShowAssistant,
+				IsShowH5:                      productPackage.IsShowH5,
+				IsShowDelivery:                productPackage.IsShowDelivery,
+				Sort:                          productPackage.Sort,
+				LimitNum:                      productPackage.LimitNum,
+				Describe:                      productPackage.Describe,
+				DescribeMultiLanguageNameUuid: productPackage.DescribeMultiLanguageNameUuid,
+				Detail:                        productPackage.Detail,
+				ActualSaleNum:                 actualSaleNum,
+				Price:                         productPackage.Price,
+				ProductType:                   productPackage.ProductType,
+				SauceRequired:                 productPackage.SauceRequired,
+				SauceMaxSelection:             productPackage.SauceMaxSelection,
+				OpenDiscount:                  productPackage.OpenDiscount,
+				OpenOverallDiscount:           productPackage.OpenOverallDiscount,
+				IsBatch:                       productPackage.IsBatch,
+				HeadquarterUuid:               companySetting.HeadquarterUuid,
 			})
 			newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
 				BaseModel: model.BaseModel{
@@ -7714,6 +7818,26 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				SvName:   productPackage.MultiLanguageName.SvName,
 			})
 			delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.MultiLanguageName.Uuid)
+			if productPackage.DescribeMultiLanguageNameUuid > 0 && !productPackage.DescribeMultiLanguageName.IsNullName() {
+				newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
+					BaseModel: model.BaseModel{
+						Uuid:       productPackage.DescribeMultiLanguageName.Uuid,
+						CreateTime: createTime,
+						UpdateTime: updateTime,
+						DeleteTime: deleteTime,
+					},
+					EnName:   productPackage.DescribeMultiLanguageName.EnName,
+					ZhName:   productPackage.DescribeMultiLanguageName.ZhName,
+					ZhTwName: productPackage.DescribeMultiLanguageName.ZhTwName,
+					ThName:   productPackage.DescribeMultiLanguageName.ThName,
+					MyName:   productPackage.DescribeMultiLanguageName.MyName,
+					JaName:   productPackage.DescribeMultiLanguageName.JaName,
+					KoName:   productPackage.DescribeMultiLanguageName.KoName,
+					TrName:   productPackage.DescribeMultiLanguageName.TrName,
+					SvName:   productPackage.DescribeMultiLanguageName.SvName,
+				})
+				delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.DescribeMultiLanguageName.Uuid)
+			}
 			for _, productBom := range productPackage.ProductBoms {
 				newProductBomList = append(newProductBomList, model.ProductBom{
 					BaseModel: model.BaseModel{
