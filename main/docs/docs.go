@@ -35274,6 +35274,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "is_default": {
+                    "description": "默认选中 0-默认不选中 1-默认选中",
+                    "type": "integer"
+                },
+                "is_required": {
+                    "description": "必选 0-不必选 1-必选",
+                    "type": "integer"
+                },
                 "num": {
                     "description": "商品数量，分组中item的数量",
                     "type": "number"
@@ -41387,6 +41395,14 @@ const docTemplate = `{
                     "description": "商品BOM UUID",
                     "type": "integer"
                 },
+                "is_default": {
+                    "description": "默认选中 0-默认不选中 1-默认选中",
+                    "type": "integer"
+                },
+                "is_required": {
+                    "description": "必选 0-不必选 1-必选",
+                    "type": "integer"
+                },
                 "num": {
                     "description": "商品数量",
                     "type": "number",
@@ -41886,9 +41902,17 @@ const docTemplate = `{
                     "description": "商品BOM UUID",
                     "type": "integer"
                 },
+                "is_default": {
+                    "description": "默认选中 0-默认不选中 1-默认选中",
+                    "type": "integer"
+                },
                 "is_delete": {
                     "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
                     "type": "boolean"
+                },
+                "is_required": {
+                    "description": "必选 0-不必选 1-必选",
+                    "type": "integer"
                 },
                 "num": {
                     "description": "商品数量",
