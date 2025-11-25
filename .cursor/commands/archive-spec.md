@@ -24,8 +24,9 @@ description: 归档已完成的 Spec 到指定版本目录
 ## 版本号获取优先级
 
 1. 命令参数 `--version` 显式指定
-2. 关联 Proposal 中的目标版本字段
-3. 交互询问用户
+2. 从 `main/version/version.go` 的 `Version` 变量提取（只取 major.minor，如 `2.10.9` → `v2.10`）
+3. 关联 Proposal 中的目标版本字段
+4. 交互询问用户
 
 ## 执行流程
 
