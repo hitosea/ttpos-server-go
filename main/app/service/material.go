@@ -2788,25 +2788,30 @@ func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
 		headquarterMaterialCategoryNotInSubShop := s.GetHeadquarterMaterialCategoryNotInSubShop(ctx, headquarterMaterialCategoryList, subShopMaterialCategoryList)
 
 		if err := repository.CommonRepo.Transaction(subShopDb, func(tx *gorm.DB) error {
+			// 更新已存在的物品分类
 			for _, category := range headquarterMaterialCategoryInSubShop {
 				if headquarterCategory, ok := headquarterMaterialCategoryMap[category.Uuid]; ok {
 					category.UpdateFromHeadquarter(headquarterCategory) // 用总部分类信息更新子公司分类
 					if err := repository.NewMaterialRepo(tx).UpdateMaterialCategory(category); err != nil {
 						return errors.WithMessage(err, "更新总部物品分类失败")
 					}
-					if err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(category.MultiLanguageNameUuid, category.MultiLanguageName); err != nil {
-						return errors.WithMessage(err, "更新多语言名称失败")
-					}
 				}
 			}
+			// 创建子店不存在的物品分类（多语言由 SyncMultiLanguage 任务处理）
 			for _, category := range headquarterMaterialCategoryNotInSubShop {
-				newCategory := category
-				newCategory.HeadquarterUuid = headquarterUuid
-				newCategory.BaseModel = model.BaseModel{Uuid: category.Uuid}
-				newCategory.MultiLanguageName.BaseModel = model.BaseModel{
-					Uuid: category.MultiLanguageNameUuid,
+				newCategory := model.MaterialCategory{
+					BaseModel: model.BaseModel{
+						Uuid:       category.Uuid,
+						CreateTime: category.CreateTime,
+						UpdateTime: category.UpdateTime,
+						DeleteTime: category.DeleteTime,
+					},
+					Name:                  category.Name,
+					MultiLanguageNameUuid: category.MultiLanguageNameUuid,
+					Code:                  category.Code,
+					Sort:                  category.Sort,
+					HeadquarterUuid:       headquarterUuid,
 				}
-				// 创建物品分类和多语言名称 Create方法会一起创建
 				if _, err := repository.NewMaterialRepo(tx).CreateMaterialCategory(newCategory); err != nil {
 					return errors.WithMessage(err, "创建总部物品分类失败")
 				}
@@ -2867,7 +2872,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(tx)
-		multilanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 		copyCtx := ctx.Copy()
 		copyCtx.SetDB(tx)
 		for _, itemInfo := range materialList.ItemList {
@@ -2913,7 +2918,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 						TrName:   itemInfo.ItemName,
 						SvName:   itemInfo.ItemName,
 					}
-					nameUuid, err := multilanguageNameRepo.CreateMultiLanguageName(newMultiLanguageName)
+					nameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(newMultiLanguageName)
 					if err != nil {
 						logger.Logger.Error("同步erp物品-更新物品-创建多语言失败", zap.String("itemCode", itemInfo.ItemCode), zap.Error(err))
 					} else {
@@ -2966,6 +2971,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
 		)
 		db := ctx.GetDB()
+		// 同步总部物品到子店（多语言由 SyncMultiLanguage 任务处理）
 		err = db.Transaction(func(tx *gorm.DB) error {
 			copyCtx := ctx.Copy()
 			copyCtx.SetDB(tx)
@@ -2973,12 +2979,10 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			commonRepo := repository.NewCommonRepo()
 			materialRepo := repository.NewMaterialRepo(tx)
 			materialUnitRepo := repository.NewMaterialUnitRepo(tx)
-			multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 
-			// 需要删除的物品、物品单位、多语言名称
+			// 需要删除的物品、物品单位
 			delMaterialUuidList := []uint64{}
 			delMaterialUnitUuidList := []uint64{}
-			delMultiLanguageNameList := []uint64{}
 			subShopMaterialList := materialRepo.GetMaterialList(
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
 				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -2986,16 +2990,14 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			)
 			for _, subShopMaterial := range subShopMaterialList {
 				delMaterialUuidList = append(delMaterialUuidList, subShopMaterial.Uuid)
-				delMultiLanguageNameList = append(delMultiLanguageNameList, subShopMaterial.MultiLanguageNameUuid)
 				for _, unit := range subShopMaterial.NotBaseUnitList {
 					delMaterialUnitUuidList = append(delMaterialUnitUuidList, unit.Uuid)
 				}
 			}
 
-			// 需要保存的物品、物品单位、多语言名称
+			// 需要保存的物品、物品单位
 			addMaterialList := []model.Material{}
 			addMaterialUnitList := []model.MaterialUnit{}
-			addMultiLanguageNameList := []model.MultiLanguageName{}
 			for _, material := range headMaterialList {
 				addMaterialList = append(addMaterialList, model.Material{
 					BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: material.CreateTime, UpdateTime: material.UpdateTime, DeleteTime: material.DeleteTime},
@@ -3022,19 +3024,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 				})
-				multiLanguageName := material.MultiLanguageName
-				addMultiLanguageNameList = append(addMultiLanguageNameList, model.MultiLanguageName{
-					BaseModel: model.BaseModel{Uuid: multiLanguageName.Uuid, CreateTime: multiLanguageName.CreateTime, UpdateTime: multiLanguageName.UpdateTime, DeleteTime: multiLanguageName.DeleteTime},
-					EnName:    multiLanguageName.EnName,
-					ZhName:    multiLanguageName.ZhName,
-					ZhTwName:  multiLanguageName.ZhTwName,
-					ThName:    multiLanguageName.ThName,
-					MyName:    multiLanguageName.MyName,
-					JaName:    multiLanguageName.JaName,
-					KoName:    multiLanguageName.KoName,
-					TrName:    multiLanguageName.TrName,
-					SvName:    multiLanguageName.SvName,
-				})
 				for _, unit := range material.NotBaseUnitList {
 					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{
 						BaseModel:      model.BaseModel{Uuid: unit.Uuid, CreateTime: unit.CreateTime, UpdateTime: unit.UpdateTime, DeleteTime: unit.DeleteTime},
@@ -3059,12 +3048,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					return errors.WithMessage(err, "删除总部物品单位列表失败")
 				}
 			}
-			if len(delMultiLanguageNameList) > 0 {
-				err := multiLanguageNameRepo.DestroyMultiLanguageName(commonRepo.WhereInUuids(delMultiLanguageNameList))
-				if err != nil {
-					return errors.WithMessage(err, "删除总部多语言名称列表失败")
-				}
-			}
 			if len(addMaterialList) > 0 {
 				err := materialRepo.CreateMaterialList(addMaterialList)
 				if err != nil {
@@ -3075,12 +3058,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				err := materialUnitRepo.CreateMaterialUnitList(addMaterialUnitList)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部物品单位列表失败")
-				}
-			}
-			if len(addMultiLanguageNameList) > 0 {
-				err := multiLanguageNameRepo.CreateMultiLanguageNameList(addMultiLanguageNameList)
-				if err != nil {
-					return errors.WithMessage(err, "创建总部多语言名称列表失败")
 				}
 			}
 			return nil
@@ -3145,7 +3122,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		// 需要失效的成本卡列表。erpnext没有，而ttpos有时
 		needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自1种场景：1. erpnext为已经添加成本卡的商品删除成本卡
 		// 已经存在的成本卡列表。erpnext有，而ttpos也有
-		existingProductBomCardList := needCreateProductBomCardList.ExsitProductBomCardList
+		existingProductBomCardList := needCreateProductBomCardList.ExistProductBomCardList
 		for _, bomCard := range existingProductBomCardList {
 			if bom, ok := erpBomsMap[bomCard.ErpCode]; ok {
 				itemCode := bom.ItemCode                                              // 商品、小料的erpnext编码
@@ -3196,6 +3173,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 
 	// 从ttpos总店同步
 	if companySetting.IsSubShop() {
+		// 同步总部成本卡到子店（多语言由 SyncMultiLanguage 任务处理）
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
 		productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(
@@ -3214,7 +3192,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		}
 
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-			// 删除所有总部的成本卡。
+			// 删除所有总部的成本卡
 			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
 			productBomCardUuids := []uint64{}
 			for _, productBomCard := range productBomCardList {
@@ -3223,7 +3201,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
 
 			for _, productBomCard := range productBomCardList {
-				// 过滤掉数据不完整的成本卡。如无多语言名称
+				// 过滤掉数据不完整的成本卡（如无多语言名称）
 				if productBomCard.MultiLanguageName == nil {
 					continue
 				}
@@ -3234,11 +3212,6 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 				productBomCard.HeadquarterUuid = companySetting.HeadquarterUuid
 				if err := repository.NewProductBomCardRepo(tx).CreateProductBomCard(*productBomCard); err != nil {
 					return errors.WithMessage(err, "创建成本卡失败")
-				}
-				// 创建多语言
-				productBomCard.MultiLanguageName.BaseModel = model.BaseModel{Uuid: productBomCard.MultiLanguageNameUuid}
-				if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageNameDUPLICATE(*productBomCard.MultiLanguageName); err != nil {
-					return errors.WithMessage(err, "创建多语言名称失败")
 				}
 				// 创建成本卡材料
 				for _, material := range productBomCard.RelatedMaterials {
@@ -3341,14 +3314,14 @@ func (s *materialSrv) getObjectByProductBomCardUuid(ctx context.Context, product
 
 type ProductBomCardList struct {
 	CreateBoms              []*manufacturing.BomInfo
-	ExsitProductBomCardList []*model.ProductBomCard
+	ExistProductBomCardList []*model.ProductBomCard
 	DisableBoms             []*model.ProductBomCard
 }
 
 // 获取需要新建、失效的成本卡列表、维持不变的成本卡列表
 func (s *materialSrv) getNeedCreateProductBomCardList(headquarterProductBomCardMap map[string]*model.ProductBomCard, erpBoms []*manufacturing.BomInfo) *ProductBomCardList {
 	createBoms := []*manufacturing.BomInfo{}
-	exsitProductBomCardList := []*model.ProductBomCard{}
+	existProductBomCardList := []*model.ProductBomCard{}
 	for _, bom := range erpBoms {
 		key := bom.BomName
 		if _, ok := headquarterProductBomCardMap[key]; !ok {
@@ -3356,7 +3329,7 @@ func (s *materialSrv) getNeedCreateProductBomCardList(headquarterProductBomCardM
 			createBoms = append(createBoms, bom)
 		} else {
 			// erpnext有，ttpos也有。无需处理
-			exsitProductBomCardList = append(exsitProductBomCardList, headquarterProductBomCardMap[key])
+			existProductBomCardList = append(existProductBomCardList, headquarterProductBomCardMap[key])
 			delete(headquarterProductBomCardMap, key)
 		}
 	}
@@ -3369,7 +3342,7 @@ func (s *materialSrv) getNeedCreateProductBomCardList(headquarterProductBomCardM
 
 	return &ProductBomCardList{
 		CreateBoms:              createBoms,
-		ExsitProductBomCardList: exsitProductBomCardList,
+		ExistProductBomCardList: existProductBomCardList,
 		DisableBoms:             disableBoms,
 	}
 }

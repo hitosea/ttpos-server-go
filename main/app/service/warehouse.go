@@ -787,10 +787,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	// 待翻译多语言Uuid
 	var multiLanguageNameUuids []uint64
 
-	// 已存在的多语言Uuid
-	var existsMultiLanguageUuids []uint64
-	db.Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
-
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if len(deletingWarehouseUuids) > 0 {
 			err = tx.Model(&model.Warehouse{}).Where("uuid IN (?)", deletingWarehouseUuids).Update("delete_time", time.Now().Unix()).Error
@@ -890,12 +886,11 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			}
 		}
 
-		// 同步ttpos总店数据
+		// 同步ttpos总店数据（多语言由 SyncMultiLanguage 任务处理）
 		if len(headquarterWarehouses) > 0 {
 			// 删除仓库
 			tx.Where("headquarter_uuid > 0").Delete(&model.Warehouse{})
 
-			var insertingMultiLanguageNames []model.MultiLanguageName
 			for _, headquarterWarehouse := range headquarterWarehouses {
 				multiLanguageName := headquarterWarehouse.MultiLanguageName.GetNames()
 				insertingWarehouses = append(insertingWarehouses, model.Warehouse{
@@ -917,36 +912,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					Address:               headquarterWarehouse.Address,
 					HeadquarterUuid:       headquarter.Uuid,
 				})
-
-				// 新增的多语言
-				if headquarterWarehouse.MultiLanguageName != nil &&
-					headquarterWarehouse.MultiLanguageName.Uuid != 0 &&
-					!slices.Contains(existsMultiLanguageUuids, headquarterWarehouse.MultiLanguageName.Uuid) {
-
-					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
-						BaseModel: model.BaseModel{
-							Uuid:       headquarterWarehouse.MultiLanguageNameUuid,
-							CreateTime: headquarterWarehouse.MultiLanguageName.CreateTime,
-							UpdateTime: headquarterWarehouse.MultiLanguageName.UpdateTime,
-							DeleteTime: headquarterWarehouse.MultiLanguageName.DeleteTime,
-						},
-						ZhName:   headquarterWarehouse.MultiLanguageName.ZhName,
-						ThName:   headquarterWarehouse.MultiLanguageName.ThName,
-						EnName:   headquarterWarehouse.MultiLanguageName.EnName,
-						ZhTwName: headquarterWarehouse.MultiLanguageName.ZhTwName,
-						JaName:   headquarterWarehouse.MultiLanguageName.JaName,
-						KoName:   headquarterWarehouse.MultiLanguageName.KoName,
-						MyName:   headquarterWarehouse.MultiLanguageName.MyName,
-						TrName:   headquarterWarehouse.MultiLanguageName.TrName,
-						SvName:   headquarterWarehouse.MultiLanguageName.SvName,
-					})
-				}
-			}
-			if len(insertingMultiLanguageNames) > 0 {
-				err = tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
-				if err != nil {
-					return errors.WithMessage(err, "同步总店仓库多语言名称失败")
-				}
 			}
 		}
 		if len(insertingWarehouses) > 0 {

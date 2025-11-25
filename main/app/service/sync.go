@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -20,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // ISyncSrv同步服务接口
@@ -117,7 +119,7 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 	allTasks := []syncTaskConfig{
 		{constant.SyncTaskTypeProductCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductCategory], s.productSrv.SyncProductShopCategory},
 		{constant.SyncTaskTypeMaterialCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterialCategory], s.materialSrv.SyncMaterialCategory},
-		{constant.SyncTaskTypeTax, constant.SyncTaskTypeNames[constant.SyncTaskTypeTax], s.productSrv.SyncProductTax},
+		{constant.SyncTaskTypeTax, constant.SyncTaskTypeNames[constant.SyncTaskTypeTax], s.productSrv.SyncProductTax}, // 无多语言数据
 		{constant.SyncTaskTypeUnit, constant.SyncTaskTypeNames[constant.SyncTaskTypeUnit], s.productSrv.SyncUnit},
 		{constant.SyncTaskTypeMaterial, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterial], s.materialSrv.SyncMaterial},
 		{constant.SyncTaskTypeWarehouse, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouse], s.warehouseSrv.SyncWarehouse},
@@ -126,10 +128,11 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		{constant.SyncTaskTypeSauce, constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce], s.productSrv.SyncSauce},
 		{constant.SyncTaskTypeProduct, constant.SyncTaskTypeNames[constant.SyncTaskTypeProduct], s.productSrv.SyncProduct},
 		{constant.SyncTaskTypeBomCard, constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard], s.materialSrv.SyncProductBomCard},
-		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},
-		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock},
-		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], s.productSrv.SyncProductStockByBomCard},
-		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage},
+		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},                        // 无多语言数据
+		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock}, // 无多语言数据
+		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], s.productSrv.SyncProductStockByBomCard},    // 无多语言数据
+		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage},      // 无多语言数据
+		{constant.SyncTaskTypeMultiLanguage, constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage], s.SyncMultiLanguage},
 	}
 
 	// 如果传递了任务UUID，则为重试模式
@@ -472,4 +475,147 @@ func convertToSyncTaskListResp(task model.SyncTask) resp.SyncTaskListResp {
 		Duration:     duration,
 		CreateTime:   task.CreateTime,
 	}
+}
+
+// SyncMultiLanguage 同步多语言数据
+// 从总部同步所有类型（商品分类、物品分类、单位、仓库、物品、规格、属性、加料、商品、成本卡、商品套餐组）的多语言数据到子店
+// 采用先删除后创建的策略，确保子店多语言数据与总部保持一致
+func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
+	// 只有子店才需要同步多语言
+	if !companySetting.IsSubShop() {
+		return nil
+	}
+
+	// 获取总部数据库
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+
+	// 定义需要同步多语言的表和字段映射
+	type tableConfig struct {
+		tableName               string   // 表名
+		multiLanguageUuidColumn string   // 多语言UUID字段名
+		entityUuidColumn        string   // 实体UUID字段名
+		preloadRelations        []string // 需要预加载的关联
+	}
+
+	// 所有需要同步多语言的表配置（按表名字母顺序排列）
+	tableConfigs := []tableConfig{
+		{tableName: config.Database.TablePrefix + "material", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "material_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_attribute", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_attribute_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_bom_card", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_flavor", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_sauce", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_unit", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "warehouse", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+	}
+
+	// 收集所有需要同步的多语言UUID
+	multiLanguageUuidMap := make(map[uint64]bool) // 用于去重
+
+	// 从总部表中查询所有总部数据的多语言UUID
+	for _, config := range tableConfigs {
+		var records []map[string]any
+		err := headquarterDB.Table(config.tableName).
+			Select(config.multiLanguageUuidColumn).
+			Where("delete_time = 0").
+			Where("headquarter_uuid = 0").
+			Where(config.multiLanguageUuidColumn + " > 0").
+			Find(&records).Error
+		if err != nil {
+			logger.Logger.Error("同步多语言-查询表失败",
+				zap.String("table", config.tableName),
+				zap.Error(err))
+			continue
+		}
+
+		for _, record := range records {
+			if uuid, ok := record[config.multiLanguageUuidColumn].(uint64); ok && uuid > 0 {
+				multiLanguageUuidMap[uuid] = true
+			}
+		}
+	}
+
+	if len(multiLanguageUuidMap) == 0 {
+		logger.Logger.Info("同步多语言-没有需要同步的多语言数据")
+		return nil
+	}
+
+	// 将map转为切片
+	multiLanguageUuids := make([]uint64, 0, len(multiLanguageUuidMap))
+	for uuid := range multiLanguageUuidMap {
+		multiLanguageUuids = append(multiLanguageUuids, uuid)
+	}
+
+	logger.Logger.Info("同步多语言-开始同步", zap.Int("count", len(multiLanguageUuids)))
+
+	// 从总部查询所有多语言数据
+	var headquarterMultiLanguages []model.MultiLanguageName
+	err := headquarterDB.Model(&model.MultiLanguageName{}).
+		Where("delete_time = 0").
+		Where("uuid IN (?)", multiLanguageUuids).
+		Find(&headquarterMultiLanguages).Error
+	if err != nil {
+		return errors.WithMessage(err, "获取总部多语言数据失败")
+	}
+
+	// 在事务中批量同步多语言数据：先删除，再创建
+	err = subShopDB.Transaction(func(tx *gorm.DB) error {
+		// 步骤1：删除子店中这些UUID对应的所有多语言记录
+		if len(multiLanguageUuids) > 0 {
+			err := tx.Where("uuid IN (?)", multiLanguageUuids).Delete(&model.MultiLanguageName{}).Error
+			if err != nil {
+				logger.Logger.Error("同步多语言-删除子店旧多语言数据失败", zap.Error(err))
+				return errors.WithMessage(err, "删除子店旧多语言数据失败")
+			}
+			logger.Logger.Info("同步多语言-已删除子店旧多语言数据", zap.Int("count", len(multiLanguageUuids)))
+		}
+
+		// 步骤2：批量创建总部的多语言记录
+		if len(headquarterMultiLanguages) > 0 {
+			// 构建要插入的多语言记录列表
+			insertMultiLanguages := make([]model.MultiLanguageName, 0, len(headquarterMultiLanguages))
+			for _, hqMultiLanguage := range headquarterMultiLanguages {
+				insertMultiLanguages = append(insertMultiLanguages, model.MultiLanguageName{
+					BaseModel: model.BaseModel{
+						Uuid:       hqMultiLanguage.Uuid,
+						CreateTime: hqMultiLanguage.CreateTime,
+						UpdateTime: hqMultiLanguage.UpdateTime,
+						DeleteTime: hqMultiLanguage.DeleteTime,
+					},
+					EnName:   hqMultiLanguage.EnName,
+					ZhName:   hqMultiLanguage.ZhName,
+					ZhTwName: hqMultiLanguage.ZhTwName,
+					ThName:   hqMultiLanguage.ThName,
+					MyName:   hqMultiLanguage.MyName,
+					JaName:   hqMultiLanguage.JaName,
+					KoName:   hqMultiLanguage.KoName,
+					TrName:   hqMultiLanguage.TrName,
+					SvName:   hqMultiLanguage.SvName,
+				})
+			}
+
+			// 批量插入多语言记录
+			err := tx.Create(&insertMultiLanguages).Error
+			if err != nil {
+				logger.Logger.Error("同步多语言-批量创建多语言记录失败", zap.Error(err))
+				return errors.WithMessage(err, "批量创建多语言记录失败")
+			}
+			logger.Logger.Info("同步多语言-已批量创建多语言记录", zap.Int("count", len(insertMultiLanguages)))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return errors.WithMessage(err, "同步多语言数据失败")
+	}
+
+	logger.Logger.Info("同步多语言-完成", zap.Int("count", len(headquarterMultiLanguages)))
+	return nil
 }
