@@ -417,7 +417,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							Sauces: product_resp.ProductSauceList{
 								List: make([]product_resp.ProductSauce, 0),
 							},
-							Describe: product.Describe,
+							Detail:       product.Detail,
+							Describe:     product.Describe,
+							DescribeI18n: product.DescribeMultiLanguageName.GetNames(),
 						},
 						Num:        item.Num,
 						AddPrice:   item.AddPrice,
@@ -473,7 +475,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				CategoryUuid:        product.CategoryUuid,
 				SpecialCategoryUuid: product.SpecialCategoryUuid,
 				FirstCategoryUuid:   product.ProductCategory.GetFirstCategoryUuid(),
+				Detail:              product.Detail,
 				Describe:            product.Describe,
+				DescribeI18n:        product.DescribeMultiLanguageName.GetNames(),
 				IsShowKitchen:       product.IsShowKitchen,
 				ProductType:         product.ProductType,
 				Flavors: product_resp.ProductFlavorList{
@@ -630,6 +634,8 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 					List: attributeGroups,
 				},
 				Describe:      product.Describe,
+				DescribeI18n:  product.DescribeMultiLanguageName.GetNames(),
+				Detail:        product.Detail,
 				IsShowKitchen: product.IsShowKitchen,
 				Label:         labelInfo, // 商品标签
 			})
@@ -5294,15 +5300,16 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 	}
 
 	productDetailResp := product_resp.ProductDetailResp{
-		ProductType:  productPackage.ProductType,
-		Uuid:         productPackage.Uuid,
-		LocaleName:   productPackage.MultiLanguageName.GetNames(),
-		CategoryUuid: productPackage.CategoryUuid,
-		CategoryName: productPackage.ProductCategory.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		UnitUuid:     productPackage.ProductUnit.Uuid,
-		UnitName:     productPackage.ProductUnit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		Price:        &productPackage.Price,
-		Detail:       productPackage.Detail,
+		ProductType:      productPackage.ProductType,
+		Uuid:             productPackage.Uuid,
+		LocaleName:       productPackage.MultiLanguageName.GetNames(),
+		CategoryUuid:     productPackage.CategoryUuid,
+		CategoryName:     productPackage.ProductCategory.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitUuid:         productPackage.ProductUnit.Uuid,
+		UnitName:         productPackage.ProductUnit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Price:            &productPackage.Price,
+		Detail:           productPackage.Detail,
+		SellingPointI18n: productPackage.DescribeMultiLanguageName.GetNames(),
 
 		TakeoutTaxUuid: productPackage.TakeoutTax.Uuid,
 		TakeoutTaxName: productPackage.TakeoutTax.Name,
@@ -5357,10 +5364,6 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		},
 		HeadquarterUuid: productPackage.HeadquarterUuid,
 	}
-
-	sellingPoint, sellingPointI18n := resolveProductSellingPoint(*productPackage, ctx.GetLanguage())
-	productDetailResp.SellingPoint = sellingPoint
-	productDetailResp.SellingPointI18n = sellingPointI18n
 
 	return &productDetailResp, nil
 }

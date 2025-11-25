@@ -22,8 +22,8 @@ type Product struct {
 	Sauces              ProductSauceList          `json:"sauces"`                // 商品小料
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
-	SellingPoint        string                    `json:"selling_point"`         // 当前语言卖点
-	SellingPointI18n    dto.LocaleResponse        `json:"selling_point_i18n"`    // 卖点多语言
+	DescribeI18n        dto.LocaleResponse        `json:"describe_i18n"`         // 卖点多语言
+	Detail              string                    `json:"detail"`                // 商品详情（富文本）
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
 	ProductType         uint                      `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	// 套餐分组
@@ -530,7 +530,6 @@ type ProductDetailResp struct {
 	UnitName         string             `json:"unit_name"`          // 商品单位名称
 	Price            *float64           `json:"price"`              // 商品价格,套餐的价格
 	Detail           string             `json:"detail"`             // 商品详情（富文本）
-	SellingPoint     string             `json:"selling_point"`      // 当前语言卖点
 	SellingPointI18n dto.LocaleResponse `json:"selling_point_i18n"` // 卖点多语言
 
 	Flavors                 ProductFlavorList                 `json:"flavors"`                    // 商品规格列表

@@ -427,6 +427,9 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 				Query: "MultiLanguageName",
 			},
 			WithPreload{
+				Query: "DescribeMultiLanguageName",
+			},
+			WithPreload{
 				Query: "ProductCategory.MultiLanguageName",
 			},
 			WithPreload{
