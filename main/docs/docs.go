@@ -26724,7 +26724,7 @@ const docTemplate = `{
             }
         },
         "/shop/role/delete": {
-            "post": {
+            "delete": {
                 "security": [
                     {
                         "JwtToken": []
@@ -35181,6 +35181,10 @@ const docTemplate = `{
         "product_resp.PackageProductDetail": {
             "type": "object",
             "properties": {
+                "add_price": {
+                    "description": "加价金额",
+                    "type": "number"
+                },
                 "can_edit": {
                     "description": "是否可以编辑",
                     "type": "boolean"
@@ -36198,6 +36202,10 @@ const docTemplate = `{
         "product_resp.ProductPackageGroup": {
             "type": "object",
             "properties": {
+                "group_type": {
+                    "description": "分组类型 0-固定 1-可选",
+                    "type": "integer"
+                },
                 "is_full": {
                     "description": "是否选满",
                     "type": "boolean"
@@ -36212,6 +36220,10 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "套餐商品数量",
+                    "type": "integer"
+                },
+                "optional_count": {
+                    "description": "可选数量",
                     "type": "integer"
                 },
                 "products": {
@@ -41278,14 +41290,24 @@ const docTemplate = `{
         },
         "req.ProductShopAddPackageGroupProductReq": {
             "type": "object",
+            "required": [
+                "bom_uuid",
+                "num",
+                "sort"
+            ],
             "properties": {
+                "add_price": {
+                    "description": "加价金额，默认0",
+                    "type": "number"
+                },
                 "bom_uuid": {
                     "description": "商品BOM UUID",
                     "type": "integer"
                 },
                 "num": {
                     "description": "商品数量",
-                    "type": "number"
+                    "type": "number",
+                    "minimum": 0
                 },
                 "sort": {
                     "description": "商品排序",
@@ -41295,7 +41317,15 @@ const docTemplate = `{
         },
         "req.ProductShopAddPackageGroupReq": {
             "type": "object",
+            "required": [
+                "locale_name",
+                "products"
+            ],
             "properties": {
+                "group_type": {
+                    "description": "分组类型 0-固定 1-可选，默认0",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "套餐分组名称",
                     "allOf": [
@@ -41303,6 +41333,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "optional_count": {
+                    "description": "可选数量（可选分组时有效），默认1",
+                    "type": "integer"
                 },
                 "products": {
                     "description": "套餐分组商品列表",
@@ -41761,6 +41795,10 @@ const docTemplate = `{
         "req.ProductShopEditPackageGroupProductReq": {
             "type": "object",
             "properties": {
+                "add_price": {
+                    "description": "加价金额，默认0",
+                    "type": "number"
+                },
                 "bom_uuid": {
                     "description": "商品BOM UUID",
                     "type": "integer"
@@ -41786,6 +41824,10 @@ const docTemplate = `{
         "req.ProductShopEditPackageGroupReq": {
             "type": "object",
             "properties": {
+                "group_type": {
+                    "description": "分组类型 0-固定 1-可选",
+                    "type": "integer"
+                },
                 "is_delete": {
                     "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
                     "type": "boolean"
@@ -41797,6 +41839,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "optional_count": {
+                    "description": "可选数量（可选分组时有效）",
+                    "type": "integer"
                 },
                 "products": {
                     "description": "套餐分组商品列表",

@@ -1903,6 +1903,9 @@ definitions:
     type: object
   product_resp.PackageProductDetail:
     properties:
+      add_price:
+        description: 加价金额
+        type: number
       can_edit:
         description: 是否可以编辑
         type: boolean
@@ -2576,6 +2579,9 @@ definitions:
     type: object
   product_resp.ProductPackageGroup:
     properties:
+      group_type:
+        description: 分组类型 0-固定 1-可选
+        type: integer
       is_full:
         description: 是否选满
         type: boolean
@@ -2585,6 +2591,9 @@ definitions:
         description: 套餐分组名称
       num:
         description: 套餐商品数量
+        type: integer
+      optional_count:
+        description: 可选数量
         type: integer
       products:
         allOf:
@@ -6082,27 +6091,44 @@ definitions:
     type: object
   req.ProductShopAddPackageGroupProductReq:
     properties:
+      add_price:
+        description: 加价金额，默认0
+        type: number
       bom_uuid:
         description: 商品BOM UUID
         type: integer
       num:
         description: 商品数量
+        minimum: 0
         type: number
       sort:
         description: 商品排序
         type: integer
+    required:
+    - bom_uuid
+    - num
+    - sort
     type: object
   req.ProductShopAddPackageGroupReq:
     properties:
+      group_type:
+        description: 分组类型 0-固定 1-可选，默认0
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
+      optional_count:
+        description: 可选数量（可选分组时有效），默认1
+        type: integer
       products:
         description: 套餐分组商品列表
         items:
           $ref: '#/definitions/req.ProductShopAddPackageGroupProductReq'
         type: array
+    required:
+    - locale_name
+    - products
     type: object
   req.ProductShopAddPackageReq:
     properties:
@@ -6407,6 +6433,9 @@ definitions:
     type: object
   req.ProductShopEditPackageGroupProductReq:
     properties:
+      add_price:
+        description: 加价金额，默认0
+        type: number
       bom_uuid:
         description: 商品BOM UUID
         type: integer
@@ -6425,6 +6454,9 @@ definitions:
     type: object
   req.ProductShopEditPackageGroupReq:
     properties:
+      group_type:
+        description: 分组类型 0-固定 1-可选
+        type: integer
       is_delete:
         description: 是否删除, 如果是新增/编辑，则传false，删除时传true
         type: boolean
@@ -6432,6 +6464,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
+      optional_count:
+        description: 可选数量（可选分组时有效）
+        type: integer
       products:
         description: 套餐分组商品列表
         items:
@@ -32035,7 +32070,7 @@ paths:
       tags:
       - 商家端.员工账号
   /shop/role/delete:
-    post:
+    delete:
       consumes:
       - application/json
       description: 删除角色（已关联员工的角色无法删除）

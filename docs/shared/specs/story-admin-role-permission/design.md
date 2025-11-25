@@ -398,7 +398,14 @@ type RoleAccess struct {
 **请求**:
 
 - **URL**: `/api/v1/shop/role/delete`
-- **Method**: `POST`
+- **Method**: `DELETE`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -412,6 +419,16 @@ type RoleAccess struct {
 {
   "code": 1,
   "message": "success",
+  "data": {}
+}
+```
+
+**错误响应**（角色已关联员工）:
+
+```json
+{
+  "code": 0,
+  "message": "该角色已关联员工，无法删除",
   "data": {}
 }
 ```
@@ -799,6 +816,7 @@ func (s *roleSrv) UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) e
 	// 4. 更新角色信息（UpdateTime 由 GORM 自动更新）
 	// 5. 更新角色权限关联
 	// 6. 更新员工角色关联（如果提供了 staff_uuids）
+	// 7. 推送 WebSocket 通知（权限更新成功）
 }
 
 func (s *roleSrv) GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDetailResp, error) {
@@ -973,6 +991,52 @@ func (api *RoleAPI) GetPermissionTree(c *gin.Context) {
 
 ---
 
+## 📡 WebSocket 推送设计
+
+### 推送时机
+
+- **更新角色权限时**: 在 `UpdateRole` 方法中，更新角色权限成功后推送 WebSocket 通知
+- **创建角色时**: 不推送（Requirement 2.8）
+- **删除角色时**: 不推送（Requirement 2.8）
+
+### 推送实现
+
+**位置**: `main/app/service/role.go` 的 `UpdateRole` 方法
+
+**实现方式**:
+
+```go
+// 更新角色权限成功后，推送 WebSocket 通知
+utils.Go(func() {
+    websocket.PushClient(
+        ctx.GetCompanyUuid(),
+        websocket.SourceAll,
+        websocket.SourceAll,
+        websocket.UPDATE_PERMISSION,
+        map[string]any{
+            "update_time": time.Now().Unix(),
+            "role_uuid":   updateReq.Uuid,
+        },
+    )
+})
+```
+
+**推送参数**:
+- `companyUuid`: 从 `ctx.GetCompanyUuid()` 获取
+- `sourceClient`: `websocket.SourceAll`（推送给所有客户端）
+- `deviceId`: `websocket.SourceAll`（推送给所有设备）
+- `messageType`: `websocket.UPDATE_PERMISSION`
+- `data`: `{"update_time": timestamp, "role_uuid": roleUuid}`
+
+**参考实现**: `main/app/service/staff.go:172-176`（更新员工权限时的推送示例）
+
+### 推送范围
+
+- 推送给所有客户端（`SourceAll`）
+- 前端收到通知后，应刷新权限相关数据
+
+---
+
 ## 📈 性能优化
 
 ### 优化策略
@@ -984,10 +1048,15 @@ func (api *RoleAPI) GetPermissionTree(c *gin.Context) {
 2. **查询优化**:
    - 权限树查询使用缓存（可选）
 
+3. **WebSocket 推送优化**:
+   - 使用异步推送（`utils.Go`），不阻塞主流程
+   - 推送失败不影响业务逻辑
+
 ### 性能指标
 
 - 本地响应时间: < 200ms
 - 数据库查询: < 50ms
+- WebSocket 推送: 异步执行，不阻塞主流程
 
 ---
 
@@ -995,10 +1064,11 @@ func (api *RoleAPI) GetPermissionTree(c *gin.Context) {
 
 ### Phase 1: 核心实现（Go Main）
 
-- [ ] 创建或扩展 Role Service
-- [ ] 创建 Role API
-- [ ] 实现权限筛选逻辑（复用 role_access.go）
-- [ ] 实现角色 CRUD 操作
+- [x] 创建或扩展 Role Service
+- [x] 创建 Role API
+- [x] 实现权限筛选逻辑（复用 role_access.go）
+- [x] 实现角色 CRUD 操作
+- [x] 实现 WebSocket 推送（更新角色权限时）
 
 ### Phase 2: 权限规则处理
 
