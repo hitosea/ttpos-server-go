@@ -6,7 +6,7 @@
 
 | 项目              | 内容                                                                                                                         |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **来源 Proposal** | [docs/team/proposals/2025-11-25-product-selling-point-multilang-old-shop.md](../../../team/proposals/2025-11-25-product-selling-point-multilang-old-shop.md) |
+| **来源 Proposal** | [docs/team/proposals/2025-11/product-selling-point-multilang-old-shop.md](../../../../team/proposals/2025-11/product-selling-point-multilang-old-shop.md) |
 | **创建日期**      | 2025-11-25                                                                                                                   |
 | **负责人**        | {姓名}                                                                                                                       |
 | **目标 Sprint**   | Sprint {N}                                                                                                                   |
@@ -250,7 +250,7 @@
 - `.cursor/rules/go-main.mdc`
 - `.cursor/rules/php.mdc`
 - `.cursor/rules/vue.mdc`
-- `docs/shared/specs/story-shop-product-detail-editor/`（同一模块字段扩展参考）
+- `docs/shared/specs/active/story-shop-product-detail-editor/`（同一模块字段扩展参考）
 
 ---
 

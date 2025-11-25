@@ -20,7 +20,7 @@
 | -------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | **Layer 1：AGENTS.md**     | 场景识别、命令映射、快速检索顺序                                | `AGENTS.md` 场景 → 文件表                                                                    | 覆盖需求/功能/Bug/集成/数据库等常见场景，明确引用 `.cursor/rules` 与 `docs/`，但未直接提示 Graphiti 模板位置。                   |
 | **Layer 2：.cursor/rules** | 规则速查、导航、命名约束                                        | `workflows.mdc`, `documentation.mdc`, `specs.mdc`, `knowledge_management.mdc`, `structs.mdc` | 具备分层理念：“薄层引导 + 厚层详解”。部分规则引用未落实到现有文件（见 §3）。                                                     |
-| **Layer 3：docs/**         | 厚层内容（工作流、模板、架构、Spec、Troubleshooting、团队协作） | `docs/agent/workflows/*.md`, `docs/human/guides/*.md`, `docs/shared/specs/story-*`           | Agent 文档满足 <300 行、步骤化；人类文档提供 WHY/HOW；共享 Spec 体现 Proposal↔Spec 链接。存在模板/目录缺失与 Graphiti 链接空白。 |
+| **Layer 3：docs/**         | 厚层内容（工作流、模板、架构、Spec、Troubleshooting、团队协作） | `docs/agent/workflows/*.md`, `docs/human/guides/*.md`, `docs/shared/specs/active/story-*`    | Agent 文档满足 <300 行、步骤化；人类文档提供 WHY/HOW；共享 Spec 体现 Proposal↔Spec 链接。存在模板/目录缺失与 Graphiti 链接空白。 |
 
 ---
 
