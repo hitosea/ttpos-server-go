@@ -35399,6 +35399,18 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "selling_point": {
+                    "description": "当前语言卖点",
+                    "type": "string"
+                },
+                "selling_point_i18n": {
+                    "description": "卖点多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "special_category_uuid": {
                     "description": "商品特殊类别UUID",
                     "type": "integer"
@@ -35841,6 +35853,18 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/product_resp.ProductSauceList"
+                        }
+                    ]
+                },
+                "selling_point": {
+                    "description": "当前语言卖点",
+                    "type": "string"
+                },
+                "selling_point_i18n": {
+                    "description": "卖点多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
                 },
@@ -38428,7 +38452,6 @@ const docTemplate = `{
             "required": [
                 "end_date",
                 "locale_name",
-                "reduction_type",
                 "rules",
                 "start_date",
                 "uuid"
@@ -41590,6 +41613,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "selling_point": {
+                    "description": "商品卖点（多语言，可选）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "show": {
                     "description": "商品显示设置",
                     "allOf": [
@@ -42105,6 +42136,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/req.ProductShopEditSauceReq"
+                        }
+                    ]
+                },
+                "selling_point": {
+                    "description": "商品卖点（多语言，可选）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
                 },
@@ -50396,6 +50435,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "batch_tag_uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
                 },
                 "can_change_num": {
                     "description": "顾客可修改必点数量",

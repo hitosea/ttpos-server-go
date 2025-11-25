@@ -1976,6 +1976,13 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductSauceList'
         description: 商品小料
+      selling_point:
+        description: 当前语言卖点
+        type: string
+      selling_point_i18n:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 卖点多语言
       special_category_uuid:
         description: 商品特殊类别UUID
         type: integer
@@ -2261,6 +2268,13 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductSauceList'
         description: 商品小料列表
+      selling_point:
+        description: 当前语言卖点
+        type: string
+      selling_point_i18n:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 卖点多语言
       status:
         description: 商品状态 0-下架 1-上架
         type: integer
@@ -4051,7 +4065,6 @@ definitions:
     required:
     - end_date
     - locale_name
-    - reduction_type
     - rules
     - start_date
     - uuid
@@ -6226,6 +6239,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/req.ProductShopAddSauceReq'
         description: 商品加料列表
+      selling_point:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品卖点（多语言，可选）
       show:
         allOf:
         - $ref: '#/definitions/req.ProductShopAddShowReq'
@@ -6578,6 +6595,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/req.ProductShopEditSauceReq'
         description: 商品加料列表
+      selling_point:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品卖点（多语言，可选）
       show:
         allOf:
         - $ref: '#/definitions/req.ProductShopEditShowReq'
@@ -12235,6 +12256,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 分批类型名称
+      batch_tag_uuid:
+        description: 分批类型UUID
+        type: integer
       can_change_num:
         description: 顾客可修改必点数量
         type: boolean

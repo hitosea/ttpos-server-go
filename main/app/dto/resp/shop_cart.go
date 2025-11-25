@@ -330,6 +330,7 @@ type Product struct {
 	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
 	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
 	BatchTagColor       string             `json:"batch_tag_color"`       // 分批类型颜色
+	BatchTagUuid        uint64             `json:"batch_tag_uuid"`        // 分批类型UUID
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
@@ -353,7 +354,7 @@ type PackageProduct struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
 	UnitNum             float64            `json:"unit_num"`              // 单位数量
-	AddPrice            float64            `json:"add_price"`              // 加价金额
+	AddPrice            float64            `json:"add_price"`             // 加价金额
 }
 
 // GetPrice 获取商品价格(折后价)

@@ -844,6 +844,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 				}
 				return ""
 			}(),
+			BatchTagUuid: saleOrderProduct.BatchTagUuid,
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
