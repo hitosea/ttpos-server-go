@@ -40,7 +40,8 @@ type SaleOrderProduct struct {
 	// 价格相关字段
 	FlavorPrice      float64 `gorm:"column:flavor_price;type:decimal(12,2);not null;default:0.00;comment:'规格原价（单商品）,仅某规格商品的原价'" json:"flavor_price"`
 	SaucePrice       float64 `gorm:"column:sauce_price;type:decimal(12,2);not null;default:0.00;comment:'小料价（单商品）,所有小料的价格之和'" json:"sauce_price"`
-	ProductPrice     float64 `gorm:"column:product_price;type:decimal(12,2);not null;default:0.00;comment:'原始单价（单商品）,规格原价+小料价'" json:"product_price"`
+	AddPrice         float64 `gorm:"column:add_price;type:decimal(22,4);not null;default:0.00;comment:'加价金额。子商品记录单商品加价金额；套餐主商品记录所有子商品加价总和'" json:"add_price"`
+	ProductPrice     float64 `gorm:"column:product_price;type:decimal(22,4);not null;default:0.00;comment:'原始单价（单商品）,规格原价+小料价+加价金额'" json:"product_price"`
 	SalePrice        float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0.00;comment:'销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'" json:"sale_price"`
 	SalePriceNoTax   float64 `gorm:"column:sale_price_no_tax;type:decimal(12,2);not null;default:0.00;comment:'销售价,未含税价格（折前）'" json:"sale_price_no_tax"`
 	Price            float64 `gorm:"column:price;type:decimal(12,2);not null;default:0.00;comment:'最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'" json:"price"`

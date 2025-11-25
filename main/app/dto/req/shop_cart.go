@@ -30,8 +30,9 @@ type ProductRequest struct {
 	ProductPackageGroupUuid uint64 `json:"product_package_group_uuid"` // 套餐分组UUID
 	// 普通商品的参数
 	EditProductReq
-	Num     float64 `json:"num"`      // 商品数量
-	UnitNum float64 `json:"unit_num"` // 一个套餐的单个子商品的数量
+	Num      float64 `json:"num"`       // 商品数量
+	UnitNum  float64 `json:"unit_num"`  // 一个套餐的单个子商品的数量
+	AddPrice float64 `json:"add_price"` // 加价金额
 }
 
 type OrderCartProductFlavorAndAttributeChangeReq struct {
@@ -122,6 +123,7 @@ type ProductParams struct {
 	IsBuffet                        *bool            `json:"is_buffet"`                           // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息
 	ProductPackageAttributeUuidList []uint64         `json:"product_package_attribute_uuid_list"` // 属性信息
+	AddPrice                        float64          `json:"add_price"`                           // 加价金额
 	Operation                       string           `json:"operation"`                           // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64           `json:"must_plan_uuid"`                      // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Remark                          string           `json:"remark"`                              // 备注，平板端离线购物车提交

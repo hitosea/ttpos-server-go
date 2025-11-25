@@ -323,6 +323,7 @@ type Product struct {
 	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
+	AddPrice            float64            `json:"add_price"`             // 加价金额（套餐主商品的加价总和）
 	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
 	IsBatch             bool               `json:"is_batch"`              // 是否是分批商品
 	ShowDelayTag        bool               `json:"show_delay_tag"`        // 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
@@ -352,6 +353,7 @@ type PackageProduct struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
 	UnitNum             float64            `json:"unit_num"`              // 单位数量
+	AddPrice            float64            `json:"add_price"`              // 加价金额
 }
 
 // GetPrice 获取商品价格(折后价)

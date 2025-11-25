@@ -1922,6 +1922,13 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				}
 				params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, subProducts...)
 				saleOrderProducts = append(saleOrderProducts, subProducts...)
+
+				// 计算套餐主商品的加价总和 = Σ(子商品加价 × 子商品数量)
+				totalAddPrice := decimal.NewFromFloat(0.0)
+				for _, subProduct := range subProducts {
+					totalAddPrice = totalAddPrice.Add(decimal.NewFromFloat(subProduct.AddPrice).Mul(decimal.NewFromFloat(subProduct.Num)))
+				}
+				saleOrderProduct.AddPrice = totalAddPrice.InexactFloat64()
 			}
 		} else {
 			// 查询是否存在签名相同的订单商品
@@ -1997,6 +2004,13 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					}
 					params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, subProducts...)
 					saleOrderProducts = append(saleOrderProducts, subProducts...)
+
+					// 计算套餐主商品的加价总和 = Σ(子商品加价 × 子商品数量)
+					totalAddPrice := decimal.NewFromFloat(0.0)
+					for _, subProduct := range subProducts {
+						totalAddPrice = totalAddPrice.Add(decimal.NewFromFloat(subProduct.AddPrice).Mul(decimal.NewFromFloat(subProduct.Num)))
+					}
+					saleOrderProduct.AddPrice = totalAddPrice.InexactFloat64()
 				}
 				// 商品数量不能超过999个
 				if saleOrderProduct.Num > constant.ProductNumMax {
@@ -2230,6 +2244,9 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		IsAcceptOrder: uint(isAcceptOrder),
 		Remark:        product.Remark,
 	}, &productPackage, product.Operation)
+
+	// 设置加价金额（子商品）
+	saleOrderProduct.AddPrice = product.AddPrice
 
 	// 生成签名
 	saleOrderProduct.UpdateSign()

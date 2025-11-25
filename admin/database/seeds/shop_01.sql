@@ -384,7 +384,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 价格信息
     `flavor_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '规格原价（单商品）,仅某规格商品的原价',
     `sauce_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '小料价（单商品）,所有小料的价格之和',
-    `product_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '原始单价（单商品）,规格原价+小料价',
+    `add_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '加价金额。子商品记录单商品加价金额；套餐主商品记录所有子商品加价总和',
+    `product_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '原始单价（单商品）,规格原价+小料价+加价金额',
     `change_price_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并',
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0',
     -- 总销售价=销售价*数量

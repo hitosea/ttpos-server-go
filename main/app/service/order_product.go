@@ -1898,6 +1898,26 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 
+	// 查询套餐分组配置，用于验证分组选择
+	productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+		repository.CommonRepo.WhereByUuid(request.ProductPackageUuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+		repository.NewProductPackageRepo(db).WithProductPackageGroups(
+			repository.CommonRepo.WhereBySoftDelete(),
+		),
+		repository.NewProductPackageRepo(db).WithProductPackageGroupItems(
+			repository.CommonRepo.WhereBySoftDelete(),
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询套餐信息失败")
+	}
+
+	// 分组选择验证
+	if err := s.validatePackageGroupSelection(ctx, request.Products, productPackage.ProductPackageGroups); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	// 往销售账单里添加商品
 	productParam := req.ProductParams{
 		FlavorProductBomUuid: request.ProductPackageUuid,
@@ -1912,6 +1932,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 			Num:                             productReq.Num,
 			ProductPackageAttributeUuidList: productReq.AttributeUuidList,
 			ProductPackageGroupUuid:         productReq.ProductPackageGroupUuid,
+			AddPrice:                        productReq.AddPrice, // 传递加价金额
 			Operation:                       "add",
 		}
 		subProducts = append(subProducts, subProduct)
@@ -1932,6 +1953,79 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 
 	return shopCart, nil
 }
+
+// validatePackageGroupSelection 验证套餐分组选择是否符合套餐设置
+func (s *orderSrv) validatePackageGroupSelection(ctx context.Context, selectedProducts []req.ProductRequest, packageGroups []model.ProductPackageGroup) error {
+	// 按分组UUID分组统计已选商品
+	groupSelectedMap := make(map[uint64][]req.ProductRequest)
+	for _, product := range selectedProducts {
+		if product.ProductPackageGroupUuid > 0 {
+			groupSelectedMap[product.ProductPackageGroupUuid] = append(
+				groupSelectedMap[product.ProductPackageGroupUuid],
+				product,
+			)
+		}
+	}
+
+	// 遍历每个分组进行验证
+	for _, group := range packageGroups {
+		if group.IsDelete() {
+			continue
+		}
+
+		selectedProducts := groupSelectedMap[group.Uuid]
+
+		if group.GroupType == 0 {
+			// 固定分组：验证是否包含所有商品
+			// 获取分组内所有商品（未删除的）
+			validItems := make([]model.ProductPackageGroupItem, 0)
+			for _, item := range group.ProductPackageGroupItems {
+				if !item.IsDelete() {
+					validItems = append(validItems, item)
+				}
+			}
+
+			if len(selectedProducts) != len(validItems) {
+				groupName := group.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				return errors.New(fmt.Sprintf("固定分组「%s」必须选择所有商品，请重新选择", groupName))
+			}
+
+			// 验证商品UUID是否匹配
+			selectedUuidMap := make(map[uint64]bool)
+			for _, p := range selectedProducts {
+				selectedUuidMap[p.FlavorUuid] = true
+			}
+
+			for _, item := range validItems {
+				if !selectedUuidMap[item.ProductBomUuid] {
+					groupName := group.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					return errors.New(fmt.Sprintf("固定分组「%s」必须选择所有商品，请重新选择", groupName))
+				}
+			}
+		} else {
+			// 可选分组：验证已选数量是否等于 optional_count
+			selectedCount := 0.0
+			for _, p := range selectedProducts {
+				selectedCount += p.Num // 按份数统计
+			}
+
+			if int(selectedCount) != group.OptionalCount {
+				groupName := group.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				diff := group.OptionalCount - int(selectedCount)
+				if diff > 0 {
+					return errors.New(fmt.Sprintf("该分组「%s」需要选择 %d 个商品，当前已选 %d 个，还差 %d 个", 
+						groupName, group.OptionalCount, int(selectedCount), diff))
+				} else {
+					return errors.New(fmt.Sprintf("该分组「%s」最多选择 %d 个商品，当前已选 %d 个，请删除多余商品", 
+						groupName, group.OptionalCount, int(selectedCount)))
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
