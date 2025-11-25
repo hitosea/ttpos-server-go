@@ -950,3 +950,5 @@ if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
 - **2025-01-XX**: 初始版本，基于 `cashier_desk.go` 分析套餐加购业务逻辑
 
+
+

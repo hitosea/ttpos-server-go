@@ -235,9 +235,9 @@ redis-clear-data-node-conf:
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-1
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-2
 	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh down redis-node-3
-	@sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go/docker > /dev/null 2>&1
-	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1
-	@sudo rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1
+	@sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go/docker > /dev/null 2>&1 || true
+	@rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 
+	@sudo rm -rf ./docker/redis/cluster/data-* > /dev/null 2>&1 || true
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;
 check-db-host-open-mysql:
