@@ -1797,6 +1797,54 @@
         [
             {
                 "group_block_id": "amount_due_information",
+                "block_id": "order.activity_amount",
+                "block_type": "label:auto:value",
+                "block_label": {
+                    "de": "Aktivitätsabzug",
+                    "en": "Activity Deduction",
+                    "ja": "活動控除",
+                    "ko": "활동 공제",
+                    "my": "လှုပ်ရှားမှုလျှော့",
+                    "sv": "Aktivitetavdrag",
+                    "th": "หักลดจากกิจกรรม",
+                    "tr": "Etkinlik indir",
+                    "zh": "活动抵扣",
+                    "zhtw": "活動抵扣"
+                },
+                "block_name": {
+                    "en": "Activity Deduction",
+                    "ja": "活動控除",
+                    "ko": "활동 공제",
+                    "my": "လှုပ်ရှားမှုလျှော့",
+                    "th": "หักลดจากกิจกรรม",
+                    "tr": "Etkinlik Düşümü",
+                    "zh": "活动抵扣",
+                    "zhtw": "活動抵扣",
+                    "de": "Aktivität Abzug",
+                    "sv": "Aktivitet Avdrag"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "right",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 60,
+                    "show_currency_unit": true
+                },
+                "conditions": [
+                    {
+                        "field": "order.activity_amount",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.return_amount",
                 "block_type": "label:auto:value",
                 "block_label": {
