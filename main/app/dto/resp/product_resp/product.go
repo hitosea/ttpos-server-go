@@ -22,6 +22,8 @@ type Product struct {
 	Sauces              ProductSauceList          `json:"sauces"`                // 商品小料
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
+	SellingPoint        string                    `json:"selling_point"`         // 当前语言卖点
+	SellingPointI18n    dto.LocaleResponse        `json:"selling_point_i18n"`    // 卖点多语言
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
 	ProductType         uint                      `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	// 套餐分组
@@ -519,15 +521,17 @@ type ProductPrinterList struct {
 
 // ProductDetailResp 商品详情响应
 type ProductDetailResp struct {
-	ProductType  uint               `json:"product_type"`  // 商品类型 0-商品 1-套餐
-	Uuid         uint64             `json:"uuid"`          // 商品UUID
-	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品名称
-	CategoryUuid uint64             `json:"category_uuid"` // 商品分类UUID
-	CategoryName string             `json:"category_name"` // 商品分类名称
-	UnitUuid     uint64             `json:"unit_uuid"`     // 商品单位UUID
-	UnitName     string             `json:"unit_name"`     // 商品单位名称
-	Price        *float64           `json:"price"`         // 商品价格,套餐的价格
-	Detail       string             `json:"detail"`        // 商品详情（富文本）
+	ProductType      uint               `json:"product_type"`       // 商品类型 0-商品 1-套餐
+	Uuid             uint64             `json:"uuid"`               // 商品UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 商品名称
+	CategoryUuid     uint64             `json:"category_uuid"`      // 商品分类UUID
+	CategoryName     string             `json:"category_name"`      // 商品分类名称
+	UnitUuid         uint64             `json:"unit_uuid"`          // 商品单位UUID
+	UnitName         string             `json:"unit_name"`          // 商品单位名称
+	Price            *float64           `json:"price"`              // 商品价格,套餐的价格
+	Detail           string             `json:"detail"`             // 商品详情（富文本）
+	SellingPoint     string             `json:"selling_point"`      // 当前语言卖点
+	SellingPointI18n dto.LocaleResponse `json:"selling_point_i18n"` // 卖点多语言
 
 	Flavors                 ProductFlavorList                 `json:"flavors"`                    // 商品规格列表
 	Sauces                  ProductSauceList                  `json:"sauces"`                     // 商品小料列表

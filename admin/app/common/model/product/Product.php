@@ -55,6 +55,7 @@ class Product extends BaseModel
         'feed_open_max_select',
         'feed_max_select',
         'selling_point',
+        'selling_point_i18n',
         'is_enable_grade',
         'is_alone_grade',
         'product_sort',
@@ -63,6 +64,8 @@ class Product extends BaseModel
         'product_name_text',
         'product_unit_text',
     ];
+
+    private const SELLING_POINT_LANGUAGES = ['zh', 'en', 'zhtw', 'th', 'my', 'ja', 'ko', 'tr', 'sv'];
 
     /*
      * 类型 10-成品 20-材料
@@ -156,6 +159,20 @@ class Product extends BaseModel
     public function getSellingPointAttr($value, $data = [])
     {
         return $this->describe ?: '';
+    }
+
+    public function getSellingPointI18nAttr($value, $data = [])
+    {
+        $uuid = $data['describe_multi_language_name_uuid'] ?? 0;
+        if (empty($uuid)) {
+            return [];
+        }
+        $names = (new MultiLanguageName)->getNames($uuid);
+        if (empty($names)) {
+            return [];
+        }
+        $decoded = json_decode($names, true);
+        return is_array($decoded) ? $decoded : [];
     }
     public function getIsEnableGradeAttr($value, $data = [])
     {
