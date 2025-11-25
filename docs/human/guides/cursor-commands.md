@@ -8,15 +8,16 @@
 
 ### 核心指令
 
-| 优先级 | 指令                      | 描述                    | 状态   |
-| ------ | ------------------------- | ----------------------- | ------ |
-| ⭐⭐⭐ | `/propose`                | 创建需求提案（Scrum）   | ✅ MVP |
-| ⭐⭐⭐ | `/onboard`                | 项目快速入门引导        | ✅ MVP |
-| ⭐⭐⭐ | `/create-spec`            | 创建 Spec 文档          | ✅ MVP |
-| ⭐⭐⭐ | `/archive-spec`           | 归档已完成的 Spec       | ✅ MVP |
-| ⭐⭐⭐ | `/deprecate-spec`         | 废弃不再需要的 Spec     | ✅ MVP |
-| ⭐⭐⭐ | `/restore-spec`           | 恢复已归档/废弃的 Spec  | ✅ MVP |
-| ⭐⭐⭐ | `/check-tasks`            | 检查任务完成进度        | 规划中 |
+| 优先级 | 指令                      | 描述                              | 状态   |
+| ------ | ------------------------- | --------------------------------- | ------ |
+| ⭐⭐⭐ | `/propose`                | 创建需求提案（Scrum）             | ✅ MVP |
+| ⭐⭐⭐ | `/onboard`                | 项目快速入门引导                  | ✅ MVP |
+| ⭐⭐⭐ | `/create-spec`            | 创建需求文档（requirements.md）   | ✅ MVP |
+| ⭐⭐⭐ | `/design-spec`            | 创建设计文档（design + tasks）    | ✅ MVP |
+| ⭐⭐⭐ | `/archive-spec`           | 归档已完成的 Spec                 | ✅ MVP |
+| ⭐⭐⭐ | `/deprecate-spec`         | 废弃不再需要的 Spec               | ✅ MVP |
+| ⭐⭐⭐ | `/restore-spec`           | 恢复已归档/废弃的 Spec            | ✅ MVP |
+| ⭐⭐⭐ | `/check-tasks`            | 检查任务完成进度                  | 规划中 |
 | ⭐⭐   | `/create-api-doc`         | 为已实现的 API 创建文档 | 规划中 |
 | ⭐⭐   | `/create-component-test`  | 为组件创建测试          | 规划中 |
 | ⭐⭐   | `/create-model-test`      | 为 Model 创建测试       | 规划中 |
@@ -60,6 +61,34 @@
   - 将任务内容作为上下文信息，供后续对话使用
 
 **详见**: `.cursor/commands/propose.md`
+
+---
+
+### `/design-spec` - 创建设计文档 ⭐ 新增
+
+**使用场景**: 需求审核通过后，创建技术设计文档和任务分解
+
+**使用方式**:
+
+```bash
+/design-spec story-order-quick-payment
+/design-spec task-shop-export-report
+```
+
+**前置条件**:
+
+- requirements.md 存在
+- 审核状态为「已通过」
+
+**功能特点**:
+
+- ✅ 检查 requirements.md 存在且已通过审核
+- ✅ 创建 design.md（技术设计）
+- ✅ 创建 tasks.md（任务分解）
+- ✅ 自动填充后端特定信息（Go/PHP/数据库）
+- ✅ 提供开发指引
+
+**详见**: `.cursor/commands/design-spec.md`
 
 ---
 

@@ -9,7 +9,7 @@
 | 用户说...                      | 识别为     | 立即执行                                                               | 涉及文件/目录                  | 参考规范        |
 | ------------------------------ | ---------- | ---------------------------------------------------------------------- | ------------------------------ | --------------- |
 | "新人" "入职" "不熟悉"         | 新成员入职 | `/onboard quick` → 推送必读清单                                        | agent/workflows/onboarding.md  | intro.mdc       |
-| "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 填写 → 评审 → `/create-spec story-{module}-{name}` | team/proposals/, shared/specs/ | specs.mdc       |
+| "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 评审 → `/create-spec` → 审核 → `/design-spec`      | team/proposals/, shared/specs/ | specs.mdc       |
 | "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/active/{}/tasks.md` → 逐任务执行                      | shared/specs/, main/, admin/   | go-main/php.mdc |
 | "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | go-main.mdc     |
 | "集成 XX" "对接 XX" "API"      | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档               | integrations/, shared/api/     | api.mdc         |
@@ -64,7 +64,8 @@
 | **查看规范**              | `.cursor/rules/*.mdc`                           | 规则速查                       |
 | **执行任务**              | `docs/shared/specs/active/*/tasks.md`                  | 任务逐条执行                   |
 | **创建需求提案**          | `docs/team/proposals/{YYYY-MM}/{name}.md`              | `/propose`                     |
-| **创建功能规格**          | `docs/shared/specs/active/{level}-{module}-{feature}/` | `/create-spec`                 |
+| **创建需求文档**          | `docs/shared/specs/active/{level}-{module}-{feature}/requirements.md` | `/create-spec`                 |
+| **创建设计文档**          | `docs/shared/specs/active/{level}-{module}-{feature}/design.md + tasks.md` | `/design-spec`                 |
 | **归档 Spec**             | `docs/shared/specs/archived/{version}/`                | `/archive-spec`                |
 | **废弃 Spec**             | `docs/shared/specs/deprecated/`                        | `/deprecate-spec`              |
 

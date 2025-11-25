@@ -45,9 +45,15 @@ docs/team/proposals/{YYYY-MM}/{feature-name}.md
 ## 🔄 提案流程
 
 ```
-想法 → 创建提案 → 需求评审 → 
-  ├─ 批准 → 创建 Spec → 进入开发 → 上线 → /archive-spec
+想法 → /propose → 需求评审 → 
+  ├─ 批准 → /create-spec → 产品审核 → /design-spec → 开发 → 上线 → /archive-spec
   └─ 拒绝/取消 → 归档（标注原因）或 /deprecate-spec
+
+详细流程:
+/propose         → 创建提案文档
+/create-spec     → 创建 requirements.md（审核状态: 待审核）
+产品审核         → 更新审核状态为「已通过」
+/design-spec     → 创建 design.md + tasks.md
 ```
 
 ---
@@ -81,7 +87,8 @@ touch docs/team/proposals/2025-11/quick-payment.md
 ## 🔗 相关资源
 
 ### 工作流
-- [需求管理工作流](../../agent/workflows/requirement-management.md)
+- [需求管理工作流](../../agent/workflows/requirement/management.md)
+- [Proposal-Spec 链接](../../agent/workflows/requirement/linking.md)
 
 ### 模板
 - [提案模板](../../agent/templates/proposal-template.md)
@@ -91,5 +98,5 @@ touch docs/team/proposals/2025-11/quick-payment.md
 
 ---
 
-**最后更新**: 2025-11-16
+**最后更新**: 2025-11-25
 

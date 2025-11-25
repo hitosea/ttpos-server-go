@@ -103,12 +103,34 @@ story-order-quick-payment/
 
 ---
 
-## 📋 创建新 Spec
+## 📋 创建新 Spec（两阶段流程）
 
-### 使用 Agent 指令
+### Phase 1: 创建需求文档
 
 ```bash
 /create-spec story-order-quick-payment
+```
+
+输出：
+```
+docs/shared/specs/active/story-order-quick-payment/
+└── requirements.md  # 审核状态: 待审核
+```
+
+### Phase 2: 创建设计文档（产品审核通过后）
+
+```bash
+/design-spec story-order-quick-payment
+```
+
+前置条件：requirements.md 审核状态为「已通过」
+
+输出：
+```
+docs/shared/specs/active/story-order-quick-payment/
+├── requirements.md  # 审核状态: 已通过
+├── design.md        # 技术设计
+└── tasks.md         # 任务分解
 ```
 
 ### 手动创建
@@ -116,7 +138,9 @@ story-order-quick-payment/
 ```bash
 mkdir -p docs/shared/specs/active/story-order-quick-payment
 cd docs/shared/specs/active/story-order-quick-payment
-touch requirements.md design.md tasks.md
+touch requirements.md  # 先创建需求文档
+# 审核通过后再创建
+touch design.md tasks.md
 ```
 
 ### Graphiti & 活动日志
@@ -131,8 +155,8 @@ touch requirements.md design.md tasks.md
 
 ### 工作流
 
-- [需求管理工作流](../../agent/workflows/requirement-management.md)
-- [功能开发工作流](../../agent/workflows/feature-development.md)
+- [需求管理工作流](../../agent/workflows/requirement/management.md)
+- [功能开发工作流](../../agent/workflows/development/feature.md)
 
 ### 模板
 
@@ -147,4 +171,4 @@ touch requirements.md design.md tasks.md
 
 ---
 
-**最后更新**: 2025-11-16
+**最后更新**: 2025-11-25
