@@ -107,6 +107,7 @@
         "member_card_discount_rate": 10,
         "member_points_discount": 100,
         "coupon_exchange_amount": 10,
+        "activity_amount": 50,
         "check_out_zero_fee": "0.92",
         "return_amount": "10",
         "payment_commission_fee": 30,

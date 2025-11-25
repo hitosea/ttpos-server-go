@@ -361,6 +361,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			}(),
 			//
 			CouponExchangeAmount: saleOrder.CalcCouponExchangeAmount(),
+			ActivityAmount:       saleOrder.ActivityAmount,
 			CheckOutZeroFee:      t.base.Amount(saleOrder.GetCheckOutZeroFee()),
 			ReturnAmount:         t.base.Amount(saleOrder.GetReturnAmount()),
 			PaymentCommissionFee: saleOrder.PaymentCommissionFee,

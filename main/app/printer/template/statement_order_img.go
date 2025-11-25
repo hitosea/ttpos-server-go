@@ -496,6 +496,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 	}
 
+	// 活动抵扣
+	if saleOrder.ActivityAmount > 0 {
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("活动抵扣"), t.base.GetPriceAndUnit(saleOrder.ActivityAmount)))
+		img.LineFeed(1)
+	}
+
 	// 抹零
 	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))

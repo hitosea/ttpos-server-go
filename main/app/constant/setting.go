@@ -22,6 +22,7 @@ const (
 	SettingPointsRule     = "points_rule"      // 积分规则设置
 	SettingCloudBasic     = "cloud_basic"      // 云端-基础信息
 	SettingBatchColor     = "batch_color"      // 分批类型颜色设置
+	SettingDataManage     = "data_manage"      // 数据管理设置
 )
 
 const (

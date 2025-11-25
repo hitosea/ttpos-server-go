@@ -81,6 +81,7 @@ type ISrv interface {
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
 	GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp                                                               // 获取支付方式列表
+	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -2158,4 +2159,22 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 		})
 	}
 	return setting.PaymentMethodListResp{List: list}
+}
+
+// GetDataManageSetting 获取数据管理设置
+func (s *Srv) GetDataManageSetting(ctx context.Context) model.DataManageSetting {
+	setting := s.getSettingByKey(ctx, constant.SettingDataManage)
+	if setting.Key == "" {
+		return model.DataManageSetting{
+			IsEnableDataManage: false,
+		}
+	}
+	var dataManageSetting model.DataManageSetting
+	err := json.Unmarshal([]byte(setting.Values), &dataManageSetting)
+	if err != nil {
+		return model.DataManageSetting{
+			IsEnableDataManage: false,
+		}
+	}
+	return dataManageSetting
 }
