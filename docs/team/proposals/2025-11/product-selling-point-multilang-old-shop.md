@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 待评审   |
 | **关联任务** | DooTask #36924 |
-| **关联 Spec** | [docs/shared/specs/story-shop-product-selling-point-multilang-old-shop/](../shared/specs/story-shop-product-selling-point-multilang-old-shop/) |
+| **关联 Spec** | [docs/shared/specs/story-shop-product-selling-point-multilang-old-shop/](../../../shared/specs/story-shop-product-selling-point-multilang-old-shop/) |
 
 ---
 
