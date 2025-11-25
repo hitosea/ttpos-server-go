@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -10,6 +12,8 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 )
 
 // IRoleSrv 角色服务接口
@@ -231,6 +235,20 @@ func (s *roleSrv) UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) e
 			}
 		}
 	}
+
+	// 推送 WebSocket 通知（更新角色权限成功）
+	utils.Go(func() {
+		websocket.PushClient(
+			ctx.GetCompanyUuid(),
+			websocket.SourceAll,
+			websocket.SourceAll,
+			websocket.UPDATE_PERMISSION,
+			map[string]any{
+				"update_time": time.Now().Unix(),
+				"role_uuid":   updateReq.Uuid,
+			},
+		)
+	})
 
 	return nil
 }

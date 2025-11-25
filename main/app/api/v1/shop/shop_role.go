@@ -107,7 +107,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Security JwtToken
 // @Param data body req.DeleteRoleReq true "删除角色请求"
 // @Success 200 {object} dto.Response
-// @Router /shop/role/delete [post]
+// @Router /shop/role/delete [delete]
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var deleteReq req.DeleteRoleReq
@@ -163,7 +163,7 @@ func RegisterRoleHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/role/detail", wrapper.GetRoleDetail) // 获取角色详情
 		privateApi.POST("/role/create", wrapper.CreateRole)   // 创建角色
 		privateApi.POST("/role/update", wrapper.UpdateRole)   // 更新角色
-		privateApi.POST("/role/delete", wrapper.DeleteRole)   // 删除角色
+		privateApi.DELETE("/role/delete", wrapper.DeleteRole) // 删除角色
 
 		privateApi.GET("/permission_group", wrapper.GetPermissionGroup) // 获取权限树
 	}

@@ -125,6 +125,7 @@
 1. **WHEN** 管理员点击"编辑角色" **THEN** 系统 **SHALL** 显示角色编辑表单，包含角色名称、功能权限和关联员工
 2. **WHEN** 编辑角色时 **THEN** 系统 **SHALL** 显示关联员工功能
 3. **IF** 修改角色名称或权限 **THEN** 系统 **SHALL** 验证并保存更改
+4. **WHEN** 更新角色权限成功 **THEN** 系统 **SHALL** 推送 WebSocket 通知到前端，通知权限已更新
 
 #### 具体要求
 
@@ -135,6 +136,13 @@
 - [ ] 2.5 显示已关联的员工列表
 - [x] 2.6 在获取角色详情时，返回已选择叶子节点权限数量（`selected_leaf_count`）
 - [x] 2.7 在获取角色详情时，返回公司管理APP、收银机、点餐助手三个权限组的叶子节点数量之和（`total_leaf_count`）
+- [x] 2.8 在 `UpdateRole` 方法中，更新角色权限成功后推送 WebSocket 通知
+  - 使用 `websocket.PushClient()` 推送
+  - 消息类型：`websocket.UPDATE_PERMISSION`
+  - 推送范围：`SourceAll`（所有客户端）
+  - 数据格式：`{"update_time": timestamp, "role_uuid": roleUuid}`
+  - ⚠️ **注意**：仅在更新权限时推送，创建和删除角色不推送
+  - ✅ **已完成**：在 `main/app/service/role.go` 的 `UpdateRole` 方法中实现了 WebSocket 推送逻辑
 
 ---
 
@@ -154,6 +162,7 @@
 - [ ] 3.2 检查角色是否关联员工，如果已关联则置灰删除按钮
 - [ ] 3.3 未关联员工时，点击删除显示确认提示："确定删除角色吗？"
 - [ ] 3.4 确认删除后，删除角色记录和角色权限关联记录
+- [x] 3.5 删除角色接口使用 DELETE 方法，参数通过请求体传递（`/api/v1/shop/role/delete`，Body: `{"uuid": xxx}`）
 
 ---
 
@@ -206,6 +215,18 @@
 - [x] 字段名使用 snake_case
 - [x] 参考: `.cursor/rules/database.mdc` - 数据库开发规范
 
+### WebSocket 推送要求
+
+- [ ] **更新角色权限时推送通知**
+  - 仅在更新角色权限时推送（`UpdateRole` 方法中）
+  - 创建角色（`CreateRole`）不推送
+  - 删除角色（`DeleteRole`）不推送
+  - 使用 `websocket.PushClient()` 异步推送
+  - 消息类型：`websocket.UPDATE_PERMISSION`
+  - 推送范围：`SourceAll`（所有客户端）
+  - 数据格式：`{"update_time": timestamp, "role_uuid": roleUuid}`
+  - 参考实现：`main/app/service/staff.go:172-176`
+
 ### 性能要求
 
 - [ ] 本地响应时间 < 200ms
@@ -255,6 +276,7 @@
 3. **编辑角色**: 管理员可以修改角色名称和权限，可以关联员工
 4. **删除角色**: 已关联员工的角色不能删除，未关联的角色可以删除（需确认）
 5. **权限规则**: 根据商户类型和配置动态显示/隐藏权限选项
+6. **WebSocket 推送**: 更新角色权限成功后，推送 WebSocket 通知到前端（创建和删除不推送）
 
 ### 测试验收
 
