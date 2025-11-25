@@ -226,6 +226,8 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	if desk.SaleBill == nil {
 		return res, nil
 	}
+	// 设置国籍UUID
+	res.NationalityUuid = desk.SaleBill.NationalityUuid
 	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
 	if shopCart == nil {
 		var opts []repository.OrderCartInfoOptionFunc

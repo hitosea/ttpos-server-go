@@ -110,6 +110,7 @@ type DeskPing struct {
 	UpdateTime          int64                  `json:"update_time"`            // 更新时间
 	Product             *product_resp.Product  `json:"product,omitempty"`      // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 	OrderRemark         *OrderRemarkRes        `json:"order_remark,omitempty"` // 整单备注信息
+	NationalityUuid     uint64                 `json:"nationality_uuid"`       // 国籍UUID（0=未设置）
 }
 
 type H5DeskPing struct {
