@@ -377,3 +377,8 @@ type VerifyPasswordForSensitiveOperationReq struct {
 	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"` // 授权员工账号（邮箱或手机号）
 	Password               string `json:"password" binding:"required"`                 // 权限密码
 }
+
+// OrderPaymentAmountReq 获取实付金额请求
+type OrderPaymentAmountReq struct {
+	SaleBillUuids []uint64 `json:"sale_bill_uuids"` // 销售账单UUID列表
+}

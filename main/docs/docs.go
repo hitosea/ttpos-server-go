@@ -22735,6 +22735,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/order/payment_amount": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取实付金额",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "获取实付金额",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderPaymentAmountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "实付金额",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GetPaymentAmountResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/shop/order/re_return": {
             "post": {
                 "security": [
@@ -35331,6 +35373,18 @@ const docTemplate = `{
                     "description": "卖点，h5端显示",
                     "type": "string"
                 },
+                "describe_i18n": {
+                    "description": "卖点多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "detail": {
+                    "description": "商品详情（富文本）",
+                    "type": "string"
+                },
                 "first_category_uuid": {
                     "description": "商品一级类别UUID",
                     "type": "integer"
@@ -35396,18 +35450,6 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/product_resp.ProductSauceList"
-                        }
-                    ]
-                },
-                "selling_point": {
-                    "description": "当前语言卖点",
-                    "type": "string"
-                },
-                "selling_point_i18n": {
-                    "description": "卖点多语言",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
                 },
@@ -35855,10 +35897,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/product_resp.ProductSauceList"
                         }
                     ]
-                },
-                "selling_point": {
-                    "description": "当前语言卖点",
-                    "type": "string"
                 },
                 "selling_point_i18n": {
                     "description": "卖点多语言",
@@ -39848,6 +39886,18 @@ const docTemplate = `{
                 "sale_order_uuid": {
                     "description": "销售订单UUID, 必填",
                     "type": "integer"
+                }
+            }
+        },
+        "req.OrderPaymentAmountReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuids": {
+                    "description": "销售账单UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -46938,6 +46988,15 @@ const docTemplate = `{
                 "remaining_payment_time": {
                     "description": "剩余支付时间(单位秒)",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.GetPaymentAmountResp": {
+            "type": "object",
+            "properties": {
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
                 }
             }
         },

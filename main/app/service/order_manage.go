@@ -2545,3 +2545,59 @@ func (s *orderSrv) AuthorizeSensitiveOperation(ctx context.Context, operationTyp
 	staff := ctx.GetStaff()
 	return &staff, nil
 }
+
+// GetPaymentAmount 获取实付金额。实付金额=订单金额-退款金额
+func (s *orderSrv) GetPaymentAmount(ctx context.Context, req req.OrderPaymentAmountReq) resp.GetPaymentAmountResp {
+	if len(req.SaleBillUuids) == 0 {
+		return resp.GetPaymentAmountResp{PaymentAmount: 0}
+	}
+
+	db := ctx.GetDB()
+	if db == nil {
+		db = s.dbm.GetDB(ctx.GetDbId())
+	}
+
+	type amountAgg struct {
+		Amount float64 `gorm:"column:amount"`
+	}
+
+	var (
+		payAgg    amountAgg
+		refundAgg amountAgg
+	)
+
+	// 统计销售订单的支付金额
+	if err := db.Model(&model.SaleOrder{}).
+		Select("COALESCE(SUM(payment_amount), 0) AS amount").
+		Where("sale_bill_uuid IN (?)", req.SaleBillUuids).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("status = ?", constant.SaleOrderStatusFinish).
+		Scan(&payAgg).Error; err != nil {
+		logger.Logger.Error("GetPaymentAmount sum payment failed", zap.Error(err))
+		return resp.GetPaymentAmountResp{PaymentAmount: 0}
+	}
+
+	// 统计退款金额
+	if err := db.Table("ttpos_return_order AS ro").
+		Select("COALESCE(SUM(ro.refund_amount), 0) AS amount").
+		Joins("INNER JOIN ttpos_sale_order AS so ON ro.related_order_uuid = so.uuid AND so.delete_time = ? AND so.status = ?", constant.NotDeleted, constant.SaleOrderStatusFinish).
+		Where("ro.delete_time = ?", constant.NotDeleted).
+		Where("ro.related_order_type = ?", constant.ReturnOrderRelatedOrderTypeSaleOrder).
+		Where("so.sale_bill_uuid IN (?)", req.SaleBillUuids).
+		Scan(&refundAgg).Error; err != nil {
+		logger.Logger.Error("GetPaymentAmount sum refund failed", zap.Error(err))
+		return resp.GetPaymentAmountResp{PaymentAmount: 0}
+	}
+
+	paymentAmount := decimal.NewFromFloat(payAgg.Amount).
+		Sub(decimal.NewFromFloat(refundAgg.Amount)).
+		Round(2).InexactFloat64()
+
+	if paymentAmount < 0 {
+		paymentAmount = 0
+	}
+
+	return resp.GetPaymentAmountResp{
+		PaymentAmount: paymentAmount,
+	}
+}
