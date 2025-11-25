@@ -82,7 +82,7 @@
 
 | 我需要...      | 文件路径                           | 用途       |
 | -------------- | ---------------------------------- | ---------- |
-| **功能规格**   | `docs/shared/specs/story-*-*/`     | 需求和设计 |
+| **功能规格**   | `docs/shared/specs/active/story-*-*/` | 需求和设计 |
 | **API 文档**   | `docs/shared/api/*.md`             | 接口查询   |
 | **问题排查**   | `docs/shared/troubleshooting/*.md` | 故障处理   |
 | **第三方集成** | `docs/shared/integrations/`        | 集成文档   |

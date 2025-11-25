@@ -39,7 +39,7 @@
 | 文档类型                          | 放置目录                                            | 模板                                                  | 关键内容                     |
 | --------------------------------- | --------------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
 | 需求提案（Proposal）              | `docs/team/proposals/`                              | `docs/agent/templates/proposal-template.md`           | 背景、价值、风险、评审       |
-| Spec（requirements/design/tasks） | `docs/shared/specs/{spec-name}/`                    | `docs/agent/templates/requirements-template.md` 等    | User Story、设计、任务       |
+| Spec（requirements/design/tasks） | `docs/shared/specs/active/{spec-name}/`             | `docs/agent/templates/requirements-template.md` 等    | User Story、设计、任务       |
 | API 文档                          | `docs/shared/api/{module}_api.md`                   | `docs/agent/templates/api-doc-template.md`            | 接口列表、参数、示例、错误码 |
 | 数据库迁移说明                    | `admin/database/migrations/` + `docs/shared/specs/` | `docs/agent/templates/database-migration-template.md` | 字段规范、迁移步骤           |
 | gRPC / 微服务设计                 | `ttpos-bmp/` + `docs/shared/specs/`                 | `docs/agent/templates/grpc-service-template.md`       | proto、服务注册、调用示例    |

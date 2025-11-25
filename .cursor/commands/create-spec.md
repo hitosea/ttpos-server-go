@@ -48,7 +48,7 @@ description: 创建功能规格文档
 ## 输出产物
 
 ```
-docs/shared/specs/{level}-{module}-{feature}/
+docs/shared/specs/active/{level}-{module}-{feature}/
 ├── requirements.md  # 需求规格（自动关联 Proposal）
 ├── design.md        # 技术设计（Go/PHP/Vue）
 └── tasks.md         # 任务分解（含 AI Prompt）

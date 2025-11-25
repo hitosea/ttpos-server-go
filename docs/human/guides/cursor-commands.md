@@ -47,7 +47,7 @@
 
 - ✅ 自动使用 `docs/agent/templates/proposal-template.md` 创建提案
 - ✅ 自动填充日期、提案人信息
-- ✅ 创建目录 `docs/team/proposals/{YYYY-MM-DD}-{feature-name}.md`
+- ✅ 创建目录 `docs/team/proposals/{YYYY-MM}/{feature-name}.md`
 - ✅ 提供 Scrum 评审清单
 - ✅ **自动读取 DooTask 任务**（当提供任务编号时）
   - 自动获取任务标题、描述、需求详情

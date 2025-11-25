@@ -282,9 +282,9 @@
 | 阶段     | 产物                             | 存放位置                                      |
 | -------- | -------------------------------- | --------------------------------------------- |
 | 需求提案 | `{YYYY-MM-DD}-{feature-name}.md` | `docs/team/proposals/`                        |
-| 需求规格 | `requirements.md`                | `docs/shared/specs/story-{module}-{feature}/` |
-| 技术设计 | `design.md`                      | `docs/shared/specs/story-{module}-{feature}/` |
-| 任务分解 | `tasks.md`                       | `docs/shared/specs/story-{module}-{feature}/` |
+| 需求规格 | `requirements.md`                | `docs/shared/specs/active/story-{module}-{feature}/` |
+| 技术设计 | `design.md`                      | `docs/shared/specs/active/story-{module}-{feature}/` |
+| 任务分解 | `tasks.md`                       | `docs/shared/specs/active/story-{module}-{feature}/` |
 
 ---
 
