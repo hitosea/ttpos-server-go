@@ -2314,7 +2314,7 @@ func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq
 			continue
 		}
 		// 验证商品是否已送厨（已送厨则不允许修改）
-		if product.IsCookingProduct() {
+		if !product.IsPreCooking() {
 			return errors.New("商品已送厨，不能修改分批类型")
 		}
 		// 验证商品是否为分批商品
