@@ -398,6 +398,7 @@ type SaleOrderItem struct {
 	// 父级关联
 	Parentfield string `json:"parentfield,omitempty"` // 父级字段
 	Parenttype  string `json:"parenttype,omitempty"`  // 父级类型
+	Supplier    string `json:"supplier,omitempty"`    //供应商
 }
 
 // SaleOrder 结构体，表示销售订单
