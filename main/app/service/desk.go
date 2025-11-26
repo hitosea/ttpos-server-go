@@ -693,14 +693,38 @@ func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) er
 
 // ChangeDesk 切换桌台
 func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp.ShopCart, error) {
-	// 禁止并发操作
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
+	// 禁止并发操作：在方法开头就加锁，确保获取目标桌台的订单UUID时使用的是最新数据
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(reqs.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(reqs.SaleBillUuid)
+		systemLock := lock.NewSystemLock()
+
+		// 收集需要锁定的资源：源订单 + 目标资源（目标桌台或目标订单）
+		lockUuids := []uint64{reqs.SaleBillUuid}
+
+		// 获取目标桌台的订单UUID（在锁内获取，确保数据一致性）
+		// 如果目标桌台有订单，则锁定目标订单；否则锁定目标桌台
+		targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(reqs.DeskUuid)
+		if err == nil && targetSaleBillUuid != 0 {
+			// 目标桌台有订单，锁定目标订单
+			lockUuids = append(lockUuids, targetSaleBillUuid)
+		} else {
+			// 目标桌台没有订单，锁定目标桌台
+			lockUuids = append(lockUuids, reqs.DeskUuid)
+		}
+
+		// 锁定源订单和目标资源（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, lockUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+
 		ctx.AddLock()
 	}
 
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(reqs.SaleBillUuid)
 	if errSaleBill != nil {
@@ -722,7 +746,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 		return nil, errors.New("旧桌台待清台，不允许转台")
 	}
 
-	// 获取桌台信息
+	// 获取桌台信息（在锁内获取，确保数据一致性）
 	desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(reqs.DeskUuid)
 	if errDesk != nil {
 		return nil, errors.WithMessage(errDesk, "获取桌台信息失败")
@@ -798,28 +822,39 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 
 // MergeDesk 合并桌台
 func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
-	companyUuid := ctx.GetCompanyUuid()
-	systemLock := lock.NewSystemLock()
-	// 禁止并发操作
-	if ctx.NoLock() {
-		// 禁止并发操作
-		systemLock.LockUuid(req.SaleBillUuid)
-		systemLock.LockUuid(companyUuid)
-		// 按相反顺序解锁
-		defer func() {
-			systemLock.UnlockUuid(companyUuid)
-			systemLock.UnlockUuid(req.SaleBillUuid)
-		}()
-		ctx.AddLock()
-	}
-
 	if err := req.Validate(); err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 
-	// 获取销售账单信息
+	// 禁止并发操作：在方法开头就加锁，确保获取被合并桌台的订单UUID时使用的是最新数据
+	if ctx.NoLock() {
+		systemLock := lock.NewSystemLock()
+		// 收集所有需要锁定的订单 UUID（主订单 + 所有被合并的订单）
+		orderUuids := []uint64{req.SaleBillUuid}
+
+		// 收集被合并桌台的订单 UUID（在锁内获取，确保数据一致性）
+		for _, deskUuid := range req.DeskUuids {
+			// 通过桌台UUID获取订单UUID（在锁内获取）
+			targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(deskUuid)
+			if err == nil && targetSaleBillUuid != 0 {
+				orderUuids = append(orderUuids, targetSaleBillUuid)
+			}
+		}
+
+		// 锁定所有涉及的订单（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, orderUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+		ctx.AddLock()
+	}
+
+	// 获取销售账单信息（用于后续业务逻辑）
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")

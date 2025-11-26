@@ -193,7 +193,7 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 		// 未对接erp无进销存权限
-		if permission.Uuid == 2857919057920000 && company.IsOpenErp() {
+		if permission.Uuid == 2857919057920000 && !company.IsOpenErp() {
 			continue
 		}
 		filteredPermissions = append(filteredPermissions, permission)
