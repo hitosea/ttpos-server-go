@@ -18,7 +18,7 @@ ttpos-websocket 服务支持两种 Redis 部署模式：
 redis:
   default:
     address: "127.0.0.1:6379"              # 单个 Redis 地址
-    password: ""                           # 密码（可选）
+    pass: ""                           # 密码（可选）
     db: 0                                  # 数据库索引
     cluster: false                         # 关闭集群模式
     minIdle: 5                             # 最小空闲连接数
@@ -38,7 +38,7 @@ redis:
 redis:
   default:
     address: "redis-node1:6379,redis-node2:6379,redis-node3:6379"  # 多个节点地址，逗号分隔
-    password: "your-password"              # 密码
+    pass: "your-password"              # 密码
     db: 0                                  # 数据库索引
     cluster: true                          # 开启集群模式
     minIdle: 5                             # 最小空闲连接数
@@ -75,7 +75,7 @@ redis:
 redis:
   default:
     address: "$REDIS_HOST:$REDIS_PORT"     # 从环境变量组合地址
-    password: "$REDIS_PASSWORD"            # 从环境变量读取
+    pass: "$REDIS_PASSWORD"            # 从环境变量读取
     db: $REDIS_DB                          # 从环境变量读取
     cluster: false                         # 是否为集群模式
 ```

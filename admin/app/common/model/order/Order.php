@@ -713,6 +713,10 @@ class Order extends BaseModelOrder
             'cashier_min_order_price' => $data['all_cashier_min_order_price'],
             'cashier_max_order_price' => $data['all_cashier_max_order_price'],
             'cashier_avg_order_price' => $data['all_cashier_avg_order_price'],
+            'takeaway_order_num' => $data['all_takeaway_order_num'],
+            'takeaway_min_order_price' => $data['all_takeaway_min_order_price'],
+            'takeaway_max_order_price' => $data['all_takeaway_max_order_price'],
+            'takeaway_avg_order_price' => $data['all_takeaway_avg_order_price'],
             'incomes' => $incomes,
         ];
     }

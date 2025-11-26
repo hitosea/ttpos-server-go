@@ -1944,5 +1944,7 @@
     "开启后，进行退款操作时需要密码验证或授权员工验证": "Etkinleştirildiğinde, geri ödeme işlemi sırasında parola doğrulaması veya yetkilendirilmiş personel doğrulaması gereklidir",
     "退款授权员工": "Geri ödeme yetkili personel",
     "选择授权员工后，这些员工可以进行退款操作的授权验证": "Yetkili personel seçildikten sonra, bu personel geri ödeme işlemleri için yetkilendirme doğrulaması yapabilir",
-    "(外卖)": "(Paket Servis)"
+    "(外卖)": "(Paket Servis)",
+    "店内": "Mağaza içi",
+    "外卖": "Paket Servis"
 }
