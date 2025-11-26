@@ -158,7 +158,8 @@ class Product extends BaseModel
     }
     public function getSellingPointAttr($value, $data = [])
     {
-        return $this->describe ?: '';
+        $describe = $this->getData('describe');
+        return is_string($describe) ? $describe : '';
     }
 
     public function getSellingPointI18nAttr($value, $data = [])
