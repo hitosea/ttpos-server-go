@@ -270,30 +270,30 @@ start-http-debug-proxy:
 	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT,http://$(LOCAL_IP):$$NGINX_PORT"; \
 	echo "🎯 目标URL: $$TARGET_URL, 代理端口: $$PROXY_PORT"; \
 	docker run -d \
-		--name http-debug-proxy \
+		--name http-proxy-debug-view \
 		-p $$PROXY_PORT:8080 \
 		-p 8091:8091 \
 		-e TARGET_URL="$$TARGET_URL" \
 		-e PROXY_PORT=8080 \
 		-e WEB_PORT=8091 \
 		--restart unless-stopped \
-		602666178/http-debug-proxy > /dev/null 2>&1 || \
+		602666178/http-proxy-debug-view > /dev/null 2>&1 || \
 		(echo "⚠️  HTTP调试代理容器已存在，正在重启..." && \
-		docker rm -f http-debug-proxy > /dev/null 2>&1 && \
+		docker rm -f http-proxy-debug-view > /dev/null 2>&1 && \
 		docker run -d \
-			--name http-debug-proxy \
+			--name http-proxy-debug-view \
 			-p $$PROXY_PORT:8080 \
 			-p 8091:8091 \
 			-e TARGET_URL="$$TARGET_URL" \
 			-e PROXY_PORT=8080 \
 			-e WEB_PORT=8091 \
 			--restart unless-stopped \
-			602666178/http-debug-proxy:latest > /dev/null 2>&1); \
+			602666178/http-proxy-debug-view:latest > /dev/null 2>&1); \
 	echo "✅ HTTP调试代理已启动 - 代理端口: $$PROXY_PORT, 调试界面: http://localhost:8091"
 
 stop-http-debug-proxy:
 	@echo "🛑 停止HTTP调试代理容器..."
-	@docker rm -f http-debug-proxy > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
+	@docker rm -f http-proxy-debug-view > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
 
 # 运行数据库迁移
 php-migrate:
