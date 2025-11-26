@@ -141,6 +141,8 @@ type IProductQueryRepo interface {
 
 	GetProductListByKeywordAndCategory(keyword string, categoryUuids []uint64) ([]*model.ProductPackage, error) // 根据name进行模糊查询、根据分类进行查询商品列表
 
+	GetProductSingleCount(opts ...DBOption) (int64, error) // 查询有多少个规格商品
+
 	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
 }
 
@@ -1541,4 +1543,15 @@ func (r *productRepo) GetProductListByKeywordAndCategory(keyword string, categor
 		return nil, errors.WithMessage(err)
 	}
 	return products, nil
+}
+
+// 查询有多少个规格商品
+func (r *productRepo) GetProductSingleCount(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.ProductBom{}).Where("delete_time = ?", constant.NotDeleted).Where("product_flavor_uuid > 0")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, errors.WithMessage(err)
 }

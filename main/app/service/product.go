@@ -4937,14 +4937,19 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 	}
 
 	// 获取商品列表
-	productPackages, total, err := productRepo.PaginateGetProductShopList(
+	productPackages, _, err := productRepo.PaginateGetProductShopList(
 		req.PageNo, req.PageSize, opts...,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商品列表失败")
 	}
 
-	productList := make([]product_resp.ProductSingleListItemResp, 0, len(productPackages))
+	total, err := productRepo.GetProductSingleCount()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品数量失败")
+	}
+
+	productList := make([]product_resp.ProductSingleListItemResp, 0)
 	for _, productPackage := range productPackages {
 		for _, productBom := range productPackage.ProductBoms {
 			if productBom.IsFlavor() {
