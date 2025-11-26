@@ -679,3 +679,18 @@ func (model *SaleBill) NewH5Order(companySetting CompanySetting) (*H5Order, erro
 		IsNeedAudit:     companySetting.IsOpenH5Order,     // 是否需要审核，关闭商家扫码点餐接单，则不需要审核
 	}, nil
 }
+
+// ShouldFinishBillAfterDelete 判断删除指定订单后，剩余订单是否全部已结账
+// 参数：deleteOrderUuid - 要删除的订单UUID
+// 返回：true - 剩余订单全部已结账，应该完成账单；false - 仍有未结账订单
+func (sb *SaleBill) ShouldFinishBillAfterDelete(deleteOrderUuid uint64) bool {
+	for _, order := range sb.SaleOrders {
+		if order.Uuid == deleteOrderUuid {
+			continue // 跳过要删除的订单
+		}
+		if !order.IsSettled() {
+			return false // 存在未结账订单
+		}
+	}
+	return true // 所有剩余订单都已结账
+}

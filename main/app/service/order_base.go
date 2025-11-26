@@ -975,9 +975,9 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		}
 	}
 
-	// 如果第一个销售订单已经结账且要删除的订单没有商品且销售订单数量等于2时，则删除该拆单并完成该销售账单
-	if firstSaleOrder.IsSettled() && len(moveProductList) == 0 && len(saleBill.SaleOrders) == 2 {
-		// 如果销售订单中没有商品，则直接删除订单
+	// 如果要删除的订单没有商品，且删除后剩余订单全部已结账，则删除该拆单并完成该销售账单
+	if len(moveProductList) == 0 && saleBill.ShouldFinishBillAfterDelete(saleOrderFrom.Uuid) {
+		// 如果销售订单中没有商品，且剩余订单全部已结账，则直接删除订单并完成账单
 		saleOrderFrom.SetDelete()
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
