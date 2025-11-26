@@ -72,6 +72,7 @@ var (
 	countSaleSubQuerySelect = []string{
 		"sale_bill_uuid",
 		"desk_uuid",
+		"order_source_uuid",
 		"is_meger",
 		"is_special",
 		"is_takeout",
@@ -100,54 +101,61 @@ var (
 		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_desk_order_amount",
-		"SUM(IF(desk_uuid = 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
-		"SUM(IF(desk_uuid = 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_takeaway_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_takeaway_amount",
 		"SUM(IF(is_takeout = 1 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS takeout_order_amount",
 		"SUM(IF(is_takeout = 1, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_takeout_order_amount",
 		"complete_time",
 	}
 	// 统计销售
 	countSaleSelect = []string{
-		"SUM(t.sale_amount) AS total_sale_amount",                                                                        // 总销售额
-		"SUM(t.received_amount) AS total_received_amount",                                                                // 总实收金额
-		"SUM(t.product_price) AS total_product_price",                                                                    // 总商品原价
-		"SUM(t.product_origin_price) AS total_product_origin_price",                                                      // 总原商品金额
-		"SUM(t.product_num) AS total_product_num",                                                                        // 总商品数量
-		"SUM(t.discount_member) AS total_discount_member",                                                                // 总会员折扣
-		"SUM(t.business_amount) AS total_business_amount",                                                                // 总营业收入
-		"SUM(t.payment_fee) AS total_payment_fee",                                                                        // 总支付手续费
-		"SUM(t.service_fee) AS total_service_fee",                                                                        // 总服务费
-		"SUM(t.tax) AS total_tax",                                                                                        // 总税额
-		"SUM(t.refund_amount) AS total_refund_amount",                                                                    // 总退款金额
-		"SUM(t.discount) AS total_discount",                                                                              // 总优惠折扣
-		"SUM(t.gift_amount) AS total_gift_amount",                                                                        // 总赠菜金额
-		"SUM(t.gift_num) AS total_gift_num",                                                                              // 总赠菜数量
-		"SUM(t.free_amount) AS total_free_amount",                                                                        // 总免单金额
-		"SUM(t.free_num) AS total_free_num",                                                                              // 总免单数量
-		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",                                                               // 总订单数量
-		"SUM(t.takeout_sale_amount) AS total_takeout_sale_amount",                                                        // 总外送销售
-		"SUM(t.takeout_business_amount) AS total_takeout_business_amount",                                                // 总外送营收
-		"SUM(t.takeout_refund_amount) AS total_takeout_refund_amount",                                                    // 总外送退款金额
-		"SUM(t.takeout_delivery_fee) AS total_takeout_delivery_fee",                                                      // 总外送配送费
-		"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num",                               // 总桌台数量
-		"SUM(t.desk_order_amount) AS total_desk_order_amount",                                                            // 总桌台订单金额
-		"SUM(t.meal_num) AS total_meal_num",                                                                              // 总用餐人数
-		"SUM(t.instant_order_amount) AS total_instant_order_amount",                                                      // 总即时订单金额
-		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                      // 总即时订单数量
-		"SUM(t.takeout_order_amount) AS total_takeout_order_amount",                                                      // 总外送订单金额
-		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_takeout_order_num", // 总外送订单数量
-		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",                                                                  // 最小订单金额
-		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",                                                                                        // 最大订单金额
-		"SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)) AS avg_order_amount",                                                                                                                       // 平均订单金额
-		"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",          // 最小桌台订单金额
-		"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",                                // 最大桌台订单金额
-		"SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS avg_desk_order_amount",                                  // 平均桌台订单金额
-		"MIN(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount", // 最小即时订单金额
-		"MAX(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                          // 最大即时订单金额
-		"SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS avg_instant_order_amount",                                                 // 平均即时订单金额
-		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                     // 最小外送订单金额
-		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                              // 最大外送订单金额
-		"SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS avg_takeout_order_amount",                                                                     // 平均外送订单金额
+		"SUM(t.sale_amount) AS total_sale_amount",                                          // 总销售额
+		"SUM(t.received_amount) AS total_received_amount",                                  // 总实收金额
+		"SUM(t.product_price) AS total_product_price",                                      // 总商品原价
+		"SUM(t.product_origin_price) AS total_product_origin_price",                        // 总原商品金额
+		"SUM(t.product_num) AS total_product_num",                                          // 总商品数量
+		"SUM(t.discount_member) AS total_discount_member",                                  // 总会员折扣
+		"SUM(t.business_amount) AS total_business_amount",                                  // 总营业收入
+		"SUM(t.payment_fee) AS total_payment_fee",                                          // 总支付手续费
+		"SUM(t.service_fee) AS total_service_fee",                                          // 总服务费
+		"SUM(t.tax) AS total_tax",                                                          // 总税额
+		"SUM(t.refund_amount) AS total_refund_amount",                                      // 总退款金额
+		"SUM(t.discount) AS total_discount",                                                // 总优惠折扣
+		"SUM(t.gift_amount) AS total_gift_amount",                                          // 总赠菜金额
+		"SUM(t.gift_num) AS total_gift_num",                                                // 总赠菜数量
+		"SUM(t.free_amount) AS total_free_amount",                                          // 总免单金额
+		"SUM(t.free_num) AS total_free_num",                                                // 总免单数量
+		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",                                 // 总订单数量
+		"SUM(t.takeout_sale_amount) AS total_takeout_sale_amount",                          // 总外送销售
+		"SUM(t.takeout_business_amount) AS total_takeout_business_amount",                  // 总外送营收
+		"SUM(t.takeout_refund_amount) AS total_takeout_refund_amount",                      // 总外送退款金额
+		"SUM(t.takeout_delivery_fee) AS total_takeout_delivery_fee",                        // 总外送配送费
+		"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num", // 总桌台数量
+		"SUM(t.desk_order_amount) AS total_desk_order_amount",                              // 总桌台订单金额
+		"SUM(t.meal_num) AS total_meal_num",                                                // 总用餐人数
+		"SUM(t.instant_order_amount) AS total_instant_order_amount",                        // 即时订单金额（店内）
+		"SUM(t.instant_order_takeaway_amount) AS total_instant_order_takeaway_amount",      // 即时订单-外卖来源金额
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                                                                                                                                    // 总即时订单数量（店内）
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_takeaway_num",                                                                                                                           // 总即时订单数量（外卖来源）
+		"SUM(t.takeout_order_amount) AS total_takeout_order_amount",                                                                                                                                                                                                // 总外送订单金额
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_takeout_order_num",                                                                                                                                           // 总外送订单数量
+		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",                                                                                                                         // 最小订单金额
+		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",                                                                                                                                               // 最大订单金额
+		"SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)) AS avg_order_amount",                                                                                                                                                                              // 平均订单金额
+		"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",                                                                 // 最小桌台订单金额
+		"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",                                                                                       // 最大桌台订单金额
+		"SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS avg_desk_order_amount",                                                                                         // 平均桌台订单金额
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",                            // 最小即时订单金额（店内）
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                                                     // 最大即时订单金额（店内）
+		"SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END) AS avg_instant_order_amount",                                                                  // 平均即时订单金额（店内）
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS min_instant_order_takeaway_amount", // 最小即时订单金额（外卖来源）
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount > 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS max_instant_order_takeaway_amount",                                          // 最大即时订单金额（外卖来源）
+		"SUM(t.avg_instant_order_takeaway_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 AND t.instant_order_takeaway_amount > 0 THEN 1 END) AS avg_instant_order_takeaway_amount",                                       // 平均即时订单金额（外卖来源）
+		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                                                                            // 最小外送订单金额
+		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                                                                                     // 最大外送订单金额
+		"SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS avg_takeout_order_amount",                                                                                                                            // 平均外送订单金额
 	}
 )
 

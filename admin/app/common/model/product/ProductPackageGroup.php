@@ -61,21 +61,6 @@ class ProductPackageGroup extends BaseModel
                 'optional_count' => $item['optional_count'] ?? 0, // 可选数量
             ];
             
-            // 数据校验：当 group_type 为可选时，检查必选数量是否大于可选数量
-            if (($groupData['group_type'] ?? 0) == 1) {
-                $requiredCount = 0;
-                $groupProductList = $item['product_list'] ?? [];
-                foreach ($groupProductList as $groupItem) {
-                    if (($groupItem['is_required'] ?? 0) == 1) {
-                        $requiredCount++;
-                    }
-                }
-                $optionalCount = $groupData['optional_count'] ?? 0;
-                if ($requiredCount > $optionalCount) {
-                    throw new \Exception('必选不可大于可选数量');
-                }
-            }
-            
             $insertGroups[] = [
                 'uuid' => $groupUuid, // 套餐分组uuid
                 'name' => $item['group_name'], // 套餐分组名称
@@ -151,20 +136,6 @@ class ProductPackageGroup extends BaseModel
                 }
             }
             $groupItemList = $item['product_list'] ?? [];
-            
-            // 数据校验：当 group_type 为可选时，检查必选数量是否大于可选数量
-            if (($groupData['group_type'] ?? 0) == 1) {
-                $requiredCount = 0;
-                foreach ($groupItemList as $groupItem) {
-                    if (($groupItem['is_required'] ?? 0) == 1) {
-                        $requiredCount++;
-                    }
-                }
-                $optionalCount = $groupData['optional_count'] ?? 0;
-                if ($requiredCount > $optionalCount) {
-                    throw new \Exception('必选不可大于可选数量');
-                }
-            }
             
             $productIds = array_column($groupItemList, 'product_id');
             $productBoms = ProductBom::whereIn('uuid', $productIds)->column('product_package_uuid', 'uuid');

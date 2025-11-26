@@ -769,11 +769,10 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		AllCashierMaxOrderPrice: saleData.MaxInstantOrderAmount,
 		AllCashierAvgOrderPrice: saleData.AvgInstantOrderAmount,
 		// 收银方式-外卖
-		// TODO: 待王总给值
-		AllTakeawayOrderNum:      0,
-		AllTakeawayMinOrderPrice: 0,
-		AllTakeawayMaxOrderPrice: 0,
-		AllTakeawayAvgOrderPrice: 0,
+		AllTakeawayOrderNum:      int(saleData.TotalInstantOrderTakeawayNum),
+		AllTakeawayMinOrderPrice: saleData.MinInstantOrderTakeawayAmount,
+		AllTakeawayMaxOrderPrice: saleData.MaxInstantOrderTakeawayAmount,
+		AllTakeawayAvgOrderPrice: saleData.AvgInstantOrderTakeawayAmount,
 		// 支付方式
 		PaymentMethodIncomes: func() []business_data_resp.PaymentMethodIncome {
 			// 支付数据
