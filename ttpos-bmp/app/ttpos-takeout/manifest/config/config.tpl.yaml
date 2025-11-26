@@ -86,7 +86,7 @@ cache:
 redis:
   default:
     address: "$REDIS_ADDRESSES"
-    password: "$REDIS_PASSWORD"
+    pass: "$REDIS_PASSWORD"
     db: "$REDIS_DB"
     cluster: true
 

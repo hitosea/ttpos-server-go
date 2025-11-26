@@ -97,7 +97,7 @@ nacos:
 redis:
   default:
     address: "$REDIS_ADDRESSES"            # Redis地址（集群模式使用逗号分隔多个地址，如：host1:port1,host2:port2,host3:port3）
-    password: "$REDIS_PASSWORD"            # 密码
+    pass: "$REDIS_PASSWORD"            # 密码
     db: $REDIS_DB                          # 数据库索引
     cluster: true                          # 是否为集群模式
     minIdle: 5                             # 最小空闲连接数
