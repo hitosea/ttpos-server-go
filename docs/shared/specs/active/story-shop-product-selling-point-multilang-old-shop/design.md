@@ -81,7 +81,7 @@ Go main API/Service (读取 describe_multi_language_name_uuid → join ttpos_mul
 ### 模块职责
 
 - **Vue**: 表单 + 500 字符限制 + 主语言复制。
-- **PHP Controller**: JSON 结构 `selling_point_i18n` 解析、长度校验、至少一个语言必填。
+- **PHP Controller**: JSON 结构 `selling_point_i18n` 解析、长度校验，支持所有语言可选。
 - **PHP Model**: 调用 `MultiLanguageName->saveNames()` 保存/更新，回填 `describe_multi_language_name_uuid`。
 - **Go Service**: `GetProductDetail()` JOIN 多语言表；`ProductCache` 内部存 `SellingPointI18n`。
 - **缓存刷新**: 后台保存成功后调用 `ProductUpdatedEvent`，Go 监听后清理 `product_detail` 缓存。
@@ -167,8 +167,7 @@ type ProductDetailResp struct {
 - **URL**: `POST /shop/product/store.Product/save`
 - **Body**: 增加 `selling_point_i18n`，结构为语言代码 → 字符串。
 - **验证**:
-  - `selling_point_i18n.zh` 必填
-  - 每个语言长度 ≤ 500
+  - `selling_point_i18n` 允许所有语言为空，填写时需满足长度 ≤ 500
   - 空字符串自动转 `""`，不创建多语言记录
 - **响应**: 增加 `describe_multi_language_name_uuid` 字段，便于前端比对。
 

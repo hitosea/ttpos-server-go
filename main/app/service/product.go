@@ -357,24 +357,6 @@ func saveSellingPointMultiLanguage(repo repository.IMultiLanguageNameRepo, curre
 	return currentUuid, fallbackSellingPointLocale(locale), nil
 }
 
-func resolveProductSellingPoint(product model.ProductPackage, lang string) (string, dto.LocaleResponse) {
-	locale := product.DescribeMultiLanguageName.GetNames()
-	if product.DescribeMultiLanguageNameUuid == 0 || product.DescribeMultiLanguageName.IsNullName() {
-		locale = dto.LocaleResponse{}
-	}
-	if locale.IsNull() && product.Describe != "" {
-		locale.SetLocale(string(dto.LocaleZH), product.Describe)
-	}
-	sellingPoint := locale.GetLocale(lang)
-	if sellingPoint == "" {
-		sellingPoint = fallbackSellingPointLocale(locale)
-		if sellingPoint == "" {
-			sellingPoint = product.Describe
-		}
-	}
-	return sellingPoint, locale
-}
-
 func FormatProducts(ctx context.Context, products []model.ProductPackage, options ...FormatProductsFn) []product_resp.Product {
 	var option FormatProductsOption
 	for _, fn := range options {

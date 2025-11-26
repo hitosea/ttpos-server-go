@@ -39,6 +39,8 @@
     "vendor",
     "*.json",
     "*.lock",
+    "*.mod",
+    "*.sum",
     "**/ttpos-flutter/**"
   ],
   "cSpell.ignoreRegExpList": [
@@ -61,7 +63,6 @@
     "Uoms","upgrader","Upgrader","varchar","Wechat","xiezhihuan","Xprinter","xuri","Yemek","Zaman","zhtw","Zhuhai",
     "Ziyaretiniz","ZZCJZ", "Resipi","Makanan","Kassafaktura","Keluaran","Tiramisu","Tunai","Cacl","rmqnamesrv","rmqbroker",
     "mqnamesrv","NAMESRV","namesrv","mqbroker","BROKER","broker","apacherocketmq","mqproxy","Drocketmq","rmqproxy",
-
   ],
   
   // ===== 文件监听排除（减少 gopls 文件监听负担）=====
