@@ -22,6 +22,9 @@ type TimeUtil interface {
 	YesterdayStartEndUnix() (int64, int64)                                                            // 获取昨天的开始时间和结束时间戳
 	WeekStartEndUnix() (int64, int64)                                                                 // 获取本周的开始时间和结束时间戳
 	MonthStartEndUnix() (int64, int64)                                                                // 获取本月的开始时间和结束时间戳
+	Last7DaysStartEndUnix() (int64, int64)                                                            // 获取近7天的开始时间和结束时间戳
+	LastMonthStartEndUnix() (int64, int64)                                                            // 获取上月的开始时间和结束时间戳
+	YearStartEndUnix() (int64, int64)                                                                 // 获取今年的开始时间和结束时间戳
 	FormatUnixTime(timestamp int64, layout string) string                                             // 将时间戳转换为指定格式的时间字符串
 	FormatUnixTimeDefault(timestamp int64) string                                                     // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
 	FormatUnixTimeWithSlash(timestamp int64) string                                                   // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
@@ -125,6 +128,49 @@ func (t Timezone) WeekStartEndUnix() (int64, int64) {
 
 func (t Timezone) MonthStartEndUnix() (int64, int64) {
 	start, end := t.MonthStartEnd()
+	return start.Unix(), end.Unix()
+}
+
+// Last7DaysStartEnd 获取近7天的开始时间和结束时间
+func (t Timezone) Last7DaysStartEnd() (time.Time, time.Time) {
+	now := t.Now()
+	end := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+	start := time.Date(now.Year(), now.Month(), now.Day()-6, 0, 0, 0, 0, now.Location())
+	return start, end
+}
+
+// Last7DaysStartEndUnix 获取近7天的开始时间和结束时间戳
+func (t Timezone) Last7DaysStartEndUnix() (int64, int64) {
+	start, end := t.Last7DaysStartEnd()
+	return start.Unix(), end.Unix()
+}
+
+// LastMonthStartEnd 获取上月的开始时间和结束时间
+func (t Timezone) LastMonthStartEnd() (time.Time, time.Time) {
+	now := t.Now()
+	lastMonth := now.AddDate(0, -1, 0)
+	start := time.Date(lastMonth.Year(), lastMonth.Month(), 1, 0, 0, 0, 0, now.Location())
+	end := time.Date(lastMonth.Year(), lastMonth.Month()+1, 0, 23, 59, 59, 999999999, now.Location())
+	return start, end
+}
+
+// LastMonthStartEndUnix 获取上月的开始时间和结束时间戳
+func (t Timezone) LastMonthStartEndUnix() (int64, int64) {
+	start, end := t.LastMonthStartEnd()
+	return start.Unix(), end.Unix()
+}
+
+// YearStartEnd 获取今年的开始时间和结束时间
+func (t Timezone) YearStartEnd() (time.Time, time.Time) {
+	now := t.Now()
+	start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+	end := time.Date(now.Year(), 12, 31, 23, 59, 59, 999999999, now.Location())
+	return start, end
+}
+
+// YearStartEndUnix 获取今年的开始时间和结束时间戳
+func (t Timezone) YearStartEndUnix() (int64, int64) {
+	start, end := t.YearStartEnd()
 	return start.Unix(), end.Unix()
 }
 

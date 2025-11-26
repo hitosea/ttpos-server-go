@@ -116,8 +116,12 @@ type BusinessDataCountProductSalesReq struct {
 	ProductName    string `form:"product_name" json:"product_name"`         // 商品名称
 	QueryStartTime int64  `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   int64  `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
-	AreaUuid       uint64 `form:"area_uuid" json:"area_uuid"`               // 区域UUID, -1=全都
-	CategoryUuid   uint64 `form:"category_uuid" json:"category_uuid"`       // 分类UUID, -1=全都
+	TimeType       int    `form:"time_type" json:"time_type"`               // 时间类型: 1=今天, 2=昨天, 3=本周, 4=本月, 5=近7天, 6=上月, 7=今年
+	AreaUuid       uint64 `form:"area_uuid" json:"area_uuid"`               // 区域UUID, -1=全部
+	CategoryUuid   uint64 `form:"category_uuid" json:"category_uuid"`       // 分类UUID, -1=全部 (向后兼容)
+	CategoryUuids  string `form:"category_uuids" json:"category_uuids"`     // 分类UUID列表, 格式: "uuid1,uuid2,,,," 空字符串=全部
+	OrderType      string `form:"order_type" json:"order_type"`             // 订单类型: ""=全部, "1"=点餐, "2"=桌台, "3"=外送, 可多选如"1,2,3"
+	OrderSource    int    `form:"order_source" json:"order_source"`         // 订单来源: -1=全部, 1=店内, 2=外卖
 	SortType       int    `form:"sort_type" json:"sort_type"`               // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
 	SortDirection  int    `form:"sort_direction" json:"sort_direction"`     // 排序方向 0=默认、 1=升序、 2=降序
 }
