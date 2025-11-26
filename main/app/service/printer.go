@@ -876,7 +876,7 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 	var templateConfigObj map[string]interface{}
 	if err := json.Unmarshal([]byte(templateConfigInfoStr), &templateConfigObj); err == nil {
 		// 如果有提取的blocks，将它们添加到配置信息的 data_rows 中
-		if extractedBlocks != nil && len(extractedBlocks) > 0 {
+		if len(extractedBlocks) > 0 {
 			if rows, ok := templateConfigObj["rows"].([]interface{}); ok {
 				// 遍历每个 group
 				for _, row := range rows {

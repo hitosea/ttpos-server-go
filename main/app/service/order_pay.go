@@ -1569,7 +1569,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 }
 
 // getFullReductionActivityList 获取满减活动列表
-func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill) (resp.FullReductionActivityList, error) {
+func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, _ *model.SaleBill) (resp.FullReductionActivityList, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	now := time.Now().Unix()
 

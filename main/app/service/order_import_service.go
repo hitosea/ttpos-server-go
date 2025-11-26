@@ -351,7 +351,7 @@ func (s *orderImportSrv) getOrderDetailsByOrderNo(detailList []OrderDetailData, 
 }
 
 // validateOrderData 校验订单数据
-func (s *orderImportSrv) validateOrderData(ctx context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
+func (s *orderImportSrv) validateOrderData(_ context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
 	// 1. 校验必填字段
 	if orderBasic.OrderNo == "" {
 		return errors.New("订单号不能为空")
@@ -450,7 +450,7 @@ func (s *orderImportSrv) validateOrderData(ctx context.Context, db *gorm.DB, ord
 }
 
 // createOrder 创建订单
-func (s *orderImportSrv) createOrder(ctx context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
+func (s *orderImportSrv) createOrder(_ context.Context, db *gorm.DB, orderBasic *OrderBasicData, details []OrderDetailData) error {
 	// 1. 查找门店 UUID（已在 validateOrderData 中校验，这里再次确认）
 	// companyRepo := repository.NewCompanyRepo(db)
 	// _, err := companyRepo.GetCompany(

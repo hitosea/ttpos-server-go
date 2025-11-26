@@ -217,7 +217,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	}
 
 	// 判断必点商品是否售罄
-	if mustPlanList != nil && len(mustPlanList) > 0 {
+	if len(mustPlanList) > 0 {
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
 				// 判断商品是否售罄。如果售罄，则允许"确认必点"
