@@ -60,18 +60,6 @@ func (m *TranslateTaskManager) finishTask(companyUuid uint64) {
 	m.runningTasks.Delete(companyUuid)
 }
 
-// getRunningCompanyUuids 获取当前正在执行同步任务的所有companyUuid
-func (m *TranslateTaskManager) getRunningCompanyUuids() []uint64 {
-	var companyUuids []uint64
-	m.runningTasks.Range(func(key, value any) bool {
-		if companyUuid, ok := key.(uint64); ok {
-			companyUuids = append(companyUuids, companyUuid)
-		}
-		return true
-	})
-	return companyUuids
-}
-
 // NewTranslateSrv 创建新翻译服务
 func NewTranslateSrv(dbm *database.DBManager, cache cache.Cache) ITranslateSrv {
 	return NewTranslateSrvImpl(dbm, cache)

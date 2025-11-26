@@ -145,7 +145,7 @@ func TestDeskMapService_GetLayoutDetail(t *testing.T) {
 	}
 
 	// 验证布局为空
-	if result.Layout.Desks != nil && len(result.Layout.Desks) != 0 {
+	if len(result.Layout.Desks) != 0 {
 		t.Error("Expected empty layout, got desks")
 	}
 
