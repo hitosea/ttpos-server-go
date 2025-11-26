@@ -1643,13 +1643,13 @@ func (h *InstantHandler) ChangeBatchTag(c *gin.Context) {
 		return
 	}
 	// 更换分批类型
-	err := h.orderSrv.ChangeBatchTag(ctx, params)
+	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, res)
 }
 
 // OrderPaymentActivity 选择或取消满减活动

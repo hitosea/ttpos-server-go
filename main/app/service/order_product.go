@@ -2275,10 +2275,16 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 }
 
 // ChangeBatchTag 更换分批类型（前置模式）
-func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq, opts ...repository.OrderCartInfoOptionFunc) error {
+func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
 	// 验证参数
 	if err := req.Validate(); err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -2287,23 +2293,23 @@ func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq
 	// 获取业务设置，判断是否为前置模式
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 	if businessSetting.BatchCookingMode != constant.BatchCookingModePre {
-		return errors.New("当前不是前置模式，不支持更换分批类型")
+		return nil, errors.WithMessage(errors.New("当前不是前置模式，不支持更换分批类型"))
 	}
 
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
-		return errors.WithMessage(errSaleBill)
+		return nil, errors.WithMessage(errSaleBill)
 	}
 
 	// 验证新的 batch_tag_uuid 的有效性
 	batchTagRepo := repository.NewBatchTagRepo(db)
 	_, err = batchTagRepo.GetBatchTagInfo(req.BatchTagUuid)
 	if err != nil {
-		return errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
+		return nil, errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
 	}
 
 	// 获取要更换的商品列表
@@ -2315,17 +2321,17 @@ func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq
 		}
 		// 验证商品是否已送厨（已送厨则不允许修改）
 		if !product.IsPreCooking() {
-			return errors.New("商品已送厨，不能修改分批类型")
+			return nil, errors.WithMessage(errors.New("商品已送厨，不能修改分批类型"))
 		}
 		// 验证商品是否为分批商品
 		if !product.IsBatchBool() {
-			return errors.New("商品不是分批商品，不能修改分批类型")
+			return nil, errors.WithMessage(errors.New("商品不是分批商品，不能修改分批类型"))
 		}
 		saleOrderProducts = append(saleOrderProducts, product)
 	}
 
 	if len(saleOrderProducts) == 0 {
-		return errors.New("未找到要更换的商品")
+		return nil, errors.WithMessage(errors.New("未找到要更换的商品"))
 	}
 
 	// 更新商品的分批类型关联
@@ -2341,7 +2347,14 @@ func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq
 		}
 		return nil
 	}); err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
-	return nil
+
+	// 获取新的购物车商品数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
 }

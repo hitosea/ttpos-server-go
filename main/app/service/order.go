@@ -104,7 +104,7 @@ type IOrderSrv interface {
 	OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error)    // 查询购物车商品“规格/属性”
 	OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error)            // 修改购物车商品“规格/属性”
 	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)   // 向购物车添加商品
-	ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq, opts ...repository.OrderCartInfoOptionFunc) error                                          // 更换分批类型（前置模式）
+	ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq) (*resp.ShopCart, error)                                                                    // 更换分批类型（前置模式）
 
 	// cooking
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                                                                                                                  // 获取点餐必点方案
