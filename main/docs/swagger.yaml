@@ -3406,11 +3406,20 @@ definitions:
   req.BusinessDataCountProductSalesReq:
     properties:
       area_uuid:
-        description: 区域UUID, -1=全都
+        description: 区域UUID, -1=全部
         type: integer
       category_uuid:
-        description: 分类UUID, -1=全都
+        description: 分类UUID, -1=全部 (向后兼容)
         type: integer
+      category_uuids:
+        description: '分类UUID列表, 格式: "uuid1,uuid2,,,," 空字符串=全部'
+        type: string
+      order_source:
+        description: '订单来源: -1=全部, 1=店内, 2=外卖'
+        type: integer
+      order_type:
+        description: '订单类型: ""=全部, "1"=点餐, "2"=桌台, "3"=外送, 可多选如"1,2,3"'
+        type: string
       page_no:
         description: 页码
         minimum: 1
@@ -3434,6 +3443,9 @@ definitions:
         type: integer
       sort_type:
         description: 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+        type: integer
+      time_type:
+        description: '时间类型: 1=今天, 2=昨天, 3=本周, 4=本月, 5=近7天, 6=上月, 7=今年'
         type: integer
     type: object
   req.BusinessDataCountReq:
@@ -33676,6 +33688,30 @@ paths:
       summary: 统计商品销售
       tags:
       - 商家端.营业数据
+  /shop/statistics/product_sales/export:
+    get:
+      consumes:
+      - application/json
+      description: 导出商品销售统计数据
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BusinessDataCountProductSalesReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出商品销售统计
+      tags:
+      - 商家端.报表
   /shop/statistics/shift_refund_amount:
     get:
       consumes:
