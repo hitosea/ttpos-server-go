@@ -154,7 +154,7 @@ func (model *SaleOrderProduct) IsShowBatchTag(openIsBatch bool) bool {
 // 是否处于预送厨阶段
 func (model *SaleOrderProduct) IsPreCooking() bool {
 	// status是已送厨，不能再操作商品，只能退菜。且没有被标记分批类型，所以是预送厨阶段
-	return model.Status == constant.SaleOrderProductStatusCooking && model.BatchTime == 0
+	return model.IsBatchBool() && model.Status == constant.SaleOrderProductStatusCooking && model.BatchTime == 0
 }
 
 // 获取商品的原材料
