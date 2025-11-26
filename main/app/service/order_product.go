@@ -572,19 +572,19 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			// 获取预送厨的商品
 			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
 			if len(preCookingSaleOrderProducts) > 0 {
-				nonBathchUuids := make([]uint64, 0) // 预送厨的商品uuid列表
+				nonBatchUuids := make([]uint64, 0) // 预送厨的商品uuid列表
 				for _, saleOrderProduct := range preCookingSaleOrderProducts {
 					saleOrderProduct.IsBatch = 0
-					nonBathchUuids = append(nonBathchUuids, saleOrderProduct.Uuid)
+					nonBatchUuids = append(nonBatchUuids, saleOrderProduct.Uuid)
 				}
-				if len(nonBathchUuids) > 0 {
+				if len(nonBatchUuids) > 0 {
 					// 将预送厨的商品变为未分批商品
 					db := s.dbm.GetDB(ctx.GetDbId())
-					if err := db.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", nonBathchUuids).Update("is_batch", 0).Error; err != nil {
+					if err := db.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", nonBatchUuids).Update("is_batch", 0).Error; err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
 					// 将预送厨的生产单商品变为未分批商品
-					if err := db.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", nonBathchUuids).Update("create_time", time.Now().Unix()).Update("is_batch", 0).Error; err != nil {
+					if err := db.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", nonBatchUuids).Update("create_time", time.Now().Unix()).Update("is_batch", 0).Error; err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
 				}
@@ -2160,7 +2160,7 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 			return nil, errors.WithMessage(errors.New("修改前后套餐子商品数量不一致"), "修改前后套餐子商品数量不一致")
 		}
 		for _, subProduct := range subProducts {
-			key := fmt.Sprintf("%d-%d", subProduct.GetFlarvorSaleOrderProductBom().ProductBomUuid, subProduct.PackageGroupUuid)
+			key := fmt.Sprintf("%d-%d", subProduct.GetFlavorSaleOrderProductBom().ProductBomUuid, subProduct.PackageGroupUuid)
 			params, ok := subProductParamMap[key]
 			if !ok {
 				return nil, errors.WithMessage(errors.New("套餐子商品不存在"), "套餐子商品不存在")

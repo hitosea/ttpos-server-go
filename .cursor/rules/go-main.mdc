@@ -83,7 +83,7 @@ description: Go Main 核心约束
 
 ### Service 层
 
-- ✅ **接口定义（IxxxSrv）和实现（xxxSrv）必须放在同一个文件中**
+- ✅ **接口定义（`I{Name}Srv`）和实现（`{Name}Srv`）必须放在同一个文件中**
 - ✅ **接口第一个参数必须使用 `ctx context.Context`**
 - ✅ **通过 `db := ctx.GetDB()` 获取数据库连接**
 - ✅ **只能依赖其他 Service 接口**
@@ -180,7 +180,7 @@ description: Go Main 核心约束
 - [ ] 使用 any 而不是 interface{}
 - [ ] URL 使用 snake_case
 - [ ] 结构体 ID 字段大写
-- [ ] **Service 接口定义（IxxxSrv）和实现（xxxSrv）必须放在同一个文件中**
+- [ ] **Service 接口定义（`I{Name}Srv`）和实现（`{Name}Srv`）必须放在同一个文件中**
 - [ ] Service 接口第一个参数必须是 ctx context.Context
 - [ ] Service 方法内使用 ctx.GetDB() 获取数据库连接
 - [ ] Service 只依赖自己领域的 Repository

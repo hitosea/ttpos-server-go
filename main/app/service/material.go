@@ -3239,7 +3239,7 @@ type ObjectByItemCodeResp struct {
 }
 
 // 根据item_code查询本地ttpos数据库，判断该item_code是商品还是加料，并返回商品或加料信息
-func (s *materialSrv) getObjectByItemCode(ctx context.Context, itemCode string, tx *gorm.DB) (*ObjectByItemCodeResp, error) {
+func (s *materialSrv) getObjectByItemCode(_ context.Context, itemCode string, tx *gorm.DB) (*ObjectByItemCodeResp, error) {
 	// 查询物品
 	productBom, err := repository.NewProductBomRepo(tx).GetProductBomByItemCode(itemCode)
 	if err != nil {
@@ -3276,7 +3276,7 @@ func (s *materialSrv) getObjectByItemCode(ctx context.Context, itemCode string, 
 }
 
 // 根据成本卡uuid查询本地ttpos数据库，判断该item_code是商品还是加料，并返回商品或加料信息
-func (s *materialSrv) getObjectByProductBomCardUuid(ctx context.Context, productBomCardUuid uint64, tx *gorm.DB) (*ObjectByItemCodeResp, error) {
+func (s *materialSrv) getObjectByProductBomCardUuid(_ context.Context, productBomCardUuid uint64, tx *gorm.DB) (*ObjectByItemCodeResp, error) {
 	// 查询商品
 	productBom, err := repository.NewProductBomRepo(tx).GetProductBomByProductBomCardUuid(productBomCardUuid)
 	if err != nil {
@@ -3866,7 +3866,7 @@ func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, 
 
 // getStockAlertRecipient 获取库存预警邮件收件人
 // 从staff表中查询is_super=1的记录，获取user_name字段（邮箱）
-func (s *materialSrv) getStockAlertRecipient(ctx context.Context, companyUuid uint64) string {
+func (s *materialSrv) getStockAlertRecipient(_ context.Context, companyUuid uint64) string {
 	// 获取数据库连接
 	db := s.dbm.GetDB(companyUuid)
 	staffRepo := repository.NewStaffRepo(db)

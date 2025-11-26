@@ -458,7 +458,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					product.DiscountPrice = price
 					// 如果是套餐商品，则更新套餐商品列表
 					if saleOrderProduct.IsPackageProduct() {
-						for index, _ := range product.PackageProductList.List {
+						for index := range product.PackageProductList.List {
 							unitNum := decimal.NewFromFloat(saleOrderProduct.UnitNum)                       // 每份套餐的子商品数量
 							num := decimal.NewFromFloat(product.Num).Mul(unitNum).Round(3).InexactFloat64() // 套餐数量*每份套餐的子商品数量= 子商品的数量
 							product.PackageProductList.List[index].Num = num

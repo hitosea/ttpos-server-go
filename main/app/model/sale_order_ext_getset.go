@@ -572,7 +572,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	for _, buffet := range buffetList {
 		nonOrderingTimes = append(nonOrderingTimes, buffet.NonOrderingTime)
 		reminderOrderTimes = append(reminderOrderTimes, buffet.ReminderOrderTime)
-		for index, _ := range buffet.BuffetCustomerTypePrices {
+		for index := range buffet.BuffetCustomerTypePrices {
 			customerTypePrice := buffet.BuffetCustomerTypePrices[index]
 			if buffetUuidMap[buffet.Uuid] == nil {
 				buffetUuidMap[buffet.Uuid] = make(map[uint64]*struct {

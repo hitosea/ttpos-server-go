@@ -524,7 +524,7 @@ func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *g
 		// 如果是自助餐商品，则价格改为0元
 		if product.IsBuffet != nil && *product.IsBuffet {
 			productInfo.Price = 0
-			for index, _ := range productInfo.Flavors.List {
+			for index := range productInfo.Flavors.List {
 				productInfo.Flavors.List[index].Price = 0
 			}
 		}
@@ -663,19 +663,19 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	}
 
 	// 暂时不使用这两个字段
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		request.Products[index].Price = nil
 		request.Products[index].IsBuffet = nil
 	}
 
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		if request.Products[index].ProductType == constant.ProductTypePackage {
 			request.Products[index].FlavorProductBomUuid = request.Products[index].ProductPackageUuid // 套餐商品规格uuid改为套餐商品uuid
 		}
 	}
 
 	// 记录相关的子商品。
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		productReq := request.Products[index]
 		// 如果该商品是套餐的话,添加子商品的属性
 		if productReq.ProductType == 1 {

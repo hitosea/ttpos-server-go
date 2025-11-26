@@ -233,7 +233,7 @@ func (model *SaleOrderProduct) DeleteAllSaleOrderProductBomsAndAttributes() {
 // 获取商品的简要，如 牛排*1（标准，黑椒汁）
 func (model *SaleOrderProduct) GetProductNameAttributes(language string) string {
 	name := model.MultiLanguageName.GetNameByLang(language)
-	flarvorSaleOrderProductBom := model.GetFlarvorSaleOrderProductBom()
+	flarvorSaleOrderProductBom := model.GetFlavorSaleOrderProductBom()
 	flavorName := flarvorSaleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(language)
 	attributes := make([]string, 0)
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
@@ -251,7 +251,7 @@ func (model *SaleOrderProduct) GetProductNameAttributes(language string) string 
 }
 
 // 获取商品的规格
-func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProductBom {
+func (model *SaleOrderProduct) GetFlavorSaleOrderProductBom() *SaleOrderProductBom {
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsDelete() {
 			continue
@@ -925,7 +925,7 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 	defer model.SetUpdate() // 标记该model需要更新
 	model.CancelTime = time.Now().Unix()
 	model.CancelReason = reason
-	for index, _ := range reasons {
+	for index := range reasons {
 		reasons[index].SaleOrderProductUuid = model.Uuid // 设置退菜原因的销售订单商品
 	}
 	model.CancelReasons = append(model.CancelReasons, reasons...)
@@ -1106,11 +1106,11 @@ func (model *SaleOrderProduct) DeleteProduct() {
 	defer model.SetUpdate()
 	deleteTime := time.Now().Unix()
 	model.DeleteTime = deleteTime
-	for index, _ := range model.SaleOrderProductBoms {
+	for index := range model.SaleOrderProductBoms {
 		saleOrderProductBom := model.SaleOrderProductBoms[index]
 		saleOrderProductBom.DeleteTime = deleteTime
 	}
-	for index, _ := range model.SaleOrderProductAttributes {
+	for index := range model.SaleOrderProductAttributes {
 		saleOrderProductAttribute := model.SaleOrderProductAttributes[index]
 		saleOrderProductAttribute.DeleteTime = deleteTime
 	}

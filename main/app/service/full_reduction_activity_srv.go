@@ -388,7 +388,7 @@ func (s *fullReductionActivitySrv) Disable(ctx context.Context, uuid uint64) err
 }
 
 // buildResp 构建响应对象
-func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *model.FullReductionActivity) (*resp.FullReductionActivityResp, error) {
+func (s *fullReductionActivitySrv) buildResp(_ context.Context, activity *model.FullReductionActivity) (*resp.FullReductionActivityResp, error) {
 	// 从 MultiLanguageName 转换为 LocaleResponse（必须使用 LocaleResponse）
 	var name dto.LocaleResponse
 	if activity.MultiLanguageName.Uuid > 0 {

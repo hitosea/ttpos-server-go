@@ -368,7 +368,7 @@ func (model *SaleOrder) calcOriginTaxFee(products []*SaleOrderProduct, serviceFe
 // 计算已送厨商品的销售订单的自定义优惠折扣金额。
 // 没有整单改价时，订单自定义优惠金额=销售订单商品金额（折前价，含赠菜商品的金额之和）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和 。 总的优惠金额= 销售订单商品金额（折前价）- 销售订单商品金额（折后价）。这样计算的原因是避免四舍五入引起的误差问题
 // 有整单改价时，订单自定义优惠金额=销售订单应收金额 - 整单改价金额
-func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amount float64) float64 {
+func (model *SaleOrder) calcCustomDiscountFee(_ []*SaleOrderProduct, amount float64) float64 {
 	// 有整单改价时, 订单自定义优惠金额=销售订单应收金额 - 整单改价金额
 	if model.CustomAmount != constant.SaleOrderCustomAmountCancel {
 		return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.CustomAmount)).Truncate(3).Round(2).InexactFloat64()

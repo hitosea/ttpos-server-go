@@ -291,7 +291,7 @@ func (model *SaleOrder) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 	materials := make([]*ErpProductBomMaterials, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		saleOrderProductMaterials := saleOrderProduct.GetErpProductBomMaterials()
-		for index, _ := range saleOrderProductMaterials {
+		for index := range saleOrderProductMaterials {
 			material := saleOrderProductMaterials[index]
 			material.Num = decimal.NewFromFloat(material.Num).Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(4).InexactFloat64()
 		}
@@ -613,7 +613,7 @@ func (model *SaleOrder) InsertSaleOrderProduct(saleOrderProducts []*SaleOrderPro
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		saleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
 	}
-	for i, _ := range saleOrderProducts {
+	for i := range saleOrderProducts {
 		if _, ok := saleOrderProductMap[saleOrderProducts[i].Uuid]; !ok {
 			// 如果商品不存在，则添加
 			model.SaleOrderProducts = append(model.SaleOrderProducts, saleOrderProducts[i])

@@ -2898,7 +2898,7 @@ func (s *orderSrv) GetProductDecreaseStockList(ctx context.Context, unCookingSal
 }
 
 // 获取下单减库存的商品，从未送厨的商品中获取
-func (s *orderSrv) getOrderProductForDecreaseStock(ctx context.Context, unCookingSaleOrderProducts []*model.SaleOrderProduct) ([]*model.SaleOrderProduct, error) {
+func (s *orderSrv) getOrderProductForDecreaseStock(_ context.Context, unCookingSaleOrderProducts []*model.SaleOrderProduct) ([]*model.SaleOrderProduct, error) {
 	products := make([]*model.SaleOrderProduct, 0)
 	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
 
@@ -2910,7 +2910,7 @@ func (s *orderSrv) getOrderProductForDecreaseStock(ctx context.Context, unCookin
 }
 
 // 获取减库存的清单信息
-func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOrderProducts []*model.SaleOrderProduct) ([]*model.Product, error) {
+func (s *orderSrv) getDecreaseStockList(_ context.Context, cookingDeductSaleOrderProducts []*model.SaleOrderProduct) ([]*model.Product, error) {
 	list := make([]*model.Product, 0)
 	for _, cookingDeductSaleOrderProduct := range cookingDeductSaleOrderProducts {
 		for _, saleOrderProductBom := range cookingDeductSaleOrderProduct.SaleOrderProductBoms {
@@ -3833,7 +3833,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		if product.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
 			for _, subProduct := range subProducts {
-				productBom := subProduct.GetFlarvorSaleOrderProductBom()
+				productBom := subProduct.GetFlavorSaleOrderProductBom()
 				erpCode := productBom.ProductBom.ErpCode
 				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
 				items = append(items, &selling.PosInvoiceItem{
@@ -3846,7 +3846,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				})
 			}
 		}
-		productBom := product.GetFlarvorSaleOrderProductBom()
+		productBom := product.GetFlavorSaleOrderProductBom()
 		erpCode := productBom.ProductBom.ErpCode
 		// 是否是赠菜
 		if product.IsGiftProduct() {

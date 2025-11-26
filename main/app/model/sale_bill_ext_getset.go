@@ -65,7 +65,7 @@ func (model *SaleBill) GetPaymentMethodNameList(lang string) []string {
 func (model *SaleBill) GetSaleOrderProductCooking() []*SaleOrderProduct {
 	cookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
 	for _, saleOrder := range model.SaleOrders {
-		for i, _ := range saleOrder.SaleOrderProducts {
+		for i := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
 			if !orderProduct.IsAcceptOrderBool() || orderProduct.IsDelete() || orderProduct.IsCancelProduct() {
 				continue
@@ -88,7 +88,7 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 				packageUuidRemarkMap[orderProduct.Uuid] = orderProduct.Remark
 			}
 		}
-		for i, _ := range saleOrder.SaleOrderProducts {
+		for i := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
 			if !orderProduct.IsAcceptOrderBool() || orderProduct.IsDelete() {
 				continue
@@ -151,7 +151,7 @@ func (model *SaleBill) SetSaleOrderProductCooking() {
 func (model *SaleBill) GetSaleOrderProductUnCookingByUuids(uuids map[uint64]bool) []*SaleOrderProduct {
 	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
 	for _, saleOrder := range model.SaleOrders {
-		for i, _ := range saleOrder.SaleOrderProducts {
+		for i := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
 			if uuids[orderProduct.Uuid] {
 				unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, orderProduct)
@@ -205,7 +205,7 @@ func (model *SaleBill) GetSaleOrderProductAll(options ...func(option *CalcOption
 
 	saleOrderProducts := make([]*SaleOrderProduct, 0)
 	for _, saleOrder := range model.SaleOrders {
-		for i, _ := range saleOrder.SaleOrderProducts {
+		for i := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
 			if orderProduct == nil {
 				continue
