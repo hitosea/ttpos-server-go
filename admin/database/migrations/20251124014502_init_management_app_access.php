@@ -349,6 +349,8 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2859466756096000, 'name' => '分批送厨规则', 'path' => 'batch_cooking_rule', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 6, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 安全库存设置
             ['uuid' => 2859479339008000, 'name' => '安全库存设置', 'path' => 'safety_stock_setting', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 7, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 点餐设置
+            ['uuid' => 2859479339008001, 'name' => '点餐设置', 'path' => 'take_meal_setting', 'api_path' => '', 'parent_uuid' => 2859345121280000, 'sort' => 8, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 商家档案
             ['uuid' => 2859496116224000, 'name' => '商家档案', 'path' => 'merchant_profile_my', 'api_path' => '', 'parent_uuid' => 2859328344064000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
         ];
@@ -520,6 +522,7 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859449978880000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859466756096000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859479339008000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859479339008001', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859496116224000', 'create_time' => time()],
                 ];
                 $this->updateOrInsertData('role_access', ['role_uuid', 'access_uuid'], $managerRoleData);
