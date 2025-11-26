@@ -1932,6 +1932,9 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 		repository.NewProductPackageRepo(db).WithProductPackageGroupItems(
 			repository.CommonRepo.WhereBySoftDelete(),
 		),
+		repository.NewProductPackageRepo(db).WithProductBoms(
+			repository.CommonRepo.WhereBySoftDelete(),
+		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询套餐信息失败")
@@ -1942,9 +1945,19 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 		return nil, errors.WithMessage(err)
 	}
 
+	productPackageFlavorBomUuid := func() uint64 {
+		if len(productPackage.ProductBoms) == 0 {
+			return 0
+		}
+		return productPackage.ProductBoms[0].Uuid
+	}()
+	if productPackageFlavorBomUuid == 0 {
+		return nil, errors.WithMessage(errors.New("套餐商品规格不存在"), "套餐商品规格不存在")
+	}
+
 	// 往销售账单里添加商品
 	productParam := req.ProductParams{
-		FlavorProductBomUuid: request.ProductPackageUuid,
+		FlavorProductBomUuid: productPackageFlavorBomUuid,
 		Num:                  1,
 		Operation:            "add",
 	}
