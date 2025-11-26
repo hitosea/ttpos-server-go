@@ -510,10 +510,10 @@ func (model *SaleOrder) GetManualReturnPoints() float64 {
 	return returnedPoints
 }
 
-// 订单金额。积分抵扣后、优惠券抵扣后的金额
+// 订单金额。积分抵扣后、优惠券抵扣后、满减活动抵扣后的金额
 func (model *SaleOrder) GetAmountValue() float64 {
-	// 积分抵扣后的金额-优惠券抵扣金额
-	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Round(2).InexactFloat64()
+	// 积分抵扣后的金额-优惠券抵扣金额-满减活动抵扣金额
+	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Sub(decimal.NewFromFloat(model.ActivityAmount)).Round(2).InexactFloat64()
 }
 
 // 获取积分抵扣后的应收金额。等于Amount-PayPointsAmount
