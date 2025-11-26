@@ -6,6 +6,7 @@ const (
 	ExportTypeBusinessDataPaymentMethod = 3 // 营业收款统计
 	ExportTypeKitchenProductionDetail   = 4 // 菜品出品明细
 	ExportTypeKitchenEfficiencyAnalysis = 5 // 菜品出品详情
+	ExportTypeProductSales              = 6 // 商品销售统计
 )
 
 const (

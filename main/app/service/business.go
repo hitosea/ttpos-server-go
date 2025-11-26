@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -38,6 +40,7 @@ type IBusinessSrv interface {
 	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                                                      // 统计商品
 	CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error)                                                            // 统计区域
 	CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error)                 // 统计商品列表
+	ExportProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) error                                                                               // 导出商品销售统计
 	Count7Days(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataCount7Days, error)                                                     // 统计7天
 	CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error)                                                        // 统计导出
 	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                                             // 统计商品排行
@@ -659,7 +662,44 @@ func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankP
 
 // CountProductSales 统计商品列表
 func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error) {
+	// 解析分类UUID字符串（如"uuid1,uuid2,,,,"）转换为数组
+	var categoryUuids []uint64
+	if req.CategoryUuids != "" {
+		categoryUuidStrs := strings.Split(req.CategoryUuids, ",")
+		for _, categoryUuidStr := range categoryUuidStrs {
+			categoryUuidStr = strings.TrimSpace(categoryUuidStr)
+			if categoryUuidStr == "" {
+				continue
+			}
+			categoryUuid, err := strconv.ParseUint(categoryUuidStr, 10, 64)
+			if err == nil && categoryUuid > 0 {
+				categoryUuids = append(categoryUuids, categoryUuid)
+			}
+		}
+	}
+	// 处理向后兼容：如果传入单个 CategoryUuid，转换为 CategoryUuids 数组
+	if len(categoryUuids) == 0 && req.CategoryUuid > 0 {
+		categoryUuids = []uint64{req.CategoryUuid}
+	}
+
+	// 解析订单类型字符串（如"1,2,3"）转换为数组
+	var orderTypes []uint
+	if req.OrderType != "" {
+		orderTypeStrs := strings.Split(req.OrderType, ",")
+		for _, orderTypeStr := range orderTypeStrs {
+			orderTypeStr = strings.TrimSpace(orderTypeStr)
+			if orderTypeStr == "" {
+				continue
+			}
+			orderType, err := strconv.ParseUint(orderTypeStr, 10, 32)
+			if err == nil && orderType >= 1 && orderType <= 3 {
+				orderTypes = append(orderTypes, uint(orderType))
+			}
+		}
+	}
+
 	productSalesData := s.statisticsSrv.CountProductSale(ctx, CountReq{
+		TimeType:       req.TimeType,
 		QueryStartTime: req.QueryStartTime,
 		QueryEndTime:   req.QueryEndTime,
 		RankType:       req.SortType,
@@ -668,7 +708,10 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 		PageSize:       req.PageSize,
 		AreaUuid:       req.AreaUuid,
 		CategoryUuid:   req.CategoryUuid,
+		CategoryUuids:  categoryUuids,
 		ProductName:    req.ProductName,
+		OrderTypes:     orderTypes,
+		OrderSource:    req.OrderSource,
 	})
 
 	var list = []business_data_resp.BusinessDataCountProductSalesItem{}
@@ -694,6 +737,239 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 	}
 
 	return &productListData, nil
+}
+
+// ExportProductSales 导出商品销售统计
+func (s *businessSrv) ExportProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) error {
+	// 检查数据量
+	req.PageNo = 1
+	req.PageSize = 1000
+	result, err := s.CountProductSales(ctx, req)
+	if err != nil {
+		return err
+	}
+	if result.Meta.Total > 1000 {
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
+	}
+	if result.Meta.Total == 0 {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	fileNameMap := map[string]string{
+		"zh":    "商品销售统计%s.xlsx",
+		"th":    "สถิติการขายสินค้า%s.xlsx",
+		"en":    "Product Sales Statistics%s.xlsx",
+		"zhtw":  "商品銷售統計%s.xlsx",
+		"zh_tw": "商品銷售統計%s.xlsx",
+		"ja":    "商品販売統計%s.xlsx",
+		"ko":    "상품 판매 통계%s.xlsx",
+		"my":    "ကုန်ပစ္စည်းရောင်းအားစာရင်းဇယား%s.xlsx",
+		"tr":    "Ürün Satış İstatistikleri%s.xlsx",
+		"sv":    "Produktförsäljningsstatistik%s.xlsx",
+	}
+
+	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
+	lang := ctx.GetLanguage()
+	fileNameTemplate := fileNameMap[lang]
+	if fileNameTemplate == "" {
+		fileNameTemplate = fileNameMap["en"]
+	}
+	fileName := fmt.Sprintf(fileNameTemplate, dateString)
+
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeProductSales,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	db := ctx.GetDB()
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 判断是否还有正在导出的任务
+		oldRecord, err := repository.NewExportRecordRepo(tx).GetUnfinishedExportRecord(model.ExportTypeProductSales)
+		if err != nil {
+			return err
+		}
+		if oldRecord != nil {
+			return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+		}
+
+		err = repository.NewExportRecordRepo(tx).Create(record)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		db := ctx.GetDB()
+		recordUuid := record.Uuid
+		record, err := repository.NewExportRecordRepo(db).GetByUuid(recordUuid)
+		if err != nil {
+			logger.Logger.Error("获取导出ExportProductSales失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			if err := repository.NewExportRecordRepo(db).Update(recordUuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出ExportProductSales失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			}
+			return
+		}
+		if record == nil {
+			logger.Logger.Error("导出记录不存在", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			if err := repository.NewExportRecordRepo(db).Update(recordUuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": "导出记录不存在",
+			}); err != nil {
+				logger.Logger.Error("导出ExportProductSales失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			}
+			return
+		}
+		res, err := s.ExportProductSalesTask(ctx, req)
+		if err != nil {
+			logger.Logger.Error("导出ExportProductSalesTask失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出ExportProductSalesTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+		if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			"status":    model.ExportStatusSuccess,
+			"file_uuid": res.FileUuid,
+		}); err != nil {
+			logger.Logger.Error("导出ExportProductSalesTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			return
+		}
+	})
+
+	return nil
+}
+
+// ExportProductSalesTask 导出商品销售统计任务处理
+func (s *businessSrv) ExportProductSalesTask(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*resp.FileExportResp, error) {
+	req.PageNo = 1
+	req.PageSize = 1000
+	result, err := s.CountProductSales(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 文件名多语言
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Product Sales Statistics",
+		ZhName:   "商品销售统计",
+		ZhTwName: "商品銷售統計",
+		ThName:   "สถิติการขายสินค้า",
+		MyName:   "ကုန်ပစ္စည်းရောင်းအားစာရင်းဇယား",
+		JaName:   "商品販売統計",
+		KoName:   "상품 판매 통계",
+		TrName:   "Ürün Satış İstatistikleri",
+		SvName:   "Produktförsäljningsstatistik",
+	}
+
+	headerMap := map[string][]string{
+		"zh":    {"商品名称", "商品分类", "销售数量", "原价销售额", "赠菜", "实际销售额", "营业收入"},
+		"th":    {"ชื่อสินค้า", "หมวดหมู่สินค้า", "จำนวนการขาย", "ยอดขายราคาเดิม", "ของแถม", "ยอดขายจริง", "รายได้จากการดำเนินงาน"},
+		"en":    {"Product Name", "Category", "Sales Quantity", "Original Sales Amount", "Gift", "Actual Sales Amount", "Business Revenue"},
+		"zhtw":  {"商品名稱", "商品分類", "銷售數量", "原價銷售額", "贈菜", "實際銷售額", "營業收入"},
+		"zh_tw": {"商品名稱", "商品分類", "銷售數量", "原價銷售額", "贈菜", "實際銷售額", "營業收入"},
+		"ja":    {"商品名", "商品分類", "販売数量", "原価販売額", "おまけ", "実際販売額", "営業収入"},
+		"ko":    {"상품명", "상품 분류", "판매 수량", "원가 판매액", "사은품", "실제 판매액", "영업 수입"},
+		"my":    {"ကုန်ပစ္စည်းအမည်", "ကုန်ပစ္စည်းအမျိုးအစား", "ရောင်းအားအရေအတွက်", "မူလရောင်းအားငွေ", "လက်ဆောင်ပေးခြင်း", "အမှန်တကယ်ရောင်းအားငွေ", "လုပ်ငန်းဝင်ငွေ"},
+		"tr":    {"Ürün Adı", "Kategori", "Satış Miktarı", "Orijinal Satış Tutarı", "Hediye", "Gerçek Satış Tutarı", "İşletme Geliri"},
+		"sv":    {"Produktnamn", "Kategori", "Försäljningskvantitet", "Originalt försäljningsbelopp", "Gåva", "Faktiskt försäljningsbelopp", "Företagsintäkter"},
+	}
+
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	xlsxFile := excelize.NewFile()
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",
+		ZhName:   "报表",
+		ZhTwName: "報表",
+		ThName:   "รายงาน",
+		MyName:   "အစီရင်ခံစာ",
+		JaName:   "レポート",
+		KoName:   "보고서",
+		TrName:   "Rapor",
+		SvName:   "Rapport",
+	}
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		logger.Logger.Error("创建Excel工作表失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	lang := ctx.GetLanguage()
+	headers := func() []string {
+		headers := headerMap[lang]
+		if headers == nil {
+			headers = headerMap["en"]
+		}
+		return headers
+	}()
+
+	// 写入表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheetName, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
+	}
+
+	// 写入数据（无序号列，第一列从商品名称开始）
+	for rowIdx, item := range result.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.ProductName)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.CategoryName)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.SalesNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OriginalSalesPrice)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.GiveProductNum)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.TotalPayPrice)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), item.SalesPrice)
+	}
+
+	// 自动调整列宽
+	for i := 0; i < len(headers); i++ {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		logger.Logger.Error("写入Excel文件到内存失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, fileName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
 }
 
 // Count7Days 统计7天

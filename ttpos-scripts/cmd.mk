@@ -24,6 +24,7 @@ define update_env_and_run
 	else \
 		echo '\nREDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)' >> .env; \
 	fi;
+	sed -i.bak 's/^SERVER_IP=.*/SERVER_IP=$(LOCAL_IP)/' .env && rm .env.bak;
 	chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh up -d
 	@make start-http-debug-proxy
 endef
@@ -118,6 +119,7 @@ init-env:
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^SERVER_IP=.*/SERVER_IP=$(LOCAL_IP)/' .env && rm .env.bak; \
 	fi
 	@echo "🔍 检查 .env 文件是否存在"
 	$(call update_env_and_run);

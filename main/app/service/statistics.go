@@ -1456,22 +1456,25 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 // CountReq 统计请求
 type CountReq struct {
-	TimeType       int    `json:"time_type"`        // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月)
-	QueryStartTime int64  `json:"query_start_time"` // 查询开始时间戳
-	QueryEndTime   int64  `json:"query_end_time"`   // 查询结束时间戳
-	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
-	DutyNo         string `json:"duty_no"`          // 班次编号
-	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
-	RankDirection  int    `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
-	IsCreateTime   bool   `json:"is_create_time"`   // 是否是创建时间
-	IsUpdateTime   bool   `json:"is_update_time"`   // 是否是更新时间
-	PageNo         int    `json:"page_no"`          // 页码
-	PageSize       int    `json:"page_size"`        // 每页大小
-	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
-	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
-	ProductName    string `json:"product_name"`     // 商品名称
-	Timezone       string `json:"timezone"`         // 时区
-	StaffUuid      uint64 `json:"staff_uuid"`       // 操作员UUID
+	TimeType       int      `json:"time_type"`        // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月, 5 近7天, 6 上月, 7 今年)
+	QueryStartTime int64    `json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64    `json:"query_end_time"`   // 查询结束时间戳
+	CategoryType   int      `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
+	DutyNo         string   `json:"duty_no"`          // 班次编号
+	RankType       int      `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
+	RankDirection  int      `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
+	IsCreateTime   bool     `json:"is_create_time"`   // 是否是创建时间
+	IsUpdateTime   bool     `json:"is_update_time"`   // 是否是更新时间
+	PageNo         int      `json:"page_no"`          // 页码
+	PageSize       int      `json:"page_size"`        // 每页大小
+	AreaUuid       uint64   `json:"area_uuid"`        // 区域UUID -1=全都
+	CategoryUuid   uint64   `json:"category_uuid"`    // 分类UUID -1=全都 (向后兼容)
+	CategoryUuids  []uint64 `json:"category_uuids"`   // 分类UUID列表, 空=全部
+	ProductName    string   `json:"product_name"`     // 商品名称
+	OrderTypes     []uint   `json:"order_types"`      // 订单类型列表: 1=点餐, 2=桌台, 3=外送
+	OrderSource    int      `json:"order_source"`     // 订单来源: -1=全部, 1=店内, 2=外卖
+	Timezone       string   `json:"timezone"`         // 时区
+	StaffUuid      uint64   `json:"staff_uuid"`       // 操作员UUID
 }
 
 // buildCountOpts 构建统计选项
@@ -1486,7 +1489,7 @@ func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repo
 		req.Timezone = ctx.GetCompanySetting().Timezone
 	}
 	// 处理时间范围
-	if req.TimeType > 0 && req.TimeType < 5 {
+	if req.TimeType > 0 && req.TimeType <= 7 {
 		switch req.TimeType {
 		case 1: // 今天
 			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).TodayStartEndUnix()
@@ -1496,6 +1499,12 @@ func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repo
 			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).WeekStartEndUnix()
 		case 4: // 本月
 			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).MonthStartEndUnix()
+		case 5: // 近7天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).Last7DaysStartEndUnix()
+		case 6: // 上月
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).LastMonthStartEndUnix()
+		case 7: // 今年
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YearStartEndUnix()
 		}
 	}
 	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
@@ -1685,7 +1694,10 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		Language:      ctx.GetLanguage(),
 		AreaUuid:      req.AreaUuid,
 		CategoryUuid:  req.CategoryUuid,
+		CategoryUuids: req.CategoryUuids,
 		ProductName:   req.ProductName,
+		OrderTypes:    req.OrderTypes,
+		OrderSource:   req.OrderSource,
 	}, s.buildCountOpts(ctx, req)...)
 
 	var data []CountProductSale

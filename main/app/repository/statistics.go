@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
@@ -808,7 +809,10 @@ type CountProductSaleRepoReq struct {
 	Language      string
 	AreaUuid      uint64
 	CategoryUuid  uint64
+	CategoryUuids []uint64
 	ProductName   string
+	OrderTypes    []uint
+	OrderSource   int
 }
 
 // CountProductSale 统计商品销售
@@ -827,6 +831,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
 	deskTable := prefix + "desk as d"
+	saleBillTable := prefix + "sale_bill as sb"
 
 	var total int64
 	db = db.Table(statisticsProductTable).
@@ -835,16 +840,73 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
+	// 订单类型筛选：需要关联 sale_bill 表
+	needJoinSaleBill := len(req.OrderTypes) > 0 || (req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1))
+	if needJoinSaleBill {
+		db.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+	}
+
 	if req.AreaUuid > 0 {
 		db.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
 		db.Where("d.region_uuid = ?", req.AreaUuid)
 	}
-	if req.CategoryUuid > 0 {
+
+	// 商品分类筛选（支持多选和向后兼容）
+	if len(req.CategoryUuids) > 0 {
+		// 查询所有子分类
+		var allCategoryUuids []uint64
+		for _, categoryUuid := range req.CategoryUuids {
+			allCategoryUuids = append(allCategoryUuids, categoryUuid)
+			// 查询子分类
+			var subCategoryUuids []uint64
+			r.db.Table(productCategoryTable).
+				Select("uuid").
+				Where("parent_uuid = ?", categoryUuid).
+				Pluck("uuid", &subCategoryUuids)
+			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
+		}
+		if len(allCategoryUuids) > 0 {
+			db.Where("pp.category_uuid IN (?)", allCategoryUuids)
+		}
+	} else if req.CategoryUuid > 0 {
+		// 向后兼容：单个分类UUID
 		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
 	}
+
 	if req.ProductName != "" {
 		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
+
+	// 订单类型筛选
+	if len(req.OrderTypes) > 0 {
+		// 映射订单类型到SaleBillType
+		var billTypes []uint
+		for _, orderType := range req.OrderTypes {
+			switch orderType {
+			case 1: // 点餐订单
+				billTypes = append(billTypes, constant.SaleBillTypeInstant)
+			case 2: // 桌台订单
+				billTypes = append(billTypes, constant.SaleBillTypeDesk)
+			case 3: // 外送订单
+				billTypes = append(billTypes, constant.SaleBillTypeTakeout)
+			}
+		}
+		if len(billTypes) > 0 {
+			db.Where("sb.bill_type IN (?)", billTypes)
+		}
+	}
+
+	// 订单来源筛选（仅在订单类型包含点餐订单时生效）
+	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
+		if req.OrderSource == 1 {
+			// 1=店内
+			db.Where("sb.order_source_uuid = 0")
+		} else if req.OrderSource == 2 {
+			// 2=外卖
+			db.Where("sb.order_source_uuid > 0")
+		}
+	}
+
 	db.Pluck("total", &total)
 
 	listQuery := db2.Table(statisticsProductTable).
@@ -862,15 +924,70 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
+	// 订单类型筛选：需要关联 sale_bill 表
+	if needJoinSaleBill {
+		listQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+	}
+
 	if req.AreaUuid > 0 {
 		listQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
 		listQuery.Where("d.region_uuid = ?", req.AreaUuid)
 	}
-	if req.CategoryUuid > 0 {
+
+	// 商品分类筛选（支持多选和向后兼容）
+	if len(req.CategoryUuids) > 0 {
+		// 查询所有子分类
+		var allCategoryUuids []uint64
+		for _, categoryUuid := range req.CategoryUuids {
+			allCategoryUuids = append(allCategoryUuids, categoryUuid)
+			// 查询子分类
+			var subCategoryUuids []uint64
+			r.db.Table(productCategoryTable).
+				Select("uuid").
+				Where("parent_uuid = ?", categoryUuid).
+				Pluck("uuid", &subCategoryUuids)
+			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
+		}
+		if len(allCategoryUuids) > 0 {
+			listQuery.Where("pp.category_uuid IN (?)", allCategoryUuids)
+		}
+	} else if req.CategoryUuid > 0 {
+		// 向后兼容：单个分类UUID
 		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
 	}
+
 	if req.ProductName != "" {
 		listQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
+	}
+
+	// 订单类型筛选
+	if len(req.OrderTypes) > 0 {
+		// 映射订单类型到SaleBillType
+		var billTypes []uint
+		for _, orderType := range req.OrderTypes {
+			switch orderType {
+			case 1: // 点餐订单
+				billTypes = append(billTypes, constant.SaleBillTypeInstant)
+			case 2: // 桌台订单
+				billTypes = append(billTypes, constant.SaleBillTypeDesk)
+			case 3: // 外送订单
+				billTypes = append(billTypes, constant.SaleBillTypeTakeout)
+			}
+		}
+		if len(billTypes) > 0 {
+			listQuery.Where("sb.bill_type IN (?)", billTypes)
+		}
+	}
+
+	// 订单来源筛选（仅在订单类型包含点餐订单时生效）
+	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
+		if req.OrderSource == 1 {
+			// 1=店内
+			listQuery.Where("sb.order_source_uuid = 0")
+		} else if req.OrderSource == 2 {
+			// 2=外卖
+			listQuery.Where("sb.order_source_uuid > 0")
+		}
 	}
 	listQuery.Group("sp.product_package_uuid")
 
@@ -1313,4 +1430,9 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	r.db.Raw(dataQuery, dataArgs...).Scan(&result)
 
 	return total, result
+}
+
+// containsOrderType 检查订单类型列表中是否包含指定类型
+func containsOrderType(orderTypes []uint, orderType uint) bool {
+	return slices.Contains(orderTypes, orderType)
 }

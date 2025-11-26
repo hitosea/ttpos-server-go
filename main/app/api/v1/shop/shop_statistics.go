@@ -390,6 +390,31 @@ func (h *statisticsHandler) ExportKitchenProductionDetail(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ExportProductSales 导出商品销售统计
+// @Summary 导出商品销售统计
+// @Description 导出商品销售统计数据
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountProductSalesReq true "统计参数"
+// @Success 200 {object} dto.Response "导出成功"
+// @Router /shop/statistics/product_sales/export [get]
+func (h *statisticsHandler) ExportProductSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountProductSalesReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	err := h.businessSrv.ExportProductSales(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // CountBusinessTimePeriod 统计营业时段数据
 // @Summary 统计营业时段数据
 // @Description 移动端-报表-营业报表-时段营业统计
@@ -581,6 +606,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/area", wrapper.CountArea)                                                     // 统计区域，移动管理端首页-区域数据
 		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)                                      // 统计商品排行，移动管理端首页-销量、销售额排行
 		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)                                    // 统计商品销售
+		privateApi.GET("/statistics/product_sales/export", wrapper.ExportProductSales)                            // 导出商品销售统计
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                                                   // 统计7天
 		privateApi.GET("/statistics/export", wrapper.CountExport)                                                 // 统计导出
 		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount)                         // 统计班次退款金额
