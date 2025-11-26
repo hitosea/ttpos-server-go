@@ -37,7 +37,7 @@ build:
 	@$(call update_env_and_run)
 	@echo "🗄️  运行数据库迁移..."
 	@make migrate
-	@make rmi
+	@make rmi-docker-images
 	@echo "✅ 构建完成"
 
 #重新构建中台模块
@@ -155,7 +155,7 @@ add-parent-company-uuid:
 	cd main && go run ./main.go add-parent-company-uuid
 
 # 删除 dangling 镜像
-rmi:
+rmi-docker-images:
 	docker rmi $$(docker images -qf "dangling=true")
 
 # 授权所有文件

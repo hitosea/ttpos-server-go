@@ -297,7 +297,7 @@ export const previewData = {
     two: [
         [
             {
-                name: $t('桌位: A01 (4人)'),
+                name: $t('(外卖)') + $t('桌位: A01 (4人)'),
                 label: '',
                 hide: 2,
                 font24: true,
@@ -573,7 +573,7 @@ export const previewData = {
     three: [
         [
             {
-                name: $t('桌位: A01 (4人)'),
+                name: $t('(外卖)') + $t('桌位: A01 (4人)'),
                 label: '',
                 hide: 2,
                 font24: true,
@@ -1352,7 +1352,7 @@ export const previewData = {
     eight: [
         [
             {
-                name: $t('桌位: A01 (4人)'),
+                name: $t('(外卖)') + $t('桌位: A01 (4人)'),
                 label: '',
                 font24: true,
                 right: false,

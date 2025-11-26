@@ -2184,5 +2184,6 @@
     "退款操作权限验证": "Verifiering av behörighet för återbetalningsåtgärder",
     "开启后，进行退款操作时需要密码验证或授权员工验证": "När den är aktiverad kräver återbetalningsåtgärder lösenordsverifiering eller auktorisering av en behörig anställd",
     "退款授权员工": "Behörig personal för återbetalningar",
-    "选择授权员工后，这些员工可以进行退款操作的授权验证": "Efter att ha valt behörig personal kan dessa anställda utföra auktoriseringsverifiering för återbetalningsåtgärder"
+    "选择授权员工后，这些员工可以进行退款操作的授权验证": "Efter att ha valt behörig personal kan dessa anställda utföra auktoriseringsverifiering för återbetalningsåtgärder",
+    "(外卖)": "(Takeaway)"
 }
