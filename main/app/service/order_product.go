@@ -1059,13 +1059,37 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 
 // InstantOrderCartProductChangeDesk 转菜购物车商品
 func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 禁止并发操作：在方法开头就加锁，确保获取目标订单UUID时使用的是最新数据
 	if ctx.NoLock() {
-		s.lock.LockUuid(req.SaleBillUuid)
-		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		systemLock := lock.NewSystemLock()
+
+		// 获取目标订单 UUID（通过目标桌台 UUID 查询，在锁内获取确保数据一致性）
+		targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(req.DeskUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取目标桌台的销售账单UUID失败")
+		}
+		if targetSaleBillUuid == 0 {
+			return nil, errors.WithMessage(errors.New("目标桌台没有关联订单"))
+		}
+
+		// 收集需要锁定的订单：源订单 + 目标订单
+		orderUuids := []uint64{req.SaleBillUuid, targetSaleBillUuid}
+
+		// 锁定源订单和目标订单（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, orderUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+
 		ctx.AddLock()
 	}
+
 	// 获取验证销售账单信息
-	db := s.dbm.GetDB(ctx.GetDbId())
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "销售账单不存在")
@@ -1089,7 +1113,7 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		return nil, errors.New("商品已取消")
 	}
 
-	// 获取目标桌台的信息和销售账单
+	// 获取目标桌台的信息和销售账单（在锁内获取，确保数据一致性）
 	targetDesk, err := repository.NewDeskRepo(db).GetDeskAndSaleBillByDeskUuid(req.DeskUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -2013,10 +2037,10 @@ func (s *orderSrv) validatePackageGroupSelection(ctx context.Context, selectedPr
 				groupName := group.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 				diff := group.OptionalCount - int(selectedCount)
 				if diff > 0 {
-					return errors.New(fmt.Sprintf("该分组「%s」需要选择 %d 个商品，当前已选 %d 个，还差 %d 个", 
+					return errors.New(fmt.Sprintf("该分组「%s」需要选择 %d 个商品，当前已选 %d 个，还差 %d 个",
 						groupName, group.OptionalCount, int(selectedCount), diff))
 				} else {
-					return errors.New(fmt.Sprintf("该分组「%s」最多选择 %d 个商品，当前已选 %d 个，请删除多余商品", 
+					return errors.New(fmt.Sprintf("该分组「%s」最多选择 %d 个商品，当前已选 %d 个，请删除多余商品",
 						groupName, group.OptionalCount, int(selectedCount)))
 				}
 			}
