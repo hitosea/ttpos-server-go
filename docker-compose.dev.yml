@@ -47,7 +47,9 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.11
-      bmp-network:
+    extra_hosts:
+      ttpos-takeout: ${SERVER_IP}
+      ttpos-websocket: ${SERVER_IP}
 
   db:
     container_name: "saas-db-${APP_ID}"
