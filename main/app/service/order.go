@@ -375,7 +375,7 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 }
 
 // 创建会员端销售订单
-func createMemberSaleOrder(ctx context.Context, db *gorm.DB, params model.CreateMemberSaleOrderParams) (*model.MemberSaleOrder, error) {
+func createMemberSaleOrder(_ context.Context, db *gorm.DB, params model.CreateMemberSaleOrderParams) (*model.MemberSaleOrder, error) {
 	saleOrderObj := model.NewMemberSaleOrder(params)
 
 	if err := repository.NewMemberSaleOrderRepo(db).CreateMemberSaleOrder(*saleOrderObj); err != nil {
@@ -1301,7 +1301,7 @@ func (s *orderSrv) deleteOrRejectH5OrderProduct(ctx context.Context, db *gorm.DB
 	}
 	return nil
 }
-func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
+func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, _ uint64, _ string, req req.OrderProductDeleteReq) (*resp.ShopCart, error) {
 
 	// 获取信息源
 	db := s.dbm.GetDB(dbId)
@@ -1404,7 +1404,7 @@ func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrde
 	}
 	var newSaleOrder *model.SaleOrder
 	var newSaleOrderProduct *model.SaleOrderProduct
-	for i, _ := range newSaleBill.SaleOrders {
+	for i := range newSaleBill.SaleOrders {
 		order := newSaleBill.SaleOrders[i]
 		if order.Uuid == saleOrderUuid {
 			newSaleOrder = newSaleBill.SaleOrders[i]
@@ -2672,7 +2672,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 }
 
 // 检查自助餐顾客类型价格是否变动
-func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, saleBill *model.SaleBill) *resp.OrderCheckServiceRes {
+func (s *orderSrv) checkBuffetCustomerTypePriceChanged(_ context.Context, saleBill *model.SaleBill) *resp.OrderCheckServiceRes {
 	res := &resp.OrderCheckServiceRes{
 		Code: constant.CodeOrderCheckProductPriceChanged,
 		OrderCheckRes: resp.OrderCheckRes{
@@ -4461,7 +4461,7 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 }
 
 // 解析要移动的商品，识别为销售订单商品、顾客、加钟
-func (s *orderSrv) getMoveProductInfo(ctx context.Context, saleOrderFrom *model.SaleOrder, req req.InstantOrderSaleOrderMoveProductReq) ([]*model.SaleOrderProduct, []*model.SaleOrderBuffetCustomerType, []*model.SaleOrderBuffetDelayProduct, error) {
+func (s *orderSrv) getMoveProductInfo(_ context.Context, saleOrderFrom *model.SaleOrder, req req.InstantOrderSaleOrderMoveProductReq) ([]*model.SaleOrderProduct, []*model.SaleOrderBuffetCustomerType, []*model.SaleOrderBuffetDelayProduct, error) {
 	// 构建销售订单商品map
 	saleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
 	for index, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
@@ -4756,7 +4756,7 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 }
 
 // moveBuffetCustomer 移动加钟商品
-func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
+func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, _ *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
 	// 需要更新的销售订单加钟商品
 	waitUpdateBuffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
 	// 需要新建的销售订单加钟商品

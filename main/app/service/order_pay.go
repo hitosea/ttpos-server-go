@@ -165,7 +165,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 
 	// 检查积分数量是否超过最大抵扣数
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
-		maxPoints := saleOrder.CaclMaxPoints()
+		maxPoints := saleOrder.CalcMaxPoints()
 		if req.Points > maxPoints {
 			return nil, errors.New("积分数量超过最大抵扣数")
 		}
@@ -175,7 +175,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 			// 手动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = req.Points
 			saleOrder.AutoPointsExchange = 0
-			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
+			saleOrder.PayPointsAmount = saleOrder.CalcPointsExchangeAmount()
 
 			if err := db.Transaction(func(tx *gorm.DB) error {
 				saleOrder.SetCheckoutZeroRuleCancel() // 取消抹零，修改saleBill中的数据
@@ -1425,13 +1425,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	var pointsExchange resp.PointsExchangeInfo
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
 		// 积分抵扣信息。
-		maxPoints := saleOrder.CaclMaxPoints()
+		maxPoints := saleOrder.CalcMaxPoints()
 
 		// 如果自动抵扣积分，且未创建付款单，则更新销售订单的抵扣积分和抵扣金额
 		if saleBill.SaleBillSetting.IsOpenPointsExchange() && saleOrder.AutoPointsExchange == 1 && len(saleOrder.PaymentOrders) == 0 {
 			// 自动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = maxPoints
-			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
+			saleOrder.PayPointsAmount = saleOrder.CalcPointsExchangeAmount()
 
 			// 更新销售订单的积分抵扣信息
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 1); err != nil {
@@ -1569,7 +1569,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 }
 
 // getFullReductionActivityList 获取满减活动列表
-func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill) (resp.FullReductionActivityList, error) {
+func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *model.SaleOrder, _ *model.SaleBill) (resp.FullReductionActivityList, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	now := time.Now().Unix()
 

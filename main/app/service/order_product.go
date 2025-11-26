@@ -2152,7 +2152,7 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		// 获取套餐子商品
 		subProducts := saleOrder.GetPackageSubProductList(request.SaleOrderProductUuid)
 		subProductParamMap := make(map[string]req.ProductRequest) // 套餐子商品参数. key为商品规格uuid+套餐分组uuid
-		for i, _ := range request.Products {
+		for i := range request.Products {
 			params := request.Products[i]
 			subProductParamMap[fmt.Sprintf("%d-%d", params.FlavorUuid, params.ProductPackageGroupUuid)] = params
 		}

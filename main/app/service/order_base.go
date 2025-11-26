@@ -468,7 +468,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 			}
 		}
 		list := make([]resp.Product, 0)
-		for sign, _ := range listMap {
+		for sign := range listMap {
 			list = append(list, listMap[sign])
 		}
 		productList := resp.InstantHideSaleProductList{List: list}

@@ -148,7 +148,7 @@ func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.ZeroFee = calc.ZeroFee
 	calc.CustomDiscountFee = model.calcCustomDiscountFee(products, calc.Amount)
 	model.CustomDiscountFee = calc.CustomDiscountFee
-	calc.PayPointsAmount = model.CaclPointsExchangeAmount()
+	calc.PayPointsAmount = model.CalcPointsExchangeAmount()
 	model.PayPointsAmount = calc.PayPointsAmount // 有抵扣积分时，抵扣金额才大于0
 	// 再重新计算一次应付金额
 	calc.Amount = model.calcAmountZero(calc.Amount, calc.ZeroFee)
@@ -513,7 +513,7 @@ func (model *SaleOrder) calcAmountZero(amountNum, zeroFee float64) float64 {
 // CaclMaxPoints 计算最大可抵扣积分
 // 1. 当会员积分余额充足时，最大可抵扣积分=订单应收/积分抵扣比例
 // 2. 当会员积分余额不足时，最大可抵扣积分=会员积分余额
-func (model *SaleOrder) CaclMaxPoints() float64 {
+func (model *SaleOrder) CalcMaxPoints() float64 {
 	if model.Member == nil {
 		return 0 // 非会员订单，不支持积分抵扣
 	}
@@ -540,7 +540,7 @@ func (model *SaleOrder) CaclMaxPoints() float64 {
 }
 
 // 计算积分抵扣金额
-func (model *SaleOrder) CaclPointsExchangeAmount() float64 {
+func (model *SaleOrder) CalcPointsExchangeAmount() float64 {
 	if model.Member == nil {
 		return 0 // 非会员订单，不支持积分抵扣
 	}
