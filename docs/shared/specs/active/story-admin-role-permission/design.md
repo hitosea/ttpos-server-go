@@ -627,6 +627,7 @@ type RoleAccess struct {
 - 通过 `includeRouteNames` 参数指定需要返回的权限组
 - 在构建权限树后，遍历根节点，只保留名称匹配 `includeRouteNames` 的权限组
 - 当前固定返回三个权限组：管理APP、收银机、点餐助手
+- **商家后台特殊处理**: 商家后台（PHP Admin）在 `admin/app/common/model/shop/Access.php` 中过滤掉管理 APP 权限（uuid=2856266502144000），仅平台管理端可见
 
 3. 注册路由：
    ```go
@@ -895,10 +896,11 @@ func (api *RoleAPI) GetPermissionTree(c *gin.Context) {
 
 复用 `main/app/service/role_access.go` 的 `filterPermission` 方法，根据商户配置动态筛选权限：
 
-1. **总部商户**: 隐藏品采收货权限（UUID: 2858560786432000）
-2. **已对接ERP**: 隐藏进销存权限（UUID: 2857919057920000）
-3. **关闭渠道营收统计**: 隐藏首页渠道营收统计的"更多"选项
-4. **授权配置**: 根据商户授权配置动态隐藏相关权限（进销存、会员、平板点餐、H5点餐、点餐助手、后厨、自助餐、扫码点餐接单、外送等）
+1. **商家后台隐藏管理 APP 权限**: 商家后台（PHP Admin）在 `admin/app/common/model/shop/Access.php` 的 `recursiveMenuArray` 方法中过滤掉管理 APP 权限（uuid=2856266502144000），仅平台管理端可见
+2. **总部商户**: 隐藏品采收货权限（UUID: 2858560786432000）
+3. **已对接ERP**: 隐藏进销存权限（UUID: 2857919057920000）
+4. **关闭渠道营收统计**: 隐藏首页渠道营收统计的"更多"选项
+5. **授权配置**: 根据商户授权配置动态隐藏相关权限（进销存、会员、平板点餐、H5点餐、点餐助手、后厨、自助餐、扫码点餐接单、外送等）
 
 ### 管理APP默认权限
 

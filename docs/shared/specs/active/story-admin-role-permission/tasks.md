@@ -249,12 +249,12 @@
 
 - [x] 3.1 实现权限动态显示/隐藏逻辑
 
-  - **Module**: Main - Service 层
-  - **File**: `main/app/service/role_access.go`
+  - **Module**: Main - Service 层 + Admin - Model 层
+  - **File**: `main/app/service/role_access.go`, `admin/app/common/model/shop/Access.php`
   - **Purpose**: 根据商户配置动态筛选权限
-  - **Requirements**: R4.1-R4.4
+  - **Requirements**: R4.1-R4.5
   - **Leverage**: 现有权限筛选逻辑: `main/app/service/role_access.go` 的 `filterPermission` 方法
-  - **Status**: ✅ 已完成，`GetCompanyPermissionGroup` 方法中已调用 `filterPermission` 方法（传入 `companySetting` 和 `company` 参数），根据商户类型、ERP对接状态、授权配置、渠道营收统计配置动态筛选权限。筛选规则包括：总部商户隐藏品采收货权限、已对接ERP隐藏进销存权限、授权配置动态隐藏相关权限等。权限组过滤通过 `includeRouteNames` 参数实现，只返回"管理APP"、"收银机"、"点餐助手"三个权限组（代码位置：`main/app/service/role_access.go:312-315`）
+  - **Status**: ✅ 已完成，`GetCompanyPermissionGroup` 方法中已调用 `filterPermission` 方法（传入 `companySetting` 和 `company` 参数），根据商户类型、ERP对接状态、授权配置、渠道营收统计配置动态筛选权限。筛选规则包括：商家后台隐藏管理APP权限（在 `admin/app/common/model/shop/Access.php:305` 中过滤 uuid=2856266502144000）、总部商户隐藏品采收货权限、已对接ERP隐藏进销存权限、授权配置动态隐藏相关权限等。权限组过滤通过 `includeRouteNames` 参数实现，只返回"管理APP"、"收银机"、"点餐助手"三个权限组（代码位置：`main/app/service/role_access.go:312-315`）
 
 - [x] 3.2 实现管理APP默认勾选所有权限（前端处理）
 
