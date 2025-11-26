@@ -655,8 +655,7 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 			}
 		}
 		products := make([]CheckProductPackageGroupProductResult, 0)
-		requiredCount := 0
-		defaultCount := 0
+		requiredOrDefaultCount := 0 // 统计必选或默认的商品数量（去重）
 		for _, product := range group.Products {
 			if isDelete {
 				product.IsDelete = true
@@ -679,12 +678,9 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 					if product.IsDefault != 0 && product.IsDefault != 1 {
 						return nil, errors.New("默认选中字段必须为0（不默认选中）或1（默认选中）")
 					}
-					// 统计必选和默认选中数量
-					if product.IsRequired == 1 {
-						requiredCount++
-					}
-					if product.IsDefault == 1 {
-						defaultCount++
+					// 统计必选或默认的商品数量（去重：一个商品既是必选又是默认，只算一个）
+					if product.IsRequired == 1 || product.IsDefault == 1 {
+						requiredOrDefaultCount++
 					}
 					// 验证加价金额
 					if product.AddPrice < 0 {
@@ -711,13 +707,10 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 			}
 			products = append(products, CheckProductPackageGroupProductResult(product))
 		}
-		// 验证必选数量不能大于可选数量
+		// 验证必选或默认商品数量不能大于可选数量
 		if !isDelete && group.GroupType == 1 {
-			if requiredCount > group.OptionalCount {
-				return nil, errors.New("必选数量不能大于可选数量")
-			}
-			if defaultCount > group.OptionalCount {
-				return nil, errors.New("默认数量不能大于可选数量")
+			if requiredOrDefaultCount > group.OptionalCount {
+				return nil, errors.New("必选或默认不可大于可选数量")
 			}
 		}
 		groups = append(groups, CheckProductPackageGroupResult{
