@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `dining_method` INT(10) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食(店内就餐) 1-打包',
     `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖）',
     `nationality_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '国籍UUID（0=未记录）',
+    `source` INT(10) NOT NULL DEFAULT 0 COMMENT '来源, 0-未记录 1-收银机 2-点餐助手 3-平板 4-H5',
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_lock` INT(10) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',
@@ -82,6 +83,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     INDEX `idx_uuid_hidebilltime_id` (`uuid`, `hide_bill_time`, `id`),
     INDEX `idx_order_source_uuid` (`order_source_uuid`),
     INDEX `idx_nationality_uuid` (`nationality_uuid`),
+    INDEX `idx_source` (`source`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单表';
 
@@ -2785,6 +2787,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台UUID',
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '用餐人数',
+    `source` INT(10) NOT NULL DEFAULT 0 COMMENT '来源, 0-未记录 1-收银机 2-点餐助手 3-平板 4-H5',
     `product_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品原价: 不含税',
     `product_origin_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '原商品金额',
     `product_sale_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品销售价',
@@ -2810,6 +2813,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `is_special` INT(10) NOT NULL DEFAULT 0 COMMENT '是否特殊订单',
     `is_takeout` INT(10) NOT NULL DEFAULT 0 COMMENT '是否外送',
     `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖/渠道）',
+    `nationality_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '国籍UUID（0=未记录）',
     `delivery_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '配送费',
     `refund_service_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '退款服务费',
     `refund_discount`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '退款优惠折扣',
@@ -2826,7 +2830,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     INDEX `idx_desk_uuid` (`desk_uuid`),
     INDEX `idx_complete_time` (`complete_time`),
     INDEX `idx_is_takeout` (`is_takeout`),
-    INDEX `idx_order_source_uuid` (`order_source_uuid`)
+    INDEX `idx_order_source_uuid` (`order_source_uuid`),
+    INDEX `idx_nationality_uuid` (`nationality_uuid`),
+    INDEX `idx_source` (`source`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '销售统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (

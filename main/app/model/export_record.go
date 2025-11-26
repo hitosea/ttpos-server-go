@@ -8,6 +8,7 @@ const (
 	ExportTypeKitchenEfficiencyAnalysis = 5 // 菜品出品详情
 	ExportTypeProductSales              = 6 // 商品销售统计
 	ExportTypeChannelSales              = 7 // 渠道营业统计
+	ExportTypeUserAnalysis              = 8 // 用户分析统计
 )
 
 const (

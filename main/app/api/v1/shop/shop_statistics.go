@@ -631,6 +631,44 @@ func (h *statisticsHandler) ExportChannelSales(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// UserAnalysis 用户分析统计查询
+// @Summary 用户分析统计查询
+// @Description 用户分析统计查询
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.UserAnalysisResp} "统计数据"
+// @Router /shop/statistics/user_analysis [get]
+func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	resp, err := h.businessSrv.CountUserAnalysis(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
+// ExportUserAnalysis 导出用户分析统计
+// @Summary 导出用户分析统计
+// @Description 导出用户分析统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response "导出任务已创建"
+// @Router /shop/statistics/user_analysis/export [get]
+func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.businessSrv.ExportUserAnalysis(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -676,5 +714,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/business/payment_method/export", wrapper.ExportBusinessPaymentMethod)         // 导出营业收款统计, 移动端-报表-营业报表-支付方式统计
 		privateApi.GET("/statistics/channel_sales", wrapper.ChannelSales)                                         // 渠道营业统计查询
 		privateApi.GET("/statistics/channel_sales/export", wrapper.ExportChannelSales)                            // 导出渠道营业统计
+		privateApi.GET("/statistics/user_analysis", wrapper.UserAnalysis)                                         // 用户分析统计查询
+		privateApi.GET("/statistics/user_analysis/export", wrapper.ExportUserAnalysis)                            // 导出用户分析统计
 	}
 }

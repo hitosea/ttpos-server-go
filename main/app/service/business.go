@@ -61,6 +61,8 @@ type IBusinessSrv interface {
 	ExportBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) error                                                                            // 导出收款统计数据
 	CountChannelSales(ctx context.Context, req req.ChannelSalesReq) (*resp.ChannelSalesResp, error)                                                                       // 统计渠道营业数据
 	ExportChannelSales(ctx context.Context, req req.ChannelSalesReq) error                                                                                                // 导出渠道营业统计数据
+	CountUserAnalysis(ctx context.Context) (*resp.UserAnalysisResp, error)                                                                                                // 统计用户分析数据
+	ExportUserAnalysis(ctx context.Context) error                                                                                                                         // 导出用户分析统计数据
 }
 
 // businessSrv 收银服务结构体
@@ -3404,6 +3406,262 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	xlsxFile.SetColWidth(sheetName, "A", "A", 15) // A列：渠道名称
 	xlsxFile.SetColWidth(sheetName, "B", "B", 20) // B列：指标名称
 	xlsxFile.SetColWidth(sheetName, "C", "C", 15) // C列：数值
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, params.Record.ExportName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.NewExportRecordRepo(db).Update(params.Record.Uuid, map[string]any{
+		"file_uuid": res.Uuid,
+		"status":    model.ExportStatusSuccess,
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
+}
+
+// CountUserAnalysis 统计用户分析数据
+func (s *businessSrv) CountUserAnalysis(ctx context.Context) (*resp.UserAnalysisResp, error) {
+	db := ctx.GetDB()
+	statisticsRepo := repository.NewStatisticsRepo(db)
+	dataManageRepo := repository.NewDataManageRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 获取今天时间范围（使用门店时区）
+	timezone := ctx.GetCompanySetting().Timezone
+	timezoneUtil := utils.SetTimezone(timezone)
+	startTime, endTime := timezoneUtil.TodayStartEndUnix()
+
+	// 获取语言
+	language := ctx.GetLanguage()
+
+	// 调用 Repository 获取统计数据
+	repoResult, err := statisticsRepo.CountUserAnalysis(startTime, endTime, language,
+		commonRepo.WhereNotInDataManageSubQuery("sale_bill_uuid",
+			dataManageRepo.WhereByType(model.DataManageTypeOrder),
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "统计用户分析数据失败")
+	}
+
+	// 转换为响应格式
+	convertToItems := func(items []model.UserAnalysisItemRepo) []resp.UserAnalysisItem {
+		result := make([]resp.UserAnalysisItem, 0, len(items))
+		for _, item := range items {
+			result = append(result, resp.UserAnalysisItem{
+				Name:       item.Name,
+				OrderCount: item.OrderCount,
+				Percentage: item.Percentage.InexactFloat64(),
+			})
+		}
+		return result
+	}
+
+	return &resp.UserAnalysisResp{
+		Nationality:  convertToItems(repoResult.Nationality),
+		OrderSource:  convertToItems(repoResult.OrderSource),
+		DeskSource:   convertToItems(repoResult.DeskSource),
+		DiningMethod: convertToItems(repoResult.DiningMethod),
+	}, nil
+}
+
+// ExportUserAnalysis 导出用户分析统计数据
+func (s *businessSrv) ExportUserAnalysis(ctx context.Context) error {
+	db := ctx.GetDB()
+	// 判断是否还有正在导出的任务
+	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeUserAnalysis)
+	if err != nil {
+		return err
+	}
+	if oldRecord != nil {
+		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+	}
+
+	// 获取统计数据
+	result, err := s.CountUserAnalysis(ctx)
+	if err != nil {
+		return err
+	}
+
+	// 检查是否有数据
+	hasData := len(result.Nationality) > 0 || len(result.OrderSource) > 0 || len(result.DeskSource) > 0 || len(result.DiningMethod) > 0
+	if !hasData {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "User Analysis Statistics",
+		ZhName:   "用户分析统计",
+		ZhTwName: "用戶分析統計",
+		ThName:   "สถิติการวิเคราะห์ผู้ใช้",
+		MyName:   "အသုံးပြုသူခွဲခြမ်းစိတ်ဖြာစာရင်း",
+		JaName:   "ユーザー分析統計",
+		KoName:   "사용자 분석 통계",
+		TrName:   "Kullanıcı Analiz İstatistikleri",
+		SvName:   "Användaranalysstatistik",
+	}
+
+	// 创建导出任务
+	params := map[string]interface{}{}
+	paramsJson, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeUserAnalysis,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(paramsJson),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	err = repository.NewExportRecordRepo(db).Create(record)
+	if err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		_, err := s.ExportUserAnalysisTask(ctx, ExportUserAnalysisTaskParams{
+			Record:      *record,
+			FillNameMul: fileNameMul,
+			Result:      result,
+		})
+		if err != nil {
+			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出用户分析统计数据失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+	})
+
+	return nil
+}
+
+// ExportUserAnalysisTaskParams 导出用户分析统计数据参数
+type ExportUserAnalysisTaskParams struct {
+	Record      model.ExportRecord      // 导出记录
+	FillNameMul model.MultiLanguageName // 多语言名称
+	Result      *resp.UserAnalysisResp  // 统计数据
+}
+
+// ExportUserAnalysisTask 导出用户分析统计数据任务
+func (s *businessSrv) ExportUserAnalysisTask(ctx context.Context, params ExportUserAnalysisTaskParams) (*resp.FileExportResp, error) {
+	db := ctx.GetDB()
+	lang := ctx.GetLanguage()
+
+	// 创建 Excel 文件
+	xlsxFile := excelize.NewFile()
+	defer xlsxFile.Close()
+
+	// 定义表头映射
+	headerMap := map[string]map[string]string{
+		"zh": {
+			"name":        "名称",
+			"order_count": "订单数",
+			"percentage":  "占比%",
+		},
+		"en": {
+			"name":        "Name",
+			"order_count": "Order Count",
+			"percentage":  "Percentage(%)",
+		},
+		"th": {
+			"name":        "ชื่อ",
+			"order_count": "จำนวนคำสั่งซื้อ",
+			"percentage":  "เปอร์เซ็นต์(%)",
+		},
+	}
+
+	headers := headerMap[lang]
+	if headers == nil {
+		headers = headerMap["zh"]
+	}
+
+	// 写入四个统计维度
+	writeSheet := func(sheetName string, items []resp.UserAnalysisItem) error {
+		sheetIndex, err := xlsxFile.NewSheet(sheetName)
+		if err != nil {
+			return err
+		}
+		xlsxFile.SetActiveSheet(sheetIndex)
+
+		// 写入表头
+		xlsxFile.SetCellValue(sheetName, "A1", headers["name"])
+		xlsxFile.SetCellValue(sheetName, "B1", headers["order_count"])
+		xlsxFile.SetCellValue(sheetName, "C1", headers["percentage"])
+
+		// 写入数据
+		for i, item := range items {
+			row := i + 2
+			xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", row), item.Name)
+			xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", row), item.OrderCount)
+			xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", row), item.Percentage)
+		}
+
+		return nil
+	}
+
+	// 写入各个维度
+	sheetNameMap := map[string]map[string]string{
+		"zh": {
+			"nationality":   "国籍统计",
+			"order_source":  "点餐方式来源统计",
+			"desk_source":   "桌台方式来源统计",
+			"dining_method": "用餐方式统计",
+		},
+		"en": {
+			"nationality":   "Nationality",
+			"order_source":  "Order Source",
+			"desk_source":   "Desk Source",
+			"dining_method": "Dining Method",
+		},
+		"th": {
+			"nationality":   "สัญชาติ",
+			"order_source":  "แหล่งที่มาของคำสั่งซื้อ",
+			"desk_source":   "แหล่งที่มาของโต๊ะ",
+			"dining_method": "วิธีการรับประทานอาหาร",
+		},
+	}
+
+	sheetNames := sheetNameMap[lang]
+	if sheetNames == nil {
+		sheetNames = sheetNameMap["zh"]
+	}
+
+	if err := writeSheet(sheetNames["nationality"], params.Result.Nationality); err != nil {
+		return nil, errors.WithMessage(err, "写入国籍统计失败")
+	}
+	if err := writeSheet(sheetNames["order_source"], params.Result.OrderSource); err != nil {
+		return nil, errors.WithMessage(err, "写入点餐方式来源统计失败")
+	}
+	if err := writeSheet(sheetNames["desk_source"], params.Result.DeskSource); err != nil {
+		return nil, errors.WithMessage(err, "写入桌台方式来源统计失败")
+	}
+	if err := writeSheet(sheetNames["dining_method"], params.Result.DiningMethod); err != nil {
+		return nil, errors.WithMessage(err, "写入用餐方式统计失败")
+	}
+
+	// 删除默认的 Sheet1
+	xlsxFile.DeleteSheet("Sheet1")
 
 	// 将 Excel 文件写入内存
 	var b bytes.Buffer
