@@ -3,11 +3,13 @@ package buying
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	"ttpos-bmp/app/ttpos-erp/api/item"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/container/garray"
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -84,7 +86,14 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 }
 
 // CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
-func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error) {
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 创建内部销售订单请求参数
+//
+// 返回：
+//   - res: 创建后的销售订单信息
+//   - err: 错误信息
+func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error) {
 	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
 		Method: erp.ApiMethodMakeMappedDoc,
 	}, g.MapStrStr{
@@ -103,6 +112,12 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	salesOrder.DeliveryDate = req.DeliveryDate
 	for _, item := range salesOrder.Items {
 		item.DeliveryDate = req.DeliveryDate
+	}
+
+	// 处理dropship商品的供应商交付逻辑
+	if err := s.processDripShopItems(ctx, salesOrder.Items); err != nil {
+		g.Log().Warningf(ctx, "处理dropship商品失败: %v", err)
+		// 不中断流程，继续创建订单
 	}
 
 	//设置来源仓库
@@ -446,4 +461,114 @@ func (s *sBuying) buildPurchaseOrderCountFilters(ctx context.Context, req *buyin
 	}
 
 	return filters
+}
+
+// processDripShopItems 处理dropship商品的供应商交付逻辑
+// 遍历销售订单商品，检查商品的delivered_by_supplier属性，
+// 如果为true，则设置订单商品的DeliveredBySupplier为true
+// 参数：
+//   - ctx: 上下文对象
+//   - items: 销售订单商品列表
+//
+// 返回：
+//   - error: 错误信息
+func (s *sBuying) processDripShopItems(ctx context.Context, items []*erp.SaleOrderItem) error {
+	for _, orderItem := range items {
+		// 获取商品信息
+		itemDetail, err := service.Item().GetItem(ctx, &item.GetItemReq{
+			ItemCode: orderItem.ItemCode,
+		})
+		if err != nil {
+			// 获取商品信息失败，记录日志但不中断流程
+			g.Log().Warningf(ctx, "获取商品信息失败，跳过dropship处理: %s, err: %v", orderItem.ItemCode, err)
+			continue
+		}
+
+		// 检查是否为dropship商品
+		if !s.isDripShopItem(itemDetail) {
+			continue // 非dropship商品，跳过处理
+		}
+
+		// 设置供应商交付标识
+		orderItem.DeliveredBySupplier = true
+		g.Log().Debugf(ctx, "商品 %s 为dropship类型，已设置DeliveredBySupplier=true", orderItem.ItemCode)
+
+		// 从商品的供应商列表中选择第一个供应商（如需要）
+		supplier, err := s.selectFirstSupplier(ctx, itemDetail)
+		if err != nil {
+			g.Log().Warningf(ctx, "商品 %s 获取供应商失败: %v", orderItem.ItemCode, err)
+			// 供应商获取失败不中断流程，DeliveredBySupplier 已设置
+		} else if supplier != "" {
+			g.Log().Debugf(ctx, "商品 %s 的第一个供应商为: %s", orderItem.ItemCode, supplier)
+			orderItem.Supplier = supplier
+		}
+	}
+
+	return nil
+}
+
+// isDripShopItem 判断商品是否为dropship商品
+// 检查商品的delivered_by_supplier字段，1表示该商品由供应商直接交付
+// 参数：
+//   - itemDetail: 商品详细信息
+//
+// 返回：
+//   - bool: 是否为dropship商品
+func (s *sBuying) isDripShopItem(itemDetail *erp.Item) bool {
+	if itemDetail == nil {
+		return false
+	}
+	// 检查 Item 的 delivered_by_supplier 字段
+	// 1 表示该商品是 dropship 类型，由供应商直接交付
+	return itemDetail.DeliveredBySupplier == 1
+}
+
+// selectFirstSupplier 从商品中选择第一个供应商
+// 解析商品的SupplierItems字段，获取第一个供应商名称
+// 参数：
+//   - ctx: 上下文对象
+//   - itemDetail: 商品详细信息
+//
+// 返回：
+//   - string: 供应商名称
+//   - error: 错误信息
+func (s *sBuying) selectFirstSupplier(ctx context.Context, itemDetail *erp.Item) (string, error) {
+	if itemDetail == nil {
+		return "", gerror.New("商品信息为空")
+	}
+
+	// 检查供应商列表是否为空
+	if itemDetail.SupplierItems == nil || len(itemDetail.SupplierItems) == 0 {
+		return "", gerror.Newf("商品 %s 没有供应商信息", itemDetail.ItemCode)
+	}
+
+	// 解析第一个供应商
+	// SupplierItems 是 []interface{} 类型，使用 gjson 解析
+	firstSupplierJson := gjson.New(itemDetail.SupplierItems[0])
+	supplierName := firstSupplierJson.Get("supplier").String()
+
+	if supplierName == "" {
+		return "", gerror.Newf("商品 %s 的供应商列表中第一个供应商信息无效", itemDetail.ItemCode)
+	}
+
+	return supplierName, nil
+}
+
+// MustSelectFirstSupplier 从商品中选择第一个供应商，获取不到时返回默认供应商
+// 解析商品的SupplierItems字段，获取第一个供应商名称
+// 如果获取不到供应商信息，则返回指定的默认供应商
+// 参数：
+//   - ctx: 上下文对象
+//   - itemDetail: 商品详细信息
+//   - defaultSupplier: 默认供应商名称，当获取不到供应商时返回此值
+//
+// 返回：
+//   - string: 供应商名称
+func (s *sBuying) MustSelectFirstSupplier(ctx context.Context, itemDetail *erp.Item, defaultSupplier string) string {
+	supplier, err := s.selectFirstSupplier(ctx, itemDetail)
+	if err != nil {
+		g.Log().Debugf(ctx, "获取供应商失败，使用默认供应商: %s, err: %v", defaultSupplier, err)
+		return defaultSupplier
+	}
+	return supplier
 }
