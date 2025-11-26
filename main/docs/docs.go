@@ -28681,6 +28681,106 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/channel_sales": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "渠道营业统计查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "渠道营业统计查询",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "开始时间戳（Unix秒）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "结束时间戳（Unix秒）",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ChannelSalesResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/channel_sales/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "导出渠道营业统计",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出渠道营业统计",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "开始时间戳（Unix秒）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "结束时间戳（Unix秒）",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "导出任务已创建",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/export": {
             "get": {
                 "security": [
@@ -45543,6 +45643,101 @@ const docTemplate = `{
                 "username": {
                     "description": "收银员账号",
                     "type": "string"
+                }
+            }
+        },
+        "resp.ChannelSalesBlock": {
+            "type": "object",
+            "properties": {
+                "avg_order_amount": {
+                    "description": "平均订单金额",
+                    "type": "number"
+                },
+                "max_order_amount": {
+                    "description": "最大订单金额",
+                    "type": "number"
+                },
+                "min_order_amount": {
+                    "description": "最小订单金额",
+                    "type": "number"
+                },
+                "total_desk_num": {
+                    "description": "桌数（仅桌台渠道）",
+                    "type": "integer"
+                },
+                "total_meal_num": {
+                    "description": "人数（仅桌台渠道）",
+                    "type": "integer"
+                },
+                "total_order_num": {
+                    "description": "订单数",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ChannelSalesMeta": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ChannelSalesResp": {
+            "type": "object",
+            "properties": {
+                "dine_in": {
+                    "description": "点餐-店内",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "meta": {
+                    "description": "元数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesMeta"
+                        }
+                    ]
+                },
+                "summary": {
+                    "description": "合计",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "table": {
+                    "description": "桌台",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "takeout_delivery": {
+                    "description": "外送",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "takeout_shop": {
+                    "description": "点餐-外卖",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
                 }
             }
         },

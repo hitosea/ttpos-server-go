@@ -419,6 +419,18 @@ export const previewData = {
             },
             {
                 name: '',
+                label: $t('优惠券抵扣')+ $t('：') + '￥3',
+                typeShow: '1,2,3,4,5',
+                left: false,
+            },
+            {
+                name: '',
+                label: $t('活动抵扣')+ $t('：') + '￥3',
+                typeShow: '1,2,3,4,5',
+                left: false,
+            },
+            {
+                name: '',
                 label: $t('会员折扣') + $t('：') + $t('3.8折'),
                 typeShow: '3,4,5',
                 left: false,
@@ -699,6 +711,18 @@ export const previewData = {
                 name: '',
                 label: $t('会员优惠') + $t('：') + '￥3',
                 typeShow: '1,2,3,4',
+                left: false,
+            },
+            {
+                name: '',
+                label: $t('优惠券抵扣')+ $t('：') + '￥3',
+                typeShow: '1,2,3,4,5',
+                left: false,
+            },
+            {
+                name: '',
+                label: $t('活动抵扣')+ $t('：') + '￥3',
+                typeShow: '1,2,3,4,5',
                 left: false,
             },
             {
@@ -1422,6 +1446,14 @@ export const previewData = {
             {
                 name: '',
                 label: $t('会员折扣') + $t('：') + $t('3.8折'),
+            },
+            {
+                name: '',
+                label: $t('优惠券抵扣')+ $t('：') + '￥3',
+            },
+            {
+                name: '',
+                label: $t('活动抵扣')+ $t('：') + '￥3',
             },
             {
                 name: '',

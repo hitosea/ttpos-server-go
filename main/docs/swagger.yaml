@@ -8932,6 +8932,63 @@ definitions:
         description: 收银员账号
         type: string
     type: object
+  resp.ChannelSalesBlock:
+    properties:
+      avg_order_amount:
+        description: 平均订单金额
+        type: number
+      max_order_amount:
+        description: 最大订单金额
+        type: number
+      min_order_amount:
+        description: 最小订单金额
+        type: number
+      total_desk_num:
+        description: 桌数（仅桌台渠道）
+        type: integer
+      total_meal_num:
+        description: 人数（仅桌台渠道）
+        type: integer
+      total_order_num:
+        description: 订单数
+        type: integer
+    type: object
+  resp.ChannelSalesMeta:
+    properties:
+      end_time:
+        description: 查询结束时间戳
+        type: integer
+      start_time:
+        description: 查询开始时间戳
+        type: integer
+    type: object
+  resp.ChannelSalesResp:
+    properties:
+      dine_in:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 点餐-店内
+      meta:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesMeta'
+        description: 元数据
+      summary:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 合计
+      table:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 桌台
+      takeout_delivery:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 外送
+      takeout_shop:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 点餐-外卖
+    type: object
   resp.CheckAuthorizationResp:
     properties:
       has_permission:
@@ -33338,6 +33395,67 @@ paths:
       security:
       - JwtToken: []
       summary: 导出营业时段数据
+      tags:
+      - 商家端.报表
+  /shop/statistics/channel_sales:
+    get:
+      consumes:
+      - application/json
+      description: 渠道营业统计查询
+      parameters:
+      - description: 开始时间戳（Unix秒）
+        format: int64
+        in: query
+        name: start_time
+        type: integer
+      - description: 结束时间戳（Unix秒）
+        format: int64
+        in: query
+        name: end_time
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ChannelSalesResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 渠道营业统计查询
+      tags:
+      - 商家端.报表
+  /shop/statistics/channel_sales/export:
+    get:
+      consumes:
+      - application/json
+      description: 导出渠道营业统计
+      parameters:
+      - description: 开始时间戳（Unix秒）
+        format: int64
+        in: query
+        name: start_time
+        type: integer
+      - description: 结束时间戳（Unix秒）
+        format: int64
+        in: query
+        name: end_time
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出任务已创建
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出渠道营业统计
       tags:
       - 商家端.报表
   /shop/statistics/export:

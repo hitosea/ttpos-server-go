@@ -2191,5 +2191,7 @@
     "选择授权员工后，这些员工可以进行退款操作的授权验证": "After selecting authorized staff, these employees can perform authorization verification for refund operations",
     "(外卖)": "(Food Delivery)",
     "店内": "In-store",
-    "外卖": "Takeout"
+    "外卖": "Takeout",
+    "优惠券抵扣": "Coupon Deduction",
+    "活动抵扣": "Activity Deduction"
 }

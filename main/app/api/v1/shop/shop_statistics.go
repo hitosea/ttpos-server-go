@@ -579,6 +579,58 @@ func (h *statisticsHandler) ExportBusinessPaymentMethod(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ChannelSales 渠道营业统计查询
+// @Summary 渠道营业统计查询
+// @Description 渠道营业统计查询
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response{data=resp.ChannelSalesResp} "统计数据"
+// @Router /shop/statistics/channel_sales [get]
+func (h *statisticsHandler) ChannelSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.ChannelSalesReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	resp, err := h.businessSrv.CountChannelSales(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
+// ExportChannelSales 导出渠道营业统计
+// @Summary 导出渠道营业统计
+// @Description 导出渠道营业统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response "导出任务已创建"
+// @Router /shop/statistics/channel_sales/export [get]
+func (h *statisticsHandler) ExportChannelSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.ChannelSalesReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	err := h.businessSrv.ExportChannelSales(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -622,5 +674,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/business/time_period/export", wrapper.ExportBusinessTimePeriod)               // 导出营业时段数据, 移动端-报表-营业报表-时段营业统计
 		privateApi.GET("/statistics/business/summary/export", wrapper.ExportBusinessSummary)                      // 导出综合运营统计, 移动端-报表-营业报表-综合运营统计
 		privateApi.GET("/statistics/business/payment_method/export", wrapper.ExportBusinessPaymentMethod)         // 导出营业收款统计, 移动端-报表-营业报表-支付方式统计
+		privateApi.GET("/statistics/channel_sales", wrapper.ChannelSales)                                         // 渠道营业统计查询
+		privateApi.GET("/statistics/channel_sales/export", wrapper.ExportChannelSales)                            // 导出渠道营业统计
 	}
 }

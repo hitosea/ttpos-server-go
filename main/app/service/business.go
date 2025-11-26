@@ -59,6 +59,8 @@ type IBusinessSrv interface {
 	ExportBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) error                                                                                    // 导出时段营业统计数据
 	ExportBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) error                                                                                        // 导出综合运营统计数据
 	ExportBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) error                                                                            // 导出收款统计数据
+	CountChannelSales(ctx context.Context, req req.ChannelSalesReq) (*resp.ChannelSalesResp, error)                                                                       // 统计渠道营业数据
+	ExportChannelSales(ctx context.Context, req req.ChannelSalesReq) error                                                                                                // 导出渠道营业统计数据
 }
 
 // businessSrv 收银服务结构体
@@ -2808,6 +2810,600 @@ func (s *businessSrv) ExportBusinessPaymentMethodTask(ctx context.Context, param
 		colName, _ := excelize.ColumnNumberToName(i + 1)
 		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
 	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, params.Record.ExportName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if err := repository.NewExportRecordRepo(db).Update(params.Record.Uuid, map[string]any{
+		"file_uuid": res.Uuid,
+		"status":    model.ExportStatusSuccess,
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
+}
+
+// CountChannelSales 统计渠道营业数据
+func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSalesReq) (*resp.ChannelSalesResp, error) {
+	db := ctx.GetDB()
+	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	// 处理默认时间：如果未传时间，使用今日范围
+	startTime := req.StartTime
+	endTime := req.EndTime
+	if startTime == 0 || endTime == 0 {
+		timezone := ctx.GetCompanySetting().Timezone
+		timezoneUtil := utils.SetTimezone(timezone)
+		startTime, endTime = timezoneUtil.TodayStartEndUnix()
+	}
+
+	// 参数校验
+	if startTime > endTime {
+		return nil, errors.WithMessage(errors.New("开始时间不能大于结束时间"))
+	}
+
+	// 调用 Repository 获取渠道统计数据
+	channelData, err := statisticsRepo.CountChannelSale(startTime, endTime)
+	if err != nil {
+		return nil, errors.WithMessage(err, "统计渠道营业数据失败")
+	}
+
+	// 转换为响应格式
+	convertToBlock := func(data *model.ChannelSaleRepoResult) *resp.ChannelSalesBlock {
+		if data == nil {
+			return &resp.ChannelSalesBlock{
+				TotalOrderNum:  0,
+				MinOrderAmount: 0,
+				MaxOrderAmount: 0,
+				AvgOrderAmount: 0,
+				TotalDeskNum:   0,
+				TotalMealNum:   0,
+			}
+		}
+		block := &resp.ChannelSalesBlock{
+			TotalOrderNum: data.TotalOrderNum.Int64,
+		}
+		// 转换 NullFloat64 为 float64，无效时返回 0
+		if data.MinOrderAmount.Valid {
+			block.MinOrderAmount = data.MinOrderAmount.Float64
+		}
+		if data.MaxOrderAmount.Valid {
+			block.MaxOrderAmount = data.MaxOrderAmount.Float64
+		}
+		if data.AvgOrderAmount.Valid {
+			block.AvgOrderAmount = data.AvgOrderAmount.Float64
+		}
+		// 转换 NullInt64 为 int64，无效时返回 0
+		if data.TotalDeskNum.Valid {
+			block.TotalDeskNum = data.TotalDeskNum.Int64
+		}
+		if data.TotalMealNum.Valid {
+			block.TotalMealNum = data.TotalMealNum.Int64
+		}
+		return block
+	}
+
+	return &resp.ChannelSalesResp{
+		Summary:         convertToBlock(channelData["summary"]),
+		Table:           convertToBlock(channelData["table"]),
+		DineIn:          convertToBlock(channelData["dine_in"]),
+		TakeoutShop:     convertToBlock(channelData["takeout_shop"]),
+		TakeoutDelivery: convertToBlock(channelData["takeout_delivery"]),
+		Meta: &resp.ChannelSalesMeta{
+			StartTime: startTime,
+			EndTime:   endTime,
+		},
+	}, nil
+}
+
+// ExportChannelSales 导出渠道营业统计数据
+func (s *businessSrv) ExportChannelSales(ctx context.Context, req req.ChannelSalesReq) error {
+	db := ctx.GetDB()
+	// 判断是否还有正在导出的任务
+	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeChannelSales)
+	if err != nil {
+		return err
+	}
+	if oldRecord != nil {
+		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+	}
+
+	// 获取统计数据
+	result, err := s.CountChannelSales(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	// 检查是否有数据
+	hasData := result.Summary != nil && result.Summary.TotalOrderNum > 0
+	if !hasData {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Channel Sales Statistics",
+		ZhName:   "渠道营业统计",
+		ZhTwName: "渠道營業統計",
+		ThName:   "สถิติการขายช่องทาง",
+		MyName:   "လမ်းကြောင်းရောင်းအားစာရင်း",
+		JaName:   "チャネル売上統計",
+		KoName:   "채널 매출 통계",
+		TrName:   "Kanal Satış İstatistikleri",
+		SvName:   "Kanalförsäljningsstatistik",
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeChannelSales,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	err = repository.NewExportRecordRepo(db).Create(record)
+	if err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		_, err := s.ExportChannelSalesTask(ctx, ExportChannelSalesTaskParams{
+			Record:      *record,
+			FillNameMul: fileNameMul,
+			Request:     req,
+			Result:      result,
+		})
+		if err != nil {
+			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出渠道营业统计数据失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+	})
+
+	return nil
+}
+
+// ExportChannelSalesTaskParams 导出渠道营业统计数据参数
+type ExportChannelSalesTaskParams struct {
+	Request     req.ChannelSalesReq     // 请求参数
+	Record      model.ExportRecord      // 导出记录
+	FillNameMul model.MultiLanguageName // 多语言名称
+	Result      *resp.ChannelSalesResp  // 统计数据
+}
+
+// ExportChannelSalesTask 导出渠道营业统计数据任务
+func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportChannelSalesTaskParams) (*resp.FileExportResp, error) {
+	db := ctx.GetDB()
+	lang := ctx.GetLanguage()
+
+	// 根据语言获取渠道名称
+	channelNameMap := map[string]map[string]string{
+		"zh": {
+			"summary":          "合计",
+			"table":            "桌台",
+			"dine_in":          "点餐-店内",
+			"takeout_shop":     "点餐-外卖",
+			"takeout_delivery": "外送",
+		},
+		"en": {
+			"summary":          "Total",
+			"table":            "Table",
+			"dine_in":          "Dine-in Order",
+			"takeout_shop":     "Takeaway Order",
+			"takeout_delivery": "Delivery",
+		},
+		"th": {
+			"summary":          "รวม",
+			"table":            "โต๊ะ",
+			"dine_in":          "สั่งอาหารในร้าน",
+			"takeout_shop":     "สั่งอาหารกลับบ้าน",
+			"takeout_delivery": "จัดส่ง",
+		},
+		"zhtw": {
+			"summary":          "合計",
+			"table":            "桌台",
+			"dine_in":          "點餐-店內",
+			"takeout_shop":     "點餐-外賣",
+			"takeout_delivery": "外送",
+		},
+		"ja": {
+			"summary":          "合計",
+			"table":            "テーブル",
+			"dine_in":          "店内注文",
+			"takeout_shop":     "テイクアウト注文",
+			"takeout_delivery": "配達",
+		},
+		"ko": {
+			"summary":          "합계",
+			"table":            "테이블",
+			"dine_in":          "매장 주문",
+			"takeout_shop":     "테이크아웃 주문",
+			"takeout_delivery": "배달",
+		},
+		"my": {
+			"summary":          "စုစုပေါင်း",
+			"table":            "စားပွဲ",
+			"dine_in":          "ဆိုင်တွင်မှာယူ",
+			"takeout_shop":     "အိမ်သို့ယူ",
+			"takeout_delivery": "ပို့ဆောင်မှု",
+		},
+		"tr": {
+			"summary":          "Toplam",
+			"table":            "Masa",
+			"dine_in":          "Restoranda Sipariş",
+			"takeout_shop":     "Paket Sipariş",
+			"takeout_delivery": "Teslimat",
+		},
+		"sv": {
+			"summary":          "Totalt",
+			"table":            "Bord",
+			"dine_in":          "Beställning på restaurang",
+			"takeout_shop":     "Takeaway-beställning",
+			"takeout_delivery": "Leverans",
+		},
+	}
+	channelNames := channelNameMap[lang]
+	if channelNames == nil {
+		channelNames = channelNameMap["en"]
+	}
+
+	xlsxFile := excelize.NewFile()
+	sheetNameMul := model.MultiLanguageName{
+		EnName:   "Report",
+		ZhName:   "报表",
+		ZhTwName: "報表",
+		ThName:   "รายงาน",
+		MyName:   "အစီရင်ခံစာ",
+		JaName:   "レポート",
+		KoName:   "보고서",
+		TrName:   "Rapor",
+		SvName:   "Rapport",
+	}
+	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	// 根据语言获取指标名称
+	labelMap := map[string]map[string]string{
+		"zh": {
+			"order_count": "所有订单数",
+			"min_amount":  "最小订单金额",
+			"max_amount":  "最大订单金额",
+			"avg_amount":  "平均订单金额",
+			"table_count": "桌数",
+			"guest_count": "人数",
+		},
+		"en": {
+			"order_count": "Total Orders",
+			"min_amount":  "Min Order Amount",
+			"max_amount":  "Max Order Amount",
+			"avg_amount":  "Avg Order Amount",
+			"table_count": "Table Count",
+			"guest_count": "Guest Count",
+		},
+		"th": {
+			"order_count": "จำนวนคำสั่งซื้อทั้งหมด",
+			"min_amount":  "จำนวนเงินคำสั่งซื้อขั้นต่ำ",
+			"max_amount":  "จำนวนเงินคำสั่งซื้อสูงสุด",
+			"avg_amount":  "จำนวนเงินคำสั่งซื้อเฉลี่ย",
+			"table_count": "จำนวนโต๊ะ",
+			"guest_count": "จำนวนคน",
+		},
+		"zhtw": {
+			"order_count": "所有訂單數",
+			"min_amount":  "最小訂單金額",
+			"max_amount":  "最大訂單金額",
+			"avg_amount":  "平均訂單金額",
+			"table_count": "桌數",
+			"guest_count": "人數",
+		},
+		"ja": {
+			"order_count": "全注文数",
+			"min_amount":  "最小注文金額",
+			"max_amount":  "最大注文金額",
+			"avg_amount":  "平均注文金額",
+			"table_count": "テーブル数",
+			"guest_count": "人数",
+		},
+		"ko": {
+			"order_count": "전체 주문 수",
+			"min_amount":  "최소 주문 금액",
+			"max_amount":  "최대 주문 금액",
+			"avg_amount":  "평균 주문 금액",
+			"table_count": "테이블 수",
+			"guest_count": "인원 수",
+		},
+		"my": {
+			"order_count": "အော်ဒါအရေအတွက်စုစုပေါင်း",
+			"min_amount":  "အော်ဒါငွေပမာဏအနည်းဆုံး",
+			"max_amount":  "အော်ဒါငွေပမာဏအများဆုံး",
+			"avg_amount":  "အော်ဒါငွေပမာဏပျမ်းမျှ",
+			"table_count": "စားပွဲအရေအတွက်",
+			"guest_count": "လူအရေအတွက်",
+		},
+		"tr": {
+			"order_count": "Toplam Sipariş",
+			"min_amount":  "Min Sipariş Tutarı",
+			"max_amount":  "Max Sipariş Tutarı",
+			"avg_amount":  "Ort Sipariş Tutarı",
+			"table_count": "Masa Sayısı",
+			"guest_count": "Kişi Sayısı",
+		},
+		"sv": {
+			"order_count": "Totalt antal beställningar",
+			"min_amount":  "Min beställningsbelopp",
+			"max_amount":  "Max beställningsbelopp",
+			"avg_amount":  "Genomsnittligt beställningsbelopp",
+			"table_count": "Antal bord",
+			"guest_count": "Antal gäster",
+		},
+	}
+	labels := labelMap[lang]
+	if labels == nil {
+		labels = labelMap["en"]
+	}
+
+	// 不写表头，直接从第1行开始写数据
+	rowIdx := 1
+
+	// 合计（A2-A5合并）
+	summaryStartRow := rowIdx
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), channelNames["summary"])
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["order_count"])
+	if params.Result.Summary != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Summary.TotalOrderNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["min_amount"])
+	if params.Result.Summary != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Summary.MinOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["max_amount"])
+	if params.Result.Summary != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Summary.MaxOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["avg_amount"])
+	if params.Result.Summary != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Summary.AvgOrderAmount)
+	}
+	summaryEndRow := rowIdx
+	rowIdx++
+
+	// 合并合计的A列单元格
+	if err := xlsxFile.MergeCell(sheetName, fmt.Sprintf("A%d", summaryStartRow), fmt.Sprintf("A%d", summaryEndRow)); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 桌台（A6-A10合并）
+	tableStartRow := rowIdx
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), channelNames["table"])
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["table_count"])
+	if params.Result.Table != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.TotalDeskNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["guest_count"])
+	if params.Result.Table != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.TotalMealNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["min_amount"])
+	if params.Result.Table != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.MinOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["max_amount"])
+	if params.Result.Table != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.MaxOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["avg_amount"])
+	if params.Result.Table != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.AvgOrderAmount)
+	}
+	tableEndRow := rowIdx
+	rowIdx++
+
+	// 合并桌台的A列单元格
+	if err := xlsxFile.MergeCell(sheetName, fmt.Sprintf("A%d", tableStartRow), fmt.Sprintf("A%d", tableEndRow)); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 点餐-店内（A11-A14合并）
+	dineInStartRow := rowIdx
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), channelNames["dine_in"])
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["order_count"])
+	if params.Result.DineIn != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.DineIn.TotalOrderNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["min_amount"])
+	if params.Result.DineIn != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.DineIn.MinOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["max_amount"])
+	if params.Result.DineIn != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.DineIn.MaxOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["avg_amount"])
+	if params.Result.DineIn != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.DineIn.AvgOrderAmount)
+	}
+	dineInEndRow := rowIdx
+	rowIdx++
+
+	// 合并点餐-店内的A列单元格
+	if err := xlsxFile.MergeCell(sheetName, fmt.Sprintf("A%d", dineInStartRow), fmt.Sprintf("A%d", dineInEndRow)); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 点餐-外卖（A15-A18合并）
+	takeoutShopStartRow := rowIdx
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), channelNames["takeout_shop"])
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["order_count"])
+	if params.Result.TakeoutShop != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutShop.TotalOrderNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["min_amount"])
+	if params.Result.TakeoutShop != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutShop.MinOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["max_amount"])
+	if params.Result.TakeoutShop != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutShop.MaxOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["avg_amount"])
+	if params.Result.TakeoutShop != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutShop.AvgOrderAmount)
+	}
+	takeoutShopEndRow := rowIdx
+	rowIdx++
+
+	// 合并点餐-外卖的A列单元格
+	if err := xlsxFile.MergeCell(sheetName, fmt.Sprintf("A%d", takeoutShopStartRow), fmt.Sprintf("A%d", takeoutShopEndRow)); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 外送（A19-A22合并）
+	takeoutDeliveryStartRow := rowIdx
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), channelNames["takeout_delivery"])
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["order_count"])
+	if params.Result.TakeoutDelivery != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutDelivery.TotalOrderNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["min_amount"])
+	if params.Result.TakeoutDelivery != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutDelivery.MinOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["max_amount"])
+	if params.Result.TakeoutDelivery != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutDelivery.MaxOrderAmount)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["avg_amount"])
+	if params.Result.TakeoutDelivery != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.TakeoutDelivery.AvgOrderAmount)
+	}
+	takeoutDeliveryEndRow := rowIdx
+
+	// 合并外送的A列单元格
+	if err := xlsxFile.MergeCell(sheetName, fmt.Sprintf("A%d", takeoutDeliveryStartRow), fmt.Sprintf("A%d", takeoutDeliveryEndRow)); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 创建样式
+	// A列样式：垂直居中、水平居中、有边框
+	aColumnStyle, _ := xlsxFile.NewStyle(&excelize.Style{
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+		},
+	})
+	// B列样式：左对齐、垂直居中、有边框
+	bColumnStyle, _ := xlsxFile.NewStyle(&excelize.Style{
+		Alignment: &excelize.Alignment{
+			Horizontal: "left",
+			Vertical:   "center",
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+		},
+	})
+	// C列样式：左对齐、垂直居中、有边框
+	cColumnStyle, _ := xlsxFile.NewStyle(&excelize.Style{
+		Alignment: &excelize.Alignment{
+			Horizontal: "left",
+			Vertical:   "center",
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+		},
+	})
+
+	// 计算总行数
+	totalRows := takeoutDeliveryEndRow
+
+	// 为所有数据单元格设置样式和边框
+	for row := 1; row <= totalRows; row++ {
+		// A列
+		cellA, _ := excelize.CoordinatesToCellName(1, row)
+		xlsxFile.SetCellStyle(sheetName, cellA, cellA, aColumnStyle)
+		// B列
+		cellB, _ := excelize.CoordinatesToCellName(2, row)
+		xlsxFile.SetCellStyle(sheetName, cellB, cellB, bColumnStyle)
+		// C列
+		cellC, _ := excelize.CoordinatesToCellName(3, row)
+		xlsxFile.SetCellStyle(sheetName, cellC, cellC, cColumnStyle)
+	}
+
+	// 自动调整列宽
+	xlsxFile.SetColWidth(sheetName, "A", "A", 15) // A列：渠道名称
+	xlsxFile.SetColWidth(sheetName, "B", "B", 20) // B列：指标名称
+	xlsxFile.SetColWidth(sheetName, "C", "C", 15) // C列：数值
 
 	// 将 Excel 文件写入内存
 	var b bytes.Buffer

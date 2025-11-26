@@ -368,3 +368,13 @@ type StatisticsBusinessPaymentMethodData struct {
 	PaymentNum    sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
 	PaymentAmount sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
 }
+
+// ChannelSaleRepoResult 渠道营业统计 Repository 返回结果
+type ChannelSaleRepoResult struct {
+	TotalOrderNum  sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
+	MinOrderAmount sql.NullFloat64 `gorm:"column:min_order_amount;comment:最小订单金额"`
+	MaxOrderAmount sql.NullFloat64 `gorm:"column:max_order_amount;comment:最大订单金额"`
+	AvgOrderAmount sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
+	TotalDeskNum   sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
+	TotalMealNum   sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
+}
