@@ -2809,6 +2809,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `is_meger` INT(10) NOT NULL DEFAULT 0 COMMENT '是否合单',
     `is_special` INT(10) NOT NULL DEFAULT 0 COMMENT '是否特殊订单',
     `is_takeout` INT(10) NOT NULL DEFAULT 0 COMMENT '是否外送',
+    `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖/渠道）',
     `delivery_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '配送费',
     `refund_service_fee`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '退款服务费',
     `refund_discount`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '退款优惠折扣',
@@ -2824,7 +2825,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     INDEX `idx_duty_no` (`duty_no`),
     INDEX `idx_desk_uuid` (`desk_uuid`),
     INDEX `idx_complete_time` (`complete_time`),
-    INDEX `idx_is_takeout` (`is_takeout`)
+    INDEX `idx_is_takeout` (`is_takeout`),
+    INDEX `idx_order_source_uuid` (`order_source_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '销售统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (

@@ -172,11 +172,10 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			AllCashierMaxOrderPrice: saleData.MaxInstantOrderAmount,
 			AllCashierAvgOrderPrice: saleData.AvgInstantOrderAmount,
 			// 收银方式-外卖
-			// TODO: 待王总给值
-			AllTakeawayOrderNum:      0,
-			AllTakeawayMinOrderPrice: 0,
-			AllTakeawayMaxOrderPrice: 0,
-			AllTakeawayAvgOrderPrice: 0,
+			AllTakeawayOrderNum:      int(saleData.TotalInstantOrderTakeawayNum),
+			AllTakeawayMinOrderPrice: saleData.MinInstantOrderTakeawayAmount,
+			AllTakeawayMaxOrderPrice: saleData.MaxInstantOrderTakeawayAmount,
+			AllTakeawayAvgOrderPrice: saleData.AvgInstantOrderTakeawayAmount,
 			// 未结账数据
 			UnclosedTotalOrderNum: int(unpaidOrderData.TotalOrderNum),
 			UnclosedTotalPrice:    unpaidOrderData.TotalAmount,
@@ -458,6 +457,10 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		AllTakeoutMaxOrderPrice:    saleData.MaxTakeoutOrderAmount,
 		AllTakeoutAvgOrderPrice:    saleData.AvgTakeoutOrderAmount,
 		UnclosedTotalOrderNum:      int(unpaidOrderData.TotalOrderNum),
+		AllTakeawayOrderNum:        int(saleData.TotalInstantOrderTakeawayNum),
+		AllTakeawayMinOrderPrice:   saleData.MinInstantOrderTakeawayAmount,
+		AllTakeawayMaxOrderPrice:   saleData.MaxInstantOrderTakeawayAmount,
+		AllTakeawayAvgOrderPrice:   saleData.AvgInstantOrderTakeawayAmount,
 		UnclosedTotalPrice:         unpaidOrderData.TotalAmount,
 		PaymentMethodIncomes:       paymentMethodIncomes,
 		AbnormalData: func() business_data_resp.AbnormalData {
