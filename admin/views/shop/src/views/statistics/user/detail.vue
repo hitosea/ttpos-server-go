@@ -374,7 +374,7 @@
       </el-table-column>
     </el-table>
 
-    <div class="common-form">{{ $t('点餐方式') }}</div>
+    <div class="common-form">{{ $t('点餐方式') }}-{{ $t('店内') }}</div>
     <el-table size="small" :data="cashierData" border style="width: 100%; margin-bottom: 16px" v-loading="loading">
       <el-table-column prop="cashier_order_num" :label="$t('订单数')"></el-table-column>
       <el-table-column :label="$t('最小/最大订单金额')">
@@ -392,6 +392,29 @@
         <template #default="scope">
           <main-currency>
             {{ this.$formatPrice(scope.row.cashier_avg_order_price || 0) }}
+          </main-currency>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <div class="common-form">{{ $t('点餐方式') }}-{{ $t('外卖') }}</div>
+    <el-table size="small" :data="takeawayData" border style="width: 100%; margin-bottom: 16px" v-loading="loading">
+      <el-table-column prop="takeaway_order_num" :label="$t('订单数')"></el-table-column>
+      <el-table-column :label="$t('最小/最大订单金额')">
+        <template #default="scope">
+          <main-currency>
+            {{ this.$formatPrice(scope.row.takeaway_min_order_price || 0) }}
+          </main-currency>
+          /
+          <main-currency>
+            {{ this.$formatPrice(scope.row.takeaway_max_order_price || 0) }}
+          </main-currency>
+        </template>
+      </el-table-column>
+      <el-table-column prop="takeaway_avg_order_price" :label="$t('平均订单金额')">
+        <template #default="scope">
+          <main-currency>
+            {{ this.$formatPrice(scope.row.takeaway_avg_order_price || 0) }}
           </main-currency>
         </template>
       </el-table-column>
@@ -465,6 +488,7 @@
         orderData: [],
         zhuoData: [],
         cashierData: [],
+        takeawayData: [],
         currency: currency,
         is_open_member: is_open_member,
       };
@@ -506,6 +530,13 @@
               cashier_min_order_price: res.data.detail.order.cashier_min_order_price,
               cashier_max_order_price: res.data.detail.order.cashier_max_order_price,
               cashier_avg_order_price: res.data.detail.order.cashier_avg_order_price,
+            });
+
+            self.takeawayData.push({
+              takeaway_order_num: res.data.detail.order.takeaway_order_num,
+              takeaway_min_order_price: res.data.detail.order.takeaway_min_order_price,
+              takeaway_max_order_price: res.data.detail.order.takeaway_max_order_price,
+              takeaway_avg_order_price: res.data.detail.order.takeaway_avg_order_price,
             });
           })
           .catch((error) => {});

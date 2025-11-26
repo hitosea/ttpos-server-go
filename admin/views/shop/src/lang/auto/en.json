@@ -2189,5 +2189,7 @@
     "开启后，进行退款操作时需要密码验证或授权员工验证": "When enabled, refund operations require password verification or authorization by an authorized employee",
     "退款授权员工": "Refund authorized staff",
     "选择授权员工后，这些员工可以进行退款操作的授权验证": "After selecting authorized staff, these employees can perform authorization verification for refund operations",
-    "(外卖)": "(Food Delivery)"
+    "(外卖)": "(Food Delivery)",
+    "店内": "In-store",
+    "外卖": "Takeout"
 }
