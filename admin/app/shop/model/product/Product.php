@@ -373,12 +373,10 @@ class Product extends ProductModel
                 return false;
             }
         }
-
+        
         if (!$hasContent) {
+            $data['describe'] = $this->resolveSellingPointFallback($locales, $data);
             $data['describe_multi_language_name_uuid'] = $currentUuid ?: 0;
-        if (!$this->applySellingPointLocales($data, $this->getData('describe_multi_language_name_uuid') ?: 0)) {
-            return false;
-        }
             return true;
         }
 
@@ -437,7 +435,7 @@ class Product extends ProductModel
         if (!empty($data['selling_point'])) {
             return $data['selling_point'];
         }
-        $currentDescribe = $this->getData('describe');
+        $currentDescribe = $this->describe;
         return is_string($currentDescribe) ? $currentDescribe : '';
     }
 
