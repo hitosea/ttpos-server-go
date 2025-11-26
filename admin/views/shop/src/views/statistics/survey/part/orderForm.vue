@@ -47,7 +47,7 @@
           </div>
         </div>
         <div class="box-main">
-          <h4>{{ $t('点餐方式') }}</h4>
+          <h4>{{ $t('点餐方式') }}-{{ $t('店内') }}</h4>
           <div class="main-body">
             <div class="main-div">
               <h3>{{ $t('订单数') }}</h3>
@@ -68,6 +68,30 @@
             </div>
           </div>
         </div>
+
+        <div class="box-main">
+          <h4>{{ $t('点餐方式') }}-{{ $t('外卖') }}</h4>
+          <div class="main-body">
+            <div class="main-div">
+              <h3>{{ $t('订单数') }}</h3>
+              <h4>{{ proxy.$formatPrice(detail.takeaway_order_num || 0) }}</h4>
+            </div>
+
+            <div class="main-div">
+              <h3>{{ $t('最小/大订单金额') }}</h3>
+              <h4>
+                {{ proxy.$formatPrice(detail.takeaway_min_order_price || 0) + '/' + proxy.$formatPrice(detail.takeaway_max_order_price || 0) }}
+              </h4>
+            </div>
+            <div class="main-div">
+              <h3>{{ $t('平均订单金额') }}</h3>
+              <h4>
+                {{ proxy.$formatPrice(detail.takeaway_avg_order_price || 0) }}
+              </h4>
+            </div>
+          </div>
+        </div>
+
         <div class="box-main" v-if="delivery_status == 1">
           <h4>{{ $t('外送点餐') }}</h4>
           <div class="main-body">
