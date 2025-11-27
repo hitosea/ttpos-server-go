@@ -132,6 +132,20 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+func (model *SaleOrderProduct) GetUnitNum() float64 {
+	if model.UnitNum == 0 {
+		return 1 // 兼容旧数据. 每份商品的数量至少是1个商品
+	}
+	return model.UnitNum
+}
+
+func (model *SaleOrderProduct) SetUnitNum(unitNum float64) {
+	model.UnitNum = unitNum
+	if model.UnitNum <= 0 {
+		model.UnitNum = 1 // 强制,单位数量至少是1
+	}
+}
+
 // IsCookingDeductStock 判断商品是否是下单减库存
 func (model *SaleOrderProduct) IsCookingDeductStock() bool {
 	return model.DeductStockType == constant.ProductPackageDeductStockTypeCooking
@@ -1603,10 +1617,10 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	}
 	// 套餐子商品，设置单位数量
 	if def.ProductType == constant.ProductTypePackageSubProduct {
-		product.UnitNum = def.Num // 直接加购时num和unitNum是一样的,由于历史原因在该场景下unitNum未传值,故用num替代
+		product.SetUnitNum(def.UnitNum)
 	}
 	if def.ProductType == constant.ProductTypePackageSubProduct && def.IsTabletAddAndCooking { // 如果是平板的加购和送厨的话,unitNum和num不一样
-		product.UnitNum = def.UnitNum
+		product.SetUnitNum(def.UnitNum)
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购

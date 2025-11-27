@@ -1958,7 +1958,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					if orderProduct.ProductType == constant.ProductTypePackage {
 						subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
 						for _, subProduct := range subProducts {
-							uintNum := decimal.NewFromFloat(subProduct.UnitNum)                                         // 每个套餐该子商品的数量
+							uintNum := decimal.NewFromFloat(subProduct.GetUnitNum())                                    // 每个套餐该子商品的数量
 							addNum := decimal.NewFromFloat(saleOrderProduct.Num).Mul(uintNum).Round(3).InexactFloat64() // 新增的套餐该子商品的数量
 							subProduct.Num += addNum
 							subProduct.SetUpdate()
@@ -1971,7 +1971,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					if orderProduct.ProductType == constant.ProductTypePackage {
 						subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
 						for _, subProduct := range subProducts {
-							uintNum := decimal.NewFromFloat(subProduct.UnitNum)                                         // 每个套餐该子商品的数量
+							uintNum := decimal.NewFromFloat(subProduct.GetUnitNum())                                    // 每个套餐该子商品的数量
 							addNum := decimal.NewFromFloat(saleOrderProduct.Num).Mul(uintNum).Round(3).InexactFloat64() // 新增的套餐该子商品的数量
 							subProduct.Num -= addNum
 							if subProduct.Num <= 0 {
@@ -2997,14 +2997,22 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			firstCategoryUuid = unCookingSaleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid()
 		}
 		attributeName := unCookingSaleOrderProduct.GetAttributeName()
+
+		// 送厨的商品数量, 如果是普通商品,则是num; 如果是套餐子商品,则是num*unit_num
+		productionOrderProductNum := func() float64 {
+			if unCookingSaleOrderProduct.IsPackageSubProduct() {
+				return decimal.NewFromFloat(unCookingSaleOrderProduct.Num).Mul(decimal.NewFromFloat(unCookingSaleOrderProduct.GetUnitNum())).InexactFloat64()
+			}
+			return unCookingSaleOrderProduct.Num
+		}()
 		productionOrderProduct := model.ProductionOrderProduct{
 			SaleBillUuid:          saleBillUuid,
 			ProductionOrderUuid:   productionOrderUuid,
 			SaleOrderProductUuid:  unCookingSaleOrderProduct.Uuid,
 			FirstCategoryUuid:     firstCategoryUuid,
 			ProductPackageUuid:    unCookingSaleOrderProduct.ProductPackageUuid,
-			Num:                   unCookingSaleOrderProduct.Num,
-			InitNum:               unCookingSaleOrderProduct.Num,
+			Num:                   productionOrderProductNum,
+			InitNum:               productionOrderProductNum,
 			Name:                  unCookingSaleOrderProduct.Name,
 			FlavorName:            unCookingSaleOrderProduct.FlavorName,
 			ProductBomUuid:        unCookingSaleOrderProduct.GetFlavorBomUuid(),
@@ -4120,7 +4128,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 				for _, subProduct := range subProducts {
 					packageName := language.JsonToLocaleResponse(saleOrderProduct.Name) // 套餐名称
-					num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64()
+					num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.GetUnitNum())).Round(3).InexactFloat64()
 					items = append(items, &selling.PosInvoiceItem{
 						ItemCode:    subProduct.ErpCode,
 						Qty:         -num,
@@ -4569,7 +4577,7 @@ func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.Sal
 				}
 				moveProductNum = moveProductMapNum
 			} else {
-				unitNum := decimal.NewFromFloat(saleOrderProduct.UnitNum)
+				unitNum := decimal.NewFromFloat(saleOrderProduct.GetUnitNum())
 				moveProductNum = decimal.NewFromFloat(moveNum).Mul(unitNum).Round(3).InexactFloat64()
 			}
 

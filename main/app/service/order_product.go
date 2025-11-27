@@ -275,7 +275,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if saleOrderProduct.IsPackageProduct() {
 		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 		for _, subProduct := range subProducts {
-			unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+			unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 			subProduct.Num = decimal.NewFromFloat(request.Num).Mul(unitNum).Round(3).InexactFloat64()
 		}
 	}
@@ -425,7 +425,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	if saleOrderProduct.IsPackageProduct() {
 		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 		for _, subProduct := range subProducts {
-			unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+			unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 			subProduct.Num = decimal.NewFromFloat(saleOrderProduct.Num).Mul(unitNum).Round(3).InexactFloat64()
 			subProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 		}
@@ -716,7 +716,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			if sameSignSaleOrderProduct.IsPackageProduct() {
 				subProducts := saleOrder.GetPackageSubProductList(sameSignSaleOrderProduct.Uuid)
 				for _, subProduct := range subProducts {
-					unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+					unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 					addNum := decimal.NewFromFloat(req.Num).Mul(unitNum).Round(3).InexactFloat64()
 					subProduct.SetNum(subProduct.Num + addNum)
 				}
@@ -754,7 +754,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			if saleOrderProduct.IsPackageProduct() {
 				subProducts := saleOrder.GetPackageSubProductList(sameSignSaleOrderProduct.Uuid)
 				for _, subProduct := range subProducts {
-					unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+					unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 					num := decimal.NewFromFloat(sameSignSaleOrderProduct.Num).Mul(unitNum).Round(3).InexactFloat64()
 					subProduct.SetNum(num)
 				}
@@ -779,7 +779,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				for _, subProduct := range subProducts {
 					newSubSaleOrderProduct := subProduct.CopyOrderProduct(subProduct.SaleOrderUuid)
 					newSubSaleOrderProduct.PackageUuid = newSaleOrderProduct.Uuid // 设置为新的套餐商品uuid
-					unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+					unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 					num := decimal.NewFromFloat(req.Num).Mul(unitNum).Round(3).InexactFloat64()
 					newSubSaleOrderProduct.SetNum(num)
 					newSubSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
@@ -791,7 +791,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
-				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
 				subProduct.SetNum(num)
 			}
@@ -811,7 +811,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			subProducts := saleOrder.GetPackageSubProductList(currentReturnSaleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
 				product := *subProduct
-				product.Num = decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64() // 退菜数量,仅入库本次退菜的数量
+				product.Num = decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(subProduct.GetUnitNum())).Round(3).InexactFloat64() // 退菜数量,仅入库本次退菜的数量
 				cookingDeductSaleOrderProducts = append(cookingDeductSaleOrderProducts, &product)
 			}
 		}
@@ -877,7 +877,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
-				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
 				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
 				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(subProduct.Uuid)},
 					map[string]any{"num": num}); err != nil {
@@ -905,7 +905,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 					if !isSubProduct {
 						return req.Num
 					}
-					return decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(saleOrderProduct.UnitNum)).Round(3).InexactFloat64()
+					return decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(saleOrderProduct.GetUnitNum())).Round(3).InexactFloat64()
 				}(),
 				IsBuffet:     saleOrderProduct.IsBuffet == 1,
 				Remark:       saleOrderProduct.Remark,
@@ -1967,6 +1967,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 		subProduct := req.ProductParams{
 			FlavorProductBomUuid:            productReq.FlavorUuid,
 			Num:                             productReq.Num,
+			UnitNum:                         productReq.UnitNum,
 			ProductPackageAttributeUuidList: productReq.AttributeUuidList,
 			ProductPackageGroupUuid:         productReq.ProductPackageGroupUuid,
 			AddPrice:                        productReq.AddPrice, // 传递加价金额

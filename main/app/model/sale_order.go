@@ -779,7 +779,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 					LocaleName:          subProduct.MultiLanguageName.GetNames(),
 					LocaleAttributeName: subProduct.GetAttributeName(),
 					Num:                 subProduct.Num,
-					UnitNum:             subProduct.UnitNum,
+					UnitNum:             subProduct.GetUnitNum(),
 					AddPrice:            subProduct.AddPrice, // 子商品加价金额
 				})
 			}
