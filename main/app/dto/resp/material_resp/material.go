@@ -160,9 +160,10 @@ type ProductBomCardMaterial struct {
 }
 
 type MaterialInfo struct {
-	Uuid uint64 `json:"uuid"` // 材料UUID
-	Name string `json:"name"` // 材料名称
-	Code string `json:"code"` // 材料编码
+	Uuid         uint64 `json:"uuid"`          // 材料UUID
+	Name         string `json:"name"`          // 材料名称
+	Code         string `json:"code"`          // 材料编码
+	InternalCode string `json:"internal_code"` // 内部编码
 }
 
 // MaterialImportListItem 导入物品列表项
