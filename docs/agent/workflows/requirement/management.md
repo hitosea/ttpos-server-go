@@ -37,7 +37,7 @@
 
 ```mermaid
 graph TD
-    A[💡 需求想法] --> B[📝 /spec-propose 创建提案]
+    A[💡 需求想法] --> B[📝 /propose 创建提案]
     B --> C[📄 填写提案内容]
     C --> D[👥 需求评审会议]
     D --> E{是否批准}
@@ -72,14 +72,14 @@ graph TD
 
 **Agent 动作**:
 
-1. 使用 `/spec-propose {feature-name}` 指令创建提案。
+1. 使用 `/propose {feature-name}` 指令创建提案。
 2. 自动填充日期、提案人等基本信息。
 
 **操作步骤**:
 
 ```bash
 # 创建提案（例如：快速支付功能）
-/spec-propose quick-payment
+/propose quick-payment
 ```
 
 **输出产物**: `docs/team/proposals/{YYYY-MM}/quick-payment.md`
@@ -651,7 +651,7 @@ graph TD
 
 | 阶段     | 产物                                        | 存放位置                                             | 命令           |
 | -------- | ------------------------------------------- | ---------------------------------------------------- | -------------- |
-| 需求提案 | `{YYYY-MM-DD}-{feature-name}.md`            | `docs/team/proposals/`                               | `/spec-propose`     |
+| 需求提案 | `{YYYY-MM-DD}-{feature-name}.md`            | `docs/team/proposals/`                               | `/propose`     |
 | 需求规格 | `requirements.md`                           | `docs/shared/specs/active/story-{module}-{feature}/` | `/spec-create` |
 | 产品审核 | 审核状态字段（在 requirements.md 中）       | `docs/shared/specs/active/story-{module}-{feature}/` | 手动更新       |
 | 技术设计 | `design.md`                                 | `docs/shared/specs/active/story-{module}-{feature}/` | `/spec-design` |
@@ -672,7 +672,7 @@ graph TD
 
 ### Cursor 指令
 
-- `/spec-propose {feature-name}` - 创建需求提案
+- `/propose {feature-name}` - 创建需求提案
 - `/spec-create story-{module}-{feature}` - 创建需求文档（requirements.md）
 - `/spec-design story-{module}-{feature}` - 创建设计文档（design.md + tasks.md）
 - `/spec-archive @{spec-name}` - 归档已完成的 Spec

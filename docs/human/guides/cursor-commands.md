@@ -10,7 +10,7 @@
 
 | 优先级 | 指令                      | 描述                              | 状态   |
 | ------ | ------------------------- | --------------------------------- | ------ |
-| ⭐⭐⭐ | `/spec-propose`                | 创建需求提案（Scrum）             | ✅ MVP |
+| ⭐⭐⭐ | `/propose`                | 创建需求提案（Scrum）             | ✅ MVP |
 | ⭐⭐⭐ | `/onboard`                | 项目快速入门引导                  | ✅ MVP |
 | ⭐⭐⭐ | `/spec-create`            | 创建需求文档（requirements.md）   | ✅ MVP |
 | ⭐⭐⭐ | `/spec-design`            | 创建设计文档（design + tasks）    | ✅ MVP |
@@ -33,18 +33,18 @@
 
 ## 📖 指令详解
 
-### `/spec-propose` - 创建需求提案 ⭐ 新增
+### `/propose` - 创建需求提案 ⭐ 新增
 
 **使用场景**: 需求发起、Scrum 流程启动
 
 **使用方式**:
 
 ```bash
-/spec-propose quick-payment                    # 创建快速支付功能提案
-/spec-propose report-export                    # 创建报表导出功能提案
-/spec-propose dark-mode                        # 创建深色模式提案
-/spec-propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
-/spec-propose feature-name DooTask #36917      # 支持 DooTask # 格式
+/propose quick-payment                    # 创建快速支付功能提案
+/propose report-export                    # 创建报表导出功能提案
+/propose dark-mode                        # 创建深色模式提案
+/propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
+/propose feature-name DooTask #36917      # 支持 DooTask # 格式
 ```
 
 **功能特点**:
@@ -60,7 +60,7 @@
   - 将任务内容作为上下文信息，供后续对话使用
   - 将任务内容作为上下文信息，供后续对话使用
 
-**详见**: `.cursor/commands/spec-propose.md`
+**详见**: `.cursor/commands/propose.md`
 
 ---
 

@@ -36,7 +36,7 @@ priority: 10
 
 1. **Cursor 指令调用**
 
-   - `/spec-propose`
+   - `/propose`
    - `/spec-create`
    - `/onboard`
    - `/create-api-doc`
@@ -95,8 +95,8 @@ def log_activity(action, target, note=""):
 ### 活动类型映射
 
 | 触发场景                 | 活动类型          | 目标              | 备注          |
-| ------------------------ | ----------------- | ----------------- | ------------- |
-| `/spec-propose feature-name`  | `/spec-propose`        | feature-name      | 创建提案      |
+| --- | ----- | ----- | ---- |
+| `/propose feature-name`  | `/propose`        | feature-name      | 创建提案      |
 | `/spec-create spec-name` | `/spec-create`    | spec-name         | 创建 Spec     |
 | `/onboard quick`         | `/onboard`        | quick             | 快速入门      |
 | `/create-api-doc module` | `/create-api-doc` | module            | 创建 API 文档 |

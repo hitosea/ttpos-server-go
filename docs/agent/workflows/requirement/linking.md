@@ -1,6 +1,6 @@
 # Proposal ↔ Spec 链接工作流
 
-> 🤖 Agent 执行清单：确保 `/spec-propose` 创建的提案与 `/spec-create` 生成的 Spec 双向关联，并同步 Graphiti/活动日志。
+> 🤖 Agent 执行清单：确保 `/propose` 创建的提案与 `/spec-create` 生成的 Spec 双向关联，并同步 Graphiti/活动日志。
 
 ---
 
@@ -19,7 +19,7 @@
 
 ## 前置条件
 
-- 已使用 `/spec-propose {feature-name}` 创建提案。
+- 已使用 `/propose {feature-name}` 创建提案。
 - 提案经过评审，状态为**批准**或**修改后批准**。
 - 明确 Spec 命名：`story-{module}-{feature}` 或 `task-{module}-{topic}`。
 

@@ -103,7 +103,7 @@ graph TD
 
 | 命令 | 用途 |
 |------|------|
-| `/spec-propose` | 创建需求提案 |
+| `/propose` | 创建需求提案 |
 | `/spec-create` | 创建需求规格 |
 | `/spec-design` | 创建技术设计 + 任务分解（当前命令） |
 | `/check-tasks` | 检查任务进度 |

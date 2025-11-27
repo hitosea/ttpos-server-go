@@ -84,7 +84,7 @@ Proposal → 评审 → /spec-create → 产品审核 → /spec-design → 开�
 
 | 命令 | 用途 |
 |------|------|
-| `/spec-propose` | 创建需求提案 |
+| `/propose` | 创建需求提案 |
 | `/spec-create` | 创建需求规格（当前命令） |
 | `/spec-design` | 创建技术设计 + 任务分解 |
 

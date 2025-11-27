@@ -1,9 +1,9 @@
 ---
-name: spec-propose
+name: propose
 description: 创建新功能或改进的需求提案
 ---
 
-# /spec-propose - 创建需求提案
+# /propose - 创建需求提案
 
 ## 使用场景
 
@@ -12,11 +12,11 @@ description: 创建新功能或改进的需求提案
 ## 使用方式
 
 ```bash
-/spec-propose quick-payment                    # 创建快速支付功能提案
-/spec-propose report-export                    # 创建报表导出功能提案
-/spec-propose dark-mode                        # 创建深色模式提案
-/spec-propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
-/spec-propose feature-name DooTask #36917      # 支持 DooTask # 格式
+/propose quick-payment                    # 创建快速支付功能提案
+/propose report-export                    # 创建报表导出功能提案
+/propose dark-mode                        # 创建深色模式提案
+/propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
+/propose feature-name DooTask #36917      # 支持 DooTask # 格式
 ```
 
 ## 参数
