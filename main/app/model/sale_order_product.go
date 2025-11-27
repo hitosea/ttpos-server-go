@@ -133,6 +133,11 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 获取单个套餐子商品的商品数量, 单个套餐子商品的商品数量= 份数*单位数量. 该子商品的送厨数量为套餐数量*单个套餐子商品的商品数量
+func (model *SaleOrderProduct) GetProductNum() float64 {
+	return decimal.NewFromFloat(model.CopyNum).Mul(decimal.NewFromFloat(model.GetUnitNum())).Round(4).InexactFloat64()
+}
+
 func (model *SaleOrderProduct) GetUnitNum() float64 {
 	if model.UnitNum == 0 {
 		return 1 // 兼容旧数据. 每份商品的数量至少是1个商品

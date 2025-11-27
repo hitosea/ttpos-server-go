@@ -449,7 +449,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 								Uuid:       subProduct.Uuid,
 								LocaleName: subProduct.MultiLanguageName.GetNames(),
 								Num:        subProduct.Num,
-								UnitNum:    subProduct.GetUnitNum(),
+								UnitNum:    subProduct.GetProductNum(),
 								AddPrice:   subProduct.AddPrice, // 子商品加价金额
 							})
 						}
