@@ -64,6 +64,11 @@ func (h *StaffHandler) UpdateStaff(c *gin.Context) {
 		helper.HandleValidationError(c, err, updateStaffReq, nil)
 		return
 	}
+	// 版本兼容性验证：低于 2.10.0 版本且权限密码为空时，设置默认值
+	if err := updateStaffReq.Validate(ctx); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, err)
+		return
+	}
 	err, exists := h.staffSrv.UpdateStaff(ctx, updateStaffReq)
 	if err != nil {
 		helper.ErrorWithData(c, constant.CodeSystemError, gin.H{
@@ -89,6 +94,11 @@ func (h *StaffHandler) AddStaff(c *gin.Context) {
 	var addStaffReq req.AddStaffReq
 	if err := c.ShouldBindJSON(&addStaffReq); err != nil {
 		helper.HandleValidationError(c, err, addStaffReq, req.AddStaffRequestMessage)
+		return
+	}
+	// 版本兼容性验证：低于 2.10.0 版本且权限密码为空时，设置默认值
+	if err := addStaffReq.Validate(ctx); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, err)
 		return
 	}
 	err, exists := h.staffSrv.AddStaff(ctx, addStaffReq)

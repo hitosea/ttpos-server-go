@@ -37596,7 +37596,6 @@ const docTemplate = `{
             "required": [
                 "confirm_password",
                 "password",
-                "permission_password",
                 "phone",
                 "real_name",
                 "roles",
@@ -37612,7 +37611,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "permission_password": {
-                    "description": "权限密码，4-8位数字，必填",
+                    "description": "权限密码，4-8位数字，\u003e= 2.10.0 版本必填",
                     "type": "string"
                 },
                 "phone": {

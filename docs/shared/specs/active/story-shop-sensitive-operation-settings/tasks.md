@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 15  
-**已完成**: 13  
+**总任务数**: 17  
+**已完成**: 15  
 **进行中**: -  
-**完成率**: 87%
+**完成率**: 88%
 
 **说明**: 新管理端无前端，仅实现后端接口；商家后台实现后端接口和Vue前端。
 
@@ -50,6 +50,24 @@
   - Requirements: 3.3, 4.3
   - Leverage: `main/app/service/staff.go` - 员工 Service，或 `main/app/model/staff.go` - 员工模型
   - Prompt: Role: Go Developer | Task: 在保存设置前验证授权员工ID是否存在 | Context: 遍历 DiscountAuthorizedStaffIds 和 RefundAuthorizedStaffIds，检查每个ID是否在 staff 表中存在 | Restrictions: 遵循 .cursor/rules/go-main.mdc，使用 Repository 查询数据库 | Success: 无效的员工ID被过滤，仅保存有效的ID
+
+### 低版本APP兼容性处理
+
+- [x] 1.4 添加员工接口低版本兼容处理
+
+  - File: `main/app/api/v1/shop/shop_staff.go`
+  - Purpose: 低于 v2.10.0 版本的 APP 调用添加员工接口时，权限密码为空时设置默认值
+  - Requirements: 5.1, 5.2
+  - Leverage: `ctx.Version(context.LT, "2.10.0")` 版本判断方法
+  - Prompt: Role: Go Developer | Task: 在添加员工接口中添加低版本兼容处理 | Context: 使用 ctx.Version(context.LT, "2.10.0") 判断是否为低版本，如果是且权限密码为空，设置默认值 666888 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 低版本 APP 添加员工时权限密码自动设置为 666888
+
+- [x] 1.5 编辑员工接口低版本兼容处理
+
+  - File: `main/app/api/v1/shop/shop_staff.go`
+  - Purpose: 低于 v2.10.0 版本的 APP 调用编辑员工接口时，权限密码为空时设置默认值
+  - Requirements: 5.3, 5.4
+  - Leverage: `ctx.Version(context.LT, "2.10.0")` 版本判断方法
+  - Prompt: Role: Go Developer | Task: 在编辑员工接口中添加低版本兼容处理 | Context: 使用 ctx.Version(context.LT, "2.10.0") 判断是否为低版本，如果是且权限密码为空，设置默认值 666888 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 低版本 APP 编辑员工时权限密码自动设置为 666888
 
 ---
 
