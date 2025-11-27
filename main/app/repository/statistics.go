@@ -38,7 +38,8 @@ type IStatisticsRepo interface {
 	CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData)                  // 统计营业时段
 	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                           // 统计综合运用数据
 	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)         // 统计支付方式
-	CountChannelSale(startTime, endTime int64, opts ...DBOption) (map[string]*model.ChannelSaleRepoResult, error) // 统计渠道营业数据
+	CountChannelSale(startTime, endTime int64, opts ...DBOption) (map[string]*model.ChannelSaleRepoResult, error)              // 统计渠道营业数据
+	CountUserAnalysis(startTime, endTime int64, language string, opts ...DBOption) (*model.UserAnalysisRepoResult, error)      // 统计用户分析数据
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付

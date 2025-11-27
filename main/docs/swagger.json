@@ -29477,6 +29477,74 @@
                 }
             }
         },
+        "/shop/statistics/user_analysis": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "用户分析统计查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "用户分析统计查询",
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UserAnalysisResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/user_analysis/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "导出用户分析统计",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出用户分析统计",
+                "responses": {
+                    "200": {
+                        "description": "导出任务已创建",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/stock_reconciliation/approve": {
             "post": {
                 "security": [
@@ -55106,6 +55174,56 @@
                 },
                 "selected_sn": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.UserAnalysisItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "名称（国籍名称/来源名称/用餐方式名称）",
+                    "type": "string"
+                },
+                "order_count": {
+                    "description": "订单数",
+                    "type": "integer"
+                },
+                "percentage": {
+                    "description": "占比（%，保留2位小数，从 decimal 转换）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.UserAnalysisResp": {
+            "type": "object",
+            "properties": {
+                "desk_source": {
+                    "description": "桌台方式来源统计",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UserAnalysisItem"
+                    }
+                },
+                "dining_method": {
+                    "description": "用餐方式统计",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UserAnalysisItem"
+                    }
+                },
+                "nationality": {
+                    "description": "国籍统计",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UserAnalysisItem"
+                    }
+                },
+                "order_source": {
+                    "description": "点餐方式来源统计",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UserAnalysisItem"
+                    }
                 }
             }
         },

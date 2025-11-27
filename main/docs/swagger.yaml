@@ -15295,6 +15295,41 @@ definitions:
       selected_sn:
         type: string
     type: object
+  resp.UserAnalysisItem:
+    properties:
+      name:
+        description: 名称（国籍名称/来源名称/用餐方式名称）
+        type: string
+      order_count:
+        description: 订单数
+        type: integer
+      percentage:
+        description: 占比（%，保留2位小数，从 decimal 转换）
+        type: number
+    type: object
+  resp.UserAnalysisResp:
+    properties:
+      desk_source:
+        description: 桌台方式来源统计
+        items:
+          $ref: '#/definitions/resp.UserAnalysisItem'
+        type: array
+      dining_method:
+        description: 用餐方式统计
+        items:
+          $ref: '#/definitions/resp.UserAnalysisItem'
+        type: array
+      nationality:
+        description: 国籍统计
+        items:
+          $ref: '#/definitions/resp.UserAnalysisItem'
+        type: array
+      order_source:
+        description: 点餐方式来源统计
+        items:
+          $ref: '#/definitions/resp.UserAnalysisItem'
+        type: array
+    type: object
   resp.VerifyPasswordResp:
     properties:
       verified:
@@ -33859,6 +33894,45 @@ paths:
       summary: 统计班次退款金额
       tags:
       - 商家端.营业数据
+  /shop/statistics/user_analysis:
+    get:
+      consumes:
+      - application/json
+      description: 用户分析统计查询
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UserAnalysisResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 用户分析统计查询
+      tags:
+      - 商家端.报表
+  /shop/statistics/user_analysis/export:
+    get:
+      consumes:
+      - application/json
+      description: 导出用户分析统计
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出任务已创建
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出用户分析统计
+      tags:
+      - 商家端.报表
   /shop/stock_reconciliation/approve:
     post:
       consumes:

@@ -1,6 +1,10 @@
 package model
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/shopspring/decimal"
+)
 
 // StatisticsSale 销售统计表 ttpos_statistics_sale
 type StatisticsSale struct {
@@ -36,6 +40,8 @@ type StatisticsSale struct {
 	IsSpecial            int     `gorm:"column:is_special;type:int(11);default:0;comment:是否特殊订单;NOT NULL" json:"is_special"`
 	IsTakeout            int     `gorm:"column:is_takeout;type:int(11);default:0;comment:是否外送;NOT NULL" json:"is_takeout"`
 	OrderSourceUuid      uint64  `gorm:"column:order_source_uuid;type:bigint(20) unsigned;default:0;comment:订单来源UUID（0=店内，>0=外卖/渠道）;NOT NULL" json:"order_source_uuid"`
+	NationalityUuid      uint64  `gorm:"column:nationality_uuid;type:bigint(20) unsigned;default:0;comment:国籍UUID（0=未记录）;NOT NULL" json:"nationality_uuid"`
+	Source               uint    `gorm:"column:source;type:int(10);default:0;comment:订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5;NOT NULL" json:"source"`
 	RefundServiceFee     float64 `gorm:"column:refund_service_fee;type:decimal(14,2);default:0.00;comment:退款服务费;NOT NULL" json:"refund_service_fee"`
 	RefundDiscount       float64 `gorm:"column:refund_discount;type:decimal(14,2);default:0.00;comment:退款优惠折扣;NOT NULL" json:"refund_discount"`
 	RefundDiscountMember float64 `gorm:"column:refund_discount_member;type:decimal(14,2);default:0.00;comment:退款会员折扣;NOT NULL" json:"refund_discount_member"`
@@ -377,4 +383,19 @@ type ChannelSaleRepoResult struct {
 	AvgOrderAmount sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
 	TotalDeskNum   sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
 	TotalMealNum   sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
+}
+
+// UserAnalysisItemRepo 用户分析统计项（Repository层）
+type UserAnalysisItemRepo struct {
+	Name        string          `gorm:"column:name"`         // 名称
+	OrderCount  int64           `gorm:"column:order_count"`  // 订单数
+	Percentage  decimal.Decimal `gorm:"column:percentage"`   // 占比（decimal类型）
+}
+
+// UserAnalysisRepoResult 用户分析统计结果（Repository层）
+type UserAnalysisRepoResult struct {
+	Nationality  []UserAnalysisItemRepo `json:"nationality"`   // 国籍统计
+	OrderSource  []UserAnalysisItemRepo `json:"order_source"`   // 点餐方式来源统计
+	DeskSource   []UserAnalysisItemRepo `json:"desk_source"`    // 桌台方式来源统计
+	DiningMethod []UserAnalysisItemRepo `json:"dining_method"`  // 用餐方式统计
 }

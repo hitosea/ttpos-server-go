@@ -1412,6 +1412,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			IsTakeout:            utils.IfInt(isTakeout, 1, 0),
 			DeliveryFee:          orderDeliveryFee.InexactFloat64(),
 			OrderSourceUuid:      saleBill.OrderSourceUuid,
+			NationalityUuid:      saleBill.NationalityUuid,
+			Source:               saleBill.Source,
 		}
 		sales = append(sales, sale)
 	}
