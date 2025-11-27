@@ -17,71 +17,86 @@
     vat.value %}
   
     <div class="top-section">
-      <div class="title-row">
-        <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" /> 
-        <div class="po-title">SALES ORDER</div>
-      </div>
-      <div class="header-grid">
-        <div class="company-block">
-          <div class="company-info">
-            <strong>{{ doc.company }}</strong><br />
-          {{ (company_address or "989 AIA EAST GATEWAY BUILDING, ROOM NO.1101-1102, 11TH FLOOR, DEBARATANA RD.,BANGNA NUEA, BANGNA, BANGKOK 10260 ") | replace("BUILDING,", "BUILDING,<br />") | replace("DEBARATANA RD.,", "DEBARATANA RD.,<br />") | safe }}<br />
+      <table class="title-row" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 30px;">
+        <tr>
+          <td width="95px" valign="middle">
+            <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" style="width: 95px; height: auto;" />
+          </td>
+          <td align="center" valign="middle">
+            <div class="po-title">SALES ORDER</div>
+          </td>
+          <td width="95px"></td>
+        </tr>
+      </table>
+      <table class="header-grid" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin: 0; padding: 0;">
+        <tr>
+          <td style="width: 60% !important; padding-left: 0 !important; padding-right: 6px !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
+            <div class="company-info">
+              <strong>{{ doc.company }}</strong><br />
+            {{ (company_address or "989 AIA EAST GATEWAY BUILDING, ROOM NO.1101-1102, 11TH FLOOR, DEBARATANA RD.,BANGNA NUEA, BANGNA, BANGKOK 10260 ") | replace("BUILDING,", "BUILDING,<br />") | replace("DEBARATANA RD.,", "DEBARATANA RD.,<br />") | safe }}<br />
   
-            PHONE&nbsp;:&nbsp;{{ company.phone_no or company.phone or '082-168-8984' }}
-          </div>
-        </div>
-        <div class="meta-block">
-          <table class="meta-table">
-            <tr>
-              <td class="meta-label">TABULATION DATE</td>
-              <td>
-                {{ frappe.format_value(doc.transaction_date, {"fieldtype":"Date"}) }}
-              </td>
-            </tr>
-            <tr>
-              <td class="meta-label">ORDER NUMBER</td>
-              <td>{{ doc.name }}</td>
-            </tr>
-            <tr>
-              <td class="meta-label">DELIVERY DATE</td>
-              <td>
-                {{ frappe.format_value(doc.schedule_date, {"fieldtype":"Date"}) }}
-              </td>
-            </tr>
-            <tr>
-              <td class="meta-label">PAYMENT TERMS</td>
-              <td>{{ doc.payment_terms or '30 DAYS' }}</td>
-            </tr>
-            <tr>
-              <td class="meta-label">VENDOR CODE</td>
-              <td>{{ doc.supplier or '—' }}</td>
-            </tr>
-          </table>
-        </div>
-      </div>
+              PHONE&nbsp;:&nbsp;{{ company.phone_no or company.phone or '082-168-8984' }}
+            </div>
+          </td>
+          <td style="width: 40% !important; padding-left: 6px !important; padding-right: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
+            <table class="meta-table" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin: 0; padding: 0;">
+              <tr>
+                <td class="meta-label">TABULATION DATE</td>
+                <td>
+                  {{ frappe.format_value(doc.transaction_date, {"fieldtype":"Date"}) }}
+                </td>
+              </tr>
+              <tr>
+                <td class="meta-label">ORDER NUMBER</td>
+                <td>{{ doc.name }}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">DELIVERY DATE</td>
+                <td>
+                  {{ frappe.format_value(doc.schedule_date, {"fieldtype":"Date"}) }}
+                </td>
+              </tr>
+              <tr>
+                <td class="meta-label">PAYMENT TERMS</td>
+                <td>{{ doc.payment_terms or '30 DAYS' }}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">VENDOR CODE</td>
+                <td>{{ doc.supplier or '—' }}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
       <div class="header-divider"></div>
     </div>
   
-    <div class="info-row">
-      <div class="info-block">
-        <div class="title">CUSTOMER</div>
-        <div class="body">
-          <strong>{{ doc.customer_name or doc.get('customer_name', '') }}</strong><br />
-          {{ doc.customer_address or doc.get('customer_address', '') }}<br />
-          {{ doc.contact_person or doc.get('contact_person', '') }}<br />
-        </div>
-      </div>
-      <div class="info-block">
-        <div class="title">SHIP TO</div>
-        <div class="body">
-          {{ doc.shipping_address_name or 'WAREHOUSE BANG PLA' }}<br />
-          {{ doc.shipping_address_display or "" }}<br />
-          ATTENTION&nbsp;:&nbsp;{{ doc.contact_person or 'RECEIVING' }}
-        </div>
-      </div>
-    </div>
+    <table class="info-row" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-top: 12px; margin-left: 0; margin-right: 0; padding: 0!important;">
+      <tr>
+        <td style="margin: 0 !important; padding: 0 !important; width: 50%; padding-right: 6px !important; box-sizing: border-box;" valign="top">
+          <div class="info-block">
+            <div class="title" style="font-size: 12px;">CUSTOMER</div>
+            <div class="body">
+              <strong>{{ doc.customer_name or doc.get('customer_name', '') }}</strong><br />
+              {{ doc.customer_address or doc.get('customer_address', '') }}<br />
+              {{ doc.contact_person or doc.get('contact_person', '') }}<br />
+            </div>
+          </div>
+        </td>
+        <td style="margin: 0 !important; padding: 0 !important; width: 50%; padding-left: 6px !important; box-sizing: border-box;" valign="top">
+          <div class="info-block">
+            <div class="title" style="font-size: 12px;">SHIP TO</div>
+            <div class="body">
+              {{ doc.shipping_address_name or 'WAREHOUSE BANG PLA' }}<br />
+              {{ doc.shipping_address_display or "" }}<br />
+              ATTENTION&nbsp;:&nbsp;{{ doc.contact_person or 'RECEIVING' }}
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
   
-    <table class="items-table">
+    <table class="items-table" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-left: 0; margin-right: 0;">
       <thead>
         <tr>
           <th class="col-no">NO.</th>
@@ -112,7 +127,7 @@
             {"fieldtype":"Currency", "currency": currency}) }}
           </td>
         </tr>
-        {% endfor %} {% set max_rows = 12 %} {% set blank_rows = max_rows -
+        {% endfor %} {% set max_rows = 0 %} {% set blank_rows = max_rows -
         (doc.items|length or 0) %} {% for i in range(blank_rows if blank_rows > 0
         else 0) %}
         <tr>
@@ -128,88 +143,100 @@
       </tbody>
     </table>
   
-    <div class="comments-grid">
-      <div class="comments-block">
-        <div class="title">COMMENTS OR SPECIAL INSTRUCTIONS</div>
-        <div class="body">{{ (doc.remarks or '&nbsp;') | safe }}</div>
-      </div>
-      <table class="summary-table">
-        <tr>
-          <td>SUBTOTAL</td>
-          <td>
-            {{ frappe.format_value(subtotal, {"fieldtype":"Currency", "currency":
-            currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>VAT 7%</td>
-          <td>
-            {{ frappe.format_value(vat.value, {"fieldtype":"Currency", "currency":
-            currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>DISCOUNT</td>
-          <td>
-            {{ frappe.format_value(discount_amount, {"fieldtype":"Currency",
-            "currency": currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>OTHER</td>
-          <td>
-            {{ frappe.format_value(other_charges, {"fieldtype":"Currency",
-            "currency": currency}) }}
-          </td>
-        </tr>
-        <tr>
-          <td>TOTAL</td>
-          <td>
-            {{ frappe.format_value(grand_total, {"fieldtype":"Currency",
-            "currency": currency}) }}
-          </td>
-        </tr>
-      </table>
-    </div>
+    <table class="comments-grid" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin-top: 10px; margin-left: 0; margin-right: 0; padding: 0;">
+      <tr>
+        <td style="width: 70% !important; padding-left: 0 !important; padding-right: 6px !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
+          <div class="comments-block">
+            <div class="title" style="font-size: 12px;">COMMENTS OR SPECIAL INSTRUCTIONS</div>
+            <div class="body">{{ (doc.remarks or '&nbsp;') | safe }}</div>
+          </div>
+        </td>
+        <td style="width: 30% !important; padding-left: 6px !important; padding-right: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
+          <table class="summary-table" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin: 0; padding: 0;">
+            <tr>
+              <td>SUBTOTAL</td>
+              <td>
+                {{ frappe.format_value(subtotal, {"fieldtype":"Currency", "currency":
+                currency}) }}
+              </td>
+            </tr>
+            <tr>
+              <td>VAT 7%</td>
+              <td>
+                {{ frappe.format_value(vat.value, {"fieldtype":"Currency", "currency":
+                currency}) }}
+              </td>
+            </tr>
+            <tr>
+              <td>DISCOUNT</td>
+              <td>
+                {{ frappe.format_value(discount_amount, {"fieldtype":"Currency",
+                "currency": currency}) }}
+              </td>
+            </tr>
+            <tr>
+              <td>OTHER</td>
+              <td>
+                {{ frappe.format_value(other_charges, {"fieldtype":"Currency",
+                "currency": currency}) }}
+              </td>
+            </tr>
+            <tr>
+              <td>TOTAL</td>
+              <td>
+                {{ frappe.format_value(grand_total, {"fieldtype":"Currency",
+                "currency": currency}) }}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   
-    <div class="shelf-life">
-      <div class="title">SHELF LIFE</div>
-      <div class="body">
-        {{ doc.custom_shelf_life_note or '' }}
-      </div>
-    </div>
-    <div class="shelf-life delivery">
-      <div class="title">Product Delivery Terms
-      </div>
-      <div class="body">
-        {{ doc.custom_shelf_life_note or '' }}
-      </div>
-    </div>
-    <div class="shelf-life delivery transfer">
-      <div class="title">Product Transfer Terms  
-      </div>
-      <div class="body">
-        {{ doc.custom_shelf_life_note or '' }}
-      </div>
-    </div>
+    <table class="shelf-life" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin-top: 12px; margin-left: 0; margin-right: 0;">
+      <tr>
+        <td class="title" style="width: 30% !important; background: #dcdcdc; padding: 4px 6px !important; font-weight: 600; text-transform: uppercase; margin: 0 !important; box-sizing: border-box; font-size: 12px;" valign="top">SHELF LIFE</td>
+        <td class="body" style="width: 70% !important; padding: 6px !important; font-size: 10px; margin: 0 !important; box-sizing: border-box;" valign="top">
+          {{ doc.custom_shelf_life_note or '' }}
+        </td>
+      </tr>
+    </table>
+    <table class="shelf-life delivery" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin-top: 0px; margin-left: 0; margin-right: 0;">
+      <tr>
+        <td class="title" style="width: 30% !important; background: #dcdcdc; padding: 4px 6px !important; font-weight: 600; text-transform: uppercase; margin: 0 !important; box-sizing: border-box; font-size: 12px;" valign="top">Product Delivery Terms</td>
+        <td class="body" style="width: 70% !important; padding: 6px !important; font-size: 10px; margin: 0 !important; box-sizing: border-box;" valign="top">
+          {{ doc.custom_shelf_life_note or '' }}
+        </td>
+      </tr>
+    </table>
+    <table class="shelf-life delivery transfer" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin-top: 0px; margin-left: 0; margin-right: 0; border-bottom: 1px solid #000;">
+      <tr>
+        <td class="title" style="width: 30% !important; background: #dcdcdc; padding: 4px 6px !important; font-weight: 600; text-transform: uppercase; margin: 0 !important; box-sizing: border-box; font-size: 12px;" valign="top">Product Transfer Terms</td>
+        <td class="body" style="width: 70% !important; padding: 6px !important; font-size: 10px; margin: 0 !important; box-sizing: border-box;" valign="top">
+          {{ doc.custom_shelf_life_note or '' }}
+        </td>
+      </tr>
+    </table>
   
-    <div class="signature-grid">
-      <div>
-        <div class="line"></div>
-        <strong>EXECUTED / CHECKED BY</strong>
-        <span>DATE&nbsp;:&nbsp;......................</span>
-      </div>
-      <div>
-        <div class="line"></div>
-        <strong>APPROVED BY</strong>
-        <span>DATE&nbsp;:&nbsp;......................</span>
-      </div>
-      <div>
-        <div class="line"></div>
-        <strong>RECEIVED BY</strong>
-        <span>DATE&nbsp;:&nbsp;......................</span>
-      </div>
-    </div>
+    <table class="signature-grid" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin-top: 60px; margin-left: 0; margin-right: 0;">
+      <tr>
+        <td style="width: 33% !important; padding-right: 6px !important; font-size: 10px; margin: 0 !important; box-sizing: border-box;" align="center">
+          <div class="line"></div>
+          <strong>EXECUTED / CHECKED BY</strong>
+          <span style="display: block; margin-top: 6px;">DATE&nbsp;:&nbsp;......................</span>
+        </td>
+        <td style="width: 34% !important; padding-left: 6px !important; padding-right: 6px !important; font-size: 10px; margin: 0 !important; box-sizing: border-box;" align="center">
+          <div class="line"></div>
+          <strong>APPROVED BY</strong>
+          <span style="display: block; margin-top: 6px;">DATE&nbsp;:&nbsp;......................</span>
+        </td>
+        <td style="width: 33% !important; padding-left: 6px !important; font-size: 10px; margin: 0 !important; box-sizing: border-box;" align="center">
+          <div class="line"></div>
+          <strong>RECEIVED BY</strong>
+          <span style="display: block; margin-top: 6px;">DATE&nbsp;:&nbsp;......................</span>
+        </td>
+      </tr>
+    </table>
   
     <div class="note">
       <div>If you have any questions about this sales order, please contact</div>					
@@ -219,26 +246,50 @@
   
   </div>
   <style>
-    @page {
-      size: A4;
-      margin: 12mm 10mm;
-    }
   
     html,
     body {
       width: 210mm;
       margin: 0;
+      padding: 0;
       font-family: "Arial", sans-serif;
       color: #000;
     }
   
-    .po-wrapper {
-      width: 190mm;
-      max-width: 190mm;
-      margin: 0 auto;
-      padding: 6mm 8mm 8mm;
+    /* 覆盖 ERP 自动注入的 print-format 样式 */
+    .print-format td,
+    .print-format th {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
-      font-size: 11px;
+      width: 100% !important;
+      table-layout: fixed !important;
+    }
+  
+    td, th {
+      margin: 0 !important;
+      box-sizing: border-box;
+      overflow: hidden;
+      word-wrap: break-word;
+    }
+  
+    /* 确保所有表格的 td 和 th 的 margin 为 0 */
+    table td,
+    table th {
+      margin: 0 !important;
+    }
+  
+    /* 更具体地覆盖 print-format 下的所有表格单元格的 margin */
+    .print-format table td,
+    .print-format table th {
+      margin: 0 !important;
     }
   
     .top-section {
@@ -246,18 +297,7 @@
     }
   
     .title-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
       margin-bottom: 30px;
-    }
-  
-    .title-row .logo {
-      width: 95px;
-      height: auto;
-      position: absolute;
-      left: 0;
     }
   
     .po-title {
@@ -267,20 +307,31 @@
       text-align: center;
       margin: 0;
       padding: 0;
-      flex: 1;
     }
   
     .header-grid {
-      display: grid;
-      grid-template-columns: 2.2fr 1.4fr;
-      gap: 12px;
-      align-items: start;
+      width: 100% !important;
       margin-bottom: 8px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
     }
   
-    .company-block {
-      display: flex;
-      flex-direction: column;
+    .header-grid td {
+      box-sizing: border-box;
+      margin: 0 !important;
+    }
+  
+    .header-grid td:first-child {
+      width: 60% !important;
+    }
+  
+    .header-grid td:last-child {
+      width: 40% !important;
     }
   
     .company-info {
@@ -301,17 +352,26 @@
     }
   
     .meta-table {
-      width: 100%;
+      width: 100% !important;
       border-collapse: collapse;
+      border-spacing: 0;
       font-size: 10px;
+      border: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      table-layout: fixed;
     }
   
     .meta-table td {
       border: 1px solid #000;
-      padding: 4px 6px;
+      padding: 4px 6px !important;
+      margin: 0 !important;
+      box-sizing: border-box;
     }
   
     .meta-table td:last-child {
+      border-right: 1px solid #000;
       color: #d32f2f;
       font-weight: 500;
     }
@@ -322,14 +382,23 @@
     }
   
     .info-row {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      width: 100% !important;
       margin-top: 12px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
     }
   
     .info-block {
       border: 1px solid #000;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      width: 100%;
     }
   
     .info-block .title {
@@ -354,17 +423,29 @@
     }
   
     .items-table {
-      width: 100%;
+      width: 100% !important;
       border-collapse: collapse;
+      border-spacing: 0;
       margin-top: 14px;
+      margin-left: 0;
+      margin-right: 0;
       font-size: 10px;
       table-layout: fixed;
+      padding: 0;
+      box-sizing: border-box;
     }
   
     .items-table th,
     .items-table td {
       border: 1px solid #000;
-      padding: 4px 5px;
+      padding: 4px 5px !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .items-table th:last-child,
+    .items-table td:last-child {
+      border-right: 1px solid #000;
     }
   
     .items-table th {
@@ -384,8 +465,6 @@
   
     .col-code {
       width: 90px;
-      word-break: break-all;
-      word-wrap: break-word;
     }
   
     .col-description {
@@ -410,15 +489,35 @@
     }
   
     .comments-grid {
-      display: grid;
-      grid-template-columns: 2.2fr 0.9fr;
-      gap: 12px;
+      width: 100% !important;
       margin-top: 10px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+  
+    .comments-grid td {
+      box-sizing: border-box;
+      margin: 0 !important;
+    }
+  
+    .comments-grid td:first-child {
+      width: 70% !important;
+    }
+  
+    .comments-grid td:last-child {
+      width: 30% !important;
     }
   
     .comments-block {
       border: 1px solid #000;
       min-height: 70px;
+      margin: 0;
+      box-sizing: border-box;
     }
   
     .comments-block .title {
@@ -429,19 +528,31 @@
     }
   
     .comments-block .body {
-      padding: 6px;
-      min-height: 50px;
+        padding: 6px;
+        min-height: 60px;
     }
   
     .summary-table {
-      width: 100%;
+      width: 100% !important;
       border-collapse: collapse;
+      border-spacing: 0;
       font-size: 10px;
+      border: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      table-layout: fixed;
     }
   
     .summary-table td {
       border: 1px solid #000;
-      padding: 4px 6px;
+      padding: 4px 6px !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .summary-table td:last-child {
+      border-right: 1px solid #000;
     }
   
     .summary-table td:first-child {
@@ -456,27 +567,42 @@
   
     
     .shelf-life {
-      display: flex;
+      width: 100% !important;
       margin-top: 12px;
       border: 1px solid #000;
       border-bottom: none;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
     }
-    .delivery{
+  
+    .shelf-life.delivery {
       margin-top: 0px;
     }
-    .delivery.transfer{
+  
+    .shelf-life.delivery.transfer {
       border-bottom: 1px solid #000;
     }
   
-    .shelf-life .title {
+    .shelf-life td {
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .shelf-life td.title {
+      width: 30% !important;
       background: #dcdcdc;
-      padding: 4px 6px;
+      padding: 4px 6px !important;
       font-weight: 600;
       text-transform: uppercase;
     }
   
-    .shelf-life .body {
-      padding: 6px;
+    .shelf-life td.body {
+      width: 70% !important;
+      padding: 6px !important;
       font-size: 10px;
     }
   
@@ -491,24 +617,19 @@
     }
   
     .signature-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      text-align: center;
-      margin-top: 30px;
-      font-size: 10px;
+      width: 100% !important;
+      margin-top: 60px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
     }
   
     .signature-grid .line {
       border-top: 1px dotted #000;
       padding-top: 6px;
-      /* min-height: 10px; */
-    }
-  
-    .signature-grid span {
-      display: block;
-      margin-top: 6px;
     }
   </style>
-  
   

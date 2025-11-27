@@ -196,6 +196,10 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if permission.Uuid == 2857919057920000 && !company.IsOpenErp() {
 			continue
 		}
+		// 散户无品牌采购、品牌收货、调拨单权限
+		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
+			continue
+		}
 		filteredPermissions = append(filteredPermissions, permission)
 	}
 	return filteredPermissions

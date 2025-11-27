@@ -998,6 +998,10 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		direction = "ASC"
 	}
 
+	if req.RankType == 0 {
+		listQuery = listQuery.Order("sale_num " + direction)
+	}
+
 	if req.RankType == 1 {
 		listQuery = listQuery.Order("sale_num " + direction)
 	}

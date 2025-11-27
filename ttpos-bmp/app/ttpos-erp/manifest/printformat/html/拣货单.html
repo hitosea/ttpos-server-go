@@ -23,7 +23,7 @@
             <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" style="width: 95px; height: auto;" />
           </td>
           <td align="center" valign="middle">
-            <div class="po-title">PURCHASE RECEIPT</div>
+            <div class="po-title">PICK LIST</div>
           </td>
           <td width="95px"></td>
         </tr>
@@ -75,10 +75,10 @@
       <tr>
         <td style="margin: 0 !important; padding: 0 !important; width: 50%; padding-right: 6px !important; box-sizing: border-box;" valign="top">
           <div class="info-block">
-            <div class="title" style="font-size: 12px;">VENDOR</div>
+            <div class="title" style="font-size: 12px;">CUSTOMER</div>
             <div class="body">
-              <strong>{{ doc.supplier_name or doc.supplier  }}</strong><br />
-              {{ doc.supplier_address_display or "" }}<br />
+              <strong>{{ doc.customer or doc.get('customer', '') }}</strong><br />
+              {{ doc.purpose or "" }}<br />
             </div>
           </div>
         </td>
@@ -86,7 +86,7 @@
           <div class="info-block">
             <div class="title" style="font-size: 12px;">WAREHOUSE INFORMATION</div>
             <div class="body">
-              {{ doc.set_warehouse or '' }}<br />
+              {{ doc.parent_warehouse or '' }}<br />
             </div>
           </div>
         </td>
@@ -99,9 +99,10 @@
           <th class="col-no">NO.</th>
           <th class="col-code">CODE</th>
           <th class="col-description">DESCRIPTION</th>
-          <th class="col-qty">QUANTITY</th>
-          <th class="col-unit">UNIT</th>
-          <th class="col-price">PRICE / UNIT</th>
+          <th class="col-qty">Qty (In Stook UOM)</th>
+          <th class="col-unit">Picked Qty(in Stock UOM)</th>
+          <th class="col-price">Stock UOM</th>
+          <th class="col-order">SALES ORDER</th>
           <th class="col-total">TOTAL</th>
         </tr>
       </thead>
@@ -112,13 +113,14 @@
           <td class="col-code">{{ row.custom_internal_code or row.item_code }}</td>
           <td class="col-description">{{ row.description or row.item_name }}</td>
           <td class="col-qty">
-            {{ frappe.format_value(row.qty, {"fieldtype":"Float"}) }}
+            {{ frappe.format_value(row.stock_qty, {"fieldtype":"Float"}) }}
           </td>
-          <td class="col-unit">{{ row.uom }}</td>
+          <td class="col-unit">{{ row.picked_qty }}</td>
           <td class="col-price">
-            {{ frappe.format_value(row.rate, {"fieldtype":"Currency", "currency":
+            {{ frappe.format_value(row.stock_uom, {"fieldtype":"Currency", "currency":
             currency}) }}
           </td>
+          <td class="col-order">{{ row.sales_order }}</td>  
           <td class="col-total">
             {{ frappe.format_value(row.amount or row.base_amount,
             {"fieldtype":"Currency", "currency": currency}) }}
@@ -134,6 +136,7 @@
           <td class="col-qty"></td>
           <td class="col-unit"></td>
           <td class="col-price"></td>
+          <td class="col-order"></td>
           <td class="col-total"></td>
         </tr>
         {% endfor %}
@@ -142,51 +145,13 @@
   
     <table class="comments-grid" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin-top: 10px; margin-left: 0; margin-right: 0; padding: 0;">
       <tr>
-        <td style="width: 70% !important; padding-left: 0 !important; padding-right: 6px !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
+        <td style="width: 70% !important; padding-left: 0 !important; padding-right: 0px !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
           <div class="comments-block">
             <div class="title" style="font-size: 12px;">COMMENTS OR SPECIAL INSTRUCTIONS</div>
             <div class="body">{{ (doc.remarks or '&nbsp;') | safe }}</div>
           </div>
         </td>
-        <td style="width: 30% !important; padding-left: 6px !important; padding-right: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
-          <table class="summary-table" cellpadding="0" cellspacing="0" border="0" style="width: 100% !important; margin: 0; padding: 0;">
-            <tr>
-              <td>SUBTOTAL</td>
-              <td>
-                {{ frappe.format_value(subtotal, {"fieldtype":"Currency", "currency":
-                currency}) }}
-              </td>
-            </tr>
-            <tr>
-              <td>VAT 7%</td>
-              <td>
-                {{ frappe.format_value(vat.value, {"fieldtype":"Currency", "currency":
-                currency}) }}
-              </td>
-            </tr>
-            <tr>
-              <td>DISCOUNT</td>
-              <td>
-                {{ frappe.format_value(discount_amount, {"fieldtype":"Currency",
-                "currency": currency}) }}
-              </td>
-            </tr>
-            <tr>
-              <td>OTHER</td>
-              <td>
-                {{ frappe.format_value(other_charges, {"fieldtype":"Currency",
-                "currency": currency}) }}
-              </td>
-            </tr>
-            <tr>
-              <td>TOTAL</td>
-              <td>
-                {{ frappe.format_value(grand_total, {"fieldtype":"Currency",
-                "currency": currency}) }}
-              </td>
-            </tr>
-          </table>
-        </td>
+        
       </tr>
     </table>
   
@@ -236,7 +201,7 @@
     </table>
   
     <div class="note">
-      <div>If you have any questions about this purchase receipt, please contact</div>					
+      <div>If you have any questions about this pick list, please contact</div>					
       <div>K.Wimolwan (GiF) / Purchasing / Tel.082-168-8984 / e-mail : Wimolwan.n@wallacethailand.com</div>								
       <div>K.Henry, K.Adam / Accounting  / Tel.063-412-0672 / e-mail : henry@wallacethailand.com, adam@wallacethailand.com</div>								
     </div>    
@@ -467,6 +432,9 @@
     .col-description {
       word-break: break-all;
       word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: normal;
+      overflow: visible;
     }
   
     .col-qty {
@@ -483,6 +451,11 @@
     .col-total {
       width: 80px;
       text-align: right;
+    }
+
+    .col-order {
+      width: 80px;
+      text-align: center;
     }
   
     .comments-grid {
@@ -615,7 +588,7 @@
   
     .signature-grid {
       width: 100% !important;
-      margin-top: 60px;
+      margin-top: 30px;
       border-collapse: collapse;
       border-spacing: 0;
       margin-left: 0;
