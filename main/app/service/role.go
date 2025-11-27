@@ -18,12 +18,11 @@ import (
 
 // IRoleSrv 角色服务接口
 type IRoleSrv interface {
-	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error)                                     // 获取角色列表
-	GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDetailResp, error)                                         // 获取角色详情
-	CreateRole(ctx context.Context, createReq req.AddRoleReq) (*resp.Role, error)                                        // 创建角色
-	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error                                                   // 更新角色
-	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error                                                   // 删除角色
-	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) // 获取店铺权限树（用于角色权限配置）
+	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error) // 获取角色列表
+	GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDetailResp, error)     // 获取角色详情
+	CreateRole(ctx context.Context, createReq req.AddRoleReq) (*resp.Role, error)    // 创建角色
+	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error               // 更新角色
+	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error               // 删除角色
 }
 
 type roleSrv struct {
@@ -93,10 +92,10 @@ func (s *roleSrv) GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDeta
 	// 获取角色关联的员工UUID列表
 	staffUuids, _ := staffRoleRepo.GetStaffUuidsByRoleUuid(role.Uuid)
 
-	// 获取权限树（排除管理后台）
-	permissionGroup, err := s.GetCompanyPermissionGroup(ctx, []constant.RouteName{constant.ShopAppRouteName, constant.CashierRouteName, constant.AssistantRouteName})
+	// 获取权限组（排除管理后台）
+	permissionGroup, err := s.roleAccessSrv.GetCompanyPermissionGroup(ctx, []constant.RouteName{constant.ShopAppRouteName, constant.CashierRouteName, constant.AssistantRouteName})
 	if err != nil {
-		return resp.RoleDetailResp{}, errors.WithMessage(err, "获取权限树失败")
+		return resp.RoleDetailResp{}, errors.WithMessage(err, "获取权限组失败")
 	}
 
 	// 统计各个权限组的叶子节点数量之和（管理APP、收银机、点餐助手）
@@ -281,10 +280,4 @@ func (s *roleSrv) DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) e
 	}
 
 	return nil
-}
-
-// GetCompanyPermissionGroup 获取店铺权限树（用于角色权限配置）
-func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
-	company := ctx.GetCompany()
-	return s.roleAccessSrv.GetCompanyPermissionGroup(company.Uuid, includeRouteNames)
 }

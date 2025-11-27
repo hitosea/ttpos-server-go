@@ -7,6 +7,8 @@ import (
 	"time"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/jinzhu/copier"
@@ -21,7 +23,7 @@ type IRoleAccessSrv interface {
 	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error)
 	GetPermissionGroup(staffUuid, companyUuid uint64) (resp.PermissionGroup, error)
 	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
-	GetCompanyPermissionGroup(companyUuid uint64, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
+	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
 }
 
 func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
@@ -264,17 +266,14 @@ func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]strin
 	return permissions, nil
 }
 
-// GetCompanyPermissionTree 获取店铺的所有权限树（不依赖员工，用于角色权限配置）
-func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
-	db := s.dbm.GetDB(companyUuid)
+// GetCompanyPermissionGroup 获取店铺的所有权限组（不依赖员工，用于角色权限配置）
+func (s *roleAccessSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+	company := ctx.GetCompany()
+	companyUuid := company.Uuid
+	db := s.dbm.GetDB(company.Uuid)
 	accessRepo := repository.NewAccessRepo(db)
 	companySettingRepo := repository.NewCompanySettingRepo(db)
-	company, err := repository.NewCompanyRepo(db).GetCompany(func(db *gorm.DB) *gorm.DB {
-		return db.Where("uuid = ?", companyUuid)
-	})
-	if err != nil {
-		return resp.PermissionGroup{}, errors.WithMessage(err, "获取店铺信息失败")
-	}
+
 	// 获取店铺设置
 	companySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
 		return db.Where("company_uuid = ?", companyUuid)
@@ -308,7 +307,7 @@ func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, includeRou
 	}
 
 	// 筛选权限
-	permissions = s.filterPermission(permissions, companySetting, company)
+	permissions = s.filterPermission(permissions, companySetting, *company)
 
 	// 构建权限树形结构
 	roots := s.buildPermissionTreeWithoutFilter(permissions)
@@ -318,12 +317,20 @@ func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, includeRou
 			continue
 		}
 
-		// 如果是管理APP分组，标记所有子权限为默认勾选（前端可以根据此标记默认勾选）
-		// 注意：这里不修改 Permission 结构，前端可以根据权限组名称判断
-		// 如果需要后端标记，可以在 Permission 结构中添加 IsDefaultChecked 字段
-
 		groupPermission.List = append(groupPermission.List, root)
 	}
 
+	// 遍历groupPermission.List，将每个权限以及其所有子孙权限的名称翻译为对应语言
+	for _, root := range groupPermission.List {
+		s.translatePermission(root, ctx.GetLanguage())
+	}
 	return groupPermission, nil
+}
+
+// 翻译权限及其所有子孙权限的名称
+func (s *roleAccessSrv) translatePermission(permission *resp.Permission, language string) {
+	permission.Name = i18n.Translate(language, permission.Name)
+	for _, child := range permission.Children {
+		s.translatePermission(child, language)
+	}
 }

@@ -13,6 +13,7 @@ type OrderCartProductPackageAddReq struct {
 	SaleOrderUuid      uint64           `json:"sale_order_uuid"`      // 销售订单UUID
 	ProductPackageUuid uint64           `json:"product_package_uuid"` // 套餐UUID
 	Products           []ProductRequest `json:"products"`             // 套餐商品请求列表
+	Num                float64          `json:"num"`                  // 套餐商品数量
 
 	isH5Product bool `json:"-"` // 是否是H5端下单的商品
 }

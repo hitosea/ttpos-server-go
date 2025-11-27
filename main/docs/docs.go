@@ -23117,7 +23117,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取店铺的所有权限树（包含管理APP、收银机、点餐助手等所有权限组），用于角色权限配置",
+                "description": "获取店铺的所有权限组（包含管理APP、收银机、点餐助手等所有权限组），用于角色权限配置",
                 "consumes": [
                     "application/json"
                 ],
@@ -23127,7 +23127,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.员工账号"
                 ],
-                "summary": "获取权限树",
+                "summary": "获取权限组",
                 "responses": {
                     "200": {
                         "description": "OK",

@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 24（仅 Go 代码）  
-**已完成**: 18（Phase 0 + Phase 0.5 + Phase 1 + Phase 2 + Phase 3 + WebSocket推送）  
+**总任务数**: 26（仅 Go 代码，新增国际化任务和测试）  
+**已完成**: 19（Phase 0 + Phase 0.5 + Phase 1 + Phase 2 + Phase 3 + WebSocket推送 + 国际化）  
 **进行中**: -  
-**完成率**: 75%
+**完成率**: 73%
 
 > **注意**: 本 Spec 仅涉及 Go Main 模块开发，不涉及 PHP Admin 和 Vue 前端模块。
 
@@ -116,6 +116,15 @@
   - **Requirements**: R0.5.7
   - **Leverage**: 现有 Repository: `main/app/repository/access.go` 的 `GetAccessUuids` 方法
   - **Status**: ✅ 已完成，新增 `GetRolePermissions` 方法，在 `GetRolePermissions` Handler 中调用
+
+- [x] 0.5.8 权限名称国际化支持
+
+  - **Module**: Main - Service 层
+  - **File**: `main/app/service/role_access.go`
+  - **Purpose**: 在获取权限树时，根据请求头的 Accept-Language 返回对应语言的权限名称
+  - **Requirements**: R0.5.8
+  - **Leverage**: 现有国际化配置: `main/i18n/`，`i18n.Translate` 方法
+  - **Status**: ✅ 已完成，在 `GetCompanyPermissionGroup` 方法中遍历权限组，调用 `translatePermission(root, ctx.GetLanguage())` 方法进行国际化翻译。`translatePermission` 递归翻译所有子权限，使用 `i18n.Translate(language, permission.Name)` 实现翻译逻辑
 
 ---
 
@@ -292,6 +301,14 @@
   - **Requirements**: R4.1-R4.4
   - **Leverage**: Task 2.7 的单元测试，Task 3.1 的权限筛选实现
   - **Prompt**: Role: QA Engineer | Task: 测试权限筛选逻辑 | Context: 测试总部商户隐藏品采收货权限（UUID: 2858560786432000），测试已对接ERP隐藏进销存权限（UUID: 2857919057920000），测试关闭渠道营收统计隐藏相关权限，测试授权配置动态隐藏权限 | Restrictions: 覆盖所有权限筛选场景 | Success: 权限筛选逻辑测试通过
+
+- [ ] 4.3.1 权限名称国际化测试
+
+  - **File**: `main/app/service/role_srv_test.go` 或 `main/app/api/v1/shop/shop_staff_test.go`
+  - **Purpose**: 测试权限名称国际化功能是否正常工作
+  - **Requirements**: R0.5.8
+  - **Leverage**: Task 0.5.8 的国际化实现
+  - **Prompt**: Role: QA Engineer | Task: 测试权限名称国际化 | Context: 测试请求头 Accept-Language=zh 返回中文权限名称，测试 Accept-Language=en 返回英文权限名称，测试不存在的语言回退到中文，测试未指定语言默认使用中文 | Restrictions: 覆盖所有国际化场景 | Success: 国际化测试通过
 
 - [ ] 4.4 文档更新
 
