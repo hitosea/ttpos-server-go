@@ -1929,6 +1929,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 		repository.NewProductPackageRepo(db).WithProductPackageGroups(
 			repository.CommonRepo.WhereBySoftDelete(),
 		),
+		repository.NewProductPackageRepo(db).WithProductPackageGroupMultiLanguageName(),
 		repository.NewProductPackageRepo(db).WithProductPackageGroupItems(
 			repository.CommonRepo.WhereBySoftDelete(),
 		),
