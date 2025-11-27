@@ -4,9 +4,9 @@
 
 ## 📋 概述
 
-在创建订单时，系统需要根据请求上下文（JWT token 中的 source 信息）自动设置 `SaleBill` 表的 `source` 字段值，以准确记录订单来自哪个客户端。该功能主要涉及常量定义和订单创建逻辑的修改，不涉及数据库结构变更（字段已存在）。
+在创建订单时，系统需要根据请求上下文（JWT token 中的 source 信息和请求头中的 `Client-Version`）自动设置 `SaleBill` 表的 `source` 和 `client_version` 字段值，以准确记录订单来自哪个客户端和客户端版本。该功能主要涉及数据库迁移、常量定义和订单创建逻辑的修改。
 
-**技术定位**：纯后端逻辑修改，无前端变更，无新增 API 接口。
+**技术定位**：纯后端逻辑修改，无前端变更，无新增 API 接口。**核心原则**：`source` 和 `client_version` 必须在同一位置、同一时机一起设置，确保数据一致性。
 
 ---
 
@@ -30,7 +30,10 @@
 - ✅ `source` 字段已存在于 `ttpos_sale_bill` 表中
 - ✅ 字段类型：`int(10)`，默认值：0
 - ✅ 字段注释：`订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5、5-会员端`
-- ✅ 无需新增数据库迁移
+- ⚠️ `client_version` 字段需要新增（Requirement 0）
+- ✅ 字段类型：`varchar(20)`，默认值：空字符串 `''`
+- ✅ 字段注释：`客户端版本号（如 2.10.0、2.9.0）`
+- ✅ 需要新增数据库迁移
 
 ---
 
@@ -39,14 +42,15 @@
 ### 可复用的现有组件
 
 - **JWT Source 常量**: `main/app/constant/jwt/jwt.go` - 已定义 Source 常量（SourceCashier, SourceAssistant, SourceTablet, SourceH5, SourceMember）
-- **Context 接口**: `main/pkg/context/context.go` - 提供 `GetSource()` 方法获取请求来源
-- **SaleBill 模型**: `main/app/model/sale_bill.go` - 已包含 `Source` 字段定义
+- **Context 接口**: `main/pkg/context/context.go` - 提供 `GetSource()` 和 `GetVersion()` 方法获取请求来源和版本
+- **SaleBill 模型**: `main/app/model/sale_bill.go` - 已包含 `Source` 字段定义，需新增 `ClientVersion` 字段
 - **订单创建服务**: `main/app/service/order.go`, `main/app/service/order_base.go` - 现有订单创建逻辑
 
 ### 集成点
 
-- **订单创建流程**: 在现有订单创建方法中集成 source 字段设置逻辑
+- **订单创建流程**: 在现有订单创建方法中**同时**集成 source 和 client_version 字段设置逻辑（必须一起设置）
 - **常量映射**: 新增 Source 映射函数，将 JWT Source 字符串映射到 uint 类型
+- **版本号处理**: 新增版本号格式标准化函数，统一处理版本号格式（去除前缀 `v`，统一为 x.y.z 格式）
 
 ---
 
@@ -104,11 +108,41 @@ graph TD
 | 字段 | 类型 | 说明 | 约束 |
 |------|------|------|------|
 | source | int(10) | 订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5、5-会员端 | DEFAULT 0 |
+| client_version | varchar(20) | 客户端版本号（如 2.10.0、2.9.0） | DEFAULT '' |
 
 **索引设计**:
 - 普通索引: `KEY idx_source (source)` - 已存在（用于按来源查询）
+- 普通索引: `KEY idx_client_version (client_version)` - 建议新增（用于按版本查询）
 
-**说明**: `source` 字段已存在于表中，无需新增数据库迁移。
+**数据库迁移脚本**:
+
+```php
+// admin/database/migrations/{timestamp}_add_client_version_to_sale_bill.php
+<?php
+
+use think\migration\Migrator;
+use think\migration\db\Column;
+
+class AddClientVersionToSaleBill extends Migrator
+{
+    public function change()
+    {
+        $table = $this->table('ttpos_sale_bill');
+        $table->addColumn('client_version', 'string', [
+            'limit' => 20,
+            'default' => '',
+            'comment' => '客户端版本号（如 2.10.0、2.9.0）',
+            'after' => 'source'
+        ])
+        ->addIndex(['client_version'], ['name' => 'idx_client_version'])
+        ->update();
+    }
+}
+```
+
+**说明**: 
+- `source` 字段已存在于表中
+- `client_version` 字段需要新增数据库迁移
 
 ---
 
@@ -120,9 +154,12 @@ graph TD
 // main/app/model/sale_bill.go
 // Source 字段已存在
 Source uint `gorm:"column:source;type:int(10);default:0;comment:订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5、5-会员端" json:"source"`
+
+// ClientVersion 字段需新增
+ClientVersion string `gorm:"column:client_version;type:varchar(20);default:'';comment:客户端版本号（如 2.10.0、2.9.0）" json:"client_version"`
 ```
 
-### 常量定义（新增）
+### 常量定义和工具函数（新增）
 
 ```go
 // main/app/constant/sale_bill_source.go
@@ -172,13 +209,16 @@ func MapJwtSourceToSaleBillSource(jwtSource string) uint {
 
 ### Constant 层（新增）
 
-#### Source 映射函数
+#### Source 映射函数和版本号标准化函数
 
 ```go
 // main/app/constant/sale_bill_source.go
 package constant
 
-import "ttpos-server-go/app/constant/jwt"
+import (
+	"strings"
+	"ttpos-server-go/app/constant/jwt"
+)
 
 // MapJwtSourceToSaleBillSource 将 JWT Source 映射到 SaleBill.source 字段值
 // 参数: jwtSource - JWT token 中的 source 值（如 "cashier", "assistant" 等）
@@ -200,6 +240,22 @@ func MapJwtSourceToSaleBillSource(jwtSource string) uint {
 		return SaleBillSourceDefault
 	}
 }
+
+// NormalizeClientVersion 标准化客户端版本号格式
+// 功能: 去除前缀 "v" 或 "V"，统一为 x.y.z 格式
+// 参数: version - 原始版本号（如 "2.10.0", "v2.10.0", "V2.10.0"）
+// 返回: 标准化后的版本号（如 "2.10.0"），如果为空则返回空字符串
+func NormalizeClientVersion(version string) string {
+	if version == "" {
+		return ""
+	}
+	// 去除前缀 "v" 或 "V"
+	version = strings.TrimPrefix(version, "v")
+	version = strings.TrimPrefix(version, "V")
+	// 去除前后空格
+	version = strings.TrimSpace(version)
+	return version
+}
 ```
 
 ### Service 层（修改）
@@ -212,13 +268,15 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context, request req.CreateIns
 	// ... 现有代码 ...
 	
 	// 创建销售账单
+	// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
 	saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
-		OrderNo:      orderNo,
-		SerialNo:     serialNo,
-		BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
-		DiningMethod: constant.SaleBillDiningMethodDineIn,
-		DeviceUuid:   ctx.GetDeviceUuid(),
-		Source:       constant.MapJwtSourceToSaleBillSource(ctx.GetSource()), // 新增：设置 source
+		OrderNo:       orderNo,
+		SerialNo:      serialNo,
+		BillType:      constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
+		DiningMethod:  constant.SaleBillDiningMethodDineIn,
+		DeviceUuid:    ctx.GetDeviceUuid(),
+		Source:         constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),                    // 设置 source
+		ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),                          // 设置 client_version
 	})
 	// ... 现有代码 ...
 }
@@ -231,13 +289,15 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context, request req.CreateIns
 func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.CreateDeskOrderReq) (*resp.CreateDeskOrderResp, error) {
 	// ... 现有代码 ...
 	
+	// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
+	// 在创建 SaleBill 之前设置 source 和 client_version
+	saleBill.Source = constant.MapJwtSourceToSaleBillSource(ctx.GetSource())
+	saleBill.ClientVersion = constant.NormalizeClientVersion(ctx.GetVersion())
+	
 	// 创建销售账单
 	if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {
 		return errCreateSaleBill
 	}
-	
-	// 修改：在创建 SaleBill 之前设置 source
-	saleBill.Source = constant.MapJwtSourceToSaleBillSource(ctx.GetSource())
 	
 	// ... 现有代码 ...
 }
@@ -251,6 +311,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	// ... 现有代码 ...
 	
 	// 创建销售账单
+	// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
 	saleBill, err := repository.NewOrderRepo(db).CreateSaleBill(model.SaleBill{
 		OrderNo:             orderNo,
 		SerialNo:            "",
@@ -258,7 +319,8 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		DiningMethod:        constant.SaleBillDiningMethodTakeout,
 		DeviceUuid:          ctx.GetDeviceUuid(),
 		MemberSaleOrderUuid: memberSaleOrderUuid,
-		Source:               constant.MapJwtSourceToSaleBillSource(ctx.GetSource()), // 新增：设置 source
+		Source:               constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),                    // 设置 source
+		ClientVersion:        constant.NormalizeClientVersion(ctx.GetVersion()),                          // 设置 client_version
 	})
 	// ... 现有代码 ...
 }
@@ -268,8 +330,10 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 
 ```go
 // main/app/service/order_import_service.go
-// 对于导入订单，如果没有来源信息，使用默认值 0
+// 对于导入订单，如果没有来源信息，使用默认值
+// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
 saleBill.Source = constant.SaleBillSourceDefault
+saleBill.ClientVersion = "" // 导入订单没有版本信息，使用空字符串
 ```
 
 ### Repository 层（无需修改）
@@ -311,6 +375,29 @@ saleBill.Source = constant.SaleBillSourceDefault
   // 如果 ctx.GetSource() 返回空字符串，MapJwtSourceToSaleBillSource 会返回默认值 0
   ```
 
+#### 场景 3: 客户端版本号格式不一致
+
+- **处理方式**: 使用 `NormalizeClientVersion` 函数标准化版本号格式
+- **用户影响**: 版本号统一为 x.y.z 格式，便于后续查询和分析
+- **代码示例**:
+  ```go
+  clientVersion := constant.NormalizeClientVersion(ctx.GetVersion())
+  // "v2.10.0" -> "2.10.0"
+  // "V2.10.0" -> "2.10.0"
+  // "2.10.0" -> "2.10.0"
+  // "" -> ""
+  ```
+
+#### 场景 4: 请求头中无 Client-Version
+
+- **处理方式**: 使用空字符串作为默认值
+- **用户影响**: 订单正常创建，client_version 字段为空字符串
+- **代码示例**:
+  ```go
+  clientVersion := constant.NormalizeClientVersion(ctx.GetVersion())
+  // 如果 ctx.GetVersion() 返回空字符串，NormalizeClientVersion 会返回空字符串
+  ```
+
 ---
 
 ## 🔒 安全设计
@@ -340,7 +427,8 @@ saleBill.Source = constant.SaleBillSourceDefault
 **测试内容**:
 
 - Source 映射函数：测试所有 JWT Source 值映射到正确的 source 字段值
-- 订单创建方法：测试不同来源创建订单时 source 字段设置正确
+- 版本号标准化函数：测试版本号格式标准化（去除前缀 `v`）
+- 订单创建方法：测试不同来源和版本创建订单时 source 和 client_version 字段设置正确
 
 **示例**:
 
@@ -365,6 +453,29 @@ func TestMapJwtSourceToSaleBillSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := constant.MapJwtSourceToSaleBillSource(tt.jwtSource); got != tt.want {
 				t.Errorf("MapJwtSourceToSaleBillSource() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeClientVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{"normal", "2.10.0", "2.10.0"},
+		{"with_v_lowercase", "v2.10.0", "2.10.0"},
+		{"with_V_uppercase", "V2.10.0", "2.10.0"},
+		{"with_space", " 2.10.0 ", "2.10.0"},
+		{"empty", "", ""},
+		{"only_v", "v", ""},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := constant.NormalizeClientVersion(tt.version); got != tt.want {
+				t.Errorf("NormalizeClientVersion() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -412,25 +523,38 @@ func TestMapJwtSourceToSaleBillSource(t *testing.T) {
 
 ## 📚 实现清单
 
-### Phase 1: 常量定义
+### Phase 0: 数据库迁移
+
+- [ ] 创建数据库迁移文件，新增 `client_version` 字段
+- [ ] 更新 SaleBill 模型，添加 `ClientVersion` 字段定义
+- [ ] 验证迁移脚本可以正常执行和回滚
+
+### Phase 1: 常量定义和工具函数
 
 - [x] 创建 Source 映射常量文件
 - [x] 实现 MapJwtSourceToSaleBillSource 函数
-- [x] 编写单元测试
+- [ ] 实现 NormalizeClientVersion 函数（版本号格式标准化）
+- [x] 编写单元测试（Source 映射函数）
+- [ ] 编写单元测试（版本号标准化函数）
 
 ### Phase 2: 修改订单创建逻辑
 
-- [x] 修改 CreateInstantOrder 方法
-- [x] 修改 CreateDeskOrder 方法
-- [x] 修改 createMemberOrder 方法
+- [x] 修改 CreateInstantOrder 方法（设置 source）
+- [ ] 修改 CreateInstantOrder 方法（同时设置 client_version）
+- [x] 修改 CreateDeskOrder 方法（设置 source）
+- [ ] 修改 CreateDeskOrder 方法（同时设置 client_version）
+- [x] 修改 createMemberOrder 方法（设置 source）
+- [ ] 修改 createMemberOrder 方法（同时设置 client_version）
 - [x] 检查订单导入逻辑（已设置默认值 0）
+- [ ] 检查订单导入逻辑（同时设置 client_version 为空字符串）
 
 ### Phase 3: 测试和验证
 
 - [x] 单元测试（Source 映射函数）
-- [ ] 单元测试（订单创建方法）
+- [ ] 单元测试（版本号标准化函数）
+- [ ] 单元测试（订单创建方法，验证 source 和 client_version 一起设置）
 - [ ] API 集成测试
-- [ ] 端到端测试
+- [ ] 端到端测试（验证不同来源和版本的订单字段正确）
 
 **详细任务**: 参见 `tasks.md`
 
