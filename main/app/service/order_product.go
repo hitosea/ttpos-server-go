@@ -1959,7 +1959,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 	// 往销售账单里添加商品
 	productParam := req.ProductParams{
 		FlavorProductBomUuid: productPackageFlavorBomUuid,
-		Num:                  1,
+		Num:                  request.Num,
 		Operation:            "add",
 	}
 	// 记录相关的子商品。

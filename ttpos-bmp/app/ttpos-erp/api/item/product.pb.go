@@ -30,6 +30,7 @@ type UpdateProductReq struct {
 	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码, 可选"` //内部编码, 可选
 	Disabled      bool                   `protobuf:"varint,4,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                             //是否禁用，可选
 	Attributes    []*ProductAttribute    `protobuf:"bytes,5,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"更新规格值"`                            //更新规格值
+	StockUom      string                 `protobuf:"bytes,6,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，可选"`              //库存单位，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -99,6 +100,13 @@ func (x *UpdateProductReq) GetAttributes() []*ProductAttribute {
 	return nil
 }
 
+func (x *UpdateProductReq) GetStockUom() string {
+	if x != nil {
+		return x.StockUom
+	}
+	return ""
+}
+
 type ProductAttribute struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Attribute      string                 `protobuf:"bytes,1,opt,name=attribute,proto3" json:"attribute,omitempty" dc:"属性名称, 必填"`                                //属性名称, 必填
@@ -158,6 +166,7 @@ type UpdateProductResp struct {
 	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码, 可选"` //内部编码, 可选
 	Disabled      bool                   `protobuf:"varint,4,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                             //是否禁用，可选
 	Attributes    []*ProductAttribute    `protobuf:"bytes,5,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"规格值"`                              //规格值
+	StockUom      string                 `protobuf:"bytes,6,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位"`                 //库存单位
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -227,11 +236,18 @@ func (x *UpdateProductResp) GetAttributes() []*ProductAttribute {
 	return nil
 }
 
+func (x *UpdateProductResp) GetStockUom() string {
+	if x != nil {
+		return x.StockUom
+	}
+	return ""
+}
+
 var File_item_product_proto protoreflect.FileDescriptor
 
 const file_item_product_proto_rawDesc = "" +
 	"\n" +
-	"\x12item/product.proto\x12\x04item\x1a\terp.proto\"\xca\x01\n" +
+	"\x12item/product.proto\x12\x04item\x1a\terp.proto\"\xe7\x01\n" +
 	"\x10UpdateProductReq\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12 \n" +
 	"\fnot_for_sale\x18\x02 \x01(\bR\n" +
@@ -240,10 +256,11 @@ const file_item_product_proto_rawDesc = "" +
 	"\bdisabled\x18\x04 \x01(\bR\bdisabled\x126\n" +
 	"\n" +
 	"attributes\x18\x05 \x03(\v2\x16.item.ProductAttributeR\n" +
-	"attributes\"Y\n" +
+	"attributes\x12\x1b\n" +
+	"\tstock_uom\x18\x06 \x01(\tR\bstockUom\"Y\n" +
 	"\x10ProductAttribute\x12\x1c\n" +
 	"\tattribute\x18\x01 \x01(\tR\tattribute\x12'\n" +
-	"\x0fattribute_value\x18\x02 \x01(\tR\x0eattributeValue\"\xcb\x01\n" +
+	"\x0fattribute_value\x18\x02 \x01(\tR\x0eattributeValue\"\xe8\x01\n" +
 	"\x11UpdateProductResp\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12 \n" +
 	"\fnot_for_sale\x18\x02 \x01(\bR\n" +
@@ -252,7 +269,8 @@ const file_item_product_proto_rawDesc = "" +
 	"\bdisabled\x18\x04 \x01(\bR\bdisabled\x126\n" +
 	"\n" +
 	"attributes\x18\x05 \x03(\v2\x16.item.ProductAttributeR\n" +
-	"attributes2L\n" +
+	"attributes\x12\x1b\n" +
+	"\tstock_uom\x18\x06 \x01(\tR\bstockUom2L\n" +
 	"\x0eProductService\x12:\n" +
 	"\rUpdateProduct\x12\x16.item.UpdateProductReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
