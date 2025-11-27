@@ -497,9 +497,11 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 		multiLanguageUuidColumn string   // 多语言UUID字段名
 		entityUuidColumn        string   // 实体UUID字段名
 		preloadRelations        []string // 需要预加载的关联
+		filterCondition         string   // 自定义筛选条件（可选，默认使用 headquarter_uuid = 0）
 	}
 
 	// 所有需要同步多语言的表配置（按表名字母顺序排列）
+	// 注意：product_package_group 表没有 headquarter_uuid 字段，需要通过关联 product_package 表筛选
 	tableConfigs := []tableConfig{
 		{tableName: config.Database.TablePrefix + "material", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "material_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
@@ -509,7 +511,7 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 		{tableName: config.Database.TablePrefix + "product_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_flavor", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
-		{tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid", filterCondition: "product_package_uuid IN (SELECT uuid FROM " + config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"},
 		{tableName: config.Database.TablePrefix + "product_sauce", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_unit", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "warehouse", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
@@ -519,23 +521,30 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 	multiLanguageUuidMap := make(map[uint64]bool) // 用于去重
 
 	// 从总部表中查询所有总部数据的多语言UUID
-	for _, config := range tableConfigs {
+	for _, cfg := range tableConfigs {
 		var records []map[string]any
-		err := headquarterDB.Table(config.tableName).
-			Select(config.multiLanguageUuidColumn).
+		query := headquarterDB.Table(cfg.tableName).
+			Select(cfg.multiLanguageUuidColumn).
 			Where("delete_time = 0").
-			Where("headquarter_uuid = 0").
-			Where(config.multiLanguageUuidColumn + " > 0").
-			Find(&records).Error
+			Where(cfg.multiLanguageUuidColumn + " > 0")
+
+		// 使用自定义筛选条件或默认条件（headquarter_uuid = 0）
+		if cfg.filterCondition != "" {
+			query = query.Where(cfg.filterCondition)
+		} else {
+			query = query.Where("headquarter_uuid = 0")
+		}
+
+		err := query.Find(&records).Error
 		if err != nil {
 			logger.Logger.Error("同步多语言-查询表失败",
-				zap.String("table", config.tableName),
+				zap.String("table", cfg.tableName),
 				zap.Error(err))
 			continue
 		}
 
 		for _, record := range records {
-			if uuid, ok := record[config.multiLanguageUuidColumn].(uint64); ok && uuid > 0 {
+			if uuid, ok := record[cfg.multiLanguageUuidColumn].(uint64); ok && uuid > 0 {
 				multiLanguageUuidMap[uuid] = true
 			}
 		}
