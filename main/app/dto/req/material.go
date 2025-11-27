@@ -347,8 +347,8 @@ type MaterialStatusReq struct {
 
 // MaterialBatchUpdateVisibleReq 批量更新物品可见性请求
 type MaterialBatchUpdateVisibleReq struct {
-	Uuids                []uint64 `json:"uuids" binding:"required"`                  // 物品UUID列表
-	AllowSubstoreVisible int      `json:"allow_substore_visible" binding:"required"` // 允许子店可见：1-允许，0-不允许
+	Uuids                []uint64 `json:"uuids" binding:"required"` // 物品UUID列表
+	AllowSubstoreVisible int      `json:"allow_substore_visible"`   // 允许子店可见：1-允许，0-不允许
 }
 
 func (r *MaterialBatchUpdateVisibleReq) Validate() error {
