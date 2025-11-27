@@ -34409,6 +34409,10 @@ const docTemplate = `{
                     "description": "材料编码",
                     "type": "string"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "name": {
                     "description": "材料名称",
                     "type": "string"
