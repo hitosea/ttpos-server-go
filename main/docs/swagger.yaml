@@ -11896,9 +11896,15 @@ definitions:
       flavor_uuid:
         description: 某个规格商品ID
         type: integer
+      num:
+        description: 套餐子商品数量
+        type: number
       product_package_group_uuid:
         description: 套餐分组UUID
         type: integer
+      unit_num:
+        description: 每份数量
+        type: number
     type: object
   resp.PageMeta:
     properties:
@@ -33898,6 +33904,17 @@ paths:
       consumes:
       - application/json
       description: 用户分析统计查询
+      parameters:
+      - description: 开始时间戳（Unix秒）
+        format: int64
+        in: query
+        name: start_time
+        type: integer
+      - description: 结束时间戳（Unix秒）
+        format: int64
+        in: query
+        name: end_time
+        type: integer
       produces:
       - application/json
       responses:
@@ -33920,6 +33937,17 @@ paths:
       consumes:
       - application/json
       description: 导出用户分析统计
+      parameters:
+      - description: 开始时间戳（Unix秒）
+        format: int64
+        in: query
+        name: start_time
+        type: integer
+      - description: 结束时间戳（Unix秒）
+        format: int64
+        in: query
+        name: end_time
+        type: integer
       produces:
       - application/json
       responses:
