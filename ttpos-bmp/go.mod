@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.23.5
 
-require github.com/gogf/gf/v2 v2.9.4
+require github.com/gogf/gf/v2 v2.9.5
 
 require (
 	github.com/ace-zhaoy/go-id v1.0.6

@@ -77,6 +77,8 @@ github.com/gogf/gf/contrib/trace/otlphttp/v2 v2.9.4 h1:StdyjVYbiA3WA6d8QlawhaVtj
 github.com/gogf/gf/contrib/trace/otlphttp/v2 v2.9.4/go.mod h1:MbIU4D0dn9yaOIP0OUhfJ8uzJKIFbEE7rL/ka/FRpXU=
 github.com/gogf/gf/v2 v2.9.4 h1:6vleEWypot9WBPncP2GjbpgAUeG6Mzb1YESb9nPMkjY=
 github.com/gogf/gf/v2 v2.9.4/go.mod h1:Ukl+5HUH9S7puBmNLR4L1zUqeRwi0nrW4OigOknEztU=
+github.com/gogf/gf/v2 v2.9.5 h1:1scfOdHbMP854oQaiLejl+eL+c4xfuvtWmmZiDJxbKs=
+github.com/gogf/gf/v2 v2.9.5/go.mod h1:VUb5eyJKpvW77O/dXsbbLNO/Kjrg0UycIiq0lRiBjjo=
 github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d/go.mod h1:nnjvkQ9ptGaCkuDUx6wNykzzlUixGxvkme+H/lnzb+A=
 github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9vvo=
 github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=

@@ -31,12 +31,6 @@ type (
 		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *gjson.Json, err error)
 		// GetSiteCode 获取站点编码
 		GetSiteCode(ctx context.Context) string
-		// GetAndProcessSiteApiSecret 获取并处理 api_secret
-		// 如果 api_secret 不是 base64 编码，则先使用 gaes.Encrypt 加密，再用 gbase64.Encode 编码后保存并返回
-		GetAndProcessSiteAuthorization(ctx context.Context, siteCode string) (*SiteAuthorization, error)
-		// GetAndProcessCashierApiSecret 获取并处理收银员的 api_secret
-		// 如果 api_secret 不是 base64 编码，则先使用 gaes.Encrypt 加密，再用 gbase64.Encode 编码后保存并返回
-		GetAndProcessCashierAuthorization(ctx context.Context, cashierEmail string) (string, error)
 	}
 	IReport interface {
 		Run(ctx context.Context, params *erp.ReportParams) (rst *gjson.Json, err error)
