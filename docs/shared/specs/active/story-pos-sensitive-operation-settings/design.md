@@ -4,7 +4,7 @@
 
 ## 📋 概述
 
-在收银机和点餐助手端实现敏感操作（折扣/退款）的权限验证功能。当普通员工进行折扣或退款操作时，系统判断当前员工是否为授权验证人：
+在收银机和点餐助手端实现敏感操作（折扣/退款/免单）的权限验证功能。当普通员工进行折扣、退款或免单操作时，系统判断当前员工是否为授权验证人：
 - **如果是授权员工**：无需输入密码，直接进行下一步操作
 - **如果不是授权员工**：弹出授权验证弹窗，要求输入授权员工账号（邮箱或手机号）和权限密码
 
@@ -44,6 +44,10 @@
 
 - **退款接口**: `main/app/api/v1/cashier/cashier_order.go` - `ReturnOrder` 方法
 - **折扣接口**: `main/app/api/v1/cashier/cashier_instant.go` - `OrderDiscount` 方法
+- **免单接口**: `main/app/api/v1/cashier/cashier_desk.go` - `OrderFree` 方法（桌台免单）
+- **免单接口**: `main/app/api/v1/cashier/cashier_instant.go` - `OrderFree` 方法（点餐页面免单）
+- **免单接口**: `main/app/api/v1/assistant/assistant_desk.go` - `OrderFree` 方法（助手端免单）
+- **免单 Service**: `main/app/service/order_pay.go` - `InstantOrderFree` 方法
 - **订单操作记录**: `main/app/model/sale_order_operation_record.go` - 订单操作记录模型
 - **业务设置 Service**: `main/app/service/setting/setting.go` - 业务设置处理逻辑
 - **员工 Service**: `main/app/service/staff.go` - 员工查询逻辑
@@ -54,6 +58,9 @@
 - **密码验证接口**: `/cashier/order/verify_password` - 新建接口
 - **退款接口**: `/cashier/order/return` - 扩展现有接口
 - **折扣接口**: `/cashier/instant/order/discount` - 扩展现有接口
+- **免单接口**: `/cashier/desk/order/free` - 扩展现有接口（收银端桌台免单）
+- **免单接口**: `/cashier/instant/order/free` - 扩展现有接口（收银端点餐页面免单）
+- **免单接口**: `/assistant/desk/order/free` - 扩展现有接口（助手端免单）
 - **业务设置**: `setting` 表，key 为 `business`，values 为 JSON
 
 ---
@@ -111,6 +118,13 @@ graph TD
     C4 --> D1
     C4 --> D2
     C4 --> F
+    
+    A1 --> B5[免单接口]
+    A2 --> B5
+    B5 --> C5[Order Service]
+    C5 --> D1
+    C5 --> D2
+    C5 --> F
 ```
 
 ### 模块划分
@@ -120,9 +134,13 @@ graph TD
 - **API 层**: 
   - `main/app/api/v1/cashier/cashier_order.go` - 检查授权、密码验证、退款接口
   - `main/app/api/v1/cashier/cashier_instant.go` - 折扣接口
+  - `main/app/api/v1/cashier/cashier_desk.go` - 免单接口（桌台免单）
+  - `main/app/api/v1/cashier/cashier_instant.go` - 免单接口（点餐页面免单）
+  - `main/app/api/v1/assistant/assistant_desk.go` - 免单接口（助手端免单）
 - **Service 层**: 
   - `main/app/service/order_manage.go` - 退款 Service
   - `main/app/service/order_discount.go` - 折扣 Service
+  - `main/app/service/order_pay.go` - 免单 Service
   - `main/app/service/setting/setting.go` - 业务设置 Service（复用）
   - `main/app/service/staff.go` - 员工 Service（复用）
 - **Repository 层**: 
@@ -272,6 +290,23 @@ type OrderZeroRuleReq struct {
 }
 ```
 
+#### 免单请求扩展
+
+```go
+// main/app/dto/req/instant.go
+type InstantOrderFreeReq struct {
+    // ... 现有字段 ...
+    SaleBillUuid  uint64   `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+    SaleOrderUuid uint64   `json:"sale_order_uuid"` // 销售订单UUID, 必填
+    ReasonIds     []uint64 `json:"reason_ids"`      // 免单原因标签ids
+    Reason        string   `json:"reason"`          // 原因
+    
+    // 新增字段（可选）
+    AuthorizedStaffAccount string `json:"authorized_staff_account"` // 授权员工账号（邮箱或手机号）
+    AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
+}
+```
+
 #### 授权员工信息（操作记录）
 
 ```go
@@ -378,6 +413,14 @@ type AuthorizedStaffInfo struct {
 
 - **URL**: `/cashier/order/return`
 - **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json",
+    "Client-Version": "v2.10.0"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -389,7 +432,10 @@ type AuthorizedStaffInfo struct {
   }
   ```
 
-**注意**: `authorized_staff_account` 和 `authorized_staff_password` 为可选字段，仅在当前员工不在授权名单中时需要。
+**注意**: 
+- `authorized_staff_account` 和 `authorized_staff_password` 为可选字段，仅在当前员工不在授权名单中时需要
+- `Client-Version` 请求头为可选，格式为 `v2.10.0` 或 `2.10.0`
+- 如果版本 < v2.10.0 或未传递版本信息，不进行权限验证（向后兼容）
 
 #### API: 整单改价接口（扩展）
 
@@ -397,6 +443,14 @@ type AuthorizedStaffInfo struct {
 
 - **URL**: `/cashier/desk/order/discount` 或 `/cashier/instant/order/discount`
 - **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json",
+    "Client-Version": "v2.10.0"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -409,12 +463,22 @@ type AuthorizedStaffInfo struct {
   }
   ```
 
+**注意**: `Client-Version` 请求头为可选，如果版本 < v2.10.0 或未传递版本信息，不进行权限验证（向后兼容）
+
 #### API: 打折接口（扩展）
 
 **请求**:
 
 - **URL**: `/cashier/desk/order/discount` 或 `/cashier/instant/order/discount`
 - **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json",
+    "Client-Version": "v2.10.0"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -427,12 +491,22 @@ type AuthorizedStaffInfo struct {
   }
   ```
 
+**注意**: `Client-Version` 请求头为可选，如果版本 < v2.10.0 或未传递版本信息，不进行权限验证（向后兼容）
+
 #### API: 抹零接口（扩展）
 
 **请求**:
 
 - **URL**: `/cashier/desk/order/discount` 或 `/cashier/instant/order/discount`
 - **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json",
+    "Client-Version": "v2.10.0"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -445,7 +519,9 @@ type AuthorizedStaffInfo struct {
   }
   ```
 
-**注意**: `authorized_staff_account` 和 `authorized_staff_password` 为可选字段，仅在当前员工不在授权名单中时需要。
+**注意**: 
+- `authorized_staff_account` 和 `authorized_staff_password` 为可选字段，仅在当前员工不在授权名单中时需要
+- `Client-Version` 请求头为可选，如果版本 < v2.10.0 或未传递版本信息，不进行权限验证（向后兼容）
 
 ---
 
@@ -622,21 +698,72 @@ func (s *orderSrv) AuthorizeSensitiveOperation(ctx context.Context, operationTyp
 - 通过 `SensitiveOperationType` 区分操作类型，自动选择对应的验证方法
 - 返回授权员工信息，便于后续操作记录
 
+#### 版本判断工具方法
+
+```go
+// main/app/service/order_manage.go 或新建文件
+
+// shouldRequireAuth 判断是否需要权限验证
+// 根据客户端版本判断是否需要权限验证
+func shouldRequireAuth(clientVersion string) bool {
+    if clientVersion == "" {
+        return false // 未传递版本，视为旧版本，不验证
+    }
+    
+    // 解析版本号（支持 v2.10.0 或 2.10.0 格式）
+    version := parseVersion(clientVersion)
+    if version == nil {
+        return false // 无法解析版本，视为旧版本，不验证
+    }
+    
+    // 目标版本 v2.10.0
+    targetVersion := parseVersion("2.10.0")
+    return version.Compare(targetVersion) >= 0 // >= v2.10.0 才验证
+}
+
+// parseVersion 解析版本号
+// 支持格式：v2.10.0, 2.10.0, 2.10.0.1
+func parseVersion(versionStr string) *semver.Version {
+    // 移除前缀 v
+    if strings.HasPrefix(versionStr, "v") {
+        versionStr = versionStr[1:]
+    }
+    
+    // 使用 go-semver 或类似库解析
+    version, err := semver.NewVersion(versionStr)
+    if err != nil {
+        return nil
+    }
+    
+    return version
+}
+```
+
 #### 退款 Service 增强
 
 ```go
 // main/app/service/order_manage.go
 func (s *orderSrv) ReturnOrder(ctx context.Context, orderReq req.OrderReturnReq) (error, int) {
-    // 1. 授权验证（退款操作）
+    // 1. 版本判断：从请求头获取客户端版本
+    clientVersion := ctx.GetHeader("Client-Version")
+    
+    // 2. 如果版本 < v2.10.0，不进行权限验证，直接执行退款
+    if !shouldRequireAuth(clientVersion) {
+        // 直接执行退款逻辑（现有代码）
+        // ...
+        return nil, constant.CodeSuccess
+    }
+    
+    // 3. 版本 >= v2.10.0，进行授权验证（退款操作）
     authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeRefund, orderReq.AuthorizedStaffAccount, orderReq.AuthorizedStaffPassword)
     if err != nil {
         return errors.WithMessage(err), constant.CodeFail
     }
     
-    // 2. 执行退款逻辑（现有代码）
+    // 4. 执行退款逻辑（现有代码）
     // ...
     
-    // 3. 创建操作记录（如果使用了授权验证，记录授权员工信息）
+    // 5. 创建操作记录（如果使用了授权验证，记录授权员工信息）
     // 将 authorizedStaff 传递给操作记录创建逻辑
     // ...
 }
@@ -647,16 +774,26 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, orderReq req.OrderReturnReq)
 ```go
 // main/app/service/order_discount.go
 func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmountChangeReq) (*resp.ShopCart, error) {
-    // 1. 授权验证（折扣操作：整单改价）
+    // 1. 版本判断：从请求头获取客户端版本
+    clientVersion := ctx.GetHeader("Client-Version")
+    
+    // 2. 如果版本 < v2.10.0，不进行权限验证，直接执行整单改价
+    if !shouldRequireAuth(clientVersion) {
+        // 直接执行整单改价逻辑（现有代码）
+        // ...
+        return shopCart, nil
+    }
+    
+    // 3. 版本 >= v2.10.0，进行授权验证（折扣操作：整单改价）
     authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
     if err != nil {
         return nil, errors.WithMessage(err)
     }
     
-    // 2. 执行整单改价逻辑（现有代码）
+    // 4. 执行整单改价逻辑（现有代码）
     // ...
     
-    // 3. 创建操作记录（如果使用了授权验证，记录授权员工信息）
+    // 5. 创建操作记录（如果使用了授权验证，记录授权员工信息）
     // 将 authorizedStaff 传递给操作记录创建逻辑
     // ...
 }
@@ -667,16 +804,26 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmoun
 ```go
 // main/app/service/order_discount.go
 func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountReq) (*resp.ShopCart, error) {
-    // 1. 授权验证（折扣操作：打折）
+    // 1. 版本判断：从请求头获取客户端版本
+    clientVersion := ctx.GetHeader("Client-Version")
+    
+    // 2. 如果版本 < v2.10.0，不进行权限验证，直接执行打折
+    if !shouldRequireAuth(clientVersion) {
+        // 直接执行打折逻辑（现有代码）
+        // ...
+        return shopCart, nil
+    }
+    
+    // 3. 版本 >= v2.10.0，进行授权验证（折扣操作：打折）
     authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
     if err != nil {
         return nil, errors.WithMessage(err)
     }
     
-    // 2. 执行打折逻辑（现有代码）
+    // 4. 执行打折逻辑（现有代码）
     // ...
     
-    // 3. 创建操作记录（如果使用了授权验证，记录授权员工信息）
+    // 5. 创建操作记录（如果使用了授权验证，记录授权员工信息）
     // 将 authorizedStaff 传递给操作记录创建逻辑
     // ...
 }
@@ -687,17 +834,59 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountR
 ```go
 // main/app/service/order_discount.go
 func (s *orderSrv) OrderZeroRule(ctx context.Context, request req.OrderZeroRuleReq) (*resp.ShopCart, error) {
-    // 1. 授权验证（折扣操作：抹零）
+    // 1. 版本判断：从请求头获取客户端版本
+    clientVersion := ctx.GetHeader("Client-Version")
+    
+    // 2. 如果版本 < v2.10.0，不进行权限验证，直接执行抹零
+    if !shouldRequireAuth(clientVersion) {
+        // 直接执行抹零逻辑（现有代码）
+        // ...
+        return shopCart, nil
+    }
+    
+    // 3. 版本 >= v2.10.0，进行授权验证（折扣操作：抹零）
     authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
     if err != nil {
         return nil, errors.WithMessage(err)
     }
     
-    // 2. 执行抹零逻辑（现有代码）
+    // 4. 执行抹零逻辑（现有代码）
     // ...
     
-    // 3. 创建操作记录（如果使用了授权验证，记录授权员工信息）
+    // 5. 创建操作记录（如果使用了授权验证，记录授权员工信息）
     // 将 authorizedStaff 传递给操作记录创建逻辑
+    // ...
+}
+```
+
+#### 免单 Service 增强
+
+```go
+// main/app/service/order_pay.go
+func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error) {
+    // 1. 版本判断：从请求头获取客户端版本
+    clientVersion := ctx.GetHeader("Client-Version")
+    
+    // 2. 如果版本 < v2.10.0，不进行权限验证，直接执行免单
+    if !shouldRequireAuth(clientVersion) {
+        // 直接执行免单逻辑（现有代码）
+        // ...
+        return res, nil
+    }
+    
+    // 3. 版本 >= v2.10.0，进行授权验证（折扣操作：免单）
+    // 免单操作在产品定义中属于折扣类型（discount_type = 4），使用折扣操作的授权验证逻辑
+    authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, req.AuthorizedStaffAccount, req.AuthorizedStaffPassword)
+    if err != nil {
+        return nil, errors.WithMessage(err)
+    }
+    
+    // 4. 执行免单逻辑（现有代码）
+    // ...
+    
+    // 5. 创建操作记录（如果使用了授权验证，记录授权员工信息）
+    // 将 authorizedStaff 传递给操作记录创建逻辑
+    // 免单操作记录中需要记录授权员工信息，与折扣操作记录保持一致
     // ...
 }
 ```
@@ -825,6 +1014,7 @@ func (h *OrderReturnAmountEventHandler) Handle(ctx context.Context, payload *eve
 - 密码验证接口
 - 退款接口增强
 - 折扣接口增强
+- 免单接口增强
 
 ### 集成测试
 
@@ -863,31 +1053,50 @@ func (h *OrderReturnAmountEventHandler) Handle(ctx context.Context, payload *eve
 - [ ] 实现权限检查 Service
 - [ ] 实现密码验证 Service
 
-### Phase 2: 退款接口增强
+### Phase 2: 版本判断逻辑开发
+
+- [ ] 实现版本解析工具方法（parseVersion）
+- [ ] 实现版本比较工具方法（shouldRequireAuth）
+- [ ] 处理版本解析错误情况
+- [ ] 处理未传递版本信息的情况
+
+### Phase 3: 退款接口增强
 
 - [ ] 修改退款 DTO，增加授权参数
-- [ ] 修改退款 Service，增加授权验证逻辑
+- [ ] 修改退款 Service，增加版本判断逻辑
+- [ ] 修改退款 Service，增加授权验证逻辑（仅在版本 >= v2.10.0 时）
 - [ ] 修改操作记录创建逻辑，记录授权员工信息
 
-### Phase 3: 折扣接口增强（整单改价、打折、抹零）
+### Phase 4: 折扣接口增强（整单改价、打折、抹零）
 
 - [ ] 修改整单改价 DTO（OrderAmountChangeReq），增加授权参数
 - [ ] 修改打折 DTO（OrderDiscountReq），增加授权参数
 - [ ] 修改抹零 DTO（OrderZeroRuleReq），增加授权参数
-- [ ] 修改整单改价 Service（OrderAmountChange），增加授权验证逻辑
-- [ ] 修改打折 Service（OrderDiscount），增加授权验证逻辑
-- [ ] 修改抹零 Service（OrderZeroRule），增加授权验证逻辑
+- [ ] 修改整单改价 Service（OrderAmountChange），增加版本判断逻辑
+- [ ] 修改打折 Service（OrderDiscount），增加版本判断逻辑
+- [ ] 修改抹零 Service（OrderZeroRule），增加版本判断逻辑
+- [ ] 修改整单改价 Service（OrderAmountChange），增加授权验证逻辑（仅在版本 >= v2.10.0 时）
+- [ ] 修改打折 Service（OrderDiscount），增加授权验证逻辑（仅在版本 >= v2.10.0 时）
+- [ ] 修改抹零 Service（OrderZeroRule），增加授权验证逻辑（仅在版本 >= v2.10.0 时）
 - [ ] 修改操作记录创建逻辑，记录授权员工信息
 
-### Phase 4: 前端实现
+### Phase 5: 免单接口增强
+
+- [ ] 修改免单 DTO（InstantOrderFreeReq），增加授权参数
+- [ ] 修改免单 Service（InstantOrderFree），增加版本判断逻辑
+- [ ] 修改免单 Service（InstantOrderFree），增加授权验证逻辑（仅在版本 >= v2.10.0 时）
+- [ ] 修改操作记录创建逻辑，在免单操作记录中记录授权员工信息
+- [ ] 确保免单操作使用折扣操作的授权验证逻辑（discount_type = 4）
+
+### Phase 6: 前端实现
 
 - [ ] 创建授权验证弹窗组件（POS）
 - [ ] 创建授权验证弹窗组件（Assistant）
 - [ ] 实现检查授权接口调用
 - [ ] 实现密码验证接口调用
-- [ ] 实现退款/折扣接口调用（带授权参数）
+- [ ] 实现退款/折扣/免单接口调用（带授权参数）
 
-### Phase 5: 测试
+### Phase 7: 测试
 
 - [ ] 单元测试
 - [ ] API 测试

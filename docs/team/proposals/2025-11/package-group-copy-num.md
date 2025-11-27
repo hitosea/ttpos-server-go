@@ -11,7 +11,7 @@
 | **提案人** | xiezhihuan   |
 | **日期**   | 2025-11-27   |
 | **目标版本** | {版本号} |
-| **状态**   | 已创建 Spec   |
+| **状态**   | 开发中（部分完成）   |
 | **关联任务** | - |
 | **关联 Spec** | [story-main-package-group-copy-num](../../../shared/specs/active/story-main-package-group-copy-num/requirements.md)      |
 

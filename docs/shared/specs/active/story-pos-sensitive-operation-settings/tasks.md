@@ -12,10 +12,20 @@
 
 ## 📊 进度总览
 
-**总任务数**: 22  
-**已完成**: 0  
+**总任务数**: 30  
+**已完成**: 8  
 **进行中**: -  
-**完成率**: 0%
+**完成率**: 26.7%
+
+**已完成任务**:
+- ✅ 1.7 扩展免单请求 DTO，增加授权参数
+- ✅ 1.13 实现版本判断工具方法（使用常量）
+- ✅ 2.1 修改退款 Service，增加版本判断和授权验证逻辑
+- ✅ 3.1 修改整单改价 Service，增加版本判断和授权验证逻辑
+- ✅ 3.2 修改打折 Service，增加版本判断和授权验证逻辑
+- ✅ 3.3 修改抹零 Service，增加版本判断和授权验证逻辑
+- ✅ 4.1 修改免单 Service，增加版本判断和授权验证逻辑
+- ✅ 4.2 修改操作记录创建逻辑，记录授权员工信息（免单）
 
 ---
 
@@ -71,9 +81,17 @@
   - Leverage: 现有的 `OrderZeroRuleReq` 结构体
   - Prompt: Role: Go Developer | Task: 在 OrderZeroRuleReq 结构体中添加授权参数字段 | Context: 需要添加 AuthorizedStaffAccount (string, 可选) 和 AuthorizedStaffPassword (string, 可选) 两个字段 | Restrictions: 遵循 .cursor/rules/go-main.mdc，字段为可选 | Success: DTO 扩展完成，字段定义正确
 
+- [x] 1.7 扩展免单请求 DTO，增加授权参数 ✅
+
+  - File: `main/app/dto/req/instant.go`
+  - Purpose: 在 InstantOrderFreeReq 中增加授权员工账号和密码字段
+  - Requirements: 7.1
+  - Leverage: 现有的 `InstantOrderFreeReq` 结构体
+  - Status: ✅ 已完成 - 已添加 `AuthorizedStaffAccount` 和 `AuthorizedStaffPassword` 字段
+
 ### API 层
 
-- [ ] 1.7 创建检查授权接口
+- [ ] 1.8 创建检查授权接口
 
   - File: `main/app/api/v1/cashier/cashier_order.go` 或新建文件
   - Purpose: 创建检查授权 API 接口
@@ -81,7 +99,7 @@
   - Leverage: 现有的 cashier_order.go 文件结构
   - Prompt: Role: Go Developer | Task: 创建检查授权 API 接口 | Context: 接口路径为 /cashier/order/check_authorization (POST)，调用 Service 的 CheckAuthorization 方法 | Restrictions: 遵循 .cursor/rules/go-main.mdc 和 .cursor/rules/api.mdc | Success: API 接口创建完成，路由注册正确，响应格式正确
 
-- [ ] 1.8 创建密码验证接口
+- [ ] 1.9 创建密码验证接口
 
   - File: `main/app/api/v1/cashier/cashier_order.go` 或新建文件
   - Purpose: 创建密码验证 API 接口
@@ -91,7 +109,7 @@
 
 ### Service 层
 
-- [ ] 1.9 实现检查授权 Service 方法
+- [ ] 1.10 实现检查授权 Service 方法
 
   - File: `main/app/service/order_manage.go` 或新建文件
   - Purpose: 实现检查当前员工是否有权限操作的逻辑
@@ -99,7 +117,7 @@
   - Leverage: `main/app/service/setting/setting.go` - 业务设置 Service
   - Prompt: Role: Go Developer | Task: 实现检查授权 Service 方法 | Context: 需要从业务设置中读取授权员工列表和密码验证开关，判断当前员工是否在授权名单中 | Restrictions: 遵循 .cursor/rules/go-main.mdc，Service 只依赖其他 Service 接口 | Success: Service 方法实现完成，逻辑正确，错误处理正确
 
-- [ ] 1.10 实现密码验证 Service 方法
+- [ ] 1.11 实现密码验证 Service 方法
 
   - File: `main/app/service/order_manage.go` 或新建文件
   - Purpose: 实现密码验证逻辑
@@ -107,17 +125,33 @@
   - Leverage: `main/app/service/staff.go` - 员工 Service，`main/app/service/setting/setting.go` - 业务设置 Service
   - Prompt: Role: Go Developer | Task: 实现密码验证 Service 方法 | Context: 需要根据账号（邮箱或手机号）查找员工，验证员工是否在授权名单中，验证密码是否正确 | Restrictions: 遵循 .cursor/rules/go-main.mdc，Service 只依赖其他 Service 接口 | Success: Service 方法实现完成，逻辑正确，错误处理正确
 
+### 版本判断逻辑
+
+- [ ] 1.12 实现版本解析工具方法
+
+  - File: `main/app/service/order_manage.go` 或新建文件（如 `main/app/utils/version.go`）
+  - Purpose: 实现版本号解析逻辑，支持 v2.10.0 或 2.10.0 格式
+  - Requirements: 3.3
+  - Leverage: Go 语义化版本号解析库（如 `github.com/Masterminds/semver/v3`）
+  - Prompt: Role: Go Developer | Task: 实现版本解析工具方法 | Context: 需要解析版本号字符串（支持 v2.10.0 或 2.10.0 格式），返回版本对象或 nil（解析失败） | Restrictions: 遵循 .cursor/rules/go-main.mdc，处理解析错误情况 | Success: 版本解析方法实现完成，支持多种格式，错误处理正确
+
+- [x] 1.13 实现版本判断工具方法 ✅
+
+  - File: `main/app/constant/version.go` (新建)
+  - Purpose: 创建版本号常量，统一管理版本号
+  - Requirements: 3.3, 3.4
+  - Status: ✅ 已完成 - 创建了 `ClientVersionV2100 = "2.10.0"` 常量，所有敏感操作使用 `ctx.Version(context.GTE, constant.ClientVersionV2100)` 进行版本判断
+
 ---
 
 ## Phase 2: 退款接口增强
 
-- [ ] 2.1 修改退款 Service，增加授权验证逻辑
+- [x] 2.1 修改退款 Service，增加版本判断和授权验证逻辑 ✅
 
   - File: `main/app/service/order_manage.go`
-  - Purpose: 在退款逻辑开始前，检查授权并验证权限
-  - Requirements: 3.2, 3.3, 3.4
-  - Leverage: 现有的 `ReturnOrder` 方法，Phase 1 创建的检查授权和密码验证方法
-  - Prompt: Role: Go Developer | Task: 在退款 Service 中增加授权验证逻辑 | Context: 如果提供了授权参数，调用密码验证方法；如果没有提供，调用检查授权方法；验证通过后记录授权员工信息 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 授权验证逻辑正确，错误处理正确
+  - Purpose: 在退款逻辑开始前，先判断版本，再检查授权并验证权限
+  - Requirements: 3.2, 3.3, 3.4, 3.5
+  - Status: ✅ 已完成 - 在 `ReturnOrder` 方法中添加了版本判断逻辑，使用 `ctx.Version(context.GTE, constant.ClientVersionV2100)` 进行版本判断
 
 - [ ] 2.2 修改操作记录创建逻辑，记录授权员工信息
 
@@ -131,29 +165,26 @@
 
 ## Phase 3: 折扣接口增强（整单改价、打折、抹零）
 
-- [ ] 3.1 修改整单改价 Service，增加授权验证逻辑
+- [x] 3.1 修改整单改价 Service，增加版本判断和授权验证逻辑 ✅
 
   - File: `main/app/service/order_discount.go`
-  - Purpose: 在整单改价逻辑开始前，检查授权并验证权限
+  - Purpose: 在整单改价逻辑开始前，先判断版本，再检查授权并验证权限
   - Requirements: 4.4, 4.7, 4.8
-  - Leverage: 现有的 `OrderAmountChange` 方法，Phase 1 创建的检查授权和密码验证方法
-  - Prompt: Role: Go Developer | Task: 在整单改价 Service 中增加授权验证逻辑 | Context: 如果提供了授权参数，调用密码验证方法；如果没有提供，调用检查授权方法；验证通过后记录授权员工信息 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 授权验证逻辑正确，错误处理正确
+  - Status: ✅ 已完成 - 在 `OrderAmountChange` 方法中添加了版本判断逻辑
 
-- [ ] 3.2 修改打折 Service，增加授权验证逻辑
+- [x] 3.2 修改打折 Service，增加版本判断和授权验证逻辑 ✅
 
   - File: `main/app/service/order_discount.go`
-  - Purpose: 在打折逻辑开始前，检查授权并验证权限
+  - Purpose: 在打折逻辑开始前，先判断版本，再检查授权并验证权限
   - Requirements: 4.5, 4.7, 4.8
-  - Leverage: 现有的 `OrderDiscount` 方法，Phase 1 创建的检查授权和密码验证方法
-  - Prompt: Role: Go Developer | Task: 在打折 Service 中增加授权验证逻辑 | Context: 如果提供了授权参数，调用密码验证方法；如果没有提供，调用检查授权方法；验证通过后记录授权员工信息 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 授权验证逻辑正确，错误处理正确
+  - Status: ✅ 已完成 - 在 `OrderDiscount` 方法中添加了版本判断逻辑
 
-- [ ] 3.3 修改抹零 Service，增加授权验证逻辑
+- [x] 3.3 修改抹零 Service，增加版本判断和授权验证逻辑 ✅
 
   - File: `main/app/service/order_discount.go`
-  - Purpose: 在抹零逻辑开始前，检查授权并验证权限
+  - Purpose: 在抹零逻辑开始前，先判断版本，再检查授权并验证权限
   - Requirements: 4.6, 4.7, 4.8
-  - Leverage: 现有的 `OrderZeroRule` 方法，Phase 1 创建的检查授权和密码验证方法
-  - Prompt: Role: Go Developer | Task: 在抹零 Service 中增加授权验证逻辑 | Context: 如果提供了授权参数，调用密码验证方法；如果没有提供，调用检查授权方法；验证通过后记录授权员工信息 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 授权验证逻辑正确，错误处理正确
+  - Status: ✅ 已完成 - 在 `OrderZeroRule` 方法中添加了版本判断逻辑
 
 - [ ] 3.4 修改操作记录创建逻辑，记录授权员工信息
 
@@ -165,7 +196,27 @@
 
 ---
 
-## Phase 4: 前端实现
+## Phase 4: 免单接口增强
+
+- [x] 4.1 修改免单 Service，增加版本判断和授权验证逻辑 ✅
+
+  - File: `main/app/service/order_pay.go`
+  - Purpose: 在免单逻辑开始前，先判断版本，再检查授权并验证权限
+  - Requirements: 7.2, 7.3, 7.4, 7.5, 7.6
+  - Status: ✅ 已完成 - 在 `InstantOrderFree` 方法中添加了版本判断逻辑，使用 `SensitiveOperationTypeDiscount`（免单属于折扣类型）
+
+- [x] 4.2 修改操作记录创建逻辑，记录授权员工信息 ✅
+
+  - File: `main/app/service/order_pay.go`, `main/pkg/eventbus/event/order_free_event.go`
+  - Purpose: 在创建免单操作记录时，如果使用了授权验证，记录授权员工信息
+  - Requirements: 7.7, 7.8, 6.6
+  - Status: ✅ 已完成 - 在 `FreeSaleOrderPayload` 中增加了 `AuthorizedStaff` 字段，在发布事件时记录授权员工信息，操作记录通过 `ToJsonString()` 自动包含授权员工信息
+  - Leverage: 现有的操作记录创建逻辑，参考 Phase 2.2 和 Phase 3.4 的实现
+  - Prompt: Role: Go Developer | Task: 修改操作记录创建逻辑，记录授权员工信息 | Context: 在创建免单操作记录时，如果使用了授权验证，在 data 字段的 JSON 中增加 authorized_staff 对象（包含 uuid, name, email）；免单操作在产品定义中属于折扣类型（discount_type = 4），需要与折扣操作记录保持一致 | Restrictions: 遵循 .cursor/rules/go-main.mdc 和 .cursor/rules/database.mdc | Success: 操作记录创建逻辑正确，授权员工信息正确记录
+
+---
+
+## Phase 5: 前端实现
 
 **注意**: 前端实现需要根据实际的前端技术栈（Flutter/React Native/Vue等）来确定具体实现方式。以下任务为通用描述。
 
@@ -189,15 +240,15 @@
 
 ### 接口调用
 
-- [ ] 4.3 实现检查授权接口调用
+- [ ] 5.3 实现检查授权接口调用
 
   - File: 根据前端技术栈确定
-  - Purpose: 在点击折扣/退款按钮时，调用检查授权接口
+  - Purpose: 在点击折扣/退款/免单按钮时，调用检查授权接口
   - Requirements: 5.1
   - Leverage: 现有的 API 调用封装
-  - Prompt: Role: Frontend Developer | Task: 实现检查授权接口调用 | Context: 在点击折扣/退款按钮时，先调用检查授权接口，根据返回结果决定是否弹出授权弹窗 | Restrictions: 遵循前端开发规范 | Success: 接口调用正确，逻辑正确
+  - Prompt: Role: Frontend Developer | Task: 实现检查授权接口调用 | Context: 在点击折扣/退款/免单按钮时，先调用检查授权接口，根据返回结果决定是否弹出授权弹窗 | Restrictions: 遵循前端开发规范 | Success: 接口调用正确，逻辑正确
 
-- [ ] 4.4 实现密码验证接口调用
+- [ ] 5.4 实现密码验证接口调用
 
   - File: 根据前端技术栈确定
   - Purpose: 在授权弹窗中，调用密码验证接口
@@ -205,7 +256,7 @@
   - Leverage: 现有的 API 调用封装
   - Prompt: Role: Frontend Developer | Task: 实现密码验证接口调用 | Context: 在授权弹窗中，输入账号和密码后，调用密码验证接口，处理成功和失败情况 | Restrictions: 遵循前端开发规范 | Success: 接口调用正确，错误处理正确，toast 提示正确
 
-- [ ] 4.5 实现退款接口调用（带授权参数）
+- [ ] 5.5 实现退款接口调用（带授权参数）
 
   - File: 根据前端技术栈确定
   - Purpose: 在退款时，如果使用了授权验证，传递授权参数
@@ -213,7 +264,7 @@
   - Leverage: 现有的退款接口调用
   - Prompt: Role: Frontend Developer | Task: 实现退款接口调用（带授权参数） | Context: 在调用退款接口时，如果使用了授权验证，传递 authorized_staff_account 和 authorized_staff_password 参数 | Restrictions: 遵循前端开发规范 | Success: 接口调用正确，参数传递正确
 
-- [ ] 4.6 实现折扣接口调用（带授权参数）
+- [ ] 5.6 实现折扣接口调用（带授权参数）
 
   - File: 根据前端技术栈确定
   - Purpose: 在折扣时，如果使用了授权验证，传递授权参数
@@ -221,9 +272,17 @@
   - Leverage: 现有的折扣接口调用
   - Prompt: Role: Frontend Developer | Task: 实现折扣接口调用（带授权参数） | Context: 在调用折扣接口时，如果使用了授权验证，传递 authorized_staff_account 和 authorized_staff_password 参数 | Restrictions: 遵循前端开发规范 | Success: 接口调用正确，参数传递正确
 
+- [ ] 5.7 实现免单接口调用（带授权参数）
+
+  - File: 根据前端技术栈确定
+  - Purpose: 在免单时，如果使用了授权验证，传递授权参数
+  - Requirements: 5.7
+  - Leverage: 现有的免单接口调用
+  - Prompt: Role: Frontend Developer | Task: 实现免单接口调用（带授权参数） | Context: 在调用免单接口时，如果使用了授权验证，传递 authorized_staff_account 和 authorized_staff_password 参数；免单操作需要支持收银端桌台免单、点餐页面免单和助手端免单三个接口 | Restrictions: 遵循前端开发规范 | Success: 接口调用正确，参数传递正确
+
 ### 表单验证
 
-- [ ] 4.7 实现授权弹窗表单验证
+- [ ] 5.8 实现授权弹窗表单验证
 
   - File: 根据前端技术栈确定
   - Purpose: 实现授权弹窗的表单验证逻辑
@@ -258,6 +317,14 @@
   - Requirements: 所有功能需求
   - Leverage: 现有测试框架
   - Prompt: Role: QA Engineer | Task: 测试边界情况 | Context: 测试密码错误、账号不存在、账号不是权限员工、后台修改密码后再次验证等边界情况 | Restrictions: 测试覆盖完整 | Success: 边界测试通过
+
+- [ ] 5.4 版本兼容性测试
+
+  - File: `test/`（或相应测试目录）
+  - Purpose: 测试版本兼容性功能
+  - Requirements: 3.3, 3.4, 4.7
+  - Leverage: 现有测试框架
+  - Prompt: Role: QA Engineer | Task: 测试版本兼容性 | Context: 测试旧版本客户端（< v2.10.0）不进行权限验证、新版本客户端（>= v2.10.0）进行权限验证、未传递版本信息时默认不验证、版本号格式错误时默认不验证等场景 | Restrictions: 测试覆盖完整 | Success: 版本兼容性测试通过
 
 ---
 
