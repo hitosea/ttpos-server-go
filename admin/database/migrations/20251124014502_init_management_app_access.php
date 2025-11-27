@@ -243,8 +243,8 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2858518843392000, 'name' => '审核', 'path' => 'brand_purchase_internal_approve', 'api_path' => '', 'parent_uuid' => 2858468511744000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 删除
             ['uuid' => 2858535620608000, 'name' => '删除', 'path' => 'brand_purchase_internal_delete', 'api_path' => '', 'parent_uuid' => 2858468511744000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
-            // 品牌采购(内部)
-            ['uuid' => 2858548203520000, 'name' => '品牌采购(内部)', 'path' => 'brand_purchase_internal_receipt', 'api_path' => '', 'parent_uuid' => 2857919057920000, 'sort' => 9, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 品采收货(内部)
+            ['uuid' => 2858548203520000, 'name' => '品采收货(内部)', 'path' => 'brand_purchase_internal_receipt', 'api_path' => '', 'parent_uuid' => 2857919057920000, 'sort' => 9, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 收货
             ['uuid' => 2858560786432000, 'name' => '收货', 'path' => 'brand_purchase_internal_receipt_receive', 'api_path' => '', 'parent_uuid' => 2858548203520000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 供应商档案
