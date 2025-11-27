@@ -131,10 +131,16 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmoun
 		ctx.AddLock()
 	}
 
-	// 授权验证（折扣操作：整单改价）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（折扣操作：整单改价）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	if err := request.Validate(); err != nil {
@@ -219,10 +225,16 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountR
 		ctx.AddLock()
 	}
 
-	// 授权验证（折扣操作：打折）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（折扣操作：打折）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	if err := request.Validate(); err != nil {
@@ -321,10 +333,16 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, request req.OrderZeroRuleR
 		ctx.AddLock()
 	}
 
-	// 授权验证（折扣操作：抹零）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（折扣操作：抹零）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	if err := request.Validate(); err != nil {

@@ -1088,6 +1088,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 // InstantOrderFree 免单
 func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFreeReq) (*resp.OrderFinishResp, error) {
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（免单操作属于折扣类型，使用折扣操作的授权验证逻辑）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeDiscount, req.AuthorizedStaffAccount, req.AuthorizedStaffPassword)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 获取销售账单信息
@@ -1255,7 +1267,8 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			})
 		}
 
-		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
+		// 构建免单事件 Payload
+		freePayload := event.FreeSaleOrderPayload{
 			BasePayload: event.BasePayload{ // 免单
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
@@ -1271,7 +1284,16 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			ChangeDue:     0, // 免单时，找零金额为0
 			IsFree:        utils.BoolToUint(true),
 			DiscountMoney: saleOrder.GetAmount(),
-		})
+		}
+		// 如果使用了授权验证，记录授权员工信息
+		if authorizedStaff != nil {
+			freePayload.AuthorizedStaff = &event.AuthorizedStaffInfo{
+				Uuid:  authorizedStaff.Uuid,
+				Name:  authorizedStaff.RealName,
+				Email: authorizedStaff.Username,
+			}
+		}
+		s.bus.PublishFreeSaleOrderEvent(freePayload)
 	})
 
 	// 发布"统计"事件

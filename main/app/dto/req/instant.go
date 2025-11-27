@@ -116,6 +116,9 @@ type InstantOrderFreeReq struct {
 	SaleOrderUuid uint64   `json:"sale_order_uuid"` // 销售订单UUID, 必填
 	ReasonIds     []uint64 `json:"reason_ids"`      // 免单原因标签ids
 	Reason        string   `json:"reason"`          // 原因
+	// 授权参数（可选，用于敏感操作权限验证）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // InstantOrderPaymentZeroRuleReq 设置结账抹零规则请求

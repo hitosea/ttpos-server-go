@@ -3,6 +3,7 @@ package req
 import (
 	"regexp"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
@@ -26,7 +27,7 @@ type UpdateStaffReq struct {
 // 版本兼容性处理：低于 2.10.0 版本，直接设置默认值 666888
 func (r *UpdateStaffReq) Validate(ctx context.Context) error {
 	// 版本兼容性处理：低于 2.10.0 版本，直接设置默认值
-	if ctx.Version(context.LT, "2.10.0") {
+	if ctx.Version(context.LT, constant.ClientVersionV2100) {
 		r.PermissionPassword = DefaultPermissionPassword
 		return nil
 	}
@@ -84,7 +85,7 @@ type AddStaffReq struct {
 // 版本兼容性处理：低于 2.10.0 版本，直接设置默认值 666888
 func (r *AddStaffReq) Validate(ctx context.Context) error {
 	// 版本兼容性处理：低于 2.10.0 版本，直接设置默认值
-	if ctx.Version(context.LT, "2.10.0") {
+	if ctx.Version(context.LT, constant.ClientVersionV2100) {
 		r.PermissionPassword = DefaultPermissionPassword
 		return nil
 	}

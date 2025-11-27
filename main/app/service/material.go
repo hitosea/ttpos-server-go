@@ -895,7 +895,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		InternalCode:    request.InternalCode,
 		AllowSubstoreVisible: func() int {
 			// 如果前端版本号小于 2.10，则都等于 1
-			if ctx.Version(context.LT, "2.10.0") {
+			if ctx.Version(context.LT, constant.ClientVersionV2100) {
 				return 1
 			}
 			return request.AllowSubstoreVisible
@@ -1120,7 +1120,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}(),
 			AllowSubstoreVisible: func() int {
 				// 如果前端版本号小于 2.10，则都等于 1
-				if ctx.Version(context.LT, "2.10.0") {
+				if ctx.Version(context.LT, constant.ClientVersionV2100) {
 					return 1
 				}
 				return request.AllowSubstoreVisible

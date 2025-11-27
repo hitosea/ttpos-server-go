@@ -965,10 +965,16 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 		ctx.AddLock()
 	}
 
-	// 授权验证（退款操作）
-	authorizedStaff, err := s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeRefund, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
-	if err != nil {
-		return errors.WithMessage(err), constant.CodeFail
+	// 版本判断：从请求头获取客户端版本
+	// 如果版本 >= v2.10.0，进行权限验证；否则不进行权限验证（向后兼容）
+	var authorizedStaff *model.Staff
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		// 版本 >= v2.10.0，进行授权验证（退款操作）
+		var err error
+		authorizedStaff, err = s.AuthorizeSensitiveOperation(ctx, SensitiveOperationTypeRefund, request.AuthorizedStaffAccount, request.AuthorizedStaffPassword)
+		if err != nil {
+			return errors.WithMessage(err), constant.CodeFail
+		}
 	}
 
 	// 获取门店设置

@@ -16,6 +16,8 @@ type FreeSaleOrderPayload struct {
 	ChangeDue     float64         `json:"change_due"`     // 找零金额
 	IsFree        uint            `json:"is_free"`        // 是否免单
 	DiscountMoney float64         `json:"discount_money"` // 免单金额
+	// 授权员工信息（可选，仅在使用了授权验证时存在）
+	AuthorizedStaff *AuthorizedStaffInfo `json:"authorized_staff,omitempty"`
 }
 
 func (payload *FreeSaleOrderPayload) ToJsonString() string {
