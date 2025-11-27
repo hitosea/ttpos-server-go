@@ -43,7 +43,7 @@ description: 文档创建规范
 | **集成指南**       | `integration-template.md`     | `docs/shared/integrations/{service}/`           | `wechat-pay/setup.md`         |
 | **版本迁移**       | `migration-template.md`       | `docs/shared/migration/v{old}-to-v{new}.md`     | `v2.0-to-v2.1.md`             |
 | **功能规格**       | `requirements-template.md`    | `docs/shared/specs/{level}-{app}-{feature}/`    | `story-pos-quick-payment/`    |
-| **需求提案**       | `proposal-template.md`        | `docs/team/proposals/{YYYY-MM-DD}-{name}.md`  | `2025-11-16-quick-payment.md` |
+| **需求提案**       | `proposal-template.md`        | `docs/team/proposals/{YYYY-MM}/{name}.md`  | `2025-11/quick-payment.md` |
 
 
 ---
