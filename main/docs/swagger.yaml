@@ -3273,7 +3273,7 @@ definitions:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
       permission_password:
-        description: 权限密码，4-8位数字，必填
+        description: 权限密码，4-8位数字，>= 2.10.0 版本必填
         type: string
       phone:
         description: 手机号，限制20个字符
@@ -3295,7 +3295,6 @@ definitions:
     required:
     - confirm_password
     - password
-    - permission_password
     - phone
     - real_name
     - roles

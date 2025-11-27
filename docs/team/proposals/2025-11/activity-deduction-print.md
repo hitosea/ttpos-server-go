@@ -289,8 +289,8 @@
 
 **评审结果**: ✅ 已通过  
 **决策**: 已批准开发  
-**Spec 文档**: [task-printer-activity-deduction](../../../shared/specs/active/task-printer-activity-deduction/)  
-**下一步**: 开始实施开发任务
+**Spec 文档**: [task-printer-activity-deduction](../../../shared/specs/archived/v2.10.0/task-printer-activity-deduction/)  
+**状态**: ✅ 已完成 - 已发布 v2.10.0
 
 ---
 

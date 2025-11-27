@@ -48,7 +48,7 @@ func (s *staffSrv) PaginateGetStaffs(ctx context.Context, getStaffListReq req.Ge
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(ctx.GetDbId()))
 
 	opts := []repository.DBOption{staffRepo.WithRoles()}
-	if getStaffListReq.IsFilteSuper == 1 {
+	if getStaffListReq.IsFilterSuper == 1 {
 		opts = append(opts, staffRepo.WhereIsSuper(0))
 	}
 	if getStaffListReq.Keyword != "" {
@@ -190,7 +190,9 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	if existsCompanyStaff.Phone == addReq.Phone {
 		exists = append(exists, "phone")
 	}
-
+	if len(exists) > 0 {
+		return errors.New("此内容已被占用"), exists
+	}
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 判断角色是否存在
 	roleRepo := repository.NewRoleRepo(db)

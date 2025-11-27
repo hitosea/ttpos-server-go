@@ -27,7 +27,7 @@
           <el-col :span="6" v-if="detail.nationality_uuid">
             <div class="pb16">
               <span class="gray9">{{ $t('国籍：') }}</span>
-              <span>{{ $t('国籍') }}&nbsp;{{ detail?.nationality_name }}</span>
+              <span>{{ detail?.nationality_name !== '' ? detail?.nationality_name : '-' }}</span>
             </div>
           </el-col>
           <el-col :span="6">
@@ -71,9 +71,9 @@
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.order_source_uuid">
+          <el-col :span="6" >
             <div class="pb16">
-              <span class="gray9">{{ $t('来源：') }}</span> {{ detail.order_source_name }}
+              <span class="gray9">{{ $t('来源：') }}</span> {{ detail.order_source_name !== '' ? detail.order_source_name : $t('店内') }}
             </div>
           </el-col>
           <el-col :span="6">

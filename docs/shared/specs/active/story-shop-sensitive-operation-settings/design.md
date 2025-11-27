@@ -18,6 +18,11 @@
 - data 字段必须是对象
 - 不使用 panic，返回 error
 
+### 低版本APP兼容性规范
+
+- **版本判断**：使用 `ctx.Version(context.LT, "2.10.0")` 判断是否为低于 v2.10.0 的客户端
+- **默认值处理**：低版本 APP 调用添加/编辑员工接口时，权限密码为空时设置默认值 `666888`
+
 ### PHP 规范 (php.mdc)
 
 - 遵循 MVC 分层
@@ -213,6 +218,115 @@ type UpdateBusinessSetting struct {
     RefundAuthorizedStaffIds  []uint64 `json:"refund_authorized_staff_ids"`                                     // 退款操作授权员工ID列表
 }
 ```
+
+### 低版本APP兼容性处理
+
+**DTO 层定义**：
+
+```go
+// main/app/dto/req/staff.go
+
+// DefaultPermissionPassword 默认权限密码（用于低于 2.10.0 版本的兼容性处理）
+const DefaultPermissionPassword = "666888"
+
+type AddStaffReq struct {
+    // ... 其他字段 ...
+    PermissionPassword string `json:"permission_password"` // 权限密码，4-8位数字，>= 2.10.0 版本必填
+}
+
+// Validate 验证添加员工请求参数
+// 版本兼容性处理：低于 2.10.0 版本，直接设置默认值 666888
+func (r *AddStaffReq) Validate(ctx context.Context) error {
+    // 版本兼容性处理：低于 2.10.0 版本，直接设置默认值
+    if ctx.Version(context.LT, "2.10.0") {
+        r.PermissionPassword = DefaultPermissionPassword
+        return nil
+    }
+    // >= 2.10.0 版本，权限密码必填
+    if r.PermissionPassword == "" {
+        return errors.New("权限密码不能为空")
+    }
+    // 验证权限密码格式（4-8位数字）
+    if !isValidPermissionPassword(r.PermissionPassword) {
+        return errors.New("密码必须为 4 - 8 位数字")
+    }
+    return nil
+}
+
+type UpdateStaffReq struct {
+    // ... 其他字段 ...
+    PermissionPassword string `json:"permission_password"` // 权限密码，4-8位数字，非必填
+}
+
+// Validate 验证编辑员工请求参数
+// 版本兼容性处理：低于 2.10.0 版本，直接设置默认值 666888
+func (r *UpdateStaffReq) Validate(ctx context.Context) error {
+    // 版本兼容性处理：低于 2.10.0 版本，直接设置默认值
+    if ctx.Version(context.LT, "2.10.0") {
+        r.PermissionPassword = DefaultPermissionPassword
+        return nil
+    }
+    // >= 2.10.0 版本，如果权限密码不为空，验证格式（4-8位数字）
+    if r.PermissionPassword != "" {
+        if !isValidPermissionPassword(r.PermissionPassword) {
+            return errors.New("密码必须为 4 - 8 位数字")
+        }
+    }
+    return nil
+}
+
+// isValidPermissionPassword 验证权限密码格式（4-8位数字）
+func isValidPermissionPassword(password string) bool {
+    matched, _ := regexp.MatchString(`^\d{4,8}$`, password)
+    return matched
+}
+```
+
+**API 层调用**：
+
+```go
+// main/app/api/v1/shop/shop_staff.go
+
+// AddStaff 添加员工
+func (h *StaffHandler) AddStaff(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    var addStaffReq req.AddStaffReq
+    if err := c.ShouldBindJSON(&addStaffReq); err != nil {
+        helper.HandleValidationError(c, err, addStaffReq, req.AddStaffRequestMessage)
+        return
+    }
+    // 版本兼容性验证：低于 2.10.0 版本且权限密码为空时，设置默认值
+    if err := addStaffReq.Validate(ctx); err != nil {
+        helper.ErrorWithDetail(c, constant.CodeParamError, err)
+        return
+    }
+    // ... 业务逻辑 ...
+}
+
+// UpdateStaff 编辑员工
+func (h *StaffHandler) UpdateStaff(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    var updateStaffReq req.UpdateStaffReq
+    if err := c.ShouldBindJSON(&updateStaffReq); err != nil {
+        helper.HandleValidationError(c, err, updateStaffReq, nil)
+        return
+    }
+    // 版本兼容性验证：低于 2.10.0 版本且权限密码为空时，设置默认值
+    if err := updateStaffReq.Validate(ctx); err != nil {
+        helper.ErrorWithDetail(c, constant.CodeParamError, err)
+        return
+    }
+    // ... 业务逻辑 ...
+}
+```
+
+**说明**：
+- 在 DTO 层定义 `Validate` 方法，封装版本兼容性处理逻辑
+- 使用 `ctx.Version(context.LT, "2.10.0")` 判断是否为低于 v2.10.0 的客户端
+- `context.LT` 表示 "Less Than"（小于）
+- 默认权限密码值为 `666888`
+- 低版本直接设置默认值并跳过验证，高版本进行正常的参数验证
+- API 层调用 `req.Validate(ctx)` 方法完成版本兼容性处理
 
 ### Go Service 层
 
@@ -910,9 +1024,11 @@ public function testSaveSensitiveOperationSettings()
 
 ### Phase 1: 后端实现
 
-- [ ] 扩展 Business Controller，添加新字段处理
-- [ ] 更新设置保存逻辑，支持新字段
-- [ ] 添加参数验证
+- [x] 扩展 Business Controller，添加新字段处理
+- [x] 更新设置保存逻辑，支持新字段
+- [x] 添加参数验证
+- [x] 添加员工接口低版本兼容处理（权限密码默认值 666888）
+- [x] 编辑员工接口低版本兼容处理（权限密码默认值 666888）
 
 ### Phase 2: 前端实现
 
