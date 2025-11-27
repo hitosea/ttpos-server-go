@@ -638,11 +638,18 @@ func (h *statisticsHandler) ExportChannelSales(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
 // @Success 200 {object} dto.Response{data=resp.UserAnalysisResp} "统计数据"
 // @Router /shop/statistics/user_analysis [get]
 func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	resp, err := h.businessSrv.CountUserAnalysis(ctx)
+	var req req.UserAnalysisReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	resp, err := h.businessSrv.CountUserAnalysis(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -657,11 +664,18 @@ func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
 // @Success 200 {object} dto.Response "导出任务已创建"
 // @Router /shop/statistics/user_analysis/export [get]
 func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.businessSrv.ExportUserAnalysis(ctx)
+	var req req.UserAnalysisReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	err := h.businessSrv.ExportUserAnalysis(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

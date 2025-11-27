@@ -10,7 +10,16 @@
 3. 新增用户分析统计查询 API
 4. 新增用户分析统计导出 API
 
-功能提供四个维度的订单统计分析：国籍、点餐方式来源、桌台方式来源、用餐方式。所有统计按订单数升序排序，排除已被数据管理的订单。
+功能提供四个维度的订单统计分析：国籍、点餐方式来源、桌台方式来源、用餐方式。所有统计按订单数升序排序，排除已被数据管理的订单。支持通过 `start_time` 和 `end_time` 参数筛选时间范围，未传参数时默认查询今天数据。
+
+**功能特性**：
+- 根据门店设置动态控制统计维度：
+  - 国籍统计：仅在 `EnableNationality = "1"` 时统计
+  - 点餐方式来源统计：仅在 `OrderMethod.IsCashierOrder = "1"` 时统计
+  - 桌台方式来源统计：仅在 `OrderMethod.IsTableOrder = "1"` 时统计
+- 支持时间范围筛选，未传参数时默认查询今天数据
+- 使用 i18n 进行多语言翻译（响应数据和导出文件）
+- 异步导出 Excel 文件，使用 i18n.Translate 翻译表头和表名
 
 ---
 
@@ -62,7 +71,7 @@ Repository(statistics.go CountUserAnalysis)
 Database(ttpos_statistics_sale, ttpos_sale_bill)
 ```
 
-- **API 层**：新增 `UserAnalysis`、`ExportUserAnalysis` 方法，固定查询今天数据
+- **API 层**：新增 `UserAnalysis`、`ExportUserAnalysis` 方法，支持时间范围筛选（未传参数时默认查询今天数据）
 - **Service 层**：在 `IBusinessSrv` 中扩展用户分析统计方法，负责数据组装、导出格式
 - **Repository 层**：在 `statistics.go` 中新增 `CountUserAnalysis`，按四个维度聚合统计
 
@@ -112,7 +121,10 @@ type StatisticsSale struct {
 
 ```go
 // main/app/dto/req/statistics_user_analysis_req.go
-// 无请求参数（固定查询今天数据）
+type UserAnalysisReq struct {
+    StartTime int64 `form:"start_time" json:"start_time"` // 查询开始时间戳（Unix 秒），可选，未传时默认今天开始时间
+    EndTime   int64 `form:"end_time" json:"end_time"`     // 查询结束时间戳（Unix 秒），可选，未传时默认今天结束时间
+}
 ```
 
 #### Response DTO
@@ -151,7 +163,16 @@ type UserAnalysisResp struct {
     "Content-Type": "application/json"
   }
   ```
-- **Query**: 无（固定查询今天数据）
+- **Query**:
+  | 参数 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | start_time | int64 | 否 | 查询开始时间戳（Unix 秒），未传时默认今天开始时间 |
+  | end_time | int64 | 否 | 查询结束时间戳（Unix 秒），未传时默认今天结束时间 |
+
+**示例**:
+```
+GET /api/v1/shop/statistics/user_analysis?start_time=1700000000&end_time=1700086399
+```
 
 **响应**:
 
@@ -224,7 +245,16 @@ type UserAnalysisResp struct {
     "Content-Type": "application/json"
   }
   ```
-- **Query**: 无（固定导出今天数据）
+- **Query**:
+  | 参数 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | start_time | int64 | 否 | 查询开始时间戳（Unix 秒），未传时默认今天开始时间 |
+  | end_time | int64 | 否 | 查询结束时间戳（Unix 秒），未传时默认今天结束时间 |
+
+**示例**:
+```
+GET /api/v1/shop/statistics/user_analysis/export?start_time=1700000000&end_time=1700086399
+```
 
 **响应**:
 
@@ -253,13 +283,12 @@ import (
 )
 
 // CountUserAnalysis 统计用户分析数据
-func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64) (*UserAnalysisRepoResult, error) {
-    // 1. 按国籍统计
-    //    - 先检查是否存在 nationality_uuid > 0 的订单
-    //    - 如果所有订单的 nationality_uuid = 0，则返回空数组
-    //    - 否则仅统计 nationality_uuid > 0 的订单
-    // 2. 按点餐方式来源统计（仅点餐订单）
-    // 3. 按桌台方式来源统计（仅桌台订单）
+func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, opts ...DBOption) (*UserAnalysisRepoResult, error) {
+    // 1. 按国籍统计（仅在 enableNationality 为 true 时统计）
+    //    - 仅统计 nationality_uuid > 0 的订单
+    //    - 关联 nationality 表获取国籍名称
+    // 2. 按点餐方式来源统计（仅在 enableCashierOrder 为 true 时统计，仅点餐订单）
+    // 3. 按桌台方式来源统计（仅在 enableTableOrder 为 true 时统计，仅桌台订单）
     // 4. 按用餐方式统计（点餐+桌台）
     // 所有统计排除数据管理订单，按订单数升序排序
     // 占比计算使用 decimal：percentage = decimal.NewFromInt(orderCount).Div(decimal.NewFromInt(totalCount)).Mul(decimal.NewFromInt(100)).Round(2)
@@ -283,18 +312,20 @@ type UserAnalysisItemRepo struct {
 
 1. **国籍统计**：
    - 从 `ttpos_statistics_sale` 表查询
-   - **前置检查**：如果查询范围内所有订单的 `nationality_uuid = 0`，则不统计此维度（返回空数组）
+   - **设置检查**：仅在开启国籍功能时统计（通过 `GetBusinessSetting().EnableNationality == "1"` 判断）
    - 仅统计 `nationality_uuid > 0` 的订单
-   - 关联 `ttpos_nationality` 表获取国籍名称
+   - 关联 `ttpos_nationality` 表获取国籍名称（通过 `multi_language_name_uuid` 关联多语言名称表）
    - 排除数据管理订单：`WHERE sale_bill_uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = DataManageTypeOrder)`
 
 2. **点餐方式来源统计**：
+   - **设置检查**：仅在开启点餐功能时统计（通过 `GetCashierSetting().OrderMethod.IsCashierOrder == "1"` 判断）
    - 仅统计点餐订单（`bill_type = SaleBillTypeInstant`）
    - `order_source_uuid = 0` 归类为"店内"
    - `order_source_uuid > 0` 时，从 `ttpos_order_source` 表关联获取来源名称（通过 `multi_language_name_uuid` 关联多语言名称表）
    - 如果 `order_source` 已被删除或不存在，显示原名称或"未知来源"
 
 3. **桌台方式来源统计**：
+   - **设置检查**：仅在开启桌台功能时统计（通过 `GetCashierSetting().OrderMethod.IsTableOrder == "1"` 判断）
    - 仅统计桌台订单（`bill_type = SaleBillTypeDesk`）
    - 从 `ttpos_sale_bill.source` 字段获取来源
    - 映射：`cashier` → "收银机"，`assistant` → "点餐助手"，`tablet` → "平板"，`h5` → "H5"
@@ -312,19 +343,25 @@ type UserAnalysisItemRepo struct {
 // main/app/service/business.go
 
 // CountUserAnalysis 统计用户分析数据
-func (s *businessSrv) CountUserAnalysis(ctx context.Context) (*resp.UserAnalysisResp, error) {
-    // 1. 获取今天时间范围（使用门店时区）
-    // 2. 调用 Repository.CountUserAnalysis（返回 decimal.Decimal 类型的 Percentage）
-    // 3. 转换响应格式：将 decimal.Decimal 转换为 float64（使用 .InexactFloat64() 或 .Float64()）
-    // 4. Repository 层已使用 decimal 计算占比，Service 层只需转换类型
+func (s *businessSrv) CountUserAnalysis(ctx context.Context, req req.UserAnalysisReq) (*resp.UserAnalysisResp, error) {
+    // 1. 处理时间范围：
+    //    - 如果 start_time 或 end_time 为 0，使用门店时区获取今天时间范围
+    //    - 如果都传了，使用传入的时间范围
+    //    - 校验：start_time 不能大于 end_time
+    // 2. 获取门店业务设置，检查是否开启国籍功能（EnableNationality）
+    // 3. 获取收银机设置，检查是否开启点餐功能（OrderMethod.IsCashierOrder）和桌台功能（OrderMethod.IsTableOrder）
+    // 4. 调用 Repository.CountUserAnalysis（传递 enableNationality, enableCashierOrder, enableTableOrder 参数）
+    // 5. Repository 返回的 Percentage 为 decimal.Decimal 类型，转换为 float64（使用 .InexactFloat64()）
+    // 6. 转换响应格式：使用 i18n.Translate 翻译名称
 }
 
 // ExportUserAnalysis 导出用户分析统计
-func (s *businessSrv) ExportUserAnalysis(ctx context.Context) error {
+func (s *businessSrv) ExportUserAnalysis(ctx context.Context, req req.UserAnalysisReq) error {
     // 1. 检查是否有正在导出的任务
-    // 2. 获取统计数据
-    // 3. 创建导出任务（ExportRecord）
+    // 2. 获取统计数据（使用 req 中的时间范围）
+    // 3. 创建导出任务（ExportRecord），记录时间范围参数（JSON 格式）
     // 4. 异步处理导出（生成 Excel）
+    // 5. Excel 导出使用 i18n.Translate 翻译表头和表名
 }
 ```
 
@@ -350,10 +387,25 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 ```go
 // main/app/api/v1/shop/shop_statistics.go
 
-// UserAnalysis 用户分析统计
+// UserAnalysis 用户分析统计查询
+// @Summary 用户分析统计查询
+// @Description 用户分析统计查询
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response{data=resp.UserAnalysisResp} "统计数据"
+// @Router /shop/statistics/user_analysis [get]
 func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
     ctx := helper.GetContext(c)
-    resp, err := h.businessSrv.CountUserAnalysis(ctx)
+    var req req.UserAnalysisReq
+    if err := c.ShouldBindQuery(&req); err != nil {
+        helper.HandleValidationError(c, err, req, nil)
+        return
+    }
+    resp, err := h.businessSrv.CountUserAnalysis(ctx, req)
     if err != nil {
         helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
         return
@@ -362,9 +414,24 @@ func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
 }
 
 // ExportUserAnalysis 导出用户分析统计
+// @Summary 导出用户分析统计
+// @Description 导出用户分析统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response "导出任务已创建"
+// @Router /shop/statistics/user_analysis/export [get]
 func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
     ctx := helper.GetContext(c)
-    err := h.businessSrv.ExportUserAnalysis(ctx)
+    var req req.UserAnalysisReq
+    if err := c.ShouldBindQuery(&req); err != nil {
+        helper.HandleValidationError(c, err, req, nil)
+        return
+    }
+    err := h.businessSrv.ExportUserAnalysis(ctx, req)
     if err != nil {
         helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
         return
@@ -377,7 +444,7 @@ func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
 
 ## ⚡ 缓存设计
 
-暂不实现缓存，统计查询固定查询今天数据，数据量可控。
+暂不实现缓存，统计查询支持时间范围筛选，数据量可控。
 
 ---
 
@@ -395,7 +462,12 @@ func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
 - **处理方式**: 返回错误提示"正在导出,请稍后再操作"
 - **用户影响**: 用户看到错误提示
 
-#### 场景 3: 数据库查询异常
+#### 场景 3: 时间参数校验失败
+
+- **处理方式**: 返回参数错误提示"开始时间不能大于结束时间"
+- **用户影响**: 用户看到参数错误提示
+
+#### 场景 4: 数据库查询异常
 
 - **处理方式**: 记录错误日志，返回系统错误
 - **用户影响**: 用户看到"系统错误，请稍候再试"
@@ -453,8 +525,9 @@ func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
    - 使用聚合查询，减少数据库往返
 
 2. **查询优化**:
-   - 固定查询今天数据，数据量可控
+   - 支持时间范围筛选，未传参数时默认查询今天数据
    - 使用 `GROUP BY` 和聚合函数
+   - 建议前端限制查询时间范围不超过 90 天
 
 ### 性能指标
 
@@ -473,21 +546,21 @@ func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
 
 ### Phase 2: 核心实现
 
-- [ ] 更新 `SaveSale` 方法（保存 `nationality_uuid`）
-- [ ] 实现 Repository `CountUserAnalysis` 方法
-- [ ] 实现 Service `CountUserAnalysis` 方法
-- [ ] 实现 Service `ExportUserAnalysis` 方法
-- [ ] 创建 DTO 定义
+- [x] 更新 `SaveSale` 方法（保存 `nationality_uuid`）
+- [x] 实现 Repository `CountUserAnalysis` 方法（包含设置检查：EnableNationality, IsCashierOrder, IsTableOrder）
+- [x] 实现 Service `CountUserAnalysis` 方法（包含时间范围处理、设置检查、i18n 翻译）
+- [x] 实现 Service `ExportUserAnalysis` 方法（包含 Excel 导出、i18n 翻译）
+- [x] 创建 DTO 定义（Request DTO 和 Response DTO）
 
 ### Phase 3: API 层
 
-- [ ] 实现 API Handler
-- [ ] 注册路由
+- [x] 实现 API Handler（包含查询参数绑定、Swagger 注释）
+- [x] 注册路由
 
 ### Phase 4: 导出功能
 
-- [ ] 实现 Excel 导出模板
-- [ ] 实现导出任务异步处理
+- [x] 实现 Excel 导出模板（使用 i18n.Translate 翻译表头和表名）
+- [x] 实现导出任务异步处理
 
 ### Phase 5: 测试
 

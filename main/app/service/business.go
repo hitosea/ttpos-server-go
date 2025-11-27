@@ -19,6 +19,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -61,8 +62,8 @@ type IBusinessSrv interface {
 	ExportBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) error                                                                            // 导出收款统计数据
 	CountChannelSales(ctx context.Context, req req.ChannelSalesReq) (*resp.ChannelSalesResp, error)                                                                       // 统计渠道营业数据
 	ExportChannelSales(ctx context.Context, req req.ChannelSalesReq) error                                                                                                // 导出渠道营业统计数据
-	CountUserAnalysis(ctx context.Context) (*resp.UserAnalysisResp, error)                                                                                                // 统计用户分析数据
-	ExportUserAnalysis(ctx context.Context) error                                                                                                                         // 导出用户分析统计数据
+	CountUserAnalysis(ctx context.Context, req req.UserAnalysisReq) (*resp.UserAnalysisResp, error)                                                                       // 统计用户分析数据
+	ExportUserAnalysis(ctx context.Context, req req.UserAnalysisReq) error                                                                                                // 导出用户分析统计数据
 }
 
 // businessSrv 收银服务结构体
@@ -3430,22 +3431,52 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 }
 
 // CountUserAnalysis 统计用户分析数据
-func (s *businessSrv) CountUserAnalysis(ctx context.Context) (*resp.UserAnalysisResp, error) {
+func (s *businessSrv) CountUserAnalysis(ctx context.Context, req req.UserAnalysisReq) (*resp.UserAnalysisResp, error) {
 	db := ctx.GetDB()
 	statisticsRepo := repository.NewStatisticsRepo(db)
 	dataManageRepo := repository.NewDataManageRepo(db)
 	commonRepo := repository.NewCommonRepo()
 
-	// 获取今天时间范围（使用门店时区）
-	timezone := ctx.GetCompanySetting().Timezone
-	timezoneUtil := utils.SetTimezone(timezone)
-	startTime, endTime := timezoneUtil.TodayStartEndUnix()
+	// 处理默认时间：如果未传时间，使用今日范围
+	startTime := req.StartTime
+	endTime := req.EndTime
+	if startTime == 0 || endTime == 0 {
+		timezone := ctx.GetCompanySetting().Timezone
+		timezoneUtil := utils.SetTimezone(timezone)
+		startTime, endTime = timezoneUtil.TodayStartEndUnix()
+	}
+
+	// 参数校验
+	if startTime > endTime {
+		return nil, errors.WithMessage(errors.New("开始时间不能大于结束时间"))
+	}
 
 	// 获取语言
 	language := ctx.GetLanguage()
 
+	// 获取门店业务设置，检查是否开启国籍功能
+	settingSrv := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		ctx.Log().Error("获取门店业务设置失败", zap.Error(err))
+		// 如果获取设置失败，默认不开启国籍统计
+		businessSetting.EnableNationality = "0"
+	}
+	enableNationality := businessSetting.EnableNationality == "1"
+
+	// 获取收银机设置，检查是否开启点餐和桌台功能
+	cashierSetting, err := settingSrv.GetCashierSetting(ctx, nil)
+	if err != nil {
+		ctx.Log().Error("获取收银机设置失败", zap.Error(err))
+		// 如果获取设置失败，默认不开启点餐和桌台统计
+		cashierSetting.OrderMethod.IsCashierOrder = "0"
+		cashierSetting.OrderMethod.IsTableOrder = "0"
+	}
+	enableCashierOrder := cashierSetting.OrderMethod.IsCashierOrder == "1"
+	enableTableOrder := cashierSetting.OrderMethod.IsTableOrder == "1"
+
 	// 调用 Repository 获取统计数据
-	repoResult, err := statisticsRepo.CountUserAnalysis(startTime, endTime, language,
+	repoResult, err := statisticsRepo.CountUserAnalysis(startTime, endTime, language, enableNationality, enableCashierOrder, enableTableOrder,
 		commonRepo.WhereNotInDataManageSubQuery("sale_bill_uuid",
 			dataManageRepo.WhereByType(model.DataManageTypeOrder),
 		),
@@ -3459,7 +3490,7 @@ func (s *businessSrv) CountUserAnalysis(ctx context.Context) (*resp.UserAnalysis
 		result := make([]resp.UserAnalysisItem, 0, len(items))
 		for _, item := range items {
 			result = append(result, resp.UserAnalysisItem{
-				Name:       item.Name,
+				Name:       i18n.Translate(language, item.Name),
 				OrderCount: item.OrderCount,
 				Percentage: item.Percentage.InexactFloat64(),
 			})
@@ -3476,7 +3507,7 @@ func (s *businessSrv) CountUserAnalysis(ctx context.Context) (*resp.UserAnalysis
 }
 
 // ExportUserAnalysis 导出用户分析统计数据
-func (s *businessSrv) ExportUserAnalysis(ctx context.Context) error {
+func (s *businessSrv) ExportUserAnalysis(ctx context.Context, req req.UserAnalysisReq) error {
 	db := ctx.GetDB()
 	// 判断是否还有正在导出的任务
 	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeUserAnalysis)
@@ -3488,7 +3519,7 @@ func (s *businessSrv) ExportUserAnalysis(ctx context.Context) error {
 	}
 
 	// 获取统计数据
-	result, err := s.CountUserAnalysis(ctx)
+	result, err := s.CountUserAnalysis(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -3512,7 +3543,10 @@ func (s *businessSrv) ExportUserAnalysis(ctx context.Context) error {
 	}
 
 	// 创建导出任务
-	params := map[string]interface{}{}
+	params := map[string]interface{}{
+		"start_time": req.StartTime,
+		"end_time":   req.EndTime,
+	}
 	paramsJson, err := json.Marshal(params)
 	if err != nil {
 		return err
@@ -3572,28 +3606,11 @@ func (s *businessSrv) ExportUserAnalysisTask(ctx context.Context, params ExportU
 	xlsxFile := excelize.NewFile()
 	defer xlsxFile.Close()
 
-	// 定义表头映射
-	headerMap := map[string]map[string]string{
-		"zh": {
-			"name":        "名称",
-			"order_count": "订单数",
-			"percentage":  "占比%",
-		},
-		"en": {
-			"name":        "Name",
-			"order_count": "Order Count",
-			"percentage":  "Percentage(%)",
-		},
-		"th": {
-			"name":        "ชื่อ",
-			"order_count": "จำนวนคำสั่งซื้อ",
-			"percentage":  "เปอร์เซ็นต์(%)",
-		},
-	}
-
-	headers := headerMap[lang]
-	if headers == nil {
-		headers = headerMap["zh"]
+	// 定义表头映射（使用 i18n 翻译）
+	headers := map[string]string{
+		"name":        i18n.Translate(lang, "名称"),
+		"order_count": i18n.Translate(lang, "订单数"),
+		"percentage":  i18n.Translate(lang, "占比%"),
 	}
 
 	// 写入四个统计维度
@@ -3620,31 +3637,12 @@ func (s *businessSrv) ExportUserAnalysisTask(ctx context.Context, params ExportU
 		return nil
 	}
 
-	// 写入各个维度
-	sheetNameMap := map[string]map[string]string{
-		"zh": {
-			"nationality":   "国籍统计",
-			"order_source":  "点餐方式来源统计",
-			"desk_source":   "桌台方式来源统计",
-			"dining_method": "用餐方式统计",
-		},
-		"en": {
-			"nationality":   "Nationality",
-			"order_source":  "Order Source",
-			"desk_source":   "Desk Source",
-			"dining_method": "Dining Method",
-		},
-		"th": {
-			"nationality":   "สัญชาติ",
-			"order_source":  "แหล่งที่มาของคำสั่งซื้อ",
-			"desk_source":   "แหล่งที่มาของโต๊ะ",
-			"dining_method": "วิธีการรับประทานอาหาร",
-		},
-	}
-
-	sheetNames := sheetNameMap[lang]
-	if sheetNames == nil {
-		sheetNames = sheetNameMap["zh"]
+	// 写入各个维度（使用 i18n 翻译）
+	sheetNames := map[string]string{
+		"nationality":   i18n.Translate(lang, "国籍"),
+		"order_source":  i18n.Translate(lang, "点餐方式来源"),
+		"desk_source":   i18n.Translate(lang, "桌台方式来源"),
+		"dining_method": i18n.Translate(lang, "用餐"),
 	}
 
 	if err := writeSheet(sheetNames["nationality"], params.Result.Nationality); err != nil {
