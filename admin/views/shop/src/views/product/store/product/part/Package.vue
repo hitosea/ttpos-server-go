@@ -51,8 +51,8 @@
             ></el-input>
             <el-button class="ml8" type="primary" @click="translate(groupIndex)">{{ $t('翻译') }}</el-button>
             <el-select v-model="form.model.package_group[groupIndex].group_type" class="max-w230 ml16" :disabled="erp_is_open == 1">
-              <el-option :value="0" :label="$t('固定套餐')"></el-option>
-              <el-option :value="1" :label="$t('可选套餐')"></el-option>
+              <el-option :value="0" :label="$t('固定')"></el-option>
+              <el-option :value="1" :label="$t('可选')"></el-option>
             </el-select>
 
             <el-icon class="delete-icon" :class="{ 'is-disabled': form.model.package_group.length === 1 }" @click="handleDelete(groupIndex)">
@@ -358,6 +358,8 @@
   const addGroup = () => {
     form.model.package_group.push({
       group_name: JSON.parse(languageData),
+      group_type: 0,
+      optional_count: 0,
       product_list: [],
     });
   };
