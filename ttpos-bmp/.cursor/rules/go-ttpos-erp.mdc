@@ -1,0 +1,9 @@
+---
+alwaysApply: false
+---
+
+# ttpos-erp 子模块规则
+
+## 编码约定
+- 创建erpnext 对应DTO时，必须参考原系统的数据结构 (https://github.com/frappe/erpnext/blob/develop/erpnext/*/doctype/**.json)
+- 创建与erpnext 交互的服务，应每个DocType 一个独立的逻辑服务

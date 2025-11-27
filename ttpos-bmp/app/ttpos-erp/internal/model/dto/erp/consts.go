@@ -86,3 +86,11 @@ const (
 const (
 	WarehouseTypeTransit = "Transit"
 )
+
+// 税费模板文档类型
+const (
+	// DocTypePurchaseTaxesTemplate 采购税费模板
+	DocTypePurchaseTaxesTemplate = "Purchase Taxes and Charges Template"
+	// DocTypeSalesTaxesTemplate 销售税费模板
+	DocTypeSalesTaxesTemplate = "Sales Taxes and Charges Template"
+)
