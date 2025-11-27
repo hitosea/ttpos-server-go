@@ -37,18 +37,18 @@
 
 ```mermaid
 graph TD
-    A[💡 需求想法] --> B[📝 /propose 创建提案]
+    A[💡 需求想法] --> B[📝 /spec-propose 创建提案]
     B --> C[📄 填写提案内容]
     C --> D[👥 需求评审会议]
     D --> E{是否批准}
     E -->|❌ 拒绝| F[🗃️ 归档/迭代]
-    E -->|✅ 批准| G[📦 /create-spec 创建需求]
+    E -->|✅ 批准| G[📦 /spec-create 创建需求]
     G --> H[📋 User Story + AC]
     H --> I[👀 产品审核]
     I --> J{审核结果}
     J -->|❌ 需修改| K[🔄 修改需求]
     K --> H
-    J -->|✅ 已通过| L[📦 /design-spec 创建设计]
+    J -->|✅ 已通过| L[📦 /spec-design 创建设计]
     L --> M[🏗️ 技术方案设计]
     M --> N[📊 SP 评估]
     N --> O{SP ≤ 5?}
@@ -58,8 +58,8 @@ graph TD
     Q --> R[✨ 进入 Sprint Backlog]
     R --> S[🚀 功能开发工作流]
     S --> T{开发结果}
-    T -->|✅ 完成上线| U[📦 /archive-spec 归档]
-    T -->|❌ 需求取消| V[🗑️ /deprecate-spec 废弃]
+    T -->|✅ 完成上线| U[📦 /spec-archive 归档]
+    T -->|❌ 需求取消| V[🗑️ /spec-deprecate 废弃]
 ```
 
 ---
@@ -72,14 +72,14 @@ graph TD
 
 **Agent 动作**:
 
-1. 使用 `/propose {feature-name}` 指令创建提案。
+1. 使用 `/spec-propose {feature-name}` 指令创建提案。
 2. 自动填充日期、提案人等基本信息。
 
 **操作步骤**:
 
 ```bash
 # 创建提案（例如：快速支付功能）
-/propose quick-payment
+/spec-propose quick-payment
 ```
 
 **输出产物**: `docs/team/proposals/{YYYY-MM}/quick-payment.md`
@@ -231,7 +231,7 @@ graph TD
 
 **Agent 动作**:
 
-1. 提示使用 `/create-spec` 指令创建需求文档。
+1. 提示使用 `/spec-create` 指令创建需求文档。
 2. 根据提案内容，自动填充基本信息。
 3. 初始化审核状态为「待审核」。
 
@@ -239,7 +239,7 @@ graph TD
 
 ```bash
 # 创建 Spec 需求文档（需确定模块和功能名）
-/create-spec story-order-quick-payment
+/spec-create story-order-quick-payment
 ```
 
 **输出产物**: `docs/shared/specs/active/story-order-quick-payment/`
@@ -248,7 +248,7 @@ graph TD
 
 **智能关联**:
 
-- `/create-spec` 会自动搜索 `docs/team/proposals/` 目录
+- `/spec-create` 会自动搜索 `docs/team/proposals/` 目录
 - 根据 feature 名称匹配对应的 Proposal
 - 在 requirements.md 中自动填充 Proposal 链接
 - 回写 Proposal，更新状态和 Spec 链接
@@ -385,13 +385,13 @@ graph TD
 **Agent 动作**:
 
 1. 检查 requirements.md 审核状态是否为「已通过」。
-2. 提示使用 `/design-spec` 指令创建设计文档。
+2. 提示使用 `/spec-design` 指令创建设计文档。
 
 **操作步骤**:
 
 ```bash
 # 创建设计文档（需求审核通过后）
-/design-spec story-order-quick-payment
+/spec-design story-order-quick-payment
 ```
 
 **输出产物**: `docs/shared/specs/active/story-order-quick-payment/`
@@ -651,11 +651,11 @@ graph TD
 
 | 阶段     | 产物                                        | 存放位置                                             | 命令           |
 | -------- | ------------------------------------------- | ---------------------------------------------------- | -------------- |
-| 需求提案 | `{YYYY-MM-DD}-{feature-name}.md`            | `docs/team/proposals/`                               | `/propose`     |
-| 需求规格 | `requirements.md`                           | `docs/shared/specs/active/story-{module}-{feature}/` | `/create-spec` |
+| 需求提案 | `{YYYY-MM-DD}-{feature-name}.md`            | `docs/team/proposals/`                               | `/spec-propose`     |
+| 需求规格 | `requirements.md`                           | `docs/shared/specs/active/story-{module}-{feature}/` | `/spec-create` |
 | 产品审核 | 审核状态字段（在 requirements.md 中）       | `docs/shared/specs/active/story-{module}-{feature}/` | 手动更新       |
-| 技术设计 | `design.md`                                 | `docs/shared/specs/active/story-{module}-{feature}/` | `/design-spec` |
-| 任务分解 | `tasks.md`                                  | `docs/shared/specs/active/story-{module}-{feature}/` | `/design-spec` |
+| 技术设计 | `design.md`                                 | `docs/shared/specs/active/story-{module}-{feature}/` | `/spec-design` |
+| 任务分解 | `tasks.md`                                  | `docs/shared/specs/active/story-{module}-{feature}/` | `/spec-design` |
 | 评估记录 | SP 评估清单（可选，记录在 requirements 中） | `docs/shared/specs/active/story-{module}-{feature}/` | -              |
 
 ---
@@ -672,12 +672,12 @@ graph TD
 
 ### Cursor 指令
 
-- `/propose {feature-name}` - 创建需求提案
-- `/create-spec story-{module}-{feature}` - 创建需求文档（requirements.md）
-- `/design-spec story-{module}-{feature}` - 创建设计文档（design.md + tasks.md）
-- `/archive-spec @{spec-name}` - 归档已完成的 Spec
-- `/deprecate-spec @{spec-name}` - 废弃不再需要的 Spec
-- `/restore-spec @{spec-name}` - 恢复已归档/废弃的 Spec
+- `/spec-propose {feature-name}` - 创建需求提案
+- `/spec-create story-{module}-{feature}` - 创建需求文档（requirements.md）
+- `/spec-design story-{module}-{feature}` - 创建设计文档（design.md + tasks.md）
+- `/spec-archive @{spec-name}` - 归档已完成的 Spec
+- `/spec-deprecate @{spec-name}` - 废弃不再需要的 Spec
+- `/spec-restore @{spec-name}` - 恢复已归档/废弃的 Spec
 
 ### 模板文件
 

@@ -66,20 +66,20 @@ docs/agent/workflows/
 1. 查阅 [需求管理工作流](../../docs/agent/workflows/requirement/management.md)
 2. 按照 10 步流程执行 (详见文档)
 3. **核心流程** Proposal → 评审 → Spec → SP 评估
-   - Step 1: `/propose {feature-name}` 创建提案
+   - Step 1: `/spec-propose {feature-name}` 创建提案
    - Step 2: 填写提案
    - Step 3-4: 需求评审会议 → 评审决策
-   - Step 5: `/create-spec story-{module}-{feature}` 创建 Spec
+   - Step 5: `/spec-create story-{module}-{feature}` 创建 Spec
    - Step 6: 编写 User Story + AC (requirements.md)
    - Step 7: 技术方案设计 (design.md)
    - Step 8: SP 评估 (≤5 进入开发，>5 拆分)
    - Step 9: 任务分解 (tasks.md)
    - Step 10: 进入 Sprint Backlog
 4. 涉及的规范和指令:
-   - `/propose` - 创建需求提案
+   - `/spec-propose` - 创建需求提案
    - `proposal-template.md` - 提案模板
    - `specs.mdc` - Spec 命名规范
-   - `/create-spec` - 创建 Spec 文档
+   - `/spec-create` - 创建 Spec 文档
 5. 输出产物:
    - `docs/team/proposals/{YYYY-MM-DD}-{feature-name}.md`
    - `docs/shared/specs/story-{module}-{feature}/requirements.md`

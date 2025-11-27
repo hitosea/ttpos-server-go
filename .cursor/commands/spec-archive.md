@@ -1,9 +1,9 @@
 ---
-name: archive-spec
+name: spec-archive
 description: 归档已完成的 Spec 到指定版本目录
 ---
 
-# /archive-spec - 归档 Spec
+# /spec-archive - 归档 Spec
 
 ## 使用场景
 
@@ -12,8 +12,8 @@ description: 归档已完成的 Spec 到指定版本目录
 ## 使用方式
 
 ```bash
-/archive-spec @story-order-quick-payment                    # 自动检测版本号
-/archive-spec @story-order-quick-payment --version v2.10    # 指定版本号
+/spec-archive @story-order-quick-payment                    # 自动检测版本号
+/spec-archive @story-order-quick-payment --version v2.10    # 指定版本号
 ```
 
 ## 参数

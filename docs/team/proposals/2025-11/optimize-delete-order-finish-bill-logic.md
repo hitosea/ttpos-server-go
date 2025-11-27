@@ -228,7 +228,7 @@ if firstSaleOrder.IsSettled() && len(moveProductList) == 0 && len(saleBill.SaleO
 - [x] 创建 Spec：`task-main-optimize-delete-order-finish-bill-logic`
 - [x] 分配负责人：xiezhihuan
 - [ ] 目标 Sprint：下个迭代
-- [ ] 技术设计：待 `/design-spec` 创建
+- [ ] 技术设计：待 `/spec-design` 创建
 
 ---
 

@@ -1,9 +1,9 @@
 ---
-name: deprecate-spec
+name: spec-deprecate
 description: 废弃不再需要的 Spec
 ---
 
-# /deprecate-spec - 废弃 Spec
+# /spec-deprecate - 废弃 Spec
 
 ## 使用场景
 
@@ -12,8 +12,8 @@ description: 废弃不再需要的 Spec
 ## 使用方式
 
 ```bash
-/deprecate-spec @story-old-payment --reason "被 story-new-payment 替代"
-/deprecate-spec @story-abandoned-feature --reason "需求取消"
+/spec-deprecate @story-old-payment --reason "被 story-new-payment 替代"
+/spec-deprecate @story-abandoned-feature --reason "需求取消"
 ```
 
 ## 参数

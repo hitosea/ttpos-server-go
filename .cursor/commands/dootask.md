@@ -121,22 +121,22 @@ description: 读取 DooTask 任务详情
 
 **场景**: 查看 Bug 修复任务，了解问题描述和解决方案。
 
-### 示例 3: 配合 /propose 使用
+### 示例 3: 配合 /spec-propose 使用
 
 ```bash
 # 先查看任务详情
 /dootask 36917
 
 # 然后基于任务创建提案
-/propose quick-payment 编号:36917
+/spec-propose quick-payment 编号:36917
 ```
 
 **场景**: 先详细了解任务内容，再创建需求提案。
 
 ## 相关指令
 
-- `/propose` - 基于任务创建需求提案
-- `/create-spec` - 创建功能规格文档
+- `/spec-propose` - 基于任务创建需求提案
+- `/spec-create` - 创建功能规格文档
 
 ## 技术实现
 

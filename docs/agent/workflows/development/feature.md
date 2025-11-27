@@ -293,7 +293,7 @@ git push origin feature/story-{module}-{feature}
 功能上线后，执行归档：
 
 ```bash
-/archive-spec @story-{module}-{feature} --version v2.10
+/spec-archive @story-{module}-{feature} --version v2.10
 ```
 
 ### 归档条件
@@ -307,7 +307,7 @@ git push origin feature/story-{module}-{feature}
 - 更新关联 Proposal 状态为"已完成 - 已发布"
 - 添加归档标记到 `requirements.md`
 
-**详见**: `.cursor/commands/archive-spec.md`
+**详见**: `.cursor/commands/spec-archive.md`
 
 ---
 

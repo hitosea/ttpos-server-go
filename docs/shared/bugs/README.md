@@ -226,9 +226,9 @@ Bug 管理体系设计与 Spec 管理体系保持一致，采用三阶段管理�
 
 | 阶段     | Bug 管理        | Spec 管理       | 输出产物              | 说明                 |
 | -------- | --------------- | --------------- | --------------------- | -------------------- |
-| **阶段 1** | `/bug-create`   | `/create-spec`  | `bug.md`              | 问题描述 vs 需求定义 |
-| **阶段 2** | `/bug-spec`     | `/design-spec`  | `solution.md` + `tasks.md` | 修复方案 vs 技术设计 |
-| **阶段 3** | `/bug-archive`  | `/archive-spec` | 归档到 `resolved/{version}/` | 归档已修复 vs 归档已完成 |
+| **阶段 1** | `/bug-create`   | `/spec-create`  | `bug.md`              | 问题描述 vs 需求定义 |
+| **阶段 2** | `/bug-spec`     | `/spec-design`  | `solution.md` + `tasks.md` | 修复方案 vs 技术设计 |
+| **阶段 3** | `/bug-archive`  | `/spec-archive` | 归档到 `resolved/{version}/` | 归档已修复 vs 归档已完成 |
 
 ### 文档对应关系
 

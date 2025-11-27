@@ -36,8 +36,8 @@ priority: 10
 
 1. **Cursor 指令调用**
 
-   - `/propose`
-   - `/create-spec`
+   - `/spec-propose`
+   - `/spec-create`
    - `/onboard`
    - `/create-api-doc`
    - `/create-*-test`
@@ -96,8 +96,8 @@ def log_activity(action, target, note=""):
 
 | 触发场景                 | 活动类型          | 目标              | 备注          |
 | ------------------------ | ----------------- | ----------------- | ------------- |
-| `/propose feature-name`  | `/propose`        | feature-name      | 创建提案      |
-| `/create-spec spec-name` | `/create-spec`    | spec-name         | 创建 Spec     |
+| `/spec-propose feature-name`  | `/spec-propose`        | feature-name      | 创建提案      |
+| `/spec-create spec-name` | `/spec-create`    | spec-name         | 创建 Spec     |
 | `/onboard quick`         | `/onboard`        | quick             | 快速入门      |
 | `/create-api-doc module` | `/create-api-doc` | module            | 创建 API 文档 |
 | 执行功能开发工作流       | `功能开发`        | spec-name         | 工作流执行    |
@@ -179,16 +179,16 @@ IF 同一分钟内相同活动 THEN
 
 ## 示例场景
 
-### 场景 1: 调用 /create-spec
+### 场景 1: 调用 /spec-create
 
 ```
-用户: "/create-spec story-pos-quick-payment"
+用户: "/spec-create story-pos-quick-payment"
 
 AI 执行:
   1. 创建 Spec 文件
   2. 填充内容
   3. 记录日志:
-     | 14:30 | /create-spec | story-pos-quick-payment | ✅ | 创建Spec |
+     | 14:30 | /spec-create | story-pos-quick-payment | ✅ | 创建Spec |
 
 AI 回复:
   "✅ Spec 已创建: docs/shared/specs/active/story-pos-quick-payment/"

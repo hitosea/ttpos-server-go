@@ -382,7 +382,7 @@ find docs/shared/bugs/resolved/ -name "*-order-*"
   - `redis-issue` - Redis 相关
   - `mysql-issue` - MySQL 相关
 
-## 与 /archive-spec 的对应关系
+## 与 /spec-archive 的对应关系
 
 | Bug 归档         | Spec 归档         | 说明                     |
 | ---------------- | ----------------- | ------------------------ |

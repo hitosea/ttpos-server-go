@@ -361,9 +361,9 @@ END IF
 
 | Bug 管理         | Spec 管理         | 说明                     |
 | ---------------- | ----------------- | ------------------------ |
-| `/bug-create`    | `/create-spec`    | 创建基本文档             |
-| `/bug-spec`      | `/design-spec`    | 创建方案和任务           |
-| `/bug-archive`   | `/archive-spec`   | 归档到版本目录           |
+| `/bug-create`    | `/spec-create`    | 创建基本文档             |
+| `/bug-spec`      | `/spec-design`    | 创建方案和任务           |
+| `/bug-archive`   | `/spec-archive`   | 归档到版本目录           |
 | `bug.md`         | `requirements.md` | 问题描述                 |
 | `solution.md`    | `design.md`       | 修复方案                 |
 | `tasks.md`       | `tasks.md`        | 任务分解（格式一致）     |

@@ -206,8 +206,8 @@ docs/shared/integrations/{service}/
 
 | 指令              | 用途          | 文档类型                         |
 | ----------------- | ------------- | -------------------------------- |
-| `/propose`        | 创建需求提案  | Proposal                         |
-| `/create-spec`    | 创建功能规格  | Spec (requirements/design/tasks) |
+| `/spec-propose`        | 创建需求提案  | Proposal                         |
+| `/spec-create`    | 创建功能规格  | Spec (requirements/design/tasks) |
 | `/create-api-doc` | 创建 API 文档 | API Documentation                |
 
 

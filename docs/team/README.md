@@ -29,7 +29,7 @@
 
 **记录内容：**
 
-- Cursor 指令调用（/propose, /create-spec 等）
+- Cursor 指令调用（/spec-propose, /spec-create 等）
 - 工作流执行（功能开发、Bug 修复等）
 - Graphiti 知识记录
 - 重要决策和会议
@@ -78,11 +78,11 @@ graph LR
 
 **关键步骤：**
 
-1. 使用 `/propose {feature-name}` 创建提案
+1. 使用 `/spec-propose {feature-name}` 创建提案
 2. 填写提案内容（目标、价值、风险）
 3. 组织需求评审会议
 4. 记录评审决策
-5. 批准后使用 `/create-spec story-{module}-{feature}` 创建 Spec
+5. 批准后使用 `/spec-create story-{module}-{feature}` 创建 Spec
 6. SP 评估（≤5 进入开发，>5 拆分）
 
 ### 功能开发流程
@@ -180,7 +180,7 @@ graph LR
 ## 🆘 常见问题
 
 **Q: 如何创建需求提案？**  
-A: 使用 `/propose {feature-name}` 命令，Agent 会自动创建并填充模板
+A: 使用 `/spec-propose {feature-name}` 命令，Agent 会自动创建并填充模板
 
 **Q: 如何判断需求是否应该拆分？**  
 A: SP 评估 > 5 必须拆分，通常按业务模块拆分

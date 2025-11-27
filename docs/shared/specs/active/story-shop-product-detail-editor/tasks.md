@@ -149,7 +149,7 @@
 - [ ] 5.2 活动日志记录
 
   - File: `docs/team/activities/{user}/{YYYY-MM}/{YYYY-MM-DD}.md`
-  - Purpose: 记录 `/create-spec` 活动
+  - Purpose: 记录 `/spec-create` 活动
   - Requirements: 团队规范
   - Success: 日志追加成功
 
