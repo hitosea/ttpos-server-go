@@ -1133,6 +1133,10 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 		helper.HandleValidationError(c, err, editReq, nil)
 		return
 	}
+	if err := editReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
 	data, replace, err := h.productSrv.EditProductShop(ctx, editReq)
 	if err != nil {
 		if data != nil {

@@ -2,6 +2,7 @@ package req
 
 import (
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
 )
 
 // ProductListReq 商品列表查询
@@ -498,6 +499,28 @@ type ProductShopEditReq struct {
 	Package             ProductShopEditPackageReq          `json:"package"`               // 商品套餐
 	ProductPrinterUuids []uint64                           `json:"product_printer_uuids"` // 商品打印机列表
 	Detail              string                             `json:"detail"`                // 商品详情（富文本）
+}
+
+// Validate 验证商品编辑请求
+func (r *ProductShopEditReq) Validate() error {
+	// 校验套餐分组商品中的数量必须大于0
+	for _, group := range r.Package.Groups {
+		// 如果分组被标记为删除，跳过校验
+		if group.IsDelete {
+			continue
+		}
+		for _, product := range group.Products {
+			// 如果商品被标记为删除，跳过校验
+			if product.IsDelete {
+				continue
+			}
+			// 校验商品数量必须大于0
+			if product.Num <= 0 {
+				return errors.WithMessage(errors.New("套餐分组商品数量必须大于0"))
+			}
+		}
+	}
+	return nil
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
