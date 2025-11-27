@@ -143,6 +143,7 @@ docs/
 1. 优先查找 Go Main 模块 (main/app/) - 核心业务
 2. 其次查找 PHP Admin 模块 (admin/app/) - 仅当 Go 找不到
 3. 最后查找 Go BMP 模块 (ttpos-bmp/) - 微服务
+4. "新管理端" 都用 Go Main 模块
 ```
 
 **核心原则**：

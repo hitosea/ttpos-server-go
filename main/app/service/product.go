@@ -4668,6 +4668,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.SkuUuid = skuUuid
 		products.DineTaxUuid = taxUuid
 		products.TakeoutTaxUuid = takeoutTaxUuid
+		products.NumType = utils.IfInt(item.NumType == 2, 2, 1)
 		// 处理数量计算方法
 		// 按小数计价，不在助手、平板、扫码端显示
 		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
