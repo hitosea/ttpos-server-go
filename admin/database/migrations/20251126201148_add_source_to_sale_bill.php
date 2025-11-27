@@ -19,7 +19,7 @@ class AddSourceToSaleBill extends Migrator
                     'signed' => false,
                     'default' => 0,
                     'null' => false,
-                    'comment' => '订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5',
+                    'comment' => '订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5、5-会员端',
                     'after' => 'nationality_uuid',
                 ]);
             }

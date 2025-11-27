@@ -621,6 +621,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		DiningMethod:        constant.SaleBillDiningMethodTakeout,
 		DeviceUuid:          ctx.GetDeviceUuid(),
 		MemberSaleOrderUuid: memberSaleOrderUuid,
+		Source:              constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err)

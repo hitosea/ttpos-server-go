@@ -23,6 +23,7 @@ const (
 	SaleBillSourceAssistant = 2 // 点餐助手
 	SaleBillSourceTablet    = 3 // 平板
 	SaleBillSourceH5        = 4 // H5
+	SaleBillSourceMember    = 5 // 会员端
 )
 
 var SourceTextMap = map[string]string{

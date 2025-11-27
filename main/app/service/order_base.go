@@ -61,6 +61,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
 			DeviceUuid:   ctx.GetDeviceUuid(),
+			Source:       constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
 		})
 		if err != nil {
 			return errors.WithMessage(err)
@@ -174,6 +175,9 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 				saleBill.ReminderOrderTime = reminderOrderTime
 			}
 		}
+
+		// 设置订单来源
+		saleBill.Source = constant.MapJwtSourceToSaleBillSource(ctx.GetSource())
 
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {

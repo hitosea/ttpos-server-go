@@ -519,6 +519,7 @@ func (s *orderImportSrv) createOrder(_ context.Context, db *gorm.DB, orderBasic 
 		Remark:        orderBasic.Remark,
 		ConsumerUuid:  consumerUuid,
 		DeskUuid:      deskUuid,
+		Source:        constant.SaleBillSourceDefault, // 导入订单使用默认值 0
 		// ShopUuid 字段不存在，通过 DeskUuid 关联到门店
 	}
 

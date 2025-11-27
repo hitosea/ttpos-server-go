@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `dining_method` INT(10) NOT NULL DEFAULT 0 COMMENT '用餐方式,0-堂食(店内就餐) 1-打包',
     `order_source_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '订单来源UUID（0=店内，>0=外卖）',
     `nationality_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '国籍UUID（0=未记录）',
-    `source` INT(10) NOT NULL DEFAULT 0 COMMENT '来源, 0-未记录 1-收银机 2-点餐助手 3-平板 4-H5',
+    `source` INT(10) NOT NULL DEFAULT 0 COMMENT '来源, 0-未记录 1-收银机 2-点餐助手 3-平板 4-H5 5-会员端',
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_lock` INT(10) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',
