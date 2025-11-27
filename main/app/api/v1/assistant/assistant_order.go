@@ -105,13 +105,20 @@ func (h *OrderHandler) GetProductPackageDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param data body req.CheckAuthorizationReq true "检查授权参数"
 // @Success 200 {object} dto.Response{data=resp.CheckAuthorizationResp}
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/order/check_authorization [post]
 func (h *OrderHandler) CheckAuthorization(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	// 检查授权（折扣操作）
-	hasPermission, err := h.orderSrv.CheckAuthorization(ctx)
+	// 绑定请求参数
+	req := req.CheckAuthorizationReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	// 调用 Service 检查授权
+	hasPermission, err := h.orderSrv.CheckAuthorization(ctx, req.OperationType)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

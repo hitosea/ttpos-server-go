@@ -372,6 +372,11 @@ type CashBoxBalanceChangeReq struct {
 	OrderNo     string  `json:"order_no"`     // 订单编号
 }
 
+// CheckAuthorizationReq 检查授权请求
+type CheckAuthorizationReq struct {
+	OperationType string `json:"operation_type" binding:"required,oneof=discount refund"` // 操作类型: discount-折扣操作 refund-退款操作
+}
+
 // VerifyPasswordForSensitiveOperationReq 敏感操作密码验证请求
 type VerifyPasswordForSensitiveOperationReq struct {
 	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"` // 授权员工账号（邮箱或手机号）

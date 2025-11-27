@@ -2324,8 +2324,9 @@ func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleB
 }
 
 // CheckAuthorization 检查授权
-// 检查当前员工是否有权限进行折扣操作（整单改价、打折、抹零）
-func (s *orderSrv) CheckAuthorization(ctx context.Context) (bool, error) {
+// 检查当前员工是否有权限进行敏感操作（折扣或退款）
+// operationType: "discount" - 折扣操作（整单改价、打折、抹零），"refund" - 退款操作
+func (s *orderSrv) CheckAuthorization(ctx context.Context, operationType string) (bool, error) {
 	// 1. 获取当前员工信息
 	currentStaff := ctx.GetStaff()
 	if currentStaff.Uuid == 0 {
@@ -2338,18 +2339,27 @@ func (s *orderSrv) CheckAuthorization(ctx context.Context) (bool, error) {
 		return false, errors.WithMessage(err, "获取业务设置失败")
 	}
 
-	// 3. 检查折扣操作是否开启密码验证（整单改价、打折、抹零共用）
-	discountNeedPassword := businessSetting.DiscountNeedPassword == "1"
-	refundNeedPassword := businessSetting.RefundNeedPassword == "1"
-	discountAuthorizedStaffIds := businessSetting.DiscountAuthorizedStaffIds
+	// 3. 根据操作类型选择对应的配置
+	var needPassword bool
+	var authorizedStaffIds []uint64
+
+	if operationType == string(SensitiveOperationTypeRefund) {
+		// 退款操作：使用退款授权列表
+		needPassword = businessSetting.RefundNeedPassword == "1"
+		authorizedStaffIds = businessSetting.RefundAuthorizedStaffIds
+	} else {
+		// 折扣操作：使用折扣授权列表（默认）
+		needPassword = businessSetting.DiscountNeedPassword == "1"
+		authorizedStaffIds = businessSetting.DiscountAuthorizedStaffIds
+	}
 
 	// 4. 如果未开启密码验证，返回有权限
-	if !discountNeedPassword && !refundNeedPassword {
+	if !needPassword {
 		return true, nil
 	}
 
 	// 5. 检查当前员工是否在授权名单中
-	for _, staffId := range discountAuthorizedStaffIds {
+	for _, staffId := range authorizedStaffIds {
 		if staffId == currentStaff.Uuid {
 			return true, nil
 		}
@@ -2370,7 +2380,7 @@ func (s *orderSrv) VerifyPassword(ctx context.Context, req req.VerifyPasswordFor
 		if err != nil {
 			ctx.Log().Info("VerifyPassword", zap.Any("companyUuid", ctx.GetCompanyUuid()), zap.Any("req", req), zap.Error(errors.WithMessage(err)))
 		}
-		return false, errors.New("不是权限员工，请确认信息")
+		return false, errors.WithMessage(errors.New("不是权限员工，请确认信息"), err.Error())
 	}
 
 	// 2. 获取业务设置
@@ -2380,7 +2390,7 @@ func (s *orderSrv) VerifyPassword(ctx context.Context, req req.VerifyPasswordFor
 	}
 
 	// 3. 检查员工是否在授权名单中（退款操作的授权名单）
-	authorizedStaffIds := businessSetting.RefundAuthorizedStaffIds
+	authorizedStaffIds := businessSetting.DiscountAuthorizedStaffIds
 
 	isAuthorized := false
 	for _, staffId := range authorizedStaffIds {
@@ -2391,13 +2401,13 @@ func (s *orderSrv) VerifyPassword(ctx context.Context, req req.VerifyPasswordFor
 	}
 
 	if !isAuthorized {
-		return false, errors.New("不是权限员工，请确认信息")
+		return false, errors.WithMessage(errors.New("不是权限员工，请确认信息"), "不是权限员工，请确认信息")
 	}
 
 	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
 	encryptedPassword := utils.EncryptPassword(req.Password)
 	if staff.PermissionPassword != encryptedPassword {
-		return false, errors.New("密码错误")
+		return false, errors.WithMessage(errors.New("密码错误"), "密码错误")
 	}
 
 	// 5. 返回验证结果
@@ -2535,9 +2545,9 @@ func (s *orderSrv) AuthorizeSensitiveOperation(ctx context.Context, operationTyp
 	var err error
 
 	if operationType == SensitiveOperationTypeRefund {
-		hasPermission, err = s.CheckAuthorizationForRefund(ctx)
+		hasPermission, err = s.CheckAuthorization(ctx, string(SensitiveOperationTypeRefund))
 	} else {
-		hasPermission, err = s.CheckAuthorization(ctx)
+		hasPermission, err = s.CheckAuthorization(ctx, string(SensitiveOperationTypeDiscount))
 	}
 
 	if err != nil {

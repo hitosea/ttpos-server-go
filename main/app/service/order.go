@@ -80,7 +80,7 @@ type IOrderSrv interface {
 	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                      // 反结账
 	OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                 // 修改订单备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMember bool) (*model.SaleBillSetting, error) // 创建销售账单设置
-	CheckAuthorization(ctx context.Context) (bool, error)                                                                                        // 检查授权（折扣操作）
+	CheckAuthorization(ctx context.Context, operationType string) (bool, error)                                                                  // 检查授权（折扣操作）
 	VerifyPassword(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error)                                            // 密码验证（折扣操作）
 	CheckAuthorizationForRefund(ctx context.Context) (bool, error)                                                                               // 检查退款授权
 	VerifyPasswordForRefund(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error)                                   // 退款密码验证
