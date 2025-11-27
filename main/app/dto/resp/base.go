@@ -296,6 +296,8 @@ type ShopBase struct {
 
 	IsSyncing    bool  `json:"is_syncing"`     // 是否erp数据同步中
 	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
+
+	HasDataPermission bool `json:"has_data_permission"` // 是否有数据管理权限
 }
 
 type ShopProfile struct {
