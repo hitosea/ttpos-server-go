@@ -128,26 +128,26 @@ func (v *purchaseOrderValidator) validateSupplierStatus(
 	return nil
 }
 
-// validateReceiptQuantity 验证收货数量
-func (v *purchaseOrderValidator) validateReceiptQuantity(
-	ctx context.Context,
-	orderItem *model.PurchaseOrderItem,
-	receiptNum float64,
-) error {
-	newArrivalNum := orderItem.ArrivalNum + receiptNum
-	if newArrivalNum > orderItem.Num {
-		return errors.New(
-			fmt.Sprintf(
-				i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
-				language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
-				orderItem.Num,
-				orderItem.ArrivalNum,
-				receiptNum,
-			),
-		)
-	}
-	return nil
-}
+// // validateReceiptQuantity 验证收货数量
+// func (v *purchaseOrderValidator) validateReceiptQuantity(
+// 	ctx context.Context,
+// 	orderItem *model.PurchaseOrderItem,
+// 	receiptNum float64,
+// ) error {
+// 	newArrivalNum := orderItem.ArrivalNum + receiptNum
+// 	if newArrivalNum > orderItem.Num {
+// 		return errors.New(
+// 			fmt.Sprintf(
+// 				i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+// 				language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+// 				orderItem.Num,
+// 				orderItem.ArrivalNum,
+// 				receiptNum,
+// 			),
+// 		)
+// 	}
+// 	return nil
+// }
 
 // validateReceiptQuantity 验证收货数量
 func (v *purchaseOrderValidator) validateReceiptQuantityNew(
