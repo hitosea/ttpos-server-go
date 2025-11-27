@@ -23,7 +23,7 @@
             <img src="https://wallace.ttpos.com/files/wallace-logo.png" alt="Company Logo" class="logo" style="width: 95px; height: auto;" />
           </td>
           <td align="center" valign="middle">
-            <div class="po-title">PURCHASE RECEIPT</div>
+            <div class="po-title">PURCHASE ORDER</div>
           </td>
           <td width="95px"></td>
         </tr>
@@ -77,16 +77,19 @@
           <div class="info-block">
             <div class="title" style="font-size: 12px;">VENDOR</div>
             <div class="body">
-              <strong>{{ doc.supplier_name or doc.supplier  }}</strong><br />
+              <strong>{{ doc.supplier_name or doc.get('supplier', '') }}</strong><br />
               {{ doc.supplier_address_display or "" }}<br />
+              PHONE&nbsp;:&nbsp;{{ doc.contact_phone or doc.contact_mobile or '-' }}
             </div>
           </div>
         </td>
         <td style="margin: 0 !important; padding: 0 !important; width: 50%; padding-left: 6px !important; box-sizing: border-box;" valign="top">
           <div class="info-block">
-            <div class="title" style="font-size: 12px;">WAREHOUSE INFORMATION</div>
+            <div class="title" style="font-size: 12px;">SHIP TO</div>
             <div class="body">
-              {{ doc.set_warehouse or '' }}<br />
+              {{ doc.shipping_address_name or 'WAREHOUSE BANG PLA' }}<br />
+              {{ doc.shipping_address_display or "" }}<br />
+              ATTENTION&nbsp;:&nbsp;{{ doc.contact_person or 'RECEIVING' }}
             </div>
           </div>
         </td>
@@ -236,7 +239,7 @@
     </table>
   
     <div class="note">
-      <div>If you have any questions about this purchase receipt, please contact</div>					
+      <div>If you have any questions about this purchase order, please contact</div>					
       <div>K.Wimolwan (GiF) / Purchasing / Tel.082-168-8984 / e-mail : Wimolwan.n@wallacethailand.com</div>								
       <div>K.Henry, K.Adam / Accounting  / Tel.063-412-0672 / e-mail : henry@wallacethailand.com, adam@wallacethailand.com</div>								
     </div>    
@@ -615,7 +618,7 @@
   
     .signature-grid {
       width: 100% !important;
-      margin-top: 60px;
+      margin-top: 30px;
       border-collapse: collapse;
       border-spacing: 0;
       margin-left: 0;
