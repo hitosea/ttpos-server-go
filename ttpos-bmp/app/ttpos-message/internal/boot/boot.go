@@ -21,7 +21,8 @@ var (
 
 func init() {
 	InitRpc(ctx)
-	uuid.InitIdGenerator(ctx)
+	// 指定应用类型为 Message，避免跨应用 ID 冲突
+	uuid.InitIdGenerator(ctx, uuid.AppTypeMessage)
 }
 
 // Init 初始化服务
