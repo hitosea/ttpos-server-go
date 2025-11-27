@@ -448,5 +448,7 @@
     "排序值必须在0-999之间": "Sorteringsvärdet måste vara mellan 0 och 999",
     "支付管理": "Betalning",
     "如:13.716412789763694, 100.52312952599786": "t.ex.: 13.716412789763694, 100.52312952599786",
-    "高级票据打印": "Avancerad biljettutskrift"
+    "高级票据打印": "Avancerad biljettutskrift",
+    "桌台地图": "Bordlayoutkarta",
+    "数据管理": "Datastyrning"
 }
