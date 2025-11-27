@@ -240,7 +240,7 @@ tableConfigs := []tableConfig{
    tableName := prefix + "material"
    ```
 
-3. **涉及的表**（共 12 个）
+3. **涉及的表**（共 13 条配置）
    - material
    - material_category
    - product_attribute
@@ -248,7 +248,8 @@ tableConfigs := []tableConfig{
    - product_bom_card
    - product_category
    - product_flavor
-   - product_package
+   - product_package（名称多语言：`multi_language_name_uuid`）
+   - product_package（卖点多语言：`describe_multi_language_name_uuid`）
    - product_package_group（⚠️ 无 `headquarter_uuid` 字段，需要自定义筛选条件）
    - product_sauce
    - product_unit
@@ -425,10 +426,13 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
     
     // 表配置 - 使用配置化表前缀
     // 注意：product_package_group 表没有 headquarter_uuid 字段，需要通过关联 product_package 表筛选
+    // 注意：product_package 表有两个多语言字段（名称和卖点）
     tableConfigs := []tableConfig{
         {tableName: config.Database.TablePrefix + "material", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "material_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         // ... 其他表
+        {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+        {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "describe_multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid", filterCondition: "product_package_uuid IN (SELECT uuid FROM " + config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"},
         // ... 更多表
     }
@@ -449,7 +453,20 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
         }
 
         err := query.Find(&records).Error
-        // ... 处理记录
+        
+        // 数据库返回的整数类型可能是 uint64 或 int64，需要分别处理
+        for _, record := range records {
+            var uuid uint64
+            switch v := record[cfg.multiLanguageUuidColumn].(type) {
+            case uint64:
+                uuid = v
+            case int64:
+                uuid = uint64(v)
+            }
+            if uuid > 0 {
+                multiLanguageUuidMap[uuid] = true
+            }
+        }
     }
     
     // ... 后续代码

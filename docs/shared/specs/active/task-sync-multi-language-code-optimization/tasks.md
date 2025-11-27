@@ -12,8 +12,8 @@
 
 ## 📊 进度总览
 
-**总任务数**: 6（本次优化任务）  
-**已完成**: 6  
+**总任务数**: 7（本次优化任务）  
+**已完成**: 7  
 **完成率**: 100% ✅
 
 **关联任务 #36915 的重构工作**：
@@ -122,6 +122,55 @@
     }
     ```
   - **验收**: 编译通过，`product_package_group` 表查询正常
+
+---
+
+### Task 1.5 补充商品卖点多语言
+
+- [x] **添加 describe_multi_language_name_uuid 配置**
+  - **File**: `main/app/service/sync.go`
+  - **Method**: `SyncMultiLanguage`
+  - **Purpose**: `product_package` 表除了名称多语言，还有卖点多语言需要同步
+  - **执行步骤**:
+    1. 在 `tableConfigs` 中添加 `product_package` 表的 `describe_multi_language_name_uuid` 配置
+  - **代码变更**:
+    ```go
+    // product_package 表有两个多语言字段
+    {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+    {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "describe_multi_language_name_uuid", entityUuidColumn: "uuid"},
+    ```
+  - **验收**: 编译通过，商品卖点多语言同步正常
+
+---
+
+### Task 1.6 修复类型断言 Bug
+
+- [x] **支持 int64 类型断言**
+  - **File**: `main/app/service/sync.go`
+  - **Method**: `SyncMultiLanguage`
+  - **Purpose**: 数据库返回的整数可能是 `int64` 而非 `uint64`，需要兼容处理
+  - **执行步骤**:
+    1. 使用 `switch type` 语句分别处理 `uint64` 和 `int64` 类型
+  - **代码变更**:
+    ```go
+    // 改进前
+    if uuid, ok := record[cfg.multiLanguageUuidColumn].(uint64); ok && uuid > 0 {
+        multiLanguageUuidMap[uuid] = true
+    }
+    
+    // 改进后
+    var uuid uint64
+    switch v := record[cfg.multiLanguageUuidColumn].(type) {
+    case uint64:
+        uuid = v
+    case int64:
+        uuid = uint64(v)
+    }
+    if uuid > 0 {
+        multiLanguageUuidMap[uuid] = true
+    }
+    ```
+  - **验收**: 编译通过，类型断言兼容 `uint64` 和 `int64`
 
 ---
 
@@ -246,6 +295,8 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 - [x] 所有表名使用配置化表前缀
 - [x] 类型定义使用 `any`
 - [x] 特殊表（`product_package_group`）使用自定义筛选条件
+- [x] 商品卖点多语言（`describe_multi_language_name_uuid`）已添加
+- [x] 类型断言支持 `uint64` 和 `int64`
 - [x] 通过 golangci-lint 检查
 - [x] Import 格式正确
 
@@ -253,6 +304,7 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 - [x] 编译通过
 - [x] 多语言同步功能正常
 - [x] `product_package_group` 表查询正常
+- [x] 商品卖点多语言同步正常
 
 ---
 
@@ -263,12 +315,13 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 | 项目 | 数量 |
 |------|------|
 | 文件变更 | 1 个 |
-| 代码行变更 | ~25 行 |
+| 代码行变更 | ~35 行 |
 | 新增 Import | 1 个 |
-| 表名修改 | 12 处 |
-| 类型修改 | 1 处 |
+| 表配置数 | 13 条 |
+| 类型修改 | 1 处（`any` 替代 `interface{}`） |
 | 新增结构体字段 | 1 个（`filterCondition`） |
 | 特殊表处理 | 1 个（`product_package_group`） |
+| 类型断言修复 | 1 处（支持 `int64`） |
 
 ### 关联重构（任务 #36915）
 

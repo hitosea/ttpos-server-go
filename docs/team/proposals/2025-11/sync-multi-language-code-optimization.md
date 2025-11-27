@@ -119,7 +119,7 @@ import (
 ### 代码变更
 - **文件**: `main/app/service/sync.go`
 - **方法**: `SyncMultiLanguage`
-- **变更行数**: ~15 行
+- **变更行数**: ~35 行
 
 ### 功能影响
 - ✅ 无功能变更，纯代码优化
@@ -139,10 +139,13 @@ import (
    - 所有表名使用 `config.Database.TablePrefix` 配置
    - 类型定义使用 `any` 替代 `interface{}`
    - 特殊表（如 `product_package_group`）使用自定义筛选条件
+   - 商品卖点多语言（`describe_multi_language_name_uuid`）已添加
+   - 类型断言支持 `uint64` 和 `int64`
 
 2. **功能验证**
    - 多语言数据同步功能正常运行
    - 与总部数据保持一致
+   - 商品卖点多语言同步正常
    - 无性能回退
 
 3. **代码规范**

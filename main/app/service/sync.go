@@ -511,6 +511,7 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 		{tableName: config.Database.TablePrefix + "product_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_flavor", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+		{tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "describe_multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid", filterCondition: "product_package_uuid IN (SELECT uuid FROM " + config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"},
 		{tableName: config.Database.TablePrefix + "product_sauce", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
 		{tableName: config.Database.TablePrefix + "product_unit", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
@@ -544,7 +545,15 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 		}
 
 		for _, record := range records {
-			if uuid, ok := record[cfg.multiLanguageUuidColumn].(uint64); ok && uuid > 0 {
+			// 数据库返回的整数类型可能是 uint64 或 int64，需要分别处理
+			var uuid uint64
+			switch v := record[cfg.multiLanguageUuidColumn].(type) {
+			case uint64:
+				uuid = v
+			case int64:
+				uuid = uint64(v)
+			}
+			if uuid > 0 {
 				multiLanguageUuidMap[uuid] = true
 			}
 		}
