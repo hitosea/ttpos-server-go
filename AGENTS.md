@@ -11,7 +11,7 @@
 | "新人" "入职" "不熟悉"         | 新成员入职 | `/onboard quick` → 推送必读清单                                        | agent/workflows/onboarding.md  | intro.mdc       |
 | "有个想法" "提需求" "能不能做" | 需求发起   | `/propose {name}` → 评审 → `/create-spec` → 审核 → `/design-spec`      | team/proposals/, shared/specs/ | specs.mdc       |
 | "实现功能" "开发 XX" "新增 XX" | 功能开发   | 读 `shared/specs/active/{}/tasks.md` → 逐任务执行                      | shared/specs/, main/, admin/   | go-main/php.mdc |
-| "报错" "bug" "崩溃" "异常"     | Bug 修复   | 搜 Graphiti → 定位 → 修复 → 测试 → 记录                                | shared/troubleshooting/, main/ | go-main.mdc     |
+| "报错" "bug" "崩溃" "异常"     | Bug 修复   | `/bug-create` → 分析 → `/bug-spec` → 修复 → `/bug-archive` → Graphiti | shared/bugs/, main/            | go-main.mdc     |
 | "集成 XX" "对接 XX" "API"      | 第三方集成 | 查 `integrations/{service}/` → 创建 API 类 → 测试 → 文档               | integrations/, shared/api/     | api.mdc         |
 | "迁移数据库" "新增表" "改字段" | 数据库迁移 | 创建迁移文件 → 更新 model → 更新 seeds                                 | admin/database/migrations/     | database.mdc    |
 | "gRPC" "微服务" "ttpos-bmp"    | 微服务集成 | 查 ttpos-bmp 文档 → 定义 Protobuf → 注册服务                           | ttpos-bmp/                     | go-bmp.mdc      |
@@ -68,6 +68,9 @@
 | **创建设计文档**          | `docs/shared/specs/active/{level}-{module}-{feature}/design.md + tasks.md` | `/design-spec`                 |
 | **归档 Spec**             | `docs/shared/specs/archived/{version}/`                | `/archive-spec`                |
 | **废弃 Spec**             | `docs/shared/specs/deprecated/`                        | `/deprecate-spec`              |
+| **创建 Bug 报告**         | `docs/shared/bugs/active/bug-{id}-{module}-{brief}/bug.md` | `/bug-create`             |
+| **创建 Bug 修复方案**     | `docs/shared/bugs/active/bug-{id}-{module}-{brief}/solution.md + tasks.md` | `/bug-spec` |
+| **归档 Bug**              | `docs/shared/bugs/resolved/{version}/`                 | `/bug-archive`                 |
 
 ### 👤 人类优先（学习资料）
 
@@ -84,6 +87,7 @@
 | 我需要...      | 文件路径                           | 用途       |
 | -------------- | ---------------------------------- | ---------- |
 | **功能规格**   | `docs/shared/specs/active/story-*-*/` | 需求和设计 |
+| **Bug 管理**   | `docs/shared/bugs/active/` / `resolved/{version}/` | Bug 报告   |
 | **API 文档**   | `docs/shared/api/*.md`             | 接口查询   |
 | **问题排查**   | `docs/shared/troubleshooting/*.md` | 故障处理   |
 | **第三方集成** | `docs/shared/integrations/`        | 集成文档   |
@@ -106,6 +110,7 @@ docs/
 │
 ├── shared/             # 📚 共用资源
 │   ├── specs/          #    功能规格
+│   ├── bugs/           #    Bug管理
 │   ├── api/            #    API文档
 │   ├── troubleshooting/#    问题排查
 │   └── integrations/   #    第三方集成
@@ -127,3 +132,23 @@ docs/
 5. codebase_search (实现细节、代码位置)
 6. web_search (最新技术、第三方文档)
 ```
+
+---
+
+## 技术栈识别优先级 (⚠️ 重要)
+
+**在分析 Bug、功能开发、代码修改时，必须按以下顺序确定技术栈：**
+
+```
+1. 优先查找 Go Main 模块 (main/app/) - 核心业务
+2. 其次查找 PHP Admin 模块 (admin/app/) - 仅当 Go 找不到
+3. 最后查找 Go BMP 模块 (ttpos-bmp/) - 微服务
+```
+
+**核心原则**：
+- ✅ 先搜索 Go Main，找不到再搜索 PHP
+- ❌ 不要看到"管理端"就认为是 PHP
+- ✅ 根据实际代码确定技术栈
+
+**详细识别方法、常见误区和实战案例**，请查阅:
+→ `docs/agent/workflows/development/bug-fixing.md` Step 2 技术栈识别

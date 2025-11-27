@@ -85,6 +85,67 @@ tail -f runtime/log/*.log
 - Chrome DevTools (Web)
 - 数据库查询日志
 
+#### ⚠️ 技术栈识别优先级（重要）
+
+**在分析 Bug 或制定修复方案时，必须按以下顺序确定技术栈：**
+
+**优先级 1: Go Main 模块** (main/app/)
+- **适用场景**: 核心业务逻辑、API 接口
+- **典型功能**: 订单、支付、会员、商品、库存等主要业务
+- **技术栈**: Go 1.23+ + Gin + GORM
+- **搜索命令**:
+  ```bash
+  codebase_search "功能关键词" ["main/app/"]
+  grep -r "错误信息" main/app/
+  ```
+
+**优先级 2: PHP Admin 模块** (admin/app/) - **仅当 Go 中找不到时**
+- **适用场景**: 早期遗留代码、部分管理后台功能
+- **技术栈**: PHP 8.0+ + ThinkPHP 6.0
+- **搜索命令**:
+  ```bash
+  codebase_search "功能关键词" ["admin/app/"]
+  grep -r "错误信息" admin/app/
+  ```
+
+**优先级 3: Go BMP 模块** (ttpos-bmp/)
+- **适用场景**: gRPC 微服务、打印服务等
+- **技术栈**: Go 1.23+ + GoFrame 2.x
+- **搜索命令**:
+  ```bash
+  codebase_search "功能关键词" ["ttpos-bmp/"]
+  ```
+
+**识别方法（标准流程）**：
+1. ✅ **先搜索 Go Main**：使用 `codebase_search` 在 `main/app/` 中搜索
+2. ✅ **找不到再搜索 PHP**：在 `admin/app/` 中搜索
+3. ✅ **根据实际代码确定**：找到哪个模块的代码就用哪个技术栈
+4. ❌ **不要预设技术栈**：避免根据功能名称猜测
+5. ❌ **不要看到"管理端"就认为是 PHP**：很多管理端功能已迁移到 Go Main
+
+**常见误区示例**：
+- ❌ 错误：看到"新管理端-业务设置"就认为是 PHP Admin
+- ✅ 正确：先搜索 `main/app/service/order_source.go`，找到了就用 Go
+- ❌ 错误：没搜索代码就写 PHP + ThinkPHP 的修复方案
+- ✅ 正确：搜索确认后再制定对应技术栈的方案
+
+**实战案例**：
+
+```bash
+# 场景：修复"外卖来源配置删除"功能的 Bug
+
+# Step 1: 先搜索 Go Main
+codebase_search "外卖来源 删除" ["main/app/"]
+# 结果：找到 main/app/service/order_source.go
+
+# Step 2: 确定技术栈
+# 找到了 Go 代码 → 使用 Go + GORM 修复方案
+
+# Step 3: 制定方案
+# 修改 Service 层：实现软删除逻辑
+# 使用 GORM 的 .Update("delete_time", time.Now().Unix())
+```
+
 #### 代码分析
 
 ```bash
