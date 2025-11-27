@@ -6,7 +6,7 @@
 
 | 项目              | 内容                                                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **来源 Proposal** | [docs/team/proposals/2025-11/新管理端-满减营销功能.md](../../../../team/proposals/2025-11/新管理端-满减营销功能.md) |
+| **来源 Proposal** | [docs/team/proposals/2025-11/shop-full-reduction-marketing.md](../../../../team/proposals/2025-11/shop-full-reduction-marketing.md) |
 | **创建日期**      | 2025-11-21                                                                                                          |
 | **负责人**        | 待定                                                                                                                |
 | **目标 Sprint**   | Sprint 待定                                                                                                         |

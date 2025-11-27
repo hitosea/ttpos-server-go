@@ -4,13 +4,13 @@
 
 ## 📋 基本信息
 
-| 项目              | 内容 |
-| ----------------- | ---- |
-| **来源 Proposal** | [docs/team/proposals/2025-11/根据订单来源拆分点餐方式订单相关统计.md](../../../../team/proposals/2025-11/根据订单来源拆分点餐方式订单相关统计.md) |
-| **创建日期**      | 2025-11-25 |
-| **负责人**        | 待定 |
-| **目标 Sprint**   | Sprint 25 |
-| **涉及技术栈**    | [x] Go (main/) [ ] Go (ttpos-bmp/) [ ] PHP (admin/) [ ] Vue (admin/views/) |
+| 项目              | 内容                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **来源 Proposal** | [docs/team/proposals/2025-11/order-source-split-statistics.md](../../../../team/proposals/2025-11/order-source-split-statistics.md) |
+| **创建日期**      | 2025-11-25                                                                                                                          |
+| **负责人**        | 待定                                                                                                                                |
+| **目标 Sprint**   | Sprint 25                                                                                                                           |
+| **涉及技术栈**    | [x] Go (main/) [ ] Go (ttpos-bmp/) [ ] PHP (admin/) [ ] Vue (admin/views/)                                                          |
 
 ---
 
@@ -181,6 +181,7 @@
 **影响**: 中  
 **概率**: 高  
 **缓解措施**:
+
 - 新增列默认值 0，保证统计查询不报错。
 - 另行计划 backfill 任务，或在 UI 中允许“未知来源”提示。
 
@@ -189,6 +190,7 @@
 **影响**: 中  
 **概率**: 中  
 **缓解措施**:
+
 - 在 `ttpos_statistics_sale` 上评估是否需要 `(desk_uuid, order_source_uuid)` 组合索引。
 - 发布前在 1w+ 记录数据集上完成压测。
 
@@ -208,7 +210,7 @@
 - `.cursor/rules/go-main.mdc`
 - `.cursor/rules/api.mdc`
 - `.cursor/rules/database.mdc`
-- `docs/team/proposals/2025-11/根据订单来源拆分点餐方式订单相关统计.md`
+- `docs/team/proposals/2025-11/order-source-split-statistics.md`
 
 ---
 
@@ -224,5 +226,3 @@
 **最后更新**: 2025-11-26  
 **作者**: TTPOS Team (Backend)  
 **审核者**: 待定
-
-

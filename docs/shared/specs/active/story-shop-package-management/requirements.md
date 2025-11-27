@@ -6,7 +6,7 @@
 
 | 项目              | 内容                                                                                                                  |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **来源 Proposal** | [docs/team/proposals/2025-11/旧管理端-商品管理-套餐.md](../../../../team/proposals/2025-11/旧管理端-商品管理-套餐.md) |
+| **来源 Proposal** | [docs/team/proposals/2025-11/admin-package-management.md](../../../../team/proposals/2025-11/admin-package-management.md) |
 | **创建日期**      | 2025-11-25                                                                                                            |
 | **负责人**        | 待分配                                                                                                                |
 | **目标 Sprint**   | Sprint {N}                                                                                                            |
