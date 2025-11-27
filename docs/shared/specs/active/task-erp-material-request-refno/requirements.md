@@ -6,7 +6,8 @@
 
 | 项目              | 内容                                                                                                                         |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **来源 Proposal** | [docs/team/proposals/2025-11/stock-material-request-refno.md](../../../../team/proposals/2025-11/stock-material-request-refno.md) |
+| **来源 Proposal** | [stock-material-request-refno.md](../../../../team/proposals/2025-11/stock-material-request-refno.md) |
+| **补充提案** | [stock-material-request-refno-supplement.md](../../../../team/proposals/2025-11/stock-material-request-refno-supplement.md) |
 | **创建日期**      | 2025-11-27                                                                                                                   |
 | **负责人**        | rikugun                                                                                                                      |
 | **目标 Sprint**   | 待定                                                                                                                         |

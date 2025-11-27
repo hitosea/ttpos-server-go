@@ -1030,6 +1030,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		SourceWarehouse: purchaseOrder.WarehouseErpCode,
 		TargetWarehouse: purchaseOrder.DefaultWarehouseErpCode,
 		Items:           stockItems,
+		RefNo:           purchaseOrder.OrderNo, // 来源单据号，用于跟踪ttpos原始订单号
 	})
 	if err != nil {
 		return "", s.helper.handleErpError(ctx, err, purchaseOrder)
