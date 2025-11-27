@@ -981,6 +981,11 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	if err != nil {
 		return shopBase, errors.WithMessage(err)
 	}
+	// 是否有数据管理权限
+	hasDataPermission := false
+	if companySetting.EnableDataManagement == 1 && (staff.HasDataPermission == 1 || staff.IsSuper == 1) {
+		hasDataPermission = true
+	}
 
 	return resp.ShopBase{
 		Username:     staff.Username,
@@ -1021,14 +1026,15 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			Language:        companySetting.GetLanguages(),
 			CompanyName:     storeSetting.Company,
 		},
-		IsTtposSite:   companySetting.IsTtposSite(),
-		IsHeadquarter: companySetting.IsHeadquarter(),
-		UpdateTime:    time.Now().Unix(),
-		ServerVersion: utils.GetVersion(),
-		IsOpenTax:     taxSetting.IsOpen == "1",
-		IsSyncing:     slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
-		LastSyncTime:  company.LastSyncTime,
-		HasChildren:   companySetting.HasChildren == 1,
+		IsTtposSite:       companySetting.IsTtposSite(),
+		IsHeadquarter:     companySetting.IsHeadquarter(),
+		UpdateTime:        time.Now().Unix(),
+		ServerVersion:     utils.GetVersion(),
+		IsOpenTax:         taxSetting.IsOpen == "1",
+		IsSyncing:         slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
+		LastSyncTime:      company.LastSyncTime,
+		HasChildren:       companySetting.HasChildren == 1,
+		HasDataPermission: hasDataPermission,
 	}, nil
 }
 

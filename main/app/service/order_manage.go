@@ -178,13 +178,32 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 	}
 	// 获取数量
 	getOrderNum := func(status uint) int64 {
-		num, _ := orderRepo.GetOrderNum(
+		opts := []repository.DBOption{
 			repository.CommonRepo.WhereByStatus(status),
 			repository.CommonRepo.WhereBySoftDelete(),
 			repository.CommonRepo.WhereByCooking(),
 			repository.CommonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 			dbOption,
-		)
+		}
+		if reqs.IsOnlyDataManage == 1 {
+			uuidList := strings.Split(reqs.SaleBillUuids, ",")
+			uuids := []uint64{}
+			for _, uuid := range uuidList {
+				uuid, _ := strconv.ParseUint(uuid, 10, 64)
+				uuids = append(uuids, uint64(uuid))
+			}
+			opts = append(opts, repository.CommonRepo.WhereInUuids(uuids))
+		}
+		if reqs.IsOnlyDataManage == 0 && reqs.IsContainDataManage == 0 {
+			opts = append(opts,
+				func() repository.DBOption {
+					return func(db *gorm.DB) *gorm.DB {
+						return db.Where("uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ?)", model.DataManageTypeOrder)
+					}
+				}(),
+			)
+		}
+		num, _ := orderRepo.GetOrderNum(opts...)
 		return num
 	}
 	// 获取数量
