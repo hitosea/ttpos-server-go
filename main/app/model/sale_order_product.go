@@ -28,6 +28,7 @@ type SaleOrderProduct struct {
 	FlavorName string  `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
 	Num        float64 `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
 	UnitNum    float64 `gorm:"column:unit_num;type:decimal(12,4);not null;default:0.00;comment:'单位数量，用于套餐子商品'" json:"unit_num"`
+	CopyNum    float64 `gorm:"column:copy_num;type:decimal(12,4);not null;default:0.00;comment:'表示该子商品在分组中被选择多少份'" json:"copy_num"`
 	NumType    uint    `gorm:"column:num_type;type:tinyint(1);not null;default:0;comment:'数量类型, 0-整数 1-小数'" json:"num_type"`
 	Remark     string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
 	IsBuffet   uint    `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
@@ -1556,6 +1557,7 @@ type DefaultSaleOrderProduct struct {
 	IsAcceptOrder           uint    // 是否接单
 	Num                     float64 // 数量
 	UnitNum                 float64 // 单位数量,套餐子商品
+	CopyNum                 float64 // 表示该子商品在分组中被选择多少份
 	IsTabletAddAndCooking   bool    // 是否是平台的加购并送厨
 	NumType                 uint    // 数量类型
 	Remark                  string  // 备注
@@ -1590,7 +1592,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		ErpCode:                    def.Flavor.ErpCode,
 		Remark:                     def.Remark,
 		FlavorName:                 def.Flavor.Name,
-		Num:                        def.Num,
+		CopyNum:                    def.CopyNum,
 		NumType:                    def.NumType,
 		Status:                     constant.OrderProductStatusUnSending,
 		IsAcceptOrder:              def.IsAcceptOrder,
@@ -1615,6 +1617,8 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		IsBatch:                    def.IsBatch,
 		BatchTagUuid:               def.BatchTagUuid,
 	}
+	product.SetUnitNum(1) // 设置默认单位数量为1
+
 	// 套餐子商品，设置单位数量
 	if def.ProductType == constant.ProductTypePackageSubProduct {
 		product.SetUnitNum(def.UnitNum)
@@ -1622,6 +1626,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	if def.ProductType == constant.ProductTypePackageSubProduct && def.IsTabletAddAndCooking { // 如果是平板的加购和送厨的话,unitNum和num不一样
 		product.SetUnitNum(def.UnitNum)
 	}
+	product.Num = decimal.NewFromFloat(product.GetUnitNum()).Mul(decimal.NewFromFloat(product.CopyNum)).Round(4).InexactFloat64()
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购
 	{

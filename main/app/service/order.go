@@ -1813,7 +1813,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			MemberCardDiscountRate: innerParams.MemberCardDiscountRate,
 			CustomDiscountRate:     innerParams.CustomDiscountRate,
 			Sauces:                 sauces,
-			Num:                    product.Num,
+			CopyNum:                product.Num,
 			NumType:                productPackage.NumType,
 			PackageSubProductParams: func() string {
 				if product.GetIsPackageProduct() {
@@ -1839,6 +1839,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			IsBatch:       isBatch,
 			BatchTagUuid:  batchTagUuid,
 		}, &productPackage, product.Operation)
+		saleOrderProduct.SetUnitNum(1) // 设置默认单位数量为1
+		saleOrderProduct.Num = decimal.NewFromFloat(saleOrderProduct.GetUnitNum()).Mul(decimal.NewFromFloat(saleOrderProduct.CopyNum)).Round(4).InexactFloat64()
 
 		// 设置必点信息
 		if !option.IsMemberAdd { // 会员端加购不设置必点信息
@@ -2224,7 +2226,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		MemberCardDiscountRate: innerParams.MemberCardDiscountRate,
 		CustomDiscountRate:     innerParams.CustomDiscountRate,
 		Sauces:                 sauces,
-		Num:                    product.Num,
+		CopyNum:                product.Num,
 		UnitNum:                product.UnitNum,
 		IsTabletAddAndCooking:  innerParams.IsTabletAddAndCooking,
 		NumType:                productPackage.NumType,
@@ -2999,13 +3001,8 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 		}
 		attributeName := unCookingSaleOrderProduct.GetAttributeName()
 
-		// 送厨的商品数量, 如果是普通商品,则是num; 如果是套餐子商品,则是num*unit_num
-		productionOrderProductNum := func() float64 {
-			if unCookingSaleOrderProduct.IsPackageSubProduct() {
-				return decimal.NewFromFloat(unCookingSaleOrderProduct.Num).Mul(decimal.NewFromFloat(unCookingSaleOrderProduct.GetUnitNum())).InexactFloat64()
-			}
-			return unCookingSaleOrderProduct.Num
-		}()
+		// 送厨的商品数量, sale_order_product.num 该字段已经计算了单位数量和份数,表示送厨的商品数量
+		productionOrderProductNum := unCookingSaleOrderProduct.Num
 		productionOrderProduct := model.ProductionOrderProduct{
 			SaleBillUuid:          saleBillUuid,
 			ProductionOrderUuid:   productionOrderUuid,
