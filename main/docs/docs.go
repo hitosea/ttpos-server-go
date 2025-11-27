@@ -34284,6 +34284,10 @@ const docTemplate = `{
         "material_resp.MaterialDetailResp": {
             "type": "object",
             "properties": {
+                "allow_substore_visible": {
+                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "type": "integer"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -38840,6 +38844,14 @@ const docTemplate = `{
         "req.InstantOrderFreeReq": {
             "type": "object",
             "properties": {
+                "authorized_staff_account": {
+                    "description": "授权参数（可选，用于敏感操作权限验证）",
+                    "type": "string"
+                },
+                "authorized_staff_password": {
+                    "description": "权限密码",
+                    "type": "string"
+                },
                 "reason": {
                     "description": "原因",
                     "type": "string"
@@ -41481,7 +41493,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "num": {
-                    "description": "数量数量",
+                    "description": "商品份数",
                     "type": "number"
                 },
                 "operation": {
@@ -41554,7 +41566,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "num": {
-                    "description": "商品数量",
+                    "description": "商品份数",
                     "type": "number"
                 },
                 "product_package_group_uuid": {
