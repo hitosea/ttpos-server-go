@@ -14,6 +14,7 @@ message UpdateProductReq {
   string internal_code = 3 ; //内部编码, 可选
   bool disabled =4 ; //是否禁用，可选
   repeated ProductAttribute attributes = 5; //更新规格值
+  string stock_uom = 6; //库存单位，可选
 }
 
 
@@ -28,6 +29,7 @@ message UpdateProductResp {
   string internal_code = 3 ; //内部编码, 可选
   bool disabled =4 ; //是否禁用，可选
   repeated ProductAttribute attributes = 5; //规格值
+  string stock_uom = 6; //库存单位
 }
 
 

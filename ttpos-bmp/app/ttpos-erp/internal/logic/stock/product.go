@@ -41,6 +41,11 @@ func (s *sProduct) UpdateProduct(ctx context.Context, req *item.UpdateProductReq
 		itemInfo.CustomInternalCode = req.InternalCode
 	}
 
+	// 处理库存单位更新
+	if len(req.StockUom) > 0 {
+		itemInfo.StockUom = req.StockUom
+	}
+
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeItem,
 		Name:    req.ItemCode,
@@ -53,5 +58,6 @@ func (s *sProduct) UpdateProduct(ctx context.Context, req *item.UpdateProductReq
 		NotForSale:   req.NotForSale,
 		InternalCode: req.InternalCode,
 		Disabled:     req.Disabled,
+		StockUom:     req.StockUom,
 	}, nil
 }
