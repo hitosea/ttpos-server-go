@@ -14,7 +14,8 @@ import (
 
 // RoleHandler 角色管理控制器
 type RoleHandler struct {
-	roleSrv service.IRoleSrv
+	roleSrv       service.IRoleSrv
+	roleAccessSrv service.IRoleAccessSrv
 }
 
 // GetRoleDetail 获取角色详情
@@ -125,9 +126,9 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	helper.Success(c, gin.H{}, "删除角色成功")
 }
 
-// GetPermissions 获取权限树
-// @Summary 获取权限树
-// @Description 获取店铺的所有权限树（包含管理APP、收银机、点餐助手等所有权限组），用于角色权限配置
+// GetPermissions 获取权限组
+// @Summary 获取权限组
+// @Description 获取店铺的所有权限组（包含管理APP、收银机、点餐助手等所有权限组），用于角色权限配置
 // @Tags 商家端.员工账号
 // @Accept json
 // @Produce json
@@ -137,7 +138,7 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 func (h *RoleHandler) GetPermissionGroup(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	permissionGroup, err := h.roleSrv.GetCompanyPermissionGroup(ctx,
+	permissionGroup, err := h.roleAccessSrv.GetCompanyPermissionGroup(ctx,
 		[]constant.RouteName{constant.ShopAppRouteName, constant.CashierRouteName, constant.AssistantRouteName})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
@@ -154,7 +155,8 @@ func RegisterRoleHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	roleSrv := service.NewRoleSrv(dbm, roleAccessSrv)
 
 	wrapper := &RoleHandler{
-		roleSrv: roleSrv,
+		roleSrv:       roleSrv,
+		roleAccessSrv: roleAccessSrv,
 	}
 
 	// 需要认证
@@ -165,6 +167,6 @@ func RegisterRoleHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/role/update", wrapper.UpdateRole)   // 更新角色
 		privateApi.DELETE("/role/delete", wrapper.DeleteRole) // 删除角色
 
-		privateApi.GET("/permission_group", wrapper.GetPermissionGroup) // 获取权限树
+		privateApi.GET("/permission_group", wrapper.GetPermissionGroup) // 获取权限组
 	}
 }

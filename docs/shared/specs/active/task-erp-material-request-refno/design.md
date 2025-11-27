@@ -31,18 +31,37 @@
 
 ## 🔄 代码复用分析
 
-### 现有代码
+### 现有代码（ttpos-bmp）
 
 | 文件 | 说明 |
 |------|------|
-| `ttpos-bmp/app/ttpos-erp/manifest/protobuf/stock/stock.proto` | 现有 protobuf 定义 |
-| `ttpos-bmp/app/ttpos-erp/api/stock/stock.pb.go` | 生成的 Go 代码 |
-| `ttpos-bmp/app/ttpos-erp/api/stock/stock_grpc.pb.go` | 生成的 gRPC 代码 |
+| `ttpos-bmp/app/ttpos-erp/manifest/protobuf/stock/stock.proto` | 现有 protobuf 定义（已修改） |
+| `ttpos-bmp/app/ttpos-erp/api/stock/stock.pb.go` | 生成的 Go 代码（已更新） |
+| `ttpos-bmp/app/ttpos-erp/api/stock/stock_grpc.pb.go` | 生成的 gRPC 代码（已更新） |
 | `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/stock/stock.go` | RPC Controller |
+
+### 现有代码（ttpos Main）
+
+| 文件 | 说明 |
+|------|------|
+| `main/app/service/purchase_order/purchase_order.go` | 采购订单服务，需要修改 |
+| `main/app/service/rpc/erp/stock.go` | ERP Stock 服务客户端，无需修改 |
+| `main/app/model/purchase_order.go` | 采购订单模型，OrderNo 字段 |
+
+### 参考实现（调拨单）
+
+| 文件 | 行号 | 说明 |
+|------|------|------|
+| `main/app/service/transfer_order/helper.go` | 672 | RefNo: transferOrder.OrderNo |
+| `main/app/service/transfer_order/helper.go` | 675 | 日志记录示例 |
 
 ### 集成点
 
-- **ttpos → ttpos-erp**: gRPC 调用，调用方可选传入 `ref_no`
+- **ttpos → ttpos-erp**: gRPC 调用，调用方传入 `ref_no`（采购订单号）
+
+**调用位置**：
+- `main/app/service/purchase_order/purchase_order.go` - handleInternalPurchaseErp 函数
+- 参考实现：`main/app/service/transfer_order/helper.go:672` - 调拨单传入 RefNo
 
 ---
 
@@ -50,6 +69,7 @@
 
 ### 变更范围
 
+**ttpos-bmp 侧（已完成）**：
 ```
 stock.proto (修改)
     ↓ gf gen pb
@@ -57,15 +77,34 @@ stock.pb.go (自动生成)
 stock_grpc.pb.go (自动生成)
 ```
 
+**ttpos Main 侧（待执行）**：
+```
+main/app/service/purchase_order/purchase_order.go (修改)
+    ↓ 调用 SaveMaterialRequest 时传入 RefNo
+```
+
 ### 数据流
 
 ```
-ttpos 调用方
-    ↓ SaveMaterialRequest(ref_no: "ORDER-123")
+ttpos Main 模块
+    ↓ 创建采购订单（PurchaseOrder）
+    ↓ OrderNo: "PO-20251127-001234"
+    ↓
+handleInternalPurchaseErp 函数
+    ↓ SaveMaterialRequest(ref_no: purchaseOrder.OrderNo)
+    ↓
 ttpos-erp RPC Controller
     ↓ 接收 ref_no 字段
-业务逻辑 (可选日志记录)
+    ↓
+ERP 业务逻辑 (可选日志记录)
+    ↓
+ERP 物料申请单（Material Request）
+    ✓ ref_no: "PO-20251127-001234"
 ```
+
+**关键点**：
+- ttpos 采购订单号（PurchaseOrder.OrderNo）→ ERP ref_no
+- 参考调拨单实现：TransferOrder.OrderNo → MaterialTransfer.RefNo
 
 ---
 
@@ -196,16 +235,23 @@ req := &stock.SaveMaterialRequestReq{
 
 ## 📚 实现清单
 
-### Phase 1: Protobuf 修改
+### Phase 1: Protobuf 修改（ttpos-bmp）✅
 
-- [ ] 修改 `stock.proto`，新增 `ref_no` 字段
-- [ ] 执行 `gf gen pb` 重新生成 Go 代码
-- [ ] 验证生成的代码正确
+- [x] 修改 `stock.proto`，新增 `ref_no` 字段
+- [x] 执行 `gf gen pb` 重新生成 Go 代码
+- [x] 验证生成的代码正确
 
-### Phase 2: 验证测试
+### Phase 2: ttpos 调用端修改（Main 模块）
 
-- [ ] 验证新字段能正确传递和接收
-- [ ] 验证向后兼容性
+- [ ] 修改 `purchase_order.go` 中的 handleInternalPurchaseErp 函数
+- [ ] 在调用 SaveMaterialRequest 时添加 RefNo 字段
+- [ ] 添加日志记录（可选）
+- [ ] 编译验证
+
+### Phase 3: 验证测试
+
+- [ ] 端到端测试：验证 ref_no 从 ttpos 到 ERP 的完整传递
+- [ ] 兼容性测试：验证不传 ref_no 时接口正常工作
 
 **详细任务**: 参见 `tasks.md`
 

@@ -341,8 +341,15 @@ type RoleAccess struct {
 
 **请求**:
 
-- **URL**: `/api/v1/role/create`
+- **URL**: `/api/v1/shop/role/create`
 - **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -356,10 +363,11 @@ type RoleAccess struct {
 ```json
 {
   "code": 1,
-  "message": "success",
+  "message": "创建角色成功",
   "data": {
     "uuid": 123456,
-    "name": "收银员"
+    "name": "收银员",
+    "create_time": 1732704000
   }
 }
 ```
@@ -370,6 +378,13 @@ type RoleAccess struct {
 
 - **URL**: `/api/v1/shop/role/update`
 - **Method**: `POST`
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json"
+  }
+  ```
 - **Body**:
   ```json
   {
@@ -385,11 +400,8 @@ type RoleAccess struct {
 ```json
 {
   "code": 1,
-  "message": "success",
-  "data": {
-    "uuid": 123456,
-    "name": "收银员"
-  }
+  "message": "更新角色成功",
+  "data": {}
 }
 ```
 
@@ -418,7 +430,7 @@ type RoleAccess struct {
 ```json
 {
   "code": 1,
-  "message": "success",
+  "message": "删除角色成功",
   "data": {}
 }
 ```
@@ -442,9 +454,11 @@ type RoleAccess struct {
 - **Headers**:
   ```json
   {
-    "Authorization": "Bearer {token}"
+    "Authorization": "Bearer {token}",
+    "Accept-Language": "zh"
   }
   ```
+  - `Accept-Language`: 可选，指定返回的权限名称语言（zh/en/ja/ko等），默认为 zh
 
 **响应**:
 
@@ -486,6 +500,46 @@ type RoleAccess struct {
 
 > **注意**: 权限树不包含"管理后台"分组，只返回"管理APP"、"收银机"、"点餐助手"三个分组。
 
+**响应示例（英文）**:
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "list": [
+      {
+        "uuid": 2856287473664000,
+        "name": "Management APP",
+        "path": "",
+        "children": [
+          {
+            "uuid": 2856287473664001,
+            "name": "Home",
+            "path": "home",
+            "children": []
+          }
+        ]
+      },
+      {
+        "uuid": 2856287473665000,
+        "name": "Cashier",
+        "path": "",
+        "children": []
+      },
+      {
+        "uuid": 2856287473666000,
+        "name": "Assistant",
+        "path": "",
+        "children": []
+      }
+    ]
+  }
+}
+```
+
+> **说明**: 当请求头 `Accept-Language: en` 时，返回英文权限名称。
+
 **实现要点**:
 
 1. 在 Service 层新增 `GetCompanyPermissionTree` 方法（不依赖员工）：
@@ -521,6 +575,14 @@ type RoleAccess struct {
 
 4. 权限数据已自动筛选（根据商户类型、ERP对接状态、渠道营收统计配置）
 
+5. **国际化实现**（已完成）:
+   - 语言从 `ctx.GetLanguage()` 获取（自动从请求头 Accept-Language 读取）
+   - 在 `GetCompanyPermissionGroup` 方法的最后，递归翻译所有权限节点
+   - 使用 `i18n.Translate(language, permission.Name)` 进行动态翻译
+   - 翻译内容存储在 `main/i18n/languages/*.json` 文件中
+   - 如果翻译不存在，返回原始权限名称作为 fallback
+   - 代码位置：`main/app/service/role_access.go:323-327`（translatePermission 方法）
+
 ---
 
 #### API 0.5.2: 获取权限组接口（用于角色权限配置）
@@ -532,9 +594,11 @@ type RoleAccess struct {
 - **Headers**:
   ```json
   {
-    "Authorization": "Bearer {token}"
+    "Authorization": "Bearer {token}",
+    "Accept-Language": "zh"
   }
   ```
+  - `Accept-Language`: 可选，指定返回的权限名称语言（zh/en/ja/ko等），默认为 zh
 
 **响应**:
 
@@ -599,15 +663,20 @@ type RoleAccess struct {
    }
    ```
 
-2. Service 层方法签名：
+2. Service 层方法签名（在 `role_access.go` 中）：
    ```go
-   func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
+   func (s *roleAccessSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
    ```
 
 3. Service 层实现（`role_access.go`）：
    ```go
-   func (s *roleAccessSrv) GetCompanyPermissionGroup(companyUuid uint64, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
-       // ... 获取权限数据 ...
+   func (s *roleAccessSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+       company := ctx.GetCompany()
+       companyUuid := company.Uuid
+       // ... 获取权限数据和店铺设置 ...
+       
+       // 筛选权限
+       permissions = s.filterPermission(permissions, companySetting, *company)
        
        // 构建权限树形结构
        roots := s.buildPermissionTreeWithoutFilter(permissions)
@@ -617,6 +686,11 @@ type RoleAccess struct {
                continue
            }
            groupPermission.List = append(groupPermission.List, root)
+       }
+       
+       // 国际化翻译权限名称
+       for _, root := range groupPermission.List {
+           s.translatePermission(root, ctx.GetLanguage())
        }
        
        return groupPermission, nil
@@ -635,6 +709,14 @@ type RoleAccess struct {
    ```
 
 4. 权限数据已自动筛选（根据商户类型、ERP对接状态、渠道营收统计配置）
+
+5. **国际化实现**（已完成）:
+   - 语言从 `ctx.GetLanguage()` 获取（自动从请求头 Accept-Language 读取）
+   - 在 `GetCompanyPermissionGroup` 方法的最后，递归翻译所有权限节点
+   - 使用 `i18n.Translate(language, permission.Name)` 进行动态翻译
+   - 翻译内容存储在 `main/i18n/languages/*.json` 文件中
+   - 如果翻译不存在，返回原始权限名称作为 fallback
+   - 代码位置：`main/app/service/role_access.go:323-327`（translatePermission 方法）
 
 ---
 
@@ -779,17 +861,26 @@ type ShopBase struct {
 
 ---
 
-#### Role Service 接口（需要创建或扩展）
+#### Role Service 接口
 
 ```go
 // main/app/service/role.go
 type IRoleSrv interface {
-	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error)                                     // 获取角色列表（可能在其他模块实现）
-	GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDetailResp, error)                                         // 获取角色详情（包含叶子节点统计信息）
-	CreateRole(ctx context.Context, createReq req.AddRoleReq) (*resp.Role, error)                                        // 创建角色
-	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error                                                   // 更新角色
-	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error                                                   // 删除角色
-	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) // 获取店铺权限树（用于角色权限配置）
+	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error) // 获取角色列表
+	GetRoleDetail(ctx context.Context, uuid uint64) (resp.RoleDetailResp, error)     // 获取角色详情（包含叶子节点统计信息）
+	CreateRole(ctx context.Context, createReq req.AddRoleReq) (*resp.Role, error)    // 创建角色
+	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error               // 更新角色
+	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error               // 删除角色
+}
+```
+
+**说明**: `GetCompanyPermissionGroup` 方法在 `IRoleAccessSrv` 接口中定义：
+
+```go
+// main/app/service/role_access.go
+type IRoleAccessSrv interface {
+	// ... 其他方法 ...
+	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
 }
 ```
 
@@ -836,10 +927,8 @@ func (s *roleSrv) DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) e
 	// 4. 软删除角色
 }
 
-func (s *roleSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
-	company := ctx.GetCompany()
-	return s.roleAccessSrv.GetCompanyPermissionGroup(company.Uuid, includeRouteNames)
-}
+// GetCompanyPermissionGroup 方法委托给 roleAccessSrv 实现
+// 在 API Handler 中直接调用 roleAccessSrv.GetCompanyPermissionGroup(ctx, includeRouteNames)
 ```
 
 ### Repository 层
@@ -867,24 +956,55 @@ type IRoleRepo interface {
 
 ```go
 // main/app/api/v1/shop/shop_role.go
-func (api *RoleAPI) GetList(c *gin.Context) {
-	// 调用 Service 获取角色列表
+type RoleHandler struct {
+	roleSrv       service.IRoleSrv
+	roleAccessSrv service.IRoleAccessSrv
 }
 
-func (api *RoleAPI) Create(c *gin.Context) {
-	// 调用 Service 创建角色
+func (h *RoleHandler) GetRoleDetail(c *gin.Context) {
+	// 获取角色详情（包含权限列表和关联员工）
 }
 
-func (api *RoleAPI) Update(c *gin.Context) {
-	// 调用 Service 更新角色
+func (h *RoleHandler) CreateRole(c *gin.Context) {
+	// 创建角色并配置权限（权限至少选择一个）
 }
 
-func (api *RoleAPI) Delete(c *gin.Context) {
-	// 调用 Service 删除角色
+func (h *RoleHandler) UpdateRole(c *gin.Context) {
+	// 更新角色信息、权限和关联员工（权限至少选择一个）
 }
 
-func (api *RoleAPI) GetPermissionTree(c *gin.Context) {
-	// 调用 Service 获取权限树
+func (h *RoleHandler) DeleteRole(c *gin.Context) {
+	// 删除角色（已关联员工的角色无法删除）
+}
+
+func (h *RoleHandler) GetPermissionGroup(c *gin.Context) {
+	// 获取店铺的所有权限组（管理APP、收银机、点餐助手）
+	// 调用 roleAccessSrv.GetCompanyPermissionGroup 获取权限树
+}
+```
+
+**路由注册**:
+
+```go
+func RegisterRoleHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	roleSrv := service.NewRoleSrv(dbm, roleAccessSrv)
+
+	wrapper := &RoleHandler{
+		roleSrv:       roleSrv,
+		roleAccessSrv: roleAccessSrv,
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(...))
+	{
+		privateApi.GET("/role/detail", wrapper.GetRoleDetail)     // 获取角色详情
+		privateApi.POST("/role/create", wrapper.CreateRole)       // 创建角色
+		privateApi.POST("/role/update", wrapper.UpdateRole)       // 更新角色
+		privateApi.DELETE("/role/delete", wrapper.DeleteRole)     // 删除角色
+		privateApi.GET("/permission_group", wrapper.GetPermissionGroup) // 获取权限组
+	}
 }
 ```
 
