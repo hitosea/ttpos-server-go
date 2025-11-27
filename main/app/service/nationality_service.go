@@ -171,14 +171,10 @@ func (s *nationalitySrv) Update(ctx context.Context, req req.NationalityUpdateRe
 
 // Delete 删除国籍
 func (s *nationalitySrv) Delete(ctx context.Context, req req.NationalityDeleteReq) error {
-	// 校验是否可删除
-	if err := s.CheckCanDelete(ctx, req.Uuid); err != nil {
-		return err
-	}
-
 	db := ctx.GetDB()
 
-	// 软删除国籍
+	// 软删除国籍（移除CheckCanDelete检查，允许删除已使用的配置）
+	// 历史订单仍可通过 GetByUuidWithDeleted 查询到配置名称
 	nationalityRepo := repository.NewNationalityRepo(db)
 	err := nationalityRepo.SoftDelete(req.Uuid)
 	if err != nil {

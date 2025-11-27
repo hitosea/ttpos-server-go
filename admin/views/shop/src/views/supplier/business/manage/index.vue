@@ -172,7 +172,9 @@
             <el-form-item 
               v-if="form.discount_need_password == 1" 
               for="no_click" 
+              prop="discount_authorized_staff_ids"
               :label="$t('折扣授权员工')"
+              :rules="[{ required: true, message: $t('请选择授权员工') }]"
             >
               <el-select
                 v-model="form.discount_authorized_staff_ids"
@@ -208,7 +210,9 @@
             <el-form-item 
               v-if="form.refund_need_password == 1" 
               for="no_click" 
+              prop="refund_authorized_staff_ids"
               :label="$t('退款授权员工')"
+              :rules="[{ required: true, message: $t('请选择授权员工') }]"
             >
               <el-select
                 v-model="form.refund_authorized_staff_ids"

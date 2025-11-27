@@ -90,6 +90,7 @@ app/ttpos-erp/
 - **数据库操作**：必须使用 DAO 层服务，通过 `dao.TableName.Ctx(ctx)` 调用
 - **自动生成文件**：`dao/`、`service/`、`entity/`、`do/` 目录下的文件由框架自动生成，**严禁手动修改**
 - **框架生成标识**：包含 `"Code generated and maintained by GoFrame CLI tool. DO NOT EDIT."` 注释的文件不要优化或修改
+- `internal/service` 下的代码不要修改，通过在模块下执行 `gf gen service` 生成
 
 ### 3.3 服务层设计
 ```go

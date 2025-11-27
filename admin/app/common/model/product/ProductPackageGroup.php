@@ -61,6 +61,25 @@ class ProductPackageGroup extends BaseModel
                 'optional_count' => $item['optional_count'] ?? 0, // 可选数量
             ];
             
+            // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否大于可选数量
+            if ($groupData['group_type'] == 1) { // 可选类型
+                $productList = $item['product_list'] ?? [];
+                // 统计必选+默认商品总数（去重：一个商品可能既是必选又是默认，只算一次）
+                $requiredOrDefaultCount = 0;
+                foreach ($productList as $productItem) {
+                    $isRequired = ($productItem['is_required'] ?? 0) == 1;
+                    $isDefault = ($productItem['is_default'] ?? 0) == 1;
+                    // 如果商品是必选或默认，则计数（必选+默认的商品只算一次）
+                    if ($isRequired || $isDefault) {
+                        $requiredOrDefaultCount++;
+                    }
+                }
+                $optionalCount = $groupData['optional_count'] ?? 0;
+                if ($requiredOrDefaultCount > $optionalCount) {
+                    throw new \Exception('必选或默认不可大于可选数量');
+                }
+            }
+            
             $insertGroups[] = [
                 'uuid' => $groupUuid, // 套餐分组uuid
                 'name' => $item['group_name'], // 套餐分组名称
@@ -136,6 +155,24 @@ class ProductPackageGroup extends BaseModel
                 }
             }
             $groupItemList = $item['product_list'] ?? [];
+            
+            // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否大于可选数量
+            if ($groupData['group_type'] == 1) { // 可选类型
+                // 统计必选+默认商品总数（去重：一个商品可能既是必选又是默认，只算一次）
+                $requiredOrDefaultCount = 0;
+                foreach ($groupItemList as $groupItem) {
+                    $isRequired = ($groupItem['is_required'] ?? 0) == 1;
+                    $isDefault = ($groupItem['is_default'] ?? 0) == 1;
+                    // 如果商品是必选或默认，则计数（必选+默认的商品只算一次）
+                    if ($isRequired || $isDefault) {
+                        $requiredOrDefaultCount++;
+                    }
+                }
+                $optionalCount = $groupData['optional_count'] ?? 0;
+                if ($requiredOrDefaultCount > $optionalCount) {
+                    throw new \Exception('必选或默认不可大于可选数量');
+                }
+            }
             
             $productIds = array_column($groupItemList, 'product_id');
             $productBoms = ProductBom::whereIn('uuid', $productIds)->column('product_package_uuid', 'uuid');

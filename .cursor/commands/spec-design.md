@@ -1,21 +1,21 @@
 ---
-name: design-spec
+name: spec-design
 description: 创建技术设计和任务分解（设计阶段）
 ---
 
-# /design-spec - 创建 Spec 设计文档
+# /spec-design - 创建 Spec 设计文档
 
 ## 使用场景
 
 需求审核通过后，创建技术设计文档和任务分解，进入开发阶段。
 
-> **前置条件**: 必须先使用 `/create-spec` 创建需求文档，且审核状态为「已通过」。
+> **前置条件**: 必须先使用 `/spec-create` 创建需求文档，且审核状态为「已通过」。
 
 ## 使用方式
 
 ```bash
-/design-spec story-order-quick-payment
-/design-spec task-shop-export-report
+/spec-design story-order-quick-payment
+/spec-design task-shop-export-report
 ```
 
 ## 参数
@@ -36,8 +36,8 @@ description: 创建技术设计和任务分解（设计阶段）
 
 | 检查项 | 失败处理 |
 |--------|----------|
-| Spec 目录不存在 | 提示先使用 `/create-spec` |
-| requirements.md 不存在 | 提示先使用 `/create-spec` |
+| Spec 目录不存在 | 提示先使用 `/spec-create` |
+| requirements.md 不存在 | 提示先使用 `/spec-create` |
 | 审核状态不是「已通过」 | 提示等待产品审核通过 |
 
 ## 功能特点
@@ -67,7 +67,7 @@ docs/shared/specs/active/{level}-{module}-{feature}/
 ## 工作流位置
 
 ```
-Proposal → 评审 → /create-spec → 产品审核 → /design-spec → 开发
+Proposal → 评审 → /spec-create → 产品审核 → /spec-design → 开发
                                                  ↑
                                               当前命令
 ```
@@ -76,8 +76,8 @@ Proposal → 评审 → /create-spec → 产品审核 → /design-spec → 开�
 
 ```mermaid
 graph TD
-    A[/design-spec spec-name] --> B{检查 Spec 目录}
-    B -->|不存在| C[❌ 提示先 /create-spec]
+    A[/spec-design spec-name] --> B{检查 Spec 目录}
+    B -->|不存在| C[❌ 提示先 /spec-create]
     B -->|存在| D{检查 requirements.md}
     D -->|不存在| C
     D -->|存在| E{检查审核状态}
@@ -92,8 +92,8 @@ graph TD
 
 | 错误类型 | 处理方式 |
 |---|---|
-| Spec 不存在 | 提示使用 `/create-spec` 创建 |
-| requirements.md 不存在 | 提示使用 `/create-spec` 创建 |
+| Spec 不存在 | 提示使用 `/spec-create` 创建 |
+| requirements.md 不存在 | 提示使用 `/spec-create` 创建 |
 | 审核状态非「已通过」 | 提示等待产品审核 |
 | design.md 已存在 | 询问是否覆盖 |
 | tasks.md 已存在 | 询问是否覆盖 |
@@ -103,9 +103,9 @@ graph TD
 
 | 命令 | 用途 |
 |------|------|
-| `/propose` | 创建需求提案 |
-| `/create-spec` | 创建需求规格 |
-| `/design-spec` | 创建技术设计 + 任务分解（当前命令） |
+| `/spec-propose` | 创建需求提案 |
+| `/spec-create` | 创建需求规格 |
+| `/spec-design` | 创建技术设计 + 任务分解（当前命令） |
 | `/check-tasks` | 检查任务进度 |
 
 ## 模板引用

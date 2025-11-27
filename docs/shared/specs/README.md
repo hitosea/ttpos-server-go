@@ -39,13 +39,13 @@ archived/   deprecated/
 
 ```bash
 # 归档到指定版本（任务必须全部完成）
-/archive-spec @story-order-quick-payment --version v2.10
+/spec-archive @story-order-quick-payment --version v2.10
 
 # 废弃 Spec（必须提供原因）
-/deprecate-spec @story-old-feature --reason "需求取消"
+/spec-deprecate @story-old-feature --reason "需求取消"
 
 # 恢复 Spec 到 active
-/restore-spec @story-order-quick-payment
+/spec-restore @story-order-quick-payment
 ```
 
 ---
@@ -108,7 +108,7 @@ story-order-quick-payment/
 ### Phase 1: 创建需求文档
 
 ```bash
-/create-spec story-order-quick-payment
+/spec-create story-order-quick-payment
 ```
 
 输出：
@@ -120,7 +120,7 @@ docs/shared/specs/active/story-order-quick-payment/
 ### Phase 2: 创建设计文档（产品审核通过后）
 
 ```bash
-/design-spec story-order-quick-payment
+/spec-design story-order-quick-payment
 ```
 
 前置条件：requirements.md 审核状态为「已通过」

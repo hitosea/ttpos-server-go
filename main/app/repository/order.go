@@ -1362,19 +1362,11 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 			},
 			WithPreload{
 				Query: "OrderSource.MultiLanguageName",
-				Args: []any{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", constant.NotDeleted)
-					},
-				},
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 			WithPreload{
 				Query: "Nationality.MultiLanguageName",
-				Args: []any{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", constant.NotDeleted)
-					},
-				},
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
@@ -2064,19 +2056,11 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 			// ==================== 销售账单的订单来源和国籍信息 ====================
 			WithPreload{
 				Query: "OrderSource.MultiLanguageName",
-				Args: []any{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", constant.NotDeleted)
-					},
-				},
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 			WithPreload{
 				Query: "Nationality.MultiLanguageName",
-				Args: []any{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", constant.NotDeleted)
-					},
-				},
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
@@ -2110,19 +2094,11 @@ func (r *orderRepo) GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBil
 			},
 			WithPreload{
 				Query: "OrderSource.MultiLanguageName",
-				Args: []any{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", constant.NotDeleted)
-					},
-				},
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 			WithPreload{
 				Query: "Nationality.MultiLanguageName",
-				Args: []any{
-					func(db *gorm.DB) *gorm.DB {
-						return db.Where("delete_time = ?", constant.NotDeleted)
-					},
-				},
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),

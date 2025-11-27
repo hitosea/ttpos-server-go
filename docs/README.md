@@ -103,6 +103,14 @@ docs/
 │   │       ├── requirements.md         # 需求文档
 │   │       ├── design.md               # 设计文档
 │   │       └── tasks.md                # 任务清单
+│   ├── bugs/                 #   Bug 管理
+│   │   ├── active/                     # 未解决的 Bug
+│   │   │   └── bug-{id}-{module}-{brief}/
+│   │   │       └── bug.md              # Bug 详情
+│   │   └── resolved/                   # 已解决的 Bug（按版本归档）
+│   │       └── {version}/
+│   │           └── bug-{id}-{module}-{brief}/
+│   │               └── bug.md          # Bug 详情（含解决方案）
 │   ├── api/                   #   API 文档
 │   │   └── conventions.md              # API 约定
 │   ├── troubleshooting/      #   问题排查指南
@@ -143,7 +151,8 @@ docs/
 | 场景               | 查看                                                                           |
 | ------------------ | ------------------------------------------------------------------------------ |
 | **开发新功能**     | [功能开发工作流](./agent/workflows/feature-development.md)                     |
-| **修复 Bug**       | [Bug 修复工作流](./agent/workflows/bug-fixing.md)                              |
+| **修复 Bug**       | [Bug 修复工作流](./agent/workflows/bug-fixing.md) / [Bug 管理体系](./shared/bugs/) |
+| **创建 Bug 报告**  | [`/bug-create`](../.cursor/commands/bug-create.md) → [`/bug-spec`](../.cursor/commands/bug-spec.md) → [`/bug-archive`](../.cursor/commands/bug-archive.md) |
 | **创建数据库迁移** | [数据库迁移工作流](./agent/workflows/database-migration.md)                    |
 | **开发 gRPC 服务** | [微服务集成工作流](./agent/workflows/microservice-integration.md)              |
 | **对接第三方 API** | [API 对接工作流](./agent/workflows/api-integration.md)                         |

@@ -12,8 +12,8 @@
 
 ## 📊 进度总览
 
-**总任务数**: 5（本次优化任务）  
-**已完成**: 5  
+**总任务数**: 7（本次优化任务）  
+**已完成**: 7  
 **完成率**: 100% ✅
 
 **关联任务 #36915 的重构工作**：
@@ -90,35 +90,87 @@
 
 ---
 
-### Task 1.4 添加 Debug 支持
+### Task 1.4 支持特殊表的自定义筛选条件
 
-- [x] **添加 GORM Debug 调用**
+- [x] **修复 product_package_group 表查询**
   - **File**: `main/app/service/sync.go`
   - **Method**: `SyncMultiLanguage`
-  - **Purpose**: 在查询语句中添加 `.Debug()` 以便调试
+  - **Purpose**: `product_package_group` 表没有 `headquarter_uuid` 字段，需要通过子查询筛选
   - **Requirements**: R3
   - **执行步骤**:
-    1. 找到查询多语言UUID的代码块（约第 523-528 行）
-    2. 在 `.Find(&records).Error` 前添加 `.Debug()`
+    1. 在 `tableConfig` 结构体中添加 `filterCondition` 字段
+    2. 为 `product_package_group` 表配置子查询条件
+    3. 修改查询逻辑，根据配置使用不同的筛选条件
+  - **代码变更**:
+    ```go
+    // 结构体添加字段
+    type tableConfig struct {
+        // ... 其他字段
+        filterCondition string   // 自定义筛选条件（可选，默认使用 headquarter_uuid = 0）
+    }
+    
+    // product_package_group 使用子查询
+    {tableName: config.Database.TablePrefix + "product_package_group", ..., 
+     filterCondition: "product_package_uuid IN (SELECT uuid FROM " + 
+         config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"}
+    
+    // 查询逻辑
+    if cfg.filterCondition != "" {
+        query = query.Where(cfg.filterCondition)
+    } else {
+        query = query.Where("headquarter_uuid = 0")
+    }
+    ```
+  - **验收**: 编译通过，`product_package_group` 表查询正常
+
+---
+
+### Task 1.5 补充商品卖点多语言
+
+- [x] **添加 describe_multi_language_name_uuid 配置**
+  - **File**: `main/app/service/sync.go`
+  - **Method**: `SyncMultiLanguage`
+  - **Purpose**: `product_package` 表除了名称多语言，还有卖点多语言需要同步
+  - **执行步骤**:
+    1. 在 `tableConfigs` 中添加 `product_package` 表的 `describe_multi_language_name_uuid` 配置
+  - **代码变更**:
+    ```go
+    // product_package 表有两个多语言字段
+    {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+    {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "describe_multi_language_name_uuid", entityUuidColumn: "uuid"},
+    ```
+  - **验收**: 编译通过，商品卖点多语言同步正常
+
+---
+
+### Task 1.6 修复类型断言 Bug
+
+- [x] **支持 int64 类型断言**
+  - **File**: `main/app/service/sync.go`
+  - **Method**: `SyncMultiLanguage`
+  - **Purpose**: 数据库返回的整数可能是 `int64` 而非 `uint64`，需要兼容处理
+  - **执行步骤**:
+    1. 使用 `switch type` 语句分别处理 `uint64` 和 `int64` 类型
   - **代码变更**:
     ```go
     // 改进前
-    err := headquarterDB.Table(config.tableName).
-        Select(config.multiLanguageUuidColumn).
-        Where("delete_time = 0").
-        Where("headquarter_uuid = 0").
-        Where(config.multiLanguageUuidColumn + " > 0").
-        Find(&records).Error
+    if uuid, ok := record[cfg.multiLanguageUuidColumn].(uint64); ok && uuid > 0 {
+        multiLanguageUuidMap[uuid] = true
+    }
     
     // 改进后
-    err := headquarterDB.Table(config.tableName).
-        Select(config.multiLanguageUuidColumn).
-        Where("delete_time = 0").
-        Where("headquarter_uuid = 0").
-        Where(config.multiLanguageUuidColumn + " > 0").Debug().
-        Find(&records).Error
+    var uuid uint64
+    switch v := record[cfg.multiLanguageUuidColumn].(type) {
+    case uint64:
+        uuid = v
+    case int64:
+        uuid = uint64(v)
+    }
+    if uuid > 0 {
+        multiLanguageUuidMap[uuid] = true
+    }
     ```
-  - **验收**: 编译通过，运行时可以看到 SQL Debug 输出
+  - **验收**: 编译通过，类型断言兼容 `uint64` 和 `int64`
 
 ---
 
@@ -188,7 +240,17 @@ import (
 func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
     // ... 前面的代码
     
+    // 定义需要同步多语言的表和字段映射
+    type tableConfig struct {
+        tableName               string   // 表名
+        multiLanguageUuidColumn string   // 多语言UUID字段名
+        entityUuidColumn        string   // 实体UUID字段名
+        preloadRelations        []string // 需要预加载的关联
+        filterCondition         string   // 自定义筛选条件（可选，默认使用 headquarter_uuid = 0）
+    }
+    
     // 所有需要同步多语言的表配置（按表名字母顺序排列）
+    // 注意：product_package_group 表没有 headquarter_uuid 字段，需要通过关联 product_package 表筛选
     tableConfigs := []tableConfig{
         {tableName: config.Database.TablePrefix + "material", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "material_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
@@ -198,21 +260,28 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
         {tableName: config.Database.TablePrefix + "product_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "product_flavor", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
-        {tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+        {tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid", filterCondition: "product_package_uuid IN (SELECT uuid FROM " + config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"},
         {tableName: config.Database.TablePrefix + "product_sauce", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "product_unit", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "warehouse", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
     }
     
     // 从总部表中查询所有总部数据的多语言UUID
-    for _, config := range tableConfigs {
+    for _, cfg := range tableConfigs {
         var records []map[string]any
-        err := headquarterDB.Table(config.tableName).
-            Select(config.multiLanguageUuidColumn).
+        query := headquarterDB.Table(cfg.tableName).
+            Select(cfg.multiLanguageUuidColumn).
             Where("delete_time = 0").
-            Where("headquarter_uuid = 0").
-            Where(config.multiLanguageUuidColumn + " > 0").Debug().
-            Find(&records).Error
+            Where(cfg.multiLanguageUuidColumn + " > 0")
+
+        // 使用自定义筛选条件或默认条件（headquarter_uuid = 0）
+        if cfg.filterCondition != "" {
+            query = query.Where(cfg.filterCondition)
+        } else {
+            query = query.Where("headquarter_uuid = 0")
+        }
+
+        err := query.Find(&records).Error
         // ... 处理代码
     }
 }
@@ -225,14 +294,17 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 ### 代码质量
 - [x] 所有表名使用配置化表前缀
 - [x] 类型定义使用 `any`
-- [x] 添加 `.Debug()` 支持
+- [x] 特殊表（`product_package_group`）使用自定义筛选条件
+- [x] 商品卖点多语言（`describe_multi_language_name_uuid`）已添加
+- [x] 类型断言支持 `uint64` 和 `int64`
 - [x] 通过 golangci-lint 检查
 - [x] Import 格式正确
 
 ### 功能验证
 - [x] 编译通过
 - [x] 多语言同步功能正常
-- [x] Debug 输出正常
+- [x] `product_package_group` 表查询正常
+- [x] 商品卖点多语言同步正常
 
 ---
 
@@ -243,11 +315,13 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 | 项目 | 数量 |
 |------|------|
 | 文件变更 | 1 个 |
-| 代码行变更 | ~15 行 |
+| 代码行变更 | ~35 行 |
 | 新增 Import | 1 个 |
-| 表名修改 | 12 处 |
-| 类型修改 | 1 处 |
-| Debug 添加 | 1 处 |
+| 表配置数 | 13 条 |
+| 类型修改 | 1 处（`any` 替代 `interface{}`） |
+| 新增结构体字段 | 1 个（`filterCondition`） |
+| 特殊表处理 | 1 个（`product_package_group`） |
+| 类型断言修复 | 1 处（支持 `int64`） |
 
 ### 关联重构（任务 #36915）
 
@@ -342,19 +416,43 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 ```diff
 + import "ttpos-server-go/config"
 
+  // 结构体添加字段
+  type tableConfig struct {
+      tableName               string
+      multiLanguageUuidColumn string
+      entityUuidColumn        string
+      preloadRelations        []string
++     filterCondition         string   // 自定义筛选条件（可选）
+  }
+
   tableConfigs := []tableConfig{
 -     {tableName: "ttpos_material", ...},
 +     {tableName: config.Database.TablePrefix + "material", ...},
-      // ... 其他11个表
+      // ... 其他表
++     // product_package_group 使用子查询筛选（无 headquarter_uuid 字段）
++     {tableName: config.Database.TablePrefix + "product_package_group", ..., 
++      filterCondition: "product_package_uuid IN (SELECT uuid FROM " + 
++          config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"},
   }
   
 - var records []map[string]interface{}
 + var records []map[string]any
 
-  err := headquarterDB.Table(config.tableName).
-      // ... 查询条件
--     Find(&records).Error
-+     .Debug().Find(&records).Error
+- for _, config := range tableConfigs {
+-     err := headquarterDB.Table(config.tableName).
+-         // ...
+-         Where("headquarter_uuid = 0").
+-         Find(&records).Error
++ for _, cfg := range tableConfigs {
++     query := headquarterDB.Table(cfg.tableName).
++         // ...
++     // 使用自定义筛选条件或默认条件
++     if cfg.filterCondition != "" {
++         query = query.Where(cfg.filterCondition)
++     } else {
++         query = query.Where("headquarter_uuid = 0")
++     }
++     err := query.Find(&records).Error
 ```
 
 ---
@@ -372,7 +470,7 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 3. **代码质量**
    - 使用配置化表前缀，避免硬编码
    - 使用现代 Go 特性（`any` 类型）
-   - 添加 Debug 支持，方便问题排查
+   - 支持特殊表的自定义筛选条件（如 `product_package_group`）
 
 4. **注释规范**
    - 在同步方法中明确注释"多语言由 SyncMultiLanguage 任务处理"
@@ -381,6 +479,6 @@ func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
 ---
 
 **创建时间**: 2025-11-25  
-**完成时间**: 2025-11-25  
+**完成时间**: 2025-11-27  
 **维护者**: 曾振华
 

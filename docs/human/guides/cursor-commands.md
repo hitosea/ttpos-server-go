@@ -10,13 +10,13 @@
 
 | 优先级 | 指令                      | 描述                              | 状态   |
 | ------ | ------------------------- | --------------------------------- | ------ |
-| ⭐⭐⭐ | `/propose`                | 创建需求提案（Scrum）             | ✅ MVP |
+| ⭐⭐⭐ | `/spec-propose`                | 创建需求提案（Scrum）             | ✅ MVP |
 | ⭐⭐⭐ | `/onboard`                | 项目快速入门引导                  | ✅ MVP |
-| ⭐⭐⭐ | `/create-spec`            | 创建需求文档（requirements.md）   | ✅ MVP |
-| ⭐⭐⭐ | `/design-spec`            | 创建设计文档（design + tasks）    | ✅ MVP |
-| ⭐⭐⭐ | `/archive-spec`           | 归档已完成的 Spec                 | ✅ MVP |
-| ⭐⭐⭐ | `/deprecate-spec`         | 废弃不再需要的 Spec               | ✅ MVP |
-| ⭐⭐⭐ | `/restore-spec`           | 恢复已归档/废弃的 Spec            | ✅ MVP |
+| ⭐⭐⭐ | `/spec-create`            | 创建需求文档（requirements.md）   | ✅ MVP |
+| ⭐⭐⭐ | `/spec-design`            | 创建设计文档（design + tasks）    | ✅ MVP |
+| ⭐⭐⭐ | `/spec-archive`           | 归档已完成的 Spec                 | ✅ MVP |
+| ⭐⭐⭐ | `/spec-deprecate`         | 废弃不再需要的 Spec               | ✅ MVP |
+| ⭐⭐⭐ | `/spec-restore`           | 恢复已归档/废弃的 Spec            | ✅ MVP |
 | ⭐⭐⭐ | `/check-tasks`            | 检查任务完成进度                  | 规划中 |
 | ⭐⭐   | `/create-api-doc`         | 为已实现的 API 创建文档 | 规划中 |
 | ⭐⭐   | `/create-component-test`  | 为组件创建测试          | 规划中 |
@@ -33,18 +33,18 @@
 
 ## 📖 指令详解
 
-### `/propose` - 创建需求提案 ⭐ 新增
+### `/spec-propose` - 创建需求提案 ⭐ 新增
 
 **使用场景**: 需求发起、Scrum 流程启动
 
 **使用方式**:
 
 ```bash
-/propose quick-payment                    # 创建快速支付功能提案
-/propose report-export                    # 创建报表导出功能提案
-/propose dark-mode                        # 创建深色模式提案
-/propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
-/propose feature-name DooTask #36917      # 支持 DooTask # 格式
+/spec-propose quick-payment                    # 创建快速支付功能提案
+/spec-propose report-export                    # 创建报表导出功能提案
+/spec-propose dark-mode                        # 创建深色模式提案
+/spec-propose feature-name 编号:36917          # 基于 DooTask 任务创建提案
+/spec-propose feature-name DooTask #36917      # 支持 DooTask # 格式
 ```
 
 **功能特点**:
@@ -60,19 +60,19 @@
   - 将任务内容作为上下文信息，供后续对话使用
   - 将任务内容作为上下文信息，供后续对话使用
 
-**详见**: `.cursor/commands/propose.md`
+**详见**: `.cursor/commands/spec-propose.md`
 
 ---
 
-### `/design-spec` - 创建设计文档 ⭐ 新增
+### `/spec-design` - 创建设计文档 ⭐ 新增
 
 **使用场景**: 需求审核通过后，创建技术设计文档和任务分解
 
 **使用方式**:
 
 ```bash
-/design-spec story-order-quick-payment
-/design-spec task-shop-export-report
+/spec-design story-order-quick-payment
+/spec-design task-shop-export-report
 ```
 
 **前置条件**:
@@ -88,19 +88,19 @@
 - ✅ 自动填充后端特定信息（Go/PHP/数据库）
 - ✅ 提供开发指引
 
-**详见**: `.cursor/commands/design-spec.md`
+**详见**: `.cursor/commands/spec-design.md`
 
 ---
 
-### `/archive-spec` - 归档 Spec
+### `/spec-archive` - 归档 Spec
 
 **使用场景**: 功能开发完成并发布后，将 Spec 归档到版本目录
 
 **使用方式**:
 
 ```bash
-/archive-spec @story-order-quick-payment                    # 自动检测版本号
-/archive-spec @story-order-quick-payment --version v2.10    # 指定版本号
+/spec-archive @story-order-quick-payment                    # 自动检测版本号
+/spec-archive @story-order-quick-payment --version v2.10    # 指定版本号
 ```
 
 **功能特点**:
@@ -112,19 +112,19 @@
 - ✅ 同步更新关联 Proposal 的链接和状态
 - ✅ 记录活动日志
 
-**详见**: `.cursor/commands/archive-spec.md`
+**详见**: `.cursor/commands/spec-archive.md`
 
 ---
 
-### `/deprecate-spec` - 废弃 Spec
+### `/spec-deprecate` - 废弃 Spec
 
 **使用场景**: 将不再需要、被替代或取消的 Spec 标记为废弃
 
 **使用方式**:
 
 ```bash
-/deprecate-spec @story-old-payment --reason "被 story-new-payment 替代"
-/deprecate-spec @story-abandoned-feature --reason "需求取消"
+/spec-deprecate @story-old-payment --reason "被 story-new-payment 替代"
+/spec-deprecate @story-abandoned-feature --reason "需求取消"
 ```
 
 **功能特点**:
@@ -136,20 +136,20 @@
 - ✅ 同步更新关联 Proposal 的链接和状态
 - ✅ 记录活动日志
 
-**详见**: `.cursor/commands/deprecate-spec.md`
+**详见**: `.cursor/commands/spec-deprecate.md`
 
 ---
 
-### `/restore-spec` - 恢复 Spec
+### `/spec-restore` - 恢复 Spec
 
 **使用场景**: 将已归档或已废弃的 Spec 恢复到 active 目录
 
 **使用方式**:
 
 ```bash
-/restore-spec @story-order-quick-payment                    # 自动检测来源
-/restore-spec @story-order-quick-payment --from archived    # 指定从 archived 恢复
-/restore-spec @story-old-payment --from deprecated          # 指定从 deprecated 恢复
+/spec-restore @story-order-quick-payment                    # 自动检测来源
+/spec-restore @story-order-quick-payment --from archived    # 指定从 archived 恢复
+/spec-restore @story-old-payment --from deprecated          # 指定从 deprecated 恢复
 ```
 
 **功能特点**:
@@ -160,6 +160,6 @@
 - ✅ 同步更新关联 Proposal 的链接和状态
 - ✅ 记录活动日志
 
-**详见**: `.cursor/commands/restore-spec.md`
+**详见**: `.cursor/commands/spec-restore.md`
 
 ---

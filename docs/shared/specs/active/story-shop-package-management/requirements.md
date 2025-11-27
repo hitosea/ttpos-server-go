@@ -60,13 +60,13 @@
 
 1. **WHEN** 调用保存套餐组 API **THEN** 系统 **SHALL** 支持 `optional_count` 字段（默认 1）
 2. **WHEN** 调用保存套餐组商品 API **THEN** 系统 **SHALL** 支持 `is_required` 和 `is_default` 字段
-3. **WHEN** 必选数量大于可选数量 **THEN** 系统 **SHALL** 返回错误："必选不可大于可选数量"
+3. **WHEN** 必选+默认商品总数大于可选数量 **THEN** 系统 **SHALL** 返回错误："必选+默认商品总数不可大于可选数量"
 
 #### 具体要求
 
 - [x] 2.1 数据库字段已存在：`ttpos_product_package_group_item.is_required` 字段（0-否 1-是，默认 0）
 - [x] 2.2 数据库字段已存在：`ttpos_product_package_group_item.is_default` 字段（0-否 1-是，默认 0）
-- [ ] 2.3 PHP 后端 API 实现数据校验：必选数量不可大于可选数量
+- [ ] 2.3 PHP 后端 API 实现数据校验：必选+默认商品总数不可大于可选数量（如可选2，A商品必选+默认，B商品默认，C商品必选）
 - [ ] 2.4 更新 PHP Model：`admin/app/common/model/product/ProductPackageGroupItem.php`（支持新字段）
 - [ ] 2.5 更新 `ProductPackageGroup::updatePackageGroup` 方法，支持新字段
 
@@ -109,12 +109,12 @@
 
 #### 验收标准
 
-1. **WHEN** 调用保存套餐组 API **AND** 必选数量大于可选数量 **THEN** 系统 **SHALL** 返回错误信息
+1. **WHEN** 调用保存套餐组 API **AND** 必选+默认商品总数大于可选数量 **THEN** 系统 **SHALL** 返回错误信息
 2. **WHEN** 调用保存套餐组 API **AND** 数据格式不正确 **THEN** 系统 **SHALL** 返回参数错误信息
 
 #### 具体要求
 
-- [ ] 5.1 实现数据校验：必选数量不可大于可选数量
+- [ ] 5.1 实现数据校验：必选+默认商品总数不可大于可选数量
 - [ ] 5.2 实现参数验证：确保必填字段存在，数据类型正确
 
 ---
@@ -183,7 +183,7 @@
 3. **必选/默认选项**: PHP 后端 API 支持商品的必选和默认选项
 4. **价格加价模式**: PHP 后端 API 支持加价字段，默认 0
 5. **数量默认值**: PHP 后端 API 支持数量字段，默认 1
-6. **数据校验**: PHP 后端 API 校验必选数量不可大于可选数量
+6. **数据校验**: PHP 后端 API 校验必选+默认商品总数不可大于可选数量
 
 ### 测试验收
 

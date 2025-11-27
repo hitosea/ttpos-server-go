@@ -158,14 +158,18 @@ public static function updatePackageGroup($data, $product)
         
         // 新增：数据校验
         if ($groupData['group_type'] == 1) { // 可选类型
-            $requiredCount = 0;
+            // 统计必选+默认商品总数（去重：一个商品可能既是必选又是默认，只算一次）
+            $requiredOrDefaultCount = 0;
             foreach ($groupItemList as $item) {
-                if (($item['is_required'] ?? 0) == 1) {
-                    $requiredCount++;
+                $isRequired = ($item['is_required'] ?? 0) == 1;
+                $isDefault = ($item['is_default'] ?? 0) == 1;
+                // 如果商品是必选或默认，则计数（必选+默认的商品只算一次）
+                if ($isRequired || $isDefault) {
+                    $requiredOrDefaultCount++;
                 }
             }
-            if ($requiredCount > ($groupData['optional_count'] ?? 0)) {
-                throw new \Exception('必选不可大于可选数量');
+            if ($requiredOrDefaultCount > ($groupData['optional_count'] ?? 0)) {
+                throw new \Exception('必选+默认商品总数不可大于可选数量');
             }
         }
     }
@@ -231,7 +235,7 @@ public static function updatePackageGroup($data, $product)
 ```json
 {
   "code": 0,
-  "message": "必选不可大于可选数量",
+  "message": "必选+默认商品总数不可大于可选数量",
   "data": {}
 }
 ```
@@ -254,7 +258,7 @@ public static function updatePackageGroup($data, $product)
     // 2. 支持 is_required 和 is_default 字段
     // 3. 支持 add_price 字段
     // 4. num 字段默认值为 1
-    // 5. 数据校验：必选数量不可大于可选数量
+    // 5. 数据校验：必选+默认商品总数不可大于可选数量
 }
 ```
 
@@ -272,14 +276,23 @@ public static function updatePackageGroup($data, $product)
 
 ### 错误场景
 
-#### 场景 1: 必选数量大于可选数量
+#### 场景 1: 必选+默认商品总数大于可选数量
 
 - **处理方式**: 在 Model 层进行校验，抛出异常
-- **用户影响**: 前端显示错误提示："必选不可大于可选数量"
+- **用户影响**: 前端显示错误提示："必选+默认商品总数不可大于可选数量"
 - **代码示例**:
   ```php
-  if ($requiredCount > $optionalCount) {
-      throw new \Exception('必选不可大于可选数量');
+  // 统计必选+默认商品总数（去重：一个商品可能既是必选又是默认，只算一次）
+  $requiredOrDefaultCount = 0;
+  foreach ($groupItemList as $item) {
+      $isRequired = ($item['is_required'] ?? 0) == 1;
+      $isDefault = ($item['is_default'] ?? 0) == 1;
+      if ($isRequired || $isDefault) {
+          $requiredOrDefaultCount++;
+      }
+  }
+  if ($requiredOrDefaultCount > $optionalCount) {
+      throw new \Exception('必选+默认商品总数不可大于可选数量');
   }
   ```
 

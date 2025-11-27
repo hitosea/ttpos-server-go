@@ -29501,6 +29501,22 @@ const docTemplate = `{
                     "商家端.报表"
                 ],
                 "summary": "用户分析统计查询",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "开始时间戳（Unix秒）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "结束时间戳（Unix秒）",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "统计数据",
@@ -29541,6 +29557,22 @@ const docTemplate = `{
                     "商家端.报表"
                 ],
                 "summary": "导出用户分析统计",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "开始时间戳（Unix秒）",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "结束时间戳（Unix秒）",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "导出任务已创建",
@@ -34375,6 +34407,10 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "description": "材料编码",
+                    "type": "string"
+                },
+                "internal_code": {
+                    "description": "内部编码",
                     "type": "string"
                 },
                 "name": {
@@ -50178,9 +50214,17 @@ const docTemplate = `{
                     "description": "某个规格商品ID",
                     "type": "integer"
                 },
+                "num": {
+                    "description": "套餐子商品数量",
+                    "type": "number"
+                },
                 "product_package_group_uuid": {
                     "description": "套餐分组UUID",
                     "type": "integer"
+                },
+                "unit_num": {
+                    "description": "每份数量",
+                    "type": "number"
                 }
             }
         },

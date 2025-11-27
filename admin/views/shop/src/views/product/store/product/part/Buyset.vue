@@ -140,12 +140,12 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item for="no_click" :label="$t('商品卖点：')">
+      <el-form-item for="no_click" >
         <UniqueNameFormAreaText
           ref="uniqueNameFormAreaTextRef"
           width="460px"
+          :labelPrefix="$t('商品卖点')"
           :maxlength="500"
-          :singleInputMode="true"
           :overrideLanguages="form.model.product_id ? form.model.selling_point_i18n : undefined"
         />
       </el-form-item>

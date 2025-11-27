@@ -8,14 +8,14 @@
 
 **设计范围**：
 1. **整体架构设计**：多语言同步的统一架构（任务 #36915）
-2. **代码优化设计**：消除硬编码、现代化、增强调试（本次优化）
+2. **代码优化设计**：消除硬编码、现代化、支持特殊表筛选（本次优化）
 
 **设计目标**：
 - 统一多语言同步逻辑
 - 区分数据来源处理策略
 - 消除硬编码，使用配置化表前缀
 - 采用 Go 1.18+ 现代特性
-- 增强调试能力
+- 支持特殊表的自定义筛选条件
 
 ---
 
@@ -240,7 +240,7 @@ tableConfigs := []tableConfig{
    tableName := prefix + "material"
    ```
 
-3. **涉及的表**（共 12 个）
+3. **涉及的表**（共 13 条配置）
    - material
    - material_category
    - product_attribute
@@ -248,8 +248,9 @@ tableConfigs := []tableConfig{
    - product_bom_card
    - product_category
    - product_flavor
-   - product_package
-   - product_package_group
+   - product_package（名称多语言：`multi_language_name_uuid`）
+   - product_package（卖点多语言：`describe_multi_language_name_uuid`）
+   - product_package_group（⚠️ 无 `headquarter_uuid` 字段，需要自定义筛选条件）
    - product_sauce
    - product_unit
    - warehouse
@@ -298,71 +299,75 @@ type any = interface{}
 
 ---
 
-### 3. 添加调试支持
+### 3. 支持特殊表的自定义筛选条件
 
-#### 现状分析
+#### 问题分析
 
-当前查询语句没有 Debug 输出：
+`product_package_group` 表没有 `headquarter_uuid` 字段，无法使用统一的 `headquarter_uuid = 0` 条件筛选总部数据。
 
-```go
-err := headquarterDB.Table(config.tableName).
-    Select(config.multiLanguageUuidColumn).
-    Where("delete_time = 0").
-    Where("headquarter_uuid = 0").
-    Where(config.multiLanguageUuidColumn + " > 0").
-    Find(&records).Error
+**表结构差异**：
+```yaml
+有 headquarter_uuid 的表:
+  - material, material_category, product_attribute, ...
+  - 筛选条件: headquarter_uuid = 0
+
+无 headquarter_uuid 的表:
+  - product_package_group
+  - 需要通过关联表筛选
 ```
-
-**问题**：
-- 排查问题时看不到实际 SQL
-- 需要临时添加日志代码
-- 降低调试效率
 
 #### 设计方案
 
-添加 GORM 的 `.Debug()` 调用：
+在 `tableConfig` 结构体中添加 `filterCondition` 字段支持自定义筛选条件：
 
 ```go
-err := headquarterDB.Table(config.tableName).
-    Select(config.multiLanguageUuidColumn).
-    Where("delete_time = 0").
-    Where("headquarter_uuid = 0").
-    Where(config.multiLanguageUuidColumn + " > 0").Debug().
-    Find(&records).Error
+type tableConfig struct {
+    tableName               string   // 表名
+    multiLanguageUuidColumn string   // 多语言UUID字段名
+    entityUuidColumn        string   // 实体UUID字段名
+    preloadRelations        []string // 需要预加载的关联
+    filterCondition         string   // 自定义筛选条件（可选，默认使用 headquarter_uuid = 0）
+}
 ```
 
-**GORM Debug 机制**：
-- `.Debug()` 会将当前查询的 SQL 输出到日志
-- 包含完整的 SQL 语句和参数
-- 不影响查询执行
+#### 实现细节
 
-#### Debug 输出示例
+1. **配置定义**
+   ```go
+   // product_package_group 使用子查询筛选
+   {
+       tableName: config.Database.TablePrefix + "product_package_group",
+       multiLanguageUuidColumn: "multi_language_name_uuid",
+       entityUuidColumn: "uuid",
+       filterCondition: "product_package_uuid IN (SELECT uuid FROM " + 
+           config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)",
+   }
+   ```
 
-```sql
-[2025-11-25 10:30:45] [rows:5] 
-SELECT multi_language_name_uuid 
-FROM ttpos_material 
-WHERE delete_time = 0 
-AND headquarter_uuid = 0 
-AND multi_language_name_uuid > 0
-```
+2. **查询逻辑**
+   ```go
+   for _, cfg := range tableConfigs {
+       query := headquarterDB.Table(cfg.tableName).
+           Select(cfg.multiLanguageUuidColumn).
+           Where("delete_time = 0").
+           Where(cfg.multiLanguageUuidColumn + " > 0")
+
+       // 使用自定义筛选条件或默认条件
+       if cfg.filterCondition != "" {
+           query = query.Where(cfg.filterCondition)
+       } else {
+           query = query.Where("headquarter_uuid = 0")
+       }
+
+       err := query.Find(&records).Error
+       // ...
+   }
+   ```
 
 **优势**：
-- 直观查看执行的 SQL
-- 快速定位查询问题
-- 验证查询条件是否正确
-
-#### 环境控制
-
-GORM 的 Debug 模式可以通过配置控制：
-
-```yaml
-# config.yaml
-database:
-  debug: true  # 开发环境启用
-```
-
-在生产环境中，可以关闭 Debug 模式以避免日志过多。
+- 灵活支持不同表结构
+- 保持代码统一性
+- 易于扩展支持其他特殊表
 
 ---
 
@@ -410,23 +415,58 @@ import (
 func (s *SyncSrv) SyncMultiLanguage(ctx context.Context) error {
     // ... 前面的代码
     
+    // 定义需要同步多语言的表和字段映射
+    type tableConfig struct {
+        tableName               string   // 表名
+        multiLanguageUuidColumn string   // 多语言UUID字段名
+        entityUuidColumn        string   // 实体UUID字段名
+        preloadRelations        []string // 需要预加载的关联
+        filterCondition         string   // 自定义筛选条件（可选，默认使用 headquarter_uuid = 0）
+    }
+    
     // 表配置 - 使用配置化表前缀
+    // 注意：product_package_group 表没有 headquarter_uuid 字段，需要通过关联 product_package 表筛选
+    // 注意：product_package 表有两个多语言字段（名称和卖点）
     tableConfigs := []tableConfig{
         {tableName: config.Database.TablePrefix + "material", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
         {tableName: config.Database.TablePrefix + "material_category", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+        // ... 其他表
+        {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid"},
+        {tableName: config.Database.TablePrefix + "product_package", multiLanguageUuidColumn: "describe_multi_language_name_uuid", entityUuidColumn: "uuid"},
+        {tableName: config.Database.TablePrefix + "product_package_group", multiLanguageUuidColumn: "multi_language_name_uuid", entityUuidColumn: "uuid", filterCondition: "product_package_uuid IN (SELECT uuid FROM " + config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"},
         // ... 更多表
     }
     
-    // 查询记录 - 使用 any + Debug
-    for _, config := range tableConfigs {
+    // 查询记录 - 使用 any + 自定义筛选条件
+    for _, cfg := range tableConfigs {
         var records []map[string]any
-        err := headquarterDB.Table(config.tableName).
-            Select(config.multiLanguageUuidColumn).
+        query := headquarterDB.Table(cfg.tableName).
+            Select(cfg.multiLanguageUuidColumn).
             Where("delete_time = 0").
-            Where("headquarter_uuid = 0").
-            Where(config.multiLanguageUuidColumn + " > 0").Debug().
-            Find(&records).Error
-        // ... 处理记录
+            Where(cfg.multiLanguageUuidColumn + " > 0")
+
+        // 使用自定义筛选条件或默认条件（headquarter_uuid = 0）
+        if cfg.filterCondition != "" {
+            query = query.Where(cfg.filterCondition)
+        } else {
+            query = query.Where("headquarter_uuid = 0")
+        }
+
+        err := query.Find(&records).Error
+        
+        // 数据库返回的整数类型可能是 uint64 或 int64，需要分别处理
+        for _, record := range records {
+            var uuid uint64
+            switch v := record[cfg.multiLanguageUuidColumn].(type) {
+            case uint64:
+                uuid = v
+            case int64:
+                uuid = uint64(v)
+            }
+            if uuid > 0 {
+                multiLanguageUuidMap[uuid] = true
+            }
+        }
     }
     
     // ... 后续代码
@@ -461,15 +501,6 @@ docker-compose up -d
 # 检查子店数据库中的多语言数据是否与总部一致
 ```
 
-### 3. Debug 输出验证
-
-查看日志中的 SQL 输出：
-
-```bash
-# 查看日志
-tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
-```
-
 ---
 
 ## 📈 性能影响分析
@@ -481,14 +512,7 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 | 查询性能 | N | N | 无影响 |
 | 内存使用 | N | N | 无影响 |
 | 代码可读性 | 中 | 高 | 提升 |
-| 调试效率 | 低 | 高 | 显著提升 |
-
-### Debug 模式性能影响
-
-- `.Debug()` 仅影响日志输出
-- 不改变查询执行逻辑
-- 生产环境可关闭 Debug 模式
-- 对性能影响可忽略
+| 可扩展性 | 低 | 高 | 显著提升 |
 
 ---
 
@@ -499,12 +523,6 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 - 表名使用配置化前缀，安全可控
 - 查询条件使用 GORM 参数化查询
 - 无 SQL 注入风险
-
-### Debug 信息泄露
-
-- Debug 输出包含 SQL 语句
-- 不包含敏感数据（密码、token 等）
-- 生产环境建议关闭 Debug 模式
 
 ---
 
@@ -517,11 +535,6 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 2. **变量命名冲突**
    - 循环变量 `config` 与包名 `config` 不冲突
    - Go 允许局部变量与包名同名
-
-3. **Debug 模式**
-   - 开发环境启用，方便调试
-   - 生产环境可选择关闭
-   - 不影响功能逻辑
 
 ---
 
@@ -538,7 +551,7 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 ### 代码层面（本次优化）
 - ✅ 配置化表前缀（12个表）
 - ✅ 现代类型使用（`any` 替代 `interface{}`）
-- ✅ Debug 支持（SQL 输出）
+- ✅ 特殊表自定义筛选条件（`product_package_group`）
 - ✅ Import 规范
 - ✅ 注释清晰
 
@@ -569,7 +582,7 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 
 1. **配置化**：表前缀可配置，适应不同环境
 2. **现代化**：使用 Go 1.18+ 特性，符合社区最佳实践
-3. **可调试**：添加 Debug 支持，提升问题排查效率
+3. **可扩展**：支持特殊表的自定义筛选条件
 
 ### 设计亮点
 
@@ -578,7 +591,7 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 | 统一入口 | 单一方法管理所有多语言同步 | 维护成本降低 80% |
 | 批量操作 | 先删除后创建，一次事务完成 | 性能提升 50%，数据一致性保证 |
 | 区分来源 | 总部数据和ERP数据分别处理 | 职责清晰，逻辑简单 |
-| 配置化 | 表前缀、Debug 模式可配置 | 环境适配性强 |
+| 配置化 | 表前缀可配置 | 环境适配性强 |
 | 注释规范 | 明确标注多语言处理方式 | 代码可读性高 |
 
 ---
@@ -593,6 +606,6 @@ tail -f logs/main.log | grep "SELECT multi_language_name_uuid"
 ---
 
 **创建时间**: 2025-11-25  
-**最后更新**: 2025-11-25  
+**最后更新**: 2025-11-27  
 **维护者**: 曾振华
 

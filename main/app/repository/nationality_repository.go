@@ -24,6 +24,7 @@ type INationalityRepo interface {
 type INationalityQueryRepo interface {
 	FindList() ([]model.Nationality, error)
 	FindByUuid(uuid uint64) (*model.Nationality, error)
+	FindByUuidWithDeleted(uuid uint64) (*model.Nationality, error)
 	CountOrdersByNationalityUuid(uuid uint64) (int64, error)
 }
 
@@ -48,7 +49,7 @@ func (r *NationalityRepoImpl) FindList() ([]model.Nationality, error) {
 	err := r.db.Model(&model.Nationality{}).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
 		Where("delete_time = ?", 0).
-		Order("sort ASC, id ASC").
+		Order("create_time DESC").
 		Find(&nationalities).Error
 
 	return nationalities, errors.WithMessage(err)
@@ -101,6 +102,25 @@ func (r *NationalityRepoImpl) SoftDelete(uuid uint64) error {
 		Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error
 
 	return errors.WithMessage(err)
+}
+
+// FindByUuidWithDeleted 根据UUID查找国籍（包含已删除）
+// 用于订单详情查询，保证历史订单仍可显示已删除的配置名称
+func (r *NationalityRepoImpl) FindByUuidWithDeleted(uuid uint64) (*model.Nationality, error) {
+	var nationality model.Nationality
+	err := r.db.Model(&model.Nationality{}).
+		Preload("MultiLanguageName").
+		Where("uuid = ?", uuid).
+		First(&nationality).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // 未找到记录返回 nil，不报错
+		}
+		return nil, errors.WithMessage(err)
+	}
+
+	return &nationality, nil
 }
 
 // CountOrdersByNationalityUuid 统计使用该国籍的订单数量

@@ -1,9 +1,9 @@
 ---
-name: restore-spec
+name: spec-restore
 description: 从 archived 或 deprecated 恢复 Spec 到 active
 ---
 
-# /restore-spec - 恢复 Spec
+# /spec-restore - 恢复 Spec
 
 ## 使用场景
 
@@ -14,9 +14,9 @@ description: 从 archived 或 deprecated 恢复 Spec 到 active
 ## 使用方式
 
 ```bash
-/restore-spec @story-order-quick-payment                    # 自动检测来源
-/restore-spec @story-order-quick-payment --from archived    # 指定从 archived 恢复
-/restore-spec @story-old-payment --from deprecated          # 指定从 deprecated 恢复
+/spec-restore @story-order-quick-payment                    # 自动检测来源
+/spec-restore @story-order-quick-payment --from archived    # 指定从 archived 恢复
+/spec-restore @story-old-payment --from deprecated          # 指定从 deprecated 恢复
 ```
 
 ## 参数

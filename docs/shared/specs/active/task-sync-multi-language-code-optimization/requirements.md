@@ -24,13 +24,18 @@
    - Go 1.18+ 引入了 `any` 作为 `interface{}` 的别名，更简洁
    - 项目已使用 Go 1.23+，应采用现代特性
 
+3. **特殊表处理缺失**
+   - `product_package_group` 表没有 `headquarter_uuid` 字段
+   - 使用统一的 `headquarter_uuid = 0` 条件会导致查询失败
+   - 需要通过关联 `product_package` 表来筛选总部数据
+
 ---
 
 ## 🎯 需求目标
 
 ### 主要目标
 
-优化 `SyncMultiLanguage` 方法的代码质量，提升可维护性和调试友好性。
+优化 `SyncMultiLanguage` 方法的代码质量，提升可维护性。
 
 ### 具体需求
 
@@ -85,39 +90,44 @@ var records []map[string]any
 
 ---
 
-#### R3. 添加调试支持
+#### R3. 支持特殊表的自定义筛选条件
 
 **需求描述**：  
-在查询语句中添加 GORM 的 `.Debug()` 调用，方便开发调试。
+`product_package_group` 表没有 `headquarter_uuid` 字段，需要通过关联表筛选。
 
 **实现要求**：
-- 在查询多语言UUID的 SQL 语句中添加 `.Debug()`
-- 开发环境可以看到实际执行的 SQL
-- 不影响生产环境性能
+- 在 `tableConfig` 结构体中添加 `filterCondition` 字段
+- 对于没有 `headquarter_uuid` 的表，使用子查询筛选
+- 保持代码的统一性和可扩展性
 
 **示例**：
 ```go
-// 改进前
-err := headquarterDB.Table(config.tableName).
-    Select(config.multiLanguageUuidColumn).
-    Where("delete_time = 0").
-    Where("headquarter_uuid = 0").
-    Where(config.multiLanguageUuidColumn + " > 0").
-    Find(&records).Error
+// 结构体定义
+type tableConfig struct {
+    tableName               string
+    multiLanguageUuidColumn string
+    entityUuidColumn        string
+    preloadRelations        []string
+    filterCondition         string   // 自定义筛选条件（可选）
+}
 
-// 改进后
-err := headquarterDB.Table(config.tableName).
-    Select(config.multiLanguageUuidColumn).
-    Where("delete_time = 0").
-    Where("headquarter_uuid = 0").
-    Where(config.multiLanguageUuidColumn + " > 0").Debug().
-    Find(&records).Error
+// product_package_group 使用子查询
+{tableName: config.Database.TablePrefix + "product_package_group", ..., 
+ filterCondition: "product_package_uuid IN (SELECT uuid FROM " + 
+     config.Database.TablePrefix + "product_package WHERE headquarter_uuid = 0)"}
+
+// 查询逻辑
+if cfg.filterCondition != "" {
+    query = query.Where(cfg.filterCondition)
+} else {
+    query = query.Where("headquarter_uuid = 0")
+}
 ```
 
 **验收标准**：
-- ✅ 添加 `.Debug()` 调用
-- ✅ 开发环境可以查看 SQL 输出
-- ✅ 方便问题排查和调试
+- ✅ `tableConfig` 结构体支持 `filterCondition` 字段
+- ✅ `product_package_group` 表使用子查询筛选
+- ✅ 其他表仍使用默认的 `headquarter_uuid = 0` 条件
 
 ---
 
@@ -132,7 +142,7 @@ err := headquarterDB.Table(config.tableName).
 #### 2. 同步服务（`main/app/service/sync.go`）
 - ✅ 新增 `SyncMultiLanguage` 方法
 - ✅ 在任务列表中添加多语言任务（最优先执行）
-- 🔧 本次优化：配置化表前缀、`any` 类型、`.Debug()` 调试
+- 🔧 本次优化：配置化表前缀、`any` 类型、自定义筛选条件
 
 #### 3. 物品同步（`main/app/service/material.go`）
 
@@ -198,13 +208,13 @@ err := headquarterDB.Table(config.tableName).
 ### 代码质量
 1. 所有表名使用 `config.Database.TablePrefix`
 2. 类型定义使用 `any` 替代 `interface{}`
-3. 查询语句添加 `.Debug()` 支持
+3. 特殊表（`product_package_group`）使用自定义筛选条件
 4. 通过 golangci-lint 检查
 5. 符合项目代码规范
 
 ### 功能验证
 1. 多语言同步功能正常运行
-2. 开发环境可以看到 SQL Debug 输出
+2. `product_package_group` 表查询正常
 3. 与总部数据保持一致
 4. 无性能回退
 
@@ -214,7 +224,6 @@ err := headquarterDB.Table(config.tableName).
 
 1. **性能要求**
    - 不影响同步性能
-   - Debug 输出仅在开发环境启用
 
 2. **可维护性要求**
    - 代码符合项目规范

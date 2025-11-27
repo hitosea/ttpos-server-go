@@ -84,7 +84,7 @@ cp ../../agent/templates/tasks-template.md tasks.md
 
 ```bash
 # 自动创建并填充模板
-/create-spec story-order-quick-payment
+/spec-create story-order-quick-payment
 ```
 
 ---

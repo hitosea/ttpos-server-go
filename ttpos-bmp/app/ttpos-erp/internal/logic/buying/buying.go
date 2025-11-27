@@ -65,6 +65,31 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 		purchaseOrder.BuyingPriceList = defaultPriceList.BuyingPriceList
 	}
 
+	// 设置税费参数
+	var taxTemplateName string
+	if req.TaxesAndCharges != "" {
+		// 优先使用传入的税费模板
+		taxTemplateName = req.TaxesAndCharges
+	} else {
+		// 未传入时，查询公司默认采购税费模板
+		taxTemplateName = service.Accounts().GetDefaultPurchaseTaxTemplate(ctx, purchaseOrder.Company)
+	}
+
+	// 如果有税费模板，获取模板详情并复制 taxes 明细
+	if taxTemplateName != "" {
+		purchaseOrder.TaxesAndCharges = taxTemplateName
+		// 获取模板的 taxes 子表并复制到 PO
+		taxes := service.Accounts().GetPurchaseTaxTemplateDetails(ctx, taxTemplateName)
+		if len(taxes) > 0 {
+			purchaseOrder.Taxes = s.convertPurchaseTaxesToInterface(taxes)
+		}
+	}
+
+	// 设置税类别
+	if req.TaxCategory != "" {
+		purchaseOrder.TaxCategory = req.TaxCategory
+	}
+
 	//创建采购订单
 	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseOrder, purchaseOrder)
 	if err != nil {
@@ -145,6 +170,31 @@ func (s *sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req
 			}
 		}
 		salesOrder.SellingPriceList = defaultPriceList.SellingPriceList
+	}
+
+	// 设置税费参数
+	var taxTemplateName string
+	if req.TaxesAndCharges != "" {
+		// 优先使用传入的税费模板
+		taxTemplateName = req.TaxesAndCharges
+	} else {
+		// 未传入时，查询公司默认销售税费模板
+		taxTemplateName = service.Accounts().GetDefaultSalesTaxTemplate(ctx, salesOrder.Company)
+	}
+
+	// 如果有税费模板，获取模板详情并复制 taxes 明细
+	if taxTemplateName != "" {
+		salesOrder.TaxesAndCharges = taxTemplateName
+		// 获取模板的 taxes 子表并复制到 SO
+		taxes := service.Accounts().GetSalesTaxTemplateDetails(ctx, taxTemplateName)
+		if len(taxes) > 0 {
+			salesOrder.Taxes = s.convertSalesTaxesToInterface(taxes)
+		}
+	}
+
+	// 设置税类别
+	if req.TaxCategory != "" {
+		salesOrder.TaxCategory = req.TaxCategory
 	}
 
 	//创建内部销售订单
@@ -571,4 +621,56 @@ func (s *sBuying) MustSelectFirstSupplier(ctx context.Context, itemDetail *erp.I
 		return defaultSupplier
 	}
 	return supplier
+}
+
+// convertPurchaseTaxesToInterface 将采购税费明细转换为 interface 数组
+// 复制配置字段，清除计算字段（由 ERPNext 自动计算）
+// 参数：
+//   - taxes: 采购税费明细列表
+//
+// 返回：
+//   - []interface{}: 转换后的税费明细数组
+func (s *sBuying) convertPurchaseTaxesToInterface(taxes []*erp.PurchaseTaxesAndCharges) []interface{} {
+	result := make([]interface{}, len(taxes))
+	for i, tax := range taxes {
+		// 复制税费明细，清除计算字段
+		result[i] = &erp.PurchaseTaxesAndCharges{
+			Category:            tax.Category,
+			AddDeductTax:        tax.AddDeductTax,
+			ChargeType:          tax.ChargeType,
+			RowId:               tax.RowId,
+			AccountHead:         tax.AccountHead,
+			Description:         tax.Description,
+			CostCenter:          tax.CostCenter,
+			Rate:                tax.Rate,
+			IncludedInPrintRate: tax.IncludedInPrintRate,
+			// 不复制计算字段（TaxAmount, Total 等），由 ERPNext 自动计算
+		}
+	}
+	return result
+}
+
+// convertSalesTaxesToInterface 将销售税费明细转换为 interface 数组
+// 复制配置字段，清除计算字段（由 ERPNext 自动计算）
+// 参数：
+//   - taxes: 销售税费明细列表
+//
+// 返回：
+//   - []interface{}: 转换后的税费明细数组
+func (s *sBuying) convertSalesTaxesToInterface(taxes []*erp.SalesTaxesAndCharges) []interface{} {
+	result := make([]interface{}, len(taxes))
+	for i, tax := range taxes {
+		// 复制税费明细，清除计算字段
+		result[i] = &erp.SalesTaxesAndCharges{
+			ChargeType:          tax.ChargeType,
+			RowId:               tax.RowId,
+			AccountHead:         tax.AccountHead,
+			Description:         tax.Description,
+			CostCenter:          tax.CostCenter,
+			Rate:                tax.Rate,
+			IncludedInPrintRate: tax.IncludedInPrintRate,
+			// 不复制计算字段（TaxAmount, Total 等），由 ERPNext 自动计算
+		}
+	}
+	return result
 }

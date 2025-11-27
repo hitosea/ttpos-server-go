@@ -54,10 +54,10 @@
 - [x] 2.1 实现数据校验逻辑
 
   - File: `admin/app/common/model/product/ProductPackageGroup.php`
-  - Purpose: 在 updatePackageGroup 方法中添加数据校验：必选数量不可大于可选数量
+  - Purpose: 在 updatePackageGroup 方法中添加数据校验：必选+默认商品总数不可大于可选数量
   - Requirements: 2.3, 5.1
   - Leverage: 现有 Model: `admin/app/common/model/product/ProductPackageGroup.php`，updatePackageGroup 方法
-  - Prompt: Role: PHP Developer with business logic expertise | Task: 在 updatePackageGroup 方法中添加数据校验逻辑：当 group_type 为可选时，检查必选数量是否大于可选数量 | Context: 遍历 groupItemList，统计每个可选组的必选商品数量（is_required=1），与 optional_count 比较 | Restrictions: 遵循 .cursor/rules/php.mdc，抛出异常处理错误 | Success: 数据校验逻辑正确，错误提示清晰
+  - Prompt: Role: PHP Developer with business logic expertise | Task: 在 updatePackageGroup 方法中添加数据校验逻辑：当 group_type 为可选时，检查必选+默认商品总数是否大于可选数量 | Context: 遍历 groupItemList，统计每个可选组的必选或默认商品数量（is_required=1 或 is_default=1，去重：一个商品可能既是必选又是默认，只算一次），与 optional_count 比较 | Restrictions: 遵循 .cursor/rules/php.mdc，抛出异常处理错误 | Success: 数据校验逻辑正确，错误提示清晰
 
 - [x] 2.2 实现参数验证
 

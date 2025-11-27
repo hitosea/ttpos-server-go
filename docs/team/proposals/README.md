@@ -45,15 +45,15 @@ docs/team/proposals/{YYYY-MM}/{feature-name}.md
 ## 🔄 提案流程
 
 ```
-想法 → /propose → 需求评审 → 
-  ├─ 批准 → /create-spec → 产品审核 → /design-spec → 开发 → 上线 → /archive-spec
-  └─ 拒绝/取消 → 归档（标注原因）或 /deprecate-spec
+想法 → /spec-propose → 需求评审 → 
+  ├─ 批准 → /spec-create → 产品审核 → /spec-design → 开发 → 上线 → /archive-spec
+  └─ 拒绝/取消 → 归档（标注原因）或 /spec-deprecate
 
 详细流程:
-/propose         → 创建提案文档
-/create-spec     → 创建 requirements.md（审核状态: 待审核）
+/spec-propose         → 创建提案文档
+/spec-create     → 创建 requirements.md（审核状态: 待审核）
 产品审核         → 更新审核状态为「已通过」
-/design-spec     → 创建 design.md + tasks.md
+/spec-design     → 创建 design.md + tasks.md
 ```
 
 ---
@@ -62,7 +62,7 @@ docs/team/proposals/{YYYY-MM}/{feature-name}.md
 
 ### 使用 Agent 指令
 ```bash
-/propose quick-payment
+/spec-propose quick-payment
 ```
 
 ### 手动创建

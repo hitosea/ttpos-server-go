@@ -64,7 +64,7 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 			MenuShowSoldOut:         "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 			MemberShowSoldOut:       "1",                       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 			NoOrderCarouselInterval: "10",                      // 未点餐时轮播间隔(秒)
-			OrderDisplayMode:        "carousel",                // 点餐时展示模式 carousel/order/order_carousel
+			OrderDisplayMode:        "order",                   // 点餐时展示模式 carousel/order/order_carousel
 			OrderCarouselInterval:   "10",                      // 点餐时轮播间隔(秒)
 		},
 		AdvancedPassword: "666888", // 高级设置密码

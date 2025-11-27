@@ -1,6 +1,6 @@
 # Proposal ↔ Spec 链接工作流
 
-> 🤖 Agent 执行清单：确保 `/propose` 创建的提案与 `/create-spec` 生成的 Spec 双向关联，并同步 Graphiti/活动日志。
+> 🤖 Agent 执行清单：确保 `/spec-propose` 创建的提案与 `/spec-create` 生成的 Spec 双向关联，并同步 Graphiti/活动日志。
 
 ---
 
@@ -8,9 +8,9 @@
 
 ```
 创建 Proposal → 填写提案 → 评审决定 →
-  批准 → /create-spec → requirements → 产品审核 →
+  批准 → /spec-create → requirements → 产品审核 →
                                          ↓
-                             /design-spec → design + tasks → 建立双向链接
+                             /spec-design → design + tasks → 建立双向链接
                                                    ↓
                                           Graphiti Episode + 活动日志
 ```
@@ -19,7 +19,7 @@
 
 ## 前置条件
 
-- 已使用 `/propose {feature-name}` 创建提案。
+- 已使用 `/spec-propose {feature-name}` 创建提案。
 - 提案经过评审，状态为**批准**或**修改后批准**。
 - 明确 Spec 命名：`story-{module}-{feature}` 或 `task-{module}-{topic}`。
 
@@ -39,7 +39,7 @@
 ## Step 2: 创建 Spec 需求文档
 
 ```bash
-/create-spec story-{module}-{feature}
+/spec-create story-{module}-{feature}
 ```
 
 生成目录：
@@ -64,7 +64,7 @@ docs/shared/specs/active/story-{module}-{feature}/
 ## Step 4: 创建 Spec 设计文档
 
 ```bash
-/design-spec story-{module}-{feature}
+/spec-design story-{module}-{feature}
 ```
 
 生成文件：

@@ -1,21 +1,21 @@
 ---
-name: create-spec
+name: spec-create
 description: 创建功能规格文档（需求阶段）
 ---
 
-# /create-spec - 创建 Spec 需求文档
+# /spec-create - 创建 Spec 需求文档
 
 ## 使用场景
 
 快速创建功能规格的需求文档，进入产品审核阶段。
 
-> **注意**: 此命令只创建 `requirements.md`。产品审核通过后，使用 `/design-spec` 创建技术设计和任务分解。
+> **注意**: 此命令只创建 `requirements.md`。产品审核通过后，使用 `/spec-design` 创建技术设计和任务分解。
 
 ## 使用方式
 
 ```bash
-/create-spec story-order-quick-payment
-/create-spec task-shop-export-report
+/spec-create story-order-quick-payment
+/spec-create task-shop-export-report
 ```
 
 ## 参数
@@ -53,7 +53,7 @@ docs/shared/specs/active/{level}-{module}-{feature}/
 ## 工作流位置
 
 ```
-Proposal → 评审 → /create-spec → 产品审核 → /design-spec → 开发
+Proposal → 评审 → /spec-create → 产品审核 → /spec-design → 开发
                        ↑                          ↑
                     当前命令                   下一步
 ```
@@ -63,7 +63,7 @@ Proposal → 评审 → /create-spec → 产品审核 → /design-spec → 开�
 | 状态 | 说明 | 下一步 |
 |------|------|--------|
 | **待审核** | 需求刚创建，等待产品审核 | 产品审核 |
-| **已通过** | 产品审核通过，可进入设计阶段 | `/design-spec` |
+| **已通过** | 产品审核通过，可进入设计阶段 | `/spec-design` |
 | **需修改** | 产品审核有意见，需要修改 | 修改后重新审核 |
 
 ## 后端特定适配
@@ -84,9 +84,9 @@ Proposal → 评审 → /create-spec → 产品审核 → /design-spec → 开�
 
 | 命令 | 用途 |
 |------|------|
-| `/propose` | 创建需求提案 |
-| `/create-spec` | 创建需求规格（当前命令） |
-| `/design-spec` | 创建技术设计 + 任务分解 |
+| `/spec-propose` | 创建需求提案 |
+| `/spec-create` | 创建需求规格（当前命令） |
+| `/spec-design` | 创建技术设计 + 任务分解 |
 
 ---
 

@@ -828,7 +828,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		cashier.NoOrderCarouselInterval = "10"
 	}
 	if cashier.OrderDisplayMode == "" {
-		cashier.OrderDisplayMode = "carousel"
+		cashier.OrderDisplayMode = "order"
 	}
 	if cashier.OrderCarouselInterval == "" || cashier.OrderCarouselInterval == "0" {
 		cashier.OrderCarouselInterval = "10"

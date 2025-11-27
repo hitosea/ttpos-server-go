@@ -4668,6 +4668,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.SkuUuid = skuUuid
 		products.DineTaxUuid = taxUuid
 		products.TakeoutTaxUuid = takeoutTaxUuid
+		products.NumType = utils.IfInt(item.NumType == 2, 2, 1)
 		// 处理数量计算方法
 		// 按小数计价，不在助手、平板、扫码端显示
 		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
@@ -7034,7 +7035,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	var headquarter model.CompanySetting
 	var headquarterUnits []model.ProductUnit
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -7163,7 +7164,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 		return nil
 	}
 	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
@@ -7226,7 +7227,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 		return nil
 	}
 	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}

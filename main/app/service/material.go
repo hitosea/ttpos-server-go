@@ -2192,9 +2192,10 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 		}
 		materialList = append(materialList, material_resp.ProductBomCardMaterial{
 			Material: material_resp.MaterialInfo{
-				Uuid: material.MaterialUuid,
-				Name: material.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-				Code: material.Material.Code,
+				Uuid:         material.MaterialUuid,
+				Name:         material.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				Code:         material.Material.Code,
+				InternalCode: material.Material.InternalCode,
 			},
 			Num: material.Num,
 			Unit: material_resp.MaterialUnit{
