@@ -388,6 +388,7 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,
 				Price:            product.ProductBom.Price,
+				AddPrice:         product.AddPrice,
 				IsRequired:       isRequired,
 				IsDefault:        isDefault,
 			})
