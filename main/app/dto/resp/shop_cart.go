@@ -33,6 +33,8 @@ type PackageSelectedInfo struct {
 	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组UUID
 	FlavorUuid              uint64   `json:"flavor_uuid"`                // 某个规格商品ID
 	AttributeUuidList       []uint64 `json:"attribute_uuid"`             // 属性ID列表
+	Num                     float64  `json:"num"`                        // 套餐子商品数量
+	UnitNum                 float64  `json:"unit_num"`                   // 每份数量
 }
 
 type OrderRemarkRes struct {

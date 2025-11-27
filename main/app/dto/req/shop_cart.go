@@ -164,9 +164,11 @@ func (req *ProductParams) GetIsPackageProduct() bool {
 }
 
 type SubProduct struct {
-	FlavorUuid              uint64   `json:"flavor_uuid"`
-	AttributeUuid           []uint64 `json:"attribute_uuid"`
-	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+	FlavorUuid              uint64   `json:"flavor_uuid"`                // 商品规格uuid
+	AttributeUuid           []uint64 `json:"attribute_uuid"`             // 属性ID列表
+	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组uuid
+	Num                     float64  `json:"num"`                        // 套餐子商品数量
+	UnitNum                 float64  `json:"unit_num"`                   // 每份数量
 }
 
 func (req *ProductParams) GetSubProductList() []SubProduct {
@@ -176,6 +178,8 @@ func (req *ProductParams) GetSubProductList() []SubProduct {
 			FlavorUuid:              subProduct.FlavorProductBomUuid,
 			AttributeUuid:           subProduct.ProductPackageAttributeUuidList,
 			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
+			Num:                     subProduct.Num,
+			UnitNum:                 subProduct.UnitNum,
 		})
 	}
 	return subProductList

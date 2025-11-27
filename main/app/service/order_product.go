@@ -2192,6 +2192,8 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 					FlavorUuid:              params.FlavorUuid,
 					AttributeUuid:           params.AttributeUuidList,
 					ProductPackageGroupUuid: params.ProductPackageGroupUuid,
+					Num:                     params.Num,
+					UnitNum:                 params.UnitNum,
 				})
 			}
 			return utils.ToJson(subProductList)

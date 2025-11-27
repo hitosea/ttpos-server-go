@@ -1919,6 +1919,8 @@ func (model *SaleOrderProduct) GetPackageDetail() []resp.PackageSelectedInfo {
 		FlavorUuid              uint64   `json:"flavor_uuid"`                // 商品规格uuid
 		AttributeUuid           []uint64 `json:"attribute_uuid"`             // 属性uuid列表
 		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组uuid
+		Num                     float64  `json:"num"`                        // 商品数量
+		UnitNum                 float64  `json:"unit_num"`                   // 每份数量
 	}
 
 	subProductList := make([]SubProduct, 0)
@@ -1928,6 +1930,8 @@ func (model *SaleOrderProduct) GetPackageDetail() []resp.PackageSelectedInfo {
 			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
 			FlavorUuid:              subProduct.FlavorUuid,
 			AttributeUuidList:       subProduct.AttributeUuid,
+			Num:                     subProduct.Num,
+			UnitNum:                 subProduct.UnitNum,
 		})
 	}
 	return packageSelectedInfoList
