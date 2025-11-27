@@ -55,13 +55,15 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			return errors.WithMessage(err, "订单序号生成失败")
 		}
 		// 创建销售账单
+		// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
 		saleBill, err := repository.NewOrderRepo(tx).CreateSaleBill(model.SaleBill{
-			OrderNo:      orderNo,
-			SerialNo:     serialNo,
-			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
-			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			DeviceUuid:   ctx.GetDeviceUuid(),
-			Source:       constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
+			OrderNo:       orderNo,
+			SerialNo:      serialNo,
+			BillType:      constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
+			DiningMethod:  constant.SaleBillDiningMethodDineIn,
+			DeviceUuid:    ctx.GetDeviceUuid(),
+			Source:        constant.MapJwtSourceToSaleBillSource(ctx.GetSource()),
+			ClientVersion: constant.NormalizeClientVersion(ctx.GetVersion()),
 		})
 		if err != nil {
 			return errors.WithMessage(err)
@@ -176,8 +178,10 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 			}
 		}
 
-		// 设置订单来源
+		// ⚠️ 重要：source 和 client_version 必须一起设置，确保数据一致性
+		// 设置订单来源和客户端版本
 		saleBill.Source = constant.MapJwtSourceToSaleBillSource(ctx.GetSource())
+		saleBill.ClientVersion = constant.NormalizeClientVersion(ctx.GetVersion())
 
 		// 创建销售账单
 		if _, errCreateSaleBill := repository.NewOrderRepo(tx).CreateSaleBill(*saleBill); errCreateSaleBill != nil {

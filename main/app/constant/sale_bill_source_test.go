@@ -62,3 +62,60 @@ func TestMapJwtSourceToSaleBillSource(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeClientVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{
+			name:    "normal",
+			version: "2.10.0",
+			want:    "2.10.0",
+		},
+		{
+			name:    "with_v_lowercase",
+			version: "v2.10.0",
+			want:    "2.10.0",
+		},
+		{
+			name:    "with_V_uppercase",
+			version: "V2.10.0",
+			want:    "2.10.0",
+		},
+		{
+			name:    "with_space",
+			version: " 2.10.0 ",
+			want:    "2.10.0",
+		},
+		{
+			name:    "empty",
+			version: "",
+			want:    "",
+		},
+		{
+			name:    "only_v",
+			version: "v",
+			want:    "",
+		},
+		{
+			name:    "v_with_space",
+			version: " v2.10.0 ",
+			want:    "2.10.0",
+		},
+		{
+			name:    "V_with_space",
+			version: " V2.10.0 ",
+			want:    "2.10.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeClientVersion(tt.version); got != tt.want {
+				t.Errorf("NormalizeClientVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
