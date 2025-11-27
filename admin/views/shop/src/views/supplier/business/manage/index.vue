@@ -653,4 +653,10 @@
       margin-bottom: 22px;
     }
   }
+
+  :deep(.el-select--small .el-select__wrapper) {
+    min-height: 32px !important;
+    height: auto;
+    padding: 4px 8px !important;
+  }
 </style>
