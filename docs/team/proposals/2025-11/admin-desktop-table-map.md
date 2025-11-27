@@ -11,8 +11,8 @@
 | **提案人**    | weifashi                                                                                     |
 | **日期**      | 2025-11-19                                                                                   |
 | **目标版本**  | v2.10.0                                                                                      |
-| **状态**      | 进行中                                                                                       |
-| **关联 Spec** | [story-admin-desktop-table-map](../../../shared/specs/active/story-admin-desktop-table-map/) |
+| **状态**      | ✅ 已完成 - 已发布 v2.10.0                                                                                       |
+| **关联 Spec** | [story-admin-desktop-table-map](../../../shared/specs/archived/v2.10.0/story-admin-desktop-table-map/) |
 
 ---
 

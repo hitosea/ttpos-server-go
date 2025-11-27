@@ -130,3 +130,29 @@ queue:
     invisibleDuration: 25   #invisibleDuration should > 20s
     awaitDuration: 5      # maximum waiting time for receive func
     unitName: "" # 消费者单元名称，默认使用GUID
+
+# 健康检查配置
+health:
+  enable: true                          # 是否启用健康检查
+  path: "/health"                       # 健康检查端点路径
+  token: "$HEALTH_TOKEN"                # 访问令牌（为空则不校验）
+  allowedIps: []                        # IP 白名单（为空则不限制）
+  cacheTtl: "2s"                        # 检查结果缓存时间
+  timeout: "500ms"                      # 单个检查超时时间
+  
+  # 依赖检测配置
+  dependencies:
+    mysql:
+      enabled: true                     # 是否检测 MySQL
+      pingQuery: "SELECT 1"             # Ping 查询语句
+    redis:
+      enabled: true                     # 是否检测 Redis
+      cluster: true                     # 是否集群模式
+    rocketmq:
+      enabled: false                    # 是否检测 RocketMQ（预留）
+    nacos:
+      enabled: false                    # 是否检测 Nacos（预留）
+  
+  # 降级配置（可选）
+  degrade:
+    pausePush: false                    # 健康检查失败时是否暂停推送
