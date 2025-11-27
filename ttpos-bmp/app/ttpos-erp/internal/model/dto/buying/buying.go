@@ -6,6 +6,8 @@ type CreatePurchaseFromMqReq struct {
 	RequiredBy      string `json:"required_by,omitempty"`
 	TargetWarehouse string `json:"target_warehouse,omitempty"`
 	BuyingPriceList string `json:"buying_price_list,omitempty" description:"采购价格表"`
+	TaxesAndCharges string `json:"taxes_and_charges,omitempty" description:"采购税费模板名称"`
+	TaxCategory     string `json:"tax_category,omitempty" description:"税类别"`
 }
 
 type CreateInnerSaleOrderFromPurchaseOrderReq struct {
@@ -13,6 +15,8 @@ type CreateInnerSaleOrderFromPurchaseOrderReq struct {
 	DeliveryDate     string `json:"delivery_date,omitempty"`
 	SourceWarehouse  string `json:"source_warehouse,omitempty"`
 	SellingPriceList string `json:"selling_price_list,omitempty" description:"销售价格表"`
+	TaxesAndCharges  string `json:"taxes_and_charges,omitempty" description:"销售税费模板名称"`
+	TaxCategory      string `json:"tax_category,omitempty" description:"税类别"`
 }
 
 type AddSupplerTransactCompanyReq struct {
