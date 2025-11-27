@@ -1119,13 +1119,6 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				}
 				return unitMap[request.CostUnitUuid]
 			}(),
-			AllowSubstoreVisible: func() int {
-				// 如果前端版本号小于 2.10，则都等于 1
-				if ctx.Version(context.LT, constant.ClientVersionV2100) {
-					return 1
-				}
-				return request.AllowSubstoreVisible
-			}(),
 		}
 
 		err = materialRepo.UpdateMaterial(material)
@@ -1140,6 +1133,15 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			err = materialRepo.UpdateMaterialStatus(request.Uuid, false)
 			if err != nil {
 				return errors.WithMessage(err, "更新物品状态失败")
+			}
+		}
+
+		// 单独更新 AllowSubstoreVisible 字段，因为 GORM 的 Updates 会跳过零值
+		// 前端版本号 >= 2.10 时才需要更新
+		if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+			err = materialRepo.UpdateMaterialAllowSubstoreVisible(request.Uuid, request.AllowSubstoreVisible)
+			if err != nil {
+				return errors.WithMessage(err, "更新物品子店可见性失败")
 			}
 		}
 

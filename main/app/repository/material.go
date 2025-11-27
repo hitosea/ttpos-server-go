@@ -33,10 +33,11 @@ type IMaterialRepo interface {
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
-	ClearMaterialBarcodeValue(uuid uint64) error // 清空物品条形码值
-	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
-	ClearMaterialInternalCode(uuid uint64) error // 清空物品内部编码
-	ClearMaterialSafetyStock(uuid uint64) error  // 清空物品安全库存
+	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
+	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
+	ClearMaterialValuation(uuid uint64) error                                       // 清空物品估值率
+	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
+	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
@@ -446,6 +447,14 @@ func (r *MaterialRepoImpl) UpdateMaterialData(data map[string]any, opts ...DBOpt
 func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "更新物品状态失败")
+	}
+	return nil
+}
+
+// UpdateMaterialAllowSubstoreVisible 更新物品子店可见性
+func (r *MaterialRepoImpl) UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_substore_visible", allowSubstoreVisible).Error; err != nil {
+		return errors.WithMessage(err, "更新物品子店可见性失败")
 	}
 	return nil
 }
