@@ -295,6 +295,7 @@ type UpdateProductReq struct {
 	InternalCode string                `json:"internal_code"`
 	Disabled     bool                  `json:"disabled"`
 	Attributes   []UpdateProductFlavor `json:"attributes"`
+	StockUom     string                `json:"stock_uom"` // 库存单位，可选
 }
 
 type UpdateProductFlavor struct {
@@ -327,6 +328,7 @@ func (s *erpSrv) UpdateProduct(ctx context.Context, params UpdateProductReq) err
 		InternalCode: params.InternalCode,
 		Disabled:     params.Disabled,
 		Attributes:   attributes,
+		StockUom:     params.StockUom,
 	})
 	if err != nil {
 		return err
