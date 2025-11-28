@@ -559,6 +559,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errors.New("无法查询到销售订单")
 	}
 
+	oldPrice := saleOrder.GetAmountValueNoActivityAmount()
+
 	// 如果选择了活动，验证活动有效性
 	if saleOrder.FullReductionActivityUuid > 0 {
 		now := time.Now().Unix()
@@ -986,7 +988,24 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	saleOrderPaymentAmount := saleOrder.PaymentAmount
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	utils.Go(func() {
-
+		// 发布活动事件
+		if saleOrder.FullReductionActivityUuid > 0 {
+			event.NewSystemBus().PublishActivitySaleOrderEvent(event.ActivitySaleOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  request.SaleBillUuid,
+					SaleOrderUuid: request.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				FullReductionActivityUuid:    saleOrder.FullReductionActivityUuid,
+				FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
+				ActivityAmount:               saleOrder.ActivityAmount,
+				OldPrice:                     oldPrice,
+				NewPrice:                     saleOrder.GetAmountValue(),
+			})
+		}
 		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额不为0，则发布"抹零"事件。
 		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee != 0 {
 			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
@@ -1483,7 +1502,14 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
-
+	// 计算活动抵扣金额
+	discountAmount := 0.0
+	if saleOrder.FullReductionActivityUuid > 0 {
+		discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+		}
+	}
 	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	for _, paymentMethod := range paymentMethods {
 		// 不显示免单
@@ -1535,7 +1561,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
 				CouponExchangeAmount:  saleOrder.CalcCouponExchangeAmount(),
-				ActivityAmount:        saleOrder.ActivityAmount,
+				ActivityAmount:        discountAmount,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(true),
 				ZeroAmount:            0, // 只有没有手续费时才会抹零
 				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
@@ -1559,7 +1585,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
 				CouponExchangeAmount:  unpaidAmount,
-				ActivityAmount:        saleOrder.ActivityAmount,
+				ActivityAmount:        discountAmount,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
@@ -1860,15 +1886,15 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 		}
 
 		// 计算活动抵扣金额
-		discountAmount, activityMessage, err := s.calculateActivityDiscount(ctx, saleOrder, req.FullReductionActivityUuid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
-		}
+		// discountAmount, activityMessage, err := s.calculateActivityDiscount(ctx, saleOrder, req.FullReductionActivityUuid)
+		// if err != nil {
+		// 	return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+		// }
 
 		// 更新订单的活动信息
 		saleOrder.FullReductionActivityUuid = req.FullReductionActivityUuid
-		saleOrder.FullReductionActivityMessage = activityMessage
-		saleOrder.ActivityAmount = discountAmount
+		// saleOrder.FullReductionActivityMessage = activityMessage
+		saleOrder.ActivityAmount = 0
 
 		// 选择活动后，将积分自动抵扣失效改为手动抵扣
 		saleOrder.AutoPointsExchange = 0
@@ -1876,9 +1902,6 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 		// 取消活动
 		saleOrder.SetActivityCancel()
 	}
-
-	// 记录使用活动前的订单金额
-	oldPrice := saleOrder.GetAmountValue()
 
 	// 使用事务更新订单
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -1888,7 +1911,7 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 			saleOrder.Uuid,
 			saleOrder.FullReductionActivityUuid,
 			saleOrder.FullReductionActivityMessage,
-			saleOrder.ActivityAmount,
+			0,
 			saleOrder.AutoPointsExchange,
 		); err != nil {
 			return errors.WithMessage(err, "更新订单活动信息失败")
@@ -1911,32 +1934,6 @@ func (s *orderSrv) OrderPaymentActivity(ctx context.Context, req req.InstantOrde
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
-
-	// 获取更新后的订单金额
-	saleOrder = saleBill.GetSaleOrder(req.SaleOrderUuid)
-	if saleOrder == nil {
-		return nil, errors.New("无法查询到销售订单")
-	}
-	newPrice := saleOrder.GetAmountValue()
-
-	// 发布活动事件
-	utils.Go(func() {
-		event.NewSystemBus().PublishActivitySaleOrderEvent(event.ActivitySaleOrderPayload{
-			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
-				OperatorUuid:  int64(ctx.GetStaffUuid()),
-			},
-			FullReductionActivityUuid:    saleOrder.FullReductionActivityUuid,
-			FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
-			ActivityAmount:               saleOrder.ActivityAmount,
-			OldPrice:                     oldPrice,
-			NewPrice:                     newPrice,
-		})
-	})
 
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
