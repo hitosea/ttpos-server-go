@@ -3028,6 +3028,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 				}
 				return 0
 			}(),
+			BatchTagUuid: unCookingSaleOrderProduct.BatchTagUuid,
 		}
 		productionOrderProducts = append(productionOrderProducts, &productionOrderProduct)
 	}
