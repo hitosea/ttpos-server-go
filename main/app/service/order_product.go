@@ -580,11 +580,12 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 				if len(nonBatchUuids) > 0 {
 					// 将预送厨的商品变为未分批商品
 					db := s.dbm.GetDB(ctx.GetDbId())
-					if err := db.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", nonBatchUuids).Update("is_batch", 0).Error; err != nil {
+					// 从业务设置中获取分批送厨模式
+					businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+					if err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
-					// 将预送厨的生产单商品变为未分批商品
-					if err := db.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", nonBatchUuids).Update("create_time", time.Now().Unix()).Update("is_batch", 0).Error; err != nil {
+					if err := s.updateProductBatchFlagToZero(db, nonBatchUuids, businessSetting.BatchCookingMode); err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
 				}

@@ -142,6 +142,12 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 
 	noBatchProductUuids := make([]uint64, 0)
 
+	// 从业务设置中获取分批送厨模式
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	// 送厨相关
 	{
 		// 获取所有商品,用于检查限购
@@ -207,15 +213,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			notBatch = true
 		}
 		if notBatch {
-			// 遍历所有未送厨的商品，将is_batch为0
-			for _, product := range unCookingSaleOrderProducts {
-				product.IsBatch = 0
-				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
-			}
 			// 遍历所有预送厨的商品，将is_batch为0
 			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
 			for _, product := range preCookingSaleOrderProducts {
-				product.IsBatch = 0
 				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
 			}
 		}
@@ -316,13 +316,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		// 将未送厨和预送厨的商品编辑未分批商品
 		if len(noBatchProductUuids) > 0 {
-			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+			if err := s.updateProductBatchFlagToZero(tx, noBatchProductUuids, businessSetting.BatchCookingMode); err != nil {
 				return errors.WithMessage(err)
 			}
-			if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
-				return errors.WithMessage(err)
-			}
-
 		}
 		return nil
 	}); err != nil {
@@ -854,6 +850,39 @@ func (s *orderSrv) checkTimeoutAndCannotAddPurchase(ctx context.Context, saleBil
 					return errors.New("自助餐时间已到达，自助餐商品不可继续下单")
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// updateProductBatchFlagToZero 将指定商品的 is_batch 标志更新为 0
+// 同时更新 SaleOrderProduct 和 ProductionOrderProduct 表中的 is_batch 字段
+// modeType: pre 前置模式,post 后置模式
+func (s *orderSrv) updateProductBatchFlagToZero(tx *gorm.DB, productUuids []uint64, modeType string) error {
+	if len(productUuids) == 0 {
+		return nil
+	}
+	now := time.Now().Unix()
+	// 后置模式下，取消分批类型
+	if modeType == constant.BatchCookingModePost {
+		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"is_batch": 0, "batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
+		}
+		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{
+			"is_batch":    0,
+			"batch_time":  now,
+			"create_time": now,
+		}).Error; err != nil {
+			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
+		}
+	}
+	// 前置模式下，只更新 batch_time 字段. 不取消分批类型
+	if modeType == constant.BatchCookingModePre {
+		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
+		}
+		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
 		}
 	}
 	return nil
