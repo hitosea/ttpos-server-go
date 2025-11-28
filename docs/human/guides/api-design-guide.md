@@ -384,6 +384,23 @@ func GetOrderItems(orderId uint64) []OrderItem {
 - ❌ **禁止在响应体中使用 nil 切片**
 - ❌ **禁止依赖 Go 的零值初始化（nil slice）**
 
+### 业务数据返回规范
+
+#### 销售订单购物车信息
+
+**涉及销售订单（`ttpos_sale_order`）和销售账单（`ttpos_sale_bill`）的接口，必须在响应中包含购物车信息。**
+
+**规则：**
+
+- ✅ **必须返回购物车信息**：确保前端能够实时获取最新的购物车状态（如商品列表、金额信息、折扣信息等）。
+- ✅ **使用 `resp.ShopCart` 结构**：标准化的购物车响应结构。
+- ✅ **场景覆盖**：创建订单、更新订单、查询订单详情、结账检查等接口。
+
+**代码参考：**
+
+- **响应结构**：`main/app/dto/resp/shop_cart.go` 中的 `ShopCart` 结构体。
+- **实现示例**：`main/app/api/v1/cashier/cashier_instant.go` 中的 `OrderCartInfo` 方法。
+
 ---
 
 ## 分页规范
