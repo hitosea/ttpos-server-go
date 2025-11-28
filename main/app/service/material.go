@@ -2681,15 +2681,16 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 
 			// 添加物品
 			tmp := req.MaterialAddReq{
-				LocaleName:       item.LocaleName,
-				CategoryUuid:     item.CategoryUuid,
-				UnitUuid:         item.UnitUuid,
-				Status:           item.Status,
-				Valuation:        item.Valuation,
-				InitStock:        item.InitStock,
-				BarcodeValue:     item.BarcodeValue,
-				PurchaseUnitUuid: item.UnitUuid,
-				CostUnitUuid:     item.UnitUuid,
+				LocaleName:           item.LocaleName,
+				CategoryUuid:         item.CategoryUuid,
+				UnitUuid:             item.UnitUuid,
+				Status:               item.Status,
+				Valuation:            item.Valuation,
+				InitStock:            item.InitStock,
+				BarcodeValue:         item.BarcodeValue,
+				PurchaseUnitUuid:     item.UnitUuid,
+				CostUnitUuid:         item.UnitUuid,
+				AllowSubstoreVisible: 1,
 			}
 			err := s.AddMaterial(ctx, tmp)
 			if err != nil {
