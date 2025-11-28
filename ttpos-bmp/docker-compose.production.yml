@@ -96,9 +96,6 @@ services:
     image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
     environment:
       GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14052"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-websocket"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./app/ttpos-websocket/manifest/config:/app/config  #生产环境根据需要调整
     restart: always
