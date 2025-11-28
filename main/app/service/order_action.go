@@ -141,6 +141,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
 	noBatchProductUuids := make([]uint64, 0)
+	noBatchProduct := make([]*model.SaleOrderProduct, 0)
 
 	// 从业务设置中获取分批送厨模式
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
@@ -217,6 +218,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
 			for _, product := range preCookingSaleOrderProducts {
 				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
+				noBatchProduct = append(noBatchProduct, product)
 			}
 		}
 
@@ -377,6 +379,15 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 						}
 						products = append(products, s.convertToEventOrderProduct(
 							unCookingSaleOrderProduct,
+							saleBill,
+							saleBill.GetSaleOrder(saleOrderUuid),
+						))
+					}
+					// 如果有预送厨的商品跟未送厨的商品一起结账送厨,则需要将预送厨的商品也打印出来
+					for _, noBatchProduct := range noBatchProduct {
+						noBatchProduct.IsBatch = 0 // 临时在内存中将该商品的is_batch设置为0,让打印出该商品的送厨单
+						products = append(products, s.convertToEventOrderProduct(
+							noBatchProduct,
 							saleBill,
 							saleBill.GetSaleOrder(saleOrderUuid),
 						))
