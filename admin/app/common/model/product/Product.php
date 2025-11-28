@@ -179,12 +179,27 @@ class Product extends BaseModel
         if (empty($uuid)) {
             return json_encode($default);
         }
-        $names = (new MultiLanguageName)->getNames($uuid);
-        if (empty($names)) {
+        $record = (new MultiLanguageName())->where('uuid', $uuid)
+                ->field('en_name,zh_name,zh_tw_name,th_name,my_name,ja_name,ko_name,tr_name,sv_name')
+                ->find();
+
+        if (!$record) {
             return json_encode($default);
         }
-        $decoded = json_decode($names, true);
-        return is_array($decoded) ? json_encode($decoded) : json_encode($default);
+
+        // 构建返回格式
+        $names = json_encode([
+            'en'   => $record['en_name'],
+            'zh'   => $record['zh_name'],
+            'zhtw' => $record['zh_tw_name'],
+            'th'   => $record['th_name'],
+            'my'   => $record['my_name'],
+            'ja'   => $record['ja_name'],
+            'ko'   => $record['ko_name'],
+            'tr'   => $record['tr_name'],
+            'sv'   => $record['sv_name'],
+        ], JSON_UNESCAPED_UNICODE);
+        return $names;
     }
     public function getIsEnableGradeAttr($value, $data = [])
     {
