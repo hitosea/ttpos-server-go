@@ -38,8 +38,8 @@ for app_dir in ../app/*; do
         if [ -f "$tpl_file" ]; then
             # 执行复制操作
             cp "$tpl_file" "$target_file"
-            # 处理REDIS地址组合逻辑
-            if [ -n "$REDIS_CLUSTER_ANNOUNCE_IP" ] && [ -n "$REDIS_PORT" ]; then
+            # 处理REDIS地址组合逻辑（如果ENV_FILE中未配置REDIS_ADDRESSES则自动生成）
+            if [ -z "$REDIS_ADDRESSES" ] && [ -n "$REDIS_CLUSTER_ANNOUNCE_IP" ] && [ -n "$REDIS_PORT" ]; then
                 # 处理REDIS_CLUSTER_ANNOUNCE_IP为auto的情况
                 if [ "$REDIS_CLUSTER_ANNOUNCE_IP" = "auto" ]; then
                     # 获取本地网卡IP，优先192.168.100开头

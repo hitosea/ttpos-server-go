@@ -61,6 +61,12 @@ class ProductPackageGroup extends BaseModel
                 'optional_count' => $item['optional_count'] ?? 0, // 可选数量
             ];
             
+            // 数据校验：可选数量必须 >= 1
+            $optionalCount = $groupData['optional_count'] ?? 0;
+            if ($optionalCount < 1) {
+                throw new \Exception('套餐组可选数量不能小于 1');
+            }
+            
             // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否大于可选数量
             if ($groupData['group_type'] == 1) { // 可选类型
                 $productList = $item['product_list'] ?? [];
@@ -74,7 +80,6 @@ class ProductPackageGroup extends BaseModel
                         $requiredOrDefaultCount++;
                     }
                 }
-                $optionalCount = $groupData['optional_count'] ?? 0;
                 if ($requiredOrDefaultCount > $optionalCount) {
                     throw new \Exception('必选或默认不可大于可选数量');
                 }
@@ -134,6 +139,13 @@ class ProductPackageGroup extends BaseModel
                 'group_type' => $item['group_type'] ?? 0, // 分组类型 0-固定 1-可选
                 'optional_count' => $item['optional_count'] ?? 0, // 可选数量
             ];
+            
+            // 数据校验：可选数量必须 >= 1
+            $optionalCount = $groupData['optional_count'] ?? 0;
+            if ($optionalCount < 1) {
+                throw new \Exception('套餐组可选数量不能小于 1');
+            }
+            
             $groupUuid = $item['group_id'] ?? 0;
             if ($groupUuid == 0) {
                 $multiLanguageNameUuid = (new MultiLanguageName)->saveNames($item['group_name']);
@@ -168,7 +180,6 @@ class ProductPackageGroup extends BaseModel
                         $requiredOrDefaultCount++;
                     }
                 }
-                $optionalCount = $groupData['optional_count'] ?? 0;
                 if ($requiredOrDefaultCount > $optionalCount) {
                     throw new \Exception('必选或默认不可大于可选数量');
                 }

@@ -2122,26 +2122,45 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 					if errGetProductPackage != nil {
 						return errors.WithMessage(errGetProductPackage, "获取商品包失败")
 					}
-					for _, productBom := range productPackage.ProductBoms {
-						productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
-						productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
-						if err != nil {
-							return errors.WithMessage(err, "翻译失败")
+					erpSrv := erp.NewIErpSrv(s.dbm)
+					if productPackage.IsPackage() {
+						// 套餐：使用 UpdateProduct 更新套餐单位
+						for _, productBom := range productPackage.ProductBoms {
+							if productBom.IsPackageFlavor() {
+								errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+									ItemCode:   productBom.ErpCode, // 使用套餐 Item Code
+									StockUom:   erpUom,
+									Disabled:   productPackage.Status == constant.ProductStatusOffSale,
+									NotForSale: productPackage.IsDelete(),
+								})
+								if errErp != nil {
+									logger.Logger.Error("同步套餐单位到ERP失败",
+										zap.String("product_package_uuid", fmt.Sprintf("%d", productPackageUuid)),
+										zap.String("product_bom_uuid", fmt.Sprintf("%d", productBom.Uuid)),
+										zap.String("erp_code", productBom.ErpCode),
+										zap.String("erp_uom", erpUom),
+										zap.Error(errErp))
+									return errors.WithMessage(errErp, "同步套餐单位到ERP失败")
+								}
+								break // 套餐只有一个 PackageFlavor
+							}
 						}
-						multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-						if err != nil {
-							return errors.WithMessage(err, "翻译失败")
-						}
-						erpSrv := erp.NewIErpSrv(s.dbm)
-						itemName := fmt.Sprintf("%s-%s", productEnName, enName)
-						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-							ItemName: itemName,
-							StockUom: erpUom,
-							ItemCode: productBom.ErpCode,
+					} else if productPackage.IsProduct() {
+						// 普通商品：使用 UpdateProduct 更新模板单位
+						errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+							ItemCode:   productPackage.ErpCode, // 使用模板 Item Code
+							StockUom:   erpUom,
+							Disabled:   productPackage.Status == constant.ProductStatusOffSale,
+							NotForSale: productPackage.IsDelete(),
 						})
 						if errErp != nil {
-							return errors.WithMessage(errErp, "同步商品到erp失败")
+							logger.Logger.Error("同步商品单位到ERP失败",
+								zap.String("product_package_uuid", fmt.Sprintf("%d", productPackageUuid)),
+								zap.String("product_name", productPackage.Name),
+								zap.String("erp_code", productPackage.ErpCode),
+								zap.String("erp_uom", erpUom),
+								zap.Error(errErp))
+							return errors.WithMessage(errErp, "同步商品单位到ERP失败")
 						}
 					}
 				}
@@ -2289,49 +2308,51 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 				}
 				for i := range productPackages {
 					productPackage := productPackages[i]
-					for _, productBom := range productPackage.ProductBoms {
-						if productBom.IsFlavor() {
-							if productPackage.IsPackage() {
-								// 同步套餐到erp
-								multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-								enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-								if err != nil {
-									return errors.WithMessage(err, "翻译失败")
-								}
+					if productPackage.IsPackage() {
+						for _, productBom := range productPackage.ProductBoms {
+							if productBom.IsPackageFlavor() {
+								// 同步套餐到erp - 使用 UpdateProduct 更新套餐单位
 								erpSrv := erp.NewIErpSrv(s.dbm)
-								_, errErp := erpSrv.AddPackage(ctx, req.PackageAddErpReq{
-									ItemName: enName,
-									StockUom: productUnit.ErpnextUom,
-									ItemCode: productBom.ErpCode,
+								errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+									ItemCode:   productBom.ErpCode, // 使用套餐 Item Code
+									StockUom:   productUnit.ErpnextUom,
+									Disabled:   productPackage.Status == constant.ProductStatusOffSale,
+									NotForSale: productPackage.IsDelete(),
 								})
 								if errErp != nil {
-									return errors.WithMessage(errErp, "同步商品到erp失败")
-								}
-							} else if productPackage.IsProduct() {
-								// 同步商品到erp
-								productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
-								productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
-								if err != nil {
-									return errors.WithMessage(err, "翻译失败")
-								}
-								multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-								enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-								if err != nil {
-									return errors.WithMessage(err, "翻译失败")
-								}
-								erpSrv := erp.NewIErpSrv(s.dbm)
-								itemName := fmt.Sprintf("%s-%s", productEnName, enName)
-								_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-									ItemName: itemName,
-									StockUom: productUnit.ErpnextUom,
-									ItemCode: productBom.ErpCode,
-								})
-								if errErp != nil {
-									return errors.WithMessage(errErp, "同步商品到erp失败")
+									logger.Logger.Error("同步套餐单位到ERP失败",
+										zap.String("product_package_uuid", fmt.Sprintf("%d", productPackage.Uuid)),
+										zap.String("product_bom_uuid", fmt.Sprintf("%d", productBom.Uuid)),
+										zap.String("erp_code", productBom.ErpCode),
+										zap.String("unit_uuid", fmt.Sprintf("%d", productUnit.Uuid)),
+										zap.String("erp_uom", productUnit.ErpnextUom),
+										zap.Error(errErp))
+									return errors.WithMessage(errErp, "同步套餐单位到ERP失败")
 								}
 							}
 						}
+					} else if productPackage.IsProduct() {
+						// 同步商品到erp - 使用 UpdateProduct 更新模板单位
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+							ItemCode:   productPackage.ErpCode, // 使用模板 Item Code
+							StockUom:   productUnit.ErpnextUom,
+							Disabled:   productPackage.Status == constant.ProductStatusOffSale,
+							NotForSale: productPackage.IsDelete(),
+						})
+						if errErp != nil {
+							logger.Logger.Error("同步商品单位到ERP失败",
+								zap.String("product_package_uuid", fmt.Sprintf("%d", productPackage.Uuid)),
+								zap.String("product_name", productPackage.Name),
+								zap.String("erp_code", productPackage.ErpCode),
+								zap.String("unit_uuid", fmt.Sprintf("%d", productUnit.Uuid)),
+								zap.String("unit_name", productUnit.Name),
+								zap.String("erp_uom", productUnit.ErpnextUom),
+								zap.Error(errErp))
+							return errors.WithMessage(errErp, "同步商品单位到ERP失败")
+						}
 					}
+
 				}
 			}
 			// 修改商品的单位UUID
@@ -5342,8 +5363,9 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 			if !productPackage.IsPackage() {
 				// 禁用商品模板
 				err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-					ItemCode: productPackage.ErpCode,
-					Disabled: *req.Status == 0,
+					ItemCode:   productPackage.ErpCode,
+					Disabled:   *req.Status == constant.ProductStatusOffSale,
+					NotForSale: productPackage.IsDelete(),
 				})
 				if err != nil {
 					return errors.WithMessage(err, "同步商品模板到erp失败")
@@ -5352,8 +5374,9 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 			for _, productBom := range productPackage.ProductBoms {
 				if productBom.IsFlavor() || productBom.IsPackageFlavor() {
 					err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-						ItemCode: productBom.ErpCode,
-						Disabled: *req.Status == 0,
+						ItemCode:   productBom.ErpCode,
+						Disabled:   *req.Status == constant.ProductStatusOffSale,
+						NotForSale: productPackage.IsDelete(),
 					})
 					if err != nil {
 						return errors.WithMessage(err, "同步商品bom到erp失败")
@@ -5995,6 +6018,7 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	commonRepo := repository.NewCommonRepo()
 	multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 	productPackageRepo := repository.NewProductPackageRepo(tx)
+	unitRepo := repository.NewProductUnitRepo(tx)
 
 	productPackage, err := productPackageRepo.GetProductPackage(
 		commonRepo.WhereByUuid(req.Uuid),
@@ -6058,6 +6082,31 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	}
 	// 商品 - 将多语言名称uuid从待翻译集合中删除
 	s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), productPackage.MultiLanguageNameUuid) // 商品
+
+	// 商品 - 同步到ERP
+	if ctx.GetCompany().IsOpenErp() && productPackage.IsProduct() {
+		unit, err := unitRepo.GetProductUnit(commonRepo.WhereByUuid(req.UnitUuid))
+		if err != nil || unit.ID == 0 {
+			logger.Logger.Error("获取商品单位失败", zap.String("product_package_uuid", fmt.Sprintf("%d", productPackage.Uuid)), zap.Error(err))
+			return nil, errors.WithMessage(err, "获取商品单位失败")
+		}
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+			ItemCode:   productPackage.ErpCode,
+			StockUom:   unit.ErpnextUom,
+			Disabled:   req.Status == constant.ProductStatusOffSale,
+			NotForSale: productPackage.IsDelete(),
+		})
+		if errErp != nil {
+			logger.Logger.Error("同步商品到ERP失败",
+				zap.String("product_package_uuid", fmt.Sprintf("%d", productPackage.Uuid)),
+				zap.String("status", fmt.Sprintf("%d", req.Status)),
+				zap.String("erp_code", productPackage.ErpCode),
+				zap.String("erp_uom", unit.ErpnextUom),
+				zap.Error(errErp))
+			return nil, errors.WithMessage(errErp, "同步商品到ERP失败")
+		}
+	}
 
 	return &AddProductPackageRes{
 		Uuid:    req.Uuid,
@@ -6520,6 +6569,14 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 						})
 						if errErp != nil {
 							return errors.WithMessage(errErp, "同步套餐到erp失败")
+						}
+						errErp = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+							ItemCode:   productBom.ErpCode,
+							Disabled:   params.FlavorListResult.Status == constant.ProductStatusOffSale,
+							NotForSale: productBom.ProductPackage.IsDelete(),
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp, "同步商品bom到erp失败")
 						}
 					}
 				}

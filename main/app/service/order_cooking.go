@@ -589,7 +589,9 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 		for _, product := range signProducts {
 			products = append(products, product)
 		}
-
+		sort.Slice(products, func(i, j int) bool {
+			return products[i].CreateTime < products[j].CreateTime
+		})
 		groups = append(groups, resp.SentKitchenProductGroup{
 			SendKitchenTime: sendKitchenTime,
 			Products: resp.GroupProductList{

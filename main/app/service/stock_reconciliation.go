@@ -557,7 +557,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 					return errors.NewWithCode(constant.CodeItemDisabled, itemName)
 				}
 				message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", itemName)
-				return errors.NewWithCode(constant.CodeItemDisabled, message)
+				return errors.New(message)
 			}
 			return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
 		}
@@ -781,7 +781,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 						return errors.NewWithCode(constant.CodeItemDisabled, itemName)
 					}
 					message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", itemName)
-					return errors.NewWithCode(constant.CodeItemDisabled, message)
+					return errors.New(message)
 				}
 				return errors.WithMessage(errors.New("审核盘点单失败"), err.Error())
 			}
