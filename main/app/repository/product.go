@@ -230,6 +230,9 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
 				},
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ImageFile",
+				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
