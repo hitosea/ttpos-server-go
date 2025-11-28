@@ -360,14 +360,14 @@ func (r *saleBillRepo) UpdateSaleBillBatchTagUuid(saleBillUuid uint64, batchTagU
 
 // UpdateOrderSource 更新销售账单的订单来源
 func (r *saleBillRepo) UpdateOrderSource(saleBillUuid uint64, orderSourceUuid uint64) error {
-	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+	return r.db.Model(&model.SaleBill{}).Select("order_source_uuid").Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
 		OrderSourceUuid: orderSourceUuid,
 	}).Error
 }
 
 // UpdateNationality 更新销售账单的国籍
 func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error {
-	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+	return r.db.Model(&model.SaleBill{}).Select("nationality_uuid").Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
 		NationalityUuid: nationalityUuid,
 	}).Error
 }

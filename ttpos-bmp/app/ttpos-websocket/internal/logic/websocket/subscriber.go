@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 	"ttpos-bmp/app/ttpos-websocket/internal/consts"
 	"ttpos-bmp/app/ttpos-websocket/internal/model/dto"
@@ -20,6 +21,7 @@ func StartRedisSubscriber(ctx context.Context) {
 	conn, _, err := g.Redis().Subscribe(ctx, consts.ChannelWebsocketMsgPush)
 	if err != nil {
 		g.Log().Error(ctx, "订阅Redis频道失败", err)
+		g.Log().Infof(ctx, "Redis配置检查: %+v", g.Cfg().MustGet(ctx, "redis.default").Map())
 		return
 	}
 
@@ -28,8 +30,8 @@ func StartRedisSubscriber(ctx context.Context) {
 			g.Log().Error(ctx, "Redis订阅者异常", r)
 		}
 		conn.Close(ctx)
-		// 延迟3秒重连
-		time.Sleep(3 * time.Second)
+		// 延迟2秒重连
+		time.Sleep(2 * time.Second)
 		StartRedisSubscriber(ctx)
 	}()
 
@@ -45,6 +47,9 @@ func StartRedisSubscriber(ctx context.Context) {
 			if err != nil {
 				if err == context.Canceled || err == context.DeadlineExceeded {
 					g.Log().Info(ctx, "Redis订阅者已停止")
+					return
+				} else if strings.Contains(err.Error(), "connect: connection refused") {
+					g.Log().Error(ctx, "Redis连接失败", err)
 					return
 				}
 				g.Log().Error(ctx, "接收Redis消息失败", err)
