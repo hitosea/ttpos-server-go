@@ -2364,6 +2364,16 @@ func (s *orderSrv) CheckAuthorization(ctx context.Context, operationType string)
 	if currentStaff.Uuid == 0 {
 		return false, errors.New("未找到当前员工信息")
 	}
+	// 如果是助手端,需要获取当前助手端登陆的员账号. 当前使用的token是收银机账户的
+	if ctx.GetSource() == constant.SourceAssistant {
+		// 1. 获取当前员工信息
+		currentStaffUuid := ctx.GetAssistantUuid()
+		staff, err := repository.NewStaffRepo(ctx.GetDB()).GetStaff(repository.CommonRepo.WhereByUuid(currentStaffUuid))
+		if err != nil {
+			return false, errors.WithMessage(err, "获取当前员工信息失败")
+		}
+		currentStaff = staff
+	}
 
 	// 2. 获取业务设置
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
