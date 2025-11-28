@@ -167,11 +167,13 @@ func (h *InstantHandler) SetOrderSource(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid); err != nil {
+	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	//
+	helper.Success(c, shopCart)
 }
 
 // SetNationality 设置点餐订单国籍
@@ -192,11 +194,12 @@ func (h *InstantHandler) SetNationality(c *gin.Context) {
 		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
 		return
 	}
-	if err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid); err != nil {
+	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, shopCart)
 }
 
 // OrderList 处理显示点餐订单列表（取单列表）

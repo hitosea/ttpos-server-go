@@ -227,9 +227,9 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 }
 
 // SetOrderSource 设置销售账单订单来源
-func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orderSourceUuid uint64) error {
+func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orderSourceUuid uint64) (resp.ShopCart, error) {
 	if saleBillUuid == 0 {
-		return errors.New("销售账单 UUID 不能为空")
+		return resp.ShopCart{}, errors.New("销售账单 UUID 不能为空")
 	}
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -238,13 +238,21 @@ func (s *orderSrv) SetOrderSource(ctx context.Context, saleBillUuid uint64, orde
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	return repository.NewSaleBillRepo(db).UpdateOrderSource(saleBillUuid, orderSourceUuid)
+	err := repository.NewSaleBillRepo(db).UpdateOrderSource(saleBillUuid, orderSourceUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	return *shopCart, nil
 }
 
 // SetNationality 设置销售账单国籍
-func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nationalityUuid uint64) error {
+func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nationalityUuid uint64) (resp.ShopCart, error) {
 	if saleBillUuid == 0 {
-		return errors.New("销售账单 UUID 不能为空")
+		return resp.ShopCart{}, errors.New("销售账单 UUID 不能为空")
 	}
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -253,7 +261,15 @@ func (s *orderSrv) SetNationality(ctx context.Context, saleBillUuid uint64, nati
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	return repository.NewSaleBillRepo(db).UpdateNationality(saleBillUuid, nationalityUuid)
+	err := repository.NewSaleBillRepo(db).UpdateNationality(saleBillUuid, nationalityUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	if err != nil {
+		return resp.ShopCart{}, errors.WithMessage(err)
+	}
+	return *shopCart, nil
 }
 
 // IsCellCancelOrder 判断订单是否可以取消
