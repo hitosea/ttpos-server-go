@@ -374,7 +374,8 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 			for _, group := range product.ProductPackageGroups {
 				productList := make([]product_resp.PackageProductDetail, 0)
 				for _, item := range group.ProductPackageGroupItems {
-					flavor := getFlavor(item.ProductBom)                       // 商品规格
+					flavor := getFlavor(item.ProductBom) // 商品规格
+					subProductImage := item.ProductPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 					attributeGroups := getAttributeGroups(item.ProductPackage) // 商品属性组
 					// 固定分组时，IsRequired 和 IsDefault 返回 1
 					isRequired := item.IsRequired
@@ -387,7 +388,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 						Detail: product_resp.Product{
 							Uuid:       item.ProductBom.Uuid,
 							LocaleName: item.ProductPackage.MultiLanguageName.GetNames(),
-							Image:      image,
+							Image:      subProductImage,
 							Unit:       item.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
 							Price:      0, // 商品价格，套餐内目前是0元
 							Flavors: product_resp.ProductFlavorList{
