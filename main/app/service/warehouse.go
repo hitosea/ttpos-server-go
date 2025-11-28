@@ -145,7 +145,11 @@ func (s *warehouseSrv) GetHeadquarterWarehouseList(ctx context.Context) (resp.Wa
 func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
-	warehouse, err := warehouseRepo.GetByUuid(req.Uuid)
+	opts := []repository.DBOption{
+		warehouseRepo.WithItems(),
+		warehouseRepo.WithMultiLanguageName(),
+	}
+	warehouse, err := warehouseRepo.GetByUuid(req.Uuid, opts...)
 	if err != nil {
 		return resp.WarehouseResp{}, errors.WithMessage(err, "获取仓库失败")
 	}
@@ -375,8 +379,11 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq r
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
 
+	opts := []repository.DBOption{
+		warehouseRepo.WithItems(),
+	}
 	// 检查仓库是否存在
-	existingWarehouse, err := warehouseRepo.GetByUuid(deleteWarehouseReq.Uuid)
+	existingWarehouse, err := warehouseRepo.GetByUuid(deleteWarehouseReq.Uuid, opts...)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("仓库不存在")

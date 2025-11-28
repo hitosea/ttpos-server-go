@@ -113,6 +113,12 @@ const (
 	CodeTransferOrderItemUnitNumZero = -805 // 调拨单明细单位数量为0，提交后将移除对应物品
 )
 
+// 盘点单业务错误码
+const (
+	CodeWarehouseDisabled = -806 // 仓库状态已关闭，请修改仓库状态
+	CodeItemDisabled      = -807 // 物品状态已关闭，请修改物品状态
+)
+
 type ParseCodeOrderCheckOption struct {
 	IsH5     bool // 是否是h5端的文案
 	IsTablet bool // 是否是平板端的文案
