@@ -574,7 +574,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			if len(preCookingSaleOrderProducts) > 0 {
 				nonBatchUuids := make([]uint64, 0) // 预送厨的商品uuid列表
 				for _, saleOrderProduct := range preCookingSaleOrderProducts {
-					saleOrderProduct.IsBatch = 0
+					saleOrderProduct.IsBatch = 0 // 临时在内存中将该商品的is_batch设置为0,让打印出该商品的送厨单
 					nonBatchUuids = append(nonBatchUuids, saleOrderProduct.Uuid)
 				}
 				if len(nonBatchUuids) > 0 {
@@ -588,6 +588,38 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 					if err := s.updateProductBatchFlagToZero(db, nonBatchUuids, businessSetting.BatchCookingMode); err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
+					// 场景一: 全是预送厨商品时
+					// 发起“送厨”操作的事件
+					utils.Go(func() {
+						saleOrderUuid := saleBill.GetFirstSaleOrder().Uuid
+						s.bus.PublishSentCookingEvent(event.SentCookingPayload{
+							BasePayload: event.BasePayload{ // 送厨
+								Ctx:           ctx,
+								CompanyUuid:   ctx.GetCompanyUuid(),
+								Source:        ctx.GetSource(),
+								SaleBillUuid:  saleBill.Uuid,
+								SaleOrderUuid: saleOrderUuid,
+								H5OrderUuid:   h5OrderUuid,
+								OperatorUuid:  int64(ctx.GetStaffUuid()),
+							},
+							Products: func() event.Products {
+								products := make(event.Products, 0)
+								for _, unCookingSaleOrderProduct := range preCookingSaleOrderProducts {
+									// 套餐子商品不显示送厨记录
+									if unCookingSaleOrderProduct.IsPackageSubProduct() {
+										continue
+									}
+									products = append(products, s.convertToEventOrderProduct(
+										unCookingSaleOrderProduct,
+										saleBill,
+										saleBill.GetSaleOrder(saleOrderUuid),
+									))
+								}
+								return products
+							}(),
+						})
+					})
+
 				}
 			}
 		}

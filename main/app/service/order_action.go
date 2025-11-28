@@ -371,6 +371,10 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 						if unCookingSaleOrderProduct.IsPackageSubProduct() {
 							continue
 						}
+						// 如果是结账送厨,需要将所有未送厨商品都打印出来,故要临时将is_batch为0
+						if ignoreMust { // 只有结账送厨才会忽略必点
+							unCookingSaleOrderProduct.IsBatch = 0
+						}
 						products = append(products, s.convertToEventOrderProduct(
 							unCookingSaleOrderProduct,
 							saleBill,
