@@ -751,6 +751,19 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			}
 		}
 		realName := record.Operator.RealName
+		email := record.Operator.Username
+
+		// 获取授权人信息
+		if strings.Contains(record.Data, "authorized_staff") { // 授权操作时，记录了授权人信息
+			var authorizedStaffInfo event.AuthorizedStaffInfo
+			if err := utils.ExtractNestedFieldToStruct(record.Data, "authorized_staff", &authorizedStaffInfo); err == nil {
+				realName = authorizedStaffInfo.Name
+				email = authorizedStaffInfo.Email
+			} else {
+				ctx.Log().Info("解析订单操作记录时，获取授权人信息失败", zap.Any("companyUuid", ctx.GetCompanyUuid()), zap.Any("record", record), zap.Error(err))
+			}
+		}
+
 		if record.Source == constant.SourceH5 {
 			realName = i18n.Translate(language, "用户")
 		}
@@ -781,7 +794,7 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:       record.Uuid,
 			RealName:   realName,
-			Email:      record.Operator.Username,
+			Email:      email,
 			Source:     i18n.Translate(language, constant.SourceTextMap[record.Source]),
 			CreateTime: record.CreateTime,
 			RefundType: func() int {
