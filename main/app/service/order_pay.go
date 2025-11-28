@@ -1748,7 +1748,7 @@ func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *mod
 	}
 
 	// 计算订单金额（积分抵扣后的应收金额）
-	orderAmount := saleOrder.GetAmountValue()
+	orderAmount := saleOrder.GetAmountValueNoActivityAmount()
 
 	// 根据活动类型计算抵扣金额
 	var discountAmount float64
