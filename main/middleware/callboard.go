@@ -4,7 +4,7 @@ import (
 	"errors"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	tterrors "ttpos-server-go/app/errors"
+	ttposErrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,7 @@ func BindedDeviceAuth(validator BindedDeviceValidator) gin.HandlerFunc {
 		deviceId := getDeviceId(c)
 		companyUuid, err := validator.BindedDeviceValidate(deviceId)
 		if err != nil {
-			var appError tterrors.AppError
+			var appError ttposErrors.AppError
 			if errors.As(err, &appError) {
 				helper.Fail(c, appError.Code, appError.Message)
 				c.Abort()
@@ -52,19 +52,4 @@ func getDeviceId(c *gin.Context) string {
 		return c.Param("device_id")
 	}
 	return ""
-}
-
-func getTimestamp(c *gin.Context) string {
-	if c.GetHeader("Timestamp") != "" {
-		return c.GetHeader("Timestamp")
-	}
-	// 从请求参数中获取
-	if c.Query("timestamp") != "" {
-		return c.Query("timestamp")
-	}
-	return ""
-}
-
-func getSignature(c *gin.Context) string {
-	return c.GetHeader("Signature")
 }
