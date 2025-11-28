@@ -65,8 +65,8 @@ func (model *SaleOrder) CalcCommissionFee() float64 {
 // 计算销售订单未付款的金额。
 // 支付没有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
 // 支付有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
-func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
-	amount := model.GetAmountValue()
+func (model *SaleOrder) CalcUnPayAmount(hasCommission bool, activityAmount float64) float64 {
+	amount := model.GetAmountValueWithActivityAmount(activityAmount)
 	if hasCommission {
 		// 销售订单各个支付单的支付金额之和
 		payOrderAmount := model.calcPayOrderAmount()

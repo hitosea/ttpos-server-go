@@ -1551,7 +1551,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 		commissionFee := saleOrder.CalcCommissionFee()
 
-		saleOrderAmount := saleOrder.GetAmountValue() // 积分抵扣后的应收金额
+		saleOrderAmount := saleOrder.GetAmountValueWithActivityAmount(discountAmount) // 积分抵扣后的应收金额
 		saleOrderOriginAmount := saleOrder.GetOriginAmountValue()
 		if commissionFee > 0 {
 			// 如果有手续费
@@ -1562,7 +1562,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				CommissionFee:         commissionFee,
 				CouponExchangeAmount:  saleOrder.CalcCouponExchangeAmount(),
 				ActivityAmount:        discountAmount,
-				UnpaidAmount:          saleOrder.CalcUnPayAmount(true),
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(true, discountAmount),
 				ZeroAmount:            0, // 只有没有手续费时才会抹零
 				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
 				PaymentMethodUuid:     methodItem.Uuid,
@@ -1586,7 +1586,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				CommissionFee:         commissionFee,
 				CouponExchangeAmount:  unpaidAmount,
 				ActivityAmount:        discountAmount,
-				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
+				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission, discountAmount),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
 				ZeroRule:              saleOrder.ZeroCheckoutRule,

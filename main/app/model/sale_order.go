@@ -516,6 +516,12 @@ func (model *SaleOrder) GetAmountValue() float64 {
 	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Sub(decimal.NewFromFloat(model.ActivityAmount)).Round(2).InexactFloat64()
 }
 
+// 订单金额。积分抵扣后、优惠券抵扣后、满减活动抵扣后的金额
+func (model *SaleOrder) GetAmountValueWithActivityAmount(activityAmount float64) float64 {
+	// 积分抵扣后的金额-优惠券抵扣金额-满减活动抵扣金额
+	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Sub(decimal.NewFromFloat(activityAmount)).Round(2).InexactFloat64()
+}
+
 // 订单金额。积分抵扣后、优惠券抵扣后的金额, 未满减活动抵扣的金额
 func (model *SaleOrder) GetAmountValueNoActivityAmount() float64 {
 	// 积分抵扣后的金额-优惠券抵扣金额
