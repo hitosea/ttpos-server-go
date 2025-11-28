@@ -141,7 +141,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
 	noBatchProductUuids := make([]uint64, 0)
-	noBatchProduct := make([]*model.SaleOrderProduct, 0)
+	noBatchProduct := make([]*model.SaleOrderProduct, 0) // 要合并跟unCookingSaleOrderProducts一起打印的预送厨商品
 
 	// 从业务设置中获取分批送厨模式
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
@@ -392,6 +392,11 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 							saleBill.GetSaleOrder(saleOrderUuid),
 						))
 					}
+					// 基于uuid进行去重,避免重复打印
+					products = utils.RemoveDuplicatesByKey(products, func(product event.OrderProduct) uint64 {
+						return product.OrderProductId
+					})
+
 					return products
 				}(),
 			})
@@ -404,6 +409,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			})
 		})
 	}
+
 	return nil, nil
 }
 

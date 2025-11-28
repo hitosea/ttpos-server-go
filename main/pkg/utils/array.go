@@ -55,3 +55,24 @@ func Contains[T comparable](slice []T, target T) bool {
 	}
 	return false
 }
+
+// RemoveDuplicatesByKey 基于指定的 key 提取函数去除切片中的重复元素
+// 保留第一次出现的元素
+func RemoveDuplicatesByKey[T any, K comparable](slice []T, getKey func(T) K) []T {
+	if len(slice) == 0 {
+		return slice
+	}
+
+	seen := make(map[K]bool)
+	result := make([]T, 0, len(slice))
+
+	for _, item := range slice {
+		key := getKey(item)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
