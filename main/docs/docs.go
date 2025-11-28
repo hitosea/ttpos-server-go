@@ -4059,6 +4059,17 @@ const docTemplate = `{
                     "点餐助手端.订单"
                 ],
                 "summary": "检查授权",
+                "parameters": [
+                    {
+                        "description": "检查授权参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CheckAuthorizationReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -13355,6 +13366,17 @@ const docTemplate = `{
                     "收银端.订单"
                 ],
                 "summary": "检查授权",
+                "parameters": [
+                    {
+                        "description": "检查授权参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CheckAuthorizationReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -34108,6 +34130,10 @@ const docTemplate = `{
         "material_resp.Material": {
             "type": "object",
             "properties": {
+                "allow_substore_visible": {
+                    "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
+                    "type": "integer"
+                },
                 "available_num": {
                     "description": "可用库存数量",
                     "type": "number"
@@ -36676,6 +36702,10 @@ const docTemplate = `{
         "product_resp.ProductPackageSubProduct": {
             "type": "object",
             "properties": {
+                "add_price": {
+                    "description": "加价金额",
+                    "type": "number"
+                },
                 "bom_uuid": {
                     "description": "商品BOM UUID",
                     "type": "integer"
@@ -38136,6 +38166,22 @@ const docTemplate = `{
                 }
             }
         },
+        "req.CheckAuthorizationReq": {
+            "type": "object",
+            "required": [
+                "operation_type"
+            ],
+            "properties": {
+                "operation_type": {
+                    "description": "操作类型: discount-折扣操作 refund-退款操作",
+                    "type": "string",
+                    "enum": [
+                        "discount",
+                        "refund"
+                    ]
+                }
+            }
+        },
         "req.CheckMemberPasswordReq": {
             "type": "object",
             "required": [
@@ -39274,7 +39320,6 @@ const docTemplate = `{
         "req.MaterialBatchUpdateVisibleReq": {
             "type": "object",
             "required": [
-                "allow_substore_visible",
                 "uuids"
             ],
             "properties": {
@@ -39865,6 +39910,10 @@ const docTemplate = `{
                     "description": "某个规格商品ID",
                     "type": "integer"
                 },
+                "num": {
+                    "description": "套餐商品数量",
+                    "type": "number"
+                },
                 "product_package_uuid": {
                     "description": "套餐UUID",
                     "type": "integer"
@@ -39953,6 +40002,10 @@ const docTemplate = `{
         "req.OrderCartProductPackageAddReq": {
             "type": "object",
             "properties": {
+                "num": {
+                    "description": "套餐商品数量",
+                    "type": "number"
+                },
                 "product_package_uuid": {
                     "description": "套餐UUID",
                     "type": "integer"
@@ -53233,6 +53286,10 @@ const docTemplate = `{
                     "description": "有下级公司，则表示为上级公司，用于判断调拨规则是否支持",
                     "type": "boolean"
                 },
+                "has_data_permission": {
+                    "description": "是否有数据管理权限",
+                    "type": "boolean"
+                },
                 "is_headquarter": {
                     "description": "是否是总部",
                     "type": "boolean"
@@ -53588,6 +53645,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.StockReconciliationCheckMaterialsResp"
                     }
+                },
+                "warehouse_disabled": {
+                    "description": "仓库是否禁用 true-被禁用；false-正常",
+                    "type": "boolean"
                 }
             }
         },

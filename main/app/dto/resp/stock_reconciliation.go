@@ -83,5 +83,6 @@ type StockReconciliationCheckMaterialsResp struct {
 }
 
 type StockReconciliationCheckMaterialsListResp struct {
-	List []StockReconciliationCheckMaterialsResp `json:"list"` // 物品列表
+	List              []StockReconciliationCheckMaterialsResp `json:"list"`               // 物品列表
+	WarehouseDisabled bool                                    `json:"warehouse_disabled"` // 仓库是否禁用 true-被禁用；false-正常
 }
