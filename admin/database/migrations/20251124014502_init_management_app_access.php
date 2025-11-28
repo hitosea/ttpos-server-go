@@ -189,18 +189,18 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2858179104768000, 'name' => '成本卡', 'path' => 'bom_card', 'api_path' => '', 'parent_uuid' => 2857919057920000, 'sort' => 3, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 商品
             ['uuid' => 2858200076288000, 'name' => '商品', 'path' => 'bom_card_product', 'api_path' => '', 'parent_uuid' => 2858179104768000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
-            // 添加
-            ['uuid' => 2858216853504000, 'name' => '添加', 'path' => 'bom_card_product_add', 'api_path' => '', 'parent_uuid' => 2858200076288000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 编辑
-            ['uuid' => 2858233630720000, 'name' => '编辑', 'path' => 'bom_card_product_edit', 'api_path' => '', 'parent_uuid' => 2858200076288000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            ['uuid' => 2858233630720000, 'name' => '编辑', 'path' => 'bom_card_product_edit', 'api_path' => '', 'parent_uuid' => 2858200076288000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 删除
+            ['uuid' => 2858216853504000, 'name' => '删除', 'path' => 'bom_card_product_delete', 'api_path' => '', 'parent_uuid' => 2858200076288000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 配置成本卡
             ['uuid' => 2858250407936000, 'name' => '配置成本卡', 'path' => 'bom_card_product_configure', 'api_path' => '', 'parent_uuid' => 2858200076288000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 加料
             ['uuid' => 2858267185152000, 'name' => '加料', 'path' => 'bom_card_sauce', 'api_path' => '', 'parent_uuid' => 2858179104768000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
-            // 添加
-            ['uuid' => 2858283962368000, 'name' => '添加', 'path' => 'bom_card_sauce_add', 'api_path' => '', 'parent_uuid' => 2858267185152000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 编辑
-            ['uuid' => 2858296545280000, 'name' => '编辑', 'path' => 'bom_card_sauce_edit', 'api_path' => '', 'parent_uuid' => 2858267185152000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            ['uuid' => 2858296545280000, 'name' => '编辑', 'path' => 'bom_card_sauce_edit', 'api_path' => '', 'parent_uuid' => 2858267185152000, 'sort' => 1, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 删除
+            ['uuid' => 2858283962368000, 'name' => '删除', 'path' => 'bom_card_sauce_delete', 'api_path' => '', 'parent_uuid' => 2858267185152000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 配置成本卡
             ['uuid' => 2858313322496000, 'name' => '配置成本卡', 'path' => 'bom_card_sauce_configure', 'api_path' => '', 'parent_uuid' => 2858267185152000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 采购申请(外部)

@@ -144,6 +144,7 @@
         <UniqueNameFormAreaText
           ref="uniqueNameFormAreaTextRef"
           width="460px"
+          :required="false"
           :labelPrefix="$t('商品卖点')"
           :maxlength="500"
           :overrideLanguages="form.model.product_id ? form.model.selling_point_i18n : undefined"

@@ -14,7 +14,7 @@
         <el-form-item
           :label="`${props.labelPrefix}`"
           :error="formErrors.SINGLE"
-          :required="true"
+          :required="required"
           :rules="[
             { required: true, message: props.placeholder ?? $t('请输入名称') },
             {
@@ -53,7 +53,7 @@
           :key="languageKey"
           :label="`${props.labelPrefix}${props.singleInputMode ? '' : `(${languageStore.getLanguageValueByKey(languageKey)})`}`"
           :error="formErrors[languageKey]"
-          :required="true"
+          :required="required"
           :rules="[
             { required: true, message: props.placeholder ?? $t('请输入名称') },
             {
@@ -119,6 +119,13 @@
   const emit = defineEmits(['nowLangeData']);
 
   const props = defineProps({
+    //是否必填
+    required: {
+      type: Boolean,
+      required: false,
+      default: true,
+    },
+
     singleLanguage: {
       type: Boolean,
       required: false,
