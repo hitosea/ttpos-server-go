@@ -183,10 +183,11 @@ func (s *erpSrv) DeleteProduct(ctx context.Context, params req.DeleteProductErpR
 
 	for _, obj := range params.Items {
 		result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
-			ItemCode: obj.ItemCode,
-			Disabled: true,
-			ItemName: obj.ItemName,
-			StockUom: obj.StockUom,
+			ItemCode:   obj.ItemCode,
+			Disabled:   true,
+			ItemName:   obj.ItemName,
+			StockUom:   obj.StockUom,
+			NotForSale: true,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "删除商品到erp失败")
