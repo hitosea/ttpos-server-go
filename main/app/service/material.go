@@ -359,6 +359,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			CostUnitLocaleName:     costUnitLocaleName,
 			UnitLocaleName:         baseUnitLocaleName,
 			UnitList:               unitList,
+			AllowSubstoreVisible:   material.AllowSubstoreVisible,
 		}
 		materialList = append(materialList, respMaterial)
 	}
