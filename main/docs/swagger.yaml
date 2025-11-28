@@ -930,6 +930,9 @@ definitions:
     type: object
   material_resp.Material:
     properties:
+      allow_substore_visible:
+        description: 允许子店可见：1-允许，0-不允许（仅总店可用）
+        type: integer
       available_num:
         description: 可用库存数量
         type: number
@@ -2638,6 +2641,9 @@ definitions:
     type: object
   product_resp.ProductPackageSubProduct:
     properties:
+      add_price:
+        description: 加价金额
+        type: number
       bom_uuid:
         description: 商品BOM UUID
         type: integer
@@ -3630,6 +3636,17 @@ definitions:
     - new_password
     - old_password
     type: object
+  req.CheckAuthorizationReq:
+    properties:
+      operation_type:
+        description: '操作类型: discount-折扣操作 refund-退款操作'
+        enum:
+        - discount
+        - refund
+        type: string
+    required:
+    - operation_type
+    type: object
   req.CheckMemberPasswordReq:
     properties:
       member_uuid:
@@ -4433,7 +4450,6 @@ definitions:
           type: integer
         type: array
     required:
-    - allow_substore_visible
     - uuids
     type: object
   req.MaterialCategoryAddReq:
@@ -4830,6 +4846,9 @@ definitions:
       flavor_uuid:
         description: 某个规格商品ID
         type: integer
+      num:
+        description: 套餐商品数量
+        type: number
       product_package_uuid:
         description: 套餐UUID
         type: integer
@@ -4893,6 +4912,9 @@ definitions:
     type: object
   req.OrderCartProductPackageAddReq:
     properties:
+      num:
+        description: 套餐商品数量
+        type: number
       product_package_uuid:
         description: 套餐UUID
         type: integer
@@ -13944,6 +13966,9 @@ definitions:
       has_children:
         description: 有下级公司，则表示为上级公司，用于判断调拨规则是否支持
         type: boolean
+      has_data_permission:
+        description: 是否有数据管理权限
+        type: boolean
       is_headquarter:
         description: 是否是总部
         type: boolean
@@ -14183,6 +14208,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.StockReconciliationCheckMaterialsResp'
         type: array
+      warehouse_disabled:
+        description: 仓库是否禁用 true-被禁用；false-正常
+        type: boolean
     type: object
   resp.StockReconciliationCheckMaterialsResp:
     properties:
@@ -18823,6 +18851,13 @@ paths:
       consumes:
       - application/json
       description: 检查当前员工是否有权限进行敏感操作（折扣/退款）
+      parameters:
+      - description: 检查授权参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CheckAuthorizationReq'
       produces:
       - application/json
       responses:
@@ -24230,6 +24265,13 @@ paths:
       consumes:
       - application/json
       description: 检查当前员工是否有权限进行折扣/退款操作
+      parameters:
+      - description: 检查授权参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CheckAuthorizationReq'
       produces:
       - application/json
       responses:
