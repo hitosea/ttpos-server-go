@@ -210,8 +210,8 @@ func processHttpMessage(ctx context.Context, task messageTask) {
 
 	// 检查Redis缓存是否被更新或消息次数超过10
 	if task.MessageKey != "" {
-		// 等待900毫秒
-		time.Sleep(900 * time.Millisecond)
+		// 等待300毫秒
+		time.Sleep(300 * time.Millisecond)
 
 		// 检查消息次数
 		if task.Count <= 10 {
