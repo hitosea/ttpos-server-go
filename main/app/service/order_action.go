@@ -572,6 +572,13 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 				product.ProductPackageUuid = productBomUuid
 			}
 		}
+	} else {
+		for i := range request.Products {
+			product := &request.Products[i]
+			if product.ProductType == constant.ProductTypePackage {
+				product.FlavorProductBomUuid = product.ProductPackageUuid // 前端没有传这个参数，所以需要手动设置
+			}
+		}
 	}
 
 	// 判断商品价格是否与后台设置的最新价格不一致
