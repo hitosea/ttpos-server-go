@@ -103,7 +103,9 @@ func (r *FullReductionActivityRepoImpl) GetByUuid(uuid uint64, options ...DBOpti
 	}
 
 	err := db.Where("uuid = ?", uuid).
-		Preload("Rules", "delete_time = ?", constant.NotDeleted).
+		Preload("Rules", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", constant.NotDeleted).Order("reduction_amount ASC")
+		}).
 		Preload("MultiLanguageName", "delete_time = ?", constant.NotDeleted).
 		First(&activity).Error
 
