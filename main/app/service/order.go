@@ -1928,10 +1928,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, subProducts...)
 				saleOrderProducts = append(saleOrderProducts, subProducts...)
 
-				// 计算套餐主商品的加价总和 = Σ(子商品加价 × 子商品数量)
+				// 计算套餐主商品的加价总和 = Σ(子商品每份的加价 × 子商品份数)
 				totalAddPrice := decimal.NewFromFloat(0.0)
 				for _, subProduct := range subProducts {
-					totalAddPrice = totalAddPrice.Add(decimal.NewFromFloat(subProduct.AddPrice).Mul(decimal.NewFromFloat(subProduct.Num)))
+					totalAddPrice = totalAddPrice.Add(decimal.NewFromFloat(subProduct.AddPrice).Mul(decimal.NewFromFloat(subProduct.CopyNum)))
 				}
 				saleOrderProduct.AddPrice = totalAddPrice.InexactFloat64()
 			}
@@ -2010,10 +2010,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, subProducts...)
 					saleOrderProducts = append(saleOrderProducts, subProducts...)
 
-					// 计算套餐主商品的加价总和 = Σ(子商品加价 × 子商品数量)
+					// 计算套餐主商品的加价总和 = Σ(子商品每份加价 × 子商品份数)
 					totalAddPrice := decimal.NewFromFloat(0.0)
 					for _, subProduct := range subProducts {
-						totalAddPrice = totalAddPrice.Add(decimal.NewFromFloat(subProduct.AddPrice).Mul(decimal.NewFromFloat(subProduct.Num)))
+						totalAddPrice = totalAddPrice.Add(decimal.NewFromFloat(subProduct.AddPrice).Mul(decimal.NewFromFloat(subProduct.CopyNum)))
 					}
 					saleOrderProduct.AddPrice = totalAddPrice.InexactFloat64()
 				}
