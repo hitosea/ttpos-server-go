@@ -1663,11 +1663,19 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 		// 计算活动抵扣金额（如果已选中）
 		discountAmount := 0.0
 		if isSelected {
-			var err error
-			discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, activity.Uuid)
-			if err != nil {
-				// 如果计算失败，忽略错误，继续处理其他活动
-				discountAmount = 0.0
+			// 如果活动不可用,则取消选中活动。避免前端显示已选中活动，但活动不可用
+			if !isAvailable {
+				isSelected = false
+				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderActivity(saleOrder.Uuid, 0, "", 0, saleOrder.AutoPointsExchange); err != nil {
+					ctx.Log().Error("取消选中活动失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Error(err))
+				}
+			} else {
+				var err error
+				discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, activity.Uuid)
+				if err != nil {
+					// 如果计算失败，忽略错误，继续处理其他活动
+					discountAmount = 0.0
+				}
 			}
 		}
 
