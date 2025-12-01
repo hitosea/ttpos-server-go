@@ -276,7 +276,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 		for _, subProduct := range subProducts {
 			unitNum := decimal.NewFromFloat(subProduct.GetUnitNum())
-			subProduct.Num = decimal.NewFromFloat(request.Num).Mul(unitNum).Round(3).InexactFloat64()
+			subProduct.Num = decimal.NewFromFloat(saleOrderProduct.Num).Mul(unitNum).Mul(decimal.NewFromFloat(subProduct.CopyNum)).Round(3).InexactFloat64()
 		}
 	}
 

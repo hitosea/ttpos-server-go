@@ -1563,6 +1563,7 @@ type DefaultSaleOrderProduct struct {
 	Num                     float64 // 数量
 	UnitNum                 float64 // 单位数量,套餐子商品
 	CopyNum                 float64 // 表示该子商品在分组中被选择多少份
+	PackageNum              float64 // 套餐数量
 	IsTabletAddAndCooking   bool    // 是否是平台的加购并送厨
 	NumType                 uint    // 数量类型
 	Remark                  string  // 备注
@@ -1631,7 +1632,10 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	if def.ProductType == constant.ProductTypePackageSubProduct && def.IsTabletAddAndCooking { // 如果是平板的加购和送厨的话,unitNum和num不一样
 		product.SetUnitNum(def.UnitNum)
 	}
-	product.Num = decimal.NewFromFloat(product.GetUnitNum()).Mul(decimal.NewFromFloat(product.CopyNum)).Round(4).InexactFloat64()
+	// 套餐子商品，设置商品数量 = 套餐数量 * 单位数量 * 份数
+	if def.PackageNum > 0 {
+		product.Num = decimal.NewFromFloat(def.PackageNum).Mul(decimal.NewFromFloat(product.GetUnitNum())).Mul(decimal.NewFromFloat(product.CopyNum)).Round(4).InexactFloat64()
+	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购
 	{
