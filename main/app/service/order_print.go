@@ -63,6 +63,9 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	printType := constant.PrinterTemplatePreBilling
 	if saleOrder.IsPaid() {
 		printType = constant.PrinterTemplateBilling
+	} else if saleOrder.FullReductionActivityUuid > 0 {
+		discountAmount, _, _ := s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
+		saleOrder.ActivityAmount = discountAmount
 	}
 
 	// 打印
