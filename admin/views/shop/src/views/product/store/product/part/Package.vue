@@ -68,7 +68,7 @@
           label-position="left"
           v-if="form.model.package_group[groupIndex].group_type == 1"
         >
-          <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="999" :precision="0" :disabled="erp_is_open == 1" />
+          <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
         </el-form-item>
 
         <el-form-item :prop="`model.package_group.${groupIndex}.product_list`" :rules="[{ required: true, validator: validatePackageGroup, message: $t('请添加套餐商品') }]">

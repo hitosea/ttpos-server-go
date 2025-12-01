@@ -139,7 +139,7 @@
         {
           group_name: JSON.parse(languageData),
           group_type: 0, // 0-固定套餐 1-可选套餐
-          optional_count :0, // 可选套餐数量
+          optional_count :1, // 可选套餐数量
           product_list: [],
         },
       ],
@@ -263,7 +263,7 @@
         params.package_group.forEach((group) => {
           group.group_name = JSON.stringify(group.group_name);
           group.group_type = group.group_type || 0;
-          group.optional_count = group.optional_count || 0;
+          group.optional_count = group.optional_count || 1;
           // group.product_list 只需要保留product_id、num、sort，其他字段删除
           let productList = [];
           group.product_list.forEach((product) => {
