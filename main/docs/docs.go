@@ -20804,19 +20804,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.FullReductionActivityResp"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -20843,6 +20831,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "活动UUID",
                         "name": "uuid",
                         "in": "query",
@@ -20919,6 +20908,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "活动UUID",
                         "name": "uuid",
                         "in": "query",

@@ -28721,12 +28721,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.FullReductionActivityResp'
-              type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
       summary: 创建满减活动
@@ -28739,6 +28734,7 @@ paths:
       description: 删除满减活动
       parameters:
       - description: 活动UUID
+        format: int64
         in: query
         name: uuid
         required: true
@@ -28786,6 +28782,7 @@ paths:
       description: 根据UUID获取满减活动详情
       parameters:
       - description: 活动UUID
+        format: int64
         in: query
         name: uuid
         required: true
