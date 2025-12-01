@@ -302,10 +302,6 @@ class Access extends BaseModel
         $re_data = [];
         $licenses = request()->licenses;
         foreach ($data as $key => $value) {
-            // 商家后台隐藏管理APP权限
-            if ($value['uuid'] == 2856266502144000) {
-                continue;
-            }
             // 暂时去掉外卖管理
             if ($value['uuid'] == 1626688443) {
                 continue;

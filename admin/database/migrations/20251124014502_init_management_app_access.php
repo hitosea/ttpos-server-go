@@ -53,8 +53,10 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2856505577472000, 'name' => '营业收款统计', 'path' => 'business_payment_statistics', 'api_path' => '', 'parent_uuid' => 2856430080000000, 'sort' => 3, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 渠道营业统计
             ['uuid' => 2856543326208000, 'name' => '渠道营业统计', 'path' => 'channel_business_statistics', 'api_path' => '', 'parent_uuid' => 2856430080000000, 'sort' => 4, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 商品销售统计
+            ['uuid' => 2856543326208001, 'name' => '商品销售统计', 'path' => 'product_sales_statistics', 'api_path' => '', 'parent_uuid' => 2856430080000000, 'sort' => 5, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 用户分析
-            ['uuid' => 2856589463552000, 'name' => '用户分析', 'path' => 'user_analysis', 'api_path' => '', 'parent_uuid' => 2856430080000000, 'sort' => 5, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            ['uuid' => 2856589463552000, 'name' => '用户分析', 'path' => 'user_analysis', 'api_path' => '', 'parent_uuid' => 2856430080000000, 'sort' => 6, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 运营报表
             ['uuid' => 2856623017984000, 'name' => '运营报表', 'path' => 'operation_report', 'api_path' => '', 'parent_uuid' => 2856409108480000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 后厨菜品出品明细
@@ -352,6 +354,7 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856476217344000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856505577472000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856543326208000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856543326208001', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856589463552000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856623017984000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2856635600896000', 'create_time' => time()],

@@ -12,8 +12,8 @@
         <div class="flex">
           <!-- 权限主要列表 -->
           <div class="role-menu">
-            <template v-for="(item, index) in data" :key="index">
-              <div class="role-menu-title" :class="{ active: active == index }" @click="handleClick(index)">{{ item.name }}</div>
+            <template v-for="(item, index) in data" :key="index">  
+                <div v-if="item.path != 'management_app'" class="role-menu-title" :class="{ active: active == index }" @click="handleClick(index)">{{ item.name }}</div> 
             </template>
           </div>
           <div class="flex-1">

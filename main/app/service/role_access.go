@@ -190,15 +190,23 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if companySetting.DeliveryStatus != 1 && permission.Uuid == 1752716650 {
 			continue
 		}
-		// 总部无品采收货权限
+		// 新管理端-管理APP-总部无品采收货权限
 		if permission.Uuid == 2858548203520000 && companySetting.IsHeadquarter() {
 			continue
 		}
-		// 未对接erp无进销存权限
+		// 新管理端-管理APP-未对接erp无进销存权限
 		if permission.Uuid == 2857919057920000 && !company.IsOpenErp() {
 			continue
 		}
-		// 散户无品牌采购、品牌收货、调拨单权限
+		// 新管理端-管理APP-云平台未开启高级票据打印，权限列表无高级票据样式设置
+		if permission.Uuid == 2859181543424000 && companySetting.IsOpenAdvancedTicketPrint == 0 {
+			continue
+		}
+		// 新管理端-管理APP-云平台未开启桌台地图，权限列表无桌台地图
+		if permission.Uuid == 2859106045952001 && !companySetting.IsOpenTableMap() {
+			continue
+		}
+		// 新管理端-管理APP-散户无品牌采购、品牌收货、调拨单权限
 		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
 			continue
 		}
