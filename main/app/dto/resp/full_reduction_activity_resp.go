@@ -6,8 +6,10 @@ import "ttpos-server-go/app/dto"
 type FullReductionActivityResp struct {
 	Uuid              uint64                          `json:"uuid"`
 	LocaleName        dto.LocaleResponse              `json:"locale_name"` // 多语言名称，使用 LocaleResponse（必须）
-	StartDate         int64                           `json:"start_date"`
-	EndDate           int64                           `json:"end_date"`
+	StartDate         int64                           `json:"start_date"` // 时间戳，当天00:00:00
+	EndDate           int64                           `json:"end_date"`  // 时间戳，当天23:59:59
+	StartDateStr      string                          `json:"start_date_str"` // 格式2025-01-01
+	EndDateStr        string                          `json:"end_date_str"`   // 格式2025-01-01
 	StartTime         string                          `json:"start_time"`
 	EndTime           string                          `json:"end_time"`
 	IsAllDay          int                             `json:"is_all_day"`

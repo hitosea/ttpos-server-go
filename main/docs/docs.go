@@ -38718,14 +38718,17 @@ const docTemplate = `{
         "req.FullReductionActivityCreateReq": {
             "type": "object",
             "required": [
-                "end_date",
                 "locale_name",
-                "rules",
-                "start_date"
+                "rules"
             ],
             "properties": {
                 "end_date": {
+                    "description": "时间戳，当天23:59:59",
                     "type": "integer"
+                },
+                "end_date_str": {
+                    "description": "格式2025-01-01",
+                    "type": "string"
                 },
                 "end_time": {
                     "description": "HH:mm格式",
@@ -38755,7 +38758,12 @@ const docTemplate = `{
                     }
                 },
                 "start_date": {
+                    "description": "时间戳，当天00:00:00",
                     "type": "integer"
+                },
+                "start_date_str": {
+                    "description": "格式2025-01-01",
+                    "type": "string"
                 },
                 "start_time": {
                     "description": "HH:mm格式",
@@ -38796,15 +38804,18 @@ const docTemplate = `{
         "req.FullReductionActivityUpdateReq": {
             "type": "object",
             "required": [
-                "end_date",
                 "locale_name",
                 "rules",
-                "start_date",
                 "uuid"
             ],
             "properties": {
                 "end_date": {
+                    "description": "时间戳，当天23:59:59",
                     "type": "integer"
+                },
+                "end_date_str": {
+                    "description": "格式2025-01-01",
+                    "type": "string"
                 },
                 "end_time": {
                     "type": "string"
@@ -38831,7 +38842,12 @@ const docTemplate = `{
                     }
                 },
                 "start_date": {
+                    "description": "时间戳，当天00:00:00",
                     "type": "integer"
+                },
+                "start_date_str": {
+                    "description": "格式2025-01-01",
+                    "type": "string"
                 },
                 "start_time": {
                     "type": "string"
@@ -47070,7 +47086,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "end_date": {
+                    "description": "时间戳，当天23:59:59",
                     "type": "integer"
+                },
+                "end_date_str": {
+                    "description": "格式2025-01-01",
+                    "type": "string"
                 },
                 "end_time": {
                     "type": "string"
@@ -47103,7 +47124,12 @@ const docTemplate = `{
                     }
                 },
                 "start_date": {
+                    "description": "时间戳，当天00:00:00",
                     "type": "integer"
+                },
+                "start_date_str": {
+                    "description": "格式2025-01-01",
+                    "type": "string"
                 },
                 "start_time": {
                     "type": "string"

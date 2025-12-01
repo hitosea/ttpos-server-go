@@ -4017,7 +4017,11 @@ definitions:
   req.FullReductionActivityCreateReq:
     properties:
       end_date:
+        description: 时间戳，当天23:59:59
         type: integer
+      end_date_str:
+        description: 格式2025-01-01
+        type: string
       end_time:
         description: HH:mm格式
         type: string
@@ -4037,15 +4041,17 @@ definitions:
         minItems: 1
         type: array
       start_date:
+        description: 时间戳，当天00:00:00
         type: integer
+      start_date_str:
+        description: 格式2025-01-01
+        type: string
       start_time:
         description: HH:mm格式
         type: string
     required:
-    - end_date
     - locale_name
     - rules
-    - start_date
     type: object
   req.FullReductionActivityDisableReq:
     properties:
@@ -4071,7 +4077,11 @@ definitions:
   req.FullReductionActivityUpdateReq:
     properties:
       end_date:
+        description: 时间戳，当天23:59:59
         type: integer
+      end_date_str:
+        description: 格式2025-01-01
+        type: string
       end_time:
         type: string
       is_all_day:
@@ -4088,16 +4098,18 @@ definitions:
         minItems: 1
         type: array
       start_date:
+        description: 时间戳，当天00:00:00
         type: integer
+      start_date_str:
+        description: 格式2025-01-01
+        type: string
       start_time:
         type: string
       uuid:
         type: integer
     required:
-    - end_date
     - locale_name
     - rules
-    - start_date
     - uuid
     type: object
   req.GetBindCodeReq:
@@ -9817,7 +9829,11 @@ definitions:
   resp.FullReductionActivityResp:
     properties:
       end_date:
+        description: 时间戳，当天23:59:59
         type: integer
+      end_date_str:
+        description: 格式2025-01-01
+        type: string
       end_time:
         type: string
       is_all_day:
@@ -9838,7 +9854,11 @@ definitions:
           $ref: '#/definitions/resp.FullReductionActivityRuleResp'
         type: array
       start_date:
+        description: 时间戳，当天00:00:00
         type: integer
+      start_date_str:
+        description: 格式2025-01-01
+        type: string
       start_time:
         type: string
       status:

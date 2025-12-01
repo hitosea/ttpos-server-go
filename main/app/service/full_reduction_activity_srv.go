@@ -41,8 +41,11 @@ func NewFullReductionActivitySrv(dbm *database.DBManager) IFullReductionActivity
 
 // Create 创建满减活动
 func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullReductionActivityCreateReq) error {
-	// 验证请求
-	if err := req.Validate(); err != nil {
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := (&companySetting).GetTimezone()
+	// 验证请求并初始化日期字段
+	if err := req.Validate(timezone); err != nil {
 		return err
 	}
 
@@ -144,8 +147,11 @@ func (s *fullReductionActivitySrv) Create(ctx context.Context, req *req.FullRedu
 
 // Update 更新满减活动
 func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullReductionActivityUpdateReq) error {
-	// 验证请求
-	if err := req.Validate(); err != nil {
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := (&companySetting).GetTimezone()
+	// 验证请求并初始化日期字段
+	if err := req.Validate(timezone); err != nil {
 		return err
 	}
 
@@ -393,7 +399,7 @@ func (s *fullReductionActivitySrv) Disable(ctx context.Context, uuid uint64) err
 }
 
 // buildResp 构建响应对象
-func (s *fullReductionActivitySrv) buildResp(_ context.Context, activity *model.FullReductionActivity) (*resp.FullReductionActivityResp, error) {
+func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *model.FullReductionActivity) (*resp.FullReductionActivityResp, error) {
 	// 从 MultiLanguageName 转换为 LocaleResponse（必须使用 LocaleResponse）
 	var name dto.LocaleResponse
 	if activity.MultiLanguageName.Uuid > 0 {
@@ -410,9 +416,23 @@ func (s *fullReductionActivitySrv) buildResp(_ context.Context, activity *model.
 		})
 	}
 
+	// 获取商家时区
+	companySetting := ctx.GetCompanySetting()
+	timezone := (&companySetting).GetTimezone()
+
+	// 将时间戳转换为日期字符串
+	timeUtil := utils.Timezone(timezone)
+	startDateStr := ""
+	endDateStr := ""
+	if activity.StartDate > 0 {
+		startDateStr = timeUtil.FormatUnixTime(activity.StartDate, "2006-01-02")
+	}
+	if activity.EndDate > 0 {
+		endDateStr = timeUtil.FormatUnixTime(activity.EndDate, "2006-01-02")
+	}
+
 	// 获取活动状态
 	now := time.Now().Unix()
-	timezone := "" // 可以从 ctx 获取时区
 	status := activity.GetStatus(now, timezone)
 
 	// 获取满减方式名称
@@ -426,6 +446,8 @@ func (s *fullReductionActivitySrv) buildResp(_ context.Context, activity *model.
 		LocaleName:        name, // ✅ 使用 LocaleResponse
 		StartDate:         activity.StartDate,
 		EndDate:           activity.EndDate,
+		StartDateStr:      startDateStr,
+		EndDateStr:        endDateStr,
 		StartTime:         activity.StartTime,
 		EndTime:           activity.EndTime,
 		IsAllDay:          activity.IsAllDay,
