@@ -1507,7 +1507,8 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	if saleOrder.FullReductionActivityUuid > 0 {
 		discountAmount, _, err = s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
 		if err != nil {
-			return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+			// return nil, errors.WithMessage(err, "计算活动抵扣金额失败")
+			ctx.Log().Error("计算活动抵扣金额失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Any("activity_uuid", saleOrder.FullReductionActivityUuid), zap.Error(err))
 		}
 	}
 	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
