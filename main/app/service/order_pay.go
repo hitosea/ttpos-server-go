@@ -1655,7 +1655,7 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 		meetsThreshold := s.checkActivityThreshold(activity, orderAmount)
 
 		// 判断活动是否可用
-		isAvailable := isInTimeRange && meetsThreshold && !hasPartialPayment && !isFinalAmountZero
+		isAvailable := isInTimeRange && meetsThreshold && !isFinalAmountZero
 
 		// 判断活动是否已选中
 		isSelected := activity.Uuid == selectedActivityUuid
@@ -1677,6 +1677,11 @@ func (s *orderSrv) getFullReductionActivityList(ctx context.Context, saleOrder *
 					discountAmount = 0.0
 				}
 			}
+		}
+
+		// 如果活动可用，且订单已部分支付，且未选中活动，则活动不可用
+		if isAvailable && hasPartialPayment && !isSelected {
+			isAvailable = false
 		}
 
 		// 构建活动规则列表
