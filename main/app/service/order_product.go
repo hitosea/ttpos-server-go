@@ -1955,9 +1955,22 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 
+	// 兼容2.10.0之前的版本. 通过product_bom_uuid查询套餐product_package_uuid
+	productPackageUuid := func() uint64 {
+		if ctx.Version(context.LT, constant.ClientVersionV2100) {
+			if productPackageUuid, err := repository.NewProductBomRepo(db).GetProductPackageUuidByBomUuid(request.ProductPackageUuid); err != nil {
+				ctx.Log().Error("通过商品bom uuid查询套餐product_package_uuid失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Uint64("product_bom_uuid", request.ProductPackageUuid), zap.Error(err))
+				return 0
+			} else {
+				return productPackageUuid
+			}
+		}
+		return request.ProductPackageUuid
+	}()
+
 	// 查询套餐分组配置，用于验证分组选择
 	productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
-		repository.CommonRepo.WhereByUuid(request.ProductPackageUuid),
+		repository.CommonRepo.WhereByUuid(productPackageUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
 		repository.NewProductPackageRepo(db).WithProductPackageGroups(
 			repository.CommonRepo.WhereBySoftDelete(),
@@ -2075,6 +2088,11 @@ func (s *orderSrv) validatePackageGroupSelection(ctx context.Context, selectedPr
 				}
 			}
 		} else {
+			// 兼容2.10.0之前的版本. 提示请升级客户端版本。可选分组功能在2.10.0版本中引入
+			if ctx.Version(context.LT, constant.ClientVersionV2100) {
+				return errors.WithMessage(errors.New("请升级客户端版本到2.10.0及以上版本"), "请升级客户端版本到2.10.0及以上版本")
+			}
+
 			// 可选分组：验证已选数量是否等于 optional_count
 			selectedCount := 0.0
 			for _, p := range selectedProducts {

@@ -206,6 +206,11 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 		activity.ReductionType = req.ReductionType
 		activity.UpdateTime = currentTime
 
+		if req.IsAllDay == constant.Yes {
+			activity.StartTime = ""
+			activity.EndTime = ""
+		}
+
 		activityRepoTx := repository.NewFullReductionActivityRepo(tx)
 		if err := activityRepoTx.UpdateActivity(activity); err != nil {
 			return errors.WithMessage(err, "更新活动失败")
