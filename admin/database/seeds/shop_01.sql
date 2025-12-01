@@ -3517,7 +3517,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_export_record` (
   `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
   KEY `idx_export_type` (`export_type`),
   KEY `idx_status` (`status`),
-  KEY `idx_create_time` (`create_time`)
+  KEY `idx_create_time` (`create_time`),
+  KEY `idx_export_type_status_date` (`export_type`, `status`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='导出记录表';
 
 -- 后厨效率分析表

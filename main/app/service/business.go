@@ -766,27 +766,23 @@ func (s *businessSrv) ExportProductSales(ctx context.Context, req req.BusinessDa
 		return err
 	}
 
-	fileNameMap := map[string]string{
-		"zh":    "商品销售统计%s.xlsx",
-		"th":    "สถิติการขายสินค้า%s.xlsx",
-		"en":    "Product Sales Statistics%s.xlsx",
-		"zhtw":  "商品銷售統計%s.xlsx",
-		"zh_tw": "商品銷售統計%s.xlsx",
-		"ja":    "商品販売統計%s.xlsx",
-		"ko":    "상품 판매 통계%s.xlsx",
-		"my":    "ကုန်ပစ္စည်းရောင်းအားစာရင်းဇယား%s.xlsx",
-		"tr":    "Ürün Satış İstatistikleri%s.xlsx",
-		"sv":    "Produktförsäljningsstatistik%s.xlsx",
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Product Sales Statistics",
+		ZhName:   "商品销售统计",
+		ZhTwName: "商品銷售統計",
+		ThName:   "สถิติการขายสินค้า",
+		MyName:   "ကုန်ပစ္စည်းရောင်းအားစာရင်းဇယား",
+		JaName:   "商品販売統計",
+		KoName:   "상품 판매 통계",
+		TrName:   "Ürün Satış İstatistikleri",
+		SvName:   "Produktförsäljningsstatistik",
 	}
 
-	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
-	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
-	lang := ctx.GetLanguage()
-	fileNameTemplate := fileNameMap[lang]
-	if fileNameTemplate == "" {
-		fileNameTemplate = fileNameMap["en"]
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeProductSales)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
 	}
-	fileName := fmt.Sprintf(fileNameTemplate, dateString)
 
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
@@ -845,7 +841,7 @@ func (s *businessSrv) ExportProductSales(ctx context.Context, req req.BusinessDa
 			}
 			return
 		}
-		res, err := s.ExportProductSalesTask(ctx, req)
+		res, err := s.ExportProductSalesTask(ctx, req, record)
 		if err != nil {
 			logger.Logger.Error("导出ExportProductSalesTask失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
 			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
@@ -869,25 +865,12 @@ func (s *businessSrv) ExportProductSales(ctx context.Context, req req.BusinessDa
 }
 
 // ExportProductSalesTask 导出商品销售统计任务处理
-func (s *businessSrv) ExportProductSalesTask(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*resp.FileExportResp, error) {
+func (s *businessSrv) ExportProductSalesTask(ctx context.Context, req req.BusinessDataCountProductSalesReq, record *model.ExportRecord) (*resp.FileExportResp, error) {
 	req.PageNo = 1
 	req.PageSize = 1000
 	result, err := s.CountProductSales(ctx, req)
 	if err != nil {
 		return nil, err
-	}
-
-	// 文件名多语言
-	fileNameMul := model.MultiLanguageName{
-		EnName:   "Product Sales Statistics",
-		ZhName:   "商品销售统计",
-		ZhTwName: "商品銷售統計",
-		ThName:   "สถิติการขายสินค้า",
-		MyName:   "ကုန်ပစ္စည်းရောင်းအားစာရင်းဇယား",
-		JaName:   "商品販売統計",
-		KoName:   "상품 판매 통계",
-		TrName:   "Ürün Satış İstatistikleri",
-		SvName:   "Produktförsäljningsstatistik",
 	}
 
 	headerMap := map[string][]string{
@@ -903,20 +886,10 @@ func (s *businessSrv) ExportProductSalesTask(ctx context.Context, req req.Busine
 		"sv":    {"Produktnamn", "Kategori", "Försäljningskvantitet", "Originalt försäljningsbelopp", "Gåva", "Faktiskt försäljningsbelopp", "Företagsintäkter"},
 	}
 
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	// 使用 record 中已生成的文件名
+	fileName := record.ExportName
 	xlsxFile := excelize.NewFile()
-	sheetNameMul := model.MultiLanguageName{
-		EnName:   "Report",
-		ZhName:   "报表",
-		ZhTwName: "報表",
-		ThName:   "รายงาน",
-		MyName:   "အစီရင်ခံစာ",
-		JaName:   "レポート",
-		KoName:   "보고서",
-		TrName:   "Rapor",
-		SvName:   "Rapport",
-	}
-	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetName := "Sheet1"
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
 		logger.Logger.Error("创建Excel工作表失败", zap.Error(err))
@@ -1499,17 +1472,16 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysis(ctx context.Context, reque
 		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
-	fileNameMap := map[string]string{
-		"zh":    "菜品出品详情%s.xlsx",                       // 中文
-		"th":    "รายละเอียดเมนูอาหาร%s.xlsx",          // 泰文
-		"en":    "Details of Dish Presentation%s.xlsx", // 英文
-		"zhtw":  "菜品出品詳情%s.xlsx",                       // 繁体中文
-		"zh_tw": "菜品出品詳情%s.xlsx",                       // 繁体中文
-		"ja":    "料理の提供詳細%s.xlsx",                      // 日文
-		"ko":    "메뉴 세부 정보%s.xlsx",              // 韩文
-		"my":    "ဟင်းလျာအသေးစိတ်%s.xlsx",              // 缅甸文
-		"tr":    "Yemek Sunumu Detayları%s.xlsx",       // 土耳其文
-		"sv":    "Maträttsdetaljer%s.xlsx",            // 瑞典文
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Details of Dish Presentation",
+		ZhName:   "菜品出品详情",
+		ZhTwName: "菜品出品詳情",
+		ThName:   "รายละเอียดเมนูอาหาร",
+		MyName:   "ဟင်းလျာအသေးစိတ်",
+		JaName:   "料理の提供詳細",
+		KoName:   "메뉴 서비스 정보",
+		TrName:   "Yemek Sunumu Detayları",
+		SvName:   "Maträttsdetaljer",
 	}
 
 	// 创建导出任务
@@ -1517,9 +1489,11 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysis(ctx context.Context, reque
 	if err != nil {
 		return err
 	}
-	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
-	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
-	fileName := fmt.Sprintf(fileNameMap[ctx.GetLanguage()], dateString)
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeKitchenEfficiencyAnalysis)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -1591,7 +1565,7 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysis(ctx context.Context, reque
 			}
 			return
 		}
-		if res, err := s.ExportKitchenEfficiencyAnalysisTask(ctx, *params); err != nil {
+		if res, err := s.ExportKitchenEfficiencyAnalysisTask(ctx, *params, record); err != nil {
 			logger.Logger.Error("导出ExportKitchenProductionDetailTask失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
 			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
 				"status":    model.ExportStatusFailed,
@@ -1629,17 +1603,16 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
 	}
 
-	fileNameMap := map[string]string{
-		"zh":    "菜品出品明细%s.xlsx",                                // 中文
-		"th":    "รายละเอียดการออกอาหาร%s.xlsx",                 // 泰文
-		"en":    "Detailed List of Dish Output%s.xlsx",          // 英文
-		"zhtw":  "菜品出品明細%s.xlsx",                                // 繁体中文
-		"zh_tw": "菜品出品明細%s.xlsx",                                // 繁体中文
-		"ja":    "料理の提供明細%s.xlsx",                               // 日文
-		"ko":    "메뉴 출품 상세 내역%s.xlsx",               // 韩文
-		"my":    "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း%s.xlsx",     // 缅甸文
-		"tr":    "Yemek Çıkış Ayrıntıları%s.xlsx",             // 土耳其文
-		"sv":    "Detaljerad lista över maträttsutbud%s.xlsx", // 瑞典文
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Detailed List of Dish Output",
+		ZhName:   "菜品出品明细",
+		ZhTwName: "菜品出品明細",
+		ThName:   "รายละเอียดการออกอาหาร",
+		MyName:   "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း",
+		JaName:   "料理の提供明細",
+		KoName:   "메뉴 출품 상세 내역",
+		TrName:   "Yemek Çıkış Ayrıntıları",
+		SvName:   "Detaljerad lista över maträttsutbud",
 	}
 
 	// 创建导出任务
@@ -1647,9 +1620,11 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 	if err != nil {
 		return err
 	}
-	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
-	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
-	fileName := fmt.Sprintf(fileNameMap[ctx.GetLanguage()], dateString)
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeKitchenProductionDetail)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -1721,7 +1696,7 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 			}
 			return
 		}
-		if res, err := s.ExportKitchenProductionDetailTask(ctx, *params); err != nil {
+		if res, err := s.ExportKitchenProductionDetailTask(ctx, *params, record); err != nil {
 			logger.Logger.Error("导出ExportKitchenProductionDetailTask失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
 			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
 				"status":    model.ExportStatusFailed,
@@ -1957,7 +1932,7 @@ func (s *businessSrv) CountBusinessPaymentMethod(ctx context.Context, req req.St
 }
 
 // 导出厨房出品明细数据到谷歌桶
-func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req req.KitchenProductionDetailReq) (*resp.FileExportResp, error) { // 修改返回类型
+func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req req.KitchenProductionDetailReq, record *model.ExportRecord) (*resp.FileExportResp, error) { // 修改返回类型
 	req.PageNo = 1
 	req.PageSize = 1000 // 最多导出1000条数据
 	productionDetail, err := s.KitchenProductionDetail(ctx, req)
@@ -1968,18 +1943,6 @@ func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req
 	// 商家时区
 	timezone := ctx.GetCompanySetting().Timezone
 	timezoneUtil := utils.SetTimezone(timezone)
-	// 文件名多语言
-	fileNameMul := model.MultiLanguageName{
-		EnName:   "Detailed List of Dish Output",          // 英文
-		ZhName:   "菜品出品明细",                                // 中文
-		ZhTwName: "菜品出品明細",                                // 繁体中文
-		ThName:   "รายละเอียดการออกอาหาร",                 // 泰语
-		MyName:   "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း",     // 缅甸语
-		JaName:   "料理の提供明細",                               // 日语
-		KoName:   "메뉴 출품 상세 내역",               // 韩语
-		TrName:   "Yemek Çıkış Ayrıntıları",             // 土耳其语
-		SvName:   "Detaljerad lista över maträttsutbud", // 瑞典语
-	}
 	headerMap := map[string][]string{
 		"zh": { // 中文
 			"名称", "规格", "分类", "完成数量", "下单时间", "制作完成时间", "制作总耗时", "传菜完成时间", "传菜总耗时", "完成时间", "总耗时",
@@ -2012,20 +1975,10 @@ func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req
 			"Namn", "specifikation", "Kategori", "Antal Färdigställda", "Beställningstid", "Produktionsfärdigställningstid", "Total Produktionstid", "Matleveransfärdigställningstid", "Total Matleveranstid", "Färdigställningstid", "Total Tid",
 		},
 	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
+	// 使用 record 中已生成的文件名
+	fileName := record.ExportName
 	xlsxFile := excelize.NewFile()
-	sheetNameMul := model.MultiLanguageName{
-		EnName:   "Report",     // 英文
-		ZhName:   "报表",         // 中文
-		ZhTwName: "報表",         // 繁体中文
-		ThName:   "รายงาน",     // 泰语
-		MyName:   "အစီရင်ခံစာ", // 缅甸语
-		JaName:   "レポート",       // 日语
-		KoName:   "보고서",        // 韩语
-		TrName:   "Rapor",      // 土耳其语
-		SvName:   "Rapport",    // 瑞典语
-	} // 修改这里，直接使用 NewFile()
-	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetName := "Sheet1"
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -2095,7 +2048,7 @@ func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req
 }
 
 // 导出后厨菜品出品效率分析到谷歌桶
-func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*resp.FileExportResp, error) { // 修改返回类型
+func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, req req.KitchenEfficiencyAnalysisReq, record *model.ExportRecord) (*resp.FileExportResp, error) { // 修改返回类型
 	req.PageNo = 1
 	req.PageSize = 1000 // 最多导出1000条数据
 	result, err := s.CountKitchenEfficiencyAnalysis(ctx, req)
@@ -2103,18 +2056,6 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, r
 		return nil, err
 	}
 
-	// 文件名多语言
-	fileNameMul := model.MultiLanguageName{
-		EnName:   "Details of Dish Presentation",      // 英文
-		ZhName:   "菜品出品明细",                            // 中文
-		ZhTwName: "菜品出品詳情",                            // 繁体中文
-		ThName:   "รายละเอียดเมนูอาหาร",               // 泰语
-		MyName:   "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း", // 缅甸语
-		JaName:   "料理の提供詳細",                           // 日语
-		KoName:   "메뉴 세부 정보",                   // 韩语
-		TrName:   "Yemek Sunumu Detayları",            // 土耳其语
-		SvName:   "Maträttsdetaljer",                 // 瑞典语
-	}
 	headerMap := map[string][]string{
 		"zh": { // 中文
 			"名称", "分类", "最短出品时长", "最最长出品时长值", "平均出品时长",
@@ -2147,20 +2088,10 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, r
 			"Namn", "Kategori", "Kortaste Produktionstid", "Längsta Produktionstid", "Genomsnittlig Produktionstid",
 		},
 	}
-	sheetNameMul := model.MultiLanguageName{
-		EnName:   "Report",     // 英文
-		ZhName:   "报表",         // 中文
-		ZhTwName: "報表",         // 繁体中文
-		ThName:   "รายงาน",     // 泰语
-		MyName:   "အစီရင်ခံစာ", // 缅甸语
-		JaName:   "レポート",       // 日语
-		KoName:   "보고서",        // 韩语
-		TrName:   "Rapor",      // 土耳其语
-		SvName:   "Rapport",    // 瑞典语
-	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
-	xlsxFile := excelize.NewFile()                                                                         // 修改这里，直接使用 NewFile()
-	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	// 使用 record 中已生成的文件名
+	fileName := record.ExportName
+	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
+	sheetName := "Sheet1"
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -2223,6 +2154,45 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, r
 	return &resp.FileExportResp{FileUuid: res.Uuid}, nil // 返回文件UUID
 }
 
+// generateExportFileName 生成导出文件名
+// 格式: 报表名YYYY-MM-DD.xlsx 或 报表名YYYY-MM-DD（序号）.xlsx
+// 同一天多次导出同名报表时，自动添加序号避免冲突
+func (s *businessSrv) generateExportFileName(
+	ctx context.Context,
+	reportName string, // 报表名称（多语言）
+	exportType uint8, // 导出类型
+) (string, error) {
+	// 1. 获取商户时区
+	timezone := ctx.GetCompanySetting().Timezone
+	timezoneUtils := utils.SetTimezone(timezone)
+	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
+
+	// 2. 查询同一天已导出的同名报表（数据库连接已包含商户隔离）
+	db := ctx.GetDB()
+	exportRecordRepo := repository.NewExportRecordRepo(db)
+
+	// 获取当天的开始和结束时间戳（商户时区）
+	startTime, endTime := timezoneUtils.TodayStartEndUnix()
+
+	records, err := exportRecordRepo.GetByDateAndType(
+		exportType,
+		startTime,
+		endTime,
+	)
+	if err != nil {
+		return "", errors.WithMessage(err, "查询导出记录失败")
+	}
+
+	// 3. 计算序号
+	suffix := ""
+	if len(records) > 0 {
+		suffix = fmt.Sprintf("（%d）", len(records))
+	}
+
+	// 4. 生成文件名（包含 .xlsx 后缀）
+	return fmt.Sprintf("%s%s%s.xlsx", reportName, dateString, suffix), nil
+}
+
 // 导出时段营业统计数据
 func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.BusinessTimePeriodReq) error {
 	db := ctx.GetDB()
@@ -2260,7 +2230,11 @@ func (s *businessSrv) ExportBusinessTimePeriod(ctx context.Context, request req.
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeBusinessData)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -2345,19 +2319,7 @@ func (s *businessSrv) ExportBusinessTimePeriodTask(ctx context.Context, params E
 		},
 	}
 	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
-
-	sheetNameMul := model.MultiLanguageName{
-		EnName:   "Report",     // 英文
-		ZhName:   "报表",         // 中文
-		ZhTwName: "報表",         // 繁体中文
-		ThName:   "รายงาน",     // 泰语
-		MyName:   "အစီရင်ခံစာ", // 缅甸语
-		JaName:   "レポート",       // 日语
-		KoName:   "보고서",        // 韩语
-		TrName:   "Rapor",      // 土耳其语
-		SvName:   "Rapport",    // 瑞典语
-	}
-	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetName := "Sheet1"
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -2464,7 +2426,11 @@ func (s *businessSrv) ExportBusinessSummary(ctx context.Context, request req.Sta
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeBusinessDataSummary)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -2549,18 +2515,7 @@ func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params Expo
 		},
 	}
 	xlsxFile := excelize.NewFile() // 修改这里，直接使用 NewFile()
-	sheetNameMul := model.MultiLanguageName{
-		EnName:   "Report",     // 英文
-		ZhName:   "报表",         // 中文
-		ZhTwName: "報表",         // 繁体中文
-		ThName:   "รายงาน",     // 泰语
-		MyName:   "အစီရင်ခံစာ", // 缅甸语
-		JaName:   "レポート",       // 日语
-		KoName:   "보고서",        // 韩语
-		TrName:   "Rapor",      // 土耳其语
-		SvName:   "Rapport",    // 瑞典语
-	}
-	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetName := "Sheet1"
 	// 创建一个新的工作表
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
@@ -2673,7 +2628,11 @@ func (s *businessSrv) ExportBusinessPaymentMethod(ctx context.Context, request r
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeBusinessDataPaymentMethod)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -2950,7 +2909,11 @@ func (s *businessSrv) ExportChannelSales(ctx context.Context, req req.ChannelSal
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeChannelSales)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
@@ -3075,18 +3038,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	}
 
 	xlsxFile := excelize.NewFile()
-	sheetNameMul := model.MultiLanguageName{
-		EnName:   "Report",
-		ZhName:   "报表",
-		ZhTwName: "報表",
-		ThName:   "รายงาน",
-		MyName:   "အစီရင်ခံစာ",
-		JaName:   "レポート",
-		KoName:   "보고서",
-		TrName:   "Rapor",
-		SvName:   "Rapport",
-	}
-	sheetName := sheetNameMul.GetNameByLang(ctx.GetLanguage())
+	sheetName := "Sheet1"
 	index, err := xlsxFile.NewSheet(sheetName)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -3551,7 +3503,11 @@ func (s *businessSrv) ExportUserAnalysis(ctx context.Context, req req.UserAnalys
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix())
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeUserAnalysis)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
 	uuid, _ := utils.GetID()
 	record := &model.ExportRecord{
 		BaseModel:    model.BaseModel{Uuid: uuid},
