@@ -107,27 +107,25 @@
       </tr>
     </thead>
     <tbody>
-      {% for row in doc.items %}
+      {% for row in doc.get('locations', []) %}
       <tr>
-        <td class="col-no">{{ row.idx }}</td>
-        <td class="col-code">{{ row.custom_internal_code or row.item_code }}</td>
-        <td class="col-description">{{ row.description or row.item_name }}</td>
+        <td class="col-no">{{ loop.index }}</td>
+        <td class="col-code">{{ row.get('item_code', '') }}</td>
+        <td class="col-description">{{ row.get('item_name', '') }}</td>
         <td class="col-qty">
-          {{ frappe.format_value(row.stock_qty, {"fieldtype":"Float"}) }}
+          {{ frappe.format_value(row.get('qty', 0), {"fieldtype":"Float"}) }}
         </td>
-        <td class="col-unit">{{ row.picked_qty }}</td>
+        <td class="col-unit">{{ row.get('picked_qty', 0) }}</td>
         <td class="col-price">
-          {{ frappe.format_value(row.stock_uom, {"fieldtype":"Currency", "currency":
-          currency}) }}
+          {{ row.get('uom', '') }}
         </td>
-        <td class="col-order">{{ row.sales_order }}</td>  
+        <td class="col-order">{{ row.get('sales_order', '') }}</td>  
         <td class="col-total">
-          {{ frappe.format_value(row.amount or row.base_amount,
-          {"fieldtype":"Currency", "currency": currency}) }}
+          <!-- Item amount not available in location -->
         </td>
       </tr>
       {% endfor %} {% set max_rows = 0 %} {% set blank_rows = max_rows -
-      (doc.items|length or 0) %} {% for i in range(blank_rows if blank_rows > 0
+      (doc.get('locations', [])|length or 0) %} {% for i in range(blank_rows if blank_rows > 0
       else 0) %}
       <tr>
         <td class="col-no">&nbsp;</td>
