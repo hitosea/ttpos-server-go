@@ -1793,7 +1793,7 @@ func (s *orderSrv) calculateActivityDiscount(ctx context.Context, saleOrder *mod
 		maxDiscount := 0.0
 		maxThreshold := 0.0
 		for _, rule := range activity.Rules {
-			if orderAmount >= rule.Threshold && rule.Threshold > maxThreshold {
+			if orderAmount >= rule.Threshold && rule.ReductionAmount > maxDiscount {
 				maxThreshold = rule.Threshold
 				maxDiscount = rule.ReductionAmount
 			}
