@@ -359,7 +359,7 @@
     form.model.package_group.push({
       group_name: JSON.parse(languageData),
       group_type: 0,
-      optional_count: 0,
+      optional_count: 1,
       product_list: [],
     });
   };
@@ -523,6 +523,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  .justify-end {
+    justify-content: flex-end;
   }
 
   .w-full {
