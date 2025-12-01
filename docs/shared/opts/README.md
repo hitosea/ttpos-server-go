@@ -7,7 +7,7 @@
 ## 📁 目录结构
 
 ```
-docs/shared/optimizations/
+docs/shared/opts/
 ├── active/                          # 🟡 进行中的优化
 │   └── opt-{YYMMDD}-{序号}-{module}-{brief}/
 │       ├── optimize.md              # 优化需求（需求详情）
@@ -118,40 +118,40 @@ opt-{YYMMDD}-{序号}
 
 ```bash
 # 查看某个版本完成的优化数量
-ls docs/shared/optimizations/completed/v2.12/ | wc -l
+ls docs/shared/opts/completed/v2.12/ | wc -l
 
 # 查看进行中的优化数量
-ls docs/shared/optimizations/active/ | wc -l
+ls docs/shared/opts/active/ | wc -l
 ```
 
 ### 按模块统计
 
 ```bash
 # 查看订单模块的优化
-find docs/shared/optimizations/ -name "*-order-*"
+find docs/shared/opts/ -name "*-order-*"
 
 # 查看性能相关的优化
-grep -r "performance" docs/shared/optimizations/active/*/optimize.md
+grep -r "performance" docs/shared/opts/active/*/optimize.md
 ```
 
 ### 按类型统计
 
 ```bash
 # 查看性能优化
-grep -l "优化类型.*performance" docs/shared/optimizations/active/*/optimize.md
+grep -l "优化类型.*performance" docs/shared/opts/active/*/optimize.md
 
 # 查看用户体验优化
-grep -l "优化类型.*ux" docs/shared/optimizations/active/*/optimize.md
+grep -l "优化类型.*ux" docs/shared/opts/active/*/optimize.md
 ```
 
 ### 收益统计
 
 ```bash
 # 查看所有性能提升数据
-grep -r "提升.*%" docs/shared/optimizations/completed/*/optimize.md
+grep -r "提升.*%" docs/shared/opts/completed/*/optimize.md
 
 # 查看成本节约
-grep -r "节约" docs/shared/optimizations/completed/*/optimize.md
+grep -r "节约" docs/shared/opts/completed/*/optimize.md
 ```
 
 ---
@@ -227,20 +227,20 @@ grep -r "节约" docs/shared/optimizations/completed/*/optimize.md
 
 ```bash
 # 查看所有进行中的优化
-ls docs/shared/optimizations/active/
+ls docs/shared/opts/active/
 
 # 搜索特定关键词
-grep -r "performance" docs/shared/optimizations/active/*/optimize.md
+grep -r "performance" docs/shared/opts/active/*/optimize.md
 ```
 
 ### 查询已完成的优化
 
 ```bash
 # 查看 v2.12 版本完成的优化
-ls docs/shared/optimizations/completed/v2.12/
+ls docs/shared/opts/completed/v2.12/
 
 # 查看所有已完成的优化
-find docs/shared/optimizations/completed/ -name "optimize.md"
+find docs/shared/opts/completed/ -name "optimize.md"
 ```
 
 ### 在 Graphiti 中查询
@@ -483,15 +483,15 @@ mcp_Graphiti_search_memory_facts --query "性能优化 查询优化"
 
 ```bash
 # 查看 v2.12 版本完成了哪些优化
-ls docs/shared/optimizations/completed/v2.12/
+ls docs/shared/opts/completed/v2.12/
 
 # 统计各版本完成的优化数量
-for v in docs/shared/optimizations/completed/*/; do
+for v in docs/shared/opts/completed/*/; do
   echo "$(basename $v): $(ls $v | wc -l)"
 done
 
 # 查看某个版本的优化汇总
-cat docs/shared/optimizations/completed/v2.12/README.md
+cat docs/shared/opts/completed/v2.12/README.md
 ```
 
 ---

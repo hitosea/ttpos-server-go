@@ -38,7 +38,7 @@ description: 创建优化实施方案和任务分解
 ## 输出产物
 
 ```
-docs/shared/optimizations/active/opt-{id}-{module}-{brief}/
+docs/shared/opts/active/opt-{id}-{module}-{brief}/
 ├── optimize.md     # 优化需求（状态: 规划中）
 ├── solution.md     # 优化方案
 └── tasks.md        # 任务分解清单
@@ -326,9 +326,9 @@ docs/shared/optimizations/active/opt-{id}-{module}-{brief}/
 
 ```yaml
 IF 参数是完整优化 ID THEN
-  查找: docs/shared/optimizations/active/opt-{id}-*/
+  查找: docs/shared/opts/active/opt-{id}-*/
 ELSE IF 参数是简述 THEN
-  搜索: docs/shared/optimizations/active/*/*-{brief}*/
+  搜索: docs/shared/opts/active/*/*-{brief}*/
   IF 找到多个 THEN
     显示列表让用户选择
   END IF

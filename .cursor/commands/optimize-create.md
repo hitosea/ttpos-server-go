@@ -55,7 +55,7 @@ opt-{YYMMDD}-{序号}
 ## 输出产物
 
 ```
-docs/shared/optimizations/active/opt-{id}-{module}-{brief}/
+docs/shared/opts/active/opt-{id}-{module}-{brief}/
 └── optimize.md  # 优化需求（状态: 待评估）
 ```
 
@@ -166,7 +166,7 @@ docs/shared/optimizations/active/opt-{id}-{module}-{brief}/
 
 ```yaml
 获取当前日期: YYMMDD
-扫描: docs/shared/optimizations/active/opt-{YYMMDD}-*/
+扫描: docs/shared/opts/active/opt-{YYMMDD}-*/
 计算序号: 最大序号 + 1
 生成: opt-{YYMMDD}-{序号:03d}
 ```
@@ -183,7 +183,7 @@ IF 找到相似优化 THEN
 ### Step 3: 检测重复
 
 ```yaml
-搜索: docs/shared/optimizations/active/*/*-{brief}*/
+搜索: docs/shared/opts/active/*/*-{brief}*/
 IF 找到相似优化 THEN
   提示用户
   询问是否继续
@@ -192,7 +192,7 @@ IF 找到相似优化 THEN
 ### Step 4: 创建目录和文件
 
 ```yaml
-创建目录: docs/shared/optimizations/active/opt-{id}-{module}-{brief}/
+创建目录: docs/shared/opts/active/opt-{id}-{module}-{brief}/
 创建文件: optimize.md
 填充模板: 基本信息 + 需求描述
 ```

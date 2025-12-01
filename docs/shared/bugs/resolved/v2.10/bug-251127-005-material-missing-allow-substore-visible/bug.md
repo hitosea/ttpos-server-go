@@ -1,5 +1,11 @@
 # Bug-251127-005: 物料详情接口缺失 allow_substore_visible 字段
 
+> ✅ **已解决** - 此 Bug 已在 v2.10 中修复。
+>
+> - 解决时间: 2025-12-01
+> - 解决者: weifashi
+> - 验证状态: ✅ 已验证
+
 ## 基本信息
 
 | 字段       | 值                                           |
@@ -10,7 +16,10 @@
 | 发现版本   | v2.10.9                                      |
 | 发现日期   | 2025-11-27                                   |
 | 发现者     | weifashi                                     |
-| 状态       | 🟢 待测试                                    |
+| 状态       | 🔵 已修复                                    |
+| 解决版本   | v2.10                                        |
+| 解决日期   | 2025-12-01                                   |
+| 解决者     | weifashi                                     |
 | 影响终端   | shop（店铺后台）                             |
 
 ## 问题描述
@@ -137,3 +146,45 @@
 **最后更新**: 2025-11-27 16:36  
 **状态**: 🟢 待测试（代码修复已完成）
 
+
+---
+
+## 经验总结
+
+**问题类型**: 响应字段遗漏
+
+**根本原因**: 在构建响应 DTO 时遗漏了字段。数据库 Model 层有该字段，但响应结构体 `MaterialDetailResp` 中缺少字段定义，Service 层构建响应时也未填充该字段。
+
+**解决方案**: 
+1. 在响应 DTO (`MaterialDetailResp`) 中添加 `AllowSubstoreVisible` 字段
+2. 在 Service 层 (`GetMaterialDetail` 方法) 中填充该字段值
+3. 更新 Swagger 文档（自动生成）
+
+**关键步骤**:
+1. 修改 `main/app/dto/resp/material_resp/material.go`，添加字段定义
+2. 修改 `main/app/service/material.go`，填充字段值
+3. 运行 `swag init` 更新 Swagger 文档
+4. 测试验证字段返回正确
+
+**预防措施**:
+1. **Code Review 检查清单**: 新增字段时需同步更新 Model、请求 DTO、响应 DTO 和 Service 层
+2. **自动化检测**: 编写 lint 规则检测 Model 与 DTO 字段一致性
+3. **测试覆盖**: 增加 API 响应字段完整性测试
+4. **文档同步**: 在需求评审时明确列出所有字段
+
+**相关知识**:
+- DTO (Data Transfer Object) 设计模式
+- Go 结构体标签（struct tags）
+- RESTful API 响应规范
+- 字段映射和数据转换
+
+**适用场景**:
+- API 接口返回字段缺失的问题
+- DTO 与 Model 不一致的问题
+- 响应数据完整性问题
+
+**参考资料**:
+- `.cursor/rules/api.mdc` - API 设计规范
+- `.cursor/rules/go-main.mdc` - Go 开发规范
+- `main/app/dto/resp/material_resp/material.go` (Line 54-79)
+- `main/app/service/material.go` (Line 428-455)
