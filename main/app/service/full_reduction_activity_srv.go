@@ -425,10 +425,10 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 	startDateStr := ""
 	endDateStr := ""
 	if activity.StartDate > 0 {
-		startDateStr = timeUtil.FormatUnixTime(activity.StartDate, "2006-01-02")
+		startDateStr = timeUtil.FormatUnixTime(activity.StartDate, "2006/01/02")
 	}
 	if activity.EndDate > 0 {
-		endDateStr = timeUtil.FormatUnixTime(activity.EndDate, "2006-01-02")
+		endDateStr = timeUtil.FormatUnixTime(activity.EndDate, "2006/01/02")
 	}
 
 	// 获取活动状态
