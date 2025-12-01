@@ -165,15 +165,15 @@ class Product extends BaseModel
     public function getSellingPointI18nAttr($value, $data = [])
     {
         $default = [
-            'zh' => '',
-            'en' => '',
-            'zhtw' => '',
-            'th' => '',
-            'my' => '',
-            'ja' => '',
-            'ko' => '',
-            'tr' => '',
-            'sv' => '',
+            'zh' => $data['describe'] ?? '',
+            'en' => $data['describe'] ?? '',
+            'zhtw' => $data['describe'] ?? '',
+            'th' => $data['describe'] ?? '',
+            'my' => $data['describe'] ?? '',
+            'ja' => $data['describe'] ?? '',
+            'ko' => $data['describe'] ?? '',
+            'tr' => $data['describe'] ?? '',
+            'sv' => $data['describe'] ?? '',
         ];
         $uuid = $data['describe_multi_language_name_uuid'] ?? 0;
         if (empty($uuid)) {
