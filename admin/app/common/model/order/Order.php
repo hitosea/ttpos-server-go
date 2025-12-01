@@ -738,10 +738,20 @@ class Order extends BaseModelOrder
     {
         $start_time = isset($params['date'][0]) ? $params['date'][0] : 0;
         $end_time = isset($params['date'][1]) ? $params['date'][1] : 0;
+        $query_start_time = 0;
+        $query_end_time = 0;
+        if ($start_time != 0 && $end_time != 0) {
+            if (strpos($end_time, ':') !== false) {
+                $query_end_time = strtotime($end_time);
+            } else {
+                $query_end_time = strtotime($end_time) + 86399;
+            }
+            $query_start_time = strtotime($start_time);
+        }
 
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/export', [
-            'query_start_time' => strtotime($start_time),
-            'query_end_time' => strtotime($end_time) + 86399,
+            'query_start_time' => $query_start_time,
+            'query_end_time' => $query_end_time,
         ], [
             'Authorization: Bearer ' . $params['token'],
             'Accept-Language: ' . $params['language'],
