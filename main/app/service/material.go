@@ -2183,6 +2183,7 @@ func newProductBomCardLog(ctx context.Context, num float64, cardUuid uint64, car
 func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error) {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
+	companySetting := ctx.GetCompanySetting()
 
 	productBomCardRepo := repository.NewProductBomCardRepo(db)
 	productBomCard, err := productBomCardRepo.GetProductBomCardDetail(req.Uuid)
@@ -2192,6 +2193,9 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 
 	materialList := []material_resp.ProductBomCardMaterial{}
 	for _, material := range productBomCard.RelatedMaterials {
+		if !companySetting.IsHeadquarter() && material.Material.AllowSubstoreVisible == 0 {
+			continue
+		}
 		unitList := []material_resp.MaterialUnit{}
 		for _, unit := range material.Material.NotBaseUnitList {
 			unitList = append(unitList, material_resp.MaterialUnit{
