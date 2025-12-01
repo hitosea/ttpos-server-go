@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -96,6 +97,12 @@ func (s *printerSrv) GetProductPrinterList(ctx context.Context) (resp.ProductPri
 
 // UsbPrinterReport 上报打印
 func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error) {
+	// 添加公司锁 - 禁止并发操作
+	companyUuid := ctx.GetCompanyUuid()
+	lock.NewSystemLock().LockUuid(companyUuid)
+	defer lock.NewSystemLock().UnlockUuid(companyUuid)
+
+	// 获取打印机列表
 	printerRepo := repository.NewPrinterRepo(ctx.GetDB())
 	dbUsbList := printerRepo.GetUsbList()
 	selectedUuid := uint64(0)
@@ -427,8 +434,11 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 	if err := json.Unmarshal(testDataBytes, &testData); err != nil {
 		return nil, errors.WithMessage(errors.New("解析测试数据JSON失败"), err.Error())
 	}
+
+	// 初始化 settingSrv，供多处使用
+	settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
+
 	if testData["store"] != nil {
-		settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
 		storeSetting, err := settingSrv.GetStoreSetting(ctx)
 		if err != nil {
 			return nil, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
@@ -461,9 +471,11 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 		}
 	}
 	if testData["order"] != nil {
+		// 备注
 		if testData["order"].(map[string]interface{})["remark"] != nil {
 			testData["order"].(map[string]interface{})["remark"] = i18n.Translate(ctx.GetLanguage(), "开桌备注")
 		}
+		// 商品
 		if testData["order"].(map[string]interface{})["products"] != nil {
 			switch products := testData["order"].(map[string]interface{})["products"].(type) {
 			case []interface{}:
@@ -490,6 +502,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 				}
 			}
 		}
+		// 支付方式
 		if testData["order"].(map[string]interface{})["payment_methods"] != nil {
 			switch methods := testData["order"].(map[string]interface{})["payment_methods"].(type) {
 			case []interface{}:
@@ -500,6 +513,30 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 					}
 					if v, ok := paymentMethod["name"].(string); ok {
 						paymentMethod["name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+				}
+			}
+		}
+		// 动态设置 order.is_contain_tax 根据商家配置（与实际打印单逻辑保持一致）
+		if orderData, ok := testData["order"].(map[string]interface{}); ok {
+			// 获取税率设置和打印机设置
+			taxRateSetting, err := settingSrv.GetTaxRateSetting(ctx)
+			if err == nil {
+				printerSetting, err := settingSrv.GetPrinterSetting(ctx, nil)
+				if err == nil {
+					taxFeeType := taxRateSetting.GetTaxFeeType()
+					// 打印机消费税设置
+					consumptionTax, _ := strconv.Atoi(printerSetting.ConsumptionTax)
+					// 与实际打印单相同的逻辑
+					// 商品未含税：需要TaxFeeType == 1 && (ConsumptionTax == 1 || 3)
+					if taxFeeType == 1 && (consumptionTax == 1 || consumptionTax == 3) {
+						orderData["is_contain_tax"] = uint(1)
+					} else if taxFeeType == 2 && (consumptionTax == 1 || consumptionTax == 2) {
+						// 商品已含税：需要 TaxFee > 0 && TaxFeeType == 2 && (ConsumptionTax == 1 || 2)
+						orderData["is_contain_tax"] = uint(2)
+					} else {
+						// 关闭消费税
+						orderData["is_contain_tax"] = uint(0)
 					}
 				}
 			}

@@ -1389,45 +1389,26 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		}
 
 		// 将商品模板和规格禁售
-		if ctx.GetCompany().IsOpenErp() {
+		if ctx.GetCompany().IsOpenErp() && !product.IsPackage() {
+			// 普通商品：继续调用ERP接口设置禁售（不受影响）
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			if !product.IsPackage() {
-				if err := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-					ItemCode:   product.ErpCode,
-					NotForSale: true,
-					Disabled:   product.Status == constant.ProductStatusOffSale,
-				}); err != nil {
-					return errors.WithMessage(err, "设置商品模板禁售失败")
-				}
-				for _, productBom := range product.ProductBoms {
-					if productBom.IsFlavor() {
-						if err := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-							ItemCode:     productBom.ErpCode,
-							NotForSale:   true,
-							InternalCode: productBom.InternalCode,
-							Disabled:     product.Status == constant.ProductStatusOffSale,
-						}); err != nil {
-							return errors.WithMessage(err, "设置商品规格禁售失败")
-						}
+			if err := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+				ItemCode:   product.ErpCode,
+				NotForSale: true,
+				Disabled:   product.Status == constant.ProductStatusOffSale,
+			}); err != nil {
+				return errors.WithMessage(err, "设置商品模板禁售失败")
+			}
+			for _, productBom := range product.ProductBoms {
+				if productBom.IsFlavor() {
+					if err := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+						ItemCode:     productBom.ErpCode,
+						NotForSale:   true,
+						InternalCode: productBom.InternalCode,
+						Disabled:     product.Status == constant.ProductStatusOffSale,
+					}); err != nil {
+						return errors.WithMessage(err, "设置商品规格禁售失败")
 					}
-				}
-			} else {
-				items := []req.DeleteProductErpItemReq{}
-				multiLanguageName := model.NewMultiLanguageName(product.Name)
-				enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
-				}
-				erpCode := product.GetPackageProductBom().ErpCode
-				items = append(items, req.DeleteProductErpItemReq{
-					ItemCode: erpCode,
-					ItemName: enName,
-					StockUom: product.ProductUnit.ErpnextUom,
-				})
-				if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
-					Items: items,
-				}); err != nil {
-					return errors.WithMessage(err, "删除商品到erp失败")
 				}
 			}
 		}
@@ -2123,29 +2104,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 						return errors.WithMessage(errGetProductPackage, "获取商品包失败")
 					}
 					erpSrv := erp.NewIErpSrv(s.dbm)
-					if productPackage.IsPackage() {
-						// 套餐：使用 UpdateProduct 更新套餐单位
-						for _, productBom := range productPackage.ProductBoms {
-							if productBom.IsPackageFlavor() {
-								errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-									ItemCode:   productBom.ErpCode, // 使用套餐 Item Code
-									StockUom:   erpUom,
-									Disabled:   productPackage.Status == constant.ProductStatusOffSale,
-									NotForSale: productPackage.IsDelete(),
-								})
-								if errErp != nil {
-									logger.Logger.Error("同步套餐单位到ERP失败",
-										zap.String("product_package_uuid", fmt.Sprintf("%d", productPackageUuid)),
-										zap.String("product_bom_uuid", fmt.Sprintf("%d", productBom.Uuid)),
-										zap.String("erp_code", productBom.ErpCode),
-										zap.String("erp_uom", erpUom),
-										zap.Error(errErp))
-									return errors.WithMessage(errErp, "同步套餐单位到ERP失败")
-								}
-								break // 套餐只有一个 PackageFlavor
-							}
-						}
-					} else if productPackage.IsProduct() {
+					if productPackage.IsProduct() {
 						// 普通商品：使用 UpdateProduct 更新模板单位
 						errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
 							ItemCode:   productPackage.ErpCode, // 使用模板 Item Code
@@ -2308,30 +2267,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 				}
 				for i := range productPackages {
 					productPackage := productPackages[i]
-					if productPackage.IsPackage() {
-						for _, productBom := range productPackage.ProductBoms {
-							if productBom.IsPackageFlavor() {
-								// 同步套餐到erp - 使用 UpdateProduct 更新套餐单位
-								erpSrv := erp.NewIErpSrv(s.dbm)
-								errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-									ItemCode:   productBom.ErpCode, // 使用套餐 Item Code
-									StockUom:   productUnit.ErpnextUom,
-									Disabled:   productPackage.Status == constant.ProductStatusOffSale,
-									NotForSale: productPackage.IsDelete(),
-								})
-								if errErp != nil {
-									logger.Logger.Error("同步套餐单位到ERP失败",
-										zap.String("product_package_uuid", fmt.Sprintf("%d", productPackage.Uuid)),
-										zap.String("product_bom_uuid", fmt.Sprintf("%d", productBom.Uuid)),
-										zap.String("erp_code", productBom.ErpCode),
-										zap.String("unit_uuid", fmt.Sprintf("%d", productUnit.Uuid)),
-										zap.String("erp_uom", productUnit.ErpnextUom),
-										zap.Error(errErp))
-									return errors.WithMessage(errErp, "同步套餐单位到ERP失败")
-								}
-							}
-						}
-					} else if productPackage.IsProduct() {
+					if productPackage.IsProduct() {
 						// 同步商品到erp - 使用 UpdateProduct 更新模板单位
 						erpSrv := erp.NewIErpSrv(s.dbm)
 						errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
@@ -2352,7 +2288,6 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 							return errors.WithMessage(errErp, "同步商品单位到ERP失败")
 						}
 					}
-
 				}
 			}
 			// 修改商品的单位UUID
@@ -5360,7 +5295,7 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 		company := ctx.GetCompany()
 		if company.IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			if !productPackage.IsPackage() {
+			if productPackage.IsProduct() {
 				// 禁用商品模板
 				err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
 					ItemCode:   productPackage.ErpCode,
@@ -5370,19 +5305,20 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 				if err != nil {
 					return errors.WithMessage(err, "同步商品模板到erp失败")
 				}
-			}
-			for _, productBom := range productPackage.ProductBoms {
-				if productBom.IsFlavor() || productBom.IsPackageFlavor() {
-					err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-						ItemCode:   productBom.ErpCode,
-						Disabled:   *req.Status == constant.ProductStatusOffSale,
-						NotForSale: productPackage.IsDelete(),
-					})
-					if err != nil {
-						return errors.WithMessage(err, "同步商品bom到erp失败")
+				for _, productBom := range productPackage.ProductBoms {
+					if productBom.IsFlavor() {
+						err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+							ItemCode:   productBom.ErpCode,
+							Disabled:   *req.Status == constant.ProductStatusOffSale,
+							NotForSale: productPackage.IsDelete(),
+						})
+						if err != nil {
+							return errors.WithMessage(err, "同步商品bom到erp失败")
+						}
 					}
 				}
 			}
+
 		}
 
 		return nil
@@ -6331,7 +6267,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 				}
 			}
 			// 删除商品规格的item
-			if ctx.GetCompany().IsOpenErp() {
+			if ctx.GetCompany().IsOpenErp() && !params.FlavorListResult.IsPackage {
 				// 获取商品bom信息
 				productBom, err := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
 				if err != nil {
@@ -6352,54 +6288,9 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 				erpCode := ""
 				if params.FlavorListResult.IsPackage {
 					isAdd = true
-					// 同步套餐到erp
-					if ctx.GetCompany().IsOpenErp() {
-						// 获取商品包信息
-						productPackage, err := productPackageRepo.GetProductPackage(
-							commonRepo.WhereByUuid(params.ProductPackageUuid),
-							commonRepo.Preload(
-								repository.WithPreload{
-									Query: "ProductUnit",
-								},
-								repository.WithPreload{
-									Query: "ProductCategory.MultiLanguageName",
-								},
-							),
-						)
-						if err != nil {
-							return errors.WithMessage(err, "获取商品包失败")
-						}
-
-						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
-						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-						if err != nil {
-							return errors.WithMessage(err, "翻译失败")
-						}
-						productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(params.UnitUuid))
-						if errGetUnit != nil {
-							return errors.WithMessage(errGetUnit, "获取商品单位失败")
-						}
-						erpSrv := erp.NewIErpSrv(s.dbm)
-						stockUom := productUnit.ErpnextUom
-						classification := productPackage.ProductCategory.MultiLanguageName.GetNames()
-						getEnClassification, err := s.getEnName(ctx, classification)
-						if err != nil {
-							return errors.WithMessage(err, "翻译失败")
-						}
-
-						params := req.PackageAddErpReq{
-							ItemName:           enName,
-							StockUom:           stockUom,
-							InternalCode:       params.FlavorListResult.Flavors[0].InternalCode,
-							Classification:     getEnClassification,
-							ClassificationCode: productPackage.ProductCategory.Code,
-						}
-						itemInfo, errErp := erpSrv.AddPackage(ctx, params)
-						if errErp != nil {
-							return errors.WithMessage(errErp)
-						}
-						erpCode = itemInfo.ItemCode
-					}
+					// 套餐：不再调用ERP接口，直接保存到本地数据库
+					// erpCode 设置为空字符串，因为套餐不再同步到ERP
+					erpCode = ""
 				} else {
 					// 同步商品到erp
 					if ctx.GetCompany().IsOpenErp() {
@@ -6533,62 +6424,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					return errors.WithMessage(err, "更新商品bom失败")
 				}
 
-				// 同步商品到erp
-				if ctx.GetCompany().IsOpenErp() {
-					if params.FlavorListResult.IsPackage {
-						// 同步套餐到erp
-						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
-						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-						if err != nil {
-							return errors.WithMessage(err, "翻译失败")
-						}
-						productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(params.UnitUuid))
-						if errGetUnit != nil {
-							return errors.WithMessage(errGetUnit, "获取商品单位失败")
-						}
-						productBom, errGetBom := productBomRepo.GetProductBom(
-							commonRepo.WhereByUuid(flavor.BomUuid),
-							commonRepo.Preload(
-								repository.WithPreload{
-									Query: "ProductPackage.ProductCategory.MultiLanguageName",
-								},
-							),
-						)
-						if errGetBom != nil {
-							return errors.WithMessage(errGetBom, "获取商品bom失败")
-						}
-						erpSrv := erp.NewIErpSrv(s.dbm)
-						classification := productBom.ProductPackage.ProductCategory.MultiLanguageName.GetNames()
-						getEnClassification, err := s.getEnName(ctx, classification)
-						if err != nil {
-							return errors.WithMessage(err, "翻译失败")
-						}
-						_, errErp := erpSrv.AddPackage(ctx, req.PackageAddErpReq{
-							ItemName: enName,
-							StockUom: productUnit.ErpnextUom,
-							ItemCode: productBom.ErpCode,
-							InternalCode: func() string {
-								if flavor.InternalCode != "" {
-									return flavor.InternalCode
-								}
-								return " " // 内部编码为空时，传空格给ErpNext
-							}(),
-							Classification:     getEnClassification,
-							ClassificationCode: productBom.ProductPackage.ProductCategory.Code,
-						})
-						if errErp != nil {
-							return errors.WithMessage(errErp, "同步套餐到erp失败")
-						}
-						errErp = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
-							ItemCode:   productBom.ErpCode,
-							Disabled:   params.FlavorListResult.Status == constant.ProductStatusOffSale,
-							NotForSale: productBom.ProductPackage.IsDelete(),
-						})
-						if errErp != nil {
-							return errors.WithMessage(errErp, "同步商品bom到erp失败")
-						}
-					}
-				}
 				if setting.SaleStock == 1 {
 					bom, err := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
 					if err != nil {

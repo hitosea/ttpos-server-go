@@ -1,18 +1,19 @@
 <div class="po-wrapper">
 
-  {% set company = frappe.get_doc("Company", doc.company) %} {% set
-  company_addr_name = doc.company_address %} {% if not company_addr_name %} {%
+  {% set company_name = doc.get('company') %} {% set
+  company = frappe.get_doc("Company", company_name) if company_name else None %} {% set
+  company_addr_name = doc.get('company_address') %} {% if not company_addr_name and company_name %} {%
   set company_addr_name = frappe.db.get_value( "Dynamic Link", {"link_doctype":
-  "Company", "link_name": doc.company}, "parent" ) %} {% endif %} {% set
+  "Company", "link_name": company_name}, "parent" ) %} {% endif %} {% set
   company_address = frappe.utils.get_address_display(company_addr_name) if
-  company_addr_name else "" %} {% set currency = doc.currency or
-  company.default_currency %} {% set subtotal = doc.total or doc.base_total or 0
-  %} {% set grand_total = doc.grand_total or doc.base_grand_total or 0 %} {% set
-  taxes_total = doc.total_taxes_and_charges or doc.base_total_taxes_and_charges
-  or 0 %} {% set discount_amount = doc.discount_amount or 0 %} {% set taxes =
-  doc.taxes or [] %} {% set vat = namespace(value=0) %} {% for tax in taxes %}
-  {% set tax_amount = tax.tax_amount or tax.base_tax_amount or 0 %} {% if "VAT"
-  in (tax.description or "").upper() %} {% set vat.value = vat.value +
+  company_addr_name else "" %} {% set currency = doc.get('currency') or
+  (company.default_currency if company else None) %} {% set subtotal = doc.get('total') or doc.get('base_total') or 0
+  %} {% set grand_total = doc.get('grand_total') or doc.get('base_grand_total') or 0 %} {% set
+  taxes_total = doc.get('total_taxes_and_charges') or doc.get('base_total_taxes_and_charges')
+  or 0 %} {% set discount_amount = doc.get('discount_amount') or 0 %} {% set taxes =
+  doc.get('taxes') or [] %} {% set vat = namespace(value=0) %} {% for tax in taxes %}
+  {% set tax_amount = tax.get('tax_amount') or tax.get('base_tax_amount') or 0 %} {% if "VAT"
+  in (tax.get('description') or "").upper() %} {% set vat.value = vat.value +
   tax_amount %} {% endif %} {% endfor %} {% set other_charges = taxes_total -
   vat.value %}
 
@@ -32,10 +33,10 @@
       <tr>
         <td style="width: 60% !important; padding-left: 0 !important; padding-right: 6px !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
           <div class="company-info">
-            <strong>{{ doc.company }}</strong><br />
+            <strong>{{ doc.get('company') }}</strong><br />
           {{ (company_address or "989 AIA EAST GATEWAY BUILDING, ROOM NO.1101-1102, 11TH FLOOR, DEBARATANA RD.,BANGNA NUEA, BANGNA, BANGKOK 10260 ") | replace("BUILDING,", "BUILDING,<br />") | replace("DEBARATANA RD.,", "DEBARATANA RD.,<br />") | safe }}<br />
 
-            PHONE&nbsp;:&nbsp;{{ company.phone_no or company.phone or '082-168-8984' }}
+            PHONE&nbsp;:&nbsp;{{ (company.phone_no if company else None) or (company.phone if company else None) or '082-168-8984' }}
           </div>
         </td>
         <td style="width: 40% !important; padding-left: 6px !important; padding-right: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; box-sizing: border-box;" valign="top">
@@ -115,7 +116,7 @@
         </td>
         <td class="col-unit">{{ row.uom }}</td>
         <td class="col-total">
-          {{ frappe.format_value(row.amount or row.base_amount,
+          {{ frappe.format_value(row.get('amount', 0) or row.get('base_amount', 0),
           {"fieldtype":"Currency", "currency": currency}) }}
         </td>
       </tr>
