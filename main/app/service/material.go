@@ -29,7 +29,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
-	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
@@ -1314,21 +1313,29 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 					updateData["purchase_unit_uuid"] = material.Unit.Uuid
 				}
 			} else {
-				// 非基准单位
-				existUnit, exist := slice.FindBy(material.NotBaseUnitList, func(index int, item *model.MaterialUnit) bool {
-					return item.UnitUuid == productUnit.Uuid && item.DeleteTime == 0
-				})
+				var exist bool
+				materialUnit := materialUnitRepo.GetMaterialUnit(
+					commonRepo.WhereByUnitUuid(productUnit.Uuid),
+					commonRepo.WhereByMaterialUuid(material.Uuid),
+					commonRepo.WhereByIsDefault(0),
+					commonRepo.WhereBySoftDelete(),
+				)
+				if materialUnit.Uuid > 0 {
+					exist = true
+				}
 				if exist {
 					err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
 						"name":            productUnit.Name,
 						"conversion_rate": uom.ConversionRate,
-					}, commonRepo.WhereByUuid(existUnit.Uuid))
+						"is_default":      0,
+						"delete_time":     0,
+					}, commonRepo.WhereByUuid(materialUnit.Uuid))
 					if err != nil {
 						return errors.WithMessage(err, "更新非基准单位失败")
 					}
-					saveUnitUuids = append(saveUnitUuids, existUnit.Uuid)
+					saveUnitUuids = append(saveUnitUuids, materialUnit.Uuid)
 					if productUnit.Uuid == purchaseUnitUuid {
-						updateData["purchase_unit_uuid"] = existUnit.Uuid
+						updateData["purchase_unit_uuid"] = materialUnit.Uuid
 					}
 				} else {
 					uuid, err := materialUnitRepo.CreateMaterialUnit(model.MaterialUnit{
