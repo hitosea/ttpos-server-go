@@ -32,7 +32,7 @@ type ImgTemplateMetadata struct {
 // ImgTemplateBlock 模板块定义
 type ImgTemplateBlock struct {
 	BlockID           string                   `json:"block_id"`            // 块唯一标识
-	BlockType         string                   `json:"block_type"`          // 块类型 label, value, label:auto:value, array, img, qrcode, barcode, blank_line
+	BlockType         string                   `json:"block_type"`          // 块类型 label, value, label:auto:value, column, img, qrcode, barcode, blank_line
 	BlockLabel        interface{}              `json:"block_label"`         // 标签（支持字符串或多语言）
 	BlockValue        interface{}              `json:"block_value"`         // 块值
 	BlockBeforeLabel  interface{}              `json:"block_before_label"`  // 块前标签（支持字符串或多语言）
@@ -504,6 +504,12 @@ func (p *ImgTemplateParser) convertToFloat64(value interface{}) float64 {
 	case int32:
 		return float64(v)
 	case int64:
+		return float64(v)
+	case uint:
+		return float64(v)
+	case uint32:
+		return float64(v)
+	case uint64:
 		return float64(v)
 	case string:
 		// 尝试解析字符串为数字
