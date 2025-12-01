@@ -558,6 +558,22 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		ctx.AddLock()
 	}
 
+	// 兼容2.10.0之后的版本. 通过product_package_uuid查询套餐product_bom_uuid
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		for i := range request.Products {
+			product := &request.Products[i]
+			if product.ProductType == constant.ProductTypePackage {
+				// 通过product_package_uuid查询套餐product_bom_uuid
+				productBomUuid, err := repository.NewProductBomRepo(ctx.GetDB()).GetProductBomUuidByProductPackageUuid(product.ProductPackageUuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				product.FlavorProductBomUuid = productBomUuid
+				product.ProductPackageUuid = productBomUuid
+			}
+		}
+	}
+
 	// 判断商品价格是否与后台设置的最新价格不一致
 	// 查询商品规格的最新价格
 	// 查询所选加料的最新价格

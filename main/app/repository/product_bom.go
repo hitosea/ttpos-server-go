@@ -33,6 +33,7 @@ type IProductBomQueryRepo interface {
 	GetProductBomByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductBom, error) // 通过成本卡uuid获取商品信息
 	GetProductBomsByHasCard() ([]*model.ProductBom, error)                                  // 获取有成本卡的product_bom
 	GetProductPackageUuidByBomUuid(productBomUuid uint64) (uint64, error)                   // 通过商品bom uuid获取套餐product_package_uuid
+	GetProductBomUuidByProductPackageUuid(productPackageUuid uint64) (uint64, error)        // 通过套餐product_package_uuid获取商品bom uuid
 	WhereProductSauceUuid(uuid uint64) DBOption                                             // 查询条件 商品加料UUID
 }
 
@@ -322,4 +323,14 @@ func (r *productBomRepoImpl) GetProductPackageUuidByBomUuid(productBomUuid uint6
 		return 0, errors.WithMessage(err)
 	}
 	return productPackageUuid, nil
+}
+
+func (r *productBomRepoImpl) GetProductBomUuidByProductPackageUuid(productPackageUuid uint64) (uint64, error) {
+	var productBomUuid uint64
+	err := r.db.Model(&model.ProductBom{}).Where("product_package_uuid = ?", productPackageUuid).
+		Pluck("uuid", &productBomUuid).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return productBomUuid, nil
 }
