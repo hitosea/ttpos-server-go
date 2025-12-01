@@ -191,7 +191,7 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 		// 总部无品采收货权限
-		if permission.Uuid == 2858560786432000 && companySetting.IsHeadquarter() {
+		if permission.Uuid == 2858548203520000 && companySetting.IsHeadquarter() {
 			continue
 		}
 		// 未对接erp无进销存权限

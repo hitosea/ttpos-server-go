@@ -1017,7 +1017,7 @@ func RegisterRoleHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 复用 `main/app/service/role_access.go` 的 `filterPermission` 方法，根据商户配置动态筛选权限：
 
 1. **商家后台隐藏管理 APP 权限**: 商家后台（PHP Admin）在 `admin/app/common/model/shop/Access.php` 的 `recursiveMenuArray` 方法中过滤掉管理 APP 权限（uuid=2856266502144000），仅平台管理端可见
-2. **总部商户**: 隐藏品采收货权限（UUID: 2858560786432000）
+2. **总部商户**: 隐藏品采收货权限（UUID: 2858548203520000）
 3. **散户商户**: 隐藏品牌采购（UUID: 2858468511744000）、品牌收货（UUID: 2858548203520000）、调拨单（UUID: 2858825027584000）权限
 4. **已对接ERP**: 隐藏进销存权限（UUID: 2857919057920000）
 5. **关闭渠道营收统计**: 隐藏首页渠道营收统计的"更多"选项
