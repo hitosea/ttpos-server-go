@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -423,6 +424,63 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 	return dataURL, nil
 }
 
+// ParserConcurrent 并发安全的模板解析器（支持多个goroutine同时调用）
+// uniqueID 用于生成唯一的临时文件名，避免并发冲突
+func (s *printerSrv) ParserConcurrent(ctx context.Context, templateJSONStr string, testData map[string]interface{}, uniqueID uint64) (string, error) {
+	currencySetting, err := setting.NewSrv(s.dbm, s.cache).GetCurrencySetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(errors.New("获取打印设置失败"), err.Error())
+	}
+
+	// 创建解析器
+	unitPosition, err := strconv.ParseInt(currencySetting.UnitPosition, 10, 64)
+	if err != nil {
+		return "", errors.WithMessage(errors.New("转换货币单位位置失败"), err.Error())
+	}
+	parser, err := pkg.NewImgTemplateParser(pkg.ImgBaseData{
+		Language:             ctx.GetLanguage(),
+		CurrencyUnit:         currencySetting.PrintUnit,
+		CurrencyUnitPosition: int(unitPosition),
+	}, templateJSONStr, testData)
+	if err != nil {
+		return "", errors.WithMessage(errors.New("创建模板解析器失败"), err.Error())
+	}
+
+	// 验证模板
+	err = parser.ValidateTemplate()
+	if err != nil {
+		return "", errors.WithMessage(errors.New("验证模板失败"), err.Error())
+	}
+
+	// 解析模板
+	img, err := parser.Parse()
+	if err != nil {
+		return "", errors.WithMessage(errors.New("解析模板失败"), err.Error())
+	}
+
+	// 使用唯一的临时文件名，避免并发冲突
+	tempFilePath := fmt.Sprintf("/tmp/printer_template_%d_%d.png", uniqueID, time.Now().UnixNano())
+	defer os.Remove(tempFilePath) // 确保清理临时文件
+
+	// 设置分割高度并保存到临时文件
+	img.SegmentationHeight = 200000
+	img.Save(tempFilePath, false, 0)
+
+	// 读取保存的图片文件并转换为base64
+	imageData, err := os.ReadFile(tempFilePath)
+	if err != nil {
+		return "", errors.WithMessage(errors.New("读取生成的图片文件失败"), err.Error())
+	}
+
+	// 转换为base64字符串
+	base64Str := base64.StdEncoding.EncodeToString(imageData)
+
+	// 添加data URL前缀
+	dataURL := "data:image/png;base64," + base64Str
+
+	return dataURL, nil
+}
+
 // GetTestData 获取测试数据
 func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[string]interface{}, error) {
 	// 从JSON文件读取测试数据
@@ -563,7 +621,7 @@ func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName str
 	return string(templateJSON), nil
 }
 
-// GetPrintTemplateDetail 获取菜单详情
+// GetPrintTemplateDetail 获取菜单详情（并发优化版本）
 func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (resp.PrintTemplateDetailResp, error) {
 	db := ctx.GetDB()
 	companySetting := ctx.GetCompanySetting()
@@ -594,49 +652,112 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("获取测试数据失败"), err.Error())
 	}
 
-	// 默认模板
+	// 定义结果结构
+	type templateResult struct {
+		customize model.PrinterCustomize
+		imgUrl    string
+		err       error
+		isDefault bool
+	}
+
+	// 创建结果通道和等待组
+	resultChan := make(chan templateResult, len(customizes)+1)
+	var wg sync.WaitGroup
+
+	// 并发生成所有模板预览图
+	for _, customize := range customizes {
+		wg.Add(1)
+		go func(cust model.PrinterCustomize) {
+			defer wg.Done()
+
+			// 使用并发安全的Parser
+			imgUrl, err := s.ParserConcurrent(ctx, cust.Data, testData, cust.Uuid)
+
+			resultChan <- templateResult{
+				customize: cust,
+				imgUrl:    imgUrl,
+				err:       err,
+				isDefault: cust.IsAdv == 0 && cust.TemplateId == template.ID,
+			}
+		}(customize)
+	}
+
+	// 检查是否需要生成默认模板
+	hasDefault := false
+	for _, customize := range customizes {
+		if customize.IsAdv == 0 && customize.TemplateId == template.ID {
+			hasDefault = true
+			break
+		}
+	}
+
+	// 如果没有默认模板，并发生成一个
+	if !hasDefault {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			imgUrl, err := s.ParserConcurrent(ctx, templateJSONStr, testData, 0)
+			resultChan <- templateResult{
+				imgUrl:    imgUrl,
+				err:       err,
+				isDefault: true,
+			}
+		}()
+	}
+
+	// 等待所有任务完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 初始化默认模板
 	defaultTemplate := resp.PrintTemplateDetail{
 		ID:    template.ID,
 		Name:  i18n.Translate(ctx.GetLanguage(), DefaultTemplateName),
 		IsUse: false,
 	}
 
-	// 高级模板列表(高级模版列表)
+	// 收集结果
 	advReceiptTpls := make([]resp.PrintTemplateDetail, 0)
-	for _, customize := range customizes {
-		if customize.IsAdv == 1 {
+	needCreateDefault := false
+
+	for result := range resultChan {
+		if result.err != nil {
+			// 记录错误但不中断（容错处理）
+			zap.L().Error("生成模板预览图失败",
+				zap.Uint("customize_id", result.customize.ID),
+				zap.Error(result.err))
+			continue
+		}
+
+		if result.isDefault {
+			// 处理默认模板
+			defaultTemplate.ImgUrl = result.imgUrl
+			if result.customize.ID > 0 {
+				defaultTemplate.Name = utils.IfString(result.customize.Name == DefaultTemplateName,
+					i18n.Translate(ctx.GetLanguage(), DefaultTemplateName),
+					result.customize.Name)
+				defaultTemplate.IsUse = result.customize.IsUse == 1
+				defaultTemplate.CustomizeUuid = result.customize.Uuid
+			} else {
+				// 没有customize记录，需要创建
+				needCreateDefault = true
+			}
+		} else {
+			// 处理高级模板
 			advReceiptTpls = append(advReceiptTpls, resp.PrintTemplateDetail{
 				ID:            template.ID,
-				Name:          customize.Name,
-				IsUse:         customize.IsUse == 1,
-				CustomizeUuid: customize.Uuid,
-				ImgUrl: func() string {
-					printContent, err := s.Parser(ctx, customize.Data, testData)
-					if err != nil {
-						return ""
-					}
-					return printContent
-				}(),
+				Name:          result.customize.Name,
+				IsUse:         result.customize.IsUse == 1,
+				CustomizeUuid: result.customize.Uuid,
+				ImgUrl:        result.imgUrl,
 			})
-		} else if customize.TemplateId == template.ID {
-			defaultTemplate.Name = utils.IfString(customize.Name == DefaultTemplateName, i18n.Translate(ctx.GetLanguage(), DefaultTemplateName), customize.Name)
-			defaultTemplate.IsUse = customize.IsUse == 1
-			defaultTemplate.CustomizeUuid = customize.Uuid
-			printContent, err := s.Parser(ctx, customize.Data, testData)
-			if err != nil {
-				return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("解析模板失败"), err.Error())
-			}
-			defaultTemplate.ImgUrl = printContent
 		}
 	}
 
-	// 默认模板没有设置，则使用门店默认模版解析
-	if defaultTemplate.ImgUrl == "" && defaultTemplate.CustomizeUuid == 0 {
-		defaultTemplate.ImgUrl, err = s.Parser(ctx, templateJSONStr, testData)
-		if err != nil {
-			return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("解析模板失败"), err.Error())
-		}
-		// 创建打印机定制
+	// 如果需要创建默认模板记录
+	if needCreateDefault && defaultTemplate.ImgUrl != "" {
 		uuid, err := utils.GetID()
 		if err != nil {
 			return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("生成雪花ID失败"), err.Error())

@@ -186,6 +186,13 @@ IsContainTax: func() uint {
 - 确保测试数据生成逻辑与实际打印逻辑完全一致
 - 考虑所有配置组合场景（TaxFeeType × ConsumptionTax）
 - 保持错误处理的容错性
+- **⚠️ 关键修复**: `convertToFloat64` 方法必须支持 `uint` 类型，否则条件判断会失败
+
+**后续发现的问题及修复**:
+- **问题**: 模板条件判断时 `order.is_contain_tax` 值始终为 0
+- **原因**: `img_parser.go` 的 `convertToFloat64` 方法缺少 `uint/uint32/uint64` 类型处理
+- **修复**: 在 `convertToFloat64` 中添加 `uint` 系列类型的 case
+- **影响**: 修复后条件判断正常，税费标签显示正确
 
 **适用场景**: 
 - 任何需要预览数据与实际数据保持一致的场景

@@ -38,9 +38,9 @@ description: 归档已完成的优化到指定版本目录
 
 ```yaml
 IF 参数是完整优化 ID THEN
-  查找: docs/shared/optimizations/active/opt-{id}-*/
+  查找: docs/shared/opts/active/opt-{id}-*/
 ELSE IF 参数是简述 THEN
-  搜索: docs/shared/optimizations/active/*/*-{brief}*/
+  搜索: docs/shared/opts/active/*/*-{brief}*/
   IF 找到多个 THEN
     显示列表让用户选择
   END IF
@@ -110,9 +110,9 @@ END IF
 ### Step 7: 移动到已完成目录
 
 ```
-docs/shared/optimizations/active/opt-{id}-{module}-{brief}/
+docs/shared/opts/active/opt-{id}-{module}-{brief}/
     ↓
-docs/shared/optimizations/completed/{version}/opt-{id}-{module}-{brief}/
+docs/shared/opts/completed/{version}/opt-{id}-{module}-{brief}/
 ```
 
 - 如果版本目录不存在，自动创建
@@ -215,7 +215,7 @@ END IF
 
 ### Step 12: 生成版本报告条目
 
-在 `docs/shared/optimizations/completed/{version}/README.md` 中添加条目：
+在 `docs/shared/opts/completed/{version}/README.md` 中添加条目：
 
 ```markdown
 ## {version} 版本优化汇总
@@ -242,8 +242,8 @@ END IF
 ✅ 优化已完成并归档
 
 🚀 opt-251201-001: order-query-performance
-   从: docs/shared/optimizations/active/opt-251201-001-order-query-performance/
-   到: docs/shared/optimizations/completed/v2.12/opt-251201-001-order-query-performance/
+   从: docs/shared/opts/active/opt-251201-001-order-query-performance/
+   到: docs/shared/opts/completed/v2.12/opt-251201-001-order-query-performance/
 
 📊 收益达成:
    - 响应时间: 500ms → 200ms (↓60%)
@@ -387,7 +387,7 @@ git commit -m "perf(order): 优化订单查询性能 (#opt-251201-001)"
 ### 归档结构
 
 ```
-docs/shared/optimizations/
+docs/shared/opts/
 ├── active/                          # 进行中的优化
 │   ├── opt-251201-001-order-query/
 │   │   ├── optimize.md
@@ -420,10 +420,10 @@ docs/shared/optimizations/
 
 ```bash
 # 查看某个版本的所有优化
-ls docs/shared/optimizations/completed/v2.12/
+ls docs/shared/opts/completed/v2.12/
 
 # 搜索特定模块的优化
-find docs/shared/optimizations/completed/ -name "*-order-*"
+find docs/shared/opts/completed/ -name "*-order-*"
 
 # 在 Graphiti 中查询
 # 使用 MCP 工具搜索优化相关经验
