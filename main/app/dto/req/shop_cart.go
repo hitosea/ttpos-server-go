@@ -38,7 +38,7 @@ type ProductRequest struct {
 
 type OrderCartProductFlavorAndAttributeChangeReq struct {
 	OrderCartProductPackageAddReq        // 套餐商品请求参数
-	ProductType                   uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐 2-套餐子商品
+	ProductType                   uint   `json:"product_type"` // 商品类型 0-商品 1-套餐 2-套餐子商品
 	SaleOrderProductUuid          uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 
 	// 普通商品的参数
@@ -110,7 +110,7 @@ func (req *TabletOrderCartProductAddReq) FormatPackageSubProductParams() {
 	for _, product := range req.Products {
 		for j := range product.Products {
 			subProduct := &product.Products[j]
-			subProduct.Num = subProduct.UnitNum * product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
+			subProduct.Num = product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
 		}
 	}
 }
