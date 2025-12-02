@@ -871,7 +871,7 @@ func (s *sWebSocket) handleHeartbeat(ctx context.Context, newConn *ConnectionInf
 		s.updateDeviceHeartbeat(ctx, connKey)
 	}
 
-	g.Log().Debug(ctx, "收到心跳消息", "device_id", newConn.DeviceId)
+	g.Log().Debug(ctx, "收到心跳消息", "company_uuid", newConn.CompanyUuid, "device_id", newConn.DeviceId, "source_client", newConn.SourceClient)
 }
 
 // handleReply 处理已读回复
