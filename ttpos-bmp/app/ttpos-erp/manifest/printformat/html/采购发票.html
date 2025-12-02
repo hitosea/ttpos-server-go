@@ -236,389 +236,389 @@
 </div>
 <style>
 
-  html,
-  body {
-    width: 210mm;
-    margin: 0;
-    padding: 0;
-    font-family: "Arial", sans-serif;
-    color: #000;
-  }
-
-  /* 覆盖 ERP 自动注入的 print-format 样式 */
-  .print-format td,
-  .print-format th {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  table {
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    width: 100% !important;
-    table-layout: fixed !important;
-  }
-
-  td, th {
-    margin: 0 !important;
-    box-sizing: border-box;
-    overflow: hidden;
-    word-wrap: break-word;
-  }
-
-  /* 确保所有表格的 td 和 th 的 margin 为 0 */
-  table td,
-  table th {
-    margin: 0 !important;
-  }
-
-  /* 更具体地覆盖 print-format 下的所有表格单元格的 margin */
-  .print-format table td,
-  .print-format table th {
-    margin: 0 !important;
-  }
-
-  .top-section {
-    margin-bottom: 12px;
-  }
-
-  .title-row {
-    margin-bottom: 30px;
-  }
-
-  .po-title {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-  }
-
-  .header-grid {
-    width: 100% !important;
-    margin-bottom: 8px;
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 0;
-    table-layout: fixed;
-    box-sizing: border-box;
-  }
-
-  .header-grid td {
-    box-sizing: border-box;
-    margin: 0 !important;
-  }
-
-  .header-grid td:first-child {
-    width: 60% !important;
-  }
-
-  .header-grid td:last-child {
-    width: 40% !important;
-  }
-
-  .company-info {
-    font-size: 10px;
-    line-height: 1.5;
-    text-transform: uppercase;
-    margin-top: 30px;
-  }
-
-  .company-info strong {
-    font-size: 14px;
-  }
-
-  .header-divider {
-    border-bottom: 2px solid #006400;
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  .meta-table {
-    width: 100% !important;
-    border-collapse: collapse;
-    border-spacing: 0;
-    font-size: 10px;
-    border: 0;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    table-layout: fixed;
-  }
-
-  .meta-table td {
-    border: 1px solid #000;
-    padding: 4px 6px !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .meta-table td:last-child {
-    border-right: 1px solid #000;
-    color: #d32f2f;
-    font-weight: 500;
-  }
-
-  .meta-label {
-    font-weight: 600;
-    width: 55%;
-  }
-
-  .info-row {
-    width: 100% !important;
-    margin-top: 12px;
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 0;
-    table-layout: fixed;
-    box-sizing: border-box;
-  }
-
-  .info-block {
-    border: 1px solid #000;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    width: 100%;
-  }
-
-  .info-block .title {
-    background: #dcdcdc;
-    font-weight: 600;
-    padding: 4px 6px;
-    letter-spacing: 0.5px;
-  }
-
-  .info-block .body {
-    min-height: 12px;
-    padding: 6px;
-    font-size: 10px;
-    line-height: 1.4;
-    text-transform: uppercase;
-  }
-
-  .info-block .body strong {
-    font-weight: 700;
-    display: block;
-    margin-bottom: 2px;
-  }
-
-  .items-table {
-    width: 100% !important;
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin-top: 14px;
-    margin-left: 0;
-    margin-right: 0;
-    font-size: 10px;
-    table-layout: fixed;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  .items-table th,
-  .items-table td {
-    border: 1px solid #000;
-    padding: 4px 5px !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .items-table th:last-child,
-  .items-table td:last-child {
-    border-right: 1px solid #000;
-  }
-
-  .items-table th {
-    background: #dcdcdc;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-  }
-
-  .items-table thead {
-    display: table-header-group;
-  }
-
-  .col-no {
-    width: 35px;
-    text-align: center;
-  }
-
-  .col-code {
-    width: 90px;
-  }
-
-  .col-description {
-    word-break: break-all;
-    word-wrap: break-word;
-  }
-
-  .col-qty {
-    width: 70px;
-    text-align: center;
-  }
-
-  .col-unit {
-    width: 60px;
-    text-align: center;
-  }
-
-  .col-price,
-  .col-total {
-    width: 80px;
-    text-align: right;
-  }
-
-  .comments-grid {
-    width: 100% !important;
-    margin-top: 10px;
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 0;
-    table-layout: fixed;
-    box-sizing: border-box;
-  }
-
-  .comments-grid td {
-    box-sizing: border-box;
-    margin: 0 !important;
-  }
-
-  .comments-grid td:first-child {
-    width: 70% !important;
-  }
-
-  .comments-grid td:last-child {
-    width: 30% !important;
-  }
-
-  .comments-block {
-    border: 1px solid #000;
-    min-height: 70px;
-    margin: 0;
-    box-sizing: border-box;
-  }
-
-  .comments-block .title {
-    background: #dcdcdc;
-    font-weight: 600;
-    padding: 4px 6px;
-    text-transform: uppercase;
-  }
-
-  .comments-block .body {
-      padding: 6px;
-      min-height: 60px;
-  }
-
-  .summary-table {
-    width: 100% !important;
-    border-collapse: collapse;
-    border-spacing: 0;
-    font-size: 10px;
-    border: 0;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    table-layout: fixed;
-  }
-
-  .summary-table td {
-    border: 1px solid #000;
-    padding: 4px 6px !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .summary-table td:last-child {
-    border-right: 1px solid #000;
-  }
-
-  .summary-table td:first-child {
-    text-align: right;
-    font-weight: 600;
-  }
-
-  .summary-table tr:last-child td {
-    font-weight: 700;
-    background: #f4f4f4;
-  }
-
+html,
+    body {
+      width: 210mm;
+      margin: 0;
+      padding: 0;
+      font-family: "Arial", sans-serif;
+      color: #000;
+    }
   
-  .shelf-life {
-    width: 100% !important;
-    margin-top: 12px;
-    border: 1px solid #000;
-    border-bottom: none;
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin-left: 0;
-    margin-right: 0;
-    table-layout: fixed;
-    box-sizing: border-box;
-  }
-
-  .shelf-life.delivery {
-    margin-top: 0px;
-  }
-
-  .shelf-life.delivery.transfer {
-    border-bottom: 1px solid #000;
-  }
-
-  .shelf-life td {
-    margin: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .shelf-life td.title {
-    width: 30% !important;
-    background: #dcdcdc;
-    padding: 4px 6px !important;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .shelf-life td.body {
-    width: 70% !important;
-    padding: 6px !important;
-    font-size: 10px;
-  }
-
-  .note {
-    margin-top: 30px;
-    font-size: 9px;
-    line-height: 1.4;
-    text-transform: uppercase;
-  }
-  .note div {
-    text-align: center;
-  }
-
-  .signature-grid {
-    width: 100% !important;
-    margin-top: 30px;
-    border-collapse: collapse;
-    border-spacing: 0;
-    margin-left: 0;
-    margin-right: 0;
-    table-layout: fixed;
-    box-sizing: border-box;
-  }
-
-  .signature-grid .line {
-    border-top: 1px dotted #000;
-    padding-top: 6px;
-  }
+    /* 覆盖 ERP 自动注入的 print-format 样式 */
+    .print-format td,
+    .print-format th {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      width: 100% !important;
+      table-layout: fixed !important;
+    }
+  
+    td, th {
+      margin: 0 !important;
+      box-sizing: border-box;
+      overflow: hidden;
+      word-wrap: break-word;
+    }
+  
+    /* 确保所有表格的 td 和 th 的 margin 为 0 */
+    table td,
+    table th {
+      margin: 0 !important;
+    }
+  
+    /* 更具体地覆盖 print-format 下的所有表格单元格的 margin */
+    .print-format table td,
+    .print-format table th {
+      margin: 0 !important;
+    }
+  
+    .top-section {
+      margin-bottom: 12px;
+    }
+  
+    .title-row {
+      margin-bottom: 30px;
+    }
+  
+    .po-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+  
+    .header-grid {
+      width: 100% !important;
+      margin-bottom: 8px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+  
+    .header-grid td {
+      box-sizing: border-box;
+      margin: 0 !important;
+    }
+  
+    .header-grid td:first-child {
+      width: 60% !important;
+    }
+  
+    .header-grid td:last-child {
+      width: 40% !important;
+    }
+  
+    .company-info {
+      font-size: 10px;
+      line-height: 1.5;
+      text-transform: uppercase;
+      margin-top: 30px;
+    }
+  
+    .company-info strong {
+      font-size: 14px;
+    }
+  
+    .header-divider {
+      border-bottom: 2px solid #006400;
+      width: 100%;
+      margin-top: 8px;
+    }
+  
+    .meta-table {
+      width: 100% !important;
+      border-collapse: collapse;
+      border-spacing: 0;
+      font-size: 10px;
+      border: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      table-layout: fixed;
+    }
+  
+    .meta-table td {
+      border: 1px solid #000;
+      padding: 4px 6px !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .meta-table td:last-child {
+      border-right: 1px solid #000;
+      color: #d32f2f;
+      font-weight: 500;
+    }
+  
+    .meta-label {
+      font-weight: 600;
+      width: 55%;
+    }
+  
+    .info-row {
+      width: 100% !important;
+      margin-top: 12px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+  
+    .info-block {
+      border: 1px solid #000;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      width: 100%;
+    }
+  
+    .info-block .title {
+      background: #dcdcdc;
+      font-weight: 600;
+      padding: 4px 6px;
+      letter-spacing: 0.5px;
+    }
+  
+    .info-block .body {
+      min-height: 12px;
+      padding: 6px;
+      font-size: 10px;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+  
+    .info-block .body strong {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 2px;
+    }
+  
+    .items-table {
+      width: 100% !important;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-top: 14px;
+      margin-left: 0;
+      margin-right: 0;
+      font-size: 10px;
+      table-layout: fixed;
+      padding: 0;
+      box-sizing: border-box;
+    }
+  
+    .items-table th,
+    .items-table td {
+      border: 1px solid #000;
+      padding: 4px 5px !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .items-table th:last-child,
+    .items-table td:last-child {
+      border-right: 1px solid #000;
+    }
+  
+    .items-table th {
+      background: #dcdcdc;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+  
+    .items-table thead {
+      display: table-header-group;
+    }
+  
+    .col-no {
+      width: 35px;
+      text-align: center;
+    }
+  
+    .col-code {
+      width: 90px;
+    }
+  
+    .col-description {
+      word-break: break-all;
+      word-wrap: break-word;
+    }
+  
+    .col-qty {
+      width: 70px;
+      text-align: center;
+    }
+  
+    .col-unit {
+      width: 60px;
+      text-align: center;
+    }
+  
+    .col-price,
+    .col-total {
+      width: 80px;
+      text-align: right;
+    }
+  
+    .comments-grid {
+      width: 100% !important;
+      margin-top: 10px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+  
+    .comments-grid td {
+      box-sizing: border-box;
+      margin: 0 !important;
+    }
+  
+    .comments-grid td:first-child {
+      width: 70% !important;
+    }
+  
+    .comments-grid td:last-child {
+      width: 30% !important;
+    }
+  
+    .comments-block {
+      border: 1px solid #000;
+      min-height: 70px;
+      margin: 0;
+      box-sizing: border-box;
+    }
+  
+    .comments-block .title {
+      background: #dcdcdc;
+      font-weight: 600;
+      padding: 4px 6px;
+      text-transform: uppercase;
+    }
+  
+    .comments-block .body {
+        padding: 6px;
+        min-height: 60px;
+    }
+  
+    .summary-table {
+      width: 100% !important;
+      border-collapse: collapse;
+      border-spacing: 0;
+      font-size: 10px;
+      border: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      table-layout: fixed;
+    }
+  
+    .summary-table td {
+      border: 1px solid #000;
+      padding: 4px 6px !important;
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .summary-table td:last-child {
+      border-right: 1px solid #000;
+    }
+  
+    .summary-table td:first-child {
+      text-align: right;
+      font-weight: 600;
+    }
+  
+    .summary-table tr:last-child td {
+      font-weight: 700;
+      background: #f4f4f4;
+    }
+  
+    
+    .shelf-life {
+      width: 100% !important;
+      margin-top: 12px;
+      border: 1px solid #000;
+      border-bottom: none;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+  
+    .shelf-life.delivery {
+      margin-top: 0px;
+    }
+  
+    .shelf-life.delivery.transfer {
+      border-bottom: 1px solid #000;
+    }
+  
+    .shelf-life td {
+      margin: 0 !important;
+      box-sizing: border-box;
+    }
+  
+    .shelf-life td.title {
+      width: 30% !important;
+      background: #dcdcdc;
+      padding: 4px 6px !important;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+  
+    .shelf-life td.body {
+      width: 70% !important;
+      padding: 6px !important;
+      font-size: 10px;
+    }
+  
+    .note {
+      margin-top: 30px;
+      font-size: 9px;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    .note div {
+      text-align: center;
+    }
+  
+    .signature-grid {
+      width: 100% !important;
+      margin-top: 30px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin-left: 0;
+      margin-right: 0;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+  
+    .signature-grid .line {
+      border-top: 1px dotted #000;
+      padding-top: 6px;
+    }
 </style>
 
