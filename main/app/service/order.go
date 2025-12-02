@@ -2980,10 +2980,6 @@ func (s *orderSrv) getDecreaseStockList(_ context.Context, cookingDeductSaleOrde
 				}
 				// 遍历原材料
 				for _, material := range sauceMaterials {
-					// 防止空指针
-					if material == nil {
-						continue
-					}
 					// 防止 Material 为空
 					if material.Material == nil {
 						continue
