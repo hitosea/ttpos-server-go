@@ -53,6 +53,8 @@ check_dependencies
 
 # ============== 配置 ==============
 LOKI_URL="${CURSOR_LOKI_URL:-https://3100--main--erpnext--bendaye.coder.hitosea.com}"
+LOKI_USER="${CURSOR_LOKI_USER:-contributors@ttpos.com}"
+LOKI_PASS="${CURSOR_LOKI_PASS:-Contributors001}"
 APP_NAME="cursor-agent"
 
 # ============== 读取输入 ==============
@@ -202,7 +204,13 @@ payload=$(jq -n \
   }') || exit 0
 
 # ============== 异步推送 (fire-and-forget) ==============
+CURL_AUTH=""
+if [[ -n "$LOKI_USER" && -n "$LOKI_PASS" ]]; then
+  CURL_AUTH="-u ${LOKI_USER}:${LOKI_PASS}"
+fi
+
 (curl -s -X POST "${LOKI_URL}/loki/api/v1/push" \
+  $CURL_AUTH \
   -H "Content-Type: application/json" \
   -d "$payload" \
   --connect-timeout 2 \
