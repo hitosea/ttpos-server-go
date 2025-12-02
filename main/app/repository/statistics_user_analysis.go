@@ -55,8 +55,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 		}
 		err = queryDb.Table(statisticsSaleTable+" AS ss").
 			Select("ss.nationality_uuid, COALESCE(NULLIF(mln."+langField+", ''), NULLIF(mln.en_name, ''), 'Unknown') AS name, COUNT(DISTINCT ss.sale_bill_uuid) AS order_count").
-			Joins("LEFT JOIN "+nationalityTable+" AS n ON ss.nationality_uuid = n.uuid AND n.delete_time = ?", constant.NotDeleted).
-			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON n.multi_language_name_uuid = mln.uuid AND mln.delete_time = ?", constant.NotDeleted).
+			Joins("LEFT JOIN "+nationalityTable+" AS n ON ss.nationality_uuid = n.uuid").
+			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON n.multi_language_name_uuid = mln.uuid").
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
 			Where("ss.nationality_uuid > 0").
 			Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery).
@@ -112,8 +112,8 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 				"END AS name, "+
 				"COUNT(DISTINCT ss.sale_bill_uuid) AS order_count").
 			Joins("LEFT JOIN "+saleBillTable+" AS sb ON ss.sale_bill_uuid = sb.uuid AND sb.delete_time = ?", constant.NotDeleted).
-			Joins("LEFT JOIN "+orderSourceTable+" AS os ON ss.order_source_uuid = os.uuid AND os.delete_time = ?", constant.NotDeleted).
-			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON os.multi_language_name_uuid = mln.uuid AND mln.delete_time = ?", constant.NotDeleted).
+			Joins("LEFT JOIN "+orderSourceTable+" AS os ON ss.order_source_uuid = os.uuid").
+			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON os.multi_language_name_uuid = mln.uuid").
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
 			Where("sb.bill_type = ?", constant.SaleBillTypeInstant).
 			Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery).
