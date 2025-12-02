@@ -1466,6 +1466,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_group` (
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐UUID',
     `group_type` INT(10) NOT NULL DEFAULT 0 COMMENT '分组类型 0-固定 1-可选',
     `optional_count` INT(11) NOT NULL DEFAULT 0 COMMENT '可选数量，表示本组商品中要求选择多少个商品',
+    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -135,7 +135,7 @@ func (r *productPackageGroupRepoImpl) DestroyProductPackageGroupItem(opts ...DBO
 // GetProductPackageGroup 获取商品套餐组
 func (r *productPackageGroupRepoImpl) GetProductPackageGroup(opts ...DBOption) (*model.ProductPackageGroup, error) {
 	var productPackageGroup model.ProductPackageGroup
-	db := r.db
+	db := r.db.Order("sort ASC, id ASC") // 按 sort 字段升序排序，相同 sort 值时按 id 升序排序
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -187,6 +187,8 @@ func (r *productPackageGroupRepoImpl) GetProductPackageGroupItems(opts ...DBOpti
 func (r *productPackageGroupRepoImpl) WithProductPackageGroup(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackageGroup", func(db *gorm.DB) *gorm.DB {
+			// 按 sort 字段升序排序，相同 sort 值时按 id 升序排序
+			db = db.Order("sort ASC, id ASC")
 			for _, opt := range opts {
 				db = opt(db)
 			}

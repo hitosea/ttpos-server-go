@@ -6660,7 +6660,9 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 	multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 	productBomRepo := repository.NewProductBomRepo(tx)
 
-	for _, group := range groupList {
+	// 根据数组索引设置排序值
+	for index, group := range groupList {
+		sortValue := index + 1 // 排序从 1 开始
 		if group.IsDelete {
 			err := productPackageGroupRepo.DeleteProductPackageGroup(
 				commonRepo.WhereByUuid(group.Uuid),
@@ -6699,6 +6701,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					ProductPackageUuid:    productPackageUuid,
 					GroupType:             group.GroupType,
 					OptionalCount:         group.OptionalCount,
+					Sort:                  sortValue, // 设置排序值
 				})
 				if err != nil {
 					return errors.WithMessage(err, "保存套餐组失败")
@@ -6758,6 +6761,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					"name":           group.LocaleName.ToJson(),
 					"group_type":     group.GroupType,
 					"optional_count": group.OptionalCount,
+					"sort":           sortValue, // 更新排序值
 				}, commonRepo.WhereByUuid(group.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新套餐组失败")

@@ -204,6 +204,8 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 					Query: "ProductPackageGroups",
 					Args: []any{
 						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+						CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
+						CommonRepo.DBOption(CommonRepo.SortWithID("ASC")),
 					},
 				},
 			)),
@@ -469,6 +471,10 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 			},
 			WithPreload{
 				Query: "ProductPackageGroups",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
+					CommonRepo.DBOption(CommonRepo.SortWithID("ASC")),
+				},
 			},
 			WithPreload{
 				Query: "ProductPackageGroups.MultiLanguageName",
