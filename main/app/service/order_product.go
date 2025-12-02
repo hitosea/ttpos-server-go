@@ -1762,7 +1762,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			products := saleOrder.GetProductList(option.UnorderedH5Product == repository.OrderedH5ProductWithReject, businessSetting.OpenIsBatch())
+			products := saleOrder.GetProductList(ctx.GetVersion(), option.UnorderedH5Product == repository.OrderedH5ProductWithReject, businessSetting.OpenIsBatch())
 			productList = append(productList, products...)
 		}
 
