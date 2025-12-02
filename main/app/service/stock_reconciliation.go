@@ -460,7 +460,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		return errors.New("盘点单不存在")
 	}
 
-	if stockReconciliation.Warehouse != nil && stockReconciliation.Warehouse.IsDisabled() {
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) && stockReconciliation.Warehouse != nil && stockReconciliation.Warehouse.IsDisabled() {
 		return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
 	}
 
@@ -537,7 +537,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		if err != nil {
 			logger.Logger.Error("提交盘点单失败", zap.Error(err))
 			// 检查是否是仓库禁用错误
-			if strings.Contains(err.Error(), "Disabled Warehouse") {
+			if ctx.Version(context.GTE, constant.ClientVersionV2100) && strings.Contains(err.Error(), "Disabled Warehouse") {
 				return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
 			}
 			// 提取物品名称
@@ -644,7 +644,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 	}
 
 	// 检查仓库是否被禁用
-	if stockReconciliation.Warehouse != nil && stockReconciliation.Warehouse.IsDisabled() {
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) && stockReconciliation.Warehouse != nil && stockReconciliation.Warehouse.IsDisabled() {
 		return nil, errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
 	}
 
@@ -761,7 +761,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 			if err != nil {
 				logger.Logger.Error("审核盘点单失败", zap.Error(err))
 				// 检查是否是仓库禁用错误
-				if strings.Contains(err.Error(), "Disabled Warehouse") {
+				if ctx.Version(context.GTE, constant.ClientVersionV2100) && strings.Contains(err.Error(), "Disabled Warehouse") {
 					return errors.NewWithCode(constant.CodeWarehouseDisabled, i18n.Translate(ctx.GetLanguage(), "仓库状态已关闭，请修改仓库状态"))
 				}
 				// 提取物品名称
@@ -901,9 +901,6 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	if warehouse == nil || warehouse.Type != constant.WarehouseTypeNormal {
 		return nil, nil, errors.New("仓库参数错误")
 	}
-	if warehouse.IsDisabled() {
-		return nil, nil, errors.New("仓库状态已关闭，请修改仓库状态")
-	}
 
 	// 判断盘点物品明细列表是否正确，要求所有物品均为仓库内的物品，且单位均为仓库内物品的单位
 	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
@@ -973,7 +970,7 @@ func (s *stockReconciliationSrv) getIsInventoryStatusException(bookedQuantity de
 func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) {
 
 	var listResp resp.StockReconciliationCheckMaterialsListResp
-	var itemResp []resp.StockReconciliationCheckMaterialsResp
+	itemResp := make([]resp.StockReconciliationCheckMaterialsResp, 0)
 
 	db := ctx.GetDB()
 
@@ -1042,14 +1039,14 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 		}
 	}
-
+	var warehouseDisabled bool
 	if checkReq.WarehouseUuid != 0 && ctx.Version(context.GTE, constant.ClientVersionV2100) {
 		warehouseRepo := repository.NewWarehouseRepo(db)
 		warehouse, err := warehouseRepo.GetByUuid(checkReq.WarehouseUuid)
 		if err != nil {
 			return listResp, errors.WithMessage(errors.New("查询仓库失败"), err.Error())
 		}
-		listResp.WarehouseDisabled = warehouse != nil && warehouse.IsDisabled()
+		warehouseDisabled = warehouse != nil && warehouse.IsDisabled()
 	}
 
 	if len(checkReq.Items) > 0 {
@@ -1078,7 +1075,8 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 	}
 
 	return resp.StockReconciliationCheckMaterialsListResp{
-		List: itemResp,
+		List:              itemResp,
+		WarehouseDisabled: warehouseDisabled,
 	}, nil
 }
 
