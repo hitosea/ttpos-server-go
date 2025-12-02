@@ -897,7 +897,7 @@ func (model *SaleOrder) SetActivityCancel() {
 	defer model.SetUpdate() // 标记更新
 	model.FullReductionActivityUuid = 0
 	model.FullReductionActivityMessage = ""
-	model.ActivityAmount = 0
+	//model.ActivityAmount = 0
 }
 
 // 设置整单折扣，并修改订单商品的折扣
