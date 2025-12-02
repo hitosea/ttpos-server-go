@@ -457,6 +457,21 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				})
 			}
 
+			describeI18n := dto.LocaleResponse{
+				ZH:   product.Describe,
+				TH:   product.Describe,
+				EN:   product.Describe,
+				ZHTW: product.Describe,
+				JA:   product.Describe,
+				KO:   product.Describe,
+				MY:   product.Describe,
+				TR:   product.Describe,
+				SV:   product.Describe,
+			}
+			if product.DescribeMultiLanguageNameUuid > 0 && product.DescribeMultiLanguageName.Uuid > 0 {
+				describeI18n = product.DescribeMultiLanguageName.GetNames()
+			}
+
 			packageItem := product_resp.Product{
 				Uuid:       product.Uuid,
 				Image:      image,
@@ -474,7 +489,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				FirstCategoryUuid:   product.ProductCategory.GetFirstCategoryUuid(),
 				Detail:              product.Detail,
 				Describe:            product.Describe,
-				DescribeI18n:        product.DescribeMultiLanguageName.GetNames(),
+				DescribeI18n:        describeI18n,
 				IsShowKitchen:       product.IsShowKitchen,
 				ProductType:         product.ProductType,
 				Flavors: product_resp.ProductFlavorList{
