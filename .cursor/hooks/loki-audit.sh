@@ -125,8 +125,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS: 秒级时间戳 + 补零
   timestamp="$(date -u +%s)000000000"
 else
-  # Linux: 支持纳秒
-  timestamp=$(date -u +%s%N | head -c 16)
+  # Linux: 支持纳秒 (19位)
+  timestamp=$(date -u +%s%N)
 fi
 
 # ============== 构建日志行 ==============
