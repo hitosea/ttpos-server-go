@@ -11,19 +11,51 @@ description: 项目结构快速定位
 
 ## 快速定位
 
-| 我要找...                | 路径                              |
-| ------------------------ | --------------------------------- |
-| **Go Main 核心业务**     | `main/app/`                       |
-| **PHP 管理后台**         | `admin/app/admin/`                |
-| **PHP 店铺后台**         | `admin/app/shop/`                 |
-| **Go BMP 微服务**        | `ttpos-bmp/app/ttpos-*/`          |
-| **前端管理后台**         | `admin/views/admin/`              |
-| **前端店铺后台**         | `admin/views/shop/`               |
-| **数据库迁移**           | `admin/database/migrations/`      |
-| **Docker 配置**          | `docker/`                         |
-| **项目文档**             | `docs/`                           |
-| **API 定义**             | `ttpos-api/`                      |
-| **工具脚本**             | `ttpos-scripts/`, `scripts/`      |
+| 我要找...            | 路径                         |
+| -------------------- | ---------------------------- |
+| **新前端管理后台**   | `ttpos-flutter/apps/shop`     |
+| **新前端管理后台**   | `ttpos-flutter/apps/shop`    |
+| **新前端管理后台**   | `ttpos-flutter/apps/shop`     |
+| **Go Main 核心业务** | `main/app/`                  |
+| **打印模块（Main）** | `main/app/printer/` 详见 `go-printer.mdc` |
+| **PHP 管理后台**     | `admin/app/admin/`           |
+| **PHP 店铺后台**     | `admin/app/shop/`            |
+| **Go BMP 微服务**    | `ttpos-bmp/app/ttpos-*/`     |
+| **前端管理后台**     | `admin/views/admin/`         |
+| **前端店铺后台**     | `admin/views/shop/`          |
+| **数据库迁移**       | `admin/database/migrations/` |
+| **Docker 配置**      | `docker/`                    |
+| **项目文档**         | `docs/`                      |
+| **API 定义**         | `ttpos-api/`                 |
+| **工具脚本**         | `ttpos-scripts/`             |
+---
+
+## 根目录结构与目录命名规则（当前仓库）
+
+> 本仓库是一个多模块单体 + 多项目仓库，顶层目录已经约定俗成，**禁止随意新增新的一级目录**。
+
+```text
+.
+├── admin/          # PHP 管理后台 + 店铺后台（ThinkPHP）
+├── main/           # Go Main 核心后端（Gin 单体）
+├── ttpos-flutter/  # 多终端 Flutter 前端工程 / 新管理端（对接的是main，与php没有关联关系）
+├── ttpos-bmp/      # Go BMP 业务中台微服务（GoFrame）
+├── ttpos-api/      # 公共 API / SDK 定义与复用代码
+├── ttpos-scripts/  # 脚本与运维工具（独立仓库式管理）
+├── docker/         # Docker / Compose / 中间件配置
+├── docs/           # 文档体系（与 AGENTS.md 说明保持一致）
+└── 其他文件         # 仓库级配置（makefile、compose 文件、README 等）
+```
+
+**目录规则与约束：**
+
+- **禁止新增一级目录**：如需新增模块，优先在现有模块内扩展，例如：
+  - Go 业务 → 放在 `main/app/` 或 `ttpos-bmp/app/ttpos-*/` 下
+  - PHP 业务 → 放在 `admin/app/{admin,shop,common}/` 下
+  - 新管理端 → 优先 `ttpos-flutter/apps/shop` 中
+- **文档统一放在 `docs/`**，按 `agent/human/shared/team` 分类，不在源码目录里随意新建 `docs/`。
+- **脚本优先放在模块内的 `scripts/` 或根 `ttpos-scripts/`**，不要在任意目录下散落脚本文件。
+- **调试/临时文件禁止入库**：如本地证书、日志、临时导出文件等，统一走 `.gitignore` 或放在 `runtime/` / `tmp/`。
 
 ---
 
@@ -44,7 +76,11 @@ main/app/
 │   └── resp/         # 响应数据
 ├── constant/         # 常量定义
 ├── errors/           # 错误处理
-└── event/            # 事件处理
+├── event/            # 事件处理
+└── printer/          # 打印模块（详见 .cursor/rules/go-printer.mdc）
+    ├── template/          # 标准打印模板（硬编码，按打印机型号）
+    ├── template_struct/   # 打印数据结构定义
+    └── pkg/               # 打印引擎和自定义模板配置
 ```
 
 ### 2. Admin 模块（PHP + ThinkPHP）
@@ -67,7 +103,7 @@ admin/
 │   └── seeds/              # 种子文件
 └── views/                  # 前端代码（Vue3）
     ├── admin/              # 管理后台前端
-    └── shop/               # 店铺后台前端
+    └── shop/               # 店铺后台前端 (它不是新的管理后台)
 ```
 
 ### 3. BMP 模块（Go + GoFrame）
@@ -107,6 +143,7 @@ ttpos-*/
 ## 🔌 服务通信
 
 ### 内部通信
+
 ```
 Main ←→ BMP-ERP (gRPC)
 Main ←→ BMP-Message (gRPC)
@@ -117,7 +154,8 @@ Frontend ←→ Main (HTTP API)
 ```
 
 ### 事件通信
-- **内存事件总线**: Main模块内部（同步/异步）
+
+- **内存事件总线**: Main 模块内部（同步/异步）
 - **RocketMQ**: 跨服务异步通信
 - **WebSocket**: 实时推送
 
@@ -141,6 +179,7 @@ API 层 (Controller/API)
 - ❌ 禁止循环依赖
 
 **特殊规则**：
+
 - ✅ Service 可以依赖其他 Service
 - ❌ Service 不能依赖 Repository
 - ❌ Repository 不能持有 DBManager（只持有 db）
@@ -183,16 +222,79 @@ docs/                   # 项目文档
 
 ---
 
+## 服务对象与终端视角（与 ttpos-flutter 对齐）
+
+从业务使用者的角度看，系统面向多个前端终端提供能力（如 `pos`、`shop`、`kds`、`qds`、`assistant`、`tablet`、`kiosk`、`mobile`、`menu`、`member` 等）。这些终端的 UI 与交互主要在 `ttpos-flutter` 仓库和本仓库的前端代码中实现，本仓库中的 `main`、`admin`、`ttpos-bmp` 等模块，则通过 HTTP API、gRPC、消息队列与 WebSocket 为其提供统一的后端支撑。
+
+- **C 端终端**（顾客 / 会员使用，如 `kiosk`、`mobile`、`menu`、`member`）
+
+  - 主要消费订单、菜品、营销、会员等能力
+  - 通过 Nginx 反向代理访问 `main`/`ttpos-bmp` 提供的接口，部分场景配合 `ttpos-websocket` 做实时状态推送
+  - 相关改动重点关注「下单/支付闭环」与「会员资产（积分/储值/优惠券）」的一致性
+
+- **B 端终端**（门店与总部内部使用，如 `pos`、`assistant`、`tablet`、`shop`、`kds`、`qds`）
+  - 通过 `admin` + `main` + `ttpos-bmp` 组合提供的 API、报表与配置服务完成日常经营
+  - 涉及收银流程、出餐流转、门店配置的改动往往会同时影响多个终端，属于高风险或中高风险区域
+
+在进行后端设计和改动时，应先明确：
+
+1. 这个改动会影响到**哪些终端**（pos/shop/kds/qds/assistant/tablet/kiosk/mobile/menu/member）？
+2. 这些终端背后的**用户角色**是谁（顾客、收银员、店长、运营、后厨等）？
+3. 是否触及**资金闭环或会员资产**，以及是否可能导致多终端之间的状态不一致？
+
+### 前端技术栈说明
+
+**重要规则：架构图和文档中应明确前端技术栈，避免混淆**
+
+- ✅ **新管理端（Shop）**: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/shop`
+- ✅ **所有用户端终端**（pos/kds/qds/assistant/tablet/kiosk/mobile/menu/member）: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/`
+- ✅ **旧管理后台和店铺后台**: 使用 **Vue 3 + TypeScript**，位于 `admin/views/`
+
+**架构图规范**：
+
+- ❌ **禁止使用** "Vue Frontend" 作为通用前端标识（容易误解）
+- ✅ **推荐使用** "新管理端 (Flutter)" 或 "Shop Management Frontend (Flutter)"
+- ✅ **或使用** 具体终端名称（如 "Shop App (Flutter)"）
+
+**文档规范**：
+
+- 在 Spec 文档中明确说明前端技术栈
+- 新管理端功能应标注为 Flutter，不是 Vue
+- 旧管理后台功能应标注为 Vue3
+
+### 终端与 API 路径快速映射（main 模块）
+
+> 仅列出主调用入口，所有终端的登录/鉴权等通用能力由 `/api/v1/passport` 提供。
+
+| 终端          | 主要 API 前缀       | Go 路由分组            | 说明            |
+| ------------- | ------------------- | ---------------------- | --------------- |
+| **pos**       | `/api/v1/cashier`   | `app/api/v1/cashier`   | 收银端          |
+| **shop**      | `/api/v1/shop`      | `app/api/v1/shop`      | 商家/门店管理端 |
+| **kds**       | `/api/v1/kitchen`   | `app/api/v1/kitchen`   | 厨房端（厨显）  |
+| **qds**       | `/api/v1/callboard` | `app/api/v1/callboard` | 排号叫号端      |
+| **assistant** | `/api/v1/assistant` | `app/api/v1/assistant` | 点餐助手端      |
+| **tablet**    | `/api/v1/tablet`    | `app/api/v1/tablet`    | 平板端          |
+| **mobile**    | `/api/v1/h5`        | `app/api/v1/h5`        | H5 扫码点餐端   |
+| **menu**      | `/api/v1/menu`      | `app/api/v1/menu`      | 电子菜单端      |
+| **member**    | `/api/v1/member`    | `app/api/v1/member`    | 会员端          |
+| **kiosk**     | `/api/v1/kiosk`     | `app/api/v1/kiosk`     | 自助点餐机      |
+
+其他内部或管理向 API 前缀（如 `/api/v1/admin`、`/api/v1/internal`）主要面向管理后台或服务间调用，通常不直接暴露给终端用户界面。
+
+只有在终端视角与 API 路径层面都澄清上述问题，才能更准确地评估改动风险等级，并选择合适的发布与回滚策略；如需查看各终端更细粒度的场景与风险说明，请参考 `ttpos-flutter` 仓库中的 `intro.mdc` 与 `structs.mdc`。
+
+---
+
 ## 禁止依赖
 
-| 禁止                             | 原因                     |
-| -------------------------------- | ------------------------ |
-| Service → Repository             | Service 只能依赖 Service |
-| Repository → Service             | 不能向上依赖             |
-| Controller → Repository          | 必须通过 Service         |
+| 禁止                                 | 原因                     |
+| ------------------------------------ | ------------------------ |
+| Service → Repository                 | Service 只能依赖 Service |
+| Repository → Service                 | 不能向上依赖             |
+| Controller → Repository              | 必须通过 Service         |
 | ttpos-bmp 修改 dao/entity/do/service | 自动生成，修改会被覆盖   |
-| API 层包含业务逻辑               | 职责单一                 |
-| Repository 持有 DBManager        | 只能持有 db 实例         |
+| API 层包含业务逻辑                   | 职责单一                 |
+| Repository 持有 DBManager            | 只能持有 db 实例         |
 
 ---
 

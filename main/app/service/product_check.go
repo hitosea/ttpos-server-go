@@ -19,6 +19,7 @@ import (
 type IProductCheckSrv interface {
 	CheckProductType(typ int) error                                                                                             // 检查商品类型
 	CheckProductName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                     // 检查商品名称
+	CheckProductSellingPoint(ctx context.Context, localeName dto.LocaleResponse) error                                          // 检查商品卖点
 	CheckMaterialName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                    // 检查物品名称
 	CheckProductCategory(db *gorm.DB, categoryUuid uint64) error                                                                // 检查商品分类
 	CheckProductUnique(db *gorm.DB, uuid uint64) error                                                                          // 检查商品唯一性
@@ -74,6 +75,17 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, loc
 	}
 	if !localeName.CheckLenLocal(storeLanguages, 150) {
 		return errors.New("名称长度不能超过150")
+	}
+	return nil
+}
+
+func (s *productCheckSrv) CheckProductSellingPoint(ctx context.Context, localeName dto.LocaleResponse) error {
+	if localeName.IsNull() {
+		return nil
+	}
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !localeName.CheckLenLocal(storeLanguages, 500) {
+		return errors.New("卖点长度不能超过500")
 	}
 	return nil
 }
@@ -544,18 +556,23 @@ type CheckProductPackageParam struct {
 }
 
 type CheckProductPackageGroupParam struct {
-	Uuid       uint64                                 `json:"uuid"`        // 套餐组UUID
-	LocaleName dto.LocaleResponse                     `json:"locale_name"` // 套餐组名称
-	IsDelete   bool                                   `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
-	Products   []CheckProductPackageGroupProductParam `json:"products"`    // 商品套餐组商品列表
+	Uuid          uint64                                 `json:"uuid"`           // 套餐组UUID
+	LocaleName    dto.LocaleResponse                     `json:"locale_name"`    // 套餐组名称
+	GroupType     int                                    `json:"group_type"`     // 分组类型 0-固定 1-可选
+	OptionalCount int                                    `json:"optional_count"` // 可选数量（可选分组时有效）
+	IsDelete      bool                                   `json:"is_delete"`      // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Products      []CheckProductPackageGroupProductParam `json:"products"`       // 商品套餐组商品列表
 }
 
 type CheckProductPackageGroupProductParam struct {
-	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
-	Num      float64 `json:"num"`       // 商品数量
-	Sort     int     `json:"sort"`      // 商品排序
-	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid       uint64  `json:"uuid"`        // 套餐商品UUID
+	BomUuid    uint64  `json:"bom_uuid"`    // 商品BOM UUID
+	Num        float64 `json:"num"`         // 商品数量
+	Sort       int     `json:"sort"`        // 商品排序
+	AddPrice   float64 `json:"add_price"`   // 加价金额，默认0
+	IsRequired int     `json:"is_required"` // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`  // 默认选中 0-默认不选中 1-默认选中
+	IsDelete   bool    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 type CheckProductPackageResult struct {
@@ -565,18 +582,23 @@ type CheckProductPackageResult struct {
 }
 
 type CheckProductPackageGroupResult struct {
-	Uuid       uint64                                  `json:"uuid"`        // 套餐组UUID
-	LocaleName dto.LocaleResponse                      `json:"locale_name"` // 套餐组名称
-	IsDelete   bool                                    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
-	Products   []CheckProductPackageGroupProductResult `json:"products"`    // 商品套餐组商品列表
+	Uuid          uint64                                  `json:"uuid"`           // 套餐组UUID
+	LocaleName    dto.LocaleResponse                      `json:"locale_name"`    // 套餐组名称
+	GroupType     int                                     `json:"group_type"`     // 分组类型 0-固定 1-可选
+	OptionalCount int                                     `json:"optional_count"` // 可选数量（可选分组时有效）
+	IsDelete      bool                                    `json:"is_delete"`      // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Products      []CheckProductPackageGroupProductResult `json:"products"`       // 商品套餐组商品列表
 }
 
 type CheckProductPackageGroupProductResult struct {
-	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
-	Num      float64 `json:"num"`       // 商品数量
-	Sort     int     `json:"sort"`      // 商品排序
-	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid       uint64  `json:"uuid"`        // 套餐商品UUID
+	BomUuid    uint64  `json:"bom_uuid"`    // 商品BOM UUID
+	Num        float64 `json:"num"`         // 商品数量
+	Sort       int     `json:"sort"`        // 商品排序
+	AddPrice   float64 `json:"add_price"`   // 加价金额，默认0
+	IsRequired int     `json:"is_required"` // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`  // 默认选中 0-默认不选中 1-默认选中
+	IsDelete   bool    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error) {
@@ -614,7 +636,26 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 		if !isDelete && len(group.Products) == 0 {
 			return nil, errors.New("商品不能为空")
 		}
+		// 验证分组类型
+		if !isDelete {
+			if group.GroupType != 0 && group.GroupType != 1 {
+				return nil, errors.New("分组类型必须为0（固定）或1（可选）")
+			}
+			// 固定分组时，可选数量应等于商品总数
+			if group.GroupType == 0 {
+				group.OptionalCount = len(group.Products)
+			}
+			// 验证可选数量
+			if group.GroupType == 1 && group.OptionalCount < 1 {
+				return nil, errors.New("可选数量必须 >= 1")
+			}
+			// 验证可选数量不能小于1
+			if group.OptionalCount < 1 {
+				return nil, errors.WithMessage(errors.New("可选数量不能小于1"))
+			}
+		}
 		products := make([]CheckProductPackageGroupProductResult, 0)
+		requiredOrDefaultCount := 0 // 统计必选或默认的商品数量（去重）
 		for _, product := range group.Products {
 			if isDelete {
 				product.IsDelete = true
@@ -630,6 +671,21 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 					}
 				}
 				if !product.IsDelete {
+					// 验证必选和默认选中字段
+					if product.IsRequired != 0 && product.IsRequired != 1 {
+						return nil, errors.New("必选字段必须为0（不必选）或1（必选）")
+					}
+					if product.IsDefault != 0 && product.IsDefault != 1 {
+						return nil, errors.New("默认选中字段必须为0（不默认选中）或1（默认选中）")
+					}
+					// 统计必选或默认的商品数量（去重：一个商品既是必选又是默认，只算一个）
+					if product.IsRequired == 1 || product.IsDefault == 1 {
+						requiredOrDefaultCount++
+					}
+					// 验证加价金额
+					if product.AddPrice < 0 {
+						return nil, errors.New("加价金额不能为负数")
+					}
 					bom, _ := productRepo.GetProductBom(
 						commonRepo.WhereBySoftDelete(),
 						productRepo.WhereUuid(product.BomUuid),
@@ -651,11 +707,19 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 			}
 			products = append(products, CheckProductPackageGroupProductResult(product))
 		}
+		// 验证必选或默认商品数量不能大于可选数量
+		if !isDelete && group.GroupType == 1 {
+			if requiredOrDefaultCount > group.OptionalCount {
+				return nil, errors.New("必选或默认不可大于可选数量")
+			}
+		}
 		groups = append(groups, CheckProductPackageGroupResult{
-			Uuid:       group.Uuid,
-			LocaleName: group.LocaleName,
-			IsDelete:   group.IsDelete,
-			Products:   products,
+			Uuid:          group.Uuid,
+			LocaleName:    group.LocaleName,
+			GroupType:     group.GroupType,
+			OptionalCount: group.OptionalCount,
+			IsDelete:      group.IsDelete,
+			Products:      products,
 		})
 		if !isDelete {
 			count++

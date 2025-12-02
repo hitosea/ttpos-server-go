@@ -19,7 +19,7 @@ var DeskReqMessage = map[string]string{
 type DeskListReq struct {
 	Status      int `form:"status,default=-1"`    // 桌台状态, -1=全都、 0=未开台、1=已开台, 2=已开台不等于待清台
 	IsBuffet    int `form:"is_buffet,default=-1"` // 是否是自助餐: -1=全都、0=否、1=是
-	dto.PageReq                                   // 分页参数
+	dto.PageReq     // 分页参数
 }
 
 // DeskInfoReq 桌台信息
@@ -59,6 +59,8 @@ type DeskOrderCreateReq struct {
 	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1
 	Remark              string                   `json:"remark"`                // 备注: 最小空字符串,最大50字符
+	OrderSourceUuid     uint64                   `json:"order_source_uuid"`     // 订单来源UUID（0=店内，>0=外卖），可选
+	NationalityUuid     uint64                   `json:"nationality_uuid"`      // 国籍UUID（0=未记录），可选
 }
 
 type GetMemberOrderCheckoutInfoReq struct {

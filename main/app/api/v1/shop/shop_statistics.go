@@ -390,6 +390,31 @@ func (h *statisticsHandler) ExportKitchenProductionDetail(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ExportProductSales 导出商品销售统计
+// @Summary 导出商品销售统计
+// @Description 导出商品销售统计数据
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountProductSalesReq true "统计参数"
+// @Success 200 {object} dto.Response "导出成功"
+// @Router /shop/statistics/product_sales/export [get]
+func (h *statisticsHandler) ExportProductSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountProductSalesReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	err := h.businessSrv.ExportProductSales(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // CountBusinessTimePeriod 统计营业时段数据
 // @Summary 统计营业时段数据
 // @Description 移动端-报表-营业报表-时段营业统计
@@ -554,6 +579,110 @@ func (h *statisticsHandler) ExportBusinessPaymentMethod(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ChannelSales 渠道营业统计查询
+// @Summary 渠道营业统计查询
+// @Description 渠道营业统计查询
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response{data=resp.ChannelSalesResp} "统计数据"
+// @Router /shop/statistics/channel_sales [get]
+func (h *statisticsHandler) ChannelSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.ChannelSalesReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	resp, err := h.businessSrv.CountChannelSales(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
+// ExportChannelSales 导出渠道营业统计
+// @Summary 导出渠道营业统计
+// @Description 导出渠道营业统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response "导出任务已创建"
+// @Router /shop/statistics/channel_sales/export [get]
+func (h *statisticsHandler) ExportChannelSales(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.ChannelSalesReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	err := h.businessSrv.ExportChannelSales(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// UserAnalysis 用户分析统计查询
+// @Summary 用户分析统计查询
+// @Description 用户分析统计查询
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response{data=resp.UserAnalysisResp} "统计数据"
+// @Router /shop/statistics/user_analysis [get]
+func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.UserAnalysisReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	resp, err := h.businessSrv.CountUserAnalysis(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
+// ExportUserAnalysis 导出用户分析统计
+// @Summary 导出用户分析统计
+// @Description 导出用户分析统计
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param start_time query int64 false "开始时间戳（Unix秒）"
+// @param end_time query int64 false "结束时间戳（Unix秒）"
+// @Success 200 {object} dto.Response "导出任务已创建"
+// @Router /shop/statistics/user_analysis/export [get]
+func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.UserAnalysisReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	err := h.businessSrv.ExportUserAnalysis(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -581,6 +710,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/area", wrapper.CountArea)                                                     // 统计区域，移动管理端首页-区域数据
 		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)                                      // 统计商品排行，移动管理端首页-销量、销售额排行
 		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)                                    // 统计商品销售
+		privateApi.GET("/statistics/product_sales/export", wrapper.ExportProductSales)                            // 导出商品销售统计
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                                                   // 统计7天
 		privateApi.GET("/statistics/export", wrapper.CountExport)                                                 // 统计导出
 		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount)                         // 统计班次退款金额
@@ -596,5 +726,9 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/business/time_period/export", wrapper.ExportBusinessTimePeriod)               // 导出营业时段数据, 移动端-报表-营业报表-时段营业统计
 		privateApi.GET("/statistics/business/summary/export", wrapper.ExportBusinessSummary)                      // 导出综合运营统计, 移动端-报表-营业报表-综合运营统计
 		privateApi.GET("/statistics/business/payment_method/export", wrapper.ExportBusinessPaymentMethod)         // 导出营业收款统计, 移动端-报表-营业报表-支付方式统计
+		privateApi.GET("/statistics/channel_sales", wrapper.ChannelSales)                                         // 渠道营业统计查询
+		privateApi.GET("/statistics/channel_sales/export", wrapper.ExportChannelSales)                            // 导出渠道营业统计
+		privateApi.GET("/statistics/user_analysis", wrapper.UserAnalysis)                                         // 用户分析统计查询
+		privateApi.GET("/statistics/user_analysis/export", wrapper.ExportUserAnalysis)                            // 导出用户分析统计
 	}
 }

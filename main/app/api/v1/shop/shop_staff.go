@@ -28,16 +28,18 @@ type StaffHandler struct {
 // @Security JwtToken
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
+// @Param is_filter_super query int false "是否过滤超级管理员"
+// @Param keyword query string false "关键词, 姓名、邮箱、手机号"
 // @Success 200 {object} dto.Response{data=resp.StaffListPaginationResp}
 // @Router /shop/staff/list [get]
 func (h *StaffHandler) GetStaffList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var pageReq dto.PageReq
-	if err := c.ShouldBindQuery(&pageReq); err != nil {
-		helper.HandleValidationError(c, err, pageReq, dto.PageReqMessage)
+	var getStaffListReq req.GetStaffListReq
+	if err := c.ShouldBindQuery(&getStaffListReq); err != nil {
+		helper.HandleValidationError(c, err, getStaffListReq, req.GetStaffListReqReqMessage)
 		return
 	}
-	res, err := h.staffSrv.PaginateGetStaffs(ctx, pageReq)
+	res, err := h.staffSrv.PaginateGetStaffs(ctx, getStaffListReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
 		return
@@ -60,6 +62,11 @@ func (h *StaffHandler) UpdateStaff(c *gin.Context) {
 	var updateStaffReq req.UpdateStaffReq
 	if err := c.ShouldBindJSON(&updateStaffReq); err != nil {
 		helper.HandleValidationError(c, err, updateStaffReq, nil)
+		return
+	}
+	// 版本兼容性验证：低于 2.10.0 版本且权限密码为空时，设置默认值
+	if err := updateStaffReq.Validate(ctx); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, err)
 		return
 	}
 	err, exists := h.staffSrv.UpdateStaff(ctx, updateStaffReq)
@@ -87,6 +94,11 @@ func (h *StaffHandler) AddStaff(c *gin.Context) {
 	var addStaffReq req.AddStaffReq
 	if err := c.ShouldBindJSON(&addStaffReq); err != nil {
 		helper.HandleValidationError(c, err, addStaffReq, req.AddStaffRequestMessage)
+		return
+	}
+	// 版本兼容性验证：低于 2.10.0 版本且权限密码为空时，设置默认值
+	if err := addStaffReq.Validate(ctx); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, err)
 		return
 	}
 	err, exists := h.staffSrv.AddStaff(ctx, addStaffReq)

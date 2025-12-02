@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
@@ -26,13 +27,18 @@ type SaleBill struct {
 	IsSplitOrder uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
 
 	// 订单类型字段
-	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
-	DiningMethod    uint  `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
-	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
-	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
-	BuffetStartTime int64 `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
-	DelayDuration   uint  `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
-	DelayStartTime  int64 `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
+	BillType        uint   `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
+	DiningMethod    uint   `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
+	OrderSourceUuid uint64 `gorm:"column:order_source_uuid;type:bigint(20);default:0;comment:订单来源UUID（0=店内，>0=外卖）" json:"order_source_uuid"`
+	NationalityUuid uint64 `gorm:"column:nationality_uuid;type:bigint(20);default:0;comment:国籍UUID（0=未记录）" json:"nationality_uuid"`
+	NationalityName string `gorm:"column:nationality_name;type:text;default:'';comment:国籍名称快照（JSON），不随后台更新" json:"nationality_name"`
+	Source          uint   `gorm:"column:source;type:int(10);default:0;comment:订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5、5-会员端" json:"source"`
+	ClientVersion   string `gorm:"column:client_version;type:varchar(20);default:'';comment:客户端版本号（如 2.10.0、2.9.0）" json:"client_version"`
+	IsBuffet        uint   `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
+	BuffetDuration  uint   `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
+	BuffetStartTime int64  `gorm:"column:buffet_start_time;type:int(10);default:0;comment:自助餐开始时间（秒）" json:"buffet_start_time"`
+	DelayDuration   uint   `gorm:"column:delay_duration;type:int(10);default:0;comment:总延迟时长（秒）" json:"delay_duration"`
+	DelayStartTime  int64  `gorm:"column:delay_start_time;type:int(10);default:0;comment:总延迟时长开始时间（秒）" json:"delay_start_time"`
 
 	NonOrderingTime   uint `gorm:"default:0;comment:不可下单时间（分钟）"`
 	ReminderOrderTime uint `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
@@ -61,6 +67,7 @@ type SaleBill struct {
 	CustomDiscountFee float64 `gorm:"column:custom_discount_fee;type:decimal(12,2);default:0;comment:折扣费用,关联销售订单的折扣费用之和" json:"discount_fee"`
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣费用,关联销售订单的会员折扣费用之和" json:"member_discount_fee"`
 	GiftAmount        float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,关联销售订单的赠菜金额之和" json:"gift_amount"`
+	ActivityAmount    float64 `gorm:"column:activity_amount;type:decimal(20,8);default:0;comment:满减活动抵扣金额（所有sale_order的满减扣减金额总和）" json:"activity_amount"`
 	FreeAmount        float64 `gorm:"column:free_amount;type:decimal(12,2);default:0;comment:免单金额,关联销售订单的免单金额之和" json:"free_amount"`
 
 	// 时间相关字段
@@ -103,6 +110,9 @@ type SaleBill struct {
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 	BatchTag        *BatchTag         `gorm:"foreignKey:BatchTagUuid;references:uuid"`
+	OrderSource     *OrderSource      `gorm:"foreignKey:OrderSourceUuid;references:uuid"`
+	Nationality     *Nationality      `gorm:"foreignKey:NationalityUuid;references:uuid"`
+	DataManage      *DataManage       `gorm:"foreignKey:DataUuid;references:uuid"`
 }
 
 // 获取自助餐套餐名称
@@ -234,7 +244,7 @@ func (model *SaleBill) GetSaleOrderProductBatchCookingBySaleOrderUuid(saleOrderP
 
 	products := make([]*SaleOrderProduct, 0)
 	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
-		if uuidMap[saleOrderProduct.Uuid] && saleOrderProduct.BatchTagUuid == 0 {
+		if uuidMap[saleOrderProduct.Uuid] && saleOrderProduct.BatchTime == 0 {
 			products = append(products, saleOrderProduct)
 		}
 	}
@@ -284,6 +294,19 @@ func (model *SaleBill) IsDeskBill() bool {
 // 是否是外送订单
 func (model *SaleBill) IsTakeoutBill() bool {
 	return model.BillType == constant.SaleBillTypeTakeout || model.MemberSaleOrderUuid != 0
+}
+
+// 是否是订单来源为外卖的订单
+func (model *SaleBill) IsOrderSourceTakeout() bool {
+	return model.OrderSourceUuid > 0
+}
+
+// 获取订单来源为外卖的文本
+func (model *SaleBill) GetOrderSourceTakeoutText() string {
+	if model.IsOrderSourceTakeout() {
+		return "外卖"
+	}
+	return ""
 }
 
 // 销售账单是否已经使用了通用优惠券
@@ -659,4 +682,72 @@ func (model *SaleBill) NewH5Order(companySetting CompanySetting) (*H5Order, erro
 		H5OrderProducts: h5OrderProductList,               // 订单商品
 		IsNeedAudit:     companySetting.IsOpenH5Order,     // 是否需要审核，关闭商家扫码点餐接单，则不需要审核
 	}, nil
+}
+
+// ShouldFinishBillAfterDelete 判断删除指定订单后，剩余订单是否全部已结账
+// 参数：deleteOrderUuid - 要删除的订单UUID
+// 返回：true - 剩余订单全部已结账，应该完成账单；false - 仍有未结账订单
+func (sb *SaleBill) ShouldFinishBillAfterDelete(deleteOrderUuid uint64) bool {
+	for _, order := range sb.SaleOrders {
+		if order.Uuid == deleteOrderUuid {
+			continue // 跳过要删除的订单
+		}
+		if !order.IsSettled() {
+			return false // 存在未结账订单
+		}
+	}
+	return true // 所有剩余订单都已结账
+}
+
+// GetLocaleNationalityName 获取国籍名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-nationality-snapshot-fix
+func (model *SaleBill) GetLocaleNationalityName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.NationalityName
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.Nationality != nil && !model.Nationality.MultiLanguageName.IsNullName() {
+		return model.Nationality.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetNationalityNameSnapshot 设置国籍名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-nationality-snapshot-fix (JSON 方案)
+func (model *SaleBill) SetNationalityNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.NationalityName = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.NationalityName = string(jsonData)
+	return nil
 }

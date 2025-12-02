@@ -999,6 +999,12 @@ class Setting extends BaseModel
                     'is_auto_voice' => '0',
                     // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
                     'menu_show_sold_out' => '1',
+                    // 未点餐时轮播间隔(秒)
+                    'no_order_carousel_interval' => '10',
+                    // 点餐时展示模式 carousel/order/order_carousel
+                    'order_display_mode' => 'carousel',
+                    // 点餐时轮播间隔(秒)
+                    'order_carousel_interval' => '10',
                 ],
             ],
             SettingEnum::TABLET => [
@@ -1257,7 +1263,12 @@ class Setting extends BaseModel
                     'delivery_price_ratio' => 100,
                     'is_batch' => '0', // 是否是分批商品 0-否 1-是
                     'batch_product_uuids' => [], // 分批商品UUID列表
-                    'batch_tag_num' => 0  // 分批类型数量
+                    'batch_tag_num' => 0,  // 分批类型数量
+
+                    // 外卖功能开关 0-关闭 1-开启
+                    'enable_order_source' => '0',
+                    // 国籍功能开关 0-关闭 1-开启
+                    'enable_nationality' => '0',
                 ],
             ],
         ];

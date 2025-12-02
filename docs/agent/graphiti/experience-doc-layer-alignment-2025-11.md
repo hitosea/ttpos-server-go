@@ -13,13 +13,13 @@
 - **Owner**：`@benbige`
 - **协作者 / 审核人**：`@doc-team`
 - **Source 链接**：
-  - `AGENT.md`
+  - `AGENTS.md`
   - `.cursor/rules/workflows.mdc`
   - `docs/team/reports/document-system-assessment-2025-11-17.md`
 - **Related Docs**（相对路径）：
   - `docs/agent/workflows/feature-development.md`
   - `docs/human/README.md`
-  - `docs/shared/specs/story-order-quick-payment/requirements.md`
+  - `docs/shared/specs/active/story-order-quick-payment/requirements.md`
 - **Related Tickets/Specs**：
   - `story-order-quick-payment`
 
@@ -39,8 +39,8 @@
 
 > 记录可复用的排查流程或操作命令，保持步骤化。
 
-1. **识别场景**：阅读 `AGENT.md` 表格，确定工作流或模块（需求/功能/Bug/集成/数据库）。
-2. **加载规则**：依据 `AGENT.md` 中的“参考规范”进入 `.cursor/rules/*.mdc` 查命名、模板、约束。
+1. **识别场景**：阅读 `AGENTS.md` 表格，确定工作流或模块（需求/功能/Bug/集成/数据库）。
+2. **加载规则**：依据 `AGENTS.md` 中的“参考规范”进入 `.cursor/rules/*.mdc` 查命名、模板、约束。
 3. **跳转厚层**：按规则文件中的“查阅 docs/”路径定位 `docs/agent/`（Agent 执行）、`docs/human/`（理解）、`docs/shared/`（产出）。
 4. **执行+回链**：在厚层文档完成任务后，在尾部新增 `Related Episode` 并触发 Graphiti 模板。
 
@@ -51,13 +51,13 @@
 ```bash
 # 快速定位 3 层入口
 cd path/ttpos-server-go
-ls AGENT.md .cursor/rules/ docs/
+ls AGENTS.md .cursor/rules/ docs/
 ```
 
 ```12:40:docs/team/reports/document-system-assessment-2025-11-17.md
-| 层级 | 核心职责 | 示例入口 | 评估 |
-| --- | --- | --- | --- |
-| Layer 1：AGENT.md | 场景识别... | AGENT.md 场景表 | ... |
+| 层级               | 核心职责    | 示例入口         | 评估 |
+| ------------------ | ----------- | ---------------- | ---- |
+| Layer 1：AGENTS.md | 场景识别... | AGENTS.md 场景表 | ...  |
 ```
 
 ## 预防与后续行动

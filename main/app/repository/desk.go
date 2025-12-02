@@ -32,6 +32,7 @@ type IDeskRepo interface {
 type IDeskQueryRepo interface {
 	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
+	GetSaleBillUuidByDeskUuid(deskUuid uint64) (uint64, error)        // 通过桌台ID获取销售账单UUID（仅用于锁机制）
 	GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
 	GetDesks(opts ...DBOption) ([]*model.Desk, error)
@@ -39,6 +40,8 @@ type IDeskQueryRepo interface {
 	GetAvailableDeskList() ([]*model.Desk, error)                            // 获取所有空闲的桌台
 	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)       //
 	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                      // 通过uuid获取桌台的记录信息
+	GetDeskCountsByRegion() (map[uint64]int64, error)                        // 获取按区域分组的桌台数量
+	GetDesksByRegionUuid(regionUuid uint64) ([]model.Desk, error)            // 按区域查询桌台列表
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {
@@ -189,7 +192,7 @@ func (r *deskRepo) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, e
 		db = opt(db)
 	}
 
-	result := db.Preload("SaleBill").Preload("SaleBill.BatchTag").Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
+	result := db.Preload("SaleBill.SaleBillSetting").Preload("SaleBill.BatchTag").Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
 		return db.Scopes(NotDeleted).Order("create_time asc")
 	}).First(&desk)
 	if result.Error != nil {
@@ -307,4 +310,59 @@ func (r *deskRepo) GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, er
 	return desk, r.db.Model(&model.Desk{}).Where("uuid = ? AND delete_time = ?", deskUuid, constant.NotDeleted).Preload("SaleBill", func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", constant.SaleBillStatusPending)
 	}).First(&desk).Error
+}
+
+// GetSaleBillUuidByDeskUuid 通过桌台ID获取销售账单UUID（仅用于锁机制）
+// 这个方法只查询 sale_bill_uuid 字段，避免加载完整对象，提高性能
+func (r *deskRepo) GetSaleBillUuidByDeskUuid(deskUuid uint64) (uint64, error) {
+	var saleBillUuid uint64
+	err := r.db.Model(&model.Desk{}).
+		Select("sale_bill_uuid").
+		Where("uuid = ? AND delete_time = ?", deskUuid, constant.NotDeleted).
+		Scan(&saleBillUuid).Error
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取桌台的销售账单UUID失败")
+	}
+	return saleBillUuid, nil
+}
+
+// GetDeskCountsByRegion 获取按区域分组的桌台数量
+func (r *deskRepo) GetDeskCountsByRegion() (map[uint64]int64, error) {
+	var results []struct {
+		RegionUuid uint64
+		Count      int64
+	}
+
+	err := r.db.Model(&model.Desk{}).
+		Select("region_uuid, COUNT(*) as count").
+		Where("delete_time = ?", 0).
+		Group("region_uuid").
+		Find(&results).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询桌台数量失败")
+	}
+
+	// 转换为 map
+	countMap := make(map[uint64]int64)
+	for _, result := range results {
+		countMap[result.RegionUuid] = result.Count
+	}
+
+	return countMap, nil
+}
+
+// GetDesksByRegionUuid 按区域查询桌台列表
+func (r *deskRepo) GetDesksByRegionUuid(regionUuid uint64) ([]model.Desk, error) {
+	var desks []model.Desk
+
+	err := r.db.Model(&model.Desk{}).
+		Where("region_uuid = ? AND delete_time = ?", regionUuid, 0).
+		Find(&desks).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询桌台列表失败")
+	}
+
+	return desks, nil
 }

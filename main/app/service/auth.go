@@ -230,6 +230,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
 	case constant.SourceShop: // 移动管理端
+		// 权限获取在 shop_auth.go 中完成，这里不需要处理
 	default:
 		return loginResp, errors.New("登录来源错误")
 	}
@@ -947,8 +948,14 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
 	)
 	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
-	// 判断权限
-	permissions := []*resp.Permission{}
+
+	// 获取员工权限（使用管理APP路由名称）
+	permissions, err := s.roleAccessSrv.GetPermission(constant.ShopAppRouteName, staff.Uuid, staff.CompanyUuid)
+	if err != nil {
+		// 权限获取失败不影响基础信息获取，返回空权限数组
+		logger.Logger.Error("获取权限失败", zap.Error(err))
+		permissions = []*resp.Permission{}
+	}
 
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
@@ -974,6 +981,11 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	if err != nil {
 		return shopBase, errors.WithMessage(err)
 	}
+	// 是否有数据管理权限
+	hasDataPermission := false
+	if companySetting.EnableDataManagement == 1 && (staff.HasDataPermission == 1 || staff.IsSuper == 1) {
+		hasDataPermission = true
+	}
 
 	return resp.ShopBase{
 		Username:     staff.Username,
@@ -987,17 +999,19 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		Buffet:   buffetSetting,
 		Currency: currencySetting,
 		Company: resp.Company{ // shop
-			Uuid:           company.Uuid,
-			Name:           company.Name,
-			Logo:           utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
-			TimeZone:       companySetting.Timezone,
-			ExpireTime:     company.ExpireTime,
-			IsOpenMember:   companySetting.IsOpenMember,
-			IsOpenBuffet:   companySetting.IsOpenBuffet,
-			IsOpenH5Order:  companySetting.IsOpenH5Order,
-			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
-			IsOpenRider:    companySetting.IsOpenRider(),
-			IsEnableErp:    company.IsOpenErp(),
+			Uuid:                 company.Uuid,
+			Name:                 company.Name,
+			Logo:                 utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:             companySetting.Timezone,
+			ExpireTime:           company.ExpireTime,
+			IsOpenMember:         companySetting.IsOpenMember,
+			IsOpenBuffet:         companySetting.IsOpenBuffet,
+			IsOpenH5Order:        companySetting.IsOpenH5Order,
+			IsOpenOldOrder:       utils.IfInt(company.OldCompanyId > 0, 1, 0),
+			IsOpenRider:          companySetting.IsOpenRider(),
+			IsEnableErp:          company.IsOpenErp(),
+			IsOpenMap:            companySetting.IsOpenTableMap(),
+			IsOpenDataManagement: companySetting.IsOpenDataManagement(),
 		},
 		CloudBasic: cloudBasicSetting,
 		Profile: resp.ShopProfile{
@@ -1012,14 +1026,15 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			Language:        companySetting.GetLanguages(),
 			CompanyName:     storeSetting.Company,
 		},
-		IsTtposSite:   companySetting.IsTtposSite(),
-		IsHeadquarter: companySetting.IsHeadquarter(),
-		UpdateTime:    time.Now().Unix(),
-		ServerVersion: utils.GetVersion(),
-		IsOpenTax:     taxSetting.IsOpen == "1",
-		IsSyncing:     slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
-		LastSyncTime:  company.LastSyncTime,
-		HasChildren:   companySetting.HasChildren == 1,
+		IsTtposSite:       companySetting.IsTtposSite(),
+		IsHeadquarter:     companySetting.IsHeadquarter(),
+		UpdateTime:        time.Now().Unix(),
+		ServerVersion:     utils.GetVersion(),
+		IsOpenTax:         taxSetting.IsOpen == "1",
+		IsSyncing:         slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
+		LastSyncTime:      company.LastSyncTime,
+		HasChildren:       companySetting.HasChildren == 1,
+		HasDataPermission: hasDataPermission,
 	}, nil
 }
 

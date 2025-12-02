@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
@@ -11,48 +12,50 @@ import (
 )
 
 type IStatisticsRepo interface {
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                       // 统计销售
-	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                             // 统计销售天数
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                               // 统计支付
-	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                       // 统计支付天数
-	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                       // 统计税类
-	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                 // 统计自助餐税类
-	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                            // 统计自助餐加钟税类
-	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) // 统计分类
-	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
-	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
-	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                             // 统计区域
-	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                     // 统计销售天数
-	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                         // 统计未结订单
-	CountMemberNum(opts ...DBOption) int64                                                                                     // 统计会员数量
-	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                        // 统计会员数量天数
-	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                   // 统计会员
-	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                         // 统计会员天数
-	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                         // 统计会员支付
-	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                 // 统计会员支付天数
-	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                 // 统计商品销售
-	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                         // 统计免单支付
-	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                               // 统计免单支付天数
-	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                         // 统计取消订单
-	CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData)                  // 统计营业时段
-	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                           // 统计综合运用数据
-	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)         // 统计支付方式
-	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
-	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
-	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
-	SaveProduct(products []model.StatisticsProduct) error                                                                      // 保存商品
-	SaveCustomerType(customerTypes []model.StatisticsCustomerType) error                                                       // 保存客户类型
-	SaveDelay(delays []model.StatisticsDelay) error                                                                            // 保存加钟
-	DeleteSale(saleBillUuid uint64) error                                                                                      // 删除销售
-	DeletePayment(saleBillUuid uint64) error                                                                                   // 删除支付
-	DeleteProduct(saleBillUuid uint64) error                                                                                   // 删除商品
-	DeleteCustomerType(saleBillUuid uint64) error                                                                              // 删除客户类型
-	DeleteDelay(saleBillUuid uint64) error                                                                                     // 删除加钟
-	SaveMember(member model.StatisticsMember) error                                                                            // 保存会员
-	SaveMembers(members []model.StatisticsMember) error                                                                        // 保存会员
-	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                          // 保存会员支付
-	DeleteMember(memberRechargeOrderUuid uint64) error                                                                         // 删除会员
-	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                  // 删除会员支付
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                                                                                          // 统计销售
+	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                                                                                                // 统计销售天数
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                                  // 统计支付
+	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                          // 统计支付天数
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                          // 统计税类
+	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                    // 统计自助餐税类
+	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                               // 统计自助餐加钟税类
+	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData)                                                                    // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                 // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                                                                                        // 统计区域
+	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                                                                                                // 统计区域
+	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                                                                                        // 统计销售天数
+	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                                                                                            // 统计未结订单
+	CountMemberNum(opts ...DBOption) int64                                                                                                                                                        // 统计会员数量
+	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                                                                                           // 统计会员数量天数
+	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                                                                                      // 统计会员
+	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                                                                                            // 统计会员天数
+	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                            // 统计会员支付
+	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                    // 统计会员支付天数
+	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                                                                                    // 统计商品销售
+	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                                                                                            // 统计免单支付
+	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                                                                                                  // 统计免单支付天数
+	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                                                                                            // 统计取消订单
+	CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData)                                                                                     // 统计营业时段
+	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                                                                                              // 统计综合运用数据
+	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)                                                                            // 统计支付方式
+	CountChannelSale(startTime, endTime int64, opts ...DBOption) (map[string]*model.ChannelSaleRepoResult, error)                                                                                 // 统计渠道营业数据
+	CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) // 统计用户分析数据
+	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                                                                                    // 统计商品排行
+	SaveSale(sales []model.StatisticsSale) error                                                                                                                                                  // 保存销售
+	SavePayment(payments []model.StatisticsPayment) error                                                                                                                                         // 保存支付
+	SaveProduct(products []model.StatisticsProduct) error                                                                                                                                         // 保存商品
+	SaveCustomerType(customerTypes []model.StatisticsCustomerType) error                                                                                                                          // 保存客户类型
+	SaveDelay(delays []model.StatisticsDelay) error                                                                                                                                               // 保存加钟
+	DeleteSale(saleBillUuid uint64) error                                                                                                                                                         // 删除销售
+	DeletePayment(saleBillUuid uint64) error                                                                                                                                                      // 删除支付
+	DeleteProduct(saleBillUuid uint64) error                                                                                                                                                      // 删除商品
+	DeleteCustomerType(saleBillUuid uint64) error                                                                                                                                                 // 删除客户类型
+	DeleteDelay(saleBillUuid uint64) error                                                                                                                                                        // 删除加钟
+	SaveMember(member model.StatisticsMember) error                                                                                                                                               // 保存会员
+	SaveMembers(members []model.StatisticsMember) error                                                                                                                                           // 保存会员
+	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                                                                                             // 保存会员支付
+	DeleteMember(memberRechargeOrderUuid uint64) error                                                                                                                                            // 删除会员
+	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                                                                                     // 删除会员支付
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -72,6 +75,7 @@ var (
 	countSaleSubQuerySelect = []string{
 		"sale_bill_uuid",
 		"desk_uuid",
+		"order_source_uuid",
 		"is_meger",
 		"is_special",
 		"is_takeout",
@@ -100,54 +104,61 @@ var (
 		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_desk_order_amount",
-		"SUM(IF(desk_uuid = 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
-		"SUM(IF(desk_uuid = 0 AND is_takeout = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_takeaway_amount",
+		"SUM(IF(desk_uuid = 0 AND order_source_uuid > 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_takeaway_amount",
 		"SUM(IF(is_takeout = 1 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS takeout_order_amount",
 		"SUM(IF(is_takeout = 1, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_takeout_order_amount",
 		"complete_time",
 	}
 	// 统计销售
 	countSaleSelect = []string{
-		"SUM(t.sale_amount) AS total_sale_amount",                                                                        // 总销售额
-		"SUM(t.received_amount) AS total_received_amount",                                                                // 总实收金额
-		"SUM(t.product_price) AS total_product_price",                                                                    // 总商品原价
-		"SUM(t.product_origin_price) AS total_product_origin_price",                                                      // 总原商品金额
-		"SUM(t.product_num) AS total_product_num",                                                                        // 总商品数量
-		"SUM(t.discount_member) AS total_discount_member",                                                                // 总会员折扣
-		"SUM(t.business_amount) AS total_business_amount",                                                                // 总营业收入
-		"SUM(t.payment_fee) AS total_payment_fee",                                                                        // 总支付手续费
-		"SUM(t.service_fee) AS total_service_fee",                                                                        // 总服务费
-		"SUM(t.tax) AS total_tax",                                                                                        // 总税额
-		"SUM(t.refund_amount) AS total_refund_amount",                                                                    // 总退款金额
-		"SUM(t.discount) AS total_discount",                                                                              // 总优惠折扣
-		"SUM(t.gift_amount) AS total_gift_amount",                                                                        // 总赠菜金额
-		"SUM(t.gift_num) AS total_gift_num",                                                                              // 总赠菜数量
-		"SUM(t.free_amount) AS total_free_amount",                                                                        // 总免单金额
-		"SUM(t.free_num) AS total_free_num",                                                                              // 总免单数量
-		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",                                                               // 总订单数量
-		"SUM(t.takeout_sale_amount) AS total_takeout_sale_amount",                                                        // 总外送销售
-		"SUM(t.takeout_business_amount) AS total_takeout_business_amount",                                                // 总外送营收
-		"SUM(t.takeout_refund_amount) AS total_takeout_refund_amount",                                                    // 总外送退款金额
-		"SUM(t.takeout_delivery_fee) AS total_takeout_delivery_fee",                                                      // 总外送配送费
-		"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num",                               // 总桌台数量
-		"SUM(t.desk_order_amount) AS total_desk_order_amount",                                                            // 总桌台订单金额
-		"SUM(t.meal_num) AS total_meal_num",                                                                              // 总用餐人数
-		"SUM(t.instant_order_amount) AS total_instant_order_amount",                                                      // 总即时订单金额
-		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                      // 总即时订单数量
-		"SUM(t.takeout_order_amount) AS total_takeout_order_amount",                                                      // 总外送订单金额
-		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_takeout_order_num", // 总外送订单数量
-		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",                                                                  // 最小订单金额
-		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",                                                                                        // 最大订单金额
-		"SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)) AS avg_order_amount",                                                                                                                       // 平均订单金额
-		"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",          // 最小桌台订单金额
-		"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",                                // 最大桌台订单金额
-		"SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS avg_desk_order_amount",                                  // 平均桌台订单金额
-		"MIN(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount", // 最小即时订单金额
-		"MAX(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                          // 最大即时订单金额
-		"SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS avg_instant_order_amount",                                                 // 平均即时订单金额
-		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                     // 最小外送订单金额
-		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                              // 最大外送订单金额
-		"SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS avg_takeout_order_amount",                                                                     // 平均外送订单金额
+		"SUM(t.sale_amount) AS total_sale_amount",                                          // 总销售额
+		"SUM(t.received_amount) AS total_received_amount",                                  // 总实收金额
+		"SUM(t.product_price) AS total_product_price",                                      // 总商品原价
+		"SUM(t.product_origin_price) AS total_product_origin_price",                        // 总原商品金额
+		"SUM(t.product_num) AS total_product_num",                                          // 总商品数量
+		"SUM(t.discount_member) AS total_discount_member",                                  // 总会员折扣
+		"SUM(t.business_amount) AS total_business_amount",                                  // 总营业收入
+		"SUM(t.payment_fee) AS total_payment_fee",                                          // 总支付手续费
+		"SUM(t.service_fee) AS total_service_fee",                                          // 总服务费
+		"SUM(t.tax) AS total_tax",                                                          // 总税额
+		"SUM(t.refund_amount) AS total_refund_amount",                                      // 总退款金额
+		"SUM(t.discount) AS total_discount",                                                // 总优惠折扣
+		"SUM(t.gift_amount) AS total_gift_amount",                                          // 总赠菜金额
+		"SUM(t.gift_num) AS total_gift_num",                                                // 总赠菜数量
+		"SUM(t.free_amount) AS total_free_amount",                                          // 总免单金额
+		"SUM(t.free_num) AS total_free_num",                                                // 总免单数量
+		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",                                 // 总订单数量
+		"SUM(t.takeout_sale_amount) AS total_takeout_sale_amount",                          // 总外送销售
+		"SUM(t.takeout_business_amount) AS total_takeout_business_amount",                  // 总外送营收
+		"SUM(t.takeout_refund_amount) AS total_takeout_refund_amount",                      // 总外送退款金额
+		"SUM(t.takeout_delivery_fee) AS total_takeout_delivery_fee",                        // 总外送配送费
+		"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num", // 总桌台数量
+		"SUM(t.desk_order_amount) AS total_desk_order_amount",                              // 总桌台订单金额
+		"SUM(t.meal_num) AS total_meal_num",                                                // 总用餐人数
+		"SUM(t.instant_order_amount) AS total_instant_order_amount",                        // 即时订单金额（店内）
+		"SUM(t.instant_order_takeaway_amount) AS total_instant_order_takeaway_amount",      // 即时订单-外卖来源金额
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",                                                                                                                                    // 总即时订单数量（店内）
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_takeaway_num",                                                                                                                           // 总即时订单数量（外卖来源）
+		"SUM(t.takeout_order_amount) AS total_takeout_order_amount",                                                                                                                                                                                                // 总外送订单金额
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_takeout_order_num",                                                                                                                                           // 总外送订单数量
+		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",                                                                                                                         // 最小订单金额
+		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",                                                                                                                                               // 最大订单金额
+		"ROUND(SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)), 2) AS avg_order_amount",                                                                                                                                                                    // 平均订单金额
+		"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",                                                                 // 最小桌台订单金额
+		"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",                                                                                       // 最大桌台订单金额
+		"ROUND(SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_desk_order_amount",                                                                               // 平均桌台订单金额
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",                            // 最小即时订单金额（店内）
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",                                                                     // 最大即时订单金额（店内）
+		"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_instant_order_amount",                                                        // 平均即时订单金额（店内）
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS min_instant_order_takeaway_amount", // 最小即时订单金额（外卖来源）
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount > 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS max_instant_order_takeaway_amount",                                          // 最大即时订单金额（外卖来源）
+		"ROUND(SUM(t.avg_instant_order_takeaway_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 AND t.instant_order_takeaway_amount > 0 THEN 1 END), 2) AS avg_instant_order_takeaway_amount",                             // 平均即时订单金额（外卖来源）
+		"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_takeout_order_amount",                                                                            // 最小外送订单金额
+		"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_takeout_order_amount",                                                                                                                     // 最大外送订单金额
+		"ROUND(SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END), 2) AS avg_takeout_order_amount",                                                                                                                  // 平均外送订单金额
 	}
 )
 
@@ -800,7 +811,10 @@ type CountProductSaleRepoReq struct {
 	Language      string
 	AreaUuid      uint64
 	CategoryUuid  uint64
+	CategoryUuids []uint64
 	ProductName   string
+	OrderTypes    []uint
+	OrderSource   int
 }
 
 // CountProductSale 统计商品销售
@@ -819,6 +833,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
 	deskTable := prefix + "desk as d"
+	saleBillTable := prefix + "sale_bill as sb"
 
 	var total int64
 	db = db.Table(statisticsProductTable).
@@ -827,16 +842,73 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
+	// 订单类型筛选：需要关联 sale_bill 表
+	needJoinSaleBill := len(req.OrderTypes) > 0 || (req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1))
+	if needJoinSaleBill {
+		db.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+	}
+
 	if req.AreaUuid > 0 {
 		db.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
 		db.Where("d.region_uuid = ?", req.AreaUuid)
 	}
-	if req.CategoryUuid > 0 {
+
+	// 商品分类筛选（支持多选和向后兼容）
+	if len(req.CategoryUuids) > 0 {
+		// 查询所有子分类
+		var allCategoryUuids []uint64
+		for _, categoryUuid := range req.CategoryUuids {
+			allCategoryUuids = append(allCategoryUuids, categoryUuid)
+			// 查询子分类
+			var subCategoryUuids []uint64
+			r.db.Table(productCategoryTable).
+				Select("uuid").
+				Where("parent_uuid = ?", categoryUuid).
+				Pluck("uuid", &subCategoryUuids)
+			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
+		}
+		if len(allCategoryUuids) > 0 {
+			db.Where("pp.category_uuid IN (?)", allCategoryUuids)
+		}
+	} else if req.CategoryUuid > 0 {
+		// 向后兼容：单个分类UUID
 		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
 	}
+
 	if req.ProductName != "" {
 		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
+
+	// 订单类型筛选
+	if len(req.OrderTypes) > 0 {
+		// 映射订单类型到SaleBillType
+		var billTypes []uint
+		for _, orderType := range req.OrderTypes {
+			switch orderType {
+			case 1: // 点餐订单
+				billTypes = append(billTypes, constant.SaleBillTypeInstant)
+			case 2: // 桌台订单
+				billTypes = append(billTypes, constant.SaleBillTypeDesk)
+			case 3: // 外送订单
+				billTypes = append(billTypes, constant.SaleBillTypeTakeout)
+			}
+		}
+		if len(billTypes) > 0 {
+			db.Where("sb.bill_type IN (?)", billTypes)
+		}
+	}
+
+	// 订单来源筛选（仅在订单类型包含点餐订单时生效）
+	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
+		if req.OrderSource == 1 {
+			// 1=店内
+			db.Where("sb.order_source_uuid = 0")
+		} else if req.OrderSource == 2 {
+			// 2=外卖
+			db.Where("sb.order_source_uuid > 0")
+		}
+	}
+
 	db.Pluck("total", &total)
 
 	listQuery := db2.Table(statisticsProductTable).
@@ -854,21 +926,80 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
+	// 订单类型筛选：需要关联 sale_bill 表
+	if needJoinSaleBill {
+		listQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+	}
+
 	if req.AreaUuid > 0 {
 		listQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
 		listQuery.Where("d.region_uuid = ?", req.AreaUuid)
 	}
-	if req.CategoryUuid > 0 {
+
+	// 商品分类筛选（支持多选和向后兼容）
+	if len(req.CategoryUuids) > 0 {
+		// 查询所有子分类
+		var allCategoryUuids []uint64
+		for _, categoryUuid := range req.CategoryUuids {
+			allCategoryUuids = append(allCategoryUuids, categoryUuid)
+			// 查询子分类
+			var subCategoryUuids []uint64
+			r.db.Table(productCategoryTable).
+				Select("uuid").
+				Where("parent_uuid = ?", categoryUuid).
+				Pluck("uuid", &subCategoryUuids)
+			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
+		}
+		if len(allCategoryUuids) > 0 {
+			listQuery.Where("pp.category_uuid IN (?)", allCategoryUuids)
+		}
+	} else if req.CategoryUuid > 0 {
+		// 向后兼容：单个分类UUID
 		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
 	}
+
 	if req.ProductName != "" {
 		listQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
+	}
+
+	// 订单类型筛选
+	if len(req.OrderTypes) > 0 {
+		// 映射订单类型到SaleBillType
+		var billTypes []uint
+		for _, orderType := range req.OrderTypes {
+			switch orderType {
+			case 1: // 点餐订单
+				billTypes = append(billTypes, constant.SaleBillTypeInstant)
+			case 2: // 桌台订单
+				billTypes = append(billTypes, constant.SaleBillTypeDesk)
+			case 3: // 外送订单
+				billTypes = append(billTypes, constant.SaleBillTypeTakeout)
+			}
+		}
+		if len(billTypes) > 0 {
+			listQuery.Where("sb.bill_type IN (?)", billTypes)
+		}
+	}
+
+	// 订单来源筛选（仅在订单类型包含点餐订单时生效）
+	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
+		if req.OrderSource == 1 {
+			// 1=店内
+			listQuery.Where("sb.order_source_uuid = 0")
+		} else if req.OrderSource == 2 {
+			// 2=外卖
+			listQuery.Where("sb.order_source_uuid > 0")
+		}
 	}
 	listQuery.Group("sp.product_package_uuid")
 
 	direction := "DESC"
 	if req.RankDirection == 1 {
 		direction = "ASC"
+	}
+
+	if req.RankType == 0 {
+		listQuery = listQuery.Order("sale_num " + direction)
 	}
 
 	if req.RankType == 1 {
@@ -1305,4 +1436,83 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	r.db.Raw(dataQuery, dataArgs...).Scan(&result)
 
 	return total, result
+}
+
+// containsOrderType 检查订单类型列表中是否包含指定类型
+func containsOrderType(orderTypes []uint, orderType uint) bool {
+	return slices.Contains(orderTypes, orderType)
+}
+
+// CountChannelSale 统计渠道营业数据
+func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, opts ...DBOption) (map[string]*model.ChannelSaleRepoResult, error) {
+	result := make(map[string]*model.ChannelSaleRepoResult)
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	// 复用 CountSale 的子查询逻辑
+	subQuery := db.Model(&model.StatisticsSale{}).
+		Select(countSaleSubQuerySelect).
+		Where("complete_time >= ? AND complete_time <= ?", startTime, endTime).
+		Group("sale_bill_uuid")
+
+	// 定义渠道分组条件
+	channelSelects := map[string][]string{
+		"summary": { // 合计：所有订单
+			"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",
+			"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
+		"table": { // 桌台：desk_uuid > 0 && is_takeout = 0
+			"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
+			"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num",
+			"SUM(IF(t.desk_uuid > 0 AND t.is_takeout = 0, t.meal_num, 0)) AS total_meal_num",
+			"ROUND(SUM(t.desk_order_amount) / NULLIF(SUM(IF(t.desk_uuid > 0 AND t.is_takeout = 0, t.meal_num, 0)), 0), 2) AS order_amount_meal_avg", // 人均订单金额：桌台订单总金额 / 用餐人数，保留两位小数
+		},
+		"dine_in": { // 点餐-店内：desk_uuid = 0 && order_source_uuid = 0 && is_takeout = 0
+			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
+		"takeout_shop": { // 点餐-外卖：desk_uuid = 0 && order_source_uuid > 0 && is_takeout = 0
+			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.instant_order_takeaway_amount > 0 THEN t.instant_order_takeaway_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_instant_order_takeaway_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_meger = 0 AND t.instant_order_takeaway_amount > 0 THEN 1 END), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
+		"takeout_delivery": { // 外送：is_takeout = 1
+			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.takeout_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.is_takeout = 1 AND t.takeout_order_amount > 0 THEN t.takeout_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_takeout_order_amount) / COUNT(CASE WHEN t.is_takeout = 1 AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
+	}
+
+	// 为每个渠道执行查询
+	for channelKey, selects := range channelSelects {
+		var channelResult model.ChannelSaleRepoResult
+		err := db.Table("(?) AS t", subQuery).
+			Select(selects).
+			Scan(&channelResult).Error
+		if err != nil {
+			return nil, err
+		}
+		result[channelKey] = &channelResult
+	}
+
+	return result, nil
 }

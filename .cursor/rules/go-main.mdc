@@ -15,32 +15,67 @@ description: Go Main 核心约束
 | 接口        | I 开头          | `IOrderRepo`, `IUserSrv` |
 | 实现        | Impl 结尾       | `OrderRepoImpl`          |
 
+### 类型使用规范
+
+- ✅ **使用 `any` 替代 `interface{}`**（Go 1.18+）
+- ❌ **禁止使用 `interface{}`**
+
+完整代码示例请参考：`docs/agent/workflows/development/type-usage-examples.md`
+
 ### API 响应格式
 
 **data 必须是对象，不能是 null 或数组**
 
-```go
-// ✅ 正确
-helper.Success(c, gin.H{})
-helper.Success(c, gin.H{"list": []})
+**响应体中的切片必须使用 `make` 初始化，避免返回 null**
 
-// ❌ 错误
-helper.Success(c, nil)
-helper.Success(c, []string{})
-```
+完整代码示例请参考：`docs/agent/workflows/development/api-response-examples.md`
+
+### 多语言字段规范（请求和响应）
+
+**所有 API 接口的多语言字段，无论是请求参数还是响应参数，都必须使用 `dto.LocaleResponse` 结构**
+
+**规则：**
+
+- ✅ **必须使用** `dto.LocaleResponse` 结构体
+- ✅ **字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式**（如 `LocaleName`、`LocaleAttributeName`、`LocaleUnitName` 等）
+- ❌ **禁止使用** 字符串、map 或其他自定义结构
+- ❌ **禁止使用** `Name`、`AttributeName` 等不带 `Locale` 前缀的字段名
+- ✅ **包含所有支持的语言字段**：ZH, TH, EN, ZHTW, JA, KO, MY, TR, SV
+- ✅ **请求参数和响应参数都必须使用** `dto.LocaleResponse`
+
+完整代码示例请参考：`docs/agent/workflows/development/locale-field-examples.md`
+
 
 ### 错误处理
 
 - ✅ **必须返回 error**，不使用 panic
 - ✅ **使用** `errors.WithMessage` 包装错误
 
-```go
-// ✅ 正确
-return nil, errors.WithMessage(err, "查询失败")
+完整代码示例请参考：`docs/agent/workflows/development/error-handling-examples.md`
 
-// ❌ 错误
-panic(err)
-```
+### 协程使用规范
+
+- ✅ **所有 go func 协程都必须使用 `utils.Go` 方法**
+- ✅ **`utils.Go` 方法已内置 recover 机制，自动捕获 panic 并记录日志**
+- ❌ **禁止直接使用 `go func() { ... }()`**
+- ❌ **禁止在协程中手动编写 recover（`utils.Go` 已包含）**
+
+**关键点：**
+
+- **自动化 panic 捕获**：`utils.Go` 自动集成 `defer` + `recover` 机制，无需手动编写
+- **统一日志记录**：所有捕获的 panic 都会通过 `logger.Logger.Error` 记录，包含 panic 值和完整的堆栈信息
+- **提高健壮性**：确保单个协程的 panic 不会导致整个应用程序崩溃
+- **简化开发**：开发者无需在每个协程中手动编写 recover 代码
+
+完整代码示例请参考：`docs/agent/workflows/development/goroutine-examples.md`
+
+### 常量定义规范
+
+- ✅ **所有常量必须在 `constant` 包中定义**
+- ✅ **禁止在代码中使用字面量（magic numbers/strings）**
+- ✅ **使用常量或枚举替代字面量**
+
+完整代码示例请参考：`docs/agent/workflows/development/constant-examples.md`
 
 ---
 
@@ -48,17 +83,39 @@ panic(err)
 
 ### Service 层
 
+- ✅ **接口定义（`I{Name}Srv`）和实现（`{Name}Srv`）必须放在同一个文件中**
+- ✅ **接口第一个参数必须使用 `ctx context.Context`**
+- ✅ **通过 `db := ctx.GetDB()` 获取数据库连接**
 - ✅ **只能依赖其他 Service 接口**
-- ✅ **持有 DBManager**
-- ❌ **不能直接依赖 Repository**
+- ✅ **持有 DBManager**（仅在极少数需要切换数据库时使用）
+- ✅ **可以依赖自己领域的 Repository 接口**
+- ✅ **使用带调用链跟踪的DB，通过DBManager.GetDBWithContext() 获取DB实例**
+- ❌ **不能直接依赖其他领域的 Repository**
+- ❌ **不能直接操作 model，必须通过 Repository**
+- ❌ **禁止直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法**
+- ✅ **所有数据库操作必须通过 Repository 层封装后再调用**
 
-```go
-type orderSrv struct {
-    dbm        *database.DBManager  // ✅
-    memberSrv  IMemberSrv            // ✅
-    memberRepo IMemberRepo           // ❌ 错误
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/service-layer-examples.md`
+
+### Service 层事务使用规范
+
+- ✅ **多个数据库操作必须使用事务包裹**，确保原子性
+- ✅ **涉及多个表的数据修改操作必须使用事务**
+- ✅ **删除操作涉及关联数据时必须使用事务**
+- ✅ **更新操作涉及多个步骤时必须使用事务**
+- ✅ **优先使用 `repository.CommonRepo.Transaction()` 方法**
+- ✅ **事务中必须使用 `tx` 创建 Repository 实例**
+- ✅ **事务中返回 error 会自动回滚，返回 nil 会自动提交**
+- ❌ **禁止在事务中手动调用 `tx.Commit()` 或 `tx.Rollback()`**
+
+**何时需要使用事务：**
+
+1. **创建操作**：创建主记录 + 创建关联记录（如创建活动 + 创建规则）
+2. **更新操作**：更新主记录 + 更新/删除关联记录（如更新活动 + 删除旧规则 + 创建新规则）
+3. **删除操作**：删除主记录 + 删除关联记录（如删除活动 + 删除规则）
+4. **复杂业务逻辑**：涉及多个表的数据修改，需要保证一致性
+
+完整代码示例请参考：`docs/agent/workflows/development/transaction-examples.md`
 
 ### Repository 层
 
@@ -66,12 +123,47 @@ type orderSrv struct {
 - ❌ **不能持有 DBManager**
 - ✅ **使用选项模式**
 
-```go
-type OrderRepoImpl struct {
-    db  *gorm.DB           // ✅ 正确
-    dbm *database.DBManager // ❌ 错误
-}
-```
+完整代码示例请参考：`docs/agent/workflows/development/repository-layer-examples.md`
+
+### API 层（app/api/v1）
+
+- ✅ **只能调用 Service 接口**
+- ✅ **只负责参数校验、调用 Service、返回响应**
+- ❌ **严禁引用 repository 包**（违反分层架构，必须通过 Service 层）
+- ❌ **严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
+- ❌ **禁止在 app/api/v1 目录下的任何子目录中引用 repository 包**
+
+完整代码示例请参考：`docs/agent/workflows/development/api-layer-examples.md`
+
+### API 层请求参数解析规范
+
+**在 `app/api/v1` 目录下的 handler 中，必须根据 HTTP 方法使用对应的参数解析方式：**
+
+#### GET 请求
+
+- ✅ **必须使用 `ShouldBindQuery` 解析查询参数**
+- ✅ **Req 结构体字段必须使用 `form` tag**
+- ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
+
+#### POST 请求
+
+- ✅ **必须使用 `ShouldBindJSON` 解析 JSON 请求体**
+- ✅ **Req 结构体字段必须使用 `json` tag**
+- ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
+
+#### DELETE 请求
+
+- ✅ **必须使用 `ShouldBindJSON` 解析查询参数**
+- ✅ **Req 结构体字段必须使用 `json` tag**
+- ✅ **错误处理使用 `helper.HandleValidationError(c, err, params, nil)`**
+
+**总结：**
+
+| HTTP 方法 | 解析方法          | Req 结构体 tag | 错误处理                          |
+| --------- | ----------------- | -------------- | --------------------------------- |
+| GET       | `ShouldBindQuery` | `form`         | `helper.HandleValidationError`    |
+| POST      | `ShouldBindJSON`  | `json`         | `helper.HandleValidationError`    |
+| DELETE    | `ShouldBindJSON` | `json`         | `helper.HandleValidationError`    |
 
 ---
 
@@ -85,13 +177,35 @@ type OrderRepoImpl struct {
 
 ### 编码时
 
+- [ ] 使用 any 而不是 interface{}
 - [ ] URL 使用 snake_case
 - [ ] 结构体 ID 字段大写
-- [ ] Service 只依赖 Service 接口
+- [ ] **Service 接口定义（`I{Name}Srv`）和实现（`{Name}Srv`）必须放在同一个文件中**
+- [ ] Service 接口第一个参数必须是 ctx context.Context
+- [ ] Service 方法内使用 ctx.GetDB() 获取数据库连接
+- [ ] Service 只依赖自己领域的 Repository
+- [ ] Service 通过 Repository 操作 model，不直接操作
+- [ ] **禁止直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法**
+- [ ] **所有数据库操作必须通过 Repository 层封装后再调用**
+- [ ] **多个数据库操作必须使用事务包裹（创建/更新/删除涉及多个表时）**
+- [ ] **事务中必须使用 `tx` 创建 Repository 实例，不能使用 `db`**
+- [ ] **事务中不要手动调用 `tx.Commit()` 或 `tx.Rollback()`**
+- [ ] **错误必须使用 `errors.WithMessage` 包装错误消息**
 - [ ] Repository 只持有 db 实例
+- [ ] **API 层（app/api/v1 及其所有子目录）严禁引用 repository 包**
+- [ ] **API 层严禁编写业务逻辑，所有业务逻辑必须在 service 层实现**
+- [ ] API 层只负责参数校验、调用 Service、返回响应
+- [ ] **GET 请求必须使用 `ShouldBindQuery` 解析，Req 结构体字段使用 `form` tag**
+- [ ] **POST 请求必须使用 `ShouldBindJSON` 解析，Req 结构体字段使用 `json` tag**
+- [ ] **DELETE 请求必须使用 `ShouldBindQuery` 解析，Req 结构体字段使用 `form` tag**
+- [ ] **所有请求参数解析错误必须使用 `helper.HandleValidationError(c, err, params, nil)` 处理**
 - [ ] data 不能为 null 或数组
+- [ ] **多语言字段（请求参数和响应参数）必须使用 `dto.LocaleResponse` 结构，禁止使用字符串、map 或自定义结构**
+- [ ] **多语言字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式，禁止使用 `Name` 等不带 `Locale` 前缀的字段名**
 - [ ] 所有错误都 return，不 panic
 - [ ] 使用 `errors.WithMessage` 包装错误
+- [ ] **所有 go func 协程必须使用 `utils.Go` 方法，禁止直接使用 `go func()`**
+- [ ] 常量必须在 constant 包中定义，禁止使用字面量
 
 ### 提交前
 
@@ -100,81 +214,48 @@ type OrderRepoImpl struct {
 - [ ] `go vet` 检查问题
 - [ ] 测试通过
 - [ ] 代码已 review
+- [ ] **如果添加了 SQL 迁移文件，必须同步更新 `admin/database/seeds/shop_01.sql` 文件**（新增表、删除表、新增字段、删除字段、修改字段等都必须同步反映）
 
 ---
 
 ## 📋 常用模式
 
-### Service 构造函数
-
-```go
-func NewOrderSrv(
-    dbm *database.DBManager,
-    orderRepo repository.IOrderRepo,
-    memberSrv IMemberSrv,
-) IOrderSrv {
-    return &orderSrv{
-        dbm:       dbm,
-        orderRepo: orderRepo,
-        memberSrv: memberSrv,
-    }
-}
-```
-
-### Repository 选项模式
-
-```go
-func (r *OrderRepoImpl) WhereUuid(uuid uint64) DBOption {
-    return func(db *gorm.DB) *gorm.DB {
-        return db.Where("uuid = ?", uuid)
-    }
-}
-
-// 使用
-order, err := orderRepo.GetOrder(
-    orderRepo.WhereUuid(orderUuid),
-    orderRepo.WhereStatus(1),
-)
-```
-
-### 事件发布
-
-```go
-    go func() {
-    event.NewSystemBus().PublishOrderCreatedEvent(
-        event.OrderCreatedPayload{
-            BasePayload: event.BasePayload{
-                Ctx: ctx,
-                CompanyUuid: ctx.GetCompanyUuid(),
-            },
-            OrderUuid: orderUuid,
-        },
-    )
-}()
-```
-
-### UUID 锁
-
-```go
-    s.systemLock.LockUuid(deskUuid)
-    defer s.systemLock.UnlockUuid(deskUuid)
-
-    // 业务逻辑
-```
+常用开发模式示例请参考：`docs/agent/workflows/development/common-patterns-examples.md`
 
 ---
 
 ## 🚫 禁止事项
 
-| 禁止                         | 原因                  |
-| ---------------------------- | --------------------- |
-| ❌ URL 用 kebab-case         | 项目统一用 snake_case |
-| ❌ data 返回 null            | 前端无法统一处理      |
-| ❌ data 返回数组             | 必须是对象            |
-| ❌ 使用 panic                | 必须 return error     |
-| ❌ Service 依赖 Repository   | 只能依赖 Service      |
-| ❌ Repository 持有 DBManager | 只能持有 db           |
-| ❌ 跨层调用                  | 必须遵循分层          |
+| 禁止                                | 原因                        |
+| ----------------------------------- | --------------------------- |
+| ❌ 使用 interface{}                 | 必须使用 any（Go 1.18+）    |
+| ❌ URL 用 kebab-case                | 项目统一用 snake_case       |
+| ❌ data 返回 null                   | 前端无法统一处理            |
+| ❌ data 返回数组                    | 必须是对象                  |
+| ❌ **多语言字段（请求参数和响应参数）使用字符串、map 或自定义结构** | **必须使用 `dto.LocaleResponse`** |
+| ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
+| ❌ 使用 panic                       | 必须 return error           |
+| ❌ **直接使用 `go func() { ... }()` 启动协程** | **必须使用 `utils.Go` 方法** |
+| ❌ **在协程中手动编写 recover**     | **`utils.Go` 已包含 recover** |
+| ❌ **Service 接口和实现分开在不同文件** | **必须放在同一个文件中** |
+| ❌ Service 接口第一个参数不是 ctx   | 必须是 context.Context      |
+| ❌ Service 使用 dbm.GetDB(dbId)     | 必须使用 ctx.GetDB()        |
+| ❌ Service 跨领域依赖 Repository    | 只能依赖自己领域的 Repo     |
+| ❌ Service 直接操作 model           | 必须通过 Repository         |
+| ❌ **直接使用 `db.Model()`、`db.Create()`、`db.Update()`、`db.Delete()`、`db.Where()` 等 GORM 方法** | **必须通过 Repository 层封装** |
+| ❌ **多个数据库操作不使用事务包裹** | **必须使用事务保证原子性** |
+| ❌ **事务中使用 `db` 而不是 `tx` 创建 Repository** | **必须使用 `tx` 才能保证在同一个事务中** |
+| ❌ **事务中手动调用 `tx.Commit()` 或 `tx.Rollback()`** | **Transaction 方法会自动处理，手动调用会导致错误** |
+| ❌ **API 层（app/api/v1 及其所有子目录）引用 repository 包** | **严禁违反，必须通过 Service 层** |
+| ❌ **API 层编写业务逻辑**        | **严禁违反，所有业务逻辑必须在 Service 层实现** |
+| ❌ **GET 请求使用 `ShouldBindJSON` 或 Req 结构体使用 `json` tag** | **必须使用 `ShouldBindQuery` 和 `form` tag** |
+| ❌ **DELETE 请求使用 `ShouldBindJSON` 或 Req 结构体使用 `json` tag** | **必须使用 `ShouldBindQuery` 和 `form` tag** |
+| ❌ **POST 请求使用 `ShouldBindQuery` 或 Req 结构体使用 `form` tag** | **必须使用 `ShouldBindJSON` 和 `json` tag** |
+| ❌ **请求参数解析错误不使用 `helper.HandleValidationError`** | **必须统一使用 `helper.HandleValidationError(c, err, params, nil)`** |
+| ❌ Repository 持有 DBManager        | 只能持有 db                 |
+| ❌ 跨层调用                         | 必须遵循分层                |
+| ❌ 使用字面量常量             | 必须在 constant 包中定义 |
+| ❌ **添加 SQL 迁移文件后不更新 `shop_01.sql`** | **必须同步更新，确保种子数据与最新表结构一致** |
 
 ---
 

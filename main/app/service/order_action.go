@@ -141,6 +141,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
 	noBatchProductUuids := make([]uint64, 0)
+	noBatchProduct := make([]*model.SaleOrderProduct, 0) // 要合并跟unCookingSaleOrderProducts一起打印的预送厨商品
+
+	// 从销售账单设置中获取分批送厨模式（快照值）
+	batchCookingMode := constant.BatchCookingModePost // 默认值
+	if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode != "" {
+		batchCookingMode = saleBill.SaleBillSetting.BatchCookingMode
+	}
 
 	// 送厨相关
 	{
@@ -207,16 +214,11 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			notBatch = true
 		}
 		if notBatch {
-			// 遍历所有未送厨的商品，将is_batch为0
-			for _, product := range unCookingSaleOrderProducts {
-				product.IsBatch = 0
-				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
-			}
 			// 遍历所有预送厨的商品，将is_batch为0
 			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
 			for _, product := range preCookingSaleOrderProducts {
-				product.IsBatch = 0
 				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
+				noBatchProduct = append(noBatchProduct, product)
 			}
 		}
 
@@ -316,13 +318,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		// 将未送厨和预送厨的商品编辑未分批商品
 		if len(noBatchProductUuids) > 0 {
-			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+			if err := s.updateProductBatchFlagToZero(tx, noBatchProductUuids, batchCookingMode); err != nil {
 				return errors.WithMessage(err)
 			}
-			if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
-				return errors.WithMessage(err)
-			}
-
 		}
 		return nil
 	}); err != nil {
@@ -375,12 +373,30 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 						if unCookingSaleOrderProduct.IsPackageSubProduct() {
 							continue
 						}
+						// 如果是结账送厨,需要将所有未送厨商品都打印出来,故要临时将is_batch为0
+						if ignoreMust { // 只有结账送厨才会忽略必点
+							unCookingSaleOrderProduct.IsBatch = 0
+						}
 						products = append(products, s.convertToEventOrderProduct(
 							unCookingSaleOrderProduct,
 							saleBill,
 							saleBill.GetSaleOrder(saleOrderUuid),
 						))
 					}
+					// 如果有预送厨的商品跟未送厨的商品一起结账送厨,则需要将预送厨的商品也打印出来
+					for _, noBatchProduct := range noBatchProduct {
+						noBatchProduct.IsBatch = 0 // 临时在内存中将该商品的is_batch设置为0,让打印出该商品的送厨单
+						products = append(products, s.convertToEventOrderProduct(
+							noBatchProduct,
+							saleBill,
+							saleBill.GetSaleOrder(saleOrderUuid),
+						))
+					}
+					// 基于uuid进行去重,避免重复打印
+					products = utils.RemoveDuplicatesByKey(products, func(product event.OrderProduct) uint64 {
+						return product.OrderProductId
+					})
+
 					return products
 				}(),
 			})
@@ -393,6 +409,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			})
 		})
 	}
+
 	return nil, nil
 }
 
@@ -524,7 +541,7 @@ func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *g
 		// 如果是自助餐商品，则价格改为0元
 		if product.IsBuffet != nil && *product.IsBuffet {
 			productInfo.Price = 0
-			for index, _ := range productInfo.Flavors.List {
+			for index := range productInfo.Flavors.List {
 				productInfo.Flavors.List[index].Price = 0
 			}
 		}
@@ -539,6 +556,29 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		s.lock.LockUuid(request.SaleBillUuid)
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
+	}
+
+	// 兼容2.10.0之后的版本. 通过product_package_uuid查询套餐product_bom_uuid
+	if ctx.Version(context.GTE, constant.ClientVersionV2100) {
+		for i := range request.Products {
+			product := &request.Products[i]
+			if product.ProductType == constant.ProductTypePackage {
+				// 通过product_package_uuid查询套餐product_bom_uuid
+				productBomUuid, err := repository.NewProductBomRepo(ctx.GetDB()).GetProductBomUuidByProductPackageUuid(product.ProductPackageUuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				product.FlavorProductBomUuid = productBomUuid
+				product.ProductPackageUuid = productBomUuid
+			}
+		}
+	} else {
+		for i := range request.Products {
+			product := &request.Products[i]
+			if product.ProductType == constant.ProductTypePackage {
+				product.FlavorProductBomUuid = product.ProductPackageUuid // 前端没有传这个参数，所以需要手动设置
+			}
+		}
 	}
 
 	// 判断商品价格是否与后台设置的最新价格不一致
@@ -663,19 +703,19 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	}
 
 	// 暂时不使用这两个字段
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		request.Products[index].Price = nil
 		request.Products[index].IsBuffet = nil
 	}
 
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		if request.Products[index].ProductType == constant.ProductTypePackage {
 			request.Products[index].FlavorProductBomUuid = request.Products[index].ProductPackageUuid // 套餐商品规格uuid改为套餐商品uuid
 		}
 	}
 
 	// 记录相关的子商品。
-	for index, _ := range request.Products {
+	for index := range request.Products {
 		productReq := request.Products[index]
 		// 如果该商品是套餐的话,添加子商品的属性
 		if productReq.ProductType == 1 {
@@ -688,6 +728,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 					ProductPackageAttributeUuidList: subProductParam.EditProductReq.AttributeUuidList,
 					ProductPackageGroupUuid:         subProductParam.ProductPackageGroupUuid,
 					Operation:                       "add",
+					AddPrice:                        subProductParam.AddPrice,
 				}
 				subProductParams = append(subProductParams, params)
 			}
@@ -854,6 +895,39 @@ func (s *orderSrv) checkTimeoutAndCannotAddPurchase(ctx context.Context, saleBil
 					return errors.New("自助餐时间已到达，自助餐商品不可继续下单")
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// updateProductBatchFlagToZero 将指定商品的 is_batch 标志更新为 0
+// 同时更新 SaleOrderProduct 和 ProductionOrderProduct 表中的 is_batch 字段
+// modeType: pre 前置模式,post 后置模式
+func (s *orderSrv) updateProductBatchFlagToZero(tx *gorm.DB, productUuids []uint64, modeType string) error {
+	if len(productUuids) == 0 {
+		return nil
+	}
+	now := time.Now().Unix()
+	// 后置模式下，取消分批类型
+	if modeType == constant.BatchCookingModePost {
+		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"is_batch": 0, "batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
+		}
+		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{
+			"is_batch":    0,
+			"batch_time":  now,
+			"create_time": now,
+		}).Error; err != nil {
+			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
+		}
+	}
+	// 前置模式下，只更新 batch_time 字段. 不取消分批类型
+	if modeType == constant.BatchCookingModePre {
+		if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新销售订单商品 is_batch 失败")
+		}
+		if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", productUuids).Updates(map[string]interface{}{"batch_time": now}).Error; err != nil {
+			return errors.WithMessage(err, "更新生产订单商品 is_batch 失败")
 		}
 	}
 	return nil

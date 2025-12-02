@@ -17,7 +17,9 @@ services:
     restart: always
     depends_on:
       - db
-      - redis
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
       - redis-proxy
     networks:
       saas-network:
@@ -33,18 +35,21 @@ services:
       - ./docker/sysctl/nginx.conf:/etc/nginx/nginx.conf
       - ./docker/nginx:/etc/nginx/conf.d
       - ./admin/public:/var/www/public
+      - ./docs:/var/www/docs
+      - ./main/docs:/var/www/main/docs/
     links:
       - php
       - golang
-      - websocket
     depends_on:
       - php
       - golang
-      - websocket
     restart: unless-stopped
     networks:
       saas-network:
         ipv4_address: 10.0.0.11
+    extra_hosts:
+      ttpos-takeout: ${SERVER_IP}
+      ttpos-websocket: ${SERVER_IP}
 
   db:
     container_name: "saas-db-${APP_ID}"
@@ -79,25 +84,16 @@ services:
       saas-network:
         ipv4_address: 10.0.0.12
   
-  redis:
-    container_name: "saas-redis-${APP_ID}"
-    image: redis:6
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.13
-
   redis-proxy:
     container_name: "saas-redis-proxy-${APP_ID}"
-    build:
-      context: ./redis-proxy
-      dockerfile: Dockerfile
+    image: hitosea2020/redis-proxy:latest
     volumes:
       - .env:/var/.env
-    image: redis-proxy
     restart: always
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
     networks:
       saas-network:
         ipv4_address: 10.0.0.17
@@ -117,19 +113,6 @@ services:
       saas-network:
         ipv4_address: 10.0.0.18
 
-  websocket:
-    container_name: "saas-websocket-${APP_ID}"
-    build:
-      context: ./websocket
-      dockerfile: Dockerfile
-    image: ttpos-server-websocket
-    volumes:
-      - .env:/var/.env
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.15
-        
 networks:
   saas-network:
     driver: bridge

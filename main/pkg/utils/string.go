@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -102,4 +103,68 @@ func IsValidInternalCode(internalCode string) bool {
 		return false
 	}
 	return true
+}
+
+// FullReductionResult 满减字符串解析结果
+type FullReductionResult struct {
+	Type            string  // 类型："满" 或 "每满"
+	FullAmount      float64 // 满减的金额阈值（n）
+	ReductionAmount float64 // 减免的金额（m）
+}
+
+// ParseFullReductionString 解析"满n减m"或"每满n减m"格式的字符串，提取类型和两个浮点数
+// 例如：
+//   - "满100.00减10.00" -> FullReductionResult{Type: "满", FullAmount: 100.00, ReductionAmount: 10.00}
+//   - "每满100.00减10.00" -> FullReductionResult{Type: "每满", FullAmount: 100.00, ReductionAmount: 10.00}
+//
+// 参数:
+//   - s: 待解析的字符串
+//
+// 返回:
+//   - result: 解析结果，包含类型和数值
+//   - error: 解析错误，如果格式不匹配或数字解析失败则返回错误
+func ParseFullReductionString(s string) (*FullReductionResult, error) {
+	if s == "" {
+		return nil, fmt.Errorf("输入字符串为空")
+	}
+
+	var result FullReductionResult
+	var matches []string
+
+	// 优先匹配"每满n减m"格式（循环满减）
+	patternEveryFull := `每满([\d.]+)减([\d.]+)`
+	reEveryFull := regexp.MustCompile(patternEveryFull)
+	matches = reEveryFull.FindStringSubmatch(s)
+
+	if len(matches) == 3 {
+		result.Type = "每满"
+	} else {
+		// 匹配"满n减m"格式（阶梯满减）
+		patternFull := `满([\d.]+)减([\d.]+)`
+		reFull := regexp.MustCompile(patternFull)
+		matches = reFull.FindStringSubmatch(s)
+
+		if len(matches) == 3 {
+			result.Type = "满"
+		} else {
+			return nil, fmt.Errorf("字符串格式不匹配，期望格式：满n减m 或 每满n减m，实际：%s", s)
+		}
+	}
+
+	// 解析第一个数字（满减阈值）
+	fullAmount, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return nil, fmt.Errorf("解析满减阈值失败：%w", err)
+	}
+
+	// 解析第二个数字（减免金额）
+	reductionAmount, err := strconv.ParseFloat(matches[2], 64)
+	if err != nil {
+		return nil, fmt.Errorf("解析减免金额失败：%w", err)
+	}
+
+	result.FullAmount = fullAmount
+	result.ReductionAmount = reductionAmount
+
+	return &result, nil
 }

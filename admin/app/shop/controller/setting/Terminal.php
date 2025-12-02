@@ -88,6 +88,10 @@ class Terminal extends Controller
         // 对轮播图片列表进行处理
         $carousel = [];
         $carousels = $data['carousel'] ?? [];
+        // 轮播内容数量限制：最多15个
+        if (count($carousels) > 15) {
+            return $this->renderError('轮播内容最多15个');
+        }
         foreach ($carousels as $item) {
             $carousel[] = [
                 'file_path' => ImgHelp::removeImageDomain($item['file_path']) ?? '',
@@ -97,6 +101,22 @@ class Terminal extends Controller
             ];
         }
         $carousels = $carousel;
+
+        // 接收新字段参数
+        $no_order_carousel_interval = $data['no_order_carousel_interval'] ?? 10;
+        $order_display_mode = $data['order_display_mode'] ?? 'carousel';
+        $order_carousel_interval = $data['order_carousel_interval'] ?? 10;
+
+        // 参数验证
+        if ($no_order_carousel_interval < 10 || $no_order_carousel_interval > 120) {
+            return $this->renderError('未点餐时轮播间隔必须在10-120秒之间');
+        }
+        if (!in_array($order_display_mode, ['carousel', 'order', 'order_carousel'])) {
+            return $this->renderError('点餐时展示模式无效');
+        }
+        if ($order_carousel_interval < 10 || $order_carousel_interval > 120) {
+            return $this->renderError('点餐时轮播间隔必须在10-120秒之间');
+        }
 
         $arr = [
             'carousel' => $carousels, // 轮播内容url
@@ -109,6 +129,9 @@ class Terminal extends Controller
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
             'main_cashier_uuid' => $data['main_cashier_uuid'] ?? '', // 主收银机uuid
+            'no_order_carousel_interval' => $no_order_carousel_interval, // 未点餐时轮播间隔(秒)
+            'order_display_mode' => $order_display_mode, // 点餐时展示模式 carousel/order/order_carousel
+            'order_carousel_interval' => $order_carousel_interval, // 点餐时轮播间隔(秒)
         ];
         // 当开启剩余时长颜色时，才会更新时长颜色
         if ($is_remain_color) {

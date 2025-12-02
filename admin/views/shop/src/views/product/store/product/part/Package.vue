@@ -50,19 +50,41 @@
               v-model="form.model.package_group[groupIndex].group_name[item.key]"
             ></el-input>
             <el-button class="ml8" type="primary" @click="translate(groupIndex)">{{ $t('翻译') }}</el-button>
+            <el-select v-model="form.model.package_group[groupIndex].group_type" class="max-w230 ml16" :disabled="erp_is_open == 1">
+              <el-option :value="0" :label="$t('固定')"></el-option>
+              <el-option :value="1" :label="$t('可选')"></el-option>
+            </el-select>
+
             <el-icon class="delete-icon" :class="{ 'is-disabled': form.model.package_group.length === 1 }" @click="handleDelete(groupIndex)">
               <Delete />
             </el-icon>
           </el-form-item>
         </template>
+
+        <el-form-item
+          for="no_click"
+          :label="$t('本组可选数量') + '&nbsp;&nbsp;&nbsp;' + form.model.package_group[groupIndex].product_list.length + $t('选')"
+          label-width="auto"
+          label-position="left"
+          v-if="form.model.package_group[groupIndex].group_type == 1"
+        >
+          <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
+        </el-form-item>
+
         <el-form-item :prop="`model.package_group.${groupIndex}.product_list`" :rules="[{ required: true, validator: validatePackageGroup, message: $t('请添加套餐商品') }]">
           <el-table :data="form.model.package_group[groupIndex].product_list" style="width: 100%" border max-height="250">
             <el-table-column :label="$t('序号')" width="80" type="index" />
             <el-table-column prop="product_name_text" :label="$t('商品名称')" />
             <el-table-column prop="spec_name_text" :label="$t('规格')" width="120" />
-            <el-table-column prop="product_price" :label="$t('商品价格')" width="120">
+            <el-table-column prop="product_price" :label="$t('加价')" width="120">
               <template #default="scope">
-                {{ $formatPrice(scope.row.product_price) }}
+                <el-form-item
+                  class="mt16"
+                  :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.add_price`"
+                  :rules="[{ required: true, message: $t('请输入加价') }]"
+                >
+                  <numInput v-model="scope.row.add_price" :min="0" :max="99999999" :precision="2" :disabled="erp_is_open == 1" />
+                </el-form-item>
               </template>
             </el-table-column>
             <el-table-column prop="num" :label="$t('数量')" width="120">
@@ -84,6 +106,18 @@
                 {{ scope.row.stock_num }}
               </template>
             </el-table-column>
+
+            <el-table-column prop="is_required" :label="$t('必选')" width="80" v-if="form.model.package_group[groupIndex].group_type == 1">
+              <template #default="scope">
+                <el-checkbox v-model="scope.row.is_required" :true-value="1" :false-value="0" :disabled="erp_is_open == 1"></el-checkbox>
+              </template>
+            </el-table-column>
+            <el-table-column prop="is_default" :label="$t('默认')" width="80" v-if="form.model.package_group[groupIndex].group_type == 1">
+              <template #default="scope">
+                <el-checkbox v-model="scope.row.is_default" :true-value="1" :false-value="0" :disabled="erp_is_open == 1"></el-checkbox>
+              </template>
+            </el-table-column>
+
             <el-table-column prop="action" :label="$t('操作')" width="100" fixed="right">
               <template #default="scope">
                 <el-button type="primary" @click="handleDeleteGoods(groupIndex, scope.$index)" :disabled="erp_is_open == 1">{{ $t('删除') }}</el-button>
@@ -167,6 +201,7 @@
   import ProductSelector from '@/components/product/Selector.vue';
   import Add from '../../../expand/unit/add.vue';
   import { useUserStore } from '@/store';
+  import { length } from 'localforage';
   const { erp_is_open } = useUserStore();
   const emit = defineEmits(['validateField']);
   const languageList = languageStore().getLanguageList().languageList.value;
@@ -323,6 +358,8 @@
   const addGroup = () => {
     form.model.package_group.push({
       group_name: JSON.parse(languageData),
+      group_type: 0,
+      optional_count: 1,
       product_list: [],
     });
   };
@@ -408,6 +445,9 @@
         ...item, // 复制所有原有属性
         sort: maxSort + index + 1, // 递增排序
         num: 1, // 保持原有num值，如果没有则为null
+        add_price: 0, // 加价
+        is_required: 1, // 是否必选  0-否 1-是
+        is_default: 1, // 是否默认 0-否 1-是
       };
       form.model.package_group[selectIndex.value].product_list.push(newProduct);
     });
@@ -477,9 +517,17 @@
     },
     { deep: true, immediate: true }
   );
-
 </script>
 <style scoped lang="scss">
+  .flex {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .justify-end {
+    justify-content: flex-end;
+  }
+
   .w-full {
     width: 100%;
   }
@@ -504,5 +552,17 @@
     :deep(.el-form-item__label) {
       margin-bottom: 0;
     }
+  }
+
+  .max-w230 {
+    max-width: 230px;
+  }
+
+  .max-w80 {
+    max-width: 80px;
+  }
+
+  .ml16 {
+    margin-left: 16px;
   }
 </style>

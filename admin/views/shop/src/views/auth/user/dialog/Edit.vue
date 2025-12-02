@@ -22,6 +22,12 @@
       <el-form-item for="no_click" :label="$t('确认密码')" prop="confirm_password"
         ><el-input v-model="form.confirm_password" :maxlength="16" :placeholder="$t('请输入确认密码')" type="password"></el-input
       ></el-form-item>
+      <el-form-item for="no_click" :label="$t('权限密码')" prop="permission_password">
+        <el-input v-model="form.permission_password" :maxlength="8" :placeholder="$t('留空则不修改原权限密码')" type="password"></el-input>
+        <div class="tips">
+          {{ $t('密码必须为 4 - 8 位数字') }}
+        </div>
+      </el-form-item>
       <el-form-item for="no_click" :label="$t('姓名')" prop="real_name">
         <el-input v-model="form.real_name" :maxlength="50" :placeholder="$t('请输入姓名')"></el-input>
       </el-form-item>
@@ -63,6 +69,14 @@
           callback();
         }
       };
+
+      let validatePermissionPassword = (rule, value, callback) => {
+        if (value && !/^\d{4,8}$/.test(value)) {
+          callback(new Error($t('密码必须为 4 - 8 位数字')));
+        } else {
+          callback();
+        }
+      };
       return {
         /*左边长度*/
         formLabelWidth: '120px',
@@ -76,6 +90,7 @@
           phone: '',
           password: '',
           confirm_password: '',
+          permission_password: '',
           access_id: [],
           real_name: '',
         },
@@ -125,6 +140,12 @@
               trigger: ['blur', 'change'],
             },
           ],
+          permission_password: [
+            {
+              validator: validatePermissionPassword,
+              trigger: ['blur', 'change'],
+            },
+          ],
         },
       };
     },
@@ -154,6 +175,7 @@
               phone: obj.phone,
               password: obj.password,
               confirm_password: obj.confirm_password,
+              permission_password: '',
               access_id: obj.access_id,
             };
             self.form.role_id = res.data.role_arr;
@@ -201,6 +223,7 @@
         this.form = {
           user_name: '',
           access_id: [],
+          permission_password: '',
         };
         if (e) {
           this.$emit('close', {

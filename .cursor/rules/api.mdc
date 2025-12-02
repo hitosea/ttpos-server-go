@@ -53,36 +53,74 @@ description: API 设计规范
 {"data": {"list": []}}
 ```
 
+### 删除接口 - DELETE 方法
+
+**所有删除操作必须使用 DELETE HTTP 方法**
+
+**详细说明和代码示例**：参见 [API 设计指南 - DELETE 方法](../../docs/human/guides/api-design-guide.md#delete-方法---删除接口规范) 章节
+
+### 切片初始化规范
+
+**响应体中的切片必须使用 `make` 初始化，避免返回 null**
+
+**详细代码示例**：参见 [API 设计指南 - 切片初始化规范](../../docs/human/guides/api-design-guide.md#切片初始化规范) 章节
+
 ---
 
 ## 📋 API 设计规则
+
+### 路由注册（强制，强制，强制）
+
+**每个 API 文件必须包含注册函数，并在 router.go 中调用**
+
+**详细代码示例**：参见 [API 设计指南 - 路由注册](../../docs/human/guides/api-design-guide.md#路由注册) 章节
 
 ### URL 设计
 
 ```
 ✅ 使用名词单数 + 操作后缀
-GET  /api/v1/order/list
-GET  /api/v1/order/info
-POST /api/v1/order/create
-POST /api/v1/order/cancel
+GET    /api/v1/order/list          # 获取列表
+GET    /api/v1/order/info          # 获取详情
+POST   /api/v1/order/create        # 创建
+POST   /api/v1/order/update        # 更新
+DELETE /api/v1/order/delete        # 删除
 
 ❌ 不使用 RESTful 风格
 GET  /api/v1/orders
 GET  /api/v1/orders/123
 ```
 
-### HTTP 方法
+### HTTP 方法（RESTful API 规范）
 
-| 方法   | 用途      | 示例                          |
-| ------ | --------- | ----------------------------- |
-| GET    | 获取资源  | `GET /api/v1/order/list`      |
-| POST   | 创建/执行 | `POST /api/v1/order/create`   |
-| PUT    | 完整更新  | `PUT /api/v1/order/update`    |
-| DELETE | 删除      | `DELETE /api/v1/order/delete` |
+**必须遵循以下规则：**
+
+| 方法   | 用途           | 示例                          | 说明                    |
+| ------ | -------------- | ----------------------------- | ----------------------- |
+| GET    | 获取信息       | `GET /api/v1/order/list`      | 查询、列表、详情        |
+| POST   | 创建/修改数据  | `POST /api/v1/order/create`    | 创建、更新、执行操作    |
+| DELETE | 删除数据       | `DELETE /api/v1/order/delete` | 删除操作                |
+| PUT    | **禁止使用**   | -                             | **项目禁止使用 PUT 方法** |
+
+**规则说明：**
+
+- ✅ **GET 请求**：用于获取信息（查询、列表、详情），参数通过 Query 传递
+- ✅ **POST 请求**：用于创建和修改数据，参数通过 Body 传递
+- ✅ **DELETE 请求**：用于删除数据，参数可通过 Query 或 Body 传递
+- ❌ **PUT 请求**：禁止使用
+
+**详细代码示例**：参见 [API 设计指南 - HTTP 方法](../../docs/human/guides/api-design-guide.md#http-方法) 和 [代码示例](../../docs/human/guides/api-design-guide.md#代码示例) 章节
 
 ---
 
 ## 🔍 关键检查点
+
+### 创建 API 文件时
+
+- [ ] 必须包含 `Register*Handlers` 函数
+- [ ] 在 `router/router.go` 中调用注册函数
+- [ ] 注册函数中初始化所有依赖服务
+- [ ] 注册函数中创建 Handler 实例
+- [ ] 注册函数中注册所有路由
 
 ### 设计 API 时
 
@@ -90,6 +128,11 @@ GET  /api/v1/orders/123
 - [ ] 使用名词单数 + 操作后缀
 - [ ] data 必须是对象
 - [ ] 包含版本号 /api/v1/
+- [ ] **获取信息使用 GET 请求（查询、列表、详情）**
+- [ ] **创建和修改数据使用 POST 请求**
+- [ ] **删除数据使用 DELETE 请求**
+- [ ] **禁止使用 PUT 请求**
+- [ ] **GET 请求参数通过 Query 传递，不使用 Body**
 
 ### 编写响应时
 
@@ -103,60 +146,49 @@ GET  /api/v1/orders/123
 - [ ] Go: 使用 helper.Success()
 - [ ] PHP: 使用 renderSuccess()
 - [ ] 空数据返回 `{}`，不返回 null
+- [ ] **Go 响应体中的切片必须使用 `make` 初始化，避免返回 null**
+
+### 多语言字段（请求和响应）
+
+- [ ] **所有多语言字段（请求参数和响应参数）必须使用 `dto.LocaleResponse` 类型**
+- [ ] **多语言字段名称必须使用 `LocaleName` 或 `LocaleXXXName` 格式命名**（如 `LocaleName`、`LocaleAttributeName`、`LocaleUnitName` 等）
+- [ ] ❌ **禁止使用** 字符串、map[string]string 或其他自定义结构
+- [ ] ❌ **禁止使用** `Name`、`AttributeName` 等不带 `Locale` 前缀的字段名
+
+**详细代码示例**：参见 [API 设计指南 - 多语言字段示例](../../docs/human/guides/api-design-guide.md#多语言字段示例) 章节
 
 ---
 
-## 📋 常用模式
+## 📋 代码示例
 
-### Go 返回响应
+**所有详细的代码示例已移至** [API 设计指南 - 代码示例](../../docs/human/guides/api-design-guide.md#代码示例) 章节，包括：
 
-```go
-// ✅ 正确
-helper.Success(c, gin.H{})
-helper.Success(c, gin.H{"list": []})
-helper.ErrorWithDetail(c, constant.CodeFail, err)
-
-// ❌ 错误
-c.JSON(200, data)  // 不要直接用 c.JSON
-```
-
-### PHP 返回响应
-
-```php
-// ✅ 正确
-return $this->renderSuccess($data);
-return $this->renderSuccess([]);
-return $this->renderError('错误信息');
-```
-
-### 分页响应
-
-```json
-{
-  "code": 1,
-  "message": "success",
-  "data": {
-    "list": [...],
-    "meta": {
-      "page_no": 1,
-      "page_size": 20,
-      "total": 100
-    }
-  }
-}
-```
+- 路由注册完整示例
+- GET/POST/DELETE 请求处理示例
+- 响应处理示例（Go/PHP）
+- 多语言字段使用示例
+- 分页响应格式示例
 
 ---
 
 ## 🚫 禁止事项
 
-| 禁止                 | 原因                  |
-| -------------------- | --------------------- |
-| ❌ URL 用 kebab-case | 项目统一用 snake_case |
-| ❌ data 返回 null    | 前端无法统一处理      |
-| ❌ data 返回数组     | 必须是对象            |
-| ❌ 使用 RESTful 风格 | 项目用操作后缀        |
-| ❌ 直接用 c.JSON     | 必须用 helper         |
+| 禁止                        | 原因                      |
+| --------------------------- | ------------------------- |
+| ❌ API 文件无注册函数       | 路由无法生效              |
+| ❌ 注册函数未在 router 调用 | 路由无法生效              |
+| ❌ URL 用 kebab-case        | 项目统一用 snake_case     |
+| ❌ data 返回 null           | 前端无法统一处理          |
+| ❌ data 返回数组            | 必须是对象                |
+| ❌ 使用 RESTful 风格        | 项目用操作后缀            |
+| ❌ 直接用 c.JSON            | 必须用 helper             |
+| ❌ **获取信息使用 POST 请求** | **必须使用 GET 请求** |
+| ❌ **删除数据使用 POST 请求** | **必须使用 DELETE 请求** |
+| ❌ **使用 PUT 请求** | **项目禁止使用 PUT 方法** |
+| ❌ **GET 请求使用 Body 传递参数** | **GET 请求参数必须通过 Query 传递** |
+| ❌ **多语言字段（请求参数和响应参数）使用 map[string]string、字符串或自定义结构** | **必须用 dto.LocaleResponse** |
+| ❌ **多语言字段名不是 LocaleName 或 LocaleXXXName 格式** | **必须使用 LocaleName 或 LocaleXXXName 格式** |
+| ❌ **响应体中的切片未使用 make 初始化** | **必须使用 make 初始化，避免返回 null** |
 
 ---
 
@@ -169,5 +201,5 @@ return $this->renderError('错误信息');
 
 ---
 
-**最后更新**: 2025-11-17  
+**最后更新**: 2025-11-20  
 **维护者**: TTPOS Team

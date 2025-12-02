@@ -91,6 +91,9 @@ class App extends AppModel
             "su.enable_sms",
             "su.sms_quota",
             "su.coordinates",
+            // v2.10.0
+            "su.enable_table_map",
+            "su.enable_data_management",
         ];
         //
         $countWhere = 'where 1 = 1';

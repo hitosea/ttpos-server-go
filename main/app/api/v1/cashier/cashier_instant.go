@@ -26,9 +26,10 @@ import (
 
 // InstantHandler 收银点餐处理程序
 type InstantHandler struct {
-	orderSrv  service.IOrderSrv  // 订单服务
-	memberSrv service.IMemberSrv // 会员服务
-	otherSrv  service.IOtherSrv  // 其他服务
+	orderSrv   service.IOrderSrv   // 订单服务
+	memberSrv  service.IMemberSrv  // 会员服务
+	otherSrv   service.IOtherSrv   // 其他服务
+	productSrv service.IProductSrv // 产品服务
 }
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
@@ -145,6 +146,59 @@ func (h *InstantHandler) ShowOrder(c *gin.Context) {
 		return
 	}
 	// 返回结果
+	helper.Success(c, shopCart)
+}
+
+// SetOrderSource 设置点餐订单来源
+// @Summary 设置点餐订单来源
+// @Description 将点餐订单标记为某个外卖渠道
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetOrderSourceReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/set_order_source [post]
+func (h *InstantHandler) SetOrderSource(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetOrderSourceReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	//
+	helper.Success(c, shopCart)
+}
+
+// SetNationality 设置点餐订单国籍
+// @Summary 设置点餐订单国籍
+// @Description 设置当前点餐订单的国籍信息
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetNationalityReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/set_nationality [post]
+func (h *InstantHandler) SetNationality(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetNationalityReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
 	helper.Success(c, shopCart)
 }
 
@@ -1550,6 +1604,88 @@ func (h *InstantHandler) OrderCartProductBatchCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetBatchTagList 获取分批类型列表
+// @Summary 获取分批类型列表
+// @Description 获取分批类型列表，按 sort 排序，优先级高的在前
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=product_resp.BatchTagList}
+// @Router /cashier/instant/batch_tag/list [get]
+func (h *InstantHandler) GetBatchTagList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 调用 Service 层获取分批类型列表
+	batchTagList, err := h.productSrv.GetBatchTagList(ctx, req.BatchTagListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, batchTagList)
+}
+
+// ChangeBatchTag 更换分批类型（前置模式）
+// @Summary 更换分批类型
+// @Description 更换未送厨商品的分批类型（前置模式）
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ChangeBatchTagReq true "更换分批类型请求"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/instant/order/cart/batch/change_tag [post]
+func (h *InstantHandler) ChangeBatchTag(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.ChangeBatchTagReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 更换分批类型
+	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentActivity 选择或取消满减活动
+// @Summary 选择或取消满减活动
+// @Description 选择或取消满减活动
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentActivityReq true "选择或取消满减活动参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/payment/activity [post]
+func (h *InstantHandler) OrderPaymentActivity(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面选择或取消满减活动接口请求")
+
+	var activityReq req.InstantOrderPaymentActivityReq
+	if err := c.ShouldBindJSON(&activityReq); err != nil {
+		helper.HandleValidationError(c, err, activityReq, nil)
+		return
+	}
+	ctx.Log().Info("选择或取消满减活动", zap.Any("params", activityReq))
+	// 选择或取消满减活动
+	res, err := h.orderSrv.OrderPaymentActivity(ctx, activityReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1567,11 +1703,14 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{
-		orderSrv:  orderSrv,  // 订单服务
-		memberSrv: memberSrv, // 会员服务
-		otherSrv:  otherSrv,  // 其他服务
+		orderSrv:   orderSrv,   // 订单服务
+		memberSrv:  memberSrv,  // 会员服务
+		otherSrv:   otherSrv,   // 其他服务
+		productSrv: productSrv, // 产品服务
 	}
 
 	// 需要认证
@@ -1581,6 +1720,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/cancel", wrapper.CancelOrder)                                                         // 取消点餐订单
 		privateApi.POST("/instant/order/hide", wrapper.HideOrder)                                                             // 隐藏点餐订单（挂单）
 		privateApi.POST("/instant/order/show", wrapper.ShowOrder)                                                             // 显示点餐订单（取单）
+		privateApi.POST("/instant/set_order_source", wrapper.SetOrderSource)                                                  // 设置点餐订单来源
+		privateApi.POST("/instant/set_nationality", wrapper.SetNationality)                                                   // 设置点餐订单国籍
 		privateApi.GET("/instant/order/list", wrapper.OrderList)                                                              // 显示点餐订单列表（取单列表）
 		privateApi.POST("/instant/order/takeout", wrapper.OrderTakeout)                                                       // 打包
 		privateApi.DELETE("/instant/order/product/delete", wrapper.OrderProductDelete)                                        // 删除点餐订单商品
@@ -1625,5 +1766,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/instant/order/member/list", wrapper.GetOrderMemberList)                                              // 获取订单会员列表
 		privateApi.GET("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/instant/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
+		privateApi.GET("/instant/batch_tag/list", wrapper.GetBatchTagList)                                                    // 获取分批类型列表
+		privateApi.POST("/instant/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型
+		privateApi.POST("/instant/order/payment/activity", wrapper.OrderPaymentActivity)                                      // 选择或取消满减活动
 	}
 }

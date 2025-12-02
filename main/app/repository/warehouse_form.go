@@ -211,7 +211,7 @@ func (r *warehouseFormRepoImpl) CreateWarehouseOutFormItemRecords(list []*model.
 	for _, item := range list {
 		items = append(items, *item)
 	}
-	for index, _ := range items {
+	for index := range items {
 		items[index].SetNil()
 	}
 	return r.db.Model(&model.WarehouseOutFormItem{}).Create(items).Error
@@ -222,7 +222,7 @@ func (r *warehouseFormRepoImpl) CreateWarehouseFormItemRecords(list []*model.War
 	for _, item := range list {
 		items = append(items, *item)
 	}
-	for index, _ := range items {
+	for index := range items {
 		items[index].SetNil()
 	}
 	return r.db.Model(&model.WarehouseFormItem{}).Create(items).Error

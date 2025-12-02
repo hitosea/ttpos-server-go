@@ -67,20 +67,25 @@ type SaleOrder struct {
 	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,4);default:0;comment:积分抵扣汇率,1积分抵扣多少元" json:"points_exchange_rate"`
 	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
 
+	// 满减活动
+	FullReductionActivityUuid uint64 `gorm:"column:full_reduction_activity_uuid;type:bigint(20);default:0;comment:订单使用的满减活动UUID" json:"full_reduction_activity_uuid"`
+
 	// 结账完成后才记录的字段
-	CouponAmount         float64 `gorm:"column:coupon_amount;type:decimal(12,2);default:0;comment:优惠券抵扣金额，实际抵扣金额" json:"coupon_amount"`
-	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
-	ChangeAmount         float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
-	ZeroCheckoutFee      float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
-	FinalPrice           float64 `gorm:"column:final_price;type:decimal(12,2);default:0;comment:最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额" json:"final_price"`
-	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
-	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
-	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
-	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例或每人赠送积分数量。赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
-	GiftPointsType       uint8   `gorm:"column:gift_points_type;type:tinyint(1);default:0;comment:赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送" json:"gift_points_type"`
-	MemberLevelName      string  `gorm:"column:member_level_name;type:varchar(255);default:'';comment:会员等级名称" json:"member_level_name"`
-	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
-	Unit                 string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
+	CouponAmount                 float64 `gorm:"column:coupon_amount;type:decimal(12,2);default:0;comment:优惠券抵扣金额，实际抵扣金额" json:"coupon_amount"`
+	ActivityAmount               float64 `gorm:"column:activity_amount;type:decimal(20,8);default:0;comment:满减活动抵扣金额（结账完成后记录）" json:"activity_amount"`
+	FullReductionActivityMessage string  `gorm:"column:full_reduction_activity_message;type:varchar(255);default:'';comment:满减规则信息（如\"满200减20\"）" json:"full_reduction_activity_message"`
+	PaymentAmount                float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
+	ChangeAmount                 float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
+	ZeroCheckoutFee              float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
+	FinalPrice                   float64 `gorm:"column:final_price;type:decimal(12,2);default:0;comment:最终应收金额。最终应收金额=应收金额+手续费-结账抹零金额" json:"final_price"`
+	PaymentCommissionFee         float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
+	GiftAmount                   float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
+	GiftPoints                   float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
+	GiftPointsRate               float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例或每人赠送积分数量。赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
+	GiftPointsType               uint8   `gorm:"column:gift_points_type;type:tinyint(1);default:0;comment:赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送" json:"gift_points_type"`
+	MemberLevelName              string  `gorm:"column:member_level_name;type:varchar(255);default:'';comment:会员等级名称" json:"member_level_name"`
+	MemberBalance                float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
+	Unit                         string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
 
 	// erp相关
 	ErpProductsInvoiceName string  `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称;NOT NULL" json:"erp_products_invoice_name"`
@@ -286,7 +291,7 @@ func (model *SaleOrder) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 	materials := make([]*ErpProductBomMaterials, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		saleOrderProductMaterials := saleOrderProduct.GetErpProductBomMaterials()
-		for index, _ := range saleOrderProductMaterials {
+		for index := range saleOrderProductMaterials {
 			material := saleOrderProductMaterials[index]
 			material.Num = decimal.NewFromFloat(material.Num).Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(4).InexactFloat64()
 		}
@@ -505,8 +510,20 @@ func (model *SaleOrder) GetManualReturnPoints() float64 {
 	return returnedPoints
 }
 
-// 订单金额。积分抵扣后、优惠券抵扣后的金额
+// 订单金额。积分抵扣后、优惠券抵扣后、满减活动抵扣后的金额
 func (model *SaleOrder) GetAmountValue() float64 {
+	// 积分抵扣后的金额-优惠券抵扣金额-满减活动抵扣金额
+	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Sub(decimal.NewFromFloat(model.ActivityAmount)).Round(2).InexactFloat64()
+}
+
+// 订单金额。积分抵扣后、优惠券抵扣后、满减活动抵扣后的金额
+func (model *SaleOrder) GetAmountValueWithActivityAmount(activityAmount float64) float64 {
+	// 积分抵扣后的金额-优惠券抵扣金额-满减活动抵扣金额
+	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Sub(decimal.NewFromFloat(activityAmount)).Round(2).InexactFloat64()
+}
+
+// 订单金额。积分抵扣后、优惠券抵扣后的金额, 未满减活动抵扣的金额
+func (model *SaleOrder) GetAmountValueNoActivityAmount() float64 {
 	// 积分抵扣后的金额-优惠券抵扣金额
 	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Round(2).InexactFloat64()
 }
@@ -588,6 +605,7 @@ func (model *SaleOrder) IsSettled() bool {
 // 清除结账信息
 func (model *SaleOrder) ClearSettleInfo() {
 	model.CouponAmount = 0
+	model.SetActivityCancel()
 	model.PaymentAmount = 0
 	model.ChangeAmount = 0
 	model.ZeroCheckoutFee = 0
@@ -607,7 +625,7 @@ func (model *SaleOrder) InsertSaleOrderProduct(saleOrderProducts []*SaleOrderPro
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		saleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
 	}
-	for i, _ := range saleOrderProducts {
+	for i := range saleOrderProducts {
 		if _, ok := saleOrderProductMap[saleOrderProducts[i].Uuid]; !ok {
 			// 如果商品不存在，则添加
 			model.SaleOrderProducts = append(model.SaleOrderProducts, saleOrderProducts[i])
@@ -735,7 +753,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 }
 
 // 获取销售订单的商品列表
-func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openIsBatch bool) []resp.Product {
+func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductWithReject bool, openIsBatch bool) []resp.Product {
 	productList := make([]resp.Product, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 套餐子商品不返回
@@ -768,13 +786,19 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 		if saleOrderProduct.ProductType == constant.ProductTypePackage {
 			subProductList := model.GetPackageSubProductList(saleOrderProduct.Uuid) // 获取套餐的子商品列表
 			for _, subProduct := range subProductList {
-				packageProductList = append(packageProductList, resp.PackageProduct{
+				item := resp.PackageProduct{
 					Uuid:                subProduct.Uuid,
 					LocaleName:          subProduct.MultiLanguageName.GetNames(),
 					LocaleAttributeName: subProduct.GetAttributeName(),
-					Num:                 subProduct.Num,
-					UnitNum:             subProduct.UnitNum,
-				})
+					Num:                 subProduct.CopyNum,
+					UnitNum:             subProduct.GetUnitNum(),
+					AddPrice:            subProduct.AddPrice, // 子商品加价金额
+				}
+				// 如果版本小于2.10.0,则num*unit_num的值赋值给unit_num
+				if utils.CompareVersion(clientVerson, utils.VersionLT, constant.ClientVersionV2100) {
+					item.UnitNum = item.Num * item.UnitNum
+				}
+				packageProductList = append(packageProductList, item)
 			}
 		}
 
@@ -809,12 +833,25 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},
+			AddPrice:     saleOrderProduct.AddPrice, // 套餐主商品的加价总和
 			CanEdit:      saleOrderProduct.IsCanEdit(),
 			IsBatch:      saleOrderProduct.IsBatchBool(),
+			ShowDelayTag: saleOrderProduct.IsPreCooking(), // 如果商品是分批商，且处于预送厨阶段，则显示延迟送厨标签
 			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
 			BatchTagName: func() dto.LocaleResponse {
 				if saleOrderProduct.BatchTag != nil {
-					return saleOrderProduct.BatchTag.MultiLanguageName.GetNames()
+					// return saleOrderProduct.BatchTag.MultiLanguageName.GetNames()
+					return dto.LocaleResponse{
+						ZH:   saleOrderProduct.BatchTag.Abbreviation,
+						TH:   saleOrderProduct.BatchTag.Abbreviation,
+						EN:   saleOrderProduct.BatchTag.Abbreviation,
+						ZHTW: saleOrderProduct.BatchTag.Abbreviation,
+						JA:   saleOrderProduct.BatchTag.Abbreviation,
+						KO:   saleOrderProduct.BatchTag.Abbreviation,
+						MY:   saleOrderProduct.BatchTag.Abbreviation,
+						TR:   saleOrderProduct.BatchTag.Abbreviation,
+						SV:   saleOrderProduct.BatchTag.Abbreviation,
+					}
 				}
 				return dto.LocaleResponse{}
 			}(),
@@ -824,6 +861,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 				}
 				return ""
 			}(),
+			BatchTagUuid: saleOrderProduct.BatchTagUuid,
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
@@ -1241,6 +1279,7 @@ type BuffetUuidMapBuffetCustomerTypes struct {
 
 type FinalAmount struct {
 	CouponAmount         float64 // 优惠券金额
+	ActivityAmount       float64 // 满减活动抵扣金额
 	PaymentAmount        float64 // 已支付的金额
 	ChangeAmount         float64 // 找零金额
 	ZeroCheckoutFee      float64 // 结账抹零金额

@@ -18,6 +18,8 @@ const (
 	OrderDateTypeWeek      = 2  // 本周
 	OrderDateTypeMonth     = 3  // 本月
 	OrderDateTypeYear      = 4  // 本年
+	OrderDateTypeLastWeek  = 5  // 近7天
+	OrderDateTypeLastMonth = 6  // 上个月
 )
 
 const (
@@ -152,6 +154,7 @@ const (
 	OrderProductMove         = "PRODUCT_MOVE"          // 转菜
 	OrderDiscount            = "DISCOUNT"              // 优惠折扣
 	OrderCancelDiscount      = "CANCEL_DISCOUNT"       // 撤销优惠折扣
+	OrderActivity            = "ACTIVITY"              // 满减活动
 	OrderSettle              = "SETTLE"                // 结账
 	OrderFreeSale            = "FREE_SALE"             // 免单
 	OrderReverseSettle       = "REVERSE_SETTLE"        // 反结账

@@ -14,12 +14,27 @@ description: 数据库开发规范
 
 | 我要...          | 查阅文档                                                           |
 | ---------------- | ------------------------------------------------------------------ |
+| 查看代码示例     | [数据库开发规范 - 代码示例](./database-examples.mdc)              |
 | 了解数据库架构   | [数据库架构设计](../../docs/human/architecture/database-design.md) |
 | 学习详细开发规范 | [数据库开发指南](../../docs/human/guides/database-guide.md)        |
 
 ---
 
 ## ⚡ 核心约束（必须遵守）
+
+### 迁移文件与种子数据同步
+
+**强制要求：创建迁移文件必须同步更新 `shop_01.sql`**
+
+- ✅ **必须同步**：任何迁移文件的数据库变更（新增表、删除表、新增字段、删除字段、修改字段、修改字段类型、修改索引等）都必须同步反映到 `admin/database/seeds/shop_01.sql` 文件中
+- ✅ **目的**：确保种子数据与最新表结构一致，新商户初始化时使用正确的表结构
+- ✅ **执行时机**：创建迁移文件时立即同步更新 `shop_01.sql`
+- ✅ **初始化数据**：如有初始化数据，需同时添加到 `shop_init_data.sql` 中
+
+**示例：**
+- 创建迁移文件 `20251125094923_add_add_price_to_sale_order_product_table.php` 添加字段
+- 必须同步修改 `admin/database/seeds/shop_01.sql` 中 `ttpos_sale_order_product` 表的定义
+- 确保新增字段在种子文件中存在且定义一致
 
 ### 多租户架构
 
@@ -31,6 +46,13 @@ shop8609817471094784     # 商户2数据库
 saas                     # 系统主库
 ```
 
+**重要约束：**
+
+- ❌ **禁止在业务表中添加 `company_uuid` 字段**
+- ✅ **原因**：每个商户使用独立的数据库实例，数据天然隔离，无需通过 `company_uuid` 字段区分商户
+- ✅ **适用场景**：所有商户业务表（如订单、商品、活动等）
+- ⚠️ **例外**：仅系统主库（saas）中的跨商户表需要 `company_uuid` 字段
+
 ### 命名规范
 
 | 类型   | 规则          | 示例                     |
@@ -40,21 +62,42 @@ saas                     # 系统主库
 | 字段   | snake_case    | `user_id`, `create_time` |
 | 索引   | uk*/idx*前缀  | `uk_uuid`, `idx_status`  |
 
+**外键 UUID 字段命名规范：**
+
+- ✅ **必须使用完整表名**：`{完整表名}_uuid`
+- ❌ **禁止使用缩写或简写**：不能使用 `prod_uuid`、`usr_uuid` 等
+
+**示例：**
+
+| 关联表名                | 正确字段名                          | 错误示例              |
+| ----------------------- | ----------------------------------- | --------------------- |
+| `ttpos_product`         | `product_uuid`                      | ❌ `prod_uuid`         |
+| `ttpos_user`           | `user_uuid`                         | ❌ `usr_uuid`          |
+| `ttpos_order`          | `order_uuid`                        | ❌ `ord_uuid`          |
+| `ttpos_multi_language_name` | `multi_language_name_uuid`      | ❌ `mln_uuid`          |
+| `ttpos_product_category` | `product_category_uuid`          | ❌ `prod_cat_uuid`      |
+
+**说明：**
+
+- 字段名中的表名部分应去除 `ttpos_` 前缀
+- 例如：`ttpos_product` 表对应的外键字段为 `product_uuid`，而不是 `ttpos_product_uuid`
+- 必须使用完整的表名（去除前缀后），不能使用任何形式的缩写
+
 ---
 
 ## 🗄️ 必需字段
 
 **每个表必须包含**：
 
-```sql
-`id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-`uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
-`create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
-`update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
-`delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
-PRIMARY KEY (`id`),
-UNIQUE KEY `uk_uuid` (`uuid`)
-```
+> 📖 **完整示例**: 参见 [必需字段示例](./database-examples.mdc#必需字段示例)
+
+- `id` - 主键ID（bigint unsigned AUTO_INCREMENT）
+- `uuid` - 唯一标识（bigint unsigned）
+- `create_time` - 创建时间（int）
+- `update_time` - 更新时间（int）
+- `delete_time` - 删除时间（int）
+- PRIMARY KEY (`id`)
+- UNIQUE KEY `uk_uuid` (`uuid`)
 
 ---
 
@@ -62,9 +105,7 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 时间字段 - 使用 int
 
-```sql
-`create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间'
-```
+> 📖 **完整示例**: 参见 [时间字段示例](./database-examples.mdc#时间字段)
 
 **原因**：
 
@@ -74,25 +115,43 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 金额字段 - 使用 decimal
 
-```sql
--- 高精度（8位小数）
-`amount` decimal(20,8) NOT NULL DEFAULT 0.00000000
-
--- 普通金额（2位小数）
-`price` decimal(14,2) NOT NULL DEFAULT 0.00
-```
+> 📖 **完整示例**: 参见 [金额字段示例](./database-examples.mdc#金额字段)
 
 **为什么不用 float/double?** 精度丢失
 
 ### UUID 字段 - 使用 bigint
 
-```sql
-`uuid` bigint unsigned NOT NULL DEFAULT 0
-```
+> 📖 **完整示例**: 参见 [UUID 字段示例](./database-examples.mdc#uuid-字段)
+
+### 布尔字段 - 使用 int
+
+**禁止使用 boolean 类型，统一使用 int**
+
+> 📖 **完整示例**: 参见 [布尔字段示例](./database-examples.mdc#布尔字段)
+
+**原因：**
+- MySQL 中 boolean 类型实际上是 tinyint(1) 的别名
+- 统一使用 int 类型，保持一致性
+- 便于扩展（如需要三态：0/1/2）
+- 避免不同数据库系统的兼容性问题
+
+**规范：**
+- ✅ 使用 `int` 类型
+- ✅ 默认值：`0`（否）或 `1`（是）
+- ✅ 注释中明确说明：`0=否，1=是` 或 `0=否，1=是，2=待定` 等
+- ❌ 禁止使用 `boolean`、`bool`、`tinyint(1)` 类型
 
 ---
 
 ## 🔍 关键检查点
+
+### 创建迁移文件时（必须检查）
+
+- [ ] **同步更新 `admin/database/seeds/shop_01.sql`**：任何数据库变更都必须同步反映到种子文件
+- [ ] **同步更新模型文件**：如果变更涉及业务表，需同步更新 `../main/app/model/` 目录下对应的模型文件
+- [ ] 检查表是否存在
+- [ ] 检查字段是否存在
+- [ ] 包含注释说明
 
 ### 设计表时
 
@@ -100,8 +159,10 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 - [ ] 时间字段用 int 类型
 - [ ] 金额字段用 decimal 类型
 - [ ] UUID 字段用 bigint 类型
+- [ ] **布尔字段用 int 类型，禁止使用 boolean 类型**
 - [ ] 表名使用 ttpos\_ 前缀
 - [ ] 字段名使用 snake_case
+- [ ] 外键 UUID 字段使用完整表名（去除 ttpos\_ 前缀），禁止使用缩写或简写
 
 ### 创建索引时
 
@@ -112,61 +173,161 @@ UNIQUE KEY `uk_uuid` (`uuid`)
 
 ### 迁移文件
 
+**TARGET 常量说明：**
+- [ ] `const TARGET = 'all';` - 应用到所有商户数据库和saas主库（系统级表） （company、company_setting 表必须）
+- [ ] `const TARGET = 'main';` - 仅应用到 saas 主库（系统级表）
+- 不设置 - 仅应用到所有商户数据库（普通业务表）
+
+**约束：**
+- [ ] **文件命名**: 使用 `date +%Y%m%d%H%M%S` 命令生成时间戳前缀，格式：`{YYYYMMDDHHMMSS}_{操作描述}.php`
+  - 示例：`20250721370408_add_table_name_table.php`
+  - 必须使用 shell 命令 `date +%Y%m%d%H%M%S` 生成，保持与其他迁移文件一致
+- [ ] **TARGET 常量**: 涉及 `company_setting` 和 `company` 表的迁移，必须添加 `const TARGET = 'all';`
+- [ ] **表名引用**: "强制要求,强制要求,强制要求" 在迁移文件中引用表名时，不需要添加 `ttpos_` 前缀（实际数据库表已包含该前缀）
+  - ✅ 正确：`$this->hasTable('company_setting')`
 - [ ] 检查表是否存在
 - [ ] 检查字段是否存在
 - [ ] 包含注释说明
+- [ ] **⚠️ 强制要求：同步更新 `admin/database/seeds/shop_01.sql`**
+  - 任何迁移文件的数据库变更（新增表、删除表、新增字段、删除字段、修改字段、修改字段类型、修改索引等）都必须同步反映到 `shop_01.sql` 文件中
+  - 确保种子数据与最新表结构一致
+  - 有初始化数据的也添加到 `shop_init_data.sql` 中
+  - **这是必须执行的步骤，不能遗漏**
+- [ ] **同步更新模型文件**：如果变更涉及业务表，需同步更新 `../main/app/model/` 目录下对应的模型文件
+- [ ] 存在 `const TARGET = 'all';` 标识的时候，新建的表才需要添加 `company_uuid` 字段但不是必须的，其他时候一定不需要添加
+- [ ] 强制要求 $table->addColumn 方法里面的内容不需要换行
+
+**执行迁移：**
+```bash
+make migrate
+```
 
 ---
 
 ## 📋 常用模式
 
+> 📖 **完整示例**: 参见 [常用模式示例](./database-examples.mdc#常用模式示例)
+
+### 迁移文件模板
+
+> 📖 **完整示例**: 参见 [迁移文件模板](./database-examples.mdc#迁移文件模板)
+
 ### 创建表模板
 
-```sql
-CREATE TABLE IF NOT EXISTS `ttpos_product` (
-    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
-    `name` varchar(100) NOT NULL DEFAULT '' COMMENT '商品名称',
-    `price` decimal(14,2) NOT NULL DEFAULT 0.00 COMMENT '价格',
-    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
-    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
-    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_uuid` (`uuid`),
-    KEY `idx_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
-```
+> 📖 **完整示例**: 参见 [创建表模板](./database-examples.mdc#创建表模板)
 
 ### 软删除查询
 
-```sql
--- 查询未删除数据
-SELECT * FROM ttpos_user WHERE delete_time = 0;
+> 📖 **完整示例**: 参见 [软删除查询](./database-examples.mdc#软删除查询)
 
--- 软删除
-UPDATE ttpos_user SET delete_time = 1699999999 WHERE id = 1;
-```
+---
+
+## 🌍 多语言支持
+
+### 多语言表（ttpos_multi_language_name）
+
+**所有需要多语言的实体，必须通过 `multi_language_name_uuid` 字段关联 `ttpos_multi_language_name` 表**
+
+> 📖 **完整示例**: 参见 [多语言表定义](./database-examples.mdc#多语言表定义)
+
+### 支持的语言
+
+| 语言代码 | 字段名        | 说明     |
+| -------- | ------------- | -------- |
+| `en`     | `en_name`     | 英文     |
+| `zh`     | `zh_name`     | 中文简体 |
+| `zhtw`   | `zh_tw_name`  | 中文繁体 |
+| `th`     | `th_name`     | 泰语     |
+| `my`     | `my_name`     | 缅甸语   |
+| `ja`     | `ja_name`     | 日语     |
+| `ko`     | `ko_name`     | 韩语     |
+| `tr`     | `tr_name`     | 土耳其语 |
+| `sv`     | `sv_name`     | 瑞典语   |
+
+### 关联使用模式
+
+**业务表必须包含两个字段：**
+
+1. **`name` VARCHAR(1000)** - 存储 JSON 格式的多语言数据（冗余存储，便于快速查询）
+2. **`multi_language_name_uuid` BIGINT** - 关联 `ttpos_multi_language_name` 表
+
+> 📖 **完整示例**: 参见 [业务表多语言字段示例](./database-examples.mdc#业务表多语言字段示例)
+
+**name 字段存储格式（JSON）：**
+
+> 📖 **完整示例**: 参见 [name 字段存储格式](./database-examples.mdc#name-字段存储格式json)
+
+### 查询多语言数据
+
+**使用 JOIN 关联查询：**
+
+> 📖 **完整示例**: 参见 [查询多语言数据](./database-examples.mdc#查询多语言数据)
+
+### Go 代码操作
+
+> 📖 **完整示例**: 参见 [Go 代码操作示例](./database-examples.mdc#go-代码操作示例)
+
+### PHP 代码操作
+
+> 📖 **完整示例**: 参见 [PHP 代码操作示例](./database-examples.mdc#php-代码操作示例)
+
+### 📋 多语言检查清单
+
+**设计表时：**
+
+- [ ] 需要多语言的表必须包含 **两个字段**：
+  - `name` VARCHAR(1000) - 存储 JSON 格式的多语言数据
+  - `multi_language_name_uuid` BIGINT UNSIGNED - 关联多语言表
+- [ ] 添加索引：`KEY idx_multi_language_name_uuid (multi_language_name_uuid)`
+
+**编写代码时：**
+
+- [ ] 先创建/更新 `ttpos_multi_language_name` 记录
+- [ ] 将多语言数据转换为 JSON 格式赋值给业务表的 `name` 字段
+- [ ] 将返回的 uuid 赋值给业务表的 `multi_language_name_uuid`
+
+**常见应用场景：**
+
+- 商品名称（product_package）
+- 商品分类（product_category）
+- 商品单位（product_unit）
+- 商品属性（product_attribute）
+- 商品口味（product_flavor）
+- 商品酱料（product_sauce）
+- 原料名称（material）
+- 原料分类（material_category）
+- 仓库名称（warehouse）
+- 标签名称（batch_tag）
 
 ---
 
 ## 🚫 禁止事项
 
-| 禁止                     | 原因         |
-| ------------------------ | ------------ |
-| ❌ 时间字段用 datetime   | 必须用 int   |
-| ❌ 金额字段用 float      | 精度丢失     |
-| ❌ 缺少必需字段          | 不符合规范   |
-| ❌ 表名不加 ttpos\_ 前缀 | 命名规范     |
-| ❌ 硬删除数据            | 必须用软删除 |
+| 禁止                                        | 原因                   |
+| ------------------------------------------- | ---------------------- |
+| ❌ **创建迁移文件后不同步更新 `shop_01.sql`** | **必须同步更新种子文件** |
+| ❌ 时间字段用 datetime                      | 必须用 int             |
+| ❌ 金额字段用 float                         | 精度丢失               |
+| ❌ **布尔字段用 boolean 类型**              | **必须用 int 类型**    |
+| ❌ 缺少必需字段                             | 不符合规范             |
+| ❌ 表名不加 ttpos\_ 前缀                    | 命名规范               |
+| ❌ 外键 UUID 字段使用缩写或简写             | 必须使用完整表名       |
+| ❌ 硬删除数据                               | 必须用软删除           |
+| ❌ 多语言表缺少 name 或 multi_language_name_uuid | 必须同时包含两个字段   |
+| ❌ name 字段不存储 JSON 格式                | 必须是完整的 JSON      |
+| ❌ name 字段长度小于 1000                   | 必须使用 VARCHAR(1000) |
+| ❌ company_setting/company 表迁移未添加 TARGET | 必须添加 `const TARGET = 'all';` |
 
 ---
 
 ## 📖 详细文档
 
+- [数据库开发规范 - 代码示例](./database-examples.mdc)
 - [数据库架构设计](../../docs/human/architecture/database-design.md)
 - [数据库开发指南](../../docs/human/guides/database-guide.md)
+- [多语言名称检查](../../docs/human/architecture/features/check_name.md)
 
 ---
 
-**最后更新**: 2025-11-17  
+**最后更新**: 2025-11-19  
 **维护者**: TTPOS Team

@@ -90,6 +90,7 @@ func rocketmqConf(opt copier.Option) {
 
 func nacosConf(opt copier.Option) {
 	Nacos = NacosConf{
+		Addresses: "",
 		Host:      "localhost",
 		Port:      8848,
 		Namespace: "",
@@ -99,8 +100,9 @@ func nacosConf(opt copier.Option) {
 		Group:     "",
 	}
 	copier.CopyWithOption(&Nacos, NacosConf{
-		Host:      viper.GetString("NACOS_SERVER_IP"),
-		Port:      viper.GetInt("NACOS_SERVER_PORT"),
+		Addresses: viper.GetString("NACOS_SERVER_ADDRESSES"), // 多实例配置（优先）
+		Host:      viper.GetString("NACOS_SERVER_IP"),        // 兼容旧配置
+		Port:      viper.GetInt("NACOS_SERVER_PORT"),         // 兼容旧配置
 		Namespace: viper.GetString("NACOS_NAMESPACE"),
 		Username:  viper.GetString("NACOS_USERNAME"),
 		Password:  viper.GetString("NACOS_PASSWORD"),

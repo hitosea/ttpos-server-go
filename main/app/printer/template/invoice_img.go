@@ -90,7 +90,11 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	img.AppendText(t.base.Translate("非常感谢您今天的到来，我们期待您的再次光临"))
 	img.LineFeed(1, 60)
 	img.SetFontSize(28)
-	img.AppendText(t.base.Translate("发票"))
+	invoiceTitle := t.base.Translate("发票")
+	if saleBill.IsOrderSourceTakeout() {
+		invoiceTitle += "(" + t.base.Translate("外卖") + ")"
+	}
+	img.AppendText(invoiceTitle)
 	img.SetFontSize(20)
 	img.LineFeed(1)
 	if payTime != "" {

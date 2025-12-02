@@ -49,6 +49,10 @@ func (r *BatchTagRepoImpl) GetBatchTags(opts ...DBOption) ([]*model.BatchTag, er
 func (r *BatchTagRepoImpl) GetBatchTagList() ([]*model.BatchTag, error) {
 	opts := []DBOption{
 		NotDeleted,
+		// 根据sort 排序
+		CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Order("sort ASC")
+		}),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "MultiLanguageName",
@@ -130,8 +134,9 @@ func (r *BatchTagRepoImpl) CheckColorExists(color string, uuid uint64) bool {
 // 更新分批类型
 func (r *BatchTagRepoImpl) UpdateBatchTag(batchTag model.BatchTag) error {
 	return r.db.Model(&model.BatchTag{}).Where("uuid = ?", batchTag.Uuid).Updates(map[string]any{
-		"color": batchTag.Color,
-		"name":  batchTag.Name,
+		"color":        batchTag.Color,
+		"name":         batchTag.Name,
+		"abbreviation": batchTag.Abbreviation,
 	}).Error
 }
 

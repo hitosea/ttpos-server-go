@@ -31,6 +31,7 @@ type BillListsExtra struct { // 通过当前数据控制按钮是否显示
 	IsCellPrint         bool `json:"is_cell_print"`          // 是否可打印小票
 	IsCellDelete        bool `json:"is_cell_delete"`         // 是否可删除
 	IsCellInvoice       bool `json:"is_cell_invoice"`        // 是否可打印发票
+	IsCellShow          bool `json:"is_cell_show"`           // 是否显示
 }
 
 // BillLists 订单列表响应
@@ -53,10 +54,11 @@ type BillLists struct {
 
 type OrderListMeta struct {
 	dto.PageResponse
-	TotalNum    int64 `json:"total_num"`    // 总数量
-	UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
-	CompleteNum int64 `json:"complete_num"` // 已完成数量
-	CancelNum   int64 `json:"cancel_num"`   // 已取消数量
+	TotalNum      int64   `json:"total_num"`      // 总数量
+	UnpaidNum     int64   `json:"unpaid_num"`     // 待付款数量
+	CompleteNum   int64   `json:"complete_num"`   // 已完成数量
+	CancelNum     int64   `json:"cancel_num"`     // 已取消数量
+	PaymentAmount float64 `json:"payment_amount"` // 实付金额
 }
 
 // OrderListPaginationResp 订单列表分页响应
@@ -121,27 +123,31 @@ type OrderInfo struct {
 
 // OrderInfos 订单信息响应
 type OrderInfos struct {
-	SaleBillUuid  uint64              `json:"sale_bill_uuid"` // 销售账单UUID
-	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单 2:外送订单
-	DiningMethod  uint                `json:"dining_method"`  // 用餐方式,0-堂食(店内就餐) 1-打包
-	IsSplit       bool                `json:"is_split"`       // 是否拆单	false:否 true:是
-	IsBuffet      bool                `json:"is_buffet"`      // 是否自助餐	false:否 true:是
-	SerialNo      string              `json:"serial_no"`      // 桌位编号 (点餐流水号)
-	OrderNo       string              `json:"order_no"`       // 订单编号
-	Status        uint                `json:"status"`         // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	CreateTime    int64               `json:"create_time"`    // 创建时间
-	FinishTime    int64               `json:"finish_time"`    // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64             `json:"order_amount"`   // 订单总金额
-	PaymentAmount float64             `json:"payment_amount"` // 支付金额
-	RefundAmount  float64             `json:"refund_amount"`  // 退款金额
-	MemberNames   string              `json:"member_names"`   // 会员名称
-	MemberUuids   string              `json:"member_uuids"`   // 会员名称
-	BuffetNames   string              `json:"buffet_names"`   // 自助餐名称
-	CancelReason  string              `json:"cancel_reason"`  // 取消原因
-	CashierName   string              `json:"cashier_name"`   // 收银员名称
-	Remark        string              `json:"remark"`         // 备注
-	PayTypes      []OrderInfoPayTypes `json:"pay_types"`      // 支付类型
-	SaleOrders    []OrderInfo         `json:"sale_orders"`    // 订单列表
+	SaleBillUuid    uint64              `json:"sale_bill_uuid"`    // 销售账单UUID
+	BillType        uint                `json:"bill_type"`         // 订单类型	0:桌台订单 1:点餐订单 2:外送订单
+	DiningMethod    uint                `json:"dining_method"`     // 用餐方式,0-堂食(店内就餐) 1-打包
+	IsSplit         bool                `json:"is_split"`          // 是否拆单	false:否 true:是
+	IsBuffet        bool                `json:"is_buffet"`         // 是否自助餐	false:否 true:是
+	SerialNo        string              `json:"serial_no"`         // 桌位编号 (点餐流水号)
+	OrderNo         string              `json:"order_no"`          // 订单编号
+	Status          uint                `json:"status"`            // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	CreateTime      int64               `json:"create_time"`       // 创建时间
+	FinishTime      int64               `json:"finish_time"`       // 完成时间（支付时间）（时间戳）
+	OrderAmount     float64             `json:"order_amount"`      // 订单总金额
+	PaymentAmount   float64             `json:"payment_amount"`    // 支付金额
+	RefundAmount    float64             `json:"refund_amount"`     // 退款金额
+	MemberNames     string              `json:"member_names"`      // 会员名称
+	MemberUuids     string              `json:"member_uuids"`      // 会员名称
+	BuffetNames     string              `json:"buffet_names"`      // 自助餐名称
+	CancelReason    string              `json:"cancel_reason"`     // 取消原因
+	CashierName     string              `json:"cashier_name"`      // 收银员名称
+	Remark          string              `json:"remark"`            // 备注
+	OrderSourceUuid uint64              `json:"order_source_uuid"` // 订单来源UUID（0=店内）
+	OrderSourceName string              `json:"order_source_name"` // 订单来源名称
+	NationalityUuid uint64              `json:"nationality_uuid"`  // 国籍UUID（0=未记录）
+	NationalityName string              `json:"nationality_name"`  // 国籍名称
+	PayTypes        []OrderInfoPayTypes `json:"pay_types"`         // 支付类型
+	SaleOrders      []OrderInfo         `json:"sale_orders"`       // 订单列表
 }
 
 type OrderOperationLog struct {
@@ -243,8 +249,23 @@ type OrderBuffetResp struct {
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表
 }
 
+// CheckAuthorizationResp 检查授权响应
+type CheckAuthorizationResp struct {
+	HasPermission bool `json:"has_permission"` // 是否有权限: true-有权限, false-无权限
+}
+
+// VerifyPasswordResp 密码验证响应
+type VerifyPasswordResp struct {
+	Verified bool `json:"verified"` // 验证结果: true-成功, false-失败
+}
+
 // DeskBuffetCustomerType 自助餐顾客类型
 type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
 	MealNum uint   `json:"meal_num"` // 就餐人数
+}
+
+// GetPaymentAmountResp 获取支付金额响应
+type GetPaymentAmountResp struct {
+	PaymentAmount float64 `json:"payment_amount"` // 支付金额
 }

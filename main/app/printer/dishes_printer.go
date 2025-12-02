@@ -97,6 +97,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				FirstExecution:     0,
 				ProductPrinterUuid: 0,
 				Copies:             printer.Copies,
+				PrintSpeed:         printer.PrintSpeed,
 			}, "")
 			if err != nil {
 				logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -200,6 +201,12 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							FirstExecution:     0,
 							ProductPrinterUuid: productPrinter.Uuid,
 							Copies:             productPrinter.Copies,
+							PrintSpeed: func() int {
+								if printerItem.Printer != nil {
+									return printerItem.Printer.PrintSpeed
+								}
+								return 2
+							}(),
 						}, "")
 						if err != nil {
 							logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -234,6 +241,12 @@ func (p *PrinterRepoImpl) PrintingDishes(
 									FirstExecution:     0,
 									ProductPrinterUuid: productPrinter.Uuid,
 									Copies:             productPrinter.Copies,
+									PrintSpeed: func() int {
+										if printerItem.Printer != nil {
+											return printerItem.Printer.PrintSpeed
+										}
+										return 2
+									}(),
 								}, "")
 								if err != nil {
 									logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -274,6 +287,12 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						FirstExecution:     0,
 						ProductPrinterUuid: productPrinter.Uuid,
 						Copies:             productPrinter.Copies,
+						PrintSpeed: func() int {
+							if printerItem.Printer != nil {
+								return printerItem.Printer.PrintSpeed
+							}
+							return 2
+						}(),
 					}, "")
 					if err != nil {
 						logger.Logger.Error("添加打印日志失败", zap.Error(err))

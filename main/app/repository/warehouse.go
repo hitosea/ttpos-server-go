@@ -34,6 +34,9 @@ type IWarehouseRepo interface {
 	WhereStatus(status int) DBOption
 	OrderByUpdateTime(desc bool) DBOption
 	UpdateIsDefault(uuid uint64) error
+
+	WithItems() DBOption
+	WithMultiLanguageName() DBOption
 }
 
 // WarehouseRepoImpl 仓库Repository实现
@@ -79,7 +82,7 @@ func (r *WarehouseRepoImpl) GetById(id uint64, opts ...DBOption) (*model.Warehou
 // GetByUuid 根据UUID获取仓库
 func (r *WarehouseRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Warehouse, error) {
 	var warehouse model.Warehouse
-	query := r.db.Where("uuid = ?", uuid).Preload("MultiLanguageName").Preload("Items").Scopes(NotDeleted)
+	query := r.db.Where("uuid = ?", uuid).Scopes(NotDeleted)
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
@@ -284,4 +287,16 @@ func (r *WarehouseRepoImpl) Get(opts ...DBOption) ([]model.Warehouse, error) {
 	}
 	err := query.Find(&warehouses).Error
 	return warehouses, err
+}
+
+func (r *WarehouseRepoImpl) WithItems() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Items")
+	}
+}
+
+func (r *WarehouseRepoImpl) WithMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName")
+	}
 }

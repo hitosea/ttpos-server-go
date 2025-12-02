@@ -165,30 +165,32 @@ func (model *ProductPackageAttribute) IsDefaultSelectedBool() bool {
 // ProductPackage 产品包表,定义产品包的相关信息 `ttpos_product_package`
 type ProductPackage struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'产品包名称'"`
-	ErpCode               string `gorm:"default:'';column:erp_code;comment:'ERPNext 商品编码，每个商品都有一个模版物品编码'"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
-	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
-	DeductStockType       uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
-	NumType               uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
-	UnitUuid              uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
-	DineTaxUuid           uint64 `gorm:"default:0;column:dine_tax_uuid;comment:'堂食税UUID'"`
-	CategoryUuid          uint64 `gorm:"default:0;column:category_uuid;comment:'类别UUID'"`
-	TakeoutTaxUuid        uint64 `gorm:"default:0;column:takeout_tax_uuid;comment:'外卖税UUID'"`
-	SpecialCategoryUuid   uint64 `gorm:"default:0;column:special_category_uuid;comment:'特殊类别UUID'"`
-	PrinterTagUuid        uint64 `gorm:"default:0;column:printer_tag_uuid;comment:'打印机标签UUID'"`
-	SupplierUuid          uint64 `gorm:"default:0;column:supplier_uuid;comment:'供应商UUID'"`
-	Status                uint   `gorm:"default:0;column:status;comment:'状态, 0-上架 1-下架'"`
-	IsShowCashier         uint   `gorm:"default:0;column:is_show_cashier;comment:'是否在收银设备显示, 0-否 1-是'"`
-	IsShowTablet          uint   `gorm:"default:0;column:is_show_tablet;comment:'是否在平板设备显示, 0-否 1-是'"`
-	IsShowKitchen         uint   `gorm:"default:0;column:is_show_kitchen;comment:'是否在厨房设备显示, 0-否 1-是'"`
-	IsShowAssistant       uint   `gorm:"default:0;column:is_show_assistant;comment:'是否在助手设备显示, 0-否 1-是'"`
-	IsShowH5              uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
-	IsShowDelivery        uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
-	Sort                  uint   `gorm:"default:0;column:sort;comment:'排序'"`
-	LimitNum              uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
-	Describe              string `gorm:"default:'';column:describe;comment:'卖点描述'"`
+	Name                          string `gorm:"default:'';column:name;comment:'产品包名称'"`
+	ErpCode                       string `gorm:"default:'';column:erp_code;comment:'ERPNext 商品编码，每个商品都有一个模版物品编码'"`
+	MultiLanguageNameUuid         uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	ImageName                     string `gorm:"default:'';column:image_name;comment:'图片名称'"`
+	ImageFileUuid                 uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
+	DeductStockType               uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
+	NumType                       uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
+	UnitUuid                      uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
+	DineTaxUuid                   uint64 `gorm:"default:0;column:dine_tax_uuid;comment:'堂食税UUID'"`
+	CategoryUuid                  uint64 `gorm:"default:0;column:category_uuid;comment:'类别UUID'"`
+	TakeoutTaxUuid                uint64 `gorm:"default:0;column:takeout_tax_uuid;comment:'外卖税UUID'"`
+	SpecialCategoryUuid           uint64 `gorm:"default:0;column:special_category_uuid;comment:'特殊类别UUID'"`
+	PrinterTagUuid                uint64 `gorm:"default:0;column:printer_tag_uuid;comment:'打印机标签UUID'"`
+	SupplierUuid                  uint64 `gorm:"default:0;column:supplier_uuid;comment:'供应商UUID'"`
+	Status                        uint   `gorm:"default:0;column:status;comment:'状态, 0-上架 1-下架'"`
+	IsShowCashier                 uint   `gorm:"default:0;column:is_show_cashier;comment:'是否在收银设备显示, 0-否 1-是'"`
+	IsShowTablet                  uint   `gorm:"default:0;column:is_show_tablet;comment:'是否在平板设备显示, 0-否 1-是'"`
+	IsShowKitchen                 uint   `gorm:"default:0;column:is_show_kitchen;comment:'是否在厨房设备显示, 0-否 1-是'"`
+	IsShowAssistant               uint   `gorm:"default:0;column:is_show_assistant;comment:'是否在助手设备显示, 0-否 1-是'"`
+	IsShowH5                      uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
+	IsShowDelivery                uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
+	Sort                          uint   `gorm:"default:0;column:sort;comment:'排序'"`
+	LimitNum                      uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
+	Describe                      string `gorm:"default:'';column:describe;comment:'卖点描述'"`
+	DescribeMultiLanguageNameUuid uint64 `gorm:"default:0;column:describe_multi_language_name_uuid;comment:'商品卖点多语言UUID'"`
+	Detail                        string `gorm:"type:longtext;column:detail;comment:'商品详情（富文本）'"`
 
 	ActualSaleNum float64 `gorm:"default:0.0000;column:actual_sale_num;comment:'实际销量。每次卖出时,实际销量增加'"`
 
@@ -209,20 +211,22 @@ type ProductPackage struct {
 	// 商品标签UUID
 	ProductLabelUuid uint64 `gorm:"default:0;column:product_label_uuid;comment:'商品标签UUID'"`
 
-	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
-	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位
-	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`      // BOM
-	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`      // 产品包属性组
-	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid" json:"-"`    // 堂食税
-	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid" json:"-"` // 外卖税
-	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`    // 类别
-	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`  // 图片
-	ProductPackageGroups          []ProductPackageGroup          `gorm:"foreignKey:product_package_uuid;references:uuid"`      // 商品套餐组
-	ProductLabel                  ProductLabel                   `gorm:"foreignKey:product_label_uuid;references:uuid"`        // 商品标签
+	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`          // 多语言名称
+	DescribeMultiLanguageName     MultiLanguageName              `gorm:"foreignKey:describe_multi_language_name_uuid;references:uuid"` // 卖点多语言
+	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`                // 单位
+	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`              // BOM
+	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`              // 产品包属性组
+	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid" json:"-"`            // 堂食税
+	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid" json:"-"`         // 外卖税
+	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`            // 类别
+	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`          // 图片
+	ProductPackageGroups          []ProductPackageGroup          `gorm:"foreignKey:product_package_uuid;references:uuid"`              // 商品套餐组
+	ProductLabel                  ProductLabel                   `gorm:"foreignKey:product_label_uuid;references:uuid"`                // 商品标签
 }
 
 func (model *ProductPackage) SetNil() {
 	model.MultiLanguageName = MultiLanguageName{}
+	model.DescribeMultiLanguageName = MultiLanguageName{}
 	model.ProductUnit = ProductUnit{}
 	model.ProductBoms = nil
 	model.ProductPackageAttributeGroups = nil
@@ -369,6 +373,13 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 			if product.IsDelete() {
 				continue
 			}
+			// 固定分组时，IsRequired 和 IsDefault 返回 1
+			isRequired := product.IsRequired
+			isDefault := product.IsDefault
+			if packageSubProductGroup.GroupType == 0 {
+				isRequired = 1
+				isDefault = 1
+			}
 			products = append(products, product_resp.ProductPackageSubProduct{
 				Uuid:             product.Uuid,
 				BomUuid:          product.ProductBomUuid,
@@ -377,11 +388,16 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,
 				Price:            product.ProductBom.Price,
+				AddPrice:         product.AddPrice,
+				IsRequired:       isRequired,
+				IsDefault:        isDefault,
 			})
 		}
 		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
-			Uuid:       packageSubProductGroup.Uuid,
-			LocaleName: packageSubProductGroup.MultiLanguageName.GetNames(),
+			Uuid:          packageSubProductGroup.Uuid,
+			LocaleName:    packageSubProductGroup.MultiLanguageName.GetNames(),
+			GroupType:     packageSubProductGroup.GroupType,
+			OptionalCount: packageSubProductGroup.OptionalCount,
 			Products: product_resp.ProductPackageSubProductList{
 				List: products,
 			},
@@ -959,6 +975,7 @@ type BatchTag struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Abbreviation          string `gorm:"default:'';column:abbreviation;comment:'名称缩写'"`
 	Color                 string `gorm:"default:'';column:color;comment:'颜色值，如#FF0000'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 

@@ -175,8 +175,20 @@ func (t *printerTemplate) IsThText(text string) bool {
 	return thaiRegex.MatchString(text) || text == "฿"
 }
 
+// Translate 翻译文本
 func (t *printerTemplate) Translate(message string) string {
+	if message == "" {
+		return ""
+	}
 	return i18n.Translate(t.Lang, message)
+}
+
+// GetOrderSourceTakeoutText 获取订单来源为外卖的文本
+func (t *printerTemplate) GetOrderSourceTakeoutText(message string) string {
+	if message == "" {
+		return ""
+	}
+	return "(" + i18n.Translate(t.Lang, message) + ")  "
 }
 
 // 打印文本（支持可选参数和默认值）

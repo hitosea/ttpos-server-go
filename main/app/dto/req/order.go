@@ -20,16 +20,19 @@ var OrderReqMessage = map[string]string{
 
 // OrderListReq 订单列表查询
 type OrderListReq struct {
-	dto.PageReq             // 分页参数
-	OrderNo          string `form:"order_no"`                 // 订单编号
-	DateType         int    `form:"date_type,default=-1"`     // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
-	EnableCreateTime bool   `form:"enable_create_time"`       // 启用开台时间 false-不启用，true-启用
-	EnablePayTime    bool   `form:"enable_pay_time"`          // 启用支付时间 false-不启用，true-启用
-	QueryStartTime   uint   `form:"query_start_time"`         // 查询开始时间戳
-	QueryEndTime     uint   `form:"query_end_time"`           // 查询结束时间戳
-	Status           int    `form:"status,default=-1"`        // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
-	BillType         int    `form:"bill_type,default=-1"`     // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
-	DiningMethod     int    `form:"dining_method,default=-1"` // 用餐方式, -1=全都、 0-堂食 1-打包
+	dto.PageReq                // 分页参数
+	OrderNo             string `form:"order_no"`                         // 订单编号
+	DateType            int    `form:"date_type,default=-1"`             // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周、3=本月、4=本年、5=近7天、6=上个月
+	EnableCreateTime    bool   `form:"enable_create_time"`               // 启用开台时间 false-不启用，true-启用
+	EnablePayTime       bool   `form:"enable_pay_time"`                  // 启用支付时间 false-不启用，true-启用
+	QueryStartTime      uint   `form:"query_start_time"`                 // 查询开始时间戳
+	QueryEndTime        uint   `form:"query_end_time"`                   // 查询结束时间戳
+	Status              int    `form:"status,default=-1"`                // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
+	BillType            int    `form:"bill_type,default=-1"`             // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
+	DiningMethod        int    `form:"dining_method,default=-1"`         // 用餐方式, -1=全都、 0-堂食 1-打包
+	SaleBillUuids       string `form:"sale_bill_uuids"`                  // 销售账单UUID列表，多个UUID用逗号分隔
+	IsOnlyDataManage    int    `form:"is_only_data_manage,default=0"`    // 是否只包含数据管理, 0-不包含、1-包含
+	IsContainDataManage int    `form:"is_contain_data_manage,default=0"` // 是否包含数据管理, 0-不包含、1-包含
 }
 
 // OrderInfoReq 订单信息查询
@@ -64,6 +67,9 @@ type OrderReturnReq struct {
 	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
 	// 手动退款积分
 	Points float64 `json:"points"` // 积分。当手动退积分时，需要传积分数量。
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // OrderReReturnReq 订单重新退款
@@ -116,6 +122,18 @@ type OrderIsCellCloseReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID	二选一，销售账单UUID权重最大
 }
 
+// OrderSetOrderSourceReq 设置订单来源
+type OrderSetOrderSourceReq struct {
+	SaleBillUuid    uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	OrderSourceUuid uint64 `json:"order_source_uuid"`                 // 订单来源UUID
+}
+
+// OrderSetNationalityReq 设置订单国籍
+type OrderSetNationalityReq struct {
+	SaleBillUuid    uint64 `json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+	NationalityUuid uint64 `json:"nationality_uuid"`                  // 国籍UUID
+}
+
 // OrderProductDeleteReq 删除订单商品
 type OrderProductDeleteReq struct {
 	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
@@ -147,6 +165,9 @@ type OrderAmountChangeReq struct {
 	SaleBillUuid  uint64  `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
 	SaleOrderUuid uint64  `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
 	Price         float64 `json:"price"`                              // 改价
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // Validate 验证参数
@@ -166,6 +187,9 @@ type OrderDiscountReq struct {
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单UUID
 	Discount      float64 `json:"discount"`        // 打折。0-100之间
 	DiscountType  int     `json:"discount_type"`   // 打折类型 0=百分比折扣，如八折为80% 1=百分比减免Off，如八折为20% off
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // Validate 验证参数
@@ -222,6 +246,9 @@ type OrderZeroRuleReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
 	ZeroRule      int    `json:"zero_rule"`       // 抹零规则
+	// 授权验证（可选）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // Validate 验证参数
@@ -343,4 +370,21 @@ type CashBoxBalanceChangeReq struct {
 	Amount      float64 `json:"amount"`       // 变动的金额。 正数为增加，负数为减少
 	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID; 用餐订单反结账的时候，关联的是用餐订单的ID
 	OrderNo     string  `json:"order_no"`     // 订单编号
+}
+
+// CheckAuthorizationReq 检查授权请求
+type CheckAuthorizationReq struct {
+	OperationType string `json:"operation_type" binding:"required,oneof=discount refund"` // 操作类型: discount-折扣操作 refund-退款操作
+}
+
+// VerifyPasswordForSensitiveOperationReq 敏感操作密码验证请求
+type VerifyPasswordForSensitiveOperationReq struct {
+	OperationType          string `json:"operation_type" binding:"required,oneof=discount refund"` // 操作类型: discount-折扣操作 refund-退款操作
+	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"`             // 授权员工账号（邮箱或手机号）
+	Password               string `json:"password" binding:"required"`                             // 权限密码
+}
+
+// OrderPaymentAmountReq 获取实付金额请求
+type OrderPaymentAmountReq struct {
+	SaleBillUuids []uint64 `json:"sale_bill_uuids"` // 销售账单UUID列表
 }

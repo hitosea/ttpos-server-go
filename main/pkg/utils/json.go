@@ -111,3 +111,32 @@ func MergeMaps(maps ...map[string]any) map[string]any {
 	}
 	return result
 }
+
+// ExtractNestedFieldToStruct 从 JSON 字符串中提取指定的嵌套字段并解析到目标结构体
+// jsonStr: JSON 字符串
+// fieldName: 要提取的字段名
+// target: 目标结构体指针
+// 返回错误信息
+func ExtractNestedFieldToStruct(jsonStr string, fieldName string, target any) error {
+	var dataMap map[string]any
+	if err := json.Unmarshal([]byte(jsonStr), &dataMap); err != nil {
+		return fmt.Errorf("解析 JSON 失败: %w", err)
+	}
+
+	fieldValue, ok := dataMap[fieldName]
+	if !ok {
+		return fmt.Errorf("字段 %s 不存在", fieldName)
+	}
+
+	// 将字段值序列化为 JSON，再解析到目标结构体
+	fieldBytes, err := json.Marshal(fieldValue)
+	if err != nil {
+		return fmt.Errorf("序列化字段 %s 失败: %w", fieldName, err)
+	}
+
+	if err := json.Unmarshal(fieldBytes, target); err != nil {
+		return fmt.Errorf("解析字段 %s 到结构体失败: %w", fieldName, err)
+	}
+
+	return nil
+}

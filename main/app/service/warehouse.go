@@ -145,7 +145,11 @@ func (s *warehouseSrv) GetHeadquarterWarehouseList(ctx context.Context) (resp.Wa
 func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
-	warehouse, err := warehouseRepo.GetByUuid(req.Uuid)
+	opts := []repository.DBOption{
+		warehouseRepo.WithItems(),
+		warehouseRepo.WithMultiLanguageName(),
+	}
+	warehouse, err := warehouseRepo.GetByUuid(req.Uuid, opts...)
 	if err != nil {
 		return resp.WarehouseResp{}, errors.WithMessage(err, "获取仓库失败")
 	}
@@ -375,8 +379,11 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq r
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
 
+	opts := []repository.DBOption{
+		warehouseRepo.WithItems(),
+	}
 	// 检查仓库是否存在
-	existingWarehouse, err := warehouseRepo.GetByUuid(deleteWarehouseReq.Uuid)
+	existingWarehouse, err := warehouseRepo.GetByUuid(deleteWarehouseReq.Uuid, opts...)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("仓库不存在")
@@ -787,10 +794,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	// 待翻译多语言Uuid
 	var multiLanguageNameUuids []uint64
 
-	// 已存在的多语言Uuid
-	var existsMultiLanguageUuids []uint64
-	db.Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
-
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if len(deletingWarehouseUuids) > 0 {
 			err = tx.Model(&model.Warehouse{}).Where("uuid IN (?)", deletingWarehouseUuids).Update("delete_time", time.Now().Unix()).Error
@@ -890,12 +893,11 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			}
 		}
 
-		// 同步ttpos总店数据
+		// 同步ttpos总店数据（多语言由 SyncMultiLanguage 任务处理）
 		if len(headquarterWarehouses) > 0 {
 			// 删除仓库
 			tx.Where("headquarter_uuid > 0").Delete(&model.Warehouse{})
 
-			var insertingMultiLanguageNames []model.MultiLanguageName
 			for _, headquarterWarehouse := range headquarterWarehouses {
 				multiLanguageName := headquarterWarehouse.MultiLanguageName.GetNames()
 				insertingWarehouses = append(insertingWarehouses, model.Warehouse{
@@ -917,36 +919,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					Address:               headquarterWarehouse.Address,
 					HeadquarterUuid:       headquarter.Uuid,
 				})
-
-				// 新增的多语言
-				if headquarterWarehouse.MultiLanguageName != nil &&
-					headquarterWarehouse.MultiLanguageName.Uuid != 0 &&
-					!slices.Contains(existsMultiLanguageUuids, headquarterWarehouse.MultiLanguageName.Uuid) {
-
-					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
-						BaseModel: model.BaseModel{
-							Uuid:       headquarterWarehouse.MultiLanguageNameUuid,
-							CreateTime: headquarterWarehouse.MultiLanguageName.CreateTime,
-							UpdateTime: headquarterWarehouse.MultiLanguageName.UpdateTime,
-							DeleteTime: headquarterWarehouse.MultiLanguageName.DeleteTime,
-						},
-						ZhName:   headquarterWarehouse.MultiLanguageName.ZhName,
-						ThName:   headquarterWarehouse.MultiLanguageName.ThName,
-						EnName:   headquarterWarehouse.MultiLanguageName.EnName,
-						ZhTwName: headquarterWarehouse.MultiLanguageName.ZhTwName,
-						JaName:   headquarterWarehouse.MultiLanguageName.JaName,
-						KoName:   headquarterWarehouse.MultiLanguageName.KoName,
-						MyName:   headquarterWarehouse.MultiLanguageName.MyName,
-						TrName:   headquarterWarehouse.MultiLanguageName.TrName,
-						SvName:   headquarterWarehouse.MultiLanguageName.SvName,
-					})
-				}
-			}
-			if len(insertingMultiLanguageNames) > 0 {
-				err = tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
-				if err != nil {
-					return errors.WithMessage(err, "同步总店仓库多语言名称失败")
-				}
 			}
 		}
 		if len(insertingWarehouses) > 0 {
@@ -1124,12 +1096,16 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 		warehouseItemMap[warehouseItem.MaterialUuid] = *warehouseItem
 	}
 
+	// 构建查询选项
+	var materialOpts []repository.DBOption
+	materialOpts = append(materialOpts, repository.NewCommonRepo().WhereByStatus(uint(1)))
+	materialOpts = append(materialOpts, repository.NotDeleted)
+
 	// 获取物品列表
 	paginatedMaterials, total, err := materialRepo.GetMaterialListWithPagination(
 		req.PageNo,
 		req.PageSize,
-		repository.NewCommonRepo().WhereByStatus(uint(1)),
-		repository.NotDeleted,
+		materialOpts...,
 	)
 
 	// 获取所有物品UUID

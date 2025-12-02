@@ -78,8 +78,13 @@ func (s *UploadFileSrvImpl) UploadImage(ctx context.Context, fileReader io.Reade
 	}
 
 	// 确定缩略图尺寸
+	// source == "shop" 时不生成缩略图（thumbSize = 0）
+	// source == "" 时使用大尺寸缩略图（thumbSize = 5000）
+	// 其他情况使用标准缩略图（thumbSize = 500）
 	thumbSize := 500
-	if source == "" {
+	if source == "shop" {
+		thumbSize = 0 // 不生成缩略图
+	} else if source == "" {
 		thumbSize = 5000
 	}
 
@@ -94,8 +99,15 @@ func (s *UploadFileSrvImpl) UploadVideo(ctx context.Context, fileReader io.Reade
 		extension = extension[1:]
 	}
 
+	// 如果 maxSize 为 30，则只支持 MP4（收银机轮播视频）
 	allowedExts := []string{"avi", "mpeg", "mov", "mp4"}
+	if maxSize == 30 {
+		allowedExts = []string{"mp4"}
+	}
 	if !s.isAllowedExtension(extension, allowedExts) {
+		if maxSize == 30 {
+			return nil, fmt.Errorf("仅支持MP4格式")
+		}
 		return nil, fmt.Errorf("仅支持AVI、MPEG、MOV、MP4格式")
 	}
 

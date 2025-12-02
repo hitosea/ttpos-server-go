@@ -30,10 +30,12 @@ import (
 
 // DeskHandler 桌台处理程序
 type DeskHandler struct {
-	deskSrv   service.IDeskSrv   // 主服务
-	memberSrv service.IMemberSrv // 会员服务
-	orderSrv  service.IOrderSrv  // 订单服务
-	otherSrv  service.IOtherSrv  // 其他服务
+	deskSrv    service.IDeskSrv    // 主服务
+	deskMapSrv service.IDeskMapSrv // 桌台地图服务
+	memberSrv  service.IMemberSrv  // 会员服务
+	orderSrv   service.IOrderSrv   // 订单服务
+	otherSrv   service.IOtherSrv   // 其他服务
+	productSrv service.IProductSrv // 产品服务
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -47,9 +49,9 @@ type DeskHandler struct {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/region_and_type [get]
 func (h *DeskHandler) GetDeskRegionAndType(c *gin.Context) {
-	companyId := helper.GetCompanyUuid(c)
+	ctx := helper.GetContext(c)
 	// 处理获取桌台的区域和类型的逻辑
-	res, err := h.deskSrv.GetDeskRegionAndTypeList(companyId)
+	res, err := h.deskSrv.GetDeskRegionAndTypeList(ctx)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -152,6 +154,58 @@ func (h *DeskHandler) CreateDeskOrder(c *gin.Context) {
 
 	// 返回结果
 	helper.Success(c, res)
+}
+
+// SetOrderSource 设置桌台订单来源
+// @Summary 设置桌台订单来源
+// @Description 将目标订单标记为某个外卖渠道，可从桌台流程触发
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetOrderSourceReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/set_order_source [post]
+func (h *DeskHandler) SetOrderSource(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetOrderSourceReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	shopCart, err := h.orderSrv.SetOrderSource(ctx, payload.SaleBillUuid, payload.OrderSourceUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, shopCart)
+}
+
+// SetNationality 设置桌台订单国籍
+// @Summary 设置桌台订单国籍
+// @Description 设置当前桌台订单的国籍信息
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderSetNationalityReq true "设置参数"
+// @Success 200 {object} dto.Response{data=object} "操作成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/set_nationality [post]
+func (h *DeskHandler) SetNationality(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	payload := req.OrderSetNationalityReq{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		helper.HandleValidationError(c, err, payload, req.OrderReqMessage)
+		return
+	}
+	shopCart, err := h.orderSrv.SetNationality(ctx, payload.SaleBillUuid, payload.NationalityUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, shopCart)
 }
 
 // CloseDesk 处理关闭桌台
@@ -1216,6 +1270,37 @@ func (h *DeskHandler) OrderPaymentCoupon(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentActivity 选择或取消满减活动
+// @Summary 选择或取消满减活动
+// @Description 选择或取消满减活动
+// @Tags 收银端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentActivityReq true "选择或取消满减活动参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/payment/activity [post]
+func (h *DeskHandler) OrderPaymentActivity(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面选择或取消满减活动接口请求")
+
+	var activityReq req.InstantOrderPaymentActivityReq
+	if err := c.ShouldBindJSON(&activityReq); err != nil {
+		helper.HandleValidationError(c, err, activityReq, nil)
+		return
+	}
+	ctx.Log().Info("选择或取消满减活动", zap.Any("params", activityReq))
+	// 选择或取消满减活动
+	res, err := h.orderSrv.OrderPaymentActivity(ctx, activityReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderPaymentInfo 设置订单的抵扣积分数量
 // @Summary 设置订单的抵扣积分数量
 // @Description 设置订单的抵扣积分数量
@@ -1904,6 +1989,87 @@ func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDeskMapLayout 获取桌台地图布局
+// @Summary 获取桌台地图布局
+// @Description 获取当前商户的桌台地图布局数据，用于地图模式展示。如果传入region_uuid参数，返回该区域的详细布局；否则返回所有区域列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param region_uuid query uint64 false "区域UUID，不传则返回区域列表"
+// @Success 200 {object} dto.Response{data=resp.DeskMapAreaListResp} "返回区域列表（未传region_uuid）"
+// @Success 200 {object} dto.Response{data=resp.DeskMapLayoutResp} "返回区域布局详情（传入region_uuid）"
+// @Router /cashier/desk/map/layout [get]
+func (h *DeskHandler) GetDeskMapLayout(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 检查是否传入了 region_uuid 参数
+	var detailReq req.DeskMapLayoutDetailReq
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, nil)
+		return
+	}
+
+	// 获取指定区域的详细布局
+	layoutDetail, err := h.deskMapSrv.GetLayoutDetail(ctx, detailReq.RegionUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, layoutDetail, "获取成功")
+}
+
+// ChangeBatchTag 更换分批类型（前置模式）
+// @Summary 更换分批类型
+// @Description 更换未送厨商品的分批类型（前置模式）
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ChangeBatchTagReq true "更换分批类型请求"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Router /cashier/desk/order/cart/batch/change_tag [post]
+func (h *DeskHandler) ChangeBatchTag(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.ChangeBatchTagReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 更换分批类型
+	res, err := h.orderSrv.ChangeBatchTag(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetBatchTagList 获取分批类型列表
+// @Summary 获取分批类型列表
+// @Description 获取分批类型列表，按 sort 排序，优先级高的在前
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=product_resp.BatchTagList}
+// @Router /cashier/desk/batch_tag/list [get]
+func (h *DeskHandler) GetBatchTagList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 调用 Service 层获取分批类型列表
+	batchTagList, err := h.productSrv.GetBatchTagList(ctx, req.BatchTagListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, batchTagList)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1921,12 +2087,17 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
+	deskMapSrv := service.NewDeskMapSrv(dbm)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 	// 初始化处理器
 	wrapper := DeskHandler{
-		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
-		memberSrv: memberSrv,
-		orderSrv:  orderSrv,
-		otherSrv:  otherSrv,
+		deskSrv:    service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		deskMapSrv: deskMapSrv,
+		productSrv: productSrv,
+		memberSrv:  memberSrv,
+		orderSrv:   orderSrv,
+		otherSrv:   otherSrv,
 	}
 
 	// 需要认证
@@ -1939,6 +2110,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                                            // 完成桌台（清台）
 		privateApi.POST("/desk/change", wrapper.ChangeDesk)                                                                // 切换桌台（转台）
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                             // 创建桌台订单(开桌)
+		privateApi.POST("/desk/set_order_source", wrapper.SetOrderSource)                                                  // 设置桌台订单来源
+		privateApi.POST("/desk/set_nationality", wrapper.SetNationality)                                                   // 设置桌台订单国籍
 		privateApi.POST("/desk/merge", wrapper.MergeDesk)                                                                  // 合并桌台
 		privateApi.POST("/desk/order/cancel", wrapper.CancelDeskOrder)                                                     // 取消桌台订单
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                                        // 删除桌台订单商品
@@ -1971,6 +2144,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                               // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/coupon", wrapper.OrderPaymentCoupon)                                          // 选择或取消优惠券
 		privateApi.POST("/desk/order/payment/points", wrapper.OrderPaymentPoints)                                          // 设置订单的抵扣积分数量
+		privateApi.POST("/desk/order/payment/activity", wrapper.OrderPaymentActivity)                                      // 选择或取消满减活动
 		privateApi.GET("/desk/order/payment/qrcode", wrapper.OrderPaymentQrcodeInfo)                                       // 获取支付方式的二维码信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                                          // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                                          // 撤销一个支付单
@@ -1992,5 +2166,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
 		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
+		privateApi.POST("/desk/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型（前置模式）
+		privateApi.GET("/desk/batch_tag/list", wrapper.GetBatchTagList)                                                    // 获取分批类型列表
+		// 桌台地图相关接口
+		privateApi.GET("/desk/map/layout", wrapper.GetDeskMapLayout) // 获取桌台地图布局
 	}
 }

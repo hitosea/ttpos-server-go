@@ -1,14 +1,14 @@
 # 文档体系评估报告（2025-11-17）
 
-> 评估范围：`AGENT.md` → `.cursor/rules/*.mdc` → `docs/**` 厚层文档（agent/human/shared/team），并对知识沉淀（Graphiti）衔接提出建议。
+> 评估范围：`AGENTS.md` → `.cursor/rules/*.mdc` → `docs/**` 厚层文档（agent/human/shared/team），并对知识沉淀（Graphiti）衔接提出建议。
 
 ---
 
 ## 1. 方法与样本
 
-- **分层基线**：对 `AGENT.md` 与 `.cursor/rules`、`docs/` 目录的引用关系进行映射。
+- **分层基线**：对 `AGENTS.md` 与 `.cursor/rules`、`docs/` 目录的引用关系进行映射。
 - **规则巡检**：重点检查 `documentation.mdc`, `knowledge_management.mdc`, `workflows.mdc`, `specs.mdc`, `structs.mdc`。
-- **厚层抽样**：阅读 `docs/agent/workflows/*`, `docs/agent/templates/*`, `docs/human/README.md`, `docs/human/guides/go-main-development.md`, `docs/shared/specs/story-order-quick-payment/`。
+- **厚层抽样**：阅读 `docs/agent/workflows/*`, `docs/agent/templates/*`, `docs/human/README.md`, `docs/human/guides/go-main-development.md`, `docs/shared/specs/active/story-order-quick-payment/`。
 - **链路演练**：沿着 `Proposal → Spec → Tasks → 工作流 → 知识沉淀` 走查一次（以快捷支付 Story 为例）。
 - **Graphiti 规划**：基于 `docs/agent/templates/graphiti-episode.md` 输出可入库的 Episode 草稿。
 
@@ -18,9 +18,9 @@
 
 | 层级                       | 核心职责                                                        | 示例入口                                                                                     | 评估                                                                                                                             |
 | -------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Layer 1：AGENT.md**      | 场景识别、命令映射、快速检索顺序                                | `AGENT.md` 场景 → 文件表                                                                     | 覆盖需求/功能/Bug/集成/数据库等常见场景，明确引用 `.cursor/rules` 与 `docs/`，但未直接提示 Graphiti 模板位置。                   |
+| **Layer 1：AGENTS.md**     | 场景识别、命令映射、快速检索顺序                                | `AGENTS.md` 场景 → 文件表                                                                    | 覆盖需求/功能/Bug/集成/数据库等常见场景，明确引用 `.cursor/rules` 与 `docs/`，但未直接提示 Graphiti 模板位置。                   |
 | **Layer 2：.cursor/rules** | 规则速查、导航、命名约束                                        | `workflows.mdc`, `documentation.mdc`, `specs.mdc`, `knowledge_management.mdc`, `structs.mdc` | 具备分层理念：“薄层引导 + 厚层详解”。部分规则引用未落实到现有文件（见 §3）。                                                     |
-| **Layer 3：docs/**         | 厚层内容（工作流、模板、架构、Spec、Troubleshooting、团队协作） | `docs/agent/workflows/*.md`, `docs/human/guides/*.md`, `docs/shared/specs/story-*`           | Agent 文档满足 <300 行、步骤化；人类文档提供 WHY/HOW；共享 Spec 体现 Proposal↔Spec 链接。存在模板/目录缺失与 Graphiti 链接空白。 |
+| **Layer 3：docs/**         | 厚层内容（工作流、模板、架构、Spec、Troubleshooting、团队协作） | `docs/agent/workflows/*.md`, `docs/human/guides/*.md`, `docs/shared/specs/active/story-*`    | Agent 文档满足 <300 行、步骤化；人类文档提供 WHY/HOW；共享 Spec 体现 Proposal↔Spec 链接。存在模板/目录缺失与 Graphiti 链接空白。 |
 
 ---
 
@@ -67,7 +67,7 @@
 
 ### 4.3 共享 Spec 示例
 
-- `docs/shared/specs/story-order-quick-payment` 中的 `requirements.md`, `design.md`, `tasks.md` 遵循模板，且 `requirements.md` 已链接对应 Proposal。
+- `docs/shared/specs/active/story-order-quick-payment` 中的 `requirements.md`, `design.md`, `tasks.md` 遵循模板，且 `requirements.md` 已链接对应 Proposal。
 - `design.md` 与 `tasks.md` 多处引用 `.cursor/rules`，说明厚层文档能够回指薄层规范。
 - 仍缺 `Related Episode` 标记及 Graphiti 记录，未满足 `knowledge_management.mdc` 的互链要求。
 
@@ -75,9 +75,9 @@
 
 ## 5. 需求 → 沉淀链路验证（快捷支付 Story）
 
-1. **Proposal**：`docs/team/proposals/2025-11-16-quick-payment.md`（链接已在 `requirements.md` 中体现）。
-2. **Spec**：`docs/shared/specs/story-order-quick-payment/` 结构完整，`tasks.md` 任务可直接映射到 Go/PHP/Vue 代码路径。
-3. **执行工作流**：`AGENT.md` → `workflows.mdc` → `docs/agent/workflows/feature-development.md`，提供任务循环和检查清单。
+1. **Proposal**：`docs/team/proposals/2025-11/quick-payment.md`（链接已在 `requirements.md` 中体现）。
+2. **Spec**：`docs/shared/specs/active/story-order-quick-payment/` 结构完整，`tasks.md` 任务可直接映射到 Go/PHP/Vue 代码路径。
+3. **执行工作流**：`AGENTS.md` → `workflows.mdc` → `docs/agent/workflows/feature-development.md`，提供任务循环和检查清单。
 4. **文档更新**：`tasks.md` 要求更新 `docs/shared/api/order_api.md` 与 CHANGELOG，但缺少 API 模板指导。
 5. **知识沉淀**：`knowledge_management.mdc` 要求耗时 >30 分钟的问题记录 Graphiti，但 Story 文档未提示或挂链。
 
@@ -92,10 +92,10 @@
 
 依据 `knowledge_management.mdc`，本次评估产出两份 Episode 草稿（放置于 `docs/agent/graphiti/`）：
 
-| Episode                                  | 类型/Group ID                       | 内容摘要                                                                             | 关联文档                                                                                                |
-| ---------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `experience-doc-layer-alignment-2025-11` | `experience` / `ttpos-architecture` | 记录三层文档体系的定位、进入路径和互相引用方式，方便新人快速理解。                   | `AGENT.md`, `.cursor/rules/workflows.mdc`, `docs/team/reports/document-system-assessment-2025-11-17.md` |
-| `qa-graphiti-link-gap-2025-11`           | `qa` / `ttpos-knowledge_management` | 总结当前 Graphiti 触发规则与实际落地差距，列出模板缺失、互链空白、活动日志衔接方案。 | `.cursor/rules/knowledge_management.mdc`, `docs/agent/templates/graphiti-episode.md`, 本评估报告        |
+| Episode                                  | 类型/Group ID                       | 内容摘要                                                                             | 关联文档                                                                                                 |
+| ---------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `experience-doc-layer-alignment-2025-11` | `experience` / `ttpos-architecture` | 记录三层文档体系的定位、进入路径和互相引用方式，方便新人快速理解。                   | `AGENTS.md`, `.cursor/rules/workflows.mdc`, `docs/team/reports/document-system-assessment-2025-11-17.md` |
+| `qa-graphiti-link-gap-2025-11`           | `qa` / `ttpos-knowledge_management` | 总结当前 Graphiti 触发规则与实际落地差距，列出模板缺失、互链空白、活动日志衔接方案。 | `.cursor/rules/knowledge_management.mdc`, `docs/agent/templates/graphiti-episode.md`, 本评估报告         |
 
 每个草稿均包含：背景、关键结论、操作步骤、后续行动，可直接用 MCP 推送。
 

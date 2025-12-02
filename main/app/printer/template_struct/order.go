@@ -52,6 +52,7 @@ type StatementOrderInfoData struct {
 	MemberCardDiscountRate float64                   `json:"member_card_discount_rate"` // 会员卡折扣率
 	MemberPointsDiscount   float64                   `json:"member_points_discount"`    // 会员积分抵扣金额
 	CouponExchangeAmount   float64                   `json:"coupon_exchange_amount"`    // 优惠券抵扣金额
+	ActivityAmount         float64                   `json:"activity_amount"`           // 活动抵扣金额
 	CheckOutZeroFee        string                    `json:"check_out_zero_fee"`        // 结账抹零金额
 	ReturnAmount           string                    `json:"return_amount"`             // 退款金额
 	PaymentCommissionFee   float64                   `json:"payment_commission_fee"`    // 支付手续费
@@ -66,6 +67,7 @@ type StatementOrderInfoData struct {
 	PaymentName            string                    `json:"payment_name"`              // 支付方式名称
 	PaymentQrcode          string                    `json:"payment_qrcode"`            // 支付方式二维码
 	Barcode                string                    `json:"barcode"`                   // 条形码
+	IsOrderSourceTakeout   bool                      `json:"is_order_source_takeout"`   // 是否订单来源为外卖
 }
 
 // StatementBuffetData 自助餐数据结构体

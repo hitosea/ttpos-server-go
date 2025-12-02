@@ -91,6 +91,7 @@ const (
 	EventDiscountZeroSaleOrder        EventName = "Event_Discount_Zero_Sale_Order"   // 订单抹零事件
 	EventDiscountChangePriceSaleOrder EventName = "Event_Change_Price_Sale_Order"    // 改价事件
 	EventCancelSaleOrderDiscount      EventName = "Event_Cancel_Sale_Order_Discount" // 取消优惠折扣事件
+	EventActivitySaleOrder            EventName = "Event_Activity_Sale_Order"        // 满减活动事件
 
 	// =============================================================================
 	// 会员相关事件

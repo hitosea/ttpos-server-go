@@ -224,6 +224,8 @@ CREATE TABLE `ttpos_company_setting` (
     `is_open_tablet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
     `is_open_h5` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',
     `is_open_assistant` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启点餐助手: 0不开启, 1开启',
+    `enable_table_map` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用桌台地图能力：0-否；1-是',
+    `enable_data_management` INT(3) NOT NULL DEFAULT 0 COMMENT '是否启用数据管理能力：0-否；1-是',
     `is_open_kitchen_kds` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启后厨KDS: 0不开启, 1开启',
     `is_open_buffet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
@@ -396,6 +398,7 @@ CREATE TABLE `ttpos_web_socket_msg` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='websocket消息表';
 
+-- 外送台账结清数据表
 CREATE TABLE `ttpos_delivery_ledger_settle` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
@@ -410,6 +413,7 @@ CREATE TABLE `ttpos_delivery_ledger_settle` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送台账结清数据';
 
+-- 会员表
 CREATE TABLE `ttpos_member` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` bigint(20) NOT NULL,
@@ -423,5 +427,80 @@ CREATE TABLE `ttpos_member` (
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`,`uuid`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=210 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员表';
+
+-- 调拨单主表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司名称',
+  `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
+  `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号TR+12位数字',
+  `erp_order_no` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP调拨单号（销售单号）',
+  `transfer_type` int(4) NOT NULL DEFAULT 1 COMMENT '调拨类型：1-调入 2-调出',
+  `sender_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '发货门店UUID',
+  `sender_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '发货门店名称',
+  `receiver_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '收货门店UUID',
+  `receiver_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '收货门店名称',
+  `out_warehouse_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '出库仓库ERP编码',
+  `out_warehouse_name` text COMMENT '出库仓库名称',
+  `in_warehouse_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '入库仓库ERP编码',
+  `in_warehouse_name` text COMMENT '入库仓库名称',
+  `order_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '单据日期（提交时间戳）',
+  `submit_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交时间',
+  `status` int(4) NOT NULL DEFAULT 0 COMMENT '状态：0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成',
+  `creator_uuid` bigint NOT NULL DEFAULT 0 COMMENT '创建人UUID',
+  `creator_name` varchar(100) NOT NULL DEFAULT '' COMMENT '创建人姓名',
+  `next_approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '下一个审批门店UUID',
+  `next_approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '下一个审批门店名称',
+  `remark` text COMMENT '备注',
+  `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
+  `erp_resp` text COMMENT 'ERP响应数据',
+  `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',
+  `receipt_order_erp_resp` text COMMENT '收货单ERP响应数据',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_company_uuid` (`company_uuid`),
+  KEY `idx_headquarter_uuid` (`headquarter_uuid`),
+  KEY `idx_order_no` (`order_no`),
+  KEY `idx_sender_company_uuid` (`sender_company_uuid`),
+  KEY `idx_receiver_company_uuid` (`receiver_company_uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_delete_time` (`delete_time`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单主表';
+
+-- 调拨单审批流程表
+CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_approval` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
+  `transfer_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
+  `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
+  `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
+  `approval_type` varchar(50) NOT NULL DEFAULT '' COMMENT '审批类型：initiator-发起人公司 sender-发货门店 sender_parent-发货门店上级 receiver_parent-收货门店上级 receiver-收货门店',
+  `approval_company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '审批门店UUID',
+  `approval_company_name` varchar(255) NOT NULL DEFAULT '' COMMENT '审批门店名称',
+  `sequence` int(10) NOT NULL DEFAULT 0 COMMENT '审批顺序，从1开始',
+  `status` int(4) NOT NULL DEFAULT 0 COMMENT '审批状态：0-待审批 1-已通过 2-已驳回 3-已跳过',
+  `approver_uuid` bigint NOT NULL DEFAULT 0 COMMENT '审批人UUID',
+  `approver_name` varchar(100) NOT NULL DEFAULT '' COMMENT '审批人姓名',
+  `approve_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '审批时间',
+  `reject_reason` text COMMENT '驳回原因',
+  `is_required` int(4) NOT NULL DEFAULT 1 COMMENT '是否必须审批：0-否 1-是',
+  `remark` text COMMENT '备注',
+  `is_via_company_warehouse` int(4) NOT NULL DEFAULT 0 COMMENT '是否通过公司仓库：0-否 1-是',
+  `erpnext_company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP公司简称',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_transfer_order_uuid` (`transfer_order_uuid`),
+  KEY `idx_approval_company_uuid` (`approval_company_uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_sequence` (`sequence`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单审批流程表';
 
 SET FOREIGN_KEY_CHECKS = 1;

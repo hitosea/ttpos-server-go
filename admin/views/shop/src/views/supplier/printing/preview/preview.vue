@@ -94,7 +94,7 @@
       </div>
       <div class="box-border one-menu">
         <template v-if="mode == 1">
-          <p class="font24"> {{ $t('桌位: A01 (4人)') }} </p>
+          <p class="font24"> {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }} </p>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
           </div>
@@ -120,7 +120,7 @@
         </template>
         <template v-if="mode == 2">
           <h3>
-            {{ $t('桌位: A01 (4人)') }}
+            {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }}
           </h3>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
@@ -281,10 +281,10 @@
         </template>
         <template v-if="title == $t('整单打印')">
           <h4 class="mb-12" v-if="mode == 1">
-            {{ $t('桌位: A01 (4人)') }}
+            {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }}
           </h4>
           <h3 v-if="mode == 2 || mode == 3">
-            {{ $t('桌位: A01 (4人)') }}
+            {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }}
           </h3>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
@@ -295,7 +295,7 @@
           <h4 class="mb-8" v-if="mode == 1 || mode == 2"> {{ $t('退菜单') }}</h4>
           <h2 class="mb-24" v-if="mode == 2">*******************************************</h2>
           <h4 class="Invoice-h4 mb-8" v-if="mode == 1 || mode == 2">
-            {{ $t('桌位: A01 (4人)') }}
+            {{ $t('(外卖)') }}{{ $t('桌位: A01 (4人)') }}
           </h4>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
@@ -304,7 +304,7 @@
         <template v-if="title == $t('出菜单')">
           <h4 class="mb-8"> {{ $t('出菜单') }}</h4>
           <h4 class="Invoice-h4 mb-8">
-            {{ $t('桌号/序号/外送: A01 (4人)') }}
+            {{ $t('(外卖)') }}{{ $t('桌号/序号/外送: A01 (4人)') }}
           </h4>
           <div class="text-order—remark">
             {{ $t('整单备注：这是整单备注备注') }}
@@ -499,11 +499,11 @@
       }
       if (this.title == $t('结账单')) {
         this.details = previewData.two;
-        this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
+        this.titleName = $t('(外卖)') + $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('预结账单')) {
         this.details = previewData.three;
-        this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
+        this.titleName = $t('(外卖)') + $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('一菜一单')) {
         this.dialogWidth = 2;

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 测试客户端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.connected {
+            background: #28a745;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+        
+        .log-entry.sent {
+            border-left-color: #28a745;
+        }
+        
+        .log-entry.received {
+            border-left-color: #17a2b8;
+        }
+        
+        .log-entry.error {
+            border-left-color: #dc3545;
+        }
+        
+        .log-entry .timestamp {
+            color: #808080;
+            margin-right: 10px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 WebSocket 测试客户端</h1>
+            <p>ttpos-websocket 服务连接测试工具</p>
+        </div>
+        
+        <div class="content">
+            <!-- 连接配置面板 -->
+            <div class="panel">
+                <h2>📡 连接配置</h2>
+                
+                <div class="status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <div>
+                        <strong>连接状态：</strong>
+                        <span id="statusText">未连接</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>WebSocket 地址</label>
+                    <input type="text" id="wsUrl" value="ws://localhost:14051/ws" placeholder="ws://localhost:14051/ws">
+                </div>
+                
+                <div class="form-group">
+                    <label>公司 UUID</label>
+                    <input type="number" id="companyUuid" value="1" placeholder="输入公司UUID">
+                </div>
+                
+                <div class="form-group">
+                    <label>员工 UUID</label>
+                    <input type="number" id="staffUuid" value="100" placeholder="输入员工UUID">
+                </div>
+                
+                <div class="form-group">
+                    <label>来源客户端</label>
+                    <select id="sourceClient">
+                        <option value="shop">商城 (shop)</option>
+                        <option value="cashier">收银机 (cashier)</option>
+                        <option value="tablet">平板 (tablet)</option>
+                        <option value="kitchen">厨房 (kitchen)</option>
+                        <option value="assistant">助手 (assistant)</option>
+                        <option value="H5">H5</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>设备 ID</label>
+                    <input type="text" id="deviceId" value="test-device-001" placeholder="输入设备ID">
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" id="connectBtn" onclick="connect()">连接</button>
+                    <button class="btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>断开</button>
+                </div>
+                
+                <!-- 统计信息 -->
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="sentCount">0</div>
+                        <div class="stat-label">已发送</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="receivedCount">0</div>
+                        <div class="stat-label">已接收</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="errorCount">0</div>
+                        <div class="stat-label">错误</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 消息发送面板 -->
+            <div class="panel">
+                <h2>📤 发送消息</h2>
+                
+                <div class="form-group">
+                    <label>消息类型</label>
+                    <select id="messageType">
+                        <option value="heartbeat">心跳 (heartbeat)</option>
+                        <option value="reply">回复 (reply)</option>
+                        <option value="usb_print_report">USB打印报告</option>
+                        <option value="lan_print_report">网络打印报告</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>消息内容 (JSON)</label>
+                    <textarea id="messageData" placeholder='{"key": "value"}'>{}</textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-success" onclick="sendMessage()" disabled id="sendBtn">发送消息</button>
+                    <button class="btn-secondary" onclick="sendHeartbeat()" disabled id="heartbeatBtn">发送心跳</button>
+                </div>
+            </div>
+            
+            <!-- 日志面板 -->
+            <div class="panel" style="grid-column: 1 / -1;">
+                <h2>📋 消息日志</h2>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">
+                        <span class="timestamp">[系统]</span>
+                        等待连接...
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="clearLog()">清空日志</button>
+                    <button class="btn-secondary" onclick="exportLog()">导出日志</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let sentCount = 0;
+        let receivedCount = 0;
+        let errorCount = 0;
+        
+        function updateStatus(connected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            const heartbeatBtn = document.getElementById('heartbeatBtn');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = '已连接';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendBtn.disabled = false;
+                heartbeatBtn.disabled = false;
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = '未连接';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                sendBtn.disabled = true;
+                heartbeatBtn.disabled = true;
+            }
+        }
+        
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span>${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function updateStats() {
+            document.getElementById('sentCount').textContent = sentCount;
+            document.getElementById('receivedCount').textContent = receivedCount;
+            document.getElementById('errorCount').textContent = errorCount;
+        }
+        
+        function connect() {
+            const wsUrl = document.getElementById('wsUrl').value;
+            const companyUuid = document.getElementById('companyUuid').value;
+            const staffUuid = document.getElementById('staffUuid').value;
+            const sourceClient = document.getElementById('sourceClient').value;
+            const deviceId = document.getElementById('deviceId').value;
+            
+            const fullUrl = `${wsUrl}?company_uuid=${companyUuid}&staff_uuid=${staffUuid}&source_client=${sourceClient}&device_id=${deviceId}`;
+            
+            addLog(`正在连接到: ${fullUrl}`, 'info');
+            
+            try {
+                ws = new WebSocket(fullUrl);
+                
+                ws.onopen = function(event) {
+                    addLog('✅ WebSocket 连接成功', 'received');
+                    updateStatus(true);
+                };
+                
+                ws.onmessage = function(event) {
+                    receivedCount++;
+                    updateStats();
+                    addLog(`⬇️ 收到消息: ${event.data}`, 'received');
+                };
+                
+                ws.onerror = function(error) {
+                    errorCount++;
+                    updateStats();
+                    addLog(`❌ 连接错误: ${error.message || '未知错误'}`, 'error');
+                };
+                
+                ws.onclose = function(event) {
+                    addLog(`🔌 连接已关闭 (代码: ${event.code}, 原因: ${event.reason || '无'})`, 'info');
+                    updateStatus(false);
+                };
+            } catch (error) {
+                errorCount++;
+                updateStats();
+                addLog(`❌ 连接失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                addLog('断开连接', 'info');
+            }
+        }
+        
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('❌ 未连接到服务器', 'error');
+                return;
+            }
+            
+            const messageType = document.getElementById('messageType').value;
+            const messageData = document.getElementById('messageData').value;
+            
+            try {
+                const data = JSON.parse(messageData || '{}');
+                const message = {
+                    type: messageType,
+                    data: data
+                };
+                
+                ws.send(JSON.stringify(message));
+                sentCount++;
+                updateStats();
+                addLog(`⬆️ 发送消息: ${JSON.stringify(message)}`, 'sent');
+            } catch (error) {
+                errorCount++;
+                updateStats();
+                addLog(`❌ 发送失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function sendHeartbeat() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('❌ 未连接到服务器', 'error');
+                return;
+            }
+            
+            const message = {
+                type: 'heartbeat',
+                data: {}
+            };
+            
+            ws.send(JSON.stringify(message));
+            sentCount++;
+            updateStats();
+            addLog(`💓 发送心跳`, 'sent');
+        }
+        
+        function clearLog() {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = '<div class="log-entry"><span class="timestamp">[系统]</span>日志已清空</div>';
+        }
+        
+        function exportLog() {
+            const logContainer = document.getElementById('logContainer');
+            const logs = logContainer.innerText;
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `websocket-log-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            addLog('📥 日志已导出', 'info');
+        }
+        
+        // 页面加载完成后的初始化
+        window.onload = function() {
+            addLog('🚀 WebSocket 测试客户端已就绪', 'info');
+            updateStatus(false);
+        };
+    </script>
+</body>
+</html>
+

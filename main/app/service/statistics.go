@@ -68,49 +68,54 @@ func NewStatisticsSrvImpl() IStatisticsSrv {
 
 // CountSaleResp 统计销售响应
 type CountSaleResp struct {
-	TotalSaleAmount            float64 `json:"total_sale_amount"`             // 总销售额
-	TotalReceivedAmount        float64 `json:"total_received_amount"`         // 总实收金额
-	TotalProductPrice          float64 `json:"total_product_price"`           // 总商品原价
-	TotalProductOriginPrice    float64 `json:"total_product_origin_price"`    // 总原商品金额
-	TotalProductNum            float64 `json:"total_product_num"`             // 总商品数量
-	TotalDiscountMember        float64 `json:"total_discount_member"`         // 总会员折扣
-	TotalBusinessAmount        float64 `json:"total_business_amount"`         // 总营业收入
-	TotalServiceFee            float64 `json:"total_service_fee"`             // 总服务费
-	TotalPaymentFee            float64 `json:"total_payment_fee"`             // 总支付手续费
-	TotalTax                   float64 `json:"total_tax"`                     // 总税额
-	TotalRefundAmount          float64 `json:"total_refund_amount"`           // 总退款金额
-	TotalDiscount              float64 `json:"total_discount"`                // 总优惠折扣
-	TotalDiscountRatio         float64 `json:"total_discount_ratio"`          // 总优惠折扣率
-	TotalGiftAmount            float64 `json:"total_gift_amount"`             // 总赠菜金额
-	TotalGiftNum               float64 `json:"total_gift_num"`                // 总赠菜数量
-	TotalFreeAmount            float64 `json:"total_free_amount"`             // 总免单金额
-	TotalFreeNum               float64 `json:"total_free_num"`                // 总免单数量
-	TotalOrderNum              int64   `json:"total_order_num"`               // 总订单数量
-	TotalTakeoutSaleAmount     float64 `json:"total_takeout_sale_amount"`     // 总外送销售
-	TotalTakeoutBusinessAmount float64 `json:"total_takeout_business_amount"` // 总外送营收
-	TotalTakeoutRefundAmount   float64 `json:"total_takeout_refund_amount"`   // 总外送退款金额
-	TotalTakeoutDeliveryFee    float64 `json:"total_takeout_delivery_fee"`    // 总外送配送费
-	TotalDeskNum               int64   `json:"total_desk_num"`                // 总桌台数量
-	TotalMealNum               int64   `json:"total_meal_num"`                // 总用餐人数
-	TotalCancelOrderNum        int64   `json:"total_cancel_order_num"`        // 总取消订单数
-	TotalCancelOrderAmount     float64 `json:"total_cancel_order_amount"`     // 总取消订单金额
-	TotalInstantOrderNum       int64   `json:"total_instant_order_num"`       // 总即时订单数量
-	TotalInstantOrderAmount    float64 `json:"total_instant_order_amount"`    // 总即时订单金额
-	TotalTakeoutOrderNum       int64   `json:"total_takeout_order_num"`       // 总外送订单数
-	TotalTakeoutOrderAmount    float64 `json:"total_takeout_order_amount"`    // 总外送订单金额
-	MinOrderAmount             float64 `json:"min_order_amount"`              // 最小订单金额
-	MaxOrderAmount             float64 `json:"max_order_amount"`              // 最大订单金额
-	AvgOrderAmount             float64 `json:"avg_order_amount"`              // 平均订单金额
-	MinDeskOrderAmount         float64 `json:"min_desk_order_amount"`         // 最小桌台订单金额
-	MaxDeskOrderAmount         float64 `json:"max_desk_order_amount"`         // 最大桌台订单金额
-	AvgDeskOrderAmount         float64 `json:"avg_desk_order_amount"`         // 平均桌台订单金额
-	AvgDeskPeopleOrderAmount   float64 `json:"avg_desk_people_order_amount"`  // 平均桌台每人订单金额
-	MinInstantOrderAmount      float64 `json:"min_instant_order_amount"`      // 最小即时订单金额
-	MaxInstantOrderAmount      float64 `json:"max_instant_order_amount"`      // 最大即时订单金额
-	AvgInstantOrderAmount      float64 `json:"avg_instant_order_amount"`      // 平均即时订单金额
-	MinTakeoutOrderAmount      float64 `json:"min_takeout_order_amount"`      // 总外送最小订单金额
-	MaxTakeoutOrderAmount      float64 `json:"max_takeout_order_amount"`      // 总外送最大订单金额
-	AvgTakeoutOrderAmount      float64 `json:"avg_takeout_order_amount"`      // 总外送平均订单金额
+	TotalSaleAmount                 float64 `json:"total_sale_amount"`                   // 总销售额
+	TotalReceivedAmount             float64 `json:"total_received_amount"`               // 总实收金额
+	TotalProductPrice               float64 `json:"total_product_price"`                 // 总商品原价
+	TotalProductOriginPrice         float64 `json:"total_product_origin_price"`          // 总原商品金额
+	TotalProductNum                 float64 `json:"total_product_num"`                   // 总商品数量
+	TotalDiscountMember             float64 `json:"total_discount_member"`               // 总会员折扣
+	TotalBusinessAmount             float64 `json:"total_business_amount"`               // 总营业收入
+	TotalServiceFee                 float64 `json:"total_service_fee"`                   // 总服务费
+	TotalPaymentFee                 float64 `json:"total_payment_fee"`                   // 总支付手续费
+	TotalTax                        float64 `json:"total_tax"`                           // 总税额
+	TotalRefundAmount               float64 `json:"total_refund_amount"`                 // 总退款金额
+	TotalDiscount                   float64 `json:"total_discount"`                      // 总优惠折扣
+	TotalDiscountRatio              float64 `json:"total_discount_ratio"`                // 总优惠折扣率
+	TotalGiftAmount                 float64 `json:"total_gift_amount"`                   // 总赠菜金额
+	TotalGiftNum                    float64 `json:"total_gift_num"`                      // 总赠菜数量
+	TotalFreeAmount                 float64 `json:"total_free_amount"`                   // 总免单金额
+	TotalFreeNum                    float64 `json:"total_free_num"`                      // 总免单数量
+	TotalOrderNum                   int64   `json:"total_order_num"`                     // 总订单数量
+	TotalTakeoutSaleAmount          float64 `json:"total_takeout_sale_amount"`           // 总外送销售
+	TotalTakeoutBusinessAmount      float64 `json:"total_takeout_business_amount"`       // 总外送营收
+	TotalTakeoutRefundAmount        float64 `json:"total_takeout_refund_amount"`         // 总外送退款金额
+	TotalTakeoutDeliveryFee         float64 `json:"total_takeout_delivery_fee"`          // 总外送配送费
+	TotalDeskNum                    int64   `json:"total_desk_num"`                      // 总桌台数量
+	TotalMealNum                    int64   `json:"total_meal_num"`                      // 总用餐人数
+	TotalCancelOrderNum             int64   `json:"total_cancel_order_num"`              // 总取消订单数
+	TotalCancelOrderAmount          float64 `json:"total_cancel_order_amount"`           // 总取消订单金额
+	TotalInstantOrderNum            int64   `json:"total_instant_order_num"`             // 即时订单数量（店内）
+	TotalInstantOrderAmount         float64 `json:"total_instant_order_amount"`          // 即时订单金额（店内）
+	TotalInstantOrderTakeawayNum    int64   `json:"total_instant_order_takeaway_num"`    // 即时订单数量（外卖）
+	TotalInstantOrderTakeawayAmount float64 `json:"total_instant_order_takeaway_amount"` // 即时订单金额（外卖）
+	TotalTakeoutOrderNum            int64   `json:"total_takeout_order_num"`             // 总外送订单数
+	TotalTakeoutOrderAmount         float64 `json:"total_takeout_order_amount"`          // 总外送订单金额
+	MinOrderAmount                  float64 `json:"min_order_amount"`                    // 最小订单金额
+	MaxOrderAmount                  float64 `json:"max_order_amount"`                    // 最大订单金额
+	AvgOrderAmount                  float64 `json:"avg_order_amount"`                    // 平均订单金额
+	MinDeskOrderAmount              float64 `json:"min_desk_order_amount"`               // 最小桌台订单金额
+	MaxDeskOrderAmount              float64 `json:"max_desk_order_amount"`               // 最大桌台订单金额
+	AvgDeskOrderAmount              float64 `json:"avg_desk_order_amount"`               // 平均桌台订单金额
+	AvgDeskPeopleOrderAmount        float64 `json:"avg_desk_people_order_amount"`        // 平均桌台每人订单金额
+	MinInstantOrderAmount           float64 `json:"min_instant_order_amount"`            // 最小即时订单金额-店内
+	MaxInstantOrderAmount           float64 `json:"max_instant_order_amount"`            // 最大即时订单金额-店内
+	AvgInstantOrderAmount           float64 `json:"avg_instant_order_amount"`            // 平均即时订单金额-店内
+	MinInstantOrderTakeawayAmount   float64 `json:"min_instant_order_takeaway_amount"`   // 最小即时订单金额-外卖
+	MaxInstantOrderTakeawayAmount   float64 `json:"max_instant_order_takeaway_amount"`   // 最大即时订单金额-外卖
+	AvgInstantOrderTakeawayAmount   float64 `json:"avg_instant_order_takeaway_amount"`   // 平均即时订单金额-外卖
+	MinTakeoutOrderAmount           float64 `json:"min_takeout_order_amount"`            // 总外送最小订单金额
+	MaxTakeoutOrderAmount           float64 `json:"max_takeout_order_amount"`            // 总外送最大订单金额
+	AvgTakeoutOrderAmount           float64 `json:"avg_takeout_order_amount"`            // 总外送平均订单金额
 }
 
 // CountSale 统计销售
@@ -140,49 +145,54 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 
 	return CountSaleResp{
-		TotalSaleAmount:            totalSaleAmount.Round(2).InexactFloat64(),
-		TotalReceivedAmount:        totalReceivedAmount.Round(2).InexactFloat64(),
-		TotalProductPrice:          saleData.TotalProductPrice.Float64,
-		TotalProductOriginPrice:    saleData.TotalProductOriginPrice.Float64,
-		TotalProductNum:            saleData.TotalProductNum.Float64,
-		TotalDiscountMember:        saleData.TotalDiscountMember.Float64,
-		TotalBusinessAmount:        totalBusinessAmount.Round(2).InexactFloat64(),
-		TotalServiceFee:            saleData.TotalServiceFee.Float64,
-		TotalPaymentFee:            totalPaymentFee.Round(2).InexactFloat64(),
-		TotalTax:                   saleData.TotalTax.Float64,
-		TotalRefundAmount:          totalRefundAmount.Round(2).InexactFloat64(),
-		TotalDiscount:              saleData.TotalDiscount.Float64,
-		TotalDiscountRatio:         discountRatio.Round(2).InexactFloat64(),
-		TotalGiftAmount:            saleData.TotalGiftAmount.Float64,
-		TotalGiftNum:               saleData.TotalGiftNum.Float64,
-		TotalFreeAmount:            saleData.TotalFreeAmount.Float64,
-		TotalFreeNum:               saleData.TotalFreeNum.Float64,
-		TotalOrderNum:              saleData.TotalOrderNum.Int64,
-		TotalTakeoutSaleAmount:     saleData.TotalTakeoutSaleAmount.Float64,
-		TotalTakeoutBusinessAmount: saleData.TotalTakeoutBusinessAmount.Float64,
-		TotalTakeoutRefundAmount:   saleData.TotalTakeoutRefundAmount.Float64,
-		TotalTakeoutDeliveryFee:    saleData.TotalTakeoutDeliveryFee.Float64,
-		TotalDeskNum:               saleData.TotalDeskNum.Int64,
-		TotalMealNum:               saleData.TotalMealNum.Int64,
-		TotalCancelOrderNum:        cancelOrderData.TotalCancelOrderNum,
-		TotalCancelOrderAmount:     cancelOrderData.TotalCancelOrderAmount,
-		TotalInstantOrderNum:       saleData.TotalInstantOrderNum.Int64,
-		TotalInstantOrderAmount:    saleData.TotalInstantOrderAmount.Float64,
-		TotalTakeoutOrderNum:       saleData.TotalTakeoutOrderNum.Int64,
-		TotalTakeoutOrderAmount:    saleData.TotalTakeoutOrderAmount.Float64,
-		MinOrderAmount:             saleData.MinOrderAmount.Float64,
-		MaxOrderAmount:             saleData.MaxOrderAmount.Float64,
-		AvgOrderAmount:             saleData.AvgOrderAmount.Float64,
-		MinDeskOrderAmount:         saleData.MinDeskOrderAmount.Float64,
-		MaxDeskOrderAmount:         saleData.MaxDeskOrderAmount.Float64,
-		AvgDeskOrderAmount:         saleData.AvgDeskOrderAmount.Float64,
-		AvgDeskPeopleOrderAmount:   avgDeskPeopleOrderAmount.Round(2).InexactFloat64(),
-		MinInstantOrderAmount:      saleData.MinInstantOrderAmount.Float64,
-		MaxInstantOrderAmount:      saleData.MaxInstantOrderAmount.Float64,
-		AvgInstantOrderAmount:      saleData.AvgInstantOrderAmount.Float64,
-		MinTakeoutOrderAmount:      saleData.MinTakeoutOrderAmount.Float64,
-		MaxTakeoutOrderAmount:      saleData.MaxTakeoutOrderAmount.Float64,
-		AvgTakeoutOrderAmount:      saleData.AvgTakeoutOrderAmount.Float64,
+		TotalSaleAmount:                 totalSaleAmount.Round(2).InexactFloat64(),
+		TotalReceivedAmount:             totalReceivedAmount.Round(2).InexactFloat64(),
+		TotalProductPrice:               saleData.TotalProductPrice.Float64,
+		TotalProductOriginPrice:         saleData.TotalProductOriginPrice.Float64,
+		TotalProductNum:                 saleData.TotalProductNum.Float64,
+		TotalDiscountMember:             saleData.TotalDiscountMember.Float64,
+		TotalBusinessAmount:             totalBusinessAmount.Round(2).InexactFloat64(),
+		TotalServiceFee:                 saleData.TotalServiceFee.Float64,
+		TotalPaymentFee:                 totalPaymentFee.Round(2).InexactFloat64(),
+		TotalTax:                        saleData.TotalTax.Float64,
+		TotalRefundAmount:               totalRefundAmount.Round(2).InexactFloat64(),
+		TotalDiscount:                   saleData.TotalDiscount.Float64,
+		TotalDiscountRatio:              discountRatio.Round(2).InexactFloat64(),
+		TotalGiftAmount:                 saleData.TotalGiftAmount.Float64,
+		TotalGiftNum:                    saleData.TotalGiftNum.Float64,
+		TotalFreeAmount:                 saleData.TotalFreeAmount.Float64,
+		TotalFreeNum:                    saleData.TotalFreeNum.Float64,
+		TotalOrderNum:                   saleData.TotalOrderNum.Int64,
+		TotalTakeoutSaleAmount:          saleData.TotalTakeoutSaleAmount.Float64,
+		TotalTakeoutBusinessAmount:      saleData.TotalTakeoutBusinessAmount.Float64,
+		TotalTakeoutRefundAmount:        saleData.TotalTakeoutRefundAmount.Float64,
+		TotalTakeoutDeliveryFee:         saleData.TotalTakeoutDeliveryFee.Float64,
+		TotalDeskNum:                    saleData.TotalDeskNum.Int64,
+		TotalMealNum:                    saleData.TotalMealNum.Int64,
+		TotalCancelOrderNum:             cancelOrderData.TotalCancelOrderNum,
+		TotalCancelOrderAmount:          cancelOrderData.TotalCancelOrderAmount,
+		TotalInstantOrderNum:            saleData.TotalInstantOrderNum.Int64,
+		TotalInstantOrderAmount:         saleData.TotalInstantOrderAmount.Float64,
+		TotalInstantOrderTakeawayNum:    saleData.TotalInstantOrderTakeawayNum.Int64,
+		TotalInstantOrderTakeawayAmount: saleData.TotalInstantOrderTakeawayAmount.Float64,
+		TotalTakeoutOrderNum:            saleData.TotalTakeoutOrderNum.Int64,
+		TotalTakeoutOrderAmount:         saleData.TotalTakeoutOrderAmount.Float64,
+		MinOrderAmount:                  saleData.MinOrderAmount.Float64,
+		MaxOrderAmount:                  saleData.MaxOrderAmount.Float64,
+		AvgOrderAmount:                  saleData.AvgOrderAmount.Float64,
+		MinDeskOrderAmount:              saleData.MinDeskOrderAmount.Float64,
+		MaxDeskOrderAmount:              saleData.MaxDeskOrderAmount.Float64,
+		AvgDeskOrderAmount:              saleData.AvgDeskOrderAmount.Float64,
+		AvgDeskPeopleOrderAmount:        avgDeskPeopleOrderAmount.Round(2).InexactFloat64(),
+		MinInstantOrderAmount:           saleData.MinInstantOrderAmount.Float64,
+		MaxInstantOrderAmount:           saleData.MaxInstantOrderAmount.Float64,
+		AvgInstantOrderAmount:           saleData.AvgInstantOrderAmount.Float64,
+		MinInstantOrderTakeawayAmount:   saleData.MinInstantOrderTakeawayAmount.Float64,
+		MaxInstantOrderTakeawayAmount:   saleData.MaxInstantOrderTakeawayAmount.Float64,
+		AvgInstantOrderTakeawayAmount:   saleData.AvgInstantOrderTakeawayAmount.Float64,
+		MinTakeoutOrderAmount:           saleData.MinTakeoutOrderAmount.Float64,
+		MaxTakeoutOrderAmount:           saleData.MaxTakeoutOrderAmount.Float64,
+		AvgTakeoutOrderAmount:           saleData.AvgTakeoutOrderAmount.Float64,
 	}
 }
 
@@ -202,45 +212,47 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 	list := make([]CountSaleDaysResp, 0, len(days))
 	for _, day := range days {
 		var (
-			totalSaleAmount            decimal.Decimal
-			totalReceivedAmount        decimal.Decimal
-			totalProductPrice          decimal.Decimal
-			totalDiscountMember        decimal.Decimal
-			totalBusinessAmount        decimal.Decimal
-			totalServiceFee            decimal.Decimal
-			totalPaymentFee            decimal.Decimal
-			totalTax                   decimal.Decimal
-			totalRefundAmount          decimal.Decimal
-			totalDiscount              decimal.Decimal
-			totalDiscountRatio         decimal.Decimal
-			totalGiveAmount            decimal.Decimal
-			totalFreeAmount            decimal.Decimal
-			totalTakeoutSaleAmount     decimal.Decimal
-			totalTakeoutBusinessAmount decimal.Decimal
-			totalTakeoutRefundAmount   decimal.Decimal
-			totalTakeoutDeliveryFee    decimal.Decimal
-			totalInstantOrderAmount    decimal.Decimal
-			minOrderAmount             decimal.Decimal
-			maxOrderAmount             decimal.Decimal
-			avgOrderAmount             decimal.Decimal
-			minDeskOrderAmount         decimal.Decimal
-			maxDeskOrderAmount         decimal.Decimal
-			avgDeskOrderAmount         decimal.Decimal
-			avgDeskPeopleOrderAmount   decimal.Decimal
-			minInstantOrderAmount      decimal.Decimal
-			maxInstantOrderAmount      decimal.Decimal
-			avgInstantOrderAmount      decimal.Decimal
-			minTakeoutOrderAmount      decimal.Decimal
-			maxTakeoutOrderAmount      decimal.Decimal
-			avgTakeoutOrderAmount      decimal.Decimal
-			totalProductNum            decimal.Decimal
-			totalGiveNum               decimal.Decimal
-			totalFreeNum               decimal.Decimal
-			totalOrderNum              int64
-			totalDeskNum               int64
-			totalMealNum               int64
-			totalInstantOrderNum       int64
-			totalTakeoutOrderNum       int64
+			totalSaleAmount                 decimal.Decimal
+			totalReceivedAmount             decimal.Decimal
+			totalProductPrice               decimal.Decimal
+			totalDiscountMember             decimal.Decimal
+			totalBusinessAmount             decimal.Decimal
+			totalServiceFee                 decimal.Decimal
+			totalPaymentFee                 decimal.Decimal
+			totalTax                        decimal.Decimal
+			totalRefundAmount               decimal.Decimal
+			totalDiscount                   decimal.Decimal
+			totalDiscountRatio              decimal.Decimal
+			totalGiveAmount                 decimal.Decimal
+			totalFreeAmount                 decimal.Decimal
+			totalTakeoutSaleAmount          decimal.Decimal
+			totalTakeoutBusinessAmount      decimal.Decimal
+			totalTakeoutRefundAmount        decimal.Decimal
+			totalTakeoutDeliveryFee         decimal.Decimal
+			totalInstantOrderAmount         decimal.Decimal
+			totalInstantOrderTakeawayAmount decimal.Decimal
+			avgInstantOrderTakeawayAmount   decimal.Decimal
+			minOrderAmount                  decimal.Decimal
+			maxOrderAmount                  decimal.Decimal
+			avgOrderAmount                  decimal.Decimal
+			minDeskOrderAmount              decimal.Decimal
+			maxDeskOrderAmount              decimal.Decimal
+			avgDeskOrderAmount              decimal.Decimal
+			avgDeskPeopleOrderAmount        decimal.Decimal
+			minInstantOrderAmount           decimal.Decimal
+			maxInstantOrderAmount           decimal.Decimal
+			avgInstantOrderAmount           decimal.Decimal
+			minTakeoutOrderAmount           decimal.Decimal
+			maxTakeoutOrderAmount           decimal.Decimal
+			avgTakeoutOrderAmount           decimal.Decimal
+			totalProductNum                 decimal.Decimal
+			totalGiveNum                    decimal.Decimal
+			totalFreeNum                    decimal.Decimal
+			totalOrderNum                   int64
+			totalDeskNum                    int64
+			totalMealNum                    int64
+			totalInstantOrderNum            int64
+			totalTakeoutOrderNum            int64
 		)
 
 		saleResult, ok := slice.FindBy(saleData, func(index int, dayData model.StatisticsSaleDaysData) bool {
@@ -267,6 +279,8 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			totalTakeoutRefundAmount = decimal.NewFromFloat(saleResult.TotalTakeoutRefundAmount.Float64)
 			totalTakeoutDeliveryFee = decimal.NewFromFloat(saleResult.TotalTakeoutDeliveryFee.Float64)
 			totalInstantOrderAmount = decimal.NewFromFloat(saleResult.TotalInstantOrderAmount.Float64)
+			totalInstantOrderTakeawayAmount = decimal.NewFromFloat(saleResult.TotalInstantOrderTakeawayAmount.Float64)
+			avgInstantOrderTakeawayAmount = decimal.NewFromFloat(saleResult.AvgInstantOrderTakeawayAmount.Float64)
 			minOrderAmount = decimal.NewFromFloat(saleResult.MinOrderAmount.Float64).Round(2)
 			maxOrderAmount = decimal.NewFromFloat(saleResult.MaxOrderAmount.Float64).Round(2)
 			avgOrderAmount = decimal.NewFromFloat(saleResult.AvgOrderAmount.Float64).Round(2)
@@ -303,45 +317,47 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 		}
 		list = append(list, CountSaleDaysResp{
 			CountSaleResp: CountSaleResp{
-				TotalSaleAmount:            totalSaleAmount.InexactFloat64(),
-				TotalReceivedAmount:        totalReceivedAmount.InexactFloat64(),
-				TotalProductPrice:          totalProductPrice.InexactFloat64(),
-				TotalProductNum:            totalProductNum.InexactFloat64(),
-				TotalDiscountMember:        totalDiscountMember.InexactFloat64(),
-				TotalBusinessAmount:        totalBusinessAmount.InexactFloat64(),
-				TotalServiceFee:            totalServiceFee.InexactFloat64(),
-				TotalPaymentFee:            totalPaymentFee.InexactFloat64(),
-				TotalTax:                   totalTax.InexactFloat64(),
-				TotalRefundAmount:          totalRefundAmount.InexactFloat64(),
-				TotalDiscount:              totalDiscount.InexactFloat64(),
-				TotalDiscountRatio:         totalDiscountRatio.InexactFloat64(),
-				TotalGiftAmount:            totalGiveAmount.InexactFloat64(),
-				TotalGiftNum:               totalGiveNum.InexactFloat64(),
-				TotalFreeAmount:            totalFreeAmount.InexactFloat64(),
-				TotalFreeNum:               totalFreeNum.InexactFloat64(),
-				TotalOrderNum:              totalOrderNum,
-				TotalDeskNum:               totalDeskNum,
-				TotalMealNum:               totalMealNum,
-				TotalInstantOrderNum:       totalInstantOrderNum,
-				TotalInstantOrderAmount:    totalInstantOrderAmount.InexactFloat64(),
-				TotalTakeoutOrderNum:       totalTakeoutOrderNum,
-				TotalTakeoutSaleAmount:     totalTakeoutSaleAmount.InexactFloat64(),
-				TotalTakeoutBusinessAmount: totalTakeoutBusinessAmount.InexactFloat64(),
-				TotalTakeoutRefundAmount:   totalTakeoutRefundAmount.InexactFloat64(),
-				TotalTakeoutDeliveryFee:    totalTakeoutDeliveryFee.InexactFloat64(),
-				MinOrderAmount:             minOrderAmount.InexactFloat64(),
-				MaxOrderAmount:             maxOrderAmount.InexactFloat64(),
-				AvgOrderAmount:             avgOrderAmount.InexactFloat64(),
-				MinDeskOrderAmount:         minDeskOrderAmount.InexactFloat64(),
-				MaxDeskOrderAmount:         maxDeskOrderAmount.InexactFloat64(),
-				AvgDeskOrderAmount:         avgDeskOrderAmount.InexactFloat64(),
-				AvgDeskPeopleOrderAmount:   avgDeskPeopleOrderAmount.InexactFloat64(),
-				MinInstantOrderAmount:      minInstantOrderAmount.InexactFloat64(),
-				MaxInstantOrderAmount:      maxInstantOrderAmount.InexactFloat64(),
-				AvgInstantOrderAmount:      avgInstantOrderAmount.InexactFloat64(),
-				MinTakeoutOrderAmount:      minTakeoutOrderAmount.InexactFloat64(),
-				MaxTakeoutOrderAmount:      maxTakeoutOrderAmount.InexactFloat64(),
-				AvgTakeoutOrderAmount:      avgTakeoutOrderAmount.InexactFloat64(),
+				TotalSaleAmount:                 totalSaleAmount.InexactFloat64(),
+				TotalReceivedAmount:             totalReceivedAmount.InexactFloat64(),
+				TotalProductPrice:               totalProductPrice.InexactFloat64(),
+				TotalProductNum:                 totalProductNum.InexactFloat64(),
+				TotalDiscountMember:             totalDiscountMember.InexactFloat64(),
+				TotalBusinessAmount:             totalBusinessAmount.InexactFloat64(),
+				TotalServiceFee:                 totalServiceFee.InexactFloat64(),
+				TotalPaymentFee:                 totalPaymentFee.InexactFloat64(),
+				TotalTax:                        totalTax.InexactFloat64(),
+				TotalRefundAmount:               totalRefundAmount.InexactFloat64(),
+				TotalDiscount:                   totalDiscount.InexactFloat64(),
+				TotalDiscountRatio:              totalDiscountRatio.InexactFloat64(),
+				TotalGiftAmount:                 totalGiveAmount.InexactFloat64(),
+				TotalGiftNum:                    totalGiveNum.InexactFloat64(),
+				TotalFreeAmount:                 totalFreeAmount.InexactFloat64(),
+				TotalFreeNum:                    totalFreeNum.InexactFloat64(),
+				TotalOrderNum:                   totalOrderNum,
+				TotalDeskNum:                    totalDeskNum,
+				TotalMealNum:                    totalMealNum,
+				TotalInstantOrderNum:            totalInstantOrderNum,
+				TotalInstantOrderAmount:         totalInstantOrderAmount.InexactFloat64(),
+				TotalInstantOrderTakeawayAmount: totalInstantOrderTakeawayAmount.InexactFloat64(),
+				AvgInstantOrderTakeawayAmount:   avgInstantOrderTakeawayAmount.InexactFloat64(),
+				TotalTakeoutOrderNum:            totalTakeoutOrderNum,
+				TotalTakeoutSaleAmount:          totalTakeoutSaleAmount.InexactFloat64(),
+				TotalTakeoutBusinessAmount:      totalTakeoutBusinessAmount.InexactFloat64(),
+				TotalTakeoutRefundAmount:        totalTakeoutRefundAmount.InexactFloat64(),
+				TotalTakeoutDeliveryFee:         totalTakeoutDeliveryFee.InexactFloat64(),
+				MinOrderAmount:                  minOrderAmount.InexactFloat64(),
+				MaxOrderAmount:                  maxOrderAmount.InexactFloat64(),
+				AvgOrderAmount:                  avgOrderAmount.InexactFloat64(),
+				MinDeskOrderAmount:              minDeskOrderAmount.InexactFloat64(),
+				MaxDeskOrderAmount:              maxDeskOrderAmount.InexactFloat64(),
+				AvgDeskOrderAmount:              avgDeskOrderAmount.InexactFloat64(),
+				AvgDeskPeopleOrderAmount:        avgDeskPeopleOrderAmount.InexactFloat64(),
+				MinInstantOrderAmount:           minInstantOrderAmount.InexactFloat64(),
+				MaxInstantOrderAmount:           maxInstantOrderAmount.InexactFloat64(),
+				AvgInstantOrderAmount:           avgInstantOrderAmount.InexactFloat64(),
+				MinTakeoutOrderAmount:           minTakeoutOrderAmount.InexactFloat64(),
+				MaxTakeoutOrderAmount:           maxTakeoutOrderAmount.InexactFloat64(),
+				AvgTakeoutOrderAmount:           avgTakeoutOrderAmount.InexactFloat64(),
 			},
 			Day: day,
 		})
@@ -1395,6 +1411,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			CompleteTime:         saleBill.FinishTime,
 			IsTakeout:            utils.IfInt(isTakeout, 1, 0),
 			DeliveryFee:          orderDeliveryFee.InexactFloat64(),
+			OrderSourceUuid:      saleBill.OrderSourceUuid,
+			NationalityUuid:      saleBill.NationalityUuid,
+			Source:               saleBill.Source,
 		}
 		sales = append(sales, sale)
 	}
@@ -1439,22 +1458,25 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 // CountReq 统计请求
 type CountReq struct {
-	TimeType       int    `json:"time_type"`        // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月)
-	QueryStartTime int64  `json:"query_start_time"` // 查询开始时间戳
-	QueryEndTime   int64  `json:"query_end_time"`   // 查询结束时间戳
-	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
-	DutyNo         string `json:"duty_no"`          // 班次编号
-	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
-	RankDirection  int    `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
-	IsCreateTime   bool   `json:"is_create_time"`   // 是否是创建时间
-	IsUpdateTime   bool   `json:"is_update_time"`   // 是否是更新时间
-	PageNo         int    `json:"page_no"`          // 页码
-	PageSize       int    `json:"page_size"`        // 每页大小
-	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
-	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
-	ProductName    string `json:"product_name"`     // 商品名称
-	Timezone       string `json:"timezone"`         // 时区
-	StaffUuid      uint64 `json:"staff_uuid"`       // 操作员UUID
+	TimeType       int      `json:"time_type"`        // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月, 5 近7天, 6 上月, 7 今年)
+	QueryStartTime int64    `json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64    `json:"query_end_time"`   // 查询结束时间戳
+	CategoryType   int      `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
+	DutyNo         string   `json:"duty_no"`          // 班次编号
+	RankType       int      `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
+	RankDirection  int      `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
+	IsCreateTime   bool     `json:"is_create_time"`   // 是否是创建时间
+	IsUpdateTime   bool     `json:"is_update_time"`   // 是否是更新时间
+	PageNo         int      `json:"page_no"`          // 页码
+	PageSize       int      `json:"page_size"`        // 每页大小
+	AreaUuid       uint64   `json:"area_uuid"`        // 区域UUID -1=全都
+	CategoryUuid   uint64   `json:"category_uuid"`    // 分类UUID -1=全都 (向后兼容)
+	CategoryUuids  []uint64 `json:"category_uuids"`   // 分类UUID列表, 空=全部
+	ProductName    string   `json:"product_name"`     // 商品名称
+	OrderTypes     []uint   `json:"order_types"`      // 订单类型列表: 1=点餐, 2=桌台, 3=外送
+	OrderSource    int      `json:"order_source"`     // 订单来源: -1=全部, 1=店内, 2=外卖
+	Timezone       string   `json:"timezone"`         // 时区
+	StaffUuid      uint64   `json:"staff_uuid"`       // 操作员UUID
 }
 
 // buildCountOpts 构建统计选项
@@ -1469,7 +1491,7 @@ func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repo
 		req.Timezone = ctx.GetCompanySetting().Timezone
 	}
 	// 处理时间范围
-	if req.TimeType > 0 && req.TimeType < 5 {
+	if req.TimeType > 0 && req.TimeType <= 7 {
 		switch req.TimeType {
 		case 1: // 今天
 			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).TodayStartEndUnix()
@@ -1479,6 +1501,12 @@ func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repo
 			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).WeekStartEndUnix()
 		case 4: // 本月
 			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).MonthStartEndUnix()
+		case 5: // 近7天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).Last7DaysStartEndUnix()
+		case 6: // 上月
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).LastMonthStartEndUnix()
+		case 7: // 今年
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YearStartEndUnix()
 		}
 	}
 	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
@@ -1668,7 +1696,10 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		Language:      ctx.GetLanguage(),
 		AreaUuid:      req.AreaUuid,
 		CategoryUuid:  req.CategoryUuid,
+		CategoryUuids: req.CategoryUuids,
 		ProductName:   req.ProductName,
+		OrderTypes:    req.OrderTypes,
+		OrderSource:   req.OrderSource,
 	}, s.buildCountOpts(ctx, req)...)
 
 	var data []CountProductSale

@@ -72,6 +72,7 @@ type ISrv interface {
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
 	EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error                              // 修改自动接单会员订单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
+	EditCashierSetting(ctx context.Context, cashierSettingReq req.SaveCashierSettingReq) error                                            // 修改收银机设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
@@ -80,6 +81,7 @@ type ISrv interface {
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
 	GetPaymentMethodList(ctx context.Context) setting.PaymentMethodListResp                                                               // 获取支付方式列表
+	GetDataManageSetting(ctx context.Context) model.DataManageSetting                                                                     // 获取数据管理设置
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -420,6 +422,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printerWidth           int = 80 // 默认80mm打印机
 		enableStatusCheck      int = 0  // 是否启用状态检查
 		enableSound            int = 0  // 是否启用打印提示音
+		printSpeed             int = 2  // 打印速度 1-流畅(不分片打印) 2-稳定(分片大包打印) 3-兼容(分片小包打印)
 	)
 
 	// 收银机开启
@@ -465,6 +468,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printerWidth = printer.Width
 			enableStatusCheck = printer.EnableStatusCheck
 			enableSound = printer.EnableSound
+			printSpeed = printer.PrintSpeed
 		} else if printerId != "0" && printerId != "" {
 			// 收银机内置的打印机
 			printerCashierDeviceSn = printerId
@@ -501,6 +505,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		PrinterWidth:           printerWidth,
 		EnableStatusCheck:      enableStatusCheck,
 		EnableSound:            enableSound,
+		PrintSpeed:             printSpeed,
 	}, nil
 }
 
@@ -563,6 +568,13 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		defaultBusiness.FreeMethodList = make([]setting.FreeMethodItem, 0)
 	}
 
+	if len(defaultBusiness.DiscountAuthorizedStaffIds) == 0 {
+		defaultBusiness.DiscountAuthorizedStaffIds = make([]uint64, 0)
+	}
+	if len(defaultBusiness.RefundAuthorizedStaffIds) == 0 {
+		defaultBusiness.RefundAuthorizedStaffIds = make([]uint64, 0)
+	}
+
 	// 分批商品相关
 	{
 		db := s.dbm.GetDB(ctx.GetCompanyUuid())
@@ -573,6 +585,9 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 			return business, errors.WithMessage(err)
 		}
 		defaultBusiness.BatchProductUuids = batchProductUuids
+		if len(defaultBusiness.BatchProductUuids) == 0 {
+			defaultBusiness.BatchProductUuids = make([]uint64, 0)
+		}
 
 		// 分批类型数量
 		batchTagNum, err := repository.NewBatchTagRepo(db).GetBatchTagCount()
@@ -580,6 +595,11 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 			return business, errors.WithMessage(err)
 		}
 		defaultBusiness.BatchTagNum = uint(batchTagNum)
+	}
+
+	// 确保 BatchCookingMode 有默认值
+	if defaultBusiness.BatchCookingMode == "" {
+		defaultBusiness.BatchCookingMode = constant.BatchCookingModePost
 	}
 
 	return defaultBusiness, nil
@@ -806,11 +826,28 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		return cashier, errors.New("解析各端-收银机设置失败 - 02" + err.Error())
 	}
 
+	// 设置新字段的默认值（向后兼容）
+	if cashier.NoOrderCarouselInterval == "" || cashier.NoOrderCarouselInterval == "0" {
+		cashier.NoOrderCarouselInterval = "10"
+	}
+	if cashier.OrderDisplayMode == "" {
+		cashier.OrderDisplayMode = "order"
+	}
+	if cashier.OrderCarouselInterval == "" || cashier.OrderCarouselInterval == "0" {
+		cashier.OrderCarouselInterval = "10"
+	}
+
 	// 滚动图/视频处理
 	ginContext := ctx.GetGin()
 	if len(cashier.Carousel) > 0 && ginContext != nil {
 		for i, item := range cashier.Carousel {
 			cashier.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
+		}
+	}
+	// 点餐时轮播图/视频处理
+	if len(cashier.OrderCarousel) > 0 && ginContext != nil {
+		for i, item := range cashier.OrderCarousel {
+			cashier.OrderCarousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
 		}
 	}
 	defaultCashier := s.getDefaultCashier(languageList)
@@ -833,6 +870,9 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 
 	if len(defaultCashier.Carousel) == 0 {
 		defaultCashier.Carousel = make([]setting.CarouselItem, 0)
+	}
+	if len(defaultCashier.OrderCarousel) == 0 {
+		defaultCashier.OrderCarousel = make([]setting.CarouselItem, 0)
 	}
 	if len(defaultCashier.LanguageList) == 0 {
 		defaultCashier.LanguageList = make([]dto.LanguageItem, 0)
@@ -1441,6 +1481,46 @@ func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSys
 	return nil
 }
 
+// EditCashierSetting 修改收银机设置
+func (s *Srv) EditCashierSetting(ctx context.Context, cashierSettingReq req.SaveCashierSettingReq) error {
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 更新轮播内容
+	if cashierSettingReq.Carousel != nil {
+		cashierSetting.Carousel = cashierSettingReq.Carousel
+	}
+
+	// 更新未点餐时轮播间隔（Validate() 已处理 "0" 和空字符串的情况，统一设置为 "10"）
+	if cashierSettingReq.NoOrderCarouselInterval != "" {
+		cashierSetting.NoOrderCarouselInterval = cashierSettingReq.NoOrderCarouselInterval
+	}
+
+	// 更新点餐时展示模式
+	if cashierSettingReq.OrderDisplayMode != "" {
+		cashierSetting.OrderDisplayMode = cashierSettingReq.OrderDisplayMode
+	}
+
+	// 更新点餐时轮播内容
+	if cashierSettingReq.OrderCarousel != nil {
+		cashierSetting.OrderCarousel = cashierSettingReq.OrderCarousel
+	}
+
+	// 更新点餐时轮播间隔（Validate() 已处理 "0" 和空字符串的情况，统一设置为 "10"）
+	if cashierSettingReq.OrderCarouselInterval != "" {
+		cashierSetting.OrderCarouselInterval = cashierSettingReq.OrderCarouselInterval
+	}
+
+	// 保存设置
+	if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
+}
+
 // GetCashierBaseSetting 获取收银端设置
 func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error) {
 	var settingResp resp.CashierBaseSetting
@@ -1911,6 +1991,30 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	// 更新businessSetting
 	copier.CopyWithOption(&businessSetting, businessSettingReq, copier.Option{IgnoreEmpty: true})
 
+	// 验证授权员工ID有效性
+	db := s.dbm.GetDB(companyUuid)
+	staffRepo := repository.NewStaffRepo(db)
+
+	// 验证折扣授权员工ID
+	if len(businessSettingReq.DiscountAuthorizedStaffIds) > 0 {
+		validStaffs := staffRepo.GetStaffs(staffRepo.WhereUuids(businessSettingReq.DiscountAuthorizedStaffIds))
+		validStaffIds := make([]uint64, 0, len(validStaffs))
+		for _, staff := range validStaffs {
+			validStaffIds = append(validStaffIds, staff.Uuid)
+		}
+		businessSetting.DiscountAuthorizedStaffIds = validStaffIds
+	}
+
+	// 验证退款授权员工ID
+	if len(businessSettingReq.RefundAuthorizedStaffIds) > 0 {
+		validStaffs := staffRepo.GetStaffs(staffRepo.WhereUuids(businessSettingReq.RefundAuthorizedStaffIds))
+		validStaffIds := make([]uint64, 0, len(validStaffs))
+		for _, staff := range validStaffs {
+			validStaffIds = append(validStaffIds, staff.Uuid)
+		}
+		businessSetting.RefundAuthorizedStaffIds = validStaffIds
+	}
+
 	// 删除不需要的列表字段
 	businessSetting.ZeroingMethodList = []setting.ZeroingMethodItem{}
 	businessSetting.CheckoutZeroingMethodList = []setting.CheckoutZeroingMethodItem{}
@@ -1969,7 +2073,7 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
-	var freeReasonCount, returnFoodReasonCount, orderRemarkCount int64
+	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderSourceCount, nationalityCount int64
 	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
@@ -1979,6 +2083,14 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 	err = db.Model(&model.OrderRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderRemarkCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+	err = db.Model(&model.OrderSource{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderSourceCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+	err = db.Model(&model.Nationality{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&nationalityCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
@@ -2003,6 +2115,8 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		OrderRemarkCount:                         int(orderRemarkCount),
 		HeadquarterRequiredParentCompanyApproval: headquarterRequiredParentCompanyApproval,
 		HeadquarterViaParentCompanyWarehouse:     headquarterViaParentCompanyWarehouse,
+		OrderSourceCount:                         int(orderSourceCount),
+		NationalityCount:                         int(nationalityCount),
 	}, nil
 }
 
@@ -2048,4 +2162,22 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 		})
 	}
 	return setting.PaymentMethodListResp{List: list}
+}
+
+// GetDataManageSetting 获取数据管理设置
+func (s *Srv) GetDataManageSetting(ctx context.Context) model.DataManageSetting {
+	setting := s.getSettingByKey(ctx, constant.SettingDataManage)
+	if setting.Key == "" {
+		return model.DataManageSetting{
+			IsEnableDataManage: false,
+		}
+	}
+	var dataManageSetting model.DataManageSetting
+	err := json.Unmarshal([]byte(setting.Values), &dataManageSetting)
+	if err != nil {
+		return model.DataManageSetting{
+			IsEnableDataManage: false,
+		}
+	}
+	return dataManageSetting
 }

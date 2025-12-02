@@ -72,6 +72,7 @@ services:
 #    networks:
 #      bmp-network:
 #        ipv4_address: 10.0.10.43
+
   # 消息中心模块
   bmp-message:
     container_name: "ttpos-bmp-message-${APP_ID}"
@@ -88,6 +89,23 @@ services:
     networks:
       bmp-network:
         ipv4_address: 10.0.10.44
+
+# WebSocket服务模块
+  bmp-websocket:
+    container_name: "ttpos-bmp-websocket-${APP_ID}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
+    environment:
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14052"  #生产环境调成服务IP
+    volumes:
+      - ./app/ttpos-websocket/manifest/config:/app/config  #生产环境根据需要调整
+    restart: always
+    ports:
+      - "14051:14051"  # HTTP端口（WebSocket升级）
+      - "14052:14052"  # gRPC端口
+    networks:
+      bmp-network:
+        ipv4_address: 10.0.10.45
+        
 networks:
   bmp-network:
     driver: bridge

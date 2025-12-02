@@ -10,6 +10,24 @@ priority: 10
 
 ---
 
+## ⚠️ 执行时机（强制约束）
+
+**日志记录是后置操作，必须在主任务完成后执行。**
+
+```yaml
+执行顺序: 1. ✅ 完成用户请求的主任务（创建文件、修改代码、回答问题等）
+  2. ✅ 向用户返回主任务结果
+  3. ✅ 最后一步：记录活动日志（静默执行）
+
+禁止: ❌ 在识别到触发条件时立即记录日志
+  ❌ 在主任务执行过程中记录日志
+  ❌ 让日志记录阻塞或干扰主任务
+```
+
+**实际执行时机**：在回复用户之前的最后一个工具调用中执行日志写入。
+
+---
+
 ## 核心规则
 
 ### 记录时机
@@ -17,41 +35,48 @@ priority: 10
 **必须记录的场景：**
 
 1. **Cursor 指令调用**
+
    - `/propose`
-   - `/create-spec`
+   - `/spec-create`
    - `/onboard`
    - `/create-api-doc`
    - `/create-*-test`
 
 2. **工作流执行**
    - 识别到"开始功能开发"
-   - 识别到"Bug修复完成"
-   - 识别到"API对接完成"
-   - 识别到"Graphiti记录"
+   - 识别到"Bug 修复完成"
+   - 识别到"API 对接完成"
+   - 识别到"Graphiti 记录"
 
 ### 记录方式
 
 ```python
 # 伪代码
 def log_activity(action, target, note=""):
-    today = get_today()  # 2025-11-16
-    month = get_month()  # 2025-11
+    # 确保使用东八区 (UTC+8) 时间
+    today = get_today(tz="Asia/Shanghai")  # 2025-11-16
+    month = get_month(tz="Asia/Shanghai")  # 2025-11
     user = get_git_user()  # 从 git config user.name 获取
-    time = get_time()  # HH:mm
-    
+    time = get_time(tz="Asia/Shanghai")  # HH:mm
+
     # 文件路径
-    log_file = f"docs/team/activities/{month}/{today}.md"
-    
+    # 按用户隔离，避免 Git 冲突
+    log_file = f"docs/team/activities/{user}/{month}/{today}.md"
+
     # 如果文件不存在，创建并添加表头
     if not exists(log_file):
         create_log_file(log_file)
-    
+
     # 追加一行记录
     append_line(
         log_file,
-        f"| {time} | @{user} | {action} | {target} | ✅ | {note} |"
+        f"| {time} | {action} | {target} | ✅ | {note} |"
     )
 ```
+
+**⚠️ 重要：时间获取实现**
+
+在终端命令中获取东八区（Asia/Shanghai）时间，必须使用 `TZ` 环境变量，不能直接使用 `date` 命令（会使用系统默认时区）。
 
 ---
 
@@ -62,22 +87,22 @@ def log_activity(action, target, note=""):
 ```markdown
 # {YYYY-MM-DD} 活动日志
 
-| 时间  | 成员    | 活动     | 目标     | 状态 | 备注     |
-| ----- | ------- | -------- | -------- | ---- | -------- |
-| HH:mm | @用户名 | 活动类型 | 具体内容 | ✅    | 简短说明 |
+| 时间  | 活动     | 目标     | 状态 | 备注     |
+| ----- | -------- | -------- | ---- | -------- |
+| HH:mm | 活动类型 | 具体内容 | ✅   | 简短说明 |
 ```
 
 ### 活动类型映射
 
-| 触发场景                 | 活动类型          | 目标              | 备注        |
-| ------------------------ | ----------------- | ----------------- | ----------- |
-| `/propose feature-name`  | `/propose`        | feature-name      | 创建提案    |
-| `/create-spec spec-name` | `/create-spec`    | spec-name         | 创建Spec    |
-| `/onboard quick`         | `/onboard`        | quick             | 快速入门    |
-| `/create-api-doc module` | `/create-api-doc` | module            | 创建API文档 |
-| 执行功能开发工作流       | `功能开发`        | spec-name         | 工作流执行  |
-| 完成Bug修复              | `Bug修复`         | issue-description | 问题已解决  |
-| 记录Graphiti Episode     | `Graphiti记录`    | episode-name      | 知识记录    |
+| 触发场景                 | 活动类型          | 目标              | 备注          |
+| --- | ----- | ----- | ---- |
+| `/propose feature-name`  | `/propose`        | feature-name      | 创建提案      |
+| `/spec-create spec-name` | `/spec-create`    | spec-name         | 创建 Spec     |
+| `/onboard quick`         | `/onboard`        | quick             | 快速入门      |
+| `/create-api-doc module` | `/create-api-doc` | module            | 创建 API 文档 |
+| 执行功能开发工作流       | `功能开发`        | spec-name         | 工作流执行    |
+| 完成 Bug 修复            | `Bug修复`         | issue-description | 问题已解决    |
+| 记录 Graphiti Episode    | `Graphiti记录`    | episode-name      | 知识记录      |
 
 ---
 
@@ -87,20 +112,21 @@ def log_activity(action, target, note=""):
 
 ```yaml
 IF 用户调用 Cursor 指令 THEN
-  识别指令名称和参数
-  
+识别指令名称和参数
+
 IF 用户表达符合工作流模式 THEN
-  识别工作流类型
-  
+识别工作流类型
+
 IF 创建了 Graphiti Episode THEN
-  识别 Episode 名称
+识别 Episode 名称
 ```
 
 ### Step 2: 准备数据
 
 ```yaml
 获取:
-  - 当前日期和时间
+  - 当前日期和时间 (必须使用东八区/Asia/Shanghai)
+    实现: TZ=Asia/Shanghai date +%Y-%m-%d 和 TZ=Asia/Shanghai date +%H:%M
   - Git 用户名 (git config user.name)
   - 活动类型
   - 目标对象
@@ -110,16 +136,13 @@ IF 创建了 Graphiti Episode THEN
 ### Step 3: 写入日志
 
 ```yaml
-检查文件:
-  IF docs/team/activities/{YYYY-MM}/{YYYY-MM-DD}.md 不存在 THEN
-    创建文件
-    写入表头
-  
-追加记录:
-  在表格中追加一行
-  
-静默执行:
-  不向用户显示"已记录日志"的消息
+检查文件: IF docs/team/activities/{user}/{YYYY-MM}/{YYYY-MM-DD}.md 不存在 THEN
+  创建文件
+  写入表头
+
+追加记录: 在表格中追加一行
+
+静默执行: 不向用户显示"已记录日志"的消息
   除非用户明确询问
 ```
 
@@ -131,26 +154,23 @@ IF 创建了 Graphiti Episode THEN
 
 ```yaml
 IF 同一分钟内相同活动 THEN
-  跳过记录
+跳过记录
 ```
 
 ### Git 冲突处理
 
 ```yaml
-记录时不要:
-  ❌ 自动 git add
+记录时不要: ❌ 自动 git add
   ❌ 自动 git commit
-  
-只做:
-  ✅ 写入文件
+
+只做: ✅ 写入文件
   ✅ 让开发者自己提交
 ```
 
 ### 获取用户名
 
 ```yaml
-优先级:
-  1. git config user.name
+优先级: 1. git config user.name
   2. 系统用户名
   3. "未知用户"
 ```
@@ -159,20 +179,20 @@ IF 同一分钟内相同活动 THEN
 
 ## 示例场景
 
-### 场景 1: 调用 /create-spec
+### 场景 1: 调用 /spec-create
 
 ```
-用户: "/create-spec story-pos-quick-payment"
+用户: "/spec-create story-pos-quick-payment"
 
 AI 执行:
   1. 创建 Spec 文件
   2. 填充内容
   3. 记录日志:
-     | 14:30 | @张三 | /create-spec | story-pos-quick-payment | ✅ | 创建Spec |
+     | 14:30 | /spec-create | story-pos-quick-payment | ✅ | 创建Spec |
 
 AI 回复:
-  "✅ Spec 已创建: docs/shared/specs/story-pos-quick-payment/"
-  
+  "✅ Spec 已创建: docs/shared/specs/active/story-pos-quick-payment/"
+
   (不提及日志记录，静默完成)
 ```
 
@@ -190,7 +210,7 @@ AI 执行:
   1. 查阅 specs/ 读取任务
   2. 开始引导开发
   3. 记录日志:
-     | 15:00 | @张三 | 功能开发 | story-pos-quick-payment | 🚧 | 开始开发 |
+     | 15:00 | 功能开发 | story-pos-quick-payment | 🚧 | 开始开发 |
 
 AI 回复:
   "好的，让我们开始实现 story-pos-quick-payment..."
@@ -204,7 +224,7 @@ AI 回复:
 AI 执行:
   1. 创建 Graphiti Episode
   2. 记录日志:
-     | 16:30 | @张三 | Graphiti记录 | qa-payment-timeout | ✅ | 记录经验 |
+     | 16:30 | Graphiti记录 | qa-payment-timeout | ✅ | 记录经验 |
 
 AI 回复:
   "✅ 已记录到 Graphiti: qa-payment-timeout"
@@ -214,17 +234,25 @@ AI 回复:
 
 ## 实现注意事项
 
-1. **性能优化**
+1. **时区处理（⚠️ 关键）**
+
+   - **必须使用东八区（Asia/Shanghai）时间**
+   - 使用 `TZ=Asia/Shanghai date` 命令获取时间，不要直接使用 `date` 命令
+   - 系统时区可能与东八区不同，直接使用 `date` 会导致时间错误
+
+2. **性能优化**
+
    - 文件写入要快速（几毫秒）
    - 不影响主要任务执行
    - 不消耗额外 token（预设逻辑）
 
-2. **错误处理**
+3. **错误处理**
+
    - 如果写入失败，静默忽略
    - 不要因为日志记录失败而中断主任务
    - 可以在日志中记录失败信息供调试
 
-3. **文件管理**
+4. **文件管理**
    - 自动创建月份目录
    - 自动创建日期文件
    - 保持文件格式一致
@@ -244,6 +272,6 @@ AI 回复:
 ## 相关文档
 
 - 团队协作总览: `docs/team/README.md`
-- 日志文件位置: `docs/team/activities/{YYYY-MM}/`
+- 日志文件位置: `docs/team/activities/{user}/{YYYY-MM}/`
 
 ---

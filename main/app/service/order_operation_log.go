@@ -238,6 +238,21 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			desc := i18n.Translate(language, "免单") + " (" + s.settingSrv.SymbolPosition(ctx, freeSale.DiscountMoney) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
 		}
+	case constant.OrderActivity: // 满减活动
+		var activity event.ActivitySaleOrderPayload
+		if err := json.Unmarshal([]byte(log.Data), &activity); err == nil {
+			// 解析满减字符串，获取类型和金额信息（可选，解析失败不影响显示）
+			text := i18n.Translate(language, activity.FullReductionActivityMessage)
+			result, err := utils.ParseFullReductionString(activity.FullReductionActivityMessage)
+			if err != nil {
+				// 解析失败时忽略错误，继续使用原始消息
+			} else {
+				// 可以在这里使用解析结果，例如：result.Type, result.FullAmount, result.ReductionAmount
+				text = i18n.Translate(language, result.Type) + utils.FormatFloat(result.FullAmount) + i18n.Translate(language, "减") + utils.FormatFloat(result.ReductionAmount)
+			}
+			desc := text + " (" + s.settingSrv.SymbolPosition(ctx, activity.ActivityAmount) + ")"
+			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
+		}
 	case constant.OrderSettle: // 结账
 		var settle event.CheckoutSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &settle); err == nil {
@@ -397,6 +412,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderDiscount:            i18n.Translate(language, "优惠折扣"),
 		constant.OrderFreeSale:            i18n.Translate(language, "优惠折扣"),
 		constant.OrderCancelDiscount:      i18n.Translate(language, "撤销优惠折扣"),
+		constant.OrderActivity:            i18n.Translate(language, "满减活动"),
 		constant.OrderSettle:              i18n.Translate(language, "结账"),
 		constant.OrderReverseSettle:       i18n.Translate(language, "反结账"),
 		constant.OrderRefund:              i18n.Translate(language, "部分退款"), // 默认部分退款

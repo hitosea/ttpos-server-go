@@ -20,6 +20,8 @@ use app\common\model\product\ProductPackageGroupItem as ProductPackageGroupItemM
  */
 class Product extends ProductModel
 {
+    private const SELLING_POINT_LANGUAGES = ['zh', 'en', 'zhtw', 'th', 'my', 'ja', 'ko', 'tr', 'sv'];
+
     /**
      * 添加商品
      */
@@ -254,7 +256,9 @@ class Product extends ProductModel
         $data['num_type'] = $data['num_type'] ?? 0; // 数量计算方法, 0-整数 1-小数
         $data['sauce_required'] = $data['feed_required'] ?? 0; // 是否必选小料, 0-否 1-是
         $data['sauce_max_selection'] = $data['feed_max_select'] ?? 0; // 小料最大选择数量
-        $data['describe'] = $data['selling_point'] ?? ''; // 商品卖点
+        if (!$this->applySellingPointLocales($data)) {
+            return false;
+        }
         $data['open_discount'] = $data['is_enable_grade'] ?? 0; // 是否开启会员折扣, 0-否 1-是
         $data['price'] = $isPackage ? $data['price'] : ($data['sku'][0]['purchase_price'] ?? 0); // 价格
         $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
@@ -352,6 +356,87 @@ class Product extends ProductModel
             }
         }
         return $data;
+    }
+
+    private function applySellingPointLocales(array &$data, ?int $currentUuid = null): bool
+    {
+        $locales = $this->normalizeSellingPointLocales($data['selling_point_i18n'] ?? []);
+        unset($data['selling_point_i18n']);
+
+        $hasContent = false;
+        foreach ($locales as $lang => $text) {
+            if ($text !== '') {
+                $hasContent = true;
+            }
+            if (mb_strlen($text) > 500) {
+                $this->error = sprintf('%s卖点不能超过500个字符', strtoupper($lang));
+                return false;
+            }
+        }
+        
+        if (!$hasContent) {
+            $data['describe'] = $this->resolveSellingPointFallback($locales, $data);
+            $data['describe_multi_language_name_uuid'] = $currentUuid ?: 0;
+            return true;
+        }
+
+        $multiLanguageUuid = (new MultiLanguageName)->saveNames($locales, $currentUuid ?: null);
+        $data['describe_multi_language_name_uuid'] = $multiLanguageUuid;
+        $data['describe'] = $this->resolveSellingPointFallback($locales, $data);
+
+        return true;
+    }
+
+    private function normalizeSellingPointLocales($value): array
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $value = $decoded;
+            } else {
+                return [];
+            }
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $locales = [];
+        foreach (self::SELLING_POINT_LANGUAGES as $lang) {
+            if (!array_key_exists($lang, $value)) {
+                continue;
+            }
+            $text = $value[$lang];
+            if ($text === null) {
+                $locales[$lang] = '';
+                continue;
+            }
+            $locales[$lang] = is_string($text) ? trim($text) : trim((string) $text);
+        }
+
+        return $locales;
+    }
+
+    private function resolveSellingPointFallback(array $locales, array $data): string
+    {
+        if (!empty($locales['zh'])) {
+            return $locales['zh'];
+        }
+        foreach ($locales as $value) {
+            if ($value !== '') {
+                return $value;
+            }
+        }
+        if (!empty($data['selling_point'])) {
+            return $data['selling_point'];
+        }
+        $currentDescribe = $this->describe;
+        return is_string($currentDescribe) ? $currentDescribe : '';
     }
 
     /**
@@ -660,6 +745,16 @@ class Product extends ProductModel
         // 是否显示外送
         $isShowDelivery = isset($data['is_show_delivery']) ? ($data['is_show_delivery'] == 0 ? 2 : $data['is_show_delivery']) : 2;
 
+        $sellingPointPayload = [
+            'selling_point' => $data['selling_point'] ?? ($this->getData('describe') ?? ''),
+        ];
+        if (isset($data['selling_point_i18n'])) {
+            $sellingPointPayload['selling_point_i18n'] = $data['selling_point_i18n'];
+        }
+        if (!$this->applySellingPointLocales($sellingPointPayload, $this->getData('describe_multi_language_name_uuid') ?: 0)) {
+            return false;
+        }
+
         $updateData = [
             'name' => $data['product_name'], // 产品包名称
             'image_name' => $data['img_name'] ?? '', // 产品包图片名称
@@ -682,7 +777,8 @@ class Product extends ProductModel
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,
             'sauce_max_selection' => $data['feed_open_max_select'] == 0 ? 0 : $data['feed_max_select'], // 加料最多可选数量
             'special_category_uuid' => $data['special_id'], // 热门分类
-            'describe' => $data['selling_point'], // 卖点
+            'describe' => $sellingPointPayload['describe'], // 卖点
+            'describe_multi_language_name_uuid' => $sellingPointPayload['describe_multi_language_name_uuid'] ?? 0,
             'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是
             'open_overall_discount' => $data['open_overall_discount'], // 是否开启整单折扣: 0-否, 1-是
             'printer_tag_uuid' => $data['label_id'] ?? 0, // 打印机标签

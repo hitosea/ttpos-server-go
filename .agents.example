@@ -1,0 +1,15 @@
+# .agents.example
+# 复制此文件为 .agents 并填入你本地的绝对路径
+# Agent 会读取此文件来定位前后端仓库，以便进行跨仓库的代码分析和协作
+
+# 前端仓库根目录
+# 例如: /Users/username/Projects/ttpos-flutter
+FRONTEND_PATH=
+
+# 后端仓库根目录
+# 例如: /Users/username/Projects/ttpos-server-go
+BACKEND_PATH=
+
+# 文档仓库 (如果有独立的文档库)
+DOCS_PATH=
+

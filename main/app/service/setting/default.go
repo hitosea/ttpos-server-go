@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
@@ -47,21 +48,24 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 
 			IsOpenCashierPassword: "1", // 是否开启钱箱密码 0-关闭 1-开启
 
-			IsAutoLockScreen:       "1",                       // 是否开启自动锁屏 0-关闭 1-开启
-			AutoLockScreen:         "300",                     // 自动锁屏（秒），默认5分钟
-			IsShowScanSoldOut:      1,                         // 扫码点餐是否显示售罄商品 0-不显示 1-显示
-			IsShowAssistantSoldOut: 1,                         // 点餐助手是否显示售罄商品 0-不显示 1-显示
-			LanguageList:           languageList,              // 语言列表
-			Language:               []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-			DefaultLanguage:        defaultLanguage,           // 默认语言
-			IsAutoOrder:            "0",                       // 是否自动接单
-			AutoOrderLimit:         "1000",                    // 自动接单金额上限
-			IsAutoVoice:            "0",                       // 是否开启自动接单语音播报
-			IsAutoMemberOrder:      "0",                       // 是否自动接单会员订单 0-关闭 1-开启
-			AutoMemberOrderLimit:   "1000",                    // 自动接单会员订单金额上限
-			IsAutoVoiceMemberOrder: "0",                       // 是否开启自动接单会员订单语音播报
-			MenuShowSoldOut:        "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
-			MemberShowSoldOut:      "1",                       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+			IsAutoLockScreen:        "1",                       // 是否开启自动锁屏 0-关闭 1-开启
+			AutoLockScreen:          "300",                     // 自动锁屏（秒），默认5分钟
+			IsShowScanSoldOut:       1,                         // 扫码点餐是否显示售罄商品 0-不显示 1-显示
+			IsShowAssistantSoldOut:  1,                         // 点餐助手是否显示售罄商品 0-不显示 1-显示
+			LanguageList:            languageList,              // 语言列表
+			Language:                []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage:         defaultLanguage,           // 默认语言
+			IsAutoOrder:             "0",                       // 是否自动接单
+			AutoOrderLimit:          "1000",                    // 自动接单金额上限
+			IsAutoVoice:             "0",                       // 是否开启自动接单语音播报
+			IsAutoMemberOrder:       "0",                       // 是否自动接单会员订单 0-关闭 1-开启
+			AutoMemberOrderLimit:    "1000",                    // 自动接单会员订单金额上限
+			IsAutoVoiceMemberOrder:  "0",                       // 是否开启自动接单会员订单语音播报
+			MenuShowSoldOut:         "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+			MemberShowSoldOut:       "1",                       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+			NoOrderCarouselInterval: "10",                      // 未点餐时轮播间隔(秒)
+			OrderDisplayMode:        "order",                   // 点餐时展示模式 carousel/order/order_carousel
+			OrderCarouselInterval:   "10",                      // 点餐时轮播间隔(秒)
 		},
 		AdvancedPassword: "666888", // 高级设置密码
 		CashierPassword:  "666888", // 钱箱密码
@@ -233,24 +237,33 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 			Key:  "20",
 			Name: i18n.Translate(language, "不计入总销售额、优惠折扣、服务费、税费"),
 		}}, // 免单计算方式列表
-		FreeMethod:         "10",       // 免单计算方式，10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费
-		DiscountMethod:     "10",       // 折扣计算方式 10-按百分比 20-直接减免
-		QrCode:             "123456",   // 电子菜单二维码校验失效值，6位数数字
-		NoClearTable:       "0",        // 结账后不清台 0-清台 1-不清台
-		IsNeedPassword:     "1",        // 取消订单/退菜 0-无需密码 1-需要密码
-		DishCardStyle:      "0",        // 菜品卡片样式 0-无图模式 1-图片模式
-		DishCardStyleTime:  "0",        // 菜品卡片样式最后更新时间
-		IsInvoice:          "0",        // 开票信息 0-不需要填写 1-需要填写
-		OpeningHours:       "",         // 营业时间 00:00-23:59
-		DeliveryPriceRatio: 100,        // 外送商品价格和商品原价比例
-		StartSerialNo:      "0001",     // 开始序列号
-		IsBatch:            "0",        // 是否是分批商品 0-否 1-是
-		BatchProductUuids:  []uint64{}, // 分批商品UUID列表
-		BatchTagNum:        0,          // 分批类型数量
-		SafetyStockType:    "1",        // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
+		FreeMethod:         "10",          // 免单计算方式，10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费
+		DiscountMethod:     "10",          // 折扣计算方式 10-按百分比 20-直接减免
+		QrCode:             "123456",      // 电子菜单二维码校验失效值，6位数数字
+		NoClearTable:       "0",           // 结账后不清台 0-清台 1-不清台
+		IsNeedPassword:     "1",           // 取消订单/退菜 0-无需密码 1-需要密码
+		DishCardStyle:      "0",           // 菜品卡片样式 0-无图模式 1-图片模式
+		DishCardStyleTime:  "0",           // 菜品卡片样式最后更新时间
+		IsInvoice:          "0",           // 开票信息 0-不需要填写 1-需要填写
+		OpeningHours:       "00:00-23:59", // 营业时间 00:00-23:59
+		DeliveryPriceRatio: 100,           // 外送商品价格和商品原价比例
+		StartSerialNo:      "0001",        // 开始序列号
+		IsBatch:            "0",           // 是否是分批商品 0-否 1-是
+		BatchProductUuids:  []uint64{},    // 分批商品UUID列表
+		BatchTagNum:        0,             // 分批类型数量
+		SafetyStockType:    "1",           // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 
-		RequiredParentCompanyApproval: "0", // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
-		ViaParentCompanyWarehouse:     "0", // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		RequiredParentCompanyApproval: "0",                           // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		ViaParentCompanyWarehouse:     "0",                           // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		BatchCookingMode:              constant.BatchCookingModePost, // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
+
+		EnableOrderSource: "0", // 外卖功能开关 0-关闭 1-开启
+		EnableNationality: "0", // 国籍功能开关 0-关闭 1-开启
+
+		DiscountNeedPassword:       "0",        // 折扣操作是否需要密码 0-否 1-是
+		DiscountAuthorizedStaffIds: []uint64{}, // 折扣操作授权员工ID列表
+		RefundNeedPassword:         "0",        // 退款操作是否需要密码 0-否 1-是
+		RefundAuthorizedStaffIds:   []uint64{}, // 退款操作授权员工ID列表
 	}
 
 }

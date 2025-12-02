@@ -315,10 +315,10 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("人均"), t.base.GetPriceAndUnit(businessData.All.AllTablePeopleAvg))
 		printer.LineFeed(2)
-		// 收银方式
+		// 收银方式-店内
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, false, false)
-		printer.AppendText(t.base.Translate("点餐方式"))
+		printer.AppendText(t.base.Translate("点餐方式-店内"))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(2)
 		printer.SetAlignment(pkg.AlignLeft)
@@ -334,6 +334,27 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.All.AllCashierAvgOrderPrice))
 		printer.LineFeed(1)
+		// 收银方式-外卖
+		if businessData.All.AllTakeawayOrderNum > 0 {
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.SetPrintModes(true, false, false)
+			printer.AppendText(t.base.Translate("点餐方式-外卖"))
+			printer.SetPrintModes(false, false, false)
+			printer.LineFeed(2)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.PrintInColumns(t.base.Translate("订单数"), fmt.Sprintf("%.0f", float64(businessData.All.AllTakeawayOrderNum)))
+			printer.LineFeed(1)
+			if t.base.Lang == "my" {
+				printer.SetLineSpacing(50)
+			}
+			printer.PrintInColumns(t.base.Translate("最小/大订单金额"), fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.All.AllTakeawayMinOrderPrice), t.base.GetPriceAndUnit(businessData.All.AllTakeawayMaxOrderPrice)))
+			if t.base.Lang == "my" {
+				printer.SetLineSpacing(utils.IfInt(isOneself, 25, 20))
+			}
+			printer.LineFeed(1)
+			printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.All.AllTakeawayAvgOrderPrice))
+			printer.LineFeed(1)
+		}
 		// 支付方式
 		printer.AppendText("------------------------------------------------")
 		printer.LineFeed(2)

@@ -89,7 +89,8 @@ class Product extends Controller
      *      @Apidoc\Param("file_id", type="int", require=true, desc="图片id"),
      *      @Apidoc\Param("file_path", type="string", require=true, desc="图片路径"),
      *   }),
-     *   @Apidoc\Param("selling_point", type="string", require=true, desc="商品卖点"),
+     *   @Apidoc\Param("selling_point", type="string", require=false, desc="商品卖点"),
+     *   @Apidoc\Param("selling_point_i18n", type="object", require=false, desc="商品卖点多语言，示例：{\"zh\":\"中文\",\"en\":\"English\"}"),
      *   @Apidoc\Param("spec_type", type="int", require=true, desc="产品规格(10单规格 20多规格)"),
      *   @Apidoc\Param("deduct_stock_type", type="int", require=true, desc="库存计算方式(10下单减库存 20付款减库存)"),
      *   @Apidoc\Param("num_type", type="int", require=true, desc="数量计算方法, 0-整数 1-小数"),
@@ -142,10 +143,15 @@ class Product extends Controller
      *   @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
      *   @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *      @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
+     *      @Apidoc\Param("group_type", type="int", require=true, desc="套餐分组类型，0-固定，1-可选"),
+     *      @Apidoc\Param("optional_count", type="int", require=true, desc="套餐可选数量"),
      *      @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children = {
      *          @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
      *          @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
      *          @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
+     *          @Apidoc\Param("add_price", type="decimal", require=true, desc="加价金额"),
+     *          @Apidoc\Param("is_required", type="int", require=true, desc="是否必选，0-否，1-是"),
+     *          @Apidoc\Param("is_default", type="int", require=true, desc="是否默认，0-否，1-是"),
      *      }),
      *   }),
      * })
@@ -187,7 +193,8 @@ class Product extends Controller
      *      @Apidoc\Param("file_id", type="int", require=true, desc="图片id"),
      *      @Apidoc\Param("file_path", type="string", require=true, desc="图片路径"),
      *   }),
-     *   @Apidoc\Param("selling_point", type="string", require=true, desc="商品卖点"),
+     *   @Apidoc\Param("selling_point", type="string", require=false, desc="商品卖点"),
+     *   @Apidoc\Param("selling_point_i18n", type="object", require=false, desc="商品卖点多语言，示例：{\"zh\":\"中文\",\"en\":\"English\"}"),
      *   @Apidoc\Param("spec_type", type="int", require=true, desc="产品规格(10单规格 20多规格)"),
      *   @Apidoc\Param("deduct_stock_type", type="int", require=true, desc="库存计算方式(10下单减库存 20付款减库存)"),
      *   @Apidoc\Param("is_alone_grade", type="int", require=true, desc="会员折扣设置(0默认等级折扣 1单独设置折扣)"),
@@ -239,11 +246,16 @@ class Product extends Controller
      *  @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *     @Apidoc\Param("group_id", type="int", require=true, desc="套餐分组id"),
      *     @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
+     *     @Apidoc\Param("group_type", type="int", require=true, desc="套餐分组类型，0-固定，1-可选"),
+     *     @Apidoc\Param("optional_count", type="int", require=true, desc="套餐可选数量"),
      *     @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children = {
      *         @Apidoc\Param("item_id", type="int", require=true, desc="套餐分组商品id"),
      *         @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
      *         @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
      *         @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
+     *         @Apidoc\Param("add_price", type="decimal", require=true, desc="加价金额"),
+     *         @Apidoc\Param("is_required", type="int", require=true, desc="是否必选，0-否，1-是"),
+     *         @Apidoc\Param("is_default", type="int", require=true, desc="是否默认，0-否，1-是"),
      *     }),
      *   }),
      * })

@@ -12,22 +12,27 @@ type IStaffRepo interface {
 	WithDevice(source string) DBOption // 关联设备
 	WithRoles() DBOption               // 关联角色
 
-	WhereUuid(uuid uint64) DBOption         // Uuid 条件
-	WhereUsername(username string) DBOption // 用户名条件
-	WhereCashierOnline() DBOption           // 收银机在线条件
-	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
-	WhereRoleUuid(roleUuid uint64) DBOption // 角色ID条件
-	WhereIsSuper(isSuper int) DBOption      // 是否超级管理员条件
-	WhereRealName(realName string) DBOption // 姓名条件
-	WhereNotUuid(uuid uint64) DBOption      // 排除UUID条件
+	WhereUuid(uuid uint64) DBOption                         // Uuid 条件
+	WhereUuids(uuids []uint64) DBOption                     // Uuid 列表条件
+	WhereUsername(username string) DBOption                 // 用户名条件
+	WhereCashierOnline() DBOption                           // 收银机在线条件
+	WhereDeviceId(bindKey string) DBOption                  // 设备ID条件
+	WhereRoleUuid(roleUuid uint64) DBOption                 // 角色ID条件
+	WhereIsSuper(isSuper int) DBOption                      // 是否超级管理员条件
+	WhereRealName(realName string) DBOption                 // 姓名条件
+	WhereNotUuid(uuid uint64) DBOption                      // 排除UUID条件
+	WhereHasDataPermission(hasDataPermission int) DBOption  // 是否有数据管理权限条件
+	WhereRealNameOrUsernameOrPhone(keyword string) DBOption // 姓名、邮箱、手机号条件
 
 	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
 	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
+	CountStaff(opts ...DBOption) (int64, error)     // 统计员工数量
 
 	PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.Staff, int64, error) // 分页查询员工
 
 	CreateStaff(staff model.Staff) error                         // 创建员工
 	Update(uuid uint64, vars map[string]any) error               // 更新员工
+	Updates(vars map[string]any, opts ...DBOption) error         // 批量更新员工
 	UpdateStaffRoles(staffUuid uint64, roleUuids []uint64) error // 更新管理员角色
 }
 
@@ -91,6 +96,15 @@ func (r *StaffRepo) WhereUuid(uuid uint64) DBOption {
 	}
 }
 
+func (r *StaffRepo) WhereUuids(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(uuids) == 0 {
+			return db.Where("1 = 0") // 空列表返回空结果
+		}
+		return db.Where("uuid IN ?", uuids)
+	}
+}
+
 func (r *StaffRepo) WhereUsername(username string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("BINARY username = ? OR phone = ?", username, username)
@@ -117,6 +131,14 @@ func (r *StaffRepo) WhereDeviceId(bindKey string) DBOption {
 
 func (r *StaffRepo) Update(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.Staff{}).Where("uuid = ?", uuid).Updates(vars).Error
+}
+
+func (r *StaffRepo) Updates(vars map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.Staff{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(vars).Error
 }
 
 func (r *StaffRepo) PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.Staff, int64, error) {
@@ -172,5 +194,30 @@ func (r *StaffRepo) WhereRealName(realName string) DBOption {
 func (r *StaffRepo) WhereNotUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid <> ?", uuid)
+	}
+}
+
+func (r *StaffRepo) CountStaff(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.Staff{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *StaffRepo) WhereHasDataPermission(hasDataPermission int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("has_data_permission = ?", hasDataPermission)
+	}
+}
+
+func (r *StaffRepo) WhereRealNameOrUsernameOrPhone(keyword string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("real_name LIKE ? OR username LIKE ? OR phone LIKE ?", Like(keyword), Like(keyword), Like(keyword))
 	}
 }

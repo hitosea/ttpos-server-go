@@ -7,9 +7,12 @@ import (
 	"time"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -20,6 +23,7 @@ type IRoleAccessSrv interface {
 	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error)
 	GetPermissionGroup(staffUuid, companyUuid uint64) (resp.PermissionGroup, error)
 	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
+	GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error)
 }
 
 func NewRoleAccessSrv(dbm *database.DBManager) IRoleAccessSrv {
@@ -37,19 +41,20 @@ func NewRoleAccessSrvImpl(dbm *database.DBManager) IRoleAccessSrv {
 }
 
 // 从数据库获取权限
-func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model.Access, model.CompanySetting, error) {
+func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model.Access, model.CompanySetting, model.Company, error) {
 	db := s.dbm.GetDB(companyUuid)
 	accessRepo := repository.NewAccessRepo(db)
 	var companySetting model.CompanySetting
+	var company model.Company
 	staffRepo := repository.NewStaffRepo(db)
 	staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 
 	if staff.Company == nil || staff.Company.CompanySetting == nil {
-		return nil, companySetting, errors.New("获取商家信息错误")
+		return nil, companySetting, company, errors.New("获取商家信息错误")
 	}
 
 	companySetting = *staff.Company.CompanySetting
-
+	company = *staff.Company
 	var options []repository.DBOption
 
 	if staff.IsSuper == 1 { // 超级管理员
@@ -59,11 +64,11 @@ func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 	} else {
 		roleUuids, err := repository.NewStaffRoleRepo(s.dbm.GetDB(staff.CompanyUuid)).GetRoleUuidsByStaffUuid(staff.Uuid)
 		if err != nil {
-			return nil, companySetting, errors.WithMessage(err, "获取用户角色失败")
+			return nil, companySetting, company, errors.WithMessage(err, "获取用户角色失败")
 		}
 		accessUuids, err := accessRepo.GetAccessUuids(roleUuids)
 		if err != nil {
-			return nil, companySetting, errors.WithMessage(err, "获取角色权限失败")
+			return nil, companySetting, company, errors.WithMessage(err, "获取角色权限失败")
 		}
 		options = append(options, accessRepo.WhereUuids(accessUuids))
 	}
@@ -71,17 +76,17 @@ func (s *roleAccessSrv) getDbPermissions(staffUuid, companyUuid uint64) ([]model
 	dbPermissions, err := accessRepo.GetPermissions(options...)
 
 	if err != nil {
-		return nil, companySetting, errors.WithMessage(err, "获取权限失败")
+		return nil, companySetting, company, errors.WithMessage(err, "获取权限失败")
 	}
 
-	return dbPermissions, companySetting, nil
+	return dbPermissions, companySetting, company, nil
 }
 
 // GetPermission 获取权限
 func (s *roleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error) {
 
 	var permissions []resp.Permission
-	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
+	dbPermissions, companySetting, company, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -95,7 +100,7 @@ func (s *roleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, 
 		permissions = append(permissions, permission)
 	}
 
-	permissions = s.filterPermission(permissions, companySetting)
+	permissions = s.filterPermission(permissions, companySetting, company)
 
 	return s.buildPermissionTree(permissions, routerName), nil
 }
@@ -107,7 +112,7 @@ func (s *roleAccessSrv) GetPermissionGroup(staffUuid, companyUuid uint64) (resp.
 	groupPermission := resp.PermissionGroup{
 		List: []*resp.Permission{},
 	}
-	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
+	dbPermissions, companySetting, company, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return groupPermission, errors.WithMessage(err)
 	}
@@ -124,7 +129,7 @@ func (s *roleAccessSrv) GetPermissionGroup(staffUuid, companyUuid uint64) (resp.
 	}
 
 	// 筛选权限
-	permissions = s.filterPermission(permissions, companySetting)
+	permissions = s.filterPermission(permissions, companySetting, company)
 
 	// 构建权限树形结构
 	roots := s.buildPermissionTreeWithoutFilter(permissions)
@@ -137,7 +142,7 @@ func (s *roleAccessSrv) GetPermissionGroup(staffUuid, companyUuid uint64) (resp.
 }
 
 // 筛选权限
-func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
+func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting, company model.Company) []resp.Permission {
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
 		// 删除无效数据
@@ -183,6 +188,26 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		}
 		// 授权无外送权限
 		if companySetting.DeliveryStatus != 1 && permission.Uuid == 1752716650 {
+			continue
+		}
+		// 新管理端-管理APP-总部无品采收货权限
+		if permission.Uuid == 2858548203520000 && companySetting.IsHeadquarter() {
+			continue
+		}
+		// 新管理端-管理APP-未对接erp无进销存权限
+		if permission.Uuid == 2857919057920000 && !company.IsOpenErp() {
+			continue
+		}
+		// 新管理端-管理APP-云平台未开启高级票据打印，权限列表无高级票据样式设置
+		if permission.Uuid == 2859181543424000 && companySetting.IsOpenAdvancedTicketPrint == 0 {
+			continue
+		}
+		// 新管理端-管理APP-云平台未开启桌台地图，权限列表无桌台地图
+		if permission.Uuid == 2859106045952001 && !companySetting.IsOpenTableMap() {
+			continue
+		}
+		// 新管理端-管理APP-散户无品牌采购、品牌收货、调拨单权限
+		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
 			continue
 		}
 		filteredPermissions = append(filteredPermissions, permission)
@@ -236,7 +261,7 @@ func (s *roleAccessSrv) buildPermissionTreeWithoutFilter(permissions []resp.Perm
 }
 
 func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
-	accesses, _, err := s.getDbPermissions(staffUuid, companyUuid)
+	accesses, _, _, err := s.getDbPermissions(staffUuid, companyUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -247,4 +272,73 @@ func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]strin
 		}
 	}
 	return permissions, nil
+}
+
+// GetCompanyPermissionGroup 获取店铺的所有权限组（不依赖员工，用于角色权限配置）
+func (s *roleAccessSrv) GetCompanyPermissionGroup(ctx context.Context, includeRouteNames []constant.RouteName) (resp.PermissionGroup, error) {
+	company := ctx.GetCompany()
+	companyUuid := company.Uuid
+	db := s.dbm.GetDB(company.Uuid)
+	accessRepo := repository.NewAccessRepo(db)
+	companySettingRepo := repository.NewCompanySettingRepo(db)
+
+	// 获取店铺设置
+	companySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
+		return db.Where("company_uuid = ?", companyUuid)
+	})
+	if err != nil {
+		return resp.PermissionGroup{}, errors.WithMessage(err, "获取店铺设置失败")
+	}
+
+	// 获取所有权限（不依赖员工）
+	var options []repository.DBOption
+	// 如果是供应商，只获取供应商权限
+	// 这里可以根据需要添加供应商判断逻辑
+	dbPermissions, err := accessRepo.GetPermissions(options...)
+	if err != nil {
+		return resp.PermissionGroup{}, errors.WithMessage(err, "获取权限失败")
+	}
+
+	var permissions []resp.Permission
+	groupPermission := resp.PermissionGroup{
+		List: []*resp.Permission{},
+	}
+
+	for _, dbPermission := range dbPermissions {
+		var permission resp.Permission
+		copier.Copy(&permission, dbPermission)
+		permission.ParentUuid = dbPermission.ParentUuid
+		permission.CreateTime = time.Unix(dbPermission.CreateTime, 0).Format(time.DateTime)
+		permission.UpdateTime = time.Unix(dbPermission.UpdateTime, 0).Format(time.DateTime)
+		permission.Children = []*resp.Permission{}
+		permissions = append(permissions, permission)
+	}
+
+	// 筛选权限
+	permissions = s.filterPermission(permissions, companySetting, *company)
+
+	// 构建权限树形结构
+	roots := s.buildPermissionTreeWithoutFilter(permissions)
+	for _, root := range roots {
+		// 只返回"管理APP"、"收银机"、"点餐助手"
+		if !slices.Contains(includeRouteNames, constant.RouteName(root.Name)) {
+			continue
+		}
+
+		groupPermission.List = append(groupPermission.List, root)
+	}
+
+	// 遍历groupPermission.List，将每个权限以及其所有子孙权限的名称翻译为对应语言
+	for _, root := range groupPermission.List {
+		s.translatePermission(root, ctx.GetLanguage())
+	}
+	return groupPermission, nil
+}
+
+// 翻译权限及其所有子孙权限的名称
+func (s *roleAccessSrv) translatePermission(permission *resp.Permission, language string) {
+	permission.Name = i18n.Translate(language, permission.Name)
+	for _, child := range permission.Children {
+		s.translatePermission(child, language)
+	}
 }

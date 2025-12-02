@@ -9,7 +9,7 @@
 | 字段      | 内容                                                |
 | --------- | --------------------------------------------------- | -------------------------- |
 | 迁移名称  | `{YYYYMMDDHHMMSS}_add_{table_or_column}_fields.php` |
-| 触发 Spec | `docs/shared/specs/{story                           | task}-{module}-{feature}/` |
+| 触发 Spec | `docs/shared/specs/active/{story\|task}-{module}-{feature}/` |
 | 负责人    | `@`                                                 |
 | 关联任务  | `tasks.md` 中的编号                                 |
 
@@ -113,7 +113,7 @@ php think migrate:rollback --step=1
 
 ## 7. 文档 & 链接
 
-- 更新 `docs/shared/specs/{spec}/design.md` 的数据库章节。
+- 更新 `docs/shared/specs/active/{spec}/design.md` 的数据库章节。
 - 如涉及接口，更新 `docs/shared/api/{module}_api.md`。
 - 在 `requirements.md` / `design.md` / `tasks.md` 的 `Graphiti & 活动日志` 区域记录：
   - Related Episode: `[待补充]`

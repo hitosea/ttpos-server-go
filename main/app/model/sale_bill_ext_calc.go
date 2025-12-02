@@ -126,6 +126,17 @@ func (model *SaleBill) calcFreeAmount() float64 {
 	return amount.InexactFloat64()
 }
 
+// 计算销售订单的满减活动抵扣金额。活动抵扣金额=销售订单的活动抵扣金额之和
+func (model *SaleBill) calcActivityAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		if !saleOrder.IsDelete() {
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.ActivityAmount))
+		}
+	}
+	return amount.InexactFloat64()
+}
+
 // 重新计算销售账单的金额
 func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 	option := &CalcOption{}
@@ -136,9 +147,9 @@ func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 	if option.SaleBillSetting != nil {
 		setting = option.SaleBillSetting
 	}
-	for i, _ := range model.SaleOrders {
+	for i := range model.SaleOrders {
 		saleOrder := model.SaleOrders[i]
-		for j, _ := range saleOrder.SaleOrderProducts {
+		for j := range saleOrder.SaleOrderProducts {
 			saleOrderProduct := saleOrder.SaleOrderProducts[j]
 			if saleOrderProduct == nil {
 				continue
@@ -189,6 +200,8 @@ func (model *SaleBill) CalcSaleBill() *SaleBillCalc {
 	model.MemberDiscountFee = calc.MemberDiscountFee
 	calc.GiftAmount = model.calcGiftAmount()
 	model.GiftAmount = calc.GiftAmount
+	calc.ActivityAmount = model.calcActivityAmount()
+	model.ActivityAmount = calc.ActivityAmount
 	calc.FreeAmount = model.calcFreeAmount()
 	model.FreeAmount = calc.FreeAmount
 	calc.ProductOriginalAmount = model.calcProductOriginalAmount()

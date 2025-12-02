@@ -1,7 +1,7 @@
 # 文档编写指南（后端版）
 
 > 👤 **受众**：人类开发者、技术写作者  
-> 🎯 **目的**：在 `AGENT.md` → `.cursor/rules/documentation.mdc` → `docs/**` 的体系下，提供可操作的详细说明，确保各类文档有据可依、互相关联。
+> 🎯 **目的**：在 `AGENTS.md` → `.cursor/rules/documentation.mdc` → `docs/**` 的体系下，提供可操作的详细说明，确保各类文档有据可依、互相关联。
 
 ---
 
@@ -39,7 +39,7 @@
 | 文档类型                          | 放置目录                                            | 模板                                                  | 关键内容                     |
 | --------------------------------- | --------------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
 | 需求提案（Proposal）              | `docs/team/proposals/`                              | `docs/agent/templates/proposal-template.md`           | 背景、价值、风险、评审       |
-| Spec（requirements/design/tasks） | `docs/shared/specs/{spec-name}/`                    | `docs/agent/templates/requirements-template.md` 等    | User Story、设计、任务       |
+| Spec（requirements/design/tasks） | `docs/shared/specs/active/{spec-name}/`             | `docs/agent/templates/requirements-template.md` 等    | User Story、设计、任务       |
 | API 文档                          | `docs/shared/api/{module}_api.md`                   | `docs/agent/templates/api-doc-template.md`            | 接口列表、参数、示例、错误码 |
 | 数据库迁移说明                    | `admin/database/migrations/` + `docs/shared/specs/` | `docs/agent/templates/database-migration-template.md` | 字段规范、迁移步骤           |
 | gRPC / 微服务设计                 | `ttpos-bmp/` + `docs/shared/specs/`                 | `docs/agent/templates/grpc-service-template.md`       | proto、服务注册、调用示例    |
@@ -142,7 +142,7 @@
 
 ## 8. 相关资源
 
-- `AGENT.md` – 场景映射与命令指南。
+- `AGENTS.md` – 场景映射与命令指南。
 - `.cursor/rules/documentation.mdc` – 薄层规范与模板映射。
 - `.cursor/rules/knowledge_management.mdc` – Graphiti 规则与 IF-THEN 触发器。
 - `docs/team/reports/document-system-assessment-2025-11-17.md` – 文档体系评估报告。

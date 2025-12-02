@@ -84,6 +84,19 @@ func (model *Printer) IsCompatibleMode() bool {
 	return model.PrintSpeed == 3
 }
 
+// 获取打印分片大小
+func (model *Printer) GetPrintChunkSize() int {
+	switch model.PrintSpeed {
+	case 1:
+		return 5 * 1024 * 1024 // 5MB
+	case 2:
+		return 20 * 1024 // 20KB
+	case 3:
+		return 4 * 1024 // 4KB
+	}
+	return 4 * 1024
+}
+
 type PrinterConfigJson struct {
 	IP   string `json:"IP"`
 	PORT string `json:"PORT"`

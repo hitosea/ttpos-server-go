@@ -55,6 +55,7 @@ class Product extends BaseModel
         'feed_open_max_select',
         'feed_max_select',
         'selling_point',
+        'selling_point_i18n',
         'is_enable_grade',
         'is_alone_grade',
         'product_sort',
@@ -63,6 +64,8 @@ class Product extends BaseModel
         'product_name_text',
         'product_unit_text',
     ];
+
+    private const SELLING_POINT_LANGUAGES = ['zh', 'en', 'zhtw', 'th', 'my', 'ja', 'ko', 'tr', 'sv'];
 
     /*
      * 类型 10-成品 20-材料
@@ -155,7 +158,48 @@ class Product extends BaseModel
     }
     public function getSellingPointAttr($value, $data = [])
     {
-        return $this->describe ?: '';
+        $describe = $this->getData('describe');
+        return is_string($describe) ? $describe : '';
+    }
+
+    public function getSellingPointI18nAttr($value, $data = [])
+    {
+        $default = [
+            'zh' => $data['describe'] ?? '',
+            'en' => $data['describe'] ?? '',
+            'zhtw' => $data['describe'] ?? '',
+            'th' => $data['describe'] ?? '',
+            'my' => $data['describe'] ?? '',
+            'ja' => $data['describe'] ?? '',
+            'ko' => $data['describe'] ?? '',
+            'tr' => $data['describe'] ?? '',
+            'sv' => $data['describe'] ?? '',
+        ];
+        $uuid = $data['describe_multi_language_name_uuid'] ?? 0;
+        if (empty($uuid)) {
+            return json_encode($default);
+        }
+        $record = (new MultiLanguageName())->where('uuid', $uuid)
+                ->field('en_name,zh_name,zh_tw_name,th_name,my_name,ja_name,ko_name,tr_name,sv_name')
+                ->find();
+
+        if (!$record) {
+            return json_encode($default);
+        }
+
+        // 构建返回格式
+        $names = json_encode([
+            'en'   => $record['en_name'],
+            'zh'   => $record['zh_name'],
+            'zhtw' => $record['zh_tw_name'],
+            'th'   => $record['th_name'],
+            'my'   => $record['my_name'],
+            'ja'   => $record['ja_name'],
+            'ko'   => $record['ko_name'],
+            'tr'   => $record['tr_name'],
+            'sv'   => $record['sv_name'],
+        ], JSON_UNESCAPED_UNICODE);
+        return $names;
     }
     public function getIsEnableGradeAttr($value, $data = [])
     {
@@ -438,7 +482,9 @@ class Product extends BaseModel
      */
     public function productPackageGroup()
     {
-        return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid');
+        return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid')
+            ->order('sort', 'asc') // 按 sort 字段升序排序
+            ->order('id', 'asc'); // 相同 sort 值时按 id 升序排序
     }
 
     /**
@@ -1574,12 +1620,17 @@ class Product extends BaseModel
                         'stock_num' => $item['productBom']['stock_num'], // 商品库存
                         'num' => intval($item['num']), // 商品数量
                         'sort' => $item['sort'], // 排序
+                        'add_price' => floatval($item['add_price'] ?? 0), // 加价金额
+                        'is_required' => intval($item['is_required'] ?? 0), // 是否必选 0-否 1-是
+                        'is_default' => intval($item['is_default'] ?? 0), // 是否默认 0-否 1-是
                     ];
                 }
                 $result['package_group'][] = [
                     'group_id' => $group['uuid'], // 套餐分组uuid
                     'group_name' => $group['name'], // 套餐分组名称
                     'group_name_text' => $group['group_name_text'], // 套餐分组名称
+                    'group_type' => intval($group['group_type'] ?? 0), // 分组类型 0-固定 1-可选
+                    'optional_count' => intval($group['optional_count'] ?? 0), // 可选数量
                     'product_list' => $productList, // 套餐分组商品列表
                 ];
             }

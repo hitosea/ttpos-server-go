@@ -572,7 +572,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 	for _, buffet := range buffetList {
 		nonOrderingTimes = append(nonOrderingTimes, buffet.NonOrderingTime)
 		reminderOrderTimes = append(reminderOrderTimes, buffet.ReminderOrderTime)
-		for index, _ := range buffet.BuffetCustomerTypePrices {
+		for index := range buffet.BuffetCustomerTypePrices {
 			customerTypePrice := buffet.BuffetCustomerTypePrices[index]
 			if buffetUuidMap[buffet.Uuid] == nil {
 				buffetUuidMap[buffet.Uuid] = make(map[uint64]*struct {
@@ -892,6 +892,14 @@ func (model *SaleOrder) SetPointsCouponCancel() {
 	}
 }
 
+// SetActivityCancel 清空满减活动选择
+func (model *SaleOrder) SetActivityCancel() {
+	defer model.SetUpdate() // 标记更新
+	model.FullReductionActivityUuid = 0
+	model.FullReductionActivityMessage = ""
+	//model.ActivityAmount = 0
+}
+
 // 设置整单折扣，并修改订单商品的折扣
 // 参数discount，表示给订单设置的打折率，统一使用百分比打折。比如八折，discount值为0.8；比如30% off，discount值为0.7。
 // 注意：请在调用该方法时，就做好discount值的转化
@@ -1028,6 +1036,7 @@ func (model *SaleOrder) SetFinishStatus(final FinalAmount) {
 	model.FinishTime = time.Now().Unix()
 	// 更新订单结算后要计算的金额字段
 	model.CouponAmount = final.CouponAmount
+	model.ActivityAmount = final.ActivityAmount
 	model.PaymentAmount = final.PaymentAmount
 	model.ChangeAmount = final.ChangeAmount
 	model.ZeroCheckoutFee = final.ZeroCheckoutFee

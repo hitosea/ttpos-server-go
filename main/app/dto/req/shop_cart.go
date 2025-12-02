@@ -13,6 +13,7 @@ type OrderCartProductPackageAddReq struct {
 	SaleOrderUuid      uint64           `json:"sale_order_uuid"`      // 销售订单UUID
 	ProductPackageUuid uint64           `json:"product_package_uuid"` // 套餐UUID
 	Products           []ProductRequest `json:"products"`             // 套餐商品请求列表
+	Num                float64          `json:"num"`                  // 套餐商品数量
 
 	isH5Product bool `json:"-"` // 是否是H5端下单的商品
 }
@@ -30,8 +31,9 @@ type ProductRequest struct {
 	ProductPackageGroupUuid uint64 `json:"product_package_group_uuid"` // 套餐分组UUID
 	// 普通商品的参数
 	EditProductReq
-	Num     float64 `json:"num"`      // 商品数量
-	UnitNum float64 `json:"unit_num"` // 一个套餐的单个子商品的数量
+	Num      float64 `json:"num"`       // 商品份数
+	UnitNum  float64 `json:"unit_num"`  // 一个套餐的单个子商品的数量
+	AddPrice float64 `json:"add_price"` // 加价金额
 }
 
 type OrderCartProductFlavorAndAttributeChangeReq struct {
@@ -69,6 +71,7 @@ type OrderCartProductAddReq struct {
 	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Price             *float64 `json:"price"`           // 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
 	IsBuffet          *bool    `json:"is_buffet"`       // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
+	BatchTagUuid      uint64   `json:"batch_tag_uuid"`  // 分批类型UUID, 可选（前置模式时使用）
 	// 后端内部使用的参数
 	isH5Product bool `json:"-"` // 是否是H5商品
 }
@@ -104,23 +107,24 @@ type TabletOrderCartProductAddReq struct {
 }
 
 func (req *TabletOrderCartProductAddReq) FormatPackageSubProductParams() {
-	for _, product := range req.Products {
-		for j := range product.Products {
-			subProduct := &product.Products[j]
-			subProduct.Num = subProduct.UnitNum * product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
-		}
-	}
+	//for _, product := range req.Products {
+	//	for j := range product.Products {
+	//		subProduct := &product.Products[j]
+	//		subProduct.Num = product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
+	//	}
+	//}
 }
 
 // ProductParams 商品参数
 type ProductParams struct {
 	FlavorProductBomUuid            uint64           `json:"flavor_product_bom_uuid"`             // 商品规格uuid
-	Num                             float64          `json:"num"  binding:"required"`             // 数量数量
+	Num                             float64          `json:"num"  binding:"required"`             // 商品份数
 	UnitNum                         float64          `json:"unit_num"`                            // 单位数量. 目前只有平板的加购并送厨使用该字段
 	Price                           *float64         `json:"price"`                               // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
 	IsBuffet                        *bool            `json:"is_buffet"`                           // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息
 	ProductPackageAttributeUuidList []uint64         `json:"product_package_attribute_uuid_list"` // 属性信息
+	AddPrice                        float64          `json:"add_price"`                           // 加价金额
 	Operation                       string           `json:"operation"`                           // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64           `json:"must_plan_uuid"`                      // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Remark                          string           `json:"remark"`                              // 备注，平板端离线购物车提交
@@ -129,12 +133,13 @@ type ProductParams struct {
 	Products                        []ProductRequest `json:"products"`                            // 套餐商品请求列表。当商品是套餐商品时，该字段有值
 	ProductPackageUuid              uint64           `json:"product_package_uuid"`                // 套餐商品uuid。当商品是套餐商品时，该字段有值
 
-	isPackageProduct        bool   `json:"is_package_product"`         // 是否是套餐商品
-	packageSubProductParams string `json:"package_sub_product_params"` // 套餐子商品参数（JSON格式）
+	isPackageProduct        bool   // 是否是套餐商品
+	packageSubProductParams string // 套餐子商品参数（JSON格式）
 
-	subProducts         []ProductParams `json:"sub_products"`           // 套餐子商品列表。当商品是套餐商品时，该字段有值
-	isPackageSubProduct bool            `json:"is_package_sub_product"` // 是否是套餐子商品
-	packageUuid         uint64          `json:"package_uuid"`           // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
+	subProducts         []ProductParams // 套餐子商品列表。当商品是套餐商品时，该字段有值
+	isPackageSubProduct bool            // 是否是套餐子商品
+	packageUuid         uint64          // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
+	BatchTagUuid        uint64          `json:"batch_tag_uuid"` // 分批类型UUID, 可选（前置模式时使用）
 }
 
 func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {
@@ -160,9 +165,11 @@ func (req *ProductParams) GetIsPackageProduct() bool {
 }
 
 type SubProduct struct {
-	FlavorUuid              uint64   `json:"flavor_uuid"`
-	AttributeUuid           []uint64 `json:"attribute_uuid"`
-	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+	FlavorUuid              uint64   `json:"flavor_uuid"`                // 商品规格uuid
+	AttributeUuid           []uint64 `json:"attribute_uuid"`             // 属性ID列表
+	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组uuid
+	Num                     float64  `json:"num"`                        // 套餐子商品数量
+	UnitNum                 float64  `json:"unit_num"`                   // 每份数量
 }
 
 func (req *ProductParams) GetSubProductList() []SubProduct {
@@ -172,6 +179,8 @@ func (req *ProductParams) GetSubProductList() []SubProduct {
 			FlavorUuid:              subProduct.FlavorProductBomUuid,
 			AttributeUuid:           subProduct.ProductPackageAttributeUuidList,
 			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
+			Num:                     subProduct.Num,
+			UnitNum:                 subProduct.UnitNum,
 		})
 	}
 	return subProductList

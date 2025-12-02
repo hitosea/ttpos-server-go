@@ -66,6 +66,24 @@ func strongPassword(fl validator.FieldLevel) bool {
 	return typeCount >= 2
 }
 
+// permissionPassword 权限密码验证
+// 规则：必须为 4-8 位数字
+func permissionPassword(fl validator.FieldLevel) bool {
+	password, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+
+	// 如果密码为空，则跳过验证（通过 omitempty 处理）
+	if password == "" {
+		return true
+	}
+
+	// 使用正则表达式验证：4-8位数字
+	matched, _ := regexp.MatchString(`^\d{4,8}$`, password)
+	return matched
+}
+
 // openingHours 营业时间格式验证
 // 规则：必须符合 HH:MM-HH:MM 格式，其中 HH 为 00-23，MM 为 00-59
 // 支持跨天营业，如：09:00-22:00, 23:00-02:00

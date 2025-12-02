@@ -23,7 +23,7 @@ import (
 // IDeskSrv 定义收银服务接口
 type IDeskSrv interface {
 	GetDeskList(ctx context.Context, dbId uint64, req req.DeskListReq) (resp.DeskListWithPaginationResp, error)         // 获取桌台列表
-	GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error)                         // 获取桌台区域和类型列表
+	GetDeskRegionAndTypeList(ctx context.Context) (resp.DeskRegionAndTypeListWithPaginationResp, error)                 // 获取桌台区域和类型列表
 	GetDeskInfo(dbId uint64, deskUuid uint64) (resp.Desk, error)                                                        // 获取桌台详情
 	GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.DeskPing, error)                   // 获取桌台详情-用于定时轮询
 	GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *resp.ShopCart) (resp.H5DeskPing, error)               // 获取桌台详情-用于h5定时轮询
@@ -68,10 +68,13 @@ func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrd
 }
 
 // GetDeskRegionAndTypeList 获取收银机点餐页面产品类别列表
-func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
+func (s *deskSrv) GetDeskRegionAndTypeList(ctx context.Context) (resp.DeskRegionAndTypeListWithPaginationResp, error) {
+	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
+
 	// 获取列表
-	regions, _ := repository.NewDeskRegionRepo(s.dbm.GetDB(dbId)).GetDeskRegionList()
-	types, _ := repository.NewDeskTypeRepo(s.dbm.GetDB(dbId)).GetDeskTypeList()
+	repo := repository.NewDeskRegionRepo(db)
+	regions, _ := repo.GetDeskRegionList(repo.WithDeskMapLayout())
 
 	// 转换为响应对象
 	deskRegionResp := make([]resp.DeskRegion, len(regions))
@@ -79,9 +82,17 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 		deskRegionResp[i] = resp.DeskRegion{
 			Uuid: region.Uuid,
 			Name: region.Name,
+			IsOpenMap: func() bool {
+				if companySetting.IsOpenTableMap() && region.DeskMapLayout != nil {
+					return true
+				}
+				return false
+			}(),
 		}
 	}
 
+	// 获取桌台类型列表
+	types, _ := repository.NewDeskTypeRepo(db).GetDeskTypeList()
 	deskTypeResp := make([]resp.DeskType, len(types))
 	for i, type_ := range types {
 		deskTypeResp[i] = resp.DeskType{
@@ -215,6 +226,8 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	if desk.SaleBill == nil {
 		return res, nil
 	}
+	// 设置国籍UUID
+	res.NationalityUuid = desk.SaleBill.NationalityUuid
 	// 获取账单信息，合计未送厨商品数量、合计已送厨商品列表
 	if shopCart == nil {
 		var opts []repository.OrderCartInfoOptionFunc
@@ -680,14 +693,38 @@ func (s *deskSrv) CompleteDesk(ctx context.Context, reqs req.DeskJsonUuidReq) er
 
 // ChangeDesk 切换桌台
 func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp.ShopCart, error) {
-	// 禁止并发操作
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
+	// 禁止并发操作：在方法开头就加锁，确保获取目标桌台的订单UUID时使用的是最新数据
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(reqs.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(reqs.SaleBillUuid)
+		systemLock := lock.NewSystemLock()
+
+		// 收集需要锁定的资源：源订单 + 目标资源（目标桌台或目标订单）
+		lockUuids := []uint64{reqs.SaleBillUuid}
+
+		// 获取目标桌台的订单UUID（在锁内获取，确保数据一致性）
+		// 如果目标桌台有订单，则锁定目标订单；否则锁定目标桌台
+		targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(reqs.DeskUuid)
+		if err == nil && targetSaleBillUuid != 0 {
+			// 目标桌台有订单，锁定目标订单
+			lockUuids = append(lockUuids, targetSaleBillUuid)
+		} else {
+			// 目标桌台没有订单，锁定目标桌台
+			lockUuids = append(lockUuids, reqs.DeskUuid)
+		}
+
+		// 锁定源订单和目标资源（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, lockUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+
 		ctx.AddLock()
 	}
 
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(reqs.SaleBillUuid)
 	if errSaleBill != nil {
@@ -709,7 +746,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 		return nil, errors.New("旧桌台待清台，不允许转台")
 	}
 
-	// 获取桌台信息
+	// 获取桌台信息（在锁内获取，确保数据一致性）
 	desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(reqs.DeskUuid)
 	if errDesk != nil {
 		return nil, errors.WithMessage(errDesk, "获取桌台信息失败")
@@ -785,23 +822,45 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 
 // MergeDesk 合并桌台
 func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.DeskMergeShopCartResp, *resp.DeskMergeCheckResp, error) {
-	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
-		ctx.AddLock()
-	}
-
 	if err := req.Validate(); err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 
-	// 获取销售账单信息
+	// 禁止并发操作：在方法开头就加锁，确保获取被合并桌台的订单UUID时使用的是最新数据
+	if ctx.NoLock() {
+		systemLock := lock.NewSystemLock()
+		// 收集所有需要锁定的订单 UUID（主订单 + 所有被合并的订单）
+		orderUuids := []uint64{req.SaleBillUuid}
+
+		// 收集被合并桌台的订单 UUID（在锁内获取，确保数据一致性）
+		for _, deskUuid := range req.DeskUuids {
+			// 通过桌台UUID获取订单UUID（在锁内获取）
+			targetSaleBillUuid, err := repository.NewDeskRepo(db).GetSaleBillUuidByDeskUuid(deskUuid)
+			if err == nil && targetSaleBillUuid != 0 {
+				orderUuids = append(orderUuids, targetSaleBillUuid)
+			}
+		}
+
+		// 锁定所有涉及的订单（按 UUID 排序）
+		// LockMultipleUuids 会自动去重和排序，返回排序后的 UUID 列表
+		lockedUuids := lock.LockMultipleUuids(systemLock, orderUuids)
+
+		// 按相反顺序释放锁（UnlockMultipleUuids 内部会使用相同的排序策略）
+		defer func() {
+			lock.UnlockMultipleUuids(systemLock, lockedUuids)
+		}()
+		ctx.AddLock()
+	}
+
+	// 获取销售账单信息（用于后续业务逻辑）
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+	}
+	if saleBill.IsCanceled() {
+		return nil, nil, errors.New("当前订单已取消，不支持合并桌台")
 	}
 
 	// 点餐助手，拆单后不可以修改人数
@@ -823,6 +882,10 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	saleBillList := []model.SaleBill{}
 	deskNos := []string{}
 	for _, deskUuid := range req.DeskUuids {
+		// 跳过当前桌台，避免关闭当前桌台
+		if deskUuid == saleBill.DeskUuid {
+			continue
+		}
 		desk, errDesk := repository.NewDeskRepo(db).GetDeskRecord(deskUuid)
 		if errDesk != nil {
 			return nil, nil, errors.WithMessage(errDesk, "获取桌台信息失败")
@@ -864,6 +927,11 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		return nil, &deskMergeCheckRes, errors.New(errDeskMsg)
 	}
 
+	// 如果没有需要合并的桌台，直接返回
+	if len(saleBillList) == 0 {
+		return nil, nil, errors.New("没有可合并的桌台")
+	}
+
 	resp := &resp.DeskMergeShopCartResp{}
 
 	// 更新桌台信息
@@ -890,13 +958,13 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 			}
 
 			// 更新送厨单和商品
-			productionRepo := repository.NewProductionRepo(db)
+			productionRepo := repository.NewProductionRepo(tx)
 			if err := productionRepo.UpdateProduct([]repository.DBOption{saleBillOpt}, map[string]any{
 				"sale_bill_uuid": saleBill.Uuid,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
-			if err := repository.NewProductionRepo(db).UpdateOrder([]repository.DBOption{saleBillOpt, saleOrderOpt}, map[string]any{
+			if err := productionRepo.UpdateOrder([]repository.DBOption{saleBillOpt, saleOrderOpt}, map[string]any{
 				"desk_uuid":       saleBill.DeskUuid,
 				"sale_bill_uuid":  saleBill.Uuid,
 				"sale_order_uuid": saleOrder.Uuid,

@@ -27,6 +27,7 @@ type Desk struct {
 	DefaultPeopleNum       uint    `json:"default_people_num"`         // 默认人数
 	IsOpenDefaultPeopleNum bool    `json:"is_open_default_people_num"` // 是否开启默认人数
 	BatchTagColor          string  `json:"batch_tag_color"`            // 桌台分批类型的颜色
+	BatchCookingMode       string  `json:"batch_cooking_mode"`         // 分批送厨模式, "post"：后置模式 "pre"：前置模式
 }
 
 type DeskNo struct {
@@ -55,8 +56,9 @@ type BatchTagRes struct {
 }
 
 type DeskRegion struct {
-	Uuid uint64 `json:"uuid"` // 餐桌区域ID
-	Name string `json:"name"` // 餐桌区域名称
+	Uuid      uint64 `json:"uuid"`        // 餐桌区域ID
+	Name      string `json:"name"`        // 餐桌区域名称
+	IsOpenMap bool   `json:"is_open_map"` // 是否开启地图
 }
 
 type DeskType struct {
@@ -109,6 +111,7 @@ type DeskPing struct {
 	UpdateTime          int64                  `json:"update_time"`            // 更新时间
 	Product             *product_resp.Product  `json:"product,omitempty"`      // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 	OrderRemark         *OrderRemarkRes        `json:"order_remark,omitempty"` // 整单备注信息
+	NationalityUuid     uint64                 `json:"nationality_uuid"`       // 国籍UUID（0=未设置）
 }
 
 type H5DeskPing struct {

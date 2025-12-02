@@ -171,7 +171,7 @@ open http://localhost:3000
 **必读文档** (按顺序):
 
 1. [ ] [README.md](../../README.md) - 项目概览
-2. [ ] [AGENT.md](../../AGENT.md) - Agent 速查表 ⭐⭐⭐
+2. [ ] [AGENTS.md](../../AGENTS.md) - Agent 速查表 ⭐⭐⭐
 3. [ ] [项目结构](../../.cursor/rules/structs.mdc) - 代码定位
 4. [ ] [系统架构](../human/architecture/overview.md) - 技术架构
 5. [ ] [餐饮术语表](../human/business/glossary.md) - 业务术语
@@ -662,7 +662,7 @@ type orderSrv struct {
 ### 项目文档
 
 - [README.md](../../README.md) - 项目总览
-- [AGENT.md](../../AGENT.md) - Agent 速查表 ⭐⭐⭐
+- [AGENTS.md](../../AGENTS.md) - Agent 速查表 ⭐⭐⭐
 - [docs/agent/workflows/](../agent/workflows/) - 工作流程 ⭐⭐⭐
 - [docs/human/architecture/](../human/architecture/) - 架构设计
 - [docs/shared/api/](../shared/api/) - API 文档

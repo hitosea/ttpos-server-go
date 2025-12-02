@@ -56,3 +56,9 @@ type EditOrderRemarkReq struct {
 type DeleteOrderRemarkReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"`
 }
+
+type SetDataManageReq struct {
+	IsEnableDataManage bool     `json:"is_enable_data_manage"` // 是否启用数据管理
+	StaffUuids         []uint64 `json:"staff_uuids"`           // 员工UUID列表
+	SaleBillUuids      []uint64 `json:"sale_bill_uuids"`       // 销售单UUID列表
+}

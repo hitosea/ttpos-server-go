@@ -1061,4 +1061,49 @@ INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `crea
 INSERT INTO `ttpos_role_access` (`id`, `uuid`, `role_uuid`, `access_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1169, 1169, 2, 1724220613, 1761133410, 1761133410, 0);
 COMMIT;
 
+-- ----------------------------
+-- Records of ttpos_multi_language_name (外卖来源和国籍)
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_multi_language_name` (`uuid`, `zh_name`, `en_name`, `zh_tw_name`, `th_name`, `my_name`, `ja_name`, `ko_name`, `tr_name`, `sv_name`, `create_time`, `update_time`, `delete_time`) VALUES
+(8267304538112001, 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', 'Grab', @nowTime, @nowTime, 0),
+(8267304538112002, 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', 'Line Man', @nowTime, @nowTime, 0),
+(8267304538112003, '悟空外卖', 'Wukong Delivery', '悟空外賣', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', 'Wukong Delivery', @nowTime, @nowTime, 0),
+(8267304538112004, 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', 'Foodpanda', @nowTime, @nowTime, 0),
+(8267304538112005, '泰国', 'Thailand', '泰國', 'ไทย', 'ထိုင်း', 'タイ', '태국', 'Tayland', 'Thailand', @nowTime, @nowTime, 0),
+(8267304538112006, '中国', 'China', '中國', 'จีน', 'တရုတ်', '中国', '중국', 'Çin', 'Kina', @nowTime, @nowTime, 0),
+(8267304538112007, '美国', 'United States', '美國', 'สหรัฐอเมริกา', 'အမေရိကန်', 'アメリカ', '미국', 'Amerika Birleşik Devletleri', 'USA', @nowTime, @nowTime, 0),
+(8267304538112008, '日本', 'Japan', '日本', 'ญี่ปุ่น', 'ဂျပန်', '日本', '일본', 'Japonya', 'Japan', @nowTime, @nowTime, 0),
+(8267304538112009, '韩国', 'South Korea', '韓國', 'เกาหลีใต้', 'တောင်ကိုရီးယား', '韓国', '한국', 'Güney Kore', 'Sydkorea', @nowTime, @nowTime, 0),
+(8267304538112010, '英国', 'United Kingdom', '英國', 'สหราชอาณาจักร', 'ယူနိုက်တက်ကင်းဒမ်း', 'イギリス', '영국', 'Birleşik Krallık', 'Storbritannien', @nowTime, @nowTime, 0),
+(8267304538112011, '法国', 'France', '法國', 'ฝรั่งเศส', 'ပြင်သစ်', 'フランス', '프랑스', 'Fransa', 'Frankrike', @nowTime, @nowTime, 0),
+(8267304538112012, '俄罗斯', 'Russia', '俄羅斯', 'รัสเซีย', 'ရုရှား', 'ロシア', '러시아', 'Rusya', 'Ryssland', @nowTime, @nowTime, 0);
+COMMIT;
+
+-- ----------------------------
+-- Records of ttpos_order_source
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_order_source` (`uuid`, `multi_language_name_uuid`, `sort`, `status`, `create_time`, `update_time`, `delete_time`) VALUES
+(8267304538112101, 8267304538112001, 1, 1, @nowTime, @nowTime, 0),
+(8267304538112102, 8267304538112002, 2, 1, @nowTime, @nowTime, 0),
+(8267304538112103, 8267304538112003, 3, 1, @nowTime, @nowTime, 0),
+(8267304538112104, 8267304538112004, 4, 1, @nowTime, @nowTime, 0);
+COMMIT;
+
+-- ----------------------------
+-- Records of ttpos_nationality
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_nationality` (`uuid`, `multi_language_name_uuid`, `sort`, `status`, `create_time`, `update_time`, `delete_time`) VALUES
+(8267304538112201, 8267304538112005, 1, 1, @nowTime, @nowTime, 0),
+(8267304538112202, 8267304538112006, 2, 1, @nowTime, @nowTime, 0),
+(8267304538112203, 8267304538112007, 3, 1, @nowTime, @nowTime, 0),
+(8267304538112204, 8267304538112008, 4, 1, @nowTime, @nowTime, 0),
+(8267304538112205, 8267304538112009, 5, 1, @nowTime, @nowTime, 0),
+(8267304538112206, 8267304538112010, 6, 1, @nowTime, @nowTime, 0),
+(8267304538112207, 8267304538112011, 7, 1, @nowTime, @nowTime, 0),
+(8267304538112208, 8267304538112012, 8, 1, @nowTime, @nowTime, 0);
+COMMIT;
+
 SET FOREIGN_KEY_CHECKS = 1;

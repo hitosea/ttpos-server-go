@@ -16,6 +16,9 @@ __debug_*
 
 /vendor/
 /node_modules/
+/certificate
+/ttpos-flutter
+/pay-server
 
 # 编译和构建文件
 *.exe
@@ -53,3 +56,6 @@ admin/public/shop
 # MCP Servers
 .spec-workflow/session.json
 certificate
+
+# Agent 相关
+.agents

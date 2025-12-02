@@ -359,6 +359,41 @@ func (h *MaterialHandler) UpdateMaterialStatusBatch(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// BatchUpdateMaterialVisible 批量更新物品可见性
+// @Summary 批量更新物品可见性
+// @Description 批量更新物品可见性设置（仅总店可用）
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialBatchUpdateVisibleReq true "批量更新物品可见性请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/batch_update_visible [post]
+func (h *MaterialHandler) BatchUpdateMaterialVisible(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	visibleReq := req.MaterialBatchUpdateVisibleReq{}
+
+	if err := c.ShouldBindJSON(&visibleReq); err != nil {
+		helper.HandleValidationError(c, err, visibleReq, dto.PageReqMessage)
+		return
+	}
+	if err := visibleReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
+
+	updatedCount, err := h.materialSrv.UpdateMaterialVisibleBatch(ctx, visibleReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{
+		"updated_count": updatedCount,
+	})
+}
+
 // GetMaterialUnitList 获取物品的单位列表
 // @Summary 获取物品的单位列表
 // @Description 获取物品的单位列表
@@ -645,19 +680,20 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/material/list", wrapper.GetMaterialList)                      // 获取物品列表
-		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                  // 获取物品详情
-		privateApi.GET("/material/stock/detail", wrapper.GetMaterialStockDetail)       // 查询物品库存详情
-		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)         // 创建物品类别
-		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)     // 获取物品类别列表
-		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail) // 获取物品类别详情
-		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)       // 排序物品类别
-		privateApi.POST("/material/category/edit", wrapper.EditMaterialCategory)       // 编辑物品类别
-		privateApi.POST("/material/category/delete", wrapper.DeleteMaterialCategory)   // 删除物品类别
-		privateApi.POST("/material/add", wrapper.AddMaterial)                          // 添加物品
-		privateApi.POST("/material/edit", wrapper.EditMaterial)                        // 编辑物品
-		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch)   // 批量修改物品状态
-		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)             // 获取物品的单位列表
+		privateApi.GET("/material/list", wrapper.GetMaterialList)                             // 获取物品列表
+		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                         // 获取物品详情
+		privateApi.GET("/material/stock/detail", wrapper.GetMaterialStockDetail)              // 查询物品库存详情
+		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)                // 创建物品类别
+		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)            // 获取物品类别列表
+		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail)        // 获取物品类别详情
+		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)              // 排序物品类别
+		privateApi.POST("/material/category/edit", wrapper.EditMaterialCategory)              // 编辑物品类别
+		privateApi.POST("/material/category/delete", wrapper.DeleteMaterialCategory)          // 删除物品类别
+		privateApi.POST("/material/add", wrapper.AddMaterial)                                 // 添加物品
+		privateApi.POST("/material/edit", wrapper.EditMaterial)                               // 编辑物品
+		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch)          // 批量修改物品状态
+		privateApi.POST("/material/batch_update_visible", wrapper.BatchUpdateMaterialVisible) // 批量更新物品可见性
+		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)                    // 获取物品的单位列表
 
 		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard)         // 添加成本卡
 		privateApi.GET("/product_bom/card/detail", wrapper.GetProductBomCardDetail) // 规格商品成本卡详情

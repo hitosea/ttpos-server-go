@@ -400,7 +400,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 			if option.SaleBillUuid != 0 && buffetProductMap[productPackageUuid] {
 				productPackages[i].Product.Price = 0 // 自助餐商品价格为0元
 				// 自助餐商品的所有规格价格为0元
-				for j, _ := range productPackages[i].Product.Flavors.List {
+				for j := range productPackages[i].Product.Flavors.List {
 					flavor := &productPackages[i].Product.Flavors.List[j]
 					flavor.Price = 0
 				}

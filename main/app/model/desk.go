@@ -13,7 +13,8 @@ type DeskRegion struct {
 	Name string `gorm:"default:'';column:name;comment:'餐桌区域名称'"`
 	Sort uint   `gorm:"default:0;column:sort;comment:'排序序号'"`
 
-	Desks []Desk `gorm:"foreignKey:RegionUuid;references:Uuid"`
+	Desks         []Desk         `gorm:"foreignKey:RegionUuid;references:Uuid"`
+	DeskMapLayout *DeskMapLayout `gorm:"foreignKey:RegionUuid;references:Uuid"`
 }
 
 // DeskType 餐桌类型表,定义餐桌的类型信息 ttpos_desk_type
@@ -218,6 +219,18 @@ func (model *Desk) GetDeskResp() resp.Desk {
 				return model.SaleBill.BatchTag.Color
 			}
 			return ""
+		}(),
+		BatchCookingMode: func() string {
+			if model.SaleBill != nil && model.SaleBill.SaleBillSetting != nil {
+				mode := model.SaleBill.SaleBillSetting.BatchCookingMode
+				if mode == constant.BatchCookingModePre {
+					return constant.BatchCookingModePre
+				} else {
+					return constant.BatchCookingModePost
+				}
+			}
+			// 默认后置模式
+			return constant.BatchCookingModePost
 		}(),
 	}
 }

@@ -30,10 +30,21 @@ type Business struct {
 	IsBatch           string   `json:"is_batch"`            // 是否是分批商品 0-否 1-是
 	BatchProductUuids []uint64 `json:"batch_product_uuids"` // 分批商品UUID列表
 	BatchTagNum       uint     `json:"batch_tag_num"`       // 分批类型数量
+	BatchCookingMode  string   `json:"batch_cooking_mode"`  // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
 	SafetyStockType   string   `json:"safety_stock_type"`   // 安全库存类型 1-门店维度 2-仓库维度，默认为1
 
 	RequiredParentCompanyApproval string `json:"required_parent_company_approval"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
 	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
+
+	DiscountNeedPassword       string   `json:"discount_need_password"`        // 折扣操作是否需要密码 0-否 1-是
+	DiscountAuthorizedStaffIds []uint64 `json:"discount_authorized_staff_ids"` // 折扣操作授权员工ID列表
+	RefundNeedPassword         string   `json:"refund_need_password"`          // 退款操作是否需要密码 0-否 1-是
+	RefundAuthorizedStaffIds   []uint64 `json:"refund_authorized_staff_ids"`   // 退款操作授权员工ID列表
+
+	// 外卖来源和国籍功能开关
+	EnableOrderSource string `json:"enable_order_source"` // 外卖功能开关 0-关闭 1-开启
+	EnableNationality string `json:"enable_nationality"`  // 国籍功能开关 0-关闭 1-开启
+
 }
 
 type ShopBusiness struct {
@@ -44,6 +55,9 @@ type ShopBusiness struct {
 
 	HeadquarterRequiredParentCompanyApproval string `json:"headquarter_required_parent_company_approval"` // 总部调拨规则-经过上级门店审批 "0"-否 "1"-是
 	HeadquarterViaParentCompanyWarehouse     string `json:"headquarter_via_parent_company_warehouse"`     // 总部调拨规则-经过上级门店仓库 "0"-否 "1"-是
+
+	OrderSourceCount int `json:"order_source_count"` // 外卖来源管理数量
+	NationalityCount int `json:"nationality_count"`  // 国籍管理数量
 }
 
 // 是否开启了分批送厨商品

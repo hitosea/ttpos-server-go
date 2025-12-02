@@ -65,6 +65,9 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		}
 	}
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
 	printer.LineFeed(1)
@@ -78,20 +81,21 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		printer.SetPrintModes(true, true, false)
 
 		// 桌号
+		serialNoText := order.SerialNo
 		if order.DeskUuid > 0 {
 			// 判断文字是否包含缅甸语
 			spacing := 60
-			if t.base.IsMyText(order.SerialNo) {
+			if t.base.IsMyText(serialNoText) {
 				spacing = 80
 			}
 			printer.SetLineSpacing(spacing)
-			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
 		} else if order.IsTakeoutBill() {
-			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
 		} else {
-			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 		}
 
 		// 整单备注
@@ -236,20 +240,21 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
 
+		serialNoText := order.SerialNo
 		if order.DeskUuid > 0 {
 			// 判断文字是否包含缅甸语
 			spacing := 60
-			if t.base.IsMyText(order.SerialNo) {
+			if t.base.IsMyText(serialNoText) {
 				spacing = 80
 			}
 			printer.SetLineSpacing(spacing)
-			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
 		} else if order.IsTakeoutBill() {
-			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
 		} else {
-			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 		}
 
 		// 整单备注
@@ -453,6 +458,9 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		}
 	}
 
+	// 订单来源为外卖的文本
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
 	printer.LineFeed()
@@ -467,18 +475,19 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		printer.SetCharacterSize(2, 2)
 
 		// 桌号
+		serialNoText := order.SerialNo
 		if order.DeskUuid > 0 {
 			spacing := 60
-			if t.base.IsMyText(order.SerialNo) { // 判断文字是否包含缅甸语
+			if t.base.IsMyText(serialNoText) { // 判断文字是否包含缅甸语
 				spacing = 80
 			}
 			printer.SetLineSpacing(spacing)
-			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 		} else if order.IsTakeoutBill() {
-			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 		} else {
-			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + mealNumStr)
 		}
 
 		// 整单备注
@@ -598,19 +607,23 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		printer.SetCharacterSize(2, 2)
 
 		// 处理桌号或取单号
+		serialNoText := order.SerialNo
+		if order.IsOrderSourceTakeout() {
+			serialNoText = t.base.Translate("外卖") + " " + serialNoText
+		}
 		if order.DeskUuid > 0 {
 			// 判断文字是否包含缅甸语
 			spacing := 60
-			if t.base.IsMyText(order.SerialNo) {
+			if t.base.IsMyText(serialNoText) {
 				spacing = 80
 			}
 			printer.SetLineSpacing(spacing)
-			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 		} else if order.IsTakeoutBill() {
-			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 		} else {
-			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
+			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + mealNumStr)
 		}
 
 		// 整单备注

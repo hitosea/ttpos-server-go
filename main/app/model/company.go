@@ -107,6 +107,8 @@ type CompanySetting struct {
 	ErpnextAdminEmail         string `gorm:"column:erpnext_admin_email;type:varchar(255);default:'';comment:ERPNext 管理员邮箱;NOT NULL" json:"erpnext_admin_email"`
 	ParentCompanyUuids        string `gorm:"column:parent_company_uuids;type:varchar(255);default:'';comment:父级公司UUID路径，从根节点到父节点，逗号分隔;NOT NULL" json:"parent_company_uuids"`
 	HasChildren               int    `gorm:"column:has_children;type:int(11);default:0;comment:是否含有子节点: 0-否 1-是;NOT NULL" json:"has_children"`
+	EnableTableMap            int    `gorm:"column:enable_table_map;type:int(11);default:0;comment:是否开启桌台地图: 0-否 1-是;NOT NULL" json:"enable_table_map"`
+	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
 }
 
 // 连锁子店
@@ -211,6 +213,14 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 
 func (model *CompanySetting) IsOpenRider() bool {
 	return model.DeliveryStatus == 1
+}
+
+func (model *CompanySetting) IsOpenTableMap() bool {
+	return model.EnableTableMap == 1
+}
+
+func (model *CompanySetting) IsOpenDataManagement() bool {
+	return model.EnableDataManagement == 1
 }
 
 // 外送配置

@@ -18,6 +18,7 @@ import (
 type IProductRepo interface {
 	IProductQueryRepo
 	WithMultiLanguageName(opts ...DBOption) DBOption                                              // 预加载多语言名称
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption                                      // 预加载卖点多语言
 	WithProductUnit() DBOption                                                                    // 预加载产品单位
 	WithProductUnitMultiLanguageName() DBOption                                                   // 预加载产品单位多语言名称
 	WithProductBoms(opts ...DBOption) DBOption                                                    // 预加载产品Boms
@@ -140,6 +141,8 @@ type IProductQueryRepo interface {
 
 	GetProductListByKeywordAndCategory(keyword string, categoryUuids []uint64) ([]*model.ProductPackage, error) // 根据name进行模糊查询、根据分类进行查询商品列表
 
+	GetProductSingleCount(opts ...DBOption) (int64, error) // 查询有多少个规格商品
+
 	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
 }
 
@@ -168,6 +171,7 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 
 	preloads := []DBOption{
 		r.WithMultiLanguageName(),
+		r.WithDescribeMultiLanguageName(),
 		r.WithProductUnit(),
 		r.WithProductUnitMultiLanguageName(),
 		r.WithProductBoms(),
@@ -200,6 +204,8 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 					Query: "ProductPackageGroups",
 					Args: []any{
 						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+						CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
+						CommonRepo.DBOption(CommonRepo.SortWithID("ASC")),
 					},
 				},
 			)),
@@ -220,26 +226,61 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductBom.ProductFlavor.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ImageFile",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.DescribeMultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductUnit.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 		}
@@ -247,6 +288,17 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 	}
 
 	return preloads
+}
+
+func (r *productRepo) WithDescribeMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DescribeMultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
 }
 
 // 查询商家是否存在商品套餐
@@ -414,6 +466,9 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 				Query: "MultiLanguageName",
 			},
 			WithPreload{
+				Query: "DescribeMultiLanguageName",
+			},
+			WithPreload{
 				Query: "ProductCategory.MultiLanguageName",
 			},
 			WithPreload{
@@ -448,6 +503,10 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 			},
 			WithPreload{
 				Query: "ProductPackageGroups",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
+					CommonRepo.DBOption(CommonRepo.SortWithID("ASC")),
+				},
 			},
 			WithPreload{
 				Query: "ProductPackageGroups.MultiLanguageName",
@@ -1525,4 +1584,15 @@ func (r *productRepo) GetProductListByKeywordAndCategory(keyword string, categor
 		return nil, errors.WithMessage(err)
 	}
 	return products, nil
+}
+
+// 查询有多少个规格商品
+func (r *productRepo) GetProductSingleCount(opts ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.ProductBom{}).Where("delete_time = ?", constant.NotDeleted).Where("product_flavor_uuid > 0")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&count).Error
+	return count, errors.WithMessage(err)
 }

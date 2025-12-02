@@ -35,6 +35,7 @@ type InstantOrderAddProductReq struct {
 	SaleBillUuid  uint64     `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64     `json:"sale_order_uuid"` // 销售订单UUID, 必填
 	Product       AddProduct `json:"product"`         // 商品, 必填
+	BatchTagUuid  uint64     `json:"batch_tag_uuid"`  // 分批类型UUID, 可选（前置模式时使用）
 }
 
 // InstantOrderPaymentPointsReq 设置订单的抵扣积分数量请求
@@ -77,7 +78,14 @@ type InstantOrderPaymentCouponReq struct {
 	SaleBillUuid      uint64 `json:"sale_bill_uuid"`     // 销售账单UUID, 必填
 	SaleOrderUuid     uint64 `json:"sale_order_uuid"`    // 销售订单UUID, 必填
 	CouponUuid        uint64 `json:"coupon_uuid"`        // 优惠券UUID, 必填。通用优惠券或会员优惠券的uuid
-	CouponRequirement string `json:"coupon_requirement"` // 优惠券类型, 必填。通用优惠券“none”或会员优惠券“marketing”
+	CouponRequirement string `json:"coupon_requirement"` // 优惠券类型, 必填。通用优惠券"none"或会员优惠券"marketing"
+}
+
+// InstantOrderPaymentActivityReq 选择或取消满减活动请求
+type InstantOrderPaymentActivityReq struct {
+	SaleBillUuid              uint64 `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID, 必填
+	SaleOrderUuid             uint64 `json:"sale_order_uuid" binding:"required"` // 销售订单UUID, 必填
+	FullReductionActivityUuid uint64 `json:"full_reduction_activity_uuid"`       // 满减活动UUID, 0表示取消活动
 }
 
 // InstantOrderPaymentCreateReq 创建一个支付单请求
@@ -108,6 +116,9 @@ type InstantOrderFreeReq struct {
 	SaleOrderUuid uint64   `json:"sale_order_uuid"` // 销售订单UUID, 必填
 	ReasonIds     []uint64 `json:"reason_ids"`      // 免单原因标签ids
 	Reason        string   `json:"reason"`          // 原因
+	// 授权参数（可选，用于敏感操作权限验证）
+	AuthorizedStaffAccount  string `json:"authorized_staff_account"`  // 授权员工账号（邮箱或手机号）
+	AuthorizedStaffPassword string `json:"authorized_staff_password"` // 权限密码
 }
 
 // InstantOrderPaymentZeroRuleReq 设置结账抹零规则请求
@@ -273,6 +284,26 @@ func (r *OrderCartProductBatchCookingReq) Validate() error {
 	}
 	if r.SaleOrderUuid == 0 {
 		return errors.New("销售订单UUID不能为空")
+	}
+	if len(r.SaleOrderProductUuids) == 0 {
+		return errors.New("销售订单商品UUID列表不能为空")
+	}
+	if r.BatchTagUuid == 0 {
+		return errors.New("分批类型UUID不能为空")
+	}
+	return nil
+}
+
+// ChangeBatchTagReq 更换分批类型请求
+type ChangeBatchTagReq struct {
+	SaleBillUuid          uint64   `json:"sale_bill_uuid" binding:"required"`           // 销售账单UUID
+	SaleOrderProductUuids []uint64 `json:"sale_order_product_uuids" binding:"required"` // 销售订单商品UUID列表
+	BatchTagUuid          uint64   `json:"batch_tag_uuid" binding:"required"`           // 分批类型UUID
+}
+
+func (r *ChangeBatchTagReq) Validate() error {
+	if r.SaleBillUuid == 0 {
+		return errors.New("销售账单UUID不能为空")
 	}
 	if len(r.SaleOrderProductUuids) == 0 {
 		return errors.New("销售订单商品UUID列表不能为空")

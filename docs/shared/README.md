@@ -56,6 +56,32 @@ Go/PHP/JavaScript 调用示例
 重要提示和最佳实践
 ```
 
+### [Bug 管理](./bugs/)
+**用途：** Bug 报告、跟踪和归档  
+**格式：** Bug 目录，包含 bug.md
+
+```
+bugs/
+├── active/                          # 未解决的 Bug
+│   └── bug-{YYMMDD}-{序号}-{module}-{brief}/
+│       └── bug.md
+└── resolved/                        # 已解决的 Bug（按版本归档）
+    └── {version}/
+        └── bug-{YYMMDD}-{序号}-{module}-{brief}/
+            └── bug.md
+```
+
+**命名规范：**
+```yaml
+Bug ID 格式: bug-{YYMMDD}-{序号}
+示例: bug-251127-001
+说明:
+  - YYMMDD: 发现日期
+  - 序号: 当日递增的三位序号（001, 002...）
+  - module: 业务模块（order, member, product等）
+  - brief: 简短问题描述（kebab-case）
+```
+
 ### [问题排查](./troubleshooting/)
 **用途：** 常见问题和解决方案  
 **格式：** 问题分类文档
@@ -113,6 +139,14 @@ integrations/{service}/
   2. 查看 specs/{spec-name}/design.md 了解技术方案
   3. 按照 specs/{spec-name}/tasks.md 逐任务执行
   4. 参考 api/ 文档了解接口规范
+
+场景: 修复 Bug
+步骤:
+  1. 使用 /bug-create 创建 Bug 报告
+  2. 调查分析并填写技术分析
+  3. 使用 /bug-spec 创建修复方案和任务
+  4. 实施修复并完成任务
+  5. 使用 /bug-archive 归档 Bug
 ```
 
 ### 人类使用
@@ -124,6 +158,12 @@ integrations/{service}/
   2. 查看 api/ 了解接口定义
   3. 参考 troubleshooting/ 解决问题
   4. 查阅 integrations/ 对接第三方服务
+
+场景: 查询历史 Bug
+步骤:
+  1. 查看 bugs/active/ 了解未解决问题
+  2. 查看 bugs/resolved/{version}/ 了解已修复问题
+  3. 使用 Graphiti 搜索相似问题经验
 ```
 
 ---

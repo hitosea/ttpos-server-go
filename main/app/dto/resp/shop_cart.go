@@ -33,6 +33,8 @@ type PackageSelectedInfo struct {
 	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组UUID
 	FlavorUuid              uint64   `json:"flavor_uuid"`                // 某个规格商品ID
 	AttributeUuidList       []uint64 `json:"attribute_uuid"`             // 属性ID列表
+	Num                     float64  `json:"num"`                        // 套餐子商品数量
+	UnitNum                 float64  `json:"unit_num"`                   // 每份数量
 }
 
 type OrderRemarkRes struct {
@@ -148,22 +150,26 @@ func (item *OrderRemarkItem) GetOrderRemarkResponse() dto.LocaleResponse {
 
 // 桌台购物车
 type ShopCart struct {
-	SaleBillUuid  uint64               `json:"sale_bill_uuid"`         // 销售账单ID
-	Takeout       *bool                `json:"takeout,omitempty"`      // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
-	IsDeskOrder   bool                 `json:"is_desk_order"`          // 购物车类型 true:桌台购物车 false:点餐购物车
-	IsLock        bool                 `json:"is_lock"`                // 购物车是否锁定 true:锁定 false:未锁定
-	Desk          *DeskInfo            `json:"desk,omitempty"`         // 桌台信息
-	Buffet        *BuffetInfo          `json:"buffet,omitempty"`       // 自助餐信息
-	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"`   // 必点方案列表信息
-	DiningMethod  uint                 `json:"dining_method"`          // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
-	SaleOrderList []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
-	UpdateTime    int64                `json:"update_time"`            // 更新时间
-	OrderRemark   *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
+	SaleBillUuid    uint64               `json:"sale_bill_uuid"`         // 销售账单ID
+	Takeout         *bool                `json:"takeout,omitempty"`      // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
+	IsDeskOrder     bool                 `json:"is_desk_order"`          // 购物车类型 true:桌台购物车 false:点餐购物车
+	IsLock          bool                 `json:"is_lock"`                // 购物车是否锁定 true:锁定 false:未锁定
+	OrderSourceUuid uint64               `json:"order_source_uuid"`      // 订单来源UUID（0=店内）
+	NationalityUuid uint64               `json:"nationality_uuid"`       // 国籍UUID（0=未记录）
+	Desk            *DeskInfo            `json:"desk,omitempty"`         // 桌台信息
+	Buffet          *BuffetInfo          `json:"buffet,omitempty"`       // 自助餐信息
+	MustPlans       *ProductMustPlanList `json:"must_plans,omitempty"`   // 必点方案列表信息
+	DiningMethod    uint                 `json:"dining_method"`          // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
+	SaleOrderList   []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
+	UpdateTime      int64                `json:"update_time"`            // 更新时间
+	OrderRemark     *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
+	// 分批送厨的模式
+	BatchCookingMode string `json:"batch_cooking_mode"` // 分批送厨的模式 "post"：后置模式 "pre"：前置模式
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 
 	// 是否返回code状态码为-209
-	code int `json:"code,omitempty"` // 状态码。 当code为-209时，前端会弹出分批送厨弹窗
+	code int // 状态码。 当code为-209时，前端会弹出分批送厨弹窗
 }
 
 func (res *ShopCart) SetCode(code int) {
@@ -321,11 +327,14 @@ type Product struct {
 	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
+	AddPrice            float64            `json:"add_price"`             // 加价金额（套餐主商品的加价总和）
 	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
 	IsBatch             bool               `json:"is_batch"`              // 是否是分批商品
+	ShowDelayTag        bool               `json:"show_delay_tag"`        // 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
 	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
 	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
 	BatchTagColor       string             `json:"batch_tag_color"`       // 分批类型颜色
+	BatchTagUuid        uint64             `json:"batch_tag_uuid"`        // 分批类型UUID
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
@@ -349,6 +358,7 @@ type PackageProduct struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
 	UnitNum             float64            `json:"unit_num"`              // 单位数量
+	AddPrice            float64            `json:"add_price"`             // 加价金额
 }
 
 // GetPrice 获取商品价格(折后价)

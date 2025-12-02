@@ -102,6 +102,15 @@ class User extends UserModel
             $this->error = '不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种';
             return false;
         }
+        // 权限密码校验（必填）
+        if (empty($data['permission_password'])) {
+            $this->error = '权限密码不能为空';
+            return false;
+        }
+        if (!ValidateHelp::validatePermissionPassword($data['permission_password'])) {
+            $this->error = '密码必须为 4 - 8 位数字';
+            return false;
+        }
 
         $this->startTrans();
         try {
@@ -111,6 +120,7 @@ class User extends UserModel
                 'phone' => trim($data['phone']),
                 'username' => trim($data['user_name']),
                 'password' => salt_hash($data['password']),
+                'permission_password' => salt_hash($data['permission_password']),
                 'real_name' => trim($data['real_name']),
                 'user_type' => $user['user_type'],
                 'company_uuid' => $appId
@@ -194,6 +204,11 @@ class User extends UserModel
             $this->error = '不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种';
             return false;
         }
+        // 权限密码校验（非必填，但如果传了则必须符合格式）
+        if (!empty($data['permission_password']) && !ValidateHelp::validatePermissionPassword($data['permission_password'])) {
+            $this->error = '密码必须为 4 - 8 位数字';
+            return false;
+        }
 
         $this->startTrans();
         try {
@@ -207,6 +222,10 @@ class User extends UserModel
                 unset($arr['password']);
             } else {
                 $arr['password_change_time'] = time();
+            }
+            // 权限密码处理：如果传了且不为空，则更新；否则不更新（保持原值）
+            if (!empty($data['permission_password'])) {
+                $arr['permission_password'] = salt_hash($data['permission_password']);
             }
 
             $where['uuid'] = $data['shop_user_id'];

@@ -16,6 +16,16 @@ const (
 	SourceRider     = "rider"     // 骑手端. skootar
 )
 
+// SaleBillSource 销售账单来源（整数类型）
+const (
+	SaleBillSourceDefault   = 0 // 默认值
+	SaleBillSourceCashier   = 1 // 收银机
+	SaleBillSourceAssistant = 2 // 点餐助手
+	SaleBillSourceTablet    = 3 // 平板
+	SaleBillSourceH5        = 4 // H5
+	SaleBillSourceMember    = 5 // 会员端
+)
+
 var SourceTextMap = map[string]string{
 	SourceCashier:   "收银端",
 	SourceMember:    "会员端",

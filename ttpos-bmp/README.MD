@@ -38,6 +38,8 @@ make run.takeout
 #erp模块
 make run.erp
 
+# websocket
+make run.websocket
 ```
 
 ### ERP 数据迁移

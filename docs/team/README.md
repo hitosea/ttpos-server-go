@@ -29,7 +29,7 @@
 
 **记录内容：**
 
-- Cursor 指令调用（/propose, /create-spec 等）
+- Cursor 指令调用（/propose, /spec-create 等）
 - 工作流执行（功能开发、Bug 修复等）
 - Graphiti 知识记录
 - 重要决策和会议
@@ -41,7 +41,7 @@
 
 | 时间  | 成员    | 活动     | 目标     | 状态 | 备注     |
 | ----- | ------- | -------- | -------- | ---- | -------- |
-| HH:mm | @用户名 | 活动类型 | 具体内容 | ✅   | 简短说明 |
+| HH:mm | @用户名 | 活动类型 | 具体内容 | ✅    | 简短说明 |
 ```
 
 ### [评估报告](./reports/)
@@ -55,7 +55,7 @@
 **建议流程：**
 1. 在报告中总结背景、发现、建议与行动项
 2. 如有复用价值，创建 Graphiti Episode 并在报告尾部互链
-3. 在 `AGENT.md` / README / struct 文档中建立索引，避免孤岛
+3. 在 `AGENTS.md` / README / struct 文档中建立索引，避免孤岛
 
 ---
 
@@ -82,7 +82,7 @@ graph LR
 2. 填写提案内容（目标、价值、风险）
 3. 组织需求评审会议
 4. 记录评审决策
-5. 批准后使用 `/create-spec story-{module}-{feature}` 创建 Spec
+5. 批准后使用 `/spec-create story-{module}-{feature}` 创建 Spec
 6. SP 评估（≤5 进入开发，>5 拆分）
 
 ### 功能开发流程
@@ -171,7 +171,7 @@ graph LR
 
 ### 核心规范
 
-- [Agent 速查表](../../AGENT.md)
+- [Agent 速查表](../../AGENTS.md)
 - [Spec 规范](../../.cursor/rules/specs.mdc)
 - [工作流导航](../../.cursor/rules/workflows.mdc)
 

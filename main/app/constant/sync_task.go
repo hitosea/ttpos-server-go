@@ -32,6 +32,7 @@ const (
 	SyncTaskTypeSupplier         = "supplier"          // 供应商
 	SyncTaskTypeWarehouseStock   = "warehouse_stock"   // 仓库物品库存
 	SyncTaskTypePackageImage     = "package_image"     // 商品图片
+	SyncTaskTypeMultiLanguage    = "multi_language"    // 多语言
 )
 
 // SyncTaskTypeNames 任务类型名称映射
@@ -51,4 +52,5 @@ var SyncTaskTypeNames = map[string]string{
 	SyncTaskTypeSupplier:         "供应商",
 	SyncTaskTypeWarehouseStock:   "仓库物品库存",
 	SyncTaskTypePackageImage:     "商品图片",
+	SyncTaskTypeMultiLanguage:    "多语言",
 }

@@ -336,10 +336,10 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("人均"), "", t.base.GetPriceAndUnit(businessData.AllTablePeopleAvg), width-differenceWidth))
 		printer.LineFeed(1)
-		// 收银方式
+		// 收银方式-店内
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, false, false)
-		printer.AppendText(t.base.Translate("点餐方式"))
+		printer.AppendText(t.base.Translate("点餐方式-店内"))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		printer.SetAlignment(pkg.AlignLeft)
@@ -351,6 +351,23 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.AllCashierAvgOrderPrice), width-differenceWidth))
 		printer.LineFeed(1)
+		// 收银方式-外卖
+		if businessData.AllTakeawayOrderNum > 0 {
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.SetPrintModes(true, false, false)
+			printer.AppendText(t.base.Translate("点餐方式-外卖"))
+			printer.SetPrintModes(false, false, false)
+			printer.LineFeed(1)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.PrintText(t.base.Translate("订单数"), "", fmt.Sprintf("%.0f", float64(businessData.AllTakeawayOrderNum)), width))
+			printer.LineFeed(1)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.AllTakeawayMinOrderPrice), t.base.GetPriceAndUnit(businessData.AllTakeawayMaxOrderPrice)), width-differenceWidth*2))
+			printer.LineFeed(1)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.PrintText(t.base.Translate("平均订单金额"), "", t.base.GetPriceAndUnit(businessData.AllTakeawayAvgOrderPrice), width-differenceWidth))
+			printer.LineFeed(1)
+		}
 		// 支付方式
 		printer.AppendText("------------------------------------------------")
 		printer.SetPrintModes(true, false, false)

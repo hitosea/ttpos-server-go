@@ -713,6 +713,10 @@ class Order extends BaseModelOrder
             'cashier_min_order_price' => $data['all_cashier_min_order_price'],
             'cashier_max_order_price' => $data['all_cashier_max_order_price'],
             'cashier_avg_order_price' => $data['all_cashier_avg_order_price'],
+            'takeaway_order_num' => $data['all_takeaway_order_num'],
+            'takeaway_min_order_price' => $data['all_takeaway_min_order_price'],
+            'takeaway_max_order_price' => $data['all_takeaway_max_order_price'],
+            'takeaway_avg_order_price' => $data['all_takeaway_avg_order_price'],
             'incomes' => $incomes,
         ];
     }
@@ -734,10 +738,20 @@ class Order extends BaseModelOrder
     {
         $start_time = isset($params['date'][0]) ? $params['date'][0] : 0;
         $end_time = isset($params['date'][1]) ? $params['date'][1] : 0;
+        $query_start_time = 0;
+        $query_end_time = 0;
+        if ($start_time != 0 && $end_time != 0) {
+            if (strpos($end_time, ':') !== false) {
+                $query_end_time = strtotime($end_time);
+            } else {
+                $query_end_time = strtotime($end_time) + 86399;
+            }
+            $query_start_time = strtotime($start_time);
+        }
 
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/export', [
-            'query_start_time' => strtotime($start_time),
-            'query_end_time' => strtotime($end_time) + 86399,
+            'query_start_time' => $query_start_time,
+            'query_end_time' => $query_end_time,
         ], [
             'Authorization: Bearer ' . $params['token'],
             'Accept-Language: ' . $params['language'],

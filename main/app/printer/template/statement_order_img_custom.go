@@ -281,8 +281,9 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			PrinterSn:        settingPrinterInfo.PrinterSn,
 		},
 		Order: template_struct.StatementOrderInfoData{
-			Status:   saleOrder.Status,
-			SerialNo: saleBill.SerialNo,
+			Status:               saleOrder.Status,
+			SerialNo:             saleBill.SerialNo,
+			IsOrderSourceTakeout: saleBill.IsOrderSourceTakeout(),
 			SerialNos: func() string {
 				if saleBill.DeskUuid > 0 {
 					return fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr)
@@ -360,6 +361,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			}(),
 			//
 			CouponExchangeAmount: saleOrder.CalcCouponExchangeAmount(),
+			ActivityAmount:       saleOrder.ActivityAmount,
 			CheckOutZeroFee:      t.base.Amount(saleOrder.GetCheckOutZeroFee()),
 			ReturnAmount:         t.base.Amount(saleOrder.GetReturnAmount()),
 			PaymentCommissionFee: saleOrder.PaymentCommissionFee,

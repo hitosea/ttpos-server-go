@@ -57,6 +57,9 @@ const (
 	DocTypeDeliveryNoteItem = "Delivery Note Item"
 
 	DocTypeCompany = "Company"
+
+	// DocTypePrintFormat Print Format 文档类型
+	DocTypePrintFormat = "Print Format"
 )
 
 const (

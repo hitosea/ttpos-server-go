@@ -22,6 +22,8 @@ type Product struct {
 	Sauces              ProductSauceList          `json:"sauces"`                // 商品小料
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
+	DescribeI18n        dto.LocaleResponse        `json:"describe_i18n"`         // 卖点多语言
+	Detail              string                    `json:"detail"`                // 商品详情（富文本）
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
 	ProductType         uint                      `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	// 套餐分组
@@ -47,11 +49,13 @@ type ProductPackageGroupList struct {
 
 // ProductPackageGroup 套餐分组
 type ProductPackageGroup struct {
-	Uuid       uint64             `json:"uuid"`        // 套餐分组UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 套餐分组名称
-	IsFull     bool               `json:"is_full"`     // 是否选满
-	Num        int                `json:"num"`         // 套餐商品数量
-	Products   ProductList        `json:"products"`    // 套餐商品列表
+	Uuid          uint64             `json:"uuid"`           // 套餐分组UUID
+	LocaleName    dto.LocaleResponse `json:"locale_name"`    // 套餐分组名称
+	GroupType     int                `json:"group_type"`     // 分组类型 0-固定 1-可选
+	OptionalCount int                `json:"optional_count"` // 可选数量
+	IsFull        bool               `json:"is_full"`        // 是否选满
+	Num           int                `json:"num"`            // 套餐商品数量
+	Products      ProductList        `json:"products"`       // 套餐商品列表
 }
 
 // 判断套餐分组是否选满
@@ -72,9 +76,12 @@ type ProductList struct {
 
 // PackageProductDetail 套餐商品详情
 type PackageProductDetail struct {
-	Detail  Product `json:"detail"`   // 商品详情
-	Num     float64 `json:"num"`      // 商品数量，分组中item的数量
-	CanEdit bool    `json:"can_edit"` // 是否可以编辑
+	Detail     Product `json:"detail"`      // 商品详情
+	Num        float64 `json:"num"`         // 商品数量，分组中item的数量
+	AddPrice   float64 `json:"add_price"`   // 加价金额
+	IsRequired int     `json:"is_required"` // 必选 0-不必选 1-必选
+	IsDefault  int     `json:"is_default"`  // 默认选中 0-默认不选中 1-默认选中
+	CanEdit    bool    `json:"can_edit"`    // 是否可以编辑
 }
 
 // 判断是否可以编辑。无需选择属性的商品，不可以编辑
@@ -93,10 +100,11 @@ func (p *PackageProductDetail) GetCanEdit() bool {
 
 // ProductBatchType 分批类型
 type BatchTag struct {
-	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
-	Color      string             `json:"color"`       // 颜色值，如#FF0000
-	Sort       int                `json:"sort"`        // 排序，数字越小越靠前
+	Uuid         uint64             `json:"uuid"`         // 分批类型UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`  // 分批类型名称，多语言
+	Abbreviation string             `json:"abbreviation"` // 名称缩写
+	Color        string             `json:"color"`        // 颜色值，如#FF0000
+	Sort         int                `json:"sort"`         // 排序，数字越小越靠前
 }
 
 // BatchTagList 分批类型列表
@@ -106,10 +114,11 @@ type BatchTagList struct {
 
 // ProductBatchTypeDetail 分批类型详情
 type BatchTagDetail struct {
-	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
-	Color      string             `json:"color"`       // 颜色值，如#FF0000
-	Sort       int                `json:"sort"`        // 排序，数字越小越靠前
+	Uuid         uint64             `json:"uuid"`         // 分批类型UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`  // 分批类型名称，多语言
+	Abbreviation string             `json:"abbreviation"` // 名称缩写
+	Color        string             `json:"color"`        // 颜色值，如#FF0000
+	Sort         int                `json:"sort"`         // 排序，数字越小越靠前
 }
 
 // BatchTagList 分批类型列表
@@ -480,6 +489,9 @@ type ProductPackageSubProduct struct {
 	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
 	Num              float64            `json:"num"`                // 套餐子商品数量
 	Price            float64            `json:"price"`              // 套餐子商品价格
+	AddPrice         float64            `json:"add_price"`          // 加价金额
+	IsRequired       int                `json:"is_required"`        // 必选 0-不必选 1-必选
+	IsDefault        int                `json:"is_default"`         // 默认选中 0-默认不选中 1-默认选中
 }
 
 type ProductPrinter struct {
@@ -493,9 +505,11 @@ type ProductPackageSubProductList struct {
 }
 
 type ProductPackageSubProductGroup struct {
-	Uuid       uint64                       `json:"uuid"`        // 套餐子商品分组UUID
-	LocaleName dto.LocaleResponse           `json:"locale_name"` // 套餐子商品分组名称
-	Products   ProductPackageSubProductList `json:"products"`    // 套餐子商品列表
+	Uuid          uint64                       `json:"uuid"`           // 套餐子商品分组UUID
+	LocaleName    dto.LocaleResponse           `json:"locale_name"`    // 套餐子商品分组名称
+	GroupType     int                          `json:"group_type"`     // 分组类型 0-固定 1-可选
+	OptionalCount int                          `json:"optional_count"` // 可选数量，表示本组商品中要求选择多少个商品
+	Products      ProductPackageSubProductList `json:"products"`       // 套餐子商品列表
 }
 
 type ProductPackageSubProductGroupList struct {
@@ -508,14 +522,16 @@ type ProductPrinterList struct {
 
 // ProductDetailResp 商品详情响应
 type ProductDetailResp struct {
-	ProductType  uint               `json:"product_type"`  // 商品类型 0-商品 1-套餐
-	Uuid         uint64             `json:"uuid"`          // 商品UUID
-	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品名称
-	CategoryUuid uint64             `json:"category_uuid"` // 商品分类UUID
-	CategoryName string             `json:"category_name"` // 商品分类名称
-	UnitUuid     uint64             `json:"unit_uuid"`     // 商品单位UUID
-	UnitName     string             `json:"unit_name"`     // 商品单位名称
-	Price        *float64           `json:"price"`         // 商品价格,套餐的价格
+	ProductType      uint               `json:"product_type"`       // 商品类型 0-商品 1-套餐
+	Uuid             uint64             `json:"uuid"`               // 商品UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 商品名称
+	CategoryUuid     uint64             `json:"category_uuid"`      // 商品分类UUID
+	CategoryName     string             `json:"category_name"`      // 商品分类名称
+	UnitUuid         uint64             `json:"unit_uuid"`          // 商品单位UUID
+	UnitName         string             `json:"unit_name"`          // 商品单位名称
+	Price            *float64           `json:"price"`              // 商品价格,套餐的价格
+	Detail           string             `json:"detail"`             // 商品详情（富文本）
+	SellingPointI18n dto.LocaleResponse `json:"selling_point_i18n"` // 卖点多语言
 
 	Flavors                 ProductFlavorList                 `json:"flavors"`                    // 商品规格列表
 	Sauces                  ProductSauceList                  `json:"sauces"`                     // 商品小料列表

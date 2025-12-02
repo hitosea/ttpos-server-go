@@ -12,8 +12,8 @@
         <div class="flex">
           <!-- 权限主要列表 -->
           <div class="role-menu">
-            <template v-for="(item, index) in data" :key="index">
-              <div class="role-menu-title" :class="{ active: active == index }" @click="handleClick(index)">{{ item.name }}</div>
+            <template v-for="(item, index) in data" :key="index">  
+                <div v-if="item.path != 'management_app'" class="role-menu-title" :class="{ active: active == index }" @click="handleClick(index)">{{ item.name }}</div> 
             </template>
           </div>
           <div class="flex-1">
@@ -70,6 +70,7 @@
         active: 0,
         checkedKeysMap: [],
         upCheckedKeysMap: [],
+        validAccesses: [],
       };
     },
     created() {
@@ -93,7 +94,19 @@
         });
         self.$refs.form.validate((valid) => {
           if (valid) {
-            if (self.form.access_id?.length == 0 || self.form.access?.length == 0) {
+            // 如果access_id中所有元素长度都大于10，则提示请选择权限
+            if (self.form.access_id?.length > 0) {  
+              // 过滤掉self.form.access_id中长度大于10的元素
+              self.validAccesses = self.form.access_id.filter((item) => item.toString().length < 11);  
+              if (self.validAccesses.length == 0) {
+                this.$ElMessage({
+                  message: this.$t('请选择权限'),
+                  type: 'error',
+                });
+                return;
+              }
+            }
+            if (self.form.access_id?.length == 0) {
               this.$ElMessage({
                 message: this.$t('请选择权限'),
                 type: 'error',

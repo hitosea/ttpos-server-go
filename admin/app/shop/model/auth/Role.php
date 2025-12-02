@@ -26,7 +26,7 @@ class Role extends RoleModel
      */
     private function getAll()
     {
-        $data = $this->field('*, name as role_name')->order(['create_time' => 'desc'])->select();
+        $data = $this->field('*, name as role_name')->order(['create_time' => 'desc'])->where('delete_time', 0)->select();
         return $data ? $data->toArray() : [];
     }
 
