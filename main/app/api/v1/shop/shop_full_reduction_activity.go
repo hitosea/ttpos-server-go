@@ -30,19 +30,19 @@ type FullReductionActivityHandler struct {
 // @Success 200 {object} dto.Response
 // @Router /shop/full_reduction_activity/create [post]
 func (h *FullReductionActivityHandler) Create(c *gin.Context) {
-	ctx := helper.GetContext(c)
+	// ctx := helper.GetContext(c)
 
-	var createReq req.FullReductionActivityCreateReq
-	if err := c.ShouldBindJSON(&createReq); err != nil {
-		helper.HandleValidationError(c, err, createReq, nil)
-		return
-	}
+	// var createReq req.FullReductionActivityCreateReq
+	// if err := c.ShouldBindJSON(&createReq); err != nil {
+	// 	helper.HandleValidationError(c, err, createReq, nil)
+	// 	return
+	// }
 
-	err := h.fullReductionActivitySrv.Create(ctx, &createReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
+	// err := h.fullReductionActivitySrv.Create(ctx, &createReq)
+	// if err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	// 	return
+	// }
 
 	helper.Success(c, gin.H{}, "创建成功")
 }
