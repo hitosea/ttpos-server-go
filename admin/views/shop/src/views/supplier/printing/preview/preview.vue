@@ -499,11 +499,11 @@
       }
       if (this.title == $t('结账单')) {
         this.details = previewData.two;
-        this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
+        this.titleName = $t('(外卖)') + $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('预结账单')) {
         this.details = previewData.three;
-        this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
+        this.titleName = $t('(外卖)') + $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('一菜一单')) {
         this.dialogWidth = 2;
