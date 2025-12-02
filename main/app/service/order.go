@@ -2951,6 +2951,10 @@ func (s *orderSrv) getDecreaseStockList(_ context.Context, cookingDeductSaleOrde
 					if productBomMaterial.IsDelete() {
 						continue
 					}
+					// 防止 Material 为空
+					if productBomMaterial.Material == nil {
+						continue
+					}
 					// 如果材料被禁用，则跳过，不扣减库存
 					if productBomMaterial.Material.Status == false {
 						continue
@@ -2976,6 +2980,14 @@ func (s *orderSrv) getDecreaseStockList(_ context.Context, cookingDeductSaleOrde
 				}
 				// 遍历原材料
 				for _, material := range sauceMaterials {
+					// 防止空指针
+					if material == nil {
+						continue
+					}
+					// 防止 Material 为空
+					if material.Material == nil {
+						continue
+					}
 					// 如果材料被禁用，则跳过，不扣减库存
 					if material.Material.Status == false {
 						continue
