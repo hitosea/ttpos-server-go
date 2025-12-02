@@ -519,8 +519,8 @@ class OrderBusinessDataRepository
                 'product_num' => $item['sales_num'],
                 'sales_price' => $item['original_sales_price'],
                 'free_product_num' => $item['give_product_num'],
-                'received_price' => $item['total_pay_price'],
-                'business_price' => $item['sales_price'],
+                'received_price' => $item['sales_price'],
+                'business_price' => $item['total_pay_price'],
             ];
         }
 
