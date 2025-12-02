@@ -2,12 +2,13 @@ package resp
 
 // ChannelSalesBlock 渠道营业统计数据块
 type ChannelSalesBlock struct {
-	TotalOrderNum  int64   `json:"total_order_num"`  // 订单数
-	MinOrderAmount float64 `json:"min_order_amount"` // 最小订单金额
-	MaxOrderAmount float64 `json:"max_order_amount"` // 最大订单金额
-	AvgOrderAmount float64 `json:"avg_order_amount"` // 平均订单金额
-	TotalDeskNum   int64   `json:"total_desk_num"`   // 桌数（仅桌台渠道）
-	TotalMealNum   int64   `json:"total_meal_num"`   // 人数（仅桌台渠道）
+	TotalOrderNum      int64   `json:"total_order_num"`       // 订单数
+	MinOrderAmount     float64 `json:"min_order_amount"`      // 最小订单金额
+	MaxOrderAmount     float64 `json:"max_order_amount"`      // 最大订单金额
+	AvgOrderAmount     float64 `json:"avg_order_amount"`      // 平均订单金额
+	TotalDeskNum       int64   `json:"total_desk_num"`        // 桌数（仅桌台渠道）
+	TotalMealNum       int64   `json:"total_meal_num"`        // 人数（仅桌台渠道）
+	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 人均订单金额（仅桌台渠道）
 }
 
 // ChannelSalesMeta 渠道营业统计元数据

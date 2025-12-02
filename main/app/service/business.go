@@ -2806,12 +2806,13 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 	convertToBlock := func(data *model.ChannelSaleRepoResult) *resp.ChannelSalesBlock {
 		if data == nil {
 			return &resp.ChannelSalesBlock{
-				TotalOrderNum:  0,
-				MinOrderAmount: 0,
-				MaxOrderAmount: 0,
-				AvgOrderAmount: 0,
-				TotalDeskNum:   0,
-				TotalMealNum:   0,
+				TotalOrderNum:      0,
+				MinOrderAmount:     0,
+				MaxOrderAmount:     0,
+				AvgOrderAmount:     0,
+				TotalDeskNum:       0,
+				TotalMealNum:       0,
+				OrderAmountMealAvg: 0,
 			}
 		}
 		block := &resp.ChannelSalesBlock{
@@ -2833,6 +2834,11 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 		}
 		if data.TotalMealNum.Valid {
 			block.TotalMealNum = data.TotalMealNum.Int64
+		}
+		// 转换人均订单金额，使用 decimal 确保精度，保留两位小数
+		if data.OrderAmountMealAvg.Valid {
+			orderAmountMealAvgDec := decimal.NewFromFloat(data.OrderAmountMealAvg.Float64)
+			block.OrderAmountMealAvg = orderAmountMealAvgDec.Round(2).InexactFloat64()
 		}
 		return block
 	}
@@ -3030,76 +3036,85 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	// 根据语言获取指标名称
 	labelMap := map[string]map[string]string{
 		"zh": {
-			"order_count": "所有订单数",
-			"min_amount":  "最小订单金额",
-			"max_amount":  "最大订单金额",
-			"avg_amount":  "平均订单金额",
-			"table_count": "桌数",
-			"guest_count": "人数",
+			"order_count":    "所有订单数",
+			"min_amount":     "最小订单金额",
+			"max_amount":     "最大订单金额",
+			"avg_amount":     "平均订单金额",
+			"table_count":    "桌数",
+			"guest_count":    "人数",
+			"order_meal_avg": "人均",
 		},
 		"en": {
-			"order_count": "Total Orders",
-			"min_amount":  "Min Order Amount",
-			"max_amount":  "Max Order Amount",
-			"avg_amount":  "Avg Order Amount",
-			"table_count": "Table Count",
-			"guest_count": "Guest Count",
+			"order_count":    "Total Orders",
+			"min_amount":     "Min Order Amount",
+			"max_amount":     "Max Order Amount",
+			"avg_amount":     "Avg Order Amount",
+			"table_count":    "Table Count",
+			"guest_count":    "Guest Count",
+			"order_meal_avg": "Per Person",
 		},
 		"th": {
-			"order_count": "จำนวนคำสั่งซื้อทั้งหมด",
-			"min_amount":  "จำนวนเงินคำสั่งซื้อขั้นต่ำ",
-			"max_amount":  "จำนวนเงินคำสั่งซื้อสูงสุด",
-			"avg_amount":  "จำนวนเงินคำสั่งซื้อเฉลี่ย",
-			"table_count": "จำนวนโต๊ะ",
-			"guest_count": "จำนวนคน",
+			"order_count":    "จำนวนคำสั่งซื้อทั้งหมด",
+			"min_amount":     "จำนวนเงินคำสั่งซื้อขั้นต่ำ",
+			"max_amount":     "จำนวนเงินคำสั่งซื้อสูงสุด",
+			"avg_amount":     "จำนวนเงินคำสั่งซื้อเฉลี่ย",
+			"table_count":    "จำนวนโต๊ะ",
+			"guest_count":    "จำนวนคน",
+			"order_meal_avg": "ต่อคน",
 		},
 		"zhtw": {
-			"order_count": "所有訂單數",
-			"min_amount":  "最小訂單金額",
-			"max_amount":  "最大訂單金額",
-			"avg_amount":  "平均訂單金額",
-			"table_count": "桌數",
-			"guest_count": "人數",
+			"order_count":    "所有訂單數",
+			"min_amount":     "最小訂單金額",
+			"max_amount":     "最大訂單金額",
+			"avg_amount":     "平均訂單金額",
+			"table_count":    "桌數",
+			"guest_count":    "人數",
+			"order_meal_avg": "人均",
 		},
 		"ja": {
-			"order_count": "全注文数",
-			"min_amount":  "最小注文金額",
-			"max_amount":  "最大注文金額",
-			"avg_amount":  "平均注文金額",
-			"table_count": "テーブル数",
-			"guest_count": "人数",
+			"order_count":    "全注文数",
+			"min_amount":     "最小注文金額",
+			"max_amount":     "最大注文金額",
+			"avg_amount":     "平均注文金額",
+			"table_count":    "テーブル数",
+			"guest_count":    "人数",
+			"order_meal_avg": "一人あたり",
 		},
 		"ko": {
-			"order_count": "전체 주문 수",
-			"min_amount":  "최소 주문 금액",
-			"max_amount":  "최대 주문 금액",
-			"avg_amount":  "평균 주문 금액",
-			"table_count": "테이블 수",
-			"guest_count": "인원 수",
+			"order_count":    "전체 주문 수",
+			"min_amount":     "최소 주문 금액",
+			"max_amount":     "최대 주문 금액",
+			"avg_amount":     "평균 주문 금액",
+			"table_count":    "테이블 수",
+			"guest_count":    "인원 수",
+			"order_meal_avg": "인당",
 		},
 		"my": {
-			"order_count": "အော်ဒါအရေအတွက်စုစုပေါင်း",
-			"min_amount":  "အော်ဒါငွေပမာဏအနည်းဆုံး",
-			"max_amount":  "အော်ဒါငွေပမာဏအများဆုံး",
-			"avg_amount":  "အော်ဒါငွေပမာဏပျမ်းမျှ",
-			"table_count": "စားပွဲအရေအတွက်",
-			"guest_count": "လူအရေအတွက်",
+			"order_count":    "အော်ဒါအရေအတွက်စုစုပေါင်း",
+			"min_amount":     "အော်ဒါငွေပမာဏအနည်းဆုံး",
+			"max_amount":     "အော်ဒါငွေပမာဏအများဆုံး",
+			"avg_amount":     "အော်ဒါငွေပမာဏပျမ်းမျှ",
+			"table_count":    "စားပွဲအရေအတွက်",
+			"guest_count":    "လူအရေအတွက်",
+			"order_meal_avg": "တစ်ဦးလျှင်",
 		},
 		"tr": {
-			"order_count": "Toplam Sipariş",
-			"min_amount":  "Min Sipariş Tutarı",
-			"max_amount":  "Max Sipariş Tutarı",
-			"avg_amount":  "Ort Sipariş Tutarı",
-			"table_count": "Masa Sayısı",
-			"guest_count": "Kişi Sayısı",
+			"order_count":    "Toplam Sipariş",
+			"min_amount":     "Min Sipariş Tutarı",
+			"max_amount":     "Max Sipariş Tutarı",
+			"avg_amount":     "Ort Sipariş Tutarı",
+			"table_count":    "Masa Sayısı",
+			"guest_count":    "Kişi Sayısı",
+			"order_meal_avg": "Kişi başı",
 		},
 		"sv": {
-			"order_count": "Totalt antal beställningar",
-			"min_amount":  "Min beställningsbelopp",
-			"max_amount":  "Max beställningsbelopp",
-			"avg_amount":  "Genomsnittligt beställningsbelopp",
-			"table_count": "Antal bord",
-			"guest_count": "Antal gäster",
+			"order_count":    "Totalt antal beställningar",
+			"min_amount":     "Min beställningsbelopp",
+			"max_amount":     "Max beställningsbelopp",
+			"avg_amount":     "Genomsnittligt beställningsbelopp",
+			"table_count":    "Antal bord",
+			"guest_count":    "Antal gäster",
+			"order_meal_avg": "Per person",
 		},
 	}
 	labels := labelMap[lang]
@@ -3143,7 +3158,7 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 		return nil, errors.WithMessage(err)
 	}
 
-	// 桌台（A6-A10合并）
+	// 桌台（A6-A11合并，增加人均订单金额行）
 	tableStartRow := rowIdx
 	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), channelNames["table"])
 	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["table_count"])
@@ -3155,6 +3170,12 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["guest_count"])
 	if params.Result.Table != nil {
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.TotalMealNum)
+	}
+	rowIdx++
+
+	xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), labels["order_meal_avg"])
+	if params.Result.Table != nil {
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), params.Result.Table.OrderAmountMealAvg)
 	}
 	rowIdx++
 
