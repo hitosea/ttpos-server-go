@@ -445,9 +445,14 @@ func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, productBom
 	if len(productBomUuids) > 0 {
 		db = db.Where("product_bom_uuid in (?)", productBomUuids)
 	}
+	// 如果没有传时间范围
+	if startTime == 0 && endTime == 0 {
+
+	} else {
+		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
+	}
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
-		Where("finished_time BETWEEN ? AND ?", startTime, endTime).         // 选择时间区间
 		Order("finished_time desc").                                        // 按照完成时间最新的在前
 		Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&productionOrderProducts).Error
 	if err != nil {
@@ -467,9 +472,13 @@ func (r *productionRepo) GetProductionOrderListCount(productBomUuids []uint64, s
 	if len(productBomUuids) > 0 {
 		db = db.Where("product_bom_uuid in (?)", productBomUuids)
 	}
+	if startTime == 0 && endTime == 0 {
+
+	} else {
+		db.Where("finished_time BETWEEN ? AND ?", startTime, endTime) // 选择时间区间
+	}
 	err := db.
 		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
-		Where("finished_time BETWEEN ? AND ?", startTime, endTime).         // 选择时间区间
 		Count(&count).Error
 	if err != nil {
 		return 0, errors.WithMessage(err)

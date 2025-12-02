@@ -1297,15 +1297,6 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req
 }
 
 func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error) {
-	// 参数默认值
-	if req.StartTime == 0 {
-		dayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
-		req.StartTime = dayStart.Unix()
-	}
-	if req.EndTime == 0 {
-		dayEnd := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 23, 59, 59, 0, time.Local)
-		req.EndTime = dayEnd.Unix()
-	}
 	db := ctx.GetDB()
 	productionRepo := repository.NewProductionRepo(db)
 	// 根据过滤条件,获取商品bom_uuid列表
@@ -1436,15 +1427,6 @@ func (s *businessSrv) getKitchenProductionDetailProductBomUuids(ctx context.Cont
 
 // KitchenProductionDetailCount 统计后厨菜品出品明细数量
 func (s *businessSrv) KitchenProductionDetailCount(ctx context.Context, req req.KitchenProductionDetailReq) (int64, error) {
-	// 参数默认值
-	if req.StartTime == 0 {
-		dayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
-		req.StartTime = dayStart.Unix()
-	}
-	if req.EndTime == 0 {
-		dayEnd := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 23, 59, 59, 0, time.Local)
-		req.EndTime = dayEnd.Unix()
-	}
 	db := ctx.GetDB()
 	productionRepo := repository.NewProductionRepo(db)
 	// 根据过滤条件,获取商品bom_uuid列表

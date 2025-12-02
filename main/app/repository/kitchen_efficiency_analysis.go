@@ -92,8 +92,15 @@ type KitchenEfficiencyAnalysisResult struct {
 
 // 根据product_package_uuid查询后厨效率分析记录
 func (r *kitchenEfficiencyAnalysisRepo) GetKitchenEfficiencyAnalysisByProductPackageUuid(productPackageUuids []uint64, startTime, endTime int64) ([]*KitchenEfficiencyAnalysisResult, error) {
+	db := r.db.Model(&model.KitchenEfficiencyAnalysis{}).Where("product_package_uuid IN (?)", productPackageUuids)
+
+	// 如果没有传时间范围
+	if startTime == 0 && endTime == 0 {
+
+	} else {
+		db = db.Where("date >= ?", startTime).Where("date <= ?", endTime)
+	}
 	var results []*KitchenEfficiencyAnalysisResult
-	db := r.db.Model(&model.KitchenEfficiencyAnalysis{}).Where("product_package_uuid IN (?)", productPackageUuids).Where("date >= ?", startTime).Where("date <= ?", endTime)
 	err := db.Select("product_package_uuid, MIN(min) as min, MAX(max) as max, AVG(avg) as avg").Group("product_package_uuid").Find(&results).Error
 	if err != nil {
 		return nil, err
@@ -121,7 +128,20 @@ func (r *kitchenEfficiencyAnalysisRepo) GetKitchenEfficiencyAnalysisAvg(startTim
 		FROM
 			(SELECT IFNULL(sum(total), 0) AS total, IFNULL(sum(count), 0) AS count FROM ttpos_kitchen_efficiency_analysis WHERE is_package = 0 AND date>= ? AND date<= ?) AS t1
 	`
-	err := r.db.Raw(dataQuery, startTime, endTime).First(&avgResult).Error
+	db := r.db
+	// 如果没有传时间范围
+	if startTime == 0 && endTime == 0 {
+		dataQuery = `
+			SELECT
+				IF(t1.count = 0, 0, t1.total / t1.count) AS avg
+			FROM
+				(SELECT IFNULL(sum(total), 0) AS total, IFNULL(sum(count), 0) AS count FROM ttpos_kitchen_efficiency_analysis WHERE is_package = 0) AS t1
+		`
+		db = db.Raw(dataQuery)
+	} else {
+		db = db.Raw(dataQuery, startTime, endTime)
+	}
+	err := db.First(&avgResult).Error
 	if err != nil {
 		return 0, err
 	}
