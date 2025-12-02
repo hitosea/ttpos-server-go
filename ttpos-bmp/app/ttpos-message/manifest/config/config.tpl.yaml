@@ -53,7 +53,7 @@ queue:
   # RocketMQ 配置
   rocketmq:
     endpoint: "$ROCKETMQ_ENDPOINT"                    # 代理接入点 新版v5客户端支持
-    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]      # nameSrvAdder+端口，支持多个
+    nameSrvAdders: [ $ROCKETMQ_NAME_SRV_ADDR ]        # nameSrvAdder+端口，支持多个（集群模式使用逗号分隔）
     accessKey: "$ROCKETMQ_ACCESS_KEY"                 # 选填。如果开启了acl控制就必填
     secretKey: "$ROCKETMQ_SECRET_KEY"                 # 选填。如果开启了acl控制就必填
     brokerAddr: "$ROCKETMQ_BROKER_ADDR"               # brokerAddr+端口，选填
