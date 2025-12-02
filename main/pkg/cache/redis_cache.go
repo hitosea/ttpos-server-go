@@ -70,14 +70,16 @@ func newRedisCache(conf Config) Cache {
 			addressList = append(addressList, address)
 		}
 		clusterClient = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:         addressList,
-			Password:      conf.Password,
-			RouteRandomly: true,
-			MaxRetries:    5,
-			DialTimeout:   3 * time.Second,
-			ReadTimeout:   2 * time.Second,
-			WriteTimeout:  2 * time.Second,
-			ReadOnly:      true, // 允许从副本读取
+			Addrs: addressList,
+			Password: conf.Password,
+			// RouteRandomly: true, // 禁用随机路由，避免请求分发到故障节点
+			MaxRetries: 3, // 减少重试次数，配合 Backoff 策略
+			MinRetryBackoff: 8 * time.Millisecond,
+			MaxRetryBackoff: 512 * time.Millisecond,
+			DialTimeout: 3 * time.Second,
+			ReadTimeout: 2 * time.Second,
+			WriteTimeout: 2 * time.Second,
+			ReadOnly: true, // 允许从副本读取
 		})
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
