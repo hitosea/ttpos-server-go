@@ -226,29 +226,55 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductBom.ProductFlavor.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ImageFile",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductUnit.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 		}
