@@ -482,7 +482,9 @@ class Product extends BaseModel
      */
     public function productPackageGroup()
     {
-        return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid');
+        return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid')
+            ->order('sort', 'asc') // 按 sort 字段升序排序
+            ->order('id', 'asc'); // 相同 sort 值时按 id 升序排序
     }
 
     /**

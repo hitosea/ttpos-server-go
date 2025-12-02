@@ -52,7 +52,9 @@ class ProductPackageGroup extends BaseModel
         $insertGroupItems = [];
 
         $packageGroup = $data['package_group'] ?? [];
-        foreach ($packageGroup as $item) {
+        // 根据数组索引设置排序值
+        foreach ($packageGroup as $index => $item) {
+            $sortValue = $index + 1; // 排序从 1 开始
             // 支持 group_type 和 optional_count 字段
             $groupUuid = createUuid();
             $multiLanguageNameUuid = (new MultiLanguageName)->saveNames($item['group_name']);
@@ -92,6 +94,7 @@ class ProductPackageGroup extends BaseModel
                 'product_package_uuid' => $product['uuid'], // 套餐uuid
                 'group_type' => $groupData['group_type'], // 分组类型
                 'optional_count' => $groupData['optional_count'], // 可选数量
+                'sort' => $sortValue, // 排序字段
                 'create_time' => time(), // 创建时间
                 'update_time' => time(), // 更新时间
             ];
@@ -131,13 +134,16 @@ class ProductPackageGroup extends BaseModel
         $groupItemUuidList = [];
         // 新增或编辑套餐分组
         $groupList = $data['package_group'];
-        foreach ($groupList as $item) {
+        // 根据数组索引设置排序值
+        foreach ($groupList as $index => $item) {
+            $sortValue = $index + 1; // 排序从 1 开始
             // 支持 group_type 和 optional_count 字段
             $groupData = [
                 'name' => $item['group_name'], // 套餐分组名称
                 'product_package_uuid' => $product['uuid'], // 套餐uuid
                 'group_type' => $item['group_type'] ?? 0, // 分组类型 0-固定 1-可选
                 'optional_count' => $item['optional_count'] ?? 0, // 可选数量
+                'sort' => $sortValue, // 排序字段
             ];
             
             // 数据校验：可选数量必须 >= 1
