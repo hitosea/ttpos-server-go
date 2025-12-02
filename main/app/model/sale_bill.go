@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
@@ -30,6 +31,7 @@ type SaleBill struct {
 	DiningMethod    uint   `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
 	OrderSourceUuid uint64 `gorm:"column:order_source_uuid;type:bigint(20);default:0;comment:订单来源UUID（0=店内，>0=外卖）" json:"order_source_uuid"`
 	NationalityUuid uint64 `gorm:"column:nationality_uuid;type:bigint(20);default:0;comment:国籍UUID（0=未记录）" json:"nationality_uuid"`
+	NationalityName string `gorm:"column:nationality_name;type:text;default:'';comment:国籍名称快照（JSON），不随后台更新" json:"nationality_name"`
 	Source          uint   `gorm:"column:source;type:int(10);default:0;comment:订单来源：0-默认值、1-收银机、2-点餐助手、3-平板、4-H5、5-会员端" json:"source"`
 	ClientVersion   string `gorm:"column:client_version;type:varchar(20);default:'';comment:客户端版本号（如 2.10.0、2.9.0）" json:"client_version"`
 	IsBuffet        uint   `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
@@ -695,4 +697,57 @@ func (sb *SaleBill) ShouldFinishBillAfterDelete(deleteOrderUuid uint64) bool {
 		}
 	}
 	return true // 所有剩余订单都已结账
+}
+
+// GetLocaleNationalityName 获取国籍名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-nationality-snapshot-fix
+func (model *SaleBill) GetLocaleNationalityName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.NationalityName
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.Nationality != nil && !model.Nationality.MultiLanguageName.IsNullName() {
+		return model.Nationality.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetNationalityNameSnapshot 设置国籍名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-nationality-snapshot-fix (JSON 方案)
+func (model *SaleBill) SetNationalityNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.NationalityName = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.NationalityName = string(jsonData)
+	return nil
 }

@@ -366,8 +366,28 @@ func (r *saleBillRepo) UpdateOrderSource(saleBillUuid uint64, orderSourceUuid ui
 }
 
 // UpdateNationality 更新销售账单的国籍
+// JSON 方案：同时保存 nationality_uuid 和 nationality_name 快照（包含所有语言）
+// Requirement: story-main-nationality-snapshot-fix
 func (r *saleBillRepo) UpdateNationality(saleBillUuid uint64, nationalityUuid uint64) error {
-	return r.db.Model(&model.SaleBill{}).Select("nationality_uuid").Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
-		NationalityUuid: nationalityUuid,
-	}).Error
+	// 1. 查询国籍信息（包括多语言数据）
+	nationalityRepo := NewNationalityRepo(r.db)
+	nationality, err := nationalityRepo.FindByUuid(nationalityUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询国籍信息失败")
+	}
+	if nationality == nil {
+		return errors.New("国籍不存在")
+	}
+
+	// 2. 序列化为 JSON 快照
+	saleBill := model.SaleBill{NationalityUuid: nationalityUuid}
+	if err := saleBill.SetNationalityNameSnapshot(nationality.MultiLanguageName); err != nil {
+		return errors.WithMessage(err, "序列化国籍快照失败")
+	}
+
+	// 3. 同时更新 nationality_uuid 和 nationality_name
+	return r.db.Model(&model.SaleBill{}).
+		Select("nationality_uuid", "nationality_name").
+		Where("uuid = ?", saleBillUuid).
+		Updates(saleBill).Error
 }

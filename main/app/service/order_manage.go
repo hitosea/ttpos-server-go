@@ -688,11 +688,14 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				}
 				return 0
 			}(),
+			// 使用快照数据（优先），降级使用关联表（兼容历史）
+			// Requirement: story-main-nationality-snapshot-fix (JSON 方案)
 			NationalityName: func() string {
-				if saleBill.Nationality != nil {
-					return saleBill.Nationality.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				nationalityName := saleBill.GetLocaleNationalityName()
+				if nationalityName.IsNull() {
+					return ""
 				}
-				return ""
+				return nationalityName.GetLocale(ctx.GetLanguage())
 			}(),
 			PayTypes:   saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),
 			SaleOrders: orderList,
