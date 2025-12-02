@@ -69,7 +69,7 @@ dev: debug
 # 运行数据库迁移
 migrate:
 	@echo "🗄️  运行主项目数据库迁移..."
-	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh think migrate:run
+	@chmod +x ./ttpos-scripts/cmd.sh && ./ttpos-scripts/cmd.sh php-migrate
 	@echo "🚀 更新 中台 模块数据库..."
 	@cd ttpos-bmp && make update-ip && make conf && make migrate
 	@echo "✅ 数据库迁移完成"
