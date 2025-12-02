@@ -422,6 +422,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printerWidth           int = 80 // 默认80mm打印机
 		enableStatusCheck      int = 0  // 是否启用状态检查
 		enableSound            int = 0  // 是否启用打印提示音
+		printSpeed             int = 2  // 打印速度 1-流畅(不分片打印) 2-稳定(分片大包打印) 3-兼容(分片小包打印)
 	)
 
 	// 收银机开启
@@ -467,6 +468,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printerWidth = printer.Width
 			enableStatusCheck = printer.EnableStatusCheck
 			enableSound = printer.EnableSound
+			printSpeed = printer.PrintSpeed
 		} else if printerId != "0" && printerId != "" {
 			// 收银机内置的打印机
 			printerCashierDeviceSn = printerId
@@ -503,6 +505,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		PrinterWidth:           printerWidth,
 		EnableStatusCheck:      enableStatusCheck,
 		EnableSound:            enableSound,
+		PrintSpeed:             printSpeed,
 	}, nil
 }
 
