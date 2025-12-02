@@ -728,6 +728,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 					ProductPackageAttributeUuidList: subProductParam.EditProductReq.AttributeUuidList,
 					ProductPackageGroupUuid:         subProductParam.ProductPackageGroupUuid,
 					Operation:                       "add",
+					AddPrice:                        subProductParam.AddPrice,
 				}
 				subProductParams = append(subProductParams, params)
 			}
