@@ -724,10 +724,10 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 		list = append(list, business_data_resp.BusinessDataCountProductSalesItem{
 			ProductName:        productSale.ProductName,
 			SalesNum:           productSale.TotalSaleNum,
-			SalesPrice:         productSale.TotalBusinessAmount,
+			SalesPrice:         productSale.TotalActualSaleAmount,
 			CategoryName:       productSale.CategoryName,
 			OriginalSalesPrice: productSale.TotalOriginSaleAmount,
-			TotalPayPrice:      productSale.TotalActualSaleAmount,
+			TotalPayPrice:      productSale.TotalBusinessAmount,
 			GiveProductNum:     productSale.TotalGiveNum,
 		})
 	}
@@ -924,8 +924,8 @@ func (s *businessSrv) ExportProductSalesTask(ctx context.Context, req req.Busine
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.SalesNum)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OriginalSalesPrice)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.GiveProductNum)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.TotalPayPrice)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), item.SalesPrice)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.SalesPrice)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), item.TotalPayPrice)
 	}
 
 	// 自动调整列宽
