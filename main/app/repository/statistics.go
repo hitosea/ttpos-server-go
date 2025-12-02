@@ -1474,6 +1474,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, opts ...DBOp
 			"ROUND(SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
 			"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num",
 			"SUM(IF(t.desk_uuid > 0 AND t.is_takeout = 0, t.meal_num, 0)) AS total_meal_num",
+			"ROUND(SUM(t.desk_order_amount) / NULLIF(SUM(IF(t.desk_uuid > 0 AND t.is_takeout = 0, t.meal_num, 0)), 0), 2) AS order_amount_meal_avg", // 人均订单金额：桌台订单总金额 / 用餐人数，保留两位小数
 		},
 		"dine_in": { // 点餐-店内：desk_uuid = 0 && order_source_uuid = 0 && is_takeout = 0
 			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",

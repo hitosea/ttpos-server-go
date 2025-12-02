@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
@@ -10,6 +10,37 @@ if [ ! -f "$ENV_FILE" ] ;then
 fi
 
 . "$ENV_FILE"
+
+# 处理 RocketMQ NameServer 地址列表（支持集群配置）
+# 如果 ROCKETMQ_NAME_SRV_ADDR 包含逗号或分号，则格式化为 YAML 列表项
+if [ -n "$ROCKETMQ_NAME_SRV_ADDR" ]; then
+    # 将分号替换为逗号，统一分隔符
+    rocketmq_addrs=$(echo "$ROCKETMQ_NAME_SRV_ADDR" | sed 's/;/,/g')
+    # 检查是否包含逗号（即多个地址）
+    if echo "$rocketmq_addrs" | grep -q ','; then
+        # 多地址：分割并格式化为 "addr1", "addr2" 格式
+        formatted_addrs=""
+        IFS=',' read -ra addrs <<< "$rocketmq_addrs"
+        for addr in "${addrs[@]}"; do
+            # 清理地址前后空格
+            addr=$(echo "$addr" | xargs)
+            if [ -n "$addr" ]; then
+                if [ -n "$formatted_addrs" ]; then
+                    formatted_addrs="$formatted_addrs, \"$addr\""
+                else
+                    formatted_addrs="\"$addr\""
+                fi
+            fi
+        done
+        export ROCKETMQ_NAME_SRV_ADDR="$formatted_addrs"
+    else
+        # 单地址：添加引号
+        addr=$(echo "$rocketmq_addrs" | xargs)
+        export ROCKETMQ_NAME_SRV_ADDR="\"$addr\""
+    fi
+    # echo "ROCKETMQ_NAME_SRV_ADDR=$ROCKETMQ_NAME_SRV_ADDR"
+fi
+
 # 遍历app目录下的所有子目录（假设init_conf.sh位于hack目录，app目录在上级目录）
 for app_dir in ../app/*; do
     # 仅处理目录类型

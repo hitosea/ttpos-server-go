@@ -377,25 +377,26 @@ type StatisticsBusinessPaymentMethodData struct {
 
 // ChannelSaleRepoResult 渠道营业统计 Repository 返回结果
 type ChannelSaleRepoResult struct {
-	TotalOrderNum  sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
-	MinOrderAmount sql.NullFloat64 `gorm:"column:min_order_amount;comment:最小订单金额"`
-	MaxOrderAmount sql.NullFloat64 `gorm:"column:max_order_amount;comment:最大订单金额"`
-	AvgOrderAmount sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
-	TotalDeskNum   sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
-	TotalMealNum   sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
+	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
+	MinOrderAmount     sql.NullFloat64 `gorm:"column:min_order_amount;comment:最小订单金额"`
+	MaxOrderAmount     sql.NullFloat64 `gorm:"column:max_order_amount;comment:最大订单金额"`
+	AvgOrderAmount     sql.NullFloat64 `gorm:"column:avg_order_amount;comment:平均订单金额"`
+	TotalDeskNum       sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
+	TotalMealNum       sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
+	OrderAmountMealAvg sql.NullFloat64 `gorm:"column:order_amount_meal_avg;comment:人均订单金额"`
 }
 
 // UserAnalysisItemRepo 用户分析统计项（Repository层）
 type UserAnalysisItemRepo struct {
-	Name        string          `gorm:"column:name"`         // 名称
-	OrderCount  int64           `gorm:"column:order_count"`  // 订单数
-	Percentage  decimal.Decimal `gorm:"column:percentage"`   // 占比（decimal类型）
+	Name       string          `gorm:"column:name"`        // 名称
+	OrderCount int64           `gorm:"column:order_count"` // 订单数
+	Percentage decimal.Decimal `gorm:"column:percentage"`  // 占比（decimal类型）
 }
 
 // UserAnalysisRepoResult 用户分析统计结果（Repository层）
 type UserAnalysisRepoResult struct {
 	Nationality  []UserAnalysisItemRepo `json:"nationality"`   // 国籍统计
-	OrderSource  []UserAnalysisItemRepo `json:"order_source"`   // 点餐方式来源统计
-	DeskSource   []UserAnalysisItemRepo `json:"desk_source"`    // 桌台方式来源统计
-	DiningMethod []UserAnalysisItemRepo `json:"dining_method"`  // 用餐方式统计
+	OrderSource  []UserAnalysisItemRepo `json:"order_source"`  // 点餐方式来源统计
+	DeskSource   []UserAnalysisItemRepo `json:"desk_source"`   // 桌台方式来源统计
+	DiningMethod []UserAnalysisItemRepo `json:"dining_method"` // 用餐方式统计
 }

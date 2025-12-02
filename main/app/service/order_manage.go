@@ -2571,6 +2571,16 @@ func (s *orderSrv) AuthorizeSensitiveOperation(ctx context.Context, operationTyp
 
 	// 当前员工有权限，返回当前员工信息
 	staff := ctx.GetStaff()
+	// 如果是助手端,需要获取当前助手端登陆的员账号. 当前使用的token是收银机账户的
+	if ctx.GetSource() == constant.SourceAssistant {
+		// 1. 获取当前员工信息
+		assistantStaffUuid := ctx.GetAssistantUuid()
+		assistantStaff, err := repository.NewStaffRepo(ctx.GetDB()).GetStaff(repository.CommonRepo.WhereByUuid(assistantStaffUuid))
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取当前员工信息失败")
+		}
+		staff = assistantStaff
+	}
 	return &staff, nil
 }
 
