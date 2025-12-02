@@ -107,12 +107,12 @@ type TabletOrderCartProductAddReq struct {
 }
 
 func (req *TabletOrderCartProductAddReq) FormatPackageSubProductParams() {
-	for _, product := range req.Products {
-		for j := range product.Products {
-			subProduct := &product.Products[j]
-			subProduct.Num = product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
-		}
-	}
+	//for _, product := range req.Products {
+	//	for j := range product.Products {
+	//		subProduct := &product.Products[j]
+	//		subProduct.Num = product.Num // 前端传过来的num是错误的. 需要单位数量✖️套餐数量
+	//	}
+	//}
 }
 
 // ProductParams 商品参数
