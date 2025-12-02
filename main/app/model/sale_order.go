@@ -836,7 +836,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			AddPrice:     saleOrderProduct.AddPrice, // 套餐主商品的加价总和
 			CanEdit:      saleOrderProduct.IsCanEdit(),
 			IsBatch:      saleOrderProduct.IsBatchBool(),
-			ShowDelayTag: saleOrderProduct.IsPreCooking() && saleOrderProduct.BatchTagUuid != 0, // 如果商品是分批商品，且被标记分批类型，且处于预送厨阶段，则显示延迟送厨标签
+			ShowDelayTag: saleOrderProduct.IsPreCooking(), // 如果商品是分批商，且处于预送厨阶段，则显示延迟送厨标签
 			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
 			BatchTagName: func() dto.LocaleResponse {
 				if saleOrderProduct.BatchTag != nil {
