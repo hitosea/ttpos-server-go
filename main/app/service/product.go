@@ -384,6 +384,20 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 						isRequired = 1
 						isDefault = 1
 					}
+					describeI18n := dto.LocaleResponse{
+						ZH:   item.ProductPackage.Describe,
+						TH:   item.ProductPackage.Describe,
+						EN:   item.ProductPackage.Describe,
+						ZHTW: item.ProductPackage.Describe,
+						JA:   item.ProductPackage.Describe,
+						KO:   item.ProductPackage.Describe,
+						MY:   item.ProductPackage.Describe,
+						TR:   item.ProductPackage.Describe,
+						SV:   item.ProductPackage.Describe,
+					}
+					if item.ProductPackage.DescribeMultiLanguageNameUuid > 0 && item.ProductPackage.DescribeMultiLanguageName.Uuid > 0 {
+						describeI18n = item.ProductPackage.DescribeMultiLanguageName.GetNames()
+					}
 					productDetail := product_resp.PackageProductDetail{
 						Detail: product_resp.Product{
 							Uuid:       item.ProductBom.Uuid,
@@ -400,9 +414,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							Sauces: product_resp.ProductSauceList{
 								List: make([]product_resp.ProductSauce, 0),
 							},
-							Detail:       product.Detail,
-							Describe:     product.Describe,
-							DescribeI18n: product.DescribeMultiLanguageName.GetNames(),
+							Detail:       item.ProductPackage.Detail,
+							Describe:     item.ProductPackage.Describe,
+							DescribeI18n: describeI18n,
 						},
 						Num:        item.Num,
 						AddPrice:   item.AddPrice,
