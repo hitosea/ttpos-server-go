@@ -10,10 +10,42 @@ exec 1>/dev/null
 # ============== 错误处理：静默失败，不阻塞 Agent ==============
 trap 'exit 0' ERR
 
-# ============== 依赖检查 ==============
+# ============== 依赖检查与静默安装 ==============
+install_dependencies() {
+  local missing_deps=()
+  
+  # 检查缺失的依赖
+  command -v jq &>/dev/null || missing_deps+=("jq")
+  command -v curl &>/dev/null || missing_deps+=("curl")
+  
+  # 没有缺失的依赖
+  [[ ${#missing_deps[@]} -eq 0 ]] && return 0
+  
+  # 根据系统类型安装
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS: 使用 Homebrew
+    if command -v brew &>/dev/null; then
+      for dep in "${missing_deps[@]}"; do
+        brew install "$dep" &>/dev/null || true
+      done
+    fi
+  elif [[ -f /etc/debian_version ]] || command -v apt-get &>/dev/null; then
+    # Linux (Debian/Ubuntu): 使用 apt
+    for dep in "${missing_deps[@]}"; do
+      sudo apt-get install -y "$dep" &>/dev/null || true
+    done
+  fi
+}
+
 check_dependencies() {
+  # 首次检查
   if ! command -v jq &>/dev/null || ! command -v curl &>/dev/null; then
-    exit 0
+    # 尝试静默安装
+    install_dependencies
+    # 再次检查，仍然缺失则静默退出
+    if ! command -v jq &>/dev/null || ! command -v curl &>/dev/null; then
+      exit 0
+    fi
   fi
 }
 
@@ -21,6 +53,8 @@ check_dependencies
 
 # ============== 配置 ==============
 LOKI_URL="${CURSOR_LOKI_URL:-https://3100--main--erpnext--bendaye.coder.hitosea.com}"
+LOKI_USER="${CURSOR_LOKI_USER:-contributors@ttpos.com}"
+LOKI_PASS="${CURSOR_LOKI_PASS:-Contributors001}"
 APP_NAME="cursor-agent"
 
 # ============== 读取输入 ==============
@@ -170,7 +204,13 @@ payload=$(jq -n \
   }') || exit 0
 
 # ============== 异步推送 (fire-and-forget) ==============
+CURL_AUTH=""
+if [[ -n "$LOKI_USER" && -n "$LOKI_PASS" ]]; then
+  CURL_AUTH="-u ${LOKI_USER}:${LOKI_PASS}"
+fi
+
 (curl -s -X POST "${LOKI_URL}/loki/api/v1/push" \
+  $CURL_AUTH \
   -H "Content-Type: application/json" \
   -d "$payload" \
   --connect-timeout 2 \

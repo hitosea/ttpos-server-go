@@ -753,7 +753,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 }
 
 // 获取销售订单的商品列表
-func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openIsBatch bool) []resp.Product {
+func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductWithReject bool, openIsBatch bool) []resp.Product {
 	productList := make([]resp.Product, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 套餐子商品不返回
@@ -786,14 +786,19 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 		if saleOrderProduct.ProductType == constant.ProductTypePackage {
 			subProductList := model.GetPackageSubProductList(saleOrderProduct.Uuid) // 获取套餐的子商品列表
 			for _, subProduct := range subProductList {
-				packageProductList = append(packageProductList, resp.PackageProduct{
+				item := resp.PackageProduct{
 					Uuid:                subProduct.Uuid,
 					LocaleName:          subProduct.MultiLanguageName.GetNames(),
 					LocaleAttributeName: subProduct.GetAttributeName(),
 					Num:                 subProduct.CopyNum,
 					UnitNum:             subProduct.GetUnitNum(),
 					AddPrice:            subProduct.AddPrice, // 子商品加价金额
-				})
+				}
+				// 如果版本小于2.10.0,则num*unit_num的值赋值给unit_num
+				if utils.CompareVersion(clientVerson, utils.VersionLT, constant.ClientVersionV2100) {
+					item.UnitNum = item.Num * item.UnitNum
+				}
+				packageProductList = append(packageProductList, item)
 			}
 		}
 
