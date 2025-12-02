@@ -2110,8 +2110,9 @@ func (s *orderSrv) validatePackageGroupSelection(ctx context.Context, selectedPr
 				groupName := group.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 				diff := group.OptionalCount - int(selectedCount)
 				if diff > 0 {
-					return errors.New(fmt.Sprintf("该分组「%s」需要选择 %d 个商品，当前已选 %d 个，还差 %d 个",
+					ctx.Log().Info(fmt.Sprintf("该分组「%s」需要选择 %d 个商品，当前已选 %d 个，还差 %d 个",
 						groupName, group.OptionalCount, int(selectedCount), diff))
+					return errors.WithMessage(errors.New(fmt.Sprintf("%s还没选满", groupName)))
 				} else {
 					return errors.New(fmt.Sprintf("该分组「%s」最多选择 %d 个商品，当前已选 %d 个，请删除多余商品",
 						groupName, group.OptionalCount, int(selectedCount)))
