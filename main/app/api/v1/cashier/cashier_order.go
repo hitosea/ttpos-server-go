@@ -271,7 +271,7 @@ func (h *OrderHandler) CheckAuthorization(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.VerifyPasswordReq true "密码验证参数"
+// @param data body req.VerifyPasswordForSensitiveOperationReq true "密码验证参数"
 // @Success 200 {object} dto.Response{data=resp.VerifyPasswordResp}
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/order/verify_password [post]

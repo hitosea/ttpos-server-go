@@ -379,8 +379,9 @@ type CheckAuthorizationReq struct {
 
 // VerifyPasswordForSensitiveOperationReq 敏感操作密码验证请求
 type VerifyPasswordForSensitiveOperationReq struct {
-	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"` // 授权员工账号（邮箱或手机号）
-	Password               string `json:"password" binding:"required"`                 // 权限密码
+	OperationType          string `json:"operation_type" binding:"required,oneof=discount refund"` // 操作类型: discount-折扣操作 refund-退款操作
+	AuthorizedStaffAccount string `json:"authorized_staff_account" binding:"required"`             // 授权员工账号（邮箱或手机号）
+	Password               string `json:"password" binding:"required"`                             // 权限密码
 }
 
 // OrderPaymentAmountReq 获取实付金额请求

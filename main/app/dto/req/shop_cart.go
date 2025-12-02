@@ -38,7 +38,7 @@ type ProductRequest struct {
 
 type OrderCartProductFlavorAndAttributeChangeReq struct {
 	OrderCartProductPackageAddReq        // 套餐商品请求参数
-	ProductType                   uint   `json:"product_type"` // 商品类型 0-商品 1-套餐 2-套餐子商品
+	ProductType                   uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐 2-套餐子商品
 	SaleOrderProductUuid          uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 
 	// 普通商品的参数
