@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -14,11 +15,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/gin-gonic/gin"
 )
 
-type Operator string
+// Operator 版本比较操作符类型（向后兼容别名）
+// 实际类型定义在 utils 包中
+type Operator = utils.VersionOperator
 
 const (
 	LT  Operator = "<"
@@ -406,27 +408,10 @@ func (c *ContextImpl) GetCfIPCountry() string {
 	return c.cc.GetHeader("CF-IPCountry")
 }
 
-// 版本小于指定版本
+// Version 比较客户端版本号
 func (c *ContextImpl) Version(op Operator, version string) bool {
-	v1, err := semver.NewVersion(c.cc.GetHeader("Client-Version"))
-	if err != nil {
-		return false
-	}
-	v2, err := semver.NewVersion(version)
-	if err != nil {
-		return false
-	}
-	switch op {
-	case GTE:
-		return v1.GreaterThan(v2) || v1.Equal(v2)
-	case GT:
-		return v1.GreaterThan(v2)
-	case LT:
-		return v1.LessThan(v2)
-	case EQ:
-		return v1.Equal(v2)
-	}
-	return false
+	clientVersion := c.cc.GetHeader("Client-Version")
+	return utils.CompareVersion(clientVersion, op, version)
 }
 
 // generateRandomIP 生成随机IP地址
