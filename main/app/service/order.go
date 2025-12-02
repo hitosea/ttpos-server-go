@@ -1783,6 +1783,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			batchCookingMode = constant.BatchCookingModePost // 默认值
 		}
 		if batchCookingMode == constant.BatchCookingModePre && isBatch == 1 {
+			// 必须指定分批类型
+			if product.BatchTagUuid == 0 {
+				return nil, errors.WithMessage(errors.New("请选择分批类型再加购"))
+			}
 			batchTagRepo := repository.NewBatchTagRepo(db)
 			if product.BatchTagUuid > 0 {
 				// 验证 batch_tag_uuid 的有效性
