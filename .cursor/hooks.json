@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "afterShellExecution": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "beforeMCPExecution": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "afterMCPExecution": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "afterFileEdit": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "beforeSubmitPrompt": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "afterAgentResponse": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "afterAgentThought": [{ "command": "./.cursor/hooks/loki-audit.sh" }],
+    "stop": [{ "command": "./.cursor/hooks/loki-audit.sh" }]
+  }
+}
