@@ -22,3 +22,4 @@ class AddCopyNumToSaleOrderProductTable extends Migrator
     }
 }
 
+
