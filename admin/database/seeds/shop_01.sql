@@ -275,6 +275,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `open_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启积分抵扣, 0-不开启 1-开启',
     `points_exchange_rate` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
     `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
+    `batch_cooking_mode` VARCHAR(10) NOT NULL DEFAULT 'post' COMMENT '分批送厨模式: pre-前置 / post-后置，默认 post',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -66,6 +66,7 @@ type IOrderQueryRepo interface {
 	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
 	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
 	GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrderRank, error)                                                                   // 获取订单的月排名信息（基于全表数据）
+	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
 }
 
@@ -2359,4 +2360,15 @@ func (r *orderRepo) UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark s
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
 		OrderRemark: orderRemark,
 	}).Error
+}
+
+// 获取订单当前的分批送厨模式
+func (r *orderRepo) GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error) {
+	var result struct {
+		BatchCookingMode string `json:"batch_cooking_mode"`
+	}
+	if err := r.db.Model(&model.SaleBillSetting{}).Where("sale_bill_uuid = ?", saleBillUuid).Select("batch_cooking_mode").Scan(&result).Error; err != nil {
+		return "", fmt.Errorf("GetSaleBillBatchCookingMode: %v", err)
+	}
+	return result.BatchCookingMode, nil
 }

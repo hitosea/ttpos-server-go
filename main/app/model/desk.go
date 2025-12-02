@@ -220,5 +220,17 @@ func (model *Desk) GetDeskResp() resp.Desk {
 			}
 			return ""
 		}(),
+		BatchCookingMode: func() string {
+			if model.SaleBill != nil && model.SaleBill.SaleBillSetting != nil {
+				mode := model.SaleBill.SaleBillSetting.BatchCookingMode
+				if mode == constant.BatchCookingModePre {
+					return constant.BatchCookingModePre
+				} else {
+					return constant.BatchCookingModePost
+				}
+			}
+			// 默认后置模式
+			return constant.BatchCookingModePost
+		}(),
 	}
 }

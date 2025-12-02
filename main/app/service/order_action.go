@@ -143,10 +143,10 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	noBatchProductUuids := make([]uint64, 0)
 	noBatchProduct := make([]*model.SaleOrderProduct, 0) // 要合并跟unCookingSaleOrderProducts一起打印的预送厨商品
 
-	// 从业务设置中获取分批送厨模式
-	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 从销售账单设置中获取分批送厨模式（快照值）
+	batchCookingMode := constant.BatchCookingModePost // 默认值
+	if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode != "" {
+		batchCookingMode = saleBill.SaleBillSetting.BatchCookingMode
 	}
 
 	// 送厨相关
@@ -318,7 +318,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		// 将未送厨和预送厨的商品编辑未分批商品
 		if len(noBatchProductUuids) > 0 {
-			if err := s.updateProductBatchFlagToZero(tx, noBatchProductUuids, businessSetting.BatchCookingMode); err != nil {
+			if err := s.updateProductBatchFlagToZero(tx, noBatchProductUuids, batchCookingMode); err != nil {
 				return errors.WithMessage(err)
 			}
 		}

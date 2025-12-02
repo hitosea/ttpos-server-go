@@ -510,6 +510,12 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 		serviceFeeBase = uint(constant.SaleBillSettingServiceFeeBaseAmount)
 	}
 
+	// 分批送厨模式（从业务设置中读取并保存快照）
+	batchCookingMode := businessSetting.BatchCookingMode
+	if batchCookingMode == "" {
+		batchCookingMode = constant.BatchCookingModePost // 默认值
+	}
+
 	saleBillSetting := model.SaleBillSetting{
 		SaleBillUuid:       saleBillUuid,
 		ServiceFeeType:     serviceFeeType,
@@ -525,6 +531,7 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 		OpenPointsExchange: utils.BoolToUint(pointsSetting.GetOpenPointsExchange()),
 		PointsExchangeRate: pointsSetting.GetPointsExchangeRate(),
 		AutoPointsExchange: utils.BoolToUint(pointsSetting.IsAutoPointsExchange()),
+		BatchCookingMode:   batchCookingMode,
 	}
 
 	// 如果是会员端订单，不收取服务费
@@ -1769,9 +1776,13 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			return 0
 		}()
 
-		// 前置模式下，处理分批类型UUID
+		// 前置模式下，处理分批类型UUID（使用快照值）
 		batchTagUuid := uint64(0)
-		if businessSetting.BatchCookingMode == constant.BatchCookingModePre && isBatch == 1 {
+		batchCookingMode := params.Setting.BatchCookingMode
+		if batchCookingMode == "" {
+			batchCookingMode = constant.BatchCookingModePost // 默认值
+		}
+		if batchCookingMode == constant.BatchCookingModePre && isBatch == 1 {
 			batchTagRepo := repository.NewBatchTagRepo(db)
 			if product.BatchTagUuid > 0 {
 				// 验证 batch_tag_uuid 的有效性

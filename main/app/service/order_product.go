@@ -503,10 +503,11 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	defer func() { // 送厨结束后，执行分批送厨
 		// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
 		if ctx.GetSource() == constant.SourceAssistant {
-			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			db := s.dbm.GetDB(ctx.GetDbId())
+			batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
 			if err != nil {
-				ctx.Log().Info("获取业务设置失败,导致不能分批送厨", zap.Error(err))
-			} else if businessSetting.BatchCookingMode == constant.BatchCookingModePre {
+				ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
+			} else if batchCookingMode == constant.BatchCookingModePre {
 				// 异步执行分批送厨，不阻塞流程
 				utils.Go(func() {
 					ctx := ctx.Copy()
@@ -580,12 +581,12 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 				if len(nonBatchUuids) > 0 {
 					// 将预送厨的商品变为未分批商品
 					db := s.dbm.GetDB(ctx.GetDbId())
-					// 从业务设置中获取分批送厨模式
-					businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-					if err != nil {
-						return nil, nil, errors.WithMessage(err)
+					// 从销售账单设置中获取分批送厨模式（快照值）
+					batchCookingMode := constant.BatchCookingModePost // 默认值
+					if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode != "" {
+						batchCookingMode = saleBill.SaleBillSetting.BatchCookingMode
 					}
-					if err := s.updateProductBatchFlagToZero(db, nonBatchUuids, businessSetting.BatchCookingMode); err != nil {
+					if err := s.updateProductBatchFlagToZero(db, nonBatchUuids, batchCookingMode); err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
 					// 场景一: 全是预送厨商品时
@@ -1803,19 +1804,25 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 
 	takeout := shopCart.SaleBill.IsTakeout()
 	orderRemark, _ := shopCart.SaleBill.GetOrderRemarkRes()
+	// 从销售账单设置中获取分批送厨模式（快照值）
+	batchCookingMode := constant.BatchCookingModePost // 默认值
+	if shopCart.SaleBill.SaleBillSetting != nil && shopCart.SaleBill.SaleBillSetting.BatchCookingMode != "" {
+		batchCookingMode = shopCart.SaleBill.SaleBillSetting.BatchCookingMode
+	}
 	shopCartInfo := &resp.ShopCart{
-		SaleBillUuid:    saleBillUuid,
-		IsDeskOrder:     shopCart.IsDeskShopCart(),
-		IsLock:          shopCart.SaleBill.IsLockStatus(),
-		OrderSourceUuid: shopCart.SaleBill.OrderSourceUuid,
-		NationalityUuid: shopCart.SaleBill.NationalityUuid,
-		Takeout:         &takeout,
-		Desk:            nil,
-		Buffet:          nil,
-		DiningMethod:    shopCart.SaleBill.DiningMethod,
-		SaleOrderList:   saleOrderList,
-		UpdateTime:      shopCart.SaleBill.UpdateTime,
-		OrderRemark:     orderRemark,
+		SaleBillUuid:     saleBillUuid,
+		IsDeskOrder:      shopCart.IsDeskShopCart(),
+		IsLock:           shopCart.SaleBill.IsLockStatus(),
+		OrderSourceUuid:  shopCart.SaleBill.OrderSourceUuid,
+		NationalityUuid:  shopCart.SaleBill.NationalityUuid,
+		Takeout:          &takeout,
+		Desk:             nil,
+		Buffet:           nil,
+		DiningMethod:     shopCart.SaleBill.DiningMethod,
+		SaleOrderList:    saleOrderList,
+		UpdateTime:       shopCart.SaleBill.UpdateTime,
+		OrderRemark:      orderRemark,
+		BatchCookingMode: batchCookingMode,
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {
@@ -2382,24 +2389,24 @@ func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 
-	// 获取业务设置，判断是否为前置模式
-	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	if businessSetting.BatchCookingMode != constant.BatchCookingModePre {
-		return nil, errors.WithMessage(errors.New("当前不是前置模式，不支持更换分批类型"))
-	}
-
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
 
+	// 从销售账单设置中获取分批送厨模式（快照值），判断是否为前置模式
+	batchCookingMode := constant.BatchCookingModePost // 默认值
+	if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode != "" {
+		batchCookingMode = saleBill.SaleBillSetting.BatchCookingMode
+	}
+	if batchCookingMode != constant.BatchCookingModePre {
+		return nil, errors.WithMessage(errors.New("当前不是前置模式，不支持更换分批类型"))
+	}
+
 	// 验证新的 batch_tag_uuid 的有效性
 	batchTagRepo := repository.NewBatchTagRepo(db)
-	_, err = batchTagRepo.GetBatchTagInfo(req.BatchTagUuid)
+	_, err := batchTagRepo.GetBatchTagInfo(req.BatchTagUuid)
 	if err != nil {
 		return nil, errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
 	}

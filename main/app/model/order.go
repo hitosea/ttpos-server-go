@@ -49,7 +49,7 @@ type SaleBillCalc struct {
 	DiscountFee       float64 `json:"discount_fee"`        // 折扣费用=销售订单的折扣费用之和
 	MemberDiscountFee float64 `json:"member_discount_fee"` // 会员折扣费用=销售订单的会员折扣费用之和
 	GiftAmount        float64 `json:"gift_amount"`         // 赠菜金额=销售订单的赠菜金额之和
-	ActivityAmount    float64 `json:"activity_amount"`    // 满减活动抵扣金额=销售订单的活动抵扣金额之和
+	ActivityAmount    float64 `json:"activity_amount"`     // 满减活动抵扣金额=销售订单的活动抵扣金额之和
 	FreeAmount        float64 `json:"free_amount"`         // 免单金额=销售订单的免单金额之和
 
 	ProductOriginalAmount float64 `json:"product_original_amount"` //
@@ -165,6 +165,9 @@ type SaleBillSetting struct {
 	OpenPointsExchange uint    `gorm:"column:open_points_exchange;type:tinyint(1);default:0;comment:是否开启积分抵扣, 0-不开启 1-开启" json:"open_points_exchange"`
 	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,2);default:0;comment:积分汇率，每积分抵扣的金额，可输入大于0的两位小数" json:"points_exchange_rate"`
 	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
+
+	// 分批送厨模式
+	BatchCookingMode string `gorm:"column:batch_cooking_mode;type:varchar(10);default:'post';comment:分批送厨模式: pre-前置 / post-后置，默认 post" json:"batch_cooking_mode"`
 }
 
 // 积分是否开启自动抵扣

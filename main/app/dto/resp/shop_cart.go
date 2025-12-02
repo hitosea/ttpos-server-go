@@ -163,6 +163,8 @@ type ShopCart struct {
 	SaleOrderList   []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
 	UpdateTime      int64                `json:"update_time"`            // 更新时间
 	OrderRemark     *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
+	// 分批送厨的模式
+	BatchCookingMode string `json:"batch_cooking_mode"` // 分批送厨的模式 "post"：后置模式 "pre"：前置模式
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 
