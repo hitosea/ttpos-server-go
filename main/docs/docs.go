@@ -14169,7 +14169,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                            "$ref": "#/definitions/req.VerifyPasswordForSensitiveOperationReq"
                         }
                     }
                 ],
@@ -44816,12 +44816,21 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "authorized_staff_account",
+                "operation_type",
                 "password"
             ],
             "properties": {
                 "authorized_staff_account": {
                     "description": "授权员工账号（邮箱或手机号）",
                     "type": "string"
+                },
+                "operation_type": {
+                    "description": "操作类型: discount-折扣操作 refund-退款操作",
+                    "type": "string",
+                    "enum": [
+                        "discount",
+                        "refund"
+                    ]
                 },
                 "password": {
                     "description": "权限密码",
@@ -45835,6 +45844,10 @@ const docTemplate = `{
                     "description": "最小订单金额",
                     "type": "number"
                 },
+                "order_meal_avg_amount": {
+                    "description": "人均订单金额（仅桌台渠道）",
+                    "type": "number"
+                },
                 "total_desk_num": {
                     "description": "桌数（仅桌台渠道）",
                     "type": "integer"
@@ -46225,6 +46238,10 @@ const docTemplate = `{
         "resp.Desk": {
             "type": "object",
             "properties": {
+                "batch_cooking_mode": {
+                    "description": "分批送厨模式, \"post\"：后置模式 \"pre\"：前置模式",
+                    "type": "string"
+                },
                 "batch_tag_color": {
                     "description": "桌台分批类型的颜色",
                     "type": "string"
@@ -53366,6 +53383,10 @@ const docTemplate = `{
         "resp.ShopCart": {
             "type": "object",
             "properties": {
+                "batch_cooking_mode": {
+                    "description": "分批送厨的模式",
+                    "type": "string"
+                },
                 "buffet": {
                     "description": "自助餐信息",
                     "allOf": [

@@ -8323,11 +8323,18 @@ definitions:
       authorized_staff_account:
         description: 授权员工账号（邮箱或手机号）
         type: string
+      operation_type:
+        description: '操作类型: discount-折扣操作 refund-退款操作'
+        enum:
+        - discount
+        - refund
+        type: string
       password:
         description: 权限密码
         type: string
     required:
     - authorized_staff_account
+    - operation_type
     - password
     type: object
   req.VerifyPasswordReq:
@@ -8988,6 +8995,9 @@ definitions:
       min_order_amount:
         description: 最小订单金额
         type: number
+      order_meal_avg_amount:
+        description: 人均订单金额（仅桌台渠道）
+        type: number
       total_desk_num:
         description: 桌数（仅桌台渠道）
         type: integer
@@ -9251,6 +9261,9 @@ definitions:
     type: object
   resp.Desk:
     properties:
+      batch_cooking_mode:
+        description: 分批送厨模式, "post"：后置模式 "pre"：前置模式
+        type: string
       batch_tag_color:
         description: 桌台分批类型的颜色
         type: string
@@ -14031,6 +14044,9 @@ definitions:
     type: object
   resp.ShopCart:
     properties:
+      batch_cooking_mode:
+        description: 分批送厨的模式
+        type: string
       buffet:
         allOf:
         - $ref: '#/definitions/resp.BuffetInfo'
@@ -24779,7 +24795,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.VerifyPasswordReq'
+          $ref: '#/definitions/req.VerifyPasswordForSensitiveOperationReq'
       produces:
       - application/json
       responses:
