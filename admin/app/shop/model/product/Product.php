@@ -433,7 +433,17 @@ class Product extends ProductModel
             }
         }
         if (!empty($data['selling_point'])) {
-            return $data['selling_point'];
+            $describe = '';
+            $sellingPoint = $data['selling_point'];
+            if (is_string($data['selling_point'])) {
+                $sellingPoint = json_decode($data['selling_point'], true);
+            }
+            foreach ($sellingPoint as $value) {
+                if ($value !== '') {
+                    $describe = $value;
+                }
+            }
+            return $describe;
         }
         $currentDescribe = $this->describe;
         return is_string($currentDescribe) ? $currentDescribe : '';
