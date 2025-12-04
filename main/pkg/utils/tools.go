@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"ttpos-server-go/config"
-	"ttpos-server-go/version"
 
 	"github.com/shopspring/decimal"
 )
@@ -167,7 +166,7 @@ func RemoveDomain(fileUrl string) string {
 
 // GetVersion 并返回版本号
 func GetVersion() string {
-	return version.Version
+	return config.Version
 }
 
 func DecimalAdd(f1 float64, fs ...float64) float64 {
