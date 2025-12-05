@@ -77,6 +77,7 @@ type MaterialDetailResp struct {
 	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
 	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
+	OriginCountry          *CountryItem         `json:"origin_country"`            // 原产地国家信息（可选）
 	IsEditable             bool                 `json:"is_editable"`               // 是否可编辑
 }
 
@@ -199,4 +200,15 @@ type MaterialConsumption struct {
 	MaterialUuid uint64  `json:"material_uuid"` // 物品UUID
 	MaterialCode string  `json:"material_code"` // 物品编码
 	Consumption  float64 `json:"consumption"`   // 消耗量
+}
+
+// CountryItem 国家信息
+type CountryItem struct {
+	Code       string             `json:"code"`        // 国家编码（ISO 3166-1 alpha-2）
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 多语言国家名称
+}
+
+// CountryListResp 国家列表响应
+type CountryListResp struct {
+	List []CountryItem `json:"list"` // 国家列表
 }

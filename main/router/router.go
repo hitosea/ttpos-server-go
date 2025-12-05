@@ -86,7 +86,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterAuthHandlers(shopGroup, dbm, cache)                // 认证
 			shop.RegisterStaffHandlers(shopGroup, dbm, cache)               // 管理员管理
-			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                 // 角色管理
+			shop.RegisterRoleHandlers(shopGroup, dbm, cache)                // 角色管理
 			shop.RegisterSettingHandlers(shopGroup, dbm, cache)             // 设置
 			shop.RegisterProductHandlers(shopGroup, dbm, cache)             // 商品
 			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache)        // 商品标签
@@ -103,6 +103,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterExportRecordHandlers(shopGroup, dbm, cache)        // 导出记录
 			shop.RegisterDeskMapHandlers(shopGroup, dbm, cache)             // 桌台地图
 			shop.RegisterNationalityRoutes(shopGroup, dbm, cache)           // 国籍管理
+			shop.RegisterCountryRoutes(shopGroup, dbm, cache)               // 国家管理
 			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)           // 外卖来源管理
 			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache) // 满减活动管理
 		}

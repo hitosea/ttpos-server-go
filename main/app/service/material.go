@@ -425,6 +425,19 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	if material.CostUnit != nil {
 		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
 	}
+
+	// 获取原产地国家信息
+	var originCountry *material_resp.CountryItem
+	if material.OriginCountryCode != "" {
+		country := constant.GetCountryByCode(material.OriginCountryCode)
+		if country != nil {
+			originCountry = &material_resp.CountryItem{
+				Code:       country.Code,
+				LocaleName: country.GetLocaleNames(),
+			}
+		}
+	}
+
 	return material_resp.MaterialDetailResp{
 		Uuid:                 material.Uuid,
 		LocaleName:           material.MultiLanguageName.GetNames(),
@@ -455,6 +468,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,
+		OriginCountry:          originCountry,
 		IsEditable:             !material.IsHeadquarter(), // 总部物品不可编辑
 	}, nil
 }
@@ -901,6 +915,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 			}
 			return request.AllowSubstoreVisible
 		}(),
+		OriginCountryCode: request.OriginCountryCode,
 	}
 
 	// 设置总部ID
@@ -1119,6 +1134,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				}
 				return unitMap[request.CostUnitUuid]
 			}(),
+			OriginCountryCode: request.OriginCountryCode,
 		}
 
 		err = materialRepo.UpdateMaterial(material)

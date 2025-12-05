@@ -113,6 +113,7 @@ type MaterialAddReq struct {
 	InternalCode         string             `json:"internal_code"`          // 内部编码
 	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
 	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	OriginCountryCode    string             `json:"origin_country_code"`    // 原产地国家编码（可选）
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
 	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
@@ -293,6 +294,7 @@ type MaterialEditReq struct {
 	InternalCode         string             `json:"internal_code"`          // 内部编码
 	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
 	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	OriginCountryCode    string             `json:"origin_country_code"`    // 原产地国家编码（可选）
 }
 
 func (r *MaterialEditReq) Validate() error {

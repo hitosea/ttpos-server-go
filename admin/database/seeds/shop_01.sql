@@ -959,6 +959,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
     `warehouse_uuid` BIGINT UNSIGNED DEFAULT 0 COMMENT '默认仓库Uuid，表示该原料的来自哪个仓库',
     `allow_substore_visible` INT(1) NOT NULL DEFAULT 1 COMMENT '允许子店可见：1-允许，0-不允许',
+    `origin_country_code` VARCHAR(10) NOT NULL DEFAULT '' COMMENT '原产地国家编码（ISO 3166-1 alpha-2，如：CN, US, TH）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
