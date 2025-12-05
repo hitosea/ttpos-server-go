@@ -52,3 +52,36 @@ type SyncTaskListPaginationResp struct {
 	List []SyncTaskListResp `json:"list"`
 	Meta dto.PageResponse   `json:"meta"`
 }
+
+// HeadquartersDataListResp 总部可同步数据列表响应
+type HeadquartersDataListResp struct {
+	DataGroups []DataGroup `json:"data_groups"` // 按种类分组的数据
+}
+
+// DataGroup 数据分组
+type DataGroup struct {
+	Type        string     `json:"type"`         // 数据类型（如：product_category, unit, coupon等）
+	TypeName    string     `json:"type_name"`    // 类型名称（如：商品分类、单位、优惠券等）
+	Items       []DataItem `json:"items"`        // 该类型的数据列表
+	SyncedUuids []uint64   `json:"synced_uuids"` // 分店已同步的总部数据uuid列表
+}
+
+// DataItem 数据项
+type DataItem struct {
+	Uuid           uint64         `json:"uuid"`                      // 数据uuid
+	Name           string         `json:"name"`                      // 数据名称
+	RelatedData    []RelatedData  `json:"related_data,omitempty"`    // 关联数据（明确类型和uuid列表）
+	AdditionalInfo map[string]any `json:"additional_info,omitempty"` // 额外信息（如商品价格、活动状态等）
+}
+
+// RelatedData 关联数据
+type RelatedData struct {
+	Type  string   `json:"type"`  // 关联数据的类型（如：product, category, unit, flavor等）
+	Uuids []uint64 `json:"uuids"` // 关联的uuid列表
+}
+
+// GranularSyncResp 颗粒化同步响应
+type GranularSyncResp struct {
+	TaskUuid uint64 `json:"task_uuid"` // 同步任务uuid
+	Message  string `json:"message"`   // 提示信息
+}

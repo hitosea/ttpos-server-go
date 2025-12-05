@@ -7,6 +7,7 @@ import (
 // FullReductionActivity 满减活动表 `ttpos_full_reduction_activity`
 type FullReductionActivity struct {
 	BaseModel
+	HeadquarterUuid       uint64 `gorm:"column:headquarter_uuid;default:0;comment:总部uuid，0表示本店创建，>0表示从总部同步" json:"headquarter_uuid"`
 	Name                  string `gorm:"column:name;type:varchar(1000);default:'';comment:'活动名称（JSON格式）'" json:"name"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;default:0;comment:'多语言名称UUID'" json:"multi_language_name_uuid"`
 	StartDate             int64  `gorm:"column:start_date;type:int(10);default:0;comment:'活动开始日期（时间戳，当天00:00:00）'" json:"start_date"`

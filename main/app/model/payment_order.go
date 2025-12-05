@@ -12,6 +12,7 @@ import (
 // PaymentMethod 支付方式 `ttpos_payment_method`
 type PaymentMethod struct {
 	BaseModel
+	HeadquarterUuid      uint64  `gorm:"column:headquarter_uuid;default:0;comment:总部uuid，0表示本店创建，>0表示从总部同步;index:idx_headquarter_uuid" json:"headquarter_uuid"`
 	Name                 string  `gorm:"column:name;type:varchar(255);comment:支付方式名称;NOT NULL" json:"name"`
 	Code                 int     `gorm:"column:code;type:int(11);default:0;comment:支付方式代号;NOT NULL" json:"code"`
 	PaymentName          string  `gorm:"column:payment_name;type:varchar(255);comment:支付名称;NOT NULL" json:"payment_name"`
@@ -36,6 +37,26 @@ func (model *PaymentMethod) SetNil() {
 	model.QrcodeFile = nil
 	model.LogoFile = nil
 }
+
+// 系统默认支付方式code
+const (
+	PaymentMethodBalance = 10 // 余额
+	PaymentMethodCash    = 40 // 现金
+)
+
+// 渠道提供方
+const (
+	PaymentSourceSystem      = 0 // 系统默认
+	PaymentSourceDefault     = 1 // 自行添加
+	PaymentSourceLianlianpay = 2 // LianLianPay
+)
+
+// LianLian渠道支付方式code（特殊code）
+const (
+	PaymentCodeLianlianWechat      = 90111 // LIANLIAN_WECHAT_PAY
+	PaymentCodeLianlianAli         = 90222 // LIANLIAN_ALI_PAY
+	PaymentCodeLianlianQrPromptPay = 90333 // LIANLIAN_QR_PROMPT_PAY
+)
 
 // GetPaymentName 获取支付名称
 func (model *PaymentMethod) GetPaymentName() string {

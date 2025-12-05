@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// AuthHandler 认证鉴权控制器
+// SettingHandler 设置控制器
 type SettingHandler struct {
 	syncSrv       service.ISyncSrv
 	settingSrv    settingSrv.ISrv
@@ -616,6 +616,56 @@ func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// GetHeadquartersDataList 获取总部可同步数据列表
+// @Summary 获取总部可同步数据列表
+// @Description 获取总部可同步数据列表（按种类分组，返回所有16种数据类型）
+// @Tags 商家端.数据同步
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.HeadquartersDataListResp}
+// @Router /shop/setting/headquarters_data_list [get]
+func (h *SettingHandler) GetHeadquartersDataList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 不需要传递任何参数，查询所有类型
+	result, err := h.syncSrv.GetHeadquartersDataList(ctx, req.GetHeadquartersDataListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, result)
+}
+
+// GranularSync 颗粒化同步数据
+// @Summary 颗粒化同步数据
+// @Description 颗粒化同步数据（接收勾选的uuid列表，删除未勾选的，同步勾选的）
+// @Tags 商家端.数据同步
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.GranularSyncReq true "请求参数"
+// @Success 200 {object} dto.Response{data=resp.GranularSyncResp}
+// @Router /shop/setting/granular_sync [post]
+func (h *SettingHandler) GranularSync(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var syncReq req.GranularSyncReq
+	if err := c.ShouldBindJSON(&syncReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	result, err := h.syncSrv.GranularSync(ctx, syncReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, result)
+}
+
 // GetPaymentMethodList 获取支付方式列表
 // @Summary 获取支付方式列表
 // @Description 获取支付方式列表
@@ -905,11 +955,13 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码
-		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)      // 获取会员端二维码
-		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)            // 上传logo
-		privateApi.POST("/setting/sync", wrapper.Sync)                         // 获取总部最新数据
-		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)     // 获取同步任务列表
-		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail) // 获取同步任务详情
+		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)                  // 获取会员端二维码
+		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)                        // 上传logo
+		privateApi.POST("/setting/sync", wrapper.Sync)                                     // 获取总部最新数据
+		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)                 // 获取同步任务列表
+		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail)             // 获取同步任务详情
+		privateApi.GET("/setting/headquarters_data_list", wrapper.GetHeadquartersDataList) // 获取总部可同步数据列表
+		privateApi.POST("/setting/granular_sync", wrapper.GranularSync)                    // 颗粒化同步数据
 		// 数据管理
 		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
 		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理

@@ -206,16 +206,16 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 
 	// 解析json字符串为map进行处理，处理language字段
 	jsonStr := st.Values
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err := json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败-01", zap.Error(err))
 		return store, errors.New("解析商城设置失败-01" + err.Error())
 	}
 	// 处理language数组中的key字段
-	if language, ok := jsonMap["language"].([]interface{}); ok {
+	if language, ok := jsonMap["language"].([]any); ok {
 		for i, item := range language {
-			if langItem, ok := item.(map[string]interface{}); ok {
+			if langItem, ok := item.(map[string]any); ok {
 				// 尝试将key转换为string
 				if keyNum, ok := langItem["key"].(string); ok {
 					langItem["key"], _ = strconv.Atoi(keyNum)
@@ -249,6 +249,8 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	if store.IPWhiteList != "" {
 		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
 	}
+
+	logger.Logger.Info("store", zap.Any("store", store))
 
 	defaultStore := s.getDefaultStore(ctx.GetLanguage())
 	store.TimeZoneList = nil
@@ -303,7 +305,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	jsonStr := st.Values
 
 	// 解析json字符串为map进行处理
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err = json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
@@ -312,9 +314,9 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	// 处理 cashier_printer 字段，确保它是一个数组
 	if cashierPrinter, ok := jsonMap["cashier_printer"]; ok {
 		// 如果是对象，转换为数组
-		if _, ok := cashierPrinter.(map[string]interface{}); ok {
+		if _, ok := cashierPrinter.(map[string]any); ok {
 			// 将对象转换为数组
-			cashierPrinterArray := []interface{}{cashierPrinter}
+			cashierPrinterArray := []any{cashierPrinter}
 			jsonMap["cashier_printer"] = cashierPrinterArray
 		}
 	}
@@ -338,9 +340,9 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		}
 	}
 	// 处理language_list中的key
-	if languageList, ok := jsonMap["language_list"].([]interface{}); ok {
+	if languageList, ok := jsonMap["language_list"].([]any); ok {
 		for i, item := range languageList {
-			if langItem, ok := item.(map[string]interface{}); ok {
+			if langItem, ok := item.(map[string]any); ok {
 				// 尝试将key转换为int
 				if keyStr, ok := langItem["key"].(string); ok {
 					langItem["key"], _ = strconv.Atoi(keyStr)
@@ -929,7 +931,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	}
 	st := s.getSettingByKey(ctx, constant.SettingAssistant)
 	// 解析json字符串为map进行处理
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析点餐助手设置失败-01", zap.Error(err))
@@ -1138,7 +1140,7 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
 	}
 	// 解析json字符串为map进行处理
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析各端-扫码H5设置失败 - 01", zap.Error(err))

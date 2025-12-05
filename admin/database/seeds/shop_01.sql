@@ -353,6 +353,7 @@ CREATE TABLE `ttpos_ll_payment_order` (
 CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '支付方式ID',
+    `headquarter_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '总部uuid，0表示本店创建，>0表示从总部同步',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支付方式名称',
     `code` INT(11) NOT NULL DEFAULT 0 COMMENT '支付方式代号',
     `payment_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支付名称',
@@ -371,7 +372,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_headquarter_uuid` (`headquarter_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付方式表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
@@ -379,7 +381,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `name` TEXT COMMENT '商品名称',
-    `flavor_name` TEXT DEFAULT '' COMMENT '规格名称',
+    `flavor_name` TEXT COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` DECIMAL(12, 8) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
     `num_type` INT(10) NOT NULL DEFAULT 0 COMMENT '数量计算方法, 0-整数 1-小数',
@@ -1372,6 +1374,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_tax` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_label` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `headquarter_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '总部uuid，0表示本店创建，>0表示从总部同步',
     `name` TEXT COMMENT '标签名称',
     `style` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '标签样式',
     `is_show_cashier` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在收银机显示, 0-否 1-是',
@@ -1383,7 +1386,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_label` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `idx_uuid` (`uuid`)
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    INDEX `idx_headquarter_uuid` (`headquarter_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品标签表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
@@ -3035,6 +3039,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_lan_printer_scan` (
 CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` bigint(20) DEFAULT 0 COMMENT '活动唯一ID',
+  `headquarter_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '总部uuid，0表示本店创建，>0表示从总部同步',
   `name` varchar(2500) DEFAULT '' COMMENT '活动名称',
   `type` int(1) DEFAULT 0 COMMENT '活动类型 0邀请有礼 1积分商城',
   `multi_language_name_uuid` bigint(20) DEFAULT 0 COMMENT '活动名称多语言uuid',
@@ -3053,7 +3058,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity` (
   `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX `idx_headquarter_uuid` (`headquarter_uuid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员营销-活动表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_consumption` (
@@ -3086,6 +3092,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_prize` (
 CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` bigint(20) DEFAULT 0 COMMENT '优惠券唯一ID',
+  `headquarter_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '总部uuid，0表示本店创建，>0表示从总部同步',
   `name` varchar(50) DEFAULT '' COMMENT '优惠券名称',
   `sort` int(11) DEFAULT 0 COMMENT '排序, 1-99',
   `type` varchar(20) DEFAULT '' COMMENT '优惠券类型: deduction - 抵扣券',
@@ -3102,7 +3109,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon` (
   `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX `idx_headquarter_uuid` (`headquarter_uuid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员营销-优惠券表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon_record` (
@@ -3563,6 +3571,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
 CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `headquarter_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '总部uuid，0表示本店创建，>0表示从总部同步',
     `name` varchar(1000) NOT NULL DEFAULT '' COMMENT '活动名称（JSON格式）',
     `multi_language_name_uuid` bigint NOT NULL DEFAULT 0 COMMENT '多语言名称UUID',
     `start_date` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '活动开始日期（时间戳，当天00:00:00）',
@@ -3579,6 +3588,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity` (
     KEY `idx_start_date` (`start_date`),
     KEY `idx_end_date` (`end_date`),
     KEY `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
+    INDEX `idx_headquarter_uuid` (`headquarter_uuid`),
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='满减活动表';
 
