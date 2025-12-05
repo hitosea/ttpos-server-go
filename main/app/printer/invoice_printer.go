@@ -144,6 +144,15 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
+		if tmpInfo.TmpUuid > 0 {
+			return template.NewInvoiceImgTemplateCustom(base).GetPrintContent(
+				settingPrinterInfo,
+				tmpInfo.TmpData,
+				saleBill,
+				saleOrder,
+				false,
+			)
+		}
 		if !p.Is58mmPrinter() {
 			return template.NewInvoiceImgTemplate(base).GetPrintContent(
 				settingPrinterInfo,

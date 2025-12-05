@@ -53,6 +53,7 @@ const (
 const (
 	TemplateNameBilling    = "结账单"
 	TemplateNamePreBilling = "预结账单"
+	TemplateNameInvoice    = "发票"
 )
 
 type printerSrv struct {
@@ -320,7 +321,7 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 	templateOrders := []uint64{
 		constant.PrinterTemplatePreBilling, // 预结账单
 		constant.PrinterTemplateBilling,    // 结账单
-		// constant.PrinterTemplateInvoice,       // 发票
+		constant.PrinterTemplateInvoice,    // 发票
 		// constant.PrinterTemplateRecharge,      // 充值单
 		// constant.PrinterTemplateBusiness,      // 营业数据
 		// constant.PrinterTemplateHandoverSheet, // 交班单
