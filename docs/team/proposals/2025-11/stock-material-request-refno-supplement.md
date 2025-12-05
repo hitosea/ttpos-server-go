@@ -13,7 +13,7 @@
 | **目标版本** | v2.x.x |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | docs/shared/specs/active/task-erp-material-request-refno/ |
+| **关联 Spec** | docs/shared/specs/archived/v2.10.0/task-erp-material-request-refno/ |
 
 ---
 
@@ -151,9 +151,9 @@
 
 ### 相关文档
 
-- 需求文档 (Requirements): `docs/shared/specs/active/task-erp-material-request-refno/requirements.md`
-- 设计文档 (Design): `docs/shared/specs/active/task-erp-material-request-refno/design.md`
-- 任务清单 (Tasks): `docs/shared/specs/active/task-erp-material-request-refno/tasks.md`
+- 需求文档 (Requirements): `docs/shared/specs/archived/v2.10.0/task-erp-material-request-refno/requirements.md`
+- 设计文档 (Design): `docs/shared/specs/archived/v2.10.0/task-erp-material-request-refno/design.md`
+- 任务清单 (Tasks): `docs/shared/specs/archived/v2.10.0/task-erp-material-request-refno/tasks.md`
 - Protobuf 规范: `ttpos-bmp/.cursor/rules/proto-rules.mdc`
 - Go BMP 规范: `ttpos-bmp/.cursor/rules/go-rules.mdc`
 

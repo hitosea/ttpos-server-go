@@ -161,8 +161,8 @@
 
 ### 相关文档
 
-- 需求文档: `docs/shared/specs/active/story-pos-sensitive-operation-settings/requirements.md`
-- 设计文档: `docs/shared/specs/active/story-pos-sensitive-operation-settings/design.md`
+- 需求文档: `docs/shared/specs/archived/v2.10.0/story-pos-sensitive-operation-settings/requirements.md`
+- 设计文档: `docs/shared/specs/archived/v2.10.0/story-pos-sensitive-operation-settings/design.md`
 - 操作记录 Service: `main/app/service/order_operation_log.go`
 - 操作记录查询: `main/app/service/order_manage.go` - `GetOrderOperationLog` 方法
 

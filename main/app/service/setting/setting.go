@@ -1683,6 +1683,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
+	storeSetting.StoreCode = storeSettingReq.StoreCode
 
 	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####
 	// ##### 1、处理 cashier 设置 #####

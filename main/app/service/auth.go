@@ -1020,6 +1020,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			IpWhiteList:     storeSetting.IPWhiteList,
 			Phone:           storeSetting.Phone,
 			TaxNumber:       storeSetting.TaxNumber,
+			StoreCode:       storeSetting.StoreCode,
 			TimeZoneList:    storeSetting.TimeZoneList,
 			DefaultLanguage: storeSetting.Language[0].Name,
 			LanguageList:    storeSetting.Language,

@@ -52,7 +52,7 @@ description: 项目结构快速定位
 - **禁止新增一级目录**：如需新增模块，优先在现有模块内扩展，例如：
   - Go 业务 → 放在 `main/app/` 或 `ttpos-bmp/app/ttpos-*/` 下
   - PHP 业务 → 放在 `admin/app/{admin,shop,common}/` 下
-  - 新管理端 → 优先 `ttpos-flutter/apps/shop` 中
+  - 新管理端 → 优先 `查看 .agents ` 中
 - **文档统一放在 `docs/`**，按 `agent/human/shared/team` 分类，不在源码目录里随意新建 `docs/`。
 - **脚本优先放在模块内的 `scripts/` 或根 `ttpos-scripts/`**，不要在任意目录下散落脚本文件。
 - **调试/临时文件禁止入库**：如本地证书、日志、临时导出文件等，统一走 `.gitignore` 或放在 `runtime/` / `tmp/`。
@@ -246,7 +246,7 @@ docs/                   # 项目文档
 
 **重要规则：架构图和文档中应明确前端技术栈，避免混淆**
 
-- ✅ **新管理端（Shop）**: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/shop`
+- ✅ **新管理端（Shop）**: 使用 **Flutter + Dart**，位于 `查看 .agents `
 - ✅ **所有用户端终端**（pos/kds/qds/assistant/tablet/kiosk/mobile/menu/member）: 使用 **Flutter + Dart**，位于 `ttpos-flutter/apps/`
 - ✅ **旧管理后台和店铺后台**: 使用 **Vue 3 + TypeScript**，位于 `admin/views/`
 

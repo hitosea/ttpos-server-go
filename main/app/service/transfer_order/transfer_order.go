@@ -97,6 +97,7 @@ func (s *transferOrderSrv) GetTransferOrderList(
 			OrderTimeEnd:        req.OrderTimeEnd,
 			OppositeCompanyUuid: req.OppositeCompanyUuid,
 			MyRole:              req.MyRole,
+			SubmitSide:          req.SubmitSide, // 新增：提交方筛选
 		},
 	)
 	if err != nil {

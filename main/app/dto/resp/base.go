@@ -307,6 +307,7 @@ type ShopProfile struct {
 	IpWhiteList     string                 `json:"ip_white_list"`    // ip白名单
 	Phone           string                 `json:"phone"`            // 联系电话
 	TaxNumber       string                 `json:"tax_number"`       // 税号
+	StoreCode       string                 `json:"store_code"`       // 店铺编码，用于发票打印
 	TimeZoneList    []setting.TimeZoneItem `json:"time_zone_list"`   // 时区列表
 	DefaultLanguage string                 `json:"default_language"` // 默认语言
 	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表

@@ -35,6 +35,7 @@ type ITransferOrderRepo interface {
 	WhereStatusIn(statusIn []int) DBOption
 	WhereSenderCompanyUuid(senderCompanyUuid uint64) DBOption
 	WhereReceiverCompanyUuid(receiverCompanyUuid uint64) DBOption
+	WhereSubmitSide(currentCompanyUuid uint64, submitSide string) DBOption // 提交方筛选选项
 	WhereOutWarehouseErpCode(outWarehouseErpCode string) DBOption
 	WhereInWarehouseErpCode(inWarehouseErpCode string) DBOption
 	WhereCreateTimeRange(start, end int) DBOption
@@ -150,6 +151,7 @@ type TransferOrderQueryReq struct {
 	OrderTimeEnd        int
 	OppositeCompanyUuid []uint64
 	MyRole              []string // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批
+	SubmitSide          string   // 提交方筛选：all-全部 self-本店提交 other-他店提交
 }
 
 func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferOrderQueryReq) ([]model.TransferOrder, int64, error) {
@@ -241,6 +243,20 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 				) OR`, companyUuid)
 			}
 			baseSQL += fmt.Sprintf(" 0 = 1 )")
+		}
+	}
+
+	// 提交方筛选
+	if query.SubmitSide != "" {
+		switch query.SubmitSide {
+		case "self":
+			// 仅本店提交（company_uuid 为本店）
+			baseSQL += fmt.Sprintf(" AND company_uuid = %d ", companyUuid)
+		case "other":
+			// 仅其他门店提交（company_uuid 不是本店）
+			baseSQL += fmt.Sprintf(" AND company_uuid != %d ", companyUuid)
+		case "all":
+			// 全部：不添加额外条件（已经在 UNION 中处理）
 		}
 	}
 
@@ -348,6 +364,28 @@ func (r *TransferOrderRepoImpl) WhereReceiverCompanyUuid(receiverCompanyUuid uin
 			return db.Where("receiver_company_uuid = ?", receiverCompanyUuid)
 		}
 		return db
+	}
+}
+
+// WhereSubmitSide 提交方筛选条件
+func (r *TransferOrderRepoImpl) WhereSubmitSide(currentCompanyUuid uint64, submitSide string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if currentCompanyUuid == 0 {
+			return db
+		}
+		switch submitSide {
+		case "self":
+			// 仅本店提交（company_uuid 为本店）
+			return db.Where("company_uuid = ?", currentCompanyUuid)
+		case "other":
+			// 仅其他门店提交（company_uuid 不是本店）
+			return db.Where("company_uuid != ?", currentCompanyUuid)
+		case "all":
+			fallthrough
+		default:
+			// 全部：不添加额外筛选（已在基础查询中处理与本店相关的调拨单）
+			return db
+		}
 	}
 }
 

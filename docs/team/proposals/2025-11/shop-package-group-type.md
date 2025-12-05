@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                                |
 | **状态**      | 待评审                                                                                                                 |
 | **关联任务**  | DooTask #36913                                                                                                         |
-| **关联 Spec** | [docs/shared/specs/active/story-shop-package-group-type/](../../../shared/specs/active/story-shop-package-group-type/) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-shop-package-group-type/](../../../shared/specs/active/story-shop-package-group-type/) |
 
 ---
 
