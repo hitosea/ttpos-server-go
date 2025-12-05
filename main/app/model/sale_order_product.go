@@ -91,7 +91,7 @@ type SaleOrderProduct struct {
 	DeskUuid              uint64 `gorm:"column:desk_uuid;type:bigint(20);not null;default:0;comment:'桌台ID, 默认为0是本台，大于0为合并过来的桌台'" json:"desk_uuid"`
 
 	// 其他字段
-	Sign string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
+	Sign string `gorm:"column:sign;type:text;comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
 
 	// 扫码订单相关
 	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`

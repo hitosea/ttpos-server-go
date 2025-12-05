@@ -30,6 +30,7 @@ const (
 )
 
 type Context interface {
+	context.Context
 	GetLanguage() string                     // 获取语言
 	SetLanguage(language string)             // 设置语言
 	GetCompanyUuid() uint64                  // 获取商家ID
