@@ -12,7 +12,6 @@ import (
 // PaymentMethod 支付方式 `ttpos_payment_method`
 type PaymentMethod struct {
 	BaseModel
-	HeadquarterUuid      uint64  `gorm:"column:headquarter_uuid;default:0;comment:总部uuid，0表示本店创建，>0表示从总部同步;index:idx_headquarter_uuid" json:"headquarter_uuid"`
 	Name                 string  `gorm:"column:name;type:varchar(255);comment:支付方式名称;NOT NULL" json:"name"`
 	Code                 int     `gorm:"column:code;type:int(11);default:0;comment:支付方式代号;NOT NULL" json:"code"`
 	PaymentName          string  `gorm:"column:payment_name;type:varchar(255);comment:支付名称;NOT NULL" json:"payment_name"`
