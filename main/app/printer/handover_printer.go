@@ -79,6 +79,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 		Type:            1,
 		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
+		PrintSpeed:      settingPrinterInfo.PrintSpeed,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))

@@ -1,0 +1,188 @@
+---
+description: Go Modules 模块开发规范
+globs:
+  - main/app/modules/**/*.go
+---
+
+# Go Modules 模块开发规范
+
+> 本规范适用于 `main/app/modules/` 目录下的 DDD 模块开发
+
+---
+
+## ⚠️ 核心约束（强制执行）
+
+### 1. Context 类型约束
+
+**在 `modules` 目录中，必须使用自定义的 `pkg/context.Context`，禁止使用标准库的 `context.Context`。**
+
+```go
+// ✅ 正确：使用自定义 Context
+import "ttpos-server-go/pkg/context"
+
+type IWarehouseRepository interface {
+    Save(ctx context.Context, warehouse *entity.Warehouse) error
+}
+
+// ❌ 错误：使用标准库 context
+import "context"
+
+type IWarehouseRepository interface {
+    Save(ctx context.Context, warehouse *entity.Warehouse) error
+}
+```
+
+**原因**：
+- 自定义 Context 包含商家信息、数据库连接、语言设置等业务上下文
+- 可以直接通过 `ctx.GetDbId()` 获取数据库连接
+- 避免在方法间传递大量参数
+
+**实现示例**：
+
+```go
+package repository
+
+import (
+    "ttpos-server-go/pkg/context"
+    "ttpos-server-go/app/modules/inventory/domain/entity"
+)
+
+type IWarehouseRepository interface {
+    Save(ctx context.Context, warehouse *entity.Warehouse) error
+    FindByUuid(ctx context.Context, uuid uint64) (*entity.Warehouse, error)
+}
+```
+
+```go
+package persistence
+
+import (
+    "ttpos-server-go/pkg/context"
+    "ttpos-server-go/app/modules/inventory/domain/entity"
+)
+
+func (r *WarehouseRepositoryImpl) Save(ctx context.Context, warehouse *entity.Warehouse) error {
+    db := ctx.GetDB() // 直接使用 ctx 获取 DB
+    // ...
+}
+```
+
+**调用外部服务时**：
+如果需要调用外部服务（如 ERP、RPC），它们可能期望标准库的 `context.Context`，此时使用 `ctx.GetContext()` 转换：
+
+```go
+// 外部服务期望标准 context.Context
+erpCode, err := erpSrv.CreateWarehouse(ctx.GetContext(), req)
+```
+
+---
+
+## 目录结构规范
+
+```
+app/modules/{domain}/
+├── domain/                 # 领域层
+│   ├── entity/             # 实体/聚合根
+│   ├── valueobject/        # 值对象
+│   ├── repository/         # 仓储接口（使用 pkg/context.Context）
+│   ├── service/            # 领域服务（使用 pkg/context.Context）
+│   ├── event/              # 领域事件
+│   └── specification/      # 规格模式
+│
+├── application/            # 应用层
+│   └── *_app_service.go    # 应用服务（使用 pkg/context.Context）
+│
+└── infrastructure/         # 基础设施层
+    ├── persistence/        # 仓储实现（使用 pkg/context.Context）
+    └── integration/        # 外部服务集成（使用 pkg/context.Context）
+```
+
+---
+
+## 接口设计规范
+
+### Repository 接口
+
+```go
+package repository
+
+import (
+    "ttpos-server-go/pkg/context"
+)
+
+// IXxxRepository 仓储接口
+type IXxxRepository interface {
+    // 所有方法第一个参数必须是 context.Context（pkg/context）
+    Save(ctx context.Context, entity *Entity) error
+    FindByUuid(ctx context.Context, uuid uint64) (*Entity, error)
+    Remove(ctx context.Context, uuid uint64) error
+}
+```
+
+### Domain Service 接口
+
+```go
+package service
+
+import (
+    "ttpos-server-go/pkg/context"
+)
+
+// IXxxDomainService 领域服务接口
+type IXxxDomainService interface {
+    // 所有方法第一个参数必须是 context.Context（pkg/context）
+    DoSomething(ctx context.Context, req Request) (*Result, error)
+}
+```
+
+---
+
+## 依赖注入规范
+
+```go
+// 应用服务构造函数
+func NewXxxAppService(
+    repo repository.IXxxRepository,
+    domainSrv service.IXxxDomainService,
+    // ... 其他依赖
+) *XxxAppService {
+    return &XxxAppService{
+        repo:      repo,
+        domainSrv: domainSrv,
+    }
+}
+```
+
+---
+
+## 测试规范
+
+测试文件中需要 mock `pkg/context.Context`：
+
+```go
+// mockContext 实现 pkg/context.Context 接口
+type mockContext struct {
+    ctx         context.Context // 标准库 context（内部使用）
+    companyUuid uint64
+    dbId        uint64
+    // ... 其他字段
+}
+
+func (m *mockContext) GetContext() context.Context { return m.ctx }
+func (m *mockContext) GetCompanyUuid() uint64      { return m.companyUuid }
+func (m *mockContext) GetDbId() uint64             { return m.dbId }
+// ... 实现其他接口方法
+```
+
+---
+
+## 相关文档
+
+- 项目结构：`.cursor/rules/structs.mdc`
+- Go Main 规范：`.cursor/rules/go-main.mdc`
+- 模块使用说明：`main/app/modules/README.md`
+
+---
+
+**最后更新**: 2025-12-04
+**维护者**: TTPOS Team

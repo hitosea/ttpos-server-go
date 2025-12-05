@@ -1,4 +1,4 @@
-package version
+package config
 
 var (
 	Version   = "2.10.9"

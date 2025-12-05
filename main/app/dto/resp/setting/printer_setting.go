@@ -55,6 +55,7 @@ type PrinterInfo struct {
 	PrinterWidth           int    // 打印机宽度mm
 	EnableStatusCheck      int    // 是否启用状态检查
 	EnableSound            int    // 是否启用打印提示音
+	PrintSpeed             int    // 打印速度 1-流畅(不分片打印) 2-稳定(分片大包打印) 3-兼容(分片小包打印)
 }
 
 // 是否启用

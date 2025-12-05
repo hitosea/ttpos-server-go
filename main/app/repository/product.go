@@ -244,6 +244,12 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 					},
 				},
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.DescribeMultiLanguageName",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
