@@ -378,7 +378,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `name` TEXT COMMENT '商品名称',
-    `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称',
+    `flavor_name` TEXT DEFAULT '' COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` DECIMAL(12, 8) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
     `num_type` INT(10) NOT NULL DEFAULT 0 COMMENT '数量计算方法, 0-整数 1-小数',
@@ -435,7 +435,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜时间(时间戳)',
     `gift_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '赠菜原因',
     `cancel_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '退菜原因',
-    `sign` TEXT NOT NULL COMMENT '商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品',
+    `sign` TEXT COMMENT '商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品',
     -- 关联信息
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
