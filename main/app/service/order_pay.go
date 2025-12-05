@@ -14,7 +14,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -252,6 +251,12 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.New("支付方式不可用")
 	}
 
+	// 验证支付配置
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		return nil, errors.New("请先到支付管理中完善后使用")
+	}
+
 	// 判断支付方式是否已支付
 	orderRepo := repository.NewPaymentOrderRepo(db)
 	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
@@ -287,7 +292,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+	payment, err := paymentRepo.CreatePayment(CreatePaymentReq{
 		RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
 		RelatedUuid:       saleOrder.Uuid,
 		PaymentMethodUuid: paymentMethod.Uuid,
@@ -1511,21 +1516,30 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			ctx.Log().Error("计算活动抵扣金额失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Any("activity_uuid", saleOrder.FullReductionActivityUuid), zap.Error(err))
 		}
 	}
-	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
+
+	// 连连支付是否可用
+	lianLianPayAvailable := true
+	if err := NewPaymentRepo(ctx, s.dbm).ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		lianLianPayAvailable = false
+	}
+
+	// 遍历支付方式
 	for _, paymentMethod := range paymentMethods {
+		isAvailable := true
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
 		// LianLianPay 没有配置支付信息 不显示
-		if paymentMethod.Code == constant.PaymentMethodCodeLianLianWechatPay ||
-			paymentMethod.Code == constant.PaymentMethodCodeLianLianAliPay ||
-			paymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
-			if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
+		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
+			if paymentMethod.IsHeadquarterPayment() {
+				isAvailable = false
+			} else {
 				continue
 			}
 		}
 
+		// 获取支付方式logo和二维码
 		var logoUrl string
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {
@@ -1537,6 +1551,14 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		if paymentMethod.QrcodeFile != nil {
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
+
+		// 总部支付方式
+		if paymentMethod.IsHeadquarterPayment() {
+			if paymentMethod.Source == constant.PaymentMethodSourceDefault && qrcodeUrl == "" {
+				isAvailable = false
+			}
+		}
+
 		methodItem := resp.PaymentMethodItem{
 			Source:        paymentMethod.Source,
 			SourceText:    paymentMethod.GetSourceText(ctx.GetLanguage()),
@@ -1546,6 +1568,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			FeePercent:    paymentMethod.FeePercent,
 			Logo:          logoUrl,
 			Qrcode:        qrcodeUrl,
+			IsAvailable:   isAvailable,
 			Code:          paymentMethod.Code,
 		}
 		methodItems = append(methodItems, methodItem)

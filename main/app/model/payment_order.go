@@ -26,6 +26,7 @@ type PaymentMethod struct {
 	Sort                 int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 	DefaultImg           string  `gorm:"column:default_img;type:varchar(255);comment:默认图片;NOT NULL" json:"default_img"`
 	ErpnextPayment       string  `gorm:"column:erpnext_payment;type:varchar(255);comment:ERPNext支付方式;NOT NULL" json:"erpnext_payment"`
+	HeadquarterUuid      uint64  `gorm:"column:headquarter_uuid;type:bigint(20) unsigned;default:0;comment:总部ID;NOT NULL" json:"headquarter_uuid"`
 
 	QrcodeFile *File `gorm:"foreignKey:QrcodeFileUuid;references:Uuid"` // 关联文件
 	LogoFile   *File `gorm:"foreignKey:LogoFileUuid;references:Uuid"`   // 关联文件
@@ -75,6 +76,11 @@ func (model *PaymentMethod) CalculatePaymentAmount(paymentAmount float64) float6
 // HasCommission 判断是否含手续费
 func (model *PaymentMethod) HasCommission() bool {
 	return model.FeePercent > 0
+}
+
+// 是否总部支付方式
+func (model *PaymentMethod) IsHeadquarterPayment() bool {
+	return model.HeadquarterUuid > 0
 }
 
 // IsBalance 是否是余额支付
