@@ -760,6 +760,36 @@ func (h *SettingHandler) DeleteOrderItemRemark(c *gin.Context) {
 - **JWT Token**: 所有 API 需要 Token 验证
 - **权限验证**: 权限处理逻辑与"整单备注"一致
 
+### 旧商户后台权限配置
+
+在旧商户后台（PHP Admin 模块）中，单品备注接口需要添加到权限白名单中，与整单备注保持一致的处理逻辑。
+
+**权限白名单配置**:
+
+在 `admin/app/shop/service/AuthService.php` 的 `$allowAllAction` 数组中添加：
+
+```php
+// 各端设置
+'/setting/business/freeTag',
+'/setting/business/returnReason',
+'/setting/business/orderRemark',        // 整单备注
+'/setting/business/orderItemRemark',     // 单品备注（新增）
+'/setting/business/qrcode',
+'/setting/business/companyQrcode',
+```
+
+**说明**:
+
+- 单品备注接口路径: `/setting/business/orderItemRemark`
+- 与整单备注 (`/setting/business/orderRemark`) 并列，位于同一权限白名单区域
+- 超级管理员无需验证，普通用户需要验证权限
+- 权限验证逻辑与整单备注完全一致
+
+**相关文件**:
+
+- `admin/app/shop/service/AuthService.php` - 权限验证服务
+- `admin/app/shop/controller/setting/Business.php` - 业务设置控制器
+
 ### 数据安全
 
 - **SQL 注入防护**: 使用参数化查询（GORM）

@@ -91,6 +91,7 @@ class AuthService
         '/setting/business/freeTag',
         '/setting/business/returnReason',
         '/setting/business/orderRemark',
+        '/setting/business/orderItemRemark',
         '/setting/business/qrcode',
         '/setting/business/companyQrcode',
 
