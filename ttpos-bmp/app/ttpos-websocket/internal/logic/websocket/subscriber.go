@@ -22,19 +22,20 @@ func StartRedisSubscriber(ctx context.Context) {
 	// 使用 GoFrame Redis 订阅
 	conn, _, err := g.Redis().Subscribe(ctx, consts.ChannelWebsocketMsgPush)
 	if err != nil {
-		g.Log().Error(ctx, "订阅Redis频道失败", err)
-		g.Log().Infof(ctx, "Redis配置检查: %+v", g.Cfg().MustGet(ctx, "redis.default").Map())
+		g.Log().Error(ctx, "订阅Redis频道失败 重试中...", err)
+		time.Sleep(2 * time.Second)
+		StartRedisSubscriber(ctx)
 		return
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
-			g.Log().Error(ctx, "Redis订阅者异常-02", r)
+			g.Log().Error(ctx, "Redis订阅者异常-02 重试中...", r)
 		}
 		conn.Close(ctx)
 		// 延迟2秒重连
 		time.Sleep(2 * time.Second)
-		StartRedisSubscriber(ctx)
+		go StartRedisSubscriber(ctx)
 	}()
 
 	// 循环接收消息
