@@ -20480,6 +20480,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/country/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取所有国家列表（197个国家/地区）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "获取国家列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/material_resp.CountryListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/desk/map/areas": {
             "get": {
                 "security": [
@@ -30974,6 +31017,12 @@ const docTemplate = `{
                         "description": "状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成",
                         "name": "status_in",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "提交方筛选：all-全部 self-本店提交 other-他店提交，默认 all",
+                        "name": "submit_side",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -34117,6 +34166,35 @@ const docTemplate = `{
                 }
             }
         },
+        "material_resp.CountryItem": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "国家编码（ISO 3166-1 alpha-2）",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "多语言国家名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "material_resp.CountryListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "国家列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/material_resp.CountryItem"
+                    }
+                }
+            }
+        },
         "material_resp.Material": {
             "type": "object",
             "properties": {
@@ -34361,6 +34439,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "origin_country": {
+                    "description": "原产地国家信息（可选）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.CountryItem"
                         }
                     ]
                 },
@@ -39294,6 +39380,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "origin_country_code": {
+                    "description": "原产地国家编码（可选）",
+                    "type": "string"
+                },
                 "purchase_unit_uuid": {
                     "description": "采购单位UUID",
                     "type": "integer"
@@ -39454,6 +39544,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "origin_country_code": {
+                    "description": "原产地国家编码（可选）",
+                    "type": "string"
                 },
                 "purchase_unit_uuid": {
                     "description": "采购单位UUID",
@@ -40988,6 +41082,10 @@ const docTemplate = `{
                 "num": {
                     "description": "创建成本卡",
                     "type": "number"
+                },
+                "origin_country_code": {
+                    "description": "原产地国家编码（可选）",
+                    "type": "string"
                 },
                 "purchase_unit_uuid": {
                     "description": "采购单位UUID",
@@ -44639,6 +44737,11 @@ const docTemplate = `{
                     "description": "联系电话，必填，最大20个字符",
                     "type": "string",
                     "maxLength": 20
+                },
+                "store_code": {
+                    "description": "店铺编码，用于发票打印，最大100个字符",
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "tax_number": {
                     "description": "税号",
@@ -53523,6 +53626,10 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "联系电话",
+                    "type": "string"
+                },
+                "store_code": {
+                    "description": "店铺编码，用于发票打印",
                     "type": "string"
                 },
                 "tax_number": {
