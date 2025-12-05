@@ -433,7 +433,30 @@ class Product extends ProductModel
             }
         }
         if (!empty($data['selling_point'])) {
-            return $data['selling_point'];
+            $describe = '';
+            $sellingPoint = $data['selling_point'];
+            if (is_string($sellingPoint)) {
+                $decoded = json_decode($sellingPoint, true);
+                // 保证解码成功且为数组
+                $sellingPoint = (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [];
+            }
+            if (is_array($sellingPoint)) {
+                foreach ($sellingPoint as $value) {
+                    if (is_string($value)) {
+                        $trimmedValue = trim($value);
+                        if ($trimmedValue !== '') {
+                            $describe = $trimmedValue;
+                        }
+                    } elseif (!empty($value)) {
+                        // 保证非字符串类型也能转为字符串不会报错
+                        $descValue = trim((string)$value);
+                        if ($descValue !== '') {
+                            $describe = $descValue;
+                        }
+                    }
+                }
+            }
+            return $describe;
         }
         $currentDescribe = $this->describe;
         return is_string($currentDescribe) ? $currentDescribe : '';
