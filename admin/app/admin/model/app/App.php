@@ -94,6 +94,8 @@ class App extends AppModel
             // v2.10.0
             "su.enable_table_map",
             "su.enable_data_management",
+            // v2.11.0
+            "su.enable_kiosk",
         ];
         //
         $countWhere = 'where 1 = 1';
