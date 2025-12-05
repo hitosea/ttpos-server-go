@@ -27476,6 +27476,149 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/order_item_remark": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取单品备注列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "获取单品备注",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/resp.OrderItemRemarkResp"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除单品备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "删除单品备注",
+                "parameters": [
+                    {
+                        "description": "删除单品备注",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeleteOrderItemRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/order_item_remark/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新增单品备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "新增单品备注",
+                "parameters": [
+                    {
+                        "description": "新增单品备注",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddOrderItemRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/order_item_remark/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑单品备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "编辑单品备注",
+                "parameters": [
+                    {
+                        "description": "编辑单品备注",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditOrderItemRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/order_remark": {
             "get": {
                 "security": [
@@ -30973,6 +31116,12 @@ const docTemplate = `{
                         "collectionFormat": "csv",
                         "description": "状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成",
                         "name": "status_in",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "提交方筛选：all-全部 self-本店提交 other-他店提交，默认 all",
+                        "name": "submit_side",
                         "in": "query"
                     }
                 ],
@@ -37530,6 +37679,22 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AddOrderItemRemarkReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "名称列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "req.AddOrderRemarkReq": {
             "type": "object",
             "required": [
@@ -38369,6 +38534,17 @@ const docTemplate = `{
                 }
             }
         },
+        "req.DeleteOrderItemRemarkReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
         "req.DeleteOrderRemarkReq": {
             "type": "object",
             "required": [
@@ -38573,6 +38749,25 @@ const docTemplate = `{
             }
         },
         "req.EditFreeOrGiftReasonReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "名称列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "req.EditOrderItemRemarkReq": {
             "type": "object",
             "required": [
                 "uuid"
@@ -44640,6 +44835,11 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 20
                 },
+                "store_code": {
+                    "description": "店铺编码，用于发票打印，最大100个字符",
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "tax_number": {
                     "description": "税号",
                     "type": "string"
@@ -49611,6 +49811,28 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.OrderItemRemark": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.OrderItemRemarkResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderItemRemark"
+                    }
+                }
+            }
+        },
         "resp.OrderListMeta": {
             "type": "object",
             "properties": {
@@ -50490,6 +50712,10 @@ const docTemplate = `{
                 "fee_percent": {
                     "description": "手续费率",
                     "type": "number"
+                },
+                "is_available": {
+                    "description": "是否可用",
+                    "type": "boolean"
                 },
                 "logo": {
                     "description": "logo",
@@ -53523,6 +53749,10 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "联系电话",
+                    "type": "string"
+                },
+                "store_code": {
+                    "description": "店铺编码，用于发票打印",
                     "type": "string"
                 },
                 "tax_number": {

@@ -3193,6 +3193,15 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddOrderItemRemarkReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+    required:
+    - locale_name
+    type: object
   req.AddOrderRemarkReq:
     properties:
       locale_name:
@@ -3786,6 +3795,13 @@ definitions:
     required:
     - uuid
     type: object
+  req.DeleteOrderItemRemarkReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
   req.DeleteOrderRemarkReq:
     properties:
       uuid:
@@ -3929,6 +3945,17 @@ definitions:
         type: string
     type: object
   req.EditFreeOrGiftReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.EditOrderItemRemarkReq:
     properties:
       locale_name:
         allOf:
@@ -8187,6 +8214,10 @@ definitions:
         description: 联系电话，必填，最大20个字符
         maxLength: 20
         type: string
+      store_code:
+        description: 店铺编码，用于发票打印，最大100个字符
+        maxLength: 100
+        type: string
       tax_number:
         description: 税号
         type: string
@@ -11481,6 +11512,20 @@ definitions:
             type: array
         type: object
     type: object
+  resp.OrderItemRemark:
+    properties:
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      uuid:
+        type: integer
+    type: object
+  resp.OrderItemRemarkResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.OrderItemRemark'
+        type: array
+    type: object
   resp.OrderListMeta:
     properties:
       cancel_num:
@@ -12091,6 +12136,9 @@ definitions:
       fee_percent:
         description: 手续费率
         type: number
+      is_available:
+        description: 是否可用
+        type: boolean
       logo:
         description: logo
         type: string
@@ -14137,6 +14185,9 @@ definitions:
         type: array
       phone:
         description: 联系电话
+        type: string
+      store_code:
+        description: 店铺编码，用于发票打印
         type: string
       tax_number:
         description: 税号
@@ -32803,6 +32854,94 @@ paths:
       summary: 获取电子菜单二维码
       tags:
       - 商家端.业务设置
+  /shop/setting/order_item_remark:
+    delete:
+      consumes:
+      - application/json
+      description: 删除单品备注
+      parameters:
+      - description: 删除单品备注
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteOrderItemRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除单品备注
+      tags:
+      - 商家端.业务设置
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.OrderItemRemarkResp'
+      security:
+      - JwtToken: []
+      summary: 获取单品备注
+      tags:
+      - 商家端.业务设置
+  /shop/setting/order_item_remark/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增单品备注
+      parameters:
+      - description: 新增单品备注
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddOrderItemRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 新增单品备注
+      tags:
+      - 商家端.业务设置
+  /shop/setting/order_item_remark/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑单品备注
+      parameters:
+      - description: 编辑单品备注
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditOrderItemRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 编辑单品备注
+      tags:
+      - 商家端.业务设置
   /shop/setting/order_remark:
     delete:
       consumes:
@@ -34867,6 +35006,10 @@ paths:
           type: integer
         name: status_in
         type: array
+      - description: 提交方筛选：all-全部 self-本店提交 other-他店提交，默认 all
+        in: query
+        name: submit_side
+        type: string
       produces:
       - application/json
       responses:
