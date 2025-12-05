@@ -17840,6 +17840,30 @@ paths:
       summary: 免单
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/member/cancel:
     delete:
       consumes:
@@ -22364,6 +22388,30 @@ paths:
       summary: 隐藏（挂单）
       tags:
       - 收银端.点餐
+  /cashier/instant/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/list:
     get:
       consumes:
@@ -26456,6 +26504,30 @@ paths:
       security:
       - JwtToken: []
       summary: 向购物车添加套餐
+      tags:
+      - 扫码点餐
+  /h5/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
       tags:
       - 扫码点餐
   /h5/order/remark/list:
@@ -35775,6 +35847,30 @@ paths:
       security:
       - JwtToken: []
       summary: 向购物车添加商品并送厨
+      tags:
+      - 平板端.桌台
+  /tablet/desk/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
       tags:
       - 平板端.桌台
   /tablet/desk/order/must_plan/confirm:
