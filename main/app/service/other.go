@@ -22,15 +22,19 @@ type IOtherSrv interface {
 	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResp, error)
 	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error)
 	GetOrderRemarkList(ctx context.Context) (*resp.OrderRemarkResp, error)
+	AddOrderRemark(ctx context.Context, addOrderRemark req.AddOrderRemarkReq) error
+	EditOrderRemark(ctx context.Context, editOrderRemark req.EditOrderRemarkReq) error
+	DeleteOrderRemark(ctx context.Context, deleteOrderRemark req.DeleteOrderRemarkReq) error
+	GetOrderItemRemarkList(ctx context.Context) (*resp.OrderItemRemarkResp, error)
+	AddOrderItemRemark(ctx context.Context, addOrderItemRemark req.AddOrderItemRemarkReq) error
+	EditOrderItemRemark(ctx context.Context, editOrderItemRemark req.EditOrderItemRemarkReq) error
+	DeleteOrderItemRemark(ctx context.Context, deleteOrderItemRemark req.DeleteOrderItemRemarkReq) error
 	AddFreeOrGiftReason(ctx context.Context, addFreeOrGiftReasonReq req.AddFreeOrGiftReasonReq) error
 	EditFreeOrGiftReason(ctx context.Context, editFreeReason req.EditFreeOrGiftReasonReq) error
 	DeleteFreeOrGiftReason(ctx context.Context, deleteFreeReason req.DeleteFreeOrGiftReasonReq) error
 	AddReturnFoodReason(ctx context.Context, addReturnFoodReason req.AddReturnFoodReasonReq) error
 	EditReturnFoodReason(ctx context.Context, editReturnFoodReason req.EditReturnFoodReasonReq) error
 	DeleteReturnFoodReason(ctx context.Context, deleteReturnFoodReason req.DeleteReturnFoodReasonReq) error
-	AddOrderRemark(ctx context.Context, addOrderRemark req.AddOrderRemarkReq) error
-	EditOrderRemark(ctx context.Context, editOrderRemark req.EditOrderRemarkReq) error
-	DeleteOrderRemark(ctx context.Context, deleteOrderRemark req.DeleteOrderRemarkReq) error
 }
 
 func NewOtherSrv(dbm *database.DBManager, cache cache.Cache, settingSrv setting.ISrv) IOtherSrv {
@@ -361,6 +365,123 @@ func (s *otherSrv) DeleteOrderRemark(ctx context.Context, deleteOrderRemark req.
 	})
 	if err != nil {
 		return errors.WithMessage(err, "删除整单备注失败")
+	}
+	return nil
+}
+
+// GetOrderItemRemarkList 获取单品备注列表
+func (s *otherSrv) GetOrderItemRemarkList(ctx context.Context) (*resp.OrderItemRemarkResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	repo := base.NewOrderItemRemarkRepo(db)
+	list, err := repo.GetOrderItemRemarkList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取单品备注列表失败")
+	}
+
+	result := make([]resp.OrderItemRemark, 0, len(list))
+	for _, remark := range list {
+		result = append(result, resp.OrderItemRemark{
+			Uuid:       remark.Uuid,
+			LocaleName: remark.MultiLanguageName.GetNames(),
+		})
+	}
+
+	return &resp.OrderItemRemarkResp{
+		List: result,
+	}, nil
+}
+
+// AddOrderItemRemark 新增单品备注
+func (s *otherSrv) AddOrderItemRemark(ctx context.Context, addOrderItemRemark req.AddOrderItemRemarkReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addOrderItemRemark.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("多语言名称不完整")
+	}
+
+	if !addOrderItemRemark.LocaleName.CheckLen(100) {
+		return errors.New("字数不能超过100个字")
+	}
+
+	// 限制单品备注数量,不能超过100个
+	count, err := base.NewOrderItemRemarkRepo(s.dbm.GetDB(ctx.GetCompanyUuid())).CountOrderItemRemark()
+	if err != nil {
+		return errors.WithMessage(err, "获取单品备注数量失败")
+	}
+	if count >= 100 {
+		return errors.New("单品备注数量不能超过100个")
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		repo := base.NewOrderItemRemarkRepo(tx)
+		_, err := repo.CreateOrderItemRemark(model.OrderItemRemark{
+			Name: addOrderItemRemark.LocaleName.GetLocale("zh"),
+			MultiLanguageName: model.MultiLanguageName{
+				ZhName:   addOrderItemRemark.LocaleName.ZH,
+				ThName:   addOrderItemRemark.LocaleName.TH,
+				EnName:   addOrderItemRemark.LocaleName.EN,
+				ZhTwName: addOrderItemRemark.LocaleName.ZHTW,
+				JaName:   addOrderItemRemark.LocaleName.JA,
+				KoName:   addOrderItemRemark.LocaleName.KO,
+				MyName:   addOrderItemRemark.LocaleName.MY,
+				TrName:   addOrderItemRemark.LocaleName.TR,
+				SvName:   addOrderItemRemark.LocaleName.SV,
+			},
+		})
+		return err
+	}); err != nil {
+		return errors.WithMessage(err, "保存单品备注失败")
+	}
+	return nil
+}
+
+// EditOrderItemRemark 编辑单品备注
+func (s *otherSrv) EditOrderItemRemark(ctx context.Context, editOrderItemRemark req.EditOrderItemRemarkReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editOrderItemRemark.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("多语言名称不完整")
+	}
+
+	if !editOrderItemRemark.LocaleName.CheckLen(100) {
+		return errors.New("字数不能超过100个字")
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		repo := base.NewOrderItemRemarkRepo(tx)
+		remark, err := repo.GetOrderItemRemarkByUuid(editOrderItemRemark.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "单品备注不存在")
+		}
+
+		remark.Name = editOrderItemRemark.LocaleName.GetLocale("zh")
+		remark.MultiLanguageName.ZhName = editOrderItemRemark.LocaleName.ZH
+		remark.MultiLanguageName.ThName = editOrderItemRemark.LocaleName.TH
+		remark.MultiLanguageName.EnName = editOrderItemRemark.LocaleName.EN
+		remark.MultiLanguageName.ZhTwName = editOrderItemRemark.LocaleName.ZHTW
+		remark.MultiLanguageName.JaName = editOrderItemRemark.LocaleName.JA
+		remark.MultiLanguageName.KoName = editOrderItemRemark.LocaleName.KO
+		remark.MultiLanguageName.MyName = editOrderItemRemark.LocaleName.MY
+		remark.MultiLanguageName.TrName = editOrderItemRemark.LocaleName.TR
+		remark.MultiLanguageName.SvName = editOrderItemRemark.LocaleName.SV
+
+		return repo.UpdateOrderItemRemark(editOrderItemRemark.Uuid, *remark)
+	})
+	if err != nil {
+		return errors.WithMessage(err, "更新单品备注失败")
+	}
+	return nil
+}
+
+// DeleteOrderItemRemark 删除单品备注
+func (s *otherSrv) DeleteOrderItemRemark(ctx context.Context, deleteOrderItemRemark req.DeleteOrderItemRemarkReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		repo := base.NewOrderItemRemarkRepo(tx)
+		return repo.DeleteOrderItemRemark(deleteOrderItemRemark.Uuid)
+	})
+	if err != nil {
+		return errors.WithMessage(err, "删除单品备注失败")
 	}
 	return nil
 }
