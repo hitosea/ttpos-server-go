@@ -406,7 +406,7 @@
             {
                 "group_block_id": "invoice_unified_credit_code",
                 "block_id": "invoice.unified_credit_code",
-                "block_type": "label",
+                "block_type": "label:value",
                 "block_label": {
                     "zh": "统一信用代码: ",
                     "en": "VAT Reg. No.: ",
@@ -420,7 +420,7 @@
                     "zhtw": "統一信用代碼: "
                 },
                 "block_name": {
-                    "zh": "统一信用代码",
+                    "zh": "信用代码",
                     "en": "VAT Reg. No.",
                     "ja": "JCT",
                     "ko": "VAT Number",
@@ -429,8 +429,9 @@
                     "tr": "VKN",
                     "de": "Einheitlicher Kreditcode",
                     "sv": "Org. Nr.",
-                    "zhtw": "統一信用代碼"
+                    "zhtw": "信用代碼"
                 },
+                "block_value": "",
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
@@ -438,15 +439,11 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
+                    "can_edit_value": true,
+                    "not_show_empty": true,
                     "width": 100
                 },
-                "conditions": [
-                    {
-                        "field": "invoice.unified_credit_code",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
+                "conditions": []
             }
         ],
         [
@@ -718,53 +715,6 @@
                 "conditions": [
                     {
                         "field": "order.meal_num",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "group_block_id": "table_remarks",
-                "block_id": "order.remark",
-                "block_type": "label:value",
-                "block_label": {
-                    "de": "Tisch Notiz: ",
-                    "en": "Table Remark: ",
-                    "ja": "テーブル備考: ",
-                    "ko": "테이블 비고: ",
-                    "my": "စားပွဲမှတ်ချက်: ",
-                    "sv": "Bord Kommentar: ",
-                    "th": "โต๊ะหมายเหตุ: ",
-                    "tr": "Masa Notu: ",
-                    "zh": "开桌备注: ",
-                    "zhtw": "開桌備註: "
-                },
-                "block_name": {
-                    "en": "Table Remark",
-                    "ja": "テーブル備考",
-                    "ko": "테이블 비고",
-                    "my": "စားပွဲမှတ်ချက်",
-                    "th": "โต๊ะหมายเหตุ",
-                    "tr": "Masa Notu",
-                    "zh": "开桌备注",
-                    "zhtw": "開桌備註",
-                    "de": "Tisch Notiz",
-                    "sv": "Bord Kommentar"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "left",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.remark",
                         "operator": "not_empty",
                         "value": 0
                     }
@@ -2480,12 +2430,12 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "center",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
-                    "width": 100,
-                    "not_show_empty": true
+                    "not_show_empty": true,
+                    "width": 100
                 },
                 "conditions": [
                     {
@@ -2815,7 +2765,7 @@
                     "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
+                    "trailing_blank_lines": 1,
                     "not_show_empty": true,
                     "width": 100
                 },

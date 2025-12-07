@@ -83,7 +83,7 @@
                 },
                 {
                     "block_name": {
-                        "zh": "统一信用代码",
+                        "zh": "信用代码",
                         "en": "VAT Reg. No.",
                         "ja": "JCT",
                         "ko": "VAT Number",
@@ -92,7 +92,7 @@
                         "tr": "VKN",
                         "de": "Einheitlicher Kreditcode",
                         "sv": "Org. Nr.",
-                        "zhtw": "統一信用代碼"
+                        "zhtw": "信用代碼"
                     },
                     "block_id": "invoice_unified_credit_code",
                     "data_rows": []
@@ -179,22 +179,6 @@
                 },
                 {
                     "block_name": {
-                        "th": "หมายเหตุโต๊ะ",
-                        "en": "Table remarks",
-                        "ko": "테이블 메모",
-                        "my": "စားပွဲမှတ်ချက်",
-                        "tr": "Masa notları",
-                        "de": "Tisch-Bemerkungen",
-                        "sv": "Bordanteckningar",
-                        "ja": "テーブル備考",
-                        "zhtw": "開桌備註",
-                        "zh": "开桌备注"
-                    },
-                    "block_id": "table_remarks",
-                    "data_rows": []
-                },
-                {
-                    "block_name": {
                         "th": "แคชเชียร์",
                         "en": "Cashier",
                         "ko": "캐셔",
@@ -211,16 +195,16 @@
                 },
                 {
                     "block_name": {
-                        "th": "วันที่สิ้นสุด",
-                        "en": "Finish Time",
-                        "ko": "종료 시간",
-                        "my": "အဆုံးသတ်ချက်",
-                        "tr": "Son Zamanı",
-                        "de": "Endzeit",
-                        "sv": "Sluttid",
-                        "ja": "終了時間",
-                        "zhtw": "結账時間",
-                        "zh": "结账时间"
+                        "th": "เวลา",
+                        "en": "Time",
+                        "ko": "시간",
+                        "my": "အချိန်",
+                        "tr": "Zaman",
+                        "de": "Zeit",
+                        "sv": "Tid",
+                        "ja": "時間",
+                        "zhtw": "時間",
+                        "zh": "时间"
                     },
                     "block_id": "finish_time",
                     "data_rows": []
@@ -339,22 +323,6 @@
                 },
                 {
                     "block_name": {
-                        "zh": "会员明细",
-                        "th": "ข้อมูลสมาชิก",
-                        "en": "Member details",
-                        "ko": "회원 세부 정보",
-                        "my": "အဖွဲ့ဝင်များ အမှန့်",
-                        "tr": "Üye detayları",
-                        "de": "Mitgliederdetails",
-                        "sv": "Medlemsdetaljer",
-                        "ja": "会員詳細情報",
-                        "zhtw": "會員詳細資訊"
-                    },
-                    "block_id": "member_details",
-                    "data_rows": []
-                },
-                {
-                    "block_name": {
                         "zh": "价格说明",
                         "th": "คำอธิบายราคา",
                         "en": "Price explanation",
@@ -367,6 +335,22 @@
                         "zhtw": "價格說明"
                     },
                     "block_id": "price_explaination",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "会员明细",
+                        "th": "ข้อมูลสมาชิก",
+                        "en": "Member details",
+                        "ko": "회원 세부 정보",
+                        "my": "အဖွဲ့ဝင်များ အမှန့်",
+                        "tr": "Üye detayları",
+                        "de": "Mitgliederdetails",
+                        "sv": "Medlemsdetaljer",
+                        "ja": "会員詳細情報",
+                        "zhtw": "會員詳細資訊"
+                    },
+                    "block_id": "member_details",
                     "data_rows": []
                 }
             ]
