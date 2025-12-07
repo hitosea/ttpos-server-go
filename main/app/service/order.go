@@ -4171,6 +4171,9 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				totalServiceFee = totalServiceFee.Add(serviceFee)
 			}
 			if saleOrderProduct.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+				if saleOrderProduct.IsPackageProduct() {
+					product.ErpCode = "TC001" // 当退款套餐商品时，商品编码为TC001
+				}
 				items = append(items, &selling.PosInvoiceItem{
 					ItemCode:   product.ErpCode,
 					Qty:        -product.Num,
