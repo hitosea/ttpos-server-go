@@ -3900,7 +3900,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				})
 			}
 		} else if product.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
-			if product.IsPackageProduct() { // 套餐主商品不添加到发票
+			if product.IsPackageProduct() { // 0 元的套餐固定使用TC001
 				erpCode = "TC001"
 			}
 			items = append(items, &selling.PosInvoiceItem{
