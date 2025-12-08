@@ -450,5 +450,9 @@
     "如:13.716412789763694, 100.52312952599786": "t.ex.: 13.716412789763694, 100.52312952599786",
     "高级票据打印": "Avancerad biljettutskrift",
     "桌台地图": "Bordlayoutkarta",
-    "数据管理": "Datastyrning"
+    "数据管理": "Datastyrning",
+    "自助点餐机": "Självbetjäningsbeställningskiosk",
+    "发布自助点餐机": "Publicera självbetjäningsbeställningskiosk",
+    "查看自助点餐机": "Visa självbetjäningsbeställningskiosk",
+    "Grab外卖": "Grab-leverans"
 }
