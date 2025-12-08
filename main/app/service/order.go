@@ -4174,19 +4174,23 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				if saleOrderProduct.IsPackageProduct() {
 					product.ErpCode = "TC001" // 当退款套餐商品时，商品编码为TC001
 				}
+				packageName := language.JsonToLocaleResponse(product.ProductName) // 套餐名称
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode:   product.ErpCode,
-					Qty:        -product.Num,
-					Rate:       0,    // 商品未含税价格（折后）
-					Amount:     0,    // 商品未含税价格（折后）* 数量
-					IsFreeItem: true, // 零元商品当作赠菜
+					ItemCode:    product.ErpCode,
+					Qty:         -product.Num,
+					Rate:        0,              // 商品未含税价格（折后）
+					Amount:      0,              // 商品未含税价格（折后）* 数量
+					IsFreeItem:  true,           // 零元商品当作赠菜
+					Description: packageName.EN, // 套餐商品描述
 				})
 			} else {
+				packageName := language.JsonToLocaleResponse(product.ProductName) // 套餐名称
 				item := &selling.PosInvoiceItem{
-					ItemCode: product.ErpCode,
-					Qty:      -product.Num,
-					Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
-					Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+					ItemCode:    product.ErpCode,
+					Qty:         -product.Num,
+					Rate:        product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
+					Amount:      -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+					Description: packageName.EN,                                                           // 套餐商品描述
 				}
 				if saleOrderProduct.IsGiftProduct() {
 					item.IsFreeItem = true
