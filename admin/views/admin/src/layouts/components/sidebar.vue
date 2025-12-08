@@ -144,6 +144,12 @@
           path: '/client/assistant',
           permission: ['admin_client.client_index'],
         },
+        {
+          icon: '',
+          title: $t('自助点餐机'),
+          path: '/client/kiosk',
+          permission: ['admin_client.client_index'],
+        },
       ],
     },
     {

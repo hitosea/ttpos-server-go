@@ -103,3 +103,34 @@ func (m *MultiLanguageName) GetNameByLang(lang string) string {
 		return ""
 	}
 }
+
+// GetNameByLangWithFallback 获取指定语言名称，如果不存在则按优先级顺序尝试其他语言
+// 优先级顺序：1. 指定语言 2. 英语(en) 3. 其他语言（中文、泰语、繁体中文、日语、韩语、缅甸语、土耳其语、瑞典语）
+func (m *MultiLanguageName) GetNameByLangWithFallback(lang string) string {
+	// 1. 先尝试获取指定语言的名称
+	if name := m.GetNameByLang(lang); name != "" {
+		return name
+	}
+
+	// 2. 如果指定语言不存在，尝试英语
+	if lang != "en" {
+		if name := m.GetNameByLang("en"); name != "" {
+			return name
+		}
+	}
+
+	// 3. 如果英语也不存在，按顺序尝试其他语言
+	fallbackLangs := []string{"zh", "th", "zhtw", "ja", "ko", "my", "tr", "sv"}
+	for _, fallbackLang := range fallbackLangs {
+		// 跳过已经尝试过的语言
+		if fallbackLang == lang || fallbackLang == "en" {
+			continue
+		}
+		if name := m.GetNameByLang(fallbackLang); name != "" {
+			return name
+		}
+	}
+
+	// 如果所有语言都没有名称，返回空字符串
+	return ""
+}

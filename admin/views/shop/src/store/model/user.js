@@ -153,6 +153,8 @@ export const useUserStore = defineStore('main', {
       this.userInfo.shopName = shop_name;
       this.userInfo.isOpenTax = is_open_tax;
       setStorage(JSON.stringify(this.userInfo), 'userInfo');
+      // 确保异步完成，等待微任务队列执行
+      await Promise.resolve();
     },
 
     /**
