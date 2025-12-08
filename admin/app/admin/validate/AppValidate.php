@@ -55,6 +55,8 @@ class AppValidate extends  BaseValidate
         'enable_data_management|是否启用数据管理能力' => 'in:0,1',
         // v2.11.0
         'enable_kiosk|是否启用自助点餐机' => 'in:0,1',
+        // Grab外卖控制
+        'enable_grab_delivery|是否启用Grab外卖' => 'in:0,1',
     ];
 
     protected $message = [
@@ -113,6 +115,8 @@ class AppValidate extends  BaseValidate
             'enable_data_management',
             // v2.11.0
             'enable_kiosk',
+            // Grab外卖控制
+            'enable_grab_delivery',
         ],
         'edit' => [
             'app_id',
@@ -156,6 +160,8 @@ class AppValidate extends  BaseValidate
             'enable_data_management',
             // v2.11.0
             'enable_kiosk',
+            // Grab外卖控制
+            'enable_grab_delivery',
         ],
         'id' => [
             'app_id',

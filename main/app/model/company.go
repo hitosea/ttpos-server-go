@@ -110,6 +110,7 @@ type CompanySetting struct {
 	EnableTableMap            int    `gorm:"column:enable_table_map;type:int(11);default:0;comment:是否开启桌台地图: 0-否 1-是;NOT NULL" json:"enable_table_map"`
 	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
 	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
+	EnableGrabDelivery        int    `gorm:"column:enable_grab_delivery;type:int(11);default:0;comment:是否启用Grab外卖: 0-否 1-是;NOT NULL" json:"enable_grab_delivery"`
 }
 
 // 连锁子店
@@ -226,6 +227,10 @@ func (model *CompanySetting) IsOpenTableMap() bool {
 
 func (model *CompanySetting) IsOpenDataManagement() bool {
 	return model.EnableDataManagement == 1
+}
+
+func (model *CompanySetting) IsOpenGrabDelivery() bool {
+	return model.EnableGrabDelivery == 1
 }
 
 // 外送配置
