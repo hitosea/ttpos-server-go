@@ -280,7 +280,8 @@ class MarketingActivityService
             reward_value,
             is_send_sms,
             create_time, 
-            update_time
+            update_time,
+            headquarter_uuid
         ')->page($page, $pageSize)->select();
         // 
         $total = $query->count();
