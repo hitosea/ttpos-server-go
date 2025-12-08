@@ -1342,7 +1342,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db, returnType, isPartReturn)
+			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, saleBill, db, returnType, isPartReturn)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
