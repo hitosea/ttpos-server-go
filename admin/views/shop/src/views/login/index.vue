@@ -457,8 +457,15 @@
 
               console.log('准备跳转到首页，当前路径:', this.$route.path);
 
+              // 获取supplier的app_id
+              const supplier = getSessionStorage('supplier');
+              const app_id = supplier?.app_id;
+              
+              // 构建带app_id的路径
+              const homePath = app_id ? `/${app_id}/home` : '/home';
+
               // 尝试路由跳转
-              await this.$router.push({ path: '/home' });
+              await this.$router.push({ path: homePath });
 
               this.logining = false;
               // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
@@ -466,7 +473,10 @@
             } catch (error) {
               console.error('跳转过程出错:', error);
               // 出错时直接使用强制跳转
-              window.location.href = '/home';
+              const supplier = getSessionStorage('supplier');
+              const app_id = supplier?.app_id;
+              const homePath = app_id ? `/${app_id}/home` : '/home';
+              window.location.href = homePath;
             } finally {
               this.logining = false;
             }

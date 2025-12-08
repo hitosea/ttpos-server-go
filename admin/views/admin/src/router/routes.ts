@@ -150,6 +150,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
               title: $t('点餐助手'),
             },
           },
+          {
+            path: 'kiosk',
+            component: () => import('@/pages/client/kiosk.vue'),
+            meta: {
+              title: $t('自助点餐机'),
+            },
+          },
         ],
       },
       {
