@@ -324,6 +324,7 @@ type ProductImportItemReq struct {
 	IsShowAssistant       int                `json:"is_show_assistant"`        // 是否显示在点餐助手 1-显示 0-不显示
 	IsShowH5              int                `json:"is_show_h5"`               // 是否显示在h5 1-显示 0-不显示
 	IsShowDelivery        int                `json:"is_show_delivery"`         // 是否显示在外送 1-显示 0-不显示
+	IsShowKiosk           int                `json:"is_show_kiosk"`            // 是否在自助点餐机显示 0-否 1-是
 	UnitUuid              uint64             `json:"unit_uuid"`                // 单位UUID
 	CategoryUuid          uint64             `json:"category_uuid"`            // 分类UUID
 	SkuUuid               uint64             `json:"sku_uuid"`                 // 规格UUID
@@ -445,6 +446,7 @@ type ProductShopAddShowReq struct {
 	IsShowAssistant int `json:"is_show_assistant"` // 是否显示在点餐助手 0-不显示 1-显示
 	IsShowH5        int `json:"is_show_h5"`        // 是否显示在h5 0-不显示 1-显示
 	IsShowDelivery  int `json:"is_show_delivery"`  // 是否显示在外送 0-不显示 1-显示
+	IsShowKiosk     int `json:"is_show_kiosk"`     // 是否在自助点餐机显示 0-否 1-是
 }
 
 // ProductShopAddDiscountReq 商品折扣设置添加请求
@@ -580,6 +582,7 @@ type ProductShopEditShowReq struct {
 	IsShowAssistant int `json:"is_show_assistant"` // 是否显示在点餐助手 0-不显示 1-显示
 	IsShowH5        int `json:"is_show_h5"`        // 是否显示在h5 0-不显示 1-显示
 	IsShowDelivery  int `json:"is_show_delivery"`  // 是否显示在外送 0-不显示 1-显示
+	IsShowKiosk     int `json:"is_show_kiosk"`     // 是否在自助点餐机显示 0-否 1-是
 }
 
 // ProductShopAddDiscountReq 商品折扣设置添加请求

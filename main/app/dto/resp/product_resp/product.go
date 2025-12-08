@@ -556,6 +556,7 @@ type ProductDetailResp struct {
 	IsShowAssistant bool `json:"is_show_assistant"` // 是否显示在点餐助手 1-显示 0-不显示
 	IsShowH5        bool `json:"is_show_h5"`        // 是否显示在h5 1-显示 0-不显示
 	IsShowDelivery  bool `json:"is_show_delivery"`  // 是否显示在外送 1-显示 0-不显示
+	IsShowKiosk     bool `json:"is_show_kiosk"`     // 是否在自助点餐机显示 true-是 false-否
 
 	OpenDiscount        bool `json:"open_discount"`         // 是否开启会员折扣 1-开启 0-关闭
 	OpenOverallDiscount bool `json:"open_overall_discount"` // 整单折扣 1-开启 0-关闭

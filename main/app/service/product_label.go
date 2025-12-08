@@ -76,6 +76,7 @@ func (s *ProductLabelSrvImpl) GetProductLabelList(ctx context.Context) (*resp.Pr
 			IsShowH5:            label.IsShowH5,
 			IsShowDelivery:      label.IsShowDelivery,
 			IsShowMenu:          label.IsShowMenu,
+			IsShowKiosk:         label.IsShowKiosk,
 			ProductPackageCount: len(label.ProductPackages),
 			CreateTime:          label.CreateTime,
 			ProductPackages:     []resp.ProductLabelPackageItem{},
@@ -186,6 +187,7 @@ func (s *ProductLabelSrvImpl) AddProductLabel(ctx context.Context, req req.Produ
 			IsShowH5:        req.IsShowH5,
 			IsShowDelivery:  req.IsShowDelivery,
 			IsShowMenu:      req.IsShowMenu,
+			IsShowKiosk:     req.IsShowKiosk,
 		}
 
 		uuid, err := productLabelRepo.CreateProductLabel(label)
@@ -252,6 +254,7 @@ func (s *ProductLabelSrvImpl) EditProductLabel(ctx context.Context, req req.Prod
 			IsShowH5:        req.IsShowH5,
 			IsShowDelivery:  req.IsShowDelivery,
 			IsShowMenu:      req.IsShowMenu,
+			IsShowKiosk:     req.IsShowKiosk,
 		}
 
 		err = productLabelRepo.UpdateProductLabel(label)

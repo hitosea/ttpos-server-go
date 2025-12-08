@@ -5214,6 +5214,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		IsShowAssistant: productPackage.GetIsShowAssistant(),
 		IsShowH5:        productPackage.GetIsShowH5(),
 		IsShowDelivery:  productPackage.GetIsShowDelivery(),
+		IsShowKiosk:     productPackage.GetIsShowKiosk(),
 
 		OpenDiscount:        productPackage.GetOpenDiscount(),
 		OpenOverallDiscount: productPackage.GetOpenOverallDiscount(),
@@ -6008,12 +6009,19 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
 	}
 
+	companySetting := ctx.GetCompanySetting()
 	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
-	companySetting := ctx.GetCompanySetting()
 	if !companySetting.IsOpenRider() || req.Type == constant.ProductTypePackage || req.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
+
+	// 处理自助点餐机显示：如果自助点餐机未开启,则不显示
+	isShowKiosk := uint(req.Show.IsShowKiosk)
+	if !companySetting.IsOpenKiosk() {
+		isShowKiosk = 0
+	}
+
 	updateData := map[string]any{
 		"name":                  req.LocaleName.ToJson(),
 		"image_file_uuid":       req.ImageFileUuid,
@@ -6030,6 +6038,7 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 		"is_show_assistant":     req.Show.IsShowAssistant,
 		"is_show_h5":            req.Show.IsShowH5,
 		"is_show_delivery":      isShowDelivery,
+		"is_show_kiosk":         isShowKiosk,
 		"price":                 price,
 		"open_discount":         req.Discount.IsEnableMemberDiscount,
 		"open_overall_discount": req.Discount.IsEnableOverallDiscount,
@@ -6169,11 +6178,17 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 			erpCode = itemInfo.ItemCode
 		}
 	}
+	companySetting := ctx.GetCompanySetting()
 	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
 	isShowDelivery := uint(request.Show.IsShowDelivery)
-	companySetting := ctx.GetCompanySetting()
 	if !companySetting.IsOpenRider() || request.Type == constant.ProductTypePackage || request.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
+	}
+
+	// 处理自助点餐机显示：如果自助点餐机未开启,则不显示
+	isShowKiosk := uint(request.Show.IsShowKiosk)
+	if !companySetting.IsOpenKiosk() {
+		isShowKiosk = 0
 	}
 	openOverallDiscount := uint(0)
 	if request.Discount.IsEnableOverallDiscount == 1 {
@@ -6202,6 +6217,7 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		IsShowAssistant:       uint(request.Show.IsShowAssistant),
 		IsShowH5:              uint(request.Show.IsShowH5),
 		IsShowDelivery:        isShowDelivery,
+		IsShowKiosk:           isShowKiosk,
 		Sort:                  uint(sort),
 		Price:                 price,
 		ProductType:           uint(request.Type),
@@ -8202,4 +8218,14 @@ func (s *productSrv) SyncProductPackageImage(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+// getKioskEnabledDefault 获取自助点餐机默认显示状态（根据云平台开启状态）
+// 如果云平台已开启自助点餐机功能，返回 1（显示），否则返回 0（不显示）
+func (s *productSrv) getKioskEnabledDefault(ctx context.Context) uint {
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.EnableKiosk == 1 {
+		return 1
+	}
+	return 0
 }

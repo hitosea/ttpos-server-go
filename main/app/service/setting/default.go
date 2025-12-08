@@ -110,6 +110,31 @@ func (s *Srv) getDefaultTablet(languageList []dto.LanguageItem) setting.Tablet {
 	}
 }
 
+// 默认自助点餐机设置
+func (s *Srv) getDefaultKioskSetting(languageList []dto.LanguageItem) setting.Kiosk {
+	var defaultLanguage = i18n.LanguageEN
+	if len(languageList) > 0 {
+		defaultLanguage = languageList[0].Name
+	}
+
+	// 默认勾选所有语言
+	commonLanguages := make([]string, 0, len(languageList))
+	for _, lang := range languageList {
+		commonLanguages = append(commonLanguages, lang.Name)
+	}
+
+	return setting.Kiosk{
+		KioskResp: setting.KioskResp{
+			AdvancedPassword:  "666888",                    // 高级密码（默认666888）
+			CallWaiterEnabled: 1,                          // 呼叫服务员开关（默认1-开启）
+			LanguageList:      languageList,                // 语言列表
+			Language:          commonLanguages,             // 已设置的语言（默认所有语言）
+			DefaultLanguage:   defaultLanguage,             // 默认语言（默认语言1）
+			Carousel:          []setting.CarouselItem{},   // 轮播内容（默认空数组）
+		},
+	}
+}
+
 // 默认扫码H5设置
 func (s *Srv) getDefaultH5(languageList []dto.LanguageItem) setting.H5 {
 	var defaultLanguage = i18n.LanguageEN
