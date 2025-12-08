@@ -27733,6 +27733,144 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/kiosk": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取自助点餐机设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自助点餐机设置"
+                ],
+                "summary": "获取自助点餐机设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.KioskResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存自助点餐机设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自助点餐机设置"
+                ],
+                "summary": "保存自助点餐机设置",
+                "parameters": [
+                    {
+                        "description": "保存自助点餐机设置",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveKioskSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/kiosk/carousel/upload": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "上传自助点餐机轮播内容，支持图片（JPG、JPEG、PNG、WEBP，\u003c2MB）和视频（MP4，\u003c10MB）",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.自助点餐机设置"
+                ],
+                "summary": "上传自助点餐机轮播内容",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件类型：image 或 video，不传则自动识别",
+                        "name": "file_type",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "分组ID",
+                        "name": "group_id",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UploadFileResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/member_qrcode": {
             "get": {
                 "security": [
@@ -36627,6 +36765,10 @@ const docTemplate = `{
                     "description": "是否显示在h5 1-显示 0-不显示",
                     "type": "boolean"
                 },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示 true-是 false-否",
+                    "type": "boolean"
+                },
                 "is_show_kitchen": {
                     "description": "是否显示在厨显端显示：1-显示；0-不显示",
                     "type": "boolean"
@@ -41985,6 +42127,10 @@ const docTemplate = `{
                     "description": "是否显示在h5 1-显示 0-不显示",
                     "type": "integer"
                 },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示 0-否 1-是",
+                    "type": "integer"
+                },
                 "is_show_kitchen": {
                     "description": "是否显示在送厨端 1-显示 0-不显示",
                     "type": "integer"
@@ -42173,6 +42319,10 @@ const docTemplate = `{
                     "description": "是否在H5显示, 0-否 1-是",
                     "type": "integer"
                 },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示, 0-否 1-是",
+                    "type": "integer"
+                },
                 "is_show_menu": {
                     "description": "是否在电子菜单显示, 0-否 1-是",
                     "type": "integer"
@@ -42227,6 +42377,10 @@ const docTemplate = `{
                 },
                 "is_show_h5": {
                     "description": "是否在H5显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示, 0-否 1-是",
                     "type": "integer"
                 },
                 "is_show_menu": {
@@ -42819,6 +42973,10 @@ const docTemplate = `{
                     "description": "是否显示在h5 0-不显示 1-显示",
                     "type": "integer"
                 },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示 0-否 1-是",
+                    "type": "integer"
+                },
                 "is_show_kitchen": {
                     "description": "是否显示在厨显端 0-不显示 1-显示",
                     "type": "integer"
@@ -43355,6 +43513,10 @@ const docTemplate = `{
                 },
                 "is_show_h5": {
                     "description": "是否显示在h5 0-不显示 1-显示",
+                    "type": "integer"
+                },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示 0-否 1-是",
                     "type": "integer"
                 },
                 "is_show_kitchen": {
@@ -44172,6 +44334,37 @@ const docTemplate = `{
                 "order_display_mode": {
                     "description": "点餐时展示模式 carousel/order/order_carousel，默认carousel",
                     "type": "string"
+                }
+            }
+        },
+        "req.SaveKioskSettingReq": {
+            "type": "object",
+            "properties": {
+                "advanced_password": {
+                    "description": "高级密码（4-8位整数，默认666888）",
+                    "type": "string"
+                },
+                "call_waiter_enabled": {
+                    "description": "呼叫服务员开关（0-关闭，1-开启，默认1）",
+                    "type": "integer"
+                },
+                "carousel": {
+                    "description": "轮播内容（图片+视频，最多10张图片+5个视频，总共最多15个，支持排序）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
+                "default_language": {
+                    "description": "默认语言（默认语言1）",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "已设置的语言（常用语言，JSON数组，默认所有语言）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -52104,6 +52297,10 @@ const docTemplate = `{
                     "description": "是否在H5显示, 0-否 1-是",
                     "type": "integer"
                 },
+                "is_show_kiosk": {
+                    "description": "是否在自助点餐机显示, 0-否 1-是",
+                    "type": "integer"
+                },
                 "is_show_menu": {
                     "description": "是否在电子菜单显示, 0-否 1-是",
                     "type": "integer"
@@ -57317,6 +57514,44 @@ const docTemplate = `{
                 }
             }
         },
+        "setting.KioskResp": {
+            "type": "object",
+            "properties": {
+                "advanced_password": {
+                    "description": "高级密码（默认666888）",
+                    "type": "string"
+                },
+                "call_waiter_enabled": {
+                    "description": "呼叫服务员开关（默认1-开启）",
+                    "type": "integer"
+                },
+                "carousel": {
+                    "description": "轮播内容（图片+视频，最多10张图片+5个视频，总共最多15个，支持排序）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.CarouselItem"
+                    }
+                },
+                "default_language": {
+                    "description": "默认语言（默认语言1）",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "已设置的语言（常用语言）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表，当前勾选了的语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                }
+            }
+        },
         "setting.KitchenResp": {
             "type": "object",
             "properties": {
@@ -57666,6 +57901,10 @@ const docTemplate = `{
                 "opening_hours": {
                     "description": "营业时间 18:00-02:00",
                     "type": "string"
+                },
+                "order_item_remark_count": {
+                    "description": "整单备注原因数量",
+                    "type": "integer"
                 },
                 "order_remark_count": {
                     "description": "整单备注原因数量",
