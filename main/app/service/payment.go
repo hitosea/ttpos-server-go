@@ -603,6 +603,15 @@ func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, err
 	return url, orderType, nil
 }
 
+// validateConfigError 验证支付配置错误
+func (p *PaymentRepo) ValidateConfigError(companyUuid uint64) error {
+	_, paymentAppErr := p.validateConfig(companyUuid)
+	if paymentAppErr != nil {
+		return paymentAppErr
+	}
+	return nil
+}
+
 // validateConfig 验证支付配置
 func (p *PaymentRepo) validateConfig(companyUuid uint64) (*model.PaymentApp, error) {
 	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(p.dbm.GetDB(0)).GetPaymentAppCompanyUuid(companyUuid)

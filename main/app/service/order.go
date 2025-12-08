@@ -4188,6 +4188,9 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				if saleOrderProduct.IsGiftProduct() {
 					item.IsFreeItem = true
 				}
+				if saleOrderProduct.IsPackageProduct() {
+					item.ItemCode = "TC001" // 当退款套餐商品时，商品编码为TC001
+				}
 				items = append(items, item)
 
 			}

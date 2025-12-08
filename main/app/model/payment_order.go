@@ -26,6 +26,7 @@ type PaymentMethod struct {
 	Sort                 int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 	DefaultImg           string  `gorm:"column:default_img;type:varchar(255);comment:默认图片;NOT NULL" json:"default_img"`
 	ErpnextPayment       string  `gorm:"column:erpnext_payment;type:varchar(255);comment:ERPNext支付方式;NOT NULL" json:"erpnext_payment"`
+	HeadquarterUuid      uint64  `gorm:"column:headquarter_uuid;type:bigint(20) unsigned;default:0;comment:总部ID;NOT NULL" json:"headquarter_uuid"`
 
 	QrcodeFile *File `gorm:"foreignKey:QrcodeFileUuid;references:Uuid"` // 关联文件
 	LogoFile   *File `gorm:"foreignKey:LogoFileUuid;references:Uuid"`   // 关联文件
@@ -35,6 +36,26 @@ func (model *PaymentMethod) SetNil() {
 	model.QrcodeFile = nil
 	model.LogoFile = nil
 }
+
+// 系统默认支付方式code
+const (
+	PaymentMethodBalance = 10 // 余额
+	PaymentMethodCash    = 40 // 现金
+)
+
+// 渠道提供方
+const (
+	PaymentSourceSystem      = 0 // 系统默认
+	PaymentSourceDefault     = 1 // 自行添加
+	PaymentSourceLianlianpay = 2 // LianLianPay
+)
+
+// LianLian渠道支付方式code（特殊code）
+const (
+	PaymentCodeLianlianWechat      = 90111 // LIANLIAN_WECHAT_PAY
+	PaymentCodeLianlianAli         = 90222 // LIANLIAN_ALI_PAY
+	PaymentCodeLianlianQrPromptPay = 90333 // LIANLIAN_QR_PROMPT_PAY
+)
 
 // GetPaymentName 获取支付名称
 func (model *PaymentMethod) GetPaymentName() string {
@@ -75,6 +96,11 @@ func (model *PaymentMethod) CalculatePaymentAmount(paymentAmount float64) float6
 // HasCommission 判断是否含手续费
 func (model *PaymentMethod) HasCommission() bool {
 	return model.FeePercent > 0
+}
+
+// 是否总部支付方式
+func (model *PaymentMethod) IsHeadquarterPayment() bool {
+	return model.HeadquarterUuid > 0
 }
 
 // IsBalance 是否是余额支付

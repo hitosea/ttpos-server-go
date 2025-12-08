@@ -1224,6 +1224,12 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 		return nil, errors.New("支付方式不可用")
 	}
 
+	// 验证支付配置
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		return nil, errors.New("请先到支付管理中完善后使用")
+	}
+
 	// 判断支付方式是否已支付
 	orderRepo := repository.NewPaymentOrderRepo(db)
 	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
@@ -1260,7 +1266,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+	payment, err := paymentRepo.CreatePayment(CreatePaymentReq{
 		RelatedType:       constant.PaymentOrderRelatedTypeRechargeOrder,
 		RelatedUuid:       order.Uuid,
 		PaymentMethodUuid: paymentMethod.Uuid,

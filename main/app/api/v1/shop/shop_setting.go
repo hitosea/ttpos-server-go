@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// AuthHandler 认证鉴权控制器
+// SettingHandler 设置控制器
 type SettingHandler struct {
 	syncSrv       service.ISyncSrv
 	settingSrv    settingSrv.ISrv
@@ -384,6 +384,100 @@ func (h *SettingHandler) DeleteOrderRemark(c *gin.Context) {
 	helper.Success(c, "删除成功")
 }
 
+// GetOrderItemRemark 获取单品备注
+// @Summary 获取单品备注
+// @Description 获取单品备注列表
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Success 200 {object} resp.OrderItemRemarkResp
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark [get]
+func (h *SettingHandler) GetOrderItemRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	orderItemRemark, err := h.otherSrv.GetOrderItemRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, orderItemRemark)
+}
+
+// AddOrderItemRemark 新增单品备注
+// @Summary 新增单品备注
+// @Description 新增单品备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.AddOrderItemRemarkReq true "新增单品备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark/add [post]
+func (h *SettingHandler) AddOrderItemRemark(c *gin.Context) {
+	var addOrderItemRemark req.AddOrderItemRemarkReq
+	if err := c.ShouldBindJSON(&addOrderItemRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.AddOrderItemRemark(ctx, addOrderItemRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "新增成功")
+}
+
+// EditOrderItemRemark 编辑单品备注
+// @Summary 编辑单品备注
+// @Description 编辑单品备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.EditOrderItemRemarkReq true "编辑单品备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark/edit [post]
+func (h *SettingHandler) EditOrderItemRemark(c *gin.Context) {
+	var editOrderItemRemark req.EditOrderItemRemarkReq
+	if err := c.ShouldBindJSON(&editOrderItemRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.EditOrderItemRemark(ctx, editOrderItemRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "编辑成功")
+}
+
+// DeleteOrderItemRemark 删除单品备注
+// @Summary 删除单品备注
+// @Description 删除单品备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.DeleteOrderItemRemarkReq true "删除单品备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark [delete]
+func (h *SettingHandler) DeleteOrderItemRemark(c *gin.Context) {
+	var deleteOrderItemRemark req.DeleteOrderItemRemarkReq
+	if err := c.ShouldBindJSON(&deleteOrderItemRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.DeleteOrderItemRemark(ctx, deleteOrderItemRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "删除成功")
+}
+
 // GetMenuQrcode 获取电子菜单二维码
 // @Summary 获取电子菜单二维码
 // @Description 获取电子菜单二维码
@@ -519,6 +613,56 @@ func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
+	helper.Success(c, result)
+}
+
+// GetHeadquartersDataList 获取总部可同步数据列表
+// @Summary 获取总部可同步数据列表
+// @Description 获取总部可同步数据列表（按种类分组，返回所有16种数据类型）
+// @Tags 商家端.数据同步
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.HeadquartersDataListResp}
+// @Router /shop/setting/headquarters_data_list [get]
+func (h *SettingHandler) GetHeadquartersDataList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 不需要传递任何参数，查询所有类型
+	result, err := h.syncSrv.GetHeadquartersDataList(ctx, req.GetHeadquartersDataListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, result)
+}
+
+// GranularSync 颗粒化同步数据
+// @Summary 颗粒化同步数据
+// @Description 颗粒化同步数据（接收勾选的uuid列表，删除未勾选的，同步勾选的）
+// @Tags 商家端.数据同步
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.GranularSyncReq true "请求参数"
+// @Success 200 {object} dto.Response{data=resp.GranularSyncResp}
+// @Router /shop/setting/granular_sync [post]
+func (h *SettingHandler) GranularSync(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var syncReq req.GranularSyncReq
+	if err := c.ShouldBindJSON(&syncReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	result, err := h.syncSrv.GranularSync(ctx, syncReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
 	helper.Success(c, result)
 }
 
@@ -803,15 +947,21 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/order_remark/add", wrapper.AddOrderRemark)              // 新增整单备注
 		privateApi.POST("/setting/order_remark/edit", wrapper.EditOrderRemark)            // 编辑整单备注
 		privateApi.DELETE("/setting/order_remark", wrapper.DeleteOrderRemark)             // 删除整单备注
+		privateApi.GET("/setting/order_item_remark", wrapper.GetOrderItemRemark)          // 获取单品备注
+		privateApi.POST("/setting/order_item_remark/add", wrapper.AddOrderItemRemark)     // 新增单品备注
+		privateApi.POST("/setting/order_item_remark/edit", wrapper.EditOrderItemRemark)   // 编辑单品备注
+		privateApi.DELETE("/setting/order_item_remark", wrapper.DeleteOrderItemRemark)    // 删除单品备注
 		privateApi.GET("/setting/payment_method/list", wrapper.GetPaymentMethodList)      // 获取支付方式列表
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码
-		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)      // 获取会员端二维码
-		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)            // 上传logo
-		privateApi.POST("/setting/sync", wrapper.Sync)                         // 获取总部最新数据
-		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)     // 获取同步任务列表
-		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail) // 获取同步任务详情
+		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)                  // 获取会员端二维码
+		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)                        // 上传logo
+		privateApi.POST("/setting/sync", wrapper.Sync)                                     // 获取总部最新数据
+		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)                 // 获取同步任务列表
+		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail)             // 获取同步任务详情
+		privateApi.GET("/setting/headquarters_data_list", wrapper.GetHeadquartersDataList) // 获取总部可同步数据列表
+		privateApi.POST("/setting/granular_sync", wrapper.GranularSync)                    // 颗粒化同步数据
 		// 数据管理
 		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
 		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理

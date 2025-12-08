@@ -1,0 +1,583 @@
+{
+    "metadata": {
+        "name": "发票"
+    },
+    "rows": [
+        {
+            "group_name": {
+                "th": "ข้อมูลพื้นฐาน",
+                "en": "Basic information",
+                "ko": "기초 정보",
+                "my": "အခြေခံအချက်အလက်",
+                "tr": "Temel bilgiler",
+                "de": "Grundinformationen",
+                "sv": "Grundinformation",
+                "ja": "基本情報",
+                "zhtw": "基礎資訊",
+                "zh": "基础信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ชื่อใบเสร็จ",
+                        "en": "Receipt name",
+                        "ko": "영수증 이름",
+                        "my": "ပြေစာနာမည်",
+                        "tr": "Makbuz adı",
+                        "de": "Belegname",
+                        "sv": "Kvittonamn",
+                        "ja": "レシート名",
+                        "zhtw": "收據名稱",
+                        "zh": "票据名称"
+                    },
+                    "block_id": "receipt_name",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "ชื่อร้าน",
+                        "en": "Store Name",
+                        "ko": "가게 이름",
+                        "my": "ဆိုင်အမည်",
+                        "tr": "Dükkan adı",
+                        "de": "Geschäftsname",
+                        "sv": "Butiksnamn",
+                        "ja": "店舗名",
+                        "zhtw": "店家名稱",
+                        "zh": "店铺名称"
+                    },
+                    "block_id": "store_name",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "ข้อมูลร้าน",
+                        "en": "Store information",
+                        "ko": "매장 정보",
+                        "my": "ဆိုင်အချက်အလက်",
+                        "tr": "Mağaza bilgisi",
+                        "de": "Geschäftsinformationen",
+                        "sv": "Butiksinformation",
+                        "ja": "店舗情報",
+                        "zhtw": "店家資訊",
+                        "zh": "店铺信息"
+                    },
+                    "block_id": "store_information",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "发票编号",
+                        "en": "Invoice No.",
+                        "ja": "請求書番号",
+                        "ko": "청구서 번호",
+                        "my": "ဘီလ်နံပါတ်",
+                        "th": "No.",
+                        "tr": "Fatura No.",
+                        "de": "Rechnungsnummer",
+                        "sv": "Fakt.nr",
+                        "zhtw": "發票編碼"
+                    },
+                    "block_id": "invoice_number",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "信用代码",
+                        "en": "VAT Reg. No.",
+                        "ja": "JCT",
+                        "ko": "VAT Number",
+                        "my": "TIN",
+                        "th": "RD",
+                        "tr": "VKN",
+                        "de": "Einheitlicher Kreditcode",
+                        "sv": "Org. Nr.",
+                        "zhtw": "信用代碼"
+                    },
+                    "block_id": "invoice_unified_credit_code",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "收银机SN",
+                        "en": "Cashier SN",
+                        "ko": "캐셔 SN",
+                        "my": "ငွေကောင်တာ SN",
+                        "tr": "Kasa SN",
+                        "de": "Kassen-SN",
+                        "sv": "Kassör SN",
+                        "ja": "レジ SN",
+                        "zhtw": "收銀機SN",
+                        "th": "เครื่องคิดเงิน SN"
+                    },
+                    "block_id": "cashier_sn",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                       "zh": "打印机SN",
+                        "en": "Printer SN",
+                        "ko": "프린터 SN",
+                        "my": "ပုံနှိပ်စက် SN",
+                        "tr": "Yazıcı SN",
+                        "de": "Drucker-SN",
+                        "sv": "Skrivare SN",
+                        "ja": "プリンター SN",
+                        "zhtw": "印表機SN",
+                        "th": "เครื่องพิมพ์ SN"
+                    },
+                    "block_id": "printer_sn",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "หมายเลขโต๊ะ/หมายเลขรับ",
+                        "en": "Table No./Order No.",
+                        "ko": "테이블 번호/주문 번호",
+                        "my": "စားပွဲနံပါတ်/အော်ဒါနံပါတ်",
+                        "tr": "Masa No./Sipariş No.",
+                        "de": "Tisch Nr./Bestell Nr.",
+                        "sv": "Bord Nr./Beställnings Nr.",
+                        "ja": "テーブル番号/注文番号",
+                        "zhtw": "桌號/取單號",
+                        "zh": "桌号/取单号"
+                    },
+                    "block_id": "table_no_order_no",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "หมายเลขคำสั่งซื้อ",
+                        "en": "Order No.",
+                        "ko": "주문번호",
+                        "my": "အမှာစာနံပါတ်",
+                        "tr": "Sipariş No.",
+                        "de": "Bestell-Nr.",
+                        "sv": "Beställningsnr",
+                        "ja": "注文番号",
+                        "zhtw": "訂單號",
+                        "zh": "订单号"
+                    },
+                    "block_id": "order_no",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "จำนวนคน",
+                        "en": "Number of people",
+                        "ko": "인원수",
+                        "my": "လူအရေအတွက်",
+                        "tr": "Kişi sayısı",
+                        "de": "Anzahl der Personen",
+                        "sv": "Antal personer",
+                        "ja": "人数",
+                        "zhtw": "人數",
+                        "zh": "人数"
+                    },
+                    "block_id": "number_of_people",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "แคชเชียร์",
+                        "en": "Cashier",
+                        "ko": "캐셔",
+                        "my": "ငွေကောင်တာ",
+                        "tr": "Kasiyer",
+                        "de": "Kassierer",
+                        "sv": "Kassör",
+                        "ja": "レジ係",
+                        "zhtw": "收銀員",
+                        "zh": "收银员"
+                    },
+                    "block_id": "cashier_staff",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "เวลา",
+                        "en": "Time",
+                        "ko": "시간",
+                        "my": "အချိန်",
+                        "tr": "Zaman",
+                        "de": "Zeit",
+                        "sv": "Tid",
+                        "ja": "時間",
+                        "zhtw": "時間",
+                        "zh": "时间"
+                    },
+                    "block_id": "finish_time",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ข้อมูลผลิตภัณฑ์",
+                "en": "Commodity information",
+                "ko": "상품 정보",
+                "my": "ထုတ်ကုန်အချက်အလက်",
+                "tr": "Ürün Bilgisi",
+                "de": "Produktinformationen",
+                "sv": "Produktinformation",
+                "ja": "商品情報",
+                "zhtw": "商品資訊",
+                "zh": "商品信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "สินค้า",
+                        "en": "Commodity",
+                        "ko": "상품",
+                        "my": "ကုန်စည်",
+                        "tr": "Emtia",
+                        "de": "Produkt",
+                        "sv": "Produkt",
+                        "ja": "商品",
+                        "zhtw": "商品",
+                        "zh": "商品"
+                    },
+                    "block_id": "commodity",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "จำนวนสินค้า",
+                        "en": "Total items",
+                        "ko": "상품 수량",
+                        "my": "ကုန်ပစ္စည်းအရေအတွက်",
+                        "tr": "Toplam ürün",
+                        "de": "Gesamtmenge",
+                        "sv": "Total kvantitet",
+                        "ja": "商品数量",
+                        "zhtw": "商品數量",
+                        "zh": "商品数量"
+                    },
+                    "block_id": "product_total_num",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "en": "Product Amount",
+                        "ja": "商品金額",
+                        "ko": "상품 금액",
+                        "my": "ကုန်ပစ္စည်းပမာဏ",
+                        "th": "จำนวนเงินสินค้า",
+                        "tr": "Ürün Tutarı",
+                        "zh": "商品金额",
+                        "zhtw": "商品金額",
+                        "de": "Produktbetrag",
+                        "sv": "Produktbelopp"
+                    },
+                    "block_id": "product_total_amount",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ข้อมูลการชำระเงิน",
+                "en": "Payment information",
+                "ko": "결제 정보",
+                "my": "ငွေပေးချေမှုအချက်အလက်",
+                "tr": "Ödeme bilgisi",
+                "de": "Zahlungsinformationen",
+                "sv": "Betalningsinformation",
+                "ja": "決済情報",
+                "zhtw": "結算資訊",
+                "zh": "结算信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ข้อมูลที่ต้องชำระ",
+                        "en": "Amount due information",
+                        "ko": "미수금 정보",
+                        "my": "ရရန်ရှိသောငွေအချက်အလက်",
+                        "tr": "Borc bilgisi",
+                        "de": "Fällige Beträge",
+                        "sv": "Förfallna belopp",
+                        "ja": "未収情報",
+                        "zhtw": "應付資訊",
+                        "zh": "应付信息"
+                    },
+                    "block_id": "amount_due_information",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "ข้อมูลการชำระเงิน",
+                        "en": "Payment information",
+                        "ko": "결제 정보",
+                        "my": "ငွေပေးချေမှုအချက်အလက်",
+                        "tr": "Ödeme bilgisi",
+                        "de": "Zahlungsinformationen",
+                        "sv": "Betalningsinformation",
+                        "ja": "決済情報",
+                        "zhtw": "支付資訊",
+                        "zh": "支付信息"
+                    },
+                    "block_id": "payment_info",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "价格说明",
+                        "th": "คำอธิบายราคา",
+                        "en": "Price explanation",
+                        "ko": "가격 설명",
+                        "my": "ငွေပမာဏ အကြောင်းအရာ",
+                        "tr": "Fiyat açıklaması",
+                        "de": "Preiserklärung",
+                        "sv": "Prisbeskrivning",
+                        "ja": "価格説明",
+                        "zhtw": "價格說明"
+                    },
+                    "block_id": "price_explaination",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "会员明细",
+                        "th": "ข้อมูลสมาชิก",
+                        "en": "Member details",
+                        "ko": "회원 세부 정보",
+                        "my": "အဖွဲ့ဝင်များ အမှန့်",
+                        "tr": "Üye detayları",
+                        "de": "Mitgliederdetails",
+                        "sv": "Medlemsdetaljer",
+                        "ja": "会員詳細情報",
+                        "zhtw": "會員詳細資訊"
+                    },
+                    "block_id": "member_details",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ข้อมูลใบแจ้งหนี้",
+                "en": "Invoice information",
+                "ko": "송장 정보",
+                "my": "ငွေတောင်းခံလွှာအချက်အလက်",
+                "tr": "Fatura bilgisi",
+                "de": "Rechnungsinformationen",
+                "sv": "Fakturainformation",
+                "ja": "請求書情報",
+                "zhtw": "發票資訊",
+                "zh": "发票信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ข้อมูลใบแจ้งหนี้",
+                        "en": "Invoice information",
+                        "ko": "송장 정보",
+                        "my": "ငွေတောင်းခံလွှာအချက်အလက်",
+                        "tr": "Fatura bilgisi",
+                        "de": "Rechnungsinformationen",
+                        "sv": "Fakturainformation",
+                        "ja": "請求書情報",
+                        "zhtw": "發票資訊",
+                        "zh": "发票信息"
+                    },
+                    "block_id": "invoice_info",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "zh": "注意事项",
+                        "en": "Notice",
+                        "ja": "注意事項",
+                        "ko": "주의사항",
+                        "my": "သတိပေးချက်",
+                        "th": "ข้อควรระวัง",
+                        "tr": "Uyarı",
+                        "de": "Hinweis",
+                        "sv": "Meddelande",
+                        "zhtw": "注意事項"
+                    },
+                    "block_id": "invoice_notice",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ส่วนท้าย",
+                "en": "Footer",
+                "ko": "바닥글",
+                "my": "အောက်ခြေ",
+                "tr": "Alt bilgi",
+                "de": "Fußzeile",
+                "sv": "Sidfot",
+                "ja": "フッター",
+                "zhtw": "底部",
+                "zh": "底部"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "รูปภาพที่กำหนดเอง",
+                        "en": "Custom image",
+                        "ko": "사용자 정의 이미지",
+                        "my": "ပုံသေတ္တာ",
+                        "tr": "Özel resim",
+                        "de": "Benutzerdefiniertes Bild",
+                        "sv": "Anpassad bild",
+                        "ja": "カスタム画像",
+                        "zhtw": "自定義圖片",
+                        "zh": "自定义图片"
+                    },
+                    "block_id": "custom_image",
+                    "data_rows": [
+                        [
+                            {
+                                "group_block_id": "custom_image",
+                                "block_id": "custom_image",
+                                "block_type": "img",
+                                "block_value": "",
+                                "block_attr": {
+                                    "font_size": 22,
+                                    "align": "center",
+                                    "font_bold": false,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 280
+                                },
+                                "conditions": []
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name": {
+                        "th": "ข้อความที่กำหนดเอง",
+                        "en": "Custom text",
+                        "ko": "사용자 텍스트",
+                        "my": "မှတ်ချက်များ",
+                        "tr": "Özel metin",
+                        "de": "Benutzerdefinierter Text",
+                        "sv": "Anpassad text",
+                        "ja": "カスタムテキスト",
+                        "zhtw": "自定義文字",
+                        "zh": "自定义文字"
+                    },
+                    "block_id": "custom_text",
+                    "data_rows": [
+                        [
+                            {
+                                "group_block_id": "custom_text",
+                                "block_id": "custom_text",
+                                "block_type": "label",
+                                "block_label": {
+                                    "zh": "",
+                                    "en": "",
+                                    "ko": "",
+                                    "my": "",
+                                    "tr": "",
+                                    "de": "",
+                                    "sv": "",
+                                    "ja": "",
+                                    "zhtw": "",
+                                    "th": ""
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100,
+                                    "not_show_empty": true
+                                },
+                                "conditions": []
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name": {
+                        "th": "การสนับสนุนระบบ",
+                        "en": "System support",
+                        "ko": "시스템 지원",
+                        "my": "စနစ်ပံ့ပိုးမှု",
+                        "tr": "Sistem desteği",
+                        "de": "Systemunterstützung",
+                        "sv": "Systemstöd",
+                        "ja": "システムサポート",
+                        "zhtw": "系統支援",
+                        "zh": "系统支持"
+                    },
+                    "block_id": "system_support",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "อื่นๆ",
+                "en": "Other",
+                "ko": "기타",
+                "my": "မှတ်ချက်များ",
+                "tr": "Diğer",
+                "de": "Andere",
+                "sv": "Andra",
+                "ja": "その他",
+                "zhtw": "其他",
+                "zh": "其他"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ส่วนขวาง",
+                        "en": "Dividing line",
+                        "ko": "구분선",
+                        "my": "ခွဲစိုက်ခြင်း",
+                        "tr": "Bölme çizgisi",
+                        "de": "Trennlinie",
+                        "sv": "Delningslinje",
+                        "ja": "区切り線",
+                        "zhtw": "分割線",
+                        "zh": "分割线"
+                    },
+                    "block_id": "blank_line",
+                    "data_rows": [
+                        [
+                            {
+                                "group_block_id": "blank_line",
+                                "block_id": "blank_line",
+                                "block_type": "blank_line",
+                                "block_label": {},
+                                "block_name": {
+                                    "th": "ส่วนขวาง",
+                                    "en": "Dividing line",
+                                    "ko": "구분선",
+                                    "my": "ခွဲစိုက်ခြင်း",
+                                    "tr": "Bölme çizgisi",
+                                    "de": "Trennlinie",
+                                    "sv": "Delningslinje",
+                                    "ja": "区切り線",
+                                    "zhtw": "分割線",
+                                    "zh": "分割线"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": false,
+                                    "dividing_line": true,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100
+                                }
+                            }
+                        ]
+                    ]
+                }
+            ]
+        }
+    ]
+}

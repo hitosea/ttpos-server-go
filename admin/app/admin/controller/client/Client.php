@@ -44,7 +44,7 @@ class Client extends Controller
      * @Apidoc\Title("列表")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/api/admin/client.client/index")
-     * @Apidoc\Param("type", type="string", require=true, default="1", desc="类型：1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端")
+     * @Apidoc\Param("type", type="string", require=true, default="1", desc="类型：1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端,6自助点餐机")
      * @Apidoc\Param("version_number", type="string", require=true, default="", desc="版本号")
      * @Apidoc\Param("forced_update", type="string", require=true, default="", desc="强制更新 0全部 1是 2否")
      * @Apidoc\Param(ref="pageParam")
@@ -58,7 +58,7 @@ class Client extends Controller
         $type = $param['type'] ?? 1;
         $versionNumber = $param['version_number'] ?? '';
         $forcedUpdate = $param['forced_update'] ?? '';
-        $types = [1 => 'Cashier', 2 => 'Menu', 3=> 'Kitchen', 4 => 'Shop', 5 => 'Assistant'];
+        $types = [1 => 'Cashier', 2 => 'Menu', 3=> 'Kitchen', 4 => 'Shop', 5 => 'Assistant', 6 => 'Kiosk'];
         //
         $credentialsPath = root_path('runtime/storage') . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
         if (!file_exists($credentialsPath)) {
@@ -213,6 +213,7 @@ class Client extends Controller
      * @Apidoc\Title("添加")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url("/api/admin/client.client/add")
+     * @Apidoc\Param("type", type="int", require=true, default="", desc="类型：1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端,6自助点餐机")
      * @Apidoc\Param(ref="app\common\model\client\ClientVersion\lists", desc="登录日志列表", withoutField="id,num,create_time,update_time")
      * @Apidoc\Returned("list", type="array", ref="app\common\model\admin\LoginLog\getList", desc="登录日志列表")
      */
@@ -389,7 +390,7 @@ class Client extends Controller
      * @Apidoc\Title("获取客户端最新版本")
      * @Apidoc\Method ("get")
      * @Apidoc\Url("/api/admin/client.client/getNewVersion")
-     * @Apidoc\Param("type", type="string", default="product", desc="类型：1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端")
+     * @Apidoc\Param("type", type="string", default="product", desc="类型：1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端,6自助点餐机")
      * @Apidoc\Param("brand", type="string", default="product", desc="品牌：0最新的一条, 1TTPOS， 2jbc")
      * @Apidoc\Returned("brand", type="string", desc="品牌")
      * @Apidoc\Returned("version_name", type="string", desc="版本名称")

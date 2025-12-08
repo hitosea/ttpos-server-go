@@ -3215,6 +3215,15 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddOrderItemRemarkReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+    required:
+    - locale_name
+    type: object
   req.AddOrderRemarkReq:
     properties:
       locale_name:
@@ -3808,6 +3817,13 @@ definitions:
     required:
     - uuid
     type: object
+  req.DeleteOrderItemRemarkReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
   req.DeleteOrderRemarkReq:
     properties:
       uuid:
@@ -3951,6 +3967,17 @@ definitions:
         type: string
     type: object
   req.EditFreeOrGiftReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.EditOrderItemRemarkReq:
     properties:
       locale_name:
         allOf:
@@ -4146,6 +4173,98 @@ definitions:
       sale_bill_uuid:
         description: 销售账单UUID, 必填
         type: integer
+    type: object
+  req.GranularSyncData:
+    properties:
+      attribute:
+        description: 属性
+        items:
+          type: integer
+        type: array
+      bom_card:
+        description: 成本卡
+        items:
+          type: integer
+        type: array
+      coupon:
+        description: 优惠券
+        items:
+          type: integer
+        type: array
+      flavor:
+        description: 规格
+        items:
+          type: integer
+        type: array
+      full_reduction:
+        description: 满额减
+        items:
+          type: integer
+        type: array
+      marketing_activity:
+        description: 营销活动
+        items:
+          type: integer
+        type: array
+      material:
+        description: 物品
+        items:
+          type: integer
+        type: array
+      material_category:
+        description: 物品分类
+        items:
+          type: integer
+        type: array
+      payment_method:
+        description: 支付方式
+        items:
+          type: integer
+        type: array
+      product:
+        description: 商品
+        items:
+          type: integer
+        type: array
+      product_category:
+        description: 商品分类
+        items:
+          type: integer
+        type: array
+      product_label:
+        description: 菜品标签
+        items:
+          type: integer
+        type: array
+      sauce:
+        description: 加料
+        items:
+          type: integer
+        type: array
+      supplier:
+        description: 供应商
+        items:
+          type: integer
+        type: array
+      tax:
+        description: 税类
+        items:
+          type: integer
+        type: array
+      unit:
+        description: 单位
+        items:
+          type: integer
+        type: array
+    type: object
+  req.GranularSyncReq:
+    properties:
+      sync_data:
+        allOf:
+        - $ref: '#/definitions/req.GranularSyncData'
+        description: 要同步的数据
+    required:
+    - sync_data
     type: object
   req.InitShopReq:
     properties:
@@ -9261,6 +9380,43 @@ definitions:
         description: 定制UUID
         type: integer
     type: object
+  resp.DataGroup:
+    properties:
+      items:
+        description: 该类型的数据列表
+        items:
+          $ref: '#/definitions/resp.DataItem'
+        type: array
+      synced_uuids:
+        description: 分店已同步的总部数据uuid列表
+        items:
+          type: integer
+        type: array
+      type:
+        description: 数据类型（如：product_category, unit, coupon等）
+        type: string
+      type_name:
+        description: 类型名称（如：商品分类、单位、优惠券等）
+        type: string
+    type: object
+  resp.DataItem:
+    properties:
+      additional_info:
+        additionalProperties: {}
+        description: 额外信息（如商品价格、活动状态等）
+        type: object
+      name:
+        description: 数据名称
+        type: string
+      related_data:
+        description: 关联数据（明确类型和uuid列表）
+        items:
+          $ref: '#/definitions/resp.RelatedData'
+        type: array
+      uuid:
+        description: 数据uuid
+        type: integer
+    type: object
   resp.DecryptQrCodeResp:
     properties:
       activity_uuid:
@@ -10128,6 +10284,15 @@ definitions:
           $ref: '#/definitions/resp.GiftOrFreeOrderReason'
         type: array
     type: object
+  resp.GranularSyncResp:
+    properties:
+      message:
+        description: 提示信息
+        type: string
+      task_uuid:
+        description: 同步任务uuid
+        type: integer
+    type: object
   resp.GroupList:
     properties:
       list:
@@ -10359,6 +10524,14 @@ definitions:
       unhandled_count:
         description: 未处理的接单数量
         type: integer
+    type: object
+  resp.HeadquartersDataListResp:
+    properties:
+      data_groups:
+        description: 按种类分组的数据
+        items:
+          $ref: '#/definitions/resp.DataGroup'
+        type: array
     type: object
   resp.InstantHideOrderListResp:
     properties:
@@ -11516,6 +11689,20 @@ definitions:
             type: array
         type: object
     type: object
+  resp.OrderItemRemark:
+    properties:
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      uuid:
+        type: integer
+    type: object
+  resp.OrderItemRemarkResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.OrderItemRemark'
+        type: array
+    type: object
   resp.OrderListMeta:
     properties:
       cancel_num:
@@ -12126,6 +12313,9 @@ definitions:
       fee_percent:
         description: 手续费率
         type: number
+      is_available:
+        description: 是否可用
+        type: boolean
       logo:
         description: logo
         type: string
@@ -13734,6 +13924,17 @@ definitions:
       refundable_amount:
         description: 剩余可退款金额
         type: number
+    type: object
+  resp.RelatedData:
+    properties:
+      type:
+        description: 关联数据的类型（如：product, category, unit, flavor等）
+        type: string
+      uuids:
+        description: 关联的uuid列表
+        items:
+          type: integer
+        type: array
     type: object
   resp.ReturnFoodReason:
     properties:
@@ -17825,6 +18026,30 @@ paths:
       security:
       - JwtToken: []
       summary: 免单
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
       tags:
       - 点餐助手端.桌台
   /assistant/desk/order/member/cancel:
@@ -22351,6 +22576,30 @@ paths:
       summary: 隐藏（挂单）
       tags:
       - 收银端.点餐
+  /cashier/instant/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/list:
     get:
       consumes:
@@ -26443,6 +26692,30 @@ paths:
       security:
       - JwtToken: []
       summary: 向购物车添加套餐
+      tags:
+      - 扫码点餐
+  /h5/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
       tags:
       - 扫码点餐
   /h5/order/remark/list:
@@ -32831,6 +33104,57 @@ paths:
       summary: 编辑免单原因
       tags:
       - 商家端.业务设置
+  /shop/setting/granular_sync:
+    post:
+      consumes:
+      - application/json
+      description: 颗粒化同步数据（接收勾选的uuid列表，删除未勾选的，同步勾选的）
+      parameters:
+      - description: 请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GranularSyncReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GranularSyncResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 颗粒化同步数据
+      tags:
+      - 商家端.数据同步
+  /shop/setting/headquarters_data_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取总部可同步数据列表（按种类分组，返回所有16种数据类型）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.HeadquartersDataListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取总部可同步数据列表
+      tags:
+      - 商家端.数据同步
   /shop/setting/member_qrcode:
     get:
       consumes:
@@ -32863,6 +33187,94 @@ paths:
       security:
       - JwtToken: []
       summary: 获取电子菜单二维码
+      tags:
+      - 商家端.业务设置
+  /shop/setting/order_item_remark:
+    delete:
+      consumes:
+      - application/json
+      description: 删除单品备注
+      parameters:
+      - description: 删除单品备注
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteOrderItemRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除单品备注
+      tags:
+      - 商家端.业务设置
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.OrderItemRemarkResp'
+      security:
+      - JwtToken: []
+      summary: 获取单品备注
+      tags:
+      - 商家端.业务设置
+  /shop/setting/order_item_remark/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增单品备注
+      parameters:
+      - description: 新增单品备注
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddOrderItemRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 新增单品备注
+      tags:
+      - 商家端.业务设置
+  /shop/setting/order_item_remark/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑单品备注
+      parameters:
+      - description: 编辑单品备注
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditOrderItemRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 编辑单品备注
       tags:
       - 商家端.业务设置
   /shop/setting/order_remark:
@@ -35698,6 +36110,30 @@ paths:
       security:
       - JwtToken: []
       summary: 向购物车添加商品并送厨
+      tags:
+      - 平板端.桌台
+  /tablet/desk/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
       tags:
       - 平板端.桌台
   /tablet/desk/order/must_plan/confirm:

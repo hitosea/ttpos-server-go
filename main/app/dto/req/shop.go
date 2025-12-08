@@ -57,6 +57,19 @@ type DeleteOrderRemarkReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"`
 }
 
+type AddOrderItemRemarkReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称列表
+}
+
+type EditOrderItemRemarkReq struct {
+	Uuid       uint64             `json:"uuid" binding:"required"`
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 名称列表
+}
+
+type DeleteOrderItemRemarkReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"`
+}
+
 type SetDataManageReq struct {
 	IsEnableDataManage bool     `json:"is_enable_data_manage"` // 是否启用数据管理
 	StaffUuids         []uint64 `json:"staff_uuids"`           // 员工UUID列表

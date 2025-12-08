@@ -294,6 +294,27 @@ func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// OrderItemRemarkList 处理获取单品备注列表
+// @Summary 获取单品备注列表
+// @Description 获取单品备注列表
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderItemRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/item/remark/list [get]
+func (h *DeskHandler) OrderItemRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderItemRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderCartInfo 处理查询桌台购物车信息
 // @Summary 查询桌台购物车信息
 // @Description 查询桌台购物车信息
@@ -2039,6 +2060,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                                          // 桌台订单商品备注
 		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                                         // 整单备注
 		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
+		privateApi.GET("/desk/order/item/remark/list", wrapper.OrderItemRemarkList)                                        // 获取单品备注列表
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                                            // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                               // 获取结账页面信息
