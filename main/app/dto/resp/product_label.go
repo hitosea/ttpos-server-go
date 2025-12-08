@@ -22,6 +22,7 @@ type ProductLabelDetail struct {
 	ProductPackageCount int                       `json:"product_package_count"` // 关联商品数量
 	ProductPackages     []ProductLabelPackageItem `json:"product_packages"`      // 关联商品列表
 	CreateTime          int64                     `json:"create_time"`           // 创建时间
+	IsEditable          bool                      `json:"is_editable"`           // 是否可编辑
 }
 
 // ProductLabelPackageItem 标签关联的商品项

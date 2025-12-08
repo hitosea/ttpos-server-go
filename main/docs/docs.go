@@ -47017,6 +47017,10 @@ const docTemplate = `{
                     "description": "是否开启数据管理功能",
                     "type": "boolean"
                 },
+                "is_open_grab_delivery": {
+                    "description": "是否开启Grab外卖功能",
+                    "type": "boolean"
+                },
                 "is_open_h5_order": {
                     "description": "是否开启扫码接单功能: 0不开启, 1开启",
                     "type": "integer"
@@ -48197,6 +48201,10 @@ const docTemplate = `{
                 },
                 "is_disabled": {
                     "type": "integer"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "多语言名称，使用 LocaleResponse（必须）",
@@ -52378,6 +52386,10 @@ const docTemplate = `{
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "is_show_assistant": {
                     "description": "是否在助手显示, 0-否 1-是",

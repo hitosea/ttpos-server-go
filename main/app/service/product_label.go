@@ -80,6 +80,7 @@ func (s *ProductLabelSrvImpl) GetProductLabelList(ctx context.Context) (*resp.Pr
 			ProductPackageCount: len(label.ProductPackages),
 			CreateTime:          label.CreateTime,
 			ProductPackages:     []resp.ProductLabelPackageItem{},
+			IsEditable:          isEditable(ctx, label.HeadquarterUuid),
 		}
 
 		// 组装关联的商品列表
@@ -241,6 +242,11 @@ func (s *ProductLabelSrvImpl) EditProductLabel(ctx context.Context, req req.Prod
 			return errors.New("标签不存在")
 		}
 
+		// 检查是否为总部来源数据
+		if !isEditable(ctx, existLabel.HeadquarterUuid) {
+			return errors.New("标签不可编辑")
+		}
+
 		// 更新标签
 		label := model.ProductLabel{
 			BaseModel: model.BaseModel{
@@ -295,6 +301,11 @@ func (s *ProductLabelSrvImpl) DeleteProductLabel(ctx context.Context, req req.Pr
 		}
 		if existLabel == nil {
 			return errors.New("标签不存在")
+		}
+
+		// 检查是否为总部来源数据
+		if !isEditable(ctx, existLabel.HeadquarterUuid) {
+			return errors.New("标签不可删除")
 		}
 
 		// 清除商品与标签的关联关系
