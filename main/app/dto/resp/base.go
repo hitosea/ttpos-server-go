@@ -120,6 +120,7 @@ type Company struct {
 	IsEnableErp          bool   `json:"is_show_inventory"`       // 是否显示移动管理端进销存功能
 	IsOpenMap            bool   `json:"is_open_map"`             // 是否开启地图
 	IsOpenDataManagement bool   `json:"is_open_data_management"` // 是否开启数据管理功能
+	IsOpenKiosk          bool   `json:"is_open_kiosk"`           // 是否开启自助点餐机功能
 }
 
 type Permission struct {

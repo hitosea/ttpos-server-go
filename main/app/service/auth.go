@@ -1016,6 +1016,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			IsEnableErp:          company.IsOpenErp(),
 			IsOpenMap:            companySetting.IsOpenTableMap(),
 			IsOpenDataManagement: companySetting.IsOpenDataManagement(),
+			IsOpenKiosk:          companySetting.IsOpenKiosk(),
 		},
 		CloudBasic: cloudBasicSetting,
 		Profile: resp.ShopProfile{
