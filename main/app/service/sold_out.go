@@ -123,11 +123,26 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 			true:  1,
 			false: 0,
 		}
-		if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(item.ProductBomUuid)}, map[string]any{
+
+		// 构建更新字段 map
+		updateMap := map[string]any{
 			"is_sold_out": soldOutMap[*item.IsSoldOut],
-		}); err != nil {
+		}
+
+		// 如果提供了 use_bom_card_stock，则更新
+		if item.UseBomCardStock != nil {
+			updateMap["use_bom_card_stock"] = map[bool]uint{true: 1, false: 0}[*item.UseBomCardStock]
+		}
+
+		// 如果提供了 sellable_quantity，则更新
+		if item.SellableQuantity != nil {
+			updateMap["sellable_quantity"] = *item.SellableQuantity
+		}
+
+		if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(item.ProductBomUuid)}, updateMap); err != nil {
 			return errors.WithMessage(err, "沽清商品失败")
 		}
+
 		// 推送沽清商品
 		utils.Go(func() {
 			websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
@@ -144,10 +159,13 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettingsReq) (*resp.SoldOutSettingsResp, error) {
 	productBomRepo := repository.NewProductBomRepo(s.dbm.GetDB(companyUuid))
 
-	// 查询该商品包的所有规格
+	// 查询该商品包的所有规格，预加载成本卡及其关联材料
 	boms, err := productBomRepo.GetProductBoms(
 		repository.CommonRepo.WhereByProductPackageUuid(req.ProductPackageUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
+		repository.CommonRepo.Preload(repository.WithPreload{
+			Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+		}),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商品规格失败")
@@ -156,9 +174,10 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 	settings := make([]resp.SoldOutSetting, 0, len(boms))
 	for _, bom := range boms {
 		bomCardStockNum := 0.0
-		if bom.UseBomCardStock == 1 {
-			// TODO: 调用库存服务计算成本卡库存
-			// 暂时返回 0，后续实现成本卡库存计算
+		if bom.UseBomCardStock == 1 && bom.HasProductBomCard() && bom.ProductBomCard != nil {
+			// 计算成本卡库存：根据成本卡关联的材料库存计算预计可生产数量
+			// CalculateExpectedProductionNum 会遍历所有关联材料，取最小可生产数量
+			bomCardStockNum = bom.ProductBomCard.CalculateExpectedProductionNum()
 		}
 
 		settings = append(settings, resp.SoldOutSetting{
