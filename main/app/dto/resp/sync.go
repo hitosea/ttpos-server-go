@@ -68,10 +68,9 @@ type DataGroup struct {
 
 // DataItem 数据项
 type DataItem struct {
-	Uuid           uint64         `json:"uuid"`                      // 数据uuid
-	Name           string         `json:"name"`                      // 数据名称
-	RelatedData    []RelatedData  `json:"related_data,omitempty"`    // 关联数据（明确类型和uuid列表）
-	AdditionalInfo map[string]any `json:"additional_info,omitempty"` // 额外信息（如商品价格、活动状态等）
+	Uuid        uint64             `json:"uuid"`         // 数据uuid
+	LocaleName  dto.LocaleResponse `json:"locale_name"`  // 数据名称
+	RelatedData []RelatedData      `json:"related_data"` // 关联数据（明确类型和uuid列表）
 }
 
 // RelatedData 关联数据

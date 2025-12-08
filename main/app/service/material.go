@@ -89,9 +89,9 @@ type IMaterialSrv interface {
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
-	SyncMaterialCategory(ctx context.Context) error // 同步物品分类
-	SyncMaterial(ctx context.Context) error         // 同步物品
-	SyncProductBomCard(ctx context.Context) error   // 同步成本卡
+	SyncMaterialCategory(ctx context.Context, useFilter bool, filterUuids []uint64) error // 同步物品分类
+	SyncMaterial(ctx context.Context, useFilter bool, filterUuids []uint64) error         // 同步物品
+	SyncProductBomCard(ctx context.Context, useFilter bool, filterUuids []uint64) error   // 同步成本卡
 
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
@@ -2792,14 +2792,19 @@ func (s *materialSrv) GetWarehouseItemsByErpCode(ctx context.Context, warehouseE
 }
 
 // 同步物品分类
-func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
+// useFilter: 是否使用uuid过滤（颗粒化同步时为true）
+// filterUuids: 需要同步的总部数据uuid列表（useFilter=true时有效）
+func (s *materialSrv) SyncMaterialCategory(ctx context.Context, useFilter bool, filterUuids []uint64) error {
 	companySetting := ctx.GetCompanySetting()
 	if companySetting.IsSubShop() {
 		// 获取总部company_uuid
 		headquarterUuid := companySetting.HeadquarterUuid
 		headquarterDb := s.dbm.GetDB(headquarterUuid)
-		// 获取总部的分类
-		headquarterMaterialCategoryList, err := repository.NewMaterialRepo(headquarterDb).GetMaterialCategoryList()
+		var dbOptions []repository.DBOption
+		if useFilter {
+			dbOptions = append(dbOptions, repository.CommonRepo.WhereInUuids(filterUuids))
+		}
+		headquarterMaterialCategoryList, err := repository.NewMaterialRepo(headquarterDb).GetMaterialCategoryList(dbOptions...)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部分类列表失败")
 		}
@@ -2822,6 +2827,16 @@ func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
 		headquarterMaterialCategoryNotInSubShop := s.GetHeadquarterMaterialCategoryNotInSubShop(ctx, headquarterMaterialCategoryList, subShopMaterialCategoryList)
 
 		if err := repository.CommonRepo.Transaction(subShopDb, func(tx *gorm.DB) error {
+			// 如果使用过滤，先标记删除分店中未勾选的总部数据
+			if useFilter {
+				if err := tx.Table("ttpos_material_category").
+					Where("headquarter_uuid = ?", headquarterUuid).
+					Where("uuid NOT IN (?)", filterUuids).
+					Update("delete_time", time.Now().Unix()).Error; err != nil {
+					logger.Logger.Error("标记删除物品分类失败", zap.Error(err))
+					return errors.WithMessage(err, "标记删除物品分类失败")
+				}
+			}
 			// 更新已存在的物品分类
 			for _, category := range headquarterMaterialCategoryInSubShop {
 				if headquarterCategory, ok := headquarterMaterialCategoryMap[category.Uuid]; ok {
@@ -2885,7 +2900,7 @@ func (s *materialSrv) GetHeadquarterMaterialCategoryInSubShop(ctx context.Contex
 }
 
 // SyncMaterial 同步物品
-func (s *materialSrv) SyncMaterial(ctx context.Context) error {
+func (s *materialSrv) SyncMaterial(ctx context.Context, useFilter bool, filterUuids []uint64) error {
 	companySetting := ctx.GetCompanySetting()
 
 	// 从erp获取物品列表
@@ -2999,14 +3014,27 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(headquarterDb)
-		headMaterialList := materialRepo.GetMaterialList(
+		options := []repository.DBOption{
 			commonRepo.WhereByHeadquarterUuid(0),
 			materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 			materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
-		)
+		}
+		if useFilter {
+			options = append(options, commonRepo.WhereInUuids(filterUuids))
+		}
+		headMaterialList := materialRepo.GetMaterialList(options...)
 		db := ctx.GetDB()
 		// 同步总部物品到子店（多语言由 SyncMultiLanguage 任务处理）
 		err = db.Transaction(func(tx *gorm.DB) error {
+			if useFilter {
+				if err := tx.Table("ttpos_material").
+					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
+					Where("uuid NOT IN (?)", filterUuids).
+					Update("delete_time", time.Now().Unix()).Error; err != nil {
+					logger.Logger.Error("标记删除物品失败", zap.Error(err))
+					return errors.WithMessage(err, "标记删除物品失败")
+				}
+			}
 			copyCtx := ctx.Copy()
 			copyCtx.SetDB(tx)
 
@@ -3114,7 +3142,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 }
 
 // 同步成本卡
-func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
+func (s *materialSrv) SyncProductBomCard(ctx context.Context, useFilter bool, filterUuids []uint64) error {
 	companySetting := ctx.GetCompanySetting()
 	erpBoms := []*manufacturing.BomInfo{} // erp成本卡列表
 	erpSrv := erp.NewIErpSrv(s.dbm)
@@ -3210,7 +3238,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		// 同步总部成本卡到子店（多语言由 SyncMultiLanguage 任务处理）
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
-		productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(
+		options := []repository.DBOption{
 			commonRepo.WhereBySoftDelete(),
 			commonRepo.Preload(
 				repository.WithPreload{
@@ -3220,14 +3248,32 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 					Query: "RelatedMaterials",
 				},
 			),
-		)
+		}
+		if useFilter {
+			options = append(options, commonRepo.WhereInUuids(filterUuids))
+		}
+		productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(options...)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部成本卡列表失败")
 		}
 
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-			// 删除所有总部的成本卡
-			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+			if useFilter {
+				// 标记删除分店中未勾选的总部数据
+				if err := tx.Table("ttpos_product_bom_card").
+					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
+					Where("uuid NOT IN (?)", filterUuids).
+					Update("delete_time", time.Now().Unix()).Error; err != nil {
+					logger.Logger.Error("标记删除成本卡失败", zap.Error(err))
+					return errors.WithMessage(err, "标记删除成本卡失败")
+				}
+				// 删除所有总部的成本卡
+				tx.Where("headquarter_uuid > 0").Where("uuid IN (?)", filterUuids).Delete(&model.ProductBomCard{})
+			} else {
+				// 删除所有总部的成本卡
+				tx.Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+			}
+
 			productBomCardUuids := []uint64{}
 			for _, productBomCard := range productBomCardList {
 				productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)

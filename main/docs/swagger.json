@@ -46920,6 +46920,10 @@
                     "description": "是否开启扫码接单功能: 0不开启, 1开启",
                     "type": "integer"
                 },
+                "is_open_kiosk": {
+                    "description": "是否开启自助点餐机功能",
+                    "type": "boolean"
+                },
                 "is_open_map": {
                     "description": "是否开启地图",
                     "type": "boolean"
@@ -47152,14 +47156,13 @@
         "resp.DataItem": {
             "type": "object",
             "properties": {
-                "additional_info": {
-                    "description": "额外信息（如商品价格、活动状态等）",
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "name": {
+                "locale_name": {
                     "description": "数据名称",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "related_data": {
                     "description": "关联数据（明确类型和uuid列表）",

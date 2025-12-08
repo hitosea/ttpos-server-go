@@ -350,10 +350,10 @@ type DataGroup struct {
 
 // DataItem 数据项
 type DataItem struct {
-    Uuid            uint64        `json:"uuid"`              // 数据uuid
-    Name            string        `json:"name"`              // 数据名称
-    RelatedData     []RelatedData `json:"related_data,omitempty"` // 关联数据（明确类型和uuid列表）
-    AdditionalInfo  map[string]any `json:"additional_info,omitempty"` // 额外信息（如商品价格、活动状态等）
+    Uuid           uint64              `json:"uuid"`                       // 数据uuid
+    LocaleName     dto.LocaleResponse  `json:"locale_name"`                // 多语言名称
+    RelatedData    []RelatedData       `json:"related_data,omitempty"`     // 关联数据（明确类型和uuid列表）
+    AdditionalInfo map[string]any      `json:"additional_info,omitempty"`  // 额外信息（如商品价格、活动状态等）
 }
 
 // RelatedData 关联数据
@@ -367,6 +367,8 @@ type GranularSyncResp struct {
     TaskUuid uint64 `json:"task_uuid"` // 同步任务uuid
     Message  string `json:"message"`   // 提示信息
 }
+
+// 注意：实际代码中使用 dto.LocaleResponse 结构（包含ZH, EN, TH等多语言字段）
 ```
 
 ---
@@ -406,15 +408,18 @@ type GranularSyncResp struct {
         "items": [
           {
             "uuid": 123456,
-            "name": "饮料",
-            "related_data": [],
-            "additional_info": {}
-          },
-          {
-            "uuid": 234567,
-            "name": "小吃",
-            "related_data": [],
-            "additional_info": {}
+            "locale_name": {
+              "zh": "饮料",
+              "en": "Beverages",
+              "th": "เครื่องดื่ม",
+              "zh_tw": "飲料",
+              "ja": "飲み物",
+              "ko": "음료",
+              "my": "Minuman",
+              "tr": "İçecekler",
+              "sv": "Drycker"
+            },
+            "related_data": []
           }
         ]
       },
@@ -425,21 +430,12 @@ type GranularSyncResp struct {
         "items": [
           {
             "uuid": 789012,
-            "name": "满100减10",
-            "related_data": [],
-            "additional_info": {
-              "amount": 10.00,
-              "status": 1
-            }
-          },
-          {
-            "uuid": 888888,
-            "name": "满50减5",
-            "related_data": [],
-            "additional_info": {
-              "amount": 5.00,
-              "status": 1
-            }
+            "locale_name": {
+              "zh": "满100减10",
+              "en": "满100减10",
+              "th": "满100减10"
+            },
+            "related_data": []
           }
         ]
       },
@@ -450,29 +446,17 @@ type GranularSyncResp struct {
         "items": [
           {
             "uuid": 345678,
-            "name": "招牌菜",
+            "locale_name": {
+              "zh": "招牌菜",
+              "en": "招牌菜",
+              "th": "招牌菜"
+            },
             "related_data": [
               {
                 "type": "product",
                 "uuids": [111111, 222222]
               }
-            ],
-            "additional_info": {
-              "product_count": 2
-            }
-          },
-          {
-            "uuid": 456789,
-            "name": "新品",
-            "related_data": [
-              {
-                "type": "product",
-                "uuids": [333333]
-              }
-            ],
-            "additional_info": {
-              "product_count": 1
-            }
+            ]
           }
         ]
       }
@@ -1334,54 +1318,44 @@ shopSync := shopGroup.Group("/sync")
 
 ### Phase 1: 数据库和模型
 
-- [ ] 为5张表添加 `headquarter_uuid` 字段
+- [x] 为5张表添加 `headquarter_uuid` 字段
 - [ ] 执行数据库迁移（主库和所有分店库）
-- [ ] 更新 Go Model（添加 `HeadquarterUuid` 字段）
-- [ ] 定义新的 DTO（Request 和 Response）
+- [x] 更新 Go Model（添加 `HeadquarterUuid` 字段）
+- [x] 定义新的 DTO（Request 和 Response）
 
 ### Phase 2: Service 层实现
 
-- [ ] 实现 `GetHeadquartersDataList` 方法
-- [ ] 实现 `getDataGroupByType` 方法（处理各种数据类型）
-- [ ] 实现 `GranularSync` 方法
-- [ ] 实现 `executeGranularSync` 方法
-- [ ] 实现 `deleteUncheckedHeadquartersData` 方法
-- [ ] 实现 `SyncXxxByUuids` 方法（5种新数据类型）
-- [ ] 扩展现有 Service 的 Sync 方法，支持按 uuid 列表过滤
+- [x] 实现 `GetHeadquartersDataList` 方法
+- [x] 实现 `getDataGroupByType` 方法（处理各种数据类型）
+- [x] 实现 `GranularSync` 方法
+- [x] 实现 `executeGranularSync` 方法
+- [x] 实现 `SyncXxxByUuids` 方法（5种新数据类型）
+  - [x] SyncMarketingCouponByUuids
+  - [x] SyncFullReductionByUuids
+  - [x] SyncProductLabelByUuids
+  - [x] SyncMarketingActivityByUuids
+  - [x] SyncPaymentMethodByUuids（包含特殊规则）
+- [x] 现有 Service 的 Sync 方法已支持按 uuid 列表过滤（useFilter 参数）
+- [x] 支付方式同步实现完整的特殊规则
 
 ### Phase 3: API 层实现
 
-- [ ] 创建 `ShopSyncHandler`
+- [ ] 创建或扩展 `ShopSyncHandler`
 - [ ] 实现 `GetHeadquartersDataList` API
 - [ ] 实现 `GranularSync` API
 - [ ] 注册路由
 
 ### Phase 4: 常量定义
 
-- [ ] 定义新的同步数据类型常量
-  ```go
-  const (
-      SyncDataTypeCoupon           = "coupon"
-      SyncDataTypeFullReduction    = "full_reduction"
-      SyncDataTypeProductLabel     = "product_label"
-      SyncDataTypeMarketingActivity = "marketing_activity"
-      SyncDataTypePaymentMethod    = "payment_method"
-  )
-  
-  var SyncDataTypeNames = map[string]string{
-      SyncDataTypeCoupon:           "优惠券",
-      SyncDataTypeFullReduction:    "满额减",
-      SyncDataTypeProductLabel:     "菜品标签",
-      SyncDataTypeMarketingActivity: "营销活动",
-      SyncDataTypePaymentMethod:    "支付方式",
-  }
-  ```
+- [x] 定义新的同步数据类型常量（已在 constant.SyncTaskType* 中定义）
+- [x] 常量名称映射（constant.SyncTaskTypeNames）
 
 ### Phase 5: 测试
 
 - [ ] 单元测试（Service 层）
 - [ ] API 测试
 - [ ] 集成测试（端到端流程）
+- [ ] 支付方式规则测试（6个测试用例）
 - [ ] 性能测试
 
 ### Phase 6: 文档和部署

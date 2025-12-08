@@ -210,14 +210,18 @@
 ### 业务约束
 
 - 只有分店账号才能执行颗粒化同步
-- 支付方式有复杂的同步规则（详见 `PAYMENT_METHOD_SYNC_RULES.md`）
+- 支付方式有复杂的同步规则:
+  - 不同步 code=40 (现金) 和 code=10 (余额)
+  - 特殊code (90111, 90222, 90333) 只更新 headquarter_uuid
+  - 普通code同名跳过,不存在则创建
+  - 支付方式不删除未勾选数据
 - 多语言数据需要一并同步
 - 同步任务不能并发执行
 
 ### 资源约束
 
-- 开发时间: 23.5小时（36个任务）
-- Story Point: 待评估 (预估 8-13 SP)
+- 开发时间: ✅ 已完成核心实现
+- Story Point: 13 SP (实际复杂度高)
 
 ---
 
@@ -272,16 +276,20 @@
 
 ---
 
-## 时间表
+## 实施状态
 
-- **Phase 1 - 数据库和模型**: 2.5h（5个任务）
-- **Phase 2 - 常量定义**: 0.5h（1个任务）
-- **Phase 3 - Repository扩展**: 2h（6个任务）
-- **Phase 4 - Service层实现**: 9h（12个任务，支付方式最复杂）
-- **Phase 5 - API层实现**: 2h（3个任务）
-- **Phase 6 - 测试**: 5.5h（6个任务）
-- **Phase 7 - 部署和联调**: 2h（3个任务）
-- **总计**: 23.5h（36个任务）
+- **Phase 1 - 数据库和模型**: ✅ 已完成
+- **Phase 2 - 常量定义**: ✅ 已完成
+- **Phase 3 - Repository扩展**: ⚠️ 部分完成（需补充 Repository 查询方法）
+- **Phase 4 - Service层实现**: ✅ 已完成核心逻辑
+  - ✅ GetHeadquartersDataList 方法
+  - ✅ getDataGroupByType 及各类型查询方法
+  - ✅ GranularSync 和 executeGranularSync
+  - ✅ SyncXxxByUuids 方法（5种新数据类型）
+  - ✅ 支付方式特殊规则实现
+- **Phase 5 - API层实现**: ⏳ 需补充 API 接口
+- **Phase 6 - 测试**: ⏳ 待执行
+- **Phase 7 - 部署和联调**: ⏳ 待执行
 
 ---
 
