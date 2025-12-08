@@ -7543,6 +7543,12 @@ definitions:
       product_bom_uuid:
         description: 商品规格Uuid
         type: integer
+      sellable_quantity:
+        description: 可售数量
+        type: number
+      use_bom_card_stock:
+        description: 是否使用成本卡库存
+        type: boolean
     required:
     - is_sold_out
     - product_bom_uuid
@@ -14417,6 +14423,31 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.SoldOutSetting:
+    properties:
+      bom_card_stock_num:
+        description: 成本卡库存数量
+        type: number
+      is_sold_out:
+        description: 是否售罄
+        type: boolean
+      product_bom_uuid:
+        description: 商品规格UUID
+        type: integer
+      sellable_quantity:
+        description: 可售数量
+        type: number
+      use_bom_card_stock:
+        description: 是否使用成本卡库存
+        type: boolean
+    type: object
+  resp.SoldOutSettingsResp:
+    properties:
+      settings:
+        items:
+          $ref: '#/definitions/resp.SoldOutSetting'
+        type: array
     type: object
   resp.Staff:
     properties:
@@ -26020,6 +26051,35 @@ paths:
       security:
       - JwtToken: []
       summary: 沽清售罄列表
+      tags:
+      - 收银端.沽清
+  /cashier/sold_out/settings:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定商品的沽清设置信息
+      parameters:
+      - description: 商品包ID
+        format: int64
+        in: query
+        name: product_package_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SoldOutSettingsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取商品沽清设置
       tags:
       - 收银端.沽清
   /cashier/statistics/business:

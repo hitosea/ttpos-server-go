@@ -18,6 +18,7 @@ type ISoldOutSrv interface {
 	CancelSoldOut(companyUuid uint64, productBomUuid uint64) error                                        // 取消单个沽清商品
 	CancelAllSoldOut(companyUuid uint64) error                                                            // 取消全部沽清商品
 	AddSoldOut(companyUuid uint64, items []req.SoldOutItem) error                                         // 添加商品沽清
+	GetSettings(companyUuid uint64, req *req.GetSoldOutSettingsReq) (*resp.SoldOutSettingsResp, error)    // 获取商品沽清设置
 }
 
 // soldOutSrv 沽清服务结构体
@@ -137,4 +138,39 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 		})
 	}
 	return nil
+}
+
+// GetSettings 获取商品沽清设置
+func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettingsReq) (*resp.SoldOutSettingsResp, error) {
+	productBomRepo := repository.NewProductBomRepo(s.dbm.GetDB(companyUuid))
+
+	// 查询该商品包的所有规格
+	boms, err := productBomRepo.GetProductBoms(
+		repository.CommonRepo.WhereByProductPackageUuid(req.ProductPackageUuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品规格失败")
+	}
+
+	settings := make([]resp.SoldOutSetting, 0, len(boms))
+	for _, bom := range boms {
+		bomCardStockNum := 0.0
+		if bom.UseBomCardStock == 1 {
+			// TODO: 调用库存服务计算成本卡库存
+			// 暂时返回 0，后续实现成本卡库存计算
+		}
+
+		settings = append(settings, resp.SoldOutSetting{
+			ProductBomUuid:   bom.Uuid,
+			UseBomCardStock:  bom.UseBomCardStock == 1,
+			BomCardStockNum:  bomCardStockNum,
+			IsSoldOut:        bom.IsSoldOut == 1,
+			SellableQuantity: bom.SellableQuantity,
+		})
+	}
+
+	return &resp.SoldOutSettingsResp{
+		Settings: settings,
+	}, nil
 }
