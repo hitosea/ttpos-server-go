@@ -50,6 +50,7 @@ type ISrv interface {
 	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)                                      // 获取打印机设置
 	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error)                     // 获取打印机信息
 	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                      // 获取收银机设置
+	GetKioskSetting(ctx context.Context) (setting.Kiosk, error)                                                                           // 获取自助点餐机设置
 	GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error)                                                                 // 获取云端基础信息
 	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)                                  // 获取点餐助手设置
 	GetPointsSetting(ctx context.Context) (setting.Points, error)                                                                         // 获取积分设置
@@ -73,6 +74,7 @@ type ISrv interface {
 	EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error                              // 修改自动接单会员订单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	EditCashierSetting(ctx context.Context, cashierSettingReq req.SaveCashierSettingReq) error                                            // 修改收银机设置
+	EditKioskSetting(ctx context.Context, kioskSettingReq req.SaveKioskSettingReq) error                                                  // 修改自助点餐机设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
@@ -897,6 +899,78 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	return defaultCashier, nil
 }
 
+// GetKioskSetting 获取自助点餐机设置
+func (s *Srv) GetKioskSetting(ctx context.Context) (setting.Kiosk, error) {
+	var kiosk setting.Kiosk
+	st := s.getSettingByKey(ctx, constant.SettingKiosk)
+
+	logger.Logger.Info("kioskSetting", zap.Any("kioskSetting", st.Values))
+
+	// 获取语言列表
+	languageList, err := s.GetStoreLanguageList(ctx)
+	if err != nil {
+		return kiosk, errors.WithMessage(err, "获取语言列表失败")
+	}
+
+	// 解析 JSON 字符串
+	if st.Values == "" || st.Values == "{}" {
+		// 返回默认值
+		return s.getDefaultKioskSetting(languageList), nil
+	}
+
+	err = json.Unmarshal([]byte(st.Values), &kiosk)
+	if err != nil {
+		ctx.Log().Error("解析自助点餐机设置失败", zap.Error(err))
+		return kiosk, errors.WithMessage(err, "解析自助点餐机设置失败")
+	}
+
+	// 设置默认值
+	kiosk = s.mergeDefaultKioskSetting(kiosk, languageList)
+
+	// 轮播图/视频处理（添加域名）
+	ginContext := ctx.GetGin()
+	if len(kiosk.Carousel) > 0 && ginContext != nil {
+		for i, item := range kiosk.Carousel {
+			kiosk.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
+		}
+	}
+
+	// 确保数组不为 nil
+	if kiosk.Carousel == nil {
+		kiosk.Carousel = make([]setting.CarouselItem, 0)
+	}
+	if kiosk.Language == nil {
+		kiosk.Language = make([]string, 0)
+	}
+	if kiosk.LanguageList == nil {
+		kiosk.LanguageList = make([]dto.LanguageItem, 0)
+	}
+
+	return kiosk, nil
+}
+
+// mergeDefaultKioskSetting 合并默认值
+func (s *Srv) mergeDefaultKioskSetting(kiosk setting.Kiosk, languageList []dto.LanguageItem) setting.Kiosk {
+	defaultSetting := s.getDefaultKioskSetting(languageList)
+
+	if kiosk.AdvancedPassword == "" {
+		kiosk.AdvancedPassword = defaultSetting.AdvancedPassword
+	}
+	if len(kiosk.Language) == 0 {
+		kiosk.Language = defaultSetting.Language
+	}
+	if kiosk.DefaultLanguage == "" {
+		kiosk.DefaultLanguage = defaultSetting.DefaultLanguage
+	}
+	if kiosk.Carousel == nil {
+		kiosk.Carousel = defaultSetting.Carousel
+	}
+	// LanguageList 始终使用最新的语言列表
+	kiosk.LanguageList = languageList
+
+	return kiosk
+}
+
 // GetCloudBasicSetting 获取云端基础信息
 func (s *Srv) GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error) {
 	var (
@@ -1523,6 +1597,38 @@ func (s *Srv) EditCashierSetting(ctx context.Context, cashierSettingReq req.Save
 	return nil
 }
 
+// EditKioskSetting 修改自助点餐机设置
+func (s *Srv) EditKioskSetting(ctx context.Context, kioskSettingReq req.SaveKioskSettingReq) error {
+	kioskSetting, err := s.GetKioskSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 更新字段（只更新传递的字段）
+	if kioskSettingReq.AdvancedPassword != "" {
+		kioskSetting.AdvancedPassword = kioskSettingReq.AdvancedPassword
+	}
+	if kioskSettingReq.CallWaiterEnabled == 0 || kioskSettingReq.CallWaiterEnabled == 1 {
+		kioskSetting.CallWaiterEnabled = kioskSettingReq.CallWaiterEnabled
+	}
+	if kioskSettingReq.Language != nil {
+		kioskSetting.Language = kioskSettingReq.Language
+	}
+	if kioskSettingReq.DefaultLanguage != "" {
+		kioskSetting.DefaultLanguage = kioskSettingReq.DefaultLanguage
+	}
+	if kioskSettingReq.Carousel != nil {
+		kioskSetting.Carousel = kioskSettingReq.Carousel
+	}
+
+	// 保存设置
+	if err := s.UpdateSetting(ctx, constant.SettingKiosk, kioskSetting); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
+}
+
 // GetCashierBaseSetting 获取收银端设置
 func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error) {
 	var settingResp resp.CashierBaseSetting
@@ -1614,6 +1720,7 @@ func (s *Srv) SymbolPosition(ctx context.Context, amount float64) string {
 // UpdateSetting 更新设置
 func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) error {
 	value := utils.ToJson(values)
+	logger.Logger.Info("UpdateSetting", zap.String("settingKey", settingKey), zap.String("value", value))
 	if settingKey == constant.SettingStore {
 		value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
 		value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")

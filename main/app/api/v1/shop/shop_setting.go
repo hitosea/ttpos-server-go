@@ -2,6 +2,7 @@ package shop
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"ttpos-server-go/app/api/helper"
@@ -619,7 +620,7 @@ func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
 // GetHeadquartersDataList 获取总部可同步数据列表
 // @Summary 获取总部可同步数据列表
 // @Description 获取总部可同步数据列表（按种类分组，返回所有16种数据类型）
-// @Tags 商家端.数据同步
+// @Tags 商家端.业务设置
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -641,7 +642,7 @@ func (h *SettingHandler) GetHeadquartersDataList(c *gin.Context) {
 // GranularSync 颗粒化同步数据
 // @Summary 颗粒化同步数据
 // @Description 颗粒化同步数据（接收勾选的uuid列表，删除未勾选的，同步勾选的）
-// @Tags 商家端.数据同步
+// @Tags 商家端.业务设置
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -900,6 +901,176 @@ func (h *SettingHandler) SetDataManage(c *gin.Context) {
 	helper.Success(c, "设置成功")
 }
 
+// GetKioskSetting 获取自助点餐机设置
+// @Summary 获取自助点餐机设置
+// @Description 获取自助点餐机设置
+// @Tags 商家端.自助点餐机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.KioskResp}
+// @Router /shop/setting/kiosk [get]
+func (h *SettingHandler) GetKioskSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	kioskSetting, err := h.settingSrv.GetKioskSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 只返回响应字段，不返回敏感信息
+	resp := setting.KioskResp{
+		AdvancedPassword:  kioskSetting.AdvancedPassword,
+		CallWaiterEnabled: kioskSetting.CallWaiterEnabled,
+		LanguageList:      kioskSetting.LanguageList,
+		Language:          kioskSetting.Language,
+		DefaultLanguage:   kioskSetting.DefaultLanguage,
+		Carousel:          kioskSetting.Carousel,
+	}
+	helper.Success(c, resp)
+}
+
+// SaveKioskSetting 保存自助点餐机设置
+// @Summary 保存自助点餐机设置
+// @Description 保存自助点餐机设置
+// @Tags 商家端.自助点餐机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveKioskSettingReq true "保存自助点餐机设置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/kiosk [post]
+func (h *SettingHandler) SaveKioskSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var kioskSettingReq req.SaveKioskSettingReq
+	if err := c.ShouldBindJSON(&kioskSettingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 参数验证
+	if err := kioskSettingReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 调用 Service 层保存
+	err := h.settingSrv.EditKioskSetting(ctx, kioskSettingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
+// UploadKioskCarousel 上传自助点餐机轮播内容（图片/视频）
+// @Summary 上传自助点餐机轮播内容
+// @Description 上传自助点餐机轮播内容，支持图片（JPG、JPEG、PNG、WEBP，<2MB）和视频（MP4，<10MB）
+// @Tags 商家端.自助点餐机设置
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param file formData file true "文件"
+// @Param file_type formData string false "文件类型：image 或 video，不传则自动识别"
+// @Param group_id formData int false "分组ID"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
+// @Router /shop/setting/kiosk/carousel/upload [post]
+func (h *SettingHandler) UploadKioskCarousel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 打开文件
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	defer fileReader.Close()
+
+	// 获取文件类型参数（可选，如果不传则根据文件扩展名自动识别）
+	fileTypeParam := c.PostForm("file_type")
+
+	// 获取文件扩展名
+	fileName := file.Filename
+	extension := ""
+	if len(fileName) > 0 {
+		dotIndex := -1
+		for i := len(fileName) - 1; i >= 0; i-- {
+			if fileName[i] == '.' {
+				dotIndex = i
+				break
+			}
+		}
+		if dotIndex >= 0 && dotIndex < len(fileName)-1 {
+			extension = fileName[dotIndex+1:]
+		}
+	}
+	extension = strings.ToLower(extension)
+
+	// 获取分组ID
+	groupId := uint64(0)
+	if groupIdStr := c.PostForm("group_id"); groupIdStr != "" {
+		if id, err := strconv.ParseUint(groupIdStr, 10, 64); err == nil {
+			groupId = id
+		}
+	}
+
+	var uploadFileResp *resp.UploadFileResp
+
+	// 根据文件类型或扩展名判断是图片还是视频
+	if fileTypeParam == "image" || (fileTypeParam == "" && (extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "webp")) {
+		// 图片上传：JPG、JPEG、PNG、WEBP，<2MB
+		allowedExts := []string{"jpg", "jpeg", "png", "webp"}
+		isAllowed := slices.Contains(allowedExts, extension)
+		if !isAllowed {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("图片仅支持JPG、JPEG、PNG、WEBP格式"))
+			return
+		}
+
+		// 检查文件大小：2MB
+		maxSizeBytes := int64(2 * 1024 * 1024)
+		if file.Size > maxSizeBytes {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("图片文件大小不能超过2MB"))
+			return
+		}
+
+		uploadFileResp, err = h.uploadFileSrv.UploadImage(ctx, fileReader, fileName, file.Size, groupId, "shop")
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	} else if fileTypeParam == "video" || (fileTypeParam == "" && extension == "mp4") {
+		// 视频上传：MP4，<10MB
+		if extension != "mp4" {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("视频仅支持MP4格式"))
+			return
+		}
+
+		// 检查文件大小：10MB
+		maxSizeBytes := int64(10 * 1024 * 1024)
+		if file.Size > maxSizeBytes {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("视频文件大小不能超过10MB"))
+			return
+		}
+
+		uploadFileResp, err = h.uploadFileSrv.UploadVideo(ctx, fileReader, fileName, file.Size, groupId, 10)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	} else {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("不支持的文件格式，图片支持JPG、JPEG、PNG、WEBP，视频支持MP4"))
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -934,6 +1105,9 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/cashier", wrapper.GetCashierSetting)                      // 获取收银机设置
 		privateApi.POST("/setting/cashier", wrapper.SaveCashierSetting)                    // 保存收银机设置
 		privateApi.POST("/setting/cashier/carousel/upload", wrapper.UploadCashierCarousel) // 上传收银机轮播内容
+		privateApi.GET("/setting/kiosk", wrapper.GetKioskSetting)                          // 获取自助点餐机设置
+		privateApi.POST("/setting/kiosk", wrapper.SaveKioskSetting)                        // 保存自助点餐机设置
+		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因

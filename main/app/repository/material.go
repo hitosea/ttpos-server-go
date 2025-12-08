@@ -47,7 +47,7 @@ type IMaterialRepo interface {
 	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
 	DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
-	GetMaterialCategoryList() ([]model.MaterialCategory, error)
+	GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error                       // 批量修改物品状态
 	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
@@ -486,10 +486,14 @@ func (r *MaterialRepoImpl) CreateMaterialCategory(materialCategory model.Materia
 	return materialCategory.Uuid, nil
 }
 
-func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, error) {
+func (r *MaterialRepoImpl) GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error) {
 	var materialCategories []model.MaterialCategory
 
-	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("sort ASC").Find(&materialCategories).Error; err != nil {
+	db := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("sort ASC")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Find(&materialCategories).Error; err != nil {
 		return nil, errors.WithMessage(err, "获取物品类别列表失败")
 	}
 

@@ -186,6 +186,7 @@ type ProductPackage struct {
 	IsShowAssistant               uint   `gorm:"default:0;column:is_show_assistant;comment:'是否在助手设备显示, 0-否 1-是'"`
 	IsShowH5                      uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
 	IsShowDelivery                uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
+	IsShowKiosk                   uint   `gorm:"default:0;column:is_show_kiosk;comment:'是否在自助点餐机显示, 0-否 1-是'"`
 	Sort                          uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum                      uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe                      string `gorm:"default:'';column:describe;comment:'卖点描述'"`
@@ -273,6 +274,10 @@ func (model *ProductPackage) GetIsShowH5() bool {
 
 func (model *ProductPackage) GetIsShowDelivery() bool {
 	return model.IsShowDelivery == 1
+}
+
+func (model *ProductPackage) GetIsShowKiosk() bool {
+	return model.IsShowKiosk == 1
 }
 
 func (model *ProductPackage) GetOpenDiscount() bool {

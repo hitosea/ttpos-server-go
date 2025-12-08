@@ -109,6 +109,7 @@ type CompanySetting struct {
 	HasChildren               int    `gorm:"column:has_children;type:int(11);default:0;comment:是否含有子节点: 0-否 1-是;NOT NULL" json:"has_children"`
 	EnableTableMap            int    `gorm:"column:enable_table_map;type:int(11);default:0;comment:是否开启桌台地图: 0-否 1-是;NOT NULL" json:"enable_table_map"`
 	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
+	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
 }
 
 // 连锁子店
@@ -213,6 +214,10 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 
 func (model *CompanySetting) IsOpenRider() bool {
 	return model.DeliveryStatus == 1
+}
+
+func (model *CompanySetting) IsOpenKiosk() bool {
+	return model.EnableKiosk == 1
 }
 
 func (model *CompanySetting) IsOpenTableMap() bool {

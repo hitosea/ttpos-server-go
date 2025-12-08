@@ -2250,6 +2250,9 @@ definitions:
       is_show_h5:
         description: 是否显示在h5 1-显示 0-不显示
         type: boolean
+      is_show_kiosk:
+        description: 是否在自助点餐机显示 true-是 false-否
+        type: boolean
       is_show_kitchen:
         description: 是否显示在厨显端显示：1-显示；0-不显示
         type: boolean
@@ -5935,6 +5938,9 @@ definitions:
       is_show_h5:
         description: 是否显示在h5 1-显示 0-不显示
         type: integer
+      is_show_kiosk:
+        description: 是否在自助点餐机显示 0-否 1-是
+        type: integer
       is_show_kitchen:
         description: 是否显示在送厨端 1-显示 0-不显示
         type: integer
@@ -6068,6 +6074,9 @@ definitions:
       is_show_h5:
         description: 是否在H5显示, 0-否 1-是
         type: integer
+      is_show_kiosk:
+        description: 是否在自助点餐机显示, 0-否 1-是
+        type: integer
       is_show_menu:
         description: 是否在电子菜单显示, 0-否 1-是
         type: integer
@@ -6107,6 +6116,9 @@ definitions:
         type: integer
       is_show_h5:
         description: 是否在H5显示, 0-否 1-是
+        type: integer
+      is_show_kiosk:
+        description: 是否在自助点餐机显示, 0-否 1-是
         type: integer
       is_show_menu:
         description: 是否在电子菜单显示, 0-否 1-是
@@ -6513,6 +6525,9 @@ definitions:
       is_show_h5:
         description: 是否显示在h5 0-不显示 1-显示
         type: integer
+      is_show_kiosk:
+        description: 是否在自助点餐机显示 0-否 1-是
+        type: integer
       is_show_kitchen:
         description: 是否显示在厨显端 0-不显示 1-显示
         type: integer
@@ -6877,6 +6892,9 @@ definitions:
         type: integer
       is_show_h5:
         description: 是否显示在h5 0-不显示 1-显示
+        type: integer
+      is_show_kiosk:
+        description: 是否在自助点餐机显示 0-否 1-是
         type: integer
       is_show_kitchen:
         description: 是否显示在厨显端 0-不显示 1-显示
@@ -7469,6 +7487,28 @@ definitions:
       order_display_mode:
         description: 点餐时展示模式 carousel/order/order_carousel，默认carousel
         type: string
+    type: object
+  req.SaveKioskSettingReq:
+    properties:
+      advanced_password:
+        description: 高级密码（4-8位整数，默认666888）
+        type: string
+      call_waiter_enabled:
+        description: 呼叫服务员开关（0-关闭，1-开启，默认1）
+        type: integer
+      carousel:
+        description: 轮播内容（图片+视频，最多10张图片+5个视频，总共最多15个，支持排序）
+        items:
+          $ref: '#/definitions/setting.CarouselItem'
+        type: array
+      default_language:
+        description: 默认语言（默认语言1）
+        type: string
+      language:
+        description: 已设置的语言（常用语言，JSON数组，默认所有语言）
+        items:
+          type: string
+        type: array
     type: object
   req.SendMemberRechargeSMS:
     properties:
@@ -9244,6 +9284,9 @@ definitions:
       is_open_h5_order:
         description: '是否开启扫码接单功能: 0不开启, 1开启'
         type: integer
+      is_open_kiosk:
+        description: 是否开启自助点餐机功能
+        type: boolean
       is_open_map:
         description: 是否开启地图
         type: boolean
@@ -9399,7 +9442,11 @@ definitions:
           type: integer
         type: array
       type:
-        description: 数据类型（如：product_category, unit, coupon等）
+        description: '数据类型: product_category - 商品分类, material_category - 物品分类, tax
+          - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料,
+          product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon
+          - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity -
+          营销活动'
         type: string
       type_name:
         description: 类型名称（如：商品分类、单位、优惠券等）
@@ -9407,13 +9454,10 @@ definitions:
     type: object
   resp.DataItem:
     properties:
-      additional_info:
-        additionalProperties: {}
-        description: 额外信息（如商品价格、活动状态等）
-        type: object
-      name:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
         description: 数据名称
-        type: string
       related_data:
         description: 关联数据（明确类型和uuid列表）
         items:
@@ -12835,6 +12879,9 @@ definitions:
       is_show_h5:
         description: 是否在H5显示, 0-否 1-是
         type: integer
+      is_show_kiosk:
+        description: 是否在自助点餐机显示, 0-否 1-是
+        type: integer
       is_show_menu:
         description: 是否在电子菜单显示, 0-否 1-是
         type: integer
@@ -13934,7 +13981,11 @@ definitions:
   resp.RelatedData:
     properties:
       type:
-        description: 关联数据的类型（如：product, category, unit, flavor等）
+        description: '关联数据的类型: product_category - 商品分类, material_category - 物品分类,
+          tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce -
+          加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商,
+          coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity
+          - 营销活动'
         type: string
       uuids:
         description: 关联的uuid列表
@@ -16396,6 +16447,33 @@ definitions:
         - $ref: '#/definitions/setting.OrderLimit'
         description: 非自助餐下单限制
     type: object
+  setting.KioskResp:
+    properties:
+      advanced_password:
+        description: 高级密码（默认666888）
+        type: string
+      call_waiter_enabled:
+        description: 呼叫服务员开关（默认1-开启）
+        type: integer
+      carousel:
+        description: 轮播内容（图片+视频，最多10张图片+5个视频，总共最多15个，支持排序）
+        items:
+          $ref: '#/definitions/setting.CarouselItem'
+        type: array
+      default_language:
+        description: 默认语言（默认语言1）
+        type: string
+      language:
+        description: 已设置的语言（常用语言）
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表，当前勾选了的语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+    type: object
   setting.KitchenResp:
     properties:
       default_language:
@@ -16646,6 +16724,9 @@ definitions:
       opening_hours:
         description: 营业时间 18:00-02:00
         type: string
+      order_item_remark_count:
+        description: 整单备注原因数量
+        type: integer
       order_remark_count:
         description: 整单备注原因数量
         type: integer
@@ -33192,7 +33273,7 @@ paths:
       - JwtToken: []
       summary: 颗粒化同步数据
       tags:
-      - 商家端.数据同步
+      - 商家端.业务设置
   /shop/setting/headquarters_data_list:
     get:
       consumes:
@@ -33214,7 +33295,88 @@ paths:
       - JwtToken: []
       summary: 获取总部可同步数据列表
       tags:
-      - 商家端.数据同步
+      - 商家端.业务设置
+  /shop/setting/kiosk:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助点餐机设置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.KioskResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取自助点餐机设置
+      tags:
+      - 商家端.自助点餐机设置
+    post:
+      consumes:
+      - application/json
+      description: 保存自助点餐机设置
+      parameters:
+      - description: 保存自助点餐机设置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveKioskSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存自助点餐机设置
+      tags:
+      - 商家端.自助点餐机设置
+  /shop/setting/kiosk/carousel/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传自助点餐机轮播内容，支持图片（JPG、JPEG、PNG、WEBP，<2MB）和视频（MP4，<10MB）
+      parameters:
+      - description: 文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 文件类型：image 或 video，不传则自动识别
+        in: formData
+        name: file_type
+        type: string
+      - description: 分组ID
+        in: formData
+        name: group_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UploadFileResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 上传自助点餐机轮播内容
+      tags:
+      - 商家端.自助点餐机设置
   /shop/setting/member_qrcode:
     get:
       consumes:

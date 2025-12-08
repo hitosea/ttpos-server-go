@@ -18,6 +18,7 @@ type ProductLabelDetail struct {
 	IsShowH5            uint                      `json:"is_show_h5"`            // 是否在H5显示, 0-否 1-是
 	IsShowDelivery      uint                      `json:"is_show_delivery"`      // 是否在外送显示, 0-否 1-是
 	IsShowMenu          uint                      `json:"is_show_menu"`          // 是否在电子菜单显示, 0-否 1-是
+	IsShowKiosk         uint                      `json:"is_show_kiosk"`         // 是否在自助点餐机显示, 0-否 1-是
 	ProductPackageCount int                       `json:"product_package_count"` // 关联商品数量
 	ProductPackages     []ProductLabelPackageItem `json:"product_packages"`      // 关联商品列表
 	CreateTime          int64                     `json:"create_time"`           // 创建时间

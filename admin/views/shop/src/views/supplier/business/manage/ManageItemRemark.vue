@@ -121,7 +121,7 @@
               action: item.action,
             };
           });
-          SettingApi.setItemRemark({ remark }, true)
+          SettingApi.setItemRemark({ order_item_remark: remark }, true)
             .then((res) => {
               this.$ElMessage({
                 type: 'success',

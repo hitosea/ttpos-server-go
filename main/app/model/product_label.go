@@ -14,6 +14,7 @@ type ProductLabel struct {
 	IsShowH5        uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5显示, 0-否 1-是'"`
 	IsShowDelivery  uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
 	IsShowMenu      uint   `gorm:"default:0;column:is_show_menu;comment:'是否在电子菜单显示, 0-否 1-是'"`
+	IsShowKiosk     uint   `gorm:"default:0;column:is_show_kiosk;comment:'是否在自助点餐机显示, 0-否 1-是'"`
 
 	// 关联的商品列表
 	ProductPackages []ProductPackage `gorm:"foreignKey:product_label_uuid;references:uuid"`
