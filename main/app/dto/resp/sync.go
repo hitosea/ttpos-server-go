@@ -60,7 +60,7 @@ type HeadquartersDataListResp struct {
 
 // DataGroup 数据分组
 type DataGroup struct {
-	Type        string     `json:"type"`         // 数据类型（如：product_category, unit, coupon等）
+	Type        string     `json:"type"`         // 数据类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动
 	TypeName    string     `json:"type_name"`    // 类型名称（如：商品分类、单位、优惠券等）
 	Items       []DataItem `json:"items"`        // 该类型的数据列表
 	SyncedUuids []uint64   `json:"synced_uuids"` // 分店已同步的总部数据uuid列表
@@ -75,7 +75,7 @@ type DataItem struct {
 
 // RelatedData 关联数据
 type RelatedData struct {
-	Type  string   `json:"type"`  // 关联数据的类型（如：product, category, unit, flavor等）
+	Type  string   `json:"type"`  // 关联数据的类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动
 	Uuids []uint64 `json:"uuids"` // 关联的uuid列表
 }
 

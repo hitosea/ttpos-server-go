@@ -27657,7 +27657,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.数据同步"
+                    "商家端.业务设置"
                 ],
                 "summary": "颗粒化同步数据",
                 "parameters": [
@@ -27708,7 +27708,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.数据同步"
+                    "商家端.业务设置"
                 ],
                 "summary": "获取总部可同步数据列表",
                 "responses": {
@@ -47150,7 +47150,7 @@ const docTemplate = `{
                     }
                 },
                 "type": {
-                    "description": "数据类型（如：product_category, unit, coupon等）",
+                    "description": "数据类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动",
                     "type": "string"
                 },
                 "type_name": {
@@ -53927,7 +53927,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "type": {
-                    "description": "关联数据的类型（如：product, category, unit, flavor等）",
+                    "description": "关联数据的类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动",
                     "type": "string"
                 },
                 "uuids": {

@@ -620,7 +620,7 @@ func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
 // GetHeadquartersDataList 获取总部可同步数据列表
 // @Summary 获取总部可同步数据列表
 // @Description 获取总部可同步数据列表（按种类分组，返回所有16种数据类型）
-// @Tags 商家端.数据同步
+// @Tags 商家端.业务设置
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -642,7 +642,7 @@ func (h *SettingHandler) GetHeadquartersDataList(c *gin.Context) {
 // GranularSync 颗粒化同步数据
 // @Summary 颗粒化同步数据
 // @Description 颗粒化同步数据（接收勾选的uuid列表，删除未勾选的，同步勾选的）
-// @Tags 商家端.数据同步
+// @Tags 商家端.业务设置
 // @Accept json
 // @Produce json
 // @Security JwtToken
