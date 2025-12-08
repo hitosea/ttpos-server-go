@@ -325,16 +325,15 @@ func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderPro
 }
 
 // 获取自助餐名称
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// Requirement: story-main-buffet-package-name-snapshot-fix
 func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
-	name1 := dto.LocaleResponse{}
-	name2 := dto.LocaleResponse{}
-	if model.BuffetPackage1 != nil {
-		name1 = model.BuffetPackage1.MultiLanguageName.GetNames()
-	}
-	if model.BuffetPackage2 != nil {
-		name2 = model.BuffetPackage2.MultiLanguageName.GetNames()
-	}
-	if model.BuffetPackage1 != nil && model.BuffetPackage2 != nil {
+	// 优先使用快照字段
+	name1 := model.GetLocaleBuffetPackage1Name()
+	name2 := model.GetLocaleBuffetPackage2Name()
+
+	// 如果两个套餐都有数据，合并显示
+	if !name1.IsNull() && !name2.IsNull() {
 		name = dto.LocaleResponse{
 			ZH:   fmt.Sprintf("%s+%s", name1.ZH, name2.ZH),
 			TH:   fmt.Sprintf("%s+%s", name1.TH, name2.TH),
@@ -349,18 +348,13 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 		return
 	}
 	// 只有一个自助餐时都是只填在BuffetPackage1
-	if model.BuffetPackage1 != nil {
-		name = dto.LocaleResponse{
-			ZH:   name1.ZH,
-			TH:   name1.TH,
-			EN:   name1.EN,
-			ZHTW: name1.ZHTW,
-			JA:   name1.JA,
-			KO:   name1.KO,
-			MY:   name1.MY,
-			TR:   name1.TR,
-			SV:   name1.SV,
-		}
+	if !name1.IsNull() {
+		name = name1
+		return
+	}
+	// 如果套餐1为空，尝试使用套餐2（兼容异常情况）
+	if !name2.IsNull() {
+		name = name2
 		return
 	}
 	return name
@@ -455,12 +449,45 @@ func (model *SaleBill) GetPaymentAmount() float64 {
 }
 
 // 获取所有自助餐名称
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// Requirement: story-main-buffet-package-name-snapshot-fix
 func (model *SaleBill) GetBuffetNames(language string) string {
 	buffets := make([]string, 0)
+	buffetUuidMap := make(map[uint64]bool) // 用于去重
+
+	// 优先使用快照字段
+	if model.BuffetPackage1Uuid != 0 {
+		name1 := model.GetLocaleBuffetPackage1Name()
+		if !name1.IsNull() {
+			name := name1.GetLocale(language)
+			if name != "" && !slices.Contains(buffets, name) {
+				buffets = append(buffets, name)
+				buffetUuidMap[model.BuffetPackage1Uuid] = true
+			}
+		}
+	}
+	if model.BuffetPackage2Uuid != 0 {
+		name2 := model.GetLocaleBuffetPackage2Name()
+		if !name2.IsNull() {
+			name := name2.GetLocale(language)
+			if name != "" && !slices.Contains(buffets, name) {
+				buffets = append(buffets, name)
+				buffetUuidMap[model.BuffetPackage2Uuid] = true
+			}
+		}
+	}
+
+	// 降级：如果快照字段为空，使用关联表（兼容历史数据）
+	// 遍历 SaleOrderBuffetCustomerTypes，但跳过已经在快照中找到的套餐
 	for _, order := range model.SaleOrders {
 		for _, buffet := range order.SaleOrderBuffetCustomerTypes {
+			// 如果这个套餐已经在快照中找到，跳过
+			if buffetUuidMap[buffet.BuffetPackageUuid] {
+				continue
+			}
+			// 使用关联表数据
 			name := buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language)
-			if !slices.Contains(buffets, name) {
+			if name != "" && !slices.Contains(buffets, name) {
 				buffets = append(buffets, name)
 			}
 		}

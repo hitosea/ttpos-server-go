@@ -86,6 +86,8 @@ type SaleBill struct {
 	DeskUuid            uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
 	BuffetPackage1Uuid  uint64 `gorm:"column:buffet_package1_uuid;type:bigint(20);default:0;comment:自助餐套餐1ID" json:"buffet_package1_uuid"`
 	BuffetPackage2Uuid  uint64 `gorm:"column:buffet_package2_uuid;type:bigint(20);default:0;comment:自助餐套餐2ID" json:"buffet_package2_uuid"`
+	BuffetPackage1Name  string `gorm:"column:buffet_package1_name;type:text;default:'';comment:自助餐套餐1名称快照（JSON），不随后台更新" json:"buffet_package1_name"`
+	BuffetPackage2Name  string `gorm:"column:buffet_package2_name;type:text;default:'';comment:自助餐套餐2名称快照（JSON），不随后台更新" json:"buffet_package2_name"`
 	DeviceUuid          uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
 	MemberSaleOrderUuid uint64 `gorm:"column:member_sale_order_uuid;type:bigint(20);default:0;comment:会员销售订单ID" json:"member_sale_order_uuid"`
 
@@ -117,29 +119,56 @@ type SaleBill struct {
 }
 
 // 获取自助餐套餐名称
+// GetBuffetPackageName 获取自助餐套餐名称（MultiLanguageName 格式）
+// 优先使用快照字段，降级使用关联表数据
+// Requirement: story-main-buffet-package-name-snapshot-fix
 func (model *SaleBill) GetBuffetPackageName() MultiLanguageName {
-	if model.BuffetPackage1 != nil && model.BuffetPackage1 == nil {
-		return model.BuffetPackage1.MultiLanguageName
-	}
-	if model.BuffetPackage2 != nil && model.BuffetPackage1 == nil {
-		return model.BuffetPackage2.MultiLanguageName
-	}
-	if model.BuffetPackage1 != nil && model.BuffetPackage2 != nil {
+	name1 := model.GetLocaleBuffetPackage1Name()
+	name2 := model.GetLocaleBuffetPackage2Name()
+
+	// 如果两个套餐都有数据，合并显示
+	if !name1.IsNull() && !name2.IsNull() {
 		return MultiLanguageName{
-			EnName:   model.BuffetPackage1.MultiLanguageName.EnName + " + " + model.BuffetPackage2.MultiLanguageName.EnName,
-			ZhName:   model.BuffetPackage1.MultiLanguageName.ZhName + " + " + model.BuffetPackage2.MultiLanguageName.ZhName,
-			ThName:   model.BuffetPackage1.MultiLanguageName.ThName + "+ " + model.BuffetPackage2.MultiLanguageName.ThName,
-			ZhTwName: model.BuffetPackage1.MultiLanguageName.ZhTwName + " + " + model.BuffetPackage2.MultiLanguageName.ZhTwName,
-			JaName:   model.BuffetPackage1.MultiLanguageName.JaName + "+ " + model.BuffetPackage2.MultiLanguageName.JaName,
-			KoName:   model.BuffetPackage1.MultiLanguageName.KoName + "+ " + model.BuffetPackage2.MultiLanguageName.KoName,
-			MyName:   model.BuffetPackage1.MultiLanguageName.MyName + "+ " + model.BuffetPackage2.MultiLanguageName.MyName,
-			TrName:   model.BuffetPackage1.MultiLanguageName.TrName + "+ " + model.BuffetPackage2.MultiLanguageName.TrName,
-			SvName:   model.BuffetPackage1.MultiLanguageName.SvName + "+ " + model.BuffetPackage2.MultiLanguageName.SvName,
+			EnName:   name1.EN + " + " + name2.EN,
+			ZhName:   name1.ZH + " + " + name2.ZH,
+			ThName:   name1.TH + " + " + name2.TH,
+			ZhTwName: name1.ZHTW + " + " + name2.ZHTW,
+			JaName:   name1.JA + " + " + name2.JA,
+			KoName:   name1.KO + " + " + name2.KO,
+			MyName:   name1.MY + " + " + name2.MY,
+			TrName:   name1.TR + " + " + name2.TR,
+			SvName:   name1.SV + " + " + name2.SV,
 		}
 	}
-	if model.BuffetPackage1 == nil && model.BuffetPackage2 == nil {
-		return MultiLanguageName{}
+	// 只有一个自助餐时都是只填在BuffetPackage1
+	if !name1.IsNull() {
+		return MultiLanguageName{
+			EnName:   name1.EN,
+			ZhName:   name1.ZH,
+			ThName:   name1.TH,
+			ZhTwName: name1.ZHTW,
+			JaName:   name1.JA,
+			KoName:   name1.KO,
+			MyName:   name1.MY,
+			TrName:   name1.TR,
+			SvName:   name1.SV,
+		}
 	}
+	// 如果套餐1为空，尝试使用套餐2（兼容异常情况）
+	if !name2.IsNull() {
+		return MultiLanguageName{
+			EnName:   name2.EN,
+			ZhName:   name2.ZH,
+			ThName:   name2.TH,
+			ZhTwName: name2.ZHTW,
+			JaName:   name2.JA,
+			KoName:   name2.KO,
+			MyName:   name2.MY,
+			TrName:   name2.TR,
+			SvName:   name2.SV,
+		}
+	}
+	return MultiLanguageName{}
 	return MultiLanguageName{}
 }
 
@@ -804,4 +833,141 @@ func (model *SaleBill) SetOrderSourceNameSnapshot(multiLangName MultiLanguageNam
 
 	model.OrderSourceName = string(jsonData)
 	return nil
+}
+
+// GetLocaleBuffetPackage1Name 获取自助餐套餐1名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-buffet-package-name-snapshot-fix
+func (model *SaleBill) GetLocaleBuffetPackage1Name() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.BuffetPackage1Name
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.BuffetPackage1 != nil && !model.BuffetPackage1.MultiLanguageName.IsNullName() {
+		return model.BuffetPackage1.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// GetLocaleBuffetPackage2Name 获取自助餐套餐2名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-buffet-package-name-snapshot-fix
+func (model *SaleBill) GetLocaleBuffetPackage2Name() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.BuffetPackage2Name
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.BuffetPackage2 != nil && !model.BuffetPackage2.MultiLanguageName.IsNullName() {
+		return model.BuffetPackage2.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetBuffetPackage1NameSnapshot 设置自助餐套餐1名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-buffet-package-name-snapshot-fix (JSON 方案)
+func (model *SaleBill) SetBuffetPackage1NameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.BuffetPackage1Name = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.BuffetPackage1Name = string(jsonData)
+	return nil
+}
+
+// SetBuffetPackage2NameSnapshot 设置自助餐套餐2名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-buffet-package-name-snapshot-fix (JSON 方案)
+func (model *SaleBill) SetBuffetPackage2NameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.BuffetPackage2Name = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.BuffetPackage2Name = string(jsonData)
+	return nil
+}
+
+// GetLocaleBuffetPackageNameByUuid 根据 BuffetPackageUuid 获取自助餐套餐名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// Requirement: story-main-buffet-package-name-snapshot-fix
+// Parameters:
+//   - buffetPackageUuid: 自助餐套餐 UUID
+//   - fallbackMultiLangName: 降级使用的多语言名称（当快照为空时使用）
+//
+// Returns: 多语言响应，如果快照和关联表都为空则返回空响应
+func (model *SaleBill) GetLocaleBuffetPackageNameByUuid(buffetPackageUuid uint64, fallbackMultiLangName MultiLanguageName) dto.LocaleResponse {
+	// 根据 UUID 判断是套餐1还是套餐2
+	var buffetLocaleName dto.LocaleResponse
+	if model.BuffetPackage1Uuid == buffetPackageUuid {
+		buffetLocaleName = model.GetLocaleBuffetPackage1Name()
+	} else if model.BuffetPackage2Uuid == buffetPackageUuid {
+		buffetLocaleName = model.GetLocaleBuffetPackage2Name()
+	} else {
+		// UUID 不匹配，直接使用降级数据
+		if !fallbackMultiLangName.IsNullName() {
+			return fallbackMultiLangName.GetNames()
+		}
+		return dto.LocaleResponse{}
+	}
+
+	// 如果快照字段为空，降级使用关联表数据（兼容历史数据）
+	if buffetLocaleName.IsNull() && !fallbackMultiLangName.IsNullName() {
+		return fallbackMultiLangName.GetNames()
+	}
+
+	return buffetLocaleName
 }

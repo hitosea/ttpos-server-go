@@ -79,10 +79,49 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 }
 
 // 获取所有自助餐名称
+// GetBuffetNames 获取自助餐名称
+// 优先使用 SaleBill 快照字段，降级使用关联表数据，支持多语言
+// Requirement: story-main-buffet-package-name-snapshot-fix
 func (model *SaleOrder) GetBuffetNames(language string) string {
 	buffets := make([]string, 0)
+	buffetUuidMap := make(map[uint64]bool) // 用于去重
+
+	// 优先使用 SaleBill 快照字段
+	if model.SaleBill != nil {
+		if model.SaleBill.BuffetPackage1Uuid != 0 {
+			name1 := model.SaleBill.GetLocaleBuffetPackage1Name()
+			if !name1.IsNull() {
+				name := name1.GetLocale(language)
+				if name != "" && !slices.Contains(buffets, name) {
+					buffets = append(buffets, name)
+					buffetUuidMap[model.SaleBill.BuffetPackage1Uuid] = true
+				}
+			}
+		}
+		if model.SaleBill.BuffetPackage2Uuid != 0 {
+			name2 := model.SaleBill.GetLocaleBuffetPackage2Name()
+			if !name2.IsNull() {
+				name := name2.GetLocale(language)
+				if name != "" && !slices.Contains(buffets, name) {
+					buffets = append(buffets, name)
+					buffetUuidMap[model.SaleBill.BuffetPackage2Uuid] = true
+				}
+			}
+		}
+	}
+
+	// 降级：如果快照字段为空，使用关联表（兼容历史数据）
+	// 遍历 SaleOrderBuffetCustomerTypes，但跳过已经在快照中找到的套餐
 	for _, buffet := range model.SaleOrderBuffetCustomerTypes {
-		buffets = append(buffets, buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language))
+		// 如果这个套餐已经在快照中找到，跳过
+		if buffetUuidMap[buffet.BuffetPackageUuid] {
+			continue
+		}
+		// 使用关联表数据
+		name := buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language)
+		if name != "" && !slices.Contains(buffets, name) {
+			buffets = append(buffets, name)
+		}
 	}
 	return strings.Join(buffets, "+")
 }

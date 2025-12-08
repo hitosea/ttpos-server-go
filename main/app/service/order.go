@@ -2709,10 +2709,16 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(_ context.Context, saleBi
 				continue
 			}
 			if buffetCustomer.IsBuffetCustomerTypePriceChanged() || buffetCustomer.GetOpenOverallDiscountChanged() {
+				// 优先使用快照字段，降级使用关联表数据
+				// Requirement: story-main-buffet-package-name-snapshot-fix
+				buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
+					buffetCustomer.BuffetPackageUuid,
+					buffetCustomer.BuffetPackage.MultiLanguageName,
+				)
 				// 自助餐顾客类型价格变动
 				customer := resp.Product{
 					Uuid:       buffetCustomer.Uuid,
-					LocaleName: buffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
+					LocaleName: buffetLocaleName,
 					LocaleAttributeName: dto.LocaleResponse{
 						ZH:   buffetCustomer.Name,
 						TH:   buffetCustomer.Name,
@@ -3832,8 +3838,13 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	items := make([]*selling.PosInvoiceItem, 0)
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
 	for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
-		// 自助餐名称
-		buffetName := product.BuffetPackage.MultiLanguageName.EnName
+		// 优先使用快照字段，降级使用关联表数据
+		// Requirement: story-main-buffet-package-name-snapshot-fix
+		buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
+			product.BuffetPackageUuid,
+			product.BuffetPackage.MultiLanguageName,
+		)
+		buffetName := buffetLocaleName.EN
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode:    "ZZC001",
 			Qty:         float64(product.Num),
@@ -4209,8 +4220,13 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				serviceFee := decimal.NewFromFloat(buffetCustomer.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
 				totalServiceFee = totalServiceFee.Add(serviceFee)
 			}
-			// 自助餐名称
-			buffetName := buffetCustomer.BuffetPackage.MultiLanguageName.EnName
+			// 优先使用快照字段，降级使用关联表数据
+			// Requirement: story-main-buffet-package-name-snapshot-fix
+			buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
+				buffetCustomer.BuffetPackageUuid,
+				buffetCustomer.BuffetPackage.MultiLanguageName,
+			)
+			buffetName := buffetLocaleName.EN
 			if buffetCustomer.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				item := &selling.PosInvoiceItem{
 					ItemCode:    "ZZC001",

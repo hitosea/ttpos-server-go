@@ -151,6 +151,29 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		return resp.CreateDeskOrderResp{}, nil
 	}
 
+	// 设置自助餐名称快照（JSON 方案）
+	// Requirement: story-main-buffet-package-name-snapshot-fix
+	// 创建 map 确保按照 req.BuffetUuids 的顺序匹配
+	buffetMap := make(map[uint64]*model.BuffetPackage)
+	for _, buffet := range buffetList {
+		buffetMap[buffet.Uuid] = buffet
+	}
+	// 按照 req.BuffetUuids 的顺序设置快照
+	if len(req.BuffetUuids) >= 1 {
+		if buffet1, ok := buffetMap[req.BuffetUuids[0]]; ok && !buffet1.MultiLanguageName.IsNullName() {
+			if err := saleBill.SetBuffetPackage1NameSnapshot(buffet1.MultiLanguageName); err != nil {
+				ctx.Log().Error("保存自助餐套餐1名称快照失败", zap.Error(err))
+			}
+		}
+	}
+	if len(req.BuffetUuids) >= 2 {
+		if buffet2, ok := buffetMap[req.BuffetUuids[1]]; ok && !buffet2.MultiLanguageName.IsNullName() {
+			if err := saleBill.SetBuffetPackage2NameSnapshot(buffet2.MultiLanguageName); err != nil {
+				ctx.Log().Error("保存自助餐套餐2名称快照失败", zap.Error(err))
+			}
+		}
+	}
+
 	// 构建自助餐顾客列表
 	buffetCustomerTypes := []model.BuffetUuidMapBuffetCustomerTypes{}
 	copier.Copy(&buffetCustomerTypes, req.BuffetCustomerTypes)

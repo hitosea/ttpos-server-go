@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID。系统自动创建的销售账单，收银员ID为0',
     `desk_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '餐桌ID',
     `buffet_package1_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐1的uuid',
+    `buffet_package1_name` TEXT COMMENT '自助餐套餐1名称快照（JSON），不随后台更新',
     `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
+    `buffet_package2_name` TEXT COMMENT '自助餐套餐2名称快照（JSON），不随后台更新',
     `device_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询',
     `member_sale_order_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '会员端销售订单ID',
     -- 随订单修改而更新的字段
