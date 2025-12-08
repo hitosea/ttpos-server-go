@@ -29,7 +29,7 @@ class AddSoldOutFieldsToProductBomTable extends Migrator
             $table->addColumn('use_bom_card_stock', 'integer', [
                 'limit' => 1,
                 'null' => false,
-                'default' => 1,
+                'default' => 0,
                 'comment' => '是否使用成本卡库存，0-否 1-是',
                 'after' => 'sellable_quantity'
             ])->update();
