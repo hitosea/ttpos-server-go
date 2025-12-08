@@ -7123,6 +7123,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/item/remark/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取单品备注列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取单品备注列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderItemRemarkResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/member/cancel": {
             "delete": {
                 "security": [
@@ -21978,6 +22018,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/material_resp.MaterialUnitListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/update_safety_stock": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "子店修改总店同步物品的安全库存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "修改物品安全库存",
+                "parameters": [
+                    {
+                        "description": "请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialUpdateSafetyStockReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -40500,6 +40579,22 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MaterialUpdateSafetyStockReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "safety_stock": {
+                    "description": "安全库存值（可为 null）",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "物品UUID",
                     "type": "integer"
                 }
             }

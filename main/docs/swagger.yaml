@@ -4811,6 +4811,17 @@ definitions:
     - conversion_rate
     - uuid
     type: object
+  req.MaterialUpdateSafetyStockReq:
+    properties:
+      safety_stock:
+        description: 安全库存值（可为 null）
+        type: number
+      uuid:
+        description: 物品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
       member_sale_order_uuid:
@@ -21040,6 +21051,28 @@ paths:
       summary: 获取总部物品列表
       tags:
       - 收银端.桌台
+  /cashier/desk/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/member/cancel:
     delete:
       consumes:
@@ -29803,6 +29836,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取物品的单位列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/update_safety_stock:
+    post:
+      consumes:
+      - application/json
+      description: 子店修改总店同步物品的安全库存
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialUpdateSafetyStockReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改物品安全库存
       tags:
       - 商家端.物品管理
   /shop/member_order/cancel:
