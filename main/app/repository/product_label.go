@@ -17,8 +17,9 @@ type IProductLabelRepo interface {
 	CreateProductLabel(productLabel model.ProductLabel) (uint64, error)
 	UpdateProductLabel(productLabel model.ProductLabel) error
 	DeleteProductLabel(uuid uint64) error
-	ClearProductPackageLabelRelation(labelUuid uint64) error                                // 清除商品包与标签的关联关系
-	UpdateProductPackageLabelRelation(productPackageUuids []uint64, labelUuid uint64) error // 建立商品包与标签的关联关系
+	ClearProductPackageLabelRelation(labelUuid uint64) error                                                          // 清除商品包与标签的关联关系
+	UpdateProductPackageLabelRelation(productPackageUuids []uint64, labelUuid uint64) error                           // 建立商品包与标签的关联关系
+	CheckHeadquarterLabelConflict(productPackageUuids []uint64) ([]model.ProductPackage, []model.ProductLabel, error) // 检查商品是否已被总部标签关联
 
 	// 查询选项
 	WhereUuid(uuid uint64) DBOption
@@ -172,4 +173,50 @@ func (r *ProductLabelRepoImpl) OrderByProductPackageCount(order string) DBOption
 		}
 		return db.Order("product_package_count " + order)
 	}
+}
+
+// CheckHeadquarterLabelConflict 检查商品是否已被总部标签关联
+// 返回冲突的商品包列表和对应的标签列表
+func (r *ProductLabelRepoImpl) CheckHeadquarterLabelConflict(
+	productPackageUuids []uint64,
+) ([]model.ProductPackage, []model.ProductLabel, error) {
+	if len(productPackageUuids) == 0 {
+		return nil, nil, nil
+	}
+
+	var packages []model.ProductPackage
+
+	// 查询商品包及其关联的标签（headquarter_uuid > 0）
+	err := r.db.
+		Preload("MultiLanguageName").
+		Preload("ProductLabel", func(db *gorm.DB) *gorm.DB {
+			return db.Where("headquarter_uuid > ?", 0).Where("delete_time = ?", 0)
+		}).
+		Where("uuid IN ?", productPackageUuids).
+		Where("delete_time = ?", 0).
+		Where("product_label_uuid > ?", 0).
+		Find(&packages).Error
+
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "查询商品包失败")
+	}
+
+	// 提取冲突的商品包（有总部标签关联的）
+	conflictPackages := make([]model.ProductPackage, 0)
+	labelMap := make(map[uint64]model.ProductLabel)
+
+	for _, pkg := range packages {
+		if pkg.ProductLabel.Uuid > 0 && pkg.ProductLabel.HeadquarterUuid > 0 {
+			conflictPackages = append(conflictPackages, pkg)
+			labelMap[pkg.ProductLabel.Uuid] = pkg.ProductLabel
+		}
+	}
+
+	// 转换为标签列表
+	labels := make([]model.ProductLabel, 0, len(labelMap))
+	for _, label := range labelMap {
+		labels = append(labels, label)
+	}
+
+	return conflictPackages, labels, nil
 }
