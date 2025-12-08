@@ -4116,7 +4116,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 }
 
 // 退款发票到erp
-func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, db *gorm.DB, returnType int, isPartReturn bool) (*selling.ReturnPosInvoiceResp, error) {
+func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, saleBill *model.SaleBill, db *gorm.DB, returnType int, isPartReturn bool) (*selling.ReturnPosInvoiceResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
 	staff := ctx.GetStaff()
@@ -4213,41 +4213,48 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				serviceFee := decimal.NewFromFloat(buffetCustomer.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
 				totalServiceFee = totalServiceFee.Add(serviceFee)
 			}
+			// 自助餐名称
+			buffetName := buffetCustomer.BuffetPackage.MultiLanguageName.EnName
 			if buffetCustomer.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				item := &selling.PosInvoiceItem{
-					ItemCode:   "ZZC001",
-					Qty:        -product.Num,
-					Rate:       0,
-					Amount:     0,
-					IsFreeItem: true,
+					ItemCode:    "ZZC001",
+					Qty:         -product.Num,
+					Rate:        0,
+					Amount:      0,
+					IsFreeItem:  true,
+					Description: fmt.Sprintf("%s-%s", buffetName, buffetCustomer.Name),
 				}
 				items = append(items, item)
 			} else {
 				item := &selling.PosInvoiceItem{
-					ItemCode: "ZZC001",
-					Qty:      -product.Num,
-					Rate:     buffetCustomer.GetFinalSalePriceNoneTax(),
-					Amount:   -decimal.NewFromFloat(buffetCustomer.GetFinalSalePriceNoneTax()).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+					ItemCode:    "ZZC001",
+					Qty:         -product.Num,
+					Rate:        buffetCustomer.GetFinalSalePriceNoneTax(),
+					Amount:      -decimal.NewFromFloat(buffetCustomer.GetFinalSalePriceNoneTax()).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+					Description: fmt.Sprintf("%s-%s", buffetName, buffetCustomer.Name),
 				}
 				items = append(items, item)
 			}
 		} else if product.ProductType == constant.ReturnOrderProductTypeBuffetAddTimeProduct {
+			buffetPackageName := saleBill.GetBuffetPackageName()
 			buffetDelayProduct, _, _ := saleOrder.GetSaleOrderBuffetDelayProduct(product.SaleOrderProductUuid)
 			if buffetDelayProduct.Price == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				item := &selling.PosInvoiceItem{
-					ItemCode:   "ZZC001",
-					Qty:        -product.Num,
-					Rate:       0,
-					Amount:     0,
-					IsFreeItem: true,
+					ItemCode:    "ZZCJZ001",
+					Qty:         -product.Num,
+					Rate:        0,
+					Amount:      0,
+					IsFreeItem:  true,
+					Description: fmt.Sprintf("Delay:%s %s", buffetPackageName.EnName, buffetDelayProduct.Name),
 				}
 				items = append(items, item)
 			} else {
 				item := &selling.PosInvoiceItem{
-					ItemCode: "ZZC001",
-					Qty:      -product.Num,
-					Rate:     buffetDelayProduct.Price,
-					Amount:   -decimal.NewFromFloat(buffetDelayProduct.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+					ItemCode:    "ZZCJZ001",
+					Qty:         -product.Num,
+					Rate:        buffetDelayProduct.Price,
+					Amount:      -decimal.NewFromFloat(buffetDelayProduct.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+					Description: fmt.Sprintf("Delay:%s %s", buffetPackageName.EnName, buffetDelayProduct.Name),
 				}
 				items = append(items, item)
 			}
