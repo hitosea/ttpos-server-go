@@ -2076,7 +2076,7 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
-	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderSourceCount, nationalityCount int64
+	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderItemRemarkCount, orderSourceCount, nationalityCount int64
 	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
@@ -2086,6 +2086,10 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 	err = db.Model(&model.OrderRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderRemarkCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+	err = db.Model(&model.OrderItemRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderItemRemarkCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
@@ -2116,6 +2120,7 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		FreeReasonCount:                          int(freeReasonCount),
 		ReturnFoodReasonCount:                    int(returnFoodReasonCount),
 		OrderRemarkCount:                         int(orderRemarkCount),
+		OrderItemRemarkCount:                     int(orderItemRemarkCount),
 		HeadquarterRequiredParentCompanyApproval: headquarterRequiredParentCompanyApproval,
 		HeadquarterViaParentCompanyWarehouse:     headquarterViaParentCompanyWarehouse,
 		OrderSourceCount:                         int(orderSourceCount),

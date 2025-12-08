@@ -1342,10 +1342,11 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			if productUnit.Uuid == stockUnit.Uuid {
 				// 基准单位
 				err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
-					"name":        productUnit.Name,
-					"unit_uuid":   productUnit.Uuid,
-					"is_default":  1,
-					"delete_time": 0,
+					"name":            productUnit.Name,
+					"unit_uuid":       productUnit.Uuid,
+					"conversion_rate": uom.ConversionRate,
+					"is_default":      1,
+					"delete_time":     0,
 				}, commonRepo.WhereByUuid(material.Unit.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新基准单位失败")
