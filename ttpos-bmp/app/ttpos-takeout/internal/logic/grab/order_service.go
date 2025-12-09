@@ -69,7 +69,7 @@ func (s *OrderService) HandleSubmitOrder(ctx context.Context, signature, timesta
 		ProviderName: "grab",
 		OrderUUID:    orderUUID,
 		OrderID:      req.GetOrderID(),
-		MerchantID:   req.GetPartnerMerchantID(),
+		MerchantID:   req.GetPartnerMerchantID(), // 保持 MQ 事件中的字段名不变
 		Status:       req.GetOrderState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
@@ -115,33 +115,34 @@ func (s *OrderService) saveOrderFromSDK(ctx context.Context, req *grabfood.Submi
 	err := dao.Order.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		// 1. 插入订单主表
 		orderDo := &do.Order{
-			Uuid:              orderUUID,
-			MerchantId:        req.GetPartnerMerchantID(),
-			PartnerOrderId:    req.GetOrderID(),
-			ShortOrderNumber:  req.GetShortOrderNumber(),
-			ProviderName:      "grab",
-			OrderType:         getOrderTypeFromSDK(req),
-			OrderTime:         parseTime(req.GetOrderTime()),
-			OrderStatus:       req.GetOrderState(),
-			ScheduledTime:     parseTime(req.GetScheduledTime()),
-			Currency:          currency.GetCode(),
-			Subtotal:          float64(price.GetSubtotal()) / divisor,
-			TotalAmount:       float64(price.GetEaterPayment()) / divisor,
-			MerchantCharge:    float64(price.GetMerchantChargeFee()) / divisor,
-			TaxAmount:         float64(price.GetTax()) / divisor,
-			DiscountAmount:    float64(price.GetGrabFundPromo()+price.GetMerchantFundPromo()) / divisor,
-			MerchantFundPromo: float64(price.GetMerchantFundPromo()) / divisor,
-			PaymentType:       req.GetPaymentType(),
-			IsMexEditOrder:    boolToIntFromFeatureFlags(req.GetFeatureFlags()),
-			Cutlery:           boolToInt(req.GetCutlery()),
-			EaterCount:        getEaterCountFromSDK(req),
-			CustomerName:      getCustomerNameFromSDK(req),
-			CustomerPhone:     getCustomerPhoneFromSDK(req),
-			DeliveryAddress:   deliveryAddressJSON,
-			Note:              "", // 从 items 中提取
-			RawData:           string(rawData),
-			CreatedAt:         gtime.Now(),
-			UpdatedAt:         gtime.Now(),
+			Uuid:               orderUUID,
+			ShopUuid:           "", // TODO: 从配置或上下文获取 shop_uuid
+			ProviderMerchantId: req.GetPartnerMerchantID(),
+			PartnerOrderId:     req.GetOrderID(),
+			ShortOrderNumber:   req.GetShortOrderNumber(),
+			ProviderName:       "grab",
+			OrderType:          getOrderTypeFromSDK(req),
+			OrderTime:          parseTime(req.GetOrderTime()),
+			OrderStatus:        req.GetOrderState(),
+			ScheduledTime:      parseTime(req.GetScheduledTime()),
+			Currency:           currency.GetCode(),
+			Subtotal:           float64(price.GetSubtotal()) / divisor,
+			TotalAmount:        float64(price.GetEaterPayment()) / divisor,
+			MerchantCharge:     float64(price.GetMerchantChargeFee()) / divisor,
+			TaxAmount:          float64(price.GetTax()) / divisor,
+			DiscountAmount:     float64(price.GetGrabFundPromo()+price.GetMerchantFundPromo()) / divisor,
+			MerchantFundPromo:  float64(price.GetMerchantFundPromo()) / divisor,
+			PaymentType:        req.GetPaymentType(),
+			IsMexEditOrder:     boolToIntFromFeatureFlags(req.GetFeatureFlags()),
+			Cutlery:            boolToInt(req.GetCutlery()),
+			EaterCount:         getEaterCountFromSDK(req),
+			CustomerName:       getCustomerNameFromSDK(req),
+			CustomerPhone:      getCustomerPhoneFromSDK(req),
+			DeliveryAddress:    deliveryAddressJSON,
+			Note:               "", // 从 items 中提取
+			RawData:            string(rawData),
+			CreatedAt:          gtime.Now(),
+			UpdatedAt:          gtime.Now(),
 		}
 
 		_, err := dao.Order.Ctx(ctx).Data(orderDo).Insert()
@@ -266,7 +267,7 @@ func (s *OrderService) HandlePushOrderState(ctx context.Context, signature, time
 		ProviderName: "grab",
 		OrderUUID:    order.Uuid,
 		OrderID:      req.GetOrderID(),
-		MerchantID:   req.GetPartnerMerchantID(),
+		MerchantID:   req.GetPartnerMerchantID(), // 保持 MQ 事件中的字段名不变
 		Status:       req.GetState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
@@ -315,7 +316,7 @@ func getOrderTypeFromSDK(req *grabfood.SubmitOrderRequest) string {
 		return "DineIn"
 	}
 	// 根据 featureFlags 或其他字段判断
-	return "DeliveryByGrab"
+	return "DeliveryByProvider"
 }
 
 // getEaterCountFromSDK 从 SDK SubmitOrderRequest 获取用餐人数
@@ -362,7 +363,7 @@ func getOrderType(req *grabDto.SubmitOrderRequest) string {
 	if req.DineIn != nil {
 		return "DineIn"
 	}
-	return "DeliveryByGrab"
+	return "DeliveryByProvider"
 }
 
 // getEaterCount 从旧 DTO 获取用餐人数

@@ -8,7 +8,6 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 )
 
@@ -26,11 +25,11 @@ type (
 		// HandlePushOrderState 处理订单状态变更 Webhook
 		HandlePushOrderState(ctx context.Context, signature string, timestamp string, body []byte) error
 		// HandleGetMenu 处理 Grab 获取菜单请求
-		HandleGetMenu(ctx context.Context, signature string, timestamp string, merchantID string) (*grab.GetMenuResponse, error)
+		HandleGetMenu(ctx context.Context, signature string, timestamp string, merchantID string) (*grabDto.GetMenuResponse, error)
 		// HandleMenuSyncState 处理菜单同步状态回调
 		HandleMenuSyncState(ctx context.Context, signature string, timestamp string, body []byte) error
 		// SyncMenu 主动同步菜单到 Grab
-		SyncMenu(ctx context.Context, merchantID string, menu *grab.GetMenuResponse) error
+		SyncMenu(ctx context.Context, merchantID string, menu *grabDto.GetMenuResponse) error
 		// HandleIntegrationStatus 处理门店集成状态回调
 		HandleIntegrationStatus(ctx context.Context, signature string, timestamp string, body []byte) error
 		// PauseStore 暂停门店
