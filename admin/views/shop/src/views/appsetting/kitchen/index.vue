@@ -62,7 +62,7 @@
           </div>
           <div class="max-w460 color-box">
             <el-select v-model="form.wait_time_color_ranges[2].minute" class="w-104" size="default" :placeholder="$t('选择分钟')" :disabled="!form.wait_time_color_ranges[1].minute && form.wait_time_color_ranges[1].minute !== 0">
-              <el-option v-for="minute in 61 - form.wait_time_color_ranges[1].minute - 1" :key="form.wait_time_color_ranges[1].minute + minute" :value="form.wait_time_color_ranges[1].minute + minute" :label="`${form.wait_time_color_ranges[1].minute + minute}min`"> </el-option>
+              <el-option v-for="minute in 60 - form.wait_time_color_ranges[1].minute" :key="form.wait_time_color_ranges[1].minute + minute" :value="form.wait_time_color_ranges[1].minute + minute" :label="`${form.wait_time_color_ranges[1].minute + minute}min`"> </el-option>
             </el-select>
             <el-select class="w-104" v-model="form.wait_time_color_ranges[2].color" size="default">
               <el-option value="#100A05" :label="$t('黑色')">{{ $t('黑色') }}</el-option>
@@ -317,11 +317,17 @@
                 }
 
                 return {
-                  minute: minute,
+                  minute: parseInt(minute) || 0, // 确保minute是数字类型
                   color: color
                 };
               });
             }
+
+            // 数据处理完成后强制更新视图
+            self.$nextTick(() => {
+              self.$forceUpdate();
+            });
+
             self.onlineList = [];
             self.offlineList = [];
             self.printerList = data.data.vars.values.printer_list;
