@@ -52303,13 +52303,6 @@ const docTemplate = `{
                     "description": "数量计算方法 0-整数 1-小数",
                     "type": "integer"
                 },
-                "order_item_remark_uuids": {
-                    "description": "备注预设UUID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
                 "package_product_list": {
                     "description": "套餐商品列表",
                     "allOf": [
@@ -52333,6 +52326,13 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注",
                     "type": "string"
+                },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "show_batch_tag": {
                     "description": "是否显示分批类型",

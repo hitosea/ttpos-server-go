@@ -55,7 +55,7 @@
   - Purpose: 定义保存厨显设置的请求参数结构体
   - Requirements: 1.3
   - Leverage: 现有 Request DTO: `main/app/dto/req/setting/`
-  - Prompt: Role: Go Developer | Task: 创建 SaveKitchenSettingReq 结构体，包含 IsWaitColor 和 WaitTimeColorRanges 字段，添加 binding 验证标签 | Context: IsWaitColor 必须是 0 或 1，WaitTimeColorRanges 必须包含 3 个区间，Color 字段统一使用 RGB 格式（#xxxxxx），限定颜色值：黑色 #100A05，黄色 #FFBE00，红色 #E50028 | Restrictions: 遵循 .cursor/rules/go-main.mdc，使用 binding 标签验证 | Success: DTO 创建成功，validation 正确
+  - Prompt: Role: Go Developer | Task: 创建 SaveKitchenSettingReq 结构体，包含 IsWaitColor 和 WaitTimeColorRanges 字段，添加 binding 验证标签 | Context: IsWaitColor 必须是 0 或 1，WaitTimeColorRanges 必须包含 3 个区间，Color 字段统一使用 RGB 格式（#xxxxxx），不限定颜色值 | Restrictions: 遵循 .cursor/rules/go-main.mdc，使用 binding 标签验证 | Success: DTO 创建成功，validation 正确
 
 ---
 
@@ -64,10 +64,10 @@
 - [x] 2.1 实现参数验证逻辑
 
   - File: `main/app/service/setting/setting.go`
-  - Purpose: 验证等待时长颜色区间的合法性（时间区间、颜色格式）
+  - Purpose: 验证等待时长颜色区间的合法性（时间区间）
   - Requirements: 1.5
   - Leverage: 现有 Service: `main/app/service/setting/setting.go`
-  - Prompt: Role: Go Developer with validation expertise | Task: 实现 validateWaitTimeColorRanges 方法，验证：1) 必须3个区间，2) 第一区间必须为0分钟，3) 第二区间1-60分钟，4) 第三区间必须大于第二区间且≤60分钟，5) 颜色格式验证（RGB 格式 #xxxxxx，限定颜色值：黑色 #100A05，黄色 #FFBE00，红色 #E50028） | Context: 严格验证参数，返回明确的错误信息 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: 验证逻辑完整，错误信息明确
+  - Prompt: Role: Go Developer with validation expertise | Task: 实现 validateWaitTimeColorRanges 方法，验证：1) 必须3个区间，2) 第一区间必须为0分钟，3) 第二区间1-60分钟，4) 第三区间必须大于第二区间且≤60分钟 | Context: 严格验证参数，返回明确的错误信息，不验证颜色格式 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: 验证逻辑完整，错误信息明确
 
 - [x] 2.2 实现新旧格式转换逻辑
 

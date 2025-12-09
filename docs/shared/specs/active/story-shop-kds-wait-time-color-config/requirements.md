@@ -69,10 +69,9 @@
 #### 验收标准
 
 1. **WHEN** 前端调用获取厨显设置接口 **THEN** 系统 **SHALL** 返回完整的厨显设置信息，包括等待时长颜色配置
-2. **WHEN** 前端调用保存厨显设置接口 **AND** 传递等待时长颜色配置参数 **THEN** 系统 **SHALL** 验证参数合法性，保存配置到数据库，同步到旧后台，并通过 WebSocket 下发到 KDS 终端
+2. **WHEN** 前端调用保存厨显设置接口 **AND** 传递等待时长颜色配置参数 **THEN** 系统 **SHALL** 验证参数合法性（时间区间），保存配置到数据库，同步到旧后台，并通过 WebSocket 下发到 KDS 终端
 3. **WHEN** 前端传递的时间区间重叠（第三区间起点 ≤ 第二区间） **THEN** 系统 **SHALL** 返回错误提示："区间不可重叠，第三区间起点必须大于第二区间"
 4. **WHEN** 前端传递的时间区间不在有效范围（1-60 分钟） **THEN** 系统 **SHALL** 返回错误提示："时间区间必须在 1-60 分钟之间"
-5. **WHEN** 前端传递的颜色格式不正确（非 RGB 格式） **THEN** 系统 **SHALL** 返回错误提示："颜色格式不正确，请使用 RGB 格式（如 #100A05）"
 
 #### 具体要求
 
@@ -82,7 +81,7 @@
 - [ ] 1.2 在 `main/app/api/v1/shop/shop_setting.go` 中新增 `SaveKitchenSetting` 接口
   - URL: `POST /api/v1/shop/setting/kitchen`
   - 接收等待时长颜色配置参数
-  - 验证参数合法性（时间区间、颜色格式）
+  - 验证参数合法性（时间区间）
   - 保存配置到数据库
   - 同步到旧后台（调用 PHP API）
   - 通过 WebSocket 推送配置更新
@@ -92,15 +91,12 @@
     - `WaitTimeColorRanges` ([]WaitTimeColorRange): 等待时长颜色区间配置
       - `WaitTimeColorRange` 结构体：
         - `Minute` (string): 时间阈值（分钟，字符串类型以兼容 PHP）
-        - `Color` (string): 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
-          - 黑色：`#100A05`
-          - 黄色：`#FFBE00`
-          - 红色：`#E50028`
+        - `Color` (string): 颜色值（RGB 格式，统一使用 #xxxxxx 格式，不限定颜色值）
 - [ ] 1.4 在 `main/app/dto/resp/setting/kitchen_setting.go` 中更新响应 DTO
   - 在 `KitchenResp` 结构体中新增 `WaitTimeColorRanges` ([]WaitTimeColorRange) 字段
   - 保留 `WaitColor` ([]string) 字段，保持向后兼容
 - [ ] 1.5 在 `main/app/service/setting/setting.go` 中实现 `SaveKitchenSetting` 方法
-  - 参数验证（时间区间、颜色格式）
+  - 参数验证（时间区间）
   - 保存配置到 `setting` 表（key = `kitchen`）
   - 调用旧后台同步方法
   - 推送 WebSocket 配置更新
@@ -298,7 +294,7 @@
 ### 安全要求
 
 - [ ] 所有 API 需要身份验证（JWT Token）
-- [ ] 参数验证（时间区间、颜色格式）
+- [ ] 参数验证（时间区间）
 - [ ] SQL 注入防护（使用参数化查询）
 - [ ] 参考: `.cursor/rules/security.mdc` - 安全开发规范
 
@@ -363,10 +359,7 @@
   - 第二区间：10 分钟（颜色从旧后台配置读取，如无则使用 `#FFBE00`）
   - 第三区间：20 分钟及以上（颜色从旧后台配置读取，如无则使用 `#E50028`）
 - 旧格式 `wait_color` 只有 `"red"` 和 `"yellow"` 两个取值，第一个元素对应第二区间，第二个元素对应第三区间
-- 新格式 `wait_time_color_ranges` 统一使用 RGB 格式（`#xxxxxx`），颜色值限定：
-  - 黑色：`#100A05`
-  - 黄色：`#FFBE00`
-  - 红色：`#E50028`
+- 新格式 `wait_time_color_ranges` 统一使用 RGB 格式（`#xxxxxx`），颜色值不限定，支持任意 RGB 颜色值
 
 ### 资源约束
 

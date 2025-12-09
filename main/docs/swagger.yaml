@@ -12787,11 +12787,6 @@ definitions:
       num_type:
         description: 数量计算方法 0-整数 1-小数
         type: integer
-      order_item_remark_uuids:
-        description: 备注预设UUID列表
-        items:
-          type: integer
-        type: array
       package_product_list:
         allOf:
         - $ref: '#/definitions/resp.PackageProductList'
@@ -12808,6 +12803,11 @@ definitions:
       remark:
         description: 备注
         type: string
+      remark_uuids:
+        description: 备注预设UUID列表
+        items:
+          type: integer
+        type: array
       show_batch_tag:
         description: 是否显示分批类型
         type: boolean

@@ -165,10 +165,7 @@ CREATE TABLE `setting` (
   - 取值只能是 `"red"` 或 `"yellow"`
 - `wait_time_color_ranges` ([]object): 新格式，格式：`[{"minute": "0", "color": "#100A05"}, ...]`（注意：`minute` 为字符串类型以兼容 PHP）
   - 统一使用 RGB 格式（`#xxxxxx`）
-  - 颜色值限定：
-    - 黑色：`#100A05`
-    - 黄色：`#FFBE00`
-    - 红色：`#E50028`
+  - 颜色值不限定，支持任意 RGB 颜色值
 
 ### 数据库迁移
 
@@ -188,8 +185,7 @@ CREATE TABLE `setting` (
 // WaitTimeColorRange 等待时长颜色区间
 type WaitTimeColorRange struct {
     Minute string `json:"minute"` // 时间阈值（分钟，字符串类型以兼容 PHP）
-    Color  string `json:"color"`   // 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
-    // 颜色值限定：黑色 #100A05，黄色 #FFBE00，红色 #E50028
+    Color  string `json:"color"`   // 颜色值（RGB 格式，统一使用 #xxxxxx 格式，不限定颜色值）
 }
 
 // KitchenResp 厨显设置，接口响应
@@ -494,35 +490,7 @@ func (s *Srv) validateWaitTimeColorRanges(ranges []req.WaitTimeColorRange) error
         return errors.New("第三区间起点必须大于第二区间，且不超过60分钟")
     }
 
-    // 验证颜色格式（RGB 格式，限定颜色值）
-    for _, r := range ranges {
-        if !isValidColor(r.Color) {
-            return errors.New("颜色格式不正确，请使用 RGB 格式（如 #100A05），限定颜色：黑色 #100A05，黄色 #FFBE00，红色 #E50028")
-        }
-    }
-
     return nil
-}
-
-// isValidColor 验证颜色格式
-func isValidColor(color string) bool {
-    // RGB 格式：以 # 开头，6位十六进制
-    if !strings.HasPrefix(color, "#") {
-        return false
-    }
-    matched, _ := regexp.MatchString(`^#[0-9A-Fa-f]{6}$`, color)
-    if !matched {
-        return false
-    }
-    // 限定颜色值：黑色 #100A05，黄色 #FFBE00，红色 #E50028
-    validColors := []string{"#100A05", "#FFBE00", "#E50028"}
-    colorUpper := strings.ToUpper(color)
-    for _, validColor := range validColors {
-        if colorUpper == validColor {
-            return true
-        }
-    }
-    return false
 }
 
 // convertToOldFormat 转换新格式到旧格式
@@ -709,12 +677,7 @@ return kitchen
   }
   ```
 
-#### 场景 2: 颜色格式不正确
-
-- **处理方式**: 返回错误提示："颜色格式不正确，请使用 RGB 格式（如 #100A05），限定颜色：黑色 #100A05，黄色 #FFBE00，红色 #E50028"
-- **用户影响**: 前端显示错误提示，不允许保存
-
-#### 场景 3: WebSocket 推送失败
+#### 场景 2: WebSocket 推送失败
 
 - **处理方式**: 记录错误日志，不影响配置保存
 - **用户影响**: 配置保存成功，但 KDS 终端可能未及时更新（可通过主动拉取配置）
@@ -738,7 +701,7 @@ return kitchen
 
 - **参数验证**: 使用 `binding` 标签验证参数
 - **SQL 注入防护**: 使用 GORM 参数化查询
-- **数据格式验证**: 严格验证时间区间和颜色格式
+- **数据格式验证**: 严格验证时间区间
 
 ---
 
@@ -809,7 +772,7 @@ return kitchen
 ### Phase 2: Service 层实现
 
 - [ ] 实现 `SaveKitchenSetting` 方法
-- [ ] 实现参数验证逻辑（支持 RGB 格式和 red/yellow）
+- [ ] 实现参数验证逻辑（时间区间验证）
 - [ ] 实现新旧格式转换逻辑（`["red", "yellow"]` ↔ RGB 格式）
 - [ ] 更新 `GetKitchenSetting` 方法（支持新格式）
 
