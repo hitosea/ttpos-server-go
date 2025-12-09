@@ -25567,6 +25567,124 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/takeout/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加外卖商品配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "添加外卖商品",
+                "parameters": [
+                    {
+                        "description": "外卖商品添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductTakeoutShopAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/takeout/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取外卖商品详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "获取外卖商品详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "外卖商品UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductTakeoutShopDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/takeout/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑外卖商品配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "编辑外卖商品",
+                "parameters": [
+                    {
+                        "description": "外卖商品编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductTakeoutShopEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/tax/list": {
             "get": {
                 "security": [
@@ -37848,6 +37966,14 @@ const docTemplate = `{
                     "description": "商品类别编码",
                     "type": "string"
                 },
+                "is_display_in_store": {
+                    "description": "是否在店内显示: 1-是 0-否",
+                    "type": "integer"
+                },
+                "is_display_in_takeout": {
+                    "description": "是否在外卖平台显示: 1-是 0-否",
+                    "type": "integer"
+                },
                 "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
@@ -37893,6 +38019,14 @@ const docTemplate = `{
                     "description": "分类编码",
                     "type": "string"
                 },
+                "is_display_in_store": {
+                    "description": "v2.11.0 是否在店内显示: 1-是 0-否，永远等于1",
+                    "type": "integer"
+                },
+                "is_display_in_takeout": {
+                    "description": "v2.11.0 是否在外卖平台显示: 1-是 0-否, 当takeout_product_count大于0的时候 不能设置为0",
+                    "type": "integer"
+                },
                 "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
@@ -37923,6 +38057,10 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "商品类别状态 0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "takeout_product_count": {
+                    "description": "v2.11.0 被外卖商品选中的数量",
                     "type": "integer"
                 },
                 "uuid": {
@@ -38167,6 +38305,111 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "product_resp.ProductTakeoutShopDetailResp": {
+            "type": "object",
+            "properties": {
+                "category_name": {
+                    "description": "外卖分类名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "category_uuid": {
+                    "description": "外卖分类UUID",
+                    "type": "integer"
+                },
+                "flavors": {
+                    "description": "外卖规格列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductTakeoutShopFlavorResp"
+                    }
+                },
+                "headquarter_uuid": {
+                    "description": "总部UUID,0表示不是总部商品",
+                    "type": "integer"
+                },
+                "image_file_uuid": {
+                    "description": "外卖商品图片UUID",
+                    "type": "integer"
+                },
+                "image_url": {
+                    "description": "外卖商品图片URL",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "商品名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "package_sub_product_groups": {
+                    "description": "关联原商品的套餐信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductPackageSubProductGroupList"
+                        }
+                    ]
+                },
+                "product_package_uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
+                },
+                "special_category_name": {
+                    "description": "外卖特色分类名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "special_category_uuid": {
+                    "description": "外卖特色分类UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "外卖状态 0-下架 1-上架",
+                    "type": "integer"
+                },
+                "takeout_type": {
+                    "description": "外卖类型 1-Grab 2-FoodPanda 3-其他",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "外卖商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductTakeoutShopFlavorResp": {
+            "type": "object",
+            "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "规格名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "外卖规格价格",
+                    "type": "number"
                 }
             }
         },
@@ -39753,136 +39996,20 @@ const docTemplate = `{
                 }
             }
         },
-        "req.GranularSyncData": {
-            "type": "object",
-            "properties": {
-                "attribute": {
-                    "description": "属性",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "bom_card": {
-                    "description": "成本卡",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "coupon": {
-                    "description": "优惠券",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "flavor": {
-                    "description": "规格",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "full_reduction": {
-                    "description": "满额减",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "marketing_activity": {
-                    "description": "营销活动",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "material": {
-                    "description": "物品",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "material_category": {
-                    "description": "物品分类",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "payment_method": {
-                    "description": "支付方式",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "product": {
-                    "description": "商品",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "product_category": {
-                    "description": "商品分类",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "product_label": {
-                    "description": "菜品标签",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "sauce": {
-                    "description": "加料",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "supplier": {
-                    "description": "供应商",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "tax": {
-                    "description": "税类",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "unit": {
-                    "description": "单位",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
         "req.GranularSyncReq": {
             "type": "object",
-            "required": [
-                "sync_data"
-            ],
             "properties": {
-                "sync_data": {
-                    "description": "要同步的数据",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/req.GranularSyncData"
-                        }
-                    ]
+                "activity_data_checked": {
+                    "description": "活动数据组是否勾选",
+                    "type": "boolean"
+                },
+                "payment_data_checked": {
+                    "description": "支付数据组是否勾选",
+                    "type": "boolean"
+                },
+                "product_data_checked": {
+                    "description": "商品数据组是否勾选",
+                    "type": "boolean"
                 }
             }
         },
@@ -43189,6 +43316,14 @@ const docTemplate = `{
                     "description": "分类编码",
                     "type": "string"
                 },
+                "is_display_in_store": {
+                    "description": "v2.11.0 是否在店内显示: 1-是 0-否, 永远等于1",
+                    "type": "integer"
+                },
+                "is_display_in_takeout": {
+                    "description": "v2.11.0 是否在外卖平台显示: 1-是 0-否, 当takeout_product_count大于0的时候 不能设置为0",
+                    "type": "integer"
+                },
                 "is_special": {
                     "description": "是否特殊分类, false-否 true-是",
                     "type": "boolean"
@@ -43233,6 +43368,14 @@ const docTemplate = `{
                 "code": {
                     "description": "分类编码",
                     "type": "string"
+                },
+                "is_display_in_store": {
+                    "description": "v2.11.0 是否在店内显示: 1-是 0-否, 永远等于1",
+                    "type": "integer"
+                },
+                "is_display_in_takeout": {
+                    "description": "v2.11.0 是否在外卖平台显示: 1-是 0-否, 当takeout_product_count大于0的时候 不能设置为0, 默认0",
+                    "type": "integer"
                 },
                 "locale_name": {
                     "description": "商品分类名称, 多语言",
@@ -43738,6 +43881,128 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductTakeoutShopAddFlavorReq": {
+            "type": "object",
+            "required": [
+                "bom_uuid"
+            ],
+            "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID（关联店内规格）",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "外卖规格价格",
+                    "type": "number"
+                }
+            }
+        },
+        "req.ProductTakeoutShopAddReq": {
+            "type": "object",
+            "required": [
+                "product_package_uuid"
+            ],
+            "properties": {
+                "category_uuid": {
+                    "description": "外卖分类UUID",
+                    "type": "integer"
+                },
+                "flavors": {
+                    "description": "外卖规格列表（价格）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductTakeoutShopAddFlavorReq"
+                    }
+                },
+                "image_file_uuid": {
+                    "description": "外卖商品图片文件UUID",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "外卖商品名称（多语言），不填则使用店内商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_package_uuid": {
+                    "description": "商品包UUID（关联店内商品）",
+                    "type": "integer"
+                },
+                "special_category_uuid": {
+                    "description": "外卖特色分类UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "外卖状态 0-下架 1-上架",
+                    "type": "integer"
+                },
+                "takeout_type": {
+                    "description": "外卖类型 1-Grab 2-FoodPanda 3-其他，默认1",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductTakeoutShopEditFlavorReq": {
+            "type": "object",
+            "required": [
+                "bom_uuid"
+            ],
+            "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "外卖规格价格",
+                    "type": "number"
+                }
+            }
+        },
+        "req.ProductTakeoutShopEditReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "category_uuid": {
+                    "description": "外卖分类UUID",
+                    "type": "integer"
+                },
+                "flavors": {
+                    "description": "外卖规格列表（价格）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductTakeoutShopEditFlavorReq"
+                    }
+                },
+                "image_file_uuid": {
+                    "description": "外卖商品图片文件UUID",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "外卖商品名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "special_category_uuid": {
+                    "description": "外卖特色分类UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "外卖状态 0-下架 1-上架",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "外卖商品UUID",
                     "type": "integer"
                 }
             }
@@ -47356,54 +47621,27 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.DataGroup": {
+        "resp.DataGroupResp": {
             "type": "object",
             "properties": {
-                "items": {
-                    "description": "该类型的数据列表",
+                "dependencies": {
+                    "description": "依赖的分组列表（group标识）",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.DataItem"
+                        "type": "string"
                     }
                 },
-                "synced_uuids": {
-                    "description": "分店已同步的总部数据uuid列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "type": {
-                    "description": "数据类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动",
+                "group": {
+                    "description": "分组标识: product_data - 商品数据, activity_data - 活动数据, other_data - 其他数据",
                     "type": "string"
                 },
-                "type_name": {
-                    "description": "类型名称（如：商品分类、单位、优惠券等）",
+                "group_name": {
+                    "description": "分组名称（中文）",
                     "type": "string"
-                }
-            }
-        },
-        "resp.DataItem": {
-            "type": "object",
-            "properties": {
-                "locale_name": {
-                    "description": "数据名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
                 },
-                "related_data": {
-                    "description": "关联数据（明确类型和uuid列表）",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.RelatedData"
-                    }
-                },
-                "uuid": {
-                    "description": "数据uuid",
-                    "type": "integer"
+                "synced": {
+                    "description": "该分组是否已同步过（组级别）",
+                    "type": "boolean"
                 }
             }
         },
@@ -49094,11 +49332,11 @@ const docTemplate = `{
         "resp.HeadquartersDataListResp": {
             "type": "object",
             "properties": {
-                "data_groups": {
-                    "description": "按种类分组的数据",
+                "groups": {
+                    "description": "数据分组列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.DataGroup"
+                        "$ref": "#/definitions/resp.DataGroupResp"
                     }
                 }
             }
@@ -54159,22 +54397,6 @@ const docTemplate = `{
                 "refundable_amount": {
                     "description": "剩余可退款金额",
                     "type": "number"
-                }
-            }
-        },
-        "resp.RelatedData": {
-            "type": "object",
-            "properties": {
-                "type": {
-                    "description": "关联数据的类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动",
-                    "type": "string"
-                },
-                "uuids": {
-                    "description": "关联的uuid列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 }
             }
         },

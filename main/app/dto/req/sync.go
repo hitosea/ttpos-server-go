@@ -24,27 +24,9 @@ type GetHeadquartersDataListReq struct {
 	DataTypes []string `json:"data_types"` // 可选，指定查询的数据类型，不传则查询所有
 }
 
-// GranularSyncReq 颗粒化同步请求
+// GranularSyncReq 颗粒化同步请求（简化：只需要提交需要同步的分组）
 type GranularSyncReq struct {
-	SyncData GranularSyncData `json:"sync_data" binding:"required"` // 要同步的数据
-}
-
-// GranularSyncData 要同步的数据（按种类分组）
-type GranularSyncData struct {
-	ProductCategory   []uint64 `json:"product_category"`   // 商品分类
-	Unit              []uint64 `json:"unit"`               // 单位
-	Flavor            []uint64 `json:"flavor"`             // 规格
-	Attribute         []uint64 `json:"attribute"`          // 属性
-	Sauce             []uint64 `json:"sauce"`              // 加料
-	Product           []uint64 `json:"product"`            // 商品
-	MaterialCategory  []uint64 `json:"material_category"`  // 物品分类
-	Material          []uint64 `json:"material"`           // 物品
-	BomCard           []uint64 `json:"bom_card"`           // 成本卡
-	Supplier          []uint64 `json:"supplier"`           // 供应商
-	Tax               []uint64 `json:"tax"`                // 税类
-	Coupon            []uint64 `json:"coupon"`             // 优惠券
-	FullReduction     []uint64 `json:"full_reduction"`     // 满额减
-	ProductLabel      []uint64 `json:"product_label"`      // 菜品标签
-	MarketingActivity []uint64 `json:"marketing_activity"` // 营销活动
-	PaymentMethod     []uint64 `json:"payment_method"`     // 支付方式
+	ProductDataChecked  bool `json:"product_data_checked"`  // 商品数据组是否勾选
+	ActivityDataChecked bool `json:"activity_data_checked"` // 活动数据组是否勾选
+	PaymentDataChecked  bool `json:"payment_data_checked"`  // 支付数据组是否勾选
 }

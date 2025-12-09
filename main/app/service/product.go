@@ -160,15 +160,15 @@ type IProductSrv interface {
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
 	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
-	SyncProductShopCategory(ctx context.Context, useFilter bool, filterUuids []uint64) error // 同步产品分类
-	SyncProductTax(ctx context.Context, useFilter bool, filterUuids []uint64) error          // 同步商品税类
-	SyncUnit(ctx context.Context, useFilter bool, filterUuids []uint64) error                // 获取总部最新单位数据
-	SyncProductFlavor(ctx context.Context, useFilter bool, filterUuids []uint64) error       // 同步商品规格
-	SyncSauce(ctx context.Context, useFilter bool, filterUuids []uint64) error               // 获取总部最新加料数据
-	SyncAttributeGroup(ctx context.Context, useFilter bool, filterUuids []uint64) error      // 获取总部最新属性组数据
-	SyncProduct(ctx context.Context, useFilter bool, filterUuids []uint64) error             // 同步商品
-	SyncProductStockByBomCard(ctx context.Context) error                                     // 计算所有关联成本卡的商品的库存
-	SyncProductPackageImage(ctx context.Context) error                                       // 同步商品包图片
+	SyncProductShopCategory(ctx context.Context) error   // 同步产品分类
+	SyncProductTax(ctx context.Context) error            // 同步商品税类
+	SyncUnit(ctx context.Context) error                  // 获取总部最新单位数据
+	SyncProductFlavor(ctx context.Context) error         // 同步商品规格
+	SyncSauce(ctx context.Context) error                 // 获取总部最新加料数据
+	SyncAttributeGroup(ctx context.Context) error        // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context) error               // 同步商品
+	SyncProductStockByBomCard(ctx context.Context) error // 计算所有关联成本卡的商品的库存
+	SyncProductPackageImage(ctx context.Context) error   // 同步商品包图片
 }
 
 type productSrv struct {
@@ -1625,9 +1625,7 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 }
 
 // SyncProductShopCategory 同步产品分类
-// useFilter: 是否使用uuid过滤（颗粒化同步时为true）
-// filterUuids: 需要同步的总部数据uuid列表（useFilter=true时有效）
-func (s *productSrv) SyncProductShopCategory(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	if !company.IsOpenErp() {
@@ -1639,17 +1637,12 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context, useFilter bool
 	commonRepo := repository.NewCommonRepo()
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 	productRepo := repository.NewProductRepo(headquarterDB)
-	// 查询总部数据（如果使用过滤，只查询指定uuid）
-	options := []repository.DBOption{
+	categories, err := productRepo.GetProductCategoryList(
 		commonRepo.WhereByCategoryKey(""),
 		commonRepo.SortWithSort("ASC"),
 		commonRepo.WhereByHeadquarterUuid(0),
 		productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
-	}
-	if useFilter {
-		options = append(options, commonRepo.WhereInUuids(filterUuids))
-	}
-	categories, err := productRepo.GetProductCategoryList(options...)
+	)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部产品分类失败")
 	}
@@ -1657,16 +1650,6 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context, useFilter bool
 	err = subShopDB.Transaction(func(tx *gorm.DB) error {
 		productRepo = repository.NewProductRepo(tx)
 		categoryRepo := repository.NewProductCategoryRepo(tx)
-		// 如果使用过滤，先标记删除分店中未勾选的总部数据
-		if useFilter {
-			if err := tx.Table("ttpos_product_category").
-				Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-				Where("uuid NOT IN (?)", filterUuids).
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				logger.Logger.Error("标记删除商品分类失败", zap.Error(err))
-				return errors.WithMessage(err, "标记删除商品分类失败")
-			}
-		}
 		for _, category := range categories {
 			subShopCategory, err := categoryRepo.GetProductCategory(
 				commonRepo.WhereByUuid(category.Uuid),
@@ -1836,7 +1819,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context, useFilter bool
 }
 
 // SyncProductTax 同步商品税类
-func (s *productSrv) SyncProductTax(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncProductTax(ctx context.Context) error {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	if !company.IsOpenErp() {
@@ -1847,28 +1830,12 @@ func (s *productSrv) SyncProductTax(ctx context.Context, useFilter bool, filterU
 	}
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 	taxRepo := repository.NewTaxRepo(headquarterDB)
-	// 查询总部数据（如果使用过滤，只查询指定uuid）
-	commonRepo := repository.NewCommonRepo()
-	options := []repository.DBOption{}
-	if useFilter {
-		options = append(options, commonRepo.WhereInUuids(filterUuids))
-	}
-	taxes, err := taxRepo.GetTaxCategoryList(options...)
+	taxes, err := taxRepo.GetTaxCategoryList()
 	if err != nil {
 		return errors.WithMessage(err, "获取总部商品税类失败")
 	}
 	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
 	err = subShopDB.Transaction(func(tx *gorm.DB) error {
-		// 如果使用过滤，先标记删除分店中未勾选的总部数据
-		if useFilter {
-			if err := tx.Table("ttpos_product_tax").
-				Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-				Where("uuid NOT IN (?)", filterUuids).
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				logger.Logger.Error("标记删除税类失败", zap.Error(err))
-				return errors.WithMessage(err, "标记删除税类失败")
-			}
-		}
 		commonRepo := repository.NewCommonRepo()
 		taxRepo = repository.NewTaxRepo(tx)
 		for _, tax := range taxes {
@@ -4523,7 +4490,7 @@ func (s *productSrv) SortProductFlavor(ctx context.Context, req req.ProductFlavo
 }
 
 // SyncProductFlavor 同步商品规格
-func (s *productSrv) SyncProductFlavor(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	if !company.IsOpenErp() {
@@ -4639,15 +4606,11 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, useFilter bool, filt
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(headquarterDb)
 
-		options := []repository.DBOption{
+		headquarterFlavorList, err := productRepo.GetProductFlavorList(
 			commonRepo.WhereBySoftDelete(),
 			commonRepo.WhereByHeadquarterUuid(0),
 			productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
-		}
-		if useFilter {
-			options = append(options, commonRepo.WhereInUuids(filterUuids))
-		}
-		headquarterFlavorList, err := productRepo.GetProductFlavorList(options...)
+		)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部规格列表失败")
 		}
@@ -4683,17 +4646,6 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, useFilter bool, filt
 			delFlavorUuids = append(delFlavorUuids, flavor.Uuid)
 		}
 		err = db.Transaction(func(tx *gorm.DB) error {
-			// 如果使用过滤，先标记删除分店中未勾选的总部数据
-			if useFilter {
-				if err := tx.Table("ttpos_product_flavor").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除规格失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除规格失败")
-				}
-			}
-
 			productFlavorRepo := repository.NewProductFlavorRepo(tx)
 
 			if len(delFlavorUuids) > 0 {
@@ -7099,7 +7051,7 @@ func (s *productSrv) ProductShopChangePrice(ctx context.Context, req req.Product
 }
 
 // SyncUnit 同步单位，暂不考虑erp禁用的情况；如果总部取消给某个子店查看某个单位，如何处理，暂不处理
-func (s *productSrv) SyncUnit(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncUnit(ctx context.Context) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -7131,11 +7083,7 @@ func (s *productSrv) SyncUnit(ctx context.Context, useFilter bool, filterUuids [
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		hqQuery := s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductUnit{})
-		if useFilter {
-			hqQuery = hqQuery.Where("uuid IN (?)", filterUuids)
-		}
-		hqQuery.Preload("MultiLanguageName").Find(&headquarterUnits)
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductUnit{}).Preload("MultiLanguageName").Find(&headquarterUnits)
 	}
 
 	// 子店ttpos已有单位 和 要标记删除的单位
@@ -7204,21 +7152,10 @@ func (s *productSrv) SyncUnit(ctx context.Context, useFilter bool, filterUuids [
 				recoveringUnitUuids = append(recoveringUnitUuids, unit.Uuid)
 			}
 		}
-		if useFilter && len(headquarterUnits) == 0 {
-			if err := tx.Table("ttpos_product_unit").Where("headquarter_uuid > 0").Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, "标记删除单位失败")
-			}
-		}
 		// 同步总部ttpos单位（多语言由 SyncMultiLanguage 任务处理）
 		if len(headquarterUnits) > 0 {
-			if useFilter {
-				// 未勾选的总部数据，标记删除
-				tx.Table("ttpos_product_unit").Where("headquarter_uuid > 0").Where("uuid NOT IN (?)", filterUuids).Update("delete_time", time.Now().Unix())
-				// 删除所有总部数据
-				tx.Table("ttpos_product_unit").Where("headquarter_uuid > 0").Where("uuid IN (?)", filterUuids).Delete(&model.ProductUnit{})
-			} else {
-				tx.Table("ttpos_product_unit").Where("headquarter_uuid > 0").Delete(&model.ProductUnit{})
-			}
+			// 删除单位
+			tx.Where("headquarter_uuid > 0").Delete(&model.ProductUnit{})
 
 			for _, headquarterUnit := range headquarterUnits {
 				insertingProductUnits = append(insertingProductUnits, model.ProductUnit{
@@ -7260,7 +7197,7 @@ func (s *productSrv) SyncUnit(ctx context.Context, useFilter bool, filterUuids [
 }
 
 // SyncSauce 同步加料
-func (s *productSrv) SyncSauce(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncSauce(ctx context.Context) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -7275,36 +7212,13 @@ func (s *productSrv) SyncSauce(ctx context.Context, useFilter bool, filterUuids 
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
-	// 查询总部数据（如果使用过滤，只查询指定uuid）
 	var headquarterSauces []model.ProductSauce
-	query := s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductSauce{}).Preload("MultiLanguageName")
-	if useFilter {
-		query = query.Where("uuid IN (?)", filterUuids)
-	}
-	query.Find(&headquarterSauces)
-
-	if useFilter && len(headquarterSauces) == 0 {
-		// 标记删除总部未勾选的加料
-		if err := s.dbm.GetDB(companySetting.CompanyUuid).Model(&model.ProductSauce{}).Where("headquarter_uuid > 0").Update("delete_time", time.Now().Unix()).Error; err != nil {
-			return errors.WithMessage(err, "标记删除加料失败")
-		}
-	}
+	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductSauce{}).Preload("MultiLanguageName").Find(&headquarterSauces)
 
 	if len(headquarterSauces) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
-			// 标记删除加料（如果使用过滤，只删除未勾选的；否则删除所有总部数据）
-			if useFilter {
-				if err := tx.Table("ttpos_product_sauce").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除加料失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除加料失败")
-				}
-				tx.Where("headquarter_uuid > 0").Where("uuid IN (?)", filterUuids).Delete(&model.ProductSauce{})
-			} else {
-				tx.Where("headquarter_uuid > 0").Delete(&model.ProductSauce{})
-			}
+			// 删除加料（多语言由 SyncMultiLanguage 任务处理）
+			tx.Where("headquarter_uuid > 0").Delete(&model.ProductSauce{})
 
 			var insertingProductSauce []model.ProductSauce
 			for _, headquarterSauce := range headquarterSauces {
@@ -7346,7 +7260,7 @@ func (s *productSrv) SyncSauce(ctx context.Context, useFilter bool, filterUuids 
 }
 
 // SyncAttributeGroup 同步属性组、属性
-func (s *productSrv) SyncAttributeGroup(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -7363,64 +7277,14 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context, useFilter bool, fil
 	}
 
 	var headquarterAttributeGroups []model.ProductAttributeGroup
-	query := s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{})
-	// 如果使用过滤，只查询指定uuid
-	if useFilter {
-		query = query.Where("uuid IN (?)", filterUuids)
-	}
-	query.Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
+	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
 
-	// 如果使用过滤，且总部没有勾选的属性组，则标记删除总部未勾选的属性组和属性值
-	if useFilter && len(headquarterAttributeGroups) == 0 {
-		if err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
-			// 标记删除总部未勾选的属性组
-			if err := tx.Model(&model.ProductAttributeGroup{}).
-				Where("headquarter_uuid > 0").
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, "标记删除属性组失败")
-			}
-			// 标记删除总部未勾选的属性值
-			if err := tx.Model(&model.ProductAttribute{}).Where("headquarter_uuid > 0").
-				Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, "标记删除属性值失败")
-			}
-			return nil
-		}); err != nil {
-			return errors.WithMessage(errors.New("标记删除属性组失败"), err.Error())
-		}
-	}
-
-	// 如果总部有勾选的属性组，则同步总部属性组和属性
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
-			if useFilter {
-				// 标记删除分店中未勾选的总部数据
-				if err := tx.Table("ttpos_product_attribute_group").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除属性组失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除属性组失败")
-				}
-				// 标记删除分店中未勾选的属性值
-				if err := tx.Table("ttpos_product_attribute").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("attribute_group_uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除属性值失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除属性值失败")
-				}
-				// 删除属性值
-				tx.Where("attribute_group_uuid IN (?)", filterUuids).Delete(&model.ProductAttribute{})
-				// 删除属性组
-				tx.Where("headquarter_uuid > 0").Where("uuid IN (?)", filterUuids).Delete(&model.ProductAttributeGroup{})
-			} else {
-				// 删除属性值
-				tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
-				// 删除属性组
-				tx.Where("headquarter_uuid > 0").Delete(&model.ProductAttributeGroup{})
-			}
+			// 删除属性值
+			tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
+			// 删除属性组
+			tx.Where("headquarter_uuid > 0").Delete(&model.ProductAttributeGroup{})
 
 			// 同步总部属性组和属性（多语言由 SyncMultiLanguage 任务处理）
 			var insertingProductAttributeGroups []model.ProductAttributeGroup
@@ -7479,7 +7343,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context, useFilter bool, fil
 }
 
 // SyncProduct 同步商品
-func (s *productSrv) SyncProduct(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *productSrv) SyncProduct(ctx context.Context) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -7698,7 +7562,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, useFilter bool, filterUuid
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
 		subProductPackageRepo := repository.NewProductPackageRepo(db)
-		options := []repository.DBOption{
+		headProductPackageList, err := productPackageRepo.GetProductPackageList(
 			commonRepo.WhereByHeadquarterUuid(0),
 			productPackageRepo.WithMultiLanguageName(),
 			productPackageRepo.WithProductBoms(),
@@ -7707,11 +7571,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, useFilter bool, filterUuid
 			productPackageRepo.WithProductPackageGroups(),
 			productPackageRepo.WithProductPackageGroupItems(),
 			productPackageRepo.WithProductPackageGroupMultiLanguageName(),
-		}
-		if useFilter {
-			options = append(options, commonRepo.WhereInUuids(filterUuids))
-		}
-		headProductPackageList, err := productPackageRepo.GetProductPackageList(options...)
+		)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部商品包列表失败")
 		}
@@ -7872,16 +7732,6 @@ func (s *productSrv) SyncProduct(ctx context.Context, useFilter bool, filterUuid
 		}
 		// 执行同步总店商品到子店
 		err = db.Transaction(func(tx *gorm.DB) error {
-			if useFilter {
-				// 标记删除分店中未勾选的总部数据
-				if err := tx.Table("ttpos_product_package").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除商品包失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除商品包失败")
-				}
-			}
 			productPackageRepo := repository.NewProductPackageRepo(tx)
 			productBomRepo := repository.NewProductBomRepo(tx)
 			productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)

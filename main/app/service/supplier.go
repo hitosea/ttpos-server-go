@@ -14,10 +14,8 @@ import (
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 
 	"github.com/jinzhu/copier"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -32,7 +30,7 @@ type ISupplierSrv interface {
 	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
 
-	SyncSupplier(ctx context.Context, useFilter bool, filterUuids []uint64) error // 同步供应商
+	SyncSupplier(ctx context.Context) error // 同步供应商
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -369,7 +367,7 @@ func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExis
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }
 
-func (s *supplierSrv) SyncSupplier(ctx context.Context, useFilter bool, filterUuids []uint64) error {
+func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -398,11 +396,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, useFilter bool, filterUu
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		query := s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{})
-		if useFilter {
-			query = query.Where("uuid IN (?)", filterUuids)
-		}
-		query.Find(&headquarterSuppliers)
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Find(&headquarterSuppliers)
 	}
 
 	// 本店ttpos供应商
@@ -481,19 +475,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context, useFilter bool, filterUu
 			}
 		}
 		if len(headquarterSuppliers) > 0 {
-			if useFilter {
-				// 标记删除分店中未勾选的总部数据
-				if err := tx.Table("ttpos_supplier").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除供应商失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除供应商失败")
-				}
-				tx.Where("headquarter_uuid > 0").Where("uuid IN (?)", filterUuids).Delete(&model.Supplier{})
-			} else {
-				tx.Where("headquarter_uuid > 0").Delete(&model.Supplier{})
-			}
+			tx.Where("headquarter_uuid > 0").Delete(&model.Supplier{})
 			for _, headquarterSupplier := range headquarterSuppliers {
 				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{
 					BaseModel: model.BaseModel{
