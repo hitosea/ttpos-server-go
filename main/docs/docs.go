@@ -54666,6 +54666,10 @@ const docTemplate = `{
                     "description": "成本卡库存数量",
                     "type": "number"
                 },
+                "is_open_stock": {
+                    "description": "是否开启可售库存",
+                    "type": "boolean"
+                },
                 "is_sold_out": {
                     "description": "是否售罄",
                     "type": "boolean"

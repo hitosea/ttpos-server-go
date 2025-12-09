@@ -185,6 +185,7 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 			UseBomCardStock:  bom.UseBomCardStock == 1,
 			BomCardStockNum:  bomCardStockNum,
 			IsSoldOut:        bom.IsSoldOut == 1,
+			IsOpenStock:      bom.IsOpenStock == 1,
 			SellableQuantity: bom.SellableQuantity,
 		})
 	}
