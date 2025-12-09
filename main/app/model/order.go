@@ -471,10 +471,11 @@ type SaleOrderProductReason struct {
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单商品ID.如果说退菜和赠菜，则sale_order_product_uuid不为0；如果是整单免单，则sale_order_product_uuid为0	" json:"sale_order_product_uuid"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
-	// 三选一。
+	// 四选一。
 	ReturnFoodReasonUuid uint64 `gorm:"column:return_food_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因ID" json:"return_food_reason_uuid"`
 	FreeReasonUuid       uint64 `gorm:"column:free_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:免单原因ID" json:"free_reason_uuid"`
 	GiftReasonUuid       uint64 `gorm:"column:gift_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:赠菜原因ID" json:"gift_reason_uuid"`
+	OrderItemRemarkUuid  uint64 `gorm:"column:order_item_remark_uuid;type:bigint(20) unsigned;not null;default:0;comment:备注预设UUID" json:"order_item_remark_uuid"`
 
 	// 快照字段（JSON 方案）
 	// Requirement: story-main-reason-snapshot-fix
@@ -497,6 +498,11 @@ func (model *SaleOrderProductReason) IsFreeReason() bool {
 // 是否是赠菜原因
 func (model *SaleOrderProductReason) IsGiftReason() bool {
 	return model.GiftReasonUuid != 0
+}
+
+// 是否是备注预设
+func (model *SaleOrderProductReason) IsOrderItemRemark() bool {
+	return model.OrderItemRemarkUuid != 0
 }
 
 func (model *SaleOrderProductReason) SetNil() {

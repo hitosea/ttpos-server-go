@@ -800,34 +800,41 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			}
 		}
 
+		orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+		orderItemRemarkUuids := make([]uint64, 0)
+		for _, item := range orderItemRemarkList {
+			orderItemRemarkUuids = append(orderItemRemarkUuids, item.OrderItemRemarkUuid)
+		}
+
 		product := resp.Product{
-			Uuid:                saleOrderProduct.Uuid,
-			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
-			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
-			Num:                 saleOrderProduct.Num,
-			NumType:             saleOrderProduct.NumType,
-			SalePrice:           saleOrderProduct.GetSalePrice(),
-			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
-			Status:              saleOrderProduct.StatusValue(),
-			Remark:              saleOrderProduct.Remark,
-			IsMust:              saleOrderProduct.IsMustProduct(),
-			IsGift:              saleOrderProduct.IsGiftProduct(),
-			IsWrap:              saleOrderProduct.IsWrapProduct(),
-			IsBuffet:            saleOrderProduct.IsBuffetProduct(),
-			IsCancel:            saleOrderProduct.IsCancelProduct(),
-			CanChangeNum:        canChangeNum,
-			SendKitchenTime:     sendKitchenTime,
-			H5OrderTime:         h5OrderTime,
-			IsH5OrderNeedAudit:  isH5NeedAudit,
-			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
-			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
-			MustPlanUuid:        saleOrderProduct.MustPlanUuid,
-			AcceptTime:          saleOrderProduct.GetAcceptTime(),
-			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
-			UnitPrice:           saleOrderProduct.SalePrice,
-			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
-			CreateTime:          saleOrderProduct.CreateTime,
-			ProductType:         saleOrderProduct.ProductPackage.ProductType,
+			Uuid:                 saleOrderProduct.Uuid,
+			LocaleName:           saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
+			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
+			Num:                  saleOrderProduct.Num,
+			NumType:              saleOrderProduct.NumType,
+			SalePrice:            saleOrderProduct.GetSalePrice(),
+			DiscountPrice:        saleOrderProduct.GetProductFinalSalePrice(),
+			Status:               saleOrderProduct.StatusValue(),
+			Remark:               saleOrderProduct.Remark,
+			OrderItemRemarkUuids: orderItemRemarkUuids,
+			IsMust:               saleOrderProduct.IsMustProduct(),
+			IsGift:               saleOrderProduct.IsGiftProduct(),
+			IsWrap:               saleOrderProduct.IsWrapProduct(),
+			IsBuffet:             saleOrderProduct.IsBuffetProduct(),
+			IsCancel:             saleOrderProduct.IsCancelProduct(),
+			CanChangeNum:         canChangeNum,
+			SendKitchenTime:      sendKitchenTime,
+			H5OrderTime:          h5OrderTime,
+			IsH5OrderNeedAudit:   isH5NeedAudit,
+			Sign:                 cryptor.Md5String(saleOrderProduct.Sign),
+			ProductPackageUuid:   saleOrderProduct.ProductPackageUuid,
+			MustPlanUuid:         saleOrderProduct.MustPlanUuid,
+			AcceptTime:           saleOrderProduct.GetAcceptTime(),
+			IsAccept:             saleOrderProduct.IsAcceptOrderProduct(),
+			UnitPrice:            saleOrderProduct.SalePrice,
+			IsShowKitchen:        saleOrderProduct.ProductPackage.IsShowKitchen,
+			CreateTime:           saleOrderProduct.CreateTime,
+			ProductType:          saleOrderProduct.ProductPackage.ProductType,
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},

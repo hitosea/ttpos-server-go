@@ -130,6 +130,7 @@ type SaleOrderProduct struct {
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
 	BatchTag                   *BatchTag                    `gorm:"foreignKey:BatchTagUuid;references:uuid"`
+	OrderItemRemarks           []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
@@ -966,6 +967,37 @@ func (model *SaleOrderProduct) NewSaleOrderProductReasonList(reasons []*ReturnFo
 	return list
 }
 
+// NewSaleOrderProductRemarkReasonList 创建备注预设原因列表，保存快照字段（JSON 格式）
+func (model *SaleOrderProduct) NewSaleOrderProductRemarkReasonList(remarks []*OrderItemRemark) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, remark := range remarks {
+		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !remark.MultiLanguageName.IsNullName() {
+			localeResp := remark.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.SaleOrderUuid,
+			SaleOrderProductUuid:  model.Uuid,
+			OrderItemRemarkUuid:   remark.Uuid,
+			MultiLanguageNameUuid: remark.MultiLanguageNameUuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
+		})
+	}
+	return list
+}
+
 // SetCancelInfo 设置订单商品的退菜信息，标记该商品为退菜商品
 func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrderProductReason) {
 	defer model.SetUpdate() // 标记该model需要更新
@@ -1151,6 +1183,22 @@ func (model *SaleOrderProduct) GetCancelReasons() []*SaleOrderProductReason {
 		}
 		// 三选一。只取出退菜原因，忽略赠菜原因和免单原因
 		if reason.ReturnFoodReasonUuid != 0 {
+			list = append(list, reason)
+		}
+	}
+	return list
+}
+
+// GetOrderItemRemarkUuids 获取订单商品的备注预设UUID列表
+func (model *SaleOrderProduct) GetOrderItemRemark() []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range model.OrderItemRemarks {
+		// 严谨性检查。避免有不是该商品的备注预设原因
+		if reason.SaleOrderProductUuid != model.Uuid || reason.SaleOrderUuid != model.SaleOrderUuid {
+			continue
+		}
+		// 只取出备注预设原因
+		if reason.OrderItemRemarkUuid != 0 && reason.DeleteTime == 0 {
 			list = append(list, reason)
 		}
 	}
@@ -1919,7 +1967,7 @@ func (model *SaleOrderProduct) UpdateSign() {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid-分批类型uuid
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid-分批类型uuid-备注预设UUID列表
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1929,6 +1977,7 @@ func (model *SaleOrderProduct) UpdateSign() {
 // 6 退菜
 // 7 h5下单
 // 8 接单
+// 9 修改备注预设
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -1969,7 +2018,19 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%d",
+	// 构建商品的备注预设UUID列表
+	type Remark struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	remark := Remark{Uuids: make([]uint64, 0), Text: model.Remark}
+	remarkUuids := model.GetOrderItemRemark()
+	for _, item := range remarkUuids {
+		remark.Uuids = append(remark.Uuids, item.OrderItemRemarkUuid)
+	}
+	remarkStr := utils.ToJson(remark)
+
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%d-%s",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -1983,11 +2044,12 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
 		model.PackageUuid,
 		model.BatchTagUuid, // 分批类型UUID. 前置模式下，加购时就设置，用于区分相同商品但不同分批类型
+		remarkStr,          // 备注预设原因列表
 	)
 }
 
 // GeneratePackageSign 生成商品套餐签名. 相同的商品套餐，商品套餐签名相同,用于取消拆单时合并商品。
-// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-分批类型uuid
+// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-分批类型uuid-备注预设UUID列表
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1997,6 +2059,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 // 6 退菜
 // 7 h5下单
 // 8 接单
+// 9 修改备注预设
 func (model *SaleOrderProduct) GeneratePackageSign() string {
 	packageUuid := model.ProductPackageUuid
 
@@ -2011,7 +2074,18 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d",
+	// 构建商品的备注预设UUID列表
+	type Remark struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	remark := Remark{Uuids: make([]uint64, 0), Text: model.Remark}
+	for _, item := range model.GetOrderItemRemark() {
+		remark.Uuids = append(remark.Uuids, item.OrderItemRemarkUuid)
+	}
+	remarkStr := utils.ToJson(remark)
+
+	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%s",
 		packageUuid,
 		model.PackageSubProductParams,
 		model.Remark,
@@ -2024,6 +2098,7 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
 		model.BatchTagUuid,  // 分批类型UUID. 前置模式下，加购时就设置，用于区分相同商品但不同分批类型
+		remarkStr,           // 备注预设原因列表
 	)
 }
 

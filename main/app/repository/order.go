@@ -842,6 +842,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -959,6 +962,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						},
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
 						},
 					),
 					CommonRepo.Preload(
@@ -1080,6 +1086,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					},
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
 					},
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.ProductPackage",
@@ -1963,6 +1972,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage.MultiLanguageName",
