@@ -304,38 +304,38 @@ type SaleOrder struct {
 
 // Product 购物车商品
 type Product struct {
-	Uuid                 uint64             `json:"uuid"`                    // 商品uuid
-	ProductPackageUuid   uint64             `json:"product_package_uuid"`    // 商品包uuid
-	MustPlanUuid         uint64             `json:"must_plan_uuid"`          // 必点方案uuid
-	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 商品名称。商品名称、自助餐名称、自助餐加钟名称
-	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 商品属性
-	Num                  float64            `json:"num"`                     // 数量
-	NumType              uint               `json:"num_type"`                // 数量计算方法 0-整数 1-小数
-	FinishedNum          float64            `json:"finished_num"`            // 制作完成数量
-	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）
-	SalePrice            float64            `json:"price"`                   // 原价. 原价=单价*数量
-	DiscountPrice        float64            `json:"discount_price"`          // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
-	Status               int                `json:"status"`                  // 0: 未送厨 1:已送厨 2:制作完成（出餐）
-	Remark               string             `json:"remark"`                  // 备注
-	OrderItemRemarkUuids []uint64           `json:"order_item_remark_uuids"` // 备注预设UUID列表
-	IsMust               bool               `json:"is_must"`                 // 是否必点
-	IsGift               bool               `json:"is_gift"`                 // 是否是赠菜
-	IsWrap               bool               `json:"is_wrap"`                 // 是否是打包
-	IsBuffet             bool               `json:"is_buffet"`               // 是否是自助餐
-	IsCancel             bool               `json:"is_cancel"`               // 是否退菜
-	CanChangeNum         bool               `json:"can_change_num"`          // 顾客可修改必点数量
-	AboutBuffet          AboutBuffet        `json:"about_buffet"`            // 自助餐信息
-	IsShowKitchen        uint               `json:"is_show_kitchen"`         // 是否在厨显端显示
-	ProductType          uint               `json:"product_type"`            // 商品类型 0-商品 1-套餐
-	PackageProductList   PackageProductList `json:"package_product_list"`    // 套餐商品列表
-	AddPrice             float64            `json:"add_price"`               // 加价金额（套餐主商品的加价总和）
-	CanEdit              bool               `json:"can_edit"`                // 是否可以编辑
-	IsBatch              bool               `json:"is_batch"`                // 是否是分批商品
-	ShowDelayTag         bool               `json:"show_delay_tag"`          // 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
-	ShowBatchTag         bool               `json:"show_batch_tag"`          // 是否显示分批类型
-	BatchTagName         dto.LocaleResponse `json:"batch_tag_name"`          // 分批类型名称
-	BatchTagColor        string             `json:"batch_tag_color"`         // 分批类型颜色
-	BatchTagUuid         uint64             `json:"batch_tag_uuid"`          // 分批类型UUID
+	Uuid                uint64             `json:"uuid"`                  // 商品uuid
+	ProductPackageUuid  uint64             `json:"product_package_uuid"`  // 商品包uuid
+	MustPlanUuid        uint64             `json:"must_plan_uuid"`        // 必点方案uuid
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
+	Num                 float64            `json:"num"`                   // 数量
+	NumType             uint               `json:"num_type"`              // 数量计算方法 0-整数 1-小数
+	FinishedNum         float64            `json:"finished_num"`          // 制作完成数量
+	UnitPrice           float64            `json:"unit_price"`            // 单价（折前）
+	SalePrice           float64            `json:"price"`                 // 原价. 原价=单价*数量
+	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
+	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）
+	Remark              string             `json:"remark"`                // 备注
+	RemarkUuids         []uint64           `json:"remark_uuids"`          // 备注预设UUID列表
+	IsMust              bool               `json:"is_must"`               // 是否必点
+	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
+	IsWrap              bool               `json:"is_wrap"`               // 是否是打包
+	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
+	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
+	CanChangeNum        bool               `json:"can_change_num"`        // 顾客可修改必点数量
+	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
+	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
+	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
+	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
+	AddPrice            float64            `json:"add_price"`             // 加价金额（套餐主商品的加价总和）
+	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
+	IsBatch             bool               `json:"is_batch"`              // 是否是分批商品
+	ShowDelayTag        bool               `json:"show_delay_tag"`        // 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
+	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
+	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
+	BatchTagColor       string             `json:"batch_tag_color"`       // 分批类型颜色
+	BatchTagUuid        uint64             `json:"batch_tag_uuid"`        // 分批类型UUID
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
