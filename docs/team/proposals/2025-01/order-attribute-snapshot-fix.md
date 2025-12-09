@@ -247,6 +247,12 @@
     - 优先使用 `SaleBill.NationalityName` 字段
     - 如果快照字段为空，降级使用 `Nationality.MultiLanguageName`
 
+12. **修复自助餐顾客类型套餐名称获取逻辑**
+    - 在 `ttpos_sale_order_buffet_customer_type` 表添加 `buffet_package_name` 字段（TEXT 类型，多语言 JSON 快照）
+    - 修改 `SaleOrderBuffetCustomerType` 模型，添加 `BuffetPackageName` 字段和 `GetLocaleBuffetPackageName()` 方法
+    - 修改所有使用 `SaleOrderBuffetCustomerType` 的地方，优先使用快照字段
+    - 修改下单逻辑，创建 `SaleOrderBuffetCustomerType` 时保存自助餐套餐名称快照
+
 #### 三、数据迁移和兼容性
 
 12. **数据完整性检查**

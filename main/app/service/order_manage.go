@@ -266,11 +266,8 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 					continue
 				}
 				// 优先使用快照字段，降级使用关联表数据
-				// Requirement: story-main-buffet-package-name-snapshot-fix
-				buffetLocaleName := bill.GetLocaleBuffetPackageNameByUuid(
-					orderBuffetCustomer.BuffetPackageUuid,
-					orderBuffetCustomer.BuffetPackage.MultiLanguageName,
-				)
+				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+				buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
 				buffetName := buffetLocaleName.GetLocale(language)
 				products = append(products, &resp.OrderExportInfoProduct{
 					Name:       buffetName,
@@ -455,11 +452,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					continue
 				}
 				// 优先使用快照字段，降级使用关联表数据
-				// Requirement: story-main-buffet-package-name-snapshot-fix
-				buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-					orderBuffetCustomer.BuffetPackageUuid,
-					orderBuffetCustomer.BuffetPackage.MultiLanguageName,
-				)
+				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+				buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
 				// 自助餐顾客价格收费列表
 				products = append(products, resp.OrderProduct{
 					Uuid:       orderBuffetCustomer.Uuid,
@@ -1463,11 +1457,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 	for _, saleOrderProduct := range saleOrderBuffetCustomerTypes {
 		if num, exists := numMap[saleOrderProduct.Uuid]; exists && num > 0 {
 			// 优先使用快照字段，降级使用关联表数据
-			// Requirement: story-main-buffet-package-name-snapshot-fix
-			buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-				saleOrderProduct.BuffetPackageUuid,
-				saleOrderProduct.BuffetPackage.MultiLanguageName,
-			)
+			// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+			buffetLocaleName := saleOrderProduct.GetLocaleBuffetPackageName()
 			products = append(products, event.OrderProduct{
 				OrderProductId: saleOrderProduct.Uuid,
 				ProductId:      saleOrderProduct.BuffetCustomerTypePriceUuid,

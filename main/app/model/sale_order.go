@@ -663,9 +663,12 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 			continue
 		}
 		// 自助餐顾客价格收费列表
+		// 优先使用快照字段，降级使用关联表数据
+		// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+		buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
 		product := resp.Product{
 			Uuid:       orderBuffetCustomer.Uuid,
-			LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
+			LocaleName: buffetLocaleName,
 			LocaleAttributeName: dto.LocaleResponse{
 				ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
@@ -789,7 +792,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			for _, subProduct := range subProductList {
 				item := resp.PackageProduct{
 					Uuid:                subProduct.Uuid,
-					LocaleName:          subProduct.MultiLanguageName.GetNames(),
+					LocaleName:          subProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 					LocaleAttributeName: subProduct.GetAttributeName(),
 					Num:                 subProduct.CopyNum,
 					UnitNum:             subProduct.GetUnitNum(),
@@ -805,7 +808,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
-			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			NumType:             saleOrderProduct.NumType,
@@ -1154,6 +1157,9 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 	}, nil
 }
 
+// NewSaleOrderBuffetCustomerType 创建销售订单自助餐顾客类型
+// 注意：此方法不设置自助餐套餐名称快照，快照应在调用方通过 SetBuffetPackageNameSnapshot() 设置
+// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		SaleOrderUuid:               model.Uuid,
@@ -1267,6 +1273,9 @@ func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, 
 	return saleOrder
 }
 
+// NewSaleOrderBuffetCustomerType 创建销售订单自助餐顾客类型（函数版本）
+// 注意：此函数不设置自助餐套餐名称快照，快照应在调用方通过 SetBuffetPackageNameSnapshot() 设置
+// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting, openOverallDiscount uint) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		Name:                        customerName,

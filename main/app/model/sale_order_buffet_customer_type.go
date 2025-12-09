@@ -1,8 +1,10 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -35,6 +37,7 @@ type SaleOrderBuffetCustomerType struct {
 	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
 	SaleBillUuid                uint64 `gorm:"column:sale_bill_uuid;comment:销售账单ID" json:"sale_bill_uuid"`
 	BuffetPackageUuid           uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
+	BuffetPackageName           string `gorm:"column:buffet_package_name;type:text" json:"buffet_package_name"` // 新增快照字段（JSON）
 	BuffetCustomerTypePriceUuid uint64 `gorm:"column:buffet_customer_type_price_uuid;comment:顾客类型定价ID" json:"buffet_customer_type_price_uuid"`
 
 	// 关联字段
@@ -201,3 +204,56 @@ func (model *SaleOrderBuffetCustomerType) GetDiscountPriceWithVAT(options ...fun
 // 	price := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 // 	return price
 // }
+
+// GetLocaleBuffetPackageName 获取自助餐套餐名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+func (model *SaleOrderBuffetCustomerType) GetLocaleBuffetPackageName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.BuffetPackageName
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if !model.BuffetPackage.MultiLanguageName.IsNullName() {
+		return model.BuffetPackage.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetBuffetPackageNameSnapshot 设置自助餐套餐名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix (JSON 方案)
+func (model *SaleOrderBuffetCustomerType) SetBuffetPackageNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.BuffetPackageName = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.BuffetPackageName = string(jsonData)
+	return nil
+}

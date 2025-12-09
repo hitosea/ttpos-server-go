@@ -14,8 +14,10 @@ import (
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
@@ -702,6 +704,16 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
 			taxRate := buffetPackage.GeTaxRate()
 			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, b.SaleBillUuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting, buffetPackage.OpenOverallDiscount)
+
+			// 设置自助餐套餐名称快照（JSON 方案）
+			// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+			if buffet, ok := buffetMap[buffetUuid]; ok && !buffet.MultiLanguageName.IsNullName() {
+				if err := saleOrderBuffetCustomerType.SetBuffetPackageNameSnapshot(buffet.MultiLanguageName); err != nil {
+					// 记录错误日志，但不中断流程
+					logger.Logger.Error("保存自助餐套餐名称快照失败", zap.Error(err), zap.Uint64("buffet_package_uuid", buffetUuid))
+				}
+			}
+
 			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
 			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
 			if !newBuffetUuidMap2[buffetUuid] {

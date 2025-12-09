@@ -912,6 +912,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单顾客类型ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '顾客类型名称',
+    `buffet_package_name` TEXT COMMENT '自助餐套餐名称快照（JSON），不随后台更新',
     -- 价格信息
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
     `sale_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',

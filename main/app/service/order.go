@@ -2773,11 +2773,8 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(_ context.Context, saleBi
 			}
 			if buffetCustomer.IsBuffetCustomerTypePriceChanged() || buffetCustomer.GetOpenOverallDiscountChanged() {
 				// 优先使用快照字段，降级使用关联表数据
-				// Requirement: story-main-buffet-package-name-snapshot-fix
-				buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-					buffetCustomer.BuffetPackageUuid,
-					buffetCustomer.BuffetPackage.MultiLanguageName,
-				)
+				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+				buffetLocaleName := buffetCustomer.GetLocaleBuffetPackageName()
 				// 自助餐顾客类型价格变动
 				customer := resp.Product{
 					Uuid:       buffetCustomer.Uuid,
@@ -3902,11 +3899,8 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
 	for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
 		// 优先使用快照字段，降级使用关联表数据
-		// Requirement: story-main-buffet-package-name-snapshot-fix
-		buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-			product.BuffetPackageUuid,
-			product.BuffetPackage.MultiLanguageName,
-		)
+		// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+		buffetLocaleName := product.GetLocaleBuffetPackageName()
 		buffetName := buffetLocaleName.EN
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode:    "ZZC001",
@@ -4284,11 +4278,8 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				totalServiceFee = totalServiceFee.Add(serviceFee)
 			}
 			// 优先使用快照字段，降级使用关联表数据
-			// Requirement: story-main-buffet-package-name-snapshot-fix
-			buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-				buffetCustomer.BuffetPackageUuid,
-				buffetCustomer.BuffetPackage.MultiLanguageName,
-			)
+			// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+			buffetLocaleName := buffetCustomer.GetLocaleBuffetPackageName()
 			buffetName := buffetLocaleName.EN
 			if buffetCustomer.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				item := &selling.PosInvoiceItem{
