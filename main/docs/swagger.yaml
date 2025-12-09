@@ -5346,6 +5346,11 @@ definitions:
       remark:
         description: remark
         type: string
+      remark_uuids:
+        description: 备注预设UUID列表
+        items:
+          type: integer
+        type: array
       sale_bill_uuid:
         description: 销售账单UUID
         type: integer
@@ -12784,6 +12789,11 @@ definitions:
       num_type:
         description: 数量计算方法 0-整数 1-小数
         type: integer
+      order_item_remark_uuids:
+        description: 备注预设UUID列表
+        items:
+          type: integer
+        type: array
       package_product_list:
         allOf:
         - $ref: '#/definitions/resp.PackageProductList'
