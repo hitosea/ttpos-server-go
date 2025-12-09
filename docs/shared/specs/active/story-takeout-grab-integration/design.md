@@ -139,20 +139,60 @@ CREATE TABLE IF NOT EXISTS `takeout_order_status_log` (
 
 ## 🔌 API 设计
 
-### Webhook API (ttpos-takeout)
+### Webhook API (ttpos-takeout -> Grab Partner Endpoints)
 
-#### API 1: 接收订单 (Submit Order)
+`ttpos-takeout` 需要实现以下 Partner Endpoints 供 Grab 调用。
 
-- **URL**: `/api/v1/callback/grab/orders`
+#### API 1: 认证 (Get Partner OAuth Access Token)
+
+- **URL**: `/api/v1/callback/grab/oauth/token` (Grab: `POST /grabid/v1/oauth2/token` counterpart on partner side is usually not needed for Client Credentials flow, but Grab might call a webhook to push tokens. **Correction**: Grab uses OAuth 2.0. Partner calls Grab to get token. Grab calls Partner Webhooks with signature. **Wait**, document says "Get partner access token webhook". This implies Grab calls Partner to get a token to access Partner APIs? No, usually Grab signs requests. Let's check docs again. Docs say "Partner endpoints" are webhooks Grab calls. The list includes `Get Oauth access token` which is usually Partner calling Grab. But `Get partner access token webhook` suggests Grab calling Partner? Actually, standard integration usually involves Grab calling `SubmitOrder`, `NotifyMembership`, etc. Let's focus on `SubmitOrder`, `MenuSync`, etc.)
+
+**修正**: Grab 文档中的 "Partner endpoints" 指的是 **Partner 需要实现** 的 Webhook 接口，供 Grab 调用。
+
+#### API 2: 接收订单 (Submit Order Webhook)
+
+- **Grab Action**: `POST /partner/v1/orders` (Partner Configured URL)
+- **Endpoint**: `/api/v1/callback/grab/orders`
 - **Logic**:
     1. 校验 HMAC 签名。
-    2. 解析 JSON。
+    2. 解析 JSON (`SubmitOrderRequest`).
     3. 开启事务：
         - 插入 `takeout_order`。
         - 插入 `takeout_order_item`。
     4. 提交事务。
-    5. 发送 RocketMQ 消息。
-    6. 返回 200 OK。
+    5. 发送 RocketMQ 消息 (`ThirdPartyOrderEvent` action=`create`).
+    6. 返回 200 OK.
+
+#### API 3: 订单状态更新 (Push Order State Webhook)
+
+- **Grab Action**: `PUT /partner/v1/orders/{orderID}/state` (Partner Configured URL)
+- **Endpoint**: `/api/v1/callback/grab/orders/state`
+- **Logic**:
+    1. 校验 HMAC 签名。
+    2. 解析 JSON (`OrderStateRequest`).
+    3. 记录日志到 `takeout_order_status_log`.
+    4. 更新 `takeout_order.order_status`.
+    5. 发送 RocketMQ 消息 (`ThirdPartyOrderEvent` action=`status_update`).
+    6. 返回 200 OK.
+
+#### API 4: 菜单同步通知 (Menu Sync Webhook)
+
+- **Grab Action**: `POST /partner/v1/merchant/menu/notification` (Partner Configured URL)
+- **Endpoint**: `/api/v1/callback/grab/menu/notify`
+- **Logic**:
+    1. 校验 HMAC 签名。
+    2. 解析 JSON.
+    3. 这是一个 Grab 通知我们“需要更新菜单”或“菜单更新结果”的回调？文档通常指 "Grab notifies partner that menu is updated" or "Grab requests menu update". Check docs: `Notify Grab of updated menu` is Partner->Grab. `Get food menu webhook` is Grab->Partner (Pull model).
+    4. **Grab->Partner (Pull)**: `GET /partner/v1/merchant/menu` (Partner Configured URL). 当 Grab 需要拉取菜单时调用。
+    5. **实现 `GetMenu` 接口**:
+       - 转换 POS 菜单为 Grab 格式返回。
+
+#### API 5: 门店集成状态通知 (Push Integration Status Webhook)
+
+- **Grab Action**: `POST /partner/v1/merchant/integration/status`
+- **Endpoint**: `/api/v1/callback/grab/integration/status`
+- **Logic**:
+    1. 记录商户集成状态变更（上线/下线）。
 
 ---
 
@@ -185,27 +225,35 @@ type GrabClient interface {
 ```go
 // ttpos-bmp/app/ttpos-takeout/internal/logic/grab/grab.go
 
-func (s *sGrab) HandleOrder(ctx context.Context, payload []byte) error {
+// Webhook Handlers (Partner Endpoints)
+func (s *sGrab) HandleSubmitOrder(ctx context.Context, payload []byte) error {
     // 1. Verify Signature
-    // 2. Parse DTO
+    // 2. Parse SubmitOrderRequest
     // 3. Save to DB (Transaction)
     // 4. Send MQ (Retry on failure? Or just log error as order is already saved)
 }
 
+func (s *sGrab) HandlePushOrderState(ctx context.Context, payload []byte) error {
+     // 1. Verify Signature
+     // 2. Parse OrderStateRequest
+     // 3. Save to takeout_order_status_log
+     // 4. Update takeout_order.order_status
+     // 5. Send MQ
+}
+
+func (s *sGrab) HandleGetMenu(ctx context.Context, merchantID string) (*dto.GrabMenu, error) {
+    // 1. Verify Signature
+    // 2. Fetch POS Menu
+    // 3. Convert to GrabMenu
+    // 4. Return
+}
+
+// Client Calls
 func (s *sGrab) SyncMenu(ctx context.Context, merchantID string) error {
     // 1. Convert POS Menu -> Grab Menu DTO
     // 2. Save snapshot to takeout_menu_log (QUEUED)
     // 3. Call GrabClient.UpdateMenu
     // 4. Update log status (SUCCESS/FAIL)
-}
-
-// HandleOrderStatusUpdate 处理状态变更回调
-func (s *sGrab) HandleOrderStatusUpdate(ctx context.Context, payload []byte) error {
-     // 1. Verify Signature
-     // 2. Parse DTO
-     // 3. Save to takeout_order_status_log
-     // 4. Update takeout_order.order_status
-     // 5. Send MQ
 }
 ```
 
@@ -219,7 +267,7 @@ func (s *sGrab) HandleOrderStatusUpdate(ctx context.Context, payload []byte) err
 
 ### Phase 2: 核心逻辑 (ttpos-takeout)
 - [ ] 实现签名验证。
-- [ ] 实现 Webhook Controller。
+- [ ] 实现 Webhook Controller (SubmitOrder, PushOrderState, GetMenu)。
 - [ ] 实现数据入库逻辑。
 - [ ] 实现 MQ 发送逻辑。
 
@@ -231,5 +279,5 @@ func (s *sGrab) HandleOrderStatusUpdate(ctx context.Context, payload []byte) err
 
 ---
 
-**版本**: v1.3.0
+**版本**: v1.4.0
 **创建日期**: 2025-12-04
