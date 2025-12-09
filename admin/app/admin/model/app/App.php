@@ -96,6 +96,8 @@ class App extends AppModel
             "su.enable_data_management",
             // v2.11.0
             "su.enable_kiosk",
+            // Grab外卖控制
+            "su.enable_grab_delivery",
         ];
         //
         $countWhere = 'where 1 = 1';

@@ -1293,6 +1293,11 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		return nil, errors.New("商品不存在")
 	}
 
+	// 检查是否为总部来源数据
+	if !isEditable(ctx, product.HeadquarterUuid) {
+		return nil, errors.New("商品不可删除")
+	}
+
 	productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.WhereByRelatedUuid(request.Uuid),
@@ -5681,6 +5686,24 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	productBomRepo := repository.NewProductBomRepo(db)
 	productPackageGroupRepo := repository.NewProductPackageGroupRepo(db)
 
+	// 查询商品，检查是否为总部来源数据
+	existingProduct, err := productRepo.GetProduct(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(req.Uuid),
+	)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "查询商品失败")
+	}
+	if existingProduct.Uuid == 0 {
+		return nil, nil, errors.New("商品不存在")
+	}
+
+	// 如果是总部来源数据，只能修改外卖的价格、上下架
+	if !isEditable(ctx, existingProduct.HeadquarterUuid) {
+		// TODO: 只能修改外卖的价格、上下架
+		return nil, nil, errors.New("商品不可编辑")
+	}
+
 	// 检查商品类型
 	if err := productCheckSrv.CheckProductType(req.Type); err != nil {
 		return nil, nil, err
@@ -5932,7 +5955,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	}
 
 	// 编辑商品
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 
 		// 编辑商品包
 		productPackageRes, err := s.EditProductPackage(ctx, tx, req, flavorListResult.MinPrice)

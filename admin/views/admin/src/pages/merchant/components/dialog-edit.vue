@@ -158,6 +158,13 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <!-- Grab外卖 -->
+        <el-form-item :label="$t('Grab外卖')" prop="enable_grab_delivery">
+          <el-radio-group v-model="formData.enable_grab_delivery">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('数据管理')" prop="enable_data_management">
           <el-radio-group v-model="formData.enable_data_management">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
@@ -380,6 +387,7 @@
     is_open_advanced_ticket_print: 0, // 是否开启高级票据打印: 0不开启, 1开启
     coordinates: '', // 经纬度
     enable_table_map: 0, // 是否启用桌台地图能力: 0不开启, 1开启
+    enable_grab_delivery: 0, // 是否开启Grab外卖: 0不开启, 1开启
     enable_data_management: 0, // 是否启用数据管理能力: 0不开启, 1开启
     enable_kiosk: 0, // 是否开启自助点餐机: 0不开启, 1开启
   });
@@ -420,6 +428,7 @@
     is_open_marketing: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     is_open_advanced_ticket_print: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     enable_table_map: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
+    enable_grab_delivery: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     enable_data_management: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     enable_kiosk: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     printer_limit: [
@@ -656,6 +665,7 @@
         is_open_advanced_ticket_print: props.detail?.is_open_advanced_ticket_print || 0, //
         coordinates: props.detail?.coordinates || '', //
         enable_table_map: props.detail?.enable_table_map || 0, //
+        enable_grab_delivery: props.detail?.enable_grab_delivery || 0, //
         enable_data_management: props.detail?.enable_data_management || 0, //
         enable_kiosk: props.detail?.enable_kiosk || 0, //
       };

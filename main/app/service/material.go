@@ -29,6 +29,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
@@ -96,6 +97,8 @@ type IMaterialSrv interface {
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
+
+	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error // 修改物品安全库存
 }
 
 type materialSrv struct {
@@ -3026,15 +3029,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, useFilter bool, filterUu
 		db := ctx.GetDB()
 		// 同步总部物品到子店（多语言由 SyncMultiLanguage 任务处理）
 		err = db.Transaction(func(tx *gorm.DB) error {
-			if useFilter {
-				if err := tx.Table("ttpos_material").
-					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
-					Where("uuid NOT IN (?)", filterUuids).
-					Update("delete_time", time.Now().Unix()).Error; err != nil {
-					logger.Logger.Error("标记删除物品失败", zap.Error(err))
-					return errors.WithMessage(err, "标记删除物品失败")
-				}
-			}
+
 			copyCtx := ctx.Copy()
 			copyCtx.SetDB(tx)
 
@@ -3045,22 +3040,45 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, useFilter bool, filterUu
 			// 需要删除的物品、物品单位
 			delMaterialUuidList := []uint64{}
 			delMaterialUnitUuidList := []uint64{}
+
+			// 获取子店中已存在的总部物品，获取uuid和safety_stock的map
+			// 使用 *float64 类型，可以区分：nil（子店为nil，需要保留nil）、非nil（子店有值，需要保留该值）、不存在（使用总店的值）
+			subShopMaterialSafetyStockMap := make(map[uint64]*float64)
+
 			subShopMaterialList := materialRepo.GetMaterialList(
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
 				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 				materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
 			)
 			for _, subShopMaterial := range subShopMaterialList {
+				// 无论子店的安全库存是否为 nil，都记录到 map 中，以保留子店的值
+				subShopMaterialSafetyStockMap[subShopMaterial.Uuid] = subShopMaterial.SafetyStock
 				delMaterialUuidList = append(delMaterialUuidList, subShopMaterial.Uuid)
 				for _, unit := range subShopMaterial.NotBaseUnitList {
 					delMaterialUnitUuidList = append(delMaterialUnitUuidList, unit.Uuid)
 				}
 			}
 
+			if useFilter {
+				if err := tx.Table("ttpos_material").
+					Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).
+					Where("uuid NOT IN (?)", filterUuids).
+					Update("delete_time", time.Now().Unix()).Error; err != nil {
+					logger.Logger.Error("标记删除物品失败", zap.Error(err))
+					return errors.WithMessage(err, "标记删除物品失败")
+				}
+				delMaterialUuidList = slice.Intersection(delMaterialUuidList, filterUuids)
+			}
+
 			// 需要保存的物品、物品单位
 			addMaterialList := []model.Material{}
 			addMaterialUnitList := []model.MaterialUnit{}
 			for _, material := range headMaterialList {
+				// 如果子店已有该物品（通过 uuid 匹配），则保留子店的安全库存（包括 nil）
+				if subShopSafetyStock, ok := subShopMaterialSafetyStockMap[material.Uuid]; ok {
+					material.SafetyStock = subShopSafetyStock // 保留子店的值，可能是 nil 或具体数值
+				}
+				// 否则使用总店的安全库存（material.SafetyStock 保持不变）
 				addMaterialList = append(addMaterialList, model.Material{
 					BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: material.CreateTime, UpdateTime: material.UpdateTime, DeleteTime: material.DeleteTime},
 					Name:                  material.Name,
@@ -3077,7 +3095,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, useFilter bool, filterUu
 					CostUnitUuid:          material.CostUnitUuid,
 					Price:                 material.Price,
 					StockNum:              material.StockNum,
-					SafetyStock:           material.SafetyStock, // 安全库存跟随总部
+					SafetyStock:           material.SafetyStock,
 					ActualSaleNum:         material.ActualSaleNum,
 					BarcodeValue:          material.BarcodeValue,
 					InternalCode:          material.InternalCode,
@@ -3733,6 +3751,39 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 	if len(errs) > 0 {
 		// 返回第一个错误（或者可以返回所有错误的组合）
 		return errs[0]
+	}
+
+	return nil
+}
+
+// UpdateMaterialSafetyStock 修改物品安全库存
+func (s *materialSrv) UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error {
+	companySetting := ctx.GetCompanySetting()
+
+	// 权限校验：只有子店账号才能修改
+	if !companySetting.IsSubShop() {
+		return errors.New("非子店账号无法修改")
+	}
+
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	materialRepo := repository.NewMaterialRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询物品，确保物品存在
+	_, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "物品不存在")
+	}
+
+	// 更新安全库存（子店可以修改自己物品和总店同步物品的安全库存）
+	updateData := map[string]any{
+		"safety_stock": req.SafetyStock,
+		"update_time":  time.Now().Unix(),
+	}
+
+	if err := materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(req.Uuid)); err != nil {
+		return errors.WithMessage(err, "更新安全库存失败")
 	}
 
 	return nil

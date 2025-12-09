@@ -158,7 +158,9 @@ class Controller extends BaseController
             'supplier' => $user->supplier()->field('
                 company_uuid as app_id, company_uuid, sale_stock, cash_limit, kitchen_limit, tablet_limit, assistant_limit, 
                 is_open_member, is_open_tablet, is_open_coupon, is_open_marketing, languages,
-                is_open_h5 as is_open_scan, is_open_assistant, is_open_kitchen_kds, is_open_buffet, table_limit, printer_limit, timezone, delivery_status
+                is_open_h5 as is_open_scan, is_open_assistant, is_open_kitchen_kds, is_open_buffet, table_limit, printer_limit, timezone, delivery_status,
+                enable_grab_delivery, 
+                enable_kiosk
             ')->find(),
         ];
         // 设置时区

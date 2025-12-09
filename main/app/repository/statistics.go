@@ -350,7 +350,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"0 AS category_uuid",
 				"'' AS category_name",
 				"SUM(sp.product_num) AS sale_num",
-				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+				"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS sale_amount",
 				"IF(pc.parent_uuid > 0, ppc.sort, pc.sort) AS sort",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
@@ -370,7 +370,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"pc.uuid AS category_uuid",
 				"JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')) AS category_name",
 				"SUM(sp.product_num) AS sale_num",
-				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+				"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS sale_amount",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
@@ -410,7 +410,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"CASE WHEN pb.name IS NOT NULL AND pb.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) ELSE '' END AS flavor_name",
 			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS sale_amount",
 			"IF(pc.parent_uuid = 0, pc.sort, ppc.sort) AS ppc_sort",
 			"IF(pc.parent_uuid = 0, pc.create_time, ppc.create_time) AS ppc_create_time",
 			"IF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",

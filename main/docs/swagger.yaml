@@ -4811,6 +4811,17 @@ definitions:
     - conversion_rate
     - uuid
     type: object
+  req.MaterialUpdateSafetyStockReq:
+    properties:
+      safety_stock:
+        description: 安全库存值（可为 null）
+        type: number
+      uuid:
+        description: 物品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
       member_sale_order_uuid:
@@ -9281,6 +9292,9 @@ definitions:
       is_open_data_management:
         description: 是否开启数据管理功能
         type: boolean
+      is_open_grab_delivery:
+        description: 是否开启Grab外卖功能
+        type: boolean
       is_open_h5_order:
         description: '是否开启扫码接单功能: 0不开启, 1开启'
         type: integer
@@ -10094,6 +10108,9 @@ definitions:
         type: integer
       is_disabled:
         type: integer
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -12867,6 +12884,9 @@ definitions:
       create_time:
         description: 创建时间
         type: integer
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       is_show_assistant:
         description: 是否在助手显示, 0-否 1-是
         type: integer
@@ -21041,6 +21061,28 @@ paths:
       security:
       - JwtToken: []
       summary: 获取总部物品列表
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/item/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单品备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderItemRemarkResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取单品备注列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/member/cancel:
@@ -29806,6 +29848,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取物品的单位列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/update_safety_stock:
+    post:
+      consumes:
+      - application/json
+      description: 子店修改总店同步物品的安全库存
+      parameters:
+      - description: 请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialUpdateSafetyStockReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改物品安全库存
       tags:
       - 商家端.物品管理
   /shop/member_order/cancel:

@@ -121,6 +121,7 @@ type Company struct {
 	IsOpenMap            bool   `json:"is_open_map"`             // 是否开启地图
 	IsOpenDataManagement bool   `json:"is_open_data_management"` // 是否开启数据管理功能
 	IsOpenKiosk          bool   `json:"is_open_kiosk"`           // 是否开启自助点餐机功能
+	IsOpenGrabDelivery   bool   `json:"is_open_grab_delivery"`   // 是否开启Grab外卖功能
 }
 
 type Permission struct {
