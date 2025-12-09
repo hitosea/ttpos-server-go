@@ -25,10 +25,11 @@
       <el-table-column prop="real_name" :label="$t('超管用户名')" min-width="200"></el-table-column>
       <el-table-column prop="erpnext_company_abbr" :label="$t('erpnext公司')" min-width="200"></el-table-column>
       <el-table-column prop="erpnext_pos_profile_name" :label="$t('Pos Profile')" min-width="200"></el-table-column>
-      <el-table-column fixed="right" :label="$t('操作')" width="150">
+      <el-table-column fixed="right" :label="$t('操作')" width="100">
         <template #default="scope">
           <el-button v-permission="['admin_erpnext_add']" type="primary" link @click="handleEdit(scope.row)">{{ $t('查看') }}</el-button>
-          <el-button type="primary" link @click="handlePay(scope.row)">{{ $t('支付管理') }}</el-button>
+          <!-- 支付管理功能暂时关闭, 任务ID37460 -->
+          <!-- <el-button type="primary" link @click="handlePay(scope.row)">{{ $t('支付管理') }}</el-button> -->
         </template>
       </el-table-column>
     </el-table>
@@ -98,10 +99,10 @@
     editRow.value = row;
   };
 
-  const handlePay = (row: authorizationListTypeItem) => {
-    editRow.value = row;
-    payManageShow.value = true;
-  };
+  //   const handlePay = (row: authorizationListTypeItem) => {
+  //     editRow.value = row;
+  //     payManageShow.value = true;
+  //   };
 
   onMounted(() => {
     getList();
