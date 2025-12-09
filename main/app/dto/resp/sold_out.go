@@ -25,5 +25,6 @@ type SoldOutSetting struct {
 	UseBomCardStock  bool    `json:"use_bom_card_stock"` // 是否使用成本卡库存
 	BomCardStockNum  float64 `json:"bom_card_stock_num"` // 成本卡库存数量
 	IsSoldOut        bool    `json:"is_sold_out"`        // 是否售罄
+	IsOpenStock      bool    `json:"is_open_stock"`      // 是否开启可售库存
 	SellableQuantity float64 `json:"sellable_quantity"`  // 可售数量
 }

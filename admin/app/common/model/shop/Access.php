@@ -382,6 +382,12 @@ class Access extends BaseModel
                     continue;
                 }
             }
+            // 授权无Grab外卖权限（未开启Grab外卖时，隐藏外卖接单权限）
+            if (($licenses['enable_grab_delivery'] ?? 0) == 0) {
+                if ($value['uuid'] == 1734000001) { // 外卖权限UUID
+                    continue;
+                }
+            }
             //
             if ($value['parent_uuid'] == $pid) {
                 $re_data[$value['uuid']] = $value;

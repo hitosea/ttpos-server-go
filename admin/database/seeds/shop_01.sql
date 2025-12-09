@@ -504,10 +504,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_reason` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自增UUID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID，如果说退菜和赠菜，则sale_order_product_uuid不为0；如果是整单免单，则sale_order_product_uuid为0',
-    -- 三选一
+    -- 四选一
     `return_food_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜原因ID',
     `free_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '免单原因ID',
     `gift_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠菜原因ID',
+    `order_item_remark_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '备注预设UUID',
+    -- 快照字段
+    `name` TEXT COMMENT '原因名称快照（JSON），不随后台更新',
     -- 关联对象
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原因-多语言名称ID',
     -- 时间信息
@@ -516,6 +519,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_reason` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_order_item_remark_uuid` (`order_item_remark_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品表';
 
@@ -608,7 +612,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order_product` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品规格或小料ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格或小料名称,不随后台更新',
+    `name` TEXT COMMENT '规格或小料名称,不随后台更新',
     `price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动',
     `sale_order_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
@@ -624,7 +628,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_bom` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_attribute` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品属性名称,不随后台更新',
+    `name` TEXT COMMENT '商品属性名称,不随后台更新',
     `sale_order_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `product_attribute_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品属性ID',
@@ -909,7 +913,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单顾客类型ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '顾客类型名称',
+    `name` TEXT COMMENT '顾客类型名称快照（JSON），不随后台更新',
+    `buffet_package_name` TEXT COMMENT '自助餐套餐名称快照（JSON），不随后台更新',
     -- 价格信息
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',
     `sale_price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',

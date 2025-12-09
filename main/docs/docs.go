@@ -27950,6 +27950,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/kitchen": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取厨显设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.厨显设置"
+                ],
+                "summary": "获取厨显设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.KitchenResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存厨显设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.厨显设置"
+                ],
+                "summary": "保存厨显设置",
+                "parameters": [
+                    {
+                        "description": "保存厨显设置",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveKitchenSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/member_qrcode": {
             "get": {
                 "security": [
@@ -41345,6 +41422,13 @@ const docTemplate = `{
                     "description": "remark",
                     "type": "string"
                 },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
                     "type": "integer"
@@ -44463,6 +44547,30 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SaveKitchenSettingReq": {
+            "type": "object",
+            "required": [
+                "is_wait_color",
+                "wait_time_color_ranges"
+            ],
+            "properties": {
+                "is_wait_color": {
+                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                },
+                "wait_time_color_ranges": {
+                    "description": "等待时长颜色区间配置",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.WaitTimeColorRange"
+                    }
+                }
+            }
+        },
         "req.SendMemberRechargeSMS": {
             "type": "object",
             "properties": {
@@ -45893,6 +46001,23 @@ const docTemplate = `{
                 "company_uuid": {
                     "description": "集团ID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.WaitTimeColorRange": {
+            "type": "object",
+            "required": [
+                "color",
+                "minute"
+            ],
+            "properties": {
+                "color": {
+                    "description": "颜色值（RGB 格式，统一使用 #xxxxxx 格式）",
+                    "type": "string"
+                },
+                "minute": {
+                    "description": "时间阈值（分钟，字符串类型以兼容 PHP）",
+                    "type": "string"
                 }
             }
         },
@@ -52202,6 +52327,13 @@ const docTemplate = `{
                     "description": "备注",
                     "type": "string"
                 },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "show_batch_tag": {
                     "description": "是否显示分批类型",
                     "type": "boolean"
@@ -54772,6 +54904,10 @@ const docTemplate = `{
                 "bom_card_stock_num": {
                     "description": "成本卡库存数量",
                     "type": "number"
+                },
+                "is_open_stock": {
+                    "description": "是否开启可售库存",
+                    "type": "boolean"
                 },
                 "is_sold_out": {
                     "description": "是否售罄",
@@ -57712,10 +57848,17 @@ const docTemplate = `{
                     ]
                 },
                 "wait_color": {
-                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
+                    "description": "时长颜色（旧格式，保持兼容：[\"red\", \"yellow\"]）",
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                },
+                "wait_time_color_ranges": {
+                    "description": "等待时长颜色区间配置（新格式）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.WaitTimeColorRange"
                     }
                 }
             }
@@ -58160,6 +58303,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "setting.WaitTimeColorRange": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "颜色值（RGB 格式，统一使用 #xxxxxx 格式）",
+                    "type": "string"
+                },
+                "minute": {
+                    "description": "时间阈值（分钟，字符串类型以兼容 PHP）",
                     "type": "string"
                 }
             }

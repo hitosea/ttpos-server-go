@@ -88,16 +88,17 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	companyResp := resp.Company{ // menu
-		Uuid:          company.Uuid,
-		Name:          company.Name,
-		Logo:          utils.AddImageDomain(company.Logo, utils.GetBaseURL(c.Request), true),
-		TimeZone:      companySetting.Timezone,
-		ExpireTime:    company.ExpireTime,
-		IsOpenMember:  companySetting.IsOpenMember,
-		IsOpenBuffet:  companySetting.IsOpenBuffet,
-		IsOpenH5Order: companySetting.IsOpenH5Order,
-		IsOpenRider:   companySetting.IsOpenRider(),
-		IsEnableErp:   company.IsOpenErp(),
+		Uuid:               company.Uuid,
+		Name:               company.Name,
+		Logo:               utils.AddImageDomain(company.Logo, utils.GetBaseURL(c.Request), true),
+		TimeZone:           companySetting.Timezone,
+		ExpireTime:         company.ExpireTime,
+		IsOpenMember:       companySetting.IsOpenMember,
+		IsOpenBuffet:       companySetting.IsOpenBuffet,
+		IsOpenH5Order:      companySetting.IsOpenH5Order,
+		IsOpenRider:        companySetting.IsOpenRider(),
+		IsEnableErp:        company.IsOpenErp(),
+		IsOpenGrabDelivery: companySetting.IsOpenGrabDelivery(),
 	}
 	helper.Success(c, resp.MenuBaseInfo{
 		Currency:      currencySetting,

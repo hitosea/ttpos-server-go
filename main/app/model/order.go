@@ -1,9 +1,11 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -60,7 +62,7 @@ type SaleBillCalc struct {
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`
 type SaleOrderProductAttribute struct {
 	BaseModel
-	Name                        string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
+	Name                        string `gorm:"column:name;type:text;not null;default:'';comment:'商品属性名称快照（JSON），不随后台更新'"`
 	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
 	SaleOrderProductUuid        uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
 	ProductAttributeUuid        uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
@@ -88,10 +90,63 @@ func (model *SaleOrderProductAttribute) CopyAttribute(saleOrderUuid uint64, sale
 	return newAttribute
 }
 
+// GetLocaleName 获取属性名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-product-attribute-snapshot-fix
+func (model *SaleOrderProductAttribute) GetLocaleName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.Name
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if !model.ProductAttribute.MultiLanguageName.IsNullName() {
+		return model.ProductAttribute.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetNameSnapshot 设置属性名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-product-attribute-snapshot-fix (JSON 方案)
+func (model *SaleOrderProductAttribute) SetNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.Name = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.Name = string(jsonData)
+	return nil
+}
+
 // SaleOrderProductBom 销售订单产品原料 `ttpos_sale_order_product_bom`
 type SaleOrderProductBom struct {
 	BaseModel
-	Name        string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'规格或小料规格名称,不随后台更新'"`
+	Name        string  `gorm:"column:name;type:text;not null;default:'';comment:'规格或小料名称快照（JSON），不随后台更新'"`
 	Price       float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:'单价,不随后台更新，记录加购时的价格。结账时要校验价格是否变动'"`
 	IsFlavorBom uint    `gorm:"column:is_flavor_bom;type:tinyint(1);not null;default:0;comment:'是否为规格商品BOM, 0-否,加料商品 1-是,规格商品'"`
 
@@ -137,6 +192,67 @@ func (model *SaleOrderProductBom) IsFlavor() bool {
 
 func (model *SaleOrderProductBom) IsSauce() bool {
 	return model.IsFlavorBom == constant.ProductBomTypeSauce
+}
+
+// GetLocaleName 获取规格或小料名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-product-attribute-snapshot-fix
+func (model *SaleOrderProductBom) GetLocaleName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.Name
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.IsFlavor() {
+		// 规格
+		if !model.ProductBom.ProductFlavor.MultiLanguageName.IsNullName() {
+			return model.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
+		}
+	} else {
+		// 小料
+		if !model.ProductBom.ProductSauce.MultiLanguageName.IsNullName() {
+			return model.ProductBom.ProductSauce.MultiLanguageName.GetNames()
+		}
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetNameSnapshot 设置规格或小料名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-product-attribute-snapshot-fix (JSON 方案)
+func (model *SaleOrderProductBom) SetNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.Name = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.Name = string(jsonData)
+	return nil
 }
 
 // SaleBillSetting 销售账单设置 ttpos_sale_bill_setting
@@ -355,10 +471,15 @@ type SaleOrderProductReason struct {
 	SaleOrderUuid         uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单ID" json:"sale_order_uuid"`
 	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;not null;default:0;comment:销售订单商品ID.如果说退菜和赠菜，则sale_order_product_uuid不为0；如果是整单免单，则sale_order_product_uuid为0	" json:"sale_order_product_uuid"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
-	// 三选一。
+	// 四选一。
 	ReturnFoodReasonUuid uint64 `gorm:"column:return_food_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:退菜原因ID" json:"return_food_reason_uuid"`
 	FreeReasonUuid       uint64 `gorm:"column:free_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:免单原因ID" json:"free_reason_uuid"`
 	GiftReasonUuid       uint64 `gorm:"column:gift_reason_uuid;type:bigint(20) unsigned;not null;default:0;comment:赠菜原因ID" json:"gift_reason_uuid"`
+	OrderItemRemarkUuid  uint64 `gorm:"column:order_item_remark_uuid;type:bigint(20) unsigned;not null;default:0;comment:备注预设UUID" json:"order_item_remark_uuid"`
+
+	// 快照字段（JSON 方案）
+	// Requirement: story-main-reason-snapshot-fix
+	Name string `gorm:"column:name;type:text;default:'';comment:原因名称快照（JSON），不随后台更新" json:"name"`
 
 	// 关联对象
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
@@ -377,6 +498,41 @@ func (model *SaleOrderProductReason) IsFreeReason() bool {
 // 是否是赠菜原因
 func (model *SaleOrderProductReason) IsGiftReason() bool {
 	return model.GiftReasonUuid != 0
+}
+
+// 是否是备注预设
+func (model *SaleOrderProductReason) IsOrderItemRemark() bool {
+	return model.OrderItemRemarkUuid != 0
+}
+
+// GetLocaleName 获取原因名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-gift-reason-snapshot-fix
+func (model *SaleOrderProductReason) GetLocaleName() dto.LocaleResponse {
+	// 优先使用快照字段（JSON）
+	snapshotJSON := model.Name
+	var snapshotLocale dto.LocaleResponse
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotJSON != "" {
+		if err := json.Unmarshal([]byte(snapshotJSON), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 使用快照数据（所有语言）
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.MultiLanguageName != nil && !model.MultiLanguageName.IsNullName() {
+		return model.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
 }
 
 func (model *SaleOrderProductReason) SetNil() {

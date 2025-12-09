@@ -329,8 +329,10 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		}
 		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(3))
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
-		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
-			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
+		// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+		customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
+		if customerTypeLocaleName.GetLocale(t.base.Lang) != "" {
+			buffetNameText += "\n(" + customerTypeLocaleName.GetLocale(t.base.Lang) + ")"
 		}
 		discountPrice := orderBuffetCustomer.GetOriginPrice()
 		printer.PrintInColumns(

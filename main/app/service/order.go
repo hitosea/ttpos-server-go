@@ -735,7 +735,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			Num:                  saleOrderProduct.Num,
 			UnitPrice:            saleOrderProduct.OriginTotalPrice,
 			Amount:               amount,
-			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:           saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Image: func() string {
 				if saleOrderProduct.ImageFileUuid != 0 {
@@ -1494,6 +1494,14 @@ func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, s
 			ProductBomUuid: request.FlavorUuid,
 			ErpCode:        flavorProductBom.ErpCode,
 		})
+		// 设置规格名称快照（JSON）
+		// Requirement: story-main-product-attribute-snapshot-fix
+		if !flavorProductBom.ProductFlavor.MultiLanguageName.IsNullName() {
+			flavor.ProductBom = *flavorProductBom
+			if err := flavor.SetNameSnapshot(flavorProductBom.ProductFlavor.MultiLanguageName); err != nil {
+				ctx.Log().Error("设置规格名称快照失败", zap.Error(err), zap.Uint64("product_bom_uuid", request.FlavorUuid))
+			}
+		}
 		flavor.SetUpdate()
 		saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, flavor)
 		saleOrderProduct.ChangeFlavor(flavor)
@@ -1513,9 +1521,17 @@ func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, s
 			sauces = append(sauces, sauce)
 		}
 		for _, sauce := range sauces {
-			sauce := model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce)
-			sauce.SetUpdate()
-			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, sauce)
+			sauceObj := model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce)
+			// 设置小料名称快照（JSON）
+			// Requirement: story-main-product-attribute-snapshot-fix
+			if sauceProductBom, ok := sauceProductBoms[sauce.ProductBomUuid]; ok && !sauceProductBom.ProductSauce.MultiLanguageName.IsNullName() {
+				sauceObj.ProductBom = *sauceProductBom
+				if err := sauceObj.SetNameSnapshot(sauceProductBom.ProductSauce.MultiLanguageName); err != nil {
+					ctx.Log().Error("设置小料名称快照失败", zap.Error(err), zap.Uint64("product_bom_uuid", sauce.ProductBomUuid))
+				}
+			}
+			sauceObj.SetUpdate()
+			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, sauceObj)
 		}
 		// 添加新属性
 		productAttributes, errProductAttributes := GetAttributeInfo(ctx, db, request.AttributeUuidList)
@@ -1525,6 +1541,14 @@ func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, s
 		attributes := sortProductAttributes(ctx, productAttributes)
 		for _, attribute := range attributes {
 			attr := model.NewSaleOrderProductAttribute(saleOrderProduct.Uuid, saleOrder.Uuid, attribute)
+			// 设置属性名称快照（JSON）
+			// Requirement: story-main-product-attribute-snapshot-fix
+			if productPackageAttribute, ok := productAttributes[attribute.ProductPackageAttributeUuid]; ok && !productPackageAttribute.Attribute.MultiLanguageName.IsNullName() {
+				attr.ProductAttribute = productPackageAttribute.Attribute
+				if err := attr.SetNameSnapshot(productPackageAttribute.Attribute.MultiLanguageName); err != nil {
+					ctx.Log().Error("设置属性名称快照失败", zap.Error(err), zap.Uint64("product_attribute_uuid", attribute.ProductAttributeUuid))
+				}
+			}
 			attr.SetUpdate()
 			saleOrderProduct.SaleOrderProductAttributes = append(saleOrderProduct.SaleOrderProductAttributes, attr)
 		}
@@ -1854,6 +1878,45 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}, &productPackage, product.Operation)
 		saleOrderProduct.SetUnitNum(1) // 设置默认单位数量为1
 		saleOrderProduct.Num = decimal.NewFromFloat(saleOrderProduct.GetUnitNum()).Mul(decimal.NewFromFloat(saleOrderProduct.CopyNum)).Round(4).InexactFloat64()
+
+		// 设置规格、小料和属性的快照（JSON）
+		// Requirement: story-main-product-attribute-snapshot-fix
+		// 设置规格名称快照
+		if !flavorProductBom.ProductFlavor.MultiLanguageName.IsNullName() {
+			for _, bom := range saleOrderProduct.SaleOrderProductBoms {
+				if bom.IsFlavor() {
+					bom.ProductBom = *flavorProductBom
+					if err := bom.SetNameSnapshot(flavorProductBom.ProductFlavor.MultiLanguageName); err != nil {
+						ctx.Log().Error("设置规格名称快照失败", zap.Error(err), zap.Uint64("product_bom_uuid", flavorProductBom.Uuid))
+					}
+					// 同时更新 SaleOrderProduct.FlavorName
+					if err := saleOrderProduct.SetFlavorNameSnapshot(flavorProductBom.ProductFlavor.MultiLanguageName); err != nil {
+						ctx.Log().Error("设置商品规格名称快照失败", zap.Error(err), zap.Uint64("product_bom_uuid", flavorProductBom.Uuid))
+					}
+					break
+				}
+			}
+		}
+		// 设置小料名称快照
+		for _, bom := range saleOrderProduct.SaleOrderProductBoms {
+			if !bom.IsFlavor() {
+				if sauceProductBom, ok := sauceProductBoms[bom.ProductBomUuid]; ok && !sauceProductBom.ProductSauce.MultiLanguageName.IsNullName() {
+					bom.ProductBom = *sauceProductBom
+					if err := bom.SetNameSnapshot(sauceProductBom.ProductSauce.MultiLanguageName); err != nil {
+						ctx.Log().Error("设置小料名称快照失败", zap.Error(err), zap.Uint64("product_bom_uuid", bom.ProductBomUuid))
+					}
+				}
+			}
+		}
+		// 设置属性名称快照
+		for _, attr := range saleOrderProduct.SaleOrderProductAttributes {
+			if productPackageAttribute, ok := productAttributes[attr.ProductPackageAttributeUuid]; ok && !productPackageAttribute.Attribute.MultiLanguageName.IsNullName() {
+				attr.ProductAttribute = productPackageAttribute.Attribute
+				if err := attr.SetNameSnapshot(productPackageAttribute.Attribute.MultiLanguageName); err != nil {
+					ctx.Log().Error("设置属性名称快照失败", zap.Error(err), zap.Uint64("product_attribute_uuid", attr.ProductAttributeUuid))
+				}
+			}
+		}
 
 		// 设置必点信息
 		if !option.IsMemberAdd { // 会员端加购不设置必点信息
@@ -2710,28 +2773,17 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(_ context.Context, saleBi
 			}
 			if buffetCustomer.IsBuffetCustomerTypePriceChanged() || buffetCustomer.GetOpenOverallDiscountChanged() {
 				// 优先使用快照字段，降级使用关联表数据
-				// Requirement: story-main-buffet-package-name-snapshot-fix
-				buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-					buffetCustomer.BuffetPackageUuid,
-					buffetCustomer.BuffetPackage.MultiLanguageName,
-				)
+				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+				buffetLocaleName := buffetCustomer.GetLocaleBuffetPackageName()
 				// 自助餐顾客类型价格变动
+				// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+				customerTypeLocaleName := buffetCustomer.GetLocaleName()
 				customer := resp.Product{
-					Uuid:       buffetCustomer.Uuid,
-					LocaleName: buffetLocaleName,
-					LocaleAttributeName: dto.LocaleResponse{
-						ZH:   buffetCustomer.Name,
-						TH:   buffetCustomer.Name,
-						EN:   buffetCustomer.Name,
-						ZHTW: buffetCustomer.Name,
-						JA:   buffetCustomer.Name,
-						KO:   buffetCustomer.Name,
-						MY:   buffetCustomer.Name,
-						TR:   buffetCustomer.Name,
-						SV:   buffetCustomer.Name,
-					},
-					Num:       float64(buffetCustomer.Num),
-					SalePrice: buffetCustomer.SalePrice,
+					Uuid:                buffetCustomer.Uuid,
+					LocaleName:          buffetLocaleName,
+					LocaleAttributeName: customerTypeLocaleName,
+					Num:                 float64(buffetCustomer.Num),
+					SalePrice:           buffetCustomer.SalePrice,
 				}
 				res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, customer)
 				return res
@@ -3839,11 +3891,8 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
 	for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
 		// 优先使用快照字段，降级使用关联表数据
-		// Requirement: story-main-buffet-package-name-snapshot-fix
-		buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-			product.BuffetPackageUuid,
-			product.BuffetPackage.MultiLanguageName,
-		)
+		// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+		buffetLocaleName := product.GetLocaleBuffetPackageName()
 		buffetName := buffetLocaleName.EN
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode:    "ZZC001",
@@ -3911,6 +3960,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				})
 			}
 		} else if product.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+			if product.IsPackageProduct() { // 0 元的套餐固定使用TC001
+				erpCode = "TC001"
+			}
 			items = append(items, &selling.PosInvoiceItem{
 				ItemCode:   erpCode,
 				Qty:        product.Num,
@@ -4185,19 +4237,23 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				if saleOrderProduct.IsPackageProduct() {
 					product.ErpCode = "TC001" // 当退款套餐商品时，商品编码为TC001
 				}
+				packageName := language.JsonToLocaleResponse(product.ProductName) // 套餐名称
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode:   product.ErpCode,
-					Qty:        -product.Num,
-					Rate:       0,    // 商品未含税价格（折后）
-					Amount:     0,    // 商品未含税价格（折后）* 数量
-					IsFreeItem: true, // 零元商品当作赠菜
+					ItemCode:    product.ErpCode,
+					Qty:         -product.Num,
+					Rate:        0,              // 商品未含税价格（折后）
+					Amount:      0,              // 商品未含税价格（折后）* 数量
+					IsFreeItem:  true,           // 零元商品当作赠菜
+					Description: packageName.EN, // 套餐商品描述
 				})
 			} else {
+				packageName := language.JsonToLocaleResponse(product.ProductName) // 套餐名称
 				item := &selling.PosInvoiceItem{
-					ItemCode: product.ErpCode,
-					Qty:      -product.Num,
-					Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
-					Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+					ItemCode:    product.ErpCode,
+					Qty:         -product.Num,
+					Rate:        product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
+					Amount:      -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+					Description: packageName.EN,                                                           // 套餐商品描述
 				}
 				if saleOrderProduct.IsGiftProduct() {
 					item.IsFreeItem = true
@@ -4221,11 +4277,8 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				totalServiceFee = totalServiceFee.Add(serviceFee)
 			}
 			// 优先使用快照字段，降级使用关联表数据
-			// Requirement: story-main-buffet-package-name-snapshot-fix
-			buffetLocaleName := saleBill.GetLocaleBuffetPackageNameByUuid(
-				buffetCustomer.BuffetPackageUuid,
-				buffetCustomer.BuffetPackage.MultiLanguageName,
-			)
+			// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+			buffetLocaleName := buffetCustomer.GetLocaleBuffetPackageName()
 			buffetName := buffetLocaleName.EN
 			if buffetCustomer.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				item := &selling.PosInvoiceItem{

@@ -180,14 +180,14 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 					subProducts := h5Order.GetSubProducts(product.Uuid)
 					for _, subProduct := range subProducts {
 						subProductList = append(subProductList, resp.SubProductItem{
-							LocaleName: subProduct.MultiLanguageName.GetNames(),
+							LocaleName: subProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 							Num:        subProduct.Num,
 						})
 					}
 				}
 
 				newProducts = append(newProducts, resp.ProductItem{
-					LocaleName: product.MultiLanguageName.GetNames(),
+					LocaleName: product.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 					Num:        product.Num,
 					TotalPrice: totalPrice,
 					SubProducts: resp.SubProductList{
@@ -207,7 +207,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 				if product.IsAccepted() {
 					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(2).InexactFloat64()
 					acceptedProducts = append(acceptedProducts, resp.ProductItem{
-						LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
+						LocaleName: product.SaleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 						Num:        product.Num,
 						TotalPrice: totalPrice,
 					})
@@ -219,7 +219,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 		for _, product := range h5Order.H5OrderProducts {
 			totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(2).InexactFloat64()
 			newProducts = append(newProducts, resp.ProductItem{
-				LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
+				LocaleName: product.SaleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 				Num:        product.Num,
 				TotalPrice: totalPrice,
 			})
