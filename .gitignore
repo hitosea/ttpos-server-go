@@ -59,3 +59,5 @@ certificate
 
 # Agent 相关
 .agents
+/ttpos-scripts/find-order-database.js
+/main/1.json
