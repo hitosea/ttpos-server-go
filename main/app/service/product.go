@@ -99,6 +99,7 @@ type IProductSrv interface {
 	AddProductShopCategory(ctx context.Context, req req.ProductShopCategoryAddReq) error                                                  // 添加产品分类
 	EditProductShopCategory(ctx context.Context, req req.ProductShopCategoryEditReq) error                                                // 编辑产品分类
 	DeleteProductShopCategory(ctx context.Context, req req.ProductShopCategoryDeleteReq) error                                            // 删除产品分类
+	SetCategoryDisplayInTakeout(ctx context.Context, categoryUuid uint64) error                                                           // 设置分类在外卖平台显示
 
 	AddProductUnit(ctx context.Context, req req.ProductUnitAddReq) error   // 添加产品单位
 	EditProductUnit(ctx context.Context, req req.ProductUnitEditReq) error // 编辑产品单位
@@ -1319,6 +1320,58 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 		return errors.WithMessage(err, "编辑分类失败")
 	}
 
+	return nil
+}
+
+// SetCategoryDisplayInTakeout 设置分类在外卖平台显示
+// 当外卖商品选中某个分类时，自动将该分类的 is_display_in_takeout 设置为 1
+func (s *productSrv) SetCategoryDisplayInTakeout(ctx context.Context, categoryUuid uint64) error {
+	if categoryUuid == 0 {
+		return nil // 如果分类UUID为0，不需要处理
+	}
+
+	db := ctx.GetDB()
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	// 查询分类信息
+	productCategory, err := productRepo.GetProductCategory(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(categoryUuid),
+	)
+	if err != nil {
+		logger.Logger.Warn("查询分类失败，跳过设置外卖显示", zap.Uint64("categoryUuid", categoryUuid), zap.Error(err))
+		return nil // 不阻塞主流程
+	}
+	if productCategory.Uuid == 0 {
+		logger.Logger.Warn("分类不存在，跳过设置外卖显示", zap.Uint64("categoryUuid", categoryUuid))
+		return nil // 不阻塞主流程
+	}
+
+	// 如果已经设置为外卖显示，无需重复设置
+	if productCategory.IsDisplayInTakeout == 1 {
+		return nil
+	}
+
+	// 更新分类的 is_display_in_takeout 为 1
+	err = db.Model(&model.ProductCategory{}).
+		Where("uuid = ?", categoryUuid).
+		Update("is_display_in_takeout", 1).Error
+	if err != nil {
+		logger.Logger.Error("设置分类外卖显示失败", zap.Uint64("categoryUuid", categoryUuid), zap.Error(err))
+		return nil // 不阻塞主流程，只记录日志
+	}
+
+	// 清除分类缓存（如果缓存可用）
+	if s.cache != nil {
+		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), utils.IfInt(productCategory.IsSpecial == 0, 1, 0), 1))
+		err = cache.NewTaggedCache(s.cache).TagClear(tag)
+		if err != nil {
+			logger.Logger.Warn("清除分类缓存失败", zap.Uint64("categoryUuid", categoryUuid), zap.Error(err))
+		}
+	}
+
+	logger.Logger.Info("自动设置分类外卖显示成功", zap.Uint64("categoryUuid", categoryUuid))
 	return nil
 }
 

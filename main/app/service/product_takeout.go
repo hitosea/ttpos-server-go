@@ -7,6 +7,8 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -26,21 +28,23 @@ type IProductTakeoutSrv interface {
 }
 
 type productTakeoutSrv struct {
-	dbm       *database.DBManager
-	localeSrv ILocaleSrv
+	dbm        *database.DBManager
+	localeSrv  ILocaleSrv
+	productSrv IProductSrv
 }
 
-func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IProductTakeoutSrv {
+func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache, translateSrv ITranslateSrv) IProductTakeoutSrv {
 	return &productTakeoutSrv{
-		dbm:       dbm,
-		localeSrv: localeSrv,
+		dbm:        dbm,
+		localeSrv:  localeSrv,
+		productSrv: NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
 	}
 }
 
 // AddProductTakeoutShop 添加外卖商品
 func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq req.ProductTakeoutShopAddReq) (uint64, error) {
 	companySetting := ctx.GetCompanySetting()
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	// 设置默认外卖类型
 	if addReq.TakeoutType == 0 {
@@ -140,6 +144,14 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	if err != nil {
 		logger.Logger.Error("添加外卖商品失败", zap.Any("func", "AddProductTakeoutShop"), zap.Any("params", addReq), zap.Error(err))
 		return 0, errors.WithMessage(err, "添加外卖商品失败")
+	}
+
+	// 自动设置分类在外卖平台显示
+	if addReq.CategoryUuid != 0 {
+		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.CategoryUuid)
+	}
+	if addReq.SpecialCategoryUuid != 0 {
+		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.SpecialCategoryUuid)
 	}
 
 	return uuid, nil
@@ -263,6 +275,18 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 	if err != nil {
 		logger.Logger.Error("编辑外卖商品失败", zap.Any("func", "EditProductTakeoutShop"), zap.Any("params", editReq), zap.Error(err))
 		return errors.WithMessage(err, "编辑外卖商品失败")
+	}
+
+	// 自动设置分类在外卖平台显示（仅在非总部商品时才处理分类更新）
+	if !isHeadquarterProduct {
+		// 如果修改了分类UUID，自动设置新分类的外卖显示
+		if editReq.CategoryUuid != 0 {
+			_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, editReq.CategoryUuid)
+		}
+		// 如果修改了特色分类UUID，自动设置新特色分类的外卖显示
+		if editReq.SpecialCategoryUuid != 0 && editReq.SpecialCategoryUuid != editReq.CategoryUuid {
+			_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, editReq.SpecialCategoryUuid)
+		}
 	}
 
 	return nil

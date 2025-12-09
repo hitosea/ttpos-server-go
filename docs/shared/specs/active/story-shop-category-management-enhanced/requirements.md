@@ -72,6 +72,10 @@
    **WHEN** 我查看分类详情  
    **THEN** 系统应该返回该分类被外卖商品选中的数量，前端根据此数量判断是否可以控制 `is_display_in_takeout` 字段
 
+6. **GIVEN** 商品管理中有外卖商品选择了某个分类  
+   **WHEN** 外卖商品选中该分类时  
+   **THEN** 系统应该自动将该分类的 `is_display_in_takeout` 设置为 1
+
 #### 具体要求
 
 - [ ] 1.1 数据库分类表增加 `is_display_in_store` 字段（tinyint，默认1）
@@ -83,6 +87,7 @@
 - [ ] 1.7 分类详情接口返回被外卖商品选中的数量（`takeout_product_count`），供前端判断是否可控制 `is_display_in_takeout`
 - [ ] 1.8 店内显示不允许取消：`is_display_in_store` 必须始终为 1，创建和编辑时都不允许设置为 0
 - [ ] 1.9 被 Grab 商品勾选的分类不允许取消外卖显示：如果 `takeout_product_count > 0`，则 `is_display_in_takeout` 不能设置为 0
+- [ ] 1.10 自动外卖显示：当外卖商品选中某个分类时，系统自动将该分类的 `is_display_in_takeout` 设置为 1（商品创建/编辑时触发）
 
 ---
 

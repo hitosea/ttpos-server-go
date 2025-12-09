@@ -1371,7 +1371,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 			cache,
 			translateSrv,
 		),
-		productTakeoutSrv: service.NewProductTakeoutSrv(dbm, localeSrv),
+		productTakeoutSrv: service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
 		uploadFileSrv:     service.NewUploadFileSrv(dbm),
 		pinterSrv:         service.NewPrinterSrv(dbm, cache),
 	}
