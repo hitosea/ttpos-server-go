@@ -317,6 +317,7 @@ type Product struct {
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）
 	Remark              string             `json:"remark"`                // 备注
+	RemarkUuids         []uint64           `json:"remark_uuids"`          // 备注预设UUID列表
 	IsMust              bool               `json:"is_must"`               // 是否必点
 	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
 	IsWrap              bool               `json:"is_wrap"`               // 是否是打包

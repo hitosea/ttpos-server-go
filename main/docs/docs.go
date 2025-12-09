@@ -41422,6 +41422,13 @@ const docTemplate = `{
                     "description": "remark",
                     "type": "string"
                 },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID",
                     "type": "integer"
@@ -46009,10 +46016,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "minute": {
-                    "description": "时间阈值（分钟）",
-                    "type": "integer",
-                    "maximum": 60,
-                    "minimum": 0
+                    "description": "时间阈值（分钟，字符串类型以兼容 PHP）",
+                    "type": "string"
                 }
             }
         },
@@ -52298,6 +52303,13 @@ const docTemplate = `{
                     "description": "数量计算方法 0-整数 1-小数",
                     "type": "integer"
                 },
+                "order_item_remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "package_product_list": {
                     "description": "套餐商品列表",
                     "allOf": [
@@ -58303,8 +58315,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "minute": {
-                    "description": "时间阈值（分钟）",
-                    "type": "integer"
+                    "description": "时间阈值（分钟，字符串类型以兼容 PHP）",
+                    "type": "string"
                 }
             }
         },

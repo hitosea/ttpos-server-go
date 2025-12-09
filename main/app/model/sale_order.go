@@ -800,6 +800,12 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			}
 		}
 
+		orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+		orderItemRemarkUuids := make([]uint64, 0)
+		for _, item := range orderItemRemarkList {
+			orderItemRemarkUuids = append(orderItemRemarkUuids, item.OrderItemRemarkUuid)
+		}
+
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
 			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
@@ -810,6 +816,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
 			Status:              saleOrderProduct.StatusValue(),
 			Remark:              saleOrderProduct.Remark,
+			RemarkUuids:         orderItemRemarkUuids,
 			IsMust:              saleOrderProduct.IsMustProduct(),
 			IsGift:              saleOrderProduct.IsGiftProduct(),
 			IsWrap:              saleOrderProduct.IsWrapProduct(),

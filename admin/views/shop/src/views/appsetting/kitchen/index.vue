@@ -40,18 +40,37 @@
         </el-form-item>
         <el-form-item for="no_click" v-if="form.is_wait_color == 1" label="" :rules="[{ required: true, message: '' }]">
           <div class="max-w460 color-box">
-            <el-input v-model="input1" disabled></el-input>
-            <el-select v-model="form.wait_color[0]" size="default">
-              <el-option value="red" :label="$t('红色')">{{ $t('红色') }}</el-option>
-              <el-option value="yellow" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+            <el-input v-model="input0" disabled></el-input>
+            <el-select v-model="form.wait_time_color_ranges[0].color" size="default">
+              <el-option value="#100A05" :label="$t('黑色')">{{ $t('黑色') }}</el-option>
+              <el-option value="#E50028" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+              <el-option value="#FFBE00" :label="$t('红色')">{{ $t('红色') }}</el-option>
+              <el-option value="custom" :label="$t('自定义')">{{ $t('自定义') }}</el-option>
             </el-select>
           </div>
           <div class="max-w460 color-box">
-            <el-input v-model="input2" disabled></el-input>
-            <el-select v-model="form.wait_color[1]" size="default">
-              <el-option value="red" :label="$t('红色')">{{ $t('红色') }}</el-option>
-              <el-option value="yellow" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+            <el-select class="w-104" v-model="form.wait_time_color_ranges[1].minute" size="default" :placeholder="$t('选择分钟')">
+              <el-option v-for="minute in 61" :key="minute - 1" :value="minute - 1" :label="`${minute - 1}min`"> </el-option>
             </el-select>
+            <el-select class="w-104" v-model="form.wait_time_color_ranges[1].color" size="default">
+              <el-option value="#100A05" :label="$t('黑色')">{{ $t('黑色') }}</el-option>
+              <el-option value="#E50028" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+              <el-option value="#FFBE00" :label="$t('红色')">{{ $t('红色') }}</el-option>
+              <el-option value="custom" :label="$t('自定义')">{{ $t('自定义') }}</el-option>
+            </el-select>
+            <el-color-picker v-if="form.wait_time_color_ranges[1].color === 'custom'" v-model="customColor0" :predefine="predefinedColors" :show-alpha="false" size="small" />
+          </div>
+          <div class="max-w460 color-box">
+            <el-select v-model="form.wait_time_color_ranges[2].minute" class="w-104" size="default" :placeholder="$t('选择分钟')" :disabled="!form.wait_time_color_ranges[1].minute && form.wait_time_color_ranges[1].minute !== 0">
+              <el-option v-for="minute in 61 - form.wait_time_color_ranges[1].minute - 1" :key="form.wait_time_color_ranges[1].minute + minute" :value="form.wait_time_color_ranges[1].minute + minute" :label="`${form.wait_time_color_ranges[1].minute + minute}min`"> </el-option>
+            </el-select>
+            <el-select class="w-104" v-model="form.wait_time_color_ranges[2].color" size="default">
+              <el-option value="#100A05" :label="$t('黑色')">{{ $t('黑色') }}</el-option>
+              <el-option value="#E50028" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+              <el-option value="#FFBE00" :label="$t('红色')">{{ $t('红色') }}</el-option>
+              <el-option value="custom" :label="$t('自定义')">{{ $t('自定义') }}</el-option>
+            </el-select>
+            <el-color-picker v-if="form.wait_time_color_ranges[2].color === 'custom'" v-model="customColor1" :predefine="predefinedColors" :show-alpha="false" size="small" />
           </div>
         </el-form-item>
 
@@ -179,6 +198,11 @@
           default_language: null,
           advanced_password: false,
           wait_color: ['', ''],
+          wait_time_color_ranges: [
+            { minute: 0, color: '#100A05' }, // 第一个时间范围（0分钟）
+            { minute: 10, color: '#E50028' }, // 第二个时间范围（10分钟）
+            { minute: 20, color: '#FFBE00' }, // 第三个时间范围（20分钟）
+          ],
           bind_list: [],
           is_come_dish: '1',
           is_call_service: '1',
@@ -190,7 +214,26 @@
         origin: window.location.origin,
         port: window.location.port || '80',
         input1: $t('10分钟'),
+        input0: '0min',
         input2: $t('20分钟及以上'),
+        predefinedColors: [
+          '#ff0000',
+          '#ff7f00',
+          '#ffff00',
+          '#00ff00',
+          '#0000ff',
+          '#4b0082',
+          '#9400d3',
+          '#ff1493',
+          '#00ffff',
+          '#ff4500',
+          '#32cd32',
+          '#1e90ff',
+          '#daa520',
+          '#ff69b4',
+        ], // 预定义颜色
+        customColor0: '#ff0000', // 第一个自定义颜色
+        customColor1: '#ffff00', // 第二个自定义颜色
         languageList: [],
         open: false,
         loading: false,
@@ -221,6 +264,18 @@
         return result;
       },
     },
+    watch: {
+      wait_time1(newVal) {
+        // 当第一个时间改变时，确保第二个时间大于第一个时间
+        if (this.wait_time2 <= newVal) {
+          this.wait_time2 = newVal + 1;
+          // 如果超出范围，设置为最大值
+          if (this.wait_time2 > 60) {
+            this.wait_time2 = 60;
+          }
+        }
+      },
+    },
     methods: {
       DTime: DTime,
       setPassword() {
@@ -240,6 +295,33 @@
             self.form.language = self.form.language.filter((lang) => {
               return self.languageList.map((h) => h.key).indexOf(lang) != -1;
             });
+
+            // 处理颜色数据：初始化 wait_time_color_ranges
+            if (self.form.wait_time_color_ranges && self.form.wait_time_color_ranges.length >= 3) {
+              self.form.wait_time_color_ranges = self.form.wait_time_color_ranges.map((range, index) => {
+                let color = range.color || '#100A05'; // 默认黑色
+                let minute = range.minute || 0;
+
+                // 将颜色值转换为选择项格式：只有预设值才显示为对应选项，其他都是自定义
+                if (color === '#100A05' || color === '#E50028' || color === '#FFBE00') {
+                  // 预设颜色，保持原值
+                  color = color;
+                } else {
+                  // 自定义颜色，设置对应的自定义颜色字段
+                  if (index === 1) {
+                    self.customColor0 = color;
+                  } else if (index === 2) {
+                    self.customColor1 = color;
+                  }
+                  color = 'custom';
+                }
+
+                return {
+                  minute: minute,
+                  color: color
+                };
+              });
+            }
             self.onlineList = [];
             self.offlineList = [];
             self.printerList = data.data.vars.values.printer_list;
@@ -265,6 +347,25 @@
       onSubmit() {
         let self = this;
         let params = JSON.parse(JSON.stringify(self.form));
+
+        // 处理颜色选择：在提交时根据选择的值设置最终颜色
+        params.wait_time_color_ranges = params.wait_time_color_ranges.map((range, index) => {
+          let color = range.color;
+          if (color === 'custom') {
+            // 如果选择自定义，使用对应的自定义颜色
+            if (index === 1) {
+              color = self.customColor0;
+            } else if (index === 2) {
+              color = self.customColor1;
+            }
+          }
+          // 其他情况（预设颜色值）直接使用原值
+
+          return {
+            minute: range.minute,
+            color: color
+          };
+        });
 
         //绑定的清空,只需要提交绑定的打印机ID和设备UUID
         params.bind_list = [];
@@ -337,7 +438,10 @@
   .color-box {
     display: flex;
     gap: 12px;
-    margin-right: 16px;
+    margin-right: 24px;
+    .w-104 {
+      width: 104px;
+    }
   }
 
   .el-button--primary:focus {

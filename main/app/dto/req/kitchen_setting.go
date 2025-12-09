@@ -3,6 +3,7 @@ package req
 import (
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"ttpos-server-go/app/dto/resp/setting"
@@ -11,8 +12,8 @@ import (
 
 // WaitTimeColorRange 等待时长颜色区间
 type WaitTimeColorRange struct {
-	Minute int    `json:"minute" binding:"required,min=0,max=60"` // 时间阈值（分钟）
-	Color  string `json:"color" binding:"required"`               // 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
+	Minute string `json:"minute" binding:"required"` // 时间阈值（分钟，字符串类型以兼容 PHP）
+	Color  string `json:"color" binding:"required"`  // 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
 	// 颜色值限定：黑色 #100A05，黄色 #FFBE00，红色 #E50028
 }
 
@@ -29,18 +30,21 @@ func (r *SaveKitchenSettingReq) Validate() error {
 		return errs.WithMessage(errors.New("必须配置3个时间区间"))
 	}
 
-	// 验证第一区间必须为0分钟
-	if r.WaitTimeColorRanges[0].Minute != 0 {
+	// 解析并验证第一区间必须为0分钟
+	minute0, err := strconv.Atoi(r.WaitTimeColorRanges[0].Minute)
+	if err != nil || minute0 != 0 {
 		return errs.WithMessage(errors.New("第一区间必须为0分钟"))
 	}
 
-	// 验证第二区间范围：1-60分钟
-	if r.WaitTimeColorRanges[1].Minute < 1 || r.WaitTimeColorRanges[1].Minute > 60 {
+	// 解析并验证第二区间范围：1-60分钟
+	minute1, err := strconv.Atoi(r.WaitTimeColorRanges[1].Minute)
+	if err != nil || minute1 < 1 || minute1 > 60 {
 		return errs.WithMessage(errors.New("第二区间必须在1-60分钟之间"))
 	}
 
-	// 验证第三区间范围：必须大于第二区间，且≤60分钟
-	if r.WaitTimeColorRanges[2].Minute <= r.WaitTimeColorRanges[1].Minute || r.WaitTimeColorRanges[2].Minute > 60 {
+	// 解析并验证第三区间范围：必须大于第二区间，且≤60分钟
+	minute2, err := strconv.Atoi(r.WaitTimeColorRanges[2].Minute)
+	if err != nil || minute2 <= minute1 || minute2 > 60 {
 		return errs.WithMessage(errors.New("第三区间起点必须大于第二区间，且不超过60分钟"))
 	}
 
@@ -84,7 +88,7 @@ func (r *SaveKitchenSettingReq) ToSettingWaitTimeColorRanges() []setting.WaitTim
 	result := make([]setting.WaitTimeColorRange, len(r.WaitTimeColorRanges))
 	for i, item := range r.WaitTimeColorRanges {
 		result[i] = setting.WaitTimeColorRange{
-			Minute: item.Minute,
+			Minute: item.Minute,                 // 直接传递字符串
 			Color:  strings.ToUpper(item.Color), // 统一转换为大写
 		}
 	}

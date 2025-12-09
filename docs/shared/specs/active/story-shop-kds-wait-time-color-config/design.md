@@ -104,6 +104,9 @@ graph TD
 
 #### PHP Admin 模块
 
+- **Controller 层**: `admin/app/shop/controller/setting/Terminal.php` - `kitchen()` 方法处理厨显设置
+  - GET 请求：获取厨显设置（包含 `wait_time_color_ranges` 字段）
+  - POST 请求：保存厨显设置（接收并保存 `wait_time_color_ranges` 字段）
 - **迁移文件**: `admin/database/migrations/` - 权限迁移和数据迁移
 
 ---
@@ -145,9 +148,9 @@ CREATE TABLE `setting` (
   "is_wait_color": "1",
   "wait_color": ["red", "yellow"],
     "wait_time_color_ranges": [
-      {"minute": 0, "color": "#100A05"},
-      {"minute": 10, "color": "#FFBE00"},
-      {"minute": 20, "color": "#E50028"}
+      {"minute": "0", "color": "#100A05"},
+      {"minute": "10", "color": "#FFBE00"},
+      {"minute": "20", "color": "#E50028"}
     ],
   "language": ["en", "zh"],
   "default_language": "en",
@@ -160,7 +163,7 @@ CREATE TABLE `setting` (
   - 第一个元素对应第二区间（10分钟）的颜色
   - 第二个元素对应第三区间（20分钟）的颜色
   - 取值只能是 `"red"` 或 `"yellow"`
-- `wait_time_color_ranges` ([]object): 新格式，格式：`[{"minute": 0, "color": "#100A05"}, ...]`
+- `wait_time_color_ranges` ([]object): 新格式，格式：`[{"minute": "0", "color": "#100A05"}, ...]`（注意：`minute` 为字符串类型以兼容 PHP）
   - 统一使用 RGB 格式（`#xxxxxx`）
   - 颜色值限定：
     - 黑色：`#100A05`
@@ -184,8 +187,8 @@ CREATE TABLE `setting` (
 
 // WaitTimeColorRange 等待时长颜色区间
 type WaitTimeColorRange struct {
-    Minute int    `json:"minute"` // 时间阈值（分钟）
-    Color  string `json:"color"`  // 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
+    Minute string `json:"minute"` // 时间阈值（分钟，字符串类型以兼容 PHP）
+    Color  string `json:"color"`   // 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
     // 颜色值限定：黑色 #100A05，黄色 #FFBE00，红色 #E50028
 }
 
@@ -226,8 +229,8 @@ type SaveKitchenSettingReq struct {
 
 // WaitTimeColorRange 等待时长颜色区间
 type WaitTimeColorRange struct {
-    Minute int    `json:"minute" binding:"required,min=0,max=60"` // 时间阈值（分钟）
-    Color  string `json:"color" binding:"required"`               // 颜色值（RGB 格式，如 #000000，或旧格式 red/yellow）
+    Minute string `json:"minute" binding:"required"` // 时间阈值（分钟，字符串类型以兼容 PHP）
+    Color  string `json:"color" binding:"required"`  // 颜色值（RGB 格式，如 #000000，或旧格式 red/yellow）
 }
 ```
 
@@ -275,9 +278,9 @@ type WaitTimeColorRange struct {
     "is_wait_color": "1",
     "wait_color": ["red", "yellow"],
     "wait_time_color_ranges": [
-      {"minute": 0, "color": "#100A05"},
-      {"minute": 10, "color": "#FFBE00"},
-      {"minute": 20, "color": "#E50028"}
+      {"minute": "0", "color": "#100A05"},
+      {"minute": "10", "color": "#FFBE00"},
+      {"minute": "20", "color": "#E50028"}
     ],
     "language_list": [...],
     "language": ["en", "zh"],
@@ -305,9 +308,9 @@ type WaitTimeColorRange struct {
   {
     "is_wait_color": "1",
     "wait_time_color_ranges": [
-      {"minute": 0, "color": "#100A05"},
-      {"minute": 15, "color": "#FFBE00"},
-      {"minute": 30, "color": "#E50028"}
+      {"minute": "0", "color": "#100A05"},
+      {"minute": "15", "color": "#FFBE00"},
+      {"minute": "30", "color": "#E50028"}
     ]
   }
   ```
@@ -332,6 +335,61 @@ type WaitTimeColorRange struct {
 }
 ```
 
+### PHP Admin API（兼容接口）
+
+#### API: 厨显设置（GET/POST）
+
+**请求**:
+
+- **URL**: `/index.php/shop/setting.Terminal/kitchen`
+- **Method**: `GET`（获取）或 `POST`（设置）
+- **Headers**:
+  ```json
+  {
+    "Authorization": "Bearer {token}",
+    "Content-Type": "application/json"
+  }
+  ```
+
+**POST 请求 Body**（包含 `wait_time_color_ranges` 字段）:
+
+```json
+{
+  "is_open": "1",
+  "is_come_dish": "1",
+  "is_call_service": "1",
+  "server": {
+    "ip": "192.168.1.100",
+    "port": "8080"
+  },
+  "is_wait_color": "1",
+  "wait_color": ["red", "yellow"],
+  "wait_time_color_ranges": [
+    {"minute": "0", "color": "#100A05"},
+    {"minute": "10", "color": "#FFBE00"},
+    {"minute": "20", "color": "#E50028"}
+  ],
+  "language": ["en", "zh"],
+  "default_language": "en",
+  "is_smart_kitchen": "0"
+}
+```
+
+**响应**:
+
+```json
+{
+  "code": 1,
+  "message": "操作成功",
+  "data": {}
+}
+```
+
+**说明**:
+- PHP Admin 模块的 `Terminal::kitchen()` 方法同时支持 `wait_color`（旧格式）和 `wait_time_color_ranges`（新格式）
+- 两个字段都会保存到数据库，保持向后兼容
+- GET 请求返回的配置中包含 `wait_time_color_ranges` 字段
+
 ---
 
 ## 🧩 组件和接口
@@ -353,6 +411,11 @@ type ISrv interface {
 
 ```go
 // main/app/service/setting/setting.go
+
+import (
+    "strconv"
+    // ... 其他导入
+)
 
 // SaveKitchenSetting 保存厨显设置
 func (s *Srv) SaveKitchenSetting(ctx context.Context, req req.SaveKitchenSettingReq) error {
@@ -413,18 +476,21 @@ func (s *Srv) validateWaitTimeColorRanges(ranges []req.WaitTimeColorRange) error
         return errors.New("必须配置3个时间区间")
     }
 
-    // 第一区间必须为0分钟
-    if ranges[0].Minute != 0 {
+    // 解析并验证第一区间必须为0分钟
+    minute0, err := strconv.Atoi(ranges[0].Minute)
+    if err != nil || minute0 != 0 {
         return errors.New("第一区间必须为0分钟")
     }
 
-    // 第二区间范围：1-60分钟
-    if ranges[1].Minute < 1 || ranges[1].Minute > 60 {
+    // 解析并验证第二区间范围：1-60分钟
+    minute1, err := strconv.Atoi(ranges[1].Minute)
+    if err != nil || minute1 < 1 || minute1 > 60 {
         return errors.New("第二区间必须在1-60分钟之间")
     }
 
-    // 第三区间范围：必须大于第二区间，且≤60分钟
-    if ranges[2].Minute <= ranges[1].Minute || ranges[2].Minute > 60 {
+    // 解析并验证第三区间范围：必须大于第二区间，且≤60分钟
+    minute2, err := strconv.Atoi(ranges[2].Minute)
+    if err != nil || minute2 <= minute1 || minute2 > 60 {
         return errors.New("第三区间起点必须大于第二区间，且不超过60分钟")
     }
 
@@ -485,7 +551,7 @@ func (s *Srv) convertToOldFormat(ranges []req.WaitTimeColorRange) []string {
 // convertFromOldFormat 从旧格式转换到新格式
 func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRange {
     var result []setting.WaitTimeColorRange
-    result = append(result, setting.WaitTimeColorRange{Minute: 0, Color: "#100A05"}) // 第一区间固定黑色
+    result = append(result, setting.WaitTimeColorRange{Minute: "0", Color: "#100A05"}) // 第一区间固定黑色
     
     // 旧格式：["red", "yellow"] 或 ["yellow", "red"]
     // 第一个元素对应第二区间，第二个元素对应第三区间
@@ -498,9 +564,9 @@ func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRa
         if i >= 2 {
             break // 最多两个元素
         }
-        minute := 10
+        minute := "10"
         if i == 1 {
-            minute = 20
+            minute = "20"
         }
         color := "#FFBE00" // 默认黄色
         if rgbColor, ok := colorMap[item]; ok {
@@ -512,10 +578,10 @@ func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRa
     // 如果旧格式数据不足，使用默认值
     if len(result) < 3 {
         if len(result) == 1 {
-            result = append(result, setting.WaitTimeColorRange{Minute: 10, Color: "#FFBE00"})
+            result = append(result, setting.WaitTimeColorRange{Minute: "10", Color: "#FFBE00"})
         }
         if len(result) == 2 {
-            result = append(result, setting.WaitTimeColorRange{Minute: 20, Color: "#E50028"})
+            result = append(result, setting.WaitTimeColorRange{Minute: "20", Color: "#E50028"})
         }
     }
     

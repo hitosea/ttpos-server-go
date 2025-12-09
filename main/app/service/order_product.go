@@ -82,12 +82,49 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 
 	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 处理备注预设UUID列表（参考退菜逻辑）
+		if len(req.RemarkUuids) > 0 {
+			// 查询备注预设列表
+			orderItemRemarkRepo := base.NewOrderItemRemarkRepo(db)
+			orderItemRemarks, err := orderItemRemarkRepo.GetOrderItemRemarkListByUuids(req.RemarkUuids)
+			if err != nil {
+				return errors.WithMessage(err, "查询备注预设失败")
+			}
+			// 如果查到的备注预设数量跟提交的数量不一致，提示备注预设不存在
+			if len(orderItemRemarks) != len(req.RemarkUuids) {
+				return errors.WithMessage(fmt.Errorf("备注预设不存在: %v", req.RemarkUuids))
+			}
+
+			// 删除旧的备注预设原因记录（物理删除）
+			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
+				return errors.WithMessage(err, "删除旧备注预设原因失败")
+			}
+
+			// 创建新的备注预设原因记录
+			remarkReasonList := saleOrderProduct.NewSaleOrderProductRemarkReasonList(orderItemRemarks)
+			if len(remarkReasonList) > 0 {
+				if err := reasonRepo.CreateSaleOrderProductReasons(remarkReasonList); err != nil {
+					return errors.WithMessage(err, "保存备注预设原因失败")
+				}
+			}
+			saleOrderProduct.OrderItemRemarks = remarkReasonList
+		} else {
+			// 如果没有备注预设UUID列表，删除旧的备注预设原因记录（物理删除）
+			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
+				return errors.WithMessage(err, "删除旧备注预设原因失败")
+			}
+			saleOrderProduct.OrderItemRemarks = make([]*model.SaleOrderProductReason, 0)
+		}
+
 		saleOrderProduct.Remark = req.Remark
 		saleOrderProduct.UpdateSign()
 		sign := saleOrderProduct.Sign
 		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
 		}
+
 		// 更新套餐商品的子商品的签名
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)

@@ -4,7 +4,7 @@ import "ttpos-server-go/app/dto"
 
 // WaitTimeColorRange 等待时长颜色区间
 type WaitTimeColorRange struct {
-	Minute int    `json:"minute"` // 时间阈值（分钟）
+	Minute string `json:"minute"` // 时间阈值（分钟，字符串类型以兼容 PHP）
 	Color  string `json:"color"`  // 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
 	// 颜色值限定：黑色 #100A05，黄色 #FFBE00，红色 #E50028
 }
