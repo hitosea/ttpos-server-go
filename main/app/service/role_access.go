@@ -190,6 +190,12 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if companySetting.DeliveryStatus != 1 && permission.Uuid == 1752716650 {
 			continue
 		}
+		// 授权无Grab外卖权限（未开启Grab外卖时，隐藏外卖接单权限）
+		if !companySetting.IsOpenGrabDelivery() {
+			if permission.Uuid == 1734000001 { // 外卖权限UUID
+				continue
+			}
+		}
 		// 新管理端-管理APP-总部无品采收货权限
 		if permission.Uuid == 2858548203520000 && companySetting.IsHeadquarter() {
 			continue
