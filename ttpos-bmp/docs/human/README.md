@@ -8,6 +8,7 @@
 
 ### [guides/](./guides/) - 开发指南
 **用途：** 开发规范、最佳实践、工具使用
+- [TTPOS 项目总览](./guides/ttpos-project-overview.md) - 项目架构、快速开始、开发指南
 - [GoFrame开发指南](./guides/goframe-development-guide.md)
 - [Protobuf开发规范](./guides/protobuf-development-guide.md)
 - [数据库设计规范](./guides/database-design-guide.md)

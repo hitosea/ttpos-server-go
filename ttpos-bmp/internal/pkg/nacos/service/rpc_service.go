@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -42,6 +43,8 @@ func (s *rpcServer) Init(ctx context.Context) {
 	//.SetClusterName("DEFAULT")
 	//.SetGroupName("DEFAULT_GROUP"))
 	s.GRpc = grpcx.Server.New(grpcConf)
+	//开启反射
+	reflection.Register(s.GRpc.Server)
 	//注册服务
 	//go s.GRpc.Run()
 }
