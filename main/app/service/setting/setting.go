@@ -75,6 +75,7 @@ type ISrv interface {
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	EditCashierSetting(ctx context.Context, cashierSettingReq req.SaveCashierSettingReq) error                                            // 修改收银机设置
 	EditKioskSetting(ctx context.Context, kioskSettingReq req.SaveKioskSettingReq) error                                                  // 修改自助点餐机设置
+	SaveKitchenSetting(ctx context.Context, kitchenSettingReq req.SaveKitchenSettingReq) error                                            // 保存厨显设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
@@ -1174,11 +1175,19 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	if len(defaultKitchen.WaitColor) == 0 {
 		defaultKitchen.WaitColor = make([]string, 0)
 	}
+	if len(defaultKitchen.WaitTimeColorRanges) == 0 {
+		defaultKitchen.WaitTimeColorRanges = make([]setting.WaitTimeColorRange, 0)
+	}
 	if len(defaultKitchen.LanguageList) == 0 {
 		defaultKitchen.LanguageList = make([]dto.LanguageItem, 0)
 	}
 	if len(defaultKitchen.Language) == 0 {
 		defaultKitchen.Language = make([]string, 0)
+	}
+
+	// 转换旧格式到新格式（如果只有旧格式数据）
+	if len(defaultKitchen.WaitTimeColorRanges) == 0 && len(defaultKitchen.WaitColor) > 0 {
+		defaultKitchen.WaitTimeColorRanges = s.convertFromOldFormat(defaultKitchen.WaitColor)
 	}
 
 	validLanguageList := make([]dto.LanguageItem, 0)
@@ -1627,6 +1636,126 @@ func (s *Srv) EditKioskSetting(ctx context.Context, kioskSettingReq req.SaveKios
 	}
 
 	return nil
+}
+
+// SaveKitchenSetting 保存厨显设置
+func (s *Srv) SaveKitchenSetting(ctx context.Context, kitchenSettingReq req.SaveKitchenSettingReq) error {
+	// 1. 参数验证
+	if err := kitchenSettingReq.Validate(); err != nil {
+		return errors.WithMessage(err, "参数验证失败")
+	}
+
+	// 2. 获取当前配置
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取商家设置失败")
+	}
+
+	languageList, err := s.GetStoreLanguageList(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取语言列表失败")
+	}
+
+	currentKitchen, err := s.GetKitchenSetting(ctx, companySetting, languageList)
+	if err != nil {
+		return errors.WithMessage(err, "获取厨显设置失败")
+	}
+
+	// 3. 更新配置
+	currentKitchen.IsWaitColor = kitchenSettingReq.IsWaitColor
+	currentKitchen.WaitTimeColorRanges = kitchenSettingReq.ToSettingWaitTimeColorRanges()
+
+	// 4. 转换新格式到旧格式（保持兼容）
+	currentKitchen.WaitColor = s.convertToOldFormat(kitchenSettingReq.WaitTimeColorRanges)
+
+	// 5. 保存到数据库
+	if err := s.UpdateSetting(ctx, constant.SettingKitchen, currentKitchen); err != nil {
+		return errors.WithMessage(err, "保存配置失败")
+	}
+
+	// 6. 删除缓存
+	companyUuid := ctx.GetCompanyUuid()
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+
+	// 7. 推送 WebSocket 配置更新
+	utils.Go(func() {
+		websocket.PushClient(
+			companyUuid,
+			websocket.SourceKitchen,
+			websocket.SourceAll,
+			websocket.UPDATE_CONFIG,
+			map[string]any{
+				"update_time": time.Now().Unix(),
+				"config_type": "kitchen_wait_time_color",
+				"config_data": kitchenSettingReq.WaitTimeColorRanges,
+			},
+		)
+	})
+
+	return nil
+}
+
+// convertToOldFormat 转换新格式到旧格式
+func (s *Srv) convertToOldFormat(ranges []req.WaitTimeColorRange) []string {
+	var result []string
+	for i, r := range ranges {
+		if i == 0 {
+			continue // 跳过第一区间（0分钟）
+		}
+		// RGB 格式转换为 red/yellow
+		color := r.Color
+		colorUpper := strings.ToUpper(color)
+		if colorUpper == "#E50028" {
+			color = "red"
+		} else if colorUpper == "#FFBE00" {
+			color = "yellow"
+		} else {
+			// 其他 RGB 颜色，默认使用 yellow（保持兼容）
+			color = "yellow"
+		}
+		result = append(result, color)
+	}
+	return result
+}
+
+// convertFromOldFormat 从旧格式转换到新格式
+func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRange {
+	var result []setting.WaitTimeColorRange
+	result = append(result, setting.WaitTimeColorRange{Minute: 0, Color: "#100A05"}) // 第一区间固定黑色
+
+	// 旧格式：["red", "yellow"] 或 ["yellow", "red"]
+	// 第一个元素对应第二区间，第二个元素对应第三区间
+	colorMap := map[string]string{
+		"red":    "#E50028",
+		"yellow": "#FFBE00",
+	}
+
+	for i, item := range oldFormat {
+		if i >= 2 {
+			break // 最多两个元素
+		}
+		minute := 10
+		if i == 1 {
+			minute = 20
+		}
+		color := "#FFBE00" // 默认黄色
+		if rgbColor, ok := colorMap[item]; ok {
+			color = rgbColor
+		}
+		result = append(result, setting.WaitTimeColorRange{Minute: minute, Color: color})
+	}
+
+	// 如果旧格式数据不足，使用默认值
+	if len(result) < 3 {
+		if len(result) == 1 {
+			result = append(result, setting.WaitTimeColorRange{Minute: 10, Color: "#FFBE00"})
+		}
+		if len(result) == 2 {
+			result = append(result, setting.WaitTimeColorRange{Minute: 20, Color: "#E50028"})
+		}
+	}
+
+	return result
 }
 
 // GetCashierBaseSetting 获取收银端设置

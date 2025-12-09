@@ -962,6 +962,72 @@ func (h *SettingHandler) SaveKioskSetting(c *gin.Context) {
 	helper.Success(c, "保存成功")
 }
 
+// GetKitchenSetting 获取厨显设置
+// @Summary 获取厨显设置
+// @Description 获取厨显设置
+// @Tags 商家端.厨显设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.KitchenResp}
+// @Router /shop/setting/kitchen [get]
+func (h *SettingHandler) GetKitchenSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	companySetting, err := h.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	languageList, err := h.settingSrv.GetStoreLanguageList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	kitchenSetting, err := h.settingSrv.GetKitchenSetting(ctx, companySetting, languageList)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, kitchenSetting.KitchenResp)
+}
+
+// SaveKitchenSetting 保存厨显设置
+// @Summary 保存厨显设置
+// @Description 保存厨显设置
+// @Tags 商家端.厨显设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveKitchenSettingReq true "保存厨显设置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/kitchen [post]
+func (h *SettingHandler) SaveKitchenSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var kitchenSettingReq req.SaveKitchenSettingReq
+	if err := c.ShouldBindJSON(&kitchenSettingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 参数验证
+	if err := kitchenSettingReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 调用 Service 层保存
+	err := h.settingSrv.SaveKitchenSetting(ctx, kitchenSettingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, "保存成功")
+}
+
 // UploadKioskCarousel 上传自助点餐机轮播内容（图片/视频）
 // @Summary 上传自助点餐机轮播内容
 // @Description 上传自助点餐机轮播内容，支持图片（JPG、JPEG、PNG、WEBP，<2MB）和视频（MP4，<10MB）
@@ -1108,6 +1174,8 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/kiosk", wrapper.GetKioskSetting)                          // 获取自助点餐机设置
 		privateApi.POST("/setting/kiosk", wrapper.SaveKioskSetting)                        // 保存自助点餐机设置
 		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容
+		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                      // 获取厨显设置
+		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                    // 保存厨显设置
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因

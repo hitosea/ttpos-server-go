@@ -50,8 +50,8 @@
           <el-table-column prop="create_time" :label="$t('添加時間')"> </el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="160">
             <template #default="scope">
-              <el-button v-auth="'/marketing/coupon/edit'" @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" type="primary" link size="small">{{ $t('删除') }}</el-button>
+              <el-button v-auth="'/marketing/coupon/edit'" :disabled="scope.row.headquarter_uuid > 0" @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
+              <el-button :disabled="scope.row.headquarter_uuid > 0" @click="deleteClick(scope.row)" type="primary" link size="small">{{ $t('删除') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
