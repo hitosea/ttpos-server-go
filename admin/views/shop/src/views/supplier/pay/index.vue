@@ -44,7 +44,7 @@
           <el-table-column prop="create_time" :label="$t('添加时间')" width="180"></el-table-column>
           <el-table-column prop="" :label="$t('操作')" width="120" fixed="right">
             <template #default="scope">
-              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/pay/edit'">
+              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/pay/edit'" :disabled="scope.row.headquarter_uuid > 0">
                 {{ $t('编辑') }}
               </el-button>
               <el-button
@@ -54,7 +54,7 @@
                 link
                 size="small"
                 v-auth="'/supplier/pay/delete'"
-                :disabled="scope.row.status == 2 || erp_is_open == 1"
+                :disabled="scope.row.status == 2 || erp_is_open == 1 || scope.row.headquarter_uuid > 0"
               >
                 {{ $t('删除') }}
               </el-button>

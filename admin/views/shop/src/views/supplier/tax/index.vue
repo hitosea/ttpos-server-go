@@ -62,7 +62,7 @@
                 },
               ]"
             >
-              <el-input :placeholder="$t('请输入税率名称')" :maxlength="50" v-model="item.name"></el-input>
+              <el-input :placeholder="$t('请输入税率名称')" :maxlength="50" v-model="item.name" :disabled="item.headquarter_uuid > 0"></el-input>
             </el-form-item>
             <el-form-item
               class="max-w460"
@@ -77,10 +77,10 @@
                 },
               ]"
             >
-              <numInput :min="0" :max="100" :precision="2" v-model="item.tax_rate" :placeholder="$t('请输入税率')"></numInput>
+              <numInput :min="0" :max="100" :precision="2" v-model="item.tax_rate" :placeholder="$t('请输入税率')" :disabled="item.headquarter_uuid > 0"></numInput>
             </el-form-item>
             <span class="span-p">%</span>
-            <el-icon class="delete-icon" :class="unDelete ? 'delete-icon-none' : ''" @click="handleDelete(index)">
+            <el-icon class="delete-icon" :class="unDelete || item.headquarter_uuid > 0 ? 'delete-icon-none' : ''" @click="handleDelete(index)">
               <Delete />
             </el-icon>
           </div>
@@ -154,6 +154,7 @@
                 name: item.name,
                 tax_rate: item.tax_rate,
                 action: 'edit',
+                headquarter_uuid: item.headquarter_uuid,
               });
             });
             self.$refs.form.validate();
@@ -196,6 +197,7 @@
       },
 
       handleDelete(index) {
+        if (this.form.add_tax_category[index].headquarter_uuid > 0) return;
         let result = 0;
         this.form.add_tax_category.map((item) => {
           if (item.action != 'delete') {
