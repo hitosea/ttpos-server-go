@@ -80,6 +80,17 @@
     - 后台删除了"中国"或改名为"中华人民共和国"
     - 查询订单时显示错误信息或新名称
 
+12. **分批类型被删除或改名**：
+    - 订单商品使用了分批类型："第一批"
+    - 后台删除了"第一批"分批类型或改名为"首轮"
+    - 查询订单时显示错误信息或新名称（厨显端、订单详情中都会显示分批类型）
+
+13. **自助餐加钟商品名称被修改**：
+    - 订单自助餐加钟商品："加钟30分钟"
+    - 后台将加钟商品改名为"加时30分钟"
+    - 查询订单时显示："加时30分钟"（显示的是新名称，而非下单时的名称）
+    - 注：`SaleOrderBuffetDelayProduct.Name` 字段已有快照机制，但需要确认下单时是否正确保存
+
 **问题影响**：
 
 - ❌ 订单历史信息不准确，无法还原下单时的真实状态
@@ -222,12 +233,14 @@
 #### 二、新增快照字段（需要数据库变更）
 
 6. **数据库结构变更**
-   - 在 `ttpos_sale_order_product_reason` 表添加 `name` 字段（VARCHAR(255)），用于快照免单/退菜原因名称
+   - 在 `ttpos_sale_order_product_reason` 表添加 `name` 字段（TEXT），用于快照免单/退菜/赠菜原因名称（多语言 JSON）
    - 在 `ttpos_sale_bill` 表添加以下字段：
-     - `buffet_package1_name` VARCHAR(255) - 自助餐套餐1名称快照
-     - `buffet_package2_name` VARCHAR(255) - 自助餐套餐2名称快照
-     - `order_source_name` VARCHAR(255) - 外卖来源名称快照
-     - `nationality_name` VARCHAR(255) - 国籍名称快照
+     - `buffet_package1_name` TEXT - 自助餐套餐1名称快照（多语言 JSON）
+     - `buffet_package2_name` TEXT - 自助餐套餐2名称快照（多语言 JSON）
+     - `order_source_name` TEXT - 外卖来源名称快照（多语言 JSON）
+     - `nationality_name` TEXT - 国籍名称快照（多语言 JSON）
+   - 在 `ttpos_sale_order_product` 表添加以下字段：
+     - `batch_tag_name` TEXT - 分批类型名称快照（多语言 JSON）
 
 7. **修复免单原因获取逻辑**
    - 修改 `SaleOrder.GetFreeReason()` 方法
@@ -268,23 +281,35 @@
     - 修改所有使用 `SaleOrderBuffetCustomerType` 的地方，优先使用快照字段
     - 修改下单逻辑，创建 `SaleOrderBuffetCustomerType` 时保存自助餐套餐名称快照
 
+14. **修复分批类型名称获取逻辑**
+    - 在 `ttpos_sale_order_product` 表添加 `batch_tag_name` 字段（TEXT 类型，多语言 JSON 快照）
+    - 修改 `SaleOrderProduct` 模型，添加 `BatchTagName` 字段和 `GetLocaleBatchTagName()` 方法
+    - 修改订单详情查询中的 `BatchTagName` 获取逻辑，优先使用快照字段
+    - 如果快照字段为空，降级使用 `BatchTag.MultiLanguageName` 或 `BatchTag.Abbreviation`
+    - 修改下单逻辑，创建订单商品时保存分批类型名称快照（如果商品使用了分批类型）
+
+15. **确认自助餐加钟商品名称快照**
+    - 确认 `SaleOrderBuffetDelayProduct.Name` 字段在下单时是否正确保存快照
+    - 如果未正确保存，修复下单逻辑，确保保存加钟商品名称快照
+
 #### 三、数据迁移和兼容性
 
-12. **数据完整性检查**
+16. **数据完整性检查**
     - 检查历史订单的所有快照字段填充情况
     - 如有缺失，提供数据迁移脚本
 
-13. **兼容性处理**
+17. **兼容性处理**
     - 当快照字段为空时，降级使用关联表数据
     - 确保历史订单正常显示
 
-14. **下单时保存快照**
+18. **下单时保存快照**
    - 确保创建订单时正确保存所有快照字段
-   - 包括新增的字段（免单原因、退菜原因、赠菜原因、自助餐名称、外卖来源、国籍）
+   - 包括新增的字段（免单原因、退菜原因、赠菜原因、自助餐名称、外卖来源、国籍、分批类型名称）
+   - 确认自助餐加钟商品名称快照已正确保存
 
 #### 四、测试验证
 
-15. **测试验证**
+19. **测试验证**
     - 验证商品删除/改名后订单显示
     - 验证规格删除/改名后订单显示
     - 验证小料删除/改名后订单显示
@@ -295,6 +320,8 @@
    - 验证自助餐名称修改后订单显示
     - 验证外卖来源删除/改名后订单显示
     - 验证国籍删除/改名后订单显示
+    - 验证分批类型删除/改名后订单显示（厨显端、订单详情）
+    - 验证自助餐加钟商品名称修改后订单显示
     - 验证历史订单兼容性
 
 ### 影响范围
@@ -313,10 +340,10 @@
 **涉及模块**：
 - [ ] UI 组件
 - [ ] API 接口
-- [x] 数据模型（`SaleOrderProductAttribute`、`SaleOrderProductReason`、`SaleBill`）
+- [x] 数据模型（`SaleOrderProductAttribute`、`SaleOrderProductReason`、`SaleBill`、`SaleOrderProduct`）
 - [x] 业务逻辑（名称获取方法）
 - [ ] 第三方集成
-- [x] 数据库迁移（新增快照字段）
+- [x] 数据库迁移（新增快照字段：免单/退菜/赠菜原因、自助餐名称、外卖来源、国籍、分批类型名称）
 - [x] 下单逻辑（保存快照数据）
 
 ---
@@ -363,6 +390,8 @@
    - 修改自助餐名称获取方法
    - 修改外卖来源获取方法
    - 修改国籍获取方法
+   - 修改分批类型名称获取方法
+   - 确认自助餐加钟商品名称快照逻辑
    - 修改下单逻辑，确保保存快照数据
 
 4. **数据检查与迁移**（0.5-1 天）
@@ -550,8 +579,10 @@
 15. **WHEN** 查询包含自助餐的订单 **THEN** 系统 **SHALL** 显示下单时保存的自助餐名称快照
 15. **WHEN** 查询包含外卖来源的订单 **THEN** 系统 **SHALL** 显示下单时保存的外卖来源名称快照
 16. **WHEN** 查询包含国籍的订单 **THEN** 系统 **SHALL** 显示下单时保存的国籍名称快照
-17. **IF** 后台删除了免单/退菜/赠菜原因、自助餐、外卖来源、国籍 **THEN** 历史订单 **SHALL** 仍然显示该信息的原始名称
-18. **IF** 后台修改了免单/退菜/赠菜原因、自助餐、外卖来源、国籍的名称 **THEN** 历史订单 **SHALL** 显示修改前的原始名称
+17. **IF** 后台删除了免单/退菜/赠菜原因、自助餐、外卖来源、国籍、分批类型 **THEN** 历史订单 **SHALL** 仍然显示该信息的原始名称
+18. **IF** 后台修改了免单/退菜/赠菜原因、自助餐、外卖来源、国籍、分批类型的名称 **THEN** 历史订单 **SHALL** 显示修改前的原始名称
+19. **WHEN** 查询包含分批类型的订单 **THEN** 系统 **SHALL** 显示下单时保存的分批类型名称快照
+20. **WHEN** 查询包含自助餐加钟商品的订单 **THEN** 系统 **SHALL** 显示下单时保存的加钟商品名称快照
 
 ### 技术方案要点（初稿）
 
@@ -870,33 +901,74 @@
    }
    ```
 
-11. **数据库迁移脚本**：
+11. **修改分批类型名称获取方法**：
+   ```go
+   func (model *SaleOrderProduct) GetLocaleBatchTagName() dto.LocaleResponse {
+       // 优先使用快照字段（JSON）
+       snapshotJSON := model.BatchTagName
+       var snapshotLocale dto.LocaleResponse
+       
+       // 如果快照字段不为空，尝试反序列化为多语言数据
+       if snapshotJSON != "" {
+           if err := json.Unmarshal([]byte(snapshotJSON), &snapshotLocale); err == nil {
+               if !snapshotLocale.IsNull() {
+                   return snapshotLocale
+               }
+           }
+       }
+       
+       // 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+       if model.BatchTag != nil {
+           // 优先使用 MultiLanguageName，如果没有则使用 Abbreviation
+           if !model.BatchTag.MultiLanguageName.IsNullName() {
+               return model.BatchTag.MultiLanguageName.GetNames()
+           }
+           if model.BatchTag.Abbreviation != "" {
+               return dto.LocaleResponse{
+                   ZH:   model.BatchTag.Abbreviation,
+                   TH:   model.BatchTag.Abbreviation,
+                   EN:   model.BatchTag.Abbreviation,
+                   // ... 其他语言都用 Abbreviation
+               }
+           }
+       }
+       
+       return dto.LocaleResponse{}
+   }
+   ```
+
+12. **数据库迁移脚本**：
    ```sql
    -- 添加免单/退菜/赠菜原因快照字段（多语言 JSON）
    ALTER TABLE `ttpos_sale_order_product_reason` 
    MODIFY COLUMN `name` TEXT NOT NULL DEFAULT '' COMMENT '原因名称快照（JSON，包含免单/退菜/赠菜原因），不随后台更新';
    -- 注意：如果字段已存在，使用 MODIFY 修改类型；如果不存在，使用 ADD COLUMN
    
-   -- 添加自助餐名称快照字段
+   -- 添加自助餐名称快照字段（多语言 JSON）
    ALTER TABLE `ttpos_sale_bill` 
-   ADD COLUMN `buffet_package1_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐套餐1名称快照（单语言），不随后台更新' AFTER `buffet_package2_uuid`,
-   ADD COLUMN `buffet_package2_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐套餐2名称快照（单语言），不随后台更新' AFTER `buffet_package1_name`;
+   ADD COLUMN `buffet_package1_name` TEXT NOT NULL DEFAULT '' COMMENT '自助餐套餐1名称快照（JSON），不随后台更新' AFTER `buffet_package2_uuid`,
+   ADD COLUMN `buffet_package2_name` TEXT NOT NULL DEFAULT '' COMMENT '自助餐套餐2名称快照（JSON），不随后台更新' AFTER `buffet_package1_name`;
    
-   -- 添加外卖来源名称快照字段
+   -- 添加外卖来源名称快照字段（多语言 JSON）
    ALTER TABLE `ttpos_sale_bill` 
-   ADD COLUMN `order_source_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '外卖来源名称快照（单语言），不随后台更新' AFTER `order_source_uuid`;
+   ADD COLUMN `order_source_name` TEXT NOT NULL DEFAULT '' COMMENT '外卖来源名称快照（JSON），不随后台更新' AFTER `order_source_uuid`;
    
    -- 添加国籍名称快照字段
    ALTER TABLE `ttpos_sale_bill` 
-   ADD COLUMN `nationality_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '国籍名称快照（单语言），不随后台更新' AFTER `nationality_uuid`;
+   ADD COLUMN `nationality_name` TEXT NOT NULL DEFAULT '' COMMENT '国籍名称快照（JSON），不随后台更新' AFTER `nationality_uuid`;
+   
+   -- 添加分批类型名称快照字段
+   ALTER TABLE `ttpos_sale_order_product` 
+   ADD COLUMN `batch_tag_name` TEXT NOT NULL DEFAULT '' COMMENT '分批类型名称快照（JSON），不随后台更新' AFTER `batch_tag_uuid`;
    ```
 
-12. **数据检查脚本**：
+13. **数据检查脚本**：
    - 检查 `ttpos_sale_order_product.name` 字段的填充率
    - 检查 `ttpos_sale_order_product.flavor_name` 字段的填充率
    - 检查 `ttpos_sale_order_product_bom.name` 字段的填充率
    - 检查 `ttpos_sale_order_product_attribute.name` 字段的填充率
-   - 检查新增字段的填充率（免单原因、退菜原因、赠菜原因、自助餐名称、外卖来源、国籍）
+   - 检查新增字段的填充率（免单原因、退菜原因、赠菜原因、自助餐名称、外卖来源、国籍、分批类型名称）
+   - 检查 `ttpos_sale_order_buffet_delay_product.name` 字段的填充率（确认加钟商品名称快照）
    - 识别需要补充数据的订单
 
 13. **数据迁移脚本**（可选）：
