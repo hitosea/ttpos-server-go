@@ -499,6 +499,36 @@ func (model *SaleOrderProductReason) IsGiftReason() bool {
 	return model.GiftReasonUuid != 0
 }
 
+// GetLocaleName 获取原因名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-gift-reason-snapshot-fix
+func (model *SaleOrderProductReason) GetLocaleName() dto.LocaleResponse {
+	// 优先使用快照字段（JSON）
+	snapshotJSON := model.Name
+	var snapshotLocale dto.LocaleResponse
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotJSON != "" {
+		if err := json.Unmarshal([]byte(snapshotJSON), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 使用快照数据（所有语言）
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.MultiLanguageName != nil && !model.MultiLanguageName.IsNullName() {
+		return model.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
 func (model *SaleOrderProductReason) SetNil() {
 	model.MultiLanguageName = nil
 }

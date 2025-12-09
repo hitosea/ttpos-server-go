@@ -1515,16 +1515,16 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		return nil, errors.New("商品已取消")
 	}
 	//  验证赠菜标签
-	reasons := [][2]uint64{}
+	var giftReasons []*model.FreeReason
 	if len(req.GiftIds) > 0 {
-		_reasons, notFound, err := base.NewGiftOrFreeOrderReasonRepo(db).ExistsByUuids(req.GiftIds)
+		giftReasons, err = base.NewGiftOrFreeOrderReasonRepo(db).GetFreeOrderReasonListByUuids(req.GiftIds)
 		if err != nil {
-			return nil, errors.WithMessage(err)
+			return nil, errors.WithMessage(err, "params:", utils.ToJson(req.GiftIds))
 		}
-		if len(notFound) > 0 {
-			return nil, fmt.Errorf("以下赠菜原因不存在: %v", notFound)
+		// 如果查到的原因数量跟提交的原因数量不一致，提示赠菜原因不存在
+		if len(giftReasons) != len(req.GiftIds) {
+			return nil, errors.WithMessage(fmt.Errorf("赠菜原因不存在: %v", req.GiftIds))
 		}
-		reasons = _reasons
 	}
 	// 设置赠菜时间
 	saleOrderProduct.SetGiftProduct(req.Reason)
@@ -1555,13 +1555,10 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 			}
 		}
 		// 添加赠菜原因
-		if len(reasons) > 0 {
-			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductReasons(
-				saleOrderProduct.SaleOrderUuid,
-				saleOrderProduct.Uuid,
-				constant.ProductReasonTypeGift,
-				reasons,
-			); err != nil {
+		if len(giftReasons) > 0 {
+			// 构建订单商品赠菜原因列表
+			giftReasonList := saleOrderProduct.NewGiftReasonList(giftReasons)
+			if err := repository.NewSaleOrderProductReasonRepo(tx).CreateSaleOrderProductReasons(giftReasonList); err != nil {
 				return errors.WithMessage(err)
 			}
 		}

@@ -966,6 +966,38 @@ func (model *SaleOrderProduct) NewSaleOrderProductReasonList(reasons []*ReturnFo
 	return list
 }
 
+// NewGiftReasonList 创建赠菜原因列表，保存快照字段（JSON 格式）
+// Requirement: story-main-gift-reason-snapshot-fix
+func (model *SaleOrderProduct) NewGiftReasonList(reasons []*FreeReason) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range reasons {
+		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !reason.MultiLanguageName.IsNullName() {
+			localeResp := reason.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.SaleOrderUuid,
+			SaleOrderProductUuid:  model.Uuid,
+			GiftReasonUuid:        reason.Uuid,
+			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
+		})
+	}
+	return list
+}
+
 // SetCancelInfo 设置订单商品的退菜信息，标记该商品为退菜商品
 func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrderProductReason) {
 	defer model.SetUpdate() // 标记该model需要更新
@@ -1004,43 +1036,18 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 			continue
 		}
 
-		// 优先使用快照字段（JSON）
-		snapshotJSON := reason.Name
-		var snapshotLocale dto.LocaleResponse
-
-		// 如果快照字段不为空，尝试反序列化为多语言数据
-		if snapshotJSON != "" {
-			if err := json.Unmarshal([]byte(snapshotJSON), &snapshotLocale); err == nil {
-				// 反序列化成功，检查是否有主语言数据
-				if !snapshotLocale.IsNull() {
-					// 使用快照数据（所有语言）
-					zhNames = append(zhNames, snapshotLocale.ZH)
-					thNames = append(thNames, snapshotLocale.TH)
-					enNames = append(enNames, snapshotLocale.EN)
-					zhtwNames = append(zhtwNames, snapshotLocale.ZHTW)
-					jaNames = append(jaNames, snapshotLocale.JA)
-					koNames = append(koNames, snapshotLocale.KO)
-					myNames = append(myNames, snapshotLocale.MY)
-					trNames = append(trNames, snapshotLocale.TR)
-					svNames = append(svNames, snapshotLocale.SV)
-					continue
-				}
-			}
-			// 如果反序列化失败或数据不完整，继续后续降级逻辑
-		}
-
-		// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
-		if reason.MultiLanguageName != nil && !reason.MultiLanguageName.IsNullName() {
-			multiLang := reason.MultiLanguageName.GetNames()
-			zhNames = append(zhNames, multiLang.ZH)
-			thNames = append(thNames, multiLang.TH)
-			enNames = append(enNames, multiLang.EN)
-			zhtwNames = append(zhtwNames, multiLang.ZHTW)
-			jaNames = append(jaNames, multiLang.JA)
-			koNames = append(koNames, multiLang.KO)
-			myNames = append(myNames, multiLang.MY)
-			trNames = append(trNames, multiLang.TR)
-			svNames = append(svNames, multiLang.SV)
+		// 使用 SaleOrderProductReason 的方法获取多语言名称（优先使用快照，降级使用关联表）
+		localeResp := reason.GetLocaleName()
+		if !localeResp.IsNull() {
+			zhNames = append(zhNames, localeResp.ZH)
+			thNames = append(thNames, localeResp.TH)
+			enNames = append(enNames, localeResp.EN)
+			zhtwNames = append(zhtwNames, localeResp.ZHTW)
+			jaNames = append(jaNames, localeResp.JA)
+			koNames = append(koNames, localeResp.KO)
+			myNames = append(myNames, localeResp.MY)
+			trNames = append(trNames, localeResp.TR)
+			svNames = append(svNames, localeResp.SV)
 		}
 	}
 	// 添加自定义的退菜原因
@@ -1069,7 +1076,10 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 	return reasonDto
 }
 
-// 获取赠品原因
+// GetGiftReason 获取赠菜原因（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-gift-reason-snapshot-fix
 func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 	zhNames := make([]string, 0)
 	thNames := make([]string, 0)
@@ -1085,17 +1095,25 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		if !reason.IsGiftReason() {
 			continue
 		}
-		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
-		thNames = append(thNames, reason.MultiLanguageName.ThName)
-		enNames = append(enNames, reason.MultiLanguageName.EnName)
-		zhtwNames = append(zhtwNames, reason.MultiLanguageName.ZhTwName)
-		jaNames = append(jaNames, reason.MultiLanguageName.JaName)
-		koNames = append(koNames, reason.MultiLanguageName.KoName)
-		myNames = append(myNames, reason.MultiLanguageName.MyName)
-		trNames = append(trNames, reason.MultiLanguageName.TrName)
-		svNames = append(svNames, reason.MultiLanguageName.SvName)
+		if reason.IsDelete() {
+			continue
+		}
+
+		// 使用 SaleOrderProductReason 的方法获取多语言名称（优先使用快照，降级使用关联表）
+		localeResp := reason.GetLocaleName()
+		if !localeResp.IsNull() {
+			zhNames = append(zhNames, localeResp.ZH)
+			thNames = append(thNames, localeResp.TH)
+			enNames = append(enNames, localeResp.EN)
+			zhtwNames = append(zhtwNames, localeResp.ZHTW)
+			jaNames = append(jaNames, localeResp.JA)
+			koNames = append(koNames, localeResp.KO)
+			myNames = append(myNames, localeResp.MY)
+			trNames = append(trNames, localeResp.TR)
+			svNames = append(svNames, localeResp.SV)
+		}
 	}
-	// 添加自定义的退菜原因
+	// 添加自定义的赠菜原因
 	if model.GiftReason != "" {
 		zhNames = append(zhNames, model.GiftReason)
 		thNames = append(thNames, model.GiftReason)

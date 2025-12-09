@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -49,43 +48,18 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 			continue
 		}
 
-		// 优先使用快照字段（JSON）
-		snapshotJSON := reason.Name
-		var snapshotLocale dto.LocaleResponse
-
-		// 如果快照字段不为空，尝试反序列化为多语言数据
-		if snapshotJSON != "" {
-			if err := json.Unmarshal([]byte(snapshotJSON), &snapshotLocale); err == nil {
-				// 反序列化成功，检查是否有主语言数据
-				if !snapshotLocale.IsNull() {
-					// 使用快照数据（所有语言）
-					zhNames = append(zhNames, snapshotLocale.ZH)
-					thNames = append(thNames, snapshotLocale.TH)
-					enNames = append(enNames, snapshotLocale.EN)
-					zhtwNames = append(zhtwNames, snapshotLocale.ZHTW)
-					jaNames = append(jaNames, snapshotLocale.JA)
-					koNames = append(koNames, snapshotLocale.KO)
-					myNames = append(myNames, snapshotLocale.MY)
-					trNames = append(trNames, snapshotLocale.TR)
-					svNames = append(svNames, snapshotLocale.SV)
-					continue
-				}
-			}
-			// 如果反序列化失败或数据不完整，继续后续降级逻辑
-		}
-
-		// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
-		if reason.MultiLanguageName != nil && !reason.MultiLanguageName.IsNullName() {
-			multiLang := reason.MultiLanguageName.GetNames()
-			zhNames = append(zhNames, multiLang.ZH)
-			thNames = append(thNames, multiLang.TH)
-			enNames = append(enNames, multiLang.EN)
-			zhtwNames = append(zhtwNames, multiLang.ZHTW)
-			jaNames = append(jaNames, multiLang.JA)
-			koNames = append(koNames, multiLang.KO)
-			myNames = append(myNames, multiLang.MY)
-			trNames = append(trNames, multiLang.TR)
-			svNames = append(svNames, multiLang.SV)
+		// 使用 SaleOrderProductReason 的方法获取多语言名称（优先使用快照，降级使用关联表）
+		localeResp := reason.GetLocaleName()
+		if !localeResp.IsNull() {
+			zhNames = append(zhNames, localeResp.ZH)
+			thNames = append(thNames, localeResp.TH)
+			enNames = append(enNames, localeResp.EN)
+			zhtwNames = append(zhtwNames, localeResp.ZHTW)
+			jaNames = append(jaNames, localeResp.JA)
+			koNames = append(koNames, localeResp.KO)
+			myNames = append(myNames, localeResp.MY)
+			trNames = append(trNames, localeResp.TR)
+			svNames = append(svNames, localeResp.SV)
 		}
 	}
 	// 添加自定义的免单原因
