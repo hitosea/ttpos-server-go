@@ -89,18 +89,19 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 	err = g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		// 1. 写入主表 takeout_order (通用字段)
 		order := &entity.Order{
-			Uuid:           orderUuid,
-			MerchantId:     "", // Skootar 没有 merchant_id
-			PartnerOrderId: resp.JobDetail.JobId,
-			ShopRefNo:      req.ShopOrderUuid, // TTPOS 内部订单号
-			ProviderName:   gconv.String(consts.ProviderSkootar),
-			OrderStatus:    gconv.String(resp.JobDetail.JobStatus),
-			OrderTime:      gtime.Now(),
-			PaymentType:    reqInp.PaymentType,
-			CustomerPhone:  req.CustomerLocation.ContactPhone,
-			Note:           reqInp.Remark,
-			CreatedAt:      gtime.Now(),
-			UpdatedAt:      gtime.Now(),
+			Uuid:               orderUuid,
+			ShopUuid:           "", // TODO: 从配置或上下文获取 shop_uuid
+			ProviderMerchantId: "", // Skootar 没有 merchant_id
+			PartnerOrderId:     resp.JobDetail.JobId,
+			ShopRefNo:          req.ShopOrderUuid, // TTPOS 内部订单号
+			ProviderName:       gconv.String(consts.ProviderSkootar),
+			OrderStatus:        gconv.String(resp.JobDetail.JobStatus),
+			OrderTime:          gtime.Now(),
+			PaymentType:        reqInp.PaymentType,
+			CustomerPhone:      req.CustomerLocation.ContactPhone,
+			Note:               reqInp.Remark,
+			CreatedAt:          gtime.Now(),
+			UpdatedAt:          gtime.Now(),
 		}
 		if _, err := dao.Order.Ctx(ctx).TX(tx).Data(order).Insert(); err != nil {
 			return gerror.Wrap(err, "创建订单主表失败")

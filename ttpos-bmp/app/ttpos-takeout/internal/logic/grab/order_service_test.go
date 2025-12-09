@@ -99,7 +99,7 @@ func TestGetOrderType(t *testing.T) {
 			req: &grab.SubmitOrderRequest{
 				DineIn: nil,
 			},
-			want: "DeliveryByGrab",
+			want: "DeliveryByProvider",
 		},
 	}
 

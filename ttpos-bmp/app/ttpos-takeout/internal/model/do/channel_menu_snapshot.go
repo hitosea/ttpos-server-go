@@ -1,0 +1,21 @@
+// =================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// =================================================================================
+
+package do
+
+import (
+	"github.com/gogf/gf/v2/frame/g"
+)
+
+// ChannelMenuSnapshot is the golang structure of table takeout_channel_menu_snapshot for DAO operations like Where/Data.
+type ChannelMenuSnapshot struct {
+	g.Meta       `orm:"table:takeout_channel_menu_snapshot, do:true"`
+	Id           any // 主键ID
+	Uuid         any // 唯一标识
+	ShopUuid     any // 商户UUID
+	ProviderName any // 渠道名称 (grab, lineman)
+	MenuData     any // 菜单数据快照 (JSON)
+	CreateTime   any // 创建时间
+	UpdateTime   any // 更新时间
+}
