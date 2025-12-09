@@ -14,7 +14,7 @@ import (
 type SaleOrderBuffetCustomerType struct {
 	// 主键字段
 	BaseModel
-	Name string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'名称'"`
+	Name string `gorm:"column:name;type:text" json:"name"` // 顾客类型名称快照（JSON），不随后台更新
 	// 价格信息
 	Num                uint    `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
 	SalePrice          float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0;comment:原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变" json:"sale_price"`
@@ -255,5 +255,75 @@ func (model *SaleOrderBuffetCustomerType) SetBuffetPackageNameSnapshot(multiLang
 	}
 
 	model.BuffetPackageName = string(jsonData)
+	return nil
+}
+
+// GetLocaleName 获取顾客类型名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+func (model *SaleOrderBuffetCustomerType) GetLocaleName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.Name
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			if !snapshotLocale.IsNull() {
+				return snapshotLocale
+			}
+		}
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
+		// BuffetCustomerType.Name 是单语言字段，转换为多语言格式
+		return dto.LocaleResponse{
+			ZH:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			TH:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			EN:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			ZHTW: model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			JA:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			KO:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			MY:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			TR:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			SV:   model.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+		}
+	}
+
+	return dto.LocaleResponse{}
+}
+
+// SetNameSnapshot 设置顾客类型名称快照（JSON）
+// 从单语言名称转换为多语言 JSON
+// Requirement: story-main-buffet-customer-type-name-snapshot-fix (JSON 方案)
+func (model *SaleOrderBuffetCustomerType) SetNameSnapshot(customerTypeName string) error {
+	// 如果名称为空，设置为空字符串
+	if customerTypeName == "" {
+		model.Name = ""
+		return nil
+	}
+
+	// 构建多语言响应（所有语言使用相同值）
+	localeResp := dto.LocaleResponse{
+		ZH:   customerTypeName,
+		TH:   customerTypeName,
+		EN:   customerTypeName,
+		ZHTW: customerTypeName,
+		JA:   customerTypeName,
+		KO:   customerTypeName,
+		MY:   customerTypeName,
+		TR:   customerTypeName,
+		SV:   customerTypeName,
+	}
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.Name = string(jsonData)
 	return nil
 }

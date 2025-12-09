@@ -269,9 +269,11 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 				buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
 				buffetName := buffetLocaleName.GetLocale(language)
+				// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+				customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
 				products = append(products, &resp.OrderExportInfoProduct{
 					Name:       buffetName,
-					AttrName:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					AttrName:   customerTypeLocaleName.GetLocale(language),
 					Num:        float64(orderBuffetCustomer.Num),
 					TotalPrice: orderBuffetCustomer.GetDiscountPriceWithVAT(),
 				})
@@ -454,31 +456,23 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				// 优先使用快照字段，降级使用关联表数据
 				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 				buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
+				// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+				customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
 				// 自助餐顾客价格收费列表
 				products = append(products, resp.OrderProduct{
-					Uuid:       orderBuffetCustomer.Uuid,
-					LocaleName: buffetLocaleName,
-					LocaleAttributeName: dto.LocaleResponse{
-						ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-						SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					},
-					Price:            orderBuffetCustomer.SalePrice,
-					Num:              float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
-					SalePrice:        orderBuffetCustomer.GetDiscountPriceWithVAT(model.WithOriginPrice()),
-					TotalPrice:       orderBuffetCustomer.GetDiscountPriceWithVAT(),
-					RefundAmount:     -orderBuffetCustomer.GetReturnPrice(),
-					Status:           1,
-					Remark:           "",
-					IsMust:           false,
-					IsGift:           false,
-					IsBuffetCustomer: true,
+					Uuid:                orderBuffetCustomer.Uuid,
+					LocaleName:          buffetLocaleName,
+					LocaleAttributeName: customerTypeLocaleName,
+					Price:               orderBuffetCustomer.SalePrice,
+					Num:                 float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
+					SalePrice:           orderBuffetCustomer.GetDiscountPriceWithVAT(model.WithOriginPrice()),
+					TotalPrice:          orderBuffetCustomer.GetDiscountPriceWithVAT(),
+					RefundAmount:        -orderBuffetCustomer.GetReturnPrice(),
+					Status:              1,
+					Remark:              "",
+					IsMust:              false,
+					IsGift:              false,
+					IsBuffetCustomer:    true,
 				})
 			}
 		}
@@ -1459,22 +1453,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 			// 优先使用快照字段，降级使用关联表数据
 			// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 			buffetLocaleName := saleOrderProduct.GetLocaleBuffetPackageName()
+			// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+			customerTypeLocaleName := saleOrderProduct.GetLocaleName()
 			products = append(products, event.OrderProduct{
 				OrderProductId: saleOrderProduct.Uuid,
 				ProductId:      saleOrderProduct.BuffetCustomerTypePriceUuid,
 				ProductName:    buffetLocaleName,
-				ProductAttr: dto.LocaleResponse{
-					ZH:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					TH:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					EN:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					ZHTW: saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					JA:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					KO:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					MY:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					TR:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					SV:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				},
-				TotalNum: num,
+				ProductAttr:    customerTypeLocaleName,
+				TotalNum:       num,
 			})
 		}
 	}

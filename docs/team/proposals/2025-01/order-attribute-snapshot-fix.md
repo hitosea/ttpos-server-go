@@ -250,6 +250,8 @@
 12. **修复自助餐顾客类型套餐名称获取逻辑**
     - 在 `ttpos_sale_order_buffet_customer_type` 表添加 `buffet_package_name` 字段（TEXT 类型，多语言 JSON 快照）
     - 修改 `SaleOrderBuffetCustomerType` 模型，添加 `BuffetPackageName` 字段和 `GetLocaleBuffetPackageName()` 方法
+    - 修改 `ttpos_sale_order_buffet_customer_type` 表的 `name` 字段类型为 `TEXT`（多语言 JSON 快照）
+    - 修改 `SaleOrderBuffetCustomerType` 模型的 `Name` 字段，实现 `GetLocaleName()` 和 `SetNameSnapshot()` 方法
     - 修改所有使用 `SaleOrderBuffetCustomerType` 的地方，优先使用快照字段
     - 修改下单逻辑，创建 `SaleOrderBuffetCustomerType` 时保存自助餐套餐名称快照
 

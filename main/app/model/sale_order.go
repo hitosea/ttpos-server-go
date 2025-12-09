@@ -12,10 +12,12 @@ import (
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/cryptor"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 // SaleOrder 销售订单 `ttpos_sale_order`
@@ -666,31 +668,23 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 		// 优先使用快照字段，降级使用关联表数据
 		// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 		buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
+		// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+		customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
 		product := resp.Product{
-			Uuid:       orderBuffetCustomer.Uuid,
-			LocaleName: buffetLocaleName,
-			LocaleAttributeName: dto.LocaleResponse{
-				ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			},
-			Num:           float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
-			FinishedNum:   float64(orderBuffetCustomer.Num),
-			SalePrice:     orderBuffetCustomer.GetOriginPrice(),
-			DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
-			TotalPrice:    orderBuffetCustomer.TotalPrice,
-			Status:        1,
-			Remark:        "",
-			IsMust:        false,
-			IsGift:        false,
-			IsCancel:      false,
-			IsBuffet:      false,
+			Uuid:                orderBuffetCustomer.Uuid,
+			LocaleName:          buffetLocaleName,
+			LocaleAttributeName: customerTypeLocaleName,
+			Num:                 float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
+			FinishedNum:         float64(orderBuffetCustomer.Num),
+			SalePrice:           orderBuffetCustomer.GetOriginPrice(),
+			DiscountPrice:       orderBuffetCustomer.GetDiscountPrice(),
+			TotalPrice:          orderBuffetCustomer.TotalPrice,
+			Status:              1,
+			Remark:              "",
+			IsMust:              false,
+			IsGift:              false,
+			IsCancel:            false,
+			IsBuffet:            false,
 			AboutBuffet: resp.AboutBuffet{
 				IsCustomer:       true,
 				IsDelay:          false,
@@ -1278,7 +1272,6 @@ func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, 
 // Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting, openOverallDiscount uint) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
-		Name:                        customerName,
 		SaleOrderUuid:               saleOrderUuid,
 		SaleBillUuid:                saleBillUuid,
 		BuffetPackageUuid:           buffetPackageUuid,
@@ -1292,6 +1285,13 @@ func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBill
 	}
 	// 计算金额
 	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)
+	// 设置顾客类型名称快照（JSON 方案）
+	// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+	// 注意：customerName 参数是单语言名称，需要转换为多语言 JSON
+	if err := saleOrderBuffetCustomerType.SetNameSnapshot(customerName); err != nil {
+		// 记录错误日志，但不中断流程
+		logger.Logger.Error("保存顾客类型名称快照失败", zap.Error(err), zap.String("customer_name", customerName))
+	}
 	//
 	return saleOrderBuffetCustomerType
 }

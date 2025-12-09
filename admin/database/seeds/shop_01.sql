@@ -911,7 +911,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_product` (
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单顾客类型ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '顾客类型名称',
+    `name` TEXT COMMENT '顾客类型名称快照（JSON），不随后台更新',
     `buffet_package_name` TEXT COMMENT '自助餐套餐名称快照（JSON），不随后台更新',
     -- 价格信息
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '人数',

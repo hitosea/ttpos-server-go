@@ -97,14 +97,16 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		}
 		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(3))
 		originPrice := orderBuffetCustomer.GetOriginPrice()
+		// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+		customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
 		products = append(products, template_struct.StatementProductData{
 			Name:            orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
 			PriceNum:        fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
 			Price:           t.base.Amount(originPrice),
 			Num:             float64(orderBuffetCustomer.Num),
 			Subtotal:        t.base.Amount(orderBuffetCustomer.TotalPrice),
-			Attrs:           orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			Attr:            orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			Attrs:           customerTypeLocaleName.GetLocale(t.base.Lang),
+			Attr:            customerTypeLocaleName.GetLocale(t.base.Lang),
 			SauceNames:      "",
 			IsBuffet:        true,
 			IsBuffetProduct: false,

@@ -2776,22 +2776,14 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(_ context.Context, saleBi
 				// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 				buffetLocaleName := buffetCustomer.GetLocaleBuffetPackageName()
 				// 自助餐顾客类型价格变动
+				// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+				customerTypeLocaleName := buffetCustomer.GetLocaleName()
 				customer := resp.Product{
-					Uuid:       buffetCustomer.Uuid,
-					LocaleName: buffetLocaleName,
-					LocaleAttributeName: dto.LocaleResponse{
-						ZH:   buffetCustomer.Name,
-						TH:   buffetCustomer.Name,
-						EN:   buffetCustomer.Name,
-						ZHTW: buffetCustomer.Name,
-						JA:   buffetCustomer.Name,
-						KO:   buffetCustomer.Name,
-						MY:   buffetCustomer.Name,
-						TR:   buffetCustomer.Name,
-						SV:   buffetCustomer.Name,
-					},
-					Num:       float64(buffetCustomer.Num),
-					SalePrice: buffetCustomer.SalePrice,
+					Uuid:                buffetCustomer.Uuid,
+					LocaleName:          buffetLocaleName,
+					LocaleAttributeName: customerTypeLocaleName,
+					Num:                 float64(buffetCustomer.Num),
+					SalePrice:           buffetCustomer.SalePrice,
 				}
 				res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, customer)
 				return res
