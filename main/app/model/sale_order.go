@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -1170,10 +1171,23 @@ func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffet
 	return saleOrderBuffetCustomerType
 }
 
+// NewFreeOrderReason 创建免单原因列表，保存快照字段（JSON 格式）
+// Requirement: story-main-reason-snapshot-fix
 func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrderProductReason {
 	list := make([]*SaleOrderProductReason, 0)
 	for _, reason := range freeReasons {
 		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !reason.MultiLanguageName.IsNullName() {
+			localeResp := reason.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
 		list = append(list, &SaleOrderProductReason{
 			BaseModel: BaseModel{
 				Uuid: reasonUuid,
@@ -1181,6 +1195,8 @@ func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrd
 			SaleOrderUuid:         model.Uuid,
 			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
 			FreeReasonUuid:        reason.Uuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
 		})
 	}
 	return list

@@ -508,6 +508,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_reason` (
     `return_food_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜原因ID',
     `free_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '免单原因ID',
     `gift_reason_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠菜原因ID',
+    -- 快照字段
+    `name` TEXT COMMENT '原因名称快照（JSON），不随后台更新',
     -- 关联对象
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原因-多语言名称ID',
     -- 时间信息
