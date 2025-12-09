@@ -1721,7 +1721,7 @@ func (s *Srv) convertToOldFormat(ranges []req.WaitTimeColorRange) []string {
 // convertFromOldFormat 从旧格式转换到新格式
 func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRange {
 	var result []setting.WaitTimeColorRange
-	result = append(result, setting.WaitTimeColorRange{Minute: 0, Color: "#100A05"}) // 第一区间固定黑色
+	result = append(result, setting.WaitTimeColorRange{Minute: "0", Color: "#100A05"}) // 第一区间固定黑色
 
 	// 旧格式：["red", "yellow"] 或 ["yellow", "red"]
 	// 第一个元素对应第二区间，第二个元素对应第三区间
@@ -1734,9 +1734,9 @@ func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRa
 		if i >= 2 {
 			break // 最多两个元素
 		}
-		minute := 10
+		minute := "10"
 		if i == 1 {
-			minute = 20
+			minute = "20"
 		}
 		color := "#FFBE00" // 默认黄色
 		if rgbColor, ok := colorMap[item]; ok {
@@ -1748,10 +1748,10 @@ func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRa
 	// 如果旧格式数据不足，使用默认值
 	if len(result) < 3 {
 		if len(result) == 1 {
-			result = append(result, setting.WaitTimeColorRange{Minute: 10, Color: "#FFBE00"})
+			result = append(result, setting.WaitTimeColorRange{Minute: "10", Color: "#FFBE00"})
 		}
 		if len(result) == 2 {
-			result = append(result, setting.WaitTimeColorRange{Minute: 20, Color: "#E50028"})
+			result = append(result, setting.WaitTimeColorRange{Minute: "20", Color: "#E50028"})
 		}
 	}
 

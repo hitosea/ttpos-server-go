@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 18  
-**已完成**: 13  
+**总任务数**: 19  
+**已完成**: 14  
 **进行中**: -  
-**完成率**: 72%
+**完成率**: 74%
 
 ---
 
@@ -39,7 +39,7 @@
   - Purpose: 定义等待时长颜色区间的数据结构
   - Requirements: 2.1
   - Leverage: 现有 DTO: `main/app/dto/resp/setting/kitchen_setting.go`
-  - Prompt: Role: Go Developer | Task: 在 kitchen_setting.go 中定义 WaitTimeColorRange 结构体，包含 Minute (int) 和 Color (string) 字段 | Context: 用于表示等待时长颜色区间配置 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 结构体定义正确，JSON 标签正确
+  - Prompt: Role: Go Developer | Task: 在 kitchen_setting.go 中定义 WaitTimeColorRange 结构体，包含 Minute (string) 和 Color (string) 字段 | Context: 用于表示等待时长颜色区间配置，Minute 使用字符串类型以兼容 PHP | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 结构体定义正确，JSON 标签正确
 
 - [x] 1.2 更新 KitchenResp 结构体
 
@@ -75,7 +75,7 @@
   - Purpose: 实现新旧格式的相互转换，保持向后兼容
   - Requirements: 2.3
   - Leverage: 现有 Service: `main/app/service/setting/setting.go`
-  - Prompt: Role: Go Developer | Task: 实现 convertToOldFormat 和 convertFromOldFormat 方法，实现新旧格式转换 | Context: 旧格式: ["red", "yellow"]（第一个元素对应第二区间，第二个元素对应第三区间），新格式: [{"minute": 0, "color": "#100A05"}, {"minute": 10, "color": "#FFBE00"}, {"minute": 20, "color": "#E50028"}]，转换规则：red ↔ #E50028，yellow ↔ #FFBE00，黑色固定 #100A05 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 转换逻辑正确，处理边界情况
+  - Prompt: Role: Go Developer | Task: 实现 convertToOldFormat 和 convertFromOldFormat 方法，实现新旧格式转换 | Context: 旧格式: ["red", "yellow"]（第一个元素对应第二区间，第二个元素对应第三区间），新格式: [{"minute": "0", "color": "#100A05"}, {"minute": "10", "color": "#FFBE00"}, {"minute": "20", "color": "#E50028"}]（注意：minute 为字符串类型以兼容 PHP），转换规则：red ↔ #E50028，yellow ↔ #FFBE00，黑色固定 #100A05 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 转换逻辑正确，处理边界情况
 
 - [x] 2.3 实现 SaveKitchenSetting 方法
 
@@ -160,30 +160,42 @@
 
 ---
 
-## Phase 5: 数据迁移
+## Phase 5: PHP Admin 模块更新
 
-- [x] 5.1 创建数据迁移文件
+- [x] 5.1 更新 Terminal.php 注释文档和代码
+
+  - File: `admin/app/shop/controller/setting/Terminal.php`
+  - Purpose: 在 PHP Admin 模块的厨显设置接口中添加 `wait_time_color_ranges` 字段支持
+  - Requirements: 1.7
+  - Leverage: 现有 Terminal.php: `admin/app/shop/controller/setting/Terminal.php` (line 485-536)
+  - Prompt: Role: PHP Developer | Task: 在 Terminal.php 的 kitchen() 方法中：1) 添加 wait_time_color_ranges 字段的 @Apidoc\Param 注释（包含子参数 minute 和 color），2) 在 $arr 数组中添加 wait_time_color_ranges 字段处理，3) 更新 wait_color 注释说明为旧格式 | Context: 保持向后兼容，同时支持新旧格式 | Restrictions: 遵循 .cursor/rules/php.mdc | Success: 注释文档和代码都已更新，字段处理正确
+
+---
+
+## Phase 6: 数据迁移
+
+- [x] 6.1 创建数据迁移文件
 
   - File: `admin/database/migrations/{YYYYMMDDHHMMSS}_add_kitchen_wait_time_color_config.php`
   - Purpose: 为所有门店初始化默认等待时长颜色配置
-  - Requirements: 5.1
+  - Requirements: 5.1（原编号，实际对应 Requirement 5）
   - Leverage: 现有迁移文件: `admin/database/migrations/`，参考 `20251124014502_init_management_app_access.php`
   - Prompt: Role: PHP Developer with ThinkPHP Migration expertise | Task: 创建数据迁移文件，查询所有门店的厨显设置，如无 wait_time_color_ranges 配置则初始化默认配置 | Context: 默认配置：第一区间0分钟黑色 #100A05，第二区间10分钟（从旧配置 wait_color[0] 读取，如 "red" 转 #E50028，"yellow" 转 #FFBE00，如无则使用 #FFBE00），第三区间20分钟（从旧配置 wait_color[1] 读取，如无则使用 #E50028） | Restrictions: 遵循 .cursor/rules/php.mdc，实现幂等性 | Success: 迁移文件创建成功，逻辑正确
 
-- [ ] 5.2 执行数据迁移
+- [ ] 6.2 执行数据迁移
 
   - File: -
   - Purpose: 在数据库中初始化默认配置
-  - Requirements: 5.2
-  - Leverage: Task 5.1 的迁移文件
+  - Requirements: 5.2（原编号，实际对应 Requirement 5）
+  - Leverage: Task 6.1 的迁移文件
   - Command: `cd admin && php think migrate:run`
   - Success: 迁移执行成功，所有门店默认配置已初始化
 
 ---
 
-## Phase 6: WebSocket 推送
+## Phase 7: WebSocket 推送
 
-- [x] 6.1 实现 WebSocket 推送逻辑
+- [x] 7.1 实现 WebSocket 推送逻辑
 
   - File: `main/app/service/setting/setting.go`
   - Purpose: 在保存配置后推送 WebSocket 配置更新事件
@@ -193,9 +205,9 @@
 
 ---
 
-## Phase 7: 测试和优化
+## Phase 8: 测试和优化
 
-- [ ] 7.1 集成测试
+- [ ] 8.1 集成测试
 
   - File: `test/integration/kitchen_wait_time_color_test.go`
   - Purpose: 测试端到端功能
@@ -203,7 +215,7 @@
   - Leverage: 现有集成测试
   - Prompt: Role: QA Automation Engineer | Task: 实现端到端集成测试，测试配置保存 → WebSocket 推送 → KDS 终端接收流程 | Context: 测试用户完整流程，测试数据一致性 | Restrictions: 测试真实用户场景 | Success: 集成测试通过
 
-- [ ] 7.2 性能测试
+- [ ] 8.2 性能测试
 
   - File: -
   - Purpose: 确保性能达标
@@ -211,7 +223,7 @@
   - Leverage: 性能测试工具（如：wrk, ab）
   - Success: 配置保存响应时间 < 2 秒，WebSocket 推送延迟 < 5 秒
 
-- [ ] 7.3 文档更新
+- [ ] 8.3 文档更新
 
   - File: `docs/shared/api/shop_setting_api.md`, `CHANGELOG.md`
   - Purpose: 确保文档与代码同步

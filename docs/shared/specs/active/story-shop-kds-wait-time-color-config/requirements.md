@@ -91,7 +91,7 @@
     - `IsWaitColor` (string): 是否开启等待时长颜色 0-关闭 1-开启
     - `WaitTimeColorRanges` ([]WaitTimeColorRange): 等待时长颜色区间配置
       - `WaitTimeColorRange` 结构体：
-        - `Minute` (int): 时间阈值（分钟）
+        - `Minute` (string): 时间阈值（分钟，字符串类型以兼容 PHP）
         - `Color` (string): 颜色值（RGB 格式，统一使用 #xxxxxx 格式）
           - 黑色：`#100A05`
           - 黄色：`#FFBE00`
@@ -107,6 +107,13 @@
 - [ ] 1.6 在 `main/app/service/setting/setting.go` 中更新 `GetKitchenSetting` 方法
   - 返回新的等待时长颜色配置格式（`WaitTimeColorRanges`）
   - 同时返回旧格式数据（`WaitColor`），保持向后兼容
+- [ ] 1.7 更新 PHP Admin 模块的 `Terminal::kitchen()` 方法
+  - 文件：`admin/app/shop/controller/setting/Terminal.php`
+  - 在注释文档中添加 `wait_time_color_ranges` 字段的 `@Apidoc\Param` 注释
+  - 在代码的 `$arr` 数组中添加 `wait_time_color_ranges` 字段处理
+  - GET 请求：返回的配置中包含 `wait_time_color_ranges` 字段
+  - POST 请求：接收并保存 `wait_time_color_ranges` 字段到数据库
+  - 保持向后兼容：同时支持 `wait_color`（旧格式）和 `wait_time_color_ranges`（新格式）
 
 ---
 
@@ -127,7 +134,8 @@
 
 - [ ] 2.1 定义等待时长颜色配置数据结构
   - 在 `main/app/dto/resp/setting/kitchen_setting.go` 中定义 `WaitTimeColorRange` 结构体
-  - 字段：`Minute` (int), `Color` (string)
+  - 字段：`Minute` (string), `Color` (string)
+  - 注意：`Minute` 使用字符串类型以兼容 PHP（PHP 在处理 JSON 时数字可能被转换为字符串）
 - [ ] 2.2 更新 `Kitchen` 结构体
   - 新增 `WaitTimeColorRanges` ([]WaitTimeColorRange) 字段
   - 保留 `WaitColor` ([]string) 字段，保持向后兼容

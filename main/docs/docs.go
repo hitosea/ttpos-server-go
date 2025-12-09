@@ -46016,10 +46016,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "minute": {
-                    "description": "时间阈值（分钟）",
-                    "type": "integer",
-                    "maximum": 60,
-                    "minimum": 0
+                    "description": "时间阈值（分钟，字符串类型以兼容 PHP）",
+                    "type": "string"
                 }
             }
         },
@@ -58317,8 +58315,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "minute": {
-                    "description": "时间阈值（分钟）",
-                    "type": "integer"
+                    "description": "时间阈值（分钟，字符串类型以兼容 PHP）",
+                    "type": "string"
                 }
             }
         },

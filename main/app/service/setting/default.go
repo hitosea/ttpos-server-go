@@ -182,9 +182,9 @@ func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen
 			IsWaitColor:   "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
 			WaitColor:     []string{},                         // 时长颜色（旧格式：["red", "yellow"]）
 			WaitTimeColorRanges: []setting.WaitTimeColorRange{ // 等待时长颜色区间配置（新格式）
-				{Minute: 0, Color: "#100A05"},  // 第一区间：0分钟（黑色）
-				{Minute: 10, Color: "#FFBE00"}, // 第二区间：10分钟（黄色）
-				{Minute: 20, Color: "#E50028"}, // 第三区间：20分钟（红色）
+				{Minute: "0", Color: "#100A05"},  // 第一区间：0分钟（黑色）
+				{Minute: "10", Color: "#FFBE00"}, // 第二区间：10分钟（黄色）
+				{Minute: "20", Color: "#E50028"}, // 第三区间：20分钟（红色）
 			},
 			LanguageList:    languageList,              // 语言列表
 			Language:        []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
