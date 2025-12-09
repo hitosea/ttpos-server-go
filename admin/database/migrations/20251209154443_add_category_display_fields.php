@@ -36,11 +36,11 @@ class AddCategoryDisplayFields extends Migrator
         }
         
         // 添加索引（如果不存在）
-        if (!$table->hasIndex('idx_is_display_in_store')) {
+        if (!$table->hasIndexByName('idx_is_display_in_store')) {
             $table->addIndex('is_display_in_store', ['name' => 'idx_is_display_in_store']);
         }
         
-        if (!$table->hasIndex('idx_is_display_in_takeout')) {
+        if (!$table->hasIndexByName('idx_is_display_in_takeout')) {
             $table->addIndex('is_display_in_takeout', ['name' => 'idx_is_display_in_takeout']);
         }
         
