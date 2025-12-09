@@ -7521,6 +7521,23 @@ definitions:
           type: string
         type: array
     type: object
+  req.SaveKitchenSettingReq:
+    properties:
+      is_wait_color:
+        description: 是否开启等待时长颜色 0-关闭 1-开启
+        enum:
+        - "0"
+        - "1"
+        type: string
+      wait_time_color_ranges:
+        description: 等待时长颜色区间配置
+        items:
+          $ref: '#/definitions/req.WaitTimeColorRange'
+        type: array
+    required:
+    - is_wait_color
+    - wait_time_color_ranges
+    type: object
   req.SendMemberRechargeSMS:
     properties:
       balance:
@@ -8563,6 +8580,20 @@ definitions:
         type: integer
     required:
     - company_uuid
+    type: object
+  req.WaitTimeColorRange:
+    properties:
+      color:
+        description: '颜色值（RGB 格式，统一使用 #xxxxxx 格式）'
+        type: string
+      minute:
+        description: 时间阈值（分钟）
+        maximum: 60
+        minimum: 0
+        type: integer
+    required:
+    - color
+    - minute
     type: object
   resp.AbnormalPrintItem:
     properties:
@@ -16532,9 +16563,14 @@ definitions:
         - $ref: '#/definitions/setting.Server'
         description: 厨显服务器连接
       wait_color:
-        description: 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
+        description: 时长颜色（旧格式，保持兼容：["red", "yellow"]）
         items:
           type: string
+        type: array
+      wait_time_color_ranges:
+        description: 等待时长颜色区间配置（新格式）
+        items:
+          $ref: '#/definitions/setting.WaitTimeColorRange'
         type: array
     type: object
   setting.OrderLimit:
@@ -16850,6 +16886,15 @@ definitions:
         type: string
       value:
         type: string
+    type: object
+  setting.WaitTimeColorRange:
+    properties:
+      color:
+        description: '颜色值（RGB 格式，统一使用 #xxxxxx 格式）'
+        type: string
+      minute:
+        description: 时间阈值（分钟）
+        type: integer
     type: object
   setting.ZeroingMethodItem:
     properties:
@@ -33446,6 +33491,51 @@ paths:
       summary: 上传自助点餐机轮播内容
       tags:
       - 商家端.自助点餐机设置
+  /shop/setting/kitchen:
+    get:
+      consumes:
+      - application/json
+      description: 获取厨显设置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.KitchenResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取厨显设置
+      tags:
+      - 商家端.厨显设置
+    post:
+      consumes:
+      - application/json
+      description: 保存厨显设置
+      parameters:
+      - description: 保存厨显设置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveKitchenSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存厨显设置
+      tags:
+      - 商家端.厨显设置
   /shop/setting/member_qrcode:
     get:
       consumes:

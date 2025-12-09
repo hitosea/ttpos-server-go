@@ -27944,6 +27944,83 @@
                 }
             }
         },
+        "/shop/setting/kitchen": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取厨显设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.厨显设置"
+                ],
+                "summary": "获取厨显设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.KitchenResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存厨显设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.厨显设置"
+                ],
+                "summary": "保存厨显设置",
+                "parameters": [
+                    {
+                        "description": "保存厨显设置",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveKitchenSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/member_qrcode": {
             "get": {
                 "security": [
@@ -44457,6 +44534,30 @@
                 }
             }
         },
+        "req.SaveKitchenSettingReq": {
+            "type": "object",
+            "required": [
+                "is_wait_color",
+                "wait_time_color_ranges"
+            ],
+            "properties": {
+                "is_wait_color": {
+                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                },
+                "wait_time_color_ranges": {
+                    "description": "等待时长颜色区间配置",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.WaitTimeColorRange"
+                    }
+                }
+            }
+        },
         "req.SendMemberRechargeSMS": {
             "type": "object",
             "properties": {
@@ -45887,6 +45988,25 @@
                 "company_uuid": {
                     "description": "集团ID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.WaitTimeColorRange": {
+            "type": "object",
+            "required": [
+                "color",
+                "minute"
+            ],
+            "properties": {
+                "color": {
+                    "description": "颜色值（RGB 格式，统一使用 #xxxxxx 格式）",
+                    "type": "string"
+                },
+                "minute": {
+                    "description": "时间阈值（分钟）",
+                    "type": "integer",
+                    "maximum": 60,
+                    "minimum": 0
                 }
             }
         },
@@ -57710,10 +57830,17 @@
                     ]
                 },
                 "wait_color": {
-                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
+                    "description": "时长颜色（旧格式，保持兼容：[\"red\", \"yellow\"]）",
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                },
+                "wait_time_color_ranges": {
+                    "description": "等待时长颜色区间配置（新格式）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.WaitTimeColorRange"
                     }
                 }
             }
@@ -58159,6 +58286,19 @@
                 },
                 "value": {
                     "type": "string"
+                }
+            }
+        },
+        "setting.WaitTimeColorRange": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "颜色值（RGB 格式，统一使用 #xxxxxx 格式）",
+                    "type": "string"
+                },
+                "minute": {
+                    "description": "时间阈值（分钟）",
+                    "type": "integer"
                 }
             }
         },
