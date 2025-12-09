@@ -587,7 +587,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 				products := make([]resp.MemberOrderProduct, 0)
 				for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
 					products = append(products, resp.MemberOrderProduct{
-						LocaleName: saleOrderProduct.MultiLanguageName.GetNames(),
+						LocaleName: saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 						Num:        saleOrderProduct.Num,
 						TotalPrice: saleOrderProduct.GetTotalPrice(),
 						Image: func() string {
@@ -625,7 +625,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 	products := make([]resp.MemberOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.GetFirstSaleOrder().SaleOrderProducts {
 		products = append(products, resp.MemberOrderProduct{
-			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
@@ -1289,7 +1289,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 	products := make([]resp.MemberOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
 		products = append(products, resp.MemberOrderProduct{
-			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
@@ -1475,7 +1475,7 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 			imageUrl = saleOrderProduct.ImageFile.GetUrl(baseUrl)
 		}
 		products = append(products, resp.MemberOrderManageProduct{
-			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			ImageUrl:            imageUrl,
 			OriginUnitPrice:     saleOrderProduct.OriginTotalPrice,
@@ -1956,7 +1956,7 @@ func (s *orderSrv) GetMemberOrderReturnInfo(ctx context.Context, req member_req.
 		}
 		products = append(products, resp.OrderReturnProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
-			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:           saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
 			NumType:              saleOrderProduct.NumType,

@@ -591,7 +591,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 
 				products = append(products, resp.OrderProduct{
 					Uuid:                saleOrderProduct.Uuid,
-					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+					LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 					LocaleAttributeName: attributeName,
 					Price:               saleOrderProduct.SalePrice,
 					Num:                 saleOrderProduct.Num,
@@ -1740,7 +1740,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 		}
 		products = append(products, resp.OrderReturnProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
-			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:           saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
 			NumType:              saleOrderProduct.NumType,
