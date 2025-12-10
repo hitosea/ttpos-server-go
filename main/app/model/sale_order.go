@@ -828,13 +828,19 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			IsH5OrderNeedAudit:  isH5NeedAudit,
 			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
-			MustPlanUuid:        saleOrderProduct.MustPlanUuid,
-			AcceptTime:          saleOrderProduct.GetAcceptTime(),
-			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
-			UnitPrice:           saleOrderProduct.SalePrice,
-			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
-			CreateTime:          saleOrderProduct.CreateTime,
-			ProductType:         saleOrderProduct.ProductPackage.ProductType,
+			CategoryUuid: func() uint64 {
+				if saleOrderProduct.ProductPackage == nil {
+					return 0
+				}
+				return saleOrderProduct.ProductPackage.CategoryUuid
+			}(),
+			MustPlanUuid:  saleOrderProduct.MustPlanUuid,
+			AcceptTime:    saleOrderProduct.GetAcceptTime(),
+			IsAccept:      saleOrderProduct.IsAcceptOrderProduct(),
+			UnitPrice:     saleOrderProduct.SalePrice,
+			IsShowKitchen: saleOrderProduct.ProductPackage.IsShowKitchen,
+			CreateTime:    saleOrderProduct.CreateTime,
+			ProductType:   saleOrderProduct.ProductPackage.ProductType,
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},
