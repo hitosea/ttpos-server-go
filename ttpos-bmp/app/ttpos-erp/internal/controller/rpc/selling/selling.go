@@ -480,3 +480,31 @@ func (*Controller) GetModeOfPaymentList(ctx context.Context, req *selling.GetMod
 	}
 	return rpc.ApiSuccessWithData("获取支付方式成功", resp), nil
 }
+
+// SaveModeOfPayment 保存/同步支付方式
+func (c *Controller) SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*api.ResponseInfo, error) {
+	if err := c.validateSaveModeOfPaymentReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	resp, err := service.Selling().SaveModeOfPayment(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("保存支付方式成功", resp), nil
+}
+
+func (c *Controller) validateSaveModeOfPaymentReq(req *selling.SaveModeOfPaymentReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司简称不能为空")
+	}
+	if strings.TrimSpace(req.Branch) == "" {
+		return gerror.New("分支不能为空")
+	}
+	if strings.TrimSpace(req.PayType) == "" {
+		return gerror.New("支付类型不能为空")
+	}
+	return nil
+}

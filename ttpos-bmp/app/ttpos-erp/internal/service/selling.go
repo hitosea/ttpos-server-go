@@ -213,6 +213,13 @@ type (
 		// 功能：
 		//   - 获取支付方式列表
 		GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
+		// SaveModeOfPayment 保存/同步支付方式
+		//   - ctx: 上下文
+		//   - req: 请求参数（公司简称、分支、渠道、支付类型）
+		//
+		// 功能：
+		//   - 根据规则生成支付方式名称并创建/同步
+		SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error)
 		// CountCustomer 统计客户数量
 		// 参数：
 		//   - ctx: 上下文对象

@@ -2,6 +2,9 @@ package selling
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"
@@ -1088,4 +1091,124 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 	return &selling.GetModeOfPaymentListResp{
 		ModeOfPaymentList: modeOfPaymentList,
 	}, nil
+}
+
+// SaveModeOfPayment 保存/同步支付方式
+func (s *sSelling) SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error) {
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "根据公司缩写[%s]查询公司失败", req.CompanyAbbr)
+	}
+
+	// 允许 channel 为空，前缀仅拼接非空段，末尾统一加 -
+	parts := make([]string, 0, 2)
+	if strings.TrimSpace(req.Channel) != "" {
+		parts = append(parts, req.Channel)
+	}
+	if strings.TrimSpace(req.PayType) != "" {
+		parts = append(parts, req.PayType)
+	}
+	prefix := strings.Join(parts, "-") + "-"
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		nextSeq, err := s.nextModeOfPaymentSeq(ctx, prefix, companyName)
+		if err != nil {
+			return nil, err
+		}
+		name := fmt.Sprintf("%s%04d - %s", prefix, nextSeq, req.CompanyAbbr)
+
+		payload := g.Map{
+			"mode_of_payment": name,
+			"name":            name,
+			"enabled":         1,
+			"type":            "General", // 需求默认通用类型，后续可按渠道扩展
+			"custom_branch":   req.Branch,
+			"custom_company":  companyName,
+		}
+
+		resp, err := service.Document().Create(ctx, erp.DocTypeModeOfPayment, payload)
+		if err != nil {
+			lastErr = err
+			// 并发/重复情况下重试
+			if strings.Contains(err.Error(), "exists") || strings.Contains(err.Error(), "Duplicate") {
+				continue
+			}
+			return nil, gerror.Wrapf(err, "创建支付方式失败")
+		}
+
+		createdName := name
+		if resp != nil {
+			if v := resp.Get("data.name").String(); v != "" {
+				createdName = v
+			}
+		}
+
+		// 创建对应公司的支付账户关联，确保新支付方式可用
+		if err := service.Selling().CreateModePaymentAccount(ctx, &setup.CreateModePaymentAccountInp{
+			CompanyAbbr: req.CompanyAbbr,
+			PaymentType: createdName,
+		}); err != nil {
+			return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
+		}
+
+		return &selling.SaveModeOfPaymentResp{
+			Name: createdName,
+		}, nil
+	}
+
+	if lastErr != nil {
+		return nil, gerror.Wrapf(lastErr, "创建支付方式失败")
+	}
+	return nil, gerror.New("创建支付方式失败")
+}
+
+// nextModeOfPaymentSeq 计算下一个支付方式序号
+func (s *sSelling) nextModeOfPaymentSeq(ctx context.Context, prefix, companyName string) (int, error) {
+	filters := [][]string{
+		{"name", "like", prefix + "%"},
+	}
+	if companyName != "" {
+		filters = append(filters, []string{"custom_company", "=", companyName})
+	}
+
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeModeOfPayment,
+	}, &erp.RequestParams{
+		Fields:  []string{"name"},
+		Filters: filters,
+	})
+	if err != nil {
+		return 0, gerror.Wrapf(err, "获取支付方式列表失败")
+	}
+
+	maxSeq := -1
+	for _, item := range resp.GetJsons("data") {
+		name := item.Get("name").String()
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		rest := strings.TrimPrefix(name, prefix)
+		if len(rest) < 4 {
+			continue
+		}
+		if idx := strings.Index(rest, " "); idx >= 0 {
+			rest = rest[:idx]
+		}
+		seqVal, err := strconv.Atoi(rest)
+		if err != nil {
+			continue
+		}
+		if seqVal > maxSeq {
+			maxSeq = seqVal
+		}
+	}
+
+	next := maxSeq + 1
+	if maxSeq < 0 {
+		next = 1 //默认从1开始
+	}
+	if next > consts.Limit9999 {
+		return 0, gerror.New("支付方式序号已超出上限")
+	}
+	return next, nil
 }
