@@ -175,6 +175,19 @@ message ModeOfPayment {
   string name = 1; // 支付方式名称
 }
 
+// SaveModeOfPaymentReq 保存/同步支付方式请求
+message SaveModeOfPaymentReq {
+  string company_abbr = 1; // 公司简称，必填
+  string branch = 2;       // 分支，必填
+  string channel = 3;      // 渠道，如 LianLianPay，必填
+  string pay_type = 4;     // 支付类型（TTPOS 定义），必填
+}
+
+// SaveModeOfPaymentResp 保存/同步支付方式响应
+message SaveModeOfPaymentResp {
+  string name = 1; // 规范化名称 {channel}-{pay_type}-{NNNN} - {company_abbr}
+}
+
 message GetModeOfPaymentListReq {
   string company_abbr = 1; // 公司缩写,可选
   string branch = 2; // 分支名称,可选
@@ -207,4 +220,7 @@ service SellingService {
 
   //获取支付方式
   rpc GetModeOfPaymentList (GetModeOfPaymentListReq) returns (erp.ResponseInfo);
+
+  // 保存/同步支付方式
+  rpc SaveModeOfPayment (SaveModeOfPaymentReq) returns (erp.ResponseInfo);
 }
