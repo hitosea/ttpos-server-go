@@ -163,9 +163,14 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 	boms, err := productBomRepo.GetProductBoms(
 		repository.CommonRepo.WhereByProductPackageUuid(req.ProductPackageUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
-		repository.CommonRepo.Preload(repository.WithPreload{
-			Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-		}),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			repository.WithPreload{
+				Query: "FlavorMaterials",
+			},
+		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商品规格失败")
@@ -182,6 +187,7 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 
 		settings = append(settings, resp.SoldOutSetting{
 			ProductBomUuid:   bom.Uuid,
+			HasBomCard:       bom.HasProductBomCard() || len(bom.FlavorMaterials) > 0, // 有成本卡 或者 关联了材料
 			UseBomCardStock:  bom.UseBomCardStock == 1,
 			BomCardStockNum:  bomCardStockNum,
 			IsSoldOut:        bom.IsSoldOut == 1,
