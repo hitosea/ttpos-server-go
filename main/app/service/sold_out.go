@@ -134,9 +134,14 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 			updateMap["use_bom_card_stock"] = map[bool]uint{true: 1, false: 0}[*item.UseBomCardStock]
 		}
 
-		// 如果提供了 sellable_quantity，则更新
+		// 如果提供了 stock_num
 		if item.SellableQuantity != nil {
-			updateMap["sellable_quantity"] = *item.SellableQuantity
+			updateMap["stock_num"] = *item.SellableQuantity
+		}
+
+		// 如果提供了 is_open_stock
+		if item.IsOpenStock != nil {
+			updateMap["is_open_stock"] = *item.IsOpenStock
 		}
 
 		if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(item.ProductBomUuid)}, updateMap); err != nil {
