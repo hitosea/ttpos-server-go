@@ -12,6 +12,8 @@ import (
 	"ttpos-bmp/app/ttpos-erp/utility"
 	"ttpos-bmp/internal/pkg/queue"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -205,6 +207,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			ItemGroupName:      itemGroupCodeName,
 			VariantOf:          itemInfo.VariantOf,
 			NotForSale:         itemInfo.CustomNotForSale,
+			AllowNegativeStock: proto.Bool(itemInfo.AllowNegativeStock == 1),
 		})
 	}
 
@@ -220,6 +223,8 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 		return nil, gerror.Wrapf(err, "复制请求参数失败")
 	}
 
+	hasAllowNegative := req.AllowNegativeStock != nil
+
 	// 检查物品是否已存在
 	exists, err := s.checkItemExists(ctx, req.ItemCode)
 	if err != nil {
@@ -227,6 +232,26 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 	}
 
 	if exists {
+		// 读取现有物料，用于保持未传字段及关闭校验
+		existingItem, err := s.GetItem(ctx, &item.GetItemReq{
+			ItemCode: req.ItemCode,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// true->false 且存在负库存时拒绝关闭
+		if hasAllowNegative && !req.GetAllowNegativeStock() && existingItem != nil && existingItem.AllowNegativeStock == 1 {
+			if err := s.ensureNoNegativeStockWhenDisable(ctx, req); err != nil {
+				return nil, err
+			}
+		}
+
+		// 未传字段时沿用现有值，避免覆盖
+		if !hasAllowNegative && existingItem != nil {
+			req.AllowNegativeStock = proto.Bool(existingItem.AllowNegativeStock == 1)
+		}
+
 		// 更新现有物品
 		return s.updateExistingItem(ctx, req)
 	} else {
@@ -350,6 +375,10 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["custom_not_for_sale"] = 0
 	}
 
+	if req.AllowNegativeStock != nil {
+		itemForUpdate["allow_negative_stock"] = boolToInt(req.GetAllowNegativeStock())
+	}
+
 	// 属性和加料特殊处理
 	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {
 		if req.ItemGroupName != "" {
@@ -436,6 +465,68 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 	return respItem, nil
 }
 
+// ensureNoNegativeStockWhenDisable 在从允许改为不允许负库存时校验当前库存
+func (s *sItem) ensureNoNegativeStockWhenDisable(ctx context.Context, req *item.ItemInfo) error {
+	companyName := "" //默认不区分公司
+	// companyName := existingItem.CustomCompany
+	// if companyName == "" && len(req.CompanyAbbr) > 0 {
+	// if name, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr); err == nil {
+	// companyName = name
+	// }
+	// }
+
+	hasNegative, err := s.hasNegativeStock(ctx, companyName, req.ItemCode)
+	if err != nil {
+		return err
+	}
+	if hasNegative {
+		return gerror.New("物料已产生负库存，请修正库存后再进行操作")
+	}
+	return nil
+}
+
+// hasNegativeStock 判断当前物料是否存在负库存（基于 Stock Projected Qty）
+func (s *sItem) hasNegativeStock(ctx context.Context, companyName, itemCode string) (bool, error) {
+	if len(itemCode) == 0 {
+		return false, gerror.New("物品编码缺失，无法校验库存")
+	}
+
+	filters := gjson.New(g.Map{})
+
+	if len(companyName) > 0 {
+		filters.Set("company", companyName)
+	}
+
+	if len(itemCode) > 0 {
+		filters.Set("item_code", itemCode)
+	}
+
+	resp, err := service.Report().Run(ctx, &erp.ReportParams{
+		ReportName:           erp.DocTypeStockProjectedQty,
+		Filters:              filters.String(),
+		IgnorePreparedReport: true,
+	})
+	if err != nil {
+		return false, gerror.Wrapf(err, "查询库存报表失败")
+	}
+
+	dataArray := resp.GetJsons("message.result")
+	for _, data := range dataArray {
+		if data.Get("actual_qty").Float64() < 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func boolToInt(v bool) int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
 // getCompanyInfo 获取公司信息
 func (s *sItem) getCompanyInfo(ctx context.Context, companyAbbr string) (*company.CompanyInfo, error) {
 	company, err := service.Company().GetCompanyWithAbbr(ctx, companyAbbr)
@@ -461,6 +552,10 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"custom_internal_code":       req.InternalCode,
 		"custom_not_for_sale":        req.NotForSale,
 		"has_variants":               req.HasVariants,
+	}
+
+	if req.AllowNegativeStock != nil {
+		newItem["allow_negative_stock"] = boolToInt(req.GetAllowNegativeStock())
 	}
 
 	// 根据物品分组添加特定字段
