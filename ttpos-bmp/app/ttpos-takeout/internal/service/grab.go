@@ -50,6 +50,8 @@ type (
 		// ParsePartnerToken 校验并解析 Partner Token
 		// 用于中间件验证 Grab 发送的请求中携带的 Token
 		ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error)
+		// HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
+		HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error
 	}
 )
 

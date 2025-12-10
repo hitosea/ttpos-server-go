@@ -15,18 +15,18 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
+	"ttpos-bmp/internal/pkg/queue"
+)
+
+const (
+	// TopicGrabOrder Grab 订单 MQ Topic
+	TopicGrabOrder = "takeout_grab_order"
 )
 
 // OrderService 订单服务
 // 内部使用，通过 sGrab 统一管理
 type OrderService struct {
-	verifier   *SignatureVerifier
-	mqProducer MQProducer
-}
-
-// MQProducer MQ 生产者接口
-type MQProducer interface {
-	SendOrderEvent(ctx context.Context, event *OrderEvent) error
+	verifier *SignatureVerifier
 }
 
 // OrderEvent 订单事件
@@ -73,7 +73,7 @@ func (s *OrderService) HandleSubmitOrder(ctx context.Context, signature, timesta
 		Status:       req.GetOrderState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
-	if err := s.mqProducer.SendOrderEvent(ctx, event); err != nil {
+	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
 		// MQ 发送失败只记录日志，不影响主流程（订单已入库）
 		g.Log().Warningf(ctx, "Failed to send MQ event for order %s: %v", orderUUID, err)
 	}
@@ -271,7 +271,7 @@ func (s *OrderService) HandlePushOrderState(ctx context.Context, signature, time
 		Status:       req.GetState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
-	if err := s.mqProducer.SendOrderEvent(ctx, event); err != nil {
+	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
 		g.Log().Warningf(ctx, "Failed to send MQ event for order status update %s: %v", order.Uuid, err)
 	}
 

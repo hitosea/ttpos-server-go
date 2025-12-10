@@ -1,6 +1,5 @@
 // Package grab 定义 GrabFood API v1.1.3 交互的数据结构
 //
-// Deprecated: 结构体已废弃，请使用 github.com/grab/grabfood-api-sdk-go SDK Model
 // 仅保留常量定义以兼容现有代码
 package grab
 

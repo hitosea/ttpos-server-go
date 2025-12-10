@@ -5,6 +5,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/gogf/gf/v2/os/gtime"
+
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
@@ -20,7 +22,6 @@ var (
 type sGrab struct {
 	verifier   *SignatureVerifier
 	sdkWrapper *SDKWrapper // 官方 SDK Wrapper
-	mqProducer MQProducer
 	cfgLoader  *PartnerConfigLoader
 	tokenSvc   *PartnerTokenService
 }
@@ -89,16 +90,6 @@ func (s *sGrab) getTokenService() *PartnerTokenService {
 	return s.tokenSvc
 }
 
-// getMQProducer 获取 MQ 生产者
-func (s *sGrab) getMQProducer() MQProducer {
-	if s.mqProducer == nil {
-		// TODO: 根据配置初始化 RocketMQ 生产者
-		// 暂时使用 NoopMQProducer
-		s.mqProducer = NewNoopMQProducer()
-	}
-	return s.mqProducer
-}
-
 // VerifyWebhookSignature 验证 Grab Webhook 签名 (公开方法，供其他服务调用)
 // signature: X-Grab-Signature 请求头值
 // timestamp: X-Grab-Timestamp 请求头值
@@ -110,8 +101,7 @@ func (s *sGrab) VerifyWebhookSignature(ctx context.Context, signature, timestamp
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 func (s *sGrab) HandleSubmitOrder(ctx context.Context, signature, timestamp string, body []byte) error {
 	orderService := &OrderService{
-		verifier:   s.getVerifier(),
-		mqProducer: s.getMQProducer(),
+		verifier: s.getVerifier(),
 	}
 	return orderService.HandleSubmitOrder(ctx, signature, timestamp, body)
 }
@@ -119,8 +109,7 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, signature, timestamp stri
 // HandlePushOrderState 处理订单状态变更 Webhook
 func (s *sGrab) HandlePushOrderState(ctx context.Context, signature, timestamp string, body []byte) error {
 	orderService := &OrderService{
-		verifier:   s.getVerifier(),
-		mqProducer: s.getMQProducer(),
+		verifier: s.getVerifier(),
 	}
 	return orderService.HandlePushOrderState(ctx, signature, timestamp, body)
 }
@@ -206,4 +195,27 @@ func (s *sGrab) GetPartnerToken(ctx context.Context, clientID string, clientSecr
 // 用于中间件验证 Grab 发送的请求中携带的 Token
 func (s *sGrab) ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error) {
 	return s.getTokenService().ParsePartnerToken(token)
+}
+
+// HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
+func (s *sGrab) HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error {
+	menuService := &MenuService{
+		verifier: s.getVerifier(),
+	}
+
+	// 1. Save Snapshot
+	storageKey, err := menuService.SaveMenuSnapshot(ctx, dto)
+	if err != nil {
+		return err
+	}
+
+	// 2. Notify
+	event := &grabDto.ProviderMenuUpdateEvent{
+		ProviderName:      "grab",
+		MerchantID:        dto.MerchantID,
+		PartnerMerchantID: dto.PartnerMerchantID,
+		StorageKey:        storageKey,
+		ReceivedAt:        gtime.Timestamp(),
+	}
+	return menuService.NotifyMenuUpdate(ctx, event)
 }

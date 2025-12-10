@@ -11,9 +11,9 @@
 | **提案人** | rikugun   |
 | **日期**   | 2025-12-09   |
 | **目标版本** | v2.11.0 |
-| **状态**   | 待评审   |
+| **状态**   | 已通过   |
 | **关联任务** | - |
-| **关联 Spec** | `task-takeout-grab-oauth-partner-webhook-simple` |
+| **关联 Spec** | [`task-takeout-push-grab-menu-webhook`](../../shared/specs/active/task-takeout-push-grab-menu-webhook/requirements.md) |
 
 ---
 
@@ -96,8 +96,9 @@ type MenuCategory struct {
 
 1. **API 定义**: 补充 `PushGrabMenuWebhookReq` 的请求体字段，与 Grab SDK 类型对齐
 2. **Controller 实现**: 实现 webhook 处理逻辑，解析请求体
-3. **业务逻辑**: 存储菜单数据（可选：触发菜单同步流程）
-4. **响应处理**: 成功返回 HTTP 204 No Content
+3. **业务逻辑**: 存储菜单数据（暂存到 Redis 或数据库）
+4. **消息通知**: 新增 `provider_menu_update` 消息通知，通知下游业务（如菜单服务）菜单已更新. 消息中需要有ProvierName
+5. **响应处理**: 成功返回 HTTP 204 No Content
 
 ### 影响范围
 
@@ -108,6 +109,7 @@ type MenuCategory struct {
 - [x] API 接口定义
 - [x] Controller 实现
 - [x] 业务逻辑
+- [x] 消息通知 (MQ/Event)
 - [x] 第三方集成 (GrabFood)
 
 ---

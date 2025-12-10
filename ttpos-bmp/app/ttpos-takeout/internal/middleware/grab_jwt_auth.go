@@ -50,7 +50,7 @@ func MiddlewareGrabJWTAuth(r *ghttp.Request) {
 		return
 	}
 
-	token := parts[1]
+	token := strings.TrimSpace(parts[1])
 	if token == "" {
 		g.Log().Warning(ctx, "[grab-jwt-auth] Token is empty")
 		r.Response.WriteJsonExit(g.Map{
@@ -60,10 +60,21 @@ func MiddlewareGrabJWTAuth(r *ghttp.Request) {
 		return
 	}
 
+	// 验证 JWT Token 格式：应该包含三个部分，用点号分隔
+	tokenParts := strings.Split(token, ".")
+	if len(tokenParts) != 3 {
+		g.Log().Warningf(ctx, "[grab-jwt-auth] Invalid token format: expected 3 segments, got %d. Token preview: %s...", len(tokenParts), getTokenPreview(token))
+		r.Response.WriteJsonExit(g.Map{
+			"error":             "unauthorized",
+			"error_description": "Invalid token format",
+		})
+		return
+	}
+
 	// 调用 Grab Service 验证 Token
 	claims, err := service.Grab().ParsePartnerToken(token)
 	if err != nil {
-		g.Log().Warningf(ctx, "[grab-jwt-auth] Token validation failed: %v", err)
+		g.Log().Warningf(ctx, "[grab-jwt-auth] Token validation failed: %v. Token preview: %s...", err, getTokenPreview(token))
 		r.Response.WriteJsonExit(g.Map{
 			"error":             "unauthorized",
 			"error_description": "Invalid or expired token",
@@ -119,4 +130,16 @@ func MiddlewareDirectResponse(r *ghttp.Request) {
 	}
 
 	r.Response.WriteJson(res)
+}
+
+// getTokenPreview 返回 token 的前缀预览（用于日志，不暴露完整 token）
+func getTokenPreview(token string) string {
+	if len(token) == 0 {
+		return ""
+	}
+	previewLen := 20
+	if len(token) < previewLen {
+		previewLen = len(token)
+	}
+	return token[:previewLen]
 }
