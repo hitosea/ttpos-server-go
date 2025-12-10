@@ -307,6 +307,7 @@ type Product struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品uuid
 	ProductPackageUuid  uint64             `json:"product_package_uuid"`  // 商品包uuid
 	CategoryUuid        uint64             `json:"category_uuid"`         // 分类uuid
+	SpecialCategoryUuid uint64             `json:"special_category_uuid"` // 特殊分类uuid
 	MustPlanUuid        uint64             `json:"must_plan_uuid"`        // 必点方案uuid
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性

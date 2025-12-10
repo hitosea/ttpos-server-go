@@ -832,7 +832,13 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 				if saleOrderProduct.ProductPackage == nil {
 					return 0
 				}
-				return saleOrderProduct.ProductPackage.CategoryUuid
+				return saleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid()
+			}(),
+			SpecialCategoryUuid: func() uint64 {
+				if saleOrderProduct.ProductPackage == nil {
+					return 0
+				}
+				return saleOrderProduct.ProductPackage.SpecialCategoryUuid
 			}(),
 			MustPlanUuid:  saleOrderProduct.MustPlanUuid,
 			AcceptTime:    saleOrderProduct.GetAcceptTime(),
