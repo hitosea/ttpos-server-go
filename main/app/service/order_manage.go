@@ -1955,9 +1955,11 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		for _, saleOrder := range saleBill.SaleOrders {
 			isUseMember := saleOrder.ConsumerUuid != 0
 			for _, paymentOrder := range saleOrder.PaymentOrders {
-				refundOrder := paymentOrder.RefundOrder
-				if err := repository.NewPaymentOrderRepo(db).CreateRefundOrderRecord(*refundOrder); err != nil {
-					return errors.WithMessage(err)
+				// 创建退款单
+				if refundOrder := paymentOrder.RefundOrder; refundOrder != nil {
+					if err := repository.NewPaymentOrderRepo(db).CreateRefundOrderRecord(*refundOrder); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 				// 如果是余额支付，则退款到余额
 				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
