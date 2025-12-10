@@ -15,11 +15,12 @@ type ProductPackageTakeout struct {
 	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'外卖商品图片UUID'"`
 
 	// 关联关系
-	ProductPackage         ProductPackage    `gorm:"foreignKey:product_package_uuid;references:uuid" json:"-"`     // 商品包
-	MultiLanguageName      MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid" json:"-"` // 多语言名称
-	ProductCategory        ProductCategory   `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`            // 外卖分类
-	ProductSpecialCategory ProductCategory   `gorm:"foreignKey:special_category_uuid;references:uuid" json:"-"`    // 外卖特色分类
-	ImageFile              File              `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`          // 图片
+	ProductPackage         ProductPackage      `gorm:"foreignKey:product_package_uuid;references:uuid" json:"-"`         // 商品包
+	MultiLanguageName      MultiLanguageName   `gorm:"foreignKey:multi_language_name_uuid;references:uuid" json:"-"`     // 多语言名称
+	ProductCategory        ProductCategory     `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`                // 外卖分类
+	ProductSpecialCategory ProductCategory     `gorm:"foreignKey:special_category_uuid;references:uuid" json:"-"`        // 外卖特色分类
+	ImageFile              File                `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`              // 图片
+	ProductBomTakeouts     []ProductBomTakeout `gorm:"foreignKey:product_package_takeout_uuid;references:uuid" json:"-"` // 外卖规格价格列表
 }
 
 // TableName 指定表名

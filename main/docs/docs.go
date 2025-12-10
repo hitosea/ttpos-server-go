@@ -21300,6 +21300,166 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/grab/binding-link": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取 Grab 平台的绑定链接，用户可跳转到 Grab 页面完成配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "获取 Grab 绑定链接",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabBindingLinkResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/grab/binding-status": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证是否已经绑定 Grab 平台，前端可以定时查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "检查 Grab 绑定状态",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabBindingStatusResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/grab/menu": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "从 Grab API 获取商品菜单数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "获取 Grab 商品菜单",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabMenuResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/grab/menu/import": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "将外卖平台（如 Grab）的菜单数据导入到 TTPOS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖菜单"
+                ],
+                "summary": "从外卖平台格式导入菜单",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TakeoutMenuImportResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -33708,6 +33868,57 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/takeout/menu/export": {
+            "post": {
+                "security": [
+                    {
+                        "JwtAuth": []
+                    }
+                ],
+                "description": "将 TTPOS 菜单数据转换为指定外卖平台（如 Grab）的格式",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "外卖菜单"
+                ],
+                "summary": "导出菜单到外卖平台格式",
+                "parameters": [
+                    {
+                        "description": "导出请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutMenuExportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TakeoutMenuExportResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -45371,6 +45582,36 @@ const docTemplate = `{
                 }
             }
         },
+        "req.TakeoutMenuExportReq": {
+            "type": "object",
+            "required": [
+                "platform"
+            ],
+            "properties": {
+                "categoryIds": {
+                    "description": "分类 ID 列表（可选，为空则导出所有）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "companyUuid": {
+                    "description": "公司 UUID（可选，默认当前公司）",
+                    "type": "integer"
+                },
+                "platform": {
+                    "description": "平台名称：grab, lineman 等",
+                    "type": "string"
+                },
+                "sellingTimeIds": {
+                    "description": "售卖时段 ID 列表（可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "req.TransferOrderApproveReq": {
             "type": "object",
             "required": [
@@ -48930,6 +49171,48 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.GiftOrFreeOrderReason"
                     }
+                }
+            }
+        },
+        "resp.GrabBindingLinkResp": {
+            "type": "object",
+            "properties": {
+                "bindingLink": {
+                    "description": "绑定链接 URL",
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "description": "过期时间（Unix 时间戳）",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.GrabBindingStatusResp": {
+            "type": "object",
+            "properties": {
+                "boundAt": {
+                    "description": "绑定时间（Unix 时间戳）",
+                    "type": "integer"
+                },
+                "isBound": {
+                    "description": "是否已绑定",
+                    "type": "boolean"
+                },
+                "merchantId": {
+                    "description": "Grab 商户 ID",
+                    "type": "string"
+                },
+                "merchantName": {
+                    "description": "Grab 商户名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.GrabMenuResp": {
+            "type": "object",
+            "properties": {
+                "menu": {
+                    "description": "Grab 菜单数据"
                 }
             }
         },
@@ -55127,6 +55410,10 @@ const docTemplate = `{
                     "description": "成本卡库存数量",
                     "type": "number"
                 },
+                "has_bom_card": {
+                    "description": "是否关联了成本卡",
+                    "type": "boolean"
+                },
                 "is_open_stock": {
                     "description": "是否开启可售库存",
                     "type": "boolean"
@@ -55943,6 +56230,58 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
+                }
+            }
+        },
+        "resp.TakeoutMenuExportResp": {
+            "type": "object",
+            "properties": {
+                "menuData": {
+                    "description": "平台格式的菜单数据"
+                },
+                "platform": {
+                    "description": "平台名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.TakeoutMenuImportResp": {
+            "type": "object",
+            "properties": {
+                "createdCategories": {
+                    "description": "创建的分类数",
+                    "type": "integer"
+                },
+                "createdItems": {
+                    "description": "创建的商品数",
+                    "type": "integer"
+                },
+                "errors": {
+                    "description": "错误列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "success": {
+                    "description": "是否成功",
+                    "type": "boolean"
+                },
+                "totalCategories": {
+                    "description": "总分类数",
+                    "type": "integer"
+                },
+                "totalItems": {
+                    "description": "总商品数",
+                    "type": "integer"
+                },
+                "updatedCategories": {
+                    "description": "更新的分类数",
+                    "type": "integer"
+                },
+                "updatedItems": {
+                    "description": "更新的商品数",
+                    "type": "integer"
                 }
             }
         },

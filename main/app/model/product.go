@@ -581,13 +581,13 @@ func (model *ProductBom) HasProductBomCard() bool {
 }
 
 func (model *ProductBom) GetStockNum() float64 {
-	// 如果关闭库存，返回999999表示无限库存
-	if !model.IsOpenStockBool() {
-		return constant.ProductBomInfiniteStock
-	}
 	// 如果标记沽清，返回0
 	if model.IsSoldOut == constant.ProductStatusSaleOut {
 		return 0
+	}
+	// 如果关闭库存，返回999999表示无限库存
+	if !model.IsOpenStockBool() {
+		return constant.ProductBomInfiniteStock
 	}
 	return model.StockNum
 }
