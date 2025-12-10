@@ -178,6 +178,9 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 
 	settings := make([]resp.SoldOutSetting, 0, len(boms))
 	for _, bom := range boms {
+		if bom.IsSauce() {
+			continue
+		}
 		bomCardStockNum := 0.0
 		if bom.UseBomCardStock == 1 && bom.HasProductBomCard() && bom.ProductBomCard != nil {
 			// 计算成本卡库存：根据成本卡关联的材料库存计算预计可生产数量
