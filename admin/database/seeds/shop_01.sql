@@ -1285,6 +1285,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     `name` TEXT COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `status` INT(10) NOT NULL DEFAULT 1 COMMENT '状态, 1-开启 0-关闭',
+    `is_display_in_store` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否在店内显示: 1-是 0-否',
+    `is_display_in_takeout` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否在外卖平台显示: 1-是 0-否',
     `parent_uuid` BIGINT UNSIGNED DEFAULT NULL COMMENT '父级ID',
     `is_special` INT(10) NOT NULL DEFAULT 0 COMMENT '特殊分类, 1-是 0-否',
     `category_key` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关键字',
@@ -1295,6 +1297,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_parent_uuid` (`parent_uuid`),
+    INDEX `idx_is_display_in_store` (`is_display_in_store`),
+    INDEX `idx_is_display_in_takeout` (`is_display_in_takeout`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品类别表';
 
@@ -3637,5 +3641,48 @@ CREATE TABLE IF NOT EXISTS `ttpos_data_manage` (
     KEY `idx_staff_uuid` (`staff_uuid`),
     PRIMARY KEY (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据管理表';
+
+-- 外卖商品表
+CREATE TABLE IF NOT EXISTS `ttpos_product_package_takeout` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `product_package_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '商品包UUID，关联 ttpos_product_package.uuid',
+    `name` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '商品包名称',
+    `multi_language_name_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    `headquarter_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '总部UUID,0表示不是总部商品',
+    `product_type` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
+    `takeout_type` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '外卖类型 1-Grab 2-FoodPanda 3-其他（预留扩展）',
+    `status` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '外卖状态 0-下架 1-上架',
+    `category_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖分类UUID',
+    `special_category_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖特色分类UUID',
+    `image_file_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖商品图片UUID',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_takeout_type` (`takeout_type`),
+    KEY `idx_status` (`status`),
+    KEY `idx_delete_time` (`delete_time`),
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖商品表，存储商品的外卖专属信息';
+
+-- 外卖规格价格表
+CREATE TABLE IF NOT EXISTS `ttpos_product_bom_takeout` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `product_package_takeout_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖商品UUID，关联 ttpos_product_package_takeout.uuid',
+    `product_bom_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '店内商品BOM UUID，关联 ttpos_product_bom.uuid',
+    `headquarter_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '总部UUID,0表示不是总部商品',
+    `price` decimal(22,4) NOT NULL DEFAULT 0.0000 COMMENT '外卖规格价格',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    UNIQUE KEY `idx_takeout_bom` (`product_package_takeout_uuid`, `product_bom_uuid`),
+    KEY `idx_product_package_takeout_uuid` (`product_package_takeout_uuid`),
+    KEY `idx_product_bom_uuid` (`product_bom_uuid`),
+    KEY `idx_delete_time` (`delete_time`),
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖规格价格表';
 
 SET FOREIGN_KEY_CHECKS = 1;

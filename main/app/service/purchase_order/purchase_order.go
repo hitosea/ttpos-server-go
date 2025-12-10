@@ -177,14 +177,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	}
 
 	// 转换仓库名称
-	if purchaseOrder.Warehouse != nil {
-		detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.Warehouse.Name)
-	}
-
-	// 转换供应商名称
-	if purchaseOrder.Supplier != nil {
-		detailResp.SupplierName = purchaseOrder.Supplier.Name
-	}
+	detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.WarehouseName)
 
 	// 初始化数组字段
 	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0, len(purchaseOrder.Items))
@@ -248,23 +241,6 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 						ArrivalNum: unit.ArrivalNum,
 						UnitUuid:   unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
-							if item.Material == nil {
-								return *language.JsonToLocaleResponse(unit.UnitName)
-							}
-							if len(item.Material.NotBaseUnitList) == 0 {
-								return *language.JsonToLocaleResponse(unit.UnitName)
-							}
-							for _, materialUnit := range item.Material.NotBaseUnitList {
-								if materialUnit.Uuid == unit.UnitUuid {
-									if materialUnit.Unit == nil {
-										return *language.JsonToLocaleResponse(materialUnit.Name)
-									}
-									if materialUnit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
-										return materialUnit.Unit.MultiLanguageName.GetNames()
-									}
-									return materialUnit.Unit.MultiLanguageName.GetNames()
-								}
-							}
 							return *language.JsonToLocaleResponse(unit.UnitName)
 						}(),
 					})

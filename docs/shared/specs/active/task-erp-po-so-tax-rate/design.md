@@ -314,7 +314,7 @@ ttpos-bmp/app/ttpos-erp/internal/logic/accounts/
 // ttpos-bmp/app/ttpos-erp/internal/logic/accounts/accounts.go
 package accounts
 
-import "ttpos-bmp/app/ttpos-erp/internal/service"
+import "../../task-erp-po-so-tax-rate/ttpos-bmp/app/ttpos-erp/internal/service"
 
 var Accounts = new(sAccounts)
 

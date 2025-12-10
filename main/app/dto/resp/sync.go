@@ -55,28 +55,15 @@ type SyncTaskListPaginationResp struct {
 
 // HeadquartersDataListResp 总部可同步数据列表响应
 type HeadquartersDataListResp struct {
-	DataGroups []DataGroup `json:"data_groups"` // 按种类分组的数据
+	Groups []DataGroupResp `json:"groups"` // 数据分组列表
 }
 
-// DataGroup 数据分组
-type DataGroup struct {
-	Type        string     `json:"type"`         // 数据类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动
-	TypeName    string     `json:"type_name"`    // 类型名称（如：商品分类、单位、优惠券等）
-	Items       []DataItem `json:"items"`        // 该类型的数据列表
-	SyncedUuids []uint64   `json:"synced_uuids"` // 分店已同步的总部数据uuid列表
-}
-
-// DataItem 数据项
-type DataItem struct {
-	Uuid        uint64             `json:"uuid"`         // 数据uuid
-	LocaleName  dto.LocaleResponse `json:"locale_name"`  // 数据名称
-	RelatedData []RelatedData      `json:"related_data"` // 关联数据（明确类型和uuid列表）
-}
-
-// RelatedData 关联数据
-type RelatedData struct {
-	Type  string   `json:"type"`  // 关联数据的类型: product_category - 商品分类, material_category - 物品分类, tax - 税类, unit - 单位, material - 物品, flavor - 规格, attribute - 属性, sauce - 加料, product - 商品, product_stock - 商品库存, bom_card - 成本卡, supplier - 供应商, coupon - 优惠券, full_reduction - 满额减, product_label - 菜品标签, marketing_activity - 营销活动
-	Uuids []uint64 `json:"uuids"` // 关联的uuid列表
+// DataGroupResp 数据分组响应（简化：只返回组级别信息）
+type DataGroupResp struct {
+	Group        string   `json:"group"`        // 分组标识: product_data - 商品数据, activity_data - 活动数据, other_data - 其他数据
+	GroupName    string   `json:"group_name"`   // 分组名称（中文）
+	Synced       bool     `json:"synced"`       // 该分组是否已同步过（组级别）
+	Dependencies []string `json:"dependencies"` // 依赖的分组列表（group标识）
 }
 
 // GranularSyncResp 颗粒化同步响应

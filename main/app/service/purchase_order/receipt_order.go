@@ -716,20 +716,6 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 						PurchaseNum: purchaseNum,
 						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
-							if item.Material == nil {
-								return *language.JsonToLocaleResponse(unit.UnitName)
-							}
-							if len(item.Material.NotBaseUnitList) == 0 {
-								return *language.JsonToLocaleResponse(unit.UnitName)
-							}
-							for _, materialUnit := range item.Material.NotBaseUnitList {
-								if materialUnit.Uuid == unit.UnitUuid {
-									if materialUnit.Unit == nil {
-										return *language.JsonToLocaleResponse(materialUnit.Name)
-									}
-									return materialUnit.Unit.MultiLanguageName.GetNames()
-								}
-							}
 							return *language.JsonToLocaleResponse(unit.UnitName)
 						}(),
 					})

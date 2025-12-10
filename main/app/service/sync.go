@@ -121,21 +121,21 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 
 	// 定义所有同步任务配置（保持原样，不添加营销数据类型）
 	allTasks := []syncTaskConfig{
-		{constant.SyncTaskTypeProductCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductCategory], func(ctx context.Context) error { return s.productSrv.SyncProductShopCategory(ctx, false, nil) }},
-		{constant.SyncTaskTypeMaterialCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterialCategory], func(ctx context.Context) error { return s.materialSrv.SyncMaterialCategory(ctx, false, nil) }},
-		{constant.SyncTaskTypeTax, constant.SyncTaskTypeNames[constant.SyncTaskTypeTax], func(ctx context.Context) error { return s.productSrv.SyncProductTax(ctx, false, nil) }}, // 无多语言数据
-		{constant.SyncTaskTypeUnit, constant.SyncTaskTypeNames[constant.SyncTaskTypeUnit], func(ctx context.Context) error { return s.productSrv.SyncUnit(ctx, false, nil) }},
-		{constant.SyncTaskTypeMaterial, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterial], func(ctx context.Context) error { return s.materialSrv.SyncMaterial(ctx, false, nil) }},
+		{constant.SyncTaskTypeProductCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductCategory], s.productSrv.SyncProductShopCategory},
+		{constant.SyncTaskTypeMaterialCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterialCategory], s.materialSrv.SyncMaterialCategory},
+		{constant.SyncTaskTypeTax, constant.SyncTaskTypeNames[constant.SyncTaskTypeTax], s.productSrv.SyncProductTax}, // 无多语言数据
+		{constant.SyncTaskTypeUnit, constant.SyncTaskTypeNames[constant.SyncTaskTypeUnit], s.productSrv.SyncUnit},
+		{constant.SyncTaskTypeMaterial, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterial], s.materialSrv.SyncMaterial},
 		{constant.SyncTaskTypeWarehouse, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouse], s.warehouseSrv.SyncWarehouse},
-		{constant.SyncTaskTypeFlavor, constant.SyncTaskTypeNames[constant.SyncTaskTypeFlavor], func(ctx context.Context) error { return s.productSrv.SyncProductFlavor(ctx, false, nil) }},
-		{constant.SyncTaskTypeAttribute, constant.SyncTaskTypeNames[constant.SyncTaskTypeAttribute], func(ctx context.Context) error { return s.productSrv.SyncAttributeGroup(ctx, false, nil) }},
-		{constant.SyncTaskTypeSauce, constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce], func(ctx context.Context) error { return s.productSrv.SyncSauce(ctx, false, nil) }},
-		{constant.SyncTaskTypeProduct, constant.SyncTaskTypeNames[constant.SyncTaskTypeProduct], func(ctx context.Context) error { return s.productSrv.SyncProduct(ctx, false, nil) }},
-		{constant.SyncTaskTypeBomCard, constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard], func(ctx context.Context) error { return s.materialSrv.SyncProductBomCard(ctx, false, nil) }},
-		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], func(ctx context.Context) error { return s.supplierSrv.SyncSupplier(ctx, false, nil) }}, // 无多语言数据
-		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock},                                      // 无多语言数据
-		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], s.productSrv.SyncProductStockByBomCard},                                         // 无多语言数据
-		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage},                                           // 无多语言数据
+		{constant.SyncTaskTypeFlavor, constant.SyncTaskTypeNames[constant.SyncTaskTypeFlavor], s.productSrv.SyncProductFlavor},
+		{constant.SyncTaskTypeAttribute, constant.SyncTaskTypeNames[constant.SyncTaskTypeAttribute], s.productSrv.SyncAttributeGroup},
+		{constant.SyncTaskTypeSauce, constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce], s.productSrv.SyncSauce},
+		{constant.SyncTaskTypeProduct, constant.SyncTaskTypeNames[constant.SyncTaskTypeProduct], s.productSrv.SyncProduct},
+		{constant.SyncTaskTypeBomCard, constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard], s.materialSrv.SyncProductBomCard},
+		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},                        // 无多语言数据
+		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock}, // 无多语言数据
+		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], s.productSrv.SyncProductStockByBomCard},    // 无多语言数据
+		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage},      // 无多语言数据
 		{constant.SyncTaskTypeMultiLanguage, constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage], s.SyncMultiLanguage},
 	}
 
@@ -931,7 +931,7 @@ func (s *SyncSrv) generatePaymentCode(db *gorm.DB) int {
 	return maxCode + 100 // 每次递增100
 }
 
-// GetHeadquartersDataList 获取总部可同步数据列表
+// GetHeadquartersDataList 获取总部可同步数据列表（返回三组数据）
 func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHeadquartersDataListReq) (resp.HeadquartersDataListResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
@@ -944,11 +944,12 @@ func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHe
 	subShopUuid := companySetting.CompanyUuid
 
 	// 获取数据库连接
-	headquarterDB := s.dbm.GetDB(headquarterUuid)
 	subShopDB := s.dbm.GetDB(subShopUuid)
 
-	// 查询所有类型（不使用传参，固定查询所有）
-	dataTypes := []string{
+	var groups []resp.DataGroupResp
+
+	// 商品数据组
+	productDataTypes := []string{
 		constant.SyncTaskTypeProductCategory,
 		constant.SyncTaskTypeUnit,
 		constant.SyncTaskTypeFlavor,
@@ -956,897 +957,127 @@ func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHe
 		constant.SyncTaskTypeSauce,
 		constant.SyncTaskTypeProduct,
 		constant.SyncTaskTypeMaterialCategory,
-		constant.SyncTaskTypeMaterial,
 		constant.SyncTaskTypeBomCard,
 		constant.SyncTaskTypeSupplier,
 		constant.SyncTaskTypeTax,
+	}
+	productSynced := s.checkGroupSynced(subShopDB, headquarterUuid, productDataTypes)
+	groups = append(groups, resp.DataGroupResp{
+		Group:        "product_data",
+		GroupName:    "商品数据",
+		Synced:       productSynced,
+		Dependencies: []string{},
+	})
+
+	// 活动数据组
+	activityDataTypes := []string{
 		constant.SyncTaskTypeCoupon,
 		constant.SyncTaskTypeFullReduction,
 		constant.SyncTaskTypeProductLabel,
 		constant.SyncTaskTypeMarketingActivity,
-		constant.SyncTaskTypePaymentMethod,
 	}
-
-	// 查询各类型数据
-	var dataGroups []resp.DataGroup
-
-	for _, dataType := range dataTypes {
-		group, err := s.getDataGroupByType(ctx, dataType, headquarterDB, subShopDB, headquarterUuid)
-		if err != nil {
-			logger.Logger.Error("查询数据失败", zap.String("dataType", dataType), zap.Error(err))
-			continue
-		}
-		dataGroups = append(dataGroups, group)
+	activitySynced := s.checkGroupSynced(subShopDB, headquarterUuid, activityDataTypes)
+	dependencies := []string{}
+	if s.hasActivityDataDependsOnProductData(ctx) {
+		dependencies = append(dependencies, "product_data")
 	}
+	groups = append(groups, resp.DataGroupResp{
+		Group:        "activity_data",
+		GroupName:    "活动数据",
+		Synced:       activitySynced,
+		Dependencies: dependencies,
+	})
+
+	// 支付数据组
+	paymentSynced := s.checkPaymentGroupSynced(subShopDB, headquarterUuid)
+	groups = append(groups, resp.DataGroupResp{
+		Group:        "other_data",
+		GroupName:    "其他数据",
+		Synced:       paymentSynced,
+		Dependencies: []string{},
+	})
 
 	return resp.HeadquartersDataListResp{
-		DataGroups: dataGroups,
+		Groups: groups,
 	}, nil
 }
 
-// getDataGroupByType 根据数据类型查询数据分组
-func (s *SyncSrv) getDataGroupByType(ctx context.Context, dataType string, headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
+// checkGroupSynced 检查分组是否已同步（组级别：只要有一个类型已同步，则认为组已同步）
+func (s *SyncSrv) checkGroupSynced(subShopDB *gorm.DB, headquarterUuid uint64, dataTypes []string) bool {
+	for _, dataType := range dataTypes {
+		tableName := s.getTableNameByDataType(dataType)
+		if tableName == "" {
+			continue
+		}
+
+		var count int64
+		err := subShopDB.Table(tableName).
+			Where("headquarter_uuid = ?", headquarterUuid).
+			Where("delete_time = 0").
+			Count(&count).Error
+		if err != nil {
+			logger.Logger.Error("检查分组同步状态失败", zap.String("dataType", dataType), zap.Error(err))
+			continue
+		}
+
+		// 只要有一个类型已同步，则认为组已同步
+		if count > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// checkPaymentGroupSynced 检查支付数据组是否已同步
+func (s *SyncSrv) checkPaymentGroupSynced(subShopDB *gorm.DB, headquarterUuid uint64) bool {
+	var count int64
+	err := subShopDB.Table("ttpos_payment_method").
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Where("delete_time = 0").
+		Count(&count).Error
+	if err != nil {
+		logger.Logger.Error("检查支付数据组同步状态失败", zap.Error(err))
+		return false
+	}
+
+	return count > 0
+}
+
+// getTableNameByDataType 根据数据类型获取表名
+func (s *SyncSrv) getTableNameByDataType(dataType string) string {
 	switch dataType {
-	// 基础数据类型
 	case constant.SyncTaskTypeProductCategory:
-		return s.getProductCategoryGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_product_shop_category"
 	case constant.SyncTaskTypeUnit:
-		return s.getUnitGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_unit"
 	case constant.SyncTaskTypeFlavor:
-		return s.getFlavorGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_product_flavor"
 	case constant.SyncTaskTypeAttribute:
-		return s.getAttributeGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_attribute_group"
 	case constant.SyncTaskTypeSauce:
-		return s.getSauceGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_sauce"
 	case constant.SyncTaskTypeProduct:
-		return s.getProductGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_product"
 	case constant.SyncTaskTypeMaterialCategory:
-		return s.getMaterialCategoryGroup(headquarterDB, subShopDB, headquarterUuid)
-	case constant.SyncTaskTypeMaterial:
-		return s.getMaterialGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_material_category"
 	case constant.SyncTaskTypeBomCard:
-		return s.getBomCardGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_product_bom_card"
 	case constant.SyncTaskTypeSupplier:
-		return s.getSupplierGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_supplier"
 	case constant.SyncTaskTypeTax:
-		return s.getTaxGroup(headquarterDB, subShopDB, headquarterUuid)
-
-	// 营销数据类型
+		return "ttpos_product_tax"
 	case constant.SyncTaskTypeCoupon:
-		return s.getCouponGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_marketing_coupon"
 	case constant.SyncTaskTypeFullReduction:
-		return s.getFullReductionGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_full_reduction_activity"
 	case constant.SyncTaskTypeProductLabel:
-		return s.getProductLabelGroup(headquarterDB, subShopDB, headquarterUuid)
+		return "ttpos_product_label"
 	case constant.SyncTaskTypeMarketingActivity:
-		return s.getMarketingActivityGroup(headquarterDB, subShopDB, headquarterUuid)
-	case constant.SyncTaskTypePaymentMethod:
-		return s.getPaymentMethodGroup(headquarterDB, subShopDB, headquarterUuid)
-
+		return "ttpos_marketing_activity"
 	default:
-		return resp.DataGroup{}, errors.New("不支持的数据类型")
+		return ""
 	}
-}
-
-// getCouponGroup 获取优惠券数据分组
-func (s *SyncSrv) getCouponGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	// 1. 查询总部优惠券（headquarter_uuid = 0）
-	var hqCoupons []model.MarketingCoupon
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Find(&hqCoupons).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部优惠券失败")
-	}
-
-	// 2. 查询分店已同步的优惠券uuid列表
-	syncedUuids := make([]uint64, 0)
-	err = subShopDB.Model(&model.MarketingCoupon{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询分店已同步优惠券失败")
-	}
-
-	// 3. 组装数据项
-	items := make([]resp.DataItem, 0)
-	for _, coupon := range hqCoupons {
-		items = append(items, resp.DataItem{
-			Uuid: coupon.Uuid,
-			LocaleName: dto.LocaleResponse{
-				ZH:   coupon.Name,
-				TH:   coupon.Name,
-				EN:   coupon.Name,
-				ZHTW: coupon.Name,
-				JA:   coupon.Name,
-				KO:   coupon.Name,
-				MY:   coupon.Name,
-				TR:   coupon.Name,
-				SV:   coupon.Name,
-			},
-			RelatedData: []resp.RelatedData{}, // 优惠券无关联数据
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeCoupon,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeCoupon],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getFullReductionGroup 获取满额减数据分组
-func (s *SyncSrv) getFullReductionGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	// 1. 查询总部满额减活动
-	var hqActivities []model.FullReductionActivity
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").
-		Find(&hqActivities).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部满额减活动失败")
-	}
-
-	// 2. 查询分店已同步的满额减uuid列表
-	syncedUuids := make([]uint64, 0)
-	err = subShopDB.Model(&model.FullReductionActivity{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询分店已同步满额减失败")
-	}
-
-	// 3. 组装数据项
-	items := make([]resp.DataItem, 0)
-	for _, activity := range hqActivities {
-		items = append(items, resp.DataItem{
-			Uuid:        activity.Uuid,
-			LocaleName:  activity.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeFullReduction,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeFullReduction],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getProductLabelGroup 获取菜品标签数据分组
-func (s *SyncSrv) getProductLabelGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	// 1. 查询总部菜品标签（Preload关联商品）
-	var hqLabels []model.ProductLabel
-	err := headquarterDB.Preload("ProductPackages").
-		Where("delete_time = 0 AND headquarter_uuid = 0").
-		Find(&hqLabels).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部菜品标签失败")
-	}
-
-	// 2. 查询分店已同步的菜品标签uuid列表
-	syncedUuids := make([]uint64, 0)
-	err = subShopDB.Model(&model.ProductLabel{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询分店已同步菜品标签失败")
-	}
-
-	// 3. 组装数据项
-	items := make([]resp.DataItem, 0)
-	for _, label := range hqLabels {
-		// 提取关联的商品uuid
-		var relatedProductUuids []uint64
-		for _, pkg := range label.ProductPackages {
-			if pkg.ProductLabelUuid == label.Uuid {
-				relatedProductUuids = append(relatedProductUuids, pkg.Uuid)
-			}
-		}
-
-		// 构建关联数据（明确关联类型）
-		var relatedData []resp.RelatedData
-		if len(relatedProductUuids) > 0 {
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeProduct,
-				Uuids: relatedProductUuids,
-			})
-		}
-
-		items = append(items, resp.DataItem{
-			Uuid: label.Uuid,
-			LocaleName: dto.LocaleResponse{
-				ZH:   label.Name,
-				TH:   label.Name,
-				EN:   label.Name,
-				ZHTW: label.Name,
-				JA:   label.Name,
-				KO:   label.Name,
-				MY:   label.Name,
-				TR:   label.Name,
-				SV:   label.Name,
-			},
-			RelatedData: relatedData,
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeProductLabel,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeProductLabel],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getMarketingActivityGroup 获取营销活动数据分组
-func (s *SyncSrv) getMarketingActivityGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	// 1. 查询总部营销活动
-	var hqActivities []model.MarketingActivity
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").
-		Find(&hqActivities).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部营销活动失败")
-	}
-
-	// 2. 查询分店已同步的营销活动uuid列表
-	syncedUuids := make([]uint64, 0)
-	err = subShopDB.Model(&model.MarketingActivity{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询分店已同步营销活动失败")
-	}
-
-	// 3. 组装数据项
-	items := make([]resp.DataItem, 0)
-	for _, activity := range hqActivities {
-		items = append(items, resp.DataItem{
-			Uuid:        activity.Uuid,
-			LocaleName:  activity.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeMarketingActivity,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeMarketingActivity],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getPaymentMethodGroup 获取支付方式数据分组（⚠️ 特殊：通过名称匹配判断已同步）
-func (s *SyncSrv) getPaymentMethodGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	// 1. 查询总部支付方式（过滤 code=40 和 code=10）
-	var hqPayments []model.PaymentMethod
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
-		Find(&hqPayments).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部支付方式失败")
-	}
-
-	// 2. 查询分店中从总部同步的支付方式名称列表
-	//    ⚠️ 关键：只查询 headquarter_uuid = 总部uuid 的支付方式
-	var syncedPaymentNames []string
-	err = subShopDB.Model(&model.PaymentMethod{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("payment_name", &syncedPaymentNames).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询分店已同步支付方式名称失败")
-	}
-
-	// 3. 构建已同步名称的map
-	syncedNameMap := make(map[string]bool)
-	for _, name := range syncedPaymentNames {
-		syncedNameMap[name] = true
-	}
-
-	// 4. 匹配总部支付方式，找出已同步的总部uuid
-	syncedUuids := make([]uint64, 0)
-	items := make([]resp.DataItem, 0)
-
-	for _, hqPayment := range hqPayments {
-		// 通过名称匹配：分店有同名的总部支付方式，则该总部支付方式已同步
-		if syncedNameMap[hqPayment.PaymentName] {
-			syncedUuids = append(syncedUuids, hqPayment.Uuid)
-		}
-
-		items = append(items, resp.DataItem{
-			Uuid: hqPayment.Uuid,
-			LocaleName: dto.LocaleResponse{
-				ZH:   hqPayment.PaymentName,
-				TH:   hqPayment.PaymentName,
-				EN:   hqPayment.PaymentName,
-				ZHTW: hqPayment.PaymentName,
-				JA:   hqPayment.PaymentName,
-				KO:   hqPayment.PaymentName,
-				MY:   hqPayment.PaymentName,
-				TR:   hqPayment.PaymentName,
-				SV:   hqPayment.PaymentName,
-			},
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypePaymentMethod,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getProductCategoryGroup 获取商品分类数据分组
-func (s *SyncSrv) getProductCategoryGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqCategories []model.ProductCategory
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqCategories).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部商品分类失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductCategory{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, category := range hqCategories {
-		items = append(items, resp.DataItem{
-			Uuid:        category.Uuid,
-			LocaleName:  category.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeProductCategory,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeProductCategory],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getUnitGroup 获取单位数据分组
-func (s *SyncSrv) getUnitGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqUnits []model.ProductUnit
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqUnits).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部单位失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductUnit{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, unit := range hqUnits {
-		items = append(items, resp.DataItem{
-			Uuid:        unit.Uuid,
-			LocaleName:  unit.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeUnit,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeUnit],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getFlavorGroup 获取规格数据分组
-func (s *SyncSrv) getFlavorGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqFlavors []model.ProductFlavor
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqFlavors).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部规格失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductFlavor{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, flavor := range hqFlavors {
-		items = append(items, resp.DataItem{
-			Uuid:        flavor.Uuid,
-			LocaleName:  flavor.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeFlavor,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeFlavor],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getAttributeGroup 获取属性数据分组
-func (s *SyncSrv) getAttributeGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqAttributes []model.ProductAttributeGroup
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqAttributes).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部属性失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductAttributeGroup{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, attr := range hqAttributes {
-		items = append(items, resp.DataItem{
-			Uuid:        attr.Uuid,
-			LocaleName:  attr.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeAttribute,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeAttribute],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getSauceGroup 获取加料数据分组
-func (s *SyncSrv) getSauceGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqSauces []model.ProductSauce
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqSauces).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部加料失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductSauce{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, sauce := range hqSauces {
-		items = append(items, resp.DataItem{
-			Uuid:        sauce.Uuid,
-			LocaleName:  sauce.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeSauce,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getProductGroup 获取商品数据分组
-func (s *SyncSrv) getProductGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqProducts []model.ProductPackage
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqProducts).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部商品失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductPackage{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	// 获取商品包的uuid列表
-	productPackageUuids := make([]uint64, 0, len(hqProducts))
-	for _, p := range hqProducts {
-		productPackageUuids = append(productPackageUuids, p.Uuid)
-	}
-
-	// 查询商品的 ProductBom 关联（规格、小料、成本卡）
-	type ProductBomRelation struct {
-		ProductPackageUuid uint64
-		ProductFlavorUuid  uint64
-		ProductSauceUuid   uint64
-		ProductBomCardUuid uint64
-	}
-	var productBoms []ProductBomRelation
-	if len(productPackageUuids) > 0 {
-		headquarterDB.Table("ttpos_product_bom").
-			Select("product_package_uuid, product_flavor_uuid, product_sauce_uuid, product_bom_card_uuid").
-			Where("product_package_uuid IN (?) AND delete_time = 0", productPackageUuids).
-			Find(&productBoms)
-	}
-
-	// 构建商品 -> ProductBom关联的映射
-	productBomMap := make(map[uint64][]ProductBomRelation)
-	for _, bom := range productBoms {
-		productBomMap[bom.ProductPackageUuid] = append(productBomMap[bom.ProductPackageUuid], bom)
-	}
-
-	// 查询商品的属性组关联
-	type ProductAttributeGroupRelation struct {
-		ProductPackageUuid        uint64
-		ProductAttributeGroupUuid uint64
-	}
-	var productAttrGroups []ProductAttributeGroupRelation
-	if len(productPackageUuids) > 0 {
-		headquarterDB.Table("ttpos_product_package_attribute_group").
-			Select("product_package_uuid, product_attribute_group_uuid").
-			Where("product_package_uuid IN (?) AND delete_time = 0", productPackageUuids).
-			Find(&productAttrGroups)
-	}
-
-	// 构建商品 -> 属性组的映射
-	productAttrGroupMap := make(map[uint64][]uint64)
-	for _, ag := range productAttrGroups {
-		productAttrGroupMap[ag.ProductPackageUuid] = append(productAttrGroupMap[ag.ProductPackageUuid], ag.ProductAttributeGroupUuid)
-	}
-
-	items := make([]resp.DataItem, 0)
-	for _, product := range hqProducts {
-		// 构建关联数据
-		var relatedData []resp.RelatedData
-
-		// 关联单位
-		if product.UnitUuid > 0 {
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeUnit,
-				Uuids: []uint64{product.UnitUuid},
-			})
-		}
-
-		// 关联分类（普通分类 + 特殊分类，去重）
-		categoryUuidMap := make(map[uint64]bool)
-		if product.CategoryUuid > 0 {
-			categoryUuidMap[product.CategoryUuid] = true
-		}
-		if product.SpecialCategoryUuid > 0 {
-			categoryUuidMap[product.SpecialCategoryUuid] = true
-		}
-		if len(categoryUuidMap) > 0 {
-			var categoryUuids []uint64
-			for categoryUuid := range categoryUuidMap {
-				categoryUuids = append(categoryUuids, categoryUuid)
-			}
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeProductCategory,
-				Uuids: categoryUuids,
-			})
-		}
-
-		// 关联税类（堂食税 + 外卖税，去重）
-		taxUuidMap := make(map[uint64]bool)
-		if product.DineTaxUuid > 0 {
-			taxUuidMap[product.DineTaxUuid] = true
-		}
-		if product.TakeoutTaxUuid > 0 {
-			taxUuidMap[product.TakeoutTaxUuid] = true
-		}
-		if len(taxUuidMap) > 0 {
-			var taxUuids []uint64
-			for taxUuid := range taxUuidMap {
-				taxUuids = append(taxUuids, taxUuid)
-			}
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeTax,
-				Uuids: taxUuids,
-			})
-		}
-
-		// 关联规格、小料、成本卡（通过 ProductBom 中间表）
-		if boms, exists := productBomMap[product.Uuid]; exists {
-			flavorUuids := make(map[uint64]bool)
-			sauceUuids := make(map[uint64]bool)
-			bomCardUuids := make(map[uint64]bool)
-
-			for _, bom := range boms {
-				if bom.ProductFlavorUuid > 0 {
-					flavorUuids[bom.ProductFlavorUuid] = true
-				}
-				if bom.ProductSauceUuid > 0 {
-					sauceUuids[bom.ProductSauceUuid] = true
-				}
-				if bom.ProductBomCardUuid > 0 {
-					bomCardUuids[bom.ProductBomCardUuid] = true
-				}
-			}
-
-			// 添加规格关联
-			if len(flavorUuids) > 0 {
-				var uuids []uint64
-				for uuid := range flavorUuids {
-					uuids = append(uuids, uuid)
-				}
-				relatedData = append(relatedData, resp.RelatedData{
-					Type:  constant.SyncTaskTypeFlavor,
-					Uuids: uuids,
-				})
-			}
-
-			// 添加小料关联
-			if len(sauceUuids) > 0 {
-				var uuids []uint64
-				for uuid := range sauceUuids {
-					uuids = append(uuids, uuid)
-				}
-				relatedData = append(relatedData, resp.RelatedData{
-					Type:  constant.SyncTaskTypeSauce,
-					Uuids: uuids,
-				})
-			}
-
-			// 添加成本卡关联
-			if len(bomCardUuids) > 0 {
-				var uuids []uint64
-				for uuid := range bomCardUuids {
-					uuids = append(uuids, uuid)
-				}
-				relatedData = append(relatedData, resp.RelatedData{
-					Type:  constant.SyncTaskTypeBomCard,
-					Uuids: uuids,
-				})
-			}
-		}
-
-		// 关联属性组（通过 ProductPackageAttributeGroup 中间表）
-		if attrGroupUuids, exists := productAttrGroupMap[product.Uuid]; exists && len(attrGroupUuids) > 0 {
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeAttribute,
-				Uuids: attrGroupUuids,
-			})
-		}
-
-		items = append(items, resp.DataItem{
-			Uuid:        product.Uuid,
-			LocaleName:  product.MultiLanguageName.GetNames(),
-			RelatedData: relatedData,
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeProduct,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeProduct],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getMaterialCategoryGroup 获取物品分类数据分组
-func (s *SyncSrv) getMaterialCategoryGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqCategories []model.MaterialCategory
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqCategories).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部物品分类失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.MaterialCategory{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, category := range hqCategories {
-		items = append(items, resp.DataItem{
-			Uuid:        category.Uuid,
-			LocaleName:  category.MultiLanguageName.GetNames(),
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeMaterialCategory,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterialCategory],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getMaterialGroup 获取物品数据分组
-func (s *SyncSrv) getMaterialGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqMaterials []model.Material
-	err := headquarterDB.Preload("NotBaseUnitList").
-		Preload("Unit").
-		Preload("PurchaseUnit").
-		Preload("CostUnit").
-		Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqMaterials).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部物品失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.Material{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, material := range hqMaterials {
-		var relatedData []resp.RelatedData
-
-		// 提取关联的单位uuid（去重）
-		unitUuidMap := make(map[uint64]bool)
-
-		// 直接字段的单位
-		if material.Unit != nil && material.Unit.UnitUuid > 0 {
-			unitUuidMap[material.Unit.UnitUuid] = true
-		}
-		if material.PurchaseUnit != nil && material.PurchaseUnit.UnitUuid > 0 {
-			unitUuidMap[material.PurchaseUnit.UnitUuid] = true
-		}
-		if material.CostUnit != nil && material.CostUnit.UnitUuid > 0 {
-			unitUuidMap[material.CostUnit.UnitUuid] = true
-		}
-
-		// 非基准单位列表的单位（material_unit.unit_uuid → product_unit 表）
-		for _, materialUnit := range material.NotBaseUnitList {
-			if materialUnit.UnitUuid > 0 {
-				unitUuidMap[materialUnit.UnitUuid] = true
-			}
-		}
-
-		// 转为切片
-		if len(unitUuidMap) > 0 {
-			var unitUuids []uint64
-			for unitUuid := range unitUuidMap {
-				unitUuids = append(unitUuids, unitUuid)
-			}
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeUnit,
-				Uuids: unitUuids,
-			})
-		}
-
-		// 关联物品分类
-		if material.CategoryUuid > 0 {
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeMaterialCategory,
-				Uuids: []uint64{material.CategoryUuid},
-			})
-		}
-
-		items = append(items, resp.DataItem{
-			Uuid:        material.Uuid,
-			LocaleName:  material.MultiLanguageName.GetNames(),
-			RelatedData: relatedData,
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeMaterial,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterial],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getBomCardGroup 获取成本卡数据分组
-func (s *SyncSrv) getBomCardGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqBomCards []model.ProductBomCard
-	err := headquarterDB.Preload("RelatedMaterials").
-		Where("delete_time = 0 AND headquarter_uuid = 0").Preload("MultiLanguageName").Find(&hqBomCards).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部成本卡失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.ProductBomCard{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, bomCard := range hqBomCards {
-		var relatedData []resp.RelatedData
-
-		// 提取关联的物品uuid
-		var materialUuids []uint64
-		for _, relatedMaterial := range bomCard.RelatedMaterials {
-			if relatedMaterial.MaterialUuid > 0 {
-				materialUuids = append(materialUuids, relatedMaterial.MaterialUuid)
-			}
-		}
-
-		if len(materialUuids) > 0 {
-			relatedData = append(relatedData, resp.RelatedData{
-				Type:  constant.SyncTaskTypeMaterial,
-				Uuids: materialUuids,
-			})
-		}
-
-		items = append(items, resp.DataItem{
-			Uuid:        bomCard.Uuid,
-			LocaleName:  bomCard.MultiLanguageName.GetNames(),
-			RelatedData: relatedData,
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeBomCard,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getSupplierGroup 获取供应商数据分组
-func (s *SyncSrv) getSupplierGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqSuppliers []model.Supplier
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Find(&hqSuppliers).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部供应商失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.Supplier{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, supplier := range hqSuppliers {
-		items = append(items, resp.DataItem{
-			Uuid: supplier.Uuid,
-			LocaleName: dto.LocaleResponse{
-				ZH:   supplier.Name,
-				TH:   supplier.Name,
-				EN:   supplier.Name,
-				ZHTW: supplier.Name,
-				JA:   supplier.Name,
-				KO:   supplier.Name,
-				MY:   supplier.Name,
-				TR:   supplier.Name,
-				SV:   supplier.Name,
-			},
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeSupplier,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
-}
-
-// getTaxGroup 获取税类数据分组
-func (s *SyncSrv) getTaxGroup(headquarterDB, subShopDB *gorm.DB, headquarterUuid uint64) (resp.DataGroup, error) {
-	var hqTaxes []model.Tax
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").Find(&hqTaxes).Error
-	if err != nil {
-		return resp.DataGroup{}, errors.WithMessage(err, "查询总部税类失败")
-	}
-
-	syncedUuids := make([]uint64, 0)
-	subShopDB.Model(&model.Tax{}).
-		Where("delete_time = 0 AND headquarter_uuid = ?", headquarterUuid).
-		Pluck("uuid", &syncedUuids)
-
-	items := make([]resp.DataItem, 0)
-	for _, tax := range hqTaxes {
-		items = append(items, resp.DataItem{
-			Uuid: tax.Uuid,
-			LocaleName: dto.LocaleResponse{
-				ZH:   tax.Name,
-				TH:   tax.Name,
-				EN:   tax.Name,
-				ZHTW: tax.Name,
-				JA:   tax.Name,
-				KO:   tax.Name,
-				MY:   tax.Name,
-				TR:   tax.Name,
-				SV:   tax.Name,
-			},
-			RelatedData: []resp.RelatedData{},
-		})
-	}
-
-	return resp.DataGroup{
-		Type:        constant.SyncTaskTypeTax,
-		TypeName:    constant.SyncTaskTypeNames[constant.SyncTaskTypeTax],
-		Items:       items,
-		SyncedUuids: syncedUuids,
-	}, nil
 }
 
 // GranularSync 颗粒化同步数据
@@ -1856,6 +1087,13 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 	// 只有分店才能执行颗粒化同步
 	if !companySetting.IsSubShop() {
 		return resp.GranularSyncResp{}, errors.New("非分店账号无法执行颗粒化同步")
+	}
+
+	// 依赖检查：如果勾选了活动数据组但未勾选商品数据组，检查活动数据是否依赖商品数据
+	if syncReq.ActivityDataChecked && !syncReq.ProductDataChecked {
+		if s.hasActivityDataDependsOnProductData(ctx) {
+			return resp.GranularSyncResp{}, errors.New("选择的数据正在使用商品数据，请一并勾选所需内容")
+		}
 	}
 
 	companyUuid := companySetting.CompanyUuid
@@ -1884,7 +1122,7 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 
 	// 异步执行颗粒化同步
 	utils.Go(func() {
-		s.executeGranularSync(ctx, syncTask, syncReq.SyncData)
+		s.executeGranularSync(ctx, syncTask, syncReq.ProductDataChecked, syncReq.ActivityDataChecked, syncReq.PaymentDataChecked)
 	})
 
 	return resp.GranularSyncResp{
@@ -1893,12 +1131,34 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 	}, nil
 }
 
+// hasActivityDataDependsOnProductData 检查活动数据是否依赖商品数据
+func (s *SyncSrv) hasActivityDataDependsOnProductData(ctx context.Context) bool {
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+
+	// 检查product_package表中是否存在使用了product_label的记录
+	var count int64
+	err := headquarterDB.Table("ttpos_product_package").
+		Where("headquarter_uuid = 0 AND delete_time = 0").
+		Where("product_label_uuid > 0").
+		Count(&count).Error
+	if err != nil {
+		logger.Logger.Error("查询product_package使用product_label失败", zap.Error(err))
+		return false
+	}
+
+	// 如果存在使用了product_label的记录，则活动数据依赖商品数据
+	return count > 0
+}
+
 // executeGranularSync 执行颗粒化同步
-func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncTask, syncData req.GranularSyncData) {
+func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncTask, productDataChecked, activityDataChecked, paymentDataChecked bool) {
 	companySetting := ctx.GetCompanySetting()
 	companyUuid := companySetting.CompanyUuid
+	headquarterUuid := companySetting.HeadquarterUuid
 
 	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
+	syncTaskItemRepo := repository.NewSyncTaskItemRepo(s.dbm.GetDB(companyUuid))
 
 	var successCount uint32
 	var failCount uint32
@@ -1933,84 +1193,129 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		})
 	}()
 
-	logger.Logger.Info("开始执行颗粒化同步", zap.Uint64("companyUuid", companyUuid), zap.Uint64("taskUuid", syncTask.Uuid))
+	logger.Logger.Info("开始执行颗粒化同步", zap.Uint64("companyUuid", companyUuid), zap.Uint64("taskUuid", syncTask.Uuid),
+		zap.Bool("productDataChecked", productDataChecked),
+		zap.Bool("activityDataChecked", activityDataChecked),
+		zap.Bool("paymentDataChecked", paymentDataChecked))
 
-	// 注意：基础数据类型复用 allTasks 中的方法（传 useFilter=true），营销数据类型使用独立方法
-	syncTasks := []struct {
-		Name     string
-		Uuids    []uint64
-		Executor func(context.Context, []uint64) error
-	}{
-		// 基础数据类型（复用 allTasks 中的方法）
-		{constant.SyncTaskTypeProductCategory, syncData.ProductCategory, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncProductShopCategory(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeMaterialCategory, syncData.MaterialCategory, func(ctx context.Context, uuids []uint64) error {
-			return s.materialSrv.SyncMaterialCategory(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeTax, syncData.Tax, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncProductTax(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeUnit, syncData.Unit, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncUnit(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeMaterial, syncData.Material, func(ctx context.Context, uuids []uint64) error {
-			return s.materialSrv.SyncMaterial(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeWarehouse, nil, func(ctx context.Context, uuids []uint64) error {
-			return s.warehouseSrv.SyncWarehouse(ctx) // ok
-		}},
-		{constant.SyncTaskTypeFlavor, syncData.Flavor, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncProductFlavor(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeAttribute, syncData.Attribute, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncAttributeGroup(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeSauce, syncData.Sauce, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncSauce(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeProduct, syncData.Product, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncProduct(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeBomCard, syncData.BomCard, func(ctx context.Context, uuids []uint64) error {
-			return s.materialSrv.SyncProductBomCard(ctx, true, uuids) // ok
-		}},
-		{constant.SyncTaskTypeSupplier, syncData.Supplier, func(ctx context.Context, uuids []uint64) error {
-			return s.supplierSrv.SyncSupplier(ctx, true, uuids) // ok
-		}},
-
-		{constant.SyncTaskTypeWarehouseStock, nil, func(ctx context.Context, uuids []uint64) error {
-			return s.warehouseSrv.SyncWarehouseItemStock(ctx) // ok
-		}},
-		{constant.SyncTaskTypeProductStock, nil, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncProductStockByBomCard(ctx) // ok
-		}},
-		{constant.SyncTaskTypePackageImage, nil, func(ctx context.Context, uuids []uint64) error {
-			return s.productSrv.SyncProductPackageImage(ctx) // ok
-		}},
-		// 营销数据类型（独立方法，新增的数据类型）
-		{constant.SyncTaskTypeCoupon, syncData.Coupon, s.SyncMarketingCouponByUuids},
-		{constant.SyncTaskTypeFullReduction, syncData.FullReduction, s.SyncFullReductionByUuids},
-		{constant.SyncTaskTypeProductLabel, syncData.ProductLabel, s.SyncProductLabelByUuids},
-		{constant.SyncTaskTypeMarketingActivity, syncData.MarketingActivity, s.SyncMarketingActivityByUuids},
-		{constant.SyncTaskTypePaymentMethod, syncData.PaymentMethod, s.SyncPaymentMethodByUuids},
-
-		{constant.SyncTaskTypeMultiLanguage, nil, func(ctx context.Context, uuids []uint64) error {
-			return s.SyncMultiLanguage(ctx) // ok
-		}},
+	// Step 1: 处理未勾选的数据（按照指定顺序依次标记删除）
+	err := s.handleUncheckedHeadquartersData(ctx, headquarterUuid, productDataChecked, activityDataChecked, paymentDataChecked)
+	if err != nil {
+		logger.Logger.Error("处理未勾选的总部数据失败", zap.Error(err))
+		failCount++
 	}
 
-	syncTaskItemRepo := repository.NewSyncTaskItemRepo(s.dbm.GetDB(companyUuid))
+	// Step 2: 同步勾选的数据（按照指定顺序，全量同步）
 
-	for _, task := range syncTasks {
-		if len(task.Uuids) == 0 {
-			continue
+	// 商品数据组：按照指定顺序执行全量同步
+	if productDataChecked {
+		productSyncTasks := []struct {
+			Name     string
+			Executor func(context.Context) error
+		}{
+			{constant.SyncTaskTypeProductCategory, s.productSrv.SyncProductShopCategory},
+			{constant.SyncTaskTypeMaterialCategory, s.materialSrv.SyncMaterialCategory},
+			{constant.SyncTaskTypeTax, s.productSrv.SyncProductTax},
+			{constant.SyncTaskTypeUnit, s.productSrv.SyncUnit},
+			{constant.SyncTaskTypeMaterial, s.materialSrv.SyncMaterial},
+			{constant.SyncTaskTypeWarehouse, s.warehouseSrv.SyncWarehouse},
+			{constant.SyncTaskTypeFlavor, s.productSrv.SyncProductFlavor},
+			{constant.SyncTaskTypeAttribute, s.productSrv.SyncAttributeGroup},
+			{constant.SyncTaskTypeSauce, s.productSrv.SyncSauce},
+			{constant.SyncTaskTypeProduct, s.productSrv.SyncProduct},
+			{constant.SyncTaskTypeBomCard, s.materialSrv.SyncProductBomCard},
+			{constant.SyncTaskTypeSupplier, s.supplierSrv.SyncSupplier},
+			{constant.SyncTaskTypeWarehouseStock, s.warehouseSrv.SyncWarehouseItemStock},
+			{constant.SyncTaskTypeProductStock, s.productSrv.SyncProductStockByBomCard},
+			{constant.SyncTaskTypePackageImage, s.productSrv.SyncProductPackageImage},
 		}
 
+		for _, task := range productSyncTasks {
+			taskItem := &model.SyncTaskItem{
+				SyncTaskUuid: syncTask.Uuid,
+				TaskType:     task.Name,
+				TaskName:     constant.SyncTaskTypeNames[task.Name],
+				Status:       constant.SyncTaskItemStatusRunning,
+				StartTime:    time.Now().Unix(),
+			}
+
+			syncTaskItemRepo.Create(taskItem)
+
+			logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+			err := task.Executor(ctx)
+			endTime := time.Now().Unix()
+
+			if err != nil {
+				failCount++
+				logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+				syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+					"status":        constant.SyncTaskItemStatusFailed,
+					"error_message": err.Error(),
+					"end_time":      endTime,
+				})
+			} else {
+				successCount++
+				logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+				syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+					"status":   constant.SyncTaskItemStatusSuccess,
+					"end_time": endTime,
+				})
+			}
+		}
+	}
+
+	// 活动数据组：按照指定顺序执行全量同步
+	if activityDataChecked {
+		activitySyncTasks := []struct {
+			Name     string
+			Executor func(context.Context) error
+		}{
+			{constant.SyncTaskTypeCoupon, s.SyncMarketingCoupon},
+			{constant.SyncTaskTypeFullReduction, s.SyncFullReduction},
+			{constant.SyncTaskTypeProductLabel, s.SyncProductLabel},
+			{constant.SyncTaskTypeMarketingActivity, s.SyncMarketingActivity},
+		}
+
+		for _, task := range activitySyncTasks {
+			taskItem := &model.SyncTaskItem{
+				SyncTaskUuid: syncTask.Uuid,
+				TaskType:     task.Name,
+				TaskName:     constant.SyncTaskTypeNames[task.Name],
+				Status:       constant.SyncTaskItemStatusRunning,
+				StartTime:    time.Now().Unix(),
+			}
+
+			syncTaskItemRepo.Create(taskItem)
+
+			logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+			err := task.Executor(ctx)
+			endTime := time.Now().Unix()
+
+			if err != nil {
+				failCount++
+				logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+				syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+					"status":        constant.SyncTaskItemStatusFailed,
+					"error_message": err.Error(),
+					"end_time":      endTime,
+				})
+			} else {
+				successCount++
+				logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+				syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+					"status":   constant.SyncTaskItemStatusSuccess,
+					"end_time": endTime,
+				})
+			}
+		}
+	}
+
+	// 支付方式：全量同步
+	if paymentDataChecked {
 		taskItem := &model.SyncTaskItem{
 			SyncTaskUuid: syncTask.Uuid,
-			TaskType:     task.Name,
-			TaskName:     constant.SyncTaskTypeNames[task.Name],
+			TaskType:     constant.SyncTaskTypePaymentMethod,
+			TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
 			Status:       constant.SyncTaskItemStatusRunning,
 			StartTime:    time.Now().Unix(),
 		}
@@ -2018,7 +1323,7 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		syncTaskItemRepo.Create(taskItem)
 
 		logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-		err := task.Executor(ctx, task.Uuids)
+		err := s.SyncPaymentMethod(ctx)
 		endTime := time.Now().Unix()
 
 		if err != nil {
@@ -2039,8 +1344,39 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		}
 	}
 
-	// 更新主任务状态
+	// 最后：执行多语言同步
+	taskItem := &model.SyncTaskItem{
+		SyncTaskUuid: syncTask.Uuid,
+		TaskType:     constant.SyncTaskTypeMultiLanguage,
+		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage],
+		Status:       constant.SyncTaskItemStatusRunning,
+		StartTime:    time.Now().Unix(),
+	}
+
+	syncTaskItemRepo.Create(taskItem)
+
+	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+	err = s.SyncMultiLanguage(ctx)
 	endTime := time.Now().Unix()
+
+	if err != nil {
+		failCount++
+		logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":        constant.SyncTaskItemStatusFailed,
+			"error_message": err.Error(),
+			"end_time":      endTime,
+		})
+	} else {
+		successCount++
+		logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":   constant.SyncTaskItemStatusSuccess,
+			"end_time": endTime,
+		})
+	}
+
+	// 更新主任务状态
 	finalStatus := constant.SyncTaskStatusSuccess
 	if failCount > 0 {
 		finalStatus = constant.SyncTaskStatusFailed
@@ -2053,4 +1389,322 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		"total_count":   successCount + failCount,
 		"end_time":      endTime,
 	})
+}
+
+// handleUncheckedHeadquartersData 处理未勾选的总部数据（标记删除）
+func (s *SyncSrv) handleUncheckedHeadquartersData(ctx context.Context, headquarterUuid uint64, productDataChecked, activityDataChecked, paymentDataChecked bool) error {
+	companySetting := ctx.GetCompanySetting()
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+
+	// 商品数据组：如果未勾选，标记删除子店中的总部数据
+	if !productDataChecked {
+		productDataTables := []string{
+			"ttpos_product_shop_category", // 商品分类
+			"ttpos_unit",                  // 单位
+			"ttpos_product_flavor",        // 规格
+			"ttpos_attribute_group",       // 属性
+			"ttpos_sauce",                 // 加料
+			"ttpos_product",               // 商品
+			"ttpos_material_category",     // 物品分类
+			"ttpos_product_bom_card",      // 成本卡
+			"ttpos_supplier",              // 供应商
+			"ttpos_product_tax",           // 税类
+		}
+
+		for _, tableName := range productDataTables {
+			if err := subShopDB.Table(tableName).
+				Where("headquarter_uuid = ?", headquarterUuid).
+				Where("delete_time = 0").
+				Update("delete_time", time.Now().Unix()).Error; err != nil {
+				return errors.WithMessage(err, fmt.Sprintf("标记删除%s失败", tableName))
+			}
+		}
+	}
+
+	// 活动数据组：如果未勾选，标记删除子店中的总部数据
+	if !activityDataChecked {
+		activityDataTables := []string{
+			"ttpos_marketing_coupon",        // 优惠券
+			"ttpos_full_reduction_activity", // 满额减
+			"ttpos_product_label",           // 菜品标签
+			"ttpos_marketing_activity",      // 营销活动
+		}
+
+		for _, tableName := range activityDataTables {
+			if err := subShopDB.Table(tableName).
+				Where("headquarter_uuid = ?", headquarterUuid).
+				Where("delete_time = 0").
+				Update("delete_time", time.Now().Unix()).Error; err != nil {
+				return errors.WithMessage(err, fmt.Sprintf("标记删除%s失败", tableName))
+			}
+		}
+	}
+
+	// 支付数据组：未勾选时不删除子店的支付数据
+	// 不做任何处理
+
+	return nil
+}
+
+// SyncMarketingCoupon 全量同步优惠券（先硬删除子店中的总部数据，再全量同步）
+func (s *SyncSrv) SyncMarketingCoupon(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+	headquarterUuid := companySetting.HeadquarterUuid
+
+	// 硬删除子店中已有的总部优惠券
+	if err := subShopDB.Unscoped().
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Delete(&model.MarketingCoupon{}).Error; err != nil {
+		return errors.WithMessage(err, "硬删除子店中的总部优惠券失败")
+	}
+
+	// 查询总部所有优惠券
+	var hqCoupons []model.MarketingCoupon
+	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
+		Find(&hqCoupons).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询总部优惠券失败")
+	}
+
+	// 同步到分店
+	for _, hqCoupon := range hqCoupons {
+		newCoupon := hqCoupon
+		newCoupon.HeadquarterUuid = headquarterUuid
+		newCoupon.ID = 0
+
+		err = subShopDB.Create(&newCoupon).Error
+		if err != nil {
+			logger.Logger.Error("同步优惠券失败", zap.Uint64("uuid", hqCoupon.Uuid), zap.Error(err))
+			continue
+		}
+	}
+
+	return nil
+}
+
+// SyncFullReduction 全量同步满额减活动（先硬删除子店中的总部数据，再全量同步）
+func (s *SyncSrv) SyncFullReduction(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+	headquarterUuid := companySetting.HeadquarterUuid
+
+	// 硬删除子店中已有的总部满额减活动（包括规则）
+	var existingActivities []model.FullReductionActivity
+	subShopDB.Where("headquarter_uuid = ?", headquarterUuid).Find(&existingActivities)
+	for _, activity := range existingActivities {
+		subShopDB.Unscoped().Where("full_reduction_activity_uuid = ?", activity.Uuid).Delete(&model.FullReductionActivityRule{})
+	}
+	if err := subShopDB.Unscoped().
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Delete(&model.FullReductionActivity{}).Error; err != nil {
+		return errors.WithMessage(err, "硬删除子店中的总部满额减活动失败")
+	}
+
+	// 查询总部所有满额减活动（包含规则）
+	var hqActivities []model.FullReductionActivity
+	err := headquarterDB.Preload("Rules").
+		Where("delete_time = 0 AND headquarter_uuid = 0").
+		Find(&hqActivities).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询总部满额减活动失败")
+	}
+
+	// 同步到分店
+	for _, hqActivity := range hqActivities {
+		newActivity := hqActivity
+		newActivity.HeadquarterUuid = headquarterUuid
+		newActivity.ID = 0
+
+		// 同步规则
+		for i := range newActivity.Rules {
+			newActivity.Rules[i].ID = 0
+		}
+
+		err = subShopDB.Create(&newActivity).Error
+		if err != nil {
+			logger.Logger.Error("同步满额减活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
+			continue
+		}
+	}
+
+	return nil
+}
+
+// SyncProductLabel 全量同步菜品标签（先硬删除子店中的总部数据，再全量同步）
+func (s *SyncSrv) SyncProductLabel(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+	headquarterUuid := companySetting.HeadquarterUuid
+
+	// 硬删除子店中已有的总部菜品标签
+	if err := subShopDB.Unscoped().
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Delete(&model.ProductLabel{}).Error; err != nil {
+		return errors.WithMessage(err, "硬删除子店中的总部菜品标签失败")
+	}
+
+	// 查询总部所有菜品标签
+	var hqLabels []model.ProductLabel
+	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
+		Find(&hqLabels).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询总部菜品标签失败")
+	}
+
+	// 同步到分店
+	for _, hqLabel := range hqLabels {
+		newLabel := hqLabel
+		newLabel.HeadquarterUuid = headquarterUuid
+		newLabel.ID = 0
+
+		err = subShopDB.Create(&newLabel).Error
+		if err != nil {
+			logger.Logger.Error("同步菜品标签失败", zap.Uint64("uuid", hqLabel.Uuid), zap.Error(err))
+			continue
+		}
+	}
+
+	return nil
+}
+
+// SyncMarketingActivity 全量同步营销活动（先硬删除子店中的总部数据，再全量同步）
+func (s *SyncSrv) SyncMarketingActivity(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+	headquarterUuid := companySetting.HeadquarterUuid
+
+	// 硬删除子店中已有的总部营销活动（包括奖品）
+	var existingActivities []model.MarketingActivity
+	subShopDB.Where("headquarter_uuid = ?", headquarterUuid).Find(&existingActivities)
+	for _, activity := range existingActivities {
+		subShopDB.Unscoped().Where("activity_uuid = ?", activity.Uuid).Delete(&model.MarketingActivityPrize{})
+	}
+	if err := subShopDB.Unscoped().
+		Where("headquarter_uuid = ?", headquarterUuid).
+		Delete(&model.MarketingActivity{}).Error; err != nil {
+		return errors.WithMessage(err, "硬删除子店中的总部营销活动失败")
+	}
+
+	// 查询总部所有营销活动（包含奖品）
+	var hqActivities []model.MarketingActivity
+	err := headquarterDB.Preload("Prizes").
+		Where("delete_time = 0 AND headquarter_uuid = 0").
+		Find(&hqActivities).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询总部营销活动失败")
+	}
+
+	// 同步到分店
+	for _, hqActivity := range hqActivities {
+		newActivity := hqActivity
+		newActivity.HeadquarterUuid = headquarterUuid
+		newActivity.ID = 0
+
+		// 同步奖品
+		for i := range newActivity.Prizes {
+			newActivity.Prizes[i].ID = 0
+		}
+
+		err = subShopDB.Create(&newActivity).Error
+		if err != nil {
+			logger.Logger.Error("同步营销活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
+			continue
+		}
+	}
+
+	return nil
+}
+
+// SyncPaymentMethod 全量同步支付方式（遵循原有特殊逻辑，不删除未勾选的支付数据）
+func (s *SyncSrv) SyncPaymentMethod(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+	headquarterUuid := companySetting.HeadquarterUuid
+
+	// 查询总部支付方式（排除 code=40 和 code=10）
+	var hqPayments []model.PaymentMethod
+	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
+		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
+		Find(&hqPayments).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询总部支付方式失败")
+	}
+
+	// 特殊code列表（不跳过，只更新headquarter_uuid）
+	specialCodes := map[int]bool{
+		model.PaymentCodeLianlianWechat:      true, // 90111
+		model.PaymentCodeLianlianAli:         true, // 90222
+		model.PaymentCodeLianlianQrPromptPay: true, // 90333
+	}
+
+	for _, hqPayment := range hqPayments {
+		// 检查分店是否已有同名支付方式（payment_name）
+		var existPayment model.PaymentMethod
+		err := subShopDB.Where("payment_name = ? AND delete_time = 0", hqPayment.PaymentName).
+			First(&existPayment).Error
+
+		if err == nil {
+			// 分店已有同名支付方式
+			if specialCodes[existPayment.Code] {
+				// 特殊code：只更新 headquarter_uuid
+				err = subShopDB.Model(&model.PaymentMethod{}).
+					Where("id = ?", existPayment.ID).
+					Update("headquarter_uuid", headquarterUuid).Error
+				if err != nil {
+					logger.Logger.Error("更新支付方式headquarter_uuid失败",
+						zap.String("name", hqPayment.PaymentName),
+						zap.Int("code", existPayment.Code),
+						zap.Error(err))
+				} else {
+					logger.Logger.Info("更新支付方式headquarter_uuid",
+						zap.String("name", hqPayment.PaymentName),
+						zap.Int("code", existPayment.Code))
+				}
+			} else {
+				// 普通code：跳过
+				logger.Logger.Info("支付方式已存在，跳过同步",
+					zap.String("name", hqPayment.PaymentName),
+					zap.Int("code", existPayment.Code))
+			}
+			continue
+		}
+
+		// 分店不存在，创建新支付方式
+		newCode := s.generatePaymentCode(subShopDB)
+
+		newPayment := model.PaymentMethod{
+			BaseModel: model.BaseModel{
+				Uuid:       hqPayment.Uuid, // 保持与总部相同的uuid
+				CreateTime: time.Now().Unix(),
+				UpdateTime: time.Now().Unix(),
+			},
+			HeadquarterUuid: headquarterUuid,
+			PaymentName:     hqPayment.PaymentName,
+			Name:            hqPayment.Name,
+			Code:            newCode,                    // 生成新code
+			Source:          model.PaymentSourceDefault, // 1-手动添加
+			LogoFileUuid:    0,                          // 固定为0
+			// 其他字段使用数据库默认值
+		}
+
+		err = subShopDB.Create(&newPayment).Error
+		if err != nil {
+			logger.Logger.Error("创建支付方式失败",
+				zap.String("name", hqPayment.PaymentName),
+				zap.Error(err))
+			continue
+		}
+
+		logger.Logger.Info("创建新支付方式",
+			zap.String("name", hqPayment.PaymentName),
+			zap.Int("code", newCode))
+	}
+
+	return nil
 }

@@ -199,3 +199,10 @@ const (
 	ProductNumTypeInteger = 0 // 整数
 	ProductNumTypeDecimal = 1 // 小数
 )
+
+// 外卖类型
+const (
+	TakeoutTypeGrab      = 1 // Grab
+	TakeoutTypeFoodPanda = 2 // FoodPanda
+	TakeoutTypeOther     = 3 // 其他（预留扩展）
+)
