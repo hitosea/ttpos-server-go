@@ -918,6 +918,12 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 			return request.AllowSubstoreVisible
 		}(),
 		OriginCountryCode: request.OriginCountryCode,
+		AllowNegativeStock: func() int {
+			if request.AllowNegativeStock != nil && *request.AllowNegativeStock {
+				return 1
+			}
+			return 0
+		}(),
 	}
 
 	// 设置总部ID
@@ -997,6 +1003,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		Classification:     getMaterialCategoryName,
 		ClassificationCode: materialCategory.Code,
 		PurchaseUom:        purchaseUom,
+		AllowNegativeStock: request.AllowNegativeStock,
 	}
 
 	return &material, materialAddErpReq, nil
@@ -1163,6 +1170,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}
 		}
 
+		// 更新 AllowNegativeStock 字段
+		err = materialRepo.UpdateMaterialAllowNegativeStock(request.Uuid, request.AllowNegativeStock)
+		if err != nil {
+			return errors.WithMessage(err, "更新物品负库存设置失败")
+		}
+
 		if request.BarcodeValue == "" {
 			err = materialRepo.ClearMaterialBarcodeValue(request.Uuid)
 			if err != nil {
@@ -1242,6 +1255,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				purchaseUom = purchaseUnit.Unit.ErpnextUom
 			}
 
+			allowNegativeStock := request.AllowNegativeStock
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:      existingMaterial.Code,
 				ItemName:      enName,
@@ -1259,6 +1273,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				Classification:     getMaterialCategoryName,
 				ClassificationCode: materialCategory.Code,
 				PurchaseUom:        purchaseUom,
+				AllowNegativeStock: &allowNegativeStock,
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp)
@@ -1297,6 +1312,15 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 				}
 				return 1
 			}(),
+		}
+
+		// 更新 allow_negative_stock 字段
+		if request.AllowNegativeStock != nil {
+			value := 0
+			if *request.AllowNegativeStock {
+				value = 1
+			}
+			updateData["allow_negative_stock"] = value
 		}
 
 		material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
@@ -3071,6 +3095,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
+					AllowNegativeStock:    material.AllowNegativeStock,
 				})
 				for _, unit := range material.NotBaseUnitList {
 					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{

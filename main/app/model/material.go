@@ -30,6 +30,7 @@ type Material struct {
 	WarehouseUuid         uint64   `gorm:"default:0;column:warehouse_uuid;comment:'默认仓库Uuid，表示该原料的来自哪个仓库'"`
 	AllowSubstoreVisible  int      `gorm:"column:allow_substore_visible;comment:'允许子店可见：1-允许，0-不允许'"`
 	OriginCountryCode     string   `gorm:"type:varchar(10);default:'';column:origin_country_code;comment:'原产地国家编码（ISO 3166-1 alpha-2）'"`
+	AllowNegativeStock    int      `gorm:"column:allow_negative_stock;default:0;comment:'是否允许负库存：1-允许，0-不允许'"`
 
 	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	Unit                *MaterialUnit      `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位

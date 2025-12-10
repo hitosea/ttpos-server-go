@@ -34,6 +34,7 @@ type IMaterialRepo interface {
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
 	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
+	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
 	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
 	ClearMaterialValuation(uuid uint64) error                                       // 清空物品估值率
 	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
@@ -455,6 +456,18 @@ func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error 
 func (r *MaterialRepoImpl) UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_substore_visible", allowSubstoreVisible).Error; err != nil {
 		return errors.WithMessage(err, "更新物品子店可见性失败")
+	}
+	return nil
+}
+
+// UpdateMaterialAllowNegativeStock 更新物品负库存设置
+func (r *MaterialRepoImpl) UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error {
+	value := 0
+	if allowNegativeStock {
+		value = 1
+	}
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("allow_negative_stock", value).Error; err != nil {
+		return errors.WithMessage(err, "更新物品负库存设置失败")
 	}
 	return nil
 }
