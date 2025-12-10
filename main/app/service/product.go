@@ -445,11 +445,16 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				}
 
 				packageGroup := product_resp.ProductPackageGroup{
-					Uuid:          group.Uuid,
-					LocaleName:    group.MultiLanguageName.GetNames(),
-					GroupType:     group.GroupType,
-					OptionalCount: group.OptionalCount,
-					Num:           len(productList),
+					Uuid:       group.Uuid,
+					LocaleName: group.MultiLanguageName.GetNames(),
+					GroupType:  group.GroupType,
+					OptionalCount: func() int {
+						if group.GroupType == 0 { // 兼容前端bug,固定商品要返回商品数量
+							return len(productList)
+						}
+						return group.OptionalCount
+					}(),
+					Num: len(productList),
 					Products: product_resp.ProductList{
 						List: productList,
 					},
