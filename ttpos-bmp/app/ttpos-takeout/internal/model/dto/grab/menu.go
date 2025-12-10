@@ -1,5 +1,22 @@
 package grab
 
+import (
+	grabfood "github.com/grab/grabfood-api-sdk-go"
+)
+
+// ============================================================================
+// Push Menu Webhook (POST /partner/v1/merchant/menu)
+// ============================================================================
+
+// PushGrabMenuDTO 推送菜单数据传输对象
+type PushGrabMenuDTO struct {
+	MerchantID        string                  `json:"merchantID"`
+	PartnerMerchantID string                  `json:"partnerMerchantID"`
+	Currency          grabfood.Currency       `json:"currency"`
+	SellingTimes      []grabfood.SellingTime  `json:"sellingTimes"`
+	Categories        []grabfood.MenuCategory `json:"categories"`
+}
+
 // ============================================================================
 // Get Menu Webhook (GET /partner/v1/merchant/menu)
 // ============================================================================
@@ -137,3 +154,12 @@ const (
 	MenuSyncStatusSuccess    = "SUCCESS"
 	MenuSyncStatusFail       = "FAIL"
 )
+
+// ProviderMenuUpdateEvent 供应商菜单更新事件 (for RocketMQ)
+type ProviderMenuUpdateEvent struct {
+	ProviderName      string `json:"provider_name"`       // 供应商名称 (e.g., grab)
+	MerchantID        string `json:"merchant_id"`         // 平台商户 ID
+	PartnerMerchantID string `json:"partner_merchant_id"` // 合作商户 ID
+	StorageKey        string `json:"storage_key"`         // 存储 Key (Redis)
+	ReceivedAt        int64  `json:"received_at"`         // 接收时间戳
+}

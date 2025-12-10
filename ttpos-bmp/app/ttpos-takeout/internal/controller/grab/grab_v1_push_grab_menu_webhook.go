@@ -6,6 +6,8 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 
 	v1 "ttpos-bmp/app/ttpos-takeout/api/grab/v1"
+	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 // PushGrabMenuWebhook 处理 Grab 菜单推送 webhook
@@ -19,10 +21,21 @@ func (c *ControllerV1) PushGrabMenuWebhook(ctx context.Context, req *v1.PushGrab
 	g.Log().Infof(ctx, "[Grab] Menu stats: sellingTimes=%d, categories=%d",
 		len(req.SellingTimes), len(req.Categories))
 
-	// TODO: 实现菜单存储逻辑
-	// 1. 验证商户映射关系
-	// 2. 将 Grab 菜单结构转换为 POS 菜单结构
-	// 3. 存储菜单数据供后续菜单同步使用
+	// 构造 DTO
+	dto := &grabDto.PushGrabMenuDTO{
+		MerchantID:        req.MerchantID,
+		PartnerMerchantID: req.PartnerMerchantID,
+		Currency:          req.Currency,
+		SellingTimes:      req.SellingTimes,
+		Categories:        req.Categories,
+	}
+
+	// 调用服务处理
+	if err := service.Grab().HandlePushGrabMenu(ctx, dto); err != nil {
+		g.Log().Errorf(ctx, "[Grab] HandlePushGrabMenu failed: %v", err)
+		// 注意: Grab 可能会重试，如果内部错误 (如 Redis/MQ) 应该返回 500
+		return nil, err
+	}
 
 	// 返回 204 No Content (GoFrame 会自动处理空响应)
 	return &v1.PushGrabMenuWebhookRes{}, nil
