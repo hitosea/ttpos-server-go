@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gtime"
 
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
@@ -35,8 +34,7 @@ func (s *sChannelMenu) SaveChannelMenu(ctx context.Context, shopUUID uint64, pro
 	if count > 0 {
 		// Update
 		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().MenuData:   menuData,
-			dao.ChannelMenuSnapshot.Columns().UpdateTime: gtime.Now().Timestamp(),
+			dao.ChannelMenuSnapshot.Columns().MenuData: menuData,
 		}).Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
 			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, providerName).Update()
 		return err
@@ -47,8 +45,6 @@ func (s *sChannelMenu) SaveChannelMenu(ctx context.Context, shopUUID uint64, pro
 			dao.ChannelMenuSnapshot.Columns().ShopUuid:     shopUUID,
 			dao.ChannelMenuSnapshot.Columns().ProviderName: providerName,
 			dao.ChannelMenuSnapshot.Columns().MenuData:     menuData,
-			dao.ChannelMenuSnapshot.Columns().CreateTime:   gtime.Now().Timestamp(),
-			dao.ChannelMenuSnapshot.Columns().UpdateTime:   gtime.Now().Timestamp(),
 		}).Insert()
 		return err
 	}
@@ -68,4 +64,20 @@ func (s *sChannelMenu) GetChannelMenu(ctx context.Context, shopUUID uint64, prov
 		return "", nil // Not found
 	}
 	return record[dao.ChannelMenuSnapshot.Columns().MenuData].String(), nil
+}
+
+// GetTtposMenu 读取TTPOS菜单快照
+func (s *sChannelMenu) GetTtposMenu(ctx context.Context, shopUUID uint64, providerName string) (string, error) {
+	record, err := dao.ChannelMenuSnapshot.Ctx(ctx).
+		Fields(dao.ChannelMenuSnapshot.Columns().TtposMenuData).
+		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
+		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, providerName).
+		One()
+	if err != nil {
+		return "", err
+	}
+	if record.IsEmpty() {
+		return "", nil // Not found
+	}
+	return record[dao.ChannelMenuSnapshot.Columns().TtposMenuData].String(), nil
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
@@ -63,6 +64,7 @@ func (w *SDKWrapper) fetchTokenFromSDK(ctx context.Context) (string, int, error)
 
 	resp, httpResp, err := w.client.GetOauthGrabAPI.
 		GetOauthGrab(w.GetContext(ctx)).
+		ContentType("application/json").
 		GrabOauthRequest(*authReq).
 		Execute()
 
@@ -483,4 +485,61 @@ func (w *SDKWrapper) TraceMenuSync(ctx context.Context, merchantID string) (*gra
 	}
 
 	return resp, nil
+}
+
+// ============================================================================
+// 自助激活链接 API
+// ============================================================================
+
+// CreateSelfServeJourney 创建自助激活链接
+// merchantID: Grab Merchant ID
+// 返回: activation_url, request_id
+func (w *SDKWrapper) CreateSelfServeJourney(ctx context.Context, merchantID string) (string, string, error) {
+	auth, err := w.GetAuthorizationHeader(ctx)
+	if err != nil {
+		return "", "", gerror.Wrap(err, "get authorization failed")
+	}
+
+	// 构建 Partner 信息
+	partnerInfo := grabfood.NewCreateSelfServeJourneyRequestPartner(merchantID)
+
+	// 构建请求
+	selfServeReq := grabfood.CreateSelfServeJourneyRequest{
+		Partner: *partnerInfo,
+	}
+
+	// 调用 SDK API
+	resp, httpResp, err := w.client.CreateSelfServeJourneyAPI.
+		CreateSelfServeJourney(w.GetContext(ctx)).
+		Authorization(auth).
+		ContentType("application/json").
+		CreateSelfServeJourneyRequest(selfServeReq).
+		Execute()
+
+	if err != nil {
+		return "", "", gerror.Wrap(err, "SDK CreateSelfServeJourney failed")
+	}
+	if httpResp != nil {
+		defer httpResp.Body.Close()
+	}
+
+	// 提取 request_id
+	requestID := ""
+	if httpResp != nil {
+		requestID = httpResp.Header.Get("X-Request-Id")
+		if requestID == "" {
+			requestID = httpResp.Header.Get("Request-Id")
+		}
+	}
+
+	// 提取 activation_url
+	activationURL := ""
+	if resp != nil {
+		if url := resp.GetActivationUrl(); url != "" {
+			activationURL = url
+		}
+	}
+
+	g.Log().Infof(ctx, "[SDK] Self-serve journey created: merchant=%s, requestId=%s", merchantID, requestID)
+	return activationURL, requestID, nil
 }

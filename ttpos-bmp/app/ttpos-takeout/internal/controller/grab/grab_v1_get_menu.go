@@ -16,6 +16,6 @@ func (c *ControllerV1) GetMenu(ctx context.Context, req *v1.GetMenuReq) (res *v1
 
 	// 构建响应
 	return &v1.GetMenuRes{
-		GetMenuResponse: menuResp,
+		GetMenuNewResponse: menuResp,
 	}, nil
 }

@@ -3,7 +3,7 @@ package v1
 import (
 	"github.com/gogf/gf/v2/frame/g"
 
-	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
 
 // GetMenuReq Grab 拉取菜单请求
@@ -19,5 +19,5 @@ type GetMenuReq struct {
 // GetMenuRes Grab 菜单响应
 type GetMenuRes struct {
 	g.Meta `mime:"application/json"`
-	*grab.GetMenuResponse
+	*grabfood.GetMenuNewResponse
 }
