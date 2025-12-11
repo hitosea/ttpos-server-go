@@ -30,7 +30,8 @@ type IPaymentMethodSrv interface {
 	// 新增管理方法
 	GetManagementList(ctx context.Context, listReq *req.PaymentMethodManagementListReq) (*resp.PaymentMethodListResp, error)
 	GetDetail(ctx context.Context, getReq *req.PaymentMethodGetReq) (*resp.PaymentMethodDetailResp, error)
-	Create(ctx context.Context, createReq *req.PaymentMethodCreateReq) error
+	GetDefaultPayList(ctx context.Context) ([]*resp.DefaultPaymentMethodResp, error) // 获取默认支付方式列表
+	Create(ctx context.Context, createReq *req.PaymentMethodCreateReq) error         // 批量创建支付方式
 	Update(ctx context.Context, updateReq *req.PaymentMethodUpdateReq) error
 	Delete(ctx context.Context, deleteReq *req.PaymentMethodDeleteReq) error
 	UpdateSort(ctx context.Context, sortReq *req.PaymentMethodSortUpdateReq) error
@@ -162,15 +163,16 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 		return nil, appErrors.WithMessage(err, "查询支付方式列表失败")
 	}
 
-	// 获取文件 URL
-	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
-
 	// 转换为响应格式
 	items := make([]*resp.PaymentMethodListItemResp, 0, len(list))
 	for _, method := range list {
-		var logoFile string
+		var logo string
+		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 		if method.LogoFile != nil {
-			logoFile = method.LogoFile.GetUrl(baseUrl)
+			logo = method.LogoFile.GetUrl(baseUrl)
+		}
+		if logo == "" && method.DefaultImg != "" {
+			logo = strings.TrimRight(baseUrl, "/") + method.DefaultImg
 		}
 
 		items = append(items, &resp.PaymentMethodListItemResp{
@@ -179,7 +181,7 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 			Source:   method.Source,
 			Status:   method.Status,
 			Sort:     method.Sort,
-			LogoFile: logoFile,
+			LogoFile: logo,
 		})
 	}
 
@@ -210,13 +212,16 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 	}
 
 	// 获取文件 URL
+	var logo, qrcode string
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
-	var logoFile, qrcodeFile string
 	if paymentMethod.LogoFile != nil {
-		logoFile = paymentMethod.LogoFile.GetUrl(baseUrl)
+		logo = paymentMethod.LogoFile.GetUrl(baseUrl)
+	}
+	if logo == "" && paymentMethod.DefaultImg != "" {
+		logo = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
 	}
 	if paymentMethod.QrcodeFile != nil {
-		qrcodeFile = paymentMethod.QrcodeFile.GetUrl(baseUrl)
+		qrcode = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 	}
 
 	// fee_percent 从 0-1 转换为 0-100
@@ -228,9 +233,9 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 		PaymentName:          paymentMethod.PaymentName,
 		Source:               paymentMethod.Source,
 		LogoFileUuid:         paymentMethod.LogoFileUuid,
-		LogoFile:             logoFile,
+		LogoFile:             logo,
 		QrcodeFileUuid:       paymentMethod.QrcodeFileUuid,
-		QrcodeFile:           qrcodeFile,
+		QrcodeFile:           qrcode,
 		FeePercent:           feePercent,
 		IsShowCashier:        paymentMethod.IsShowCashier,
 		IsShowAssistant:      paymentMethod.IsShowAssistant,
@@ -238,6 +243,64 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 		Status:               paymentMethod.Status,
 		Sort:                 paymentMethod.Sort,
 	}, nil
+}
+
+// GetDefaultPayList 获取默认支付方式列表（参考PHP defaultPay）
+// 返回系统默认的支付方式列表，过滤掉余额、现金、微信、支付宝、POS、免费支付
+func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) ([]*resp.DefaultPaymentMethodResp, error) {
+	// 定义系统默认支付方式列表（参考PHP OrderPayTypeEnum::data()）
+	defaultPayments := []struct {
+		Value int
+		Name  string
+		Img   string
+		Sort  int
+	}{
+		{constant.PaymentMethodCodeJACreditCard, "クレジットカード", "/image/pay/ja_pay.png", 1},
+		{constant.PaymentMethodCodeJAICTrafficCard, "IC交通卡", "/image/pay/ja_pay.png", 2},
+		{constant.PaymentMethodCodeJAQRCode, "QRコード", "/image/pay/ja_pay.png", 3},
+		{constant.PaymentMethodCodeQRPromptPay, "QR PromptPay", "/image/pay/qr_prompt_pay.png", 4},
+		{constant.PaymentMethodCodeQRCode, "QR Code", "/image/pay/qr_code.png", 5},
+		{constant.PaymentMethodCodeSCBEasy, "SCB EASY", "/image/pay/scb_easy.png", 6},
+		{constant.PaymentMethodCodeKrungthaiNext, "Krungthai NEXT", "/image/pay/krungthai_next.png", 7},
+		{constant.PaymentMethodCodeKrungsriMobile, "Krungsri Mobile", "/image/pay/krungsri_mobile.png", 8},
+		{constant.PaymentMethodCodeCrossBorderQR, "Cross-Border QR", "/image/pay/cross_border_qr.png", 9},
+		{constant.PaymentMethodCodeTrueMoneyWallet, "TrueMoney", "/image/pay/truemoney_wallet.png", 10},
+		{constant.PaymentMethodCodeLINEPay, "LINE Pay", "/image/pay/line_pay.png", 11},
+		{constant.PaymentMethodCodeOAliPay, "Alipay", "/image/pay/alipay.png", 12},
+		{constant.PaymentMethodCodeOWechat, "WeChat Pay", "/image/pay/wechat_pay.png", 13},
+		{constant.PaymentMethodCodeJAQCreditDebit, "Credit/Debit", "/image/pay/ja_pay.png", 14},
+	}
+
+	// 过滤掉余额、现金、微信、支付宝、POS、免费支付（参考PHP defaultPay逻辑）
+	excludedCodes := []int{
+		constant.PaymentMethodCodeBalance,
+		constant.PaymentMethodCodeCash,
+		constant.PaymentMethodCodeWechat,
+		constant.PaymentMethodCodeAliPay,
+		constant.PaymentMethodCodePOS,
+		constant.PaymentMethodCodeFreePay,
+	}
+
+	result := make([]*resp.DefaultPaymentMethodResp, 0)
+	for _, payment := range defaultPayments {
+		// 排除指定的支付方式
+		if slices.Contains(excludedCodes, payment.Value) {
+			continue
+		}
+		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+		if strings.HasSuffix(baseUrl, "/") {
+			baseUrl = baseUrl[:len(baseUrl)-1]
+		}
+		result = append(result, &resp.DefaultPaymentMethodResp{
+			Code: payment.Value,
+			Name: payment.Name,
+			Url:  baseUrl + payment.Img,
+			Img:  payment.Img,
+			Sort: payment.Sort,
+		})
+	}
+
+	return result, nil
 }
 
 // generatePaymentCode 生成支付方式 code（手动添加 source=1）
@@ -251,14 +314,10 @@ func (s *paymentMethodSrv) generatePaymentCode(db *gorm.DB) int {
 	return maxCode + 100 // 每次递增100
 }
 
-// Create 创建支付方式
+// Create 批量创建支付方式
 func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMethodCreateReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
-
-	// 生成 code 和设置 source
-	code := s.generatePaymentCode(db)
-	source := constant.PaymentMethodSourceDefault // 手动添加为 1
 
 	// 获取最大排序值
 	maxSort, err := paymentMethodRepo.GetMaxSort()
@@ -266,31 +325,61 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 		return appErrors.WithMessage(err, "获取最大排序值失败")
 	}
 
-	// fee_percent 从 0-100 转换为 0-1
-	feePercent := createReq.FeePercent / 100
+	// 获取起始code（用于批量创建时递增）
+	baseCode := s.generatePaymentCode(db)
 
-	// 创建支付方式
-	paymentMethod := model.PaymentMethod{
-		BaseModel: model.BaseModel{
-			// Uuid 会在 BeforeCreate hook 中自动生成
-		},
-		Name:                 createReq.Name,
-		Code:                 code,
-		PaymentName:          createReq.PaymentName,
-		Source:               source,
-		LogoFileUuid:         createReq.LogoFileUuid,
-		QrcodeFileUuid:       createReq.QrcodeFileUuid,
-		FeePercent:           feePercent,
-		IsShowCashier:        createReq.IsShowCashier,
-		IsShowAssistant:      createReq.IsShowAssistant,
-		IsShowMemberRecharge: createReq.IsShowMemberRecharge,
-		Status:               createReq.Status,
-		Sort:                 maxSort + 1,
-		// CreateTime 和 UpdateTime 由 GORM 自动管理
+	// 批量创建支付方式
+	paymentMethods := make([]model.PaymentMethod, 0, len(createReq.Items))
+	for i, item := range createReq.Items {
+		// 如果指定了code（系统默认支付方式），使用指定的code；否则自动生成
+		var code int
+		if item.Code > 0 {
+			// 使用指定的code，如果多个code一致，递增（参考PHP逻辑：code + key * 100）
+			code = item.Code + i*100
+		} else {
+			// 自动生成code
+			code = baseCode + i*100
+		}
+
+		source := constant.PaymentMethodSourceDefault // 手动添加为 1
+
+		// fee_percent 从 0-100 转换为 0-1
+		feePercent := item.FeePercent / 100
+
+		// 如果logo_file_uuid为0，使用default_img（参考PHP逻辑）
+		defaultImg := item.DefaultImg
+		if item.LogoFileUuid == 0 && defaultImg == "" {
+			// 如果都没有，保持为空
+		}
+
+		paymentMethod := model.PaymentMethod{
+			BaseModel: model.BaseModel{
+				// Uuid 会在 BeforeCreate hook 中自动生成
+			},
+			Name:                 item.Name,
+			Code:                 code,
+			PaymentName:          item.PaymentName,
+			Source:               source,
+			LogoFileUuid:         item.LogoFileUuid,
+			QrcodeFileUuid:       item.QrcodeFileUuid,
+			DefaultImg:           defaultImg,
+			FeePercent:           feePercent,
+			IsShowCashier:        item.IsShowCashier,
+			IsShowAssistant:      item.IsShowAssistant,
+			IsShowMemberRecharge: item.IsShowMemberRecharge,
+			Status:               item.Status,
+			Sort:                 maxSort + i + 1,
+			// CreateTime 和 UpdateTime 由 GORM 自动管理
+		}
+
+		paymentMethods = append(paymentMethods, paymentMethod)
 	}
 
-	if err := paymentMethodRepo.CreatePaymentMethod(paymentMethod); err != nil {
-		return appErrors.WithMessage(err, "创建支付方式失败")
+	// 批量创建
+	for _, paymentMethod := range paymentMethods {
+		if err := paymentMethodRepo.CreatePaymentMethod(paymentMethod); err != nil {
+			return appErrors.WithMessage(err, "创建支付方式失败")
+		}
 	}
 
 	return nil
@@ -302,7 +391,7 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
 	// 查询现有支付方式（验证是否存在）
-	_, err := paymentMethodRepo.GetPaymentMethodError(
+	paymentMethod, err := paymentMethodRepo.GetPaymentMethodError(
 		paymentMethodRepo.WhereUuid(updateReq.Uuid),
 		repository.CommonRepo.WhereBySoftDelete(),
 	)
@@ -310,7 +399,8 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 		return appErrors.WithMessage(err, "支付方式不存在")
 	}
 
-	// 任何来源的支付方式都可以编辑
+	// 如果是LianLianPay支付（source=2），跳过名称、支付方式、图片logo修改
+	isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
 
 	// 构建更新数据
 	updateData := model.PaymentMethod{
@@ -318,14 +408,17 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 			Uuid: updateReq.Uuid,
 		},
 	}
-	if updateReq.Name != "" {
-		updateData.Name = updateReq.Name
-	}
-	if updateReq.PaymentName != "" {
-		updateData.PaymentName = updateReq.PaymentName
-	}
-	if updateReq.LogoFileUuid > 0 {
-		updateData.LogoFileUuid = updateReq.LogoFileUuid
+	// LianLianPay支付跳过名称、支付方式、图片logo修改
+	if !isLianLianPay {
+		if updateReq.Name != "" {
+			updateData.Name = updateReq.Name
+		}
+		if updateReq.PaymentName != "" {
+			updateData.PaymentName = updateReq.PaymentName
+		}
+		if updateReq.LogoFileUuid > 0 {
+			updateData.LogoFileUuid = updateReq.LogoFileUuid
+		}
 	}
 	if updateReq.QrcodeFileUuid > 0 {
 		updateData.QrcodeFileUuid = updateReq.QrcodeFileUuid

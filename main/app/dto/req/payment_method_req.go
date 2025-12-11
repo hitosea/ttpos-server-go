@@ -6,12 +6,19 @@ type PaymentMethodManagementListReq struct {
 	PageSize int `form:"page_size" json:"page_size" binding:"required,min=1,max=1100"` // 每页大小
 }
 
-// PaymentMethodCreateReq 创建支付方式请求
+// PaymentMethodCreateReq 创建支付方式请求（批量创建）
 type PaymentMethodCreateReq struct {
+	Items []PaymentMethodCreateItem `json:"items" binding:"required,min=1,dive"` // 支付方式列表
+}
+
+// PaymentMethodCreateItem 创建支付方式单项
+type PaymentMethodCreateItem struct {
 	Name                 string  `json:"name" binding:"required"`             // 支付方式名称
 	PaymentName          string  `json:"payment_name" binding:"required"`     // 支付名称
+	Code                 int     `json:"code"`                                // 支付方式代号（可选，用于系统默认支付方式）
 	LogoFileUuid         uint64  `json:"logo_file_uuid"`                      // Logo图片UUID
 	QrcodeFileUuid       uint64  `json:"qrcode_file_uuid"`                    // 二维码图片UUID
+	DefaultImg           string  `json:"default_img"`                         // 默认图片
 	FeePercent           float64 `json:"fee_percent" binding:"gte=0,lte=100"` // 手续费百分比，取值范围0-100
 	IsShowCashier        int     `json:"is_show_cashier"`                     // 0-不显示 1-收银机结账显示
 	IsShowAssistant      int     `json:"is_show_assistant"`                   // 0-不显示 1-点餐助手结账显示

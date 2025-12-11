@@ -219,12 +219,19 @@ type PaymentMethodListReq struct {
     PageSize int `json:"page_size" binding:"required"`
 }
 
-// PaymentMethodCreateReq 创建支付方式请求
+// PaymentMethodCreateReq 批量创建支付方式请求
 type PaymentMethodCreateReq struct {
+    Items []PaymentMethodCreateItem `json:"items" binding:"required,min=1,dive"`
+}
+
+// PaymentMethodCreateItem 创建支付方式单项
+type PaymentMethodCreateItem struct {
     Name                 string  `json:"name" binding:"required"`
     PaymentName          string  `json:"payment_name" binding:"required"`
-    LogoFileUuid         uint64  `json:"logo_file_uuid"`
-    QrcodeFileUuid       uint64  `json:"qrcode_file_uuid"`
+    Code                 int     `json:"code"`                                  // 支付方式代号（可选，用于系统默认支付方式）
+    LogoFileUuid         uint64  `json:"logo_file_uuid"`                       // Logo图片UUID
+    QrcodeFileUuid       uint64  `json:"qrcode_file_uuid"`                    // 二维码图片UUID
+    DefaultImg           string  `json:"default_img"`                           // 默认图片
     FeePercent           float64 `json:"fee_percent" binding:"gte=0,lte=100"`
     IsShowCashier        int     `json:"is_show_cashier"`
     IsShowAssistant      int     `json:"is_show_assistant"`
@@ -384,7 +391,7 @@ type LianlianPayConfigResp struct {
 }
 ```
 
-#### API 2: 创建支付方式
+#### API 2: 批量创建支付方式
 
 **请求**:
 
@@ -393,15 +400,38 @@ type LianlianPayConfigResp struct {
 - **Body**:
   ```json
   {
-    "name": "微信支付",
-    "payment_name": "WeChat Pay",
-    "logo_file_uuid": 123456,
-    "fee_percent": 0.6,
-    "is_show_cashier": 1,
-    "is_show_assistant": 1,
-    "status": 1
+    "items": [
+      {
+        "name": "微信支付",
+        "payment_name": "WeChat Pay",
+        "code": 20,
+        "logo_file_uuid": 123456,
+        "default_img": "/image/pay/wechat_pay.png",
+        "fee_percent": 0.6,
+        "is_show_cashier": 1,
+        "is_show_assistant": 1,
+        "status": 1
+      },
+      {
+        "name": "支付宝支付",
+        "payment_name": "AliPay",
+        "code": 30,
+        "logo_file_uuid": 0,
+        "default_img": "/image/pay/alipay.png",
+        "fee_percent": 0.5,
+        "is_show_cashier": 1,
+        "is_show_assistant": 1,
+        "status": 1
+      }
+    ]
   }
   ```
+
+**说明**:
+- `items`: 支付方式数组，至少包含1项
+- `code`: 可选，如果指定则使用指定的code（用于系统默认支付方式），如果多个code一致，会自动递增（code + index * 100）
+- `logo_file_uuid`: Logo图片UUID，如果为0且`default_img`有值，则使用`default_img`作为默认图片
+- `default_img`: 默认图片路径，当`logo_file_uuid`为0时使用
 
 **响应**:
 
@@ -409,13 +439,7 @@ type LianlianPayConfigResp struct {
 {
   "code": 1,
   "message": "success",
-  "data": {
-    "payment_method": {
-      "uuid": 123456,
-      "name": "微信支付",
-      "status": 1
-    }
-  }
+  "data": "创建成功"
 }
 ```
 
@@ -678,11 +702,14 @@ type IPaymentMethodSrv interface {
    - 返回完整详情信息
 
 3. **Create**: 
-   - 自动生成 code（根据 source 和现有 code 生成）
+   - **批量创建**：接收数组形式的支付方式列表
+   - 如果指定了 `code`（系统默认支付方式），使用指定的 code；如果多个 code 一致，自动递增（code + index * 100）
+   - 如果未指定 `code`，自动生成 code（根据 source 和现有 code 生成）
    - 自动设置 source（手动添加为 1）
    - 生成 UUID
-   - 设置默认排序（最大 sort + 1）
+   - 设置默认排序（最大 sort + 1，批量创建时按索引递增）
    - fee_percent 范围 0-100（存储时转换为 0-1）
+   - 如果 `logo_file_uuid` 为 0 且 `default_img` 有值，使用 `default_img` 作为默认图片
 
 4. **Update**:
    - 校验系统来源（source=0）的字段修改权限

@@ -5192,3 +5192,19 @@ func sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProducts []resp.Orde
 	})
 	return batchCookingSaleOrderProducts
 }
+
+// generateInvoiceNumber 生成当日递增的发票编号（使用saas库序列表）
+func (s *orderSrv) generateInvoiceNumber(ctx context.Context) (string, error) {
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	now := time.Now()
+	dateStr := now.Format("2006-01-02")
+	companyUuid := ctx.GetCompanySetting().HeadquarterUuid
+	if companyUuid == 0 {
+		companyUuid = ctx.GetCompanyUuid()
+	}
+	seq, err := repository.NewNumberSequenceRepo(saasDB).GetNextSequence(companyUuid, constant.NumberTypeInvoice, dateStr)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("INV-%04d-%02d-%02d-%03d", now.Year(), now.Month(), now.Day(), seq), nil
+}

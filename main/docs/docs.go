@@ -23601,7 +23601,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "创建支付方式",
+                "description": "批量创建支付方式（只接收数组形式）",
                 "consumes": [
                     "application/json"
                 ],
@@ -23611,10 +23611,10 @@ const docTemplate = `{
                 "tags": [
                     "商家端.支付管理"
                 ],
-                "summary": "创建支付方式",
+                "summary": "批量创建支付方式",
                 "parameters": [
                     {
-                        "description": "创建支付方式参数",
+                        "description": "批量创建支付方式参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
@@ -23628,6 +23628,49 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/default_pay": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取系统默认的支付方式列表（原始支付列表，用于快速添加）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "获取默认支付方式列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/resp.DefaultPaymentMethodResp"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -42487,13 +42530,21 @@ const docTemplate = `{
                 }
             }
         },
-        "req.PaymentMethodCreateReq": {
+        "req.PaymentMethodCreateItem": {
             "type": "object",
             "required": [
                 "name",
                 "payment_name"
             ],
             "properties": {
+                "code": {
+                    "description": "支付方式代号（可选，用于系统默认支付方式）",
+                    "type": "integer"
+                },
+                "default_img": {
+                    "description": "默认图片",
+                    "type": "string"
+                },
                 "fee_percent": {
                     "description": "手续费百分比，取值范围0-100",
                     "type": "number",
@@ -42531,6 +42582,22 @@ const docTemplate = `{
                 "status": {
                     "description": "状态 0-禁用 1-启用 2-草稿",
                     "type": "integer"
+                }
+            }
+        },
+        "req.PaymentMethodCreateReq": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.PaymentMethodCreateItem"
+                    }
                 }
             }
         },
@@ -48546,6 +48613,31 @@ const docTemplate = `{
                 "uuid": {
                     "description": "会员uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.DefaultPaymentMethodResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "支付方式code",
+                    "type": "integer"
+                },
+                "img": {
+                    "description": "图片路径",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "url": {
+                    "description": "图片路径",
+                    "type": "string"
                 }
             }
         },

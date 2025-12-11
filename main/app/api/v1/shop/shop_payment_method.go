@@ -83,14 +83,35 @@ func (h *PaymentMethodHandler) GetDetail(c *gin.Context) {
 	helper.Success(c, gin.H{"payment_method": resp})
 }
 
-// Create 创建支付方式
-// @Summary 创建支付方式
-// @Description 创建支付方式
+// GetDefaultPayList 获取默认支付方式列表
+// @Summary 获取默认支付方式列表
+// @Description 获取系统默认的支付方式列表（原始支付列表，用于快速添加）
 // @Tags 商家端.支付管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.PaymentMethodCreateReq true "创建支付方式参数"
+// @Success 200 {object} dto.Response{data=[]resp.DefaultPaymentMethodResp}
+// @Router /shop/payment_method/default_pay [get]
+func (h *PaymentMethodHandler) GetDefaultPayList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	resp, err := h.paymentMethodSrv.GetDefaultPayList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
+// Create 批量创建支付方式
+// @Summary 批量创建支付方式
+// @Description 批量创建支付方式（只接收数组形式）
+// @Tags 商家端.支付管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PaymentMethodCreateReq true "批量创建支付方式参数"
 // @Success 200 {object} dto.Response
 // @Router /shop/payment_method/create [post]
 func (h *PaymentMethodHandler) Create(c *gin.Context) {
@@ -299,6 +320,7 @@ func RegisterPaymentMethodHandlers(router gin.IRouter, dbm *database.DBManager, 
 	{
 		privateApi.GET("/payment_method/list", handler.GetList)                               // 获取支付方式列表
 		privateApi.GET("/payment_method/detail", handler.GetDetail)                           // 获取支付方式详情
+		privateApi.GET("/payment_method/default_pay", handler.GetDefaultPayList)              // 获取默认支付方式列表
 		privateApi.POST("/payment_method/create", handler.Create)                             // 创建支付方式
 		privateApi.PUT("/payment_method/update", handler.Update)                              // 更新支付方式
 		privateApi.DELETE("/payment_method/delete", handler.Delete)                           // 删除支付方式

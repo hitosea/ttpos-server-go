@@ -137,6 +137,10 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 
 	// 设置发票信息
 	if req.CompanyName != "" {
+		invoiceNumber, err := s.generateInvoiceNumber(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err, "生成发票编号失败")
+		}
 		// 创建发票信息对象
 		invoiceInfo := model.SaleOrderInvoiceInfo{
 			SaleOrderUuid:    saleOrder.Uuid,
@@ -144,6 +148,7 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 			CompanyAddr:      req.CompanyAddr,
 			CompanyTaxNumber: req.CompanyTaxNumber,
 			CompanyPhone:     req.CompanyPhone,
+			InvoiceNumber:    invoiceNumber,
 		}
 		// 保存发票信息（不存在则创建，存在则更新）
 		invoiceInfos, err := repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, invoiceInfo)
@@ -161,8 +166,17 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 		}
 		// 更新打印次数
 		saleOrder.InvoiceInfo.PrintNum = saleOrder.InvoiceInfo.PrintNum + 1
+		// 更新发票编号
+		if saleOrder.InvoiceInfo.InvoiceNumber == "" {
+			invoiceNumber, err := s.generateInvoiceNumber(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err, "生成发票编号失败")
+			}
+			saleOrder.InvoiceInfo.InvoiceNumber = invoiceNumber
+		}
 		repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, model.SaleOrderInvoiceInfo{
 			SaleOrderUuid: saleOrder.Uuid,
+			InvoiceNumber: saleOrder.InvoiceInfo.InvoiceNumber,
 			PrintNum:      saleOrder.InvoiceInfo.PrintNum,
 		})
 	}
@@ -193,9 +207,11 @@ func (s *orderSrv) OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoi
 		return resp.SaleOrderInvoiceInfo{}
 	}
 	return resp.SaleOrderInvoiceInfo{
+		InvoiceNumber:    invoiceInfo.InvoiceNumber,
 		CompanyName:      invoiceInfo.CompanyName,
 		CompanyAddr:      invoiceInfo.CompanyAddr,
 		CompanyTaxNumber: invoiceInfo.CompanyTaxNumber,
 		CompanyPhone:     invoiceInfo.CompanyPhone,
+		PrintNum:         invoiceInfo.PrintNum,
 	}
 }
