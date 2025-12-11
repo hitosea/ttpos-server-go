@@ -237,10 +237,12 @@ type OrderReverseSettleDesk struct {
 
 // 发票信息
 type SaleOrderInvoiceInfo struct {
+	InvoiceNumber    string `json:"invoice_number"`
 	CompanyName      string `json:"company_name"`
 	CompanyAddr      string `json:"company_addr"`
 	CompanyTaxNumber string `json:"company_tax_number"`
 	CompanyPhone     string `json:"company_phone"`
+	PrintNum         int    `json:"print_num"`
 }
 
 // OrderBuffetResp 订单自助餐信息
