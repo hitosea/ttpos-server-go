@@ -228,12 +228,39 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 		s.removeExpireMemberFromQueues(cachekey.GetPreparedQueueKey(companyUuid), maxScore)
 	})
 
+	// 设置默认值
+	name := bindInfo.Name
+	if name == "" {
+		name = "WALLACE"
+	}
+
+	timeoutLimit := bindInfo.TimeoutLimit
+	if timeoutLimit == nil {
+		timeoutLimit = &[]int{0}[0]
+	}
+
+	voiceCallEnabled := bindInfo.VoiceCallEnabled
+	if voiceCallEnabled == nil {
+		voiceCallEnabled = &[]bool{false}[0]
+	}
+
+	callCount := bindInfo.CallCount
+	if callCount == 0 {
+		callCount = 1
+	}
+
 	return &resp.QueueDataResp{
 		Lang1:          bindInfo.Lang1,
 		Lang2:          bindInfo.Lang2,
 		UpdateTime:     time.Now().Unix(),
 		PreparingQueue: preparingQueue,
 		PreparedQueue:  preparedQueue,
+		// 新增配置字段
+		Name:               name,
+		BackgroundImageUrl: bindInfo.BackgroundImageUrl,
+		TimeoutLimit:       timeoutLimit,
+		VoiceCallEnabled:   voiceCallEnabled,
+		CallCount:          callCount,
 	}, nil
 }
 

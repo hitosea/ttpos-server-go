@@ -14107,9 +14107,18 @@ definitions:
     type: object
   resp.QueueDataResp:
     properties:
+      background_image_url:
+        description: 背景图片 URL
+        type: string
+      call_count:
+        description: 叫号次数
+        type: integer
       lang1:
         type: string
       lang2:
+        type: string
+      name:
+        description: 配置信息字段（必返）
         type: string
       prepared_queue:
         items:
@@ -14119,8 +14128,14 @@ definitions:
         items:
           type: string
         type: array
+      timeout_limit:
+        description: 超时限制（分钟）
+        type: integer
       update_time:
         type: integer
+      voice_call_enabled:
+        description: 语音叫号开关
+        type: boolean
     type: object
   resp.ReceiptFileInfo:
     properties:
@@ -20175,7 +20190,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取等待队列和取餐队列数据
+      description: 获取等待队列和取餐队列数据，同时返回叫号系统配置信息（系统名称、背景图片、超时限制、语音叫号开关、叫号次数）
       parameters:
       - description: 设备ID
         in: query
@@ -20190,13 +20205,12 @@ paths:
       - description: 更新时间,unix时间戳
         in: query
         name: update_time
-        required: true
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
