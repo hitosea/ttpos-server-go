@@ -53,6 +53,15 @@ type PaymentMethodListResp struct {
 	Meta *dto.PageResponse            `json:"meta"` // 分页信息
 }
 
+// DefaultPaymentMethodResp 默认支付方式响应
+type DefaultPaymentMethodResp struct {
+	Code int    `json:"code"` // 支付方式code
+	Name string `json:"name"` // 支付方式名称
+	Url  string `json:"url"`  // 图片路径
+	Img  string `json:"img"`  // 图片路径
+	Sort int    `json:"sort"` // 排序
+}
+
 // LianlianPayConfigResp LianlianPay 配置响应
 type LianlianPayConfigResp struct {
 	LlWhiteIp            string `json:"ll_white_ip"`             // 白名单IP
