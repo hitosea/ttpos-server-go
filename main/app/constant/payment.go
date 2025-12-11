@@ -28,8 +28,9 @@ const (
 )
 
 const (
-	PaymentMethodStatusEnable  = 1 // 启用
 	PaymentMethodStatusDisable = 0 // 禁用
+	PaymentMethodStatusEnable  = 1 // 启用
+	PaymentMethodStatusDraft   = 2 // 草稿
 )
 
 const (

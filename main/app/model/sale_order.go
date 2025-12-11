@@ -828,11 +828,17 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			IsH5OrderNeedAudit:  isH5NeedAudit,
 			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
-			CategoryUuid: func() uint64 {
+			FirstCategoryUuid: func() uint64 {
 				if saleOrderProduct.ProductPackage == nil {
 					return 0
 				}
 				return saleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid()
+			}(),
+			CategoryUuid: func() uint64 {
+				if saleOrderProduct.ProductPackage == nil {
+					return 0
+				}
+				return saleOrderProduct.ProductPackage.CategoryUuid
 			}(),
 			SpecialCategoryUuid: func() uint64 {
 				if saleOrderProduct.ProductPackage == nil {

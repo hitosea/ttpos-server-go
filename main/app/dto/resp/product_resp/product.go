@@ -1,10 +1,16 @@
 package product_resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+)
 
 type ProductSearchResp struct {
 	List []Product `json:"list"`
 }
+
+// ProductSlice 商品切片（用于批量操作）
+type ProductSlice []Product
 
 // Product 商品
 type Product struct {
@@ -176,11 +182,60 @@ type ProductFlavorList struct {
 	List []ProductFlavor `json:"list"`
 }
 
+// 注入商品规格的库存
+func (list *ProductFlavorList) InjectStockNum(stockNumMap map[uint64]float64) {
+	if stockNumMap == nil {
+		stockNumMap = make(map[uint64]float64)
+	}
+	for index := range list.List {
+		stockNum, ok := stockNumMap[list.List[index].BomUuid]
+		if !ok {
+			stockNum = constant.ProductBomInfiniteStock // 无限库存,如果没有设置就无限库存
+		}
+		list.List[index].StockNum = stockNum
+	}
+}
+
+// InjectStockNum 为商品列表中的所有规格注入库存
+// stockNumMap: 库存映射表，key 为 BomUuid，value 为库存数量
+func (list ProductSlice) InjectStockNum(stockNumMap map[uint64]float64) {
+	// 为每个商品的规格注入库存
+	for i := range list {
+		list[i].Flavors.InjectStockNum(stockNumMap)
+		// 为每个商品的小料注入库存
+		list[i].Sauces.InjectStockNum(stockNumMap)
+		// 如果是套餐，还需要为套餐分组中的商品注入库存
+		if list[i].PackageGroupList != nil {
+			for j := range list[i].PackageGroupList.List {
+				for k := range list[i].PackageGroupList.List[j].Products.List {
+					list[i].PackageGroupList.List[j].Products.List[k].Detail.Flavors.InjectStockNum(stockNumMap)
+					list[i].PackageGroupList.List[j].Products.List[k].Detail.Sauces.InjectStockNum(stockNumMap)
+				}
+			}
+		}
+	}
+}
+
 // ProductSauceList 商品小料列表
 type ProductSauceList struct {
 	List      []ProductSauce `json:"list"`
 	IsMust    bool           `json:"is_must"`    // 是否必选小料
 	MaxSelect int            `json:"max_select"` // 小料最大可选数量
+}
+
+// InjectStockNum 为小料列表注入库存
+// stockNumMap: 库存映射表，key 为 BomUuid，value 为库存数量
+func (list *ProductSauceList) InjectStockNum(stockNumMap map[uint64]float64) {
+	if stockNumMap == nil {
+		stockNumMap = make(map[uint64]float64)
+	}
+	for index := range list.List {
+		stockNum, ok := stockNumMap[list.List[index].BomUuid]
+		if !ok {
+			stockNum = constant.ProductBomInfiniteStock // 无限库存,如果没有设置就无限库存
+		}
+		list.List[index].StockNum = stockNum
+	}
 }
 
 // ProductAttributeGroupList 商品属性组列表

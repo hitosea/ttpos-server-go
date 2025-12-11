@@ -221,7 +221,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
 				// 判断商品是否售罄。如果售罄，则允许"确认必点"
-				isSoldOut, err := planProductSoldOut(ctx, &plan)
+				isSoldOut, err := planProductSoldOut(ctx, s.dbm, &plan)
 				if err != nil {
 					return false, nil, errors.WithMessage(err)
 				}

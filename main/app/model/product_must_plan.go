@@ -121,7 +121,7 @@ type ProductMustPlanItem struct {
 	ProductPackage  ProductPackage  `gorm:"foreignKey:ProductPackageUuid;references:Uuid"`
 }
 
-func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMustPlanProduct {
+func (model *ProductMustPlanItem) GetProductInfo(baseUrl string, productBomStockNumFn func(productBomUuid uint64) float64) *resp.InstantMustPlanProduct {
 	if model.IsDelete() {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 				Uuid:       productBom.Uuid,
 				LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Price:      productBom.Price,
-				StockNum:   int(productBom.GetStockNum()),
+				StockNum:   int(productBom.GetStockNum(productBomStockNumFn)),
 			}
 			flavorList = append(flavorList, flavor)
 		}
@@ -153,7 +153,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 				LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 				Price:             productBom.Price,
 				IsDefaultSelected: productBom.IsDefaultSelectBool(),
-				StockNum:          int(productBom.GetStockNum()),
+				StockNum:          int(productBom.GetStockNum(productBomStockNumFn)),
 			}
 			sauceList = append(sauceList, sauce)
 		}

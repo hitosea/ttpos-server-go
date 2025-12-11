@@ -15,6 +15,9 @@ import (
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	inventoryDomainService "ttpos-server-go/app/modules/inventory/domain/service"
+	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
@@ -258,9 +261,15 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		}
 		taxFeeType := taxRateSetting.GetTaxFeeType()
 
+		// 格式化产品列表
+		productList := FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType))
+
+		// 注入商品规格和小料的库存
+		s.injectProductListStockNum(ctx, productList)
+
 		// 返回响应对象
 		return product_resp.ProductListWithPaginationResp{
-			List: FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType)),
+			List: productList,
 			Meta: dto.PageResponse{
 				PageNo:   req.PageNo,
 				PageSize: req.PageSize,
@@ -269,9 +278,15 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		}, nil
 	}
 
+	// 格式化产品列表
+	productList := FormatProducts(ctx, products)
+
+	// 注入商品规格和小料的库存
+	s.injectProductListStockNum(ctx, productList)
+
 	// 返回响应对象
 	return product_resp.ProductListWithPaginationResp{
-		List: FormatProducts(ctx, products),
+		List: productList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -451,10 +466,11 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				}
 				flavors = append(flavors, product_resp.ProductFlavor{
 					Uuid:       productBom.Uuid,
+					BomUuid:    productBom.Uuid, // 设置 BomUuid，用于后续库存查询
 					LocaleName: product.MultiLanguageName.GetNames(),
 					Price:      productBom.Price,
-					StockNum:   productBom.GetStockNum(),
-					Barcode:    productBom.BarcodeValue,
+					// StockNum:   productBom.GetStockNum(), // 这里先设置默认值，后续会通过 InjectStockNum 覆盖
+					Barcode: productBom.BarcodeValue,
 				})
 			}
 
@@ -542,10 +558,11 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 					if productBom.IsFlavor() {
 						flavor := product_resp.ProductFlavor{
 							Uuid:       productBom.Uuid,
+							BomUuid:    productBom.Uuid, // 设置 BomUuid，用于后续库存查询
 							LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 							Price:      productBom.Price,
-							StockNum:   productBom.GetStockNum(),
-							Barcode:    productBom.BarcodeValue,
+							// StockNum:   productBom.GetStockNum(), // 这里先不设置，后续会通过 InjectStockNum 注入
+							Barcode: productBom.BarcodeValue,
 						}
 						// 如果是会员端查询商品列表，需要获取在会员端的该商品规格价格
 						// 会员端商品规格价格=原商品规格价*外送商品折扣率 + 税费。 税费=原商品规格价*外送商品折扣率*外送的税率
@@ -568,7 +585,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 							Price:             productBom.Price,
 							IsDefaultSelected: productBom.IsDefaultSelect == 1,
-							StockNum:          productBom.GetStockNum(),
+							// StockNum:          productBom.GetStockNum(nil),
 						}
 						// 如果是会员端查询商品列表，需要获取在会员端的该商品小料价格
 						// 会员端商品小料价格=原商品小料价*外送商品折扣率 + 税费。 税费=原商品小料价*外送商品折扣率*外送的税率
@@ -664,10 +681,11 @@ func getFlavor(productBom *model.ProductBom) product_resp.ProductFlavor {
 	if productBom.IsFlavor() {
 		flavor := product_resp.ProductFlavor{
 			Uuid:       productBom.Uuid,
+			BomUuid:    productBom.Uuid, // 设置 BomUuid，用于后续库存查询
 			LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 			Price:      productBom.Price,
-			StockNum:   productBom.GetStockNum(),
-			Barcode:    productBom.BarcodeValue,
+			// StockNum:   productBom.GetStockNum(nil), // 这里先设置默认值，后续会通过 InjectStockNum 覆盖
+			Barcode: productBom.BarcodeValue,
 		}
 		return flavor
 	}
@@ -2084,15 +2102,21 @@ func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchRe
 		}
 		taxFeeType := taxRateSetting.GetTaxFeeType()
 
+		productList := FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType))
+		// 注入商品规格和小料的库存
+		s.injectProductListStockNum(ctx, productList)
 		// 返回响应对象
 		return &product_resp.ProductSearchResp{
-			List: FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType)),
+			List: productList,
 		}, nil
 	}
 
+	productList := FormatProducts(ctx, products)
+	// 注入商品规格和小料的库存
+	s.injectProductListStockNum(ctx, productList)
 	// 返回响应对象
 	return &product_resp.ProductSearchResp{
-		List: FormatProducts(ctx, products),
+		List: productList,
 	}, nil
 }
 
@@ -5379,6 +5403,45 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		HeadquarterUuid: productPackage.HeadquarterUuid,
 	}
 
+	// 注入商品规格和小料的库存
+	// 收集所有规格和小料的 BomUuid
+	bomUuids := make(map[uint64]bool)
+	for _, flavor := range productDetailResp.Flavors.List {
+		if flavor.BomUuid > 0 {
+			bomUuids[flavor.BomUuid] = true
+		}
+	}
+	for _, sauce := range productDetailResp.Sauces.List {
+		if sauce.BomUuid > 0 {
+			bomUuids[sauce.BomUuid] = true
+		}
+	}
+
+	// 使用领域服务查询库存
+	stockNumMap := make(map[uint64]float64)
+	if len(bomUuids) > 0 {
+		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
+		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
+		domainSvc := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
+
+		for bomUuid := range bomUuids {
+			inventory, err := domainSvc.GetProductInventory(ctx, bomUuid)
+			if err != nil {
+				// 如果查询失败，记录日志但继续处理其他规格/小料
+				logger.Logger.Warn("查询商品规格/小料库存失败",
+					zap.Error(err),
+					zap.Uint64("bom_uuid", bomUuid),
+					zap.Uint64("product_package_uuid", productPackage.Uuid),
+				)
+				// 失败时使用无限库存作为默认值
+				inventory = constant.ProductBomInfiniteStock
+			}
+			stockNumMap[bomUuid] = inventory
+		}
+	}
+	productDetailResp.Flavors.InjectStockNum(stockNumMap)
+	productDetailResp.Sauces.InjectStockNum(stockNumMap)
+
 	return &productDetailResp, nil
 }
 
@@ -8374,4 +8437,122 @@ func (s *productSrv) getKioskEnabledDefault(ctx context.Context) uint {
 		return 1
 	}
 	return 0
+}
+
+// getProductFlavorStockNumMap 获取商品规格库存映射表
+// 使用领域服务查询每个规格的库存，返回 map[bomUuid]stockNum
+func (s *productSrv) getProductFlavorStockNumMap(ctx context.Context, flavors []product_resp.ProductFlavor) (map[uint64]float64, error) {
+	if len(flavors) == 0 {
+		return make(map[uint64]float64), nil
+	}
+
+	// 创建领域服务
+	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
+	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
+	domainSvc := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
+
+	// 批量查询库存
+	stockNumMap := make(map[uint64]float64, len(flavors))
+	for _, flavor := range flavors {
+		if flavor.BomUuid == 0 {
+			continue
+		}
+
+		// 使用领域服务查询库存
+		inventory, err := domainSvc.GetProductInventory(ctx, flavor.BomUuid)
+		if err != nil {
+			// 如果查询失败，记录日志但继续处理其他规格
+			logger.Logger.Warn("查询商品规格库存失败",
+				zap.Error(err),
+				zap.Uint64("bom_uuid", flavor.BomUuid),
+				zap.Uint64("flavor_uuid", flavor.Uuid),
+			)
+			// 失败时使用无限库存作为默认值
+			inventory = constant.ProductBomInfiniteStock
+		}
+
+		stockNumMap[flavor.BomUuid] = inventory
+	}
+
+	return stockNumMap, nil
+}
+
+// getProductListStockNumMap 获取商品列表所有规格和小料的库存映射表
+// 遍历商品列表，收集所有规格和小料的 BomUuid，然后批量查询库存
+func (s *productSrv) getProductListStockNumMap(ctx context.Context, productList []product_resp.Product) (map[uint64]float64, error) {
+	// 收集所有规格和小料的 BomUuid
+	bomUuids := make(map[uint64]bool)
+	for _, product := range productList {
+		// 收集商品规格的 BomUuid
+		for _, flavor := range product.Flavors.List {
+			if flavor.BomUuid > 0 {
+				bomUuids[flavor.BomUuid] = true
+			}
+		}
+		// 收集商品小料的 BomUuid
+		for _, sauce := range product.Sauces.List {
+			if sauce.BomUuid > 0 {
+				bomUuids[sauce.BomUuid] = true
+			}
+		}
+		// 如果是套餐，收集套餐分组中商品的规格和小料 BomUuid
+		if product.PackageGroupList != nil {
+			for _, group := range product.PackageGroupList.List {
+				for _, pkgProduct := range group.Products.List {
+					// 收集套餐商品规格的 BomUuid
+					for _, flavor := range pkgProduct.Detail.Flavors.List {
+						if flavor.BomUuid > 0 {
+							bomUuids[flavor.BomUuid] = true
+						}
+					}
+					// 收集套餐商品小料的 BomUuid
+					for _, sauce := range pkgProduct.Detail.Sauces.List {
+						if sauce.BomUuid > 0 {
+							bomUuids[sauce.BomUuid] = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if len(bomUuids) == 0 {
+		return make(map[uint64]float64), nil
+	}
+
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+
+	// 批量查询库存
+	stockNumMap := make(map[uint64]float64, len(bomUuids))
+	for bomUuid := range bomUuids {
+		// 使用应用服务查询库存（带缓存）
+		inventory, err := appService.GetProductInventory(ctx, bomUuid)
+		if err != nil {
+			// 如果查询失败，记录日志但继续处理其他规格/小料
+			logger.Logger.Warn("查询商品规格/小料库存失败",
+				zap.Error(err),
+				zap.Uint64("bom_uuid", bomUuid),
+			)
+			// 失败时使用无限库存作为默认值
+			inventory = constant.ProductBomInfiniteStock
+		}
+
+		stockNumMap[bomUuid] = inventory
+	}
+
+	return stockNumMap, nil
+}
+
+// injectProductListStockNum 为商品列表注入规格和小料的库存
+// 复用逻辑：获取库存映射表并注入到商品列表中
+func (s *productSrv) injectProductListStockNum(ctx context.Context, productList []product_resp.Product) {
+	stockNumMap, err := s.getProductListStockNumMap(ctx, productList)
+	if err != nil {
+		// 如果查询失败，记录日志但不影响主流程，使用默认值（无限库存）
+		logger.Logger.Warn("查询商品列表规格/小料库存失败", zap.Error(err))
+		stockNumMap = nil
+	}
+	// 为商品列表注入库存（包括规格和小料）
+	product_resp.ProductSlice(productList).InjectStockNum(stockNumMap)
 }
