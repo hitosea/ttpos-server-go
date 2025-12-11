@@ -29,6 +29,7 @@ const (
 	CodeLoginFailed         = -106 // 登录失败
 	CodeCashierNotLogin     = -107 // 点餐助手绑定的收银机未登录
 	CodeCashierHandedOver   = -108 // 已交班
+	CodeNeedCompanyUuid     = -109 // 需要绑定门店UUID
 
 	CodeCashierOrderMethodNotOpen = -110 //
 	CodeCashierLoginLimit         = -111 // 收银机登录已达上限

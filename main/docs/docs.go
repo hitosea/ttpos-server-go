@@ -4579,6 +4579,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/store_switch": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "切换门店，返回新的 token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.认证鉴权"
+                ],
+                "summary": "门店切换",
+                "parameters": [
+                    {
+                        "description": "门店切换参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StoreSwitchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/verify_advanced_password": {
             "post": {
                 "security": [
@@ -16179,6 +16230,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/store_switch": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "切换门店，返回新的 token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.认证"
+                ],
+                "summary": "门店切换",
+                "parameters": [
+                    {
+                        "description": "门店切换参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StoreSwitchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/usb/printer/report": {
             "post": {
                 "security": [
@@ -18118,6 +18220,57 @@ const docTemplate = `{
                     "厨显端.认证鉴权"
                 ],
                 "summary": "刷新token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kitchen/store_switch": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "切换门店，返回新的 token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.认证鉴权"
+                ],
+                "summary": "门店切换",
+                "parameters": [
+                    {
+                        "description": "门店切换参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StoreSwitchReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -20735,6 +20888,135 @@ const docTemplate = `{
                         "name": "brand",
                         "in": "query",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取门店信息（仅总部可用）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店管理"
+                ],
+                "summary": "获取门店信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "门店UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyStoreResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取可见门店列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店管理"
+                ],
+                "summary": "获取可见门店列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SaasCompanyListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/company/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改门店信息（仅总部可用）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.门店管理"
+                ],
+                "summary": "修改门店信息",
+                "parameters": [
+                    {
+                        "description": "更新门店信息",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateCompanyInfoReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -29756,6 +30038,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/staff/search": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "搜索员工",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.员工账号"
+                ],
+                "summary": "搜索员工",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关键词, 邮箱、手机号",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SearchStaffResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/staff/update": {
             "post": {
                 "security": [
@@ -31576,6 +31906,57 @@ const docTemplate = `{
                         "description": "请求参数错误",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/store_switch": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "切换门店，返回新的 token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.认证"
+                ],
+                "summary": "门店切换",
+                "parameters": [
+                    {
+                        "description": "门店切换参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StoreSwitchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -34327,6 +34708,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/tablet/store_switch": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "切换门店，返回新的 token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平板端.认证鉴权"
+                ],
+                "summary": "门店切换",
+                "parameters": [
+                    {
+                        "description": "门店切换参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StoreSwitchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/tablet/verify_advanced_password": {
             "post": {
                 "security": [
@@ -35775,8 +36207,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "allow_negative_stock": {
-                    "description": "是否允许负库存：1-允许，0-不允许",
-                    "type": "integer"
+                    "description": "是否允许负库存：true-允许，false-不允许",
+                    "type": "boolean"
                 },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
@@ -35959,8 +36391,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "allow_negative_stock": {
-                    "description": "是否允许负库存：1-允许，0-不允许",
-                    "type": "integer"
+                    "description": "是否允许负库存：true-允许，false-不允许",
+                    "type": "boolean"
                 },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
@@ -39477,9 +39909,24 @@ const docTemplate = `{
                 "username"
             ],
             "properties": {
+                "company_role_list": {
+                    "description": "多门店角色配置（上级门店使用，可选）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.CompanyRoleItem"
+                    }
+                },
                 "confirm_password": {
                     "description": "确认密码",
                     "type": "string"
+                },
+                "is_disable": {
+                    "description": "统一账号",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        0
+                    ]
                 },
                 "password": {
                     "description": "密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种",
@@ -39654,15 +40101,35 @@ const docTemplate = `{
                 "bind_code"
             ],
             "properties": {
+                "background_image_url": {
+                    "description": "背景图片 URL（可选，可传空字符串）",
+                    "type": "string"
+                },
                 "bind_code": {
                     "type": "string",
                     "maxLength": 10
+                },
+                "call_count": {
+                    "description": "叫号次数（可选，版本 \u003e= 2.11.0 时必填，最小1，最大3）",
+                    "type": "integer"
                 },
                 "lang1": {
                     "type": "string"
                 },
                 "lang2": {
                     "type": "string"
+                },
+                "name": {
+                    "description": "设备名称（可选，版本 \u003e= 2.11.0 时必填）",
+                    "type": "string"
+                },
+                "timeout_limit": {
+                    "description": "超时限制（分钟，可选）",
+                    "type": "integer"
+                },
+                "voice_call_enabled": {
+                    "description": "语音叫号开关（可选）",
+                    "type": "boolean"
                 }
             }
         },
@@ -40053,6 +40520,25 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string"
+                }
+            }
+        },
+        "req.CompanyRoleItem": {
+            "type": "object",
+            "required": [
+                "company_uuid"
+            ],
+            "properties": {
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                },
+                "role_uuids": {
+                    "description": "在该门店的角色UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -46146,6 +46632,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.StoreSwitchReq": {
+            "type": "object",
+            "required": [
+                "company_uuid"
+            ],
+            "properties": {
+                "company_uuid": {
+                    "description": "要切换到的门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.SubmitShiftReq": {
             "type": "object",
             "properties": {
@@ -46670,21 +47168,16 @@ const docTemplate = `{
         "req.UpdateBindInfoReq": {
             "type": "object",
             "required": [
-                "background_image_url",
-                "call_count",
-                "name",
                 "uuid"
             ],
             "properties": {
                 "background_image_url": {
-                    "description": "背景图片 URL（必填）",
+                    "description": "背景图片 URL（可选，可传空字符串）",
                     "type": "string"
                 },
                 "call_count": {
-                    "description": "叫号次数（必填，最小1，最大3）",
-                    "type": "integer",
-                    "maximum": 3,
-                    "minimum": 1
+                    "description": "叫号次数（可选，版本 \u003e= 2.11.0 时必填，最小1，最大3）",
+                    "type": "integer"
                 },
                 "lang1": {
                     "type": "string"
@@ -46693,7 +47186,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "description": "设备名称（必填）",
+                    "description": "设备名称（可选，版本 \u003e= 2.11.0 时必填）",
                     "type": "string"
                 },
                 "timeout_limit": {
@@ -46903,6 +47396,30 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UpdateCompanyInfoReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "logo": {
+                    "description": "门店logo",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态 1-启用 0-禁用",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.UpdateHeadquarterSupplierNameReq": {
             "type": "object",
             "required": [
@@ -46979,9 +47496,24 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "company_role_list": {
+                    "description": "多门店角色配置（上级门店使用，可选）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.CompanyRoleItem"
+                    }
+                },
                 "confirm_password": {
                     "description": "确认密码",
                     "type": "string"
+                },
+                "is_disable": {
+                    "description": "统一账号",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        0
+                    ]
                 },
                 "password": {
                     "description": "密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种",
@@ -47000,6 +47532,13 @@ const docTemplate = `{
                     "description": "姓名，限制100个字符",
                     "type": "string",
                     "maxLength": 100
+                },
+                "remove_company_list": {
+                    "description": "移除多门店角色配置（上级门店使用，可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "roles": {
                     "description": "角色ID列表，非必填，超管没有角色",
@@ -47552,6 +48091,13 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.Company"
                         }
                     ]
+                },
+                "company_list": {
+                    "description": "关联的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyStaffResp"
+                    }
                 },
                 "currency": {
                     "description": "货币设置",
@@ -48144,6 +48690,13 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "company_list": {
+                    "description": "关联的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyStaffResp"
+                    }
+                },
                 "currency": {
                     "description": "货币单位",
                     "allOf": [
@@ -48476,6 +49029,137 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "商家UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyInfoResp": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "roles": {
+                    "description": "角色列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.RoleItem"
+                    }
+                },
+                "super_phone": {
+                    "description": "超管手机号",
+                    "type": "string"
+                },
+                "super_real_name": {
+                    "description": "超管姓名",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyRoleInfo": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                },
+                "is_super": {
+                    "description": "是否超级管理员",
+                    "type": "integer"
+                },
+                "roles": {
+                    "description": "角色列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StaffRole"
+                    }
+                }
+            }
+        },
+        "resp.CompanyStaffResp": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                },
+                "is_super": {
+                    "description": "是否超级管理员",
+                    "type": "integer"
+                },
+                "roles": {
+                    "description": "角色列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "resp.CompanyStoreResp": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址，必填，最大500个字符",
+                    "type": "string"
+                },
+                "company_name": {
+                    "description": "公司名称，区别于店铺名称，最大500个字符",
+                    "type": "string"
+                },
+                "coordinates": {
+                    "description": "经纬度",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "云平台限制商家的可用语言列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "系统语言，必填，至少一个",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "logo_url": {
+                    "description": "店铺logo，上传后保存url，必填",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "店铺名称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "联系电话，必填，最大20个字符",
+                    "type": "string"
+                },
+                "tax_number": {
+                    "description": "税号",
+                    "type": "string"
+                },
+                "time_zone": {
+                    "description": "时区，必填",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "门店UUID",
                     "type": "integer"
                 }
             }
@@ -50856,6 +51540,13 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.Company"
                         }
                     ]
+                },
+                "company_list": {
+                    "description": "关联的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyStaffResp"
+                    }
                 },
                 "currency": {
                     "description": "货币单位",
@@ -53856,12 +54547,13 @@ const docTemplate = `{
                     "description": "备注",
                     "type": "string"
                 },
-                "remark_uuids": {
-                    "description": "备注预设UUID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                "remark_info": {
+                    "description": "备注信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.RemarkInfo"
+                        }
+                    ]
                 },
                 "show_batch_tag": {
                     "description": "是否显示分批类型",
@@ -55715,6 +56407,30 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.RemarkInfo": {
+            "type": "object",
+            "properties": {
+                "custom_remark": {
+                    "description": "自定义备注",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuids": {
+                    "description": "备注UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "resp.ReturnFoodReason": {
             "type": "object",
             "properties": {
@@ -55843,6 +56559,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.RoleItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "角色名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "角色UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.RoleListResp": {
             "type": "object",
             "properties": {
@@ -55855,6 +56584,17 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.SaasCompanyListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyInfoResp"
+                    }
                 }
             }
         },
@@ -55990,6 +56730,58 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.SearchMember"
                     }
+                }
+            }
+        },
+        "resp.SearchStaffCompanyInfo": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                },
+                "is_super": {
+                    "description": "是否超级管理员",
+                    "type": "integer"
+                },
+                "roles": {
+                    "description": "角色列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.RoleItem"
+                    }
+                }
+            }
+        },
+        "resp.SearchStaffResp": {
+            "type": "object",
+            "properties": {
+                "company_list": {
+                    "description": "在当前门店可见范围内的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SearchStaffCompanyInfo"
+                    }
+                },
+                "email": {
+                    "description": "邮箱",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "姓名",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "员工UUID，大于0表示找到员工",
+                    "type": "integer"
                 }
             }
         },
@@ -56146,6 +56938,13 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "company_list": {
+                    "description": "关联的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyStaffResp"
+                    }
+                },
                 "currency": {
                     "description": "货币单位",
                     "allOf": [
@@ -56212,6 +57011,10 @@ const docTemplate = `{
                 "profile_uuid": {
                     "description": "收银员UUID",
                     "type": "integer"
+                },
+                "real_name": {
+                    "description": "姓名",
+                    "type": "string"
                 },
                 "server_version": {
                     "description": "服务端版本",
@@ -56488,6 +57291,13 @@ const docTemplate = `{
         "resp.Staff": {
             "type": "object",
             "properties": {
+                "company_list": {
+                    "description": "员工在当前商家可见范围内的门店列表（包含角色信息）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyRoleInfo"
+                    }
+                },
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"
@@ -57236,6 +58046,13 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.Company"
                         }
                     ]
+                },
+                "company_list": {
+                    "description": "关联的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyStaffResp"
+                    }
                 },
                 "currency": {
                     "description": "货币单位",

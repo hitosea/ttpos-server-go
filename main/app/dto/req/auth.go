@@ -49,3 +49,8 @@ var ChangePasswordRequestMessage = map[string]string{
 	"confirm_password.required":    "确认密码不能为空",
 	"confirm_password.eqfield":     "两次密码输入不一致",
 }
+
+// StoreSwitchReq 门店切换请求
+type StoreSwitchReq struct {
+	CompanyUuid uint64 `json:"company_uuid" binding:"required"` // 要切换到的门店UUID
+}

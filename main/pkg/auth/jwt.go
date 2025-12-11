@@ -21,6 +21,7 @@ type Claims struct {
 	DeviceId       string    `json:"device_id"`        // 设备ID
 	Assistant      Assistant `json:"assistant"`        // 点餐助手绑定的收银机信息
 	IsRefreshToken bool      `json:"is_refresh_token"` // 是否refresh_token
+	Brand          string    `json:"brand"`            // 品牌名称
 	jwt.RegisteredClaims
 }
 

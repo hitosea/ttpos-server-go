@@ -29,6 +29,8 @@ import (
 
 type IAuthSrv interface {
 	Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)                                              // 登录
+	SaasLogin(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)                                          // 统一认证登录
+	StoreSwitch(ctx context.Context, switchReq req.StoreSwitchReq) (resp.LoginResp, error)                                 // 门店切换
 	Logout(ctx context.Context) error                                                                                      // 退出登录
 	CashierBase(ctx context.Context) (resp.CashierBase, error)                                                             // 收银端基本信息
 	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                         // 点餐助手端基本信息
@@ -275,6 +277,277 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	}, nil
 }
 
+// SaasLogin 统一认证登录
+func (s *authSrv) SaasLogin(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error) {
+	var loginResp resp.LoginResp
+
+	// 1. 验证验证码
+	if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-SIGN"), loginReq.Code) &&
+		viper.GetString("GENERAL_VERIFY_CODE") != loginReq.Code {
+		return loginResp, errors.New("验证码错误")
+	}
+
+	// 2. 查询统一账号表 saas.ttpos_staff
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
+
+	var saasStaff *model.SaasStaff
+	var err error
+
+	// 尝试通过邮箱查询
+	saasStaff, err = saasStaffRepo.GetByEmail(loginReq.Username)
+	if err != nil || saasStaff == nil {
+		// 尝试通过手机号查询
+		saasStaff, err = saasStaffRepo.GetByPhone(loginReq.Username)
+		if err != nil || saasStaff == nil {
+			return loginResp, errors.New("账号或密码错误")
+		}
+	}
+
+	// 验证密码
+	if utils.EncryptPassword(loginReq.Password) != saasStaff.Password {
+		return loginResp, errors.New("账号或密码错误")
+	}
+
+	// 检查账号是否被禁用
+	if saasStaff.IsDisable == 1 {
+		return loginResp, errors.New("账号被禁用，请联系管理员")
+	}
+
+	// 3. 查询关联的商家列表（关联 saas.ttpos_company 表获取商家信息）
+	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+
+	// 查询员工关联的商家列表（关联查询商家信息）
+	companyStaffList, err := companyStaffRepo.GetByStaffUuid(saasStaff.Uuid, companyStaffRepo.WithCompany())
+	if err != nil {
+		return loginResp, errors.WithMessage(err, "获取门店列表失败")
+	}
+
+	// 4. 过滤商家：遍历每个商家，过滤掉已过期、异常的商家
+	validCompanyList := make([]*model.CompanyStaff, 0)
+	for _, cs := range companyStaffList {
+		// 过滤条件：员工在该商家未被禁用且未删除
+		if cs.IsDisable != 0 || cs.DeleteTime != 0 {
+			continue
+		}
+
+		// 商家不存在，跳过
+		if cs.Company == nil {
+			continue
+		}
+
+		// 过滤已过期、异常的商家
+		if cs.Company.IsExpired() || cs.Company.IsException() {
+			continue
+		}
+
+		validCompanyList = append(validCompanyList, cs)
+	}
+
+	// 5. 判断商家数量（基于过滤后的商家列表）
+	if len(validCompanyList) == 0 {
+		return loginResp, errors.New("登录失败：你暂无该门店的操作权限，请联系门店管理员开通权限。")
+	}
+
+	// 6. 只有一个商家时，走原有逻辑
+	if len(validCompanyList) == 1 {
+		companyUuid := validCompanyList[0].CompanyUuid
+		return s.loginWithCompany(ctx, loginReq, saasStaff.Uuid, companyUuid, saasStaff.PasswordChangeCount == 0)
+	}
+
+	// 7. 多个商家时的处理（根据登录来源进行不同处理）
+	if loginReq.Source != constant.SourceShop {
+		// 非新管理端登录：生成 company_uuid 为 0 的 token
+		return s.generateTokenWithCompanyUuidZero(ctx, loginReq, saasStaff.Uuid, saasStaff.PasswordChangeCount == 0)
+	}
+
+	// 新管理端登录：检查 last_company_uuid
+	if saasStaff.LastCompanyUuid > 0 {
+		// 检查 last_company_uuid 是否在过滤后的关联商家列表中
+		for _, cs := range validCompanyList {
+			if cs.CompanyUuid == saasStaff.LastCompanyUuid {
+				// 从该商家数据库查询员工信息，走原有逻辑
+				return s.loginWithCompany(ctx, loginReq, saasStaff.Uuid, saasStaff.LastCompanyUuid, saasStaff.PasswordChangeCount == 0)
+			}
+		}
+	}
+
+	// last_company_uuid 无效或不在关联列表中，生成 company_uuid 为 0 的 token
+	return s.generateTokenWithCompanyUuidZero(ctx, loginReq, saasStaff.Uuid, saasStaff.PasswordChangeCount == 0)
+}
+
+// loginWithCompany 从指定商家数据库查询员工信息，走原有 Login 逻辑
+func (s *authSrv) loginWithCompany(ctx context.Context, loginReq req.LoginReq, staffUuid, companyUuid uint64, needChangePassword bool) (resp.LoginResp, error) {
+	// 从商家数据库查询员工信息
+	companyDB := s.dbm.GetDB(companyUuid)
+	if companyDB == nil {
+		return resp.LoginResp{}, errors.New("未找到绑定的商家，请确认登录信息")
+	}
+
+	staffRepo := repository.NewStaffRepo(companyDB)
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid), staffRepo.WithCompany())
+	if err != nil || staff.Uuid == 0 {
+		return resp.LoginResp{}, errors.New("账号或密码错误")
+	}
+
+	// 验证商家状态
+	if staff.Company == nil {
+		return resp.LoginResp{}, errors.New("未找到绑定的商家，请确认登录信息")
+	}
+	if staff.Company.IsExpired() {
+		return resp.LoginResp{}, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+	}
+	if staff.Company.IsException() {
+		return resp.LoginResp{}, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
+	}
+
+	// 检查员工状态
+	if staff.DeleteTime != 0 {
+		return resp.LoginResp{}, errors.New("账号被删除，请联系管理员")
+	}
+	if staff.IsDisable == 1 {
+		return resp.LoginResp{}, errors.New("账号被禁用，请联系管理员")
+	}
+
+	isFirstLogin := staff.CashierOnline == 0
+
+	// 根据 source 进行不同的权限验证和处理（参考原有 Login 方法）
+	switch loginReq.Source {
+	case constant.SourceCashier: // 收银端登录
+		// 判断权限
+		permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
+		if err != nil {
+			return resp.LoginResp{}, errors.WithMessage(err)
+		}
+		if len(permissions) == 0 {
+			return resp.LoginResp{}, errors.New("当前无权限，请联系管理员")
+		}
+
+		// 检查是否有未交班的收银员
+		if viper.GetString("CHECK_SHIFT_HANDOVER") != "false" {
+			currentStaff, _ := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
+			if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
+				return resp.LoginResp{}, errors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.GetUserName()})
+			}
+			// 是否已在其他收银机登录
+			if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
+				return resp.LoginResp{}, errors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{staff.GetUserName()})
+			}
+		}
+
+		// 更新员工信息
+		updates := map[string]any{
+			"cashier_online": 1,
+			"bind_key":       loginReq.DeviceId,
+		}
+		// 创建当班日志
+		if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
+			companySetting := repository.NewCompanySettingRepo(companyDB).Get()
+			ctx.SetCompany(*staff.Company)
+			ctx.SetCompanySetting(companySetting)
+			shiftLog, err := s.shiftSrv.CreateWorkingLog(ctx, staff)
+			if err != nil {
+				return resp.LoginResp{}, errors.WithMessage(err, "创建当班日志失败")
+			}
+			updates["cashier_login_time"] = shiftLog.ShiftStartTime
+			updates["duty_no"] = shiftLog.ShiftNo
+		}
+		err = staffRepo.Update(staff.Uuid, updates)
+		if err != nil {
+			return resp.LoginResp{}, errors.WithMessage(err, "更新信息失败")
+		}
+	case constant.SourceAssistant: // 点餐助手登录
+		companySetting := repository.NewCompanySettingRepo(companyDB).Get()
+		if companySetting.IsOpenAssistant != 1 {
+			return resp.LoginResp{}, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceKitchen: // 厨显端
+		companySetting := repository.NewCompanySettingRepo(companyDB).Get()
+		kitchenSetting, _ := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
+		if kitchenSetting.IsOpen != "1" || companySetting.IsOpenKitchenKds != 1 {
+			return resp.LoginResp{}, errors.New("当前尚未开启厨显功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceTablet: // 平板端
+		companySetting := repository.NewCompanySettingRepo(companyDB).Get()
+		if companySetting.IsOpenTablet != 1 {
+			return resp.LoginResp{}, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceShop: // 移动管理端
+		// 权限获取在 shop_auth.go 中完成，这里不需要处理
+	default:
+		return resp.LoginResp{}, errors.New("登录来源错误")
+	}
+
+	// 登录时没有商家ID，补上
+	ctx.SetCompanyUuid(staff.CompanyUuid)
+	// 添加绑定记录
+	deviceUuid, err := s.deviceSrv.AddDevice(ctx, req.AddDeviceReq{
+		DeviceId:         loginReq.DeviceId,
+		Brand:            loginReq.Brand,
+		Source:           loginReq.Source,
+		FinallyLoginUuid: staff.Uuid,
+		FinallyLoginTime: time.Now().Unix(),
+		CompanyUuid:      staff.CompanyUuid,
+	})
+	if err != nil {
+		return resp.LoginResp{}, errors.WithMessage(err)
+	}
+
+	claims := auth.Claims{
+		Source:      loginReq.Source,
+		CompanyUuid: companyUuid,
+		StaffUuid:   staffUuid,
+		DeviceUuid:  deviceUuid,
+		DeviceId:    loginReq.DeviceId,
+		Assistant:   auth.Assistant{},
+	}
+
+	// 生成 JWT token，refresh_token
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return resp.LoginResp{}, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return resp.LoginResp{}, errors.New("生成refresh_token失败")
+	}
+
+	return resp.LoginResp{
+		Token:               token,
+		RefreshToken:        refreshToken,
+		CashierIsFirstLogin: isFirstLogin,
+		NeedChangePassword:  needChangePassword,
+	}, nil
+}
+
+// generateTokenWithCompanyUuidZero 生成 company_uuid 为 0 的 token
+func (s *authSrv) generateTokenWithCompanyUuidZero(ctx context.Context, loginReq req.LoginReq, staffUuid uint64, needChangePassword bool) (resp.LoginResp, error) {
+	claims := auth.Claims{
+		Source:      loginReq.Source,
+		CompanyUuid: 0, // company_uuid 为 0，需要切换门店后设置
+		StaffUuid:   staffUuid,
+		DeviceUuid:  0,
+		DeviceId:    loginReq.DeviceId,
+		Assistant:   auth.Assistant{},
+		Brand:       loginReq.Brand,
+	}
+
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return resp.LoginResp{}, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return resp.LoginResp{}, errors.New("生成refresh_token失败")
+	}
+
+	return resp.LoginResp{
+		Token:              token,
+		RefreshToken:       refreshToken,
+		NeedChangePassword: needChangePassword,
+	}, nil
+}
+
 // Logout 退出登录
 func (s *authSrv) Logout(ctx context.Context) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
@@ -298,6 +571,14 @@ func (s *authSrv) Logout(ctx context.Context) error {
 // CashierBase 获取收银端基本信息
 func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	var cashierBase resp.CashierBase
+
+	// 如果 company_uuid 为 0，只返回可用门店列表
+	if ctx.GetCompanyUuid() == 0 {
+		cashierBase.CompanyList = s.getCompanyList(ctx)
+		return cashierBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	staff := ctx.GetStaff()
@@ -368,13 +649,23 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,
 		UpdateTime: time.Now().Unix(),
+
+		CompanyList: s.getCompanyList(ctx),
 	}, nil
 }
 
 // AssistantBase 获取助手端基本信息
 func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	assistantBase := resp.AssistantBase{}
+
+	// 如果 company_uuid 为 0，只返回可用门店列表
+	if ctx.GetCompanyUuid() == 0 {
+		assistantBase.CompanyList = s.getCompanyList(ctx)
+		return assistantBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	staff := helper.GetStaff(ctx.GetGin())
 	staffRepo := repository.NewStaffRepo(db)
 	assistantStaffUuid := ctx.GetGin().GetUint64(jwt.AssistantStaffUuid)
@@ -469,15 +760,23 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Kitchen:       kitchenSettingResp,
 		ClientVersion: clientVersion,
 		ServerVersion: utils.GetVersion(),
+		CompanyList:   s.getCompanyList(ctx),
 	}, nil
 }
 
 // TabletBase 平板端基本信息
 func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
+	var tabletBase resp.TabletBase
+
+	// 如果 company_uuid 为 0，只返回可用门店列表
+	if ctx.GetCompanyUuid() == 0 {
+		tabletBase.CompanyList = s.getCompanyList(ctx)
+		return tabletBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
 	company := helper.GetCompany(ctx.GetGin())
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
-
-	var tabletBase resp.TabletBase
 	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 	if err != nil {
 		return tabletBase, errors.WithMessage(err)
@@ -536,6 +835,8 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		Business: businessSetting,
 		Tablet:   tabletSettingResp,
 		Kitchen:  kitchenSettingResp,
+
+		CompanyList: s.getCompanyList(ctx),
 	}, nil
 }
 
@@ -545,6 +846,14 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		kitchenBase        resp.KitchenBase
 		kitchenSettingResp setting.KitchenResp
 	)
+
+	// 如果 company_uuid 为 0，返回可用门店列表
+	if ctx.GetCompanyUuid() == 0 {
+		kitchenBase.CompanyList = s.getCompanyList(ctx)
+		return kitchenBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
 	company := helper.GetCompany(ctx.GetGin())
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, nil)
@@ -595,6 +904,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		Kitchen:       kitchenSettingResp,
 		ServerVersion: utils.GetVersion(),
 		ClientVersion: clientVersion,
+		CompanyList:   s.getCompanyList(ctx),
 	}, nil
 }
 
@@ -945,6 +1255,14 @@ func (s *authSrv) RefreshToken(ctx context.Context) (resp.LoginResp, error) {
 
 func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	var shopBase resp.ShopBase
+
+	// 如果 company_uuid 为 0，只返回可用门店列表
+	if ctx.GetCompanyUuid() == 0 {
+		shopBase.CompanyList = s.getCompanyList(ctx)
+		return shopBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	staff := ctx.GetStaff()
@@ -994,6 +1312,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 
 	return resp.ShopBase{
 		Username:     staff.Username,
+		RealName:     staff.RealName,
 		ProfileUuid:  staff.Uuid,
 		DeviceId:     deviceId,
 		DeviceRemark: deviceRemark,
@@ -1043,6 +1362,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		LastSyncTime:      company.LastSyncTime,
 		HasChildren:       companySetting.HasChildren == 1,
 		HasDataPermission: hasDataPermission,
+		CompanyList:       s.getCompanyList(ctx),
 	}, nil
 }
 
@@ -1051,19 +1371,250 @@ func (s *authSrv) ChangePassword(ctx context.Context, changePasswordReq req.Chan
 	if ctx.GetSource() != constant.SourceShop {
 		return errors.New("当前无权限，请联系管理员")
 	}
-	staff := ctx.GetStaff()
-	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
-	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staff.Uuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	staffUuid := ctx.GetStaffUuid()
+
+	saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
+	staff, err := saasStaffRepo.GetByUuid(staffUuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
 	if staff.Password != utils.EncryptPassword(changePasswordReq.OldPassword) {
 		return errors.New("旧密码错误")
 	}
-	staff.Password = utils.EncryptPassword(changePasswordReq.NewPassword)
-	return staffRepo.Update(staff.Uuid, map[string]any{
-		"password":              staff.Password,
+
+	// 更新统一账号表
+	update := map[string]any{
+		"password":              utils.EncryptPassword(changePasswordReq.NewPassword),
 		"password_change_count": staff.PasswordChangeCount + 1,
 		"password_change_time":  time.Now().Unix(),
+	}
+	saasStaffRepo.Update(staffUuid, update)
+
+	// 同步更新到关联的每个商家数据库
+	companyStaffRepo := repository.NewCompanyStaffRepo(s.dbm.GetDB(constant.DefaultDB))
+	companyStaffList, err := companyStaffRepo.GetByStaffUuid(staffUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	for _, companyStaff := range companyStaffList {
+		db := s.dbm.GetDB(companyStaff.CompanyUuid)
+		if db == nil {
+			continue
+		}
+		staffRepo := repository.NewStaffRepo(db)
+		staffRepo.Update(staffUuid, update)
+	}
+	return nil
+}
+
+// StoreSwitch 门店切换（返回新 token）
+func (s *authSrv) StoreSwitch(ctx context.Context, switchReq req.StoreSwitchReq) (resp.LoginResp, error) {
+	var loginResp resp.LoginResp
+
+	staffUuid := ctx.GetStaffUuid()
+	source := ctx.GetSource()
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+
+	// 验证员工是否有该门店权限（关联查询商家信息）
+	companyStaff, err := companyStaffRepo.GetByStaffAndCompany(staffUuid, switchReq.CompanyUuid, companyStaffRepo.WithCompany())
+	if err != nil || companyStaff == nil {
+		return loginResp, errors.New("无权限访问该门店")
+	}
+
+	// 过滤条件：员工在该商家未被禁用
+	if companyStaff.IsDisable != 0 {
+		return loginResp, errors.New("无权限访问该门店")
+	}
+
+	// 从门店数据库查询员工信息，验证员工状态
+	companyDB := s.dbm.GetDB(switchReq.CompanyUuid)
+	if companyDB == nil {
+		return loginResp, errors.New("门店不存在")
+	}
+
+	staffRepo := repository.NewStaffRepo(companyDB)
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid), staffRepo.WithCompany())
+
+	// 商家状态
+	if staff.Company == nil {
+		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
+	}
+	if err != nil || staff.Uuid == 0 {
+		return loginResp, errors.New("员工不存在")
+	}
+	// 检查员工状态
+	if staff.DeleteTime != 0 {
+		return loginResp, errors.New("账号被删除，请联系管理员")
+	}
+	if staff.IsDisable == 1 {
+		return loginResp, errors.New("账号被禁用，请联系管理员")
+	}
+	if staff.Company.IsExpired() {
+		return loginResp, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+	}
+	if staff.Company.IsException() {
+		return loginResp, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
+	}
+	isFirstLogin := staff.CashierOnline == 0
+
+	// 根据 source 进行权限验证（参考 loginWithCompany 的逻辑）
+	switch ctx.GetSource() {
+	case constant.SourceCashier: // 收银端登录
+		// 判断权限
+		permissions, err := s.roleAccessSrv.GetPermission(constant.CashierRouteName, staff.Uuid, staff.CompanyUuid)
+		if err != nil {
+			return loginResp, errors.WithMessage(err)
+		}
+		if len(permissions) == 0 {
+			return loginResp, errors.New("当前无权限，请联系管理员")
+		}
+
+		// 获取员工仓库
+		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
+
+		// 检查是否有未交班的收银员
+		if viper.GetString("CHECK_SHIFT_HANDOVER") != "false" {
+			currentStaff, _ := staffRepo.GetStaff(staffRepo.WhereDeviceId(ctx.GetDeviceSn()), staffRepo.WhereCashierOnline())
+			if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
+				return loginResp, errors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.GetUserName()})
+			}
+			// 是否已在其他收银机登录
+			if staff.CashierOnline == 1 && ctx.GetDeviceSn() != staff.BindKey {
+				return loginResp, errors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{staff.GetUserName()})
+			}
+		}
+
+		// 更新员工信息
+		updates := map[string]any{
+			"cashier_online": 1,
+			"bind_key":       ctx.GetDeviceSn(),
+		}
+		// 创建当班日志
+		if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
+			companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+			ctx.SetCompany(*staff.Company)
+			ctx.SetCompanySetting(companySetting)
+			shiftLog, err := s.shiftSrv.CreateWorkingLog(ctx, staff)
+			if err != nil {
+				return loginResp, errors.WithMessage(err, "创建当班日志失败")
+			}
+			updates["cashier_login_time"] = shiftLog.ShiftStartTime
+			updates["duty_no"] = shiftLog.ShiftNo
+		}
+		err = staffRepo.Update(staff.Uuid, updates)
+		if err != nil {
+			return loginResp, errors.WithMessage(err, "更新信息失败")
+		}
+	case constant.SourceAssistant: // 点餐助手登录
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if companySetting.IsOpenAssistant != 1 {
+			return loginResp, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceKitchen: // 厨显端
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		kitchenSetting, _ := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
+		if kitchenSetting.IsOpen != "1" || companySetting.IsOpenKitchenKds != 1 {
+			return loginResp, errors.New("当前尚未开启厨显功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceTablet: // 平板端
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if companySetting.IsOpenTablet != 1 {
+			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceShop: // 移动管理端
+		// 权限获取在 shop_auth.go 中完成，这里不需要处理
+	default:
+		return loginResp, errors.New("登录来源错误")
+	}
+
+	// 登录时没有商家ID，补上
+	ctx.SetCompanyUuid(staff.CompanyUuid)
+	// 添加绑定记录
+	deviceUuid, err := s.deviceSrv.AddDevice(ctx, req.AddDeviceReq{
+		DeviceId:         ctx.GetDeviceSn(),
+		Brand:            ctx.GetBrand(),
+		Source:           ctx.GetSource(),
+		FinallyLoginUuid: staff.Uuid,
+		FinallyLoginTime: time.Now().Unix(),
+		CompanyUuid:      staff.CompanyUuid,
 	})
+	if err != nil {
+		return loginResp, errors.WithMessage(err)
+	}
+
+	claims := auth.Claims{
+		Source:      ctx.GetSource(),
+		CompanyUuid: staff.CompanyUuid,
+		StaffUuid:   staff.Uuid,
+		DeviceUuid:  deviceUuid,
+		DeviceId:    ctx.GetDeviceSn(),
+		Assistant:   auth.Assistant{},
+	}
+	// 生成 JWT token，refresh_token
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return loginResp, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return loginResp, errors.New("生成refresh_token失败")
+	}
+
+	// 更新 last_company_uuid（仅新管理端）
+	if source == constant.SourceShop {
+		saasStaffSrv := NewSaasStaffSrv(s.dbm)
+		if err := saasStaffSrv.UpdateLastCompany(ctx, staffUuid, switchReq.CompanyUuid); err != nil {
+			// 记录日志但不影响切换流程
+			logger.Logger.Warn("更新上次登录门店失败", zap.Error(err))
+		}
+	}
+
+	return resp.LoginResp{
+		Token:               token,
+		RefreshToken:        refreshToken,
+		CashierIsFirstLogin: isFirstLogin,
+		NeedChangePassword:  staff.PasswordChangeCount == 0,
+	}, nil
+}
+
+// getAvailableCompanyList 获取员工可用的商家列表（过滤已过期、异常的商家）
+func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
+	// 过滤可用门店（过滤已过期、异常的商家）
+	availableCompanyList := make([]*resp.CompanyStaffResp, 0)
+
+	staffUuid := ctx.GetStaffUuid()
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+
+	// 获取员工关联的门店列表
+	companyList, _ := companyStaffRepo.GetByStaffUuid(staffUuid, companyStaffRepo.WithCompany())
+
+	for _, cs := range companyList {
+		shopDb := s.dbm.GetDB(cs.CompanyUuid)
+		// 根据员工UUID查询角色列表
+		staffRoleRepo := repository.NewStaffRoleRepo(shopDb)
+		roleUuids, _ := staffRoleRepo.GetRoleUuidsByStaffUuid(cs.Uuid)
+		roleRepo := repository.NewRoleRepo(shopDb)
+		roles, _ := roleRepo.GetRoleList(roleRepo.WhereUuids(roleUuids))
+		roleNames := make([]string, 0, len(roles))
+		for _, role := range roles {
+			roleNames = append(roleNames, role.Name)
+		}
+		company := cs.Company
+		if company == nil || company.IsExpired() || company.IsException() {
+			continue
+		}
+		availableCompanyList = append(availableCompanyList, &resp.CompanyStaffResp{
+			CompanyUuid: cs.CompanyUuid,
+			CompanyName: company.Name,
+			Roles:       roleNames,
+			IsSuper:     cs.IsSuper,
+		})
+	}
+
+	return availableCompanyList
 }

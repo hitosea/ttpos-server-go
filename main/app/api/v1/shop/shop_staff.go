@@ -5,10 +5,12 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +18,8 @@ import (
 
 // StaffHandler 员工管理
 type StaffHandler struct {
-	staffSrv service.IStaffSrv
+	staffSrv     service.IStaffSrv
+	saasStaffSrv service.ISaasStaffSrv
 }
 
 // GetStaffList 员工列表
@@ -39,11 +42,40 @@ func (h *StaffHandler) GetStaffList(c *gin.Context) {
 		helper.HandleValidationError(c, err, getStaffListReq, req.GetStaffListReqReqMessage)
 		return
 	}
-	res, err := h.staffSrv.PaginateGetStaffs(ctx, getStaffListReq)
+	var res resp.StaffListPaginationResp
+	var err error
+	// 2.11.0版本后，使用统一账号员工列表
+	if ctx.Version(context.GTE, constant.ClientVersionV2110) {
+		res, err = h.staffSrv.SaasPaginateGetStaffs(ctx, getStaffListReq)
+	} else {
+		res, err = h.staffSrv.PaginateGetStaffs(ctx, getStaffListReq)
+	}
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
 		return
 	}
+	helper.Success(c, res)
+}
+
+// SearchStaff 搜索员工
+// @Summary 搜索员工
+// @Description 搜索员工
+// @Tags 商家端.员工账号
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param keyword query string false "关键词, 邮箱、手机号"
+// @Success 200 {object} dto.Response{data=resp.SearchStaffResp}
+// @Router /shop/staff/search [get]
+func (h *StaffHandler) SearchStaff(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var searchStaffReq req.SearchStaffByKeywordReq
+	if err := c.ShouldBindQuery(&searchStaffReq); err != nil {
+		helper.HandleValidationError(c, err, searchStaffReq, nil)
+		return
+	}
+	res := h.saasStaffSrv.SearchStaff(ctx, searchStaffReq.Keyword)
+
 	helper.Success(c, res)
 }
 
@@ -69,7 +101,14 @@ func (h *StaffHandler) UpdateStaff(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeParamError, err)
 		return
 	}
-	err, exists := h.staffSrv.UpdateStaff(ctx, updateStaffReq)
+	var err error
+	var exists []string
+	// 2.11.0版本后，使用统一账号更新员工
+	if ctx.Version(context.GTE, constant.ClientVersionV2110) {
+		err, exists = h.staffSrv.SaasUpdateStaff(ctx, updateStaffReq)
+	} else {
+		err, exists = h.staffSrv.UpdateStaff(ctx, updateStaffReq)
+	}
 	if err != nil {
 		helper.ErrorWithData(c, constant.CodeSystemError, gin.H{
 			"exists": exists,
@@ -101,7 +140,15 @@ func (h *StaffHandler) AddStaff(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeParamError, err)
 		return
 	}
-	err, exists := h.staffSrv.AddStaff(ctx, addStaffReq)
+	var err error
+	var exists []string
+
+	// 2.11.0版本后，使用统一账号添加员工
+	if ctx.Version(context.GTE, constant.ClientVersionV2110) {
+		err, exists = h.staffSrv.SaasAddStaff(ctx, addStaffReq)
+	} else {
+		err, exists = h.staffSrv.AddStaff(ctx, addStaffReq)
+	}
 	if err != nil {
 		helper.ErrorWithData(c, constant.CodeSystemError, gin.H{
 			"exists": exists,
@@ -149,7 +196,8 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &StaffHandler{
-		staffSrv: service.NewStaffSrv(dbm, cache, roleAccessSrv),
+		staffSrv:     service.NewStaffSrv(dbm, cache, roleAccessSrv),
+		saasStaffSrv: service.NewSaasStaffSrv(dbm),
 	}
 
 	// 需要认证
@@ -160,5 +208,7 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/staff/add", wrapper.AddStaff)       // 添加员工
 		privateApi.POST("/staff/update", wrapper.UpdateStaff) // 编辑员工
 		privateApi.GET("/role", wrapper.GetRoleList)          // 角色列表
+
+		privateApi.GET("/staff/search", wrapper.SearchStaff) // 搜索员工
 	}
 }

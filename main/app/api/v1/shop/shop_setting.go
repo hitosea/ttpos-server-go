@@ -28,6 +28,7 @@ type SettingHandler struct {
 	otherSrv      service.IOtherSrv
 	uploadFileSrv service.IUploadFileSrv
 	dataManageSrv service.IDataManageSrv
+	companySrv    service.ICompanySrv
 }
 
 // SaveStoreSetting 保存门店设置
@@ -1137,6 +1138,74 @@ func (h *SettingHandler) UploadKioskCarousel(c *gin.Context) {
 	helper.Success(c, uploadFileResp)
 }
 
+// GetCompanyList 获取可见门店列表
+// @Summary 获取可见门店列表
+// @Description 获取可见门店列表
+// @Tags 商家端.门店管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.SaasCompanyListResp}
+// @Router /shop/company/list [get]
+func (h *SettingHandler) GetCompanyList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	companyList, err := h.companySrv.GetCompanyList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, companyList)
+}
+
+// GetCompanyInfo 获取门店信息
+// @Summary 获取门店信息
+// @Description 获取门店信息（仅总部可用）
+// @Tags 商家端.门店管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query uint64 true "门店UUID"
+// @Success 200 {object} dto.Response{data=resp.CompanyStoreResp}
+// @Router /shop/company/info [get]
+func (h *SettingHandler) GetCompanyInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var getCompanyInfoReq req.GetCompanyInfoReq
+	if err := c.ShouldBindQuery(&getCompanyInfoReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	companyInfo, err := h.companySrv.GetCompanyInfo(ctx, getCompanyInfoReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, companyInfo)
+}
+
+// UpdateCompanyInfo 修改门店信息
+// @Summary 修改门店信息
+// @Description 修改门店信息（仅总部可用）
+// @Tags 商家端.门店管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.UpdateCompanyInfoReq true "更新门店信息"
+// @Success 200 {object} dto.Response
+// @Router /shop/company/update [post]
+func (h *SettingHandler) UpdateCompanyInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.UpdateCompanySettingReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.companySrv.UpdateCompanyInfo(ctx, updateReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "更新成功")
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1160,6 +1229,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
 		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv),
 		dataManageSrv: service.NewDataManageSrv(dbm, settingSrv),
+		companySrv:    service.NewCompanySrv(dbm, settingSrv),
 	}
 
 	// 需要认证
@@ -1207,5 +1277,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		// 数据管理
 		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
 		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理
+
+		// 门店管理（总部功能）
+		privateApi.GET("/company/list", wrapper.GetCompanyList)       // 获取总部下所有门店列表
+		privateApi.GET("/company/info", wrapper.GetCompanyInfo)       // 获取门店信息
+		privateApi.POST("/company/update", wrapper.UpdateCompanyInfo) // 修改门店信息
 	}
 }

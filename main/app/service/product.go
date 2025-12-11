@@ -7758,6 +7758,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				OpenOverallDiscount:           productPackage.OpenOverallDiscount,
 				IsBatch:                       productPackage.IsBatch,
 				HeadquarterUuid:               companySetting.HeadquarterUuid,
+				ProductLabelUuid:              productPackage.ProductLabelUuid,
 			})
 			for _, productBom := range productPackage.ProductBoms {
 				newProductBomList = append(newProductBomList, model.ProductBom{

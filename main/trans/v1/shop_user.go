@@ -95,12 +95,22 @@ func (s *ShopUserService) ConvertShopUser() error {
 			return errors.WithMessage(err)
 		}
 
+		// 从商家数据库获取员工的 is_disable 状态
+		targetShopDB := s.targetDB
+		targetShopStaffRepo := repository.NewStaffRepo(targetShopDB)
+		shopStaff, _ := targetShopStaffRepo.GetStaff(targetShopStaffRepo.WhereUuid(uint64(shopUser.ShopUserID)))
+		isDisable := 0
+		if shopStaff.IsDisable != 0 {
+			isDisable = shopStaff.IsDisable
+		}
+
 		if existsCompanyStaff.Uuid > 0 { // 更新saas商家员工
 			err = targetCompanyStaffRepo.UpdateCompanyStaff(existsCompanyStaff.Uuid, map[string]any{
 				"uuid":         shopUser.ShopUserID,
 				"company_uuid": s.targetCompanyUuid,
 				"username":     shopUser.UserName,
 				"is_super":     shopUser.IsSuper,
+				"is_disable":   isDisable,
 				"create_time":  shopUser.CreateTime,
 				"update_time":  shopUser.UpdateTime,
 			})
@@ -119,6 +129,7 @@ func (s *ShopUserService) ConvertShopUser() error {
 				Username:    shopUser.UserName,
 				Phone:       shopUser.Phone,
 				IsSuper:     int(shopUser.IsSuper),
+				IsDisable:   isDisable,
 			})
 		}
 	}

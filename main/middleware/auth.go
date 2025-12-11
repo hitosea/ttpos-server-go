@@ -85,6 +85,39 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		return
 	}
 
+	// 如果 company_uuid 为 0，只允许访问 base 接口和切换门店接口
+	if claims.CompanyUuid == 0 {
+		// 定义允许访问的接口列表
+		allowedPaths := []string{
+			fmt.Sprintf("/api/v1/%s/base", claims.Source),
+			fmt.Sprintf("/api/v1/%s/store_switch", claims.Source),
+			fmt.Sprintf("/api/v1/%s/change_password", claims.Source),
+		}
+
+		// 检查是否在允许列表中
+		isAllowed := slices.Contains(allowedPaths, urlPath)
+
+		if !isAllowed {
+			helper.Fail(c, constant.CodeNeedCompanyUuid, "请先选择门店")
+			c.Abort()
+			return
+		}
+
+		// 允许访问，但跳过 Auth 验证（因为 company_uuid 为 0）
+		// 设置基本的上下文信息
+		c.Set(jwt.Source, claims.Source)
+		c.Set(jwt.CompanyUuid, 0)
+		c.Set(jwt.StaffUuid, claims.StaffUuid)
+		c.Set(jwt.DeviceId, claims.DeviceId)
+		c.Set(jwt.RequestUuid, uuid.New().String())
+		c.Set(jwt.AssistantStaffUuid, claims.Assistant.StaffUuid)
+		c.Set(jwt.AssistantDeviceId, claims.Assistant.DeviceId)
+		c.Set(jwt.DeviceUuid, claims.DeviceUuid)
+		c.Set(jwt.Brand, claims.Brand)
+		return
+	}
+
+	// company_uuid 不为 0，走原有逻辑
 	// 用户鉴权
 	ctx := context.NewContext(
 		context.WithGinContext(c.Copy()),
@@ -146,6 +179,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 	c.Set(jwt.DeskUuid, desk.Uuid) // 桌台Uuid，平板端绑定的桌台Uuid
 
 	c.Set(jwt.DB, dbm.GetDB(claims.CompanyUuid)) // 数据库连接
+	c.Set(jwt.Brand, claims.Brand)               // 品牌名称
 }
 
 func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {

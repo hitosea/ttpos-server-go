@@ -378,6 +378,22 @@ class Staff extends BaseModel
             $companyUuid = $company['company_uuid'];
             $roleUuids = $company['role_uuids'] ?? [];
             
+            // 从商家数据库获取员工的 is_disable 状态
+            $shopPdo = $this->getShopPdoConnection($companyUuid);
+            $isDisable = 0;
+            if ($shopPdo) {
+                try {
+                    $stmt = $shopPdo->prepare("SELECT is_disable FROM ttpos_staff WHERE uuid = ? AND delete_time = 0 LIMIT 1");
+                    $stmt->execute([$staffUuid]);
+                    $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($result) {
+                        $isDisable = (int)$result['is_disable'];
+                    }
+                } catch (\Exception $e) {
+                    // 如果查询失败，使用默认值 0
+                }
+            }
+            
             // 检查门店关联是否存在
             $exists = $saasDb->table('ttpos_company_staff')
                 ->where('uuid', $staffUuid)
@@ -393,6 +409,7 @@ class Staff extends BaseModel
                     ->update([
                         'username' => $email,
                         'phone' => $phone,
+                        'is_disable' => $isDisable,
                         'update_time' => $currentTime,
                     ]);
             } else {
@@ -404,6 +421,7 @@ class Staff extends BaseModel
                         'username' => $email,
                         'phone' => $phone,
                         'is_super' => 0,
+                        'is_disable' => $isDisable,
                         'create_time' => $currentTime,
                         'update_time' => $currentTime,
                     ]);

@@ -209,7 +209,7 @@ CREATE TABLE `ttpos_staff` (
 
 #### 表 2: 账号-门店关联表 (ttpos_company_staff) - saas 数据库
 
-**说明**: 使用现有的 `ttpos_company_staff` 表作为账号-门店关联表，表结构暂不需要调整。
+**说明**: 使用现有的 `ttpos_company_staff` 表作为账号-门店关联表。已通过迁移文件添加 `is_disable` 字段，用于从商家数据库同步员工禁用状态。
 
 **现有表结构**:
 ```sql
@@ -221,6 +221,7 @@ CREATE TABLE `ttpos_company_staff` (
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
   `is_super` int NOT NULL DEFAULT '0' COMMENT '是否超级管理员',
+  `is_disable` int NOT NULL DEFAULT '0' COMMENT '是否禁用1禁用,0未禁用',
   `create_time` int unsigned NOT NULL DEFAULT '0' COMMENT '创建时间（时间戳）',
   `update_time` int unsigned NOT NULL DEFAULT '0' COMMENT '更新时间（时间戳）',
   `delete_time` int unsigned NOT NULL DEFAULT '0' COMMENT '删除时间（时间戳）',
@@ -241,6 +242,7 @@ CREATE TABLE `ttpos_company_staff` (
 | username | varchar(255) | 员工账号 | NOT NULL |
 | phone | varchar(255) | 员工手机号 | NOT NULL |
 | is_super | int | 是否超级管理员 | DEFAULT 0 |
+| is_disable | int | 是否禁用（1-禁用，0-未禁用） | DEFAULT 0（从商家数据库同步） |
 | create_time | int unsigned | 创建时间 | DEFAULT 0 |
 | update_time | int unsigned | 更新时间 | DEFAULT 0 |
 | delete_time | int unsigned | 删除时间 | DEFAULT 0 |
@@ -257,10 +259,44 @@ CREATE TABLE `ttpos_company_staff` (
 - `company_uuid` 字段关联到 `ttpos_company.uuid`（门店UUID）
 - 一个账号可以关联多个门店（一个 `ttpos_staff.uuid` 可以有多条 `ttpos_company_staff` 记录）
 - 账号在门店的角色仍然在门店数据库的 `ttpos_staff_role` 表中管理
+- `is_disable` 字段从商家数据库的 `ttpos_staff.is_disable` 同步而来，用于查询该员工是否在关联门店中被禁用
 
-**注意**: 账号在门店的角色仍然在 `ttpos_staff_role` 表中管理（门店数据库中），不需要修改。
+**注意**: 
+- 账号在门店的角色仍然在 `ttpos_staff_role` 表中管理（门店数据库中），不需要修改。
+- `is_disable` 字段通过迁移文件从商家数据库同步，在创建/更新 `company_staff` 记录时自动同步，在更新员工状态时也会同步更新。
 
 ### 数据库迁移
+
+#### 0. 为 ttpos_company_staff 表添加 is_disable 字段（已实现）
+
+**迁移文件**: `admin/database/migrations/20251210192802_add_is_disable_to_company_staff.php`
+
+**迁移内容**:
+1. **添加字段**: 为 `saas.ttpos_company_staff` 表添加 `is_disable` 字段
+   - 字段类型: `integer`
+   - 默认值: `0`
+   - 位置: `after 'is_super'`
+   - 注释: `是否禁用1禁用,0未禁用`
+
+2. **数据同步**: 从商家数据库同步 `is_disable` 数据
+   - 获取所有门店的 `company_staff` 记录（`delete_time = 0`）
+   - 按门店分组，从对应的商家数据库（`shop{company_uuid}`）查询 `ttpos_staff.is_disable`
+   - 使用 PDO 连接各个门店数据库，查询每个门店下所有员工的 `uuid` 和 `is_disable` 状态
+   - 批量更新 `saas.ttpos_company_staff.is_disable` 字段
+   - 如果商家数据库中找不到对应员工，默认设置为 `0`
+   - 处理数据库连接失败的情况，记录成功和跳过的数量
+
+**迁移逻辑**:
+- 使用 PDO 连接各个门店数据库（数据库名格式：`shop{company_uuid}`）
+- 查询每个门店下所有员工的 `uuid` 和 `is_disable` 状态
+- 批量更新 `saas.ttpos_company_staff` 表的 `is_disable` 字段
+- 处理数据库连接失败的情况，记录跳过数量
+
+**执行命令**:
+```bash
+cd admin
+php think migrate:run
+```
 
 #### 1. 创建表结构迁移
 
@@ -551,6 +587,7 @@ type CompanyStaff struct {
     Username    string `gorm:"column:username;type:varchar(255);comment:员工账号;NOT NULL" json:"username"`
     Phone       string `gorm:"column:phone;type:varchar(255);comment:员工手机号;NOT NULL" json:"phone"`
     IsSuper     int    `gorm:"column:is_super;type:int(11);default:0;comment:是否超级管理员" json:"is_super"`
+    IsDisable   int    `gorm:"column:is_disable;type:int;default:0;comment:是否禁用1禁用,0未禁用;NOT NULL" json:"is_disable"`
     
     Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
     // 关联到 SaasStaff
@@ -629,18 +666,17 @@ type SaasStaffListResp struct {
 }
 
 type CompanyStaffResp struct {
-    Uuid        uint64 `json:"uuid"`
-    StaffUuid   uint64 `json:"staff_uuid"`
-    CompanyUuid uint64 `json:"company_uuid"`
-    CompanyName string `json:"company_name"`
-    Username    string `json:"username"`
-    IsSuper     int    `json:"is_super"`
+    CompanyUuid uint64 `json:"company_uuid"` // 门店UUID
+    CompanyName string `json:"company_name"`  // 门店名称
+    IsSuper     int    `json:"is_super"`     // 是否超级管理员
 }
 
 type StoreSwitchResp struct {
-    CompanyUuid uint64   `json:"company_uuid"`
-    CompanyName string   `json:"company_name"`
-    Roles       []string `json:"roles"`
+    Token        string   `json:"token"`         // 新 token
+    RefreshToken string   `json:"refresh_token"` // 新 refresh token
+    CompanyUuid  uint64   `json:"company_uuid"`  // 门店UUID
+    CompanyName  string   `json:"company_name"`  // 门店名称
+    Roles        []string `json:"roles"`         // 角色列表
 }
 
 type ShopLoginResp struct {
@@ -651,6 +687,93 @@ type ShopLoginResp struct {
     DefaultCompanyUuid uint64            `json:"default_company_uuid,omitempty"`  // 默认门店UUID（多个门店时返回）
     CompanyUuid        uint64            `json:"company_uuid,omitempty"`  // 单个门店时返回
     CompanyName        string            `json:"company_name,omitempty"`  // 单个门店时返回
+}
+
+// SearchStaffCompanyInfo 搜索员工的门店信息
+type SearchStaffCompanyInfo struct {
+    CompanyUuid uint64     `json:"company_uuid"` // 门店UUID
+    CompanyName string     `json:"company_name"` // 门店名称
+    Roles       []RoleItem `json:"roles"`        // 角色列表（包含UUID和名称）
+    IsSuper     int        `json:"is_super"`     // 是否超级管理员
+}
+
+// RoleItem 角色项
+type RoleItem struct {
+    Uuid uint64 `json:"uuid"` // 角色UUID
+    Name string `json:"name"` // 角色名称
+}
+
+// SearchStaffResp 搜索员工响应
+type SearchStaffResp struct {
+    Uuid        uint64                    `json:"uuid"`         // 员工UUID，大于0表示找到员工
+    Email       string                    `json:"email"`        // 邮箱
+    Phone       string                    `json:"phone"`         // 手机号
+    RealName    string                    `json:"real_name"`    // 姓名
+    CompanyList []*SearchStaffCompanyInfo `json:"company_list"` // 在当前门店可见范围内的门店列表
+}
+
+// SaasStaffItem 统一账号员工列表项
+type SaasStaffItem struct {
+    Uuid        uint64            `json:"uuid"`         // 员工UUID
+    Username    string            `json:"username"`     // 用户名（邮箱）
+    Phone       string            `json:"phone"`        // 手机号
+    RealName    string            `json:"real_name"`    // 真实姓名
+    IsDisable   int               `json:"is_disable"`  // 是否禁用（如果传递了company_uuid，则为该商家的禁用状态）
+    CreateTime  int64             `json:"create_time"`  // 创建时间
+    CompanyList []CompanyRoleInfo `json:"company_list"` // 员工在当前商家可见范围内的门店列表（包含角色信息）
+}
+
+// SaasStaffListPaginationResp 统一账号员工列表响应
+type SaasStaffListPaginationResp struct {
+    List []SaasStaffItem  `json:"list"`
+    Meta dto.PageResponse `json:"meta"`
+}
+
+// CompanyInfoResp 门店信息响应（列表项）
+type CompanyInfoResp struct {
+    Uuid          uint64 `json:"uuid"`            // 门店UUID
+    Name          string `json:"name"`            // 门店名称
+    SuperRealName string `json:"super_real_name"` // 超管姓名
+    SuperPhone    string `json:"super_phone"`     // 超管手机号
+}
+
+// SaasCompanyListResp 门店列表响应
+type SaasCompanyListResp struct {
+    List []CompanyInfoResp `json:"list"`
+}
+
+// CompanyStoreResp 门店设置响应
+type CompanyStoreResp struct {
+    Uuid         uint64             `json:"uuid"`          // 门店UUID
+    Name         string             `json:"name"`          // 店铺名称
+    LogoUrl      string             `json:"logo_url"`      // 店铺logo
+    Address      string             `json:"address"`       // 地址
+    Coordinates  string             `json:"coordinates"`   // 经纬度
+    CompanyName  string             `json:"company_name"`  // 公司名称
+    Phone        string             `json:"phone"`         // 联系电话
+    TaxNumber    string             `json:"tax_number"`    // 税号
+    LanguageList []dto.LanguageItem `json:"language_list"` // 系统语言列表
+    TimeZone     string             `json:"time_zone"`     // 时区
+    Language     []string           `json:"language"`      // 云平台限制的可用语言列表
+}
+
+// UpdateCompanySettingReq 更新门店设置请求
+type UpdateCompanySettingReq struct {
+    Uuid        uint64             `json:"uuid" binding:"required"`           // 门店UUID
+    Name        string             `json:"name" binding:"required,max=100"`   // 店铺名称
+    LogoUrl     string             `json:"logo_url" binding:"required"`       // 店铺logo
+    Address     string             `json:"address" binding:"max=500"`        // 地址
+    Coordinates string             `json:"coordinates"`                       // 经纬度
+    CompanyName string             `json:"company_name" binding:"max=500"`   // 公司名称
+    Phone       string             `json:"phone" binding:"required,max=20"`    // 联系电话
+    TaxNumber   string             `json:"tax_number"`                        // 税号
+    Language    []dto.LanguageItem `json:"language" binding:"required,min=1"` // 系统语言
+    TimeZone    string             `json:"time_zone" binding:"required"`      // 时区
+}
+
+// GetCompanyInfoReq 获取门店信息请求
+type GetCompanyInfoReq struct {
+    Uuid uint64 `form:"uuid" binding:"required"` // 门店UUID
 }
 ```
 
@@ -890,7 +1013,7 @@ type ShopLoginResp struct {
 
 **请求**:
 
-- **URL**: `/api/v1/auth/login`
+- **URL**: `/api/v1/shop/login`
 - **Method**: `POST`
 - **Body**:
   ```json
@@ -961,11 +1084,165 @@ type ShopLoginResp struct {
      - 返回门店列表和默认门店UUID，前端显示门店选择界面
 4. **门店选择**: 用户选择门店后，调用门店切换 API，更新 `last_company_uuid` 字段
 
-#### API 6: 门店切换（Go Main）
+**实现位置**: `main/app/service/auth.go::ShopLogin()`
+
+---
+
+#### API 5.1: 统一认证登录（Go Main）- SaasLogin
+
+**说明**: 新增 `SaasLogin` 方法，用于统一认证。参数和 `Login` 方法一致，但使用统一账号表 `saas.ttpos_staff` 进行认证。
+
+**版本判断逻辑**:
+- **所有端登录时**（收银端、点餐助手、平板端、厨显端、新管理端等），需要判断客户端版本号
+- **版本号获取**: 从请求头 `Client-Version` 或 `Version-Name` 获取客户端版本号
+- **版本判断**: 
+  - 如果版本号 >= 2.11.0，调用 `SaasLogin` 方法（统一认证）
+  - 如果版本号 < 2.11.0 或未传递版本号，调用原有的 `Login` 方法（兼容旧版本）
+- **版本比较**: 使用 `utils.CompareVersion()` 或 `ctx.Version(context.GTE, "2.11.0")` 进行版本比较
 
 **请求**:
 
-- **URL**: `/api/v1/auth/store_switch`
+- **URL**: 复用各端的登录接口（如 `/api/v1/cashier/login`、`/api/v1/assistant/login`、`/api/v1/tablet/login`、`/api/v1/kitchen/login`、`/api/v1/shop/login` 等）
+- **Method**: `POST`
+- **Headers**:
+  ```
+  Client-Version: 2.11.0  // 或 Version-Name: 2.11.0（可选，用于版本判断）
+  X-SIGN: {sign}
+  ```
+- **Body**:
+  ```json
+  {
+    "username": "user@example.com",
+    "password": "password123",
+    "code": "1234",
+    "device_id": "device123",
+    "source": "cashier"
+  }
+  ```
+
+**登录流程说明**:
+
+1. **验证验证码**: 验证验证码是否正确
+2. **查询统一账号**: 根据用户名（邮箱或手机号）和密码查询 `saas.ttpos_staff` 表
+   - 支持邮箱或手机号登录
+   - 验证密码是否正确
+   - 检查账号是否被禁用（`is_disable == 1`）
+3. **查询关联商家**: 查询 `saas.ttpos_company_staff` 表，关联 `saas.ttpos_company` 表获取商家信息
+   - 查询条件：`ttpos_company_staff.uuid = staff_uuid` 且 `ttpos_company_staff.is_disable = 0` 且 `ttpos_company_staff.delete_time = 0`
+   - 关联查询：`ttpos_company_staff.company_uuid = ttpos_company.uuid`
+4. **过滤商家**: 遍历每个商家，过滤掉以下情况的商家：
+   - 商家已过期（`company.IsExpired() == true`）
+   - 商家状态异常（`company.IsException() == true`）
+   - 员工在该商家被禁用（`company_staff.is_disable == 1`，已在步骤3中过滤）
+5. **判断商家数量**（基于过滤后的商家列表）:
+   - **没有关联商家**: 返回错误 "登录失败：你暂无该门店的操作权限，请联系门店管理员开通权限。"
+   - **只有一个商家**: 
+     - 从该商家数据库中查询员工信息（`shop{company_uuid}.ttpos_staff`）
+     - 走原有 `Login` 方法的逻辑（验证商家状态、员工状态、权限等）
+     - 生成 token，`company_uuid` 设置为该商家UUID
+   - **有多个商家**:
+     - **非新管理端登录**（`source != "shop"`）:
+       - 生成 token，`company_uuid` 设置为 `0`
+       - 返回 token，前端需要调用门店切换 API 选择门店
+     - **新管理端登录**（`source == "shop"`）:
+       - 查询 `saas.ttpos_staff.last_company_uuid` 字段
+       - 如果 `last_company_uuid > 0` 且在关联的商家UUID列表中:
+         - 从该商家数据库中查询员工信息
+         - 走原有 `Login` 方法的逻辑
+         - 生成 token，`company_uuid` 设置为 `last_company_uuid`
+       - 否则:
+         - 生成 token，`company_uuid` 设置为 `0`
+         - 返回 token，前端需要调用门店切换 API 选择门店
+
+**响应**（单个商家时，直接进入）:
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "token": "jwt_token_here",
+    "refresh_token": "refresh_token_here",
+    "need_change_password": false,
+    "cashier_is_first_login": false
+  }
+}
+```
+
+**响应**（多个商家时，company_uuid 为 0）:
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "token": "jwt_token_here",
+    "refresh_token": "refresh_token_here",
+    "need_change_password": false,
+    "cashier_is_first_login": false
+  }
+}
+```
+
+**错误响应**（没有关联商家）:
+
+```json
+{
+  "code": 0,
+  "message": "登录失败：你暂无该门店的操作权限，请联系门店管理员开通权限。",
+  "data": {}
+}
+```
+
+**实现位置**: `main/app/service/auth.go::SaasLogin()`
+
+**API 层实现示例**（各端登录接口）:
+
+```go
+// main/app/api/v1/cashier/cashier_auth.go
+func (h *AuthHandler) Login(c *gin.Context) {
+    ctx := helper.GetContext(c)
+    var loginReq req.LoginReq
+    if err := c.ShouldBindJSON(&loginReq); err != nil {
+        helper.HandleValidationError(c, err, loginReq, req.LoginRequestMessage)
+        return
+    }
+    loginReq.Source = constant.SourceCashier
+    
+    var loginResp resp.LoginResp
+    var err error
+    
+    // 版本判断：如果版本号 >= 2.11.0，使用统一认证登录
+    if ctx.Version(context.GTE, "2.11.0") {
+        loginResp, err = h.authSrv.SaasLogin(ctx, loginReq)
+    } else {
+        // 旧版本兼容，使用原有登录方法
+        loginResp, err = h.authSrv.Login(ctx, loginReq)
+    }
+    
+    if err != nil {
+        helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
+        return
+    }
+    helper.Success(c, resp.CashierLoginResp{
+        Token:        loginResp.Token,
+        RefreshToken: loginResp.RefreshToken,
+        IsFirstLogin: loginResp.CashierIsFirstLogin,
+    })
+}
+```
+
+**参考**: `main/app/service/auth.go::Login()`
+
+---
+
+#### API 6: 门店切换（Go Main）- 新管理端
+
+**说明**: 该接口已合并到 API 6.1 中，新管理端使用 `/api/v1/shop/store_switch` 接口。
+
+**请求**:
+
+- **URL**: `/api/v1/shop/store_switch`
 - **Method**: `POST`
 - **Body**:
   ```json
@@ -992,12 +1269,29 @@ type ShopLoginResp struct {
 - 切换门店成功后，需要调用 `SaasStaffSrv.UpdateLastCompany()` 更新 `last_company_uuid` 字段
 - 该字段用于记录员工上次登录新管理端时选择的商家，下次登录时默认选择该门店
 
-#### API 7: 获取账号关联的门店列表（Go Main）
+#### API 6.1: 各端门店切换接口（Go Main）
+
+**说明**: 为收银端、点餐助手、平板端、厨显端、新管理端（移动端）等各端新增门店切换接口。
 
 **请求**:
 
-- **URL**: `/api/v1/auth/company_list`
-- **Method**: `GET`
+- **URL**: 
+  - `/api/v1/cashier/store_switch` - 收银端
+  - `/api/v1/assistant/store_switch` - 点餐助手端
+  - `/api/v1/tablet/store_switch` - 平板端
+  - `/api/v1/kitchen/store_switch` - 厨显端
+  - `/api/v1/shop/store_switch` - 新管理端（移动端）
+- **Method**: `POST`
+- **Headers**:
+  ```
+  Authorization: Bearer {token}
+  ```
+- **Body**:
+  ```json
+  {
+    "company_uuid": 789012
+  }
+  ```
 
 **响应**:
 
@@ -1006,21 +1300,69 @@ type ShopLoginResp struct {
   "code": 1,
   "message": "success",
   "data": {
-    "list": [
+    "token": "new_jwt_token_here",
+    "refresh_token": "new_refresh_token_here",
+    "company_uuid": 789012,
+    "company_name": "测试门店"
+  }
+}
+```
+
+**切换流程说明**:
+
+1. **验证员工权限**: 验证员工是否有该门店权限（查询 `saas.ttpos_company_staff` 表）
+2. **验证门店状态**: 验证门店是否过期、异常（调用 `company.IsExpired()` 和 `company.IsException()`）
+3. **验证员工状态**: 从门店数据库查询员工信息，验证员工是否被禁用
+4. **走登录的部分逻辑**: 
+   - 根据 `source` 进行权限验证（参考 `Login` 方法的逻辑）
+   - 生成新的 token，`company_uuid` 设置为切换后的门店UUID
+   - 更新 `last_company_uuid` 字段（仅新管理端）
+5. **返回新 token**: 返回包含新 `company_uuid` 的 token
+
+**重要说明**:
+- **不需要验证码**: 切换门店接口不需要验证码验证
+- **不需要用户名和密码**: 切换门店接口不需要用户名和密码验证
+- **需要 token**: 切换门店接口需要有效的 token（从 token 中获取 `staff_uuid`）
+- **返回新 token**: 切换门店成功后，返回新的 token，前端需要使用新 token 替换旧 token
+- **更新 last_company_uuid**: 仅新管理端（`source == "shop"`）需要更新 `last_company_uuid` 字段
+
+**实现位置**: 
+- Service 层: `main/app/service/auth.go::StoreSwitch()`（已实现，返回新 token）
+- API 层: 各端的 `*_auth.go` 文件（需要新增 `StoreSwitch` 方法）
+
+**实现细节**:
+- 验证员工是否有该门店权限（查询 `saas.ttpos_company_staff` 表，使用 `WithCompany()` 预加载商家信息）
+- 验证门店状态（调用 `company.IsExpired()` 和 `company.IsException()`）
+- 从门店数据库查询员工信息，验证员工状态
+- 根据 `source` 进行权限验证（参考 `loginWithCompany` 的逻辑）
+- 生成新的 token，`company_uuid` 设置为切换后的门店UUID
+- 更新 `last_company_uuid` 字段（仅新管理端，调用 `SaasStaffSrv.UpdateLastCompany()`）
+- 返回包含新 token、门店信息和角色列表的响应
+
+#### API 7: 获取账号关联的门店列表（Go Main）
+
+**说明**: 该功能已集成到各端的 Base 接口中，通过 `company_list` 字段返回。不再需要单独的接口。
+
+**实现位置**: 
+- 各端的 Base 接口（`/api/v1/{source}/base`）
+- 响应字段：`company_list`（类型：`[]*CompanyStaffResp`）
+
+**响应示例**（通过 Base 接口返回）:
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "company_list": [
       {
-        "uuid": 789012,
-        "staff_uuid": 123456,
         "company_uuid": 789012,
         "company_name": "测试门店1",
-        "username": "user@example.com",
         "is_super": 0
       },
       {
-        "uuid": 789013,
-        "staff_uuid": 123456,
         "company_uuid": 789013,
         "company_name": "测试门店2",
-        "username": "user@example.com",
         "is_super": 0
       }
     ]
@@ -1030,13 +1372,249 @@ type ShopLoginResp struct {
 
 ---
 
-#### API 8: 获取总部下所有门店列表（Go Main）
+## 🔐 中间件调整
+
+### 中间件权限控制
+
+**文件**: `main/middleware/auth.go`
+
+**调整说明**: 在 `ParseJwt` 函数中，当解析出的 `company_uuid` 为 `0` 时，只允许访问以下接口：
+
+1. **各端的 base 接口**:
+   - `/api/v1/cashier/base` - 收银端
+   - `/api/v1/assistant/base` - 点餐助手端
+   - `/api/v1/tablet/base` - 平板端
+   - `/api/v1/kitchen/base` - 厨显端
+   - `/api/v1/shop/base` - 新管理端（移动端）
+
+2. **各端的切换门店接口**:
+   - `/api/v1/cashier/store_switch` - 收银端
+   - `/api/v1/assistant/store_switch` - 点餐助手端
+   - `/api/v1/tablet/store_switch` - 平板端
+   - `/api/v1/kitchen/store_switch` - 厨显端
+   - `/api/v1/shop/store_switch` - 新管理端（移动端）
+
+**实现逻辑**:
+
+```go
+// main/middleware/auth.go
+func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *database.DBManager) {
+    // ... 现有 token 解析逻辑 ...
+    
+    // 如果 company_uuid 为 0，只允许访问 base 接口和切换门店接口
+    if claims.CompanyUuid == 0 {
+        urlPath := c.Request.URL.Path
+        
+        // 定义允许访问的接口列表
+        allowedPaths := []string{
+            fmt.Sprintf("/api/v1/%s/base", claims.Source),
+            fmt.Sprintf("/api/v1/%s/store_switch", claims.Source),
+        }
+        
+        // 检查是否在允许列表中
+        isAllowed := false
+        for _, path := range allowedPaths {
+            if urlPath == path {
+                isAllowed = true
+                break
+            }
+        }
+        
+        if !isAllowed {
+            helper.Fail(c, constant.CodeAccessDenied, "请先选择门店")
+            c.Abort()
+            return
+        }
+        
+        // 允许访问，但跳过 Auth 验证（因为 company_uuid 为 0）
+        // 设置基本的上下文信息
+        ctx := context.NewContext(
+            context.WithGinContext(c.Copy()),
+            context.WithSource(claims.Source),
+            context.WithCompanyUuid(0),
+            context.WithDeviceUuid(claims.DeviceUuid),
+            context.WithStaffUuid(claims.StaffUuid),
+            context.WithLogger(logger.Logger),
+        )
+        c.Set(jwt.Source, claims.Source)
+        c.Set(jwt.CompanyUuid, 0)
+        c.Set(jwt.StaffUuid, claims.StaffUuid)
+        c.Set(jwt.DeviceId, claims.DeviceId)
+        c.Set(jwt.RequestUuid, uuid.New().String())
+        c.Next()
+        return
+    }
+    
+    // company_uuid 不为 0，走原有逻辑
+    // ... 原有 Auth 验证逻辑 ...
+}
+```
+
+**重要说明**:
+- 当 `company_uuid` 为 `0` 时，跳过 `authSrv.Auth()` 调用（因为无法获取商家信息）
+- 设置基本的上下文信息（`source`、`staff_uuid`、`device_id` 等）
+- 不允许访问其他接口，返回错误提示"请先选择门店"
+
+---
+
+## 📊 Base 接口调整
+
+### 各端 Base 接口响应结构调整
+
+**说明**: 在各端的 base 接口响应中，新增 `company_list` 字段，返回该员工能访问、正常可用的门店列表。**无论 `company_uuid` 是否为 0，都需要返回该字段**。当 `company_uuid` 为 0 时，还需要初始化其他字段为空值（空数组、空结构体等），避免前端解析错误。
+
+**响应结构调整**:
+
+#### 收银端 Base (`CashierBase`)
+
+```go
+// main/app/dto/resp/base.go
+type CashierBase struct {
+    // ... 现有字段 ...
+    
+    // 新增字段：关联的门店列表（无论 company_uuid 是否为 0 都返回）
+    CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+}
+```
+
+#### 点餐助手端 Base (`AssistantBase`)
+
+```go
+type AssistantBase struct {
+    // ... 现有字段 ...
+    
+    // 新增字段：关联的门店列表（无论 company_uuid 是否为 0 都返回）
+    CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+}
+```
+
+#### 平板端 Base (`TabletBase`)
+
+```go
+type TabletBase struct {
+    // ... 现有字段 ...
+    
+    // 新增字段：关联的门店列表（无论 company_uuid 是否为 0 都返回）
+    CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+}
+```
+
+#### 厨显端 Base (`KitchenBase`)
+
+```go
+type KitchenBase struct {
+    // ... 现有字段 ...
+    
+    // 新增字段：关联的门店列表（无论 company_uuid 是否为 0 都返回）
+    CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+}
+```
+
+#### 新管理端 Base (`ShopBase`)
+
+```go
+type ShopBase struct {
+    // ... 现有字段 ...
+    
+    // 新增字段：关联的门店列表（无论 company_uuid 是否为 0 都返回）
+    CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+}
+```
+
+**响应示例**（当 `company_uuid` 为 0 时）:
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "username": "user@example.com",
+    "cashier_uuid": 123456,
+    "device_id": "device123",
+    "company_list": [
+      {
+        "company_uuid": 789012,
+        "company_name": "测试门店1",
+        "is_super": 0
+      },
+      {
+        "company_uuid": 789013,
+        "company_name": "测试门店2",
+        "is_super": 0
+      }
+    ]
+  }
+}
+```
+
+**实现逻辑**:
+
+```go
+// main/app/service/auth.go
+func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
+    var cashierBase resp.CashierBase
+    
+    // 如果 company_uuid 为 0，初始化字段并返回可用门店列表
+    if ctx.GetCompanyUuid() == 0 {
+        // 初始化各字段为空值，避免前端解析错误
+        cashierBase.Permissions = make([]*resp.Permission, 0)
+        cashierBase.Buffet = setting.BuffetResp{
+            AddClock: make([]setting.AddClockItem, 0),
+        }
+        cashierBase.Business = setting.Business{
+            ZeroingMethodList:         make([]setting.ZeroingMethodItem, 0),
+            CheckoutZeroingMethodList: make([]setting.CheckoutZeroingMethodItem, 0),
+            GiftMethodList:            make([]setting.GiftMethodItem, 0),
+            FreeMethodList:            make([]setting.FreeMethodItem, 0),
+        }
+        cashierBase.Cashier = setting.CashierResp{
+            Carousel:     make([]setting.CarouselItem, 0),
+            LanguageList: make([]dto.LanguageItem, 0),
+            Language:     make([]string, 0),
+        }
+        cashierBase.Printer = setting.Printer{
+            CashierPrinter: make([]setting.CashierPrinterItem, 0),
+            LanguageList:   make([]dto.LanguageItem, 0),
+            Language:       make([]string, 0),
+            PrintList:      make([]setting.PrintItem, 0),
+        }
+        // 获取可用门店列表
+        cashierBase.CompanyList = s.getCompanyList(ctx)
+        return cashierBase, nil
+    }
+    
+    // company_uuid 不为 0，走原有逻辑
+    // ... 原有 base 接口逻辑 ...
+    // 无论 company_uuid 是否为 0，都返回可用商家列表
+    cashierBase.CompanyList = s.getCompanyList(ctx)
+    return cashierBase, nil
+}
+```
+
+**重要说明**:
+- **当 `company_uuid` 为 0 时**:
+  - 初始化各字段为空值（空数组、空结构体等），避免前端解析错误
+  - 返回 `company_list` 字段，包含可用门店列表
+- **当 `company_uuid` 不为 0 时**:
+  - 走原有逻辑，返回完整的 Base 信息
+  - **同时返回 `company_list` 字段**，无论 `company_uuid` 是否为 0，都返回可用商家列表
+- **过滤可用门店**: 只返回员工能访问、正常可用的门店（过滤已过期、异常的商家）
+- **复用 `getCompanyList` 方法**: 统一使用 `getCompanyList` 方法获取可用门店列表，该方法会关联查询商家信息并过滤已过期、异常的商家
+- **`getCompanyList` 方法实现细节**:
+  - 查询 `saas.ttpos_company_staff` 表获取员工关联的所有门店（使用 `WithCompany()` 预加载商家信息）
+  - 从各门店数据库查询员工角色信息（通过 `ttpos_staff_role` 和 `ttpos_role` 表）
+  - 过滤已过期、异常的商家（调用 `company.IsExpired()` 和 `company.IsException()`）
+  - 返回包含角色名称的门店列表（`CompanyStaffResp` 结构包含 `roles` 字段）
+
+---
+
+#### API 8: 获取可见门店列表（Go Main）
 
 **请求**:
 
 - **URL**: `/api/v1/shop/company/list`
 - **Method**: `GET`
-- **说明**: 仅总部管理员可访问，返回总部下所有门店列表（包含名称和超管信息）
+- **说明**: 返回当前门店可见的所有门店列表（包括自己和 `parent_company_uuids` 包含自己的店），包含店铺名称、超管姓名和超管手机号
 
 **响应**:
 
@@ -1049,14 +1627,14 @@ type ShopLoginResp struct {
       {
         "uuid": 789012,
         "name": "测试门店1",
-        "is_super": 0,
-        "is_headquarter": 0
+        "super_real_name": "张三",
+        "super_phone": "13800138000"
       },
       {
         "uuid": 789013,
         "name": "测试门店2",
-        "is_super": 1,
-        "is_headquarter": 0
+        "super_real_name": "李四",
+        "super_phone": "13900139000"
       }
     ]
   }
@@ -1064,11 +1642,14 @@ type ShopLoginResp struct {
 ```
 
 **说明**:
-- `is_super`: 该门店是否有超管（从 `saas.ttpos_company_staff` 表中查询 `is_super=1` 的记录）
-- `is_headquarter`: 是否为总部（从 `ttpos_company_setting.headquarter_uuid` 判断）
-- 仅总部管理员可访问，需要验证权限
+- `super_real_name`: 超管姓名（从 `saas.ttpos_staff` 表查询，关联 `saas.ttpos_company_staff` 表中 `is_super=1` 的记录）
+- `super_phone`: 超管手机号（从 `saas.ttpos_staff` 表查询）
+- 所有门店都可以访问，返回当前门店可见的所有门店列表
+- 可见门店定义：包括自己和 `ttpos_company_setting.parent_company_uuids` 包含自己 UUID 的门店
 
-**实现位置**: `main/app/api/v1/shop/shop_setting.go`
+**实现位置**: `main/app/api/v1/shop/shop_setting.go`（`GetCompanyList` 方法）
+
+**Service 层**: `main/app/service/company.go`（`GetCompanyList` 方法）
 
 ---
 
@@ -1078,8 +1659,8 @@ type ShopLoginResp struct {
 
 - **URL**: `/api/v1/shop/company/info`
 - **Method**: `GET`
-- **Query参数**: `company_uuid` (uint64) - 门店UUID（可选，不传则获取当前门店）
-- **说明**: 总部管理员可查看任意门店信息，分店只能查看自己门店信息
+- **Query参数**: `uuid` (uint64, 必填) - 门店UUID
+- **说明**: 获取当前门店可见范围内的指定门店信息
 
 **响应**:
 
@@ -1088,35 +1669,42 @@ type ShopLoginResp struct {
   "code": 1,
   "message": "success",
   "data": {
+    "uuid": 789012,
     "name": "测试门店1",
-    "avatar_url": "https://example.com/avatar.jpg",
     "logo_url": "https://example.com/logo.jpg",
-    "zeroing_method": "0",
-    "ip_white_list": "",
-    "time_zone": "Asia/Shanghai",
-    "no_clear_table": "0",
-    "time_zone_list": [],
-    "company": "测试公司",
     "address": "测试地址",
+    "coordinates": "116.397128,39.916527",
+    "company_name": "测试公司",
     "phone": "13800138000",
     "tax_number": "123456789",
-    "store_code": "STORE001",
-    "chain_number": "",
-    "language": [],
-    "auth_language": "zh-CN",
-    "coordinates": "116.397128,39.916527"
+    "language_list": [
+      {
+        "key": "zh-CN",
+        "name": "中文"
+      },
+      {
+        "key": "en-US",
+        "name": "English"
+      }
+    ],
+    "time_zone": "Asia/Shanghai",
+    "language": ["zh-CN", "en-US"]
   }
 }
 ```
 
 **说明**:
-- 响应结构为 `setting.Store` 类型
-- 总部管理员可传入 `company_uuid` 参数查看任意门店信息
-- 分店管理员只能查看自己门店信息（忽略 `company_uuid` 参数）
+- 响应结构为 `resp.CompanyStoreResp` 类型
+- 验证目标门店是否在当前门店可见范围内（使用 `GetVisibleCompanyList`）
+- 如果不在可见范围内，返回错误"门店不存在或无权限查看"
+- 从 saas 数据库查询 `company`，从商家数据库查询 `companySetting`
+- 设置到 ctx 中后，调用 `settingSrv.GetStoreSetting(ctx)` 获取门店设置
+- `language_list`: 系统语言列表（从 `storeSetting.Language` 获取）
+- `language`: 云平台限制的可用语言列表（从 `companySetting.GetLanguages()` 获取）
 
-**实现位置**: `main/app/api/v1/shop/shop_setting.go`
+**实现位置**: `main/app/api/v1/shop/shop_setting.go`（`GetCompanyInfo` 方法）
 
-**参考**: 使用 `settingSrv.GetStoreSetting(ctx)` 方法，但需要支持指定 `company_uuid`
+**Service 层**: `main/app/service/company.go`（`GetCompanyInfo` 方法）
 
 ---
 
@@ -1129,38 +1717,54 @@ type ShopLoginResp struct {
 - **Body**:
   ```json
   {
-    "company_uuid": 789012,
+    "uuid": 789012,
     "name": "测试门店1",
     "logo_url": "https://example.com/logo.jpg",
     "address": "测试地址",
     "coordinates": "116.397128,39.916527",
-    "company": "测试公司",
+    "company_name": "测试公司",
     "phone": "13800138000",
     "tax_number": "123456789",
-    "language": ["zh-CN", "en-US"],
+    "language": [
+      {
+        "key": "zh-CN",
+        "name": "中文"
+      },
+      {
+        "key": "en-US",
+        "name": "English"
+      }
+    ],
     "time_zone": "Asia/Shanghai"
   }
   ```
   
 **说明**:
-- `company_uuid`: 门店UUID（可选，不传则修改当前门店）
-- 总部管理员可修改任意门店信息
-- 分店管理员只能修改自己门店信息（忽略 `company_uuid` 参数）
-- 可修改字段：商家名称、商家LOGO、地址、经纬度、公司名称、联系电话、税号、语言、时区
+- `uuid`: 门店UUID（必填）
+- **权限验证**：使用 `GetVisibleCompanyList(updateReq.Uuid)` 获取目标门店可见的所有门店列表，验证目标门店是否存在
+- 如果目标门店不在返回的列表中，返回错误"门店不存在"
+- 从 saas 数据库查询 `company`，从商家数据库查询 `companySetting`
+- 设置到 ctx 中（`SetCompanyUuid`、`SetCompany`、`SetDB`、`SetCompanySetting`）
+- 调用 `settingSrv.GetStoreSetting(ctx)` 获取当前门店设置（用于获取 `StoreCode`，避免覆盖）
+- 调用 `settingSrv.EditStoreSetting(ctx, updateStoreSetting)` 更新门店设置
+- 可修改字段：店铺名称、店铺LOGO、地址、经纬度、公司名称、联系电话、税号、系统语言、时区
+- **注意**：该方法使用目标门店UUID来获取可见列表，主要用于验证目标门店是否存在。实际权限验证应在 API 层或中间件层进行，确保当前门店有权限修改目标门店
 
 **响应**:
 
 ```json
 {
   "code": 1,
-  "message": "保存成功",
+  "message": "更新成功",
   "data": {}
 }
 ```
 
-**实现位置**: `main/app/api/v1/shop/shop_setting.go`
+**实现位置**: `main/app/api/v1/shop/shop_setting.go`（`UpdateCompanyInfo` 方法）
 
-**参考**: `main/app/api/v1/shop/shop_setting.go::SaveStoreSetting`，但需要支持指定 `company_uuid` 和权限验证
+**Service 层**: `main/app/service/company.go`（`UpdateCompanyInfo` 方法）
+
+**Service 层**: `main/app/service/company.go`（`UpdateCompanyInfo` 方法）
 
 ---
 
@@ -1797,180 +2401,457 @@ class StaffValidate extends BaseValidate
 ### Go Main 模块 - Service 层
 
 **重要说明**：
-- **调整现有方法**：新管理端的员工添加、编辑功能使用现有的 `main/app/service/staff.go` 中的 `AddStaff` 和 `UpdateStaff` 方法，**不需要新增方法**。
-- **调整逻辑**：需要调整这两个方法的实现逻辑，使其支持统一账号体系（使用 `saas.ttpos_staff` 表作为统一账号表）。
+- **调整现有方法**：新管理端的员工添加、编辑功能使用现有的 `main/app/service/staff.go` 中的 `AddStaff` 和 `UpdateStaff` 方法，已调整逻辑以支持统一账号体系。
+- **新增方法**：新增 `SaasAddStaff` 和 `SaasUpdateStaff` 方法，专门用于统一账号的添加和修改，支持多门店配置、IsDisable 更新和 RemoveCompanyList 处理。
+- **调整逻辑**：需要调整现有方法的实现逻辑，使其支持统一账号体系（使用 `saas.ttpos_staff` 表作为统一账号表）。
 - **代码风格**：Service 接口命名 `I{Name}Srv`，实现结构体命名 `{name}Srv`（小写开头），构造函数 `New{Name}Srv` 和 `New{Name}SrvImpl`。
+
+#### 新增 SaasLogin 方法（统一认证登录）
+
+**文件**: `main/app/service/auth.go`
+
+**说明**：新增 `SaasLogin` 方法，用于统一认证。参数和 `Login` 方法一致，但使用统一账号表 `saas.ttpos_staff` 进行认证。
+
+**实现状态**：✅ 已实现
+
+**接口定义**:
+
+```go
+// main/app/service/auth.go
+type IAuthSrv interface {
+    Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)              // 登录（原有方法）
+    SaasLogin(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error)            // 统一认证登录（新增方法）
+    ShopLogin(ctx context.Context, loginReq req.LoginReq) (resp.ShopLoginResp, error)        // 新管理端登录（支持多门店选择）
+    // ... 其他方法
+}
+```
+
+**方法实现**:
+
+```go
+// SaasLogin 统一认证登录
+func (s *authSrv) SaasLogin(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error) {
+    var loginResp resp.LoginResp
+    
+    // 1. 验证验证码
+    if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-SIGN"), loginReq.Code) && 
+       viper.GetString("GENERAL_VERIFY_CODE") != loginReq.Code {
+        return loginResp, errors.New("验证码错误")
+    }
+    
+    // 2. 查询统一账号表 saas.ttpos_staff
+    saasDB := s.dbm.GetDB(constant.DefaultDB)
+    saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
+    
+    var saasStaff *model.SaasStaff
+    var err error
+    
+    // 尝试通过邮箱查询
+    saasStaff, err = saasStaffRepo.GetByEmail(loginReq.Username)
+    if err != nil || saasStaff == nil {
+        // 尝试通过手机号查询
+        saasStaff, err = saasStaffRepo.GetByPhone(loginReq.Username)
+        if err != nil || saasStaff == nil {
+            return loginResp, errors.New("账号或密码错误")
+        }
+    }
+    
+    // 验证密码
+    if utils.EncryptPassword(loginReq.Password) != saasStaff.Password {
+        return loginResp, errors.New("账号或密码错误")
+    }
+    
+    // 检查账号是否被禁用
+    if saasStaff.IsDisable == 1 {
+        return loginResp, errors.New("账号被禁用，请联系管理员")
+    }
+    
+    // 3. 查询关联的商家列表（关联 saas.ttpos_company 表获取商家信息）
+    companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+    
+    // 查询员工关联的商家列表（使用 WithCompany() 预加载商家信息，避免循环查询）
+    companyStaffList, err := companyStaffRepo.GetByStaffUuid(saasStaff.Uuid, companyStaffRepo.WithCompany())
+    if err != nil {
+        return loginResp, errors.WithMessage(err, "获取门店列表失败")
+    }
+    
+    // 4. 过滤商家：遍历每个商家，过滤掉已过期、异常的商家
+    validCompanyList := make([]*model.CompanyStaff, 0)
+    for _, cs := range companyStaffList {
+        // 过滤条件：员工在该商家未被禁用且未删除
+        if cs.IsDisable != 0 || cs.DeleteTime != 0 {
+            continue
+        }
+        
+        // 商家不存在，跳过（已通过 Preload 加载）
+        if cs.Company == nil {
+            continue
+        }
+        
+        // 过滤已过期、异常的商家
+        if cs.Company.IsExpired() || cs.Company.IsException() {
+            continue
+        }
+        
+        validCompanyList = append(validCompanyList, cs)
+    }
+    
+    // 5. 判断商家数量（基于过滤后的商家列表）
+    if len(validCompanyList) == 0 {
+        return loginResp, errors.New("登录失败：你暂无该门店的操作权限，请联系门店管理员开通权限。")
+    }
+    
+    // 6. 只有一个商家时，走原有逻辑
+    if len(validCompanyList) == 1 {
+        companyUuid := validCompanyList[0].CompanyUuid
+        return s.loginWithCompany(ctx, loginReq, saasStaff.Uuid, companyUuid, saasStaff.PasswordChangeCount == 0)
+    }
+    
+    // 7. 多个商家时的处理（根据登录来源进行不同处理）
+    if loginReq.Source != constant.SourceShop {
+        // 非新管理端登录：生成 company_uuid 为 0 的 token
+        return s.generateTokenWithCompanyUuidZero(ctx, loginReq, saasStaff.Uuid, saasStaff.PasswordChangeCount == 0)
+    }
+    
+    // 新管理端登录：检查 last_company_uuid
+    if saasStaff.LastCompanyUuid > 0 {
+        // 检查 last_company_uuid 是否在过滤后的关联商家列表中
+        for _, cs := range validCompanyList {
+            if cs.CompanyUuid == saasStaff.LastCompanyUuid {
+                // 从该商家数据库查询员工信息，走原有逻辑
+                return s.loginWithCompany(ctx, loginReq, saasStaff.Uuid, saasStaff.LastCompanyUuid, saasStaff.PasswordChangeCount == 0)
+            }
+        }
+    }
+    
+    // last_company_uuid 无效或不在关联列表中，生成 company_uuid 为 0 的 token
+    return s.generateTokenWithCompanyUuidZero(ctx, loginReq, saasStaff.Uuid, saasStaff.PasswordChangeCount == 0)
+}
+
+// loginWithCompany 从指定商家数据库查询员工信息，走原有 Login 逻辑
+func (s *authSrv) loginWithCompany(ctx context.Context, loginReq req.LoginReq, staffUuid, companyUuid uint64, needChangePassword bool) (resp.LoginResp, error) {
+    // 从商家数据库查询员工信息
+    companyDB := s.dbm.GetDB(companyUuid)
+    if companyDB == nil {
+        return resp.LoginResp{}, errors.New("未找到绑定的商家，请确认登录信息")
+    }
+    
+    staffRepo := repository.NewStaffRepo(companyDB)
+    staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid), staffRepo.WithCompany())
+    if err != nil || staff.Uuid == 0 {
+        return resp.LoginResp{}, errors.New("账号或密码错误")
+    }
+    
+    // 验证商家状态
+    if staff.Company == nil {
+        return resp.LoginResp{}, errors.New("未找到绑定的商家，请确认登录信息")
+    }
+    if staff.Company.IsExpired() {
+        return resp.LoginResp{}, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+    }
+    if staff.Company.IsException() {
+        return resp.LoginResp{}, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
+    }
+    
+    // 检查员工状态
+    if staff.DeleteTime != 0 {
+        return resp.LoginResp{}, errors.New("账号被删除，请联系管理员")
+    }
+    if staff.IsDisable == 1 {
+        return resp.LoginResp{}, errors.New("账号被禁用，请联系管理员")
+    }
+    
+    // 根据 source 进行不同的权限验证和处理（参考原有 Login 方法）
+    // ... 权限验证逻辑 ...
+    
+    // 生成 token
+    claims := auth.Claims{
+        Source:      loginReq.Source,
+        CompanyUuid: companyUuid,
+        StaffUuid:   staffUuid,
+        DeviceUuid:  0,
+        DeviceId:    loginReq.DeviceId,
+        Assistant:   auth.Assistant{},
+    }
+    
+    token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+    if err != nil {
+        return resp.LoginResp{}, errors.New("生成token失败")
+    }
+    refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+    if err != nil {
+        return resp.LoginResp{}, errors.New("生成refresh_token失败")
+    }
+    
+    return resp.LoginResp{
+        Token:               token,
+        RefreshToken:        refreshToken,
+        CashierIsFirstLogin: isFirstLogin,
+        NeedChangePassword:  needChangePassword,
+    }, nil
+}
+
+// generateTokenWithCompanyUuidZero 生成 company_uuid 为 0 的 token
+func (s *authSrv) generateTokenWithCompanyUuidZero(ctx context.Context, loginReq req.LoginReq, staffUuid uint64, needChangePassword bool) (resp.LoginResp, error) {
+    claims := auth.Claims{
+        Source:      loginReq.Source,
+        CompanyUuid: 0, // company_uuid 为 0，需要切换门店后设置
+        StaffUuid:   staffUuid,
+        DeviceUuid:  0,
+        DeviceId:    loginReq.DeviceId,
+        Assistant:   auth.Assistant{},
+    }
+    
+    token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+    if err != nil {
+        return resp.LoginResp{}, errors.New("生成token失败")
+    }
+    refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+    if err != nil {
+        return resp.LoginResp{}, errors.New("生成refresh_token失败")
+    }
+    
+    return resp.LoginResp{
+        Token:              token,
+        RefreshToken:       refreshToken,
+        NeedChangePassword: needChangePassword,
+    }, nil
+}
+```
+
+**重要说明**:
+- `SaasLogin` 方法用于统一认证，适用于所有终端（收银端、点餐助手、平板端、厨显端等）
+- 参数和 `Login` 方法一致，使用 `req.LoginReq`
+- 返回类型和 `Login` 方法一致，使用 `resp.LoginResp`
+- **版本判断**：
+  - 所有端登录时，需要判断客户端版本号（从请求头 `Client-Version` 或 `Version-Name` 获取）
+  - 版本号 >= 2.11.0：调用 `SaasLogin` 方法（统一认证）
+  - 版本号 < 2.11.0 或未传递版本号：调用原有的 `Login` 方法（兼容旧版本）
+- **查询商家时需关联 `saas.ttpos_company` 表**：查询 `saas.ttpos_company_staff` 表时，使用 `WithCompany()` 预加载关联 `saas.ttpos_company` 表获取商家信息，避免循环查询（性能优化）
+- **过滤商家逻辑**：
+  - 遍历每个商家，过滤掉已过期（`company.IsExpired() == true`）的商家
+  - 过滤掉状态异常（`company.IsException() == true`）的商家
+  - 过滤掉员工在该商家被禁用（`company_staff.is_disable == 1`）的商家
+- **根据过滤后的商家数量处理**：
+  - 当有多个商家且非新管理端登录时，返回 `company_uuid` 为 `0` 的 token，前端需要调用门店切换 API
+  - 当有多个商家且是新管理端登录时，优先使用 `last_company_uuid`，如果有效且在过滤后的商家列表中，则直接登录，否则返回 `company_uuid` 为 `0` 的 token
 
 #### 调整现有 Staff Service
 
 **文件**: `main/app/service/staff.go`
 
+**实现状态**：✅ 已实现
+
 **需要调整的方法**：
 
-1. **`AddStaff` 方法**：调整逻辑以支持统一账号体系
-   - 验证邮箱和手机号唯一性时，需要查询 `saas.ttpos_staff` 表（而不是只查询 `saas.ttpos_company_staff`）
-   - 创建员工时，需要同时创建 `saas.ttpos_staff` 记录和 `saas.ttpos_company_staff` 记录
-   - 设置 `last_company_uuid` 为当前门店UUID
+**新增方法**：
 
-2. **`UpdateStaff` 方法**：调整逻辑以支持统一账号体系
-   - 验证邮箱和手机号唯一性时，需要查询 `saas.ttpos_staff` 表
-   - 更新员工时，需要同时更新 `saas.ttpos_staff` 表和 `saas.ttpos_company_staff` 表
-   - 如果修改了邮箱或手机号，需要同步更新 `saas.ttpos_staff` 表
+1. **`SaasPaginateGetStaffs` 方法**：✅ 已实现
+   - **功能**：获取统一账号员工列表（跨门店查询）
+   - **参数**：
+     - `company_uuid`（可选）：商家UUID，用于筛选特定商家的员工
+     - `keyword`（可选）：关键词，支持搜索姓名、邮箱、手机号
+     - `is_filter_super`（可选）：是否过滤超级管理员
+     - `page_no`、`page_size`：分页参数
+   - **响应**：
+     - `list`：员工列表，每个员工包含：
+       - 基本信息（uuid、username、phone、real_name、is_disable、create_time）
+       - `company_list`：员工在当前商家可见范围内的门店列表，每个门店包含：
+         - `company_uuid`、`company_name`
+         - `roles`：角色列表（包含UUID和名称）
+     - `meta`：分页信息
+   - **逻辑**：
+     - 获取当前商家可看到的所有商家列表（使用 `GetVisibleCompanyList`）
+     - 如果传递了 `company_uuid`，验证是否在可见门店列表中，并只查询该门店的员工
+     - 否则查询所有可见门店的员工
+     - 从 `saas.ttpos_staff` 查询统一账号信息，支持关键词搜索
+     - 分页处理
+     - 从各门店数据库查询员工在该门店的角色信息
+     - 如果传递了 `company_uuid`，使用该商家的禁用状态（优先从 `saas.ttpos_company_staff` 查询，如果找不到则从门店数据库查询）
+
+1. **`AddStaff` 方法**：已调整逻辑以支持统一账号体系
+   - ✅ 验证邮箱和手机号唯一性时，使用 `SaasStaffRepo.CheckEmailExists()` 和 `CheckPhoneExists()` 查询 `saas.ttpos_staff` 表
+   - ✅ 创建员工时，使用事务同时创建 `saas.ttpos_staff` 记录和 `saas.ttpos_company_staff` 记录
+   - ✅ 设置 `last_company_uuid` 为当前门店UUID
+   - ✅ 在门店数据库中创建员工记录和角色关联
+
+2. **`UpdateStaff` 方法**：已调整逻辑以支持统一账号体系
+   - ✅ 验证邮箱和手机号唯一性时，使用 `SaasStaffRepo` 查询 `saas.ttpos_staff` 表
+   - ✅ 更新员工时，先更新 `saas.ttpos_staff` 表（email、real_name、phone，如果修改了密码也同步更新）
+   - ✅ 更新 `saas.ttpos_company_staff` 表（username、phone）
+   - ✅ 更新门店数据库中的员工信息（username、real_name、phone、password、permission_password）
+   - ✅ 如果修改了密码，同步更新 `saas.ttpos_staff` 表的密码和 `password_change_time`
+   - ✅ 支持上级门店的多门店角色配置（通过 `CompanyRoleList` 字段）
+   - ✅ 同步更新各门店数据库的 `ttpos_staff_role` 表
+
+3. **`GetStaffDetail` 方法**：已实现
+   - ✅ 从 `saas.ttpos_staff` 表获取统一账号信息
+   - ✅ 上级门店：返回员工在本店及所有下级门店的角色配置
+   - ✅ 子店：只返回员工在当前门店的角色配置
+
+4. **`UpdateStaffStatus` 方法**：已实现
+   - ✅ 更新当前门店数据库中的员工状态
+   - ✅ 同步更新 `saas.ttpos_company_staff` 表的 `is_disable` 字段
+
+5. **`SaasPaginateGetStaffs` 方法**：✅ 已实现
+   - ✅ 获取统一账号员工列表（跨门店查询）
+   - ✅ 支持根据 `company_uuid` 筛选特定门店的员工
+   - ✅ 支持关键词搜索（姓名、邮箱、手机号）
+   - ✅ 返回员工在当前商家可见范围内的所有门店信息（包含角色信息）
+   - ✅ 如果传递了 `company_uuid`，使用该门店的禁用状态
+
+2. **`SaasAddStaff` 方法**：✅ 已实现
+   - ✅ 统一账号添加员工（支持多门店配置）
+   - ✅ 验证邮箱和手机号唯一性时，使用 `SaasStaffRepo` 查询 `saas.ttpos_staff` 表
+   - ✅ 创建员工时，使用事务同时创建 `saas.ttpos_staff` 记录和 `saas.ttpos_company_staff` 记录
+   - ✅ 支持总部/有子级商家：通过 `CompanyRoleList` 配置多个门店的角色
+   - ✅ 支持子店：通过 `Roles` 配置当前门店的角色
+   - ✅ 在门店数据库中创建员工记录和角色关联
+
+3. **`SaasUpdateStaff` 方法**：✅ 已实现
+   - ✅ 统一账号修改员工（支持多门店配置）
+   - ✅ 查询 `saas.ttpos_staff` 是否存在该员工，不存在则报错
+   - ✅ 修改 `saas.ttpos_staff` 的 Email、Phone、RealName（参考 UpdateStaff）
+   - ✅ 支持密码更新（同步更新 `saas.ttpos_staff` 和门店数据库的密码）
+   - ✅ **总部/有子级商家**：
+     - 验证 `CompanyRoleList` 不为空
+     - 获取当前商家可见的所有门店列表
+     - 遍历 `CompanyRoleList`，验证门店是否可见、角色是否存在、员工是否存在于门店数据库
+     - 更新各门店数据库的 `ttpos_staff` 表和 `ttpos_staff_role` 关联关系
+     - 更新 `saas.ttpos_company_staff` 表
+     - 如果 `CompanyRoleList` 中存在当前商家uuid，根据 `IsDisable` 参数更新 `is_disable` 字段
+   - ✅ **子店**：
+     - 验证 `Roles` 不为空
+     - 验证角色是否存在于当前商家数据库
+     - 验证员工是否存在于当前门店数据库
+     - 更新当前商家数据库的 `ttpos_staff` 表和 `ttpos_staff_role` 关联关系
+     - 更新 `saas.ttpos_company_staff` 表
+     - 根据 `IsDisable` 参数更新 `is_disable` 字段
+   - ✅ **IsDisable 字段更新**：
+     - 如果是子店，或者 `CompanyRoleList` 中存在当前商家uuid，则根据参数中的 `IsDisable` 更新：
+       - `saas.ttpos_company_staff` 的 `is_disable` 字段
+       - 对应商家数据库中的 `ttpos_staff` 的 `is_disable` 字段
+   - ✅ **RemoveCompanyList 处理**：
+     - 如果 `RemoveCompanyList` 有值，遍历每个门店UUID：
+       - 验证门店是否为当前公司可见
+       - 软删除 `saas.ttpos_company_staff` 中的关联关系（设置 `delete_time`）
+       - 软删除对应商家数据库中的 `ttpos_staff` 记录（设置 `delete_time`）
+   - ✅ 删除收银机缓存并推送 WebSocket 配置更新通知
+
+#### 新增 Company Service（用于门店管理功能）
+
+**文件**: `main/app/service/company.go`
+
+**实现状态**：✅ 已实现
+
+**接口定义**:
+```go
+type ICompanySrv interface {
+    GetCompanyList(ctx context.Context) (resp.SaasCompanyListResp, error)                   // 获取本店可看到的所有店列表（包含店铺名称、超管real_name以及超管手机号）
+    GetCompanyInfo(ctx context.Context, companyUuid uint64) (*resp.CompanyStoreResp, error) // 获取门店信息
+    UpdateCompanyInfo(ctx context.Context, updateReq req.UpdateCompanySettingReq) error     // 修改门店信息
+}
+```
+
+**方法说明**:
+
+1. **`GetCompanyList` 方法**：✅ 已实现
+   - **功能**：获取本店可看到的所有店列表（包括自己和 `parent_company_uuids` 包含自己的店）
+   - **返回**：门店列表，每个门店包含：
+     - `uuid`、`name`：门店UUID和名称
+     - `super_real_name`、`super_phone`：超管姓名和手机号（从 `saas.ttpos_staff` 查询，关联 `saas.ttpos_company_staff` 表中 `is_super=1` 的记录）
+   - **逻辑**：
+     - 使用 `GetVisibleCompanyList` 获取可见门店列表
+     - 查询所有门店的超管信息（`is_super=1`）
+     - 从 `saas.ttpos_staff` 获取超管的详细信息
+
+2. **`GetCompanyInfo` 方法**：✅ 已实现
+   - **功能**：获取指定门店的详细信息
+   - **参数**：`company_uuid` - 门店UUID
+   - **返回**：`CompanyStoreResp`，包含门店设置信息
+   - **逻辑**：
+     - 验证目标门店是否在当前门店可见范围内
+     - 从 saas 数据库查询 `company`
+     - 从商家数据库查询 `companySetting`
+     - 设置到 ctx 中
+     - 调用 `settingSrv.GetStoreSetting(ctx)` 获取门店设置
+     - `language_list` 从 `storeSetting.Language` 获取
+     - `language` 从 `companySetting.GetLanguages()` 获取
+
+3. **`UpdateCompanyInfo` 方法**：✅ 已实现
+   - **功能**：修改指定门店的信息
+   - **参数**：`UpdateCompanySettingReq` - 更新请求（包含 `uuid` 和要更新的字段）
+   - **逻辑**：
+     - 使用 `GetVisibleCompanyList(updateReq.Uuid)` 获取目标门店可见的所有门店列表（用于验证目标门店是否存在）
+     - 验证目标门店（`updateReq.Uuid`）是否在返回的列表中
+     - 如果不在，返回错误"门店不存在"
+     - 从 saas 数据库查询 `company`
+     - 从商家数据库查询 `companySetting`
+     - 设置到 ctx 中（`SetCompanyUuid`、`SetCompany`、`SetDB`、`SetCompanySetting`）
+     - 调用 `settingSrv.GetStoreSetting(ctx)` 获取当前门店设置（用于获取 `StoreCode`，避免覆盖）
+     - 调用 `settingSrv.EditStoreSetting(ctx, updateStoreSetting)` 更新门店设置
+     - 更新字段包括：店铺名称、店铺LOGO、地址、经纬度、公司名称、联系电话、税号、系统语言、时区
+
+**依赖关系**：
+- 依赖 `settingSrv`（`settingSrv.ISrv`）来获取和更新门店设置
+- 使用 `repository.NewCompanyRepo` 查询门店信息
+- 使用 `repository.NewCompanySettingRepo` 查询门店设置
 
 #### 新增 SaasStaff Service（用于门店切换等功能）
 
-**文件**: `main/app/service/saas_staff_srv.go`
+**文件**: `main/app/service/saas_staff.go`
 
-**说明**：仅用于门店切换、获取默认门店等新管理端特有功能，不用于员工添加/编辑。
+**说明**：仅用于门店切换、获取默认门店、搜索员工等新管理端特有功能，不用于员工添加/编辑。
+
+**实现状态**：✅ 已实现
 
 ```go
-// main/app/service/saas_staff_srv.go
+// main/app/service/saas_staff.go
 type ISaasStaffSrv interface {
     UpdateLastCompany(ctx context.Context, staffUuid, companyUuid uint64) error  // 更新上次登录商家UUID
     GetDefaultCompanyUuid(ctx context.Context, staffUuid uint64) (uint64, error) // 获取默认门店UUID（登录时使用）
+    SearchStaffByKeyword(ctx context.Context, keyword string) *resp.SearchStaffResp // 根据关键字搜索员工
 }
 
 type saasStaffSrv struct {
     dbm *database.DBManager
-    cache cache.Cache
 }
 
-func NewSaasStaffSrv(dbm *database.DBManager, cache cache.Cache) ISaasStaffSrv {
-    return NewSaasStaffSrvImpl(dbm, cache)
+func NewSaasStaffSrv(dbm *database.DBManager) ISaasStaffSrv {
+    return NewSaasStaffSrvImpl(dbm)
 }
 
-func NewSaasStaffSrvImpl(dbm *database.DBManager, cache cache.Cache) ISaasStaffSrv {
+func NewSaasStaffSrvImpl(dbm *database.DBManager) ISaasStaffSrv {
     return &saasStaffSrv{
         dbm: dbm,
-        cache: cache,
     }
 }
 
-func (s *saasStaffSrv) Create(ctx *gin.Context, req *dto_req.SaasStaffCreateReq) (*dto_resp.SaasStaffResp, error) {
-    // 获取 Repository（使用 saas 数据库连接）
-    saasDB := s.dbm.GetSaasDB(ctx)  // 获取 saas 数据库连接
-    staffRepo := repository.NewSaasStaffRepo(saasDB)
-    companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
-    
-    // 验证邮箱唯一性
-    exists, err := staffRepo.CheckEmailExists(req.Email, 0)
-    if err != nil {
-        return nil, errors.WithMessage(err, "验证邮箱失败")
-    }
-    if exists {
-        return nil, errors.New("该邮箱已在平台注册，请使用其他邮箱")
-    }
-    
-    // 验证手机号唯一性（只有非空手机号才验证）
-    if req.Phone != "" {
-        exists, err = staffRepo.CheckPhoneExists(req.Phone, 0)
-        if err != nil {
-            return nil, errors.WithMessage(err, "验证手机号失败")
-        }
-        if exists {
-            return nil, errors.New("该手机号已在平台注册，请使用其他手机号")
-        }
-    }
-    
-    // 开始事务（saas 数据库事务）
-    tx := saasDB.Begin()
-    defer func() {
-        if r := recover(); r != nil {
-            tx.Rollback()
-        }
-    }()
-    
-    // 创建统一账号（saas 数据库）
-    staff := &model.SaasStaff{
-        Uuid:              pkg_uuid.GenerateUuid(),
-        Email:             req.Email,
-        Phone:             req.Phone,  // 允许空字符串
-        Password:          utils.HashPassword(req.Password),
-        PasswordChangeCount: 0,
-        PasswordChangeTime:  0,
-        IsDisable:         0,
-        CreateTime:        time.Now().Unix(),
-        UpdateTime:        time.Now().Unix(),
-    }
-    
-    if err := staffRepo.Create(staff); err != nil {
-        tx.Rollback()
-        return nil, errors.WithMessage(err, "创建账号失败")
-    }
-    
-    // 绑定门店（saas 数据库）
-    companyStaff := &model.CompanyStaff{
-        Uuid:        staff.Uuid,  // 注意：CompanyStaff.Uuid 等于 SaasStaff.Uuid（统一账号UUID）
-        CompanyUuid: req.CompanyUuid,
-        Username:    req.Email,    // username 使用 email
-        Phone:       req.Phone,
-        IsSuper:     0,
-        CreateTime:  time.Now().Unix(),
-        UpdateTime:  time.Now().Unix(),
-    }
-    
-    if err := companyStaffRepo.Create(companyStaff); err != nil {
-        tx.Rollback()
-        return nil, errors.WithMessage(err, "绑定门店失败")
-    }
-    
-    // 设置初始 last_company_uuid（创建账号时设置为第一个关联的门店）
-    staff.LastCompanyUuid = req.CompanyUuid
-    
-    // 在门店数据库中创建员工记录并关联角色（门店数据库中管理）
-    // 这里需要调用门店数据库的 Service，创建门店数据库的 Staff 记录
-    
-    tx.Commit()
-    
-    return &dto_resp.SaasStaffResp{
-        Uuid:                staff.Uuid,
-        Email:               staff.Email,
-        Phone:               staff.Phone,
-        LastCompanyUuid: staff.LastCompanyUuid,
-        CreateTime:          staff.CreateTime,
-        UpdateTime:          staff.UpdateTime,
-    }, nil
-}
+// 注意：SaasStaffSrv 仅用于门店切换等功能，不用于创建账号
+// 账号创建功能由 Staff Service 的 AddStaff 方法实现
 
-// 更新上次登录商家UUID（门店切换时调用）
+// UpdateLastCompany 更新上次登录商家UUID（门店切换时调用）
 func (s *saasStaffSrv) UpdateLastCompany(ctx context.Context, staffUuid, companyUuid uint64) error {
     saasDB := s.dbm.GetDB(constant.DefaultDB)
     staffRepo := repository.NewSaasStaffRepo(saasDB)
-    
-    staff, err := staffRepo.GetByUuid(staffUuid)
-    if err != nil {
-        return errors.WithMessage(err, "获取员工信息失败")
-    }
+    companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
     
     // 验证员工是否有该门店权限
-    companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
-    companyStaff := companyStaffRepo.GetCompanyStaff(
-        companyStaffRepo.WhereUsernameOrPhone("", ""), // 占位，实际需要通过其他方式查询
-        companyStaffRepo.WhereNotUuid(0), // 占位
-    )
-    if companyStaff.Uuid == 0 {
+    companyStaff, err := companyStaffRepo.GetByStaffAndCompany(staffUuid, companyUuid)
+    if err != nil || companyStaff == nil {
         return errors.New("无权限访问该门店")
     }
     
     // 更新 last_company_uuid
     return staffRepo.Update(staffUuid, map[string]any{
         "last_company_uuid": companyUuid,
-        "update_time": time.Now().Unix(),
+        "update_time":       time.Now().Unix(),
     })
-    
-    staff.LastCompanyUuid = companyUuid
-    staff.UpdateTime = time.Now().Unix()
-    
-    if err := staffRepo.Update(staff); err != nil {
-        return errors.WithMessage(err, "更新上次登录商家失败")
-    }
-    
-    return nil
 }
 
-// 获取默认门店UUID（登录时使用）
-func (s *saasStaffSrv) GetDefaultCompanyUuid(ctx *gin.Context, staffUuid uint64) (uint64, error) {
-    saasDB := s.dbm.GetSaasDB(ctx)
+// GetDefaultCompanyUuid 获取默认门店UUID（登录时使用，优先使用 last_company_uuid）
+func (s *saasStaffSrv) GetDefaultCompanyUuid(ctx context.Context, staffUuid uint64) (uint64, error) {
+    saasDB := s.dbm.GetDB(constant.DefaultDB)
     staffRepo := repository.NewSaasStaffRepo(saasDB)
     companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
     
@@ -2009,14 +2890,121 @@ func (s *saasStaffSrv) GetDefaultCompanyUuid(ctx *gin.Context, staffUuid uint64)
     return companyList[0].CompanyUuid, nil
 }
 
-// 其他方法实现...
+// SearchStaffByKeyword 根据关键字（email或phone）搜索员工，返回在当前门店可见范围内的门店和角色信息
+func (s *saasStaffSrv) SearchStaffByKeyword(ctx context.Context, keyword string) *resp.SearchStaffResp {
+    saasDB := s.dbm.GetDB(constant.DefaultDB)
+    saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
+    companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+
+    // 1. 根据关键字从 saas.ttpos_staff 精确搜索（email或phone）
+    saasStaff, err := saasStaffRepo.GetByEmailOrPhone(keyword)
+    if err != nil || saasStaff == nil {
+        // 未找到员工，返回空响应（uuid为0）
+        return &resp.SearchStaffResp{
+            CompanyList: make([]*resp.SearchStaffCompanyInfo, 0),
+        }
+    }
+
+    // 2. 查询关联的 saas.ttpos_company_staff（关联查询商家信息）
+    companyStaffList, _ := companyStaffRepo.GetByStaffUuid(saasStaff.Uuid, companyStaffRepo.WithCompany())
+
+    // 3. 获取当前门店能看到的所有门店列表（包括自己和在 parent_company_uuids 包含自己uuid的记录）
+    currentCompanyUuid := ctx.GetCompanyUuid()
+    visibleCompanies, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetVisibleCompanyListByCompanyUuid(currentCompanyUuid)
+    if err != nil {
+        return &resp.SearchStaffResp{
+            CompanyList: make([]*resp.SearchStaffCompanyInfo, 0),
+        }
+    }
+
+    // 构建可见门店UUID集合和门店名称映射
+    visibleCompanyUuids := make(map[uint64]bool)
+    companyUuidToName := make(map[uint64]string)
+    for _, company := range visibleCompanies {
+        visibleCompanyUuids[company.Uuid] = true
+        companyUuidToName[company.Uuid] = company.Name
+    }
+
+    // 4. 匹配 company_uuid，过滤出在当前门店可见范围内的门店
+    matchedCompanyList := make([]*resp.SearchStaffCompanyInfo, 0)
+    for _, cs := range companyStaffList {
+        companyUuid := cs.CompanyUuid
+        if !visibleCompanyUuids[companyUuid] {
+            continue
+        }
+
+        // 5. 根据员工uuid从匹配的company_uuid的商家查找员工在该门店下的角色信息
+        shopDB := s.dbm.GetDB(companyUuid)
+        if shopDB == nil {
+            continue
+        }
+
+        staffRoleRepo := repository.NewStaffRoleRepo(shopDB)
+        roleUuids, err := staffRoleRepo.GetRoleUuidsByStaffUuid(saasStaff.Uuid)
+        if err != nil {
+            continue
+        }
+
+        roleRepo := repository.NewRoleRepo(shopDB)
+        roles, err := roleRepo.GetRoleList(roleRepo.WhereUuids(roleUuids))
+        if err != nil {
+            continue
+        }
+
+        // 构建角色列表（包含UUID和名称）
+        roleItems := make([]resp.RoleItem, 0, len(roles))
+        for _, role := range roles {
+            roleItems = append(roleItems, resp.RoleItem{
+                Uuid: role.Uuid,
+                Name: role.Name,
+            })
+        }
+
+        matchedCompanyList = append(matchedCompanyList, &resp.SearchStaffCompanyInfo{
+            CompanyUuid: companyUuid,
+            CompanyName: companyUuidToName[companyUuid],
+            Roles:       roleItems,
+            IsSuper:     cs.IsSuper,
+        })
+    }
+
+    return &resp.SearchStaffResp{
+        Uuid:        saasStaff.Uuid,
+        Email:       saasStaff.Email,
+        Phone:       saasStaff.Phone,
+        RealName:    saasStaff.RealName,
+        CompanyList: matchedCompanyList,
+    }
+}
 ```
+
+**方法说明**：
+
+1. **`UpdateLastCompany`**: 更新上次登录商家UUID（门店切换时调用）
+2. **`GetDefaultCompanyUuid`**: 获取默认门店UUID（登录时使用，优先使用 last_company_uuid）
+3. **`SearchStaffByKeyword`**: 根据关键字（email或phone）搜索员工，返回在当前门店可见范围内的门店和角色信息
+   - **参数**: `keyword` (string) - 搜索关键字（邮箱或手机号）
+   - **返回**: `*resp.SearchStaffResp` - 搜索响应（不返回 error，未找到时返回 uuid=0 的空响应）
+   - **功能**:
+     - 从 `saas.ttpos_staff` 表精确搜索员工（使用 `GetByEmailOrPhone` 方法，支持邮箱或手机号）
+     - 查询员工关联的所有门店（`saas.ttpos_company_staff`，使用 `WithCompany()` 预加载商家信息）
+     - 获取当前门店可见的所有门店列表（使用 `GetVisibleCompanyListByCompanyUuid`，包括自己和在 `parent_company_uuids` 中包含当前门店uuid的记录）
+     - 匹配并过滤出可见范围内的门店
+     - 从各门店数据库查询员工在该门店的角色信息（包含角色UUID和名称）
+   - **返回说明**:
+     - 找到员工：返回 `uuid > 0` 的响应，包含员工基本信息和可见门店列表
+     - 未找到员工：返回 `uuid = 0` 的空响应（`CompanyList` 为空数组），不返回 error
+   - **响应结构**:
+     - `Roles` 字段类型为 `[]RoleItem`，包含角色的 `Uuid` 和 `Name`
+     - `CompanyList` 包含在当前门店可见范围内的所有门店信息
 
 ### Repository 层
 
 #### Repository 接口和实现
 
 **代码风格**：Repository 接口命名 `I{Name}Repo`，实现结构体命名 `{name}Repo`（小写开头），构造函数 `New{Name}Repo` 和 `New{Name}RepoImpl`。
+
+**实现状态**：✅ 已实现
 
 ```go
 // main/app/repository/saas_staff.go
@@ -2027,6 +3015,7 @@ type ISaasStaffRepo interface {
     GetByUuid(uuid uint64, options ...DBOption) (*model.SaasStaff, error)
     GetByEmail(email string, options ...DBOption) (*model.SaasStaff, error)
     GetByPhone(phone string, options ...DBOption) (*model.SaasStaff, error)
+    GetByEmailOrPhone(keyword string, options ...DBOption) (*model.SaasStaff, error) // 根据邮箱或手机号查询（用于搜索）
     CheckEmailExists(email string, excludeUuid uint64) (bool, error)
     CheckPhoneExists(phone string, excludeUuid uint64) (bool, error)
     
@@ -2087,6 +3076,20 @@ func (r *saasStaffRepo) GetByEmail(email string, options ...DBOption) (*model.Sa
 func (r *saasStaffRepo) GetByPhone(phone string, options ...DBOption) (*model.SaasStaff, error) {
     var staff model.SaasStaff
     db := r.db.Model(&model.SaasStaff{}).Scopes(NotDeleted).Where("phone = ?", phone)
+    
+    for _, option := range options {
+        db = option(db)
+    }
+    
+    if err := db.First(&staff).Error; err != nil {
+        return nil, err
+    }
+    return &staff, nil
+}
+
+func (r *saasStaffRepo) GetByEmailOrPhone(keyword string, options ...DBOption) (*model.SaasStaff, error) {
+    var staff model.SaasStaff
+    db := r.db.Model(&model.SaasStaff{}).Scopes(NotDeleted).Where("email = ? OR phone = ?", keyword, keyword)
     
     for _, option := range options {
         db = option(db)
@@ -2208,6 +3211,7 @@ func (r *CompanyStaffRepoImpl) GetByStaffAndCompany(staffUuid, companyUuid uint6
 
 **需要新增的 API 接口**：
 - `GET /shop/staff/detail?uuid=xxx` - 获取员工详情（需要新增）
+- `GET /shop/staff/saas_list` - 统一账号员工列表（`StaffHandler.SaasGetStaffList`，调用 `SaasPaginateGetStaffs` 方法）
 
 **API 调整说明**：
 
@@ -2323,6 +3327,81 @@ func (r *CompanyStaffRepoImpl) GetByStaffAndCompany(staffUuid, companyUuid uint6
 - **子店**：只能查看员工在本店的角色配置
 
 **实现位置**: `main/app/api/v1/shop/shop_staff.go`（新增 `GetStaffDetail` 方法）
+
+#### 统一账号员工列表 API (`GET /shop/staff/saas_list`) - 新增
+
+**请求**:
+- **URL**: `/api/v1/shop/staff/saas_list`
+- **Method**: `GET`
+- **Query参数**:
+  - `company_uuid` (uint64, 可选) - 商家UUID，用于筛选特定商家的员工
+  - `keyword` (string, 可选) - 关键词，支持搜索姓名、邮箱、手机号
+  - `is_filter_super` (int, 可选) - 是否过滤超级管理员
+  - `page_no` (int, 必填) - 页码
+  - `page_size` (int, 必填) - 每页大小
+
+**响应**:
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "list": [
+      {
+        "uuid": 123456,
+        "username": "user@example.com",
+        "phone": "13800138000",
+        "real_name": "张三",
+        "is_disable": 0,
+        "create_time": 1702195200,
+        "company_list": [
+          {
+            "company_uuid": 789012,
+            "company_name": "测试门店1",
+            "roles": [
+              {
+                "uuid": 101,
+                "name": "收银员"
+              },
+              {
+                "uuid": 102,
+                "name": "店长"
+              }
+            ]
+          },
+          {
+            "company_uuid": 789013,
+            "company_name": "测试门店2",
+            "roles": [
+              {
+                "uuid": 103,
+                "name": "服务员"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "page_no": 1,
+      "page_size": 20,
+      "total": 100
+    }
+  }
+}
+```
+
+**说明**:
+- **如果传递了 `company_uuid`**：
+  - 只返回该门店的员工
+  - `company_list` 只包含该门店的信息
+  - `is_disable` 使用该门店的禁用状态
+- **如果未传递 `company_uuid`**：
+  - 返回当前商家可看到的所有商家的所有员工
+  - `company_list` 包含员工在所有可见门店的信息
+  - `is_disable` 使用统一账号的禁用状态
+
+**实现位置**: `main/app/api/v1/shop/shop_staff.go`（新增 `SaasGetStaffList` 方法）
 
 这些接口会通过调整后的 Service 层自动支持统一账号体系和多门店管理。
 
@@ -2493,35 +3572,93 @@ return staff
 
 ### Phase 1: 数据库和模型
 
-- [ ] 创建数据库迁移文件（统一账号表、账号-门店关联表）
-- [ ] 执行数据库迁移
-- [ ] 创建 Go Model
-- [ ] 扩展 Staff Model（添加邮箱字段）
+- [x] 创建数据库迁移文件（统一账号表、账号-门店关联表）
+- [x] 执行数据库迁移
+- [x] 创建 Go Model (`SaasStaff`, `CompanyStaff`)
+- [x] 创建 DTO 定义 (`SaasStaffResp`, `CompanyStaffResp`, `StoreSwitchResp`)
 
 ### Phase 2: 核心实现
 
-- [ ] 实现 Repository 接口和实现
-- [ ] 实现 Service 接口和实现
-- [ ] 实现 API 接口
-- [ ] 创建 DTO 定义
+- [x] 实现 Repository 接口和实现 (`SaasStaffRepo`, `CompanyStaffRepo`)
+- [x] 实现 Service 接口和实现 (`SaasLogin`, `StoreSwitch`, `SaasStaffSrv`)
+- [x] 调整 Staff Service (`AddStaff`, `UpdateStaff`, `GetStaffDetail`, `UpdateStaffStatus`)
+- [x] 创建 DTO 定义 (`req.StoreSwitchReq`, `resp.StoreSwitchResp`)
 
 ### Phase 3: 登录和门店切换
 
-- [ ] 扩展登录流程（支持门店选择）
-  - 登录时获取员工关联的门店列表
-  - 单个门店时直接进入
-  - 多个门店时读取 `last_company_uuid` 作为默认选择
-  - 返回门店列表和默认门店UUID
-- [ ] 实现门店切换功能
-  - 切换成功后更新 `last_company_uuid` 字段
-- [ ] 实现账号导入功能
+- [x] 扩展登录流程（支持门店选择）
+  - ✅ 登录时获取员工关联的门店列表
+  - ✅ 单个门店时直接进入
+  - ✅ 多个门店时读取 `last_company_uuid` 作为默认选择
+  - ✅ 返回门店列表和默认门店UUID
+- [x] 实现门店切换功能
+  - ✅ 切换成功后更新 `last_company_uuid` 字段
+- [ ] 实现账号导入功能（待实现）
 
-### Phase 4: 测试
+### Phase 4: 中间件和 Base 接口调整
+
+- [x] 调整各端 Base 方法
+  - ✅ 当 `company_uuid` 为 0 时，返回可用门店列表
+  - ✅ 过滤已过期、异常的商家
+- [x] 调整各端 Base 响应结构
+  - ✅ 添加 `company_list` 字段
+- [x] 调整 `StoreSwitch` 方法
+  - ✅ 返回新的 token（包含新的 `company_uuid`）
+  - ✅ 调整响应结构，添加 `token` 和 `refresh_token` 字段
+- [ ] 调整中间件 `ParseJwt` 函数（待实现）
+  - 当 `company_uuid` 为 0 时，只允许访问 base 接口和切换门店接口
+  - 跳过 `Auth` 验证，设置基本上下文信息
+
+### Phase 5: 各端切换门店接口
+
+- [ ] 收银端：新增 `/api/v1/cashier/store_switch` 接口（待实现）
+- [ ] 点餐助手端：新增 `/api/v1/assistant/store_switch` 接口（待实现）
+- [ ] 平板端：新增 `/api/v1/tablet/store_switch` 接口（待实现）
+- [ ] 厨显端：新增 `/api/v1/kitchen/store_switch` 接口（待实现）
+- [ ] 新管理端（移动端）：新增 `/api/v1/shop/store_switch` 接口（待实现）
+
+### Phase 6: 测试
 
 - [ ] 单元测试
 - [ ] API 测试
 - [ ] 集成测试
 - [ ] 性能测试
+
+---
+
+## ✅ 实现状态总结
+
+### 已完成的功能
+
+1. **数据库和模型层**
+   - ✅ `SaasStaff` Model（统一账号表）
+   - ✅ `CompanyStaff` Model（账号-门店关联表）
+   - ✅ Repository 层实现（`SaasStaffRepo`, `CompanyStaffRepo`）
+
+2. **Service 层**
+   - ✅ `SaasLogin` 方法（统一认证登录）
+   - ✅ `StoreSwitch` 方法（门店切换）
+   - ✅ `SaasStaffSrv` Service（门店切换相关功能）
+   - ✅ `Staff` Service 调整（`AddStaff`, `UpdateStaff`, `GetStaffDetail`, `UpdateStaffStatus`）
+   - ✅ `SaasAddStaff` 方法（统一账号添加员工）
+   - ✅ `SaasUpdateStaff` 方法（统一账号修改员工，支持多门店配置、IsDisable 更新和 RemoveCompanyList 处理）
+   - ✅ `getCompanyList` 方法（获取可用门店列表）
+
+3. **Base 接口调整**
+   - ✅ 各端 Base 接口支持 `company_uuid` 为 0 的情况
+   - ✅ 各端 Base 响应结构添加 `company_list` 字段
+
+### 待实现的功能
+
+1. **中间件调整**
+   - ⏳ 调整 `ParseJwt` 函数，支持 `company_uuid` 为 0 的情况
+
+2. **API 层**
+   - ⏳ 各端新增 `StoreSwitch` API 接口
+
+3. **其他**
+   - ⏳ 账号导入功能
+   - ⏳ 单元测试和集成测试
 
 **详细任务**: 参见 `tasks.md`
 

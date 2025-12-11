@@ -949,8 +949,8 @@ definitions:
   material_resp.Material:
     properties:
       allow_negative_stock:
-        description: 是否允许负库存：1-允许，0-不允许
-        type: integer
+        description: 是否允许负库存：true-允许，false-不允许
+        type: boolean
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -1072,8 +1072,8 @@ definitions:
   material_resp.MaterialDetailResp:
     properties:
       allow_negative_stock:
-        description: 是否允许负库存：1-允许，0-不允许
-        type: integer
+        description: 是否允许负库存：true-允许，false-不允许
+        type: boolean
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -3400,9 +3400,20 @@ definitions:
     type: object
   req.AddStaffReq:
     properties:
+      company_role_list:
+        description: 多门店角色配置（上级门店使用，可选）
+        items:
+          $ref: '#/definitions/req.CompanyRoleItem'
+        type: array
       confirm_password:
         description: 确认密码
         type: string
+      is_disable:
+        description: 统一账号
+        enum:
+        - 1
+        - 0
+        type: integer
       password:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
@@ -3526,13 +3537,28 @@ definitions:
     type: object
   req.BindDeviceReq:
     properties:
+      background_image_url:
+        description: 背景图片 URL（可选，可传空字符串）
+        type: string
       bind_code:
         maxLength: 10
         type: string
+      call_count:
+        description: 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
+        type: integer
       lang1:
         type: string
       lang2:
         type: string
+      name:
+        description: 设备名称（可选，版本 >= 2.11.0 时必填）
+        type: string
+      timeout_limit:
+        description: 超时限制（分钟，可选）
+        type: integer
+      voice_call_enabled:
+        description: 语音叫号开关（可选）
+        type: boolean
     required:
     - bind_code
     type: object
@@ -3818,6 +3844,19 @@ definitions:
     required:
     - lang
     - text
+    type: object
+  req.CompanyRoleItem:
+    properties:
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      role_uuids:
+        description: 在该门店的角色UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - company_uuid
     type: object
   req.ConfirmRechargeOrder:
     properties:
@@ -8071,6 +8110,14 @@ definitions:
         description: 仓库UUID
         type: integer
     type: object
+  req.StoreSwitchReq:
+    properties:
+      company_uuid:
+        description: 要切换到的门店UUID
+        type: integer
+    required:
+    - company_uuid
+    type: object
   req.SubmitShiftReq:
     properties:
       is_background:
@@ -8451,19 +8498,17 @@ definitions:
   req.UpdateBindInfoReq:
     properties:
       background_image_url:
-        description: 背景图片 URL（必填）
+        description: 背景图片 URL（可选，可传空字符串）
         type: string
       call_count:
-        description: 叫号次数（必填，最小1，最大3）
-        maximum: 3
-        minimum: 1
+        description: 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
         type: integer
       lang1:
         type: string
       lang2:
         type: string
       name:
-        description: 设备名称（必填）
+        description: 设备名称（可选，版本 >= 2.11.0 时必填）
         type: string
       timeout_limit:
         description: 超时限制（分钟，可选）
@@ -8474,9 +8519,6 @@ definitions:
         description: 语音叫号开关（可选）
         type: boolean
     required:
-    - background_image_url
-    - call_count
-    - name
     - uuid
     type: object
   req.UpdateBusinessSetting:
@@ -8628,6 +8670,23 @@ definitions:
     - start_serial_no
     - zeroing_method
     type: object
+  req.UpdateCompanyInfoReq:
+    properties:
+      logo:
+        description: 门店logo
+        type: string
+      name:
+        description: 门店名称
+        type: string
+      status:
+        description: 状态 1-启用 0-禁用
+        type: integer
+      uuid:
+        description: 门店UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.UpdateHeadquarterSupplierNameReq:
     properties:
       branch:
@@ -8680,9 +8739,20 @@ definitions:
     type: object
   req.UpdateStaffReq:
     properties:
+      company_role_list:
+        description: 多门店角色配置（上级门店使用，可选）
+        items:
+          $ref: '#/definitions/req.CompanyRoleItem'
+        type: array
       confirm_password:
         description: 确认密码
         type: string
+      is_disable:
+        description: 统一账号
+        enum:
+        - 1
+        - 0
+        type: integer
       password:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
@@ -8697,6 +8767,11 @@ definitions:
         description: 姓名，限制100个字符
         maxLength: 100
         type: string
+      remove_company_list:
+        description: 移除多门店角色配置（上级门店使用，可选）
+        items:
+          type: integer
+        type: array
       roles:
         description: 角色ID列表，非必填，超管没有角色
         items:
@@ -9088,6 +9163,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.Company'
         description: 商家信息
+      company_list:
+        description: 关联的门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyStaffResp'
+        type: array
       currency:
         allOf:
         - $ref: '#/definitions/setting.Currency'
@@ -9477,6 +9557,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.Company'
         description: 商家信息
+      company_list:
+        description: 关联的门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyStaffResp'
+        type: array
       currency:
         allOf:
         - $ref: '#/definitions/setting.Currency'
@@ -9690,6 +9775,100 @@ definitions:
         type: string
       uuid:
         description: 商家UUID
+        type: integer
+    type: object
+  resp.CompanyInfoResp:
+    properties:
+      name:
+        description: 门店名称
+        type: string
+      roles:
+        description: 角色列表
+        items:
+          $ref: '#/definitions/resp.RoleItem'
+        type: array
+      super_phone:
+        description: 超管手机号
+        type: string
+      super_real_name:
+        description: 超管姓名
+        type: string
+      uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.CompanyRoleInfo:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      is_super:
+        description: 是否超级管理员
+        type: integer
+      roles:
+        description: 角色列表
+        items:
+          $ref: '#/definitions/resp.StaffRole'
+        type: array
+    type: object
+  resp.CompanyStaffResp:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      is_super:
+        description: 是否超级管理员
+        type: integer
+      roles:
+        description: 角色列表
+        items:
+          type: string
+        type: array
+    type: object
+  resp.CompanyStoreResp:
+    properties:
+      address:
+        description: 地址，必填，最大500个字符
+        type: string
+      company_name:
+        description: 公司名称，区别于店铺名称，最大500个字符
+        type: string
+      coordinates:
+        description: 经纬度
+        type: string
+      language:
+        description: 云平台限制商家的可用语言列表
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 系统语言，必填，至少一个
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      logo_url:
+        description: 店铺logo，上传后保存url，必填
+        type: string
+      name:
+        description: 店铺名称
+        type: string
+      phone:
+        description: 联系电话，必填，最大20个字符
+        type: string
+      tax_number:
+        description: 税号
+        type: string
+      time_zone:
+        description: 时区，必填
+        type: string
+      uuid:
+        description: 门店UUID
         type: integer
     type: object
   resp.ConfigInfoResp:
@@ -11254,6 +11433,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.Company'
         description: 商家信息
+      company_list:
+        description: 关联的门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyStaffResp'
+        type: array
       currency:
         allOf:
         - $ref: '#/definitions/setting.Currency'
@@ -13301,11 +13485,10 @@ definitions:
       remark:
         description: 备注
         type: string
-      remark_uuids:
-        description: 备注预设UUID列表
-        items:
-          type: integer
-        type: array
+      remark_info:
+        allOf:
+        - $ref: '#/definitions/resp.RemarkInfo'
+        description: 备注信息
       show_batch_tag:
         description: 是否显示分批类型
         type: boolean
@@ -14553,6 +14736,21 @@ definitions:
         description: 剩余可退款金额
         type: number
     type: object
+  resp.RemarkInfo:
+    properties:
+      custom_remark:
+        description: 自定义备注
+        type: string
+      remark:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 备注
+      uuids:
+        description: 备注UUID列表
+        items:
+          type: integer
+        type: array
+    type: object
   resp.ReturnFoodReason:
     properties:
       locale_name:
@@ -14643,6 +14841,15 @@ definitions:
         description: 角色UUID
         type: integer
     type: object
+  resp.RoleItem:
+    properties:
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
+    type: object
   resp.RoleListResp:
     properties:
       list:
@@ -14652,6 +14859,13 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.SaasCompanyListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CompanyInfoResp'
+        type: array
     type: object
   resp.SaleOrder:
     properties:
@@ -14748,6 +14962,43 @@ definitions:
           $ref: '#/definitions/resp.SearchMember'
         type: array
     type: object
+  resp.SearchStaffCompanyInfo:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      is_super:
+        description: 是否超级管理员
+        type: integer
+      roles:
+        description: 角色列表
+        items:
+          $ref: '#/definitions/resp.RoleItem'
+        type: array
+    type: object
+  resp.SearchStaffResp:
+    properties:
+      company_list:
+        description: 在当前门店可见范围内的门店列表
+        items:
+          $ref: '#/definitions/resp.SearchStaffCompanyInfo'
+        type: array
+      email:
+        description: 邮箱
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      uuid:
+        description: 员工UUID，大于0表示找到员工
+        type: integer
+    type: object
   resp.SentKitchen:
     properties:
       amount_info:
@@ -14843,6 +15094,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.Company'
         description: 商家信息
+      company_list:
+        description: 关联的门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyStaffResp'
+        type: array
       currency:
         allOf:
         - $ref: '#/definitions/setting.Currency'
@@ -14889,6 +15145,9 @@ definitions:
       profile_uuid:
         description: 收银员UUID
         type: integer
+      real_name:
+        description: 姓名
+        type: string
       server_version:
         description: 服务端版本
         type: string
@@ -15072,6 +15331,11 @@ definitions:
     type: object
   resp.Staff:
     properties:
+      company_list:
+        description: 员工在当前商家可见范围内的门店列表（包含角色信息）
+        items:
+          $ref: '#/definitions/resp.CompanyRoleInfo'
+        type: array
       create_time:
         description: 创建时间
         type: integer
@@ -15587,6 +15851,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.Company'
         description: 商家信息
+      company_list:
+        description: 关联的门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyStaffResp'
+        type: array
       currency:
         allOf:
         - $ref: '#/definitions/setting.Currency'
@@ -20138,6 +20407,35 @@ paths:
       summary: 修改设置
       tags:
       - 点餐助手端.设置
+  /assistant/store_switch:
+    post:
+      consumes:
+      - application/json
+      description: 切换门店，返回新的 token
+      parameters:
+      - description: 门店切换参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StoreSwitchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 门店切换
+      tags:
+      - 点餐助手端.认证鉴权
   /assistant/verify_advanced_password:
     post:
       consumes:
@@ -26921,6 +27219,35 @@ paths:
       summary: 统计商品分类
       tags:
       - 收银端.营业数据
+  /cashier/store_switch:
+    post:
+      consumes:
+      - application/json
+      description: 切换门店，返回新的 token
+      parameters:
+      - description: 门店切换参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StoreSwitchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 门店切换
+      tags:
+      - 收银端.认证
   /cashier/usb/printer/report:
     post:
       consumes:
@@ -28073,6 +28400,35 @@ paths:
       security:
       - JwtToken: []
       summary: 刷新token
+      tags:
+      - 厨显端.认证鉴权
+  /kitchen/store_switch:
+    post:
+      consumes:
+      - application/json
+      description: 切换门店，返回新的 token
+      parameters:
+      - description: 门店切换参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StoreSwitchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 门店切换
       tags:
       - 厨显端.认证鉴权
   /kitchen/verify_advanced_password:
@@ -29640,6 +29996,81 @@ paths:
       summary: 检查更新
       tags:
       - 商家端.基础信息
+  /shop/company/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取门店信息（仅总部可用）
+      parameters:
+      - description: 门店UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyStoreResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店信息
+      tags:
+      - 商家端.门店管理
+  /shop/company/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取可见门店列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SaasCompanyListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取可见门店列表
+      tags:
+      - 商家端.门店管理
+  /shop/company/update:
+    post:
+      consumes:
+      - application/json
+      description: 修改门店信息（仅总部可用）
+      parameters:
+      - description: 更新门店信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateCompanyInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改门店信息
+      tags:
+      - 商家端.门店管理
   /shop/country/list:
     get:
       consumes:
@@ -35088,6 +35519,33 @@ paths:
       summary: 员工列表
       tags:
       - 商家端.员工账号
+  /shop/staff/search:
+    get:
+      consumes:
+      - application/json
+      description: 搜索员工
+      parameters:
+      - description: 关键词, 邮箱、手机号
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SearchStaffResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 搜索员工
+      tags:
+      - 商家端.员工账号
   /shop/staff/update:
     post:
       consumes:
@@ -36156,6 +36614,35 @@ paths:
       summary: 提交盘点单
       tags:
       - 商家端.盘点管理
+  /shop/store_switch:
+    post:
+      consumes:
+      - application/json
+      description: 切换门店，返回新的 token
+      parameters:
+      - description: 门店切换参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StoreSwitchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 门店切换
+      tags:
+      - 商家端.认证
   /shop/supplier:
     get:
       consumes:
@@ -37797,6 +38284,35 @@ paths:
       summary: 修改设置
       tags:
       - 平板端.设置
+  /tablet/store_switch:
+    post:
+      consumes:
+      - application/json
+      description: 切换门店，返回新的 token
+      parameters:
+      - description: 门店切换参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StoreSwitchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 门店切换
+      tags:
+      - 平板端.认证鉴权
   /tablet/verify_advanced_password:
     post:
       consumes:

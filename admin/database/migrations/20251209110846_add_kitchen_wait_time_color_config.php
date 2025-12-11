@@ -24,14 +24,9 @@ class AddKitchenWaitTimeColorConfig extends Migrator
                 continue;
             }
 
-            // 如果已经存在 wait_time_color_ranges，跳过
-            if (isset($values['wait_time_color_ranges']) && is_array($values['wait_time_color_ranges']) && count($values['wait_time_color_ranges']) > 0) {
-                continue;
-            }
-
             // 初始化默认配置
             $waitTimeColorRanges = [
-                ['minute' => 0, 'color' => '#100A05'], // 第一区间：0分钟（黑色）
+                ['minute' => '0', 'color' => '#100A05'], // 第一区间：0分钟（黑色）
             ];
 
             // 从旧格式 wait_color 读取配置
@@ -39,15 +34,15 @@ class AddKitchenWaitTimeColorConfig extends Migrator
             if (is_array($waitColor) && count($waitColor) > 0) {
                 // 第二区间：10分钟
                 $secondColor = $this->convertColorToRgb($waitColor[0] ?? 'yellow');
-                $waitTimeColorRanges[] = ['minute' => 10, 'color' => $secondColor];
+                $waitTimeColorRanges[] = ['minute' => '10', 'color' => $secondColor];
 
                 // 第三区间：20分钟
                 $thirdColor = $this->convertColorToRgb($waitColor[1] ?? 'red');
-                $waitTimeColorRanges[] = ['minute' => 20, 'color' => $thirdColor];
+                $waitTimeColorRanges[] = ['minute' => '20', 'color' => $thirdColor];
             } else {
                 // 如果没有旧配置，使用默认值
-                $waitTimeColorRanges[] = ['minute' => 10, 'color' => '#FFBE00']; // 默认黄色
-                $waitTimeColorRanges[] = ['minute' => 20, 'color' => '#E50028']; // 默认红色
+                $waitTimeColorRanges[] = ['minute' => '10', 'color' => '#FFBE00']; // 默认黄色
+                $waitTimeColorRanges[] = ['minute' => '20', 'color' => '#E50028']; // 默认红色
             }
 
             // 更新 values

@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 42  
-**已完成**: 0  
+**总任务数**: 56  
+**已完成**: 27  
 **进行中**: -  
-**完成率**: 0%
+**完成率**: 48.2%
 
 ---
 
@@ -179,6 +179,42 @@
     - 持有 `dbm *database.DBManager` 和 `cache cache.Cache`
     - 使用 saas 数据库连接（s.dbm.GetDB(constant.DefaultDB)）
   - Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: Service 创建成功，代码风格正确，门店切换功能正确
+
+- [x] 2.9.1 新增 SaasUpdateStaff 方法（统一账号修改员工）
+
+  - File: `main/app/service/staff.go`
+  - Purpose: 新增统一账号修改员工方法，支持多门店角色配置、IsDisable 更新和 RemoveCompanyList 处理
+  - Requirements: 1.1, 1.2, 1.3, 2.2
+  - Leverage: 现有方法: `main/app/service/staff.go` 中的 `UpdateStaff`、`SaasAddStaff` 方法
+  - Prompt: Role: Go Developer with business logic expertise | Task: 在 IStaffSrv 接口中新增 SaasUpdateStaff 方法，实现统一账号修改员工功能 | Context: 
+    - 参数和 UpdateStaff 一致（使用 `req.UpdateStaffReq`）
+    - 查询 `saas.ttpos_staff` 是否存在该员工，不存在则报错
+    - 修改 `saas.ttpos_staff` 的 Email、Phone、RealName（参考 UpdateStaff）
+    - 支持密码更新（同步更新 `saas.ttpos_staff` 和门店数据库）
+    - **总部/有子级商家**：
+      - 验证 `CompanyRoleList` 不为空
+      - 获取当前商家可见的所有门店列表
+      - 遍历 `CompanyRoleList`，验证门店是否可见、角色是否存在、员工是否存在于门店数据库
+      - 更新各门店数据库的 `ttpos_staff` 表和 `ttpos_staff_role` 关联关系
+      - 更新 `saas.ttpos_company_staff` 表
+      - 如果 `CompanyRoleList` 中存在当前商家uuid，根据 `IsDisable` 参数更新 `is_disable` 字段
+    - **子店**：
+      - 验证 `Roles` 不为空
+      - 验证角色和员工是否存在
+      - 更新当前商家数据库的 `ttpos_staff` 表和 `ttpos_staff_role` 关联关系
+      - 更新 `saas.ttpos_company_staff` 表
+      - 根据 `IsDisable` 参数更新 `is_disable` 字段
+    - **IsDisable 字段更新**：
+      - 如果是子店，或者 `CompanyRoleList` 中存在当前商家uuid，则根据参数中的 `IsDisable` 更新：
+        - `saas.ttpos_company_staff` 的 `is_disable` 字段
+        - 对应商家数据库中的 `ttpos_staff` 的 `is_disable` 字段
+    - **RemoveCompanyList 处理**：
+      - 如果 `RemoveCompanyList` 有值，遍历每个门店UUID：
+        - 验证门店是否为当前公司可见
+        - 软删除 `saas.ttpos_company_staff` 中的关联关系（设置 `delete_time`）
+        - 软删除对应商家数据库中的 `ttpos_staff` 记录（设置 `delete_time`）
+    - 删除收银机缓存并推送 WebSocket 配置更新通知
+  - Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error，支持事务管理 | Success: SaasUpdateStaff 方法实现成功，支持多门店配置、IsDisable 更新和 RemoveCompanyList 处理
 
 - [x] 2.10 扩展 Auth Service（支持门店切换和默认门店选择）
 

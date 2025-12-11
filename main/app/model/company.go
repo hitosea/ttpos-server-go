@@ -344,6 +344,8 @@ type CompanyStaff struct {
 	Username    string `gorm:"column:username;type:varchar(255);comment:员工账号;NOT NULL" json:"username"`
 	Phone       string `gorm:"column:phone;type:varchar(255);comment:员工手机号;NOT NULL" json:"phone"`
 	IsSuper     int    `gorm:"column:is_super;type:int(11);default:0;comment:是否超级管理员" json:"is_super"`
+	IsDisable   int    `gorm:"column:is_disable;type:int;default:0;comment:是否禁用1禁用,0未禁用;NOT NULL" json:"is_disable"`
 
-	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
+	Company   *Company   `gorm:"foreignKey:CompanyUuid;references:Uuid"`
+	SaasStaff *SaasStaff `gorm:"foreignKey:Uuid;references:Uuid"` // 关联到统一账号表
 }
