@@ -98,4 +98,4 @@
 ## 8. 待确认事项
 
 - [ ] 菜单数据是否需要立即持久化到 MySQL `channel_menu_snapshot` 表？（建议：是，作为快照保存）
-- [ ] `provider_menu_update` 消息的具体 Payload 格式定义。
+- [ ] `takeout_provider_menu_update` 消息的具体 Payload 格式定义。

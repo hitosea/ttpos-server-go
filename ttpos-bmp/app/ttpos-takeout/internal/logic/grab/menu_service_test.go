@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
+	"ttpos-bmp/utility/uuid"
 )
 
 // TestNotifyMenuUpdate 测试菜单更新通知
@@ -14,10 +16,10 @@ func TestNotifyMenuUpdate(t *testing.T) {
 	service := &MenuService{}
 
 	event := &grabDto.ProviderMenuUpdateEvent{
-		ProviderName:      "grab",
+		ProviderName:      string(consts.ProviderGrab),
 		MerchantID:        "M-123",
 		PartnerMerchantID: "P-456",
-		StorageKey:        "test-key",
+		Uuid:              uuid.MustGetID(),
 		ReceivedAt:        time.Now().Unix(),
 	}
 

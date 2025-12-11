@@ -16,7 +16,7 @@ sequenceDiagram
     Grab->>Webhook: POST /partner/menu (Push Menu)
     Webhook->>Webhook: Validate Token
     Webhook->>Redis: Save Menu Snapshot (JSON)
-    Webhook->>MQ: Publish provider_menu_update
+    Webhook->>MQ: Publish takeout_provider_menu_update
     Webhook-->>Grab: 204 No Content
 ```
 

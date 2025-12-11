@@ -25,36 +25,6 @@ type GetStoreStatusResponse struct {
 	ScheduleType string `json:"scheduleType"` // 调度类型
 }
 
-// StoreHoursResponse 门店营业时间响应
-type StoreHoursResponse struct {
-	MerchantID  string       `json:"merchantID"`  // 商户 ID
-	OpenPeriods []OpenPeriod `json:"openPeriods"` // 营业时段
-}
-
-// OpenPeriod 营业时段
-type OpenPeriod struct {
-	Day     string   `json:"day"`     // 星期
-	Periods []Period `json:"periods"` // 时间段
-}
-
-// UpdateStoreHoursRequest 更新门店营业时间请求
-type UpdateStoreHoursRequest struct {
-	MerchantID  string       `json:"merchantID"`  // 商户 ID
-	OpenPeriods []OpenPeriod `json:"openPeriods"` // 营业时段
-}
-
-// SpecialHoursRequest 特殊营业时间请求
-type SpecialHoursRequest struct {
-	MerchantID   string           `json:"merchantID"`   // 商户 ID
-	SpecialHours []SpecialHourDay `json:"specialHours"` // 特殊日期
-}
-
-// SpecialHourDay 特殊日期时间
-type SpecialHourDay struct {
-	Date    string   `json:"date"`    // 日期 YYYY-MM-DD
-	Periods []Period `json:"periods"` // 时间段，空数组表示休息
-}
-
 // ============================================================================
 // Integration Status Webhook
 // ============================================================================

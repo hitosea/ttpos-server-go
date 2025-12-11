@@ -116,3 +116,53 @@ func (s *sTakeout) GetWithDriver(ctx context.Context, shopOrderUuid string) (*dt
 
 	return result, nil
 }
+
+// GetMenuSnapshot 根据 request_id 查询菜单快照
+func (s *sTakeout) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshotReq) (*api.GetMenuSnapshotResp, error) {
+	// 参数校验
+	if req.ProviderName == "" {
+		return nil, gerror.New("provider_name 不能为空")
+	}
+	if req.ShopUuid == "" {
+		return nil, gerror.New("shop_uuid 不能为空")
+	}
+	if req.RequestId == "" {
+		return nil, gerror.New("request_id 不能为空")
+	}
+
+	// 查询快照记录（使用字段名字符串，兼容迁移前后）
+	record, err := dao.ChannelMenuSnapshot.Ctx(ctx).
+		Where("request_id", req.RequestId).
+		Where("provider_name", req.ProviderName).
+		Where("shop_uuid", req.ShopUuid).
+		Where("deleted_at IS NULL"). // 软删除过滤
+		One()
+	if err != nil {
+		return nil, gerror.Wrap(err, "查询菜单快照失败")
+	}
+	if record.IsEmpty() {
+		return nil, gerror.New("菜单快照不存在")
+	}
+
+	// 从记录中提取字段值（使用字段名字符串，兼容迁移前后）
+	content := record["menu_data"].String()
+	// 尝试获取 updated_at，如果不存在则使用 update_time（兼容迁移前）
+	updatedAt := record["updated_at"].Int64()
+	if updatedAt == 0 {
+		updatedAt = record["update_time"].Int64()
+	}
+	syncState := record["sync_state"].String()
+
+	// 构建响应
+	resp := &api.GetMenuSnapshotResp{
+		ResponseInfo: &api.ResponseInfo{
+			Code:    "1",
+			Message: "success",
+		},
+		Content:   content,
+		UpdatedAt: updatedAt,
+		SyncState: syncState,
+	}
+
+	return resp, nil
+}
