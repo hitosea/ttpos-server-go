@@ -521,7 +521,7 @@ type ProductBom struct {
 	Name            string  `gorm:"column:name;type:text;comment:商品名称或小料名称(不用于业务显示)" json:"name"`
 	ErpCode         string  `gorm:"column:erp_code;type:varchar(255);default:'';comment:商品编码;NOT NULL" json:"erp_code"`
 	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
-	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:1;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
+	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:0;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
 	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
 	InternalCode    string  `gorm:"column:internal_code;type:varchar(255);default:'';comment:内部编码;NOT NULL" json:"internal_code"`
 	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
@@ -529,8 +529,7 @@ type ProductBom struct {
 	IsSoldOut       int     `gorm:"column:is_sold_out;type:tinyint(1);default:0;comment:是否沽清, 0-否 1-是;NOT NULL" json:"is_sold_out"`
 	ActualSaleNum   float64 `gorm:"column:actual_sale_num;type:decimal(12,4);default:0.0000;comment:实际销量;NOT NULL" json:"actual_sale_num"`
 
-	UseBomCardStock  int     `gorm:"column:use_bom_card_stock;type:tinyint(1);default:1;comment:是否使用成本卡库存, 0-否 1-是;NOT NULL" json:"use_bom_card_stock"`
-	SellableQuantity float64 `gorm:"column:sellable_quantity;type:decimal(22,4);default:0.0000;comment:可售数量;NOT NULL" json:"sellable_quantity"`
+	UseBomCardStock int `gorm:"column:use_bom_card_stock;type:tinyint(1);default:0;comment:是否使用成本卡库存, 0-否 1-是;NOT NULL" json:"use_bom_card_stock"`
 
 	// 关联ID
 	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;type:bigint(20) unsigned;default:0;comment:商品规格ID(仅商品使用);NOT NULL" json:"product_flavor_uuid"`

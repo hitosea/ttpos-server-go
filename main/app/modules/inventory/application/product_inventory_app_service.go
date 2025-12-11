@@ -1,6 +1,7 @@
 package inventory
 
 import (
+	stdctx "context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -9,6 +10,8 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -191,5 +194,60 @@ func (s *ProductInventoryAppService) InvalidateProductPackageInventoryCache(
 	companyUuid := ctx.GetCompanyUuid()
 	cacheKey := fmt.Sprintf(ProductPackageInventoryCacheKeyPrefix, companyUuid, productPackageUuid)
 	s.cache.Del(cacheKey)
+	return nil
+}
+
+// InvalidateAllInventoryCache 使所有商品库存和商品包库存缓存失效
+// companyUuid: 公司UUID，如果为0则清除所有公司的缓存
+func (s *ProductInventoryAppService) InvalidateAllInventoryCache(
+	ctx context.Context,
+	companyUuid uint64,
+) error {
+	if !s.enableCache {
+		return nil
+	}
+
+	// 获取 Redis 客户端
+	var client redis.UniversalClient
+	if clusterClient := s.cache.GetClusterClient(); clusterClient != nil {
+		client = clusterClient
+	} else if redisClient := s.cache.GetClient(); redisClient != nil {
+		client = redisClient
+	} else {
+		// 如果不是 Redis 缓存，无法使用模式匹配，直接返回
+		return nil
+	}
+
+	// 构建缓存键模式
+	var patterns []string
+	if companyUuid > 0 {
+		// 清除指定公司的缓存
+		// 注意：缓存键格式为 product_inventory:{company_uuid}:{product_bom_uuid}
+		// 所以模式应该是 product_inventory:{company_uuid}:*
+		patterns = []string{
+			fmt.Sprintf("product_inventory:%d:*", companyUuid),
+			fmt.Sprintf("product_package_inventory:%d:*", companyUuid),
+		}
+	} else {
+		// 清除所有公司的缓存
+		patterns = []string{
+			"product_inventory:*",
+			"product_package_inventory:*",
+		}
+	}
+
+	// 扫描并删除所有匹配的键
+	backgroundCtx := stdctx.Background()
+	for _, pattern := range patterns {
+		keys, err := cache.ScanRedisKeysDefault(backgroundCtx, client, pattern)
+		if err != nil {
+			return fmt.Errorf("扫描缓存键失败: %w", err)
+		}
+
+		if len(keys) > 0 {
+			s.cache.Del(keys...)
+		}
+	}
+
 	return nil
 }
