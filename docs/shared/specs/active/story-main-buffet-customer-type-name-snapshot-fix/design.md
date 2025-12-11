@@ -461,3 +461,4 @@ if err := saleOrderBuffetCustomerType.SetNameSnapshot(customerTypeName); err != 
 **作者**: xiezhihuan  
 **审核者**: {审核者}
 
+

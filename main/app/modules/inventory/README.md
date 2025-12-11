@@ -292,6 +292,57 @@ type IWarehouseItemDomainService interface {
 }
 ```
 
+### IProductInventoryDomainService
+
+商品库存查询业务逻辑：
+
+```go
+type IProductInventoryDomainService interface {
+    // GetProductInventory 获取商品库存
+    // productBomUuid: 商品BOM的UUID
+    // 返回: 库存数量（float64），无限库存返回 99999999
+    GetProductInventory(ctx context.Context, productBomUuid uint64) (float64, error)
+}
+```
+
+**使用示例**：
+
+```go
+import (
+    "ttpos-server-go/app/modules/inventory/domain/service"
+    "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
+    "ttpos-server-go/pkg/context"
+    "ttpos-server-go/pkg/database"
+)
+
+// 创建服务
+dbm := database.NewDBManager(...)
+productBomRepo := persistence.NewProductBomRepository(dbm)
+inventoryService := service.NewProductInventoryDomainService(productBomRepo)
+
+// 查询商品库存
+ctx := context.NewContext(...)
+inventory, err := inventoryService.GetProductInventory(ctx, productBomUuid)
+if err != nil {
+    // 处理错误
+}
+// inventory 为库存数量，无限库存返回 99999999
+```
+
+**业务规则**：
+
+1. **有成本卡商品**：
+   - 成本卡控制开启 → 根据成本卡计算材料用量得到库存
+   - 成本卡控制未开启 → 判断售罄 → 判断可售量 → 返回对应值或 99999999
+
+2. **无成本卡商品**：
+   - 判断售罄 → 判断可售量 → 返回对应值或 99999999
+
+**策略模式**：
+
+- `BomCardProductInventoryStrategy` - 有成本卡商品库存计算策略
+- `NonBomCardProductInventoryStrategy` - 无成本卡商品库存计算策略
+
 ---
 
 ## 领域事件

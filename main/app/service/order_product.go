@@ -9,8 +9,12 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	inventoryDomainService "ttpos-server-go/app/modules/inventory/domain/service"
+	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -260,9 +264,16 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	saleOrderProduct.Num = request.Num
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
+	// 创建库存服务实例（用于库存检查）
+	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
+	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
+	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
+	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+
 	// 检查商品销售库存是否充足
 	if request.Num > beforeNum {
-		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
+		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage(), productBomStockNum)
 		if status != constant.CodeSuccess {
 			return nil, errors.WithMessage(errors.New(message))
 		}
@@ -2244,7 +2255,14 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 			return nil, errors.WithMessage(errors.New("商品不可编辑"), "商品不可编辑")
 		}
 
-		saleOrderProduct, err := EditProduct(ctx, db, saleOrder, saleOrderProduct, request.EditProductReq)
+		// 创建库存服务实例（用于库存检查）
+		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
+		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
+		domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
+		appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+
+		saleOrderProduct, err := EditProduct(ctx, db, saleOrder, saleOrderProduct, request.EditProductReq, productBomStockNum)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -2267,13 +2285,21 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		if len(subProducts) != len(subProductParamMap) {
 			return nil, errors.WithMessage(errors.New("修改前后套餐子商品数量不一致"), "修改前后套餐子商品数量不一致")
 		}
+
+		// 创建库存服务实例（用于库存检查）
+		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
+		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
+		domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
+		appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+
 		for _, subProduct := range subProducts {
 			key := fmt.Sprintf("%d-%d", subProduct.GetFlavorSaleOrderProductBom().ProductBomUuid, subProduct.PackageGroupUuid)
 			params, ok := subProductParamMap[key]
 			if !ok {
 				return nil, errors.WithMessage(errors.New("套餐子商品不存在"), "套餐子商品不存在")
 			}
-			_, err := EditProduct(ctx, db, saleOrder, subProduct, params.EditProductReq)
+			_, err := EditProduct(ctx, db, saleOrder, subProduct, params.EditProductReq, productBomStockNum)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}

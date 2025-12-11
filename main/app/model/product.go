@@ -294,11 +294,11 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		// 商品规格
 		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:         bom.ProductFlavor.Uuid,
-				BomUuid:      bom.Uuid,
-				LocaleName:   bom.ProductFlavor.MultiLanguageName.GetNames(),
-				Price:        bom.Price,
-				StockNum:     bom.GetStockNum(),
+				Uuid:       bom.ProductFlavor.Uuid,
+				BomUuid:    bom.Uuid,
+				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				// StockNum:     bom.GetStockNum(),
 				Barcode:      bom.BarcodeValue,
 				InternalCode: bom.InternalCode,
 			})
@@ -307,11 +307,11 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		if bom.IsPackageFlavor() && !bom.IsDelete() {
 			name := language.JsonToLocaleResponse(bom.Name)
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:         0,
-				BomUuid:      bom.Uuid,
-				LocaleName:   *name,
-				Price:        bom.Price,
-				StockNum:     bom.GetStockNum(),
+				Uuid:       0,
+				BomUuid:    bom.Uuid,
+				LocaleName: *name,
+				Price:      bom.Price,
+				// StockNum:     bom.GetStockNum(),
 				Barcode:      bom.BarcodeValue,
 				InternalCode: bom.InternalCode,
 			})
@@ -325,11 +325,11 @@ func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
 	for _, bom := range model.ProductBoms {
 		if bom.IsSauce() && !bom.IsDelete() {
 			sauceList = append(sauceList, product_resp.ProductSauce{
-				Uuid:              bom.ProductSauce.Uuid,
-				BomUuid:           bom.Uuid,
-				LocaleName:        bom.ProductSauce.MultiLanguageName.GetNames(),
-				Price:             bom.Price,
-				StockNum:          bom.GetStockNum(),
+				Uuid:       bom.ProductSauce.Uuid,
+				BomUuid:    bom.Uuid,
+				LocaleName: bom.ProductSauce.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				// StockNum:          bom.GetStockNum(nil),
 				IsDefaultSelected: bom.IsDefaultSelect == 1,
 			})
 		}
@@ -448,29 +448,6 @@ func (model *ProductPackage) TaxRate(dineType uint) float64 {
 	return model.TakeoutTax.TaxRate
 }
 
-// 判断商品是否已经无法加购：下架、售罄、删除
-func (model *ProductPackage) IsSaleout() bool {
-	return model.IsDown() || model.GetStockNum() <= 0 || model.IsDelete()
-}
-
-func (model *ProductPackage) GetStockNum() int {
-	stockNum := 0
-	for index, bom := range model.ProductBoms {
-		if bom.IsSauce() {
-			continue
-		}
-		if index == 0 {
-			stockNum = int(bom.GetStockNum())
-			continue
-		}
-		// 取库存最大的一个
-		if bom.GetStockNum() > float64(stockNum) {
-			stockNum = int(bom.GetStockNum())
-		}
-	}
-	return stockNum
-}
-
 // IsUp 判断商品是否是上架状态。排除下架、删除状态
 func (model *ProductPackage) IsUp() bool {
 	if model.Status == constant.ProductStatusOffSale || model.DeleteTime != constant.NotDeleted {
@@ -580,16 +557,45 @@ func (model *ProductBom) HasProductBomCard() bool {
 	return model.ProductBomCardUuid != 0
 }
 
-func (model *ProductBom) GetStockNum() float64 {
-	// 如果关闭库存，返回999999表示无限库存
-	if !model.IsOpenStockBool() {
-		return constant.ProductBomInfiniteStock
+func (model *ProductBom) GetStockNum(fn func(productBomUuid uint64) float64) float64 {
+	if fn != nil {
+		return fn(model.Uuid)
 	}
 	// 如果标记沽清，返回0
 	if model.IsSoldOut == constant.ProductStatusSaleOut {
 		return 0
 	}
-	return model.StockNum
+	// 如果使用成本卡
+	if model.UseBomCardStock == constant.Yes {
+		if model.ProductBomCard != nil {
+			return model.ProductBomCard.CalculateExpectedProductionNum()
+		}
+		// 如果是使用关联材料，则计算关联材料的最小可生产数量
+		if len(model.FlavorMaterials) > 0 {
+			minExpectedProductionNum := constant.ProductBomInfiniteStock
+			for _, material := range model.FlavorMaterials {
+				stockNum := material.Material.GetStockNum()
+				if stockNum <= 0 {
+					continue
+				}
+				num := material.GetDecreaseNum(1)
+				if num <= 0 {
+					continue
+				}
+				min := int(stockNum / num)
+				if min < minExpectedProductionNum {
+					minExpectedProductionNum = min
+				}
+			}
+			return float64(minExpectedProductionNum)
+		}
+		return constant.ProductBomInfiniteStock
+	}
+	// 如果开启可用量库存，返回999999表示无限库存
+	if model.IsOpenStockBool() {
+		return model.StockNum
+	}
+	return constant.ProductBomInfiniteStock
 }
 
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
@@ -695,38 +701,36 @@ func (model *RelatedMaterial) IsBomCardManage() bool {
 }
 
 // IsStockShortage 判断库存是否不足
-func (model *ProductBom) IsStockShortage(productNum float64) bool {
-	// 如果关闭库存，则不检查库存不足
-	if !model.IsOpenStockBool() {
-		return false
-	}
-	return model.GetStockNum() < productNum
-}
+// func (model *ProductBom) IsStockShortage(productNum float64) bool {
+// 	// 如果关闭库存，则不检查库存不足
+// 	if !model.IsOpenStockBool() {
+// 		return false
+// 	}
+// 	return model.GetStockNum(nil) < productNum
+// }
 
 // IsStockShortageWithMaterial 判断库存是否不足,检查材料库存
-func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
+func (model *ProductBom) IsStockShortageWithMaterial(productNum float64, productBomStockNum func(productBomUuid uint64) float64) bool {
 	// 如果是关联材料的规格，则检查关联材料的库存
 	if model.IsFlavor() {
-		for _, material := range model.FlavorMaterials {
-			if material.IsDelete() {
-				continue
-			}
-			materialStockNum := material.Material.GetStockNum()
-			if materialStockNum < material.GetDecreaseNum(productNum) {
-				return true
-			}
+		stockNum := productBomStockNum(model.Uuid)
+		if stockNum < productNum {
+			return true // 表示库存不足
 		}
 	}
 	// 如果是关联材料的小料，则检查关联材料的库存
 	if model.IsSauce() {
-		for _, material := range model.ProductSauce.SauceMaterials {
-			materialStockNum := material.Material.GetStockNum()
-			if materialStockNum < material.GetDecreaseNum(productNum) {
-				return true
-			}
+		stockNum := productBomStockNum(model.Uuid)
+		if stockNum < productNum {
+			return true // 表示库存不足
 		}
 	}
-	return model.IsStockShortage(productNum)
+
+	stockNum := productBomStockNum(model.Uuid)
+	if stockNum < productNum {
+		return true // 表示库存不足
+	}
+	return false
 }
 
 // IsPriceChanged 判断商品价格是否变动
@@ -734,19 +738,19 @@ func (model *ProductBom) IsPriceChanged(price float64) bool {
 	return model.Price != price
 }
 
-// IsSoldOutStatus 判断是否标记沽清、或售罄无库存
-func (model *ProductBom) IsSoldOutStatus() bool {
-	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum() <= 0
-}
+// // IsSoldOutStatus 判断是否标记沽清、或售罄无库存
+// func (model *ProductBom) IsSoldOutStatus() bool {
+// 	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum(nil) <= 0
+// }
 
 func (model *ProductBom) IsDefaultSelectBool() bool {
 	return model.IsDefaultSelect == constant.ProductPackageSauceDefaultSelectionOn
 }
 
-// IsNotSoldOutStatus 判断bom是否还可以销售
-func (model *ProductBom) IsNotSoldOutStatus() bool {
-	return !model.IsSoldOutStatus()
-}
+// // IsNotSoldOutStatus 判断bom是否还可以销售
+// func (model *ProductBom) IsNotSoldOutStatus() bool {
+// 	return !model.IsSoldOutStatus()
+// }
 
 // IsOpenStockBool 判断是否开启库存
 func (model *ProductBom) IsOpenStockBool() bool {

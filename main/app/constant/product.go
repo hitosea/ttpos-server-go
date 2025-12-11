@@ -19,7 +19,7 @@ const (
 
 // 库存相关常量
 const (
-	ProductBomInfiniteStock = 999999 // 无限库存（关闭库存检查时使用）
+	ProductBomInfiniteStock = 99999999 // 无限库存（关闭库存检查时使用）
 )
 
 const (
