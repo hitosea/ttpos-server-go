@@ -1,4 +1,5 @@
-package grab
+// Package grab_order 提供 GrabFood 订单服务的业务逻辑
+package grab_order
 
 import (
 	"context"
@@ -15,6 +16,7 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 	"ttpos-bmp/internal/pkg/queue"
 )
 
@@ -22,12 +24,6 @@ const (
 	// TopicGrabOrder Grab 订单 MQ Topic
 	TopicGrabOrder = "takeout_grab_order"
 )
-
-// OrderService 订单服务
-// 内部使用，通过 sGrab 统一管理
-type OrderService struct {
-	verifier *SignatureVerifier
-}
 
 // OrderEvent 订单事件
 type OrderEvent struct {
@@ -40,30 +36,37 @@ type OrderEvent struct {
 	Timestamp    int64  `json:"timestamp"`    // 事件时间戳
 }
 
-// HandleSubmitOrder 处理 Grab 提交订单 Webhook
-// 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
-func (s *OrderService) HandleSubmitOrder(ctx context.Context, signature, timestamp string, body []byte) error {
-	// 1. 验证签名
-	if err := s.verifier.VerifySignature(signature, timestamp, body); err != nil {
-		g.Log().Errorf(ctx, "Grab signature verification failed: %v", err)
-		return fmt.Errorf("signature verification failed: %w", err)
-	}
+// sGrabOrder 订单服务
+type sGrabOrder struct{}
 
-	// 2. 解析请求 - 使用 SDK Model
+func init() {
+	service.RegisterGrabOrder(New())
+}
+
+// New 创建订单服务实例
+func New() *sGrabOrder {
+	return &sGrabOrder{}
+}
+
+// HandleSubmitOrder 处理 Grab 提交订单 Webhook
+// 签名验证已由中间件完成，此处只处理业务逻辑
+// 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
+func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, body []byte) error {
+	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.SubmitOrderRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		g.Log().Errorf(ctx, "Failed to parse submit order request: %v", err)
 		return fmt.Errorf("failed to parse request: %w", err)
 	}
 
-	// 3. 保存订单
+	// 2. 保存订单
 	orderUUID, err := s.saveOrderFromSDK(ctx, &req, body)
 	if err != nil {
 		g.Log().Errorf(ctx, "Failed to save order: %v", err)
 		return fmt.Errorf("failed to save order: %w", err)
 	}
 
-	// 4. 发送 MQ 消息
+	// 3. 发送 MQ 消息
 	event := &OrderEvent{
 		Action:       "create",
 		ProviderName: "grab",
@@ -83,7 +86,7 @@ func (s *OrderService) HandleSubmitOrder(ctx context.Context, signature, timesta
 }
 
 // saveOrderFromSDK 保存订单到数据库 (使用 SDK Model)
-func (s *OrderService) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest, rawData []byte) (string, error) {
+func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest, rawData []byte) (string, error) {
 	orderUUID := uuid.New().String()
 
 	// 转换价格 (最小单位 -> 元)
@@ -197,22 +200,17 @@ func (s *OrderService) saveOrderFromSDK(ctx context.Context, req *grabfood.Submi
 }
 
 // HandlePushOrderState 处理订单状态变更 Webhook
+// 签名验证已由中间件完成，此处只处理业务逻辑
 // 使用 SDK grabfood.OrderStateRequest 替换自定义 DTO
-func (s *OrderService) HandlePushOrderState(ctx context.Context, signature, timestamp string, body []byte) error {
-	// 1. 验证签名
-	if err := s.verifier.VerifySignature(signature, timestamp, body); err != nil {
-		g.Log().Errorf(ctx, "Grab signature verification failed: %v", err)
-		return fmt.Errorf("signature verification failed: %w", err)
-	}
-
-	// 2. 解析请求 - 使用 SDK Model
+func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) error {
+	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.OrderStateRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		g.Log().Errorf(ctx, "Failed to parse order state request: %v", err)
 		return fmt.Errorf("failed to parse request: %w", err)
 	}
 
-	// 3. 查询订单
+	// 2. 查询订单
 	var order entity.Order
 	err := dao.Order.Ctx(ctx).
 		Where(dao.Order.Columns().ProviderName, "grab").

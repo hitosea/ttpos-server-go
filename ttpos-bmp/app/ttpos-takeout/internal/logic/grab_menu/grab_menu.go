@@ -1,4 +1,5 @@
-package grab
+// Package grab_menu 提供 GrabFood 菜单服务的业务逻辑
+package grab_menu
 
 import (
 	"context"
@@ -26,14 +27,21 @@ const (
 	TopicProviderMenuUpdate = "takeout_provider_menu_update"
 )
 
-// MenuService 菜单服务
-// 内部使用，通过 sGrab 统一管理
-type MenuService struct {
-	verifier *SignatureVerifier
+// sGrabMenu 菜单服务
+type sGrabMenu struct{}
+
+func init() {
+	service.RegisterGrabMenu(New())
+}
+
+// New 创建菜单服务实例
+func New() *sGrabMenu {
+	return &sGrabMenu{}
 }
 
 // HandleGetMenu 处理 Grab 获取菜单请求 (Partner Endpoint)
-func (s *MenuService) HandleGetMenu(ctx context.Context, signature, timestamp string, partnerMerchantID string) (*grabfood.GetMenuNewResponse, error) {
+// 签名验证已由中间件完成
+func (s *sGrabMenu) HandleGetMenu(ctx context.Context, partnerMerchantID string) (*grabfood.GetMenuNewResponse, error) {
 	g.Log().Infof(ctx, "[Grab] Received GetMenu request: partnerMerchantID=%s", partnerMerchantID)
 
 	// 1. 将 partnerMerchantID 转换为 shopUUID (uint64)
@@ -81,27 +89,16 @@ func (s *MenuService) HandleGetMenu(ctx context.Context, signature, timestamp st
 
 // HandleMenuSyncState 处理菜单同步状态回调
 // 使用 SDK grabfood.MenuSyncWebhookRequest
-func (s *MenuService) HandleMenuSyncState(ctx context.Context, signature, timestamp string, body []byte) error {
-	// 1. 验证签名
-	if err := s.verifier.VerifySignature(signature, timestamp, body); err != nil {
-		g.Log().Errorf(ctx, "Grab signature verification failed: %v", err)
-		return fmt.Errorf("signature verification failed: %w", err)
-	}
-
-	// 2. 解析请求 - 使用 SDK Model
-	var req grabfood.MenuSyncWebhookRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		g.Log().Errorf(ctx, "Failed to parse menu sync state request: %v", err)
-		return fmt.Errorf("failed to parse request: %w", err)
-	}
-
+func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error {
 	requestID := req.GetRequestID()
 	status := req.GetStatus()
+
+	g.Log().Infof(ctx, "[Grab] HandleMenuSyncState: requestID=%s, merchantID=%s, partnerMerchantID=%s, status=%s",
+		requestID, req.GetMerchantID(), req.GetPartnerMerchantID(), status)
 
 	// 更新 channel_menu_snapshot 的状态
 	shopUUID := g.NewVar(req.PartnerMerchantID).Uint64()
 	if shopUUID > 0 {
-		// 更新 channel_menu_snapshot 的状态
 		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).
 			Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
 			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
@@ -119,7 +116,7 @@ func (s *MenuService) HandleMenuSyncState(ctx context.Context, signature, timest
 		g.Log().Warningf(ctx, "Invalid merchantID format, cannot convert to ShopUuid: merchantID=%v", req.PartnerMerchantID)
 	}
 
-	// 4. 插入新的菜单日志记录（每次状态回调都插入新记录）
+	// 插入新的菜单日志记录（每次状态回调都插入新记录）
 	logUUID := uuid.MustGetID()
 	errMsg := ""
 	if status == grabDto.MenuSyncStatusFail && len(req.GetErrors()) > 0 {
@@ -130,11 +127,10 @@ func (s *MenuService) HandleMenuSyncState(ctx context.Context, signature, timest
 		Uuid:         logUUID,
 		MerchantId:   req.PartnerMerchantID,
 		ProviderName: string(consts.ProviderGrab),
-		// SyncType:     "FULL",
-		Status:    status,
-		ErrorMsg:  errMsg,
-		CreatedAt: gtime.Now(),
-		UpdatedAt: gtime.Now(),
+		Status:       status,
+		ErrorMsg:     errMsg,
+		CreatedAt:    gtime.Now(),
+		UpdatedAt:    gtime.Now(),
 	}
 	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
 	if err != nil {
@@ -145,7 +141,7 @@ func (s *MenuService) HandleMenuSyncState(ctx context.Context, signature, timest
 }
 
 // SyncMenu 主动同步菜单到 Grab
-func (s *MenuService) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse, notifier MenuNotifier) error {
+func (s *sGrabMenu) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse, notifier grabDto.MenuNotifier) error {
 	// 1. 保存菜单快照
 	menuSnapshot, _ := json.Marshal(menu)
 	logUUID := uuid.MustGetID()
@@ -195,15 +191,9 @@ func (s *MenuService) SyncMenu(ctx context.Context, merchantID string, menu *gra
 	return nil
 }
 
-// MenuNotifier 菜单通知接口 (仅用于 SyncMenu)
-type MenuNotifier interface {
-	// NotifyMenuUpdate 通知 Grab 菜单已更新
-	NotifyMenuUpdate(ctx context.Context, merchantID string) (requestID string, err error)
-}
-
 // SaveMenuSnapshot 保存菜单快照到数据库
 // 使用 shop_uuid + provider_name 作为唯一键，存在则更新，不存在则插入
-func (s *MenuService) SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGrabMenuDTO) (uint64, error) {
+func (s *sGrabMenu) SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGrabMenuDTO) (uint64, error) {
 	// 序列化菜单数据为 JSON
 	menuData, err := json.Marshal(dto)
 	if err != nil {
@@ -229,7 +219,7 @@ func (s *MenuService) SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGra
 }
 
 // NotifyMenuUpdate 发送菜单更新通知 (RocketMQ)
-func (s *MenuService) NotifyMenuUpdate(ctx context.Context, event *grabDto.ProviderMenuUpdateEvent) error {
+func (s *sGrabMenu) NotifyMenuUpdate(ctx context.Context, event *grabDto.ProviderMenuUpdateEvent) error {
 	// 使用 queue 包发送消息
 	if err := queue.PushWithContext(ctx, TopicProviderMenuUpdate, event); err != nil {
 		return fmt.Errorf("failed to send menu update event: %w", err)

@@ -1,5 +1,5 @@
-// Package grab 提供 GrabFood API 集成的业务逻辑
-package grab
+// Package grab_self_serve 提供 GrabFood 自助激活链接服务的业务逻辑
+package grab_self_serve
 
 import (
 	"context"
@@ -12,11 +12,40 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	grabLogic "ttpos-bmp/app/ttpos-takeout/internal/logic/grab"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
+
+// sGrabSelfServe 自助激活链接服务
+type sGrabSelfServe struct {
+	sdkWrapper *grabLogic.SDKWrapper
+}
+
+func init() {
+	service.RegisterGrabSelfServe(New())
+}
+
+// New 创建自助激活链接服务实例
+func New() *sGrabSelfServe {
+	return &sGrabSelfServe{}
+}
+
+// getSdkWrapper 获取 SDK Wrapper (懒加载)
+func (s *sGrabSelfServe) getSdkWrapper() *grabLogic.SDKWrapper {
+	if s.sdkWrapper == nil {
+		conf := service.Grab().MustConf()
+		s.sdkWrapper = grabLogic.NewSDKWrapper(&grabLogic.SDKConfig{
+			ClientID:     conf.ClientID,
+			ClientSecret: conf.ClientSecret,
+			Environment:  conf.Environment,
+		})
+	}
+	return s.sdkWrapper
+}
 
 // CreateSelfServeJourney 创建自助激活链接
 // 根据 shop_uuid 获取 Grab 配置，调用 SDK 生成激活链接
-func (s *sGrab) CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelfServeJourneyReq) (*grab.CreateSelfServeJourneyResp, error) {
+func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelfServeJourneyReq) (*grab.CreateSelfServeJourneyResp, error) {
 	// 1. 参数校验
 	if req.ProviderName == "" {
 		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "provider_name 不能为空")
@@ -31,7 +60,7 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelf
 	}
 
 	// 3. 获取 Grab 配置（包含 Environment, Credentials）
-	conf := s.MustConf()
+	conf := service.Grab().MustConf()
 	if conf == nil {
 		return nil, gerror.NewCode(gcode.CodeInternalError, "Grab 平台配置未加载，请检查配置文件 app.provider.grab.platform")
 	}
@@ -58,6 +87,15 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelf
 		return nil, s.mapGrabError(err)
 	}
 
+	// 5.1 旅程创建成功，落库 shop_provider_cfg（状态 SYNCING）
+	shopUUID := g.NewVar(req.ShopUuid).Uint64()
+	if shopUUID > 0 {
+		if upsertErr := service.ShopProviderCfg().UpsertShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab), "", consts.ProviderShopStatusSyncing); upsertErr != nil {
+			// 记录错误但不中断流程，旅程创建已成功
+			g.Log().Warningf(ctx, "[Grab] CreateSelfServeJourney upsert shop_provider_cfg failed: shop_uuid=%d, error=%v", shopUUID, upsertErr)
+		}
+	}
+
 	// 6. 构建响应
 	resp := &grab.CreateSelfServeJourneyResp{
 		ProviderName: req.ProviderName,
@@ -77,7 +115,7 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelf
 }
 
 // mapGrabError 映射 Grab SDK 错误到业务错误
-func (s *sGrab) mapGrabError(err error) error {
+func (s *sGrabSelfServe) mapGrabError(err error) error {
 	if err == nil {
 		return nil
 	}

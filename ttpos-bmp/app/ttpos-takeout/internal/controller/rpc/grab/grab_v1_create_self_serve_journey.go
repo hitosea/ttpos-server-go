@@ -22,7 +22,7 @@ func (c *Controller) CreateSelfServeJourney(ctx context.Context, req *api.Create
 	}
 
 	// 调用 Logic 层
-	resp, err := service.Grab().CreateSelfServeJourney(ctx, req)
+	resp, err := service.GrabSelfServe().CreateSelfServeJourney(ctx, req)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Grab] CreateSelfServeJourney failed: %v", err)
 		return nil, gerror.Wrap(err, "创建自助激活链接失败")

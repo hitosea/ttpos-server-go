@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion8
 
 const (
 	Grab_CreateSelfServeJourney_FullMethodName = "/grab.Grab/CreateSelfServeJourney"
+	Grab_GetShopProviderCfg_FullMethodName     = "/grab.Grab/GetShopProviderCfg"
 )
 
 // GrabClient is the client API for Grab service.
@@ -37,6 +38,10 @@ type GrabClient interface {
 	// 参数：provider_name（外卖渠道，如 grab、lineman）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
 	// 返回：provider_name、self_serve_url（自助点餐链接）、request_id（追踪ID）
 	CreateSelfServeJourney(ctx context.Context, in *CreateSelfServeJourneyReq, opts ...grpc.CallOption) (*CreateSelfServeJourneyResp, error)
+	// 查询门店第三方配置
+	// 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，默认 grab）
+	// 返回：门店集成状态、第三方商户ID、更新时间等
+	GetShopProviderCfg(ctx context.Context, in *GetShopProviderCfgReq, opts ...grpc.CallOption) (*GetShopProviderCfgResp, error)
 }
 
 type grabClient struct {
@@ -57,6 +62,16 @@ func (c *grabClient) CreateSelfServeJourney(ctx context.Context, in *CreateSelfS
 	return out, nil
 }
 
+func (c *grabClient) GetShopProviderCfg(ctx context.Context, in *GetShopProviderCfgReq, opts ...grpc.CallOption) (*GetShopProviderCfgResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetShopProviderCfgResp)
+	err := c.cc.Invoke(ctx, Grab_GetShopProviderCfg_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GrabServer is the server API for Grab service.
 // All implementations must embed UnimplementedGrabServer
 // for forward compatibility
@@ -68,6 +83,10 @@ type GrabServer interface {
 	// 参数：provider_name（外卖渠道，如 grab、lineman）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
 	// 返回：provider_name、self_serve_url（自助点餐链接）、request_id（追踪ID）
 	CreateSelfServeJourney(context.Context, *CreateSelfServeJourneyReq) (*CreateSelfServeJourneyResp, error)
+	// 查询门店第三方配置
+	// 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，默认 grab）
+	// 返回：门店集成状态、第三方商户ID、更新时间等
+	GetShopProviderCfg(context.Context, *GetShopProviderCfgReq) (*GetShopProviderCfgResp, error)
 	mustEmbedUnimplementedGrabServer()
 }
 
@@ -77,6 +96,9 @@ type UnimplementedGrabServer struct {
 
 func (UnimplementedGrabServer) CreateSelfServeJourney(context.Context, *CreateSelfServeJourneyReq) (*CreateSelfServeJourneyResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSelfServeJourney not implemented")
+}
+func (UnimplementedGrabServer) GetShopProviderCfg(context.Context, *GetShopProviderCfgReq) (*GetShopProviderCfgResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetShopProviderCfg not implemented")
 }
 func (UnimplementedGrabServer) mustEmbedUnimplementedGrabServer() {}
 
@@ -109,6 +131,24 @@ func _Grab_CreateSelfServeJourney_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Grab_GetShopProviderCfg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetShopProviderCfgReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrabServer).GetShopProviderCfg(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Grab_GetShopProviderCfg_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrabServer).GetShopProviderCfg(ctx, req.(*GetShopProviderCfgReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Grab_ServiceDesc is the grpc.ServiceDesc for Grab service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -119,6 +159,10 @@ var Grab_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateSelfServeJourney",
 			Handler:    _Grab_CreateSelfServeJourney_Handler,
+		},
+		{
+			MethodName: "GetShopProviderCfg",
+			Handler:    _Grab_GetShopProviderCfg_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

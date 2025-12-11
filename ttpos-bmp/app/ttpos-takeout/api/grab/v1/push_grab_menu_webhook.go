@@ -10,7 +10,6 @@ import (
 // 参考: https://developer.grab.com/docs/grabfood/api/v1-1-3/#tag/push-grab-menu-webhook
 type PushGrabMenuWebhookReq struct {
 	g.Meta `path:"/partner/pushGrabMenu" tags:"Grab Webhook" method:"post" summary:"响应Grab菜单推送"`
-
 	// Grab 商户 ID
 	MerchantID string `json:"merchantID,omitempty" dc:"Grab 商户 ID"`
 	// Partner 商户 ID (POS 系统中的商户标识)

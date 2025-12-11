@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
+	"ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
@@ -24,8 +25,6 @@ var (
 type sGrab struct {
 	verifier   *SignatureVerifier
 	sdkWrapper *SDKWrapper // 官方 SDK Wrapper
-	cfgLoader  *PartnerConfigLoader
-	tokenSvc   *PartnerTokenService
 }
 
 func init() {
@@ -75,23 +74,6 @@ func (s *sGrab) getVerifier() *SignatureVerifier {
 	return s.verifier
 }
 
-// getConfigLoader 获取 Partner 配置加载器
-func (s *sGrab) getConfigLoader() *PartnerConfigLoader {
-	if s.cfgLoader == nil {
-		s.cfgLoader = &PartnerConfigLoader{}
-	}
-	return s.cfgLoader
-}
-
-// getTokenService 获取 Partner Token Service
-func (s *sGrab) getTokenService() *PartnerTokenService {
-	if s.tokenSvc == nil {
-		conf := s.MustConf()
-		s.tokenSvc = NewPartnerTokenService(s.getConfigLoader(), conf.SecretKey, defaultPartnerTokenTTL)
-	}
-	return s.tokenSvc
-}
-
 // VerifyWebhookSignature 验证 Grab Webhook 签名 (公开方法，供其他服务调用)
 // signature: X-Grab-Signature 请求头值
 // timestamp: X-Grab-Timestamp 请求头值
@@ -101,52 +83,38 @@ func (s *sGrab) VerifyWebhookSignature(ctx context.Context, signature, timestamp
 }
 
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
-func (s *sGrab) HandleSubmitOrder(ctx context.Context, signature, timestamp string, body []byte) error {
-	orderService := &OrderService{
-		verifier: s.getVerifier(),
-	}
-	return orderService.HandleSubmitOrder(ctx, signature, timestamp, body)
+// 签名验证已由中间件完成
+func (s *sGrab) HandleSubmitOrder(ctx context.Context, body []byte) error {
+	return service.GrabOrder().HandleSubmitOrder(ctx, body)
 }
 
 // HandlePushOrderState 处理订单状态变更 Webhook
-func (s *sGrab) HandlePushOrderState(ctx context.Context, signature, timestamp string, body []byte) error {
-	orderService := &OrderService{
-		verifier: s.getVerifier(),
-	}
-	return orderService.HandlePushOrderState(ctx, signature, timestamp, body)
+// 签名验证已由中间件完成
+func (s *sGrab) HandlePushOrderState(ctx context.Context, body []byte) error {
+	return service.GrabOrder().HandlePushOrderState(ctx, body)
 }
 
 // HandleGetMenu 处理 Grab 获取菜单请求
-func (s *sGrab) HandleGetMenu(ctx context.Context, signature, timestamp string, merchantID string) (*grabfood.GetMenuNewResponse, error) {
-	menuService := &MenuService{
-		verifier: s.getVerifier(),
-	}
-	return menuService.HandleGetMenu(ctx, signature, timestamp, merchantID)
+// 签名验证已由中间件完成
+func (s *sGrab) HandleGetMenu(ctx context.Context, merchantID string) (*grabfood.GetMenuNewResponse, error) {
+	return service.GrabMenu().HandleGetMenu(ctx, merchantID)
 }
 
 // HandleMenuSyncState 处理菜单同步状态回调
-func (s *sGrab) HandleMenuSyncState(ctx context.Context, signature, timestamp string, body []byte) error {
-	menuService := &MenuService{
-		verifier: s.getVerifier(),
-	}
-	return menuService.HandleMenuSyncState(ctx, signature, timestamp, body)
+func (s *sGrab) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error {
+	return service.GrabMenu().HandleMenuSyncState(ctx, req)
 }
 
 // SyncMenu 主动同步菜单到 Grab
 func (s *sGrab) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse) error {
-	menuService := &MenuService{
-		verifier: s.getVerifier(),
-	}
 	// SDKWrapper 已实现 MenuNotifier 接口
-	return menuService.SyncMenu(ctx, merchantID, menu, s.getSdkWrapper())
+	return service.GrabMenu().SyncMenu(ctx, merchantID, menu, s.getSdkWrapper())
 }
 
 // HandleIntegrationStatus 处理门店集成状态回调
-func (s *sGrab) HandleIntegrationStatus(ctx context.Context, signature, timestamp string, body []byte) error {
-	storeService := &StoreService{
-		verifier: s.getVerifier(),
-	}
-	return storeService.HandleIntegrationStatus(ctx, signature, timestamp, body)
+// 签名验证已由中间件完成
+func (s *sGrab) HandleIntegrationStatus(ctx context.Context, body []byte) error {
+	return service.GrabStore().HandleIntegrationStatus(ctx, body)
 }
 
 // PauseStore 暂停门店
@@ -190,23 +158,19 @@ func (s *sGrab) CancelOrder(ctx context.Context, orderID string, cancelCode int)
 // GetPartnerToken 生成 Grab Partner Token，提供给 Grab 调用
 // 校验 client_id 和 client_secret，使用请求中的 scope 生成 Token
 func (s *sGrab) GetPartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (accessToken string, expiresIn int, err error) {
-	return s.getTokenService().GeneratePartnerToken(ctx, clientID, clientSecret, scope)
+	return service.GrabToken().GeneratePartnerToken(ctx, clientID, clientSecret, scope)
 }
 
 // ParsePartnerToken 校验并解析 Partner Token
 // 用于中间件验证 Grab 发送的请求中携带的 Token
 func (s *sGrab) ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error) {
-	return s.getTokenService().ParsePartnerToken(token)
+	return service.GrabToken().ParsePartnerToken(context.Background(), token)
 }
 
 // HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
 func (s *sGrab) HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error {
-	menuService := &MenuService{
-		verifier: s.getVerifier(),
-	}
-
 	// 1. Save Snapshot
-	menuUuid, err := menuService.SaveMenuSnapshot(ctx, dto)
+	menuUuid, err := service.GrabMenu().SaveMenuSnapshot(ctx, dto)
 	if err != nil {
 		return err
 	}
@@ -220,5 +184,10 @@ func (s *sGrab) HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMen
 		Uuid:              menuUuid,
 		ReceivedAt:        gtime.Timestamp(),
 	}
-	return menuService.NotifyMenuUpdate(ctx, event)
+	return service.GrabMenu().NotifyMenuUpdate(ctx, event)
+}
+
+// GetShopProviderCfg 查询门店第三方配置
+func (s *sGrab) GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error) {
+	return service.ShopProviderCfg().GetShopProviderCfgResp(ctx, req)
 }

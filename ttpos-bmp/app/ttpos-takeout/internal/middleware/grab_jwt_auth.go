@@ -110,6 +110,10 @@ func MiddlewareDirectResponse(r *ghttp.Request) {
 			code = gcode.CodeInternalError
 		}
 		msg = err.Error()
+		r.Response.WriteJsonExit(g.Map{
+			"code":    code,
+			"message": msg,
+		})
 	} else {
 		if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 			switch r.Response.Status {
