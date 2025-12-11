@@ -28,6 +28,9 @@ if [ -z "$ROCKETMQ_NAME_SRV_ADDR" ]; then
     exit 1
 fi
 
+# 如果 ROCKETMQ_NAME_SRV_ADDR 包含多个逗号分隔的地址，只取第一个
+ROCKETMQ_NAME_SRV_ADDR="${ROCKETMQ_NAME_SRV_ADDR%%,*}"
+
 if [ -z "$ROCKETMQ_BROKER_ADDR" ]; then
     echo "错误: ROCKETMQ_BROKER_ADDR 环境变量未设置"
     exit 1
