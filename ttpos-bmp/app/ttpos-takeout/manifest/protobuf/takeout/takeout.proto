@@ -94,7 +94,7 @@ message GetMenuSnapshotResp {
   ResponseInfo responseInfo = 1;
   string content = 2;          // Provider 侧原始菜单 JSON
   int64 updated_at = 3;        // 快照更新时间
-  string sync_state = 4;       // 同步状态
+  string sync_state = 4;       // 同步状态  QUEUED/PROCESSING/SUCCESS/FAIL
 }
 
 service TakeoutService {
