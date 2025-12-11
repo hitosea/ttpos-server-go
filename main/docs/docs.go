@@ -4659,7 +4659,7 @@ const docTemplate = `{
         },
         "/callboard/data": {
             "get": {
-                "description": "获取等待队列和取餐队列数据",
+                "description": "获取等待队列和取餐队列数据，同时返回叫号系统配置信息（系统名称、背景图片、超时限制、语音叫号开关、叫号次数）",
                 "consumes": [
                     "application/json"
                 ],
@@ -4689,13 +4689,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "更新时间,unix时间戳",
                         "name": "update_time",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "响应包含队列数据和配置信息，配置字段为必返字段，缺失时使用默认值",
                         "schema": {
                             "allOf": [
                                 {
@@ -20571,6 +20570,55 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/callboard/upload_background_image": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "上传叫号系统背景图片，支持 JPEG、PNG、WEBP 格式，大小限制 20MB",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.叫号展示"
+                ],
+                "summary": "上传叫号系统背景图片",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "背景图片文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UploadFileResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -46622,17 +46670,42 @@ const docTemplate = `{
         "req.UpdateBindInfoReq": {
             "type": "object",
             "required": [
+                "background_image_url",
+                "call_count",
+                "name",
                 "uuid"
             ],
             "properties": {
+                "background_image_url": {
+                    "description": "背景图片 URL（必填）",
+                    "type": "string"
+                },
+                "call_count": {
+                    "description": "叫号次数（必填，最小1，最大3）",
+                    "type": "integer",
+                    "maximum": 3,
+                    "minimum": 1
+                },
                 "lang1": {
                     "type": "string"
                 },
                 "lang2": {
                     "type": "string"
                 },
+                "name": {
+                    "description": "设备名称（必填）",
+                    "type": "string"
+                },
+                "timeout_limit": {
+                    "description": "超时限制（分钟，可选）",
+                    "type": "integer"
+                },
                 "uuid": {
                     "type": "integer"
+                },
+                "voice_call_enabled": {
+                    "description": "语音叫号开关（可选）",
+                    "type": "boolean"
                 }
             }
         },
@@ -49218,7 +49291,15 @@ const docTemplate = `{
         "resp.DeviceItem": {
             "type": "object",
             "properties": {
+                "background_image_url": {
+                    "description": "背景图片 URL",
+                    "type": "string"
+                },
                 "bind_time": {
+                    "type": "integer"
+                },
+                "call_count": {
+                    "description": "叫号次数",
                     "type": "integer"
                 },
                 "device_id": {
@@ -49230,8 +49311,20 @@ const docTemplate = `{
                 "lang2": {
                     "type": "string"
                 },
+                "name": {
+                    "description": "叫号系统名称（如果为空，返回 \"WALLACE\"）",
+                    "type": "string"
+                },
+                "timeout_limit": {
+                    "description": "超时限制（分钟）",
+                    "type": "integer"
+                },
                 "uuid": {
                     "type": "integer"
+                },
+                "voice_call_enabled": {
+                    "description": "语音叫号开关",
+                    "type": "boolean"
                 }
             }
         },
@@ -53679,6 +53772,10 @@ const docTemplate = `{
                     "description": "制作完成数量",
                     "type": "number"
                 },
+                "first_category_uuid": {
+                    "description": "一级分类uuid",
+                    "type": "integer"
+                },
                 "is_batch": {
                     "description": "是否是分批商品",
                     "type": "boolean"
@@ -54967,10 +55064,22 @@ const docTemplate = `{
         "resp.QueueDataResp": {
             "type": "object",
             "properties": {
+                "background_image_url": {
+                    "description": "背景图片 URL",
+                    "type": "string"
+                },
+                "call_count": {
+                    "description": "叫号次数",
+                    "type": "integer"
+                },
                 "lang1": {
                     "type": "string"
                 },
                 "lang2": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "配置信息字段（必返）",
                     "type": "string"
                 },
                 "prepared_queue": {
@@ -54985,8 +55094,16 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "timeout_limit": {
+                    "description": "超时限制（分钟）",
+                    "type": "integer"
+                },
                 "update_time": {
                     "type": "integer"
+                },
+                "voice_call_enabled": {
+                    "description": "语音叫号开关",
+                    "type": "boolean"
                 }
             }
         },
@@ -55804,6 +55921,12 @@ const docTemplate = `{
                 },
                 "company_tax_number": {
                     "type": "string"
+                },
+                "invoice_number": {
+                    "type": "string"
+                },
+                "print_num": {
+                    "type": "integer"
                 }
             }
         },

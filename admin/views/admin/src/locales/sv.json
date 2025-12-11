@@ -454,5 +454,18 @@
     "自助点餐机": "Självbetjäningsbeställningskiosk",
     "发布自助点餐机": "Publicera självbetjäningsbeställningskiosk",
     "查看自助点餐机": "Visa självbetjäningsbeställningskiosk",
-    "Grab外卖": "Grab-leverans"
+    "Grab外卖": "Grab-leverans",
+    "请选择门店": "Vänligen välj en butik",
+    "默认": "Standard",
+    "切换成功": " Växling lyckades",
+    "人员管理": "Personalhantering",
+    "编辑统一账号": "Redigera enhetligt konto",
+    "添加统一账号": "Lägg till en enhetlig konto",
+    "请输入手机号（可选）": "Ange mobilnummer (valfritt)",
+    "关联门店：": "Associerad butik：",
+    "关联门店和角色：": "Associerad butik och roll：",
+    "添加门店": "Lägg till butik",
+    "手机号": "Mobilnummer",
+    "关联门店和角色": "Associerade butiker och roller",
+    "无角色": "Ingen roll"
 }

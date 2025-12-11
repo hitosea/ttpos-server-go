@@ -15,7 +15,7 @@
                   v-model:valueData="language.remark"
                   :value="language.remark"
                   :placeholder="$t('请输入备注')"
-                  :maxlength="50"
+                  :maxlength="100"
                   :langKey="language.name"
                   width="w-full"
                   @translate="(response) => translate(item)(response)"
