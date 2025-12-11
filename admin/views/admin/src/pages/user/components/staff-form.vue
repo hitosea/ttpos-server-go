@@ -50,7 +50,7 @@
             <div v-for="(item, index) in formData.company_list" :key="index" class="mb-4 p-4 border rounded">
               <el-row :gutter="20">
                 <el-col :span="8">
-                  <el-select v-model="item.company_uuid" :placeholder="$t('请选择门店')" clearable @change="handleCompanyChange(index)">
+                  <el-select v-model="item.company_uuid" :placeholder="$t('请选择门店')" clearable>
                     <el-option v-for="company in companyList" :value="company.app_id" :key="company.app_id" :label="company.shop_supplier_name || company.id" />
                   </el-select>
                 </el-col>
@@ -60,7 +60,7 @@
                   </el-select>
                 </el-col>
                 <el-col :span="2">
-                  <el-button type="danger" icon="Delete" circle @click="handleRemoveCompany(index)" v-if="formData.company_list.length > 1"></el-button>
+                  <el-button type="danger" icon="Delete" circle @click="handleRemoveCompany(index)" v-if="formData.company_list && formData.company_list.length > 1"></el-button>
                 </el-col>
               </el-row>
             </div>
@@ -71,12 +71,26 @@
       <el-row :gutter="20">
         <el-col :span="12">
           <el-form-item :label="$t('登录密码')" prop="password">
-            <el-input type="password" v-model="formData.password" autocomplete="off" maxlength="50" show-password :placeholder="hasEdit ? $t('不修改请留空') : $t('请输入登录密码')"></el-input>
+            <el-input
+              type="password"
+              v-model="formData.password"
+              autocomplete="off"
+              maxlength="50"
+              show-password
+              :placeholder="hasEdit ? $t('不修改请留空') : $t('请输入登录密码')"
+            ></el-input>
           </el-form-item>
         </el-col>
         <el-col :span="12">
           <el-form-item :label="$t('确认密码')" prop="confirm_password">
-            <el-input type="password" v-model="formData.confirm_password" autocomplete="off" maxlength="50" show-password :placeholder="hasEdit ? $t('不修改请留空') : $t('请确认密码')"></el-input>
+            <el-input
+              type="password"
+              v-model="formData.confirm_password"
+              autocomplete="off"
+              maxlength="50"
+              show-password
+              :placeholder="hasEdit ? $t('不修改请留空') : $t('请确认密码')"
+            ></el-input>
           </el-form-item>
         </el-col>
       </el-row>
@@ -213,11 +227,6 @@
     formData.value.company_list?.splice(index, 1);
   };
 
-  const handleCompanyChange = (index: number) => {
-    // 当门店改变时，可以动态加载该门店的角色列表
-    // 这里暂时使用全局角色列表
-  };
-
   const handleSubmit = () => {
     formElement.value?.validate(async (valid: boolean) => {
       if (!valid) return;
@@ -225,7 +234,7 @@
         const data: any = { ...formData.value };
         formLoading.value = true;
         let res = null;
-        
+
         if (hasEdit.value) {
           // 编辑时，构建 company_list
           if (data.company_list && data.company_list.length > 0) {
@@ -260,7 +269,7 @@
       formRules.password[0].required = !hasEdit.value;
       formRules.confirm_password[0].required = !hasEdit.value;
       formRules.company_uuid[0].required = !hasEdit.value;
-      
+
       if (hasEdit.value) {
         // 编辑模式
         const detail = props.detail;
@@ -271,12 +280,13 @@
           password: '',
           confirm_password: '',
           real_name: detail?.real_name || '',
-          company_list: companyList.length > 0 
-            ? companyList.map((item: any) => ({
-                company_uuid: item.company_uuid,
-                role_uuids: item.roles?.map((r: any) => r.role_uuid) || [],
-              }))
-            : [{ company_uuid: undefined, role_uuids: [] }],
+          company_list:
+            companyList.length > 0
+              ? companyList.map((item: any) => ({
+                  company_uuid: item.company_uuid,
+                  role_uuids: item.roles?.map((r: any) => r.role_uuid) || [],
+                }))
+              : [{ company_uuid: undefined, role_uuids: [] }],
         };
       } else {
         // 新增模式
@@ -291,7 +301,7 @@
           company_list: [],
         };
       }
-      
+
       // 清空校验
       setTimeout(() => {
         formElement.value?.clearValidate();

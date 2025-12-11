@@ -58,7 +58,7 @@ export function fetchStaffAdd(data: StaffAddType) {
 export interface StaffEditType extends StaffAddType {
   uuid?: number; // 员工UUID
   company_list?: Array<{
-    company_uuid: number; // 门店UUID
+    company_uuid: number | undefined; // 门店UUID
     role_uuids?: number[]; // 在该门店的角色UUID列表
   }>; // 关联的门店列表（可选，用于编辑时更新门店关联）
 }

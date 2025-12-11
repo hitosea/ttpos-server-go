@@ -1,20 +1,8 @@
 <template>
   <div class="store-switch-component">
     <!-- 门店选择下拉框 -->
-    <el-select
-      v-model="selectedCompanyUuid"
-      :placeholder="$t('请选择门店')"
-      :loading="loading"
-      :disabled="disabled"
-      @change="handleCompanyChange"
-      clearable
-    >
-      <el-option
-        v-for="company in companyList"
-        :key="company.company_uuid"
-        :value="company.company_uuid"
-        :label="company.company_name"
-      >
+    <el-select v-model="selectedCompanyUuid" :placeholder="$t('请选择门店')" :loading="loading" :disabled="disabled" @change="handleCompanyChange" clearable>
+      <el-option v-for="company in companyList" :key="company.company_uuid" :value="company.company_uuid" :label="company.company_name">
         <div class="flex items-center justify-between">
           <span>{{ company.company_name }}</span>
           <el-tag v-if="company.is_default" type="success" size="small">{{ $t('默认') }}</el-tag>
@@ -44,8 +32,8 @@
   );
 
   const emits = defineEmits<{
-    (e: 'update:modelValue', value: number): void;
-    (e: 'change', value: number): void;
+    (e: 'update:modelValue', value: number | undefined): void;
+    (e: 'change', value: number | undefined): void;
   }>();
 
   const selectedCompanyUuid = ref<number | undefined>(props.modelValue);
@@ -65,7 +53,7 @@
         },
       );
       companyList.value = res.data?.list || [];
-      
+
       // 如果没有选中值，且列表中有默认门店，则选中默认门店
       if (!selectedCompanyUuid.value && companyList.value.length > 0) {
         const defaultCompany = companyList.value.find((item) => item.is_default);
@@ -106,7 +94,7 @@
       message.success(res.msg || $t('切换成功'));
       emits('update:modelValue', companyUuid);
       emits('change', companyUuid);
-      
+
       // 触发页面刷新（如果需要）
       if (typeof window !== 'undefined') {
         window.location.reload();

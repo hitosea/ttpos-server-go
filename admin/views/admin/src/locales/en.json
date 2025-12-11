@@ -454,5 +454,18 @@
     "自助点餐机": "Self-ordering kiosk",
     "发布自助点餐机": "Publish self-ordering kiosk",
     "查看自助点餐机": "View self-ordering kiosk",
-    "Grab外卖": "Grab delivery"
+    "Grab外卖": "Grab delivery",
+    "请选择门店": "Please select a store",
+    "默认": "Default",
+    "切换成功": "Switched successfully",
+    "人员管理": "Personnel management",
+    "编辑统一账号": "Edit unified account",
+    "添加统一账号": "Add unified account",
+    "请输入手机号（可选）": "Please enter mobile number (optional)",
+    "关联门店：": "Associated store:",
+    "关联门店和角色：": "Associated store and role:",
+    "添加门店": "Add store",
+    "手机号": "Mobile Number",
+    "关联门店和角色": "Associated stores and roles",
+    "无角色": "No role"
 }

@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, watch } from 'vue';
+  import { ref } from 'vue';
   import { useQuery } from 'vue-query';
   import { message } from '@/utils/feedback';
   import { StaffListData, StaffListType, getStaffList, fetchUpdateStaffStatus } from '@/api/user/staff';
@@ -125,16 +125,16 @@
     try {
       formLoading.value = true;
       staffId.value = undefined;
-      
+
       // 获取门店列表
       const shopRes = await getShopList({ page: 1, list_rows: 1000 });
       companyList.value = shopRes.data?.list?.data || [];
-      
+
       // 获取角色列表（这里需要获取所有门店的角色，暂时使用第一个门店的角色）
       // 注意：实际应该根据选择的门店动态获取角色列表
       const roleRes = await getRoleList({ page: 1, list_rows: 1000 });
       roleList.value = roleRes.data?.list?.data || [];
-      
+
       formDetail.value = {};
       formShow.value = true;
     } catch (error) {
@@ -148,15 +148,15 @@
     try {
       formLoading.value = true;
       staffId.value = row.uuid;
-      
+
       // 获取门店列表
       const shopRes = await getShopList({ page: 1, list_rows: 1000 });
       companyList.value = shopRes.data?.list?.data || [];
-      
+
       // 获取角色列表
       const roleRes = await getRoleList({ page: 1, list_rows: 1000 });
       roleList.value = roleRes.data?.list?.data || [];
-      
+
       formDetail.value = row;
       formShow.value = true;
     } catch (error) {
