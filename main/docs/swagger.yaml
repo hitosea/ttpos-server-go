@@ -5577,8 +5577,14 @@ definitions:
         description: 销售账单UUID, 必填
         type: integer
     type: object
-  req.PaymentMethodCreateReq:
+  req.PaymentMethodCreateItem:
     properties:
+      code:
+        description: 支付方式代号（可选，用于系统默认支付方式）
+        type: integer
+      default_img:
+        description: 默认图片
+        type: string
       fee_percent:
         description: 手续费百分比，取值范围0-100
         maximum: 100
@@ -5611,6 +5617,17 @@ definitions:
     required:
     - name
     - payment_name
+    type: object
+  req.PaymentMethodCreateReq:
+    properties:
+      items:
+        description: 支付方式列表
+        items:
+          $ref: '#/definitions/req.PaymentMethodCreateItem'
+        minItems: 1
+        type: array
+    required:
+    - items
     type: object
   req.PaymentMethodDeleteReq:
     properties:
@@ -9801,6 +9818,24 @@ definitions:
       uuid:
         description: 会员uuid
         type: integer
+    type: object
+  resp.DefaultPaymentMethodResp:
+    properties:
+      code:
+        description: 支付方式code
+        type: integer
+      img:
+        description: 图片路径
+        type: string
+      name:
+        description: 支付方式名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+      url:
+        description: 图片路径
+        type: string
     type: object
   resp.DeliveryResp:
     properties:
@@ -31283,9 +31318,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 创建支付方式
+      description: 批量创建支付方式（只接收数组形式）
       parameters:
-      - description: 创建支付方式参数
+      - description: 批量创建支付方式参数
         in: body
         name: data
         required: true
@@ -31300,7 +31335,31 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 创建支付方式
+      summary: 批量创建支付方式
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/default_pay:
+    get:
+      consumes:
+      - application/json
+      description: 获取系统默认的支付方式列表（原始支付列表，用于快速添加）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/resp.DefaultPaymentMethodResp'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取默认支付方式列表
       tags:
       - 商家端.支付管理
   /shop/payment_method/delete:
