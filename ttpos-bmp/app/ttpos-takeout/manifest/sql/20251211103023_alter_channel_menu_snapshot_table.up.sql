@@ -12,7 +12,7 @@ ALTER TABLE `takeout_channel_menu_snapshot`
 ADD COLUMN `deleted_at` int(11) DEFAULT NULL COMMENT '删除时间' AFTER `updated_at`;
 
 ALTER TABLE `takeout_channel_menu_snapshot` 
-ADD COLUMN `sync_state` varchar(32) NOT NULL DEFAULT '' COMMENT '同步状态: QUEUEING, PROCESSING, SUCCESS, FAILED' ;
+ADD COLUMN `sync_state` varchar(32)  NULL COMMENT '同步状态: QUEUEING, PROCESSING, SUCCESS, FAILED' ;
 
 ALTER TABLE `takeout_channel_menu_snapshot` 
 ADD COLUMN `ttpos_menu_data` longtext COMMENT 'TTPOS 侧菜单原始数据 (JSON)' AFTER `sync_state`;
