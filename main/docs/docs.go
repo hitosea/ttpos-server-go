@@ -21300,6 +21300,177 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/grab/binding-link": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取 Grab 平台的绑定链接，用户可跳转到 Grab 页面完成配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "获取 Grab 绑定链接",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabBindingLinkResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/grab/binding-status": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证是否已经绑定 Grab 平台，前端可以定时查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "检查 Grab 绑定状态",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabBindingStatusResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/grab/menu": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "从 Grab API 获取商品菜单数据",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "获取 Grab 商品菜单",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabMenuResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/grab/menu/import": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "按规则导入 Grab 菜单（分类/商品/规格/属性/单位映射或创建）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.Grab外卖"
+                ],
+                "summary": "导入 Grab 菜单",
+                "parameters": [
+                    {
+                        "description": "Grab 菜单 JSON（grab_models.go 结构）",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutMenuImportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GrabMenuImportResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -23418,6 +23589,401 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建支付方式",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "创建支付方式",
+                "parameters": [
+                    {
+                        "description": "创建支付方式参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PaymentMethodCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除支付方式（软删除）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "删除支付方式",
+                "parameters": [
+                    {
+                        "description": "删除支付方式参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PaymentMethodDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "获取支付方式详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "支付方式UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PaymentMethodDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/lianlianpay_config": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取 LianlianPay 配置（敏感字段返回占位符）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "获取 LianlianPay 配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LianlianPayConfigResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新 LianlianPay 配置（敏感字段加密存储）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "更新 LianlianPay 配置",
+                "parameters": [
+                    {
+                        "description": "LianlianPay 配置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.LianlianPayConfigUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式管理列表（分页）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "获取支付方式管理列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PaymentMethodListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/update": {
+            "put": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新支付方式（包括状态）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "更新支付方式",
+                "parameters": [
+                    {
+                        "description": "更新支付方式参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PaymentMethodUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/update_sort": {
+            "put": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量更新支付方式排序，确保排序值连续",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "批量更新支付方式排序",
+                "parameters": [
+                    {
+                        "description": "排序更新参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PaymentMethodSortUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/payment_method/upload_image": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "上传支付方式图片，支持上传Logo或二维码，通过source参数区分",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.支付管理"
+                ],
+                "summary": "上传支付方式图片",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "图片文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "图片类型：paymentLogo-支付方式Logo，paymentRqcode-支付方式二维码",
+                        "name": "source",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UploadFileResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -33708,6 +34274,57 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/takeout/menu/export": {
+            "post": {
+                "security": [
+                    {
+                        "JwtAuth": []
+                    }
+                ],
+                "description": "将 TTPOS 菜单数据转换为指定外卖平台（如 Grab）的格式",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "外卖菜单"
+                ],
+                "summary": "导出菜单到外卖平台格式",
+                "parameters": [
+                    {
+                        "description": "导出请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutMenuExportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TakeoutMenuExportResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -35066,6 +35683,10 @@ const docTemplate = `{
         "material_resp.Material": {
             "type": "object",
             "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存：1-允许，0-不允许",
+                    "type": "integer"
+                },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
                     "type": "integer"
@@ -35246,6 +35867,10 @@ const docTemplate = `{
         "material_resp.MaterialDetailResp": {
             "type": "object",
             "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存：1-允许，0-不允许",
+                    "type": "integer"
+                },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
                     "type": "integer"
@@ -39021,6 +39646,10 @@ const docTemplate = `{
                     "description": "班次编号",
                     "type": "string"
                 },
+                "exclude_data_manage": {
+                    "description": "是否排除数据管理订单",
+                    "type": "boolean"
+                },
                 "not_query_free": {
                     "description": "是否不查询免费使用场景",
                     "type": "boolean"
@@ -40374,6 +41003,43 @@ const docTemplate = `{
                 }
             }
         },
+        "req.LianlianPayConfigUpdateReq": {
+            "type": "object",
+            "required": [
+                "ll_merchant_id",
+                "ll_merchant_private_key",
+                "ll_public_key",
+                "ll_store_id",
+                "ll_token",
+                "ll_white_ip"
+            ],
+            "properties": {
+                "ll_merchant_id": {
+                    "description": "商户号",
+                    "type": "string"
+                },
+                "ll_merchant_private_key": {
+                    "description": "商户私钥",
+                    "type": "string"
+                },
+                "ll_public_key": {
+                    "description": "支付方式公钥",
+                    "type": "string"
+                },
+                "ll_store_id": {
+                    "description": "站点ID",
+                    "type": "string"
+                },
+                "ll_token": {
+                    "description": "Token",
+                    "type": "string"
+                },
+                "ll_white_ip": {
+                    "description": "白名单IP",
+                    "type": "string"
+                }
+            }
+        },
         "req.LoginReq": {
             "type": "object",
             "required": [
@@ -40408,6 +41074,10 @@ const docTemplate = `{
         "req.MaterialAddReq": {
             "type": "object",
             "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存",
+                    "type": "boolean"
+                },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
                     "type": "integer"
@@ -40577,6 +41247,10 @@ const docTemplate = `{
         "req.MaterialEditReq": {
             "type": "object",
             "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存",
+                    "type": "boolean"
+                },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
                     "type": "integer"
@@ -41813,6 +42487,149 @@ const docTemplate = `{
                 }
             }
         },
+        "req.PaymentMethodCreateReq": {
+            "type": "object",
+            "required": [
+                "name",
+                "payment_name"
+            ],
+            "properties": {
+                "fee_percent": {
+                    "description": "手续费百分比，取值范围0-100",
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "is_show_assistant": {
+                    "description": "0-不显示 1-点餐助手结账显示",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "0-不显示 1-收银机结账显示",
+                    "type": "integer"
+                },
+                "is_show_member_recharge": {
+                    "description": "0-不显示 1-收银机会员充值显示",
+                    "type": "integer"
+                },
+                "logo_file_uuid": {
+                    "description": "Logo图片UUID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_name": {
+                    "description": "支付名称",
+                    "type": "string"
+                },
+                "qrcode_file_uuid": {
+                    "description": "二维码图片UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-禁用 1-启用 2-草稿",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.PaymentMethodDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.PaymentMethodSortItem": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序值",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.PaymentMethodSortUpdateReq": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "description": "排序项列表",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.PaymentMethodSortItem"
+                    }
+                }
+            }
+        },
+        "req.PaymentMethodUpdateReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "fee_percent": {
+                    "description": "手续费百分比，取值范围0-100",
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "is_show_assistant": {
+                    "description": "0-不显示 1-点餐助手结账显示",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "0-不显示 1-收银机结账显示",
+                    "type": "integer"
+                },
+                "is_show_member_recharge": {
+                    "description": "0-不显示 1-收银机会员充值显示",
+                    "type": "integer"
+                },
+                "logo_file_uuid": {
+                    "description": "Logo图片UUID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_name": {
+                    "description": "支付名称",
+                    "type": "string"
+                },
+                "qrcode_file_uuid": {
+                    "description": "二维码图片UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-禁用 1-启用 2-草稿",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.PreviewPrinterCustomizeReq": {
             "type": "object",
             "properties": {
@@ -42130,6 +42947,10 @@ const docTemplate = `{
                 "related_uuid"
             ],
             "properties": {
+                "allow_negative_stock": {
+                    "description": "是否允许负库存",
+                    "type": "boolean"
+                },
                 "allow_substore_visible": {
                     "description": "允许子店可见：1-允许，0-不允许（仅总店可用）",
                     "type": "integer"
@@ -44939,6 +45760,10 @@ const docTemplate = `{
                 "product_bom_uuid"
             ],
             "properties": {
+                "is_open_stock": {
+                    "description": "是否开启可售量",
+                    "type": "boolean"
+                },
                 "is_sold_out": {
                     "description": "是否售罄：true-是；false-否",
                     "type": "boolean"
@@ -45368,6 +46193,64 @@ const docTemplate = `{
                 "sale_order_uuid": {
                     "description": "销售订单ID。",
                     "type": "integer"
+                }
+            }
+        },
+        "req.TakeoutMenuExportReq": {
+            "type": "object",
+            "required": [
+                "platform"
+            ],
+            "properties": {
+                "categoryIds": {
+                    "description": "分类 ID 列表（可选，为空则导出所有）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "companyUuid": {
+                    "description": "公司 UUID（可选，默认当前公司）",
+                    "type": "integer"
+                },
+                "platform": {
+                    "description": "平台名称：grab, lineman 等",
+                    "type": "string"
+                },
+                "sellingTimeIds": {
+                    "description": "售卖时段 ID 列表（可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.TakeoutMenuImportReq": {
+            "type": "object",
+            "required": [
+                "menuData",
+                "platform"
+            ],
+            "properties": {
+                "companyUuid": {
+                    "description": "公司 UUID（可选，默认当前公司）",
+                    "type": "integer"
+                },
+                "menuData": {
+                    "description": "平台菜单 JSON 数据"
+                },
+                "overwriteExisting": {
+                    "description": "是否覆盖已存在的数据",
+                    "type": "boolean"
+                },
+                "platform": {
+                    "description": "平台名称",
+                    "type": "string"
+                },
+                "syncMode": {
+                    "description": "同步模式：full / incremental",
+                    "type": "string"
                 }
             }
         },
@@ -48933,6 +49816,82 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.GrabBindingLinkResp": {
+            "type": "object",
+            "properties": {
+                "bindingLink": {
+                    "description": "绑定链接 URL",
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "description": "过期时间（Unix 时间戳）",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.GrabBindingStatusResp": {
+            "type": "object",
+            "properties": {
+                "boundAt": {
+                    "description": "绑定时间（Unix 时间戳）",
+                    "type": "integer"
+                },
+                "isBound": {
+                    "description": "是否已绑定",
+                    "type": "boolean"
+                },
+                "merchantId": {
+                    "description": "Grab 商户 ID",
+                    "type": "string"
+                },
+                "merchantName": {
+                    "description": "Grab 商户名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.GrabMenuImportResp": {
+            "type": "object",
+            "properties": {
+                "createdItems": {
+                    "type": "integer"
+                },
+                "failureCount": {
+                    "type": "integer"
+                },
+                "failures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.GrabProductImportFailure"
+                    }
+                },
+                "successCount": {
+                    "type": "integer"
+                },
+                "updatedItems": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.GrabMenuResp": {
+            "type": "object",
+            "properties": {
+                "menu": {
+                    "description": "Grab 菜单数据"
+                }
+            }
+        },
+        "resp.GrabProductImportFailure": {
+            "type": "object",
+            "properties": {
+                "grabProductId": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "resp.GranularSyncResp": {
             "type": "object",
             "properties": {
@@ -49776,6 +50735,35 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "description": "会员等级名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.LianlianPayConfigResp": {
+            "type": "object",
+            "properties": {
+                "ll_merchant_id": {
+                    "description": "商户号",
+                    "type": "string"
+                },
+                "ll_merchant_private_key": {
+                    "description": "商户私钥（暂不支持加密存储）",
+                    "type": "string"
+                },
+                "ll_public_key": {
+                    "description": "支付方式公钥",
+                    "type": "string"
+                },
+                "ll_store_id": {
+                    "description": "站点ID",
+                    "type": "string"
+                },
+                "ll_token": {
+                    "description": "Token（暂不支持加密存储）",
+                    "type": "string"
+                },
+                "ll_white_ip": {
+                    "description": "白名单IP",
                     "type": "string"
                 }
             }
@@ -51963,6 +52951,67 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.PaymentMethodDetailResp": {
+            "type": "object",
+            "properties": {
+                "fee_percent": {
+                    "description": "手续费百分比",
+                    "type": "number"
+                },
+                "is_show_assistant": {
+                    "description": "0-不显示 1-点餐助手结账显示",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "0-不显示 1-收银机结账显示",
+                    "type": "integer"
+                },
+                "is_show_member_recharge": {
+                    "description": "0-不显示 1-收银机会员充值显示",
+                    "type": "integer"
+                },
+                "logo_file": {
+                    "description": "Logo文件URL",
+                    "type": "string"
+                },
+                "logo_file_uuid": {
+                    "description": "Logo图片UUID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_name": {
+                    "description": "支付名称",
+                    "type": "string"
+                },
+                "qrcode_file": {
+                    "description": "二维码文件URL",
+                    "type": "string"
+                },
+                "qrcode_file_uuid": {
+                    "description": "二维码图片UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "来源 0-系统 1-手动 2-LianLianPay",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-禁用 1-启用 2-草稿",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.PaymentMethodIncome": {
             "type": "object",
             "properties": {
@@ -52040,6 +53089,51 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.PaymentMethodItem"
                     }
+                }
+            }
+        },
+        "resp.PaymentMethodListItemResp": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "来源 0-系统 1-手动 2-LianLianPay",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-禁用 1-启用 2-草稿",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PaymentMethodListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentMethodListItemResp"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -52477,6 +53571,10 @@ const docTemplate = `{
                     "description": "是否可以编辑",
                     "type": "boolean"
                 },
+                "category_uuid": {
+                    "description": "分类uuid",
+                    "type": "integer"
+                },
                 "discount_price": {
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量",
                     "type": "number"
@@ -52579,6 +53677,10 @@ const docTemplate = `{
                 "show_delay_tag": {
                     "description": "是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态",
                     "type": "boolean"
+                },
+                "special_category_uuid": {
+                    "description": "特殊分类uuid",
+                    "type": "integer"
                 },
                 "status": {
                     "description": "0: 未送厨 1:已送厨 2:制作完成（出餐）",
@@ -55127,6 +56229,10 @@ const docTemplate = `{
                     "description": "成本卡库存数量",
                     "type": "number"
                 },
+                "has_bom_card": {
+                    "description": "是否关联了成本卡",
+                    "type": "boolean"
+                },
                 "is_open_stock": {
                     "description": "是否开启可售库存",
                     "type": "boolean"
@@ -55943,6 +57049,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.TabletResp"
                         }
                     ]
+                }
+            }
+        },
+        "resp.TakeoutMenuExportResp": {
+            "type": "object",
+            "properties": {
+                "menuData": {
+                    "description": "平台格式的菜单数据"
+                },
+                "platform": {
+                    "description": "平台名称",
+                    "type": "string"
                 }
             }
         },

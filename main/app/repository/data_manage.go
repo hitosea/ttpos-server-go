@@ -14,6 +14,7 @@ type IDataManageRepo interface {
 	List(opts ...DBOption) []model.DataManage      // 查询数据管理数据
 	Creates(dataManages []*model.DataManage) error // 批量创建数据管理数据
 	Delete(opts ...DBOption) error                 // 删除数据管理数据
+	GetDataUuids(opts ...DBOption) []uint64        // 获取数据管理数据UUID列表
 }
 
 // NewDataManageRepo 创建新的数据管理仓库
@@ -76,4 +77,15 @@ func (r *dataManageRepo) Delete(opts ...DBOption) error {
 // Creates 批量创建数据管理数据
 func (r *dataManageRepo) Creates(dataManages []*model.DataManage) error {
 	return r.db.Create(dataManages).Error
+}
+
+// GetDataUuids 获取数据管理数据UUID列表
+func (r *dataManageRepo) GetDataUuids(opts ...DBOption) []uint64 {
+	var dataUuids []uint64
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Model(r.model).Select("data_uuid").Pluck("data_uuid", &dataUuids)
+	return dataUuids
 }

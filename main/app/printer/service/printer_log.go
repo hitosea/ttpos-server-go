@@ -192,6 +192,16 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 		return db.Select("uuid, product_printer_uuid, related_uuid, data_type, printer_time, print_method, first_execution,  status, num, printer_uuid, reason, create_time")
 	})
 
+	// 排除数据管理
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := s.settingSrv.GetDataManageSetting(ctx)
+	excludeDataManage := companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
+	if excludeDataManage {
+		queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+			return db.Where("related_uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ? AND delete_time = 0)", model.DataManageTypeOrder)
+		})
+	}
+
 	// 执行查询
 	printerLogList, total, err := printerLogRepo.PaginateGet(
 		req.PageNo,

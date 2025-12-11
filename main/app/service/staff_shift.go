@@ -139,6 +139,12 @@ func (s *staffShiftSrv) generateNumber() string {
 func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error) {
 	staff := ctx.GetStaff()
 	db := s.dbm.GetDB(staff.CompanyUuid)
+
+	// 获取公司设置
+	companySetting := ctx.GetCompanySetting()
+	settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
+	setting := settingSrv.GetDataManageSetting(ctx)
+
 	// 查询钱箱
 	cashBox := repository.NewCashBoxRepo(db).Get()
 
@@ -155,14 +161,28 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 		return nil, errors.New("当前班次已交班")
 	}
 
+	var excludeDataManage, onlyDataManage bool
+	if companySetting.IsOpenDataManagement() && setting.IsEnableDataManage {
+		excludeDataManage = true
+		onlyDataManage = true
+	}
+
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-		DutyNo: log.ShiftNo,
+		DutyNo:            log.ShiftNo,
+		ExcludeDataManage: excludeDataManage,
 	})
 	paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
-		DutyNo: log.ShiftNo,
+		DutyNo:            log.ShiftNo,
+		ExcludeDataManage: excludeDataManage,
 	})
-
-	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{DutyNo: log.ShiftNo})
+	managePaymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
+		DutyNo:         log.ShiftNo,
+		OnlyDataManage: onlyDataManage,
+	})
+	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{
+		DutyNo:            log.ShiftNo,
+		ExcludeDataManage: excludeDataManage,
+	})
 
 	var paymentMethodIncomeList = make([]resp.PaymentMethodIncome, 0)
 	for _, payment := range paymentData.PaymentList {
@@ -178,11 +198,22 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 		})
 	}
 
+	// 数据管理现金收入
+	manageCash := decimal.Zero
+	for _, payment := range managePaymentData.PaymentList {
+		if payment.PaymentCode == constant.PaymentMethodCodeCash {
+			manageCash = manageCash.Add(decimal.NewFromFloat(payment.TotalPaymentAmount))
+		}
+	}
+
+	// 当前钱箱现金总计 = 钱箱余额 - 数据管理现金收入
+	boxAmount := decimal.NewFromFloat(cashBox.GetBalance()).Sub(manageCash)
+
 	return &resp.ShiftInfo{
 		PreviousShiftCash: log.PreviousShiftCash,
 		WithdrawCash:      log.WithdrawCash,
 		DepositCash:       log.DepositCash,
-		CurrentCashTotal:  cashBox.GetBalance(), // 当前钱箱现金总计（钱箱余额）。 未交班时从钱箱表中获取数据，交班后将当前钱箱现金总计（钱箱余额）记录到交班表中
+		CurrentCashTotal:  boxAmount.InexactFloat64(), // 当前钱箱现金总计（钱箱余额）。 未交班时从钱箱表中获取数据，交班后将当前钱箱现金总计（钱箱余额）记录到交班表中
 		RefundAmount:      refundAmount,
 		PaymentMethodIncome: resp.PaymentMethodIncomeList{
 			List: paymentMethodIncomeList,
@@ -214,9 +245,10 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		return nil, errors.New("遗留现金不能小于0")
 	}
 	var (
-		withdrawCash decimal.Decimal // 取出现金
-		leaveCash    decimal.Decimal // 遗留现金
-		cashAmount   float64         // 现金收入
+		withdrawCash     decimal.Decimal // 取出现金
+		leaveCash        decimal.Decimal // 遗留现金
+		cashAmount       float64         // 现金收入
+		showWithdrawCash decimal.Decimal // 显示取出现金
 	)
 	// 获取当前员工
 	var (
@@ -240,6 +272,14 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			paymentMethodMap[paymentMethod.ErpnextPayment] = paymentMethod.PaymentName
 		}
 	}
+	companySetting := ctx.GetCompanySetting()
+	settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
+	setting := settingSrv.GetDataManageSetting(ctx)
+	var excludeDataManage, onlyDataManage bool
+	if companySetting.IsOpenDataManagement() && setting.IsEnableDataManage {
+		excludeDataManage = true
+		onlyDataManage = true
+	}
 	var currentCashTotal decimal.Decimal
 	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 获取当前班次
@@ -259,31 +299,45 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		if shiftLog.IsHandedOver() {
 			return errors.New("当前班次已交班")
 		}
+
+		manageCash := decimal.Zero
+		managePaymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
+			DutyNo:         shiftLog.ShiftNo,
+			OnlyDataManage: onlyDataManage,
+		})
+		for _, payment := range managePaymentData.PaymentList {
+			if payment.PaymentCode == constant.PaymentMethodCodeCash {
+				manageCash = manageCash.Add(decimal.NewFromFloat(payment.TotalPaymentAmount))
+			}
+		}
+
 		cashBox := repository.NewCashBoxRepo(db).Get()
-		withdrawCash = decimal.NewFromFloat(reqs.WithdrawCash)
+		boxAmount := decimal.NewFromFloat(cashBox.GetBalance())
+		showWithdrawCash = decimal.NewFromFloat(reqs.WithdrawCash)
+		withdrawCash = decimal.NewFromFloat(reqs.WithdrawCash).Add(manageCash)
 		leaveCash = decimal.NewFromFloat(reqs.LeaveCash)
 		// 后台交班时，取出金额为当前钱箱现金总计，遗留现金为0
 		if reqs.IsBackground {
-			withdrawCash = decimal.NewFromFloat(cashBox.GetBalance())
+			withdrawCash = boxAmount
 			leaveCash = decimal.Zero
 		}
 		// 当前班次取出金额 + 遗留现金 = 当前钱箱现金总计
 		if !withdrawCash.Add(leaveCash).
-			Equal(decimal.NewFromFloat(cashBox.GetBalance())) {
+			Equal(boxAmount) {
 			return errors.New("输入的本班取出現金和本班遗留备用金总额与当前钱箱现金总计不符")
 		}
 		// 当前班次支付方式收入
 		var (
 			paymentMethodIncomeList = make([]resp.PaymentMethodIncome, 0)
-			cashAmount              float64
 		)
 		saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-			DutyNo: shiftLog.ShiftNo,
+			DutyNo:            shiftLog.ShiftNo,
+			ExcludeDataManage: excludeDataManage,
 		})
 		paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
-			DutyNo: shiftLog.ShiftNo,
+			DutyNo:            shiftLog.ShiftNo,
+			ExcludeDataManage: excludeDataManage,
 		})
-		companySetting := ctx.GetCompanySetting()
 		company := ctx.GetCompany()
 		needErpClosePos := company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != ""
 		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
@@ -357,7 +411,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		_, err = shiftLogRepo.Update(shiftLog, map[string]any{
 			"status":                  constant.StaffHandedOver,          // 交班状态
 			"current_cash_total":      currentCashTotal.InexactFloat64(), // 当前钱箱现金总计
-			"cash_taken_out":          withdrawCash.InexactFloat64(),     // 取出现金
+			"cash_taken_out":          showWithdrawCash.InexactFloat64(), // 取出现金
 			"cash_left":               currentCashTotal.InexactFloat64(), // 遗留现金
 			"shift_end_time":          shiftEndTime,                      // 交班时间
 			"cash_income":             cashAmount,                        // 现金收入
@@ -427,12 +481,12 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 
 	shiftSubmitInfo := resp.ShiftSubmit{
 		CashIncome:   cashAmount,
-		CashTakenOut: withdrawCash.InexactFloat64(),
+		CashTakenOut: showWithdrawCash.InexactFloat64(),
 		CashLeft:     currentCashTotal.InexactFloat64(),
 		DutyNo:       staff.DutyNo,
 		PrinterData: func() resp.PrinterData {
 			printerData, err := s.ShiftPrinter(ctx, req.ShiftPrinterReq{
-				WithdrawCash: withdrawCash.InexactFloat64(),
+				WithdrawCash: showWithdrawCash.InexactFloat64(),
 				LeaveCash:    currentCashTotal.InexactFloat64(),
 				DutyNo:       staff.DutyNo,
 			}, utils.IfInt(reqs.IsBackground, 0, 1), true, staff)
@@ -682,6 +736,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
 		return nil, errors.WithMessage(err)
 	}
+
 	// 获取打印机设置
 	printerSetting, err := setting.GetPrinterSetting(ctx, nil)
 	if err != nil {
@@ -712,14 +767,20 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 
 	log.CashLeft = cashBox.GetBalance()
 
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := setting.GetDataManageSetting(ctx)
+	excludeDataManage := companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
+
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-		DutyNo: log.ShiftNo,
+		DutyNo:            log.ShiftNo,
+		ExcludeDataManage: excludeDataManage,
 	})
 
 	// 交班退款
 	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{
-		DutyNo: log.ShiftNo,
+		DutyNo:            log.ShiftNo,
+		ExcludeDataManage: excludeDataManage,
 	})
 
 	// 会员数量, 根据当班记录的开始和结束时间
@@ -777,7 +838,8 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		PaymentMethodIncomes: func() []business_data_resp.PaymentMethodIncome {
 			// 支付数据
 			paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
-				DutyNo: log.ShiftNo,
+				DutyNo:            log.ShiftNo,
+				ExcludeDataManage: excludeDataManage,
 			})
 			paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0, len(paymentData.PaymentList))
 			for _, v := range paymentData.PaymentList {
@@ -826,7 +888,8 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		CategoryList: func() []business_data_resp.Category {
 			// 统计分类
 			categoryData := s.statisticsSrv.CountCategory(ctx, CountReq{
-				DutyNo: log.ShiftNo,
+				DutyNo:            log.ShiftNo,
+				ExcludeDataManage: excludeDataManage,
 			})
 
 			categoryList := make([]business_data_resp.Category, 0, len(categoryData.CategoryList))
@@ -891,12 +954,19 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 		return nil
 	}
 
+	companySetting := ctx.GetCompanySetting()
+	settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
+	dataSetting := settingSrv.GetDataManageSetting(ctx)
+	excludeDataManage := companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
+	logger.Logger.Info("excludeDataManage", zap.Any("excludeDataManage", excludeDataManage))
+
 	// 获取交班详情
 	// uploadFileSrv := service.NewUploadFileSrv(s.dbm)
 	businessSrv := NewBusinessSrv(s.statisticsSrv, nil)
 	businessData, err := businessSrv.CountBusiness(ctx, req.BusinessDataCountReq{
-		QueryStartTime: log.ShiftStartTime,
-		QueryEndTime:   log.ShiftEndTime,
+		QueryStartTime:    log.ShiftStartTime,
+		QueryEndTime:      log.ShiftEndTime,
+		ExcludeDataManage: excludeDataManage,
 	})
 	if err != nil {
 		return errors.New("获取交班数据失败")
@@ -947,7 +1017,7 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	}
 
 	// 统计退款金额
-	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{DutyNo: log.ShiftNo})
+	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{DutyNo: log.ShiftNo, ExcludeDataManage: excludeDataManage})
 
 	userIsDelete := 0
 	if log.Staff.IsDelete() {

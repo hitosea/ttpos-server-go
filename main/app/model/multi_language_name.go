@@ -76,6 +76,20 @@ func (m *MultiLanguageName) ToJson() string {
 	return string(json)
 }
 
+func (m *MultiLanguageName) ToMap() map[string]string {
+	return map[string]string{
+		"zh":   m.ZhName,
+		"en":   m.EnName,
+		"th":   m.ThName,
+		"zhtw": m.ZhTwName,
+		"ja":   m.JaName,
+		"ko":   m.KoName,
+		"my":   m.MyName,
+		"tr":   m.TrName,
+		"sv":   m.SvName,
+	}
+}
+
 // GetNameByLang 获取指定语言名称
 func (m *MultiLanguageName) GetNameByLang(lang string) string {
 	switch lang {

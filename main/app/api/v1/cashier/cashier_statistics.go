@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -61,7 +62,12 @@ func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global).GetDataManageSetting(ctx)
+
 	countReq.NotQueryFree = true
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	businessData, err := h.businessSrv.CountBusiness(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -87,6 +93,10 @@ func (h *statisticsHandler) CountPaymentMethod(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global).GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	paymentMethodData, err := h.businessSrv.CountPaymentMethod(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -112,6 +122,10 @@ func (h *statisticsHandler) CountProductCategory(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global).GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	productCategoryData, err := h.businessSrv.CountProductCategory(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -137,6 +151,10 @@ func (h *statisticsHandler) CountProduct(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global).GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	productData, err := h.businessSrv.CountProduct(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

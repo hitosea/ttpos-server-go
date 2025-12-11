@@ -108,6 +108,11 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 		fmt.Println("获取门店业务设置失败", zap.Error(err))
 	}
 
+	// 获取数据管理设置
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := setting.GetDataManageSetting(ctx)
+	excludeDataManage := companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
+
 	// 设置语言
 	ctx.SetLanguage(printerSetting.DefaultLanguage)
 
@@ -121,16 +126,18 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	if printerReq.StatisticsType <= 0 {
 		// 销售数据
 		saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			CategoryType:      printerParam.CategoryType,
+			ExcludeDataManage: excludeDataManage,
 		})
 		// 支付数据
 		_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
-			NotQueryFree:   true,
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			CategoryType:      printerParam.CategoryType,
+			NotQueryFree:      true,
+			ExcludeDataManage: excludeDataManage,
 		})
 		// 会员数量
 		memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
@@ -139,8 +146,9 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 		})
 		// 未结订单
 		unpaidOrderData := s.statisticsSrv.CountUnpaidOrder(ctx, CountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			ExcludeDataManage: excludeDataManage,
 		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
@@ -225,17 +233,19 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			}(),
 			CategoryList: func() []business_data_resp.Category {
 				_, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
-					QueryStartTime: int64(printerParam.QueryStartTime),
-					QueryEndTime:   int64(printerParam.QueryEndTime),
-					CategoryType:   printerParam.CategoryType,
+					QueryStartTime:    int64(printerParam.QueryStartTime),
+					QueryEndTime:      int64(printerParam.QueryEndTime),
+					CategoryType:      printerParam.CategoryType,
+					ExcludeDataManage: excludeDataManage,
 				})
 				return categoryList
 			}(),
 			PercentageList: func() []business_data_resp.Percentage {
 				taxData := s.statisticsSrv.CountTax(ctx, CountReq{
-					QueryStartTime: int64(printerParam.QueryStartTime),
-					QueryEndTime:   int64(printerParam.QueryEndTime),
-					CategoryType:   printerParam.CategoryType,
+					QueryStartTime:    int64(printerParam.QueryStartTime),
+					QueryEndTime:      int64(printerParam.QueryEndTime),
+					CategoryType:      printerParam.CategoryType,
+					ExcludeDataManage: excludeDataManage,
 				})
 				list := make([]business_data_resp.Percentage, 0, len(taxData))
 				for _, tax := range taxData {
@@ -253,9 +263,10 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	if printerReq.StatisticsType == 1 {
 		// 支付数据
 		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			CategoryType:      printerParam.CategoryType,
+			ExcludeDataManage: excludeDataManage,
 		})
 		reqPrinterData.PaymentMethod = &business_data_resp.BusinessDataPaymentMethod{
 			TotalReceivedPrice:   paymentData.TotalReceivedAmount,
@@ -265,17 +276,19 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 
 	if printerReq.StatisticsType == 2 {
 		categoryData, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
-			SortType:       printerParam.SortType,
-			SortDirection:  printerParam.SortDirection,
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			CategoryType:      printerParam.CategoryType,
+			SortType:          printerParam.SortType,
+			SortDirection:     printerParam.SortDirection,
+			ExcludeDataManage: excludeDataManage,
 		})
 
 		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			CategoryType:      printerParam.CategoryType,
+			ExcludeDataManage: excludeDataManage,
 		})
 
 		reqPrinterData.ProductCategory = &business_data_resp.BusinessDataProductCategory{
@@ -289,9 +302,10 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 
 	if printerReq.StatisticsType == 3 {
 		productList := s.statisticsSrv.CountProduct(ctx, CountReq{
-			QueryStartTime: int64(printerParam.QueryStartTime),
-			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
+			QueryStartTime:    int64(printerParam.QueryStartTime),
+			QueryEndTime:      int64(printerParam.QueryEndTime),
+			CategoryType:      printerParam.CategoryType,
+			ExcludeDataManage: excludeDataManage,
 		})
 		// 将产品列表分成每100条一组，每组记录批次号
 		const batchSize = 100
@@ -385,11 +399,12 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 	req = req.GetParam(ctx.GetCompanySetting().Timezone, businessSetting.OpeningHours)
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		CategoryType:   req.CategoryType,
-		DutyNo:         req.DutyNo,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		CategoryType:      req.CategoryType,
+		DutyNo:            req.DutyNo,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 
 	storeSetting, err := setting.GetStoreSetting(ctx)
@@ -409,11 +424,12 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 	})
 	// 未结订单
 	unpaidOrderData := s.statisticsSrv.CountUnpaidOrder(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		CategoryType:   req.CategoryType,
-		DutyNo:         req.DutyNo,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		CategoryType:      req.CategoryType,
+		DutyNo:            req.DutyNo,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 	// 营业时间
 	openingHours := ""
@@ -518,10 +534,11 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		}(),
 		PercentageList: func() []business_data_resp.Percentage {
 			taxData := s.statisticsSrv.CountTax(ctx, CountReq{
-				TimeType:       req.TimeType,
-				QueryStartTime: req.QueryStartTime,
-				QueryEndTime:   req.QueryEndTime,
-				CategoryType:   req.CategoryType,
+				TimeType:          req.TimeType,
+				QueryStartTime:    req.QueryStartTime,
+				QueryEndTime:      req.QueryEndTime,
+				CategoryType:      req.CategoryType,
+				ExcludeDataManage: req.ExcludeDataManage,
 			})
 			list := make([]business_data_resp.Percentage, 0, len(taxData))
 			for _, tax := range taxData {
@@ -976,22 +993,24 @@ func (s *businessSrv) Count7Days(ctx context.Context, req req.BusinessDataCountR
 // BuildPaymentMethodIncome 构建支付方式收入
 func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.BusinessDataCountReq) (CountPaymentResp, []business_data_resp.PaymentMethodIncome) {
 	paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
-		DutyNo:         req.DutyNo,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		TimeType:       req.TimeType,
-		CategoryType:   req.CategoryType,
+		DutyNo:            req.DutyNo,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		TimeType:          req.TimeType,
+		CategoryType:      req.CategoryType,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 
 	// 统计免单支付
 	var freePaymentData CountFreePaymentResp
 	if !req.NotQueryFree {
 		freePaymentData = s.statisticsSrv.CountFreePayment(ctx, CountReq{
-			DutyNo:         req.DutyNo,
-			QueryStartTime: req.QueryStartTime,
-			QueryEndTime:   req.QueryEndTime,
-			TimeType:       req.TimeType,
-			CategoryType:   req.CategoryType,
+			DutyNo:            req.DutyNo,
+			QueryStartTime:    req.QueryStartTime,
+			QueryEndTime:      req.QueryEndTime,
+			TimeType:          req.TimeType,
+			CategoryType:      req.CategoryType,
+			ExcludeDataManage: req.ExcludeDataManage,
 		})
 	}
 
@@ -1027,11 +1046,12 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 // BuildCategoryList 构建分类列表
 func (s *businessSrv) BuildCategoryList(ctx context.Context, req req.BusinessDataCountReq) (CountCategoryResp, []business_data_resp.Category) {
 	categoryData := s.statisticsSrv.CountCategory(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		CategoryType:   req.CategoryType,
-		DutyNo:         req.DutyNo,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		CategoryType:      req.CategoryType,
+		DutyNo:            req.DutyNo,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 	list := make([]business_data_resp.Category, 0, len(categoryData.CategoryList))
 	for _, category := range categoryData.CategoryList {
@@ -3432,7 +3452,7 @@ func (s *businessSrv) CountUserAnalysis(ctx context.Context, req req.UserAnalysi
 
 	// 调用 Repository 获取统计数据
 	repoResult, err := statisticsRepo.CountUserAnalysis(startTime, endTime, language, enableNationality, enableCashierOrder, enableTableOrder,
-		commonRepo.WhereNotInDataManageSubQuery("sale_bill_uuid",
+		commonRepo.WhereNotInDataManageSubQuery(db, "sale_bill_uuid",
 			dataManageRepo.WhereByType(model.DataManageTypeOrder),
 		),
 	)
