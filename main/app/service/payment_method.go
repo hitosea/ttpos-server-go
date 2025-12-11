@@ -152,20 +152,34 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
-	list, total, err := paymentMethodRepo.GetPaymentMethodListWithPagination(listReq.PageNo, listReq.PageSize)
+	// 查询支付方式列表，关联logo文件
+	list, total, err := paymentMethodRepo.GetPaymentMethodListWithPagination(
+		listReq.PageNo,
+		listReq.PageSize,
+		paymentMethodRepo.WithLogoFile(),
+	)
 	if err != nil {
 		return nil, appErrors.WithMessage(err, "查询支付方式列表失败")
 	}
 
+	// 获取文件 URL
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+
 	// 转换为响应格式
 	items := make([]*resp.PaymentMethodListItemResp, 0, len(list))
 	for _, method := range list {
+		var logoFile string
+		if method.LogoFile != nil {
+			logoFile = method.LogoFile.GetUrl(baseUrl)
+		}
+
 		items = append(items, &resp.PaymentMethodListItemResp{
-			Uuid:   method.Uuid,
-			Name:   method.Name,
-			Source: method.Source,
-			Status: method.Status,
-			Sort:   method.Sort,
+			Uuid:     method.Uuid,
+			Name:     method.Name,
+			Source:   method.Source,
+			Status:   method.Status,
+			Sort:     method.Sort,
+			LogoFile: logoFile,
 		})
 	}
 

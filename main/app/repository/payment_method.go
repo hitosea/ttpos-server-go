@@ -23,13 +23,13 @@ type IPaymentMethodRepo interface {
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
 
-	CreatePaymentMethod(paymentMethod model.PaymentMethod) error                                    // 创建支付方式
-	UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error               // 更新支付方式
-	DeletePaymentMethod(uuid uint64) error                                                          // 删除支付方式（软删除）
-	CheckHasOrders(uuid uint64) (bool, error)                                                       // 检查是否有关联订单
-	GetMaxSort() (int, error)                                                                       // 获取最大排序值
-	BatchUpdateSort(items []model.PaymentMethod) error                                              // 批量更新排序
-	GetPaymentMethodListWithPagination(pageNo, pageSize int) ([]*model.PaymentMethod, int64, error) // 分页查询支付方式列表
+	CreatePaymentMethod(paymentMethod model.PaymentMethod) error                                                      // 创建支付方式
+	UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error                                 // 更新支付方式
+	DeletePaymentMethod(uuid uint64) error                                                                            // 删除支付方式（软删除）
+	CheckHasOrders(uuid uint64) (bool, error)                                                                         // 检查是否有关联订单
+	GetMaxSort() (int, error)                                                                                         // 获取最大排序值
+	BatchUpdateSort(items []model.PaymentMethod) error                                                                // 批量更新排序
+	GetPaymentMethodListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.PaymentMethod, int64, error) // 分页查询支付方式列表
 }
 
 // IPaymentMethodQueryRepo 定义仓库查询接口
@@ -326,11 +326,16 @@ func (r *paymentMethodRepo) BatchUpdateSort(items []model.PaymentMethod) error {
 }
 
 // GetPaymentMethodListWithPagination 分页查询支付方式列表
-func (r *paymentMethodRepo) GetPaymentMethodListWithPagination(pageNo, pageSize int) ([]*model.PaymentMethod, int64, error) {
+func (r *paymentMethodRepo) GetPaymentMethodListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.PaymentMethod, int64, error) {
 	var list []*model.PaymentMethod
 	var total int64
 
 	db := r.db.Model(&model.PaymentMethod{}).Where("delete_time = 0")
+
+	// 应用选项
+	for _, opt := range opts {
+		db = opt(db)
+	}
 
 	// 获取总数
 	if err := db.Count(&total).Error; err != nil {
