@@ -40,8 +40,9 @@ func (h *CallBoardHandler) BindDevice(c *gin.Context) {
 
 	ctx := helper.GetContext(c)
 	companyUuid := ctx.GetCompanyUuid()
+	clientVersion := ctx.GetVersion()
 
-	err := h.service.BindDevice(c.Request.Context(), companyUuid, reqData)
+	err := h.service.BindDevice(c.Request.Context(), companyUuid, reqData, clientVersion)
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
@@ -69,8 +70,9 @@ func (h *CallBoardHandler) UpdateBindInfo(c *gin.Context) {
 
 	ctx := helper.GetContext(c)
 	companyUuid := ctx.GetCompanyUuid()
+	clientVersion := ctx.GetVersion()
 
-	err := h.service.UpdateBindInfo(c.Request.Context(), companyUuid, reqData)
+	err := h.service.UpdateBindInfo(c.Request.Context(), companyUuid, reqData, clientVersion)
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return

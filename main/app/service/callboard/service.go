@@ -45,11 +45,11 @@ type ICallBoardService interface {
 	GetQueueData(ctx context.Context, companyUuid uint64, req req.GetQueueDataReq) (*resp.QueueDataResp, error)
 
 	// 商家管理端接口
-	BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq) error
+	BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq, clientVersion string) error
 	GetDeviceList(ctx context.Context, companyUuid uint64, req req.GetDeviceListReq) (*resp.DeviceListResp, error)
 	UnbindDevice(ctx context.Context, companyUuid uint64, uuid uint64) error
 	BindedDeviceValidate(deviceId string) (companyUuid uint64, err error)
-	UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq) error
+	UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq, clientVersion string) error
 }
 
 func NewCallBoardService(dbm *database.DBManager, cache cache.Cache) ICallBoardService {
@@ -131,17 +131,25 @@ func (s *callBoardService) getRedisClient() redis.UniversalClient {
 	return s.cache.GetClient()
 }
 
-func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq) error {
+func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq, clientVersion string) error {
 	repo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
 
-	if req.Name == "" {
-		return errors.New("请输入名称")
+	// 版本 >= 2.11.0 时才进行参数校验
+	if utils.CompareVersion(clientVersion, utils.VersionGTE, "2.11.0") {
+		if req.Name == "" {
+			return errors.New("请输入名称")
+		}
+
+		if utf8.RuneCountInString(req.Name) > 20 {
+			return errors.New("名称不能超过20个字")
+		}
+
+		if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
+			return errors.New("叫号次数必须在1-3之间")
+		}
 	}
 
-	if utf8.RuneCountInString(req.Name) > 20 {
-		return errors.New("名称不能超过20个字")
-	}
-
+	// 设置默认值
 	if req.TimeoutLimit == nil {
 		req.TimeoutLimit = &[]int{0}[0]
 	}
@@ -154,6 +162,7 @@ func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint6
 	if req.CallCount == 0 {
 		req.CallCount = 1
 	}
+	// 设置默认值后，CallCount 必须在有效范围内
 	if req.CallCount < 1 || req.CallCount > 3 {
 		return errors.New("叫号次数必须在1-3之间")
 	}
@@ -291,14 +300,21 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 }
 
 // BindDevice 绑定设备
-func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq) error {
-	// 验证请求参数
-	if req.Name == "" {
-		return errors.New("请输入名称")
+func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq, clientVersion string) error {
+	// 版本 >= 2.11.0 时才进行参数校验
+	if utils.CompareVersion(clientVersion, utils.VersionGTE, "2.11.0") {
+		if req.Name == "" {
+			return errors.New("请输入名称")
+		}
+		if utf8.RuneCountInString(req.Name) > 20 {
+			return errors.New("名称不能超过20个字")
+		}
+		if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
+			return errors.New("叫号次数必须在1-3之间")
+		}
 	}
-	if utf8.RuneCountInString(req.Name) > 20 {
-		return errors.New("名称不能超过20个字")
-	}
+
+	// 设置默认值
 	if req.TimeoutLimit == nil {
 		req.TimeoutLimit = &[]int{0}[0]
 	}
@@ -311,6 +327,7 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 	if req.CallCount == 0 {
 		req.CallCount = 1
 	}
+	// 设置默认值后，CallCount 必须在有效范围内
 	if req.CallCount < 1 || req.CallCount > 3 {
 		return errors.New("叫号次数必须在1-3之间")
 	}

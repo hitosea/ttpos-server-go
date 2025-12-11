@@ -139,7 +139,7 @@ ttpos:binded_device:{device_id}
 - **Type**: Hash
 - **Fields**:
   - `name`: 叫号系统名称
-  - `background_image_url`: 背景图片 URL（直接保存图片 URL）
+  - `background_image_url`: 背景图片 URL（可选，可传空字符串）
   - `timeout_limit`: 超时限制（分钟，可选）
   - `voice_call_enabled`: 语音叫号开关（可选）
   - `call_count`: 叫号次数（1-3）
@@ -158,6 +158,7 @@ ttpos:callboard_setting:{company_uuid}
 - 所有配置存储在 Redis 缓存中，无需使用数据库表
 - 配置按公司隔离（使用 company_uuid）
 - `background_image_url` 直接保存图片的完整 URL（如：`https://example.com/uploads/image.jpg`），无需通过 UUID 查询
+- `background_image_url` 为可选字段，可传空字符串
 - 如果配置不存在，使用默认值
 
 ---
@@ -172,18 +173,26 @@ ttpos:callboard_setting:{company_uuid}
 // main/app/dto/req/callboard.go
 // 扩展 BindDeviceReq
 type BindDeviceReq struct {
-	BindCode string `json:"bind_code" binding:"required,max=10"`
-	Lang1    string `json:"lang1"`
-	Lang2    string `json:"lang2"`
-	Name     string `json:"name" binding:"required,max=20"`  // 新增：设备名称
+	BindCode           string `json:"bind_code" binding:"required,max=10"`
+	Lang1              string `json:"lang1"`
+	Lang2              string `json:"lang2"`
+	Name               string `json:"name"`                      // 设备名称（可选，版本 >= 2.11.0 时必填）
+	BackgroundImageUrl string `json:"background_image_url"`     // 背景图片 URL（可选，可传空字符串）
+	TimeoutLimit       *int   `json:"timeout_limit"`             // 超时限制（分钟，可选）
+	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`        // 语音叫号开关（可选）
+	CallCount          int    `json:"call_count"`                // 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
 }
 
 // 扩展 UpdateBindInfoReq
 type UpdateBindInfoReq struct {
-	Uuid  uint64 `json:"uuid" binding:"required"`
-	Lang1 string `json:"lang1"`
-	Lang2 string `json:"lang2"`
-	Name  string `json:"name" binding:"required,max=20"`  // 新增：设备名称
+	Uuid               uint64 `json:"uuid" binding:"required"`
+	Lang1              string `json:"lang1"`
+	Lang2              string `json:"lang2"`
+	Name               string `json:"name"`                      // 设备名称（可选，版本 >= 2.11.0 时必填）
+	BackgroundImageUrl string `json:"background_image_url"`     // 背景图片 URL（可选，可传空字符串）
+	TimeoutLimit       *int   `json:"timeout_limit"`             // 超时限制（分钟，可选）
+	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`        // 语音叫号开关（可选）
+	CallCount          int    `json:"call_count"`                // 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
 }
 
 ```
@@ -275,15 +284,25 @@ type DeviceItem struct {
 
 - **URL**: `/api/v1/shop/callboard/device/update`
 - **Method**: `POST`
+- **Headers**:
+  - `Client-Version`: 客户端版本号（如：2.11.0）
 - **Body**:
   ```json
   {
     "uuid": 123456,
     "lang1": "zh",
     "lang2": "en",
-    "name": "叫号设备1"  // 新增字段（必填，最大 20 字符）
+    "name": "叫号设备1",  // 可选，版本 >= 2.11.0 时必填，最大 20 字符
+    "background_image_url": "",  // 背景图片 URL（可选，可传空字符串）
+    "timeout_limit": 10,  // 超时限制（分钟，可选）
+    "voice_call_enabled": true,  // 语音叫号开关（可选）
+    "call_count": 3  // 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
   }
   ```
+
+**版本兼容性说明**:
+- **版本 >= 2.11.0**: `name` 和 `call_count` 为必填字段，会进行参数校验
+- **版本 < 2.11.0**: 所有字段均为可选，不进行参数校验，使用默认值
 
 **响应**:
 
@@ -322,11 +341,11 @@ type ICallBoardService interface {
     // 扩展 GetDeviceList：返回设备名称
     GetDeviceList(ctx context.Context, companyUuid uint64, req req.GetDeviceListReq) (*resp.DeviceListResp, error)
     
-    // 扩展 UpdateBindInfo：支持更新设备名称
-    UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq) error
+    // 扩展 UpdateBindInfo：支持更新设备名称，根据客户端版本进行参数校验
+    UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq, clientVersion string) error
     
-    // 扩展 BindDevice：支持设置设备名称
-    BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq) error
+    // 扩展 BindDevice：支持设置设备名称，根据客户端版本进行参数校验
+    BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq, clientVersion string) error
 }
 
 // 实现扩展
@@ -345,27 +364,71 @@ func (s *callBoardService) GetDeviceList(...) (*resp.DeviceListResp, error) {
     })
 }
 
-func (s *callBoardService) UpdateBindInfo(...) error {
-    // 更新 Redis 缓存中的设备名称
+func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq, clientVersion string) error {
+    // 版本 >= 2.11.0 时才进行参数校验
+    if utils.CompareVersion(clientVersion, utils.VersionGTE, "2.11.0") {
+        if req.Name == "" {
+            return errors.New("请输入名称")
+        }
+        if utf8.RuneCountInString(req.Name) > 20 {
+            return errors.New("名称不能超过20个字")
+        }
+        if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
+            return errors.New("叫号次数必须在1-3之间")
+        }
+    }
+    
+    // 设置默认值
+    if req.CallCount == 0 {
+        req.CallCount = 1
+    }
+    
+    // 更新 Redis 缓存中的设备信息
     deviceKey := cachekey.GetBindedDeviceKey(device.DeviceId)
     err = s.getRedisClient().HMSet(
         ctx,
         deviceKey,
         "lang1", req.Lang1,
         "lang2", req.Lang2,
-        "name", req.Name,  // 新增字段
+        "name", req.Name,
+        "background_image_url", req.BackgroundImageUrl,
+        "timeout_limit", req.TimeoutLimit,
+        "voice_call_enabled", req.VoiceCallEnabled,
+        "call_count", req.CallCount,
     ).Err()
 }
 
-func (s *callBoardService) BindDevice(...) error {
+func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq, clientVersion string) error {
+    // 版本 >= 2.11.0 时才进行参数校验
+    if utils.CompareVersion(clientVersion, utils.VersionGTE, "2.11.0") {
+        if req.Name == "" {
+            return errors.New("请输入名称")
+        }
+        if utf8.RuneCountInString(req.Name) > 20 {
+            return errors.New("名称不能超过20个字")
+        }
+        if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
+            return errors.New("叫号次数必须在1-3之间")
+        }
+    }
+    
+    // 设置默认值
+    if req.CallCount == 0 {
+        req.CallCount = 1
+    }
+    
     // ... 现有逻辑
     
-    // 保存设备名称到 Redis
+    // 保存设备信息到 Redis
     err = s.getRedisClient().HMSet(
         ctx,
         deviceKey,
         // ... 现有字段
-        "name", req.Name,  // 新增字段
+        "name", req.Name,
+        "background_image_url", req.BackgroundImageUrl,
+        "timeout_limit", req.TimeoutLimit,
+        "voice_call_enabled", req.VoiceCallEnabled,
+        "call_count", req.CallCount,
     ).Err()
 }
 ```
@@ -450,6 +513,21 @@ err = redis.HMSet(ctx, settingKey,
 
 - **处理方式**: 参数验证失败，返回错误
 - **用户影响**: 用户看到错误提示
+
+#### 场景 2.1: 背景图片为空字符串
+
+- **处理方式**: 允许传空字符串，正常保存到 Redis
+- **用户影响**: 背景图片字段为空，QDS 端使用默认图片
+
+#### 场景 2.2: 客户端版本 < 2.11.0
+
+- **处理方式**: 所有字段（name、background_image_url、timeout_limit、voice_call_enabled、call_count）均为可选，不进行参数校验
+- **用户影响**: 旧版本客户端可以正常调用 API，使用默认值
+
+#### 场景 2.3: 客户端版本 >= 2.11.0
+
+- **处理方式**: `name` 和 `call_count` 为必填字段，进行参数校验
+- **用户影响**: 新版本客户端必须提供必填字段
 
 #### 场景 3: 背景图片格式不支持
 

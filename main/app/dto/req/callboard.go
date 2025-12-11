@@ -24,11 +24,11 @@ type BindDeviceReq struct {
 	BindCode           string `json:"bind_code" binding:"required,max=10"`
 	Lang1              string `json:"lang1"`
 	Lang2              string `json:"lang2"`
-	Name               string `json:"name" binding:"required"`
-	BackgroundImageUrl string `json:"background_image_url"`
-	TimeoutLimit       *int   `json:"timeout_limit"`
-	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`
-	CallCount          int    `json:"call_count" binding:"required,min=1,max=3"` // 叫号次数（必填，最小1，最大3）
+	Name               string `json:"name"`                 // 设备名称（可选，版本 >= 2.11.0 时必填）
+	BackgroundImageUrl string `json:"background_image_url"` // 背景图片 URL（可选，可传空字符串）
+	TimeoutLimit       *int   `json:"timeout_limit"`        // 超时限制（分钟，可选）
+	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`   // 语音叫号开关（可选）
+	CallCount          int    `json:"call_count"`           // 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
 }
 
 // GetDeviceListReq 获取设备列表请求
@@ -45,9 +45,9 @@ type UpdateBindInfoReq struct {
 	Uuid               uint64 `json:"uuid" binding:"required"`
 	Lang1              string `json:"lang1"`
 	Lang2              string `json:"lang2"`
-	Name               string `json:"name" binding:"required"`                   // 设备名称（必填）
-	BackgroundImageUrl string `json:"background_image_url" binding:"required"`   // 背景图片 URL（必填）
-	TimeoutLimit       *int   `json:"timeout_limit"`                             // 超时限制（分钟，可选）
-	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`                        // 语音叫号开关（可选）
-	CallCount          int    `json:"call_count" binding:"required,min=1,max=3"` // 叫号次数（必填，最小1，最大3）
+	Name               string `json:"name"`                 // 设备名称（可选，版本 >= 2.11.0 时必填）
+	BackgroundImageUrl string `json:"background_image_url"` // 背景图片 URL（可选，可传空字符串）
+	TimeoutLimit       *int   `json:"timeout_limit"`        // 超时限制（分钟，可选）
+	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`   // 语音叫号开关（可选）
+	CallCount          int    `json:"call_count"`           // 叫号次数（可选，版本 >= 2.11.0 时必填，最小1，最大3）
 }
