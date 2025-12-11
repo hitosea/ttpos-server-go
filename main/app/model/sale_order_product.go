@@ -1209,6 +1209,57 @@ func (model *SaleOrderProduct) GetOrderItemRemark() []*SaleOrderProductReason {
 	return list
 }
 
+// BuildOrderItemRemarkInfo 构建订单商品的备注信息
+func (model *SaleOrderProduct) BuildOrderItemRemarkInfo(orderItemRemarkList []*SaleOrderProductReason, remark string) resp.RemarkInfo {
+	orderItemRemarkUuids := make([]uint64, 0)
+	remarkLocale := dto.LocaleResponse{}
+	// 构建备注多语言响应，参考整单备注逻辑
+	for _, item := range orderItemRemarkList {
+		orderItemRemarkUuids = append(orderItemRemarkUuids, item.OrderItemRemarkUuid)
+		localeName := item.GetLocaleName()
+		if !localeName.IsNull() {
+			remarkLocale.EN += localeName.EN + ";"
+			remarkLocale.TH += localeName.TH + ";"
+			remarkLocale.ZH += localeName.ZH + ";"
+			remarkLocale.ZHTW += localeName.ZHTW + ";"
+			remarkLocale.JA += localeName.JA + ";"
+			remarkLocale.KO += localeName.KO + ";"
+			remarkLocale.MY += localeName.MY + ";"
+			remarkLocale.TR += localeName.TR + ";"
+			remarkLocale.SV += localeName.SV + ";"
+		}
+	}
+	// 添加自定义备注
+	if remark != "" {
+		remarkLocale.EN += remark
+		remarkLocale.TH += remark
+		remarkLocale.ZH += remark
+		remarkLocale.ZHTW += remark
+		remarkLocale.JA += remark
+		remarkLocale.KO += remark
+		remarkLocale.MY += remark
+		remarkLocale.TR += remark
+		remarkLocale.SV += remark
+	}
+	// 去掉最后一个分号
+	remarkLocale.EN = strings.TrimSuffix(remarkLocale.EN, ";")
+	remarkLocale.TH = strings.TrimSuffix(remarkLocale.TH, ";")
+	remarkLocale.ZH = strings.TrimSuffix(remarkLocale.ZH, ";")
+	remarkLocale.ZHTW = strings.TrimSuffix(remarkLocale.ZHTW, ";")
+	remarkLocale.JA = strings.TrimSuffix(remarkLocale.JA, ";")
+	remarkLocale.KO = strings.TrimSuffix(remarkLocale.KO, ";")
+	remarkLocale.MY = strings.TrimSuffix(remarkLocale.MY, ";")
+	remarkLocale.TR = strings.TrimSuffix(remarkLocale.TR, ";")
+	remarkLocale.SV = strings.TrimSuffix(remarkLocale.SV, ";")
+	remarkInfo := resp.RemarkInfo{
+		Uuids:        orderItemRemarkUuids,
+		Remark:       remarkLocale,
+		CustomRemark: remark,
+	}
+
+	return remarkInfo
+}
+
 // 设置销售订单商品的数量
 func (model *SaleOrderProduct) SetNum(num float64) {
 	defer model.SetUpdate() // 标记该model需要更新

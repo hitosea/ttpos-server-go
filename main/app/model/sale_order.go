@@ -800,11 +800,9 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			}
 		}
 
+		// 单品备注
 		orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
-		orderItemRemarkUuids := make([]uint64, 0)
-		for _, item := range orderItemRemarkList {
-			orderItemRemarkUuids = append(orderItemRemarkUuids, item.OrderItemRemarkUuid)
-		}
+		remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
 
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
@@ -816,7 +814,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
 			Status:              saleOrderProduct.StatusValue(),
 			Remark:              saleOrderProduct.Remark,
-			RemarkUuids:         orderItemRemarkUuids,
+			RemarkInfo:          remarkInfo,
 			IsMust:              saleOrderProduct.IsMustProduct(),
 			IsGift:              saleOrderProduct.IsGiftProduct(),
 			IsWrap:              saleOrderProduct.IsWrapProduct(),
