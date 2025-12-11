@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -132,6 +133,15 @@ func (s *callBoardService) getRedisClient() redis.UniversalClient {
 
 func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq) error {
 	repo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
+
+	if req.Name == "" {
+		return errors.New("请输入名称")
+	}
+
+	if utf8.RuneCountInString(req.Name) > 20 {
+		return errors.New("名称不能超过20个字")
+	}
+
 	device, err := repo.GetDevice(repo.WhereUuid(req.Uuid))
 	if err != nil {
 		return err
@@ -139,10 +149,21 @@ func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint6
 	if device.Uuid == 0 {
 		return errors.New("设备不存在")
 	}
-	err = s.getRedisClient().HMSet(ctx, cachekey.GetBindedDeviceKey(device.DeviceId), "lang1", req.Lang1, "lang2", req.Lang2).Err()
+
+	// 更新设备绑定信息
+	err = s.getRedisClient().HMSet(ctx, cachekey.GetBindedDeviceKey(device.DeviceId),
+		"lang1", req.Lang1,
+		"lang2", req.Lang2,
+		"name", req.Name,
+		"background_image_url", req.BackgroundImageUrl,
+		"timeout_limit", req.TimeoutLimit,
+		"voice_call_enabled", req.VoiceCallEnabled,
+		"call_count", req.CallCount,
+	).Err()
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -285,14 +306,38 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 	list := make([]resp.DeviceItem, 0, len(devices))
 	for _, device := range devices {
 		bindInfo, _ := s.mustGetCompanyDeviceBindInfo(companyUuid, device.DeviceId)
+		logger.Logger.Info("bindInfo", zap.Any("bindInfo", bindInfo))
+		// 如果设备名称为空，返回默认值 "WALLACE"
+		name := bindInfo.Name
+		if name == "" {
+			name = "WALLACE"
+		}
+		callCount := bindInfo.CallCount
+		if callCount == 0 {
+			callCount = 1
+		}
+		timeoutLimit := bindInfo.TimeoutLimit
+		if timeoutLimit == nil {
+			timeoutLimit = &[]int{0}[0]
+		}
+		voiceCallEnabled := bindInfo.VoiceCallEnabled
+		if voiceCallEnabled == nil {
+			voiceCallEnabled = &[]bool{false}[0]
+		}
 		list = append(list, resp.DeviceItem{
-			Uuid:     device.Uuid,
-			DeviceId: device.DeviceId,
-			BindTime: device.CreateTime,
-			Lang1:    bindInfo.Lang1,
-			Lang2:    bindInfo.Lang2,
+			Uuid:               device.Uuid,
+			DeviceId:           device.DeviceId,
+			BindTime:           device.CreateTime,
+			Lang1:              bindInfo.Lang1,
+			Lang2:              bindInfo.Lang2,
+			Name:               name,
+			BackgroundImageUrl: bindInfo.BackgroundImageUrl,
+			TimeoutLimit:       timeoutLimit,
+			VoiceCallEnabled:   voiceCallEnabled,
+			CallCount:          callCount,
 		})
 	}
+
 	return &resp.DeviceListResp{
 		List: list,
 	}, nil
@@ -375,11 +420,16 @@ func (s *callBoardService) setBindCodeByLua(ctx context.Context, deviceId string
 }
 
 type DeviceBindInfo struct {
-	CreateTime   int64  `redis:"create_time"`
-	CompanyUuid  uint64 `redis:"company_uuid"`
-	DeviceSecret string `redis:"device_secret"`
-	Lang1        string `redis:"lang1"`
-	Lang2        string `redis:"lang2"`
+	CreateTime         int64  `redis:"create_time"`
+	CompanyUuid        uint64 `redis:"company_uuid"`
+	DeviceSecret       string `redis:"device_secret"`
+	Lang1              string `redis:"lang1"`
+	Lang2              string `redis:"lang2"`
+	Name               string `redis:"name"`                 // 设备名称
+	BackgroundImageUrl string `redis:"background_image_url"` // 背景图片 URL
+	TimeoutLimit       *int   `redis:"timeout_limit"`        // 超时限制（分钟）
+	VoiceCallEnabled   *bool  `redis:"voice_call_enabled"`   // 语音叫号开关
+	CallCount          int    `redis:"call_count"`           // 叫号次数
 }
 
 func (s *callBoardService) clearPendingDevice(ctx context.Context, deviceId string) error {

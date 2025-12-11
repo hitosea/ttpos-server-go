@@ -29,11 +29,16 @@ type DeviceListResp struct {
 
 // DeviceItem 设备项
 type DeviceItem struct {
-	Uuid     uint64 `json:"uuid"`
-	Lang1    string `json:"lang1"`
-	Lang2    string `json:"lang2"`
-	DeviceId string `json:"device_id"`
-	BindTime int64  `json:"bind_time"`
+	Uuid               uint64 `json:"uuid"`
+	Lang1              string `json:"lang1"`
+	Lang2              string `json:"lang2"`
+	DeviceId           string `json:"device_id"`
+	BindTime           int64  `json:"bind_time"`
+	Name               string `json:"name"`                 // 叫号系统名称（如果为空，返回 "WALLACE"）
+	BackgroundImageUrl string `json:"background_image_url"` // 背景图片 URL
+	TimeoutLimit       *int   `json:"timeout_limit"`        // 超时限制（分钟）
+	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`   // 语音叫号开关
+	CallCount          int    `json:"call_count"`           // 叫号次数
 }
 
 type UpdateBindInfoResp struct {

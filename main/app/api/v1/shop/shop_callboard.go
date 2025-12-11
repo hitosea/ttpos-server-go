@@ -1,6 +1,8 @@
 package shop
 
 import (
+	"errors"
+
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -15,7 +17,8 @@ import (
 )
 
 type CallBoardHandler struct {
-	service callboard.ICallBoardService
+	service       callboard.ICallBoardService
+	uploadFileSrv service.IUploadFileSrv // 文件上传服务
 }
 
 // BindDevice 绑定设备
@@ -133,6 +136,46 @@ func (h *CallBoardHandler) UnbindDevice(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// UploadBackgroundImage 上传叫号系统背景图片
+// @Summary 上传叫号系统背景图片
+// @Description 上传叫号系统背景图片，支持 JPEG、PNG、WEBP 格式，大小限制 20MB
+// @Tags 商家端.叫号展示
+// @Accept multipart/form-data
+// @Produce json
+// @Security Bearer
+// @Param file formData file true "背景图片文件"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
+// @Router /shop/callboard/upload_background_image [post]
+func (h *CallBoardHandler) UploadBackgroundImage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 检查文件大小（20MB = 20 * 1024 * 1024 bytes）
+	maxSizeBytes := int64(20 * 1024 * 1024)
+	if file.Size > maxSizeBytes {
+		helper.ErrorWithMessage(c, constant.CodeFail, errors.New("文件大小不能超过20MB"))
+		return
+	}
+
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	uploadFileResp, err := h.uploadFileSrv.UploadImage(ctx, fileReader, file.Filename, file.Size, 0, "callboardBackground")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
 // RegisterCallBoardHandlers 注册叫号展示相关路由
 func RegisterCallBoardHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -144,9 +187,10 @@ func RegisterCallBoardHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
-	service := callboard.NewCallBoardService(dbm, cache)
+	callBoardSrv := callboard.NewCallBoardService(dbm, cache)
 	handler := &CallBoardHandler{
-		service: service,
+		service:       callBoardSrv,
+		uploadFileSrv: service.NewUploadFileSrv(dbm),
 	}
 	privateApi := router.Group("/callboard", middleware.Auth(authSrv, dbm))
 	{
@@ -154,5 +198,6 @@ func RegisterCallBoardHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.POST("/device/update", handler.UpdateBindInfo)
 		privateApi.GET("/device/list", handler.GetDeviceList)
 		privateApi.DELETE("/device", handler.UnbindDevice)
+		privateApi.POST("/upload_background_image", handler.UploadBackgroundImage)
 	}
 }
