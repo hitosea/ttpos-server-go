@@ -53095,6 +53095,10 @@ const docTemplate = `{
         "resp.PaymentMethodListItemResp": {
             "type": "object",
             "properties": {
+                "logo_file": {
+                    "description": "Logo文件URL",
+                    "type": "string"
+                },
                 "name": {
                     "description": "支付方式名称",
                     "type": "string"
