@@ -21,11 +21,12 @@ type PaymentMethodList struct {
 
 // PaymentMethodListItemResp 支付方式列表项响应（列表用）
 type PaymentMethodListItemResp struct {
-	Uuid   uint64 `json:"uuid"`   // 支付方式UUID
-	Name   string `json:"name"`   // 支付方式名称
-	Source int    `json:"source"` // 来源 0-系统 1-手动 2-LianLianPay
-	Status int    `json:"status"` // 状态 0-禁用 1-启用 2-草稿
-	Sort   int    `json:"sort"`   // 排序
+	Uuid     uint64 `json:"uuid"`      // 支付方式UUID
+	Name     string `json:"name"`      // 支付方式名称
+	Source   int    `json:"source"`    // 来源 0-系统 1-手动 2-LianLianPay
+	Status   int    `json:"status"`    // 状态 0-禁用 1-启用 2-草稿
+	Sort     int    `json:"sort"`      // 排序
+	LogoFile string `json:"logo_file"` // Logo文件URL
 }
 
 // PaymentMethodDetailResp 支付方式详情响应（详情用）
