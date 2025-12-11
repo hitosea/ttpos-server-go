@@ -32,11 +32,10 @@ func (s *nonBomCardProductInventoryStrategy) CalculateInventory(
 	}
 
 	// 2. 判断是否设置可售量
-	if bom.SellableQuantity > 0 {
-		return bom.SellableQuantity, nil
+	if bom.IsOpenStockBool() {
+		return bom.StockNum, nil
 	}
 
 	// 3. 返回无限库存
 	return constant.ProductBomInfiniteStock, nil
 }
-

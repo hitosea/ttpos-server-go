@@ -171,7 +171,6 @@ func TestProductInventoryIntegration_EndToEnd(t *testing.T) {
 		ProductBomCardUuid: bomCard.Uuid,
 		UseBomCardStock:    constant.Yes,
 		IsSoldOut:          0,
-		SellableQuantity:   0,
 		ProductBomCard:     bomCard,
 	}
 	productBomWithCard.ProductBomCard.RelatedMaterials = []*model.RelatedMaterial{relatedMaterial}
@@ -187,7 +186,6 @@ func TestProductInventoryIntegration_EndToEnd(t *testing.T) {
 		ProductBomCardUuid: 0,
 		UseBomCardStock:    constant.No,
 		IsSoldOut:          0,
-		SellableQuantity:   50.0,
 	}
 	db.Create(productBomWithoutCard)
 
@@ -227,7 +225,6 @@ func TestProductInventoryIntegration_WithCache(t *testing.T) {
 		},
 		ProductBomCardUuid: 0,
 		IsSoldOut:          0,
-		SellableQuantity:   100.0,
 	}
 	db.Create(productBom)
 

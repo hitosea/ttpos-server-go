@@ -1529,7 +1529,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `product_bom_card_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡ID',
     `stock_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
-    `sellable_quantity` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '可售数量',
     `use_bom_card_stock` INT(10) NOT NULL DEFAULT 0 COMMENT '是否使用成本卡库存，0-否 1-是',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     `internal_code` VARCHAR(255) DEFAULT '' COMMENT '内部编码',
