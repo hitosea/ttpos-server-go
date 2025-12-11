@@ -50,6 +50,10 @@ func NewProductInventoryDomainService(
 		productBomRepo,
 		productPackageRepo,
 		NewBomCardProductInventoryStrategy(),
+		NewFlavorMaterialsProductInventoryStrategy(),
+		NewSauceBomCardProductInventoryStrategy(),
+		NewSauceMaterialsProductInventoryStrategy(),
+		NewSauceNonBomCardProductInventoryStrategy(),
 		NewNonBomCardProductInventoryStrategy(),
 		NewMaxProductPackageInventoryStrategy(), // 默认使用最大值策略
 	)
@@ -60,11 +64,19 @@ func NewProductInventoryDomainServiceWithStrategies(
 	productBomRepo repository.IProductBomRepository,
 	productPackageRepo repository.IProductPackageRepository,
 	bomCardStrategy IInventoryStrategy,
+	flavorMaterialsStrategy IInventoryStrategy,
+	sauceBomCardStrategy IInventoryStrategy,
+	sauceMaterialsStrategy IInventoryStrategy,
+	sauceNonBomCardStrategy IInventoryStrategy,
 	nonBomCardStrategy IInventoryStrategy,
 	packageInventoryStrategy IProductPackageInventoryStrategy,
 ) IProductInventoryDomainService {
 	strategies := make(map[string]IInventoryStrategy)
 	strategies["bom_card"] = bomCardStrategy
+	strategies["flavor_materials"] = flavorMaterialsStrategy
+	strategies["sauce_bom_card"] = sauceBomCardStrategy
+	strategies["sauce_materials"] = sauceMaterialsStrategy
+	strategies["sauce_non_bom_card"] = sauceNonBomCardStrategy
 	strategies["non_bom_card"] = nonBomCardStrategy
 
 	return &productInventoryDomainService{
@@ -99,6 +111,18 @@ func (s *productInventoryDomainService) GetProductInventory(
 	var strategy IInventoryStrategy
 	if productBom.HasProductBomCard() {
 		strategy = s.strategies["bom_card"]
+	} else if len(productBom.FlavorMaterials) > 0 {
+		strategy = s.strategies["flavor_materials"]
+	} else if productBom.IsSauce() {
+		// 小料：优先判断是否有成本卡，其次判断是否有关联材料，都没有则使用专门的小料策略
+		if productBom.ProductSauce.HasProductBomCard() {
+			strategy = s.strategies["sauce_bom_card"]
+		} else if len(productBom.ProductSauce.SauceMaterials) > 0 {
+			strategy = s.strategies["sauce_materials"]
+		} else {
+			// 小料既没有成本卡也没有关联材料，使用专门的小料策略（检查 ProductSauce.SauceMaterials）
+			strategy = s.strategies["sauce_non_bom_card"]
+		}
 	} else {
 		strategy = s.strategies["non_bom_card"]
 	}

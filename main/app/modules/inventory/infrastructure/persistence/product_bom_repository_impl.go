@@ -45,6 +45,21 @@ func (r *ProductBomRepositoryImpl) FindByUuid(
 		return nil, errors.WithMessage(err, "查询商品BOM失败")
 	}
 
+	// 如果是小料，需要额外预加载 ProductSauce 的相关数据（成本卡和关联材料）
+	if productBom != nil && productBom.IsSauce() {
+		db := r.getDB(ctx)
+		err = db.Model(productBom).
+			Preload("ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems").
+			Preload("ProductSauce.SauceMaterials", func(db *gorm.DB) *gorm.DB {
+				return db.Where("delete_time = ?", 0)
+			}).
+			Preload("ProductSauce.SauceMaterials.Material.WarehouseItems").
+			First(productBom, productBom.Uuid).Error
+		if err != nil && err != gorm.ErrRecordNotFound {
+			return nil, errors.WithMessage(err, "预加载小料数据失败")
+		}
+	}
+
 	return productBom, nil
 }
 
@@ -73,6 +88,27 @@ func (r *ProductBomRepositoryImpl) FindByProductPackageUuid(
 		appRepo.CommonRepo.Preload(
 			appRepo.WithPreload{
 				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			appRepo.WithPreload{
+				Query: "FlavorMaterials",
+				Args: []interface{}{
+					appRepo.CommonRepo.DBOption(appRepo.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			appRepo.WithPreload{
+				Query: "FlavorMaterials.Material.WarehouseItems",
+			},
+			appRepo.WithPreload{
+				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			appRepo.WithPreload{
+				Query: "ProductSauce.SauceMaterials",
+				Args: []interface{}{
+					appRepo.CommonRepo.DBOption(appRepo.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			appRepo.WithPreload{
+				Query: "ProductSauce.SauceMaterials.Material.WarehouseItems",
 			},
 		),
 	)
