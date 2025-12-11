@@ -106,6 +106,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
               title: $t('操作日志'),
             },
           },
+          {
+            path: 'staff',
+            component: () => import('@/pages/user/staff.vue'),
+            meta: {
+              title: $t('人员管理'),
+            },
+          },
         ],
       },
       {

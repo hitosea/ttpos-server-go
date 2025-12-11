@@ -68,6 +68,7 @@ type IOrderQueryRepo interface {
 	GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrderRank, error)                                                                   // 获取订单的月排名信息（基于全表数据）
 	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
+	GetSaleOrderUuids(opts ...DBOption) []uint64                                                                                               // 获取销售订单UUID列表
 }
 
 // orderRepo 订单仓库
@@ -2392,4 +2393,15 @@ func (r *orderRepo) GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, er
 		return "", fmt.Errorf("GetSaleBillBatchCookingMode: %v", err)
 	}
 	return result.BatchCookingMode, nil
+}
+
+// GetSaleOrderUuids 获取销售订单UUID列表
+func (r *orderRepo) GetSaleOrderUuids(opts ...DBOption) []uint64 {
+	var saleOrderUuids []uint64
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Model(&model.SaleOrder{}).Select("uuid").Pluck("uuid", &saleOrderUuids)
+	return saleOrderUuids
 }

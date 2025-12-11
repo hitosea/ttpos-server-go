@@ -7,9 +7,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/logger"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -165,9 +163,12 @@ type ICommonRepo interface {
 	WhereByMaterialUuid(materialUuid uint64) DBOption                                         // 根据原料UUID查询
 	WhereInMaterialUuids(materialUuids []uint64) DBOption                                     // 根据原料UUID列表查询
 	WhereByUuidNotIn(uuids []uint64) DBOption                                                 // 根据UUID列表查询
-	WhereInDataManageSubQuery(field string, opts ...DBOption) DBOption                        // 根据DataManage子查询
-	WhereNotInDataManageSubQuery(field string, opts ...DBOption) DBOption                     // 根据DataManage子查询不包含
+	WhereInDataManageSubQuery(db *gorm.DB, field string, opts ...DBOption) DBOption           // 根据DataManage子查询
+	WhereNotInDataManageSubQuery(db *gorm.DB, field string, opts ...DBOption) DBOption        // 根据DataManage子查询不包含
 	WhereByType(typ int) DBOption                                                             // 根据数据类型查询
+	WhereInSaleBillUuids(saleBillUuids []uint64) DBOption                                     // 根据销售单UUID列表查询
+	WhereByRelatedOrderType(relatedOrderType uint) DBOption                                   // 根据关联订单类型查询
+	WhereNotInRelatedOrderUuids(relatedOrderUuids []uint64) DBOption                          // 根据关联订单UUID列表查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
@@ -731,9 +732,9 @@ func (r *commonRepo) WhereByUuidNotIn(uuids []uint64) DBOption {
 }
 
 // WhereInDataManageSubQuery 根据DataManage子查询
-func (r *commonRepo) WhereInDataManageSubQuery(field string, opts ...DBOption) DBOption {
+func (r *commonRepo) WhereInDataManageSubQuery(db2 *gorm.DB, field string, opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		subQuery := db.Model(&model.DataManage{}).Select("data_uuid")
+		subQuery := db2.Model(&model.DataManage{}).Select("data_uuid")
 		for _, opt := range opts {
 			subQuery = opt(subQuery)
 		}
@@ -742,13 +743,12 @@ func (r *commonRepo) WhereInDataManageSubQuery(field string, opts ...DBOption) D
 }
 
 // WhereNotInDataManageSubQuery 根据DataManage子查询不包含
-func (r *commonRepo) WhereNotInDataManageSubQuery(field string, opts ...DBOption) DBOption {
+func (r *commonRepo) WhereNotInDataManageSubQuery(db2 *gorm.DB, field string, opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		subQuery := db.Model(&model.DataManage{}).Select("data_uuid")
+		subQuery := db2.Model(&model.DataManage{}).Select("data_uuid")
 		for _, opt := range opts {
 			subQuery = opt(subQuery)
 		}
-		logger.Logger.Info("subQuery", zap.Any("subQuery", subQuery))
 		return db.Where(field+" NOT IN (?)", subQuery)
 	}
 }
@@ -984,5 +984,26 @@ func (r *commonRepo) WhereByMaterialSupplierErpCode(supplierErpCode string) DBOp
 func (r *commonRepo) WhereByType(typ int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("type = ?", typ)
+	}
+}
+
+// WhereInSaleBillUuids 根据销售单UUID列表查询
+func (r *commonRepo) WhereInSaleBillUuids(saleBillUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("sale_bill_uuid IN (?)", saleBillUuids)
+	}
+}
+
+// WhereByRelatedOrderType 根据关联订单类型查询
+func (r *commonRepo) WhereByRelatedOrderType(relatedOrderType uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("related_order_type = ?", relatedOrderType)
+	}
+}
+
+// WhereNotInRelatedOrderUuids 根据关联订单UUID列表查询
+func (r *commonRepo) WhereNotInRelatedOrderUuids(relatedOrderUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("related_order_uuid NOT IN (?)", relatedOrderUuids)
 	}
 }
