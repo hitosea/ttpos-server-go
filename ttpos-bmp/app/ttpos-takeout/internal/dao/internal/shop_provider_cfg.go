@@ -11,7 +11,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// ShopProviderCfgDao is the data access object for the table shop_provider_cfg.
+// ShopProviderCfgDao is the data access object for the table takeout_shop_provider_cfg.
 type ShopProviderCfgDao struct {
 	table    string                 // table is the underlying table name of the DAO.
 	group    string                 // group is the database configuration group name of the current DAO.
@@ -19,7 +19,7 @@ type ShopProviderCfgDao struct {
 	handlers []gdb.ModelHandler     // handlers for customized model modification.
 }
 
-// ShopProviderCfgColumns defines and stores column names for the table shop_provider_cfg.
+// ShopProviderCfgColumns defines and stores column names for the table takeout_shop_provider_cfg.
 type ShopProviderCfgColumns struct {
 	Id                 string // 主键ID
 	Uuid               string // 唯一标识
@@ -32,7 +32,7 @@ type ShopProviderCfgColumns struct {
 	DeletedAt          string // 删除时间
 }
 
-// shopProviderCfgColumns holds the columns for the table shop_provider_cfg.
+// shopProviderCfgColumns holds the columns for the table takeout_shop_provider_cfg.
 var shopProviderCfgColumns = ShopProviderCfgColumns{
 	Id:                 "id",
 	Uuid:               "uuid",
@@ -49,7 +49,7 @@ var shopProviderCfgColumns = ShopProviderCfgColumns{
 func NewShopProviderCfgDao(handlers ...gdb.ModelHandler) *ShopProviderCfgDao {
 	return &ShopProviderCfgDao{
 		group:    "default",
-		table:    "shop_provider_cfg",
+		table:    "takeout_shop_provider_cfg",
 		columns:  shopProviderCfgColumns,
 		handlers: handlers,
 	}

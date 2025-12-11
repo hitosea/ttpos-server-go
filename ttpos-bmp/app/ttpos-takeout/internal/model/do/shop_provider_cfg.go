@@ -8,9 +8,9 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// ShopProviderCfg is the golang structure of table shop_provider_cfg for DAO operations like Where/Data.
+// ShopProviderCfg is the golang structure of table takeout_shop_provider_cfg for DAO operations like Where/Data.
 type ShopProviderCfg struct {
-	g.Meta             `orm:"table:shop_provider_cfg, do:true"`
+	g.Meta             `orm:"table:takeout_shop_provider_cfg, do:true"`
 	Id                 any // 主键ID
 	Uuid               any // 唯一标识
 	ShopUuid           any // 门店UUID
