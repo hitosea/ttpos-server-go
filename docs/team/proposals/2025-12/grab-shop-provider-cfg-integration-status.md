@@ -13,7 +13,7 @@
 | **目标版本** | vNext |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | -      |
+| **关联 Spec** | [story-takeout-grab-shop-provider-cfg](../../shared/specs/active/story-takeout-grab-shop-provider-cfg/requirements.md)      |
 
 ---
 

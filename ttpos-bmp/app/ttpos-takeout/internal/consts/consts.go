@@ -8,5 +8,32 @@ const (
 	ProviderGrab    ProviderName = "grab"
 )
 
+// ProviderShopStatus 第三方门店集成状态
+type ProviderShopStatus string
+
+const (
+	ProviderShopStatusInactive ProviderShopStatus = "INACTIVE"
+	ProviderShopStatusActive   ProviderShopStatus = "ACTIVE"
+	ProviderShopStatusSyncing  ProviderShopStatus = "SYNCING"
+	ProviderShopStatusFailed   ProviderShopStatus = "FAILED"
+)
+
 // TTPOS_HEADER_CALLBACK_AUTH TTPOS回调Auth
 const TTPOS_HEADER_CALLBACK_AUTH = "X-TTPOS-Callback-Auth"
+
+// MapGrabIntegrationStatus 映射 Grab integrationStatus 到内部状态
+func MapGrabIntegrationStatus(grabStatus string) ProviderShopStatus {
+	switch grabStatus {
+	case "ACTIVE":
+		return ProviderShopStatusActive
+	case "INACTIVE":
+		return ProviderShopStatusInactive
+	case "SYNCING":
+		return ProviderShopStatusSyncing
+	case "FAILED":
+		return ProviderShopStatusFailed
+	default:
+		// 未知状态默认为 INACTIVE
+		return ProviderShopStatusInactive
+	}
+}

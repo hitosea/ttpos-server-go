@@ -36,7 +36,7 @@ var (
 				)
 			})
 
-			// 注册 Grab 路由（统一绑定，JWT 中间件内部跳过 OAuth 路径）
+			// 注册 Grab 路由（OAuth 无需认证，Webhook 使用签名验证）
 			s.Group("/api/v1/grab", func(group *ghttp.RouterGroup) {
 				group.Middleware(middleware.MiddlewareDirectResponse, middleware.MiddlewareGrabJWTAuth)
 				group.Bind(

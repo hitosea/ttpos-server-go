@@ -24,17 +24,21 @@ type (
 		// body: 请求体原始字节
 		VerifyWebhookSignature(ctx context.Context, signature string, timestamp string, body []byte) error
 		// HandleSubmitOrder 处理 Grab 提交订单 Webhook
-		HandleSubmitOrder(ctx context.Context, signature string, timestamp string, body []byte) error
+		// 签名验证已由中间件完成
+		HandleSubmitOrder(ctx context.Context, body []byte) error
 		// HandlePushOrderState 处理订单状态变更 Webhook
-		HandlePushOrderState(ctx context.Context, signature string, timestamp string, body []byte) error
+		// 签名验证已由中间件完成
+		HandlePushOrderState(ctx context.Context, body []byte) error
 		// HandleGetMenu 处理 Grab 获取菜单请求
-		HandleGetMenu(ctx context.Context, signature string, timestamp string, merchantID string) (*grabfood.GetMenuNewResponse, error)
+		// 签名验证已由中间件完成
+		HandleGetMenu(ctx context.Context, merchantID string) (*grabfood.GetMenuNewResponse, error)
 		// HandleMenuSyncState 处理菜单同步状态回调
-		HandleMenuSyncState(ctx context.Context, signature string, timestamp string, body []byte) error
+		HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error
 		// SyncMenu 主动同步菜单到 Grab
 		SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse) error
 		// HandleIntegrationStatus 处理门店集成状态回调
-		HandleIntegrationStatus(ctx context.Context, signature string, timestamp string, body []byte) error
+		// 签名验证已由中间件完成
+		HandleIntegrationStatus(ctx context.Context, body []byte) error
 		// PauseStore 暂停门店
 		PauseStore(ctx context.Context, merchantID string, duration int) error
 		// ResumeStore 恢复门店营业
@@ -55,9 +59,8 @@ type (
 		ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error)
 		// HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
 		HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error
-		// CreateSelfServeJourney 创建自助激活链接
-		// 根据 shop_uuid 获取 Grab 配置，调用 SDK 生成激活链接
-		CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelfServeJourneyReq) (*grab.CreateSelfServeJourneyResp, error)
+		// GetShopProviderCfg 查询门店第三方配置
+		GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error)
 	}
 )
 

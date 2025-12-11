@@ -1,4 +1,5 @@
-package grab
+// Package grab_token 提供 Grab Partner Token 生成与验证服务
+package grab_token
 
 import (
 	"context"
@@ -11,8 +12,6 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 )
-
-const defaultGrabScope = "food.partner_api"
 
 // PartnerConfigLoader 负责加载并缓存 grab.partner.* 配置
 type PartnerConfigLoader struct {

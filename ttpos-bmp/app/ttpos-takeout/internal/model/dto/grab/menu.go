@@ -1,6 +1,8 @@
 package grab
 
 import (
+	"context"
+
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
 
@@ -69,4 +71,14 @@ type ProviderMenuUpdateEvent struct {
 	ShopUuid          string `json:"shop_uuid"`           // TTPOS 门店 UUID
 	Uuid              uint64 `json:"uuid"`                // 唯一ID
 	ReceivedAt        int64  `json:"received_at"`         // 接收时间戳
+}
+
+// ============================================================================
+// Menu Notifier Interface
+// ============================================================================
+
+// MenuNotifier 菜单通知接口 (用于 SyncMenu)
+type MenuNotifier interface {
+	// NotifyMenuUpdate 通知 Grab 菜单已更新
+	NotifyMenuUpdate(ctx context.Context, merchantID string) (requestID string, err error)
 }
