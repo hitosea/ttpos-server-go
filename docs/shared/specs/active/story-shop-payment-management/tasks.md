@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 24  
-**已完成**: 16  
+**总任务数**: 25  
+**已完成**: 17  
 **进行中**: -  
-**完成率**: 66.7%
+**完成率**: 68.0%
 
 ---
 
@@ -169,7 +169,15 @@
   - Leverage: 现有路由: `main/router/router.go`
   - Success: 路由注册成功，URL 符合规范
 
-- [ ] 4.3 编写 API 集成测试
+- [x] 4.3 添加上传图片 API
+
+  - File: `main/app/api/v1/shop/shop_payment_method.go`
+  - Purpose: 实现支付方式图片上传接口（Logo和二维码）
+  - Requirements: 上传图片功能
+  - Leverage: 现有上传API: `main/app/api/v1/shop/shop_product.go` 的 UploadProductImage
+  - Prompt: Role: Go Developer with Gin framework expertise | Task: 添加上传支付方式图片API，支持上传Logo和二维码，通过source参数区分（paymentLogo/paymentRqcode） | Context: 使用 UploadFileSrv.UploadImage，source参数：paymentLogo-支付方式Logo，paymentRqcode-支付方式二维码，参考商品图片上传实现 | Restrictions: 遵循 .cursor/rules/api.mdc | Success: 上传API创建成功，支持Logo和二维码上传
+
+- [ ] 4.4 编写 API 集成测试
 
   - File: `main/app/api/v1/shop/shop_payment_method_test.go`
   - Purpose: 测试 API 接口

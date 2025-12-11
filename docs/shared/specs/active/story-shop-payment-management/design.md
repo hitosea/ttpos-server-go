@@ -550,7 +550,42 @@ type LianlianPayConfigResp struct {
 }
 ```
 
-#### API 7: 查询 LianlianPay 配置
+#### API 7: 上传支付方式图片（Logo或二维码）
+
+**请求**:
+
+- **URL**: `/api/v1/shop/payment_method/upload_image`
+- **Method**: `POST`
+- **Content-Type**: `multipart/form-data`
+- **Form Data**:
+  ```
+  file: [图片文件]
+  source: paymentLogo 或 paymentRqcode
+  ```
+  - `file`: 图片文件（支持 JPG、JPEG、PNG、WEBP）
+  - `source`: 图片类型
+    - `paymentLogo`: 支付方式Logo
+    - `paymentRqcode`: 支付方式二维码
+
+**响应**:
+
+```json
+{
+  "code": 1,
+  "message": "success",
+  "data": {
+    "uuid": 123456,
+    "url": "https://example.com/uploads/payment_logo_xxx.jpg",
+    "thumb_url": "https://example.com/uploads/payment_logo_xxx_thumb.jpg"
+  }
+}
+```
+
+**说明**:
+- Logo 和二维码使用同一个 API，通过 `source` 参数区分
+- 上传成功后返回文件 UUID 和 URL，可用于创建/更新支付方式时的 `logo_file_uuid` 或 `qrcode_file_uuid` 字段
+
+#### API 8: 查询 LianlianPay 配置
 
 **请求**:
 
@@ -574,7 +609,7 @@ type LianlianPayConfigResp struct {
 }
 ```
 
-#### API 8: 更新 LianlianPay 配置
+#### API 9: 更新 LianlianPay 配置
 
 **请求**:
 
@@ -908,6 +943,7 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 
 - [ ] 创建 API Handler
 - [ ] 实现所有 API 接口
+- [ ] 添加上传图片 API（Logo和二维码）
 - [ ] 注册路由
 
 ### Phase 4: 测试和优化

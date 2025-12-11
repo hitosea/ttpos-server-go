@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	appErrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -16,12 +17,14 @@ import (
 // PaymentMethodHandler 支付方式管理控制器
 type PaymentMethodHandler struct {
 	paymentMethodSrv service.IPaymentMethodSrv
+	uploadFileSrv    service.IUploadFileSrv
 }
 
 // NewPaymentMethodHandler 创建支付方式管理控制器
-func NewPaymentMethodHandler(paymentMethodSrv service.IPaymentMethodSrv) *PaymentMethodHandler {
+func NewPaymentMethodHandler(paymentMethodSrv service.IPaymentMethodSrv, uploadFileSrv service.IUploadFileSrv) *PaymentMethodHandler {
 	return &PaymentMethodHandler{
 		paymentMethodSrv: paymentMethodSrv,
+		uploadFileSrv:    uploadFileSrv,
 	}
 }
 
@@ -231,11 +234,56 @@ func (h *PaymentMethodHandler) UpdateLianlianPayConfig(c *gin.Context) {
 	helper.Success(c, "更新配置成功")
 }
 
+// UploadImage 上传支付方式图片（Logo或二维码）
+// @Summary 上传支付方式图片
+// @Description 上传支付方式图片，支持上传Logo或二维码，通过source参数区分
+// @Tags 商家端.支付管理
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param file formData file true "图片文件"
+// @Param source formData string true "图片类型：paymentLogo-支付方式Logo，paymentRqcode-支付方式二维码"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
+// @Router /shop/payment_method/upload_image [post]
+func (h *PaymentMethodHandler) UploadImage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 获取source参数
+	source := c.PostForm("source")
+	if source != "paymentLogo" && source != "paymentRqcode" {
+		helper.ErrorWithDetail(c, constant.CodeFail, appErrors.New("source参数错误，必须为paymentLogo或paymentRqcode"))
+		return
+	}
+
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	defer fileReader.Close()
+
+	uploadFileResp, err := h.uploadFileSrv.UploadImage(ctx, fileReader, file.Filename, file.Size, 0, source)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
 // RegisterPaymentMethodHandlers 注册支付方式管理路由
 func RegisterPaymentMethodHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	settingSrvInstance := settingSrv.NewSrv(dbm, cache)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrvInstance)
-	handler := NewPaymentMethodHandler(paymentMethodSrv)
+	uploadFileSrv := service.NewUploadFileSrv(dbm)
+	handler := NewPaymentMethodHandler(paymentMethodSrv, uploadFileSrv)
 
 	// 初始化认证服务（复用 RegisterSettingHandlers 中的逻辑）
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -255,6 +303,7 @@ func RegisterPaymentMethodHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.PUT("/payment_method/update", handler.Update)                              // 更新支付方式
 		privateApi.DELETE("/payment_method/delete", handler.Delete)                           // 删除支付方式
 		privateApi.PUT("/payment_method/update_sort", handler.UpdateSort)                     // 批量更新排序
+		privateApi.POST("/payment_method/upload_image", handler.UploadImage)                  // 上传支付方式图片（Logo或二维码）
 		privateApi.GET("/payment_method/lianlianpay_config", handler.GetLianlianPayConfig)    // 获取 LianlianPay 配置
 		privateApi.PUT("/payment_method/lianlianpay_config", handler.UpdateLianlianPayConfig) // 更新 LianlianPay 配置
 	}

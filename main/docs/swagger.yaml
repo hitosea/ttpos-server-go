@@ -31479,6 +31479,39 @@ paths:
       summary: 批量更新支付方式排序
       tags:
       - 商家端.支付管理
+  /shop/payment_method/upload_image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传支付方式图片，支持上传Logo或二维码，通过source参数区分
+      parameters:
+      - description: 图片文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 图片类型：paymentLogo-支付方式Logo，paymentRqcode-支付方式二维码
+        in: formData
+        name: source
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UploadFileResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 上传支付方式图片
+      tags:
+      - 商家端.支付管理
   /shop/permission_group:
     get:
       consumes:
