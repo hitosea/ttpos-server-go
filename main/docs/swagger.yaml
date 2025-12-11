@@ -948,6 +948,9 @@ definitions:
     type: object
   material_resp.Material:
     properties:
+      allow_negative_stock:
+        description: 是否允许负库存：1-允许，0-不允许
+        type: integer
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -1068,6 +1071,9 @@ definitions:
     type: object
   material_resp.MaterialDetailResp:
     properties:
+      allow_negative_stock:
+        description: 是否允许负库存：1-允许，0-不允许
+        type: integer
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -3583,6 +3589,9 @@ definitions:
       duty_no:
         description: 班次编号
         type: string
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       not_query_free:
         description: 是否不查询免费使用场景
         type: boolean
@@ -4529,6 +4538,34 @@ definitions:
         description: 查询开始时间戳
         type: integer
     type: object
+  req.LianlianPayConfigUpdateReq:
+    properties:
+      ll_merchant_id:
+        description: 商户号
+        type: string
+      ll_merchant_private_key:
+        description: 商户私钥
+        type: string
+      ll_public_key:
+        description: 支付方式公钥
+        type: string
+      ll_store_id:
+        description: 站点ID
+        type: string
+      ll_token:
+        description: Token
+        type: string
+      ll_white_ip:
+        description: 白名单IP
+        type: string
+    required:
+    - ll_merchant_id
+    - ll_merchant_private_key
+    - ll_public_key
+    - ll_store_id
+    - ll_token
+    - ll_white_ip
+    type: object
   req.LoginReq:
     properties:
       brand:
@@ -4554,6 +4591,9 @@ definitions:
     type: object
   req.MaterialAddReq:
     properties:
+      allow_negative_stock:
+        description: 是否允许负库存
+        type: boolean
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -4668,6 +4708,9 @@ definitions:
     type: object
   req.MaterialEditReq:
     properties:
+      allow_negative_stock:
+        description: 是否允许负库存
+        type: boolean
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -5534,6 +5577,110 @@ definitions:
         description: 销售账单UUID, 必填
         type: integer
     type: object
+  req.PaymentMethodCreateReq:
+    properties:
+      fee_percent:
+        description: 手续费百分比，取值范围0-100
+        maximum: 100
+        minimum: 0
+        type: number
+      is_show_assistant:
+        description: 0-不显示 1-点餐助手结账显示
+        type: integer
+      is_show_cashier:
+        description: 0-不显示 1-收银机结账显示
+        type: integer
+      is_show_member_recharge:
+        description: 0-不显示 1-收银机会员充值显示
+        type: integer
+      logo_file_uuid:
+        description: Logo图片UUID
+        type: integer
+      name:
+        description: 支付方式名称
+        type: string
+      payment_name:
+        description: 支付名称
+        type: string
+      qrcode_file_uuid:
+        description: 二维码图片UUID
+        type: integer
+      status:
+        description: 状态 0-禁用 1-启用 2-草稿
+        type: integer
+    required:
+    - name
+    - payment_name
+    type: object
+  req.PaymentMethodDeleteReq:
+    properties:
+      uuid:
+        description: 支付方式UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PaymentMethodSortItem:
+    properties:
+      sort:
+        description: 排序值
+        minimum: 1
+        type: integer
+      uuid:
+        description: 支付方式UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.PaymentMethodSortUpdateReq:
+    properties:
+      items:
+        description: 排序项列表
+        items:
+          $ref: '#/definitions/req.PaymentMethodSortItem'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  req.PaymentMethodUpdateReq:
+    properties:
+      fee_percent:
+        description: 手续费百分比，取值范围0-100
+        maximum: 100
+        minimum: 0
+        type: number
+      is_show_assistant:
+        description: 0-不显示 1-点餐助手结账显示
+        type: integer
+      is_show_cashier:
+        description: 0-不显示 1-收银机结账显示
+        type: integer
+      is_show_member_recharge:
+        description: 0-不显示 1-收银机会员充值显示
+        type: integer
+      logo_file_uuid:
+        description: Logo图片UUID
+        type: integer
+      name:
+        description: 支付方式名称
+        type: string
+      payment_name:
+        description: 支付名称
+        type: string
+      qrcode_file_uuid:
+        description: 二维码图片UUID
+        type: integer
+      status:
+        description: 状态 0-禁用 1-启用 2-草稿
+        type: integer
+      uuid:
+        description: 支付方式UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.PreviewPrinterCustomizeReq:
     properties:
       data:
@@ -5742,6 +5889,9 @@ definitions:
     type: object
   req.ProductBomCardImportReq:
     properties:
+      allow_negative_stock:
+        description: 是否允许负库存
+        type: boolean
       allow_substore_visible:
         description: 允许子店可见：1-允许，0-不允许（仅总店可用）
         type: integer
@@ -7708,6 +7858,9 @@ definitions:
     type: object
   req.SoldOutItem:
     properties:
+      is_open_stock:
+        description: 是否开启可售量
+        type: boolean
       is_sold_out:
         description: 是否售罄：true-是；false-否
         type: boolean
@@ -8042,6 +8195,26 @@ definitions:
           type: integer
         type: array
     required:
+    - platform
+    type: object
+  req.TakeoutMenuImportReq:
+    properties:
+      companyUuid:
+        description: 公司 UUID（可选，默认当前公司）
+        type: integer
+      menuData:
+        description: 平台菜单 JSON 数据
+      overwriteExisting:
+        description: 是否覆盖已存在的数据
+        type: boolean
+      platform:
+        description: 平台名称
+        type: string
+      syncMode:
+        description: 同步模式：full / incremental
+        type: string
+    required:
+    - menuData
     - platform
     type: object
   req.TransferOrderApproveReq:
@@ -10508,10 +10681,32 @@ definitions:
         description: Grab 商户名称
         type: string
     type: object
+  resp.GrabMenuImportResp:
+    properties:
+      createdItems:
+        type: integer
+      failureCount:
+        type: integer
+      failures:
+        items:
+          $ref: '#/definitions/resp.GrabProductImportFailure'
+        type: array
+      successCount:
+        type: integer
+      updatedItems:
+        type: integer
+    type: object
   resp.GrabMenuResp:
     properties:
       menu:
         description: Grab 菜单数据
+    type: object
+  resp.GrabProductImportFailure:
+    properties:
+      grabProductId:
+        type: string
+      message:
+        type: string
     type: object
   resp.GranularSyncResp:
     properties:
@@ -11030,6 +11225,27 @@ definitions:
     properties:
       name:
         description: 会员等级名称
+        type: string
+    type: object
+  resp.LianlianPayConfigResp:
+    properties:
+      ll_merchant_id:
+        description: 商户号
+        type: string
+      ll_merchant_private_key:
+        description: 商户私钥（暂不支持加密存储）
+        type: string
+      ll_public_key:
+        description: 支付方式公钥
+        type: string
+      ll_store_id:
+        description: 站点ID
+        type: string
+      ll_token:
+        description: Token（暂不支持加密存储）
+        type: string
+      ll_white_ip:
+        description: 白名单IP
         type: string
     type: object
   resp.LoginResp:
@@ -12514,6 +12730,51 @@ definitions:
           $ref: '#/definitions/resp.PaymentMethodAmount'
         type: array
     type: object
+  resp.PaymentMethodDetailResp:
+    properties:
+      fee_percent:
+        description: 手续费百分比
+        type: number
+      is_show_assistant:
+        description: 0-不显示 1-点餐助手结账显示
+        type: integer
+      is_show_cashier:
+        description: 0-不显示 1-收银机结账显示
+        type: integer
+      is_show_member_recharge:
+        description: 0-不显示 1-收银机会员充值显示
+        type: integer
+      logo_file:
+        description: Logo文件URL
+        type: string
+      logo_file_uuid:
+        description: Logo图片UUID
+        type: integer
+      name:
+        description: 支付方式名称
+        type: string
+      payment_name:
+        description: 支付名称
+        type: string
+      qrcode_file:
+        description: 二维码文件URL
+        type: string
+      qrcode_file_uuid:
+        description: 二维码图片UUID
+        type: integer
+      sort:
+        description: 排序
+        type: integer
+      source:
+        description: 来源 0-系统 1-手动 2-LianLianPay
+        type: integer
+      status:
+        description: 状态 0-禁用 1-启用 2-草稿
+        type: integer
+      uuid:
+        description: 支付方式UUID
+        type: integer
+    type: object
   resp.PaymentMethodIncome:
     properties:
       amount:
@@ -12573,6 +12834,36 @@ definitions:
         items:
           $ref: '#/definitions/resp.PaymentMethodItem'
         type: array
+    type: object
+  resp.PaymentMethodListItemResp:
+    properties:
+      name:
+        description: 支付方式名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+      source:
+        description: 来源 0-系统 1-手动 2-LianLianPay
+        type: integer
+      status:
+        description: 状态 0-禁用 1-启用 2-草稿
+        type: integer
+      uuid:
+        description: 支付方式UUID
+        type: integer
+    type: object
+  resp.PaymentMethodListResp:
+    properties:
+      list:
+        description: 支付方式列表
+        items:
+          $ref: '#/definitions/resp.PaymentMethodListItemResp'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
     type: object
   resp.PaymentOrder:
     properties:
@@ -12871,6 +13162,9 @@ definitions:
       can_edit:
         description: 是否可以编辑
         type: boolean
+      category_uuid:
+        description: 分类uuid
+        type: integer
       discount_price:
         description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
         type: number
@@ -12942,6 +13236,9 @@ definitions:
       show_delay_tag:
         description: 是否显示延迟送厨标签. 表示该商品是分批送厨商品,目前处理预送厨状态
         type: boolean
+      special_category_uuid:
+        description: 特殊分类uuid
+        type: integer
       status:
         description: '0: 未送厨 1:已送厨 2:制作完成（出餐）'
         type: integer
@@ -15221,35 +15518,6 @@ definitions:
       platform:
         description: 平台名称
         type: string
-    type: object
-  resp.TakeoutMenuImportResp:
-    properties:
-      createdCategories:
-        description: 创建的分类数
-        type: integer
-      createdItems:
-        description: 创建的商品数
-        type: integer
-      errors:
-        description: 错误列表
-        items:
-          type: string
-        type: array
-      success:
-        description: 是否成功
-        type: boolean
-      totalCategories:
-        description: 总分类数
-        type: integer
-      totalItems:
-        description: 总商品数
-        type: integer
-      updatedCategories:
-        description: 更新的分类数
-        type: integer
-      updatedItems:
-        description: 更新的商品数
-        type: integer
     type: object
   resp.TransferOrderApprovalInfo:
     properties:
@@ -29678,7 +29946,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: 将外卖平台（如 Grab）的菜单数据导入到 TTPOS
+      description: 按规则导入 Grab 菜单（分类/商品/规格/属性/单位映射或创建）
+      parameters:
+      - description: Grab 菜单 JSON（grab_models.go 结构）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/req.TakeoutMenuImportReq'
       produces:
       - application/json
       responses:
@@ -29689,13 +29964,13 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.TakeoutMenuImportResp'
+                  $ref: '#/definitions/resp.GrabMenuImportResp'
               type: object
       security:
       - JwtToken: []
-      summary: 从外卖平台格式导入菜单
+      summary: 导入 Grab 菜单
       tags:
-      - 商家端.外卖菜单
+      - 商家端.Grab外卖
   /shop/login:
     post:
       consumes:
@@ -31001,6 +31276,209 @@ paths:
       summary: 更新外卖来源
       tags:
       - 商家端.外卖来源
+  /shop/payment_method/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建支付方式
+      parameters:
+      - description: 创建支付方式参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PaymentMethodCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建支付方式
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除支付方式（软删除）
+      parameters:
+      - description: 删除支付方式参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PaymentMethodDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除支付方式
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式详情
+      parameters:
+      - description: 支付方式UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PaymentMethodDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式详情
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/lianlianpay_config:
+    get:
+      consumes:
+      - application/json
+      description: 获取 LianlianPay 配置（敏感字段返回占位符）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LianlianPayConfigResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取 LianlianPay 配置
+      tags:
+      - 商家端.支付管理
+    put:
+      consumes:
+      - application/json
+      description: 更新 LianlianPay 配置（敏感字段加密存储）
+      parameters:
+      - description: LianlianPay 配置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LianlianPayConfigUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新 LianlianPay 配置
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式管理列表（分页）
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页大小
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PaymentMethodListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式管理列表
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/update:
+    put:
+      consumes:
+      - application/json
+      description: 更新支付方式（包括状态）
+      parameters:
+      - description: 更新支付方式参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PaymentMethodUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新支付方式
+      tags:
+      - 商家端.支付管理
+  /shop/payment_method/update_sort:
+    put:
+      consumes:
+      - application/json
+      description: 批量更新支付方式排序，确保排序值连续
+      parameters:
+      - description: 排序更新参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PaymentMethodSortUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 批量更新支付方式排序
+      tags:
+      - 商家端.支付管理
   /shop/permission_group:
     get:
       consumes:

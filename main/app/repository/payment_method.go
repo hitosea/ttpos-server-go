@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -22,7 +23,13 @@ type IPaymentMethodRepo interface {
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
 
-	CreatePaymentMethod(paymentMethod model.PaymentMethod) error // 创建支付方式
+	CreatePaymentMethod(paymentMethod model.PaymentMethod) error                                    // 创建支付方式
+	UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error               // 更新支付方式
+	DeletePaymentMethod(uuid uint64) error                                                          // 删除支付方式（软删除）
+	CheckHasOrders(uuid uint64) (bool, error)                                                       // 检查是否有关联订单
+	GetMaxSort() (int, error)                                                                       // 获取最大排序值
+	BatchUpdateSort(items []model.PaymentMethod) error                                              // 批量更新排序
+	GetPaymentMethodListWithPagination(pageNo, pageSize int) ([]*model.PaymentMethod, int64, error) // 分页查询支付方式列表
 }
 
 // IPaymentMethodQueryRepo 定义仓库查询接口
@@ -237,4 +244,107 @@ func (r *paymentMethodRepo) WhereExistsErpnextPayment() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erpnext_payment != ''")
 	}
+}
+
+// UpdatePaymentMethod 更新支付方式
+func (r *paymentMethodRepo) UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error {
+	paymentMethod.SetNil()
+	db := r.db.Model(&model.PaymentMethod{})
+	for _, opt := range options {
+		db = opt(db)
+	}
+	if err := db.Updates(&paymentMethod).Error; err != nil {
+		return errors.WithMessage(err, "更新支付方式失败")
+	}
+	return nil
+}
+
+// DeletePaymentMethod 删除支付方式（软删除）
+func (r *paymentMethodRepo) DeletePaymentMethod(uuid uint64) error {
+	now := time.Now().Unix()
+	if err := r.db.Model(&model.PaymentMethod{}).
+		Where("uuid = ? AND delete_time = 0", uuid).
+		Update("delete_time", now).Error; err != nil {
+		return errors.WithMessage(err, "删除支付方式失败")
+	}
+	return nil
+}
+
+// CheckHasOrders 检查支付方式是否有关联订单
+func (r *paymentMethodRepo) CheckHasOrders(uuid uint64) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.PaymentOrder{}).
+		Where("payment_method_uuid = ? AND delete_time = 0", uuid).
+		Count(&count).Error
+	if err != nil {
+		return false, errors.WithMessage(err, "检查关联订单失败")
+	}
+	return count > 0, nil
+}
+
+// GetMaxSort 获取最大排序值
+func (r *paymentMethodRepo) GetMaxSort() (int, error) {
+	var maxSort int
+	err := r.db.Model(&model.PaymentMethod{}).
+		Where("delete_time = 0").
+		Select("IFNULL(MAX(sort), 0)").
+		Scan(&maxSort).Error
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取最大排序值失败")
+	}
+	return maxSort, nil
+}
+
+// BatchUpdateSort 批量更新排序
+func (r *paymentMethodRepo) BatchUpdateSort(items []model.PaymentMethod) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	// 构建 CASE WHEN 语句
+	caseWhenSQL := "CASE uuid"
+	var args []any
+	var uuids []uint64
+
+	for _, item := range items {
+		caseWhenSQL += " WHEN ? THEN ?"
+		args = append(args, item.Uuid, item.Sort)
+		uuids = append(uuids, item.Uuid)
+	}
+	caseWhenSQL += " END"
+
+	// 使用事务批量更新排序
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.PaymentMethod{}).
+			Where("uuid IN ? AND delete_time = 0", uuids).
+			Update("sort", gorm.Expr(caseWhenSQL, args...)).Error
+		if err != nil {
+			return errors.WithMessage(err, "批量更新排序失败")
+		}
+		return nil
+	})
+}
+
+// GetPaymentMethodListWithPagination 分页查询支付方式列表
+func (r *paymentMethodRepo) GetPaymentMethodListWithPagination(pageNo, pageSize int) ([]*model.PaymentMethod, int64, error) {
+	var list []*model.PaymentMethod
+	var total int64
+
+	db := r.db.Model(&model.PaymentMethod{}).Where("delete_time = 0")
+
+	// 获取总数
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, errors.WithMessage(err, "查询支付方式总数失败")
+	}
+
+	// 分页查询
+	offset := (pageNo - 1) * pageSize
+	if err := db.Order("CAST(sort AS UNSIGNED), create_time desc").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&list).Error; err != nil {
+		return nil, 0, errors.WithMessage(err, "查询支付方式列表失败")
+	}
+
+	return list, total, nil
 }
