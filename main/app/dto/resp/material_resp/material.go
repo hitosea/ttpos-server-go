@@ -29,7 +29,7 @@ type Material struct {
 	CostUnitUuid         uint64                `json:"cost_unit_uuid"`         // 成本单位UUID
 	UnitList             []MaterialUnit        `json:"unit_list"`              // 单位列表
 	AllowSubstoreVisible int                   `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
-	AllowNegativeStock   int                   `json:"allow_negative_stock"`   // 是否允许负库存：1-允许，0-不允许
+	AllowNegativeStock   bool                  `json:"allow_negative_stock"`   // 是否允许负库存：true-允许，false-不允许
 
 	UnitLocaleName         dto.LocaleResponse `json:"unit_locale_name"`          // 基准单位名称
 	CostUnitLocaleName     dto.LocaleResponse `json:"cost_unit_locale_name"`     // 成本单位名称
@@ -61,7 +61,7 @@ type MaterialDetailResp struct {
 	CategoryName           string               `json:"category_name"`             // 分类名称
 	Status                 int                  `json:"status"`                    // 状态 1-启用 0-停用
 	AllowSubstoreVisible   int                  `json:"allow_substore_visible"`    // 允许子店可见：1-允许，0-不允许（仅总店可用）
-	AllowNegativeStock     int                  `json:"allow_negative_stock"`      // 是否允许负库存：1-允许，0-不允许
+	AllowNegativeStock     bool                 `json:"allow_negative_stock"`      // 是否允许负库存：true-允许，false-不允许
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	InternalCode           string               `json:"internal_code"`             // 内部编码

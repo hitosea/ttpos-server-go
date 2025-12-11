@@ -361,7 +361,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			UnitLocaleName:         baseUnitLocaleName,
 			UnitList:               unitList,
 			AllowSubstoreVisible:   material.AllowSubstoreVisible,
-			AllowNegativeStock:     material.AllowNegativeStock,
+			AllowNegativeStock:     material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 		}
 		materialList = append(materialList, respMaterial)
 	}
@@ -449,7 +449,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		CategoryName:         material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		Status:               int(utils.BoolToUint(material.Status)),
 		AllowSubstoreVisible: material.AllowSubstoreVisible,
-		AllowNegativeStock:   material.AllowNegativeStock,
+		AllowNegativeStock:   material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 		Valuation:            material.Valuation,
 		BarcodeValue:         material.BarcodeValue,
 		InternalCode:         material.InternalCode,
