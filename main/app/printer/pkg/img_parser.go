@@ -219,7 +219,6 @@ func (p *ImgTemplateParser) validBlock(block ImgTemplateBlock) bool {
 		} else if p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
 			return false
 		}
-		return false
 	}
 	// 检查条件显示
 	if !p.checkConditions(block.Conditions) {
