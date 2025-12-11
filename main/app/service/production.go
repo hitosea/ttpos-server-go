@@ -934,6 +934,15 @@ func (s *productionSrv) convertToEventOrderProduct(product *model.ProductionOrde
 			}
 			return product.SaleOrderProduct.Remark
 		}(),
+		RemarkLocale: func() dto.LocaleResponse {
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				return dto.LocaleResponse{}
+			}
+			// 构建备注信息（包含预设备注和自定义备注）
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, product.SaleOrderProduct.Remark)
+			return remarkInfo.Remark
+		}(),
 	}
 	// 如果是套餐主商品，添加子商品
 	if product.SaleOrderProduct.IsPackageProduct() && products != nil && len(products) > 0 {

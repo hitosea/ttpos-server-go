@@ -287,15 +287,25 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					img.LineFeed(1, 50)
 				}
 
-				if product.Remark != "" {
-					if t.base.IsMyText(product.Remark) {
+				// 处理备注（包含预设备注和自定义备注）
+				var remarkText string
+				if !product.RemarkLocale.IsNull() {
+					// 使用预构建的多语言备注
+					remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+				} else {
+					// 向后兼容：如果没有预构建的备注，使用原有备注
+					remarkText = product.Remark
+				}
+
+				if remarkText != "" {
+					if t.base.IsMyText(remarkText) {
 						img.SetTextLineHeight(68)
 					} else {
 						img.SetTextLineHeight(50)
 					}
 					img.LineFeed(1, 12)
 					img.SetFontSize(28)
-					img.AppendText(product.Remark)
+					img.AppendText(remarkText)
 					img.LineFeed(1, 50)
 					img.SetFontSize(20)
 				}
@@ -428,15 +438,25 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					img.LineFeed(1, 50)
 				}
 
-				if product.Remark != "" {
-					if t.base.IsMyText(product.Remark) {
+				// 处理备注（包含预设备注和自定义备注）
+				var remarkText string
+				if !product.RemarkLocale.IsNull() {
+					// 使用预构建的多语言备注
+					remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+				} else {
+					// 向后兼容：如果没有预构建的备注，使用原有备注
+					remarkText = product.Remark
+				}
+
+				if remarkText != "" {
+					if t.base.IsMyText(remarkText) {
 						img.SetTextLineHeight(68)
 					} else {
 						img.SetTextLineHeight(50)
 					}
 					img.LineFeed(1, 12)
 					img.SetFontSize(28)
-					img.AppendText(product.Remark)
+					img.AppendText(remarkText)
 					img.LineFeed(1, 50)
 					img.SetFontSize(20)
 				}
@@ -612,9 +632,19 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 				img.LineFeed(1, 50)
 			}
 
-			if product.Remark != "" {
-				img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
-				img.AppendText(product.Remark)
+			// 处理备注（包含预设备注和自定义备注）
+			var remarkText string
+			if !product.RemarkLocale.IsNull() {
+				// 使用预构建的多语言备注
+				remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+			} else {
+				// 向后兼容：如果没有预构建的备注，使用原有备注
+				remarkText = product.Remark
+			}
+
+			if remarkText != "" {
+				img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(remarkText), 50, 40))
+				img.AppendText(remarkText)
 				img.LineFeed(1, 50)
 			}
 
@@ -814,9 +844,19 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 				}
 			}
 
-			if product.Remark != "" {
-				img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
-				img.AppendText(product.Remark)
+			// 处理备注（包含预设备注和自定义备注）
+			var remarkText string
+			if !product.RemarkLocale.IsNull() {
+				// 使用预构建的多语言备注
+				remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+			} else {
+				// 向后兼容：如果没有预构建的备注，使用原有备注
+				remarkText = product.Remark
+			}
+
+			if remarkText != "" {
+				img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(remarkText), 50, 40))
+				img.AppendText(remarkText)
 				img.LineFeed(1, 50)
 			}
 

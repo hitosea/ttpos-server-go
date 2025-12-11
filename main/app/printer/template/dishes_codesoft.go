@@ -202,17 +202,26 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 					printer.LineFeed()
 				}
 
-				// 处理备注
-				if product.Remark != "" {
+				// 处理备注（包含预设备注和自定义备注）
+				var remarkText string
+				if !product.RemarkLocale.IsNull() {
+					// 使用预构建的多语言备注
+					remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+				} else {
+					// 向后兼容：如果没有预构建的备注，使用原有备注
+					remarkText = product.Remark
+				}
+
+				if remarkText != "" {
 					// 设置行间距
-					if t.base.IsMyText(product.Remark) {
+					if t.base.IsMyText(remarkText) {
 						printer.SetLineSpacing(85)
 					} else {
 						printer.SetLineSpacing(55)
 					}
 
 					printer.SetCharacterSize(2, 2)
-					printer.PrintInColumns(product.Remark)
+					printer.PrintInColumns(remarkText)
 					printer.SetCharacterSize(1, 1)
 					printer.SetLineSpacing(20)
 					printer.LineFeed()
@@ -374,16 +383,25 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 					}
 				}
 
-				// 处理备注
-				if product.Remark != "" {
+				// 处理备注（包含预设备注和自定义备注）
+				var remarkText string
+				if !product.RemarkLocale.IsNull() {
+					// 使用预构建的多语言备注
+					remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+				} else {
+					// 向后兼容：如果没有预构建的备注，使用原有备注
+					remarkText = product.Remark
+				}
+
+				if remarkText != "" {
 					// 设置行间距
-					if t.base.IsMyText(product.Remark) {
+					if t.base.IsMyText(remarkText) {
 						printer.SetLineSpacing(85)
 					} else {
 						printer.SetLineSpacing(55)
 					}
 					printer.SetCharacterSize(2, 2)
-					printer.PrintInColumns(product.Remark)
+					printer.PrintInColumns(remarkText)
 					printer.SetCharacterSize(1, 1)
 					printer.SetLineSpacing(20)
 					printer.LineFeed()
@@ -566,11 +584,20 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 					printer.RestoreDefaultLineSpacing()
 				}
 
-				// 处理备注
-				if product.Remark != "" {
+				// 处理备注（包含预设备注和自定义备注）
+				var remarkText string
+				if !product.RemarkLocale.IsNull() {
+					// 使用预构建的多语言备注
+					remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+				} else {
+					// 向后兼容：如果没有预构建的备注，使用原有备注
+					remarkText = product.Remark
+				}
+
+				if remarkText != "" {
 					printer.SetLineSpacing(60)
 					printer.SetCharacterSize(2, 2)
-					printer.AppendText(product.Remark)
+					printer.AppendText(remarkText)
 					printer.SetCharacterSize(1, 1)
 					printer.SetLineSpacing(22)
 					printer.LineFeed(2)
@@ -714,10 +741,19 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 					printer.RestoreDefaultLineSpacing()
 				}
 
-				// 处理备注
-				if product.Remark != "" {
+				// 处理备注（包含预设备注和自定义备注）
+				var remarkText string
+				if !product.RemarkLocale.IsNull() {
+					// 使用预构建的多语言备注
+					remarkText = product.RemarkLocale.GetLocale(t.base.Lang)
+				} else {
+					// 向后兼容：如果没有预构建的备注，使用原有备注
+					remarkText = product.Remark
+				}
+
+				if remarkText != "" {
 					printer.SetCharacterSize(2, 2)
-					printer.AppendText(product.Remark)
+					printer.AppendText(remarkText)
 					printer.SetCharacterSize(1, 1)
 					printer.SetLineSpacing(22)
 					printer.LineFeed(2)

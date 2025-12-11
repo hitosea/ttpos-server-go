@@ -36,6 +36,9 @@ func FreeSaleOrderEventHandler() {
 				if saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsSendKitchen() {
 					continue
 				}
+				// 构建备注信息（包含预设备注和自定义备注）
+				orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+				remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
 				products = append(products, printer_model.OrderProduct{
 					OrderProductId:        saleOrderProduct.Uuid,
 					BatchTagUuid:          saleOrderProduct.BatchTagUuid,
@@ -54,6 +57,7 @@ func FreeSaleOrderEventHandler() {
 					IsWrap:                saleOrderProduct.IsWrapProduct(),
 					IsGift:                saleOrderProduct.IsGiftProduct(),
 					Remark:                saleOrderProduct.Remark,
+					RemarkLocale:          remarkInfo.Remark,
 				})
 			}
 

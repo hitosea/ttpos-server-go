@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -984,8 +985,14 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 					}
 					return decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(saleOrderProduct.GetUnitNum())).Round(3).InexactFloat64()
 				}(),
-				IsBuffet:     saleOrderProduct.IsBuffet == 1,
-				Remark:       saleOrderProduct.Remark,
+				IsBuffet: saleOrderProduct.IsBuffet == 1,
+				Remark:   saleOrderProduct.Remark,
+				RemarkLocale: func() dto.LocaleResponse {
+					// 构建备注信息（包含预设备注和自定义备注）
+					orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+					remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+					return remarkInfo.Remark
+				}(),
 				Reason:       model.GetReturnFoodReasonNames(returnFoodReason),
 				CustomReason: saleOrderProduct.CancelReason,
 				Sign:         saleOrderProduct.Sign,

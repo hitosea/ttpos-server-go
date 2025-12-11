@@ -16,6 +16,7 @@ type CancelSaleOrderProductProduct struct {
 	TotalNum        float64                         `json:"total_num"`        // 总数量。退菜的数量
 	IsBuffet        bool                            `json:"is_buffet"`        // 是否自助餐
 	Remark          string                          `json:"remark"`           // 备注
+	RemarkLocale    dto.LocaleResponse              `json:"remark_locale"`    // 备注（包含预设备注和自定义备注，多语言）
 	Reason          dto.LocaleResponse              `json:"reason"`           // 退菜原因
 	CustomReason    string                          `json:"custom_reason"`    // 自定义退菜原因
 	Sign            string                          `json:"sign"`             // sign

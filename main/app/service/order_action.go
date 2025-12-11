@@ -102,7 +102,13 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 		IsPackage:             saleOrderProduct.IsPackageProduct(),
 		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
-		IsBatch:               saleOrderProduct.IsBatchBool(),
+		RemarkLocale: func() dto.LocaleResponse {
+			// 构建备注信息（包含预设备注和自定义备注）
+			orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+			return remarkInfo.Remark
+		}(),
+		IsBatch: saleOrderProduct.IsBatchBool(),
 	}
 
 	// 如果是套餐主商品，添加子商品

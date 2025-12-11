@@ -703,12 +703,21 @@ func (p *printerTemplate) PrintCompleteOrderImgProducts(
 			img.SetFontSize(20)
 		}
 
-		// 打印备注
-		if product.Remark != "" && len(opts) == 0 {
-			img.SetTextLineHeight(utils.IfInt(p.IsMyText(product.Remark), 68, 50))
+		// 打印备注（包含预设备注和自定义备注）
+		var remarkText string
+		if !product.RemarkLocale.IsNull() {
+			// 使用预构建的多语言备注
+			remarkText = product.RemarkLocale.GetLocale(p.Lang)
+		} else {
+			// 向后兼容：如果没有预构建的备注，使用原有备注
+			remarkText = product.Remark
+		}
+
+		if remarkText != "" && len(opts) == 0 {
+			img.SetTextLineHeight(utils.IfInt(p.IsMyText(remarkText), 68, 50))
 			img.LineFeed(1, 12)
 			img.SetFontSize(28)
-			img.AppendText(product.Remark)
+			img.AppendText(remarkText)
 			img.LineFeed(1, 50)
 			img.SetFontSize(20)
 		}
