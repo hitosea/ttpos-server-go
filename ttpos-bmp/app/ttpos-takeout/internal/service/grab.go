@@ -7,6 +7,8 @@ package service
 
 import (
 	"context"
+	"time"
+
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
@@ -61,6 +63,30 @@ type (
 		HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error
 		// GetShopProviderCfg 查询门店第三方配置
 		GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error)
+
+		// ============================================================================
+		// 以下是从 SDKWrapper 整合的新方法
+		// ============================================================================
+
+		// CreateSelfServeJourney 创建自助激活链接
+		// merchantID: Grab Merchant ID
+		// 返回: activation_url, request_id, error
+		CreateSelfServeJourney(ctx context.Context, merchantID string) (activationURL string, requestID string, err error)
+		// GetStoreStatus 获取门店状态
+		GetStoreStatus(ctx context.Context, merchantID string) (*grabfood.StoreStatusResponse, error)
+		// GetStoreHours 获取门店营业时间
+		GetStoreHours(ctx context.Context, merchantID string) (*grabfood.StoreHourResponse, error)
+		// NotifyMenuUpdate 通知 Grab 菜单已更新
+		// 返回 requestID 用于追踪同步状态
+		NotifyMenuUpdate(ctx context.Context, merchantID string) (requestID string, err error)
+		// TraceMenuSync 追踪菜单同步状态
+		TraceMenuSync(ctx context.Context, merchantID string) (*grabfood.MenuSyncResponse, error)
+		// CheckOrderCancelable 检查订单是否可取消
+		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (cancelable bool, reason string, err error)
+		// UpdateDeliveryState 更新配送状态 (自配送)
+		UpdateDeliveryState(ctx context.Context, orderID string, fromState string, toState string) error
+		// UpdateOrderReadyTime 更新订单准备时间
+		UpdateOrderReadyTime(ctx context.Context, orderID string, newReadyTime time.Time) error
 	}
 )
 
