@@ -20,8 +20,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
-	inventoryDomainService "ttpos-server-go/app/modules/inventory/domain/service"
-	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -1686,10 +1684,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)
 
 	// 创建库存服务实例（用于库存检查）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
 	for _, product := range params.Products {
@@ -2049,11 +2044,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					if saleOrderProduct.Num > constant.ProductNumMax {
 						return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 					}
-					// 创建库存服务实例（用于库存检查）
-					productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-					productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-					domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-					appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+					appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 					productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 					// 检查商品是否超过限购
 					status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage(), productBomStockNum)
@@ -2219,11 +2210,8 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		return nil, errors.WithMessage(errFlavorProductBom)
 	}
 
-	// 创建库存服务实例（用于库存检查）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
 	if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
@@ -2515,11 +2503,8 @@ func (s *orderSrv) getProductBomStockNumMap(ctx context.Context, bomUuids map[ui
 	if len(bomUuids) == 0 {
 		return stockNumMap
 	}
-
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 
 	for bomUuid := range bomUuids {
 		inventory, err := appService.GetProductInventory(ctx, bomUuid)
@@ -2557,11 +2542,8 @@ func (s *orderSrv) createProductBomStockNumFunc(ctx context.Context, appService 
 // 使用ProductInventoryAppService的GetProductInventory方法获取库存
 // 返回库存不足的商品列表
 func (s *orderSrv) checkProductBomInventory(ctx context.Context, productBomNumMap map[uint64]*FlavorNum) []*model.SaleOrderProduct {
-	// 创建库存服务实例
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 
 	stockShortageProducts := make([]*model.SaleOrderProduct, 0)
 	for productBomUuid, flavorNum := range productBomNumMap {
@@ -2658,13 +2640,9 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			saleOrderProductsList = saleOrderProductAll
 		}
 
-		// 创建库存服务实例（用于结账检查）
-		var productBomStockNum func(productBomUuid uint64) float64
-		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-		domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-		appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
-		productBomStockNum = s.createProductBomStockNumFunc(ctx, appService)
+		// 使用工厂方法创建库存应用服务实例
+		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
 		for _, saleOrderProduct := range saleOrderProductsList {
 			// 跳过检查
@@ -2712,11 +2690,8 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 					}
 				}
 			} else {
-				// 创建库存服务实例（用于库存检查）
-				productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-				productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-				domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-				appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+				// 使用工厂方法创建库存应用服务实例
+				appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 				productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage(), productBomStockNum)
@@ -5126,11 +5101,8 @@ func WithIsH5Order() func(option *MustPlanConfirmOption) {
 }
 
 func planProductSoldOut(ctx context.Context, dbm *database.DBManager, plan *resp.InstantProductMustPlan) (bool, error) {
-	// 创建库存服务实例（复用，避免在循环中重复创建）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(dbm, cache.Global)
 
 	// 如果是可选商品. 只有必点方案的所有商品都无库存时才返回true
 	if plan.MustRule == constant.ProductMustPlanMustRuleAny {

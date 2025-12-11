@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
@@ -16,7 +17,10 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 // GrabConverter Grab 平台转换器实现
@@ -560,17 +564,35 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		price = int64(takeoutProduct.ProductPackage.Price * 100)
 	}
 
+	// 使用库存应用服务查询商品包库存来判断商品是否可用
+	status := func() valueobject.AvailableStatus {
+		// 使用工厂方法创建库存应用服务实例
+		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(c.dbm, c.cache)
+
+		// 查询商品包库存
+		inventory, err := appService.GetProductPackageInventory(ctx, takeoutProduct.ProductPackage.Uuid)
+		if err != nil {
+			// 如果查询失败，记录日志但默认返回可用状态（避免因查询失败导致商品不可用）
+			logger.Logger.Warn("查询商品包库存失败",
+				zap.Error(err),
+				zap.Uint64("product_package_uuid", takeoutProduct.ProductPackage.Uuid),
+			)
+			return valueobject.AvailableStatusAvailable
+		}
+
+		// 库存为0或负数时，商品不可用
+		if inventory <= 0 {
+			return valueobject.AvailableStatusUnavailable
+		}
+		return valueobject.AvailableStatusAvailable
+	}()
+
 	// 创建商品值对象
 	menuItem, err := valueobject.NewMenuItem(
 		fmt.Sprintf("ITEM-%d", takeoutProduct.Uuid),
 		itemName,
 		sequence,
-		func() valueobject.AvailableStatus {
-			if takeoutProduct.ProductPackage.IsSaleout() {
-				return valueobject.AvailableStatusUnavailable
-			}
-			return valueobject.AvailableStatusAvailable
-		}(),
+		status,
 		price,
 	)
 	if err != nil {

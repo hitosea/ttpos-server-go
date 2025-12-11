@@ -6,8 +6,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
-	inventoryDomainService "ttpos-server-go/app/modules/inventory/domain/service"
-	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/cache"
@@ -214,11 +212,8 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(ctx context.Context, mustPla
 	if mustPlan.IsDelete() {
 		return []resp.InstantMustPlanProductStat{}
 	}
-	// 创建库存服务实例（复用，避免在循环中重复创建）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	stockNumFn := func(productBomUuid uint64) float64 {
 		// 使用 ProductInventoryAppService 查询商品BOM库存
 		inventory, err := appService.GetProductInventory(ctx, productBomUuid)
@@ -482,11 +477,7 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 	}
 	productList := make([]resp.InstantMustPlanProductStat, 0)
 
-	// 创建库存服务实例（复用，避免在循环中重复创建）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	stockNumFn := func(productBomUuid uint64) float64 {
 		// 使用 ProductInventoryAppService 查询商品BOM库存
 		inventory, err := appService.GetProductInventory(ctx, productBomUuid)

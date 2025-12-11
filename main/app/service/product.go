@@ -8520,11 +8520,8 @@ func (s *productSrv) getProductListStockNumMap(ctx context.Context, productList 
 		return make(map[uint64]float64), nil
 	}
 
-	// 创建应用服务（带缓存）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 
 	// 批量查询库存
 	stockNumMap := make(map[uint64]float64, len(bomUuids))

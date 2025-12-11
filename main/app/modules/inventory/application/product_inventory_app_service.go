@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	domainService "ttpos-server-go/app/modules/inventory/domain/service"
+	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -39,6 +40,24 @@ func NewProductInventoryAppService(
 		cache:         cache,
 		dbm:           dbm,
 	}
+}
+
+// NewProductInventoryAppServiceWithDependencies 创建商品库存应用服务（工厂方法）
+// 接收 dbm 和 cache 作为参数，自动创建所需的依赖并返回 ProductInventoryAppService 实例
+// 用于简化其他模块的使用，避免重复创建依赖
+func NewProductInventoryAppServiceWithDependencies(
+	dbm *database.DBManager,
+	cache cache.Cache,
+) *ProductInventoryAppService {
+	// 创建持久化层
+	productBomRepo := inventoryPersistence.NewProductBomRepository(dbm)
+	productPackageRepo := inventoryPersistence.NewProductPackageRepository(dbm)
+
+	// 创建领域服务
+	domainSvc := domainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
+
+	// 创建应用服务
+	return NewProductInventoryAppService(domainSvc, cache, dbm)
 }
 
 // GetProductInventory 获取商品库存（带缓存）

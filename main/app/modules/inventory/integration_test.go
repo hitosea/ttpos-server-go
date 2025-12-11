@@ -5,8 +5,8 @@ import (
 	"testing"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
-	domainService "ttpos-server-go/app/modules/inventory/domain/service"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	domainService "ttpos-server-go/app/modules/inventory/domain/service"
 	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	pkg_context "ttpos-server-go/pkg/context"
@@ -235,10 +235,7 @@ func TestProductInventoryIntegration_WithCache(t *testing.T) {
 	mockCache := cache.NewCache(cache.GoCache, cache.Config{})
 
 	// 创建 Domain Service 和 Application Service
-	productBomRepo := inventoryPersistence.NewProductBomRepository(dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(dbm)
-	domainSvc := domainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appSvc := inventoryApp.NewProductInventoryAppService(domainSvc, mockCache, dbm)
+	appSvc := inventoryApp.NewProductInventoryAppServiceWithDependencies(dbm, mockCache)
 
 	// 第一次查询（应该从数据库获取）
 	inventory1, err := appSvc.GetProductInventory(ctx, productBom.Uuid)

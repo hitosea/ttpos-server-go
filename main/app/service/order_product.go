@@ -10,8 +10,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
-	inventoryDomainService "ttpos-server-go/app/modules/inventory/domain/service"
-	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/cache"
@@ -264,11 +262,8 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	saleOrderProduct.Num = request.Num
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
-	// 创建库存服务实例（用于库存检查）
-	productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-	productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-	domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-	appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
 	// 检查商品销售库存是否充足
@@ -2256,10 +2251,7 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		}
 
 		// 创建库存服务实例（用于库存检查）
-		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-		domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-		appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
 		saleOrderProduct, err := EditProduct(ctx, db, saleOrder, saleOrderProduct, request.EditProductReq, productBomStockNum)
@@ -2287,10 +2279,7 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		}
 
 		// 创建库存服务实例（用于库存检查）
-		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
-		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
-		domainService := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-		appService := inventoryApp.NewProductInventoryAppService(domainService, cache.Global, s.dbm)
+		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
 
 		for _, subProduct := range subProducts {
