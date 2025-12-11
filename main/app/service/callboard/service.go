@@ -142,6 +142,22 @@ func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint6
 		return errors.New("名称不能超过20个字")
 	}
 
+	if req.TimeoutLimit == nil {
+		req.TimeoutLimit = &[]int{0}[0]
+	}
+	if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+		return errors.New("超时限制必须在0-120分钟之间")
+	}
+	if req.VoiceCallEnabled == nil {
+		req.VoiceCallEnabled = &[]bool{false}[0]
+	}
+	if req.CallCount == 0 {
+		req.CallCount = 1
+	}
+	if req.CallCount < 1 || req.CallCount > 3 {
+		return errors.New("叫号次数必须在1-3之间")
+	}
+
 	device, err := repo.GetDevice(repo.WhereUuid(req.Uuid))
 	if err != nil {
 		return err
@@ -266,6 +282,28 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 
 // BindDevice 绑定设备
 func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq) error {
+	// 验证请求参数
+	if req.Name == "" {
+		return errors.New("请输入名称")
+	}
+	if utf8.RuneCountInString(req.Name) > 20 {
+		return errors.New("名称不能超过20个字")
+	}
+	if req.TimeoutLimit == nil {
+		req.TimeoutLimit = &[]int{0}[0]
+	}
+	if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+		return errors.New("超时限制必须在0-120分钟之间")
+	}
+	if req.VoiceCallEnabled == nil {
+		req.VoiceCallEnabled = &[]bool{false}[0]
+	}
+	if req.CallCount == 0 {
+		req.CallCount = 1
+	}
+	if req.CallCount < 1 || req.CallCount > 3 {
+		return errors.New("叫号次数必须在1-3之间")
+	}
 	// 从Redis获取绑定码对应的设备ID
 	bindCodeKey := cachekey.GetBindCodeKey(req.BindCode)
 	deviceId, err := s.getRedisClient().Get(ctx, bindCodeKey).Result()
@@ -280,7 +318,10 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 	deviceSecret := s.generateDeviceSecret()
 
 	repo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
-	device, err := repo.GetDevice(repo.WhereSn(deviceId))
+	device, err := repo.GetDevice(
+		repo.WhereSn(deviceId),
+		repo.WhereSource("call_board"),
+	)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
@@ -311,6 +352,11 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 		"device_secret", deviceSecret,
 		"lang1", req.Lang1,
 		"lang2", req.Lang2,
+		"name", req.Name,
+		"background_image_url", req.BackgroundImageUrl,
+		"timeout_limit", req.TimeoutLimit,
+		"voice_call_enabled", req.VoiceCallEnabled,
+		"call_count", req.CallCount,
 		"create_time", time.Now().Unix(),
 	).Err()
 	if err != nil {
@@ -333,7 +379,6 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 	list := make([]resp.DeviceItem, 0, len(devices))
 	for _, device := range devices {
 		bindInfo, _ := s.mustGetCompanyDeviceBindInfo(companyUuid, device.DeviceId)
-		logger.Logger.Info("bindInfo", zap.Any("bindInfo", bindInfo))
 		// 如果设备名称为空，返回默认值 "WALLACE"
 		name := bindInfo.Name
 		if name == "" {
