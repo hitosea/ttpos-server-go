@@ -6,7 +6,9 @@ import (
 	"sync"
 
 	"github.com/gogf/gf/v2/os/gtime"
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
@@ -115,7 +117,7 @@ func (s *sGrab) HandlePushOrderState(ctx context.Context, signature, timestamp s
 }
 
 // HandleGetMenu 处理 Grab 获取菜单请求
-func (s *sGrab) HandleGetMenu(ctx context.Context, signature, timestamp string, merchantID string) (*grabDto.GetMenuResponse, error) {
+func (s *sGrab) HandleGetMenu(ctx context.Context, signature, timestamp string, merchantID string) (*grabfood.GetMenuNewResponse, error) {
 	menuService := &MenuService{
 		verifier: s.getVerifier(),
 	}
@@ -131,7 +133,7 @@ func (s *sGrab) HandleMenuSyncState(ctx context.Context, signature, timestamp st
 }
 
 // SyncMenu 主动同步菜单到 Grab
-func (s *sGrab) SyncMenu(ctx context.Context, merchantID string, menu *grabDto.GetMenuResponse) error {
+func (s *sGrab) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse) error {
 	menuService := &MenuService{
 		verifier: s.getVerifier(),
 	}
@@ -204,17 +206,18 @@ func (s *sGrab) HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMen
 	}
 
 	// 1. Save Snapshot
-	storageKey, err := menuService.SaveMenuSnapshot(ctx, dto)
+	menuUuid, err := menuService.SaveMenuSnapshot(ctx, dto)
 	if err != nil {
 		return err
 	}
 
 	// 2. Notify
 	event := &grabDto.ProviderMenuUpdateEvent{
-		ProviderName:      "grab",
+		ProviderName:      string(consts.ProviderGrab),
 		MerchantID:        dto.MerchantID,
 		PartnerMerchantID: dto.PartnerMerchantID,
-		StorageKey:        storageKey,
+		ShopUuid:          dto.PartnerMerchantID,
+		Uuid:              menuUuid,
 		ReceivedAt:        gtime.Timestamp(),
 	}
 	return menuService.NotifyMenuUpdate(ctx, event)

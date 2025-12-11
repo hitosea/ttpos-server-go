@@ -1,0 +1,33 @@
+// Grab 服务 Protobuf 定义文件
+// 用于定义 Grab 相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+
+package grab;
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/grab";
+
+// Grab 服务接口定义
+// 提供 Grab 渠道相关的 gRPC 服务方法
+service Grab {
+  // 创建自助激活链接
+  // 参数：provider_name（外卖渠道，如 grab、lineman）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
+  // 返回：provider_name、self_serve_url（自助点餐链接）、request_id（追踪ID）
+  rpc CreateSelfServeJourney (CreateSelfServeJourneyReq) returns (CreateSelfServeJourneyResp);
+}
+
+// 创建自助激活链接请求消息
+// 用于向服务端发送创建自助激活链接的请求
+message CreateSelfServeJourneyReq {
+  string provider_name = 1; // 外卖渠道，如 grab、lineman
+  string shop_uuid = 2;     // 门店 UUID
+  string request_id = 3;     // 追踪 ID，可选
+}
+
+// 创建自助激活链接响应消息
+// 服务端返回的自助激活链接信息
+message CreateSelfServeJourneyResp {
+  string provider_name = 1;   // 外卖渠道，如 grab、lineman
+  string self_serve_url = 2;  // 自助点餐链接
+  string request_id = 3;      // 追踪 ID
+}
