@@ -528,6 +528,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_invoice_info` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `invoice_number` VARCHAR(64) DEFAULT '' COMMENT '发票编号',
     `company_name` VARCHAR(255) DEFAULT '' COMMENT '公司名称',
     `company_addr` VARCHAR(255) DEFAULT '' COMMENT '公司地址',
     `company_tax_number` VARCHAR(255) DEFAULT '' COMMENT '公司税号',

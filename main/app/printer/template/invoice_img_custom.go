@@ -373,13 +373,12 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 		},
 		// 发票数据
 		Invoice: template_struct.StatementInvoiceData{
-			InvoiceNumber:     "",
-			UnifiedCreditCode: "",
-			CompanyName:       saleOrder.InvoiceInfo.CompanyName,
-			CompanyAddress:    saleOrder.InvoiceInfo.CompanyAddr,
-			CompanyPhone:      saleOrder.InvoiceInfo.CompanyPhone,
-			CompanyTaxNumber:  saleOrder.InvoiceInfo.CompanyTaxNumber,
-			PrintNum:          saleOrder.InvoiceInfo.PrintNum,
+			InvoiceNumber:    saleOrder.InvoiceInfo.GetInvoiceNumber(),
+			CompanyName:      saleOrder.InvoiceInfo.CompanyName,
+			CompanyAddress:   saleOrder.InvoiceInfo.CompanyAddr,
+			CompanyPhone:     saleOrder.InvoiceInfo.CompanyPhone,
+			CompanyTaxNumber: saleOrder.InvoiceInfo.CompanyTaxNumber,
+			PrintNum:         saleOrder.InvoiceInfo.PrintNum,
 		},
 	}
 
