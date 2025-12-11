@@ -21,9 +21,14 @@ type GetQueueDataReq struct {
 
 // BindDeviceReq 绑定设备请求
 type BindDeviceReq struct {
-	BindCode string `json:"bind_code" binding:"required,max=10"`
-	Lang1    string `json:"lang1"`
-	Lang2    string `json:"lang2"`
+	BindCode           string `json:"bind_code" binding:"required,max=10"`
+	Lang1              string `json:"lang1"`
+	Lang2              string `json:"lang2"`
+	Name               string `json:"name" binding:"required"`
+	BackgroundImageUrl string `json:"background_image_url"`
+	TimeoutLimit       *int   `json:"timeout_limit"`
+	VoiceCallEnabled   *bool  `json:"voice_call_enabled"`
+	CallCount          int    `json:"call_count" binding:"required,min=1,max=3"` // 叫号次数（必填，最小1，最大3）
 }
 
 // GetDeviceListReq 获取设备列表请求
