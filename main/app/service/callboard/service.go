@@ -229,11 +229,21 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 	if err != nil {
 		return nil, err
 	}
-	preparingQueue, err := s.getCallBoardQueue(cachekey.GetPreparingQueueKey(companyUuid), req.Limit, bindInfo.CreateTime)
+
+	// 获取 timeout_limit，nil 或 0 表示不过滤
+	timeoutLimitMinutes := 0
+	if bindInfo.TimeoutLimit != nil && *bindInfo.TimeoutLimit > 0 {
+		timeoutLimitMinutes = *bindInfo.TimeoutLimit
+	}
+
+	// PreparingQueue 不进行过滤（传递 0）
+	preparingQueue, err := s.getCallBoardQueue(cachekey.GetPreparingQueueKey(companyUuid), req.Limit, bindInfo.CreateTime, 0)
 	if err != nil {
 		return nil, err
 	}
-	preparedQueue, err := s.getCallBoardQueue(cachekey.GetPreparedQueueKey(companyUuid), req.Limit, bindInfo.CreateTime)
+
+	// PreparedQueue 根据 timeout_limit 过滤
+	preparedQueue, err := s.getCallBoardQueue(cachekey.GetPreparedQueueKey(companyUuid), req.Limit, bindInfo.CreateTime, timeoutLimitMinutes)
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +669,8 @@ func (s *callBoardService) handleProductionOrderCookingEvent(companyUuid uint64,
 }
 
 // 获取叫号队列
-func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minScore int64) ([]string, error) {
+// timeoutLimit: 超时限制（单位：分钟），0 表示不过滤
+func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minScore int64, timeoutLimit int) ([]string, error) {
 	opt := &redis.ZRangeBy{
 		Min:    strconv.FormatInt(minScore, 10),
 		Max:    "+inf",
@@ -673,6 +684,12 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 		}
 		return nil, err
 	}
+
+	// 当前时间（Unix 时间戳，单位：秒）
+	now := time.Now().Unix()
+	// 超时时间阈值（秒）
+	timeoutThreshold := int64(timeoutLimit * 60)
+
 	// 收集所有有效的队列成员
 	queueMembers := make([]queueMember, 0, len(results))
 	for _, result := range results {
@@ -681,6 +698,17 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 		if !ok {
 			continue
 		}
+
+		// 如果 timeoutLimit > 0，进行超时过滤
+		if timeoutLimit > 0 {
+			// score 是订单完成时间（Unix 时间戳，单位：秒）
+			completedTime := int64(result.Score)
+			// 如果订单完成时间超过超时阈值，跳过该订单
+			if now-completedTime > timeoutThreshold {
+				continue
+			}
+		}
+
 		queueMembers = append(queueMembers, mem)
 	}
 
