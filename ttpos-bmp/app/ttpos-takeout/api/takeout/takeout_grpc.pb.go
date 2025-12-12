@@ -26,6 +26,7 @@ const (
 	TakeoutService_ConfirmOrder_FullMethodName     = "/takeout.TakeoutService/ConfirmOrder"
 	TakeoutService_GetDriverInfo_FullMethodName    = "/takeout.TakeoutService/GetDriverInfo"
 	TakeoutService_GetMenuSnapshot_FullMethodName  = "/takeout.TakeoutService/GetMenuSnapshot"
+	TakeoutService_SaveMenuSnapshot_FullMethodName = "/takeout.TakeoutService/SaveMenuSnapshot"
 )
 
 // TakeoutServiceClient is the client API for TakeoutService service.
@@ -38,6 +39,7 @@ type TakeoutServiceClient interface {
 	ConfirmOrder(ctx context.Context, in *ConfirmOrderReq, opts ...grpc.CallOption) (*ConfirmOrderResp, error)
 	GetDriverInfo(ctx context.Context, in *GetDriverInfoReq, opts ...grpc.CallOption) (*GetDriverInfoResp, error)
 	GetMenuSnapshot(ctx context.Context, in *GetMenuSnapshotReq, opts ...grpc.CallOption) (*GetMenuSnapshotResp, error)
+	SaveMenuSnapshot(ctx context.Context, in *SaveMenuSnapshotReq, opts ...grpc.CallOption) (*SaveMenuSnapshotResp, error)
 }
 
 type takeoutServiceClient struct {
@@ -108,6 +110,16 @@ func (c *takeoutServiceClient) GetMenuSnapshot(ctx context.Context, in *GetMenuS
 	return out, nil
 }
 
+func (c *takeoutServiceClient) SaveMenuSnapshot(ctx context.Context, in *SaveMenuSnapshotReq, opts ...grpc.CallOption) (*SaveMenuSnapshotResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveMenuSnapshotResp)
+	err := c.cc.Invoke(ctx, TakeoutService_SaveMenuSnapshot_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TakeoutServiceServer is the server API for TakeoutService service.
 // All implementations must embed UnimplementedTakeoutServiceServer
 // for forward compatibility
@@ -118,6 +130,7 @@ type TakeoutServiceServer interface {
 	ConfirmOrder(context.Context, *ConfirmOrderReq) (*ConfirmOrderResp, error)
 	GetDriverInfo(context.Context, *GetDriverInfoReq) (*GetDriverInfoResp, error)
 	GetMenuSnapshot(context.Context, *GetMenuSnapshotReq) (*GetMenuSnapshotResp, error)
+	SaveMenuSnapshot(context.Context, *SaveMenuSnapshotReq) (*SaveMenuSnapshotResp, error)
 	mustEmbedUnimplementedTakeoutServiceServer()
 }
 
@@ -142,6 +155,9 @@ func (UnimplementedTakeoutServiceServer) GetDriverInfo(context.Context, *GetDriv
 }
 func (UnimplementedTakeoutServiceServer) GetMenuSnapshot(context.Context, *GetMenuSnapshotReq) (*GetMenuSnapshotResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMenuSnapshot not implemented")
+}
+func (UnimplementedTakeoutServiceServer) SaveMenuSnapshot(context.Context, *SaveMenuSnapshotReq) (*SaveMenuSnapshotResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveMenuSnapshot not implemented")
 }
 func (UnimplementedTakeoutServiceServer) mustEmbedUnimplementedTakeoutServiceServer() {}
 
@@ -264,6 +280,24 @@ func _TakeoutService_GetMenuSnapshot_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TakeoutService_SaveMenuSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveMenuSnapshotReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TakeoutServiceServer).SaveMenuSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TakeoutService_SaveMenuSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TakeoutServiceServer).SaveMenuSnapshot(ctx, req.(*SaveMenuSnapshotReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TakeoutService_ServiceDesc is the grpc.ServiceDesc for TakeoutService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -294,6 +328,10 @@ var TakeoutService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMenuSnapshot",
 			Handler:    _TakeoutService_GetMenuSnapshot_Handler,
+		},
+		{
+			MethodName: "SaveMenuSnapshot",
+			Handler:    _TakeoutService_SaveMenuSnapshot_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

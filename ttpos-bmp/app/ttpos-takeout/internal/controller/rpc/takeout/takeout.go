@@ -109,3 +109,12 @@ func (c *Controller) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapsh
 	g.Log().Debugf(ctx, "查询菜单快照成功:%+v", res)
 	return
 }
+
+func (c *Controller) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapshotReq) (res *api.SaveMenuSnapshotResp, err error) {
+	res, err = takeout.Takeout.SaveMenuSnapshot(ctx, req)
+	if err != nil {
+		return nil, gerror.Wrap(err, "保存菜单快照失败")
+	}
+	g.Log().Debugf(ctx, "保存菜单快照成功:%+v", res)
+	return
+}

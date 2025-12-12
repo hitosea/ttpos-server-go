@@ -2,14 +2,19 @@ package takeout
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
+	"ttpos-bmp/app/ttpos-takeout/internal/logic/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 type ITakeout interface {
@@ -135,7 +140,7 @@ func (s *sTakeout) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshot
 		Where("request_id", req.RequestId).
 		Where("provider_name", req.ProviderName).
 		Where("shop_uuid", req.ShopUuid).
-		Where("deleted_at IS NULL"). // 软删除过滤
+		Where("deleted_at = 0 "). // 软删除过滤
 		One()
 	if err != nil {
 		return nil, gerror.Wrap(err, "查询菜单快照失败")
@@ -165,4 +170,108 @@ func (s *sTakeout) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshot
 	}
 
 	return resp, nil
+}
+
+// SaveMenuSnapshot 保存菜单快照
+func (s *sTakeout) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapshotReq) (*api.SaveMenuSnapshotResp, error) {
+	// 1. 参数校验
+	if req.ProviderName == "" {
+		return &api.SaveMenuSnapshotResp{
+			ResponseInfo: &api.ResponseInfo{Code: "400", Message: "provider_name is required"},
+		}, nil
+	}
+	if req.ShopUuid == "" {
+		return &api.SaveMenuSnapshotResp{
+			ResponseInfo: &api.ResponseInfo{Code: "400", Message: "shop_uuid is required"},
+		}, nil
+	}
+	if req.MenuData == "" {
+		return &api.SaveMenuSnapshotResp{
+			ResponseInfo: &api.ResponseInfo{Code: "400", Message: "menu_data is required"},
+		}, nil
+	}
+
+	// 2. 解析 shop_uuid
+	shopUuidInt, err := strconv.ParseUint(req.ShopUuid, 10, 64)
+	if err != nil {
+		return &api.SaveMenuSnapshotResp{
+			ResponseInfo: &api.ResponseInfo{Code: "400", Message: "invalid shop_uuid format"},
+		}, nil
+	}
+
+	// 3. 查找是否已存在记录（根据 provider_name + shop_uuid）
+	nowTs := int(time.Now().Unix())
+	record, err := dao.ChannelMenuSnapshot.Ctx(ctx).
+		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, req.ProviderName).
+		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUuidInt).
+		Where("deleted_at = 0 ").
+		One()
+	if err != nil {
+		g.Log().Errorf(ctx, "SaveMenuSnapshot: query failed: %v", err)
+		return &api.SaveMenuSnapshotResp{
+			ResponseInfo: &api.ResponseInfo{Code: "5001", Message: "save menu snapshot failed"},
+		}, nil
+	}
+
+	if record.IsEmpty() {
+		// 4a. 不存在，创建新记录
+		_, err = dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
+			dao.ChannelMenuSnapshot.Columns().ShopUuid:       shopUuidInt,
+			dao.ChannelMenuSnapshot.Columns().ProviderName:   req.ProviderName,
+			dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
+			dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt: nowTs,
+			dao.ChannelMenuSnapshot.Columns().CreatedAt:      nowTs,
+			dao.ChannelMenuSnapshot.Columns().UpdatedAt:      nowTs,
+		}).Insert()
+	} else {
+		// 4b. 存在，更新记录
+		_, err = dao.ChannelMenuSnapshot.Ctx(ctx).
+			Where(dao.ChannelMenuSnapshot.Columns().Id, record["id"].Uint64()).
+			Data(g.Map{
+				dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
+				dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt: nowTs,
+				dao.ChannelMenuSnapshot.Columns().UpdatedAt:      nowTs,
+			}).Update()
+	}
+
+	if err != nil {
+		g.Log().Errorf(ctx, "SaveMenuSnapshot: save failed: %v", err)
+		return &api.SaveMenuSnapshotResp{
+			ResponseInfo: &api.ResponseInfo{Code: "5001", Message: "save menu snapshot failed"},
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "SaveMenuSnapshot: saved successfully, provider=%s, shop_uuid=%s", req.ProviderName, req.ShopUuid)
+
+	// 5. 如果是 Grab 渠道，异步通知菜单更新
+	if req.ProviderName == string(consts.ProviderGrab) {
+		go s.notifyGrabMenuUpdate(context.Background(), shopUuidInt)
+	}
+
+	return &api.SaveMenuSnapshotResp{
+		ResponseInfo: &api.ResponseInfo{Code: "0", Message: "success"},
+	}, nil
+}
+
+// notifyGrabMenuUpdate 异步通知 Grab 菜单更新
+func (s *sTakeout) notifyGrabMenuUpdate(ctx context.Context, shopUuid uint64) {
+	// 1. 获取门店的 Grab 配置
+	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUuid, string(consts.ProviderGrab))
+	if err != nil {
+		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: get shop provider cfg failed: shop_uuid=%d, err=%v", shopUuid, err)
+		return
+	}
+	if cfg == nil || cfg.ProviderMerchantId == "" {
+		g.Log().Warningf(ctx, "notifyGrabMenuUpdate: merchant_id not found: shop_uuid=%d", shopUuid)
+		return
+	}
+
+	// 2. 调用 Grab NotifyMenuUpdate
+	requestId, err := grab.Grab.NotifyMenuUpdate(ctx, cfg.ProviderMerchantId)
+	if err != nil {
+		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: notify grab failed: shop_uuid=%d, merchant_id=%s, err=%v", shopUuid, cfg.ProviderMerchantId, err)
+		return
+	}
+
+	g.Log().Infof(ctx, "notifyGrabMenuUpdate: success, shop_uuid=%d, merchant_id=%s, request_id=%s", shopUuid, cfg.ProviderMerchantId, requestId)
 }
