@@ -193,6 +193,12 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 			bomCardStockNum = bom.ProductBomCard.CalculateExpectedProductionNum()
 		}
 
+		sellableQuantity := bom.StockNum
+		// 如果 IsOpenStock 为 false，则 SellableQuantity 返回 0
+		if bom.IsOpenStock == 0 {
+			sellableQuantity = 0
+		}
+
 		settings = append(settings, resp.SoldOutSetting{
 			ProductBomUuid:   bom.Uuid,
 			HasBomCard:       bom.HasProductBomCard() || len(bom.FlavorMaterials) > 0, // 有成本卡 或者 关联了材料
@@ -200,7 +206,7 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 			BomCardStockNum:  bomCardStockNum,
 			IsSoldOut:        bom.IsSoldOut == 1,
 			IsOpenStock:      bom.IsOpenStock == 1,
-			SellableQuantity: bom.StockNum,
+			SellableQuantity: sellableQuantity,
 		})
 	}
 

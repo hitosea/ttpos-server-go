@@ -66,6 +66,11 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 		helper.HandleValidationError(c, err, addSoldOutReq, nil)
 		return
 	}
+	// 验证请求参数
+	if err := addSoldOutReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
 	// 获取沽清列表
 	err := h.soldOutSrv.AddSoldOut(helper.GetCompanyUuid(c), addSoldOutReq.SoldOutData)
 	// 处理错误
