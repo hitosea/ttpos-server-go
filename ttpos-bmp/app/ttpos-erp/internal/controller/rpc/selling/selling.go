@@ -503,8 +503,22 @@ func (c *Controller) validateSaveModeOfPaymentReq(req *selling.SaveModeOfPayment
 	if strings.TrimSpace(req.Branch) == "" {
 		return gerror.New("分支不能为空")
 	}
-	if strings.TrimSpace(req.PayType) == "" {
-		return gerror.New("支付类型不能为空")
+
+	// 判断是更新操作还是创建操作
+	isUpdate := req.Name != nil && strings.TrimSpace(*req.Name) != ""
+
+	// 创建操作时，channel 和 pay_type 必填
+	// 更新操作时，channel 和 pay_type 不是必填
+	if !isUpdate {
+		if strings.TrimSpace(req.PayType) == "" {
+			return gerror.New("支付类型不能为空")
+		}
 	}
+
+	// 更新操作时，name 不能为空字符串
+	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
+		return gerror.New("支付方式名称不能为空")
+	}
+
 	return nil
 }
