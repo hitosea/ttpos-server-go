@@ -47,3 +47,29 @@
     }
 }
 ```
+
+
+-----
+
+## 启用或禁用
+```json
+
+{
+    "company_abbr": "wallace-mg",
+        "branch": "曼谷55533",
+    "name":"LineW4-Alipay-0004 - wallace-mg",
+    "enabled": true
+}
+
+```
+
+```
+{
+    "code": "0",
+    "message": "保存支付方式成功",
+    "data": {
+        "name": "LineW4-Alipay-0004 - wallace-mg",
+        "@type": "type.googleapis.com/selling.SaveModeOfPaymentResp"
+    }
+}
+```

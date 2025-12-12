@@ -173,19 +173,22 @@ message CancelPosInvoiceResp {
 
 message ModeOfPayment {
   string name = 1; // 支付方式名称
+  bool enabled = 2; // 是否启用
 }
 
 // SaveModeOfPaymentReq 保存/同步支付方式请求
 message SaveModeOfPaymentReq {
   string company_abbr = 1; // 公司简称，必填
   string branch = 2;       // 分支，必填
-  string channel = 3;      // 渠道，如 LianLianPay，必填
-  string pay_type = 4;     // 支付类型（TTPOS 定义），必填
+  string channel = 3;      // 渠道，如 LianLianPay，创建时必填
+  string pay_type = 4;     // 支付类型（TTPOS 定义），创建时必填
+  optional bool enabled = 5; // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
+  optional string name = 6;  // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
 }
 
 // SaveModeOfPaymentResp 保存/同步支付方式响应
 message SaveModeOfPaymentResp {
-  string name = 1; // 规范化名称 {channel}-{pay_type}-{NNNN} - {company_abbr}
+  string name = 1; // 规范化名称 【channel-]{pay_type}-{NNNN} - {company_abbr}
 }
 
 message GetModeOfPaymentListReq {
@@ -221,6 +224,6 @@ service SellingService {
   //获取支付方式
   rpc GetModeOfPaymentList (GetModeOfPaymentListReq) returns (erp.ResponseInfo);
 
-  // 保存/同步支付方式
+  // 保存支付方式
   rpc SaveModeOfPayment (SaveModeOfPaymentReq) returns (erp.ResponseInfo);
 }
