@@ -1048,17 +1048,17 @@ func (s *SyncSrv) checkPaymentGroupSynced(subShopDB *gorm.DB, headquarterUuid ui
 func (s *SyncSrv) getTableNameByDataType(dataType string) string {
 	switch dataType {
 	case constant.SyncTaskTypeProductCategory:
-		return "ttpos_product_shop_category"
+		return "ttpos_product_category"
 	case constant.SyncTaskTypeUnit:
-		return "ttpos_unit"
+		return "ttpos_product_unit"
 	case constant.SyncTaskTypeFlavor:
 		return "ttpos_product_flavor"
 	case constant.SyncTaskTypeAttribute:
-		return "ttpos_attribute_group"
+		return "ttpos_product_attribute_group"
 	case constant.SyncTaskTypeSauce:
-		return "ttpos_sauce"
+		return "ttpos_product_sauce"
 	case constant.SyncTaskTypeProduct:
-		return "ttpos_product"
+		return "ttpos_product_package"
 	case constant.SyncTaskTypeMaterialCategory:
 		return "ttpos_material_category"
 	case constant.SyncTaskTypeBomCard:
@@ -1066,7 +1066,7 @@ func (s *SyncSrv) getTableNameByDataType(dataType string) string {
 	case constant.SyncTaskTypeSupplier:
 		return "ttpos_supplier"
 	case constant.SyncTaskTypeTax:
-		return "ttpos_product_tax"
+		return "ttpos_tax"
 	case constant.SyncTaskTypeCoupon:
 		return "ttpos_marketing_coupon"
 	case constant.SyncTaskTypeFullReduction:
@@ -1127,7 +1127,7 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 
 	return resp.GranularSyncResp{
 		TaskUuid: syncTask.Uuid,
-		Message:  "数据同步已启动，可在同步历史中查看进度",
+		Message:  "数据同步已启动",
 	}, nil
 }
 
@@ -1399,16 +1399,16 @@ func (s *SyncSrv) handleUncheckedHeadquartersData(ctx context.Context, headquart
 	// 商品数据组：如果未勾选，标记删除子店中的总部数据
 	if !productDataChecked {
 		productDataTables := []string{
-			"ttpos_product_shop_category", // 商品分类
-			"ttpos_unit",                  // 单位
-			"ttpos_product_flavor",        // 规格
-			"ttpos_attribute_group",       // 属性
-			"ttpos_sauce",                 // 加料
-			"ttpos_product",               // 商品
-			"ttpos_material_category",     // 物品分类
-			"ttpos_product_bom_card",      // 成本卡
-			"ttpos_supplier",              // 供应商
-			"ttpos_product_tax",           // 税类
+			"ttpos_product_category",        // 商品分类
+			"ttpos_product_unit",            // 单位
+			"ttpos_product_flavor",          // 规格
+			"ttpos_product_attribute_group", // 属性
+			"ttpos_product_sauce",           // 加料
+			"ttpos_product_package",         // 商品
+			"ttpos_material_category",       // 物品分类
+			"ttpos_product_bom_card",        // 成本卡
+			"ttpos_supplier",                // 供应商
+			"ttpos_tax",                     // 税类
 		}
 
 		for _, tableName := range productDataTables {
