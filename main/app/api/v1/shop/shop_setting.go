@@ -1189,7 +1189,7 @@ func (h *SettingHandler) GetCompanyInfo(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.UpdateCompanyInfoReq true "更新门店信息"
+// @Param data body req.UpdateCompanySettingReq true "更新门店信息"
 // @Success 200 {object} dto.Response
 // @Router /shop/company/update [post]
 func (h *SettingHandler) UpdateCompanyInfo(c *gin.Context) {

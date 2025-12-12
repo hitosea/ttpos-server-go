@@ -21015,7 +21015,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.UpdateCompanyInfoReq"
+                            "$ref": "#/definitions/req.UpdateCompanySettingReq"
                         }
                     }
                 ],
@@ -47396,23 +47396,60 @@ const docTemplate = `{
                 }
             }
         },
-        "req.UpdateCompanyInfoReq": {
+        "req.UpdateCompanySettingReq": {
             "type": "object",
             "required": [
+                "language",
+                "logo_url",
+                "name",
+                "phone",
+                "time_zone",
                 "uuid"
             ],
             "properties": {
-                "logo": {
-                    "description": "门店logo",
+                "address": {
+                    "description": "地址，必填，最大500个字符",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "company_name": {
+                    "description": "公司名称，区别于店铺名称，最大500个字符",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "coordinates": {
+                    "description": "经纬度",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "系统语言，必填，至少一个",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "logo_url": {
+                    "description": "店铺logo，上传后保存url，必填",
                     "type": "string"
                 },
                 "name": {
-                    "description": "门店名称",
+                    "description": "店铺名称",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "phone": {
+                    "description": "联系电话，必填，最大20个字符",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "tax_number": {
+                    "description": "税号",
                     "type": "string"
                 },
-                "status": {
-                    "description": "状态 1-启用 0-禁用",
-                    "type": "integer"
+                "time_zone": {
+                    "description": "时区，必填",
+                    "type": "string"
                 },
                 "uuid": {
                     "description": "门店UUID",
