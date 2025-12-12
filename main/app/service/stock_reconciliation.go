@@ -193,7 +193,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 
 		// 查询物品信息
 		if item.Material != nil {
-			itemInfo.LocaleName = *language.JsonToLocaleResponse(item.Material.Name)
+			itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
+			if itemInfo.LocaleName.IsNull() {
+				itemInfo.LocaleName = *language.JsonToLocaleResponse(item.Material.Name)
+			}
 			itemInfo.MaterialCode = item.Material.Code
 			itemInfo.InternalCode = item.Material.InternalCode
 			itemInfo.MaterialBarcode = item.Material.BarcodeValue
@@ -225,7 +228,10 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 				if err := copier.Copy(unitInfo, itemUnit); err != nil {
 					continue
 				}
-				unitInfo.LocaleName = itemUnit.MaterialUnit.Unit.MultiLanguageName.GetNames()
+				unitInfo.LocaleName = *language.JsonToLocaleResponse(itemUnit.MaterialUnitName)
+				if unitInfo.LocaleName.IsNull() {
+					unitInfo.LocaleName = itemUnit.MaterialUnit.Unit.MultiLanguageName.GetNames()
+				}
 				for _, unit := range itemInfo.Units {
 					if unit.MaterialUnitUuid == itemUnit.MaterialUnitUuid {
 						unitInfo.ConversionRate = unit.ConversionRate
@@ -321,11 +327,16 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	}
 
 	materialUnitMap := make(map[uint64]map[uint64]float64)
+	materialNameMap := make(map[uint64]string)
+	materialUnitNameMap := make(map[uint64]map[uint64]string)
 	for _, material := range materials {
 		materialUnitMap[material.Uuid] = make(map[uint64]float64)
+		materialUnitNameMap[material.Uuid] = make(map[uint64]string)
 		for _, materialUnit := range material.NotBaseUnitList {
 			materialUnitMap[material.Uuid][materialUnit.Uuid] = materialUnit.ConversionRate
+			materialUnitNameMap[material.Uuid][materialUnit.Uuid] = materialUnit.Name
 		}
+		materialNameMap[material.Uuid] = material.Name
 	}
 
 	// 开启事务
@@ -386,6 +397,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			item := &model.StockReconciliationItem{
 				StockReconciliationUuid: stockReconciliation.Uuid,
 				MaterialUuid:            reqItem.MaterialUuid,
+				MaterialName:            materialNameMap[reqItem.MaterialUuid],
 				BookedQuantity:          decimal.NewFromFloat(bookedQuantityMap[reqItem.MaterialUuid]), // 每次保存都实时读取账面库存数量
 				CountedQuantity:         countedQuantity,
 			}
@@ -405,6 +417,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 				stockReconciliationItemUnits = append(stockReconciliationItemUnits, &model.StockReconciliationItemUnit{
 					StockReconciliationItemUuid: item.Uuid,
 					MaterialUnitUuid:            unitItem.MaterialUnitUuid,
+					MaterialUnitName:            materialUnitNameMap[reqItem.MaterialUuid][unitItem.MaterialUnitUuid],
 					Quantity:                    quantity,
 				})
 			}
