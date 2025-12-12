@@ -83,21 +83,25 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.New("订单商品不存在")
 	}
 
+	// 处理备注预设UUID列表（参考退菜逻辑）
+	orderItemRemarks := make([]*model.OrderItemRemark, 0)
+	if len(req.RemarkUuids) > 0 {
+		// 查询备注预设列表
+		orderItemRemarkRepo := base.NewOrderItemRemarkRepo(db)
+		var remarkErr error
+		orderItemRemarks, remarkErr = orderItemRemarkRepo.GetOrderItemRemarkListByUuids(req.RemarkUuids)
+		if remarkErr != nil {
+			return nil, errors.New("查询备注预设失败")
+		}
+		// 如果查到的备注预设数量跟提交的数量不一致，提示备注预设不存在
+		if len(orderItemRemarks) != len(req.RemarkUuids) {
+			return nil, errors.New("备注预设不存在")
+		}
+	}
+
 	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		// 处理备注预设UUID列表（参考退菜逻辑）
-		if len(req.RemarkUuids) > 0 {
-			// 查询备注预设列表
-			orderItemRemarkRepo := base.NewOrderItemRemarkRepo(db)
-			orderItemRemarks, err := orderItemRemarkRepo.GetOrderItemRemarkListByUuids(req.RemarkUuids)
-			if err != nil {
-				return errors.WithMessage(err, "查询备注预设失败")
-			}
-			// 如果查到的备注预设数量跟提交的数量不一致，提示备注预设不存在
-			if len(orderItemRemarks) != len(req.RemarkUuids) {
-				return errors.WithMessage(fmt.Errorf("备注预设不存在: %v", req.RemarkUuids))
-			}
-
+		if len(orderItemRemarks) > 0 {
 			// 删除旧的备注预设原因记录（物理删除）
 			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
 			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
@@ -120,7 +124,6 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 			}
 			saleOrderProduct.OrderItemRemarks = make([]*model.SaleOrderProductReason, 0)
 		}
-
 		saleOrderProduct.Remark = req.Remark
 		saleOrderProduct.UpdateSign()
 		sign := saleOrderProduct.Sign
@@ -132,6 +135,29 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
+				if len(orderItemRemarks) > 0 {
+					// 删除旧的备注预设原因记录（物理删除）
+					reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+					if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, subProduct.Uuid); err != nil {
+						return errors.WithMessage(err, "删除旧备注预设原因失败")
+					}
+
+					// 创建新的备注预设原因记录
+					remarkReasonList := subProduct.NewSaleOrderProductRemarkReasonList(orderItemRemarks)
+					if len(remarkReasonList) > 0 {
+						if err := reasonRepo.CreateSaleOrderProductReasons(remarkReasonList); err != nil {
+							return errors.WithMessage(err, "保存备注预设原因失败")
+						}
+					}
+					subProduct.OrderItemRemarks = remarkReasonList
+				} else {
+					// 如果没有备注预设UUID列表，删除旧的备注预设原因记录（物理删除）
+					reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+					if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, subProduct.Uuid); err != nil {
+						return errors.WithMessage(err, "删除旧备注预设原因失败")
+					}
+					subProduct.OrderItemRemarks = make([]*model.SaleOrderProductReason, 0)
+				}
 				subProduct.UpdateSign()
 				if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
 					return errors.WithMessage(err)
