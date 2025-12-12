@@ -2733,7 +2733,6 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 				Name:               addReq.LocaleName.ToJson(),
 				Price:              *addReq.Price,
 				StockNum:           99999999,
-				IsOpenStock:        1,
 				Status:             1,
 				ProductPackageUuid: productPackageUuid,
 				ProductSauceUuid:   productSauce.Uuid,
@@ -2831,7 +2830,6 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 						Name:               name,
 						Price:              *editReq.Price,
 						StockNum:           99999999,
-						IsOpenStock:        1,
 						Status:             1,
 						ProductPackageUuid: productPackageUuid,
 						ProductSauceUuid:   editReq.Uuid,
@@ -6611,7 +6609,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 						BarcodeValue:       flavor.BarcodeValue,
 						InternalCode:       flavor.InternalCode,
 						Status:             params.FlavorListResult.Status,
-						IsOpenStock:        1,
 					})
 					if err != nil {
 						return errors.WithMessage(err, "保存商品bom失败")
@@ -6751,7 +6748,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					ProductPackageUuid: params.ProductPackageUuid,
 					StockNum:           99999999,
 					Status:             params.FlavorListResult.Status,
-					IsOpenStock:        1,
 					IsDefaultSelect:    sauce.IsDefaultSelected,
 				})
 				if err != nil {
