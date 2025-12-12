@@ -221,7 +221,6 @@ func (s *sTakeout) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapsh
 			dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
 			dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt: nowTs,
 			dao.ChannelMenuSnapshot.Columns().CreatedAt:      nowTs,
-			dao.ChannelMenuSnapshot.Columns().UpdatedAt:      nowTs,
 		}).Insert()
 	} else {
 		// 4b. 存在，更新记录
@@ -230,7 +229,6 @@ func (s *sTakeout) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapsh
 			Data(g.Map{
 				dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
 				dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt: nowTs,
-				dao.ChannelMenuSnapshot.Columns().UpdatedAt:      nowTs,
 			}).Update()
 	}
 

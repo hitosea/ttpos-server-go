@@ -1,4 +1,5 @@
 item-sync
+item-sync-delay
 erp-item-change
 erp-doc-change
 
@@ -24,5 +25,6 @@ lan-printer-report
 #---- 外卖 ttpos-takeout ----
 takeout_provider_menu_update
 takeout_store_integration_state
+takeout_grab_order
 
 #---  END 外卖 ----
