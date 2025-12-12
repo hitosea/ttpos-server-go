@@ -2,24 +2,13 @@ package req
 
 // TakeoutMenuExportReq 外卖菜单导出请求
 type TakeoutMenuExportReq struct {
-	Platform       string   `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
-	CompanyUuid    uint64   `json:"companyUuid"`                 // 公司 UUID（可选，默认当前公司）
-	CategoryIDs    []uint64 `json:"categoryIds"`                 // 分类 ID 列表（可选，为空则导出所有）
-	SellingTimeIDs []uint64 `json:"sellingTimeIds"`              // 售卖时段 ID 列表（可选）
+	Platform    string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
+	CompanyUuid uint64 `json:"companyUuid"`                 // 公司 UUID（可选，默认当前公司）
 }
 
 // TakeoutMenuImportReq 外卖菜单导入请求
 type TakeoutMenuImportReq struct {
-	Platform          string      `json:"platform" binding:"required"` // 平台名称
-	CompanyUuid       uint64      `json:"companyUuid"`                 // 公司 UUID（可选，默认当前公司）
-	MenuData          interface{} `json:"menuData" binding:"required"` // 平台菜单 JSON 数据
-	SyncMode          string      `json:"syncMode"`                    // 同步模式：full / incremental
-	OverwriteExisting bool        `json:"overwriteExisting"`           // 是否覆盖已存在的数据
-}
-
-// GrabMenuImportItem 逐项导入的占位（可扩展）
-type GrabMenuImportItem struct {
-	// TODO: 如需分项导入，可在此定义
+	MenuData interface{} `json:"menuData" binding:"required"` // 平台菜单 JSON 数据
 }
 
 // TakeoutMenuPreviewReq 外卖菜单预览请求
@@ -28,26 +17,33 @@ type TakeoutMenuPreviewReq struct {
 	CompanyUuid uint64 `form:"companyUuid"`                 // 公司 UUID（可选，默认当前公司）
 }
 
-// GrabProductImportItem 单个 Grab 商品映射项
-type GrabProductImportItem struct {
-	GrabProductId       string  `json:"grabProductId" binding:"required"` // Grab 商品唯一ID
-	ProductPackageUuid  uint64  `json:"productPackageUuid"`               // 选择的店内商品UUID，未选则自动创建
-	CategoryUuid        uint64  `json:"categoryUuid"`                     // 选择的店内分类，未选则自动创建
-	SkuName             string  `json:"skuName"`                          // 创建店内商品时使用
-	SkuPrice            float64 `json:"skuPrice"`                         // 价格（单位：主货币）
-	SkuUnitUuid         uint64  `json:"skuUnitUuid"`                      // 单位UUID，未选则自动创建
-	SkuUnitName         string  `json:"skuUnitName"`                      // 单位名称，用于自动创建
-	AttributeGroupName  string  `json:"attributeGroupName"`               // 属性组名称（可选，用于自动创建）
-	AttributeValueName  string  `json:"attributeValueName"`               // 属性值名称（可选，用于自动创建）
-	SellingTimeUuid     uint64  `json:"sellingTimeUuid"`                  // 可选，售卖时段
-	NeedTranslateFields bool    `json:"needTranslateFields"`              // 是否需要翻译（默认 true）
+// GrabCategoryBinding 分类绑定
+type GrabCategoryBinding struct {
+	GrabCategoryId string `json:"grabCategoryId"` // Grab 分类 ID
+	CategoryUuid   uint64 `json:"categoryUuid"`   // 绑定的店内分类 UUID，空则创建
 }
 
-// GrabProductImportReq Grab 商品导入请求
-type GrabProductImportReq struct {
-	CompanyUuid uint64                  `json:"companyUuid"`              // 公司 UUID（可选，默认当前公司）
-	Items       []GrabProductImportItem `json:"items" binding:"required"` // 映射项列表
-	Overwrite   bool                    `json:"overwrite"`                // 是否覆盖已有映射
+// GrabItemBinding 商品绑定
+type GrabItemBinding struct {
+	GrabItemId         string `json:"grabItemId"`         // Grab 商品 ID
+	ProductPackageUuid uint64 `json:"productPackageUuid"` // 绑定的店内商品 UUID，空则创建
+	CategoryUuid       uint64 `json:"categoryUuid"`       // 若需要强制绑定分类，可传；否则使用前端选择/自动创建
+}
+
+// GrabModifierBinding 修饰符/规格/加料/属性绑定
+type GrabModifierBinding struct {
+	GrabModifierId string `json:"grabModifierId"` // Grab 修饰符 ID
+	FlavorUuid     uint64 `json:"flavorUuid"`     // 绑定到规格（可选）
+	SauceUuid      uint64 `json:"sauceUuid"`      // 绑定到加料（可选）
+	AttributeUuid  uint64 `json:"attributeUuid"`  // 绑定到属性值（可选）
+}
+
+// GrabMenuBinding 前端编排后的绑定结果
+type GrabMenuBinding struct {
+	Categories    []GrabCategoryBinding `json:"categories"`    // 分类绑定
+	Items         []GrabItemBinding     `json:"items"`         // 商品绑定
+	Modifiers     []GrabModifierBinding `json:"modifiers"`     // 规格/加料/属性绑定
+	CreateMissing bool                  `json:"createMissing"` // 若未绑定则自动创建
 }
 
 // GrabBindingLinkReq 获取 Grab 绑定链接请求

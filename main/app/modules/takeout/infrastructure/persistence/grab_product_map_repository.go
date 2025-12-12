@@ -7,27 +7,27 @@ import (
 	"gorm.io/gorm"
 )
 
-// grabProductMapRepository Grab 商品映射仓储实现
-type grabProductMapRepository struct{}
+// productMapRepository 商品映射仓储实现
+type productMapRepository struct{}
 
-// NewGrabProductMapRepository 创建映射仓储
-func NewGrabProductMapRepository() menuRepo.IGrabProductMapRepository {
-	return &grabProductMapRepository{}
+// NewProductMapRepository 创建映射仓储
+func NewProductMapRepository() menuRepo.IProductMapRepository {
+	return &productMapRepository{}
 }
 
-// GetByGrabId 获取映射
-func (r *grabProductMapRepository) GetByGrabId(db *gorm.DB, grabProductId string) (model.GrabProductMap, error) {
-	var m model.GrabProductMap
-	err := db.Where("grab_product_id = ? AND delete_time = 0", grabProductId).First(&m).Error
+// GetBySourceId 根据来源平台和商品ID获取映射
+func (r *productMapRepository) GetBySourceId(db *gorm.DB, source, sourceProductId string) (model.ProductMap, error) {
+	var m model.ProductMap
+	err := db.Where("source = ? AND source_product_id = ? AND delete_time = 0", source, sourceProductId).First(&m).Error
 	return m, err
 }
 
 // Create 创建映射
-func (r *grabProductMapRepository) Create(db *gorm.DB, m *model.GrabProductMap) error {
+func (r *productMapRepository) Create(db *gorm.DB, m *model.ProductMap) error {
 	return db.Create(m).Error
 }
 
 // UpdateById 更新映射
-func (r *grabProductMapRepository) UpdateById(db *gorm.DB, id uint, fields map[string]interface{}) error {
-	return db.Model(&model.GrabProductMap{}).Where("id = ?", id).Updates(fields).Error
+func (r *productMapRepository) UpdateById(db *gorm.DB, id uint, fields map[string]interface{}) error {
+	return db.Model(&model.ProductMap{}).Where("id = ?", id).Updates(fields).Error
 }

@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
+	"ttpos-server-go/app/api/v1/takeout"
 	_ "ttpos-server-go/app/event" // 注册事件
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc"
@@ -108,6 +109,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterCountryRoutes(shopGroup, dbm, cache)               // 国家管理
 			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)           // 外卖来源管理
 			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache) // 满减活动管理
+			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)             // 外卖平台集成
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
@@ -191,6 +193,12 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		callBoardGroup := apiV1.Group("/callboard")
 		{
 			callboard.RegisterHandlers(callBoardGroup, dbm, cache)
+		}
+
+		// 外卖平台集成（使用 shop 的认证）
+		takeoutGroup := apiV1.Group("/takeout")
+		{
+			takeout.RegisterTakeoutHandlers(takeoutGroup, dbm, cache)
 		}
 	}
 }

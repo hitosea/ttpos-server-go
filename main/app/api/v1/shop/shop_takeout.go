@@ -7,7 +7,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
-	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -19,15 +18,16 @@ import (
 
 // TakeoutHandler 外卖处理程序
 type TakeoutHandler struct {
+	takeoutSrv service.ITakeoutSrv
 	menuAppSrv application.ITakeoutMenuAppService
 }
 
 // NewTakeoutHandler 创建外卖 Handler
-func NewTakeoutHandler(dbm *database.DBManager, cache cache.Cache) *TakeoutHandler {
-	menuRepo := persistence.NewMenuDataRepository(dbm)
-	menuAppSrv := application.NewTakeoutMenuAppService(dbm, menuRepo, cache)
-
+func NewTakeoutHandler(dbm *database.DBManager, cache cache.Cache, productSrv service.IProductSrv, translateSrv service.ITranslateSrv) *TakeoutHandler {
+	menuAppSrv := application.NewTakeoutMenuAppService(dbm, cache)
+	takeoutSrv := service.NewTakeoutSrv(dbm, cache, productSrv, translateSrv)
 	return &TakeoutHandler{
+		takeoutSrv: takeoutSrv,
 		menuAppSrv: menuAppSrv,
 	}
 }
@@ -127,15 +127,8 @@ func (h *TakeoutHandler) ImportMenu(c *gin.Context) {
 	}
 
 	ctx := helper.GetContext(c)
-	if importReq.CompanyUuid == 0 {
-		importReq.CompanyUuid = ctx.GetCompanyUuid()
-	}
 
-	result, err := h.menuAppSrv.ImportMenu(ctx, application.ImportMenuRequest{
-		CompanyUuid: importReq.CompanyUuid,
-		MenuData:    importReq.MenuData,
-		Overwrite:   importReq.OverwriteExisting,
-	})
+	result, err := h.takeoutSrv.ImportMenu(ctx, "Grab", importReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "导入 Grab 菜单失败"))
 		return
@@ -162,7 +155,9 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
-	takeoutHandler := NewTakeoutHandler(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache, service.NewTranslateSrv(dbm, cache))
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	takeoutHandler := NewTakeoutHandler(dbm, cache, productSrv, translateSrv)
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))

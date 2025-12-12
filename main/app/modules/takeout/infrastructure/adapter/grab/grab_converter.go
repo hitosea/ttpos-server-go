@@ -7,20 +7,15 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
 	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
-	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
-
-	"go.uber.org/zap"
 )
 
 // GrabConverter Grab 平台转换器实现
@@ -423,23 +418,16 @@ func (c *GrabConverter) ValidateData(platformData interface{}) error {
 }
 
 // LoadMenuFromDatabase 从数据库加载菜单数据（辅助方法）
-func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid uint64, categoryIDs []uint64, sellingTimeIDs []uint64) (*entity.TakeoutMenu, error) {
+func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid uint64, currencyUnit string, categoryIDs []uint64, sellingTimeIDs []uint64) (*entity.TakeoutMenu, error) {
 	// 创建菜单聚合根
 	menu, err := entity.NewTakeoutMenu(companyUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "创建菜单聚合根失败")
 	}
 
-	// 获取货币设置
-	// TODO: 需要优化，这里以后需要把 setting 也转为领域类，从setting领域类中提取
-	currencySetting, err := setting.NewSrv(c.dbm, c.cache).GetCurrencySetting(ctx)
-	if err != nil {
-		return nil, errors.WithMessage(err, "获取货币设置失败")
-	}
-
 	// 设置货币
 	// 根据货币符号推断货币代码和 exponent
-	currencySymbol := utils.IfString(currencySetting.Unit == "", "฿", currencySetting.Unit)
+	currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
 	currencyCode, exponent := c.getCurrencyInfoBySymbol(currencySymbol)
 	if err := menu.SetCurrency(currencyCode, currencySymbol, exponent); err != nil {
 		return nil, errors.WithMessage(err, "设置货币失败")
@@ -502,7 +490,7 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 
 	// 创建分类值对象
 	categoryVO, err := valueobject.NewCategory(
-		fmt.Sprintf("CAT-%d", category.Uuid),
+		fmt.Sprintf("TTPOS-CAT-%d", category.Uuid),
 		categoryName,
 		sequence,
 		valueobject.AvailableStatusAvailable,
@@ -528,6 +516,11 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	takeoutProduct, ok := pkg.(*model.ProductPackageTakeout)
 	if !ok {
 		return nil, errors.New("类型断言失败：pkg 不是 *model.ProductPackageTakeout")
+	}
+
+	status := valueobject.AvailableStatusAvailable
+	if takeoutProduct.IsDown() || takeoutProduct.IsDelete() {
+		status = valueobject.AvailableStatusUnavailable
 	}
 
 	// 获取商品名称（优先使用外卖商品的多语言名称，否则使用店内商品名称）
@@ -564,32 +557,9 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		price = int64(takeoutProduct.ProductPackage.Price * 100)
 	}
 
-	// 使用库存应用服务查询商品包库存来判断商品是否可用
-	status := func() valueobject.AvailableStatus {
-		// 使用工厂方法创建库存应用服务实例
-		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(c.dbm, c.cache)
-
-		// 查询商品包库存
-		inventory, err := appService.GetProductPackageInventory(ctx, takeoutProduct.ProductPackage.Uuid)
-		if err != nil {
-			// 如果查询失败，记录日志但默认返回可用状态（避免因查询失败导致商品不可用）
-			logger.Logger.Warn("查询商品包库存失败",
-				zap.Error(err),
-				zap.Uint64("product_package_uuid", takeoutProduct.ProductPackage.Uuid),
-			)
-			return valueobject.AvailableStatusAvailable
-		}
-
-		// 库存为0或负数时，商品不可用
-		if inventory <= 0 {
-			return valueobject.AvailableStatusUnavailable
-		}
-		return valueobject.AvailableStatusAvailable
-	}()
-
 	// 创建商品值对象
 	menuItem, err := valueobject.NewMenuItem(
-		fmt.Sprintf("ITEM-%d", takeoutProduct.Uuid),
+		fmt.Sprintf("TTPOS-ITEM-%d", takeoutProduct.Uuid),
 		itemName,
 		sequence,
 		status,
@@ -660,11 +630,11 @@ func (c *GrabConverter) filterSupportedLanguages(translations map[string]string)
 		"en": true, // 英文 - 所有国家
 		"zh": true, // 中文 - Thailand, Singapore, Indonesia
 		"th": true, // 泰语 - Thailand
+		"my": true, // 缅甸语 - Myanmar
 		"ms": true, // 马来语 - Malaysia
 		"vi": true, // 越南语 - Vietnam
 		"id": true, // 印尼语 - Indonesia
 		"km": true, // 高棉语 - Cambodia
-		"my": true, // 缅甸语 - Myanmar
 	}
 
 	filtered := make(map[string]string)
@@ -763,7 +733,7 @@ func (c *GrabConverter) convertProductFlavors(_ context.Context, menuItem *value
 
 	// 创建一个修饰符组，包含所有规格
 	modifierGroup, err := valueobject.NewModifierGroup(
-		fmt.Sprintf("FLAVOR-GROUP-%d", productPackage.Uuid),
+		fmt.Sprintf("TTPOS-FLAVOR-GROUP-%d", productPackage.Uuid),
 		"规格",
 		map[string]string{
 			"en": "Specifications",
@@ -798,7 +768,7 @@ func (c *GrabConverter) convertProductFlavors(_ context.Context, menuItem *value
 
 		// 创建修饰符
 		modifier, err := valueobject.NewModifier(
-			fmt.Sprintf("FLAVOR-%d", bom.ProductFlavor.Uuid),
+			fmt.Sprintf("TTPOS-FLAVOR-%d", bom.ProductFlavor.Uuid),
 			flavorName,
 			idx+1,
 			valueobject.AvailableStatusAvailable,
@@ -851,7 +821,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *valu
 
 	// 创建一个修饰符组，包含所有小料
 	modifierGroup, err := valueobject.NewModifierGroup(
-		fmt.Sprintf("SAUCE-GROUP-%d", productPackage.Uuid),
+		fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", productPackage.Uuid),
 		"加料",
 		map[string]string{
 			"en": "Add Toppings",
@@ -882,7 +852,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *valu
 
 		// 创建修饰符
 		modifier, err := valueobject.NewModifier(
-			fmt.Sprintf("SAUCE-%d", bom.ProductSauce.Uuid),
+			fmt.Sprintf("TTPOS-SAUCE-%d", bom.ProductSauce.Uuid),
 			sauceName,
 			idx+1,
 			valueobject.AvailableStatusAvailable,
@@ -931,7 +901,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 
 		// 创建修饰符组
 		modifierGroup, err := valueobject.NewModifierGroup(
-			fmt.Sprintf("ATTR-GROUP-%d", packageAttrGroup.ProductAttributeGroup.Uuid),
+			fmt.Sprintf("TTPOS-ATTR-GROUP-%d", packageAttrGroup.ProductAttributeGroup.Uuid),
 			groupName,
 			c.filterSupportedLanguages(packageAttrGroup.ProductAttributeGroup.MultiLanguageName.ToMap()),
 			sequence,
@@ -957,7 +927,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 
 			// 创建修饰符（属性没有价格，价格为0）
 			modifier, err := valueobject.NewModifier(
-				fmt.Sprintf("ATTR-%d", packageAttr.Attribute.Uuid),
+				fmt.Sprintf("TTPOS-ATTR-%d", packageAttr.Attribute.Uuid),
 				attrName,
 				idx+1,
 				valueobject.AvailableStatusAvailable,
@@ -1074,7 +1044,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valu
 
 		// 创建修饰符组
 		modifierGroup, err := valueobject.NewModifierGroup(
-			fmt.Sprintf("PACKAGE-GROUP-%d", packageGroup.Uuid),
+			fmt.Sprintf("TTPOS-PACKAGE-GROUP-%d", packageGroup.Uuid),
 			groupName,
 			nameTranslation,
 			sequence,
@@ -1109,7 +1079,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valu
 
 			// 创建修饰符
 			modifier, err := valueobject.NewModifier(
-				fmt.Sprintf("PACKAGE-ITEM-%d", groupItem.Uuid),
+				fmt.Sprintf("TTPOS-PACKAGE-ITEM-%d", groupItem.Uuid),
 				itemName,
 				idx+1,
 				valueobject.AvailableStatusAvailable,

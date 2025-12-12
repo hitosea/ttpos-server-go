@@ -1,7 +1,6 @@
 package application
 
 import (
-	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
@@ -29,8 +28,8 @@ type ITakeoutMenuAppService interface {
 	// GetGrabMenu 获取 Grab 的商品菜单
 	GetGrabMenu(ctx context.Context) (*GrabMenuResponse, error)
 
-	// ImportMenu 导入 Grab 菜单（分类/商品/规格/属性/加料/单位 按需创建或关联）
-	ImportMenu(ctx context.Context, req ImportMenuRequest) (*GrabProductImportResult, error)
+	// GetImportMenu 导入 Grab 菜单（全新创建商品，不做绑定关系）
+	GetImportMenu(ctx context.Context, req ImportMenuRequest) (*entity.TakeoutMenu, error)
 }
 
 // BindingLinkResponse 绑定链接响应
@@ -54,53 +53,47 @@ type GrabMenuResponse struct {
 
 // ImportMenuRequest 导入 Grab 菜单请求
 type ImportMenuRequest struct {
-	CompanyUuid uint64
-	MenuData    interface{}
-	Overwrite   bool
+	Platform string      `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
+	MenuData interface{} `json:"menuData" binding:"required"` // 平台菜单 JSON 数据
 }
 
-// ImportMenu 导入 Grab 菜单（分类/商品/规格/属性/加料/单位）
-// 占位实现：解析菜单，逐项调用 ImportGrabProducts 逻辑后续补全
-func (s *takeoutMenuAppService) ImportMenu(ctx context.Context, req ImportMenuRequest) (*GrabProductImportResult, error) {
-	companyUuid := ctx.GetCompanyUuid()
-	if req.CompanyUuid != 0 {
-		companyUuid = req.CompanyUuid
-	}
-	if companyUuid == 0 {
-		return nil, errors.New("公司 UUID 不能为空")
-	}
+// GetImportMenu 导入 Grab 菜单（全新创建商品/分类，不做绑定关系）
+func (s *takeoutMenuAppService) GetImportMenu(ctx context.Context, req ImportMenuRequest) (*entity.TakeoutMenu, error) {
 	if req.MenuData == nil {
 		return nil, errors.New("菜单数据不能为空")
 	}
 
-	// TODO: 解析 Grab 菜单（grab_models.go 结构），执行：
-	// 1) 分类查找/创建
-	// 2) 商品查找/创建（默认下架）、建立映射
-	// 3) 规格/变体、属性组/属性值、单位查找/创建
-	// 4) 汇总结果
+	// 获取 Grab 转换器
+	converter, err := s.getConverter(req.Platform)
+	if err != nil {
+		return nil, err
+	}
+	grabConverter, ok := converter.(*grab.GrabConverter)
+	if !ok {
+		return nil, errors.New("转换器类型错误")
+	}
 
-	return &GrabProductImportResult{
-		SuccessCount: 0,
-		FailureCount: 0,
-		CreatedItems: 0,
-		UpdatedItems: 0,
-		Failures:     make([]resp.GrabProductImportFailure, 0),
-	}, nil
+	// 解析 Grab 菜单数据
+	menuEntity, err := grabConverter.ConvertToTTPOS(ctx, req.MenuData)
+	if err != nil {
+		return nil, errors.WithMessage(err, "解析 Grab 菜单失败")
+	}
+
+	return menuEntity, nil
 }
 
 // takeoutMenuAppService 外卖菜单应用服务实现
 type takeoutMenuAppService struct {
-	dbm         *database.DBManager
-	menuRepo    repository.IMenuDataRepository
-	converters  map[string]service.IPlatformConverter // 平台转换器映射
-	cache       cache.Cache
-	grabMapRepo repository.IGrabProductMapRepository
+	dbm            *database.DBManager
+	menuRepo       repository.IMenuDataRepository
+	converters     map[string]service.IPlatformConverter // 平台转换器映射
+	cache          cache.Cache
+	productMapRepo repository.IProductMapRepository
 }
 
 // NewTakeoutMenuAppService 创建外卖菜单应用服务
 func NewTakeoutMenuAppService(
 	dbm *database.DBManager,
-	menuRepo repository.IMenuDataRepository,
 	cache cache.Cache,
 ) ITakeoutMenuAppService {
 	// 初始化平台转换器
@@ -109,11 +102,11 @@ func NewTakeoutMenuAppService(
 	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
 
 	return &takeoutMenuAppService{
-		dbm:         dbm,
-		menuRepo:    menuRepo,
-		converters:  converters,
-		cache:       cache,
-		grabMapRepo: persistence.NewGrabProductMapRepository(),
+		dbm:            dbm,
+		menuRepo:       persistence.NewMenuDataRepository(dbm),
+		converters:     converters,
+		cache:          cache,
+		productMapRepo: persistence.NewProductMapRepository(),
 	}
 }
 
@@ -121,8 +114,18 @@ func NewTakeoutMenuAppService(
 type ExportMenuRequest struct {
 	Platform       string   // 平台名称：grab, lineman 等
 	CompanyUuid    uint64   // 公司 UUID
+	CurrencyUnit   string   // 货币单位
 	CategoryIDs    []uint64 // 分类 ID 列表（可选）
 	SellingTimeIDs []uint64 // 售卖时段 ID 列表（可选）
+}
+
+// GrabProductImportResult Grab 商品导入结果
+type GrabProductImportResult struct {
+	SuccessCount int
+	FailureCount int
+	CreatedItems int
+	UpdatedItems int
+	Failures     []resp.GrabProductImportFailure
 }
 
 // ExportMenu 导出菜单到指定平台格式
@@ -145,7 +148,7 @@ func (s *takeoutMenuAppService) ExportMenu(ctx context.Context, req ExportMenuRe
 	var menu *entity.TakeoutMenu
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
 		// Grab 平台使用专用的加载方法
-		menu, err = grabConverter.LoadMenuFromDatabase(ctx, req.CompanyUuid, req.CategoryIDs, req.SellingTimeIDs)
+		menu, err = grabConverter.LoadMenuFromDatabase(ctx, req.CompanyUuid, req.CurrencyUnit, req.CategoryIDs, req.SellingTimeIDs)
 		if err != nil {
 			return nil, errors.WithMessage(err, "加载菜单数据失败")
 		}
@@ -160,22 +163,6 @@ func (s *takeoutMenuAppService) ExportMenu(ctx context.Context, req ExportMenuRe
 	}
 
 	return platformData, nil
-}
-
-// GrabProductImportRequest Grab 商品导入请求
-type GrabProductImportRequest struct {
-	CompanyUuid uint64
-	Items       []req.GrabProductImportItem
-	Overwrite   bool
-}
-
-// GrabProductImportResult Grab 商品导入结果
-type GrabProductImportResult struct {
-	SuccessCount int
-	FailureCount int
-	CreatedItems int
-	UpdatedItems int
-	Failures     []resp.GrabProductImportFailure
 }
 
 // GetBindingLink 获取绑定链接

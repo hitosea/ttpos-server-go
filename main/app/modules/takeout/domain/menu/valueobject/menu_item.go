@@ -1,6 +1,9 @@
 package valueobject
 
-import "ttpos-server-go/app/errors"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
+)
 
 // CampaignInfo 营销活动信息
 type CampaignInfo struct {
@@ -82,4 +85,46 @@ func (i *MenuItem) Validate() error {
 	}
 
 	return nil
+}
+
+// GetSellingPoint 构建卖点描述
+func (i *MenuItem) GetSellingPoint() dto.LocaleResponse {
+	sellingPoint := dto.LocaleResponse{}
+
+	if i.Description != "" {
+		sellingPoint.EN = i.Description
+	}
+
+	// 从描述多语言填充
+	if i.DescriptionTranslation != nil {
+		if zh, ok := i.DescriptionTranslation["zh"]; ok {
+			sellingPoint.ZH = zh
+		}
+		if th, ok := i.DescriptionTranslation["th"]; ok {
+			sellingPoint.TH = th
+		}
+		if en, ok := i.DescriptionTranslation["en"]; ok {
+			sellingPoint.EN = en
+		}
+		if zhtw, ok := i.DescriptionTranslation["zh-TW"]; ok {
+			sellingPoint.ZHTW = zhtw
+		}
+		if ja, ok := i.DescriptionTranslation["ja"]; ok {
+			sellingPoint.JA = ja
+		}
+		if ko, ok := i.DescriptionTranslation["ko"]; ok {
+			sellingPoint.KO = ko
+		}
+		if my, ok := i.DescriptionTranslation["my"]; ok {
+			sellingPoint.MY = my
+		}
+		if tr, ok := i.DescriptionTranslation["tr"]; ok {
+			sellingPoint.TR = tr
+		}
+		if sv, ok := i.DescriptionTranslation["sv"]; ok {
+			sellingPoint.SV = sv
+		}
+	}
+
+	return sellingPoint
 }

@@ -13,6 +13,7 @@ type ProductPackageTakeout struct {
 	CategoryUuid          uint64 `gorm:"default:0;column:category_uuid;comment:'外卖分类UUID'"`
 	SpecialCategoryUuid   uint64 `gorm:"default:0;column:special_category_uuid;comment:'外卖特色分类UUID'"`
 	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'外卖商品图片UUID'"`
+	GrabProductId         string `gorm:"type:varchar(500);default:'';column:grab_product_id;index:idx_grab_product_id;comment:'Grab商品ID（用于去重）'"`
 
 	// 关联关系
 	ProductPackage         ProductPackage      `gorm:"foreignKey:product_package_uuid;references:uuid" json:"-"`         // 商品包

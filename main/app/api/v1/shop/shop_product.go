@@ -125,7 +125,7 @@ func (h *ProductHandler) AddProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	err := h.productSrv.AddProductShopCategory(ctx, addReq)
+	_, err := h.productSrv.AddProductShopCategory(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -151,7 +151,7 @@ func (h *ProductHandler) EditProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	err := h.productSrv.EditProductShopCategory(ctx, editReq)
+	_, err := h.productSrv.EditProductShopCategory(ctx, editReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -594,7 +594,7 @@ func (h *ProductHandler) AddProductAttributeGroup(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
 		return
 	}
-	err := h.productSrv.AddProductAttributeGroup(ctx, addReq)
+	_, err := h.productSrv.AddProductAttributeGroup(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -646,7 +646,7 @@ func (h *ProductHandler) AddProductFlavor(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
 		return
 	}
-	err := h.productSrv.AddProductFlavor(ctx, addReq)
+	_, err := h.productSrv.AddProductFlavor(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

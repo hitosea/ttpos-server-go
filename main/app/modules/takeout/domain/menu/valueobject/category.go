@@ -1,6 +1,8 @@
 package valueobject
 
-import "ttpos-server-go/app/errors"
+import (
+	"ttpos-server-go/app/errors"
+)
 
 // Category 菜单分类值对象（平台通用）
 type Category struct {
@@ -56,4 +58,12 @@ func (c *Category) Validate() error {
 	}
 
 	return nil
+}
+
+// GetCategoryStatus 获取分类状态
+func (c *Category) GetCategoryStatusToInt() int {
+	if c.AvailableStatus == AvailableStatusAvailable {
+		return 1 // 开启
+	}
+	return 0 // 关闭
 }

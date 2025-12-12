@@ -7,7 +7,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
-	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -17,15 +17,18 @@ import (
 // Handler 外卖菜单 Handler
 type Handler struct {
 	menuAppSrv application.ITakeoutMenuAppService
+	dbm        *database.DBManager
+	cache      cache.Cache
 }
 
 // NewHandler 创建 Handler
 func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
-	menuRepo := persistence.NewMenuDataRepository(dbm)
-	menuAppSrv := application.NewTakeoutMenuAppService(dbm, menuRepo, cache)
+	menuAppSrv := application.NewTakeoutMenuAppService(dbm, cache)
 
 	return &Handler{
 		menuAppSrv: menuAppSrv,
+		dbm:        dbm,
+		cache:      cache,
 	}
 }
 
@@ -53,12 +56,17 @@ func (h *Handler) ExportMenu(c *gin.Context) {
 		exportReq.CompanyUuid = ctx.GetCompanyUuid()
 	}
 
+	currencySetting, err := setting.NewSrv(h.dbm, h.cache).GetCurrencySetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "获取货币设置失败"))
+		return
+	}
+
 	// 调用应用服务
 	menuData, err := h.menuAppSrv.ExportMenu(ctx, application.ExportMenuRequest{
-		Platform:       exportReq.Platform,
-		CompanyUuid:    exportReq.CompanyUuid,
-		CategoryIDs:    exportReq.CategoryIDs,
-		SellingTimeIDs: exportReq.SellingTimeIDs,
+		Platform:     exportReq.Platform,
+		CompanyUuid:  exportReq.CompanyUuid,
+		CurrencyUnit: currencySetting.Unit,
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "导出菜单失败"))

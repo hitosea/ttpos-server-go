@@ -146,17 +146,44 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 			if !ok || !slices.Contains(multiLanguageNameUuids, strconv.FormatUint(multiLanguageName.Uuid, 10)) {
 				continue
 			}
+			if multiLanguageName.NotOverwrite == 1 {
+				if multiLanguageName.ZhName != "" {
+					translated.ZH = multiLanguageName.ZhName
+				}
+				if multiLanguageName.ThName != "" {
+					translated.TH = multiLanguageName.ThName
+				}
+				if multiLanguageName.EnName != "" {
+					translated.EN = multiLanguageName.EnName
+				}
+				if multiLanguageName.ZhTwName != "" {
+					translated.ZHTW = multiLanguageName.ZhTwName
+				}
+				if multiLanguageName.KoName != "" {
+					translated.KO = multiLanguageName.KoName
+				}
+				if multiLanguageName.MyName != "" {
+					translated.MY = multiLanguageName.MyName
+				}
+				if multiLanguageName.TrName != "" {
+					translated.TR = multiLanguageName.TrName
+				}
+				if multiLanguageName.SvName != "" {
+					translated.SV = multiLanguageName.SvName
+				}
+			}
 			// 更新翻译
 			tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", multiLanguageName.Uuid).Updates(map[string]any{
-				"zh_name":    translated.ZH,
-				"th_name":    translated.TH,
-				"en_name":    translated.EN,
-				"zh_tw_name": translated.ZHTW,
-				"ja_name":    translated.JA,
-				"ko_name":    translated.KO,
-				"my_name":    translated.MY,
-				"tr_name":    translated.TR,
-				"sv_name":    translated.SV,
+				"zh_name":       translated.ZH,
+				"th_name":       translated.TH,
+				"en_name":       translated.EN,
+				"zh_tw_name":    translated.ZHTW,
+				"ja_name":       translated.JA,
+				"ko_name":       translated.KO,
+				"my_name":       translated.MY,
+				"tr_name":       translated.TR,
+				"sv_name":       translated.SV,
+				"not_overwrite": 0,
 			})
 			// 翻译后 - 从集合中移除
 			if err := s.RemoveMultiLanguageNameUuidFromSet(companyUuid, multiLanguageName.Uuid); err != nil {
@@ -187,6 +214,7 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 			db.Model(&model.ProductSauce{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)     // 加料
 			db.Model(&model.ProductPackage{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)   // 商品
 			db.Model(&model.ProductBomCard{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)   // 成本卡
+			db.Model(&model.ProductCategory{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)  // 分类
 		}
 	}
 

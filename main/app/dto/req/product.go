@@ -49,6 +49,8 @@ type ProductUnitReq struct {
 
 type ProductUnitAddReq struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品单位名称
+	Source              string             `json:"source"`                         // 来源标记(grab/manual等)
+	SourceId            string             `json:"source_id"`                      // 来源平台的单位ID
 	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
@@ -114,6 +116,8 @@ type ProductShopCategorySortReq struct {
 
 // ProductShopCategoryAddReq 商品分类添加请求
 type ProductShopCategoryAddReq struct {
+	Source             string             `json:"source"`                         // 来源标记(grab/manual等)
+	SourceId           string             `json:"source_id"`                      // 来源平台的分类ID
 	IsSpecial          bool               `json:"is_special"`                     // 是否特殊分类, false-否 true-是
 	ParentUuid         uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
 	LocaleName         dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
@@ -153,11 +157,14 @@ type ProductAttributeDeleteReq struct {
 
 type ProductAttributeGroupAddReq struct {
 	LocaleName        dto.LocaleResponse                            `json:"locale_name" binding:"required"`             // 商品属性分组名称, 多语言
+	Source            string                                        `json:"source"`                                     // 来源标记(grab/manual等)
+	SourceId          string                                        `json:"source_id"`                                  // 来源平台的属性组ID
 	ProductAttributes []ProductAttributeGroupAddProductAttributeReq `json:"product_attributes" binding:"required,dive"` // 商品属性
 }
 
 type ProductAttributeGroupAddProductAttributeReq struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	Price               float64            `json:"price"`                          // 属性价格（外卖平台属性加价）
 	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
@@ -170,7 +177,10 @@ type ProductAttributeGroupEditReq struct {
 type ProductAttributeGroupEditProductAttributeReq struct {
 	Uuid                uint64             `json:"uuid"`                           // 商品属性UUID, 可选，如果有，是编辑，没有是添加
 	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	Source              string             `json:"source"`                         // 来源标记(grab/manual等)
+	SourceId            string             `json:"source_id"`                      // 来源平台的属性ID
 	Sort                int                `json:"sort" binding:"required"`        // 排序
+	Price               float64            `json:"price"`                          // 属性价格（外卖平台属性加价）
 	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
@@ -207,6 +217,8 @@ type ProductFlavorReq struct {
 // ProductFlavorAddReq 商品规格添加请求
 type ProductFlavorAddReq struct {
 	LocaleName dto.LocaleResponse               `json:"locale_name" binding:"required"` // 商品规格名称
+	Source     string                           `json:"source"`                         // 来源标记(grab/manual等)
+	SourceId   string                           `json:"source_id"`                      // 来源平台的规格ID
 	List       []ProductFlavorAddProductPackage `json:"list"`                           // 关联商品包列表
 }
 
