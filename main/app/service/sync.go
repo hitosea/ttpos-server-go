@@ -1423,6 +1423,7 @@ func (s *SyncSrv) handleUncheckedHeadquartersData(ctx context.Context, headquart
 			"ttpos_product_sauce",           // 加料
 			"ttpos_product_package",         // 商品
 			"ttpos_material_category",       // 物品分类
+			"ttpos_material",                // 物品
 			"ttpos_product_bom_card",        // 成本卡
 			"ttpos_supplier",                // 供应商
 			"ttpos_tax",                     // 税类
@@ -1696,11 +1697,6 @@ func (s *SyncSrv) SyncPaymentMethod(ctx context.Context) error {
 		newCode := s.generatePaymentCode(subShopDB)
 
 		newPayment := model.PaymentMethod{
-			BaseModel: model.BaseModel{
-				Uuid:       hqPayment.Uuid, // 保持与总部相同的uuid
-				CreateTime: time.Now().Unix(),
-				UpdateTime: time.Now().Unix(),
-			},
 			HeadquarterUuid: headquarterUuid,
 			PaymentName:     hqPayment.PaymentName,
 			Name:            hqPayment.Name,
