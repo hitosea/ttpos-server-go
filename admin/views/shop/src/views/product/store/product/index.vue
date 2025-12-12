@@ -21,14 +21,15 @@
           >
           </Acascader>
         </el-form-item>
-        <el-form-item :label="$t('商品库存')">
+        <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+        <!-- <el-form-item :label="$t('商品库存')">
           <Aselect size="small" v-model:value="stock" :placeholder="$t('全部库存')" @change="onSearch">
             <el-option :label="$t('全部')" value=" "></el-option>
             <el-option :label="$t('库存低于10')" value="10"></el-option>
             <el-option :label="$t('库存低于20')" value="20"></el-option>
             <el-option :label="$t('库存低于50')" value="50"></el-option>
           </Aselect>
-        </el-form-item>
+        </el-form-item> -->
         <el-form-item :label="$t('商品状态')">
           <Aselect size="small" v-model:value="activeName" :placeholder="$t('商品状态')" @change="onSearch">
             <el-option :label="$t('全部')" value="all"></el-option>
@@ -113,7 +114,8 @@
           </el-table-column>
           <el-table-column prop="category.path_name_text" :label="$t('分类')"></el-table-column>
           <el-table-column prop="sales_actual" :label="$t('实际销量')"></el-table-column>
-          <el-table-column prop="product_stock" :label="$t('库存')">
+          <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+          <!-- <el-table-column prop="product_stock" :label="$t('库存')">
             <template #default="scope">
               <template v-if="scope.row.type == 10 || scope.row.type == 30">
                 {{ scope.row.is_open_stock == 1 ? scope.row.product_stock : '-' }}
@@ -122,7 +124,7 @@
                 {{ scope.row.product_material_stock }}
               </template>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
             <template #default="scope">
               <el-switch
@@ -137,9 +139,15 @@
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" link type="primary" size="small" v-auth="'/product/store/product/edit'">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.is_material_used == 1 || scope.row.is_package_used == 1 || erp_is_open == 1" link type="primary" size="small" v-auth="'/product/store/product/delete'">{{
-                $t('删除')
-              }}</el-button>
+              <el-button
+                @click="deleteClick(scope.row)"
+                :disabled="scope.row.is_material_used == 1 || scope.row.is_package_used == 1 || erp_is_open == 1"
+                link
+                type="primary"
+                size="small"
+                v-auth="'/product/store/product/delete'"
+                >{{ $t('删除') }}</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -159,7 +167,7 @@
     </div>
 
     <!-- 商品选择器 -->
-    <ProductSelector v-if="openProductSelector" :open="openProductSelector" :hasPackage="true" @close="deleteArr" selectorType="all" type="all" > </ProductSelector>
+    <ProductSelector v-if="openProductSelector" :open="openProductSelector" :hasPackage="true" @close="deleteArr" selectorType="all" type="all"> </ProductSelector>
   </div>
 </template>
 

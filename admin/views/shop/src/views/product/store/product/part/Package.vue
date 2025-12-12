@@ -101,11 +101,11 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
+            <!-- <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
               <template #default="scope">
                 {{ scope.row.stock_num }}
               </template>
-            </el-table-column>
+            </el-table-column> -->
 
             <el-table-column prop="is_required" :label="$t('必选')" width="80" v-if="form.model.package_group[groupIndex].group_type == 1">
               <template #default="scope">
@@ -135,10 +135,10 @@
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
-    <el-form-item for="no_click" :label="$t('可售量')">
+    <!--  <el-form-item for="no_click" :label="$t('可售量')">
       <numInput type="text" :placeholder="$t('请输入库存')" disabled v-model="nowStock" :maxlength="50" class="max-w460"></numInput>
       <div class="gray9">{{ $t('根据子商品库存动态计算，库存变化自动更新') }}</div>
-    </el-form-item>
+    </el-form-item> -->
     <!-- TODO: 是否开启库存,2025年08月07日09:55:45，需求暂时隐藏 -->
     <!-- <el-form-item for="no_click" :label="$t('是否开启库存')">
       <el-radio-group v-model="form.model.is_open_stock">
@@ -147,10 +147,10 @@
       </el-radio-group>
     </el-form-item> -->
 
-    <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
+    <!-- <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
       <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :min="0" :max="99999999" class="max-w460"></numInput>
       <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
-    </el-form-item>
+    </el-form-item> -->
 
     <el-form-item for="no_click" :label="$t('库存计算方式：')">
       <el-radio-group v-model="form.model.deduct_stock_type" :disabled="erp_is_open == 1">

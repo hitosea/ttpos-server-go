@@ -42,8 +42,8 @@
         :disabled="erp_is_open == 1"
       ></el-input-number>
     </el-form-item>
-
-    <el-form-item for="no_click" :label="$t('库存数量：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('请填写库存数量') }]" prop="model.sku[0].stock_num">
+    <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+    <!-- <el-form-item for="no_click" :label="$t('库存数量：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('请填写库存数量') }]" prop="model.sku[0].stock_num">
       <numInput
         :min="0"
         :max="99999999"
@@ -52,8 +52,8 @@
         v-model="form.model.sku[0].stock_num"
         class="max-w460"
       ></numInput>
-    </el-form-item>
-    <el-form-item
+    </el-form-item> -->
+    <!-- <el-form-item
       for="no_click"
       :label="$t('库存数量：')"
       v-if="form.model.type == 20"
@@ -68,7 +68,7 @@
         v-model="form.model.sku[0].material_stock"
         class="max-w460"
       ></numInput>
-    </el-form-item>
+    </el-form-item> -->
 
     <el-form-item
       for="no_click"
