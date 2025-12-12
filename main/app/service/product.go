@@ -7770,7 +7770,6 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					Name:               productBom.Name,
 					ErpCode:            productBom.ErpCode,
 					StockNum:           productBom.StockNum,
-					IsOpenStock:        productBom.IsOpenStock,
 					BarcodeValue:       productBom.BarcodeValue,
 					InternalCode:       productBom.InternalCode,
 					IsDefaultSelect:    productBom.IsDefaultSelect,
