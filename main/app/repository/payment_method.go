@@ -19,12 +19,13 @@ type IPaymentMethodRepo interface {
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereStatus(status int) DBOption
 	WhereExistsErpnextPayment() DBOption // 排除ERPNext支付方式
+	WhereNotCode(codes []int) DBOption   // 排除支付方式代号
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
 
 	CreatePaymentMethod(paymentMethod model.PaymentMethod) error                                                      // 创建支付方式
-	UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error                                 // 更新支付方式
+	UpdatePaymentMethod(date map[string]any, options ...DBOption) error                                               // 更新支付方式
 	DeletePaymentMethod(uuid uint64) error                                                                            // 删除支付方式（软删除）
 	CheckHasOrders(uuid uint64) (bool, error)                                                                         // 检查是否有关联订单
 	GetMaxSort() (int, error)                                                                                         // 获取最大排序值
@@ -246,14 +247,19 @@ func (r *paymentMethodRepo) WhereExistsErpnextPayment() DBOption {
 	}
 }
 
+func (r *paymentMethodRepo) WhereNotCode(codes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code NOT IN ?", codes)
+	}
+}
+
 // UpdatePaymentMethod 更新支付方式
-func (r *paymentMethodRepo) UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error {
-	paymentMethod.SetNil()
+func (r *paymentMethodRepo) UpdatePaymentMethod(data map[string]any, options ...DBOption) error {
 	db := r.db.Model(&model.PaymentMethod{})
 	for _, opt := range options {
 		db = opt(db)
 	}
-	if err := db.Updates(&paymentMethod).Error; err != nil {
+	if err := db.Updates(data).Error; err != nil {
 		return errors.WithMessage(err, "更新支付方式失败")
 	}
 	return nil

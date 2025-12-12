@@ -185,6 +185,7 @@ func (s *companySrv) GetCompanyInfo(ctx context.Context, companyUuid uint64) (*r
 	// 构建响应
 	return &resp.CompanyStoreResp{
 		Uuid:         companyUuid,
+		IPWhiteList:  storeSetting.IPWhiteList,
 		Name:         storeSetting.Name,
 		LogoUrl:      storeSetting.LogoURL,
 		Address:      storeSetting.Address,
