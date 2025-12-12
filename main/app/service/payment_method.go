@@ -150,14 +150,22 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 
 // GetManagementList 获取支付方式管理列表（分页）
 func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.PaymentMethodManagementListReq) (*resp.PaymentMethodListResp, error) {
+	companySetting := ctx.GetCompanySetting()
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
-	// 查询支付方式列表，关联logo文件
+	opts := []repository.DBOption{
+		paymentMethodRepo.WithLogoFile(),
+	}
+	if companySetting.IsOpenMember == 0 {
+		opts = append(opts, paymentMethodRepo.WhereNotCode([]int{constant.PaymentMethodCodeBalance}))
+	}
+
+	// 查询支付方式列表
 	list, total, err := paymentMethodRepo.GetPaymentMethodListWithPagination(
 		listReq.PageNo,
 		listReq.PageSize,
-		paymentMethodRepo.WithLogoFile(),
+		opts...,
 	)
 	if err != nil {
 		return nil, appErrors.WithMessage(err, "查询支付方式列表失败")
@@ -403,43 +411,19 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
 
 	// 构建更新数据
-	updateData := model.PaymentMethod{
-		BaseModel: model.BaseModel{
-			Uuid: updateReq.Uuid,
-		},
-	}
+	updateData := map[string]any{}
 	// LianLianPay支付跳过名称、支付方式、图片logo修改
 	if !isLianLianPay {
-		if updateReq.Name != "" {
-			updateData.Name = updateReq.Name
-		}
-		if updateReq.PaymentName != "" {
-			updateData.PaymentName = updateReq.PaymentName
-		}
-		if updateReq.LogoFileUuid > 0 {
-			updateData.LogoFileUuid = updateReq.LogoFileUuid
-		}
+		updateData["name"] = updateReq.Name
+		updateData["payment_name"] = updateReq.PaymentName
+		updateData["logo_file_uuid"] = updateReq.LogoFileUuid
 	}
-	if updateReq.QrcodeFileUuid > 0 {
-		updateData.QrcodeFileUuid = updateReq.QrcodeFileUuid
-	}
-	if updateReq.FeePercent > 0 {
-		// fee_percent 从 0-100 转换为 0-1
-		updateData.FeePercent = updateReq.FeePercent / 100
-	}
-	if updateReq.IsShowCashier >= 0 {
-		updateData.IsShowCashier = updateReq.IsShowCashier
-	}
-	if updateReq.IsShowAssistant >= 0 {
-		updateData.IsShowAssistant = updateReq.IsShowAssistant
-	}
-	if updateReq.IsShowMemberRecharge >= 0 {
-		updateData.IsShowMemberRecharge = updateReq.IsShowMemberRecharge
-	}
-	if updateReq.Status >= 0 {
-		updateData.Status = updateReq.Status
-	}
-	// UpdateTime 由 GORM 自动管理（autoUpdateTime）
+	updateData["qrcode_file_uuid"] = updateReq.QrcodeFileUuid
+	updateData["fee_percent"] = updateReq.FeePercent / 100
+	updateData["is_show_cashier"] = updateReq.IsShowCashier
+	updateData["is_show_assistant"] = updateReq.IsShowAssistant
+	updateData["is_show_member_recharge"] = updateReq.IsShowMemberRecharge
+	updateData["status"] = updateReq.Status
 
 	// 更新支付方式
 	if err := paymentMethodRepo.UpdatePaymentMethod(updateData, paymentMethodRepo.WhereUuid(updateReq.Uuid)); err != nil {
