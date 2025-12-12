@@ -38171,6 +38171,10 @@ const docTemplate = `{
                     "description": "商品图片UUID",
                     "type": "integer"
                 },
+                "is_editable": {
+                    "description": "是否可编辑 1-是 0-否",
+                    "type": "boolean"
+                },
                 "is_show_assistant": {
                     "description": "是否显示在点餐助手 1-显示 0-不显示",
                     "type": "boolean"
@@ -49159,6 +49163,10 @@ const docTemplate = `{
                 },
                 "coordinates": {
                     "description": "经纬度",
+                    "type": "string"
+                },
+                "ip_white_list": {
+                    "description": "ip白名单",
                     "type": "string"
                 },
                 "language": {

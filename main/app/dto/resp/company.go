@@ -29,4 +29,5 @@ type CompanyStoreResp struct {
 	LanguageList []dto.LanguageItem `json:"language_list"` // 系统语言，必填，至少一个
 	TimeZone     string             `json:"time_zone"`     // 时区，必填
 	Language     []string           `json:"language"`      // 云平台限制商家的可用语言列表
+	IPWhiteList  string             `json:"ip_white_list"` // ip白名单
 }

@@ -688,14 +688,15 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 				}
 				return 1
 			}(),
-			Valuation:        request.ValuationRate,
-			InitStock:        request.OpeningStock,
-			BarcodeValue:     request.BarcodeValue,
-			UnitUuid:         productUnit.Uuid,
-			UnitList:         unitList,
-			PurchaseUnitUuid: purchaseUnitUuid,
-			CostUnitUuid:     productUnit.Uuid,
-			InternalCode:     request.InternalCode,
+			Valuation:          request.ValuationRate,
+			InitStock:          request.OpeningStock,
+			BarcodeValue:       request.BarcodeValue,
+			UnitUuid:           productUnit.Uuid,
+			UnitList:           unitList,
+			PurchaseUnitUuid:   purchaseUnitUuid,
+			CostUnitUuid:       productUnit.Uuid,
+			InternalCode:       request.InternalCode,
+			AllowNegativeStock: request.AllowNegativeStock,
 		}
 		// 获取总部ID
 		companySetting := ctx.GetCompanySetting()
@@ -2964,6 +2965,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
 					NotForSale:         itemInfo.NotForSale,
+					AllowNegativeStock: itemInfo.AllowNegativeStock,
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
 				}
@@ -3010,6 +3012,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
 					NotForSale:         itemInfo.NotForSale,
+					AllowNegativeStock: itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))

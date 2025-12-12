@@ -5401,6 +5401,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 			}(),
 		},
 		HeadquarterUuid: productPackage.HeadquarterUuid,
+		IsEditable:      isEditable(ctx, productPackage.HeadquarterUuid),
 	}
 
 	// 注入商品规格和小料的库存
