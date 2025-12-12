@@ -110,7 +110,7 @@
                 <el-table-column type="selection" width="40" :selectable="selectable" />
                 <el-table-column prop="product_name_text" :label="$t('商品名称')" />
                 <el-table-column v-if="props.haveSku" prop="spec_name_text" :label="$t('规格')" />
-                <el-table-column v-if="props.haveSku" prop="stock_num" :label="$t('库存')" />
+                <!-- <el-table-column v-if="props.haveSku" prop="stock_num" :label="$t('库存')" /> -->
               </el-table>
             </template>
           </el-auto-resizer>

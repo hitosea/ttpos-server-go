@@ -75,7 +75,8 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="stock_num" :label="$t('库存')" width="180">
+            <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+            <!-- <el-table-column prop="stock_num" :label="$t('库存')" width="180">
               <template #default="scope">
                 <el-form-item
                   for="no_click"
@@ -102,7 +103,7 @@
                   ></numInput>
                 </el-form-item>
               </template>
-            </el-table-column>
+            </el-table-column> -->
             <el-table-column prop="name" :label="$t('默认勾选')" width="400">
               <template #default="scope">
                 <el-form-item
