@@ -22,6 +22,7 @@ type PaymentMethodCreateItem struct {
 	FeePercent           float64 `json:"fee_percent" binding:"gte=0,lte=100"` // 手续费百分比，取值范围0-100
 	IsShowCashier        int     `json:"is_show_cashier"`                     // 0-不显示 1-收银机结账显示
 	IsShowAssistant      int     `json:"is_show_assistant"`                   // 0-不显示 1-点餐助手结账显示
+	IsShowKiosk          int     `json:"is_show_kiosk"`                       // 0-不显示 1-自助点餐机结账显示
 	IsShowMemberRecharge int     `json:"is_show_member_recharge"`             // 0-不显示 1-收银机会员充值显示
 	Status               int     `json:"status"`                              // 状态 0-禁用 1-启用 2-草稿
 }
@@ -36,6 +37,7 @@ type PaymentMethodUpdateReq struct {
 	FeePercent           float64 `json:"fee_percent" binding:"omitempty,gte=0,lte=100"` // 手续费百分比，取值范围0-100
 	IsShowCashier        int     `json:"is_show_cashier"`                               // 0-不显示 1-收银机结账显示
 	IsShowAssistant      int     `json:"is_show_assistant"`                             // 0-不显示 1-点餐助手结账显示
+	IsShowKiosk          int     `json:"is_show_kiosk"`                                 // 0-不显示 1-自助点餐机结账显示
 	IsShowMemberRecharge int     `json:"is_show_member_recharge"`                       // 0-不显示 1-收银机会员充值显示
 	Status               int     `json:"status"`                                        // 状态 0-禁用 1-启用 2-草稿
 }

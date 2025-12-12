@@ -17,6 +17,7 @@ type IPaymentMethodRepo interface {
 	WhereCashier() DBOption               // 在收银端结账显示
 	WhereCashierMemberRecharge() DBOption // 收银端充值时显示
 	WhereAssistant() DBOption             // 在助手端结账时显示
+	WhereKiosk() DBOption                 // 在自助点餐机结账时显示
 	WhereStatus(status int) DBOption
 	WhereExistsErpnextPayment() DBOption // 排除ERPNext支付方式
 	WhereNotCode(codes []int) DBOption   // 排除支付方式代号
@@ -123,6 +124,12 @@ func (r *paymentMethodRepo) WhereCashierMemberRecharge() DBOption {
 func (r *paymentMethodRepo) WhereAssistant() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_assistant = 1")
+	}
+}
+
+func (r *paymentMethodRepo) WhereKiosk() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_kiosk = 1")
 	}
 }
 

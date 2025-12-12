@@ -43097,6 +43097,10 @@ const docTemplate = `{
                     "description": "0-不显示 1-收银机结账显示",
                     "type": "integer"
                 },
+                "is_show_kiosk": {
+                    "description": "0-不显示 1-自助点餐机结账显示",
+                    "type": "integer"
+                },
                 "is_show_member_recharge": {
                     "description": "0-不显示 1-收银机会员充值显示",
                     "type": "integer"
@@ -43203,6 +43207,10 @@ const docTemplate = `{
                 },
                 "is_show_cashier": {
                     "description": "0-不显示 1-收银机结账显示",
+                    "type": "integer"
+                },
+                "is_show_kiosk": {
+                    "description": "0-不显示 1-自助点餐机结账显示",
                     "type": "integer"
                 },
                 "is_show_member_recharge": {
@@ -53885,6 +53893,10 @@ const docTemplate = `{
                 },
                 "is_show_cashier": {
                     "description": "0-不显示 1-收银机结账显示",
+                    "type": "integer"
+                },
+                "is_show_kiosk": {
+                    "description": "0-不显示 1-自助点餐机结账显示",
                     "type": "integer"
                 },
                 "is_show_member_recharge": {
