@@ -7675,6 +7675,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
 		subProductPackageRepo := repository.NewProductPackageRepo(db)
+		subProductBomRepo := repository.NewProductBomRepo(db)
 		headProductPackageList, err := productPackageRepo.GetProductPackageList(
 			commonRepo.WhereByHeadquarterUuid(0),
 			productPackageRepo.WithMultiLanguageName(),
@@ -7758,6 +7759,24 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 				ProductLabelUuid:              productPackage.ProductLabelUuid,
 			})
 			for _, productBom := range productPackage.ProductBoms {
+				// 查询子店是否存在该商品包
+				bomActualSaleNum := float64(0)
+				bomStockNum := float64(0)
+				bomUseBomCardStock := 0
+				bomIsSoldOut := 0
+				bomIsOpenStock := 0
+				existsProductBom, err := subProductBomRepo.GetProductBom(
+					commonRepo.WhereByUuid(productBom.Uuid),
+					commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+					commonRepo.WhereIsHeadquarter(),
+				)
+				if err == nil && existsProductBom.Uuid > 0 && existsProductBom.CreateTime == productBom.CreateTime {
+					bomActualSaleNum = existsProductBom.ActualSaleNum
+					bomStockNum = existsProductBom.StockNum
+					bomUseBomCardStock = existsProductBom.UseBomCardStock
+					bomIsSoldOut = existsProductBom.IsSoldOut
+					bomIsOpenStock = existsProductBom.IsOpenStock
+				}
 				newProductBomList = append(newProductBomList, model.ProductBom{
 					BaseModel: model.BaseModel{
 						Uuid:       productBom.Uuid,
@@ -7769,17 +7788,19 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					Price:              productBom.Price,
 					Name:               productBom.Name,
 					ErpCode:            productBom.ErpCode,
-					StockNum:           productBom.StockNum,
+					StockNum:           bomStockNum,
+					IsOpenStock:        bomIsOpenStock,
 					BarcodeValue:       productBom.BarcodeValue,
 					InternalCode:       productBom.InternalCode,
 					IsDefaultSelect:    productBom.IsDefaultSelect,
 					Status:             productBom.Status,
-					IsSoldOut:          productBom.IsSoldOut,
-					ActualSaleNum:      productBom.ActualSaleNum,
+					IsSoldOut:          bomIsSoldOut,
+					ActualSaleNum:      bomActualSaleNum,
 					ProductFlavorUuid:  productBom.ProductFlavorUuid,
 					ProductSauceUuid:   productBom.ProductSauceUuid,
 					ProductPackageUuid: productBom.ProductPackageUuid,
 					ProductBomCardUuid: productBom.ProductBomCardUuid,
+					UseBomCardStock:    bomUseBomCardStock,
 				})
 			}
 			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
