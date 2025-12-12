@@ -40,8 +40,8 @@ type IWarehouseSrv interface {
 	GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error)                                                     // 对方机构列表
 	GetWarehouseMaterialList(ctx context.Context, req req.WarehouseMaterialListReq) (resp.WarehouseMaterialListResp, error) // 获取仓库物品列表
 
-	SyncWarehouse(ctx context.Context) error          // 同步仓库列表
-	SyncWarehouseItemStock(ctx context.Context) error // 同步仓库物品库存
+	SyncWarehouse(ctx context.Context, syncHeadquarterData bool) error // 同步仓库列表
+	SyncWarehouseItemStock(ctx context.Context) error                  // 同步仓库物品库存
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -736,7 +736,7 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	}, nil
 }
 
-func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
+func (s *warehouseSrv) SyncWarehouse(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -760,7 +760,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	// 子店获取总部ttpos仓库
 	var headquarter model.CompanySetting
 	var headquarterWarehouses []model.Warehouse
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
@@ -894,7 +894,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		}
 
 		// 同步ttpos总店数据（多语言由 SyncMultiLanguage 任务处理）
-		if len(headquarterWarehouses) > 0 {
+		if len(headquarterWarehouses) > 0 && syncHeadquarterData {
 			// 删除仓库
 			tx.Where("headquarter_uuid > 0").Delete(&model.Warehouse{})
 

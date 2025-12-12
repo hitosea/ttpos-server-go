@@ -191,4 +191,5 @@ func (model *MaterialCategory) UpdateFromHeadquarter(headquarterCategory Materia
 	model.Code = headquarterCategory.Code
 	model.Name = headquarterCategory.Name
 	model.MultiLanguageName.InitByLocaleResponse(headquarterCategory.MultiLanguageName.GetNames())
+	model.DeleteTime = headquarterCategory.DeleteTime
 }
