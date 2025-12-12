@@ -20,6 +20,8 @@ type (
 		GetWithDriver(ctx context.Context, shopOrderUuid string) (*dto.OrderWithDriver, error)
 		// GetMenuSnapshot 根据 request_id 查询菜单快照
 		GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshotReq) (*api.GetMenuSnapshotResp, error)
+		// SaveMenuSnapshot 保存菜单快照
+		SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapshotReq) (*api.SaveMenuSnapshotResp, error)
 	}
 )
 

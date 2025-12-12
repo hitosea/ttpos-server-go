@@ -97,6 +97,17 @@ message GetMenuSnapshotResp {
   string sync_state = 4;       // 同步状态  QUEUED/PROCESSING/SUCCESS/FAIL
 }
 
+message SaveMenuSnapshotReq {
+  string provider_name = 1; // 渠道名称: grab,lineman
+  string shop_uuid = 2;     // 店铺 UUID
+  string menu_data = 3;     // 菜单数据 JSON 字符串
+  string request_id = 4;    // 请求 ID
+}
+
+message SaveMenuSnapshotResp {
+  ResponseInfo responseInfo = 1;
+}
+
 service TakeoutService {
   rpc EstimateDistance (EstimateDistanceReq) returns (EstimateDistanceResp) {}
   rpc CreateOrder (CreateOrderReq) returns (CreateOrderResp) {}
@@ -104,4 +115,5 @@ service TakeoutService {
   rpc ConfirmOrder (ConfirmOrderReq) returns (ConfirmOrderResp) {}
   rpc GetDriverInfo(GetDriverInfoReq) returns (GetDriverInfoResp) {}
   rpc GetMenuSnapshot (GetMenuSnapshotReq) returns (GetMenuSnapshotResp) {}
+  rpc SaveMenuSnapshot (SaveMenuSnapshotReq) returns (SaveMenuSnapshotResp) {}
 }

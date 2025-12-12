@@ -9,7 +9,7 @@ CHANGE COLUMN `update_time` `updated_at` int(11) NOT NULL DEFAULT 0 COMMENT '更
 
 -- 3. 添加新字段
 ALTER TABLE `takeout_channel_menu_snapshot` 
-ADD COLUMN `deleted_at` int(11) DEFAULT NULL COMMENT '删除时间' AFTER `updated_at`;
+ADD COLUMN `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间' AFTER `updated_at`;
 
 ALTER TABLE `takeout_channel_menu_snapshot` 
 ADD COLUMN `sync_state` varchar(32)  NULL COMMENT '同步状态: QUEUEING, PROCESSING, SUCCESS, FAILED' ;
