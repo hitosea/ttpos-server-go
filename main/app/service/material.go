@@ -3101,6 +3101,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
 					AllowNegativeStock:    material.AllowNegativeStock,
+					OriginCountryCode:     material.OriginCountryCode,
 				})
 				for _, unit := range material.NotBaseUnitList {
 					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{
