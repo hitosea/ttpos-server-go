@@ -521,7 +521,7 @@ func (s *authSrv) loginWithCompany(ctx context.Context, loginReq req.LoginReq, s
 }
 
 // generateTokenWithCompanyUuidZero 生成 company_uuid 为 0 的 token
-func (s *authSrv) generateTokenWithCompanyUuidZero(ctx context.Context, loginReq req.LoginReq, staffUuid uint64, needChangePassword bool) (resp.LoginResp, error) {
+func (s *authSrv) generateTokenWithCompanyUuidZero(_ context.Context, loginReq req.LoginReq, staffUuid uint64, needChangePassword bool) (resp.LoginResp, error) {
 	claims := auth.Claims{
 		Source:      loginReq.Source,
 		CompanyUuid: 0, // company_uuid 为 0，需要切换门店后设置

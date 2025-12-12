@@ -89,9 +89,9 @@ type IMaterialSrv interface {
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
-	SyncMaterialCategory(ctx context.Context) error // 同步物品分类
-	SyncMaterial(ctx context.Context) error         // 同步物品
-	SyncProductBomCard(ctx context.Context) error   // 同步成本卡
+	SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error // 同步物品分类
+	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error         // 同步物品
+	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
 
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
@@ -2821,9 +2821,9 @@ func (s *materialSrv) GetWarehouseItemsByErpCode(ctx context.Context, warehouseE
 }
 
 // 同步物品分类
-func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
+func (s *materialSrv) SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		// 获取总部company_uuid
 		headquarterUuid := companySetting.HeadquarterUuid
 		headquarterDb := s.dbm.GetDB(headquarterUuid)
@@ -2834,7 +2834,7 @@ func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
 		}
 		// 获取子公司的分类
 		subShopDb := s.dbm.GetDB(ctx.GetCompanyUuid())
-		subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryList()
+		subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryListWithDeleted()
 		if err != nil {
 			return errors.WithMessage(err, "获取子公司分类列表失败")
 		}
@@ -2914,7 +2914,7 @@ func (s *materialSrv) GetHeadquarterMaterialCategoryInSubShop(ctx context.Contex
 }
 
 // SyncMaterial 同步物品
-func (s *materialSrv) SyncMaterial(ctx context.Context) error {
+func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
 
 	// 从erp获取物品列表
@@ -3026,7 +3026,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 	})
 
 	// 从总部同步物品到子店
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(headquarterDb)
@@ -3158,7 +3158,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 }
 
 // 同步成本卡
-func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
+func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
 	erpBoms := []*manufacturing.BomInfo{} // erp成本卡列表
 	erpSrv := erp.NewIErpSrv(s.dbm)
@@ -3250,7 +3250,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 	}
 
 	// 从ttpos总店同步
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		// 同步总部成本卡到子店（多语言由 SyncMultiLanguage 任务处理）
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()

@@ -247,6 +247,7 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 		FeePercent:           feePercent,
 		IsShowCashier:        paymentMethod.IsShowCashier,
 		IsShowAssistant:      paymentMethod.IsShowAssistant,
+		IsShowKiosk:          paymentMethod.IsShowKiosk,
 		IsShowMemberRecharge: paymentMethod.IsShowMemberRecharge,
 		Status:               paymentMethod.Status,
 		Sort:                 paymentMethod.Sort,
@@ -374,6 +375,7 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 			FeePercent:           feePercent,
 			IsShowCashier:        item.IsShowCashier,
 			IsShowAssistant:      item.IsShowAssistant,
+			IsShowKiosk:          item.IsShowKiosk,
 			IsShowMemberRecharge: item.IsShowMemberRecharge,
 			Status:               item.Status,
 			Sort:                 maxSort + i + 1,
@@ -422,6 +424,7 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	updateData["fee_percent"] = updateReq.FeePercent / 100
 	updateData["is_show_cashier"] = updateReq.IsShowCashier
 	updateData["is_show_assistant"] = updateReq.IsShowAssistant
+	updateData["is_show_kiosk"] = updateReq.IsShowKiosk
 	updateData["is_show_member_recharge"] = updateReq.IsShowMemberRecharge
 	updateData["status"] = updateReq.Status
 

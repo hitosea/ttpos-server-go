@@ -653,7 +653,7 @@ func (h *MaterialHandler) ImportMaterial(c *gin.Context) {
 // @Router /shop/test/material/category/sync [post]
 func (h *MaterialHandler) SyncMaterialCategory(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.materialSrv.SyncMaterialCategory(ctx)
+	err := h.materialSrv.SyncMaterialCategory(ctx, true)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

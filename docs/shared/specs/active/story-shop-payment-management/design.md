@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `fee_percent` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '手续费百分比,取值范围0-1',
     `is_show_cashier` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-收银机结账显示',
     `is_show_assistant` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-点餐助手结账显示',
+    `is_show_kiosk` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-自助点餐机结账显示',
     `is_show_member_recharge` INT(10) NOT NULL DEFAULT 0 COMMENT '0-不显示 1-收银机会员充值显示',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态 0-禁用 1-启用',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
@@ -152,7 +153,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
 - 唯一索引: `UNIQUE KEY unique_uuid (uuid)`
 - 普通索引: `KEY idx_headquarter_uuid (headquarter_uuid)`
 
-**注意**: 本次需求不修改表结构，仅扩展 API 接口。
+**注意**: 本次需求新增 `is_show_kiosk` 字段（自助点餐机结账显示），并扩展 API 接口。
 
 #### 表 2: ttpos_payment_app（已存在，用于 LianlianPay 配置）
 
@@ -198,6 +199,7 @@ type PaymentMethod struct {
     FeePercent           float64 `gorm:"column:fee_percent;type:decimal(5,4);default:0;comment:手续费百分比，取值范围0-1;NOT NULL" json:"fee_percent"`
     IsShowCashier        int     `gorm:"column:is_show_cashier;type:tinyint(1);default:0;comment:0-不显示 1-收银机结账显示;NOT NULL" json:"is_show_cashier"`
     IsShowAssistant      int     `gorm:"column:is_show_assistant;type:tinyint(1);default:0;comment:0-不显示 1-点餐助手结账显示;NOT NULL" json:"is_show_assistant"`
+    IsShowKiosk          int     `gorm:"column:is_show_kiosk;type:tinyint(1);default:0;comment:0-不显示 1-自助点餐机结账显示;NOT NULL" json:"is_show_kiosk"`
     IsShowMemberRecharge int     `gorm:"column:is_show_member_recharge;type:tinyint(1);default:0;comment:0-不显示 1-收银机会员充值显示;NOT NULL" json:"is_show_member_recharge"`
     Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态 0-禁用 1-启用;NOT NULL" json:"status"`
     Sort                 int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
@@ -235,6 +237,7 @@ type PaymentMethodCreateItem struct {
     FeePercent           float64 `json:"fee_percent" binding:"gte=0,lte=100"`
     IsShowCashier        int     `json:"is_show_cashier"`
     IsShowAssistant      int     `json:"is_show_assistant"`
+    IsShowKiosk          int     `json:"is_show_kiosk"`
     IsShowMemberRecharge int     `json:"is_show_member_recharge"`
     Status               int     `json:"status"`
 }
@@ -249,6 +252,7 @@ type PaymentMethodUpdateReq struct {
     FeePercent           float64 `json:"fee_percent" binding:"gte=0,lte=100"`
     IsShowCashier        int     `json:"is_show_cashier"`
     IsShowAssistant      int     `json:"is_show_assistant"`
+    IsShowKiosk          int     `json:"is_show_kiosk"`
     IsShowMemberRecharge int     `json:"is_show_member_recharge"`
     Status               int     `json:"status"`
 }
@@ -315,6 +319,7 @@ type PaymentMethodDetailResp struct {
     FeePercent           float64 `json:"fee_percent"`
     IsShowCashier        int     `json:"is_show_cashier"`
     IsShowAssistant      int     `json:"is_show_assistant"`
+    IsShowKiosk          int     `json:"is_show_kiosk"`
     IsShowMemberRecharge int     `json:"is_show_member_recharge"`
     Status               int     `json:"status"`
     Sort                 int     `json:"sort"`
@@ -410,6 +415,7 @@ type LianlianPayConfigResp struct {
         "fee_percent": 0.6,
         "is_show_cashier": 1,
         "is_show_assistant": 1,
+        "is_show_kiosk": 1,
         "status": 1
       },
       {
@@ -421,6 +427,7 @@ type LianlianPayConfigResp struct {
         "fee_percent": 0.5,
         "is_show_cashier": 1,
         "is_show_assistant": 1,
+        "is_show_kiosk": 1,
         "status": 1
       }
     ]
@@ -473,6 +480,7 @@ type LianlianPayConfigResp struct {
       "fee_percent": 0.6,
       "is_show_cashier": 1,
       "is_show_assistant": 1,
+      "is_show_kiosk": 1,
       "is_show_member_recharge": 0,
       "status": 1,
       "sort": 1

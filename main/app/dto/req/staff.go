@@ -29,7 +29,7 @@ type UpdateStaffReq struct {
 	PermissionPassword string   `json:"permission_password"`                                   // 权限密码，4-8位数字，非必填
 
 	// 统一账号
-	IsDisable         *int               `json:"is_disable" binding:"omitempty,oneof=1 0"` // 状态 1:启用 0:禁用
+	IsDisable         *int               `json:"is_disable" binding:"omitempty,oneof=1 0"` // 状态 1:禁用 0:启用
 	CompanyRoleList   []*CompanyRoleItem `json:"company_role_list,omitempty"`              // 多门店角色配置（上级门店使用，可选）
 	RemoveCompanyList []uint64           `json:"remove_company_list,omitempty"`            // 移除多门店角色配置（上级门店使用，可选）
 }
@@ -101,7 +101,7 @@ type AddStaffReq struct {
 	PermissionPassword string   `json:"permission_password"`                                  // 权限密码，4-8位数字，>= 2.10.0 版本必填
 
 	// 统一账号
-	IsDisable       *int               `json:"is_disable" binding:"omitempty,oneof=1 0"` // 状态 1:启用 0:禁用
+	IsDisable       *int               `json:"is_disable" binding:"omitempty,oneof=1 0"` // 状态 1:禁用 0:启用
 	CompanyRoleList []*CompanyRoleItem `json:"company_role_list,omitempty"`              // 多门店角色配置（上级门店使用，可选）
 }
 
