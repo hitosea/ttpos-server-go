@@ -1,7 +1,6 @@
 package model
 
 import (
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 )
 
@@ -56,9 +55,9 @@ func (model *Material) SetNil() {
 
 // GetStockNum 获取库存数量。获取物品在默认仓库中的库存数量
 func (model *Material) GetStockNum() float64 {
-	if model.AllowNegativeStock == constant.Yes { // 允许负库存，则返回无限库存
-		return constant.ProductBomInfiniteStock
-	}
+	// if model.AllowNegativeStock == constant.Yes { // 允许负库存，则返回无限库存
+	// 	return constant.ProductBomInfiniteStock
+	// }
 	for _, warehouseItem := range model.WarehouseItems {
 		if warehouseItem.WarehouseUuid == model.WarehouseUuid {
 			return warehouseItem.Stock
