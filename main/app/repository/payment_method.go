@@ -26,6 +26,7 @@ type IPaymentMethodRepo interface {
 	WithQrcodeFile() DBOption // 关联二维码文件
 
 	CreatePaymentMethod(paymentMethod model.PaymentMethod) error                                                      // 创建支付方式
+	CreatePaymentMethodReturnRow(paymentMethod *model.PaymentMethod) error                                            // 批量创建支付方式
 	UpdatePaymentMethod(date map[string]any, options ...DBOption) error                                               // 更新支付方式
 	DeletePaymentMethod(uuid uint64) error                                                                            // 删除支付方式（软删除）
 	CheckHasOrders(uuid uint64) (bool, error)                                                                         // 检查是否有关联订单
@@ -65,6 +66,13 @@ func NewPaymentMethodRepoImpl(db *gorm.DB) IPaymentMethodRepo {
 func (r *paymentMethodRepo) CreatePaymentMethod(paymentMethod model.PaymentMethod) error {
 	paymentMethod.SetNil()
 	if err := r.db.Create(&paymentMethod).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *paymentMethodRepo) CreatePaymentMethodReturnRow(paymentMethod *model.PaymentMethod) error {
+	if err := r.db.Create(paymentMethod).Error; err != nil {
 		return err
 	}
 	return nil
