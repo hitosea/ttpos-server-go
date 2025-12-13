@@ -395,19 +395,6 @@ func (s *Srv) getDefaultPrinter(language string, languageList []dto.LanguageItem
 	}
 }
 
-// 默认用户充值设置
-func (s *Srv) getDefaultRecharge() setting.Recharge {
-	return setting.Recharge{
-		IsEntrance:  "1", // 是否允许用户充值
-		IsCustom:    "1", // 是否允许自定义金额
-		IsMatchPlan: "1", // 自定义金额是否自动匹配合适的套餐
-		Describe: "1. 账户充值仅限微信在线方式支付，充值金额实时到账；\n" +
-			"2. 账户充值套餐赠送的金额即时到账；\n" +
-			"3. 账户余额有效期：自充值日起至用完即止；\n" +
-			"4. 若有其它疑问，可拨打客服电话400-000-1234", // 充值说明
-	}
-}
-
 // 默认积分设置
 func (s *Srv) getDefaultPoints() setting.Points {
 	return setting.Points{
@@ -456,36 +443,6 @@ func (s *Srv) getDefaultPoints() setting.Points {
 			PointsExchangeRate: "",
 			AutoPointsExchange: "0",
 		},
-	}
-}
-
-// 默认系统设置
-func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
-	return setting.SysAdminConfig{
-		BrandName:     "Shop",                         // 商城名称
-		BrandLogo:     "/image/logo/ttpos_64_64.png",  // 商城背景图
-		BrandLogoLong: "/image/logo/ttpos_146_40.png", // 商城logo
-		BrowserLogo:   "/image/logo/ttpos_64_64.png",  // 浏览器LOGO
-		BrowserTitle:  "Shop",                         // 浏览器标题
-	}
-}
-
-// 默认系统设置
-func (s *Srv) getDefaultSysConfig() setting.SysConfig {
-	return setting.SysConfig{
-		ShopName:    "Shop", // 商城名称
-		CashierName: "收银台",  // 收银台名称
-	}
-}
-
-// 默认充值设置
-func (s *Srv) getDefaultBalance() setting.Balance {
-	return setting.Balance{
-		IsOpen:   "0", // 是否开启
-		IsPlan:   "1", // 是否可以自定义
-		MinMoney: 1,   // 最低充值金额
-		Describe: "a) 账户充值仅限在线方式支付，充值金额实时到账；\n" +
-			"b) 有问题请联系客服;\n", // 充值说明
 	}
 }
 

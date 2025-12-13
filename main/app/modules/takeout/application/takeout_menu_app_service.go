@@ -1,13 +1,14 @@
 package application
 
 import (
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	"ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
+	"ttpos-server-go/app/modules/takeout/types/request"
+	"ttpos-server-go/app/modules/takeout/types/response"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -17,48 +18,23 @@ import (
 // ITakeoutMenuAppService 外卖菜单应用服务接口
 type ITakeoutMenuAppService interface {
 	// ExportMenu 导出菜单到指定平台格式
-	ExportMenu(ctx context.Context, req ExportMenuRequest) (interface{}, error)
+	ExportMenu(ctx context.Context, req request.ExportMenuRequest) (interface{}, error)
 
 	// GetBindingLink 获取绑定链接
-	GetBindingLink(ctx context.Context) (*BindingLinkResponse, error)
+	GetBindingLink(ctx context.Context) (*response.BindingLinkResponse, error)
 
 	// CheckBindingStatus 验证是否已经绑定（定时查询）
-	CheckBindingStatus(ctx context.Context) (*BindingStatusResponse, error)
+	CheckBindingStatus(ctx context.Context) (*response.BindingStatusResponse, error)
 
 	// GetGrabMenu 获取 Grab 的商品菜单
-	GetGrabMenu(ctx context.Context) (*GrabMenuResponse, error)
+	GetGrabMenu(ctx context.Context) (*response.GrabMenuResponse, error)
 
 	// GetImportMenu 导入 Grab 菜单（全新创建商品，不做绑定关系）
-	GetImportMenu(ctx context.Context, req ImportMenuRequest) (*entity.TakeoutMenu, error)
-}
-
-// BindingLinkResponse 绑定链接响应
-type BindingLinkResponse struct {
-	BindingLink string `json:"bindingLink"` // 绑定链接 URL
-	ExpiresAt   int64  `json:"expiresAt"`   // 过期时间（Unix 时间戳）
-}
-
-// BindingStatusResponse 绑定状态响应
-type BindingStatusResponse struct {
-	IsBound      bool   `json:"isBound"`      // 是否已绑定
-	BoundAt      int64  `json:"boundAt"`      // 绑定时间（Unix 时间戳）
-	MerchantID   string `json:"merchantId"`   // Grab 商户 ID
-	MerchantName string `json:"merchantName"` // Grab 商户名称
-}
-
-// GrabMenuResponse Grab 菜单响应
-type GrabMenuResponse struct {
-	Menu interface{} `json:"menu"` // Grab 菜单数据
-}
-
-// ImportMenuRequest 导入 Grab 菜单请求
-type ImportMenuRequest struct {
-	Platform string      `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
-	MenuData interface{} `json:"menuData" binding:"required"` // 平台菜单 JSON 数据
+	GetImportMenu(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error)
 }
 
 // GetImportMenu 导入 Grab 菜单（全新创建商品/分类，不做绑定关系）
-func (s *takeoutMenuAppService) GetImportMenu(ctx context.Context, req ImportMenuRequest) (*entity.TakeoutMenu, error) {
+func (s *takeoutMenuAppService) GetImportMenu(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error) {
 	if req.MenuData == nil {
 		return nil, errors.New("菜单数据不能为空")
 	}
@@ -98,7 +74,7 @@ func NewTakeoutMenuAppService(
 ) ITakeoutMenuAppService {
 	// 初始化平台转换器
 	converters := make(map[string]service.IPlatformConverter)
-	converters["grab"] = grab.NewGrabConverter(dbm, cache)
+	converters["Grab"] = grab.NewGrabConverter(dbm, cache)
 	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
 
 	return &takeoutMenuAppService{
@@ -110,26 +86,8 @@ func NewTakeoutMenuAppService(
 	}
 }
 
-// ExportMenuRequest 导出菜单请求
-type ExportMenuRequest struct {
-	Platform       string   // 平台名称：grab, lineman 等
-	CompanyUuid    uint64   // 公司 UUID
-	CurrencyUnit   string   // 货币单位
-	CategoryIDs    []uint64 // 分类 ID 列表（可选）
-	SellingTimeIDs []uint64 // 售卖时段 ID 列表（可选）
-}
-
-// GrabProductImportResult Grab 商品导入结果
-type GrabProductImportResult struct {
-	SuccessCount int
-	FailureCount int
-	CreatedItems int
-	UpdatedItems int
-	Failures     []resp.GrabProductImportFailure
-}
-
 // ExportMenu 导出菜单到指定平台格式
-func (s *takeoutMenuAppService) ExportMenu(ctx context.Context, req ExportMenuRequest) (interface{}, error) {
+func (s *takeoutMenuAppService) ExportMenu(ctx context.Context, req request.ExportMenuRequest) (interface{}, error) {
 	// 验证参数
 	if req.Platform == "" {
 		return nil, errors.New("平台名称不能为空")
@@ -166,7 +124,7 @@ func (s *takeoutMenuAppService) ExportMenu(ctx context.Context, req ExportMenuRe
 }
 
 // GetBindingLink 获取绑定链接
-func (s *takeoutMenuAppService) GetBindingLink(ctx context.Context) (*BindingLinkResponse, error) {
+func (s *takeoutMenuAppService) GetBindingLink(ctx context.Context) (*response.BindingLinkResponse, error) {
 	companyUuid := ctx.GetCompanyUuid()
 	// TODO: 调用 bmp RPC 接口获取绑定链接
 	// 等待 bmp 实现 GetGrabBindingLink RPC 接口
@@ -175,14 +133,14 @@ func (s *takeoutMenuAppService) GetBindingLink(ctx context.Context) (*BindingLin
 		return nil, errors.WithMessage(err, "获取绑定链接失败")
 	}
 
-	return &BindingLinkResponse{
+	return &response.BindingLinkResponse{
 		BindingLink: bindingLink,
 		ExpiresAt:   expiresAt,
 	}, nil
 }
 
 // CheckBindingStatus 验证是否已经绑定（定时查询）
-func (s *takeoutMenuAppService) CheckBindingStatus(ctx context.Context) (*BindingStatusResponse, error) {
+func (s *takeoutMenuAppService) CheckBindingStatus(ctx context.Context) (*response.BindingStatusResponse, error) {
 	companyUuid := ctx.GetCompanyUuid()
 	// TODO: 调用 bmp RPC 接口检查绑定状态
 	// 等待 bmp 实现 CheckGrabBindingStatus RPC 接口
@@ -191,7 +149,7 @@ func (s *takeoutMenuAppService) CheckBindingStatus(ctx context.Context) (*Bindin
 		return nil, errors.WithMessage(err, "检查绑定状态失败")
 	}
 
-	return &BindingStatusResponse{
+	return &response.BindingStatusResponse{
 		IsBound:      isBound,
 		BoundAt:      boundAt,
 		MerchantID:   merchantID,
@@ -200,7 +158,7 @@ func (s *takeoutMenuAppService) CheckBindingStatus(ctx context.Context) (*Bindin
 }
 
 // GetGrabMenu 获取 Grab 的商品菜单
-func (s *takeoutMenuAppService) GetGrabMenu(ctx context.Context) (*GrabMenuResponse, error) {
+func (s *takeoutMenuAppService) GetGrabMenu(ctx context.Context) (*response.GrabMenuResponse, error) {
 	companyUuid := ctx.GetCompanyUuid()
 	// TODO: 调用 bmp RPC 接口获取 Grab 菜单
 	// 等待 bmp 实现 GetGrabMenu RPC 接口
@@ -209,7 +167,7 @@ func (s *takeoutMenuAppService) GetGrabMenu(ctx context.Context) (*GrabMenuRespo
 		return nil, errors.WithMessage(err, "获取 Grab 菜单失败")
 	}
 
-	return &GrabMenuResponse{
+	return &response.GrabMenuResponse{
 		Menu: menuData,
 	}, nil
 }

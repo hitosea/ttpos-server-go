@@ -36,7 +36,7 @@ func NewGrabConverter(dbm *database.DBManager, cache cache.Cache) service.IPlatf
 
 // GetPlatformName 获取平台名称
 func (c *GrabConverter) GetPlatformName() string {
-	return "grab"
+	return "Grab"
 }
 
 // ConvertFromTTPOS 从 TTPOS 数据转换为 Grab 格式

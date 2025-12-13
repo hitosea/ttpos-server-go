@@ -77,12 +77,7 @@ func (h *TakeoutHandler) CheckGrabBindingStatus(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, resp.GrabBindingStatusResp{
-		IsBound:      result.IsBound,
-		BoundAt:      result.BoundAt,
-		MerchantID:   result.MerchantID,
-		MerchantName: result.MerchantName,
-	})
+	helper.Success(c, result)
 }
 
 // GetGrabMenu 获取 Grab 菜单

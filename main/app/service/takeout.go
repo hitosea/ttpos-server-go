@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/application"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
+	"ttpos-server-go/app/modules/takeout/types/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
@@ -22,13 +23,18 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
-	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type ITakeoutSrv interface {
+	// GetBindingLink 获取绑定链接
+	GetBindingLink(ctx context.Context) (*resp.GrabBindingLinkResp, error)
+
+	// CheckBindingStatus 验证是否已经绑定（定时查询）
+	CheckBindingStatus(ctx context.Context) (*resp.GrabBindingStatusResp, error)
+
 	// ImportMenu 导入菜单
 	ImportMenu(ctx context.Context, platform string, req req.TakeoutMenuImportReq) (*resp.GrabMenuImportResp, error)
 }
@@ -44,11 +50,10 @@ type takeoutSrv struct {
 }
 
 func NewTakeoutSrv(dbm *database.DBManager, cache cache.Cache, productSrv IProductSrv, translateSrv ITranslateSrv) ITakeoutSrv {
-	menuAppSrv := application.NewTakeoutMenuAppService(dbm, cache)
 	return &takeoutSrv{
 		dbm:           dbm,
 		cache:         cache,
-		menuAppSrv:    menuAppSrv,
+		menuAppSrv:    application.NewTakeoutMenuAppService(dbm, cache),
 		productSrv:    productSrv,
 		translateSrv:  translateSrv,
 		settingSrv:    setting.NewSrv(dbm, cache),
@@ -56,9 +61,33 @@ func NewTakeoutSrv(dbm *database.DBManager, cache cache.Cache, productSrv IProdu
 	}
 }
 
+// GetBindingLink 获取绑定链接
+func (s *takeoutSrv) GetBindingLink(ctx context.Context) (*resp.GrabBindingLinkResp, error) {
+	bindingLinkResponse, err := s.menuAppSrv.GetBindingLink(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取绑定链接失败")
+	}
+	return &resp.GrabBindingLinkResp{
+		BindingLink: bindingLinkResponse.BindingLink,
+		ExpiresAt:   bindingLinkResponse.ExpiresAt,
+	}, nil
+}
+
+// CheckBindingStatus 验证是否已经绑定（定时查询）
+func (s *takeoutSrv) CheckBindingStatus(ctx context.Context) (*resp.GrabBindingStatusResp, error) {
+	bindingStatusResponse, err := s.menuAppSrv.CheckBindingStatus(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "检查绑定状态失败")
+	}
+	return &resp.GrabBindingStatusResp{
+		IsBound: bindingStatusResponse.IsBound,
+		BoundAt: bindingStatusResponse.BoundAt,
+	}, nil
+}
+
 // ImportMenu 导入菜单
 func (s *takeoutSrv) ImportMenu(ctx context.Context, platform string, reqs req.TakeoutMenuImportReq) (*resp.GrabMenuImportResp, error) {
-	menuEntity, err := s.menuAppSrv.GetImportMenu(ctx, application.ImportMenuRequest{
+	takeoutMenu, err := s.menuAppSrv.GetImportMenu(ctx, request.ImportMenuRequest{
 		Platform: platform,
 		MenuData: reqs.MenuData,
 	})
@@ -73,7 +102,7 @@ func (s *takeoutSrv) ImportMenu(ctx context.Context, platform string, reqs req.T
 		copyCtx.SetDB(tx)
 
 		// 1. 提取分类并创建或更新
-		categoryMap, err := s.syncCategories(copyCtx, platform, menuEntity.Categories)
+		categoryMap, err := s.syncCategories(copyCtx, platform, takeoutMenu.Categories)
 		if err != nil {
 			return err
 		}
@@ -94,7 +123,7 @@ func (s *takeoutSrv) ImportMenu(ctx context.Context, platform string, reqs req.T
 		success, failure, err := s.syncProducts(
 			copyCtx,
 			platform,
-			menuEntity.Categories,
+			takeoutMenu.Categories,
 			categoryMap,
 			productFlavorUuid,
 			unitUuid,
@@ -164,14 +193,16 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 
 		// 检查分类是否已存在
 		if existingCat, exists := existingMapTtposCat[platformCategoryID]; exists {
-			if err := s.updateCategory(ctx, existingCat, category, platform); err != nil {
-				return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.Name))
-			}
+			// 当前不做双向同步，暂时忽略更新
+			// if err := s.updateCategory(ctx, existingCat, category, platform); err != nil {
+			// 	return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.Name))
+			// }
 			categoryMap[platformCategoryID] = existingCat.Uuid
 		} else if existingCat, exists := existingMap[platformCategoryID]; exists {
-			if err := s.updateCategory(ctx, existingCat, category, platform); err != nil {
-				return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.Name))
-			}
+			// 当前不做双向同步，暂时忽略更新
+			// if err := s.updateCategory(ctx, existingCat, category, platform); err != nil {
+			// 	return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.Name))
+			// }
 			categoryMap[platformCategoryID] = existingCat.Uuid
 		} else {
 			// 创建新分类
@@ -483,45 +514,8 @@ func (s *takeoutSrv) syncAttributeGroup(ctx context.Context, platform string, mo
 		return 0, err
 	}
 	if err == nil && existingGroup.Uuid > 0 {
-		if !existingGroup.IsEditable() {
-			return existingGroup.Uuid, nil
-		}
-		// 属性组已存在，只更新多语言名称
-		if existingGroup.MultiLanguageNameUuid > 0 {
-			existingGroupNames := existingGroup.MultiLanguageName.GetNames()
-			if _, ok := modifierGroup.NameTranslation["en"]; ok {
-				existingGroupNames.SetLocale("en", modifierGroup.NameTranslation["en"])
-			}
-			if _, ok := modifierGroup.NameTranslation["zh"]; ok {
-				existingGroupNames.SetLocale("zh", modifierGroup.NameTranslation["zh"])
-			}
-			if _, ok := modifierGroup.NameTranslation["th"]; ok {
-				existingGroupNames.SetLocale("th", modifierGroup.NameTranslation["th"])
-			}
-			if _, ok := modifierGroup.NameTranslation["my"]; ok {
-				existingGroupNames.SetLocale("my", modifierGroup.NameTranslation["my"])
-			}
-			if existingGroupNames.EN == "" && modifierGroup.Name != "" {
-				existingGroupNames.EN = modifierGroup.Name
-			}
-
-			// 直接更新多语言名称，不需要调用 EditProductAttributeGroup
-			multiLanguageName := model.MultiLanguageName{}
-			multiLanguageName.InitByLocaleResponse(existingGroupNames)
-			err = repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageName(existingGroup.MultiLanguageNameUuid, multiLanguageName)
-			if err != nil {
-				return 0, err
-			}
-
-			// 更新属性组的 name 字段（使用 JSON 格式存储多语言名称）
-			err = db.Model(&model.ProductAttributeGroup{}).
-				Where("uuid = ?", existingGroup.Uuid).
-				Update("name", utils.ToJson(existingGroupNames)).Error
-			if err != nil {
-				return 0, err
-			}
-		}
-
+		// 属性组已存在，直接返回
+		// 当前不做双向同步，暂时忽略更新
 		return existingGroup.Uuid, nil
 	}
 
@@ -637,43 +631,42 @@ func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, a
 			attr.SourceId = fmt.Sprintf("TTPOS-ATTR-%d", attr.Uuid)
 		}
 		if modifier, ok := modifierMap[attr.SourceId]; ok {
-			if !attrGroup.IsEditable() {
-				continue
-			}
-			// 属性存在且需要更新多语言
-			localeName := attr.MultiLanguageName.GetNames()
-			if _, ok := modifier.NameTranslation["en"]; ok {
-				localeName.SetLocale("en", modifier.NameTranslation["en"])
-			}
-			if _, ok := modifier.NameTranslation["zh"]; ok {
-				localeName.SetLocale("zh", modifier.NameTranslation["zh"])
-			}
-			if _, ok := modifier.NameTranslation["th"]; ok {
-				localeName.SetLocale("th", modifier.NameTranslation["th"])
-			}
-			if _, ok := modifier.NameTranslation["my"]; ok {
-				localeName.SetLocale("my", modifier.NameTranslation["my"])
-			}
-			if localeName.EN == "" && modifier.Name != "" {
-				localeName.EN = modifier.Name
-			}
-			// 将价格从分转换为元
-			editReq.ProductAttributes = append(editReq.ProductAttributes, req.ProductAttributeGroupEditProductAttributeReq{
-				Uuid:       attr.Uuid,
-				LocaleName: localeName,
-				Sort:       modifier.Sequence,
-				Price:      attr.Price,
-				Source:     attr.Source,
-				SourceId:   attr.SourceId,
-				ProductPackageUuids: func() []uint64 {
-					productPackageUuids := make([]uint64, 0, len(attr.ProductPackageAttributes))
-					for _, productPackageAttribute := range attr.ProductPackageAttributes {
-						productPackageUuids = append(productPackageUuids, productPackageAttribute.ProductPackageAttributeGroup.ProductPackageUuid)
-					}
-					return productPackageUuids
-				}(),
-			})
-			hasNewAttribute = true
+			// 当前不做双向同步，暂时忽略更新
+			_ = modifier
+			// // 属性存在且需要更新多语言
+			// localeName := attr.MultiLanguageName.GetNames()
+			// if _, ok := modifier.NameTranslation["en"]; ok {
+			// 	localeName.SetLocale("en", modifier.NameTranslation["en"])
+			// }
+			// if _, ok := modifier.NameTranslation["zh"]; ok {
+			// 	localeName.SetLocale("zh", modifier.NameTranslation["zh"])
+			// }
+			// if _, ok := modifier.NameTranslation["th"]; ok {
+			// 	localeName.SetLocale("th", modifier.NameTranslation["th"])
+			// }
+			// if _, ok := modifier.NameTranslation["my"]; ok {
+			// 	localeName.SetLocale("my", modifier.NameTranslation["my"])
+			// }
+			// if localeName.EN == "" && modifier.Name != "" {
+			// 	localeName.EN = modifier.Name
+			// }
+			// // 将价格从分转换为元
+			// editReq.ProductAttributes = append(editReq.ProductAttributes, req.ProductAttributeGroupEditProductAttributeReq{
+			// 	Uuid:       attr.Uuid,
+			// 	LocaleName: localeName,
+			// 	Sort:       modifier.Sequence,
+			// 	Price:      attr.Price,
+			// 	Source:     attr.Source,
+			// 	SourceId:   attr.SourceId,
+			// 	ProductPackageUuids: func() []uint64 {
+			// 		productPackageUuids := make([]uint64, 0, len(attr.ProductPackageAttributes))
+			// 		for _, productPackageAttribute := range attr.ProductPackageAttributes {
+			// 			productPackageUuids = append(productPackageUuids, productPackageAttribute.ProductPackageAttributeGroup.ProductPackageUuid)
+			// 		}
+			// 		return productPackageUuids
+			// 	}(),
+			// })
+			// hasNewAttribute = true
 			// 从 modifierMap 中移除已处理的
 			delete(modifierMap, attr.SourceId)
 		} else if attr.MultiLanguageName.Uuid > 0 {
@@ -791,11 +784,6 @@ func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categori
 			}
 
 			if existingMap.Uuid > 0 {
-				// 商品已存在，更新
-				if err := s.updateProduct(ctx, db, existingMap.ProductPackageUuid, item, localCategoryUuid); err != nil {
-					failureCount++
-					continue
-				}
 				successCount++
 			} else {
 
@@ -861,14 +849,6 @@ func (s *takeoutSrv) createProduct(
 	}
 
 	return productUuid, nil
-}
-
-// updateProduct 更新现有商品
-func (s *takeoutSrv) updateProduct(ctx context.Context, db *gorm.DB, productUuid uint64, item *valueobject.MenuItem, categoryUuid uint64) error {
-	// TODO: 实现商品更新逻辑
-	// 目前暂不更新商品信息，避免覆盖商家自定义内容
-	// 可以根据需求决定是否更新价格、名称等信息
-	return nil
 }
 
 // buildProductAddReq 构建商品创建请求

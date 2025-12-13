@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
+	"ttpos-server-go/app/modules/takeout/types/request"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -63,7 +64,7 @@ func (h *Handler) ExportMenu(c *gin.Context) {
 	}
 
 	// 调用应用服务
-	menuData, err := h.menuAppSrv.ExportMenu(ctx, application.ExportMenuRequest{
+	menuData, err := h.menuAppSrv.ExportMenu(ctx, request.ExportMenuRequest{
 		Platform:     exportReq.Platform,
 		CompanyUuid:  exportReq.CompanyUuid,
 		CurrencyUnit: currencySetting.Unit,

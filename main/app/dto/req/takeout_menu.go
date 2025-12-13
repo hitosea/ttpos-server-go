@@ -2,7 +2,7 @@ package req
 
 // TakeoutMenuExportReq 外卖菜单导出请求
 type TakeoutMenuExportReq struct {
-	Platform    string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
+	Platform    string `json:"platform" binding:"required"` // 平台名称：Grab, Lineman 等
 	CompanyUuid uint64 `json:"companyUuid"`                 // 公司 UUID（可选，默认当前公司）
 }
 

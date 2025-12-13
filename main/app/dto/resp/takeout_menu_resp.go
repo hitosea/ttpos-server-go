@@ -32,10 +32,8 @@ type GrabBindingLinkResp struct {
 
 // GrabBindingStatusResp 检查 Grab 绑定状态响应
 type GrabBindingStatusResp struct {
-	IsBound      bool   `json:"isBound"`      // 是否已绑定
-	BoundAt      int64  `json:"boundAt"`      // 绑定时间（Unix 时间戳）
-	MerchantID   string `json:"merchantId"`   // Grab 商户 ID
-	MerchantName string `json:"merchantName"` // Grab 商户名称
+	IsBound bool  `json:"isBound"` // 是否已绑定
+	BoundAt int64 `json:"boundAt"` // 绑定时间（Unix 时间戳）
 }
 
 // GrabMenuResp 获取 Grab 菜单响应
