@@ -57,7 +57,7 @@ func (s *bomCardProductInventoryStrategy) calculateNonBomCardInventory(
 	if bom.HasProductBomCard() && bom.ProductBomCard != nil {
 		for _, material := range bom.ProductBomCard.RelatedMaterials {
 			if material.Material.AllowNegativeStock == constant.No {
-				return bom.ProductBomCard.CalculateExpectedProductionNum(), nil
+				return bom.ProductBomCard.CalculateExpectedProductionNum(model.WithAllowNegativeStockCheck()), nil
 			}
 		}
 	}
