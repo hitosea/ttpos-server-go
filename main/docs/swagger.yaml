@@ -8725,6 +8725,10 @@ definitions:
         description: 联系电话，必填，最大20个字符
         maxLength: 20
         type: string
+      store_code:
+        description: 店铺编码，用于发票打印，最大100个字符
+        maxLength: 100
+        type: string
       tax_number:
         description: 税号
         type: string
@@ -9842,6 +9846,9 @@ definitions:
         items:
           $ref: '#/definitions/resp.RoleItem'
         type: array
+      status:
+        description: 状态 1-启用 0-禁用
+        type: integer
       super_phone:
         description: 超管手机号
         type: string
@@ -9918,6 +9925,12 @@ definitions:
         type: string
       phone:
         description: 联系电话，必填，最大20个字符
+        type: string
+      status:
+        description: 状态 1-启用 0-禁用
+        type: integer
+      store_code:
+        description: 店铺编码，用于发票打印，最大100个字符
         type: string
       tax_number:
         description: 税号

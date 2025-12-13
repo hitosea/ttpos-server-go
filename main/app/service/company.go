@@ -104,9 +104,10 @@ func (s *companySrv) GetCompanyList(ctx context.Context) (resp.SaasCompanyListRe
 		}
 
 		companyInfo := resp.CompanyInfoResp{
-			Uuid:  company.Uuid,
-			Name:  company.Name,
-			Roles: roleItems,
+			Uuid:   company.Uuid,
+			Name:   company.Name,
+			Roles:  roleItems,
+			Status: company.Status,
 		}
 
 		// 获取该门店的超管信息
@@ -196,6 +197,8 @@ func (s *companySrv) GetCompanyInfo(ctx context.Context, companyUuid uint64) (*r
 		LanguageList: storeSetting.Language,
 		TimeZone:     storeSetting.TimeZone,
 		Language:     companySetting.GetLanguages(),
+		StoreCode:    storeSetting.StoreCode,
+		Status:       targetCompany.Status,
 	}, nil
 }
 
@@ -235,11 +238,6 @@ func (s *companySrv) UpdateCompanyInfo(ctx context.Context, updateReq req.Update
 	ctx.SetDB(s.dbm.GetDB(updateReq.Uuid))
 	ctx.SetCompanySetting(companySetting)
 
-	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
-	if err != nil {
-		return errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
-	}
-
 	err = s.settingSrv.EditStoreSetting(ctx, req.UpdateStoreSetting{
 		Name:        updateReq.Name,
 		LogoUrl:     updateReq.LogoUrl,
@@ -250,7 +248,7 @@ func (s *companySrv) UpdateCompanyInfo(ctx context.Context, updateReq req.Update
 		TaxNumber:   updateReq.TaxNumber,
 		Language:    updateReq.Language,
 		Coordinates: updateReq.Coordinates,
-		StoreCode:   storeSetting.StoreCode,
+		StoreCode:   updateReq.StoreCode,
 	})
 	if err != nil {
 		return errors.WithMessage(errors.New("修改门店信息失败"), err.Error())

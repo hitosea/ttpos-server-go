@@ -47669,6 +47669,11 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 20
                 },
+                "store_code": {
+                    "description": "店铺编码，用于发票打印，最大100个字符",
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "tax_number": {
                     "description": "税号",
                     "type": "string"
@@ -49310,6 +49315,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/resp.RoleItem"
                     }
                 },
+                "status": {
+                    "description": "状态 1-启用 0-禁用",
+                    "type": "integer"
+                },
                 "super_phone": {
                     "description": "超管手机号",
                     "type": "string"
@@ -49415,6 +49424,14 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "联系电话，必填，最大20个字符",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态 1-启用 0-禁用",
+                    "type": "integer"
+                },
+                "store_code": {
+                    "description": "店铺编码，用于发票打印，最大100个字符",
                     "type": "string"
                 },
                 "tax_number": {
