@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"ttpos-server-go/pkg/otlp"
@@ -24,6 +25,7 @@ var SMS SMSConf
 var GoogleBucket GoogleBucketConf
 var Google GoogleConf
 var Nacos NacosConf
+var CORS CORSConf
 
 var Rocketmq rocketmq.Config
 var Otlp *otlp.OtlpConfig
@@ -130,7 +132,7 @@ func logConf(opt copier.Option) {
 
 func jwtConf(opt copier.Option) {
 	JWT = JWTConf{
-		Secret:        "your-secret-key-here",
+		Secret:        "",
 		Expire:        3600 * 24,      // 默认24小时
 		RefreshExpire: 3600 * 24 * 30, // 默认30天
 	}
@@ -139,13 +141,23 @@ func jwtConf(opt copier.Option) {
 		Expire:        viper.GetInt("JWT_EXPIRE"),
 		RefreshExpire: viper.GetInt("JWT_REFRESH_EXPIRE"),
 	}, opt)
+
+	// 安全检查：JWT Secret 必须设置且不能为空
+	if JWT.Secret == "" {
+		log.Fatal("错误: 必须设置 JWT_SECRET 环境变量，且不能为为空值")
+	}
+
+	// 额外检查：防止使用明显的弱密钥
+	if JWT.Secret == "your-secret-key-here" || JWT.Secret == "secret" {
+		log.Fatal("错误: JWT_SECRET 不能使用弱密码，建议使用至少32位随机字符串")
+	}
 }
 
 func redisConf(opt copier.Option) {
 	Redis = RedisConf{
 		Host:     "127.0.0.1",
 		Port:     "6379",
-		Password: "password",
+		Password: "",
 		DB:       0,
 	}
 	copier.CopyWithOption(&Redis, RedisConf{
@@ -161,9 +173,9 @@ func databaseConf(opt copier.Option) {
 		DBType:          "mysql",
 		Host:            "127.0.0.1",
 		Port:            3306,
-		User:            "user",
-		Password:        "password",
-		RootPassword:    "root-password",
+		User:            "",
+		Password:        "",
+		RootPassword:    "",
 		Database:        "db",
 		TablePrefix:     "ttpos_",
 		SlowQueryTime:   2,
@@ -171,6 +183,7 @@ func databaseConf(opt copier.Option) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 300,
 	}
+
 	copier.CopyWithOption(&Database, DatabaseConf{
 		DBType:          viper.GetString("DB_TYPE"),
 		Host:            viper.GetString("DB_HOST"),
@@ -185,12 +198,21 @@ func databaseConf(opt copier.Option) {
 		MaxOpenConns:    viper.GetInt("MAX_OPEN_CONNS"),
 		ConnMaxLifetime: viper.GetInt("CONN_MAX_LIFE_TIME"),
 	}, opt)
+
+	// 在生产环境中强制要求设置数据库密码
+	if Server.Mode != "debug" {
+		if Database.Password == "" {
+			fmt.Printf("错误: 生产环境必须设置 DB_PASSWORD 环境变量\n")
+			// 注意: 这里不返回错误，因为配置函数不应该失败
+			// 而是在运行时检查
+		}
+	}
 }
 
 func serverConf(opt copier.Option) {
 	Server = ServerConf{
 		Port:           "8080",
-		Mode:           "debug",
+		Mode:           "release",
 		DeployMode:     "cloud",
 		BrandName:      "TTPOS",
 		Domain:         "http://127.0.0.1:8080",

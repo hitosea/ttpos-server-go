@@ -5,7 +5,6 @@ import (
 	"time"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
-	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/captcha"
 )
@@ -49,10 +48,6 @@ func (s *captchaSrv) Generate() (*resp.Captcha, error) {
 }
 
 func (s *captchaSrv) Verify(sign, answer string) bool {
-	// 开发调试使用
-	if config.Server.Mode == "debug" && answer == "123456" {
-		return true
-	}
 	ok, err := s.captcha.Verify(sign, answer)
 	if err != nil {
 		return false
