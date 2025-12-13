@@ -25,7 +25,6 @@ var SMS SMSConf
 var GoogleBucket GoogleBucketConf
 var Google GoogleConf
 var Nacos NacosConf
-var CORS CORSConf
 
 var Rocketmq rocketmq.Config
 var Otlp *otlp.OtlpConfig
