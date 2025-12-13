@@ -76,6 +76,12 @@ func (s *orderSrv) convertToEventOrderProductPre(saleOrderProduct *model.SaleOrd
 		IsPackage:             saleOrderProduct.IsPackageProduct(),
 		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
+		RemarkLocale: func() dto.LocaleResponse {
+			// 构建备注信息（包含预设备注和自定义备注）
+			orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+			return remarkInfo.Remark
+		}(),
 	}
 
 	return orderProduct
