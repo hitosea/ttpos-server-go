@@ -7768,7 +7768,6 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 				existsProductBom, err := subProductBomRepo.GetProductBom(
 					commonRepo.WhereByUuid(productBom.Uuid),
 					commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
-					commonRepo.WhereIsHeadquarter(),
 				)
 				if err == nil && existsProductBom.Uuid > 0 && existsProductBom.CreateTime == productBom.CreateTime {
 					bomActualSaleNum = existsProductBom.ActualSaleNum
