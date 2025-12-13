@@ -575,40 +575,6 @@ func (model *ProductBom) GetStockNum(fn func(productBomUuid uint64) float64) flo
 	if fn != nil {
 		return fn(model.Uuid)
 	}
-	// 如果标记沽清，返回0
-	if model.IsSoldOut == constant.ProductStatusSaleOut {
-		return 0
-	}
-	// 如果使用成本卡
-	if model.UseBomCardStock == constant.Yes {
-		if model.ProductBomCard != nil {
-			return model.ProductBomCard.CalculateExpectedProductionNum()
-		}
-		// 如果是使用关联材料，则计算关联材料的最小可生产数量
-		if len(model.FlavorMaterials) > 0 {
-			minExpectedProductionNum := constant.ProductBomInfiniteStock
-			for _, material := range model.FlavorMaterials {
-				stockNum := material.Material.GetStockNum()
-				if stockNum <= 0 {
-					continue
-				}
-				num := material.GetDecreaseNum(1)
-				if num <= 0 {
-					continue
-				}
-				min := int(stockNum / num)
-				if min < minExpectedProductionNum {
-					minExpectedProductionNum = min
-				}
-			}
-			return float64(minExpectedProductionNum)
-		}
-		return constant.ProductBomInfiniteStock
-	}
-	// 如果开启可用量库存，返回999999表示无限库存
-	if model.IsOpenStockBool() {
-		return model.StockNum
-	}
 	return constant.ProductBomInfiniteStock
 }
 
@@ -639,13 +605,12 @@ func (model *RelatedMaterial) SetNil() {
 }
 
 // 计算预计可生产的产品数量。材料库存数量 / 材料用量
-func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
+func (model *RelatedMaterial) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	// 材料对象为空时，返回0
 	if model.Material == nil {
 		return 0
 	}
-
-	materialStockNum := model.Material.GetStockNum() // 材料库存数量，单位：基准单位
+	materialStockNum := model.Material.GetStockNum(opts...) // 材料库存数量，单位：基准单位
 	if materialStockNum <= 0 {
 		return 0
 	}
@@ -660,10 +625,10 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 	return result
 }
 
-func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
+func (model *RelatedMaterial) GetExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	num := model.expectedProductionNum
 	if num <= 0 {
-		num = model.CalculateExpectedProductionNum()
+		num = model.CalculateExpectedProductionNum(opts...)
 	}
 	return num
 }
@@ -922,11 +887,11 @@ func (model *ProductBomCard) IsHeadquarter() bool {
 }
 
 // 计算预计可生产的产品数量
-func (model *ProductBomCard) CalculateExpectedProductionNum() float64 {
+func (model *ProductBomCard) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	totalExpectedProductionNum := 9999999999.0
 	for _, material := range model.RelatedMaterials {
 		// 取最小值
-		expectedProductionNum := material.GetExpectedProductionNum()
+		expectedProductionNum := material.GetExpectedProductionNum(opts...)
 		if expectedProductionNum < totalExpectedProductionNum {
 			totalExpectedProductionNum = expectedProductionNum
 		}

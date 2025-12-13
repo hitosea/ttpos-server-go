@@ -169,7 +169,6 @@ func (model *SaleBill) GetBuffetPackageName() MultiLanguageName {
 		}
 	}
 	return MultiLanguageName{}
-	return MultiLanguageName{}
 }
 
 // 是否是“已取消”状态

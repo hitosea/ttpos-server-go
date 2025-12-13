@@ -12,10 +12,12 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
@@ -111,8 +113,15 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 	opts = append(opts, paymentMethodRepo.WithLogoFile(), paymentMethodRepo.WithQrcodeFile())
 	paymentMethods := paymentMethodRepo.GetPaymentMethodList(opts...)
 
+	// 连连支付是否可用
+	lianLianPayAvailable := true
+	if err := NewPaymentRepo(ctx, s.dbm).ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		lianLianPayAvailable = false
+	}
+
 	paymentMethodItems := make([]resp.PaymentMethodItem, 0, len(paymentMethods))
 	for _, method := range paymentMethods {
+		isAvailable := true
 		// 不显示免单
 		if method.Code == constant.PaymentMethodCodeFreePay {
 			continue
@@ -121,6 +130,14 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		if method.Code == constant.PaymentMethodCodeBalance &&
 			(companySetting.IsOpenMember != 1 || typ == constant.PaymentMethodShowRecharge) {
 			continue
+		}
+		// LianLianPay 没有配置支付信息 不显示
+		if !lianLianPayAvailable && method.IsLianLianPay() {
+			if method.IsHeadquarterPayment() {
+				isAvailable = false
+			} else {
+				continue
+			}
 		}
 		var logo, qrcode string
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
@@ -133,6 +150,12 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		if method.QrcodeFile != nil {
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
+		// 总部支付方式
+		if method.IsHeadquarterPayment() {
+			if method.Source == constant.PaymentMethodSourceDefault && qrcode == "" {
+				isAvailable = false
+			}
+		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:    i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
 			Uuid:          method.Uuid,
@@ -143,6 +166,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			Qrcode:        qrcode,
 			Code:          method.Code,
 			Source:        method.Source,
+			IsAvailable:   isAvailable,
 		})
 	}
 	return resp.PaymentMethodList{List: paymentMethodItems}
@@ -338,7 +362,7 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 	baseCode := s.generatePaymentCode(db)
 
 	// 批量创建支付方式
-	paymentMethods := make([]model.PaymentMethod, 0, len(createReq.Items))
+	paymentMethods := make([]*model.PaymentMethod, 0, len(createReq.Items))
 	for i, item := range createReq.Items {
 		// 如果指定了code（系统默认支付方式），使用指定的code；否则自动生成
 		var code int
@@ -361,10 +385,7 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 			// 如果都没有，保持为空
 		}
 
-		paymentMethod := model.PaymentMethod{
-			BaseModel: model.BaseModel{
-				// Uuid 会在 BeforeCreate hook 中自动生成
-			},
+		paymentMethod := &model.PaymentMethod{
 			Name:                 item.Name,
 			Code:                 code,
 			PaymentName:          item.PaymentName,
@@ -379,7 +400,6 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 			IsShowMemberRecharge: item.IsShowMemberRecharge,
 			Status:               item.Status,
 			Sort:                 maxSort + i + 1,
-			// CreateTime 和 UpdateTime 由 GORM 自动管理
 		}
 
 		paymentMethods = append(paymentMethods, paymentMethod)
@@ -387,7 +407,48 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 
 	// 批量创建
 	for _, paymentMethod := range paymentMethods {
-		if err := paymentMethodRepo.CreatePaymentMethod(paymentMethod); err != nil {
+		err = db.Transaction(func(tx *gorm.DB) error {
+			paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
+			if err := paymentMethodRepo.CreatePaymentMethodReturnRow(paymentMethod); err != nil {
+				return err
+			}
+
+			// 如果开启了 ERP，同步支付方式到 ERP
+			if ctx.GetCompany().IsOpenErp() && paymentMethod.ErpnextPayment == "" {
+				erpSrv := erp.NewIErpSrv(s.dbm)
+
+				// 根据 source 确定 channel
+				channel := erp.GetChannelBySource(paymentMethod.Source)
+
+				saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+					CompanyUuid: ctx.GetCompanyUuid(),
+					Channel:     channel,
+					PayType:     paymentMethod.PaymentName,
+				})
+				if err != nil {
+					// 记录错误但不中断创建流程
+					logger.Logger.Error("批量创建支付方式",
+						zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+						zap.String("payment_name", paymentMethod.PaymentName),
+						zap.Error(err))
+				} else if saveModeOfPaymentResp != nil && saveModeOfPaymentResp.Name != "" {
+					// 保存返回的 erpnext_payment
+					if err := paymentMethodRepo.UpdatePaymentMethod(
+						map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+						repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
+					); err != nil {
+						logger.Logger.Error("批量创建支付方式",
+							zap.Uint64("payment_method_uuid", paymentMethod.Uuid),
+							zap.String("erpnext_payment", saveModeOfPaymentResp.Name),
+							zap.Error(err))
+					}
+				}
+			}
+			return nil
+		})
+
+		if err != nil {
+			logger.Logger.Error("创建支付方式", zap.Any("payment_method", paymentMethod), zap.Error(err))
 			return appErrors.WithMessage(err, "创建支付方式失败")
 		}
 	}
@@ -409,27 +470,78 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 		return appErrors.WithMessage(err, "支付方式不存在")
 	}
 
-	// 如果是LianLianPay支付（source=2），跳过名称、支付方式、图片logo修改
-	isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 如果是LianLianPay支付（source=2），跳过名称、支付方式、图片logo修改
+		isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
 
-	// 构建更新数据
-	updateData := map[string]any{}
-	// LianLianPay支付跳过名称、支付方式、图片logo修改
-	if !isLianLianPay {
-		updateData["name"] = updateReq.Name
-		updateData["payment_name"] = updateReq.PaymentName
-		updateData["logo_file_uuid"] = updateReq.LogoFileUuid
-	}
-	updateData["qrcode_file_uuid"] = updateReq.QrcodeFileUuid
-	updateData["fee_percent"] = updateReq.FeePercent / 100
-	updateData["is_show_cashier"] = updateReq.IsShowCashier
-	updateData["is_show_assistant"] = updateReq.IsShowAssistant
-	updateData["is_show_kiosk"] = updateReq.IsShowKiosk
-	updateData["is_show_member_recharge"] = updateReq.IsShowMemberRecharge
-	updateData["status"] = updateReq.Status
+		name := strings.TrimSpace(updateReq.Name)
+		paymentName := strings.TrimSpace(updateReq.PaymentName)
 
-	// 更新支付方式
-	if err := paymentMethodRepo.UpdatePaymentMethod(updateData, paymentMethodRepo.WhereUuid(updateReq.Uuid)); err != nil {
+		// 构建更新数据
+		updateData := map[string]any{}
+		// LianLianPay支付跳过名称、支付方式、图片logo修改
+		if !isLianLianPay {
+			updateData["name"] = name
+			updateData["payment_name"] = paymentName
+			updateData["logo_file_uuid"] = updateReq.LogoFileUuid
+		}
+		updateData["qrcode_file_uuid"] = updateReq.QrcodeFileUuid
+		updateData["fee_percent"] = updateReq.FeePercent / 100
+		updateData["is_show_cashier"] = updateReq.IsShowCashier
+		updateData["is_show_assistant"] = updateReq.IsShowAssistant
+		updateData["is_show_kiosk"] = updateReq.IsShowKiosk
+		updateData["is_show_member_recharge"] = updateReq.IsShowMemberRecharge
+		updateData["status"] = updateReq.Status
+
+		// 更新支付方式
+		if err := paymentMethodRepo.UpdatePaymentMethod(updateData, paymentMethodRepo.WhereUuid(updateReq.Uuid)); err != nil {
+			return appErrors.WithMessage(err, "更新支付方式失败")
+		}
+
+		if ctx.GetCompany().IsOpenErp() {
+			// 创建
+			channel := erp.GetChannelBySource(paymentMethod.Source)
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			if paymentMethod.ErpnextPayment == "" {
+				var erpErr error
+				saveModeOfPaymentResp, erpErr := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+					CompanyUuid: ctx.GetCompanyUuid(),
+					Channel:     channel,
+					PayType:     paymentName,
+				})
+				if erpErr != nil {
+					return erpErr
+				} else if saveModeOfPaymentResp != nil && saveModeOfPaymentResp.Name != "" {
+					if err := paymentMethodRepo.UpdatePaymentMethod(
+						map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+						repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
+					); err != nil {
+						logger.Logger.Warn("Update-UpdatePaymentMethod",
+							zap.Uint64("payment_method_uuid", paymentMethod.Uuid),
+							zap.String("erpnext_payment", saveModeOfPaymentResp.Name),
+							zap.Error(err))
+						return err
+					}
+				}
+			} else {
+				// 更新
+				var erpErr error
+				_, erpErr = erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+					CompanyUuid: ctx.GetCompanyUuid(),
+					Channel:     channel,
+					PayType:     paymentName,
+					Name:        &paymentMethod.ErpnextPayment,
+				})
+				if erpErr != nil {
+					return erpErr
+				}
+			}
+
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Logger.Error("Update-Transaction", zap.Any("payment_method", paymentMethod), zap.Error(err))
 		return appErrors.WithMessage(err, "更新支付方式失败")
 	}
 
@@ -455,27 +567,52 @@ func (s *paymentMethodSrv) Delete(ctx context.Context, deleteReq *req.PaymentMet
 		return appErrors.New("仅可删除自行添加的支付方式")
 	}
 
-	// 软删除（无需检查关联订单）
-	if err := paymentMethodRepo.DeletePaymentMethod(deleteReq.Uuid); err != nil {
-		return appErrors.WithMessage(err, "删除支付方式失败")
-	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 软删除
+		if err := paymentMethodRepo.DeletePaymentMethod(deleteReq.Uuid); err != nil {
+			return appErrors.WithMessage(err, "删除支付方式失败")
+		}
 
-	// 重新排序，确保排序值连续
-	allMethods, _, err := paymentMethodRepo.GetPaymentMethodListWithPagination(1, 10000)
-	if err == nil {
-		// 重新分配排序值
-		items := make([]model.PaymentMethod, 0, len(allMethods))
-		for i, method := range allMethods {
-			items = append(items, model.PaymentMethod{
-				BaseModel: model.BaseModel{
-					Uuid: method.Uuid,
-				},
-				Sort: i + 1,
+		// 重新排序，确保排序值连续
+		allMethods, _, err := paymentMethodRepo.GetPaymentMethodListWithPagination(1, 10000)
+		if err == nil {
+			// 重新分配排序值
+			items := make([]model.PaymentMethod, 0, len(allMethods))
+			for i, method := range allMethods {
+				items = append(items, model.PaymentMethod{
+					BaseModel: model.BaseModel{
+						Uuid: method.Uuid,
+					},
+					Sort: i + 1,
+				})
+			}
+			if len(items) > 0 {
+				err = paymentMethodRepo.BatchUpdateSort(items)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if ctx.GetCompany().IsOpenErp() && paymentMethod.ErpnextPayment != "" {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			enable := false
+			_, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+				CompanyUuid: ctx.GetCompanyUuid(),
+				Enabled:     &enable,
+				Name:        &paymentMethod.ErpnextPayment,
 			})
+			if err != nil {
+				return err
+			}
 		}
-		if len(items) > 0 {
-			_ = paymentMethodRepo.BatchUpdateSort(items)
-		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("删除支付方式", zap.Any("payment_method", paymentMethod), zap.Error(err))
+		return appErrors.WithMessage(err, "删除支付方式失败")
 	}
 
 	return nil

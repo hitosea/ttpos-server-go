@@ -56,6 +56,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		c.String(http.StatusOK, "ok")
 	})
 
+	// 认证中间件下放给子路由组
+	// ai: 查看 RegisterAuthHandlers 方法的代码，了解认证中间件是如何下放的
 	apiV1 := r.Group("api/v1")
 	{
 		adminGroup := apiV1.Group("/admin")

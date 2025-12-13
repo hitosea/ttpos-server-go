@@ -54,9 +54,28 @@ func (model *Material) SetNil() {
 	model.ImageFile = nil
 }
 
+// GetStockNumOption GetStockNum 方法的选项
+type GetStockNumOption struct {
+	CheckAllowNegativeStock bool // 是否检查允许负库存
+}
+
+// WithAllowNegativeStockCheck 启用负库存检查选项
+func WithAllowNegativeStockCheck() func(*GetStockNumOption) {
+	return func(option *GetStockNumOption) {
+		option.CheckAllowNegativeStock = true
+	}
+}
+
 // GetStockNum 获取库存数量。获取物品在默认仓库中的库存数量
-func (model *Material) GetStockNum() float64 {
-	if model.AllowNegativeStock == constant.Yes { // 允许负库存，则返回无限库存
+func (model *Material) GetStockNum(opts ...func(*GetStockNumOption)) float64 {
+	option := &GetStockNumOption{
+		CheckAllowNegativeStock: false,
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	if option.CheckAllowNegativeStock && model.AllowNegativeStock == constant.Yes { // 允许负库存，则返回无限库存
 		return constant.ProductBomInfiniteStock
 	}
 	for _, warehouseItem := range model.WarehouseItems {
@@ -191,4 +210,5 @@ func (model *MaterialCategory) UpdateFromHeadquarter(headquarterCategory Materia
 	model.Code = headquarterCategory.Code
 	model.Name = headquarterCategory.Name
 	model.MultiLanguageName.InitByLocaleResponse(headquarterCategory.MultiLanguageName.GetNames())
+	model.DeleteTime = headquarterCategory.DeleteTime
 }

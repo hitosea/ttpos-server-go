@@ -54,7 +54,7 @@ type SellingServiceClient interface {
 	CancelPosInvoice(ctx context.Context, in *CancelPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 获取支付方式
 	GetModeOfPaymentList(ctx context.Context, in *GetModeOfPaymentListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
-	// 保存/同步支付方式
+	// 保存支付方式
 	SaveModeOfPayment(ctx context.Context, in *SaveModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
@@ -178,7 +178,7 @@ type SellingServiceServer interface {
 	CancelPosInvoice(context.Context, *CancelPosInvoiceReq) (*api.ResponseInfo, error)
 	// 获取支付方式
 	GetModeOfPaymentList(context.Context, *GetModeOfPaymentListReq) (*api.ResponseInfo, error)
-	// 保存/同步支付方式
+	// 保存支付方式
 	SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedSellingServiceServer()
 }

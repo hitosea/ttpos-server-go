@@ -164,15 +164,15 @@ type IProductSrv interface {
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
 	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
-	SyncProductShopCategory(ctx context.Context) error   // 同步产品分类
-	SyncProductTax(ctx context.Context) error            // 同步商品税类
-	SyncUnit(ctx context.Context) error                  // 获取总部最新单位数据
-	SyncProductFlavor(ctx context.Context) error         // 同步商品规格
-	SyncSauce(ctx context.Context) error                 // 获取总部最新加料数据
-	SyncAttributeGroup(ctx context.Context) error        // 获取总部最新属性组数据
-	SyncProduct(ctx context.Context) error               // 同步商品
-	SyncProductStockByBomCard(ctx context.Context) error // 计算所有关联成本卡的商品的库存
-	SyncProductPackageImage(ctx context.Context) error   // 同步商品包图片
+	SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error // 同步产品分类
+	SyncProductTax(ctx context.Context, syncHeadquarterData bool) error          // 同步商品税类
+	SyncUnit(ctx context.Context, syncHeadquarterData bool) error                // 获取总部最新单位数据
+	SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error       // 同步商品规格
+	SyncSauce(ctx context.Context, syncHeadquarterData bool) error               // 获取总部最新加料数据
+	SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error      // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context, syncHeadquarterData bool) error             // 同步商品
+	SyncProductStockByBomCard(ctx context.Context) error                         // 计算所有关联成本卡的商品的库存
+	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error // 同步商品包图片
 }
 
 type productSrv struct {
@@ -1706,13 +1706,13 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 }
 
 // SyncProductShopCategory 同步产品分类
-func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
+func (s *productSrv) SyncProductShopCategory(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	if !company.IsOpenErp() {
 		return errors.New("公司未授权erp")
 	}
-	if !companySetting.IsSubShop() {
+	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
 	commonRepo := repository.NewCommonRepo()
@@ -1900,13 +1900,13 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 }
 
 // SyncProductTax 同步商品税类
-func (s *productSrv) SyncProductTax(ctx context.Context) error {
+func (s *productSrv) SyncProductTax(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	if !company.IsOpenErp() {
 		return errors.New("公司未授权erp")
 	}
-	if !companySetting.IsSubShop() {
+	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
 	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
@@ -4590,7 +4590,7 @@ func (s *productSrv) SortProductFlavor(ctx context.Context, req req.ProductFlavo
 }
 
 // SyncProductFlavor 同步商品规格
-func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
+func (s *productSrv) SyncProductFlavor(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
 	if !company.IsOpenErp() {
@@ -4700,7 +4700,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 	}
 
 	// 同步总部规格到子店
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		// 同步总部规格到子店（多语言由 SyncMultiLanguage 任务处理）
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
@@ -7189,7 +7189,7 @@ func (s *productSrv) ProductShopChangePrice(ctx context.Context, req req.Product
 }
 
 // SyncUnit 同步单位，暂不考虑erp禁用的情况；如果总部取消给某个子店查看某个单位，如何处理，暂不处理
-func (s *productSrv) SyncUnit(ctx context.Context) error {
+func (s *productSrv) SyncUnit(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -7216,7 +7216,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	// 子店获取总部单位
 	var headquarter model.CompanySetting
 	var headquarterUnits []model.ProductUnit
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
@@ -7291,7 +7291,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 			}
 		}
 		// 同步总部ttpos单位（多语言由 SyncMultiLanguage 任务处理）
-		if len(headquarterUnits) > 0 {
+		if len(headquarterUnits) > 0 && syncHeadquarterData {
 			// 删除单位
 			tx.Where("headquarter_uuid > 0").Delete(&model.ProductUnit{})
 
@@ -7335,14 +7335,14 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 }
 
 // SyncSauce 同步加料
-func (s *productSrv) SyncSauce(ctx context.Context) error {
+func (s *productSrv) SyncSauce(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
 	}
 	// v2.7 加料暂时不需要处理（本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据）
 	companySetting := ctx.GetCompanySetting()
-	if !companySetting.IsSubShop() {
+	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
 	var headquarter model.CompanySetting
@@ -7398,14 +7398,14 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 }
 
 // SyncAttributeGroup 同步属性组、属性
-func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
+func (s *productSrv) SyncAttributeGroup(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
 	}
 	companySetting := ctx.GetCompanySetting()
 	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
-	if !companySetting.IsSubShop() {
+	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
 	var headquarter model.CompanySetting
@@ -7481,7 +7481,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 }
 
 // SyncProduct 同步商品
-func (s *productSrv) SyncProduct(ctx context.Context) error {
+func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -7693,13 +7693,14 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 	}
 
 	// 同步总店商品到子店
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		// 同步总部商品到子店（多语言由 SyncMultiLanguage 任务处理）
 		db := s.dbm.GetDB(companySetting.CompanyUuid)
 		commonRepo := repository.NewCommonRepo()
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
 		subProductPackageRepo := repository.NewProductPackageRepo(db)
+		subProductBomRepo := repository.NewProductBomRepo(db)
 		headProductPackageList, err := productPackageRepo.GetProductPackageList(
 			commonRepo.WhereByHeadquarterUuid(0),
 			productPackageRepo.WithMultiLanguageName(),
@@ -7783,6 +7784,23 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				ProductLabelUuid:              productPackage.ProductLabelUuid,
 			})
 			for _, productBom := range productPackage.ProductBoms {
+				// 查询子店是否存在该商品包
+				bomActualSaleNum := float64(0)
+				bomStockNum := float64(0)
+				bomUseBomCardStock := 0
+				bomIsSoldOut := 0
+				bomIsOpenStock := 0
+				existsProductBom, err := subProductBomRepo.GetProductBom(
+					commonRepo.WhereByUuid(productBom.Uuid),
+					commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+				)
+				if err == nil && existsProductBom.Uuid > 0 && existsProductBom.CreateTime == productBom.CreateTime {
+					bomActualSaleNum = existsProductBom.ActualSaleNum
+					bomStockNum = existsProductBom.StockNum
+					bomUseBomCardStock = existsProductBom.UseBomCardStock
+					bomIsSoldOut = existsProductBom.IsSoldOut
+					bomIsOpenStock = existsProductBom.IsOpenStock
+				}
 				newProductBomList = append(newProductBomList, model.ProductBom{
 					BaseModel: model.BaseModel{
 						Uuid:       productBom.Uuid,
@@ -7794,18 +7812,19 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					Price:              productBom.Price,
 					Name:               productBom.Name,
 					ErpCode:            productBom.ErpCode,
-					StockNum:           productBom.StockNum,
-					IsOpenStock:        productBom.IsOpenStock,
+					StockNum:           bomStockNum,
+					IsOpenStock:        bomIsOpenStock,
 					BarcodeValue:       productBom.BarcodeValue,
 					InternalCode:       productBom.InternalCode,
 					IsDefaultSelect:    productBom.IsDefaultSelect,
 					Status:             productBom.Status,
-					IsSoldOut:          productBom.IsSoldOut,
-					ActualSaleNum:      productBom.ActualSaleNum,
+					IsSoldOut:          bomIsSoldOut,
+					ActualSaleNum:      bomActualSaleNum,
 					ProductFlavorUuid:  productBom.ProductFlavorUuid,
 					ProductSauceUuid:   productBom.ProductSauceUuid,
 					ProductPackageUuid: productBom.ProductPackageUuid,
 					ProductBomCardUuid: productBom.ProductBomCardUuid,
+					UseBomCardStock:    bomUseBomCardStock,
 				})
 			}
 			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
@@ -8367,13 +8386,13 @@ func (s *productSrv) SyncProductStockByBomCard(ctx context.Context) error {
 }
 
 // SyncProductPackageImage 同步商品包图片
-func (s *productSrv) SyncProductPackageImage(ctx context.Context) error {
+func (s *productSrv) SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
 	}
 	companySetting := ctx.GetCompanySetting()
-	if !companySetting.IsSubShop() {
+	if !companySetting.IsSubShop() || !syncHeadquarterData {
 		return nil
 	}
 	var files []model.File

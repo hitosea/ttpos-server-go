@@ -216,6 +216,10 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
 			continue
 		}
+		// 新管理端-非总部不显示门店管理
+		if permission.Uuid == 2856866287616001 && !companySetting.IsHeadquarter() {
+			continue
+		}
 		filteredPermissions = append(filteredPermissions, permission)
 	}
 	return filteredPermissions

@@ -17,6 +17,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -108,8 +109,8 @@ func (s *costCardCorrectionSrv) PreviewCorrection(ctx context.Context, req req.C
 			bomCard, materials := s.getBomCardAndMaterials(product)
 			if bomCard != nil {
 				productInfo.BomCardUuid = bomCard.Uuid
-				// 计算材料修正信息（这里先占位，实际计算在后续任务中实现）
-				productInfo.Materials = s.calculateMaterialCorrectionInfo(product, materials)
+				// 计算材料修正信息
+				productInfo.Materials = s.calculateMaterialCorrectionInfo(ctx, companyUuid, order.Uuid, product, materials)
 			}
 
 			if len(productInfo.Materials) > 0 {
@@ -437,7 +438,16 @@ func (s *costCardCorrectionSrv) identifyProductsWithBomCard(order model.SaleOrde
 }
 
 // getBomCardAndMaterials 获取商品的成本卡和材料信息
+// 注意：SaleOrderProductBoms 包括商品规格和小料，每个都可能有关联的成本卡
+// - 如果商品有添加小料，SaleOrderProductBoms 中有1个或多个小料和1个商品规格
+// - 如果没有小料，就只有1个商品规格
+// - 小料也会消耗材料库存，需要一并处理
+// 返回：第一个成本卡UUID（用于标识），所有BOM的材料列表（合并）
 func (s *costCardCorrectionSrv) getBomCardAndMaterials(product *model.SaleOrderProduct) (*model.ProductBomCard, []*model.RelatedMaterial) {
+	var firstBomCard *model.ProductBomCard
+	allMaterials := make([]*model.RelatedMaterial, 0)
+	materialMap := make(map[uint64]*model.RelatedMaterial) // 用于去重，key为MaterialUuid
+
 	for _, bom := range product.SaleOrderProductBoms {
 		if bom.IsDelete() {
 			continue
@@ -446,19 +456,43 @@ func (s *costCardCorrectionSrv) getBomCardAndMaterials(product *model.SaleOrderP
 		if bom.ProductBom.Uuid == 0 {
 			continue
 		}
+
+		var bomCard *model.ProductBomCard
+		var materials []*model.RelatedMaterial
+
+		// 检查商品规格（Flavor）是否使用成本卡
 		if bom.IsFlavor() && bom.ProductBom.HasProductBomCard() {
 			card := bom.ProductBom.ProductBomCard
 			if card != nil && card.Uuid != 0 && len(card.RelatedMaterials) > 0 {
-				return card, card.RelatedMaterials
+				bomCard = card
+				materials = card.RelatedMaterials
 			}
 		} else if bom.IsSauce() && bom.ProductBom.ProductSauceUuid != 0 && bom.ProductBom.ProductSauce.HasProductBomCard() {
+			// 检查小料（Sauce）是否使用成本卡
 			card := bom.ProductBom.ProductSauce.ProductBomCard
 			if card != nil && card.Uuid != 0 && len(card.RelatedMaterials) > 0 {
-				return card, card.RelatedMaterials
+				bomCard = card
+				materials = card.RelatedMaterials
+			}
+		}
+
+		// 如果找到成本卡，记录第一个作为返回值，并收集所有材料
+		if bomCard != nil && len(materials) > 0 {
+			if firstBomCard == nil {
+				firstBomCard = bomCard
+			}
+
+			// 合并材料列表（如果同一材料在多个BOM中出现，保留第一个）
+			for _, material := range materials {
+				if _, exists := materialMap[material.MaterialUuid]; !exists {
+					materialMap[material.MaterialUuid] = material
+					allMaterials = append(allMaterials, material)
+				}
 			}
 		}
 	}
-	return nil, nil
+
+	return firstBomCard, allMaterials
 }
 
 // getBusinessDateFromOrder 从订单获取营业日期
@@ -480,16 +514,29 @@ func (s *costCardCorrectionSrv) getBusinessDateFromOrderTime(ctx context.Context
 		return ""
 	}
 
+	// 获取时区和营业时间
+	timeUtil, openingHours, ok := s.getTimezoneAndOpeningHours(ctx, companyUuid)
+	if !ok {
+		// 获取失败，使用默认时区
+		defaultTimeUtil := utils.Timezone("Asia/Shanghai")
+		return defaultTimeUtil.FormatUnixTime(orderTime, "2006-01-02")
+	}
+
+	// 查找订单时间对应的营业日期
+	return s.findBusinessDateForOrderTime(ctx, companyUuid, orderTime, timeUtil, openingHours)
+}
+
+// getTimezoneAndOpeningHours 获取公司时区和营业时间
+// 返回值：时区工具、营业时间字符串、是否成功获取
+func (s *costCardCorrectionSrv) getTimezoneAndOpeningHours(ctx context.Context, companyUuid uint64) (utils.Timezone, string, bool) {
 	db := s.dbm.GetDB(companyUuid)
 
-	// 获取公司设置（时区和营业时间）
+	// 获取公司设置（时区）
 	companyRepo := repository.NewCompanyRepo(db)
 	company, err := companyRepo.GetCompany()
 	if err != nil {
 		logger.Logger.Warn("获取公司信息失败，使用默认时区", zap.Error(err))
-		// 使用默认时区和营业时间
-		timeUtil := utils.Timezone("Asia/Shanghai")
-		return timeUtil.FormatUnixTime(orderTime, "2006-01-02")
+		return utils.Timezone(""), "", false
 	}
 
 	timezone := "Asia/Shanghai" // 默认时区
@@ -505,23 +552,23 @@ func (s *costCardCorrectionSrv) getBusinessDateFromOrderTime(ctx context.Context
 	businessSetting, err := settingSrv.GetBusinessSetting(settingCtx)
 	if err != nil {
 		logger.Logger.Warn("获取营业时间设置失败，使用默认营业时间", zap.Error(err))
-		// 使用默认营业时间
-		return timeUtil.FormatUnixTime(orderTime, "2006-01-02")
+		return timeUtil, "", false
 	}
+
 	openingHours := businessSetting.OpeningHours
 	if openingHours == "" {
 		openingHours = "00:00-23:59" // 默认营业时间
 	}
 
-	// 将订单时间转换为日期字符串
-	orderDate := timeUtil.FormatUnixTime(orderTime, "2006-01-02")
+	return timeUtil, openingHours, true
+}
 
-	// 计算该日期的营业开始时间
-	// 先获取当天的开始时间戳（00:00:00）
-	dayStartTime, err := timeUtil.FormatTimeToUnix(orderDate + " 00:00:00")
+// calculateBusinessDateStartTime 计算指定日期的营业开始时间戳
+func (s *costCardCorrectionSrv) calculateBusinessDateStartTime(timeUtil utils.Timezone, date string, openingHours string) (int64, error) {
+	// 获取当天的开始时间戳（00:00:00）
+	dayStartTime, err := timeUtil.FormatTimeToUnix(date + " 00:00:00")
 	if err != nil {
-		// 如果解析失败，直接返回订单日期
-		return orderDate
+		return 0, err
 	}
 
 	// 计算营业开始时间相对于当天的偏移
@@ -529,32 +576,112 @@ func (s *costCardCorrectionSrv) getBusinessDateFromOrderTime(ctx context.Context
 	// 营业开始时间 = 当天开始时间 + 营业开始时间相对于当天的偏移（秒）
 	dateStartTime := dayStartTime + (startOffset % (24 * 3600))
 
-	// 如果订单时间在营业开始时间之前，则属于前一天的营业日
-	if orderTime < dateStartTime {
-		// 获取前一天的日期
-		prevTime := time.Unix(orderTime, 0).AddDate(0, 0, -1)
-		prevDate := timeUtil.FormatUnixTime(prevTime.Unix(), "2006-01-02")
-		return prevDate
+	return dateStartTime, nil
+}
+
+// findBusinessDateForOrderTime 查找订单时间对应的营业日期
+// 营业日从当天营业开始时间到次日营业开始时间之前
+func (s *costCardCorrectionSrv) findBusinessDateForOrderTime(ctx context.Context, companyUuid uint64, orderTime int64, timeUtil utils.Timezone, openingHours string) string {
+	// 将订单时间转换为日期字符串
+	orderDate := timeUtil.FormatUnixTime(orderTime, "2006-01-02")
+
+	// 计算当天的营业开始时间
+	dateStartTime, err := s.calculateBusinessDateStartTime(timeUtil, orderDate, openingHours)
+	if err != nil {
+		// 如果解析失败，直接返回订单日期
+		return orderDate
 	}
 
+	// 计算次日的营业开始时间
+	nextDayStartTime := dateStartTime + 24*3600 // 次日的营业开始时间
+	nextDateStartTime := nextDayStartTime
+
+	// 如果订单时间在当天营业开始时间之前，则属于前一天的营业日
+	if orderTime < dateStartTime {
+		return s.findPreviousBusinessDate(ctx, companyUuid, orderTime, timeUtil, openingHours)
+	}
+
+	// 如果订单时间在次日营业开始时间之后，则属于次日的营业日
+	// 这种情况可能发生在订单在营业时间后完成（例如营业时间 10:00-22:00，订单在次日 09:00 完成）
+	if orderTime >= nextDateStartTime {
+		return s.findNextBusinessDate(ctx, companyUuid, orderTime, timeUtil, openingHours)
+	}
+
+	// 订单时间在当天营业开始时间和次日营业开始时间之间，属于当天的营业日
 	return orderDate
 }
 
-// calculateMaterialCorrectionInfo 计算材料修正信息（占位实现，实际计算在后续任务中）
-func (s *costCardCorrectionSrv) calculateMaterialCorrectionInfo(product *model.SaleOrderProduct, materials []*model.RelatedMaterial) []resp.MaterialCorrectionInfo {
+// findPreviousBusinessDate 查找前一天的营业日期
+func (s *costCardCorrectionSrv) findPreviousBusinessDate(ctx context.Context, companyUuid uint64, orderTime int64, timeUtil utils.Timezone, openingHours string) string {
+	// 获取前一天的日期
+	prevTime := time.Unix(orderTime, 0).AddDate(0, 0, -1)
+	prevDate := timeUtil.FormatUnixTime(prevTime.Unix(), "2006-01-02")
+
+	// 计算前一天的营业开始时间
+	prevDateStartTime, err := s.calculateBusinessDateStartTime(timeUtil, prevDate, openingHours)
+	if err != nil {
+		return prevDate
+	}
+
+	// 如果订单时间在前一天的营业开始时间之后，则属于前一天的营业日
+	if orderTime >= prevDateStartTime {
+		return prevDate
+	}
+
+	// 继续往前查找（递归）
+	return s.getBusinessDateFromOrderTime(ctx, companyUuid, orderTime)
+}
+
+// findNextBusinessDate 查找次日的营业日期
+func (s *costCardCorrectionSrv) findNextBusinessDate(ctx context.Context, companyUuid uint64, orderTime int64, timeUtil utils.Timezone, openingHours string) string {
+	// 递归计算次日的营业日期
+	return s.getBusinessDateFromOrderTime(ctx, companyUuid, orderTime)
+}
+
+// calculateMaterialCorrectionInfo 计算材料修正信息
+// 计算旧消耗量（从历史出库记录）、新消耗量（根据当前成本卡）、退回数量（等于旧消耗量）
+func (s *costCardCorrectionSrv) calculateMaterialCorrectionInfo(ctx context.Context, companyUuid uint64, orderUuid uint64, product *model.SaleOrderProduct, materials []*model.RelatedMaterial) []resp.MaterialCorrectionInfo {
 	materialInfos := make([]resp.MaterialCorrectionInfo, 0)
 
+	// 查询订单的历史出库记录
+	historicalOutboundRecords, err := s.getHistoricalOutboundRecords(ctx, companyUuid, orderUuid)
+	if err != nil {
+		logger.Logger.Warn("查询历史出库记录失败", zap.Error(err), zap.Uint64("order_uuid", orderUuid))
+		// 如果查询失败，返回空列表，避免影响预览
+		return materialInfos
+	}
+
+	// 按材料UUID汇总历史出库记录中的消耗量（旧消耗量）
+	oldConsumptionMap := make(map[uint64]float64) // materialUuid -> oldConsumption
+	for _, record := range historicalOutboundRecords {
+		// 只统计该商品相关的出库记录
+		if record.SaleOrderProductUuid == product.Uuid && record.MaterialUuid > 0 {
+			oldConsumptionMap[record.MaterialUuid] = decimal.NewFromFloat(record.Num).Add(decimal.NewFromFloat(oldConsumptionMap[record.MaterialUuid])).InexactFloat64()
+		}
+	}
+
+	// 计算每个材料的修正信息
 	for _, material := range materials {
 		if material.Material == nil {
 			continue
 		}
 
+		// 旧消耗量：从历史出库记录中获取
+		oldConsumption := oldConsumptionMap[material.MaterialUuid]
+
+		// 新消耗量：根据当前正确的成本卡和商品数量计算
+		// 使用 RelatedMaterial.GetDecreaseNum 方法计算
+		newConsumption := material.GetDecreaseNum(product.Num)
+
+		// 退回数量：等于旧消耗量（需要退回所有错误扣减的材料）
+		returnQuantity := oldConsumption
+
 		materialInfo := resp.MaterialCorrectionInfo{
 			MaterialUuid:   material.MaterialUuid,
 			MaterialName:   material.Material.Name,
-			OldConsumption: 0, // TODO: 将在后续任务中计算
-			NewConsumption: 0, // TODO: 将在后续任务中计算
-			ReturnQuantity: 0, // TODO: 将在后续任务中计算
+			OldConsumption: oldConsumption,
+			NewConsumption: newConsumption,
+			ReturnQuantity: returnQuantity,
 		}
 
 		materialInfos = append(materialInfos, materialInfo)

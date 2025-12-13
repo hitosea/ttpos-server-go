@@ -249,11 +249,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))
 		return store, errors.New("解析商城设置失败" + err.Error())
 	}
-	if store.IPWhiteList != "" {
-		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
-	}
-
-	logger.Logger.Info("store", zap.Any("store", store))
+	store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
 
 	defaultStore := s.getDefaultStore(ctx.GetLanguage())
 	store.TimeZoneList = nil

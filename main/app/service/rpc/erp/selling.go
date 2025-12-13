@@ -454,3 +454,62 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	repository.NewPaymentMethodRepo(s.dbm.GetDB(addPaymentMethodReq.CompanyUuid)).CreatePaymentMethod(paymentMethod)
 	return nil
 }
+
+// SaveModeOfPayment 保存/同步支付方式
+func (s *erpSrv) SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error) {
+	db := s.dbm.GetDB(saveModeOfPaymentReq.CompanyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(saveModeOfPaymentReq.CompanyUuid)
+	if err != nil {
+		logger.Logger.Error("SaveModeOfPayment-GetCompanyInfoByUuid", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+	if company.Uuid == 0 || company.CompanySetting == nil || company.CompanySetting.Uuid == 0 {
+		logger.Logger.Error("SaveModeOfPayment-GetCompanyInfoByUuid", zap.Error(err))
+		return nil, errors.WithMessage(errors.New("商家信息异常"))
+	}
+	if !company.IsOpenErp() || company.CompanySetting.ErpnextSiteCode == "" {
+		logger.Logger.Error("SaveModeOfPayment-IsOpenErp", zap.String("company_abbr", company.CompanySetting.ErpnextCompanyAbbr), zap.String("branch", company.CompanySetting.ErpnextBranchName))
+		return nil, errors.WithMessage(errors.New("商家erp未开启"))
+	}
+	companySetting := ctx.GetCompanySetting()
+
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.SaveModeOfPaymentReq{
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+		PayType:     saveModeOfPaymentReq.PayType,
+	}
+	if saveModeOfPaymentReq.Channel != "" {
+		params.Channel = saveModeOfPaymentReq.Channel
+	}
+	if saveModeOfPaymentReq.Enabled != nil {
+		params.Enabled = saveModeOfPaymentReq.Enabled
+	}
+	if saveModeOfPaymentReq.Name != nil {
+		params.Name = saveModeOfPaymentReq.Name
+	}
+	logger.Logger.Info("保存/同步支付方式", zap.Any("params", params))
+	result, err := client.SaveModeOfPayment(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), params)
+	if err != nil {
+		logger.Logger.Error("SaveModeOfPayment-SaveModeOfPayment", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+	if result.GetCode() != "0" {
+		logger.Logger.Error("SaveModeOfPayment-SaveModeOfPayment", zap.String("result_message", result.GetMessage()), zap.String("code", result.GetCode()))
+		return nil, errors.WithMessage(errors.New(result.GetMessage()))
+	}
+	if result.Data != nil {
+		var saveModeOfPaymentResp selling.SaveModeOfPaymentResp
+		if err := result.Data.UnmarshalTo(&saveModeOfPaymentResp); err != nil {
+			logger.Logger.Error("SaveModeOfPayment-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		return &saveModeOfPaymentResp, nil
+	}
+	return nil, errors.WithMessage(errors.New("保存支付方式异常, data为空"))
+}

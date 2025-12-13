@@ -8,6 +8,7 @@ type CompanyInfoResp struct {
 	Name          string `json:"name"`            // 门店名称
 	SuperRealName string `json:"super_real_name"` // 超管姓名
 	SuperPhone    string `json:"super_phone"`     // 超管手机号
+	Status        int    `json:"status"`          // 状态 1-启用 0-禁用
 
 	Roles []RoleItem `json:"roles"` // 角色列表
 }
@@ -19,6 +20,7 @@ type SaasCompanyListResp struct {
 // Store 商城设置
 type CompanyStoreResp struct {
 	Uuid         uint64             `json:"uuid"`          // 门店UUID
+	Status       int                `json:"status"`        // 状态 1-启用 0-禁用
 	Name         string             `json:"name"`          // 店铺名称
 	LogoUrl      string             `json:"logo_url"`      // 店铺logo，上传后保存url，必填
 	Address      string             `json:"address"`       // 地址，必填，最大500个字符
@@ -28,6 +30,7 @@ type CompanyStoreResp struct {
 	TaxNumber    string             `json:"tax_number"`    // 税号
 	LanguageList []dto.LanguageItem `json:"language_list"` // 系统语言，必填，至少一个
 	TimeZone     string             `json:"time_zone"`     // 时区，必填
+	StoreCode    string             `json:"store_code"`    // 店铺编码，用于发票打印，最大100个字符
 	Language     []string           `json:"language"`      // 云平台限制商家的可用语言列表
 	IPWhiteList  string             `json:"ip_white_list"` // ip白名单
 }

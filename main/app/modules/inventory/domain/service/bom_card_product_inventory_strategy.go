@@ -53,18 +53,18 @@ func (s *bomCardProductInventoryStrategy) calculateNonBomCardInventory(
 		return 0, nil
 	}
 
-	// 判断是否设置可售量
-	if bom.IsOpenStockBool() {
-		return bom.StockNum, nil
-	}
-
 	// 特殊需求: 商品绑定了成本卡,当成本卡中的材料不允许负库存时,一定要求材料库存不能负. 所以只要成本卡中的材料有一个不允许负库存,则返回成本卡计算的库存值
 	if bom.HasProductBomCard() && bom.ProductBomCard != nil {
 		for _, material := range bom.ProductBomCard.RelatedMaterials {
 			if material.Material.AllowNegativeStock == constant.No {
-				return bom.ProductBomCard.CalculateExpectedProductionNum(), nil
+				return bom.ProductBomCard.CalculateExpectedProductionNum(model.WithAllowNegativeStockCheck()), nil
 			}
 		}
+	}
+
+	// 判断是否设置可售量
+	if bom.IsOpenStockBool() {
+		return bom.StockNum, nil
 	}
 
 	// 返回无限库存

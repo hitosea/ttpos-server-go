@@ -187,7 +187,9 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 			continue
 		}
 		bomCardStockNum := 0.0
-		if bom.UseBomCardStock == 1 && bom.HasProductBomCard() && bom.ProductBomCard != nil {
+		// 特殊需求: 不使用成本卡库存时也返回,成本卡的库存值
+		// if bom.UseBomCardStock == 1 && bom.HasProductBomCard() && bom.ProductBomCard != nil {
+		if bom.HasProductBomCard() && bom.ProductBomCard != nil {
 			// 计算成本卡库存：根据成本卡关联的材料库存计算预计可生产数量
 			// CalculateExpectedProductionNum 会遍历所有关联材料，取最小可生产数量
 			bomCardStockNum = bom.ProductBomCard.CalculateExpectedProductionNum()

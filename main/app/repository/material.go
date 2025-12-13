@@ -49,6 +49,7 @@ type IMaterialRepo interface {
 	DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList(opts ...DBOption) ([]model.MaterialCategory, error)
+	GetMaterialCategoryListWithDeleted(opts ...DBOption) ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error                       // 批量修改物品状态
 	UpdateMaterialVisibleBatch(uuids []uint64, visible int) error                     // 批量更新物品可见性
 	UpdateMaterialStockNum(materials []*model.Material) error                         // 更新物品库存数量
@@ -513,6 +514,20 @@ func (r *MaterialRepoImpl) GetMaterialCategoryList(opts ...DBOption) ([]model.Ma
 	return materialCategories, nil
 }
 
+func (r *MaterialRepoImpl) GetMaterialCategoryListWithDeleted(opts ...DBOption) ([]model.MaterialCategory, error) {
+	var materialCategories []model.MaterialCategory
+
+	db := r.db.Model(&model.MaterialCategory{}).Preload("MultiLanguageName").Order("sort ASC")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Find(&materialCategories).Error; err != nil {
+		return nil, errors.WithMessage(err, "获取物品类别列表失败")
+	}
+
+	return materialCategories, nil
+}
+
 func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "批量修改物品状态失败")
@@ -728,8 +743,9 @@ func (r *MaterialRepoImpl) CheckMaterialCategoryCodeExist(code string, uuid uint
 
 func (r *MaterialRepoImpl) UpdateMaterialCategory(materialCategory model.MaterialCategory) error {
 	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", materialCategory.Uuid).Updates(map[string]any{
-		"name": materialCategory.Name,
-		"code": materialCategory.Code,
+		"name":        materialCategory.Name,
+		"code":        materialCategory.Code,
+		"delete_time": materialCategory.DeleteTime,
 	}).Error; err != nil {
 		return errors.WithMessage(err, "更新物品类别失败")
 	}

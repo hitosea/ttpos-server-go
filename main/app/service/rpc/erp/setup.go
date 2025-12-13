@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-server-go/app/cloud"
@@ -158,14 +159,49 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		}
 	}
 
-	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)
-	repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid)).InitErpnextPayment(map[int]string{
-		constant.PaymentMethodCodeBalance:             "Balance",
-		constant.PaymentMethodCodeCash:                "Cash",
-		constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
-		constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-AliPay",
-		constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
-	})
+	paymentClient, conn, err := NewErpSellingClient()
+	if err != nil {
+		return resp.InitShopResp{}, err
+	}
+	defer conn.Close()
+	erpnextPaymentMap := make(map[int]string)
+	paymentList := repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid)).GetPaymentMethodList()
+	for _, payment := range paymentList {
+		// 如果已存在，则跳过
+		if payment.ErpnextPayment != "" {
+			continue
+		}
+		// 如果支付方式是总部同步的，且是自行添加，且没有二维码图片，则跳过
+		if payment.IsHeadquarterPayment() {
+			if payment.Source == constant.PaymentMethodSourceDefault && payment.QrcodeFileUuid == 0 {
+				continue
+			}
+		}
+
+		saveModeOfPaymentResp, err := paymentClient.SaveModeOfPayment(WithSiteCode(context.Background(), initShopReq.SiteCode), &selling.SaveModeOfPaymentReq{
+			CompanyAbbr: initShopReq.CompanyAbbr,
+			Branch:      response.BranchName,
+			Channel:     GetChannelBySource(payment.Source),
+			PayType:     payment.PaymentName,
+		})
+		if err != nil {
+			logger.Logger.Error("InitShop-SaveModeOfPayment-1", zap.Any("err", err), zap.String("payment_name", payment.PaymentName), zap.String("company_abbr", initShopReq.CompanyAbbr))
+			continue
+		}
+		if saveModeOfPaymentResp.GetCode() != "0" || saveModeOfPaymentResp.Data == nil {
+			logger.Logger.Error("InitShop-SaveModeOfPayment-2", zap.Any("code", saveModeOfPaymentResp.GetCode()), zap.String("payment_name", payment.PaymentName), zap.String("company_abbr", initShopReq.CompanyAbbr))
+			continue
+		}
+		result := &selling.SaveModeOfPaymentResp{}
+		if err := saveModeOfPaymentResp.Data.UnmarshalTo(result); err != nil {
+			logger.Logger.Error("InitShop-SaveModeOfPayment-3", zap.Any("err", err), zap.String("payment_name", payment.PaymentName), zap.String("company_abbr", initShopReq.CompanyAbbr))
+			continue
+		}
+		erpnextPaymentMap[payment.Code] = result.Name
+	}
+
+	// 自动同步了支付方式到erpnext
+	repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid)).InitErpnextPayment(erpnextPaymentMap)
 
 	utils.SafeGo(func() {
 		err := s.UpdateTtposCompanyParentUuids(initShopReq.SiteCode)

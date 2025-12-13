@@ -1712,7 +1712,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if flavorProductBom.GetStockNum(productBomStockNum) < float64(product.Num) {
 			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
 		}
-		// 如果商品规格关联了材料，检查材料库存是否充足
+		// 如果商品规格关联了材料，检查材料库存是否充足 (旧商家,不是使用成本卡的计算方式)
 		if len(flavorProductBom.FlavorMaterials) > 0 {
 			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
 				if flavorMaterial.IsDelete() {

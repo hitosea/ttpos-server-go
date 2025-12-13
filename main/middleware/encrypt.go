@@ -3,14 +3,15 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"io"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/encrypt"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type EncryptWriter struct {
@@ -54,7 +55,7 @@ func Encrypt(cache cache.Cache) gin.HandlerFunc {
 		if exists {
 			_ = json.Unmarshal([]byte(cachedKeyPair.(string)), &keyPair)
 			if keyPair.PublicKey == "" || keyPair.PrivateKey == "" {
-				logger.Logger.Error("rsa秘钥对无效", zap.Any("key_pair", keyPair))
+				logger.Logger.Error("rsa秘钥对无效")
 			}
 		}
 
@@ -91,7 +92,7 @@ func Encrypt(cache cache.Cache) gin.HandlerFunc {
 
 			rawRequestBody, err := encrypt.JsDecryptMessage(keyPair.PrivateKey, reqBody.Encrypted)
 			if err != nil {
-				logger.Logger.Error("jsencrypt解密失败", zap.Error(err), zap.Any("req_body", reqBody), zap.Any("server_key_pair", keyPair))
+				logger.Logger.Error("jsencrypt解密失败", zap.Error(err))
 			} else {
 				c.Request.Body = io.NopCloser(bytes.NewBuffer(rawRequestBody))
 			}

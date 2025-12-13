@@ -30,7 +30,7 @@ type ISupplierSrv interface {
 	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
 
-	SyncSupplier(ctx context.Context) error // 同步供应商
+	SyncSupplier(ctx context.Context, syncHeadquarterData bool) error // 同步供应商
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -367,7 +367,7 @@ func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExis
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }
 
-func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
+func (s *supplierSrv) SyncSupplier(ctx context.Context, syncHeadquarterData bool) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
 		return errors.New("公司未开启erp")
@@ -391,7 +391,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	// 总部ttpos供应商
 	var headquarterSuppliers []model.Supplier
 	var headquarter model.CompanySetting
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
@@ -474,7 +474,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 				})
 			}
 		}
-		if len(headquarterSuppliers) > 0 {
+		if len(headquarterSuppliers) > 0 && syncHeadquarterData {
 			tx.Where("headquarter_uuid > 0").Delete(&model.Supplier{})
 			for _, headquarterSupplier := range headquarterSuppliers {
 				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{

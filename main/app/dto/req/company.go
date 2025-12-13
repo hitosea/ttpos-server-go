@@ -87,4 +87,5 @@ type UpdateCompanySettingReq struct {
 	TaxNumber   string             `json:"tax_number"`                        // 税号
 	Language    []dto.LanguageItem `json:"language" binding:"required,min=1"` // 系统语言，必填，至少一个
 	TimeZone    string             `json:"time_zone" binding:"required"`      // 时区，必填
+	StoreCode   string             `json:"store_code" binding:"max=100"`      // 店铺编码，用于发票打印，最大100个字符
 }

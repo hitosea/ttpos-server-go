@@ -77,6 +77,10 @@ var rootCommand = &cobra.Command{
 			fmt.Printf("[FATAL] Failed to check SMS client config: %v\n", err)
 			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
 		}
+
+		// 初始化全局速率限制器
+		middleware.InitGlobalRateLimiter(logger.Logger)
+
 		//初始化服务发现
 		cloud.Init()
 
@@ -124,6 +128,8 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	pprof.Register(r)
 	// 添加中间件
 	r.Use(middleware.Cors())
+	// 对敏感接口实施速率限制
+	r.Use(middleware.RateLimit())
 
 	// 开启 OTLP 调用链跟踪
 	if config.Otlp.Enabled {

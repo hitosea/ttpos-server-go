@@ -39,7 +39,7 @@ type ISyncSrv interface {
 type syncTaskConfig struct {
 	TaskType string
 	TaskName string
-	Executor func(context.Context) error
+	Executor func(context.Context, bool) error
 }
 
 // SyncSrv同步服务结构体
@@ -132,11 +132,17 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		{constant.SyncTaskTypeSauce, constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce], s.productSrv.SyncSauce},
 		{constant.SyncTaskTypeProduct, constant.SyncTaskTypeNames[constant.SyncTaskTypeProduct], s.productSrv.SyncProduct},
 		{constant.SyncTaskTypeBomCard, constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard], s.materialSrv.SyncProductBomCard},
-		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},                        // 无多语言数据
-		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock}, // 无多语言数据
-		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], s.productSrv.SyncProductStockByBomCard},    // 无多语言数据
-		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage},      // 无多语言数据
-		{constant.SyncTaskTypeMultiLanguage, constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage], s.SyncMultiLanguage},
+		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier}, // 无多语言数据
+		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], func(ctx context.Context, syncHeadquarterData bool) error {
+			return s.warehouseSrv.SyncWarehouseItemStock(ctx)
+		}}, // 无多语言数据
+		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], func(ctx context.Context, syncHeadquarterData bool) error {
+			return s.productSrv.SyncProductStockByBomCard(ctx)
+		}}, // 无多语言数据
+		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage}, // 无多语言数据
+		{constant.SyncTaskTypeMultiLanguage, constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage], func(ctx context.Context, syncHeadquarterData bool) error {
+			return s.SyncMultiLanguage(ctx)
+		}},
 	}
 
 	// 如果传递了任务UUID，则为重试模式
@@ -335,7 +341,7 @@ func (s *SyncSrv) executeSyncTask(ctx context.Context, syncTaskUuid uint64, task
 	logger.Logger.Info("开始同步", zap.String("taskName", taskCfg.TaskName))
 
 	// 执行同步任务
-	err := taskCfg.Executor(ctx)
+	err := taskCfg.Executor(ctx, true)
 	endTime := time.Now().Unix()
 
 	if err != nil {
@@ -1127,7 +1133,7 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 
 	return resp.GranularSyncResp{
 		TaskUuid: syncTask.Uuid,
-		Message:  "数据同步已启动",
+		Message:  "新数据同步完成后将会通知",
 	}, nil
 }
 
@@ -1155,7 +1161,6 @@ func (s *SyncSrv) hasActivityDataDependsOnProductData(ctx context.Context) bool 
 func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncTask, productDataChecked, activityDataChecked, paymentDataChecked bool) {
 	companySetting := ctx.GetCompanySetting()
 	companyUuid := companySetting.CompanyUuid
-	headquarterUuid := companySetting.HeadquarterUuid
 
 	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
 	syncTaskItemRepo := repository.NewSyncTaskItemRepo(s.dbm.GetDB(companyUuid))
@@ -1183,6 +1188,13 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 			zap.Uint32("successCount", successCount),
 			zap.Uint32("failCount", failCount))
 
+		lastSyncTime := time.Now().Unix()
+		// 未报错才记录上次同步完成时间
+		if !isExceptionOccurred {
+			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+		}
+
 		// 推送websocket
 		utils.Go(func() {
 			websocket.PushClient(companyUuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
@@ -1198,69 +1210,62 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		zap.Bool("activityDataChecked", activityDataChecked),
 		zap.Bool("paymentDataChecked", paymentDataChecked))
 
-	// Step 1: 处理未勾选的数据（按照指定顺序依次标记删除）
-	err := s.handleUncheckedHeadquartersData(ctx, headquarterUuid, productDataChecked, activityDataChecked, paymentDataChecked)
-	if err != nil {
-		logger.Logger.Error("处理未勾选的总部数据失败", zap.Error(err))
-		failCount++
+	// 商品数据组：按照指定顺序执行全量同步
+	productSyncTasks := []struct {
+		Name     string
+		Executor func(context.Context, bool) error
+	}{
+		{constant.SyncTaskTypeProductCategory, s.productSrv.SyncProductShopCategory},
+		{constant.SyncTaskTypeMaterialCategory, s.materialSrv.SyncMaterialCategory},
+		{constant.SyncTaskTypeTax, s.productSrv.SyncProductTax},
+		{constant.SyncTaskTypeUnit, s.productSrv.SyncUnit},
+		{constant.SyncTaskTypeMaterial, s.materialSrv.SyncMaterial},
+		{constant.SyncTaskTypeWarehouse, s.warehouseSrv.SyncWarehouse},
+		{constant.SyncTaskTypeFlavor, s.productSrv.SyncProductFlavor},
+		{constant.SyncTaskTypeAttribute, s.productSrv.SyncAttributeGroup},
+		{constant.SyncTaskTypeSauce, s.productSrv.SyncSauce},
+		{constant.SyncTaskTypeProduct, s.productSrv.SyncProduct},
+		{constant.SyncTaskTypeBomCard, s.materialSrv.SyncProductBomCard},
+		{constant.SyncTaskTypeSupplier, s.supplierSrv.SyncSupplier},
+		{constant.SyncTaskTypeWarehouseStock, func(ctx context.Context, syncHeadquarterData bool) error {
+			return s.warehouseSrv.SyncWarehouseItemStock(ctx)
+		}},
+		{constant.SyncTaskTypeProductStock, func(ctx context.Context, syncHeadquarterData bool) error {
+			return s.productSrv.SyncProductStockByBomCard(ctx)
+		}},
+		{constant.SyncTaskTypePackageImage, s.productSrv.SyncProductPackageImage},
 	}
 
-	// Step 2: 同步勾选的数据（按照指定顺序，全量同步）
-
-	// 商品数据组：按照指定顺序执行全量同步
-	if productDataChecked {
-		productSyncTasks := []struct {
-			Name     string
-			Executor func(context.Context) error
-		}{
-			{constant.SyncTaskTypeProductCategory, s.productSrv.SyncProductShopCategory},
-			{constant.SyncTaskTypeMaterialCategory, s.materialSrv.SyncMaterialCategory},
-			{constant.SyncTaskTypeTax, s.productSrv.SyncProductTax},
-			{constant.SyncTaskTypeUnit, s.productSrv.SyncUnit},
-			{constant.SyncTaskTypeMaterial, s.materialSrv.SyncMaterial},
-			{constant.SyncTaskTypeWarehouse, s.warehouseSrv.SyncWarehouse},
-			{constant.SyncTaskTypeFlavor, s.productSrv.SyncProductFlavor},
-			{constant.SyncTaskTypeAttribute, s.productSrv.SyncAttributeGroup},
-			{constant.SyncTaskTypeSauce, s.productSrv.SyncSauce},
-			{constant.SyncTaskTypeProduct, s.productSrv.SyncProduct},
-			{constant.SyncTaskTypeBomCard, s.materialSrv.SyncProductBomCard},
-			{constant.SyncTaskTypeSupplier, s.supplierSrv.SyncSupplier},
-			{constant.SyncTaskTypeWarehouseStock, s.warehouseSrv.SyncWarehouseItemStock},
-			{constant.SyncTaskTypeProductStock, s.productSrv.SyncProductStockByBomCard},
-			{constant.SyncTaskTypePackageImage, s.productSrv.SyncProductPackageImage},
+	for _, task := range productSyncTasks {
+		taskItem := &model.SyncTaskItem{
+			SyncTaskUuid: syncTask.Uuid,
+			TaskType:     task.Name,
+			TaskName:     constant.SyncTaskTypeNames[task.Name],
+			Status:       constant.SyncTaskItemStatusRunning,
+			StartTime:    time.Now().Unix(),
 		}
 
-		for _, task := range productSyncTasks {
-			taskItem := &model.SyncTaskItem{
-				SyncTaskUuid: syncTask.Uuid,
-				TaskType:     task.Name,
-				TaskName:     constant.SyncTaskTypeNames[task.Name],
-				Status:       constant.SyncTaskItemStatusRunning,
-				StartTime:    time.Now().Unix(),
-			}
+		syncTaskItemRepo.Create(taskItem)
 
-			syncTaskItemRepo.Create(taskItem)
+		logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+		err := task.Executor(ctx, productDataChecked)
+		endTime := time.Now().Unix()
 
-			logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-			err := task.Executor(ctx)
-			endTime := time.Now().Unix()
-
-			if err != nil {
-				failCount++
-				logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
-				syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-					"status":        constant.SyncTaskItemStatusFailed,
-					"error_message": err.Error(),
-					"end_time":      endTime,
-				})
-			} else {
-				successCount++
-				logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
-				syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-					"status":   constant.SyncTaskItemStatusSuccess,
-					"end_time": endTime,
-				})
-			}
+		if err != nil {
+			failCount++
+			logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+				"status":        constant.SyncTaskItemStatusFailed,
+				"error_message": err.Error(),
+				"end_time":      endTime,
+			})
+		} else {
+			successCount++
+			logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+				"status":   constant.SyncTaskItemStatusSuccess,
+				"end_time": endTime,
+			})
 		}
 	}
 
@@ -1356,7 +1361,7 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 	syncTaskItemRepo.Create(taskItem)
 
 	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-	err = s.SyncMultiLanguage(ctx)
+	err := s.SyncMultiLanguage(ctx)
 	endTime := time.Now().Unix()
 
 	if err != nil {
@@ -1389,61 +1394,6 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		"total_count":   successCount + failCount,
 		"end_time":      endTime,
 	})
-}
-
-// handleUncheckedHeadquartersData 处理未勾选的总部数据（标记删除）
-func (s *SyncSrv) handleUncheckedHeadquartersData(ctx context.Context, headquarterUuid uint64, productDataChecked, activityDataChecked, paymentDataChecked bool) error {
-	companySetting := ctx.GetCompanySetting()
-	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
-
-	// 商品数据组：如果未勾选，标记删除子店中的总部数据
-	if !productDataChecked {
-		productDataTables := []string{
-			"ttpos_product_category",        // 商品分类
-			"ttpos_product_unit",            // 单位
-			"ttpos_product_flavor",          // 规格
-			"ttpos_product_attribute_group", // 属性
-			"ttpos_product_sauce",           // 加料
-			"ttpos_product_package",         // 商品
-			"ttpos_material_category",       // 物品分类
-			"ttpos_product_bom_card",        // 成本卡
-			"ttpos_supplier",                // 供应商
-			"ttpos_tax",                     // 税类
-		}
-
-		for _, tableName := range productDataTables {
-			if err := subShopDB.Table(tableName).
-				Where("headquarter_uuid = ?", headquarterUuid).
-				Where("delete_time = 0").
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("标记删除%s失败", tableName))
-			}
-		}
-	}
-
-	// 活动数据组：如果未勾选，标记删除子店中的总部数据
-	if !activityDataChecked {
-		activityDataTables := []string{
-			"ttpos_marketing_coupon",        // 优惠券
-			"ttpos_full_reduction_activity", // 满额减
-			"ttpos_product_label",           // 菜品标签
-			"ttpos_marketing_activity",      // 营销活动
-		}
-
-		for _, tableName := range activityDataTables {
-			if err := subShopDB.Table(tableName).
-				Where("headquarter_uuid = ?", headquarterUuid).
-				Where("delete_time = 0").
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("标记删除%s失败", tableName))
-			}
-		}
-	}
-
-	// 支付数据组：未勾选时不删除子店的支付数据
-	// 不做任何处理
-
-	return nil
 }
 
 // SyncMarketingCoupon 全量同步优惠券（先硬删除子店中的总部数据，再全量同步）
@@ -1679,11 +1629,6 @@ func (s *SyncSrv) SyncPaymentMethod(ctx context.Context) error {
 		newCode := s.generatePaymentCode(subShopDB)
 
 		newPayment := model.PaymentMethod{
-			BaseModel: model.BaseModel{
-				Uuid:       hqPayment.Uuid, // 保持与总部相同的uuid
-				CreateTime: time.Now().Unix(),
-				UpdateTime: time.Now().Unix(),
-			},
 			HeadquarterUuid: headquarterUuid,
 			PaymentName:     hqPayment.PaymentName,
 			Name:            hqPayment.Name,
