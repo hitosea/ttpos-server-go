@@ -1161,7 +1161,6 @@ func (s *SyncSrv) hasActivityDataDependsOnProductData(ctx context.Context) bool 
 func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncTask, productDataChecked, activityDataChecked, paymentDataChecked bool) {
 	companySetting := ctx.GetCompanySetting()
 	companyUuid := companySetting.CompanyUuid
-	headquarterUuid := companySetting.HeadquarterUuid
 
 	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
 	syncTaskItemRepo := repository.NewSyncTaskItemRepo(s.dbm.GetDB(companyUuid))
@@ -1211,17 +1210,7 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		zap.Bool("activityDataChecked", activityDataChecked),
 		zap.Bool("paymentDataChecked", paymentDataChecked))
 
-	// Step 1: 处理未勾选的数据（按照指定顺序依次标记删除）
-	err := s.handleUncheckedHeadquartersData(ctx, headquarterUuid, productDataChecked, activityDataChecked, paymentDataChecked)
-	if err != nil {
-		logger.Logger.Error("处理未勾选的总部数据失败", zap.Error(err))
-		failCount++
-	}
-
-	// Step 2: 同步勾选的数据（按照指定顺序，全量同步）
-
 	// 商品数据组：按照指定顺序执行全量同步
-	// if productDataChecked {
 	productSyncTasks := []struct {
 		Name     string
 		Executor func(context.Context, bool) error
@@ -1279,7 +1268,6 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 			})
 		}
 	}
-	// }
 
 	// 活动数据组：按照指定顺序执行全量同步
 	if activityDataChecked {
@@ -1373,7 +1361,7 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 	syncTaskItemRepo.Create(taskItem)
 
 	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-	err = s.SyncMultiLanguage(ctx)
+	err := s.SyncMultiLanguage(ctx)
 	endTime := time.Now().Unix()
 
 	if err != nil {
@@ -1406,62 +1394,6 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		"total_count":   successCount + failCount,
 		"end_time":      endTime,
 	})
-}
-
-// handleUncheckedHeadquartersData 处理未勾选的总部数据（标记删除）
-func (s *SyncSrv) handleUncheckedHeadquartersData(ctx context.Context, headquarterUuid uint64, productDataChecked, activityDataChecked, _ bool) error {
-	companySetting := ctx.GetCompanySetting()
-	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
-
-	// 商品数据组：如果未勾选，标记删除子店中的总部数据
-	if !productDataChecked {
-		productDataTables := []string{
-			"ttpos_product_category",        // 商品分类
-			"ttpos_product_unit",            // 单位
-			"ttpos_product_flavor",          // 规格
-			"ttpos_product_attribute_group", // 属性
-			"ttpos_product_sauce",           // 加料
-			"ttpos_product_package",         // 商品
-			"ttpos_material_category",       // 物品分类
-			"ttpos_material",                // 物品
-			"ttpos_product_bom_card",        // 成本卡
-			"ttpos_supplier",                // 供应商
-			"ttpos_tax",                     // 税类
-		}
-
-		for _, tableName := range productDataTables {
-			if err := subShopDB.Table(tableName).
-				Where("headquarter_uuid = ?", headquarterUuid).
-				Where("delete_time = 0").
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("标记删除%s失败", tableName))
-			}
-		}
-	}
-
-	// 活动数据组：如果未勾选，标记删除子店中的总部数据
-	if !activityDataChecked {
-		activityDataTables := []string{
-			"ttpos_marketing_coupon",        // 优惠券
-			"ttpos_full_reduction_activity", // 满额减
-			"ttpos_product_label",           // 菜品标签
-			"ttpos_marketing_activity",      // 营销活动
-		}
-
-		for _, tableName := range activityDataTables {
-			if err := subShopDB.Table(tableName).
-				Where("headquarter_uuid = ?", headquarterUuid).
-				Where("delete_time = 0").
-				Update("delete_time", time.Now().Unix()).Error; err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("标记删除%s失败", tableName))
-			}
-		}
-	}
-
-	// 支付数据组：未勾选时不删除子店的支付数据
-	// 不做任何处理
-
-	return nil
 }
 
 // SyncMarketingCoupon 全量同步优惠券（先硬删除子店中的总部数据，再全量同步）
