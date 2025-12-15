@@ -1060,7 +1060,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 					SaleOrderUuid: request.SaleOrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
-				FullReductionActivityUuid:    saleOrder.FullReductionActivityUuid,
+				FullReductionActivityUuid: saleOrder.FullReductionActivityUuid,
+				FullReductionActivityName: func() string {
+					if saleOrder.FullReductionActivityUuid > 0 {
+						activityRepo := repository.NewFullReductionActivityRepo(db)
+						activity, err := activityRepo.GetByUuid(saleOrder.FullReductionActivityUuid)
+						if err != nil {
+							return ""
+						}
+						return activity.Name
+					}
+					return ""
+				}(),
 				FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
 				ActivityAmount:               saleOrder.ActivityAmount,
 				OldPrice:                     oldPrice,
