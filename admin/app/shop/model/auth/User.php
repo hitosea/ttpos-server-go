@@ -332,6 +332,7 @@ class User extends UserModel
         }
         // 删除收银机缓存
         Cache::tag('cashier')->clear();
+        (new CompanyStaff([], 0))->setAppId(0)->update(['is_disable' => $status], ['uuid' => $this['uuid'], 'company_uuid' => $this['company_uuid']]);
         return $this->save([
             'is_disable' => $status
         ]);

@@ -242,6 +242,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     -- 骑手信息
     `rider_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手名称',
     `rider_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手电话',
+    `rider_avatar` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '骑手头像',
+    `rider_rating` decimal(20,4) NOT NULL DEFAULT '0.0000' COMMENT '骑手评分',
     `location` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手位置,格式:纬度,经度',
     `remaining_distance`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '剩余距离',
     -- 排序相关
@@ -2417,8 +2419,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `printer_limit` INT(11) NOT NULL DEFAULT 0 COMMENT '打印机上限',
     `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
     `languages` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
-    `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
-    `coordinates` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '经纬度，如：13.721899,100.52900',
+    `address` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '联系地址',
+    `coordinates` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '经纬度，如：13.721899,100.52900',
     `delivery_status` int(11) DEFAULT 0 COMMENT '外送配置状态：0-关,1-开',
     `delivery_config` text COMMENT '外送配置',
     `erpnext_site_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext站点编码',
@@ -3294,6 +3296,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sync_task` (
   `panic` text COMMENT 'panic错误信息',
   `start_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '开始时间',
   `end_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '结束时间',
+  `request_params` text COMMENT '请求参数(JSON格式)',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',

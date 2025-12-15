@@ -6438,6 +6438,11 @@ definitions:
       remark:
         description: 备注，平板端离线购物车提交
         type: string
+      remark_uuids:
+        description: 备注预设UUID列表
+        items:
+          type: integer
+        type: array
       sauce_product_bom_uuid_list:
         description: 加料信息
         items:
@@ -9866,6 +9871,9 @@ definitions:
         type: string
       company_uuid:
         description: 门店UUID
+        type: integer
+      is_disable:
+        description: 是否禁用, 1:禁用, 0:未禁用
         type: integer
       is_super:
         description: 是否超级管理员
@@ -35839,6 +35847,11 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: 门店UUID
+        format: int64
+        in: query
+        name: company_uuid
+        type: integer
       produces:
       - application/json
       responses:

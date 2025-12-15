@@ -30204,6 +30204,13 @@ const docTemplate = `{
                         "description": "关键词, 姓名、邮箱、手机号",
                         "name": "keyword",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "门店UUID",
+                        "name": "company_uuid",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -44434,6 +44441,13 @@ const docTemplate = `{
                     "description": "备注，平板端离线购物车提交",
                     "type": "string"
                 },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "sauce_product_bom_uuid_list": {
                     "description": "加料信息",
                     "type": "array",
@@ -49342,6 +49356,10 @@ const docTemplate = `{
                 },
                 "company_uuid": {
                     "description": "门店UUID",
+                    "type": "integer"
+                },
+                "is_disable": {
+                    "description": "是否禁用, 1:禁用, 0:未禁用",
                     "type": "integer"
                 },
                 "is_super": {

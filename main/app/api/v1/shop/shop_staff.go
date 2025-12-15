@@ -33,6 +33,7 @@ type StaffHandler struct {
 // @Param page_size query int false "每页条数"
 // @Param is_filter_super query int false "是否过滤超级管理员"
 // @Param keyword query string false "关键词, 姓名、邮箱、手机号"
+// @Param company_uuid query uint64 false "门店UUID"
 // @Success 200 {object} dto.Response{data=resp.StaffListPaginationResp}
 // @Router /shop/staff/list [get]
 func (h *StaffHandler) GetStaffList(c *gin.Context) {
