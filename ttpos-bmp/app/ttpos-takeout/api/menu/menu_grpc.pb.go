@@ -31,7 +31,9 @@ const (
 //
 // 外卖菜单服务
 type MenuServiceClient interface {
+	// 获取菜单快照
 	GetMenuSnapshot(ctx context.Context, in *GetMenuSnapshotReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
+	// 保存ttpos 菜单快照数据
 	SaveMenuSnapshot(ctx context.Context, in *SaveMenuSnapshotReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 }
 
@@ -69,7 +71,9 @@ func (c *menuServiceClient) SaveMenuSnapshot(ctx context.Context, in *SaveMenuSn
 //
 // 外卖菜单服务
 type MenuServiceServer interface {
+	// 获取菜单快照
 	GetMenuSnapshot(context.Context, *GetMenuSnapshotReq) (*takeout.ApiResponse, error)
+	// 保存ttpos 菜单快照数据
 	SaveMenuSnapshot(context.Context, *SaveMenuSnapshotReq) (*takeout.ApiResponse, error)
 	mustEmbedUnimplementedMenuServiceServer()
 }
