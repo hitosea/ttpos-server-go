@@ -879,6 +879,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 				uint(log.ShiftStartTime),
 				uint(queryEndTime),
 				log.StaffUuid,
+				excludeDataManage,
 			)
 			if err != nil {
 				return []business_data_resp.PeakHour{}
