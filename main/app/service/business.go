@@ -612,11 +612,12 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 	var productData = business_data_resp.BusinessDataProduct{
 		Products: func() []business_data_resp.Product {
 			productList := s.statisticsSrv.CountProduct(ctx, CountReq{
-				TimeType:       req.TimeType,
-				QueryStartTime: req.QueryStartTime,
-				QueryEndTime:   req.QueryEndTime,
-				CategoryType:   req.CategoryType,
-				DutyNo:         req.DutyNo,
+				TimeType:          req.TimeType,
+				QueryStartTime:    req.QueryStartTime,
+				QueryEndTime:      req.QueryEndTime,
+				CategoryType:      req.CategoryType,
+				DutyNo:            req.DutyNo,
+				ExcludeDataManage: req.ExcludeDataManage,
 			})
 			list := make([]business_data_resp.Product, 0, len(productList))
 			for _, product := range productList {
