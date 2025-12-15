@@ -2827,6 +2827,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			// 从所有商品中过滤出未送厨的商品（需要送厨减库存的商品）
 			unCookingSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
 			for _, saleOrderProduct := range saleOrderProductsList {
+				// 过滤掉退菜的商品
+				if saleOrderProduct.IsCancelProduct() {
+					continue
+				}
 				// 只检查需要送厨减库存的商品
 				if saleOrderProduct.IsCookingDeductStock() && saleOrderProduct.IsUnCookingProduct() {
 					// 如果指定了要检查的商品UUID列表，只检查列表中的商品
@@ -2881,6 +2885,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			// 收集需要检查材料库存的商品
 			needCheckProducts := make([]*model.SaleOrderProduct, 0)
 			for _, saleOrderProduct := range saleOrderProductsList {
+				// 过滤掉退菜的商品
+				if saleOrderProduct.IsCancelProduct() {
+					continue
+				}
 				var shouldCheck bool
 				// 结账减库存的商品，需要检查所有商品（包括已送厨的）
 				if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypePay {
