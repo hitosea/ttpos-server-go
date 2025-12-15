@@ -618,23 +618,27 @@ func (s *callBoardService) mustGetBindInfoFromCache(deviceId string) (bindInfo D
 }
 
 func checkAndFixLangs(langList []dto.LanguageItem, targetLang1 string, targetLang2 string) (lang1 string, lang2 string) {
-	// 先查找 targetLang1，再查找 targetLang2，保证返回顺序与参数顺序一致
-	var foundLang1, foundLang2 string
+	toUpdateLangs := make([]string, 0, 2)
 	for _, lang := range langList {
-		if lang.Name == targetLang1 && foundLang1 == "" {
-			foundLang1 = lang.Name
+		if len(toUpdateLangs) == 2 {
+			break
 		}
-		if lang.Name == targetLang2 && foundLang2 == "" {
-			foundLang2 = lang.Name
+		if lang.Name == targetLang1 {
+			toUpdateLangs = append(toUpdateLangs, lang.Name)
+			continue
+		}
+		if lang.Name == targetLang2 {
+			toUpdateLangs = append(toUpdateLangs, lang.Name)
+			continue
 		}
 	}
-	// 如果都没找到，使用 langList 的第一个作为 lang1
-	if foundLang1 == "" && foundLang2 == "" {
-		if len(langList) > 0 {
-			foundLang1 = langList[0].Name
-		}
+	if len(toUpdateLangs) == 0 {
+		toUpdateLangs = append(toUpdateLangs, langList[0].Name, "")
 	}
-	return foundLang1, foundLang2
+	if len(toUpdateLangs) == 1 {
+		toUpdateLangs = append(toUpdateLangs, "")
+	}
+	return toUpdateLangs[0], toUpdateLangs[1]
 }
 
 func (s *callBoardService) handleSaleBillEvent(companyUuid uint64, saleBillUuid uint64, action int) error {
