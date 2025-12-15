@@ -30204,6 +30204,13 @@ const docTemplate = `{
                         "description": "关键词, 姓名、邮箱、手机号",
                         "name": "keyword",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "门店UUID",
+                        "name": "company_uuid",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -49342,6 +49349,10 @@ const docTemplate = `{
                 },
                 "company_uuid": {
                     "description": "门店UUID",
+                    "type": "integer"
+                },
+                "is_disable": {
+                    "description": "是否禁用, 1:禁用, 0:未禁用",
                     "type": "integer"
                 },
                 "is_super": {

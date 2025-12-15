@@ -225,6 +225,7 @@ func (s *staffSrv) SaasPaginateGetStaffs(ctx context.Context, getStaffListReq re
 				CompanyName: companyName,
 				Roles:       roleList,
 				IsSuper:     cs.IsSuper,
+				IsDisable:   cs.IsDisable,
 			})
 		}
 
@@ -716,6 +717,18 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		for _, company := range visibleCompanies {
 			visibleCompanyMap[company.Uuid] = true
 		}
+
+		// NOTE: 如果updateReq.CompanyRoleList中包含当前门店，查询员工在当前门店数据库的信息
+		// for _, companyRoleItem := range updateReq.CompanyRoleList {
+		// 	if companyRoleItem.CompanyUuid == currentCompanyUuid {
+		// 		shopDB := s.dbm.GetDB(companyRoleItem.CompanyUuid)
+		// 		staffRepo := repository.NewStaffRepo(shopDB)
+		// 		staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+		// 		if staff.Uuid != 0 && staff.CashierOnline != 0 && updateReq.IsDisable != nil && *updateReq.IsDisable == 1 {
+		// 			return errors.New("当前人员未交班，请先交班"), exists
+		// 		}
+		// 	}
+		// }
 
 		// 遍历 CompanyRoleList，验证并更新员工
 		for _, companyRoleItem := range updateReq.CompanyRoleList {

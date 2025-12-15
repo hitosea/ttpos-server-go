@@ -9867,6 +9867,9 @@ definitions:
       company_uuid:
         description: 门店UUID
         type: integer
+      is_disable:
+        description: 是否禁用, 1:禁用, 0:未禁用
+        type: integer
       is_super:
         description: 是否超级管理员
         type: integer
@@ -35839,6 +35842,11 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: 门店UUID
+        format: int64
+        in: query
+        name: company_uuid
+        type: integer
       produces:
       - application/json
       responses:

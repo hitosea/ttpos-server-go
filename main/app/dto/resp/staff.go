@@ -54,4 +54,5 @@ type CompanyRoleInfo struct {
 	CompanyName string      `json:"company_name"` // 门店名称
 	Roles       []StaffRole `json:"roles"`        // 角色列表
 	IsSuper     int         `json:"is_super"`     // 是否超级管理员
+	IsDisable   int         `json:"is_disable"`   // 是否禁用, 1:禁用, 0:未禁用
 }
