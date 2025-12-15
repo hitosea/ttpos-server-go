@@ -905,7 +905,8 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		}(),
 		PercentageList: func() []business_data_resp.Percentage {
 			taxData := s.statisticsSrv.CountTax(ctx, CountReq{
-				DutyNo: log.ShiftNo,
+				DutyNo:            log.ShiftNo,
+				ExcludeDataManage: excludeDataManage,
 			})
 
 			percentageList := make([]business_data_resp.Percentage, 0, len(taxData))

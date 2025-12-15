@@ -126,7 +126,8 @@ func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseRe
 // GetPrinterLogList 获取打印列表
 func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error) {
 	// 获取打印日志
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	printerLogRepo := repository.NewPrinterLogRepo(db)
 
 	// 准备查询选项
 	queryOpts := []repository.DBOption{
@@ -197,9 +198,16 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 	dataSetting := s.settingSrv.GetDataManageSetting(ctx)
 	excludeDataManage := companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	if excludeDataManage {
-		queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-			return db.Where("related_uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = ? AND delete_time = 0)", model.DataManageTypeOrder)
-		})
+		dataManageUuid := []uint64{}
+		db.Model(&model.DataManage{}).Where("type = ? AND delete_time = 0", model.DataManageTypeOrder).Pluck("data_uuid", &dataManageUuid)
+		saleOrderUuid := []uint64{}
+		db.Model(&model.SaleOrder{}).Where("sale_bill_uuid IN ? AND delete_time = 0", dataManageUuid).Pluck("uuid", &saleOrderUuid)
+		relatedUuid := append(dataManageUuid, saleOrderUuid...)
+		if len(relatedUuid) > 0 {
+			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
+				return db.Where("related_uuid NOT IN ?", relatedUuid)
+			})
+		}
 	}
 
 	// 执行查询

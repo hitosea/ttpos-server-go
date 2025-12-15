@@ -184,7 +184,6 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 		saleBillRepo := NewOrderRepoImpl(r.db)
 		saleBillList := saleBillRepo.GetSaleBillList(
 			CommonRepo.WhereInDataManageSubQuery(r.db, "uuid", CommonRepo.WhereByType(model.DataManageTypeOrder), CommonRepo.WhereBySoftDelete()),
-			CommonRepo.WhereBetweenFinishTime(startDate+startHour*3600, endDate+endHour*3600),
 			CommonRepo.Preload(
 				WithPreload{
 					Query: "SaleOrders",
