@@ -104,7 +104,7 @@ class Erpnext extends Controller
             'company_uuid' => $param['uuid'],
             'headquarter_abbr' => $param['headquarter_abbr'],
         ];
-        $res = HttpHelp::postRequest('https://8081--main--ttpos-server-go--nightcp.coder.hitosea.com/api/v1/admin/erpnext/shop/init', json_encode($params), [
+        $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
         ], 60);
@@ -157,7 +157,7 @@ class Erpnext extends Controller
      */
     function siteCompany()
     {
-        $res = HttpHelp::getRequest('https://8081--main--ttpos-server-go--nightcp.coder.hitosea.com/api/v1/admin/erpnext/site/company', $this->getData(), [
+        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/company', $this->getData(), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
         ]);

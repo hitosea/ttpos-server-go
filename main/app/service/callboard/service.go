@@ -147,15 +147,15 @@ func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint6
 		if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
 			return errors.New("叫号次数必须在1-3之间")
 		}
+		if req.TimeoutLimit == nil {
+			req.TimeoutLimit = &[]int{0}[0]
+		}
+		if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+			return errors.New("超时限制必须在0-120分钟之间")
+		}
 	}
 
 	// 设置默认值
-	if req.TimeoutLimit == nil {
-		req.TimeoutLimit = &[]int{0}[0]
-	}
-	if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
-		return errors.New("超时限制必须在0-120分钟之间")
-	}
 	if req.VoiceCallEnabled == nil {
 		req.VoiceCallEnabled = &[]bool{false}[0]
 	}
@@ -312,15 +312,15 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 		if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
 			return errors.New("叫号次数必须在1-3之间")
 		}
+		if req.TimeoutLimit == nil {
+			req.TimeoutLimit = &[]int{0}[0]
+		}
+		if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+			return errors.New("超时限制必须在0-120分钟之间")
+		}
 	}
 
 	// 设置默认值
-	if req.TimeoutLimit == nil {
-		req.TimeoutLimit = &[]int{0}[0]
-	}
-	if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
-		return errors.New("超时限制必须在0-120分钟之间")
-	}
 	if req.VoiceCallEnabled == nil {
 		req.VoiceCallEnabled = &[]bool{false}[0]
 	}
@@ -423,6 +423,10 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 		if voiceCallEnabled == nil {
 			voiceCallEnabled = &[]bool{false}[0]
 		}
+		backgroundImageUrl := bindInfo.BackgroundImageUrl
+		if backgroundImageUrl == "" {
+			backgroundImageUrl = "/"
+		}
 		list = append(list, resp.DeviceItem{
 			Uuid:               device.Uuid,
 			DeviceId:           device.DeviceId,
@@ -430,7 +434,7 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 			Lang1:              bindInfo.Lang1,
 			Lang2:              bindInfo.Lang2,
 			Name:               name,
-			BackgroundImageUrl: bindInfo.BackgroundImageUrl,
+			BackgroundImageUrl: backgroundImageUrl,
 			TimeoutLimit:       timeoutLimit,
 			VoiceCallEnabled:   voiceCallEnabled,
 			CallCount:          callCount,
@@ -705,6 +709,7 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 
 	// 收集所有有效的队列成员
 	queueMembers := make([]queueMember, 0, len(results))
+	delMembers := make([]string, 0)
 	for _, result := range results {
 		str, _ := result.Member.(string)
 		mem, ok := parseQueueMember(str)
@@ -718,11 +723,18 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 			completedTime := int64(result.Score)
 			// 如果订单完成时间超过超时阈值，跳过该订单
 			if now-completedTime > timeoutThreshold {
+				delMembers = append(delMembers, str)
 				continue
 			}
 		}
 
 		queueMembers = append(queueMembers, mem)
+	}
+
+	if timeoutLimit > 0 && len(delMembers) > 0 {
+		for _, member := range delMembers {
+			s.removeMemberFromQueues(member, queueKey)
+		}
 	}
 
 	// 按照 CreateTime 从小到大排序

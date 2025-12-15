@@ -220,6 +220,10 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if permission.Uuid == 2856866287616001 && !companySetting.IsHeadquarter() {
 			continue
 		}
+		// 新管理端-管理APP-云平台未开启自助点餐机，权限列表无自助点餐机设置
+		if permission.Uuid == 2859353116672000 && !companySetting.IsOpenKiosk() {
+			continue
+		}
 		filteredPermissions = append(filteredPermissions, permission)
 	}
 	return filteredPermissions

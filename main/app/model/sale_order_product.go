@@ -178,7 +178,7 @@ func (model *SaleOrderProduct) IsShowBatchTag(openIsBatch bool) bool {
 // 是否处于预送厨阶段
 func (model *SaleOrderProduct) IsPreCooking() bool {
 	// status是已送厨，不能再操作商品，只能退菜。且没有被标记分批类型，所以是预送厨阶段
-	return model.IsBatchBool() && model.Status == constant.SaleOrderProductStatusCooking && model.BatchTime == 0
+	return model.IsBatchBool() && model.Status == constant.SaleOrderProductStatusCooking && model.BatchTime == 0 && !model.IsCancelProduct()
 }
 
 // 获取商品的原材料
@@ -881,6 +881,7 @@ func (model *SaleOrderProduct) SetNil() {
 	model.H5Order = nil
 	model.ProductMustPlan = nil
 	model.BatchTag = nil
+	model.OrderItemRemarks = nil
 }
 
 // 复制销售订单商品
@@ -916,6 +917,21 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 		}
 		newAttribute := attribute.CopyAttribute(model.SaleOrderUuid, productUuid)
 		product.SaleOrderProductAttributes = append(product.SaleOrderProductAttributes, newAttribute)
+	}
+	// 复制OrderItemRemarks
+	product.OrderItemRemarks = make([]*SaleOrderProductReason, 0)
+	for _, remark := range model.OrderItemRemarks {
+		if remark.IsDelete() {
+			continue
+		}
+		product.OrderItemRemarks = append(product.OrderItemRemarks, &SaleOrderProductReason{
+			BaseModel:             BaseModel{},
+			SaleOrderUuid:         saleOrderUuid,
+			SaleOrderProductUuid:  productUuid,
+			MultiLanguageNameUuid: remark.MultiLanguageNameUuid,
+			OrderItemRemarkUuid:   remark.OrderItemRemarkUuid,
+			Name:                  remark.Name,
+		})
 	}
 	return &product
 }

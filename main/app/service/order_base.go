@@ -1316,6 +1316,17 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 		if res == nil {
 			return nil, nil
 		}
+		if res.BatchCookingMode == "" {
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			// 没开启分批时，才返回 BatchCookingMode
+			if businessSetting.OpenIsBatch() {
+				res.BatchCookingMode = businessSetting.BatchCookingMode
+			}
+		}
 		return res, nil
 	}
 	// 查询购物车信息

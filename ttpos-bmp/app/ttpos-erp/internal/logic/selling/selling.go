@@ -788,7 +788,7 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 		PostingTime:           postingDatetime.Format(TimeFormat),
 		Currency:              req.Currency,
 		PriceListCurrency:     req.PriceListCurrency,
-		UpdateStock:           0, // 更新库存
+		UpdateStock:           req.UpdateStock, // 更新库存, 如果有 1 个 pos invoice 不为 1，sales invoice 的 update_stock 也不会为 1.
 		CustomerOrder:         req.OrderNo,
 		SetPostingTime:        1,
 		CustomPosOpeningEntry: req.OpenPosEntryName,

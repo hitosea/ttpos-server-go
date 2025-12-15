@@ -27,7 +27,7 @@
           <el-input v-model="form.remark" :placeholder="$t('请输入名称')" :maxlength="100" :disabled="editItem.id && editItem.source == '2'"></el-input>
         </el-form-item>
         <el-form-item for="no_click" :label="$t('支付方式')" prop="name" :rules="[{ required: true, message: $t('请输入支付方式') }]">
-          <el-input v-model="form.name" :placeholder="$t('请输入支付方式')" :disabled="(editItem.id && editItem.source == '2') || (editItem.id && erp_is_open == 1)"></el-input>
+          <el-input v-model="form.name" :placeholder="$t('请输入支付方式')" :disabled="(editItem.id && editItem.source == '2') || editItem.id || erp_is_open == 1"></el-input>
           <div class="tips">{{ $t('注：需为正确的支付方式，用于显示给用户查看') }}</div>
         </el-form-item>
         <el-form-item
@@ -163,7 +163,7 @@
               },
             ]"
           >
-            <el-input v-model="item.name" :placeholder="$t('请输入支付方式')"></el-input>
+            <el-input v-model="item.name" :disabled="editItem.id" :placeholder="$t('请输入支付方式')"></el-input>
           </el-form-item>
           <el-form-item
             for="no_click"

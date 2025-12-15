@@ -27,6 +27,7 @@ type IStaffSrv interface {
 	SaasPaginateGetStaffs(ctx context.Context, getStaffListReq req.GetStaffListReq) (resp.StaffListPaginationResp, error) // 统一账号员工列表
 	SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (error, []string)                                           // 统一账号添加员工
 	SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq) (error, []string)                                  // 统一账号修改员工
+	GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.Staff, error)                                            // 获取员工详情
 }
 
 type staffSrv struct {
@@ -173,7 +174,7 @@ func (s *staffSrv) SaasPaginateGetStaffs(ctx context.Context, getStaffListReq re
 		for _, cs := range companyStaffList {
 
 			// 如果当前门店是员工所在的门店，则获取禁用状态
-			if cs.CompanyUuid == currentCompanyUuid {
+			if cs.CompanyUuid == getStaffListReq.CompanyUuid {
 				isDisable = cs.IsDisable
 				isSuper = cs.IsSuper
 			}
@@ -225,6 +226,7 @@ func (s *staffSrv) SaasPaginateGetStaffs(ctx context.Context, getStaffListReq re
 				CompanyName: companyName,
 				Roles:       roleList,
 				IsSuper:     cs.IsSuper,
+				IsDisable:   cs.IsDisable,
 			})
 		}
 
@@ -248,6 +250,112 @@ func (s *staffSrv) SaasPaginateGetStaffs(ctx context.Context, getStaffListReq re
 			PageSize: getStaffListReq.PageSize,
 			Total:    total,
 		},
+	}, nil
+}
+
+// GetStaffDetail 获取员工详情
+func (s *staffSrv) GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.Staff, error) {
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
+	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
+
+	// 1. 根据员工uuid查询 saas.ttpos_staff，判断是否存在
+	saasStaff, err := saasStaffRepo.GetByUuid(staffUuid)
+	if err != nil || saasStaff == nil {
+		return nil, errors.New("员工不存在")
+	}
+
+	// 2. 获取当前商家可看到的所有商家列表
+	currentCompanyUuid := ctx.GetCompanyUuid()
+	visibleCompanies, err := companyRepo.GetVisibleCompanyList(currentCompanyUuid)
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("获取可见门店列表失败"), err.Error())
+	}
+
+	// 构建可见门店UUID集合
+	visibleCompanyUuids := make(map[uint64]bool)
+	companyUuidToName := make(map[uint64]string)
+	for _, company := range visibleCompanies {
+		visibleCompanyUuids[company.Uuid] = true
+		companyUuidToName[company.Uuid] = company.Name
+	}
+
+	// 3. 获取员工关联的所有门店（在可见范围内）
+	companyStaffList, err := companyStaffRepo.GetByStaffUuid(staffUuid)
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("获取员工门店列表失败"), err.Error())
+	}
+
+	var isDisable int
+	var isSuper int
+	// 构建门店列表（包含角色信息）
+	companyList := make([]resp.CompanyRoleInfo, 0)
+	currentCompanyRoles := make([]resp.StaffRole, 0)
+
+	for _, cs := range companyStaffList {
+		// 如果当前门店是员工所在的门店，则获取禁用状态
+		if cs.CompanyUuid == currentCompanyUuid {
+			isDisable = cs.IsDisable
+			isSuper = cs.IsSuper
+		}
+
+		companyUuid := cs.CompanyUuid
+		// 只处理可见门店
+		if !visibleCompanyUuids[companyUuid] {
+			continue
+		}
+
+		// 从门店数据库查询员工角色信息
+		shopDB := s.dbm.GetDB(companyUuid)
+		if shopDB == nil {
+			continue
+		}
+
+		staffRoleRepo := repository.NewStaffRoleRepo(shopDB)
+		roleUuids, err := staffRoleRepo.GetRoleUuidsByStaffUuid(staffUuid)
+		if err != nil {
+			continue
+		}
+
+		roleRepo := repository.NewRoleRepo(shopDB)
+		roles, err := roleRepo.GetRoleList(roleRepo.WhereUuids(roleUuids))
+		if err != nil {
+			continue
+		}
+
+		roleList := make([]resp.StaffRole, 0, len(roles))
+		for _, role := range roles {
+			roleList = append(roleList, resp.StaffRole{
+				Uuid: role.Uuid,
+				Name: role.Name,
+			})
+		}
+
+		if companyUuid == currentCompanyUuid {
+			currentCompanyRoles = roleList
+		}
+
+		companyName := companyUuidToName[companyUuid]
+		companyList = append(companyList, resp.CompanyRoleInfo{
+			CompanyUuid: companyUuid,
+			CompanyName: companyName,
+			Roles:       roleList,
+			IsSuper:     cs.IsSuper,
+			IsDisable:   cs.IsDisable,
+		})
+	}
+
+	return &resp.Staff{
+		Uuid:        saasStaff.Uuid,
+		Username:    saasStaff.Email,
+		Phone:       saasStaff.Phone,
+		RealName:    saasStaff.RealName,
+		Roles:       currentCompanyRoles,
+		IsDisable:   isDisable,
+		IsSuper:     isSuper,
+		CreateTime:  saasStaff.CreateTime,
+		CompanyList: companyList,
 	}, nil
 }
 
@@ -716,6 +824,18 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		for _, company := range visibleCompanies {
 			visibleCompanyMap[company.Uuid] = true
 		}
+
+		// NOTE: 如果updateReq.CompanyRoleList中包含当前门店，查询员工在当前门店数据库的信息
+		// for _, companyRoleItem := range updateReq.CompanyRoleList {
+		// 	if companyRoleItem.CompanyUuid == currentCompanyUuid {
+		// 		shopDB := s.dbm.GetDB(companyRoleItem.CompanyUuid)
+		// 		staffRepo := repository.NewStaffRepo(shopDB)
+		// 		staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+		// 		if staff.Uuid != 0 && staff.CashierOnline != 0 && updateReq.IsDisable != nil && *updateReq.IsDisable == 1 {
+		// 			return errors.New("当前人员未交班，请先交班"), exists
+		// 		}
+		// 	}
+		// }
 
 		// 遍历 CompanyRoleList，验证并更新员工
 		for _, companyRoleItem := range updateReq.CompanyRoleList {

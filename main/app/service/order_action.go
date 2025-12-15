@@ -1,7 +1,9 @@
 package service
 
 import (
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -943,4 +945,294 @@ func (s *orderSrv) updateProductBatchFlagToZero(tx *gorm.DB, productUuids []uint
 		}
 	}
 	return nil
+}
+
+// checkMaterialStock 检查材料库存是否充足
+func (s *orderSrv) checkMaterialStock(ctx context.Context, db *gorm.DB, decreaseStockList []*model.Product) error {
+	// 收集所有需要检查的材料信息（按材料UUID和仓库UUID分组）
+	type materialKey struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+	}
+	materialMap := make(map[materialKey]*model.ProductBomMaterials)
+	for _, product := range decreaseStockList {
+		for _, material := range product.ProductBomMaterials {
+			key := materialKey{
+				MaterialUuid:  material.MaterialUuid,
+				WarehouseUuid: material.WarehouseUuid,
+			}
+			if existing, exists := materialMap[key]; exists {
+				// 如果同一个材料在同一个仓库多次出现，累加所需数量
+				existing.Num += material.Num
+			} else {
+				// 创建副本避免修改原始数据
+				materialCopy := *material
+				materialMap[key] = &materialCopy
+			}
+		}
+	}
+
+	if len(materialMap) == 0 {
+		return nil
+	}
+
+	// 批量查询材料信息
+	materialUuids := make([]uint64, 0, len(materialMap))
+	materialUuidSet := make(map[uint64]bool)
+	for key := range materialMap {
+		if !materialUuidSet[key.MaterialUuid] {
+			materialUuids = append(materialUuids, key.MaterialUuid)
+			materialUuidSet[key.MaterialUuid] = true
+		}
+	}
+
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithMultiLanguageName())
+	if err != nil {
+		return errors.WithMessage(err, "查询材料信息失败")
+	}
+
+	// 构建材料UUID到材料信息的映射
+	materialInfoMap := make(map[uint64]*model.Material)
+	for i := range materials {
+		materialInfoMap[materials[i].Uuid] = materials[i]
+	}
+
+	// 检查每个材料的库存
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	insufficientMaterials := make([]string, 0)
+
+	for key, bomMaterial := range materialMap {
+		material, exists := materialInfoMap[key.MaterialUuid]
+		if !exists {
+			ctx.Log().Warn("材料不存在", zap.Uint64("materialUuid", key.MaterialUuid))
+			continue
+		}
+
+		// 如果材料允许负库存，跳过检查
+		if material.AllowNegativeStock == constant.Yes {
+			continue
+		}
+
+		// 查询材料在指定仓库的库存
+		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(key.WarehouseUuid, key.MaterialUuid)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				// 如果仓库中没有该材料的库存记录，说明库存为0
+				materialName := material.MultiLanguageName.GetNameByLangWithFallback(ctx.GetLanguage())
+				if materialName == "" {
+					materialName = material.Code
+				}
+				insufficientMaterials = append(insufficientMaterials, materialName)
+				continue
+			}
+			ctx.Log().Error("查询材料库存失败", zap.Uint64("materialUuid", key.MaterialUuid), zap.Uint64("warehouseUuid", key.WarehouseUuid), zap.Error(err))
+			continue
+		}
+
+		// 检查库存是否充足
+		if warehouseItem.Stock < bomMaterial.Num {
+			materialName := material.MultiLanguageName.GetNameByLangWithFallback(ctx.GetLanguage())
+			if materialName == "" {
+				materialName = material.Code
+			}
+			insufficientMaterials = append(insufficientMaterials, materialName)
+		}
+	}
+
+	// 如果有材料库存不足，返回错误
+	if len(insufficientMaterials) > 0 {
+		return errors.NewWithCode(
+			constant.CodeWarehouseStockNotEnough,
+			"材料库存不足: "+strings.Join(insufficientMaterials, ", "),
+		)
+	}
+
+	return nil
+}
+
+// checkMaterialStockByProductOrder 按订单商品顺序检查材料库存是否充足
+// 从上往下检查，模拟扣减过程，返回库存不足的商品列表
+func (s *orderSrv) checkMaterialStockByProductOrder(ctx context.Context, db *gorm.DB, decreaseStockList []*model.Product) ([]*model.SaleOrderProduct, error) {
+	if len(decreaseStockList) == 0 {
+		return nil, nil
+	}
+
+	// 收集所有商品的UUID
+	productUuids := make([]uint64, 0, len(decreaseStockList))
+	productUuidSet := make(map[uint64]bool)
+	for _, product := range decreaseStockList {
+		if product.SaleOrderProductUuid > 0 && !productUuidSet[product.SaleOrderProductUuid] {
+			productUuids = append(productUuids, product.SaleOrderProductUuid)
+			productUuidSet[product.SaleOrderProductUuid] = true
+		}
+	}
+
+	if len(productUuids) == 0 {
+		return nil, nil
+	}
+
+	// 查询商品信息（包括创建时间，用于排序）
+	saleOrderProductRepo := repository.NewSaleOrderProductRepo(db)
+	saleOrderProducts, err := saleOrderProductRepo.GetSaleOrderProductsByUuids(productUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询商品信息失败")
+	}
+
+	// 按创建时间排序（订单从上往下的顺序）
+	sort.Slice(saleOrderProducts, func(i, j int) bool {
+		return saleOrderProducts[i].CreateTime < saleOrderProducts[j].CreateTime
+	})
+
+	// 构建商品UUID到商品的映射（暂时不需要使用，但保留以备后用）
+	_ = make(map[uint64]*model.SaleOrderProduct)
+
+	// 构建商品UUID到材料列表的映射
+	type materialKey struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+	}
+	productMaterialsMap := make(map[uint64][]*model.ProductBomMaterials) // saleOrderProductUuid -> materials
+	for _, product := range decreaseStockList {
+		if product.SaleOrderProductUuid > 0 {
+			productMaterialsMap[product.SaleOrderProductUuid] = append(
+				productMaterialsMap[product.SaleOrderProductUuid],
+				product.ProductBomMaterials...,
+			)
+		}
+	}
+
+	// 收集所有材料UUID
+	materialUuidSet := make(map[uint64]bool)
+	for _, materials := range productMaterialsMap {
+		for _, material := range materials {
+			materialUuidSet[material.MaterialUuid] = true
+		}
+	}
+
+	materialUuids := make([]uint64, 0, len(materialUuidSet))
+	for uuid := range materialUuidSet {
+		materialUuids = append(materialUuids, uuid)
+	}
+
+	// 批量查询材料信息
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByUuids(materialUuids, materialRepo.WithMultiLanguageName())
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询材料信息失败")
+	}
+
+	// 构建材料UUID到材料信息的映射
+	materialInfoMap := make(map[uint64]*model.Material)
+	for i := range materials {
+		materialInfoMap[materials[i].Uuid] = materials[i]
+	}
+
+	// 初始化库存状态（模拟当前库存）
+	type stockKey struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+	}
+	stockMap := make(map[stockKey]float64) // 当前可用库存
+
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+
+	// 收集所有需要查询的库存键（去重）
+	stockKeys := make(map[stockKey]bool)
+	for _, materials := range productMaterialsMap {
+		for _, bomMaterial := range materials {
+			material, exists := materialInfoMap[bomMaterial.MaterialUuid]
+			if !exists {
+				continue
+			}
+			// 如果材料允许负库存，跳过检查
+			if material.AllowNegativeStock == constant.Yes {
+				continue
+			}
+			key := stockKey{
+				MaterialUuid:  bomMaterial.MaterialUuid,
+				WarehouseUuid: bomMaterial.WarehouseUuid,
+			}
+			stockKeys[key] = true
+		}
+	}
+
+	// 初始化所有材料的库存状态
+	for key := range stockKeys {
+		// 查询材料在指定仓库的库存
+		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(key.WarehouseUuid, key.MaterialUuid)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				stockMap[key] = 0
+			} else {
+				ctx.Log().Error("查询材料库存失败", zap.Uint64("materialUuid", key.MaterialUuid), zap.Uint64("warehouseUuid", key.WarehouseUuid), zap.Error(err))
+				stockMap[key] = 0
+			}
+		} else {
+			stockMap[key] = warehouseItem.Stock
+		}
+	}
+
+	// 按商品顺序检查库存（模拟扣减过程）
+	insufficientProducts := make([]*model.SaleOrderProduct, 0)
+	for _, saleOrderProduct := range saleOrderProducts {
+		materials := productMaterialsMap[saleOrderProduct.Uuid]
+		if len(materials) == 0 {
+			continue
+		}
+
+		// 检查该商品的所有材料库存是否充足
+		hasInsufficient := false
+		for _, bomMaterial := range materials {
+			material, exists := materialInfoMap[bomMaterial.MaterialUuid]
+			if !exists {
+				ctx.Log().Warn("材料不存在", zap.Uint64("materialUuid", bomMaterial.MaterialUuid))
+				continue
+			}
+
+			// 如果材料允许负库存，跳过检查
+			if material.AllowNegativeStock == constant.Yes {
+				continue
+			}
+
+			key := stockKey{
+				MaterialUuid:  bomMaterial.MaterialUuid,
+				WarehouseUuid: bomMaterial.WarehouseUuid,
+			}
+
+			// 检查库存是否充足
+			currentStock := stockMap[key]
+			if currentStock < bomMaterial.Num {
+				hasInsufficient = true
+				break
+			}
+		}
+
+		// 如果该商品的材料库存不足，记录商品对象
+		if hasInsufficient {
+			insufficientProducts = append(insufficientProducts, saleOrderProduct)
+		} else {
+			// 如果库存充足，模拟扣减（更新库存状态）
+			for _, bomMaterial := range materials {
+				material, exists := materialInfoMap[bomMaterial.MaterialUuid]
+				if !exists {
+					continue
+				}
+
+				// 如果材料允许负库存，跳过扣减
+				if material.AllowNegativeStock == constant.Yes {
+					continue
+				}
+
+				key := stockKey{
+					MaterialUuid:  bomMaterial.MaterialUuid,
+					WarehouseUuid: bomMaterial.WarehouseUuid,
+				}
+				stockMap[key] -= bomMaterial.Num
+			}
+		}
+	}
+
+	// 返回库存不足的商品列表
+	return insufficientProducts, nil
 }

@@ -175,21 +175,17 @@ func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen
 	}
 	return setting.Kitchen{
 		KitchenResp: setting.KitchenResp{
-			IsOpen:        "1",                                // 是否开启厨显功能 0关闭 1开启
-			IsComeDish:    "1",                                // 是否开启来菜提醒 0-关闭 1-开启
-			IsCallService: "1",                                // 是否开启顾客呼叫提醒 0-关闭 1-开启
-			Server:        setting.Server{IP: ip, Port: port}, // 厨显服务器连接
-			IsWaitColor:   "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
-			WaitColor:     []string{},                         // 时长颜色（旧格式：["red", "yellow"]）
-			WaitTimeColorRanges: []setting.WaitTimeColorRange{ // 等待时长颜色区间配置（新格式）
-				{Minute: "0", Color: "#100A05"},  // 第一区间：0分钟（黑色）
-				{Minute: "10", Color: "#FFBE00"}, // 第二区间：10分钟（黄色）
-				{Minute: "20", Color: "#E50028"}, // 第三区间：20分钟（红色）
-			},
-			LanguageList:    languageList,              // 语言列表
-			Language:        []string{defaultLanguage}, // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-			DefaultLanguage: defaultLanguage,           // 默认语言
-			IsSmartKitchen:  "0",                       // 是否开启智能后厨 0-关闭 1-开启
+			IsOpen:              "1",                                // 是否开启厨显功能 0关闭 1开启
+			IsComeDish:          "1",                                // 是否开启来菜提醒 0-关闭 1-开启
+			IsCallService:       "1",                                // 是否开启顾客呼叫提醒 0-关闭 1-开启
+			Server:              setting.Server{IP: ip, Port: port}, // 厨显服务器连接
+			IsWaitColor:         "0",                                // 是否开启等待时长颜色 0-关闭 1-开启
+			WaitColor:           []string{},                         // 时长颜色（旧格式：["red", "yellow"]）
+			WaitTimeColorRanges: []setting.WaitTimeColorRange{},     // 等待时长颜色区间配置（新格式）
+			LanguageList:        languageList,                       // 语言列表
+			Language:            []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+			DefaultLanguage:     defaultLanguage,                    // 默认语言
+			IsSmartKitchen:      "0",                                // 是否开启智能后厨 0-关闭 1-开启
 		},
 		AdvancedPassword: "666888", // 高级设置密码
 	}

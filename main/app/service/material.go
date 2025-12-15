@@ -1173,6 +1173,22 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}
 		}
 
+		// 检查是否从允许负库存改为不允许负库存
+		// 如果物品当前允许负库存，且要改为不允许负库存，需要检查当前库存是否已为负
+		if existingMaterial.AllowNegativeStock == constant.Yes && !request.AllowNegativeStock {
+			// 检查所有仓库的库存，看是否有任何仓库的库存为负
+			hasNegativeStock := false
+			for _, warehouseItem := range existingMaterial.WarehouseItems {
+				if warehouseItem.Stock < 0 {
+					hasNegativeStock = true
+					break
+				}
+			}
+			if hasNegativeStock {
+				return errors.WithMessage(errors.New("物品已产生负库存，请修正库存后再关闭负库存设置"))
+			}
+		}
+
 		// 更新 AllowNegativeStock 字段
 		err = materialRepo.UpdateMaterialAllowNegativeStock(request.Uuid, request.AllowNegativeStock)
 		if err != nil {

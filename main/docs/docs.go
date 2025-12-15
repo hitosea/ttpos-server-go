@@ -29991,6 +29991,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/staff/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据员工uuid查询员工详情，包括员工在各门店的角色信息和当前门店的启用禁用状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.员工账号"
+                ],
+                "summary": "获取员工详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "员工UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.Staff"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/staff/list": {
             "get": {
                 "security": [
@@ -30032,6 +30082,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "关键词, 姓名、邮箱、手机号",
                         "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "门店UUID",
+                        "name": "company_uuid",
                         "in": "query"
                     }
                 ],
@@ -44512,6 +44569,13 @@ const docTemplate = `{
                     "description": "备注，平板端离线购物车提交",
                     "type": "string"
                 },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "sauce_product_bom_uuid_list": {
                     "description": "加料信息",
                     "type": "array",
@@ -49427,6 +49491,10 @@ const docTemplate = `{
                 },
                 "company_uuid": {
                     "description": "门店UUID",
+                    "type": "integer"
+                },
+                "is_disable": {
+                    "description": "是否禁用, 1:禁用, 0:未禁用",
                     "type": "integer"
                 },
                 "is_super": {

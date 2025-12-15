@@ -53,6 +53,27 @@ func (s *bomCardProductInventoryStrategy) calculateNonBomCardInventory(
 		return 0, nil
 	}
 
+	// 判断是否设置可售量
+	if bom.IsOpenStockBool() {
+		// 如果有成本卡且有材料不允许负库存时,可售量不能大于成本卡计算的库存
+		if bom.HasProductBomCard() && bom.ProductBomCard != nil {
+			hasMaterialNotAllowNegativeStock := false
+			for _, material := range bom.ProductBomCard.RelatedMaterials {
+				if material.Material.AllowNegativeStock == constant.No {
+					hasMaterialNotAllowNegativeStock = true
+					break
+				}
+			}
+			if hasMaterialNotAllowNegativeStock {
+				// 计算成本卡库存
+				bomCardInventory := bom.ProductBomCard.CalculateExpectedProductionNum(model.WithAllowNegativeStockCheck())
+				// 取可售量和成本卡库存的最小值
+				return math.Min(bom.StockNum, bomCardInventory), nil
+			}
+		}
+		return bom.StockNum, nil
+	}
+
 	// 特殊需求: 商品绑定了成本卡,当成本卡中的材料不允许负库存时,一定要求材料库存不能负. 所以只要成本卡中的材料有一个不允许负库存,则返回成本卡计算的库存值
 	if bom.HasProductBomCard() && bom.ProductBomCard != nil {
 		for _, material := range bom.ProductBomCard.RelatedMaterials {
@@ -60,11 +81,6 @@ func (s *bomCardProductInventoryStrategy) calculateNonBomCardInventory(
 				return bom.ProductBomCard.CalculateExpectedProductionNum(model.WithAllowNegativeStockCheck()), nil
 			}
 		}
-	}
-
-	// 判断是否设置可售量
-	if bom.IsOpenStockBool() {
-		return bom.StockNum, nil
 	}
 
 	// 返回无限库存

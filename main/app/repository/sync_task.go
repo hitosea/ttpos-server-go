@@ -15,6 +15,7 @@ type ISyncTaskRepo interface {
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.SyncTask, error)
 	GetList(opts ...DBOption) ([]model.SyncTask, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.SyncTask, int64, error)
+	GetLastGranularSyncTask() (*model.SyncTask, error) // 获取最近一次颗粒化同步任务
 
 	// 条件查询选项
 	WhereStatus(status uint8) DBOption
@@ -137,6 +138,19 @@ func (r *SyncTaskRepoImpl) PreloadItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Items")
 	}
+}
+
+// GetLastGranularSyncTask 获取最近一次颗粒化同步任务
+func (r *SyncTaskRepoImpl) GetLastGranularSyncTask() (*model.SyncTask, error) {
+	var task model.SyncTask
+	err := r.db.Model(&model.SyncTask{}).
+		Where("request_params != '' AND request_params IS NOT NULL").
+		Order("create_time DESC").
+		First(&task).Error
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }
 
 // SyncTaskItemRepoImpl 同步任务明细Repository实现

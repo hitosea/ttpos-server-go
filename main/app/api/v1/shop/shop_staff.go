@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -33,6 +34,7 @@ type StaffHandler struct {
 // @Param page_size query int false "每页条数"
 // @Param is_filter_super query int false "是否过滤超级管理员"
 // @Param keyword query string false "关键词, 姓名、邮箱、手机号"
+// @Param company_uuid query uint64 false "门店UUID"
 // @Success 200 {object} dto.Response{data=resp.StaffListPaginationResp}
 // @Router /shop/staff/list [get]
 func (h *StaffHandler) GetStaffList(c *gin.Context) {
@@ -46,6 +48,9 @@ func (h *StaffHandler) GetStaffList(c *gin.Context) {
 	var err error
 	// 2.11.0版本后，使用统一账号员工列表
 	if ctx.Version(context.GTE, constant.ClientVersionV2110) {
+		if getStaffListReq.CompanyUuid == 0 {
+			helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("参数错误"))
+		}
 		res, err = h.staffSrv.SaasPaginateGetStaffs(ctx, getStaffListReq)
 	} else {
 		res, err = h.staffSrv.PaginateGetStaffs(ctx, getStaffListReq)
@@ -184,6 +189,31 @@ func (h *StaffHandler) GetRoleList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetStaffDetail 获取员工详情
+// @Summary 获取员工详情
+// @Description 根据员工uuid查询员工详情，包括员工在各门店的角色信息和当前门店的启用禁用状态
+// @Tags 商家端.员工账号
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query uint64 true "员工UUID"
+// @Success 200 {object} dto.Response{data=resp.Staff}
+// @Router /shop/staff/detail [get]
+func (h *StaffHandler) GetStaffDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var getStaffDetailReq req.GetStaffDetailReq
+	if err := c.ShouldBindQuery(&getStaffDetailReq); err != nil {
+		helper.HandleValidationError(c, err, getStaffDetailReq, req.GetStaffDetailRequestMessage)
+		return
+	}
+	res, err := h.staffSrv.GetStaffDetail(ctx, getStaffDetailReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -204,10 +234,11 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		// 员工账号
-		privateApi.GET("/staff/list", wrapper.GetStaffList)   // 员工列表
-		privateApi.POST("/staff/add", wrapper.AddStaff)       // 添加员工
-		privateApi.POST("/staff/update", wrapper.UpdateStaff) // 编辑员工
-		privateApi.GET("/role", wrapper.GetRoleList)          // 角色列表
+		privateApi.GET("/staff/list", wrapper.GetStaffList)     // 员工列表
+		privateApi.GET("/staff/detail", wrapper.GetStaffDetail) // 获取员工详情
+		privateApi.POST("/staff/add", wrapper.AddStaff)         // 添加员工
+		privateApi.POST("/staff/update", wrapper.UpdateStaff)   // 编辑员工
+		privateApi.GET("/role", wrapper.GetRoleList)            // 角色列表
 
 		privateApi.GET("/staff/search", wrapper.SearchStaff) // 搜索员工
 	}

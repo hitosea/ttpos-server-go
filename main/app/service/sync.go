@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime/debug"
 	"slices"
@@ -949,6 +950,22 @@ func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHe
 	// 获取数据库连接
 	subShopDB := s.dbm.GetDB(subShopUuid)
 
+	// 查询最近一次成功的颗粒化同步任务，获取请求参数
+	lastSuccessTask, err := repository.NewSyncTaskRepo(subShopDB).GetLastGranularSyncTask()
+	if err != nil && err != gorm.ErrRecordNotFound {
+		logger.Logger.Error("查询最近一次成功的同步任务失败", zap.Error(err))
+	}
+
+	var lastRequestParams *req.GranularSyncReq
+	if err == nil && lastSuccessTask != nil && lastSuccessTask.RequestParams != "" {
+		var reqParams req.GranularSyncReq
+		if err := json.Unmarshal([]byte(lastSuccessTask.RequestParams), &reqParams); err == nil {
+			lastRequestParams = &reqParams
+		} else {
+			logger.Logger.Warn("解析上次请求参数失败", zap.Error(err))
+		}
+	}
+
 	var groups []resp.DataGroupResp
 
 	// 商品数据组
@@ -964,7 +981,14 @@ func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHe
 		constant.SyncTaskTypeSupplier,
 		constant.SyncTaskTypeTax,
 	}
-	productSynced := s.checkGroupSynced(subShopDB, headquarterUuid, productDataTypes)
+	// 根据上次请求参数判断是否已同步
+	var productSynced bool
+	if lastRequestParams != nil {
+		productSynced = lastRequestParams.ProductDataChecked
+	} else {
+		// 如果没有上次请求参数，使用原来的逻辑
+		productSynced = s.checkGroupSynced(subShopDB, headquarterUuid, productDataTypes)
+	}
 	groups = append(groups, resp.DataGroupResp{
 		Group:        "product_data",
 		GroupName:    "商品数据",
@@ -979,7 +1003,13 @@ func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHe
 		constant.SyncTaskTypeProductLabel,
 		constant.SyncTaskTypeMarketingActivity,
 	}
-	activitySynced := s.checkGroupSynced(subShopDB, headquarterUuid, activityDataTypes)
+	var activitySynced bool
+	if lastRequestParams != nil {
+		activitySynced = lastRequestParams.ActivityDataChecked
+	} else {
+		// 如果没有上次请求参数，使用原来的逻辑
+		activitySynced = s.checkGroupSynced(subShopDB, headquarterUuid, activityDataTypes)
+	}
 	dependencies := []string{}
 	if s.hasActivityDataDependsOnProductData(ctx) {
 		dependencies = append(dependencies, "product_data")
@@ -992,7 +1022,13 @@ func (s *SyncSrv) GetHeadquartersDataList(ctx context.Context, listReq req.GetHe
 	})
 
 	// 支付数据组
-	paymentSynced := s.checkPaymentGroupSynced(subShopDB, headquarterUuid)
+	var paymentSynced bool
+	if lastRequestParams != nil {
+		paymentSynced = lastRequestParams.PaymentDataChecked
+	} else {
+		// 如果没有上次请求参数，使用原来的逻辑
+		paymentSynced = s.checkPaymentGroupSynced(subShopDB, headquarterUuid)
+	}
 	groups = append(groups, resp.DataGroupResp{
 		Group:        "other_data",
 		GroupName:    "其他数据",
@@ -1109,13 +1145,21 @@ func (s *SyncSrv) GranularSync(ctx context.Context, syncReq req.GranularSyncReq)
 	// 实例化repo（同步任务表在公司库）
 	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
 
+	// 序列化请求参数为JSON
+	requestParamsJSON, err := json.Marshal(syncReq)
+	if err != nil {
+		syncTaskManager.finishTask(companyUuid)
+		return resp.GranularSyncResp{}, errors.WithMessage(err, "序列化请求参数失败")
+	}
+
 	// 创建新的同步任务
 	syncTask := &model.SyncTask{
-		Status:       constant.SyncTaskStatusRunning,
-		TotalCount:   0, // 后续计算
-		SuccessCount: 0,
-		FailCount:    0,
-		StartTime:    time.Now().Unix(),
+		Status:        constant.SyncTaskStatusRunning,
+		TotalCount:    0, // 后续计算
+		SuccessCount:  0,
+		FailCount:     0,
+		StartTime:     time.Now().Unix(),
+		RequestParams: string(requestParamsJSON),
 	}
 
 	if err := syncTaskRepo.Create(syncTask); err != nil {
@@ -1309,39 +1353,39 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		}
 	}
 
-	// 支付方式：全量同步
-	if paymentDataChecked {
-		taskItem := &model.SyncTaskItem{
-			SyncTaskUuid: syncTask.Uuid,
-			TaskType:     constant.SyncTaskTypePaymentMethod,
-			TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
-			Status:       constant.SyncTaskItemStatusRunning,
-			StartTime:    time.Now().Unix(),
-		}
+	// NOTE: v2.11.0 暂不同步支付方式：全量同步
+	// if paymentDataChecked {
+	// 	taskItem := &model.SyncTaskItem{
+	// 		SyncTaskUuid: syncTask.Uuid,
+	// 		TaskType:     constant.SyncTaskTypePaymentMethod,
+	// 		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
+	// 		Status:       constant.SyncTaskItemStatusRunning,
+	// 		StartTime:    time.Now().Unix(),
+	// 	}
 
-		syncTaskItemRepo.Create(taskItem)
+	// 	syncTaskItemRepo.Create(taskItem)
 
-		logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-		err := s.SyncPaymentMethod(ctx)
-		endTime := time.Now().Unix()
+	// 	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+	// 	err := s.SyncPaymentMethod(ctx)
+	// 	endTime := time.Now().Unix()
 
-		if err != nil {
-			failCount++
-			logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
-			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-				"status":        constant.SyncTaskItemStatusFailed,
-				"error_message": err.Error(),
-				"end_time":      endTime,
-			})
-		} else {
-			successCount++
-			logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
-			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-				"status":   constant.SyncTaskItemStatusSuccess,
-				"end_time": endTime,
-			})
-		}
-	}
+	// 	if err != nil {
+	// 		failCount++
+	// 		logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+	// 		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+	// 			"status":        constant.SyncTaskItemStatusFailed,
+	// 			"error_message": err.Error(),
+	// 			"end_time":      endTime,
+	// 		})
+	// 	} else {
+	// 		successCount++
+	// 		logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+	// 		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+	// 			"status":   constant.SyncTaskItemStatusSuccess,
+	// 			"end_time": endTime,
+	// 		})
+	// 	}
+	// }
 
 	// 最后：执行多语言同步
 	taskItem := &model.SyncTaskItem{
@@ -1590,7 +1634,7 @@ func (s *SyncSrv) SyncPaymentMethod(ctx context.Context) error {
 	for _, hqPayment := range hqPayments {
 		// 检查分店是否已有同名支付方式（payment_name）
 		var existPayment model.PaymentMethod
-		err := subShopDB.Where("payment_name = ? AND delete_time = 0", hqPayment.PaymentName).
+		err := subShopDB.Where("payment_name = ? and source = ? AND delete_time = 0", hqPayment.PaymentName, model.PaymentSourceDefault).
 			First(&existPayment).Error
 
 		if err == nil {
@@ -1629,6 +1673,7 @@ func (s *SyncSrv) SyncPaymentMethod(ctx context.Context) error {
 			Code:            newCode,                    // 生成新code
 			Source:          model.PaymentSourceDefault, // 1-手动添加
 			LogoFileUuid:    0,                          // 固定为0
+			Sort:            hqPayment.Sort,             // 排序
 			// 其他字段使用数据库默认值
 		}
 

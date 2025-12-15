@@ -123,11 +123,11 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="name" :label="$t('关联材料')" width="120">
+            <!-- <el-table-column prop="name" :label="$t('关联材料')" width="120">
               <template #default="scope">
                 {{ scope.row.material.length > 0 ? $t('是') : $t('否') }}
               </template>
-            </el-table-column>
+            </el-table-column> -->
             <el-table-column prop="name" :label="$t('操作')" width="120">
               <template #default="scope">
                 <el-button @click="deleteClick(scope.$index)" :disabled="erp_is_open == 1" type="primary" link size="small"> {{ $t('删除') }}</el-button>

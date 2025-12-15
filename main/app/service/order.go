@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/rpc/takeout"
@@ -1825,7 +1826,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if batchCookingMode == constant.BatchCookingModePre && isBatch == 1 {
 			// 必须指定分批类型
 			if product.BatchTagUuid == 0 {
-				return nil, errors.WithMessage(errors.New("请选择分批类型再加购"))
+				// return nil, errors.WithMessage(errors.New("请选择分批类型再加购"))
+				// 前置模式下,如果没有传分批类型,则表示该商品不需要认为是分批类型. 不进行分批处理
+				isBatch = 0
 			}
 			batchTagRepo := repository.NewBatchTagRepo(db)
 			if product.BatchTagUuid > 0 {
@@ -1978,6 +1981,29 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if params.SaleBill.IsTakeout() {
 			saleOrderProduct.SetWrap()
 		}
+		// 如果请求中填写的备注预设UUID列表不为空，则更新商品备注
+		orderItemRemarks := make([]*model.OrderItemRemark, 0)
+		if len(product.RemarkUuids) > 0 {
+			// 查询备注预设列表
+			orderItemRemarkRepo := base.NewOrderItemRemarkRepo(db)
+			var remarkErr error
+			orderItemRemarks, remarkErr = orderItemRemarkRepo.GetOrderItemRemarkListByUuids(product.RemarkUuids)
+			if remarkErr != nil {
+				return nil, errors.New("查询备注预设失败")
+			}
+			// 如果查到的备注预设数量跟提交的数量不一致，提示备注预设不存在
+			if len(orderItemRemarks) != len(product.RemarkUuids) {
+				return nil, errors.New("备注预设不存在")
+			}
+		}
+		remarkReasonList := make([]*model.SaleOrderProductReason, 0)
+		if len(orderItemRemarks) > 0 {
+			// 创建新的备注预设原因记录
+			remarkReasonList = saleOrderProduct.NewSaleOrderProductRemarkReasonList(orderItemRemarks)
+			saleOrderProduct.OrderItemRemarks = remarkReasonList
+		} else {
+			saleOrderProduct.OrderItemRemarks = remarkReasonList
+		}
 		// 生成签名
 		saleOrderProduct.UpdateSign()
 		ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
@@ -2013,7 +2039,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			// 如果该商品是套餐，则新建套餐子商品
 			if saleOrderProduct.ProductType == constant.ProductTypePackage {
 				innerParams.IsTabletAddAndCooking = true
-				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num)
+				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num, product.RemarkUuids)
 				if err != nil {
 					return nil, errors.WithMessage(err)
 				}
@@ -2097,7 +2123,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				// 如果该商品是套餐，则新建套餐子商品
 				if saleOrderProduct.ProductType == constant.ProductTypePackage {
-					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num)
+					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType, product.Num, product.RemarkUuids)
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
@@ -2174,10 +2200,10 @@ func sortProductAttributes(ctx context.Context, productAttributes map[uint64]*mo
 
 // 新建套餐子商品
 func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.ProductParams, innerParams InnerParams,
-	params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64) ([]*model.SaleOrderProduct, error) {
+	params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64) ([]*model.SaleOrderProduct, error) {
 	subSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
 	for _, subProduct := range subProducts {
-		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid, deductStockType, packageNum)
+		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid, deductStockType, packageNum, remarkUuids)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -2186,7 +2212,7 @@ func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.
 	return subSaleOrderProducts, nil
 }
 
-func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64) (*model.SaleOrderProduct, error) {
+func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64) (*model.SaleOrderProduct, error) {
 	db := ctx.GetDB()
 	// 获取商品包信息
 	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.FlavorProductBomUuid)
@@ -2352,6 +2378,29 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 
 	// 设置加价金额（子商品）
 	saleOrderProduct.AddPrice = product.AddPrice
+	// 如果请求中填写的备注预设UUID列表不为空，则更新商品备注
+	orderItemRemarks := make([]*model.OrderItemRemark, 0)
+	if len(remarkUuids) > 0 {
+		// 查询备注预设列表
+		orderItemRemarkRepo := base.NewOrderItemRemarkRepo(db)
+		var remarkErr error
+		orderItemRemarks, remarkErr = orderItemRemarkRepo.GetOrderItemRemarkListByUuids(remarkUuids)
+		if remarkErr != nil {
+			return nil, errors.New("查询备注预设失败")
+		}
+		// 如果查到的备注预设数量跟提交的数量不一致，提示备注预设不存在
+		if len(orderItemRemarks) != len(remarkUuids) {
+			return nil, errors.New("备注预设不存在")
+		}
+	}
+	remarkReasonList := make([]*model.SaleOrderProductReason, 0)
+	if len(orderItemRemarks) > 0 {
+		// 创建新的备注预设原因记录
+		remarkReasonList = saleOrderProduct.NewSaleOrderProductRemarkReasonList(orderItemRemarks)
+		saleOrderProduct.OrderItemRemarks = remarkReasonList
+	} else {
+		saleOrderProduct.OrderItemRemarks = remarkReasonList
+	}
 
 	// 生成签名
 	saleOrderProduct.UpdateSign()
@@ -2770,6 +2819,130 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			// 如果没有存在，添加
 			if !exist {
 				statusMap[constant.CodeOrderCheckProductStockZero] = append(statusMap[constant.CodeOrderCheckProductStockZero], saleOrderProduct)
+			}
+		}
+
+		// 检查材料库存是否充足（送厨检查时）
+		if options.CheckType == CheckTypeCooking {
+			// 从所有商品中过滤出未送厨的商品（需要送厨减库存的商品）
+			unCookingSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
+			for _, saleOrderProduct := range saleOrderProductsList {
+				// 过滤掉退菜的商品
+				if saleOrderProduct.IsCancelProduct() {
+					continue
+				}
+				// 只检查需要送厨减库存的商品
+				if saleOrderProduct.IsCookingDeductStock() && saleOrderProduct.IsUnCookingProduct() {
+					// 如果指定了要检查的商品UUID列表，只检查列表中的商品
+					if options.SaleOrderProductUuids != nil && len(options.SaleOrderProductUuids) > 0 {
+						if !slices.Contains(options.SaleOrderProductUuids, saleOrderProduct.Uuid) {
+							continue
+						}
+					}
+					unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrderProduct)
+				}
+			}
+
+			if len(unCookingSaleOrderProducts) > 0 {
+				// 获取减库存的清单信息
+				decreaseStockList, err := s.GetProductDecreaseStockList(ctx, unCookingSaleOrderProducts)
+				if err != nil {
+					return nil, errors.WithMessage(err, "获取减库存清单失败")
+				}
+				// 检查材料库存是否充足
+				if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+					// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+					insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+					if errDetail != nil {
+						return nil, errors.WithMessage(errDetail)
+					}
+					if len(insufficientProducts) > 0 {
+						// 构建库存不足商品的UUID集合
+						insufficientProductUuidSet := make(map[uint64]bool)
+						for _, product := range insufficientProducts {
+							insufficientProductUuidSet[product.Uuid] = true
+						}
+						// 从 unCookingSaleOrderProducts 中找到对应的商品
+						matchedProducts := make([]*model.SaleOrderProduct, 0)
+						for _, product := range unCookingSaleOrderProducts {
+							if insufficientProductUuidSet[product.Uuid] {
+								matchedProducts = append(matchedProducts, product)
+							}
+						}
+						// 将库存不足的商品添加到状态映射中
+						statusMap[constant.CodeOrderCheckProductStockZero] = matchedProducts
+						// 继续执行，让后续代码统一处理 statusMap 中的错误
+					} else {
+						// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+						return nil, errors.WithMessage(err)
+					}
+				}
+			}
+		}
+
+		// 检查材料库存是否充足（结账检查时）
+		if options.CheckType == CheckTypeCheckout {
+			// 收集需要检查材料库存的商品
+			needCheckProducts := make([]*model.SaleOrderProduct, 0)
+			for _, saleOrderProduct := range saleOrderProductsList {
+				// 过滤掉退菜的商品
+				if saleOrderProduct.IsCancelProduct() {
+					continue
+				}
+				var shouldCheck bool
+				// 结账减库存的商品，需要检查所有商品（包括已送厨的）
+				if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypePay {
+					shouldCheck = true
+				} else if saleOrderProduct.IsCookingDeductStock() && !saleOrderProduct.IsCookingProduct() {
+					// 送厨减库存但未送厨的商品
+					shouldCheck = true
+				}
+
+				if shouldCheck {
+					// 如果指定了要检查的商品UUID列表，只检查列表中的商品
+					if options.SaleOrderProductUuids != nil && len(options.SaleOrderProductUuids) > 0 {
+						if !slices.Contains(options.SaleOrderProductUuids, saleOrderProduct.Uuid) {
+							continue
+						}
+					}
+					needCheckProducts = append(needCheckProducts, saleOrderProduct)
+				}
+			}
+
+			if len(needCheckProducts) > 0 {
+				// 获取减库存的清单信息
+				decreaseStockList, err := s.getDecreaseStockList(ctx, needCheckProducts)
+				if err != nil {
+					return nil, errors.WithMessage(err, "获取减库存清单失败")
+				}
+				// 检查材料库存是否充足
+				if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+					// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+					insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+					if errDetail != nil {
+						return nil, errors.WithMessage(errDetail)
+					}
+					if len(insufficientProducts) > 0 {
+						// 构建库存不足商品的UUID集合
+						insufficientProductUuidSet := make(map[uint64]bool)
+						for _, product := range insufficientProducts {
+							insufficientProductUuidSet[product.Uuid] = true
+						}
+						// 从 needCheckProducts 中找到对应的商品
+						matchedProducts := make([]*model.SaleOrderProduct, 0)
+						for _, product := range needCheckProducts {
+							if insufficientProductUuidSet[product.Uuid] {
+								matchedProducts = append(matchedProducts, product)
+							}
+						}
+						// 将库存不足的商品添加到状态映射中
+						statusMap[constant.CodeOrderCheckProductStockZero] = matchedProducts
+						// 继续执行，让后续代码统一处理 statusMap 中的错误
+					} else {
+						// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+						return nil, errors.WithMessage(err)
+					}
+				}
 			}
 		}
 	}
@@ -4641,6 +4814,8 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
 
 	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+
 		for _, saleOrder := range saleBill.SaleOrders {
 			// 保存订单
 			if len(saleBill.SaleOrders) == 1 {
@@ -4677,6 +4852,37 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 						}
 					}
 				}
+				// 创建新的备注预设原因记录
+				logger.Logger.Info("创建新的备注预设原因记录-222222", zap.Any("saleOrderProduct", saleOrderProduct))
+				logger.Logger.Info("创建新的备注预设原因记录-333333", zap.Any("saleOrderProduct.OrderItemRemarks", saleOrderProduct.OrderItemRemarks))
+				if len(saleOrderProduct.OrderItemRemarks) > 0 {
+					insertReasonList := make([]*model.SaleOrderProductReason, 0)
+					for _, orderItemRemark := range saleOrderProduct.OrderItemRemarks {
+						if orderItemRemark.ID == 0 {
+							insertReasonList = append(insertReasonList, orderItemRemark)
+						}
+					}
+					if len(insertReasonList) > 0 {
+						if err := reasonRepo.CreateSaleOrderProductReasons(insertReasonList); err != nil {
+							return errors.WithMessage(err, "保存备注预设原因失败")
+						}
+					}
+				}
+				// if saleOrderProduct.IsPackageProduct() {
+				// 	for _, subProduct := range saleOrderProduct. {
+				// 		insertReasonList := make([]*model.SaleOrderProductReason, 0)
+				// 		for _, orderItemRemark := range subProduct.OrderItemRemarks {
+				// 			if orderItemRemark.ID == 0 {
+				// 				insertReasonList = append(insertReasonList, orderItemRemark)
+				// 			}
+				// 		}
+				// 		if len(insertReasonList) > 0 {
+				// 			if err := reasonRepo.CreateSaleOrderProductReasons(insertReasonList); err != nil {
+				// 				return errors.WithMessage(err, "保存备注预设原因失败")
+				// 			}
+				// 		}
+				// 	}
+				// }
 			}
 			// 保存自助餐顾客
 			for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
