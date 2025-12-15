@@ -2821,6 +2821,122 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				statusMap[constant.CodeOrderCheckProductStockZero] = append(statusMap[constant.CodeOrderCheckProductStockZero], saleOrderProduct)
 			}
 		}
+
+		// 检查材料库存是否充足（送厨检查时）
+		if options.CheckType == CheckTypeCooking {
+			// 从所有商品中过滤出未送厨的商品（需要送厨减库存的商品）
+			unCookingSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
+			for _, saleOrderProduct := range saleOrderProductsList {
+				// 只检查需要送厨减库存的商品
+				if saleOrderProduct.IsCookingDeductStock() && saleOrderProduct.IsUnCookingProduct() {
+					// 如果指定了要检查的商品UUID列表，只检查列表中的商品
+					if options.SaleOrderProductUuids != nil && len(options.SaleOrderProductUuids) > 0 {
+						if !slices.Contains(options.SaleOrderProductUuids, saleOrderProduct.Uuid) {
+							continue
+						}
+					}
+					unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrderProduct)
+				}
+			}
+
+			if len(unCookingSaleOrderProducts) > 0 {
+				// 获取减库存的清单信息
+				decreaseStockList, err := s.GetProductDecreaseStockList(ctx, unCookingSaleOrderProducts)
+				if err != nil {
+					return nil, errors.WithMessage(err, "获取减库存清单失败")
+				}
+				// 检查材料库存是否充足
+				if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+					// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+					insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+					if errDetail != nil {
+						return nil, errors.WithMessage(errDetail)
+					}
+					if len(insufficientProducts) > 0 {
+						// 构建库存不足商品的UUID集合
+						insufficientProductUuidSet := make(map[uint64]bool)
+						for _, product := range insufficientProducts {
+							insufficientProductUuidSet[product.Uuid] = true
+						}
+						// 从 unCookingSaleOrderProducts 中找到对应的商品
+						matchedProducts := make([]*model.SaleOrderProduct, 0)
+						for _, product := range unCookingSaleOrderProducts {
+							if insufficientProductUuidSet[product.Uuid] {
+								matchedProducts = append(matchedProducts, product)
+							}
+						}
+						// 将库存不足的商品添加到状态映射中
+						statusMap[constant.CodeOrderCheckProductStockZero] = matchedProducts
+						// 继续执行，让后续代码统一处理 statusMap 中的错误
+					} else {
+						// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+						return nil, errors.WithMessage(err)
+					}
+				}
+			}
+		}
+
+		// 检查材料库存是否充足（结账检查时）
+		if options.CheckType == CheckTypeCheckout {
+			// 收集需要检查材料库存的商品
+			needCheckProducts := make([]*model.SaleOrderProduct, 0)
+			for _, saleOrderProduct := range saleOrderProductsList {
+				var shouldCheck bool
+				// 结账减库存的商品，需要检查所有商品（包括已送厨的）
+				if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypePay {
+					shouldCheck = true
+				} else if saleOrderProduct.IsCookingDeductStock() && !saleOrderProduct.IsCookingProduct() {
+					// 送厨减库存但未送厨的商品
+					shouldCheck = true
+				}
+
+				if shouldCheck {
+					// 如果指定了要检查的商品UUID列表，只检查列表中的商品
+					if options.SaleOrderProductUuids != nil && len(options.SaleOrderProductUuids) > 0 {
+						if !slices.Contains(options.SaleOrderProductUuids, saleOrderProduct.Uuid) {
+							continue
+						}
+					}
+					needCheckProducts = append(needCheckProducts, saleOrderProduct)
+				}
+			}
+
+			if len(needCheckProducts) > 0 {
+				// 获取减库存的清单信息
+				decreaseStockList, err := s.getDecreaseStockList(ctx, needCheckProducts)
+				if err != nil {
+					return nil, errors.WithMessage(err, "获取减库存清单失败")
+				}
+				// 检查材料库存是否充足
+				if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+					// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+					insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+					if errDetail != nil {
+						return nil, errors.WithMessage(errDetail)
+					}
+					if len(insufficientProducts) > 0 {
+						// 构建库存不足商品的UUID集合
+						insufficientProductUuidSet := make(map[uint64]bool)
+						for _, product := range insufficientProducts {
+							insufficientProductUuidSet[product.Uuid] = true
+						}
+						// 从 needCheckProducts 中找到对应的商品
+						matchedProducts := make([]*model.SaleOrderProduct, 0)
+						for _, product := range needCheckProducts {
+							if insufficientProductUuidSet[product.Uuid] {
+								matchedProducts = append(matchedProducts, product)
+							}
+						}
+						// 将库存不足的商品添加到状态映射中
+						statusMap[constant.CodeOrderCheckProductStockZero] = matchedProducts
+						// 继续执行，让后续代码统一处理 statusMap 中的错误
+					} else {
+						// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+						return nil, errors.WithMessage(err)
+					}
+				}
+			}
+		}
 	}
 
 	// 检查限购

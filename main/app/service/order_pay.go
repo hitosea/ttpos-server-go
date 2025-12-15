@@ -553,6 +553,60 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errSaleBill
 	}
 
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+
+	// 检查材料库存是否充足
+	{
+		withoutWarehouseOutFormSaleOrderProducts, err := s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 获取减库存的清单信息
+		decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 检查材料库存是否充足
+		if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+			// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+			insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+			if errDetail != nil {
+				return nil, errors.WithMessage(errDetail)
+			}
+			if len(insufficientProducts) > 0 {
+				// 构建商品名称列表
+				productNames := make([]string, 0, len(insufficientProducts))
+				for _, product := range insufficientProducts {
+					productName := product.GetProductNameAttributes(ctx.GetLanguage())
+					if productName == "" {
+						localeName := product.GetLocaleName()
+						productName = localeName.GetLocale(ctx.GetLanguage())
+						if productName == "" {
+							productName = localeName.EN
+							if productName == "" {
+								productName = localeName.ZH
+							}
+							if productName == "" {
+								productName = fmt.Sprintf("商品(%d)", product.Uuid)
+							}
+						}
+					}
+					productNames = append(productNames, productName)
+				}
+				return nil, errors.NewWithCode(
+					constant.CodeWarehouseStockNotEnough,
+					"以下商品材料库存不足: "+strings.Join(productNames, ", "),
+				)
+			}
+			// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	// 重新计算销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
@@ -562,9 +616,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
 		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
 	}
-
-	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
