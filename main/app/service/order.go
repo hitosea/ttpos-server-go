@@ -5209,5 +5209,5 @@ func (s *orderSrv) generateInvoiceNumber(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("INV-%04d-%02d-%02d-%03d", now.Year(), now.Month(), now.Day(), seq), nil
+	return fmt.Sprintf("INV-%04d-%02d-%02d-%05d", now.Year(), now.Month(), now.Day(), seq), nil
 }
