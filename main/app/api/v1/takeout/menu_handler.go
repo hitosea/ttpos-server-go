@@ -24,7 +24,7 @@ type Handler struct {
 
 // NewHandler 创建 Handler
 func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
-	menuAppSrv := application.NewTakeoutMenuAppService(dbm, cache)
+	menuAppSrv := application.NewTakeoutMenuAppService(dbm)
 
 	return &Handler{
 		menuAppSrv: menuAppSrv,
@@ -51,11 +51,8 @@ func (h *Handler) ExportMenu(c *gin.Context) {
 	}
 
 	ctx := helper.GetContext(c)
-
-	// 如果未指定公司，使用当前公司
-	if exportReq.CompanyUuid == 0 {
-		exportReq.CompanyUuid = ctx.GetCompanyUuid()
-	}
+	ctx.SetCompanyUuid(exportReq.CompanyUuid)
+	ctx.SetDB(h.dbm.GetDB(exportReq.CompanyUuid))
 
 	currencySetting, err := setting.NewSrv(h.dbm, h.cache).GetCurrencySetting(ctx)
 	if err != nil {
@@ -66,7 +63,6 @@ func (h *Handler) ExportMenu(c *gin.Context) {
 	// 调用应用服务
 	menuData, err := h.menuAppSrv.ExportMenu(ctx, request.ExportMenuRequest{
 		Platform:     exportReq.Platform,
-		CompanyUuid:  exportReq.CompanyUuid,
 		CurrencyUnit: currencySetting.Unit,
 	})
 	if err != nil {

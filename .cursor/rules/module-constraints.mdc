@@ -1,0 +1,133 @@
+# 外卖模块约束规则
+
+## 概述
+
+为确保DDD模块代码的一致性和规范性，特制定以下约束规则。
+
+## 规则一：Context 引用约束
+
+### 强制要求
+- **modules 中 context 必须引用 `ttpos-server-go/pkg/context`**
+- **禁止使用标准库的 `context` 包**
+
+### 正确示例
+```go
+import (
+    "ttpos-server-go/pkg/context"  // ✅ 正确
+    // "context"  // ❌ 错误
+)
+```
+
+### 影响范围
+- `main/app/modules/takeout/` 下的所有 Go 文件
+- 包括：application、domain、infrastructure 层
+
+### 验证方式
+```bash
+# 检查是否有违规引用
+grep -r '^import (' main/app/modules/takeout/ | grep '"context"'
+```
+
+## 规则二：数据库访问约束
+
+### 强制要求
+- **所有数据库访问必须使用 `ctx.GetDB()` 方法**
+- **禁止直接使用 `dbm.GetDB()` 或其他方式**
+
+### 正确示例
+```go
+// ✅ 正确：在有 context 的方法中
+func (r *repository) GetById(ctx context.Context, id uint64) (*Model, error) {
+    db := ctx.GetDB()  // ✅ 使用 ctx.GetDB()
+    // ...
+}
+
+// ❌ 错误：直接使用 dbm
+func (r *repository) GetById(dbm *database.DBManager, id uint64) (*Model, error) {
+    db := dbm.GetDB(companyUuid)  // ❌ 错误方式
+    // ...
+}
+```
+
+### 例外情况
+- 某些历史遗留代码可能暂时保留，但新代码必须遵循此规则
+- 直接接受 `*gorm.DB` 参数的方法可以继续使用（用于事务等场景）
+
+### 验证方式
+```bash
+# 检查是否还有违规的数据库访问
+grep -r "dbm\.GetDB\|r\.dbm\." main/app/modules/takeout/
+```
+
+## 规则三：接口和实现文件组织约束
+
+### 强制要求
+- **interface 和 Service 必须放在同一个文件中**
+- **禁止创建单独的 `i_*` 接口文件**
+- **interface 必须放在文件头部，实现在后面**
+
+### 正确示例
+```go
+package application
+
+// IMyService 接口定义在文件头部
+type IMyService interface {
+    DoSomething(ctx context.Context) error
+}
+
+// myService 实现
+type myService struct {
+    // ...
+}
+
+// NewMyService 构造函数
+func NewMyService() IMyService {
+    return &myService{}
+}
+
+// 实现方法
+func (s *myService) DoSomething(ctx context.Context) error {
+    // 实现逻辑
+}
+```
+
+### 文件结构要求
+```
+📁 service/
+├── my_service.go          # ✅ 接口 + 实现
+├── another_service.go     # ✅ 接口 + 实现
+└── i_my_service.go        # ❌ 禁止单独的接口文件
+```
+
+### 影响范围
+- `main/app/modules/takeout/` 下的所有服务文件
+- 包括：application service、domain service、repository
+
+### 验证方式
+```bash
+# 检查是否还有单独的接口文件
+find main/app/modules/takeout/ -name "i_*.go"
+
+# 检查接口是否在实现文件头部
+grep -A 5 "^type.*interface" main/app/modules/takeout/**/*.go
+```
+
+## 实施时间
+
+- **生效日期**: 2025-12-13
+- **适用范围**: 外卖模块所有新代码
+- **历史代码**: 逐步迁移，但新功能必须遵循
+
+## 代码审查清单
+
+在代码审查时必须检查：
+
+- [ ] Context 引用是否正确
+- [ ] 数据库访问是否使用 `ctx.GetDB()`
+- [ ] 接口和实现是否在同一文件中
+- [ ] 接口是否在文件头部
+
+## 相关文档
+
+- [Go Main 开发规范](../../go-main.mdc)
+- [项目结构规范](../../structs.mdc)

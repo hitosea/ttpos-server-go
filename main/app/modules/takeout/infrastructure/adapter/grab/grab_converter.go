@@ -490,7 +490,12 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 
 	// 创建分类值对象
 	categoryVO, err := valueobject.NewCategory(
-		fmt.Sprintf("TTPOS-CAT-%d", category.Uuid),
+		func() string {
+			if category.SourceId != "" {
+				return category.SourceId
+			}
+			return fmt.Sprintf("TTPOS-CAT-%d", category.Uuid)
+		}(),
 		categoryName,
 		sequence,
 		valueobject.AvailableStatusAvailable,
@@ -541,14 +546,29 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		}
 	}
 
+	// 创建外卖规格价格映射（bom_uuid -> 外卖价格）
+	takeoutPriceMap := make(map[uint64]float64)
+	for i := range takeoutProduct.ProductBomTakeouts {
+		bomTakeout := &takeoutProduct.ProductBomTakeouts[i]
+		if !bomTakeout.IsDelete() {
+			takeoutPriceMap[bomTakeout.ProductBomUuid] = bomTakeout.Price
+		}
+	}
+
 	// 计算商品价格：如果有规格，使用最小规格金额；否则使用商品原价
 	var price int64
 	if len(flavorsForPrice) > 0 {
-		// 找到最小规格价格
-		minPrice := flavorsForPrice[0].Price
-		for _, bom := range flavorsForPrice {
-			if bom.Price < minPrice {
-				minPrice = bom.Price
+		// 找到最小规格价格（优先使用外卖价格，否则使用店内价格）
+		minPrice := float64(0)
+		for idx, bom := range flavorsForPrice {
+			// 优先从外卖价格表获取价格
+			flavorPrice := bom.Price
+			if takeoutPrice, ok := takeoutPriceMap[bom.Uuid]; ok {
+				flavorPrice = takeoutPrice
+			}
+
+			if idx == 0 || flavorPrice < minPrice {
+				minPrice = flavorPrice
 			}
 		}
 		price = int64(minPrice * 100) // 转换为分
@@ -559,7 +579,12 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 
 	// 创建商品值对象
 	menuItem, err := valueobject.NewMenuItem(
-		fmt.Sprintf("TTPOS-ITEM-%d", takeoutProduct.Uuid),
+		func() string {
+			if takeoutProduct.SourceProductId != "" {
+				return takeoutProduct.SourceProductId
+			}
+			return fmt.Sprintf("TTPOS-ITEM-%d", takeoutProduct.Uuid)
+		}(),
 		itemName,
 		sequence,
 		status,
@@ -587,10 +612,13 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		menuItem.Description = takeoutProduct.ProductPackage.Describe
 	}
 
-	// 设置商品图片（使用 GetUrl 方法）
-	if takeoutProduct.ImageFile.Uuid != 0 {
-		imageUrl := takeoutProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
+	if takeoutProduct.ImageFile.Uuid != 0 && takeoutProduct.ImageFile.FileUrl != "" {
+		imageUrl := takeoutProduct.ImageFile.GetUrl(utils.GetBaseURL(nil))
 		menuItem.Photos = []string{imageUrl}
+	} else if takeoutProduct.ProductPackage.ImageUrl != "" {
+		// 如果没有本地图片文件，使用外部图片URL
+		menuItem.Photos = []string{takeoutProduct.ProductPackage.ImageUrl}
 	}
 
 	// 设置售卖时段 ID（默认使用全天）
@@ -598,8 +626,9 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 
 	// 处理修饰符（Modifier）
 	if takeoutProduct.ProductPackage.ProductType != constant.ProductTypePackage {
+
 		// 1. 处理 ProductFlavor（规格）
-		if err := c.convertProductFlavors(ctx, menuItem, &takeoutProduct.ProductPackage); err != nil {
+		if err := c.convertProductFlavors(ctx, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换商品规格失败")
 		}
 
@@ -704,25 +733,32 @@ func (c *GrabConverter) getCurrencyInfoBySymbol(symbol string) (code string, exp
 }
 
 // convertProductFlavors 转换商品规格为修饰符组
-func (c *GrabConverter) convertProductFlavors(_ context.Context, menuItem *valueobject.MenuItem, productPackage *model.ProductPackage) error {
+func (c *GrabConverter) convertProductFlavors(
+	_ context.Context,
+	menuItem *valueobject.MenuItem,
+	takeoutProduct *model.ProductPackageTakeout,
+) error {
 	// 收集所有规格
-	flavors := make([]*model.ProductBom, 0)
-	for i := range productPackage.ProductBoms {
-		bom := &productPackage.ProductBoms[i]
-		if bom.IsFlavor() && !bom.IsDelete() && bom.Status == 1 {
-			flavors = append(flavors, bom)
+	flavors := make([]*model.ProductBomTakeout, 0)
+	for i := range takeoutProduct.ProductBomTakeouts {
+		bomTakeout := &takeoutProduct.ProductBomTakeouts[i]
+		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId != "" {
+			continue
 		}
+		flavors = append(flavors, bomTakeout)
 	}
 
 	if len(flavors) == 0 {
 		return nil
 	}
 
-	// 找到最小规格价格，用于计算差价
-	minFlavorPrice := flavors[0].Price
-	for _, bom := range flavors {
-		if bom.Price < minFlavorPrice {
-			minFlavorPrice = bom.Price
+	// 找到最小规格价格，用于计算差价（优先使用外卖价格，否则使用店内价格）
+	minFlavorPrice := float64(0)
+	for idx, bomTakeout := range flavors {
+		// 优先从外卖价格表获取价格
+		price := bomTakeout.Price
+		if idx == 0 || price < minFlavorPrice {
+			minFlavorPrice = price
 		}
 	}
 
@@ -733,8 +769,8 @@ func (c *GrabConverter) convertProductFlavors(_ context.Context, menuItem *value
 
 	// 创建一个修饰符组，包含所有规格
 	modifierGroup, err := valueobject.NewModifierGroup(
-		fmt.Sprintf("TTPOS-FLAVOR-GROUP-%d", productPackage.Uuid),
-		"规格",
+		fmt.Sprintf("TTPOS-FLAVOR-GROUP-%d", takeoutProduct.ProductPackageUuid),
+		"Specifications",
 		map[string]string{
 			"en": "Specifications",
 			"zh": "规格",
@@ -755,20 +791,28 @@ func (c *GrabConverter) convertProductFlavors(_ context.Context, menuItem *value
 	}
 
 	// 转换每个规格为修饰符
-	for idx, bom := range flavors {
+	for idx, bomTakeout := range flavors {
 		// 获取规格名称
-		flavorName := bom.ProductFlavor.Name
-		if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
-			flavorName = bom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
+		flavorName := bomTakeout.ProductBom.ProductFlavor.Name
+		if bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.Uuid != 0 {
+			flavorName = bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
 		}
 
+		// 获取规格价格（优先使用外卖价格，否则使用店内价格）
+		flavorPrice := bomTakeout.ProductBom.Price
+
 		// 计算规格价格：与最小规格的差价（当前规格价格 - 最小规格价格）
-		priceDiff := bom.Price - minFlavorPrice
+		priceDiff := flavorPrice - minFlavorPrice
 		priceInCents := int64(priceDiff * 100) // 转换为分
 
 		// 创建修饰符
 		modifier, err := valueobject.NewModifier(
-			fmt.Sprintf("TTPOS-FLAVOR-%d", bom.ProductFlavor.Uuid),
+			func() string {
+				if bomTakeout.GrabModifierId != "" {
+					return bomTakeout.GrabModifierId
+				}
+				return fmt.Sprintf("TTPOS-FLAVOR-%d", bomTakeout.ProductBomUuid)
+			}(),
 			flavorName,
 			idx+1,
 			valueobject.AvailableStatusAvailable,
@@ -779,8 +823,8 @@ func (c *GrabConverter) convertProductFlavors(_ context.Context, menuItem *value
 		}
 
 		// 设置多语言名称
-		if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
-			modifier.NameTranslation = c.filterSupportedLanguages(bom.ProductFlavor.MultiLanguageName.ToMap())
+		if bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.Uuid != 0 {
+			modifier.NameTranslation = c.filterSupportedLanguages(bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.ToMap())
 		}
 
 		modifierGroup.AddModifier(modifier)
@@ -822,7 +866,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *valu
 	// 创建一个修饰符组，包含所有小料
 	modifierGroup, err := valueobject.NewModifierGroup(
 		fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", productPackage.Uuid),
-		"加料",
+		"Add Toppings",
 		map[string]string{
 			"en": "Add Toppings",
 			"zh": "加料",
@@ -901,7 +945,12 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 
 		// 创建修饰符组
 		modifierGroup, err := valueobject.NewModifierGroup(
-			fmt.Sprintf("TTPOS-ATTR-GROUP-%d", packageAttrGroup.ProductAttributeGroup.Uuid),
+			func() string {
+				if packageAttrGroup.ProductAttributeGroup.SourceId != "" {
+					return packageAttrGroup.ProductAttributeGroup.SourceId
+				}
+				return fmt.Sprintf("TTPOS-ATTR-GROUP-%d", packageAttrGroup.ProductAttributeGroup.Uuid)
+			}(),
 			groupName,
 			c.filterSupportedLanguages(packageAttrGroup.ProductAttributeGroup.MultiLanguageName.ToMap()),
 			sequence,
@@ -927,7 +976,12 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 
 			// 创建修饰符（属性没有价格，价格为0）
 			modifier, err := valueobject.NewModifier(
-				fmt.Sprintf("TTPOS-ATTR-%d", packageAttr.Attribute.Uuid),
+				func() string {
+					if packageAttr.Attribute.SourceId != "" {
+						return packageAttr.Attribute.SourceId
+					}
+					return fmt.Sprintf("TTPOS-ATTR-%d", packageAttr.Attribute.Uuid)
+				}(),
 				attrName,
 				idx+1,
 				valueobject.AvailableStatusAvailable,

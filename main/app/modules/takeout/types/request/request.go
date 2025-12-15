@@ -14,3 +14,14 @@ type ExportMenuRequest struct {
 	CategoryIDs    []uint64 // 分类 ID 列表（可选）
 	SellingTimeIDs []uint64 // 售卖时段 ID 列表（可选）
 }
+
+// ToggleTakeoutStatusRequest 切换外卖状态请求
+type ToggleTakeoutStatusRequest struct {
+	Platform string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
+	Enabled  bool   `json:"enabled" binding:"required"`  // 是否开启外卖
+}
+
+// UpdateBindingStatusRequest 更新绑定状态请求
+type UpdateBindingStatusRequest struct {
+	Platform string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
+}

@@ -1210,12 +1210,12 @@ func (h *ProductHandler) ProductTakeoutShopAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, nil)
 		return
 	}
-	uuid, err := h.productTakeoutSrv.AddProductTakeoutShop(ctx, addReq)
+	productPackageTakeout, err := h.productTakeoutSrv.AddProductTakeoutShop(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{"uuid": uuid}, "保存成功")
+	helper.Success(c, gin.H{"uuid": productPackageTakeout.Uuid}, "保存成功")
 }
 
 // ProductTakeoutShopEdit 编辑外卖商品

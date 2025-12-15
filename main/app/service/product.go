@@ -383,6 +383,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
 		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+		if image == "" && product.ImageUrl != "" {
+			image = product.ImageUrl
+		}
 		unit := product.ProductUnit.MultiLanguageName.GetNames()
 
 		if product.ProductType == constant.ProductTypePackage {
@@ -392,6 +395,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				for _, item := range group.ProductPackageGroupItems {
 					flavor := getFlavor(item.ProductBom) // 商品规格
 					subProductImage := item.ProductPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+					if subProductImage == "" && item.ProductPackage.ImageUrl != "" {
+						subProductImage = item.ProductPackage.ImageUrl
+					}
 					attributeGroups := getAttributeGroups(item.ProductPackage) // 商品属性组
 					// 固定分组时，IsRequired 和 IsDefault 返回 1
 					isRequired := item.IsRequired
@@ -5258,7 +5264,12 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		productItem := product_resp.ProductShopListItemResp{
 			Uuid:       productPackage.Uuid,
 			LocaleName: productPackage.MultiLanguageName.GetNames(),
-			Image:      productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+			Image: func() string {
+				if productPackage.ImageFile.Uuid > 0 {
+					return productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				}
+				return productPackage.ImageUrl
+			}(),
 			Tag: product_resp.ProductShopListItemTagResp{
 				IsMultipleSpec: IsMultipleSpec,
 				IsAttribute:    IsAttribute,
@@ -5584,12 +5595,14 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	if err := productCheckSrv.CheckProductType(req.Type); err != nil {
 		return 0, errors.WithMessage(err, "检查商品类型失败")
 	}
-	// 检查商品名称
-	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
-		return 0, errors.WithMessage(err, "检查商品名称失败")
-	}
-	if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
-		return 0, errors.WithMessage(err, "检查商品卖点失败")
+	if !req.IsImport {
+		// 检查商品名称
+		if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
+			return 0, errors.WithMessage(err, "检查商品名称失败")
+		}
+		if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
+			return 0, errors.WithMessage(err, "检查商品卖点失败")
+		}
 	}
 	// 检查商品分类
 	if err := productCheckSrv.CheckProductCategory(db, req.CategoryUuid); err != nil {
@@ -6460,7 +6473,7 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 	}
 
 	// 2.10.0 版本新增卖点描述
-	if ctx.Version(context.GTE, "2.10.0") {
+	if ctx.Version(context.GTE, "2.10.0") || request.IsImport {
 		describeUuid, describeValue, err := saveSellingPointMultiLanguage(multiLanguageNameRepo, 0, request.SellingPoint)
 		if err != nil {
 			return nil, errors.WithMessage(err, "保存卖点多语言失败")

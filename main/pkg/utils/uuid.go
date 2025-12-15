@@ -49,3 +49,8 @@ func GetID18() (id uint64, err error) {
 func GetID() (uint64, error) {
 	return uint64(idGenerator.Generate()), nil
 }
+
+// MustGetID 获取唯一ID数字
+func MustGetID() uint64 {
+	return uint64(idGenerator.Generate())
+}

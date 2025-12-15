@@ -1,9 +1,9 @@
 package persistence
 
 import (
-	"context"
 	"ttpos-server-go/app/model"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/menu/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
 	"gorm.io/gorm"
@@ -23,7 +23,7 @@ func NewMenuDataRepository(dbm *database.DBManager) menuRepo.IMenuDataRepository
 
 // GetTakeoutCategories 获取外卖分类列表
 func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, companyUuid uint64, categoryIDs []uint64) ([]*model.ProductCategory, error) {
-	db := r.dbm.GetDB(companyUuid)
+	db := ctx.GetDB()
 	var categories []*model.ProductCategory
 
 	query := db.Model(&model.ProductCategory{}).
@@ -47,7 +47,7 @@ func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, compa
 
 // GetTakeoutProducts 获取指定分类下的外卖商品
 func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, companyUuid uint64, categoryUuid uint64) ([]*model.ProductPackageTakeout, error) {
-	db := r.dbm.GetDB(companyUuid)
+	db := ctx.GetDB()
 	var products []*model.ProductPackageTakeout
 
 	err := db.Model(&model.ProductPackageTakeout{}).
@@ -90,6 +90,21 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 		}).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
 		Preload("ImageFile").
+		Preload("ProductBomTakeouts", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0).
+				Preload("ProductBom", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0)
+				}).
+				Preload("ProductBom.ProductFlavor.MultiLanguageName", "delete_time = ?", 0).
+				Preload("ProductBom.ProductSauce.MultiLanguageName", "delete_time = ?", 0)
+		}).
+		Preload("ProductPackageAttributeTakeouts", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0).
+				Preload("ProductPackageAttribute", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0)
+				}).
+				Preload("ProductPackageAttribute.Attribute.MultiLanguageName", "delete_time = ?", 0)
+		}).
 		Order("id ASC").
 		Find(&products).Error
 

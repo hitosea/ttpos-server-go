@@ -1,0 +1,399 @@
+package application
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
+	"ttpos-server-go/app/modules/takeout/domain/menu/repository"
+	"ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
+	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
+	"ttpos-server-go/app/modules/takeout/types/request"
+	"ttpos-server-go/app/modules/takeout/types/response"
+	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
+)
+
+// ITakeoutAppService 外卖应用服务接口
+type ITakeoutAppService interface {
+	// GetTakeoutStatus 获取指定平台外卖状态
+	GetTakeoutStatus(ctx context.Context, platform string) (*response.TakeoutStatusResponse, error)
+
+	// GetAllTakeoutStatus 获取所有平台外卖状态
+	GetAllTakeoutStatus(ctx context.Context) (*response.TakeoutStatusListResponse, error)
+
+	// ToggleTakeoutStatus 切换指定平台外卖状态
+	ToggleTakeoutStatus(ctx context.Context, platform string, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
+
+	// UpdateTakeoutMenu 更新指定平台的菜单数据
+	UpdateTakeoutMenu(ctx context.Context, platform string, menu interface{}) error
+
+	// 外卖绑定管理
+	// GetBindingLink 获取绑定链接
+	GetBindingLink(ctx context.Context, platform string) (*response.BindingLinkResponse, error)
+
+	// CheckBindingStatus 检查绑定状态
+	CheckBindingStatus(ctx context.Context, platform string) (*response.BindingStatusResponse, error)
+
+	// UpdateBindingStatus 更新绑定状态
+	UpdateBindingStatus(ctx context.Context, req request.UpdateBindingStatusRequest) error
+
+	// BindPlatform 绑定平台
+	BindPlatform(ctx context.Context, uuid uint64) error
+
+	// UnbindPlatform 解绑平台
+	UnbindPlatform(ctx context.Context, uuid uint64) error
+
+	// 外卖菜单管理
+	// ExportMenu 导出菜单到指定平台格式
+	ExportMenu(ctx context.Context, req request.ExportMenuRequest) (interface{}, error)
+
+	// GetGrabMenu 获取 Grab 的商品菜单
+	GetGrabMenu(ctx context.Context) (*response.GrabMenuResponse, error)
+
+	// GetImportMenu 导入 Grab 菜单（全新创建商品/分类，不做绑定关系）
+	GetImportMenu(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error)
+
+	// PushMenuToGrab 推送菜单到Grab
+	PushMenuToGrab(ctx context.Context, currencyUnit string) error
+}
+
+type ITakeoutMenuAppService = ITakeoutAppService
+
+// takeoutAppService 外卖应用服务实现
+type takeoutAppService struct {
+	// 状态管理相关
+	takeoutDomainService service.TakeoutDomainService
+
+	// RPC 调用相关
+	rpcService *rpcAdapter.TakeoutRPCService
+
+	// 菜单管理相关
+	dbm        *database.DBManager
+	menuRepo   repository.IMenuDataRepository
+	converters map[string]service.IPlatformConverter // 平台转换器映射
+}
+
+// NewTakeoutAppService 创建外卖应用服务
+func NewTakeoutAppService(
+	dbm *database.DBManager,
+) ITakeoutAppService {
+	// 初始化 RPC 服务
+	rpcService := rpcAdapter.NewTakeoutRPCService()
+
+	// 初始化平台转换器
+	converters := make(map[string]service.IPlatformConverter)
+	converters["grab"] = grab.NewGrabConverter(dbm, nil)
+	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+
+	return &takeoutAppService{
+		// 状态管理相关
+		takeoutDomainService: service.NewTakeoutDomainService(persistence.NewTakeoutRepository(dbm)),
+
+		// RPC 调用相关
+		rpcService: rpcService,
+
+		// 菜单管理相关
+		dbm:        dbm,
+		menuRepo:   persistence.NewMenuDataRepository(dbm),
+		converters: converters,
+	}
+}
+
+// NewTakeoutMenuAppService 创建外卖菜单应用服务（向后兼容）
+func NewTakeoutMenuAppService(
+	dbm *database.DBManager,
+) ITakeoutMenuAppService {
+	return NewTakeoutAppService(dbm)
+}
+
+// GetTakeoutStatus 获取指定平台外卖状态
+func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform string) (*response.TakeoutStatusResponse, error) {
+	// 从数据库获取
+	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, platform)
+	if err != nil {
+		// 如果记录不存在，自动创建一条默认记录（不开启，未绑定）
+		createdTakeout, createErr := s.takeoutDomainService.CreatePlatformStatus(ctx, platform, false)
+		if createErr != nil {
+			return nil, fmt.Errorf("获取平台状态失败，且创建默认记录失败: %w", createErr)
+		}
+		takeout = createdTakeout
+	}
+
+	resp := &response.TakeoutStatusResponse{
+		Platform:  takeout.Platform,
+		Enabled:   takeout.Enabled,
+		IsBound:   takeout.IsBound,
+		Skip:      takeout.Skip,
+		UpdatedAt: takeout.UpdateTime,
+	}
+
+	return resp, nil
+}
+
+// GetAllTakeoutStatus 获取所有平台外卖状态
+func (s *takeoutAppService) GetAllTakeoutStatus(ctx context.Context) (*response.TakeoutStatusListResponse, error) {
+	// 从数据库获取
+	takeouts, err := s.takeoutDomainService.GetAllPlatformStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("获取所有平台状态失败: %w", err)
+	}
+
+	list := make([]*response.TakeoutStatusResponse, 0, len(takeouts))
+	for _, takeout := range takeouts {
+		list = append(list, &response.TakeoutStatusResponse{
+			Platform:  takeout.Platform,
+			Enabled:   takeout.Enabled,
+			IsBound:   takeout.IsBound,
+			Skip:      takeout.Skip,
+			UpdatedAt: takeout.UpdateTime,
+		})
+	}
+
+	resp := &response.TakeoutStatusListResponse{
+		List: list,
+	}
+
+	return resp, nil
+}
+
+// ToggleTakeoutStatus 切换指定平台外卖状态
+func (s *takeoutAppService) ToggleTakeoutStatus(ctx context.Context, platform string, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
+	// 更新状态
+	err := s.takeoutDomainService.UpdatePlatformStatusByPlatform(ctx, platform, req.Enabled)
+	if err != nil {
+		return nil, fmt.Errorf("更新平台状态失败: %w", err)
+	}
+	// 返回最新状态
+	return s.GetTakeoutStatus(ctx, platform)
+}
+
+// UpdateTakeoutMenu 更新指定平台的菜单数据
+func (s *takeoutAppService) UpdateTakeoutMenu(ctx context.Context, platform string, menu interface{}) error {
+	err := s.takeoutDomainService.UpdatePlatformMenuByPlatform(ctx, platform, menu)
+	if err != nil {
+		return fmt.Errorf("更新平台菜单失败: %w", err)
+	}
+
+	return nil
+}
+
+// GetBindingLink 获取绑定链接
+func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string) (*response.BindingLinkResponse, error) {
+	// 1. 先从数据库查询缓存的绑定链接
+	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, platform)
+	if err != nil {
+		return nil, fmt.Errorf("获取平台状态失败: %w", err)
+	}
+
+	// 2. 如果缓存存在且不为空，直接返回
+	if takeout.BindingLink != "" {
+		return &response.BindingLinkResponse{
+			BindingLink: takeout.BindingLink,
+		}, nil
+	}
+
+	// 3. 如果缓存不存在，调用 RPC 获取
+	companyUuid := ctx.GetCompanyUuid()
+	bindingLink, err := s.rpcService.GetGrabBindingLink(ctx.GetContext(), companyUuid)
+	if err != nil {
+		return nil, fmt.Errorf("获取绑定链接失败: %w", err)
+	}
+
+	// 4. 保存到数据库缓存
+	if err := s.takeoutDomainService.UpdatePlatformBindingLink(ctx, takeout.Uuid, bindingLink); err != nil {
+		// 缓存失败不影响返回，只记录日志
+		// 这里没有 logger，暂不记录
+	}
+
+	return &response.BindingLinkResponse{
+		BindingLink: bindingLink,
+	}, nil
+}
+
+// CheckBindingStatus 检查绑定状态
+func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform string) (*response.BindingStatusResponse, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, platform)
+	if err != nil {
+		return nil, fmt.Errorf("获取平台状态失败: %w", err)
+	}
+	if !takeout.Enabled {
+		return nil, errors.New("平台未开启")
+	}
+
+	// 调用 bmp RPC 接口检查绑定状态
+	isBound, err := s.rpcService.CheckBindingStatus(ctx.GetContext(), platform, companyUuid)
+	if err != nil {
+		return nil, fmt.Errorf("检查绑定状态失败: %w", err)
+	}
+
+	if isBound {
+		s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, true)
+	} else {
+		s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, false)
+	}
+
+	return &response.BindingStatusResponse{
+		IsBound: isBound,
+	}, nil
+}
+
+// UpdateBindingStatus 更新绑定状态（包括 skip 字段）
+func (s *takeoutAppService) UpdateBindingStatus(ctx context.Context, req request.UpdateBindingStatusRequest) error {
+	// 获取平台状态
+	_, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
+	if err != nil {
+		return fmt.Errorf("获取平台状态失败: %w", err)
+	}
+	return nil
+}
+
+// BindPlatform 绑定平台
+func (s *takeoutAppService) BindPlatform(ctx context.Context, uuid uint64) error {
+	err := s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, uuid, true)
+	if err != nil {
+		return fmt.Errorf("绑定平台失败: %w", err)
+	}
+
+	return nil
+}
+
+// UnbindPlatform 解绑平台
+func (s *takeoutAppService) UnbindPlatform(ctx context.Context, uuid uint64) error {
+	err := s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, uuid, false)
+	if err != nil {
+		return fmt.Errorf("解绑平台失败: %w", err)
+	}
+
+	return nil
+}
+
+// ExportMenu 导出菜单到指定平台格式
+func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMenuRequest) (interface{}, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	// 验证参数
+	if req.Platform == "" {
+		return nil, errors.New("平台名称不能为空")
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("公司 UUID 不能为空")
+	}
+
+	// 获取平台转换器
+	converter, err := s.getConverter(req.Platform)
+	if err != nil {
+		return nil, err
+	}
+
+	// 从数据库加载菜单数据
+	var menu *entity.TakeoutMenu
+	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
+		// Grab 平台使用专用的加载方法
+		menu, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, req.CategoryIDs, req.SellingTimeIDs)
+		if err != nil {
+			return nil, fmt.Errorf("加载菜单数据失败: %w", err)
+		}
+	} else {
+		return nil, errors.New("暂不支持该平台")
+	}
+
+	// 转换为平台格式
+	platformData, err := converter.ConvertFromTTPOS(ctx, menu)
+	if err != nil {
+		return nil, fmt.Errorf("转换菜单数据失败: %w", err)
+	}
+
+	return platformData, nil
+}
+
+// GetGrabMenu 获取 Grab 的商品菜单
+func (s *takeoutAppService) GetGrabMenu(ctx context.Context) (*response.GrabMenuResponse, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	menuData, err := s.rpcService.GetGrabMenu(ctx.GetContext(), companyUuid)
+	if err != nil {
+		return nil, fmt.Errorf("获取 Grab 菜单失败: %w", err)
+	}
+
+	var menu *entity.TakeoutMenu
+	if err := json.Unmarshal([]byte(menuData.(string)), &menu); err != nil {
+		return nil, fmt.Errorf("解析 Grab 菜单数据失败: %w", err)
+	}
+
+	// 转换为平台格式
+	grabConverter, ok := s.converters["grab"].(*grab.GrabConverter)
+	if !ok {
+		return nil, errors.New("grab 转换器类型错误")
+	}
+	grabMenu, err := grabConverter.ConvertFromTTPOS(ctx, menu)
+	if err != nil {
+		return nil, fmt.Errorf("转换菜单数据失败: %w", err)
+	}
+
+	return &response.GrabMenuResponse{
+		Platform: "grab",
+		Menu:     grabMenu,
+	}, nil
+}
+
+// GetImportMenu 导入 Grab 菜单（全新创建商品/分类，不做绑定关系）
+func (s *takeoutAppService) GetImportMenu(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error) {
+	if req.MenuData == nil {
+		return nil, errors.New("菜单数据不能为空")
+	}
+
+	// 获取 Grab 转换器
+	converter, err := s.getConverter(req.Platform)
+	if err != nil {
+		return nil, err
+	}
+	grabConverter, ok := converter.(*grab.GrabConverter)
+	if !ok {
+		return nil, errors.New("转换器类型错误")
+	}
+
+	// 解析 Grab 菜单数据
+	menuEntity, err := grabConverter.ConvertToTTPOS(ctx, req.MenuData)
+	if err != nil {
+		return nil, fmt.Errorf("解析 Grab 菜单失败: %w", err)
+	}
+
+	// 保存菜单数据到数据库
+	err = s.UpdateTakeoutMenu(ctx, "grab", req.MenuData)
+	if err != nil {
+		return nil, fmt.Errorf("保存菜单数据失败: %w", err)
+	}
+
+	return menuEntity, nil
+}
+
+// SaveMenuSnapshot 保存菜单快照
+func (s *takeoutAppService) PushMenuToGrab(ctx context.Context, currencyUnit string) error {
+	companyUuid := ctx.GetCompanyUuid()
+
+	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
+		Platform:     "grab",
+		CurrencyUnit: currencyUnit,
+	})
+	if err != nil {
+		return fmt.Errorf("导出菜单失败: %w", err)
+	}
+
+	err = s.rpcService.SaveMenuSnapshot(ctx.GetContext(), "grab", companyUuid, menu)
+	if err != nil {
+		return fmt.Errorf("推送菜单失败: %w", err)
+	}
+
+	return nil
+}
+
+// getConverter 获取平台转换器
+func (s *takeoutAppService) getConverter(platform string) (service.IPlatformConverter, error) {
+	converter, ok := s.converters[platform]
+	if !ok {
+		return nil, errors.New("不支持的平台: " + platform)
+	}
+	return converter, nil
+}

@@ -206,15 +206,17 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 	if len(translatedMultiLanguageMap) > 0 {
 		for uuid, translated := range translatedMultiLanguageMap {
 			translatedText := translated.ToJson()
-			db.Model(&model.ProductUnit{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)      // 单位
-			db.Model(&model.Warehouse{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)        // 仓库
-			db.Model(&model.Material{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)         // 物品
-			db.Model(&model.ProductFlavor{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)    // 规格
-			db.Model(&model.ProductAttribute{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText) // 属性
-			db.Model(&model.ProductSauce{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)     // 加料
-			db.Model(&model.ProductPackage{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)   // 商品
-			db.Model(&model.ProductBomCard{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)   // 成本卡
-			db.Model(&model.ProductCategory{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)  // 分类
+			db.Model(&model.ProductUnit{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                 // 单位
+			db.Model(&model.Warehouse{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                   // 仓库
+			db.Model(&model.Material{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                    // 物品
+			db.Model(&model.ProductFlavor{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)               // 规格
+			db.Model(&model.ProductAttribute{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)            // 属性
+			db.Model(&model.ProductSauce{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)                // 加料
+			db.Model(&model.ProductPackage{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)              // 商品
+			db.Model(&model.ProductPackage{}).Where("describe_multi_language_name_uuid = ?", uuid).Update("describe", translatedText) // 商品描述
+			db.Model(&model.ProductBomCard{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)              // 成本卡
+			db.Model(&model.ProductCategory{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)             // 分类
+			db.Model(&model.ProductPackageTakeout{}).Where("multi_language_name_uuid = ?", uuid).Update("name", translatedText)       // 外卖商品
 		}
 	}
 

@@ -2417,7 +2417,7 @@
                 "block_type": "label",
                 "block_label": {
                     "zh": "价格已包含消费税",
-                    "en": "Price includes consumption tax",
+                    "en": "VAT INCLUDED",
                     "ko": "소비세가 포함된 가격",
                     "my": "အခွန်ပေးချေမှုနည်းလမ်း",
                     "tr": "Tüketim vergisi dahil fiyat",

@@ -35,8 +35,3 @@ type GrabBindingStatusResp struct {
 	IsBound bool  `json:"isBound"` // 是否已绑定
 	BoundAt int64 `json:"boundAt"` // 绑定时间（Unix 时间戳）
 }
-
-// GrabMenuResp 获取 Grab 菜单响应
-type GrabMenuResp struct {
-	Menu interface{} `json:"menu"` // Grab 菜单数据
-}

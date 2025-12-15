@@ -7,6 +7,7 @@ type ProductBomTakeout struct {
 	ProductBomUuid            uint64  `gorm:"default:0;column:product_bom_uuid;comment:'店内商品BOM UUID，关联 ttpos_product_bom.uuid'"`
 	HeadquarterUuid           uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID,0表示不是总部商品'"`
 	Price                     float64 `gorm:"type:decimal(22,4);default:0.0000;column:price;comment:'外卖规格价格'"`
+	GrabModifierId            string  `gorm:"type:varchar(500);default:'';column:grab_modifier_id;comment:'Grab修饰符ID（规格/属性/加料）'"`
 
 	// 关联关系
 	ProductPackageTakeout ProductPackageTakeout `gorm:"foreignKey:product_package_takeout_uuid;references:uuid" json:"-"` // 外卖商品

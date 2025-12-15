@@ -91,10 +91,6 @@ func (i *MenuItem) Validate() error {
 func (i *MenuItem) GetSellingPoint() dto.LocaleResponse {
 	sellingPoint := dto.LocaleResponse{}
 
-	if i.Description != "" {
-		sellingPoint.EN = i.Description
-	}
-
 	// 从描述多语言填充
 	if i.DescriptionTranslation != nil {
 		if zh, ok := i.DescriptionTranslation["zh"]; ok {
@@ -124,6 +120,10 @@ func (i *MenuItem) GetSellingPoint() dto.LocaleResponse {
 		if sv, ok := i.DescriptionTranslation["sv"]; ok {
 			sellingPoint.SV = sv
 		}
+	}
+
+	if i.Description != "" {
+		sellingPoint.SetAllEmptyLocale(i.Description)
 	}
 
 	return sellingPoint

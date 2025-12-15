@@ -409,6 +409,7 @@ type ProductShopAddReq struct {
 	Row                 int                               `json:"row"`                   // 行号
 	ProductPrinterUuids []uint64                          `json:"product_printer_uuids"` // 商品打印机列表
 	Detail              string                            `json:"detail"`                // 商品详情（富文本）
+	IsImport            bool                              `json:"is_import"`             // 是否从其他平台导入 0-否 1-是
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求

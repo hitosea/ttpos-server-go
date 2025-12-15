@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -14,7 +13,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/application"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
-	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/types/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -29,65 +27,78 @@ import (
 )
 
 type ITakeoutSrv interface {
-	// GetBindingLink 获取绑定链接
-	GetBindingLink(ctx context.Context) (*resp.GrabBindingLinkResp, error)
-
-	// CheckBindingStatus 验证是否已经绑定（定时查询）
-	CheckBindingStatus(ctx context.Context) (*resp.GrabBindingStatusResp, error)
+	// 导入菜单到TTPOS
+	ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error)
 
 	// ImportMenu 导入菜单
 	ImportMenu(ctx context.Context, platform string, req req.TakeoutMenuImportReq) (*resp.GrabMenuImportResp, error)
 }
 
 type takeoutSrv struct {
-	dbm           *database.DBManager
-	cache         cache.Cache
-	menuAppSrv    application.ITakeoutMenuAppService
-	productSrv    IProductSrv
-	translateSrv  ITranslateSrv
-	settingSrv    setting.ISrv
-	uploadFileSrv IUploadFileSrv
+	dbm               *database.DBManager
+	cache             cache.Cache
+	takeoutAppSrv     application.ITakeoutAppService
+	productSrv        IProductSrv
+	translateSrv      ITranslateSrv
+	settingSrv        setting.ISrv
+	uploadFileSrv     IUploadFileSrv
+	productTakeoutSrv IProductTakeoutSrv
 }
 
-func NewTakeoutSrv(dbm *database.DBManager, cache cache.Cache, productSrv IProductSrv, translateSrv ITranslateSrv) ITakeoutSrv {
+func NewTakeoutSrv(
+	dbm *database.DBManager,
+	cache cache.Cache,
+	productSrv IProductSrv,
+	productTakeoutSrv IProductTakeoutSrv,
+	translateSrv ITranslateSrv,
+	settingSrv setting.ISrv,
+) ITakeoutSrv {
 	return &takeoutSrv{
-		dbm:           dbm,
-		cache:         cache,
-		menuAppSrv:    application.NewTakeoutMenuAppService(dbm, cache),
-		productSrv:    productSrv,
-		translateSrv:  translateSrv,
-		settingSrv:    setting.NewSrv(dbm, cache),
-		uploadFileSrv: NewUploadFileSrv(dbm),
+		dbm:               dbm,
+		cache:             cache,
+		takeoutAppSrv:     application.NewTakeoutAppService(dbm),
+		productSrv:        productSrv,
+		translateSrv:      translateSrv,
+		settingSrv:        settingSrv,
+		uploadFileSrv:     NewUploadFileSrv(dbm),
+		productTakeoutSrv: productTakeoutSrv,
 	}
 }
 
-// GetBindingLink 获取绑定链接
-func (s *takeoutSrv) GetBindingLink(ctx context.Context) (*resp.GrabBindingLinkResp, error) {
-	bindingLinkResponse, err := s.menuAppSrv.GetBindingLink(ctx)
+// ImportMenuToTTPOS 导入菜单到TTPOS
+func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error) {
+	takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取绑定链接失败")
+		return nil, err
 	}
-	return &resp.GrabBindingLinkResp{
-		BindingLink: bindingLinkResponse.BindingLink,
-		ExpiresAt:   bindingLinkResponse.ExpiresAt,
-	}, nil
-}
 
-// CheckBindingStatus 验证是否已经绑定（定时查询）
-func (s *takeoutSrv) CheckBindingStatus(ctx context.Context) (*resp.GrabBindingStatusResp, error) {
-	bindingStatusResponse, err := s.menuAppSrv.CheckBindingStatus(ctx)
+	// 1. 导入菜单
+	resp, err := s.ImportMenu(ctx, "grab", req.TakeoutMenuImportReq{
+		Platform: "grab",
+		MenuData: takeoutMenu.Menu,
+	})
 	if err != nil {
-		return nil, errors.WithMessage(err, "检查绑定状态失败")
+		return nil, err
 	}
-	return &resp.GrabBindingStatusResp{
-		IsBound: bindingStatusResponse.IsBound,
-		BoundAt: bindingStatusResponse.BoundAt,
-	}, nil
+
+	// 2. 获取货币设置
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取货币设置失败")
+	}
+
+	// 3.推送菜单到Grab
+	err = s.takeoutAppSrv.PushMenuToGrab(ctx, currencySetting.Unit)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // ImportMenu 导入菜单
 func (s *takeoutSrv) ImportMenu(ctx context.Context, platform string, reqs req.TakeoutMenuImportReq) (*resp.GrabMenuImportResp, error) {
-	takeoutMenu, err := s.menuAppSrv.GetImportMenu(ctx, request.ImportMenuRequest{
+	takeoutMenu, err := s.takeoutAppSrv.GetImportMenu(ctx, request.ImportMenuRequest{
 		Platform: platform,
 		MenuData: reqs.MenuData,
 	})
@@ -134,9 +145,6 @@ func (s *takeoutSrv) ImportMenu(ctx context.Context, platform string, reqs req.T
 		successCount = success
 		failureCount = failure
 
-		_ = categoryMap
-		_ = productFlavorUuid
-		_ = unitUuid
 		return nil
 	})
 	if err != nil {
@@ -743,7 +751,7 @@ func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, a
 // 返回：成功数量、失败数量、错误
 func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categories []*valueobject.Category, categoryMap map[string]uint64, productFlavorUuid uint64, unitUuid uint64) (int, int, error) {
 	db := ctx.GetDB()
-	productMapRepo := persistence.NewProductMapRepository()
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 
 	successCount := 0
 	failureCount := 0
@@ -776,38 +784,52 @@ func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categori
 				continue
 			}
 
-			// 检查商品映射是否存在
-			existingMap, err := productMapRepo.GetBySourceId(db, platform, item.ID)
+			// 检查商品是否已导入（通过 source 和 source_product_id）
+			existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.ID)
 			if err != nil && err != gorm.ErrRecordNotFound {
+				logger.Logger.Error("查询外卖商品失败",
+					zap.String("platform", platform),
+					zap.String("item_id", item.ID),
+					zap.Error(err),
+				)
 				failureCount++
 				continue
 			}
 
-			if existingMap.Uuid > 0 {
+			if existingTakeout != nil && existingTakeout.Uuid > 0 {
+				// 商品已存在，更新状态和分类
+				err = takeoutRepo.UpdateProductPackageTakeout(
+					map[string]any{
+						"status":        item.AvailableStatus.ToInt(),
+						"category_uuid": localCategoryUuid,
+					},
+					repository.CommonRepo.WhereByUuid(existingTakeout.Uuid),
+				)
+				if err != nil {
+					logger.Logger.Error("更新外卖商品失败",
+						zap.String("platform", platform),
+						zap.String("item_id", item.ID),
+						zap.Uint64("uuid", existingTakeout.Uuid),
+						zap.Error(err),
+					)
+					failureCount++
+					continue
+				}
 				successCount++
 			} else {
-
-				// 2. 创建商品
+				// 2. 创建新商品
 				productUuid, err := s.createProduct(ctx, platform, item, localCategoryUuid, productFlavorUuid, unitUuid, attributeGroups)
 				if err != nil {
 					failureCount++
 					continue
 				}
 
-				_ = productUuid
-
-				// 创建商品映射
-				productMap := &model.ProductMap{
-					Source:             platform,
-					SourceProductId:    item.ID,
-					ProductPackageUuid: productUuid,
-					Status:             1,
-					SyncTime:           time.Now().Unix(),
-				}
-				if err := productMapRepo.Create(db, productMap); err != nil {
-					failureCount++
-					continue
-				}
+				// createProduct 方法中已经创建了 ProductPackageTakeout 记录，这里不需要再创建
+				logger.Logger.Info("成功创建外卖商品",
+					zap.String("platform", platform),
+					zap.String("item_id", item.ID),
+					zap.Uint64("product_uuid", productUuid),
+				)
 				successCount++
 			}
 		}
@@ -840,12 +862,30 @@ func (s *takeoutSrv) createProduct(
 	}
 
 	// 如果有图片 URL，异步下载并上传
+	imageURL := ""
 	if len(item.Photos) > 0 && item.Photos[0] != "" {
-		imageURL := item.Photos[0]
-		companyUuid := ctx.GetCompanyUuid()
+		imageURL = item.Photos[0]
+	}
+	// 更新商品包图片URL
+	if imageURL != "" {
+		productPackageRepo := repository.NewProductPackageRepo(ctx.GetDB())
+		err = productPackageRepo.UpdateProductPackage(map[string]any{
+			"image_url": imageURL,
+		}, repository.CommonRepo.WhereByUuid(productUuid))
+		if err != nil {
+			return 0, err
+		}
+	}
 
-		// 异步执行图片下载和上传
-		go s.asyncUploadProductImage(ctx, companyUuid, productUuid, imageURL, item.ID, item.Name)
+	// 创建外卖商品记录到 ttpos_product_package_takeout 表
+	err = s.createProductPackageTakeout(ctx, platform, item, productUuid, categoryUuid)
+	if err != nil {
+		return 0, errors.WithMessage(err, "创建外卖商品记录失败")
+	}
+
+	// 如果有图片 URL，异步下载并上传
+	if imageURL != "" {
+		go s.asyncUploadProductImage(ctx, ctx.GetCompanyUuid(), productUuid, imageURL, item.ID, item.Name)
 	}
 
 	return productUuid, nil
@@ -909,7 +949,7 @@ func (s *takeoutSrv) buildProductAddReq(
 		},
 		Package:             req.ProductShopAddPackageReq{},
 		ProductPrinterUuids: []uint64{},
-		Detail:              item.Description,
+		IsImport:            true,
 	}
 }
 
@@ -968,7 +1008,14 @@ func (s *takeoutSrv) getTaxUuid(ctx context.Context, taxName string) uint64 {
 }
 
 // asyncUploadProductImage 异步下载并上传商品图片
-func (s *takeoutSrv) asyncUploadProductImage(ctx context.Context, companyUuid uint64, productUuid uint64, imageURL string, productID string, productName string) {
+func (s *takeoutSrv) asyncUploadProductImage(
+	ctx context.Context,
+	companyUuid uint64,
+	productUuid uint64,
+	imageURL string,
+	productID string,
+	productName string,
+) error {
 	db := s.dbm.GetDB(companyUuid)
 
 	logger.Logger.Info("开始异步下载商品图片",
@@ -987,7 +1034,7 @@ func (s *takeoutSrv) asyncUploadProductImage(ctx context.Context, companyUuid ui
 			zap.Uint64("product_uuid", productUuid),
 			zap.Error(err),
 		)
-		return
+		return errors.WithMessage(err, "异步下载商品图片失败")
 	}
 	defer resp.Body.Close()
 
@@ -999,7 +1046,7 @@ func (s *takeoutSrv) asyncUploadProductImage(ctx context.Context, companyUuid ui
 			zap.Uint64("product_uuid", productUuid),
 			zap.Int("status_code", resp.StatusCode),
 		)
-		return
+		return errors.WithMessage(err, "异步下载商品图片失败，HTTP 状态码异常")
 	}
 
 	// 3. 从 URL 或 Content-Type 推断文件名
@@ -1021,7 +1068,7 @@ func (s *takeoutSrv) asyncUploadProductImage(ctx context.Context, companyUuid ui
 			zap.Uint64("product_uuid", productUuid),
 			zap.Error(err),
 		)
-		return
+		return errors.WithMessage(err, "异步上传商品图片失败")
 	}
 
 	// 5. 更新商品的 image_file_uuid
@@ -1035,16 +1082,118 @@ func (s *takeoutSrv) asyncUploadProductImage(ctx context.Context, companyUuid ui
 			zap.Uint64("file_uuid", uploadResp.Uuid),
 			zap.Error(err),
 		)
-		return
+		return errors.WithMessage(err, "更新商品图片UUID失败")
 	}
 
-	logger.Logger.Info("异步上传商品图片成功",
+	// 更新外卖商品记录的图片UUID
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	err = takeoutRepo.UpdateProductPackageTakeout(map[string]any{
+		"image_file_uuid": uploadResp.Uuid,
+	}, repository.CommonRepo.WhereByUuid(productUuid))
+	if err != nil {
+		logger.Logger.Warn("更新外卖商品记录的图片UUID失败",
+			zap.String("product_id", productID),
+			zap.Uint64("product_uuid", productUuid),
+			zap.Error(err),
+		)
+		return errors.WithMessage(err, "更新外卖商品记录的图片UUID失败")
+	}
+
+	logger.Logger.Info("成功上传商品图片",
 		zap.String("product_id", productID),
-		zap.String("product_name", productName),
 		zap.Uint64("product_uuid", productUuid),
-		zap.String("source_url", imageURL),
 		zap.Uint64("file_uuid", uploadResp.Uuid),
 	)
+	return nil
+}
+
+// createProductPackageTakeout 创建外卖商品记录
+func (s *takeoutSrv) createProductPackageTakeout(
+	ctx context.Context,
+	platform string,
+	item *valueobject.MenuItem,
+	productPackageUuid uint64,
+	categoryUuid uint64,
+) error {
+	db := ctx.GetDB()
+
+	// 查询商品包信息获取多语言名称UUID
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	productPackage, err := productPackageRepo.GetProductPackage(
+		repository.CommonRepo.WhereByUuid(productPackageUuid),
+		productPackageRepo.WithProductBoms(),
+		productPackageRepo.WithProductPackageAttributeGroupAttributes(),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品包信息失败")
+	}
+
+	// 确定外卖类型
+	takeoutType := s.getTakeoutTypeByPlatform(platform)
+
+	// 检查是否已存在相同的外卖商品记录（通过 source 和 source_product_id）
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.ID)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return errors.WithMessage(err, "获取外卖商品记录失败")
+	}
+
+	// 如果已存在，更新记录
+	if existingTakeout != nil && existingTakeout.Uuid > 0 {
+		return nil
+	}
+
+	// 创建外卖商品记录
+	_, err = s.productTakeoutSrv.AddProductTakeoutShop(ctx, req.ProductTakeoutShopAddReq{
+		ProductPackageUuid:  productPackageUuid,
+		TakeoutType:         takeoutType,
+		CategoryUuid:        categoryUuid,
+		SpecialCategoryUuid: 0,
+		Flavors: func() []req.ProductTakeoutShopAddFlavorReq {
+			flavors := make([]req.ProductTakeoutShopAddFlavorReq, 0)
+			for _, flavor := range productPackage.ProductBoms {
+				flavors = append(flavors, req.ProductTakeoutShopAddFlavorReq{
+					BomUuid:        flavor.Uuid,
+					Price:          flavor.Price,
+					GrabModifierId: "1001",
+				})
+			}
+			return flavors
+		}(),
+		Attributes: func() []req.ProductTakeoutShopAddAttributeReq {
+			attributes := make([]req.ProductTakeoutShopAddAttributeReq, 0)
+			for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+				for _, attribute := range attributeGroup.ProductPackageAttributes {
+					attributes = append(attributes, req.ProductTakeoutShopAddAttributeReq{
+						ProductPackageAttributeUuid: attribute.Uuid,
+						Price:                       attribute.Price,
+					})
+				}
+			}
+			return attributes
+		}(),
+		Status:          item.AvailableStatus.ToInt(),
+		Source:          platform,
+		SourceProductId: item.ID,
+	})
+	if err != nil {
+		return errors.WithMessage(err, "创建外卖商品记录失败")
+	}
+
+	return nil
+}
+
+// getTakeoutTypeByPlatform 根据平台名称获取外卖类型
+func (s *takeoutSrv) getTakeoutTypeByPlatform(platform string) int {
+	switch platform {
+	case "grab":
+		return 1 // Grab
+	case "foodpanda":
+		return 2 // FoodPanda
+	default:
+		return 3 // 其他
+	}
 }
 
 // getFileNameFromURL 从 URL 或 Content-Type 获取文件名

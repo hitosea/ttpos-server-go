@@ -185,6 +185,7 @@ type ProductPackage struct {
 	MultiLanguageNameUuid         uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName                     string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid                 uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
+	ImageUrl                      string `gorm:"default:'';column:image_url;comment:'外部图片URL地址（当image_file_uuid为空时使用）'"`
 	DeductStockType               uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
 	NumType                       uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
 	UnitUuid                      uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
