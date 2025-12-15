@@ -1825,7 +1825,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if batchCookingMode == constant.BatchCookingModePre && isBatch == 1 {
 			// 必须指定分批类型
 			if product.BatchTagUuid == 0 {
-				return nil, errors.WithMessage(errors.New("请选择分批类型再加购"))
+				// return nil, errors.WithMessage(errors.New("请选择分批类型再加购"))
+				// 前置模式下,如果没有传分批类型,则表示该商品不需要认为是分批类型. 不进行分批处理
+				isBatch = 0
 			}
 			batchTagRepo := repository.NewBatchTagRepo(db)
 			if product.BatchTagUuid > 0 {
