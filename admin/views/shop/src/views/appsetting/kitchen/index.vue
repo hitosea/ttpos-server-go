@@ -54,8 +54,8 @@
             </el-select>
             <el-select class="w-104" v-model="form.wait_time_color_ranges[1].color" size="default">
               <el-option value="#100A05" :label="$t('黑色')">{{ $t('黑色') }}</el-option>
-              <el-option value="#E50028" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
-              <el-option value="#FFBE00" :label="$t('红色')">{{ $t('红色') }}</el-option>
+              <el-option value="#FFBE00" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+              <el-option value="#E50028" :label="$t('红色')">{{ $t('红色') }}</el-option>
               <el-option value="custom" :label="$t('自定义')">{{ $t('自定义') }}</el-option>
             </el-select>
             <el-color-picker v-if="form.wait_time_color_ranges[1].color === 'custom'" v-model="customColor0" :predefine="predefinedColors" :show-alpha="false" size="small" />
@@ -66,8 +66,8 @@
             </el-select>
             <el-select class="w-104" v-model="form.wait_time_color_ranges[2].color" size="default">
               <el-option value="#100A05" :label="$t('黑色')">{{ $t('黑色') }}</el-option>
-              <el-option value="#E50028" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
-              <el-option value="#FFBE00" :label="$t('红色')">{{ $t('红色') }}</el-option>
+              <el-option value="#FFBE00" :label="$t('黄色')">{{ $t('黄色') }}</el-option>
+              <el-option value="#E50028" :label="$t('红色')">{{ $t('红色') }}</el-option>
               <el-option value="custom" :label="$t('自定义')">{{ $t('自定义') }}</el-option>
             </el-select>
             <el-color-picker v-if="form.wait_time_color_ranges[2].color === 'custom'" v-model="customColor1" :predefine="predefinedColors" :show-alpha="false" size="small" />
