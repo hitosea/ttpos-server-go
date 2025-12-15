@@ -150,8 +150,8 @@ func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint6
 		if req.TimeoutLimit == nil {
 			req.TimeoutLimit = &[]int{0}[0]
 		}
-		if *req.TimeoutLimit < 1 || *req.TimeoutLimit > 120 {
-			return errors.New("超时限制必须在1-120分钟之间")
+		if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+			return errors.New("超时限制必须在0-120分钟之间")
 		}
 	}
 
@@ -315,8 +315,8 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 		if req.TimeoutLimit == nil {
 			req.TimeoutLimit = &[]int{0}[0]
 		}
-		if *req.TimeoutLimit < 1 || *req.TimeoutLimit > 120 {
-			return errors.New("超时限制必须在1-120分钟之间")
+		if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+			return errors.New("超时限制必须在0-120分钟之间")
 		}
 	}
 
