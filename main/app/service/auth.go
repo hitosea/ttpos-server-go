@@ -1594,6 +1594,9 @@ func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 	companyList, _ := companyStaffRepo.GetByStaffUuid(staffUuid, companyStaffRepo.WithCompany())
 
 	for _, cs := range companyList {
+		if cs.IsDisable == 1 {
+			continue
+		}
 		shopDb := s.dbm.GetDB(cs.CompanyUuid)
 		// 根据员工UUID查询角色列表
 		staffRoleRepo := repository.NewStaffRoleRepo(shopDb)
