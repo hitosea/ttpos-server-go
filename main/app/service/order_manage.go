@@ -1931,10 +1931,23 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
-
 		giftPointsMap := make(map[uint64]float64) // sale_order_uuid -> gift_points
 		// 更新销售订单
 		for _, saleOrder := range saleBill.SaleOrders {
+			isUseMember := saleOrder.ConsumerUuid != 0
+			// 退会员的累计消费金额
+			if isUseMember {
+				returnAmount := saleOrder.GetCanReturnAmount() // 注意要在	saleOrder.ClearSettleInfo() 之前获取
+				// 减少会员累计消费金额
+				if err := repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, returnAmount); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 减少会员累计消费次数
+				if err := repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+
 			giftPointsMap[saleOrder.Uuid] = saleOrder.GiftPoints // 清空之前记录的赠送积分
 			// 将结账才记录的值清空
 			saleOrder.ClearSettleInfo()
@@ -1980,17 +1993,6 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					}); err != nil {
 						return errors.WithMessage(err)
 					}
-				}
-			}
-			// 退会员的累计消费金额
-			if isUseMember {
-				// 减少会员累计消费金额
-				if err := repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.GetCanReturnMemberConsumptionAmountMax()); err != nil {
-					return errors.WithMessage(err)
-				}
-				// 减少会员累计消费次数
-				if err := repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid); err != nil {
-					return errors.WithMessage(err)
 				}
 			}
 			// 退积分

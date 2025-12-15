@@ -529,6 +529,14 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 			testData["store"].(map[string]interface{})["company_addr"] = i18n.Translate(ctx.GetLanguage(), "公司地址公司地址公司地址公司地址")
 		}
 	}
+	if testData["invoice"] != nil {
+		if testData["invoice"].(map[string]interface{})["company_name"] != nil {
+			testData["invoice"].(map[string]interface{})["company_name"] = i18n.Translate(ctx.GetLanguage(), "公司名称公司名称公司名称公司名称公司名称公司名称公司名称")
+		}
+		if testData["invoice"].(map[string]interface{})["company_address"] != nil {
+			testData["invoice"].(map[string]interface{})["company_address"] = i18n.Translate(ctx.GetLanguage(), "商家地址商家地址商家地址商家地址商家地址")
+		}
+	}
 	if testData["order"] != nil {
 		// 备注
 		if testData["order"].(map[string]interface{})["remark"] != nil {

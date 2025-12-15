@@ -136,9 +136,6 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], func(ctx context.Context, syncHeadquarterData bool) error {
 			return s.warehouseSrv.SyncWarehouseItemStock(ctx)
 		}}, // 无多语言数据
-		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], func(ctx context.Context, syncHeadquarterData bool) error {
-			return s.productSrv.SyncProductStockByBomCard(ctx)
-		}}, // 无多语言数据
 		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage}, // 无多语言数据
 		{constant.SyncTaskTypeMultiLanguage, constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage], func(ctx context.Context, syncHeadquarterData bool) error {
 			return s.SyncMultiLanguage(ctx)
@@ -1229,9 +1226,6 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		{constant.SyncTaskTypeSupplier, s.supplierSrv.SyncSupplier},
 		{constant.SyncTaskTypeWarehouseStock, func(ctx context.Context, syncHeadquarterData bool) error {
 			return s.warehouseSrv.SyncWarehouseItemStock(ctx)
-		}},
-		{constant.SyncTaskTypeProductStock, func(ctx context.Context, syncHeadquarterData bool) error {
-			return s.productSrv.SyncProductStockByBomCard(ctx)
 		}},
 		{constant.SyncTaskTypePackageImage, s.productSrv.SyncProductPackageImage},
 	}
