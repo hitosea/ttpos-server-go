@@ -225,6 +225,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 					printerParam.QueryStartTime,
 					printerParam.QueryEndTime,
 					ctx.GetStaffUuid(),
+					excludeDataManage,
 				)
 				if err != nil {
 					return []business_data_resp.PeakHour{}
@@ -517,6 +518,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 				uint(req.QueryStartTime),
 				uint(req.QueryEndTime),
 				ctx.GetStaffUuid(),
+				req.ExcludeDataManage,
 			)
 			if err != nil {
 				// 如果出错，返回空切片

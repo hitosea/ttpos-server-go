@@ -169,6 +169,7 @@ type ICommonRepo interface {
 	WhereInSaleBillUuids(saleBillUuids []uint64) DBOption                                     // 根据销售单UUID列表查询
 	WhereByRelatedOrderType(relatedOrderType uint) DBOption                                   // 根据关联订单类型查询
 	WhereNotInRelatedOrderUuids(relatedOrderUuids []uint64) DBOption                          // 根据关联订单UUID列表查询
+	WhereBetweenFinishTime(startTime int64, endTime int64) DBOption                           // 根据完成时间查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
@@ -1005,5 +1006,12 @@ func (r *commonRepo) WhereByRelatedOrderType(relatedOrderType uint) DBOption {
 func (r *commonRepo) WhereNotInRelatedOrderUuids(relatedOrderUuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("related_order_uuid NOT IN (?)", relatedOrderUuids)
+	}
+}
+
+// WhereBetweenFinishTime 根据完成时间查询
+func (r *commonRepo) WhereBetweenFinishTime(startTime int64, endTime int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("finish_time BETWEEN ? AND ?", startTime, endTime)
 	}
 }
