@@ -7,7 +7,6 @@ package service
 
 import (
 	"context"
-	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
 )
 
@@ -18,10 +17,6 @@ type (
 		Get(ctx context.Context, shopOrderUuid string) (*dto.SkootarJob, error)
 		// GetWithDriver 根据 shop_order_uuid 查询订单及司机信息（新方法）
 		GetWithDriver(ctx context.Context, shopOrderUuid string) (*dto.OrderWithDriver, error)
-		// GetMenuSnapshot 根据 request_id 查询菜单快照
-		GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshotReq) (*api.GetMenuSnapshotResp, error)
-		// SaveMenuSnapshot 保存菜单快照
-		SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapshotReq) (*api.SaveMenuSnapshotResp, error)
 	}
 )
 

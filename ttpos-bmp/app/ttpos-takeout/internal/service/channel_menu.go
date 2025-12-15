@@ -7,6 +7,7 @@ package service
 
 import (
 	"context"
+	api "ttpos-bmp/app/ttpos-takeout/api/menu"
 )
 
 type (
@@ -17,6 +18,10 @@ type (
 		GetChannelMenu(ctx context.Context, shopUUID uint64, providerName string) (string, error)
 		// GetTtposMenu 读取TTPOS菜单快照
 		GetTtposMenu(ctx context.Context, shopUUID uint64, providerName string) (string, error)
+		// GetMenuSnapshot 根据 request_id 查询菜单快照
+		GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshotReq) (*api.GetMenuSnapshotResp, error)
+		// SaveMenuSnapshot 保存菜单快照
+		SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSnapshotReq) (*api.SaveMenuSnapshotResp, error)
 	}
 )
 

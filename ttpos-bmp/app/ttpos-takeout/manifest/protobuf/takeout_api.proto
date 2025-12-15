@@ -1,0 +1,10 @@
+syntax = "proto3";
+package takeout;
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/takeout";
+import "google/protobuf/any.proto";
+
+message ApiResponse {
+  string code = 1;
+  string message = 2;
+  google.protobuf.Any data = 3 ; // 响应数据，根据实际情况定义
+}
