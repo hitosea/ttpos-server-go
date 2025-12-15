@@ -82,6 +82,9 @@ type (
 		ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error)
 		// GetShopProviderCfg 查询门店第三方配置
 		GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error)
+		// UpdateMenuRecord 更新单个菜单记录 (商品或修饰符)
+		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record
+		UpdateMenuRecord(ctx context.Context, merchantID string, req grabfood.UpdateMenuRequest) error
 	}
 )
 

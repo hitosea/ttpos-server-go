@@ -608,6 +608,38 @@ func (s *sGrab) TraceMenuSync(ctx context.Context, merchantID string) (*grabfood
 	return resp, nil
 }
 
+// UpdateMenuRecord 更新单个菜单记录 (商品或修饰符)
+// 调用 GrabFood API PUT /partner/v1/merchants/menu/record
+// req 可以是 UpdateMenuItem 或 UpdateMenuModifier
+func (s *sGrab) UpdateMenuRecord(ctx context.Context, merchantID string, req grabfood.UpdateMenuRequest) error {
+	auth, err := s.getAuthorizationHeader(ctx)
+	if err != nil {
+		return gerror.Wrap(err, "获取授权信息失败")
+	}
+
+	httpResp, err := s.getClient().UpdateMenuRecordAPI.
+		UpdateMenu(s.getSDKContext(ctx)).
+		ContentType("application/json").
+		Authorization(auth).
+		UpdateMenuRequest(req).
+		Execute()
+
+	if err != nil {
+		return gerror.Wrap(err, "调用 SDK UpdateMenuRecord 失败")
+	}
+	if httpResp != nil {
+		defer httpResp.Body.Close()
+	}
+
+	// 检查 HTTP 状态码
+	if httpResp != nil && httpResp.StatusCode >= 400 {
+		return gerror.Newf("Grab API 返回错误: HTTP %d", httpResp.StatusCode)
+	}
+
+	g.Log().Infof(ctx, "[Grab] UpdateMenuRecord success: merchantID=%s", merchantID)
+	return nil
+}
+
 // ============================================================================
 // 自助激活链接 API
 // ============================================================================
