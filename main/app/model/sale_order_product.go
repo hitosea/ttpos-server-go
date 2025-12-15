@@ -918,6 +918,21 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 		newAttribute := attribute.CopyAttribute(model.SaleOrderUuid, productUuid)
 		product.SaleOrderProductAttributes = append(product.SaleOrderProductAttributes, newAttribute)
 	}
+	// 复制OrderItemRemarks
+	product.OrderItemRemarks = make([]*SaleOrderProductReason, 0)
+	for _, remark := range model.OrderItemRemarks {
+		if remark.IsDelete() {
+			continue
+		}
+		product.OrderItemRemarks = append(product.OrderItemRemarks, &SaleOrderProductReason{
+			BaseModel:             BaseModel{},
+			SaleOrderUuid:         saleOrderUuid,
+			SaleOrderProductUuid:  productUuid,
+			MultiLanguageNameUuid: remark.MultiLanguageNameUuid,
+			OrderItemRemarkUuid:   remark.OrderItemRemarkUuid,
+			Name:                  remark.Name,
+		})
+	}
 	return &product
 }
 

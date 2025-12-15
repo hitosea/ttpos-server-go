@@ -351,6 +351,8 @@ func (r *saleOrderProductRepo) WithSaleOrderProductAll() DBOption {
 			Preload("SaleOrderProductAttributes", NotDeleted).
 			Preload("SaleOrderProductAttributes.ProductAttribute").
 			Preload("SaleOrderProductAttributes.ProductAttribute.MultiLanguageName").
-			Preload("SaleBill")
+			Preload("SaleBill").
+			Preload("OrderItemRemarks").
+			Preload("OrderItemRemarks.MultiLanguageName")
 	}
 }
