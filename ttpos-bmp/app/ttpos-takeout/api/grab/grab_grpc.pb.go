@@ -11,6 +11,7 @@ package grab
 
 import (
 	context "context"
+	takeout "ttpos-bmp/app/ttpos-takeout/api/takeout"
 
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -36,12 +37,12 @@ const (
 type GrabClient interface {
 	// 创建自助激活链接
 	// 参数：provider_name（外卖渠道，如 grab、lineman）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
-	// 返回：provider_name、self_serve_url（自助点餐链接）、request_id（追踪ID）
-	CreateSelfServeJourney(ctx context.Context, in *CreateSelfServeJourneyReq, opts ...grpc.CallOption) (*CreateSelfServeJourneyResp, error)
+	// 返回：统一的 ApiResponse 格式，包含自助激活链接信息
+	CreateSelfServeJourney(ctx context.Context, in *CreateSelfServeJourneyReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 	// 查询门店第三方配置
 	// 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，默认 grab）
-	// 返回：门店集成状态、第三方商户ID、更新时间等
-	GetShopProviderCfg(ctx context.Context, in *GetShopProviderCfgReq, opts ...grpc.CallOption) (*GetShopProviderCfgResp, error)
+	// 返回：统一的 ApiResponse 格式，包含门店集成状态、第三方商户ID、更新时间等
+	GetShopProviderCfg(ctx context.Context, in *GetShopProviderCfgReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 }
 
 type grabClient struct {
@@ -52,9 +53,9 @@ func NewGrabClient(cc grpc.ClientConnInterface) GrabClient {
 	return &grabClient{cc}
 }
 
-func (c *grabClient) CreateSelfServeJourney(ctx context.Context, in *CreateSelfServeJourneyReq, opts ...grpc.CallOption) (*CreateSelfServeJourneyResp, error) {
+func (c *grabClient) CreateSelfServeJourney(ctx context.Context, in *CreateSelfServeJourneyReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateSelfServeJourneyResp)
+	out := new(takeout.ApiResponse)
 	err := c.cc.Invoke(ctx, Grab_CreateSelfServeJourney_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -62,9 +63,9 @@ func (c *grabClient) CreateSelfServeJourney(ctx context.Context, in *CreateSelfS
 	return out, nil
 }
 
-func (c *grabClient) GetShopProviderCfg(ctx context.Context, in *GetShopProviderCfgReq, opts ...grpc.CallOption) (*GetShopProviderCfgResp, error) {
+func (c *grabClient) GetShopProviderCfg(ctx context.Context, in *GetShopProviderCfgReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetShopProviderCfgResp)
+	out := new(takeout.ApiResponse)
 	err := c.cc.Invoke(ctx, Grab_GetShopProviderCfg_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -81,12 +82,12 @@ func (c *grabClient) GetShopProviderCfg(ctx context.Context, in *GetShopProvider
 type GrabServer interface {
 	// 创建自助激活链接
 	// 参数：provider_name（外卖渠道，如 grab、lineman）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
-	// 返回：provider_name、self_serve_url（自助点餐链接）、request_id（追踪ID）
-	CreateSelfServeJourney(context.Context, *CreateSelfServeJourneyReq) (*CreateSelfServeJourneyResp, error)
+	// 返回：统一的 ApiResponse 格式，包含自助激活链接信息
+	CreateSelfServeJourney(context.Context, *CreateSelfServeJourneyReq) (*takeout.ApiResponse, error)
 	// 查询门店第三方配置
 	// 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，默认 grab）
-	// 返回：门店集成状态、第三方商户ID、更新时间等
-	GetShopProviderCfg(context.Context, *GetShopProviderCfgReq) (*GetShopProviderCfgResp, error)
+	// 返回：统一的 ApiResponse 格式，包含门店集成状态、第三方商户ID、更新时间等
+	GetShopProviderCfg(context.Context, *GetShopProviderCfgReq) (*takeout.ApiResponse, error)
 	mustEmbedUnimplementedGrabServer()
 }
 
@@ -94,10 +95,10 @@ type GrabServer interface {
 type UnimplementedGrabServer struct {
 }
 
-func (UnimplementedGrabServer) CreateSelfServeJourney(context.Context, *CreateSelfServeJourneyReq) (*CreateSelfServeJourneyResp, error) {
+func (UnimplementedGrabServer) CreateSelfServeJourney(context.Context, *CreateSelfServeJourneyReq) (*takeout.ApiResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSelfServeJourney not implemented")
 }
-func (UnimplementedGrabServer) GetShopProviderCfg(context.Context, *GetShopProviderCfgReq) (*GetShopProviderCfgResp, error) {
+func (UnimplementedGrabServer) GetShopProviderCfg(context.Context, *GetShopProviderCfgReq) (*takeout.ApiResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetShopProviderCfg not implemented")
 }
 func (UnimplementedGrabServer) mustEmbedUnimplementedGrabServer() {}
