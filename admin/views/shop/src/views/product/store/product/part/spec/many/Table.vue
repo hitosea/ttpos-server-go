@@ -147,7 +147,8 @@
               </el-form-item>
             </template>
           </el-table-column>
-          <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
+          <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+          <!-- <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
                 <el-button
@@ -162,8 +163,8 @@
                 <el-form-item for="no_click" label="" class="max-w230">
                   <el-input v-model="item.product_name_text" disabled></el-input>
                 </el-form-item>
-                <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
-                <!-- <el-form-item
+             
+                <el-form-item
                   for="no_click"
                   label=""
                   class="max-w230"
@@ -186,14 +187,14 @@
                     :disabled="erp_is_open == 1"
                   >
                   </el-input-number>
-                </el-form-item> -->
-                <!-- <span class="mt--16">{{ item.product_unit_text }}</span> -->
+                </el-form-item>
+                <span class="mt--16">{{ item.product_unit_text }}</span>
                 <el-icon class="delete-icon" @click="handleDelete(scope.$index, index)">
                   <Delete />
                 </el-icon>
               </div>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column label="" fixed="right" width="100">
             <template #default="scope">
               <el-form-item label="" style="margin-bottom: 0">

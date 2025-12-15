@@ -29,8 +29,8 @@
         </el-tooltip>
       </div>
     </el-form>
-    <!-- 调整库存弹窗 -->
-    <el-dialog v-if="dialogVisible" v-model="dialogVisible" :title="$t('调整库存')" width="700" align-center append-to-body>
+    <!-- 调整库存弹窗 2025年12月12日13:49:13 任务37468 -->
+    <!-- <el-dialog v-if="dialogVisible" v-model="dialogVisible" :title="$t('调整库存')" width="700" align-center append-to-body>
       <el-form size="small" :inline="true" ref="tiaoRef" :model="tiao" label-position="top">
         <el-table size="small" ref="multipleTable" :data="form.model.sku" border style="width: 100%" v-loading="loading">
           <el-table-column prop="product.type" width="300" :label="$t('规格名称')" v-if="form.model.type == '10'">
@@ -59,7 +59,7 @@
           <el-button type="primary" @click="() => onSubmit(1)" :loading="save_loading"> {{ $t('确定') }}</el-button>
         </div>
       </template>
-    </el-dialog>
+    </el-dialog> -->
   </div>
 </template>
 
@@ -105,7 +105,7 @@
   const loading = ref(true);
   const save_loading = ref(false);
   const stockNumChange = ref(false);
-  const dialogVisible = ref(false);
+//   const dialogVisible = ref(false);
   const languageKey_ref = ref(languageKey);
   const pageParams = ref({});
 
@@ -562,12 +562,12 @@
           stockNumChange.value = true;
         }
       }
-      // 如果库存数量发生变化且e不等于1，则显示对话框
-      if (stockNumChange.value && e != 1) {
-        dialogVisible.value = true;
-        save_loading.value = false;
-        return;
-      }
+    //   // 如果库存数量发生变化且e不等于1，则显示对话框
+    //   if (stockNumChange.value && e != 1) {
+    //     dialogVisible.value = true;
+    //     save_loading.value = false;
+    //     return;
+    //   }
       // 如果库存数量发生变化且e等于1，则调用tiao的validate方法
       if (stockNumChange.value && e == 1) {
         tiaoRef.value.validate(() => {});
@@ -595,7 +595,7 @@
         cancelFunc();
       } catch (res) {
         save_loading.value = false;
-        dialogVisible.value = false;
+        // dialogVisible.value = false;
         if ((res.data || []).length > 0) {
           await res.data.map((item, index) => {
             form.model.sku[index].barcodeUniqueness = item;
