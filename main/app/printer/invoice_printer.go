@@ -150,7 +150,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 				tmpInfo.TmpData,
 				saleBill,
 				saleOrder,
-				false,
+				p.Is58mmPrinter(),
 			)
 		}
 		if !p.Is58mmPrinter() {
