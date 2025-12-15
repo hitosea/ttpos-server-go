@@ -2377,10 +2377,6 @@ func GetMultiLanguageName(ctx context.Context, enName string) (*dto.LocaleRespon
 
 // EditProductUnit 编辑产品单位
 func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.ProductUnitEditReq) error {
-	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !editUnitReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("名称不能为空")
-	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -2394,8 +2390,14 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		return errors.New("单位名称不存在")
 	}
 
+	// NOTE: 本期不考虑子店商品关联从总部同步下来的规格、属性、加料、单位后，总店删除规格、属性、加料、单位的情况
 	if !isEditable(ctx, productUnit.HeadquarterUuid) {
-		return errors.New("单位不可编辑")
+		editUnitReq.LocaleName = productUnit.MultiLanguageName.GetNames()
+	} else {
+		storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+		if !editUnitReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return errors.New("名称不能为空")
+		}
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -2754,10 +2756,6 @@ func isEditable(_ context.Context, headquarterUuid uint64) bool {
 
 // EditProductSauce 编辑商品加料
 func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSauceEditReq) error {
-	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("名称不能为空")
-	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -2773,8 +2771,17 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	if productSauce.MultiLanguageNameUuid == 0 {
 		return errors.New("加料名称不存在")
 	}
+
+	// NOTE: 本期不考虑子店商品关联从总部同步下来的规格、属性、加料、单位后，总店删除规格、属性、加料、单位的情况
 	if !isEditable(ctx, productSauce.HeadquarterUuid) {
-		return errors.New("加料不可编辑")
+		price := productSauce.Price
+		editReq.LocaleName = productSauce.MultiLanguageName.GetNames()
+		editReq.Price = &price
+	} else {
+		storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+		if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return errors.New("名称不能为空")
+		}
 	}
 
 	// 检查商品是否存在
@@ -3571,36 +3578,55 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.ProductAttributeGroupEditReq) error {
 	// companySetting := ctx.GetCompanySetting()
 	var relatedProductUuid bool
-	// 检查多语言
-	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("属性组名称不能为空")
-	}
-	for _, productAttribute := range editReq.ProductAttributes {
-		if !relatedProductUuid && len(productAttribute.ProductPackageUuids) > 0 {
-			relatedProductUuid = true
-		}
-		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
-			return errors.New("属性值名称不能为空")
-		}
-	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
-
-	var manualTranslatedUuids []uint64
 	// 检查属性组是否存在
 	attributeGroup, err := productRepo.GetProductAttributeGroup(
 		productRepo.WhereUuid(editReq.Uuid),
 		productRepo.WithProductAttributes(),
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductAttributesMultiLanguageName(),
 	)
 	if err != nil {
 		return errors.WithMessage(errors.New("属性组不存在"), err.Error())
 	}
-	manualTranslatedUuids = append(manualTranslatedUuids, attributeGroup.MultiLanguageNameUuid)
+
+	// NOTE: 本期不考虑子店商品关联从总部同步下来的规格、属性、加料、单位后，总店删除规格、属性、加料、单位的情况
 	if !isEditable(ctx, attributeGroup.HeadquarterUuid) {
-		return errors.New("属性组不可编辑")
+		editReq.LocaleName = attributeGroup.MultiLanguageName.GetNames()
+		for k, productAttribute := range editReq.ProductAttributes {
+			// 修改从总店同步的属性组，只能编辑属性，不可新增属性
+			if productAttribute.Uuid == 0 {
+				return errors.WithMessage(errors.New("参数错误"))
+			}
+			for _, attribute := range attributeGroup.ProductAttributes {
+				if attribute.Uuid == productAttribute.Uuid {
+					editReq.ProductAttributes[k].LocaleName = attribute.MultiLanguageName.GetNames()
+					editReq.ProductAttributes[k].Sort = attribute.Sort
+					break
+				}
+			}
+		}
+	} else {
+		// 检查多语言
+		storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+		if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return errors.New("属性组名称不能为空")
+		}
+		for _, productAttribute := range editReq.ProductAttributes {
+			if !relatedProductUuid && len(productAttribute.ProductPackageUuids) > 0 {
+				relatedProductUuid = true
+			}
+			if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
+				return errors.New("属性值名称不能为空")
+			}
+		}
 	}
+
+	var manualTranslatedUuids []uint64
+	manualTranslatedUuids = append(manualTranslatedUuids, attributeGroup.MultiLanguageNameUuid)
+
 	// 检查传递的属性值是否存在
 	var attributeUuids []uint64
 	for _, attribute := range editReq.ProductAttributes {
@@ -3929,16 +3955,34 @@ func (s *productSrv) getAttributeUuidListByProductPackageUuid(productAttributes 
 
 // EditProductFlavor 编辑商品规格
 func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductFlavorEditReq) error {
-	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("名称不能为空")
-	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	lang := ctx.GetLanguage()
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	productPackageGroupRepo := repository.NewProductPackageGroupRepo(db)
 
+	flavor, err := productRepo.GetProductFlavor(
+		productRepo.WhereUuid(editReq.Uuid),
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WithMultiLanguageName(),
+	)
+	if err != nil || flavor.ID == 0 {
+		return errors.WithMessage(err, "获取商品规格详情失败")
+	}
+
+	if flavor.MultiLanguageNameUuid == 0 {
+		return errors.New("商品规格名称不存在")
+	}
+
+	// NOTE: 本期不考虑子店商品关联从总部同步下来的规格、属性、加料、单位后，总店删除规格、属性、加料、单位的情况
+	if !isEditable(ctx, flavor.HeadquarterUuid) {
+		editReq.LocaleName = flavor.MultiLanguageName.GetNames()
+	} else {
+		storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+		if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return errors.New("名称不能为空")
+		}
+	}
 	productNames := []string{}
 	packageNames := []string{}
 	for _, item := range editReq.List {
@@ -3992,19 +4036,12 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 	}
 
 	var manualTranslatedUuid uint64
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
 
-		flavor, err := productRepo.GetProductFlavor(
-			productRepo.WhereUuid(editReq.Uuid),
-			commonRepo.WhereBySoftDelete(),
-		)
-		if err != nil || flavor.ID == 0 {
-			return errors.WithMessage(err, "获取商品规格详情失败")
-		}
 		manualTranslatedUuid = flavor.MultiLanguageNameUuid
 		// 更新多语言名称
 		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", flavor.MultiLanguageNameUuid).Updates(map[string]any{
