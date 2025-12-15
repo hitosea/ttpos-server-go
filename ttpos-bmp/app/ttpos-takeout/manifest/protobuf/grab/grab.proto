@@ -4,6 +4,8 @@ syntax = "proto3";
 
 package grab;
 
+import "takeout_api.proto";
+
 // Go 包路径配置
 option go_package = "ttpos-bmp/app/ttpos-takeout/api/grab";
 
@@ -12,13 +14,13 @@ option go_package = "ttpos-bmp/app/ttpos-takeout/api/grab";
 service Grab {
   // 创建自助激活链接
   // 参数：provider_name（外卖渠道，如 grab、lineman）、shop_uuid（门店UUID）、request_id（追踪ID，可选）
-  // 返回：provider_name、self_serve_url（自助点餐链接）、request_id（追踪ID）
-  rpc CreateSelfServeJourney (CreateSelfServeJourneyReq) returns (CreateSelfServeJourneyResp);
+  // 返回：统一的 ApiResponse 格式，包含自助激活链接信息
+  rpc CreateSelfServeJourney (CreateSelfServeJourneyReq) returns (takeout.ApiResponse);
 
   // 查询门店第三方配置
   // 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，默认 grab）
-  // 返回：门店集成状态、第三方商户ID、更新时间等
-  rpc GetShopProviderCfg (GetShopProviderCfgReq) returns (GetShopProviderCfgResp);
+  // 返回：统一的 ApiResponse 格式，包含门店集成状态、第三方商户ID、更新时间等
+  rpc GetShopProviderCfg (GetShopProviderCfgReq) returns (takeout.ApiResponse);
 }
 
 // 创建自助激活链接请求消息

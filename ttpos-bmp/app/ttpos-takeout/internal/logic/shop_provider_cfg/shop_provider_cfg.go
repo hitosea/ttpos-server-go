@@ -3,7 +3,6 @@ package shop_provider_cfg
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -61,7 +60,7 @@ func (s *sShopProviderCfg) UpsertShopProviderCfg(ctx context.Context, shopUUID u
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] Upsert failed: shop_uuid=%d, provider=%s, status=%s, error: %v",
 			shopUUID, providerName, status, err)
-		return fmt.Errorf("failed to upsert shop_provider_cfg: %w", err)
+		return gerror.Wrap(err, "更新门店第三方配置失败")
 	}
 
 	g.Log().Infof(ctx, "[ShopProviderCfg] Upsert success: shop_uuid=%d, provider=%s, merchant_id=%s, status=%s",
@@ -87,7 +86,7 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] Query failed: shop_uuid=%d, provider=%s, error: %v",
 			shopUUID, providerName, err)
-		return nil, fmt.Errorf("failed to query shop_provider_cfg: %w", err)
+		return nil, gerror.Wrap(err, "查询门店第三方配置失败")
 	}
 
 	// 检查是否找到记录
@@ -103,7 +102,7 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 func (s *sShopProviderCfg) NotifyStoreIntegrationState(ctx context.Context, event *grabDto.ShopIntegrationStatusEvent) error {
 	if err := queue.PushWithContext(ctx, TopicStoreIntegrationState, event); err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] Failed to send integration state event: %v", err)
-		return fmt.Errorf("failed to send store integration state event: %w", err)
+		return gerror.Wrap(err, "发送门店集成状态变更通知失败")
 	}
 
 	g.Log().Infof(ctx, "[ShopProviderCfg] Integration state event sent: topic=%s, shop_uuid=%d, status=%s",
