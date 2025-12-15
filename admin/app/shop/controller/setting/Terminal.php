@@ -745,6 +745,57 @@ class Terminal extends Controller
             } else {
                 $ret['advanced_password'] = false;
             }
+
+            // 判断如果wait_color不为空，则将wait_color转换为wait_time_color_ranges
+            if (!empty($ret['wait_color']) && empty($ret['wait_time_color_ranges'])) {
+                $waitColor = $ret['wait_color'];
+                $waitTimeColorRanges = [];
+                
+                // 第一区间固定黑色
+                $waitTimeColorRanges[] = [
+                    'minute' => '0',
+                    'color' => '#100A05'
+                ];
+                
+                // 颜色映射
+                $colorMap = [
+                    'red' => '#E50028',
+                    'yellow' => '#FFBE00'
+                ];
+                
+                // 旧格式：["red", "yellow"] 或 ["yellow", "red"]
+                // 第一个元素对应第二区间（10分钟），第二个元素对应第三区间（20分钟）
+                for ($i = 0; $i < 2 && $i < count($waitColor); $i++) {
+                    $minute = ($i == 0) ? '10' : '20';
+                    $color = '#FFBE00'; // 默认黄色
+                    if (isset($colorMap[$waitColor[$i]])) {
+                        $color = $colorMap[$waitColor[$i]];
+                    }
+                    $waitTimeColorRanges[] = [
+                        'minute' => $minute,
+                        'color' => $color
+                    ];
+                }
+                
+                // 如果旧格式数据不足，使用默认值
+                if (count($waitTimeColorRanges) < 3) {
+                    if (count($waitTimeColorRanges) == 1) {
+                        $waitTimeColorRanges[] = [
+                            'minute' => '10',
+                            'color' => '#FFBE00'
+                        ];
+                    }
+                    if (count($waitTimeColorRanges) == 2) {
+                        $waitTimeColorRanges[] = [
+                            'minute' => '20',
+                            'color' => '#E50028'
+                        ];
+                    }
+                }
+                
+                $ret['wait_time_color_ranges'] = $waitTimeColorRanges;
+            }
+
             // 绑定设备列表
             $ret['bind_list'] = (new BindRecord)->getBindList(BindRecord::SOURCE_KITCHEN, $shopSupplierId) ?: [];
             // 打印机列表

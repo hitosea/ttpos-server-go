@@ -35825,6 +35825,35 @@ paths:
       summary: 添加员工
       tags:
       - 商家端.员工账号
+  /shop/staff/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据员工uuid查询员工详情，包括员工在各门店的角色信息和当前门店的启用禁用状态
+      parameters:
+      - description: 员工UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.Staff'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取员工详情
+      tags:
+      - 商家端.员工账号
   /shop/staff/list:
     get:
       consumes:
