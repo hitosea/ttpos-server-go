@@ -8,7 +8,6 @@ package service
 import (
 	"context"
 	"time"
-
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
@@ -41,52 +40,48 @@ type (
 		// HandleIntegrationStatus 处理门店集成状态回调
 		// 签名验证已由中间件完成
 		HandleIntegrationStatus(ctx context.Context, body []byte) error
-		// PauseStore 暂停门店
-		PauseStore(ctx context.Context, merchantID string, duration int) error
-		// ResumeStore 恢复门店营业
-		ResumeStore(ctx context.Context, merchantID string) error
+		// HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
+		HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error
 		// AcceptOrder 接受订单
 		AcceptOrder(ctx context.Context, orderID string) error
 		// RejectOrder 拒绝订单
 		RejectOrder(ctx context.Context, orderID string, rejectCode int) error
-		// MarkOrderReady 标记订单准备完成
-		MarkOrderReady(ctx context.Context, orderID string, markStatus string) error
 		// CancelOrder 取消订单
 		CancelOrder(ctx context.Context, orderID string, cancelCode int) error
-		// GetPartnerToken 生成 Grab Partner Token，提供给 Grab 调用
-		// 校验 client_id 和 client_secret，使用请求中的 scope 生成 Token
-		GetPartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (accessToken string, expiresIn int, err error)
-		// ParsePartnerToken 校验并解析 Partner Token
-		// 用于中间件验证 Grab 发送的请求中携带的 Token
-		ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error)
-		// HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
-		HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMenuDTO) error
-		// GetShopProviderCfg 查询门店第三方配置
-		GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error)
-
-		// ============================================================================
-		// 以下是从 SDKWrapper 整合的新方法
-		// ============================================================================
-
-		// CreateSelfServeJourney 创建自助激活链接
-		// merchantID: Grab Merchant ID
-		// 返回: activation_url, request_id, error
-		CreateSelfServeJourney(ctx context.Context, merchantID string) (activationURL string, requestID string, err error)
+		// MarkOrderReady 标记订单准备完成
+		MarkOrderReady(ctx context.Context, orderID string, markStatus string) error
+		// UpdateDeliveryState 更新配送状态 (自配送)
+		UpdateDeliveryState(ctx context.Context, orderID string, fromState string, toState string) error
+		// UpdateOrderReadyTime 更新订单准备时间
+		UpdateOrderReadyTime(ctx context.Context, orderID string, newReadyTime time.Time) error
+		// CheckOrderCancelable 检查订单是否可取消
+		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error)
+		// PauseStore 暂停门店
+		PauseStore(ctx context.Context, merchantID string, duration int) error
+		// ResumeStore 恢复门店营业
+		ResumeStore(ctx context.Context, merchantID string) error
 		// GetStoreStatus 获取门店状态
 		GetStoreStatus(ctx context.Context, merchantID string) (*grabfood.StoreStatusResponse, error)
 		// GetStoreHours 获取门店营业时间
 		GetStoreHours(ctx context.Context, merchantID string) (*grabfood.StoreHourResponse, error)
 		// NotifyMenuUpdate 通知 Grab 菜单已更新
 		// 返回 requestID 用于追踪同步状态
-		NotifyMenuUpdate(ctx context.Context, merchantID string) (requestID string, err error)
+		// 此方法实现 MenuNotifier 接口
+		NotifyMenuUpdate(ctx context.Context, merchantID string) (string, error)
 		// TraceMenuSync 追踪菜单同步状态
 		TraceMenuSync(ctx context.Context, merchantID string) (*grabfood.MenuSyncResponse, error)
-		// CheckOrderCancelable 检查订单是否可取消
-		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (cancelable bool, reason string, err error)
-		// UpdateDeliveryState 更新配送状态 (自配送)
-		UpdateDeliveryState(ctx context.Context, orderID string, fromState string, toState string) error
-		// UpdateOrderReadyTime 更新订单准备时间
-		UpdateOrderReadyTime(ctx context.Context, orderID string, newReadyTime time.Time) error
+		// CreateSelfServeJourney 创建自助激活链接
+		// merchantID: Grab Merchant ID
+		// 返回: activation_url, request_id
+		CreateSelfServeJourney(ctx context.Context, merchantID string) (string, string, error)
+		// GetPartnerToken 生成 Grab Partner Token，提供给 Grab 调用
+		// 校验 client_id 和 client_secret，使用请求中的 scope 生成 Token
+		GetPartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (accessToken string, expiresIn int, err error)
+		// ParsePartnerToken 校验并解析 Partner Token
+		// 用于中间件验证 Grab 发送的请求中携带的 Token
+		ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error)
+		// GetShopProviderCfg 查询门店第三方配置
+		GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error)
 	}
 )
 

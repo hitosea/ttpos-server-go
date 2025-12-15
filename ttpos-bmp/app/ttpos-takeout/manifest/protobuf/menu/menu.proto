@@ -1,0 +1,33 @@
+syntax = "proto3";
+package menu;
+import "takeout_api.proto" ;
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/menu";
+
+
+message GetMenuSnapshotReq {
+  string provider_name = 1; // 渠道名称: grab,lineman
+  string shop_uuid = 2;     // 店铺 UUID
+  string request_id = 3;    // 请求 ID,可选
+}
+
+message GetMenuSnapshotResp {
+  string content = 2;          // Provider 侧原始菜单 JSON
+  int64 updated_at = 3;        // 快照更新时间
+  string sync_state = 4;       // 同步状态  QUEUED/PROCESSING/SUCCESS/FAIL
+}
+
+message SaveMenuSnapshotReq {
+  string provider_name = 1; // 渠道名称: grab,lineman
+  string shop_uuid = 2;     // 店铺 UUID
+  string menu_data = 3;     // 菜单数据 JSON 字符串
+  string request_id = 4;    // 请求 ID
+}
+
+message SaveMenuSnapshotResp {
+}
+
+// 外卖菜单服务
+service MenuService {
+    rpc GetMenuSnapshot (GetMenuSnapshotReq) returns (takeout.ApiResponse) {}
+    rpc SaveMenuSnapshot (SaveMenuSnapshotReq) returns (takeout.ApiResponse) {}
+}
