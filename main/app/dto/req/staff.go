@@ -219,3 +219,11 @@ var GetStaffListReqReqMessage = map[string]string{
 type SearchStaffByKeywordReq struct {
 	Keyword string `form:"keyword" binding:"required"` // 关键词, 邮箱、手机号
 }
+
+type GetStaffDetailReq struct {
+	Uuid uint64 `form:"uuid" binding:"required"` // 员工UUID
+}
+
+var GetStaffDetailRequestMessage = map[string]string{
+	"uuid.required": "员工UUID不能为空",
+}
