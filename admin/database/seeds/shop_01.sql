@@ -3296,6 +3296,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sync_task` (
   `panic` text COMMENT 'panic错误信息',
   `start_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '开始时间',
   `end_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '结束时间',
+  `request_params` text COMMENT '请求参数(JSON格式)',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',

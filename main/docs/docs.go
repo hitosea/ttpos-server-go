@@ -44441,6 +44441,13 @@ const docTemplate = `{
                     "description": "备注，平板端离线购物车提交",
                     "type": "string"
                 },
+                "remark_uuids": {
+                    "description": "备注预设UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "sauce_product_bom_uuid_list": {
                     "description": "加料信息",
                     "type": "array",

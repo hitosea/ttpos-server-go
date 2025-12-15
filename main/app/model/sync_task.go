@@ -3,13 +3,14 @@ package model
 // SyncTask 同步任务表 ttpos_sync_task
 type SyncTask struct {
 	BaseModel
-	Status       uint8  `gorm:"column:status;type:int(10);default:0;comment:同步状态: 0-进行中, 1-已完成, 2-失败;NOT NULL" json:"status"`
-	TotalCount   uint32 `gorm:"column:total_count;type:int(10);default:0;comment:总任务数;NOT NULL" json:"total_count"`
-	SuccessCount uint32 `gorm:"column:success_count;type:int(10);default:0;comment:成功任务数;NOT NULL" json:"success_count"`
-	FailCount    uint32 `gorm:"column:fail_count;type:int(10);default:0;comment:失败任务数;NOT NULL" json:"fail_count"`
-	Panic        string `gorm:"column:panic;type:text;comment:panic错误信息" json:"panic"`
-	StartTime    int64  `gorm:"column:start_time;type:int(10);default:0;comment:开始时间;NOT NULL" json:"start_time"`
-	EndTime      int64  `gorm:"column:end_time;type:int(10);default:0;comment:结束时间;NOT NULL" json:"end_time"`
+	Status        uint8  `gorm:"column:status;type:int(10);default:0;comment:同步状态: 0-进行中, 1-已完成, 2-失败;NOT NULL" json:"status"`
+	TotalCount    uint32 `gorm:"column:total_count;type:int(10);default:0;comment:总任务数;NOT NULL" json:"total_count"`
+	SuccessCount  uint32 `gorm:"column:success_count;type:int(10);default:0;comment:成功任务数;NOT NULL" json:"success_count"`
+	FailCount     uint32 `gorm:"column:fail_count;type:int(10);default:0;comment:失败任务数;NOT NULL" json:"fail_count"`
+	Panic         string `gorm:"column:panic;type:text;comment:panic错误信息" json:"panic"`
+	StartTime     int64  `gorm:"column:start_time;type:int(10);default:0;comment:开始时间;NOT NULL" json:"start_time"`
+	EndTime       int64  `gorm:"column:end_time;type:int(10);default:0;comment:结束时间;NOT NULL" json:"end_time"`
+	RequestParams string `gorm:"column:request_params;type:text;comment:请求参数(JSON格式)" json:"request_params"`
 
 	// 关联
 	Items []SyncTaskItem `gorm:"foreignKey:SyncTaskUuid;references:Uuid" json:"items,omitempty"`
