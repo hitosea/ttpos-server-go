@@ -11,7 +11,7 @@
         </el-form-item>
       </el-form>
       <div class="pb-4">
-        <el-button type="primary" icon="Plus" :loading="formLoading" @click="handleAdd" :disabled="true">{{ $t('添加账号') }}</el-button>
+        <el-button type="primary" v-permission="['admin_admin.staff_add']" icon="Plus" :loading="formLoading" @click="handleAdd" :disabled="true">{{ $t('添加账号') }}</el-button>
       </div>
     </div>
     <!-- 表格 -->
@@ -48,6 +48,7 @@
             :model-value="scope.row.is_disable === 0 ? 1 : 0"
             :active-value="1"
             :inactive-value="0"
+            v-permission="['admin_admin.staff_updateStatus']"
             @change="handleStatus(scope.row)"
           ></el-switch>
         </template>
@@ -55,7 +56,14 @@
       <el-table-column prop="create_time" :label="$t('添加时间')"></el-table-column>
       <el-table-column fixed="right" :label="$t('操作')" width="150">
         <template #default="scope">
-          <el-button type="primary" link :disabled="true" :loading="formLoading && staffId == scope.row.uuid" @click="handleEdit(scope.row)">
+          <el-button
+            type="primary"
+            v-permission="['admin_admin.staff_edit']"
+            link
+            :disabled="true"
+            :loading="formLoading && staffId == scope.row.uuid"
+            @click="handleEdit(scope.row)"
+          >
             {{ $t('编辑') }}
           </el-button>
         </template>
