@@ -1322,7 +1322,10 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			res.BatchCookingMode = businessSetting.BatchCookingMode
+			// 没开启分批时，才返回 BatchCookingMode
+			if !businessSetting.OpenIsBatch() {
+				res.BatchCookingMode = businessSetting.BatchCookingMode
+			}
 		}
 		return res, nil
 	}
