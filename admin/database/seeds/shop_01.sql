@@ -242,6 +242,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     -- 骑手信息
     `rider_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手名称',
     `rider_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手电话',
+    `rider_avatar` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '骑手头像',
+    `rider_rating` decimal(20,4) NOT NULL DEFAULT '0.0000' COMMENT '骑手评分',
     `location` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手位置,格式:纬度,经度',
     `remaining_distance`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '剩余距离',
     -- 排序相关
