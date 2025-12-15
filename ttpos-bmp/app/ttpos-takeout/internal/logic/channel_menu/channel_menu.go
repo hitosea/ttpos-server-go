@@ -88,7 +88,7 @@ func (s *sChannelMenu) GetTtposMenu(ctx context.Context, shopUUID uint64, provid
 	return record[dao.ChannelMenuSnapshot.Columns().TtposMenuData].String(), nil
 }
 
-// GetMenuSnapshot 根据 request_id 查询菜单快照
+// GetMenuSnapshot
 func (s *sChannelMenu) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnapshotReq) (*api.GetMenuSnapshotResp, error) {
 	// 参数校验
 	if req.ProviderName == "" {
@@ -112,12 +112,8 @@ func (s *sChannelMenu) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnap
 	}
 
 	// 从记录中提取字段值（使用字段名字符串，兼容迁移前后）
-	menuData := record[dao.ChannelMenuSnapshot.Columns().TtposMenuData].String()
-	// 尝试获取 ttpos_updated_at，如果不存在则使用 updated_at
-	updatedAt := record[dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt].Int64()
-	if updatedAt == 0 {
-		updatedAt = record[dao.ChannelMenuSnapshot.Columns().UpdatedAt].Int64()
-	}
+	menuData := record[dao.ChannelMenuSnapshot.Columns().MenuData].String()
+	updatedAt := record[dao.ChannelMenuSnapshot.Columns().UpdatedAt].Int64()
 	syncState := record[dao.ChannelMenuSnapshot.Columns().SyncState].String()
 
 	// 构建响应
