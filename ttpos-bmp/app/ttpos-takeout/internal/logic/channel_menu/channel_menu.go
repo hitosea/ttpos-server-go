@@ -112,7 +112,7 @@ func (s *sChannelMenu) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnap
 	}
 
 	// 从记录中提取字段值（使用字段名字符串，兼容迁移前后）
-	content := record[dao.ChannelMenuSnapshot.Columns().TtposMenuData].String()
+	menuData := record[dao.ChannelMenuSnapshot.Columns().TtposMenuData].String()
 	// 尝试获取 ttpos_updated_at，如果不存在则使用 updated_at
 	updatedAt := record[dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt].Int64()
 	if updatedAt == 0 {
@@ -122,8 +122,7 @@ func (s *sChannelMenu) GetMenuSnapshot(ctx context.Context, req *api.GetMenuSnap
 
 	// 构建响应
 	resp := &api.GetMenuSnapshotResp{
-
-		Content:   content,
+		MenuData:  menuData,
 		UpdatedAt: updatedAt,
 		SyncState: syncState,
 	}
