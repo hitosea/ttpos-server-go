@@ -11,7 +11,7 @@ message GetMenuSnapshotReq {
 }
 
 message GetMenuSnapshotResp {
-  string content = 2;          // Provider 侧原始菜单 JSON
+  string menu_data = 2;        // Provider 侧原始菜单 JSON
   int64 updated_at = 3;        // 快照更新时间
   string sync_state = 4;       // 同步状态  QUEUED/PROCESSING/SUCCESS/FAIL
 }
@@ -28,6 +28,8 @@ message SaveMenuSnapshotResp {
 
 // 外卖菜单服务
 service MenuService {
+    // 获取菜单快照
     rpc GetMenuSnapshot (GetMenuSnapshotReq) returns (takeout.ApiResponse) {}
+    // 保存ttpos 菜单快照数据
     rpc SaveMenuSnapshot (SaveMenuSnapshotReq) returns (takeout.ApiResponse) {}
 }
