@@ -186,6 +186,11 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 				if err := repository.NewSaleOrderCouponRepo(tx).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err, "取消销售订单所有优惠券失败")
 				}
+				// 取消满减活动
+				saleOrder.SetActivityCancel()
+				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderActivity(saleOrder.Uuid, 0, "", 0, saleOrder.AutoPointsExchange); err != nil {
+					return errors.WithMessage(err, "取消销售订单满减活动失败")
+				}
 				// 更新销售订单的积分抵扣信息
 				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
 					return errors.WithMessage(err)
