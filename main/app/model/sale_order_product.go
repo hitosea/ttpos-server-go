@@ -881,6 +881,7 @@ func (model *SaleOrderProduct) SetNil() {
 	model.H5Order = nil
 	model.ProductMustPlan = nil
 	model.BatchTag = nil
+	model.OrderItemRemarks = nil
 }
 
 // 复制销售订单商品

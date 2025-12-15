@@ -24,7 +24,9 @@
         "serena",
         "start-mcp-server",
         "--context",
-        "ide-assistant"
+        "ide",
+        "--project",
+        "ttpos-server-go"
       ]
     }
   }

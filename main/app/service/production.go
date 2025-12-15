@@ -288,9 +288,9 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				item.CreateTime = product.BatchTime
 			}
 
-			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
 				remark := item.Remark
-				orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
 				if len(orderItemRemarkList) > 0 {
 					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
 					remark = remarkInfo.Remark.GetLocale(language)
@@ -325,8 +325,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				return *remark
 			}()
 			remark := item.Remark
-			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
-			if len(orderItemRemarkList) > 0 {
+			if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
 				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
 				remark = remarkInfo.Remark.GetLocale(language)
 			}
@@ -517,9 +516,9 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 				item.CreateTime = product.BatchTime
 			}
 
-			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
 				remark := item.Remark
-				orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
 				if len(orderItemRemarkList) > 0 {
 					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
 					remark = remarkInfo.Remark.GetLocale(language)
@@ -553,8 +552,7 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 				return resp.BatchTagInfo{}
 			}()
 			remark := item.Remark
-			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
-			if len(orderItemRemarkList) > 0 {
+			if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
 				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
 				remark = remarkInfo.Remark.GetLocale(language)
 			}

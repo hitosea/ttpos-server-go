@@ -423,6 +423,10 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 		if voiceCallEnabled == nil {
 			voiceCallEnabled = &[]bool{false}[0]
 		}
+		backgroundImageUrl := bindInfo.BackgroundImageUrl
+		if backgroundImageUrl == "" {
+			backgroundImageUrl = "/"
+		}
 		list = append(list, resp.DeviceItem{
 			Uuid:               device.Uuid,
 			DeviceId:           device.DeviceId,
@@ -430,7 +434,7 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 			Lang1:              bindInfo.Lang1,
 			Lang2:              bindInfo.Lang2,
 			Name:               name,
-			BackgroundImageUrl: bindInfo.BackgroundImageUrl,
+			BackgroundImageUrl: backgroundImageUrl,
 			TimeoutLimit:       timeoutLimit,
 			VoiceCallEnabled:   voiceCallEnabled,
 			CallCount:          callCount,
