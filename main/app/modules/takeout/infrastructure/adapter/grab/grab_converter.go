@@ -418,7 +418,7 @@ func (c *GrabConverter) ValidateData(platformData interface{}) error {
 }
 
 // LoadMenuFromDatabase 从数据库加载菜单数据（辅助方法）
-func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid uint64, currencyUnit string, categoryIDs []uint64, sellingTimeIDs []uint64) (*entity.TakeoutMenu, error) {
+func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid uint64, currencyUnit string, categoryIDs []uint64) (*entity.TakeoutMenu, error) {
 	// 创建菜单聚合根
 	menu, err := entity.NewTakeoutMenu(companyUuid)
 	if err != nil {

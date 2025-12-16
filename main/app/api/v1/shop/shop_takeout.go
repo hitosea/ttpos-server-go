@@ -3,8 +3,6 @@ package shop
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
 	"ttpos-server-go/app/modules/takeout/types/request"
@@ -194,37 +192,57 @@ func (h *TakeoutHandler) GetTakeoutMenu(c *gin.Context) {
 	helper.Success(c, result)
 }
 
-// ImportMenu 导入外卖菜单
-// @Summary 导入外卖菜单
-// @Description 按规则导入外卖菜单（分类/商品/规格/属性/单位映射或创建）
+// GetImportProgress 获取导入进度
+// @Summary 获取外卖菜单导入进度
+// @Description 查询指定平台最新的菜单导入进度信息
 // @Tags 商家端.外卖管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param body body req.TakeoutMenuImportReq true "外卖菜单 JSON"
-// @Success 200 {object} nil "成功"
-// @Router /shop/takeout/menu/import [post]
-func (h *TakeoutHandler) ImportMenu(c *gin.Context) {
-	var importReq req.TakeoutMenuImportReq
-	if err := c.ShouldBindJSON(&importReq); err != nil {
-		helper.HandleValidationError(c, err, importReq, nil)
+// @Param platform query string true "外卖平台"
+// @Success 200 {object} response.ImportProgressResponse "成功"
+// @Router /shop/takeout/menu/import/progress [get]
+func (h *TakeoutHandler) GetImportProgress(c *gin.Context) {
+	platform := c.Query("platform")
+	if platform == "" {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("平台参数不能为空"))
+		return
+	}
+	ctx := helper.GetContext(c)
+	progressResp, err := h.takeoutAppSrv.GetImportProgress(ctx, platform)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "获取导入进度失败"))
+		return
+	}
+
+	helper.Success(c, progressResp)
+}
+
+// GetImportLogs 获取导入日志列表
+// @Summary 获取外卖菜单导入历史日志
+// @Description 分页查询菜单导入的历史日志，支持按平台、类型、状态筛选
+// @Tags 商家端.外卖管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param query body request.GetImportLogsRequest true "获取导入日志列表请求"
+// @Success 200 {object} response.ImportLogListResponse "成功"
+// @Router /shop/takeout/menu/import/logs [get]
+func (h *TakeoutHandler) GetImportLogs(c *gin.Context) {
+	var reqData request.GetImportLogsRequest
+	if err := c.ShouldBindQuery(&reqData); err != nil {
+		helper.HandleValidationError(c, err, reqData, nil)
 		return
 	}
 
 	ctx := helper.GetContext(c)
-	result, err := h.takeoutSrv.ImportMenu(ctx, importReq.Platform, importReq)
+	logsResp, err := h.takeoutAppSrv.GetImportLogs(ctx, reqData)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "导入外卖菜单失败"))
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "获取导入日志失败"))
 		return
 	}
 
-	helper.Success(c, resp.GrabMenuImportResp{
-		SuccessCount: result.SuccessCount,
-		FailureCount: result.FailureCount,
-		CreatedItems: result.CreatedItems,
-		UpdatedItems: result.UpdatedItems,
-		Failures:     result.Failures,
-	})
+	helper.Success(c, logsResp)
 }
 
 // RegisterTakeoutHandlers 注册外卖路由
@@ -257,8 +275,9 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/takeout/binding-status", takeoutHandler.CheckBindingStatus) // 检查绑定状态 (platform参数)
 
 		// 外卖菜单相关路由
-		privateApi.GET("/takeout/menu/get", takeoutHandler.GetTakeoutMenu) // 获取菜单数据 (platform参数)
-		privateApi.POST("/takeout/menu/import", takeoutHandler.ImportMenu) // 导入菜单数据 (platform参数)
+		privateApi.GET("/takeout/menu/get", takeoutHandler.GetTakeoutMenu)                // 获取菜单数据 (platform参数)
+		privateApi.GET("/takeout/menu/import/progress", takeoutHandler.GetImportProgress) // 获取导入进度
+		privateApi.GET("/takeout/menu/import/logs", takeoutHandler.GetImportLogs)         // 获取导入日志列表
 
 	}
 }

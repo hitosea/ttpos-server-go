@@ -7,6 +7,8 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 // TakeoutDomainService 外卖域服务接口
@@ -58,6 +60,12 @@ type TakeoutDomainService interface {
 
 	// IsPlatformBound 检查平台是否已绑定
 	IsPlatformBound(ctx context.Context, uuid uint64) (bool, error)
+
+	// GetImportStatus 获取导入状态
+	GetImportStatus(ctx context.Context, platform string) (int8, error)
+
+	// UpdateImportStatus 更新导入状态
+	UpdateImportStatus(ctx context.Context, platform string, status int8, menu interface{}) error
 }
 
 // TakeoutDomainServiceImpl 外卖域服务实现
@@ -66,9 +74,9 @@ type TakeoutDomainServiceImpl struct {
 }
 
 // NewTakeoutDomainService 创建外卖域服务
-func NewTakeoutDomainService(takeoutRepo persistence.ITakeoutRepository) TakeoutDomainService {
+func NewTakeoutDomainService(db *gorm.DB) TakeoutDomainService {
 	return &TakeoutDomainServiceImpl{
-		takeoutRepo: takeoutRepo,
+		takeoutRepo: persistence.NewTakeoutRepository(db),
 	}
 }
 
@@ -254,6 +262,28 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformBindingLinkByPlatform(ctx conte
 
 	if err := s.takeoutRepo.UpdateBindingLinkByPlatform(ctx, platform, bindingLink); err != nil {
 		return fmt.Errorf("更新平台%s绑定链接失败: %w", platform, err)
+	}
+
+	return nil
+}
+
+// GetImportStatus 获取导入状态
+func (s *TakeoutDomainServiceImpl) GetImportStatus(ctx context.Context, platform string) (int8, error) {
+	takeout, err := s.GetByPlatform(ctx, platform)
+	if err != nil {
+		return 0, err
+	}
+	return takeout.ImportStatus, nil
+}
+
+// UpdateImportStatus 更新导入状态
+func (s *TakeoutDomainServiceImpl) UpdateImportStatus(ctx context.Context, platform string, status int8, menu interface{}) error {
+	if err := s.ValidatePlatform(platform); err != nil {
+		return err
+	}
+
+	if err := s.takeoutRepo.UpdateImportStatusByPlatform(ctx, platform, status, menu); err != nil {
+		return fmt.Errorf("更新平台%s导入状态失败: %w", platform, err)
 	}
 
 	return nil

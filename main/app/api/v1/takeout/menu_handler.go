@@ -3,7 +3,6 @@ package takeout
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
@@ -40,11 +39,11 @@ func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
 // @Accept json
 // @Produce json
 // @Security JwtAuth
-// @Param body body req.TakeoutMenuExportReq true "导出请求"
+// @Param body body request.ExportMenuRequest true "导出请求"
 // @Success 200 {object} dto.Response{data=resp.TakeoutMenuExportResp} "成功"
 // @Router /takeout/menu/export [post]
 func (h *Handler) ExportMenu(c *gin.Context) {
-	var exportReq req.TakeoutMenuExportReq
+	var exportReq request.ExportMenuRequest
 	if err := c.ShouldBindJSON(&exportReq); err != nil {
 		helper.HandleValidationError(c, err, exportReq, nil)
 		return

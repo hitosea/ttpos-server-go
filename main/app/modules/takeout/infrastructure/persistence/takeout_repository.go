@@ -5,7 +5,8 @@ import (
 	"time"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/pkg/context"
-	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 // ITakeoutRepository 外卖仓储接口
@@ -51,17 +52,20 @@ type ITakeoutRepository interface {
 
 	// Delete 删除平台状态记录
 	Delete(ctx context.Context, uuid uint64) error
+
+	// UpdateImportStatusByPlatform 通过平台名称更新导入状态
+	UpdateImportStatusByPlatform(ctx context.Context, platform string, status int8, menu interface{}) error
 }
 
 // takeoutRepositoryImpl 外卖仓储实现
 type takeoutRepositoryImpl struct {
-	dbm *database.DBManager
+	db *gorm.DB
 }
 
 // NewTakeoutRepository 创建外卖仓储
-func NewTakeoutRepository(dbm *database.DBManager) ITakeoutRepository {
+func NewTakeoutRepository(db *gorm.DB) ITakeoutRepository {
 	return &takeoutRepositoryImpl{
-		dbm: dbm,
+		db: db,
 	}
 }
 
@@ -229,4 +233,26 @@ func (r *takeoutRepositoryImpl) UpdateBindingLinkByPlatform(ctx context.Context,
 			"binding_link": bindingLink,
 			"update_time":  time.Now().Unix(),
 		}).Error
+}
+
+// UpdateImportStatusByPlatform 通过平台名称更新导入状态
+func (r *takeoutRepositoryImpl) UpdateImportStatusByPlatform(ctx context.Context, platform string, status int8, menu interface{}) error {
+	db := ctx.GetDB()
+
+	updates := map[string]interface{}{
+		"import_status": status,
+		"update_time":   time.Now().Unix(),
+	}
+
+	if menu != nil {
+		menuJSON, err := json.Marshal(menu)
+		if err != nil {
+			return err
+		}
+		updates["menu"] = string(menuJSON)
+	}
+
+	return db.Model(&model.Takeout{}).
+		Where("platform = ? AND delete_time = ?", platform, 0).
+		Updates(updates).Error
 }

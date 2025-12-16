@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	"ttpos-server-go/app/modules/takeout/domain/menu/repository"
+	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
@@ -50,14 +51,21 @@ type ITakeoutAppService interface {
 	// ExportMenu 导出菜单到指定平台格式
 	ExportMenu(ctx context.Context, req request.ExportMenuRequest) (interface{}, error)
 
+	// ConvertMenuData 转换菜单数据
+	ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error)
+
 	// GetGrabMenu 获取 Grab 的商品菜单
 	GetGrabMenu(ctx context.Context) (*response.GrabMenuResponse, error)
 
-	// GetImportMenu 导入 Grab 菜单（全新创建商品/分类，不做绑定关系）
-	GetImportMenu(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error)
-
 	// PushMenuToGrab 推送菜单到Grab
 	PushMenuToGrab(ctx context.Context, currencyUnit string) error
+
+	// 外卖导入进度管理
+	// GetImportProgress 获取导入进度
+	GetImportProgress(ctx context.Context, platform string) (*response.ImportProgressResponse, error)
+
+	// GetImportLogs 获取导入日志列表
+	GetImportLogs(ctx context.Context, req request.GetImportLogsRequest) (*response.ImportLogListResponse, error)
 }
 
 type ITakeoutMenuAppService = ITakeoutAppService
@@ -90,7 +98,7 @@ func NewTakeoutAppService(
 
 	return &takeoutAppService{
 		// 状态管理相关
-		takeoutDomainService: service.NewTakeoutDomainService(persistence.NewTakeoutRepository(dbm)),
+		takeoutDomainService: service.NewTakeoutDomainService(nil),
 
 		// RPC 调用相关
 		rpcService: rpcService,
@@ -292,7 +300,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	var menu *entity.TakeoutMenu
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
 		// Grab 平台使用专用的加载方法
-		menu, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, req.CategoryIDs, req.SellingTimeIDs)
+		menu, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
 			return nil, fmt.Errorf("加载菜单数据失败: %w", err)
 		}
@@ -338,8 +346,8 @@ func (s *takeoutAppService) GetGrabMenu(ctx context.Context) (*response.GrabMenu
 	}, nil
 }
 
-// GetImportMenu 导入 Grab 菜单（全新创建商品/分类，不做绑定关系）
-func (s *takeoutAppService) GetImportMenu(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error) {
+// ConvertMenuData 转换菜单数据
+func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error) {
 	if req.MenuData == nil {
 		return nil, errors.New("菜单数据不能为空")
 	}
@@ -396,4 +404,130 @@ func (s *takeoutAppService) getConverter(platform string) (service.IPlatformConv
 		return nil, errors.New("不支持的平台: " + platform)
 	}
 	return converter, nil
+}
+
+// GetImportProgress 获取导入进度
+func (s *takeoutAppService) GetImportProgress(ctx context.Context, platform string) (*response.ImportProgressResponse, error) {
+	// 初始化 repository 和 service
+	db := ctx.GetDB()
+	importProgressSrv := service.NewImportProgressService(db)
+
+	// 获取最新的导入进度
+	progressInfo, err := importProgressSrv.GetLatestProgressByPlatform(ctx, platform)
+	if err != nil {
+		return nil, fmt.Errorf("获取导入进度失败: %w", err)
+	}
+
+	if progressInfo == nil {
+		// 没有导入记录
+		return &response.ImportProgressResponse{
+			Platform: platform,
+			Status:   -1, // 表示无导入记录
+		}, nil
+	}
+
+	// 转换为响应 DTO
+	result := &response.ImportProgressResponse{
+		UUID:            progressInfo.UUID,
+		Platform:        progressInfo.Platform,
+		ImportType:      progressInfo.ImportType,
+		ImportDirection: progressInfo.ImportDirection,
+		Status:          progressInfo.Status,
+		Progress:        progressInfo.Progress,
+		SuccessCount:    progressInfo.SuccessCount,
+		FailureCount:    progressInfo.FailureCount,
+		TotalCount:      progressInfo.TotalCount,
+		ErrorMessage:    progressInfo.ErrorMessage,
+		StartTime:       progressInfo.StartTime,
+		EndTime:         progressInfo.EndTime,
+		Duration:        progressInfo.Duration,
+		EstimatedTime:   progressInfo.EstimatedTime,
+	}
+
+	// 设置当前步骤描述
+	if progressInfo.Status == 0 { // ImportStatusInProgress
+		if progressInfo.Progress < 50 {
+			result.CurrentStep = "正在同步分类..."
+		} else {
+			result.CurrentStep = "正在同步商品..."
+		}
+	}
+
+	return result, nil
+}
+
+// GetImportLogs 获取导入日志列表
+func (s *takeoutAppService) GetImportLogs(ctx context.Context, req request.GetImportLogsRequest) (*response.ImportLogListResponse, error) {
+	// 初始化 repository 和 service
+	db := ctx.GetDB()
+	importProgressSrv := service.NewImportProgressService(db)
+
+	// 设置默认分页参数
+	if req.PageSize == 0 {
+		req.PageSize = 20
+	}
+
+	// 调用 Domain Service 获取日志列表
+	var importType int8 = 0
+	if req.ImportType != nil {
+		importType = *req.ImportType
+	}
+
+	var status int8 = -1
+	if req.Status != nil {
+		status = *req.Status
+	}
+
+	logs, total, err := importProgressSrv.ListImportLogs(
+		ctx,
+		req.Platform,
+		importType,
+		status,
+		req.PageNo,
+		req.PageSize,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("获取导入日志列表失败: %w", err)
+	}
+
+	// 转换为响应 DTO
+	logList := make([]response.ImportLogResponse, 0, len(logs))
+	for i, log := range logs {
+		// 判断是否可以重新导入：
+		// 1. 导入失败
+		// 2. 是第一条记录
+		// 3. 是从平台导入到TTPOS (importType=2)
+		// 4. 平台是 grab
+		canReimport := log.IsFailed() &&
+			i == 0 &&
+			log.ImportType == model.ImportTypePlatformToTTPOS &&
+			log.Platform == "grab"
+
+		logList = append(logList, response.ImportLogResponse{
+			UUID:            log.UUID,
+			Platform:        log.Platform,
+			ImportType:      log.ImportType,
+			ImportDirection: log.ImportDirection,
+			Status:          log.Status,
+			Progress:        log.Progress,
+			SuccessCount:    log.SuccessCount,
+			FailureCount:    log.FailureCount,
+			TotalCount:      log.TotalCount,
+			ErrorMessage:    log.ErrorMessage,
+			StartTime:       log.StartTime,
+			EndTime:         log.EndTime,
+			Duration:        log.Duration,
+			CreateTime:      log.CreateTime,
+			CanReimport:     canReimport,
+		})
+	}
+
+	return &response.ImportLogListResponse{
+		List: logList,
+		PageInfo: response.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
 }

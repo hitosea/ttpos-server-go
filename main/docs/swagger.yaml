@@ -6718,6 +6718,9 @@ definitions:
       image_file_uuid:
         description: 商品图片文件UUID
         type: integer
+      is_import:
+        description: 是否从其他平台导入 0-否 1-是
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -7224,11 +7227,25 @@ definitions:
     - status
     - uuid
     type: object
+  req.ProductTakeoutShopAddAttributeReq:
+    properties:
+      price:
+        description: 外卖属性价格
+        type: number
+      product_package_attribute_uuid:
+        description: 商品属性 UUID（关联店内属性）
+        type: integer
+    required:
+    - product_package_attribute_uuid
+    type: object
   req.ProductTakeoutShopAddFlavorReq:
     properties:
       bom_uuid:
         description: 商品BOM UUID（关联店内规格）
         type: integer
+      grab_modifier_id:
+        description: Grab修饰符ID - 可选
+        type: string
       price:
         description: 外卖规格价格
         type: number
@@ -7237,9 +7254,18 @@ definitions:
     type: object
   req.ProductTakeoutShopAddReq:
     properties:
+      attributes:
+        description: 外卖属性列表（价格）
+        items:
+          $ref: '#/definitions/req.ProductTakeoutShopAddAttributeReq'
+        type: array
       category_uuid:
         description: 外卖分类UUID
         type: integer
+      describe:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 卖点描述（多语言），不填则使用店内商品卖点
       flavors:
         description: 外卖规格列表（价格）
         items:
@@ -7255,6 +7281,12 @@ definitions:
       product_package_uuid:
         description: 商品包UUID（关联店内商品）
         type: integer
+      source:
+        description: 来源平台
+        type: string
+      source_product_id:
+        description: 来源平台商品ID
+        type: string
       special_category_uuid:
         description: 外卖特色分类UUID
         type: integer
@@ -7266,6 +7298,17 @@ definitions:
         type: integer
     required:
     - product_package_uuid
+    type: object
+  req.ProductTakeoutShopEditAttributeReq:
+    properties:
+      price:
+        description: 外卖属性价格
+        type: number
+      product_package_attribute_uuid:
+        description: 商品属性 UUID
+        type: integer
+    required:
+    - product_package_attribute_uuid
     type: object
   req.ProductTakeoutShopEditFlavorReq:
     properties:
@@ -7280,9 +7323,18 @@ definitions:
     type: object
   req.ProductTakeoutShopEditReq:
     properties:
+      attributes:
+        description: 外卖属性列表（价格）
+        items:
+          $ref: '#/definitions/req.ProductTakeoutShopEditAttributeReq'
+        type: array
       category_uuid:
         description: 外卖分类UUID
         type: integer
+      describe:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 卖点描述（多语言）
       flavors:
         description: 外卖规格列表（价格）
         items:
@@ -8306,28 +8358,6 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
-  req.TakeoutMenuExportReq:
-    properties:
-      companyUuid:
-        description: 公司 UUID（可选，默认当前公司）
-        type: integer
-      platform:
-        description: 平台名称：grab, lineman 等
-        type: string
-    required:
-    - platform
-    type: object
-  req.TakeoutMenuImportReq:
-    properties:
-      menuData:
-        description: 平台菜单 JSON 数据
-      platform:
-        description: 平台名称：grab, lineman 等
-        type: string
-    required:
-    - menuData
-    - platform
-    type: object
   req.TransferOrderApproveReq:
     properties:
       in_warehouse_erp_code:
@@ -9082,6 +9112,42 @@ definitions:
     required:
     - color
     - minute
+    type: object
+  request.ExportMenuRequest:
+    properties:
+      company_uuid:
+        description: 公司 UUID
+        type: integer
+      currency_unit:
+        description: 货币单位
+        type: string
+      platform:
+        description: 平台名称：grab, lineman 等
+        type: string
+    required:
+    - company_uuid
+    - currency_unit
+    - platform
+    type: object
+  request.GetImportLogsRequest:
+    properties:
+      importType:
+        description: 导入类型筛选（1-TTPOS推送到平台 2-平台推送到TTPOS）
+        format: int32
+        type: integer
+      pageNo:
+        description: 页码
+        type: integer
+      pageSize:
+        description: 每页数量
+        type: integer
+      platform:
+        description: 外卖平台筛选
+        type: string
+      status:
+        description: 状态筛选（0-进行中 1-成功 2-失败）
+        format: int32
+        type: integer
     type: object
   request.ToggleTakeoutStatusRequest:
     properties:
@@ -16953,6 +17019,123 @@ definitions:
       type:
         type: string
       uuid:
+        type: integer
+    type: object
+  response.ImportLogListResponse:
+    properties:
+      list:
+        description: 日志列表
+        items:
+          $ref: '#/definitions/response.ImportLogResponse'
+        type: array
+      page_info:
+        allOf:
+        - $ref: '#/definitions/response.PageResponse'
+        description: 分页信息
+    type: object
+  response.ImportLogResponse:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      duration:
+        description: 耗时(秒)
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      error_message:
+        description: 错误信息
+        type: string
+      failure_count:
+        description: 失败数量
+        type: integer
+      import_direction:
+        description: 导入方向描述
+        type: string
+      import_type:
+        description: 导入类型
+        type: integer
+      platform:
+        description: 外卖平台
+        type: string
+      progress:
+        description: 进度百分比(0-100)
+        type: integer
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: 导入状态(0-进行中 1-成功 2-失败)
+        type: integer
+      success_count:
+        description: 成功数量
+        type: integer
+      total_count:
+        description: 总数量
+        type: integer
+      uuid:
+        description: 日志UUID
+        type: integer
+    type: object
+  response.ImportProgressResponse:
+    properties:
+      current_step:
+        description: 当前步骤描述
+        type: string
+      duration:
+        description: 耗时(秒)
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      error_message:
+        description: 错误信息
+        type: string
+      estimated_time:
+        description: 预估剩余时间(秒)
+        type: integer
+      failure_count:
+        description: 失败数量
+        type: integer
+      import_direction:
+        description: 导入方向描述
+        type: string
+      import_type:
+        description: 导入类型
+        type: integer
+      platform:
+        description: 外卖平台
+        type: string
+      progress:
+        description: 进度百分比(0-100)
+        type: integer
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: 导入状态(0-进行中 1-成功 2-失败)
+        type: integer
+      success_count:
+        description: 成功数量
+        type: integer
+      total_count:
+        description: 总数量
+        type: integer
+      uuid:
+        description: 日志UUID
+        type: integer
+    type: object
+  response.PageResponse:
+    properties:
+      page_no:
+        description: 当前页码
+        type: integer
+      page_size:
+        description: 每页大小
+        type: integer
+      total:
+        description: 总数
         type: integer
     type: object
   response.TakeoutStatusResponse:
@@ -37164,10 +37347,6 @@ paths:
         name: platform
         required: true
         type: string
-      - description: 是否跳过导入菜单
-        in: query
-        name: skip
-        type: boolean
       produces:
       - application/json
       responses:
@@ -37220,26 +37399,51 @@ paths:
       summary: 获取外卖平台商品菜单
       tags:
       - 商家端.外卖管理
-  /shop/takeout/menu/import:
-    post:
+  /shop/takeout/menu/import/logs:
+    get:
       consumes:
       - application/json
-      description: 按规则导入外卖菜单（分类/商品/规格/属性/单位映射或创建）
+      description: 分页查询菜单导入的历史日志，支持按平台、类型、状态筛选
       parameters:
-      - description: 外卖菜单 JSON
+      - description: 获取导入日志列表请求
         in: body
-        name: body
+        name: query
         required: true
         schema:
-          $ref: '#/definitions/req.TakeoutMenuImportReq'
+          $ref: '#/definitions/request.GetImportLogsRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 成功
+          schema:
+            $ref: '#/definitions/response.ImportLogListResponse'
       security:
       - JwtToken: []
-      summary: 导入外卖菜单
+      summary: 获取外卖菜单导入历史日志
+      tags:
+      - 商家端.外卖管理
+  /shop/takeout/menu/import/progress:
+    get:
+      consumes:
+      - application/json
+      description: 查询指定平台最新的菜单导入进度信息
+      parameters:
+      - description: 外卖平台
+        in: query
+        name: platform
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.ImportProgressResponse'
+      security:
+      - JwtToken: []
+      summary: 获取外卖菜单导入进度
       tags:
       - 商家端.外卖管理
   /shop/takeout/status/info:
@@ -38762,7 +38966,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/req.TakeoutMenuExportReq'
+          $ref: '#/definitions/request.ExportMenuRequest'
       produces:
       - application/json
       responses:

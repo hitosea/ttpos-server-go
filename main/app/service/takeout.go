@@ -13,6 +13,8 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/application"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
+	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
+	domainService "ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/types/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -21,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -31,7 +34,7 @@ type ITakeoutSrv interface {
 	ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error)
 
 	// ImportMenu 导入菜单
-	ImportMenu(ctx context.Context, platform string, req req.TakeoutMenuImportReq) (*resp.GrabMenuImportResp, error)
+	ImportMenu(ctx context.Context, req request.ImportMenuRequest) (*resp.GrabMenuImportResp, error)
 }
 
 type takeoutSrv struct {
@@ -73,7 +76,7 @@ func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImpor
 	}
 
 	// 1. 导入菜单
-	resp, err := s.ImportMenu(ctx, "grab", req.TakeoutMenuImportReq{
+	resp, err := s.ImportMenu(ctx, request.ImportMenuRequest{
 		Platform: "grab",
 		MenuData: takeoutMenu.Menu,
 	})
@@ -97,64 +100,183 @@ func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImpor
 }
 
 // ImportMenu 导入菜单
-func (s *takeoutSrv) ImportMenu(ctx context.Context, platform string, reqs req.TakeoutMenuImportReq) (*resp.GrabMenuImportResp, error) {
-	takeoutMenu, err := s.takeoutAppSrv.GetImportMenu(ctx, request.ImportMenuRequest{
-		Platform: platform,
-		MenuData: reqs.MenuData,
-	})
+func (s *takeoutSrv) ImportMenu(ctx context.Context, reqs request.ImportMenuRequest) (*resp.GrabMenuImportResp, error) {
+	takeoutMenu, err := s.takeoutAppSrv.ConvertMenuData(ctx, reqs)
 	if err != nil {
 		return nil, err
 	}
 
+	platform := strings.ToLower(reqs.Platform)
+
+	// 初始化领域服务
+	db := ctx.GetDB()
+	progressService := domainService.NewImportProgressService(db)
+	takeoutDomainSrv := domainService.NewTakeoutDomainService(db)
+
+	// 检查Takeout表的导入状态
+	takeoutStatus, err := takeoutDomainSrv.GetImportStatus(ctx, platform)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取Takeout表失败")
+	}
+	if takeoutStatus == takeoutModel.ImportStatusSuccess {
+		return nil, nil
+	}
+
+	// 1. 检查导入状态
+	canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, platform)
+	if err != nil {
+		return nil, errors.WithMessage(err, "检查导入状态失败")
+	}
+	if !canImport {
+		errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+		return nil, errors.New(errMsg)
+	}
+
+	// 2. 开始导入，创建导入日志
+	// importType: 2 = 平台推送到TTPOS
+	// importDirection: 根据平台名称设置
+	importDirection := fmt.Sprintf("%s推送到TTPOS", strings.ToUpper(platform))
+	importLog, err := progressService.StartImport(ctx, platform, 2, importDirection)
+	if err != nil {
+		return nil, errors.WithMessage(err, "开始导入失败")
+	}
+
+	// 2.1 更新 ttpos_takeout 表的导入状态为"导入中"
+	if err := takeoutDomainSrv.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusInProgress, takeoutMenu); err != nil {
+		logger.Logger.Warn("更新导入状态为导入中失败",
+			zap.String("platform", platform),
+			zap.Error(err),
+		)
+	}
+
 	var successCount int
 	var failureCount int
+	var errorList []ProductSyncError
+
+	// 3. 执行导入流程
 	err = ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 		copyCtx := ctx.Copy()
 		copyCtx.SetDB(tx)
 
-		// 1. 提取分类并创建或更新
+		// 3.1 提取分类并创建或更新 (进度 0-10%)
 		categoryMap, err := s.syncCategories(copyCtx, platform, takeoutMenu.Categories)
 		if err != nil {
 			return err
 		}
 
-		// 2. 同步商品规格（标准规格）
+		// 更新进度到 10%
+		_ = progressService.UpdateProgress(ctx, importLog.UUID, 10, 100)
+
+		// 3.2 同步商品规格（标准规格）(进度 10-15%)
 		productFlavorUuid, err := s.syncProductFlavor(copyCtx, platform)
 		if err != nil {
 			return err
 		}
 
-		// 3. 同步商品单位（标准单位）
+		// 更新进度到 15%
+		_ = progressService.UpdateProgress(ctx, importLog.UUID, 15, 100)
+
+		// 3.3 同步商品单位（标准单位）(进度 15-20%)
 		unitUuid, err := s.syncProductUnit(copyCtx, platform)
 		if err != nil {
 			return err
 		}
 
-		// 4. 导入商品
-		success, failure, err := s.syncProducts(
+		// 更新进度到 20%
+		_ = progressService.UpdateProgress(ctx, importLog.UUID, 20, 100)
+
+		// 3.4 导入商品 (进度 20-100%，根据实际商品数量更新)
+		success, failure, errors, err := s.syncProducts(
 			copyCtx,
 			platform,
 			takeoutMenu.Categories,
 			categoryMap,
 			productFlavorUuid,
 			unitUuid,
+			progressService,
+			importLog.UUID,
 		)
 		if err != nil {
 			return err
 		}
 		successCount = success
 		failureCount = failure
+		errorList = errors
 
 		return nil
 	})
+
+	// 4. 根据结果完成导入
 	if err != nil {
-		logger.Logger.Error("导入菜单失败", zap.Error(err))
-		return nil, err
+		logger.Logger.Error("导入菜单失败",
+			zap.String("platform", platform),
+			zap.Uint64("import_log_uuid", importLog.UUID),
+			zap.Error(err),
+		)
+
+		// 标记导入失败
+		_ = progressService.CompleteImport(ctx, importLog.UUID, false, err.Error())
+
+		// 4.1 更新 ttpos_takeout 表的导入状态为"导入失败"
+		if updateErr := takeoutDomainSrv.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusFailed, nil); updateErr != nil {
+			logger.Logger.Warn("更新导入状态为导入失败失败",
+				zap.String("platform", platform),
+				zap.Error(updateErr),
+			)
+		}
+
+		return nil, errors.WithMessage(err, "导入菜单失败")
+	}
+
+	// 标记导入成功
+	var completeErr error
+	var importStatus int8
+	var importError string
+
+	if failureCount > 0 {
+		// 部分成功，标记为失败
+		importStatus = 3
+		importError = utils.ToJson(errorList)
+		completeErr = progressService.CompleteImport(ctx, importLog.UUID, false, importError)
+	} else {
+		// 全部成功
+		importStatus = 2
+		importError = ""
+		completeErr = progressService.CompleteImport(ctx, importLog.UUID, true, "")
+	}
+
+	if completeErr != nil {
+		logger.Logger.Error("完成导入状态更新失败",
+			zap.String("platform", platform),
+			zap.Uint64("import_log_uuid", importLog.UUID),
+			zap.Error(completeErr),
+		)
+	}
+
+	// 4.2 更新 ttpos_takeout 表的导入状态
+	if updateErr := takeoutDomainSrv.UpdateImportStatus(ctx, platform, importStatus, nil); updateErr != nil {
+		logger.Logger.Warn("更新导入完成状态失败",
+			zap.String("platform", platform),
+			zap.Int8("status", importStatus),
+			zap.Error(updateErr),
+		)
+	}
+
+	// 转换错误列表为响应 DTO
+	errorDTOList := make([]resp.ProductImportError, 0, len(errorList))
+	for _, err := range errorList {
+		errorDTOList = append(errorDTOList, resp.ProductImportError{
+			ProductID:   err.ProductID,
+			ProductName: err.ProductName,
+			CategoryID:  err.CategoryID,
+			Error:       err.Error,
+		})
 	}
 
 	return &resp.GrabMenuImportResp{
 		SuccessCount: successCount,
 		FailureCount: failureCount,
+		ErrorList:    errorDTOList,
 	}, nil
 }
 
@@ -747,14 +869,47 @@ func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, a
 	return finalAttributeUuids, nil
 }
 
+// ProductSyncError 商品同步错误
+type ProductSyncError struct {
+	ProductID   string `json:"product_id"`   // 商品ID
+	ProductName string `json:"product_name"` // 商品名称
+	CategoryID  string `json:"category_id"`  // 分类ID
+	Error       string `json:"error"`        // 错误信息
+}
+
 // syncProducts 同步外卖平台商品到本地
-// 返回：成功数量、失败数量、错误
-func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categories []*valueobject.Category, categoryMap map[string]uint64, productFlavorUuid uint64, unitUuid uint64) (int, int, error) {
+// 返回：成功数量、失败数量、错误列表、错误
+func (s *takeoutSrv) syncProducts(
+	ctx context.Context,
+	platform string,
+	categories []*valueobject.Category,
+	categoryMap map[string]uint64,
+	productFlavorUuid uint64,
+	unitUuid uint64,
+	progressService *domainService.ImportProgressService,
+	importLogUUID uint64,
+) (int, int, []ProductSyncError, error) {
 	db := ctx.GetDB()
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 
 	successCount := 0
 	failureCount := 0
+	errorList := make([]ProductSyncError, 0)
+
+	// 计算总商品数量
+	totalCount := 0
+	for _, category := range categories {
+		if category != nil {
+			totalCount += len(category.Items)
+		}
+	}
+
+	// 更新总数量
+	if progressService != nil && importLogUUID > 0 {
+		_ = progressService.UpdateProgress(ctx, importLogUUID, 0, totalCount)
+	}
+
+	processedCount := 0
 
 	// 遍历所有分类及其商品
 	for _, category := range categories {
@@ -766,6 +921,17 @@ func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categori
 		// 获取本地分类 UUID
 		localCategoryUuid, ok := categoryMap[category.ID]
 		if !ok {
+			// 分类映射失败，记录该分类下的所有商品为失败
+			for _, item := range category.Items {
+				if item != nil {
+					errorList = append(errorList, ProductSyncError{
+						ProductID:   item.ID,
+						ProductName: item.Name,
+						CategoryID:  category.ID,
+						Error:       fmt.Sprintf("分类映射失败: %s", category.Name),
+					})
+				}
+			}
 			failureCount += len(category.Items)
 			continue
 		}
@@ -776,23 +942,53 @@ func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categori
 				continue
 			}
 
-			// 1. 同步商品的属性组（ModifierGroups）
 			attributeGroups, err := s.syncModifierGroups(ctx, platform, item.ModifierGroups)
 			if err != nil {
-				logger.Logger.Error("同步商品属性组失败", zap.Error(err))
+				errorMsg := fmt.Sprintf("同步商品属性组失败: %v", err)
+				logger.Logger.Error("同步商品属性组失败",
+					zap.String("product_id", item.ID),
+					zap.String("product_name", item.Name),
+					zap.Error(err),
+				)
+				errorList = append(errorList, ProductSyncError{
+					ProductID:   item.ID,
+					ProductName: item.Name,
+					CategoryID:  category.ID,
+					Error:       errorMsg,
+				})
 				failureCount++
+				processedCount++
+
+				// 更新进度
+				if progressService != nil && importLogUUID > 0 {
+					_ = progressService.UpdateProgress(ctx, importLogUUID, processedCount, totalCount)
+				}
 				continue
 			}
 
 			// 检查商品是否已导入（通过 source 和 source_product_id）
 			existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.ID)
 			if err != nil && err != gorm.ErrRecordNotFound {
+				errorMsg := fmt.Sprintf("查询外卖商品失败: %v", err)
 				logger.Logger.Error("查询外卖商品失败",
 					zap.String("platform", platform),
 					zap.String("item_id", item.ID),
+					zap.String("product_name", item.Name),
 					zap.Error(err),
 				)
+				errorList = append(errorList, ProductSyncError{
+					ProductID:   item.ID,
+					ProductName: item.Name,
+					CategoryID:  category.ID,
+					Error:       errorMsg,
+				})
 				failureCount++
+				processedCount++
+
+				// 更新进度
+				if progressService != nil && importLogUUID > 0 {
+					_ = progressService.UpdateProgress(ctx, importLogUUID, processedCount, totalCount)
+				}
 				continue
 			}
 
@@ -809,33 +1005,73 @@ func (s *takeoutSrv) syncProducts(ctx context.Context, platform string, categori
 					logger.Logger.Error("更新外卖商品失败",
 						zap.String("platform", platform),
 						zap.String("item_id", item.ID),
+						zap.String("product_name", item.Name),
 						zap.Uint64("uuid", existingTakeout.Uuid),
 						zap.Error(err),
 					)
+					errorList = append(errorList, ProductSyncError{
+						ProductID:   item.ID,
+						ProductName: item.Name,
+						CategoryID:  category.ID,
+						Error:       fmt.Sprintf("更新外卖商品失败: %v", err.Error()),
+					})
 					failureCount++
+					processedCount++
+
+					// 更新进度
+					if progressService != nil && importLogUUID > 0 {
+						_ = progressService.UpdateProgress(ctx, importLogUUID, processedCount, totalCount)
+					}
 					continue
 				}
 				successCount++
+				processedCount++
+
+				// 更新进度
+				if progressService != nil && importLogUUID > 0 {
+					_ = progressService.UpdateProgress(ctx, importLogUUID, processedCount, totalCount)
+				}
 			} else {
 				// 2. 创建新商品
 				productUuid, err := s.createProduct(ctx, platform, item, localCategoryUuid, productFlavorUuid, unitUuid, attributeGroups)
 				if err != nil {
+					errorMsg := fmt.Sprintf("创建商品失败: %v", err.Error())
+					errorList = append(errorList, ProductSyncError{
+						ProductID:   item.ID,
+						ProductName: item.Name,
+						CategoryID:  category.ID,
+						Error:       errorMsg,
+					})
 					failureCount++
-					continue
+					processedCount++
+
+					// 更新进度
+					if progressService != nil && importLogUUID > 0 {
+						_ = progressService.UpdateProgress(ctx, importLogUUID, processedCount, totalCount)
+					}
+					// 因为erp商品不能回退，所以直接返回
+					return successCount, failureCount, errorList, nil
 				}
 
 				// createProduct 方法中已经创建了 ProductPackageTakeout 记录，这里不需要再创建
 				logger.Logger.Info("成功创建外卖商品",
 					zap.String("platform", platform),
 					zap.String("item_id", item.ID),
+					zap.String("product_name", item.Name),
 					zap.Uint64("product_uuid", productUuid),
 				)
 				successCount++
+				processedCount++
+
+				// 更新进度
+				if progressService != nil && importLogUUID > 0 {
+					_ = progressService.UpdateProgress(ctx, importLogUUID, processedCount, totalCount)
+				}
 			}
 		}
 	}
 
-	return successCount, failureCount, nil
+	return successCount, failureCount, errorList, nil
 }
 
 // createProduct 创建新商品
@@ -880,7 +1116,7 @@ func (s *takeoutSrv) createProduct(
 	// 创建外卖商品记录到 ttpos_product_package_takeout 表
 	err = s.createProductPackageTakeout(ctx, platform, item, productUuid, categoryUuid)
 	if err != nil {
-		return 0, errors.WithMessage(err, "创建外卖商品记录失败")
+		return 0, err
 	}
 
 	// 如果有图片 URL，异步下载并上传
