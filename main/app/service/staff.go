@@ -973,13 +973,21 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			}
 		}
 	} else {
-		// 如果是子店，判断参数中的 roles，修改当前商家数据库中的 ttpos_staff
-		if len(updateReq.Roles) == 0 {
+		// 检查 Roles 参数，是否是当前商家数据库的角色
+		db := s.dbm.GetDB(currentCompanyUuid)
+		// 检查员工是否存在于当前门店数据库中
+		staffRepo := repository.NewStaffRepo(db)
+		staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+		if err != nil {
+			return errors.WithMessage(errors.New("员工不存在"), err.Error()), exists
+		}
+		if staff.Uuid == 0 {
+			return errors.New("员工不存在"), exists
+		}
+		if staff.IsSuper != 1 && len(updateReq.Roles) == 0 {
 			return errors.New("角色不能为空"), exists
 		}
 
-		// 检查 Roles 参数，是否是当前商家数据库的角色
-		db := s.dbm.GetDB(currentCompanyUuid)
 		roleRepo := repository.NewRoleRepo(db)
 		roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(updateReq.Roles)}...)
 		if err != nil {
@@ -988,11 +996,6 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		if len(roles) != len(updateReq.Roles) {
 			return errors.New("角色参数错误"), exists
 		}
-
-		// 检查员工是否存在于当前门店数据库中
-		staffRepo := repository.NewStaffRepo(db)
-		staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
-		staffExists := err == nil && staff.Uuid != 0
 
 		// 准备员工更新/创建数据
 		staffUpdate := map[string]any{
@@ -1014,40 +1017,10 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 
 		err = db.Transaction(func(tx *gorm.DB) error {
 			txStaffRepo := repository.NewStaffRepo(tx)
-			if staffExists {
-				// 更新员工信息
-				err := txStaffRepo.Update(updateReq.Uuid, staffUpdate)
-				if err != nil {
-					return err
-				}
-			} else {
-				// 创建员工信息
-				newStaff := model.Staff{
-					CompanyUuid: currentCompanyUuid,
-					Username:    updateReq.Username,
-					RealName:    updateReq.RealName,
-					Phone:       updateReq.Phone,
-					IsDisable:   0,
-					IsSuper:     0,
-				}
-				newStaff.Uuid = updateReq.Uuid
-				if updateReq.Password != "" {
-					newStaff.Password = utils.EncryptPassword(updateReq.Password)
-					newStaff.PasswordChangeTime = time.Now().Unix()
-				} else {
-					// 如果密码为空，使用 saasStaff 的密码
-					newStaff.Password = saasStaff.Password
-				}
-				if updateReq.PermissionPassword != "" {
-					newStaff.PermissionPassword = utils.EncryptPassword(updateReq.PermissionPassword)
-				}
-				if updateReq.IsDisable != nil {
-					newStaff.IsDisable = *updateReq.IsDisable
-				}
-				err := tx.Model(&model.Staff{}).Create(&newStaff).Error
-				if err != nil {
-					return err
-				}
+			// 更新员工信息
+			err := txStaffRepo.Update(updateReq.Uuid, staffUpdate)
+			if err != nil {
+				return err
 			}
 			// 更新员工和角色的关联关系
 			err = txStaffRepo.UpdateStaffRoles(updateReq.Uuid, updateReq.Roles)
