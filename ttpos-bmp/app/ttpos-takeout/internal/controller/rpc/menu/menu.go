@@ -140,12 +140,10 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 
 	// 4. DTO → Proto 响应转换
 	resp := &api.UpdateMenuItemResp{
-		Success:      result.Success,
-		MerchantId:   result.MerchantID,
-		RecordId:     result.RecordID,
-		RecordType:   result.RecordType,
-		ErrorCode:    result.ErrorCode,
-		ErrorMessage: result.ErrorMessage,
+		MerchantId: result.MerchantID,
+		RecordId:   result.RecordID,
+		RecordType: result.RecordType,
+		// success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
 	}
 
 	// 5. 包装为 ApiResponse
@@ -232,12 +230,10 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 
 	// 4. DTO → Proto 响应转换
 	resp := &api.UpdateMenuModifierResp{
-		Success:      result.Success,
-		MerchantId:   result.MerchantID,
-		RecordId:     result.RecordID,
-		RecordType:   result.RecordType,
-		ErrorCode:    result.ErrorCode,
-		ErrorMessage: result.ErrorMessage,
+		MerchantId: result.MerchantID,
+		RecordId:   result.RecordID,
+		RecordType: result.RecordType,
+		// success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
 	}
 
 	// 5. 包装为 ApiResponse

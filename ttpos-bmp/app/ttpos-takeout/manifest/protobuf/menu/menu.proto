@@ -54,12 +54,10 @@ message UpdateMenuItemReq {
 
 // 更新菜单项响应
 message UpdateMenuItemResp {
-  bool success = 1;          // 是否成功
-  string merchant_id = 2;    // 商户ID
-  string record_id = 3;      // 记录ID (ItemID)
-  string record_type = 4;    // 记录类型: ITEM
-  string error_code = 5;     // 错误码 (失败时)
-  string error_message = 6;  // 错误信息 (失败时)
+  string merchant_id = 1;    // 商户ID
+  string record_id = 2;      // 记录ID (ItemID)
+  string record_type = 3;    // 记录类型: ITEM
+  // success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
 }
 
 // 更新菜单修饰符请求
@@ -76,12 +74,10 @@ message UpdateMenuModifierReq {
 
 // 更新菜单修饰符响应
 message UpdateMenuModifierResp {
-  bool success = 1;          // 是否成功
-  string merchant_id = 2;    // 商户ID
-  string record_id = 3;      // 记录ID (ModifierID)
-  string record_type = 4;    // 记录类型: MODIFIER
-  string error_code = 5;     // 错误码 (失败时)
-  string error_message = 6;  // 错误信息 (失败时)
+  string merchant_id = 1;    // 商户ID
+  string record_id = 2;      // 记录ID (ModifierID)
+  string record_type = 3;    // 记录类型: MODIFIER
+  // success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
 }
 
 // 外卖菜单服务
