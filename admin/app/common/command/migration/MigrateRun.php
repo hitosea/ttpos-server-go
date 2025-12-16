@@ -30,6 +30,7 @@ class MigrateRun extends Migrate
             ->addOption('--target', '-t', InputOption::VALUE_REQUIRED, 'The version number to migrate to')
             ->addOption('--date', '-d', InputOption::VALUE_REQUIRED, 'The date to migrate to')
             ->addOption('--db', '-db', InputOption::VALUE_OPTIONAL, '指定数据库')
+            ->addOption('--dry-run', '-dr', InputOption::VALUE_NONE, 'Dry run')
             ->setHelp(
                 <<<EOT
 The <info>migrate:run</info> command runs all available migrations, optionally up to a specific version
