@@ -7,3 +7,10 @@ type RegenerateSalesOutboundSummaryResp struct {
 	DurationMs     int64 `json:"duration_ms"`      // 操作耗时（毫秒）
 }
 
+// RegenerateOrderMaterialResp 重新生成订单材料用料记录响应
+type RegenerateOrderMaterialResp struct {
+	DeletedCount int   `json:"deleted_count"` // 删除的记录数
+	InsertedCount int   `json:"inserted_count"` // 插入的记录数
+	DurationMs   int64 `json:"duration_ms"`   // 操作耗时（毫秒）
+}
+

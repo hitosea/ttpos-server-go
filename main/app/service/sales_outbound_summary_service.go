@@ -31,6 +31,12 @@ type ISalesOutboundSummarySrv interface {
 	// companyUuid: 门店UUID
 	// date: 日期，格式：YYYY-MM-DD
 	RegenerateSalesOutboundSummary(ctx *gin.Context, companyUuid uint64, date string) (*resp.RegenerateSalesOutboundSummaryResp, error)
+
+	// RegenerateOrderMaterial 重新生成指定订单的材料用料记录
+	// ctx: gin.Context（可为 nil，用于命令行环境）
+	// companyUuid: 门店UUID
+	// saleOrderUuid: 订单UUID
+	RegenerateOrderMaterial(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateOrderMaterialResp, error)
 }
 
 // salesOutboundSummarySrv 销售出库汇总服务实现
@@ -433,4 +439,107 @@ func (s *salesOutboundSummarySrv) generateOrderNo(companyUuid uint64, openingHou
 	sequenceStr := fmt.Sprintf("%04d", sequence)
 
 	return "SSCK" + dateStr + sequenceStr, nil
+}
+
+// RegenerateOrderMaterial 重新生成指定订单的材料用料记录
+func (s *salesOutboundSummarySrv) RegenerateOrderMaterial(
+	ctx *gin.Context,
+	companyUuid uint64,
+	saleOrderUuid uint64,
+) (*resp.RegenerateOrderMaterialResp, error) {
+	startTime := time.Now()
+	db := s.dbm.GetDB(companyUuid)
+
+	// 1. 获取订单信息
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 先通过 sale_order_uuid 获取 sale_bill_uuid
+	saleOrder, err := orderRepo.GetSaleBillSaleOrderRecord(saleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+	if saleOrder == nil {
+		return nil, errors.New("订单不存在")
+	}
+
+	saleBillUuid := saleOrder.SaleBillUuid
+
+	// 获取订单完整信息（包含商品、BOM、材料关联等）
+	saleBill, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单完整信息失败")
+	}
+	if saleBill == nil {
+		return nil, errors.New("订单账单不存在")
+	}
+
+	// 获取指定的订单
+	saleOrderFromBill := saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrderFromBill == nil {
+		return nil, errors.New("订单不存在于账单中")
+	}
+
+	// 计算材料用量
+	materialStocks := saleOrderFromBill.GetValidSaleOrderProductMaterialList()
+
+	// 构建材料记录列表
+	saleOrderMaterials := make([]*model.SaleOrderMaterial, 0)
+	for _, materialStock := range materialStocks {
+		saleOrderMaterials = append(saleOrderMaterials, &model.SaleOrderMaterial{
+			BaseModel: model.BaseModel{
+				CreateTime: saleOrderFromBill.FinishTime, // 原料使用时间=销售订单完成时间
+			},
+			SaleOrderUuid:     saleOrderFromBill.Uuid,
+			SaleBillUuid:      saleBillUuid,
+			MaterialUuid:      materialStock.MaterialUuid,
+			WarehouseUuid:     materialStock.WarehouseUuid,
+			Num:               decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(), // 保留4位小数
+			StaffShiftLogUuid: saleOrderFromBill.StaffShiftLogUuid,
+		})
+	}
+
+	// 使用事务执行删除和插入操作
+	var deletedCount int64
+	var insertedCount int64
+
+	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 创建 repository 实例（使用事务的 tx）
+		saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(tx)
+
+		// 查询旧记录数量
+		oldMaterials, err := saleOrderMaterialRepo.GetSaleOrderMaterialBySaleOrderUuid(saleOrderUuid)
+		if err != nil {
+			return errors.WithMessage(err, "查询旧记录失败")
+		}
+		deletedCount = int64(len(oldMaterials))
+
+		// 软删除旧记录（按 sale_order_uuid 删除）
+		if deletedCount > 0 {
+			if err := saleOrderMaterialRepo.DeleteSaleOrderMaterialBySaleOrderUuid(saleOrderUuid); err != nil {
+				return errors.WithMessage(err, "删除旧记录失败")
+			}
+		}
+
+		// 插入新记录
+		if len(saleOrderMaterials) > 0 {
+			if err := saleOrderMaterialRepo.BatchInsertSaleOrderMaterial(saleOrderMaterials); err != nil {
+				return errors.WithMessage(err, "插入新记录失败")
+			}
+			insertedCount = int64(len(saleOrderMaterials))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "重新生成订单材料记录失败")
+	}
+
+	durationMs := time.Since(startTime).Milliseconds()
+
+	return &resp.RegenerateOrderMaterialResp{
+		DeletedCount:  int(deletedCount),
+		InsertedCount: int(insertedCount),
+		DurationMs:    durationMs,
+	}, nil
 }
