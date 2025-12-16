@@ -21,8 +21,10 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	MenuService_GetMenuSnapshot_FullMethodName  = "/menu.MenuService/GetMenuSnapshot"
-	MenuService_SaveMenuSnapshot_FullMethodName = "/menu.MenuService/SaveMenuSnapshot"
+	MenuService_GetMenuSnapshot_FullMethodName    = "/menu.MenuService/GetMenuSnapshot"
+	MenuService_SaveMenuSnapshot_FullMethodName   = "/menu.MenuService/SaveMenuSnapshot"
+	MenuService_UpdateMenuItem_FullMethodName     = "/menu.MenuService/UpdateMenuItem"
+	MenuService_UpdateMenuModifier_FullMethodName = "/menu.MenuService/UpdateMenuModifier"
 )
 
 // MenuServiceClient is the client API for MenuService service.
@@ -35,6 +37,10 @@ type MenuServiceClient interface {
 	GetMenuSnapshot(ctx context.Context, in *GetMenuSnapshotReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 	// 保存ttpos 菜单快照数据
 	SaveMenuSnapshot(ctx context.Context, in *SaveMenuSnapshotReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
+	// 更新菜单项 (商品)
+	UpdateMenuItem(ctx context.Context, in *UpdateMenuItemReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
+	// 更新菜单修饰符
+	UpdateMenuModifier(ctx context.Context, in *UpdateMenuModifierReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 }
 
 type menuServiceClient struct {
@@ -65,6 +71,26 @@ func (c *menuServiceClient) SaveMenuSnapshot(ctx context.Context, in *SaveMenuSn
 	return out, nil
 }
 
+func (c *menuServiceClient) UpdateMenuItem(ctx context.Context, in *UpdateMenuItemReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(takeout.ApiResponse)
+	err := c.cc.Invoke(ctx, MenuService_UpdateMenuItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *menuServiceClient) UpdateMenuModifier(ctx context.Context, in *UpdateMenuModifierReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(takeout.ApiResponse)
+	err := c.cc.Invoke(ctx, MenuService_UpdateMenuModifier_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MenuServiceServer is the server API for MenuService service.
 // All implementations must embed UnimplementedMenuServiceServer
 // for forward compatibility
@@ -75,6 +101,10 @@ type MenuServiceServer interface {
 	GetMenuSnapshot(context.Context, *GetMenuSnapshotReq) (*takeout.ApiResponse, error)
 	// 保存ttpos 菜单快照数据
 	SaveMenuSnapshot(context.Context, *SaveMenuSnapshotReq) (*takeout.ApiResponse, error)
+	// 更新菜单项 (商品)
+	UpdateMenuItem(context.Context, *UpdateMenuItemReq) (*takeout.ApiResponse, error)
+	// 更新菜单修饰符
+	UpdateMenuModifier(context.Context, *UpdateMenuModifierReq) (*takeout.ApiResponse, error)
 	mustEmbedUnimplementedMenuServiceServer()
 }
 
@@ -87,6 +117,12 @@ func (UnimplementedMenuServiceServer) GetMenuSnapshot(context.Context, *GetMenuS
 }
 func (UnimplementedMenuServiceServer) SaveMenuSnapshot(context.Context, *SaveMenuSnapshotReq) (*takeout.ApiResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveMenuSnapshot not implemented")
+}
+func (UnimplementedMenuServiceServer) UpdateMenuItem(context.Context, *UpdateMenuItemReq) (*takeout.ApiResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMenuItem not implemented")
+}
+func (UnimplementedMenuServiceServer) UpdateMenuModifier(context.Context, *UpdateMenuModifierReq) (*takeout.ApiResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMenuModifier not implemented")
 }
 func (UnimplementedMenuServiceServer) mustEmbedUnimplementedMenuServiceServer() {}
 
@@ -137,6 +173,42 @@ func _MenuService_SaveMenuSnapshot_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MenuService_UpdateMenuItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMenuItemReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MenuServiceServer).UpdateMenuItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MenuService_UpdateMenuItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MenuServiceServer).UpdateMenuItem(ctx, req.(*UpdateMenuItemReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MenuService_UpdateMenuModifier_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMenuModifierReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MenuServiceServer).UpdateMenuModifier(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MenuService_UpdateMenuModifier_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MenuServiceServer).UpdateMenuModifier(ctx, req.(*UpdateMenuModifierReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MenuService_ServiceDesc is the grpc.ServiceDesc for MenuService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -151,6 +223,14 @@ var MenuService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveMenuSnapshot",
 			Handler:    _MenuService_SaveMenuSnapshot_Handler,
+		},
+		{
+			MethodName: "UpdateMenuItem",
+			Handler:    _MenuService_UpdateMenuItem_Handler,
+		},
+		{
+			MethodName: "UpdateMenuModifier",
+			Handler:    _MenuService_UpdateMenuModifier_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

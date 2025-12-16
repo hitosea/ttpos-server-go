@@ -58,6 +58,7 @@ func (s *sGrabMenu) HandleGetMenu(ctx context.Context, partnerMerchantID string)
 		g.Log().Errorf(ctx, "[Grab] Failed to get channel menu: shopUUID=%d, error: %v", shopUUID, err)
 		return nil, fmt.Errorf("failed to get channel menu: %w", err)
 	}
+	//TODO 当绑定商家时，如果商家选择跳过导出菜单。通知或从TTPOS中获取菜单数据
 
 	// 3. 检查菜单是否存在, 需要TTPOS 更新菜单后，才能获取到菜单快照
 	if menuJSON == "" {
