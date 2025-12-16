@@ -3,6 +3,7 @@
 namespace app\admin\model;
 
 use think\Model;
+use app\admin\model\admin\Staff as SaasStaffModel;
 use app\common\model\BaseModel;
 use app\common\exception\BaseException;
 
@@ -84,11 +85,29 @@ class CompanyStaff extends BaseModel
             $this->error = '商家用户名已存在';
             return false;
         }
+
+        $uuid = createUuid();
+        $password = salt_hash($data['password']);
+
+        // 同时保存到ttpos_staff表中
+        $saasStaff = new SaasStaffModel(); 
+        if (!$saasStaff->save([
+            'uuid' => $uuid,
+            'email' => $data['user_name'],
+            'real_name' => $data['user_name'],
+            'phone' => $data['phone'],
+            'password' => $password, 
+            'company_uuid' => $company_uuid, 
+        ])) {
+            $this->error = $saasStaff->getError();
+            return false;
+        }
+
         return $this->save([
-            'uuid' => createUuid(),
+            'uuid' => $uuid,
             'username' => $data['user_name'],
             'phone' => $data['phone'],
-            'password' => salt_hash($data['password']),
+            'password' => $password,
             'company_uuid' => $company_uuid,
             'is_super' => 1
         ]);

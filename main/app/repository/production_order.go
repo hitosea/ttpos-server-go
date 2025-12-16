@@ -124,8 +124,8 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOpti
 	}
 	db.Preload("SaleBill").
 		Preload("BatchTag.MultiLanguageName").
-		Preload("SaleOrderProduct").
 		Preload("SaleOrderProduct.MultiLanguageName").
+		Preload("SaleOrderProduct.OrderItemRemarks").
 		Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
@@ -352,6 +352,8 @@ func (r *productionRepo) WithSaleBill() DBOption {
 func (r *productionRepo) WithSaleOrderProductAll() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct.MultiLanguageName").
+			Preload("SaleOrderProduct.OrderItemRemarks").
+			Preload("SaleOrderProduct.OrderItemRemarks.MultiLanguageName").
 			Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").

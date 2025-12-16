@@ -86,6 +86,12 @@ type MaterialStockDetailReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
 }
 
+// MaterialUpdateSafetyStockReq 修改物品安全库存请求
+type MaterialUpdateSafetyStockReq struct {
+	Uuid        uint64   `json:"uuid" binding:"required"` // 物品UUID
+	SafetyStock *float64 `json:"safety_stock"`            // 安全库存值（可为 null）
+}
+
 // MaterialCategoryDeleteReq 删除物品类别请求
 type MaterialCategoryDeleteReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 物品类别UUID
@@ -113,6 +119,8 @@ type MaterialAddReq struct {
 	InternalCode         string             `json:"internal_code"`          // 内部编码
 	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
 	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	OriginCountryCode    string             `json:"origin_country_code"`    // 原产地国家编码（可选）
+	AllowNegativeStock   *bool              `json:"allow_negative_stock"`   // 是否允许负库存
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
 	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
@@ -199,19 +207,20 @@ func (r *MaterialAddReq) Validate() error {
 }
 
 type MaterialAddErpReq struct {
-	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
-	ItemName           string           `json:"item_name" `           // 物品名称, 英文
-	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
-	Disabled           bool             `json:"disabled" `            // 是否禁用-对应ttpos的启用/禁用
-	NotForSale         bool             `json:"not_for_sale" `        // 是否禁售-对应ttpos的删除
-	BarcodeValue       string           `json:"barcode_value" `       // 条形码值
-	ValuationRate      float64          `json:"valuation_rate" `      // 估值率
-	OpeningStock       float64          `json:"opening_stock" `       // 期初库存
-	InternalCode       string           `json:"internal_code" `       // 内部编码
-	Classification     string           `json:"classification" `      // 分类
-	ClassificationCode string           `json:"classification_code" ` // 分类编码
-	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
-	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
+	ItemCode           string           `json:"item_code" `            // 物品编码, 如果为空，则为新增；如果非空，则为编辑
+	ItemName           string           `json:"item_name" `            // 物品名称, 英文
+	StockUom           string           `json:"stock_uom" `            // 基准库存单位, 英文
+	Disabled           bool             `json:"disabled" `             // 是否禁用-对应ttpos的启用/禁用
+	NotForSale         bool             `json:"not_for_sale" `         // 是否禁售-对应ttpos的删除
+	AllowNegativeStock *bool            `json:"allow_negative_stock" ` // 是否允许负库存-对应ttpos的允许负库存
+	BarcodeValue       string           `json:"barcode_value" `        // 条形码值
+	ValuationRate      float64          `json:"valuation_rate" `       // 估值率
+	OpeningStock       float64          `json:"opening_stock" `        // 期初库存
+	InternalCode       string           `json:"internal_code" `        // 内部编码
+	Classification     string           `json:"classification" `       // 分类
+	ClassificationCode string           `json:"classification_code" `  // 分类编码
+	Uoms               []MaterialUomReq `json:"uoms" `                 // 单位列表
+	PurchaseUom        string           `json:"purchase_uom" `         // 采购单位, 英文
 }
 
 type MaterialEditErpReq struct {
@@ -229,6 +238,7 @@ type MaterialEditErpReq struct {
 	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
 	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
 	NotForSale         bool             `json:"not_for_sale" `        // 是否禁售-对应ttpos的删除
+	AllowNegativeStock *bool            `json:"allow_negative_stock"` // 是否允许负库存-对应ttpos的允许负库存
 }
 
 type ProductAddErpReq struct {
@@ -293,6 +303,8 @@ type MaterialEditReq struct {
 	InternalCode         string             `json:"internal_code"`          // 内部编码
 	SafetyStock          *float64           `json:"safety_stock"`           // 安全库存数量
 	AllowSubstoreVisible int                `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	OriginCountryCode    string             `json:"origin_country_code"`    // 原产地国家编码（可选）
+	AllowNegativeStock   bool               `json:"allow_negative_stock"`   // 是否允许负库存
 }
 
 func (r *MaterialEditReq) Validate() error {

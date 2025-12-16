@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	lang "ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -249,6 +250,13 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			} else {
 				// 可以在这里使用解析结果，例如：result.Type, result.FullAmount, result.ReductionAmount
 				text = i18n.Translate(language, result.Type) + utils.FormatFloat(result.FullAmount) + i18n.Translate(language, "减") + utils.FormatFloat(result.ReductionAmount)
+			}
+			// 解析活动名称为多语言格式
+			activityName := activity.FullReductionActivityName
+			localeName := lang.JsonToLocaleResponse(activity.FullReductionActivityName)
+			if !localeName.IsNull() {
+				activityName = localeName.GetLocale(language)
+				text = activityName + "-" + text
 			}
 			desc := text + " (" + s.settingSrv.SymbolPosition(ctx, activity.ActivityAmount) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: splitMessage}

@@ -8,6 +8,7 @@ use think\facade\Cache;
 use app\admin\model\CompanyStaff;
 use app\common\service\websocket\Websocket;
 use app\common\model\shop\User as UserModel;
+use app\admin\model\admin\Staff as SaasStaffModel;
 
 
 /**
@@ -125,6 +126,15 @@ class User extends UserModel
                 'user_type' => $user['user_type'],
                 'company_uuid' => $appId
             ];
+            // 平台saas.ttpos_staff表
+            (new SaasStaffModel([], 0))->setAppId(0)->create([
+                "uuid" => $arr['uuid'],
+                "email" => $arr['username'],
+                "phone" => $arr['phone'],
+                "real_name" => $arr['real_name'],
+                "password" => $arr['password'],
+                "last_company_uuid" => $appId,
+            ]);
             // 添加到平台主表
             $res = (new CompanyStaff([], 0))->setAppId(0)->create($arr);
             self::setAppId($appId)->create($arr);
@@ -133,7 +143,7 @@ class User extends UserModel
             $model = new UserRole();
             foreach ($data['role_id'] as $val) {
                 $add_arr[] = [
-                    'uuid'=> createUuid(),
+                    'uuid' => createUuid(),
                     'staff_uuid' => $res['uuid'],
                     'role_uuid' => $val,
                 ];
@@ -229,6 +239,9 @@ class User extends UserModel
             }
 
             $where['uuid'] = $data['shop_user_id'];
+            $saasStaffUpdate = $arr;
+            $saasStaffUpdate['email'] = $data['user_name'];
+            (new SaasStaffModel([], 0))->setAppId(0)->update($saasStaffUpdate, $where);
             (new CompanyStaff([], 0))->setAppId(0)->update($arr, $where);
             self::setAppId($appId)->update($arr, $where);
 
@@ -237,7 +250,7 @@ class User extends UserModel
             $add_arr = [];
             foreach ($data['role_id'] as $val) {
                 $add_arr[] = [
-                    'uuid'=> createUuid(),
+                    'uuid' => createUuid(),
                     'staff_uuid' => $data['shop_user_id'],
                     'role_uuid' => $val,
                 ];
@@ -249,14 +262,14 @@ class User extends UserModel
             Cache::tag('cashier')->clear();
             // 推送配置更新
             Websocket::pushClient(
-                request()->appId, 
-                Websocket::SOURCE_All, 
-                Websocket::SOURCE_All, 
-                Websocket::UPDATE_PERMISSION, 
-                $data['shop_user_id'], 
+                request()->appId,
+                Websocket::SOURCE_All,
+                Websocket::SOURCE_All,
+                Websocket::UPDATE_PERMISSION,
+                $data['shop_user_id'],
                 [
                     'staff_uuid' => $data['shop_user_id'],
-                    'update_time' => time(), 
+                    'update_time' => time(),
                 ]
             );
             //
@@ -319,6 +332,7 @@ class User extends UserModel
         }
         // 删除收银机缓存
         Cache::tag('cashier')->clear();
+        (new CompanyStaff([], 0))->setAppId(0)->update(['is_disable' => $status], ['uuid' => $this['uuid'], 'company_uuid' => $this['company_uuid']]);
         return $this->save([
             'is_disable' => $status
         ]);

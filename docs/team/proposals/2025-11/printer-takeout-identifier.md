@@ -137,7 +137,7 @@
 
 - 产品需求文档 (PRD): 任务 DooTask #36917
 - 用户调研报告: 无
-- 技术预研文档: `docs/shared/specs/active/story-printer-takeout-identifier/requirements.md`（已存在需求文档）
+- 技术预研文档: `docs/shared/specs/archived/v2.10.0/story-printer-takeout-identifier/requirements.md`（已存在需求文档）
 
 ### 相关代码
 

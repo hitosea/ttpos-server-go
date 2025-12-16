@@ -70,11 +70,11 @@
             </template>
           </el-table-column>
           <el-table-column prop="product_sales" :label="$t('实际销量')"></el-table-column>
-          <el-table-column prop="stock_num" :label="$t('库存')">
+          <!-- <el-table-column prop="stock_num" :label="$t('库存')">
             <template #default="scope">
               {{ scope.row.product.type == 10 ? scope.row.stock_num : scope.row.material_stock }}
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
             <template #default="scope">

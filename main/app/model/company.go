@@ -109,6 +109,8 @@ type CompanySetting struct {
 	HasChildren               int    `gorm:"column:has_children;type:int(11);default:0;comment:是否含有子节点: 0-否 1-是;NOT NULL" json:"has_children"`
 	EnableTableMap            int    `gorm:"column:enable_table_map;type:int(11);default:0;comment:是否开启桌台地图: 0-否 1-是;NOT NULL" json:"enable_table_map"`
 	EnableDataManagement      int    `gorm:"column:enable_data_management;type:int(11);default:0;comment:是否开启数据管理: 0-否 1-是;NOT NULL" json:"enable_data_management"`
+	EnableKiosk               int    `gorm:"column:enable_kiosk;type:int(11);default:0;comment:是否开启自助点餐机: 0-否 1-是;NOT NULL" json:"enable_kiosk"`
+	EnableGrabDelivery        int    `gorm:"column:enable_grab_delivery;type:int(11);default:0;comment:是否启用Grab外卖: 0-否 1-是;NOT NULL" json:"enable_grab_delivery"`
 }
 
 // 连锁子店
@@ -215,12 +217,20 @@ func (model *CompanySetting) IsOpenRider() bool {
 	return model.DeliveryStatus == 1
 }
 
+func (model *CompanySetting) IsOpenKiosk() bool {
+	return model.EnableKiosk == 1
+}
+
 func (model *CompanySetting) IsOpenTableMap() bool {
 	return model.EnableTableMap == 1
 }
 
 func (model *CompanySetting) IsOpenDataManagement() bool {
 	return model.EnableDataManagement == 1
+}
+
+func (model *CompanySetting) IsOpenGrabDelivery() bool {
+	return model.EnableGrabDelivery == 1
 }
 
 // 外送配置
@@ -334,6 +344,8 @@ type CompanyStaff struct {
 	Username    string `gorm:"column:username;type:varchar(255);comment:员工账号;NOT NULL" json:"username"`
 	Phone       string `gorm:"column:phone;type:varchar(255);comment:员工手机号;NOT NULL" json:"phone"`
 	IsSuper     int    `gorm:"column:is_super;type:int(11);default:0;comment:是否超级管理员" json:"is_super"`
+	IsDisable   int    `gorm:"column:is_disable;type:int;default:0;comment:是否禁用1禁用,0未禁用;NOT NULL" json:"is_disable"`
 
-	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
+	Company   *Company   `gorm:"foreignKey:CompanyUuid;references:Uuid"`
+	SaasStaff *SaasStaff `gorm:"foreignKey:Uuid;references:Uuid"` // 关联到统一账号表
 }

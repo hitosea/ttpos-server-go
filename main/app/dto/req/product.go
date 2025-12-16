@@ -114,20 +114,24 @@ type ProductShopCategorySortReq struct {
 
 // ProductShopCategoryAddReq 商品分类添加请求
 type ProductShopCategoryAddReq struct {
-	IsSpecial  bool               `json:"is_special"`                     // 是否特殊分类, false-否 true-是
-	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
-	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
-	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
-	Code       string             `json:"code"`                           // 分类编码
+	IsSpecial          bool               `json:"is_special"`                     // 是否特殊分类, false-否 true-是
+	ParentUuid         uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+	LocaleName         dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
+	Status             int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+	Code               string             `json:"code"`                           // 分类编码
+	IsDisplayInStore   *int               `json:"is_display_in_store"`            // v2.11.0 是否在店内显示: 1-是 0-否, 永远等于1
+	IsDisplayInTakeout *int               `json:"is_display_in_takeout"`          // v2.11.0 是否在外卖平台显示: 1-是 0-否, 当takeout_product_count大于0的时候 不能设置为0
 }
 
 // ProductShopCategoryEditReq 商品分类编辑请求
 type ProductShopCategoryEditReq struct {
-	Uuid       uint64             `json:"uuid" binding:"required"`        // 商品分类UUID
-	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
-	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
-	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
-	Code       string             `json:"code"`                           // 分类编码
+	Uuid               uint64             `json:"uuid" binding:"required"`        // 商品分类UUID
+	ParentUuid         uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+	LocaleName         dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
+	Status             int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+	Code               string             `json:"code"`                           // 分类编码
+	IsDisplayInStore   *int               `json:"is_display_in_store"`            // v2.11.0 是否在店内显示: 1-是 0-否, 永远等于1
+	IsDisplayInTakeout *int               `json:"is_display_in_takeout"`          // v2.11.0 是否在外卖平台显示: 1-是 0-否, 当takeout_product_count大于0的时候 不能设置为0, 默认0
 }
 
 // ProductShopCategoryDeleteReq 商品分类请求
@@ -324,6 +328,7 @@ type ProductImportItemReq struct {
 	IsShowAssistant       int                `json:"is_show_assistant"`        // 是否显示在点餐助手 1-显示 0-不显示
 	IsShowH5              int                `json:"is_show_h5"`               // 是否显示在h5 1-显示 0-不显示
 	IsShowDelivery        int                `json:"is_show_delivery"`         // 是否显示在外送 1-显示 0-不显示
+	IsShowKiosk           int                `json:"is_show_kiosk"`            // 是否在自助点餐机显示 0-否 1-是
 	UnitUuid              uint64             `json:"unit_uuid"`                // 单位UUID
 	CategoryUuid          uint64             `json:"category_uuid"`            // 分类UUID
 	SkuUuid               uint64             `json:"sku_uuid"`                 // 规格UUID
@@ -445,6 +450,7 @@ type ProductShopAddShowReq struct {
 	IsShowAssistant int `json:"is_show_assistant"` // 是否显示在点餐助手 0-不显示 1-显示
 	IsShowH5        int `json:"is_show_h5"`        // 是否显示在h5 0-不显示 1-显示
 	IsShowDelivery  int `json:"is_show_delivery"`  // 是否显示在外送 0-不显示 1-显示
+	IsShowKiosk     int `json:"is_show_kiosk"`     // 是否在自助点餐机显示 0-否 1-是
 }
 
 // ProductShopAddDiscountReq 商品折扣设置添加请求
@@ -580,6 +586,7 @@ type ProductShopEditShowReq struct {
 	IsShowAssistant int `json:"is_show_assistant"` // 是否显示在点餐助手 0-不显示 1-显示
 	IsShowH5        int `json:"is_show_h5"`        // 是否显示在h5 0-不显示 1-显示
 	IsShowDelivery  int `json:"is_show_delivery"`  // 是否显示在外送 0-不显示 1-显示
+	IsShowKiosk     int `json:"is_show_kiosk"`     // 是否在自助点餐机显示 0-否 1-是
 }
 
 // ProductShopAddDiscountReq 商品折扣设置添加请求

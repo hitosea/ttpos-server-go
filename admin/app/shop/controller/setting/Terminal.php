@@ -492,7 +492,11 @@ class Terminal extends Controller
      * @Apidoc\Param("is_call_service", type="int", require=true, default=0, desc="顾客呼叫提醒 0-关闭 1-开启（v1.0.5）")
      * @Apidoc\Param("server", type="array", require=true, desc="厨显服务器连接")
      * @Apidoc\Param("is_wait_color", type="int", require=true, default=0, desc="是否开启等待颜色 0-关闭 1-开启")
-     * @Apidoc\Param("wait_color", type="array", require=true, desc="等待颜色")
+     * @Apidoc\Param("wait_color", type="array", require=true, desc="等待颜色（旧格式，保持兼容：[\"red\", \"yellow\"]）")
+     * @Apidoc\Param("wait_time_color_ranges", type="array", require=true, desc="等待时长颜色区间配置（新格式）", children={
+     *     @Apidoc\Param("minute", type="string", require=true, desc="时间阈值（分钟，字符串类型）"),
+     *     @Apidoc\Param("color", type="string", require=true, desc="颜色值（RGB格式，如 #100A05）"),
+     * })
      * @Apidoc\Param("language", type="array", require=true, desc="常用语言")
      * @Apidoc\Param("default_language", type="string", require=true, default="", desc="默认语言")
      * @Apidoc\Param("related_printers", type="array", require=true, desc="关联打印机uuid", children={
@@ -522,7 +526,8 @@ class Terminal extends Controller
             'is_come_dish' => $data['is_come_dish'] ?? 0, // 来菜提醒 0关闭 1开启
             'is_call_service' => $data['is_call_service'] ?? 0, // 顾客呼叫提醒 0关闭 1开启
             'is_wait_color' => $data['is_wait_color'] ?? 0, // 是否开启等待颜色
-            'wait_color' => $data['wait_color'] ??  [], // 等待颜色
+            'wait_color' => $data['wait_color'] ??  [], // 等待颜色（旧格式，保持兼容）
+            'wait_time_color_ranges' => $data['wait_time_color_ranges'] ?? [], // 等待时长颜色区间配置（新格式）
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
             'bind_list' => $data['bind_list'] ?? [],
@@ -740,6 +745,57 @@ class Terminal extends Controller
             } else {
                 $ret['advanced_password'] = false;
             }
+
+            // 判断如果wait_color不为空，则将wait_color转换为wait_time_color_ranges
+            if (!empty($ret['wait_color']) && empty($ret['wait_time_color_ranges'])) {
+                $waitColor = $ret['wait_color'];
+                $waitTimeColorRanges = [];
+                
+                // 第一区间固定黑色
+                $waitTimeColorRanges[] = [
+                    'minute' => '0',
+                    'color' => '#100A05'
+                ];
+                
+                // 颜色映射
+                $colorMap = [
+                    'red' => '#E50028',
+                    'yellow' => '#FFBE00'
+                ];
+                
+                // 旧格式：["red", "yellow"] 或 ["yellow", "red"]
+                // 第一个元素对应第二区间（10分钟），第二个元素对应第三区间（20分钟）
+                for ($i = 0; $i < 2 && $i < count($waitColor); $i++) {
+                    $minute = ($i == 0) ? '10' : '20';
+                    $color = '#FFBE00'; // 默认黄色
+                    if (isset($colorMap[$waitColor[$i]])) {
+                        $color = $colorMap[$waitColor[$i]];
+                    }
+                    $waitTimeColorRanges[] = [
+                        'minute' => $minute,
+                        'color' => $color
+                    ];
+                }
+                
+                // 如果旧格式数据不足，使用默认值
+                if (count($waitTimeColorRanges) < 3) {
+                    if (count($waitTimeColorRanges) == 1) {
+                        $waitTimeColorRanges[] = [
+                            'minute' => '10',
+                            'color' => '#FFBE00'
+                        ];
+                    }
+                    if (count($waitTimeColorRanges) == 2) {
+                        $waitTimeColorRanges[] = [
+                            'minute' => '20',
+                            'color' => '#E50028'
+                        ];
+                    }
+                }
+                
+                $ret['wait_time_color_ranges'] = $waitTimeColorRanges;
+            }
+
             // 绑定设备列表
             $ret['bind_list'] = (new BindRecord)->getBindList(BindRecord::SOURCE_KITCHEN, $shopSupplierId) ?: [];
             // 打印机列表

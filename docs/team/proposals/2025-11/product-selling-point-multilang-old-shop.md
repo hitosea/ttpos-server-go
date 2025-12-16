@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 待评审   |
 | **关联任务** | DooTask #36924 |
-| **关联 Spec** | [docs/shared/specs/active/story-shop-product-selling-point-multilang-old-shop/](../../../shared/specs/active/story-shop-product-selling-point-multilang-old-shop/) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-shop-product-selling-point-multilang-old-shop/](../../../shared/specs/active/story-shop-product-selling-point-multilang-old-shop/) |
 
 ---
 
@@ -113,7 +113,7 @@
 
 ### 参考需求
 
-- 类似功能: `docs/shared/specs/active/story-shop-product-detail-editor/`
+- 类似功能: `docs/shared/specs/archived/v2.10.0/story-shop-product-detail-editor/`
 - 竞品分析: 待补充
 
 ### 相关文档

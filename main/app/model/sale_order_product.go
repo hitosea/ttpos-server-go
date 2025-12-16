@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -12,10 +13,12 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 // SaleOrderProduct 销售订单产品 `ttpos_sale_order_product`
@@ -24,8 +27,8 @@ type SaleOrderProduct struct {
 	BaseModel
 
 	// 基本信息字段
-	Name       string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品名称'" json:"name"`
-	FlavorName string  `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
+	Name       string  `gorm:"column:name;type:text;not null;default:'';comment:'商品名称快照（JSON），不随后台更新'" json:"name"`
+	FlavorName string  `gorm:"column:flavor_name;type:text;not null;default:'';comment:'规格名称快照（JSON），不随后台更新'" json:"flavor_name"`
 	Num        float64 `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
 	UnitNum    float64 `gorm:"column:unit_num;type:decimal(12,4);not null;default:0.00;comment:'单位数量，用于套餐子商品'" json:"unit_num"`
 	CopyNum    float64 `gorm:"column:copy_num;type:decimal(12,4);not null;default:0.00;comment:'表示该子商品在分组中被选择多少份'" json:"copy_num"`
@@ -91,7 +94,7 @@ type SaleOrderProduct struct {
 	DeskUuid              uint64 `gorm:"column:desk_uuid;type:bigint(20);not null;default:0;comment:'桌台ID, 默认为0是本台，大于0为合并过来的桌台'" json:"desk_uuid"`
 
 	// 其他字段
-	Sign string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
+	Sign string `gorm:"column:sign;type:text;comment:'商品签名,规格、属性、加料、是否改价、是否赠菜、送厨批次、销售价相同的商品签名相同,用于取消拆单时合并商品'" json:"sign"`
 
 	// 扫码订单相关
 	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`
@@ -127,6 +130,7 @@ type SaleOrderProduct struct {
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
 	BatchTag                   *BatchTag                    `gorm:"foreignKey:BatchTagUuid;references:uuid"`
+	OrderItemRemarks           []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
@@ -174,7 +178,7 @@ func (model *SaleOrderProduct) IsShowBatchTag(openIsBatch bool) bool {
 // 是否处于预送厨阶段
 func (model *SaleOrderProduct) IsPreCooking() bool {
 	// status是已送厨，不能再操作商品，只能退菜。且没有被标记分批类型，所以是预送厨阶段
-	return model.IsBatchBool() && model.Status == constant.SaleOrderProductStatusCooking && model.BatchTime == 0
+	return model.IsBatchBool() && model.Status == constant.SaleOrderProductStatusCooking && model.BatchTime == 0 && !model.IsCancelProduct()
 }
 
 // 获取商品的原材料
@@ -251,16 +255,24 @@ func (model *SaleOrderProduct) DeleteAllSaleOrderProductBomsAndAttributes() {
 }
 
 // 获取商品的简要，如 牛排*1（标准，黑椒汁）
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetProductNameAttributes(language string) string {
-	name := model.MultiLanguageName.GetNameByLang(language)
-	flarvorSaleOrderProductBom := model.GetFlavorSaleOrderProductBom()
-	flavorName := flarvorSaleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(language)
+	// 使用快照方法获取商品名称
+	nameLocale := model.GetLocaleName()
+	name := nameLocale.GetLocale(language)
+
+	// 使用快照方法获取规格名称
+	flavorLocale := model.GetLocaleFlavorName()
+	flavorName := flavorLocale.GetLocale(language)
+
+	// 使用快照方法获取属性名称
 	attributes := make([]string, 0)
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
 		if saleOrderProductAttribute.IsDelete() {
 			continue
 		}
-		attributes = append(attributes, saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNameByLang(language))
+		attrLocale := saleOrderProductAttribute.GetLocaleName()
+		attributes = append(attributes, attrLocale.GetLocale(language))
 	}
 	num := decimal.NewFromFloat(model.Num).Round(3).InexactFloat64() // 去掉末尾的0
 	message := fmt.Sprintf("%s*%v（%s）", name, num, flavorName)
@@ -706,7 +718,7 @@ func (model *SaleOrderProduct) SetCookingBatch(batchTagUuid uint64, batchTime in
 }
 
 // 结账检查
-func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
+func (model *SaleOrderProduct) CheckOutProduct(productBomStockNum func(productBomUuid uint64) float64) (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.IsDelete() {
@@ -715,12 +727,9 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 		if bom.ProductBom.IsFlavor() || bom.ProductBom.IsPackageFlavor() {
 			// 只检查结账减库存的商品
 			if model.DeductStockType == constant.ProductPackageDeductStockTypePay {
-				// 商品已经沽清
-				if bom.ProductBom.IsSoldOutStatus() {
-					return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
-				}
+				stockNum := productBomStockNum(bom.ProductBomUuid)
 				// 下单商品数量超过库存数量. 只检查结账减库存的商品
-				if bom.ProductBom.IsStockShortage(model.Num) {
+				if stockNum < model.Num {
 					return constant.CodeOrderCheckProductStockZero, "下单商品数量超过库存数量"
 				}
 			}
@@ -732,13 +741,10 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 		if bom.ProductBom.IsSauce() {
 			// 只检查结账减库存的商品
 			if model.DeductStockType == constant.ProductPackageDeductStockTypePay {
-				// 商品已经沽清
-				if bom.ProductBom.IsSoldOutStatus() {
-					return constant.CodeOrderCheckProductStockZero, "小料已经售罄"
-				}
 				// 下单商品数量超过库存数量
 				// 每个订单商品一个小料只消耗一个小料库存
-				if bom.ProductBom.IsStockShortage(1) {
+				stockNum := productBomStockNum(bom.ProductBomUuid)
+				if stockNum < 1 {
 					return constant.CodeOrderCheckProductStockZero, "下单小料数量超过库存数量"
 				}
 			}
@@ -770,7 +776,7 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 }
 
 // 送厨检查
-func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
+func (model *SaleOrderProduct) CheckCookingProduct(lang string, productBomStockNum func(productBomUuid uint64) float64) (int, string) {
 	// 如果是已送厨的商品，则不检查
 	if model.IsCookingProduct() {
 		return constant.CodeSuccess, "商品检查通过"
@@ -781,12 +787,8 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 			continue
 		}
 		if bom.ProductBom.IsFlavor() {
-			// 商品已经沽清
-			if bom.ProductBom.IsSoldOutStatus() {
-				return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
-			}
 			// 下单商品数量超过库存数量
-			if bom.ProductBom.IsStockShortageWithMaterial(model.Num) {
+			if bom.ProductBom.IsStockShortageWithMaterial(model.Num, productBomStockNum) {
 				productInfoString := model.GetNameAndFlavorName()
 				return constant.CodeOrderCheckProductStockZero, fmt.Sprintf("%s 库存不足", productInfoString.GetLocale(lang))
 			}
@@ -808,10 +810,6 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 			}
 		}
 		if bom.ProductBom.IsSauce() {
-			// 小料已经沽清
-			if bom.ProductBom.IsSoldOutStatus() {
-				return constant.CodeOrderCheckProductStockZero, "小料已经售罄"
-			}
 			// 小料已经下架
 			if bom.ProductBom.IsDown() {
 				sauceName := bom.ProductBom.ProductSauce.MultiLanguageName.GetNameByLang(lang)
@@ -828,7 +826,7 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 			}
 			// 下单商品数量超过库存数量
 			// 每个订单商品一个小料只消耗一个小料库存
-			if bom.ProductBom.IsStockShortageWithMaterial(1) {
+			if bom.ProductBom.IsStockShortageWithMaterial(1, productBomStockNum) {
 				return constant.CodeOrderCheckProductStockZero, "下单小料数量超过库存数量"
 			}
 		}
@@ -883,6 +881,7 @@ func (model *SaleOrderProduct) SetNil() {
 	model.H5Order = nil
 	model.ProductMustPlan = nil
 	model.BatchTag = nil
+	model.OrderItemRemarks = nil
 }
 
 // 复制销售订单商品
@@ -919,22 +918,115 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 		newAttribute := attribute.CopyAttribute(model.SaleOrderUuid, productUuid)
 		product.SaleOrderProductAttributes = append(product.SaleOrderProductAttributes, newAttribute)
 	}
+	// 复制OrderItemRemarks
+	product.OrderItemRemarks = make([]*SaleOrderProductReason, 0)
+	for _, remark := range model.OrderItemRemarks {
+		if remark.IsDelete() {
+			continue
+		}
+		product.OrderItemRemarks = append(product.OrderItemRemarks, &SaleOrderProductReason{
+			BaseModel:             BaseModel{},
+			SaleOrderUuid:         saleOrderUuid,
+			SaleOrderProductUuid:  productUuid,
+			MultiLanguageNameUuid: remark.MultiLanguageNameUuid,
+			OrderItemRemarkUuid:   remark.OrderItemRemarkUuid,
+			Name:                  remark.Name,
+		})
+	}
 	return &product
 }
 
 // NewSaleOrderProductReasonList 新建一个销售订单商品的退菜原因列表
+// NewSaleOrderProductReasonList 创建退菜原因列表，保存快照字段（JSON 格式）
+// Requirement: story-main-reason-snapshot-fix
 func (model *SaleOrderProduct) NewSaleOrderProductReasonList(reasons []*ReturnFoodReason) []*SaleOrderProductReason {
 	list := make([]*SaleOrderProductReason, 0)
 	for _, reason := range reasons {
 		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !reason.MultiLanguageName.IsNullName() {
+			localeResp := reason.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
 		list = append(list, &SaleOrderProductReason{
 			BaseModel: BaseModel{
 				Uuid: reasonUuid,
 			},
 			SaleOrderUuid:         model.SaleOrderUuid,
 			SaleOrderProductUuid:  model.Uuid,
-			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
 			ReturnFoodReasonUuid:  reason.Uuid,
+			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
+		})
+	}
+	return list
+}
+
+// NewSaleOrderProductRemarkReasonList 创建备注预设原因列表，保存快照字段（JSON 格式）
+func (model *SaleOrderProduct) NewSaleOrderProductRemarkReasonList(remarks []*OrderItemRemark) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, remark := range remarks {
+		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !remark.MultiLanguageName.IsNullName() {
+			localeResp := remark.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.SaleOrderUuid,
+			SaleOrderProductUuid:  model.Uuid,
+			OrderItemRemarkUuid:   remark.Uuid,
+			MultiLanguageNameUuid: remark.MultiLanguageNameUuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
+		})
+	}
+	return list
+}
+
+// NewGiftReasonList 创建赠菜原因列表，保存快照字段（JSON 格式）
+// Requirement: story-main-gift-reason-snapshot-fix
+func (model *SaleOrderProduct) NewGiftReasonList(reasons []*FreeReason) []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range reasons {
+		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !reason.MultiLanguageName.IsNullName() {
+			localeResp := reason.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
+		list = append(list, &SaleOrderProductReason{
+			BaseModel: BaseModel{
+				Uuid: reasonUuid,
+			},
+			SaleOrderUuid:         model.SaleOrderUuid,
+			SaleOrderProductUuid:  model.Uuid,
+			GiftReasonUuid:        reason.Uuid,
+			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
 		})
 	}
 	return list
@@ -955,7 +1047,10 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 	model.UpdateSign()
 }
 
-// 获取退菜原因
+// GetCancelReason 获取退菜原因（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-reason-snapshot-fix
 func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 	zhNames := make([]string, 0)
 	thNames := make([]string, 0)
@@ -974,15 +1069,20 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		if reason.IsDelete() {
 			continue
 		}
-		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
-		thNames = append(thNames, reason.MultiLanguageName.ThName)
-		enNames = append(enNames, reason.MultiLanguageName.EnName)
-		zhtwNames = append(zhtwNames, reason.MultiLanguageName.ZhTwName)
-		jaNames = append(jaNames, reason.MultiLanguageName.JaName)
-		koNames = append(koNames, reason.MultiLanguageName.KoName)
-		myNames = append(myNames, reason.MultiLanguageName.MyName)
-		trNames = append(trNames, reason.MultiLanguageName.TrName)
-		svNames = append(svNames, reason.MultiLanguageName.SvName)
+
+		// 使用 SaleOrderProductReason 的方法获取多语言名称（优先使用快照，降级使用关联表）
+		localeResp := reason.GetLocaleName()
+		if !localeResp.IsNull() {
+			zhNames = append(zhNames, localeResp.ZH)
+			thNames = append(thNames, localeResp.TH)
+			enNames = append(enNames, localeResp.EN)
+			zhtwNames = append(zhtwNames, localeResp.ZHTW)
+			jaNames = append(jaNames, localeResp.JA)
+			koNames = append(koNames, localeResp.KO)
+			myNames = append(myNames, localeResp.MY)
+			trNames = append(trNames, localeResp.TR)
+			svNames = append(svNames, localeResp.SV)
+		}
 	}
 	// 添加自定义的退菜原因
 	if model.CancelReason != "" {
@@ -1010,7 +1110,10 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 	return reasonDto
 }
 
-// 获取赠品原因
+// GetGiftReason 获取赠菜原因（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-gift-reason-snapshot-fix
 func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 	zhNames := make([]string, 0)
 	thNames := make([]string, 0)
@@ -1026,17 +1129,25 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		if !reason.IsGiftReason() {
 			continue
 		}
-		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
-		thNames = append(thNames, reason.MultiLanguageName.ThName)
-		enNames = append(enNames, reason.MultiLanguageName.EnName)
-		zhtwNames = append(zhtwNames, reason.MultiLanguageName.ZhTwName)
-		jaNames = append(jaNames, reason.MultiLanguageName.JaName)
-		koNames = append(koNames, reason.MultiLanguageName.KoName)
-		myNames = append(myNames, reason.MultiLanguageName.MyName)
-		trNames = append(trNames, reason.MultiLanguageName.TrName)
-		svNames = append(svNames, reason.MultiLanguageName.SvName)
+		if reason.IsDelete() {
+			continue
+		}
+
+		// 使用 SaleOrderProductReason 的方法获取多语言名称（优先使用快照，降级使用关联表）
+		localeResp := reason.GetLocaleName()
+		if !localeResp.IsNull() {
+			zhNames = append(zhNames, localeResp.ZH)
+			thNames = append(thNames, localeResp.TH)
+			enNames = append(enNames, localeResp.EN)
+			zhtwNames = append(zhtwNames, localeResp.ZHTW)
+			jaNames = append(jaNames, localeResp.JA)
+			koNames = append(koNames, localeResp.KO)
+			myNames = append(myNames, localeResp.MY)
+			trNames = append(trNames, localeResp.TR)
+			svNames = append(svNames, localeResp.SV)
+		}
 	}
-	// 添加自定义的退菜原因
+	// 添加自定义的赠菜原因
 	if model.GiftReason != "" {
 		zhNames = append(zhNames, model.GiftReason)
 		thNames = append(thNames, model.GiftReason)
@@ -1096,6 +1207,73 @@ func (model *SaleOrderProduct) GetCancelReasons() []*SaleOrderProductReason {
 		}
 	}
 	return list
+}
+
+// GetOrderItemRemarkUuids 获取订单商品的备注预设UUID列表
+func (model *SaleOrderProduct) GetOrderItemRemark() []*SaleOrderProductReason {
+	list := make([]*SaleOrderProductReason, 0)
+	for _, reason := range model.OrderItemRemarks {
+		// 严谨性检查。避免有不是该商品的备注预设原因
+		if reason.SaleOrderProductUuid != model.Uuid || reason.SaleOrderUuid != model.SaleOrderUuid {
+			continue
+		}
+		// 只取出备注预设原因
+		if reason.OrderItemRemarkUuid != 0 && reason.DeleteTime == 0 {
+			list = append(list, reason)
+		}
+	}
+	return list
+}
+
+// BuildOrderItemRemarkInfo 构建订单商品的备注信息
+func (model *SaleOrderProduct) BuildOrderItemRemarkInfo(orderItemRemarkList []*SaleOrderProductReason, remark string) resp.RemarkInfo {
+	orderItemRemarkUuids := make([]uint64, 0)
+	remarkLocale := dto.LocaleResponse{}
+	// 构建备注多语言响应，参考整单备注逻辑
+	for _, item := range orderItemRemarkList {
+		orderItemRemarkUuids = append(orderItemRemarkUuids, item.OrderItemRemarkUuid)
+		localeName := item.GetLocaleName()
+		if !localeName.IsNull() {
+			remarkLocale.EN += localeName.EN + ";"
+			remarkLocale.TH += localeName.TH + ";"
+			remarkLocale.ZH += localeName.ZH + ";"
+			remarkLocale.ZHTW += localeName.ZHTW + ";"
+			remarkLocale.JA += localeName.JA + ";"
+			remarkLocale.KO += localeName.KO + ";"
+			remarkLocale.MY += localeName.MY + ";"
+			remarkLocale.TR += localeName.TR + ";"
+			remarkLocale.SV += localeName.SV + ";"
+		}
+	}
+	// 添加自定义备注
+	if remark != "" {
+		remarkLocale.EN += remark
+		remarkLocale.TH += remark
+		remarkLocale.ZH += remark
+		remarkLocale.ZHTW += remark
+		remarkLocale.JA += remark
+		remarkLocale.KO += remark
+		remarkLocale.MY += remark
+		remarkLocale.TR += remark
+		remarkLocale.SV += remark
+	}
+	// 去掉最后一个分号
+	remarkLocale.EN = strings.TrimSuffix(remarkLocale.EN, ";")
+	remarkLocale.TH = strings.TrimSuffix(remarkLocale.TH, ";")
+	remarkLocale.ZH = strings.TrimSuffix(remarkLocale.ZH, ";")
+	remarkLocale.ZHTW = strings.TrimSuffix(remarkLocale.ZHTW, ";")
+	remarkLocale.JA = strings.TrimSuffix(remarkLocale.JA, ";")
+	remarkLocale.KO = strings.TrimSuffix(remarkLocale.KO, ";")
+	remarkLocale.MY = strings.TrimSuffix(remarkLocale.MY, ";")
+	remarkLocale.TR = strings.TrimSuffix(remarkLocale.TR, ";")
+	remarkLocale.SV = strings.TrimSuffix(remarkLocale.SV, ";")
+	remarkInfo := resp.RemarkInfo{
+		Uuids:        orderItemRemarkUuids,
+		Remark:       remarkLocale,
+		CustomRemark: remark,
+	}
+
+	return remarkInfo
 }
 
 // 设置销售订单商品的数量
@@ -1316,21 +1494,20 @@ func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 }
 
 // 获取商品的名称。格式：`商品名 (规格名)`
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
-	var flavorName dto.LocaleResponse
-	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
-		if saleOrderProductBom.IsDelete() {
-			continue
-		}
-		if saleOrderProductBom.IsFlavor() {
-			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
-		}
-	}
+	// 使用快照方法获取规格名称
+	flavorName := model.GetLocaleFlavorName()
+
 	// 套餐显示单位
 	if model.IsPackageProduct() {
-		flavorName = model.ProductPackage.ProductUnit.MultiLanguageName.GetNames()
+		if model.ProductPackage != nil && !model.ProductPackage.ProductUnit.MultiLanguageName.IsNullName() {
+			flavorName = model.ProductPackage.ProductUnit.MultiLanguageName.GetNames()
+		}
 	}
-	productPackageName := model.MultiLanguageName.GetNames()
+
+	// 使用快照方法获取商品名称
+	productPackageName := model.GetLocaleName()
 	return dto.LocaleResponse{
 		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
 		TH:   fmt.Sprintf("%s (%s)", productPackageName.TH, flavorName.TH),
@@ -1371,29 +1548,30 @@ func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
 }
 
 // 获取商品属性 - 列表 包含规格、属性、小料
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
-	var flavorName dto.LocaleResponse
+	// 使用快照方法获取规格名称
+	flavorName := model.GetLocaleFlavorName()
 	var sauceNames []dto.LocaleResponse
 	var attributeNames []dto.LocaleResponse
 
+	// 使用快照方法获取小料名称
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsDelete() {
 			continue
 		}
-		if saleOrderProductBom.IsFlavor() {
-			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
-		} else {
-			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
+		if !saleOrderProductBom.IsFlavor() {
+			sauceName := saleOrderProductBom.GetLocaleName()
 			sauceNames = append(sauceNames, sauceName)
 		}
 	}
 
-	// 获取商品属性
+	// 使用快照方法获取属性名称
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
 		if saleOrderProductAttribute.IsDelete() {
 			continue
 		}
-		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNames()
+		attributeName := saleOrderProductAttribute.GetLocaleName()
 		attributeNames = append(attributeNames, attributeName)
 	}
 
@@ -1416,34 +1594,28 @@ func (model *SaleOrderProduct) GetPureAttributeName() dto.LocaleResponse {
 }
 
 // 获取商品属性 - 纯属性 - 列表
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetPureAttributeNameList() []dto.LocaleResponse {
 	var attributeNames []dto.LocaleResponse
-	// 获取商品属性
+	// 使用快照方法获取属性名称
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
 		if saleOrderProductAttribute.IsDelete() {
 			continue
 		}
-		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNames()
+		attributeName := saleOrderProductAttribute.GetLocaleName()
 		attributeNames = append(attributeNames, attributeName)
 	}
 	return attributeNames
 }
 
 // 获取商品规格
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetFlavorName() dto.LocaleResponse {
-	var flavorName dto.LocaleResponse
-	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
-		if saleOrderProductBom.IsDelete() {
-			continue
-		}
-		if saleOrderProductBom.IsFlavor() {
-			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
-		}
-	}
-	return flavorName
+	return model.GetLocaleFlavorName()
 }
 
 // 获取商品小料
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
 	var sauceNames []dto.LocaleResponse
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
@@ -1451,7 +1623,8 @@ func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
 			continue
 		}
 		if !saleOrderProductBom.IsFlavor() {
-			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
+			// 使用快照方法获取小料名称
+			sauceName := saleOrderProductBom.GetLocaleName()
 			sauceNames = append(sauceNames, sauceName)
 		}
 	}
@@ -1493,31 +1666,35 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 	return attributeResultNames
 }
 
+// Requirement: story-main-product-attribute-snapshot-fix
 func (model *SaleOrderProduct) GetAttributeNamesByLangs(lang string, showSku ...bool) (string, []string, string, []string) {
-	var flavorName string
+	// 使用快照方法获取规格名称
+	flavorLocale := model.GetLocaleFlavorName()
+	flavorName := flavorLocale.GetLocale(lang)
 	var sauceNames []string
 	var attributeNames []string
 	isShowSku := true
 	if len(showSku) > 0 {
 		isShowSku = showSku[0]
 	}
+	// 使用快照方法获取小料名称
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsDelete() {
 			continue
 		}
-		if saleOrderProductBom.IsFlavor() {
-			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
-		} else {
-			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNameByLang(lang)
+		if !saleOrderProductBom.IsFlavor() {
+			sauceLocale := saleOrderProductBom.GetLocaleName()
+			sauceName := sauceLocale.GetLocale(lang)
 			sauceNames = append(sauceNames, sauceName)
 		}
 	}
-	// 获取商品属性
+	// 使用快照方法获取属性名称
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
 		if saleOrderProductAttribute.IsDelete() {
 			continue
 		}
-		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNameByLang(lang)
+		attrLocale := saleOrderProductAttribute.GetLocaleName()
+		attributeName := attrLocale.GetLocale(lang)
 		attributeNames = append(attributeNames, attributeName)
 	}
 	// 根据规格生成字符串。`(规格；属性；小料)`
@@ -1539,6 +1716,115 @@ func (model *SaleOrderProduct) GetAttributeNamesByLangs(lang string, showSku ...
 func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...bool) string {
 	attributeNames, _, _, _ := model.GetAttributeNamesByLangs(lang, showSku...)
 	return attributeNames
+}
+
+// GetLocaleName 获取商品名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-product-attribute-snapshot-fix
+func (model *SaleOrderProduct) GetLocaleName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.Name
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	if model.MultiLanguageName != nil && !model.MultiLanguageName.IsNullName() {
+		return model.MultiLanguageName.GetNames()
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
+}
+
+// SetNameSnapshot 设置商品名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-product-attribute-snapshot-fix (JSON 方案)
+func (model *SaleOrderProduct) SetNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.Name = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.Name = string(jsonData)
+	return nil
+}
+
+// SetFlavorNameSnapshot 设置规格名称快照（JSON）
+// 从 MultiLanguageName 获取完整多语言数据并序列化为 JSON
+// Requirement: story-main-product-attribute-snapshot-fix (JSON 方案)
+func (model *SaleOrderProduct) SetFlavorNameSnapshot(multiLangName MultiLanguageName) error {
+	// 如果多语言名称为空，设置为空字符串
+	if multiLangName.IsNullName() {
+		model.FlavorName = ""
+		return nil
+	}
+
+	// 构建 LocaleResponse
+	localeResp := multiLangName.GetNames()
+
+	// 序列化为 JSON
+	jsonData, err := json.Marshal(localeResp)
+	if err != nil {
+		return err
+	}
+
+	model.FlavorName = string(jsonData)
+	return nil
+}
+
+// GetLocaleFlavorName 获取规格名称（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-product-attribute-snapshot-fix
+func (model *SaleOrderProduct) GetLocaleFlavorName() dto.LocaleResponse {
+	// 优先使用快照字段
+	snapshotName := model.FlavorName
+
+	// 如果快照字段不为空，尝试反序列化为多语言数据
+	if snapshotName != "" {
+		var snapshotLocale dto.LocaleResponse
+		if err := json.Unmarshal([]byte(snapshotName), &snapshotLocale); err == nil {
+			// 反序列化成功，检查是否有主语言数据
+			if !snapshotLocale.IsNull() {
+				// 如果快照数据完整，直接返回
+				return snapshotLocale
+			}
+		}
+		// 如果反序列化失败或数据不完整，继续后续降级逻辑
+	}
+
+	// 降级：如果快照字段为空或反序列化失败，使用关联表（兼容历史数据）
+	flavorBom := model.GetFlavorSaleOrderProductBom()
+	if flavorBom != nil {
+		if !flavorBom.ProductBom.ProductFlavor.MultiLanguageName.IsNullName() {
+			return flavorBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
+		}
+	}
+
+	// 兜底：如果关联表也没有数据，返回空的多语言响应
+	return dto.LocaleResponse{}
 }
 
 // 点餐时录入的原始数据
@@ -1641,6 +1927,14 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	{
 		product.ProductPackage = productPackage
 		product.MultiLanguageName = &productPackage.MultiLanguageName
+		// 设置商品名称快照（JSON）
+		// Requirement: story-main-product-attribute-snapshot-fix
+		if !productPackage.MultiLanguageName.IsNullName() {
+			if err := product.SetNameSnapshot(productPackage.MultiLanguageName); err != nil {
+				// 记录错误日志，但不中断流程
+				logger.Logger.Error("设置商品名称快照失败", zap.Error(err), zap.Uint64("product_package_uuid", productPackage.Uuid))
+			}
+		}
 	}
 
 	if operation == "sub" {
@@ -1744,7 +2038,7 @@ func (model *SaleOrderProduct) UpdateSign() {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid-分批类型uuid
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid-分批类型uuid-备注预设UUID列表
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1754,6 +2048,7 @@ func (model *SaleOrderProduct) UpdateSign() {
 // 6 退菜
 // 7 h5下单
 // 8 接单
+// 9 修改备注预设
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -1794,7 +2089,19 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%d",
+	// 构建商品的备注预设UUID列表
+	type Remark struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	remark := Remark{Uuids: make([]uint64, 0), Text: model.Remark}
+	remarkUuids := model.GetOrderItemRemark()
+	for _, item := range remarkUuids {
+		remark.Uuids = append(remark.Uuids, item.OrderItemRemarkUuid)
+	}
+	remarkStr := utils.ToJson(remark)
+
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%d-%s",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -1808,11 +2115,12 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
 		model.PackageUuid,
 		model.BatchTagUuid, // 分批类型UUID. 前置模式下，加购时就设置，用于区分相同商品但不同分批类型
+		remarkStr,          // 备注预设原因列表
 	)
 }
 
 // GeneratePackageSign 生成商品套餐签名. 相同的商品套餐，商品套餐签名相同,用于取消拆单时合并商品。
-// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-分批类型uuid
+// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-分批类型uuid-备注预设UUID列表
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1822,6 +2130,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 // 6 退菜
 // 7 h5下单
 // 8 接单
+// 9 修改备注预设
 func (model *SaleOrderProduct) GeneratePackageSign() string {
 	packageUuid := model.ProductPackageUuid
 
@@ -1836,7 +2145,18 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d",
+	// 构建商品的备注预设UUID列表
+	type Remark struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	remark := Remark{Uuids: make([]uint64, 0), Text: model.Remark}
+	for _, item := range model.GetOrderItemRemark() {
+		remark.Uuids = append(remark.Uuids, item.OrderItemRemarkUuid)
+	}
+	remarkStr := utils.ToJson(remark)
+
+	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d-%s",
 		packageUuid,
 		model.PackageSubProductParams,
 		model.Remark,
@@ -1849,6 +2169,7 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
 		model.BatchTagUuid,  // 分批类型UUID. 前置模式下，加购时就设置，用于区分相同商品但不同分批类型
+		remarkStr,           // 备注预设原因列表
 	)
 }
 

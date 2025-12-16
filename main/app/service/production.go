@@ -93,6 +93,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 		return notNullResp, err
 	}
 
+	language := ctx.GetLanguage()
 	// 获取厨显设备信息
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	deviceRepo := repository.NewDeviceRepo(db)
@@ -155,7 +156,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	if err != nil {
 		return notNullResp, errors.ErrInternal
 	}
-	finishedList, err := s.getFinishedList(productionRepo, mode, productPackageUuidOpt, saleBillUuidOpt)
+	finishedList, err := s.getFinishedList(productionRepo, mode, language, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
 		return notNullResp, err
 	}
@@ -287,8 +288,14 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				item.CreateTime = product.BatchTime
 			}
 
-			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
-				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
+				remark := item.Remark
+				if len(orderItemRemarkList) > 0 {
+					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+					remark = remarkInfo.Remark.GetLocale(language)
+				}
+				item.Remark = i18n.Translate(language, "套餐备注：") + remark
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
@@ -317,6 +324,12 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				}
 				return *remark
 			}()
+			remark := item.Remark
+			if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
+				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+				remark = remarkInfo.Remark.GetLocale(language)
+			}
+			item.Remark = remark
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -327,7 +340,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		}
 		groups = append(groups, group)
 	}
-	finishedList, err := s.getFinishedList(productionRepo, mode, productPackageUuidOpt, saleBillUuidOpt)
+	finishedList, err := s.getFinishedList(productionRepo, mode, language, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
 		return notNullResp, err
 	}
@@ -344,7 +357,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 }
 
 // getFinishedList 获取最近上菜历史
-func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrderRepo, mode *uint, opts ...repository.DBOption) (resp.ProductionList, error) {
+func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrderRepo, mode *uint, language string, opts ...repository.DBOption) (resp.ProductionList, error) {
 	var finishStatusOpt repository.DBOption = nil
 	var orderBy string = repository.FinishedTimeDesc
 	if mode != nil {
@@ -358,7 +371,7 @@ func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrd
 	} else {
 		finishStatusOpt = productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, orderBy, finishStatusOpt, opts...)
+	finishedList, err := s.getLatestFinishedList(productionRepo, orderBy, finishStatusOpt, language, opts...)
 	if err != nil {
 		errMsg := "获取最近上菜历史失败"
 		if mode != nil {
@@ -375,7 +388,7 @@ func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrd
 }
 
 // 最近上菜历史
-func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, orderBy string, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
+func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, orderBy string, statusOpt repository.DBOption, language string, opts ...repository.DBOption) (resp.ProductionList, error) {
 	_, products, err := productionRepo.GetProducts(3, orderBy, statusOpt, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
@@ -387,6 +400,13 @@ func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProduct
 		item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 		item.SerialNo = product.SaleBill.SerialNo
 		item.DiningMethod = product.SaleBill.DiningMethod
+		remark := item.Remark
+		orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+		if len(orderItemRemarkList) > 0 {
+			remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+			remark = remarkInfo.Remark.GetLocale(language)
+		}
+		item.Remark = remark
 		items = append(items, item)
 	}
 	return resp.ProductionList{
@@ -496,8 +516,14 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 				item.CreateTime = product.BatchTime
 			}
 
-			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
-				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
+				remark := item.Remark
+				if len(orderItemRemarkList) > 0 {
+					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+					remark = remarkInfo.Remark.GetLocale(language)
+				}
+				item.Remark = i18n.Translate(language, "套餐备注：") + remark
 			}
 			if modeMake {
 				item.FinishedTime = product.MadeTime
@@ -525,6 +551,12 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 				}
 				return resp.BatchTagInfo{}
 			}()
+			remark := item.Remark
+			if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
+				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+				remark = remarkInfo.Remark.GetLocale(language)
+			}
+			item.Remark = remark
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -933,6 +965,15 @@ func (s *productionSrv) convertToEventOrderProduct(product *model.ProductionOrde
 				return ""
 			}
 			return product.SaleOrderProduct.Remark
+		}(),
+		RemarkLocale: func() dto.LocaleResponse {
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				return dto.LocaleResponse{}
+			}
+			// 构建备注信息（包含预设备注和自定义备注）
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, product.SaleOrderProduct.Remark)
+			return remarkInfo.Remark
 		}(),
 	}
 	// 如果是套餐主商品，添加子商品

@@ -5,6 +5,7 @@ type SaleOrderInvoiceInfo struct {
 	BaseModel
 	// 关联ID字段
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:'销售订单ID';index" json:"sale_order_uuid"`
+	InvoiceNumber string `gorm:"column:invoice_number;type:varchar(64);default:'';comment:'发票编号'" json:"invoice_number"`
 
 	// 发票信息字段
 	CompanyName      string `gorm:"column:company_name;type:varchar(255);comment:'公司名称'" json:"company_name"`
@@ -17,4 +18,8 @@ type SaleOrderInvoiceInfo struct {
 // HasContent 检查是否有内容需要打印
 func (i *SaleOrderInvoiceInfo) HasContent() bool {
 	return i != nil && (i.CompanyName != "" || i.CompanyAddr != "" || i.CompanyTaxNumber != "" || i.CompanyPhone != "")
+}
+
+func (i *SaleOrderInvoiceInfo) GetInvoiceNumber() string {
+	return i.InvoiceNumber
 }

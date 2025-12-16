@@ -7,11 +7,13 @@ type StatementOrderData struct {
 	BrandName string                 `json:"brand_name"`
 	Store     StatementStoreData     `json:"store"`
 	Order     StatementOrderInfoData `json:"order"`
+	Invoice   StatementInvoiceData   `json:"invoice"`
 }
 
 // StatementStoreData 店铺数据结构体
 type StatementStoreData struct {
 	Name             string `json:"name"`               // 店铺名称
+	StoreCode        string `json:"store_code"`         // 店铺编号
 	Address          string `json:"address"`            // 店铺地址
 	Phone            string `json:"phone"`              // 店铺电话
 	Logo             string `json:"logo"`               // 店铺logo
@@ -137,6 +139,17 @@ type StatementPercentageData struct {
 	TaxRate    string `json:"tax_rate"`    // 税率
 	TaxFee     string `json:"tax_fee"`     // 税费
 	TotalPrice string `json:"total_price"` // 总价
+}
+
+// StatementInvoiceData 发票数据结构体
+type StatementInvoiceData struct {
+	InvoiceNumber     string `json:"invoice_number"`      // 发票编号
+	UnifiedCreditCode string `json:"unified_credit_code"` // 统一信用代码
+	CompanyName       string `json:"company_name"`        // 公司名称
+	CompanyAddress    string `json:"company_address"`     // 公司地址
+	CompanyPhone      string `json:"company_phone"`       // 公司电话
+	CompanyTaxNumber  string `json:"company_tax_number"`  // 公司税号
+	PrintNum          int    `json:"print_num"`           // 打印次数
 }
 
 // GetStatementProductData 获取商品数据

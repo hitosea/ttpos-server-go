@@ -14,7 +14,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -187,6 +186,11 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 				if err := repository.NewSaleOrderCouponRepo(tx).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err, "取消销售订单所有优惠券失败")
 				}
+				// 取消满减活动
+				saleOrder.SetActivityCancel()
+				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderActivity(saleOrder.Uuid, 0, "", 0, saleOrder.AutoPointsExchange); err != nil {
+					return errors.WithMessage(err, "取消销售订单满减活动失败")
+				}
 				// 更新销售订单的积分抵扣信息
 				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
 					return errors.WithMessage(err)
@@ -252,6 +256,12 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		return nil, errors.New("支付方式不可用")
 	}
 
+	// 验证支付配置
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		return nil, errors.New("请先到支付管理中完善后使用")
+	}
+
 	// 判断支付方式是否已支付
 	orderRepo := repository.NewPaymentOrderRepo(db)
 	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
@@ -287,7 +297,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+	payment, err := paymentRepo.CreatePayment(CreatePaymentReq{
 		RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
 		RelatedUuid:       saleOrder.Uuid,
 		PaymentMethodUuid: paymentMethod.Uuid,
@@ -543,6 +553,60 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errSaleBill
 	}
 
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+
+	// 检查材料库存是否充足
+	{
+		withoutWarehouseOutFormSaleOrderProducts, err := s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 获取减库存的清单信息
+		decreaseStockList, err := s.getDecreaseStockList(ctx, withoutWarehouseOutFormSaleOrderProducts)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 检查材料库存是否充足
+		if err := s.checkMaterialStock(ctx, db, decreaseStockList); err != nil {
+			// 如果检查不通过，按商品顺序检查，返回具体哪些商品库存不足
+			insufficientProducts, errDetail := s.checkMaterialStockByProductOrder(ctx, db, decreaseStockList)
+			if errDetail != nil {
+				return nil, errors.WithMessage(errDetail)
+			}
+			if len(insufficientProducts) > 0 {
+				// 构建商品名称列表
+				productNames := make([]string, 0, len(insufficientProducts))
+				for _, product := range insufficientProducts {
+					productName := product.GetProductNameAttributes(ctx.GetLanguage())
+					if productName == "" {
+						localeName := product.GetLocaleName()
+						productName = localeName.GetLocale(ctx.GetLanguage())
+						if productName == "" {
+							productName = localeName.EN
+							if productName == "" {
+								productName = localeName.ZH
+							}
+							if productName == "" {
+								productName = fmt.Sprintf("商品(%d)", product.Uuid)
+							}
+						}
+					}
+					productNames = append(productNames, productName)
+				}
+				return nil, errors.NewWithCode(
+					constant.CodeWarehouseStockNotEnough,
+					"以下商品材料库存不足: "+strings.Join(productNames, ", "),
+				)
+			}
+			// 如果按商品顺序检查也没有找到具体商品，返回原始错误
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	// 重新计算销售账单
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
@@ -552,9 +616,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
 		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
 	}
-
-	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
@@ -999,7 +1060,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 					SaleOrderUuid: request.SaleOrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
-				FullReductionActivityUuid:    saleOrder.FullReductionActivityUuid,
+				FullReductionActivityUuid: saleOrder.FullReductionActivityUuid,
+				FullReductionActivityName: func() string {
+					if saleOrder.FullReductionActivityUuid > 0 {
+						activityRepo := repository.NewFullReductionActivityRepo(db)
+						activity, err := activityRepo.GetByUuid(saleOrder.FullReductionActivityUuid)
+						if err != nil {
+							return ""
+						}
+						return activity.Name
+					}
+					return ""
+				}(),
 				FullReductionActivityMessage: saleOrder.FullReductionActivityMessage,
 				ActivityAmount:               saleOrder.ActivityAmount,
 				OldPrice:                     oldPrice,
@@ -1511,21 +1583,30 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			ctx.Log().Error("计算活动抵扣金额失败", zap.Any("company_uuid", ctx.GetCompanyUuid()), zap.Any("sale_order_uuid", saleOrder.Uuid), zap.Any("activity_uuid", saleOrder.FullReductionActivityUuid), zap.Error(err))
 		}
 	}
-	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
+
+	// 连连支付是否可用
+	lianLianPayAvailable := true
+	if err := NewPaymentRepo(ctx, s.dbm).ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		lianLianPayAvailable = false
+	}
+
+	// 遍历支付方式
 	for _, paymentMethod := range paymentMethods {
+		isAvailable := true
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
 		// LianLianPay 没有配置支付信息 不显示
-		if paymentMethod.Code == constant.PaymentMethodCodeLianLianWechatPay ||
-			paymentMethod.Code == constant.PaymentMethodCodeLianLianAliPay ||
-			paymentMethod.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
-			if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
+		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
+			if paymentMethod.IsHeadquarterPayment() {
+				isAvailable = false
+			} else {
 				continue
 			}
 		}
 
+		// 获取支付方式logo和二维码
 		var logoUrl string
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {
@@ -1537,6 +1618,14 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		if paymentMethod.QrcodeFile != nil {
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
+
+		// 总部支付方式
+		if paymentMethod.IsHeadquarterPayment() {
+			if paymentMethod.Source == constant.PaymentMethodSourceDefault && qrcodeUrl == "" {
+				isAvailable = false
+			}
+		}
+
 		methodItem := resp.PaymentMethodItem{
 			Source:        paymentMethod.Source,
 			SourceText:    paymentMethod.GetSourceText(ctx.GetLanguage()),
@@ -1546,6 +1635,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			FeePercent:    paymentMethod.FeePercent,
 			Logo:          logoUrl,
 			Qrcode:        qrcodeUrl,
+			IsAvailable:   isAvailable,
 			Code:          paymentMethod.Code,
 		}
 		methodItems = append(methodItems, methodItem)

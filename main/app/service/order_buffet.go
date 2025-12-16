@@ -11,9 +11,11 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -153,6 +155,29 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 		saleBill.SetMealNum(mealNum)
 		saleBill.SetBuffetPackage(buffetUuids)
 		saleBill.SetDelayProductMealNum(mealNum)
+
+		// 设置自助餐名称快照（JSON 方案）
+		// Requirement: story-main-buffet-package-name-snapshot-fix
+		// 创建 map 确保按照 buffetUuids 的顺序匹配（buffetUuids 是从 GetSaleOrderBuffetCustomerTypes 返回的，已去重且保持顺序）
+		buffetMap := make(map[uint64]*model.BuffetPackage)
+		for _, buffet := range buffetList {
+			buffetMap[buffet.Uuid] = buffet
+		}
+		// 按照 buffetUuids 的顺序设置快照
+		if len(buffetUuids) >= 1 {
+			if buffet1, ok := buffetMap[buffetUuids[0]]; ok && !buffet1.MultiLanguageName.IsNullName() {
+				if err := saleBill.SetBuffetPackage1NameSnapshot(buffet1.MultiLanguageName); err != nil {
+					logger.Logger.Error("保存自助餐套餐1名称快照失败", zap.Error(err))
+				}
+			}
+		}
+		if len(buffetUuids) >= 2 {
+			if buffet2, ok := buffetMap[buffetUuids[1]]; ok && !buffet2.MultiLanguageName.IsNullName() {
+				if err := saleBill.SetBuffetPackage2NameSnapshot(buffet2.MultiLanguageName); err != nil {
+					logger.Logger.Error("保存自助餐套餐2名称快照失败", zap.Error(err))
+				}
+			}
+		}
 
 		//
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {

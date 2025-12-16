@@ -7,6 +7,7 @@ use help\ValidateHelp;
 use Endroid\QrCode\QrCode;
 use app\common\model\store\FreeTag;
 use app\common\model\store\OrderRemark;
+use app\common\model\store\OrderItemRemark;
 use app\shop\controller\Controller;
 use app\shop\model\store\TableArea;
 use hg\apidoc\annotation as Apidoc;
@@ -461,6 +462,88 @@ class Business extends Controller
     }
 
     /**
+     * @Apidoc\Title("单品备注管理")
+     * @Apidoc\Method ("GET|POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderItemRemark")
+     * @Apidoc\Param("order_item_remark", type="array", require=false, desc="单品备注", children={
+     *     @Apidoc\Returned("id", type="int", desc="ID"),
+     *     @Apidoc\Returned("remark", type="string", desc="单品备注名称"),
+     *     @Apidoc\Returned("action", type="string", desc="操作结果 delete-删除 edit-编辑 add-新增"),
+     * })
+     * @Apidoc\Returned()
+     */
+    public function orderItemRemark()
+    {
+        $model = new OrderItemRemark;
+
+        if ($this->request->isGet()) {
+            return $this->renderSuccess('操作成功', $model->getList());
+        }
+
+        $data = $this->request->param();
+        $defaultLang = getDefaultLanguage();
+        if (isset($data['order_item_remark'])) {
+            if (empty($data['order_item_remark'])) {
+                return $this->renderError('请输入单品备注');
+            }
+            $count = 0;
+            foreach ($data['order_item_remark'] as $item) {
+                if (isset($item['action']) && $item['action'] != 'delete') {
+                    $count++;
+                }
+            }
+            if ($count > 100) {
+                return $this->renderError('单品备注数量不能超过100个');
+            }
+            foreach ($data['order_item_remark'] as $item) {
+                $remark = $item['remark'] ?? '';
+                if (ValidateHelp::hasEmptyValue($remark)) {
+                    return $this->renderError('单品备注不能为空');
+                }
+                $id = $item['id'] ?? 0;
+                $languageUuid = $item['multi_language_name_uuid'] ?? 0;
+                $languageData = json_decode($remark, true);
+                $name = $languageData[$defaultLang] ?? '';
+
+                if (isset($item['action'])) {
+                    if ($item['action'] == 'add' || $item['action'] == 'edit') {
+                        $existing = $model->where('id', $id)->find();
+                        if ($existing) {
+                            $id = $existing['id'];
+                            $languageUuid = $existing['multi_language_name_uuid'];
+                            $item['action'] = 'edit';
+                        }
+                    }
+                    //
+                    if ($item['action'] == 'add') {
+                        unset($item['id']);
+                        unset($item['action']);
+                        //
+                        $languageUuid = (new MultiLanguageName)->saveNames($languageData);
+                        $item['uuid'] = createUuid();
+                        $item['name'] = $name;
+                        $item['multi_language_name_uuid'] = $languageUuid;
+                        (new OrderItemRemark())->save($item);
+                    } elseif ($item['action'] == 'delete') {
+                        if ($id) {
+                            (new MultiLanguageName)->where('uuid', $model->where('id', $id)->value('multi_language_name_uuid'))->delete();
+                            OrderItemRemark::destroy($id);
+                        }
+                    } elseif ($item['action'] == 'edit') {
+                        if ($id) {
+                            unset($item['action']);
+                            $item['name'] = $name;
+                            (new MultiLanguageName)->saveNames($languageData, $languageUuid);
+                            $model->update($item, ['id' => $id]);
+                        }
+                    }
+                }
+            }
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
      * @Apidoc\Title("订单方案列表（v1.0.9）")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/setting.Business/orderSchemeList")
@@ -607,9 +690,10 @@ class Business extends Controller
         //
         $free_tag_count = FreeTag::count();
         $order_remark_count = OrderRemark::count();
+        $order_item_remark_count = OrderItemRemark::count();
         $return_reason_count = ReturnReason::count();
         $company_link = request()->licenses['is_open_member'] == 1 ? env('MEMBER_BASE_URL') . "/launch/{$shop_supplier_id}" : '';
         $vars['values'] = $ret;
-        return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count', 'order_remark_count', 'company_link'));
+        return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count', 'order_remark_count', 'order_item_remark_count', 'company_link'));
     }
 }

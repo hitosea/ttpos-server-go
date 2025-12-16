@@ -5,8 +5,10 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
@@ -210,12 +212,25 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(ctx context.Context, mustPla
 	if mustPlan.IsDelete() {
 		return []resp.InstantMustPlanProductStat{}
 	}
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+	stockNumFn := func(productBomUuid uint64) float64 {
+		// 使用 ProductInventoryAppService 查询商品BOM库存
+		inventory, err := appService.GetProductInventory(ctx, productBomUuid)
+		if err != nil {
+			// 查询失败时记录日志并返回0
+			ctx.Log().Warn("查询商品BOM库存失败", zap.Uint64("productBomUuid", productBomUuid), zap.Error(err))
+			return 0
+		}
+		return inventory
+	}
+
 	productList := make([]resp.InstantMustPlanProductStat, 0)
 	// 点餐的必点方案都是“每单必点”，没有“每人必点”类型的
 	// 如果是固定商品
 	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 		for _, planItem := range mustPlan.ProductMustPlanItems {
-			productPackage := planItem.GetProductInfo(baseUrl)
+			productPackage := planItem.GetProductInfo(baseUrl, stockNumFn)
 			if productPackage == nil {
 				continue
 			}
@@ -241,7 +256,7 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(ctx context.Context, mustPla
 	// 如果是可选商品
 	if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 		for _, planItem := range mustPlan.ProductMustPlanItems {
-			productPackage := planItem.GetProductInfo(baseUrl)
+			productPackage := planItem.GetProductInfo(baseUrl, stockNumFn)
 			if productPackage == nil {
 				continue
 			}
@@ -461,12 +476,25 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 		return []resp.InstantMustPlanProductStat{}
 	}
 	productList := make([]resp.InstantMustPlanProductStat, 0)
-	//
-	// 如果是“每单必点”、固定商品
+
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+	stockNumFn := func(productBomUuid uint64) float64 {
+		// 使用 ProductInventoryAppService 查询商品BOM库存
+		inventory, err := appService.GetProductInventory(ctx, productBomUuid)
+		if err != nil {
+			// 查询失败时记录日志并返回0
+			ctx.Log().Warn("查询商品BOM库存失败", zap.Uint64("productBomUuid", productBomUuid), zap.Error(err))
+			return 0
+		}
+		return inventory
+	}
+
+	// 如果是"每单必点"、固定商品
 	if mustPlan.GetMustType() == constant.ProductMustPlanMustTypeEachOrder {
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo(baseUrl)
+
+				productPackage := planItem.GetProductInfo(baseUrl, stockNumFn)
 				if productPackage == nil {
 					continue
 				}
@@ -489,10 +517,10 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 				productList = append(productList, productStat)
 			}
 		}
-		// 如果是“每单必点”、可选商品
+		// 如果是"每单必点"、可选商品
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo(baseUrl)
+				productPackage := planItem.GetProductInfo(baseUrl, stockNumFn)
 				if productPackage == nil {
 					continue
 				}
@@ -510,10 +538,10 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 
 	// "每人必点"
 	if mustPlan.GetMustType() == constant.ProductMustPlanMustTypeEachPerson {
-		// 如果是“每人必点”、固定商品
+		// 如果是"每人必点"、固定商品
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo(baseUrl)
+				productPackage := planItem.GetProductInfo(baseUrl, stockNumFn)
 				if productPackage == nil {
 					continue
 				}
@@ -536,10 +564,10 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 				productList = append(productList, productStat)
 			}
 		}
-		// 如果是“每人必点”、可选商品
+		// 如果是"每人必点"、可选商品
 		if mustPlan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 			for _, planItem := range mustPlan.ProductMustPlanItems {
-				productPackage := planItem.GetProductInfo(baseUrl)
+				productPackage := planItem.GetProductInfo(baseUrl, stockNumFn)
 				if productPackage == nil {
 					continue
 				}

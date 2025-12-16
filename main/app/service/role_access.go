@@ -190,6 +190,12 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if companySetting.DeliveryStatus != 1 && permission.Uuid == 1752716650 {
 			continue
 		}
+		// 授权无Grab外卖权限（未开启Grab外卖时，隐藏外卖接单权限）
+		if !companySetting.IsOpenGrabDelivery() {
+			if permission.Uuid == 1734000001 { // 外卖权限UUID
+				continue
+			}
+		}
 		// 新管理端-管理APP-总部无品采收货权限
 		if permission.Uuid == 2858548203520000 && companySetting.IsHeadquarter() {
 			continue
@@ -208,6 +214,14 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		}
 		// 新管理端-管理APP-散户无品牌采购、品牌收货、调拨单权限
 		if slices.Contains([]uint64{2858468511744000, 2858548203520000, 2858825027584000}, permission.Uuid) && companySetting.IsTtposSite() {
+			continue
+		}
+		// 新管理端-非总部不显示门店管理
+		if permission.Uuid == 2856866287616001 && !companySetting.IsHeadquarter() {
+			continue
+		}
+		// 新管理端-管理APP-云平台未开启自助点餐机，权限列表无自助点餐机设置
+		if permission.Uuid == 2859353116672000 && !companySetting.IsOpenKiosk() {
 			continue
 		}
 		filteredPermissions = append(filteredPermissions, permission)

@@ -10,6 +10,7 @@ import (
 // MarketingActivity 营销活动模型 `ttpos_marketing_activity`
 type MarketingActivity struct {
 	BaseModel
+	HeadquarterUuid       uint64  `gorm:"column:headquarter_uuid;type:bigint(20) unsigned;default:0;comment:总部uuid，0表示本店创建，>0表示从总部同步" json:"headquarter_uuid"`
 	Name                  string  `gorm:"column:name;type:varchar(2500);default:'';comment:活动名称" json:"name"`
 	Type                  int     `gorm:"column:type;type:tinyint(1);default:0;comment:活动类型 0邀请有礼 1积分商城" json:"type"`
 	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:biginteger;default:0;comment:活动名称多语言uuid" json:"multi_language_name_uuid"`
@@ -88,19 +89,20 @@ type MarketingActivityConsumption struct {
 // MarketingCoupon 会员营销-优惠券表 `ttpos_marketing_coupon`
 type MarketingCoupon struct {
 	BaseModel
-	Name           string  `gorm:"column:name;type:varchar(50);comment:优惠券名称" json:"name"`
-	Sort           int     `gorm:"column:sort;type:int(11);default:0;comment:排序, 1-99" json:"sort"`
-	Type           string  `gorm:"column:type;type:varchar(20);comment:优惠券类型: deduction - 抵扣券" json:"type"`
-	DeductionType  string  `gorm:"column:deduction_type;type:varchar(20);comment:抵扣类型: taxed - 税后抵扣" json:"deduction_type"`
-	Amount         float64 `gorm:"column:amount;type:decimal(14,2);default:0.00;comment:优惠券金额" json:"amount"`
-	Count          int     `gorm:"column:count;type:int(11);default:0;comment:优惠券数量, 最大999999" json:"count"`
-	DayStartTime   string  `gorm:"column:day_start_time;type:varchar(5);comment:每日适用时段开始时间, hh:mm 格式" json:"day_start_time"`
-	DayEndTime     string  `gorm:"column:day_end_time;type:varchar(5);comment:每日适用时段结束时间, hh:mm 格式" json:"day_end_time"`
-	Requirement    string  `gorm:"column:requirement;type:varchar(20);comment:获得优惠券所需条件: none - 都可以获取; marketing - 营销活动" json:"requirement"`
-	ValidStartTime int     `gorm:"column:valid_start_time;type:int(11);default:0;comment:优惠券有效开始时间, requirement = none 时有效" json:"valid_start_time"`
-	ValidEndTime   int     `gorm:"column:valid_end_time;type:int(11);default:0;comment:优惠券有效结束时间, requirement = none 时有效" json:"valid_end_time"`
-	ValidDays      int     `gorm:"column:valid_days;type:int(11);default:0;comment:领取优惠券后n天内有效, requirement = marketing 时有效" json:"valid_days"`
-	Status         int     `gorm:"column:status;type:int(11);default:1;comment:优惠券状态 0禁用 1开启" json:"status"`
+	HeadquarterUuid uint64  `gorm:"column:headquarter_uuid;default:0;comment:总部uuid，0表示本店创建，>0表示从总部同步" json:"headquarter_uuid"`
+	Name            string  `gorm:"column:name;type:varchar(50);comment:优惠券名称" json:"name"`
+	Sort            int     `gorm:"column:sort;type:int(11);default:0;comment:排序, 1-99" json:"sort"`
+	Type            string  `gorm:"column:type;type:varchar(20);comment:优惠券类型: deduction - 抵扣券" json:"type"`
+	DeductionType   string  `gorm:"column:deduction_type;type:varchar(20);comment:抵扣类型: taxed - 税后抵扣" json:"deduction_type"`
+	Amount          float64 `gorm:"column:amount;type:decimal(14,2);default:0.00;comment:优惠券金额" json:"amount"`
+	Count           int     `gorm:"column:count;type:int(11);default:0;comment:优惠券数量, 最大999999" json:"count"`
+	DayStartTime    string  `gorm:"column:day_start_time;type:varchar(5);comment:每日适用时段开始时间, hh:mm 格式" json:"day_start_time"`
+	DayEndTime      string  `gorm:"column:day_end_time;type:varchar(5);comment:每日适用时段结束时间, hh:mm 格式" json:"day_end_time"`
+	Requirement     string  `gorm:"column:requirement;type:varchar(20);comment:获得优惠券所需条件: none - 都可以获取; marketing - 营销活动" json:"requirement"`
+	ValidStartTime  int     `gorm:"column:valid_start_time;type:int(11);default:0;comment:优惠券有效开始时间, requirement = none 时有效" json:"valid_start_time"`
+	ValidEndTime    int     `gorm:"column:valid_end_time;type:int(11);default:0;comment:优惠券有效结束时间, requirement = none 时有效" json:"valid_end_time"`
+	ValidDays       int     `gorm:"column:valid_days;type:int(11);default:0;comment:领取优惠券后n天内有效, requirement = marketing 时有效" json:"valid_days"`
+	Status          int     `gorm:"column:status;type:int(11);default:1;comment:优惠券状态 0禁用 1开启" json:"status"`
 }
 
 // 判断优惠券是否可用

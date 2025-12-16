@@ -53,6 +53,20 @@ description: Go Main 核心约束
 
 完整代码示例请参考：`docs/agent/workflows/development/error-handling-examples.md`
 
+### 日志记录规范
+
+- ✅ **所有日志记录必须包含 `company_uuid` 字段**
+- ✅ **通过上下文（context）获取 `company_uuid` 并记录到日志中**
+- ❌ **禁止记录不包含 `company_uuid` 的日志**
+
+**关键点：**
+
+- **多租户隔离**：通过 `company_uuid` 可以快速定位和过滤特定商户的日志
+- **问题排查**：在排查问题时，可以根据 `company_uuid` 快速定位相关日志
+- **日志分析**：便于按商户维度进行日志分析和统计
+
+完整代码示例请参考：`docs/agent/workflows/development/logging-examples.md`
+
 ### 协程使用规范
 
 - ✅ **所有 go func 协程都必须使用 `utils.Go` 方法**

@@ -75,7 +75,8 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="stock_num" :label="$t('库存')" width="180">
+            <!-- 暂时隐藏库存查询 2025年12月12日13:49:13 任务37468 -->
+            <!-- <el-table-column prop="stock_num" :label="$t('库存')" width="180">
               <template #default="scope">
                 <el-form-item
                   for="no_click"
@@ -102,7 +103,7 @@
                   ></numInput>
                 </el-form-item>
               </template>
-            </el-table-column>
+            </el-table-column> -->
             <el-table-column prop="name" :label="$t('默认勾选')" width="400">
               <template #default="scope">
                 <el-form-item
@@ -122,11 +123,11 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="name" :label="$t('关联材料')" width="120">
+            <!-- <el-table-column prop="name" :label="$t('关联材料')" width="120">
               <template #default="scope">
                 {{ scope.row.material.length > 0 ? $t('是') : $t('否') }}
               </template>
-            </el-table-column>
+            </el-table-column> -->
             <el-table-column prop="name" :label="$t('操作')" width="120">
               <template #default="scope">
                 <el-button @click="deleteClick(scope.$index)" :disabled="erp_is_open == 1" type="primary" link size="small"> {{ $t('删除') }}</el-button>

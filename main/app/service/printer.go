@@ -53,6 +53,7 @@ const (
 const (
 	TemplateNameBilling    = "结账单"
 	TemplateNamePreBilling = "预结账单"
+	TemplateNameInvoice    = "发票"
 )
 
 type printerSrv struct {
@@ -320,7 +321,7 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 	templateOrders := []uint64{
 		constant.PrinterTemplatePreBilling, // 预结账单
 		constant.PrinterTemplateBilling,    // 结账单
-		// constant.PrinterTemplateInvoice,       // 发票
+		constant.PrinterTemplateInvoice,    // 发票
 		// constant.PrinterTemplateRecharge,      // 充值单
 		// constant.PrinterTemplateBusiness,      // 营业数据
 		// constant.PrinterTemplateHandoverSheet, // 交班单
@@ -526,6 +527,14 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 		}
 		if testData["store"].(map[string]interface{})["company_addr"] != nil {
 			testData["store"].(map[string]interface{})["company_addr"] = i18n.Translate(ctx.GetLanguage(), "公司地址公司地址公司地址公司地址")
+		}
+	}
+	if testData["invoice"] != nil {
+		if testData["invoice"].(map[string]interface{})["company_name"] != nil {
+			testData["invoice"].(map[string]interface{})["company_name"] = i18n.Translate(ctx.GetLanguage(), "公司名称公司名称公司名称公司名称公司名称公司名称公司名称")
+		}
+		if testData["invoice"].(map[string]interface{})["company_address"] != nil {
+			testData["invoice"].(map[string]interface{})["company_address"] = i18n.Translate(ctx.GetLanguage(), "商家地址商家地址商家地址商家地址商家地址")
 		}
 	}
 	if testData["order"] != nil {

@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                                           |
 | **状态**      | 已创建 Spec                                                                                                                       |
 | **关联任务**  | DooTask #36904                                                                                                                    |
-| **关联 Spec** | [docs/shared/specs/active/story-pos-package-selection/](../../../shared/specs/active/story-pos-package-selection/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-pos-package-selection/](../../../shared/specs/active/story-pos-package-selection/requirements.md) |
 
 ---
 
@@ -182,7 +182,7 @@
 
 ### 参考需求
 
-- 套餐分组类型功能（商家管理端）：`docs/shared/specs/active/story-shop-package-group-type/`
+- 套餐分组类型功能（商家管理端）：`docs/shared/specs/archived/v2.10.0/story-shop-package-group-type/`
 - 套餐加购业务逻辑：`docs/shared/api/package-add-to-cart-business-logic.md`
 - 前端对接文档：`docs/shared/api/frontend-changes-package-group-type.md`
 

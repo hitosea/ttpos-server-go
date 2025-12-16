@@ -29,6 +29,7 @@ type Material struct {
 	CostUnitUuid         uint64                `json:"cost_unit_uuid"`         // 成本单位UUID
 	UnitList             []MaterialUnit        `json:"unit_list"`              // 单位列表
 	AllowSubstoreVisible int                   `json:"allow_substore_visible"` // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowNegativeStock   bool                  `json:"allow_negative_stock"`   // 是否允许负库存：true-允许，false-不允许
 
 	UnitLocaleName         dto.LocaleResponse `json:"unit_locale_name"`          // 基准单位名称
 	CostUnitLocaleName     dto.LocaleResponse `json:"cost_unit_locale_name"`     // 成本单位名称
@@ -60,6 +61,7 @@ type MaterialDetailResp struct {
 	CategoryName           string               `json:"category_name"`             // 分类名称
 	Status                 int                  `json:"status"`                    // 状态 1-启用 0-停用
 	AllowSubstoreVisible   int                  `json:"allow_substore_visible"`    // 允许子店可见：1-允许，0-不允许（仅总店可用）
+	AllowNegativeStock     bool                 `json:"allow_negative_stock"`      // 是否允许负库存：true-允许，false-不允许
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	InternalCode           string               `json:"internal_code"`             // 内部编码
@@ -77,6 +79,7 @@ type MaterialDetailResp struct {
 	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
 	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
+	OriginCountry          *CountryItem         `json:"origin_country"`            // 原产地国家信息（可选）
 	IsEditable             bool                 `json:"is_editable"`               // 是否可编辑
 }
 
@@ -199,4 +202,15 @@ type MaterialConsumption struct {
 	MaterialUuid uint64  `json:"material_uuid"` // 物品UUID
 	MaterialCode string  `json:"material_code"` // 物品编码
 	Consumption  float64 `json:"consumption"`   // 消耗量
+}
+
+// CountryItem 国家信息
+type CountryItem struct {
+	Code       string             `json:"code"`        // 国家编码（ISO 3166-1 alpha-2）
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 多语言国家名称
+}
+
+// CountryListResp 国家列表响应
+type CountryListResp struct {
+	List []CountryItem `json:"list"` // 国家列表
 }

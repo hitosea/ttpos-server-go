@@ -18,3 +18,15 @@ type SyncTaskListReq struct {
 type SyncTaskDetailReq struct {
 	TaskUuid uint64 `json:"task_uuid" form:"task_uuid" binding:"required"` // 任务UUID
 }
+
+// GetHeadquartersDataListReq 获取总部可同步数据列表请求
+type GetHeadquartersDataListReq struct {
+	DataTypes []string `json:"data_types"` // 可选，指定查询的数据类型，不传则查询所有
+}
+
+// GranularSyncReq 颗粒化同步请求（简化：只需要提交需要同步的分组）
+type GranularSyncReq struct {
+	ProductDataChecked  bool `json:"product_data_checked"`  // 商品数据组是否勾选
+	ActivityDataChecked bool `json:"activity_data_checked"` // 活动数据组是否勾选
+	PaymentDataChecked  bool `json:"payment_data_checked"`  // 支付数据组是否勾选
+}

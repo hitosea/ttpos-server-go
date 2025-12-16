@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -44,11 +45,11 @@ type ICallBoardService interface {
 	GetQueueData(ctx context.Context, companyUuid uint64, req req.GetQueueDataReq) (*resp.QueueDataResp, error)
 
 	// 商家管理端接口
-	BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq) error
+	BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq, clientVersion string) error
 	GetDeviceList(ctx context.Context, companyUuid uint64, req req.GetDeviceListReq) (*resp.DeviceListResp, error)
 	UnbindDevice(ctx context.Context, companyUuid uint64, uuid uint64) error
 	BindedDeviceValidate(deviceId string) (companyUuid uint64, err error)
-	UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq) error
+	UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq, clientVersion string) error
 }
 
 func NewCallBoardService(dbm *database.DBManager, cache cache.Cache) ICallBoardService {
@@ -130,8 +131,42 @@ func (s *callBoardService) getRedisClient() redis.UniversalClient {
 	return s.cache.GetClient()
 }
 
-func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq) error {
+func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint64, req req.UpdateBindInfoReq, clientVersion string) error {
 	repo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
+
+	// 版本 >= 2.11.0 时才进行参数校验
+	if utils.CompareVersion(clientVersion, utils.VersionGTE, "2.11.0") {
+		if req.Name == "" {
+			return errors.New("请输入名称")
+		}
+
+		if utf8.RuneCountInString(req.Name) > 20 {
+			return errors.New("名称不能超过20个字")
+		}
+
+		if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
+			return errors.New("叫号次数必须在1-3之间")
+		}
+		if req.TimeoutLimit == nil {
+			req.TimeoutLimit = &[]int{0}[0]
+		}
+		if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+			return errors.New("超时限制必须在0-120分钟之间")
+		}
+	}
+
+	// 设置默认值
+	if req.VoiceCallEnabled == nil {
+		req.VoiceCallEnabled = &[]bool{false}[0]
+	}
+	if req.CallCount == 0 {
+		req.CallCount = 1
+	}
+	// 设置默认值后，CallCount 必须在有效范围内
+	if req.CallCount < 1 || req.CallCount > 3 {
+		return errors.New("叫号次数必须在1-3之间")
+	}
+
 	device, err := repo.GetDevice(repo.WhereUuid(req.Uuid))
 	if err != nil {
 		return err
@@ -139,10 +174,21 @@ func (s *callBoardService) UpdateBindInfo(ctx context.Context, companyUuid uint6
 	if device.Uuid == 0 {
 		return errors.New("设备不存在")
 	}
-	err = s.getRedisClient().HMSet(ctx, cachekey.GetBindedDeviceKey(device.DeviceId), "lang1", req.Lang1, "lang2", req.Lang2).Err()
+
+	// 更新设备绑定信息
+	err = s.getRedisClient().HMSet(ctx, cachekey.GetBindedDeviceKey(device.DeviceId),
+		"lang1", req.Lang1,
+		"lang2", req.Lang2,
+		"name", req.Name,
+		"background_image_url", req.BackgroundImageUrl,
+		"timeout_limit", req.TimeoutLimit,
+		"voice_call_enabled", req.VoiceCallEnabled,
+		"call_count", req.CallCount,
+	).Err()
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -192,11 +238,21 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 	if err != nil {
 		return nil, err
 	}
-	preparingQueue, err := s.getCallBoardQueue(cachekey.GetPreparingQueueKey(companyUuid), req.Limit, bindInfo.CreateTime)
+
+	// 获取 timeout_limit，nil 或 0 表示不过滤
+	timeoutLimitMinutes := 0
+	if bindInfo.TimeoutLimit != nil && *bindInfo.TimeoutLimit > 0 {
+		timeoutLimitMinutes = *bindInfo.TimeoutLimit
+	}
+
+	// PreparingQueue 不进行过滤（传递 0）
+	preparingQueue, err := s.getCallBoardQueue(cachekey.GetPreparingQueueKey(companyUuid), req.Limit, bindInfo.CreateTime, 0)
 	if err != nil {
 		return nil, err
 	}
-	preparedQueue, err := s.getCallBoardQueue(cachekey.GetPreparedQueueKey(companyUuid), req.Limit, bindInfo.CreateTime)
+
+	// PreparedQueue 根据 timeout_limit 过滤
+	preparedQueue, err := s.getCallBoardQueue(cachekey.GetPreparedQueueKey(companyUuid), req.Limit, bindInfo.CreateTime, timeoutLimitMinutes)
 	if err != nil {
 		return nil, err
 	}
@@ -207,17 +263,74 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 		s.removeExpireMemberFromQueues(cachekey.GetPreparedQueueKey(companyUuid), maxScore)
 	})
 
+	// 设置默认值
+	name := bindInfo.Name
+	if name == "" {
+		name = "WALLACE"
+	}
+
+	timeoutLimit := bindInfo.TimeoutLimit
+	if timeoutLimit == nil {
+		timeoutLimit = &[]int{0}[0]
+	}
+
+	voiceCallEnabled := bindInfo.VoiceCallEnabled
+	if voiceCallEnabled == nil {
+		voiceCallEnabled = &[]bool{false}[0]
+	}
+
+	callCount := bindInfo.CallCount
+	if callCount == 0 {
+		callCount = 1
+	}
+
 	return &resp.QueueDataResp{
 		Lang1:          bindInfo.Lang1,
 		Lang2:          bindInfo.Lang2,
 		UpdateTime:     time.Now().Unix(),
 		PreparingQueue: preparingQueue,
 		PreparedQueue:  preparedQueue,
+		// 新增配置字段
+		Name:               name,
+		BackgroundImageUrl: bindInfo.BackgroundImageUrl,
+		TimeoutLimit:       timeoutLimit,
+		VoiceCallEnabled:   voiceCallEnabled,
+		CallCount:          callCount,
 	}, nil
 }
 
 // BindDevice 绑定设备
-func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq) error {
+func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, req req.BindDeviceReq, clientVersion string) error {
+	// 版本 >= 2.11.0 时才进行参数校验
+	if utils.CompareVersion(clientVersion, utils.VersionGTE, "2.11.0") {
+		if req.Name == "" {
+			return errors.New("请输入名称")
+		}
+		if utf8.RuneCountInString(req.Name) > 20 {
+			return errors.New("名称不能超过20个字")
+		}
+		if req.CallCount != 0 && (req.CallCount < 1 || req.CallCount > 3) {
+			return errors.New("叫号次数必须在1-3之间")
+		}
+		if req.TimeoutLimit == nil {
+			req.TimeoutLimit = &[]int{0}[0]
+		}
+		if *req.TimeoutLimit < 0 || *req.TimeoutLimit > 120 {
+			return errors.New("超时限制必须在0-120分钟之间")
+		}
+	}
+
+	// 设置默认值
+	if req.VoiceCallEnabled == nil {
+		req.VoiceCallEnabled = &[]bool{false}[0]
+	}
+	if req.CallCount == 0 {
+		req.CallCount = 1
+	}
+	// 设置默认值后，CallCount 必须在有效范围内
+	if req.CallCount < 1 || req.CallCount > 3 {
+		return errors.New("叫号次数必须在1-3之间")
+	}
 	// 从Redis获取绑定码对应的设备ID
 	bindCodeKey := cachekey.GetBindCodeKey(req.BindCode)
 	deviceId, err := s.getRedisClient().Get(ctx, bindCodeKey).Result()
@@ -232,7 +345,10 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 	deviceSecret := s.generateDeviceSecret()
 
 	repo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
-	device, err := repo.GetDevice(repo.WhereSn(deviceId))
+	device, err := repo.GetDevice(
+		repo.WhereSn(deviceId),
+		repo.WhereSource("call_board"),
+	)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
@@ -263,6 +379,11 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 		"device_secret", deviceSecret,
 		"lang1", req.Lang1,
 		"lang2", req.Lang2,
+		"name", req.Name,
+		"background_image_url", req.BackgroundImageUrl,
+		"timeout_limit", req.TimeoutLimit,
+		"voice_call_enabled", req.VoiceCallEnabled,
+		"call_count", req.CallCount,
 		"create_time", time.Now().Unix(),
 	).Err()
 	if err != nil {
@@ -285,14 +406,41 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 	list := make([]resp.DeviceItem, 0, len(devices))
 	for _, device := range devices {
 		bindInfo, _ := s.mustGetCompanyDeviceBindInfo(companyUuid, device.DeviceId)
+		// 如果设备名称为空，返回默认值 "WALLACE"
+		name := bindInfo.Name
+		if name == "" {
+			name = "WALLACE"
+		}
+		callCount := bindInfo.CallCount
+		if callCount == 0 {
+			callCount = 1
+		}
+		timeoutLimit := bindInfo.TimeoutLimit
+		if timeoutLimit == nil {
+			timeoutLimit = &[]int{0}[0]
+		}
+		voiceCallEnabled := bindInfo.VoiceCallEnabled
+		if voiceCallEnabled == nil {
+			voiceCallEnabled = &[]bool{false}[0]
+		}
+		backgroundImageUrl := bindInfo.BackgroundImageUrl
+		if backgroundImageUrl == "" {
+			backgroundImageUrl = "/"
+		}
 		list = append(list, resp.DeviceItem{
-			Uuid:     device.Uuid,
-			DeviceId: device.DeviceId,
-			BindTime: device.CreateTime,
-			Lang1:    bindInfo.Lang1,
-			Lang2:    bindInfo.Lang2,
+			Uuid:               device.Uuid,
+			DeviceId:           device.DeviceId,
+			BindTime:           device.CreateTime,
+			Lang1:              bindInfo.Lang1,
+			Lang2:              bindInfo.Lang2,
+			Name:               name,
+			BackgroundImageUrl: backgroundImageUrl,
+			TimeoutLimit:       timeoutLimit,
+			VoiceCallEnabled:   voiceCallEnabled,
+			CallCount:          callCount,
 		})
 	}
+
 	return &resp.DeviceListResp{
 		List: list,
 	}, nil
@@ -375,11 +523,16 @@ func (s *callBoardService) setBindCodeByLua(ctx context.Context, deviceId string
 }
 
 type DeviceBindInfo struct {
-	CreateTime   int64  `redis:"create_time"`
-	CompanyUuid  uint64 `redis:"company_uuid"`
-	DeviceSecret string `redis:"device_secret"`
-	Lang1        string `redis:"lang1"`
-	Lang2        string `redis:"lang2"`
+	CreateTime         int64  `redis:"create_time"`
+	CompanyUuid        uint64 `redis:"company_uuid"`
+	DeviceSecret       string `redis:"device_secret"`
+	Lang1              string `redis:"lang1"`
+	Lang2              string `redis:"lang2"`
+	Name               string `redis:"name"`                 // 设备名称
+	BackgroundImageUrl string `redis:"background_image_url"` // 背景图片 URL
+	TimeoutLimit       *int   `redis:"timeout_limit"`        // 超时限制（分钟）
+	VoiceCallEnabled   *bool  `redis:"voice_call_enabled"`   // 语音叫号开关
+	CallCount          int    `redis:"call_count"`           // 叫号次数
 }
 
 func (s *callBoardService) clearPendingDevice(ctx context.Context, deviceId string) error {
@@ -465,27 +618,23 @@ func (s *callBoardService) mustGetBindInfoFromCache(deviceId string) (bindInfo D
 }
 
 func checkAndFixLangs(langList []dto.LanguageItem, targetLang1 string, targetLang2 string) (lang1 string, lang2 string) {
-	toUpdateLangs := make([]string, 0, 2)
+	// 先查找 targetLang1，再查找 targetLang2，保证返回顺序与参数顺序一致
+	var foundLang1, foundLang2 string
 	for _, lang := range langList {
-		if len(toUpdateLangs) == 2 {
-			break
+		if lang.Name == targetLang1 && foundLang1 == "" {
+			foundLang1 = lang.Name
 		}
-		if lang.Name == targetLang1 {
-			toUpdateLangs = append(toUpdateLangs, lang.Name)
-			continue
-		}
-		if lang.Name == targetLang2 {
-			toUpdateLangs = append(toUpdateLangs, lang.Name)
-			continue
+		if lang.Name == targetLang2 && foundLang2 == "" {
+			foundLang2 = lang.Name
 		}
 	}
-	if len(toUpdateLangs) == 0 {
-		toUpdateLangs = append(toUpdateLangs, langList[0].Name, "")
+	// 如果都没找到，使用 langList 的第一个作为 lang1
+	if foundLang1 == "" && foundLang2 == "" {
+		if len(langList) > 0 {
+			foundLang1 = langList[0].Name
+		}
 	}
-	if len(toUpdateLangs) == 1 {
-		toUpdateLangs = append(toUpdateLangs, "")
-	}
-	return toUpdateLangs[0], toUpdateLangs[1]
+	return foundLang1, foundLang2
 }
 
 func (s *callBoardService) handleSaleBillEvent(companyUuid uint64, saleBillUuid uint64, action int) error {
@@ -537,7 +686,8 @@ func (s *callBoardService) handleProductionOrderCookingEvent(companyUuid uint64,
 }
 
 // 获取叫号队列
-func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minScore int64) ([]string, error) {
+// timeoutLimit: 超时限制（单位：分钟），0 表示不过滤
+func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minScore int64, timeoutLimit int) ([]string, error) {
 	opt := &redis.ZRangeBy{
 		Min:    strconv.FormatInt(minScore, 10),
 		Max:    "+inf",
@@ -551,15 +701,40 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 		}
 		return nil, err
 	}
+
+	// 当前时间（Unix 时间戳，单位：秒）
+	now := time.Now().Unix()
+	// 超时时间阈值（秒）
+	timeoutThreshold := int64(timeoutLimit * 60)
+
 	// 收集所有有效的队列成员
 	queueMembers := make([]queueMember, 0, len(results))
+	delMembers := make([]string, 0)
 	for _, result := range results {
 		str, _ := result.Member.(string)
 		mem, ok := parseQueueMember(str)
 		if !ok {
 			continue
 		}
+
+		// 如果 timeoutLimit > 0，进行超时过滤
+		if timeoutLimit > 0 {
+			// score 是订单完成时间（Unix 时间戳，单位：秒）
+			completedTime := int64(result.Score)
+			// 如果订单完成时间超过超时阈值，跳过该订单
+			if now-completedTime > timeoutThreshold {
+				delMembers = append(delMembers, str)
+				continue
+			}
+		}
+
 		queueMembers = append(queueMembers, mem)
+	}
+
+	if timeoutLimit > 0 && len(delMembers) > 0 {
+		for _, member := range delMembers {
+			s.removeMemberFromQueues(member, queueKey)
+		}
 	}
 
 	// 按照 CreateTime 从小到大排序

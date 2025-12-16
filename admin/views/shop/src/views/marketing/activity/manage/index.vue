@@ -47,10 +47,10 @@
           <el-table-column fixed="right" :label="$t('操作')" width="200">
             <template #default="scope">
               <el-button @click="sendClick(scope.row)" type="primary" link size="small">{{ $t('发放记录') }} </el-button>
-              <el-button @click="editClick(scope.row)" :disabled="scope.row.status == 2" type="primary" link size="small" v-auth="'/marketing/activity/edit'"
+              <el-button @click="editClick(scope.row)" :disabled="scope.row.status == 2 || scope.row.headquarter_uuid > 0" type="primary" link size="small" v-auth="'/marketing/activity/edit'"
                 >{{ $t('编辑') }}
               </el-button>
-              <el-button @click="disableClick(scope.row)" :disabled="scope.row.status == 2" type="primary" link size="small" v-auth="'/marketing/activity/disable'"
+              <el-button @click="disableClick(scope.row)" :disabled="scope.row.status == 2 || scope.row.headquarter_uuid > 0" type="primary" link size="small" v-auth="'/marketing/activity/disable'"
                 >{{ $t('失效') }}
               </el-button>
             </template>

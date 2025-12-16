@@ -5,12 +5,15 @@ import (
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -80,18 +83,81 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.New("订单商品不存在")
 	}
 
+	// 处理备注预设UUID列表（参考退菜逻辑）
+	orderItemRemarks := make([]*model.OrderItemRemark, 0)
+	if len(req.RemarkUuids) > 0 {
+		// 查询备注预设列表
+		orderItemRemarkRepo := base.NewOrderItemRemarkRepo(db)
+		var remarkErr error
+		orderItemRemarks, remarkErr = orderItemRemarkRepo.GetOrderItemRemarkListByUuids(req.RemarkUuids)
+		if remarkErr != nil {
+			return nil, errors.New("查询备注预设失败")
+		}
+		// 如果查到的备注预设数量跟提交的数量不一致，提示备注预设不存在
+		if len(orderItemRemarks) != len(req.RemarkUuids) {
+			return nil, errors.New("备注预设不存在")
+		}
+	}
+
 	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if len(orderItemRemarks) > 0 {
+			// 删除旧的备注预设原因记录（物理删除）
+			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
+				return errors.WithMessage(err, "删除旧备注预设原因失败")
+			}
+
+			// 创建新的备注预设原因记录
+			remarkReasonList := saleOrderProduct.NewSaleOrderProductRemarkReasonList(orderItemRemarks)
+			if len(remarkReasonList) > 0 {
+				if err := reasonRepo.CreateSaleOrderProductReasons(remarkReasonList); err != nil {
+					return errors.WithMessage(err, "保存备注预设原因失败")
+				}
+			}
+			saleOrderProduct.OrderItemRemarks = remarkReasonList
+		} else {
+			// 如果没有备注预设UUID列表，删除旧的备注预设原因记录（物理删除）
+			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
+				return errors.WithMessage(err, "删除旧备注预设原因失败")
+			}
+			saleOrderProduct.OrderItemRemarks = make([]*model.SaleOrderProductReason, 0)
+		}
 		saleOrderProduct.Remark = req.Remark
 		saleOrderProduct.UpdateSign()
 		sign := saleOrderProduct.Sign
 		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
 		}
+
 		// 更新套餐商品的子商品的签名
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
+				if len(orderItemRemarks) > 0 {
+					// 删除旧的备注预设原因记录（物理删除）
+					reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+					if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, subProduct.Uuid); err != nil {
+						return errors.WithMessage(err, "删除旧备注预设原因失败")
+					}
+
+					// 创建新的备注预设原因记录
+					remarkReasonList := subProduct.NewSaleOrderProductRemarkReasonList(orderItemRemarks)
+					if len(remarkReasonList) > 0 {
+						if err := reasonRepo.CreateSaleOrderProductReasons(remarkReasonList); err != nil {
+							return errors.WithMessage(err, "保存备注预设原因失败")
+						}
+					}
+					subProduct.OrderItemRemarks = remarkReasonList
+				} else {
+					// 如果没有备注预设UUID列表，删除旧的备注预设原因记录（物理删除）
+					reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+					if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, subProduct.Uuid); err != nil {
+						return errors.WithMessage(err, "删除旧备注预设原因失败")
+					}
+					subProduct.OrderItemRemarks = make([]*model.SaleOrderProductReason, 0)
+				}
 				subProduct.UpdateSign()
 				if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
 					return errors.WithMessage(err)
@@ -223,9 +289,13 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	saleOrderProduct.Num = request.Num
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
+	// 使用工厂方法创建库存应用服务实例
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+	productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+
 	// 检查商品销售库存是否充足
 	if request.Num > beforeNum {
-		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
+		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage(), productBomStockNum)
 		if status != constant.CodeSuccess {
 			return nil, errors.WithMessage(errors.New(message))
 		}
@@ -941,8 +1011,14 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 					}
 					return decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(saleOrderProduct.GetUnitNum())).Round(3).InexactFloat64()
 				}(),
-				IsBuffet:     saleOrderProduct.IsBuffet == 1,
-				Remark:       saleOrderProduct.Remark,
+				IsBuffet: saleOrderProduct.IsBuffet == 1,
+				Remark:   saleOrderProduct.Remark,
+				RemarkLocale: func() dto.LocaleResponse {
+					// 构建备注信息（包含预设备注和自定义备注）
+					orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+					remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+					return remarkInfo.Remark
+				}(),
 				Reason:       model.GetReturnFoodReasonNames(returnFoodReason),
 				CustomReason: saleOrderProduct.CancelReason,
 				Sign:         saleOrderProduct.Sign,
@@ -1515,16 +1591,16 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		return nil, errors.New("商品已取消")
 	}
 	//  验证赠菜标签
-	reasons := [][2]uint64{}
+	var giftReasons []*model.FreeReason
 	if len(req.GiftIds) > 0 {
-		_reasons, notFound, err := base.NewGiftOrFreeOrderReasonRepo(db).ExistsByUuids(req.GiftIds)
+		giftReasons, err = base.NewGiftOrFreeOrderReasonRepo(db).GetFreeOrderReasonListByUuids(req.GiftIds)
 		if err != nil {
-			return nil, errors.WithMessage(err)
+			return nil, errors.WithMessage(err, "params:", utils.ToJson(req.GiftIds))
 		}
-		if len(notFound) > 0 {
-			return nil, fmt.Errorf("以下赠菜原因不存在: %v", notFound)
+		// 如果查到的原因数量跟提交的原因数量不一致，提示赠菜原因不存在
+		if len(giftReasons) != len(req.GiftIds) {
+			return nil, errors.WithMessage(fmt.Errorf("赠菜原因不存在: %v", req.GiftIds))
 		}
-		reasons = _reasons
 	}
 	// 设置赠菜时间
 	saleOrderProduct.SetGiftProduct(req.Reason)
@@ -1555,13 +1631,10 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 			}
 		}
 		// 添加赠菜原因
-		if len(reasons) > 0 {
-			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductReasons(
-				saleOrderProduct.SaleOrderUuid,
-				saleOrderProduct.Uuid,
-				constant.ProductReasonTypeGift,
-				reasons,
-			); err != nil {
+		if len(giftReasons) > 0 {
+			// 构建订单商品赠菜原因列表
+			giftReasonList := saleOrderProduct.NewGiftReasonList(giftReasons)
+			if err := repository.NewSaleOrderProductReasonRepo(tx).CreateSaleOrderProductReasons(giftReasonList); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
@@ -2210,7 +2283,11 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 			return nil, errors.WithMessage(errors.New("商品不可编辑"), "商品不可编辑")
 		}
 
-		saleOrderProduct, err := EditProduct(ctx, db, saleOrder, saleOrderProduct, request.EditProductReq)
+		// 创建库存服务实例（用于库存检查）
+		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+
+		saleOrderProduct, err := EditProduct(ctx, db, saleOrder, saleOrderProduct, request.EditProductReq, productBomStockNum)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -2233,13 +2310,18 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		if len(subProducts) != len(subProductParamMap) {
 			return nil, errors.WithMessage(errors.New("修改前后套餐子商品数量不一致"), "修改前后套餐子商品数量不一致")
 		}
+
+		// 创建库存服务实例（用于库存检查）
+		appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+		productBomStockNum := s.createProductBomStockNumFunc(ctx, appService)
+
 		for _, subProduct := range subProducts {
 			key := fmt.Sprintf("%d-%d", subProduct.GetFlavorSaleOrderProductBom().ProductBomUuid, subProduct.PackageGroupUuid)
 			params, ok := subProductParamMap[key]
 			if !ok {
 				return nil, errors.WithMessage(errors.New("套餐子商品不存在"), "套餐子商品不存在")
 			}
-			_, err := EditProduct(ctx, db, saleOrder, subProduct, params.EditProductReq)
+			_, err := EditProduct(ctx, db, saleOrder, subProduct, params.EditProductReq, productBomStockNum)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}

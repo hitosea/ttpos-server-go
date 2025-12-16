@@ -1,6 +1,7 @@
 package model
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 )
 
@@ -29,6 +30,8 @@ type Material struct {
 	HeadquarterUuid       uint64   `gorm:"default:0;column:headquarter_uuid;comment:'总部ID'"`
 	WarehouseUuid         uint64   `gorm:"default:0;column:warehouse_uuid;comment:'默认仓库Uuid，表示该原料的来自哪个仓库'"`
 	AllowSubstoreVisible  int      `gorm:"column:allow_substore_visible;comment:'允许子店可见：1-允许，0-不允许'"`
+	OriginCountryCode     string   `gorm:"type:varchar(10);default:'';column:origin_country_code;comment:'原产地国家编码（ISO 3166-1 alpha-2）'"`
+	AllowNegativeStock    int      `gorm:"column:allow_negative_stock;default:0;comment:'是否允许负库存：1-允许，0-不允许'"`
 
 	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	Unit                *MaterialUnit      `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
@@ -51,8 +54,30 @@ func (model *Material) SetNil() {
 	model.ImageFile = nil
 }
 
+// GetStockNumOption GetStockNum 方法的选项
+type GetStockNumOption struct {
+	CheckAllowNegativeStock bool // 是否检查允许负库存
+}
+
+// WithAllowNegativeStockCheck 启用负库存检查选项
+func WithAllowNegativeStockCheck() func(*GetStockNumOption) {
+	return func(option *GetStockNumOption) {
+		option.CheckAllowNegativeStock = true
+	}
+}
+
 // GetStockNum 获取库存数量。获取物品在默认仓库中的库存数量
-func (model *Material) GetStockNum() float64 {
+func (model *Material) GetStockNum(opts ...func(*GetStockNumOption)) float64 {
+	option := &GetStockNumOption{
+		CheckAllowNegativeStock: false,
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	if option.CheckAllowNegativeStock && model.AllowNegativeStock == constant.Yes { // 允许负库存，则返回无限库存
+		return constant.ProductBomInfiniteStock
+	}
 	for _, warehouseItem := range model.WarehouseItems {
 		if warehouseItem.WarehouseUuid == model.WarehouseUuid {
 			return warehouseItem.Stock
@@ -185,4 +210,5 @@ func (model *MaterialCategory) UpdateFromHeadquarter(headquarterCategory Materia
 	model.Code = headquarterCategory.Code
 	model.Name = headquarterCategory.Name
 	model.MultiLanguageName.InitByLocaleResponse(headquarterCategory.MultiLanguageName.GetNames())
+	model.DeleteTime = headquarterCategory.DeleteTime
 }

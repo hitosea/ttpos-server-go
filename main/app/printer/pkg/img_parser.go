@@ -65,6 +65,7 @@ type ImgTemplateBlockAttr struct {
 	ShowCurrencyUnit   bool        `json:"show_currency_unit"`   // 是否显示货币单位
 	NotShowEmpty       bool        `json:"not_show_empty"`       // 是否不显示空值
 	ShowColumnTitle    bool        `json:"show_column_title"`    // 是否显示列标题
+	CanEditValue       bool        `json:"can_edit_value"`       // 是否可编辑值
 	Disabled           bool        `json:"disabled"`             // 是否禁用
 
 	// 数据绑定
@@ -211,10 +212,13 @@ func (p *ImgTemplateParser) validBlock(block ImgTemplateBlock) bool {
 			if p.getLabel(block.BlockLabel) == "" {
 				return false
 			}
+		} else if block.BlockType == "label:value" && block.BlockValue != nil {
+			if p.getLabel(block.BlockValue) == "" {
+				return false
+			}
 		} else if p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
 			return false
 		}
-		return false
 	}
 	// 检查条件显示
 	if !p.checkConditions(block.Conditions) {
@@ -524,12 +528,13 @@ func (p *ImgTemplateParser) convertToFloat64(value interface{}) float64 {
 
 // getBlockText 获取块的显示文本
 func (p *ImgTemplateParser) getBlockText(block ImgTemplateBlock) string {
-	if block.BlockValue != nil {
-		return block.BlockValue.(string)
-	}
 	// 如果有数据源，检查是否需要隐藏空值
 	if block.BlockID != "" && (strings.Contains(block.BlockType, "value") || block.BlockType == "img" || block.BlockType == "qrcode" || block.BlockType == "barcode") {
 		value := p.getDataValue(block.BlockID)
+		if block.BlockValue != nil {
+			// 支持多语言的 BlockValue
+			value = p.getLabel(block.BlockValue)
+		}
 		formatted := p.formatValue(value, block.BlockAttr)
 		// 获取前标签文本
 		beforeLabel := p.getLabelText(block.BlockBeforeLabel)

@@ -238,7 +238,7 @@ Inter Company Sales Order 提交(Submit) → 完成（不创建发货单）
 - [x] 创建 Spec：`story-bmp-inter-company-no-auto-delivery-note`（已完成 2025-11-19）
 - [ ] 分配负责人：rikugun
 - [ ] 目标 Sprint：Sprint 待定
-- [ ] 开始开发：按照 `docs/shared/specs/active/story-bmp-inter-company-no-auto-delivery-note/tasks.md` 执行
+- [ ] 开始开发：按照 `docs/shared/specs/archived/v2.10.0/story-bmp-inter-company-no-auto-delivery-note/tasks.md` 执行
 
 ---
 

@@ -1,5 +1,28 @@
 # 更新日志
 
+## [v2.1.0] - 2025-12-05
+
+### 新增
+- ✨ **单品备注原因管理**：新增单品备注原因管理功能
+  - 新增 `GET /shop/setting/order_item_remark` 接口：获取单品备注原因列表
+  - 新增 `POST /shop/setting/order_item_remark/add` 接口：新增单品备注原因
+  - 新增 `POST /shop/setting/order_item_remark/edit` 接口：编辑单品备注原因
+  - 新增 `DELETE /shop/setting/order_item_remark` 接口：删除单品备注原因
+  - 支持多语言名称管理（中文、英文、泰文、繁体中文、日文、韩文、缅甸文、土耳其文、瑞典文）
+  - 实现数量限制验证（最多 100 个）
+  - 实现多语言完整性验证和字数限制验证（100 字）
+
+### 改进
+- 📝 更新 API 文档：新增 `docs/shared/api/shop_setting_api.md` 文档
+
+### 技术细节
+- **数据库表**：新增 `ttpos_order_item_remark` 表
+- **Model**：新增 `OrderItemRemark` 模型
+- **Repository**：新增 `OrderItemRemarkRepo` 仓库层
+- **Service**：新增 `GetOrderItemRemarkList`、`AddOrderItemRemark`、`EditOrderItemRemark`、`DeleteOrderItemRemark` 服务方法
+- **API**：新增 4 个 API 接口
+- **测试**：新增 Repository 单元测试（8 个用例）、Service 单元测试（6 个用例）、API 集成测试（10 个用例）
+
 ## [v2.0.0] - 2025-11-15
 
 ### 重大变更 🎉

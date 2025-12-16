@@ -84,6 +84,7 @@ func execute() {
 				!strings.Contains(path, "request_logger") &&
 				!strings.Contains(path, "marketing_activity.go") &&
 				!strings.Contains(path, "bucket.go") &&
+				!strings.Contains(path, "country.go") &&
 				!strings.Contains(path, "model") {
 				content, err := os.ReadFile(path)
 				if err != nil {

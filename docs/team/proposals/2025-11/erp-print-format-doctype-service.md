@@ -13,7 +13,7 @@
 | **目标版本**  | v1.x.x                                                                                                                                   |
 | **状态**      | ✅ 已创建 Spec                                                                                                                           |
 | **关联任务**  | -                                                                                                                                        |
-| **关联 Spec** | [docs/shared/specs/active/story-erp-print-format-doctype-support/](../../../shared/specs/active/story-erp-print-format-doctype-support/) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-erp-print-format-doctype-support/](../../../shared/specs/active/story-erp-print-format-doctype-support/) |
 
 ---
 

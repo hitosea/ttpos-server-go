@@ -30,6 +30,6 @@ func (t *TranslateWhenSyncTask) Execute() {
 			logger.Logger.Error("翻译任务发生panic", zap.Any("error", err))
 		}
 	}()
-	logger.Logger.Info("开始执行翻译任务")
+	// logger.Logger.Info("开始执行翻译任务")
 	service.NewTranslateSrv(t.dbm, t.cache).TranslateAll()
 }

@@ -49,11 +49,11 @@
           </el-table-column>
           <el-table-column prop="category.path_name_text" width="200" :label="$t('分类名称')"></el-table-column>
           <el-table-column prop="sales_actual" :label="$t('实际销量')"></el-table-column>
-          <el-table-column prop="product_stock" :label="$t('库存')">
+          <!-- <el-table-column prop="product_stock" :label="$t('库存')">
             <template #default="scope">
               {{ scope.row.type == 10 ? scope.row.product_stock : scope.row.product_material_stock }}
             </template>
-          </el-table-column>
+          </el-table-column> -->
 
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
             <template #default="scope">

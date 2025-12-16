@@ -2,6 +2,7 @@ package shop
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"ttpos-server-go/app/api/helper"
@@ -20,13 +21,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// AuthHandler 认证鉴权控制器
+// SettingHandler 设置控制器
 type SettingHandler struct {
 	syncSrv       service.ISyncSrv
 	settingSrv    settingSrv.ISrv
 	otherSrv      service.IOtherSrv
 	uploadFileSrv service.IUploadFileSrv
 	dataManageSrv service.IDataManageSrv
+	companySrv    service.ICompanySrv
 }
 
 // SaveStoreSetting 保存门店设置
@@ -384,6 +386,100 @@ func (h *SettingHandler) DeleteOrderRemark(c *gin.Context) {
 	helper.Success(c, "删除成功")
 }
 
+// GetOrderItemRemark 获取单品备注
+// @Summary 获取单品备注
+// @Description 获取单品备注列表
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Success 200 {object} resp.OrderItemRemarkResp
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark [get]
+func (h *SettingHandler) GetOrderItemRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	orderItemRemark, err := h.otherSrv.GetOrderItemRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, orderItemRemark)
+}
+
+// AddOrderItemRemark 新增单品备注
+// @Summary 新增单品备注
+// @Description 新增单品备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.AddOrderItemRemarkReq true "新增单品备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark/add [post]
+func (h *SettingHandler) AddOrderItemRemark(c *gin.Context) {
+	var addOrderItemRemark req.AddOrderItemRemarkReq
+	if err := c.ShouldBindJSON(&addOrderItemRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.AddOrderItemRemark(ctx, addOrderItemRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "新增成功")
+}
+
+// EditOrderItemRemark 编辑单品备注
+// @Summary 编辑单品备注
+// @Description 编辑单品备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.EditOrderItemRemarkReq true "编辑单品备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark/edit [post]
+func (h *SettingHandler) EditOrderItemRemark(c *gin.Context) {
+	var editOrderItemRemark req.EditOrderItemRemarkReq
+	if err := c.ShouldBindJSON(&editOrderItemRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.EditOrderItemRemark(ctx, editOrderItemRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "编辑成功")
+}
+
+// DeleteOrderItemRemark 删除单品备注
+// @Summary 删除单品备注
+// @Description 删除单品备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.DeleteOrderItemRemarkReq true "删除单品备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_item_remark [delete]
+func (h *SettingHandler) DeleteOrderItemRemark(c *gin.Context) {
+	var deleteOrderItemRemark req.DeleteOrderItemRemarkReq
+	if err := c.ShouldBindJSON(&deleteOrderItemRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.DeleteOrderItemRemark(ctx, deleteOrderItemRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "删除成功")
+}
+
 // GetMenuQrcode 获取电子菜单二维码
 // @Summary 获取电子菜单二维码
 // @Description 获取电子菜单二维码
@@ -519,6 +615,56 @@ func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
+	helper.Success(c, result)
+}
+
+// GetHeadquartersDataList 获取总部可同步数据列表
+// @Summary 获取总部可同步数据列表
+// @Description 获取总部可同步数据列表（按种类分组，返回所有16种数据类型）
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.HeadquartersDataListResp}
+// @Router /shop/setting/headquarters_data_list [get]
+func (h *SettingHandler) GetHeadquartersDataList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 不需要传递任何参数，查询所有类型
+	result, err := h.syncSrv.GetHeadquartersDataList(ctx, req.GetHeadquartersDataListReq{})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, result)
+}
+
+// GranularSync 颗粒化同步数据
+// @Summary 颗粒化同步数据
+// @Description 颗粒化同步数据（接收勾选的uuid列表，删除未勾选的，同步勾选的）
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.GranularSyncReq true "请求参数"
+// @Success 200 {object} dto.Response{data=resp.GranularSyncResp}
+// @Router /shop/setting/granular_sync [post]
+func (h *SettingHandler) GranularSync(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var syncReq req.GranularSyncReq
+	if err := c.ShouldBindJSON(&syncReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	result, err := h.syncSrv.GranularSync(ctx, syncReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
 	helper.Success(c, result)
 }
 
@@ -756,6 +902,310 @@ func (h *SettingHandler) SetDataManage(c *gin.Context) {
 	helper.Success(c, "设置成功")
 }
 
+// GetKioskSetting 获取自助点餐机设置
+// @Summary 获取自助点餐机设置
+// @Description 获取自助点餐机设置
+// @Tags 商家端.自助点餐机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.KioskResp}
+// @Router /shop/setting/kiosk [get]
+func (h *SettingHandler) GetKioskSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	kioskSetting, err := h.settingSrv.GetKioskSetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 只返回响应字段，不返回敏感信息
+	resp := setting.KioskResp{
+		AdvancedPassword:  kioskSetting.AdvancedPassword,
+		CallWaiterEnabled: kioskSetting.CallWaiterEnabled,
+		LanguageList:      kioskSetting.LanguageList,
+		Language:          kioskSetting.Language,
+		DefaultLanguage:   kioskSetting.DefaultLanguage,
+		Carousel:          kioskSetting.Carousel,
+	}
+	helper.Success(c, resp)
+}
+
+// SaveKioskSetting 保存自助点餐机设置
+// @Summary 保存自助点餐机设置
+// @Description 保存自助点餐机设置
+// @Tags 商家端.自助点餐机设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveKioskSettingReq true "保存自助点餐机设置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/kiosk [post]
+func (h *SettingHandler) SaveKioskSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var kioskSettingReq req.SaveKioskSettingReq
+	if err := c.ShouldBindJSON(&kioskSettingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 参数验证
+	if err := kioskSettingReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 调用 Service 层保存
+	err := h.settingSrv.EditKioskSetting(ctx, kioskSettingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "保存成功")
+}
+
+// GetKitchenSetting 获取厨显设置
+// @Summary 获取厨显设置
+// @Description 获取厨显设置
+// @Tags 商家端.厨显设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.KitchenResp}
+// @Router /shop/setting/kitchen [get]
+func (h *SettingHandler) GetKitchenSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	companySetting, err := h.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	languageList, err := h.settingSrv.GetStoreLanguageList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	kitchenSetting, err := h.settingSrv.GetKitchenSetting(ctx, companySetting, languageList)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, kitchenSetting.KitchenResp)
+}
+
+// SaveKitchenSetting 保存厨显设置
+// @Summary 保存厨显设置
+// @Description 保存厨显设置
+// @Tags 商家端.厨显设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaveKitchenSettingReq true "保存厨显设置"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/kitchen [post]
+func (h *SettingHandler) SaveKitchenSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var kitchenSettingReq req.SaveKitchenSettingReq
+	if err := c.ShouldBindJSON(&kitchenSettingReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 参数验证
+	if err := kitchenSettingReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 调用 Service 层保存
+	err := h.settingSrv.SaveKitchenSetting(ctx, kitchenSettingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, "保存成功")
+}
+
+// UploadKioskCarousel 上传自助点餐机轮播内容（图片/视频）
+// @Summary 上传自助点餐机轮播内容
+// @Description 上传自助点餐机轮播内容，支持图片（JPG、JPEG、PNG、WEBP，<2MB）和视频（MP4，<10MB）
+// @Tags 商家端.自助点餐机设置
+// @Accept multipart/form-data
+// @Produce json
+// @Security JwtToken
+// @Param file formData file true "文件"
+// @Param file_type formData string false "文件类型：image 或 video，不传则自动识别"
+// @Param group_id formData int false "分组ID"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
+// @Router /shop/setting/kiosk/carousel/upload [post]
+func (h *SettingHandler) UploadKioskCarousel(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 打开文件
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	defer fileReader.Close()
+
+	// 获取文件类型参数（可选，如果不传则根据文件扩展名自动识别）
+	fileTypeParam := c.PostForm("file_type")
+
+	// 获取文件扩展名
+	fileName := file.Filename
+	extension := ""
+	if len(fileName) > 0 {
+		dotIndex := -1
+		for i := len(fileName) - 1; i >= 0; i-- {
+			if fileName[i] == '.' {
+				dotIndex = i
+				break
+			}
+		}
+		if dotIndex >= 0 && dotIndex < len(fileName)-1 {
+			extension = fileName[dotIndex+1:]
+		}
+	}
+	extension = strings.ToLower(extension)
+
+	// 获取分组ID
+	groupId := uint64(0)
+	if groupIdStr := c.PostForm("group_id"); groupIdStr != "" {
+		if id, err := strconv.ParseUint(groupIdStr, 10, 64); err == nil {
+			groupId = id
+		}
+	}
+
+	var uploadFileResp *resp.UploadFileResp
+
+	// 根据文件类型或扩展名判断是图片还是视频
+	if fileTypeParam == "image" || (fileTypeParam == "" && (extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "webp")) {
+		// 图片上传：JPG、JPEG、PNG、WEBP，<2MB
+		allowedExts := []string{"jpg", "jpeg", "png", "webp"}
+		isAllowed := slices.Contains(allowedExts, extension)
+		if !isAllowed {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("图片仅支持JPG、JPEG、PNG、WEBP格式"))
+			return
+		}
+
+		// 检查文件大小：2MB
+		maxSizeBytes := int64(2 * 1024 * 1024)
+		if file.Size > maxSizeBytes {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("图片文件大小不能超过2MB"))
+			return
+		}
+
+		uploadFileResp, err = h.uploadFileSrv.UploadImage(ctx, fileReader, fileName, file.Size, groupId, "shop")
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	} else if fileTypeParam == "video" || (fileTypeParam == "" && extension == "mp4") {
+		// 视频上传：MP4，<10MB
+		if extension != "mp4" {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("视频仅支持MP4格式"))
+			return
+		}
+
+		// 检查文件大小：10MB
+		maxSizeBytes := int64(10 * 1024 * 1024)
+		if file.Size > maxSizeBytes {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.New("视频文件大小不能超过10MB"))
+			return
+		}
+
+		uploadFileResp, err = h.uploadFileSrv.UploadVideo(ctx, fileReader, fileName, file.Size, groupId, 10)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+	} else {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("不支持的文件格式，图片支持JPG、JPEG、PNG、WEBP，视频支持MP4"))
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
+// GetCompanyList 获取可见门店列表
+// @Summary 获取可见门店列表
+// @Description 获取可见门店列表
+// @Tags 商家端.门店管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.SaasCompanyListResp}
+// @Router /shop/company/list [get]
+func (h *SettingHandler) GetCompanyList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	companyList, err := h.companySrv.GetCompanyList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, companyList)
+}
+
+// GetCompanyInfo 获取门店信息
+// @Summary 获取门店信息
+// @Description 获取门店信息（仅总部可用）
+// @Tags 商家端.门店管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query uint64 true "门店UUID"
+// @Success 200 {object} dto.Response{data=resp.CompanyStoreResp}
+// @Router /shop/company/info [get]
+func (h *SettingHandler) GetCompanyInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var getCompanyInfoReq req.GetCompanyInfoReq
+	if err := c.ShouldBindQuery(&getCompanyInfoReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	companyInfo, err := h.companySrv.GetCompanyInfo(ctx, getCompanyInfoReq.Uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, companyInfo)
+}
+
+// UpdateCompanyInfo 修改门店信息
+// @Summary 修改门店信息
+// @Description 修改门店信息（仅总部可用）
+// @Tags 商家端.门店管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.UpdateCompanySettingReq true "更新门店信息"
+// @Success 200 {object} dto.Response
+// @Router /shop/company/update [post]
+func (h *SettingHandler) UpdateCompanyInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.UpdateCompanySettingReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if err := h.companySrv.UpdateCompanyInfo(ctx, updateReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "更新成功")
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -779,6 +1229,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
 		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv),
 		dataManageSrv: service.NewDataManageSrv(dbm, settingSrv),
+		companySrv:    service.NewCompanySrv(dbm, settingSrv),
 	}
 
 	// 需要认证
@@ -790,6 +1241,11 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/cashier", wrapper.GetCashierSetting)                      // 获取收银机设置
 		privateApi.POST("/setting/cashier", wrapper.SaveCashierSetting)                    // 保存收银机设置
 		privateApi.POST("/setting/cashier/carousel/upload", wrapper.UploadCashierCarousel) // 上传收银机轮播内容
+		privateApi.GET("/setting/kiosk", wrapper.GetKioskSetting)                          // 获取自助点餐机设置
+		privateApi.POST("/setting/kiosk", wrapper.SaveKioskSetting)                        // 保存自助点餐机设置
+		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容
+		privateApi.GET("/setting/kitchen", wrapper.GetKitchenSetting)                      // 获取厨显设置
+		privateApi.POST("/setting/kitchen", wrapper.SaveKitchenSetting)                    // 保存厨显设置
 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因
@@ -803,17 +1259,28 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/order_remark/add", wrapper.AddOrderRemark)              // 新增整单备注
 		privateApi.POST("/setting/order_remark/edit", wrapper.EditOrderRemark)            // 编辑整单备注
 		privateApi.DELETE("/setting/order_remark", wrapper.DeleteOrderRemark)             // 删除整单备注
+		privateApi.GET("/setting/order_item_remark", wrapper.GetOrderItemRemark)          // 获取单品备注
+		privateApi.POST("/setting/order_item_remark/add", wrapper.AddOrderItemRemark)     // 新增单品备注
+		privateApi.POST("/setting/order_item_remark/edit", wrapper.EditOrderItemRemark)   // 编辑单品备注
+		privateApi.DELETE("/setting/order_item_remark", wrapper.DeleteOrderItemRemark)    // 删除单品备注
 		privateApi.GET("/setting/payment_method/list", wrapper.GetPaymentMethodList)      // 获取支付方式列表
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码
-		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)      // 获取会员端二维码
-		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)            // 上传logo
-		privateApi.POST("/setting/sync", wrapper.Sync)                         // 获取总部最新数据
-		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)     // 获取同步任务列表
-		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail) // 获取同步任务详情
+		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)                  // 获取会员端二维码
+		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)                        // 上传logo
+		privateApi.POST("/setting/sync", wrapper.Sync)                                     // 获取总部最新数据
+		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)                 // 获取同步任务列表
+		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail)             // 获取同步任务详情
+		privateApi.GET("/setting/headquarters_data_list", wrapper.GetHeadquartersDataList) // 获取总部可同步数据列表
+		privateApi.POST("/setting/granular_sync", wrapper.GranularSync)                    // 颗粒化同步数据
 		// 数据管理
 		privateApi.GET("/setting/data_manage", wrapper.GetDataManage)      // 获取数据管理
 		privateApi.POST("/setting/data_manage/set", wrapper.SetDataManage) // 设置数据管理
+
+		// 门店管理（总部功能）
+		privateApi.GET("/company/list", wrapper.GetCompanyList)       // 获取总部下所有门店列表
+		privateApi.GET("/company/info", wrapper.GetCompanyInfo)       // 获取门店信息
+		privateApi.POST("/company/update", wrapper.UpdateCompanyInfo) // 修改门店信息
 	}
 }

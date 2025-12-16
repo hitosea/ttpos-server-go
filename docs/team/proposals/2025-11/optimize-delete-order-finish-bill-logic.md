@@ -189,8 +189,8 @@ if firstSaleOrder.IsSettled() && len(moveProductList) == 0 && len(saleBill.SaleO
 
 ### 相关文档
 
-- 需求设计: `docs/shared/specs/active/story-main-table-multi-order-lock/design.md`
-- 任务清单: `docs/shared/specs/active/story-main-table-multi-order-lock/tasks.md`
+- 需求设计: `docs/shared/specs/archived/v2.10.0/story-main-table-multi-order-lock/design.md`
+- 任务清单: `docs/shared/specs/archived/v2.10.0/story-main-table-multi-order-lock/tasks.md`
 - 代码位置: `main/app/service/order_base.go:924-1085`
 
 ---

@@ -41,16 +41,6 @@ func (t *invoiceImg58mmTemplate) GetPrintContent58mm(
 	 * 模版2 - 调用58mm版本的结账单模板
 	 */
 	if temp == 2 {
-		if tmpInfo.TmpUuid > 0 {
-			return NewStatementOrderImgTemplateCustom(t.base).GetPrintContent(
-				settingPrinterInfo,
-				tmpInfo.TmpData,
-				saleBill,
-				saleOrder,
-				0,
-				true,
-			)
-		}
 		return NewStatementOrderImg58mmTemplate(t.base).GetPrintContent58mm(
 			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,

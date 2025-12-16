@@ -183,12 +183,32 @@ func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company
 
 	// 获取营业时间的开始和结束时间戳
 	startTime, endTime := timeUtil.OpeningHoursStartEndUnix(openingHours, utils.WithOpeningHoursType(1))
+
+	// 如果当前时间是0点，则调整为前一天的时间
+	startTime, endTime = t.adjustOpeningHoursForMidnight(timeUtil, startTime, endTime)
+
 	logger.Logger.Info(fmt.Sprintf("openingHours: %s,营业开始时间: %s(%d),营业结束时间: %s(%d)", openingHours, timeUtil.FormatUnixTime(startTime, "2006-01-02 15:04:05"), startTime, timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
 	now := timeUtil.Now().Unix()
 
 	// 如果当前时间在营业结束时间之后，则认为已到达营业结束时间
 	logger.Logger.Info(fmt.Sprintf("当前时间: %s(%d), 营业结束时间: %s(%d)", timeUtil.FormatUnixTime(now, "2006-01-02 15:04:05"), now, timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
 	return now >= endTime, startTime, endTime
+}
+
+// adjustOpeningHoursForMidnight 如果当前时间是0点，则将营业时间调整为前一天
+func (t *DailySalesOutboundSummaryTask) adjustOpeningHoursForMidnight(timeUtil utils.TimeUtil, startTime, endTime int64) (int64, int64) {
+	now := timeUtil.Now()
+	// 判断当前时间是否是0点（小时）
+	if now.Hour() == 0 {
+		// 减去一天的秒数（24小时）
+		oneDaySeconds := int64(24 * 60 * 60)
+		startTime = startTime - oneDaySeconds
+		endTime = endTime - oneDaySeconds
+		logger.Logger.Info(fmt.Sprintf("当前时间为0点，已调整为前一天的营业时间: 开始时间 %s(%d), 结束时间 %s(%d)",
+			timeUtil.FormatUnixTime(startTime, "2006-01-02 15:04:05"), startTime,
+			timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
+	}
+	return startTime, endTime
 }
 
 // getDailySalesOutboundRecords 获取当天销售出库记录

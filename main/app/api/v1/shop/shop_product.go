@@ -17,9 +17,10 @@ import (
 
 // ProductHandler 商品处理程序
 type ProductHandler struct {
-	productSrv    service.IProductSrv    // 商品服务
-	uploadFileSrv service.IUploadFileSrv // 文件上传服务
-	pinterSrv     service.IPrinterSrv    // 打印服务
+	productSrv        service.IProductSrv        // 商品服务
+	productTakeoutSrv service.IProductTakeoutSrv // 外卖商品服务
+	uploadFileSrv     service.IUploadFileSrv     // 文件上传服务
+	pinterSrv         service.IPrinterSrv        // 打印服务
 }
 
 // GetProductCategoryList 获取商品分类列表
@@ -1107,12 +1108,14 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, nil)
 		return
 	}
-	err := h.productSrv.AddProductShop(ctx, addReq)
+	uuid, err := h.productSrv.AddProductShop(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil, "保存成功")
+	helper.Success(c, map[string]interface{}{
+		"uuid": uuid,
+	}, "保存成功")
 }
 
 // ProductShopEdit 编辑商品
@@ -1187,6 +1190,88 @@ func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
 		return
 	}
 	helper.Success(c, nil, "删除成功")
+}
+
+// ProductTakeoutShopAdd 添加外卖商品
+// @Summary 添加外卖商品
+// @Description 添加外卖商品配置
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductTakeoutShopAddReq true "外卖商品添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/takeout/add [post]
+func (h *ProductHandler) ProductTakeoutShopAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductTakeoutShopAddReq{}
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, nil)
+		return
+	}
+	uuid, err := h.productTakeoutSrv.AddProductTakeoutShop(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{"uuid": uuid}, "保存成功")
+}
+
+// ProductTakeoutShopEdit 编辑外卖商品
+// @Summary 编辑外卖商品
+// @Description 编辑外卖商品配置
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductTakeoutShopEditReq true "外卖商品编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/takeout/edit [post]
+func (h *ProductHandler) ProductTakeoutShopEdit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductTakeoutShopEditReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, nil)
+		return
+	}
+	if err := editReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
+	err := h.productTakeoutSrv.EditProductTakeoutShop(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "保存成功")
+}
+
+// ProductTakeoutShopDetail 获取外卖商品详情
+// @Summary 获取外卖商品详情
+// @Description 获取外卖商品详情
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string true "外卖商品UUID"
+// @Success 200 {object} product_resp.ProductTakeoutShopDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/takeout/detail [get]
+func (h *ProductHandler) ProductTakeoutShopDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	detailReq := req.ProductTakeoutShopDetailReq{}
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productTakeoutSrv.GetProductTakeoutShopDetail(ctx, detailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
 }
 
 // ProductTaxList 获取商品税类列表
@@ -1277,16 +1362,18 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	translateSrv := service.NewTranslateSrv(dbm, cache)
 
 	// 创建收银产品处理程序
+	localeSrv := service.NewLocaleSrv()
 	wrapper := ProductHandler{
 		productSrv: service.NewProductSrv(
-			dbm,                    // 数据库管理器
-			service.NewLocaleSrv(), // 多语言服务
-			settingSrv,             // 设置服务
+			dbm,        // 数据库管理器
+			localeSrv,  // 多语言服务
+			settingSrv, // 设置服务
 			cache,
 			translateSrv,
 		),
-		uploadFileSrv: service.NewUploadFileSrv(dbm),
-		pinterSrv:     service.NewPrinterSrv(dbm, cache),
+		productTakeoutSrv: service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
+		uploadFileSrv:     service.NewUploadFileSrv(dbm),
+		pinterSrv:         service.NewPrinterSrv(dbm, cache),
 	}
 
 	// 需要认证
@@ -1345,5 +1432,10 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/change_price", wrapper.ProductShopChangePrice) // 商品改价
 		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)              // 获取商品税类列表
 		privateApi.POST("/product/upload_image", wrapper.UploadProductImage)     // 上传商品图片
+
+		// 外卖商品
+		privateApi.POST("/product/takeout/add", wrapper.ProductTakeoutShopAdd)      // 添加外卖商品
+		privateApi.POST("/product/takeout/edit", wrapper.ProductTakeoutShopEdit)    // 编辑外卖商品
+		privateApi.GET("/product/takeout/detail", wrapper.ProductTakeoutShopDetail) // 获取外卖商品详情
 	}
 }

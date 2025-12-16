@@ -89,13 +89,15 @@ type IMaterialSrv interface {
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
-	SyncMaterialCategory(ctx context.Context) error // 同步物品分类
-	SyncMaterial(ctx context.Context) error         // 同步物品
-	SyncProductBomCard(ctx context.Context) error   // 同步成本卡
+	SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error // 同步物品分类
+	SyncMaterial(ctx context.Context, syncHeadquarterData bool) error         // 同步物品
+	SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error   // 同步成本卡
 
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 
 	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
+
+	UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error // 修改物品安全库存
 }
 
 type materialSrv struct {
@@ -359,6 +361,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			UnitLocaleName:         baseUnitLocaleName,
 			UnitList:               unitList,
 			AllowSubstoreVisible:   material.AllowSubstoreVisible,
+			AllowNegativeStock:     material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 		}
 		materialList = append(materialList, respMaterial)
 	}
@@ -425,6 +428,19 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	if material.CostUnit != nil {
 		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
 	}
+
+	// 获取原产地国家信息
+	var originCountry *material_resp.CountryItem
+	if material.OriginCountryCode != "" {
+		country := constant.GetCountryByCode(material.OriginCountryCode)
+		if country != nil {
+			originCountry = &material_resp.CountryItem{
+				Code:       country.Code,
+				LocaleName: country.GetLocaleNames(),
+			}
+		}
+	}
+
 	return material_resp.MaterialDetailResp{
 		Uuid:                 material.Uuid,
 		LocaleName:           material.MultiLanguageName.GetNames(),
@@ -433,6 +449,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		CategoryName:         material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		Status:               int(utils.BoolToUint(material.Status)),
 		AllowSubstoreVisible: material.AllowSubstoreVisible,
+		AllowNegativeStock:   material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
 		Valuation:            material.Valuation,
 		BarcodeValue:         material.BarcodeValue,
 		InternalCode:         material.InternalCode,
@@ -455,6 +472,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,
+		OriginCountry:          originCountry,
 		IsEditable:             !material.IsHeadquarter(), // 总部物品不可编辑
 	}, nil
 }
@@ -670,14 +688,15 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 				}
 				return 1
 			}(),
-			Valuation:        request.ValuationRate,
-			InitStock:        request.OpeningStock,
-			BarcodeValue:     request.BarcodeValue,
-			UnitUuid:         productUnit.Uuid,
-			UnitList:         unitList,
-			PurchaseUnitUuid: purchaseUnitUuid,
-			CostUnitUuid:     productUnit.Uuid,
-			InternalCode:     request.InternalCode,
+			Valuation:          request.ValuationRate,
+			InitStock:          request.OpeningStock,
+			BarcodeValue:       request.BarcodeValue,
+			UnitUuid:           productUnit.Uuid,
+			UnitList:           unitList,
+			PurchaseUnitUuid:   purchaseUnitUuid,
+			CostUnitUuid:       productUnit.Uuid,
+			InternalCode:       request.InternalCode,
+			AllowNegativeStock: request.AllowNegativeStock,
 		}
 		// 获取总部ID
 		companySetting := ctx.GetCompanySetting()
@@ -901,6 +920,13 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 			}
 			return request.AllowSubstoreVisible
 		}(),
+		OriginCountryCode: request.OriginCountryCode,
+		AllowNegativeStock: func() int {
+			if request.AllowNegativeStock != nil && *request.AllowNegativeStock {
+				return 1
+			}
+			return 0
+		}(),
 	}
 
 	// 设置总部ID
@@ -980,6 +1006,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		Classification:     getMaterialCategoryName,
 		ClassificationCode: materialCategory.Code,
 		PurchaseUom:        purchaseUom,
+		AllowNegativeStock: request.AllowNegativeStock,
 	}
 
 	return &material, materialAddErpReq, nil
@@ -1119,6 +1146,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				}
 				return unitMap[request.CostUnitUuid]
 			}(),
+			OriginCountryCode: request.OriginCountryCode,
 		}
 
 		err = materialRepo.UpdateMaterial(material)
@@ -1143,6 +1171,28 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			if err != nil {
 				return errors.WithMessage(err, "更新物品子店可见性失败")
 			}
+		}
+
+		// 检查是否从允许负库存改为不允许负库存
+		// 如果物品当前允许负库存，且要改为不允许负库存，需要检查当前库存是否已为负
+		if existingMaterial.AllowNegativeStock == constant.Yes && !request.AllowNegativeStock {
+			// 检查所有仓库的库存，看是否有任何仓库的库存为负
+			hasNegativeStock := false
+			for _, warehouseItem := range existingMaterial.WarehouseItems {
+				if warehouseItem.Stock < 0 {
+					hasNegativeStock = true
+					break
+				}
+			}
+			if hasNegativeStock {
+				return errors.WithMessage(errors.New("物品已产生负库存，请修正库存后再关闭负库存设置"))
+			}
+		}
+
+		// 更新 AllowNegativeStock 字段
+		err = materialRepo.UpdateMaterialAllowNegativeStock(request.Uuid, request.AllowNegativeStock)
+		if err != nil {
+			return errors.WithMessage(err, "更新物品负库存设置失败")
 		}
 
 		if request.BarcodeValue == "" {
@@ -1224,6 +1274,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				purchaseUom = purchaseUnit.Unit.ErpnextUom
 			}
 
+			allowNegativeStock := request.AllowNegativeStock
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:      existingMaterial.Code,
 				ItemName:      enName,
@@ -1241,6 +1292,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				Classification:     getMaterialCategoryName,
 				ClassificationCode: materialCategory.Code,
 				PurchaseUom:        purchaseUom,
+				AllowNegativeStock: &allowNegativeStock,
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp)
@@ -1279,6 +1331,15 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 				}
 				return 1
 			}(),
+		}
+
+		// 更新 allow_negative_stock 字段
+		if request.AllowNegativeStock != nil {
+			value := 0
+			if *request.AllowNegativeStock {
+				value = 1
+			}
+			updateData["allow_negative_stock"] = value
 		}
 
 		material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
@@ -2776,9 +2837,9 @@ func (s *materialSrv) GetWarehouseItemsByErpCode(ctx context.Context, warehouseE
 }
 
 // 同步物品分类
-func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
+func (s *materialSrv) SyncMaterialCategory(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		// 获取总部company_uuid
 		headquarterUuid := companySetting.HeadquarterUuid
 		headquarterDb := s.dbm.GetDB(headquarterUuid)
@@ -2789,7 +2850,7 @@ func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
 		}
 		// 获取子公司的分类
 		subShopDb := s.dbm.GetDB(ctx.GetCompanyUuid())
-		subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryList()
+		subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryListWithDeleted()
 		if err != nil {
 			return errors.WithMessage(err, "获取子公司分类列表失败")
 		}
@@ -2869,7 +2930,7 @@ func (s *materialSrv) GetHeadquarterMaterialCategoryInSubShop(ctx context.Contex
 }
 
 // SyncMaterial 同步物品
-func (s *materialSrv) SyncMaterial(ctx context.Context) error {
+func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
 
 	// 从erp获取物品列表
@@ -2920,6 +2981,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
 					NotForSale:         itemInfo.NotForSale,
+					AllowNegativeStock: itemInfo.AllowNegativeStock,
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
 				}
@@ -2966,6 +3028,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
 					NotForSale:         itemInfo.NotForSale,
+					AllowNegativeStock: itemInfo.AllowNegativeStock, // 是否允许负库存：true-允许，false-不允许
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
@@ -2979,7 +3042,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 	})
 
 	// 从总部同步物品到子店
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(headquarterDb)
@@ -3001,12 +3064,19 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			// 需要删除的物品、物品单位
 			delMaterialUuidList := []uint64{}
 			delMaterialUnitUuidList := []uint64{}
+
+			// 获取子店中已存在的总部物品，获取uuid和safety_stock的map
+			// 使用 *float64 类型，可以区分：nil（子店为nil，需要保留nil）、非nil（子店有值，需要保留该值）、不存在（使用总店的值）
+			subShopMaterialSafetyStockMap := make(map[uint64]*float64)
+
 			subShopMaterialList := materialRepo.GetMaterialList(
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
 				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 				materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
 			)
 			for _, subShopMaterial := range subShopMaterialList {
+				// 无论子店的安全库存是否为 nil，都记录到 map 中，以保留子店的值
+				subShopMaterialSafetyStockMap[subShopMaterial.Uuid] = subShopMaterial.SafetyStock
 				delMaterialUuidList = append(delMaterialUuidList, subShopMaterial.Uuid)
 				for _, unit := range subShopMaterial.NotBaseUnitList {
 					delMaterialUnitUuidList = append(delMaterialUnitUuidList, unit.Uuid)
@@ -3017,6 +3087,11 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			addMaterialList := []model.Material{}
 			addMaterialUnitList := []model.MaterialUnit{}
 			for _, material := range headMaterialList {
+				// 如果子店已有该物品（通过 uuid 匹配），则保留子店的安全库存（包括 nil）
+				if subShopSafetyStock, ok := subShopMaterialSafetyStockMap[material.Uuid]; ok {
+					material.SafetyStock = subShopSafetyStock // 保留子店的值，可能是 nil 或具体数值
+				}
+				// 否则使用总店的安全库存（material.SafetyStock 保持不变）
 				addMaterialList = append(addMaterialList, model.Material{
 					BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: material.CreateTime, UpdateTime: material.UpdateTime, DeleteTime: material.DeleteTime},
 					Name:                  material.Name,
@@ -3033,7 +3108,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					CostUnitUuid:          material.CostUnitUuid,
 					Price:                 material.Price,
 					StockNum:              material.StockNum,
-					SafetyStock:           material.SafetyStock, // 安全库存跟随总部
+					SafetyStock:           material.SafetyStock,
 					ActualSaleNum:         material.ActualSaleNum,
 					BarcodeValue:          material.BarcodeValue,
 					InternalCode:          material.InternalCode,
@@ -3041,6 +3116,8 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
 					WarehouseUuid:         material.WarehouseUuid,
 					AllowSubstoreVisible:  material.AllowSubstoreVisible, // 同步可见性字段
+					AllowNegativeStock:    material.AllowNegativeStock,
+					OriginCountryCode:     material.OriginCountryCode,
 				})
 				for _, unit := range material.NotBaseUnitList {
 					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{
@@ -3098,7 +3175,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 }
 
 // 同步成本卡
-func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
+func (s *materialSrv) SyncProductBomCard(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
 	erpBoms := []*manufacturing.BomInfo{} // erp成本卡列表
 	erpSrv := erp.NewIErpSrv(s.dbm)
@@ -3190,7 +3267,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 	}
 
 	// 从ttpos总店同步
-	if companySetting.IsSubShop() {
+	if companySetting.IsSubShop() && syncHeadquarterData {
 		// 同步总部成本卡到子店（多语言由 SyncMultiLanguage 任务处理）
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
@@ -3671,6 +3748,39 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 	if len(errs) > 0 {
 		// 返回第一个错误（或者可以返回所有错误的组合）
 		return errs[0]
+	}
+
+	return nil
+}
+
+// UpdateMaterialSafetyStock 修改物品安全库存
+func (s *materialSrv) UpdateMaterialSafetyStock(ctx context.Context, req req.MaterialUpdateSafetyStockReq) error {
+	companySetting := ctx.GetCompanySetting()
+
+	// 权限校验：只有子店账号才能修改
+	if !companySetting.IsSubShop() {
+		return errors.New("非子店账号无法修改")
+	}
+
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	materialRepo := repository.NewMaterialRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询物品，确保物品存在
+	_, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "物品不存在")
+	}
+
+	// 更新安全库存（子店可以修改自己物品和总店同步物品的安全库存）
+	updateData := map[string]any{
+		"safety_stock": req.SafetyStock,
+		"update_time":  time.Now().Unix(),
+	}
+
+	if err := materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(req.Uuid)); err != nil {
+		return errors.WithMessage(err, "更新安全库存失败")
 	}
 
 	return nil

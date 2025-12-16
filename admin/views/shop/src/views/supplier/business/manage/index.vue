@@ -125,6 +125,9 @@
       <el-form-item :label="$t('退菜原因')">
         <el-button @click="setRefundReason()" type="primary">{{ $t('管理') }} ({{ returnReasonCount }})</el-button>
       </el-form-item>
+      <el-form-item for="no_click" :label="$t('单品备注')">
+        <el-button @click="setItemRemark()" type="primary">{{ $t('管理') }} ({{ itemRemarkCount }})</el-button>
+      </el-form-item>
       <el-form-item for="no_click" :label="$t('整单备注')">
         <el-button @click="setOrderRemark()" type="primary">{{ $t('管理') }} ({{ orderRemarkCount }})</el-button>
       </el-form-item>
@@ -147,7 +150,12 @@
         <TimePicker v-model="form.opening_hours" @update:modelValue="updateOpeningHours" />
       </el-form-item>
       <el-form-item for="no_click" :label="$t('起始流水号')" prop="start_serial_no" :rules="[{ required: true, message: '' }]" class="start-serial-no">
-        <el-input v-model="form.start_serial_no" :placeholder="$t('请输入起始流水号')" class="max-w400" @input="form.start_serial_no = form.start_serial_no.replace(/[^0-9]/g, '')" />
+        <el-input
+          v-model="form.start_serial_no"
+          :placeholder="$t('请输入起始流水号')"
+          class="max-w400"
+          @input="form.start_serial_no = form.start_serial_no.replace(/[^0-9]/g, '')"
+        />
       </el-form-item>
 
       <!-- 敏感操作设置 -->
@@ -156,7 +164,7 @@
           <template #header>
             <span>{{ $t('敏感操作设置') }}</span>
           </template>
-          
+
           <div class="sensitive-operation-content">
             <!-- 折扣操作权限设置 -->
             <el-form-item for="no_click" :label="$t('折扣操作权限验证')" prop="discount_need_password">
@@ -168,28 +176,16 @@
                 {{ $t('开启后，进行折扣操作时需要密码验证或授权员工验证') }}
               </div>
             </el-form-item>
-            
-            <el-form-item 
-              v-if="form.discount_need_password == 1" 
-              for="no_click" 
+
+            <el-form-item
+              v-if="form.discount_need_password == 1"
+              for="no_click"
               prop="discount_authorized_staff_ids"
               :label="$t('折扣授权员工')"
               :rules="[{ required: true, message: $t('请选择授权员工') }]"
             >
-              <el-select
-                v-model="form.discount_authorized_staff_ids"
-                multiple
-                filterable
-                :placeholder="$t('请选择授权员工')"
-                class="max-w400"
-              >
-                <el-option
-                  v-for="staff in staffList"
-                  :key="staff.uuid"
-                  :label="staff.real_name || staff.user_name"
-                  :value="staff.uuid"
-                >
-                </el-option>
+              <el-select v-model="form.discount_authorized_staff_ids" multiple filterable :placeholder="$t('请选择授权员工')" class="max-w400">
+                <el-option v-for="staff in staffList" :key="staff.uuid" :label="staff.real_name || staff.user_name" :value="staff.uuid"> </el-option>
               </el-select>
               <div class="tips">
                 {{ $t('选择授权员工后，这些员工可以进行折扣操作的授权验证') }}
@@ -206,28 +202,16 @@
                 {{ $t('开启后，进行退款操作时需要密码验证或授权员工验证') }}
               </div>
             </el-form-item>
-            
-            <el-form-item 
-              v-if="form.refund_need_password == 1" 
-              for="no_click" 
+
+            <el-form-item
+              v-if="form.refund_need_password == 1"
+              for="no_click"
               prop="refund_authorized_staff_ids"
               :label="$t('退款授权员工')"
               :rules="[{ required: true, message: $t('请选择授权员工') }]"
             >
-              <el-select
-                v-model="form.refund_authorized_staff_ids"
-                multiple
-                filterable
-                :placeholder="$t('请选择授权员工')"
-                class="max-w400"
-              >
-                <el-option
-                  v-for="staff in staffList"
-                  :key="staff.uuid"
-                  :label="staff.real_name || staff.user_name"
-                  :value="staff.uuid"
-                >
-                </el-option>
+              <el-select v-model="form.refund_authorized_staff_ids" multiple filterable :placeholder="$t('请选择授权员工')" class="max-w400">
+                <el-option v-for="staff in staffList" :key="staff.uuid" :label="staff.real_name || staff.user_name" :value="staff.uuid"> </el-option>
               </el-select>
               <div class="tips">
                 {{ $t('选择授权员工后，这些员工可以进行退款操作的授权验证') }}
@@ -285,6 +269,20 @@
   >
   </ManageOrderRemark>
 
+  <ManageItemRemark
+    v-if="openItemRemarkDialog"
+    :open="openItemRemarkDialog"
+    @close="
+      (refresh) => {
+        openItemRemarkDialog = false;
+        if (refresh) {
+          this.getData();
+        }
+      }
+    "
+  >
+  </ManageItemRemark>
+
   <Qrcode :open="isQrcode" @close="closeQrcode" :type="qrcodeType"></Qrcode>
 </template>
 <script>
@@ -295,6 +293,7 @@
   import ManageFreeReason from './ManageFreeReason.vue';
   import ManageRefundReason from './ManageRefundReason.vue';
   import ManageOrderRemark from './ManageOrderRemark.vue';
+  import ManageItemRemark from './ManageItemRemark.vue';
   import Qrcode from './Qrcode.vue';
   import TimePicker from '@/components/time-picker/index.vue';
 
@@ -308,6 +307,7 @@
       ManageFreeReason,
       ManageRefundReason,
       ManageOrderRemark,
+      ManageItemRemark,
       Qrcode,
       TimePicker,
     },
@@ -319,6 +319,7 @@
         openFreeReasonDialog: false,
         openRefundReasonDialog: false,
         openOrderRemarkDialog: false,
+        openItemRemarkDialog: false,
         isQrcode: false,
         qrcodeType: '',
         form: {
@@ -437,6 +438,7 @@
         freeTagCount: 0,
         returnReasonCount: 0,
         orderRemarkCount: 0,
+        itemRemarkCount: 0,
       };
     },
     created() {
@@ -490,17 +492,18 @@
 
             // 敏感操作设置
             self.form.discount_need_password = Number(data.data.vars.values.discount_need_password) || 0;
-            self.form.discount_authorized_staff_ids = Array.isArray(data.data.vars.values.discount_authorized_staff_ids) 
-              ? data.data.vars.values.discount_authorized_staff_ids.map(id => Number(id))
+            self.form.discount_authorized_staff_ids = Array.isArray(data.data.vars.values.discount_authorized_staff_ids)
+              ? data.data.vars.values.discount_authorized_staff_ids.map((id) => Number(id))
               : [];
             self.form.refund_need_password = Number(data.data.vars.values.refund_need_password) || 0;
             self.form.refund_authorized_staff_ids = Array.isArray(data.data.vars.values.refund_authorized_staff_ids)
-              ? data.data.vars.values.refund_authorized_staff_ids.map(id => Number(id))
+              ? data.data.vars.values.refund_authorized_staff_ids.map((id) => Number(id))
               : [];
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
             self.returnReasonCount = Number(data.data.return_reason_count) || 0;
             self.orderRemarkCount = Number(data.data.order_remark_count) || 0;
+            self.itemRemarkCount = Number(data.data.order_item_remark_count) || 0;
             self.company_link = data.data.company_link;
 
             self.$nextTick(() => {
@@ -543,6 +546,9 @@
 
       setOrderRemark() {
         this.openOrderRemarkDialog = true;
+      },
+      setItemRemark() {
+        this.openItemRemarkDialog = true;
       },
 
       downloadFile(type) {

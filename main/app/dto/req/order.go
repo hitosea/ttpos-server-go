@@ -283,10 +283,11 @@ type OrderChangePopulationReq struct {
 
 // OrderProductRemarkReq 订单商品remark
 type OrderProductRemarkReq struct {
-	SaleBillUuid     uint64 `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
-	SaleOrderUuid    uint64 `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
-	OrderProductUuid uint64 `json:"order_product_uuid" binding:"required"` // 订单商品UUID
-	Remark           string `json:"remark"`                                // remark
+	SaleBillUuid     uint64   `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
+	SaleOrderUuid    uint64   `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
+	OrderProductUuid uint64   `json:"order_product_uuid" binding:"required"` // 订单商品UUID
+	Remark           string   `json:"remark"`                                // remark
+	RemarkUuids      []uint64 `json:"remark_uuids"`                          // 备注预设UUID列表
 }
 
 // OrderRemarkReq 订单备注

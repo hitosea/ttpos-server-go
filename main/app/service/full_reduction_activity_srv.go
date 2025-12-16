@@ -168,6 +168,11 @@ func (s *fullReductionActivitySrv) Update(ctx context.Context, req *req.FullRedu
 		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
 	}
 
+	// 检查是否为总部来源数据
+	if !isEditable(ctx, activity.HeadquarterUuid) {
+		return errors.New("活动不可编辑")
+	}
+
 	// 检查活动状态：已结束和已失效的活动不可编辑
 	if activity.IsDisabled == constant.Yes {
 		return errors.WithMessage(errors.New("已失效的活动不可编辑"), "已失效的活动不可编辑")
@@ -336,6 +341,11 @@ func (s *fullReductionActivitySrv) Delete(ctx context.Context, uuid uint64) erro
 		return errors.WithMessage(errors.New("活动不存在"), "活动不存在")
 	}
 
+	// 检查是否为总部来源数据
+	if !isEditable(ctx, activity.HeadquarterUuid) {
+		return errors.New("活动不可删除")
+	}
+
 	// 检查活动状态，进行中的活动不可删除
 	now := time.Now().Unix()
 	status := activity.GetStatus(now, "")
@@ -456,5 +466,6 @@ func (s *fullReductionActivitySrv) buildResp(ctx context.Context, activity *mode
 		IsDisabled:        activity.IsDisabled,
 		Status:            status,
 		Rules:             rules,
+		IsEditable:        isEditable(ctx, activity.HeadquarterUuid),
 	}, nil
 }

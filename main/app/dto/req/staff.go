@@ -12,6 +12,12 @@ import (
 // DefaultPermissionPassword 默认权限密码（用于低于 2.10.0 版本的兼容性处理）
 const DefaultPermissionPassword = "666888"
 
+// CompanyRoleItem 门店角色配置项
+type CompanyRoleItem struct {
+	CompanyUuid uint64   `json:"company_uuid" binding:"required"` // 门店UUID
+	RoleUuids   []uint64 `json:"role_uuids"`                      // 在该门店的角色UUID列表
+}
+
 type UpdateStaffReq struct {
 	Uuid               uint64   `json:"uuid" binding:"required"`                               // 员工ID
 	RealName           string   `json:"real_name" binding:"required,max=100"`                  // 姓名，限制100个字符
@@ -21,6 +27,11 @@ type UpdateStaffReq struct {
 	Password           string   `json:"password" binding:"omitempty,strong_password"`          // 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
 	ConfirmPassword    string   `json:"confirm_password" binding:"omitempty,eqfield=Password"` // 确认密码
 	PermissionPassword string   `json:"permission_password"`                                   // 权限密码，4-8位数字，非必填
+
+	// 统一账号
+	IsDisable         *int               `json:"is_disable" binding:"omitempty,oneof=1 0"` // 状态 1:禁用 0:启用
+	CompanyRoleList   []*CompanyRoleItem `json:"company_role_list,omitempty"`              // 多门店角色配置（上级门店使用，可选）
+	RemoveCompanyList []uint64           `json:"remove_company_list,omitempty"`            // 移除多门店角色配置（上级门店使用，可选）
 }
 
 // Validate 验证编辑员工请求参数
@@ -36,6 +47,15 @@ func (r *UpdateStaffReq) Validate(ctx context.Context) error {
 		if !isValidPermissionPassword(r.PermissionPassword) {
 			return errors.New("密码必须为 4 - 8 位数字")
 		}
+	}
+
+	// 如果大于2.11.0版本，则IsDisable必填
+	if ctx.Version(context.GTE, constant.ClientVersionV2110) && r.IsDisable == nil {
+		return errors.New("状态不能为空")
+	}
+
+	if len(r.Roles) == 0 && len(r.CompanyRoleList) == 0 {
+		return errors.New("角色不能为空")
 	}
 	return nil
 }
@@ -79,6 +99,10 @@ type AddStaffReq struct {
 	Password           string   `json:"password" binding:"required,strong_password"`          // 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
 	ConfirmPassword    string   `json:"confirm_password" binding:"required,eqfield=Password"` // 确认密码
 	PermissionPassword string   `json:"permission_password"`                                  // 权限密码，4-8位数字，>= 2.10.0 版本必填
+
+	// 统一账号
+	IsDisable       *int               `json:"is_disable" binding:"omitempty,oneof=1 0"` // 状态 1:禁用 0:启用
+	CompanyRoleList []*CompanyRoleItem `json:"company_role_list,omitempty"`              // 多门店角色配置（上级门店使用，可选）
 }
 
 // Validate 验证添加员工请求参数
@@ -96,6 +120,10 @@ func (r *AddStaffReq) Validate(ctx context.Context) error {
 	// 验证权限密码格式（4-8位数字）
 	if !isValidPermissionPassword(r.PermissionPassword) {
 		return errors.New("密码必须为 4 - 8 位数字")
+	}
+
+	if len(r.Roles) == 0 && len(r.CompanyRoleList) == 0 {
+		return errors.New("角色不能为空")
 	}
 	return nil
 }
@@ -178,6 +206,7 @@ type GetStaffListReq struct {
 	dto.PageReq
 	IsFilterSuper int    `form:"is_filter_super"` // 是否过滤超级管理员
 	Keyword       string `form:"keyword"`         // 关键词, 姓名、邮箱、手机号
+	CompanyUuid   uint64 `form:"company_uuid"`    // 门店UUID
 }
 
 // PageReqMessage 分页请求参数错误信息
@@ -185,4 +214,16 @@ var GetStaffListReqReqMessage = map[string]string{
 	"page_no.min":   "页码不能小于1",
 	"page_size.min": "每页大小不能小于1",
 	"page_size.max": "每页大小不能大于1100",
+}
+
+type SearchStaffByKeywordReq struct {
+	Keyword string `form:"keyword" binding:"required"` // 关键词, 邮箱、手机号
+}
+
+type GetStaffDetailReq struct {
+	Uuid uint64 `form:"uuid" binding:"required"` // 员工UUID
+}
+
+var GetStaffDetailRequestMessage = map[string]string{
+	"uuid.required": "员工UUID不能为空",
 }

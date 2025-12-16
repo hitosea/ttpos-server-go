@@ -15,6 +15,7 @@ type TransferOrderListReq struct {
 	OrderTimeEnd        int      `json:"order_time_end" form:"order_time_end"`                 // 单据时间结束
 	OppositeCompanyUuid []uint64 `json:"opposite_company_uuids" form:"opposite_company_uuids"` // 对方机构UUID列表
 	MyRole              []string `json:"my_role" form:"my_role"`                               // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批
+	SubmitSide          string   `json:"submit_side" form:"submit_side"`                       // 提交方筛选：all-全部 self-本店提交 other-他店提交，默认 all
 }
 
 // TransferOrderCreateReq 创建调拨单请求

@@ -68,6 +68,8 @@ type IOrderQueryRepo interface {
 	GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrderRank, error)                                                                   // 获取订单的月排名信息（基于全表数据）
 	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
+	GetSaleOrderUuids(opts ...DBOption) []uint64
+	GetSaleBillList(opts ...DBOption) []model.SaleBill // 获取销售账单列表
 }
 
 // orderRepo 订单仓库
@@ -837,10 +839,16 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 						},
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
+						},
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
 						},
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
 						},
 					),
 					CommonRepo.Preload(
@@ -960,6 +968,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -967,6 +978,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						},
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
 						},
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
@@ -1082,7 +1096,13 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
 					},
 					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+					},
+					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.ProductPackage",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
 					},
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
@@ -1965,6 +1985,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage.MultiLanguageName",
 			},
 			WithPreload{
@@ -2371,4 +2394,26 @@ func (r *orderRepo) GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, er
 		return "", fmt.Errorf("GetSaleBillBatchCookingMode: %v", err)
 	}
 	return result.BatchCookingMode, nil
+}
+
+// GetSaleOrderUuids 获取销售订单UUID列表
+func (r *orderRepo) GetSaleOrderUuids(opts ...DBOption) []uint64 {
+	var saleOrderUuids []uint64
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Model(&model.SaleOrder{}).Select("uuid").Pluck("uuid", &saleOrderUuids)
+	return saleOrderUuids
+}
+
+// GetSaleBillList 获取销售账单列表
+func (r *orderRepo) GetSaleBillList(opts ...DBOption) []model.SaleBill {
+	var saleBills []model.SaleBill
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Find(&saleBills)
+	return saleBills
 }

@@ -122,6 +122,14 @@ type CountSaleResp struct {
 func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleResp {
 	db := ctx.GetDB()
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			db,
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	saleData := repository.NewStatisticsRepo(db).CountSale(opts...)
 	memberData := s.CountMember(ctx, req)
 	cancelOrderData := s.CountCancelOrder(ctx, req)
@@ -393,8 +401,27 @@ type CountPaymentRespList struct {
 // CountPayment 统计支付
 func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPaymentResp {
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
+	if req.OnlyDataManage {
+		opts = append(opts, repository.CommonRepo.WhereInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPayment(opts...)
-	memberPaymentData := s.CountMemberPayment(ctx, req)
+	memberPaymentData := CountPaymentResp{}
+	if !req.OnlyDataManage {
+		memberPaymentData = s.CountMemberPayment(ctx, req)
+	}
 
 	var (
 		totalReceivedAmount decimal.Decimal
@@ -614,6 +641,14 @@ type CountTaxResp struct {
 func (s *statisticsSrv) CountTax(ctx context.Context, req CountReq) []CountTaxResp {
 	opts := s.buildCountOpts(ctx, req)
 	opts = append(opts, repository.NewCommonRepo().WhereByRefundTime(0))
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	taxData := repository.NewStatisticsRepo(ctx.GetDB()).CountTax(opts...)
 	buffetTaxData := repository.NewStatisticsRepo(ctx.GetDB()).CountBuffetTax(opts...)
 	buffetDelayTaxData := repository.NewStatisticsRepo(ctx.GetDB()).CountBuffetDelayTax(opts...)
@@ -704,6 +739,14 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 	)
 
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	orderNum, categoryData := repository.NewStatisticsRepo(ctx.GetDB()).CountCategory(req.CategoryType, ctx.GetLanguage(), opts...)
 
 	for _, category := range categoryData {
@@ -735,6 +778,14 @@ type CountProductResp struct {
 // CountProduct 统计商品
 func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountProductResp {
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).CountProduct(ctx.GetLanguage(), opts...)
 
 	var list []CountProductResp
@@ -900,9 +951,18 @@ type CountUnpaidOrderResp struct {
 
 // CountUnpaidOrder 统计未结订单
 func (s *statisticsSrv) CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp {
+	db := ctx.GetDB()
 	req.IsCreateTime = true
 	opts := s.buildCountOpts(ctx, req)
-	unpaidOrderData := repository.NewStatisticsRepo(ctx.GetDB()).CountUnpaidOrder(opts...)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			db,
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
+	unpaidOrderData := repository.NewStatisticsRepo(db).CountUnpaidOrder(opts...)
 
 	return CountUnpaidOrderResp{
 		TotalOrderNum: unpaidOrderData.TotalOrderNum.Int64,
@@ -1458,25 +1518,27 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 // CountReq 统计请求
 type CountReq struct {
-	TimeType       int      `json:"time_type"`        // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月, 5 近7天, 6 上月, 7 今年)
-	QueryStartTime int64    `json:"query_start_time"` // 查询开始时间戳
-	QueryEndTime   int64    `json:"query_end_time"`   // 查询结束时间戳
-	CategoryType   int      `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
-	DutyNo         string   `json:"duty_no"`          // 班次编号
-	RankType       int      `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
-	RankDirection  int      `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
-	IsCreateTime   bool     `json:"is_create_time"`   // 是否是创建时间
-	IsUpdateTime   bool     `json:"is_update_time"`   // 是否是更新时间
-	PageNo         int      `json:"page_no"`          // 页码
-	PageSize       int      `json:"page_size"`        // 每页大小
-	AreaUuid       uint64   `json:"area_uuid"`        // 区域UUID -1=全都
-	CategoryUuid   uint64   `json:"category_uuid"`    // 分类UUID -1=全都 (向后兼容)
-	CategoryUuids  []uint64 `json:"category_uuids"`   // 分类UUID列表, 空=全部
-	ProductName    string   `json:"product_name"`     // 商品名称
-	OrderTypes     []uint   `json:"order_types"`      // 订单类型列表: 1=点餐, 2=桌台, 3=外送
-	OrderSource    int      `json:"order_source"`     // 订单来源: -1=全部, 1=店内, 2=外卖
-	Timezone       string   `json:"timezone"`         // 时区
-	StaffUuid      uint64   `json:"staff_uuid"`       // 操作员UUID
+	TimeType          int      `json:"time_type"`           // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月, 5 近7天, 6 上月, 7 今年)
+	QueryStartTime    int64    `json:"query_start_time"`    // 查询开始时间戳
+	QueryEndTime      int64    `json:"query_end_time"`      // 查询结束时间戳
+	CategoryType      int      `json:"category_type"`       // 分类类型 (1 按一级分类, 2 按二级分类)
+	DutyNo            string   `json:"duty_no"`             // 班次编号
+	RankType          int      `json:"rank_type"`           // 排行类型 (1 按销售数量, 2 按销售金额)
+	RankDirection     int      `json:"rank_direction"`      // 排行方向 (1 升序, 2 降序)
+	IsCreateTime      bool     `json:"is_create_time"`      // 是否是创建时间
+	IsUpdateTime      bool     `json:"is_update_time"`      // 是否是更新时间
+	PageNo            int      `json:"page_no"`             // 页码
+	PageSize          int      `json:"page_size"`           // 每页大小
+	AreaUuid          uint64   `json:"area_uuid"`           // 区域UUID -1=全都
+	CategoryUuid      uint64   `json:"category_uuid"`       // 分类UUID -1=全都 (向后兼容)
+	CategoryUuids     []uint64 `json:"category_uuids"`      // 分类UUID列表, 空=全部
+	ProductName       string   `json:"product_name"`        // 商品名称
+	OrderTypes        []uint   `json:"order_types"`         // 订单类型列表: 1=点餐, 2=桌台, 3=外送
+	OrderSource       int      `json:"order_source"`        // 订单来源: -1=全部, 1=店内, 2=外卖
+	Timezone          string   `json:"timezone"`            // 时区
+	StaffUuid         uint64   `json:"staff_uuid"`          // 操作员UUID
+	ExcludeDataManage bool     `json:"exclude_data_manage"` // 是否排除数据管理订单
+	OnlyDataManage    bool     `json:"only_data_manage"`    // 是否只查询数据管理订单
 }
 
 // buildCountOpts 构建统计选项
@@ -1739,7 +1801,16 @@ type CountFreePaymentResp struct {
 func (s *statisticsSrv) CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
-	freePaymentData := statisticsRepo.CountFreePayment(s.buildCountOpts(ctx, req)...)
+	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			db,
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
+	freePaymentData := statisticsRepo.CountFreePayment(opts...)
 
 	return CountFreePaymentResp{
 		PaymentName:        i18n.Translate(ctx.GetLanguage(), "免单"),
@@ -1986,12 +2057,35 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 
 // CountShiftRefundAmount 统计班次退款金额
 func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq) float64 {
+	db := ctx.GetDB()
 	commonRepo := repository.NewCommonRepoImpl()
-	returnOrderRepo := repository.NewReturnOrderRepoImpl(ctx.GetDB())
-	return returnOrderRepo.SumRefundAmount(
+	returnOrderRepo := repository.NewReturnOrderRepoImpl(db)
+	dataManageRepo := repository.NewDataManageRepoImpl(db)
+	orderRepo := repository.NewOrderRepoImpl(db)
+	opts := []repository.DBOption{
 		commonRepo.WhereByDutyNo(req.DutyNo),
 		commonRepo.WhereBySoftDelete(),
-	)
+	}
+	if req.ExcludeDataManage {
+		saleOrderUuids := []uint64{}
+
+		dataUuids := dataManageRepo.GetDataUuids(
+			commonRepo.WhereByType(model.DataManageTypeOrder),
+			commonRepo.WhereBySoftDelete(),
+		)
+		if len(dataUuids) > 0 {
+			saleOrderUuids = orderRepo.GetSaleOrderUuids(
+				commonRepo.WhereInSaleBillUuids(dataUuids),
+				commonRepo.WhereBySoftDelete(),
+			)
+		}
+		if len(saleOrderUuids) > 0 {
+			opts = append(opts,
+				commonRepo.WhereNotInRelatedOrderUuids(saleOrderUuids),
+			)
+		}
+	}
+	return returnOrderRepo.SumRefundAmount(opts...)
 }
 
 // CountCancelOrderResp 统计取消订单响应

@@ -186,6 +186,7 @@ type ProductPackage struct {
 	IsShowAssistant               uint   `gorm:"default:0;column:is_show_assistant;comment:'是否在助手设备显示, 0-否 1-是'"`
 	IsShowH5                      uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
 	IsShowDelivery                uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
+	IsShowKiosk                   uint   `gorm:"default:0;column:is_show_kiosk;comment:'是否在自助点餐机显示, 0-否 1-是'"`
 	Sort                          uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum                      uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe                      string `gorm:"default:'';column:describe;comment:'卖点描述'"`
@@ -275,6 +276,10 @@ func (model *ProductPackage) GetIsShowDelivery() bool {
 	return model.IsShowDelivery == 1
 }
 
+func (model *ProductPackage) GetIsShowKiosk() bool {
+	return model.IsShowKiosk == 1
+}
+
 func (model *ProductPackage) GetOpenDiscount() bool {
 	return model.OpenDiscount == 1
 }
@@ -289,11 +294,11 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		// 商品规格
 		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:         bom.ProductFlavor.Uuid,
-				BomUuid:      bom.Uuid,
-				LocaleName:   bom.ProductFlavor.MultiLanguageName.GetNames(),
-				Price:        bom.Price,
-				StockNum:     bom.GetStockNum(),
+				Uuid:       bom.ProductFlavor.Uuid,
+				BomUuid:    bom.Uuid,
+				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				// StockNum:     bom.GetStockNum(),
 				Barcode:      bom.BarcodeValue,
 				InternalCode: bom.InternalCode,
 			})
@@ -302,11 +307,11 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		if bom.IsPackageFlavor() && !bom.IsDelete() {
 			name := language.JsonToLocaleResponse(bom.Name)
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:         0,
-				BomUuid:      bom.Uuid,
-				LocaleName:   *name,
-				Price:        bom.Price,
-				StockNum:     bom.GetStockNum(),
+				Uuid:       0,
+				BomUuid:    bom.Uuid,
+				LocaleName: *name,
+				Price:      bom.Price,
+				// StockNum:     bom.GetStockNum(),
 				Barcode:      bom.BarcodeValue,
 				InternalCode: bom.InternalCode,
 			})
@@ -320,11 +325,11 @@ func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
 	for _, bom := range model.ProductBoms {
 		if bom.IsSauce() && !bom.IsDelete() {
 			sauceList = append(sauceList, product_resp.ProductSauce{
-				Uuid:              bom.ProductSauce.Uuid,
-				BomUuid:           bom.Uuid,
-				LocaleName:        bom.ProductSauce.MultiLanguageName.GetNames(),
-				Price:             bom.Price,
-				StockNum:          bom.GetStockNum(),
+				Uuid:       bom.ProductSauce.Uuid,
+				BomUuid:    bom.Uuid,
+				LocaleName: bom.ProductSauce.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				// StockNum:          bom.GetStockNum(nil),
 				IsDefaultSelected: bom.IsDefaultSelect == 1,
 			})
 		}
@@ -443,29 +448,6 @@ func (model *ProductPackage) TaxRate(dineType uint) float64 {
 	return model.TakeoutTax.TaxRate
 }
 
-// 判断商品是否已经无法加购：下架、售罄、删除
-func (model *ProductPackage) IsSaleout() bool {
-	return model.IsDown() || model.GetStockNum() <= 0 || model.IsDelete()
-}
-
-func (model *ProductPackage) GetStockNum() int {
-	stockNum := 0
-	for index, bom := range model.ProductBoms {
-		if bom.IsSauce() {
-			continue
-		}
-		if index == 0 {
-			stockNum = int(bom.GetStockNum())
-			continue
-		}
-		// 取库存最大的一个
-		if bom.GetStockNum() > float64(stockNum) {
-			stockNum = int(bom.GetStockNum())
-		}
-	}
-	return stockNum
-}
-
 // IsUp 判断商品是否是上架状态。排除下架、删除状态
 func (model *ProductPackage) IsUp() bool {
 	if model.Status == constant.ProductStatusOffSale || model.DeleteTime != constant.NotDeleted {
@@ -539,13 +521,15 @@ type ProductBom struct {
 	Name            string  `gorm:"column:name;type:text;comment:商品名称或小料名称(不用于业务显示)" json:"name"`
 	ErpCode         string  `gorm:"column:erp_code;type:varchar(255);default:'';comment:商品编码;NOT NULL" json:"erp_code"`
 	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
-	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:1;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
+	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:0;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
 	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
 	InternalCode    string  `gorm:"column:internal_code;type:varchar(255);default:'';comment:内部编码;NOT NULL" json:"internal_code"`
 	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
 	Status          int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-下架 1-上架. 同步商品包的状态;NOT NULL" json:"status"`
 	IsSoldOut       int     `gorm:"column:is_sold_out;type:tinyint(1);default:0;comment:是否沽清, 0-否 1-是;NOT NULL" json:"is_sold_out"`
 	ActualSaleNum   float64 `gorm:"column:actual_sale_num;type:decimal(12,4);default:0.0000;comment:实际销量;NOT NULL" json:"actual_sale_num"`
+
+	UseBomCardStock int `gorm:"column:use_bom_card_stock;type:tinyint(1);default:0;comment:是否使用成本卡库存, 0-否 1-是;NOT NULL" json:"use_bom_card_stock"`
 
 	// 关联ID
 	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;type:bigint(20) unsigned;default:0;comment:商品规格ID(仅商品使用);NOT NULL" json:"product_flavor_uuid"`
@@ -572,16 +556,11 @@ func (model *ProductBom) HasProductBomCard() bool {
 	return model.ProductBomCardUuid != 0
 }
 
-func (model *ProductBom) GetStockNum() float64 {
-	// 如果关闭库存，返回999999表示无限库存
-	if !model.IsOpenStockBool() {
-		return constant.ProductBomInfiniteStock
+func (model *ProductBom) GetStockNum(fn func(productBomUuid uint64) float64) float64 {
+	if fn != nil {
+		return fn(model.Uuid)
 	}
-	// 如果标记沽清，返回0
-	if model.IsSoldOut == constant.ProductStatusSaleOut {
-		return 0
-	}
-	return model.StockNum
+	return constant.ProductBomInfiniteStock
 }
 
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
@@ -611,8 +590,8 @@ func (model *RelatedMaterial) SetNil() {
 }
 
 // 计算预计可生产的产品数量。材料库存数量 / 材料用量
-func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
-	materialStockNum := model.Material.GetStockNum() // 材料库存数量，单位：基准单位
+func (model *RelatedMaterial) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
+	materialStockNum := model.Material.GetStockNum(opts...) // 材料库存数量，单位：基准单位
 	if materialStockNum <= 0 {
 		return 0
 	}
@@ -627,10 +606,10 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 	return result
 }
 
-func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
+func (model *RelatedMaterial) GetExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	num := model.expectedProductionNum
 	if num <= 0 {
-		num = model.CalculateExpectedProductionNum()
+		num = model.CalculateExpectedProductionNum(opts...)
 	}
 	return num
 }
@@ -687,38 +666,36 @@ func (model *RelatedMaterial) IsBomCardManage() bool {
 }
 
 // IsStockShortage 判断库存是否不足
-func (model *ProductBom) IsStockShortage(productNum float64) bool {
-	// 如果关闭库存，则不检查库存不足
-	if !model.IsOpenStockBool() {
-		return false
-	}
-	return model.GetStockNum() < productNum
-}
+// func (model *ProductBom) IsStockShortage(productNum float64) bool {
+// 	// 如果关闭库存，则不检查库存不足
+// 	if !model.IsOpenStockBool() {
+// 		return false
+// 	}
+// 	return model.GetStockNum(nil) < productNum
+// }
 
 // IsStockShortageWithMaterial 判断库存是否不足,检查材料库存
-func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
+func (model *ProductBom) IsStockShortageWithMaterial(productNum float64, productBomStockNum func(productBomUuid uint64) float64) bool {
 	// 如果是关联材料的规格，则检查关联材料的库存
 	if model.IsFlavor() {
-		for _, material := range model.FlavorMaterials {
-			if material.IsDelete() {
-				continue
-			}
-			materialStockNum := material.Material.GetStockNum()
-			if materialStockNum < material.GetDecreaseNum(productNum) {
-				return true
-			}
+		stockNum := productBomStockNum(model.Uuid)
+		if stockNum < productNum {
+			return true // 表示库存不足
 		}
 	}
 	// 如果是关联材料的小料，则检查关联材料的库存
 	if model.IsSauce() {
-		for _, material := range model.ProductSauce.SauceMaterials {
-			materialStockNum := material.Material.GetStockNum()
-			if materialStockNum < material.GetDecreaseNum(productNum) {
-				return true
-			}
+		stockNum := productBomStockNum(model.Uuid)
+		if stockNum < productNum {
+			return true // 表示库存不足
 		}
 	}
-	return model.IsStockShortage(productNum)
+
+	stockNum := productBomStockNum(model.Uuid)
+	if stockNum < productNum {
+		return true // 表示库存不足
+	}
+	return false
 }
 
 // IsPriceChanged 判断商品价格是否变动
@@ -726,19 +703,19 @@ func (model *ProductBom) IsPriceChanged(price float64) bool {
 	return model.Price != price
 }
 
-// IsSoldOutStatus 判断是否标记沽清、或售罄无库存
-func (model *ProductBom) IsSoldOutStatus() bool {
-	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum() <= 0
-}
+// // IsSoldOutStatus 判断是否标记沽清、或售罄无库存
+// func (model *ProductBom) IsSoldOutStatus() bool {
+// 	return model.IsSoldOut == constant.ProductStatusSaleOut || model.GetStockNum(nil) <= 0
+// }
 
 func (model *ProductBom) IsDefaultSelectBool() bool {
 	return model.IsDefaultSelect == constant.ProductPackageSauceDefaultSelectionOn
 }
 
-// IsNotSoldOutStatus 判断bom是否还可以销售
-func (model *ProductBom) IsNotSoldOutStatus() bool {
-	return !model.IsSoldOutStatus()
-}
+// // IsNotSoldOutStatus 判断bom是否还可以销售
+// func (model *ProductBom) IsNotSoldOutStatus() bool {
+// 	return !model.IsSoldOutStatus()
+// }
 
 // IsOpenStockBool 判断是否开启库存
 func (model *ProductBom) IsOpenStockBool() bool {
@@ -891,11 +868,11 @@ func (model *ProductBomCard) IsHeadquarter() bool {
 }
 
 // 计算预计可生产的产品数量
-func (model *ProductBomCard) CalculateExpectedProductionNum() float64 {
+func (model *ProductBomCard) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
 	totalExpectedProductionNum := 9999999999.0
 	for _, material := range model.RelatedMaterials {
 		// 取最小值
-		expectedProductionNum := material.GetExpectedProductionNum()
+		expectedProductionNum := material.GetExpectedProductionNum(opts...)
 		if expectedProductionNum < totalExpectedProductionNum {
 			totalExpectedProductionNum = expectedProductionNum
 		}

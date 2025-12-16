@@ -105,6 +105,12 @@
           path: '/user/operation-log',
           permission: ['admin_admin.optlog_index'],
         },
+        {
+          icon: '',
+          title: $t('人员管理'),
+          path: '/user/staff',
+          permission: ['admin_admin.staff_index'],
+        },
       ],
     },
 
@@ -142,6 +148,12 @@
           icon: '',
           title: $t('点餐助手'),
           path: '/client/assistant',
+          permission: ['admin_client.client_index'],
+        },
+        {
+          icon: '',
+          title: $t('自助点餐机'),
+          path: '/client/kiosk',
           permission: ['admin_client.client_index'],
         },
       ],

@@ -32,6 +32,7 @@ type OrderProduct struct {
 	IsPackage             bool                 `json:"is_package"`          // 是否套餐
 	IsSubProduct          bool                 `json:"is_sub_product"`      // 是否套餐子商品
 	Remark                string               `json:"remark"`              // 备注
+	RemarkLocale          dto.LocaleResponse   `json:"remark_locale"`       // 备注（包含预设备注和自定义备注，多语言）
 	IsBatch               bool                 `json:"is_batch"`            // 是否分批商品
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
 }

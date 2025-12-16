@@ -77,6 +77,7 @@ var rootCommand = &cobra.Command{
 			fmt.Printf("[FATAL] Failed to check SMS client config: %v\n", err)
 			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
 		}
+
 		//初始化服务发现
 		cloud.Init()
 

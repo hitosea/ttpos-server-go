@@ -50,6 +50,7 @@ type ISrv interface {
 	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)                                      // 获取打印机设置
 	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error)                     // 获取打印机信息
 	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                      // 获取收银机设置
+	GetKioskSetting(ctx context.Context) (setting.Kiosk, error)                                                                           // 获取自助点餐机设置
 	GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error)                                                                 // 获取云端基础信息
 	GetAssistantSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Assistant, error)                                  // 获取点餐助手设置
 	GetPointsSetting(ctx context.Context) (setting.Points, error)                                                                         // 获取积分设置
@@ -73,6 +74,8 @@ type ISrv interface {
 	EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error                              // 修改自动接单会员订单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	EditCashierSetting(ctx context.Context, cashierSettingReq req.SaveCashierSettingReq) error                                            // 修改收银机设置
+	EditKioskSetting(ctx context.Context, kioskSettingReq req.SaveKioskSettingReq) error                                                  // 修改自助点餐机设置
+	SaveKitchenSetting(ctx context.Context, kitchenSettingReq req.SaveKitchenSettingReq) error                                            // 保存厨显设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
@@ -206,16 +209,16 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 
 	// 解析json字符串为map进行处理，处理language字段
 	jsonStr := st.Values
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err := json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败-01", zap.Error(err))
 		return store, errors.New("解析商城设置失败-01" + err.Error())
 	}
 	// 处理language数组中的key字段
-	if language, ok := jsonMap["language"].([]interface{}); ok {
+	if language, ok := jsonMap["language"].([]any); ok {
 		for i, item := range language {
-			if langItem, ok := item.(map[string]interface{}); ok {
+			if langItem, ok := item.(map[string]any); ok {
 				// 尝试将key转换为string
 				if keyNum, ok := langItem["key"].(string); ok {
 					langItem["key"], _ = strconv.Atoi(keyNum)
@@ -246,9 +249,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))
 		return store, errors.New("解析商城设置失败" + err.Error())
 	}
-	if store.IPWhiteList != "" {
-		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
-	}
+	store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
 
 	defaultStore := s.getDefaultStore(ctx.GetLanguage())
 	store.TimeZoneList = nil
@@ -303,7 +304,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	jsonStr := st.Values
 
 	// 解析json字符串为map进行处理
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err = json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
@@ -312,9 +313,9 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	// 处理 cashier_printer 字段，确保它是一个数组
 	if cashierPrinter, ok := jsonMap["cashier_printer"]; ok {
 		// 如果是对象，转换为数组
-		if _, ok := cashierPrinter.(map[string]interface{}); ok {
+		if _, ok := cashierPrinter.(map[string]any); ok {
 			// 将对象转换为数组
-			cashierPrinterArray := []interface{}{cashierPrinter}
+			cashierPrinterArray := []any{cashierPrinter}
 			jsonMap["cashier_printer"] = cashierPrinterArray
 		}
 	}
@@ -338,9 +339,9 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		}
 	}
 	// 处理language_list中的key
-	if languageList, ok := jsonMap["language_list"].([]interface{}); ok {
+	if languageList, ok := jsonMap["language_list"].([]any); ok {
 		for i, item := range languageList {
-			if langItem, ok := item.(map[string]interface{}); ok {
+			if langItem, ok := item.(map[string]any); ok {
 				// 尝试将key转换为int
 				if keyStr, ok := langItem["key"].(string); ok {
 					langItem["key"], _ = strconv.Atoi(keyStr)
@@ -895,6 +896,78 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	return defaultCashier, nil
 }
 
+// GetKioskSetting 获取自助点餐机设置
+func (s *Srv) GetKioskSetting(ctx context.Context) (setting.Kiosk, error) {
+	var kiosk setting.Kiosk
+	st := s.getSettingByKey(ctx, constant.SettingKiosk)
+
+	logger.Logger.Info("kioskSetting", zap.Any("kioskSetting", st.Values))
+
+	// 获取语言列表
+	languageList, err := s.GetStoreLanguageList(ctx)
+	if err != nil {
+		return kiosk, errors.WithMessage(err, "获取语言列表失败")
+	}
+
+	// 解析 JSON 字符串
+	if st.Values == "" || st.Values == "{}" {
+		// 返回默认值
+		return s.getDefaultKioskSetting(languageList), nil
+	}
+
+	err = json.Unmarshal([]byte(st.Values), &kiosk)
+	if err != nil {
+		ctx.Log().Error("解析自助点餐机设置失败", zap.Error(err))
+		return kiosk, errors.WithMessage(err, "解析自助点餐机设置失败")
+	}
+
+	// 设置默认值
+	kiosk = s.mergeDefaultKioskSetting(kiosk, languageList)
+
+	// 轮播图/视频处理（添加域名）
+	ginContext := ctx.GetGin()
+	if len(kiosk.Carousel) > 0 && ginContext != nil {
+		for i, item := range kiosk.Carousel {
+			kiosk.Carousel[i].FilePath = utils.AddImageDomain(item.FilePath, utils.GetBaseURL(ginContext.Request), true)
+		}
+	}
+
+	// 确保数组不为 nil
+	if kiosk.Carousel == nil {
+		kiosk.Carousel = make([]setting.CarouselItem, 0)
+	}
+	if kiosk.Language == nil {
+		kiosk.Language = make([]string, 0)
+	}
+	if kiosk.LanguageList == nil {
+		kiosk.LanguageList = make([]dto.LanguageItem, 0)
+	}
+
+	return kiosk, nil
+}
+
+// mergeDefaultKioskSetting 合并默认值
+func (s *Srv) mergeDefaultKioskSetting(kiosk setting.Kiosk, languageList []dto.LanguageItem) setting.Kiosk {
+	defaultSetting := s.getDefaultKioskSetting(languageList)
+
+	if kiosk.AdvancedPassword == "" {
+		kiosk.AdvancedPassword = defaultSetting.AdvancedPassword
+	}
+	if len(kiosk.Language) == 0 {
+		kiosk.Language = defaultSetting.Language
+	}
+	if kiosk.DefaultLanguage == "" {
+		kiosk.DefaultLanguage = defaultSetting.DefaultLanguage
+	}
+	if kiosk.Carousel == nil {
+		kiosk.Carousel = defaultSetting.Carousel
+	}
+	// LanguageList 始终使用最新的语言列表
+	kiosk.LanguageList = languageList
+
+	return kiosk
+}
+
 // GetCloudBasicSetting 获取云端基础信息
 func (s *Srv) GetCloudBasicSetting(ctx context.Context) (setting.CloudBasic, error) {
 	var (
@@ -929,7 +1002,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	}
 	st := s.getSettingByKey(ctx, constant.SettingAssistant)
 	// 解析json字符串为map进行处理
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析点餐助手设置失败-01", zap.Error(err))
@@ -1098,11 +1171,19 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	if len(defaultKitchen.WaitColor) == 0 {
 		defaultKitchen.WaitColor = make([]string, 0)
 	}
+	if len(defaultKitchen.WaitTimeColorRanges) == 0 {
+		defaultKitchen.WaitTimeColorRanges = make([]setting.WaitTimeColorRange, 0)
+	}
 	if len(defaultKitchen.LanguageList) == 0 {
 		defaultKitchen.LanguageList = make([]dto.LanguageItem, 0)
 	}
 	if len(defaultKitchen.Language) == 0 {
 		defaultKitchen.Language = make([]string, 0)
+	}
+
+	// 转换旧格式到新格式（如果只有旧格式数据）
+	if len(defaultKitchen.WaitTimeColorRanges) == 0 && len(defaultKitchen.WaitColor) > 0 {
+		defaultKitchen.WaitTimeColorRanges = s.convertFromOldFormat(defaultKitchen.WaitColor)
 	}
 
 	validLanguageList := make([]dto.LanguageItem, 0)
@@ -1138,7 +1219,7 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
 	}
 	// 解析json字符串为map进行处理
-	var jsonMap map[string]interface{}
+	var jsonMap map[string]any
 	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析各端-扫码H5设置失败 - 01", zap.Error(err))
@@ -1521,6 +1602,158 @@ func (s *Srv) EditCashierSetting(ctx context.Context, cashierSettingReq req.Save
 	return nil
 }
 
+// EditKioskSetting 修改自助点餐机设置
+func (s *Srv) EditKioskSetting(ctx context.Context, kioskSettingReq req.SaveKioskSettingReq) error {
+	kioskSetting, err := s.GetKioskSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 更新字段（只更新传递的字段）
+	if kioskSettingReq.AdvancedPassword != "" {
+		kioskSetting.AdvancedPassword = kioskSettingReq.AdvancedPassword
+	}
+	if kioskSettingReq.CallWaiterEnabled == 0 || kioskSettingReq.CallWaiterEnabled == 1 {
+		kioskSetting.CallWaiterEnabled = kioskSettingReq.CallWaiterEnabled
+	}
+	if kioskSettingReq.Language != nil {
+		kioskSetting.Language = kioskSettingReq.Language
+	}
+	if kioskSettingReq.DefaultLanguage != "" {
+		kioskSetting.DefaultLanguage = kioskSettingReq.DefaultLanguage
+	}
+	if kioskSettingReq.Carousel != nil {
+		kioskSetting.Carousel = kioskSettingReq.Carousel
+	}
+
+	// 保存设置
+	if err := s.UpdateSetting(ctx, constant.SettingKiosk, kioskSetting); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
+}
+
+// SaveKitchenSetting 保存厨显设置
+func (s *Srv) SaveKitchenSetting(ctx context.Context, kitchenSettingReq req.SaveKitchenSettingReq) error {
+	// 1. 参数验证
+	if err := kitchenSettingReq.Validate(); err != nil {
+		return errors.WithMessage(err, "参数验证失败")
+	}
+
+	// 2. 获取当前配置
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取商家设置失败")
+	}
+
+	languageList, err := s.GetStoreLanguageList(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取语言列表失败")
+	}
+
+	currentKitchen, err := s.GetKitchenSetting(ctx, companySetting, languageList)
+	if err != nil {
+		return errors.WithMessage(err, "获取厨显设置失败")
+	}
+
+	// 3. 更新配置
+	currentKitchen.IsWaitColor = kitchenSettingReq.IsWaitColor
+	currentKitchen.WaitTimeColorRanges = kitchenSettingReq.ToSettingWaitTimeColorRanges()
+
+	// 4. 转换新格式到旧格式（保持兼容）
+	currentKitchen.WaitColor = s.convertToOldFormat(kitchenSettingReq.WaitTimeColorRanges)
+
+	// 5. 保存到数据库
+	if err := s.UpdateSetting(ctx, constant.SettingKitchen, currentKitchen); err != nil {
+		return errors.WithMessage(err, "保存配置失败")
+	}
+
+	// 6. 删除缓存
+	companyUuid := ctx.GetCompanyUuid()
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+
+	// 7. 推送 WebSocket 配置更新
+	utils.Go(func() {
+		websocket.PushClient(
+			companyUuid,
+			websocket.SourceKitchen,
+			websocket.SourceAll,
+			websocket.UPDATE_CONFIG,
+			map[string]any{
+				"update_time": time.Now().Unix(),
+				"config_type": "kitchen_wait_time_color",
+				"config_data": kitchenSettingReq.WaitTimeColorRanges,
+			},
+		)
+	})
+
+	return nil
+}
+
+// convertToOldFormat 转换新格式到旧格式
+func (s *Srv) convertToOldFormat(ranges []req.WaitTimeColorRange) []string {
+	var result []string
+	for i, r := range ranges {
+		if i == 0 {
+			continue // 跳过第一区间（0分钟）
+		}
+		// RGB 格式转换为 red/yellow
+		color := r.Color
+		colorUpper := strings.ToUpper(color)
+		if colorUpper == "#E50028" {
+			color = "red"
+		} else if colorUpper == "#FFBE00" {
+			color = "yellow"
+		} else {
+			// 其他 RGB 颜色，默认使用 yellow（保持兼容）
+			color = "yellow"
+		}
+		result = append(result, color)
+	}
+	return result
+}
+
+// convertFromOldFormat 从旧格式转换到新格式
+func (s *Srv) convertFromOldFormat(oldFormat []string) []setting.WaitTimeColorRange {
+	var result []setting.WaitTimeColorRange
+	result = append(result, setting.WaitTimeColorRange{Minute: "0", Color: "#100A05"}) // 第一区间固定黑色
+
+	// 旧格式：["red", "yellow"] 或 ["yellow", "red"]
+	// 第一个元素对应第二区间，第二个元素对应第三区间
+	colorMap := map[string]string{
+		"red":    "#E50028",
+		"yellow": "#FFBE00",
+	}
+
+	for i, item := range oldFormat {
+		if i >= 2 {
+			break // 最多两个元素
+		}
+		minute := "10"
+		if i == 1 {
+			minute = "20"
+		}
+		color := "#FFBE00" // 默认黄色
+		if rgbColor, ok := colorMap[item]; ok {
+			color = rgbColor
+		}
+		result = append(result, setting.WaitTimeColorRange{Minute: minute, Color: color})
+	}
+
+	// 如果旧格式数据不足，使用默认值
+	if len(result) < 3 {
+		if len(result) == 1 {
+			result = append(result, setting.WaitTimeColorRange{Minute: "10", Color: "#FFBE00"})
+		}
+		if len(result) == 2 {
+			result = append(result, setting.WaitTimeColorRange{Minute: "20", Color: "#E50028"})
+		}
+	}
+
+	return result
+}
+
 // GetCashierBaseSetting 获取收银端设置
 func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error) {
 	var settingResp resp.CashierBaseSetting
@@ -1612,6 +1845,7 @@ func (s *Srv) SymbolPosition(ctx context.Context, amount float64) string {
 // UpdateSetting 更新设置
 func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) error {
 	value := utils.ToJson(values)
+	logger.Logger.Info("UpdateSetting", zap.String("settingKey", settingKey), zap.String("value", value))
 	if settingKey == constant.SettingStore {
 		value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
 		value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")
@@ -1683,6 +1917,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
+	storeSetting.StoreCode = storeSettingReq.StoreCode
 
 	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####
 	// ##### 1、处理 cashier 设置 #####
@@ -2073,7 +2308,7 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
-	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderSourceCount, nationalityCount int64
+	var freeReasonCount, returnFoodReasonCount, orderRemarkCount, orderItemRemarkCount, orderSourceCount, nationalityCount int64
 	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
@@ -2083,6 +2318,10 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 	err = db.Model(&model.OrderRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderRemarkCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+	err = db.Model(&model.OrderItemRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderItemRemarkCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
@@ -2113,6 +2352,7 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		FreeReasonCount:                          int(freeReasonCount),
 		ReturnFoodReasonCount:                    int(returnFoodReasonCount),
 		OrderRemarkCount:                         int(orderRemarkCount),
+		OrderItemRemarkCount:                     int(orderItemRemarkCount),
 		HeadquarterRequiredParentCompanyApproval: headquarterRequiredParentCompanyApproval,
 		HeadquarterViaParentCompanyWarehouse:     headquarterViaParentCompanyWarehouse,
 		OrderSourceCount:                         int(orderSourceCount),

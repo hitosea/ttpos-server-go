@@ -13,7 +13,7 @@
 | **目标版本**  | v2.9                                                                                                                                                             |
 | **状态**      | 已创建 Spec                                                                                                                                                      |
 | **关联任务**  | -                                                                                                                                                                |
-| **关联 Spec** | [docs/shared/specs/active/task-erp-migrate-command-separation/requirements.md](../../../shared/specs/active/task-erp-migrate-command-separation/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/task-erp-migrate-command-separation/requirements.md](../../../shared/specs/active/task-erp-migrate-command-separation/requirements.md) |
 
 ---
 

@@ -30,6 +30,7 @@ const (
 )
 
 type Context interface {
+	context.Context
 	GetLanguage() string                     // 获取语言
 	SetLanguage(language string)             // 设置语言
 	GetCompanyUuid() uint64                  // 获取商家ID
@@ -82,6 +83,8 @@ type Context interface {
 	Version(op Operator, version string) bool // 比较版本
 	GetVersion() string                       // 获取客户端版本号
 	Log() *zap.Logger                         // 获取日志实例
+
+	GetBrand() string // 获取品牌名称
 }
 
 type ContextImpl struct {
@@ -463,4 +466,8 @@ func (c *ContextImpl) IsMobile() bool {
 
 func (c *ContextImpl) GetCache() cache.Cache {
 	return cache.Global
+}
+
+func (c *ContextImpl) GetBrand() string {
+	return c.cc.GetString(jwt.Brand)
 }

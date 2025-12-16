@@ -187,6 +187,14 @@ type AddPaymentMethodReq struct {
 	MemberRechargeShow []string `json:"member_recharge_show"`               // 会员充值显示，可选cashier
 }
 
+type SaveModeOfPaymentReq struct {
+	CompanyUuid uint64  `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
+	Channel     string  `form:"channel" json:"channel" binding:"required"`           // 渠道，如 LianLianPay，创建时必填
+	PayType     string  `form:"pay_type" json:"pay_type" binding:"required"`         // 支付类型（TTPOS 定义），创建时必填
+	Enabled     *bool   `form:"enabled" json:"enabled" binding:"omitempty"`          // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
+	Name        *string `form:"name" json:"name" binding:"omitempty"`                // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+}
+
 type CreateSupplierReq struct {
 	SiteCode     string
 	SupplierName string // 供应商名称

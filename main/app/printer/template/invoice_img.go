@@ -35,23 +35,12 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	saleOrder *model.SaleOrder,
 ) string {
 	temp := tmpInfo.Template
-	tmpUuid := tmpInfo.TmpUuid
 	isShowSku := tmpInfo.IsShowSku
 
 	/* *
 	 * 模版2
 	 */
 	if temp == 2 {
-		if tmpUuid > 0 {
-			return NewStatementOrderImgTemplateCustom(t.base).GetPrintContent(
-				settingPrinterInfo,
-				tmpInfo.TmpData,
-				saleBill,
-				saleOrder,
-				0,
-				false,
-			)
-		}
 		return NewStatementOrderImgTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,

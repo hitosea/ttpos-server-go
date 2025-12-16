@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                                                                       |
 | **状态**      | 已创建 Spec                                                                                                                                                   |
 | **关联任务**  | DooTask #36913, DooTask #36904                                                                                                                                |
-| **关联 Spec** | [docs/shared/specs/active/story-shop-package-group-type-enhancement/](../../../shared/specs/active/story-shop-package-group-type-enhancement/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-shop-package-group-type-enhancement/](../../../shared/specs/active/story-shop-package-group-type-enhancement/requirements.md) |
 
 ---
 
@@ -208,8 +208,8 @@
 
 ### 参考需求
 
-- 套餐分组类型功能（商家管理端）：`docs/shared/specs/active/story-shop-package-group-type/`
-- 收银端套餐商品选择功能：`docs/shared/specs/active/story-pos-package-selection/`
+- 套餐分组类型功能（商家管理端）：`docs/shared/specs/archived/v2.10.0/story-shop-package-group-type/`
+- 收银端套餐商品选择功能：`docs/shared/specs/archived/v2.10.0/story-pos-package-selection/`
 - 前端对接文档：`docs/shared/api/frontend-changes-package-group-type.md`
 
 ### 相关文档

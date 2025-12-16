@@ -106,6 +106,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
               title: $t('操作日志'),
             },
           },
+          {
+            path: 'staff',
+            component: () => import('@/pages/user/staff.vue'),
+            meta: {
+              title: $t('人员管理'),
+            },
+          },
         ],
       },
       {
@@ -148,6 +155,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
             component: () => import('@/pages/client/assistant.vue'),
             meta: {
               title: $t('点餐助手'),
+            },
+          },
+          {
+            path: 'kiosk',
+            component: () => import('@/pages/client/kiosk.vue'),
+            meta: {
+              title: $t('自助点餐机'),
             },
           },
         ],

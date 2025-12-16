@@ -66,6 +66,11 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 		helper.HandleValidationError(c, err, addSoldOutReq, nil)
 		return
 	}
+	// 验证请求参数
+	if err := addSoldOutReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
 	// 获取沽清列表
 	err := h.soldOutSrv.AddSoldOut(helper.GetCompanyUuid(c), addSoldOutReq.SoldOutData)
 	// 处理错误
@@ -126,6 +131,34 @@ func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
 	helper.Success(c, gin.H{}, "取消成功")
 }
 
+// GetSettings 获取商品沽清设置
+// @Summary 获取商品沽清设置
+// @Description 获取指定商品的沽清设置信息
+// @Tags 收银端.沽清
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param product_package_uuid query uint64 true "商品包ID"
+// @Success 200 {object} dto.Response{data=resp.SoldOutSettingsResp}
+// @Router /cashier/sold_out/settings [get]
+func (h *SoldOutHandler) GetSettings(c *gin.Context) {
+	// 绑定请求参数
+	var req req.GetSoldOutSettingsReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	// 获取沽清设置
+	respData, err := h.soldOutSrv.GetSettings(helper.GetCompanyUuid(c), &req)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, respData)
+}
+
 func RegisterSoldOutHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -149,5 +182,6 @@ func RegisterSoldOutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/sold_out/add", wrapper.AddSoldOut)              // 添加沽清商品
 		privateApi.POST("/sold_out/cancel", wrapper.CancelSoldOut)        // 取消沽清商品
 		privateApi.POST("/sold_out/cancel_all", wrapper.CancelAllSoldOut) // 取消全部沽清商品
+		privateApi.GET("/sold_out/settings", wrapper.GetSettings)         // 获取商品沽清设置
 	}
 }

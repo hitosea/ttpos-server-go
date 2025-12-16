@@ -13,8 +13,10 @@ import (
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
@@ -25,7 +27,10 @@ func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 	}
 }
 
-// 获取免单原因
+// GetFreeReason 获取免单原因（多语言）
+// 优先使用快照字段，降级使用关联表数据，支持多语言
+// 快照字段保存多语言（JSON）
+// Requirement: story-main-reason-snapshot-fix
 func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 	// 获取免单原因
 	zhNames := make([]string, 0)
@@ -42,15 +47,20 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 		if !reason.IsFreeReason() || reason.IsDelete() {
 			continue
 		}
-		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
-		thNames = append(thNames, reason.MultiLanguageName.ThName)
-		enNames = append(enNames, reason.MultiLanguageName.EnName)
-		zhtwNames = append(zhtwNames, reason.MultiLanguageName.ZhTwName)
-		jaNames = append(jaNames, reason.MultiLanguageName.JaName)
-		koNames = append(koNames, reason.MultiLanguageName.KoName)
-		myNames = append(myNames, reason.MultiLanguageName.MyName)
-		trNames = append(trNames, reason.MultiLanguageName.TrName)
-		svNames = append(svNames, reason.MultiLanguageName.SvName)
+
+		// 使用 SaleOrderProductReason 的方法获取多语言名称（优先使用快照，降级使用关联表）
+		localeResp := reason.GetLocaleName()
+		if !localeResp.IsNull() {
+			zhNames = append(zhNames, localeResp.ZH)
+			thNames = append(thNames, localeResp.TH)
+			enNames = append(enNames, localeResp.EN)
+			zhtwNames = append(zhtwNames, localeResp.ZHTW)
+			jaNames = append(jaNames, localeResp.JA)
+			koNames = append(koNames, localeResp.KO)
+			myNames = append(myNames, localeResp.MY)
+			trNames = append(trNames, localeResp.TR)
+			svNames = append(svNames, localeResp.SV)
+		}
 	}
 	// 添加自定义的免单原因
 	if model.FreeReason != "" {
@@ -79,10 +89,49 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 }
 
 // 获取所有自助餐名称
+// GetBuffetNames 获取自助餐名称
+// 优先使用 SaleBill 快照字段，降级使用关联表数据，支持多语言
+// Requirement: story-main-buffet-package-name-snapshot-fix
 func (model *SaleOrder) GetBuffetNames(language string) string {
 	buffets := make([]string, 0)
+	buffetUuidMap := make(map[uint64]bool) // 用于去重
+
+	// 优先使用 SaleBill 快照字段
+	if model.SaleBill != nil {
+		if model.SaleBill.BuffetPackage1Uuid != 0 {
+			name1 := model.SaleBill.GetLocaleBuffetPackage1Name()
+			if !name1.IsNull() {
+				name := name1.GetLocale(language)
+				if name != "" && !slices.Contains(buffets, name) {
+					buffets = append(buffets, name)
+					buffetUuidMap[model.SaleBill.BuffetPackage1Uuid] = true
+				}
+			}
+		}
+		if model.SaleBill.BuffetPackage2Uuid != 0 {
+			name2 := model.SaleBill.GetLocaleBuffetPackage2Name()
+			if !name2.IsNull() {
+				name := name2.GetLocale(language)
+				if name != "" && !slices.Contains(buffets, name) {
+					buffets = append(buffets, name)
+					buffetUuidMap[model.SaleBill.BuffetPackage2Uuid] = true
+				}
+			}
+		}
+	}
+
+	// 降级：如果快照字段为空，使用关联表（兼容历史数据）
+	// 遍历 SaleOrderBuffetCustomerTypes，但跳过已经在快照中找到的套餐
 	for _, buffet := range model.SaleOrderBuffetCustomerTypes {
-		buffets = append(buffets, buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language))
+		// 如果这个套餐已经在快照中找到，跳过
+		if buffetUuidMap[buffet.BuffetPackageUuid] {
+			continue
+		}
+		// 使用关联表数据
+		name := buffet.BuffetPackage.MultiLanguageName.GetNameByLang(language)
+		if name != "" && !slices.Contains(buffets, name) {
+			buffets = append(buffets, name)
+		}
 	}
 	return strings.Join(buffets, "+")
 }
@@ -629,6 +678,16 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
 			taxRate := buffetPackage.GeTaxRate()
 			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, b.SaleBillUuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting, buffetPackage.OpenOverallDiscount)
+
+			// 设置自助餐套餐名称快照（JSON 方案）
+			// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+			if buffet, ok := buffetMap[buffetUuid]; ok && !buffet.MultiLanguageName.IsNullName() {
+				if err := saleOrderBuffetCustomerType.SetBuffetPackageNameSnapshot(buffet.MultiLanguageName); err != nil {
+					// 记录错误日志，但不中断流程
+					logger.Logger.Error("保存自助餐套餐名称快照失败", zap.Error(err), zap.Uint64("buffet_package_uuid", buffetUuid))
+				}
+			}
+
 			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
 			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
 			if !newBuffetUuidMap2[buffetUuid] {

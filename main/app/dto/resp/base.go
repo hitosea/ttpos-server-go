@@ -23,6 +23,9 @@ type CashierBase struct {
 	Printer    setting.Printer     `json:"printer"`  // 打印机设置
 
 	UpdateTime int64 `json:"update_time"` // 更新时间
+
+	// 关联的门店列表
+	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
 }
 
 type AssistantStaff struct {
@@ -53,6 +56,9 @@ type AssistantBase struct {
 	Kitchen        setting.KitchenResp   `json:"kitchen"`         // 厨显设置
 	ClientVersion  string                `json:"client_version"`  // 客户端版本
 	ServerVersion  string                `json:"server_version"`  // 服务端版本
+
+	// 关联的门店列表
+	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
 }
 
 type TabletBase struct {
@@ -66,6 +72,9 @@ type TabletBase struct {
 	Business      setting.Business    `json:"business"`       // 门店业务设置
 	Tablet        setting.TabletResp  `json:"tablet"`         // 平板端设置
 	Kitchen       setting.KitchenResp `json:"kitchen"`        // 厨显设置
+
+	// 关联的门店列表
+	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
 }
 
 type TabletDeskItem struct {
@@ -87,6 +96,9 @@ type KitchenBase struct {
 	Kitchen       setting.KitchenResp `json:"kitchen"`        // 厨显端设置
 	ServerVersion string              `json:"system_version"` // 服务端版本
 	ClientVersion string              `json:"client_version"` // 客户端版本
+
+	// 关联的门店列表
+	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
 }
 
 type ProductPrinter struct {
@@ -120,6 +132,8 @@ type Company struct {
 	IsEnableErp          bool   `json:"is_show_inventory"`       // 是否显示移动管理端进销存功能
 	IsOpenMap            bool   `json:"is_open_map"`             // 是否开启地图
 	IsOpenDataManagement bool   `json:"is_open_data_management"` // 是否开启数据管理功能
+	IsOpenKiosk          bool   `json:"is_open_kiosk"`           // 是否开启自助点餐机功能
+	IsOpenGrabDelivery   bool   `json:"is_open_grab_delivery"`   // 是否开启Grab外卖功能
 }
 
 type Permission struct {
@@ -272,6 +286,7 @@ func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 
 type ShopBase struct {
 	Username     string        `json:"username"`      // 登录账号
+	RealName     string        `json:"real_name"`     // 姓名
 	ProfileUuid  uint64        `json:"profile_uuid"`  // 收银员UUID
 	Phone        string        `json:"phone"`         // 登录账号手机号
 	DeviceId     string        `json:"device_id"`     // 设备ID
@@ -294,6 +309,9 @@ type ShopBase struct {
 
 	HasChildren bool `json:"has_children"` // 有下级公司，则表示为上级公司，用于判断调拨规则是否支持
 
+	// 关联的门店列表
+	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+
 	IsSyncing    bool  `json:"is_syncing"`     // 是否erp数据同步中
 	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
 
@@ -307,6 +325,7 @@ type ShopProfile struct {
 	IpWhiteList     string                 `json:"ip_white_list"`    // ip白名单
 	Phone           string                 `json:"phone"`            // 联系电话
 	TaxNumber       string                 `json:"tax_number"`       // 税号
+	StoreCode       string                 `json:"store_code"`       // 店铺编码，用于发票打印
 	TimeZoneList    []setting.TimeZoneItem `json:"time_zone_list"`   // 时区列表
 	DefaultLanguage string                 `json:"default_language"` // 默认语言
 	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表

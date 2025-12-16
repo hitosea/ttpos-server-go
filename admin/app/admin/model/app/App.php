@@ -2,6 +2,7 @@
 
 namespace app\admin\model\app;
 
+use app\admin\model\admin\Staff as SaasStaffModel;
 use app\common\enum\settings\SettingEnum;
 use app\common\model\settings\Setting;
 use app\common\model\shop\SaasUser;
@@ -94,6 +95,10 @@ class App extends AppModel
             // v2.10.0
             "su.enable_table_map",
             "su.enable_data_management",
+            // v2.11.0
+            "su.enable_kiosk",
+            // Grab外卖控制
+            "su.enable_grab_delivery",
         ];
         //
         $countWhere = 'where 1 = 1';
@@ -328,6 +333,10 @@ class App extends AppModel
                 }
             }
 
+            $saasStaffUpdate = $user_data;
+            $saasStaffUpdate['email'] = $data['user_name'];
+            $where = ['uuid' => $shop_user['uuid']];
+            (new SaasStaffModel([], 0))->setAppId(0)->update($saasStaffUpdate, $where);
             // 平台
             $this->save($save_data);
 

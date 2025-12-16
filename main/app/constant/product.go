@@ -19,7 +19,7 @@ const (
 
 // 库存相关常量
 const (
-	ProductBomInfiniteStock = 999999 // 无限库存（关闭库存检查时使用）
+	ProductBomInfiniteStock = 99999999 // 无限库存（关闭库存检查时使用）
 )
 
 const (
@@ -198,4 +198,11 @@ const (
 const (
 	ProductNumTypeInteger = 0 // 整数
 	ProductNumTypeDecimal = 1 // 小数
+)
+
+// 外卖类型
+const (
+	TakeoutTypeGrab      = 1 // Grab
+	TakeoutTypeFoodPanda = 2 // FoodPanda
+	TakeoutTypeOther     = 3 // 其他（预留扩展）
 )

@@ -49,6 +49,13 @@ type OrderRemarkResItem struct {
 	CreateTime   int64              `json:"create_time"`   // 创建时间(时间戳)
 }
 
+// RemarkInfo 备注信息
+type RemarkInfo struct {
+	Uuids        []uint64           `json:"uuids"`         // 备注UUID列表
+	Remark       dto.LocaleResponse `json:"remark"`        // 备注
+	CustomRemark string             `json:"custom_remark"` // 自定义备注
+}
+
 // 整单备注信息
 type OrderRemarkInfo struct {
 	List []OrderRemarkItem `json:"list"`
@@ -306,6 +313,9 @@ type SaleOrder struct {
 type Product struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品uuid
 	ProductPackageUuid  uint64             `json:"product_package_uuid"`  // 商品包uuid
+	CategoryUuid        uint64             `json:"category_uuid"`         // 分类uuid
+	FirstCategoryUuid   uint64             `json:"first_category_uuid"`   // 一级分类uuid
+	SpecialCategoryUuid uint64             `json:"special_category_uuid"` // 特殊分类uuid
 	MustPlanUuid        uint64             `json:"must_plan_uuid"`        // 必点方案uuid
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
@@ -317,6 +327,7 @@ type Product struct {
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）
 	Remark              string             `json:"remark"`                // 备注
+	RemarkInfo          RemarkInfo         `json:"remark_info"`           // 备注信息
 	IsMust              bool               `json:"is_must"`               // 是否必点
 	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
 	IsWrap              bool               `json:"is_wrap"`               // 是否是打包

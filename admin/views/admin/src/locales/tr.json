@@ -450,5 +450,22 @@
     "如:13.716412789763694, 100.52312952599786": "Örn: 13.716412789763694, 100.52312952599786",
     "高级票据打印": "Gelişmiş Fatura Yazdırma",
     "桌台地图": "Masa ve Yerleşim Haritası",
-    "数据管理": "Veri yönetimi"
+    "数据管理": "Veri yönetimi",
+    "自助点餐机": "Self-servis sipariş kioskı",
+    "发布自助点餐机": "Self-servis sipariş kioskı yayımla",
+    "查看自助点餐机": "Self-servis sipariş kioskını görüntüle",
+    "Grab外卖": "Grab paket servisi",
+    "请选择门店": "Lütfen mağaza seçin",
+    "默认": "Varsayılan",
+    "切换成功": "Geçiş başarılı",
+    "人员管理": "Personel yönetimi",
+    "编辑统一账号": "Birleştirilmiş hesabı düzenle",
+    "添加统一账号": "统一アカウントを追加",
+    "请输入手机号（可选）": "Lütfen telefon numarasını girin (isteğe bağlı)",
+    "关联门店：": "İlgili mağaza:",
+    "关联门店和角色：": "İlgili mağaza ve rol:",
+    "添加门店": "店舗を追加",
+    "手机号": "Telefon Numarası",
+    "关联门店和角色": "İlişkili mağazalar ve roller",
+    "无角色": "Rol yok"
 }

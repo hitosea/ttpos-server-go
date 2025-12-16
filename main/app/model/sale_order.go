@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -11,10 +12,12 @@ import (
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/cryptor"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 // SaleOrder 销售订单 `ttpos_sale_order`
@@ -662,31 +665,26 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 			continue
 		}
 		// 自助餐顾客价格收费列表
+		// 优先使用快照字段，降级使用关联表数据
+		// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
+		buffetLocaleName := orderBuffetCustomer.GetLocaleBuffetPackageName()
+		// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+		customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
 		product := resp.Product{
-			Uuid:       orderBuffetCustomer.Uuid,
-			LocaleName: orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNames(),
-			LocaleAttributeName: dto.LocaleResponse{
-				ZH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				TH:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				EN:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				ZHTW: orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				JA:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-				SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			},
-			Num:           float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
-			FinishedNum:   float64(orderBuffetCustomer.Num),
-			SalePrice:     orderBuffetCustomer.GetOriginPrice(),
-			DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
-			TotalPrice:    orderBuffetCustomer.TotalPrice,
-			Status:        1,
-			Remark:        "",
-			IsMust:        false,
-			IsGift:        false,
-			IsCancel:      false,
-			IsBuffet:      false,
+			Uuid:                orderBuffetCustomer.Uuid,
+			LocaleName:          buffetLocaleName,
+			LocaleAttributeName: customerTypeLocaleName,
+			Num:                 float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
+			FinishedNum:         float64(orderBuffetCustomer.Num),
+			SalePrice:           orderBuffetCustomer.GetOriginPrice(),
+			DiscountPrice:       orderBuffetCustomer.GetDiscountPrice(),
+			TotalPrice:          orderBuffetCustomer.TotalPrice,
+			Status:              1,
+			Remark:              "",
+			IsMust:              false,
+			IsGift:              false,
+			IsCancel:            false,
+			IsBuffet:            false,
 			AboutBuffet: resp.AboutBuffet{
 				IsCustomer:       true,
 				IsDelay:          false,
@@ -788,7 +786,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			for _, subProduct := range subProductList {
 				item := resp.PackageProduct{
 					Uuid:                subProduct.Uuid,
-					LocaleName:          subProduct.MultiLanguageName.GetNames(),
+					LocaleName:          subProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 					LocaleAttributeName: subProduct.GetAttributeName(),
 					Num:                 subProduct.CopyNum,
 					UnitNum:             subProduct.GetUnitNum(),
@@ -802,9 +800,13 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			}
 		}
 
+		// 单品备注
+		orderItemRemarkList := saleOrderProduct.GetOrderItemRemark()
+		remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
+
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
-			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleName:          saleOrderProduct.GetLocaleName(), // Requirement: story-main-product-attribute-snapshot-fix
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			NumType:             saleOrderProduct.NumType,
@@ -812,6 +814,7 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
 			Status:              saleOrderProduct.StatusValue(),
 			Remark:              saleOrderProduct.Remark,
+			RemarkInfo:          remarkInfo,
 			IsMust:              saleOrderProduct.IsMustProduct(),
 			IsGift:              saleOrderProduct.IsGiftProduct(),
 			IsWrap:              saleOrderProduct.IsWrapProduct(),
@@ -823,13 +826,31 @@ func (model *SaleOrder) GetProductList(clientVerson string, hasOrderedH5ProductW
 			IsH5OrderNeedAudit:  isH5NeedAudit,
 			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
-			MustPlanUuid:        saleOrderProduct.MustPlanUuid,
-			AcceptTime:          saleOrderProduct.GetAcceptTime(),
-			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
-			UnitPrice:           saleOrderProduct.SalePrice,
-			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
-			CreateTime:          saleOrderProduct.CreateTime,
-			ProductType:         saleOrderProduct.ProductPackage.ProductType,
+			FirstCategoryUuid: func() uint64 {
+				if saleOrderProduct.ProductPackage == nil {
+					return 0
+				}
+				return saleOrderProduct.ProductPackage.ProductCategory.GetFirstCategoryUuid()
+			}(),
+			CategoryUuid: func() uint64 {
+				if saleOrderProduct.ProductPackage == nil {
+					return 0
+				}
+				return saleOrderProduct.ProductPackage.CategoryUuid
+			}(),
+			SpecialCategoryUuid: func() uint64 {
+				if saleOrderProduct.ProductPackage == nil {
+					return 0
+				}
+				return saleOrderProduct.ProductPackage.SpecialCategoryUuid
+			}(),
+			MustPlanUuid:  saleOrderProduct.MustPlanUuid,
+			AcceptTime:    saleOrderProduct.GetAcceptTime(),
+			IsAccept:      saleOrderProduct.IsAcceptOrderProduct(),
+			UnitPrice:     saleOrderProduct.SalePrice,
+			IsShowKitchen: saleOrderProduct.ProductPackage.IsShowKitchen,
+			CreateTime:    saleOrderProduct.CreateTime,
+			ProductType:   saleOrderProduct.ProductPackage.ProductType,
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},
@@ -1153,6 +1174,9 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 	}, nil
 }
 
+// NewSaleOrderBuffetCustomerType 创建销售订单自助餐顾客类型
+// 注意：此方法不设置自助餐套餐名称快照，快照应在调用方通过 SetBuffetPackageNameSnapshot() 设置
+// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		SaleOrderUuid:               model.Uuid,
@@ -1170,10 +1194,23 @@ func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffet
 	return saleOrderBuffetCustomerType
 }
 
+// NewFreeOrderReason 创建免单原因列表，保存快照字段（JSON 格式）
+// Requirement: story-main-reason-snapshot-fix
 func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrderProductReason {
 	list := make([]*SaleOrderProductReason, 0)
 	for _, reason := range freeReasons {
 		reasonUuid, _ := utils.GetID()
+
+		// 序列化多语言数据为 JSON
+		var nameJSON string
+		if !reason.MultiLanguageName.IsNullName() {
+			localeResp := reason.MultiLanguageName.GetNames()
+			jsonData, err := json.Marshal(localeResp)
+			if err == nil {
+				nameJSON = string(jsonData)
+			}
+		}
+
 		list = append(list, &SaleOrderProductReason{
 			BaseModel: BaseModel{
 				Uuid: reasonUuid,
@@ -1181,6 +1218,8 @@ func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrd
 			SaleOrderUuid:         model.Uuid,
 			MultiLanguageNameUuid: reason.MultiLanguageNameUuid,
 			FreeReasonUuid:        reason.Uuid,
+			// 保存快照字段（JSON 格式，包含所有语言）
+			Name: nameJSON,
 		})
 	}
 	return list
@@ -1251,9 +1290,11 @@ func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, 
 	return saleOrder
 }
 
+// NewSaleOrderBuffetCustomerType 创建销售订单自助餐顾客类型（函数版本）
+// 注意：此函数不设置自助餐套餐名称快照，快照应在调用方通过 SetBuffetPackageNameSnapshot() 设置
+// Requirement: story-main-buffet-customer-type-package-name-snapshot-fix
 func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting, openOverallDiscount uint) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
-		Name:                        customerName,
 		SaleOrderUuid:               saleOrderUuid,
 		SaleBillUuid:                saleBillUuid,
 		BuffetPackageUuid:           buffetPackageUuid,
@@ -1267,6 +1308,13 @@ func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBill
 	}
 	// 计算金额
 	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)
+	// 设置顾客类型名称快照（JSON 方案）
+	// Requirement: story-main-buffet-customer-type-name-snapshot-fix
+	// 注意：customerName 参数是单语言名称，需要转换为多语言 JSON
+	if err := saleOrderBuffetCustomerType.SetNameSnapshot(customerName); err != nil {
+		// 记录错误日志，但不中断流程
+		logger.Logger.Error("保存顾客类型名称快照失败", zap.Error(err), zap.String("customer_name", customerName))
+	}
 	//
 	return saleOrderBuffetCustomerType
 }
