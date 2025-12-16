@@ -21,3 +21,10 @@ type RegenerateSaleBillMaterialOutboundResp struct {
 	DurationMs    int64 `json:"duration_ms"`    // 操作耗时（毫秒）
 }
 
+// RegenerateOrderPosInvoiceResp 重新生成订单POS发票响应
+type RegenerateOrderPosInvoiceResp struct {
+	ProductsInvoiceName string `json:"products_invoice_name"` // 商品发票名称
+	MaterialInvoiceName string `json:"material_invoice_name"` // 材料发票名称
+	DurationMs          int64  `json:"duration_ms"`           // 操作耗时（毫秒）
+}
+

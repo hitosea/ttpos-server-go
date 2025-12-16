@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -43,6 +44,12 @@ type ISalesOutboundSummarySrv interface {
 	// companyUuid: 门店UUID
 	// saleBillUuid: 销售账单UUID
 	RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleBillUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
+
+	// RegenerateOrderPosInvoice 重新生成指定订单的POS发票
+	// ctx: gin.Context（可为 nil，用于命令行环境）
+	// companyUuid: 门店UUID
+	// saleOrderUuid: 销售订单UUID
+	RegenerateOrderPosInvoice(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateOrderPosInvoiceResp, error)
 }
 
 // salesOutboundSummarySrv 销售出库汇总服务实现
@@ -753,6 +760,130 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 	}, nil
 }
 
+// RegenerateOrderPosInvoice 重新生成指定订单的POS发票
+func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
+	ctx *gin.Context,
+	companyUuid uint64,
+	saleOrderUuid uint64,
+) (*resp.RegenerateOrderPosInvoiceResp, error) {
+	startTime := time.Now()
+	db := s.dbm.GetDB(companyUuid)
+
+	// 1. 读取订单信息
+	saleOrderRepo := repository.NewSaleOrderRepo(db)
+	saleOrder, err := saleOrderRepo.GetSaleOrderByUuid(saleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+	if saleOrder == nil || saleOrder.Uuid == 0 {
+		return nil, errors.New("订单不存在")
+	}
+
+	// 2. 验证订单状态（必须已完成结账）
+	if saleOrder.FinishTime == 0 {
+		return nil, errors.New("订单未完成结账，无法生成发票")
+	}
+
+	// 3. 读取账单信息
+	orderRepo := repository.NewOrderRepo(db)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(saleOrder.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取账单信息失败")
+	}
+	if saleBill == nil {
+		return nil, errors.New("账单不存在")
+	}
+
+	saleOrder = saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("SaleOrder订单不存在")
+	}
+
+	// 4. 获取公司信息和设置
+	companyRepo := repository.NewCompanyRepo(db)
+	company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取公司信息失败")
+	}
+
+	// 5. 验证ERP配置
+	if !company.IsOpenErpPhase3() {
+		return nil, errors.New("ERP Phase3未启用，无法生成发票")
+	}
+	if company.CompanySetting.ErpnextSiteCode == "" {
+		return nil, errors.New("ERP SiteCode未配置，无法生成发票")
+	}
+
+	// 6. 创建 Context（命令行环境）
+	ttposCtx := context.NewContext(
+		context.WithCompanyUuid(companyUuid),
+		context.WithCompany(*company),
+		context.WithCompanySetting(*company.CompanySetting),
+		context.WithLogger(logger.Logger),
+	)
+	ttposCtx.SetDB(db)
+
+	// 7. 设置员工信息（从订单中获取，SavePosInvoice 需要）
+	var staff *model.Staff
+	if saleOrder.CashierUuid > 0 {
+		staffRepo := repository.NewStaffRepo(db)
+		staffFromDB, err := staffRepo.GetStaff(repository.CommonRepo.WhereByUuid(saleOrder.CashierUuid))
+		if err == nil {
+			staff = &staffFromDB
+			// 重新创建 Context 包含员工信息
+			ttposCtx = context.NewContext(
+				context.WithCompanyUuid(companyUuid),
+				context.WithCompany(*company),
+				context.WithCompanySetting(*company.CompanySetting),
+				context.WithStaff(*staff),
+				context.WithStaffUuid(staff.Uuid),
+				context.WithLogger(logger.Logger),
+			)
+			ttposCtx.SetDB(db)
+		}
+	}
+
+	// 8. 获取 shiftLog（用于 SavePosInvoice 的 WithShiftLog 选项）
+	shiftLog := s.getShiftLogForSavePosInvoice(db, staff)
+	if shiftLog == nil {
+		return nil, errors.New("获取 shiftLog 失败,当前门店没有当班记录")
+	}
+
+	// 9. 创建 OrderSrv 实例并调用 SavePosInvoice 方法
+	localeSrv := NewLocaleSrv()
+	mustPlanSrv := NewMustPlanSrv(s.dbm)
+	paymentMethodSrv := NewPaymentMethodSrv(s.dbm, s.settingSrv)
+	memberSrv := NewMemberSrv(s.dbm, s.cache)
+	cashBoxSrv := NewCashBoxSrv(s.dbm)
+	orderSrv := NewOrderSrv(s.dbm, localeSrv, s.settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
+
+	// 调用 SavePosInvoice 方法（通过接口调用，如果提供了 shiftLog 则通过选项传入）
+	var savePosInvoiceResp *selling.SavePosInvoiceResp
+	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog))
+	if err != nil {
+		return nil, errors.WithMessage(err, "保存发票失败")
+	}
+
+	// 9. 更新订单发票信息
+	err = saleOrderRepo.UpdateSaleOrderErpInvoice(
+		saleOrder.Uuid,
+		savePosInvoiceResp.ProductsInvoiceName,
+		savePosInvoiceResp.MaterialInvoiceName,
+	)
+	if err != nil {
+		logger.Logger.Warn("更新订单发票信息失败", zap.Uint64("saleOrderUuid", saleOrder.Uuid), zap.Error(err))
+		// 发票已保存到ERP，但更新订单信息失败，返回警告但不影响整体流程
+	}
+
+	durationMs := time.Since(startTime).Milliseconds()
+
+	return &resp.RegenerateOrderPosInvoiceResp{
+		ProductsInvoiceName: savePosInvoiceResp.ProductsInvoiceName,
+		MaterialInvoiceName: savePosInvoiceResp.MaterialInvoiceName,
+		DurationMs:          durationMs,
+	}, nil
+}
+
 // returnStockInfo 退回库存信息结构
 type returnStockInfo struct {
 	WarehouseUuid uint64
@@ -943,5 +1074,42 @@ func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[st
 		}
 	}
 
+	return nil
+}
+
+// getShiftLogForSavePosInvoice 获取 shiftLog，用于为 SavePosInvoice 的 WithShiftLog 提供参数
+// 获取规则：
+// 1. 如果订单的收银员还在当班，就取该收银员的当班记录
+// 2. 如果收银员不当班了，则选择最新的一个正在当班的 shiftLog
+func (s *salesOutboundSummarySrv) getShiftLogForSavePosInvoice(db *gorm.DB, staff *model.Staff) *model.StaffShiftLog {
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 如果订单有收银员且收银员还在当班，尝试获取该收银员的当班记录
+	if staff != nil && staff.CashierOnline == 1 && staff.DutyNo != "" {
+		shiftLog, err := shiftLogRepo.GetShiftLog(
+			repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+			repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", constant.StaffNotHandedOver) // 未交班（正在当班）
+			},
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			return &shiftLog
+		}
+	}
+
+	// 如果收银员不当班了或没有当班记录，则选择最新的一个正在当班的 shiftLog
+	shiftLogList, err := shiftLogRepo.GetShiftLogList(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("status = ?", constant.StaffNotHandedOver). // 未交班（正在当班）
+											Order("create_time DESC"). // 按创建时间倒序
+											Limit(1)                   // 只取最新的一条
+		},
+	)
+	if err == nil && len(shiftLogList) > 0 {
+		return &shiftLogList[0]
+	}
+
+	// 如果都没有找到，返回 nil
 	return nil
 }
