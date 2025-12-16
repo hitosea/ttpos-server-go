@@ -1,6 +1,6 @@
-# 重新生成销售账单材料出库记录 任务分解
+# 重新生成销售订单材料出库记录 任务分解
 
-> 本文档定义重新生成销售账单材料出库记录功能的详细执行任务清单。
+> 本文档定义重新生成销售订单材料出库记录功能的详细执行任务清单。
 
 ## 📋 任务分解原则
 
@@ -39,7 +39,7 @@
   - Purpose: 在 `ISalesOutboundSummarySrv` 接口中新增 `RegenerateSaleBillMaterialOutbound` 方法
   - Requirements: 6.1
   - Leverage: 现有接口方法: `RegenerateOrderMaterial`, `RegenerateSalesOutboundSummary`
-  - Prompt: Role: Go Developer specializing in Service Layer | Task: 在 ISalesOutboundSummarySrv 接口中新增 RegenerateSaleBillMaterialOutbound 方法 | Context: 方法签名：`RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleBillUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)` | Restrictions: 遵循 .cursor/rules/go-main.mdc，接口以 I 开头 | Success: 接口方法定义完整，方法签名正确
+  - Prompt: Role: Go Developer specializing in Service Layer | Task: 在 ISalesOutboundSummarySrv 接口中新增 RegenerateSaleBillMaterialOutbound 方法 | Context: 方法签名：`RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)` | Restrictions: 遵循 .cursor/rules/go-main.mdc，接口以 I 开头 | Success: 接口方法定义完整，方法签名正确
 
 - [x] 2.2 实现查询原记录逻辑
 
@@ -47,7 +47,7 @@
   - Purpose: 查询销售账单的所有材料出库记录，并按 warehouse_out_form_uuid 分组
   - Requirements: 1.1, 1.2, 1.3, 1.4, 1.5
   - Leverage: 现有 Repository: `main/app/repository/warehouse_form.go` (`GetWarehouseOutFormItemBySaleBillUuid` 方法)
-  - Prompt: Role: Go Developer | Task: 实现查询原记录逻辑，查询销售账单的材料出库记录并分组 | Context: 使用 WarehouseFormRepo.GetWarehouseOutFormItemBySaleBillUuid() 查询记录，过滤 material_uuid != 0 和 delete_time = 0，按 warehouse_out_form_uuid 分组 | Restrictions: 使用 map[uint64][]*model.WarehouseOutFormItem 存储分组结果 | Success: 查询逻辑正确，分组结果正确
+  - Prompt: Role: Go Developer | Task: 实现查询原记录逻辑，先通过 sale_order_uuid 获取 sale_bill_uuid，然后查询销售账单的材料出库记录并分组 | Context: 先使用 OrderRepo.GetSaleBillSaleOrderRecord(saleOrderUuid) 获取 sale_bill_uuid，然后使用 WarehouseFormRepo.GetWarehouseOutFormItemBySaleBillUuid() 查询记录，过滤 material_uuid != 0 和 delete_time = 0，按 warehouse_out_form_uuid 分组 | Restrictions: 使用 map[uint64][]*model.WarehouseOutFormItem 存储分组结果 | Success: 查询逻辑正确，分组结果正确
 
 - [x] 2.3 实现软删除原记录逻辑
 
@@ -79,7 +79,7 @@
   - Purpose: 实现分布式锁防止并发操作，使用事务确保数据一致性
   - Requirements: 6.2, 6.3, 6.4, 6.5
   - Leverage: 现有工具: `lock.NewSystemLock()`，`repository.CommonRepo.Transaction()`
-  - Prompt: Role: Go Developer | Task: 实现分布式锁和事务管理，防止并发操作并确保数据一致性 | Context: 使用 lock.NewSystemLock().TryLockUuidString() 获取锁，锁Key格式：`regenerate_sale_bill_material_outbound:{companyUuid}:{saleBillUuid}`，使用 defer 释放锁，将软删除和创建操作放在同一事务中 | Restrictions: 锁获取失败时返回错误，事务失败时回滚所有操作，记录操作日志 | Success: 分布式锁工作正常，事务管理正确
+  - Prompt: Role: Go Developer | Task: 实现分布式锁和事务管理，防止并发操作并确保数据一致性 | Context: 使用 lock.NewSystemLock().TryLockUuidString() 获取锁，锁Key格式：`regenerate_sale_bill_material_outbound:{companyUuid}:{saleOrderUuid}`，使用 defer 释放锁，将软删除和创建操作放在同一事务中 | Restrictions: 锁获取失败时返回错误，事务失败时回滚所有操作，记录操作日志 | Success: 分布式锁工作正常，事务管理正确
 
 ---
 
@@ -87,23 +87,23 @@
 
 - [x] 3.1 创建命令文件框架
 
-  - File: `main/command/regenerate_sale_bill_material_outbound.go`
+  - File: `main/command/regenerate_sale_order_material_outbound.go`
   - Purpose: 创建命令行工具的基础框架，包括命令定义、参数解析和初始化逻辑
   - Requirements: 5.1, 5.2, 5.3, 5.4
   - Leverage: 现有命令: `main/command/regenerate_order_material.go`
-  - Prompt: Role: Go Developer specializing in CLI tools | Task: 创建 regenerate-sale-bill-material-outbound 命令的基础框架，参考 regenerate_order_material.go 的结构 | Context: 使用 Cobra 框架，定义命令名称、描述、参数（company-uuid, sale-bill-uuid, dry-run），实现 PreRun 初始化逻辑（配置、日志、数据库、缓存、锁等） | Restrictions: 遵循 .cursor/rules/go-main.mdc，命令文件放在 main/command/ 目录 | Success: 命令框架创建成功，参数解析正确，PreRun 初始化完整
+  - Prompt: Role: Go Developer specializing in CLI tools | Task: 创建 regenerate-sale-order-material-outbound 命令的基础框架，参考 regenerate_order_material.go 的结构 | Context: 使用 Cobra 框架，定义命令名称、描述、参数（company-uuid, sale-order-uuid, dry-run），实现 PreRun 初始化逻辑（配置、日志、数据库、缓存、锁等） | Restrictions: 遵循 .cursor/rules/go-main.mdc，命令文件放在 main/command/ 目录 | Success: 命令框架创建成功，参数解析正确，PreRun 初始化完整
 
 - [x] 3.2 实现参数验证和 dry-run 预览模式
 
-  - File: `main/command/regenerate_sale_bill_material_outbound.go`
+  - File: `main/command/regenerate_sale_order_material_outbound.go`
   - Purpose: 实现参数验证逻辑和 dry-run 预览模式输出
   - Requirements: 5.2, 5.3, 5.7
   - Leverage: Task 3.1 的命令框架，参考 `regenerate_order_material.go:96-176`
-  - Prompt: Role: Go Developer | Task: 实现参数验证（company-uuid 和 sale-bill-uuid 必填）和 dry-run 预览模式 | Context: 验证参数不能为空，dry-run 模式下输出预览信息（将要执行的操作：删除记录数、新增记录数），不实际执行 | Restrictions: 使用彩色输出（blueColor, yellowColor, redColor, greenColor），参考 regenerate_order_material.go 的输出格式 | Success: 参数验证正确，dry-run 预览模式工作正常
+  - Prompt: Role: Go Developer | Task: 实现参数验证（company-uuid 和 sale-order-uuid 必填）和 dry-run 预览模式 | Context: 验证参数不能为空，先通过 sale_order_uuid 获取 sale_bill_uuid，dry-run 模式下输出预览信息（将要执行的操作：删除记录数、新增记录数），不实际执行 | Restrictions: 使用彩色输出（blueColor, yellowColor, redColor, greenColor），参考 regenerate_order_material.go 的输出格式 | Success: 参数验证正确，dry-run 预览模式工作正常
 
 - [x] 3.3 实现用户确认机制和调用服务
 
-  - File: `main/command/regenerate_sale_bill_material_outbound.go`
+  - File: `main/command/regenerate_sale_order_material_outbound.go`
   - Purpose: 实现用户确认机制和调用服务方法
   - Requirements: 5.4, 5.5, 5.6
   - Leverage: Task 3.1, 3.2 的实现，参考 `regenerate_order_material.go:178-207`
@@ -123,7 +123,7 @@
 
 - [ ] 4.2 编写命令行工具测试
 
-  - File: `main/command/regenerate_sale_bill_material_outbound_test.go`
+  - File: `main/command/regenerate_sale_order_material_outbound_test.go`
   - Purpose: 为命令行工具编写测试
   - Requirements: 测试要求
   - Leverage: 现有测试: `main/command/regenerate_order_material_test.go`（如有）
@@ -131,7 +131,7 @@
 
 - [ ] 4.3 编写集成测试
 
-  - File: `main/tests/integration/regenerate_sale_bill_material_outbound_test.go`
+  - File: `main/tests/integration/regenerate_sale_order_material_outbound_test.go`
   - Purpose: 编写端到端集成测试
   - Requirements: 测试要求
   - Leverage: 现有集成测试: `main/tests/integration/`

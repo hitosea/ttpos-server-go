@@ -1,10 +1,10 @@
-# 重新生成销售账单材料出库记录 设计文档
+# 重新生成销售订单材料出库记录 设计文档
 
-> 本文档定义重新生成销售账单材料出库记录功能的技术设计和实现方案。
+> 本文档定义重新生成销售订单材料出库记录功能的技术设计和实现方案。
 
 ## 📋 概述
 
-本功能提供一个命令行工具和服务接口，用于重新生成指定销售账单的材料出库记录（`ttpos_warehouse_out_form_item`）。核心实现是复用订单材料统计逻辑，封装为命令行工具和服务方法，支持预览模式和用户确认机制。
+本功能提供一个命令行工具和服务接口，用于重新生成指定销售订单的材料出库记录（`ttpos_warehouse_out_form_item`）。核心实现是先通过 `sale_order_uuid` 获取 `sale_bill_uuid`，然后复用订单材料统计逻辑，封装为命令行工具和服务方法，支持预览模式和用户确认机制。
 
 **技术要点**：
 - 复用现有材料消耗计算逻辑（`RegenerateOrderMaterial`），避免代码重复
@@ -124,7 +124,7 @@ Model Layer (SaleOrder.GetValidSaleOrderProductMaterialList)
 
 ```mermaid
 graph TD
-    A[Command<br/>regenerate-sale-bill-material-outbound] --> B[Service<br/>ISalesOutboundSummarySrv]
+    A[Command<br/>regenerate-sale-order-material-outbound] --> B[Service<br/>ISalesOutboundSummarySrv]
     B --> C[WarehouseFormRepo<br/>GetWarehouseOutFormItem<br/>查询原记录]
     B --> D[WarehouseItemRepo<br/>AddStock<br/>退回库存]
     B --> E[WarehouseFormRepo<br/>软删除原记录]
@@ -140,7 +140,7 @@ graph TD
 
 #### Go Main 模块
 
-- **Command 层**: `main/command/regenerate_sale_bill_material_outbound.go` - 命令行工具入口
+- **Command 层**: `main/command/regenerate_sale_order_material_outbound.go` - 命令行工具入口
 - **Service 层**: `main/app/service/sales_outbound_summary_service.go` - 业务逻辑实现
 - **Repository 层**: `main/app/repository/` - 数据访问（复用现有）
   - `warehouse_form.go` - 出库单明细操作
@@ -254,7 +254,7 @@ func (model *WarehouseOutFormItem) IsMaterial() bool {
 ### 命令格式
 
 ```bash
-./main regenerate-sale-bill-material-outbound --company-uuid <门店UUID> --sale-bill-uuid <销售账单UUID> [--dry-run]
+./main regenerate-sale-order-material-outbound --company-uuid <门店UUID> --sale-order-uuid <销售订单UUID> [--dry-run]
 ```
 
 ### 参数说明
@@ -262,7 +262,7 @@ func (model *WarehouseOutFormItem) IsMaterial() bool {
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `--company-uuid` | uint64 | 是 | 门店 UUID |
-| `--sale-bill-uuid` | uint64 | 是 | 销售账单 UUID |
+| `--sale-order-uuid` | uint64 | 是 | 销售订单 UUID |
 | `--dry-run` | bool | 否 | 预览模式，不实际执行 |
 
 ### 执行流程
@@ -300,7 +300,7 @@ graph TD
 RegenerateSaleBillMaterialOutbound(
     ctx *gin.Context,
     companyUuid uint64,
-    saleBillUuid uint64,
+    saleOrderUuid uint64,
 ) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
 ```
 
@@ -391,7 +391,7 @@ sequenceDiagram
 
 ### 分布式锁
 
-- **锁Key格式**: `regenerate_sale_bill_material_outbound:{companyUuid}:{saleBillUuid}`
+- **锁Key格式**: `regenerate_sale_bill_material_outbound:{companyUuid}:{saleOrderUuid}`
 - **锁实现**: `lock.NewSystemLock().TryLockUuidString(lockKey)`
 - **锁释放**: `defer systemLock.UnlockUuidString(lockKey)`
 - **目的**: 防止并发操作同一销售账单
@@ -406,8 +406,8 @@ sequenceDiagram
 
 ### 数据验证
 
-- **参数验证**: 验证 `companyUuid` 和 `saleBillUuid` 的有效性
-- **数据存在性**: 验证销售账单和出库单的存在性
+- **参数验证**: 验证 `companyUuid` 和 `saleOrderUuid` 的有效性
+- **数据存在性**: 先通过 `sale_order_uuid` 获取 `sale_bill_uuid`，然后验证销售订单、销售账单和出库单的存在性
 - **错误处理**: 返回明确的错误信息
 
 ---

@@ -1,4 +1,4 @@
-# 重新生成销售账单材料出库记录 需求提案
+# 重新生成销售订单材料出库记录 需求提案
 
 > 本文档用于需求发起阶段，经团队评审后创建正式 Spec。
 
@@ -21,7 +21,7 @@
 
 ### 问题描述
 
-在销售出库业务中，当订单的成本卡或材料配置发生变化时，需要重新计算并生成材料出库记录。当前系统缺少一个工具命令来重新生成指定销售账单（`sale_bill`）的材料出库记录（`ttpos_warehouse_out_form_item`）。
+在销售出库业务中，当订单的成本卡或材料配置发生变化时，需要重新计算并生成材料出库记录。当前系统缺少一个工具命令来重新生成指定销售订单（`sale_order`）的材料出库记录（`ttpos_warehouse_out_form_item`）。
 
 **具体场景**：
 - 订单的成本卡被修正后，需要重新计算材料消耗
@@ -54,22 +54,22 @@
 
 ### 方案描述
 
-创建一个命令行工具命令 `regenerate-sale-bill-material-outbound`，用于重新生成指定销售账单的材料出库记录。该命令将：
+创建一个命令行工具命令 `regenerate-sale-order-material-outbound`，用于重新生成指定销售订单的材料出库记录。该命令将：
 
-1. **软删除原记录并退回库存**：将指定销售账单的现有材料出库记录（`scene = 0 AND revoke_time = 0 AND material_uuid != 0`）软删除，并将对应的材料数量退回到原仓库中
+1. **软删除原记录并退回库存**：将指定销售订单的现有材料出库记录（`scene = 0 AND revoke_time = 0 AND material_uuid != 0`）软删除，并将对应的材料数量退回到原仓库中
 2. **重新计算材料消耗**：根据订单当前的成本卡配置，重新计算材料消耗
 3. **生成新记录并扣减库存**：创建新的材料出库记录，并关联到原有的 `warehouse_out_form_uuid`，同时按记录中的材料数量在对应的仓库中扣减库存
 4. **保持关联关系**：新记录继承原记录的出库单UUID，确保数据追溯性
 
 ### 核心功能点
 
-1. **命令行工具**：提供 `regenerate-sale-bill-material-outbound` 命令
-   - 参数：`--company-uuid`（门店UUID）、`--sale-bill-uuid`（销售账单UUID）
+1. **命令行工具**：提供 `regenerate-sale-order-material-outbound` 命令
+   - 参数：`--company-uuid`（门店UUID）、`--sale-order-uuid`（销售订单UUID）
    - 支持 `--dry-run` 预览模式
    - 执行前需要用户确认
 
 2. **业务逻辑服务**：在 `ISalesOutboundSummarySrv` 接口中新增方法
-   - `RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleBillUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)`
+   - `RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)`
    - 实现软删除、退回库存、重新计算、创建新记录、扣减库存的逻辑
 
 3. **库存操作**：
@@ -150,7 +150,7 @@
 **缓解措施**：
 1. **事务处理**：使用数据库事务确保操作的原子性（包括软删除、退库、创建新记录、扣库）
 2. **分布式锁**：使用分布式锁防止并发操作
-3. **数据验证**：执行前验证销售账单和出库单的存在性
+3. **数据验证**：执行前验证销售订单和出库单的存在性
 4. **预览模式**：提供 `--dry-run` 模式，允许用户预览操作结果
 5. **库存检查**：扣库前检查库存是否充足，不足时返回明确的错误信息
 6. **操作顺序**：先退库再扣库，确保库存操作的连续性
@@ -210,12 +210,12 @@
 ### User Story（初稿）
 
 **作为** 运维人员/技术支持人员  
-**我想** 通过命令行工具重新生成指定销售账单的材料出库记录  
+**我想** 通过命令行工具重新生成指定销售订单的材料出库记录  
 **以便于** 在成本卡或材料配置变更后，快速修复历史订单的出库数据，确保数据准确性
 
 ### AC 验收标准（初稿）
 
-1. **WHEN** 执行 `regenerate-sale-bill-material-outbound --company-uuid {uuid} --sale-bill-uuid {uuid}` **THEN** 系统 **SHALL** 软删除该销售账单的所有材料出库记录（`scene = 0 AND revoke_time = 0 AND material_uuid != 0`）
+1. **WHEN** 执行 `regenerate-sale-order-material-outbound --company-uuid {uuid} --sale-order-uuid {uuid}` **THEN** 系统 **SHALL** 软删除该销售订单的所有材料出库记录（`scene = 0 AND revoke_time = 0 AND material_uuid != 0`）
 
 2. **WHEN** 软删除原记录时 **THEN** 系统 **SHALL** 将原记录中的材料数量退回到对应的仓库中（`warehouse_uuid`），并记录入库日志
 
@@ -229,7 +229,7 @@
 
 7. **WHEN** 操作成功 **THEN** 系统 **SHALL** 返回删除记录数、新增记录数和执行耗时
 
-8. **WHEN** 销售账单不存在或已删除 **THEN** 系统 **SHALL** 返回明确的错误信息
+8. **WHEN** 销售订单不存在或已删除 **THEN** 系统 **SHALL** 返回明确的错误信息
 
 9. **WHEN** 库存不足导致扣库失败 **THEN** 系统 **SHALL** 返回明确的错误信息，并回滚所有操作
 
@@ -243,12 +243,12 @@
    RegenerateSaleBillMaterialOutbound(
        ctx *gin.Context,
        companyUuid uint64,
-       saleBillUuid uint64,
+       saleOrderUuid uint64,
    ) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
    ```
 
 2. **业务逻辑流程**：
-   - 查询销售账单的所有材料出库记录（`scene = 0 AND revoke_time = 0 AND material_uuid != 0`）
+   - 查询销售订单的所有材料出库记录（`scene = 0 AND revoke_time = 0 AND material_uuid != 0`）
    - 按 `warehouse_out_form_uuid` 分组
    - **退库操作**：遍历原记录，将材料数量退回到对应的仓库中（`warehouseItemRepo.AddStock()`），记录入库日志
    - 软删除原记录
@@ -283,15 +283,15 @@
 
 ```bash
 # 预览模式
-./main regenerate-sale-bill-material-outbound \
+./main regenerate-sale-order-material-outbound \
   --company-uuid 123456 \
-  --sale-bill-uuid 789012 \
+  --sale-order-uuid 789012 \
   --dry-run
 
 # 实际执行
-./main regenerate-sale-bill-material-outbound \
+./main regenerate-sale-order-material-outbound \
   --company-uuid 123456 \
-  --sale-bill-uuid 789012
+  --sale-order-uuid 789012
 ```
 
 ---

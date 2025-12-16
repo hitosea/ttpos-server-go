@@ -27,25 +27,25 @@ import (
 )
 
 func init() {
-	regenerateSaleBillMaterialOutboundCmd.Flags().Uint64Var(&regenerateSaleBillMaterialOutboundCompanyUuidFlag, "company-uuid", 0, "门店UUID")
-	regenerateSaleBillMaterialOutboundCmd.Flags().Uint64Var(&regenerateSaleBillMaterialOutboundSaleBillUuidFlag, "sale-bill-uuid", 0, "销售账单UUID")
-	regenerateSaleBillMaterialOutboundCmd.Flags().BoolVar(&regenerateSaleBillMaterialOutboundDryRunFlag, "dry-run", false, "仅预览，不实际执行")
-	regenerateSaleBillMaterialOutboundCmd.MarkFlagRequired("company-uuid")
-	regenerateSaleBillMaterialOutboundCmd.MarkFlagRequired("sale-bill-uuid")
-	rootCommand.AddCommand(regenerateSaleBillMaterialOutboundCmd)
+	regenerateSaleOrderMaterialOutboundCmd.Flags().Uint64Var(&regenerateSaleOrderMaterialOutboundCompanyUuidFlag, "company-uuid", 0, "门店UUID")
+	regenerateSaleOrderMaterialOutboundCmd.Flags().Uint64Var(&regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag, "sale-order-uuid", 0, "销售订单UUID")
+	regenerateSaleOrderMaterialOutboundCmd.Flags().BoolVar(&regenerateSaleOrderMaterialOutboundDryRunFlag, "dry-run", false, "仅预览，不实际执行")
+	regenerateSaleOrderMaterialOutboundCmd.MarkFlagRequired("company-uuid")
+	regenerateSaleOrderMaterialOutboundCmd.MarkFlagRequired("sale-order-uuid")
+	rootCommand.AddCommand(regenerateSaleOrderMaterialOutboundCmd)
 }
 
 var (
-	regenerateSaleBillMaterialOutboundCompanyUuidFlag uint64
-	regenerateSaleBillMaterialOutboundSaleBillUuidFlag uint64
-	regenerateSaleBillMaterialOutboundDryRunFlag      bool
+	regenerateSaleOrderMaterialOutboundCompanyUuidFlag   uint64
+	regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag uint64
+	regenerateSaleOrderMaterialOutboundDryRunFlag        bool
 )
 
-// regenerate-sale-bill-material-outbound 重新生成销售账单材料出库记录
-var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
-	Use:   "regenerate-sale-bill-material-outbound",
-	Short: "重新生成指定销售账单的材料出库记录",
-	Long:  `删除指定销售账单的旧材料出库记录，并重新计算生成新的材料出库记录`,
+// regenerate-sale-order-material-outbound 重新生成销售订单材料出库记录
+var regenerateSaleOrderMaterialOutboundCmd = &cobra.Command{
+	Use:   "regenerate-sale-order-material-outbound",
+	Short: "重新生成指定销售订单的材料出库记录",
+	Long:  `删除指定销售订单的旧材料出库记录，并重新计算生成新的材料出库记录`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// 初始化配置
 		if err := config.Init(); err != nil {
@@ -97,12 +97,12 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 		defer logger.Logger.Sync()
 
 		// 验证参数
-		if regenerateSaleBillMaterialOutboundCompanyUuidFlag == 0 {
+		if regenerateSaleOrderMaterialOutboundCompanyUuidFlag == 0 {
 			fmt.Printf("%s错误: 门店UUID不能为空%s\n", redColor, resetColor)
 			return
 		}
-		if regenerateSaleBillMaterialOutboundSaleBillUuidFlag == 0 {
-			fmt.Printf("%s错误: 销售账单UUID不能为空%s\n", redColor, resetColor)
+		if regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag == 0 {
+			fmt.Printf("%s错误: 销售订单UUID不能为空%s\n", redColor, resetColor)
 			return
 		}
 
@@ -111,27 +111,41 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 		settingSrv := setting.NewSrv(dbm, cache.Global)
 		salesOutboundSummarySrv := service.NewSalesOutboundSummarySrv(dbm, settingSrv, cache.Global)
 
+		// 先通过 sale_order_uuid 获取 sale_bill_uuid
+		db := dbm.GetDB(regenerateSaleOrderMaterialOutboundCompanyUuidFlag)
+		orderRepo := repository.NewOrderRepo(db)
+		saleOrder, err := orderRepo.GetSaleBillSaleOrderRecord(regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag)
+		if err != nil {
+			fmt.Printf("%s错误: 获取销售订单信息失败: %s%s\n", redColor, err.Error(), resetColor)
+			logger.Logger.Error("获取销售订单信息失败", zap.Uint64("saleOrderUuid", regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag), zap.Error(err))
+			return
+		}
+		if saleOrder == nil {
+			fmt.Printf("%s错误: 销售订单不存在%s\n", redColor, resetColor)
+			return
+		}
+		saleBillUuid := saleOrder.SaleBillUuid
+
 		// 显示操作信息
 		fmt.Printf("%s========================================%s\n", blueColor, resetColor)
-		fmt.Printf("%s重新生成销售账单材料出库记录%s\n", blueColor, resetColor)
-		fmt.Printf("%s门店UUID: %d%s\n", blueColor, regenerateSaleBillMaterialOutboundCompanyUuidFlag, resetColor)
-		fmt.Printf("%s销售账单UUID: %d%s\n", blueColor, regenerateSaleBillMaterialOutboundSaleBillUuidFlag, resetColor)
-		if regenerateSaleBillMaterialOutboundDryRunFlag {
+		fmt.Printf("%s重新生成销售订单材料出库记录%s\n", blueColor, resetColor)
+		fmt.Printf("%s门店UUID: %d%s\n", blueColor, regenerateSaleOrderMaterialOutboundCompanyUuidFlag, resetColor)
+		fmt.Printf("%s销售订单UUID: %d%s\n", blueColor, regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag, resetColor)
+		fmt.Printf("%s销售账单UUID: %d%s\n", blueColor, saleBillUuid, resetColor)
+		if regenerateSaleOrderMaterialOutboundDryRunFlag {
 			fmt.Printf("%s模式: 预览模式（不会实际执行）%s\n", yellowColor, resetColor)
 		}
 		fmt.Printf("%s========================================%s\n", blueColor, resetColor)
 
-		// 预览模式：获取销售账单信息用于预览
-		if regenerateSaleBillMaterialOutboundDryRunFlag {
-			db := dbm.GetDB(regenerateSaleBillMaterialOutboundCompanyUuidFlag)
-			orderRepo := repository.NewOrderRepo(db)
+		// 预览模式：获取销售订单信息用于预览
+		if regenerateSaleOrderMaterialOutboundDryRunFlag {
 			warehouseFormRepo := repository.NewWarehouseFormRepo(db)
 
 			// 获取销售账单完整信息
-			saleBill, err := orderRepo.GetSaleBillAllInfo(regenerateSaleBillMaterialOutboundSaleBillUuidFlag)
+			saleBill, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
 			if err != nil {
 				fmt.Printf("%s错误: 获取销售账单信息失败: %s%s\n", redColor, err.Error(), resetColor)
-				logger.Logger.Error("获取销售账单信息失败", zap.Uint64("saleBillUuid", regenerateSaleBillMaterialOutboundSaleBillUuidFlag), zap.Error(err))
+				logger.Logger.Error("获取销售账单信息失败", zap.Uint64("saleBillUuid", saleBillUuid), zap.Error(err))
 				return
 			}
 			if saleBill == nil {
@@ -140,10 +154,10 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 			}
 
 			// 查询原记录
-			warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItemBySaleBillUuid(regenerateSaleBillMaterialOutboundSaleBillUuidFlag)
+			warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid)
 			if err != nil {
 				fmt.Printf("%s错误: 查询材料出库记录失败: %s%s\n", redColor, err.Error(), resetColor)
-				logger.Logger.Error("查询材料出库记录失败", zap.Uint64("saleBillUuid", regenerateSaleBillMaterialOutboundSaleBillUuidFlag), zap.Error(err))
+				logger.Logger.Error("查询材料出库记录失败", zap.Uint64("saleBillUuid", saleBillUuid), zap.Error(err))
 				return
 			}
 
@@ -165,7 +179,7 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 			}
 
 			fmt.Printf("%s预览模式：将执行以下操作：%s\n", yellowColor, resetColor)
-			fmt.Printf("  1. 删除销售账单 %d 的旧材料出库记录（预计 %d 条）\n", regenerateSaleBillMaterialOutboundSaleBillUuidFlag, materialItemCount)
+			fmt.Printf("  1. 删除销售账单 %d 的旧材料出库记录（预计 %d 条）\n", saleBillUuid, materialItemCount)
 			fmt.Printf("  2. 重新计算材料消耗（预计 %d 种材料）\n", len(materialStocksMap))
 			fmt.Printf("  3. 创建新材料出库记录（预计 %d 条）\n", materialItemCount)
 			fmt.Printf("%s预览模式结束，未实际执行操作%s\n", yellowColor, resetColor)
@@ -174,7 +188,7 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 
 		// 确认操作
 		var confirmation string
-		fmt.Printf("%s警告：此操作将删除并重新生成销售账单的材料出库记录%s\n", redColor, resetColor)
+		fmt.Printf("%s警告：此操作将删除并重新生成销售订单的材料出库记录%s\n", redColor, resetColor)
 		fmt.Printf("%s输入 'yes' 继续，输入其他内容取消: %s", yellowColor, resetColor)
 		fmt.Scanln(&confirmation)
 		if confirmation != "yes" {
@@ -189,10 +203,10 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 		// 创建空的 gin.Context（命令行环境）
 		ctx := &gin.Context{}
 
-		result, err := salesOutboundSummarySrv.RegenerateSaleBillMaterialOutbound(ctx, regenerateSaleBillMaterialOutboundCompanyUuidFlag, regenerateSaleBillMaterialOutboundSaleBillUuidFlag)
+		result, err := salesOutboundSummarySrv.RegenerateSaleBillMaterialOutbound(ctx, regenerateSaleOrderMaterialOutboundCompanyUuidFlag, regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag)
 		if err != nil {
 			fmt.Printf("%s操作失败: %s%s\n", redColor, err.Error(), resetColor)
-			logger.Logger.Error("重新生成销售账单材料出库记录失败", zap.Uint64("saleBillUuid", regenerateSaleBillMaterialOutboundSaleBillUuidFlag), zap.Error(err))
+			logger.Logger.Error("重新生成销售订单材料出库记录失败", zap.Uint64("saleOrderUuid", regenerateSaleOrderMaterialOutboundSaleOrderUuidFlag), zap.Error(err))
 			return
 		}
 
@@ -203,4 +217,3 @@ var regenerateSaleBillMaterialOutboundCmd = &cobra.Command{
 		fmt.Printf("%s耗时: %v (API返回: %dms)%s\n", blueColor, duration, result.DurationMs, resetColor)
 	},
 }
-

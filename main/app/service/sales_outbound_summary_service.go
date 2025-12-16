@@ -39,11 +39,11 @@ type ISalesOutboundSummarySrv interface {
 	// saleOrderUuid: 订单UUID
 	RegenerateOrderMaterial(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateOrderMaterialResp, error)
 
-	// RegenerateSaleBillMaterialOutbound 重新生成指定销售账单的材料出库记录
+	// RegenerateSaleBillMaterialOutbound 重新生成指定销售订单的材料出库记录
 	// ctx: gin.Context（可为 nil，用于命令行环境）
 	// companyUuid: 门店UUID
-	// saleBillUuid: 销售账单UUID
-	RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleBillUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
+	// saleOrderUuid: 销售订单UUID
+	RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
 
 	// RegenerateOrderPosInvoice 重新生成指定订单的POS发票
 	// ctx: gin.Context（可为 nil，用于命令行环境）
@@ -557,27 +557,39 @@ func (s *salesOutboundSummarySrv) RegenerateOrderMaterial(
 	}, nil
 }
 
-// RegenerateSaleBillMaterialOutbound 重新生成指定销售账单的材料出库记录
+// RegenerateSaleBillMaterialOutbound 重新生成指定销售订单的材料出库记录
 func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 	ctx *gin.Context,
 	companyUuid uint64,
-	saleBillUuid uint64,
+	saleOrderUuid uint64,
 ) (*resp.RegenerateSaleBillMaterialOutboundResp, error) {
 	startTime := time.Now()
 	db := s.dbm.GetDB(companyUuid)
 
-	// 1. 获取分布式锁
-	lockKey := fmt.Sprintf("regenerate_sale_bill_material_outbound:%d:%d", companyUuid, saleBillUuid)
+	// 1. 先通过 sale_order_uuid 获取 sale_bill_uuid
+	orderRepo := repository.NewOrderRepo(db)
+	saleOrder, err := orderRepo.GetSaleBillSaleOrderRecord(saleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+	saleBillUuid := saleOrder.SaleBillUuid
+
+	// 2. 获取分布式锁
+	lockKey := fmt.Sprintf("regenerate_sale_bill_material_outbound:%d:%d", companyUuid, saleOrderUuid)
 	systemLock := lock.NewSystemLock()
 	if !systemLock.TryLockUuidString(lockKey) {
 		return nil, errors.New("操作进行中，请稍后再试")
 	}
 	defer systemLock.UnlockUuidString(lockKey)
 
-	// 2. 查询销售账单的所有材料出库记录（scene = 0 AND revoke_time = 0 AND material_uuid != 0）
+	// 3. 查询指定销售订单的材料出库记录（scene = 0 AND revoke_time = 0 AND material_uuid != 0）
 	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
 	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
 		repository.CommonRepo.WhereBySaleBillUuid(saleBillUuid),
+		repository.CommonRepo.WhereBySaleOrderUuid(saleOrderUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.WhereByNotRevoked(),
 		func(db *gorm.DB) *gorm.DB {
@@ -596,8 +608,7 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 		formItemMap[item.WarehouseOutFormUuid] = append(formItemMap[item.WarehouseOutFormUuid], item)
 	}
 
-	// 3. 获取订单信息并计算材料消耗
-	orderRepo := repository.NewOrderRepo(db)
+	// 4. 获取订单信息并计算材料消耗
 	saleBill, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取订单完整信息失败")
@@ -606,23 +617,27 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 		return nil, errors.New("销售账单不存在")
 	}
 
-	// 计算所有订单的材料消耗
+	// 获取指定的销售订单
+	targetSaleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	if targetSaleOrder == nil {
+		return nil, errors.New("销售订单不存在于账单中")
+	}
+
+	// 仅计算指定销售订单的材料消耗
 	materialStocksMap := make(map[uint64]*model.MaterialStock) // key: material_uuid
-	for _, saleOrder := range saleBill.SaleOrders {
-		materialStocks := saleOrder.GetValidSaleOrderProductMaterialList()
-		for _, materialStock := range materialStocks {
-			if existing, ok := materialStocksMap[materialStock.MaterialUuid]; ok {
-				// 累加相同材料的数量
-				existing.StockNum = decimal.NewFromFloat(existing.StockNum).
-					Add(decimal.NewFromFloat(materialStock.StockNum)).
-					Round(4).
-					InexactFloat64()
-			} else {
-				materialStocksMap[materialStock.MaterialUuid] = &model.MaterialStock{
-					MaterialUuid:  materialStock.MaterialUuid,
-					WarehouseUuid: materialStock.WarehouseUuid,
-					StockNum:      materialStock.StockNum,
-				}
+	materialStocks := targetSaleOrder.GetValidSaleOrderProductMaterialList()
+	for _, materialStock := range materialStocks {
+		if existing, ok := materialStocksMap[materialStock.MaterialUuid]; ok {
+			// 累加相同材料的数量
+			existing.StockNum = decimal.NewFromFloat(existing.StockNum).
+				Add(decimal.NewFromFloat(materialStock.StockNum)).
+				Round(4).
+				InexactFloat64()
+		} else {
+			materialStocksMap[materialStock.MaterialUuid] = &model.MaterialStock{
+				MaterialUuid:  materialStock.MaterialUuid,
+				WarehouseUuid: materialStock.WarehouseUuid,
+				StockNum:      materialStock.StockNum,
 			}
 		}
 	}
@@ -655,8 +670,8 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 		// 4.2 软删除原记录
 		if len(materialItems) > 0 {
 			result := tx.Model(&model.WarehouseOutFormItem{}).
-				Where("sale_bill_uuid = ? AND scene = ? AND revoke_time = ? AND material_uuid != ? AND delete_time = ?",
-					saleBillUuid, constant.WarehouseOutFormSceneSales, 0, 0, constant.NotDeleted).
+				Where("sale_order_uuid = ? AND scene = ? AND revoke_time = ? AND material_uuid != ? AND delete_time = ?",
+					saleOrderUuid, constant.WarehouseOutFormSceneSales, 0, 0, constant.NotDeleted).
 				Update("delete_time", time.Now().Unix())
 			if result.Error != nil {
 				return errors.WithMessage(result.Error, "软删除原记录失败")
@@ -708,7 +723,7 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 					WarehouseUuid:        materialStock.WarehouseUuid,
 					MaterialUuid:         materialStock.MaterialUuid,
 					SaleBillUuid:         saleBillUuid,
-					SaleOrderUuid:        originalItem.SaleOrderUuid,
+					SaleOrderUuid:        saleOrderUuid, // 使用指定的销售订单UUID
 					StaffShiftLogUuid:    originalItem.StaffShiftLogUuid,
 					Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(), // 保留4位小数
 					Scene:                constant.WarehouseOutFormSceneSales,
@@ -748,7 +763,7 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 	})
 
 	if err != nil {
-		return nil, errors.WithMessage(err, "重新生成销售账单材料出库记录失败")
+		return nil, errors.WithMessage(err, "重新生成销售订单材料出库记录失败")
 	}
 
 	durationMs := time.Since(startTime).Milliseconds()

@@ -1,6 +1,6 @@
-# 重新生成销售账单材料出库记录 需求文档
+# 重新生成销售订单材料出库记录 需求文档
 
-> 本文档定义重新生成销售账单材料出库记录功能的详细需求和验收标准。
+> 本文档定义重新生成销售订单材料出库记录功能的详细需求和验收标准。
 
 ## 📋 基本信息
 
@@ -25,7 +25,7 @@
 
 ## 📋 概述
 
-提供一个命令行工具命令 `regenerate-sale-bill-material-outbound`，用于重新生成指定销售账单（`sale_bill`）的材料出库记录（`ttpos_warehouse_out_form_item`）。当订单的成本卡或材料配置发生变化时，可以通过此工具快速重新计算并更新材料出库记录，确保数据准确性和一致性。
+提供一个命令行工具命令 `regenerate-sale-order-material-outbound`，用于重新生成指定销售订单（`sale_order`）的材料出库记录（`ttpos_warehouse_out_form_item`）。当订单的成本卡或材料配置发生变化时，可以通过此工具快速重新计算并更新材料出库记录，确保数据准确性和一致性。
 
 **核心价值**：
 - **数据准确性**：确保材料出库记录与最新的成本卡配置一致
@@ -52,7 +52,7 @@
 ## 📝 用户故事
 
 **作为** 运维人员/技术支持人员  
-**我想** 通过命令行工具重新生成指定销售账单的材料出库记录  
+**我想** 通过命令行工具重新生成指定销售订单的材料出库记录  
 **以便于** 在成本卡或材料配置变更后，快速修复历史订单的出库数据，确保数据准确性
 
 ---
@@ -65,15 +65,15 @@
 
 #### 验收标准
 
-1. **WHEN** 提供 `--company-uuid` 和 `--sale-bill-uuid` 参数 **THEN** 系统 **SHALL** 查询该销售账单的所有材料出库记录（`material_uuid != 0`）
-2. **IF** 销售账单不存在或已删除 **THEN** 系统 **SHALL** 提示错误信息并退出
+1. **WHEN** 提供 `--company-uuid` 和 `--sale-order-uuid` 参数 **THEN** 系统 **SHALL** 先通过 `sale_order_uuid` 获取 `sale_bill_uuid`，然后查询该销售账单的所有材料出库记录（`material_uuid != 0`）
+2. **IF** 销售订单不存在或已删除 **THEN** 系统 **SHALL** 提示错误信息并退出
 3. **WHEN** 查询成功 **THEN** 系统 **SHALL** 按 `warehouse_out_form_uuid` 分组返回记录
 4. **IF** 没有找到材料出库记录 **THEN** 系统 **SHALL** 提示信息并允许继续执行（可能订单没有材料出库）
 5. **WHEN** 查询完成 **THEN** 系统 **SHALL** 返回记录列表（包含出库单UUID、材料UUID、数量等）
 
 #### 具体要求
 
-- [ ] 1.1 使用 `repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid)` 查询记录
+- [ ] 1.1 先通过 `orderRepo.GetSaleBillSaleOrderRecord(saleOrderUuid)` 获取 `sale_bill_uuid`，然后使用 `repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid)` 查询记录
 - [ ] 1.2 过滤条件：`material_uuid != 0`（仅材料出库记录）
 - [ ] 1.3 过滤条件：`delete_time = 0`（未删除的记录）
 - [ ] 1.4 按 `warehouse_out_form_uuid` 分组，便于后续处理
@@ -166,7 +166,7 @@
 
 #### 验收标准
 
-1. **WHEN** 执行 `regenerate-sale-bill-material-outbound --company-uuid {uuid} --sale-bill-uuid {uuid}` **THEN** 系统 **SHALL** 执行重新生成操作
+1. **WHEN** 执行 `regenerate-sale-order-material-outbound --company-uuid {uuid} --sale-order-uuid {uuid}` **THEN** 系统 **SHALL** 执行重新生成操作
 2. **IF** 缺少必填参数 **THEN** 系统 **SHALL** 提示错误信息并退出
 3. **WHEN** 使用 `--dry-run` 参数 **THEN** 系统 **SHALL** 仅预览操作结果，不实际执行
 4. **WHEN** 非预览模式 **THEN** 系统 **SHALL** 要求用户确认（输入 'yes'）后才执行
@@ -175,11 +175,11 @@
 
 #### 具体要求
 
-- [ ] 5.1 创建 `main/command/regenerate_sale_bill_material_outbound.go` 文件
+- [ ] 5.1 创建 `main/command/regenerate_sale_order_material_outbound.go` 文件
 - [ ] 5.2 使用 Cobra 框架实现命令行参数解析
 - [ ] 5.3 参数定义：
   - `--company-uuid`（必填）：门店UUID
-  - `--sale-bill-uuid`（必填）：销售账单UUID
+  - `--sale-order-uuid`（必填）：销售订单UUID
   - `--dry-run`（可选）：预览模式
 - [ ] 5.4 初始化配置、日志、数据库等基础设施（参考 `regenerate_order_material.go`）
 - [ ] 5.5 调用 `ISalesOutboundSummarySrv.RegenerateSaleBillMaterialOutbound()` 方法
@@ -207,11 +207,11 @@
   RegenerateSaleBillMaterialOutbound(
       ctx *gin.Context,
       companyUuid uint64,
-      saleBillUuid uint64,
+      saleOrderUuid uint64,
   ) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
   ```
-- [ ] 6.2 实现参数验证：验证 `companyUuid` 和 `saleBillUuid` 的有效性
-- [ ] 6.3 使用分布式锁：`lock.NewSystemLock().TryLockUuidString(lockKey)`
+- [ ] 6.2 实现参数验证：验证 `companyUuid` 和 `saleOrderUuid` 的有效性，先通过 `sale_order_uuid` 获取 `sale_bill_uuid`
+- [ ] 6.3 使用分布式锁：`lock.NewSystemLock().TryLockUuidString(lockKey)`，锁Key使用 `sale_order_uuid`
 - [ ] 6.4 在事务中执行：查询、删除、计算、创建操作
 - [ ] 6.5 记录操作日志：使用 `logger.Logger` 记录关键步骤
 - [ ] 6.6 返回响应结构：包含删除记录数、新增记录数、执行耗时
@@ -356,7 +356,7 @@
 
 ### 业务依赖
 
-- 销售账单必须存在且未删除
+- 销售订单必须存在且未删除
 - 订单的成本卡配置必须正确
 - 材料配置必须正确
 
@@ -401,7 +401,7 @@
 **缓解措施**:
 
 - 使用分布式锁防止并发操作同一销售账单
-- 锁的Key格式：`regenerate_sale_bill_material_outbound:{companyUuid}:{saleBillUuid}`
+- 锁的Key格式：`regenerate_sale_bill_material_outbound:{companyUuid}:{saleOrderUuid}`
 
 ---
 
