@@ -246,9 +246,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 
 			// 这里需要额外查询单位名称，因为关联查询比较复杂
 			if materialBaseUnitUuid > 0 {
-				var unitName string
 				materialBaseUnitName = item.Material.Unit.Name
-				materialBaseUnitName = unitName
 			}
 
 			recordMap[key] = &OutboundRecord{
