@@ -13,7 +13,7 @@
 | **目标版本** | v2.1.0 |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | -      |
+| **关联 Spec** | [docs/shared/specs/active/story-bmp-grab-menu-update-item-modifier/requirements.md](../../../../shared/specs/active/story-bmp-grab-menu-update-item-modifier/requirements.md) |
 
 ---
 
@@ -214,3 +214,4 @@
 **创建日期**: 2025-11-16  
 **维护者**: 产品组 + Scrum Master  
 **相关规范**: `.cursor/rules/scrum_story_point.mdc`, `.cursor/rules/specs.mdc`
+
