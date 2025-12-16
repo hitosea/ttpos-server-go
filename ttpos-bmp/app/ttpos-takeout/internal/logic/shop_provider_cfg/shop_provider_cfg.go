@@ -86,7 +86,7 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] Query failed: shop_uuid=%d, provider=%s, error: %v",
 			shopUUID, providerName, err)
-		return nil, gerror.Wrap(err, "查询门店第三方配置失败")
+		return nil, nil
 	}
 
 	// 检查是否找到记录
@@ -153,7 +153,12 @@ func (s *sShopProviderCfg) GetShopProviderCfgResp(ctx context.Context, req *grab
 	if cfg == nil {
 		g.Log().Debugf(ctx, "[ShopProviderCfg] GetShopProviderCfgResp not found: shop_uuid=%d, provider=%s",
 			req.ShopUuid, providerName)
-		return nil, gerror.NewCode(gcode.CodeNotFound, "门店配置不存在")
+		//没有就返回 未绑定
+		return &grab.GetShopProviderCfgResp{
+			ShopUuid:           req.ShopUuid,
+			ProviderName:       req.ProviderName,
+			ProviderShopStatus: "INACTIVE",
+		}, nil
 	}
 
 	// 构建响应
