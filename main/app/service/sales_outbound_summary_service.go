@@ -37,6 +37,12 @@ type ISalesOutboundSummarySrv interface {
 	// companyUuid: 门店UUID
 	// saleOrderUuid: 订单UUID
 	RegenerateOrderMaterial(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateOrderMaterialResp, error)
+
+	// RegenerateSaleBillMaterialOutbound 重新生成指定销售账单的材料出库记录
+	// ctx: gin.Context（可为 nil，用于命令行环境）
+	// companyUuid: 门店UUID
+	// saleBillUuid: 销售账单UUID
+	RegenerateSaleBillMaterialOutbound(ctx *gin.Context, companyUuid uint64, saleBillUuid uint64) (*resp.RegenerateSaleBillMaterialOutboundResp, error)
 }
 
 // salesOutboundSummarySrv 销售出库汇总服务实现
@@ -542,4 +548,400 @@ func (s *salesOutboundSummarySrv) RegenerateOrderMaterial(
 		InsertedCount: int(insertedCount),
 		DurationMs:    durationMs,
 	}, nil
+}
+
+// RegenerateSaleBillMaterialOutbound 重新生成指定销售账单的材料出库记录
+func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
+	ctx *gin.Context,
+	companyUuid uint64,
+	saleBillUuid uint64,
+) (*resp.RegenerateSaleBillMaterialOutboundResp, error) {
+	startTime := time.Now()
+	db := s.dbm.GetDB(companyUuid)
+
+	// 1. 获取分布式锁
+	lockKey := fmt.Sprintf("regenerate_sale_bill_material_outbound:%d:%d", companyUuid, saleBillUuid)
+	systemLock := lock.NewSystemLock()
+	if !systemLock.TryLockUuidString(lockKey) {
+		return nil, errors.New("操作进行中，请稍后再试")
+	}
+	defer systemLock.UnlockUuidString(lockKey)
+
+	// 2. 查询销售账单的所有材料出库记录（scene = 0 AND revoke_time = 0 AND material_uuid != 0）
+	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
+	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
+		repository.CommonRepo.WhereBySaleBillUuid(saleBillUuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+		repository.CommonRepo.WhereByNotRevoked(),
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("scene = ? AND material_uuid != ?", constant.WarehouseOutFormSceneSales, 0)
+		},
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询材料出库记录失败")
+	}
+
+	materialItems := warehouseOutFormItems
+
+	// 按 warehouse_out_form_uuid 分组
+	formItemMap := make(map[uint64][]*model.WarehouseOutFormItem)
+	for _, item := range materialItems {
+		formItemMap[item.WarehouseOutFormUuid] = append(formItemMap[item.WarehouseOutFormUuid], item)
+	}
+
+	// 3. 获取订单信息并计算材料消耗
+	orderRepo := repository.NewOrderRepo(db)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取订单完整信息失败")
+	}
+	if saleBill == nil {
+		return nil, errors.New("销售账单不存在")
+	}
+
+	// 计算所有订单的材料消耗
+	materialStocksMap := make(map[uint64]*model.MaterialStock) // key: material_uuid
+	for _, saleOrder := range saleBill.SaleOrders {
+		materialStocks := saleOrder.GetValidSaleOrderProductMaterialList()
+		for _, materialStock := range materialStocks {
+			if existing, ok := materialStocksMap[materialStock.MaterialUuid]; ok {
+				// 累加相同材料的数量
+				existing.StockNum = decimal.NewFromFloat(existing.StockNum).
+					Add(decimal.NewFromFloat(materialStock.StockNum)).
+					Round(4).
+					InexactFloat64()
+			} else {
+				materialStocksMap[materialStock.MaterialUuid] = &model.MaterialStock{
+					MaterialUuid:  materialStock.MaterialUuid,
+					WarehouseUuid: materialStock.WarehouseUuid,
+					StockNum:      materialStock.StockNum,
+				}
+			}
+		}
+	}
+
+	// 转换为列表
+	materialStocksList := make([]*model.MaterialStock, 0)
+	for _, materialStock := range materialStocksMap {
+		materialStocksList = append(materialStocksList, materialStock)
+	}
+
+	// 4. 使用事务执行退库、软删除、创建和扣库操作
+	var deletedCount int64
+	var insertedCount int64
+
+	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 4.1 退回库存
+		if len(materialItems) > 0 {
+			// 统计要退回的材料
+			returnStockMap, err := s.calculateReturnStockMap(tx, materialItems)
+			if err != nil {
+				return errors.WithMessage(err, "统计要退回的材料失败")
+			}
+
+			// 执行退回库存操作
+			if err := s.returnStock(tx, returnStockMap); err != nil {
+				return errors.WithMessage(err, "退回库存失败")
+			}
+		}
+
+		// 4.2 软删除原记录
+		if len(materialItems) > 0 {
+			result := tx.Model(&model.WarehouseOutFormItem{}).
+				Where("sale_bill_uuid = ? AND scene = ? AND revoke_time = ? AND material_uuid != ? AND delete_time = ?",
+					saleBillUuid, constant.WarehouseOutFormSceneSales, 0, 0, constant.NotDeleted).
+				Update("delete_time", time.Now().Unix())
+			if result.Error != nil {
+				return errors.WithMessage(result.Error, "软删除原记录失败")
+			}
+			deletedCount = result.RowsAffected
+		}
+
+		// 4.3 创建新记录并关联原出库单UUID
+		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
+		newItems := make([]*model.WarehouseOutFormItem, 0)
+		for warehouseOutFormUuid, originalItems := range formItemMap {
+			// 验证出库单是否存在
+			warehouseOutForm, err := warehouseFormRepo.GetWarehouseForm(
+				repository.CommonRepo.WhereByUuid(warehouseOutFormUuid),
+				repository.CommonRepo.WhereBySoftDelete(),
+			)
+			if err != nil || warehouseOutForm == nil {
+				logger.Logger.Warn("出库单不存在，使用原UUID",
+					zap.Uint64("warehouseOutFormUuid", warehouseOutFormUuid),
+					zap.Uint64("saleBillUuid", saleBillUuid),
+					zap.Error(err),
+				)
+			}
+
+			// 为每个材料创建新记录
+			for _, materialStock := range materialStocksList {
+				// 查找对应的原记录（按 material_uuid 匹配）
+				var originalItem *model.WarehouseOutFormItem
+				for _, item := range originalItems {
+					if item.MaterialUuid == materialStock.MaterialUuid {
+						originalItem = item
+						break
+					}
+				}
+
+				// 如果没有对应的原记录，跳过（可能该材料是新添加的，或者不在这个出库单中）
+				if originalItem == nil {
+					continue
+				}
+
+				// 创建新记录
+				uuid, _ := utils.GetID()
+				newItem := &model.WarehouseOutFormItem{
+					BaseModel: model.BaseModel{
+						Uuid:       uuid,
+						CreateTime: time.Now().Unix(),
+					},
+					WarehouseOutFormUuid: warehouseOutFormUuid, // 关联原出库单UUID
+					WarehouseUuid:        materialStock.WarehouseUuid,
+					MaterialUuid:         materialStock.MaterialUuid,
+					SaleBillUuid:         saleBillUuid,
+					SaleOrderUuid:        originalItem.SaleOrderUuid,
+					StaffShiftLogUuid:    originalItem.StaffShiftLogUuid,
+					Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(), // 保留4位小数
+					Scene:                constant.WarehouseOutFormSceneSales,
+					Status:               constant.WarehouseOutFormItemStatusSuccess,
+					ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
+				}
+				newItems = append(newItems, newItem)
+			}
+		}
+
+		// 批量创建新记录
+		if len(newItems) > 0 {
+			if err := warehouseFormRepo.CreateWarehouseOutFormItemRecords(newItems); err != nil {
+				return errors.WithMessage(err, "创建新记录失败")
+			}
+			insertedCount = int64(len(newItems))
+
+			// 4.4 扣减库存
+			// 统计要扣减的材料
+			reduceStockMap, err := s.calculateReduceStockMap(tx, newItems)
+			if err != nil {
+				return errors.WithMessage(err, "统计要扣减的材料失败")
+			}
+
+			// 执行扣减库存操作
+			if err := s.reduceStock(tx, reduceStockMap); err != nil {
+				return errors.WithMessage(err, "扣减库存失败")
+			}
+
+			// 更新出库单明细的 reduce_stock = 1
+			if err := warehouseFormRepo.UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid); err != nil {
+				return errors.WithMessage(err, "更新 reduce_stock 失败")
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "重新生成销售账单材料出库记录失败")
+	}
+
+	durationMs := time.Since(startTime).Milliseconds()
+
+	return &resp.RegenerateSaleBillMaterialOutboundResp{
+		DeletedCount:  int(deletedCount),
+		InsertedCount: int(insertedCount),
+		DurationMs:    durationMs,
+	}, nil
+}
+
+// returnStockInfo 退回库存信息结构
+type returnStockInfo struct {
+	WarehouseUuid uint64
+	MaterialUuid  uint64
+	ReturnNum     float64
+	Material      *model.Material
+}
+
+// calculateReturnStockMap 统计要退回的材料（按 warehouse_uuid 和 material_uuid 分组汇总）
+func (s *salesOutboundSummarySrv) calculateReturnStockMap(tx *gorm.DB, materialItems []*model.WarehouseOutFormItem) (map[string]*returnStockInfo, error) {
+	materialRepo := repository.NewMaterialRepo(tx)
+
+	// 按 warehouse_uuid 和 material_uuid 分组汇总需要退回的数量
+	returnStockMap := make(map[string]*returnStockInfo)
+
+	for _, item := range materialItems {
+		key := fmt.Sprintf("%d_%d", item.WarehouseUuid, item.MaterialUuid)
+		if returnStock, ok := returnStockMap[key]; ok {
+			returnStock.ReturnNum += item.Num
+		} else {
+			// 获取材料信息（预加载关联材料和基准单位）
+			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid,
+				materialRepo.WithRelatedMaterialList(),
+				repository.CommonRepo.Preload(
+					repository.WithPreload{
+						Query: "NotBaseUnitList.Unit.MultiLanguageName",
+					},
+				),
+			)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("获取材料信息失败: %d", item.MaterialUuid))
+			}
+
+			returnStockMap[key] = &returnStockInfo{
+				WarehouseUuid: item.WarehouseUuid,
+				MaterialUuid:  item.MaterialUuid,
+				ReturnNum:     item.Num,
+				Material:      &material,
+			}
+		}
+	}
+
+	return returnStockMap, nil
+}
+
+// returnStock 执行退回库存操作（增加库存、更新关联库存）
+func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[string]*returnStockInfo) error {
+	warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+	materialRepo := repository.NewMaterialRepo(tx)
+
+	// 收集需要更新关联库存的材料UUID
+	relatedMaterialUuids := make([]uint64, 0)
+	relatedMaterialUuidSet := make(map[uint64]bool)
+
+	// 退回库存
+	for _, returnInfo := range returnStockMap {
+		if returnInfo.ReturnNum <= 0 {
+			continue
+		}
+
+		// 获取或创建仓库物品库存记录
+		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialOrCreate(
+			returnInfo.WarehouseUuid,
+			returnInfo.MaterialUuid,
+			returnInfo.Material.Code,
+			returnInfo.Material.Valuation,
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取仓库物品库存失败")
+		}
+
+		// 增加库存
+		if err := warehouseItemRepo.AddStock(warehouseItem.Uuid, returnInfo.ReturnNum); err != nil {
+			return errors.WithMessage(err, "增加材料库存失败")
+		}
+
+		// 收集需要更新关联库存的材料UUID
+		relatedUuids := returnInfo.Material.GetRelatedMaterialUuids()
+		for _, uuid := range relatedUuids {
+			if !relatedMaterialUuidSet[uuid] {
+				relatedMaterialUuids = append(relatedMaterialUuids, uuid)
+				relatedMaterialUuidSet[uuid] = true
+			}
+		}
+	}
+
+	// 更新关联材料库存
+	if len(relatedMaterialUuids) > 0 {
+		if err := materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids); err != nil {
+			return errors.WithMessage(err, "更新关联材料库存失败")
+		}
+	}
+
+	return nil
+}
+
+// reduceStockInfo 扣减库存信息结构
+type reduceStockInfo struct {
+	WarehouseUuid uint64
+	MaterialUuid  uint64
+	ReduceNum     float64
+	Material      *model.Material
+}
+
+// calculateReduceStockMap 统计要扣减的材料（按 warehouse_uuid 和 material_uuid 分组汇总）
+func (s *salesOutboundSummarySrv) calculateReduceStockMap(tx *gorm.DB, newItems []*model.WarehouseOutFormItem) (map[string]*reduceStockInfo, error) {
+	materialRepo := repository.NewMaterialRepo(tx)
+
+	// 按 warehouse_uuid 和 material_uuid 分组汇总需要扣减的数量
+	reduceStockMap := make(map[string]*reduceStockInfo)
+
+	for _, item := range newItems {
+		key := fmt.Sprintf("%d_%d", item.WarehouseUuid, item.MaterialUuid)
+		if reduceStock, ok := reduceStockMap[key]; ok {
+			reduceStock.ReduceNum += item.Num
+		} else {
+			// 获取材料信息（预加载关联材料和基准单位）
+			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid,
+				materialRepo.WithRelatedMaterialList(),
+				repository.CommonRepo.Preload(
+					repository.WithPreload{
+						Query: "NotBaseUnitList.Unit.MultiLanguageName",
+					},
+				),
+			)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("获取材料信息失败: %d", item.MaterialUuid))
+			}
+
+			reduceStockMap[key] = &reduceStockInfo{
+				WarehouseUuid: item.WarehouseUuid,
+				MaterialUuid:  item.MaterialUuid,
+				ReduceNum:     item.Num,
+				Material:      &material,
+			}
+		}
+	}
+
+	return reduceStockMap, nil
+}
+
+// reduceStock 执行扣减库存操作（扣减库存、更新关联库存）
+func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[string]*reduceStockInfo) error {
+	warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+	materialRepo := repository.NewMaterialRepo(tx)
+
+	// 收集需要更新关联库存的材料UUID
+	relatedMaterialUuids := make([]uint64, 0)
+	relatedMaterialUuidSet := make(map[uint64]bool)
+
+	// 扣减库存
+	for _, reduceInfo := range reduceStockMap {
+		if reduceInfo.ReduceNum <= 0 {
+			continue
+		}
+
+		// 获取仓库物品库存记录
+		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(reduceInfo.WarehouseUuid, reduceInfo.MaterialUuid)
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("获取仓库物品库存失败: material_uuid=%d, warehouse_uuid=%d", reduceInfo.MaterialUuid, reduceInfo.WarehouseUuid))
+		}
+
+		// 检查库存是否充足
+		if warehouseItem.Stock < reduceInfo.ReduceNum {
+			return errors.New(fmt.Sprintf("材料库存不足: material_uuid=%d, warehouse_uuid=%d, 需要=%f, 当前=%f",
+				reduceInfo.MaterialUuid, reduceInfo.WarehouseUuid, reduceInfo.ReduceNum, warehouseItem.Stock))
+		}
+
+		// 扣减库存
+		if err := warehouseItemRepo.ReduceStock(warehouseItem.Uuid, reduceInfo.ReduceNum); err != nil {
+			return errors.WithMessage(err, "扣减库存失败")
+		}
+
+		// 收集需要更新关联库存的材料UUID
+		relatedUuids := reduceInfo.Material.GetRelatedMaterialUuids()
+		for _, uuid := range relatedUuids {
+			if !relatedMaterialUuidSet[uuid] {
+				relatedMaterialUuids = append(relatedMaterialUuids, uuid)
+				relatedMaterialUuidSet[uuid] = true
+			}
+		}
+	}
+
+	// 更新关联材料库存
+	if len(relatedMaterialUuids) > 0 {
+		if err := materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids); err != nil {
+			return errors.WithMessage(err, "更新关联材料库存失败")
+		}
+	}
+
+	return nil
 }
