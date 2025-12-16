@@ -17,8 +17,9 @@ import (
 
 // WarehouseHandler 仓库控制器
 type WarehouseHandler struct {
-	authSrv      service.IAuthSrv
-	warehouseSrv service.IWarehouseSrv
+	authSrv                    service.IAuthSrv
+	warehouseSrv               service.IWarehouseSrv
+	salesOutboundSummarySrv    service.ISalesOutboundSummarySrv
 }
 
 // GetWarehouseList 获取对方机构列表
@@ -300,6 +301,46 @@ func (h *WarehouseHandler) GetWarehouseMaterialList(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// RegenerateSalesOutboundSummary 重新生成销售出库汇总记录
+// @Summary 重新生成销售出库汇总记录
+// @Description 删除指定日期的旧销售出库汇总记录，并重新生成新的汇总记录
+// @Tags 商家端.仓库管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param request body req.RegenerateSalesOutboundSummaryReq true "重新生成销售出库汇总记录请求"
+// @Success 200 {object} dto.Response{data=resp.RegenerateSalesOutboundSummaryResp} "成功"
+// @Router /shop/inventory/regenerate-sales-outbound-summary [post]
+func (h *WarehouseHandler) RegenerateSalesOutboundSummary(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	companyUuid := ctx.GetCompanyUuid()
+
+	var request req.RegenerateSalesOutboundSummaryReq
+	if err := c.ShouldBindJSON(&request); err != nil {
+		helper.HandleValidationError(c, err, request, nil)
+		return
+	}
+
+	// 使用当前门店的 UUID（如果请求中没有指定）
+	if request.CompanyUuid == 0 {
+		request.CompanyUuid = companyUuid
+	}
+
+	// 权限校验：只能操作自己门店的数据
+	if request.CompanyUuid != companyUuid {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("无权操作其他门店的数据"))
+		return
+	}
+
+	result, err := h.salesOutboundSummarySrv.RegenerateSalesOutboundSummary(c, request.CompanyUuid, request.Date)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, result, "重新生成成功")
+}
+
 // RegisterWarehouseHandlers 注册仓库相关路由
 func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -315,11 +356,13 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	messageSrv := message.NewIMessageSrv(dbm)
 	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv, messageSrv)
 	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
+	salesOutboundSummarySrv := service.NewSalesOutboundSummarySrv(dbm, settingSrv, cache)
 
 	// 初始化控制器
 	warehouseHandler := &WarehouseHandler{
-		authSrv:      authSrv,
-		warehouseSrv: warehouseSrv,
+		authSrv:                 authSrv,
+		warehouseSrv:            warehouseSrv,
+		salesOutboundSummarySrv: salesOutboundSummarySrv,
 	}
 
 	// 需要认证的路由
@@ -339,5 +382,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.GET("/warehouse/org/list", warehouseHandler.GetOtherOrgList) // 对方机构列表
 
 		privateApi.GET("/warehouse/material/list", warehouseHandler.GetWarehouseMaterialList) // 仓库物品列表
+
+		privateApi.POST("/inventory/regenerate-sales-outbound-summary", warehouseHandler.RegenerateSalesOutboundSummary) // 重新生成销售出库汇总记录
 	}
 }

@@ -120,6 +120,8 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	opts := []repository.DBOption{
 		warehouseLogRepo.WhereLogType(1), // 出库
 		warehouseLogRepo.WhereScene(1),   // 销售出库
+		// 未删除的记录
+		repository.CommonRepo.WhereBySoftDelete(),
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("opening_hours = ?", openingYearHours)
 		},
