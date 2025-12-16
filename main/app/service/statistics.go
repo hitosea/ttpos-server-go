@@ -778,6 +778,14 @@ type CountProductResp struct {
 // CountProduct 统计商品
 func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountProductResp {
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).CountProduct(ctx.GetLanguage(), opts...)
 
 	var list []CountProductResp

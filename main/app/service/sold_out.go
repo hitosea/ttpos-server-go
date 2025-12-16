@@ -200,6 +200,9 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 		if bom.IsOpenStock == 0 {
 			sellableQuantity = 0
 		}
+		if sellableQuantity < 0 { // 特殊需求: 可售量不能为负数
+			sellableQuantity = 0
+		}
 
 		settings = append(settings, resp.SoldOutSetting{
 			ProductBomUuid:   bom.Uuid,
