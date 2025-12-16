@@ -54,6 +54,7 @@ type ImgTemplateBlockAttr struct {
 
 	// 布局配置
 	Width              interface{} `json:"width"`                // 宽度百分比（支持固定值或按语言动态配置）
+	Width58            interface{} `json:"width_58"`             // 58mm宽度百分比
 	LabelWidth         float64     `json:"label_width"`          // 标签宽度百分比
 	Height             int         `json:"height"`               // 固定高度
 	DividingLine       bool        `json:"dividing_line"`        // 是否显示分割线
@@ -106,6 +107,11 @@ func NewImgTemplateParser(baseData ImgBaseData, templateJSON string, data map[st
 		return nil, fmt.Errorf("解析模板JSON失败: %v", err)
 	}
 
+	// 如果58mm打印机，且纸张宽度为0，则设置为58mm
+	if baseData.Is58mmPrinter && template.Metadata.PaperWidth == 0 {
+		template.Metadata.PaperWidth = 58
+	}
+
 	// 设置默认语言
 	if baseData.Language == "" {
 		baseData.Language = "zh"
@@ -122,9 +128,8 @@ func NewImgTemplateParser(baseData ImgBaseData, templateJSON string, data map[st
 func (p *ImgTemplateParser) Parse() (*ImgFont, error) {
 	// 根据纸张宽度创建图片打印对象
 	var img *ImgFont
-	paperWidth := p.template.Metadata.PaperWidth
 
-	switch paperWidth {
+	switch p.template.Metadata.PaperWidth {
 	case 80:
 		img = NewImgFont(568, 0, 0) // 80mm纸张
 	case 58:
@@ -293,6 +298,9 @@ func (p *ImgTemplateParser) parseRow(
 		if len(blocks) == 1 && block.BlockType != "column" {
 			// 获取宽度
 			width := p.getWidthValue(block.BlockAttr.Width)
+			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+				width = p.getWidthValue(block.BlockAttr.Width58)
+			}
 			widthInt := int(width)
 			text := p.getBlockText(block)
 
@@ -432,6 +440,9 @@ func (p *ImgTemplateParser) parseRow(
 // getBlockWidth 获取块的宽度
 func (p *ImgTemplateParser) getBlockWidth(img *ImgFont, block ImgTemplateBlock) int {
 	width := p.getWidthValue(block.BlockAttr.Width)
+	if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+		width = p.getWidthValue(block.BlockAttr.Width58)
+	}
 	if width > 0 {
 		return int(float64(img.ImageWidth) * (width / 100))
 	}
@@ -1049,6 +1060,9 @@ func (p *ImgTemplateParser) validateRow(blocks []ImgTemplateBlock, rowIndex int)
 		// 验证宽度
 		if block.BlockType != "img" && block.BlockType != "qrcode" && block.BlockType != "barcode" {
 			width := p.getWidthValue(block.BlockAttr.Width)
+			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+				width = p.getWidthValue(block.BlockAttr.Width58)
+			}
 			if width < 0 || width > 100 {
 				return fmt.Errorf("块 '%s' 的宽度必须在0-100之间", block.BlockID)
 			}
