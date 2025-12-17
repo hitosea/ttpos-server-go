@@ -83,3 +83,8 @@ const (
 	//默认销售价格列表
 	DefaultSellingPriceList = "Standard Selling"
 )
+
+const (
+	//重做的备注
+	RemarkBatchRedo = "batch redo"
+)
