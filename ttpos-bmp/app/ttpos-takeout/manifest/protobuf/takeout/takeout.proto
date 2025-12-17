@@ -84,6 +84,7 @@ message CancelOrderResp {
   ResponseInfo responseInfo = 1;
 }
 
+
 service TakeoutService {
   rpc EstimateDistance (EstimateDistanceReq) returns (EstimateDistanceResp) {}
   rpc CreateOrder (CreateOrderReq) returns (CreateOrderResp) {}

@@ -11,7 +11,7 @@ import (
 // Echo is the golang structure of table echo for DAO operations like Where/Data.
 type Echo struct {
 	g.Meta `orm:"table:echo, do:true"`
-	Id     interface{} //
-	Uuid   interface{} //
-	Msg    interface{} //
+	Id     any //
+	Uuid   any //
+	Msg    any //
 }

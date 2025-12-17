@@ -2,11 +2,14 @@ package boot
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/grab"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/menu"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/takeout"
+	"ttpos-bmp/internal/pkg/nacos/service"
+
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/grpc"
-	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/takeout"
-	"ttpos-bmp/internal/pkg/nacos/service"
 )
 
 var (
@@ -19,6 +22,8 @@ func InitRpcClient(ctx context.Context) {
 
 func initRpcServer() {
 	takeout.Register(service.RpcServer.GRpc)
+	grab.Register(service.RpcServer.GRpc)
+	menu.Register(service.RpcServer.GRpc)
 	go service.RpcServer.GRpc.Run()
 }
 
