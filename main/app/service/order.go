@@ -4492,6 +4492,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		param.AmendedProductsInvoiceName = saleOrder.ErpProductsInvoiceName
 		param.AmendedMaterialInvoiceName = saleOrder.ErpMaterialInvoiceName
 	}
+	if option.Remark != "" {
+		param.Remark = option.Remark
+	}
 	response, err := erpSrv.SavePosInvoice(ctx, param)
 	if err != nil {
 		erpSrv := erp.NewIErpSrv(s.dbm)
@@ -5329,12 +5332,20 @@ func WithIsH5Order() func(option *MustPlanConfirmOption) {
 // SavePosInvoiceOption SavePosInvoice 方法选项
 type SavePosInvoiceOption struct {
 	ShiftLog *model.StaffShiftLog // 班次记录（可选，如果不提供则从 Context 中获取）
+	Remark   string               // 备注（可选，用于区分批量任务等场景）
 }
 
 // WithShiftLog 设置班次记录选项
 func WithShiftLog(shiftLog *model.StaffShiftLog) func(*SavePosInvoiceOption) {
 	return func(option *SavePosInvoiceOption) {
 		option.ShiftLog = shiftLog
+	}
+}
+
+// WithRemark 设置备注选项
+func WithRemark(remark string) func(*SavePosInvoiceOption) {
+	return func(option *SavePosInvoiceOption) {
+		option.Remark = remark
 	}
 }
 

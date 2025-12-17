@@ -874,7 +874,7 @@ func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
 
 	// 调用 SavePosInvoice 方法（通过接口调用，如果提供了 shiftLog 则通过选项传入）
 	var savePosInvoiceResp *selling.SavePosInvoiceResp
-	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog))
+	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog), WithRemark("batch redo"))
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存发票失败")
 	}
