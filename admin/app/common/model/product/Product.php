@@ -930,6 +930,7 @@ class Product extends BaseModel
         // 成品
         $productSql = self::alias('p')
             ->field(implode(',', [
+                'p.image_url',
                 'file.file_type',
                 'file.file_url',
                 'file.file_name',
@@ -972,6 +973,7 @@ class Product extends BaseModel
         $enableErp = App::detail(self::$app_id)->isEnableErp();
         $materialSqlBuilder = Material::alias('m')
             ->field(implode(',', [
+                '"" as image_url',
                 'file.file_type',
                 'file.file_url',
                 'file.file_name',
@@ -1126,6 +1128,7 @@ class Product extends BaseModel
             'product_unit_multi_language_name_uuid',
             'is_open_stock',
             'is_package_used',
+            'image_url',
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
         $orderSql = ' ORDER BY sort ASC, create_time DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
@@ -1190,7 +1193,7 @@ class Product extends BaseModel
                 'create_time' => date('Y-m-d H:i:s', $row['create_time']),
                 'image' => [
                     [
-                        'file_path' => $filePath,
+                        'file_path' => $filePath == '/' ? ($row['image_url'] ?? '/') : $filePath,
                         'file_name' => $row['file_name'],
                         'file_url' => $row['file_url'],
                     ]

@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"context"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/context"
 )
 
 // IMenuDataRepository 菜单数据仓储接口（领域层）

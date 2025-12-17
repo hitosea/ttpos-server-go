@@ -111,6 +111,36 @@ func (l *LocaleResponse) SetLocale(locale string, value string) {
 	}
 }
 
+func (l *LocaleResponse) SetAllEmptyLocale(value string) {
+	if l.ZH == "" {
+		l.ZH = value
+	}
+	if l.TH == "" {
+		l.TH = value
+	}
+	if l.EN == "" {
+		l.EN = value
+	}
+	if l.ZHTW == "" {
+		l.ZHTW = value
+	}
+	if l.JA == "" {
+		l.JA = value
+	}
+	if l.KO == "" {
+		l.KO = value
+	}
+	if l.MY == "" {
+		l.MY = value
+	}
+	if l.TR == "" {
+		l.TR = value
+	}
+	if l.SV == "" {
+		l.SV = value
+	}
+}
+
 // ToJson 获取语言json
 func (l *LocaleResponse) ToJson() string {
 	str, _ := json.Marshal(l)

@@ -1160,7 +1160,7 @@ func (r *productRepo) GetProductAttributeGroup(opts ...DBOption) (model.ProductA
 		db = opt(db)
 	}
 	err := db.First(&attributeGroup).Error
-	return attributeGroup, errors.WithMessage(err)
+	return attributeGroup, err
 }
 
 func (r *productRepo) WithProductAttributesProductPackageAttributes() DBOption {
@@ -1214,7 +1214,7 @@ func (r *productRepo) GetProductAttribute(opts ...DBOption) (model.ProductAttrib
 		db = opt(db)
 	}
 	err := db.First(&attribute).Error
-	return attribute, errors.WithMessage(err)
+	return attribute, err
 }
 
 // GetProductPackageAttributeGroups 获取产品包属性组列表

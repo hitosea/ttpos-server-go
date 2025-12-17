@@ -20,7 +20,7 @@ import (
 
 type IProductTakeoutSrv interface {
 	// 外卖商品管理
-	AddProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopAddReq) (uint64, error)
+	AddProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error)
 	EditProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopEditReq) error
 	GetProductTakeoutShopDetail(ctx context.Context, req req.ProductTakeoutShopDetailReq) (*product_resp.ProductTakeoutShopDetailResp, error)
 	DeleteProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopDeleteReq) error
@@ -42,7 +42,7 @@ func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv, setting
 }
 
 // AddProductTakeoutShop 添加外卖商品
-func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq req.ProductTakeoutShopAddReq) (uint64, error) {
+func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error) {
 	companySetting := ctx.GetCompanySetting()
 	db := ctx.GetDB()
 
@@ -57,27 +57,27 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		repository.CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
-		return 0, errors.WithMessage(errors.New("商品不存在"))
+		return nil, errors.WithMessage(errors.New("商品不存在"))
 	}
 	if productPackage.IsDelete() {
-		return 0, errors.WithMessage(errors.New("商品已删除"))
+		return nil, errors.WithMessage(errors.New("商品已删除"))
 	}
 
 	// 检查是否是总部商品，并且当前不是总店，则总部商品不能添加为外卖商品
 	if productPackage.HeadquarterUuid != 0 && !companySetting.IsHeadquarter() {
-		return 0, errors.WithMessage(errors.New("总部商品不能添加为外卖商品"))
+		return nil, errors.WithMessage(errors.New("总部商品不能添加为外卖商品"))
 	}
 
 	// 检查是否已存在同类型外卖商品
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 	if takeoutRepo.CheckProductPackageTakeoutExist(addReq.ProductPackageUuid, uint(addReq.TakeoutType)) {
-		return 0, errors.WithMessage(errors.New("该商品已存在相同类型的外卖配置"))
+		return nil, errors.WithMessage(errors.New("该商品已存在相同类型的外卖配置"))
 	}
 
 	// 生成UUID
 	uuid, err := utils.GetID()
 	if err != nil {
-		return 0, errors.WithMessage(err, "生成UUID失败")
+		return nil, errors.WithMessage(err, "生成UUID失败")
 	}
 
 	// 处理多语言名称
@@ -89,7 +89,7 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		multiLanguageName := model.NewMultiLanguageName(productName)
 		multiLanguageNameUuid, err = repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*multiLanguageName)
 		if err != nil {
-			return 0, errors.WithMessage(err, "创建多语言名称失败")
+			return nil, errors.WithMessage(err, "创建多语言名称失败")
 		}
 	} else {
 		// 未提供自定义名称，使用店内商品的名称
@@ -97,21 +97,42 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		productName = productPackage.Name
 	}
 
+	// 处理卖点多语言
+	var describeMultiLanguageNameUuid uint64
+	var describe string
+
+	if !addReq.Describe.IsNull() {
+		describe = addReq.Describe.ToJson()
+		describeMultiLanguageName := model.NewMultiLanguageName(describe)
+		describeMultiLanguageNameUuid, err = repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*describeMultiLanguageName)
+		if err != nil {
+			return nil, errors.WithMessage(err, "创建卖点多语言失败")
+		}
+	} else {
+		// 未提供自定义卖点，使用店内商品的卖点
+		describeMultiLanguageNameUuid = productPackage.DescribeMultiLanguageNameUuid
+		describe = productPackage.Describe
+	}
+
 	// 创建外卖商品
 	productPackageTakeout := &model.ProductPackageTakeout{
 		BaseModel: model.BaseModel{
 			Uuid: uuid,
 		},
-		ProductPackageUuid:    addReq.ProductPackageUuid,
-		MultiLanguageNameUuid: multiLanguageNameUuid,
-		HeadquarterUuid:       productPackage.HeadquarterUuid,
-		Name:                  productName,
-		ProductType:           uint(productPackage.ProductType),
-		TakeoutType:           uint(addReq.TakeoutType),
-		Status:                uint(addReq.Status),
-		CategoryUuid:          addReq.CategoryUuid,
-		SpecialCategoryUuid:   addReq.SpecialCategoryUuid,
-		ImageFileUuid:         addReq.ImageFileUuid,
+		ProductPackageUuid:            addReq.ProductPackageUuid,
+		MultiLanguageNameUuid:         multiLanguageNameUuid,
+		DescribeMultiLanguageNameUuid: describeMultiLanguageNameUuid,
+		HeadquarterUuid:               productPackage.HeadquarterUuid,
+		Name:                          productName,
+		Describe:                      describe,
+		ProductType:                   uint(productPackage.ProductType),
+		TakeoutType:                   uint(addReq.TakeoutType),
+		Status:                        uint(addReq.Status),
+		CategoryUuid:                  addReq.CategoryUuid,
+		SpecialCategoryUuid:           addReq.SpecialCategoryUuid,
+		ImageFileUuid:                 addReq.ImageFileUuid,
+		Source:                        addReq.Source,
+		SourceProductId:               addReq.SourceProductId,
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -131,9 +152,28 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 					ProductBomUuid:            flavorReq.BomUuid,
 					HeadquarterUuid:           productPackage.HeadquarterUuid,
 					Price:                     flavorReq.Price,
+					GrabModifierId:            flavorReq.GrabModifierId,
 				}
 				if err := productBomTakeoutRepo.CreateProductBomTakeout(productBomTakeout); err != nil {
 					return errors.WithMessage(err, "创建外卖规格价格失败")
+				}
+			}
+		}
+
+		// 处理外卖属性价格
+		if len(addReq.Attributes) > 0 {
+			productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+
+			for _, attributeReq := range addReq.Attributes {
+				// 创建外卖属性价格记录
+				productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+					ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+					ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
+					HeadquarterUuid:             productPackage.HeadquarterUuid,
+					Price:                       attributeReq.Price,
+				}
+				if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+					return errors.WithMessage(err, "创建外卖属性价格失败")
 				}
 			}
 		}
@@ -143,7 +183,7 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 
 	if err != nil {
 		logger.Logger.Error("添加外卖商品失败", zap.Any("func", "AddProductTakeoutShop"), zap.Any("params", addReq), zap.Error(err))
-		return 0, errors.WithMessage(err, "添加外卖商品失败")
+		return nil, errors.WithMessage(err, "添加外卖商品失败")
 	}
 
 	// 自动设置分类在外卖平台显示
@@ -154,7 +194,7 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.SpecialCategoryUuid)
 	}
 
-	return uuid, nil
+	return productPackageTakeout, nil
 }
 
 // EditProductTakeoutShop 编辑外卖商品
@@ -264,6 +304,68 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 						commonRepo.WhereByUuid(existingBom.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "删除外卖规格价格失败")
+					}
+				}
+			}
+		}
+
+		// 处理外卖属性价格更新
+		if len(editReq.Attributes) > 0 {
+			productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+			commonRepo := repository.NewCommonRepo()
+
+			// 获取当前外卖商品的所有属性价格
+			existingAttributeTakeouts, err := productPackageAttributeTakeoutRepo.GetProductPackageAttributeTakeoutList(
+				func(db *gorm.DB) *gorm.DB {
+					return db.Where("product_package_takeout_uuid = ?", editReq.Uuid)
+				},
+				commonRepo.WhereBySoftDelete(),
+			)
+			if err != nil {
+				return errors.WithMessage(err, "获取外卖属性价格失败")
+			}
+
+			// 构建现有属性的映射（key: product_package_attribute_uuid）
+			existingAttributeMap := make(map[uint64]*model.ProductPackageAttributeTakeout)
+			for _, attributeTakeout := range existingAttributeTakeouts {
+				existingAttributeMap[attributeTakeout.ProductPackageAttributeUuid] = attributeTakeout
+			}
+
+			// 处理请求中的属性
+			requestedAttributeUuids := make(map[uint64]bool)
+			for _, attributeReq := range editReq.Attributes {
+				requestedAttributeUuids[attributeReq.ProductPackageAttributeUuid] = true
+
+				// 检查是否已存在
+				if existingAttribute, exists := existingAttributeMap[attributeReq.ProductPackageAttributeUuid]; exists {
+					// 更新价格
+					if err := productPackageAttributeTakeoutRepo.UpdateProductPackageAttributeTakeout(
+						map[string]any{"price": attributeReq.Price},
+						commonRepo.WhereByUuid(existingAttribute.Uuid),
+					); err != nil {
+						return errors.WithMessage(err, "更新外卖属性价格失败")
+					}
+				} else {
+					// 创建新的外卖属性价格
+					productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+						ProductPackageTakeoutUuid:   editReq.Uuid,
+						ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
+						HeadquarterUuid:             existTakeout.HeadquarterUuid,
+						Price:                       attributeReq.Price,
+					}
+					if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+						return errors.WithMessage(err, "创建外卖属性价格失败")
+					}
+				}
+			}
+
+			// 删除不再需要的外卖属性价格（软删除）
+			for attributeUuid, existingAttribute := range existingAttributeMap {
+				if !requestedAttributeUuids[attributeUuid] {
+					if err := productPackageAttributeTakeoutRepo.DestroyProductPackageAttributeTakeout(
+						commonRepo.WhereByUuid(existingAttribute.Uuid),
+					); err != nil {
+						return errors.WithMessage(err, "删除外卖属性价格失败")
 					}
 				}
 			}
