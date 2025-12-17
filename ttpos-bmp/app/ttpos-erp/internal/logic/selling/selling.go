@@ -811,6 +811,11 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 	// 构建支付信息
 	posInvoice.Payments = s.buildInvoicePayments(req.Payments)
 
+	// 设置备注
+	if len(req.Remark) > 0 {
+		posInvoice.Remarks = req.Remark
+	}
+
 	return posInvoice
 }
 

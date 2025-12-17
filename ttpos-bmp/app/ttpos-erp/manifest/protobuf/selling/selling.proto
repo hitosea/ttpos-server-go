@@ -104,6 +104,7 @@ message SavePosInvoiceReq {
   repeated PosInvoicePayment payments = 13;       // 付款列表 必填
   string amended_products_invoice_name = 14; // 反结账后，重新结账时填写原商品发票名称
   string amended_material_invoice_name = 15; // 反结账后，重新结账时填写原材料发票名称
+  string remark = 16; // 备注,可选
 }
 
 // SavePosInvoiceResp 保存POS发票响应消息
