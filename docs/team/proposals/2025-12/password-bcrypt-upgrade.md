@@ -46,13 +46,15 @@ func EncryptPassword(password string) string {
 
 ### 影响表和字段
 
-| 数据库 | 表名 | 字段 | 用途 |
-|--------|------|------|------|
-| saas | ttpos_admin_user | password | 超管密码 |
-| saas | ttpos_staff | password | 统一账号员工密码 |
-| 商家库 | ttpos_staff | password | 门店员工密码 |
-| 商家库 | ttpos_staff | permission_password | 权限密码 |
-| 商家库 | ttpos_member | password | 会员密码（本期不处理） |
+| 数据库 | 表名 | 字段 | 用途 | 优先级 |
+|--------|------|------|------|--------|
+| saas | ttpos_admin_user | password | 超管密码 | P0 |
+| saas | ttpos_staff | password | 统一账号员工密码 | P0 |
+| 商家库 | ttpos_staff | password | 门店员工密码（含供应商、收银员） | P0 |
+| 商家库 | ttpos_staff | permission_password | 权限密码 | P0 |
+| 商家库 | ttpos_member | password | 会员密码（本期不处理） | - |
+
+**说明**：供应商和收银员账号都存储在 `ttpos_staff` 表中，通过统一的员工管理接口处理。
 
 ---
 
@@ -87,10 +89,10 @@ func EncryptPassword(password string) string {
 
 ### 升级范围
 
-**本期处理**：
+**本期处理（P0 - 必须）**：
 - ✅ saas.ttpos_admin_user.password（超管密码）
 - ✅ saas.ttpos_staff.password（统一账号密码）
-- ✅ 商家库.ttpos_staff.password（员工密码）
+- ✅ 商家库.ttpos_staff.password（门店员工、供应商、收银员密码）
 - ✅ 商家库.ttpos_staff.permission_password（权限密码）
 
 **暂不处理**：
@@ -133,12 +135,26 @@ func EncryptPassword(password string) string {
 - 创建提案和技术设计文档
 - 评审和确认方案
 
-### 阶段二：开发（3-5天）
-- 实现密码工具类（Go + PHP）
+### 阶段二：开发（4-6天）
+**Go 模块（2天）**：
+- 实现密码工具类
 - 修改登录验证逻辑
 - 修改密码修改逻辑
 - 修改添加/更新员工逻辑
 - 修改权限密码验证逻辑
+
+**PHP 模块 - P0 必须（2天）**：
+- 实现密码工具函数
+- 修改店铺员工登录和密码管理
+- 修改超管登录和密码管理
+- 修改员工认证管理（含权限密码）
+- 修改统一账号员工管理
+- 修改商家员工管理
+- 修改登录控制器
+
+**PHP 模块 - P1 重要（0.5天）**：
+- 修改应用管理
+- 修改 ERP 集成验证
 
 ### 阶段三：测试（2-3天）
 - 单元测试
@@ -157,7 +173,7 @@ func EncryptPassword(password string) string {
 - 长期未登录用户通知
 - 文档归档
 
-**预计总工期**: 7-10 个工作日
+**预计总工期**: 8-10.5 个工作日
 
 ---
 

@@ -316,7 +316,8 @@ class App extends AppModel
                     $this->error = $validate->getError();
                     return false;
                 }
-                $user_data['password'] = salt_hash($data['password']);
+                // 使用 bcrypt 加密密码
+                $user_data['password'] = hash_password_bcrypt($data['password']);
             }
             //
             $shop_user = CompanyStaff::withoutGlobalScope()->where('company_uuid', '=', $this['uuid'])->order('is_super', 'desc')->find();
@@ -357,7 +358,8 @@ class App extends AppModel
             $staff['username'] = $shop_user->getData('username');
             $staff['phone'] = $shop_user->getData('phone');
             if (isset($data['password']) && $data['password'] != '') {
-                $staff['password'] = salt_hash($data['password']);
+                // 使用 bcrypt 加密密码
+                $staff['password'] = hash_password_bcrypt($data['password']);
             }
             (new ShopStaffModel([], $companyUuid))->setAppId($companyUuid)->where('uuid', $shop_user->uuid)->find()?->save($staff);
 

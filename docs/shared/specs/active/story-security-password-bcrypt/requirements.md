@@ -147,11 +147,19 @@
 
 ### 后端 PHP 模块
 
-| 模块 | 文件 | 功能 |
-|------|------|------|
-| 公共函数 | `admin/app/common.php` | salt_hash() 函数 |
-| 店铺员工 | `admin/app/shop/model/shop/User.php` | 登录和密码管理 |
-| 超管用户 | `admin/app/admin/model/admin/User.php` | 超管登录和密码管理 |
+| 模块 | 文件 | 功能 | 优先级 |
+|------|------|------|--------|
+| 公共函数 | `admin/app/common.php` | salt_hash() 函数 | P0 |
+| 店铺员工 | `admin/app/shop/model/shop/User.php` | 登录和密码管理 | P0 |
+| 超管用户 | `admin/app/admin/model/admin/User.php` | 超管登录和密码管理 | P0 |
+| 员工认证 | `admin/app/shop/model/auth/User.php` | 员工添加/更新（含权限密码，包括供应商、收银员） | P0 |
+| 统一账号员工 | `admin/app/admin/model/admin/Staff.php` | 统一账号员工管理 | P0 |
+| 商家员工 | `admin/app/admin/model/CompanyStaff.php` | 商家员工创建 | P0 |
+| 应用管理 | `admin/app/admin/model/app/App.php` | 应用管理员账号 | P1 |
+| ERP 集成 | `admin/app/admin/controller/Erpnext.php` | ERPNext 密码验证 | P1 |
+| 登录控制器 | `admin/app/shop/controller/Passport.php` | 登录密码处理 | P0 |
+
+**说明**：供应商（supplier）和收银员（cashier）的账号都存储在 `ttpos_staff` 表中，通过统一的 `shop/User.php` 和 `auth/User.php` 模型处理登录和密码管理。虽然 `supplier/Supplier.php` 和 `cashier/User.php` 文件中使用了 `salt_hash()`，但它们操作的是同一张 `ttpos_staff` 表，修改核心的密码管理逻辑后这些功能会自动覆盖。
 
 ---
 
@@ -165,13 +173,12 @@
 
 ### 涉及的表和字段
 
-| 数据库 | 表名 | 字段 | 当前格式 | 目标格式 |
-|--------|------|------|----------|----------|
-| saas | ttpos_admin_user | password | MD5 | bcrypt |
-| saas | ttpos_staff | password | MD5 | bcrypt |
-| saas | ttpos_staff | permission_password | MD5 | bcrypt |
-| shop_* | ttpos_staff | password | MD5 | bcrypt |
-| shop_* | ttpos_staff | permission_password | MD5 | bcrypt |
+| 数据库 | 表名 | 字段 | 当前格式 | 目标格式 | 优先级 | 说明 |
+|--------|------|------|----------|----------|--------|------|
+| saas | ttpos_admin_user | password | MD5 | bcrypt | P0 | 超管密码 |
+| saas | ttpos_staff | password | MD5 | bcrypt | P0 | 统一账号员工密码 |
+| shop_* | ttpos_staff | password | MD5 | bcrypt | P0 | 门店员工、供应商、收银员密码 |
+| shop_* | ttpos_staff | permission_password | MD5 | bcrypt | P0 | 权限密码 |
 
 ---
 
@@ -339,22 +346,36 @@
 
 ---
 
-## ❓ 待确认问题
+## ✅ 已确认问题
 
-1. **token 生成策略**
-   - 当前 PHP 代码使用 `md5($password)` 生成 token
-   - bcrypt 密码无法直接 MD5
-   - 建议：使用密码修改时间戳或其他字段
+1. **token 生成策略** ✅ 已确认
+   - **最终方案**：统一使用 `md5($user->password)` 生成 token 标识
+   - **原因**：保持与原有逻辑的兼容性，避免破坏现有 token 验证机制
+   - **说明**：bcrypt 密码哈希存储在数据库中，md5 后的值保持一致
+   - **后续优化**：可考虑使用不可变字段（如 `uuid`）或引入 `token_salt` 字段
 
-2. **迁移完成标准**
-   - 建议：90% 活跃用户完成迁移
-   - 长期未登录用户保留双验证逻辑
+2. **迁移完成标准** ✅ 已确认
+   - **标准**：90% 活跃用户完成迁移
+   - **策略**：长期未登录用户保留双验证逻辑
+   - **监控**：通过 SQL 查询定期检查迁移进度
 
-3. **是否需要强制密码重置**
-   - 建议：不强制，自然升级
+3. **是否需要强制密码重置** ✅ 已确认
+   - **决定**：不强制，采用自然升级方式
+   - **原因**：避免影响用户体验，降低运维成本
 
-4. **是否需要通知用户**
-   - 建议：无需通知，后台静默升级
+4. **是否需要通知用户** ✅ 已确认
+   - **决定**：无需通知，后台静默升级
+   - **原因**：对用户透明，不影响正常使用
+
+5. **password_change_time 字段处理** ✅ 已确认
+   - **创建员工**：设置为 `0`（表示从未修改）
+   - **更新密码**：**不再更新此字段**（保持原有值或不设置）
+   - **原因**：该字段仅用于密码修改次数统计，不影响密码验证和 token 生成
+
+6. **主键字段差异** ✅ 已确认
+   - **超管表**（`ttpos_admin_user`）：使用 `admin_user_id`
+   - **员工表**（`ttpos_staff`）：使用 `uuid`
+   - **影响**：密码升级函数调用时需使用正确的字段名
 
 ---
 

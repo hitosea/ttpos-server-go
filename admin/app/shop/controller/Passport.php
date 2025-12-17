@@ -61,7 +61,8 @@ class Passport extends Controller
     public function login()
     {
         $user = $this->postData();
-        $user['password'] = salt_hash($user['password'] ?? '');
+        // 不再预加密密码，将明文密码传递给 checkLogin 方法
+        // checkLogin 方法内部会使用 verify_password() 处理 MD5 和 bcrypt 两种格式
         // 云上部署时，判断规则不同
         if (!Captcha::check($user['code']) && !(env('APP_DEBUG') == true && $user['code'] == 123456)) {
             return $this->renderError('验证码错误');

@@ -31,13 +31,83 @@ function get_version()
 }
 
 /**
- * 生成密码hash值
+ * 生成密码hash值（保留用于兼容旧代码）
  * @param $password
  * @return string
  */
 function salt_hash($password)
 {
     return md5(md5($password) . 'jjjshop_salt_2020');
+}
+
+/**
+ * 验证密码（支持 MD5 和 bcrypt）
+ * @param string $password 明文密码
+ * @param string $storedPassword 存储的密码哈希
+ * @return array [是否验证成功, 是否需要升级为bcrypt]
+ */
+function verify_password($password, $storedPassword)
+{
+    // 判断是否为 bcrypt 格式
+    if (str_starts_with($storedPassword, '$2a$') || 
+        str_starts_with($storedPassword, '$2b$') || 
+        str_starts_with($storedPassword, '$2y$')) {
+        // 使用 bcrypt 验证
+        $isValid = password_verify($password, $storedPassword);
+        return [$isValid, false]; // 已经是 bcrypt，不需要升级
+    }
+    
+    // 使用旧的 MD5 验证
+    $md5Password = salt_hash($password);
+    if ($md5Password === $storedPassword) {
+        return [true, true]; // 验证成功，需要升级为 bcrypt
+    }
+    
+    return [false, false]; // 验证失败
+}
+
+/**
+ * 使用 bcrypt 加密密码
+ * @param string $password 明文密码
+ * @return string bcrypt 哈希
+ */
+function hash_password_bcrypt($password)
+{
+    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 10]);
+}
+
+/**
+ * 异步升级密码为 bcrypt
+ * 注意：PHP 中的异步比较复杂，这里简化为同步执行
+ * 生产环境可以考虑使用消息队列
+ * @param int $id 用户ID
+ * @param string $table 表名
+ * @param string $idField ID字段名
+ * @param string $fieldName 密码字段名
+ * @param string $password 明文密码
+ * @param int $appId 应用ID，0表示saas库，>0表示商家库
+ */
+function upgrade_password_async($id, $table, $idField, $fieldName, $password, $appId = 0)
+{
+    try {
+        $newHash = hash_password_bcrypt($password);
+        
+        // 根据 appId 确定数据库连接
+        if ($appId === 0) {
+            // saas 库（超管用户、统一账号员工）
+            $db = \think\facade\Db::connect('saas');
+        } else {
+            // 商家库（门店员工）
+            $db = \think\facade\Db::connect('shop' . $appId);
+        }
+        
+        $db->table($table)
+            ->where($idField, $id)
+            ->update([$fieldName => $newHash]);
+    } catch (\Exception $e) {
+        // 记录日志但不影响主流程
+        log_write('密码升级失败: ' . $e->getMessage());
+    }
 }
 
 /**

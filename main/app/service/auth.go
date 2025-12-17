@@ -151,8 +151,26 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	if staff.Company == nil {
 		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
-	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
+
+	// 验证密码（支持 MD5 和 bcrypt）
+	if staff.Uuid == 0 {
 		return loginResp, errors.New("账号或密码错误")
+	}
+	isValid, needUpgrade := utils.VerifyPassword(loginReq.Password, staff.Password)
+	if !isValid {
+		return loginResp, errors.New("账号或密码错误")
+	}
+
+	// 如果需要升级密码，异步升级为 bcrypt
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			s.dbm.GetDB(staff.CompanyUuid),
+			"ttpos_staff",
+			"password",
+			"uuid",
+			staff.Uuid,
+			loginReq.Password,
+		)
 	}
 	// 检查员工状态
 	if staff.DeleteTime != 0 {
@@ -305,9 +323,22 @@ func (s *authSrv) SaasLogin(ctx context.Context, loginReq req.LoginReq) (resp.Lo
 		}
 	}
 
-	// 验证密码
-	if utils.EncryptPassword(loginReq.Password) != saasStaff.Password {
+	// 验证密码（支持 MD5 和 bcrypt）
+	isValid, needUpgrade := utils.VerifyPassword(loginReq.Password, saasStaff.Password)
+	if !isValid {
 		return loginResp, errors.New("账号或密码错误")
+	}
+
+	// 如果需要升级密码，异步升级为 bcrypt
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			saasDB,
+			"ttpos_staff",
+			"password",
+			"uuid",
+			saasStaff.Uuid,
+			loginReq.Password,
+		)
 	}
 
 	// 检查账号是否被禁用
@@ -1442,13 +1473,21 @@ func (s *authSrv) ChangePassword(ctx context.Context, changePasswordReq req.Chan
 		return errors.WithMessage(err)
 	}
 
-	if staff.Password != utils.EncryptPassword(changePasswordReq.OldPassword) {
+	// 验证旧密码（支持 MD5 和 bcrypt）
+	isValid, _ := utils.VerifyPassword(changePasswordReq.OldPassword, staff.Password)
+	if !isValid {
 		return errors.New("旧密码错误")
+	}
+
+	// 使用 bcrypt 加密新密码
+	newPasswordHash, err := utils.HashPasswordBcrypt(changePasswordReq.NewPassword)
+	if err != nil {
+		return errors.New("密码加密失败")
 	}
 
 	// 更新统一账号表
 	update := map[string]any{
-		"password":              utils.EncryptPassword(changePasswordReq.NewPassword),
+		"password":              newPasswordHash,
 		"password_change_count": staff.PasswordChangeCount + 1,
 		"password_change_time":  time.Now().Unix(),
 	}

@@ -11674,6 +11674,42 @@ definitions:
         description: 方案uuid
         type: integer
     type: object
+  resp.KioskBase:
+    properties:
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      company_list:
+        description: 关联的门店列表
+        items:
+          $ref: '#/definitions/resp.CompanyStaffResp'
+        type: array
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      device_id:
+        description: 设备ID
+        type: string
+      device_remark:
+        description: 设备备注
+        type: string
+      kiosk:
+        allOf:
+        - $ref: '#/definitions/setting.KioskResp'
+        description: 自助点餐机设置（包含语言列表、轮播广告）
+      update_time:
+        description: 更新时间
+        type: integer
+      username:
+        description: 登录账号
+        type: string
+    type: object
   resp.KitchenBase:
     properties:
       buffet:
@@ -14239,6 +14275,9 @@ definitions:
       company_name:
         description: V2.6 公司名称
         type: string
+      company_store_code:
+        description: 公司店铺编码
+        type: string
       company_uuid:
         description: V2.6 公司UUID
         type: integer
@@ -14298,6 +14337,9 @@ definitions:
     properties:
       company_name:
         description: V2.6 公司名称
+        type: string
+      company_store_code:
+        description: 公司店铺编码
         type: string
       company_uuid:
         description: V2.6 公司UUID
@@ -28577,6 +28619,52 @@ paths:
       summary: 桌台订单商品备注
       tags:
       - 扫码点餐
+  /kiosk/base:
+    get:
+      consumes:
+      - application/json
+      description: 获取自助点餐机首页基本信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.KioskBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 基本信息
+      tags:
+      - 自助点餐机.基础信息
+  /kiosk/call:
+    post:
+      consumes:
+      - application/json
+      description: 发起呼叫服务员
+      parameters:
+      - description: 呼叫请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CallReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 发起呼叫
+      tags:
+      - 自助点餐机.呼叫
   /kiosk/login:
     post:
       consumes:

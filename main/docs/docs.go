@@ -17717,6 +17717,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取自助点餐机首页基本信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.基础信息"
+                ],
+                "summary": "基本信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.KioskBase"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kiosk/call": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "发起呼叫服务员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.呼叫"
+                ],
+                "summary": "发起呼叫",
+                "parameters": [
+                    {
+                        "description": "呼叫请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CallReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/login": {
             "post": {
                 "description": "登录",
@@ -52589,6 +52668,66 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.KioskBase": {
+            "type": "object",
+            "properties": {
+                "business": {
+                    "description": "门店业务设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Business"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "商家信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Company"
+                        }
+                    ]
+                },
+                "company_list": {
+                    "description": "关联的门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyStaffResp"
+                    }
+                },
+                "currency": {
+                    "description": "货币单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Currency"
+                        }
+                    ]
+                },
+                "device_id": {
+                    "description": "设备ID",
+                    "type": "string"
+                },
+                "device_remark": {
+                    "description": "设备备注",
+                    "type": "string"
+                },
+                "kiosk": {
+                    "description": "自助点餐机设置（包含语言列表、轮播广告）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.KioskResp"
+                        }
+                    ]
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
+                "username": {
+                    "description": "登录账号",
+                    "type": "string"
+                }
+            }
+        },
         "resp.KitchenBase": {
             "type": "object",
             "properties": {
@@ -56384,6 +56523,10 @@ const docTemplate = `{
                     "description": "V2.6 公司名称",
                     "type": "string"
                 },
+                "company_store_code": {
+                    "description": "公司店铺编码",
+                    "type": "string"
+                },
                 "company_uuid": {
                     "description": "V2.6 公司UUID",
                     "type": "integer"
@@ -56466,6 +56609,10 @@ const docTemplate = `{
             "properties": {
                 "company_name": {
                     "description": "V2.6 公司名称",
+                    "type": "string"
+                },
+                "company_store_code": {
+                    "description": "公司店铺编码",
                     "type": "string"
                 },
                 "company_uuid": {
