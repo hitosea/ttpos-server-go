@@ -252,6 +252,10 @@ func (r *takeoutRepositoryImpl) UpdateImportStatusByPlatform(ctx context.Context
 		updates["menu"] = string(menuJSON)
 	}
 
+	if status == model.ImportStatusSuccess {
+		updates["is_bound"] = true
+	}
+
 	return db.Model(&model.Takeout{}).
 		Where("platform = ? AND delete_time = ?", platform, 0).
 		Updates(updates).Error

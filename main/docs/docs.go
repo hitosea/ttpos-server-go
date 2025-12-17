@@ -32542,7 +32542,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "分页查询菜单导入的历史日志，支持按平台、类型、状态筛选",
+                "description": "分页查询菜单的历史日志，支持按平台、类型、状态筛选",
                 "consumes": [
                     "application/json"
                 ],
@@ -32552,7 +32552,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.外卖管理"
                 ],
-                "summary": "获取外卖菜单导入历史日志",
+                "summary": "获取外卖菜单历史日志",
                 "parameters": [
                     {
                         "description": "获取导入日志列表请求",
@@ -32581,7 +32581,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "查询指定平台最新的菜单导入进度信息",
+                "description": "查询指定平台最新的菜单进度信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -32591,7 +32591,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.外卖管理"
                 ],
-                "summary": "获取外卖菜单导入进度",
+                "summary": "获取外卖菜单进度",
                 "parameters": [
                     {
                         "type": "string",
@@ -32606,6 +32606,78 @@ const docTemplate = `{
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/response.ImportProgressResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/takeout/menu/push": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "推送菜单数据到外卖平台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖管理"
+                ],
+                "summary": "推送菜单数据到外卖平台",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "外卖平台",
+                        "name": "platform",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    }
+                }
+            }
+        },
+        "/shop/takeout/menu/reimport": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "基于失败的导入日志重新导入菜单到TTPOS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖管理"
+                ],
+                "summary": "重新导入失败的菜单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "导入日志UUID",
+                        "name": "log_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GrabMenuImportResp"
                         }
                     }
                 }
@@ -35152,6 +35224,13 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/request.ExportMenuRequest"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "TTPOS 导出密钥",
+                        "name": "X-TTPOS-SECRET",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -48332,7 +48411,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "company_uuid",
-                "currency_unit",
                 "platform"
             ],
             "properties": {
@@ -51385,6 +51463,41 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.GiftOrFreeOrderReason"
                     }
+                }
+            }
+        },
+        "resp.GrabMenuImportResp": {
+            "type": "object",
+            "properties": {
+                "error_list": {
+                    "description": "详细错误列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductImportError"
+                    }
+                },
+                "failureCount": {
+                    "type": "integer"
+                },
+                "failures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.GrabProductImportFailure"
+                    }
+                },
+                "successCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.GrabProductImportFailure": {
+            "type": "object",
+            "properties": {
+                "grabProductId": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },
@@ -55380,6 +55493,27 @@ const docTemplate = `{
                 "product_type": {
                     "description": "商品类型 0-商品 1-套餐",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ProductImportError": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "description": "分类ID",
+                    "type": "string"
+                },
+                "error": {
+                    "description": "错误信息",
+                    "type": "string"
+                },
+                "product_id": {
+                    "description": "商品ID",
+                    "type": "string"
+                },
+                "product_name": {
+                    "description": "商品名称",
+                    "type": "string"
                 }
             }
         },
@@ -60085,6 +60219,10 @@ const docTemplate = `{
         "response.ImportLogResponse": {
             "type": "object",
             "properties": {
+                "can_reimport": {
+                    "description": "是否可以重新导入(true-可以  false-不可以)",
+                    "type": "boolean"
+                },
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"
@@ -60191,7 +60329,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "导入状态(0-进行中 1-成功 2-失败)",
+                    "description": "导入状态(-1-未开启 0-进行中 1-成功 2-失败)",
                     "type": "integer"
                 },
                 "success_count": {

@@ -15,6 +15,9 @@ import (
 	"ttpos-server-go/app/modules/takeout/types/response"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // ITakeoutAppService 外卖应用服务接口
@@ -196,24 +199,21 @@ func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string)
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
 
-	// 2. 如果缓存存在且不为空，直接返回
-	if takeout.BindingLink != "" {
-		return &response.BindingLinkResponse{
-			BindingLink: takeout.BindingLink,
-		}, nil
-	}
-
-	// 3. 如果缓存不存在，调用 RPC 获取
+	// 2. 如果缓存不存在，调用 RPC 获取
 	companyUuid := ctx.GetCompanyUuid()
 	bindingLink, err := s.rpcService.GetGrabBindingLink(ctx.GetContext(), companyUuid)
 	if err != nil {
 		return nil, fmt.Errorf("获取绑定链接失败: %w", err)
 	}
 
-	// 4. 保存到数据库缓存
+	// 3. 保存到数据库缓存
 	if err := s.takeoutDomainService.UpdatePlatformBindingLink(ctx, takeout.Uuid, bindingLink); err != nil {
-		// 缓存失败不影响返回，只记录日志
-		// 这里没有 logger，暂不记录
+		if takeout.BindingLink != "" {
+			bindingLink = takeout.BindingLink
+		} else {
+			logger.Logger.Error("认证失败，请核对信息", zap.Error(err))
+			return nil, fmt.Errorf("认证失败，请核对信息")
+		}
 	}
 
 	return &response.BindingLinkResponse{
@@ -288,6 +288,15 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	}
 	if companyUuid == 0 {
 		return nil, errors.New("公司 UUID 不能为空")
+	}
+
+	// 判断 ttpos_takeout表 的 menu 是否存在数据，如果存在就判断是否导入成功，不然就返回空
+	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
+	if err != nil {
+		return nil, fmt.Errorf("获取平台状态失败: %w", err)
+	}
+	if takeout.Menu != nil && takeout.ImportStatus != model.ImportStatusSuccess {
+		return nil, fmt.Errorf("正在导入数据到TTPOS中，请稍后再试")
 	}
 
 	// 获取平台转换器

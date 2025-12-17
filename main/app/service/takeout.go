@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
+
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -15,6 +17,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/types/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -33,8 +36,11 @@ type ITakeoutSrv interface {
 	// 导入菜单到TTPOS
 	ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error)
 
-	// ImportMenu 导入菜单
-	ImportMenu(ctx context.Context, req request.ImportMenuRequest) (*resp.GrabMenuImportResp, error)
+	// PushMenuToPlatform 推送菜单到外卖平台
+	PushMenuToPlatform(ctx context.Context, platform string) error
+
+	// ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
+	ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*resp.GrabMenuImportResp, error)
 }
 
 type takeoutSrv struct {
@@ -68,6 +74,76 @@ func NewTakeoutSrv(
 	}
 }
 
+// PushMenuToPlatform 推送菜单到外卖平台
+func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) error {
+	platform = strings.ToLower(platform)
+
+	// 初始化领域服务
+	db := ctx.GetDB()
+	progressService := domainService.NewImportProgressService(db)
+
+	// 1. 检查推送状态
+	canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, platform)
+	if err != nil {
+		return errors.WithMessage(err, "检查推送状态失败")
+	}
+	if !canImport {
+		errMsg := fmt.Sprintf("已有推送任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+		return errors.New(errMsg)
+	}
+
+	// 2. 开始推送，创建推送日志
+	// importType: 1 = TTPOS推送到平台
+	// importDirection: 根据平台名称设置
+	importDirection := fmt.Sprintf("TTPOS推送到%s", strings.ToUpper(platform))
+	importLog, err := progressService.StartImport(ctx, platform, 1, importDirection)
+	if err != nil {
+		return errors.WithMessage(err, "开始推送失败")
+	}
+
+	// 3. 获取货币设置 (进度 0-20%)
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取货币设置失败",
+			zap.String("platform", platform),
+			zap.Error(err),
+		)
+		// 标记推送失败
+		_ = progressService.CompleteImport(ctx, importLog.UUID, false, "获取货币设置失败: "+err.Error())
+		return errors.WithMessage(err, "获取货币设置失败")
+	}
+
+	// 更新进度到 20%
+	_ = progressService.UpdateProgress(ctx, importLog.UUID, 20, 100)
+
+	// 4. 推送菜单到平台 (进度 20-100%)
+	err = s.takeoutAppSrv.PushMenuToGrab(ctx, currencySetting.Unit)
+	if err != nil {
+		logger.Logger.Error("推送菜单到平台失败",
+			zap.String("platform", platform),
+			zap.Error(err),
+		)
+		// 标记推送失败
+		_ = progressService.CompleteImport(ctx, importLog.UUID, false, "推送菜单失败: "+err.Error())
+		return errors.WithMessage(err, "推送菜单失败")
+	}
+
+	// 更新进度到 100%
+	_ = progressService.UpdateProgress(ctx, importLog.UUID, 100, 100)
+
+	// 5. 标记推送成功
+	err = progressService.CompleteImport(ctx, importLog.UUID, true, "")
+	if err != nil {
+		logger.Logger.Warn("标记推送成功失败",
+			zap.String("platform", platform),
+			zap.Uint64("import_log_uuid", importLog.UUID),
+			zap.Error(err),
+		)
+	}
+
+	return nil
+}
+
 // ImportMenuToTTPOS 导入菜单到TTPOS
 func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error) {
 	takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
@@ -84,23 +160,70 @@ func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImpor
 		return nil, err
 	}
 
-	// 2. 获取货币设置
-	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	err = s.PushMenuToPlatform(ctx, "grab")
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取货币设置失败")
-	}
-
-	// 3.推送菜单到Grab
-	err = s.takeoutAppSrv.PushMenuToGrab(ctx, currencySetting.Unit)
-	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "推送菜单到Grab失败")
 	}
 
 	return resp, nil
 }
 
+// ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
+func (s *takeoutSrv) ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*resp.GrabMenuImportResp, error) {
+	db := ctx.GetDB()
+	progressService := domainService.NewImportProgressService(db)
+
+	// 1. 查询日志
+	log, err := persistence.NewTakeoutImportLogRepository(db).FindByUUID(ctx, logUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询导入日志失败")
+	}
+	if log == nil {
+		return nil, errors.New("导入日志不存在")
+	}
+
+	// 2. 检查是否可以重新导入
+	// 判断条件：导入失败 && 是从平台导入到TTPOS && 平台是 grab
+	if !log.IsFailed() {
+		return nil, errors.New("只能重新导入失败的记录")
+	}
+	if log.ImportType != takeoutModel.ImportTypePlatformToTTPOS {
+		return nil, errors.New("只能重新导入从平台到TTPOS的记录")
+	}
+	if log.Platform != "grab" {
+		return nil, errors.New("当前仅支持重新导入 Grab 平台")
+	}
+
+	// 3. 检查是否有正在进行的导入
+	canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, log.Platform)
+	if err != nil {
+		return nil, errors.WithMessage(err, "检查导入状态失败")
+	}
+	if !canImport {
+		errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+		return nil, errors.New(errMsg)
+	}
+
+	// 4. 获取菜单数据
+	takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取菜单数据失败")
+	}
+
+	// 5. 调用 ImportMenu，传入日志 UUID 进行重新导入
+	return s.importMenuWithLog(ctx, request.ImportMenuRequest{
+		Platform: log.Platform,
+		MenuData: takeoutMenu.Menu,
+	}, &logUuid)
+}
+
 // ImportMenu 导入菜单
 func (s *takeoutSrv) ImportMenu(ctx context.Context, reqs request.ImportMenuRequest) (*resp.GrabMenuImportResp, error) {
+	return s.importMenuWithLog(ctx, reqs, nil)
+}
+
+// importMenuWithLog 导入菜单（支持复用日志）
+func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportMenuRequest, reimportLogUuid *uint64) (*resp.GrabMenuImportResp, error) {
 	takeoutMenu, err := s.takeoutAppSrv.ConvertMenuData(ctx, reqs)
 	if err != nil {
 		return nil, err
@@ -122,23 +245,54 @@ func (s *takeoutSrv) ImportMenu(ctx context.Context, reqs request.ImportMenuRequ
 		return nil, nil
 	}
 
-	// 1. 检查导入状态
-	canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, platform)
-	if err != nil {
-		return nil, errors.WithMessage(err, "检查导入状态失败")
-	}
-	if !canImport {
-		errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.UUID)
-		return nil, errors.New(errMsg)
-	}
+	var importLog *takeoutModel.TakeoutImportLog
 
-	// 2. 开始导入，创建导入日志
-	// importType: 2 = 平台推送到TTPOS
-	// importDirection: 根据平台名称设置
-	importDirection := fmt.Sprintf("%s推送到TTPOS", strings.ToUpper(platform))
-	importLog, err := progressService.StartImport(ctx, platform, 2, importDirection)
-	if err != nil {
-		return nil, errors.WithMessage(err, "开始导入失败")
+	// 如果是重新导入，复用原日志
+	if reimportLogUuid != nil {
+		// 查询并重置日志
+		log, err := persistence.NewTakeoutImportLogRepository(db).FindByUUID(ctx, *reimportLogUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询导入日志失败")
+		}
+		if log == nil {
+			return nil, errors.New("导入日志不存在")
+		}
+
+		// 重置日志状态
+		log.Status = takeoutModel.ImportLogStatusInProgress
+		log.Progress = 0
+		log.ErrorMessage = ""
+		log.SuccessCount = 0
+		log.FailureCount = 0
+		log.StartTime = time.Now().Unix()
+		log.EndTime = 0
+		log.Duration = 0
+		log.UpdateTime = time.Now().Unix()
+
+		if err := persistence.NewTakeoutImportLogRepository(db).Update(ctx, log); err != nil {
+			return nil, errors.WithMessage(err, "重置日志状态失败")
+		}
+		importLog = log
+	} else {
+		// 1. 检查导入状态
+		canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, platform)
+		if err != nil {
+			return nil, errors.WithMessage(err, "检查导入状态失败")
+		}
+		if !canImport {
+			errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+			return nil, errors.New(errMsg)
+		}
+
+		// 2. 开始导入，创建导入日志
+		// importType: 2 = 平台推送到TTPOS
+		// importDirection: 根据平台名称设置
+		importDirection := fmt.Sprintf("%s推送到TTPOS", strings.ToUpper(platform))
+		log, err := progressService.StartImport(ctx, platform, 2, importDirection)
+		if err != nil {
+			return nil, errors.WithMessage(err, "开始导入失败")
+		}
+		importLog = log
 	}
 
 	// 2.1 更新 ttpos_takeout 表的导入状态为"导入中"

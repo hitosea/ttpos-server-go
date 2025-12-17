@@ -25,7 +25,7 @@ var SMS SMSConf
 var GoogleBucket GoogleBucketConf
 var Google GoogleConf
 var Nacos NacosConf
-
+var Takeout TakeoutConf
 var Rocketmq rocketmq.Config
 var Otlp *otlp.OtlpConfig
 
@@ -52,7 +52,7 @@ func Init() error {
 	migrateDatabaseConf(opt) // 迁移数据库
 	nacosConf(opt)           // nacos配置
 	rocketmqConf(opt)        // rocketmq配置
-
+	takeoutConf(opt)         // 外卖配置
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
 	// 接口加密相关
@@ -258,6 +258,15 @@ func migrateDatabaseConf(opt copier.Option) {
 		MigrateOldDBPassword: viper.GetString("MIGRATE_OLD_DB_PASSWORD"),
 		MigrateOldDBDatabase: viper.GetString("MIGRATE_OLD_DB_DATABASE"),
 		MigrateOldDBPrefix:   viper.GetString("MIGRATE_OLD_DB_PREFIX"),
+	}, opt)
+}
+
+func takeoutConf(opt copier.Option) {
+	Takeout = TakeoutConf{
+		TakeoutTtposSecret: "",
+	}
+	copier.CopyWithOption(&Takeout, TakeoutConf{
+		TakeoutTtposSecret: viper.GetString("TAKEOUT_TTPOS_SECRET"),
 	}, opt)
 }
 

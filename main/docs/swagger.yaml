@@ -9126,7 +9126,6 @@ definitions:
         type: string
     required:
     - company_uuid
-    - currency_unit
     - platform
     type: object
   request.GetImportLogsRequest:
@@ -11177,6 +11176,29 @@ definitions:
         items:
           $ref: '#/definitions/resp.GiftOrFreeOrderReason'
         type: array
+    type: object
+  resp.GrabMenuImportResp:
+    properties:
+      error_list:
+        description: 详细错误列表
+        items:
+          $ref: '#/definitions/resp.ProductImportError'
+        type: array
+      failureCount:
+        type: integer
+      failures:
+        items:
+          $ref: '#/definitions/resp.GrabProductImportFailure'
+        type: array
+      successCount:
+        type: integer
+    type: object
+  resp.GrabProductImportFailure:
+    properties:
+      grabProductId:
+        type: string
+      message:
+        type: string
     type: object
   resp.GranularSyncResp:
     properties:
@@ -13845,6 +13867,21 @@ definitions:
       product_type:
         description: 商品类型 0-商品 1-套餐
         type: integer
+    type: object
+  resp.ProductImportError:
+    properties:
+      category_id:
+        description: 分类ID
+        type: string
+      error:
+        description: 错误信息
+        type: string
+      product_id:
+        description: 商品ID
+        type: string
+      product_name:
+        description: 商品名称
+        type: string
     type: object
   resp.ProductInfo:
     properties:
@@ -17035,6 +17072,9 @@ definitions:
     type: object
   response.ImportLogResponse:
     properties:
+      can_reimport:
+        description: 是否可以重新导入(true-可以  false-不可以)
+        type: boolean
       create_time:
         description: 创建时间
         type: integer
@@ -17114,7 +17154,7 @@ definitions:
         description: 开始时间
         type: integer
       status:
-        description: 导入状态(0-进行中 1-成功 2-失败)
+        description: 导入状态(-1-未开启 0-进行中 1-成功 2-失败)
         type: integer
       success_count:
         description: 成功数量
@@ -37403,7 +37443,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 分页查询菜单导入的历史日志，支持按平台、类型、状态筛选
+      description: 分页查询菜单的历史日志，支持按平台、类型、状态筛选
       parameters:
       - description: 获取导入日志列表请求
         in: body
@@ -37420,14 +37460,14 @@ paths:
             $ref: '#/definitions/response.ImportLogListResponse'
       security:
       - JwtToken: []
-      summary: 获取外卖菜单导入历史日志
+      summary: 获取外卖菜单历史日志
       tags:
       - 商家端.外卖管理
   /shop/takeout/menu/import/progress:
     get:
       consumes:
       - application/json
-      description: 查询指定平台最新的菜单导入进度信息
+      description: 查询指定平台最新的菜单进度信息
       parameters:
       - description: 外卖平台
         in: query
@@ -37443,7 +37483,52 @@ paths:
             $ref: '#/definitions/response.ImportProgressResponse'
       security:
       - JwtToken: []
-      summary: 获取外卖菜单导入进度
+      summary: 获取外卖菜单进度
+      tags:
+      - 商家端.外卖管理
+  /shop/takeout/menu/push:
+    post:
+      consumes:
+      - application/json
+      description: 推送菜单数据到外卖平台
+      parameters:
+      - description: 外卖平台
+        in: query
+        name: platform
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+      security:
+      - JwtToken: []
+      summary: 推送菜单数据到外卖平台
+      tags:
+      - 商家端.外卖管理
+  /shop/takeout/menu/reimport:
+    post:
+      consumes:
+      - application/json
+      description: 基于失败的导入日志重新导入菜单到TTPOS
+      parameters:
+      - description: 导入日志UUID
+        format: int64
+        in: query
+        name: log_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.GrabMenuImportResp'
+      security:
+      - JwtToken: []
+      summary: 重新导入失败的菜单
       tags:
       - 商家端.外卖管理
   /shop/takeout/status/info:
@@ -38967,6 +39052,11 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/request.ExportMenuRequest'
+      - description: TTPOS 导出密钥
+        in: header
+        name: X-TTPOS-SECRET
+        required: true
+        type: string
       produces:
       - application/json
       responses:

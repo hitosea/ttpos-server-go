@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/application"
 	"ttpos-server-go/app/modules/takeout/types/request"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -40,6 +41,7 @@ func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
 // @Produce json
 // @Security JwtAuth
 // @Param body body request.ExportMenuRequest true "导出请求"
+// @Param X-TTPOS-SECRET header string true "TTPOS 导出密钥"
 // @Success 200 {object} dto.Response{data=resp.TakeoutMenuExportResp} "成功"
 // @Router /takeout/menu/export [post]
 func (h *Handler) ExportMenu(c *gin.Context) {
@@ -49,10 +51,29 @@ func (h *Handler) ExportMenu(c *gin.Context) {
 		return
 	}
 
+	// 验证头部参数
+	auth := c.GetHeader("X-TTPOS-SECRET")
+	if auth != config.Takeout.TakeoutTtposSecret {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("无效的认证类型"))
+		return
+	}
+
+	// 平台不能为空
+	if exportReq.Platform == "" {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("平台不能为空"))
+		return
+	}
+
+	// 公司ID不能为空
+	db := h.dbm.GetDB(exportReq.CompanyUuid)
+	if db == nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("公司ID不存在"))
+		return
+	}
+
 	ctx := helper.GetContext(c)
 	ctx.SetCompanyUuid(exportReq.CompanyUuid)
 	ctx.SetDB(h.dbm.GetDB(exportReq.CompanyUuid))
-
 	currencySetting, err := setting.NewSrv(h.dbm, h.cache).GetCurrencySetting(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "获取货币设置失败"))

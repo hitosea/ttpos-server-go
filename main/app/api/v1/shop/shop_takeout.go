@@ -1,6 +1,8 @@
 package shop
 
 import (
+	"strconv"
+
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -19,6 +21,8 @@ import (
 type TakeoutHandler struct {
 	// 外卖应用服务（统一服务）
 	takeoutAppSrv application.ITakeoutAppService
+	// 外卖菜单应用服务
+	takeoutMenuAppSrv application.ITakeoutMenuAppService
 	// 外卖服务
 	takeoutSrv service.ITakeoutSrv
 }
@@ -192,9 +196,9 @@ func (h *TakeoutHandler) GetTakeoutMenu(c *gin.Context) {
 	helper.Success(c, result)
 }
 
-// GetImportProgress 获取导入进度
-// @Summary 获取外卖菜单导入进度
-// @Description 查询指定平台最新的菜单导入进度信息
+// GetImportProgress 获取进度
+// @Summary 获取外卖菜单进度
+// @Description 查询指定平台最新的菜单进度信息
 // @Tags 商家端.外卖管理
 // @Accept json
 // @Produce json
@@ -218,9 +222,9 @@ func (h *TakeoutHandler) GetImportProgress(c *gin.Context) {
 	helper.Success(c, progressResp)
 }
 
-// GetImportLogs 获取导入日志列表
-// @Summary 获取外卖菜单导入历史日志
-// @Description 分页查询菜单导入的历史日志，支持按平台、类型、状态筛选
+// GetImportLogs 获取日志列表
+// @Summary 获取外卖菜单历史日志
+// @Description 分页查询菜单的历史日志，支持按平台、类型、状态筛选
 // @Tags 商家端.外卖管理
 // @Accept json
 // @Produce json
@@ -243,6 +247,64 @@ func (h *TakeoutHandler) GetImportLogs(c *gin.Context) {
 	}
 
 	helper.Success(c, logsResp)
+}
+
+// PushTakeoutMenu 推送菜单数据
+// @Summary 推送菜单数据到外卖平台
+// @Description 推送菜单数据到外卖平台
+// @Tags 商家端.外卖管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param platform query string true "外卖平台"
+// @Success 200 {object} nil "成功"
+// @Router /shop/takeout/menu/push [post]
+func (h *TakeoutHandler) PushTakeoutMenu(c *gin.Context) {
+	platform := c.Query("platform")
+	if platform == "" {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("平台参数不能为空"))
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.takeoutSrv.PushMenuToPlatform(ctx, platform)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "推送菜单数据失败"))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// ReimportTakeoutMenu 重新导入菜单
+// @Summary 重新导入失败的菜单
+// @Description 基于失败的导入日志重新导入菜单到TTPOS
+// @Tags 商家端.外卖管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param log_uuid query uint64 true "导入日志UUID"
+// @Success 200 {object} resp.GrabMenuImportResp "成功"
+// @Router /shop/takeout/menu/reimport [post]
+func (h *TakeoutHandler) ReimportTakeoutMenu(c *gin.Context) {
+	logUuidStr := c.Query("log_uuid")
+	if logUuidStr == "" {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("日志UUID不能为空"))
+		return
+	}
+
+	logUuid, err := strconv.ParseUint(logUuidStr, 10, 64)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("日志UUID格式错误"))
+		return
+	}
+
+	ctx := helper.GetContext(c)
+	result, err := h.takeoutSrv.ReimportMenuToTTPOS(ctx, logUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "重新导入菜单失败"))
+		return
+	}
+
+	helper.Success(c, result)
 }
 
 // RegisterTakeoutHandlers 注册外卖路由
@@ -275,9 +337,11 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/takeout/binding-status", takeoutHandler.CheckBindingStatus) // 检查绑定状态 (platform参数)
 
 		// 外卖菜单相关路由
+		privateApi.POST("/takeout/menu/push", takeoutHandler.PushTakeoutMenu)             // 推送菜单数据 (platform参数)
 		privateApi.GET("/takeout/menu/get", takeoutHandler.GetTakeoutMenu)                // 获取菜单数据 (platform参数)
 		privateApi.GET("/takeout/menu/import/progress", takeoutHandler.GetImportProgress) // 获取导入进度
 		privateApi.GET("/takeout/menu/import/logs", takeoutHandler.GetImportLogs)         // 获取导入日志列表
+		privateApi.POST("/takeout/menu/reimport", takeoutHandler.ReimportTakeoutMenu)     // 重新导入菜单 (log_uuid参数)
 
 	}
 }

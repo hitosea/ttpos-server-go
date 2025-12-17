@@ -74,6 +74,10 @@ type MigrateDatabaseConf struct {
 	MigrateOldDBPrefix   string // 表名前缀
 }
 
+type TakeoutConf struct {
+	TakeoutTtposSecret string // 导出密钥
+}
+
 type SMSConf struct {
 	BaseURL     string // 基础URL
 	APIKey      string // API密钥
