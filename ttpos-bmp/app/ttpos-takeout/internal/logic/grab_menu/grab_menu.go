@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -18,7 +18,6 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/ttpos"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 	"ttpos-bmp/app/ttpos-takeout/utility"
 	"ttpos-bmp/internal/pkg/queue"
@@ -100,56 +99,45 @@ func (s *sGrabMenu) HandleGetMenu(ctx context.Context, partnerMerchantID string)
 // fetchMenuFromTTpos 从 TTPOS 主模块获取菜单数据
 // 当本地菜单快照为空时，回退调用此方法
 func (s *sGrabMenu) fetchMenuFromTTpos(ctx context.Context, shopUUID uint64) (*grabfood.GetMenuNewResponse, error) {
-	// 1. 获取 TTPOS endpoint 配置
-	ttposEndpoint := g.Cfg().MustGet(ctx, "app.ttposEndpoint").String()
-	if ttposEndpoint == "" {
-		return nil, gerror.NewCode(gcode.CodeMissingConfiguration, "TTPOS endpoint not configured")
+	// 1. 获取带认证的 Client
+	client, err := utility.GetTtposClientWithAuth(ctx, fmt.Sprintf("%d", shopUUID))
+	if err != nil {
+		return nil, gerror.Wrap(err, "failed to create TTPOS client")
 	}
 
-	// 2. 构建请求 URL
-	url := fmt.Sprintf("%s/api/v1/takeout/menu/export", ttposEndpoint)
-
-	// 3. 构建请求体
+	// 2. 构建请求体
 	reqBody := g.Map{
 		"platform":     string(consts.ProviderGrab),
 		"company_uuid": shopUUID,
 	}
 
-	// 4. 生成认证头
-	auth, err := utility.GenerateTtposAuth(fmt.Sprintf("%d", shopUUID))
+	// 3. 发起请求
+	resp := client.ContentJson().PostVar(ctx, "/api/v1/takeout/menu/export", reqBody)
+	if resp == nil || resp.IsEmpty() {
+		return nil, gerror.New("TTPOS export API returned empty response")
+	}
+
+	// 4. 解析响应
+	resultJson, err := gjson.DecodeToJson(resp)
 	if err != nil {
-		return nil, gerror.Wrap(err, "failed to generate TTPOS auth header")
-	}
-
-	// 5. 发起 HTTP 请求（设置 10s 超时）
-	client := g.Client().Timeout(10 * time.Second)
-	resp, err := client.
-		SetHeader(consts.TTPOS_HEADER_SECRET, auth).
-		ContentJson().
-		Post(ctx, url, reqBody)
-	if err != nil {
-		return nil, gerror.Wrap(err, "failed to call TTPOS export API")
-	}
-	defer resp.Close()
-
-	// 6. 检查 HTTP 状态码
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, gerror.Newf("TTPOS export API returned status %d: %s", resp.StatusCode, resp.ReadAllString())
-	}
-
-	// 7. 解析响应
-	var result ttpos.GetMenuExportResp
-	if err := json.Unmarshal(resp.ReadAll(), &result); err != nil {
 		return nil, gerror.Wrap(err, "failed to parse TTPOS export API response")
 	}
 
-	// 8. 检查业务状态码（兼容 code=200 和 code=1 两种成功状态）
-	if result.Code != 200 && result.Code != 1 {
-		return nil, gerror.Newf("TTPOS export API error: code=%d, message=%s", result.Code, result.Message)
+	// 5. 检查业务状态码（兼容 code=200 和 code=1 两种成功状态）
+	code := resultJson.Get("code").Int()
+	if code != 0 {
+		message := resultJson.Get("message").String()
+		return nil, gerror.Newf("TTPOS export API error: code=%d, message=%s", code, message)
+	}
+
+	// 6. 解析菜单数据
+	menuData := &grabfood.GetMenuNewResponse{}
+	if err := resultJson.Get("data.menuData").Struct(&menuData); err != nil {
+		return nil, gerror.Wrap(err, "failed to parse menu data")
 	}
 
 	g.Log().Infof(ctx, "[Grab] Fetched menu from TTPOS successfully: shopUUID=%d", shopUUID)
-	return &result.Data.MenuData, nil
+	return menuData, nil
 }
 
 // HandleMenuSyncState 处理菜单同步状态回调

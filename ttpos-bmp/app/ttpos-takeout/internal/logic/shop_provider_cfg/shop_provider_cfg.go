@@ -46,16 +46,33 @@ func init() {
 func (s *sShopProviderCfg) UpsertShopProviderCfg(ctx context.Context, shopUUID uint64, providerName string, merchantID string, status consts.ProviderShopStatus) error {
 	now := gtime.Timestamp()
 
-	// 使用 Save (InsertOrUpdate) 模式，基于 uk_shop_provider 唯一索引
-	_, err := dao.ShopProviderCfg.Ctx(ctx).Data(do.ShopProviderCfg{
-		Uuid:               uuid.MustGetID(),
-		ShopUuid:           shopUUID,
-		ProviderName:       providerName,
-		ProviderMerchantId: merchantID,
-		ProviderShopStatus: string(status),
-		CreatedAt:          now,
-		UpdatedAt:          now,
-	}).Save()
+	// 先查询是否存在
+	existing, err := s.GetShopProviderCfg(ctx, shopUUID, providerName)
+	if err != nil {
+		return err
+	}
+
+	if existing != nil {
+		// 更新（不更新 uuid 和 created_at）
+		_, err = dao.ShopProviderCfg.Ctx(ctx).
+			Where(dao.ShopProviderCfg.Columns().Uuid, existing.Uuid).
+			Data(g.Map{
+				dao.ShopProviderCfg.Columns().ProviderMerchantId: merchantID,
+				dao.ShopProviderCfg.Columns().ProviderShopStatus: string(status),
+				dao.ShopProviderCfg.Columns().UpdatedAt:          now,
+			}).Update()
+	} else {
+		// 插入新记录
+		_, err = dao.ShopProviderCfg.Ctx(ctx).Data(do.ShopProviderCfg{
+			Uuid:               uuid.MustGetID(),
+			ShopUuid:           shopUUID,
+			ProviderName:       providerName,
+			ProviderMerchantId: merchantID,
+			ProviderShopStatus: string(status),
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		}).Insert()
+	}
 
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] Upsert failed: shop_uuid=%d, provider=%s, status=%s, error: %v",
