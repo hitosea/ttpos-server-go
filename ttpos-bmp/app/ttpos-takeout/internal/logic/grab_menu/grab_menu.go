@@ -111,8 +111,8 @@ func (s *sGrabMenu) fetchMenuFromTTpos(ctx context.Context, shopUUID uint64) (*g
 
 	// 3. 构建请求体
 	reqBody := g.Map{
-		"platform":    string(consts.ProviderGrab),
-		"companyUuid": shopUUID,
+		"platform":     string(consts.ProviderGrab),
+		"company_uuid": shopUUID,
 	}
 
 	// 4. 生成认证头
