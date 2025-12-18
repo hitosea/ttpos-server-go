@@ -49,7 +49,8 @@ type ISalesOutboundSummarySrv interface {
 	// ctx: gin.Context（可为 nil，用于命令行环境）
 	// companyUuid: 门店UUID
 	// saleOrderUuid: 销售订单UUID
-	RegenerateOrderPosInvoice(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateOrderPosInvoiceResp, error)
+	// openPosEntryName: OpenPosEntryName（必填）
+	RegenerateOrderPosInvoice(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64, openPosEntryName string) (*resp.RegenerateOrderPosInvoiceResp, error)
 }
 
 // salesOutboundSummarySrv 销售出库汇总服务实现
@@ -780,6 +781,7 @@ func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
 	ctx *gin.Context,
 	companyUuid uint64,
 	saleOrderUuid uint64,
+	openPosEntryName string,
 ) (*resp.RegenerateOrderPosInvoiceResp, error) {
 	startTime := time.Now()
 	db := s.dbm.GetDB(companyUuid)
@@ -874,7 +876,7 @@ func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
 
 	// 调用 SavePosInvoice 方法（通过接口调用，如果提供了 shiftLog 则通过选项传入）
 	var savePosInvoiceResp *selling.SavePosInvoiceResp
-	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog), WithRemark("batch redo"))
+	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog), WithRemark("batch redo"), WithOpenPosEntryName(openPosEntryName))
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存发票失败")
 	}
