@@ -2,7 +2,6 @@ package service
 
 import (
 	"math"
-	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
 )
 
@@ -21,22 +20,12 @@ func (s *minProductPackageInventoryStrategy) CalculatePackageInventory(
 	inventories []float64,
 ) (float64, error) {
 	if len(inventories) == 0 {
-		return 0, errors.New("库存列表为空")
+		return 0, nil
 	}
 
-	var minInventory float64 = math.MaxFloat64
-	var hasValidInventory bool
-
-	for _, inventory := range inventories {
-		if inventory < minInventory {
-			minInventory = inventory
-			hasValidInventory = true
-		}
+	minInventory := inventories[0]
+	for _, inventory := range inventories[1:] {
+		minInventory = math.Min(minInventory, inventory)
 	}
-
-	if !hasValidInventory {
-		return 0, errors.New("无法计算商品包库存：所有BOM库存查询失败")
-	}
-
 	return minInventory, nil
 }
