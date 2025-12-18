@@ -9177,7 +9177,6 @@ definitions:
         description: 平台名称：grab, lineman 等
         type: string
     required:
-    - enabled
     - platform
     type: object
   resp.AbnormalPrintItem:
@@ -28578,6 +28577,77 @@ paths:
       summary: 桌台订单商品备注
       tags:
       - 扫码点餐
+  /kiosk/login:
+    post:
+      consumes:
+      - application/json
+      description: 登录
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      summary: 登录
+      tags:
+      - 自助点餐机.认证
+  /kiosk/logout:
+    post:
+      consumes:
+      - application/json
+      description: 退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 退出登录
+      tags:
+      - 自助点餐机.认证
+  /kiosk/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 自助点餐机.认证
   /kitchen/base:
     get:
       consumes:
