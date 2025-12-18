@@ -146,26 +146,28 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 
 // ImportMenuToTTPOS 导入菜单到TTPOS
 func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error) {
-	takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// TODO: 传产品说 "导入菜单到TTPOS的功能不需要了，我认为不合理 就先保留注释"
 
-	// 1. 导入菜单
-	resp, err := s.ImportMenu(ctx, request.ImportMenuRequest{
-		Platform: "grab",
-		MenuData: takeoutMenu.Menu,
-	})
-	if err != nil {
-		return nil, err
-	}
+	// takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	err = s.PushMenuToPlatform(ctx, "grab")
+	// // 1. 导入菜单
+	// resp, err := s.ImportMenu(ctx, request.ImportMenuRequest{
+	// 	Platform: "grab",
+	// 	MenuData: takeoutMenu.Menu,
+	// })
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	err := s.PushMenuToPlatform(ctx, "grab")
 	if err != nil {
 		return nil, errors.WithMessage(err, "推送菜单到Grab失败")
 	}
 
-	return resp, nil
+	return nil, nil
 }
 
 // ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
