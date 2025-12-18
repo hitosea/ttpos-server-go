@@ -22,8 +22,10 @@ type TransferOrderInfo struct {
 	TransferType             int                `json:"transfer_type"`                // 调拨类型: 1-调入 2-调出
 	SenderCompanyUuid        uint64             `json:"sender_company_uuid"`          // 发货门店UUID
 	SenderCompanyName        string             `json:"sender_company_name"`          // 发货门店名称
+	SenderCompanyStoreCode   string             `json:"sender_company_store_code"`    // 发货门店编码
 	ReceiverCompanyUuid      uint64             `json:"receiver_company_uuid"`        // 收货门店UUID
 	ReceiverCompanyName      string             `json:"receiver_company_name"`        // 收货门店名称
+	ReceiverCompanyStoreCode string             `json:"receiver_company_store_code"`  // 收货门店编码
 	OutWarehouseErpCode      string             `json:"out_warehouse_erp_code"`       // 出库仓库ERP编码
 	OutWarehouseName         dto.LocaleResponse `json:"out_warehouse_name"`           // 出库仓库名称
 	InWarehouseErpCode       string             `json:"in_warehouse_erp_code"`        // 入库仓库ERP编码
