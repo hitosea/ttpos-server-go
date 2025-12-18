@@ -4477,10 +4477,15 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		customerUuid = ""
 	}
 	erpSrv := erp.NewIErpSrv(s.dbm)
+	// 优先使用选项中的 OpenPosEntryName，如果为空则使用 shiftLog 中的值
+	openPosEntryName := shiftLog.ErpnextOpenPosEntryName
+	if option.OpenPosEntryName != "" {
+		openPosEntryName = option.OpenPosEntryName
+	}
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
 		OrderNo:          saleOrder.OrderNo,
-		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+		OpenPosEntryName: openPosEntryName,
 		PostingDatetime:  saleOrder.FinishTime,
 		CustomerUuid:     customerUuid,
 		Items:            items,         // 订单商品列表
@@ -5331,8 +5336,9 @@ func WithIsH5Order() func(option *MustPlanConfirmOption) {
 
 // SavePosInvoiceOption SavePosInvoice 方法选项
 type SavePosInvoiceOption struct {
-	ShiftLog *model.StaffShiftLog // 班次记录（可选，如果不提供则从 Context 中获取）
-	Remark   string               // 备注（可选，用于区分批量任务等场景）
+	ShiftLog         *model.StaffShiftLog // 班次记录（可选，如果不提供则从 Context 中获取）
+	Remark           string               // 备注（可选，用于区分批量任务等场景）
+	OpenPosEntryName string               // OpenPosEntryName（可选，如果不提供则从 shiftLog 中获取）
 }
 
 // WithShiftLog 设置班次记录选项
@@ -5346,6 +5352,13 @@ func WithShiftLog(shiftLog *model.StaffShiftLog) func(*SavePosInvoiceOption) {
 func WithRemark(remark string) func(*SavePosInvoiceOption) {
 	return func(option *SavePosInvoiceOption) {
 		option.Remark = remark
+	}
+}
+
+// WithOpenPosEntryName 设置 OpenPosEntryName 选项
+func WithOpenPosEntryName(openPosEntryName string) func(*SavePosInvoiceOption) {
+	return func(option *SavePosInvoiceOption) {
+		option.OpenPosEntryName = openPosEntryName
 	}
 }
 

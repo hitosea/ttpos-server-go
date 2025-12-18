@@ -51,6 +51,7 @@ type IBatchRegenerateTaskManager interface {
 type batchRegenerateTaskManager struct {
 	dbm                     *database.DBManager
 	salesOutboundSummarySrv ISalesOutboundSummarySrv
+	openPosEntryName        string
 	fileLock                *sync.Mutex // 文件锁，防止并发操作任务清单文件
 }
 
@@ -58,10 +59,12 @@ type batchRegenerateTaskManager struct {
 func NewBatchRegenerateTaskManager(
 	dbm *database.DBManager,
 	salesOutboundSummarySrv ISalesOutboundSummarySrv,
+	openPosEntryName string,
 ) IBatchRegenerateTaskManager {
 	return &batchRegenerateTaskManager{
 		dbm:                     dbm,
 		salesOutboundSummarySrv: salesOutboundSummarySrv,
+		openPosEntryName:        openPosEntryName,
 		fileLock:                &sync.Mutex{},
 	}
 }
@@ -535,7 +538,7 @@ func (m *batchRegenerateTaskManager) executeOrderStep(
 	case "regenerate-sale-order-material-outbound":
 		_, stepErr = m.salesOutboundSummarySrv.RegenerateSaleBillMaterialOutbound(&ctx, companyUuid, saleOrderUuid)
 	case "regenerate-order-pos-invoice":
-		_, stepErr = m.salesOutboundSummarySrv.RegenerateOrderPosInvoice(&ctx, companyUuid, saleOrderUuid)
+		_, stepErr = m.salesOutboundSummarySrv.RegenerateOrderPosInvoice(&ctx, companyUuid, saleOrderUuid, m.openPosEntryName)
 	default:
 		stepErr = errors.New(fmt.Sprintf("未知的步骤名称: %s", stepName))
 	}
