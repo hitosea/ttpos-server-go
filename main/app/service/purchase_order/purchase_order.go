@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -54,21 +55,23 @@ type purchaseOrderSrv struct {
 	helper     *purchaseOrderHelper
 	receiptSrv *purchaseReceiptOrderSrv
 	lock       lock.Lock
+	settingSrv setting.ISrv
 }
 
 // NewPurchaseOrderSrv 创建采购申请服务
-func NewPurchaseOrderSrv(dbm *database.DBManager) IPurchaseOrderSrv {
-	return NewPurchaseOrderSrvImpl(dbm)
+func NewPurchaseOrderSrv(dbm *database.DBManager, settingSrv setting.ISrv) IPurchaseOrderSrv {
+	return NewPurchaseOrderSrvImpl(dbm, settingSrv)
 }
 
 // NewPurchaseOrderSrvImpl 创建采购申请服务实现
-func NewPurchaseOrderSrvImpl(dbm *database.DBManager) IPurchaseOrderSrv {
+func NewPurchaseOrderSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IPurchaseOrderSrv {
 	return &purchaseOrderSrv{
 		dbm:        dbm,
 		validator:  &purchaseOrderValidator{},
 		helper:     &purchaseOrderHelper{},
 		receiptSrv: newPurchaseReceiptOrderSrv(dbm),
 		lock:       lock.NewSystemLock(),
+		settingSrv: settingSrv,
 	}
 }
 
@@ -284,7 +287,14 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 	db := ctx.GetDB()
 	var result resp.PurchaseOrderCreateResp
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	// 获取店铺编码
+	var companyStoreCode string
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err == nil {
+		companyStoreCode = storeSetting.StoreCode
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
@@ -327,6 +337,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 			PurchaseType:      utils.IfInt(req.PurchaseType == 2, 2, 1),
 			WarehouseErpCode:  req.WarehouseErpCode,
 			WarehouseName:     warehouseName,
+			CompanyStoreCode:  companyStoreCode,
 		}
 
 		// 设置默认仓库信息

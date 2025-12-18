@@ -21,6 +21,9 @@ const (
 // TTPOS_HEADER_CALLBACK_AUTH TTPOS回调Auth
 const TTPOS_HEADER_CALLBACK_AUTH = "X-TTPOS-Callback-Auth"
 
+// TTPOS_HEADER_SECRET TTPOS服务间认证头
+const TTPOS_HEADER_SECRET = "X-TTPOS-SECRET"
+
 // MapGrabIntegrationStatus 映射 Grab integrationStatus 到内部状态
 func MapGrabIntegrationStatus(grabStatus string) ProviderShopStatus {
 	switch grabStatus {
