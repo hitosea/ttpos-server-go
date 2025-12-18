@@ -128,7 +128,8 @@
 ```bash
 ./ttpos-server-go batch-regenerate-order-material-and-invoice \
   --company-uuids "7709131161600000" \
-  --start-date "2025-12-15"
+  --start-date "2025-12-15" \
+  --open-pos-entry-name "POS-ENTRY-001"
 ```
 
 ### 参数说明
@@ -137,6 +138,7 @@
 |------|------|------|------|
 | `--company-uuids` | ✅ | 公司UUID列表，逗号分隔 | `"7709131161600000,7709131161600001"` |
 | `--start-date` | ✅ | 起始日期，格式：YYYY-MM-DD | `"2025-12-15"` |
+| `--open-pos-entry-name` | ✅ | OpenPosEntryName（用于生成POS发票） | `"POS-ENTRY-001"` |
 | `--task-file` | ❌ | 任务清单文件路径（可选，默认自动生成） | `"./my-task.json"` |
 | `--resume` | ❌ | 从现有任务清单继续执行 | - |
 | `--dry-run` | ❌ | 预览模式，仅生成任务清单不执行 | - |
@@ -151,6 +153,7 @@
 ./ttpos-server-go batch-regenerate-order-material-and-invoice \
   --company-uuids "7709131161600000" \
   --start-date "2025-12-15" \
+  --open-pos-entry-name "POS-ENTRY-001" \
   --show-progress
 ```
 
@@ -160,6 +163,7 @@
 ./ttpos-server-go batch-regenerate-order-material-and-invoice \
   --company-uuids "7709131161600000,7709131161600001" \
   --start-date "2025-12-15" \
+  --open-pos-entry-name "POS-ENTRY-001" \
   --show-progress
 ```
 
@@ -169,6 +173,7 @@
 ./ttpos-server-go batch-regenerate-order-material-and-invoice \
   --company-uuids "7709131161600000" \
   --start-date "2025-12-15" \
+  --open-pos-entry-name "POS-ENTRY-001" \
   --dry-run
 ```
 
@@ -179,6 +184,7 @@
 ```bash
 ./ttpos-server-go batch-regenerate-order-material-and-invoice \
   --task-file "./batch-regenerate-task-1765886177.json" \
+  --open-pos-entry-name "POS-ENTRY-001" \
   --resume \
   --show-progress
 ```

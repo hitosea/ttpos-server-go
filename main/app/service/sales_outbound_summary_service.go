@@ -49,7 +49,8 @@ type ISalesOutboundSummarySrv interface {
 	// ctx: gin.Context（可为 nil，用于命令行环境）
 	// companyUuid: 门店UUID
 	// saleOrderUuid: 销售订单UUID
-	RegenerateOrderPosInvoice(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64) (*resp.RegenerateOrderPosInvoiceResp, error)
+	// openPosEntryName: OpenPosEntryName（必填）
+	RegenerateOrderPosInvoice(ctx *gin.Context, companyUuid uint64, saleOrderUuid uint64, openPosEntryName string) (*resp.RegenerateOrderPosInvoiceResp, error)
 }
 
 // salesOutboundSummarySrv 销售出库汇总服务实现
@@ -682,50 +683,96 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 		// 4.3 创建新记录并关联原出库单UUID
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		newItems := make([]*model.WarehouseOutFormItem, 0)
-		for warehouseOutFormUuid, originalItems := range formItemMap {
-			// 验证出库单是否存在
-			warehouseOutForm, err := warehouseFormRepo.GetWarehouseForm(
-				repository.CommonRepo.WhereByUuid(warehouseOutFormUuid),
-				repository.CommonRepo.WhereBySoftDelete(),
-			)
-			if err != nil || warehouseOutForm == nil {
-				logger.Logger.Warn("出库单不存在，使用原UUID",
-					zap.Uint64("warehouseOutFormUuid", warehouseOutFormUuid),
-					zap.Uint64("saleBillUuid", saleBillUuid),
-					zap.Error(err),
-				)
-			}
 
-			// 为每个材料创建新记录
-			for _, materialStock := range materialStocksList {
-				// 查找对应的原记录（按 material_uuid 匹配）
-				var originalItem *model.WarehouseOutFormItem
-				for _, item := range originalItems {
-					if item.MaterialUuid == materialStock.MaterialUuid {
-						originalItem = item
-						break
+		// 如果有原记录，只使用第一个出库单创建新记录
+		if len(formItemMap) > 0 {
+			// 获取第一个出库单UUID和StaffShiftLogUuid（用于创建新记录）
+			var firstWarehouseOutFormUuid uint64
+			var firstStaffShiftLogUuid uint64
+
+			for warehouseOutFormUuid, originalItems := range formItemMap {
+				// 记录第一个出库单信息
+				if firstWarehouseOutFormUuid == 0 {
+					firstWarehouseOutFormUuid = warehouseOutFormUuid
+					if len(originalItems) > 0 {
+						firstStaffShiftLogUuid = originalItems[0].StaffShiftLogUuid
+					} else {
+						firstStaffShiftLogUuid = targetSaleOrder.StaffShiftLogUuid
 					}
 				}
 
-				// 如果没有对应的原记录，跳过（可能该材料是新添加的，或者不在这个出库单中）
-				if originalItem == nil {
-					continue
+				// 验证出库单是否存在（仅用于日志记录）
+				warehouseOutForm, err := warehouseFormRepo.GetWarehouseForm(
+					repository.CommonRepo.WhereByUuid(warehouseOutFormUuid),
+					repository.CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil || warehouseOutForm == nil {
+					logger.Logger.Warn("出库单不存在，使用原UUID",
+						zap.Uint64("warehouseOutFormUuid", warehouseOutFormUuid),
+						zap.Uint64("saleBillUuid", saleBillUuid),
+						zap.Error(err),
+					)
 				}
+			}
 
-				// 创建新记录
+			// 只使用第一个出库单创建所有材料的记录
+			for _, materialStock := range materialStocksList {
 				uuid, _ := utils.GetID()
 				newItem := &model.WarehouseOutFormItem{
 					BaseModel: model.BaseModel{
 						Uuid:       uuid,
 						CreateTime: time.Now().Unix(),
 					},
-					WarehouseOutFormUuid: warehouseOutFormUuid, // 关联原出库单UUID
+					WarehouseOutFormUuid: firstWarehouseOutFormUuid, // 关联第一个出库单UUID
 					WarehouseUuid:        materialStock.WarehouseUuid,
 					MaterialUuid:         materialStock.MaterialUuid,
 					SaleBillUuid:         saleBillUuid,
 					SaleOrderUuid:        saleOrderUuid, // 使用指定的销售订单UUID
-					StaffShiftLogUuid:    originalItem.StaffShiftLogUuid,
+					StaffShiftLogUuid:    firstStaffShiftLogUuid,
 					Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(), // 保留4位小数
+					Scene:                constant.WarehouseOutFormSceneSales,
+					Status:               constant.WarehouseOutFormItemStatusSuccess,
+					ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
+				}
+				newItems = append(newItems, newItem)
+			}
+		}
+
+		// 如果没有原记录但有新的材料消耗，需要创建新的出库单
+		if len(formItemMap) == 0 && len(materialStocksList) > 0 {
+			// 创建新的出库单
+			warehouseOutFormUuid, _ := utils.GetID()
+			warehouseOutForm := &model.WarehouseOutForm{
+				BaseModel: model.BaseModel{
+					Uuid:       warehouseOutFormUuid,
+					CreateTime: time.Now().Unix(),
+				},
+				FormNo:              "CK" + time.Now().Format("20060102150405"),
+				Scene:               constant.WarehouseOutFormSceneSales,
+				AssociatedOrderUuid: saleBillUuid,
+				OperatorUuid:        targetSaleOrder.CashierUuid, // 使用收银员UUID作为操作员
+			}
+
+			// 创建出库单记录
+			if err := warehouseFormRepo.CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+				return errors.WithMessage(err, "创建出库单失败")
+			}
+
+			// 为每个材料创建出库单明细
+			for _, materialStock := range materialStocksList {
+				uuid, _ := utils.GetID()
+				newItem := &model.WarehouseOutFormItem{
+					BaseModel: model.BaseModel{
+						Uuid:       uuid,
+						CreateTime: time.Now().Unix(),
+					},
+					WarehouseOutFormUuid: warehouseOutFormUuid,
+					WarehouseUuid:        materialStock.WarehouseUuid,
+					MaterialUuid:         materialStock.MaterialUuid,
+					SaleBillUuid:         saleBillUuid,
+					SaleOrderUuid:        saleOrderUuid,
+					StaffShiftLogUuid:    targetSaleOrder.StaffShiftLogUuid,
+					Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(),
 					Scene:                constant.WarehouseOutFormSceneSales,
 					Status:               constant.WarehouseOutFormItemStatusSuccess,
 					ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
@@ -780,6 +827,7 @@ func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
 	ctx *gin.Context,
 	companyUuid uint64,
 	saleOrderUuid uint64,
+	openPosEntryName string,
 ) (*resp.RegenerateOrderPosInvoiceResp, error) {
 	startTime := time.Now()
 	db := s.dbm.GetDB(companyUuid)
@@ -874,7 +922,7 @@ func (s *salesOutboundSummarySrv) RegenerateOrderPosInvoice(
 
 	// 调用 SavePosInvoice 方法（通过接口调用，如果提供了 shiftLog 则通过选项传入）
 	var savePosInvoiceResp *selling.SavePosInvoiceResp
-	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog), WithRemark("batch redo"))
+	savePosInvoiceResp, err = orderSrv.SavePosInvoice(ttposCtx, saleOrder, saleBill, db, WithShiftLog(shiftLog), WithRemark("batch redo"), WithOpenPosEntryName(openPosEntryName))
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存发票失败")
 	}

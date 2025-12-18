@@ -84,6 +84,7 @@
 **参数**:
 - `--company-uuid` (必填): 门店UUID
 - `--sale-order-uuid` (必填): 销售订单UUID
+- `--open-pos-entry-name` (必填): OpenPosEntryName（用于生成POS发票）
 - `--dry-run` (可选): 预览模式，仅预览不实际执行
 
 **使用示例**:
@@ -93,12 +94,14 @@
 ./ttpos-server-go regenerate-order-pos-invoice \
   --company-uuid 7709131161600000 \
   --sale-order-uuid 202512151410092620 \
+  --open-pos-entry-name "POS-ENTRY-001" \
   --dry-run
 
 # 实际执行（需要输入 'yes' 确认）
 ./ttpos-server-go regenerate-order-pos-invoice \
   --company-uuid 7709131161600000 \
-  --sale-order-uuid 202512151410092620
+  --sale-order-uuid 202512151410092620 \
+  --open-pos-entry-name "POS-ENTRY-001"
 ```
 
 **数据影响**: 
