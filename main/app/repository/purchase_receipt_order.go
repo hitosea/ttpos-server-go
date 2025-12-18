@@ -249,7 +249,7 @@ func (r *PurchaseReceiptOrderRepoImpl) WithItems() DBOption {
 		return db.Preload("Items.PurchaseOrderItem").
 			Preload("Items.PurchaseOrderItem.Units").
 			Preload("Items.Material.NotBaseUnitList.Unit.MultiLanguageName").
-			Preload("Items.Units")
+			Preload("Items.Units.MaterialUnit")
 	}
 }
 
