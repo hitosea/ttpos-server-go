@@ -31,6 +31,7 @@ import (
 func init() {
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateCompanyUuidsFlag, "company-uuids", "", "公司UUID列表，逗号分隔")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateStartDateFlag, "start-date", "", "起始日期，格式：YYYY-MM-DD")
+	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateOpenPosEntryNameFlag, "open-pos-entry-name", "", "OpenPosEntryName")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateTaskFileFlag, "task-file", "", "任务清单文件路径（可选，默认：./batch-regenerate-task-{timestamp}.json）")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().BoolVar(&batchRegenerateResumeFlag, "resume", false, "从现有任务清单继续执行")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().BoolVar(&batchRegenerateDryRunFlag, "dry-run", false, "预览模式，仅生成任务清单不执行")
@@ -38,17 +39,19 @@ func init() {
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().IntVar(&batchRegenerateProgressIntervalFlag, "progress-interval", 5, "进度信息刷新间隔（秒数，默认：5秒）")
 	batchRegenerateOrderMaterialAndInvoiceCmd.MarkFlagRequired("company-uuids")
 	batchRegenerateOrderMaterialAndInvoiceCmd.MarkFlagRequired("start-date")
+	batchRegenerateOrderMaterialAndInvoiceCmd.MarkFlagRequired("open-pos-entry-name")
 	rootCommand.AddCommand(batchRegenerateOrderMaterialAndInvoiceCmd)
 }
 
 var (
-	batchRegenerateCompanyUuidsFlag     string
-	batchRegenerateStartDateFlag        string
-	batchRegenerateTaskFileFlag         string
-	batchRegenerateResumeFlag           bool
-	batchRegenerateDryRunFlag           bool
-	batchRegenerateShowProgressFlag     bool
-	batchRegenerateProgressIntervalFlag int
+	batchRegenerateCompanyUuidsFlag      string
+	batchRegenerateStartDateFlag         string
+	batchRegenerateOpenPosEntryNameFlag  string
+	batchRegenerateTaskFileFlag          string
+	batchRegenerateResumeFlag            bool
+	batchRegenerateDryRunFlag            bool
+	batchRegenerateShowProgressFlag      bool
+	batchRegenerateProgressIntervalFlag  int
 )
 
 // 颜色常量（ANSI转义序列）- 使用字符串字面量避免包级别冲突
@@ -145,6 +148,13 @@ var batchRegenerateOrderMaterialAndInvoiceCmd = &cobra.Command{
 			return
 		}
 
+		// 验证 OpenPosEntryName
+		if batchRegenerateOpenPosEntryNameFlag == "" {
+			fmt.Printf("%s错误: OpenPosEntryName不能为空%s\n", batchRegenerateRedColor, batchRegenerateResetColor)
+			logger.Logger.Error("OpenPosEntryName不能为空")
+			return
+		}
+
 		// 确定任务清单文件路径
 		taskFilePath := batchRegenerateTaskFileFlag
 		if taskFilePath == "" {
@@ -159,7 +169,7 @@ var batchRegenerateOrderMaterialAndInvoiceCmd = &cobra.Command{
 		// 初始化Service
 		settingSrv := setting.NewSrv(dbm, cache.Global)
 		salesOutboundSummarySrv := service.NewSalesOutboundSummarySrv(dbm, settingSrv, cache.Global)
-		taskManager := service.NewBatchRegenerateTaskManager(dbm, salesOutboundSummarySrv)
+		taskManager := service.NewBatchRegenerateTaskManager(dbm, salesOutboundSummarySrv, batchRegenerateOpenPosEntryNameFlag)
 		logger.Logger.Info("服务初始化完成")
 
 		// 如果是resume模式，加载现有任务清单

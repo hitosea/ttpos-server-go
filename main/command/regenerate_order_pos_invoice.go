@@ -29,16 +29,19 @@ import (
 func init() {
 	regenerateOrderPosInvoiceCmd.Flags().Uint64Var(&regenerateOrderPosInvoiceCompanyUuidFlag, "company-uuid", 0, "门店UUID")
 	regenerateOrderPosInvoiceCmd.Flags().Uint64Var(&regenerateOrderPosInvoiceSaleOrderUuidFlag, "sale-order-uuid", 0, "销售订单UUID")
+	regenerateOrderPosInvoiceCmd.Flags().StringVar(&regenerateOrderPosInvoiceOpenPosEntryNameFlag, "open-pos-entry-name", "", "OpenPosEntryName")
 	regenerateOrderPosInvoiceCmd.Flags().BoolVar(&regenerateOrderPosInvoiceDryRunFlag, "dry-run", false, "仅预览，不实际执行")
 	regenerateOrderPosInvoiceCmd.MarkFlagRequired("company-uuid")
 	regenerateOrderPosInvoiceCmd.MarkFlagRequired("sale-order-uuid")
+	regenerateOrderPosInvoiceCmd.MarkFlagRequired("open-pos-entry-name")
 	rootCommand.AddCommand(regenerateOrderPosInvoiceCmd)
 }
 
 var (
-	regenerateOrderPosInvoiceCompanyUuidFlag   uint64
-	regenerateOrderPosInvoiceSaleOrderUuidFlag uint64
-	regenerateOrderPosInvoiceDryRunFlag        bool
+	regenerateOrderPosInvoiceCompanyUuidFlag      uint64
+	regenerateOrderPosInvoiceSaleOrderUuidFlag     uint64
+	regenerateOrderPosInvoiceOpenPosEntryNameFlag  string
+	regenerateOrderPosInvoiceDryRunFlag           bool
 )
 
 // regenerate-order-pos-invoice 重新生成订单POS发票
@@ -103,6 +106,10 @@ var regenerateOrderPosInvoiceCmd = &cobra.Command{
 		}
 		if regenerateOrderPosInvoiceSaleOrderUuidFlag == 0 {
 			fmt.Printf("%s错误: 销售订单UUID不能为空%s\n", redColor, resetColor)
+			return
+		}
+		if regenerateOrderPosInvoiceOpenPosEntryNameFlag == "" {
+			fmt.Printf("%s错误: OpenPosEntryName不能为空%s\n", redColor, resetColor)
 			return
 		}
 
@@ -180,6 +187,7 @@ var regenerateOrderPosInvoiceCmd = &cobra.Command{
 			ginCtx,
 			regenerateOrderPosInvoiceCompanyUuidFlag,
 			regenerateOrderPosInvoiceSaleOrderUuidFlag,
+			regenerateOrderPosInvoiceOpenPosEntryNameFlag,
 		)
 		if err != nil {
 			fmt.Printf("%s操作失败: %s%s\n", redColor, err.Error(), resetColor)
