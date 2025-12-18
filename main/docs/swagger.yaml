@@ -16330,6 +16330,9 @@ definitions:
       name:
         description: 门店名称
         type: string
+      store_code:
+        description: 门店编码
+        type: string
       uuid:
         description: 门店UUID
         type: integer
@@ -16359,6 +16362,9 @@ definitions:
         type: string
       company_name:
         description: 所属公司名称 (发起门店)
+        type: string
+      company_store_code:
+        description: 公司店铺编码
         type: string
       company_uuid:
         description: 所属公司UUID (发起门店)
@@ -16458,6 +16464,9 @@ definitions:
         type: string
       company_name:
         description: 所属公司名称 (发起门店)
+        type: string
+      company_store_code:
+        description: 公司店铺编码
         type: string
       company_uuid:
         description: 所属公司UUID (发起门店)
@@ -28714,6 +28723,86 @@ paths:
       summary: 退出登录
       tags:
       - 自助点餐机.认证
+  /kiosk/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取产品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取产品类别列表
+      tags:
+      - 自助点餐机.产品
+  /kiosk/product/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品详细信息
+      parameters:
+      - description: 商品UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品详情
+      tags:
+      - 自助点餐机.产品
+  /kiosk/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取产品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - description: 分类UUID
+        format: int64
+        in: query
+        name: category_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductListWithPaginationResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取产品列表
+      tags:
+      - 自助点餐机.产品
   /kiosk/refresh_token:
     get:
       consumes:

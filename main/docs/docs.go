@@ -17877,6 +17877,132 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/product/category/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取产品类别列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.产品"
+                ],
+                "summary": "获取产品类别列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/kiosk/product/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品详细信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.产品"
+                ],
+                "summary": "获取商品详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "商品UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/kiosk/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取产品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.产品"
+                ],
+                "summary": "获取产品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "分类UUID",
+                        "name": "category_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductListWithPaginationResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/kiosk/refresh_token": {
             "get": {
                 "security": [
@@ -59533,6 +59659,10 @@ const docTemplate = `{
                     "description": "门店名称",
                     "type": "string"
                 },
+                "store_code": {
+                    "description": "门店编码",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "门店UUID",
                     "type": "integer"
@@ -59573,6 +59703,10 @@ const docTemplate = `{
                 },
                 "company_name": {
                     "description": "所属公司名称 (发起门店)",
+                    "type": "string"
+                },
+                "company_store_code": {
+                    "description": "公司店铺编码",
                     "type": "string"
                 },
                 "company_uuid": {
@@ -59713,6 +59847,10 @@ const docTemplate = `{
                 },
                 "company_name": {
                     "description": "所属公司名称 (发起门店)",
+                    "type": "string"
+                },
+                "company_store_code": {
+                    "description": "公司店铺编码",
                     "type": "string"
                 },
                 "company_uuid": {
