@@ -1630,6 +1630,11 @@ func (s *authSrv) StoreSwitch(ctx context.Context, switchReq req.StoreSwitchReq)
 		if companySetting.IsOpenTablet != 1 {
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
+	case constant.SourceKiosk: // 自助点餐机
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if !companySetting.IsOpenKiosk() {
+			return loginResp, errors.New("当前尚未开启自助点餐机功能，如有需要，请联系销售代表")
+		}
 	case constant.SourceShop: // 移动管理端
 		// 权限获取在 shop_auth.go 中完成，这里不需要处理
 	default:
