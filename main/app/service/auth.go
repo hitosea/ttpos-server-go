@@ -509,6 +509,11 @@ func (s *authSrv) loginWithCompany(ctx context.Context, loginReq req.LoginReq, s
 		if companySetting.IsOpenTablet != 1 {
 			return resp.LoginResp{}, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
+	case constant.SourceKiosk: // 自助点餐机
+		companySetting := repository.NewCompanySettingRepo(companyDB).Get()
+		if !companySetting.IsOpenKiosk() {
+			return resp.LoginResp{}, errors.New("当前尚未开启自助点餐机功能，如有需要，请联系销售代表")
+		}
 	case constant.SourceShop: // 移动管理端
 		// 权限获取在 shop_auth.go 中完成，这里不需要处理
 	default:
