@@ -25,4 +25,5 @@ const (
 	SourceAssistant = "assistant"
 	SourceH5        = "h5"
 	SourceMember    = "member"
+	SourceKiosk     = "kiosk"
 )

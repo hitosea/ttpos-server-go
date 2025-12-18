@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/api/v1/callboard"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
+	"ttpos-server-go/app/api/v1/kiosk"
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/member"
 	"ttpos-server-go/app/api/v1/menu"
@@ -175,6 +176,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			tablet.RegisterCallHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterProductHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterBuffetHandlers(tabletGroup, dbm, cache)
+		}
+		// 自助点餐机
+		kioskGroup := apiV1.Group("/kiosk")
+		{
+			kiosk.RegisterAuthHandlers(kioskGroup, dbm, cache)
 		}
 		// 会员端
 		memberGroup := apiV1.Group("/member")
