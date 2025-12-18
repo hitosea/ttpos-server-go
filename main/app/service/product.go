@@ -99,8 +99,8 @@ type IProductSrv interface {
 	GetProductShopCategoryList(ctx context.Context, req req.ProductShopCategoryListReq) (product_resp.ProductShopCategoryListResp, error) // 获取产品类别列表（商家端）
 	GetProductShopCategory(ctx context.Context, req req.ProductShopCategoryReq) (product_resp.ProductShopCategoryDetailResp, error)       // 获取产品类别详情
 	SortProductShopCategory(ctx context.Context, req req.ProductShopCategorySortReq) error                                                // 排序产品分类
-	AddProductShopCategory(ctx context.Context, req req.ProductShopCategoryAddReq) error                                                  // 添加产品分类
-	EditProductShopCategory(ctx context.Context, req req.ProductShopCategoryEditReq) error                                                // 编辑产品分类
+	AddProductShopCategory(ctx context.Context, req req.ProductShopCategoryAddReq) (model.ProductCategory, error)                         // 添加产品分类
+	EditProductShopCategory(ctx context.Context, req req.ProductShopCategoryEditReq) (model.ProductCategory, error)                       // 编辑产品分类
 	DeleteProductShopCategory(ctx context.Context, req req.ProductShopCategoryDeleteReq) error                                            // 删除产品分类
 	SetCategoryDisplayInTakeout(ctx context.Context, categoryUuid uint64) error                                                           // 设置分类在外卖平台显示
 
@@ -118,7 +118,7 @@ type IProductSrv interface {
 
 	GetProductAttributeGroupList(ctx context.Context, req req.ProductAttributeGroupListReq) (product_resp.ProductAttributeGroupListResp, error) // 获取商品属性分组列表
 	GetProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupReq) (product_resp.ProductAttributeGroupDetail, error)           // 获取商品属性分组详情
-	AddProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupAddReq) error                                                    // 添加商品属性分组，商品属性一起添加
+	AddProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupAddReq) (uint64, error)                                          // 添加商品属性分组，商品属性一起添加
 	EditProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupEditReq) error                                                  // 编辑商品属性分组，商品属性一起编辑
 	DeleteProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupReq) error                                                    // 删除商品属性分组
 	SortProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupSortReq) error                                                  // 排序商品属性分组
@@ -127,7 +127,7 @@ type IProductSrv interface {
 
 	GetProductFlavorList(ctx context.Context, req req.ProductFlavorListReq) (product_resp.ProductFlavorListResp, error) // 获取商品规格列表
 	GetProductFlavor(ctx context.Context, req req.ProductFlavorReq) (product_resp.ProductFlavorDetailResp, error)       // 获取商品规格详情
-	AddProductFlavor(ctx context.Context, req req.ProductFlavorAddReq) error                                            // 添加商品规格
+	AddProductFlavor(ctx context.Context, req req.ProductFlavorAddReq) (uint64, error)                                  // 添加商品规格
 	EditProductFlavor(ctx context.Context, req req.ProductFlavorEditReq) error                                          // 编辑商品规格
 	DeleteProductFlavor(ctx context.Context, req req.ProductFlavorDeleteReq) error                                      // 删除商品规格
 	SortProductFlavor(ctx context.Context, req req.ProductFlavorSortReq) error                                          // 排序商品规格
@@ -383,6 +383,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
 		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+		if image == "" && product.ImageUrl != "" {
+			image = product.ImageUrl
+		}
 		unit := product.ProductUnit.MultiLanguageName.GetNames()
 
 		if product.ProductType == constant.ProductTypePackage {
@@ -392,6 +395,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				for _, item := range group.ProductPackageGroupItems {
 					flavor := getFlavor(item.ProductBom) // 商品规格
 					subProductImage := item.ProductPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+					if subProductImage == "" && item.ProductPackage.ImageUrl != "" {
+						subProductImage = item.ProductPackage.ImageUrl
+					}
 					attributeGroups := getAttributeGroups(item.ProductPackage) // 商品属性组
 					// 固定分组时，IsRequired 和 IsDefault 返回 1
 					isRequired := item.IsRequired
@@ -1017,24 +1023,27 @@ func (s *productSrv) SortProductShopCategory(ctx context.Context, req req.Produc
 }
 
 // AddProductShopCategory 添加产品分类
-func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.ProductShopCategoryAddReq) error {
+func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.ProductShopCategoryAddReq) (model.ProductCategory, error) {
 	// 大写编码
 	addReq.Code = strings.ToUpper(addReq.Code)
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 50) {
-			return errors.New("名称长度不能超过50")
+
+	if addReq.Source == "" {
+		for _, name := range names {
+			if !checkService.CheckNameLength(ctx, name.Text, 50) {
+				return model.ProductCategory{}, errors.New("名称长度不能超过50")
+			}
 		}
 	}
 	if addReq.Status != 0 && addReq.Status != 1 {
-		return errors.New("分类状态不正确")
+		return model.ProductCategory{}, errors.New("分类状态不正确")
 	}
 	if addReq.IsSpecial && addReq.ParentUuid != 0 {
-		return errors.New("特色分类不能有一级分类")
+		return model.ProductCategory{}, errors.New("特色分类不能有一级分类")
 	}
 	if addReq.ParentUuid != 0 {
 		count, err := productRepo.GetProductCategoryCount(
@@ -1043,10 +1052,10 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 			productRepo.WhereParentUuid(0),
 		)
 		if err != nil {
-			return errors.WithMessage(err, "获取一级分类失败")
+			return model.ProductCategory{}, errors.WithMessage(err, "获取一级分类失败")
 		}
 		if count == 0 {
-			return errors.New("一级分类不存在")
+			return model.ProductCategory{}, errors.New("一级分类不存在")
 		}
 
 	}
@@ -1056,14 +1065,14 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 		productRepo.WhereByIsSpecial(utils.IfUint(addReq.IsSpecial, 1, 0)),
 	)
 	if err != nil {
-		return errors.WithMessage(err, "获取一级分类最大排序失败")
+		return model.ProductCategory{}, errors.WithMessage(err, "获取一级分类最大排序失败")
 	}
 	sort := uint(maxSort + 1)
 
 	// 检查分类编码是否已存在
 	if addReq.Code != "" {
 		if exist := productRepo.CheckProductCategoryCodeExist(addReq.Code, 0); exist {
-			return errors.New("分类编码已存在")
+			return model.ProductCategory{}, errors.New("分类编码已存在")
 		}
 	}
 
@@ -1074,25 +1083,27 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 	}
 	// 验证：店内显示不允许取消
 	if isDisplayInStore == 0 {
-		return errors.New("店内显示不允许取消")
+		return model.ProductCategory{}, errors.New("店内显示不允许取消")
 	}
 	isDisplayInTakeout := 0
 	if addReq.IsDisplayInTakeout != nil {
 		isDisplayInTakeout = *addReq.IsDisplayInTakeout
 	}
 
+	var productCategorys model.ProductCategory
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
 		multiLanguageName := model.MultiLanguageName{
-			ZhName:   addReq.LocaleName.ZH,
-			ThName:   addReq.LocaleName.TH,
-			EnName:   addReq.LocaleName.EN,
-			ZhTwName: addReq.LocaleName.ZHTW,
-			JaName:   addReq.LocaleName.JA,
-			KoName:   addReq.LocaleName.KO,
-			MyName:   addReq.LocaleName.MY,
-			TrName:   addReq.LocaleName.TR,
-			SvName:   addReq.LocaleName.SV,
+			ZhName:       addReq.LocaleName.ZH,
+			ThName:       addReq.LocaleName.TH,
+			EnName:       addReq.LocaleName.EN,
+			ZhTwName:     addReq.LocaleName.ZHTW,
+			JaName:       addReq.LocaleName.JA,
+			KoName:       addReq.LocaleName.KO,
+			MyName:       addReq.LocaleName.MY,
+			TrName:       addReq.LocaleName.TR,
+			SvName:       addReq.LocaleName.SV,
+			NotOverwrite: 1,
 		}
 		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 		if err != nil {
@@ -1109,30 +1120,33 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 			Code:                  addReq.Code,
 			IsDisplayInStore:      isDisplayInStore,
 			IsDisplayInTakeout:    isDisplayInTakeout,
+			Source:                addReq.Source,
+			SourceId:              addReq.SourceId,
 		}
 		err = tx.Model(&model.ProductCategory{}).Create(&productCategory).Error
 		if err != nil {
 			return err
 		}
+		productCategorys = productCategory
 		// 删除缓存
 		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), utils.IfInt(!addReq.IsSpecial, 1, 0), 1))
 		err = cache.NewTaggedCache(s.cache).TagClear(tag)
 		if err != nil {
-			return err
+			return errors.WithMessage(err, "删除缓存失败")
 		}
 		return nil
 	})
 
 	if err != nil {
 		logger.Logger.Error("添加产品分类失败", zap.Any("func", "AddProductShopCategory"), zap.Any("params", addReq), zap.Error(err))
-		return errors.WithMessage(err, "添加产品分类失败")
+		return model.ProductCategory{}, errors.WithMessage(err, "添加产品分类失败")
 	}
 
-	return nil
+	return productCategorys, nil
 }
 
 // EditProductShopCategory 编辑产品分类
-func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.ProductShopCategoryEditReq) error {
+func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.ProductShopCategoryEditReq) (model.ProductCategory, error) {
 	// 大写编码
 	editReq.Code = strings.ToUpper(editReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1144,22 +1158,22 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 		productRepo.WhereUuid(editReq.Uuid),
 	)
 	if err != nil {
-		return errors.WithMessage(err, "获取分类详情失败")
+		return model.ProductCategory{}, errors.WithMessage(err, "获取分类详情失败")
 	}
 	if productCategory.Uuid == 0 {
-		return errors.New("分类不存在")
+		return model.ProductCategory{}, errors.New("分类不存在")
 	}
 	if productCategory.IsSpecial == 1 && editReq.ParentUuid != 0 {
-		return errors.New("特色分类不能修改为二级分类")
+		return model.ProductCategory{}, errors.New("特色分类不能修改为二级分类")
 	}
 	if productCategory.ParentUuid == 0 && editReq.ParentUuid != 0 {
-		return errors.New("一级分类不能修改为二级分类")
+		return model.ProductCategory{}, errors.New("一级分类不能修改为二级分类")
 	}
 	if productCategory.ParentUuid != 0 && editReq.ParentUuid == 0 {
-		return errors.New("二级分类不能修改为一级分类")
+		return model.ProductCategory{}, errors.New("二级分类不能修改为一级分类")
 	}
 	if editReq.Status != 0 && editReq.Status != 1 {
-		return errors.New("分类状态不正确")
+		return model.ProductCategory{}, errors.New("分类状态不正确")
 	}
 	changeCode := false // 是否修改了分类编码
 	if editReq.Code != productCategory.Code {
@@ -1168,7 +1182,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 	if changeCode {
 		if editReq.Code != "" {
 			if exist := productRepo.CheckProductCategoryCodeExist(editReq.Code, editReq.Uuid); exist {
-				return errors.New("分类编码已存在")
+				return model.ProductCategory{}, errors.New("分类编码已存在")
 			}
 		}
 	}
@@ -1179,24 +1193,26 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 			productRepo.WhereParentUuid(0),
 		)
 		if err != nil {
-			return errors.WithMessage(err, "获取一级分类失败")
+			return model.ProductCategory{}, errors.WithMessage(err, "获取一级分类失败")
 		}
 		if count == 0 {
-			return errors.New("一级分类不存在")
+			return model.ProductCategory{}, errors.New("一级分类不存在")
 		}
 	}
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 50) {
-			return errors.New("名称长度不能超过50")
+	if productCategory.Source == "" {
+		checkService := NewCheckNameSrv(s.dbm)
+		names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
+		for _, name := range names {
+			if !checkService.CheckNameLength(ctx, name.Text, 50) {
+				return model.ProductCategory{}, errors.New("名称长度不能超过50")
+			}
 		}
 	}
 
 	// 验证显示渠道
 	// 1. 店内显示不允许取消
 	if editReq.IsDisplayInStore != nil && *editReq.IsDisplayInStore == 0 {
-		return errors.New("店内显示不允许取消")
+		return model.ProductCategory{}, errors.New("店内显示不允许取消")
 	}
 
 	// 2. 被 Grab 商品勾选的分类不允许取消外卖显示
@@ -1208,7 +1224,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 			takeoutProductRepo.WhereByCategoryUuidOrSpecialCategoryUuid(productCategory.Uuid),
 		)
 		if err == nil && takeoutProductCount > 0 {
-			return errors.New("该分类已被外卖商品使用，不允许取消外卖显示")
+			return model.ProductCategory{}, errors.New("该分类已被外卖商品使用，不允许取消外卖显示")
 		}
 	}
 
@@ -1340,10 +1356,10 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 
 	if err != nil {
 		logger.Logger.Error("编辑产品分类失败", zap.Any("func", "EditProductShopCategory"), zap.Any("params", editReq), zap.Error(err))
-		return errors.WithMessage(err, "编辑分类失败")
+		return model.ProductCategory{}, errors.WithMessage(err, "编辑分类失败")
 	}
 
-	return nil
+	return productCategory, nil
 }
 
 // SetCategoryDisplayInTakeout 设置分类在外卖平台显示
@@ -2212,8 +2228,10 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 
 	// 保存产品单位
 	productUnit := model.ProductUnit{
-		Sort: maxSort + 1,
-		Name: addReq.LocaleName.ToJson(),
+		Sort:     maxSort + 1,
+		Name:     addReq.LocaleName.ToJson(),
+		Source:   addReq.Source,
+		SourceId: addReq.SourceId,
 	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
@@ -3138,19 +3156,19 @@ func (s *productSrv) GetProductFlavor(ctx context.Context, flavorReq req.Product
 }
 
 // AddProductAttributeGroup 添加商品属性组
-func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.ProductAttributeGroupAddReq) error {
+func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.ProductAttributeGroupAddReq) (uint64, error) {
 	// companySetting := ctx.GetCompanySetting()
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("属性组名称不能为空")
+		return 0, errors.New("属性组名称不能为空")
 	}
 	for _, productAttribute := range addReq.ProductAttributes {
 		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
-			return errors.New("属性值名称不能为空")
+			return 0, errors.New("属性值名称不能为空")
 		}
 	}
 
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	productRepo := repository.NewProductRepo(db)
 	// 遍历req.ProductAttributes，判断商品是否存在
 	productPackageUuids := []uint64{}
@@ -3163,10 +3181,10 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 		// 判断商品是否存在
 		productPackageList, err := productRepo.GetProductPackageListByUuids(productPackageUuids)
 		if err != nil {
-			return errors.WithMessage(errors.New("商品不存在"), err.Error())
+			return 0, errors.WithMessage(errors.New("商品不存在"), err.Error())
 		}
 		if len(productPackageList) != len(productPackageUuids) {
-			return errors.New("商品不存在")
+			return 0, errors.New("商品不存在")
 		}
 	}
 
@@ -3177,8 +3195,10 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	db.Model(&model.ProductAttributeGroup{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	productAttributeGroup := model.ProductAttributeGroup{
-		Name: addReq.LocaleName.ToJson(),
-		Sort: maxSort + 1,
+		Name:     addReq.LocaleName.ToJson(),
+		Sort:     maxSort + 1,
+		Source:   addReq.Source,
+		SourceId: addReq.SourceId,
 	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言
@@ -3227,10 +3247,11 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			}
 			// 添加商品属性
 			productAttributeModel := model.ProductAttribute{
-				Name:                  productAttribute.LocaleName.ToJson(),
-				MultiLanguageNameUuid: multiLanguageName.Uuid,
-				AttributeGroupUuid:    productAttributeGroup.Uuid,
-				Sort:                  i + 1,
+				Name:                      productAttribute.LocaleName.ToJson(),
+				MultiLanguageNameUuid:     multiLanguageName.Uuid,
+				AttributeGroupUuid:        productAttributeGroup.Uuid,
+				ProductAttributeGroupUuid: productAttributeGroup.Uuid,
+				Sort:                      i + 1,
 			}
 			err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 			if err != nil {
@@ -3270,7 +3291,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 		return nil
 	})
 	if err != nil {
-		return errors.WithMessage(errors.New("添加属性组失败"), err.Error())
+		return 0, errors.WithMessage(errors.New("添加属性组失败"), err.Error())
 	}
 
 	// company := ctx.GetCompany()
@@ -3321,14 +3342,14 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	// 	}
 	// }
 
-	return nil
+	return productAttributeGroup.Uuid, nil
 }
 
 // AddProductFlavor 添加商品规格
-func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFlavorAddReq) error {
+func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFlavorAddReq) (uint64, error) {
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("名称不能为空")
+		return 0, errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
@@ -3337,12 +3358,13 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 		commonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
-		return errors.WithMessage(errors.New("获取最大排序失败"), err.Error())
+		return 0, errors.WithMessage(errors.New("获取最大排序失败"), err.Error())
 	}
 	sort := int(maxSort + 1)
 
 	company := ctx.GetCompany()
 
+	var productFlavorUuid uint64
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
@@ -3369,6 +3391,8 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 		// 保存产品规格
 		productFlavor := model.ProductFlavor{
 			Name:                  addReq.LocaleName.ToJson(),
+			Source:                addReq.Source,
+			SourceId:              addReq.SourceId,
 			MultiLanguageNameUuid: multiLanguageNameUuid,
 			Sort:                  sort,
 		}
@@ -3376,6 +3400,8 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 		if err != nil {
 			return errors.WithMessage(err, "保存规格失败")
 		}
+		productFlavorUuid = productFlavor.Uuid
+
 		// 保存规格名称到erp
 		if company.IsOpenErp() {
 			err = s.UpdateProductFlavorErp(ctx, tx)
@@ -3506,10 +3532,10 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 
 	if err != nil {
 		logger.Logger.Error("添加商品规格失败", zap.Any("func", "AddProductFlavor"), zap.Any("params", addReq), zap.Error(err))
-		return errors.WithMessage(err, "添加商品规格失败")
+		return 0, errors.WithMessage(err, "添加商品规格失败")
 	}
 
-	return nil
+	return productFlavorUuid, nil
 }
 
 // UpdateProductFlavorErp 更新商品规格到erp
@@ -3584,7 +3610,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	// companySetting := ctx.GetCompanySetting()
 	var relatedProductUuid bool
 
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	productRepo := repository.NewProductRepo(db)
 	// 检查属性组是否存在
 	attributeGroup, err := productRepo.GetProductAttributeGroup(
@@ -3782,8 +3808,9 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					return errors.WithMessage(errors.New("保存属性值名称多语言失败"), err.Error())
 				}
 				err = tx.Model(&model.ProductAttribute{}).Where("uuid = ?", productAttribute.Uuid).Updates(map[string]any{
-					"name": productAttribute.LocaleName.ToJson(),
-					"sort": productAttribute.Sort,
+					"name":  productAttribute.LocaleName.ToJson(),
+					"sort":  productAttribute.Sort,
+					"price": productAttribute.Price,
 				}).Error
 				if err != nil {
 					return errors.WithMessage(errors.New("保存属性值失败"), err.Error())
@@ -3805,10 +3832,14 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					return errors.WithMessage(errors.New("添加属性值名称多语言失败"), err.Error())
 				}
 				productAttributeModel := model.ProductAttribute{
-					Name:                  productAttribute.LocaleName.ToJson(),
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
-					AttributeGroupUuid:    attributeGroup.Uuid,
-					Sort:                  productAttribute.Sort,
+					Name:                      productAttribute.LocaleName.ToJson(),
+					MultiLanguageNameUuid:     multiLanguageName.Uuid,
+					AttributeGroupUuid:        attributeGroup.Uuid,
+					ProductAttributeGroupUuid: attributeGroup.Uuid,
+					Sort:                      productAttribute.Sort,
+					Price:                     productAttribute.Price,
+					Source:                    productAttribute.Source,
+					SourceId:                  productAttribute.SourceId,
 				}
 				err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 				if err != nil {
@@ -5275,7 +5306,12 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		productItem := product_resp.ProductShopListItemResp{
 			Uuid:       productPackage.Uuid,
 			LocaleName: productPackage.MultiLanguageName.GetNames(),
-			Image:      productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+			Image: func() string {
+				if productPackage.ImageFile.Uuid > 0 {
+					return productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				}
+				return productPackage.ImageUrl
+			}(),
 			Tag: product_resp.ProductShopListItemTagResp{
 				IsMultipleSpec: IsMultipleSpec,
 				IsAttribute:    IsAttribute,
@@ -5594,19 +5630,21 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 
 // AddProductShop 添加商品
 func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddReq) (uint64, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
 
 	// 检查商品类型
 	if err := productCheckSrv.CheckProductType(req.Type); err != nil {
 		return 0, errors.WithMessage(err, "检查商品类型失败")
 	}
-	// 检查商品名称
-	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
-		return 0, errors.WithMessage(err, "检查商品名称失败")
-	}
-	if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
-		return 0, errors.WithMessage(err, "检查商品卖点失败")
+	if !req.IsImport {
+		// 检查商品名称
+		if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
+			return 0, errors.WithMessage(err, "检查商品名称失败")
+		}
+		if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
+			return 0, errors.WithMessage(err, "检查商品卖点失败")
+		}
 	}
 	// 检查商品分类
 	if err := productCheckSrv.CheckProductCategory(db, req.CategoryUuid); err != nil {
@@ -6477,7 +6515,7 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 	}
 
 	// 2.10.0 版本新增卖点描述
-	if ctx.Version(context.GTE, "2.10.0") {
+	if ctx.Version(context.GTE, "2.10.0") || request.IsImport {
 		describeUuid, describeValue, err := saveSellingPointMultiLanguage(multiLanguageNameRepo, 0, request.SellingPoint)
 		if err != nil {
 			return nil, errors.WithMessage(err, "保存卖点多语言失败")

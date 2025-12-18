@@ -3,6 +3,8 @@ package queue
 import (
 	"context"
 	websocketConstant "ttpos-api/ttpos-websocket/constant"
+	printerQueue "ttpos-server-go/app/queue/printer"
+	takeoutQueue "ttpos-server-go/app/queue/takeout"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
@@ -16,8 +18,9 @@ const TAKEOUT = "takeout"
 const MEMBER_ORDER_CANCEL = "member_order_cancel"
 
 const (
-	TopicItemChange = "erp-item-change"
-	TopicDocChange  = "erp-doc-change"
+	TopicItemChange         = "erp-item-change"
+	TopicDocChange          = "erp-doc-change"
+	TopicProviderMenuUpdate = "takeout_provider_menu_update"
 )
 
 var manager *rocketmq.Manager
@@ -36,16 +39,22 @@ func Init() {
 		logger.Logger.Error("启动 RocketMQ 消费者失败", zap.Error(err))
 	}
 
-	//订阅消息
+	//订阅消息RocketmqRocketmq
 	err = manager.Subscribe(config.Rocketmq.GroupName, TopicItemChange, erpItemChangeHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicItemChange))
 	}
 
 	// 订阅 LAN 打印机上报消息
-	err = manager.Subscribe(config.Rocketmq.GroupName, websocketConstant.TopicLanPrinterReport, lanPrinterReportHandler)
+	err = manager.Subscribe(config.Rocketmq.GroupName, websocketConstant.TopicLanPrinterReport, printerQueue.LanPrinterReportHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", websocketConstant.TopicLanPrinterReport))
+	}
+
+	// 订阅供应商菜单更新消息
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicProviderMenuUpdate, takeoutQueue.TakeoutProviderMenuUpdateHandler)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicProviderMenuUpdate))
 	}
 
 }

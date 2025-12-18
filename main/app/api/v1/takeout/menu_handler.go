@@ -3,11 +3,12 @@ package takeout
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
-	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
+	"ttpos-server-go/app/modules/takeout/types/request"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -17,15 +18,18 @@ import (
 // Handler 外卖菜单 Handler
 type Handler struct {
 	menuAppSrv application.ITakeoutMenuAppService
+	dbm        *database.DBManager
+	cache      cache.Cache
 }
 
 // NewHandler 创建 Handler
 func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
-	menuRepo := persistence.NewMenuDataRepository(dbm)
-	menuAppSrv := application.NewTakeoutMenuAppService(dbm, menuRepo, cache)
+	menuAppSrv := application.NewTakeoutMenuAppService(dbm)
 
 	return &Handler{
 		menuAppSrv: menuAppSrv,
+		dbm:        dbm,
+		cache:      cache,
 	}
 }
 
@@ -36,29 +40,50 @@ func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
 // @Accept json
 // @Produce json
 // @Security JwtAuth
-// @Param body body req.TakeoutMenuExportReq true "导出请求"
+// @Param body body request.ExportMenuRequest true "导出请求"
+// @Param X-TTPOS-SECRET header string true "TTPOS 导出密钥"
 // @Success 200 {object} dto.Response{data=resp.TakeoutMenuExportResp} "成功"
 // @Router /takeout/menu/export [post]
 func (h *Handler) ExportMenu(c *gin.Context) {
-	var exportReq req.TakeoutMenuExportReq
+	var exportReq request.ExportMenuRequest
 	if err := c.ShouldBindJSON(&exportReq); err != nil {
 		helper.HandleValidationError(c, err, exportReq, nil)
 		return
 	}
 
-	ctx := helper.GetContext(c)
+	// 验证头部参数
+	auth := c.GetHeader("X-TTPOS-SECRET")
+	if auth != config.Takeout.TakeoutTtposSecret {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("无效的认证类型"))
+		return
+	}
 
-	// 如果未指定公司，使用当前公司
-	if exportReq.CompanyUuid == 0 {
-		exportReq.CompanyUuid = ctx.GetCompanyUuid()
+	// 平台不能为空
+	if exportReq.Platform == "" {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("平台不能为空"))
+		return
+	}
+
+	// 公司ID不能为空
+	db := h.dbm.GetDB(exportReq.CompanyUuid)
+	if db == nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("公司ID不存在"))
+		return
+	}
+
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(exportReq.CompanyUuid)
+	ctx.SetDB(h.dbm.GetDB(exportReq.CompanyUuid))
+	currencySetting, err := setting.NewSrv(h.dbm, h.cache).GetCurrencySetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "获取货币设置失败"))
+		return
 	}
 
 	// 调用应用服务
-	menuData, err := h.menuAppSrv.ExportMenu(ctx, application.ExportMenuRequest{
-		Platform:       exportReq.Platform,
-		CompanyUuid:    exportReq.CompanyUuid,
-		CategoryIDs:    exportReq.CategoryIDs,
-		SellingTimeIDs: exportReq.SellingTimeIDs,
+	menuData, err := h.menuAppSrv.ExportMenu(ctx, request.ExportMenuRequest{
+		Platform:     exportReq.Platform,
+		CurrencyUnit: currencySetting.Unit,
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "导出菜单失败"))

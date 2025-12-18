@@ -1,17 +1,18 @@
 package entity
 
 import (
+	"strconv"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
 )
 
 // TakeoutMenu 外卖菜单聚合根（平台通用）
 type TakeoutMenu struct {
-	Currency     *valueobject.Currency      // 货币配置
-	SellingTimes []*valueobject.SellingTime // 售卖时段列表
-	Categories   []*valueobject.Category    // 分类及商品树
-	CompanyUuid  uint64                     // 公司 UUID
-	Extra        map[string]interface{}     // 平台特定扩展字段
+	MerchantID        string                     // Grab 商户 ID
+	PartnerMerchantID string                     // Partner 商户 ID
+	Currency          *valueobject.Currency      // 货币配置
+	SellingTimes      []*valueobject.SellingTime // 售卖时段列表
+	Categories        []*valueobject.Category    // 分类及商品树
 }
 
 // NewTakeoutMenu 创建外卖菜单聚合根
@@ -21,10 +22,9 @@ func NewTakeoutMenu(companyUuid uint64) (*TakeoutMenu, error) {
 	}
 
 	return &TakeoutMenu{
-		SellingTimes: make([]*valueobject.SellingTime, 0),
-		Categories:   make([]*valueobject.Category, 0),
-		CompanyUuid:  companyUuid,
-		Extra:        make(map[string]interface{}),
+		PartnerMerchantID: strconv.FormatUint(companyUuid, 10),
+		SellingTimes:      make([]*valueobject.SellingTime, 0),
+		Categories:        make([]*valueobject.Category, 0),
 	}, nil
 }
 
@@ -67,9 +67,6 @@ func (m *TakeoutMenu) AddCategory(category *valueobject.Category) error {
 
 // Validate 验证菜单数据完整性
 func (m *TakeoutMenu) Validate() error {
-	if m.CompanyUuid == 0 {
-		return errors.New("公司 UUID 不能为空")
-	}
 	if m.Currency == nil {
 		return errors.New("货币配置不能为空")
 	}

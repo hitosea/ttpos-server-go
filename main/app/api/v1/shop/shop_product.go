@@ -125,7 +125,7 @@ func (h *ProductHandler) AddProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	err := h.productSrv.AddProductShopCategory(ctx, addReq)
+	_, err := h.productSrv.AddProductShopCategory(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -151,7 +151,7 @@ func (h *ProductHandler) EditProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	err := h.productSrv.EditProductShopCategory(ctx, editReq)
+	_, err := h.productSrv.EditProductShopCategory(ctx, editReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -594,7 +594,7 @@ func (h *ProductHandler) AddProductAttributeGroup(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
 		return
 	}
-	err := h.productSrv.AddProductAttributeGroup(ctx, addReq)
+	_, err := h.productSrv.AddProductAttributeGroup(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -646,7 +646,7 @@ func (h *ProductHandler) AddProductFlavor(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
 		return
 	}
-	err := h.productSrv.AddProductFlavor(ctx, addReq)
+	_, err := h.productSrv.AddProductFlavor(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1210,12 +1210,12 @@ func (h *ProductHandler) ProductTakeoutShopAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, nil)
 		return
 	}
-	uuid, err := h.productTakeoutSrv.AddProductTakeoutShop(ctx, addReq)
+	productPackageTakeout, err := h.productTakeoutSrv.AddProductTakeoutShop(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{"uuid": uuid}, "保存成功")
+	helper.Success(c, gin.H{"uuid": productPackageTakeout.Uuid}, "保存成功")
 }
 
 // ProductTakeoutShopEdit 编辑外卖商品
@@ -1272,6 +1272,32 @@ func (h *ProductHandler) ProductTakeoutShopDetail(c *gin.Context) {
 		return
 	}
 	helper.Success(c, res)
+}
+
+// ProductTakeoutShopDelete 删除外卖商品
+// @Summary 删除外卖商品
+// @Description 删除外卖商品（软删除），再次添加时会自动还原
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductTakeoutShopDeleteReq true "外卖商品删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/takeout/delete [post]
+func (h *ProductHandler) ProductTakeoutShopDelete(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductTakeoutShopDeleteReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, nil)
+		return
+	}
+	err := h.productTakeoutSrv.DeleteProductTakeoutShop(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "删除成功")
 }
 
 // ProductTaxList 获取商品税类列表
@@ -1434,8 +1460,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/upload_image", wrapper.UploadProductImage)     // 上传商品图片
 
 		// 外卖商品
-		privateApi.POST("/product/takeout/add", wrapper.ProductTakeoutShopAdd)      // 添加外卖商品
-		privateApi.POST("/product/takeout/edit", wrapper.ProductTakeoutShopEdit)    // 编辑外卖商品
-		privateApi.GET("/product/takeout/detail", wrapper.ProductTakeoutShopDetail) // 获取外卖商品详情
+		privateApi.POST("/product/takeout/add", wrapper.ProductTakeoutShopAdd)       // 添加外卖商品
+		privateApi.POST("/product/takeout/edit", wrapper.ProductTakeoutShopEdit)     // 编辑外卖商品
+		privateApi.GET("/product/takeout/detail", wrapper.ProductTakeoutShopDetail)  // 获取外卖商品详情
+		privateApi.POST("/product/takeout/delete", wrapper.ProductTakeoutShopDelete) // 删除外卖商品
 	}
 }

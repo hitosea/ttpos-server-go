@@ -16,6 +16,8 @@ import (
 type ProductFlavor struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
+	Source                string `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId              string `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的规格ID;NOT NULL;index:idx_source_id" json:"source_id"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
@@ -67,6 +69,8 @@ func (model *ProductSauce) HasProductBomCard() bool {
 type ProductUnit struct {
 	BaseModel
 	Name                  string            `gorm:"default:'';column:name;comment:'单位名称'"`
+	Source                string            `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId              string            `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的单位ID;NOT NULL;index:idx_source_id" json:"source_id"`
 	MultiLanguageNameUuid uint64            `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int               `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextUom            string            `gorm:"default:'';column:erpnext_uom;comment:'ERPNext UOM'"`
@@ -90,6 +94,8 @@ type PrinterTag struct {
 type ProductAttributeGroup struct {
 	BaseModel
 	Name                      string             `gorm:"default:'';column:name;comment:'名称'"`
+	Source                    string             `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId                  string             `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的属性组ID;NOT NULL;index:idx_source_id" json:"source_id"`
 	MultiLanguageNameUuid     uint64             `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                      int                `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextAttributeGroupName string             `gorm:"default:'';column:erpnext_attribute_group_name;comment:'ERPNext Attribute Group Name'"`
@@ -98,15 +104,23 @@ type ProductAttributeGroup struct {
 	ProductAttributes         []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
 }
 
+func (model *ProductAttributeGroup) IsEditable() bool {
+	return model.HeadquarterUuid == 0
+}
+
 // ProductAttribute 商品属性表,定义商品的属性信息 ttpos_product_attribute
 type ProductAttribute struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
-	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
-	ErpnextAttributeValue string `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
-	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
+	Name                      string  `gorm:"default:'';column:name;comment:'名称'"`
+	Source                    string  `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId                  string  `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的属性ID;NOT NULL;index:idx_attr_source_id" json:"source_id"`
+	MultiLanguageNameUuid     uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	AttributeGroupUuid        uint64  `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
+	ProductAttributeGroupUuid uint64  `gorm:"column:product_attribute_group_uuid;type:bigint(20) unsigned;default:0;comment:'属性组UUID（用于关联查询）';NOT NULL" json:"product_attribute_group_uuid"`
+	Sort                      int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	Price                     float64 `gorm:"type:decimal(10,2);default:0.00;column:price;comment:'属性价格（外卖平台属性加价）';NOT NULL" json:"price"`
+	ErpnextAttributeValue     string  `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
+	HeadquarterUuid           uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 
@@ -140,9 +154,10 @@ func (model *ProductPackageAttributeGroup) IsMustBool() bool {
 // ProductPackageAttribute 产品包属性表,定义产品包的属性信息 ttpos_product_package_attribute
 type ProductPackageAttribute struct {
 	BaseModel
-	ProductPackageAttributeGroupUuid uint64 `gorm:"default:0;column:product_package_attribute_group_uuid;comment:'产品包属性组UUID'"`
-	AttributeUuid                    uint64 `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
-	IsDefaultSelected                uint   `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
+	ProductPackageAttributeGroupUuid uint64  `gorm:"default:0;column:product_package_attribute_group_uuid;comment:'产品包属性组UUID'"`
+	AttributeUuid                    uint64  `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
+	IsDefaultSelected                uint    `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
+	Price                            float64 `gorm:"type:decimal(10,2);default:0.00;column:price;comment:'属性价格（商品包级别的属性加价）';NOT NULL" json:"price"`
 
 	// 关联ttpos_product_package_attribute_group
 	ProductPackageAttributeGroup ProductPackageAttributeGroup `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid" json:"-"` // 产品包属性组
@@ -170,6 +185,7 @@ type ProductPackage struct {
 	MultiLanguageNameUuid         uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName                     string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid                 uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
+	ImageUrl                      string `gorm:"default:'';column:image_url;comment:'外部图片URL地址（当image_file_uuid为空时使用）'"`
 	DeductStockType               uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
 	NumType                       uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
 	UnitUuid                      uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
@@ -591,6 +607,10 @@ func (model *RelatedMaterial) SetNil() {
 
 // 计算预计可生产的产品数量。材料库存数量 / 材料用量
 func (model *RelatedMaterial) CalculateExpectedProductionNum(opts ...func(*GetStockNumOption)) float64 {
+	// 材料对象为空时，返回0
+	if model.Material == nil {
+		return 0
+	}
 	materialStockNum := model.Material.GetStockNum(opts...) // 材料库存数量，单位：基准单位
 	if materialStockNum <= 0 {
 		return 0

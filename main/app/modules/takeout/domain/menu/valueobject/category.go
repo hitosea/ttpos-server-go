@@ -1,17 +1,18 @@
 package valueobject
 
-import "ttpos-server-go/app/errors"
+import (
+	"ttpos-server-go/app/errors"
+)
 
 // Category 菜单分类值对象（平台通用）
 type Category struct {
-	ID              string                 // 分类 ID
-	Name            string                 // 分类名称
-	Sequence        int                    // 排序序号
-	AvailableStatus AvailableStatus        // 可用状态
-	Items           []*MenuItem            // 商品列表
-	SellingTimeID   string                 // 关联的售卖时段 ID
-	NameTranslation map[string]string      // 多语言名称
-	Extra           map[string]interface{} // 平台特定扩展字段
+	ID              string            // 分类 ID
+	Name            string            // 分类名称
+	Sequence        int               // 排序序号
+	AvailableStatus AvailableStatus   // 可用状态
+	Items           []*MenuItem       // 商品列表
+	SellingTimeID   string            // 关联的售卖时段 ID
+	NameTranslation map[string]string // 多语言名称
 }
 
 // NewCategory 创建菜单分类值对象
@@ -30,7 +31,6 @@ func NewCategory(id, name string, sequence int, status AvailableStatus) (*Catego
 		AvailableStatus: status,
 		Items:           make([]*MenuItem, 0),
 		NameTranslation: make(map[string]string),
-		Extra:           make(map[string]interface{}),
 	}, nil
 }
 
@@ -56,4 +56,12 @@ func (c *Category) Validate() error {
 	}
 
 	return nil
+}
+
+// GetCategoryStatus 获取分类状态
+func (c *Category) GetCategoryStatusToInt() int {
+	if c.AvailableStatus == AvailableStatusAvailable {
+		return 1 // 开启
+	}
+	return 0 // 关闭
 }

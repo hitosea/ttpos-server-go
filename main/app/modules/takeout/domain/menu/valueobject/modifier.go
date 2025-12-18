@@ -1,6 +1,8 @@
 package valueobject
 
-import "ttpos-server-go/app/errors"
+import (
+	"ttpos-server-go/app/errors"
+)
 
 // AvailableStatus 可用状态
 type AvailableStatus string
@@ -9,6 +11,17 @@ const (
 	AvailableStatusAvailable   AvailableStatus = "AVAILABLE"
 	AvailableStatusUnavailable AvailableStatus = "UNAVAILABLE"
 )
+
+// ToInt 转换为整数
+func (s AvailableStatus) ToInt() int {
+	switch s {
+	case AvailableStatusAvailable:
+		return 1
+	case AvailableStatusUnavailable:
+		return 0
+	}
+	return 0
+}
 
 // Modifier 修饰符值对象（规格/加料，平台通用）
 type Modifier struct {
