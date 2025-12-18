@@ -684,8 +684,11 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		newItems := make([]*model.WarehouseOutFormItem, 0)
 
-		// 记录已处理的材料UUID（用于后续处理新增的材料）
-		processedMaterialUuids := make(map[uint64]bool)
+		// 记录在所有出库单的原记录中都不存在的材料（新增的材料）
+		newMaterials := make(map[uint64]*model.MaterialStock)
+		for _, materialStock := range materialStocksList {
+			newMaterials[materialStock.MaterialUuid] = materialStock
+		}
 
 		// 如果有原记录，按原出库单UUID分组创建新记录
 		if len(formItemMap) > 0 {
@@ -714,7 +717,7 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 
 				// 为每个材料创建新记录
 				for _, materialStock := range materialStocksList {
-					// 查找对应的原记录（按 material_uuid 匹配）
+					// 查找该出库单中是否存在该材料的原记录
 					var originalItem *model.WarehouseOutFormItem
 					for _, item := range originalItems {
 						if item.MaterialUuid == materialStock.MaterialUuid {
@@ -723,9 +726,9 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 						}
 					}
 
-					// 如果原记录中存在该材料，创建新记录
+					// 如果该出库单的原记录中存在该材料，创建新记录
 					if originalItem != nil {
-						// 创建新记录
+						// 创建新记录，关联到当前出库单UUID
 						uuid, _ := utils.GetID()
 						newItem := &model.WarehouseOutFormItem{
 							BaseModel: model.BaseModel{
@@ -744,13 +747,14 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 							ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
 						}
 						newItems = append(newItems, newItem)
-						processedMaterialUuids[materialStock.MaterialUuid] = true
+						// 从newMaterials中移除（表示该材料至少在一个出库单中存在）
+						delete(newMaterials, materialStock.MaterialUuid)
 					}
 				}
 			}
 
-			// 处理新增的材料（在原记录中不存在的材料）
-			// 使用第一个出库单UUID，如果没有原记录则使用第一个原记录的StaffShiftLogUuid
+			// 处理新增的材料（在所有出库单的原记录中都不存在）
+			// 关联到第一个出库单
 			var firstStaffShiftLogUuid uint64
 			if len(firstOriginalItems) > 0 {
 				firstStaffShiftLogUuid = firstOriginalItems[0].StaffShiftLogUuid
@@ -758,28 +762,25 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 				firstStaffShiftLogUuid = targetSaleOrder.StaffShiftLogUuid
 			}
 
-			for _, materialStock := range materialStocksList {
-				// 如果该材料还没有被处理（新增的材料）
-				if !processedMaterialUuids[materialStock.MaterialUuid] {
-					uuid, _ := utils.GetID()
-					newItem := &model.WarehouseOutFormItem{
-						BaseModel: model.BaseModel{
-							Uuid:       uuid,
-							CreateTime: time.Now().Unix(),
-						},
-						WarehouseOutFormUuid: firstWarehouseOutFormUuid, // 使用第一个出库单UUID
-						WarehouseUuid:        materialStock.WarehouseUuid,
-						MaterialUuid:         materialStock.MaterialUuid,
-						SaleBillUuid:         saleBillUuid,
-						SaleOrderUuid:        saleOrderUuid,
-						StaffShiftLogUuid:    firstStaffShiftLogUuid,
-						Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(),
-						Scene:                constant.WarehouseOutFormSceneSales,
-						Status:               constant.WarehouseOutFormItemStatusSuccess,
-						ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
-					}
-					newItems = append(newItems, newItem)
+			for _, materialStock := range newMaterials {
+				uuid, _ := utils.GetID()
+				newItem := &model.WarehouseOutFormItem{
+					BaseModel: model.BaseModel{
+						Uuid:       uuid,
+						CreateTime: time.Now().Unix(),
+					},
+					WarehouseOutFormUuid: firstWarehouseOutFormUuid, // 使用第一个出库单UUID
+					WarehouseUuid:        materialStock.WarehouseUuid,
+					MaterialUuid:         materialStock.MaterialUuid,
+					SaleBillUuid:         saleBillUuid,
+					SaleOrderUuid:        saleOrderUuid,
+					StaffShiftLogUuid:    firstStaffShiftLogUuid,
+					Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(),
+					Scene:                constant.WarehouseOutFormSceneSales,
+					Status:               constant.WarehouseOutFormItemStatusSuccess,
+					ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
 				}
+				newItems = append(newItems, newItem)
 			}
 		}
 
