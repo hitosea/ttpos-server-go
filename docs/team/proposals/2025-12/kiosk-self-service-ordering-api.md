@@ -73,8 +73,7 @@
 | 添加商品到购物车 | `/api/v1/kiosk/order/cart/product/add` | POST | 向购物车添加商品（若没有订单则自动创建） |
 | 添加套餐到购物车 | `/api/v1/kiosk/order/cart/product_package/add` | POST | 向购物车添加套餐 |
 | 修改商品数量 | `/api/v1/kiosk/order/cart/product/num` | POST | 修改购物车中商品的数量 |
-| 查询商品规格属性 | `/api/v1/kiosk/order/cart/product/flavor_and_attribute` | GET | 查询购物车商品的规格和属性信息 |
-| 修改商品规格属性 | `/api/v1/kiosk/order/cart/product/flavor_and_attribute` | POST | 修改购物车商品的规格和属性 |
+| 获取商品选购情况 | `/api/v1/kiosk/order/product/package/detail` | GET | 获取商品选购详情（包含已选购商品的规格、属性等信息） |
 | 删除购物车商品 | `/api/v1/kiosk/order/cart/product/delete` | DELETE | 删除购物车中的商品 |
 
 **参考接口**:
@@ -82,8 +81,8 @@
 - `/cashier/instant/order/cart/product/add` - POS 端添加商品接口
 - `/cashier/instant/order/cart/product_package/add` - POS 端添加套餐接口
 - `/cashier/instant/order/cart/product/num` - POS 端修改商品数量接口
-- `/cashier/instant/order/cart/product/flavor_and_attribute` - POS 端查询/修改商品规格属性接口
 - `/cashier/instant/order/product/delete` - POS 端删除商品接口
+- `/assistant/order/product/package/detail` - 点餐助手端获取商品选购详情接口
 
 ---
 
@@ -139,11 +138,11 @@
 | 登录认证模块 | 3 | 登录、刷新Token、退出登录（验证码使用全局接口 `/passport/captcha`） |
 | 首页功能模块 | 1 | 获取基本信息（包含语言列表、轮播广告等配置） |
 | 商品浏览与选择模块 | 3 | 分类列表、商品列表、商品详情 |
-| 购物车管理模块 | 7 | 购物车信息、添加商品/套餐、修改数量、规格属性、删除商品 |
+| 购物车管理模块 | 6 | 购物车信息、添加商品/套餐、修改数量、商品选购情况、删除商品 |
 | 订单确认与创建模块 | 2 | 订单检查、结账页面信息 |
 | 支付功能模块 | 3 | 提交支付、获取支付信息（含二维码）、获取支付状态 |
 | 异常处理模块 | 1 | 取消订单 |
-| **总计** | **20** | - |
+| **总计** | **19** | - |
 
 ---
 

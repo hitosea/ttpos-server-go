@@ -1,0 +1,254 @@
+package kiosk
+
+import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
+
+// OrderHandler 订单相关控制器
+type OrderHandler struct {
+	orderSrv service.IOrderSrv
+}
+
+// GetCartInfo 查询购物车信息
+// @Summary 查询购物车信息
+// @Description 查询购物车信息
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query uint64 false "销售账单UUID"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cart/info [get]
+func (h *OrderHandler) GetCartInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("查询购物车信息", zap.Any("params", params))
+
+	var res *resp.ShopCart
+	var err error
+
+	// 如果提供了 sale_bill_uuid，则通过 sale_bill_uuid 查询
+	if params.SaleBillUuid > 0 {
+		res, err = h.orderSrv.GetOrderCartInfo(ctx, params.SaleBillUuid)
+	} else {
+		// 否则通过设备SN查询（类似 POS 端即时点餐）
+		deviceSn := ctx.GetDeviceSn()
+		if deviceSn == "" {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.NewWithCode(constant.CodeParamError, "sale_bill_uuid 或 deviceSn 必须提供一个"))
+			return
+		}
+		res, err = h.orderSrv.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
+		if res == nil {
+			// 没有查询到属于该设备的未挂单销售账单
+			helper.Success(c, resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)})
+			return
+		}
+	}
+
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// AddProduct 向购物车添加商品
+// @Summary 向购物车添加商品
+// @Description 向购物车添加商品
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductAddReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cart/product/add [post]
+func (h *OrderHandler) AddProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("向购物车添加商品", zap.Any("params", params))
+	// 添加商品。若没有点餐账单则新建一个
+	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// AddProductPackage 向购物车添加套餐
+// @Summary 向购物车添加套餐
+// @Description 向购物车添加套餐
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductPackageAddReq true "套餐参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cart/product_package/add [post]
+func (h *OrderHandler) AddProductPackage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductPackageAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("向购物车添加套餐", zap.Any("params", params))
+	// 向购物车添加套餐
+	res, err := h.orderSrv.OrderCartProductPackageAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// UpdateProductNum 修改购物车商品数量
+// @Summary 修改购物车商品数量
+// @Description 修改购物车商品数量
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductNumReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cart/product/num [post]
+func (h *OrderHandler) UpdateProductNum(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("修改购物车商品数量")
+	// 绑定请求参数
+	params := req.OrderCartProductNumReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("修改购物车商品数量", zap.Any("params", params))
+	// 修改购物车商品数量
+	res, err := h.orderSrv.OrderCartProductNum(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetProductPackageDetail 获取商品选购详情
+// @Summary 获取商品选购详情
+// @Description 获取商品选购详情
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetProductPackageDetailReq true "商品选购详情参数"
+// @Success 200 {object} dto.Response{data=resp.ProductPackageDetailRes}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/product/package/detail [get]
+func (h *OrderHandler) GetProductPackageDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetProductPackageDetailReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取商品选购详情", zap.Any("params", params))
+	productPackage, err := h.orderSrv.GetProductPackageDetail(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, productPackage)
+}
+
+// DeleteProduct 删除购物车商品
+// @Summary 删除购物车商品
+// @Description 删除购物车商品
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderProductDeleteReq true "删除商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cart/product/delete [delete]
+func (h *OrderHandler) DeleteProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderProductDeleteReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("删除购物车商品", zap.Any("params", params))
+	// 删除商品
+	res, err := h.orderSrv.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	localeSrv := service.NewLocaleSrv()
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	memberSrv := service.NewMemberSrv(dbm, cache)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
+
+	wrapper := &OrderHandler{
+		orderSrv: orderSrv,
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
+	{
+		privateApi.GET("/order/cart/info", wrapper.GetCartInfo)                          // 查询购物车信息
+		privateApi.POST("/order/cart/product/add", wrapper.AddProduct)                   // 向购物车添加商品
+		privateApi.POST("/order/cart/product_package/add", wrapper.AddProductPackage)    // 向购物车添加套餐
+		privateApi.POST("/order/cart/product/num", wrapper.UpdateProductNum)             // 修改购物车商品数量
+		privateApi.GET("/order/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
+		privateApi.DELETE("/order/cart/product/delete", wrapper.DeleteProduct)           // 删除购物车商品
+	}
+}
