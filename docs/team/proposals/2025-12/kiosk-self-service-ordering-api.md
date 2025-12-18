@@ -38,13 +38,16 @@
 
 | 接口名称 | 接口路径 | 请求方法 | 说明 |
 |---------|---------|---------|------|
-| 获取自助点餐机设置 | `/api/v1/kiosk/setting` | GET | 获取轮播广告、呼叫服务员、语言设置等配置（包含语言列表） |
+| 获取基本信息 | `/api/v1/kiosk/base` | GET | 获取基本信息（包含轮播广告、呼叫服务员、语言设置等配置，参考其他终端的 base 接口） |
 | 呼叫服务员 | `/api/v1/kiosk/call` | POST | 发起呼叫服务员请求 |
 
 **参考接口**:
-- `/shop/setting/kiosk` - 商家端自助点餐机设置接口（响应中包含 `language_list` 字段）
-- `/tablet/call` - 平板端呼叫服务员接口
-- `/h5/call` - H5端呼叫服务员接口
+- `/api/v1/cashier/base` - 收银端基本信息接口（包含设置信息）
+- `/api/v1/tablet/base` - 平板端基本信息接口（包含设置信息）
+- `/api/v1/assistant/base` - 助手端基本信息接口（包含设置信息）
+- `/api/v1/shop/setting/kiosk` - 商家端自助点餐机设置接口（响应中包含 `language_list` 字段，用于参考数据结构）
+- `/api/v1/tablet/call` - 平板端呼叫服务员接口
+- `/api/v1/h5/call` - H5端呼叫服务员接口
 
 ---
 
