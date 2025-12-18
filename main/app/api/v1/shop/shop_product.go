@@ -1255,7 +1255,7 @@ func (h *ProductHandler) ProductTakeoutShopEdit(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param uuid query string true "外卖商品UUID"
+// @Param data query req.ProductTakeoutShopDetailReq true "外卖商品详情请求"
 // @Success 200 {object} product_resp.ProductTakeoutShopDetailResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/product/takeout/detail [get]
@@ -1375,6 +1375,126 @@ func (h *ProductHandler) ProductShopChangePrice(c *gin.Context) {
 	helper.Success(c, nil, "改价成功")
 }
 
+// TakeoutBatchCreate 批量创建外卖商品
+// @Summary 批量创建外卖商品
+// @Description 批量创建外卖商品映射关系
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TakeoutBatchCreateReq true "批量创建请求"
+// @Success 200 {object} product_resp.TakeoutBatchResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/takeout/products/batch_create [post]
+func (h *ProductHandler) TakeoutBatchCreate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	batchReq := req.TakeoutBatchCreateReq{}
+	if err := c.ShouldBindJSON(&batchReq); err != nil {
+		helper.HandleValidationError(c, err, batchReq, nil)
+		return
+	}
+	if err := batchReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
+	result, err := h.productTakeoutSrv.BatchCreateProducts(ctx, batchReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, result, "批量创建完成")
+}
+
+// TakeoutBatchOnline 批量上架外卖商品
+// @Summary 批量上架外卖商品
+// @Description 批量上架外卖商品
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TakeoutBatchOnlineReq true "批量上架请求"
+// @Success 200 {object} product_resp.TakeoutBatchResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/takeout/products/batch_online [post]
+func (h *ProductHandler) TakeoutBatchOnline(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	batchReq := req.TakeoutBatchOnlineReq{}
+	if err := c.ShouldBindJSON(&batchReq); err != nil {
+		helper.HandleValidationError(c, err, batchReq, nil)
+		return
+	}
+	if err := batchReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
+	result, err := h.productTakeoutSrv.BatchOnlineProducts(ctx, batchReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, result, "批量上架完成")
+}
+
+// TakeoutBatchOffline 批量下架外卖商品
+// @Summary 批量下架外卖商品
+// @Description 批量下架外卖商品
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TakeoutBatchOfflineReq true "批量下架请求"
+// @Success 200 {object} product_resp.TakeoutBatchResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/takeout/products/batch_offline [post]
+func (h *ProductHandler) TakeoutBatchOffline(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	batchReq := req.TakeoutBatchOfflineReq{}
+	if err := c.ShouldBindJSON(&batchReq); err != nil {
+		helper.HandleValidationError(c, err, batchReq, nil)
+		return
+	}
+	if err := batchReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
+	result, err := h.productTakeoutSrv.BatchOfflineProducts(ctx, batchReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, result, "批量下架完成")
+}
+
+// TakeoutBatchDelete 批量删除外卖商品
+// @Summary 批量删除外卖商品
+// @Description 批量删除外卖商品映射关系
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.TakeoutBatchDeleteReq true "批量删除请求"
+// @Success 200 {object} product_resp.TakeoutBatchResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/takeout/products/batch_delete [post]
+func (h *ProductHandler) TakeoutBatchDelete(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	batchReq := req.TakeoutBatchDeleteReq{}
+	if err := c.ShouldBindJSON(&batchReq); err != nil {
+		helper.HandleValidationError(c, err, batchReq, nil)
+		return
+	}
+	if err := batchReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
+	result, err := h.productTakeoutSrv.BatchDeleteProducts(ctx, batchReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, result, "批量删除完成")
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1464,5 +1584,11 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/takeout/edit", wrapper.ProductTakeoutShopEdit)     // 编辑外卖商品
 		privateApi.GET("/product/takeout/detail", wrapper.ProductTakeoutShopDetail)  // 获取外卖商品详情
 		privateApi.POST("/product/takeout/delete", wrapper.ProductTakeoutShopDelete) // 删除外卖商品
+
+		// 外卖商品批量操作
+		privateApi.POST("/takeout/products/batch_create", wrapper.TakeoutBatchCreate)   // 批量创建外卖商品
+		privateApi.POST("/takeout/products/batch_online", wrapper.TakeoutBatchOnline)   // 批量上架外卖商品
+		privateApi.POST("/takeout/products/batch_offline", wrapper.TakeoutBatchOffline) // 批量下架外卖商品
+		privateApi.POST("/takeout/products/batch_delete", wrapper.TakeoutBatchDelete)   // 批量删除外卖商品
 	}
 }

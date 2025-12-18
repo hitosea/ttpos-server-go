@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -27,6 +29,12 @@ type IProductTakeoutSrv interface {
 	GetProductTakeoutShopDetail(ctx context.Context, req req.ProductTakeoutShopDetailReq) (*product_resp.ProductTakeoutShopDetailResp, error)
 	DeleteProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopDeleteReq) error
 	UpdateProductTakeoutShopStatus(ctx context.Context, req req.ProductTakeoutShopStatusReq) error
+
+	// 批量操作
+	BatchCreateProducts(ctx context.Context, req req.TakeoutBatchCreateReq) (*product_resp.TakeoutBatchResp, error)
+	BatchOnlineProducts(ctx context.Context, req req.TakeoutBatchOnlineReq) (*product_resp.TakeoutBatchResp, error)
+	BatchOfflineProducts(ctx context.Context, req req.TakeoutBatchOfflineReq) (*product_resp.TakeoutBatchResp, error)
+	BatchDeleteProducts(ctx context.Context, req req.TakeoutBatchDeleteReq) (*product_resp.TakeoutBatchResp, error)
 
 	// GetProductCount 获取外卖商品统计
 	GetProductCount(ctx context.Context, companyUuid uint64, platform string, forceRefresh bool) (int64, error)
@@ -81,7 +89,7 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 
 	// 如果存在未删除的记录，返回错误
 	if err == nil && existingTakeout.DeleteTime == 0 {
-		return nil, errors.WithMessage(errors.New("该商品已存在相同类型的外卖配置"))
+		return existingTakeout, nil
 	}
 
 	// 如果存在已软删除的记录，还原它
@@ -432,7 +440,7 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		takeoutRepo.WithProductCategory(),
 		takeoutRepo.WithProductSpecialCategory(),
 		takeoutRepo.WithImageFile(),
-		takeoutRepo.WhereBySource(detailReq.Source),
+		takeoutRepo.WhereByTakeoutType(uint(s.platformToTakeoutType(detailReq.Platform))),
 	)
 	if err != nil {
 		return &product_resp.ProductTakeoutShopDetailResp{}, nil
@@ -513,8 +521,8 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 	takeout, err := takeoutRepo.GetProductPackageTakeout(
-		repository.CommonRepo.WhereByUuid(deleteReq.Uuid),
-		repository.CommonRepo.WhereBySoftDelete(),
+		takeoutRepo.WhereByProductPackageUuid(deleteReq.Uuid),
+		takeoutRepo.WhereByTakeoutType(uint(s.platformToTakeoutType(deleteReq.Platform))),
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -536,7 +544,7 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除外卖商品
 		if err := repository.NewProductPackageTakeoutRepo(tx).DestroyProductPackageTakeout(
-			repository.CommonRepo.WhereByUuid(deleteReq.Uuid),
+			repository.CommonRepo.WhereByUuid(takeout.Uuid),
 		); err != nil {
 			return errors.WithMessage(err, "删除外卖商品失败")
 		}
@@ -544,7 +552,7 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 		// 删除关联的外卖规格价格
 		productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
 		if err := productBomTakeoutRepo.DestroyProductBomTakeout(
-			repository.CommonRepo.WhereByProductPackageTakeoutUuid(deleteReq.Uuid),
+			repository.CommonRepo.WhereByProductPackageTakeoutUuid(takeout.Uuid),
 		); err != nil {
 			return errors.WithMessage(err, "删除外卖规格价格失败")
 		}
@@ -565,9 +573,9 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
-	_, err := takeoutRepo.GetProductPackageTakeout(
-		repository.CommonRepo.WhereByUuid(statusReq.Uuid),
-		repository.CommonRepo.WhereBySoftDelete(),
+	takeout, err := takeoutRepo.GetProductPackageTakeout(
+		takeoutRepo.WhereByProductPackageUuid(statusReq.Uuid),
+		takeoutRepo.WhereByTakeoutType(uint(s.platformToTakeoutType(statusReq.Platform))),
 	)
 	if err != nil {
 		return errors.WithMessage(errors.New("外卖商品不存在"))
@@ -575,7 +583,7 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 
 	if err := takeoutRepo.UpdateProductPackageTakeout(
 		map[string]any{"status": *statusReq.Status},
-		repository.CommonRepo.WhereByUuid(statusReq.Uuid),
+		repository.CommonRepo.WhereByUuid(takeout.Uuid),
 	); err != nil {
 		logger.Logger.Error("更新外卖商品状态失败", zap.Any("func", "UpdateProductTakeoutShopStatus"), zap.Any("params", statusReq), zap.Error(err))
 		return errors.WithMessage(err, "更新外卖商品状态失败")
@@ -804,4 +812,315 @@ func (s *productTakeoutSrv) ClearProductCountCache(ctx context.Context, companyU
 	// 清除所有平台缓存
 	allKey := s.buildCountCacheKey(companyUuid, "")
 	s.cache.Del(allKey)
+}
+
+// BatchCreateProducts 批量创建外卖商品映射
+func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq req.TakeoutBatchCreateReq) (*product_resp.TakeoutBatchResp, error) {
+	// 验证请求参数
+	if err := batchReq.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 转换平台标识为外卖类型
+	takeoutType := s.platformToTakeoutType(batchReq.Platform)
+
+	// 创建响应对象
+	result := &product_resp.TakeoutBatchResp{
+		Total:          len(batchReq.ProductUuids),
+		Success:        0,
+		Failed:         0,
+		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
+	}
+
+	// 限流器: 每秒10个请求
+	limiter := time.NewTicker(100 * time.Millisecond)
+	defer limiter.Stop()
+
+	// 使用 WaitGroup 等待所有 Goroutine 完成
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 获取商品名称映射(用于错误信息)
+	db := ctx.GetDB()
+	productNames := s.getProductNames(db, batchReq.ProductUuids)
+
+	// 并发处理每个商品
+	for _, productUuid := range batchReq.ProductUuids {
+		wg.Add(1)
+		go func(uuid uint64) {
+			defer wg.Done()
+			<-limiter.C // 限流
+
+			// 调用 AddProductTakeoutShop 逻辑
+			addReq := req.ProductTakeoutShopAddReq{
+				ProductPackageUuid: uuid,
+				TakeoutType:        takeoutType,
+			}
+			_, err := s.AddProductTakeoutShop(ctx, addReq)
+			mu.Lock()
+			if err != nil {
+				result.Failed++
+				result.FailedProducts = append(result.FailedProducts, product_resp.TakeoutBatchFailedProduct{
+					ProductUuid: uuid,
+					ProductName: productNames[uuid],
+					Error:       err.Error(),
+				})
+			} else {
+				result.Success++
+			}
+			mu.Unlock()
+		}(productUuid)
+	}
+
+	wg.Wait()
+	return result, nil
+}
+
+// platformToTakeoutType 平台标识转外卖类型
+func (s *productTakeoutSrv) platformToTakeoutType(platform string) int {
+	switch platform {
+	case "grab":
+		return constant.TakeoutTypeGrab
+	case "lineman":
+		return constant.TakeoutTypeLINEMAN // 使用 LINE MAN 类型代表 LINE MAN
+	default:
+		return constant.TakeoutTypeGrab
+	}
+}
+
+// getProductNames 批量获取商品名称
+func (s *productTakeoutSrv) getProductNames(db *gorm.DB, productUuids []uint64) map[uint64]string {
+	names := make(map[uint64]string)
+	if len(productUuids) == 0 {
+		return names
+	}
+
+	var products []model.ProductPackage
+	err := db.Model(&model.ProductPackage{}).
+		Where("uuid IN ?", productUuids).
+		Where("delete_time = ?", 0).
+		Select("uuid, name").
+		Find(&products).Error
+
+	if err != nil {
+		logger.Logger.Warn("获取商品名称失败", zap.Error(err))
+		return names
+	}
+
+	for _, product := range products {
+		names[product.Uuid] = product.Name
+	}
+
+	return names
+}
+
+// BatchOnlineProducts 批量上架外卖商品
+func (s *productTakeoutSrv) BatchOnlineProducts(ctx context.Context, batchReq req.TakeoutBatchOnlineReq) (*product_resp.TakeoutBatchResp, error) {
+	// 验证请求参数
+	if err := batchReq.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 创建响应对象
+	result := &product_resp.TakeoutBatchResp{
+		Total:          len(batchReq.ProductUuids),
+		Success:        0,
+		Failed:         0,
+		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
+	}
+
+	// 限流器: 每秒10个请求
+	limiter := time.NewTicker(100 * time.Millisecond)
+	defer limiter.Stop()
+
+	// 使用 WaitGroup 等待所有 Goroutine 完成
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 获取商品名称映射
+	db := ctx.GetDB()
+	productNames := s.getProductNames(db, batchReq.ProductUuids)
+
+	// 并发处理每个商品
+	for _, productUuid := range batchReq.ProductUuids {
+		wg.Add(1)
+		go func(uuid uint64) {
+			defer wg.Done()
+			<-limiter.C // 限流
+
+			// 调用上架逻辑
+			status := 1 // 1=上架
+			statusReq := req.ProductTakeoutShopStatusReq{
+				Uuid:     uuid,
+				Platform: batchReq.Platform,
+				Status:   &status,
+			}
+			err := s.UpdateProductTakeoutShopStatus(ctx, statusReq)
+			if err != nil {
+				// 重试3次
+				err = s.retryUpdateStatus(ctx, uuid, 1, 3)
+			}
+
+			mu.Lock()
+			if err != nil {
+				result.Failed++
+				result.FailedProducts = append(result.FailedProducts, product_resp.TakeoutBatchFailedProduct{
+					ProductUuid: uuid,
+					ProductName: productNames[uuid],
+					Error:       err.Error(),
+				})
+			} else {
+				result.Success++
+			}
+			mu.Unlock()
+		}(productUuid)
+	}
+
+	wg.Wait()
+	return result, nil
+}
+
+// BatchOfflineProducts 批量下架外卖商品
+func (s *productTakeoutSrv) BatchOfflineProducts(ctx context.Context, batchReq req.TakeoutBatchOfflineReq) (*product_resp.TakeoutBatchResp, error) {
+	// 验证请求参数
+	if err := batchReq.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 创建响应对象
+	result := &product_resp.TakeoutBatchResp{
+		Total:          len(batchReq.ProductUuids),
+		Success:        0,
+		Failed:         0,
+		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
+	}
+
+	// 限流器: 每秒10个请求
+	limiter := time.NewTicker(100 * time.Millisecond)
+	defer limiter.Stop()
+
+	// 使用 WaitGroup 等待所有 Goroutine 完成
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 获取商品名称映射
+	db := ctx.GetDB()
+	productNames := s.getProductNames(db, batchReq.ProductUuids)
+
+	// 并发处理每个商品
+	for _, productUuid := range batchReq.ProductUuids {
+		wg.Add(1)
+		go func(uuid uint64) {
+			defer wg.Done()
+			<-limiter.C // 限流
+
+			// 调用下架逻辑
+			status := 0 // 0=下架
+			statusReq := req.ProductTakeoutShopStatusReq{
+				Uuid:     uuid,
+				Platform: batchReq.Platform,
+				Status:   &status,
+			}
+			err := s.UpdateProductTakeoutShopStatus(ctx, statusReq)
+			if err != nil {
+				// 重试3次
+				err = s.retryUpdateStatus(ctx, uuid, 0, 3)
+			}
+
+			mu.Lock()
+			if err != nil {
+				result.Failed++
+				result.FailedProducts = append(result.FailedProducts, product_resp.TakeoutBatchFailedProduct{
+					ProductUuid: uuid,
+					ProductName: productNames[uuid],
+					Error:       err.Error(),
+				})
+			} else {
+				result.Success++
+			}
+			mu.Unlock()
+		}(productUuid)
+	}
+
+	wg.Wait()
+	return result, nil
+}
+
+// BatchDeleteProducts 批量删除外卖商品
+func (s *productTakeoutSrv) BatchDeleteProducts(ctx context.Context, batchReq req.TakeoutBatchDeleteReq) (*product_resp.TakeoutBatchResp, error) {
+	// 验证请求参数
+	if err := batchReq.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 创建响应对象
+	result := &product_resp.TakeoutBatchResp{
+		Total:          len(batchReq.ProductUuids),
+		Success:        0,
+		Failed:         0,
+		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
+	}
+
+	// 限流器: 每秒10个请求
+	limiter := time.NewTicker(100 * time.Millisecond)
+	defer limiter.Stop()
+
+	// 使用 WaitGroup 等待所有 Goroutine 完成
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 获取商品名称映射
+	db := ctx.GetDB()
+	productNames := s.getProductNames(db, batchReq.ProductUuids)
+
+	// 并发处理每个商品
+	for _, productUuid := range batchReq.ProductUuids {
+		wg.Add(1)
+		go func(uuid uint64) {
+			defer wg.Done()
+			<-limiter.C // 限流
+
+			// 调用删除逻辑
+			deleteReq := req.ProductTakeoutShopDeleteReq{
+				Uuid:     productUuid,
+				Platform: batchReq.Platform,
+			}
+			err := s.DeleteProductTakeoutShop(ctx, deleteReq)
+
+			mu.Lock()
+			if err != nil {
+				result.Failed++
+				result.FailedProducts = append(result.FailedProducts, product_resp.TakeoutBatchFailedProduct{
+					ProductUuid: uuid,
+					ProductName: productNames[uuid],
+					Error:       err.Error(),
+				})
+			} else {
+				result.Success++
+			}
+			mu.Unlock()
+		}(productUuid)
+	}
+
+	wg.Wait()
+	return result, nil
+}
+
+// retryUpdateStatus 重试更新状态
+func (s *productTakeoutSrv) retryUpdateStatus(ctx context.Context, productUuid uint64, status int, maxRetries int) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		statusReq := req.ProductTakeoutShopStatusReq{
+			Uuid:   productUuid,
+			Status: &status,
+		}
+		err = s.UpdateProductTakeoutShopStatus(ctx, statusReq)
+		if err == nil {
+			return nil
+		}
+
+		// 指数退避
+		time.Sleep(time.Duration(i+1) * time.Second)
+	}
+	return err
 }

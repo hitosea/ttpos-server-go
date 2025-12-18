@@ -69,25 +69,19 @@ type ProductTakeoutShopEditAttributeReq struct {
 
 // ProductTakeoutShopDetailReq 外卖商品详情请求
 type ProductTakeoutShopDetailReq struct {
-	Uuid   uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品UUID
-	Source string `form:"source" json:"source"`                // 来源平台 grab/lineman等
-}
-
-// ProductTakeoutShopListReq 外卖商品列表请求
-type ProductTakeoutShopListReq struct {
-	dto.PageReq
-	ProductPackageUuid uint64 `form:"product_package_uuid" json:"product_package_uuid"` // 商品包UUID筛选
-	TakeoutType        *int   `form:"takeout_type" json:"takeout_type"`                 // 外卖类型筛选
-	Status             *int   `form:"status" json:"status"`                             // 外卖状态筛选
+	Uuid     uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品UUID
+	Platform string `form:"platform" json:"platform"`            // 来源平台 grab/lineman等
 }
 
 // ProductTakeoutShopDeleteReq 外卖商品删除请求
 type ProductTakeoutShopDeleteReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"` // 外卖商品UUID
+	Uuid     uint64 `json:"uuid" binding:"required"`                        // 商品UUID
+	Platform string `json:"platform" binding:"required,oneof=grab lineman"` // 来源平台 grab/lineman
 }
 
 // ProductTakeoutShopStatusReq 外卖商品状态修改请求
 type ProductTakeoutShopStatusReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required"`             // 外卖商品UUID
-	Status *int   `json:"status" binding:"required,oneof=0 1"` // 外卖状态 0-下架 1-上架
+	Uuid     uint64 `json:"uuid" binding:"required"`                        // 商品UUID
+	Platform string `json:"platform" binding:"required,oneof=grab lineman"` // 来源平台 grab/lineman
+	Status   *int   `json:"status" binding:"required,oneof=0 1"`            // 外卖状态 0-下架 1-上架
 }

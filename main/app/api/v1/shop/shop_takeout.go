@@ -259,11 +259,16 @@ func (h *TakeoutHandler) GetImportLogs(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param platform query string true "外卖平台"
+// @Param platform body request.PushTakeoutMenuRequest true "外卖平台"
 // @Success 200 {object} nil "成功"
 // @Router /shop/takeout/menu/push [post]
 func (h *TakeoutHandler) PushTakeoutMenu(c *gin.Context) {
-	platform := c.Query("platform")
+	var req request.PushTakeoutMenuRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	platform := req.Platform
 	if platform == "" {
 		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("平台参数不能为空"))
 		return

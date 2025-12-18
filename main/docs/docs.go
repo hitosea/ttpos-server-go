@@ -7221,27 +7221,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/desk/order/daily_sales_outbound_summary": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取每日销售出库汇总",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "获取每日销售出库汇总",
-                "responses": {}
-            }
-        },
         "/cashier/desk/order/discount": {
             "post": {
                 "security": [
@@ -7396,34 +7375,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    }
-                }
-            }
-        },
-        "/cashier/desk/order/headquarter_material_list": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取总部物品列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.桌台"
-                ],
-                "summary": "获取总部物品列表",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -17877,6 +17828,337 @@ const docTemplate = `{
                 }
             }
         },
+        "/kiosk/order/cart/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询购物车信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "查询购物车信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "销售账单UUID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/kiosk/order/cart/product/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "向购物车添加商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "向购物车添加商品",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/kiosk/order/cart/product/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除购物车商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "删除购物车商品",
+                "parameters": [
+                    {
+                        "description": "删除商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderProductDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/kiosk/order/cart/product/num": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改购物车商品数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "修改购物车商品数量",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductNumReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/kiosk/order/cart/product_package/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "向购物车添加套餐",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "向购物车添加套餐",
+                "parameters": [
+                    {
+                        "description": "套餐参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductPackageAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/kiosk/order/product/package/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品选购详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.订单"
+                ],
+                "summary": "获取商品选购详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品包uuid",
+                        "name": "product_package_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单ID",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单ID",
+                        "name": "sale_order_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductPackageDetailRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/kiosk/product/category/list": {
             "get": {
                 "security": [
@@ -27067,7 +27349,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "外卖商品UUID",
+                        "description": "来源平台 grab/lineman等",
+                        "name": "platform",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "商品UUID",
                         "name": "uuid",
                         "in": "query",
                         "required": true
@@ -33113,11 +33401,13 @@ const docTemplate = `{
                 "summary": "推送菜单数据到外卖平台",
                 "parameters": [
                     {
-                        "type": "string",
                         "description": "外卖平台",
                         "name": "platform",
-                        "in": "query",
-                        "required": true
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.PushTakeoutMenuRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -33161,6 +33451,174 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/resp.GrabMenuImportResp"
                         }
+                    }
+                }
+            }
+        },
+        "/shop/takeout/products/batch_create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量创建外卖商品映射关系",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "批量创建外卖商品",
+                "parameters": [
+                    {
+                        "description": "批量创建请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutBatchCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.TakeoutBatchResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/takeout/products/batch_delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量删除外卖商品映射关系",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "批量删除外卖商品",
+                "parameters": [
+                    {
+                        "description": "批量删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutBatchDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.TakeoutBatchResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/takeout/products/batch_offline": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量下架外卖商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "批量下架外卖商品",
+                "parameters": [
+                    {
+                        "description": "批量下架请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutBatchOfflineReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.TakeoutBatchResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/takeout/products/batch_online": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量上架外卖商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "批量上架外卖商品",
+                "parameters": [
+                    {
+                        "description": "批量上架请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TakeoutBatchOnlineReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.TakeoutBatchResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
                     }
                 }
             }
@@ -39213,6 +39671,13 @@ const docTemplate = `{
                     "description": "商品状态 0-下架 1-上架",
                     "type": "integer"
                 },
+                "takeout_products": {
+                    "description": "外卖商品信息列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductTakeoutSimpleInfo"
+                    }
+                },
                 "takeout_tax_name": {
                     "description": "外带税类名称",
                     "type": "string"
@@ -40269,6 +40734,13 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "takeout_products": {
+                    "description": "外卖商品信息列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductTakeoutSimpleInfo"
+                    }
+                },
                 "unit": {
                     "description": "商品单位",
                     "allOf": [
@@ -40495,6 +40967,19 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductTakeoutSimpleInfo": {
+            "type": "object",
+            "properties": {
+                "takeout_type": {
+                    "description": "外卖类型 1-Grab 2-LINE MAN",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "外卖商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductTaxItemResp": {
             "type": "object",
             "properties": {
@@ -40612,6 +41097,47 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/product_resp.ProductUnitProductPackage"
                     }
+                }
+            }
+        },
+        "product_resp.TakeoutBatchFailedProduct": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "错误信息",
+                    "type": "string"
+                },
+                "product_name": {
+                    "description": "商品名称",
+                    "type": "string"
+                },
+                "product_uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.TakeoutBatchResp": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "description": "失败数量",
+                    "type": "integer"
+                },
+                "failed_products": {
+                    "description": "失败商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.TakeoutBatchFailedProduct"
+                    }
+                },
+                "success": {
+                    "description": "成功数量",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
                 }
             }
         },
@@ -46433,11 +46959,20 @@ const docTemplate = `{
         "req.ProductTakeoutShopDeleteReq": {
             "type": "object",
             "required": [
+                "platform",
                 "uuid"
             ],
             "properties": {
+                "platform": {
+                    "description": "来源平台 grab/lineman",
+                    "type": "string",
+                    "enum": [
+                        "grab",
+                        "lineman"
+                    ]
+                },
                 "uuid": {
-                    "description": "外卖商品UUID",
+                    "description": "商品UUID",
                     "type": "integer"
                 }
             }
@@ -47937,6 +48472,110 @@ const docTemplate = `{
                 }
             }
         },
+        "req.TakeoutBatchCreateReq": {
+            "type": "object",
+            "required": [
+                "platform",
+                "product_uuids"
+            ],
+            "properties": {
+                "platform": {
+                    "description": "外卖平台标识: grab/lineman",
+                    "type": "string",
+                    "enum": [
+                        "grab",
+                        "lineman"
+                    ]
+                },
+                "product_uuids": {
+                    "description": "商品UUID列表,最多100个",
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.TakeoutBatchDeleteReq": {
+            "type": "object",
+            "required": [
+                "platform",
+                "product_uuids"
+            ],
+            "properties": {
+                "platform": {
+                    "description": "外卖平台标识: grab/lineman",
+                    "type": "string",
+                    "enum": [
+                        "grab",
+                        "lineman"
+                    ]
+                },
+                "product_uuids": {
+                    "description": "商品UUID列表,最多100个",
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.TakeoutBatchOfflineReq": {
+            "type": "object",
+            "required": [
+                "platform",
+                "product_uuids"
+            ],
+            "properties": {
+                "platform": {
+                    "description": "外卖平台标识: grab/lineman",
+                    "type": "string",
+                    "enum": [
+                        "grab",
+                        "lineman"
+                    ]
+                },
+                "product_uuids": {
+                    "description": "商品UUID列表,最多100个",
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.TakeoutBatchOnlineReq": {
+            "type": "object",
+            "required": [
+                "platform",
+                "product_uuids"
+            ],
+            "properties": {
+                "platform": {
+                    "description": "外卖平台标识: grab/lineman",
+                    "type": "string",
+                    "enum": [
+                        "grab",
+                        "lineman"
+                    ]
+                },
+                "product_uuids": {
+                    "description": "商品UUID列表,最多100个",
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "req.TransferOrderApproveReq": {
             "type": "object",
             "required": [
@@ -49005,6 +49644,18 @@ const docTemplate = `{
                     "description": "状态筛选（0-进行中 1-成功 2-失败）",
                     "type": "integer",
                     "format": "int32"
+                }
+            }
+        },
+        "request.PushTakeoutMenuRequest": {
+            "type": "object",
+            "required": [
+                "platform"
+            ],
+            "properties": {
+                "platform": {
+                    "description": "平台名称：grab, lineman 等",
+                    "type": "string"
                 }
             }
         },

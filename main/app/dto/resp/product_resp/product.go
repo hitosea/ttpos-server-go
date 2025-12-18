@@ -626,7 +626,8 @@ type ProductDetailResp struct {
 
 	HeadquarterUuid uint64 `json:"headquarter_uuid"` // 总部UUID,0表示不是总部商品
 
-	IsEditable bool `json:"is_editable"` // 是否可编辑 1-是 0-否
+	IsEditable      bool                       `json:"is_editable"`      // 是否可编辑 1-是 0-否
+	TakeoutProducts []ProductTakeoutSimpleInfo `json:"takeout_products"` // 外卖商品信息列表
 }
 
 // ProductListResp 商品列表响应
@@ -653,6 +654,7 @@ type ProductShopListItemResp struct {
 	Flavors             ProductShopListItemFlavorListResp `json:"flavors"`               // 商品规格列表
 	NumType             uint                              `json:"num_type"`              // 商品数量计算方法 0-整数 1-小数
 	IsEditable          bool                              `json:"is_editable"`           // 是否可编辑
+	TakeoutProducts     []ProductTakeoutSimpleInfo        `json:"takeout_products"`      // 外卖商品信息列表
 }
 
 // ProductShopListItemTagResp 商品标签列表
@@ -675,6 +677,12 @@ type ProductShopListItemFlavorItemResp struct {
 	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品Bom名称
 	Price        float64            `json:"price"`         // 商品Bom价格
 	InternalCode string             `json:"internal_code"` // 商品Bom内部编码
+}
+
+// ProductTakeoutSimpleInfo 外卖商品简要信息
+type ProductTakeoutSimpleInfo struct {
+	Uuid        uint64 `json:"uuid"`         // 外卖商品UUID
+	TakeoutType uint   `json:"takeout_type"` // 外卖类型 1-Grab 2-LINE MAN
 }
 
 // ProductTaxListResp 商品税类列表响应

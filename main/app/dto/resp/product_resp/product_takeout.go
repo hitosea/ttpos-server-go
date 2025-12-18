@@ -43,3 +43,18 @@ type ProductTakeoutShopListResp struct {
 	ImageUrl           string             `json:"image_url"`            // 外卖商品图片URL
 	MinPrice           float64            `json:"min_price"`            // 最低价格
 }
+
+// TakeoutBatchResp 批量操作响应
+type TakeoutBatchResp struct {
+	Total          int                         `json:"total"`           // 总数
+	Success        int                         `json:"success"`         // 成功数量
+	Failed         int                         `json:"failed"`          // 失败数量
+	FailedProducts []TakeoutBatchFailedProduct `json:"failed_products"` // 失败商品列表
+}
+
+// TakeoutBatchFailedProduct 批量操作失败商品信息
+type TakeoutBatchFailedProduct struct {
+	ProductUuid uint64 `json:"product_uuid"` // 商品UUID
+	ProductName string `json:"product_name"` // 商品名称
+	Error       string `json:"error"`        // 错误信息
+}

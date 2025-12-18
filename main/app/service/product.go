@@ -5337,6 +5337,46 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		productList = append(productList, productItem)
 	}
 
+	// 批量查询外卖商品信息
+	if len(productPackages) > 0 {
+		productUuids := make([]uint64, len(productPackages))
+		for i, pkg := range productPackages {
+			productUuids[i] = pkg.Uuid
+		}
+
+		// 查询未删除的外卖商品
+		takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+		takeoutProducts, err := takeoutRepo.GetProductPackageTakeoutList(
+			takeoutRepo.WhereByProductPackageUuids(productUuids),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+
+		if err == nil && len(takeoutProducts) > 0 {
+			// 按 product_package_uuid 分组
+			takeoutMap := make(map[uint64][]product_resp.ProductTakeoutSimpleInfo)
+			for _, takeout := range takeoutProducts {
+				takeoutMap[takeout.ProductPackageUuid] = append(takeoutMap[takeout.ProductPackageUuid], product_resp.ProductTakeoutSimpleInfo{
+					Uuid:        takeout.Uuid,
+					TakeoutType: takeout.TakeoutType,
+				})
+			}
+
+			// 将外卖商品信息添加到商品列表中
+			for i := range productList {
+				if takeouts, ok := takeoutMap[productList[i].Uuid]; ok {
+					productList[i].TakeoutProducts = takeouts
+				} else {
+					productList[i].TakeoutProducts = []product_resp.ProductTakeoutSimpleInfo{}
+				}
+			}
+		} else {
+			// 如果查询失败或没有数据，设置空数组
+			for i := range productList {
+				productList[i].TakeoutProducts = []product_resp.ProductTakeoutSimpleInfo{}
+			}
+		}
+	}
+
 	productResp := product_resp.ProductShopListResp{
 		List: productList,
 		Meta: dto.PageResponse{
@@ -5519,6 +5559,26 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 	}
 	productDetailResp.Flavors.InjectStockNum(stockNumMap)
 	productDetailResp.Sauces.InjectStockNum(stockNumMap)
+
+	// 查询外卖商品信息
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	takeoutProducts, err := takeoutRepo.GetProductPackageTakeoutList(
+		takeoutRepo.WhereByProductPackageUuid(productPackage.Uuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+
+	if err == nil && len(takeoutProducts) > 0 {
+		takeoutList := make([]product_resp.ProductTakeoutSimpleInfo, len(takeoutProducts))
+		for i, takeout := range takeoutProducts {
+			takeoutList[i] = product_resp.ProductTakeoutSimpleInfo{
+				Uuid:        takeout.Uuid,
+				TakeoutType: takeout.TakeoutType,
+			}
+		}
+		productDetailResp.TakeoutProducts = takeoutList
+	} else {
+		productDetailResp.TakeoutProducts = []product_resp.ProductTakeoutSimpleInfo{}
+	}
 
 	return &productDetailResp, nil
 }
@@ -8087,6 +8147,12 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 		if err != nil {
 			return errors.WithMessage(err, "同步总店商品到子店失败")
 		}
+
+		// 同步总店外卖商品到子店
+		err = s.syncHeadquarterTakeoutProducts(ctx, db, headquarterDb, &companySetting)
+		if err != nil {
+			return errors.WithMessage(err, "同步总店外卖商品到子店失败")
+		}
 	}
 
 	if len(multiLanguageNameUuids) > 0 {
@@ -8094,6 +8160,221 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 		if err != nil {
 			logger.Logger.Error("同步erp商品添加多语言uuid到待翻译集合中失败", zap.Error(err))
 		}
+	}
+
+	return nil
+}
+
+// syncHeadquarterTakeoutProducts 同步总部外卖商品到子店
+func (s *productSrv) syncHeadquarterTakeoutProducts(
+	_ context.Context,
+	subDb *gorm.DB,
+	headquarterDb *gorm.DB,
+	companySetting *model.CompanySetting,
+) error {
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询总部外卖商品（包含关联数据）
+	headTakeoutRepo := repository.NewProductPackageTakeoutRepo(headquarterDb)
+	headTakeoutList, err := headTakeoutRepo.GetProductPackageTakeoutList(
+		commonRepo.WhereByHeadquarterUuid(0),
+		headTakeoutRepo.WithProductBomTakeouts(),
+		headTakeoutRepo.WithProductPackageAttributeTakeouts(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取总部外卖商品列表失败")
+	}
+
+	// 查询子店现有外卖商品（用于判断是否已同步）
+	subTakeoutRepo := repository.NewProductPackageTakeoutRepo(subDb)
+	subTakeoutList, err := subTakeoutRepo.GetProductPackageTakeoutList(
+		commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
+		subTakeoutRepo.WithProductBomTakeouts(),
+		subTakeoutRepo.WithProductPackageAttributeTakeouts(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取子店外卖商品列表失败")
+	}
+
+	// 构建子店已同步数据的 Map（用于快速查找）
+	subTakeoutMap := make(map[uint64]*model.ProductPackageTakeout)
+	subBomTakeoutMap := make(map[uint64]*model.ProductBomTakeout)
+	for _, takeout := range subTakeoutList {
+		subTakeoutMap[takeout.Uuid] = takeout
+		for _, bom := range takeout.ProductBomTakeouts {
+			subBomTakeoutMap[bom.Uuid] = &bom
+		}
+	}
+
+	// 准备新数据
+	newTakeoutList := make([]model.ProductPackageTakeout, 0)
+	newBomTakeoutList := make([]model.ProductBomTakeout, 0)
+	newAttrTakeoutList := make([]model.ProductPackageAttributeTakeout, 0)
+
+	for _, headTakeout := range headTakeoutList {
+		// 确定外卖商品状态：首次同步默认下架（0），再次同步保留子店状态
+		status := uint(0) // 默认下架
+		if existsTakeout, ok := subTakeoutMap[headTakeout.Uuid]; ok {
+			status = existsTakeout.Status // 保留子店状态
+		}
+
+		// 创建新外卖商品
+		newTakeout := model.ProductPackageTakeout{
+			BaseModel: model.BaseModel{
+				Uuid:       headTakeout.Uuid,
+				CreateTime: headTakeout.CreateTime,
+				UpdateTime: headTakeout.UpdateTime,
+				DeleteTime: headTakeout.DeleteTime,
+			},
+			ProductPackageUuid:            headTakeout.ProductPackageUuid,
+			MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
+			HeadquarterUuid:               companySetting.HeadquarterUuid,
+			Name:                          headTakeout.Name,
+			ProductType:                   headTakeout.ProductType,
+			TakeoutType:                   headTakeout.TakeoutType,
+			Status:                        status, // 使用确定的状态
+			CategoryUuid:                  headTakeout.CategoryUuid,
+			SpecialCategoryUuid:           headTakeout.SpecialCategoryUuid,
+			ImageFileUuid:                 headTakeout.ImageFileUuid,
+			Describe:                      headTakeout.Describe,
+			DescribeMultiLanguageNameUuid: headTakeout.DescribeMultiLanguageNameUuid,
+			Source:                        headTakeout.Source,
+			SourceProductId:               headTakeout.SourceProductId,
+		}
+		newTakeoutList = append(newTakeoutList, newTakeout)
+
+		// 处理外卖规格价格
+		for _, headBom := range headTakeout.ProductBomTakeouts {
+			// 确定规格价格：首次同步使用总部价格，再次同步保留子店价格
+			price := headBom.Price // 默认使用总部价格
+			if existsBom, ok := subBomTakeoutMap[headBom.Uuid]; ok {
+				price = existsBom.Price // 保留子店价格
+			}
+
+			newBom := model.ProductBomTakeout{
+				BaseModel: model.BaseModel{
+					Uuid:       headBom.Uuid,
+					CreateTime: headBom.CreateTime,
+					UpdateTime: headBom.UpdateTime,
+					DeleteTime: headBom.DeleteTime,
+				},
+				ProductPackageTakeoutUuid: headBom.ProductPackageTakeoutUuid,
+				ProductBomUuid:            headBom.ProductBomUuid,
+				HeadquarterUuid:           companySetting.HeadquarterUuid,
+				Price:                     price, // 使用确定的价格
+				GrabModifierId:            headBom.GrabModifierId,
+			}
+			newBomTakeoutList = append(newBomTakeoutList, newBom)
+		}
+
+		// 处理外卖属性价格（不保留子店价格，始终使用总部价格）
+		for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
+			newAttr := model.ProductPackageAttributeTakeout{
+				BaseModel: model.BaseModel{
+					Uuid:       headAttr.Uuid,
+					CreateTime: headAttr.CreateTime,
+					UpdateTime: headAttr.UpdateTime,
+					DeleteTime: headAttr.DeleteTime,
+				},
+				ProductPackageTakeoutUuid:   headAttr.ProductPackageTakeoutUuid,
+				ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
+				HeadquarterUuid:             companySetting.HeadquarterUuid,
+				Price:                       headAttr.Price, // 使用总部价格
+			}
+			newAttrTakeoutList = append(newAttrTakeoutList, newAttr)
+		}
+	}
+
+	// 执行数据库事务
+	err = subDb.Transaction(func(tx *gorm.DB) error {
+		takeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
+		bomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
+		attrTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+
+		// 收集需要删除的数据UUID
+		delTakeoutUuids := make([]uint64, 0)
+		delBomTakeoutUuids := make([]uint64, 0)
+		delAttrTakeoutUuids := make([]uint64, 0)
+
+		for _, takeout := range subTakeoutList {
+			delTakeoutUuids = append(delTakeoutUuids, takeout.Uuid)
+			for _, bom := range takeout.ProductBomTakeouts {
+				delBomTakeoutUuids = append(delBomTakeoutUuids, bom.Uuid)
+			}
+			for _, attr := range takeout.ProductPackageAttributeTakeouts {
+				delAttrTakeoutUuids = append(delAttrTakeoutUuids, attr.Uuid)
+			}
+		}
+
+		// 批量物理删除子店现有数据
+		if len(delAttrTakeoutUuids) > 0 {
+			err := attrTakeoutRepo.DestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
+			if err != nil {
+				return errors.WithMessage(err, "销毁子店外卖属性价格失败")
+			}
+		}
+
+		if len(delBomTakeoutUuids) > 0 {
+			err := bomTakeoutRepo.DestroyProductBomTakeout(commonRepo.WhereInUuids(delBomTakeoutUuids))
+			if err != nil {
+				return errors.WithMessage(err, "销毁子店外卖规格价格失败")
+			}
+		}
+
+		if len(delTakeoutUuids) > 0 {
+			err := takeoutRepo.DestroyProductPackageTakeout(commonRepo.WhereInUuids(delTakeoutUuids))
+			if err != nil {
+				return errors.WithMessage(err, "销毁子店外卖商品失败")
+			}
+		}
+
+		// 插入新数据（逐条插入，错误记录日志但不中断）
+		if len(newTakeoutList) > 0 {
+			for _, takeout := range newTakeoutList {
+				err := takeoutRepo.CreateProductPackageTakeout(&takeout)
+				if err != nil {
+					logger.Logger.Error("创建子店外卖商品失败",
+						zap.Uint64("uuid", takeout.Uuid),
+						zap.Uint64("product_package_uuid", takeout.ProductPackageUuid),
+						zap.Error(err))
+					// 不中断，继续处理
+				}
+			}
+		}
+
+		if len(newBomTakeoutList) > 0 {
+			for _, bom := range newBomTakeoutList {
+				err := bomTakeoutRepo.CreateProductBomTakeout(&bom)
+				if err != nil {
+					logger.Logger.Error("创建子店外卖规格价格失败",
+						zap.Uint64("uuid", bom.Uuid),
+						zap.Uint64("product_package_takeout_uuid", bom.ProductPackageTakeoutUuid),
+						zap.Uint64("product_bom_uuid", bom.ProductBomUuid),
+						zap.Error(err))
+					// 不中断，继续处理
+				}
+			}
+		}
+
+		if len(newAttrTakeoutList) > 0 {
+			for _, attr := range newAttrTakeoutList {
+				err := attrTakeoutRepo.CreateProductPackageAttributeTakeout(&attr)
+				if err != nil {
+					logger.Logger.Error("创建子店外卖属性价格失败",
+						zap.Uint64("uuid", attr.Uuid),
+						zap.Uint64("product_package_takeout_uuid", attr.ProductPackageTakeoutUuid),
+						zap.Uint64("product_package_attribute_uuid", attr.ProductPackageAttributeUuid),
+						zap.Error(err))
+					// 不中断，继续处理
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return errors.WithMessage(err, "同步总店外卖商品到子店事务执行失败")
 	}
 
 	return nil
@@ -8456,7 +8737,16 @@ func (s *productSrv) SyncProductPackageImage(ctx context.Context, syncHeadquarte
 	var files []model.File
 	var fileGroups []model.FileGroup
 	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-	fileUuidQuery := headquarterDb.Model(&model.ProductPackage{}).Where("image_file_uuid > 0").Select("image_file_uuid")
+
+	// 查询店内商品的图片UUID
+	productFileUuidQuery := headquarterDb.Model(&model.ProductPackage{}).Where("image_file_uuid > 0").Select("image_file_uuid")
+
+	// 查询外卖商品的图片UUID
+	takeoutFileUuidQuery := headquarterDb.Model(&model.ProductPackageTakeout{}).Where("image_file_uuid > 0").Select("image_file_uuid")
+
+	// 使用 UNION 合并两个查询
+	fileUuidQuery := headquarterDb.Raw("? UNION ?", productFileUuidQuery, takeoutFileUuidQuery)
+
 	err := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Find(&files).Error
 	if err != nil {
 		return errors.WithMessage(errors.New("查询文件失败"), err.Error())

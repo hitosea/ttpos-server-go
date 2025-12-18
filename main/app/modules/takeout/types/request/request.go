@@ -32,3 +32,8 @@ type GetImportLogsRequest struct {
 	PageNo     int    // 页码
 	PageSize   int    // 每页数量
 }
+
+// PushTakeoutMenuRequest 推送菜单请求
+type PushTakeoutMenuRequest struct {
+	Platform string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
+}
