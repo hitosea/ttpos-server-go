@@ -684,8 +684,20 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		newItems := make([]*model.WarehouseOutFormItem, 0)
 
+		// 记录已处理的材料UUID（用于后续处理新增的材料）
+		processedMaterialUuids := make(map[uint64]bool)
+
 		// 如果有原记录，按原出库单UUID分组创建新记录
 		if len(formItemMap) > 0 {
+			// 获取第一个出库单UUID（用于新增的材料）
+			var firstWarehouseOutFormUuid uint64
+			var firstOriginalItems []*model.WarehouseOutFormItem
+			for uuid, items := range formItemMap {
+				firstWarehouseOutFormUuid = uuid
+				firstOriginalItems = items
+				break
+			}
+
 			for warehouseOutFormUuid, originalItems := range formItemMap {
 				// 验证出库单是否存在
 				warehouseOutForm, err := warehouseFormRepo.GetWarehouseForm(
@@ -711,25 +723,57 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 						}
 					}
 
-					// 如果没有对应的原记录，跳过（可能该材料是新添加的，或者不在这个出库单中）
-					if originalItem == nil {
-						continue
+					// 如果原记录中存在该材料，创建新记录
+					if originalItem != nil {
+						// 创建新记录
+						uuid, _ := utils.GetID()
+						newItem := &model.WarehouseOutFormItem{
+							BaseModel: model.BaseModel{
+								Uuid:       uuid,
+								CreateTime: time.Now().Unix(),
+							},
+							WarehouseOutFormUuid: warehouseOutFormUuid, // 关联原出库单UUID
+							WarehouseUuid:        materialStock.WarehouseUuid,
+							MaterialUuid:         materialStock.MaterialUuid,
+							SaleBillUuid:         saleBillUuid,
+							SaleOrderUuid:        saleOrderUuid, // 使用指定的销售订单UUID
+							StaffShiftLogUuid:    originalItem.StaffShiftLogUuid,
+							Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(), // 保留4位小数
+							Scene:                constant.WarehouseOutFormSceneSales,
+							Status:               constant.WarehouseOutFormItemStatusSuccess,
+							ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
+						}
+						newItems = append(newItems, newItem)
+						processedMaterialUuids[materialStock.MaterialUuid] = true
 					}
+				}
+			}
 
-					// 创建新记录
+			// 处理新增的材料（在原记录中不存在的材料）
+			// 使用第一个出库单UUID，如果没有原记录则使用第一个原记录的StaffShiftLogUuid
+			var firstStaffShiftLogUuid uint64
+			if len(firstOriginalItems) > 0 {
+				firstStaffShiftLogUuid = firstOriginalItems[0].StaffShiftLogUuid
+			} else {
+				firstStaffShiftLogUuid = targetSaleOrder.StaffShiftLogUuid
+			}
+
+			for _, materialStock := range materialStocksList {
+				// 如果该材料还没有被处理（新增的材料）
+				if !processedMaterialUuids[materialStock.MaterialUuid] {
 					uuid, _ := utils.GetID()
 					newItem := &model.WarehouseOutFormItem{
 						BaseModel: model.BaseModel{
 							Uuid:       uuid,
 							CreateTime: time.Now().Unix(),
 						},
-						WarehouseOutFormUuid: warehouseOutFormUuid, // 关联原出库单UUID
+						WarehouseOutFormUuid: firstWarehouseOutFormUuid, // 使用第一个出库单UUID
 						WarehouseUuid:        materialStock.WarehouseUuid,
 						MaterialUuid:         materialStock.MaterialUuid,
 						SaleBillUuid:         saleBillUuid,
-						SaleOrderUuid:        saleOrderUuid, // 使用指定的销售订单UUID
-						StaffShiftLogUuid:    originalItem.StaffShiftLogUuid,
-						Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(), // 保留4位小数
+						SaleOrderUuid:        saleOrderUuid,
+						StaffShiftLogUuid:    firstStaffShiftLogUuid,
+						Num:                  decimal.NewFromFloat(materialStock.StockNum).Round(4).InexactFloat64(),
 						Scene:                constant.WarehouseOutFormSceneSales,
 						Status:               constant.WarehouseOutFormItemStatusSuccess,
 						ReduceStock:          constant.WarehouseOutFormItemReduceStockNotProcessed,
