@@ -11,11 +11,12 @@ import (
 // TransferOrder 调拨单主表 ttpos_transfer_order
 type TransferOrder struct {
 	BaseModel
-	CompanyUuid     uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
-	CompanyName     string `gorm:"column:company_name;type:varchar(255);default:'';comment:所属公司名称" json:"company_name"`
-	HeadquarterUuid uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
-	OrderNo         string `gorm:"column:order_no;type:varchar(255);default:'';comment:单据编号TR+12位数字" json:"order_no"`
-	ErpOrderNo      string `gorm:"column:erp_order_no;type:varchar(255);default:'';comment:ERP调拨单号（销售单号）" json:"erp_order_no"`
+	CompanyUuid      uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
+	CompanyName      string `gorm:"column:company_name;type:varchar(255);default:'';comment:所属公司名称" json:"company_name"`
+	CompanyStoreCode string `gorm:"column:company_store_code;type:varchar(255);default:'';comment:公司店铺编码" json:"company_store_code"`
+	HeadquarterUuid  uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
+	OrderNo          string `gorm:"column:order_no;type:varchar(255);default:'';comment:单据编号TR+12位数字" json:"order_no"`
+	ErpOrderNo       string `gorm:"column:erp_order_no;type:varchar(255);default:'';comment:ERP调拨单号（销售单号）" json:"erp_order_no"`
 
 	// 类型和方向
 	TransferType int `gorm:"column:transfer_type;type:int(4);default:1;comment:调拨类型：1-调入 2-调出" json:"transfer_type"`
