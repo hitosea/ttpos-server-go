@@ -34,6 +34,7 @@ type PurchaseOrder struct {
 	HeadquarterStatus       int     `gorm:"column:headquarter_status;type:int(10);not null;default:0;comment:总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"headquarter_status"`
 	CompanyUuid             uint64  `gorm:"column:company_uuid;type:bigint(20) unsigned;not null;default:0;comment:公司UUID-用于识别子商户" json:"company_uuid"`
 	CompanyName             string  `gorm:"column:company_name;type:varchar(255);not null;default:'';comment:公司名称" json:"company_name"`
+	CompanyStoreCode        string  `gorm:"column:company_store_code;type:varchar(255);not null;default:'';comment:公司店铺编码" json:"company_store_code"`
 	DefaultWarehouseErpCode string  `gorm:"column:default_warehouse_erp_code;type:varchar(255);not null;default:'';comment:默认仓库ERP编码" json:"default_warehouse_erp_code"`
 	DefaultWarehouseName    string  `gorm:"column:default_warehouse_name;type:text;comment:默认仓库名称" json:"default_warehouse_name"`
 
