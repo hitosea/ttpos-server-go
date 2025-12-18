@@ -274,14 +274,27 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 // Call 平板端呼叫
 func (s *callSrv) Call(ctx context.Context, callReq req.CallReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	deskRepo := repository.NewDeskRepo(db)
-	desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(ctx.GetDeskUuid()))
-	if err != nil {
-		return errors.New("桌台不存在")
+
+	var deskUuid uint64
+	var deskNo string
+
+	// 如果 deskUuid 为 0，可能是 Kiosk 终端（无桌台），使用设备ID作为标识
+	if ctx.GetDeskUuid() == 0 && ctx.GetSource() == constant.SourceKiosk {
+		deskUuid = 0
+		deskNo = "自助点餐机-" + ctx.GetDeviceSn() // 使用设备ID作为标识
+	} else {
+		deskRepo := repository.NewDeskRepo(db)
+		desk, err := deskRepo.GetDesk(deskRepo.WhereUuid(ctx.GetDeskUuid()))
+		if err != nil {
+			return errors.New("桌台不存在")
+		}
+		deskUuid = desk.Uuid
+		deskNo = desk.DeskNo
 	}
+
 	if err := repository.NewCallRepo(db).CreateCall(model.CustomerCall{
-		DeskUuid: desk.Uuid,
-		DeskNo:   desk.DeskNo,
+		DeskUuid: deskUuid,
+		DeskNo:   deskNo,
 		CallType: callReq.CallType,
 	}); err != nil {
 		return err

@@ -36,6 +36,7 @@ type IAuthSrv interface {
 	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                         // 点餐助手端基本信息
 	TabletBase(ctx context.Context) (resp.TabletBase, error)                                                               // 平板端基本信息
 	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                             // 厨显端基本信息
+	KioskBase(ctx context.Context) (resp.KioskBase, error)                                                                 // 自助点餐机基本信息
 	Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) // 鉴权
 	AuthDesk(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权桌台
 	AuthMenu(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权点子菜单
@@ -905,6 +906,66 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		ServerVersion: utils.GetVersion(),
 		ClientVersion: clientVersion,
 		CompanyList:   s.getCompanyList(ctx),
+	}, nil
+}
+
+// KioskBase 获取自助点餐机基本信息
+func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
+	var kioskBase resp.KioskBase
+
+	// 如果 company_uuid 为 0，只返回可用门店列表
+	// 设计原因：
+	// 1. 支持统一账号认证的多门店切换场景：用户登录后可能未选择门店，需要返回可用门店列表供用户选择
+	// 2. 保持与其他终端（Cashier、Tablet、Assistant等）Base 接口的一致性
+	// 3. 前端可以根据 company_list 判断是否需要显示门店选择界面
+	// 参考：story-auth-unified-account 统一账号认证功能设计
+	if ctx.GetCompanyUuid() == 0 {
+		kioskBase.CompanyList = s.getCompanyList(ctx)
+		return kioskBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	staff := ctx.GetStaff()
+	var (
+		source   = ctx.GetSource()
+		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
+	)
+	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
+
+	// 获取自助点餐机设置（包含语言列表、轮播广告）
+	kioskSetting, err := s.settingSrv.GetKioskSetting(ctx)
+	if err != nil {
+		return kioskBase, errors.WithMessage(err)
+	}
+
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return kioskBase, errors.WithMessage(err)
+	}
+
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return kioskBase, errors.WithMessage(err)
+	}
+
+	return resp.KioskBase{
+		Username:     staff.Username,
+		DeviceId:     deviceId,
+		DeviceRemark: deviceRemark,
+		Company: resp.Company{
+			Uuid:       company.Uuid,
+			Name:       company.Name,
+			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:   companySetting.Timezone,
+			ExpireTime: company.ExpireTime,
+		},
+		Currency:    currencySetting,
+		Business:    businessSetting,
+		Kiosk:       kioskSetting.KioskResp,
+		UpdateTime:  time.Now().Unix(),
+		CompanyList: s.getCompanyList(ctx),
 	}, nil
 }
 
