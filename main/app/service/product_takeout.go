@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	product_resp "ttpos-server-go/app/dto/resp/product_resp"
@@ -25,10 +27,14 @@ type IProductTakeoutSrv interface {
 	GetProductTakeoutShopDetail(ctx context.Context, req req.ProductTakeoutShopDetailReq) (*product_resp.ProductTakeoutShopDetailResp, error)
 	DeleteProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopDeleteReq) error
 	UpdateProductTakeoutShopStatus(ctx context.Context, req req.ProductTakeoutShopStatusReq) error
+
+	// GetProductCount 获取外卖商品统计
+	GetProductCount(ctx context.Context, companyUuid uint64, platform string, forceRefresh bool) (int64, error)
 }
 
 type productTakeoutSrv struct {
 	dbm        *database.DBManager
+	cache      cache.Cache
 	localeSrv  ILocaleSrv
 	productSrv IProductSrv
 }
@@ -36,6 +42,7 @@ type productTakeoutSrv struct {
 func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache, translateSrv ITranslateSrv) IProductTakeoutSrv {
 	return &productTakeoutSrv{
 		dbm:        dbm,
+		cache:      cache,
 		localeSrv:  localeSrv,
 		productSrv: NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
 	}
@@ -722,4 +729,79 @@ func (s *productTakeoutSrv) restoreProductTakeoutShop(ctx context.Context, exist
 	}
 
 	return restoredTakeout, nil
+}
+
+// GetProductCount 获取外卖商品统计
+func (s *productTakeoutSrv) GetProductCount(
+	ctx context.Context,
+	companyUuid uint64,
+	platform string,
+	forceRefresh bool,
+) (int64, error) {
+	// 1. 构造缓存 Key
+	cacheKey := s.buildCountCacheKey(companyUuid, platform)
+
+	// 2. 检查缓存(如果不是强制刷新)
+	if !forceRefresh {
+		cached, ok := s.cache.Get(cacheKey)
+		if ok {
+			if count, ok := cached.(int64); ok {
+				logger.Logger.Debug("缓存命中", zap.String("key", cacheKey), zap.Int64("count", count))
+				return count, nil
+			}
+		}
+	}
+
+	// 3. 查询数据库
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 4. 构造查询条件
+	var count int64
+	query := db.Model(&model.ProductPackageTakeout{}).
+		Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
+		Where("ttpos_product_package_takeout.delete_time = ?", 0).
+		Where("ttpos_product_package.delete_time = ?", 0)
+
+	// 6. 如果指定了平台,添加平台过滤 (使用source字段匹配)
+	if platform != "" {
+		query = query.Where("ttpos_product_package_takeout.source = ?", platform)
+	}
+
+	// 7. 执行统计
+	if err := query.Count(&count).Error; err != nil {
+		logger.Logger.Error("查询商品统计失败",
+			zap.Uint64("company_uuid", companyUuid),
+			zap.String("platform", platform),
+			zap.Error(err))
+		return 0, errors.WithMessage(err, "查询商品统计失败")
+	}
+
+	// 8. 写入缓存(5分钟)
+	if err := s.cache.Set(cacheKey, count, 5*60); err != nil {
+		logger.Logger.Warn("写入缓存失败", zap.String("key", cacheKey), zap.Error(err))
+		// 缓存失败不影响结果返回
+	}
+
+	return count, nil
+}
+
+// buildCountCacheKey 构造缓存Key
+func (s *productTakeoutSrv) buildCountCacheKey(companyUuid uint64, platform string) string {
+	if platform == "" {
+		return fmt.Sprintf("takeout:products:count:%d:all", companyUuid)
+	}
+	return fmt.Sprintf("takeout:products:count:%d:%s", companyUuid, platform)
+}
+
+// ClearProductCountCache 清除商品统计缓存(商品导入/删除时调用)
+func (s *productTakeoutSrv) ClearProductCountCache(ctx context.Context, companyUuid uint64, platform string) {
+	// 清除指定平台缓存
+	if platform != "" {
+		key := s.buildCountCacheKey(companyUuid, platform)
+		s.cache.Del(key)
+	}
+
+	// 清除所有平台缓存
+	allKey := s.buildCountCacheKey(companyUuid, "")
+	s.cache.Del(allKey)
 }

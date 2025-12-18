@@ -32954,6 +32954,48 @@
                 }
             }
         },
+        "/shop/takeout/products/count": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取指定平台或所有平台的外卖商品总数",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖管理"
+                ],
+                "summary": "获取外卖商品统计",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "外卖平台(grab/lineman等,不传则统计所有平台)",
+                        "name": "platform",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "total": {
+                                    "type": "integer",
+                                    "format": "int64"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/shop/takeout/status/info": {
             "get": {
                 "security": [

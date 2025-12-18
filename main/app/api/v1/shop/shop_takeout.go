@@ -25,6 +25,8 @@ type TakeoutHandler struct {
 	takeoutMenuAppSrv application.ITakeoutMenuAppService
 	// 外卖服务
 	takeoutSrv service.ITakeoutSrv
+	// 外卖商品服务
+	productTakeoutSrv service.IProductTakeoutSrv
 }
 
 // NewTakeoutHandler 创建外卖 Handler
@@ -39,8 +41,9 @@ func NewTakeoutHandler(
 ) *TakeoutHandler {
 	takeoutSrv := service.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
 	return &TakeoutHandler{
-		takeoutAppSrv: takeoutAppSrv,
-		takeoutSrv:    takeoutSrv,
+		takeoutAppSrv:     takeoutAppSrv,
+		takeoutSrv:        takeoutSrv,
+		productTakeoutSrv: productTakeoutSrv,
 	}
 }
 
@@ -307,6 +310,36 @@ func (h *TakeoutHandler) ReimportTakeoutMenu(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// GetProductCount 获取外卖商品统计
+// @Summary 获取外卖商品统计
+// @Description 获取指定平台或所有平台的外卖商品总数
+// @Tags 商家端.外卖管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param platform query string false "外卖平台(grab/lineman等,不传则统计所有平台)"
+// @Success 200 {object} object{total=int64} "成功"
+// @Router /shop/takeout/products/count [get]
+func (h *TakeoutHandler) GetProductCount(c *gin.Context) {
+	// 获取参数
+	platform := c.Query("platform")
+
+	ctx := helper.GetContext(c)
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 调用Service
+	total, err := h.productTakeoutSrv.GetProductCount(ctx, companyUuid, platform, true)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "查询商品统计失败"))
+		return
+	}
+
+	// 返回响应
+	helper.Success(c, gin.H{
+		"total": total,
+	})
+}
+
 // RegisterTakeoutHandlers 注册外卖路由
 func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -342,6 +375,9 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/takeout/menu/import/progress", takeoutHandler.GetImportProgress) // 获取导入进度
 		privateApi.GET("/takeout/menu/import/logs", takeoutHandler.GetImportLogs)         // 获取导入日志列表
 		privateApi.POST("/takeout/menu/reimport", takeoutHandler.ReimportTakeoutMenu)     // 重新导入菜单 (log_uuid参数)
+
+		// 外卖商品统计
+		privateApi.GET("/takeout/products/count", takeoutHandler.GetProductCount) // 获取外卖商品统计
 
 	}
 }
