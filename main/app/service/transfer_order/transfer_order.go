@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -57,21 +58,23 @@ type transferOrderSrv struct {
 	lock        lock.Lock
 	validator   *transferOrderValidator
 	helper      *transferOrderHelper
+	settingSrv  setting.ISrv
 }
 
 // NewTransferOrderSrv 创建调拨单服务
-func NewTransferOrderSrv(dbm *database.DBManager, materialSrv service.IMaterialSrv) ITransferOrderSrv {
-	return NewTransferOrderSrvImpl(dbm, materialSrv)
+func NewTransferOrderSrv(dbm *database.DBManager, materialSrv service.IMaterialSrv, settingSrv setting.ISrv) ITransferOrderSrv {
+	return NewTransferOrderSrvImpl(dbm, materialSrv, settingSrv)
 }
 
 // NewTransferOrderSrvImpl 创建调拨单服务实现
-func NewTransferOrderSrvImpl(dbm *database.DBManager, materialSrv service.IMaterialSrv) ITransferOrderSrv {
+func NewTransferOrderSrvImpl(dbm *database.DBManager, materialSrv service.IMaterialSrv, settingSrv setting.ISrv) ITransferOrderSrv {
 	return &transferOrderSrv{
 		dbm:         dbm,
 		materialSrv: materialSrv,
 		lock:        lock.NewSystemLock(),
 		validator:   &transferOrderValidator{},
 		helper:      &transferOrderHelper{},
+		settingSrv:  settingSrv,
 	}
 }
 
@@ -618,6 +621,13 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("生成调拨单UUID失败"), err.Error())
 	}
 
+	// 获取店铺编码
+	var companyStoreCode string
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err == nil {
+		companyStoreCode = storeSetting.StoreCode
+	}
+
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 创建调拨单主表
@@ -627,6 +637,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			},
 			CompanyUuid:         companyUuid,
 			CompanyName:         companyName,
+			CompanyStoreCode:    companyStoreCode,
 			HeadquarterUuid:     headquarterUuid,
 			OrderNo:             orderNo,
 			TransferType:        reqs.TransferType,

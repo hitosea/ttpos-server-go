@@ -411,7 +411,7 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	// 调拨单服务
 	wrapper := &TransferOrderHandler{
 		authSrv:          authSrv,
-		transferOrderSrv: transfer_order.NewTransferOrderSrv(dbm, materialSrv),
+		transferOrderSrv: transfer_order.NewTransferOrderSrv(dbm, materialSrv, settingSrv),
 	}
 
 	// 需要认证
