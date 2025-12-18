@@ -101,6 +101,20 @@ type KitchenBase struct {
 	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
 }
 
+type KioskBase struct {
+	Username     string            `json:"username"`      // 登录账号
+	DeviceId     string            `json:"device_id"`     // 设备ID
+	DeviceRemark string            `json:"device_remark"` // 设备备注
+	Company      Company           `json:"company"`       // 商家信息
+	Currency     setting.Currency  `json:"currency"`      // 货币单位
+	Business     setting.Business  `json:"business"`      // 门店业务设置
+	Kiosk        setting.KioskResp `json:"kiosk"`         // 自助点餐机设置（包含语言列表、轮播广告）
+	UpdateTime   int64             `json:"update_time"`   // 更新时间
+
+	// 关联的门店列表
+	CompanyList []*CompanyStaffResp `json:"company_list,omitempty"`
+}
+
 type ProductPrinter struct {
 	Uuid   uint64 `json:"uuid"`   // 商品打印机uuid
 	Name   string `json:"name"`   // 商品打印机名称
