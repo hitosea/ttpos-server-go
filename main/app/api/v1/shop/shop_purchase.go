@@ -453,7 +453,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	// 采购服务
-	purchaseOrderSrv := purchase_order.NewPurchaseOrderSrv(dbm)
+	purchaseOrderSrv := purchase_order.NewPurchaseOrderSrvImpl(dbm, settingSrv)
 	uploadFileSrv := service.NewUploadFileSrv(dbm)
 	receiptFileSrv := service.NewPurchaseReceiptFileSrv(dbm)
 
