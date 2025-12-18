@@ -7299,6 +7299,14 @@ definitions:
     required:
     - product_package_uuid
     type: object
+  req.ProductTakeoutShopDeleteReq:
+    properties:
+      uuid:
+        description: 外卖商品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.ProductTakeoutShopEditAttributeReq:
     properties:
       price:
@@ -7875,6 +7883,18 @@ definitions:
       product_uuid:
         description: 送厨商品ID
         type: integer
+    type: object
+  req.RegenerateSalesOutboundSummaryReq:
+    properties:
+      company_uuid:
+        description: 门店UUID
+        type: integer
+      date:
+        description: 日期，格式：YYYY-MM-DD
+        type: string
+    required:
+    - company_uuid
+    - date
     type: object
   req.RejectH5OrderReq:
     properties:
@@ -15049,6 +15069,18 @@ definitions:
         description: 剩余可退款金额
         type: number
     type: object
+  resp.RegenerateSalesOutboundSummaryResp:
+    properties:
+      deleted_count:
+        description: 删除的记录数
+        type: integer
+      duration_ms:
+        description: 操作耗时（毫秒）
+        type: integer
+      generated_count:
+        description: 生成的记录数
+        type: integer
+    type: object
   resp.RemarkInfo:
     properties:
       custom_remark:
@@ -18336,6 +18368,48 @@ paths:
       summary: 获取ERPNext站点公司名称
       tags:
       - 平台端.商家授权
+  /admin/takeout/logs:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询外卖导入日志，支持按平台、类型、状态筛选。平台管理员可查看所有商户，商户管理员只能查看自己的。
+      parameters:
+      - description: 外卖平台(grab/lineman等)，为空查询所有
+        in: query
+        name: platform
+        type: string
+      - description: 导入类型(1-TTPOS推送到平台 2-平台推送到TTPOS)，0 查询所有
+        in: query
+        name: import_type
+        type: integer
+      - description: 导入状态(0-进行中 1-成功 2-失败)，-1 查询所有
+        in: query
+        name: status
+        type: integer
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      - description: 商户 UUID(平台管理员可指定，商户管理员只能查自己的)
+        in: query
+        name: company_uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - InternalToken: []
+      summary: 获取外卖导入日志列表
+      tags:
+      - 平台端.外卖管理
   /api/v1/cost_card_correction/execute:
     post:
       consumes:
@@ -30993,6 +31067,35 @@ paths:
       summary: 更新满减活动
       tags:
       - 商家端.满减活动
+  /shop/inventory/regenerate-sales-outbound-summary:
+    post:
+      consumes:
+      - application/json
+      description: 删除指定日期的旧销售出库汇总记录，并重新生成新的汇总记录
+      parameters:
+      - description: 重新生成销售出库汇总记录请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.RegenerateSalesOutboundSummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RegenerateSalesOutboundSummaryResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 重新生成销售出库汇总记录
+      tags:
+      - 商家端.仓库管理
   /shop/login:
     post:
       consumes:
@@ -33886,6 +33989,30 @@ paths:
       security:
       - JwtToken: []
       summary: 添加外卖商品
+      tags:
+      - 商家端.外卖商品
+  /shop/product/takeout/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除外卖商品（软删除），再次添加时会自动还原
+      parameters:
+      - description: 外卖商品删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductTakeoutShopDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除外卖商品
       tags:
       - 商家端.外卖商品
   /shop/product/takeout/detail:

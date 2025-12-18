@@ -16,7 +16,7 @@ type ExportMenuRequest struct {
 // ToggleTakeoutStatusRequest 切换外卖状态请求
 type ToggleTakeoutStatusRequest struct {
 	Platform string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
-	Enabled  bool   `json:"enabled" binding:"required"`  // 是否开启外卖
+	Enabled  bool   `json:"enabled"`                     // 是否开启外卖
 }
 
 // UpdateBindingStatusRequest 更新绑定状态请求

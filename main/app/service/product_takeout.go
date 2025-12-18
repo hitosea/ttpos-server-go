@@ -68,10 +68,18 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		return nil, errors.WithMessage(errors.New("总部商品不能添加为外卖商品"))
 	}
 
-	// 检查是否已存在同类型外卖商品
+	// 检查是否已存在同类型外卖商品（包括软删除的记录）
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
-	if takeoutRepo.CheckProductPackageTakeoutExist(addReq.ProductPackageUuid, uint(addReq.TakeoutType)) {
+	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutIncludeSoftDelete(addReq.ProductPackageUuid, uint(addReq.TakeoutType))
+
+	// 如果存在未删除的记录，返回错误
+	if err == nil && existingTakeout.DeleteTime == 0 {
 		return nil, errors.WithMessage(errors.New("该商品已存在相同类型的外卖配置"))
+	}
+
+	// 如果存在已软删除的记录，还原它
+	if err == nil && existingTakeout.DeleteTime != 0 {
+		return s.restoreProductTakeoutShop(ctx, existingTakeout, addReq)
 	}
 
 	// 生成UUID
@@ -398,25 +406,29 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, detailReq req.ProductTakeoutShopDetailReq) (*product_resp.ProductTakeoutShopDetailResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
+	// 获取原商品的完整信息，包括套餐、加料、属性等
+	productRepo := repository.NewProductRepo(db)
+	productPackage, err := productRepo.GetProductDetail(detailReq.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取原商品信息失败")
+	}
+
+	// 获取外卖商品信息
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 	takeout, err := takeoutRepo.GetProductPackageTakeout(
-		repository.CommonRepo.WhereByUuid(detailReq.Uuid),
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("product_package_uuid = ?", detailReq.Uuid)
+		},
 		repository.CommonRepo.WhereBySoftDelete(),
 		takeoutRepo.WithProductPackage(),
 		takeoutRepo.WithProductPackageMultiLanguageName(),
 		takeoutRepo.WithProductCategory(),
 		takeoutRepo.WithProductSpecialCategory(),
 		takeoutRepo.WithImageFile(),
+		takeoutRepo.WhereBySource(detailReq.Source),
 	)
 	if err != nil {
-		return nil, errors.WithMessage(errors.New("外卖商品不存在"))
-	}
-
-	// 获取原商品的完整信息，包括套餐、加料、属性等
-	productRepo := repository.NewProductRepo(db)
-	productPackage, err := productRepo.GetProductDetail(takeout.ProductPackageUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err, "获取原商品信息失败")
+		return &product_resp.ProductTakeoutShopDetailResp{}, nil
 	}
 
 	// 获取外卖商品的规格价格列表
@@ -498,6 +510,9 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 		repository.CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil
+		}
 		return errors.WithMessage(errors.New("外卖商品不存在"))
 	}
 
@@ -506,7 +521,7 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 		return errors.WithMessage(errors.New("总部外卖商品不能删除"))
 	}
 
-	// 检查是否有未完成的外卖订单
+	// TODO: 检查是否有未完成的外卖订单
 	// 注意：目前外卖订单功能未开发，暂不检查
 	// 后续需要检查 ttpos_sale_order 表中是否有该外卖商品的未完成订单
 	// 如果有，应该阻止删除或给出提示
@@ -560,4 +575,151 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// restoreProductTakeoutShop 还原已软删除的外卖商品
+func (s *productTakeoutSrv) restoreProductTakeoutShop(ctx context.Context, existingTakeout *model.ProductPackageTakeout, addReq req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error) {
+	db := ctx.GetDB()
+
+	// 准备更新数据
+	updateData := map[string]any{
+		"delete_time":           0, // 还原软删除
+		"status":                addReq.Status,
+		"category_uuid":         addReq.CategoryUuid,
+		"special_category_uuid": addReq.SpecialCategoryUuid,
+		"image_file_uuid":       addReq.ImageFileUuid,
+		"source":                addReq.Source,
+		"source_product_id":     addReq.SourceProductId,
+	}
+
+	// 处理多语言名称
+	if !addReq.LocaleName.IsNull() {
+		productName := addReq.LocaleName.ToJson()
+		multiLanguageName := model.NewMultiLanguageName(productName)
+
+		// 如果已有多语言记录，更新它；否则创建新的
+		if existingTakeout.MultiLanguageNameUuid != 0 {
+			err := repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageName(existingTakeout.MultiLanguageNameUuid, *multiLanguageName)
+			if err != nil {
+				return nil, errors.WithMessage(err, "更新多语言名称失败")
+			}
+		} else {
+			multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*multiLanguageName)
+			if err != nil {
+				return nil, errors.WithMessage(err, "创建多语言名称失败")
+			}
+			updateData["multi_language_name_uuid"] = multiLanguageNameUuid
+		}
+		updateData["name"] = productName
+	}
+
+	// 处理卖点多语言
+	if !addReq.Describe.IsNull() {
+		describe := addReq.Describe.ToJson()
+		describeMultiLanguageName := model.NewMultiLanguageName(describe)
+
+		// 如果已有卖点多语言记录，更新它；否则创建新的
+		if existingTakeout.DescribeMultiLanguageNameUuid != 0 {
+			err := repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageName(existingTakeout.DescribeMultiLanguageNameUuid, *describeMultiLanguageName)
+			if err != nil {
+				return nil, errors.WithMessage(err, "更新卖点多语言失败")
+			}
+		} else {
+			describeMultiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*describeMultiLanguageName)
+			if err != nil {
+				return nil, errors.WithMessage(err, "创建卖点多语言失败")
+			}
+			updateData["describe_multi_language_name_uuid"] = describeMultiLanguageNameUuid
+		}
+		updateData["describe"] = describe
+	}
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// 还原外卖商品记录
+		takeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
+		if err := takeoutRepo.UpdateProductPackageTakeout(
+			updateData,
+			repository.CommonRepo.WhereByUuid(existingTakeout.Uuid),
+		); err != nil {
+			return errors.WithMessage(err, "还原外卖商品失败")
+		}
+
+		// 删除旧的外卖规格价格记录（软删除的可能已过期）
+		productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
+		commonRepo := repository.NewCommonRepo()
+
+		// 软删除所有旧的规格价格
+		if err := productBomTakeoutRepo.DestroyProductBomTakeout(
+			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+		); err != nil {
+			return errors.WithMessage(err, "清理旧规格价格失败")
+		}
+
+		// 添加新的外卖规格价格
+		if len(addReq.Flavors) > 0 {
+			for _, flavorReq := range addReq.Flavors {
+				productBomTakeout := &model.ProductBomTakeout{
+					ProductPackageTakeoutUuid: existingTakeout.Uuid,
+					ProductBomUuid:            flavorReq.BomUuid,
+					HeadquarterUuid:           existingTakeout.HeadquarterUuid,
+					Price:                     flavorReq.Price,
+					GrabModifierId:            flavorReq.GrabModifierId,
+				}
+				if err := productBomTakeoutRepo.CreateProductBomTakeout(productBomTakeout); err != nil {
+					return errors.WithMessage(err, "创建外卖规格价格失败")
+				}
+			}
+		}
+
+		// 删除旧的外卖属性价格记录
+		productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+
+		// 软删除所有旧的属性价格
+		if err := productPackageAttributeTakeoutRepo.DestroyProductPackageAttributeTakeout(
+			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+		); err != nil {
+			return errors.WithMessage(err, "清理旧属性价格失败")
+		}
+
+		// 添加新的外卖属性价格
+		if len(addReq.Attributes) > 0 {
+			for _, attributeReq := range addReq.Attributes {
+				productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+					ProductPackageTakeoutUuid:   existingTakeout.Uuid,
+					ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
+					HeadquarterUuid:             existingTakeout.HeadquarterUuid,
+					Price:                       attributeReq.Price,
+				}
+				if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+					return errors.WithMessage(err, "创建外卖属性价格失败")
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("还原外卖商品失败", zap.Any("func", "restoreProductTakeoutShop"), zap.Any("params", addReq), zap.Error(err))
+		return nil, errors.WithMessage(err, "还原外卖商品失败")
+	}
+
+	// 自动设置分类在外卖平台显示
+	if addReq.CategoryUuid != 0 {
+		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.CategoryUuid)
+	}
+	if addReq.SpecialCategoryUuid != 0 {
+		_ = s.productSrv.SetCategoryDisplayInTakeout(ctx, addReq.SpecialCategoryUuid)
+	}
+
+	// 重新加载并返回还原后的记录
+	restoredTakeout, err := repository.NewProductPackageTakeoutRepo(db).GetProductPackageTakeout(
+		repository.CommonRepo.WhereByUuid(existingTakeout.Uuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取还原后的外卖商品失败")
+	}
+
+	return restoredTakeout, nil
 }

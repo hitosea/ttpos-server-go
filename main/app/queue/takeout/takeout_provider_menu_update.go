@@ -67,29 +67,26 @@ func TakeoutProviderMenuUpdateHandler(ctx context.Context, msg *primitive.Messag
 	productTakeoutSrv := service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 	takeoutSrv := service.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
 
-	// 设置上下文
 	shopUuid, err := strconv.ParseUint(event.ShopUuid, 10, 64)
 	if err != nil {
 		logger.Logger.Error("转换ShopUuid失败", zap.Error(err))
 		return err
 	}
+	// 获取数据库连接
 	db := dbm.GetDB(shopUuid)
 	if db == nil {
 		logger.Logger.Error("获取数据库连接失败", zap.Uint64("shop_uuid", shopUuid))
 		return err
 	}
+	// 获取公司信息
 	companyInfo, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(shopUuid)
 	if err != nil {
 		logger.Logger.Error("获取公司信息失败", zap.Error(err))
 		return err
 	}
-
+	// 设置上下文
 	ctxHelper := ttposContext.NewDefaultContext()
-	ctxHelper.SetDB(db)
-	ctxHelper.SetCompanyUuid(shopUuid)
-	ctxHelper.SetCompany(*companyInfo)
-	ctxHelper.SetVersion("v2.11.0")
-	ctxHelper.SetCompanySetting(*companyInfo.CompanySetting)
+	ctxHelper.SetBasicInfo(db, companyInfo)
 	logger.Logger.Info("导入菜单到TTPOS开始", zap.String("provider", event.ProviderName), zap.String("merchant_id", event.MerchantID), zap.String("partner_merchant_id", event.PartnerMerchantID), zap.String("shop_uuid", event.ShopUuid), zap.Uint64("uuid", event.Uuid), zap.Int64("received_at", event.ReceivedAt))
 
 	// 导入菜单到TTPOS

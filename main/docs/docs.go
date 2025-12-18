@@ -243,6 +243,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/takeout/logs": {
+            "get": {
+                "security": [
+                    {
+                        "InternalToken": []
+                    }
+                ],
+                "description": "分页查询外卖导入日志，支持按平台、类型、状态筛选。平台管理员可查看所有商户，商户管理员只能查看自己的。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台端.外卖管理"
+                ],
+                "summary": "获取外卖导入日志列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "外卖平台(grab/lineman等)，为空查询所有",
+                        "name": "platform",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "导入类型(1-TTPOS推送到平台 2-平台推送到TTPOS)，0 查询所有",
+                        "name": "import_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "导入状态(0-进行中 1-成功 2-失败)，-1 查询所有",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商户 UUID(平台管理员可指定，商户管理员只能查自己的)",
+                        "name": "company_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/cost_card_correction/execute": {
             "post": {
                 "security": [
@@ -21820,6 +21886,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/inventory/regenerate-sales-outbound-summary": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除指定日期的旧销售出库汇总记录，并重新生成新的汇总记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库管理"
+                ],
+                "summary": "重新生成销售出库汇总记录",
+                "parameters": [
+                    {
+                        "description": "重新生成销售出库汇总记录请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RegenerateSalesOutboundSummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RegenerateSalesOutboundSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -26551,6 +26668,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.ProductTakeoutShopAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/takeout/delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除外卖商品（软删除），再次添加时会自动还原",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外卖商品"
+                ],
+                "summary": "删除外卖商品",
+                "parameters": [
+                    {
+                        "description": "外卖商品删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductTakeoutShopDeleteReq"
                         }
                     }
                 ],
@@ -45906,6 +46062,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductTakeoutShopDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "外卖商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductTakeoutShopEditAttributeReq": {
             "type": "object",
             "required": [
@@ -46702,6 +46870,23 @@ const docTemplate = `{
                 "product_uuid": {
                     "description": "送厨商品ID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.RegenerateSalesOutboundSummaryReq": {
+            "type": "object",
+            "required": [
+                "company_uuid",
+                "date"
+            ],
+            "properties": {
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                },
+                "date": {
+                    "description": "日期，格式：YYYY-MM-DD",
+                    "type": "string"
                 }
             }
         },
@@ -57242,6 +57427,23 @@ const docTemplate = `{
                 "refundable_amount": {
                     "description": "剩余可退款金额",
                     "type": "number"
+                }
+            }
+        },
+        "resp.RegenerateSalesOutboundSummaryResp": {
+            "type": "object",
+            "properties": {
+                "deleted_count": {
+                    "description": "删除的记录数",
+                    "type": "integer"
+                },
+                "duration_ms": {
+                    "description": "操作耗时（毫秒）",
+                    "type": "integer"
+                },
+                "generated_count": {
+                    "description": "生成的记录数",
+                    "type": "integer"
                 }
             }
         },

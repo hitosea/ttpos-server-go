@@ -1274,6 +1274,32 @@ func (h *ProductHandler) ProductTakeoutShopDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// ProductTakeoutShopDelete 删除外卖商品
+// @Summary 删除外卖商品
+// @Description 删除外卖商品（软删除），再次添加时会自动还原
+// @Tags 商家端.外卖商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductTakeoutShopDeleteReq true "外卖商品删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/takeout/delete [post]
+func (h *ProductHandler) ProductTakeoutShopDelete(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductTakeoutShopDeleteReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, nil)
+		return
+	}
+	err := h.productTakeoutSrv.DeleteProductTakeoutShop(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "删除成功")
+}
+
 // ProductTaxList 获取商品税类列表
 // @Summary 获取商品税类列表
 // @Description 获取商品税类列表
@@ -1434,8 +1460,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/upload_image", wrapper.UploadProductImage)     // 上传商品图片
 
 		// 外卖商品
-		privateApi.POST("/product/takeout/add", wrapper.ProductTakeoutShopAdd)      // 添加外卖商品
-		privateApi.POST("/product/takeout/edit", wrapper.ProductTakeoutShopEdit)    // 编辑外卖商品
-		privateApi.GET("/product/takeout/detail", wrapper.ProductTakeoutShopDetail) // 获取外卖商品详情
+		privateApi.POST("/product/takeout/add", wrapper.ProductTakeoutShopAdd)       // 添加外卖商品
+		privateApi.POST("/product/takeout/edit", wrapper.ProductTakeoutShopEdit)     // 编辑外卖商品
+		privateApi.GET("/product/takeout/detail", wrapper.ProductTakeoutShopDetail)  // 获取外卖商品详情
+		privateApi.POST("/product/takeout/delete", wrapper.ProductTakeoutShopDelete) // 删除外卖商品
 	}
 }

@@ -69,7 +69,8 @@ type ProductTakeoutShopEditAttributeReq struct {
 
 // ProductTakeoutShopDetailReq 外卖商品详情请求
 type ProductTakeoutShopDetailReq struct {
-	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 外卖商品UUID
+	Uuid   uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品UUID
+	Source string `form:"source" json:"source"`                // 来源平台 grab/lineman等
 }
 
 // ProductTakeoutShopListReq 外卖商品列表请求

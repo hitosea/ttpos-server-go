@@ -20,7 +20,8 @@ type IProductPackageTakeoutQueryRepo interface {
 	GetProductPackageTakeoutByProductPackageUuid(productPackageUuid uint64, takeoutType uint) (*model.ProductPackageTakeout, error)
 	GetProductPackageTakeoutBySourceProductId(source string, sourceProductId string) (*model.ProductPackageTakeout, error) // 根据来源平台和商品ID查询
 	CheckProductPackageTakeoutExist(productPackageUuid uint64, takeoutType uint) bool
-	GetProductPackageTakeoutCount(opts ...DBOption) (int64, error) // 统计外卖商品数量
+	GetProductPackageTakeoutIncludeSoftDelete(productPackageUuid uint64, takeoutType uint) (*model.ProductPackageTakeout, error) // 获取外卖商品（包括软删除的记录）
+	GetProductPackageTakeoutCount(opts ...DBOption) (int64, error)                                                              // 统计外卖商品数量
 
 	WithProductPackage(opts ...DBOption) DBOption                          // 预加载商品包
 	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption         // 预加载商品包多语言名称
@@ -98,6 +99,14 @@ func (r *productPackageTakeoutRepoImpl) GetProductPackageTakeoutBySourceProductI
 func (r *productPackageTakeoutRepoImpl) CheckProductPackageTakeoutExist(productPackageUuid uint64, takeoutType uint) bool {
 	_, err := r.GetProductPackageTakeoutByProductPackageUuid(productPackageUuid, takeoutType)
 	return err == nil
+}
+
+// GetProductPackageTakeoutIncludeSoftDelete 获取外卖商品（包括软删除的记录）
+func (r *productPackageTakeoutRepoImpl) GetProductPackageTakeoutIncludeSoftDelete(productPackageUuid uint64, takeoutType uint) (*model.ProductPackageTakeout, error) {
+	return r.GetProductPackageTakeout(
+		CommonRepo.WhereByProductPackageUuid(productPackageUuid),
+		r.WhereByTakeoutType(takeoutType),
+	)
 }
 
 // GetProductPackageTakeoutCount 统计外卖商品数量

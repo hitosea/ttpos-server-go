@@ -86,6 +86,9 @@ type Context interface {
 	Log() *zap.Logger                         // 获取日志实例
 
 	GetBrand() string // 获取品牌名称
+
+	// 基础信息
+	SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error // 设置基础信息
 }
 
 type ContextImpl struct {
@@ -489,4 +492,14 @@ func (c *ContextImpl) GetCache() cache.Cache {
 
 func (c *ContextImpl) GetBrand() string {
 	return c.cc.GetString(jwt.Brand)
+}
+
+// 设置基础信息
+func (c *ContextImpl) SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error {
+	c.SetDB(db)
+	c.SetCompanyUuid(companyInfo.Uuid)
+	c.SetCompany(*companyInfo)
+	c.SetCompanySetting(*companyInfo.CompanySetting)
+	c.SetVersion("v2.11.0")
+	return nil
 }

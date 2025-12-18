@@ -63,6 +63,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		adminGroup := apiV1.Group("/admin")
 		{
 			admin.RegisterHandlers(adminGroup, dbm, cache)
+			admin.RegisterTakeoutHandlers(adminGroup, dbm)
 		}
 
 		// 通用接口
