@@ -105,11 +105,13 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 	// 回调 ttpos (保持原有逻辑，需要从 order 中获取 callback_url)
 	// 注意：新表结构中没有 callback_url 字段，需要从其他地方获取或移除此逻辑
 	// 暂时注释掉，等待确认业务需求
+	// 如需恢复，使用 utility.GenerateTtposAuth(order.PartnerOrderId) 生成认证头
 	/*
 		if len(order.CallbackUrl) > 0 {
 			go func() {
+				auth, _ := utility.GenerateTtposAuth(order.PartnerOrderId)
 				callbackRes := &gclient.Response{}
-				if callbackRes, err = g.Client().SetHeader(consts.TTPOS_HEADER_CALLBACK_AUTH, s.getCallBackAuth(order.PartnerOrderId)).ContentJson().Post(gctx.New(), order.CallbackUrl, g.Map{
+				if callbackRes, err = g.Client().SetHeader(consts.TTPOS_HEADER_CALLBACK_AUTH, auth).ContentJson().Post(gctx.New(), order.CallbackUrl, g.Map{
 					"shopRefNo":       order.PartnerOrderId,
 					"takeoutRefNo":    order.PartnerOrderId,
 					"providerName":    order.ProviderName,
