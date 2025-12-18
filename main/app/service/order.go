@@ -166,6 +166,9 @@ type IOrderSrv interface {
 	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)   // 图片打印
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo // 图片打印
 
+	// invoice
+	SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) // 保存发票到ERP
+
 }
 
 // orderSrv 订单服务结构
@@ -4179,18 +4182,32 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 }
 
 // 保存发票到erp
-func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
+func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
-	staff := ctx.GetStaff()
-	shiftLogRepo := repository.NewShiftLogRepo(db)
-	shiftLog, err := shiftLogRepo.GetShiftLog(
-		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
-	)
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	// 处理选项参数
+	option := &SavePosInvoiceOption{}
+	for _, opt := range opts {
+		opt(option)
 	}
+
+	// 获取 shiftLog：优先使用选项中的，否则从 Context 中获取
+	var shiftLog *model.StaffShiftLog
+	if option.ShiftLog != nil {
+		shiftLog = option.ShiftLog
+	} else {
+		staff := ctx.GetStaff()
+		shiftLogRepo := repository.NewShiftLogRepo(db)
+		shiftLogFromDB, err := shiftLogRepo.GetShiftLog(
+			repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+			repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+		)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		shiftLog = &shiftLogFromDB
+	}
+
 	if shiftLog.IsHandedOver() {
 		return nil, errors.New("当前班次已交班，无法保存发票")
 	}
@@ -4460,10 +4477,15 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		customerUuid = ""
 	}
 	erpSrv := erp.NewIErpSrv(s.dbm)
+	// 优先使用选项中的 OpenPosEntryName，如果为空则使用 shiftLog 中的值
+	openPosEntryName := shiftLog.ErpnextOpenPosEntryName
+	if option.OpenPosEntryName != "" {
+		openPosEntryName = option.OpenPosEntryName
+	}
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
 		OrderNo:          saleOrder.OrderNo,
-		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+		OpenPosEntryName: openPosEntryName,
 		PostingDatetime:  saleOrder.FinishTime,
 		CustomerUuid:     customerUuid,
 		Items:            items,         // 订单商品列表
@@ -4474,6 +4496,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	if saleOrder.IsErpReverseSettle() {
 		param.AmendedProductsInvoiceName = saleOrder.ErpProductsInvoiceName
 		param.AmendedMaterialInvoiceName = saleOrder.ErpMaterialInvoiceName
+	}
+	if option.Remark != "" {
+		param.Remark = option.Remark
 	}
 	response, err := erpSrv.SavePosInvoice(ctx, param)
 	if err != nil {
@@ -5306,6 +5331,34 @@ type MustPlanConfirmOption struct {
 func WithIsH5Order() func(option *MustPlanConfirmOption) {
 	return func(option *MustPlanConfirmOption) {
 		option.IsH5Order = true
+	}
+}
+
+// SavePosInvoiceOption SavePosInvoice 方法选项
+type SavePosInvoiceOption struct {
+	ShiftLog         *model.StaffShiftLog // 班次记录（可选，如果不提供则从 Context 中获取）
+	Remark           string               // 备注（可选，用于区分批量任务等场景）
+	OpenPosEntryName string               // OpenPosEntryName（可选，如果不提供则从 shiftLog 中获取）
+}
+
+// WithShiftLog 设置班次记录选项
+func WithShiftLog(shiftLog *model.StaffShiftLog) func(*SavePosInvoiceOption) {
+	return func(option *SavePosInvoiceOption) {
+		option.ShiftLog = shiftLog
+	}
+}
+
+// WithRemark 设置备注选项
+func WithRemark(remark string) func(*SavePosInvoiceOption) {
+	return func(option *SavePosInvoiceOption) {
+		option.Remark = remark
+	}
+}
+
+// WithOpenPosEntryName 设置 OpenPosEntryName 选项
+func WithOpenPosEntryName(openPosEntryName string) func(*SavePosInvoiceOption) {
+	return func(option *SavePosInvoiceOption) {
+		option.OpenPosEntryName = openPosEntryName
 	}
 }
 
