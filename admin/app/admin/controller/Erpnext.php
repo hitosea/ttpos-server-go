@@ -74,8 +74,20 @@ class Erpnext extends Controller
         }
         // 验证用户名密码是否正确
         $user = User::withTrashed()->whereRaw('BINARY username = :username', ['username' => $this->admin['user']['user_name']])->order('admin_user_id', 'desc')->order('delete_time')->find();
-        if (!$user || $user->password != salt_hash($param['password'] ?? '')) {
+        if (!$user) {
             return $this->renderError('密码错误');
+        }
+        
+        // 验证密码（支持 MD5 和 bcrypt）
+        list($isValid, $needUpgrade) = verify_password($param['password'] ?? '', $user->password);
+        if (!$isValid) {
+            return $this->renderError('密码错误');
+        }
+        
+        // 如果需要升级，异步升级为 bcrypt
+        // 注意：超管表在 saas 库中
+        if ($needUpgrade) {
+            upgrade_password_async($user['admin_user_id'], 'ttpos_admin_user', 'admin_user_id', 'password', $param['password'] ?? '', 0);
         }
 
         $companySetting = Supplier::where("uuid", $param['uuid'])->with('app')->find();

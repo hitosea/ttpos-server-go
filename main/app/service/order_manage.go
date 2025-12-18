@@ -2463,10 +2463,22 @@ func (s *orderSrv) verifyPasswordForDiscount(ctx context.Context, req req.Verify
 		return false, errors.WithMessage(errors.New("不是权限员工，请确认信息"), "不是权限员工，请确认信息")
 	}
 
-	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
-	encryptedPassword := utils.EncryptPassword(req.Password)
-	if staff.PermissionPassword != encryptedPassword {
+	// 4. 验证权限密码（支持 MD5 和 bcrypt）
+	isValid, needUpgrade := utils.VerifyPassword(req.Password, staff.PermissionPassword)
+	if !isValid {
 		return false, errors.WithMessage(errors.New("密码错误"), "密码错误")
+	}
+
+	// 如果需要升级权限密码，异步升级为 bcrypt（可选）
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			s.dbm.GetDB(staff.CompanyUuid),
+			"ttpos_staff",
+			"permission_password",
+			"uuid",
+			staff.Uuid,
+			req.Password,
+		)
 	}
 
 	// 5. 返回验证结果
@@ -2508,10 +2520,22 @@ func (s *orderSrv) verifyPasswordForRefund(ctx context.Context, req req.VerifyPa
 		return false, errors.New("不是权限员工，请确认信息")
 	}
 
-	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
-	encryptedPassword := utils.EncryptPassword(req.Password)
-	if staff.PermissionPassword != encryptedPassword {
+	// 4. 验证权限密码（支持 MD5 和 bcrypt）
+	isValid, needUpgrade := utils.VerifyPassword(req.Password, staff.PermissionPassword)
+	if !isValid {
 		return false, errors.New("密码错误")
+	}
+
+	// 如果需要升级权限密码，异步升级为 bcrypt（可选）
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			s.dbm.GetDB(staff.CompanyUuid),
+			"ttpos_staff",
+			"permission_password",
+			"uuid",
+			staff.Uuid,
+			req.Password,
+		)
 	}
 
 	// 5. 返回验证结果
