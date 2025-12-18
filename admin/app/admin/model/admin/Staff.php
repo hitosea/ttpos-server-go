@@ -248,7 +248,7 @@ class Staff extends BaseModel
                 'email' => trim($data['email']),
                 'phone' => trim($data['phone'] ?? ''),
                 'real_name' => trim($data['real_name'] ?? ''),
-                'password' => salt_hash($data['password']),
+                'password' => hash_password_bcrypt($data['password']),
                 'password_change_count' => 0,
                 'password_change_time' => 0,
                 'is_disable' => 0,
@@ -325,9 +325,9 @@ class Staff extends BaseModel
                 'update_time' => time(),
             ];
             
-            // 如果提供了密码，则更新密码
+            // 如果提供了密码，使用 bcrypt 加密
             if (!empty($data['password'])) {
-                $arr['password'] = salt_hash($data['password']);
+                $arr['password'] = hash_password_bcrypt($data['password']);
                 $arr['password_change_count'] = Db::raw('password_change_count + 1');
                 $arr['password_change_time'] = time();
             }

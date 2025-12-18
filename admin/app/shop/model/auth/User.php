@@ -116,12 +116,13 @@ class User extends UserModel
         $this->startTrans();
         try {
             //
+            // 使用 bcrypt 加密密码
             $arr = [
                 'uuid' => createUuid(),
                 'phone' => trim($data['phone']),
                 'username' => trim($data['user_name']),
-                'password' => salt_hash($data['password']),
-                'permission_password' => salt_hash($data['permission_password']),
+                'password' => hash_password_bcrypt($data['password']),
+                'permission_password' => hash_password_bcrypt($data['permission_password']),
                 'real_name' => trim($data['real_name']),
                 'user_type' => $user['user_type'],
                 'company_uuid' => $appId
@@ -225,17 +226,18 @@ class User extends UserModel
             $arr = [
                 'phone' => $data['phone'],
                 'username' => $data['user_name'],
-                'password' => salt_hash($data['password']),
                 'real_name' => $data['real_name'],
             ];
-            if (empty($data['password'])) {
-                unset($arr['password']);
-            } else {
+            
+            // 密码处理：如果提供了新密码，使用 bcrypt 加密
+            if (!empty($data['password'])) {
+                $arr['password'] = hash_password_bcrypt($data['password']);
                 $arr['password_change_time'] = time();
             }
-            // 权限密码处理：如果传了且不为空，则更新；否则不更新（保持原值）
+            
+            // 权限密码处理：如果传了且不为空，使用 bcrypt 加密
             if (!empty($data['permission_password'])) {
-                $arr['permission_password'] = salt_hash($data['permission_password']);
+                $arr['permission_password'] = hash_password_bcrypt($data['permission_password']);
             }
 
             $where['uuid'] = $data['shop_user_id'];

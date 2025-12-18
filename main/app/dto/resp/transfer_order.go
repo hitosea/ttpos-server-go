@@ -168,6 +168,7 @@ type TransferOrderCompanyListResp struct {
 type TransferOrderCompanyItem struct {
 	Uuid          uint64 `json:"uuid"`           // 门店UUID
 	Name          string `json:"name"`           // 门店名称
+	StoreCode     string `json:"store_code"`     // 门店编码
 	IsHeadquarter bool   `json:"is_headquarter"` // 是否总部
 }
 

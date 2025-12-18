@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	"ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/model"
@@ -295,7 +296,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
-	if takeout.Menu != nil && takeout.ImportStatus != model.ImportStatusSuccess {
+	if takeout.Menu != nil && !reflect.ValueOf(takeout.Menu).IsNil() && takeout.ImportStatus != model.ImportStatusSuccess {
 		return nil, fmt.Errorf("正在导入数据到TTPOS中，请稍后再试")
 	}
 
