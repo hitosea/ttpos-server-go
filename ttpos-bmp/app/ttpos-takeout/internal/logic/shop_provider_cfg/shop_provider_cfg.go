@@ -115,6 +115,35 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 	return &cfg, nil
 }
 
+// GetShopProviderCfgByMerchantID 通过 MerchantID 查询门店第三方配置
+// merchantID: 第三方商户 ID（如 Grab MerchantID）
+// providerName: 第三方名称（如 grab），为空默认 grab
+func (s *sShopProviderCfg) GetShopProviderCfgByMerchantID(ctx context.Context, merchantID string, providerName string) (*entity.ShopProviderCfg, error) {
+	if providerName == "" {
+		providerName = string(consts.ProviderGrab)
+	}
+
+	var cfg entity.ShopProviderCfg
+	err := dao.ShopProviderCfg.Ctx(ctx).
+		Where(dao.ShopProviderCfg.Columns().ProviderMerchantId, merchantID).
+		Where(dao.ShopProviderCfg.Columns().ProviderName, providerName).
+		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
+		Scan(&cfg)
+
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 通过 MerchantID 查询失败: merchant_id=%s, provider=%s, error: %v",
+			merchantID, providerName, err)
+		return nil, nil
+	}
+
+	if cfg.Id == 0 {
+		g.Log().Debugf(ctx, "[ShopProviderCfg] 通过 MerchantID 未找到: merchant_id=%s, provider=%s", merchantID, providerName)
+		return nil, nil
+	}
+
+	return &cfg, nil
+}
+
 // NotifyStoreIntegrationState 发送门店集成状态变更通知 (RocketMQ)
 func (s *sShopProviderCfg) NotifyStoreIntegrationState(ctx context.Context, event *grabDto.ShopIntegrationStatusEvent) error {
 	if err := queue.PushWithContext(ctx, TopicStoreIntegrationState, event); err != nil {

@@ -69,8 +69,11 @@ func (s *sGrabMenu) HandleGetMenu(ctx context.Context, partnerMerchantID string)
 			g.Log().Errorf(ctx, "[Grab] 从 TTPOS 获取菜单失败: shopUUID=%d, error=%v", shopUUID, err)
 			return nil, gerror.NewCode(gcode.CodeNotFound, "菜单不存在")
 		}
-		g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自 TTPOS）: merchantID=%v, partnerMerchantID=%v, categories=%d",
-			resp.MerchantID, resp.PartnerMerchantID, len(resp.Categories))
+		// 清空 MerchantID 和 PartnerMerchantID，由 grab.go 的 HandleGetMenu 设置
+		resp.MerchantID = nil
+		resp.PartnerMerchantID = nil
+		g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自 TTPOS）: categories=%d,sellingTimes=%d",
+			len(resp.Categories), len(resp.SellingTimes))
 		return resp, nil
 	}
 
@@ -81,30 +84,16 @@ func (s *sGrabMenu) HandleGetMenu(ctx context.Context, partnerMerchantID string)
 		return nil, gerror.Wrap(err, "解析菜单数据失败")
 	}
 
-	// 5. 从 ShopProviderCfg 查询 MerchantID 和 PartnerMerchantID
-	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab))
-	if err != nil {
-		g.Log().Errorf(ctx, "[Grab] 获取门店第三方配置失败: shopUUID=%d, error: %v", shopUUID, err)
-		return nil, gerror.Wrap(err, "获取门店第三方配置失败")
-	}
-	if cfg == nil {
-		g.Log().Errorf(ctx, "[Grab] 门店第三方配置不存在: shopUUID=%d, provider=%s", shopUUID, consts.ProviderGrab)
-		return nil, gerror.NewCode(gcode.CodeNotFound, "门店第三方配置不存在")
-	}
-
-	// 6. 构建响应结构，使用 ShopProviderCfg 中的 MerchantID，PartnerMerchantID 使用 shopUUID
-	merchantID := cfg.ProviderMerchantId
-	partnerMerchantIDStr := fmt.Sprintf("%d", shopUUID)
+	// 5. 构建响应结构，MerchantID 和 PartnerMerchantID 由 grab.go 的 HandleGetMenu 设置
 	resp := &grabfood.GetMenuNewResponse{
-		MerchantID:        &merchantID,
-		PartnerMerchantID: &partnerMerchantIDStr,
+		MerchantID:        nil, // 由 grab.go 设置
+		PartnerMerchantID: nil, // 由 grab.go 设置
 		Currency:          pushDTO.Currency,
 		SellingTimes:      pushDTO.SellingTimes,
 		Categories:        pushDTO.Categories,
 	}
 
-	g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自本地）: merchantID=%v, partnerMerchantID=%v, categories=%d",
-		resp.MerchantID, resp.PartnerMerchantID, len(resp.Categories))
+	g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自本地）: categories=%d", len(resp.Categories))
 
 	return resp, nil
 }
@@ -159,12 +148,21 @@ func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuS
 	requestID := req.GetRequestID()
 	status := req.GetStatus()
 
-	g.Log().Infof(ctx, "[Grab] 处理菜单同步状态: requestID=%s, merchantID=%s, partnerMerchantID=%s, status=%s",
-		requestID, req.GetMerchantID(), req.GetPartnerMerchantID(), status)
+	g.Log().Infof(ctx, "[Grab] 处理菜单同步状态: requestID=%s, merchantID=%s, status=%s",
+		requestID, req.GetMerchantID(), status)
 
-	// 更新 channel_menu_snapshot 的状态
-	shopUUID := g.NewVar(req.PartnerMerchantID).Uint64()
-	if shopUUID > 0 {
+	// 通过 Grab MerchantID 查询 shopUUID
+	merchantID := req.GetMerchantID()
+	cfg, err := service.ShopProviderCfg().GetShopProviderCfgByMerchantID(ctx, merchantID, string(consts.ProviderGrab))
+	if err != nil {
+		g.Log().Warningf(ctx, "[Grab] 获取门店配置失败: merchantID=%s, error: %v", merchantID, err)
+		// 不中断流程，继续处理 MenuLog 插入
+	} else if cfg == nil || cfg.Id == 0 {
+		g.Log().Warningf(ctx, "[Grab] 未找到对应的门店配置: merchantID=%s", merchantID)
+		// 不中断流程，继续处理 MenuLog 插入
+	} else {
+		shopUUID := cfg.ShopUuid
+		// 更新 channel_menu_snapshot 的状态
 		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).
 			Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
 			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
@@ -178,8 +176,6 @@ func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuS
 		} else {
 			g.Log().Infof(ctx, "[Grab] 渠道菜单快照状态已更新: shopUUID=%d, status=%s", shopUUID, status)
 		}
-	} else {
-		g.Log().Warningf(ctx, "[Grab] merchantID 格式无效，无法转换为 ShopUuid: merchantID=%v", req.PartnerMerchantID)
 	}
 
 	// 插入新的菜单日志记录（每次状态回调都插入新记录）
@@ -191,14 +187,12 @@ func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuS
 
 	logDo := &do.MenuLog{
 		Uuid:         logUUID,
-		MerchantId:   req.PartnerMerchantID,
+		MerchantId:   req.GetMerchantID(),
 		ProviderName: string(consts.ProviderGrab),
 		Status:       status,
 		ErrorMsg:     errMsg,
-		CreatedAt:    gtime.Now(),
-		UpdatedAt:    gtime.Now(),
 	}
-	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
+	_, err = dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
 	if err != nil {
 		g.Log().Errorf(ctx, "[Grab] 插入菜单日志失败: %v", err)
 	}

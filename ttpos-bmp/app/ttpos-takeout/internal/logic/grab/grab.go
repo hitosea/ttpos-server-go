@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -204,7 +205,40 @@ func (s *sGrab) HandlePushOrderState(ctx context.Context, body []byte) error {
 // HandleGetMenu 处理 Grab 获取菜单请求
 // 签名验证已由中间件完成
 func (s *sGrab) HandleGetMenu(ctx context.Context, merchantID string) (*grabfood.GetMenuNewResponse, error) {
-	return service.GrabMenu().HandleGetMenu(ctx, merchantID)
+	// 1. 将 merchantID (partnerMerchantID) 转换为 shopUUID
+	shopUUID := g.NewVar(merchantID).Uint64()
+	if shopUUID == 0 {
+		g.Log().Errorf(ctx, "[Grab] partnerMerchantID 格式无效: %s", merchantID)
+		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "partnerMerchantID 格式无效")
+	}
+
+	// 2. 调用 GrabMenu 服务获取菜单数据（不包含 MerchantID 和 PartnerMerchantID）
+	menuResp, err := service.GrabMenu().HandleGetMenu(ctx, merchantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 查询 ShopProviderCfg
+	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab))
+	if err != nil {
+		g.Log().Errorf(ctx, "[Grab] 获取门店第三方配置失败: shopUUID=%d, error: %v", shopUUID, err)
+		return nil, gerror.Wrap(err, "获取门店第三方配置失败")
+	}
+	if cfg == nil {
+		g.Log().Errorf(ctx, "[Grab] 门店第三方配置不存在: shopUUID=%d, provider=%s", shopUUID, consts.ProviderGrab)
+		return nil, gerror.NewCode(gcode.CodeNotFound, "门店第三方配置不存在")
+	}
+
+	// 4. 设置 MerchantID 和 PartnerMerchantID
+	merchantIDStr := cfg.ProviderMerchantId
+	partnerMerchantIDStr := fmt.Sprintf("%d", shopUUID)
+	menuResp.MerchantID = &merchantIDStr
+	menuResp.PartnerMerchantID = &partnerMerchantIDStr
+
+	g.Log().Infof(ctx, "[Grab] 获取菜单成功: merchantID=%v, partnerMerchantID=%v, categories=%d",
+		menuResp.MerchantID, menuResp.PartnerMerchantID, len(menuResp.Categories))
+
+	return menuResp, nil
 }
 
 // HandleMenuSyncState 处理菜单同步状态回调
