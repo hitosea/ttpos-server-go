@@ -22,10 +22,12 @@ type TransferOrder struct {
 	TransferType int `gorm:"column:transfer_type;type:int(4);default:1;comment:调拨类型：1-调入 2-调出" json:"transfer_type"`
 
 	// 门店信息
-	SenderCompanyUuid   uint64 `gorm:"column:sender_company_uuid;type:bigint;default:0;comment:发货门店UUID" json:"sender_company_uuid"`
-	SenderCompanyName   string `gorm:"column:sender_company_name;type:varchar(255);default:'';comment:发货门店名称" json:"sender_company_name"`
-	ReceiverCompanyUuid uint64 `gorm:"column:receiver_company_uuid;type:bigint;default:0;comment:收货门店UUID" json:"receiver_company_uuid"`
-	ReceiverCompanyName string `gorm:"column:receiver_company_name;type:varchar(255);default:'';comment:收货门店名称" json:"receiver_company_name"`
+	SenderCompanyUuid        uint64 `gorm:"column:sender_company_uuid;type:bigint;default:0;comment:发货门店UUID" json:"sender_company_uuid"`
+	SenderCompanyName        string `gorm:"column:sender_company_name;type:varchar(255);default:'';comment:发货门店名称" json:"sender_company_name"`
+	SenderCompanyStoreCode   string `gorm:"column:sender_company_store_code;type:varchar(255);default:'';comment:发货门店编码" json:"sender_company_store_code"`
+	ReceiverCompanyUuid      uint64 `gorm:"column:receiver_company_uuid;type:bigint;default:0;comment:收货门店UUID" json:"receiver_company_uuid"`
+	ReceiverCompanyName      string `gorm:"column:receiver_company_name;type:varchar(255);default:'';comment:收货门店名称" json:"receiver_company_name"`
+	ReceiverCompanyStoreCode string `gorm:"column:receiver_company_store_code;type:varchar(255);default:'';comment:收货门店编码" json:"receiver_company_store_code"`
 
 	// 仓库信息
 	OutWarehouseErpCode string `gorm:"column:out_warehouse_erp_code;type:varchar(255);default:'';comment:出库仓库ERP编码" json:"out_warehouse_erp_code"`
