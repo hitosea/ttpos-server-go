@@ -1571,9 +1571,16 @@ func (s *transferOrderSrv) GetTransferOrderCompanyList(
 		if company.Uuid == currentCompanyUuid {
 			continue
 		}
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetCompanyUuid(company.Uuid)
+		storeSetting, err := s.settingSrv.GetStoreSetting(ctxCopy)
+		if err != nil {
+			return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
+		}
 		list = append(list, resp.TransferOrderCompanyItem{
 			Uuid:          company.Uuid,
 			Name:          company.Name,
+			StoreCode:     storeSetting.StoreCode,
 			IsHeadquarter: company.Uuid == headquarterUuid,
 		})
 	}
