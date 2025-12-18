@@ -55,15 +55,15 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, body []byte) error {
 	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.SubmitOrderRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		g.Log().Errorf(ctx, "Failed to parse submit order request: %v", err)
-		return fmt.Errorf("failed to parse request: %w", err)
+		g.Log().Errorf(ctx, "解析提交订单请求失败: %v", err)
+		return fmt.Errorf("解析请求失败: %w", err)
 	}
 
 	// 2. 保存订单
 	orderUUID, err := s.saveOrderFromSDK(ctx, &req, body)
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to save order: %v", err)
-		return fmt.Errorf("failed to save order: %w", err)
+		g.Log().Errorf(ctx, "保存订单失败: %v", err)
+		return fmt.Errorf("保存订单失败: %w", err)
 	}
 
 	// 3. 发送 MQ 消息
@@ -78,10 +78,10 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, body []byte) error {
 	}
 	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
 		// MQ 发送失败只记录日志，不影响主流程（订单已入库）
-		g.Log().Warningf(ctx, "Failed to send MQ event for order %s: %v", orderUUID, err)
+		g.Log().Warningf(ctx, "发送订单 MQ 事件失败 %s: %v", orderUUID, err)
 	}
 
-	g.Log().Infof(ctx, "Successfully processed Grab order: %s (UUID: %s)", req.GetOrderID(), orderUUID)
+	g.Log().Infof(ctx, "成功处理 Grab 订单: %s (UUID: %s)", req.GetOrderID(), orderUUID)
 	return nil
 }
 
@@ -150,7 +150,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 
 		_, err := dao.Order.Ctx(ctx).Data(orderDo).Insert()
 		if err != nil {
-			return fmt.Errorf("insert order failed: %w", err)
+			return fmt.Errorf("插入订单失败: %w", err)
 		}
 
 		// 2. 插入订单明细
@@ -185,7 +185,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 
 			_, err := dao.OrderItem.Ctx(ctx).Data(itemDo).Insert()
 			if err != nil {
-				return fmt.Errorf("insert order item failed: %w", err)
+				return fmt.Errorf("插入订单明细失败: %w", err)
 			}
 		}
 
@@ -206,8 +206,8 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.OrderStateRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		g.Log().Errorf(ctx, "Failed to parse order state request: %v", err)
-		return fmt.Errorf("failed to parse request: %w", err)
+		g.Log().Errorf(ctx, "解析订单状态请求失败: %v", err)
+		return fmt.Errorf("解析请求失败: %w", err)
 	}
 
 	// 2. 查询订单
@@ -217,8 +217,8 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 		Where(dao.Order.Columns().PartnerOrderId, req.GetOrderID()).
 		Scan(&order)
 	if err != nil {
-		g.Log().Errorf(ctx, "Order not found: %s", req.GetOrderID())
-		return fmt.Errorf("order not found: %s", req.GetOrderID())
+		g.Log().Errorf(ctx, "订单不存在: %s", req.GetOrderID())
+		return fmt.Errorf("订单不存在: %s", req.GetOrderID())
 	}
 
 	// 4. 记录状态变更日志
@@ -243,8 +243,8 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 
 	_, err = dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert()
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to insert status log: %v", err)
-		return fmt.Errorf("failed to insert status log: %w", err)
+		g.Log().Errorf(ctx, "插入状态日志失败: %v", err)
+		return fmt.Errorf("插入状态日志失败: %w", err)
 	}
 
 	// 5. 更新订单状态
@@ -255,8 +255,8 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 			dao.Order.Columns().UpdatedAt:   gtime.Now(),
 		}).Update()
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to update order status: %v", err)
-		return fmt.Errorf("failed to update order status: %w", err)
+		g.Log().Errorf(ctx, "更新订单状态失败: %v", err)
+		return fmt.Errorf("更新订单状态失败: %w", err)
 	}
 
 	// 6. 发送 MQ 消息
@@ -270,10 +270,10 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 		Timestamp:    gtime.Now().Unix(),
 	}
 	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
-		g.Log().Warningf(ctx, "Failed to send MQ event for order status update %s: %v", order.Uuid, err)
+		g.Log().Warningf(ctx, "发送订单状态更新 MQ 事件失败 %s: %v", order.Uuid, err)
 	}
 
-	g.Log().Infof(ctx, "Order status updated: %s -> %s (Order: %s)", order.OrderStatus, req.GetState(), req.GetOrderID())
+	g.Log().Infof(ctx, "订单状态已更新: %s -> %s (订单ID: %s)", order.OrderStatus, req.GetState(), req.GetOrderID())
 	return nil
 }
 

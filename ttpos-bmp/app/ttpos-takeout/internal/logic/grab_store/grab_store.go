@@ -32,8 +32,8 @@ func (s *sGrabStore) HandleIntegrationStatus(ctx context.Context, body []byte) e
 	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.PushIntegrationStatusWebhookRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		g.Log().Errorf(ctx, "Failed to parse integration status request: %v", err)
-		return fmt.Errorf("failed to parse request: %w", err)
+		g.Log().Errorf(ctx, "解析集成状态请求失败: %v", err)
+		return fmt.Errorf("解析请求失败: %w", err)
 	}
 
 	// 2. 记录状态变更
@@ -41,13 +41,13 @@ func (s *sGrabStore) HandleIntegrationStatus(ctx context.Context, body []byte) e
 	integrationStatus := req.GetIntegrationStatus()
 	grabMerchantID := req.GetGrabMerchantID()
 
-	g.Log().Infof(ctx, "Store integration status changed: partner_merchant_id=%s, grab_merchant_id=%s, status=%s",
+	g.Log().Infof(ctx, "门店集成状态已变更: partner_merchant_id=%s, grab_merchant_id=%s, status=%s",
 		partnerMerchantID, grabMerchantID, integrationStatus)
 
 	// 3. 将 partnerMerchantID 转换为 shopUUID (uint64)
 	shopUUID := g.NewVar(partnerMerchantID).Uint64()
 	if shopUUID == 0 {
-		g.Log().Warningf(ctx, "[GrabStore] Invalid partnerMerchantID format, skip upsert: partnerMerchantID=%s", partnerMerchantID)
+		g.Log().Warningf(ctx, "[GrabStore] partnerMerchantID 格式无效，跳过更新: partnerMerchantID=%s", partnerMerchantID)
 		return nil
 	}
 
@@ -56,7 +56,7 @@ func (s *sGrabStore) HandleIntegrationStatus(ctx context.Context, body []byte) e
 
 	// 5. 更新配置并发送通知
 	if err := service.ShopProviderCfg().UpsertAndNotify(ctx, shopUUID, string(consts.ProviderGrab), grabMerchantID, internalStatus); err != nil {
-		g.Log().Errorf(ctx, "[GrabStore] Failed to upsert shop_provider_cfg: shop_uuid=%d, status=%s, error: %v",
+		g.Log().Errorf(ctx, "[GrabStore] 更新门店第三方配置失败: shop_uuid=%d, status=%s, error: %v",
 			shopUUID, internalStatus, err)
 		// 记录错误但不中断流程，Webhook 应返回成功
 	}

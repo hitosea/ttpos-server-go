@@ -5,19 +5,20 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 var (
 	// ErrInvalidSignature 签名无效
-	ErrInvalidSignature = errors.New("invalid signature")
+	ErrInvalidSignature = gerror.New("签名无效")
 	// ErrExpiredTimestamp 时间戳过期
-	ErrExpiredTimestamp = errors.New("timestamp expired")
+	ErrExpiredTimestamp = gerror.New("时间戳已过期")
 	// ErrMissingHeader 缺少必要的请求头
-	ErrMissingHeader = errors.New("missing required header")
+	ErrMissingHeader = gerror.New("缺少必需的请求头")
 )
 
 const (
@@ -50,16 +51,16 @@ func newSignatureVerifier(secretKey string) *SignatureVerifier {
 func (v *SignatureVerifier) VerifySignature(signature, timestamp string, body []byte) error {
 	// 1. 验证必要参数
 	if signature == "" {
-		return fmt.Errorf("%w: %s", ErrMissingHeader, HeaderXGrabSignature)
+		return gerror.Wrapf(ErrMissingHeader, "%s", HeaderXGrabSignature)
 	}
 	if timestamp == "" {
-		return fmt.Errorf("%w: %s", ErrMissingHeader, HeaderXGrabTimestamp)
+		return gerror.Wrapf(ErrMissingHeader, "%s", HeaderXGrabTimestamp)
 	}
 
 	// 2. 验证时间戳有效性
 	ts, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
-		return fmt.Errorf("invalid timestamp format: %w", err)
+		return gerror.Wrapf(err, "时间戳格式无效")
 	}
 	requestTime := time.Unix(ts, 0)
 	if time.Since(requestTime) > SignatureValidityWindow {

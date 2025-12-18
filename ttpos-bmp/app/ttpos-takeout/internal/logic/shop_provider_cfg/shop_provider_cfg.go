@@ -75,12 +75,12 @@ func (s *sShopProviderCfg) UpsertShopProviderCfg(ctx context.Context, shopUUID u
 	}
 
 	if err != nil {
-		g.Log().Errorf(ctx, "[ShopProviderCfg] Upsert failed: shop_uuid=%d, provider=%s, status=%s, error: %v",
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 更新失败: shop_uuid=%d, provider=%s, status=%s, error: %v",
 			shopUUID, providerName, status, err)
 		return gerror.Wrap(err, "更新门店第三方配置失败")
 	}
 
-	g.Log().Infof(ctx, "[ShopProviderCfg] Upsert success: shop_uuid=%d, provider=%s, merchant_id=%s, status=%s",
+	g.Log().Infof(ctx, "[ShopProviderCfg] 更新成功: shop_uuid=%d, provider=%s, merchant_id=%s, status=%s",
 		shopUUID, providerName, merchantID, status)
 	return nil
 }
@@ -101,14 +101,14 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 		Scan(&cfg)
 
 	if err != nil {
-		g.Log().Errorf(ctx, "[ShopProviderCfg] Query failed: shop_uuid=%d, provider=%s, error: %v",
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 查询失败: shop_uuid=%d, provider=%s, error: %v",
 			shopUUID, providerName, err)
 		return nil, nil
 	}
 
 	// 检查是否找到记录
 	if cfg.Id == 0 {
-		g.Log().Debugf(ctx, "[ShopProviderCfg] Not found: shop_uuid=%d, provider=%s", shopUUID, providerName)
+		g.Log().Debugf(ctx, "[ShopProviderCfg] 未找到: shop_uuid=%d, provider=%s", shopUUID, providerName)
 		return nil, nil
 	}
 
@@ -118,11 +118,11 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 // NotifyStoreIntegrationState 发送门店集成状态变更通知 (RocketMQ)
 func (s *sShopProviderCfg) NotifyStoreIntegrationState(ctx context.Context, event *grabDto.ShopIntegrationStatusEvent) error {
 	if err := queue.PushWithContext(ctx, TopicStoreIntegrationState, event); err != nil {
-		g.Log().Errorf(ctx, "[ShopProviderCfg] Failed to send integration state event: %v", err)
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 发送集成状态事件失败: %v", err)
 		return gerror.Wrap(err, "发送门店集成状态变更通知失败")
 	}
 
-	g.Log().Infof(ctx, "[ShopProviderCfg] Integration state event sent: topic=%s, shop_uuid=%d, status=%s",
+	g.Log().Infof(ctx, "[ShopProviderCfg] 集成状态事件已发送: topic=%s, shop_uuid=%d, status=%s",
 		TopicStoreIntegrationState, event.ShopUuid, event.ProviderShopStatus)
 	return nil
 }
@@ -161,14 +161,14 @@ func (s *sShopProviderCfg) GetShopProviderCfgResp(ctx context.Context, req *grab
 	// 查询配置
 	cfg, err := s.GetShopProviderCfg(ctx, req.ShopUuid, providerName)
 	if err != nil {
-		g.Log().Errorf(ctx, "[ShopProviderCfg] GetShopProviderCfgResp failed: shop_uuid=%d, provider=%s, error=%v",
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 获取门店配置响应失败: shop_uuid=%d, provider=%s, error=%v",
 			req.ShopUuid, providerName, err)
 		return nil, gerror.Wrap(err, "查询门店配置失败")
 	}
 
 	// 未找到记录
 	if cfg == nil {
-		g.Log().Debugf(ctx, "[ShopProviderCfg] GetShopProviderCfgResp not found: shop_uuid=%d, provider=%s",
+		g.Log().Debugf(ctx, "[ShopProviderCfg] 获取门店配置响应未找到: shop_uuid=%d, provider=%s",
 			req.ShopUuid, providerName)
 		//没有就返回 未绑定
 		return &grab.GetShopProviderCfgResp{
@@ -187,7 +187,7 @@ func (s *sShopProviderCfg) GetShopProviderCfgResp(ctx context.Context, req *grab
 		UpdatedAt:          int64(cfg.UpdatedAt),
 	}
 
-	g.Log().Debugf(ctx, "[ShopProviderCfg] GetShopProviderCfgResp success: shop_uuid=%d, provider=%s, status=%s",
+	g.Log().Debugf(ctx, "[ShopProviderCfg] 获取门店配置响应成功: shop_uuid=%d, provider=%s, status=%s",
 		cfg.ShopUuid, cfg.ProviderName, cfg.ProviderShopStatus)
 	return resp, nil
 }
@@ -205,7 +205,7 @@ func (s *sShopProviderCfg) HandleIntegrationStatus(ctx context.Context, req *gra
 	// 1. partnerMerchantID 转换为 shopUUID
 	shopUUID := g.NewVar(partnerMerchantID).Uint64()
 	if shopUUID == 0 {
-		g.Log().Warningf(ctx, "[ShopProviderCfg] Invalid partnerMerchantID: %s", partnerMerchantID)
+		g.Log().Warningf(ctx, "[ShopProviderCfg] partnerMerchantID 无效: %s", partnerMerchantID)
 		return nil
 	}
 

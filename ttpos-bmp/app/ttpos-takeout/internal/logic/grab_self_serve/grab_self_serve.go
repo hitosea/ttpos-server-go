@@ -63,7 +63,7 @@ func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.C
 	// 当前实现假设 shop_uuid 就是 Grab Merchant ID
 	activationURL, requestID, err := service.Grab().CreateSelfServeJourney(ctx, req.ShopUuid)
 	if err != nil {
-		g.Log().Errorf(ctx, "[Grab] CreateSelfServeJourney failed: shop_uuid=%s, error=%v", req.ShopUuid, err)
+		g.Log().Errorf(ctx, "[Grab] 创建自助激活链接失败: shop_uuid=%s, error=%v", req.ShopUuid, err)
 		// 错误映射：根据错误类型返回不同的错误码
 		return nil, s.mapGrabError(err)
 	}
@@ -73,7 +73,7 @@ func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.C
 	if shopUUID > 0 {
 		if upsertErr := service.ShopProviderCfg().UpsertShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab), "", consts.ProviderShopStatusSyncing); upsertErr != nil {
 			// 记录错误但不中断流程，旅程创建已成功
-			g.Log().Warningf(ctx, "[Grab] CreateSelfServeJourney upsert shop_provider_cfg failed: shop_uuid=%d, error=%v", shopUUID, upsertErr)
+			g.Log().Warningf(ctx, "[Grab] 创建自助激活链接时更新门店第三方配置失败: shop_uuid=%d, error=%v", shopUUID, upsertErr)
 		}
 	}
 
@@ -91,7 +91,7 @@ func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.C
 		resp.RequestId = req.RequestId
 	}
 
-	g.Log().Infof(ctx, "[Grab] CreateSelfServeJourney success: shop_uuid=%s, request_id=%s", req.ShopUuid, resp.RequestId)
+	g.Log().Infof(ctx, "[Grab] 创建自助激活链接成功: shop_uuid=%s, request_id=%s", req.ShopUuid, resp.RequestId)
 	return resp, nil
 }
 
