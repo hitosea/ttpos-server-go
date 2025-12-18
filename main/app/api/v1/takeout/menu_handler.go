@@ -1,8 +1,6 @@
 package takeout
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -13,6 +11,7 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/encrypt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,9 +54,8 @@ func (h *Handler) ExportMenu(c *gin.Context) {
 
 	// 验证头部参数
 	auth := c.GetHeader("X-TTPOS-SECRET")
-	authMD5 := md5.Sum([]byte(auth))
-	if hex.EncodeToString(authMD5[:]) != config.Takeout.TakeoutTtposSecret {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("无效的认证类型"))
+	if auth != encrypt.CompanyMd5(exportReq.CompanyUuid, config.Takeout.TakeoutTtposSecret) {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("无效的认证密钥"))
 		return
 	}
 

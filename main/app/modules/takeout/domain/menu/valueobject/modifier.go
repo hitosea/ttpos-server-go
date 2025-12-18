@@ -8,8 +8,10 @@ import (
 type AvailableStatus string
 
 const (
-	AvailableStatusAvailable   AvailableStatus = "AVAILABLE"
-	AvailableStatusUnavailable AvailableStatus = "UNAVAILABLE"
+	AvailableStatusAvailable    AvailableStatus = "AVAILABLE"        // 可用
+	AvailableStatusUnavailable  AvailableStatus = "UNAVAILABLE"      // 不可用
+	AvailableStatusUnavailToday AvailableStatus = "UNAVAILABLETODAY" // 不可用今天
+	AvailableStatusHide         AvailableStatus = "HIDE"             // 隐藏	无库存
 )
 
 // ToInt 转换为整数

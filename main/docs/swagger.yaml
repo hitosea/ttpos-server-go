@@ -2318,6 +2318,11 @@ definitions:
       status:
         description: 商品状态 0-下架 1-上架
         type: integer
+      takeout_products:
+        description: 外卖商品信息列表
+        items:
+          $ref: '#/definitions/product_resp.ProductTakeoutSimpleInfo'
+        type: array
       takeout_tax_name:
         description: 外带税类名称
         type: string
@@ -3032,6 +3037,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductShopListItemTagResp'
         description: 商品标签列表
+      takeout_products:
+        description: 外卖商品信息列表
+        items:
+          $ref: '#/definitions/product_resp.ProductTakeoutSimpleInfo'
+        type: array
       unit:
         allOf:
         - $ref: '#/definitions/product_resp.ProductShopListItemUnitResp'
@@ -3174,6 +3184,15 @@ definitions:
         description: 外卖规格价格
         type: number
     type: object
+  product_resp.ProductTakeoutSimpleInfo:
+    properties:
+      takeout_type:
+        description: 外卖类型 1-Grab 2-LINE MAN
+        type: integer
+      uuid:
+        description: 外卖商品UUID
+        type: integer
+    type: object
   product_resp.ProductTaxItemResp:
     properties:
       name:
@@ -3252,6 +3271,35 @@ definitions:
         items:
           $ref: '#/definitions/product_resp.ProductUnitProductPackage'
         type: array
+    type: object
+  product_resp.TakeoutBatchFailedProduct:
+    properties:
+      error:
+        description: 错误信息
+        type: string
+      product_name:
+        description: 商品名称
+        type: string
+      product_uuid:
+        description: 商品UUID
+        type: integer
+    type: object
+  product_resp.TakeoutBatchResp:
+    properties:
+      failed:
+        description: 失败数量
+        type: integer
+      failed_products:
+        description: 失败商品列表
+        items:
+          $ref: '#/definitions/product_resp.TakeoutBatchFailedProduct'
+        type: array
+      success:
+        description: 成功数量
+        type: integer
+      total:
+        description: 总数
+        type: integer
     type: object
   req.AcceptH5OrderReq:
     properties:
@@ -7301,10 +7349,17 @@ definitions:
     type: object
   req.ProductTakeoutShopDeleteReq:
     properties:
+      platform:
+        description: 来源平台 grab/lineman
+        enum:
+        - grab
+        - lineman
+        type: string
       uuid:
-        description: 外卖商品UUID
+        description: 商品UUID
         type: integer
     required:
+    - platform
     - uuid
     type: object
   req.ProductTakeoutShopEditAttributeReq:
@@ -8378,6 +8433,82 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
+  req.TakeoutBatchCreateReq:
+    properties:
+      platform:
+        description: '外卖平台标识: grab/lineman'
+        enum:
+        - grab
+        - lineman
+        type: string
+      product_uuids:
+        description: 商品UUID列表,最多100个
+        items:
+          type: integer
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - platform
+    - product_uuids
+    type: object
+  req.TakeoutBatchDeleteReq:
+    properties:
+      platform:
+        description: '外卖平台标识: grab/lineman'
+        enum:
+        - grab
+        - lineman
+        type: string
+      product_uuids:
+        description: 商品UUID列表,最多100个
+        items:
+          type: integer
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - platform
+    - product_uuids
+    type: object
+  req.TakeoutBatchOfflineReq:
+    properties:
+      platform:
+        description: '外卖平台标识: grab/lineman'
+        enum:
+        - grab
+        - lineman
+        type: string
+      product_uuids:
+        description: 商品UUID列表,最多100个
+        items:
+          type: integer
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - platform
+    - product_uuids
+    type: object
+  req.TakeoutBatchOnlineReq:
+    properties:
+      platform:
+        description: '外卖平台标识: grab/lineman'
+        enum:
+        - grab
+        - lineman
+        type: string
+      product_uuids:
+        description: 商品UUID列表,最多100个
+        items:
+          type: integer
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - platform
+    - product_uuids
+    type: object
   req.TransferOrderApproveReq:
     properties:
       in_warehouse_erp_code:
@@ -9167,6 +9298,14 @@ definitions:
         description: 状态筛选（0-进行中 1-成功 2-失败）
         format: int32
         type: integer
+    type: object
+  request.PushTakeoutMenuRequest:
+    properties:
+      platform:
+        description: 平台名称：grab, lineman 等
+        type: string
+    required:
+    - platform
     type: object
   request.ToggleTakeoutStatusRequest:
     properties:
@@ -22508,19 +22647,6 @@ paths:
       summary: 订单检查
       tags:
       - 收银端.桌台
-  /cashier/desk/order/daily_sales_outbound_summary:
-    get:
-      consumes:
-      - application/json
-      description: 获取每日销售出库汇总
-      produces:
-      - application/json
-      responses: {}
-      security:
-      - JwtToken: []
-      summary: 获取每日销售出库汇总
-      tags:
-      - 收银端.桌台
   /cashier/desk/order/discount:
     post:
       consumes:
@@ -22610,23 +22736,6 @@ paths:
       security:
       - JwtToken: []
       summary: 免单
-      tags:
-      - 收银端.桌台
-  /cashier/desk/order/headquarter_material_list:
-    get:
-      consumes:
-      - application/json
-      description: 获取总部物品列表
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取总部物品列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/item/remark/list:
@@ -28735,6 +28844,197 @@ paths:
       summary: 退出登录
       tags:
       - 自助点餐机.认证
+  /kiosk/order/cart/info:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车信息
+      parameters:
+      - description: 销售账单UUID
+        format: int64
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车信息
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/cart/product/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加商品
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/cart/product/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除购物车商品
+      parameters:
+      - description: 删除商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderProductDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 删除购物车商品
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/cart/product/num:
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品数量
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductNumReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品数量
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/product/package/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品选购详情
+      parameters:
+      - description: 商品包uuid
+        in: query
+        name: product_package_uuid
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductPackageDetailRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取商品选购详情
+      tags:
+      - 自助点餐机.订单
   /kiosk/product/category/list:
     get:
       consumes:
@@ -34280,11 +34580,15 @@ paths:
       - application/json
       description: 获取外卖商品详情
       parameters:
-      - description: 外卖商品UUID
+      - description: 来源平台 grab/lineman等
+        in: query
+        name: platform
+        type: string
+      - description: 商品UUID
         in: query
         name: uuid
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -37879,10 +38183,11 @@ paths:
       description: 推送菜单数据到外卖平台
       parameters:
       - description: 外卖平台
-        in: query
+        in: body
         name: platform
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/request.PushTakeoutMenuRequest'
       produces:
       - application/json
       responses:
@@ -37917,6 +38222,110 @@ paths:
       summary: 重新导入失败的菜单
       tags:
       - 商家端.外卖管理
+  /shop/takeout/products/batch_create:
+    post:
+      consumes:
+      - application/json
+      description: 批量创建外卖商品映射关系
+      parameters:
+      - description: 批量创建请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TakeoutBatchCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.TakeoutBatchResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量创建外卖商品
+      tags:
+      - 商家端.外卖商品
+  /shop/takeout/products/batch_delete:
+    post:
+      consumes:
+      - application/json
+      description: 批量删除外卖商品映射关系
+      parameters:
+      - description: 批量删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TakeoutBatchDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.TakeoutBatchResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量删除外卖商品
+      tags:
+      - 商家端.外卖商品
+  /shop/takeout/products/batch_offline:
+    post:
+      consumes:
+      - application/json
+      description: 批量下架外卖商品
+      parameters:
+      - description: 批量下架请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TakeoutBatchOfflineReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.TakeoutBatchResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量下架外卖商品
+      tags:
+      - 商家端.外卖商品
+  /shop/takeout/products/batch_online:
+    post:
+      consumes:
+      - application/json
+      description: 批量上架外卖商品
+      parameters:
+      - description: 批量上架请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TakeoutBatchOnlineReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.TakeoutBatchResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量上架外卖商品
+      tags:
+      - 商家端.外卖商品
   /shop/takeout/products/count:
     get:
       consumes:

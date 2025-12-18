@@ -5337,6 +5337,46 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		productList = append(productList, productItem)
 	}
 
+	// 批量查询外卖商品信息
+	if len(productPackages) > 0 {
+		productUuids := make([]uint64, len(productPackages))
+		for i, pkg := range productPackages {
+			productUuids[i] = pkg.Uuid
+		}
+
+		// 查询未删除的外卖商品
+		takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+		takeoutProducts, err := takeoutRepo.GetProductPackageTakeoutList(
+			takeoutRepo.WhereByProductPackageUuids(productUuids),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+
+		if err == nil && len(takeoutProducts) > 0 {
+			// 按 product_package_uuid 分组
+			takeoutMap := make(map[uint64][]product_resp.ProductTakeoutSimpleInfo)
+			for _, takeout := range takeoutProducts {
+				takeoutMap[takeout.ProductPackageUuid] = append(takeoutMap[takeout.ProductPackageUuid], product_resp.ProductTakeoutSimpleInfo{
+					Uuid:        takeout.Uuid,
+					TakeoutType: takeout.TakeoutType,
+				})
+			}
+
+			// 将外卖商品信息添加到商品列表中
+			for i := range productList {
+				if takeouts, ok := takeoutMap[productList[i].Uuid]; ok {
+					productList[i].TakeoutProducts = takeouts
+				} else {
+					productList[i].TakeoutProducts = []product_resp.ProductTakeoutSimpleInfo{}
+				}
+			}
+		} else {
+			// 如果查询失败或没有数据，设置空数组
+			for i := range productList {
+				productList[i].TakeoutProducts = []product_resp.ProductTakeoutSimpleInfo{}
+			}
+		}
+	}
+
 	productResp := product_resp.ProductShopListResp{
 		List: productList,
 		Meta: dto.PageResponse{
@@ -5519,6 +5559,26 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 	}
 	productDetailResp.Flavors.InjectStockNum(stockNumMap)
 	productDetailResp.Sauces.InjectStockNum(stockNumMap)
+
+	// 查询外卖商品信息
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	takeoutProducts, err := takeoutRepo.GetProductPackageTakeoutList(
+		takeoutRepo.WhereByProductPackageUuid(productPackage.Uuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+
+	if err == nil && len(takeoutProducts) > 0 {
+		takeoutList := make([]product_resp.ProductTakeoutSimpleInfo, len(takeoutProducts))
+		for i, takeout := range takeoutProducts {
+			takeoutList[i] = product_resp.ProductTakeoutSimpleInfo{
+				Uuid:        takeout.Uuid,
+				TakeoutType: takeout.TakeoutType,
+			}
+		}
+		productDetailResp.TakeoutProducts = takeoutList
+	} else {
+		productDetailResp.TakeoutProducts = []product_resp.ProductTakeoutSimpleInfo{}
+	}
 
 	return &productDetailResp, nil
 }
