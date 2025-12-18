@@ -96,6 +96,33 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	helper.Success(c, gin.H{}, "退出成功")
 }
 
+// StoreSwitch 门店切换
+// @Summary 门店切换
+// @Description 切换门店，返回新的 token
+// @Tags 自助点餐机.认证
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.StoreSwitchReq true "门店切换参数"
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Router /kiosk/store_switch [post]
+func (h *AuthHandler) StoreSwitch(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var switchReq req.StoreSwitchReq
+	if err := c.ShouldBindJSON(&switchReq); err != nil {
+		helper.HandleValidationError(c, err, switchReq, nil)
+		return
+	}
+
+	switchResp, err := h.authSrv.StoreSwitch(ctx, switchReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+
+	helper.Success(c, switchResp)
+}
+
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -121,5 +148,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	{
 		privateApi.GET("/refresh_token", wrapper.RefreshToken) // 刷新token
 		privateApi.POST("/logout", wrapper.Logout)             // 退出登录
+		privateApi.POST("/store_switch", wrapper.StoreSwitch)  // 门店切换
 	}
 }
