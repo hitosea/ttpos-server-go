@@ -59,16 +59,6 @@ type UpdatePurchasabilityReq struct {
 	Purchasable bool   `json:"purchasable"` // 是否可购买
 }
 
-// UpdateMenuResult 更新菜单结果
-type UpdateMenuResult struct {
-	Success      bool   `json:"success"`                 // 是否成功
-	MerchantID   string `json:"merchant_id"`             // 商户ID
-	RecordID     string `json:"record_id"`               // 记录ID (ItemID 或 ModifierID)
-	RecordType   string `json:"record_type"`             // 记录类型: ITEM, MODIFIER
-	ErrorCode    string `json:"error_code,omitempty"`    // 错误码
-	ErrorMessage string `json:"error_message,omitempty"` // 错误信息
-}
-
 // ToSDKUpdateMenuItem 转换为 SDK UpdateMenuItem 请求
 func (r *UpdateMenuItemReq) ToSDKUpdateMenuItem() *grabfood.UpdateMenuItem {
 	item := grabfood.NewUpdateMenuItem(r.MerchantID, MenuItemUpdateFieldItem, r.ItemID)

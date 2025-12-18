@@ -29,10 +29,10 @@ type (
 		NotifyMenuUpdate(ctx context.Context, event *grabDto.ProviderMenuUpdateEvent) error
 		// UpdateMenuItem 更新单个菜单项 (商品)
 		// 支持更新价格、可用状态、库存、高级定价等
-		UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) (*grabDto.UpdateMenuResult, error)
+		UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) error
 		// UpdateMenuModifier 更新单个修饰符
 		// 支持更新价格、可用状态、是否免费、高级定价等
-		UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) (*grabDto.UpdateMenuResult, error)
+		UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) error
 	}
 )
 

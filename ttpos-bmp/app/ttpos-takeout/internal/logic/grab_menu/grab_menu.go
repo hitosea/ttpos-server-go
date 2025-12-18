@@ -289,20 +289,13 @@ func (s *sGrabMenu) NotifyMenuUpdate(ctx context.Context, event *grabDto.Provide
 // UpdateMenuItem 更新单个菜单项 (商品)
 // 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新商品信息
 // 支持更新：价格、可用状态、库存、高级定价配置、购买能力配置
-func (s *sGrabMenu) UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) (*grabDto.UpdateMenuResult, error) {
+func (s *sGrabMenu) UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) error {
 	g.Log().Infof(ctx, "[Grab] UpdateMenuItem: merchantID=%s, itemID=%s", req.MerchantID, req.ItemID)
 
 	// 1. 参数验证
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		g.Log().Errorf(ctx, "[Grab] UpdateMenuItem validation failed: %v", err)
-		return &grabDto.UpdateMenuResult{
-			Success:      false,
-			MerchantID:   req.MerchantID,
-			RecordID:     req.ItemID,
-			RecordType:   grabDto.MenuItemUpdateFieldItem,
-			ErrorCode:    "VALIDATION_ERROR",
-			ErrorMessage: err.Error(),
-		}, gerror.NewCode(gcode.CodeValidationFailed, err.Error())
+		return gerror.NewCode(gcode.CodeValidationFailed, err.Error())
 	}
 
 	// 2. 构建 SDK 请求
@@ -317,46 +310,27 @@ func (s *sGrabMenu) UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuI
 
 		g.Log().Errorf(ctx, "[Grab] UpdateMenuItem API failed: merchantID=%s, itemID=%s, error=%v",
 			req.MerchantID, req.ItemID, err)
-		return &grabDto.UpdateMenuResult{
-			Success:      false,
-			MerchantID:   req.MerchantID,
-			RecordID:     req.ItemID,
-			RecordType:   grabDto.MenuItemUpdateFieldItem,
-			ErrorCode:    "API_ERROR",
-			ErrorMessage: err.Error(),
-		}, gerror.Wrap(err, "调用 Grab UpdateMenuItem API 失败")
+		return gerror.Wrap(err, "调用 Grab UpdateMenuItem API 失败")
 	}
 
 	// 5. 记录成功日志
 	s.logMenuRecordUpdate(ctx, req.MerchantID, req.ItemID, grabDto.MenuItemUpdateFieldItem, true, "")
 
 	g.Log().Infof(ctx, "[Grab] UpdateMenuItem success: merchantID=%s, itemID=%s", req.MerchantID, req.ItemID)
-	return &grabDto.UpdateMenuResult{
-		Success:    true,
-		MerchantID: req.MerchantID,
-		RecordID:   req.ItemID,
-		RecordType: grabDto.MenuItemUpdateFieldItem,
-	}, nil
+	return nil
 }
 
 // UpdateMenuModifier 更新单个修饰符
 // 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新修饰符信息
 // 支持更新：价格、可用状态、是否免费、高级定价配置
-func (s *sGrabMenu) UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) (*grabDto.UpdateMenuResult, error) {
+func (s *sGrabMenu) UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) error {
 	g.Log().Infof(ctx, "[Grab] UpdateMenuModifier: merchantID=%s, modifierID=%s, modifierName=%s",
 		req.MerchantID, req.ModifierID, req.ModifierName)
 
 	// 1. 参数验证
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		g.Log().Errorf(ctx, "[Grab] UpdateMenuModifier validation failed: %v", err)
-		return &grabDto.UpdateMenuResult{
-			Success:      false,
-			MerchantID:   req.MerchantID,
-			RecordID:     req.ModifierID,
-			RecordType:   grabDto.MenuItemUpdateFieldModifier,
-			ErrorCode:    "VALIDATION_ERROR",
-			ErrorMessage: err.Error(),
-		}, gerror.NewCode(gcode.CodeValidationFailed, err.Error())
+		return gerror.NewCode(gcode.CodeValidationFailed, err.Error())
 	}
 
 	// 2. 构建 SDK 请求
@@ -371,26 +345,14 @@ func (s *sGrabMenu) UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateM
 
 		g.Log().Errorf(ctx, "[Grab] UpdateMenuModifier API failed: merchantID=%s, modifierID=%s, error=%v",
 			req.MerchantID, req.ModifierID, err)
-		return &grabDto.UpdateMenuResult{
-			Success:      false,
-			MerchantID:   req.MerchantID,
-			RecordID:     req.ModifierID,
-			RecordType:   grabDto.MenuItemUpdateFieldModifier,
-			ErrorCode:    "API_ERROR",
-			ErrorMessage: err.Error(),
-		}, gerror.Wrap(err, "调用 Grab UpdateMenuModifier API 失败")
+		return gerror.Wrap(err, "调用 Grab UpdateMenuModifier API 失败")
 	}
 
 	// 5. 记录成功日志
 	s.logMenuRecordUpdate(ctx, req.MerchantID, req.ModifierID, grabDto.MenuItemUpdateFieldModifier, true, "")
 
 	g.Log().Infof(ctx, "[Grab] UpdateMenuModifier success: merchantID=%s, modifierID=%s", req.MerchantID, req.ModifierID)
-	return &grabDto.UpdateMenuResult{
-		Success:    true,
-		MerchantID: req.MerchantID,
-		RecordID:   req.ModifierID,
-		RecordType: grabDto.MenuItemUpdateFieldModifier,
-	}, nil
+	return nil
 }
 
 // logMenuRecordUpdate 记录菜单记录更新日志
