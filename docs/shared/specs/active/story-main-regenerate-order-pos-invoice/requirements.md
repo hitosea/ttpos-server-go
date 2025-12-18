@@ -64,19 +64,21 @@
 
 #### 验收标准
 
-1. **WHEN** 执行 `regenerate-order-pos-invoice --company-uuid {uuid} --sale-order-uuid {uuid}` **THEN** 系统 **SHALL** 解析参数并验证有效性
+1. **WHEN** 执行 `regenerate-order-pos-invoice --company-uuid {uuid} --sale-order-uuid {uuid} --open-pos-entry-name {name}` **THEN** 系统 **SHALL** 解析参数并验证有效性
 2. **IF** `--company-uuid` 参数缺失或无效 **THEN** 系统 **SHALL** 提示错误信息并退出
 3. **IF** `--sale-order-uuid` 参数缺失或无效 **THEN** 系统 **SHALL** 提示错误信息并退出
-4. **WHEN** 使用 `--dry-run` 参数 **THEN** 系统 **SHALL** 进入预览模式，不实际执行发票保存
-5. **WHEN** 参数验证通过 **THEN** 系统 **SHALL** 继续执行后续步骤
+4. **IF** `--open-pos-entry-name` 参数缺失或为空 **THEN** 系统 **SHALL** 提示错误信息并退出
+5. **WHEN** 使用 `--dry-run` 参数 **THEN** 系统 **SHALL** 进入预览模式，不实际执行发票保存
+6. **WHEN** 参数验证通过 **THEN** 系统 **SHALL** 继续执行后续步骤
 
 #### 具体要求
 
 - [ ] 1.1 使用 Cobra 框架创建命令行工具
 - [ ] 1.2 定义 `--company-uuid` 参数（必填，uint64类型）
 - [ ] 1.3 定义 `--sale-order-uuid` 参数（必填，uint64类型）
-- [ ] 1.4 定义 `--dry-run` 参数（可选，bool类型，默认false）
-- [ ] 1.5 在 `PreRun` 中初始化配置、数据库、日志等基础设施
+- [ ] 1.4 定义 `--open-pos-entry-name` 参数（必填，string类型）
+- [ ] 1.5 定义 `--dry-run` 参数（可选，bool类型，默认false）
+- [ ] 1.6 在 `PreRun` 中初始化配置、数据库、日志等基础设施
 - [ ] 1.6 参考 `regenerate-sale-bill-material-outbound` 命令的实现方式
 
 ---
