@@ -52,10 +52,10 @@
 - [ ] 2.2 实现批量创建商品
 
   - File: `main/app/service/product_takeout.go`
-  - Purpose: 实现批量创建商品业务逻辑
+  - Purpose: 实现批量创建商品映射关系业务逻辑
   - Requirements: Requirement 1
-  - Leverage: 现有 productTakeoutSrv 实现,复用单商品推送逻辑
-  - Prompt: Role: Go Developer | Task: 实现 BatchCreateProducts 方法,支持并发批量创建 | Context: 查询商品列表,使用 Goroutine 并发处理,实现限流控制(每秒10个),失败重试3次,使用 sync.WaitGroup 等待完成,直接返回结果 | Restrictions: 不使用 panic,返回 error,遵循 .cursor/rules/go-main.mdc | Success: 批量创建逻辑实现完整,并发处理正常工作,限流和重试机制生效
+  - Leverage: 复用 AddProductTakeoutShop 方法的逻辑
+  - Prompt: Role: Go Developer | Task: 实现 BatchCreateProducts 方法,支持并发批量创建外卖商品映射 | Context: 遍历商品UUID列表,使用 Goroutine 并发处理,对每个商品调用 AddProductTakeoutShop 逻辑,实现限流控制(每秒10个),失败重试3次,使用 sync.WaitGroup 等待完成,直接返回结果 | Restrictions: 不使用 panic,返回 error,遵循 .cursor/rules/go-main.mdc | Success: 批量创建逻辑实现完整,并发处理正常工作,限流和重试机制生效
 
 - [ ] 2.3 实现批量上架商品
 

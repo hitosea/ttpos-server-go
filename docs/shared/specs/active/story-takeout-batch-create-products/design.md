@@ -56,23 +56,23 @@ API 设计遵循规范:
 ### 可复用的现有组件
 
 1. **ProductTakeoutSrv**: `main/app/service/product_takeout.go`
-   - 复用单商品推送逻辑
-   - 复用外卖平台API调用逻辑
+   - 复用 AddProductTakeoutShop 的核心逻辑
+   - 复用外卖商品映射创建逻辑
    - 扩展批量操作方法
 
 2. **TakeoutApp Service**: `main/app/modules/takeout/application/takeout_app_service.go`
-   - 复用 Grab API 集成
+   - 批量上架/下架时复用 Grab API 集成
    - 复用菜单转换逻辑
 
-3. **ProductTakeout Model**: `main/app/model/product_takeout.go`
+3. **ProductPackageTakeout Model**: `main/app/model/product_package_takeout.go`
    - 复用外卖商品映射表结构
    - 复用查询方法
 
 ### 集成点
 
-- **现有路由**: 扩展 `main/app/api/v1/shop/shop_takeout.go`,添加批量操作路由
-- **数据库表**: 使用现有 `ttpos_product_takeout` 表
-- **外卖平台API**: 复用现有 Grab、LINE MAN API 集成代码
+- **现有路由**: 扩展 `main/app/api/v1/shop/shop_product.go`,添加批量操作路由
+- **数据库表**: 使用现有 `ttpos_product_package_takeout` 表
+- **外卖商品创建**: 复用 `/product/takeout/add` 接口的逻辑
 
 ---
 
@@ -85,9 +85,9 @@ API 设计遵循规范:
 ```
 API 层 (Handler)
   ↓ 依赖
-Service 层 (Business Logic + Async Task)
+Service 层 (Business Logic + Batch Processing)
   ↓ 依赖
-Repository 层 (Data Access) + External API
+Repository 层 (Data Access)
 ```
 
 **依赖规则**:
@@ -96,7 +96,7 @@ Repository 层 (Data Access) + External API
 - ✅ Service 依赖其他 Service 接口
 - ✅ Service 持有 DBManager,通过 GetDB() 访问数据库
 - ❌ Service 不直接依赖 Repository
-- ✅ Service 可以直接访问外部API(外卖平台)
+- ✅ Service 调用其他 Service 接口完成业务逻辑
 
 ### 架构图
 
@@ -104,10 +104,8 @@ Repository 层 (Data Access) + External API
 graph TD
     A[Shop Frontend] -->|HTTP| B[API Handler]
     B --> C[ProductTakeoutSrv]
-    C --> E[TakeoutAppSrv]
-    E --> G[Grab API]
-    E --> H[LINE MAN API]
-    C --> F[Database]
+    C --> D[AddProductTakeoutShop Logic]
+    D --> F[Database - ttpos_product_package_takeout]
 ```
 
 ### 批量处理流程
@@ -117,16 +115,22 @@ sequenceDiagram
     participant User
     participant Handler
     participant Service
-    participant Platform as 外卖平台API
+    participant AddLogic as AddProductTakeoutShop Logic
     participant DB
 
     User->>Handler: POST /batch_create
     Handler->>Service: BatchCreateProducts()
     
     loop 并发处理
-        Service->>Platform: 推送商品
-        Platform-->>Service: 返回结果
-        Service->>DB: 更新商品映射
+        Service->>AddLogic: 创建外卖商品映射
+        AddLogic->>DB: 检查是否已存在
+        alt 已存在已删除记录
+            AddLogic->>DB: 还原记录
+        else 不存在
+            AddLogic->>DB: 创建新记录
+        end
+        DB-->>AddLogic: 返回结果
+        AddLogic-->>Service: 返回成功/失败
     end
     
     Service-->>Handler: 返回结果汇总
@@ -143,11 +147,11 @@ sequenceDiagram
 
 **扩展文件**:
 - `main/app/service/product_takeout.go` - 扩展批量操作方法
-- `main/app/api/v1/shop/shop_takeout.go` - 添加批量操作路由
+- `main/app/api/v1/shop/shop_product.go` - 添加批量操作路由
 
 **复用文件**:
-- `main/app/model/product_takeout.go` - 外卖商品映射模型
-- `main/app/modules/takeout/application/takeout_app_service.go` - 外卖平台API调用
+- `main/app/model/product_package_takeout.go` - 外卖商品映射模型
+- `main/app/service/product_takeout.go` - AddProductTakeoutShop 逻辑
 
 ---
 
@@ -156,14 +160,14 @@ sequenceDiagram
 ### 数据表设计
 
 本功能使用现有表,不需要新增数据表:
-- `ttpos_product_takeout`: 外卖商品映射表
-- `ttpos_product`: 商品主表
+- `ttpos_product_package_takeout`: 外卖商品映射表
+- `ttpos_product_package`: 商品包主表
 
 ### 数据流
 
-1. **查询商品**: 查询 `ttpos_product` 和 `ttpos_product_takeout` 表
-2. **处理商品**: 逐个推送商品到外卖平台
-3. **更新数据**: 更新 `ttpos_product_takeout` 表的商品状态
+1. **查询商品**: 查询 `ttpos_product_package` 表
+2. **创建映射**: 使用 `/product/takeout/add` 的逻辑创建外卖商品映射
+3. **更新数据**: 在 `ttpos_product_package_takeout` 表中创建或还原记录
 4. **返回结果**: 返回成功/失败统计信息
 
 ---
@@ -305,32 +309,36 @@ func (s *productTakeoutSrv) processBatchCreate(
     var wg sync.WaitGroup
     var mu sync.Mutex
     
-    for _, product := range products {
+    for _, productUuid := range productUuids {
         wg.Add(1)
-        go func(p *model.Product) {
+        go func(uuid uint64) {
             defer wg.Done()
             <-limiter.C // 限流
 
-            // 推送商品到外卖平台
-            err := s.pushProductToPlatform(ctx, p, platform)
+            // 调用 AddProductTakeoutShop 逻辑
+            addReq := req.ProductTakeoutShopAddReq{
+                ProductPackageUuid: uuid,
+                TakeoutType:        platform,
+            }
+            _, err := s.AddProductTakeoutShop(ctx, addReq)
             if err != nil {
                 // 重试3次
-                err = s.retryPushProduct(ctx, p, platform, 3)
+                err = s.retryCreateProduct(ctx, uuid, platform, 3)
             }
 
             mu.Lock()
             if err != nil {
                 result.Failed++
                 result.FailedProducts = append(result.FailedProducts, FailedProduct{
-                    ProductUuid: p.Uuid,
-                    ProductName: p.Name,
+                    ProductUuid: uuid,
+                    ProductName: getProductName(uuid),
                     Error:       err.Error(),
                 })
             } else {
                 result.Success++
             }
             mu.Unlock()
-        }(product)
+        }(productUuid)
     }
 
     wg.Wait()
@@ -360,15 +368,19 @@ func (rl *RateLimiter) Wait() {
 ### 失败重试机制
 
 ```go
-func (s *productTakeoutSrv) retryPushProduct(
+func (s *productTakeoutSrv) retryCreateProduct(
     ctx context.Context,
-    product *model.Product,
+    productUuid uint64,
     platform string,
     maxRetries int,
 ) error {
     var err error
     for i := 0; i < maxRetries; i++ {
-        err = s.pushProductToPlatform(ctx, product, platform)
+        addReq := req.ProductTakeoutShopAddReq{
+            ProductPackageUuid: productUuid,
+            TakeoutType:        platform,
+        }
+        _, err = s.AddProductTakeoutShop(ctx, addReq)
         if err == nil {
             return nil
         }

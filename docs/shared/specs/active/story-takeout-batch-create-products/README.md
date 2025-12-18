@@ -7,10 +7,10 @@
 ## 🎯 目标
 
 为商家端提供批量操作外卖商品的能力,包括:
-- 批量创建商品到外卖平台(Grab、LINE MAN)
+- 批量创建外卖商品映射关系(复用 `/product/takeout/add` 逻辑)
 - 批量上架外卖平台商品
 - 批量下架外卖平台商品
-- 批量删除外卖平台商品
+- 批量删除外卖平台商品映射关系
 
 ## 📂 文档结构
 
@@ -39,8 +39,9 @@ story-takeout-batch-create-products/
 
 ### 1. 批量创建商品
 - **接口**: POST `/shop/takeout/products/batch_create`
-- **功能**: 批量将TTPOS商品推送到外卖平台
+- **功能**: 批量创建TTPOS商品到外卖平台的映射关系
 - **特性**: 并发处理、限流控制、失败重试
+- **逻辑**: 复用 `/product/takeout/add` 接口的逻辑
 
 ### 2. 批量上架商品
 - **接口**: POST `/shop/takeout/products/batch_online`
@@ -54,7 +55,7 @@ story-takeout-batch-create-products/
 
 ### 4. 批量删除商品
 - **接口**: POST `/shop/takeout/products/batch_delete`
-- **功能**: 批量删除外卖平台商品
+- **功能**: 批量删除TTPOS商品的外卖平台映射关系
 - **特性**: 状态检查、软删除
 
 ## 🏗️ 技术栈
@@ -63,8 +64,8 @@ story-takeout-batch-create-products/
 - **框架**: Gin + GORM
 - **并发处理**: Goroutine + sync.WaitGroup
 - **数据表**: 
-  - ttpos_product_takeout (复用)
-  - ttpos_product (复用)
+  - ttpos_product_package_takeout (复用)
+  - ttpos_product_package (复用)
 
 ## 📊 Story Point 评估
 
