@@ -59792,6 +59792,10 @@ const docTemplate = `{
                     "description": "收货门店名称",
                     "type": "string"
                 },
+                "receiver_company_store_code": {
+                    "description": "收货门店编码",
+                    "type": "string"
+                },
                 "receiver_company_uuid": {
                     "description": "收货门店UUID",
                     "type": "integer"
@@ -59810,6 +59814,10 @@ const docTemplate = `{
                 },
                 "sender_company_name": {
                     "description": "发货门店名称",
+                    "type": "string"
+                },
+                "sender_company_store_code": {
+                    "description": "发货门店编码",
                     "type": "string"
                 },
                 "sender_company_uuid": {
@@ -59929,6 +59937,10 @@ const docTemplate = `{
                     "description": "收货门店名称",
                     "type": "string"
                 },
+                "receiver_company_store_code": {
+                    "description": "收货门店编码",
+                    "type": "string"
+                },
                 "receiver_company_uuid": {
                     "description": "收货门店UUID",
                     "type": "integer"
@@ -59939,6 +59951,10 @@ const docTemplate = `{
                 },
                 "sender_company_name": {
                     "description": "发货门店名称",
+                    "type": "string"
+                },
+                "sender_company_store_code": {
+                    "description": "发货门店编码",
                     "type": "string"
                 },
                 "sender_company_uuid": {
@@ -62448,7 +62464,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "10.144.144.7:8080",
+	Host:             "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",

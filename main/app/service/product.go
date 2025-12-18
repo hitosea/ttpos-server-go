@@ -5823,6 +5823,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		IsShowAssistant: req.Show.IsShowAssistant,
 		IsShowH5:        req.Show.IsShowH5,
 		IsShowDelivery:  req.Show.IsShowDelivery,
+		IsShowKiosk:     req.Show.IsShowKiosk,
 	}); err != nil {
 		return 0, err
 	}
@@ -6160,6 +6161,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		IsShowAssistant: req.Show.IsShowAssistant,
 		IsShowH5:        req.Show.IsShowH5,
 		IsShowDelivery:  req.Show.IsShowDelivery,
+		IsShowKiosk:     req.Show.IsShowKiosk,
 	}); err != nil {
 		return nil, nil, err
 	}

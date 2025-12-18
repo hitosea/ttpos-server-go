@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "10.144.144.7:8080",
+    "host": "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
     "basePath": "/",
     "paths": {
         "/admin/erpnext/lianlian/payment/add": {
@@ -59786,6 +59786,10 @@
                     "description": "收货门店名称",
                     "type": "string"
                 },
+                "receiver_company_store_code": {
+                    "description": "收货门店编码",
+                    "type": "string"
+                },
                 "receiver_company_uuid": {
                     "description": "收货门店UUID",
                     "type": "integer"
@@ -59804,6 +59808,10 @@
                 },
                 "sender_company_name": {
                     "description": "发货门店名称",
+                    "type": "string"
+                },
+                "sender_company_store_code": {
+                    "description": "发货门店编码",
                     "type": "string"
                 },
                 "sender_company_uuid": {
@@ -59923,6 +59931,10 @@
                     "description": "收货门店名称",
                     "type": "string"
                 },
+                "receiver_company_store_code": {
+                    "description": "收货门店编码",
+                    "type": "string"
+                },
                 "receiver_company_uuid": {
                     "description": "收货门店UUID",
                     "type": "integer"
@@ -59933,6 +59945,10 @@
                 },
                 "sender_company_name": {
                     "description": "发货门店名称",
+                    "type": "string"
+                },
+                "sender_company_store_code": {
+                    "description": "发货门店编码",
                     "type": "string"
                 },
                 "sender_company_uuid": {

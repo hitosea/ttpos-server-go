@@ -99,6 +99,7 @@ func (r *ProductLabelRepoImpl) UpdateProductLabel(productLabel model.ProductLabe
 		"is_show_h5":        productLabel.IsShowH5,
 		"is_show_delivery":  productLabel.IsShowDelivery,
 		"is_show_menu":      productLabel.IsShowMenu,
+		"is_show_kiosk":     productLabel.IsShowKiosk,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)

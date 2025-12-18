@@ -511,6 +511,7 @@ type CheckProductShowParam struct {
 	IsShowAssistant int `json:"is_show_assistant"` // 是否显示在点餐助手 0-不显示 1-显示
 	IsShowH5        int `json:"is_show_h5"`        // 是否显示在h5 0-不显示 1-显示
 	IsShowDelivery  int `json:"is_show_delivery"`  // 是否显示在外送 0-不显示 1-显示
+	IsShowKiosk     int `json:"is_show_kiosk"`     // 是否在自助点餐机显示 0-否 1-是
 }
 
 func (s *productCheckSrv) CheckProductShow(show CheckProductShowParam) error {
@@ -532,6 +533,9 @@ func (s *productCheckSrv) CheckProductShow(show CheckProductShowParam) error {
 	}
 	if show.IsShowDelivery != 0 && show.IsShowDelivery != 1 {
 		return errors.New("是否显示在外送不正确")
+	}
+	if show.IsShowKiosk != 0 && show.IsShowKiosk != 1 {
+		return errors.New("是否在自助点餐机显示不正确")
 	}
 	return nil
 }
