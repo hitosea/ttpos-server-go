@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
@@ -236,6 +237,11 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 		return
 	}
 
+	if ctx.Version(context.LT, "2.9.0") {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("您的软件版本过低，请升级后再试"))
+	} else if len(createReq.FileUuids) == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("请上传相关附件后确定收货。"))
+	}
 	resp, err := h.purchaseOrderSrv.CreatePurchaseReceiptOrder(ctx, createReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -263,7 +269,11 @@ func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 		helper.HandleValidationError(c, err, updateReq, nil)
 		return
 	}
-
+	if ctx.Version(context.LT, "2.9.0") {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("您的软件版本过低，请升级后再试"))
+	} else if len(updateReq.FileUuids) == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("请上传相关附件后确定收货。"))
+	}
 	err := h.purchaseOrderSrv.UpdatePurchaseReceiptOrder(ctx, updateReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
