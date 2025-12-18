@@ -55,6 +55,8 @@ app:
   serviceUrl: $TAKEOUT_SERVICE_URL
   # 换成 jwt的密钥
   callbackSecret:  $JWT_SECRET
+  # TTPOS 主模块地址，用于回退调用菜单导出接口
+  ttposEndpoint: $TTPOS_MAIN_ENDPOINT
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT
