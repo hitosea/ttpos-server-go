@@ -32,6 +32,40 @@ class AddCompanyStoreCodeToTransferOrder extends Migrator
             
             $table->update();
         }
+        
+        // 添加发货门店编码字段
+        if (!$table->hasColumn('sender_company_store_code')) {
+            $table->addColumn(
+                'sender_company_store_code',
+                'string',
+                [
+                    'limit' => 255,
+                    'null' => false,
+                    'default' => '',
+                    'comment' => '发货门店编码',
+                    'after' => 'sender_company_name'
+                ]
+            );
+            
+            $table->update();
+        }
+        
+        // 添加收货门店编码字段
+        if (!$table->hasColumn('receiver_company_store_code')) {
+            $table->addColumn(
+                'receiver_company_store_code',
+                'string',
+                [
+                    'limit' => 255,
+                    'null' => false,
+                    'default' => '',
+                    'comment' => '收货门店编码',
+                    'after' => 'receiver_company_name'
+                ]
+            );
+            
+            $table->update();
+        }
     }
 }
 
