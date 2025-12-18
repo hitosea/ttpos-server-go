@@ -6,6 +6,7 @@ import (
 
 	api "ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/api/takeout"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -31,6 +32,11 @@ func (m *MockGrabService) GetShopProviderCfg(ctx context.Context, req *api.GetSh
 	return args.Get(0).(*api.GetShopProviderCfgResp), args.Error(1)
 }
 
+func (m *MockGrabService) NotifyMenuUpdate(ctx context.Context, merchantID string) (string, error) {
+	args := m.Called(ctx, merchantID)
+	return args.String(0), args.Error(1)
+}
+
 func TestController_CreateSelfServeJourney_InvalidProviderName(t *testing.T) {
 	// 创建控制器
 	ctrl := &Controller{}
@@ -43,7 +49,7 @@ func TestController_CreateSelfServeJourney_InvalidProviderName(t *testing.T) {
 
 	resp, err := ctrl.CreateSelfServeJourney(context.Background(), invalidReq)
 	assert.NoError(t, err)
-	assert.Equal(t, "4001", resp.Code)
+	assert.Equal(t, string(consts.CodeInvalidParam), resp.Code)
 	assert.Contains(t, resp.Message, "provider_name 不能为空")
 	assert.Nil(t, resp.Data)
 }
@@ -58,7 +64,7 @@ func TestController_CreateSelfServeJourney_InvalidShopUuid(t *testing.T) {
 
 	resp, err := ctrl.CreateSelfServeJourney(context.Background(), req)
 	assert.NoError(t, err)
-	assert.Equal(t, "4001", resp.Code)
+	assert.Equal(t, string(consts.CodeInvalidParam), resp.Code)
 	assert.Contains(t, resp.Message, "shop_uuid 不能为空")
 	assert.Nil(t, resp.Data)
 }
@@ -81,12 +87,12 @@ func TestController_GetShopProviderCfg_BasicStructure(t *testing.T) {
 func TestApiResponse_Structure(t *testing.T) {
 	// 测试 ApiResponse 结构
 	resp := &takeout.ApiResponse{
-		Code:    "0",
+		Code:    string(consts.CodeSuccess),
 		Message: "success",
 		Data:    nil,
 	}
 
-	assert.Equal(t, "0", resp.Code)
+	assert.Equal(t, string(consts.CodeSuccess), resp.Code)
 	assert.Equal(t, "success", resp.Message)
 	assert.Nil(t, resp.Data)
 }
@@ -94,12 +100,47 @@ func TestApiResponse_Structure(t *testing.T) {
 func TestApiResponse_ErrorStructure(t *testing.T) {
 	// 测试错误响应结构
 	resp := &takeout.ApiResponse{
-		Code:    "5001",
+		Code:    string(consts.CodeServiceError),
 		Message: "服务器内部错误",
 		Data:    nil,
 	}
 
-	assert.Equal(t, "5001", resp.Code)
+	assert.Equal(t, string(consts.CodeServiceError), resp.Code)
 	assert.Equal(t, "服务器内部错误", resp.Message)
 	assert.Nil(t, resp.Data)
+}
+
+func TestController_NotifyMenuUpdate_InvalidMerchantId(t *testing.T) {
+	// 创建控制器
+	ctrl := &Controller{}
+
+	// 测试参数校验 - 空的 merchant_id
+	invalidReq := &api.NotifyMenuUpdateReq{
+		MerchantId: "",
+	}
+
+	resp, err := ctrl.NotifyMenuUpdate(context.Background(), invalidReq)
+	assert.NoError(t, err)
+	assert.Equal(t, string(consts.CodeInvalidParam), resp.Code)
+	assert.Contains(t, resp.Message, "merchant_id 不能为空")
+	assert.Nil(t, resp.Data)
+}
+
+func TestController_NotifyMenuUpdate_BasicStructure(t *testing.T) {
+	// 测试请求结构
+	req := &api.NotifyMenuUpdateReq{
+		MerchantId: "test-merchant-123",
+	}
+
+	// 验证请求参数
+	assert.Equal(t, "test-merchant-123", req.MerchantId)
+	assert.NotNil(t, req)
+
+	// 测试响应结构
+	resp := &api.NotifyMenuUpdateResp{
+		RequestId: "req-123456",
+	}
+
+	assert.Equal(t, "req-123456", resp.RequestId)
+	assert.NotNil(t, resp)
 }
