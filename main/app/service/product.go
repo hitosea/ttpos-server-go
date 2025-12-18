@@ -211,6 +211,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
 		constant.SourceH5:        commonRepo.WhereByIsShowH5(1),
 		constant.SourceMember:    commonRepo.WhereByIsShowMember(1),
+		constant.SourceKiosk:     commonRepo.WhereByIsShowKiosk(1),
 	}
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
 	var dbOptions []repository.DBOption

@@ -186,6 +186,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			kiosk.RegisterAuthHandlers(kioskGroup, dbm, cache)
 			kiosk.RegisterBaseHandlers(kioskGroup, dbm, cache)
 			kiosk.RegisterCallHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterProductHandlers(kioskGroup, dbm, cache)
 		}
 		// 会员端
 		memberGroup := apiV1.Group("/member")

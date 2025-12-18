@@ -82,6 +82,7 @@ type ICommonRepo interface {
 	WhereByIsShowKitchen(isShow uint) DBOption                                                // 根据是否显示厨显端查询
 	WhereByIsShowH5(isShow uint) DBOption                                                     // 根据是否显示H5端查询
 	WhereByIsShowMember(isShow uint) DBOption                                                 // 根据是否显示会员端查询
+	WhereByIsShowKiosk(isShow uint) DBOption                                                  // 根据是否显示自助点餐机查询
 	WhereBySoftDelete() DBOption                                                              // 根据软删除查询
 	WhereByErpCode(erpCode string) DBOption                                                   // 根据erp_code查询
 	WhereByProductPackageErpCode(productPackageErpCode string) DBOption                       // 根据产品包erp_code查询
@@ -334,6 +335,13 @@ func (r *commonRepo) WhereByIsShowH5(isShow uint) DBOption {
 func (r *commonRepo) WhereByIsShowMember(isShow uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_delivery = ?", isShow)
+	}
+}
+
+// WhereByIsShowKiosk 根据是否显示自助点餐机查询
+func (r *commonRepo) WhereByIsShowKiosk(isShow uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_kiosk = ?", isShow)
 	}
 }
 
