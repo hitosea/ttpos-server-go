@@ -2,7 +2,6 @@ package service
 
 import (
 	"math"
-	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
 )
 
@@ -16,27 +15,17 @@ func NewMaxProductPackageInventoryStrategy() IProductPackageInventoryStrategy {
 }
 
 // CalculatePackageInventory 计算商品包库存（取最大值）
+// 注意：会忽略0值库存，只计算非零库存的最大值
+// 如果所有库存都是0，则返回0
 func (s *maxProductPackageInventoryStrategy) CalculatePackageInventory(
 	ctx context.Context,
 	inventories []float64,
 ) (float64, error) {
-	if len(inventories) == 0 {
-		return 0, errors.New("库存列表为空")
-	}
-
-	var maxInventory float64 = math.SmallestNonzeroFloat64
-	var hasValidInventory bool
-
+	maxInventory := 0.0
 	for _, inventory := range inventories {
-		if inventory > maxInventory {
-			maxInventory = inventory
-			hasValidInventory = true
+		if inventory != 0 {
+			maxInventory = math.Max(maxInventory, inventory)
 		}
 	}
-
-	if !hasValidInventory {
-		return 0, errors.New("无法计算商品包库存：所有BOM库存查询失败")
-	}
-
 	return maxInventory, nil
 }
