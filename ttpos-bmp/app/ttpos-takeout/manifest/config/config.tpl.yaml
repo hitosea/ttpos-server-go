@@ -57,6 +57,9 @@ app:
   callbackSecret:  $JWT_SECRET
   # TTPOS 主模块地址，用于回退调用菜单导出接口
   ttposEndpoint: $TTPOS_MAIN_ENDPOINT
+  # TTPOS HTTP Client 配置
+  ttpos-client:
+    dump: false  # 是否打印请求/响应详情
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT
