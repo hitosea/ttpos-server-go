@@ -103,6 +103,22 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2857034059776000, 'name' => '删除', 'path' => 'product_delete', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 4, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 批量导入
             ['uuid' => 2857055031296000, 'name' => '批量导入', 'path' => 'product_batch_import', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 5, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量创建Grab
+            ['uuid' => 2857076002816000, 'name' => '批量创建Grab', 'path' => 'product_batch_create_grab', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 6, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量上架Grab
+            ['uuid' => 2857096974336000, 'name' => '批量上架Grab', 'path' => 'product_batch_online_grab', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 7, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量下架Grab
+            ['uuid' => 2857117945856000, 'name' => '批量下架Grab', 'path' => 'product_batch_offline_grab', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 8, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量删除Grab
+            ['uuid' => 2857138917376000, 'name' => '批量删除Grab', 'path' => 'product_batch_delete_grab', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 9, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量创建LINE MAN
+            ['uuid' => 2857159888896001, 'name' => '批量创建LINE MAN', 'path' => 'product_batch_create_lineman', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 10, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量上架LINE MAN
+            ['uuid' => 2857180860416001, 'name' => '批量上架LINE MAN', 'path' => 'product_batch_online_lineman', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 11, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量下架LINE MAN
+            ['uuid' => 2857201831936000, 'name' => '批量下架LINE MAN', 'path' => 'product_batch_offline_lineman', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 12, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 批量删除LINE MAN
+            ['uuid' => 2857222803456001, 'name' => '批量删除LINE MAN', 'path' => 'product_batch_delete_lineman', 'api_path' => '', 'parent_uuid' => 2856954368000000, 'sort' => 13, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 商品分类
             ['uuid' => 2857080197120000, 'name' => '商品分类', 'path' => 'product_category', 'api_path' => '', 'parent_uuid' => 2856933396480000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 普通分类
@@ -283,8 +299,14 @@ class InitManagementAppAccess extends Migrator
             ['uuid' => 2859030548480000, 'name' => '编辑', 'path' => 'marketing_activity_edit', 'api_path' => '', 'parent_uuid' => 2858996994048000, 'sort' => 2, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 删除
             ['uuid' => 2859047325696000, 'name' => '删除', 'path' => 'marketing_activity_delete', 'api_path' => '', 'parent_uuid' => 2858996994048000, 'sort' => 3, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // 外卖管理
+            ['uuid' => 2858986936320000, 'name' => '外卖管理', 'path' => 'takeout_management', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 5, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // Grab
+            ['uuid' => 2859007907840000, 'name' => 'Grab', 'path' => 'takeout_grab', 'api_path' => '', 'parent_uuid' => 2858986936320000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            // LINE MAN
+            ['uuid' => 2859028879360000, 'name' => 'LINE MAN', 'path' => 'takeout_lineman', 'api_path' => '', 'parent_uuid' => 2858986936320000, 'sort' => 2, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 餐厅设置
-            ['uuid' => 2859064102912000, 'name' => '餐厅设置', 'path' => 'restaurant_setting', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 5, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            ['uuid' => 2859064102912000, 'name' => '餐厅设置', 'path' => 'restaurant_setting', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 6, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 副屏设置
             ['uuid' => 2859080880128000, 'name' => '副屏设置', 'path' => 'secondary_screen_setting', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 票据样式设置
@@ -308,7 +330,7 @@ class InitManagementAppAccess extends Migrator
             // 使用
             ['uuid' => 2859252846592000, 'name' => '使用', 'path' => 'advanced_ticket_template_use', 'api_path' => '', 'parent_uuid' => 2859181543424000, 'sort' => 4, 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 其他
-            ['uuid' => 2859273818112000, 'name' => '其他', 'path' => 'other', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 6, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
+            ['uuid' => 2859273818112000, 'name' => '其他', 'path' => 'other', 'api_path' => '', 'parent_uuid' => 2856757235712000, 'sort' => 7, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 各端设置
             ['uuid' => 2859290595328000, 'name' => '各端设置', 'path' => 'terminal_setting', 'api_path' => '', 'parent_uuid' => 2859273818112000, 'sort' => 1, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => 1763721369, 'update_time' => 1763721369],
             // 排号取餐
@@ -397,6 +419,14 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857013088256000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857034059776000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857055031296000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857076002816000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857096974336000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857117945856000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857138917376000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857159888896001', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857180860416001', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857201831936000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857222803456001', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857080197120000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857105362944000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2857134723072000', 'create_time' => time()],
@@ -487,6 +517,9 @@ class InitManagementAppAccess extends Migrator
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859013771264000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859030548480000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859047325696000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2858986936320000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859007907840000', 'create_time' => time()],
+                    ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859028879360000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859064102912000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859080880128000', 'create_time' => time()],
                     ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '2859106045952000', 'create_time' => time()],

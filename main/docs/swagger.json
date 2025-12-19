@@ -303,196 +303,6 @@
                 }
             }
         },
-        "/api/v1/cost_card_correction/execute": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "执行成本卡修正，包括退回材料、重新计算消耗、重新生成出库记录等",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "成本卡修正"
-                ],
-                "summary": "执行修正操作",
-                "parameters": [
-                    {
-                        "description": "修正请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.CostCardCorrectionReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.CostCardCorrectionResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "错误请求",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cost_card_correction/logs": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "查询成本卡修正操作日志",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "成本卡修正"
-                ],
-                "summary": "查询修正日志",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "修正操作UUID",
-                        "name": "correction_uuid",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "订单UUID",
-                        "name": "order_uuid",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "页码",
-                        "name": "page_no",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "每页大小",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.CostCardCorrectionLogsResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "错误请求",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cost_card_correction/preview": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "预览成本卡修正对订单、材料库存的影响",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "成本卡修正"
-                ],
-                "summary": "预览修正影响",
-                "parameters": [
-                    {
-                        "description": "预览请求",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.CostCardCorrectionPreviewReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.CostCardCorrectionPreviewResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "错误请求",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/assistant/base": {
             "get": {
                 "security": [
@@ -42069,30 +41879,6 @@
                 }
             }
         },
-        "req.CostCardCorrectionPreviewReq": {
-            "type": "object",
-            "properties": {
-                "order_uuids": {
-                    "description": "预览修正影响的订单UUID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "req.CostCardCorrectionReq": {
-            "type": "object",
-            "properties": {
-                "order_uuids": {
-                    "description": "需要修正的订单UUID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
         "req.CreateMemberOrderReq": {
             "type": "object",
             "properties": {
@@ -51118,126 +50904,6 @@
                 }
             }
         },
-        "resp.CostCardCorrectionLog": {
-            "type": "object",
-            "properties": {
-                "correction_uuid": {
-                    "description": "修正操作UUID",
-                    "type": "integer"
-                },
-                "create_time": {
-                    "description": "创建时间",
-                    "type": "integer"
-                },
-                "details": {
-                    "description": "详细信息 (JSON)",
-                    "type": "string"
-                },
-                "message": {
-                    "description": "消息",
-                    "type": "string"
-                },
-                "operation_type": {
-                    "description": "操作类型 (e.g., \"preview\", \"execute\")",
-                    "type": "string"
-                },
-                "operator_name": {
-                    "description": "操作人姓名",
-                    "type": "string"
-                },
-                "operator_uuid": {
-                    "description": "操作人UUID",
-                    "type": "integer"
-                },
-                "order_no": {
-                    "description": "订单号",
-                    "type": "string"
-                },
-                "order_uuid": {
-                    "description": "订单UUID",
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "状态 (e.g., \"success\", \"failed\")",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "日志UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CostCardCorrectionLogsResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "description": "日志列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.CostCardCorrectionLog"
-                    }
-                },
-                "page_no": {
-                    "description": "当前页码",
-                    "type": "integer"
-                },
-                "page_size": {
-                    "description": "每页大小",
-                    "type": "integer"
-                },
-                "total": {
-                    "description": "总记录数",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CostCardCorrectionPreviewResp": {
-            "type": "object",
-            "properties": {
-                "affected_dates": {
-                    "description": "受影响的日期列表",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "orders": {
-                    "description": "订单修正信息列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.OrderCorrectionInfo"
-                    }
-                },
-                "total_orders": {
-                    "description": "总订单数",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.CostCardCorrectionResp": {
-            "type": "object",
-            "properties": {
-                "correction_uuid": {
-                    "description": "修正操作UUID（用于日志追踪）",
-                    "type": "integer"
-                },
-                "fail_count": {
-                    "description": "失败的订单数",
-                    "type": "integer"
-                },
-                "failed_orders": {
-                    "description": "失败的订单信息",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.FailedOrderInfo"
-                    }
-                },
-                "success_count": {
-                    "description": "成功修正的订单数",
-                    "type": "integer"
-                }
-            }
-        },
         "resp.Coupon": {
             "type": "object",
             "properties": {
@@ -52200,23 +51866,6 @@
                 },
                 "undelivery_num": {
                     "description": "待配送数量",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.FailedOrderInfo": {
-            "type": "object",
-            "properties": {
-                "error_message": {
-                    "description": "错误信息",
-                    "type": "string"
-                },
-                "order_no": {
-                    "description": "订单号",
-                    "type": "string"
-                },
-                "order_uuid": {
-                    "description": "订单UUID",
                     "type": "integer"
                 }
             }
@@ -53704,31 +53353,6 @@
                 }
             }
         },
-        "resp.MaterialCorrectionInfo": {
-            "type": "object",
-            "properties": {
-                "material_name": {
-                    "description": "材料名称",
-                    "type": "string"
-                },
-                "material_uuid": {
-                    "description": "材料UUID",
-                    "type": "integer"
-                },
-                "new_consumption": {
-                    "description": "新消耗量",
-                    "type": "number"
-                },
-                "old_consumption": {
-                    "description": "旧消耗量",
-                    "type": "number"
-                },
-                "return_quantity": {
-                    "description": "退回数量",
-                    "type": "number"
-                }
-            }
-        },
         "resp.MaterialUnitInfo": {
             "type": "object",
             "properties": {
@@ -54740,30 +54364,6 @@
                 "name": {
                     "description": "名称",
                     "type": "string"
-                }
-            }
-        },
-        "resp.OrderCorrectionInfo": {
-            "type": "object",
-            "properties": {
-                "create_time": {
-                    "description": "创建时间",
-                    "type": "integer"
-                },
-                "order_no": {
-                    "description": "订单号",
-                    "type": "string"
-                },
-                "order_uuid": {
-                    "description": "订单UUID",
-                    "type": "integer"
-                },
-                "products": {
-                    "description": "商品修正信息列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.ProductCorrectionInfo"
-                    }
                 }
             }
         },
@@ -56735,30 +56335,6 @@
                     "items": {
                         "type": "integer"
                     }
-                }
-            }
-        },
-        "resp.ProductCorrectionInfo": {
-            "type": "object",
-            "properties": {
-                "bom_card_uuid": {
-                    "description": "成本卡UUID",
-                    "type": "integer"
-                },
-                "materials": {
-                    "description": "材料修正信息列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.MaterialCorrectionInfo"
-                    }
-                },
-                "product_bom_uuid": {
-                    "description": "商品BOM UUID",
-                    "type": "integer"
-                },
-                "product_name": {
-                    "description": "商品名称",
-                    "type": "string"
                 }
             }
         },
