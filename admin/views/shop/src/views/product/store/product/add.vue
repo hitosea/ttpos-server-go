@@ -133,7 +133,7 @@
       ],
       open_overall_discount: 1,
       package_price: null,
-      is_open_stock: 1,
+      is_open_stock: 0,
       package_stock: null,
       package_group: [
         {

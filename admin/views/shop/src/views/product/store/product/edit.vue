@@ -186,7 +186,7 @@
     label_id: '',
     open_overall_discount: 0,
     package_price: null,
-    is_open_stock: 1,
+    is_open_stock: 0,
     package_stock: null,
     package_group: [
       {
@@ -383,7 +383,7 @@
           });
           form.model.package_price = form.model.package.package_price;
           form.model.package_stock = form.model.package.package_stock;
-          form.model.is_open_stock = form.model.package.is_open_stock;
+          form.model.is_open_stock = form.model.package.is_open_stock || 0;
         }
         
         try {
