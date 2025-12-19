@@ -10,7 +10,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 type ImgBaseData struct {
@@ -126,6 +129,12 @@ func NewImgTemplateParser(baseData ImgBaseData, templateJSON string, data map[st
 
 // Parse 解析模板并生成打印内容
 func (p *ImgTemplateParser) Parse() (*ImgFont, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			// 捕获 panic 并记录日志
+			logger.Logger.Error("解析模板并生成打印内容 panic", zap.Any("panic_value", r), zap.Stack("stack_trace"))
+		}
+	}()
 	// 根据纸张宽度创建图片打印对象
 	var img *ImgFont
 
@@ -298,7 +307,7 @@ func (p *ImgTemplateParser) parseRow(
 		if len(blocks) == 1 && block.BlockType != "column" {
 			// 获取宽度
 			width := p.getWidthValue(block.BlockAttr.Width)
-			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil && block.BlockAttr.Width58 != 0 {
 				width = p.getWidthValue(block.BlockAttr.Width58)
 			}
 			widthInt := int(width)
@@ -440,7 +449,7 @@ func (p *ImgTemplateParser) parseRow(
 // getBlockWidth 获取块的宽度
 func (p *ImgTemplateParser) getBlockWidth(img *ImgFont, block ImgTemplateBlock) int {
 	width := p.getWidthValue(block.BlockAttr.Width)
-	if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+	if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil && block.BlockAttr.Width58 != 0 {
 		width = p.getWidthValue(block.BlockAttr.Width58)
 	}
 	if width > 0 {
@@ -1060,7 +1069,7 @@ func (p *ImgTemplateParser) validateRow(blocks []ImgTemplateBlock, rowIndex int)
 		// 验证宽度
 		if block.BlockType != "img" && block.BlockType != "qrcode" && block.BlockType != "barcode" {
 			width := p.getWidthValue(block.BlockAttr.Width)
-			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil && block.BlockAttr.Width58 != 0 {
 				width = p.getWidthValue(block.BlockAttr.Width58)
 			}
 			if width < 0 || width > 100 {
