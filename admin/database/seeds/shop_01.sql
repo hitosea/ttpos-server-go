@@ -88,6 +88,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     INDEX `idx_uuid_hidebilltime_id` (`uuid`, `hide_bill_time`, `id`),
     INDEX `idx_order_source_uuid` (`order_source_uuid`),
     INDEX `idx_nationality_uuid` (`nationality_uuid`),
+    INDEX `idx_consumer_uuid` (`consumer_uuid`),
+    INDEX `idx_cashier_uuid` (`cashier_uuid`),
+    INDEX `idx_member_sale_order_uuid` (`member_sale_order_uuid`),
+    INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_source` (`source`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单表';
@@ -158,6 +162,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_tso_bill_qry` (`delete_time`, `sale_bill_uuid`),
     INDEX `idx_sale_bill_uuid_status` (`sale_bill_uuid`, `status`, `delete_time`),
+    INDEX `idx_full_reduction_activity_uuid` (`full_reduction_activity_uuid`),
+    INDEX `idx_consumer_uuid` (`consumer_uuid`),
+    INDEX `idx_cashier_uuid` (`cashier_uuid`),
+    INDEX `idx_staff_shift_log_uuid` (`staff_shift_log_uuid`),
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_status_delete_time` (`status`, `delete_time`),
     INDEX `idx_deletetime_salebilluuid` (`delete_time`, `sale_bill_uuid`),
@@ -177,6 +185,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_material` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_material_uuid` (`material_uuid`),
+    INDEX `idx_warehouse_uuid` (`warehouse_uuid`),
+    INDEX `idx_staff_shift_log_uuid` (`staff_shift_log_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单原料表';
 
@@ -193,6 +206,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_coupon` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_tsoc_order_qry` (`delete_time`, `sale_order_uuid`),
+    INDEX `idx_member_coupon_uuid` (`member_coupon_uuid`),
+    INDEX `idx_marketing_coupon_uuid` (`marketing_coupon_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单优惠券表';
 
@@ -261,6 +276,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)，前端提交订单的时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_member_uuid` (`member_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
+    INDEX `idx_payment_method_uuid` (`payment_method_uuid`),
+    INDEX `idx_member_address_uuid` (`member_address_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员销售订单表';
 
@@ -313,6 +333,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_tpo_order_qry` (`delete_time`, `related_uuid`),
     INDEX `idx_related_uuid` (`related_uuid`),
+    INDEX `idx_payment_method_uuid` (`payment_method_uuid`),
     INDEX `idx_status` (`status`),
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_deletetime_status_relateduuid` (`delete_time`, `status`, `related_uuid`),
@@ -353,7 +374,9 @@ CREATE TABLE `ttpos_ll_payment_order` (
     KEY `order_id` (`order_id`),
     KEY `merchant_order_id` (`merchant_order_id`),
     KEY `related_uuid` (`related_uuid`),
-    KEY `payment_order_uuid` (`payment_order_uuid`)
+    KEY `payment_order_uuid` (`payment_order_uuid`),
+    KEY `idx_payment_method_uuid` (`payment_method_uuid`),
+    KEY `idx_member_sale_order_uuid` (`member_sale_order_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='lianlian支付订单';
 
 CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
@@ -479,6 +502,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     INDEX `idx_product_package_uuid` (`product_package_uuid`),
     INDEX `idx_package_group_uuid` (`package_group_uuid`),
+    INDEX `idx_production_order_uuid` (`production_order_uuid`),
+    INDEX `idx_must_plan_uuid` (`must_plan_uuid`),
+    INDEX `idx_desk_uuid` (`desk_uuid`),
+    INDEX `idx_h5_order_uuid` (`h5_order_uuid`),
+    INDEX `idx_h5_order_product_uuid` (`h5_order_product_uuid`),
+    INDEX `idx_package_uuid` (`package_uuid`),
+    INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_status_delete_time` (`status`, `delete_time`),
     INDEX `idx_is_accept_order` (`is_accept_order`),
     INDEX `idx_deletetime_saleorderuuid` (`delete_time`, `sale_order_uuid`),
@@ -522,6 +552,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_reason` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_return_food_reason_uuid` (`return_food_reason_uuid`),
+    INDEX `idx_free_reason_uuid` (`free_reason_uuid`),
+    INDEX `idx_gift_reason_uuid` (`gift_reason_uuid`),
     INDEX `idx_order_item_remark_uuid` (`order_item_remark_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品表';
@@ -588,6 +621,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_desk_uuid_status` (`desk_uuid`, `status`, `delete_time`),
+    INDEX `idx_staff_uuid` (`staff_uuid`),
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_status_auto_accept` (`status`, `is_auto_accept`),
     UNIQUE KEY `unique_uuid` (`uuid`)
@@ -610,6 +646,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order_product` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_h5_order_uuid_delete` (`h5_order_uuid`, `delete_time`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '扫码订单商品';
 
@@ -625,7 +662,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_bom` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
     UNIQUE KEY `iunique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品组合表';
 
@@ -641,7 +680,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product_attribute` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_product_attribute_uuid` (`product_attribute_uuid`),
+    INDEX `idx_product_package_attribute_uuid` (`product_package_attribute_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品属性记录表';
 
@@ -656,6 +698,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_discount_strategy` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单优惠策略表';
 
@@ -669,6 +712,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_desk_uuid` (`desk_uuid`),
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单表';
 
@@ -708,7 +754,13 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_product_package_uuid` (`product_package_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_production_order_uuid` (`production_order_uuid`),
+    INDEX `idx_first_category_uuid` (`first_category_uuid`),
+    INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_status` (`status`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单商品表';
@@ -726,6 +778,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_material_uuid` (`material_uuid`),
+    INDEX `idx_production_order_product_uuid` (`production_order_product_uuid`),
+    INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单原料表';
 
@@ -771,6 +826,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_region_uuid` (`region_uuid`),
+    INDEX `idx_type_uuid` (`type_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_device_uuid` (`device_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台信息表';
 
@@ -806,6 +865,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_operation_record` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
+    INDEX `idx_h5_order_uuid` (`h5_order_uuid`),
+    INDEX `idx_operator_uuid` (`operator_uuid`),
+    INDEX `idx_member_sale_order_uuid` (`member_sale_order_uuid`),
+    INDEX `idx_member_uuid` (`member_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '桌台账单操作记录';
 
@@ -980,6 +1045,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_category_uuid` (`category_uuid`),
+    INDEX `idx_supplier_uuid` (`supplier_uuid`),
+    INDEX `idx_image_uuid` (`image_uuid`),
+    INDEX `idx_unit_uuid` (`unit_uuid`),
+    INDEX `idx_purchase_unit_uuid` (`purchase_unit_uuid`),
+    INDEX `idx_cost_unit_uuid` (`cost_unit_uuid`),
+    INDEX `idx_headquarter_uuid` (`headquarter_uuid`),
+    INDEX `idx_warehouse_uuid` (`warehouse_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`),
     KEY `idx_allow_substore_visible` (`allow_substore_visible`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料信息表';
@@ -995,6 +1068,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_category` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_headquarter_uuid` (`headquarter_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料分类表';
 
@@ -1539,8 +1613,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_group` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`),
-    INDEX `idx_product_package_uuid` (`product_package_uuid`),
-    INDEX `idx_multi_language_name_uuid` (`multi_language_name_uuid`)
+    INDEX `idx_product_package_uuid` (`product_package_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品套餐组表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_package_group_item` (
@@ -1661,6 +1734,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     INDEX `idx_phone` (`phone`),
     INDEX `idx_device_id` (`device_id`),
     INDEX `idx_is_visitor` (`is_visitor`),
+    INDEX `idx_member_level_uuid` (`member_level_uuid`),
+    INDEX `idx_member_card_uuid` (`member_card_uuid`),
+    INDEX `idx_referrer_uuid` (`referrer_uuid`),
+    INDEX `idx_activity_uuid` (`activity_uuid`),
     INDEX `idx_create_time` (`create_time`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员信息表';
@@ -1696,6 +1773,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_level_log` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_member_uuid` (`member_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = COMPACT COMMENT = '用户会员等级变更记录表';
 
@@ -1729,6 +1807,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),领取时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_card_type_uuid` (`card_type_uuid`),
+    INDEX `idx_member_uuid` (`member_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员卡表';
 
@@ -1749,6 +1829,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_log` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_member_card_type_uuid` (`member_card_type_uuid`),
+    INDEX `idx_member_uuid` (`member_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员卡领取记录表';
 
@@ -1769,6 +1851,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_member_uuid_scene` (`member_uuid`, `scene`),
     INDEX `idx_related_uuid` (`related_uuid`),
+    INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     INDEX `idx_create_time` (`create_time`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员余额变动记录表';
@@ -1815,6 +1898,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_member_uuid_status` (`member_uuid`, `status`),
+    INDEX `idx_staff_uuid` (`staff_uuid`),
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_status` (`status`),
     UNIQUE KEY `unique_uuid` (`uuid`)
@@ -1833,6 +1917,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_operation_log` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_recharge_order_uuid` (`recharge_order_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员充值订单操作日志表';
 
@@ -1849,6 +1934,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_abnormal_record` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    INDEX `idx_recharge_order_uuid` (`recharge_order_uuid`),
+    INDEX `idx_cashier_uuid` (`cashier_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单异常日志表';
 
@@ -1871,6 +1958,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse` (
   `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`),
+  INDEX `idx_headquarter_uuid` (`headquarter_uuid`),
   UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
 
@@ -2389,7 +2477,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_order_source` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `uk_uuid` (`uuid`),
-    INDEX `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
     INDEX `idx_delete_time` (`delete_time`),
     INDEX `idx_status` (`status`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '外卖来源配置表';
@@ -2404,7 +2491,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_nationality` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `uk_uuid` (`uuid`),
-    INDEX `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
     INDEX `idx_delete_time` (`delete_time`),
     INDEX `idx_status` (`status`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '国籍配置表';
@@ -3657,7 +3743,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_full_reduction_activity` (
     UNIQUE KEY `uk_uuid` (`uuid`),
     KEY `idx_start_date` (`start_date`),
     KEY `idx_end_date` (`end_date`),
-    KEY `idx_multi_language_name_uuid` (`multi_language_name_uuid`),
     INDEX `idx_headquarter_uuid` (`headquarter_uuid`),
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='满减活动表';
