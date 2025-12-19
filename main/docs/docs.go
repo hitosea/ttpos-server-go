@@ -30766,6 +30766,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "字段, email、phone",
+                        "name": "field",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "关键词, 邮箱、手机号",
                         "name": "keyword",
                         "in": "query"

@@ -36468,6 +36468,10 @@ paths:
       - application/json
       description: 搜索员工
       parameters:
+      - description: 字段, email、phone
+        in: query
+        name: field
+        type: string
       - description: 关键词, 邮箱、手机号
         in: query
         name: keyword
