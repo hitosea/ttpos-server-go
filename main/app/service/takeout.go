@@ -122,7 +122,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 	_ = progressService.UpdateProgress(ctx, importLog.UUID, 20, 100)
 
 	// 4. 推送菜单到平台 (进度 20-100%)
-	err = s.takeoutAppSrv.PushMenuToGrab(ctx, currencySetting.Unit)
+	err = s.takeoutAppSrv.PushMenu(ctx, platform, currencySetting.Unit)
 	if err != nil {
 		logger.Logger.Error("推送菜单到平台失败",
 			zap.String("platform", platform),

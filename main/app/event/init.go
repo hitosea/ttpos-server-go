@@ -4,6 +4,7 @@ import (
 	member "ttpos-server-go/app/event/member"
 	order "ttpos-server-go/app/event/order"
 	order_h5 "ttpos-server-go/app/event/order_h5"
+	product "ttpos-server-go/app/event/product"
 	rider "ttpos-server-go/app/event/rider"
 	statistics "ttpos-server-go/app/event/statistics"
 )
@@ -103,6 +104,10 @@ func init() {
 	order.FinishMenuEventHandler()
 	// 自动注册"送厨"事件处理器
 	order.SentCookingEventHandler()
+
+	// 商品沽清相关事件处理器
+	// 自动注册"商品沽清"事件处理器
+	product.ProductSoldOutEventHandler()
 
 	// 其他操作事件处理器
 	// 自动注册"修改就餐人数,修改注释"事件处理器

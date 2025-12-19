@@ -71,8 +71,9 @@ func (h *SoldOutHandler) AddSoldOut(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
 		return
 	}
+	ctx := helper.GetContext(c)
 	// 获取沽清列表
-	err := h.soldOutSrv.AddSoldOut(helper.GetCompanyUuid(c), addSoldOutReq.SoldOutData)
+	err := h.soldOutSrv.AddSoldOut(ctx, helper.GetCompanyUuid(c), addSoldOutReq.SoldOutData)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -100,7 +101,8 @@ func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
 		return
 	}
 	// 取消沽清商品
-	err := h.soldOutSrv.CancelSoldOut(helper.GetCompanyUuid(c), cancelSoldOut.ProductBomUuid)
+	ctx := helper.GetContext(c)
+	err := h.soldOutSrv.CancelSoldOut(ctx, helper.GetCompanyUuid(c), cancelSoldOut.ProductBomUuid)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -121,7 +123,8 @@ func (h *SoldOutHandler) CancelSoldOut(c *gin.Context) {
 // @Router /cashier/sold_out/cancel_all [post]
 func (h *SoldOutHandler) CancelAllSoldOut(c *gin.Context) {
 	// 取消沽清全部商品
-	err := h.soldOutSrv.CancelAllSoldOut(helper.GetCompanyUuid(c))
+	ctx := helper.GetContext(c)
+	err := h.soldOutSrv.CancelAllSoldOut(ctx, helper.GetCompanyUuid(c))
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
