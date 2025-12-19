@@ -47,6 +47,7 @@
               <el-option value="#FFBE00" :label="$t('红色')">{{ $t('红色') }}</el-option>
               <el-option value="custom" :label="$t('自定义')">{{ $t('自定义') }}</el-option>
             </el-select>
+            <el-color-picker v-if="form.wait_time_color_ranges[0].color === 'custom'" v-model="customColor2" :predefine="predefinedColors" :show-alpha="false" size="small" />
           </div>
           <div class="max-w460 color-box">
             <el-select class="w-104" v-model="form.wait_time_color_ranges[1].minute" size="default" :placeholder="$t('选择分钟')">
@@ -232,8 +233,9 @@
           '#daa520',
           '#ff69b4',
         ], // 预定义颜色
-        customColor0: '#ff0000', // 第一个自定义颜色
-        customColor1: '#ffff00', // 第二个自定义颜色
+        customColor2: '#100A05', // 第一个自定义颜色（0分钟）
+        customColor0: '#ff0000', // 第二个自定义颜色（10分钟）
+        customColor1: '#ffff00', // 第三个自定义颜色（20分钟）
         languageList: [],
         open: false,
         loading: false,
@@ -308,7 +310,9 @@
                   color = color;
                 } else {
                   // 自定义颜色，设置对应的自定义颜色字段
-                  if (index === 1) {
+                  if (index === 0) {
+                    self.customColor2 = color;
+                  } else if (index === 1) {
                     self.customColor0 = color;
                   } else if (index === 2) {
                     self.customColor1 = color;
@@ -359,7 +363,9 @@
           let color = range.color;
           if (color === 'custom') {
             // 如果选择自定义，使用对应的自定义颜色
-            if (index === 1) {
+            if (index === 0) {
+              color = self.customColor2;
+            } else if (index === 1) {
               color = self.customColor0;
             } else if (index === 2) {
               color = self.customColor1;
