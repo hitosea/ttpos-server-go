@@ -24,9 +24,10 @@ type IStaffRepo interface {
 	WhereHasDataPermission(hasDataPermission int) DBOption  // 是否有数据管理权限条件
 	WhereRealNameOrUsernameOrPhone(keyword string) DBOption // 姓名、邮箱、手机号条件
 
-	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
-	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
-	CountStaff(opts ...DBOption) (int64, error)     // 统计员工数量
+	GetStaff(opts ...DBOption) (model.Staff, error)            // 查询员工
+	GetStaffWithDeleted(opts ...DBOption) (model.Staff, error) // 查询员工
+	GetStaffs(opts ...DBOption) []model.Staff                  // 查询员工
+	CountStaff(opts ...DBOption) (int64, error)                // 统计员工数量
 
 	PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.Staff, int64, error) // 分页查询员工
 
@@ -59,6 +60,16 @@ func (r *StaffRepo) GetStaff(opts ...DBOption) (model.Staff, error) {
 		db = opt(db)
 	}
 	err := db.Take(&staff).Error
+	return staff, err
+}
+
+func (r *StaffRepo) GetStaffWithDeleted(opts ...DBOption) (model.Staff, error) {
+	var staff model.Staff
+	db := r.db.Model(&model.Staff{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&staff).Error
 	return staff, err
 }
 
