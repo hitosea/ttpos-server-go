@@ -182,7 +182,6 @@ class Product extends ProductModel
                     'stock_num' => $data['package_stock'] ?: 0,
                     'spec_id' => 0,
                     'barcode' => '',
-                    'is_open_stock' => $data['is_open_stock'] ?? 0,
                 ]
             ];
         }
@@ -640,7 +639,6 @@ class Product extends ProductModel
                     'stock_num' => $data['package_stock'] ?: 0,
                     'spec_id' => 0,
                     'barcode' => '',
-                    'is_open_stock' => $data['is_open_stock'] ?? 0,
                     'product_sku_id' => $this['sku'][0]['uuid'],
                 ]
             ];

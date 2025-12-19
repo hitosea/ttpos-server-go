@@ -139,7 +139,6 @@ class Product extends Controller
      *      @Apidoc\Param("tax_category_id", type="int", require=true, desc="税类id"),
      *   }),
      *   @Apidoc\Param("package_price", type="decimal", require=false, desc="套餐价格"),
-     *   @Apidoc\Param("is_open_stock", type="int", require=false, desc="是否开启库存"),
      *   @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
      *   @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *      @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
@@ -241,7 +240,6 @@ class Product extends Controller
      *      @Apidoc\Param("tax_category_id", type="int", require=true, desc="税类id"),
      *  }),
      *  @Apidoc\Param("package_price", type="decimal", require=false, desc="套餐价格"),
-     *  @Apidoc\Param("is_open_stock", type="int", require=false, desc="是否开启库存"),
      *  @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
      *  @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *     @Apidoc\Param("group_id", type="int", require=true, desc="套餐分组id"),

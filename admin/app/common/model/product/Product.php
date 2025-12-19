@@ -995,7 +995,7 @@ class Product extends BaseModel
                 '0 as sort',
                 'm.id as id',
                 'pu.multi_language_name_uuid as product_unit_multi_language_name_uuid',
-                '1 as is_open_stock',
+                '0 as is_open_stock',
                 '0 as is_package_used',
             ]));
 
