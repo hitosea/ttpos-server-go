@@ -5738,7 +5738,6 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		flavorListResult = CheckProductFlavorResult{
 			MinPrice: packageResult.Price,
 			MaxPrice: packageResult.Price,
-			StockNum: packageResult.StockNum,
 			Status:   req.Status,
 			Flavors: []CheckProductFlavorItemResult{
 				{
