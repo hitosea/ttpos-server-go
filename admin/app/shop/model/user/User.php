@@ -329,7 +329,6 @@ class User extends UserModel
                 return false;
             }
         }
-
         return $this->transaction(function () use ($card, $cardNumber, $data, $referrerUuid) {
             if ($card) {
                 // 会员未拥有此会员卡，发卡
@@ -350,8 +349,8 @@ class User extends UserModel
             }
             $data['member_card_no'] = $cardNumber;
             $data['referrer_uuid'] = $referrerUuid;
-            //
-            return $this->save($data); 
+            // 使用 force(true) 强制更新所有字段，确保 member_card_no 被更新
+            return $this->force(true)->save($data);
         });
     }
 
