@@ -5,6 +5,9 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/inventory/domain/repository"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // GetProductPackageInventoryOption 商品包库存查询选项
@@ -25,6 +28,11 @@ type IProductInventoryDomainService interface {
 	// productBomUuid: 商品BOM的UUID
 	// 返回: 库存数量（float64），无限库存返回 99999999
 	GetProductInventory(ctx context.Context, productBomUuid uint64) (float64, error)
+
+	// GetProductInventoriesBatch 批量获取商品库存
+	// productBomUuids: 商品BOM的UUID列表
+	// 返回: map[UUID]库存数量，无限库存返回 99999999
+	GetProductInventoriesBatch(ctx context.Context, productBomUuids []uint64) (map[uint64]float64, error)
 
 	// GetProductPackageInventory 获取商品包库存
 	// productPackageUuid: 商品包的UUID
@@ -134,6 +142,68 @@ func (s *productInventoryDomainService) GetProductInventory(
 	}
 
 	return inventory, nil
+}
+
+// GetProductInventoriesBatch 批量获取商品库存
+func (s *productInventoryDomainService) GetProductInventoriesBatch(
+	ctx context.Context,
+	productBomUuids []uint64,
+) (map[uint64]float64, error) {
+	// 1. 参数校验
+	if len(productBomUuids) == 0 {
+		return make(map[uint64]float64), nil
+	}
+
+	// 2. 批量查询商品BOM
+	productBomInterfaces, err := s.productBomRepo.FindByUuids(ctx, productBomUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品BOM失败")
+	}
+
+	// 3. 初始化结果map
+	result := make(map[uint64]float64, len(productBomUuids))
+
+	// 4. 遍历每个BOM，计算库存
+	for _, bomInterface := range productBomInterfaces {
+		productBom, ok := bomInterface.(*model.ProductBom)
+		if !ok {
+			// 记录错误但继续处理其他BOM
+			logger.Logger.Warn("*model.ProductBom类型错误", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(errors.New("商品BOM类型错误")))
+			continue
+		}
+
+		// 5. 判断商品类型，选择策略
+		var strategy IInventoryStrategy
+		if productBom.HasProductBomCard() {
+			strategy = s.strategies["bom_card"]
+		} else if len(productBom.FlavorMaterials) > 0 {
+			strategy = s.strategies["flavor_materials"]
+		} else if productBom.IsSauce() {
+			// 小料：优先判断是否有成本卡，其次判断是否有关联材料，都没有则使用专门的小料策略
+			if productBom.ProductSauce.HasProductBomCard() {
+				strategy = s.strategies["sauce_bom_card"]
+			} else if len(productBom.ProductSauce.SauceMaterials) > 0 {
+				strategy = s.strategies["sauce_materials"]
+			} else {
+				// 小料既没有成本卡也没有关联材料，使用专门的小料策略（检查 ProductSauce.SauceMaterials）
+				strategy = s.strategies["sauce_non_bom_card"]
+			}
+		} else {
+			strategy = s.strategies["non_bom_card"]
+		}
+
+		// 6. 计算库存
+		inventory, err := strategy.CalculateInventory(ctx, productBom)
+		if err != nil {
+			// 记录错误但继续处理其他BOM
+			logger.Logger.Warn("计算商品库存失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Uint64("product_bom_uuid", productBom.Uuid), zap.Error(err))
+			continue
+		}
+
+		result[productBom.Uuid] = inventory
+	}
+
+	return result, nil
 }
 
 // GetProductPackageInventory 获取商品包库存

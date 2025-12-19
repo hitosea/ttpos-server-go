@@ -225,7 +225,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		// 如果不是收银机点击送厨、助手端点击送厨时，需要将未送厨和预送厨的商品都修改is_batch为0
 		notBatch := !option.IsBatch
 		if ignoreMust { // 只有点击结账时弹出是否送厨并点击送厨时，会忽略必点，这个情况下，需要都修改is_batch为0
-			notBatch = true
+			if ctx.GetSource() != constant.SourceAssistant { // 助手端开启下单密码时ignoreMust为true. 修复 任务:38009 v2.11 -生产反馈 - 点餐助手 开启分批送厨 前置+下单密码- 后送厨菜品未标记：D
+				notBatch = true
+			}
 		}
 		if notBatch {
 			// 遍历所有预送厨的商品，将is_batch为0

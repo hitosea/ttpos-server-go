@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "10.144.144.7:8080",
+    "host": "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
     "basePath": "/",
     "paths": {
         "/admin/erpnext/lianlian/payment/add": {
@@ -30298,6 +30298,12 @@
                 ],
                 "summary": "搜索员工",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "字段, email、phone",
+                        "name": "field",
+                        "in": "query"
+                    },
                     {
                         "type": "string",
                         "description": "关键词, 邮箱、手机号",
