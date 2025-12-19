@@ -2560,18 +2560,20 @@ func (s *orderSrv) getProductBomStockNumMap(ctx context.Context, bomUuids map[ui
 	// 使用工厂方法创建库存应用服务实例
 	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 
+	// 收集所有需要查询库存的 BOM UUID
+	targetBomUuids := make([]uint64, 0)
 	for bomUuid := range bomUuids {
-		inventory, err := appService.GetProductInventory(ctx, bomUuid)
-		if err != nil {
-			// 如果查询失败，记录日志但继续处理其他规格/小料
-			logger.Logger.Warn("查询商品规格/小料库存失败",
-				zap.Error(err),
-				zap.Uint64("bom_uuid", bomUuid),
-				zap.Uint64("product_package_uuid", productPackageUuid),
-			)
-			// 失败时使用无限库存作为默认值
-			inventory = constant.ProductBomInfiniteStock
+		targetBomUuids = append(targetBomUuids, bomUuid)
+	}
+	//
+	inventoryMap, err := appService.GetProductInventoriesBatch(ctx, targetBomUuids)
+	if err != nil {
+		for bomUuid := range bomUuids {
+			stockNumMap[bomUuid] = constant.ProductBomInfiniteStock
 		}
+		return stockNumMap
+	}
+	for bomUuid, inventory := range inventoryMap {
 		stockNumMap[bomUuid] = inventory
 	}
 	return stockNumMap
@@ -2598,14 +2600,24 @@ func (s *orderSrv) createProductBomStockNumFunc(ctx context.Context, appService 
 func (s *orderSrv) checkProductBomInventory(ctx context.Context, productBomNumMap map[uint64]*FlavorNum) []*model.SaleOrderProduct {
 	// 使用工厂方法创建库存应用服务实例
 	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
-
 	stockShortageProducts := make([]*model.SaleOrderProduct, 0)
+
+	// 收集所有需要查询库存的 BOM UUID
+	targetBomUuids := make([]uint64, 0)
+	for productBomUuid := range productBomNumMap {
+		targetBomUuids = append(targetBomUuids, productBomUuid)
+	}
+	inventoryMap, err := appService.GetProductInventoriesBatch(ctx, targetBomUuids)
+	if err != nil {
+		ctx.Log().Error("获取商品库存失败", zap.Error(err))
+		return stockShortageProducts
+	}
 	for productBomUuid, flavorNum := range productBomNumMap {
 		// 获取商品库存
-		inventory, err := appService.GetProductInventory(ctx, productBomUuid)
-		if err != nil {
+		inventory, ok := inventoryMap[productBomUuid]
+		if !ok {
 			// 如果获取库存失败，记录错误但不中断检查流程
-			ctx.Log().Error("获取商品库存失败", zap.Uint64("productBomUuid", productBomUuid), zap.Error(err))
+			ctx.Log().Error("获取商品库存失败", zap.Uint64("productBomUuid", productBomUuid))
 			continue
 		}
 		// 检查库存是否充足：库存需要大于等于所需数量
