@@ -1,9 +1,11 @@
 package grab
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -1295,4 +1297,94 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 	}
 
 	return allSoldOut
+}
+
+// ParseGrabMenu 解析 Grab 菜单数据
+// 支持从字符串、字节数组或对象解析为 GrabMenu 结构
+func (c *GrabConverter) ParseGrabMenu(menuData interface{}) (*GrabMenu, error) {
+	var menuJSON []byte
+	var err error
+
+	// 判断 menuData 的类型
+	switch v := menuData.(type) {
+	case string:
+		// 如果已经是 JSON 字符串，直接使用
+		menuJSON = []byte(v)
+	case []byte:
+		// 如果是字节数组，直接使用
+		menuJSON = v
+	case *GrabMenu:
+		// 如果已经是 GrabMenu 对象，直接返回
+		return v, nil
+	default:
+		// 如果是其他对象类型，需要序列化
+		menuJSON, err = json.Marshal(menuData)
+		if err != nil {
+			return nil, fmt.Errorf("序列化菜单数据失败: %w", err)
+		}
+	}
+
+	// 尝试检测并处理 Base64 编码的数据
+	menuJSON = c.tryDecodeBase64(menuJSON)
+
+	var menu GrabMenu
+	if err := json.Unmarshal(menuJSON, &menu); err != nil {
+		// 输出前100个字符用于调试
+		preview := string(menuJSON)
+		if len(preview) > 100 {
+			preview = preview[:100] + "..."
+		}
+		return nil, fmt.Errorf("反序列化菜单数据失败 (preview: %s, length: %d): %w", preview, len(menuJSON), err)
+	}
+
+	return &menu, nil
+}
+
+// tryDecodeBase64 尝试检测并解码 Base64 数据
+func (c *GrabConverter) tryDecodeBase64(data []byte) []byte {
+	str := string(data)
+
+	// 移除可能的引号
+	str = strings.Trim(str, "\"")
+
+	// 检查是否看起来像 Base64（只包含 Base64 字符）
+	if len(str) > 0 && isLikelyBase64(str) {
+		// 尝试解码
+		decoded, err := base64.StdEncoding.DecodeString(str)
+		if err == nil && len(decoded) > 0 {
+			// 检查解码后的数据是否像 JSON
+			trimmed := strings.TrimSpace(string(decoded))
+			if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+				return decoded
+			}
+		}
+	}
+
+	return data
+}
+
+// isLikelyBase64 检查字符串是否可能是 Base64 编码
+func isLikelyBase64(s string) bool {
+	// Base64 字符集: A-Z, a-z, 0-9, +, /, =
+	// 如果字符串很短或者包含大量非 Base64 字符，则不太可能是 Base64
+	if len(s) < 20 {
+		return false
+	}
+
+	// 检查是否包含典型的 JSON 字符（如果有，就不是 Base64）
+	if strings.Contains(s, "{") || strings.Contains(s, "}") ||
+		strings.Contains(s, "[") || strings.Contains(s, "]") ||
+		strings.Contains(s, ":") || strings.Contains(s, ",") {
+		return false
+	}
+
+	// 简单检查：Base64 字符串通常不包含空格和特殊字符（除了 +/=）
+	for _, c := range s {
+		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+			(c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=') {
+			return false
+		}
+	}
+
+	return true
 }

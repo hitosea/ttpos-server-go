@@ -1,7 +1,6 @@
 package persistence
 
 import (
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/menu/repository"
@@ -125,25 +124,50 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 	if len(takeoutProducts) == 0 {
 		return
 	}
+
 	// 使用工厂方法创建库存应用服务实例
 	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(r.dbm, cache.Global)
+
+	// Step 1: 收集所有需要查询库存的 BOM UUID 及其对应的对象引用
+	bomUuids := make([]uint64, 0)
+	bomMap := make(map[uint64]*model.ProductBom) // 用于快速定位 BOM 对象
+
 	for _, takeoutProduct := range takeoutProducts {
-		for _, bom := range takeoutProduct.ProductPackage.ProductBoms {
+		// 使用索引遍历以获取可修改的引用
+		for i := range takeoutProduct.ProductPackage.ProductBoms {
+			bom := &takeoutProduct.ProductPackage.ProductBoms[i]
 			if bom.IsDelete() || bom.IsDown() || !bom.IsSauce() || bom.IsFlavor() {
 				continue
 			}
-			inventory, err := appService.GetProductInventory(ctx, bom.Uuid)
-			if err != nil {
-				// 如果查询失败，记录日志但继续处理其他规格/小料
-				logger.Logger.Warn("查询商品规格/小料库存失败",
-					zap.Error(err),
-					zap.Uint64("bom_uuid", bom.Uuid),
-					zap.Uint64("product_package_uuid", takeoutProduct.ProductPackageUuid),
-				)
-				// 失败时使用无限库存作为默认值
-				inventory = constant.ProductBomInfiniteStock
-			}
+			bomUuids = append(bomUuids, bom.Uuid)
+			bomMap[bom.Uuid] = bom
+		}
+	}
+
+	// Step 2: 如果没有需要查询的 BOM，直接返回
+	if len(bomUuids) == 0 {
+		return
+	}
+
+	// Step 3: 批量查询所有 BOM 的库存
+	inventoryMap, err := appService.GetProductInventoriesBatch(ctx, bomUuids)
+	if err != nil {
+		logger.Logger.Error("批量查询商品规格/小料库存失败", zap.Error(err), zap.Int("bom_count", len(bomUuids)))
+		// 查询失败，设置所有 BOM 为无限库存
+		for _, bom := range bomMap {
+			bom.StockNum = 99999999
+		}
+		return
+	}
+
+	// Step 4: 将库存值注入到对应的 BOM 对象中
+	for bomUuid, bom := range bomMap {
+		if inventory, ok := inventoryMap[bomUuid]; ok {
 			bom.StockNum = inventory
+		} else {
+			// 如果某个 BOM 没有返回库存数据，设置为无限库存
+			logger.Logger.Warn("未查询到商品规格/小料库存，设置为无限库存", zap.Uint64("bom_uuid", bomUuid))
+			bom.StockNum = 99999999
 		}
 	}
 }

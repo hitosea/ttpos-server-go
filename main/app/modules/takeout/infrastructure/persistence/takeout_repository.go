@@ -50,6 +50,9 @@ type ITakeoutRepository interface {
 	// UpdateBindingLinkByPlatform 通过平台名称更新平台绑定链接
 	UpdateBindingLinkByPlatform(ctx context.Context, platform string, bindingLink string) error
 
+	// UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
+	UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error
+
 	// Delete 删除平台状态记录
 	Delete(ctx context.Context, uuid uint64) error
 
@@ -232,6 +235,37 @@ func (r *takeoutRepositoryImpl) UpdateBindingLinkByPlatform(ctx context.Context,
 		Updates(map[string]interface{}{
 			"binding_link": bindingLink,
 			"update_time":  time.Now().Unix(),
+		}).Error
+}
+
+// UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
+func (r *takeoutRepositoryImpl) UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error {
+	db := ctx.GetDB()
+
+	var ttposMenuJSON []byte
+	var err error
+
+	// 判断输入类型，避免重复序列化
+	switch v := ttposMenu.(type) {
+	case string:
+		// 如果已经是 JSON 字符串，直接使用
+		ttposMenuJSON = []byte(v)
+	case []byte:
+		// 如果是字节数组，直接使用
+		ttposMenuJSON = v
+	default:
+		// 如果是对象，需要序列化
+		ttposMenuJSON, err = json.Marshal(ttposMenu)
+		if err != nil {
+			return err
+		}
+	}
+
+	return db.Model(&model.Takeout{}).
+		Where("platform = ? AND delete_time = ?", platform, 0).
+		Updates(map[string]interface{}{
+			"ttpos_menu":  string(ttposMenuJSON),
+			"update_time": time.Now().Unix(),
 		}).Error
 }
 

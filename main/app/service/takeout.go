@@ -19,6 +19,7 @@ import (
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/types/request"
+	"ttpos-server-go/app/modules/takeout/types/response"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
@@ -38,6 +39,9 @@ type ITakeoutSrv interface {
 
 	// PushMenuToPlatform 推送菜单到外卖平台
 	PushMenuToPlatform(ctx context.Context, platform string) error
+
+	// SyncMenuChanges 同步菜单变更
+	SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error)
 
 	// ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
 	ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*resp.GrabMenuImportResp, error)
@@ -72,6 +76,13 @@ func NewTakeoutSrv(
 		uploadFileSrv:     NewUploadFileSrv(dbm),
 		productTakeoutSrv: productTakeoutSrv,
 	}
+}
+
+// SyncMenuChanges 同步菜单变更
+func (s *takeoutSrv) SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error) {
+	return s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
+		Platform: platform,
+	})
 }
 
 // PushMenuToPlatform 推送菜单到外卖平台

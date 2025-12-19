@@ -37,3 +37,21 @@ type GetImportLogsRequest struct {
 type PushTakeoutMenuRequest struct {
 	Platform string `json:"platform" binding:"required"` // 平台名称：grab, lineman 等
 }
+
+// UpdateMenuItemRequest 更新菜单项请求
+type UpdateMenuItemRequest struct {
+	Platform        string `json:"platform" binding:"required,oneof=grab"` // 平台名称，目前仅支持 grab
+	ItemId          string `json:"item_id" binding:"required"`             // 商品ID (partner item id)
+	Price           *int64 `json:"price,omitempty"`                        // 价格 (单位：分)
+	AvailableStatus string `json:"available_status,omitempty"`             // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE
+	MaxStock        *int64 `json:"max_stock,omitempty"`                    // 库存数量，设为 0 时需同时设置 AvailableStatus 为 UNAVAILABLE
+}
+
+// UpdateMenuModifierRequest 更新菜单修饰符请求
+type UpdateMenuModifierRequest struct {
+	Platform        string `json:"platform" binding:"required,oneof=grab"` // 平台名称，目前仅支持 grab
+	ModifierId      string `json:"modifier_id" binding:"required"`         // 修饰符ID (partner modifier id)
+	ModifierName    string `json:"modifier_name" binding:"required"`       // 修饰符名称 (用于定位记录)
+	Price           *int64 `json:"price,omitempty"`                        // 价格 (单位：分)
+	AvailableStatus string `json:"available_status,omitempty"`             // 可用状态: AVAILABLE, UNAVAILABLE
+}

@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -31,11 +32,13 @@ func ProductSoldOutEventHandler() {
 			translateSrv := service.NewTranslateSrv(dbm, cache)
 			takeoutSrv := service.NewTakeoutSrv(dbm, cache, nil, nil, translateSrv, settingSrv)
 
-			// 推送菜单到Grab平台
-			err := takeoutSrv.PushMenuToPlatform(payload.Ctx, "grab")
-			if err != nil {
-				logger.Logger.Error("推送菜单到Grab平台失败", zap.Error(err))
-			}
+			utils.Go(func() {
+				// 推送菜单到Grab平台
+				_, err := takeoutSrv.SyncMenuChanges(payload.Ctx, "grab")
+				if err != nil {
+					logger.Logger.Error("推送菜单到Grab平台失败", zap.Error(err))
+				}
+			})
 		})
 	})
 }
