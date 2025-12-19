@@ -134,6 +134,14 @@ func (s *ProductInventoryAppService) GetProductInventory(
 	return inventory, nil
 }
 
+// GetProductInventoriesBatch 批量获取商品库存
+func (s *ProductInventoryAppService) GetProductInventoriesBatch(
+	ctx context.Context,
+	productBomUuids []uint64,
+) (map[uint64]float64, error) {
+	return s.domainService.GetProductInventoriesBatch(ctx, productBomUuids)
+}
+
 // InvalidateProductInventoryCache 使商品库存缓存失效
 func (s *ProductInventoryAppService) InvalidateProductInventoryCache(
 	companyUuid uint64,

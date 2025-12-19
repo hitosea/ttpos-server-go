@@ -5464,10 +5464,18 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		productBomRepo := inventoryPersistence.NewProductBomRepository(s.dbm)
 		productPackageRepo := inventoryPersistence.NewProductPackageRepository(s.dbm)
 		domainSvc := inventoryDomainService.NewProductInventoryDomainService(productBomRepo, productPackageRepo)
-
+		// 收集所有需要查询库存的 BOM UUID
+		targetBomUuids := make([]uint64, 0)
 		for bomUuid := range bomUuids {
-			inventory, err := domainSvc.GetProductInventory(ctx, bomUuid)
-			if err != nil {
+			targetBomUuids = append(targetBomUuids, bomUuid)
+		}
+		inventoryMap, err := domainSvc.GetProductInventoriesBatch(ctx, targetBomUuids)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询商品规格/小料库存失败")
+		}
+		for bomUuid := range bomUuids {
+			inventory, ok := inventoryMap[bomUuid]
+			if !ok {
 				// 如果查询失败，记录日志但继续处理其他规格/小料
 				logger.Logger.Warn("查询商品规格/小料库存失败",
 					zap.Error(err),
@@ -8502,14 +8510,25 @@ func (s *productSrv) getProductFlavorStockNumMap(ctx context.Context, flavors []
 
 	// 批量查询库存
 	stockNumMap := make(map[uint64]float64, len(flavors))
+
+	targetBomUuids := make([]uint64, 0)
 	for _, flavor := range flavors {
 		if flavor.BomUuid == 0 {
 			continue
 		}
-
+		targetBomUuids = append(targetBomUuids, flavor.BomUuid)
+	}
+	inventoryMap, err := domainSvc.GetProductInventoriesBatch(ctx, targetBomUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询商品规格/小料库存失败")
+	}
+	for _, flavor := range flavors {
+		if flavor.BomUuid == 0 {
+			continue
+		}
 		// 使用领域服务查询库存
-		inventory, err := domainSvc.GetProductInventory(ctx, flavor.BomUuid)
-		if err != nil {
+		inventory, ok := inventoryMap[flavor.BomUuid]
+		if !ok {
 			// 如果查询失败，记录日志但继续处理其他规格
 			logger.Logger.Warn("查询商品规格库存失败",
 				zap.Error(err),
@@ -8519,7 +8538,6 @@ func (s *productSrv) getProductFlavorStockNumMap(ctx context.Context, flavors []
 			// 失败时使用无限库存作为默认值
 			inventory = constant.ProductBomInfiniteStock
 		}
-
 		stockNumMap[flavor.BomUuid] = inventory
 	}
 
@@ -8573,11 +8591,22 @@ func (s *productSrv) getProductListStockNumMap(ctx context.Context, productList 
 	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 
 	// 批量查询库存
+	targetBomUuids := make([]uint64, 0)
+	for bomUuid := range bomUuids {
+		targetBomUuids = append(targetBomUuids, bomUuid)
+	}
+	inventoryMap, err := appService.GetProductInventoriesBatch(ctx, targetBomUuids)
 	stockNumMap := make(map[uint64]float64, len(bomUuids))
+	if err != nil {
+		for bomUuid := range bomUuids {
+			stockNumMap[bomUuid] = constant.ProductBomInfiniteStock
+		}
+		return stockNumMap, nil
+	}
 	for bomUuid := range bomUuids {
 		// 使用应用服务查询库存（带缓存）
-		inventory, err := appService.GetProductInventory(ctx, bomUuid)
-		if err != nil {
+		inventory, ok := inventoryMap[bomUuid]
+		if !ok {
 			// 如果查询失败，记录日志但继续处理其他规格/小料
 			logger.Logger.Warn("查询商品规格/小料库存失败",
 				zap.Error(err),
