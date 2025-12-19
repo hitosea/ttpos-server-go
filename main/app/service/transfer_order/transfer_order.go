@@ -683,11 +683,6 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
 
-		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, tx, transferOrder.Uuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
-			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
-		}
-
 		// 提交调拨单
 		if reqs.IsSubmit {
 			ctx.SetDB(tx)
@@ -700,6 +695,12 @@ func (s *transferOrderSrv) CreateTransferOrder(
 
 	if err != nil {
 		return resp.TransferOrderCreateResp{}, err
+	}
+
+	// 故意为之: 操作日志 不重要可以不再事务中
+	// 记录操作日志
+	if err := s.helper.CreateLog(ctx, db, transferOrderUuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
+		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 
 	return resp.TransferOrderCreateResp{
@@ -1478,15 +1479,18 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 			return errors.WithMessage(errors.New("提交事务失败"), err.Error())
 		}
 
-		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, tx, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
-			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
-		}
-
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	// 故意为之: 操作日志 不重要可以不再事务中
+	// 记录操作日志
+	if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
+		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
+	}
+	return nil
 }
 
 // GetTransferOrderApprovalList 获取调拨单审批流程列表
