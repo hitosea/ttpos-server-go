@@ -6,11 +6,12 @@ use think\migration\Migrator;
 class AddTakeoutManagementAccess extends Migrator
 {
     /**
-     * 新增外卖管理权限
+     * 新增外卖管理权限和打印设置权限
      * 1. 商品管理下的批量操作权限（Grab和LINE MAN各4个）
      * 2. 外卖管理一级菜单（工作台下）
      * 3. Grab和LINE MAN二级菜单
-     * 4. 调整"餐厅设置"和"其他"的sort值以避免冲突
+     * 4. 打印设置权限（餐厅设置下）
+     * 5. 调整"餐厅设置"和"其他"的sort值以避免冲突
      */
     public function change()
     {
@@ -45,14 +46,21 @@ class AddTakeoutManagementAccess extends Migrator
         ];
         $this->updateOrInsertData('access', 'uuid', $takeoutManagementAccessData);
 
-        // 3. 调整"餐厅设置"和"其他"的sort值，避免冲突
+        // 3. 打印设置权限（餐厅设置下的二级菜单）
+        $printerSettingAccessData = [
+            // 打印设置（餐厅设置下，sort=4在桌台地图之后）
+            ['uuid' => 2859123823104000, 'name' => '打印设置', 'path' => 'printer_setting', 'api_path' => '', 'parent_uuid' => 2859064102912000, 'sort' => 4, 'is_route' => 1, 'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 0, 'create_time' => time(), 'update_time' => time()],
+        ];
+        $this->updateOrInsertData('access', 'uuid', $printerSettingAccessData);
+
+        // 4. 调整"餐厅设置"和"其他"的sort值，避免冲突
         // 餐厅设置从 sort=5 调整为 sort=6
         $db->name('access')->where('uuid', 2859064102912000)->update(['sort' => 6, 'update_time' => time()]);
         
         // 其他从 sort=6 调整为 sort=7
         $db->name('access')->where('uuid', 2859273818112000)->update(['sort' => 7, 'update_time' => time()]);
 
-        // 4. 为所有角色分配新权限
+        // 5. 为所有角色分配新权限
         $roles = $db->name('role')->where('id', '>', '0')->where('delete_time', '=', '0')->select();
         
         // 所有新增权限的UUID列表
@@ -61,7 +69,9 @@ class AddTakeoutManagementAccess extends Migrator
             2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000,
             2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001,
             // 外卖管理菜单
-            2858986936320000, 2859007907840000, 2859028879360000
+            2858986936320000, 2859007907840000, 2859028879360000,
+            // 打印设置
+            2859123823104000
         ];
         
         foreach ($roles as $role) {
