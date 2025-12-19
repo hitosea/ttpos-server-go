@@ -88,7 +88,6 @@ func (r *ProductBomRepositoryImpl) FindByUuids(
 	// 预加载所有可能需要的关联数据，避免后续查询时的 N+1 问题
 	productBoms, err := repo.GetProductBoms(
 		whereUuids,
-		appRepo.CommonRepo.WhereBySoftDelete(),
 		appRepo.CommonRepo.Preload(
 			appRepo.WithPreload{
 				Query: "ProductFlavor.MultiLanguageName",
