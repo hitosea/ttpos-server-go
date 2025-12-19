@@ -5,6 +5,9 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/inventory/domain/repository"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // GetProductPackageInventoryOption 商品包库存查询选项
