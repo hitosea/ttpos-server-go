@@ -7,17 +7,22 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
+
+	"go.uber.org/zap"
 )
 
 // ISoldOutSrv 定义沽清服务接口
 type ISoldOutSrv interface {
 	GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutListReq) (resp.SoldOutPaginationResp, error) // 获取沽清商品列表
-	CancelSoldOut(companyUuid uint64, productBomUuid uint64) error                                        // 取消单个沽清商品
-	CancelAllSoldOut(companyUuid uint64) error                                                            // 取消全部沽清商品
-	AddSoldOut(companyUuid uint64, items []req.SoldOutItem) error                                         // 添加商品沽清
+	CancelSoldOut(ctx context.Context, companyUuid uint64, productBomUuid uint64) error                   // 取消单个沽清商品
+	CancelAllSoldOut(ctx context.Context, companyUuid uint64) error                                       // 取消全部沽清商品
+	AddSoldOut(ctx context.Context, companyUuid uint64, items []req.SoldOutItem) error                    // 添加商品沽清
 	GetSettings(companyUuid uint64, req *req.GetSoldOutSettingsReq) (*resp.SoldOutSettingsResp, error)    // 获取商品沽清设置
 }
 
@@ -76,13 +81,27 @@ func (s *soldOutSrv) GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutLi
 }
 
 // CancelSoldOut 取消单个沽清商品
-func (s *soldOutSrv) CancelSoldOut(companyUuid uint64, productBomUuid uint64) error {
+func (s *soldOutSrv) CancelSoldOut(ctx context.Context, companyUuid uint64, productBomUuid uint64) error {
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
 	if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(productBomUuid)}, map[string]any{
 		"is_sold_out": 0,
 	}); err != nil {
 		return errors.WithMessage(err, "取消沽清商品失败")
 	}
+
+	// 发布取消沽清事件
+	utils.Go(func() {
+		isSoldOut := true
+		event.NewSystemBus().PublishProductSoldOutEvent(event.ProductSoldOutPayload{
+			BasePayload: event.BasePayload{
+				Ctx:         ctx,
+				CompanyUuid: companyUuid,
+			},
+			ProductBomUuid: productBomUuid,
+			IsSoldOut:      &isSoldOut,
+		})
+	})
+
 	// 推送沽清商品
 	utils.Go(func() {
 		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, map[string]interface{}{
@@ -95,7 +114,7 @@ func (s *soldOutSrv) CancelSoldOut(companyUuid uint64, productBomUuid uint64) er
 }
 
 // CancelAllSoldOut 取消全部沽清商品
-func (s *soldOutSrv) CancelAllSoldOut(companyUuid uint64) error {
+func (s *soldOutSrv) CancelAllSoldOut(ctx context.Context, companyUuid uint64) error {
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
 
 	if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomIsSoldOut()}, map[string]any{
@@ -103,6 +122,32 @@ func (s *soldOutSrv) CancelAllSoldOut(companyUuid uint64) error {
 	}); err != nil {
 		return errors.WithMessage(err, "全部取消沽清商品失败")
 	}
+
+	// 发布取消全部沽清事件 (ProductBomUuid 为 0 表示全部)
+	utils.Go(func() {
+		productBomUuids := make([]uint64, 0)
+		boms, _, err := productRepo.GetSoldOutWithPagination(1, 1000)
+		if err != nil {
+			logger.Logger.Error("获取沽清商品列表失败", zap.Error(err))
+			return
+		}
+		for _, bom := range boms {
+			productBomUuids = append(productBomUuids, bom.Uuid)
+		}
+
+		// 发布取消全部沽清事件 (ProductBomUuid 为 0 表示全部)
+		utils.Go(func() {
+			isSoldOut := false
+			event.NewSystemBus().PublishProductSoldOutEvent(event.ProductSoldOutPayload{
+				BasePayload: event.BasePayload{
+					Ctx:         ctx,
+					CompanyUuid: companyUuid,
+				},
+				ProductBomUuid: 0,
+				IsSoldOut:      &isSoldOut,
+			})
+		})
+	})
 
 	// 推送沽清商品
 	utils.Go(func() {
@@ -116,7 +161,7 @@ func (s *soldOutSrv) CancelAllSoldOut(companyUuid uint64) error {
 }
 
 // AddSoldOut 添加商品沽清
-func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) error {
+func (s *soldOutSrv) AddSoldOut(ctx context.Context, companyUuid uint64, items []req.SoldOutItem) error {
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
 	for _, item := range items {
 		soldOutMap := map[bool]uint{
@@ -147,6 +192,18 @@ func (s *soldOutSrv) AddSoldOut(companyUuid uint64, items []req.SoldOutItem) err
 		if err := productRepo.UpdateProductBomSoldOut([]repository.DBOption{productRepo.WhereBomUuid(item.ProductBomUuid)}, updateMap); err != nil {
 			return errors.WithMessage(err, "沽清商品失败")
 		}
+
+		// 发布沽清/取消沽清事件
+		utils.Go(func() {
+			event.NewSystemBus().PublishProductSoldOutEvent(event.ProductSoldOutPayload{
+				BasePayload: event.BasePayload{
+					Ctx:         ctx,
+					CompanyUuid: companyUuid,
+				},
+				ProductBomUuid: item.ProductBomUuid,
+				IsSoldOut:      item.IsSoldOut,
+			})
+		})
 
 		// 推送沽清商品
 		utils.Go(func() {

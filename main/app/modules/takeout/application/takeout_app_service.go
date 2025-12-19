@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	"ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/model"
@@ -58,11 +59,11 @@ type ITakeoutAppService interface {
 	// ConvertMenuData 转换菜单数据
 	ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error)
 
+	// PushMenu 推送菜单
+	PushMenu(ctx context.Context, platform string, currencyUnit string) error
+
 	// GetGrabMenu 获取 Grab 的商品菜单
 	GetGrabMenu(ctx context.Context) (*response.GrabMenuResponse, error)
-
-	// PushMenuToGrab 推送菜单到Grab
-	PushMenuToGrab(ctx context.Context, currencyUnit string) error
 
 	// 外卖导入进度管理
 	// GetImportProgress 获取导入进度
@@ -388,18 +389,19 @@ func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.Imp
 }
 
 // SaveMenuSnapshot 保存菜单快照
-func (s *takeoutAppService) PushMenuToGrab(ctx context.Context, currencyUnit string) error {
+func (s *takeoutAppService) PushMenu(ctx context.Context, platform string, currencyUnit string) error {
+	platform = strings.ToLower(platform)
 	companyUuid := ctx.GetCompanyUuid()
 
 	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
-		Platform:     "grab",
+		Platform:     platform,
 		CurrencyUnit: currencyUnit,
 	})
 	if err != nil {
 		return fmt.Errorf("导出菜单失败: %w", err)
 	}
 
-	err = s.rpcService.SaveMenuSnapshot(ctx.GetContext(), "grab", companyUuid, menu)
+	err = s.rpcService.SaveMenuSnapshot(ctx.GetContext(), platform, companyUuid, menu)
 	if err != nil {
 		return fmt.Errorf("推送菜单失败: %w", err)
 	}

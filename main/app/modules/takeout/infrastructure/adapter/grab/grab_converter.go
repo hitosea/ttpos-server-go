@@ -488,6 +488,14 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 		categoryName = category.MultiLanguageName.GetNameByLangWithFallback("en")
 	}
 
+	// 判断分类状态：
+	// Status = 1（开启）-> AVAILABLE
+	// Status != 1（关闭）-> HIDE
+	categoryStatus := valueobject.AvailableStatusAvailable
+	if category.Status != 1 {
+		categoryStatus = valueobject.AvailableStatusHide
+	}
+
 	// 创建分类值对象
 	categoryVO, err := valueobject.NewCategory(
 		func() string {
@@ -498,7 +506,7 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 		}(),
 		categoryName,
 		sequence,
-		valueobject.AvailableStatusAvailable,
+		categoryStatus,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "创建分类值对象失败")
@@ -523,9 +531,14 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		return nil, errors.New("类型断言失败：pkg 不是 *model.ProductPackageTakeout")
 	}
 
+	// 判断商品状态：
+	// 1. 商品下架（Status=0）或删除 -> HIDE
+	// 2. 商品所有规格都售罄 -> UNAVAILABLE
+	// 3. 正常（Status=1）-> AVAILABLE
 	status := valueobject.AvailableStatusAvailable
 	if takeoutProduct.IsDown() || takeoutProduct.IsDelete() {
-		status = valueobject.AvailableStatusUnavailable
+		// 商品下架或删除，设置为 HIDE
+		status = valueobject.AvailableStatusHide
 	}
 
 	// 获取商品名称（优先使用外卖商品的多语言名称，否则使用店内商品名称）
@@ -648,6 +661,14 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		}
 	}
 
+	// 检查商品是否所有规格都售罄（仅当商品正常上架时才检查）
+	if status == valueobject.AvailableStatusAvailable {
+		if c.isAllFlavorsSoldOut(takeoutProduct) {
+			// 所有规格都售罄，商品状态设为 UNAVAILABLE
+			menuItem.AvailableStatus = valueobject.AvailableStatusUnavailable
+		}
+	}
+
 	return menuItem, nil
 }
 
@@ -686,11 +707,6 @@ func (c *GrabConverter) loadCategoryProducts(ctx context.Context, companyUuid ui
 
 	// 转换商品并添加到分类
 	for idx, pkg := range takeoutProducts {
-		// 过滤已沽清的商品：下架、删除
-		if pkg.IsDown() || pkg.IsDelete() {
-			continue
-		}
-
 		menuItem, err := c.convertTTPOSProduct(ctx, pkg, idx+1)
 		if err != nil {
 			return errors.WithMessage(err, fmt.Sprintf("转换商品失败: %s", pkg.Name))
@@ -767,6 +783,31 @@ func (c *GrabConverter) convertProductFlavors(
 	minSelection := 1
 	maxSelection := 1 // 规格只能选一个
 
+	// 判断规格组状态：
+	// 如果所有规格都售罄（is_sold_out = 1）-> UNAVAILABLE
+	// 如果所有规格都下架 -> HIDE
+	// 否则 -> AVAILABLE
+	modifierGroupStatus := valueobject.AvailableStatusAvailable
+	allSoldOut := true
+	allDown := true
+	for i := range takeoutProduct.ProductBomTakeouts {
+		bomTakeout := &takeoutProduct.ProductBomTakeouts[i]
+		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId == "" {
+			continue
+		}
+		if bomTakeout.ProductBom.IsSoldOut != 1 && bomTakeout.ProductBom.StockNum > 0 {
+			allSoldOut = false
+		}
+		if !bomTakeout.ProductBom.IsDown() {
+			allDown = false
+		}
+	}
+	if allDown {
+		modifierGroupStatus = valueobject.AvailableStatusHide
+	} else if allSoldOut {
+		modifierGroupStatus = valueobject.AvailableStatusUnavailable
+	}
+
 	// 创建一个修饰符组，包含所有规格
 	modifierGroup, err := valueobject.NewModifierGroup(
 		fmt.Sprintf("TTPOS-FLAVOR-GROUP-%d", takeoutProduct.ProductPackageUuid),
@@ -782,7 +823,7 @@ func (c *GrabConverter) convertProductFlavors(
 			"my": "သတ်မှတ်ချက်များ",
 		},
 		1,
-		valueobject.AvailableStatusAvailable,
+		modifierGroupStatus,
 		minSelection,
 		maxSelection,
 	)
@@ -799,11 +840,24 @@ func (c *GrabConverter) convertProductFlavors(
 		}
 
 		// 获取规格价格（优先使用外卖价格，否则使用店内价格）
-		flavorPrice := bomTakeout.ProductBom.Price
+		flavorPrice := bomTakeout.Price
 
 		// 计算规格价格：与最小规格的差价（当前规格价格 - 最小规格价格）
 		priceDiff := flavorPrice - minFlavorPrice
 		priceInCents := int64(priceDiff * 100) // 转换为分
+
+		// 判断规格状态：
+		// 1. 售罄（is_sold_out = 1）-> UNAVAILABLE
+		// 2. 下架（Status = 0）或删除 -> HIDE
+		// 3. 正常 -> AVAILABLE
+		modifierStatus := valueobject.AvailableStatusAvailable
+		if bomTakeout.ProductBom.IsSoldOut == 1 || bomTakeout.ProductBom.StockNum <= 0 {
+			// 规格售罄
+			modifierStatus = valueobject.AvailableStatusUnavailable
+		} else if bomTakeout.ProductBom.IsDown() {
+			// 规格下架或删除
+			modifierStatus = valueobject.AvailableStatusHide
+		}
 
 		// 创建修饰符
 		modifier, err := valueobject.NewModifier(
@@ -815,7 +869,7 @@ func (c *GrabConverter) convertProductFlavors(
 			}(),
 			flavorName,
 			idx+1,
-			valueobject.AvailableStatusAvailable,
+			modifierStatus,
 			priceInCents,
 		)
 		if err != nil {
@@ -863,6 +917,31 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *valu
 	// 根据图片规则：必选时可选组(必选) min:1 max:配置值，可选时可选组(非必选) min:0 max:配置值
 	minSelection := utils.IfInt(isRequired, 1, 0)
 
+	// 判断小料组状态：
+	// 如果所有小料都售罄（is_sold_out = 1 或 StockNum <= 0）-> UNAVAILABLE
+	// 如果所有小料都下架 -> HIDE
+	// 否则 -> AVAILABLE
+	modifierGroupStatus := valueobject.AvailableStatusAvailable
+	allSoldOut := true
+	allDown := true
+	for i := range productPackage.ProductBoms {
+		bom := &productPackage.ProductBoms[i]
+		if !bom.IsSauce() {
+			continue
+		}
+		if bom.IsSoldOut != 1 && bom.StockNum > 0 {
+			allSoldOut = false
+		}
+		if !bom.IsDown() {
+			allDown = false
+		}
+	}
+	if allDown {
+		modifierGroupStatus = valueobject.AvailableStatusHide
+	} else if allSoldOut {
+		modifierGroupStatus = valueobject.AvailableStatusUnavailable
+	}
+
 	// 创建一个修饰符组，包含所有小料
 	modifierGroup, err := valueobject.NewModifierGroup(
 		fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", productPackage.Uuid),
@@ -878,7 +957,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *valu
 			"my": "အပိုထည့်ခြင်း",
 		},
 		2,
-		valueobject.AvailableStatusAvailable,
+		modifierGroupStatus,
 		minSelection,
 		maxSelection,
 	)
@@ -894,12 +973,25 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *valu
 			sauceName = bom.ProductSauce.MultiLanguageName.GetNameByLangWithFallback("en")
 		}
 
+		// 判断小料状态：
+		// 1. 售罄（is_sold_out = 1 或 StockNum <= 0）-> UNAVAILABLE
+		// 2. 下架（Status = 0）或删除 -> HIDE
+		// 3. 正常 -> AVAILABLE
+		modifierStatus := valueobject.AvailableStatusAvailable
+		if bom.IsSoldOut == 1 || bom.StockNum <= 0 {
+			// 小料售罄
+			modifierStatus = valueobject.AvailableStatusUnavailable
+		} else if bom.IsDown() {
+			// 小料下架或删除
+			modifierStatus = valueobject.AvailableStatusHide
+		}
+
 		// 创建修饰符
 		modifier, err := valueobject.NewModifier(
 			fmt.Sprintf("TTPOS-SAUCE-%d", bom.ProductSauce.Uuid),
 			sauceName,
 			idx+1,
-			valueobject.AvailableStatusAvailable,
+			modifierStatus,
 			int64(bom.Price*100), // 转换为分
 		)
 		if err != nil {
@@ -1170,4 +1262,37 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valu
 	}
 
 	return nil
+}
+
+// isAllFlavorsSoldOut 检查商品是否所有规格都售罄
+// 返回 true 表示所有规格都售罄，false 表示至少有一个规格可用
+func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackageTakeout) bool {
+	// 如果没有规格，商品本身就不能售罄
+	if len(takeoutProduct.ProductPackage.ProductBoms) == 0 {
+		return false
+	}
+
+	// 收集所有规格
+	hasFlavor := false
+	allSoldOut := true
+	for i := range takeoutProduct.ProductPackage.ProductBoms {
+		bom := &takeoutProduct.ProductPackage.ProductBoms[i]
+		// 只检查规格和小料
+		if !bom.IsFlavor() {
+			continue
+		}
+		hasFlavor = true
+		// 如果有任何一个规格未售罄，则商品不是售罄状态
+		if bom.IsSoldOut != 1 && bom.StockNum > 0 {
+			allSoldOut = false
+			break
+		}
+	}
+
+	// 如果没有规格，返回 false
+	if !hasFlavor {
+		return false
+	}
+
+	return allSoldOut
 }
