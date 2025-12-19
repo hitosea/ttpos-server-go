@@ -1,6 +1,7 @@
 package shop
 
 import (
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -69,6 +70,7 @@ func (h *StaffHandler) GetStaffList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param field query string false "字段, email、phone"
 // @Param keyword query string false "关键词, 邮箱、手机号"
 // @Success 200 {object} dto.Response{data=resp.SearchStaffResp}
 // @Router /shop/staff/search [get]
@@ -76,10 +78,14 @@ func (h *StaffHandler) SearchStaff(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var searchStaffReq req.SearchStaffByKeywordReq
 	if err := c.ShouldBindQuery(&searchStaffReq); err != nil {
+		if strings.Contains(err.Error(), "'Field' failed on the 'required' tag") {
+			helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("请更新软件版本再尝试"))
+			return
+		}
 		helper.HandleValidationError(c, err, searchStaffReq, nil)
 		return
 	}
-	res := h.saasStaffSrv.SearchStaff(ctx, searchStaffReq.Keyword)
+	res := h.saasStaffSrv.SearchStaff(ctx, searchStaffReq)
 
 	helper.Success(c, res)
 }
