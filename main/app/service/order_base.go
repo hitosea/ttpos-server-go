@@ -1363,6 +1363,10 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	productPackageDetailList := make([]resp.ProductPackageDetail, 0)
 
 	for _, saleOrderProduct := range saleOrderProducts {
+		// 过滤掉已经送厨的商品
+		if saleOrderProduct.IsCookingProduct() {
+			continue
+		}
 		productPackageDetail := saleOrderProduct.GetProductPackageDetail()
 		productPackageDetailList = append(productPackageDetailList, productPackageDetail)
 	}
