@@ -785,6 +785,19 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		return errors.New("员工不存在"), exists
 	}
 
+	// saas库查询是否存在相同的邮箱或手机号
+	existsSaasStaff := saasStaffRepo.GetSaasStaff(saasStaffRepo.WhereEmailOrPhone(updateReq.Username, updateReq.Phone), saasStaffRepo.WhereNotUuid(updateReq.Uuid))
+	// 手机号、邮箱必填，可以这样判断
+	if existsSaasStaff.Email == updateReq.Username {
+		exists = append(exists, "username")
+	}
+	if existsSaasStaff.Phone == updateReq.Phone {
+		exists = append(exists, "phone")
+	}
+	if len(exists) > 0 {
+		return errors.New("此内容已被占用"), exists
+	}
+
 	// 修改 saas.ttpos_staff 的 Email、Phone、RealName
 	saasStaffUpdate := map[string]any{
 		"email":     updateReq.Username,
@@ -825,18 +838,6 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			visibleCompanyMap[company.Uuid] = true
 		}
 
-		// NOTE: 如果updateReq.CompanyRoleList中包含当前门店，查询员工在当前门店数据库的信息
-		// for _, companyRoleItem := range updateReq.CompanyRoleList {
-		// 	if companyRoleItem.CompanyUuid == currentCompanyUuid {
-		// 		shopDB := s.dbm.GetDB(companyRoleItem.CompanyUuid)
-		// 		staffRepo := repository.NewStaffRepo(shopDB)
-		// 		staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
-		// 		if staff.Uuid != 0 && staff.CashierOnline != 0 && updateReq.IsDisable != nil && *updateReq.IsDisable == 1 {
-		// 			return errors.New("当前人员未交班，请先交班"), exists
-		// 		}
-		// 	}
-		// }
-
 		// 遍历 CompanyRoleList，验证并更新员工
 		for _, companyRoleItem := range updateReq.CompanyRoleList {
 			// 判断 company_uuid 是否为当前公司可见
@@ -850,25 +851,29 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				return errors.New("获取门店数据库连接失败"), exists
 			}
 
-			roleRepo := repository.NewRoleRepo(shopDB)
-			roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(companyRoleItem.RoleUuids)}...)
-			if err != nil {
-				return errors.WithMessage(errors.New("获取角色失败"), err.Error()), exists
-			}
-			if len(roles) != len(companyRoleItem.RoleUuids) {
-				return errors.New("角色参数错误"), exists
+			// 如果 RoleUuids 不为空，则查询对应商家数据库的 RoleUuids 是否存在
+			if len(companyRoleItem.RoleUuids) > 0 {
+				roleRepo := repository.NewRoleRepo(shopDB)
+				roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(companyRoleItem.RoleUuids)}...)
+				if err != nil {
+					return errors.WithMessage(errors.New("获取角色失败"), err.Error()), exists
+				}
+				if len(roles) != len(companyRoleItem.RoleUuids) {
+					return errors.New("角色参数错误"), exists
+				}
 			}
 
 			// 检查员工是否存在于该门店数据库中
 			staffRepo := repository.NewStaffRepo(shopDB)
-			staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+			staff, err := staffRepo.GetStaffWithDeleted(staffRepo.WhereUuid(updateReq.Uuid))
 			staffExists := err == nil && staff.Uuid != 0
 
 			// 准备员工更新/创建数据
 			staffUpdate := map[string]any{
-				"username":  updateReq.Username,
-				"real_name": updateReq.RealName,
-				"phone":     updateReq.Phone,
+				"username":    updateReq.Username,
+				"real_name":   updateReq.RealName,
+				"phone":       updateReq.Phone,
+				"delete_time": 0, // 恢复员工(如果被软删除)
 			}
 			if updateReq.Password != "" {
 				staffUpdate["password"] = utils.EncryptPassword(updateReq.Password)
@@ -937,8 +942,9 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				First(&companyStaff).Error
 
 			companyStaffUpdate := map[string]any{
-				"username": updateReq.Username,
-				"phone":    updateReq.Phone,
+				"username":    updateReq.Username,
+				"phone":       updateReq.Phone,
+				"delete_time": 0, // 恢复员工(如果被软删除)
 			}
 			// 如果 CompanyRoleList 中存在当前商家uuid，更新 is_disable
 			if updateReq.IsDisable != nil && companyRoleItem.CompanyUuid == currentCompanyUuid {
@@ -977,31 +983,35 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		db := s.dbm.GetDB(currentCompanyUuid)
 		// 检查员工是否存在于当前门店数据库中
 		staffRepo := repository.NewStaffRepo(db)
-		staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
-		if err != nil {
-			return errors.WithMessage(errors.New("员工不存在"), err.Error()), exists
-		}
-		if staff.Uuid == 0 {
-			return errors.New("员工不存在"), exists
-		}
-		if staff.IsSuper != 1 && len(updateReq.Roles) == 0 {
-			return errors.New("角色不能为空"), exists
-		}
-
-		roleRepo := repository.NewRoleRepo(db)
-		roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(updateReq.Roles)}...)
-		if err != nil {
-			return errors.WithMessage(errors.New("获取角色失败"), err.Error()), exists
-		}
-		if len(roles) != len(updateReq.Roles) {
-			return errors.New("角色参数错误"), exists
+		staff, err := staffRepo.GetStaffWithDeleted(staffRepo.WhereUuid(updateReq.Uuid))
+		staffExists := err == nil && staff.Uuid != 0
+		// 如果不是超级管理员，角色不能为空
+		if len(updateReq.Roles) == 0 {
+			// 检查是否是创建新员工且不是超管
+			if !staffExists {
+				return errors.New("角色不能为空"), exists
+			}
+			// 如果是更新现有员工且不是超管
+			if staffExists && staff.IsSuper != 1 {
+				return errors.New("角色不能为空"), exists
+			}
+		} else {
+			roleRepo := repository.NewRoleRepo(db)
+			roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(updateReq.Roles)}...)
+			if err != nil {
+				return errors.WithMessage(errors.New("获取角色失败"), err.Error()), exists
+			}
+			if len(roles) != len(updateReq.Roles) {
+				return errors.New("角色参数错误"), exists
+			}
 		}
 
 		// 准备员工更新/创建数据
 		staffUpdate := map[string]any{
-			"username":  updateReq.Username,
-			"real_name": updateReq.RealName,
-			"phone":     updateReq.Phone,
+			"username":    updateReq.Username,
+			"real_name":   updateReq.RealName,
+			"phone":       updateReq.Phone,
+			"delete_time": 0, // 恢复员工(如果被软删除)
 		}
 		if updateReq.Password != "" {
 			staffUpdate["password"] = utils.EncryptPassword(updateReq.Password)
@@ -1017,10 +1027,40 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 
 		err = db.Transaction(func(tx *gorm.DB) error {
 			txStaffRepo := repository.NewStaffRepo(tx)
-			// 更新员工信息
-			err := txStaffRepo.Update(updateReq.Uuid, staffUpdate)
-			if err != nil {
-				return err
+			if staffExists {
+				// 更新员工信息
+				err := txStaffRepo.Update(updateReq.Uuid, staffUpdate)
+				if err != nil {
+					return err
+				}
+			} else {
+				// 创建员工信息
+				newStaff := model.Staff{
+					CompanyUuid: currentCompanyUuid,
+					Username:    updateReq.Username,
+					RealName:    updateReq.RealName,
+					Phone:       updateReq.Phone,
+					IsDisable:   0,
+					IsSuper:     0,
+				}
+				newStaff.Uuid = updateReq.Uuid
+				if updateReq.Password != "" {
+					newStaff.Password = utils.EncryptPassword(updateReq.Password)
+					newStaff.PasswordChangeTime = time.Now().Unix()
+				} else {
+					// 如果密码为空，使用 saasStaff 的密码
+					newStaff.Password = saasStaff.Password
+				}
+				if updateReq.PermissionPassword != "" {
+					newStaff.PermissionPassword = utils.EncryptPassword(updateReq.PermissionPassword)
+				}
+				if updateReq.IsDisable != nil {
+					newStaff.IsDisable = *updateReq.IsDisable
+				}
+				err := tx.Model(&model.Staff{}).Create(&newStaff).Error
+				if err != nil {
+					return err
+				}
 			}
 			// 更新员工和角色的关联关系
 			err = txStaffRepo.UpdateStaffRoles(updateReq.Uuid, updateReq.Roles)
@@ -1040,8 +1080,9 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			First(&companyStaff).Error
 
 		companyStaffUpdate := map[string]any{
-			"username": updateReq.Username,
-			"phone":    updateReq.Phone,
+			"username":    updateReq.Username,
+			"phone":       updateReq.Phone,
+			"delete_time": 0, // 恢复员工(如果被软删除)
 		}
 		// 如果是子店，更新 is_disable
 		if updateReq.IsDisable != nil {
@@ -1115,6 +1156,14 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				if err != nil {
 					return errors.WithMessage(errors.New("删除员工失败"), err.Error()), exists
 				}
+
+				// 删除角色关联
+				err = shopDB.Model(&model.StaffRole{}).
+					Where("staff_uuid = ?", updateReq.Uuid).
+					Update("delete_time", time.Now().Unix()).Error
+				if err != nil {
+					return errors.WithMessage(errors.New("删除员工角色关联失败"), err.Error()), exists
+				}
 			}
 		}
 	}
@@ -1123,13 +1172,27 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 	tc := cache.NewTaggedCache(s.cache)
 	tc.TagClear("cashier")
 
-	// 推送配置更新
-	utils.Go(func() {
-		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
-			"staff_uuid":  updateReq.Uuid,
-			"update_time": time.Now().Unix(),
+	if isHeadquarter || hasChildren {
+		// 多门店：向所有涉及的门店推送
+		for _, companyRoleItem := range updateReq.CompanyRoleList {
+			utils.Go(func(companyUuid uint64) func() {
+				return func() {
+					websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
+						"staff_uuid":  updateReq.Uuid,
+						"update_time": time.Now().Unix(),
+					})
+				}
+			}(companyRoleItem.CompanyUuid))
+		}
+	} else {
+		// 单门店：只推送当前门店
+		utils.Go(func() {
+			websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
+				"staff_uuid":  updateReq.Uuid,
+				"update_time": time.Now().Unix(),
+			})
 		})
-	})
+	}
 
 	return nil, exists
 }
