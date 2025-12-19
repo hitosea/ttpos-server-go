@@ -225,45 +225,6 @@ func TestUpdateMenuModifierReq_ToSDKUpdateMenuModifier(t *testing.T) {
 }
 
 // ============================================================================
-// UpdateMenuResult 测试
-// ============================================================================
-
-// TestUpdateMenuResult 测试结果结构体
-func TestUpdateMenuResult(t *testing.T) {
-	// 测试成功结果
-	successResult := &UpdateMenuResult{
-		Success:    true,
-		MerchantID: "M-12345",
-		RecordID:   "ITEM-001",
-		RecordType: MenuItemUpdateFieldItem,
-	}
-
-	if !successResult.Success {
-		t.Error("Success should be true")
-	}
-	if successResult.ErrorCode != "" {
-		t.Errorf("ErrorCode should be empty, got %s", successResult.ErrorCode)
-	}
-
-	// 测试失败结果
-	failResult := &UpdateMenuResult{
-		Success:      false,
-		MerchantID:   "M-12345",
-		RecordID:     "MOD-001",
-		RecordType:   MenuItemUpdateFieldModifier,
-		ErrorCode:    "API_ERROR",
-		ErrorMessage: "调用 API 失败",
-	}
-
-	if failResult.Success {
-		t.Error("Success should be false")
-	}
-	if failResult.ErrorCode != "API_ERROR" {
-		t.Errorf("ErrorCode = %s, want API_ERROR", failResult.ErrorCode)
-	}
-}
-
-// ============================================================================
 // 常量测试
 // ============================================================================
 

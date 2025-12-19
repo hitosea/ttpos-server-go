@@ -1271,7 +1271,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 #### API 6.1: 各端门店切换接口（Go Main）
 
-**说明**: 为收银端、点餐助手、平板端、厨显端、新管理端（移动端）等各端新增门店切换接口。
+**说明**: 为收银端、点餐助手、平板端、厨显端、新管理端（移动端）、自助点餐机端等各端新增门店切换接口。
 
 **请求**:
 
@@ -1281,6 +1281,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
   - `/api/v1/tablet/store_switch` - 平板端
   - `/api/v1/kitchen/store_switch` - 厨显端
   - `/api/v1/shop/store_switch` - 新管理端（移动端）
+  - `/api/v1/kiosk/store_switch` - 自助点餐机端
 - **Method**: `POST`
 - **Headers**:
   ```
@@ -1393,6 +1394,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
    - `/api/v1/tablet/store_switch` - 平板端
    - `/api/v1/kitchen/store_switch` - 厨显端
    - `/api/v1/shop/store_switch` - 新管理端（移动端）
+   - `/api/v1/kiosk/store_switch` - 自助点餐机端
 
 **实现逻辑**:
 

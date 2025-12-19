@@ -29137,6 +29137,35 @@ paths:
       summary: 刷新token
       tags:
       - 自助点餐机.认证
+  /kiosk/store_switch:
+    post:
+      consumes:
+      - application/json
+      description: 切换门店，返回新的 token
+      parameters:
+      - description: 门店切换参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StoreSwitchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 门店切换
+      tags:
+      - 自助点餐机.认证
   /kitchen/base:
     get:
       consumes:

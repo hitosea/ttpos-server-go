@@ -161,7 +161,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			Qrcode:        qrcode,
 			Code:          method.Code,
 			Source:        method.Source,
-			// IsAvailable:   isAvailable,
+			IsAvailable:   true,
 		})
 	}
 	return resp.PaymentMethodList{List: paymentMethodItems}

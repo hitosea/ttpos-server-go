@@ -128,8 +128,7 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 	}
 
 	// 3. 调用 Service 层
-	result, err := service.GrabMenu().UpdateMenuItem(ctx, updateReq)
-	if err != nil {
+	if err := service.GrabMenu().UpdateMenuItem(ctx, updateReq); err != nil {
 		g.Log().Errorf(ctx, "[Menu] UpdateMenuItem failed: merchantID=%s, itemID=%s, error=%v",
 			req.MerchantId, req.ItemId, err)
 		return &takeout.ApiResponse{
@@ -140,9 +139,9 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 
 	// 4. DTO → Proto 响应转换
 	resp := &api.UpdateMenuItemResp{
-		MerchantId: result.MerchantID,
-		RecordId:   result.RecordID,
-		RecordType: result.RecordType,
+		MerchantId: req.MerchantId,
+		RecordId:   req.ItemId,
+		RecordType: string(grabDto.MenuItemUpdateFieldItem),
 		// success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
 	}
 
@@ -218,8 +217,7 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 	}
 
 	// 3. 调用 Service 层
-	result, err := service.GrabMenu().UpdateMenuModifier(ctx, updateReq)
-	if err != nil {
+	if err := service.GrabMenu().UpdateMenuModifier(ctx, updateReq); err != nil {
 		g.Log().Errorf(ctx, "[Menu] UpdateMenuModifier failed: merchantID=%s, modifierID=%s, error=%v",
 			req.MerchantId, req.ModifierId, err)
 		return &takeout.ApiResponse{
@@ -230,9 +228,9 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 
 	// 4. DTO → Proto 响应转换
 	resp := &api.UpdateMenuModifierResp{
-		MerchantId: result.MerchantID,
-		RecordId:   result.RecordID,
-		RecordType: result.RecordType,
+		MerchantId: req.MerchantId,
+		RecordId:   req.ModifierId,
+		RecordType: string(grabDto.MenuItemUpdateFieldModifier),
 		// success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
 	}
 

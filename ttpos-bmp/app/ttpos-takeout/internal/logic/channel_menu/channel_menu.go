@@ -178,7 +178,7 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 		return nil, gerror.Wrap(err, "保存菜单快照失败")
 	}
 
-	g.Log().Infof(ctx, "SaveMenuSnapshot: saved successfully, provider=%s, shop_uuid=%s", req.ProviderName, req.ShopUuid)
+	g.Log().Infof(ctx, "SaveMenuSnapshot: 保存成功, provider=%s, shop_uuid=%s", req.ProviderName, req.ShopUuid)
 
 	// 5. 如果是 Grab 渠道，异步通知菜单更新
 	if req.ProviderName == string(consts.ProviderGrab) {
@@ -193,20 +193,20 @@ func (s *sChannelMenu) notifyGrabMenuUpdate(ctx context.Context, shopUuid uint64
 	// 1. 获取门店的 Grab 配置
 	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUuid, string(consts.ProviderGrab))
 	if err != nil {
-		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: get shop provider cfg failed: shop_uuid=%d, err=%v", shopUuid, err)
+		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: 获取门店第三方配置失败: shop_uuid=%d, err=%v", shopUuid, err)
 		return
 	}
 	if cfg == nil || cfg.ProviderMerchantId == "" {
-		g.Log().Warningf(ctx, "notifyGrabMenuUpdate: merchant_id not found: shop_uuid=%d", shopUuid)
+		g.Log().Warningf(ctx, "notifyGrabMenuUpdate: 未找到 merchant_id: shop_uuid=%d", shopUuid)
 		return
 	}
 
 	// 2. 调用 Grab NotifyMenuUpdate
 	requestId, err := service.Grab().NotifyMenuUpdate(ctx, cfg.ProviderMerchantId)
 	if err != nil {
-		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: notify grab failed: shop_uuid=%d, merchant_id=%s, err=%v", shopUuid, cfg.ProviderMerchantId, err)
+		g.Log().Errorf(ctx, "notifyGrabMenuUpdate: 通知 Grab 失败: shop_uuid=%d, merchant_id=%s, err=%v", shopUuid, cfg.ProviderMerchantId, err)
 		return
 	}
 
-	g.Log().Infof(ctx, "notifyGrabMenuUpdate: success, shop_uuid=%d, merchant_id=%s, request_id=%s", shopUuid, cfg.ProviderMerchantId, requestId)
+	g.Log().Infof(ctx, "notifyGrabMenuUpdate: 成功, shop_uuid=%d, merchant_id=%s, request_id=%s", shopUuid, cfg.ProviderMerchantId, requestId)
 }

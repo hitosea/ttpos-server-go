@@ -21,6 +21,11 @@ service Grab {
   // 参数：shop_uuid（门店UUID）、provider_name（第三方名称，可选，默认 grab）
   // 返回：统一的 ApiResponse 格式，包含门店集成状态、第三方商户ID、更新时间等
   rpc GetShopProviderCfg (GetShopProviderCfgReq) returns (takeout.ApiResponse);
+
+  // 通知菜单更新
+  // 参数：merchant_id（第三方商户ID）
+  // 返回：统一的 ApiResponse 格式，包含请求ID用于追踪同步状态
+  rpc NotifyMenuUpdate (NotifyMenuUpdateReq) returns (takeout.ApiResponse);
 }
 
 // 创建自助激活链接请求消息
@@ -52,4 +57,14 @@ message GetShopProviderCfgResp {
   string provider_merchant_id = 3;  // 第三方商户 ID
   string provider_shop_status = 4;  // 门店集成状态 (INACTIVE/ACTIVE/SYNCING/FAILED)
   int64  updated_at = 5;            // 更新时间（Unix 秒）
+}
+
+// 通知菜单更新请求消息
+message NotifyMenuUpdateReq {
+  string merchant_id = 1; // 第三方商户 ID
+}
+
+// 通知菜单更新响应消息
+message NotifyMenuUpdateResp {
+  string request_id = 1; // 请求 ID，用于追踪同步状态
 }
