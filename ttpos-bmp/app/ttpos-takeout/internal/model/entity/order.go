@@ -40,7 +40,7 @@ type Order struct {
 	ReadyTime          *gtime.Time `json:"readyTime"          orm:"ready_time"           description:"商家预估准备完成时间"`                                                      // 商家预估准备完成时间
 	Note               string      `json:"note"               orm:"note"                 description:"订单备注"`                                                            // 订单备注
 	RawData            string      `json:"rawData"            orm:"raw_data"             description:"原始JSON数据"`                                                        // 原始JSON数据
-	CreatedAt          *gtime.Time `json:"createdAt"          orm:"created_at"           description:"创建时间"`                                                            // 创建时间
-	UpdatedAt          *gtime.Time `json:"updatedAt"          orm:"updated_at"           description:"更新时间"`                                                            // 更新时间
-	DeletedAt          *gtime.Time `json:"deletedAt"          orm:"deleted_at"           description:"软删除"`                                                             // 软删除
+	CreatedAt          int         `json:"createdAt"          orm:"created_at"           description:"创建时间"`                                                            // 创建时间
+	UpdatedAt          int         `json:"updatedAt"          orm:"updated_at"           description:"更新时间"`                                                            // 更新时间
+	DeletedAt          int         `json:"deletedAt"          orm:"deleted_at"           description:"软删除"`                                                             // 软删除
 }

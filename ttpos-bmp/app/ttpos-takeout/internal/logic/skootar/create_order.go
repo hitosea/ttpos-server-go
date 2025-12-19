@@ -100,8 +100,6 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 			PaymentType:        reqInp.PaymentType,
 			CustomerPhone:      req.CustomerLocation.ContactPhone,
 			Note:               reqInp.Remark,
-			CreatedAt:          gtime.Now(),
-			UpdatedAt:          gtime.Now(),
 		}
 		if _, err := dao.Order.Ctx(ctx).TX(tx).Data(order).Insert(); err != nil {
 			return gerror.Wrap(err, "创建订单主表失败")
@@ -112,8 +110,6 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		orderSkootar := &entity.OrderSkootar{
 			Uuid:      guid.S(),
 			OrderUuid: orderUuid,
-			CreatedAt: gtime.Now(),
-			UpdatedAt: gtime.Now(),
 		}
 		if _, err := dao.OrderSkootar.Ctx(ctx).TX(tx).Data(orderSkootar).Insert(); err != nil {
 			return gerror.Wrap(err, "创建订单扩展表失败")

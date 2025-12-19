@@ -42,7 +42,7 @@ type Order struct {
 	ReadyTime          *gtime.Time // 商家预估准备完成时间
 	Note               any         // 订单备注
 	RawData            any         // 原始JSON数据
-	CreatedAt          *gtime.Time // 创建时间
-	UpdatedAt          *gtime.Time // 更新时间
-	DeletedAt          *gtime.Time // 软删除
+	CreatedAt          any         // 创建时间
+	UpdatedAt          any         // 更新时间
+	DeletedAt          any         // 软删除
 }
