@@ -28,10 +28,12 @@ type (
 		// NotifyMenuUpdate 发送菜单更新通知 (RocketMQ)
 		NotifyMenuUpdate(ctx context.Context, event *grabDto.ProviderMenuUpdateEvent) error
 		// UpdateMenuItem 更新单个菜单项 (商品)
-		// 支持更新价格、可用状态、库存、高级定价等
+		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新商品信息
+		// 支持更新：价格、可用状态、库存、高级定价配置、购买能力配置
 		UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) error
 		// UpdateMenuModifier 更新单个修饰符
-		// 支持更新价格、可用状态、是否免费、高级定价等
+		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新修饰符信息
+		// 支持更新：价格、可用状态、是否免费、高级定价配置
 		UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) error
 	}
 )

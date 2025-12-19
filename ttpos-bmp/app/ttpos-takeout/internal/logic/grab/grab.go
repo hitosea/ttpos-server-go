@@ -198,8 +198,8 @@ func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrder
 
 // HandlePushOrderState 处理订单状态变更 Webhook
 // 签名验证已由中间件完成
-func (s *sGrab) HandlePushOrderState(ctx context.Context, body []byte) error {
-	return service.GrabOrder().HandlePushOrderState(ctx, body)
+func (s *sGrab) HandlePushOrderState(ctx context.Context, req *grabfood.OrderStateRequest) error {
+	return service.GrabOrder().HandlePushOrderState(ctx, req)
 }
 
 // HandleGetMenu 处理 Grab 获取菜单请求

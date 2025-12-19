@@ -29,7 +29,7 @@ type (
 		HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error
 		// HandlePushOrderState 处理订单状态变更 Webhook
 		// 签名验证已由中间件完成
-		HandlePushOrderState(ctx context.Context, body []byte) error
+		HandlePushOrderState(ctx context.Context, req *grabfood.OrderStateRequest) error
 		// HandleGetMenu 处理 Grab 获取菜单请求
 		// 签名验证已由中间件完成
 		HandleGetMenu(ctx context.Context, merchantID string) (*grabfood.GetMenuNewResponse, error)
@@ -70,6 +70,10 @@ type (
 		NotifyMenuUpdate(ctx context.Context, merchantID string) (string, error)
 		// TraceMenuSync 追踪菜单同步状态
 		TraceMenuSync(ctx context.Context, merchantID string) (*grabfood.MenuSyncResponse, error)
+		// UpdateMenuRecord 更新单个菜单记录 (商品或修饰符)
+		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record
+		// req 可以是 UpdateMenuItem 或 UpdateMenuModifier
+		UpdateMenuRecord(ctx context.Context, merchantID string, req grabfood.UpdateMenuRequest) error
 		// CreateSelfServeJourney 创建自助激活链接
 		// merchantID: Grab Merchant ID
 		// 返回: activation_url, request_id
@@ -82,9 +86,6 @@ type (
 		ParsePartnerToken(token string) (*grabDto.PartnerTokenClaims, error)
 		// GetShopProviderCfg 查询门店第三方配置
 		GetShopProviderCfg(ctx context.Context, req *grab.GetShopProviderCfgReq) (*grab.GetShopProviderCfgResp, error)
-		// UpdateMenuRecord 更新单个菜单记录 (商品或修饰符)
-		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record
-		UpdateMenuRecord(ctx context.Context, merchantID string, req grabfood.UpdateMenuRequest) error
 	}
 )
 

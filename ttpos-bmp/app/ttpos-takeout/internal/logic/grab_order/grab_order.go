@@ -3,6 +3,7 @@ package grab_order
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -32,6 +33,7 @@ const (
 type OrderEvent struct {
 	Action       string `json:"action"`       // create, status_update, cancel
 	ProviderName string `json:"providerName"` // grab
+	ShopUUID     string `json:"shopUuid"`     // TTPOS 店铺 UUID
 	OrderUUID    string `json:"orderUuid"`    // 订单 UUID
 	OrderID      string `json:"orderId"`      // 平台订单 ID
 	MerchantID   string `json:"merchantId"`   // 商户 ID
@@ -66,9 +68,10 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, req *grabfood.Submit
 	event := &OrderEvent{
 		Action:       "create",
 		ProviderName: string(consts.ProviderGrab),
+		ShopUUID:     req.GetPartnerMerchantID(), // partnerMerchantID 即为 shopUuid
 		OrderUUID:    orderUUID,
 		OrderID:      req.GetOrderID(),
-		MerchantID:   req.GetPartnerMerchantID(), // 保持 MQ 事件中的字段名不变
+		MerchantID:   req.GetPartnerMerchantID(),
 		Status:       req.GetOrderState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
@@ -217,49 +220,55 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 
 // HandlePushOrderState 处理订单状态变更 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
-// 使用 SDK grabfood.OrderStateRequest 替换自定义 DTO
-func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) error {
-	// 1. 解析请求 - 使用 SDK Model
-	var req grabfood.OrderStateRequest
-	if err := gjson.DecodeTo(body, &req); err != nil {
-		g.Log().Errorf(ctx, "解析订单状态请求失败: %v", err)
-		return gerror.Wrap(err, "解析请求失败")
-	}
+// 使用 SDK grabfood.OrderStateRequest
+func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, req *grabfood.OrderStateRequest) error {
+	// 1. 序列化用于保存原始数据
+	rawData, _ := gjson.EncodeString(req)
 
 	// 2. 查询订单
 	var order entity.Order
+	var orderExists bool
 	err := dao.Order.Ctx(ctx).
 		Where(dao.Order.Columns().ProviderName, string(consts.ProviderGrab)).
 		Where(dao.Order.Columns().ProviderOrderId, req.GetOrderID()).
 		Scan(&order)
-	if err != nil {
-		g.Log().Errorf(ctx, "订单不存在: %s", req.GetOrderID())
-		return gerror.Newf("订单不存在: %s", req.GetOrderID())
+	if err == nil {
+		orderExists = true
 	}
 
-	// 4. 记录状态变更日志
+	// 3. 记录状态变更日志（无论订单是否存在都记录）
 	logUUID := guid.S()
 	var driverEta int
 	if req.HasDriverETA() {
 		driverEta = int(req.GetDriverETA())
 	}
 
+	remark := req.GetMessage()
+	if !orderExists {
+		remark = fmt.Sprintf("[订单不存在] %s", remark)
+	}
+
 	logDo := &do.OrderStatusLog{
 		Uuid:         logUUID,
-		OrderUuid:    order.Uuid,
+		OrderUuid:    order.Uuid, // 订单不存在时为空
 		ProviderName: string(consts.ProviderGrab),
-		StatusBefore: order.OrderStatus,
+		StatusBefore: order.OrderStatus, // 订单不存在时为空
 		StatusAfter:  req.GetState(),
 		ChangeSource: "WEBHOOK",
 		DriverEta:    driverEta,
-		Remark:       req.GetMessage(),
-		RawData:      string(body),
+		Remark:       remark,
+		RawData:      rawData,
 	}
 
-	_, err = dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert()
-	if err != nil {
-		g.Log().Errorf(ctx, "插入状态日志失败: %v", err)
-		return gerror.Wrap(err, "插入状态日志失败")
+	_, logErr := dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert()
+	if logErr != nil {
+		g.Log().Errorf(ctx, "插入状态日志失败: %v", logErr)
+	}
+
+	// 4. 如果订单不存在，返回错误
+	if !orderExists {
+		g.Log().Errorf(ctx, "订单不存在: %s", req.GetOrderID())
+		return gerror.Newf("订单不存在: %s", req.GetOrderID())
 	}
 
 	// 5. 更新订单状态
@@ -267,7 +276,6 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 		Where(dao.Order.Columns().Uuid, order.Uuid).
 		Data(g.Map{
 			dao.Order.Columns().OrderStatus: req.GetState(),
-			dao.Order.Columns().UpdatedAt:   gtime.Now(),
 		}).Update()
 	if err != nil {
 		g.Log().Errorf(ctx, "更新订单状态失败: %v", err)
@@ -278,9 +286,10 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	event := &OrderEvent{
 		Action:       "status_update",
 		ProviderName: string(consts.ProviderGrab),
+		ShopUUID:     order.ShopUuid,
 		OrderUUID:    order.Uuid,
 		OrderID:      req.GetOrderID(),
-		MerchantID:   req.GetPartnerMerchantID(), // 保持 MQ 事件中的字段名不变
+		MerchantID:   req.GetMerchantID(),
 		Status:       req.GetState(),
 		Timestamp:    gtime.Now().Unix(),
 	}
