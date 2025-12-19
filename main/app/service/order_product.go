@@ -571,20 +571,22 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 // InstantOrderCartProductCooking 送厨购物车商品
 func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error) {
 	defer func() { // 送厨结束后，执行分批送厨
-		// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
-		if ctx.GetSource() == constant.SourceAssistant {
-			db := s.dbm.GetDB(ctx.GetDbId())
-			batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
-			if err != nil {
-				ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
-			} else if batchCookingMode == constant.BatchCookingModePre {
-				// 异步执行分批送厨，不阻塞流程
-				utils.Go(func() {
-					ctx := ctx.Copy()
-					if err := s.AutoSendCookingByPriority(ctx, req.SaleBillUuid); err != nil {
-						ctx.Log().Error("分批送厨失败", zap.Error(err))
-					}
-				})
+		if !req.IsCheckCooking { // 只有真送厨时才会送厨预送厨的商品. IsCheckCooking为true时,表示助手端在进行送厨检查,不需要实际进行送厨
+			// 助手端前置模式：分批送厨（每次点击下单都送优先级最高的分批类型）
+			if ctx.GetSource() == constant.SourceAssistant {
+				db := s.dbm.GetDB(ctx.GetDbId())
+				batchCookingMode, err := repository.NewOrderRepo(db).GetSaleBillBatchCookingMode(req.SaleBillUuid)
+				if err != nil {
+					ctx.Log().Info("获取销售账单的分批送厨模式失败,导致不能分批送厨", zap.Error(err))
+				} else if batchCookingMode == constant.BatchCookingModePre {
+					// 异步执行分批送厨，不阻塞流程
+					utils.Go(func() {
+						ctx := ctx.Copy()
+						if err := s.AutoSendCookingByPriority(ctx, req.SaleBillUuid); err != nil {
+							ctx.Log().Error("分批送厨失败", zap.Error(err))
+						}
+					})
+				}
 			}
 		}
 	}()
