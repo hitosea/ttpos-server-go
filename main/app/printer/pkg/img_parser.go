@@ -308,7 +308,9 @@ func (p *ImgTemplateParser) parseRow(
 			// 获取宽度
 			width := p.getWidthValue(block.BlockAttr.Width)
 			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil && block.BlockAttr.Width58 != 0 {
-				width = p.getWidthValue(block.BlockAttr.Width58)
+				if width58 := p.getWidthValue(block.BlockAttr.Width58); width58 != 0 {
+					width = width58
+				}
 			}
 			widthInt := int(width)
 			text := p.getBlockText(block)
@@ -450,7 +452,9 @@ func (p *ImgTemplateParser) parseRow(
 func (p *ImgTemplateParser) getBlockWidth(img *ImgFont, block ImgTemplateBlock) int {
 	width := p.getWidthValue(block.BlockAttr.Width)
 	if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil && block.BlockAttr.Width58 != 0 {
-		width = p.getWidthValue(block.BlockAttr.Width58)
+		if width58 := p.getWidthValue(block.BlockAttr.Width58); width58 != 0 {
+			width = width58
+		}
 	}
 	if width > 0 {
 		return int(float64(img.ImageWidth) * (width / 100))
@@ -1069,8 +1073,10 @@ func (p *ImgTemplateParser) validateRow(blocks []ImgTemplateBlock, rowIndex int)
 		// 验证宽度
 		if block.BlockType != "img" && block.BlockType != "qrcode" && block.BlockType != "barcode" {
 			width := p.getWidthValue(block.BlockAttr.Width)
-			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil && block.BlockAttr.Width58 != 0 {
-				width = p.getWidthValue(block.BlockAttr.Width58)
+			if p.template.Metadata.PaperWidth == 58 && block.BlockAttr.Width58 != nil {
+				if width58 := p.getWidthValue(block.BlockAttr.Width58); width58 != 0 {
+					width = width58
+				}
 			}
 			if width < 0 || width > 100 {
 				return fmt.Errorf("块 '%s' 的宽度必须在0-100之间", block.BlockID)
@@ -1086,6 +1092,11 @@ func (p *ImgTemplateParser) validateRow(blocks []ImgTemplateBlock, rowIndex int)
 	// 验证总宽度不超过100%
 	if totalWidth > 100 {
 		return fmt.Errorf("第%d行所有块的总宽度(%.1f%%)超过100%%", rowIndex+1, totalWidth)
+	}
+
+	// 验证总宽度必须大于0
+	if totalWidth < 0 {
+		return fmt.Errorf("第%d行所有块的总宽度必须大于0", rowIndex+1)
 	}
 
 	return nil
