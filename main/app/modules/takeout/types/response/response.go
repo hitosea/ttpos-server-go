@@ -80,3 +80,64 @@ type PageResponse struct {
 	PageSize int   `json:"page_size"` // 每页大小
 	Total    int64 `json:"total"`     // 总数
 }
+
+// UpdateMenuItemResponse 更新菜单项响应
+type UpdateMenuItemResponse struct {
+	MerchantId      string `json:"merchant_id"`      // 商户ID
+	ItemId          string `json:"item_id"`          // 商品ID
+	Price           int64  `json:"price"`            // 价格
+	AvailableStatus string `json:"available_status"` // 可用状态
+	MaxStock        int64  `json:"max_stock"`        // 库存数量
+}
+
+// UpdateMenuModifierResponse 更新菜单修饰符响应
+type UpdateMenuModifierResponse struct {
+	MerchantId      string `json:"merchant_id"`      // 商户ID
+	ModifierId      string `json:"modifier_id"`      // 修饰符ID
+	ModifierName    string `json:"modifier_name"`    // 修饰符名称
+	Price           int64  `json:"price"`            // 价格
+	AvailableStatus string `json:"available_status"` // 可用状态
+}
+
+// MenuSyncResult 菜单同步结果
+type MenuSyncResult struct {
+	TotalItems       int                  `json:"total_items"`       // 总商品数
+	TotalModifiers   int                  `json:"total_modifiers"`   // 总修饰符数
+	ChangedItems     int                  `json:"changed_items"`     // 变更商品数
+	ChangedModifiers int                  `json:"changed_modifiers"` // 变更修饰符数
+	SuccessItems     int                  `json:"success_items"`     // 成功更新商品数
+	SuccessModifiers int                  `json:"success_modifiers"` // 成功更新修饰符数
+	FailedItems      int                  `json:"failed_items"`      // 失败商品数
+	FailedModifiers  int                  `json:"failed_modifiers"`  // 失败修饰符数
+	ItemChanges      []MenuItemChange     `json:"item_changes"`      // 商品变更详情
+	ModifierChanges  []MenuModifierChange `json:"modifier_changes"`  // 修饰符变更详情
+	Errors           []string             `json:"errors,omitempty"`  // 错误信息列表
+}
+
+// MenuItemChange 菜单项变更详情
+type MenuItemChange struct {
+	ItemID       string `json:"item_id"`                 // 商品ID
+	ItemName     string `json:"item_name"`               // 商品名称
+	ChangeType   string `json:"change_type"`             // 变更类型: price, status, stock
+	OldPrice     *int64 `json:"old_price,omitempty"`     // 旧价格
+	NewPrice     *int64 `json:"new_price,omitempty"`     // 新价格
+	OldStatus    string `json:"old_status,omitempty"`    // 旧状态
+	NewStatus    string `json:"new_status,omitempty"`    // 新状态
+	OldStock     *int64 `json:"old_stock,omitempty"`     // 旧库存
+	NewStock     *int64 `json:"new_stock,omitempty"`     // 新库存
+	Success      bool   `json:"success"`                 // 是否成功
+	ErrorMessage string `json:"error_message,omitempty"` // 错误信息
+}
+
+// MenuModifierChange 修饰符变更详情
+type MenuModifierChange struct {
+	ModifierID   string `json:"modifier_id"`             // 修饰符ID
+	ModifierName string `json:"modifier_name"`           // 修饰符名称
+	ChangeType   string `json:"change_type"`             // 变更类型: price, status
+	OldPrice     *int64 `json:"old_price,omitempty"`     // 旧价格
+	NewPrice     *int64 `json:"new_price,omitempty"`     // 新价格
+	OldStatus    string `json:"old_status,omitempty"`    // 旧状态
+	NewStatus    string `json:"new_status,omitempty"`    // 新状态
+	Success      bool   `json:"success"`                 // 是否成功
+	ErrorMessage string `json:"error_message,omitempty"` // 错误信息
+}

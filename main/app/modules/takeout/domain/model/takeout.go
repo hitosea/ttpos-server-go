@@ -12,6 +12,7 @@ type Takeout struct {
 	Skip        bool        `gorm:"column:skip;type:tinyint(1);default:0;comment:是否跳过绑定(1:跳过 0:不跳过);NOT NULL" json:"skip"`
 	BindingLink string      `gorm:"column:binding_link;type:varchar(500);default:'';comment:平台绑定链接(缓存用);NOT NULL" json:"binding_link"`
 	Menu        interface{} `gorm:"column:menu;type:json;comment:平台菜单数据(JSON格式)" json:"menu"`
+	TtposMenu   interface{} `gorm:"column:ttpos_menu;type:json;comment:TTPOS导出的菜单数据(JSON格式)" json:"ttpos_menu"`
 
 	// 导入进度相关字段
 	ImportStatus int8 `gorm:"column:import_status;type:tinyint(3);default:0;comment:导入状态(0-未导入 1-导入中 2-导入成功 3-导入失败);NOT NULL;index:idx_import_status" json:"import_status"`

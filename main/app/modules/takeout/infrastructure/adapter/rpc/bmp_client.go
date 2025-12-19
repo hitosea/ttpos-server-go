@@ -31,6 +31,12 @@ type TakeoutRPCClient interface {
 	// SaveGrabMenu 保存 Grab 菜单
 	SaveMenuSnapshot(ctx context.Context, providerName string, shopUuid string, requestId string, menuData interface{}) (err error)
 
+	// UpdateMenuItem 更新菜单项（商品）
+	UpdateMenuItem(ctx context.Context, req *menuApi.UpdateMenuItemReq) error
+
+	// UpdateMenuModifier 更新菜单修饰符
+	UpdateMenuModifier(ctx context.Context, req *menuApi.UpdateMenuModifierReq) error
+
 	// Close 关闭连接
 	Close() error
 }
@@ -209,6 +215,52 @@ func (c *BMPTakeoutClient) SaveMenuSnapshot(ctx context.Context, providerName st
 			zap.String("providerName", providerName),
 			zap.String("shopUuid", shopUuid),
 			zap.String("requestId", requestId))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
+// UpdateMenuItem 更新菜单项（商品）
+func (c *BMPTakeoutClient) UpdateMenuItem(ctx context.Context, req *menuApi.UpdateMenuItemReq) error {
+	resp, err := c.menuClient.UpdateMenuItem(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 UpdateMenuItem 接口失败",
+			zap.Error(err),
+			zap.String("merchantId", req.MerchantId),
+			zap.String("itemId", req.ItemId))
+		return errors.WithMessage(err, "调用更新菜单项接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("UpdateMenuItem 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("merchantId", req.MerchantId),
+			zap.String("itemId", req.ItemId))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
+// UpdateMenuModifier 更新菜单修饰符
+func (c *BMPTakeoutClient) UpdateMenuModifier(ctx context.Context, req *menuApi.UpdateMenuModifierReq) error {
+	resp, err := c.menuClient.UpdateMenuModifier(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 UpdateMenuModifier 接口失败",
+			zap.Error(err),
+			zap.String("merchantId", req.MerchantId),
+			zap.String("modifierId", req.ModifierId))
+		return errors.WithMessage(err, "调用更新菜单修饰符接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("UpdateMenuModifier 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("merchantId", req.MerchantId),
+			zap.String("modifierId", req.ModifierId))
 		return errors.New(resp.Message)
 	}
 

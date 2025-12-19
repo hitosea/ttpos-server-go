@@ -21,7 +21,7 @@ import (
 // LanPrinterReportHandler 处理 LAN 打印机上报
 func LanPrinterReportHandler(ctx context.Context, msg *primitive.MessageExt) error {
 	if config.Server.Mode == gin.DebugMode {
-		logger.Logger.Info("收到 LAN 打印机上报消息",
+		logger.Logger.Debug("收到 LAN 打印机上报消息",
 			zap.String("msg_id", msg.MsgId),
 			zap.String("topic", msg.Topic),
 		)

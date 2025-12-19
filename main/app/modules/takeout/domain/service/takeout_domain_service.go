@@ -49,6 +49,9 @@ type TakeoutDomainService interface {
 	// UpdatePlatformBindingLinkByPlatform 通过平台名称更新平台绑定链接
 	UpdatePlatformBindingLinkByPlatform(ctx context.Context, platform string, bindingLink string) error
 
+	// UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
+	UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error
+
 	// GetAllPlatformStatus 获取所有平台状态
 	GetAllPlatformStatus(ctx context.Context) ([]*model.Takeout, error)
 
@@ -262,6 +265,19 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformBindingLinkByPlatform(ctx conte
 
 	if err := s.takeoutRepo.UpdateBindingLinkByPlatform(ctx, platform, bindingLink); err != nil {
 		return fmt.Errorf("更新平台%s绑定链接失败: %w", platform, err)
+	}
+
+	return nil
+}
+
+// UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
+func (s *TakeoutDomainServiceImpl) UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error {
+	if err := s.ValidatePlatform(platform); err != nil {
+		return err
+	}
+
+	if err := s.takeoutRepo.UpdateTtposMenuByPlatform(ctx, platform, ttposMenu); err != nil {
+		return fmt.Errorf("更新平台%s的TTPOS菜单数据失败: %w", platform, err)
 	}
 
 	return nil

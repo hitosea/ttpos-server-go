@@ -142,7 +142,7 @@ think:
 # 监听今天的日志（格式化输出，显示完整JSON）
 log:
 	@echo "🔍 监听今天的日志（完整JSON格式，忽略warn级别）..."
-	@tail -f -n 100 ./main/log/$$(date +%Y-%m-%d).log | grep --line-buffered -v '"level":"warn"' | while IFS= read -r line; do \
+	@tail -f -n 100 ./main/log/$$(date +%Y-%m-%d).log | grep --line-buffered -v '"level":"warn"' | grep --line-buffered -v '"level":"debug"' | while IFS= read -r line; do \
 		if echo "$$line" | grep -q '"level":"error"'; then \
 			echo "$$line" | jq -C . 2>/dev/null || echo "$$line" | sed 's/.*/\x1b[0;31m&\x1b[0m/'; \
 		else \
