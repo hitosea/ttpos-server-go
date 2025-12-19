@@ -212,7 +212,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		}
 
 		// 创建销售账单设置
-		if _, errCreateSaleBillSetting := repository.NewOrderRepo(db).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
+		if _, errCreateSaleBillSetting := repository.NewOrderRepo(tx).CreateSaleBillSetting(*saleBillSetting); errCreateSaleBillSetting != nil {
 			return errCreateSaleBillSetting
 		}
 
@@ -951,7 +951,7 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 		}
 
 		// 更新账单
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil

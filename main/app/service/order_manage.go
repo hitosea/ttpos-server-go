@@ -871,7 +871,11 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		s.returnInventory(ctx, saleBill)
+		ctx.SetDB(tx) // 确保 returnInventory 使用事务
+		if err := s.returnInventory(ctx, saleBill); err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
+		}
 	}
 
 	// 如果是桌台订单
@@ -915,8 +919,9 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
 
-	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
+		tx.Rollback()
 		return errors.WithMessage(err, "销售账单不存在")
 	}
 	saleBill.SetCanceled()
@@ -1214,11 +1219,9 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 						}
 						// 更新退款状态
 						returnOrderRepo := repository.NewReturnOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
-						returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
+						if err := returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
 							returnOrderRepo.WhereUuid(returnOrderAmount.Uuid),
-						}, returnOrderAmount)
-						if err != nil {
-							fmt.Println("更新退款状态失败", err)
+						}, returnOrderAmount); err != nil {
 							logger.Logger.Error("更新退款状态失败", zap.Error(err))
 						}
 					})
@@ -1975,14 +1978,16 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				}
 				// 如果是余额支付，则退款到余额
 				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
-					s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+					if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
 						MemberUuid:  saleOrder.ConsumerUuid,
 						Money:       paymentOrder.BalanceAmount,
 						GiftMoney:   paymentOrder.GiftBalanceAmount,
 						Scene:       constant.MemberBalanceLogReverse,
 						Describe:    fmt.Sprintf("订单反结账：%s", saleOrder.OrderNo),
 						RelatedUuid: saleOrder.Uuid,
-					})
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 				// 取现金，更新钱箱
 				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {

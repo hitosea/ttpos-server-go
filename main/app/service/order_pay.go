@@ -104,11 +104,11 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 		saleOrder.AddCoupon(req.CouponUuid, req.CouponRequirement, couponAmount)
 	}
 
-	db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 选择优惠券后，将积分自动抵扣失效改为手动抵扣
 		saleOrder.AutoPointsExchange = 0
 
-		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
 		if hasCoupon {
@@ -123,7 +123,9 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
@@ -825,8 +827,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 更新会员消费金额和消费次数
 		consumptionAmount := decimal.NewFromFloat(saleOrder.GetAmountValue()).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).Truncate(2).InexactFloat64()
-		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount)
-		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
+		if err := repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if err := repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 		// 处理会员升级 todo 如果后面的逻辑报错，这个升级没有回滚，应该放在事务中升级
 		utils.Go(func() {
 			s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), saleOrder.ConsumerUuid)

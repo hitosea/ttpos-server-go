@@ -1,0 +1,366 @@
+---
+alwaysApply: false
+description: 代码审查规则 - 事务错误处理检查策略
+---
+
+# 代码审查规则 - 事务错误处理检查策略
+
+## 概述
+
+本规则总结了事务错误处理的检查策略和思考过程，用于系统化地进行代码审查，确保事务的正确性和错误处理的完整性。
+
+## 检查目标
+
+### 核心原则
+
+1. **事务一致性**：确保所有数据库操作在事务中执行
+2. **错误完整性**：确保所有错误都被正确处理
+3. **上下文传递**：确保事务上下文正确传递给服务方法
+
+## 检查策略
+
+### 1. 事务中使用外部 db 而非 tx（严重）
+
+**问题描述**：  
+事务回调函数的参数是 `tx`，但代码中使用的是外部 `db`，导致操作不在事务中执行。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    repository.NewOrderRepo(db).UpdateOrder(...) // 使用 db 而非 tx
+    return nil
+})
+
+// ✅ 正确示例
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    repository.NewOrderRepo(tx).UpdateOrder(...) // 使用 tx
+    return nil
+})
+```
+
+**检查步骤**：
+1. 搜索所有 `Transaction` 或 `db.Transaction` 调用
+2. 检查事务回调函数内部是否使用外部 `db`
+3. 确认所有 Repository 调用都使用事务参数 `tx`
+
+**影响**：
+- 数据不一致
+- 事务失效
+- 回滚失败
+
+---
+
+### 2. 事务调用未检查返回错误（高）
+
+**问题描述**：  
+事务调用没有检查返回的错误，如果事务失败，错误会被忽略。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+db.Transaction(func(tx *gorm.DB) error {
+    // ...
+    return nil
+})
+// 没有检查返回错误
+
+// ✅ 正确示例
+if err := db.Transaction(func(tx *gorm.DB) error {
+    // ...
+    return nil
+}); err != nil {
+    return errors.WithMessage(err)
+}
+```
+
+**检查步骤**：
+1. 搜索所有 `Transaction` 调用
+2. 检查是否有 `if err :=` 或 `err =` 赋值
+3. 确认错误被正确处理
+
+**影响**：
+- 事务失败但无错误提示
+- 调用方无法感知失败
+- 数据不一致
+
+---
+
+### 3. 调用方法未检查返回错误（高）
+
+**问题描述**：  
+调用返回 `error` 的方法但未检查返回错误。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+s.memberSrv.HandleMemberBalance(ctx, req)
+// 没有检查返回错误
+
+// ✅ 正确示例
+if err := s.memberSrv.HandleMemberBalance(ctx, req); err != nil {
+    return errors.WithMessage(err)
+}
+```
+
+**检查步骤**：
+1. 搜索所有服务方法调用（`s.xxxSrv.`、`repository.NewXxxRepo`）
+2. 检查方法签名是否返回 `error`
+3. 确认所有返回 `error` 的调用都被检查
+
+**影响**：
+- 错误被忽略
+- 调用方无法感知失败
+- 数据不一致
+
+---
+
+### 4. 调用服务方法前未设置事务上下文（中）
+
+**问题描述**：  
+在事务中调用服务方法，但未设置事务上下文，可能导致方法内部使用错误的数据库连接。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    if err := s.returnInventory(ctx, saleBill); err != nil {
+        return errors.WithMessage(err)
+    }
+    return nil
+})
+
+// ✅ 正确示例
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    ctxCopy := ctx.Copy()
+    ctxCopy.SetDB(tx)
+    if err := s.returnInventory(ctxCopy, saleBill); err != nil {
+        return errors.WithMessage(err)
+    }
+    return nil
+})
+```
+
+**检查步骤**：
+1. 搜索事务中调用服务方法（`s.xxxSrv.`、`s.xxx()`）
+2. 检查方法内部是否使用 `ctx.GetDB()`
+3. 确认在调用前设置了 `ctx.SetDB(tx)`
+
+**影响**：
+- 事务失效
+- 操作不在事务中执行
+- 回滚失败
+
+---
+
+### 5. Goroutine 中调用方法未检查返回错误（中）
+
+**问题描述**：  
+在 goroutine 中调用方法但未检查返回错误。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+utils.Go(func() {
+    returnOrderRepo.UpdateReturnOrderAmount(...) // 没有检查错误
+})
+
+// ✅ 正确示例
+utils.Go(func() {
+    if err := returnOrderRepo.UpdateReturnOrderAmount(...); err != nil {
+        logger.Logger.Error("更新退款状态失败", zap.Error(err))
+    }
+})
+```
+
+**检查步骤**：
+1. 搜索所有 `utils.Go` 或 `go func()` 调用
+2. 检查内部方法调用是否检查错误
+3. 确认错误被记录或处理
+
+**影响**：
+- 错误被忽略
+- 无法追踪失败原因
+- 数据不一致
+
+---
+
+### 6. JSON 序列化/反序列化未检查错误（低）
+
+**问题描述**：  
+调用 `json.Marshal` 或 `json.Unmarshal` 但未检查返回错误。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+json.Unmarshal(data, &obj)
+
+// ✅ 正确示例
+if err := json.Unmarshal(data, &obj); err != nil {
+    return errors.WithMessage(err, "解析JSON失败")
+}
+```
+
+**检查步骤**：
+1. 搜索所有 `json.Marshal` 和 `json.Unmarshal` 调用
+2. 检查是否有错误检查
+3. 确认错误被正确处理
+
+**影响**：
+- 数据解析失败但无提示
+- 可能导致后续逻辑错误
+
+---
+
+## 检查流程
+
+### 步骤 1: 识别事务块
+
+```bash
+# 搜索事务调用模式
+grep -r "Transaction\|db\.Begin\|tx\.Begin" --include="*.go"
+```
+
+### 步骤 2: 检查事务参数使用
+
+```bash
+# 搜索事务回调函数
+grep -r "func.*\*gorm\.DB.*error" --include="*.go"
+```
+
+### 步骤 3: 检查错误处理
+
+```bash
+# 搜索未检查错误的方法调用
+grep -r "\.\w+\(.*\)$" --include="*.go" | grep -v "if err"
+```
+
+### 步骤 4: 检查上下文传递
+
+```bash
+# 搜索服务方法调用
+grep -r "s\.\w+Srv\.\w+\|s\.\w+\(ctx" --include="*.go"
+```
+
+## 优先级分类
+
+| 优先级 | 问题类型 | 影响 | 修复优先级 |
+|--------|---------|------|-----------|
+| **严重** | 事务中使用外部 db 而非 tx | 数据不一致、事务失效 | P0 |
+| **高** | 事务调用未检查返回错误 | 事务失败但无提示 | P0 |
+| **高** | 调用方法未检查返回错误 | 错误被忽略 | P0 |
+| **中** | 调用服务方法前未设置事务上下文 | 事务失效 | P1 |
+| **中** | Goroutine 中调用方法未检查返回错误 | 错误被忽略 | P1 |
+| **低** | JSON 序列化/反序列化未检查错误 | 数据解析失败 | P2 |
+
+## 检查清单
+
+### 事务相关检查
+
+- [ ] 所有事务回调函数都使用 `tx` 而非外部 `db`
+- [ ] 所有事务调用都检查返回错误
+- [ ] 所有事务中的 Repository 调用都使用 `tx`
+- [ ] 所有事务中的服务方法调用都设置了事务上下文
+
+### 错误处理检查
+
+- [ ] 所有返回 `error` 的方法调用都检查了错误
+- [ ] 所有 `json.Marshal`/`json.Unmarshal` 调用都检查了错误
+- [ ] 所有 goroutine 中的方法调用都检查了错误
+
+### 上下文传递检查
+
+- [ ] 事务中调用服务方法前设置了 `ctx.SetDB(tx)`
+- [ ] 使用 `ctx.Copy()` 避免修改原始上下文
+- [ ] 服务方法内部使用 `ctx.GetDB()` 获取数据库连接
+
+## 常见模式
+
+### 模式 1: 事务中使用外部 db
+
+```go
+// ❌ 错误
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    repository.NewOrderRepo(db).UpdateOrder(...) // 使用 db
+    return nil
+})
+
+// ✅ 正确
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    repository.NewOrderRepo(tx).UpdateOrder(...) // 使用 tx
+    return nil
+})
+```
+
+### 模式 2: 事务中调用服务方法
+
+```go
+// ❌ 错误
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    if err := s.returnInventory(ctx, saleBill); err != nil {
+        return errors.WithMessage(err)
+    }
+    return nil
+})
+
+// ✅ 正确
+if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+    ctxCopy := ctx.Copy()
+    ctxCopy.SetDB(tx)
+    if err := s.returnInventory(ctxCopy, saleBill); err != nil {
+        return errors.WithMessage(err)
+    }
+    return nil
+})
+```
+
+### 模式 3: 事务调用未检查错误
+
+```go
+// ❌ 错误
+db.Transaction(func(tx *gorm.DB) error {
+    // ...
+    return nil
+})
+
+// ✅ 正确
+if err := db.Transaction(func(tx *gorm.DB) error {
+    // ...
+    return nil
+}); err != nil {
+    return errors.WithMessage(err)
+}
+```
+
+## 工具支持
+
+### 静态检查工具
+
+- **golangci-lint**: 检查未使用的错误
+- **go vet**: 检查错误处理模式
+- **自定义检查**: 基于 AST 分析事务使用模式
+
+### 代码搜索模式
+
+```bash
+# 搜索事务块
+grep -r "Transaction\|db\.Begin" --include="*.go"
+
+# 搜索未检查错误的方法调用
+grep -r "\.\w+\(.*\)$" --include="*.go" | grep -v "if err\|err :="
+
+# 搜索服务方法调用
+grep -r "s\.\w+Srv\.\w+\|s\.\w+\(ctx" --include="*.go"
+```
+
+## 参考文档
+
+- 事务错误处理扫描报告: `docs/shared/troubleshooting/transaction-error-handling-scan-report.md`
+- Go Main 核心约束: `.cursor/rules/go-main.mdc`
+- 错误处理示例: `docs/agent/workflows/development/error-handling-examples.md`
+
+---
+
+**版本**: v1.0.0  
+**创建日期**: 2025-12-19  
+**维护者**: 代码审查组

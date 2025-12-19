@@ -4503,7 +4503,7 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 	// 获取公司
 	company := ctx.GetCompany()
 
-	db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 软删除商品规格
 		err = tx.Model(&model.ProductFlavor{}).Where("uuid = ?", productFlavor.Uuid).Updates(map[string]any{
 			"delete_time": time.Now().Unix(),
@@ -4539,8 +4539,7 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 		}
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return errors.WithMessage(errors.New("删除规格失败"), err.Error())
 	}
 

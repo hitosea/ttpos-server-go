@@ -99,11 +99,11 @@ func (s *orderSrv) CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderU
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 更新销售订单
-		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+		if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrder); err != nil {
 			return errors.WithMessage(err)
 		}
 		// 设置sort排序。 ！！！ 注意是修改sort字段为0，gorm默认不修改值为0的字段
-		if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrderUuid, constant.MemberSaleOrderSortDefault); err != nil {
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderSort(memberSaleOrderUuid, constant.MemberSaleOrderSortDefault); err != nil {
 			return errors.WithMessage(err)
 		}
 		return nil
@@ -983,12 +983,14 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 
 	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 退回商品库存
-		if err := s.returnInventory(ctx.Copy(), billInfo); err != nil {
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetDB(tx) // 确保 returnInventory 使用事务
+		if err := s.returnInventory(ctxCopy, billInfo); err != nil {
 			return errors.WithMessage(err)
 		}
 
 		// 取消订单
-		err = orderRepo.CancelOrder(ctx.Copy(), saleBillUuid, 0, request.CancelReason)
+		err = orderRepo.CancelOrder(ctxCopy, saleBillUuid, 0, request.CancelReason)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -1746,9 +1748,11 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 	memberSaleOrder.Reject()
 
 	// 整单取消SaleBill
-	s.CancelOrder(ctx, req.OrderCancelReq{
+	if err := s.CancelOrder(ctx, req.OrderCancelReq{
 		SaleBillUuid: memberSaleOrder.SaleBill.Uuid,
-	})
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
 
 	// 退款
 	returnOrder, err := NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
@@ -1759,10 +1763,14 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 	}
 
 	// 更新订单状态
-	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderReject(*memberSaleOrder)
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderReject(*memberSaleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
 		return nil
-	})
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
 
 	// 发布"外送拒单"操作事件
 	utils.Go(func() {

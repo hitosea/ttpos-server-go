@@ -100,10 +100,10 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	// 更新订单商品备注
-	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if len(orderItemRemarks) > 0 {
 			// 删除旧的备注预设原因记录（物理删除）
-			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+			reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
 				return errors.WithMessage(err, "删除旧备注预设原因失败")
 			}
@@ -118,7 +118,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 			saleOrderProduct.OrderItemRemarks = remarkReasonList
 		} else {
 			// 如果没有备注预设UUID列表，删除旧的备注预设原因记录（物理删除）
-			reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+			reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 			if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, req.OrderProductUuid); err != nil {
 				return errors.WithMessage(err, "删除旧备注预设原因失败")
 			}
@@ -127,7 +127,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		saleOrderProduct.Remark = req.Remark
 		saleOrderProduct.UpdateSign()
 		sign := saleOrderProduct.Sign
-		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
+		if err := repository.NewOrderRepo(tx).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
 		}
 
@@ -137,7 +137,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 			for _, subProduct := range subProducts {
 				if len(orderItemRemarks) > 0 {
 					// 删除旧的备注预设原因记录（物理删除）
-					reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+					reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 					if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, subProduct.Uuid); err != nil {
 						return errors.WithMessage(err, "删除旧备注预设原因失败")
 					}
@@ -152,20 +152,22 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 					subProduct.OrderItemRemarks = remarkReasonList
 				} else {
 					// 如果没有备注预设UUID列表，删除旧的备注预设原因记录（物理删除）
-					reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+					reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 					if err := reasonRepo.DeleteOrderItemRemarkReasons(req.SaleOrderUuid, subProduct.Uuid); err != nil {
 						return errors.WithMessage(err, "删除旧备注预设原因失败")
 					}
 					subProduct.OrderItemRemarks = make([]*model.SaleOrderProductReason, 0)
 				}
 				subProduct.UpdateSign()
-				if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
+				if err := repository.NewOrderRepo(tx).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
@@ -350,24 +352,24 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		}
 	}
 
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
 		if len(subProducts) > 0 {
 			for _, subProduct := range subProducts {
-				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
+				if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
 					return errors.WithMessage(errUpdate)
 				}
 				ctx.Log().Debug("更新销售订单套餐子商品成功")
 			}
 		}
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errors.WithMessage(errUpdateSaleBill)
 		}
 		return nil
@@ -532,25 +534,25 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		}
 	}
 
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
 		if len(subProducts) > 0 {
 			for _, subProduct := range subProducts {
-				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
+				if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
 					return errors.WithMessage(errUpdate)
 				}
 			}
 			ctx.Log().Debug("更新销售订单套餐子商品成功")
 		}
 
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errors.WithMessage(errUpdateSaleBill)
 		}
 		return nil
@@ -1095,7 +1097,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	}
 	// 更新销售订单商品
 	errUpdate := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
+		if err := repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductReasons(
 			saleOrderProduct.SaleOrderUuid,
 			saleOrderProduct.Uuid,
 			constant.ProductReasonTypeReturnFood,
@@ -1269,7 +1271,11 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 			// h5订单只有一个商品时拒单
 			if saleOrderProduct.H5OrderUuid != 0 {
 				// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
-				s.deleteOrRejectH5OrderProduct(ctx, db, saleOrderProduct)
+				ctxCopy := ctx.Copy()
+				ctxCopy.SetDB(tx)
+				if err := s.deleteOrRejectH5OrderProduct(ctxCopy, tx, saleOrderProduct); err != nil {
+					return errors.WithMessage(err)
+				}
 				// 删除掉h5订单uuid
 				saleOrderProduct.H5OrderUuid = 0
 			}
@@ -1303,7 +1309,7 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 			}
 
 			// 更新生产单
-			productionRepo := repository.NewProductionRepo(db)
+			productionRepo := repository.NewProductionRepo(tx)
 			oldProductionOrder, _ := productionRepo.GetProductionOrder(productionRepo.WhereUuid(oldProductionOrderUuid))
 			if oldProductionOrder != nil {
 				if err := productionRepo.CreateProductionOrder(&model.ProductionOrder{
@@ -1713,7 +1719,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 
 	// 更新销售订单商品
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
+		if err := repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductReasons(
 			saleOrderProduct.SaleOrderUuid,
 			saleOrderProduct.Uuid,
 			constant.ProductReasonTypeGift,
@@ -2346,8 +2352,8 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 	}
 
 	// 从新计算订单并保存
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
 		return nil

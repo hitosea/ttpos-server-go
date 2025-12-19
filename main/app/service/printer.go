@@ -832,7 +832,7 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	customizeInfo.Data = editPrinterCustomizeReq.Data
 
 	// 更新打印机定制
-	db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomize(customizeInfo)
 		if err != nil {
 			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
@@ -849,7 +849,9 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
 
 	return nil
 }

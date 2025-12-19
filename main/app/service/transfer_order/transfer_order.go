@@ -684,7 +684,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, db, transferOrder.Uuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
+		if err := s.helper.CreateLog(ctx, tx, transferOrder.Uuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
@@ -1479,7 +1479,7 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
+		if err := s.helper.CreateLog(ctx, tx, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 

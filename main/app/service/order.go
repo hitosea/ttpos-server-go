@@ -1201,15 +1201,15 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 	}
 
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 撤销出库单
 		for _, form := range forms {
-			if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormRecord(*form); err != nil {
+			if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormRecord(*form); err != nil {
 				return errors.WithMessage(err)
 			}
 			// 撤销出库单明细
 			for _, item := range form.WarehouseOutFormItems {
-				if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecord(*item); err != nil {
+				if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecord(*item); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
@@ -1218,11 +1218,11 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		// 创建入库单
 		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
 			// 创建入库单
-			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseFormRecord(*warehouseForm); err != nil {
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormRecord(*warehouseForm); err != nil {
 				return errors.WithMessage(err)
 			}
 			// 创建入库单记录
-			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
@@ -1231,12 +1231,12 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if opt.IsReverseSettle {
 			ProductBoms, ProducttPackages := GetSalesVolume(saleBill)
 			for productBomUuid, saleNum := range ProductBoms {
-				if err := repository.NewProductBomRepo(db).SubActualSaleNum(productBomUuid, saleNum); err != nil {
+				if err := repository.NewProductBomRepo(tx).SubActualSaleNum(productBomUuid, saleNum); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 			for productPackageUuid, saleNum := range ProducttPackages {
-				if err := repository.NewProductPackageRepo(db).SubActualSaleNum(productPackageUuid, saleNum); err != nil {
+				if err := repository.NewProductPackageRepo(tx).SubActualSaleNum(productPackageUuid, saleNum); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
@@ -1246,7 +1246,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		for _, warehouseOutForm := range warehouseOutForms {
 			if warehouseOutForm != nil && len(warehouseOutForm.WarehouseOutFormItems) > 0 {
 				// 创建出库单
-				if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
 					return errors.WithMessage(err)
 				}
 				// 创建出库单记录
@@ -1304,7 +1304,9 @@ func (s *orderSrv) deleteOrRejectH5OrderProduct(ctx context.Context, db *gorm.DB
 			return errors.WithMessage(err)
 		}
 		if h5OrderProductCount == 1 {
-			s.RejectH5Order(ctx, saleOrderProduct.H5OrderUuid)
+			if err := s.RejectH5Order(ctx, saleOrderProduct.H5OrderUuid); err != nil {
+				return errors.WithMessage(err)
+			}
 		} else {
 			// 删除h5订单商品
 			if err := repository.NewH5OrderRepo(db).DeleteH5OrderProduct(saleOrderProduct.H5OrderUuid, saleOrderProduct.Uuid); err != nil {
@@ -1373,26 +1375,26 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, _ uint64
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 删除订单商品
-		err := repository.NewOrderRepo(db).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+		err := repository.NewOrderRepo(tx).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
 		// 删除套餐子商品
 		if len(subProducts) > 0 {
 			for _, subProduct := range subProducts {
-				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
+				if errUpdate := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
 					return errors.WithMessage(errUpdate)
 				}
 			}
 		}
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
 		// 更新销售账单
-		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		if errUpdateSaleBill := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 			return errUpdateSaleBill
 		}
 		return nil
@@ -4838,19 +4840,19 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 	staff := ctx.GetStaff()
 	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
 
-	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		reasonRepo := repository.NewSaleOrderProductReasonRepo(db)
+	err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		reasonRepo := repository.NewSaleOrderProductReasonRepo(tx)
 
 		for _, saleOrder := range saleBill.SaleOrders {
 			// 保存订单
 			if len(saleBill.SaleOrders) == 1 {
 				// 账单中只有一个订单时，只能更新订单，不能再创建订单。因为业务上默认就是一个账单一个订单，没有有账单而没有订单的情况
-				if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderRecord(*saleOrder); err != nil {
 					return errors.WithMessage(err)
 				}
 			} else {
 				// 有拆单时使用
-				if err := repository.NewSaleOrderRepo(db).UpdateOrCreateSaleOrderRecord(*saleOrder); err != nil {
+				if err := repository.NewSaleOrderRepo(tx).UpdateOrCreateSaleOrderRecord(*saleOrder); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
@@ -4860,19 +4862,19 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 					continue
 				}
 				// 保存订单商品。只有标记更新的商品才会更新
-				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+				if err := repository.NewSaleOrderProductRepo(tx).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 					return errors.WithMessage(err)
 				}
 				for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
 					if saleOrderProductBom.GetUpdate() {
-						if err := repository.NewOrderProductBomRepo(db).UpdateOrCreateSaleOrderProductBomRecord(*saleOrderProductBom); err != nil {
+						if err := repository.NewOrderProductBomRepo(tx).UpdateOrCreateSaleOrderProductBomRecord(*saleOrderProductBom); err != nil {
 							return errors.WithMessage(err)
 						}
 					}
 				}
 				for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
 					if saleOrderProductAttribute.GetUpdate() {
-						if err := repository.NewSaleOrderProductAttributeRepo(db).UpdateOrCreateSaleOrderProductAttributeRecord(*saleOrderProductAttribute); err != nil {
+						if err := repository.NewSaleOrderProductAttributeRepo(tx).UpdateOrCreateSaleOrderProductAttributeRecord(*saleOrderProductAttribute); err != nil {
 							return errors.WithMessage(err)
 						}
 					}
@@ -4911,26 +4913,26 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 			}
 			// 保存自助餐顾客
 			for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
-				if err := repository.NewSaleOrderBuffetCustomerTypeRepo(db).UpdateOrCreateSaleOrderBuffetCustomerTypeRecord(*buffetCustomer); err != nil {
+				if err := repository.NewSaleOrderBuffetCustomerTypeRepo(tx).UpdateOrCreateSaleOrderBuffetCustomerTypeRecord(*buffetCustomer); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 			// 保存自助餐加钟商品
 			for _, buffetDelayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
-				if err := repository.NewSaleOrderBuffetDelayProductRepo(db).UpdateOrCreateSaleOrderBuffetDelayProductRecord(*buffetDelayProduct); err != nil {
+				if err := repository.NewSaleOrderBuffetDelayProductRepo(tx).UpdateOrCreateSaleOrderBuffetDelayProductRecord(*buffetDelayProduct); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 			// 更新账单设置
 			if option.SaleBillSetting != nil {
 				option.SaleBillSetting.Uuid = saleBill.SaleBillSetting.Uuid
-				if _, err := repository.NewOrderRepo(db).UpdateSaleBillSetting(*option.SaleBillSetting); err != nil {
+				if _, err := repository.NewOrderRepo(tx).UpdateSaleBillSetting(*option.SaleBillSetting); err != nil {
 					return errors.WithMessage(err)
 				}
 			}
 		}
 		// 保存账单。不能用这个方法来创建销售账单，故不使用UpdateOrCreate
-		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
 		return nil
