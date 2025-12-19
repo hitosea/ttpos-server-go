@@ -25,7 +25,7 @@ type OrderColumns struct {
 	Uuid               string // 系统唯一ID
 	ShopUuid           string // TTPOS店铺UUID
 	ProviderMerchantId string // 渠道商户ID (Provider Merchant ID)
-	PartnerOrderId     string // 平台订单号 (Grab Order ID)
+	ProviderOrderId    string // 平台订单号 (Grab Order ID)
 	ShopRefNo          string // TTPOS内部订单号
 	ShortOrderNumber   string // 短单号
 	ProviderName       string // 渠道: grab, foodpanda
@@ -62,7 +62,7 @@ var orderColumns = OrderColumns{
 	Uuid:               "uuid",
 	ShopUuid:           "shop_uuid",
 	ProviderMerchantId: "provider_merchant_id",
-	PartnerOrderId:     "partner_order_id",
+	ProviderOrderId:    "provider_order_id",
 	ShopRefNo:          "shop_ref_no",
 	ShortOrderNumber:   "short_order_number",
 	ProviderName:       "provider_name",

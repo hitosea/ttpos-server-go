@@ -14,7 +14,7 @@ type OrderItem struct {
 	g.Meta                `orm:"table:takeout_order_item, do:true"`
 	Id                    any         // 主键
 	OrderUuid             any         // 关联订单UUID
-	PartnerItemId         any         // 平台商品ID (Grab Item ID)
+	ProviderItemId        any         // 平台商品ID (Grab Item ID)
 	ItemName              any         // 商品名称
 	Quantity              any         // 数量
 	Price                 any         // 单价

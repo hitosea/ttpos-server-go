@@ -14,7 +14,7 @@ type Order struct {
 	Uuid               string      `json:"uuid"               orm:"uuid"                 description:"系统唯一ID"`                                                          // 系统唯一ID
 	ShopUuid           string      `json:"shopUuid"           orm:"shop_uuid"            description:"TTPOS店铺UUID"`                                                     // TTPOS店铺UUID
 	ProviderMerchantId string      `json:"providerMerchantId" orm:"provider_merchant_id" description:"渠道商户ID (Provider Merchant ID)"`                                   // 渠道商户ID (Provider Merchant ID)
-	PartnerOrderId     string      `json:"partnerOrderId"     orm:"partner_order_id"     description:"平台订单号 (Grab Order ID)"`                                           // 平台订单号 (Grab Order ID)
+	ProviderOrderId    string      `json:"providerOrderId"    orm:"provider_order_id"    description:"平台订单号 (Grab Order ID)"`                                           // 平台订单号 (Grab Order ID)
 	ShopRefNo          string      `json:"shopRefNo"          orm:"shop_ref_no"          description:"TTPOS内部订单号"`                                                      // TTPOS内部订单号
 	ShortOrderNumber   string      `json:"shortOrderNumber"   orm:"short_order_number"   description:"短单号"`                                                             // 短单号
 	ProviderName       string      `json:"providerName"       orm:"provider_name"        description:"渠道: grab, foodpanda"`                                             // 渠道: grab, foodpanda

@@ -16,7 +16,7 @@ type Order struct {
 	Uuid               any         // 系统唯一ID
 	ShopUuid           any         // TTPOS店铺UUID
 	ProviderMerchantId any         // 渠道商户ID (Provider Merchant ID)
-	PartnerOrderId     any         // 平台订单号 (Grab Order ID)
+	ProviderOrderId    any         // 平台订单号 (Grab Order ID)
 	ShopRefNo          any         // TTPOS内部订单号
 	ShortOrderNumber   any         // 短单号
 	ProviderName       any         // 渠道: grab, foodpanda

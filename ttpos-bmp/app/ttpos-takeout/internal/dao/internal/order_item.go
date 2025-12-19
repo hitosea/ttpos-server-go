@@ -23,7 +23,7 @@ type OrderItemDao struct {
 type OrderItemColumns struct {
 	Id                    string // 主键
 	OrderUuid             string // 关联订单UUID
-	PartnerItemId         string // 平台商品ID (Grab Item ID)
+	ProviderItemId        string // 平台商品ID (Grab Item ID)
 	ItemName              string // 商品名称
 	Quantity              string // 数量
 	Price                 string // 单价
@@ -39,7 +39,7 @@ type OrderItemColumns struct {
 var orderItemColumns = OrderItemColumns{
 	Id:                    "id",
 	OrderUuid:             "order_uuid",
-	PartnerItemId:         "partner_item_id",
+	ProviderItemId:        "provider_item_id",
 	ItemName:              "item_name",
 	Quantity:              "quantity",
 	Price:                 "price",

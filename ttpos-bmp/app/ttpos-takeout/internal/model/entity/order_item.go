@@ -12,7 +12,7 @@ import (
 type OrderItem struct {
 	Id                    int64       `json:"id"                    orm:"id"                       description:"主键"`                    // 主键
 	OrderUuid             string      `json:"orderUuid"             orm:"order_uuid"               description:"关联订单UUID"`              // 关联订单UUID
-	PartnerItemId         string      `json:"partnerItemId"         orm:"partner_item_id"          description:"平台商品ID (Grab Item ID)"` // 平台商品ID (Grab Item ID)
+	ProviderItemId        string      `json:"providerItemId"        orm:"provider_item_id"         description:"平台商品ID (Grab Item ID)"` // 平台商品ID (Grab Item ID)
 	ItemName              string      `json:"itemName"              orm:"item_name"                description:"商品名称"`                  // 商品名称
 	Quantity              int         `json:"quantity"              orm:"quantity"                 description:"数量"`                    // 数量
 	Price                 float64     `json:"price"                 orm:"price"                    description:"单价"`                    // 单价

@@ -139,7 +139,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 			Uuid:               orderUUID,
 			ShopUuid:           shopUuid,
 			ProviderMerchantId: req.GetPartnerMerchantID(),
-			PartnerOrderId:     req.GetOrderID(),
+			ProviderOrderId:    req.GetOrderID(),
 			ShortOrderNumber:   req.GetShortOrderNumber(),
 			ProviderName:       string(consts.ProviderGrab),
 			OrderType:          getOrderTypeFromSDK(req),
@@ -188,7 +188,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 
 			itemDo := &do.OrderItem{
 				OrderUuid:             orderUUID,
-				PartnerItemId:         item.GetId(),
+				ProviderItemId:        item.GetId(),
 				ItemName:              item.GetSpecifications(), // Grab 用 specifications 字段表示商品名
 				Quantity:              int(item.GetQuantity()),
 				Price:                 float64(item.GetPrice()) / divisor,
@@ -229,7 +229,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	var order entity.Order
 	err := dao.Order.Ctx(ctx).
 		Where(dao.Order.Columns().ProviderName, string(consts.ProviderGrab)).
-		Where(dao.Order.Columns().PartnerOrderId, req.GetOrderID()).
+		Where(dao.Order.Columns().ProviderOrderId, req.GetOrderID()).
 		Scan(&order)
 	if err != nil {
 		g.Log().Errorf(ctx, "订单不存在: %s", req.GetOrderID())

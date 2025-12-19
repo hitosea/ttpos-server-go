@@ -16,6 +16,8 @@ gfcli:
       - link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
         descriptionTag: true
         removePrefix: "takeout_"
+        tablesEx: "schema_migrations"
+
 
   run:
     path: "./bin"
