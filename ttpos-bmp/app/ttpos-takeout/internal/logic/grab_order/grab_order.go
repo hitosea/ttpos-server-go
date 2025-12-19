@@ -3,18 +3,19 @@ package grab_order
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
-	"github.com/google/uuid"
+	"github.com/gogf/gf/v2/util/guid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
-	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 	"ttpos-bmp/internal/pkg/queue"
@@ -23,6 +24,8 @@ import (
 const (
 	// TopicGrabOrder Grab 订单 MQ Topic
 	TopicGrabOrder = "takeout_grab_order"
+	// ProviderNameGrab Grab 供应商名称常量
+	ProviderNameGrab = string(consts.ProviderGrab) // "grab"
 )
 
 // OrderEvent 订单事件
@@ -51,16 +54,9 @@ func New() *sGrabOrder {
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
 // 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
-func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, body []byte) error {
-	// 1. 解析请求 - 使用 SDK Model
-	var req grabfood.SubmitOrderRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		g.Log().Errorf(ctx, "解析提交订单请求失败: %v", err)
-		return fmt.Errorf("解析请求失败: %w", err)
-	}
-
-	// 2. 保存订单
-	orderUUID, err := s.saveOrderFromSDK(ctx, &req, body)
+func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error {
+	// 保存订单
+	orderUUID, err := s.saveOrderFromSDK(ctx, req)
 	if err != nil {
 		g.Log().Errorf(ctx, "保存订单失败: %v", err)
 		return fmt.Errorf("保存订单失败: %w", err)
@@ -69,7 +65,7 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, body []byte) error {
 	// 3. 发送 MQ 消息
 	event := &OrderEvent{
 		Action:       "create",
-		ProviderName: "grab",
+		ProviderName: string(consts.ProviderGrab),
 		OrderUUID:    orderUUID,
 		OrderID:      req.GetOrderID(),
 		MerchantID:   req.GetPartnerMerchantID(), // 保持 MQ 事件中的字段名不变
@@ -86,8 +82,23 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, body []byte) error {
 }
 
 // saveOrderFromSDK 保存订单到数据库 (使用 SDK Model)
-func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest, rawData []byte) (string, error) {
-	orderUUID := uuid.New().String()
+func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest) (string, error) {
+	orderUUID := guid.S()
+
+	// 查询 ShopUuid - 优先使用 partnerMerchantID
+	shopUuid := req.GetPartnerMerchantID()
+	if shopUuid == "" {
+		// fallback 到 merchantID
+		cfg, err := service.ShopProviderCfg().GetShopProviderCfgByMerchantID(ctx, req.GetMerchantID(), string(consts.ProviderGrab))
+		if err != nil {
+			g.Log().Warningf(ctx, "查询门店配置失败: merchantID=%s, error=%v", req.GetMerchantID(), err)
+		} else if cfg != nil {
+			shopUuid = strconv.FormatUint(cfg.ShopUuid, 10)
+			g.Log().Infof(ctx, "找到门店配置: merchantID=%s, shopUuid=%s", req.GetMerchantID(), shopUuid)
+		} else {
+			g.Log().Warningf(ctx, "未找到门店配置: merchantID=%s, provider=%s", req.GetMerchantID(), string(consts.ProviderGrab))
+		}
+	}
 
 	// 转换价格 (最小单位 -> 元)
 	currency := req.GetCurrency()
@@ -105,8 +116,8 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 	if req.HasReceiver() {
 		receiver := req.GetReceiver()
 		if receiver.HasAddress() {
-			if addrBytes, err := json.Marshal(receiver.GetAddress()); err == nil {
-				deliveryAddressJSON = string(addrBytes)
+			if addrJSON, err := gjson.EncodeString(receiver.GetAddress()); err == nil {
+				deliveryAddressJSON = addrJSON
 			}
 		}
 	}
@@ -114,16 +125,23 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 	// 获取价格信息
 	price := req.GetPrice()
 
+	// 序列化请求体用于保存原始数据
+	rawData, err := gjson.EncodeString(req)
+	if err != nil {
+		g.Log().Errorf(ctx, "序列化请求失败: %v", err)
+		return "", fmt.Errorf("序列化请求失败: %w", err)
+	}
+
 	// 开启事务
-	err := dao.Order.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+	err = dao.Order.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		// 1. 插入订单主表
 		orderDo := &do.Order{
 			Uuid:               orderUUID,
-			ShopUuid:           "", // TODO: 从配置或上下文获取 shop_uuid
+			ShopUuid:           shopUuid,
 			ProviderMerchantId: req.GetPartnerMerchantID(),
 			PartnerOrderId:     req.GetOrderID(),
 			ShortOrderNumber:   req.GetShortOrderNumber(),
-			ProviderName:       "grab",
+			ProviderName:       string(consts.ProviderGrab),
 			OrderType:          getOrderTypeFromSDK(req),
 			OrderTime:          parseTime(req.GetOrderTime()),
 			OrderStatus:        req.GetOrderState(),
@@ -143,9 +161,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 			CustomerPhone:      getCustomerPhoneFromSDK(req),
 			DeliveryAddress:    deliveryAddressJSON,
 			Note:               "", // 从 items 中提取
-			RawData:            string(rawData),
-			CreatedAt:          gtime.Now(),
-			UpdatedAt:          gtime.Now(),
+			RawData:            rawData,
 		}
 
 		_, err := dao.Order.Ctx(ctx).Data(orderDo).Insert()
@@ -157,8 +173,8 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 		for _, item := range req.GetItems() {
 			var modifiersJSON string
 			if len(item.GetModifiers()) > 0 {
-				if mBytes, err := json.Marshal(item.GetModifiers()); err == nil {
-					modifiersJSON = string(mBytes)
+				if mJSON, err := gjson.EncodeString(item.GetModifiers()); err == nil {
+					modifiersJSON = mJSON
 				}
 			}
 
@@ -180,7 +196,6 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 				Specifications:        item.GetSpecifications(),
 				Modifiers:             modifiersJSON,
 				OutOfStockInstruction: outOfStockInstr,
-				CreatedAt:             gtime.Now(),
 			}
 
 			_, err := dao.OrderItem.Ctx(ctx).Data(itemDo).Insert()
@@ -205,7 +220,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) error {
 	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.OrderStateRequest
-	if err := json.Unmarshal(body, &req); err != nil {
+	if err := gjson.DecodeTo(body, &req); err != nil {
 		g.Log().Errorf(ctx, "解析订单状态请求失败: %v", err)
 		return fmt.Errorf("解析请求失败: %w", err)
 	}
@@ -213,7 +228,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	// 2. 查询订单
 	var order entity.Order
 	err := dao.Order.Ctx(ctx).
-		Where(dao.Order.Columns().ProviderName, "grab").
+		Where(dao.Order.Columns().ProviderName, string(consts.ProviderGrab)).
 		Where(dao.Order.Columns().PartnerOrderId, req.GetOrderID()).
 		Scan(&order)
 	if err != nil {
@@ -222,7 +237,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	}
 
 	// 4. 记录状态变更日志
-	logUUID := uuid.New().String()
+	logUUID := guid.S()
 	var driverEta int
 	if req.HasDriverETA() {
 		driverEta = int(req.GetDriverETA())
@@ -231,14 +246,13 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	logDo := &do.OrderStatusLog{
 		Uuid:         logUUID,
 		OrderUuid:    order.Uuid,
-		ProviderName: "grab",
+		ProviderName: string(consts.ProviderGrab),
 		StatusBefore: order.OrderStatus,
 		StatusAfter:  req.GetState(),
 		ChangeSource: "WEBHOOK",
 		DriverEta:    driverEta,
 		Remark:       req.GetMessage(),
 		RawData:      string(body),
-		CreatedAt:    gtime.Now(),
 	}
 
 	_, err = dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert()
@@ -262,7 +276,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	// 6. 发送 MQ 消息
 	event := &OrderEvent{
 		Action:       "status_update",
-		ProviderName: "grab",
+		ProviderName: string(consts.ProviderGrab),
 		OrderUUID:    order.Uuid,
 		OrderID:      req.GetOrderID(),
 		MerchantID:   req.GetPartnerMerchantID(), // 保持 MQ 事件中的字段名不变
@@ -348,48 +362,4 @@ func getCustomerPhoneFromSDK(req *grabfood.SubmitOrderRequest) string {
 		return receiver.GetPhones()
 	}
 	return ""
-}
-
-// ============================================================================
-// 旧 DTO 辅助函数 (保留以兼容测试)
-// Deprecated: Phase 3 迁移后删除
-// ============================================================================
-
-// getOrderType 从旧 DTO 获取订单类型
-// Deprecated: 使用 getOrderTypeFromSDK
-func getOrderType(req *grabDto.SubmitOrderRequest) string {
-	if req.DineIn != nil {
-		return "DineIn"
-	}
-	return "DeliveryByProvider"
-}
-
-// getEaterCount 从旧 DTO 获取用餐人数
-// Deprecated: 使用 getEaterCountFromSDK
-func getEaterCount(dineIn *grabDto.DineInInfo) int {
-	if dineIn != nil {
-		return dineIn.EaterCount
-	}
-	return 0
-}
-
-// getCustomerName 从旧 DTO 获取客户姓名
-// Deprecated: 使用 getCustomerNameFromSDK
-func getCustomerName(receiver *grabDto.Receiver) string {
-	if receiver != nil {
-		return receiver.Name
-	}
-	return ""
-}
-
-// getCustomerPhone 从旧 DTO 获取客户电话
-// Deprecated: 使用 getCustomerPhoneFromSDK
-func getCustomerPhone(receiver *grabDto.Receiver) string {
-	if receiver == nil {
-		return ""
-	}
-	if receiver.VirtualContact != nil && receiver.VirtualContact.Phone != "" {
-		return receiver.VirtualContact.Phone
-	}
-	return receiver.Phone
 }

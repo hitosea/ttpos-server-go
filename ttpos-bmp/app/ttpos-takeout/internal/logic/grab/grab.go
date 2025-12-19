@@ -192,8 +192,8 @@ func (s *sGrab) VerifyWebhookSignature(ctx context.Context, signature, timestamp
 
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 // 签名验证已由中间件完成
-func (s *sGrab) HandleSubmitOrder(ctx context.Context, body []byte) error {
-	return service.GrabOrder().HandleSubmitOrder(ctx, body)
+func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error {
+	return service.GrabOrder().HandleSubmitOrder(ctx, req)
 }
 
 // HandlePushOrderState 处理订单状态变更 Webhook

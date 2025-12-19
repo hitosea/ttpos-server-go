@@ -26,7 +26,7 @@ type (
 		VerifyWebhookSignature(ctx context.Context, signature string, timestamp string, body []byte) error
 		// HandleSubmitOrder 处理 Grab 提交订单 Webhook
 		// 签名验证已由中间件完成
-		HandleSubmitOrder(ctx context.Context, body []byte) error
+		HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error
 		// HandlePushOrderState 处理订单状态变更 Webhook
 		// 签名验证已由中间件完成
 		HandlePushOrderState(ctx context.Context, body []byte) error

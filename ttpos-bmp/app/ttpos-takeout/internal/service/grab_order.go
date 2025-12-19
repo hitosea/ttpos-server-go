@@ -7,6 +7,8 @@ package service
 
 import (
 	"context"
+
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
 
 type (
@@ -14,7 +16,7 @@ type (
 		// HandleSubmitOrder 处理 Grab 提交订单 Webhook
 		// 签名验证已由中间件完成，此处只处理业务逻辑
 		// 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
-		HandleSubmitOrder(ctx context.Context, body []byte) error
+		HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error
 		// HandlePushOrderState 处理订单状态变更 Webhook
 		// 签名验证已由中间件完成，此处只处理业务逻辑
 		// 使用 SDK grabfood.OrderStateRequest 替换自定义 DTO
