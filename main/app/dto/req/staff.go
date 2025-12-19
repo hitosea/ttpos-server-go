@@ -217,7 +217,8 @@ var GetStaffListReqReqMessage = map[string]string{
 }
 
 type SearchStaffByKeywordReq struct {
-	Keyword string `form:"keyword" binding:"required"` // 关键词, 邮箱、手机号
+	Field   string `form:"field" binding:"required,oneof=email phone"` // 字段, 邮箱、手机号
+	Keyword string `form:"keyword" binding:"required"`                 // 关键词, 邮箱、手机号
 }
 
 type GetStaffDetailReq struct {

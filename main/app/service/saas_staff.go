@@ -3,6 +3,7 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -18,7 +19,7 @@ type ISaasStaffSrv interface {
 	// GetDefaultCompanyUuid 获取默认门店UUID（登录时使用，优先使用 last_company_uuid）
 	GetDefaultCompanyUuid(ctx context.Context, staffUuid uint64) (uint64, error)
 	// SearchStaff 根据关键字（email或phone）搜索员工，返回在当前门店可见范围内的门店和角色信息
-	SearchStaff(ctx context.Context, keyword string) *resp.SearchStaffResp
+	SearchStaff(ctx context.Context, searchReq req.SearchStaffByKeywordReq) *resp.SearchStaffResp
 }
 
 func NewSaasStaffSrv(dbm *database.DBManager) ISaasStaffSrv {
@@ -96,7 +97,7 @@ func (s *saasStaffSrv) GetDefaultCompanyUuid(ctx context.Context, staffUuid uint
 }
 
 // SearchStaff 根据关键字（email或phone）搜索员工，返回在当前门店可见范围内的门店和角色信息
-func (s *saasStaffSrv) SearchStaff(ctx context.Context, keyword string) *resp.SearchStaffResp {
+func (s *saasStaffSrv) SearchStaff(ctx context.Context, searchReq req.SearchStaffByKeywordReq) *resp.SearchStaffResp {
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
@@ -106,7 +107,7 @@ func (s *saasStaffSrv) SearchStaff(ctx context.Context, keyword string) *resp.Se
 	var err error
 
 	// 通过邮箱或手机号查询
-	saasStaff, err = saasStaffRepo.GetByEmailOrPhone(keyword)
+	saasStaff, err = saasStaffRepo.GetByEmailOrPhone(searchReq.Field, searchReq.Keyword)
 	if err != nil || saasStaff == nil {
 		return &resp.SearchStaffResp{
 			CompanyList: make([]*resp.SearchStaffCompanyInfo, 0),
