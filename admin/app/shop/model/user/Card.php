@@ -76,7 +76,7 @@ class Card extends CardModel
                 }
                 // 检查会员卡号是否已存在
                 $record = (new User)::where('member_card_no', '=', $cardNumber)->where('uuid', '<>', $userInfo['uuid'])->find();
-                if ($record || in_array($cardNumber, $exists)) {
+                if ($record || in_array($cardNumber, $exists, true)) {
                     $this->error = '卡号重复';
                     return false;
                 }
@@ -154,7 +154,7 @@ class Card extends CardModel
                         ], ['order_no' => '后台发放会员卡赠送']);
                     }
                 } else {
-                    $user->save(['member_card_no' => $cardNumber]);
+                    $user->force(true)->save(['member_card_no' => $cardNumber]);
                 }
                 $this->commit();
             } catch (\Exception $e) {

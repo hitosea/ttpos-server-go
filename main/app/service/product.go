@@ -5755,7 +5755,6 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		}
 		flavorListResult = *result
 		flavorListResult.Status = req.Status
-		flavorListResult.StockNum = 99999999
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
 			var attributes []CheckProductAttributeGroupParam
@@ -5845,7 +5844,6 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		flavorListResult = CheckProductFlavorResult{
 			MinPrice: packageResult.Price,
 			MaxPrice: packageResult.Price,
-			StockNum: packageResult.StockNum,
 			Status:   req.Status,
 			Flavors: []CheckProductFlavorItemResult{
 				{
@@ -6079,7 +6077,6 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		}
 		flavorListResult = *result
 		flavorListResult.Status = req.Status
-		flavorListResult.StockNum = 99999999
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
 			var attributes []CheckProductAttributeGroupParam
@@ -6756,7 +6753,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 						ErpCode:            erpCode,
 						ProductFlavorUuid:  flavor.Uuid,
 						ProductPackageUuid: params.ProductPackageUuid,
-						StockNum:           params.FlavorListResult.StockNum,
 						BarcodeValue:       flavor.BarcodeValue,
 						InternalCode:       flavor.InternalCode,
 						Status:             params.FlavorListResult.Status,
@@ -6771,11 +6767,9 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 						"erp_code":             erpCode,
 						"product_flavor_uuid":  flavor.Uuid,
 						"product_package_uuid": params.ProductPackageUuid,
-						"stock_num":            params.FlavorListResult.StockNum,
 						"barcode_value":        flavor.BarcodeValue,
 						"internal_code":        flavor.InternalCode,
 						"status":               params.FlavorListResult.Status,
-						"is_open_stock":        1,
 						"delete_time":          0,
 					}, commonRepo.WhereByUuid(flavorUuid))
 					if err != nil {
@@ -6818,7 +6812,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					"barcode_value":        flavor.BarcodeValue,
 					"internal_code":        flavor.InternalCode,
 					"status":               params.FlavorListResult.Status,
-					"is_open_stock":        1,
 				}
 
 				err = productBomRepo.UpdateProductBom(updateData, commonRepo.WhereByUuid(flavor.BomUuid))
@@ -6897,7 +6890,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					Name:               sauce.Name,
 					ProductSauceUuid:   sauce.Uuid,
 					ProductPackageUuid: params.ProductPackageUuid,
-					StockNum:           99999999,
 					Status:             params.FlavorListResult.Status,
 					IsDefaultSelect:    sauce.IsDefaultSelected,
 				})
@@ -6910,9 +6902,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					"name":                 sauce.Name,
 					"product_sauce_uuid":   sauce.Uuid,
 					"product_package_uuid": params.ProductPackageUuid,
-					"stock_num":            99999999,
 					"status":               params.FlavorListResult.Status,
-					"is_open_stock":        1,
 					"is_default_select":    sauce.IsDefaultSelected,
 				}, commonRepo.WhereByUuid(sauce.BomUuid))
 				if err != nil {

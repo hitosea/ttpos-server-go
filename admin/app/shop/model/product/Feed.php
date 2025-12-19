@@ -182,13 +182,6 @@ class Feed extends FeedModel
             $delete_product_ids = array_diff($current_product_ids, $product_ids) ?: [];
             // 计算需要新增的产品ID
             $add_product_ids = array_diff($product_ids, $current_product_ids) ?: [];
-            // 获取材料最小库存
-            $stock = RelatedMaterial::alias('r')
-                ->join('material m', 'r.material_uuid = m.uuid')
-                ->field('r.related_uuid, LEAST(FLOOR(MIN(m.stock_num / r.num)), 99999999) AS min_stock_num')
-                ->where('r.related_uuid', $feed_id)
-                ->find();
-            $min_stock_num = $stock['min_stock_num'] ?: self::MAX_MATERIAL_NUM;
             // 删除变动的关系
             if (!empty($delete_product_ids)) {
                 $chunks = array_chunk($delete_product_ids, 1000);
@@ -209,7 +202,6 @@ class Feed extends FeedModel
                         'product_sauce_uuid' => $feed_id,
                         'name'  => $this['name'],
                         'price' => $this['price'],
-                        'stock_num' => $min_stock_num,
                         'create_time' => time(),
                         'update_time' => time(),
                         'status' => 1,

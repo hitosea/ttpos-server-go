@@ -871,11 +871,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		ctx.SetDB(tx) // 确保 returnInventory 使用事务
-		if err := s.returnInventory(ctx, saleBill); err != nil {
-			tx.Rollback()
-			return errors.WithMessage(err)
-		}
+		s.returnInventory(ctx, saleBill)
 	}
 
 	// 如果是桌台订单
@@ -919,9 +915,8 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
 
-	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
-		tx.Rollback()
 		return errors.WithMessage(err, "销售账单不存在")
 	}
 	saleBill.SetCanceled()
@@ -1219,9 +1214,11 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 						}
 						// 更新退款状态
 						returnOrderRepo := repository.NewReturnOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
-						if err := returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
+						returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
 							returnOrderRepo.WhereUuid(returnOrderAmount.Uuid),
-						}, returnOrderAmount); err != nil {
+						}, returnOrderAmount)
+						if err != nil {
+							fmt.Println("更新退款状态失败", err)
 							logger.Logger.Error("更新退款状态失败", zap.Error(err))
 						}
 					})
@@ -1990,6 +1987,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					}); err != nil {
 						return errors.WithMessage(err)
 					}
+
 				}
 				// 取现金，更新钱箱
 				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
@@ -2470,22 +2468,10 @@ func (s *orderSrv) verifyPasswordForDiscount(ctx context.Context, req req.Verify
 		return false, errors.WithMessage(errors.New("不是权限员工，请确认信息"), "不是权限员工，请确认信息")
 	}
 
-	// 4. 验证权限密码（支持 MD5 和 bcrypt）
-	isValid, needUpgrade := utils.VerifyPassword(req.Password, staff.PermissionPassword)
-	if !isValid {
+	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
+	encryptedPassword := utils.EncryptPassword(req.Password)
+	if staff.PermissionPassword != encryptedPassword {
 		return false, errors.WithMessage(errors.New("密码错误"), "密码错误")
-	}
-
-	// 如果需要升级权限密码，异步升级为 bcrypt（可选）
-	if needUpgrade {
-		utils.UpgradePasswordAsync(
-			s.dbm.GetDB(staff.CompanyUuid),
-			"ttpos_staff",
-			"permission_password",
-			"uuid",
-			staff.Uuid,
-			req.Password,
-		)
 	}
 
 	// 5. 返回验证结果
@@ -2527,22 +2513,10 @@ func (s *orderSrv) verifyPasswordForRefund(ctx context.Context, req req.VerifyPa
 		return false, errors.New("不是权限员工，请确认信息")
 	}
 
-	// 4. 验证权限密码（支持 MD5 和 bcrypt）
-	isValid, needUpgrade := utils.VerifyPassword(req.Password, staff.PermissionPassword)
-	if !isValid {
+	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
+	encryptedPassword := utils.EncryptPassword(req.Password)
+	if staff.PermissionPassword != encryptedPassword {
 		return false, errors.New("密码错误")
-	}
-
-	// 如果需要升级权限密码，异步升级为 bcrypt（可选）
-	if needUpgrade {
-		utils.UpgradePasswordAsync(
-			s.dbm.GetDB(staff.CompanyUuid),
-			"ttpos_staff",
-			"permission_password",
-			"uuid",
-			staff.Uuid,
-			req.Password,
-		)
 	}
 
 	// 5. 返回验证结果

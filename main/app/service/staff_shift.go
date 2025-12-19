@@ -175,10 +175,6 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 		DutyNo:            log.ShiftNo,
 		ExcludeDataManage: excludeDataManage,
 	})
-	managePaymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
-		DutyNo:         log.ShiftNo,
-		OnlyDataManage: onlyDataManage,
-	})
 	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{
 		DutyNo:            log.ShiftNo,
 		ExcludeDataManage: excludeDataManage,
@@ -200,9 +196,15 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 
 	// 数据管理现金收入
 	manageCash := decimal.Zero
-	for _, payment := range managePaymentData.PaymentList {
-		if payment.PaymentCode == constant.PaymentMethodCodeCash {
-			manageCash = manageCash.Add(decimal.NewFromFloat(payment.TotalPaymentAmount))
+	if excludeDataManage && onlyDataManage {
+		managePaymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
+			DutyNo:         log.ShiftNo,
+			OnlyDataManage: onlyDataManage,
+		})
+		for _, payment := range managePaymentData.PaymentList {
+			if payment.PaymentCode == constant.PaymentMethodCodeCash {
+				manageCash = manageCash.Add(decimal.NewFromFloat(payment.TotalPaymentAmount))
+			}
 		}
 	}
 
@@ -301,13 +303,15 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		}
 
 		manageCash := decimal.Zero
-		managePaymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
-			DutyNo:         shiftLog.ShiftNo,
-			OnlyDataManage: onlyDataManage,
-		})
-		for _, payment := range managePaymentData.PaymentList {
-			if payment.PaymentCode == constant.PaymentMethodCodeCash {
-				manageCash = manageCash.Add(decimal.NewFromFloat(payment.TotalPaymentAmount))
+		if excludeDataManage && onlyDataManage {
+			managePaymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
+				DutyNo:         shiftLog.ShiftNo,
+				OnlyDataManage: onlyDataManage,
+			})
+			for _, payment := range managePaymentData.PaymentList {
+				if payment.PaymentCode == constant.PaymentMethodCodeCash {
+					manageCash = manageCash.Add(decimal.NewFromFloat(payment.TotalPaymentAmount))
+				}
 			}
 		}
 
@@ -960,7 +964,6 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
 	dataSetting := settingSrv.GetDataManageSetting(ctx)
 	excludeDataManage := companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
-	logger.Logger.Info("excludeDataManage", zap.Any("excludeDataManage", excludeDataManage))
 
 	// 获取交班详情
 	// uploadFileSrv := service.NewUploadFileSrv(s.dbm)

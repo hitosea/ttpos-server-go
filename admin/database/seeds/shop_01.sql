@@ -511,7 +511,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_status_delete_time` (`status`, `delete_time`),
     INDEX `idx_is_accept_order` (`is_accept_order`),
-    INDEX `idx_deletetime_saleorderuuid` (`delete_time`, `sale_order_uuid`),
+    INDEX `ttpos_sale_order_product_sale_order_uuid_IDX` (`sale_order_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单商品表';
 

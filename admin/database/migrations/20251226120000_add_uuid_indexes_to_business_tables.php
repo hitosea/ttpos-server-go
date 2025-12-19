@@ -57,6 +57,7 @@ class AddUuidIndexesToBusinessTables extends Migrator
         $this->checkAndAddIndex('sale_order_product', 'idx_h5_order_product_uuid', ['h5_order_product_uuid']);
         $this->checkAndAddIndex('sale_order_product', 'idx_package_uuid', ['package_uuid']);
         $this->checkAndAddIndex('sale_order_product', 'idx_batch_tag_uuid', ['batch_tag_uuid']);
+        $this->checkAndAddIndex('sale_order_product', 'ttpos_sale_order_product_sale_order_uuid_IDX', ['sale_order_uuid']);
 
         // ==================== 销售订单商品原因表 (sale_order_product_reason) ====================
         $this->checkAndAddIndex('sale_order_product_reason', 'idx_return_food_reason_uuid', ['return_food_reason_uuid']);
@@ -217,6 +218,7 @@ class AddUuidIndexesToBusinessTables extends Migrator
         $this->removeIndexIfExists('sale_order_product', 'idx_h5_order_product_uuid', ['h5_order_product_uuid']);
         $this->removeIndexIfExists('sale_order_product', 'idx_package_uuid', ['package_uuid']);
         $this->removeIndexIfExists('sale_order_product', 'idx_batch_tag_uuid', ['batch_tag_uuid']);
+        $this->removeIndexIfExists('sale_order_product', 'ttpos_sale_order_product_sale_order_uuid_IDX', ['sale_order_uuid']);
 
         // 销售订单商品原因表
         $this->removeIndexIfExists('sale_order_product_reason', 'idx_return_food_reason_uuid', ['return_food_reason_uuid']);
@@ -339,7 +341,7 @@ class AddUuidIndexesToBusinessTables extends Migrator
             $table = $this->table($tableName);
             
             // 检查索引是否已存在（使用 hasIndexByName 方法）
-            if ($table->hasIndex($indexName)) {
+            if ($table->hasIndexByName($indexName)) {
                 return;
             }
 
@@ -349,6 +351,10 @@ class AddUuidIndexesToBusinessTables extends Migrator
                 'unique' => false
             ])->update();
         } catch (\Exception $e) {
+            echo "检查并添加索引失败: " . $e->getMessage() . "\n";
+            echo "表名: " . $tableName . "\n";
+            echo "索引名: " . $indexName . "\n";
+            echo "字段: " . implode(', ', $columns) . "\n";
             // 索引已存在或其他错误，忽略
         }
     }
@@ -370,7 +376,7 @@ class AddUuidIndexesToBusinessTables extends Migrator
             $table = $this->table($tableName);
             
             // 检查索引是否存在
-            if ($table->hasIndex($indexName)) {
+            if ($table->hasIndexByName($indexName)) {
                 $table->removeIndex($columns, [
                     'name' => $indexName
                 ])->update();
