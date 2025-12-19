@@ -1905,6 +1905,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetDB(db)
 		// 删除销售订单原料
 		if err := repository.NewSaleOrderMaterialRepo(db).DeleteSaleOrderMaterial(saleBill.Uuid); err != nil {
 			return errors.WithMessage(err)
@@ -1978,7 +1980,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				}
 				// 如果是余额支付，则退款到余额
 				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
-					if err := s.memberSrv.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+					if err := s.memberSrv.HandleMemberBalance(ctxCopy, MemberBalanceChangeReq{
 						MemberUuid:  saleOrder.ConsumerUuid,
 						Money:       paymentOrder.BalanceAmount,
 						GiftMoney:   paymentOrder.GiftBalanceAmount,
