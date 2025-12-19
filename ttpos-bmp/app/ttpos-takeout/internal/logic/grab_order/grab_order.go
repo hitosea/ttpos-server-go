@@ -3,11 +3,11 @@ package grab_order
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/guid"
@@ -59,7 +59,7 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, req *grabfood.Submit
 	orderUUID, err := s.saveOrderFromSDK(ctx, req)
 	if err != nil {
 		g.Log().Errorf(ctx, "保存订单失败: %v", err)
-		return fmt.Errorf("保存订单失败: %w", err)
+		return gerror.Wrap(err, "保存订单失败")
 	}
 
 	// 3. 发送 MQ 消息
@@ -129,7 +129,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 	rawData, err := gjson.EncodeString(req)
 	if err != nil {
 		g.Log().Errorf(ctx, "序列化请求失败: %v", err)
-		return "", fmt.Errorf("序列化请求失败: %w", err)
+		return "", gerror.Wrap(err, "序列化请求失败")
 	}
 
 	// 开启事务
@@ -166,11 +166,12 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 
 		_, err := dao.Order.Ctx(ctx).Data(orderDo).Insert()
 		if err != nil {
-			return fmt.Errorf("插入订单失败: %w", err)
+			return gerror.Wrap(err, "插入订单失败")
 		}
 
 		// 2. 插入订单明细
 		for _, item := range req.GetItems() {
+			// modifiers 字段已改为 TEXT 类型，可以直接使用字符串
 			var modifiersJSON string
 			if len(item.GetModifiers()) > 0 {
 				if mJSON, err := gjson.EncodeString(item.GetModifiers()); err == nil {
@@ -200,7 +201,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 
 			_, err := dao.OrderItem.Ctx(ctx).Data(itemDo).Insert()
 			if err != nil {
-				return fmt.Errorf("插入订单明细失败: %w", err)
+				return gerror.Wrap(err, "插入订单明细失败")
 			}
 		}
 
@@ -222,7 +223,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	var req grabfood.OrderStateRequest
 	if err := gjson.DecodeTo(body, &req); err != nil {
 		g.Log().Errorf(ctx, "解析订单状态请求失败: %v", err)
-		return fmt.Errorf("解析请求失败: %w", err)
+		return gerror.Wrap(err, "解析请求失败")
 	}
 
 	// 2. 查询订单
@@ -233,7 +234,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 		Scan(&order)
 	if err != nil {
 		g.Log().Errorf(ctx, "订单不存在: %s", req.GetOrderID())
-		return fmt.Errorf("订单不存在: %s", req.GetOrderID())
+		return gerror.Newf("订单不存在: %s", req.GetOrderID())
 	}
 
 	// 4. 记录状态变更日志
@@ -258,7 +259,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 	_, err = dao.OrderStatusLog.Ctx(ctx).Data(logDo).Insert()
 	if err != nil {
 		g.Log().Errorf(ctx, "插入状态日志失败: %v", err)
-		return fmt.Errorf("插入状态日志失败: %w", err)
+		return gerror.Wrap(err, "插入状态日志失败")
 	}
 
 	// 5. 更新订单状态
@@ -270,7 +271,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, body []byte) erro
 		}).Update()
 	if err != nil {
 		g.Log().Errorf(ctx, "更新订单状态失败: %v", err)
-		return fmt.Errorf("更新订单状态失败: %w", err)
+		return gerror.Wrap(err, "更新订单状态失败")
 	}
 
 	// 6. 发送 MQ 消息

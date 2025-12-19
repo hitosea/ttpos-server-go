@@ -92,7 +92,7 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 			Uuid:               orderUuid,
 			ShopUuid:           "", // TODO: 从配置或上下文获取 shop_uuid
 			ProviderMerchantId: "", // Skootar 没有 merchant_id
-			PartnerOrderId:     resp.JobDetail.JobId,
+			ProviderOrderId:    resp.JobDetail.JobId,
 			ShopRefNo:          req.ShopOrderUuid, // TTPOS 内部订单号
 			ProviderName:       gconv.String(consts.ProviderSkootar),
 			OrderStatus:        gconv.String(resp.JobDetail.JobStatus),

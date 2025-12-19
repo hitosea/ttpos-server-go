@@ -40,8 +40,8 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 
 		// 2. 查询主表订单
 		orderModel = dao.Order.Ctx(ctx).TX(tx).Where(do.Order{
-			PartnerOrderId: req.JobId,
-			ProviderName:   consts.ProviderSkootar,
+			ProviderOrderId: req.JobId,
+			ProviderName:    consts.ProviderSkootar,
 		})
 		if err = orderModel.Scan(&order); err != nil {
 			return err

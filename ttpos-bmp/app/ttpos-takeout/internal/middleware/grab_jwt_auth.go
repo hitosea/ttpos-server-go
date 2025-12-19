@@ -110,6 +110,8 @@ func MiddlewareDirectResponse(r *ghttp.Request) {
 			code = gcode.CodeInternalError
 		}
 		msg = err.Error()
+		// 根据错误码设置 HTTP status
+		r.Response.Status = mapCodeToHTTPStatus(code)
 		r.Response.WriteJsonExit(g.Map{
 			"code":    code,
 			"message": msg,
@@ -134,6 +136,29 @@ func MiddlewareDirectResponse(r *ghttp.Request) {
 	}
 
 	r.Response.WriteJson(res)
+}
+
+// mapCodeToHTTPStatus 将 gcode.Code 映射到 HTTP status code
+func mapCodeToHTTPStatus(code gcode.Code) int {
+	switch code {
+	// 4xx 客户端错误
+	case gcode.CodeInvalidParameter, gcode.CodeValidationFailed:
+		return http.StatusBadRequest // 400
+	case gcode.CodeNotFound:
+		return http.StatusNotFound // 404
+	case gcode.CodeNotAuthorized:
+		return http.StatusUnauthorized // 401
+
+	// 5xx 服务器错误
+	case gcode.CodeInternalError:
+		return http.StatusInternalServerError // 500
+	case gcode.CodeNotImplemented:
+		return http.StatusNotImplemented // 501
+	case gcode.CodeUnknown, gcode.CodeNil:
+		return http.StatusInternalServerError // 500
+	default:
+		return http.StatusInternalServerError // 500
+	}
 }
 
 // getTokenPreview 返回 token 的前缀预览（用于日志，不暴露完整 token）

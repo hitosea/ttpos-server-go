@@ -98,7 +98,7 @@ func (s *sTakeout) GetWithDriver(ctx context.Context, shopOrderUuid string) (*dt
 	result := &dto.OrderWithDriver{
 		OrderUuid:      order.Uuid,
 		ProviderName:   order.ProviderName,
-		PartnerOrderId: order.PartnerOrderId,
+		PartnerOrderId: order.ProviderOrderId,
 		OrderStatus:    order.OrderStatus,
 	}
 
