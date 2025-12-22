@@ -46729,6 +46729,22 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductTakeoutShopAddPackageGroupItemReq": {
+            "type": "object",
+            "required": [
+                "product_package_group_item_uuid"
+            ],
+            "properties": {
+                "add_price": {
+                    "description": "外卖平台的加价金额（覆盖店内加价）",
+                    "type": "number"
+                },
+                "product_package_group_item_uuid": {
+                    "description": "套餐子商品 UUID（关联店内套餐子商品）",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductTakeoutShopAddReq": {
             "type": "object",
             "required": [
@@ -46773,6 +46789,13 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "package_group_items": {
+                    "description": "外卖套餐子商品列表（加价）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductTakeoutShopAddPackageGroupItemReq"
+                    }
+                },
                 "product_package_uuid": {
                     "description": "商品包UUID（关联店内商品）",
                     "type": "integer"
@@ -46794,7 +46817,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "takeout_type": {
-                    "description": "外卖类型 1-Grab 2-FoodPanda 3-其他，默认1",
+                    "description": "外卖类型 1-Grab 2-Lineman 3-其他，默认1",
                     "type": "integer"
                 }
             }
@@ -46852,6 +46875,22 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductTakeoutShopEditPackageGroupItemReq": {
+            "type": "object",
+            "required": [
+                "product_package_group_item_uuid"
+            ],
+            "properties": {
+                "add_price": {
+                    "description": "外卖平台的加价金额",
+                    "type": "number"
+                },
+                "product_package_group_item_uuid": {
+                    "description": "套餐子商品 UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductTakeoutShopEditReq": {
             "type": "object",
             "required": [
@@ -46895,6 +46934,13 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "package_group_items": {
+                    "description": "外卖套餐子商品列表（加价）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductTakeoutShopEditPackageGroupItemReq"
+                    }
                 },
                 "special_category_uuid": {
                     "description": "外卖特色分类UUID",

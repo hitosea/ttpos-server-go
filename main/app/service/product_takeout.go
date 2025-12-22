@@ -201,6 +201,38 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 			}
 		}
 
+		// 处理外卖套餐子商品价格（仅当商品类型为套餐时）
+		if productPackage.ProductType == constant.ProductTypePackage && len(addReq.PackageGroupItems) > 0 {
+			packageGroupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
+			productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+
+			for _, groupItemReq := range addReq.PackageGroupItems {
+				// 验证套餐子商品是否存在
+				groupItem, err := productPackageGroupRepo.GetProductPackageGroupItem(
+					repository.CommonRepo.WhereByUuid(groupItemReq.ProductPackageGroupItemUuid),
+					repository.CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return errors.WithMessage(err, "套餐子商品不存在")
+				}
+				if groupItem.IsDelete() {
+					return errors.WithMessage(errors.New("套餐子商品已删除"))
+				}
+
+				// 创建外卖套餐子商品价格记录
+				packageGroupItemTakeout := &model.ProductPackageGroupItemTakeout{
+					ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+					ProductPackageGroupItemUuid: groupItemReq.ProductPackageGroupItemUuid,
+					ProductPackageGroupUuid:     groupItem.ProductPackageGroupUuid,
+					HeadquarterUuid:             productPackage.HeadquarterUuid,
+					AddPrice:                    groupItemReq.AddPrice,
+				}
+				if err := packageGroupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(packageGroupItemTakeout); err != nil {
+					return errors.WithMessage(err, "创建外卖套餐子商品价格失败")
+				}
+			}
+		}
+
 		return nil
 	})
 
@@ -389,6 +421,72 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 						commonRepo.WhereByUuid(existingAttribute.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "删除外卖属性价格失败")
+					}
+				}
+			}
+		}
+
+		// 处理外卖套餐子商品价格更新（仅当商品类型为套餐时）
+		if existTakeout.ProductType == constant.ProductTypePackage && len(editReq.PackageGroupItems) > 0 {
+			packageGroupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
+			productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+			commonRepo := repository.NewCommonRepo()
+
+			// 获取当前外卖商品的所有套餐子商品价格
+			existingGroupItemTakeouts, err := packageGroupItemTakeoutRepo.GetProductPackageGroupItemTakeoutList(editReq.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "获取外卖套餐子商品价格失败")
+			}
+
+			// 构建现有套餐子商品的映射（key: product_package_group_item_uuid）
+			existingGroupItemMap := make(map[uint64]*model.ProductPackageGroupItemTakeout)
+			for _, groupItemTakeout := range existingGroupItemTakeouts {
+				existingGroupItemMap[groupItemTakeout.ProductPackageGroupItemUuid] = groupItemTakeout
+			}
+
+			// 处理请求中的套餐子商品
+			requestedGroupItemUuids := make(map[uint64]bool)
+			for _, groupItemReq := range editReq.PackageGroupItems {
+				requestedGroupItemUuids[groupItemReq.ProductPackageGroupItemUuid] = true
+
+				// 检查是否已存在
+				if existingGroupItem, exists := existingGroupItemMap[groupItemReq.ProductPackageGroupItemUuid]; exists {
+					// 更新加价
+					if err := packageGroupItemTakeoutRepo.UpdateAddPrice(existingGroupItem.Uuid, groupItemReq.AddPrice); err != nil {
+						return errors.WithMessage(err, "更新外卖套餐子商品价格失败")
+					}
+				} else {
+					// 验证套餐子商品是否存在
+					groupItem, err := productPackageGroupRepo.GetProductPackageGroupItem(
+						commonRepo.WhereByUuid(groupItemReq.ProductPackageGroupItemUuid),
+						commonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return errors.WithMessage(err, "套餐子商品不存在")
+					}
+					if groupItem.IsDelete() {
+						return errors.WithMessage(errors.New("套餐子商品已删除"))
+					}
+
+					// 创建新的外卖套餐子商品价格
+					packageGroupItemTakeout := &model.ProductPackageGroupItemTakeout{
+						ProductPackageTakeoutUuid:   editReq.Uuid,
+						ProductPackageGroupItemUuid: groupItemReq.ProductPackageGroupItemUuid,
+						ProductPackageGroupUuid:     groupItem.ProductPackageGroupUuid,
+						HeadquarterUuid:             existTakeout.HeadquarterUuid,
+						AddPrice:                    groupItemReq.AddPrice,
+					}
+					if err := packageGroupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(packageGroupItemTakeout); err != nil {
+						return errors.WithMessage(err, "创建外卖套餐子商品价格失败")
+					}
+				}
+			}
+
+			// 删除不再需要的外卖套餐子商品价格（软删除）
+			for groupItemUuid, existingGroupItem := range existingGroupItemMap {
+				if !requestedGroupItemUuids[groupItemUuid] {
+					if err := packageGroupItemTakeoutRepo.SoftDelete(existingGroupItem.Uuid); err != nil {
+						return errors.WithMessage(err, "删除外卖套餐子商品价格失败")
 					}
 				}
 			}

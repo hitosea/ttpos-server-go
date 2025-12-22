@@ -27,6 +27,7 @@ type ProductPackageTakeout struct {
 	ImageFile                       File                             `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`                   // 图片
 	ProductBomTakeouts              []ProductBomTakeout              `gorm:"foreignKey:product_package_takeout_uuid;references:uuid" json:"-"`      // 外卖规格价格列表
 	ProductPackageAttributeTakeouts []ProductPackageAttributeTakeout `gorm:"foreignKey:product_package_takeout_uuid;references:uuid" json:"-"`      // 外卖属性价格列表
+	ProductPackageGroupItemTakeouts []ProductPackageGroupItemTakeout `gorm:"foreignKey:product_package_takeout_uuid;references:uuid" json:"-"`      // 外卖套餐子商品价格列表
 }
 
 // TableName 指定表名

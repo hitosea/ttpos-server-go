@@ -7284,6 +7284,17 @@ definitions:
     required:
     - bom_uuid
     type: object
+  req.ProductTakeoutShopAddPackageGroupItemReq:
+    properties:
+      add_price:
+        description: 外卖平台的加价金额（覆盖店内加价）
+        type: number
+      product_package_group_item_uuid:
+        description: 套餐子商品 UUID（关联店内套餐子商品）
+        type: integer
+    required:
+    - product_package_group_item_uuid
+    type: object
   req.ProductTakeoutShopAddReq:
     properties:
       attributes:
@@ -7310,6 +7321,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 外卖商品名称（多语言），不填则使用店内商品名称
+      package_group_items:
+        description: 外卖套餐子商品列表（加价）
+        items:
+          $ref: '#/definitions/req.ProductTakeoutShopAddPackageGroupItemReq'
+        type: array
       product_package_uuid:
         description: 商品包UUID（关联店内商品）
         type: integer
@@ -7326,7 +7342,7 @@ definitions:
         description: 外卖状态 0-下架 1-上架
         type: integer
       takeout_type:
-        description: 外卖类型 1-Grab 2-FoodPanda 3-其他，默认1
+        description: 外卖类型 1-Grab 2-Lineman 3-其他，默认1
         type: integer
     required:
     - product_package_uuid
@@ -7368,6 +7384,17 @@ definitions:
     required:
     - bom_uuid
     type: object
+  req.ProductTakeoutShopEditPackageGroupItemReq:
+    properties:
+      add_price:
+        description: 外卖平台的加价金额
+        type: number
+      product_package_group_item_uuid:
+        description: 套餐子商品 UUID
+        type: integer
+    required:
+    - product_package_group_item_uuid
+    type: object
   req.ProductTakeoutShopEditReq:
     properties:
       attributes:
@@ -7394,6 +7421,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 外卖商品名称（多语言）
+      package_group_items:
+        description: 外卖套餐子商品列表（加价）
+        items:
+          $ref: '#/definitions/req.ProductTakeoutShopEditPackageGroupItemReq'
+        type: array
       special_category_uuid:
         description: 外卖特色分类UUID
         type: integer

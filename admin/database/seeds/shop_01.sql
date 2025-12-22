@@ -1600,6 +1600,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute_takeout` (
   KEY `idx_delete_time` (`delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖属性价格表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_product_package_group_item_takeout` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint DEFAULT '0' COMMENT '唯一标识',
+  `product_package_takeout_uuid` bigint DEFAULT '0' COMMENT '外卖商品UUID，关联 ttpos_product_package_takeout.uuid',
+  `product_package_group_item_uuid` bigint DEFAULT '0' COMMENT '套餐子商品UUID，关联 ttpos_product_package_group_item.uuid',
+  `product_package_group_uuid` bigint DEFAULT '0' COMMENT '套餐分组UUID，关联 ttpos_product_package_group.uuid',
+  `headquarter_uuid` bigint DEFAULT '0' COMMENT '总部UUID,0表示不是总部商品',
+  `add_price` decimal(22,4) DEFAULT '0.0000' COMMENT '外卖平台的加价金额（覆盖店内加价）',
+  `delete_time` bigint DEFAULT '0' COMMENT '删除时间，0表示未删除',
+  `create_time` bigint DEFAULT '0' COMMENT '创建时间',
+  `update_time` bigint DEFAULT '0' COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_uuid` (`uuid`),
+  KEY `idx_product_package_takeout_uuid` (`product_package_takeout_uuid`),
+  KEY `idx_product_package_group_item_uuid` (`product_package_group_item_uuid`),
+  KEY `idx_product_package_group_uuid` (`product_package_group_uuid`),
+  KEY `idx_headquarter_uuid` (`headquarter_uuid`),
+  KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖套餐子商品价格表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_product_package_group` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐组ID',

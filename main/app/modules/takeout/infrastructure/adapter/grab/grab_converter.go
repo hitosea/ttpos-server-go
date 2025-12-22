@@ -658,7 +658,7 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		}
 	} else {
 		// 4. 处理套餐分组（如果是套餐）
-		if err := c.convertPackageGroups(ctx, menuItem, &takeoutProduct.ProductPackage); err != nil {
+		if err := c.convertPackageGroups(ctx, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换套餐分组失败")
 		}
 	}
@@ -1104,7 +1104,9 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 }
 
 // convertPackageGroups 转换套餐分组为修饰符组
-func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valueobject.MenuItem, productPackage *model.ProductPackage) error {
+func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valueobject.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+	productPackage := &takeoutProduct.ProductPackage
+
 	// 收集所有未删除的套餐分组
 	packageGroups := make([]*model.ProductPackageGroup, 0)
 	for i := range productPackage.ProductPackageGroups {
@@ -1115,6 +1117,14 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valu
 	}
 	if len(packageGroups) == 0 {
 		return nil
+	}
+
+	// 构建外卖套餐子商品价格映射（key: product_package_group_item_uuid）
+	takeoutPriceMap := make(map[uint64]float64)
+	for _, takeoutPrice := range takeoutProduct.ProductPackageGroupItemTakeouts {
+		if takeoutPrice.DeleteTime == 0 {
+			takeoutPriceMap[takeoutPrice.ProductPackageGroupItemUuid] = takeoutPrice.AddPrice
+		}
 	}
 
 	// 按 Sort 排序
@@ -1222,8 +1232,12 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *valu
 				}
 			}
 
-			// 计算价格：AddPrice（加价金额，转换为分）
-			priceInCents := int64(groupItem.AddPrice * 100)
+			// 计算价格：优先使用外卖平台的加价，如果没有则使用店内加价
+			addPrice := float64(0)
+			if takeoutAddPrice, exists := takeoutPriceMap[groupItem.Uuid]; exists {
+				addPrice = takeoutAddPrice
+			}
+			priceInCents := int64(addPrice * 100)
 
 			// 创建修饰符
 			modifier, err := valueobject.NewModifier(

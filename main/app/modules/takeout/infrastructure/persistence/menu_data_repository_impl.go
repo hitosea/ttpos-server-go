@@ -105,6 +105,9 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 				}).
 				Preload("ProductPackageAttribute.Attribute.MultiLanguageName", "delete_time = ?", 0)
 		}).
+		Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", 0)
+		}).
 		Order("id ASC").
 		Find(&products).Error
 
