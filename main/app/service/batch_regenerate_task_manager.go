@@ -553,7 +553,7 @@ func (m *batchRegenerateTaskManager) executeOrderStep(
 	m.SaveTaskList(task, taskFilePath) // 保存状态
 	m.fileLock.Unlock()
 
-	time.Sleep(10 * time.Second)
+	// time.Sleep(10 * time.Second)
 
 	return stepErr
 }
