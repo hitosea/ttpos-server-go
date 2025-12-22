@@ -41,8 +41,48 @@ func (s *flavorMaterialsProductInventoryStrategy) CalculateInventory(
 		return 0, nil
 	}
 
-	// 3. 遍历所有 FlavorMaterials，计算每个材料的可生产数量，取最小值
+	// 3. 判断是否设置可售量
+	if bom.IsOpenStockBool() {
+		// 如果有材料不允许负库存时,可售量不能大于材料计算的库存
+		hasMaterialNotAllowNegativeStock := false
+		for _, material := range bom.FlavorMaterials {
+			if material.Material != nil && material.Material.AllowNegativeStock == constant.No {
+				hasMaterialNotAllowNegativeStock = true
+				break
+			}
+		}
+		if hasMaterialNotAllowNegativeStock {
+			// 计算材料库存（考虑负库存限制）
+			materialInventory := s.calculateFlavorMaterialsInventory(bom, true)
+			// 取可售量和材料库存的最小值
+			return math.Min(bom.StockNum, materialInventory), nil
+		}
+		return bom.StockNum, nil
+	}
+
+	// 4. 特殊需求: 当材料不允许负库存时,一定要求材料库存不能负. 所以只要材料有一个不允许负库存,则返回材料计算的库存值
+	hasMaterialNotAllowNegativeStock := false
+	for _, material := range bom.FlavorMaterials {
+		if material.Material != nil && material.Material.AllowNegativeStock == constant.No {
+			hasMaterialNotAllowNegativeStock = true
+			break
+		}
+	}
+	if hasMaterialNotAllowNegativeStock {
+		return s.calculateFlavorMaterialsInventory(bom, true), nil
+	}
+
+	// 5. 遍历所有 FlavorMaterials，计算每个材料的可生产数量，取最小值
 	// 参考 ProductBom.GetStockNum 中的逻辑：使用 material.Material.GetStockNum() 和 material.GetDecreaseNum(1)
+	return s.calculateFlavorMaterialsInventory(bom, false), nil
+}
+
+// calculateFlavorMaterialsInventory 计算规格材料库存（内部方法）
+// checkAllowNegativeStock: 是否检查允许负库存
+func (s *flavorMaterialsProductInventoryStrategy) calculateFlavorMaterialsInventory(
+	bom *model.ProductBom,
+	checkAllowNegativeStock bool,
+) float64 {
 	var minExpectedProductionNum float64 = constant.ProductBomInfiniteStock
 	hasValidMaterial := false
 
@@ -53,7 +93,18 @@ func (s *flavorMaterialsProductInventoryStrategy) CalculateInventory(
 		}
 
 		// 获取材料库存数量
-		stockNum := material.Material.GetStockNum()
+		var stockNum float64
+		if checkAllowNegativeStock {
+			stockNum = material.Material.GetStockNum(model.WithAllowNegativeStockCheck())
+		} else {
+			stockNum = material.Material.GetStockNum()
+		}
+
+		// 如果检查负库存且材料允许负库存，则返回无限库存
+		if checkAllowNegativeStock && stockNum == constant.ProductBomInfiniteStock {
+			return constant.ProductBomInfiniteStock
+		}
+
 		if stockNum <= 0 {
 			continue
 		}
@@ -72,10 +123,10 @@ func (s *flavorMaterialsProductInventoryStrategy) CalculateInventory(
 		}
 	}
 
-	// 4. 如果没有有效的材料，返回无限库存
+	// 如果没有有效的材料，返回无限库存
 	if !hasValidMaterial {
-		return constant.ProductBomInfiniteStock, nil
+		return constant.ProductBomInfiniteStock
 	}
 
-	return math.Max(0, minExpectedProductionNum), nil
+	return math.Max(0, minExpectedProductionNum)
 }
