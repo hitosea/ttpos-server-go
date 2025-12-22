@@ -1603,6 +1603,10 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
+		// 不显示 Grab 和 LINE MAN 支付方式
+		if paymentMethod.Code == constant.PaymentMethodCodeGrab || paymentMethod.Code == constant.PaymentMethodCodeLineMan {
+			continue
+		}
 		// LianLianPay 没有配置支付信息 不显示
 		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
 			if paymentMethod.IsHeadquarterPayment() {

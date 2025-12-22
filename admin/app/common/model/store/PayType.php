@@ -51,6 +51,12 @@ class PayType extends BaseModel
         90333 => 'LIANLIAN_QR_PROMPT_PAY',
     ];
 
+    /**
+     * Grab 和 LINE MAN 支付方式
+     */
+    const CODE_GRAB = 91100;
+    const CODE_LINE_MAN = 91200;
+
     // 结账显示类型
     const SHOW_CHECKOUT = 'checkout';
     const SHOW_RECHARGE = 'recharge';
@@ -211,6 +217,10 @@ class PayType extends BaseModel
         $enumData = self::listAll($shopSupplierId, $appId);
         $licenses = request()->licenses;
         return array_values(array_filter($enumData, function ($item) use ($LianLian_enable, $licenses) {
+            // 过滤 Grab 和 LINE MAN 支付方式
+            if ($item['value'] == self::CODE_GRAB || $item['value'] == self::CODE_LINE_MAN) {
+                return false;
+            }
             switch ($item['value']) {
                 case OrderPayTypeEnum::BALANCE:
                     return $licenses['is_open_member'] == 1; // 会员功能开启时显示 0关闭 1开启

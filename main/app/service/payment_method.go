@@ -127,6 +127,10 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		if method.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
+		// 不显示 Grab 和 LINE MAN 支付方式
+		if method.Code == constant.PaymentMethodCodeGrab || method.Code == constant.PaymentMethodCodeLineMan {
+			continue
+		}
 		// 充值不显示余额
 		if method.Code == constant.PaymentMethodCodeBalance &&
 			(companySetting.IsOpenMember != 1 || typ == constant.PaymentMethodShowRecharge) {
@@ -180,13 +184,15 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	commonRepo := repository.NewCommonRepo()
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
+	excludeCodes := []int{constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan}
+	if companySetting.IsOpenMember == 0 {
+		excludeCodes = append(excludeCodes, constant.PaymentMethodCodeBalance)
+	}
 	opts := []repository.DBOption{
 		commonRepo.SortWithRaw("CAST(sort AS UNSIGNED), create_time desc"),
 		commonRepo.WhereBySoftDelete(),
 		paymentMethodRepo.WithLogoFile(),
-	}
-	if companySetting.IsOpenMember == 0 {
-		opts = append(opts, paymentMethodRepo.WhereNotCode([]int{constant.PaymentMethodCodeBalance}))
+		paymentMethodRepo.WhereNotCode(excludeCodes),
 	}
 
 	// 查询支付方式列表
@@ -938,4 +944,174 @@ func (s *paymentMethodSrv) isReservedPaymentName(name string) bool {
 		"Free Meal",                // 免单
 	}
 	return slices.Contains(reserved, name)
+}
+
+// SaveGrabPaymentMethod 保存 Grab 支付方式，如果已存在则跳过（幂等性）
+// 供外部服务调用，支持事务
+func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.DB) error {
+	paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
+
+	// 检查支付方式是否已存在（通过 payment_name 或 code）
+	existPayment := paymentMethodRepo.GetPaymentMethod(
+		paymentMethodRepo.WherePaymentName(constant.PaymentMethodNameGrab),
+	)
+	if existPayment.Uuid > 0 {
+		// 已存在，跳过
+		return nil
+	}
+
+	// 如果通过 payment_name 没找到，再通过 code 查询
+	existPayment = paymentMethodRepo.GetPaymentMethod(
+		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeGrab),
+	)
+	if existPayment.Uuid > 0 {
+		// 已存在，跳过
+		return nil
+	}
+
+	// 获取最大排序值
+	maxSort, err := paymentMethodRepo.GetMaxSort()
+	if err != nil {
+		logger.Logger.Error("获取最大排序值失败", zap.Error(err))
+		return errors.WithMessage(err, "获取最大排序值失败")
+	}
+
+	// 创建 Grab 支付方式
+	paymentMethod := &model.PaymentMethod{
+		Name:                 constant.PaymentMethodNameGrab,
+		Code:                 constant.PaymentMethodCodeGrab,
+		PaymentName:          constant.PaymentMethodNameGrab,
+		Source:               constant.PaymentMethodSourceSystem, // 0=系统默认
+		LogoFileUuid:         0,
+		QrcodeFileUuid:       0,
+		FeePercent:           0.0000,
+		IsShowCashier:        0, // 不在收银端显示
+		IsShowAssistant:      0,
+		IsShowKiosk:          0,
+		IsShowMemberRecharge: 0,
+		Status:               constant.PaymentMethodStatusEnable,
+		Sort:                 maxSort + 1,
+		DefaultImg:           "", // 空字符串
+		ErpnextPayment:       "",
+		HeadquarterUuid:      0,
+	}
+
+	if err := paymentMethodRepo.CreatePaymentMethodReturnRow(paymentMethod); err != nil {
+		logger.Logger.Error("创建 Grab 支付方式失败", zap.Error(err))
+		return errors.WithMessage(err, "创建 Grab 支付方式失败")
+	}
+
+	// 如果开启了 ERP，同步支付方式到 ERP
+	if ctx.GetCompany().IsOpenErp() {
+		erpSrv := erpService.NewIErpSrv(s.dbm)
+
+		// 根据 source 确定 channel
+		channel := erpService.GetChannelBySource(paymentMethod.Source)
+
+		saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+			CompanyUuid: ctx.GetCompanyUuid(),
+			Channel:     channel,
+			PayType:     paymentMethod.PaymentName,
+		})
+		if err != nil || saveModeOfPaymentResp == nil {
+			logger.Logger.Error("同步 Grab 支付方式到 ERP 失败", zap.Error(err))
+			return errors.WithMessage(err, "创建 Grab 支付方式失败")
+		}
+		if saveModeOfPaymentResp.Name != "" {
+			if err := paymentMethodRepo.UpdatePaymentMethod(
+				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+				repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
+			); err != nil {
+				logger.Logger.Error("更新 Grab 支付方式 ERP 名称失败", zap.Error(err))
+				return errors.WithMessage(err, "创建 Grab 支付方式失败")
+			}
+		}
+	}
+
+	return nil
+}
+
+// SaveLineManPaymentMethod 保存 LINE MAN 支付方式，如果已存在则跳过（幂等性）
+// 供外部服务调用，支持事务
+func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gorm.DB) error {
+	paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
+
+	// 检查支付方式是否已存在（通过 payment_name 或 code）
+	existPayment := paymentMethodRepo.GetPaymentMethod(
+		paymentMethodRepo.WherePaymentName(constant.PaymentMethodNameLineMan),
+	)
+	if existPayment.Uuid > 0 {
+		// 已存在，跳过
+		return nil
+	}
+
+	// 如果通过 payment_name 没找到，再通过 code 查询
+	existPayment = paymentMethodRepo.GetPaymentMethod(
+		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeLineMan),
+	)
+	if existPayment.Uuid > 0 {
+		// 已存在，跳过
+		return nil
+	}
+
+	// 获取最大排序值
+	maxSort, err := paymentMethodRepo.GetMaxSort()
+	if err != nil {
+		logger.Logger.Error("获取最大排序值失败", zap.Error(err))
+		return errors.WithMessage(err, "获取最大排序值失败")
+	}
+
+	// 创建 LINE MAN 支付方式
+	paymentMethod := &model.PaymentMethod{
+		Name:                 constant.PaymentMethodNameLineMan,
+		Code:                 constant.PaymentMethodCodeLineMan,
+		PaymentName:          constant.PaymentMethodNameLineMan,
+		Source:               constant.PaymentMethodSourceSystem, // 0=系统默认
+		LogoFileUuid:         0,
+		QrcodeFileUuid:       0,
+		FeePercent:           0.0000,
+		IsShowCashier:        0, // 不在收银端显示
+		IsShowAssistant:      0,
+		IsShowKiosk:          0,
+		IsShowMemberRecharge: 0,
+		Status:               constant.PaymentMethodStatusEnable,
+		Sort:                 maxSort + 1,
+		DefaultImg:           "", // 空字符串
+		ErpnextPayment:       "",
+		HeadquarterUuid:      0,
+	}
+
+	if err := paymentMethodRepo.CreatePaymentMethodReturnRow(paymentMethod); err != nil {
+		logger.Logger.Error("创建 LINE MAN 支付方式失败", zap.Error(err))
+		return errors.WithMessage(err, "创建 LINE MAN 支付方式失败")
+	}
+
+	// 如果开启了 ERP，同步支付方式到 ERP
+	if ctx.GetCompany().IsOpenErp() {
+		erpSrv := erpService.NewIErpSrv(s.dbm)
+
+		// 根据 source 确定 channel
+		channel := erpService.GetChannelBySource(paymentMethod.Source)
+
+		saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+			CompanyUuid: ctx.GetCompanyUuid(),
+			Channel:     channel,
+			PayType:     paymentMethod.PaymentName,
+		})
+		if err != nil || saveModeOfPaymentResp == nil {
+			logger.Logger.Error("同步 LINE MAN 支付方式到 ERP 失败", zap.Error(err))
+			return errors.WithMessage(err, "创建 LINE MAN 支付方式失败")
+		}
+		if saveModeOfPaymentResp.Name != "" {
+			if err := paymentMethodRepo.UpdatePaymentMethod(
+				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+				repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
+			); err != nil {
+				logger.Logger.Error("更新 LINE MAN 支付方式 ERP 名称失败", zap.Error(err))
+				return errors.WithMessage(err, "创建 LINE MAN 支付方式失败")
+			}
+		}
+	}
+
+	return nil
 }

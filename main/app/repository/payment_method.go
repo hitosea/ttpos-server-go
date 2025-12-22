@@ -19,9 +19,11 @@ type IPaymentMethodRepo interface {
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereKiosk() DBOption                 // 在自助点餐机结账时显示
 	WhereStatus(status int) DBOption
-	WhereExistsErpnextPayment() DBOption    // 存在ERPNext支付方式
-	WhereNotExistsErpnextPayment() DBOption // 不存在ERPNext支付方式
-	WhereNotCode(codes []int) DBOption      // 排除支付方式代号
+	WhereExistsErpnextPayment() DBOption          // 存在ERPNext支付方式
+	WhereNotExistsErpnextPayment() DBOption       // 不存在ERPNext支付方式
+	WhereNotCode(codes []int) DBOption            // 排除支付方式代号
+	WherePaymentName(paymentName string) DBOption // 按支付方式名称查询
+	WhereCode(code int) DBOption                  // 按支付方式code查询
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
@@ -272,6 +274,18 @@ func (r *paymentMethodRepo) WhereNotExistsErpnextPayment() DBOption {
 func (r *paymentMethodRepo) WhereNotCode(codes []int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("code NOT IN ?", codes)
+	}
+}
+
+func (r *paymentMethodRepo) WherePaymentName(paymentName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("payment_name = ?", paymentName)
+	}
+}
+
+func (r *paymentMethodRepo) WhereCode(code int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code = ?", code)
 	}
 }
 
