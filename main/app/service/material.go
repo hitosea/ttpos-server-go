@@ -3615,7 +3615,7 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	// 查询这些班次中指定仓库下的物品消耗量
 	itemLogs, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItem(
 		func(db *gorm.DB) *gorm.DB {
-			return db.Where("warehouse_uuid = ? AND scene = ?", warehouseUuid, 0) // 场景为0，表示销售出库
+			return db.Where("warehouse_uuid = ? AND scene = ? AND delete_time = 0", warehouseUuid, 0) // 场景为0，表示销售出库
 		},
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("staff_shift_log_uuid IN ?", staffShiftLogUuids)
