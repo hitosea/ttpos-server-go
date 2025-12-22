@@ -243,30 +243,37 @@ func (s *productInventoryDomainService) GetProductPackageInventory(
 		return 0, errors.New("商品包下没有BOM")
 	}
 
-	// 4. 遍历每个BOM，收集库存
-	inventories := make([]float64, 0)
+	// 4. 收集所有BOM的UUID
+	productBomUuids := make([]uint64, 0, len(productBomInterfaces))
 	for _, bomInterface := range productBomInterfaces {
 		productBom, ok := bomInterface.(*model.ProductBom)
 		if !ok {
 			// 记录错误但继续处理其他BOM
 			continue
 		}
-
-		inventory, err := s.GetProductInventory(ctx, productBom.Uuid)
-		if err != nil {
-			// 记录错误但继续处理其他BOM
-			continue
-		}
-
-		inventories = append(inventories, inventory)
+		productBomUuids = append(productBomUuids, productBom.Uuid)
 	}
 
-	// 5. 如果没有有效的库存，返回错误
+	// 5. 批量查询库存
+	inventoryMap, err := s.GetProductInventoriesBatch(ctx, productBomUuids)
+	if err != nil {
+		return 0, errors.WithMessage(err, "批量查询商品包BOM库存失败")
+	}
+
+	// 6. 收集库存值
+	inventories := make([]float64, 0, len(inventoryMap))
+	for _, uuid := range productBomUuids {
+		if inventory, exists := inventoryMap[uuid]; exists {
+			inventories = append(inventories, inventory)
+		}
+	}
+
+	// 7. 如果没有有效的库存，返回错误
 	if len(inventories) == 0 {
 		return 0, errors.New("无法计算商品包库存：所有BOM库存查询失败")
 	}
 
-	// 6. 使用策略计算商品包库存
+	// 8. 使用策略计算商品包库存
 	// 如果未提供策略，使用默认策略
 	strategy := option.Strategy
 	if strategy == nil {
