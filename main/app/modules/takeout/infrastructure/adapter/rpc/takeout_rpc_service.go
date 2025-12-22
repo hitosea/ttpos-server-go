@@ -219,3 +219,33 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 
 	return nil
 }
+
+// GetOrderInfo 获取订单信息
+func (s *TakeoutRPCService) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (map[string]interface{}, error) {
+	// 创建客户端
+	client, err := NewBMPTakeoutClient()
+	if err != nil {
+		logger.Logger.Error("创建 RPC 客户端失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "创建 RPC 客户端失败")
+	}
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			logger.Logger.Warn("关闭 RPC 客户端失败", zap.Error(closeErr))
+		}
+	}()
+
+	// 调用 RPC 接口
+	orderData, err := client.GetOrderInfo(ctx, shopUuid, orderUuid)
+	if err != nil {
+		logger.Logger.Error("获取订单信息失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	return orderData, nil
+}

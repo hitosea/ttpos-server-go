@@ -7,6 +7,7 @@ import (
 	grabApi "ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/api/menu"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
+	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/errors"
@@ -37,16 +38,20 @@ type TakeoutRPCClient interface {
 	// UpdateMenuModifier 更新菜单修饰符
 	UpdateMenuModifier(ctx context.Context, req *menuApi.UpdateMenuModifierReq) error
 
+	// GetOrderInfo 获取订单信息
+	GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error)
+
 	// Close 关闭连接
 	Close() error
 }
 
 // BMPTakeoutClient BMP 外送 RPC 客户端实现
 type BMPTakeoutClient struct {
-	conn       *grpc.ClientConn
-	client     api.TakeoutServiceClient
-	grabClient grabApi.GrabClient
-	menuClient menuApi.MenuServiceClient
+	conn        *grpc.ClientConn
+	client      api.TakeoutServiceClient
+	grabClient  grabApi.GrabClient
+	menuClient  menuApi.MenuServiceClient
+	orderClient orderApi.OrderServiceClient
 }
 
 // NewBMPTakeoutClient 创建 BMP 外送 RPC 客户端
@@ -61,11 +66,13 @@ func NewBMPTakeoutClient() (TakeoutRPCClient, error) {
 	client := api.NewTakeoutServiceClient(conn)
 	grabClient := grabApi.NewGrabClient(conn)
 	menuClient := menu.NewMenuServiceClient(conn)
+	orderClient := orderApi.NewOrderServiceClient(conn)
 	return &BMPTakeoutClient{
-		conn:       conn,
-		client:     client,
-		grabClient: grabClient,
-		menuClient: menuClient,
+		conn:        conn,
+		client:      client,
+		grabClient:  grabClient,
+		menuClient:  menuClient,
+		orderClient: orderClient,
 	}, nil
 }
 
@@ -265,6 +272,56 @@ func (c *BMPTakeoutClient) UpdateMenuModifier(ctx context.Context, req *menuApi.
 	}
 
 	return nil
+}
+
+// GetOrderInfo 获取订单信息
+func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error) {
+	req := &orderApi.GetOrderInfoReq{
+		ShopUuid:  shopUuid,
+		OrderUuid: orderUuid,
+		RequestId: uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.GetOrderInfo(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 GetOrderInfo 接口失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "调用获取订单信息接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("GetOrderInfo 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.New(resp.Message)
+	}
+
+	data, err := resp.Data.UnmarshalNew()
+	if err != nil {
+		logger.Logger.Error("GetOrderInfo 返回数据解析失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "获取订单信息数据解析失败")
+	}
+
+	orderResp := data.(*orderApi.GetOrderInfoResp)
+
+	// 解析 raw_data JSON 字符串为 map
+	var rawData map[string]interface{}
+	if err := json.Unmarshal([]byte(orderResp.RawData), &rawData); err != nil {
+		logger.Logger.Error("解析订单原始数据失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "解析订单原始数据失败")
+	}
+
+	return rawData, nil
 }
 
 // Close 关闭连接

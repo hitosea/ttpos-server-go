@@ -16454,6 +16454,36 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/takeout/order/push-state": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "处理订单状态变更-模拟接收新订单",
+                "parameters": [
+                    {
+                        "description": "订单状态变更参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderEvent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "处理订单状态变更成功"
+                    }
+                }
+            }
+        },
         "/cashier/takeout/order/reject": {
             "post": {
                 "consumes": [
@@ -49800,6 +49830,43 @@ const docTemplate = `{
             ],
             "properties": {
                 "order_uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "request.TakeoutOrderEvent": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "create, status_update, cancel",
+                    "type": "string"
+                },
+                "merchantId": {
+                    "description": "商户 ID",
+                    "type": "string"
+                },
+                "orderId": {
+                    "description": "平台订单 ID",
+                    "type": "string"
+                },
+                "orderUuid": {
+                    "description": "订单 UUID",
+                    "type": "string"
+                },
+                "providerName": {
+                    "description": "grab",
+                    "type": "string"
+                },
+                "shopUuid": {
+                    "description": "TTPOS 店铺 UUID",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "当前状态",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "事件时间戳",
                     "type": "integer"
                 }
             }

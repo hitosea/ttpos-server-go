@@ -17,6 +17,8 @@ import (
 	"github.com/hdt3213/delayqueue"
 )
 
+const MEMBER_ORDER_CANCEL = "member_order_cancel"
+
 var (
 	memberOrderCancelQueue *delayqueue.DelayQueue
 	memberOrderInit        sync.Once
@@ -36,7 +38,7 @@ var (
 )
 
 // InitMemberOrderCancel 初始化会员订单自动取消队列
-func initMemberOrderCancel() {
+func InitMemberOrderCancel() {
 	memberOrderInit.Do(func() {
 		// 初始化服务实例缓存
 		initServiceInstances()

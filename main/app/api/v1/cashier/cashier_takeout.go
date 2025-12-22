@@ -215,6 +215,30 @@ func (h *TakeoutHandler) SyncOrder(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// HandlePushOrderState 处理订单状态变更-模拟接收新订单
+// @Summary 处理订单状态变更-模拟接收新订单
+// @Tags 收银端.外卖管理
+// @Accept json
+// @Produce json
+// @Param request body request.TakeoutOrderEvent true "订单状态变更参数"
+// @Success 200 {object} nil "处理订单状态变更成功"
+// @Router /cashier/takeout/order/push-state [post]
+func (h *TakeoutHandler) HandlePushOrderState(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req request.TakeoutOrderEvent
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+
+	if err := h.orderAppSrv.HandlePushOrderState(ctx, req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, nil)
+}
+
 // RegisterTakeoutHandlers 注册外卖路由
 func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -242,10 +266,12 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/takeout/settings", wrapper.GetSettings)   // 获取配置
 		privateApi.POST("/takeout/settings", wrapper.SaveSettings) // 保存配置
 		// 订单管理
-		privateApi.POST("/takeout/order/sync", wrapper.SyncOrder)     // 同步订单
 		privateApi.GET("/takeout/order/list", wrapper.GetList)        // 获取订单列表
 		privateApi.GET("/takeout/order/detail", wrapper.GetDetail)    // 获取订单详情
 		privateApi.POST("/takeout/order/accept", wrapper.AcceptOrder) // 接单
 		privateApi.POST("/takeout/order/reject", wrapper.RejectOrder) // 拒单
+		// 模拟接收新订单
+		privateApi.POST("/takeout/order/sync", wrapper.SyncOrder)                  // 同步订单
+		privateApi.POST("/takeout/order/push-state", wrapper.HandlePushOrderState) // 处理订单状态变更
 	}
 }

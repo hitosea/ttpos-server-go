@@ -19,6 +19,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
 
 // GrabConverter Grab 平台转换器实现
@@ -1418,37 +1420,29 @@ func isLikelyBase64(s string) bool {
 //
 // 本方法会自动识别并处理这两种格式，统一返回 GrabOrderWebhook 结构
 func (c *GrabConverter) ParseOrderWebhook(rawData []byte) (interface{}, error) {
-	// 先尝试解析为订单对象（最常见的情况）
-	var order GrabOrder
-	if err := json.Unmarshal(rawData, &order); err != nil {
+	// 先尝试解析为 SubmitOrderRequest（Grab SDK 类型）
+	var submitOrderReq grabfood.SubmitOrderRequest
+	if err := json.Unmarshal(rawData, &submitOrderReq); err != nil {
 		return nil, fmt.Errorf("解析 Grab 订单数据失败: %w", err)
 	}
 
 	// 检查是否解析成功（通过必填字段判断）
-	if order.OrderID != "" && order.MerchantID != "" {
-		// 成功解析为订单对象，构造 Webhook 结构返回
-		webhook := &GrabOrderWebhook{
-			MerchantID:        order.MerchantID,
-			PartnerMerchantID: order.PartnerMerchantID,
-			OrderID:           order.OrderID,
-			State:             order.OrderState,
-			Order:             &order,
-		}
-		return webhook, nil
+	if submitOrderReq.OrderID != "" && submitOrderReq.MerchantID != "" {
+		return &submitOrderReq, nil
 	}
 
-	// 如果不是直接的订单格式，尝试解析为 Webhook 包装格式
-	var webhook GrabOrderWebhook
-	if err := json.Unmarshal(rawData, &webhook); err != nil {
-		return nil, fmt.Errorf("解析 Grab Webhook 数据失败: %w", err)
+	// 如果不是 SubmitOrderRequest 格式，尝试解析为 OrderStateRequest（状态更新）
+	var orderStateReq grabfood.OrderStateRequest
+	if err := json.Unmarshal(rawData, &orderStateReq); err != nil {
+		return nil, fmt.Errorf("解析 Grab 订单状态数据失败: %w", err)
 	}
 
-	// 验证 Webhook 结构
-	if webhook.Order == nil {
-		return nil, fmt.Errorf("Grab 订单数据格式错误：既不是标准订单格式，也不是 Webhook 包装格式")
+	// 验证 OrderStateRequest
+	if orderStateReq.OrderID != "" && orderStateReq.MerchantID != "" {
+		return &orderStateReq, nil
 	}
 
-	return &webhook, nil
+	return nil, fmt.Errorf("Grab 订单数据格式错误：无法识别的订单格式")
 }
 
 // ConvertOrderToTakeoutOrder 将 Grab 订单转换为通用外卖订单格式
@@ -1460,17 +1454,11 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	rawDataJSON []byte,
 	currentTime int64,
 ) (*takeoutModel.TakeoutOrder, error) {
-	// 类型断言
-	webhook, ok := platformOrder.(*GrabOrderWebhook)
+	// 类型断言 - 支持 SubmitOrderRequest
+	submitOrderReq, ok := platformOrder.(*grabfood.SubmitOrderRequest)
 	if !ok {
-		return nil, errors.New("平台订单数据类型错误")
+		return nil, errors.New("平台订单数据类型错误，期望 *grabfood.SubmitOrderRequest")
 	}
-
-	if webhook.Order == nil {
-		return nil, errors.New("Grab 订单数据不能为空")
-	}
-
-	grabOrder := webhook.Order
 
 	order := &takeoutModel.TakeoutOrder{
 		BaseModel: takeoutModel.BaseModel{
@@ -1487,65 +1475,83 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	}
 
 	// 基础字段映射
-	order.ShortOrderNumber = grabOrder.ShortOrderNumber
-	order.MerchantId = grabOrder.MerchantID
-	order.PartnerMerchantId = grabOrder.PartnerMerchantID
-	order.PaymentType = grabOrder.PaymentType
-	order.OrderType = grabOrder.FeatureFlags.OrderType
-	order.OrderAcceptedType = grabOrder.FeatureFlags.OrderAcceptedType
-	order.MembershipId = grabOrder.MembershipID
+	order.ShortOrderNumber = submitOrderReq.GetShortOrderNumber()
+	order.MerchantId = submitOrderReq.GetMerchantID()
+
+	if partnerMerchantID, ok := submitOrderReq.GetPartnerMerchantIDOk(); ok {
+		order.PartnerMerchantId = *partnerMerchantID
+	}
+
+	order.PaymentType = submitOrderReq.GetPaymentType()
+
+	featureFlags := submitOrderReq.GetFeatureFlags()
+	order.OrderType = featureFlags.OrderType
+	order.OrderAcceptedType = featureFlags.OrderAcceptedType
+
+	if membershipID, ok := submitOrderReq.GetMembershipIDOk(); ok {
+		order.MembershipId = *membershipID
+	}
 
 	// 布尔字段转整数
-	if grabOrder.Cutlery {
+	if submitOrderReq.GetCutlery() {
 		order.Cutlery = 1
 	}
-	if grabOrder.FeatureFlags.IsMexEditOrder {
+	if featureFlags.HasIsMexEditOrder() && featureFlags.GetIsMexEditOrder() {
 		order.IsMexEditOrder = 1
 	}
 
 	// 价格信息映射
-	order.Subtotal = grabOrder.Price.Subtotal
-	order.DeliveryFee = grabOrder.Price.DeliveryFee
-	order.SmallOrderFee = grabOrder.Price.SmallOrderFee
-	order.TotalAmount = grabOrder.Price.Total
-	order.EaterPayment = grabOrder.Price.EaterPayment
-	order.PlatformDiscount = grabOrder.Price.GrabFundPromo
-	order.MerchantDiscount = grabOrder.Price.MerchantFundPromo
-	order.BasketPromo = grabOrder.Price.BasketPromo
-	order.Tax = grabOrder.Price.Tax
-	order.MerchantChargeFee = grabOrder.Price.MerchantChargeFee
+	price := submitOrderReq.GetPrice()
+	order.Subtotal = price.GetSubtotal()
+	order.DeliveryFee = price.GetDeliveryFee()
+	order.SmallOrderFee = price.GetSmallOrderFee()
+	order.TotalAmount = price.GetEaterPayment() // 使用 EaterPayment 作为总金额
+	order.EaterPayment = price.GetEaterPayment()
+	order.PlatformDiscount = price.GetGrabFundPromo()
+	order.MerchantDiscount = price.GetMerchantFundPromo()
+	order.BasketPromo = price.GetBasketPromo()
+	order.Tax = price.GetTax()
+	order.MerchantChargeFee = price.GetMerchantChargeFee()
 
 	// 货币信息映射
-	order.CurrencyCode = grabOrder.Currency.Code
-	order.CurrencySymbol = grabOrder.Currency.Symbol
-	order.CurrencyExponent = grabOrder.Currency.Exponent
+	currency := submitOrderReq.GetCurrency()
+	order.CurrencyCode = currency.GetCode()
+	order.CurrencySymbol = currency.GetSymbol()
+	order.CurrencyExponent = int(currency.GetExponent())
 
 	// 时间字段映射（RFC3339 格式转 Unix 时间戳）
-	order.OrderTime = c.parseRFC3339Time(grabOrder.OrderTime)
-	order.SubmitTime = c.parseRFC3339Time(grabOrder.SubmitTime)
-	order.ScheduledTime = c.parseRFC3339Time(grabOrder.ScheduledTime)
+	order.OrderTime = c.parseRFC3339Time(submitOrderReq.GetOrderTime())
+
+	if submitOrderReq.HasSubmitTime() {
+		order.SubmitTime = submitOrderReq.GetSubmitTime().Unix()
+	}
+
+	if scheduledTime, ok := submitOrderReq.GetScheduledTimeOk(); ok {
+		order.ScheduledTime = c.parseRFC3339Time(*scheduledTime)
+	}
 
 	// 预计准备时间
-	if grabOrder.OrderReadyEstimation != nil {
-		order.EstimatedReadyTime = c.parseRFC3339Time(grabOrder.OrderReadyEstimation.EstimatedOrderReadyTime)
-		order.MaxReadyTime = c.parseRFC3339Time(grabOrder.OrderReadyEstimation.MaxOrderReadyTime)
+	if submitOrderReq.HasOrderReadyEstimation() {
+		estimation := submitOrderReq.GetOrderReadyEstimation()
+		order.EstimatedReadyTime = estimation.GetEstimatedOrderReadyTime().Unix()
+		order.MaxReadyTime = estimation.GetMaxOrderReadyTime().Unix()
 	}
 
 	// 解析商品数据并填充到 order.TakeoutOrderItems
-	if len(grabOrder.Items) > 0 {
-		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(grabOrder.Items))
-		for _, item := range grabOrder.Items {
+	if len(submitOrderReq.Items) > 0 {
+		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(submitOrderReq.Items))
+		for _, item := range submitOrderReq.Items {
 			// 将 Grab item 转换为 JSON 保存在 PlatformData
 			itemBytes, _ := json.Marshal(item)
 
 			// 注意：UUID、CreateTime、UpdateTime 会在 Service 层设置
 			orderItem := takeoutModel.TakeoutOrderItem{
 				Platform:       platform,
-				PlatformItemId: item.ID,
-				Quantity:       item.Quantity,
+				PlatformItemId: item.Id,
+				Quantity:       int(item.Quantity),
 				Price:          item.Price,
-				Tax:            item.Tax,
-				Specifications: item.Specifications,
+				Tax:            getInt64Value(item.Tax),
+				Specifications: getStringValue(item.Specifications),
 				PlatformData:   string(itemBytes),
 			}
 
@@ -1556,10 +1562,10 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 					modifierBytes, _ := json.Marshal(modifier)
 					orderItemModifier := takeoutModel.TakeoutOrderItemModifier{
 						Platform:           platform,
-						PlatformModifierId: modifier.ID,
-						Quantity:           modifier.Quantity,
-						Price:              modifier.Price,
-						Tax:                modifier.Tax,
+						PlatformModifierId: modifier.GetId(),
+						Quantity:           int(modifier.GetQuantity()),
+						Price:              modifier.GetPrice(),
+						Tax:                modifier.GetTax(),
 						PlatformData:       string(modifierBytes),
 					}
 					orderItem.TakeoutOrderItemModifiers = append(orderItem.TakeoutOrderItemModifiers, orderItemModifier)
@@ -1571,6 +1577,28 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	}
 
 	return order, nil
+}
+
+// 辅助函数：安全获取指针类型的值
+func getStringValue(ptr *string) string {
+	if ptr == nil {
+		return ""
+	}
+	return *ptr
+}
+
+func getInt32Value(ptr *int32) int32 {
+	if ptr == nil {
+		return 0
+	}
+	return *ptr
+}
+
+func getInt64Value(ptr *int64) int64 {
+	if ptr == nil {
+		return 0
+	}
+	return *ptr
 }
 
 // parseRFC3339Time 解析 RFC3339 格式时间为 Unix 时间戳

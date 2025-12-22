@@ -1,5 +1,17 @@
 package request
 
+// TakeoutOrderEvent 供应商订单更新事件
+type TakeoutOrderEvent struct {
+	Action       string `json:"action"`       // create, status_update, cancel
+	ProviderName string `json:"providerName"` // grab
+	ShopUuid     string `json:"shopUuid"`     // TTPOS 店铺 UUID
+	OrderUuid    string `json:"orderUuid"`    // 订单 UUID
+	OrderId      string `json:"orderId"`      // 平台订单 ID
+	MerchantId   string `json:"merchantId"`   // 商户 ID
+	Status       string `json:"status"`       // 当前状态 PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED
+	Timestamp    int64  `json:"timestamp"`    // 事件时间戳
+}
+
 // TakeoutOrderListReq 订单列表请求
 type TakeoutOrderListReq struct {
 	PageNo    int    `json:"page_no" binding:"required"`

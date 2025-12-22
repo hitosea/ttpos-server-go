@@ -16,6 +16,7 @@ type ITakeoutOrderRepo interface {
 	Update(order *model.TakeoutOrder, options ...DBOption) error
 	UpdateByMap(uuid uint64, data map[string]interface{}) error
 	GetByUuid(uuid uint64, options ...DBOption) (*model.TakeoutOrder, error)
+	GetByTakeoutOrderUuid(takeoutOrderUuid string, options ...DBOption) (*model.TakeoutOrder, error)
 	GetByPlatformOrderId(platform, platformOrderId string, options ...DBOption) (*model.TakeoutOrder, error)
 	GetList(options ...DBOption) ([]*model.TakeoutOrder, int64, error)
 	Delete(uuid uint64) error
@@ -73,6 +74,27 @@ func (r *TakeoutOrderRepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*mod
 	}
 
 	err := db.Where("uuid = ?", uuid).First(&order).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+
+	return &order, nil
+}
+
+// GetByTakeoutOrderUuid 根据 TakeoutOrderUuid 字符串获取外卖订单
+func (r *TakeoutOrderRepoImpl) GetByTakeoutOrderUuid(takeoutOrderUuid string, options ...DBOption) (*model.TakeoutOrder, error) {
+	var order model.TakeoutOrder
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+
+	for _, option := range options {
+		db = option(db)
+	}
+
+	err := db.Where("takeout_order_uuid = ?", takeoutOrderUuid).First(&order).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {

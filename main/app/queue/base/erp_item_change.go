@@ -10,7 +10,7 @@ import (
 )
 
 // erpItemChangeHandler 处理商品变更
-func erpItemChangeHandler(ctx context.Context, msg *primitive.MessageExt) error {
+func ErpItemChangeHandler(ctx context.Context, msg *primitive.MessageExt) error {
 	//TODO 处理商品变更
 	logger.Logger.Info("处理商品变更", zap.String("msg_id", msg.MsgId))
 	// 报文样例

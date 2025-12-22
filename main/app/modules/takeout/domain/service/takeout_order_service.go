@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/model"
@@ -11,8 +12,10 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +31,9 @@ type ITakeoutOrderSrv interface {
 
 	// 创建订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
 	CreateOrder(ctx context.Context, order *model.TakeoutOrder) error
+
+	// 更新订单状态 - 由 Application 层调用
+	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, rawData map[string]interface{}) error
 }
 
 // takeoutOrderSrv 外卖订单服务实现
@@ -440,4 +446,58 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 	// TODO: 发送 WebSocket 通知到前端
 
 	return nil
+}
+
+// UpdateOrderStatus 更新订单状态
+func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, rawData map[string]interface{}) error {
+	db := ctx.GetDB()
+
+	// 开启事务
+	return db.Transaction(func(tx *gorm.DB) error {
+		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
+
+		// 1. 查询订单（通过 takeout_order_uuid 字符串查询）
+		order, err := orderRepoTx.GetByTakeoutOrderUuid(orderUuid)
+		if err != nil {
+			logger.Logger.Error("查询订单失败",
+				zap.String("order_uuid", orderUuid),
+				zap.Error(err))
+			return errors.WithMessage(err, "查询订单失败")
+		}
+
+		if order == nil {
+			logger.Logger.Error("订单不存在", zap.String("order_uuid", orderUuid))
+			return errors.New("订单不存在")
+		}
+
+		// 2. 记录旧状态（保存原始的平台状态字符串用于日志）
+		oldStatusStr := newStatus // 这里应该从 rawData 或其他地方获取旧状态，暂时占位
+
+		// 3. 更新订单原始数据（保持 RawData 字段更新）
+		if rawData != nil {
+			rawDataJSON, err := json.Marshal(rawData)
+			if err != nil {
+				logger.Logger.Error("序列化订单数据失败", zap.Error(err))
+				return errors.WithMessage(err, "序列化订单数据失败")
+			}
+			order.RawData = string(rawDataJSON)
+		}
+
+		// 4. 更新订单（这里只更新 RawData，状态映射应该由平台转换器处理）
+		// 注意：OrderState 是 int 类型，需要由调用方传入映射后的状态码
+		// 这里暂时只更新 RawData，状态转换留给后续优化
+		if err := orderRepoTx.Update(order); err != nil {
+			logger.Logger.Error("更新订单数据失败",
+				zap.String("order_uuid", orderUuid),
+				zap.Error(err))
+			return errors.WithMessage(err, "更新订单数据失败")
+		}
+
+		logger.Logger.Info("订单状态已更新",
+			zap.String("order_uuid", orderUuid),
+			zap.String("platform_status", newStatus),
+			zap.String("old_status", oldStatusStr))
+
+		return nil
+	})
 }
