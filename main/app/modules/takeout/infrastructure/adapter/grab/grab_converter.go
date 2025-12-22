@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
-	"ttpos-server-go/app/modules/takeout/domain/service"
+	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -28,7 +29,7 @@ type GrabConverter struct {
 }
 
 // NewGrabConverter 创建 Grab 转换器
-func NewGrabConverter(dbm *database.DBManager, cache cache.Cache) service.IPlatformConverter {
+func NewGrabConverter(dbm *database.DBManager, cache cache.Cache) *GrabConverter {
 	return &GrabConverter{
 		dbm:      dbm,
 		menuRepo: persistence.NewMenuDataRepository(dbm),
@@ -1405,4 +1406,193 @@ func isLikelyBase64(s string) bool {
 	}
 
 	return true
+}
+
+// ==================== 订单处理相关方法 ====================
+
+// ParseOrderWebhook 解析 Grab 订单数据
+//
+// Grab 的订单数据有两种可能的格式：
+// 1. 直接的订单对象（最常见，包括新订单推送、订单查询等场景）
+// 2. Webhook 包装格式（包含 order 字段，用于某些特定的 Webhook 通知）
+//
+// 本方法会自动识别并处理这两种格式，统一返回 GrabOrderWebhook 结构
+func (c *GrabConverter) ParseOrderWebhook(rawData []byte) (interface{}, error) {
+	// 先尝试解析为订单对象（最常见的情况）
+	var order GrabOrder
+	if err := json.Unmarshal(rawData, &order); err != nil {
+		return nil, fmt.Errorf("解析 Grab 订单数据失败: %w", err)
+	}
+
+	// 检查是否解析成功（通过必填字段判断）
+	if order.OrderID != "" && order.MerchantID != "" {
+		// 成功解析为订单对象，构造 Webhook 结构返回
+		webhook := &GrabOrderWebhook{
+			MerchantID:        order.MerchantID,
+			PartnerMerchantID: order.PartnerMerchantID,
+			OrderID:           order.OrderID,
+			State:             order.OrderState,
+			Order:             &order,
+		}
+		return webhook, nil
+	}
+
+	// 如果不是直接的订单格式，尝试解析为 Webhook 包装格式
+	var webhook GrabOrderWebhook
+	if err := json.Unmarshal(rawData, &webhook); err != nil {
+		return nil, fmt.Errorf("解析 Grab Webhook 数据失败: %w", err)
+	}
+
+	// 验证 Webhook 结构
+	if webhook.Order == nil {
+		return nil, fmt.Errorf("Grab 订单数据格式错误：既不是标准订单格式，也不是 Webhook 包装格式")
+	}
+
+	return &webhook, nil
+}
+
+// ConvertOrderToTakeoutOrder 将 Grab 订单转换为通用外卖订单格式
+func (c *GrabConverter) ConvertOrderToTakeoutOrder(
+	orderUuid uint64,
+	platform string,
+	platformOrderId string,
+	platformOrder interface{},
+	rawDataJSON []byte,
+	currentTime int64,
+) (*takeoutModel.TakeoutOrder, error) {
+	// 类型断言
+	webhook, ok := platformOrder.(*GrabOrderWebhook)
+	if !ok {
+		return nil, errors.New("平台订单数据类型错误")
+	}
+
+	if webhook.Order == nil {
+		return nil, errors.New("Grab 订单数据不能为空")
+	}
+
+	grabOrder := webhook.Order
+
+	order := &takeoutModel.TakeoutOrder{
+		BaseModel: takeoutModel.BaseModel{
+			Uuid:       orderUuid,
+			CreateTime: currentTime,
+			UpdateTime: currentTime,
+		},
+		Platform:        platform,
+		PlatformOrderId: platformOrderId,
+		OrderState:      0, // 待接单
+		IsAbnormal:      0,
+		StockStatus:     0, // 库存充足
+		RawData:         string(rawDataJSON),
+	}
+
+	// 基础字段映射
+	order.ShortOrderNumber = grabOrder.ShortOrderNumber
+	order.MerchantId = grabOrder.MerchantID
+	order.PartnerMerchantId = grabOrder.PartnerMerchantID
+	order.PaymentType = grabOrder.PaymentType
+	order.OrderType = grabOrder.FeatureFlags.OrderType
+	order.OrderAcceptedType = grabOrder.FeatureFlags.OrderAcceptedType
+	order.MembershipId = grabOrder.MembershipID
+
+	// 布尔字段转整数
+	if grabOrder.Cutlery {
+		order.Cutlery = 1
+	}
+	if grabOrder.FeatureFlags.IsMexEditOrder {
+		order.IsMexEditOrder = 1
+	}
+
+	// 价格信息映射
+	order.Subtotal = grabOrder.Price.Subtotal
+	order.DeliveryFee = grabOrder.Price.DeliveryFee
+	order.SmallOrderFee = grabOrder.Price.SmallOrderFee
+	order.TotalAmount = grabOrder.Price.Total
+	order.EaterPayment = grabOrder.Price.EaterPayment
+	order.PlatformDiscount = grabOrder.Price.GrabFundPromo
+	order.MerchantDiscount = grabOrder.Price.MerchantFundPromo
+	order.BasketPromo = grabOrder.Price.BasketPromo
+	order.Tax = grabOrder.Price.Tax
+	order.MerchantChargeFee = grabOrder.Price.MerchantChargeFee
+
+	// 货币信息映射
+	order.CurrencyCode = grabOrder.Currency.Code
+	order.CurrencySymbol = grabOrder.Currency.Symbol
+	order.CurrencyExponent = grabOrder.Currency.Exponent
+
+	// 时间字段映射（RFC3339 格式转 Unix 时间戳）
+	order.OrderTime = c.parseRFC3339Time(grabOrder.OrderTime)
+	order.SubmitTime = c.parseRFC3339Time(grabOrder.SubmitTime)
+	order.ScheduledTime = c.parseRFC3339Time(grabOrder.ScheduledTime)
+
+	// 预计准备时间
+	if grabOrder.OrderReadyEstimation != nil {
+		order.EstimatedReadyTime = c.parseRFC3339Time(grabOrder.OrderReadyEstimation.EstimatedOrderReadyTime)
+		order.MaxReadyTime = c.parseRFC3339Time(grabOrder.OrderReadyEstimation.MaxOrderReadyTime)
+	}
+
+	// 解析商品数据并填充到 order.TakeoutOrderItems
+	if len(grabOrder.Items) > 0 {
+		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(grabOrder.Items))
+		for _, item := range grabOrder.Items {
+			// 将 Grab item 转换为 JSON 保存在 PlatformData
+			itemBytes, _ := json.Marshal(item)
+
+			// 注意：UUID、CreateTime、UpdateTime 会在 Service 层设置
+			orderItem := takeoutModel.TakeoutOrderItem{
+				Platform:       platform,
+				PlatformItemId: item.ID,
+				Quantity:       item.Quantity,
+				Price:          item.Price,
+				Tax:            item.Tax,
+				Specifications: item.Specifications,
+				PlatformData:   string(itemBytes),
+			}
+
+			// 解析修饰符
+			if len(item.Modifiers) > 0 {
+				orderItem.TakeoutOrderItemModifiers = make([]takeoutModel.TakeoutOrderItemModifier, 0, len(item.Modifiers))
+				for _, modifier := range item.Modifiers {
+					modifierBytes, _ := json.Marshal(modifier)
+					orderItemModifier := takeoutModel.TakeoutOrderItemModifier{
+						Platform:           platform,
+						PlatformModifierId: modifier.ID,
+						Quantity:           modifier.Quantity,
+						Price:              modifier.Price,
+						Tax:                modifier.Tax,
+						PlatformData:       string(modifierBytes),
+					}
+					orderItem.TakeoutOrderItemModifiers = append(orderItem.TakeoutOrderItemModifiers, orderItemModifier)
+				}
+			}
+
+			order.TakeoutOrderItems = append(order.TakeoutOrderItems, orderItem)
+		}
+	}
+
+	return order, nil
+}
+
+// parseRFC3339Time 解析 RFC3339 格式时间为 Unix 时间戳
+func (c *GrabConverter) parseRFC3339Time(timeStr string) int64 {
+	if timeStr == "" {
+		return 0
+	}
+
+	// 尝试多种时间格式
+	formats := []string{
+		time.RFC3339,
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05.000Z",
+		"2006-01-02T15:04:05-07:00",
+		"2006-01-02T15:04:05.000-07:00",
+	}
+
+	for _, format := range formats {
+		if t, err := time.Parse(format, timeStr); err == nil {
+			return t.Unix()
+		}
+	}
+
+	return 0
 }

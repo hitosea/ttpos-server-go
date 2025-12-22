@@ -136,6 +136,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterStatisticsHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterOrderSourceRoutes(cashierGroup, dbm, cache)
 			cashier.RegisterNationalityRoutes(cashierGroup, dbm, cache)
+			cashier.RegisterTakeoutHandlers(cashierGroup, dbm, cache)
 		}
 		// 点餐助手端
 		assistantGroup := apiV1.Group("/assistant")

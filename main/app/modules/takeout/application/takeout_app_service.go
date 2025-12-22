@@ -14,8 +14,8 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
-	"ttpos-server-go/app/modules/takeout/types/request"
-	"ttpos-server-go/app/modules/takeout/types/response"
+	"ttpos-server-go/app/modules/takeout/interfaces/request"
+	"ttpos-server-go/app/modules/takeout/interfaces/response"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -96,7 +96,10 @@ type takeoutAppService struct {
 	// 菜单管理相关
 	dbm        *database.DBManager
 	menuRepo   repository.IMenuDataRepository
-	converters map[string]service.IPlatformConverter // 平台转换器映射
+	converters map[string]service.IPlatformConverter // 平台菜单转换器映射
+
+	// 订单管理相关
+	orderService service.ITakeoutOrderSrv // 订单服务
 }
 
 // NewTakeoutAppService 创建外卖应用服务
@@ -106,10 +109,14 @@ func NewTakeoutAppService(
 	// 初始化 RPC 服务
 	rpcService := rpcAdapter.NewTakeoutRPCService()
 
-	// 初始化平台转换器
+	// 初始化平台转换器（用于菜单转换）
 	converters := make(map[string]service.IPlatformConverter)
-	converters["grab"] = grab.NewGrabConverter(dbm, nil)
+	grabConverter := grab.NewGrabConverter(dbm, nil)
+	converters["grab"] = grabConverter
 	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+
+	// 初始化订单服务
+	orderService := service.NewTakeoutOrderSrv(dbm)
 
 	return &takeoutAppService{
 		// 状态管理相关
@@ -122,6 +129,9 @@ func NewTakeoutAppService(
 		dbm:        dbm,
 		menuRepo:   persistence.NewMenuDataRepository(dbm),
 		converters: converters,
+
+		// 订单管理相关
+		orderService: orderService,
 	}
 }
 
@@ -532,7 +542,7 @@ func (s *takeoutAppService) GetImportLogs(ctx context.Context, req request.GetIm
 			log.Platform == "grab"
 
 		logList = append(logList, response.ImportLogResponse{
-			UUID:            log.UUID,
+			UUID:            log.Uuid,
 			Platform:        log.Platform,
 			ImportType:      log.ImportType,
 			ImportDirection: log.ImportDirection,

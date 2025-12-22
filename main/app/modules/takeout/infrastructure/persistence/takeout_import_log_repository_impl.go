@@ -50,7 +50,7 @@ func (r *TakeoutImportLogRepositoryImpl) Update(ctx context.Context, log *model.
 
 	return r.db.WithContext(ctx).
 		Model(&model.TakeoutImportLog{}).
-		Where("uuid = ? AND delete_time = 0", log.UUID).
+		Where("uuid = ? AND delete_time = 0", log.Uuid).
 		Updates(log).Error
 }
 

@@ -258,12 +258,18 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 	companySetting := ctx.GetCompanySetting()
 	db := s.dbm.GetDB(ctx.GetDbId())
 
+	// 检查商品包是否存在
+	productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+		repository.CommonRepo.WhereByUuid(editReq.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(errors.New("商品不存在"))
+	}
+
 	// 检查外卖商品是否存在
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
-	existTakeout, err := takeoutRepo.GetProductPackageTakeout(
-		repository.CommonRepo.WhereByUuid(editReq.Uuid),
-		repository.CommonRepo.WhereBySoftDelete(),
-	)
+	// 检查是否已存在同类型外卖商品（包括软删除的记录）
+	existTakeout, err := takeoutRepo.GetProductPackageTakeoutIncludeSoftDelete(productPackage.Uuid, uint(editReq.TakeoutType))
 	if err != nil {
 		return errors.WithMessage(errors.New("外卖商品不存在"))
 	}
@@ -313,7 +319,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 
 			// 获取当前外卖商品的所有规格价格
 			existingBomTakeouts, err := productBomTakeoutRepo.GetProductBomTakeoutList(
-				commonRepo.WhereByProductPackageTakeoutUuid(editReq.Uuid),
+				commonRepo.WhereByProductPackageTakeoutUuid(existTakeout.Uuid),
 				commonRepo.WhereBySoftDelete(),
 			)
 			if err != nil {

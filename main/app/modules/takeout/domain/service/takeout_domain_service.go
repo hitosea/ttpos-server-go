@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/pkg/context"
@@ -115,12 +116,16 @@ func (s *TakeoutDomainServiceImpl) CreatePlatformStatus(ctx context.Context, pla
 
 	// 检查是否已存在
 	existing, err := s.takeoutRepo.GetByPlatform(ctx, platform)
-	if err == nil && existing != nil && !existing.IsDelete() {
+	if err == nil && existing != nil && existing.DeleteTime == 0 {
 		return existing, nil
 	}
 
 	takeout := &model.Takeout{
-		Uuid:     utils.MustGetID(),
+		BaseModel: model.BaseModel{
+			Uuid:       utils.MustGetID(),
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+		},
 		Platform: platform,
 		Enabled:  enabled,
 		IsBound:  false, // 新创建的默认为未绑定

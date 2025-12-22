@@ -16298,6 +16298,281 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/takeout/order/accept": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "接单",
+                "parameters": [
+                    {
+                        "description": "接单参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderAcceptReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "接单成功"
+                    }
+                }
+            }
+        },
+        "/cashier/takeout/order/detail": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "获取外卖订单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "订单UUID",
+                        "name": "order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "外卖订单详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.TakeoutOrderResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/takeout/order/list": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "获取外卖订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "平台筛选: grab,foodpanda,lineman",
+                        "name": "platform",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态: 0=全部,1=待接单,2=已接单,3=制作中,4=已完成,5=已拒单",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "开始时间",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "结束时间",
+                        "name": "end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索关键词",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "外卖订单列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.TakeoutOrderListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/takeout/order/reject": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "拒单",
+                "parameters": [
+                    {
+                        "description": "拒单参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderRejectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "拒单成功"
+                    }
+                }
+            }
+        },
+        "/cashier/takeout/order/sync": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "同步订单-模拟接收新订单",
+                "parameters": [
+                    {
+                        "description": "同步订单参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderSyncReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "同步订单成功"
+                    }
+                }
+            }
+        },
+        "/cashier/takeout/settings": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "获取外卖配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "平台: grab,foodpanda,lineman",
+                        "name": "platform",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.TakeoutSettingsResp"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "保存外卖配置",
+                "parameters": [
+                    {
+                        "description": "配置参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutSettingsSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "保存成功"
+                    }
+                }
+            }
+        },
         "/cashier/usb/printer/report": {
             "post": {
                 "security": [
@@ -46855,6 +47130,7 @@ const docTemplate = `{
         "req.ProductTakeoutShopEditReq": {
             "type": "object",
             "required": [
+                "takeout_type",
                 "uuid"
             ],
             "properties": {
@@ -46915,8 +47191,12 @@ const docTemplate = `{
                     "description": "外卖状态 0-下架 1-上架",
                     "type": "integer"
                 },
+                "takeout_type": {
+                    "description": "外卖类型 1-Grab 2-Lineman 3-其他，默认1",
+                    "type": "integer"
+                },
                 "uuid": {
-                    "description": "外卖商品UUID",
+                    "description": "商品UUID",
                     "type": "integer"
                 }
             }
@@ -49509,6 +49789,69 @@ const docTemplate = `{
             "properties": {
                 "platform": {
                     "description": "平台名称：grab, lineman 等",
+                    "type": "string"
+                }
+            }
+        },
+        "request.TakeoutOrderAcceptReq": {
+            "type": "object",
+            "required": [
+                "order_uuid"
+            ],
+            "properties": {
+                "order_uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "request.TakeoutOrderRejectReq": {
+            "type": "object",
+            "required": [
+                "order_uuid",
+                "reject_reason_code"
+            ],
+            "properties": {
+                "order_uuid": {
+                    "type": "integer"
+                },
+                "reject_reason_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.TakeoutOrderSyncReq": {
+            "type": "object",
+            "required": [
+                "platform",
+                "raw_data"
+            ],
+            "properties": {
+                "platform": {
+                    "description": "grab,foodpanda,lineman",
+                    "type": "string"
+                },
+                "raw_data": {
+                    "description": "原始订单数据",
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "request.TakeoutSettingsSaveReq": {
+            "type": "object",
+            "required": [
+                "platform"
+            ],
+            "properties": {
+                "auto_accept": {
+                    "type": "boolean"
+                },
+                "max_amount": {
+                    "description": "单位：分",
+                    "type": "integer"
+                },
+                "platform": {
+                    "description": "grab,foodpanda,lineman",
                     "type": "string"
                 }
             }
@@ -61306,6 +61649,20 @@ const docTemplate = `{
                 }
             }
         },
+        "response.Meta": {
+            "type": "object",
+            "properties": {
+                "page_no": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.PageResponse": {
             "type": "object",
             "properties": {
@@ -61319,6 +61676,131 @@ const docTemplate = `{
                 },
                 "total": {
                     "description": "总数",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderItemResp": {
+            "type": "object",
+            "properties": {
+                "is_mapped": {
+                    "type": "integer"
+                },
+                "platform_item_id": {
+                    "type": "string"
+                },
+                "platform_item_name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "specifications": {
+                    "type": "string"
+                },
+                "tax": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                }
+            }
+        },
+        "response.TakeoutOrderResp": {
+            "type": "object",
+            "properties": {
+                "abnormal_detail": {
+                    "type": "string"
+                },
+                "accepted_time": {
+                    "type": "integer"
+                },
+                "currency_code": {
+                    "type": "string"
+                },
+                "currency_symbol": {
+                    "type": "string"
+                },
+                "cutlery": {
+                    "type": "integer"
+                },
+                "delivery_fee": {
+                    "type": "integer"
+                },
+                "is_abnormal": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderItemResp"
+                    }
+                },
+                "order_state": {
+                    "type": "integer"
+                },
+                "order_time": {
+                    "type": "integer"
+                },
+                "order_type": {
+                    "type": "string"
+                },
+                "payment_type": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "platform_order_id": {
+                    "type": "string"
+                },
+                "short_order_number": {
+                    "type": "string"
+                },
+                "stock_status": {
+                    "type": "integer"
+                },
+                "subtotal": {
+                    "type": "integer"
+                },
+                "total_amount": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutSettingsResp": {
+            "type": "object",
+            "properties": {
+                "auto_accept": {
+                    "type": "boolean"
+                },
+                "max_amount": {
+                    "type": "integer"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "uuid": {
                     "type": "integer"
                 }
             }

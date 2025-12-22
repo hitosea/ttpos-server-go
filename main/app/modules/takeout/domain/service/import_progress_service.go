@@ -86,7 +86,11 @@ func (s *ImportProgressService) StartImport(ctx context.Context, platform string
 	// 创建导入日志
 	now := time.Now().Unix()
 	log := &model.TakeoutImportLog{
-		UUID:            utils.MustGetID(),
+		BaseModel: model.BaseModel{
+			Uuid:       utils.MustGetID(),
+			CreateTime: now,
+			UpdateTime: now,
+		},
 		Platform:        platform,
 		ImportType:      importType,
 		ImportDirection: importDirection,
@@ -96,8 +100,6 @@ func (s *ImportProgressService) StartImport(ctx context.Context, platform string
 		FailureCount:    0,
 		TotalCount:      0,
 		StartTime:       now,
-		CreateTime:      now,
-		UpdateTime:      now,
 	}
 
 	if err := s.importLogRepo.Create(ctx, log); err != nil {
@@ -188,7 +190,7 @@ func (s *ImportProgressService) GetProgressInfo(ctx context.Context, uuid uint64
 	}
 
 	info := &ImportProgressInfo{
-		UUID:            log.UUID,
+		UUID:            log.Uuid,
 		Platform:        log.Platform,
 		ImportType:      log.ImportType,
 		ImportDirection: log.ImportDirection,
@@ -227,7 +229,7 @@ func (s *ImportProgressService) GetLatestProgressByPlatform(ctx context.Context,
 		return nil, nil
 	}
 
-	return s.GetProgressInfo(ctx, log.UUID)
+	return s.GetProgressInfo(ctx, log.Uuid)
 }
 
 // ListImportLogs 查询导入日志列表

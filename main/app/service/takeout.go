@@ -18,8 +18,8 @@ import (
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
-	"ttpos-server-go/app/modules/takeout/types/request"
-	"ttpos-server-go/app/modules/takeout/types/response"
+	"ttpos-server-go/app/modules/takeout/interfaces/request"
+	"ttpos-server-go/app/modules/takeout/interfaces/response"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
@@ -99,7 +99,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 		return errors.WithMessage(err, "检查推送状态失败")
 	}
 	if !canImport {
-		errMsg := fmt.Sprintf("已有推送任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+		errMsg := fmt.Sprintf("已有推送任务正在进行中 (UUID: %d)", inProgressLog.Uuid)
 		return errors.New(errMsg)
 	}
 
@@ -125,12 +125,12 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 			zap.Error(err),
 		)
 		// 标记推送失败
-		_ = progressService.CompleteImport(ctx, importLog.UUID, false, "获取货币设置失败: "+err.Error())
+		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, "获取货币设置失败: "+err.Error())
 		return errors.WithMessage(err, "获取货币设置失败")
 	}
 
 	// 更新进度到 20%
-	_ = progressService.UpdateProgress(ctx, importLog.UUID, 20, 100)
+	_ = progressService.UpdateProgress(ctx, importLog.Uuid, 20, 100)
 
 	// 4. 推送菜单到平台 (进度 20-100%)
 	err = s.takeoutAppSrv.PushMenu(ctx, platform, currencySetting.Unit)
@@ -140,19 +140,19 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 			zap.Error(err),
 		)
 		// 标记推送失败
-		_ = progressService.CompleteImport(ctx, importLog.UUID, false, "推送菜单失败: "+err.Error())
+		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, "推送菜单失败: "+err.Error())
 		return errors.WithMessage(err, "推送菜单失败")
 	}
 
 	// 更新进度到 100%
-	_ = progressService.UpdateProgress(ctx, importLog.UUID, 100, 100)
+	_ = progressService.UpdateProgress(ctx, importLog.Uuid, 100, 100)
 
 	// 5. 标记推送成功
-	err = progressService.CompleteImport(ctx, importLog.UUID, true, "")
+	err = progressService.CompleteImport(ctx, importLog.Uuid, true, "")
 	if err != nil {
 		logger.Logger.Warn("标记推送成功失败",
 			zap.String("platform", platform),
-			zap.Uint64("import_log_uuid", importLog.UUID),
+			zap.Uint64("import_log_uuid", importLog.Uuid),
 			zap.Error(err),
 		)
 	}
@@ -218,7 +218,7 @@ func (s *takeoutSrv) ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*
 		return nil, errors.WithMessage(err, "检查导入状态失败")
 	}
 	if !canImport {
-		errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+		errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.Uuid)
 		return nil, errors.New(errMsg)
 	}
 
@@ -298,7 +298,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 			return nil, errors.WithMessage(err, "检查导入状态失败")
 		}
 		if !canImport {
-			errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.UUID)
+			errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.Uuid)
 			return nil, errors.New(errMsg)
 		}
 
@@ -337,7 +337,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		}
 
 		// 更新进度到 10%
-		_ = progressService.UpdateProgress(ctx, importLog.UUID, 10, 100)
+		_ = progressService.UpdateProgress(ctx, importLog.Uuid, 10, 100)
 
 		// 3.2 同步商品规格（标准规格）(进度 10-15%)
 		productFlavorUuid, err := s.syncProductFlavor(copyCtx, platform)
@@ -346,7 +346,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		}
 
 		// 更新进度到 15%
-		_ = progressService.UpdateProgress(ctx, importLog.UUID, 15, 100)
+		_ = progressService.UpdateProgress(ctx, importLog.Uuid, 15, 100)
 
 		// 3.3 同步商品单位（标准单位）(进度 15-20%)
 		unitUuid, err := s.syncProductUnit(copyCtx, platform)
@@ -355,7 +355,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		}
 
 		// 更新进度到 20%
-		_ = progressService.UpdateProgress(ctx, importLog.UUID, 20, 100)
+		_ = progressService.UpdateProgress(ctx, importLog.Uuid, 20, 100)
 
 		// 3.4 导入商品 (进度 20-100%，根据实际商品数量更新)
 		success, failure, errors, err := s.syncProducts(
@@ -366,7 +366,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 			productFlavorUuid,
 			unitUuid,
 			progressService,
-			importLog.UUID,
+			importLog.Uuid,
 		)
 		if err != nil {
 			return err
@@ -382,12 +382,12 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	if err != nil {
 		logger.Logger.Error("导入菜单失败",
 			zap.String("platform", platform),
-			zap.Uint64("import_log_uuid", importLog.UUID),
+			zap.Uint64("import_log_uuid", importLog.Uuid),
 			zap.Error(err),
 		)
 
 		// 标记导入失败
-		_ = progressService.CompleteImport(ctx, importLog.UUID, false, err.Error())
+		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, err.Error())
 
 		// 4.1 更新 ttpos_takeout 表的导入状态为"导入失败"
 		if updateErr := takeoutDomainSrv.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusFailed, nil); updateErr != nil {
@@ -409,18 +409,18 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		// 部分成功，标记为失败
 		importStatus = 3
 		importError = utils.ToJson(errorList)
-		completeErr = progressService.CompleteImport(ctx, importLog.UUID, false, importError)
+		completeErr = progressService.CompleteImport(ctx, importLog.Uuid, false, importError)
 	} else {
 		// 全部成功
 		importStatus = 2
 		importError = ""
-		completeErr = progressService.CompleteImport(ctx, importLog.UUID, true, "")
+		completeErr = progressService.CompleteImport(ctx, importLog.Uuid, true, "")
 	}
 
 	if completeErr != nil {
 		logger.Logger.Error("完成导入状态更新失败",
 			zap.String("platform", platform),
-			zap.Uint64("import_log_uuid", importLog.UUID),
+			zap.Uint64("import_log_uuid", importLog.Uuid),
 			zap.Error(completeErr),
 		)
 	}

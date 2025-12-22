@@ -5,7 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
-	"ttpos-server-go/app/modules/takeout/types/request"
+	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/database"
