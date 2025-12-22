@@ -1109,8 +1109,8 @@ func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[st
 			return errors.WithMessage(err, fmt.Sprintf("获取仓库物品库存失败: material_uuid=%d, warehouse_uuid=%d", reduceInfo.MaterialUuid, reduceInfo.WarehouseUuid))
 		}
 
-		// 检查库存是否充足
-		if warehouseItem.Stock < reduceInfo.ReduceNum {
+		// 检查库存是否充足（如果材料开启负库存，认为是无限库存，不会材料不足）
+		if reduceInfo.Material.AllowNegativeStock != constant.Yes && warehouseItem.Stock < reduceInfo.ReduceNum {
 			return errors.New(fmt.Sprintf("材料库存不足: material_uuid=%d, warehouse_uuid=%d, 需要=%f, 当前=%f",
 				reduceInfo.MaterialUuid, reduceInfo.WarehouseUuid, reduceInfo.ReduceNum, warehouseItem.Stock))
 		}
