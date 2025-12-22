@@ -29,7 +29,6 @@ class ProductBom extends ProductBomModel
                 'stock_num' => $item['stock_num'], // 库存数量
                 'barcode_value' => $item['barcode'], // 条码值
                 'status' => $product['status'], // 状态
-                'is_open_stock' => $item['is_open_stock'] ?? 1, // 是否开启库存, 兼容商品默认开启库存
             ]);
             // 判断是否开启授权进销存
             if ($product->hasInventoryAuth()) {
@@ -66,7 +65,6 @@ class ProductBom extends ProductBomModel
                 'stock_num' => $item['stock_num'], // 库存数量
                 'barcode_value' => $item['barcode'], // 条码值
                 'status' => $data['product_status'] == 10 ? 1 : 0, // 状态: 10-上架, 20-下架
-                'is_open_stock' => $item['is_open_stock'] ?? 1, // 是否开启库存, 兼容商品默认开启库存
             ];
             $flavorUuid = $item['product_sku_id'] ?? 0;
             if ($flavorUuid == 0) {

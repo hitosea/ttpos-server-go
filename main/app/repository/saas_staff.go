@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -22,7 +23,7 @@ type ISaasStaffRepo interface {
 	GetByUuid(uuid uint64, options ...DBOption) (*model.SaasStaff, error)
 	GetByEmail(email string, options ...DBOption) (*model.SaasStaff, error)
 	GetByPhone(phone string, options ...DBOption) (*model.SaasStaff, error)
-	GetByEmailOrPhone(keyword string, options ...DBOption) (*model.SaasStaff, error)
+	GetByEmailOrPhone(field, keyword string, options ...DBOption) (*model.SaasStaff, error)
 	PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.SaasStaff, int64, error) // 分页查询统一账号
 
 	GetSaasStaff(opts ...DBOption) model.SaasStaff
@@ -100,9 +101,17 @@ func (r *saasStaffRepo) GetByPhone(phone string, options ...DBOption) (*model.Sa
 }
 
 // GetByEmailOrPhone 根据邮箱或手机号获取统一账号
-func (r *saasStaffRepo) GetByEmailOrPhone(keyword string, options ...DBOption) (*model.SaasStaff, error) {
+func (r *saasStaffRepo) GetByEmailOrPhone(field, keyword string, options ...DBOption) (*model.SaasStaff, error) {
 	var staff model.SaasStaff
-	db := r.db.Model(&model.SaasStaff{}).Scopes(NotDeleted).Where("email = ? OR phone = ?", keyword, keyword)
+	db := r.db.Model(&model.SaasStaff{}).Scopes(NotDeleted)
+	switch field {
+	case "email":
+		db = db.Where("email = ?", keyword)
+	case "phone":
+		db = db.Where("phone = ?", keyword)
+	default:
+		return nil, errors.New("字段错误")
+	}
 	for _, option := range options {
 		db = option(db)
 	}

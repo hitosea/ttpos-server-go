@@ -372,6 +372,7 @@ type PurchaseReceiptOrderItemUnit struct {
 
 	// 关联关系
 	PurchaseReceiptOrderItem PurchaseReceiptOrderItem `gorm:"foreignKey:ItemUuid;references:Uuid" json:"purchase_receipt_order_item,omitempty"`
+	MaterialUnit             *MaterialUnit            `gorm:"foreignKey:Uuid;references:UnitUuid" json:"material_unit,omitempty"`
 }
 
 // TableName 指定表名

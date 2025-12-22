@@ -174,7 +174,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 								PurchaseReceiptOrderUuid: receiptOrder.Uuid,
 								Num:                      unit.Num,
 								UnitUuid:                 unit.Uuid,
-								UnitName:                 orderItem.UnitName,
+								UnitName:                 orderItemUnit.UnitName,
 								UnitConversionRate:       orderItemUnit.UnitConversionRate,
 								BaseUnitUuid:             orderItemUnit.BaseUnitUuid,
 								BaseUnitName:             orderItemUnit.BaseUnitName,
@@ -716,6 +716,9 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 						PurchaseNum: purchaseNum,
 						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
+							if unit.UnitName == "" && unit.MaterialUnit != nil {
+								return *language.JsonToLocaleResponse(unit.MaterialUnit.Name)
+							}
 							return *language.JsonToLocaleResponse(unit.UnitName)
 						}(),
 					})

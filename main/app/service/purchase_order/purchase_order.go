@@ -232,17 +232,19 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 			unitList := []resp.PurchaseOrderItemUnit{}
 			if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
 				unitList = append(unitList, resp.PurchaseOrderItemUnit{
-					Num:        item.Num,
-					ArrivalNum: item.ArrivalNum,
-					UnitUuid:   item.UnitUuid,
-					LocaleName: *language.JsonToLocaleResponse(item.UnitName),
+					Num:         item.Num,
+					PurchaseNum: item.Num,
+					ArrivalNum:  item.ArrivalNum,
+					UnitUuid:    item.UnitUuid,
+					LocaleName:  *language.JsonToLocaleResponse(item.UnitName),
 				})
 			} else {
 				for _, unit := range item.Units {
 					unitList = append(unitList, resp.PurchaseOrderItemUnit{
-						Num:        unit.Num,
-						ArrivalNum: unit.ArrivalNum,
-						UnitUuid:   unit.UnitUuid,
+						Num:         unit.Num,
+						PurchaseNum: unit.Num,
+						ArrivalNum:  unit.ArrivalNum,
+						UnitUuid:    unit.UnitUuid,
 						LocaleName: func() dto.LocaleResponse {
 							return *language.JsonToLocaleResponse(unit.UnitName)
 						}(),

@@ -30306,6 +30306,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "字段, email、phone",
+                        "name": "field",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "关键词, 邮箱、手机号",
                         "name": "keyword",
                         "in": "query"
@@ -61335,7 +61341,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "10.144.144.7:8080",
+	Host:             "8080--main--gold-moose-23--zzhheverywhere.coder.hitosea.com",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "ttpos-server-go API",
