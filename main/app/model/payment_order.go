@@ -143,6 +143,11 @@ func (model *PaymentMethod) IsDisabledCancel() bool {
 	return model.IsLianLianPay()
 }
 
+// IsDraft 判断是否草稿状态
+func (model *PaymentMethod) IsDraft() bool {
+	return model.IsHeadquarterPayment() && model.ErpnextPayment == ""
+}
+
 // GetSourceText 获取来源文本
 func (model *PaymentMethod) GetSourceText(language string) string {
 	if model.Source == 0 {

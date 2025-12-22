@@ -24611,45 +24611,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/payment_method/delete": {
-            "delete": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "删除支付方式（软删除）",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.支付管理"
-                ],
-                "summary": "删除支付方式",
-                "parameters": [
-                    {
-                        "description": "删除支付方式参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.PaymentMethodDeleteReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/payment_method/detail": {
             "get": {
                 "security": [
@@ -37772,10 +37733,6 @@ const docTemplate = `{
                 "uuid": {
                     "description": "物品UUID",
                     "type": "integer"
-                },
-                "valuation": {
-                    "description": "估值率",
-                    "type": "number"
                 }
             }
         },
@@ -43044,10 +43001,6 @@ const docTemplate = `{
                 "unit_uuid": {
                     "description": "基准单位UUID",
                     "type": "integer"
-                },
-                "valuation": {
-                    "description": "估值率",
-                    "type": "number"
                 }
             }
         },
@@ -43213,10 +43166,6 @@ const docTemplate = `{
                 "uuid": {
                     "description": "物品UUID",
                     "type": "integer"
-                },
-                "valuation": {
-                    "description": "估值率",
-                    "type": "number"
                 }
             }
         },
@@ -44470,18 +44419,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.PaymentMethodDeleteReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "description": "支付方式UUID",
-                    "type": "integer"
-                }
-            }
-        },
         "req.PaymentMethodSortItem": {
             "type": "object",
             "required": [
@@ -44550,10 +44487,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "description": "支付方式名称",
-                    "type": "string"
-                },
-                "payment_name": {
-                    "description": "支付名称",
                     "type": "string"
                 },
                 "qrcode_file_uuid": {
@@ -44981,10 +44914,6 @@ const docTemplate = `{
                 "unit_uuid": {
                     "description": "基准单位UUID",
                     "type": "integer"
-                },
-                "valuation": {
-                    "description": "估值率",
-                    "type": "number"
                 }
             }
         },
@@ -45754,7 +45683,7 @@ const docTemplate = `{
                     }
                 },
                 "is_must": {
-                    "description": "商品属性组是否必选 0-否 1-是",
+                    "description": "商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）",
                     "type": "integer"
                 },
                 "is_open_input": {
@@ -45763,6 +45692,10 @@ const docTemplate = `{
                 },
                 "max_selection": {
                     "description": "商品属性组最大选择数量",
+                    "type": "integer"
+                },
+                "min_selection": {
+                    "description": "商品属性组最小选择数量（v2.12新增）",
                     "type": "integer"
                 },
                 "uuid": {
@@ -45873,7 +45806,11 @@ const docTemplate = `{
                     ]
                 },
                 "optional_count": {
-                    "description": "可选数量（可选分组时有效），默认1",
+                    "description": "最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）",
+                    "type": "integer"
+                },
+                "optional_min_count": {
+                    "description": "最小可选数量（v2.12新增，可选分组时有效）",
                     "type": "integer"
                 },
                 "products": {
@@ -46044,7 +45981,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "is_must": {
-                    "description": "是否必选 0-否 1-是",
+                    "description": "是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）",
                     "type": "integer"
                 },
                 "is_open_input": {
@@ -46053,6 +45990,10 @@ const docTemplate = `{
                 },
                 "max_selection": {
                     "description": "最大选择数量",
+                    "type": "integer"
+                },
+                "min_selection": {
+                    "description": "最小选择数量（v2.12新增）",
                     "type": "integer"
                 },
                 "sauces": {
@@ -46298,7 +46239,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "is_must": {
-                    "description": "商品属性组是否必选 0-否 1-是",
+                    "description": "商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）",
                     "type": "integer"
                 },
                 "is_open_input": {
@@ -46307,6 +46248,10 @@ const docTemplate = `{
                 },
                 "max_selection": {
                     "description": "商品属性组最大选择数量",
+                    "type": "integer"
+                },
+                "min_selection": {
+                    "description": "商品属性组最小选择数量（v2.12新增）",
                     "type": "integer"
                 },
                 "uuid": {
@@ -46431,7 +46376,11 @@ const docTemplate = `{
                     ]
                 },
                 "optional_count": {
-                    "description": "可选数量（可选分组时有效）",
+                    "description": "最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）",
+                    "type": "integer"
+                },
+                "optional_min_count": {
+                    "description": "最小可选数量（v2.12新增，可选分组时有效）",
                     "type": "integer"
                 },
                 "products": {
@@ -46610,7 +46559,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "is_must": {
-                    "description": "是否必选 0-否 1-是",
+                    "description": "是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）",
                     "type": "integer"
                 },
                 "is_open_input": {
@@ -46619,6 +46568,10 @@ const docTemplate = `{
                 },
                 "max_selection": {
                     "description": "最大选择数量",
+                    "type": "integer"
+                },
+                "min_selection": {
+                    "description": "最小选择数量（v2.12新增）",
                     "type": "integer"
                 },
                 "sauces": {

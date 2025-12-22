@@ -1473,6 +1473,19 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		return &product_resp.ProductDeleteResp{List: packageNames}, errors.New("商品已关联如下套餐，暂时无法删除，请先修改套餐")
 	}
 
+	// 检查商品/规格是否存在未完结的外卖订单
+	orderRepo := repository.NewOrderRepo(db)
+	for _, productBom := range product.ProductBoms {
+		hasTakeoutOrder, err := orderRepo.HasUnfinishedTakeoutOrderWithProduct(request.Uuid, productBom.Uuid)
+		if err != nil {
+			logger.Logger.Error("检查外卖订单失败", zap.Any("func", "DeleteProductShop"), zap.Any("params", request), zap.Error(err))
+			return nil, errors.New("检查外卖订单失败")
+		}
+		if hasTakeoutOrder {
+			return nil, errors.New("商品/规格存在未完结的外卖订单，无法删除")
+		}
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
 		productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
@@ -5786,6 +5799,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				attributes = append(attributes, CheckProductAttributeGroupParam{
 					Uuid:         attribute.Uuid,
 					IsMust:       attribute.IsMust,
+					MinSelection: attribute.MinSelection,
 					IsOpenInput:  attribute.IsOpenInput,
 					MaxSelection: attribute.MaxSelection,
 					Attributes:   attributeParams,
@@ -5808,6 +5822,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
 				IsMust:       req.Sauce.IsMust,
+				MinSelection: req.Sauce.MinSelection,
 				IsOpenInput:  req.Sauce.IsOpenInput,
 				MaxSelection: req.Sauce.MaxSelection,
 				Sauces:       sauceListParam,
@@ -5839,15 +5854,19 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				})
 			}
 			groupType := group.GroupType
+			optionalMinCount := group.OptionalMinCount
 			optionalCount := group.OptionalCount
 			if groupType == 0 {
+				// 固定分组：最小和最大可选都等于商品数量
+				optionalMinCount = len(group.Products)
 				optionalCount = len(group.Products)
 			}
 			groups = append(groups, CheckProductPackageGroupParam{
-				LocaleName:    group.LocaleName,
-				GroupType:     groupType,
-				OptionalCount: optionalCount,
-				Products:      products,
+				LocaleName:       group.LocaleName,
+				GroupType:        groupType,
+				OptionalMinCount: optionalMinCount,
+				OptionalCount:    optionalCount,
+				Products:         products,
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
@@ -6109,6 +6128,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				attributes = append(attributes, CheckProductAttributeGroupParam{
 					Uuid:         attribute.Uuid,
 					IsMust:       attribute.IsMust,
+					MinSelection: attribute.MinSelection,
 					IsOpenInput:  attribute.IsOpenInput,
 					MaxSelection: attribute.MaxSelection,
 					Attributes:   attributeParams,
@@ -6134,6 +6154,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
 				IsMust:       req.Sauce.IsMust,
+				MinSelection: req.Sauce.MinSelection,
 				IsOpenInput:  req.Sauce.IsOpenInput,
 				MaxSelection: req.Sauce.MaxSelection,
 				Sauces:       sauceListParam,
@@ -6161,17 +6182,21 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				})
 			}
 			groupType := group.GroupType
+			optionalMinCount := group.OptionalMinCount
 			optionalCount := group.OptionalCount
 			if groupType == 0 {
+				// 固定分组：最小和最大可选都等于商品数量
+				optionalMinCount = len(group.Products)
 				optionalCount = len(group.Products)
 			}
 			groups = append(groups, CheckProductPackageGroupParam{
-				Uuid:          group.Uuid,
-				LocaleName:    group.LocaleName,
-				GroupType:     groupType,
-				OptionalCount: optionalCount,
-				Products:      products,
-				IsDelete:      group.IsDelete,
+				Uuid:             group.Uuid,
+				LocaleName:       group.LocaleName,
+				GroupType:        groupType,
+				OptionalMinCount: optionalMinCount,
+				OptionalCount:    optionalCount,
+				Products:         products,
+				IsDelete:         group.IsDelete,
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
@@ -6931,6 +6956,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 	// 更新商品包
 	err = productPackageRepo.UpdateProductPackage(map[string]any{
 		"sauce_required":      params.SauceResult.IsMust,
+		"sauce_min_selection": params.SauceResult.MinSelection,
 		"sauce_max_selection": params.SauceResult.MaxSelection,
 	}, commonRepo.WhereByUuid(params.ProductPackageUuid))
 	if err != nil {
@@ -6985,6 +7011,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 						UpdateTime: time.Now().Unix(),
 					},
 					IsMust:                    uint(attributeGroup.IsMust),
+					MinSelection:              uint(attributeGroup.MinSelection),
 					MaxSelection:              uint(attributeGroup.MaxSelection),
 					ProductPackageUuid:        productPackageUuid,
 					ProductAttributeGroupUuid: attributeGroup.Uuid,
@@ -7010,6 +7037,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 				// 更新商品包关联属性组
 				err := productPackageAttributeGroupRepo.UpdateProductPackageAttributeGroup(map[string]any{
 					"is_must":       attributeGroup.IsMust,
+					"min_selection": attributeGroup.MinSelection,
 					"max_selection": attributeGroup.MaxSelection,
 				}, commonRepo.WhereByUuid(productPackageAttributeGroup.Uuid))
 				if err != nil {
@@ -7108,6 +7136,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					MultiLanguageNameUuid: multiLanguageNameUuid,
 					ProductPackageUuid:    productPackageUuid,
 					GroupType:             group.GroupType,
+					OptionalMinCount:      group.OptionalMinCount,
 					OptionalCount:         group.OptionalCount,
 					Sort:                  sortValue, // 设置排序值
 				})
@@ -7166,10 +7195,11 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					return errors.WithMessage(err, "保存多语言名称失败")
 				}
 				err = productPackageGroupRepo.UpdateProductPackageGroup(map[string]any{
-					"name":           group.LocaleName.ToJson(),
-					"group_type":     group.GroupType,
-					"optional_count": group.OptionalCount,
-					"sort":           sortValue, // 更新排序值
+					"name":               group.LocaleName.ToJson(),
+					"group_type":         group.GroupType,
+					"optional_min_count": group.OptionalMinCount,
+					"optional_count":     group.OptionalCount,
+					"sort":               sortValue, // 更新排序值
 				}, commonRepo.WhereByUuid(group.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新套餐组失败")

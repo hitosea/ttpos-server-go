@@ -1155,9 +1155,6 @@ definitions:
       uuid:
         description: 物品UUID
         type: integer
-      valuation:
-        description: 估值率
-        type: number
     type: object
   material_resp.MaterialInfo:
     properties:
@@ -4729,9 +4726,6 @@ definitions:
       unit_uuid:
         description: 基准单位UUID
         type: integer
-      valuation:
-        description: 估值率
-        type: number
     type: object
   req.MaterialBatchUpdateVisibleReq:
     properties:
@@ -4843,9 +4837,6 @@ definitions:
       uuid:
         description: 物品UUID
         type: integer
-      valuation:
-        description: 估值率
-        type: number
     type: object
   req.MaterialImportItemReq:
     properties:
@@ -5725,14 +5716,6 @@ definitions:
     required:
     - items
     type: object
-  req.PaymentMethodDeleteReq:
-    properties:
-      uuid:
-        description: 支付方式UUID
-        type: integer
-    required:
-    - uuid
-    type: object
   req.PaymentMethodSortItem:
     properties:
       sort:
@@ -5781,9 +5764,6 @@ definitions:
         type: integer
       name:
         description: 支付方式名称
-        type: string
-      payment_name:
-        description: 支付名称
         type: string
       qrcode_file_uuid:
         description: 二维码图片UUID
@@ -6074,9 +6054,6 @@ definitions:
       unit_uuid:
         description: 基准单位UUID
         type: integer
-      valuation:
-        description: 估值率
-        type: number
     required:
     - num
     - related_uuid
@@ -6619,13 +6596,16 @@ definitions:
           $ref: '#/definitions/req.ProductShopAddGroupAttributeReq'
         type: array
       is_must:
-        description: 商品属性组是否必选 0-否 1-是
+        description: 商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 商品属性组最大选择数量是否开启 false-关闭 true-开启
         type: boolean
       max_selection:
         description: 商品属性组最大选择数量
+        type: integer
+      min_selection:
+        description: 商品属性组最小选择数量（v2.12新增）
         type: integer
       uuid:
         description: 商品属性组UUID
@@ -6700,7 +6680,10 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
       optional_count:
-        description: 可选数量（可选分组时有效），默认1
+        description: 最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）
+        type: integer
+      optional_min_count:
+        description: 最小可选数量（v2.12新增，可选分组时有效）
         type: integer
       products:
         description: 套餐分组商品列表
@@ -6813,13 +6796,16 @@ definitions:
   req.ProductShopAddSauceReq:
     properties:
       is_must:
-        description: 是否必选 0-否 1-是
+        description: 是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 是否开启输入 0-否 1-是
         type: boolean
       max_selection:
         description: 最大选择数量
+        type: integer
+      min_selection:
+        description: 最小选择数量（v2.12新增）
         type: integer
       sauces:
         description: 商品加料列表
@@ -6990,13 +6976,16 @@ definitions:
         description: 是否删除, 如果是新增/编辑，则传false，删除时传true
         type: boolean
       is_must:
-        description: 商品属性组是否必选 0-否 1-是
+        description: 商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 商品属性组最大选择数量是否开启 false-否 true-是
         type: boolean
       max_selection:
         description: 商品属性组最大选择数量
+        type: integer
+      min_selection:
+        description: 商品属性组最小选择数量（v2.12新增）
         type: integer
       uuid:
         description: 商品属性组UUID
@@ -7084,7 +7073,10 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
       optional_count:
-        description: 可选数量（可选分组时有效）
+        description: 最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）
+        type: integer
+      optional_min_count:
+        description: 最小可选数量（v2.12新增，可选分组时有效）
         type: integer
       products:
         description: 套餐分组商品列表
@@ -7200,13 +7192,16 @@ definitions:
   req.ProductShopEditSauceReq:
     properties:
       is_must:
-        description: 是否必选 0-否 1-是
+        description: 是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 是否开启输入 0-否 1-是
         type: boolean
       max_selection:
         description: 最大选择数量
+        type: integer
+      min_selection:
+        description: 最小选择数量（v2.12新增）
         type: integer
       sauces:
         description: 商品加料列表
@@ -32797,30 +32792,6 @@ paths:
       security:
       - JwtToken: []
       summary: 获取默认支付方式列表
-      tags:
-      - 商家端.支付管理
-  /shop/payment_method/delete:
-    delete:
-      consumes:
-      - application/json
-      description: 删除支付方式（软删除）
-      parameters:
-      - description: 删除支付方式参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PaymentMethodDeleteReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 删除支付方式
       tags:
       - 商家端.支付管理
   /shop/payment_method/detail:

@@ -19,8 +19,11 @@ type IPaymentMethodRepo interface {
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereKiosk() DBOption                 // 在自助点餐机结账时显示
 	WhereStatus(status int) DBOption
-	WhereExistsErpnextPayment() DBOption // 排除ERPNext支付方式
-	WhereNotCode(codes []int) DBOption   // 排除支付方式代号
+	WhereExistsErpnextPayment() DBOption          // 存在ERPNext支付方式
+	WhereNotExistsErpnextPayment() DBOption       // 不存在ERPNext支付方式
+	WhereNotCode(codes []int) DBOption            // 排除支付方式代号
+	WherePaymentName(paymentName string) DBOption // 按支付方式名称查询
+	WhereCode(code int) DBOption                  // 按支付方式code查询
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
@@ -262,9 +265,27 @@ func (r *paymentMethodRepo) WhereExistsErpnextPayment() DBOption {
 	}
 }
 
+func (r *paymentMethodRepo) WhereNotExistsErpnextPayment() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_payment = ''")
+	}
+}
+
 func (r *paymentMethodRepo) WhereNotCode(codes []int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("code NOT IN ?", codes)
+	}
+}
+
+func (r *paymentMethodRepo) WherePaymentName(paymentName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("payment_name = ?", paymentName)
+	}
+}
+
+func (r *paymentMethodRepo) WhereCode(code int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code = ?", code)
 	}
 }
 
@@ -351,7 +372,7 @@ func (r *paymentMethodRepo) GetPaymentMethodListWithPagination(pageNo, pageSize 
 	var list []*model.PaymentMethod
 	var total int64
 
-	db := r.db.Model(&model.PaymentMethod{}).Where("delete_time = 0")
+	db := r.db.Model(&model.PaymentMethod{})
 
 	// 应用选项
 	for _, opt := range opts {
@@ -365,8 +386,7 @@ func (r *paymentMethodRepo) GetPaymentMethodListWithPagination(pageNo, pageSize 
 
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	if err := db.Order("CAST(sort AS UNSIGNED), create_time desc").
-		Offset(offset).
+	if err := db.Offset(offset).
 		Limit(pageSize).
 		Find(&list).Error; err != nil {
 		return nil, 0, errors.WithMessage(err, "查询支付方式列表失败")

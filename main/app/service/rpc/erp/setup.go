@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-server-go/app/cloud"
@@ -31,6 +32,8 @@ func NewErpSetupClient() (setup.SetupServiceClient, *grpc.ClientConn, error) {
 }
 
 func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error) {
+	commonRepo := repository.NewCommonRepo()
+
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB))
 	// 判断是否已经有店铺
 	companySetting, _ := companySettingRepo.GetOne(companySettingRepo.WhereErpnextCompanyAbbr(initShopReq.CompanyAbbr), companySettingRepo.WhereSiteCode(initShopReq.SiteCode), repository.NotDeleted)
@@ -158,14 +161,66 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		}
 	}
 
-	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)
-	repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid)).InitErpnextPayment(map[int]string{
-		constant.PaymentMethodCodeBalance:             "Balance",
-		constant.PaymentMethodCodeCash:                "Cash",
-		constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
-		constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-AliPay",
-		constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
-	})
+	// 同步支付方式到ERP
+	sellingClient, conn, err := NewErpSellingClient()
+	if err != nil {
+		return resp.InitShopResp{}, err
+	}
+	defer conn.Close()
+
+	paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid))
+
+	paymentMethodList := paymentMethodRepo.GetAllPaymentMethodList(
+		commonRepo.WhereBySoftDelete(),
+		paymentMethodRepo.WhereNotExistsErpnextPayment(),
+	)
+
+	saveModeOfPaymentRespMap := make(map[int]string)
+	for _, paymentMethod := range paymentMethodList {
+		channel := getChannelBySource(paymentMethod.Source)
+		params := &selling.SaveModeOfPaymentReq{
+			CompanyAbbr: initShopReq.CompanyAbbr,
+			Branch:      response.BranchName,
+			Channel:     channel,
+			PayType:     paymentMethod.PaymentName,
+		}
+		saveResp, err := sellingClient.SaveModeOfPayment(WithSiteCode(context.Background(), initShopReq.SiteCode), params)
+		if err != nil {
+			logger.Logger.Error(
+				"InitShop-SaveModeOfPayment",
+				zap.Any("err", err),
+				zap.Any("params", params),
+				zap.Any("company_uuid", company.Uuid),
+				zap.Any("payment_method_uuid", paymentMethod.Uuid),
+			)
+			continue
+		}
+		if saveResp.GetCode() != "0" || saveResp.Data == nil {
+			logger.Logger.Error(
+				"InitShop-SaveModeOfPayment",
+				zap.Any("code", saveResp.GetCode()),
+				zap.Any("message", saveResp.GetMessage()),
+				zap.Any("params", params),
+				zap.Any("company_uuid", company.Uuid),
+				zap.Any("payment_method_uuid", paymentMethod.Uuid),
+			)
+			continue
+		}
+		var saveModeOfPaymentResp selling.SaveModeOfPaymentResp
+		if err := saveResp.Data.UnmarshalTo(&saveModeOfPaymentResp); err != nil {
+			logger.Logger.Error(
+				"InitShop-SaveModeOfPayment-UnmarshalTo",
+				zap.Any("err", err),
+				zap.Any("params", params),
+				zap.Any("company_uuid", company.Uuid),
+				zap.Any("payment_method_uuid", paymentMethod.Uuid),
+			)
+			continue
+		}
+		saveModeOfPaymentRespMap[paymentMethod.Code] = saveModeOfPaymentResp.Name
+	}
+
+	paymentMethodRepo.InitErpnextPayment(saveModeOfPaymentRespMap)
 
 	utils.SafeGo(func() {
 		err := s.UpdateTtposCompanyParentUuids(initShopReq.SiteCode)

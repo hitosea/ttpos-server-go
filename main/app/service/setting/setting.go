@@ -2391,6 +2391,7 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
+		paymentRepo.WhereNotCode([]int{constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan}),
 	)
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))
