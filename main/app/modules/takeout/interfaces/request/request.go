@@ -55,3 +55,9 @@ type UpdateMenuModifierRequest struct {
 	Price           *int64 `json:"price,omitempty"`                        // 价格 (单位：分)
 	AvailableStatus string `json:"available_status,omitempty"`             // 可用状态: AVAILABLE, UNAVAILABLE
 }
+
+// PageReq 分页请求参数
+type PageReq struct {
+	PageNo   int `form:"page_no,default=1"  json:"page_no,default=1" binding:"omitempty,min=1"`               // 页码
+	PageSize int `form:"page_size,default=20" json:"page_size,default=20" binding:"omitempty,min=1,max=1100"` // 每页大小
+}

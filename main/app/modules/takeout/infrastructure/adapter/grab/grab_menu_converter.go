@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/menu/repository"
 	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
-	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -56,155 +54,190 @@ func (c *GrabConverter) ConvertFromTTPOS(ctx context.Context, menu *entity.Takeo
 	}
 
 	// 转换货币
-	grabCurrency := GrabCurrency{
-		Code:     menu.Currency.Code,
-		Symbol:   menu.Currency.Symbol,
-		Exponent: menu.Currency.Exponent,
-	}
+	grabCurrency := *grabfood.NewCurrency(
+		menu.Currency.Code,
+		menu.Currency.Symbol,
+		int32(menu.Currency.Exponent),
+	)
 
 	// 转换售卖时段
-	grabSellingTimes := make([]GrabSellingTime, 0, len(menu.SellingTimes))
+	grabSellingTimes := make([]grabfood.SellingTime, 0, len(menu.SellingTimes))
 	for _, st := range menu.SellingTimes {
 		grabST := c.convertSellingTime(st)
 		grabSellingTimes = append(grabSellingTimes, grabST)
 	}
 
 	// 转换分类
-	grabCategories := make([]GrabCategory, 0, len(menu.Categories))
+	grabCategories := make([]grabfood.MenuCategory, 0, len(menu.Categories))
 	for _, cat := range menu.Categories {
 		grabCat := c.convertCategory(cat)
 		grabCategories = append(grabCategories, grabCat)
 	}
 
-	grabMenu := &GrabMenu{
-		Currency:     grabCurrency,
-		SellingTimes: grabSellingTimes,
-		Categories:   grabCategories,
-	}
+	grabMenu := grabfood.NewGetMenuNewResponse(
+		grabCurrency,
+		grabSellingTimes,
+		grabCategories,
+	)
 
 	return grabMenu, nil
 }
 
 // convertSellingTime 转换售卖时段
-func (c *GrabConverter) convertSellingTime(st *valueobject.SellingTime) GrabSellingTime {
+func (c *GrabConverter) convertSellingTime(st *valueobject.SellingTime) grabfood.SellingTime {
 	// 默认全天营业配置
-	defaultDayHours := GrabDayServiceHours{
-		OpenPeriodType: "OpenPeriod",
-		Periods: []GrabServicePeriod{
-			{
-				StartTime: "00:00",
-				EndTime:   "23:59",
-			},
-		},
-	}
+	defaultDayHours := *grabfood.NewServiceHour("OpenPeriod")
+	defaultDayHours.SetPeriods([]grabfood.OpenPeriod{
+		*grabfood.NewOpenPeriod("00:00", "23:59"),
+	})
 
-	return GrabSellingTime{
-		ID:       st.ID,
-		Name:     st.Name,
-		Sequence: st.Sequence,
-		ServiceHours: GrabServiceHours{
-			Mon: defaultDayHours,
-			Tue: defaultDayHours,
-			Wed: defaultDayHours,
-			Thu: defaultDayHours,
-			Fri: defaultDayHours,
-			Sat: defaultDayHours,
-			Sun: defaultDayHours,
-		},
-		StartTime: st.StartTime,
-		EndTime:   st.EndTime,
-	}
+	serviceHours := grabfood.NewServiceHours(
+		defaultDayHours,
+		defaultDayHours,
+		defaultDayHours,
+		defaultDayHours,
+		defaultDayHours,
+		defaultDayHours,
+		defaultDayHours,
+	)
+
+	sellingTime := grabfood.NewSellingTimeWithDefaults()
+	sellingTime.SetId(st.ID)
+	sellingTime.SetName(st.Name)
+	sellingTime.SetStartTime(st.StartTime)
+	sellingTime.SetEndTime(st.EndTime)
+	sellingTime.SetServiceHours(*serviceHours)
+
+	return *sellingTime
 }
 
 // convertCategory 转换分类
-func (c *GrabConverter) convertCategory(cat *valueobject.Category) GrabCategory {
-	grabItems := make([]GrabItem, 0, len(cat.Items))
+func (c *GrabConverter) convertCategory(cat *valueobject.Category) grabfood.MenuCategory {
+	grabItems := make([]grabfood.MenuItem, 0, len(cat.Items))
 	for _, item := range cat.Items {
 		grabItem := c.convertItem(item)
 		grabItems = append(grabItems, grabItem)
 	}
 
-	return GrabCategory{
-		ID:              cat.ID,
-		Name:            cat.Name,
-		NameTranslation: cat.NameTranslation,
-		Sequence:        cat.Sequence,
-		AvailableStatus: string(cat.AvailableStatus),
-		Items:           grabItems,
-		SellingTimeID:   cat.SellingTimeID,
+	category := grabfood.NewMenuCategory(
+		cat.ID,
+		cat.Name,
+		string(cat.AvailableStatus),
+		cat.SellingTimeID,
+		grabItems,
+	)
+
+	if cat.NameTranslation != nil {
+		category.SetNameTranslation(cat.NameTranslation)
 	}
+	if cat.Sequence != 0 {
+		category.SetSequence(int32(cat.Sequence))
+	}
+
+	return *category
 }
 
 // convertItem 转换商品
-func (c *GrabConverter) convertItem(item *valueobject.MenuItem) GrabItem {
-	grabModifierGroups := make([]GrabModifierGroup, 0, len(item.ModifierGroups))
+func (c *GrabConverter) convertItem(item *valueobject.MenuItem) grabfood.MenuItem {
+	grabModifierGroups := make([]grabfood.ModifierGroup, 0, len(item.ModifierGroups))
 	for _, mg := range item.ModifierGroups {
 		grabMG := c.convertModifierGroup(mg)
 		grabModifierGroups = append(grabModifierGroups, grabMG)
 	}
 
-	grabItem := GrabItem{
-		ID:                     item.ID,
-		Name:                   item.Name,
-		NameTranslation:        item.NameTranslation,
-		Sequence:               item.Sequence,
-		AvailableStatus:        string(item.AvailableStatus),
-		Price:                  item.Price,
-		Description:            item.Description,
-		DescriptionTranslation: item.DescriptionTranslation,
-		Photos:                 item.Photos,
-		ModifierGroups:         grabModifierGroups,
-		SellingTimeID:          item.SellingTimeID,
+	menuItem := grabfood.NewMenuItem(
+		item.ID,
+		item.Name,
+		string(item.AvailableStatus),
+		item.Price,
+	)
+
+	if item.NameTranslation != nil {
+		menuItem.SetNameTranslation(item.NameTranslation)
+	}
+	if item.Sequence != 0 {
+		menuItem.SetSequence(int32(item.Sequence))
+	}
+	if item.Description != "" {
+		menuItem.SetDescription(item.Description)
+	}
+	if item.DescriptionTranslation != nil {
+		menuItem.SetDescriptionTranslation(item.DescriptionTranslation)
+	}
+	if len(item.Photos) > 0 {
+		menuItem.SetPhotos(item.Photos)
+	}
+	if len(grabModifierGroups) > 0 {
+		menuItem.SetModifierGroups(grabModifierGroups)
+	}
+	if item.SellingTimeID != "" {
+		menuItem.SetSellingTimeID(item.SellingTimeID)
 	}
 
-	// 转换营销活动信息
+	// 转换营销活动信息（SDK 使用 AdvancedPricing）
 	if item.CampaignInfo != nil {
-		grabItem.CampaignInfo = &GrabCampaignInfo{
-			OriginalPrice: item.CampaignInfo.OriginalPrice,
-			DiscountType:  item.CampaignInfo.DiscountType,
-			DiscountValue: item.CampaignInfo.DiscountValue,
-		}
+		advancedPricing := grabfood.NewAdvancedPricingWithDefaults()
+		// Note: AdvancedPricing 结构与 CampaignInfo 不完全匹配，需要根据实际需求调整
+		// 暂时跳过，因为 SDK 的 AdvancedPricing 结构更复杂
+		menuItem.SetAdvancedPricing(*advancedPricing)
 	}
 
-	return grabItem
+	return *menuItem
 }
 
 // convertModifierGroup 转换修饰符组
-func (c *GrabConverter) convertModifierGroup(mg *valueobject.ModifierGroup) GrabModifierGroup {
-	grabModifiers := make([]GrabModifier, 0, len(mg.Modifiers))
+func (c *GrabConverter) convertModifierGroup(mg *valueobject.ModifierGroup) grabfood.ModifierGroup {
+	grabModifiers := make([]grabfood.MenuModifier, 0, len(mg.Modifiers))
 	for _, m := range mg.Modifiers {
-		grabM := GrabModifier{
-			ID:              m.ID,
-			Name:            m.Name,
-			NameTranslation: m.NameTranslation,
-			Sequence:        m.Sequence,
-			AvailableStatus: string(m.AvailableStatus),
-			Price:           m.Price,
+		grabM := grabfood.NewMenuModifier(
+			m.ID,
+			m.Name,
+			string(m.AvailableStatus),
+		)
+		if m.NameTranslation != nil {
+			grabM.SetNameTranslation(m.NameTranslation)
 		}
-		grabModifiers = append(grabModifiers, grabM)
+		if m.Sequence != 0 {
+			grabM.SetSequence(int32(m.Sequence))
+		}
+		if m.Price != 0 {
+			grabM.SetPrice(m.Price)
+		}
+		grabModifiers = append(grabModifiers, *grabM)
 	}
 
-	return GrabModifierGroup{
-		ID:                mg.ID,
-		Name:              mg.Name,
-		NameTranslation:   mg.NameTranslation,
-		Sequence:          mg.Sequence,
-		AvailableStatus:   string(mg.AvailableStatus),
-		SelectionRangeMin: mg.SelectionRangeMin,
-		SelectionRangeMax: mg.SelectionRangeMax,
-		Modifiers:         grabModifiers,
+	modifierGroup := grabfood.NewModifierGroup(
+		mg.ID,
+		mg.Name,
+		string(mg.AvailableStatus),
+		int32(mg.SelectionRangeMax),
+	)
+
+	if mg.NameTranslation != nil {
+		modifierGroup.SetNameTranslation(mg.NameTranslation)
 	}
+	if mg.Sequence != 0 {
+		modifierGroup.SetSequence(int32(mg.Sequence))
+	}
+	if mg.SelectionRangeMin != 0 {
+		modifierGroup.SetSelectionRangeMin(int32(mg.SelectionRangeMin))
+	}
+	if len(grabModifiers) > 0 {
+		modifierGroup.SetModifiers(grabModifiers)
+	}
+
+	return *modifierGroup
 }
 
 // ConvertToTTPOS 从 Grab 格式转换为 TTPOS 数据
 func (c *GrabConverter) ConvertToTTPOS(ctx context.Context, platformData interface{}) (*entity.TakeoutMenu, error) {
 	// 将 interface{} 转换为 GrabMenu
-	var grabMenu GrabMenu
+	var grabMenu grabfood.GetMenuNewResponse
 
 	// 尝试类型断言
-	if gm, ok := platformData.(*GrabMenu); ok {
+	if gm, ok := platformData.(*grabfood.GetMenuNewResponse); ok {
 		grabMenu = *gm
-	} else if gm, ok := platformData.(GrabMenu); ok {
+	} else if gm, ok := platformData.(grabfood.GetMenuNewResponse); ok {
 		grabMenu = gm
 	} else {
 		// 尝试 JSON 序列化/反序列化
@@ -226,10 +259,11 @@ func (c *GrabConverter) ConvertToTTPOS(ctx context.Context, platformData interfa
 	company := ctx.GetCompany()
 
 	// 转换货币
+	grabcurrency := grabMenu.GetCurrency()
 	currency, err := valueobject.NewCurrency(
-		grabMenu.Currency.Code,
-		grabMenu.Currency.Symbol,
-		grabMenu.Currency.Exponent,
+		grabcurrency.GetCode(),
+		grabcurrency.GetSymbol(),
+		int(grabcurrency.GetExponent()),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "创建货币对象失败")
@@ -272,36 +306,43 @@ func (c *GrabConverter) ConvertToTTPOS(ctx context.Context, platformData interfa
 }
 
 // convertFromGrabSellingTime 从 Grab 格式转换售卖时段
-func (c *GrabConverter) convertFromGrabSellingTime(gst *GrabSellingTime) (*valueobject.SellingTime, error) {
+func (c *GrabConverter) convertFromGrabSellingTime(gst *grabfood.SellingTime) (*valueobject.SellingTime, error) {
 	return valueobject.NewSellingTime(
-		gst.ID,
-		gst.Name,
-		gst.Sequence,
-		gst.StartTime,
-		gst.EndTime,
+		gst.GetId(),
+		gst.GetName(),
+		0, // SDK 的 SellingTime 没有 Sequence 字段
+		gst.GetStartTime(),
+		gst.GetEndTime(),
 	)
 }
 
 // convertFromGrabCategory 从 Grab 格式转换分类
-func (c *GrabConverter) convertFromGrabCategory(gcat *GrabCategory) (*valueobject.Category, error) {
+func (c *GrabConverter) convertFromGrabCategory(gcat *grabfood.MenuCategory) (*valueobject.Category, error) {
 	status := valueobject.AvailableStatusAvailable
-	if gcat.AvailableStatus == "UNAVAILABLE" {
+	if gcat.GetAvailableStatus() == "UNAVAILABLE" {
 		status = valueobject.AvailableStatusUnavailable
 	}
 
-	cat, err := valueobject.NewCategory(gcat.ID, gcat.Name, gcat.Sequence, status)
+	sequence := 0
+	if gcat.HasSequence() {
+		sequence = int(gcat.GetSequence())
+	}
+
+	cat, err := valueobject.NewCategory(gcat.GetId(), gcat.GetName(), sequence, status)
 	if err != nil {
 		return nil, err
 	}
 
-	cat.SellingTimeID = gcat.SellingTimeID
-	cat.NameTranslation = gcat.NameTranslation
+	cat.SellingTimeID = gcat.GetSellingTimeID()
+	if gcat.HasNameTranslation() {
+		cat.NameTranslation = gcat.GetNameTranslation()
+	}
 
 	// 转换商品
-	for _, gitem := range gcat.Items {
+	for _, gitem := range gcat.GetItems() {
 		item, err := c.convertFromGrabItem(&gitem)
 		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("转换商品失败: %s", gitem.Name))
+			return nil, errors.WithMessage(err, fmt.Sprintf("转换商品失败: %s", gitem.GetName()))
 		}
 		cat.AddItem(item)
 	}
@@ -310,77 +351,120 @@ func (c *GrabConverter) convertFromGrabCategory(gcat *GrabCategory) (*valueobjec
 }
 
 // convertFromGrabItem 从 Grab 格式转换商品
-func (c *GrabConverter) convertFromGrabItem(gitem *GrabItem) (*valueobject.MenuItem, error) {
+func (c *GrabConverter) convertFromGrabItem(gitem *grabfood.MenuItem) (*valueobject.MenuItem, error) {
 	status := valueobject.AvailableStatusAvailable
-	if gitem.AvailableStatus == "UNAVAILABLE" {
+	if gitem.GetAvailableStatus() == "UNAVAILABLE" {
 		status = valueobject.AvailableStatusUnavailable
 	}
 
-	item, err := valueobject.NewMenuItem(gitem.ID, gitem.Name, gitem.Sequence, status, gitem.Price)
+	sequence := 0
+	if gitem.HasSequence() {
+		sequence = int(gitem.GetSequence())
+	}
+
+	item, err := valueobject.NewMenuItem(gitem.GetId(), gitem.GetName(), sequence, status, gitem.GetPrice())
 	if err != nil {
 		return nil, err
 	}
 
-	item.Description = gitem.Description
-	item.DescriptionTranslation = gitem.DescriptionTranslation
-	item.Photos = gitem.Photos
-	item.SellingTimeID = gitem.SellingTimeID
-	item.NameTranslation = gitem.NameTranslation
+	if gitem.HasDescription() {
+		item.Description = gitem.GetDescription()
+	}
+	if gitem.HasDescriptionTranslation() {
+		item.DescriptionTranslation = gitem.GetDescriptionTranslation()
+	}
+	if gitem.HasPhotos() {
+		item.Photos = gitem.GetPhotos()
+	}
+	if gitem.HasSellingTimeID() {
+		item.SellingTimeID = gitem.GetSellingTimeID()
+	}
+	if gitem.HasNameTranslation() {
+		item.NameTranslation = gitem.GetNameTranslation()
+	}
 
-	// 转换营销活动信息
-	if gitem.CampaignInfo != nil {
-		item.CampaignInfo = &valueobject.CampaignInfo{
-			OriginalPrice: gitem.CampaignInfo.OriginalPrice,
-			DiscountType:  gitem.CampaignInfo.DiscountType,
-			DiscountValue: gitem.CampaignInfo.DiscountValue,
-		}
+	// 转换营销活动信息（SDK 使用 AdvancedPricing）
+	if gitem.HasAdvancedPricing() {
+		// Note: AdvancedPricing 结构与 CampaignInfo 不完全匹配
+		// 暂时跳过，需要根据实际需求调整映射逻辑
 	}
 
 	// 转换修饰符组
-	for _, gmg := range gitem.ModifierGroups {
-		mg, err := c.convertFromGrabModifierGroup(&gmg)
-		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("转换修饰符组失败: %s", gmg.Name))
+	if gitem.HasModifierGroups() {
+		for _, gmg := range gitem.GetModifierGroups() {
+			mg, err := c.convertFromGrabModifierGroup(&gmg)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("转换修饰符组失败: %s", gmg.GetName()))
+			}
+			item.AddModifierGroup(mg)
 		}
-		item.AddModifierGroup(mg)
 	}
 
 	return item, nil
 }
 
 // convertFromGrabModifierGroup 从 Grab 格式转换修饰符组
-func (c *GrabConverter) convertFromGrabModifierGroup(gmg *GrabModifierGroup) (*valueobject.ModifierGroup, error) {
+func (c *GrabConverter) convertFromGrabModifierGroup(gmg *grabfood.ModifierGroup) (*valueobject.ModifierGroup, error) {
 	status := valueobject.AvailableStatusAvailable
-	if gmg.AvailableStatus == "UNAVAILABLE" {
+	if gmg.GetAvailableStatus() == "UNAVAILABLE" {
 		status = valueobject.AvailableStatusUnavailable
 	}
 
+	sequence := 0
+	if gmg.HasSequence() {
+		sequence = int(gmg.GetSequence())
+	}
+
+	selectionMin := 0
+	if gmg.HasSelectionRangeMin() {
+		selectionMin = int(gmg.GetSelectionRangeMin())
+	}
+
+	nameTranslation := make(map[string]string)
+	if gmg.HasNameTranslation() {
+		nameTranslation = gmg.GetNameTranslation()
+	}
+
 	mg, err := valueobject.NewModifierGroup(
-		gmg.ID,
-		gmg.Name,
-		c.filterSupportedLanguages(gmg.NameTranslation),
-		gmg.Sequence,
+		gmg.GetId(),
+		gmg.GetName(),
+		c.filterSupportedLanguages(nameTranslation),
+		sequence,
 		status,
-		gmg.SelectionRangeMin,
-		gmg.SelectionRangeMax,
+		selectionMin,
+		int(gmg.GetSelectionRangeMax()),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	// 转换修饰符
-	for _, gm := range gmg.Modifiers {
-		mStatus := valueobject.AvailableStatusAvailable
-		if gm.AvailableStatus == "UNAVAILABLE" {
-			mStatus = valueobject.AvailableStatusUnavailable
-		}
+	if gmg.HasModifiers() {
+		for _, gm := range gmg.GetModifiers() {
+			mStatus := valueobject.AvailableStatusAvailable
+			if gm.GetAvailableStatus() == "UNAVAILABLE" {
+				mStatus = valueobject.AvailableStatusUnavailable
+			}
 
-		m, err := valueobject.NewModifier(gm.ID, gm.Name, gm.Sequence, mStatus, gm.Price)
-		if err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("转换修饰符失败: %s", gm.Name))
+			mSequence := 0
+			if gm.HasSequence() {
+				mSequence = int(gm.GetSequence())
+			}
+
+			mPrice := int64(0)
+			if gm.HasPrice() {
+				mPrice = gm.GetPrice()
+			}
+
+			m, err := valueobject.NewModifier(gm.GetId(), gm.GetName(), mSequence, mStatus, mPrice)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("转换修饰符失败: %s", gm.GetName()))
+			}
+			if gm.HasNameTranslation() {
+				m.NameTranslation = gm.GetNameTranslation()
+			}
+			mg.AddModifier(m)
 		}
-		m.NameTranslation = gm.NameTranslation
-		mg.AddModifier(m)
 	}
 
 	return mg, nil
@@ -389,21 +473,21 @@ func (c *GrabConverter) convertFromGrabModifierGroup(gmg *GrabModifierGroup) (*v
 // ValidateData 验证 Grab 菜单数据格式
 func (c *GrabConverter) ValidateData(platformData interface{}) error {
 	// 尝试多种类型断言
-	if grabMenu, ok := platformData.(*GrabMenu); ok {
-		if grabMenu.Currency.Code == "" {
+	if grabMenu, ok := platformData.(*grabfood.GetMenuNewResponse); ok {
+		if grabMenu.GetCurrency().Code == "" {
 			return errors.New("货币代码不能为空")
 		}
-		if len(grabMenu.Categories) == 0 {
+		if len(grabMenu.GetCategories()) == 0 {
 			return errors.New("至少需要一个分类")
 		}
 		return nil
 	}
 
-	if grabMenu, ok := platformData.(GrabMenu); ok {
-		if grabMenu.Currency.Code == "" {
+	if grabMenu, ok := platformData.(grabfood.GetMenuNewResponse); ok {
+		if grabMenu.GetCurrency().Code == "" {
 			return errors.New("货币代码不能为空")
 		}
-		if len(grabMenu.Categories) == 0 {
+		if len(grabMenu.GetCategories()) == 0 {
 			return errors.New("至少需要一个分类")
 		}
 		return nil
@@ -1322,7 +1406,7 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 
 // ParseGrabMenu 解析 Grab 菜单数据
 // 支持从字符串、字节数组或对象解析为 GrabMenu 结构
-func (c *GrabConverter) ParseGrabMenu(menuData interface{}) (*GrabMenu, error) {
+func (c *GrabConverter) ParseGrabMenu(menuData interface{}) (*grabfood.GetMenuNewResponse, error) {
 	var menuJSON []byte
 	var err error
 
@@ -1334,9 +1418,12 @@ func (c *GrabConverter) ParseGrabMenu(menuData interface{}) (*GrabMenu, error) {
 	case []byte:
 		// 如果是字节数组，直接使用
 		menuJSON = v
-	case *GrabMenu:
-		// 如果已经是 GrabMenu 对象，直接返回
+	case *grabfood.GetMenuNewResponse:
+		// 如果已经是 GetMenuNewResponse 对象，直接返回
 		return v, nil
+	case grabfood.GetMenuNewResponse:
+		// 如果是值类型，返回指针
+		return &v, nil
 	default:
 		// 如果是其他对象类型，需要序列化
 		menuJSON, err = json.Marshal(menuData)
@@ -1348,7 +1435,7 @@ func (c *GrabConverter) ParseGrabMenu(menuData interface{}) (*GrabMenu, error) {
 	// 尝试检测并处理 Base64 编码的数据
 	menuJSON = c.tryDecodeBase64(menuJSON)
 
-	var menu GrabMenu
+	var menu grabfood.GetMenuNewResponse
 	if err := json.Unmarshal(menuJSON, &menu); err != nil {
 		// 输出前100个字符用于调试
 		preview := string(menuJSON)
@@ -1408,219 +1495,4 @@ func isLikelyBase64(s string) bool {
 	}
 
 	return true
-}
-
-// ==================== 订单处理相关方法 ====================
-
-// ParseOrderWebhook 解析 Grab 订单数据
-//
-// Grab 的订单数据有两种可能的格式：
-// 1. 直接的订单对象（最常见，包括新订单推送、订单查询等场景）
-// 2. Webhook 包装格式（包含 order 字段，用于某些特定的 Webhook 通知）
-//
-// 本方法会自动识别并处理这两种格式，统一返回 GrabOrderWebhook 结构
-func (c *GrabConverter) ParseOrderWebhook(rawData []byte) (interface{}, error) {
-	// 先尝试解析为 SubmitOrderRequest（Grab SDK 类型）
-	var submitOrderReq grabfood.SubmitOrderRequest
-	if err := json.Unmarshal(rawData, &submitOrderReq); err != nil {
-		return nil, fmt.Errorf("解析 Grab 订单数据失败: %w", err)
-	}
-
-	// 检查是否解析成功（通过必填字段判断）
-	if submitOrderReq.OrderID != "" && submitOrderReq.MerchantID != "" {
-		return &submitOrderReq, nil
-	}
-
-	// 如果不是 SubmitOrderRequest 格式，尝试解析为 OrderStateRequest（状态更新）
-	var orderStateReq grabfood.OrderStateRequest
-	if err := json.Unmarshal(rawData, &orderStateReq); err != nil {
-		return nil, fmt.Errorf("解析 Grab 订单状态数据失败: %w", err)
-	}
-
-	// 验证 OrderStateRequest
-	if orderStateReq.OrderID != "" && orderStateReq.MerchantID != "" {
-		return &orderStateReq, nil
-	}
-
-	return nil, fmt.Errorf("Grab 订单数据格式错误：无法识别的订单格式")
-}
-
-// ConvertOrderToTakeoutOrder 将 Grab 订单转换为通用外卖订单格式
-func (c *GrabConverter) ConvertOrderToTakeoutOrder(
-	orderUuid uint64,
-	platform string,
-	platformOrderId string,
-	platformOrder interface{},
-	rawDataJSON []byte,
-	currentTime int64,
-) (*takeoutModel.TakeoutOrder, error) {
-	// 类型断言 - 支持 SubmitOrderRequest
-	submitOrderReq, ok := platformOrder.(*grabfood.SubmitOrderRequest)
-	if !ok {
-		return nil, errors.New("平台订单数据类型错误，期望 *grabfood.SubmitOrderRequest")
-	}
-
-	order := &takeoutModel.TakeoutOrder{
-		BaseModel: takeoutModel.BaseModel{
-			Uuid:       orderUuid,
-			CreateTime: currentTime,
-			UpdateTime: currentTime,
-		},
-		Platform:        platform,
-		PlatformOrderId: platformOrderId,
-		OrderState:      0, // 待接单
-		IsAbnormal:      0,
-		StockStatus:     0, // 库存充足
-		RawData:         string(rawDataJSON),
-	}
-
-	// 基础字段映射
-	order.ShortOrderNumber = submitOrderReq.GetShortOrderNumber()
-	order.MerchantId = submitOrderReq.GetMerchantID()
-
-	if partnerMerchantID, ok := submitOrderReq.GetPartnerMerchantIDOk(); ok {
-		order.PartnerMerchantId = *partnerMerchantID
-	}
-
-	order.PaymentType = submitOrderReq.GetPaymentType()
-
-	featureFlags := submitOrderReq.GetFeatureFlags()
-	order.OrderType = featureFlags.OrderType
-	order.OrderAcceptedType = featureFlags.OrderAcceptedType
-
-	if membershipID, ok := submitOrderReq.GetMembershipIDOk(); ok {
-		order.MembershipId = *membershipID
-	}
-
-	// 布尔字段转整数
-	if submitOrderReq.GetCutlery() {
-		order.Cutlery = 1
-	}
-	if featureFlags.HasIsMexEditOrder() && featureFlags.GetIsMexEditOrder() {
-		order.IsMexEditOrder = 1
-	}
-
-	// 价格信息映射
-	price := submitOrderReq.GetPrice()
-	order.Subtotal = price.GetSubtotal()
-	order.DeliveryFee = price.GetDeliveryFee()
-	order.SmallOrderFee = price.GetSmallOrderFee()
-	order.TotalAmount = price.GetEaterPayment() // 使用 EaterPayment 作为总金额
-	order.EaterPayment = price.GetEaterPayment()
-	order.PlatformDiscount = price.GetGrabFundPromo()
-	order.MerchantDiscount = price.GetMerchantFundPromo()
-	order.BasketPromo = price.GetBasketPromo()
-	order.Tax = price.GetTax()
-	order.MerchantChargeFee = price.GetMerchantChargeFee()
-
-	// 货币信息映射
-	currency := submitOrderReq.GetCurrency()
-	order.CurrencyCode = currency.GetCode()
-	order.CurrencySymbol = currency.GetSymbol()
-	order.CurrencyExponent = int(currency.GetExponent())
-
-	// 时间字段映射（RFC3339 格式转 Unix 时间戳）
-	order.OrderTime = c.parseRFC3339Time(submitOrderReq.GetOrderTime())
-
-	if submitOrderReq.HasSubmitTime() {
-		order.SubmitTime = submitOrderReq.GetSubmitTime().Unix()
-	}
-
-	if scheduledTime, ok := submitOrderReq.GetScheduledTimeOk(); ok {
-		order.ScheduledTime = c.parseRFC3339Time(*scheduledTime)
-	}
-
-	// 预计准备时间
-	if submitOrderReq.HasOrderReadyEstimation() {
-		estimation := submitOrderReq.GetOrderReadyEstimation()
-		order.EstimatedReadyTime = estimation.GetEstimatedOrderReadyTime().Unix()
-		order.MaxReadyTime = estimation.GetMaxOrderReadyTime().Unix()
-	}
-
-	// 解析商品数据并填充到 order.TakeoutOrderItems
-	if len(submitOrderReq.Items) > 0 {
-		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(submitOrderReq.Items))
-		for _, item := range submitOrderReq.Items {
-			// 将 Grab item 转换为 JSON 保存在 PlatformData
-			itemBytes, _ := json.Marshal(item)
-
-			// 注意：UUID、CreateTime、UpdateTime 会在 Service 层设置
-			orderItem := takeoutModel.TakeoutOrderItem{
-				Platform:       platform,
-				PlatformItemId: item.Id,
-				Quantity:       int(item.Quantity),
-				Price:          item.Price,
-				Tax:            getInt64Value(item.Tax),
-				Specifications: getStringValue(item.Specifications),
-				PlatformData:   string(itemBytes),
-			}
-
-			// 解析修饰符
-			if len(item.Modifiers) > 0 {
-				orderItem.TakeoutOrderItemModifiers = make([]takeoutModel.TakeoutOrderItemModifier, 0, len(item.Modifiers))
-				for _, modifier := range item.Modifiers {
-					modifierBytes, _ := json.Marshal(modifier)
-					orderItemModifier := takeoutModel.TakeoutOrderItemModifier{
-						Platform:           platform,
-						PlatformModifierId: modifier.GetId(),
-						Quantity:           int(modifier.GetQuantity()),
-						Price:              modifier.GetPrice(),
-						Tax:                modifier.GetTax(),
-						PlatformData:       string(modifierBytes),
-					}
-					orderItem.TakeoutOrderItemModifiers = append(orderItem.TakeoutOrderItemModifiers, orderItemModifier)
-				}
-			}
-
-			order.TakeoutOrderItems = append(order.TakeoutOrderItems, orderItem)
-		}
-	}
-
-	return order, nil
-}
-
-// 辅助函数：安全获取指针类型的值
-func getStringValue(ptr *string) string {
-	if ptr == nil {
-		return ""
-	}
-	return *ptr
-}
-
-func getInt32Value(ptr *int32) int32 {
-	if ptr == nil {
-		return 0
-	}
-	return *ptr
-}
-
-func getInt64Value(ptr *int64) int64 {
-	if ptr == nil {
-		return 0
-	}
-	return *ptr
-}
-
-// parseRFC3339Time 解析 RFC3339 格式时间为 Unix 时间戳
-func (c *GrabConverter) parseRFC3339Time(timeStr string) int64 {
-	if timeStr == "" {
-		return 0
-	}
-
-	// 尝试多种时间格式
-	formats := []string{
-		time.RFC3339,
-		"2006-01-02T15:04:05Z",
-		"2006-01-02T15:04:05.000Z",
-		"2006-01-02T15:04:05-07:00",
-		"2006-01-02T15:04:05.000-07:00",
-	}
-
-	for _, format := range formats {
-		if t, err := time.Parse(format, timeStr); err == nil {
-			return t.Unix()
-		}
-	}
-
-	return 0
 }

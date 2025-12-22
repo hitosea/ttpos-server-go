@@ -71,16 +71,7 @@
   - Prompt: 添加 platform 字段，platform_modifier_id 替代 grab_modifier_id，移除 shop_uuid
   - Success: 迁移文件创建成功
 
-- [ ] 1.5 创建 ttpos_takeout_sync_logs 表迁移文件
-
-  - File: `admin/database/migrations/20251222100004_create_ttpos_takeout_sync_logs_table.php`
-  - Purpose: 定义外卖订单同步日志表结构（支持多平台）
-  - Requirements: Requirement 1 (订单同步)
-  - Leverage: Task 1.1 的迁移文件
-  - Prompt: 添加 platform 字段，移除 shop_uuid
-  - Success: 迁移文件创建成功
-
-- [ ] 1.6 创建 ttpos_takeout_settings 表迁移文件
+- [ ] 1.5 创建 ttpos_takeout_settings 表迁移文件
 
   - File: `admin/database/migrations/20251222100005_create_ttpos_takeout_settings_table.php`
   - Purpose: 定义外卖平台配置表结构（支持多平台）
@@ -89,7 +80,7 @@
   - Prompt: 添加 platform 和 is_enabled 字段，唯一索引 (platform, delete_time)，移除 shop_uuid 和 company_uuid，每个平台一条全局配置
   - Success: 迁移文件创建成功，唯一索引正确
 
-- [ ] 1.7 执行数据库迁移并创建 Go Model
+- [ ] 1.6 执行数据库迁移并创建 Go Model
 
   - File: `main/app/model/takeout_*.go` (6 个模型文件)
   - Purpose: 在数据库中创建表，并定义 Go 数据模型

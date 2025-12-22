@@ -54,7 +54,6 @@ func (s *takeoutOrderSrv) GetList(ctx context.Context, req *request.TakeoutOrder
 
 	// 创建 Repository
 	orderRepo := persistence.NewTakeoutOrderRepo(db)
-	itemRepo := persistence.NewTakeoutOrderItemRepo(db)
 
 	// 构建查询选项
 	options := []persistence.DBOption{
@@ -73,15 +72,16 @@ func (s *takeoutOrderSrv) GetList(ctx context.Context, req *request.TakeoutOrder
 	}
 
 	// 构建响应
-	list := make([]*response.TakeoutOrderResp, 0, len(orders))
+	list := make([]*response.TakeoutOrderListItemResp, 0, len(orders))
 	for _, order := range orders {
-		// 查询订单商品
-		items, err := itemRepo.GetByOrderUuid(order.Uuid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "查询订单商品失败")
+		orderResp := &response.TakeoutOrderListItemResp{
+			Uuid:             order.Uuid,
+			Platform:         order.Platform,
+			ShortOrderNumber: order.ShortOrderNumber,
+			OrderState:       order.OrderState,
+			IsAbnormal:       order.IsAbnormal,
+			TotalItems:       len(order.TakeoutOrderItems),
 		}
-
-		orderResp := s.buildOrderResp(order, items)
 		list = append(list, orderResp)
 	}
 
@@ -101,10 +101,13 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 
 	// 创建 Repository
 	orderRepo := persistence.NewTakeoutOrderRepo(db)
-	itemRepo := persistence.NewTakeoutOrderItemRepo(db)
 
 	// 查询订单
-	order, err := orderRepo.GetByUuid(uuid)
+	order, err := orderRepo.GetByUuid(uuid,
+		orderRepo.WithPreload(persistence.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Preload("TakeoutOrderItems").Preload("TakeoutOrderReceiver").Preload("TakeoutOrderCampaigns")
+		})),
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询订单失败")
 	}
@@ -112,13 +115,74 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 		return nil, errors.New("订单不存在")
 	}
 
-	// 查询订单商品
-	items, err := itemRepo.GetByOrderUuid(order.Uuid)
-	if err != nil {
-		return nil, errors.WithMessage(err, "查询订单商品失败")
+	// 构建商品列表
+	itemList := make([]response.TakeoutOrderItemResp, 0, len(order.TakeoutOrderItems))
+	for _, item := range order.TakeoutOrderItems {
+		itemList = append(itemList, response.TakeoutOrderItemResp{
+			Uuid:             item.Uuid,
+			PlatformItemId:   item.PlatformItemId,
+			PlatformItemName: item.PlatformItemName,
+		})
 	}
 
-	return s.buildOrderResp(order, items), nil
+	// 构建收货人信息
+	var receiverResp response.TakeoutOrderReceiverResp
+	if order.TakeoutOrderReceiver != nil {
+		receiverResp = response.TakeoutOrderReceiverResp{
+			ReceiverName:        order.TakeoutOrderReceiver.ReceiverName,
+			ReceiverPhones:      order.TakeoutOrderReceiver.ReceiverPhones,
+			UnitNumber:          order.TakeoutOrderReceiver.UnitNumber,
+			DeliveryInstruction: order.TakeoutOrderReceiver.DeliveryInstruction,
+			Address:             order.TakeoutOrderReceiver.Address,
+		}
+	}
+
+	// 构建活动信息
+	campaigns := make([]response.TakeoutOrderCampaignResp, 0)
+	for _, campaign := range order.TakeoutOrderCampaigns {
+		campaigns = append(campaigns, response.TakeoutOrderCampaignResp{
+			Uuid:           campaign.Uuid,
+			CampaignName:   campaign.CampaignNameForMex,
+			CampaignType:   campaign.CampaignType,
+			DeductedAmount: campaign.DeductedAmount * 100,
+		})
+	}
+
+	return &response.TakeoutOrderResp{
+		Uuid:               order.Uuid,
+		Platform:           order.Platform,
+		ShortOrderNumber:   order.ShortOrderNumber,
+		OrderState:         order.OrderState,
+		OrderTime:          order.OrderTime,
+		SubmitTime:         order.SubmitTime,
+		AcceptedTime:       order.AcceptedTime,
+		CompletedTime:      order.CompletedTime,
+		EstimatedReadyTime: order.EstimatedReadyTime,
+		MaxReadyTime:       order.MaxReadyTime,
+		IsAbnormal:         order.IsAbnormal,
+		AbnormalDetail:     order.AbnormalDetail,
+		// 订单金额
+		Subtotal:       order.Subtotal,
+		DeliveryFee:    order.DeliveryFee,
+		SmallOrderFee:  order.SmallOrderFee,
+		EaterPayment:   order.EaterPayment,
+		TotalAmount:    order.TotalAmount,
+		CurrencyCode:   order.CurrencyCode,
+		CurrencySymbol: order.CurrencySymbol,
+		PaymentType:    order.PaymentType,
+		// 订单优惠
+		// PlatformDiscount: order.PlatformDiscount,
+		// MerchantDiscount: order.MerchantDiscount,
+		// BasketPromo:      order.BasketPromo,
+		// Tax:              order.Tax,
+		// 订单类型
+		Cutlery:    order.Cutlery,
+		OrderType:  order.OrderType,
+		TotalItems: len(itemList),
+		Items:      itemList,
+		Receiver:   receiverResp,
+		Campaigns:  campaigns,
+	}, nil
 }
 
 // AcceptOrder 接单
@@ -204,47 +268,6 @@ func (s *takeoutOrderSrv) RejectOrder(ctx context.Context, req *request.TakeoutO
 	// TODO: 发送 WebSocket 通知到前端
 
 	return nil
-}
-
-// buildOrderResp 构建订单响应
-func (s *takeoutOrderSrv) buildOrderResp(order *model.TakeoutOrder, items []*model.TakeoutOrderItem) *response.TakeoutOrderResp {
-	// 构建商品列表
-	itemList := make([]*response.TakeoutOrderItemResp, 0, len(items))
-	for _, item := range items {
-		itemResp := &response.TakeoutOrderItemResp{
-			Uuid:             item.Uuid,
-			PlatformItemId:   item.PlatformItemId,
-			PlatformItemName: item.PlatformItemName,
-			Quantity:         item.Quantity,
-			Price:            item.Price,
-			Tax:              item.Tax,
-			Specifications:   item.Specifications,
-			IsMapped:         item.IsMapped,
-		}
-		itemList = append(itemList, itemResp)
-	}
-
-	return &response.TakeoutOrderResp{
-		Uuid:             order.Uuid,
-		Platform:         order.Platform,
-		PlatformOrderId:  order.PlatformOrderId,
-		ShortOrderNumber: order.ShortOrderNumber,
-		OrderState:       order.OrderState,
-		IsAbnormal:       order.IsAbnormal,
-		AbnormalDetail:   order.AbnormalDetail,
-		StockStatus:      order.StockStatus,
-		Subtotal:         order.Subtotal,
-		DeliveryFee:      order.DeliveryFee,
-		TotalAmount:      order.TotalAmount,
-		CurrencyCode:     order.CurrencyCode,
-		CurrencySymbol:   order.CurrencySymbol,
-		PaymentType:      order.PaymentType,
-		OrderTime:        order.OrderTime,
-		AcceptedTime:     order.AcceptedTime,
-		Cutlery:          order.Cutlery,
-		OrderType:        order.OrderType,
-		Items:            itemList,
-	}
 }
 
 // findProductMapping 查找商品映射关系
@@ -406,17 +429,63 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			}
 		}
 
-		// 3. 检查商品映射状态
+		// 3. 保存收货人信息
+		if order.TakeoutOrderReceiver != nil {
+			receiverRepo := persistence.NewTakeoutOrderReceiverRepo(tx)
+			receiverUuid, err := utils.GetID()
+			if err != nil {
+				logger.Logger.Error("生成收货人UUID失败", zap.Error(err))
+				return errors.WithMessage(err, "生成收货人UUID失败")
+			}
+			order.TakeoutOrderReceiver.Uuid = receiverUuid
+			order.TakeoutOrderReceiver.TakeoutOrderUuid = order.Uuid
+			order.TakeoutOrderReceiver.CreateTime = currentTime
+			order.TakeoutOrderReceiver.UpdateTime = currentTime
+			if err := receiverRepo.Create(order.TakeoutOrderReceiver); err != nil {
+				logger.Logger.Error("创建收货人信息失败", zap.Error(err))
+				return errors.WithMessage(err, "创建收货人信息失败")
+			}
+		}
+
+		// 4. 保存活动信息
+		if len(order.TakeoutOrderCampaigns) > 0 {
+			campaignRepo := persistence.NewTakeoutOrderCampaignRepo(tx)
+			for i := range order.TakeoutOrderCampaigns {
+				campaign := &order.TakeoutOrderCampaigns[i]
+				campaignUuid, err := utils.GetID()
+				if err != nil {
+					logger.Logger.Error("生成活动UUID失败", zap.Error(err))
+					return errors.WithMessage(err, "生成活动UUID失败")
+				}
+				campaign.Uuid = campaignUuid
+				campaign.TakeoutOrderUuid = order.Uuid
+				campaign.CreateTime = currentTime
+				campaign.UpdateTime = currentTime
+			}
+
+			// 批量创建活动
+			campaignsPtr := make([]*model.TakeoutOrderCampaign, len(order.TakeoutOrderCampaigns))
+			for i := range order.TakeoutOrderCampaigns {
+				campaignsPtr[i] = &order.TakeoutOrderCampaigns[i]
+			}
+			if err := campaignRepo.BatchCreate(campaignsPtr); err != nil {
+				logger.Logger.Error("批量创建活动信息失败", zap.Error(err))
+				return errors.WithMessage(err, "批量创建活动信息失败")
+			}
+		}
+
+		// 5. 检查商品映射状态
 		if hasUnmapped {
 			// 标记订单为异常状态
 			order.IsAbnormal = 1
 			order.AbnormalDetail = "订单包含未映射的商品"
 			if err := orderRepoTx.Update(order); err != nil {
+				logger.Logger.Error("更新订单异常状态失败", zap.Error(err))
 				return errors.WithMessage(err, "更新订单异常状态失败")
 			}
 		}
 
-		// 4. 检查库存（仅检查已映射的商品）
+		// 6. 检查库存（仅检查已映射的商品）
 		if !hasUnmapped {
 			// 提取已创建的商品列表用于库存检查
 			createdItems := make([]*model.TakeoutOrderItem, len(order.TakeoutOrderItems))
@@ -432,6 +501,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			if stockStatus != valueobject.TakeoutStockStatusSufficient {
 				order.StockStatus = stockStatus
 				if err := orderRepoTx.Update(order); err != nil {
+					logger.Logger.Error("更新库存状态失败", zap.Error(err))
 					return errors.WithMessage(err, "更新库存状态失败")
 				}
 			}

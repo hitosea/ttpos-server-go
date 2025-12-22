@@ -156,8 +156,8 @@ class CreateTtposTakeoutOrderTable extends Migrator
         }
 
         // 检查表是否存在
-        if (!$this->hasTable('takeout_order_item_modifiers')) {
-            $table = $this->table('takeout_order_item_modifiers', [
+        if (!$this->hasTable('takeout_order_item_modifier')) {
+            $table = $this->table('takeout_order_item_modifier', [
                 'engine' => 'InnoDB',
                 'collation' => 'utf8mb4_general_ci',
                 'comment' => '外卖订单商品修饰符表(多平台)',
@@ -185,50 +185,6 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addIndex(['takeout_order_item_uuid'], ['name' => 'idx_order_item_uuid'])
                 ->addIndex(['platform', 'platform_modifier_id'], ['name' => 'idx_platform_modifier'])
                 ->addIndex(['delete_time'], ['name' => 'idx_delete_time'])
-                ->create();
-        }
-
-        // 检查表是否已存在
-        if (!$this->hasTable('takeout_sync_logs')) {
-            $table = $this->table('takeout_sync_logs', [
-                'engine' => 'InnoDB',
-                'collation' => 'utf8mb4_unicode_ci',
-                'comment' => '外卖订单同步日志表(多平台)',
-                'id' => false,
-                'primary_key' => ['id']
-            ]);
-
-            $table
-                // 基础字段
-                ->addColumn('id', 'biginteger', ['signed' => false, 'identity' => true, 'comment' => '主键ID'])
-                ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '唯一标识'])
-                ->addColumn('platform', 'string', ['limit' => 20, 'default' => '', 'comment' => '外卖平台: grab,foodpanda,lineman,etc'])
-                
-                // 同步信息
-                ->addColumn('platform_order_id', 'string', ['limit' => 100, 'default' => '', 'comment' => '平台订单ID'])
-                ->addColumn('sync_type', 'string', ['limit' => 50, 'default' => '', 'comment' => '同步类型: new_order,status_update,accept,reject'])
-                ->addColumn('sync_status', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '同步状态: 0=失败,1=成功,2=重试中'])
-                ->addColumn('retry_count', 'integer', ['signed' => true, 'default' => 0, 'comment' => '重试次数'])
-                
-                // 错误信息
-                ->addColumn('error_code', 'string', ['limit' => 50, 'default' => '', 'comment' => '错误代码'])
-                ->addColumn('error_message', 'text', ['null' => true, 'comment' => '错误信息'])
-                
-                // 请求/响应数据
-                ->addColumn('request_data', 'text', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::TEXT_MEDIUM, 'null' => true, 'comment' => '请求数据(JSON)'])
-                ->addColumn('response_data', 'text', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::TEXT_MEDIUM, 'null' => true, 'comment' => '响应数据(JSON)'])
-                
-                // 标准字段
-                ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
-                ->addColumn('update_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '更新时间'])
-                ->addColumn('delete_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '删除时间'])
-                
-                // 索引
-                ->addIndex(['uuid'], ['unique' => true, 'name' => 'uk_uuid'])
-                ->addIndex(['platform', 'platform_order_id', 'delete_time'], ['name' => 'idx_platform_order'])
-                ->addIndex(['sync_status', 'delete_time'], ['name' => 'idx_sync_status'])
-                ->addIndex(['create_time', 'delete_time'], ['name' => 'idx_create_time'])
-                
                 ->create();
         }
 

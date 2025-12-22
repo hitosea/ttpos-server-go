@@ -71,13 +71,30 @@ type TakeoutOrder struct {
 	RejectReason     string `gorm:"column:reject_reason" json:"reject_reason"`
 
 	// 关联字表结构
-	TakeoutOrderItems []TakeoutOrderItem `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderItems     []TakeoutOrderItem     `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderReceiver  *TakeoutOrderReceiver  `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderCampaigns []TakeoutOrderCampaign `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 }
 
 func (*TakeoutOrder) TableName() string {
 	return "ttpos_takeout_order"
 }
 
-func (o *TakeoutOrder) SetTakeoutOrderItemsNil() {
-	o.TakeoutOrderItems = nil
+func (o *TakeoutOrder) SetTakeoutOrderReceiver(receiver *TakeoutOrderReceiver) {
+	o.TakeoutOrderReceiver = receiver
+}
+
+func (o *TakeoutOrder) SetTakeoutOrderCampaigns(campaigns []*TakeoutOrderCampaign) {
+	if campaigns == nil {
+		o.TakeoutOrderCampaigns = nil
+		return
+	}
+	if len(campaigns) == 0 {
+		o.TakeoutOrderCampaigns = nil
+		return
+	}
+	o.TakeoutOrderCampaigns = make([]TakeoutOrderCampaign, len(campaigns))
+	for i, campaign := range campaigns {
+		o.TakeoutOrderCampaigns[i] = *campaign
+	}
 }

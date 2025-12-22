@@ -97,14 +97,6 @@ func (h *TakeoutHandler) GetList(c *gin.Context) {
 		return
 	}
 
-	// 参数校验
-	if req.PageNo <= 0 {
-		req.PageNo = 1
-	}
-	if req.PageSize <= 0 || req.PageSize > 100 {
-		req.PageSize = 20
-	}
-
 	list, err := h.orderSrv.GetList(ctx, &req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

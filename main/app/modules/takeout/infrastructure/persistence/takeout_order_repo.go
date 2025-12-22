@@ -22,6 +22,7 @@ type ITakeoutOrderRepo interface {
 	Delete(uuid uint64) error
 
 	// 选项方法
+	WithPreload(options ...DBOption) DBOption
 	WhereUuid(uuid uint64) DBOption
 	WherePlatform(platform string) DBOption
 	WhereOrderState(orderState int) DBOption
@@ -150,7 +151,8 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 		db = option(db)
 	}
 
-	err := db.Order("order_time DESC").Find(&orders).Error
+	// Preload 收货人信息
+	err := db.Preload("TakeoutOrderItems").Order("order_time DESC").Find(&orders).Error
 
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
@@ -209,11 +211,21 @@ func (r *TakeoutOrderRepoImpl) WhereTimeRange(startTime, endTime int64) DBOption
 	}
 }
 
-// WhereSearch 根据关键词搜索
+// WhereSearch 根据关键词搜索（订单号、平台订单ID、收货人姓名、收货人电话）
 func (r *TakeoutOrderRepoImpl) WhereSearch(search string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if search != "" {
-			return db.Where("short_order_number LIKE ? OR platform_order_id LIKE ?", "%"+search+"%", "%"+search+"%")
+			// 使用 LEFT JOIN 关联收货人表，搜索订单字段和收货人字段
+			return db.Where(
+				"short_order_number LIKE ? OR platform_order_id LIKE ? OR "+
+					"EXISTS ("+
+					"SELECT 1 FROM ttpos_takeout_order_receiver "+
+					"WHERE ttpos_takeout_order_receiver.takeout_order_uuid = ttpos_takeout_order.uuid "+
+					"AND ttpos_takeout_order_receiver.delete_time = 0 "+
+					"AND (ttpos_takeout_order_receiver.receiver_name LIKE ? OR ttpos_takeout_order_receiver.receiver_phones LIKE ?)"+
+					")",
+				"%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%",
+			)
 		}
 		return db
 	}
@@ -234,6 +246,16 @@ func (r *TakeoutOrderRepoImpl) Offset(offset int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if offset > 0 {
 			return db.Offset(offset)
+		}
+		return db
+	}
+}
+
+// WithPreload 预加载
+func (r *TakeoutOrderRepoImpl) WithPreload(options ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		for _, option := range options {
+			db = option(db)
 		}
 		return db
 	}

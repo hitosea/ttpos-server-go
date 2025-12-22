@@ -141,3 +141,10 @@ type MenuModifierChange struct {
 	Success      bool   `json:"success"`                 // 是否成功
 	ErrorMessage string `json:"error_message,omitempty"` // 错误信息
 }
+
+// Meta 分页元数据
+type Meta struct {
+	PageNo   int `json:"page_no"`
+	PageSize int `json:"page_size"`
+	Total    int `json:"total"`
+}

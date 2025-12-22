@@ -404,44 +404,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_modifier_mapping` (
 
 **迁移文件**: `admin/database/migrations/20251222100003_create_ttpos_takeout_modifier_mapping_table.php`
 
-#### 表 5: ttpos_takeout_sync_logs
-
-```sql
-CREATE TABLE IF NOT EXISTS `ttpos_takeout_sync_logs` (
-    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
-    `platform` varchar(20) NOT NULL DEFAULT '' COMMENT '外卖平台: grab,foodpanda,lineman,etc',
-    
-    -- 同步信息
-    `platform_order_id` varchar(100) NOT NULL DEFAULT '' COMMENT '平台订单ID',
-    `sync_type` varchar(50) NOT NULL DEFAULT '' COMMENT '同步类型: new_order,status_update,accept,reject',
-    `sync_status` tinyint NOT NULL DEFAULT 0 COMMENT '同步状态: 0=失败,1=成功,2=重试中',
-    `retry_count` int NOT NULL DEFAULT 0 COMMENT '重试次数',
-    
-    -- 错误信息
-    `error_code` varchar(50) NOT NULL DEFAULT '' COMMENT '错误代码',
-    `error_message` text COMMENT '错误信息',
-    
-    -- 请求/响应数据
-    `request_data` mediumtext COMMENT '请求数据(JSON)',
-    `response_data` mediumtext COMMENT '响应数据(JSON)',
-    
-    -- 标准字段
-    `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
-    `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
-    `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
-    
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_uuid` (`uuid`),
-    KEY `idx_platform_order` (`platform`, `platform_order_id`, `delete_time`),
-    KEY `idx_sync_status` (`sync_status`, `delete_time`),
-    KEY `idx_create_time` (`create_time`, `delete_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='外卖订单同步日志表(多平台)';
-```
-
-**迁移文件**: `admin/database/migrations/20251222100004_create_ttpos_takeout_sync_logs_table.php`
-
-#### 表 6: ttpos_takeout_settings
+#### 表 5: ttpos_takeout_settings
 
 ```sql
 CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (

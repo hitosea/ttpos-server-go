@@ -32,5 +32,5 @@ type TakeoutOrderItemModifier struct {
 }
 
 func (*TakeoutOrderItemModifier) TableName() string {
-	return "ttpos_takeout_order_item_modifiers"
+	return "ttpos_takeout_order_item_modifier"
 }

@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
 )
 
@@ -741,24 +742,24 @@ func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.Exp
 func (s *takeoutAppService) compareAndSyncMenu(
 	ctx context.Context,
 	platform string,
-	oldMenu *grab.GrabMenu,
-	newMenu *grab.GrabMenu,
+	oldMenu *grabfood.GetMenuNewResponse,
+	newMenu *grabfood.GetMenuNewResponse,
 	result *response.MenuSyncResult,
 ) error {
 	// 创建旧菜单的索引
-	oldItemsMap := make(map[string]*grab.GrabItem)
-	oldModifiersMap := make(map[string]*grab.GrabModifier)
+	oldItemsMap := make(map[string]*grabfood.MenuItem)
+	oldModifiersMap := make(map[string]*grabfood.MenuModifier)
 
 	for _, category := range oldMenu.Categories {
 		for i := range category.Items {
 			item := &category.Items[i]
-			oldItemsMap[item.ID] = item
+			oldItemsMap[item.Id] = item
 
 			// 索引修饰符
 			for _, modGroup := range item.ModifierGroups {
 				for j := range modGroup.Modifiers {
 					modifier := &modGroup.Modifiers[j]
-					oldModifiersMap[modifier.ID] = modifier
+					oldModifiersMap[modifier.Id] = modifier
 				}
 			}
 		}
@@ -771,7 +772,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 			result.TotalItems++
 
 			// 比较商品
-			if oldItem, exists := oldItemsMap[newItem.ID]; exists {
+			if oldItem, exists := oldItemsMap[newItem.Id]; exists {
 				s.compareAndSyncItem(ctx, platform, oldItem, newItem, result)
 			}
 
@@ -781,7 +782,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 					newModifier := &modGroup.Modifiers[j]
 					result.TotalModifiers++
 
-					if oldModifier, exists := oldModifiersMap[newModifier.ID]; exists {
+					if oldModifier, exists := oldModifiersMap[newModifier.Id]; exists {
 						s.compareAndSyncModifier(ctx, platform, oldModifier, newModifier, result)
 					}
 				}
@@ -796,8 +797,8 @@ func (s *takeoutAppService) compareAndSyncMenu(
 func (s *takeoutAppService) compareAndSyncItem(
 	ctx context.Context,
 	platform string,
-	oldItem *grab.GrabItem,
-	newItem *grab.GrabItem,
+	oldItem *grabfood.MenuItem,
+	newItem *grabfood.MenuItem,
 	result *response.MenuSyncResult,
 ) {
 	var changes []string
@@ -833,7 +834,7 @@ func (s *takeoutAppService) compareAndSyncItem(
 	// 调用更新API
 	updateReq := request.UpdateMenuItemRequest{
 		Platform:        platform,
-		ItemId:          newItem.ID,
+		ItemId:          newItem.Id,
 		Price:           updatePrice,
 		AvailableStatus: updateStatus,
 		MaxStock:        &updateStock,
@@ -843,7 +844,7 @@ func (s *takeoutAppService) compareAndSyncItem(
 
 	// 记录变更详情
 	change := response.MenuItemChange{
-		ItemID:     newItem.ID,
+		ItemID:     newItem.Id,
 		ItemName:   newItem.Name,
 		ChangeType: changeType,
 		Success:    err == nil,
@@ -862,7 +863,7 @@ func (s *takeoutAppService) compareAndSyncItem(
 	if err != nil {
 		change.ErrorMessage = err.Error()
 		result.FailedItems++
-		result.Errors = append(result.Errors, fmt.Sprintf("商品%s(%s)更新失败: %v", newItem.Name, newItem.ID, err))
+		result.Errors = append(result.Errors, fmt.Sprintf("商品%s(%s)更新失败: %v", newItem.Name, newItem.Id, err))
 	} else {
 		result.SuccessItems++
 	}
@@ -874,8 +875,8 @@ func (s *takeoutAppService) compareAndSyncItem(
 func (s *takeoutAppService) compareAndSyncModifier(
 	ctx context.Context,
 	platform string,
-	oldModifier *grab.GrabModifier,
-	newModifier *grab.GrabModifier,
+	oldModifier *grabfood.MenuModifier,
+	newModifier *grabfood.MenuModifier,
 	result *response.MenuSyncResult,
 ) {
 	var changes []string
@@ -885,7 +886,7 @@ func (s *takeoutAppService) compareAndSyncModifier(
 	// 检查价格变更
 	if oldModifier.Price != newModifier.Price {
 		changes = append(changes, "price")
-		updatePrice = &newModifier.Price
+		updatePrice = newModifier.Price
 	}
 
 	// 检查状态变更
@@ -905,7 +906,7 @@ func (s *takeoutAppService) compareAndSyncModifier(
 	// 调用更新API
 	updateReq := request.UpdateMenuModifierRequest{
 		Platform:        platform,
-		ModifierId:      newModifier.ID,
+		ModifierId:      newModifier.Id,
 		ModifierName:    newModifier.Name,
 		Price:           updatePrice,
 		AvailableStatus: updateStatus,
@@ -915,14 +916,14 @@ func (s *takeoutAppService) compareAndSyncModifier(
 
 	// 记录变更详情
 	change := response.MenuModifierChange{
-		ModifierID:   newModifier.ID,
+		ModifierID:   newModifier.Id,
 		ModifierName: newModifier.Name,
 		ChangeType:   changeType,
 		Success:      err == nil,
 	}
 
 	if updatePrice != nil {
-		change.OldPrice = &oldModifier.Price
+		change.OldPrice = oldModifier.Price
 		change.NewPrice = updatePrice
 	}
 
@@ -934,7 +935,7 @@ func (s *takeoutAppService) compareAndSyncModifier(
 	if err != nil {
 		change.ErrorMessage = err.Error()
 		result.FailedModifiers++
-		result.Errors = append(result.Errors, fmt.Sprintf("修饰符%s(%s)更新失败: %v", newModifier.Name, newModifier.ID, err))
+		result.Errors = append(result.Errors, fmt.Sprintf("修饰符%s(%s)更新失败: %v", newModifier.Name, newModifier.Id, err))
 	} else {
 		result.SuccessModifiers++
 	}
