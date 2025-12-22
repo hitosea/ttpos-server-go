@@ -670,9 +670,12 @@ func (s *salesOutboundSummarySrv) RegenerateSaleBillMaterialOutbound(
 
 		// 4.2 软删除原记录
 		if len(materialItems) > 0 {
+			uuids := make([]uint64, 0)
+			for _, item := range materialItems {
+				uuids = append(uuids, item.Uuid)
+			}
 			result := tx.Model(&model.WarehouseOutFormItem{}).
-				Where("sale_order_uuid = ? AND scene = ? AND revoke_time = ? AND material_uuid != ? AND delete_time = ?",
-					saleOrderUuid, constant.WarehouseOutFormSceneSales, 0, 0, constant.NotDeleted).
+				Where("uuid in (?)", uuids).
 				Update("delete_time", time.Now().Unix())
 			if result.Error != nil {
 				return errors.WithMessage(result.Error, "软删除原记录失败")
