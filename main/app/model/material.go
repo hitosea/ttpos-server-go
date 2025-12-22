@@ -91,7 +91,7 @@ func (model *Material) GetValuation() float64 {
 	if model.Valuation != 0 {
 		return model.Valuation
 	}
-	return 1
+	return 0 // 任务37893: 取消盘点单中因估值率为0，强行写入1的规则；
 }
 
 // 通过uom名获取单位uuid

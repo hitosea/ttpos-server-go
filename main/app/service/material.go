@@ -450,7 +450,6 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		Status:               int(utils.BoolToUint(material.Status)),
 		AllowSubstoreVisible: material.AllowSubstoreVisible,
 		AllowNegativeStock:   material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
-		Valuation:            material.Valuation,
 		BarcodeValue:         material.BarcodeValue,
 		InternalCode:         material.InternalCode,
 		SafetyStock:          material.SafetyStock,
