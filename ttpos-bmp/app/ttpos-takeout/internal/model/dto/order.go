@@ -27,3 +27,15 @@ type SkootarJob struct {
 	SkootarImageUrl string  // 骑手头像
 	SkootarRating   float64 // 骑手评分
 }
+
+// PrepareOrderReq 准备订单请求 DTO（接受/拒绝订单）
+type PrepareOrderReq struct {
+	TakeoutOrderUuid string `json:"takeout_order_uuid" v:"required#订单UUID不能为空"`                                   // TTPOS订单UUID
+	ToState          string `json:"to_state" v:"required|in:Accepted,Rejected#目标状态不能为空|目标状态必须为Accepted或Rejected"` // 目标状态: Accepted/Rejected
+	RequestId        string `json:"request_id"`                                                                   // 请求追踪ID (可选)
+}
+
+// PrepareOrderResp 准备订单响应 DTO
+type PrepareOrderResp struct {
+	OrderUuid string `json:"order_uuid"` // 订单UUID
+}

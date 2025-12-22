@@ -21,6 +21,14 @@ type (
 		// 签名验证已由中间件完成，此处只处理业务逻辑
 		// 使用 SDK grabfood.OrderStateRequest
 		HandlePushOrderState(ctx context.Context, req *grabfood.OrderStateRequest) error
+		// PrepareOrder 准备订单（接受/拒绝）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - orderEntity: 订单实体
+		//   - toState: 目标状态 (Accepted/Rejected)
+		// 返回：
+		//   - err: 错误信息
+		PrepareOrder(ctx context.Context, orderEntity interface{}, toState string) error
 	}
 )
 

@@ -18,6 +18,16 @@ const (
 	ProviderShopStatusFailed   ProviderShopStatus = "FAILED"
 )
 
+// OrderPrepareState 订单准备状态（接受/拒绝）
+type OrderPrepareState string
+
+const (
+	// OrderPrepareStateAccepted 接受订单
+	OrderPrepareStateAccepted OrderPrepareState = "Accepted"
+	// OrderPrepareStateRejected 拒绝订单
+	OrderPrepareStateRejected OrderPrepareState = "Rejected"
+)
+
 // TTPOS_HEADER_CALLBACK_AUTH TTPOS回调Auth
 const TTPOS_HEADER_CALLBACK_AUTH = "X-TTPOS-Callback-Auth"
 

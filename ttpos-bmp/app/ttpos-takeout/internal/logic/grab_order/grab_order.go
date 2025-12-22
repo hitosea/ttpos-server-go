@@ -373,3 +373,67 @@ func getCustomerPhoneFromSDK(req *grabfood.SubmitOrderRequest) string {
 	}
 	return ""
 }
+
+// PrepareOrder 准备订单（接受/拒绝）
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体
+//   - toState: 目标状态 (Accepted/Rejected)
+//
+// 返回：
+//   - err: 错误信息
+func (s *sGrabOrder) PrepareOrder(ctx context.Context, orderEntityInterface interface{}, toState string) error {
+	// 类型断言获取订单实体
+	orderEntity, ok := orderEntityInterface.(*entity.Order)
+	if !ok {
+		return gerror.New("订单实体类型错误")
+	}
+
+	// 调用 GrabFood SDK 接受/拒绝订单
+	err := s.callGrabAcceptRejectAPI(ctx, orderEntity, toState)
+	if err != nil {
+		g.Log().Errorf(ctx, "调用 GrabFood API 失败: %v", err)
+		return gerror.Wrap(err, "调用 GrabFood API 失败")
+	}
+
+	g.Log().Infof(ctx, "订单 %s 已成功调用 Grab API: %s", orderEntity.Uuid, toState)
+	return nil
+}
+
+// callGrabAcceptRejectAPI 调用 GrabFood SDK 的 accept-reject-order API
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体，包含 ProviderOrderId
+//   - toState: 目标状态，"Accepted" 或 "Rejected"
+//
+// 返回：
+//   - err: 错误信息
+func (s *sGrabOrder) callGrabAcceptRejectAPI(ctx context.Context, orderEntity *entity.Order, toState string) error {
+	g.Log().Infof(ctx, "准备调用 GrabFood API: orderID=%s, toState=%s", orderEntity.ProviderOrderId, toState)
+
+	// 根据 toState 调用相应的 Grab 服务方法
+	switch toState {
+	case string(consts.OrderPrepareStateAccepted):
+		// 调用接受订单 API
+		err := service.Grab().AcceptOrder(ctx, orderEntity.ProviderOrderId)
+		if err != nil {
+			g.Log().Errorf(ctx, "接受订单失败: orderID=%s, error=%v", orderEntity.ProviderOrderId, err)
+			return gerror.Wrap(err, "接受订单失败")
+		}
+		g.Log().Infof(ctx, "成功接受订单: orderID=%s", orderEntity.ProviderOrderId)
+		return nil
+
+	case string(consts.OrderPrepareStateRejected):
+		// 调用拒绝订单 API
+		err := service.Grab().RejectOrder(ctx, orderEntity.ProviderOrderId, 0)
+		if err != nil {
+			g.Log().Errorf(ctx, "拒绝订单失败: orderID=%s, error=%v", orderEntity.ProviderOrderId, err)
+			return gerror.Wrap(err, "拒绝订单失败")
+		}
+		g.Log().Infof(ctx, "成功拒绝订单: orderID=%s", orderEntity.ProviderOrderId)
+		return nil
+
+	default:
+		return gerror.Newf("不支持的订单状态: %s，必须为 %s 或 %s", toState, consts.OrderPrepareStateAccepted, consts.OrderPrepareStateRejected)
+	}
+}
