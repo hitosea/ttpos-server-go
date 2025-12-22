@@ -572,7 +572,7 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 
 	// 计算商品价格：如果有规格，使用最小规格金额；否则使用商品原价
 	var price int64
-	if len(flavorsForPrice) > 0 {
+	if len(flavorsForPrice) > 0 && takeoutProduct.ProductType == 0 {
 		// 找到最小规格价格（优先使用外卖价格，否则使用店内价格）
 		minPrice := float64(0)
 		for idx, bom := range flavorsForPrice {
@@ -588,8 +588,12 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		}
 		price = int64(minPrice * 100) // 转换为分
 	} else {
-		// 没有规格，使用商品原价
-		price = int64(takeoutProduct.ProductPackage.Price * 100)
+		// 没有规格，优先使用外卖商品价格，否则使用店内商品原价
+		if takeoutProduct.Price > 0 {
+			price = int64(takeoutProduct.Price * 100)
+		} else {
+			price = int64(takeoutProduct.ProductPackage.Price * 100)
+		}
 	}
 
 	// 创建商品值对象

@@ -149,6 +149,7 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		Name:                          productName,
 		Describe:                      describe,
 		ProductType:                   uint(productPackage.ProductType),
+		Price:                         addReq.Price,
 		TakeoutType:                   uint(addReq.TakeoutType),
 		Status:                        uint(addReq.Status),
 		CategoryUuid:                  addReq.CategoryUuid,
@@ -276,6 +277,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 	// 准备更新数据
 	updateData := map[string]any{
 		"status": editReq.Status,
+		"price":  editReq.Price,
 	}
 
 	// 如果不是总部商品，可以编辑完整信息
@@ -593,6 +595,7 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		Uuid:                takeout.Uuid,
 		ProductPackageUuid:  takeout.ProductPackageUuid,
 		ProductType:         uint(productPackage.ProductType),
+		Price:               takeout.Price,
 		TakeoutType:         int(takeout.TakeoutType),
 		LocaleName:          takeout.ProductPackage.MultiLanguageName.GetNames(),
 		CategoryUuid:        takeout.CategoryUuid,

@@ -40772,12 +40772,16 @@ const docTemplate = `{
                     ]
                 },
                 "package_sub_product_groups": {
-                    "description": "关联原商品的套餐信息",
+                    "description": "套餐子商品分组列表",
                     "allOf": [
                         {
                             "$ref": "#/definitions/product_resp.ProductPackageSubProductGroupList"
                         }
                     ]
+                },
+                "price": {
+                    "description": "外卖商品价格 (套餐价格)",
+                    "type": "number"
                 },
                 "product_package_uuid": {
                     "description": "商品包UUID",
@@ -46796,16 +46800,20 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.ProductTakeoutShopAddPackageGroupItemReq"
                     }
                 },
+                "price": {
+                    "description": "外卖商品价格 (套餐价格)",
+                    "type": "number"
+                },
                 "product_package_uuid": {
                     "description": "商品包UUID（关联店内商品）",
                     "type": "integer"
                 },
                 "source": {
-                    "description": "来源平台",
+                    "description": "来源平台 (grab/lineman等 默认grab)",
                     "type": "string"
                 },
                 "source_product_id": {
-                    "description": "来源平台商品ID",
+                    "description": "来源平台商品ID (grab/lineman等 默认grab)",
                     "type": "string"
                 },
                 "special_category_uuid": {
@@ -46941,6 +46949,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductTakeoutShopEditPackageGroupItemReq"
                     }
+                },
+                "price": {
+                    "description": "外卖商品价格 (套餐价格)",
+                    "type": "number"
                 },
                 "special_category_uuid": {
                     "description": "外卖特色分类UUID",

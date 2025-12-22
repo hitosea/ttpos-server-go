@@ -8228,6 +8228,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 			HeadquarterUuid:               companySetting.HeadquarterUuid,
 			Name:                          headTakeout.Name,
 			ProductType:                   headTakeout.ProductType,
+			Price:                         headTakeout.Price,
 			TakeoutType:                   headTakeout.TakeoutType,
 			Status:                        status, // 使用确定的状态
 			CategoryUuid:                  headTakeout.CategoryUuid,

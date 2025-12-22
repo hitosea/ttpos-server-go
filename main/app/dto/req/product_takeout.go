@@ -15,11 +15,12 @@ type ProductTakeoutShopAddReq struct {
 	SpecialCategoryUuid uint64                                     `json:"special_category_uuid"`                   // 外卖特色分类UUID
 	Flavors             []ProductTakeoutShopAddFlavorReq           `json:"flavors"`                                 // 外卖规格列表（价格）
 	Attributes          []ProductTakeoutShopAddAttributeReq        `json:"attributes"`                              // 外卖属性列表（价格）
+	Price               float64                                    `json:"price"`                                   // 外卖商品价格 (套餐价格)
 	PackageGroupItems   []ProductTakeoutShopAddPackageGroupItemReq `json:"package_group_items"`                     // 外卖套餐子商品列表（加价）
 	Status              int                                        `json:"status"`                                  // 外卖状态 0-下架 1-上架
 	ImageFileUuid       uint64                                     `json:"image_file_uuid"`                         // 外卖商品图片文件UUID
-	Source              string                                     `json:"source"`                                  // 来源平台
-	SourceProductId     string                                     `json:"source_product_id"`                       // 来源平台商品ID
+	Source              string                                     `json:"source"`                                  // 来源平台 (grab/lineman等 默认grab)
+	SourceProductId     string                                     `json:"source_product_id"`                       // 来源平台商品ID (grab/lineman等 默认grab)
 }
 
 // ProductTakeoutShopAddFlavorReq 外卖商品规格添加请求
@@ -50,6 +51,7 @@ type ProductTakeoutShopEditReq struct {
 	SpecialCategoryUuid uint64                                      `json:"special_category_uuid"`   // 外卖特色分类UUID
 	Flavors             []ProductTakeoutShopEditFlavorReq           `json:"flavors"`                 // 外卖规格列表（价格）
 	Attributes          []ProductTakeoutShopEditAttributeReq        `json:"attributes"`              // 外卖属性列表（价格）
+	Price               float64                                     `json:"price"`                   // 外卖商品价格 (套餐价格)
 	PackageGroupItems   []ProductTakeoutShopEditPackageGroupItemReq `json:"package_group_items"`     // 外卖套餐子商品列表（加价）
 	Status              int                                         `json:"status"`                  // 外卖状态 0-下架 1-上架
 	ImageFileUuid       uint64                                      `json:"image_file_uuid"`         // 外卖商品图片文件UUID
