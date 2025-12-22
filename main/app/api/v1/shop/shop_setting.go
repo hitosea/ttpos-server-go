@@ -1223,11 +1223,12 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache, translateSrv)
 	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv, messageSrv)
 	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	wrapper := &SettingHandler{
 		settingSrv:    settingSrv,
 		otherSrv:      otherSrv,
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
-		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv),
+		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv, paymentMethodSrv),
 		dataManageSrv: service.NewDataManageSrv(dbm, settingSrv),
 		companySrv:    service.NewCompanySrv(dbm, settingSrv),
 	}
