@@ -1,0 +1,498 @@
+# 任务清单：新管理端-商品管理（删除、属性、加料限制）
+
+## 文档信息
+
+| 项目       | 内容                                          |
+| ---------- | --------------------------------------------- |
+| 需求名称   | 新管理端-商品管理（删除、属性、加料限制）     |
+| DooTask ID | 37946                                         |
+| 版本       | v2.12.0                                       |
+| 创建时间   | 2025-12-22                                    |
+| Story Point | 预估 11 点（仅后端Go代码）                    |
+
+---
+
+## 任务概览
+
+本需求涉及后端（Go）和数据库迁移（PHP）的开发工作，**不包含前端开发**。
+
+---
+
+## 任务分解
+
+### 阶段一：数据库层（2 SP）
+
+#### Task 1.1: 创建数据库迁移脚本 ⭐⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 2小时  
+**Story Point：** 2
+
+**描述：**  
+创建迁移脚本，为商品表、属性组表、套餐分组表添加新字段，并迁移旧数据。
+
+**实施步骤：**
+
+1. ✅ 创建迁移文件 `admin/database/migrations/20251222145027_add_selection_range_fields.php`
+2. ✅ 实现 `up()` 方法：
+   - 为 `ttpos_product_package` 添加 `sauce_min_selection` 字段
+   - 为 `ttpos_product_package_attribute_group` 添加 `min_selection` 字段
+   - 为 `ttpos_product_package_group` 添加 `optional_min_count` 字段
+   - 修改 `optional_count` 注释为"最大可选数量"（字段名保持不变）
+   - 编写旧数据迁移SQL：
+     - 根据 `sauce_required` 设置 `sauce_min_selection`
+     - 根据 `is_must` 设置 `min_selection`
+     - 可选分组设置 `optional_min_count=1`
+     - 修正 `max_selection` 和 `sauce_max_selection` 为0的情况
+3. ✅ 实现 `down()` 方法（回滚逻辑）
+4. ✅ 迁移逻辑经过多次优化，确保数据正确性
+
+**验收标准：**
+- ✅ 迁移脚本执行成功，无报错
+- ✅ 新字段已添加到对应表中
+- ✅ 旧数据正确转换为新格式
+- ✅ 回滚脚本能够正确还原数据库状态
+
+**依赖：** 无
+
+**输出文件：**
+- ✅ `admin/database/migrations/20251222145027_add_selection_range_fields.php`
+
+---
+
+### 阶段二：Model层（1 SP）
+
+#### Task 2.1: 更新Model定义 ⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 1小时  
+**Story Point：** 1
+
+**描述：**  
+更新Go Model定义，添加新字段。
+
+**实施步骤：**
+
+1. ✅ 更新 `main/app/model/product.go`：
+   - `ProductPackage` 添加 `SauceMinSelection` 字段
+   - `ProductPackageAttributeGroup` 添加 `MinSelection` 字段
+   - 标注废弃字段注释（`SauceRequired`, `IsMust`）
+2. ✅ 更新 `main/app/model/product_package_group.go`：
+   - 添加 `OptionalMinCount` 字段
+   - 修改 `OptionalCount` 字段注释为"最大可选数量，表示本组商品中最多可以选择多少个商品"
+
+**验收标准：**
+- ✅ Model字段定义与数据库表结构一致
+- ✅ GORM标签正确配置
+- ✅ 废弃字段已标注注释
+
+**依赖：** Task 1.1
+
+**输出文件：**
+- ✅ `main/app/model/product.go`
+- ✅ `main/app/model/product_package_group.go`
+
+---
+
+### 阶段三：Repository层（2 SP）
+
+#### Task 3.1: 新增OrderRepo方法 ⭐⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 1.5小时  
+**Story Point：** 2
+
+**描述：**  
+在OrderRepo中新增方法，用于检查未完结外卖订单。
+
+**实施步骤：**
+
+1. ✅ 在 `main/app/repository/order.go` 中添加方法：
+   ```go
+   func (r *orderRepo) HasUnfinishedTakeoutOrderWithProduct(productPackageUuid, bomUuid uint64) (bool, error)
+   ```
+2. ✅ 实现查询逻辑：
+   - 关联 `ttpos_sale_bill` 和 `ttpos_sale_order_product` 表
+   - 筛选外卖订单类型 (`bill_type = 2`)
+   - 筛选未完结状态 (`status = pending`)
+   - 根据 `product_package_uuid` 或 `product_bom_uuid` 筛选
+3. ⚠️ 添加TODO注释：外卖订单表创建后需要修改查询逻辑
+
+**验收标准：**
+- ✅ 方法能正确检查未完结外卖订单
+- ⏳ 单元测试（Task 6.1）
+- ✅ 查询逻辑清晰，包含TODO说明
+
+**依赖：** Task 2.1
+
+**输出文件：**
+- ✅ `main/app/repository/order.go`
+
+---
+
+### 阶段四：Service层（4 SP）
+
+#### Task 4.1: 增强ProductSrv删除方法 ⭐⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 1小时  
+**Story Point：** 2
+
+**描述：**  
+在删除商品和规格时，增加未完结外卖订单检查。
+
+**实施步骤：**
+
+1. ✅ 修改 `DeleteProductShop` 方法（`main/app/service/product.go`）：
+   - 在套餐检查后，删除事务前，添加外卖订单检查
+   - 遍历所有 `productBom`，调用 `HasUnfinishedTakeoutOrderWithProduct`
+   - 如果存在未完结订单，返回错误："商品/规格存在未完结的外卖订单，无法删除"
+2. ✅ 添加日志记录：检查失败时记录详细错误信息
+
+**验收标准：**
+- ✅ 删除存在未完结订单的商品时返回错误
+- ✅ 删除无订单或已完结订单的商品成功
+- ⏳ 单元测试（Task 6.1）
+
+**依赖：** Task 3.1
+
+**输出文件：**
+- ✅ `main/app/service/product.go` (DeleteProductShop方法)
+
+---
+
+#### Task 4.2: 增强ProductCheckSrv验证方法 ⭐⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 2.5小时  
+**Story Point：** 2
+
+**描述：**  
+更新商品检查服务，添加可选范围验证逻辑。
+
+**实施步骤：**
+
+1. ✅ 更新 `main/app/service/product_check.go`：
+   - 修改 `CheckProductAttributeGroupParam` 结构体，添加 `MinSelection` 字段
+   - 修改 `CheckProductSauceParam` 结构体，添加 `MinSelection` 字段
+   - 修改 `CheckProductPackageGroupParam` 结构体，添加 `OptionalMinCount` 字段
+   - 修改 `CheckProductSauceResult` 结构体，添加 `MinSelection` 字段
+   - 修改 `CheckProductPackageGroupResult` 结构体，添加 `OptionalMinCount` 字段
+2. ✅ 实现 `CheckProductAttribute` 方法：
+   - 验证 `max_selection >= min_selection`
+   - 验证 `max_selection <= 属性值数量`
+   - **兼容旧数据：`is_must=1` 且 `min_selection=0` 时，自动设置 `min_selection=1`**
+3. ✅ 实现 `CheckProductSauce` 方法：
+   - 验证 `sauce_max_selection >= sauce_min_selection`
+   - 验证 `sauce_max_selection <= 加料值数量`
+   - **兼容旧数据：`is_must=1` 且 `min_selection=0` 时，自动设置 `min_selection=1`**
+4. ✅ 实现 `CheckProductPackageGroup` 方法：
+   - 验证 `optional_count >= optional_min_count`
+   - 验证 `optional_count <= 分组商品数量`
+   - 固定分组自动设置 `optional_min_count` 和 `optional_count` 为商品数量
+   - **兼容旧数据：可选分组 `optional_min_count=0` 时，自动设置为 `1`**
+5. ✅ **版本兼容性处理逻辑已实现**
+
+**验收标准：**
+- ✅ 可选范围验证逻辑正确
+- ✅ 错误提示清晰准确
+- ✅ **兼容v2.11客户端（不传新字段）**
+- ✅ **兼容v2.12客户端（传新旧字段）**
+- ⏳ 单元测试（Task 6.1）
+
+**依赖：** Task 2.1
+
+**输出文件：**
+- ✅ `main/app/service/product_check.go`
+
+---
+
+### 阶段五：API层（2 SP）
+
+#### Task 5.1: 更新商品API请求和响应结构 ⭐⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 2.5小时  
+**Story Point：** 2
+
+**描述：**  
+更新API请求结构和Service层保存逻辑，支持新字段。
+
+**实施步骤：**
+
+1. ✅ 更新 `main/app/dto/req/product.go`：
+   - `ProductShopAddSauceReq` 和 `ProductShopEditSauceReq` 添加 `MinSelection` 字段
+   - `ProductShopAddAttributeGroupReq` 和 `ProductShopEditAttributeGroupReq` 添加 `MinSelection` 字段
+   - `ProductShopAddPackageGroupReq` 和 `ProductShopEditPackageGroupReq` 添加 `OptionalMinCount` 字段
+   - 修改 `OptionalCount` 注释为"最大可选数量"
+   - 标注废弃字段（`IsMust`, `IsRequired`）
+2. ✅ 修改 `main/app/service/product.go`：
+   - `AddProductShop` 方法：传递新字段到验证层
+   - `EditProductShop` 方法：传递新字段到验证层
+   - `SaveProductPackageBom` 方法：保存 `sauce_min_selection`
+   - `SaveProductPackageAttribute` 方法：保存 `min_selection`（创建和更新）
+   - `SaveProductPackageGroup` 方法：保存 `optional_min_count`（创建和更新）
+
+**验收标准：**
+- ✅ API请求结构支持新旧字段
+- ✅ Service层正确传递和保存新字段
+- ✅ **v2.11客户端能正常使用旧字段**
+- ✅ **v2.12客户端优先使用新字段**
+- ✅ 保持向后兼容
+- ⏳ 单元测试（Task 6.1）
+
+**依赖：** Task 4.1, Task 4.2
+
+**输出文件：**
+- ✅ `main/app/dto/req/product.go`
+- ✅ `main/app/service/product.go`
+- ✅ `main/app/service/product_check.go`
+
+---
+
+### 阶段六：测试（2 SP）
+
+#### Task 6.1: 编写后端集成测试 ⭐⭐ ⏳
+
+**负责人：** 待分配  
+**预估时间：** 3小时  
+**Story Point：** 2
+
+**描述：**  
+编写完整的后端集成测试，覆盖所有功能点。
+
+**当前状态：** 代码实现已完成，待编写测试用例
+
+**实施步骤：**
+
+1. ⏳ 创建测试用例文件 `main/tests/integration/product_management_test.go`
+2. ⏳ 测试商品删除限制：
+   - 删除无订单的商品 -> 成功
+   - 删除有已完成订单的商品 -> 成功
+   - 删除有未完结外卖订单的商品 -> 失败
+3. 测试属性/加料可选范围：
+   - 设置有效范围 -> 成功
+   - 设置 max < min -> 失败
+   - 设置 max > 属性值数量 -> 失败
+4. 测试套餐分组可选范围：
+   - 设置有效范围 -> 成功
+   - 设置 max < min -> 失败
+   - 设置 max > 分组商品数量 -> 失败
+5. **测试版本兼容性**：
+   - **v2.11客户端添加商品（不传新字段）-> 成功，验证默认值**
+   - **v2.11客户端查询商品 -> 成功，验证包含旧字段**
+   - **v2.12客户端添加商品（传新字段）-> 成功**
+   - **v2.12客户端添加商品（传新旧字段）-> 成功，验证优先使用新字段**
+   - **v2.12客户端查询商品 -> 成功，验证包含新旧字段**
+6. API接口测试（使用Postman或curl）
+
+**验收标准：**
+- ✅ 所有集成测试通过
+- ✅ 测试覆盖率 > 80%
+- ✅ API接口测试通过
+- ✅ **版本兼容性测试全部通过**
+
+**依赖：** Task 5.1
+
+**输出文件：**
+- `main/tests/integration/product_management_test.go`
+- `docs/shared/api/product-management-test-cases.md`（API测试用例文档）
+
+---
+
+### 阶段七：文档和部署（1 SP）
+
+#### Task 7.1: 更新文档并部署 ⭐
+
+**负责人：** 待分配  
+**预估时间：** 1小时  
+**Story Point：** 1
+
+**描述：**  
+更新相关文档，准备后端部署。
+
+**实施步骤：**
+
+1. 更新API文档：`docs/shared/api/product-management.md`
+   - 添加新字段说明
+   - 标注兼容性信息
+   - 添加请求/响应示例
+2. 编写后端部署说明：
+   - 数据库迁移步骤
+   - 后端部署步骤
+   - 回滚方案
+3. 在测试环境验证完整流程
+4. 部署到生产环境
+
+**验收标准：**
+- ✅ API文档完整准确
+- ✅ 部署说明清晰
+- ✅ 测试环境验证通过
+- ✅ 生产环境部署成功
+
+**依赖：** Task 6.1
+
+**输出文件：**
+- `docs/shared/api/product-management.md`
+- `docs/shared/specs/active/story-shop-product-management-restrictions/deployment.md`
+
+---
+
+## 任务依赖关系图
+
+```
+Task 1.1 (数据库迁移)
+    ↓
+Task 2.1 (Model层)
+    ↓
+Task 3.1 (Repository层)
+    ↓
+Task 4.1 (Service删除) ← Task 4.2 (Service验证)
+    ↓
+Task 5.1 (API层)
+    ↓
+Task 6.1 (后端集成测试)
+    ↓
+Task 7.1 (文档部署)
+```
+
+---
+
+## 工作量统计
+
+| 阶段          | 任务数 | Story Point | 预估工时 |
+| ------------- | ------ | ----------- | -------- |
+| 数据库层      | 1      | 2           | 2h       |
+| Model层       | 1      | 1           | 1h       |
+| Repository层  | 1      | 2           | 2h       |
+| Service层     | 2      | 4           | 6h       |
+| API层         | 1      | 2           | 2h       |
+| 测试          | 1      | 2           | 3h       |
+| 文档部署      | 1      | 1           | 1h       |
+| **合计**      | **8**  | **14**      | **17h**  |
+
+**说明：**
+- Story Point：14 点（仅后端Go代码）
+- 预估工时：17 小时，实际可能需要 2-3 个工作日完成
+- 建议分配：2 名后端Go开发人员
+
+---
+
+## 里程碑
+
+| 里程碑                 | 完成标志                              | 目标日期   |
+| ---------------------- | ------------------------------------- | ---------- |
+| M1: 数据库迁移完成     | Task 1.1 完成，测试环境验证通过       | Day 1      |
+| M2: 后端Model/Repo完成 | Task 2.1-3.1 完成，基础功能就绪       | Day 1-2    |
+| M3: Service层完成      | Task 4.1-4.2 完成，单元测试通过       | Day 2      |
+| M4: API开发完成        | Task 5.1 完成，API测试通过            | Day 2      |
+| M5: 后端测试完成       | Task 6.1 完成，所有后端测试通过       | Day 3      |
+| M6: 后端部署上线       | Task 7.1 完成，生产环境运行正常       | Day 3      |
+
+---
+
+## 风险和注意事项
+
+### 高风险项
+
+1. **数据迁移风险（Task 1.1）**
+   - 风险：旧数据转换不准确，导致业务异常
+   - 缓解措施：
+     - 在测试环境充分验证迁移脚本
+     - 人工抽查迁移后的数据
+     - 提供数据修正工具
+
+2. **版本兼容性风险（Task 4.2, 5.1, 6.1）**
+   - 风险：v2.11客户端无法正常使用，或v2.12客户端数据错误
+   - 缓解措施：
+     - 后端自动转换新旧字段
+     - 查询接口同时返回新旧字段
+     - 充分测试各版本客户端场景
+     - 提供版本兼容性测试用例
+
+### 中风险项
+
+1. **删除限制影响业务（Task 4.1）**
+   - 风险：删除限制过严，影响正常操作
+   - 缓解措施：
+     - 提供清晰的错误提示
+     - 引导用户处理订单后再删除
+
+2. **性能问题（Task 3.1）**
+   - 风险：未完结订单查询性能不佳
+   - 缓解措施：
+     - 优化SQL查询
+     - 添加合适的索引
+     - 性能测试
+
+### 低风险项
+
+1. **性能问题**
+   - 风险：未完结订单查询性能不佳
+   - 缓解措施：
+     - 优化SQL查询
+     - 添加合适的索引
+     - 性能测试
+
+---
+
+## 验收清单
+
+### 功能验收
+
+- [ ] 商品删除时能正确检查未完结外卖订单
+- [ ] 删除存在未完结订单的商品时给出明确提示
+- [ ] 属性设置支持可选范围（最小-最大）
+- [ ] 加料设置支持可选范围（最小-最大）
+- [ ] 套餐分组支持可选范围（最小-最大）
+- [ ] 可选范围验证逻辑正确（max >= min）
+- [ ] 错误提示清晰准确
+- [ ] 旧数据能正确转换和显示
+
+### 性能验收
+
+- [ ] 删除操作检查查询时间 < 200ms
+- [ ] API响应时间 < 500ms
+
+### 兼容性验收
+
+- [ ] v2.11客户端能正常添加商品（不传新字段）
+- [ ] v2.11客户端能正常编辑商品
+- [ ] v2.11客户端查询商品时返回旧字段
+- [ ] v2.12客户端能正常添加商品（传新字段）
+- [ ] v2.12客户端传新旧字段时优先使用新字段
+- [ ] v2.12客户端查询商品时返回新旧字段
+- [ ] 旧数据在新系统中显示正确
+
+### 测试验收
+
+- [ ] 单元测试覆盖率 > 80%
+- [ ] 集成测试全部通过
+- [ ] API接口测试全部通过
+
+### 文档验收
+
+- [ ] API文档完整准确，包含新旧字段对比说明
+- [ ] 后端部署文档清晰
+- [ ] 数据库迁移文档完整
+
+---
+
+## 相关文档
+
+- 需求文档：`requirements.md`
+- 设计文档：`design.md`
+- DooTask 任务：#37946
+
+---
+
+## 变更历史
+
+| 版本 | 日期       | 变更人 | 变更内容                                                                         |
+| ---- | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 1.0  | 2025-12-22 | 曾振华 | 创建任务清单                                                                      |
+| 1.1  | 2025-12-22 | 曾振华 | 调整为仅后端Go代码，移除前端任务                                                  |
+| 1.2  | 2025-12-22 | 曾振华 | 修改套餐分组字段方案：保持 optional_count 字段名不变，只修改注释                   |
+| 1.3  | 2025-12-22 | 曾振华 | 清理所有前端相关描述，聚焦后端开发任务                                             |
+| 1.4  | 2025-12-22 | 曾振华 | 新增版本兼容性处理说明，明确v2.11和v2.12的兼容策略和测试要求                       |
+

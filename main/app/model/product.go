@@ -131,7 +131,8 @@ type ProductAttribute struct {
 // ProductPackageAttributeGroup 产品包属性组表,定义产品包的属性分组信息 ttpos_product_package_attribute_group
 type ProductPackageAttributeGroup struct {
 	BaseModel
-	IsMust                    uint   `gorm:"default:0;column:is_must;comment:'是否必选, 0-否 1-是'"`
+	IsMust                    uint   `gorm:"default:0;column:is_must;comment:'是否必选, 0-否 1-是（废弃，使用min_selection替代）'"`
+	MinSelection              uint   `gorm:"default:0;column:min_selection;comment:'最小选择数量'"`
 	MaxSelection              uint   `gorm:"default:0;column:max_selection;comment:'最大选择数量'"`
 	ProductPackageUuid        uint64 `gorm:"default:0;column:product_package_uuid;comment:'产品包UUID'"`
 	ProductAttributeGroupUuid uint64 `gorm:"default:0;column:product_attribute_group_uuid;comment:'商品属性组UUID'"`
@@ -214,7 +215,8 @@ type ProductPackage struct {
 	Price float64 `gorm:"default:0;column:price;comment:'套餐价格'"`
 
 	ProductType         uint  `gorm:"default:0;column:product_type;comment:'商品类型, 0-商品 1-套餐'"`
-	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
+	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是（废弃，使用sauce_min_selection替代）'"`
+	SauceMinSelection   uint  `gorm:"default:0;column:sauce_min_selection;comment:'小料最小选择数量'"`
 	SauceMaxSelection   uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 	OpenOverallDiscount *uint `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
