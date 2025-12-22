@@ -39,6 +39,12 @@ type IProductInventoryDomainService interface {
 	// opts: 可选参数，使用 WithStrategy 设置策略
 	// 返回: 库存数量（float64），根据策略计算该商品包下所有BOM库存的最小值或最大值
 	GetProductPackageInventory(ctx context.Context, productPackageUuid uint64, opts ...func(option *GetProductPackageInventoryOption)) (float64, error)
+
+	// GetProductPackageInventoriesBatch 批量获取商品包库存
+	// productPackageUuids: 商品包的UUID列表
+	// opts: 可选参数，使用 WithStrategy 设置策略
+	// 返回: map[商品包UUID]库存数量，根据策略计算每个商品包下所有BOM库存的最小值或最大值
+	GetProductPackageInventoriesBatch(ctx context.Context, productPackageUuids []uint64, opts ...func(option *GetProductPackageInventoryOption)) (map[uint64]float64, error)
 }
 
 // productInventoryDomainService 商品库存领域服务实现
@@ -281,4 +287,127 @@ func (s *productInventoryDomainService) GetProductPackageInventory(
 	}
 
 	return strategy.CalculatePackageInventory(ctx, inventories)
+}
+
+// GetProductPackageInventoriesBatch 批量获取商品包库存
+// 根据策略计算每个商品包下所有商品BOM库存的最小值或最大值
+func (s *productInventoryDomainService) GetProductPackageInventoriesBatch(
+	ctx context.Context,
+	productPackageUuids []uint64,
+	opts ...func(option *GetProductPackageInventoryOption),
+) (map[uint64]float64, error) {
+	// 解析选项
+	option := &GetProductPackageInventoryOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	// 1. 参数校验
+	if len(productPackageUuids) == 0 {
+		return make(map[uint64]float64), nil
+	}
+
+	// 2. 批量查询商品包信息，检查状态
+	productPackages, err := s.productPackageRepo.FindByUuids(ctx, productPackageUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品包失败")
+	}
+
+	// 3. 过滤有效的商品包（未删除）
+	validPackageUuids := make([]uint64, 0, len(productPackages))
+	packageMap := make(map[uint64]*model.ProductPackage, len(productPackages))
+	for _, productPackage := range productPackages {
+		if productPackage != nil && !productPackage.IsDelete() {
+			validPackageUuids = append(validPackageUuids, productPackage.Uuid)
+			packageMap[productPackage.Uuid] = productPackage
+		}
+	}
+
+	if len(validPackageUuids) == 0 {
+		return make(map[uint64]float64), nil
+	}
+
+	// 4. 批量查询所有商品包下的BOM
+	productBomInterfaces, err := s.productBomRepo.FindByProductPackageUuids(ctx, validPackageUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品包BOM列表失败")
+	}
+
+	// 5. 按商品包分组BOM，并收集所有BOM的UUID
+	packageBomMap := make(map[uint64][]uint64) // map[商品包UUID][]BOM UUID
+	allBomUuids := make([]uint64, 0)
+	bomUuidSet := make(map[uint64]bool) // 用于去重
+
+	for _, bomInterface := range productBomInterfaces {
+		productBom, ok := bomInterface.(*model.ProductBom)
+		if !ok {
+			// 记录错误但继续处理其他BOM
+			continue
+		}
+
+		packageUuid := productBom.ProductPackageUuid
+		bomUuid := productBom.Uuid
+
+		// 添加到对应商品包的BOM列表
+		if _, exists := packageBomMap[packageUuid]; !exists {
+			packageBomMap[packageUuid] = make([]uint64, 0)
+		}
+		packageBomMap[packageUuid] = append(packageBomMap[packageUuid], bomUuid)
+
+		// 收集所有BOM UUID（去重）
+		if !bomUuidSet[bomUuid] {
+			allBomUuids = append(allBomUuids, bomUuid)
+			bomUuidSet[bomUuid] = true
+		}
+	}
+
+	// 6. 批量查询所有BOM的库存
+	inventoryMap, err := s.GetProductInventoriesBatch(ctx, allBomUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品包BOM库存失败")
+	}
+
+	// 7. 使用策略计算每个商品包的库存
+	// 如果未提供策略，使用默认策略
+	strategy := option.Strategy
+	if strategy == nil {
+		strategy = s.defaultPackageInventoryStrategy
+	}
+
+	result := make(map[uint64]float64, len(validPackageUuids))
+	for _, packageUuid := range validPackageUuids {
+		bomUuids, exists := packageBomMap[packageUuid]
+		if !exists || len(bomUuids) == 0 {
+			// 商品包下没有BOM，库存为0
+			result[packageUuid] = 0
+			continue
+		}
+
+		// 收集该商品包下所有BOM的库存值
+		inventories := make([]float64, 0, len(bomUuids))
+		for _, bomUuid := range bomUuids {
+			if inventory, exists := inventoryMap[bomUuid]; exists {
+				inventories = append(inventories, inventory)
+			}
+		}
+
+		// 如果没有有效的库存，设置为0
+		if len(inventories) == 0 {
+			result[packageUuid] = 0
+			continue
+		}
+
+		// 使用策略计算商品包库存
+		packageInventory, err := strategy.CalculatePackageInventory(ctx, inventories)
+		if err != nil {
+			// 记录错误但继续处理其他商品包
+			logger.Logger.Warn("计算商品包库存失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Uint64("product_package_uuid", packageUuid), zap.Error(err))
+			result[packageUuid] = 0
+			continue
+		}
+
+		result[packageUuid] = packageInventory
+	}
+
+	return result, nil
 }
