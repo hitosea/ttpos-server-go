@@ -1020,7 +1020,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
     `name` TEXT COMMENT '原料名称',
     `code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料编码',
-    `valuation` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '估值率',
     `init_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '期初库存',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '类别ID',

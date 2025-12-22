@@ -336,7 +336,7 @@ func (s *salesOutboundSummarySrv) getDailySalesOutboundRecords(
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
-				Valuation:            item.Material.Valuation,
+				Valuation:            0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				SupplierUuid:         item.Material.SupplierUuid,
 				MaterialName:         materialName,
 				MaterialBaseUnitUuid: materialBaseUnitUuid,
@@ -1007,12 +1007,13 @@ func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[st
 			continue
 		}
 
+		valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 		// 获取或创建仓库物品库存记录
 		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialOrCreate(
 			returnInfo.WarehouseUuid,
 			returnInfo.MaterialUuid,
 			returnInfo.Material.Code,
-			returnInfo.Material.Valuation,
+			valuation,
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取仓库物品库存失败")

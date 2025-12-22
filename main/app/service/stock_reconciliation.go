@@ -743,6 +743,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 					scene = constant.WarehouseInOutLogSceneLossOut
 				}
 				diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
+				valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
 					LogType:              logType,
 					Scene:                scene,
@@ -752,8 +753,8 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 					MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
 					MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
 					Num:                  diff.Truncate(3).InexactFloat64(),
-					Price:                material.Valuation,
-					Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
+					Price:                valuation,
+					Amount:               decimal.NewFromFloat(valuation).Mul(diff).Truncate(3).InexactFloat64(),
 					OrderNo:              stockReconciliation.OrderNo,
 				})
 			}

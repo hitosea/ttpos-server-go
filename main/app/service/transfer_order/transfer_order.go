@@ -489,7 +489,7 @@ func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transfe
 			MaterialName:         material.Name,
 			MaterialInternalCode: material.InternalCode,
 			MaterialBarcodeValue: material.BarcodeValue,
-			Valuation:            material.GetValuation(),
+			Valuation:            0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 		}
 
 		if err := transferOrderItemRepoTx.Create(item); err != nil {

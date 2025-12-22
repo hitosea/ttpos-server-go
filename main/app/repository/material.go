@@ -36,7 +36,6 @@ type IMaterialRepo interface {
 	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
 	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
 	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
-	ClearMaterialValuation(uuid uint64) error                                       // 清空物品估值率
 	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
 	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
@@ -546,13 +545,6 @@ func (r *MaterialRepoImpl) UpdateMaterialVisibleBatch(uuids []uint64, visible in
 func (r *MaterialRepoImpl) ClearMaterialBarcodeValue(uuid uint64) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("barcode_value", "").Error; err != nil {
 		return errors.WithMessage(err, "清空物品条形码值失败")
-	}
-	return nil
-}
-
-func (r *MaterialRepoImpl) ClearMaterialValuation(uuid uint64) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("valuation", 0).Error; err != nil {
-		return errors.WithMessage(err, "清空物品估值率失败")
 	}
 	return nil
 }
