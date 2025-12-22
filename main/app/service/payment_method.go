@@ -40,6 +40,8 @@ type IPaymentMethodSrv interface {
 	UpdateLianlianPayConfig(ctx context.Context, configReq *req.LianlianPayConfigUpdateReq) error
 	SyncPaymentMethod(ctx context.Context) error // 同步支付方式
 	GetLogo(ctx context.Context, method *model.PaymentMethod) string
+	SaveGrabPaymentMethod(ctx context.Context, tx *gorm.DB) error
+	SaveLineManPaymentMethod(ctx context.Context, tx *gorm.DB) error
 }
 
 // paymentMethodSrv  支付方式服务结构体
