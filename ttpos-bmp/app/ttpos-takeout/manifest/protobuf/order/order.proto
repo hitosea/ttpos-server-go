@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package order;
+
+import "takeout_api.proto";
+
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/order";
+
+// 获取订单信息请求
+message GetOrderInfoReq {
+  string shop_uuid = 1;    // TTPOS店铺UUID
+  string order_uuid = 2;   // TTPOS订单UUID
+  string request_id = 3;   // 请求追踪ID (可选)
+}
+
+// 获取订单信息响应
+message GetOrderInfoResp {
+  string shop_uuid = 1;     // TTPOS店铺UUID
+  string order_status = 2;  // 订单状态
+  string order_type = 3;    // 订单类型
+  string raw_data = 4;      // 原始JSON数据
+  string provider_name = 5; // 渠道名称: grab, foodpanda, lineman
+}
+
+// 订单服务
+service OrderService {
+  // 获取订单信息
+  rpc GetOrderInfo(GetOrderInfoReq) returns (takeout.ApiResponse);
+}
