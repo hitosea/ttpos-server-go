@@ -5245,13 +5245,27 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		return nil, errors.WithMessage(err, "获取商品列表失败")
 	}
 
+	// 批量查询商品包库存
+	productPackageUuids := make([]uint64, 0, len(productPackages))
+	for _, productPackage := range productPackages {
+		productPackageUuids = append(productPackageUuids, productPackage.Uuid)
+	}
+
+	// 创建库存应用服务并批量查询库存
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+	packageInventoryMap, err := appService.GetProductPackageInventoriesBatch(ctx, productPackageUuids)
+	if err != nil {
+		// 如果查询库存失败，记录日志但不影响主流程，使用默认值
+		logger.Logger.Warn("批量查询商品包库存失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(err))
+		packageInventoryMap = make(map[uint64]float64)
+	}
+
 	productList := make([]product_resp.ProductShopListItemResp, 0, len(productPackages))
 	for _, productPackage := range productPackages {
 		// 格式化商品信息
 		minPrice := 0.0
 		maxPrice := 0.0
 		specCount := 0
-		specStockNum := 0.0
 		IsMultipleSpec := false
 		IsAttribute := len(productPackage.ProductPackageAttributeGroups) > 0
 		IsSauce := false
@@ -5271,9 +5285,6 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 						maxPrice = utils.IfFloat64(productBom.Price >= maxPrice, productBom.Price, maxPrice)
 					}
 					specCount++
-					if productBom.StockNum > 0 {
-						specStockNum = productBom.StockNum
-					}
 					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
 						Uuid:         productBom.Uuid,
 						LocaleName:   productBom.ProductFlavor.MultiLanguageName.GetNames(),
@@ -5288,7 +5299,6 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			} else {
 				minPrice = productBom.Price
 				maxPrice = productBom.Price
-				specStockNum = productBom.StockNum
 				// 套餐
 				if productBom.ProductFlavorUuid == 0 && productBom.ProductSauceUuid == 0 {
 					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
@@ -5303,6 +5313,13 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		if specCount > 1 {
 			IsMultipleSpec = true
 		}
+		// 从批量查询结果中获取商品包库存
+		packageInventory, hasInventory := packageInventoryMap[productPackage.Uuid]
+		if !hasInventory {
+			packageInventory = constant.ProductBomInfiniteStock // 无限库存,如果查询到库存数据就显示无限库存
+		}
+		isSoldOut := packageInventory <= 0
+
 		productItem := product_resp.ProductShopListItemResp{
 			Uuid:       productPackage.Uuid,
 			LocaleName: productPackage.MultiLanguageName.GetNames(),
@@ -5323,7 +5340,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			CategoryUuid:        productPackage.CategoryUuid,
 			SpecialCategoryUuid: productPackage.SpecialCategoryUuid,
 			Status:              int(productPackage.Status),
-			IsSoldOut:           specStockNum <= 0,
+			IsSoldOut:           isSoldOut,
 			ProductType:         int(productPackage.ProductType),
 			Sort:                int(productPackage.Sort),
 			Flavors: product_resp.ProductShopListItemFlavorListResp{

@@ -45,6 +45,27 @@ func (r *ProductPackageRepositoryImpl) FindByUuid(
 	return productPackage, nil
 }
 
+// FindByUuids 根据UUID列表批量查找商品包列表
+func (r *ProductPackageRepositoryImpl) FindByUuids(
+	ctx context.Context,
+	uuids []uint64,
+) ([]*model.ProductPackage, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductPackage{}, nil
+	}
+
+	db := r.getDB(ctx)
+	repo := appRepo.NewProductPackageRepo(db)
+
+	// 批量查询商品包，不预加载任何关联数据，只查询基本信息
+	productPackages, err := repo.GetProductPackageListByUuids(uuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品包失败")
+	}
+
+	return productPackages, nil
+}
+
 // getDB 获取数据库连接
 func (r *ProductPackageRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
 	return ctx.GetDB()

@@ -191,6 +191,16 @@ func (s *ProductInventoryAppService) GetProductPackageInventory(
 	return inventory, nil
 }
 
+// GetProductPackageInventoriesBatch 批量获取商品包库存
+// opts: 可选参数，使用 domainService.WithStrategy 设置策略
+func (s *ProductInventoryAppService) GetProductPackageInventoriesBatch(
+	ctx context.Context,
+	productPackageUuids []uint64,
+	opts ...func(option *domainService.GetProductPackageInventoryOption),
+) (map[uint64]float64, error) {
+	return s.domainService.GetProductPackageInventoriesBatch(ctx, productPackageUuids, opts...)
+}
+
 // InvalidateProductPackageInventoryCache 使商品包库存缓存失效
 func (s *ProductInventoryAppService) InvalidateProductPackageInventoryCache(
 	ctx context.Context,
