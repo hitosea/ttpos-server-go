@@ -43,7 +43,8 @@
 - **PaymentMethod Service**: `main/app/service/payment_method.go` - 已存在查询方法，需扩展管理方法
 - **PaymentMethod Model**: `main/app/model/payment_method.go` - 数据模型已存在
 - **PaymentApp Model**: `main/app/model/payment_app.go` - LianlianPay 配置模型已存在
-- **Payment Service**: `main/app/service/payment.go` - LianlianPay 支付服务已存在
+- **Payment Service**: `main/app/service/payment.go` - LianlianPay 支付服务已存在，包含 `GetSignSalt()` 方法
+- **RSA 加密工具**: `main/pkg/encrypt/rsa.go` - RSA 加密/解密、签名/验签工具包（新增）
 
 ### 集成点
 
@@ -262,10 +263,6 @@ type PaymentMethodGetReq struct {
     Uuid uint64 `json:"uuid" binding:"required"`
 }
 
-// PaymentMethodDeleteReq 删除支付方式请求
-type PaymentMethodDeleteReq struct {
-    Uuid uint64 `json:"uuid" binding:"required"`
-}
 
 // PaymentMethodSortUpdateReq 排序更新请求（批量）
 type PaymentMethodSortUpdateReq struct {
@@ -522,40 +519,7 @@ type LianlianPayConfigResp struct {
 }
 ```
 
-#### API 5: 删除支付方式
-
-**请求**:
-
-- **URL**: `/api/v1/shop/payment_method/delete`
-- **Method**: `DELETE`
-- **Body**:
-  ```json
-  {
-    "uuid": 123456
-  }
-  ```
-
-**响应**:
-
-```json
-{
-  "code": 1,
-  "message": "success",
-  "data": {}
-}
-```
-
-**错误响应**（有关联订单）:
-
-```json
-{
-  "code": 0,
-  "message": "支付方式有关联订单，无法删除",
-  "data": {}
-}
-```
-
-#### API 6: 批量更新支付方式排序
+#### API 5: 批量更新支付方式排序
 
 **请求**:
 
@@ -582,7 +546,7 @@ type LianlianPayConfigResp struct {
 }
 ```
 
-#### API 7: 上传支付方式图片（Logo或二维码）
+#### API 6: 上传支付方式图片（Logo或二维码）
 
 **请求**:
 
@@ -617,7 +581,7 @@ type LianlianPayConfigResp struct {
 - Logo 和二维码使用同一个 API，通过 `source` 参数区分
 - 上传成功后返回文件 UUID 和 URL，可用于创建/更新支付方式时的 `logo_file_uuid` 或 `qrcode_file_uuid` 字段
 
-#### API 8: 查询 LianlianPay 配置
+#### API 7: 查询 LianlianPay 配置
 
 **请求**:
 
@@ -641,7 +605,7 @@ type LianlianPayConfigResp struct {
 }
 ```
 
-#### API 9: 更新 LianlianPay 配置
+#### API 8: 更新 LianlianPay 配置
 
 **请求**:
 
@@ -673,6 +637,29 @@ type LianlianPayConfigResp struct {
 
 ## 🧩 组件和接口
 
+### RSA 加密工具包
+
+**新增组件**: `main/pkg/encrypt/rsa.go`
+
+**功能说明**:
+- 提供 RSA 加密/解密功能（公钥加密、私钥解密）
+- 提供 RSA 签名/验签功能
+- 支持 PKCS1 和 PKCS8 格式的私钥
+- 支持从文件或字符串加载密钥
+- 自动格式化 PEM 格式的密钥
+
+**核心方法**:
+- `GetPrivateKey()`: 从文件或字符串创建私钥
+- `GetPublicKey()`: 从文件或字符串创建公钥
+- `PubEncrypt()`: RSA 公钥分段加密（返回 base64）
+- `PrivDecrypt()`: RSA 私钥分段解密
+- `Sign()`: RSA 私钥生成签名（SHA256）
+- `Verify()`: RSA 公钥验签
+
+**使用场景**:
+- LianlianPay 配置更新时，使用 RSA 公钥加密配置参数传输到支付服务
+- 支付服务返回签名盐（sign_salt），用于后续支付签名
+
 ### Service 层
 
 #### Service 接口扩展
@@ -689,7 +676,6 @@ type IPaymentMethodSrv interface {
     GetDetail(ctx context.Context, req *dto_req.PaymentMethodGetReq) (*dto_resp.PaymentMethodDetailResp, error)
     Create(ctx context.Context, req *dto_req.PaymentMethodCreateReq) (*dto_resp.PaymentMethodDetailResp, error)
     Update(ctx context.Context, req *dto_req.PaymentMethodUpdateReq) (*dto_resp.PaymentMethodDetailResp, error)
-    Delete(ctx context.Context, req *dto_req.PaymentMethodDeleteReq) error
     UpdateSort(ctx context.Context, req *dto_req.PaymentMethodSortUpdateReq) error
     GetLianlianPayConfig(ctx context.Context) (*dto_resp.LianlianPayConfigResp, error)
     UpdateLianlianPayConfig(ctx context.Context, req *dto_req.LianlianPayConfigUpdateReq) error
@@ -724,20 +710,20 @@ type IPaymentMethodSrv interface {
    - 支持更新 status（状态在编辑时更改）
    - fee_percent 范围 0-100（存储时转换为 0-1）
 
-5. **Delete**:
-   - 校验系统来源（source=0）禁止删除
-   - 检查关联订单（查询 `ttpos_payment_order` 表）
-   - 软删除（设置 `delete_time`）
-   - 重新排序（删除后排序值需连续）
-
-6. **UpdateSort**:
+5. **UpdateSort**:
    - 批量更新排序
    - 确保排序值连续（1, 2, 3...）
    - 使用事务保证一致性
 
+6. **GetLianlianPayConfig**:
+   - 按公司 UUID 查询 `ttpos_payment_app` 表
+   - 敏感字段（私钥、Token）返回占位符 `***`
+
 7. **UpdateLianlianPayConfig**:
-   - 敏感字段（私钥、Token）加密存储
+   - 使用 RSA 加密与支付服务通信获取签名盐（sign_salt）
    - 按公司 UUID 查询/更新 `ttpos_payment_app` 表
+   - 配置参数（私钥、Token）明文存储，但通过 RSA 加密传输到支付服务
+   - 调用 `PaymentRepo.GetSignSalt()` 方法获取签名盐并存储
 
 ### Repository 层
 
@@ -755,9 +741,6 @@ type IPaymentMethodRepo interface {
     // 新增管理方法
     CreatePaymentMethod(paymentMethod model.PaymentMethod) error
     UpdatePaymentMethod(paymentMethod model.PaymentMethod, options ...DBOption) error
-    DeletePaymentMethod(uuid uint64) error
-    CheckCodeExists(code int, excludeUuid uint64) (bool, error)
-    CheckHasOrders(uuid uint64) (bool, error)
     GetMaxSort() (int, error)
     BatchUpdateSort(items []model.PaymentMethod) error
 }
@@ -869,17 +852,12 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 
 ### 错误场景
 
-#### 场景 1: 系统来源支付方式禁止修改/删除
+#### 场景 1: 系统来源支付方式禁止修改
 
 - **处理方式**: 返回错误码 `CodePaymentMethodSystemSource`
-- **用户影响**: 提示"系统来源的支付方式不允许修改/删除"
+- **用户影响**: 提示"系统来源的支付方式不允许修改"
 
-#### 场景 2: 删除时有关联订单
-
-- **处理方式**: 返回错误码 `CodePaymentMethodHasOrders`
-- **用户影响**: 提示"支付方式有关联订单，无法删除"
-
-#### 场景 3: 排序值不连续
+#### 场景 2: 排序值不连续
 
 - **处理方式**: 自动重新排序，确保连续
 - **用户影响**: 排序自动调整
@@ -895,14 +873,17 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 
 ### 数据安全
 
-- **敏感数据加密**: LianlianPay 私钥、Token 加密存储
+- **敏感数据传输**: LianlianPay 配置参数通过 RSA 公钥加密后传输到支付服务
+- **签名盐获取**: 使用 RSA 加密与支付服务通信，获取签名盐（sign_salt）并存储
 - **SQL 注入防护**: 使用参数化查询
 - **参数验证**: 使用 binding 标签验证
 
 ### 敏感字段处理
 
-- **存储**: 私钥、Token 使用 AES 加密存储
+- **存储**: 私钥、Token 明文存储在数据库中（`ttpos_payment_app` 表）
+- **传输**: 使用 RSA 公钥加密后传输到支付服务获取签名盐
 - **响应**: 返回占位符 `***` 或加密后的值（不返回明文）
+- **RSA 加密工具**: 使用 `main/pkg/encrypt/rsa.go` 提供的 RSA 加密/解密功能
 
 ---
 
@@ -919,7 +900,7 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 **测试内容**:
 
 - CRUD 操作
-- 业务逻辑（排序、删除检查）
+- 业务逻辑（排序）
 - 权限控制（系统来源限制）
 - 敏感字段加密
 
@@ -962,24 +943,24 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 
 ### Phase 1: DTO 和 Repository 扩展
 
-- [ ] 创建 Request DTO
-- [ ] 创建 Response DTO
-- [ ] 扩展 Repository 接口
-- [ ] 实现 Repository 方法
+- [x] 创建 Request DTO
+- [x] 创建 Response DTO
+- [x] 扩展 Repository 接口
+- [x] 实现 Repository 方法
 
 ### Phase 2: Service 层实现
 
-- [ ] 扩展 Service 接口
-- [ ] 实现 Service 业务逻辑
-- [ ] 实现排序逻辑
-- [ ] 实现 LianlianPay 配置管理
+- [x] 扩展 Service 接口
+- [x] 实现 Service 业务逻辑
+- [x] 实现排序逻辑
+- [x] 实现 LianlianPay 配置管理（使用 RSA 加密）
 
 ### Phase 3: API 层实现
 
-- [ ] 创建 API Handler
-- [ ] 实现所有 API 接口
-- [ ] 添加上传图片 API（Logo和二维码）
-- [ ] 注册路由
+- [x] 创建 API Handler
+- [x] 实现所有 API 接口
+- [x] 添加上传图片 API（Logo和二维码）
+- [x] 注册路由
 
 ### Phase 4: 测试和优化
 
@@ -987,6 +968,13 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 - [ ] API 测试
 - [ ] 性能优化
 - [ ] 缓存实现
+
+### Phase 5: RSA 加密工具包（新增）
+
+- [x] 创建 RSA 加密工具包 (`main/pkg/encrypt/rsa.go`)
+- [x] 实现 RSA 加密/解密功能
+- [x] 实现 RSA 签名/验签功能
+- [x] 集成到 LianlianPay 配置更新流程
 
 **详细任务**: 参见 `tasks.md`
 

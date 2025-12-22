@@ -142,6 +142,7 @@ type ICommonRepo interface {
 	SortWithSubmitPayTime(order string) DBOption                                              // 根据提交支付时间排序
 	SortWithPayTime(order string) DBOption                                                    // 根据支付时间排序
 	SortWithHandleTime(order string) DBOption                                                 // 根据h5订单处理时间排序
+	SortWithRaw(raw string) DBOption                                                          // 根据原始SQL排序
 	WhereCreateTimeGt(createTime int64) DBOption                                              // 根据创建时间大于查询
 	SortWithSort(order string) DBOption                                                       // 根据Order By排序
 	SortWithIsSpecial(order string) DBOption                                                  // 根据是否特殊排序
@@ -793,6 +794,13 @@ func (r *commonRepo) SortWithPayTime(order string) DBOption {
 func (r *commonRepo) SortWithHandleTime(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Order("handle_time " + order)
+	}
+}
+
+// 根据原始SQL排序
+func (r *commonRepo) SortWithRaw(raw string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Order(raw)
 	}
 }
 
