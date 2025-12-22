@@ -87,11 +87,11 @@ func (x *GetOrderInfoReq) GetRequestId() string {
 // 获取订单信息响应
 type GetOrderInfoResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"TTPOS店铺UUID"`                       // TTPOS店铺UUID
-	OrderStatus   string                 `protobuf:"bytes,2,opt,name=order_status,json=orderStatus,proto3" json:"order_status,omitempty" dc:"订单状态"`                     // 订单状态
-	OrderType     string                 `protobuf:"bytes,3,opt,name=order_type,json=orderType,proto3" json:"order_type,omitempty" dc:"订单类型"`                           // 订单类型
-	RawData       string                 `protobuf:"bytes,4,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty" dc:"原始JSON数据"`                             // 原始JSON数据
-	ProviderName  string                 `protobuf:"bytes,5,opt,name=provider_name,json=providerName,proto3" json:"provider_name,omitempty" dc:"渠道名称: grab, foodpanda"` // 渠道名称: grab, foodpanda
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"TTPOS店铺UUID"`                                // TTPOS店铺UUID
+	OrderStatus   string                 `protobuf:"bytes,2,opt,name=order_status,json=orderStatus,proto3" json:"order_status,omitempty" dc:"订单状态"`                              // 订单状态
+	OrderType     string                 `protobuf:"bytes,3,opt,name=order_type,json=orderType,proto3" json:"order_type,omitempty" dc:"订单类型"`                                    // 订单类型
+	RawData       string                 `protobuf:"bytes,4,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty" dc:"原始JSON数据"`                                      // 原始JSON数据
+	ProviderName  string                 `protobuf:"bytes,5,opt,name=provider_name,json=providerName,proto3" json:"provider_name,omitempty" dc:"渠道名称: grab, foodpanda, lineman"` // 渠道名称: grab, foodpanda, lineman
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -161,6 +161,112 @@ func (x *GetOrderInfoResp) GetProviderName() string {
 	return ""
 }
 
+// 准备订单请求（接受/拒绝）
+type PrepareOrderReq struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TakeoutOrderUuid string                 `protobuf:"bytes,1,opt,name=takeout_order_uuid,json=takeoutOrderUuid,proto3" json:"takeout_order_uuid,omitempty" dc:"TTPOS订单UUID"` // TTPOS订单UUID
+	ToState          string                 `protobuf:"bytes,2,opt,name=to_state,json=toState,proto3" json:"to_state,omitempty" dc:"目标状态: Accepted/Rejected"`                  // 目标状态: Accepted/Rejected
+	RequestId        string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求追踪ID (可选)"`                        // 请求追踪ID (可选)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PrepareOrderReq) Reset() {
+	*x = PrepareOrderReq{}
+	mi := &file_order_order_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PrepareOrderReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PrepareOrderReq) ProtoMessage() {}
+
+func (x *PrepareOrderReq) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PrepareOrderReq.ProtoReflect.Descriptor instead.
+func (*PrepareOrderReq) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PrepareOrderReq) GetTakeoutOrderUuid() string {
+	if x != nil {
+		return x.TakeoutOrderUuid
+	}
+	return ""
+}
+
+func (x *PrepareOrderReq) GetToState() string {
+	if x != nil {
+		return x.ToState
+	}
+	return ""
+}
+
+func (x *PrepareOrderReq) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// 准备订单响应
+type PrepareOrderResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderUuid     string                 `protobuf:"bytes,1,opt,name=order_uuid,json=orderUuid,proto3" json:"order_uuid,omitempty" dc:"订单UUID"` // 订单UUID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PrepareOrderResp) Reset() {
+	*x = PrepareOrderResp{}
+	mi := &file_order_order_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PrepareOrderResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PrepareOrderResp) ProtoMessage() {}
+
+func (x *PrepareOrderResp) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PrepareOrderResp.ProtoReflect.Descriptor instead.
+func (*PrepareOrderResp) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PrepareOrderResp) GetOrderUuid() string {
+	if x != nil {
+		return x.OrderUuid
+	}
+	return ""
+}
+
 var File_order_order_proto protoreflect.FileDescriptor
 
 const file_order_order_proto_rawDesc = "" +
@@ -178,9 +284,18 @@ const file_order_order_proto_rawDesc = "" +
 	"\n" +
 	"order_type\x18\x03 \x01(\tR\torderType\x12\x19\n" +
 	"\braw_data\x18\x04 \x01(\tR\arawData\x12#\n" +
-	"\rprovider_name\x18\x05 \x01(\tR\fproviderName2L\n" +
+	"\rprovider_name\x18\x05 \x01(\tR\fproviderName\"y\n" +
+	"\x0fPrepareOrderReq\x12,\n" +
+	"\x12takeout_order_uuid\x18\x01 \x01(\tR\x10takeoutOrderUuid\x12\x19\n" +
+	"\bto_state\x18\x02 \x01(\tR\atoState\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\"1\n" +
+	"\x10PrepareOrderResp\x12\x1d\n" +
+	"\n" +
+	"order_uuid\x18\x01 \x01(\tR\torderUuid2\x8a\x01\n" +
 	"\fOrderService\x12<\n" +
-	"\fGetOrderInfo\x12\x16.order.GetOrderInfoReq\x1a\x14.takeout.ApiResponseB'Z%ttpos-bmp/app/ttpos-takeout/api/orderb\x06proto3"
+	"\fGetOrderInfo\x12\x16.order.GetOrderInfoReq\x1a\x14.takeout.ApiResponse\x12<\n" +
+	"\fPrepareOrder\x12\x16.order.PrepareOrderReq\x1a\x14.takeout.ApiResponseB'Z%ttpos-bmp/app/ttpos-takeout/api/orderb\x06proto3"
 
 var (
 	file_order_order_proto_rawDescOnce sync.Once
@@ -194,17 +309,21 @@ func file_order_order_proto_rawDescGZIP() []byte {
 	return file_order_order_proto_rawDescData
 }
 
-var file_order_order_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_order_order_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_order_order_proto_goTypes = []any{
 	(*GetOrderInfoReq)(nil),     // 0: order.GetOrderInfoReq
 	(*GetOrderInfoResp)(nil),    // 1: order.GetOrderInfoResp
-	(*takeout.ApiResponse)(nil), // 2: takeout.ApiResponse
+	(*PrepareOrderReq)(nil),     // 2: order.PrepareOrderReq
+	(*PrepareOrderResp)(nil),    // 3: order.PrepareOrderResp
+	(*takeout.ApiResponse)(nil), // 4: takeout.ApiResponse
 }
 var file_order_order_proto_depIdxs = []int32{
 	0, // 0: order.OrderService.GetOrderInfo:input_type -> order.GetOrderInfoReq
-	2, // 1: order.OrderService.GetOrderInfo:output_type -> takeout.ApiResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: order.OrderService.PrepareOrder:input_type -> order.PrepareOrderReq
+	4, // 2: order.OrderService.GetOrderInfo:output_type -> takeout.ApiResponse
+	4, // 3: order.OrderService.PrepareOrder:output_type -> takeout.ApiResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -221,7 +340,7 @@ func file_order_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_order_order_proto_rawDesc), len(file_order_order_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

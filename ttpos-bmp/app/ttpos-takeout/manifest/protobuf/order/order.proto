@@ -22,8 +22,23 @@ message GetOrderInfoResp {
   string provider_name = 5; // 渠道名称: grab, foodpanda, lineman
 }
 
+// 准备订单请求（接受/拒绝）
+message PrepareOrderReq {
+  string takeout_order_uuid = 1; // TTPOS订单UUID
+  string to_state = 2;           // 目标状态: Accepted/Rejected
+  string request_id = 3;         // 请求追踪ID (可选)
+}
+
+// 准备订单响应
+message PrepareOrderResp {
+  string order_uuid = 1; // 订单UUID
+}
+
 // 订单服务
 service OrderService {
   // 获取订单信息
   rpc GetOrderInfo(GetOrderInfoReq) returns (takeout.ApiResponse);
+  
+  // 准备订单（接受/拒绝）
+  rpc PrepareOrder(PrepareOrderReq) returns (takeout.ApiResponse);
 }

@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	OrderService_GetOrderInfo_FullMethodName = "/order.OrderService/GetOrderInfo"
+	OrderService_PrepareOrder_FullMethodName = "/order.OrderService/PrepareOrder"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -32,6 +33,8 @@ const (
 type OrderServiceClient interface {
 	// 获取订单信息
 	GetOrderInfo(ctx context.Context, in *GetOrderInfoReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
+	// 准备订单（接受/拒绝）
+	PrepareOrder(ctx context.Context, in *PrepareOrderReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 }
 
 type orderServiceClient struct {
@@ -52,6 +55,16 @@ func (c *orderServiceClient) GetOrderInfo(ctx context.Context, in *GetOrderInfoR
 	return out, nil
 }
 
+func (c *orderServiceClient) PrepareOrder(ctx context.Context, in *PrepareOrderReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(takeout.ApiResponse)
+	err := c.cc.Invoke(ctx, OrderService_PrepareOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
@@ -60,6 +73,8 @@ func (c *orderServiceClient) GetOrderInfo(ctx context.Context, in *GetOrderInfoR
 type OrderServiceServer interface {
 	// 获取订单信息
 	GetOrderInfo(context.Context, *GetOrderInfoReq) (*takeout.ApiResponse, error)
+	// 准备订单（接受/拒绝）
+	PrepareOrder(context.Context, *PrepareOrderReq) (*takeout.ApiResponse, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -72,6 +87,9 @@ type UnimplementedOrderServiceServer struct{}
 
 func (UnimplementedOrderServiceServer) GetOrderInfo(context.Context, *GetOrderInfoReq) (*takeout.ApiResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrderInfo not implemented")
+}
+func (UnimplementedOrderServiceServer) PrepareOrder(context.Context, *PrepareOrderReq) (*takeout.ApiResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PrepareOrder not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -112,6 +130,24 @@ func _OrderService_GetOrderInfo_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_PrepareOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareOrderReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).PrepareOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_PrepareOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).PrepareOrder(ctx, req.(*PrepareOrderReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -122,6 +158,10 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetOrderInfo",
 			Handler:    _OrderService_GetOrderInfo_Handler,
+		},
+		{
+			MethodName: "PrepareOrder",
+			Handler:    _OrderService_PrepareOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
