@@ -64,6 +64,10 @@ func (s *soldOutSrv) GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutLi
 	soldOuts := make([]resp.SoldOut, 0, len(boms))
 
 	for _, bom := range boms {
+		// 过滤掉开启“使用进销存计算库存”的商品
+		if bom.UseBomCardStock == 1 {
+			continue
+		}
 		soldOuts = append(soldOuts, resp.SoldOut{
 			LocaleProductName:    bom.ProductPackage.MultiLanguageName.GetNames(),
 			ProductBomUuid:       bom.Uuid,
