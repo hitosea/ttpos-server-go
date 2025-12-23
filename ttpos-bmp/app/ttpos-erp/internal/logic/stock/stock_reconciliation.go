@@ -123,10 +123,8 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
 					item.ItemCode, itemData.Warehouse, binData.ValuationRate)
 			} else {
-				// Bin 表中没有估值率，使用保底值 1
-				itemData.ValuationRate = consts.DefaultValuationRate
-				g.Log().Warningf(ctx, "Bin 表中无估值率，使用保底值 1: item_code=%s, warehouse=%s",
-					item.ItemCode, itemData.Warehouse)
+				// Bin 表中没有估值率，返回异常
+				return nil, gerror.New("缺少对应仓库的入库记录,无估值率!")
 			}
 		}
 
