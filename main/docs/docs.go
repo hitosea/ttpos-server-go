@@ -40400,7 +40400,11 @@ const docTemplate = `{
                     ]
                 },
                 "optional_count": {
-                    "description": "可选数量，表示本组商品中要求选择多少个商品",
+                    "description": "最大可选数量，表示本组商品中要求选择多少个商品",
+                    "type": "integer"
+                },
+                "optional_min_count": {
+                    "description": "最小可选数量",
                     "type": "integer"
                 },
                 "products": {
@@ -49108,6 +49112,10 @@ const docTemplate = `{
             "properties": {
                 "batch_cooking_mode": {
                     "description": "分批模式 pre-前置模式 post-后置模式，默认为post",
+                    "type": "string"
+                },
+                "batch_print_mode": {
+                    "description": "分批打印模式: \"default\" 默认 / \"merge\" 合并",
                     "type": "string"
                 },
                 "checkout_zeroing_method": {
@@ -62197,6 +62205,10 @@ const docTemplate = `{
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
                     "type": "string"
                 },
+                "batch_print_mode": {
+                    "description": "分批打印模式: \"default\" 默认 / \"merge\" 合并",
+                    "type": "string"
+                },
                 "batch_product_uuids": {
                     "description": "分批商品UUID列表",
                     "type": "array",
@@ -63091,6 +63103,10 @@ const docTemplate = `{
             "properties": {
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
+                    "type": "string"
+                },
+                "batch_print_mode": {
+                    "description": "分批打印模式: \"default\" 默认 / \"merge\" 合并",
                     "type": "string"
                 },
                 "batch_product_uuids": {
