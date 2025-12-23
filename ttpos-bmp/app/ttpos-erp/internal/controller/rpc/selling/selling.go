@@ -481,6 +481,15 @@ func (*Controller) GetModeOfPaymentList(ctx context.Context, req *selling.GetMod
 	return rpc.ApiSuccessWithData("获取支付方式成功", resp), nil
 }
 
+// GetModeOfPayment 查询单个支付方式
+func (*Controller) GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*api.ResponseInfo, error) {
+	resp, err := service.Selling().GetModeOfPayment(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("查询支付方式成功", resp), nil
+}
+
 // SaveModeOfPayment 保存/同步支付方式
 func (c *Controller) SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*api.ResponseInfo, error) {
 	if err := c.validateSaveModeOfPaymentReq(req); err != nil {

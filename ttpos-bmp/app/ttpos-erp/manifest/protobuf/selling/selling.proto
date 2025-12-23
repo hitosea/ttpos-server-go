@@ -134,8 +134,10 @@ message PosInvoiceTax {
 
 // PosInvoicePayment POS发票付款
 message PosInvoicePayment {
-  string mode_of_payment = 1; // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
+  string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
   double amount = 2;          // 金额，必填
+  optional string payment_id = 3; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
 }
 
 // ReturnPosInvoiceReq 退款POS发票请求消息
@@ -191,7 +193,8 @@ message SaveModeOfPaymentReq {
 
 // SaveModeOfPaymentResp 保存/同步支付方式响应
 message SaveModeOfPaymentResp {
-  string name = 1; // 规范化名称 【channel-]{pay_type}-{NNNN} - {company_abbr}
+  string name = 1;       // 规范化名称 [channel-]{pay_type}-{NNNN} - {company_abbr}
+  string payment_id = 2; // 支付方式唯一标识（PaymentID）
 }
 
 message GetModeOfPaymentListReq {
@@ -201,6 +204,17 @@ message GetModeOfPaymentListReq {
 
 message GetModeOfPaymentListResp {
   repeated ModeOfPayment mode_of_payment_list = 1; // 支付方式列表
+}
+
+// GetModeOfPaymentReq 查询单个支付方式请求
+message GetModeOfPaymentReq {
+  optional string name = 1;       // 支付方式名称（精确匹配），与 payment_id 二选一
+  optional string payment_id = 2; // 支付方式唯一标识（PaymentID），与 name 二选一
+}
+
+// GetModeOfPaymentResp 查询单个支付方式响应
+message GetModeOfPaymentResp {
+  ModeOfPayment mode_of_payment = 1; // 支付方式信息
 }
 
 // SellingService 服务定义
@@ -224,8 +238,11 @@ service SellingService {
   // 取消 Pos Invoice
   rpc CancelPosInvoice (CancelPosInvoiceReq) returns (erp.ResponseInfo);
 
-  //获取支付方式
+  //获取支付方式列表
   rpc GetModeOfPaymentList (GetModeOfPaymentListReq) returns (erp.ResponseInfo);
+
+  // 查询单个支付方式
+  rpc GetModeOfPayment (GetModeOfPaymentReq) returns (erp.ResponseInfo);
 
   // 保存支付方式
   rpc SaveModeOfPayment (SaveModeOfPaymentReq) returns (erp.ResponseInfo);

@@ -149,14 +149,6 @@ type (
 		//   - []dtoSelling.SimplePosInvoice: POS发票列表
 		//   - error: 错误信息
 		GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPosInvoiceListReq) ([]dtoSelling.SimplePosInvoice, error)
-		// SavePosInvoice 保存POS发票
-		// 参数：
-		//   - ctx: 上下文对象
-		//   - req: 保存POS发票请求参数
-		//
-		// 返回：
-		//   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
-		//   - error: 错误信息
 		SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
 		// SavePosInvoiceStep 保存POS发票步骤
 		// 参数：
@@ -211,14 +203,23 @@ type (
 		//   - error: 错误信息
 		//
 		// 功能：
-		//   - 获取支付方式列表
+		//   - 获取支付方式列表（包含所有支付方式，不管启用状态）
+		//   - 从ERP读取enabled字段并填充到响应中
 		GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
-		// SaveModeOfPayment 保存/同步支付方式
-		//   - ctx: 上下文
-		//   - req: 请求参数（公司简称、分支、渠道、支付类型）
+		// GetModeOfPayment 查询单个支付方式
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 查询单个支付方式请求参数（name 或 payment_id 至少提供一个）
+		//
+		// 返回：
+		//   - *selling.ModeOfPayment: 支付方式信息
+		//   - error: 错误信息
 		//
 		// 功能：
-		//   - 根据规则生成支付方式名称并创建/同步
+		//   - 支持通过 name 查询（主键查询，性能最优）
+		//   - 支持通过 payment_id 查询（Filter 查询）
+		GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*selling.ModeOfPayment, error)
+		// SaveModeOfPayment 保存/同步支付方式
 		SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error)
 		// CountCustomer 统计客户数量
 		// 参数：

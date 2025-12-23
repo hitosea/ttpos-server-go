@@ -73,3 +73,26 @@
     }
 }
 ```
+
+
+----
+
+## selling.SellingService / GetModeOfPayment 查询支付方式
+```json
+{
+    "payment_id": "PID3704535585523713"
+}
+```
+
+```json
+{
+    "code": "0",
+    "message": "查询支付方式成功",
+    "data": {
+        "name": "LineW4-Alipay-0008 - wallace-mg",
+        "enabled": false,
+        "payment_id": "PID3704535585523713",
+        "@type": "type.googleapis.com/selling.ModeOfPayment"
+    }
+}
+```
