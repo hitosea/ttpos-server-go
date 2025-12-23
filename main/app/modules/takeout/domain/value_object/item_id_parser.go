@@ -12,7 +12,8 @@ const (
 	PrefixCategory = "TTPOS-CAT-" // 分类
 
 	// 商品前缀
-	PrefixItem = "TTPOS-ITEM-" // 商品
+	PrefixItem    = "TTPOS-ITEM-"    // 商品
+	PrefixPackage = "TTPOS-PACKAGE-" // 套餐
 
 	// 套餐前缀
 	PrefixPackageGroup = "TTPOS-PACKAGE-GROUP-" // 套餐组
@@ -35,6 +36,7 @@ type IDType string
 const (
 	IDTypeCategory     IDType = "category"      // 分类
 	IDTypeItem         IDType = "item"          // 商品
+	IDTypePackage      IDType = "package"       // 套餐
 	IDTypePackageGroup IDType = "package_group" // 套餐组
 	IDTypePackageItem  IDType = "package_item"  // 套餐项
 	IDTypeFlavorGroup  IDType = "flavor_group"  // 口味组
@@ -43,6 +45,7 @@ const (
 	IDTypeSauce        IDType = "sauce"         // 酱料
 	IDTypeAttrGroup    IDType = "attr_group"    // 属性组
 	IDTypeAttr         IDType = "attr"          // 属性
+	IDTypeCommodity    IDType = "commodity"     // 套餐商品
 	IDTypeUnknown      IDType = "unknown"       // 未知类型
 )
 
@@ -58,6 +61,7 @@ type ParseResult struct {
 // 支持的前缀：
 //   - TTPOS-CAT-            → 分类
 //   - TTPOS-ITEM-           → 商品
+//   - TTPOS-PACKAGE-        → 套餐
 //   - TTPOS-PACKAGE-GROUP-  → 套餐组
 //   - TTPOS-PACKAGE-ITEM-   → 套餐项
 //   - TTPOS-FLAVOR-GROUP-   → 口味组
@@ -176,6 +180,14 @@ func parseGrabID(platformID string) (*ParseResult, error) {
 			return nil, err
 		}
 		return &ParseResult{UUID: uuid, IDType: IDTypeItem, IsMapped: true}, nil
+	}
+
+	if strings.HasPrefix(platformID, PrefixPackage) {
+		uuid, err := extractUUID(platformID, PrefixPackage)
+		if err != nil {
+			return nil, err
+		}
+		return &ParseResult{UUID: uuid, IDType: IDTypePackage, IsMapped: true}, nil
 	}
 
 	// 未匹配到任何前缀

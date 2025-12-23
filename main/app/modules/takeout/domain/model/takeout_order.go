@@ -8,11 +8,12 @@ type TakeoutOrder struct {
 	TakeoutOrderUuid string `gorm:"column:takeout_order_uuid" json:"takeout_order_uuid"`
 
 	// 平台信息
-	Platform          string `gorm:"column:platform" json:"platform"`
-	PlatformOrderId   string `gorm:"column:platform_order_id" json:"platform_order_id"`
-	ShortOrderNumber  string `gorm:"column:short_order_number" json:"short_order_number"`
-	MerchantId        string `gorm:"column:merchant_id" json:"merchant_id"`
-	PartnerMerchantId string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`
+	Platform           string `gorm:"column:platform" json:"platform"`
+	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`
+	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单 )
+	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`
+	MerchantId         string `gorm:"column:merchant_id" json:"merchant_id"`
+	PartnerMerchantId  string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`
 
 	// 订单状态
 	OrderState     int    `gorm:"column:order_state" json:"order_state"`
@@ -21,16 +22,16 @@ type TakeoutOrder struct {
 	StockStatus    int    `gorm:"column:stock_status" json:"stock_status"`
 
 	// 价格信息（单位：分）
-	Subtotal          int64 `gorm:"column:subtotal" json:"subtotal"`
-	DeliveryFee       int64 `gorm:"column:delivery_fee" json:"delivery_fee"`
-	SmallOrderFee     int64 `gorm:"column:small_order_fee" json:"small_order_fee"`
-	TotalAmount       int64 `gorm:"column:total_amount" json:"total_amount"`
-	EaterPayment      int64 `gorm:"column:eater_payment" json:"eater_payment"`
-	PlatformDiscount  int64 `gorm:"column:platform_discount" json:"platform_discount"`
-	MerchantDiscount  int64 `gorm:"column:merchant_discount" json:"merchant_discount"`
-	BasketPromo       int64 `gorm:"column:basket_promo" json:"basket_promo"`
-	Tax               int64 `gorm:"column:tax" json:"tax"`
-	MerchantChargeFee int64 `gorm:"column:merchant_charge_fee" json:"merchant_charge_fee"`
+	Subtotal          int64 `gorm:"column:subtotal" json:"subtotal"`                       // 小计金额
+	DeliveryFee       int64 `gorm:"column:delivery_fee" json:"delivery_fee"`               // 配送费
+	SmallOrderFee     int64 `gorm:"column:small_order_fee" json:"small_order_fee"`         // 小单费用
+	TotalAmount       int64 `gorm:"column:total_amount" json:"total_amount"`               // 总金额
+	EaterPayment      int64 `gorm:"column:eater_payment" json:"eater_payment"`             // 顾客实付
+	PlatformDiscount  int64 `gorm:"column:platform_discount" json:"platform_discount"`     // 平台优惠
+	MerchantDiscount  int64 `gorm:"column:merchant_discount" json:"merchant_discount"`     // 商户优惠
+	BasketPromo       int64 `gorm:"column:basket_promo" json:"basket_promo"`               // 购物车优惠
+	Tax               int64 `gorm:"column:tax" json:"tax"`                                 // 税费
+	MerchantChargeFee int64 `gorm:"column:merchant_charge_fee" json:"merchant_charge_fee"` // 商户收取费用
 
 	// 货币信息
 	CurrencyCode     string `gorm:"column:currency_code" json:"currency_code"`
@@ -74,6 +75,7 @@ type TakeoutOrder struct {
 	TakeoutOrderItems     []TakeoutOrderItem     `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 	TakeoutOrderReceiver  *TakeoutOrderReceiver  `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 	TakeoutOrderCampaigns []TakeoutOrderCampaign `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderPromos    []TakeoutOrderPromo    `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 }
 
 func (*TakeoutOrder) TableName() string {
@@ -96,5 +98,20 @@ func (o *TakeoutOrder) SetTakeoutOrderCampaigns(campaigns []*TakeoutOrderCampaig
 	o.TakeoutOrderCampaigns = make([]TakeoutOrderCampaign, len(campaigns))
 	for i, campaign := range campaigns {
 		o.TakeoutOrderCampaigns[i] = *campaign
+	}
+}
+
+func (o *TakeoutOrder) SetTakeoutOrderPromos(promos []*TakeoutOrderPromo) {
+	if promos == nil {
+		o.TakeoutOrderPromos = nil
+		return
+	}
+	if len(promos) == 0 {
+		o.TakeoutOrderPromos = nil
+		return
+	}
+	o.TakeoutOrderPromos = make([]TakeoutOrderPromo, len(promos))
+	for i, promo := range promos {
+		o.TakeoutOrderPromos[i] = *promo
 	}
 }

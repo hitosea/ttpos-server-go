@@ -12,12 +12,12 @@ type TakeoutOrderItemModifier struct {
 	Platform             string `gorm:"column:platform" json:"platform"`
 
 	// 平台修饰符信息
-	PlatformModifierId   string `gorm:"column:platform_modifier_id" json:"platform_modifier_id"`
-	PlatformModifierName string `gorm:"column:platform_modifier_name" json:"platform_modifier_name"`
+	PlatformModifierId string `gorm:"column:platform_modifier_id" json:"platform_modifier_id"`
+	ModifierName       string `gorm:"column:modifier_name;type:text" json:"modifier_name"`
 
 	// TTPOS 修饰符信息（关联映射后）
 	TtposModifierUuid uint64 `gorm:"column:ttpos_modifier_uuid" json:"ttpos_modifier_uuid"` // TTPOS 修饰符UUID（规格/加料/属性值的UUID）
-	TtposModifierType string `gorm:"column:ttpos_modifier_type" json:"ttpos_modifier_type"` // TTPOS 修饰符类型：flavor=规格, sauce=加料, attr=属性
+	TtposModifierType string `gorm:"column:ttpos_modifier_type" json:"ttpos_modifier_type"` // TTPOS 修饰符类型：flavor=规格, sauce=加料, attr=属性, commodity=套餐商品
 
 	// 数量和价格
 	Quantity int   `gorm:"column:quantity" json:"quantity"`
@@ -33,4 +33,8 @@ type TakeoutOrderItemModifier struct {
 
 func (*TakeoutOrderItemModifier) TableName() string {
 	return "ttpos_takeout_order_item_modifier"
+}
+
+func (o *TakeoutOrderItemModifier) IsCommodity() bool {
+	return o.TtposModifierType == "commodity"
 }

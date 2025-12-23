@@ -14,9 +14,9 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/application"
-	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
@@ -29,6 +29,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -162,13 +163,17 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 
 // ImportMenuToTTPOS 导入菜单到TTPOS
 func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error) {
+	takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// 保存菜单到数据库
+	err = s.takeoutAppSrv.UpdateTakeoutMenu(ctx, "grab", takeoutMenu.Menu)
+	if err != nil {
+		return nil, errors.WithMessage(err, "保存菜单到数据库失败")
+	}
+
 	// TODO: 传产品说 "导入菜单到TTPOS的功能不需要了，我认为不合理 就先保留注释"
-
-	// takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	// // 1. 导入菜单
 	// resp, err := s.ImportMenu(ctx, request.ImportMenuRequest{
 	// 	Platform: "grab",
@@ -178,7 +183,7 @@ func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImpor
 	// 	return nil, err
 	// }
 
-	err := s.PushMenuToPlatform(ctx, "grab")
+	err = s.PushMenuToPlatform(ctx, "grab")
 	if err != nil {
 		return nil, errors.WithMessage(err, "推送菜单到Grab失败")
 	}
@@ -242,9 +247,22 @@ func (s *takeoutSrv) ImportMenu(ctx context.Context, reqs request.ImportMenuRequ
 
 // importMenuWithLog 导入菜单（支持复用日志）
 func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportMenuRequest, reimportLogUuid *uint64) (*resp.GrabMenuImportResp, error) {
-	takeoutMenu, err := s.takeoutAppSrv.ConvertMenuData(ctx, reqs)
+	grabMenu, err := s.takeoutAppSrv.ConvertMenuData(ctx, reqs)
 	if err != nil {
 		return nil, err
+	}
+
+	// 将 Grab 格式转换为 TTPOS entity 格式
+	grabConverter := grab.NewGrabConverter(s.dbm, nil)
+	result, err := grabConverter.ConvertToTTPOS(ctx, grabMenu)
+	if err != nil {
+		return nil, errors.WithMessage(err, "转换菜单格式失败")
+	}
+
+	// 类型断言为 grabfood.GetMenuNewResponse
+	takeoutMenu, ok := result.(*grabfood.GetMenuNewResponse)
+	if !ok {
+		return nil, errors.New("转换结果类型错误")
 	}
 
 	platform := strings.ToLower(reqs.Platform)
@@ -331,7 +349,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		copyCtx.SetDB(tx)
 
 		// 3.1 提取分类并创建或更新 (进度 0-10%)
-		categoryMap, err := s.syncCategories(copyCtx, platform, takeoutMenu.Categories)
+		categoryMap, err := s.syncCategories(copyCtx, platform, takeoutMenu.GetCategories())
 		if err != nil {
 			return err
 		}
@@ -361,7 +379,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		success, failure, errors, err := s.syncProducts(
 			copyCtx,
 			platform,
-			takeoutMenu.Categories,
+			takeoutMenu.GetCategories(),
 			categoryMap,
 			productFlavorUuid,
 			unitUuid,
@@ -454,7 +472,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 
 // syncCategories 同步外卖平台分类到本地
 // 返回：map[platformCategoryID]localCategoryUuid
-func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, categories []*valueobject.Category) (map[string]uint64, error) {
+func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, categories []grabfood.MenuCategory) (map[string]uint64, error) {
 	categoryMap := make(map[string]uint64)
 	db := ctx.GetDB()
 	commonRepo := repository.NewCommonRepo()
@@ -480,14 +498,12 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 	}
 
 	// 遍历平台分类，判断创建或更新
-	for _, category := range categories {
-		if category == nil {
-			continue
-		}
+	for i := range categories {
+		category := &categories[i]
 
-		platformCategoryID := category.ID
+		platformCategoryID := category.GetId()
 		if platformCategoryID == "" {
-			return nil, errors.WithMessage(errors.New("分类ID不能为空"), fmt.Sprintf("分类ID不能为空: %s", category.Name))
+			return nil, errors.WithMessage(errors.New("分类ID不能为空"), fmt.Sprintf("分类ID不能为空: %s", category.GetName()))
 		}
 
 		// 去掉 TTPOS-CAT- 前缀
@@ -497,20 +513,20 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 		if existingCat, exists := existingMapTtposCat[platformCategoryID]; exists {
 			// 当前不做双向同步，暂时忽略更新
 			// if err := s.updateCategory(ctx, existingCat, category, platform); err != nil {
-			// 	return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.Name))
+			// 	return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.GetName()))
 			// }
 			categoryMap[platformCategoryID] = existingCat.Uuid
 		} else if existingCat, exists := existingMap[platformCategoryID]; exists {
 			// 当前不做双向同步，暂时忽略更新
 			// if err := s.updateCategory(ctx, existingCat, category, platform); err != nil {
-			// 	return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.Name))
+			// 	return nil, errors.WithMessage(err, fmt.Sprintf("更新分类失败: %s", category.GetName()))
 			// }
 			categoryMap[platformCategoryID] = existingCat.Uuid
 		} else {
 			// 创建新分类
 			productCategory, err := s.createCategory(ctx, category, platform)
 			if err != nil {
-				return nil, errors.WithMessage(err, fmt.Sprintf("创建分类失败: %s", category.Name))
+				return nil, errors.WithMessage(err, fmt.Sprintf("创建分类失败: %s", category.GetName()))
 			}
 			categoryMap[platformCategoryID] = productCategory.Uuid
 		}
@@ -520,22 +536,33 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 }
 
 // createCategory 创建新分类
-func (s *takeoutSrv) createCategory(ctx context.Context, category *valueobject.Category, platform string) (model.ProductCategory, error) {
+func (s *takeoutSrv) createCategory(ctx context.Context, category *grabfood.MenuCategory, platform string) (model.ProductCategory, error) {
 	// 准备多语言名称
-	localeName := language.MapToLocaleResponse(category.NameTranslation, category.Name)
+	nameTranslation := make(map[string]string)
+	if category.HasNameTranslation() {
+		nameTranslation = category.GetNameTranslation()
+	}
+	localeName := language.MapToLocaleResponse(nameTranslation, category.GetName())
 
 	// 通过 ProductService 创建分类
 	displayInStore := 1
 	displayInTakeout := 1
+
+	// 转换状态
+	status := 1 // 默认开启
+	if category.GetAvailableStatus() == "HIDE" || category.GetAvailableStatus() == "UNAVAILABLE" {
+		status = 0
+	}
+
 	categoryReq := req.ProductShopCategoryAddReq{
 		ParentUuid:         0, // 外卖分类作为一级分类
 		LocaleName:         localeName,
 		IsSpecial:          false,
-		Status:             category.GetCategoryStatusToInt(),
+		Status:             status,
 		IsDisplayInStore:   &displayInStore,   // 外卖分类在店内显示
 		IsDisplayInTakeout: &displayInTakeout, // 外卖分类在外卖平台显示
 		Source:             platform,
-		SourceId:           category.ID,
+		SourceId:           category.GetId(),
 	}
 
 	productCategory, err := s.productSrv.AddProductShopCategory(ctx, categoryReq)
@@ -556,37 +583,45 @@ func (s *takeoutSrv) createCategory(ctx context.Context, category *valueobject.C
 }
 
 // updateCategory 更新现有分类
-func (s *takeoutSrv) updateCategory(ctx context.Context, existingCat model.ProductCategory, category *valueobject.Category, platform string) error {
+func (s *takeoutSrv) updateCategory(ctx context.Context, existingCat model.ProductCategory, category *grabfood.MenuCategory, platform string) error {
 	if !existingCat.IsEditable() {
 		return nil
 	}
 	// 准备多语言名称
 	localeName := existingCat.MultiLanguageName.GetNames()
-	if len(category.NameTranslation) > 0 {
-		if _, ok := category.NameTranslation["en"]; ok {
-			localeName.EN = category.NameTranslation["en"]
+	if category.HasNameTranslation() {
+		nameTranslation := category.GetNameTranslation()
+		if val, ok := nameTranslation["en"]; ok {
+			localeName.EN = val
 		}
-		if _, ok := category.NameTranslation["zh"]; ok {
-			localeName.ZH = category.NameTranslation["zh"]
+		if val, ok := nameTranslation["zh"]; ok {
+			localeName.ZH = val
 		}
-		if _, ok := category.NameTranslation["th"]; ok {
-			localeName.TH = category.NameTranslation["th"]
+		if val, ok := nameTranslation["th"]; ok {
+			localeName.TH = val
 		}
-		if _, ok := category.NameTranslation["my"]; ok {
-			localeName.MY = category.NameTranslation["my"]
+		if val, ok := nameTranslation["my"]; ok {
+			localeName.MY = val
 		}
 	}
-	if localeName.EN == "" && category.Name != "" {
-		localeName.EN = category.Name
+	if localeName.EN == "" && category.GetName() != "" {
+		localeName.EN = category.GetName()
 	}
 
 	// 通过 ProductService 更新分类
 	displayInStore := 1
 	displayInTakeout := 1
+
+	// 转换状态
+	status := 1 // 默认开启
+	if category.GetAvailableStatus() == "HIDE" || category.GetAvailableStatus() == "UNAVAILABLE" {
+		status = 0
+	}
+
 	categoryReq := req.ProductShopCategoryEditReq{
 		Uuid:               existingCat.Uuid,
 		LocaleName:         localeName,
-		Status:             category.GetCategoryStatusToInt(),
+		Status:             status,
 		IsDisplayInStore:   &displayInStore,
 		IsDisplayInTakeout: &displayInTakeout,
 	}
@@ -732,7 +767,7 @@ func (s *takeoutSrv) syncProductUnit(ctx context.Context, platform string) (uint
 
 // syncModifierGroups 同步商品的 ModifierGroups 为属性组
 // 将外卖平台的修饰符组转换为 TTPOS 的属性组
-func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, modifierGroups []*valueobject.ModifierGroup) ([]req.ProductShopAddAttributeGroupReq, error) {
+func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, modifierGroups []grabfood.ModifierGroup) ([]req.ProductShopAddAttributeGroupReq, error) {
 	if len(modifierGroups) == 0 {
 		return []req.ProductShopAddAttributeGroupReq{}, nil
 	}
@@ -740,12 +775,12 @@ func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, mo
 	attributeGroups := make([]req.ProductShopAddAttributeGroupReq, 0, len(modifierGroups))
 
 	for _, modifierGroup := range modifierGroups {
-		if modifierGroup == nil || len(modifierGroup.Modifiers) == 0 {
+		if len(modifierGroup.GetModifiers()) == 0 {
 			continue
 		}
 
 		// 1. 同步属性组
-		attributeGroupUuid, err := s.syncAttributeGroup(ctx, platform, modifierGroup)
+		attributeGroupUuid, err := s.syncAttributeGroup(ctx, platform, &modifierGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -754,7 +789,7 @@ func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, mo
 		}
 
 		// 2. 批量同步属性值
-		attributeUuids, err := s.syncAttributesBatch(ctx, platform, attributeGroupUuid, modifierGroup.Modifiers)
+		attributeUuids, err := s.syncAttributesBatch(ctx, platform, attributeGroupUuid, modifierGroup.GetModifiers())
 		if err != nil {
 			return nil, err
 		}
@@ -774,12 +809,12 @@ func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, mo
 
 		// 4. 构建商品属性组请求
 		isMust := 0
-		if modifierGroup.SelectionRangeMin > 0 {
+		if modifierGroup.GetSelectionRangeMin() > 0 {
 			isMust = 1 // 最小选择数量大于0，则为必选
 		}
 
 		isOpenInput := false
-		maxSelection := modifierGroup.SelectionRangeMax
+		maxSelection := int(modifierGroup.GetSelectionRangeMax())
 		if maxSelection > 1 {
 			isOpenInput = true // 最大选择数量大于1，开启选择数量
 		}
@@ -797,19 +832,19 @@ func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, mo
 }
 
 // syncAttributeGroup 同步属性组
-func (s *takeoutSrv) syncAttributeGroup(ctx context.Context, platform string, modifierGroup *valueobject.ModifierGroup) (uint64, error) {
+func (s *takeoutSrv) syncAttributeGroup(ctx context.Context, platform string, modifierGroup *grabfood.ModifierGroup) (uint64, error) {
 	db := ctx.GetDB()
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 
-	modifierGroupID := strings.TrimPrefix(modifierGroup.ID, "TTPOS-ATTR-GROUP-")
+	modifierGroupID := strings.TrimPrefix(modifierGroup.GetId(), "TTPOS-ATTR-GROUP-")
 
 	// 查询是否已存在该属性组
 	existingGroup, err := productRepo.GetProductAttributeGroup(
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.Preload(repository.WithPreload{Query: "MultiLanguageName"}),
 		func(db *gorm.DB) *gorm.DB {
-			return db.Where("((source = ? AND source_id = ?) OR uuid = ?)", platform, modifierGroup.ID, modifierGroupID)
+			return db.Where("((source = ? AND source_id = ?) OR uuid = ?)", platform, modifierGroup.GetId(), modifierGroupID)
 		},
 	)
 	if err != nil && err != gorm.ErrRecordNotFound {
@@ -822,18 +857,22 @@ func (s *takeoutSrv) syncAttributeGroup(ctx context.Context, platform string, mo
 	}
 
 	// 如果是 TTPOS 开头的 ID，说明是本地创建的，不应该由外卖平台同步创建
-	if strings.Contains(modifierGroup.ID, "TTPOS-ATTR-GROUP-") {
+	if strings.Contains(modifierGroup.GetId(), "TTPOS-ATTR-GROUP-") {
 		return 0, nil
 	}
 
 	// 属性组不存在，创建新属性组
 	// 构建多语言名称
-	localeName := language.MapToLocaleResponse(modifierGroup.NameTranslation)
-	localeName.SetAllEmptyLocale(modifierGroup.Name)
+	nameTranslation := make(map[string]string)
+	if modifierGroup.HasNameTranslation() {
+		nameTranslation = modifierGroup.GetNameTranslation()
+	}
+	localeName := language.MapToLocaleResponse(nameTranslation)
+	localeName.SetAllEmptyLocale(modifierGroup.GetName())
 	attributeGroupUuid, err := s.productSrv.AddProductAttributeGroup(ctx, req.ProductAttributeGroupAddReq{
 		LocaleName:        localeName,
 		Source:            platform,
-		SourceId:          modifierGroup.ID,
+		SourceId:          modifierGroup.GetId(),
 		ProductAttributes: []req.ProductAttributeGroupAddProductAttributeReq{},
 	})
 	if err != nil {
@@ -845,7 +884,7 @@ func (s *takeoutSrv) syncAttributeGroup(ctx context.Context, platform string, mo
 
 // syncAttributesBatch 批量同步属性值
 // 将一个属性组的所有属性值一次性同步，避免循环调用数据库
-func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, attributeGroupUuid uint64, modifiers []*valueobject.Modifier) ([]uint64, error) {
+func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, attributeGroupUuid uint64, modifiers []grabfood.MenuModifier) ([]uint64, error) {
 	if len(modifiers) == 0 {
 		return []uint64{}, nil
 	}
@@ -867,21 +906,18 @@ func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, a
 	}
 
 	// 2. 构建 source_id -> modifier 的映射
-	modifierMap := make(map[string]*valueobject.Modifier)
+	modifierMap := make(map[string]grabfood.MenuModifier)
 	ttposAttrIds := make([]string, 0, len(modifiers))
 	for _, modifier := range modifiers {
-		if modifier == nil {
-			continue
-		}
 		// 如果是 TTPOS 开头的 ID（非属性组），说明是本地创建的，跳过
-		if strings.Contains(modifier.ID, "TTPOS") && !strings.Contains(modifier.ID, "TTPOS-ATTR-") {
+		if strings.Contains(modifier.GetId(), "TTPOS") && !strings.Contains(modifier.GetId(), "TTPOS-ATTR-") {
 			continue
 		}
-		if strings.Contains(modifier.ID, "TTPOS-ATTR-") {
-			attrId := strings.TrimPrefix(modifier.ID, "TTPOS-ATTR-")
+		if strings.Contains(modifier.GetId(), "TTPOS-ATTR-") {
+			attrId := strings.TrimPrefix(modifier.GetId(), "TTPOS-ATTR-")
 			ttposAttrIds = append(ttposAttrIds, attrId)
 		}
-		modifierMap[modifier.ID] = modifier
+		modifierMap[modifier.GetId()] = modifier
 	}
 
 	// 3. 查询已存在的属性（通过 source 和 source_id）
@@ -995,20 +1031,24 @@ func (s *takeoutSrv) syncAttributesBatch(ctx context.Context, platform string, a
 	// 7. 添加新属性（modifierMap 中剩余的就是新属性）
 	for _, modifier := range modifierMap {
 		hasNewAttribute = true
-		localeName := language.MapToLocaleResponse(modifier.NameTranslation)
-		localeName.SetAllEmptyLocale(modifier.Name)
+		nameTranslation := make(map[string]string)
+		if modifier.HasNameTranslation() {
+			nameTranslation = modifier.GetNameTranslation()
+		}
+		localeName := language.MapToLocaleResponse(nameTranslation)
+		localeName.SetAllEmptyLocale(modifier.GetName())
 
 		// 将价格从分转换为元
-		price := float64(modifier.Price) / 100.0
+		price := float64(modifier.GetPrice()) / 100.0
 
 		editReq.ProductAttributes = append(editReq.ProductAttributes, req.ProductAttributeGroupEditProductAttributeReq{
 			Uuid:                0, // 新属性
 			LocaleName:          localeName,
-			Sort:                modifier.Sequence,
+			Sort:                int(modifier.GetSequence()),
 			Price:               price,
 			ProductPackageUuids: []uint64{},
 			Source:              platform,
-			SourceId:            modifier.ID,
+			SourceId:            modifier.GetId(),
 		})
 	}
 
@@ -1054,7 +1094,7 @@ type ProductSyncError struct {
 func (s *takeoutSrv) syncProducts(
 	ctx context.Context,
 	platform string,
-	categories []*valueobject.Category,
+	categories []grabfood.MenuCategory,
 	categoryMap map[string]uint64,
 	productFlavorUuid uint64,
 	unitUuid uint64,
@@ -1071,9 +1111,7 @@ func (s *takeoutSrv) syncProducts(
 	// 计算总商品数量
 	totalCount := 0
 	for _, category := range categories {
-		if category != nil {
-			totalCount += len(category.Items)
-		}
+		totalCount += len(category.GetItems())
 	}
 
 	// 更新总数量
@@ -1085,47 +1123,41 @@ func (s *takeoutSrv) syncProducts(
 
 	// 遍历所有分类及其商品
 	for _, category := range categories {
-		if category == nil || len(category.Items) == 0 {
+		if len(category.GetItems()) == 0 {
 			continue
 		}
-		category.ID = strings.TrimPrefix(category.ID, "TTPOS-CAT-")
+		categoryID := strings.TrimPrefix(category.GetId(), "TTPOS-CAT-")
 
 		// 获取本地分类 UUID
-		localCategoryUuid, ok := categoryMap[category.ID]
+		localCategoryUuid, ok := categoryMap[categoryID]
 		if !ok {
 			// 分类映射失败，记录该分类下的所有商品为失败
-			for _, item := range category.Items {
-				if item != nil {
-					errorList = append(errorList, ProductSyncError{
-						ProductID:   item.ID,
-						ProductName: item.Name,
-						CategoryID:  category.ID,
-						Error:       fmt.Sprintf("分类映射失败: %s", category.Name),
-					})
-				}
+			for _, item := range category.GetItems() {
+				errorList = append(errorList, ProductSyncError{
+					ProductID:   item.GetId(),
+					ProductName: item.GetName(),
+					CategoryID:  categoryID,
+					Error:       fmt.Sprintf("分类映射失败: %s", category.GetName()),
+				})
 			}
-			failureCount += len(category.Items)
+			failureCount += len(category.GetItems())
 			continue
 		}
 
 		// 遍历分类下的所有商品
-		for _, item := range category.Items {
-			if item == nil {
-				continue
-			}
-
-			attributeGroups, err := s.syncModifierGroups(ctx, platform, item.ModifierGroups)
+		for _, item := range category.GetItems() {
+			attributeGroups, err := s.syncModifierGroups(ctx, platform, item.GetModifierGroups())
 			if err != nil {
 				errorMsg := fmt.Sprintf("同步商品属性组失败: %v", err)
 				logger.Logger.Error("同步商品属性组失败",
-					zap.String("product_id", item.ID),
-					zap.String("product_name", item.Name),
+					zap.String("product_id", item.GetId()),
+					zap.String("product_name", item.GetName()),
 					zap.Error(err),
 				)
 				errorList = append(errorList, ProductSyncError{
-					ProductID:   item.ID,
-					ProductName: item.Name,
-					CategoryID:  category.ID,
+					ProductID:   item.GetId(),
+					ProductName: item.GetName(),
+					CategoryID:  categoryID,
 					Error:       errorMsg,
 				})
 				failureCount++
@@ -1139,19 +1171,19 @@ func (s *takeoutSrv) syncProducts(
 			}
 
 			// 检查商品是否已导入（通过 source 和 source_product_id）
-			existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.ID)
+			existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.GetId())
 			if err != nil && err != gorm.ErrRecordNotFound {
 				errorMsg := fmt.Sprintf("查询外卖商品失败: %v", err)
 				logger.Logger.Error("查询外卖商品失败",
 					zap.String("platform", platform),
-					zap.String("item_id", item.ID),
-					zap.String("product_name", item.Name),
+					zap.String("item_id", item.GetId()),
+					zap.String("product_name", item.GetName()),
 					zap.Error(err),
 				)
 				errorList = append(errorList, ProductSyncError{
-					ProductID:   item.ID,
-					ProductName: item.Name,
-					CategoryID:  category.ID,
+					ProductID:   item.GetId(),
+					ProductName: item.GetName(),
+					CategoryID:  categoryID,
 					Error:       errorMsg,
 				})
 				failureCount++
@@ -1166,9 +1198,15 @@ func (s *takeoutSrv) syncProducts(
 
 			if existingTakeout != nil && existingTakeout.Uuid > 0 {
 				// 商品已存在，更新状态和分类
+				// 转换状态
+				status := 1 // 默认开启
+				if item.GetAvailableStatus() == "HIDE" || item.GetAvailableStatus() == "UNAVAILABLE" {
+					status = 0
+				}
+
 				err = takeoutRepo.UpdateProductPackageTakeout(
 					map[string]any{
-						"status":        item.AvailableStatus.ToInt(),
+						"status":        status,
 						"category_uuid": localCategoryUuid,
 					},
 					repository.CommonRepo.WhereByUuid(existingTakeout.Uuid),
@@ -1176,15 +1214,15 @@ func (s *takeoutSrv) syncProducts(
 				if err != nil {
 					logger.Logger.Error("更新外卖商品失败",
 						zap.String("platform", platform),
-						zap.String("item_id", item.ID),
-						zap.String("product_name", item.Name),
+						zap.String("item_id", item.GetId()),
+						zap.String("product_name", item.GetName()),
 						zap.Uint64("uuid", existingTakeout.Uuid),
 						zap.Error(err),
 					)
 					errorList = append(errorList, ProductSyncError{
-						ProductID:   item.ID,
-						ProductName: item.Name,
-						CategoryID:  category.ID,
+						ProductID:   item.GetId(),
+						ProductName: item.GetName(),
+						CategoryID:  categoryID,
 						Error:       fmt.Sprintf("更新外卖商品失败: %v", err.Error()),
 					})
 					failureCount++
@@ -1205,13 +1243,13 @@ func (s *takeoutSrv) syncProducts(
 				}
 			} else {
 				// 2. 创建新商品
-				productUuid, err := s.createProduct(ctx, platform, item, localCategoryUuid, productFlavorUuid, unitUuid, attributeGroups)
+				productUuid, err := s.createProduct(ctx, platform, &item, localCategoryUuid, productFlavorUuid, unitUuid, attributeGroups)
 				if err != nil {
 					errorMsg := fmt.Sprintf("创建商品失败: %v", err.Error())
 					errorList = append(errorList, ProductSyncError{
-						ProductID:   item.ID,
-						ProductName: item.Name,
-						CategoryID:  category.ID,
+						ProductID:   item.GetId(),
+						ProductName: item.GetName(),
+						CategoryID:  categoryID,
 						Error:       errorMsg,
 					})
 					failureCount++
@@ -1228,8 +1266,8 @@ func (s *takeoutSrv) syncProducts(
 				// createProduct 方法中已经创建了 ProductPackageTakeout 记录，这里不需要再创建
 				logger.Logger.Info("成功创建外卖商品",
 					zap.String("platform", platform),
-					zap.String("item_id", item.ID),
-					zap.String("product_name", item.Name),
+					zap.String("item_id", item.GetId()),
+					zap.String("product_name", item.GetName()),
 					zap.Uint64("product_uuid", productUuid),
 				)
 				successCount++
@@ -1250,7 +1288,7 @@ func (s *takeoutSrv) syncProducts(
 func (s *takeoutSrv) createProduct(
 	ctx context.Context,
 	platform string,
-	item *valueobject.MenuItem,
+	item *grabfood.MenuItem,
 	categoryUuid uint64,
 	productFlavorUuid uint64,
 	unitUuid uint64,
@@ -1293,7 +1331,7 @@ func (s *takeoutSrv) createProduct(
 
 	// 如果有图片 URL，异步下载并上传
 	if imageURL != "" {
-		go s.asyncUploadProductImage(ctx, ctx.GetCompanyUuid(), productUuid, imageURL, item.ID, item.Name)
+		go s.asyncUploadProductImage(ctx, ctx.GetCompanyUuid(), productUuid, imageURL, item.GetId(), item.GetName())
 	}
 
 	return productUuid, nil
@@ -1302,7 +1340,7 @@ func (s *takeoutSrv) createProduct(
 // buildProductAddReq 构建商品创建请求
 func (s *takeoutSrv) buildProductAddReq(
 	_ context.Context,
-	item *valueobject.MenuItem,
+	item *grabfood.MenuItem,
 	categoryUuid uint64,
 	productFlavorUuid uint64,
 	unitUuid uint64,
@@ -1310,18 +1348,40 @@ func (s *takeoutSrv) buildProductAddReq(
 	attributeGroups []req.ProductShopAddAttributeGroupReq,
 ) req.ProductShopAddReq {
 	// 构建多语言名称
-	localeName := language.MapToLocaleResponse(item.NameTranslation)
-	localeName.SetAllEmptyLocale(item.Name)
+	nameTranslation := make(map[string]string)
+	if item.HasNameTranslation() {
+		nameTranslation = item.GetNameTranslation()
+	}
+	localeName := language.MapToLocaleResponse(nameTranslation)
+	localeName.SetAllEmptyLocale(item.GetName())
 
 	// 构建卖点描述（使用商品描述）
-	sellingPoint := item.GetSellingPoint()
+	sellingPoint := dto.LocaleResponse{}
+	if item.HasDescription() {
+		sellingPoint.SetAllEmptyLocale(item.GetDescription())
+	}
+	if item.HasDescriptionTranslation() {
+		descTranslation := item.GetDescriptionTranslation()
+		if val, ok := descTranslation["en"]; ok {
+			sellingPoint.EN = val
+		}
+		if val, ok := descTranslation["th"]; ok {
+			sellingPoint.TH = val
+		}
+	}
 
 	// 构建商品规格（单规格）
 	flavors := []req.ProductShopAddFlavorReq{
 		{
-			Uuid:  productFlavorUuid,           // 使用同步的标准规格 UUID
-			Price: float64(item.Price) / 100.0, // 转换为元
+			Uuid:  productFlavorUuid,                // 使用同步的标准规格 UUID
+			Price: float64(item.GetPrice()) / 100.0, // 转换为元
 		},
+	}
+
+	// 转换状态
+	status := 1 // 默认开启
+	if item.GetAvailableStatus() == "HIDE" || item.GetAvailableStatus() == "UNAVAILABLE" {
+		status = 0
 	}
 
 	// 构建商品请求
@@ -1336,7 +1396,7 @@ func (s *takeoutSrv) buildProductAddReq(
 			DineUuid:    taxUuid, // 使用 Grab 税类（如门店未开启税率则为 0）
 			TakeoutUuid: taxUuid, // 使用 Grab 税类（如门店未开启税率则为 0）
 		},
-		Status:          item.AvailableStatus.ToInt(),
+		Status:          status,
 		ImageFileUuid:   0,               // 不上传文件，通过 image_name 存储 URL
 		NumType:         0,               // 整数
 		Attributes:      attributeGroups, // 使用同步的属性组
@@ -1519,7 +1579,7 @@ func (s *takeoutSrv) asyncUploadProductImage(
 func (s *takeoutSrv) createProductPackageTakeout(
 	ctx context.Context,
 	platform string,
-	item *valueobject.MenuItem,
+	item *grabfood.MenuItem,
 	productPackageUuid uint64,
 	categoryUuid uint64,
 ) error {
@@ -1542,7 +1602,7 @@ func (s *takeoutSrv) createProductPackageTakeout(
 
 	// 检查是否已存在相同的外卖商品记录（通过 source 和 source_product_id）
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
-	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.ID)
+	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutBySourceProductId(platform, item.GetId())
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return errors.WithMessage(err, "获取外卖商品记录失败")
 	}
@@ -1550,6 +1610,12 @@ func (s *takeoutSrv) createProductPackageTakeout(
 	// 如果已存在，更新记录
 	if existingTakeout != nil && existingTakeout.Uuid > 0 {
 		return nil
+	}
+
+	// 转换状态
+	status := 1 // 默认开启
+	if item.GetAvailableStatus() == "HIDE" || item.GetAvailableStatus() == "UNAVAILABLE" {
+		status = 0
 	}
 
 	// 创建外卖商品记录
@@ -1581,9 +1647,9 @@ func (s *takeoutSrv) createProductPackageTakeout(
 			}
 			return attributes
 		}(),
-		Status:          item.AvailableStatus.ToInt(),
+		Status:          status,
 		Source:          platform,
-		SourceProductId: item.ID,
+		SourceProductId: item.GetId(),
 	})
 	if err != nil {
 		return errors.WithMessage(err, "创建外卖商品记录失败")

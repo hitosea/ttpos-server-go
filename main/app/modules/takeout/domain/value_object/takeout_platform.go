@@ -16,11 +16,12 @@ var TakeoutPlatformNames = map[string]string{
 
 // 外卖订单状态
 const (
-	TakeoutOrderStatePending    = 1 // 待接单
-	TakeoutOrderStateAccepted   = 2 // 已接单
-	TakeoutOrderStateProcessing = 3 // 制作中
-	TakeoutOrderStateCompleted  = 4 // 已完成
-	TakeoutOrderStateRejected   = 5 // 已拒单
+	TakeoutOrderStatePending         = 0 // 待接单
+	TakeoutOrderStateAccepted        = 1 // 已接单配餐中
+	TakeoutOrderStateRiderPending    = 2 // 待骑手接单
+	TakeoutOrderStateRiderProcessing = 3 // 骑手配送中
+	TakeoutOrderStateCompleted       = 4 // 已完成
+	TakeoutOrderStateRejected        = 5 // 已拒单
 )
 
 // 库存状态

@@ -3,6 +3,7 @@ package grab
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
@@ -64,12 +65,13 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 			CreateTime: currentTime,
 			UpdateTime: currentTime,
 		},
-		Platform:        platform,
-		PlatformOrderId: platformOrderId,
-		OrderState:      0, // 待接单
-		IsAbnormal:      0,
-		StockStatus:     0, // 库存充足
-		RawData:         string(rawDataJSON),
+		Platform:           platform,
+		PlatformOrderId:    platformOrderId,
+		PlatformOrderState: submitOrderReq.GetOrderState(),
+		OrderState:         0, // 待接单
+		IsAbnormal:         0,
+		StockStatus:        0, // 库存充足
+		RawData:            string(rawDataJSON),
 	}
 
 	// 基础字段映射
@@ -100,16 +102,16 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 
 	// 价格信息映射
 	price := submitOrderReq.GetPrice()
-	order.Subtotal = price.GetSubtotal()
-	order.DeliveryFee = price.GetDeliveryFee()
-	order.SmallOrderFee = price.GetSmallOrderFee()
-	order.TotalAmount = price.GetEaterPayment() // 使用 EaterPayment 作为总金额
-	order.EaterPayment = price.GetEaterPayment()
-	order.PlatformDiscount = price.GetGrabFundPromo()
-	order.MerchantDiscount = price.GetMerchantFundPromo()
-	order.BasketPromo = price.GetBasketPromo()
-	order.Tax = price.GetTax()
-	order.MerchantChargeFee = price.GetMerchantChargeFee()
+	order.Subtotal = price.GetSubtotal() / 100
+	order.DeliveryFee = price.GetDeliveryFee() / 100
+	order.SmallOrderFee = price.GetSmallOrderFee() / 100
+	order.TotalAmount = price.GetSubtotal() / 100 // 使用 EaterPayment 作为总金额
+	order.EaterPayment = price.GetEaterPayment() / 100
+	order.PlatformDiscount = price.GetGrabFundPromo() / 100
+	order.MerchantDiscount = price.GetMerchantFundPromo() / 100
+	order.BasketPromo = price.GetBasketPromo() / 100
+	order.Tax = price.GetTax() / 100
+	order.MerchantChargeFee = price.GetMerchantChargeFee() / 100
 
 	// 货币信息映射
 	currency := submitOrderReq.GetCurrency()
@@ -142,15 +144,24 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 			// 将 Grab item 转换为 JSON 保存在 PlatformData
 			itemBytes, _ := json.Marshal(item)
 
+			// 根据 item.Id 前缀判断商品类型
+			// TTPOS-ITEM- 开头为普通商品(0), TTPOS-PACKAGE- 开头为套餐(1)
+			ttposProductType := 0
+			if strings.HasPrefix(item.Id, "TTPOS-PACKAGE-") {
+				ttposProductType = 1
+			}
+
 			// 注意：UUID、CreateTime、UpdateTime 会在 Service 层设置
+			// Grab API 不提供商品名称，这里暂时使用 item.Id 作为名称
 			orderItem := takeoutModel.TakeoutOrderItem{
-				Platform:       platform,
-				PlatformItemId: item.Id,
-				Quantity:       int(item.Quantity),
-				Price:          item.Price,
-				Tax:            item.GetTax(),
-				Specifications: item.GetSpecifications(),
-				PlatformData:   string(itemBytes),
+				Platform:         platform,
+				PlatformItemId:   item.Id,
+				TtposProductType: ttposProductType,
+				Quantity:         int(item.Quantity),
+				Price:            item.Price,
+				Tax:              item.GetTax(),
+				Specifications:   item.GetSpecifications(),
+				PlatformData:     string(itemBytes),
 			}
 
 			// 解析修饰符
@@ -158,6 +169,7 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 				orderItem.TakeoutOrderItemModifiers = make([]takeoutModel.TakeoutOrderItemModifier, 0, len(item.Modifiers))
 				for _, modifier := range item.Modifiers {
 					modifierBytes, _ := json.Marshal(modifier)
+					// Grab API 不提供修饰符名称，这里暂时使用 modifier.GetId() 作为名称
 					orderItemModifier := takeoutModel.TakeoutOrderItemModifier{
 						Platform:           platform,
 						PlatformModifierId: modifier.GetId(),
@@ -187,6 +199,13 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 		return nil, errors.WithMessage(err, "转换活动信息失败")
 	}
 	order.SetTakeoutOrderCampaigns(campaigns)
+
+	// 转换促销信息
+	promos, err := c.ConvertOrderPromos(orderUuid, platform, submitOrderReq, currentTime)
+	if err != nil {
+		return nil, errors.WithMessage(err, "转换促销信息失败")
+	}
+	order.SetTakeoutOrderPromos(promos)
 
 	return order, nil
 }
@@ -383,4 +402,74 @@ func (c *GrabConverter) ConvertCampaigns(
 	}
 
 	return orderCampaigns, nil
+}
+
+// ConvertOrderPromos 将 Grab 订单促销转换为 TTPOS 订单促销格式
+func (c *GrabConverter) ConvertOrderPromos(
+	orderUuid uint64,
+	platform string,
+	submitOrderReq *grabfood.SubmitOrderRequest,
+	currentTime int64,
+) ([]*takeoutModel.TakeoutOrderPromo, error) {
+	if !submitOrderReq.HasPromos() {
+		return nil, nil // 没有促销信息
+	}
+
+	promos := submitOrderReq.GetPromos()
+	if len(promos) == 0 {
+		return nil, nil
+	}
+
+	orderPromos := make([]*takeoutModel.TakeoutOrderPromo, 0, len(promos))
+
+	for _, promo := range promos {
+		orderPromo := &takeoutModel.TakeoutOrderPromo{
+			BaseModel: takeoutModel.BaseModel{
+				CreateTime: currentTime,
+				UpdateTime: currentTime,
+			},
+			TakeoutOrderUuid: fmt.Sprintf("%d", orderUuid),
+			Platform:         platform,
+		}
+
+		// 促销基本信息
+		if promo.HasCode() {
+			orderPromo.PromoCode = promo.GetCode()
+		}
+		if promo.HasName() {
+			orderPromo.PromoName = promo.GetName()
+		}
+		if promo.HasDescription() {
+			orderPromo.PromoDescription = promo.GetDescription()
+		}
+
+		// 金额信息
+		if promo.HasPromoAmountInMin() {
+			orderPromo.PromoAmount = promo.GetPromoAmountInMin()
+			orderPromo.PromoAmountInMin = promo.GetPromoAmountInMin()
+		} else if promo.HasPromoAmount() {
+			// 如果没有 PromoAmountInMin，使用 PromoAmount（需要转换为最小单位）
+			orderPromo.PromoAmount = promo.GetPromoAmount() * 100
+			orderPromo.PromoAmountInMin = promo.GetPromoAmount() * 100
+		}
+
+		if promo.HasMexFundedRatio() {
+			orderPromo.MexFundedRatio = int(promo.GetMexFundedRatio())
+		}
+		if promo.HasMexFundedAmount() {
+			orderPromo.MexFundedAmount = promo.GetMexFundedAmount()
+		}
+		if promo.HasTargetedPrice() {
+			orderPromo.TargetedPrice = promo.GetTargetedPrice()
+		}
+
+		// 保存完整的促销数据为 JSON
+		if promoBytes, err := json.Marshal(promo); err == nil {
+			orderPromo.PlatformData = string(promoBytes)
+		}
+
+		orderPromos = append(orderPromos, orderPromo)
+	}
+
+	return orderPromos, nil
 }

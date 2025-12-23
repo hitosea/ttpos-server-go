@@ -28,6 +28,7 @@ type ITakeoutOrderRepo interface {
 	WhereOrderState(orderState int) DBOption
 	WhereTimeRange(startTime, endTime int64) DBOption
 	WhereSearch(search string) DBOption
+	WhereIsHistoryOrder(isHistory bool) DBOption
 	Limit(limit int) DBOption
 	Offset(offset int) DBOption
 }
@@ -190,7 +191,7 @@ func (r *TakeoutOrderRepoImpl) WherePlatform(platform string) DBOption {
 // WhereOrderState 根据订单状态筛选
 func (r *TakeoutOrderRepoImpl) WhereOrderState(orderState int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		if orderState > 0 {
+		if orderState >= 0 {
 			return db.Where("order_state = ?", orderState)
 		}
 		return db
@@ -226,6 +227,16 @@ func (r *TakeoutOrderRepoImpl) WhereSearch(search string) DBOption {
 					")",
 				"%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%",
 			)
+		}
+		return db
+	}
+}
+
+// WhereIsHistoryOrder 根据是否历史订单筛选
+func (r *TakeoutOrderRepoImpl) WhereIsHistoryOrder(isHistory bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if !isHistory {
+			return db.Where("order_state not in (4, 5)")
 		}
 		return db
 	}

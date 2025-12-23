@@ -8,12 +8,13 @@ type TakeoutOrderItem struct {
 	Platform         string `gorm:"column:platform" json:"platform"`
 
 	// 平台商品信息
-	PlatformItemId   string `gorm:"column:platform_item_id" json:"platform_item_id"`
-	PlatformItemName string `gorm:"column:platform_item_name" json:"platform_item_name"`
+	PlatformItemId string `gorm:"column:platform_item_id" json:"platform_item_id"`
+	ItemName       string `gorm:"column:item_name;type:text" json:"item_name"`
 
 	// TTPOS 商品信息（关联映射后）
 	TtposProductUuid uint64 `gorm:"column:ttpos_product_uuid" json:"ttpos_product_uuid"`
 	TtposSkuUuid     uint64 `gorm:"column:ttpos_sku_uuid" json:"ttpos_sku_uuid"`
+	TtposProductType int    `gorm:"column:ttpos_product_type" json:"ttpos_product_type"` // 0-商品, 1-套餐
 
 	// 商品数量和价格
 	Quantity       int    `gorm:"column:quantity" json:"quantity"`
@@ -37,4 +38,8 @@ func (*TakeoutOrderItem) TableName() string {
 
 func (o *TakeoutOrderItem) SetTakeoutOrderItemModifiersNil() {
 	o.TakeoutOrderItemModifiers = nil
+}
+
+func (o *TakeoutOrderItem) IsPackage() bool {
+	return o.TtposProductType == 1
 }

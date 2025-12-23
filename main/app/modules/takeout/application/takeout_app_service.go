@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"ttpos-server-go/app/modules/takeout/domain/menu/entity"
-	"ttpos-server-go/app/modules/takeout/domain/menu/repository"
-	"ttpos-server-go/app/modules/takeout/domain/menu/valueobject"
 	"ttpos-server-go/app/modules/takeout/domain/model"
+	"ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
@@ -26,11 +25,11 @@ import (
 
 // ITakeoutAppService 外卖应用服务接口
 type ITakeoutAppService interface {
+	// 处理门店集成状态变更
+	HandleIntegrationStatus(ctx context.Context, takeoutIntegrationEvent request.TakeoutIntegrationEvent) error
+
 	// GetTakeoutStatus 获取指定平台外卖状态
 	GetTakeoutStatus(ctx context.Context, platform string) (*response.TakeoutStatusResponse, error)
-
-	// GetAllTakeoutStatus 获取所有平台外卖状态
-	GetAllTakeoutStatus(ctx context.Context) (*response.TakeoutStatusListResponse, error)
 
 	// ToggleTakeoutStatus 切换指定平台外卖状态
 	ToggleTakeoutStatus(ctx context.Context, platform string, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
@@ -59,7 +58,7 @@ type ITakeoutAppService interface {
 	ExportMenu(ctx context.Context, req request.ExportMenuRequest) (interface{}, error)
 
 	// ConvertMenuData 转换菜单数据
-	ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error)
+	ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*grabfood.GetMenuNewResponse, error)
 
 	// PushMenu 推送菜单
 	PushMenu(ctx context.Context, platform string, currencyUnit string) error
@@ -143,6 +142,16 @@ func NewTakeoutMenuAppService(
 	return NewTakeoutAppService(dbm)
 }
 
+// HandleIntegrationStatus 处理门店集成状态变更
+func (s *takeoutAppService) HandleIntegrationStatus(ctx context.Context, takeoutIntegrationEvent request.TakeoutIntegrationEvent) error {
+	// 更新门店集成状态
+	_, err := s.CheckBindingStatus(ctx, "grab")
+	if err != nil {
+		return fmt.Errorf("检查绑定状态失败: %w", err)
+	}
+	return nil
+}
+
 // GetTakeoutStatus 获取指定平台外卖状态
 func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform string) (*response.TakeoutStatusResponse, error) {
 	// 从数据库获取
@@ -162,32 +171,6 @@ func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform strin
 		IsBound:   takeout.IsBound,
 		Skip:      takeout.Skip,
 		UpdatedAt: takeout.UpdateTime,
-	}
-
-	return resp, nil
-}
-
-// GetAllTakeoutStatus 获取所有平台外卖状态
-func (s *takeoutAppService) GetAllTakeoutStatus(ctx context.Context) (*response.TakeoutStatusListResponse, error) {
-	// 从数据库获取
-	takeouts, err := s.takeoutDomainService.GetAllPlatformStatus(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("获取所有平台状态失败: %w", err)
-	}
-
-	list := make([]*response.TakeoutStatusResponse, 0, len(takeouts))
-	for _, takeout := range takeouts {
-		list = append(list, &response.TakeoutStatusResponse{
-			Platform:  takeout.Platform,
-			Enabled:   takeout.Enabled,
-			IsBound:   takeout.IsBound,
-			Skip:      takeout.Skip,
-			UpdatedAt: takeout.UpdateTime,
-		})
-	}
-
-	resp := &response.TakeoutStatusListResponse{
-		List: list,
 	}
 
 	return resp, nil
@@ -328,22 +311,16 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 		return nil, err
 	}
 
-	// 从数据库加载菜单数据
-	var menu *entity.TakeoutMenu
+	// 从数据库加载菜单数据并转换为平台格式
+	var platformData interface{}
 	if grabConverter, ok := converter.(*grab.GrabConverter); ok {
-		// Grab 平台使用专用的加载方法
-		menu, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
+		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
+		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
 			return nil, fmt.Errorf("加载菜单数据失败: %w", err)
 		}
 	} else {
 		return nil, errors.New("暂不支持该平台")
-	}
-
-	// 转换为平台格式
-	platformData, err := converter.ConvertFromTTPOS(ctx, menu)
-	if err != nil {
-		return nil, fmt.Errorf("转换菜单数据失败: %w", err)
 	}
 
 	// 保存导出的菜单数据到 ttpos_menu 字段
@@ -363,29 +340,25 @@ func (s *takeoutAppService) GetGrabMenu(ctx context.Context) (*response.GrabMenu
 		return nil, fmt.Errorf("获取 Grab 菜单失败: %w", err)
 	}
 
-	var menu *entity.TakeoutMenu
+	var menu *grabfood.GetMenuNewResponse
 	if err := json.Unmarshal([]byte(menuData.(string)), &menu); err != nil {
 		return nil, fmt.Errorf("解析 Grab 菜单数据失败: %w", err)
 	}
 
-	// 转换为平台格式
-	grabConverter, ok := s.converters["grab"].(*grab.GrabConverter)
-	if !ok {
-		return nil, errors.New("grab 转换器类型错误")
-	}
-	grabMenu, err := grabConverter.ConvertFromTTPOS(ctx, menu)
+	// 更新 ttpos_takeout 表的 menu 字段
+	err = s.takeoutDomainService.UpdatePlatformMenuByPlatform(ctx, "grab", menu)
 	if err != nil {
-		return nil, fmt.Errorf("转换菜单数据失败: %w", err)
+		return nil, fmt.Errorf("更新 TTPOS 菜单失败: %w", err)
 	}
 
 	return &response.GrabMenuResponse{
 		Platform: "grab",
-		Menu:     grabMenu,
+		Menu:     menu,
 	}, nil
 }
 
 // ConvertMenuData 转换菜单数据
-func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*entity.TakeoutMenu, error) {
+func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.ImportMenuRequest) (*grabfood.GetMenuNewResponse, error) {
 	if req.MenuData == nil {
 		return nil, errors.New("菜单数据不能为空")
 	}
@@ -400,19 +373,19 @@ func (s *takeoutAppService) ConvertMenuData(ctx context.Context, req request.Imp
 		return nil, errors.New("转换器类型错误")
 	}
 
-	// 解析 Grab 菜单数据
-	menuEntity, err := grabConverter.ConvertToTTPOS(ctx, req.MenuData)
+	// 解析 Grab 菜单数据（返回 Grab 格式）
+	grabMenu, err := grabConverter.ParseGrabMenu(req.MenuData)
 	if err != nil {
 		return nil, fmt.Errorf("解析 Grab 菜单失败: %w", err)
 	}
 
 	// 保存菜单数据到数据库
-	err = s.UpdateTakeoutMenu(ctx, "grab", req.MenuData)
+	err = s.UpdateTakeoutMenu(ctx, "grab", grabMenu)
 	if err != nil {
 		return nil, fmt.Errorf("保存菜单数据失败: %w", err)
 	}
 
-	return menuEntity, nil
+	return grabMenu, nil
 }
 
 // SaveMenuSnapshot 保存菜单快照
@@ -581,15 +554,6 @@ func (s *takeoutAppService) UpdateMenuItem(ctx context.Context, req request.Upda
 		return errors.New("商品ID不能为空")
 	}
 
-	// 获取平台配置获取 MerchantID
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
-	if err != nil {
-		return fmt.Errorf("获取平台状态失败: %w", err)
-	}
-	if !takeout.IsBound {
-		return errors.New("平台未绑定，无法更新菜单项")
-	}
-
 	// 获取 MerchantID（从 RPC 获取）
 	companyUuid := ctx.GetCompanyUuid()
 	_, _, merchantId, _, err := s.rpcService.CheckBindingStatusWithMerchantId(ctx.GetContext(), req.Platform, companyUuid)
@@ -627,15 +591,6 @@ func (s *takeoutAppService) UpdateMenuModifier(ctx context.Context, req request.
 	}
 	if req.ModifierName == "" {
 		return errors.New("修饰符名称不能为空")
-	}
-
-	// 获取平台配置获取 MerchantID
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
-	if err != nil {
-		return fmt.Errorf("获取平台状态失败: %w", err)
-	}
-	if !takeout.IsBound {
-		return errors.New("平台未绑定，无法更新菜单修饰符")
 	}
 
 	// 获取 MerchantID（从 RPC 获取）
@@ -733,7 +688,8 @@ func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.Exp
 		zap.Int("successItems", result.SuccessItems),
 		zap.Int("successModifiers", result.SuccessModifiers),
 		zap.Int("failedItems", result.FailedItems),
-		zap.Int("failedModifiers", result.FailedModifiers))
+		zap.Int("failedModifiers", result.FailedModifiers),
+		zap.Strings("errors", result.Errors))
 
 	return result, nil
 }
@@ -809,17 +765,17 @@ func (s *takeoutAppService) compareAndSyncItem(
 	// 检查价格变更
 	if oldItem.Price != newItem.Price {
 		changes = append(changes, "price")
-		updatePrice = &newItem.Price
 	}
+	updatePrice = &newItem.Price
 
 	// 检查状态变更
 	if oldItem.AvailableStatus != newItem.AvailableStatus {
 		changes = append(changes, "status")
-		updateStatus = newItem.AvailableStatus
 	}
+	updateStatus = newItem.AvailableStatus
 
 	// 检查库存变更
-	if updateStatus != string(valueobject.AvailableStatusAvailable) {
+	if updateStatus != string(value_object.AvailableStatusAvailable) {
 		updateStock = 0
 	}
 
@@ -886,14 +842,15 @@ func (s *takeoutAppService) compareAndSyncModifier(
 	// 检查价格变更
 	if oldModifier.Price != newModifier.Price {
 		changes = append(changes, "price")
-		updatePrice = newModifier.Price
 	}
 
 	// 检查状态变更
 	if oldModifier.AvailableStatus != newModifier.AvailableStatus {
 		changes = append(changes, "status")
-		updateStatus = newModifier.AvailableStatus
 	}
+
+	updatePrice = newModifier.Price
+	updateStatus = newModifier.AvailableStatus
 
 	// 如果没有变更，直接返回
 	if len(changes) == 0 {

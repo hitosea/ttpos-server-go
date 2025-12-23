@@ -34,7 +34,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('partner_merchant_id', 'string', ['limit' => 100, 'default' => '', 'comment' => '合作伙伴商户ID (Grab: partnerMerchantID)'])
                 
                 // 订单状态
-                ->addColumn('order_state', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '订单状态: 1=待接单,2=已接单,3=制作中,4=已完成,5=已拒单'])
+                ->addColumn('order_state', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单'])
                 ->addColumn('is_abnormal', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否异常: 0=正常,1=异常'])
                 ->addColumn('abnormal_detail', 'text', ['null' => true, 'comment' => '异常详情(JSON)'])
                 ->addColumn('stock_status', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '库存状态: 1=充足,2=不足'])
@@ -124,7 +124,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 
                 // 平台商品信息
                 ->addColumn('platform_item_id', 'string', ['limit' => 100, 'default' => '', 'comment' => '平台商品ID (Grab: TTPOS-ITEM-{uuid})'])
-                ->addColumn('platform_item_name', 'string', ['limit' => 255, 'default' => '', 'comment' => '平台商品名称'])
+                ->addColumn('item_name', 'text', ['null' => true, 'comment' => '商品名称'])
                 
                 // TTPOS 商品信息（从 platform_item_id 解析）
                 ->addColumn('ttpos_product_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS商品UUID (从TTPOS-ITEM-前缀提取)'])
@@ -170,7 +170,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('takeout_order_item_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '订单商品UUID'])
                 ->addColumn('platform', 'string', ['limit' => 50, 'default' => '', 'comment' => '平台: grab,foodpanda,lineman'])
                 ->addColumn('platform_modifier_id', 'string', ['limit' => 255, 'default' => '', 'comment' => '平台修饰符ID'])
-                ->addColumn('platform_modifier_name', 'string', ['limit' => 255, 'default' => '', 'comment' => '平台修饰符名称'])
+                ->addColumn('modifier_name', 'text', ['null' => true, 'comment' => '修饰符名称'])
                 ->addColumn('ttpos_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS修饰符UUID(关联后)'])
                 ->addColumn('ttpos_modifier_type', 'string', ['limit' => 20, 'default' => '', 'comment' => 'TTPOS修饰符类型: flavor=规格, sauce=加料, attr=属性'])
                 ->addColumn('quantity', 'integer', ['signed' => false, 'default' => 1, 'comment' => '数量'])

@@ -52,10 +52,5 @@ func (model *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 		}
 		model.Uuid = uuid
 	}
-	// 如果就是要uuid为0
-	// 18446744073709551615 为uint64的最大值
-	if model.Uuid == 18446744073709551615 {
-		model.Uuid = 0
-	}
 	return
 }

@@ -33,3 +33,10 @@ type TakeoutOrderCampaign struct {
 func (*TakeoutOrderCampaign) TableName() string {
 	return "ttpos_takeout_order_campaign"
 }
+
+func (c *TakeoutOrderCampaign) GetCampaignName() string {
+	if c.CampaignNameForMex != "" {
+		return c.CampaignNameForMex
+	}
+	return c.CampaignName
+}

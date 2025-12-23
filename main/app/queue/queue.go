@@ -18,10 +18,14 @@ import (
 const TAKEOUT = "takeout"
 
 const (
-	TopicItemChange          = "erp-item-change"
-	TopicDocChange           = "erp-doc-change"
-	TopicProviderMenuUpdate  = "takeout_provider_menu_update"
-	TopicProviderOrderUpdate = "takeout_grab_order"
+	TopicItemChange = "erp-item-change"
+	TopicDocChange  = "erp-doc-change"
+)
+
+const (
+	TopicProviderMenuUpdate    = "takeout_provider_menu_update"
+	TopicProviderOrderUpdate   = "takeout_grab_order"
+	TopicStoreIntegrationState = "takeout_store_integration_state"
 )
 
 var manager *rocketmq.Manager
@@ -56,6 +60,12 @@ func Init() {
 	err = manager.Subscribe(config.Rocketmq.GroupName, TopicProviderMenuUpdate, takeoutQueue.TakeoutProviderMenuUpdateHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicProviderMenuUpdate))
+	}
+
+	// 订阅门店集成状态变更消息
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicStoreIntegrationState, takeoutQueue.HandleIntegrationStatus)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicStoreIntegrationState))
 	}
 
 	// 订阅供应商订单更新消息

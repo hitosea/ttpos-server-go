@@ -79,18 +79,11 @@ func (h *TakeoutHandler) SaveSettings(c *gin.Context) {
 // @Tags 收银端.外卖管理
 // @Accept json
 // @Produce json
-// @Param page_no query int true "页码"
-// @Param page_size query int true "每页数量"
-// @Param platform query string false "平台筛选: grab,foodpanda,lineman"
-// @Param status query int false "状态: 0=全部,1=待接单,2=已接单,3=制作中,4=已完成,5=已拒单"
-// @Param start_time query int64 false "开始时间"
-// @Param end_time query int64 false "结束时间"
-// @Param search query string false "搜索关键词"
+// @Param request query request.TakeoutOrderListReq true "请求参数"
 // @Success 200 {object} dto.Response{data=response.TakeoutOrderListResp} "外卖订单列表"
 // @Router /cashier/takeout/order/list [get]
 func (h *TakeoutHandler) GetList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-
 	var req request.TakeoutOrderListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		helper.HandleValidationError(c, err, req, nil)
@@ -111,7 +104,7 @@ func (h *TakeoutHandler) GetList(c *gin.Context) {
 // @Tags 收银端.外卖管理
 // @Accept json
 // @Produce json
-// @Param order_uuid query uint64 true "订单UUID"
+// @Param request query request.TakeoutOrderDetailReq true "请求参数"
 // @Success 200 {object} dto.Response{data=response.TakeoutOrderResp} "外卖订单详情"
 // @Router /cashier/takeout/order/detail [get]
 func (h *TakeoutHandler) GetDetail(c *gin.Context) {
@@ -123,7 +116,7 @@ func (h *TakeoutHandler) GetDetail(c *gin.Context) {
 		return
 	}
 
-	order, err := h.orderSrv.GetByUuid(ctx, req.OrderUuid)
+	order, err := h.orderSrv.GetByUuid(ctx, req.Uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -175,6 +168,31 @@ func (h *TakeoutHandler) RejectOrder(c *gin.Context) {
 	}
 
 	if err := h.orderSrv.RejectOrder(ctx, &req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, nil)
+}
+
+// CallRider 呼叫骑手
+// @Summary 呼叫骑手（标记订单准备完成）
+// @Tags 收银端.外卖管理
+// @Accept json
+// @Produce json
+// @Param request body request.TakeoutOrderCallRiderReq true "呼叫骑手参数"
+// @Success 200 {object} nil "呼叫骑手成功"
+// @Router /cashier/takeout/order/call-rider [post]
+func (h *TakeoutHandler) CallRider(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var req request.TakeoutOrderCallRiderReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+
+	if err := h.orderSrv.CallRider(ctx, &req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
@@ -258,10 +276,11 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/takeout/settings", wrapper.GetSettings)   // 获取配置
 		privateApi.POST("/takeout/settings", wrapper.SaveSettings) // 保存配置
 		// 订单管理
-		privateApi.GET("/takeout/order/list", wrapper.GetList)        // 获取订单列表
-		privateApi.GET("/takeout/order/detail", wrapper.GetDetail)    // 获取订单详情
-		privateApi.POST("/takeout/order/accept", wrapper.AcceptOrder) // 接单
-		privateApi.POST("/takeout/order/reject", wrapper.RejectOrder) // 拒单
+		privateApi.GET("/takeout/order/list", wrapper.GetList)          // 获取订单列表
+		privateApi.GET("/takeout/order/detail", wrapper.GetDetail)      // 获取订单详情
+		privateApi.POST("/takeout/order/accept", wrapper.AcceptOrder)   // 接单
+		privateApi.POST("/takeout/order/reject", wrapper.RejectOrder)   // 拒单
+		privateApi.POST("/takeout/order/call-rider", wrapper.CallRider) // 呼叫骑手
 		// 模拟接收新订单
 		privateApi.POST("/takeout/order/sync", wrapper.SyncOrder)                  // 同步订单
 		privateApi.POST("/takeout/order/push-state", wrapper.HandlePushOrderState) // 处理订单状态变更

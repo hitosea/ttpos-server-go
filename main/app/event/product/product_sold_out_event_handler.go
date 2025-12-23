@@ -34,7 +34,7 @@ func ProductSoldOutEventHandler() {
 
 			utils.Go(func() {
 				// 推送菜单到Grab平台
-				_, err := takeoutSrv.SyncMenuChanges(payload.Ctx, "grab")
+				err := takeoutSrv.PushMenuToPlatform(payload.Ctx, "grab")
 				if err != nil {
 					logger.Logger.Error("推送菜单到Grab平台失败", zap.Error(err))
 				}

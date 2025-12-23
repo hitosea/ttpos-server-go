@@ -38,8 +38,16 @@ type TakeoutRPCClient interface {
 	// UpdateMenuModifier 更新菜单修饰符
 	UpdateMenuModifier(ctx context.Context, req *menuApi.UpdateMenuModifierReq) error
 
+	//  ------------------------- Order Service -------------------------
+
 	// GetOrderInfo 获取订单信息
 	GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error)
+
+	// PrepareOrder 准备订单（接受/拒绝）
+	PrepareOrder(ctx context.Context, takeoutOrderUuid string, toState string) error
+
+	// MarkOrderReady 标记订单准备完成（呼叫骑手）
+	MarkOrderReady(ctx context.Context, takeoutOrderUuid string) error
 
 	// Close 关闭连接
 	Close() error
@@ -322,6 +330,71 @@ func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, or
 	}
 
 	return rawData, nil
+}
+
+// PrepareOrder 准备订单（接受/拒绝）
+// toState: "Accepted" 或 "Rejected"
+func (c *BMPTakeoutClient) PrepareOrder(ctx context.Context, takeoutOrderUuid string, toState string) error {
+	req := &orderApi.PrepareOrderReq{
+		TakeoutOrderUuid: takeoutOrderUuid,
+		ToState:          toState,
+		RequestId:        uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.PrepareOrder(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 PrepareOrder 接口失败",
+			zap.Error(err),
+			zap.String("takeoutOrderUuid", takeoutOrderUuid),
+			zap.String("toState", toState))
+		return errors.WithMessage(err, "调用准备订单接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("PrepareOrder 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("takeoutOrderUuid", takeoutOrderUuid),
+			zap.String("toState", toState))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
+// MarkOrderReady 标记订单准备完成（呼叫骑手）
+// TODO: 等待 ttpos-bmp proto 文件生成后实现
+func (c *BMPTakeoutClient) MarkOrderReady(ctx context.Context, takeoutOrderUuid string) error {
+	// 临时实现：直接返回成功
+	// 生产环境需要等待 proto 编译后使用真实的 gRPC 调用
+	logger.Logger.Info("MarkOrderReady 调用（临时实现）",
+		zap.String("takeoutOrderUuid", takeoutOrderUuid))
+
+	// TODO: 取消注释以下代码，在 proto 编译后使用
+	/*
+		req := &orderApi.MarkOrderReadyReq{
+			TakeoutOrderUuid: takeoutOrderUuid,
+			RequestId:        uuid.New().String(),
+		}
+
+		resp, err := c.orderClient.MarkOrderReady(ctx, req)
+		if err != nil {
+			logger.Logger.Error("调用 MarkOrderReady 接口失败",
+				zap.Error(err),
+				zap.String("takeoutOrderUuid", takeoutOrderUuid))
+			return errors.WithMessage(err, "调用标记订单准备完成接口失败")
+		}
+
+		if resp.Code != "0" {
+			logger.Logger.Warn("MarkOrderReady 返回错误",
+				zap.String("code", resp.Code),
+				zap.String("message", resp.Message),
+				zap.String("takeoutOrderUuid", takeoutOrderUuid))
+			return errors.New(resp.Message)
+		}
+	*/
+
+	return nil
 }
 
 // Close 关闭连接
