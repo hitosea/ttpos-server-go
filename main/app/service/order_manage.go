@@ -1898,6 +1898,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		}
 	}
 
+	refundPoints := 0.0 // 用于记录本次退款的积分
+
 	// 构建入库单，将账单的商品重新入库.
 	// 出库记录标记为已撤销，并生成入库单将库存退还
 	// 构建出库单，将账单下单减库存的商品出库
@@ -2043,6 +2045,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 						return errors.WithMessage(err)
 					}
 				}
+				refundPoints = points // 用于记录本次退款的积分
 			}
 
 			// 退优惠券。如果订单使用了优惠券，需要将优惠券退还给会员。如果使用了通用优惠券，则通用优惠券余量+1并生成记录
@@ -2177,6 +2180,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					OperatorUuid: int64(ctx.GetStaffUuid()),
 				},
 				PayTypes: payTypes,
+				Points:   refundPoints,
 			})
 		})
 
