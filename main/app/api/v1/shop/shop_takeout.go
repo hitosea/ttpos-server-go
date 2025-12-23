@@ -102,7 +102,7 @@ func (h *TakeoutHandler) ToggleTakeoutStatus(c *gin.Context) {
 
 	ctx := helper.GetContext(c)
 
-	status, err := h.takeoutAppSrv.ToggleTakeoutStatus(ctx, req.Platform, req)
+	status, err := h.takeoutSrv.ToggleTakeoutStatus(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

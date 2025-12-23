@@ -68,22 +68,18 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 	lockKey := fmt.Sprintf("takeout_order:%s:%s", takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid)
 	s.systemLock.LockUuidString(lockKey)
 	defer s.systemLock.UnlockUuidString(lockKey)
-
-	// 通过 RPC 查询订单信息
-	orderInfo, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
-	if err != nil {
-		logger.Logger.Error("RPC查询订单失败", zap.Error(err))
-		return fmt.Errorf("RPC查询订单失败: %w", err)
-	}
-
 	// 根据 Action 处理订单
 	switch takeoutOrderEvent.Action {
 	case "create":
+		// 通过 RPC 查询订单信息
+		orderInfo, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
+		if err != nil {
+			logger.Logger.Error("RPC查询订单失败", zap.Error(err))
+			return fmt.Errorf("RPC查询订单失败: %w", err)
+		}
 		return s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo)
-	case "status_update":
-		return s.UpdateOrderStatus(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo)
-	case "cancel":
-		return s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo)
+	case "status_update", "cancel":
+		return s.orderService.UpdateOrderStatus(ctx, takeoutOrderEvent.OrderUuid, takeoutOrderEvent.Status)
 	}
 	return nil
 }
@@ -159,57 +155,4 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 
 	// 8. 调用 Domain Service 创建订单
 	return s.orderService.CreateOrder(ctx, order)
-}
-
-// UpdateOrderStatus 更新订单状态（从 RPC 接收状态变更）
-func (s *takeoutOrderAppService) UpdateOrderStatus(ctx context.Context, platform string, orderUuid string, rawData map[string]interface{}) error {
-	// 1. 获取平台转换器
-	converter, ok := s.converters[platform]
-	if !ok {
-		logger.Logger.Error("不支持的平台", zap.String("platform", platform))
-		return fmt.Errorf("不支持的平台: %s", platform)
-	}
-
-	// 2. 将原始数据转为 JSON
-	rawDataJSON, err := json.Marshal(rawData)
-	if err != nil {
-		logger.Logger.Error("序列化订单数据失败", zap.Error(err))
-		return fmt.Errorf("序列化订单数据失败: %w", err)
-	}
-
-	// 3. 使用转换器解析状态更新 Webhook
-	webhookInterface, err := converter.ParseOrderWebhook(rawDataJSON)
-	if err != nil {
-		logger.Logger.Error("解析订单状态 Webhook 失败", zap.Error(err))
-		return fmt.Errorf("解析订单状态 Webhook 失败: %w", err)
-	}
-
-	// 4. 从 Webhook 提取新状态（支持多种类型）
-	var newStatus string
-
-	// 尝试作为 SubmitOrderRequest 处理
-	if submitOrderReq, ok := webhookInterface.(*grabfood.SubmitOrderRequest); ok {
-		if submitOrderReq.HasOrderState() {
-			newStatus = submitOrderReq.GetOrderState()
-		}
-	} else if orderStateReq, ok := webhookInterface.(*grabfood.OrderStateRequest); ok {
-		// 作为 OrderStateRequest 处理（状态更新）
-		newStatus = orderStateReq.State
-	} else {
-		logger.Logger.Error("Webhook 类型断言失败", zap.Any("webhookInterface", webhookInterface))
-		return fmt.Errorf("Webhook 类型断言失败，期望 *grabfood.SubmitOrderRequest 或 *grabfood.OrderStateRequest，实际类型：%T", webhookInterface)
-	}
-
-	if newStatus == "" {
-		logger.Logger.Error("订单状态为空")
-		return fmt.Errorf("订单状态为空")
-	}
-
-	logger.Logger.Info("更新订单状态",
-		zap.String("order_uuid", orderUuid),
-		zap.String("new_status", newStatus),
-		zap.String("platform", platform))
-
-	// 6. 调用 Domain Service 更新订单状态
-	return s.orderService.UpdateOrderStatus(ctx, orderUuid, newStatus, rawData)
 }

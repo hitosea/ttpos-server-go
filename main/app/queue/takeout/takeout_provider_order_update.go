@@ -34,6 +34,7 @@ func TakeoutProviderOrderUpdateHandler(ctx context.Context, msg *primitive.Messa
 	}
 
 	logger.Logger.Info("收到供应商订单更新事件",
+		zap.String("action", event.Action),
 		zap.String("provider", event.ProviderName),
 		zap.String("merchant_id", event.MerchantId),
 		zap.String("shop_uuid", event.ShopUuid),

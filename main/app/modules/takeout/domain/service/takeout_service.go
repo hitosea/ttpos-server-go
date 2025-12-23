@@ -12,8 +12,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// TakeoutDomainService 外卖域服务接口
-type TakeoutDomainService interface {
+// TakeoutService 外卖域服务接口
+type TakeoutService interface {
 	// GetByUuid 根据UUID获取外卖状态
 	GetByUuid(ctx context.Context, uuid uint64) (*model.Takeout, error)
 
@@ -72,20 +72,20 @@ type TakeoutDomainService interface {
 	UpdateImportStatus(ctx context.Context, platform string, status int8, menu interface{}) error
 }
 
-// TakeoutDomainServiceImpl 外卖域服务实现
-type TakeoutDomainServiceImpl struct {
+// TakeoutServiceImpl 外卖域服务实现
+type TakeoutServiceImpl struct {
 	takeoutRepo persistence.ITakeoutRepository
 }
 
-// NewTakeoutDomainService 创建外卖域服务
-func NewTakeoutDomainService(db *gorm.DB) TakeoutDomainService {
-	return &TakeoutDomainServiceImpl{
+// NewTakeoutService 创建外卖域服务
+func NewTakeoutService(db *gorm.DB) TakeoutService {
+	return &TakeoutServiceImpl{
 		takeoutRepo: persistence.NewTakeoutRepository(db),
 	}
 }
 
 // GetByUuid 根据UUID获取外卖状态
-func (s *TakeoutDomainServiceImpl) GetByUuid(ctx context.Context, uuid uint64) (*model.Takeout, error) {
+func (s *TakeoutServiceImpl) GetByUuid(ctx context.Context, uuid uint64) (*model.Takeout, error) {
 	takeout, err := s.takeoutRepo.GetByUuid(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("获取UUID%d的外卖状态失败: %w", uuid, err)
@@ -95,7 +95,7 @@ func (s *TakeoutDomainServiceImpl) GetByUuid(ctx context.Context, uuid uint64) (
 }
 
 // GetByPlatform 根据平台获取外卖状态
-func (s *TakeoutDomainServiceImpl) GetByPlatform(ctx context.Context, platform string) (*model.Takeout, error) {
+func (s *TakeoutServiceImpl) GetByPlatform(ctx context.Context, platform string) (*model.Takeout, error) {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (s *TakeoutDomainServiceImpl) GetByPlatform(ctx context.Context, platform s
 }
 
 // CreatePlatformStatus 创建平台状态记录
-func (s *TakeoutDomainServiceImpl) CreatePlatformStatus(ctx context.Context, platform string, enabled bool) (*model.Takeout, error) {
+func (s *TakeoutServiceImpl) CreatePlatformStatus(ctx context.Context, platform string, enabled bool) (*model.Takeout, error) {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (s *TakeoutDomainServiceImpl) CreatePlatformStatus(ctx context.Context, pla
 }
 
 // UpdatePlatformStatus 更新平台状态
-func (s *TakeoutDomainServiceImpl) UpdatePlatformStatus(ctx context.Context, uuid uint64, enabled bool) error {
+func (s *TakeoutServiceImpl) UpdatePlatformStatus(ctx context.Context, uuid uint64, enabled bool) error {
 	if err := s.takeoutRepo.UpdateStatus(ctx, uuid, enabled); err != nil {
 		return fmt.Errorf("更新UUID%d的平台状态失败: %w", uuid, err)
 	}
@@ -148,7 +148,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformStatus(ctx context.Context, uui
 }
 
 // UpdatePlatformBoundStatus 更新平台绑定状态
-func (s *TakeoutDomainServiceImpl) UpdatePlatformBoundStatus(ctx context.Context, uuid uint64, isBound bool) error {
+func (s *TakeoutServiceImpl) UpdatePlatformBoundStatus(ctx context.Context, uuid uint64, isBound bool) error {
 	if err := s.takeoutRepo.UpdateBoundStatus(ctx, uuid, isBound); err != nil {
 		return fmt.Errorf("更新UUID%d的平台绑定状态失败: %w", uuid, err)
 	}
@@ -157,7 +157,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformBoundStatus(ctx context.Context
 }
 
 // UpdatePlatformSkipStatus 更新平台跳过绑定状态
-func (s *TakeoutDomainServiceImpl) UpdatePlatformSkipStatus(ctx context.Context, uuid uint64, skip bool) error {
+func (s *TakeoutServiceImpl) UpdatePlatformSkipStatus(ctx context.Context, uuid uint64, skip bool) error {
 	if err := s.takeoutRepo.UpdateSkipStatus(ctx, uuid, skip); err != nil {
 		return fmt.Errorf("更新UUID%d的平台跳过绑定状态失败: %w", uuid, err)
 	}
@@ -166,7 +166,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformSkipStatus(ctx context.Context,
 }
 
 // UpdatePlatformSkipStatusByPlatform 通过平台名称更新跳过绑定状态
-func (s *TakeoutDomainServiceImpl) UpdatePlatformSkipStatusByPlatform(ctx context.Context, platform string, skip bool) error {
+func (s *TakeoutServiceImpl) UpdatePlatformSkipStatusByPlatform(ctx context.Context, platform string, skip bool) error {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformSkipStatusByPlatform(ctx contex
 }
 
 // GetAllPlatformStatus 获取所有平台状态
-func (s *TakeoutDomainServiceImpl) GetAllPlatformStatus(ctx context.Context) ([]*model.Takeout, error) {
+func (s *TakeoutServiceImpl) GetAllPlatformStatus(ctx context.Context) ([]*model.Takeout, error) {
 	takeouts, err := s.takeoutRepo.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("获取所有平台状态失败: %w", err)
@@ -189,7 +189,7 @@ func (s *TakeoutDomainServiceImpl) GetAllPlatformStatus(ctx context.Context) ([]
 }
 
 // ValidatePlatform 验证平台名称是否支持
-func (s *TakeoutDomainServiceImpl) ValidatePlatform(platform string) error {
+func (s *TakeoutServiceImpl) ValidatePlatform(platform string) error {
 	supportedPlatforms := []string{"grab", "lineman", "foodpanda", "shopeefood"}
 
 	for _, p := range supportedPlatforms {
@@ -202,7 +202,7 @@ func (s *TakeoutDomainServiceImpl) ValidatePlatform(platform string) error {
 }
 
 // IsPlatformEnabled 检查平台是否开启
-func (s *TakeoutDomainServiceImpl) IsPlatformEnabled(ctx context.Context, uuid uint64) (bool, error) {
+func (s *TakeoutServiceImpl) IsPlatformEnabled(ctx context.Context, uuid uint64) (bool, error) {
 	takeout, err := s.GetByUuid(ctx, uuid)
 	if err != nil {
 		return false, err
@@ -212,7 +212,7 @@ func (s *TakeoutDomainServiceImpl) IsPlatformEnabled(ctx context.Context, uuid u
 }
 
 // IsPlatformBound 检查平台是否已绑定
-func (s *TakeoutDomainServiceImpl) IsPlatformBound(ctx context.Context, uuid uint64) (bool, error) {
+func (s *TakeoutServiceImpl) IsPlatformBound(ctx context.Context, uuid uint64) (bool, error) {
 	takeout, err := s.GetByUuid(ctx, uuid)
 	if err != nil {
 		return false, err
@@ -222,7 +222,7 @@ func (s *TakeoutDomainServiceImpl) IsPlatformBound(ctx context.Context, uuid uin
 }
 
 // UpdatePlatformStatusByPlatform 通过平台名称更新平台状态
-func (s *TakeoutDomainServiceImpl) UpdatePlatformStatusByPlatform(ctx context.Context, platform string, enabled bool) error {
+func (s *TakeoutServiceImpl) UpdatePlatformStatusByPlatform(ctx context.Context, platform string, enabled bool) error {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformStatusByPlatform(ctx context.Co
 }
 
 // UpdatePlatformMenu 通过UUID更新平台菜单数据
-func (s *TakeoutDomainServiceImpl) UpdatePlatformMenu(ctx context.Context, uuid uint64, menu interface{}) error {
+func (s *TakeoutServiceImpl) UpdatePlatformMenu(ctx context.Context, uuid uint64, menu interface{}) error {
 	if err := s.takeoutRepo.UpdateMenu(ctx, uuid, menu); err != nil {
 		return fmt.Errorf("更新平台%d的菜单数据失败: %w", uuid, err)
 	}
@@ -242,7 +242,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformMenu(ctx context.Context, uuid 
 }
 
 // UpdatePlatformMenuByPlatform 通过平台名称更新平台菜单数据
-func (s *TakeoutDomainServiceImpl) UpdatePlatformMenuByPlatform(ctx context.Context, platform string, menu interface{}) error {
+func (s *TakeoutServiceImpl) UpdatePlatformMenuByPlatform(ctx context.Context, platform string, menu interface{}) error {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformMenuByPlatform(ctx context.Cont
 }
 
 // UpdatePlatformBindingLink 更新平台绑定链接
-func (s *TakeoutDomainServiceImpl) UpdatePlatformBindingLink(ctx context.Context, uuid uint64, bindingLink string) error {
+func (s *TakeoutServiceImpl) UpdatePlatformBindingLink(ctx context.Context, uuid uint64, bindingLink string) error {
 	if err := s.takeoutRepo.UpdateBindingLink(ctx, uuid, bindingLink); err != nil {
 		return fmt.Errorf("更新UUID%d的绑定链接失败: %w", uuid, err)
 	}
@@ -263,7 +263,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformBindingLink(ctx context.Context
 }
 
 // UpdatePlatformBindingLinkByPlatform 通过平台名称更新平台绑定链接
-func (s *TakeoutDomainServiceImpl) UpdatePlatformBindingLinkByPlatform(ctx context.Context, platform string, bindingLink string) error {
+func (s *TakeoutServiceImpl) UpdatePlatformBindingLinkByPlatform(ctx context.Context, platform string, bindingLink string) error {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (s *TakeoutDomainServiceImpl) UpdatePlatformBindingLinkByPlatform(ctx conte
 }
 
 // UpdateTtposMenuByPlatform 通过平台名称更新 TTPOS 导出的菜单数据
-func (s *TakeoutDomainServiceImpl) UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error {
+func (s *TakeoutServiceImpl) UpdateTtposMenuByPlatform(ctx context.Context, platform string, ttposMenu interface{}) error {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func (s *TakeoutDomainServiceImpl) UpdateTtposMenuByPlatform(ctx context.Context
 }
 
 // GetImportStatus 获取导入状态
-func (s *TakeoutDomainServiceImpl) GetImportStatus(ctx context.Context, platform string) (int8, error) {
+func (s *TakeoutServiceImpl) GetImportStatus(ctx context.Context, platform string) (int8, error) {
 	takeout, err := s.GetByPlatform(ctx, platform)
 	if err != nil {
 		return 0, err
@@ -298,7 +298,7 @@ func (s *TakeoutDomainServiceImpl) GetImportStatus(ctx context.Context, platform
 }
 
 // UpdateImportStatus 更新导入状态
-func (s *TakeoutDomainServiceImpl) UpdateImportStatus(ctx context.Context, platform string, status int8, menu interface{}) error {
+func (s *TakeoutServiceImpl) UpdateImportStatus(ctx context.Context, platform string, status int8, menu interface{}) error {
 	if err := s.ValidatePlatform(platform); err != nil {
 		return err
 	}

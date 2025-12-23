@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
@@ -9,6 +8,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
+	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
@@ -39,7 +39,7 @@ type ITakeoutOrderSrv interface {
 	CreateOrder(ctx context.Context, order *model.TakeoutOrder) error
 
 	// 更新订单状态 - 由 Application 层调用
-	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, rawData map[string]interface{}) error
+	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string) error
 }
 
 // takeoutOrderSrv 外卖订单服务实现
@@ -288,18 +288,14 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 	// 调用 BMP RPC 通知平台接受订单
 	rpcClient, err := rpc.NewBMPTakeoutClient()
 	if err != nil {
-		logger.Logger.Error("创建 BMP RPC 客户端失败",
-			zap.Error(err),
-			zap.Uint64("orderUuid", order.Uuid))
+		logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
 	}
 	defer rpcClient.Close()
 
 	// 调用 PrepareOrder 接口（接受订单）
 	if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
-		logger.Logger.Error("调用 BMP PrepareOrder 接口失败",
-			zap.Error(err),
-			zap.Uint64("orderUuid", order.Uuid))
+		logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
 	}
 
@@ -313,9 +309,7 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 	}
 
 	if err := orderRepo.UpdateByMap(order.Uuid, updateData); err != nil {
-		logger.Logger.Error("更新订单状态失败",
-			zap.Error(err),
-			zap.Uint64("orderUuid", order.Uuid))
+		logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
 	}
 
@@ -344,9 +338,7 @@ func (s *takeoutOrderSrv) RejectOrder(ctx context.Context, req *request.TakeoutO
 	orderRepo := persistence.NewTakeoutOrderRepo(db)
 	order, err := orderRepo.GetByUuid(req.Uuid)
 	if err != nil {
-		logger.Logger.Error("查询订单失败",
-			zap.Error(err),
-			zap.Uint64("uuid", req.Uuid))
+		logger.Logger.Error("查询订单失败", zap.Error(err), zap.Uint64("uuid", req.Uuid))
 		return errors.WithMessage(errors.New("查询订单失败"), err.Error())
 	}
 	if order == nil {
@@ -361,18 +353,14 @@ func (s *takeoutOrderSrv) RejectOrder(ctx context.Context, req *request.TakeoutO
 	// 调用 BMP RPC 通知平台拒绝订单
 	rpcClient, err := rpc.NewBMPTakeoutClient()
 	if err != nil {
-		logger.Logger.Error("创建 BMP RPC 客户端失败",
-			zap.Error(err),
-			zap.Uint64("orderUuid", order.Uuid))
+		logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
 	}
 	defer rpcClient.Close()
 
 	// 调用 PrepareOrder 接口（拒绝订单）
 	if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Rejected"); err != nil {
-		logger.Logger.Error("调用 BMP PrepareOrder 接口失败",
-			zap.Error(err),
-			zap.Uint64("orderUuid", order.Uuid))
+		logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("通知平台拒绝订单失败"), err.Error())
 	}
 
@@ -387,9 +375,7 @@ func (s *takeoutOrderSrv) RejectOrder(ctx context.Context, req *request.TakeoutO
 	}
 
 	if err := orderRepo.UpdateByMap(order.Uuid, updateData); err != nil {
-		logger.Logger.Error("更新订单状态失败",
-			zap.Error(err),
-			zap.Uint64("orderUuid", order.Uuid))
+		logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 		return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
 	}
 
@@ -406,12 +392,6 @@ func (s *takeoutOrderSrv) RejectOrder(ctx context.Context, req *request.TakeoutO
 		ctx.GetCompanyUuid(),
 	)
 	event.GetDispatcher().Publish(rejectedEvent)
-
-	logger.Logger.Info("订单拒绝成功，已发布事件",
-		zap.Uint64("orderUuid", order.Uuid),
-		zap.String("platform", order.Platform),
-		zap.String("shortOrderNumber", order.ShortOrderNumber),
-		zap.String("rejectReasonCode", req.RejectReasonCode))
 
 	return nil
 }
@@ -805,7 +785,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 }
 
 // UpdateOrderStatus 更新订单状态
-func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, rawData map[string]interface{}) error {
+func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, status string) error {
 	db := ctx.GetDB()
 
 	// 开启事务
@@ -815,9 +795,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		// 1. 查询订单（通过 takeout_order_uuid 字符串查询）
 		order, err := orderRepoTx.GetByTakeoutOrderUuid(orderUuid)
 		if err != nil {
-			logger.Logger.Error("查询订单失败",
-				zap.String("order_uuid", orderUuid),
-				zap.Error(err))
+			logger.Logger.Error("查询订单失败", zap.String("order_uuid", orderUuid), zap.Error(err))
 			return errors.WithMessage(err, "查询订单失败")
 		}
 
@@ -826,23 +804,19 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 			return errors.New("订单不存在")
 		}
 
-		// 2. 更新订单原始数据（保持 RawData 字段更新）
-		if rawData != nil {
-			rawDataJSON, err := json.Marshal(rawData)
-			if err != nil {
-				logger.Logger.Error("序列化订单数据失败", zap.Error(err))
-				return errors.WithMessage(err, "序列化订单数据失败")
-			}
-			order.RawData = string(rawDataJSON)
+		// 3. 转换并更新订单状态
+		// 使用平台转换器将平台状态转换为内部状态码
+		newOrderState := grab.ConvertPlatformStateToOrderState(status)
+		if newOrderState == -1 {
+			logger.Logger.Error("转换订单状态失败", zap.String("order_uuid", orderUuid), zap.String("status", status))
+			return errors.New("转换订单状态失败")
 		}
+		order.PlatformOrderState = status // 更新平台原始状态
+		order.OrderState = newOrderState  // 更新内部状态码
 
-		// 3. 更新订单（这里只更新 RawData，状态映射应该由平台转换器处理）
-		// 注意：OrderState 是 int 类型，需要由调用方传入映射后的状态码
-		// 这里暂时只更新 RawData，状态转换留给后续优化
+		// 4. 更新订单到数据库
 		if err := orderRepoTx.Update(order); err != nil {
-			logger.Logger.Error("更新订单数据失败",
-				zap.String("order_uuid", orderUuid),
-				zap.Error(err))
+			logger.Logger.Error("更新订单数据失败", zap.String("order_uuid", orderUuid), zap.Error(err))
 			return errors.WithMessage(err, "更新订单数据失败")
 		}
 

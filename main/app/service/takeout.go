@@ -35,6 +35,9 @@ import (
 )
 
 type ITakeoutSrv interface {
+	// ToggleTakeoutStatus 切换指定平台外卖状态
+	ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
+
 	// 导入菜单到TTPOS
 	ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error)
 
@@ -77,6 +80,23 @@ func NewTakeoutSrv(
 		uploadFileSrv:     NewUploadFileSrv(dbm),
 		productTakeoutSrv: productTakeoutSrv,
 	}
+}
+
+// ToggleTakeoutStatus 切换指定平台外卖状态
+func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
+	paymentMethodSrv := NewPaymentMethodSrv(s.dbm, s.settingSrv).(*paymentMethodSrv)
+	if req.Platform == "grab" {
+		err := paymentMethodSrv.SaveGrabPaymentMethod(ctx, ctx.GetDB())
+		if err != nil {
+			return nil, errors.WithMessage(err, "保存Grab支付方式失败")
+		}
+	} else if req.Platform == "lineman" {
+		err := paymentMethodSrv.SaveLineManPaymentMethod(ctx, ctx.GetDB())
+		if err != nil {
+			return nil, errors.WithMessage(err, "保存LINE MAN支付方式失败")
+		}
+	}
+	return s.takeoutAppSrv.ToggleTakeoutStatus(ctx, req)
 }
 
 // SyncMenuChanges 同步菜单变更
@@ -270,10 +290,10 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	// 初始化领域服务
 	db := ctx.GetDB()
 	progressService := domainService.NewImportProgressService(db)
-	takeoutDomainSrv := domainService.NewTakeoutDomainService(db)
+	takeoutService := domainService.NewTakeoutService(db)
 
 	// 检查Takeout表的导入状态
-	takeoutStatus, err := takeoutDomainSrv.GetImportStatus(ctx, platform)
+	takeoutStatus, err := takeoutService.GetImportStatus(ctx, platform)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取Takeout表失败")
 	}
@@ -332,7 +352,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	}
 
 	// 2.1 更新 ttpos_takeout 表的导入状态为"导入中"
-	if err := takeoutDomainSrv.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusInProgress, takeoutMenu); err != nil {
+	if err := takeoutService.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusInProgress, takeoutMenu); err != nil {
 		logger.Logger.Warn("更新导入状态为导入中失败",
 			zap.String("platform", platform),
 			zap.Error(err),
@@ -408,7 +428,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, err.Error())
 
 		// 4.1 更新 ttpos_takeout 表的导入状态为"导入失败"
-		if updateErr := takeoutDomainSrv.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusFailed, nil); updateErr != nil {
+		if updateErr := takeoutService.UpdateImportStatus(ctx, platform, takeoutModel.ImportStatusFailed, nil); updateErr != nil {
 			logger.Logger.Warn("更新导入状态为导入失败失败",
 				zap.String("platform", platform),
 				zap.Error(updateErr),
@@ -444,7 +464,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	}
 
 	// 4.2 更新 ttpos_takeout 表的导入状态
-	if updateErr := takeoutDomainSrv.UpdateImportStatus(ctx, platform, importStatus, nil); updateErr != nil {
+	if updateErr := takeoutService.UpdateImportStatus(ctx, platform, importStatus, nil); updateErr != nil {
 		logger.Logger.Warn("更新导入完成状态失败",
 			zap.String("platform", platform),
 			zap.Int8("status", importStatus),

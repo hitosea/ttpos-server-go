@@ -7,9 +7,59 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
+	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
+
+// ConvertPlatformStateToOrderState 将 Grab 平台订单状态转换为内部订单状态
+//
+// Grab 平台官方状态列表及映射：
+// - NEW/PENDING: 新订单，待接单 → TakeoutOrderStatePending (0)
+// - ACCEPTED/PREPARING/READY: 已接单，配餐中 → TakeoutOrderStateAccepted (1)
+// - ALLOCATING/DRIVER_ALLOCATED: 待骑手接单/骑手已分配 → TakeoutOrderStateRiderPending (2)
+// - DRIVER_ARRIVED/COLLECTED/DELIVERING: 骑手已到店/已取餐/配送中 → TakeoutOrderStateRiderProcessing (3)
+// - DELIVERED/COMPLETED/BILL_PAID: 已送达/已完成/已支付 → TakeoutOrderStateCompleted (4)
+// - CANCELLED/REJECTED/FAILED/REFUNDED: 已取消/拒单/失败/退款 → TakeoutOrderStateRejected (5)
+//
+// Grab 官方状态说明：
+// DRIVER_ALLOCATED - Driver has been allocated
+// DRIVER_ARRIVED - Driver has reached your store to collect the order
+// COLLECTED - Driver has collected the order from your store
+// DELIVERED - Driver has delivered the order to the consumer location
+// COMPLETED - Order has been completed successfully
+// BILL_PAID - When the order is paid by diner via Grab, the value will be BILL_PAID
+// REFUNDED - Order has been refunded to the consumer
+// CANCELLED - Order has been cancelled by the consumer, merchant, or driver for some reason
+// FAILED - The order might fail because of unallocation, reallocation, system issues, etc
+func ConvertPlatformStateToOrderState(platformState string) int {
+	// 转换为大写进行匹配（容错）
+	state := strings.ToUpper(strings.TrimSpace(platformState))
+
+	switch state {
+	case "NEW", "PENDING":
+		return valueobject.TakeoutOrderStatePending // 0 - 待接单
+
+	case "ACCEPTED", "PREPARING", "READY":
+		return valueobject.TakeoutOrderStateAccepted // 1 - 已接单配餐中
+
+	case "ALLOCATING", "DRIVER_ALLOCATED":
+		return valueobject.TakeoutOrderStateRiderPending // 2 - 待骑手接单/骑手已分配
+
+	case "DRIVER_ARRIVED", "COLLECTED", "DELIVERING", "RIDER_PROCESSING", "DRIVER_ASSIGNED":
+		return valueobject.TakeoutOrderStateRiderProcessing // 3 - 骑手配送中（已到店/已取餐/配送中）
+
+	case "DELIVERED", "COMPLETED", "BILL_PAID":
+		return valueobject.TakeoutOrderStateCompleted // 4 - 已完成（已送达/已完成/已支付）
+
+	case "CANCELLED", "REJECTED", "CANCELED", "FAILED", "REFUNDED":
+		return valueobject.TakeoutOrderStateRejected // 5 - 已拒单/取消/失败/退款
+
+	default:
+		// 未知状态，默认为待接单
+		return -1
+	}
+}
 
 // ParseOrderWebhook 解析 Grab 订单数据
 //
@@ -68,7 +118,7 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 		Platform:           platform,
 		PlatformOrderId:    platformOrderId,
 		PlatformOrderState: submitOrderReq.GetOrderState(),
-		OrderState:         0, // 待接单
+		OrderState:         ConvertPlatformStateToOrderState(submitOrderReq.GetOrderState()), // 使用状态转换函数
 		IsAbnormal:         0,
 		StockStatus:        0, // 库存充足
 		RawData:            string(rawDataJSON),

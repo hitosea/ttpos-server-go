@@ -32,7 +32,7 @@ type ITakeoutAppService interface {
 	GetTakeoutStatus(ctx context.Context, platform string) (*response.TakeoutStatusResponse, error)
 
 	// ToggleTakeoutStatus 切换指定平台外卖状态
-	ToggleTakeoutStatus(ctx context.Context, platform string, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
+	ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
 
 	// UpdateTakeoutMenu 更新指定平台的菜单数据
 	UpdateTakeoutMenu(ctx context.Context, platform string, menu interface{}) error
@@ -88,7 +88,7 @@ type ITakeoutMenuAppService = ITakeoutAppService
 // takeoutAppService 外卖应用服务实现
 type takeoutAppService struct {
 	// 状态管理相关
-	takeoutDomainService service.TakeoutDomainService
+	takeoutService service.TakeoutService
 
 	// RPC 调用相关
 	rpcService *rpcAdapter.TakeoutRPCService
@@ -120,7 +120,7 @@ func NewTakeoutAppService(
 
 	return &takeoutAppService{
 		// 状态管理相关
-		takeoutDomainService: service.NewTakeoutDomainService(nil),
+		takeoutService: service.NewTakeoutService(nil),
 
 		// RPC 调用相关
 		rpcService: rpcService,
@@ -155,10 +155,10 @@ func (s *takeoutAppService) HandleIntegrationStatus(ctx context.Context, takeout
 // GetTakeoutStatus 获取指定平台外卖状态
 func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform string) (*response.TakeoutStatusResponse, error) {
 	// 从数据库获取
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, platform)
+	takeout, err := s.takeoutService.GetByPlatform(ctx, platform)
 	if err != nil {
 		// 如果记录不存在，自动创建一条默认记录（不开启，未绑定）
-		createdTakeout, createErr := s.takeoutDomainService.CreatePlatformStatus(ctx, platform, false)
+		createdTakeout, createErr := s.takeoutService.CreatePlatformStatus(ctx, platform, false)
 		if createErr != nil {
 			return nil, fmt.Errorf("获取平台状态失败，且创建默认记录失败: %w", createErr)
 		}
@@ -177,19 +177,19 @@ func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform strin
 }
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
-func (s *takeoutAppService) ToggleTakeoutStatus(ctx context.Context, platform string, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
+func (s *takeoutAppService) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
 	// 更新状态
-	err := s.takeoutDomainService.UpdatePlatformStatusByPlatform(ctx, platform, req.Enabled)
+	err := s.takeoutService.UpdatePlatformStatusByPlatform(ctx, req.Platform, req.Enabled)
 	if err != nil {
 		return nil, fmt.Errorf("更新平台状态失败: %w", err)
 	}
 	// 返回最新状态
-	return s.GetTakeoutStatus(ctx, platform)
+	return s.GetTakeoutStatus(ctx, req.Platform)
 }
 
 // UpdateTakeoutMenu 更新指定平台的菜单数据
 func (s *takeoutAppService) UpdateTakeoutMenu(ctx context.Context, platform string, menu interface{}) error {
-	err := s.takeoutDomainService.UpdatePlatformMenuByPlatform(ctx, platform, menu)
+	err := s.takeoutService.UpdatePlatformMenuByPlatform(ctx, platform, menu)
 	if err != nil {
 		return fmt.Errorf("更新平台菜单失败: %w", err)
 	}
@@ -200,7 +200,7 @@ func (s *takeoutAppService) UpdateTakeoutMenu(ctx context.Context, platform stri
 // GetBindingLink 获取绑定链接
 func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string) (*response.BindingLinkResponse, error) {
 	// 1. 先从数据库查询缓存的绑定链接
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, platform)
+	takeout, err := s.takeoutService.GetByPlatform(ctx, platform)
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
@@ -213,7 +213,7 @@ func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string)
 	}
 
 	// 3. 保存到数据库缓存
-	if err := s.takeoutDomainService.UpdatePlatformBindingLink(ctx, takeout.Uuid, bindingLink); err != nil {
+	if err := s.takeoutService.UpdatePlatformBindingLink(ctx, takeout.Uuid, bindingLink); err != nil {
 		if takeout.BindingLink != "" {
 			bindingLink = takeout.BindingLink
 		} else {
@@ -230,7 +230,7 @@ func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string)
 // CheckBindingStatus 检查绑定状态
 func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform string) (*response.BindingStatusResponse, error) {
 	companyUuid := ctx.GetCompanyUuid()
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, platform)
+	takeout, err := s.takeoutService.GetByPlatform(ctx, platform)
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
@@ -245,9 +245,9 @@ func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform str
 	}
 
 	if isBound {
-		s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, true)
+		s.takeoutService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, true)
 	} else {
-		s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, false)
+		s.takeoutService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, false)
 	}
 
 	return &response.BindingStatusResponse{
@@ -258,7 +258,7 @@ func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform str
 // UpdateBindingStatus 更新绑定状态（包括 skip 字段）
 func (s *takeoutAppService) UpdateBindingStatus(ctx context.Context, req request.UpdateBindingStatusRequest) error {
 	// 获取平台状态
-	_, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
+	_, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
 	if err != nil {
 		return fmt.Errorf("获取平台状态失败: %w", err)
 	}
@@ -267,7 +267,7 @@ func (s *takeoutAppService) UpdateBindingStatus(ctx context.Context, req request
 
 // BindPlatform 绑定平台
 func (s *takeoutAppService) BindPlatform(ctx context.Context, uuid uint64) error {
-	err := s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, uuid, true)
+	err := s.takeoutService.UpdatePlatformBoundStatus(ctx, uuid, true)
 	if err != nil {
 		return fmt.Errorf("绑定平台失败: %w", err)
 	}
@@ -277,7 +277,7 @@ func (s *takeoutAppService) BindPlatform(ctx context.Context, uuid uint64) error
 
 // UnbindPlatform 解绑平台
 func (s *takeoutAppService) UnbindPlatform(ctx context.Context, uuid uint64) error {
-	err := s.takeoutDomainService.UpdatePlatformBoundStatus(ctx, uuid, false)
+	err := s.takeoutService.UpdatePlatformBoundStatus(ctx, uuid, false)
 	if err != nil {
 		return fmt.Errorf("解绑平台失败: %w", err)
 	}
@@ -297,7 +297,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	}
 
 	// 判断 ttpos_takeout表 的 menu 是否存在数据，如果存在就判断是否导入成功，不然就返回空
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
+	takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
@@ -324,7 +324,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	}
 
 	// 保存导出的菜单数据到 ttpos_menu 字段
-	if err := s.takeoutDomainService.UpdateTtposMenuByPlatform(ctx, req.Platform, platformData); err != nil {
+	if err := s.takeoutService.UpdateTtposMenuByPlatform(ctx, req.Platform, platformData); err != nil {
 		// 仅记录日志，不影响主流程
 		logger.Logger.Error("保存TTPOS导出菜单失败", zap.Error(err), zap.String("platform", req.Platform))
 	}
@@ -346,7 +346,7 @@ func (s *takeoutAppService) GetGrabMenu(ctx context.Context) (*response.GrabMenu
 	}
 
 	// 更新 ttpos_takeout 表的 menu 字段
-	err = s.takeoutDomainService.UpdatePlatformMenuByPlatform(ctx, "grab", menu)
+	err = s.takeoutService.UpdatePlatformMenuByPlatform(ctx, "grab", menu)
 	if err != nil {
 		return nil, fmt.Errorf("更新 TTPOS 菜单失败: %w", err)
 	}
@@ -633,7 +633,7 @@ func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.Exp
 	}
 
 	// 1. 获取旧菜单（从 ttpos_menu 字段）
-	takeout, err := s.takeoutDomainService.GetByPlatform(ctx, req.Platform)
+	takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
