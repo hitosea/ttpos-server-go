@@ -398,6 +398,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `default_img` TEXT COMMENT '默认图片',
     `erpnext_payment` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext支付方式',
+    `erpnext_payment_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext支付方式ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

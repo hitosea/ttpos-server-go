@@ -170,14 +170,64 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 
 	paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid))
 
-	paymentMethodList := paymentMethodRepo.GetAllPaymentMethodList(
-		commonRepo.WhereBySoftDelete(),
-		paymentMethodRepo.WhereNotExistsErpnextPayment(),
-	)
+	// 定义基础支付方式列表（仅同步 Cash、Balance、Free Meal for ERP）
+	basePaymentCodes := []int{
+		constant.PaymentMethodCodeCash,           // 40
+		constant.PaymentMethodCodeBalance,        // 10
+		constant.PaymentMethodCodeFreeMealForErp, // 92000（用于ERP同步的Free Meal）
+	}
 
-	saveModeOfPaymentRespMap := make(map[int]string)
-	for _, paymentMethod := range paymentMethodList {
-		channel := getChannelBySource(paymentMethod.Source)
+	// 确保 Free Meal for ERP 存在（code=92000，不改变原有的Free Meal code=-1）
+	freeMealForErpPayment := paymentMethodRepo.GetPaymentMethod(
+		paymentMethodRepo.WhereCode(constant.PaymentMethodCodeFreeMealForErp),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if freeMealForErpPayment.Uuid == 0 {
+		// Free Meal for ERP 不存在，创建它
+		maxSort, err := paymentMethodRepo.GetMaxSort()
+		if err != nil {
+			logger.Logger.Error("InitShop-GetMaxSort", zap.Error(err))
+		} else {
+			freeMealForErpPayment = model.PaymentMethod{
+				Code:                 constant.PaymentMethodCodeFreeMealForErp,
+				Name:                 "Free Meal",
+				PaymentName:          "Free Meal",
+				Source:               constant.PaymentMethodSourceSystem,
+				Status:               constant.PaymentMethodStatusEnable,
+				Sort:                 maxSort + 1,
+				DefaultImg:           "/image/pay/ja_pay.png",
+				IsShowCashier:        0, // 不在收银机显示
+				IsShowAssistant:      0, // 不在助手端显示
+				IsShowKiosk:          0,
+				IsShowMemberRecharge: 0,
+				FeePercent:           0.0000,
+			}
+			if err := paymentMethodRepo.CreatePaymentMethod(freeMealForErpPayment); err != nil {
+				logger.Logger.Error("InitShop-CreateFreeMealForErp", zap.Error(err))
+			} else {
+				logger.Logger.Info("InitShop-CreateFreeMealForErp", zap.String("name", "Free Meal"), zap.Int("code", constant.PaymentMethodCodeFreeMealForErp))
+			}
+		}
+	}
+
+	saveModeOfPaymentRespMap := make(map[int]repository.ErpnextPaymentInfo)
+	// 只同步基础支付方式
+	for _, code := range basePaymentCodes {
+		paymentMethod := paymentMethodRepo.GetPaymentMethod(
+			paymentMethodRepo.WhereCode(code),
+			commonRepo.WhereBySoftDelete(),
+		)
+		if paymentMethod.Uuid == 0 {
+			continue // 支付方式不存在，跳过
+		}
+
+		// 如果已有 erpnext_payment 或 erpnext_payment_id，跳过
+		if paymentMethod.ErpnextPayment != "" || paymentMethod.ErpnextPaymentId != "" {
+			continue
+		}
+
+		// 根据 source 获取 channel
+		channel := GetChannelBySource(paymentMethod.Source)
 		params := &selling.SaveModeOfPaymentReq{
 			CompanyAbbr: initShopReq.CompanyAbbr,
 			Branch:      response.BranchName,
@@ -192,6 +242,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 				zap.Any("params", params),
 				zap.Any("company_uuid", company.Uuid),
 				zap.Any("payment_method_uuid", paymentMethod.Uuid),
+				zap.Int("code", code),
 			)
 			continue
 		}
@@ -203,6 +254,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 				zap.Any("params", params),
 				zap.Any("company_uuid", company.Uuid),
 				zap.Any("payment_method_uuid", paymentMethod.Uuid),
+				zap.Int("code", code),
 			)
 			continue
 		}
@@ -214,13 +266,20 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 				zap.Any("params", params),
 				zap.Any("company_uuid", company.Uuid),
 				zap.Any("payment_method_uuid", paymentMethod.Uuid),
+				zap.Int("code", code),
 			)
 			continue
 		}
-		saveModeOfPaymentRespMap[paymentMethod.Code] = saveModeOfPaymentResp.Name
+		// 保存 Name 和 PaymentId
+		saveModeOfPaymentRespMap[paymentMethod.Code] = repository.ErpnextPaymentInfo{
+			Name:      saveModeOfPaymentResp.Name,
+			PaymentId: saveModeOfPaymentResp.PaymentId,
+		}
 	}
 
-	paymentMethodRepo.InitErpnextPayment(saveModeOfPaymentRespMap)
+	if len(saveModeOfPaymentRespMap) > 0 {
+		paymentMethodRepo.InitErpnextPaymentWithId(saveModeOfPaymentRespMap)
+	}
 
 	utils.SafeGo(func() {
 		err := s.UpdateTtposCompanyParentUuids(initShopReq.SiteCode)

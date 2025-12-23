@@ -49,6 +49,7 @@ type IPaymentMethodQueryRepo interface {
 	GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error)  // 查询连连支付的支付方式列表
 
 	InitErpnextPayment(payments map[int]string) error
+	InitErpnextPaymentWithId(payments map[int]ErpnextPaymentInfo) error
 }
 
 // paymentMethodRepo 仓库
@@ -233,6 +234,12 @@ func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentM
 	return result, nil
 }
 
+// ErpnextPaymentInfo ERP支付方式信息
+type ErpnextPaymentInfo struct {
+	Name      string // ERP支付方式名称
+	PaymentId string // ERP支付方式ID
+}
+
 func (r *paymentMethodRepo) InitErpnextPayment(payments map[int]string) error {
 	// 检查是否有数据需要更新
 	if len(payments) == 0 {
@@ -259,6 +266,44 @@ func (r *paymentMethodRepo) InitErpnextPayment(payments map[int]string) error {
 	return nil
 }
 
+// InitErpnextPaymentWithId 批量初始化ERP支付方式（同时保存Name和PaymentId）
+func (r *paymentMethodRepo) InitErpnextPaymentWithId(payments map[int]ErpnextPaymentInfo) error {
+	// 检查是否有数据需要更新
+	if len(payments) == 0 {
+		return nil
+	}
+	var codes []int
+	// 构建 erpnext_payment 的 CASE WHEN 语句
+	caseWhenSQLName := "CASE code"
+	var argsName []any
+	// 构建 erpnext_payment_id 的 CASE WHEN 语句
+	caseWhenSQLId := "CASE code"
+	var argsId []any
+
+	for code, info := range payments {
+		caseWhenSQLName += " WHEN ? THEN ?"
+		argsName = append(argsName, code, info.Name)
+		caseWhenSQLId += " WHEN ? THEN ?"
+		argsId = append(argsId, code, info.PaymentId)
+		codes = append(codes, code)
+	}
+	caseWhenSQLName += " END"
+	caseWhenSQLId += " END"
+
+	// 一条SQL语句批量更新两个字段
+	err := r.db.Model(&model.PaymentMethod{}).
+		Where("code IN ?", codes).
+		Updates(map[string]any{
+			"erpnext_payment":    gorm.Expr(caseWhenSQLName, argsName...),
+			"erpnext_payment_id": gorm.Expr(caseWhenSQLId, argsId...),
+		}).Error
+
+	if err != nil {
+		return errors.WithMessage(errors.New("更新支付方式失败"), err.Error())
+	}
+	return nil
+}
+
 func (r *paymentMethodRepo) WhereExistsErpnextPayment() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erpnext_payment != ''")
@@ -267,7 +312,8 @@ func (r *paymentMethodRepo) WhereExistsErpnextPayment() DBOption {
 
 func (r *paymentMethodRepo) WhereNotExistsErpnextPayment() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("erpnext_payment = ''")
+		// 未同步到ERP：erpnext_payment 为空 且 erpnext_payment_id 为空
+		return db.Where("erpnext_payment = '' AND erpnext_payment_id = ''")
 	}
 }
 

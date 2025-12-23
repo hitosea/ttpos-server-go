@@ -194,6 +194,7 @@ type SaveModeOfPaymentReq struct {
 	PayType     string  `form:"pay_type" json:"pay_type" binding:"required"`         // 支付类型（TTPOS 定义），创建时必填
 	Enabled     *bool   `form:"enabled" json:"enabled" binding:"omitempty"`          // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
 	Name        *string `form:"name" json:"name" binding:"omitempty"`                // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+	PaymentId   *string `form:"payment_id" json:"payment_id" binding:"omitempty"`   // PaymentId，可选：更新时传入
 }
 
 type CreateSupplierReq struct {

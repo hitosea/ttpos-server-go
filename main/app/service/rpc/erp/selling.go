@@ -215,7 +215,7 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		// 反结账后，重新结账时填写原商品发票名称
 		AmendedProductsInvoiceName: savePosInvoiceReq.AmendedProductsInvoiceName,
 		AmendedMaterialInvoiceName: savePosInvoiceReq.AmendedMaterialInvoiceName,
-		Remark:                    savePosInvoiceReq.Remark,
+		Remark:                     savePosInvoiceReq.Remark,
 	}
 	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
 	if err != nil {
@@ -491,6 +491,11 @@ func (s *erpSrv) SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.
 	if saveModeOfPaymentReq.Enabled != nil {
 		params.Enabled = saveModeOfPaymentReq.Enabled
 	}
+	// 更新时优先使用 PaymentId
+	if saveModeOfPaymentReq.PaymentId != nil {
+		params.PaymentId = *saveModeOfPaymentReq.PaymentId
+	}
+	// 更新时同时传递 Name
 	if saveModeOfPaymentReq.Name != nil {
 		params.Name = saveModeOfPaymentReq.Name
 	}
