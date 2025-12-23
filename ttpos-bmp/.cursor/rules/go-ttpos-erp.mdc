@@ -7,3 +7,5 @@ alwaysApply: false
 ## 编码约定
 - 创建erpnext 对应DTO时，必须参考原系统的数据结构 (https://github.com/frappe/erpnext/blob/develop/erpnext/*/doctype/**.json)
 - 创建与erpnext 交互的服务，应每个DocType 一个独立的逻辑服务
+- 对外提供的gRpc 服务，响应参数应该通过 `erp.ApiResponse` 包装
+- logic/service 层，应该尽量复用已有的逻辑，避免重复实现. 返回参数类型不能是 `erp.ApiResponse` 

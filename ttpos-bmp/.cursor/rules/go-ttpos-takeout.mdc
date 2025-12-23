@@ -1,0 +1,66 @@
+---
+alwaysApply: false
+---
+
+# ttpos-takeout 子模块规则
+
+## 编码约定
+
+### gRPC 服务响应规范
+
+- **对外提供的 gRPC 服务，响应参数应该通过 `takeout.ApiResponse` 包装**
+  - Controller 层（`internal/controller/rpc/`）的 gRPC 服务方法应返回 `*takeout.ApiResponse`
+  - 将业务数据通过 `google.protobuf.Any` 包装在 `ApiResponse.Data` 字段中
+  - 统一设置 `Code` 和 `Message` 字段表示响应状态
+
+**示例：**
+```go
+// Controller 层 - 正确示例
+func (c *Controller) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (*takeout.ApiResponse, error) {
+    res, err := service.Order().GetOrderInfo(ctx, req)
+    if err != nil {
+        return &takeout.ApiResponse{
+            Code:    string(consts.CodeServiceError),
+            Message: err.Error(),
+        }, nil
+    }
+    
+    dataAny, err := anypb.New(res)
+    if err != nil {
+        return &takeout.ApiResponse{
+            Code:    string(consts.CodeSerializeError),
+            Message: consts.MsgSerializeFailed,
+        }, nil
+    }
+    
+    return &takeout.ApiResponse{
+        Code:    string(consts.CodeSuccess),
+        Message: consts.MsgSuccess,
+        Data:    dataAny,
+    }, nil
+}
+```
+
+### Logic/Service 层规范
+
+- **logic/service 层，应该尽量复用已有的逻辑，避免重复实现**
+- **返回参数类型不能是 `takeout.ApiResponse`**
+  - Logic/Service 层应返回具体的业务数据类型（如 `*api.GetOrderInfoResp`、`*api.PrepareOrderResp` 等）
+  - 这样设计便于逻辑复用，Controller 层负责将业务数据包装为 `takeout.ApiResponse`
+
+**示例：**
+```go
+// Logic/Service 层 - 正确示例
+func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (*api.GetOrderInfoResp, error) {
+    // 业务逻辑实现
+    // 返回具体的业务数据类型，而不是 takeout.ApiResponse
+    return &api.GetOrderInfoResp{
+        // ... 业务数据
+    }, nil
+}
+
+// Logic/Service 层 - 错误示例（禁止）
+func (s *sOrder) GetOrderInfo(ctx context.Context, req *api.GetOrderInfoReq) (*takeout.ApiResponse, error) {
+    // ❌ 禁止：Logic 层不应返回 takeout.ApiResponse
+}
+```
