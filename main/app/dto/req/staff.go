@@ -228,3 +228,8 @@ type GetStaffDetailReq struct {
 var GetStaffDetailRequestMessage = map[string]string{
 	"uuid.required": "员工UUID不能为空",
 }
+
+// QueryStaffByContactReq 根据邮箱或手机号查询员工请求
+type QueryStaffByContactReq struct {
+	Keyword string `form:"keyword" binding:"omitempty"` // 搜索关键词（邮箱或手机号，支持模糊匹配）
+}
