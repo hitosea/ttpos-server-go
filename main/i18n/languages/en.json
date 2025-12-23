@@ -4402,6 +4402,7 @@
   "秘魯": "Peru",
   "秘鲁": "Peru",
   "积分": "Point",
+  "扣除积分": "Deduct points",
   "积分不能为负数": "Points cannot be negative",
   "积分不能小于0": "Points cannot be less than 0",
   "积分不能小于当前数值": "The points cannot be less than the current value",

@@ -300,7 +300,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var refundPayload event.ReturnOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
 			if refundPayload.RefundType == constant.ReturnOrderRefundTypeTotal { // 整单退款不显示商品
-				return ActionDescription{Desc: "", SplitMessage: ""}
+				descStr := " "
+				if refundPayload.Points > 0 {
+					descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(refundPayload.Points) + ") " + i18n.Translate(language, "退款金额")
+				}
+				return ActionDescription{Desc: descStr, SplitMessage: ""}
 			}
 			var desc []string
 			for _, product := range refundPayload.Products {
@@ -313,7 +317,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				desc = append(desc, item)
 			}
-			descStr := strings.Join(desc, "、")
+			descStr := ""
+			if refundPayload.Points > 0 {
+				descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(refundPayload.Points) + ") "
+			}
+			descStr = descStr + strings.Join(desc, "、")
 			return ActionDescription{Desc: descStr, SplitMessage: ""}
 		}
 	case constant.OrderOrderTaking: // 接单 不需要解析data

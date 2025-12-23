@@ -1183,6 +1183,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
 	var publishChangeMemberBalance, publishChangeMemberPoints, isExistCashPay bool
+	refundPoints := 0.0 // 用于记录本次退款的积分
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
@@ -1293,6 +1294,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
 						return errors.WithMessage(err)
 					}
+					refundPoints = points // 用于记录本次退款的积分
 				}
 			} else {
 				// 自动退积分
@@ -1326,6 +1328,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 						return errors.WithMessage(err)
 					}
 				}
+				refundPoints = points // 用于记录本次退款的积分
 			}
 			publishChangeMemberPoints = true
 		}
@@ -1532,6 +1535,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 			PayTypes:        payTypes,
 			RefundType:      returnType,
 			AuthorizedStaff: authorizedStaffInfo,
+			Points:          refundPoints,
 		})
 	})
 	// 发布"统计"事件
