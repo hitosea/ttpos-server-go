@@ -1958,13 +1958,13 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 			}
 		}
 		// 更新支付订单,状态为已退款
-		for _, saleOrder := range saleBill.SaleOrders {
-			for _, paymentOrder := range saleOrder.PaymentOrders {
-				if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
-					return errors.WithMessage(err)
-				}
-			}
-		}
+		// for _, saleOrder := range saleBill.SaleOrders {
+		// 	for _, paymentOrder := range saleOrder.PaymentOrders {
+		// 		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
+		// 			return errors.WithMessage(err)
+		// 		}
+		// 	}
+		// }
 		// 生成退款单
 		for _, saleOrder := range saleBill.SaleOrders {
 			isUseMember := saleOrder.ConsumerUuid != 0
