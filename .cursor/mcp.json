@@ -8,11 +8,6 @@
       "url": "https://mcp.context7.com/mcp",
       "headers": {}
     },
-    "exa": {
-      "type": "http",
-      "url": "https://mcp.exa.ai/mcp",
-      "headers": {}
-    },
     "Graphiti": {
       "url": "https://graph.hitosea.com/mcp/?group_id=ttpos"
     },
