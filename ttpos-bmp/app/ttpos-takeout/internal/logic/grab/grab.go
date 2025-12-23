@@ -95,15 +95,16 @@ func (s *sGrab) handleSDKError(ctx context.Context, err error, operation string)
 	if err == nil {
 		return nil
 	}
-
+	errBody := ""
 	// 安全的类型断言，记录 API 详细错误
 	if apiErr, ok := err.(*grabfood.GenericOpenAPIError); ok {
-		g.Log().Errorf(ctx, "[Grab] SDK %s 失败: %s", operation, string(apiErr.Body()))
+		errBody = string(apiErr.Body())
+		g.Log().Errorf(ctx, "[Grab] SDK %s 失败: %s", operation, errBody)
 	} else {
 		g.Log().Errorf(ctx, "[Grab] SDK %s 失败: %v", operation, err)
 	}
 
-	return gerror.Wrapf(err, "SDK %s 失败", operation)
+	return gerror.Wrapf(err, "[Grab] SDK %s 失败 %s", operation, errBody)
 }
 
 // getSDKContext 获取带环境配置的 Context
