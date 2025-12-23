@@ -376,6 +376,7 @@ func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductA
 			Uuid:       attributeGroup.ProductAttributeGroup.Uuid,
 			LocaleName: attributeGroup.ProductAttributeGroup.MultiLanguageName.GetNames(),
 			IsMust:     attributeGroup.IsMust == 1,
+			MinSelect:  attributeGroup.MinSelection,
 			MaxSelect:  attributeGroup.MaxSelection,
 			Attributes: product_resp.ProductAttributeValueList{
 				List: attributes,
