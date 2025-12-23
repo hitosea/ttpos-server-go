@@ -5,4 +5,3 @@ type SiteAuthorization struct {
 	SiteUrl       string // 站点URL
 	Authorization string // 授权令牌
 }
-

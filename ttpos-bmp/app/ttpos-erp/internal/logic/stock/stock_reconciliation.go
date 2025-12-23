@@ -2,7 +2,9 @@ package stock
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"strings"
 	itemApi "ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
@@ -104,10 +106,28 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 
 		// 设置估值价格
 		if item.ValuationRate > 0 {
+			// 用户提供了估值率，直接使用
 			itemData.ValuationRate = item.ValuationRate
+			g.Log().Infof(ctx, "使用用户提供的估值率: item_code=%s, valuation_rate=%.2f",
+				item.ItemCode, item.ValuationRate)
 		} else {
-			//默认估值率1
-			itemData.ValuationRate = consts.DefaultValuationRate
+			// 估值率为 0，从 Bin 表查询
+			binData, err := s.GetBin(ctx, &stock.GetBinReq{
+				ItemCode:  item.ItemCode,
+				Warehouse: itemData.Warehouse,
+			})
+
+			if err == nil && binData != nil && binData.ValuationRate > 0 {
+				// 使用 Bin 表中的估值率
+				itemData.ValuationRate = binData.ValuationRate
+				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
+					item.ItemCode, itemData.Warehouse, binData.ValuationRate)
+			} else {
+				// Bin 表中没有估值率，使用保底值 1
+				itemData.ValuationRate = consts.DefaultValuationRate
+				g.Log().Warningf(ctx, "Bin 表中无估值率，使用保底值 1: item_code=%s, warehouse=%s",
+					item.ItemCode, itemData.Warehouse)
+			}
 		}
 
 		itemList = append(itemList, itemData)
@@ -271,6 +291,43 @@ func (s *sStock) SubmitStockReconciliation(ctx context.Context, req *stock.Submi
 			Message: "库存盘点使用默认单据号提交成功",
 		}, nil
 	}
+
+	// 查询盘点单详情，验证估值率
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeStockReconciliation,
+		Name:    req.StockReconciliationName,
+	}, nil)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询盘点单详情失败")
+	}
+
+	// 验证估值率
+	j := resp
+	itemsArray := j.GetJsons("data.items")
+	invalidItems := make([]string, 0)
+
+	for _, itemData := range itemsArray {
+		itemCode := itemData.Get("item_code").String()
+		warehouse := itemData.Get("warehouse").String()
+		valuationRate := itemData.Get("valuation_rate").Float64()
+
+		// 检查估值率是否为 0 或 1（保底值）
+		if valuationRate == 0 || valuationRate == 1 {
+			invalidItems = append(invalidItems,
+				fmt.Sprintf("物品 [%s] 在仓库 [%s] 的估值率为空（%.2f）",
+					itemCode, warehouse, valuationRate))
+		}
+	}
+
+	if len(invalidItems) > 0 {
+		errMsg := fmt.Sprintf("盘点单中有物品估值率为空，无法提交。请先通过采购入库建立库存。\n详情：\n%s",
+			strings.Join(invalidItems, "\n"))
+		g.Log().Warning(ctx, errMsg)
+		return nil, gerror.New(errMsg)
+	}
+
+	g.Log().Infof(ctx, "估值率验证通过，提交盘点单: %s", req.StockReconciliationName)
+
 	// 提交库存盘点单据
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeStockReconciliation, req.StockReconciliationName, erp.DocstatusSubmitted)
 	if err != nil {
