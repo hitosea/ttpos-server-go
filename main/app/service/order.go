@@ -3375,6 +3375,7 @@ func (s *orderSrv) getDecreaseStockList(_ context.Context, cookingDeductSaleOrde
 							MaterialUuid:  material.MaterialUuid,
 							WarehouseUuid: material.Material.WarehouseUuid,
 							Num:           num,
+							SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
 						})
 					}
 				}
