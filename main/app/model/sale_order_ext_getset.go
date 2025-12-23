@@ -579,6 +579,19 @@ func (model *SaleOrder) GetMemberName() string {
 	return model.Member.Nickname
 }
 
+// GetMemberPhone 获取订单的会员手机号
+func (model *SaleOrder) GetMemberPhone() string {
+	if model.Member == nil {
+		return ""
+	}
+	return model.Member.Phone
+}
+
+// GetMemberNameAndPhone 获取订单的会员名称和手机号
+func (model *SaleOrder) GetMemberNameAndPhone() string {
+	return model.GetMemberName() + "(" + model.GetMemberPhone() + ")"
+}
+
 // 获取该销售订单使用会员余额支付的金额
 func (model *SaleOrder) GetMemberBalanceAmount() float64 {
 	memberBalanceAmount := decimal.NewFromFloat(0)

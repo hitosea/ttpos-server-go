@@ -137,7 +137,7 @@ type OrderInfos struct {
 	PaymentAmount   float64             `json:"payment_amount"`    // 支付金额
 	RefundAmount    float64             `json:"refund_amount"`     // 退款金额
 	MemberNames     string              `json:"member_names"`      // 会员名称
-	MemberUuids     string              `json:"member_uuids"`      // 会员名称
+	MemberUuids     string              `json:"member_uuids"`      // 昵称+会员手机号 任务:37911【优化】收银机/商家后台-订单详情中调整会员信息内容
 	BuffetNames     string              `json:"buffet_names"`      // 自助餐名称
 	CancelReason    string              `json:"cancel_reason"`     // 取消原因
 	CashierName     string              `json:"cashier_name"`      // 收银员名称

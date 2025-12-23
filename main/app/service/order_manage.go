@@ -432,7 +432,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 
 	// 组合信息
 	totalMemberNames := []string{}
-	totalMemberUuids := []string{}
+	totalMemberNameAndPhones := []string{}
 	orderList := make([]resp.OrderInfo, 0)
 	for i, saleOrder := range saleBill.SaleOrders {
 		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
@@ -442,7 +442,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
 		}
 		if saleOrder.ConsumerUuid != 0 {
-			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(uint64(saleOrder.Member.ID), 10))
+			totalMemberNameAndPhones = append(totalMemberNameAndPhones, saleOrder.GetMemberNameAndPhone())
 		}
 		//
 		products := make([]resp.OrderProduct, 0)
@@ -666,7 +666,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			PaymentAmount: saleBill.GetPaymentAmount(),
 			RefundAmount:  saleBill.GetTotalRefundAmount(),
 			MemberNames:   strings.Join(totalMemberNames, ","),
-			MemberUuids:   strings.Join(totalMemberUuids, ","),
+			MemberUuids:   strings.Join(totalMemberNameAndPhones, ","),
 			CashierName:   saleBill.CashierName,
 			IsBuffet:      saleBill.IsBuffet == constant.SaleBillIsBuffetYes,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
