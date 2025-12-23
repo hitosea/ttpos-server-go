@@ -54,6 +54,7 @@ class Product extends BaseModel
         'feed_required',
         'feed_open_max_select',
         'feed_max_select',
+        'feed_min_select', // 兼容字段：加料最小可选数量
         'selling_point',
         'selling_point_i18n',
         'is_enable_grade',
@@ -68,7 +69,7 @@ class Product extends BaseModel
     private const SELLING_POINT_LANGUAGES = ['zh', 'en', 'zhtw', 'th', 'my', 'ja', 'ko', 'tr', 'sv'];
 
     /*
-     * 类型 10-成品 20-材料
+     * 类型 10-成品 20-材料 30-套餐
      */
     const TYPE_PRODUCT = 10;
     const TYPE_MATERIAL = 20;
@@ -155,6 +156,10 @@ class Product extends BaseModel
     public function getFeedMaxSelectAttr($value, $data = [])
     {
         return $this->sauce_max_selection ?: 0;
+    }
+    public function getFeedMinSelectAttr($value, $data = [])
+    {
+        return $this->sauce_min_selection ?: 0;
     }
     public function getSellingPointAttr($value, $data = [])
     {
