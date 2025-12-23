@@ -110,6 +110,7 @@ type BusinessDataRankProductReq struct {
 	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   int64 `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
 	RankType       int   `form:"rank_type" json:"rank_type"`               // 排行类型 (1 按销量, 2 按销售额)
+	ExcludeDataManage bool `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
 }
 
 // BusinessDataCountProductSalesReq 营业数据商品销售统计列表请求
@@ -126,6 +127,7 @@ type BusinessDataCountProductSalesReq struct {
 	OrderSource    int    `form:"order_source" json:"order_source"`         // 订单来源: -1=全部, 1=店内, 2=外卖
 	SortType       int    `form:"sort_type" json:"sort_type"`               // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
 	SortDirection  int    `form:"sort_direction" json:"sort_direction"`     // 排序方向 0=默认、 1=升序、 2=降序
+	ExcludeDataManage bool `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
 }
 
 // KitchenEfficiencyAnalysisReq 统计后厨效率分析请求
@@ -162,6 +164,7 @@ type BusinessTimePeriodReq struct {
 	OrderDesk      int   `form:"order_desk" json:"order_desk"`             // 桌台订单， 0=否、 1=是
 	OrderTakeout   int   `form:"order_takeout" json:"order_takeout"`       // 外送订单， 0=否、 1=是
 	StatisticsType int   `form:"statistics_type" json:"statistics_type"`   // 统计类型， 0=开台时间、 1=结账时间
+	ExcludeDataManage bool `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
 }
 
 // StatisticsSummaryReq 统计综合运营请求
@@ -170,6 +173,7 @@ type StatisticsSummaryReq struct {
 	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   int64 `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
 	Cycle          int   `form:"cycle" json:"cycle"`                       // 周期: 0=按日、1=按月
+	ExcludeDataManage bool `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
 }
 
 // StatisticsPaymentMethodReq 统计收款数据请求
@@ -182,4 +186,5 @@ type StatisticsPaymentMethodReq struct {
 	OrderDesk         int    `form:"order_desk" json:"order_desk"`                   // 桌台订单， 0=否、 1=是
 	OrderTakeout      int    `form:"order_takeout" json:"order_takeout"`             // 外送订单， 0=否、 1=是
 	PaymentMethodList string `form:"payment_method_list" json:"payment_method_list"` // 支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割
+	ExcludeDataManage bool   `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
 }
