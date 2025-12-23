@@ -8,7 +8,7 @@
 | DooTask ID | 37946                                         |
 | 版本       | v2.12.0                                       |
 | 创建时间   | 2025-12-22                                    |
-| Story Point | 预估 11 点（仅后端Go代码）                    |
+| Story Point | 预估 15 点（仅后端Go代码）                    |
 
 ---
 
@@ -182,15 +182,18 @@
    - 验证 `max_selection >= min_selection`
    - 验证 `max_selection <= 属性值数量`
    - **兼容旧数据：`is_must=1` 且 `min_selection=0` 时，自动设置 `min_selection=1`**
+   - **修改属性组上限：从10个改为100个**
 3. ✅ 实现 `CheckProductSauce` 方法：
    - 验证 `sauce_max_selection >= sauce_min_selection`
    - 验证 `sauce_max_selection <= 加料值数量`
    - **兼容旧数据：`is_must=1` 且 `min_selection=0` 时，自动设置 `min_selection=1`**
+   - **修改加料上限：从10个改为100个**
 4. ✅ 实现 `CheckProductPackageGroup` 方法：
    - 验证 `optional_count >= optional_min_count`
    - 验证 `optional_count <= 分组商品数量`
    - 固定分组自动设置 `optional_min_count` 和 `optional_count` 为商品数量
    - **兼容旧数据：可选分组 `optional_min_count=0` 时，自动设置为 `1`**
+   - **修改套餐分组上限：从5个改为100个**
 5. ✅ **版本兼容性处理逻辑已实现**
 
 **验收标准：**
@@ -207,9 +210,9 @@
 
 ---
 
-### 阶段五：API层（2 SP）
+### 阶段五：API层（3 SP）
 
-#### Task 5.1: 更新商品API请求和响应结构 ⭐⭐ ✅
+#### Task 5.1: 更新商品API请求结构 ⭐⭐ ✅
 
 **负责人：** 已完成  
 **实际时间：** 2.5小时  
@@ -250,6 +253,46 @@
 
 ---
 
+#### Task 5.2: 更新商品详情响应结构 ⭐ ✅
+
+**负责人：** 已完成  
+**实际时间：** 1小时  
+**Story Point：** 1
+
+**描述：**  
+更新商品详情接口的响应结构，确保返回新增的可选范围字段，同时保持旧字段以实现版本兼容。
+
+**实施步骤：**
+
+1. ✅ 更新 `main/app/dto/resp/product_resp/product.go`：
+   - `ProductSauceList` 已包含 `IsMust`, `MinSelect`, `MaxSelect` 字段
+   - `ProductAttributeGroup` 已包含 `IsMust`, `MinSelect`, `MaxSelect` 字段
+   - `ProductPackageSubProductGroup` 已包含 `OptionalMinCount`, `OptionalCount` 字段
+2. ✅ 修改 `main/app/service/product.go` 的 `GetProductDetail` 方法：
+   - 小料列表正确填充：`IsMust`, `MinSelect`, `MaxSelect`（行5529-5534）
+   - 属性组列表通过 `GetRespAttributeGroupList` 正确填充字段（行5535-5537）
+   - 套餐分组列表通过 `GetRespPackageSubProductGroupList` 正确填充字段（行5538-5540）
+3. ✅ 修改 `main/app/model/product.go`：
+   - `GetRespAttributeGroupList` 方法正确返回 `IsMust`, `MinSelect`, `MaxSelect`（行358-387）
+   - `GetRespPackageSubProductGroupList` 方法正确返回 `OptionalMinCount`, `OptionalCount`（行389-432）
+
+**验收标准：**
+- ✅ 响应结构包含所有新字段
+- ✅ 同时返回旧字段（`IsMust`, `SauceRequired`）以兼容v2.11客户端
+- ✅ 新字段值从数据库正确读取和转换
+- ✅ **v2.11客户端查询商品详情能获取到旧字段**
+- ✅ **v2.12客户端查询商品详情能获取到新旧字段**
+- ⏳ 单元测试（Task 6.1）
+
+**依赖：** Task 5.1
+
+**输出文件：**
+- ✅ `main/app/dto/resp/product_resp/product.go`
+- ✅ `main/app/service/product.go` (GetProductDetail方法)
+- ✅ `main/app/model/product.go` (GetRespAttributeGroupList, GetRespPackageSubProductGroupList方法)
+
+---
+
 ### 阶段六：测试（2 SP）
 
 #### Task 6.1: 编写后端集成测试 ⭐⭐ ⏳
@@ -278,21 +321,29 @@
    - 设置有效范围 -> 成功
    - 设置 max < min -> 失败
    - 设置 max > 分组商品数量 -> 失败
-5. **测试版本兼容性**：
+5. **测试商品详情接口响应**：
+   - **查询包含属性的商品 -> 验证属性组返回 `is_must`, `min_select`, `max_select` 字段**
+   - **查询包含小料的商品 -> 验证小料列表返回 `is_must`, `min_select`, `max_select` 字段**
+   - **查询套餐商品 -> 验证分组返回 `optional_min_count`, `optional_count` 字段**
+   - **验证旧字段和新字段的值一致性：`is_must = (min_select > 0)`**
+6. **测试版本兼容性**：
    - **v2.11客户端添加商品（不传新字段）-> 成功，验证默认值**
    - **v2.11客户端查询商品 -> 成功，验证包含旧字段**
+   - **v2.11客户端查询商品详情 -> 成功，验证包含旧字段**
    - **v2.12客户端添加商品（传新字段）-> 成功**
    - **v2.12客户端添加商品（传新旧字段）-> 成功，验证优先使用新字段**
    - **v2.12客户端查询商品 -> 成功，验证包含新旧字段**
-6. API接口测试（使用Postman或curl）
+   - **v2.12客户端查询商品详情 -> 成功，验证包含新旧字段**
+7. API接口测试（使用Postman或curl）
 
 **验收标准：**
 - ✅ 所有集成测试通过
 - ✅ 测试覆盖率 > 80%
 - ✅ API接口测试通过
 - ✅ **版本兼容性测试全部通过**
+- ✅ **商品详情接口响应字段验证通过**
 
-**依赖：** Task 5.1
+**依赖：** Task 5.1, Task 5.2
 
 **输出文件：**
 - `main/tests/integration/product_management_test.go`
@@ -349,7 +400,7 @@ Task 3.1 (Repository层)
     ↓
 Task 4.1 (Service删除) ← Task 4.2 (Service验证)
     ↓
-Task 5.1 (API层)
+Task 5.1 (API请求) → Task 5.2 (API响应)
     ↓
 Task 6.1 (后端集成测试)
     ↓
@@ -366,14 +417,14 @@ Task 7.1 (文档部署)
 | Model层       | 1      | 1           | 1h       |
 | Repository层  | 1      | 2           | 2h       |
 | Service层     | 2      | 4           | 6h       |
-| API层         | 1      | 2           | 2h       |
+| API层         | 2      | 3           | 3.5h     |
 | 测试          | 1      | 2           | 3h       |
 | 文档部署      | 1      | 1           | 1h       |
-| **合计**      | **8**  | **14**      | **17h**  |
+| **合计**      | **9**  | **15**      | **18.5h**|
 
 **说明：**
-- Story Point：14 点（仅后端Go代码）
-- 预估工时：17 小时，实际可能需要 2-3 个工作日完成
+- Story Point：15 点（仅后端Go代码）
+- 预估工时：18.5 小时，实际可能需要 2-3 个工作日完成
 - 建议分配：2 名后端Go开发人员
 
 ---
@@ -495,4 +546,6 @@ Task 7.1 (文档部署)
 | 1.2  | 2025-12-22 | 曾振华 | 修改套餐分组字段方案：保持 optional_count 字段名不变，只修改注释                   |
 | 1.3  | 2025-12-22 | 曾振华 | 清理所有前端相关描述，聚焦后端开发任务                                             |
 | 1.4  | 2025-12-22 | 曾振华 | 新增版本兼容性处理说明，明确v2.11和v2.12的兼容策略和测试要求                       |
+| 1.5  | 2025-12-23 | AI     | 补充Task 5.2：商品详情接口响应结构更新任务，调整SP为15点                           |
+| 1.6  | 2025-12-23 | AI     | 修复上限验证：属性组/加料/套餐分组上限从10/10/5个改为100/100/100个                |
 

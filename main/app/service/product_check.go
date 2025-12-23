@@ -350,8 +350,8 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			attributeGroupCount++
 		}
 	}
-	if attributeGroupCount > 10 {
-		return nil, errors.New("属性组不能超过10个")
+	if attributeGroupCount > 100 {
+		return nil, errors.New("属性组不能超过100个")
 	}
 	return attributes, nil
 }
@@ -440,8 +440,8 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 	if param.IsOpenInput && sauceDefaultCount > param.MaxSelection {
 		return nil, errors.New("默认勾选数量不能大于最大选择数量")
 	}
-	if sauceCount > 10 {
-		return nil, errors.New("加料不能超过10个")
+	if sauceCount > 100 {
+		return nil, errors.New("加料不能超过100个")
 	}
 	return &CheckProductSauceResult{
 		IsMust:       param.IsMust,
@@ -773,8 +773,8 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 		}
 	}
 
-	if count > 5 {
-		return nil, errors.New("分组不能超过5个")
+	if count > 100 {
+		return nil, errors.New("分组不能超过100个")
 	}
 
 	return &CheckProductPackageResult{
