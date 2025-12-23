@@ -3636,6 +3636,9 @@ definitions:
       category_uuids:
         description: '分类UUID列表, 格式: "uuid1,uuid2,,,," 空字符串=全部'
         type: string
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       order_source:
         description: '订单来源: -1=全部, 1=店内, 2=外卖'
         type: integer
@@ -3732,6 +3735,9 @@ definitions:
     type: object
   req.BusinessDataRankProductReq:
     properties:
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       query_end_time:
         description: 查询结束时间戳
         type: integer
@@ -3744,6 +3750,9 @@ definitions:
     type: object
   req.BusinessTimePeriodReq:
     properties:
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -8191,6 +8200,9 @@ definitions:
       cycle:
         description: '周期: 0=按日、1=按月'
         type: integer
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -8224,6 +8236,9 @@ definitions:
       cycle:
         description: '周期: 0=按日、1=按月'
         type: integer
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       page_no:
         description: 页码
         minimum: 1
@@ -12768,7 +12783,7 @@ definitions:
         description: 会员名称
         type: string
       member_uuids:
-        description: 会员名称
+        description: 昵称+会员手机号 任务:37911【优化】收银机/商家后台-订单详情中调整会员信息内容
         type: string
       nationality_name:
         description: 国籍名称
@@ -14758,6 +14773,29 @@ definitions:
         description: 采购单列表
         items:
           $ref: '#/definitions/resp.PurchaseOrderInfo'
+        type: array
+    type: object
+  resp.QueryStaffByContactItem:
+    properties:
+      email:
+        description: 邮箱
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      uuid:
+        description: 员工UUID
+        type: integer
+    type: object
+  resp.QueryStaffByContactResp:
+    properties:
+      list:
+        description: 员工列表
+        items:
+          $ref: '#/definitions/resp.QueryStaffByContactItem'
         type: array
     type: object
   resp.QueueDataResp:
@@ -21086,6 +21124,33 @@ paths:
       summary: 获取商品选购详情
       tags:
       - 点餐助手端.订单
+  /assistant/order/query_staff:
+    get:
+      consumes:
+      - application/json
+      description: 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示
+      parameters:
+      - description: 搜索关键词（邮箱或手机号，支持模糊匹配）
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.QueryStaffByContactResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 根据邮箱或手机号查询员工
+      tags:
+      - 点餐助手端.订单
   /assistant/order/verify_password:
     post:
       consumes:
@@ -26806,6 +26871,33 @@ paths:
       security:
       - JwtToken: []
       summary: 打印发票
+      tags:
+      - 收银端.订单
+  /cashier/order/query_staff:
+    get:
+      consumes:
+      - application/json
+      description: 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示
+      parameters:
+      - description: 搜索关键词（邮箱或手机号，支持模糊匹配）
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.QueryStaffByContactResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 根据邮箱或手机号查询员工
       tags:
       - 收银端.订单
   /cashier/order/re_return:

@@ -4306,6 +4306,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/order/query_staff": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.订单"
+                ],
+                "summary": "根据邮箱或手机号查询员工",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索关键词（邮箱或手机号，支持模糊匹配）",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.QueryStaffByContactResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/order/verify_password": {
             "post": {
                 "security": [
@@ -14107,6 +14155,54 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/order/query_staff": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.订单"
+                ],
+                "summary": "根据邮箱或手机号查询员工",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索关键词（邮箱或手机号，支持模糊匹配）",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.QueryStaffByContactResp"
                                         }
                                     }
                                 }
@@ -41757,6 +41853,10 @@ const docTemplate = `{
                     "description": "分类UUID列表, 格式: \"uuid1,uuid2,,,,\" 空字符串=全部",
                     "type": "string"
                 },
+                "exclude_data_manage": {
+                    "description": "是否排除数据管理订单",
+                    "type": "boolean"
+                },
                 "order_source": {
                     "description": "订单来源: -1=全部, 1=店内, 2=外卖",
                     "type": "integer"
@@ -41887,6 +41987,10 @@ const docTemplate = `{
         "req.BusinessDataRankProductReq": {
             "type": "object",
             "properties": {
+                "exclude_data_manage": {
+                    "description": "是否排除数据管理订单",
+                    "type": "boolean"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
@@ -41904,6 +42008,10 @@ const docTemplate = `{
         "req.BusinessTimePeriodReq": {
             "type": "object",
             "properties": {
+                "exclude_data_manage": {
+                    "description": "是否排除数据管理订单",
+                    "type": "boolean"
+                },
                 "order_desk": {
                     "description": "桌台订单， 0=否、 1=是",
                     "type": "integer"
@@ -48268,6 +48376,10 @@ const docTemplate = `{
                     "description": "周期: 0=按日、1=按月",
                     "type": "integer"
                 },
+                "exclude_data_manage": {
+                    "description": "是否排除数据管理订单",
+                    "type": "boolean"
+                },
                 "order_desk": {
                     "description": "桌台订单， 0=否、 1=是",
                     "type": "integer"
@@ -48311,6 +48423,10 @@ const docTemplate = `{
                 "cycle": {
                     "description": "周期: 0=按日、1=按月",
                     "type": "integer"
+                },
+                "exclude_data_manage": {
+                    "description": "是否排除数据管理订单",
+                    "type": "boolean"
                 },
                 "page_no": {
                     "description": "页码",
@@ -55010,7 +55126,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "member_uuids": {
-                    "description": "会员名称",
+                    "description": "昵称+会员手机号 任务:37911【优化】收银机/商家后台-订单详情中调整会员信息内容",
                     "type": "string"
                 },
                 "nationality_name": {
@@ -57932,6 +58048,39 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.PurchaseOrderInfo"
+                    }
+                }
+            }
+        },
+        "resp.QueryStaffByContactItem": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "description": "邮箱",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "姓名",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "员工UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.QueryStaffByContactResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "员工列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.QueryStaffByContactItem"
                     }
                 }
             }
