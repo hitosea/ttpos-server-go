@@ -175,6 +175,7 @@ message CancelPosInvoiceResp {
 message ModeOfPayment {
   string name = 1; // 支付方式名称
   bool enabled = 2; // 是否启用
+  string payment_id = 3; // 支付方式唯一标识（PaymentID）
 }
 
 // SaveModeOfPaymentReq 保存/同步支付方式请求
@@ -185,6 +186,7 @@ message SaveModeOfPaymentReq {
   string pay_type = 4;     // 支付类型（TTPOS 定义），创建时必填
   optional bool enabled = 5; // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
   optional string name = 6;  // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+  string payment_id = 7;     // 支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字
 }
 
 // SaveModeOfPaymentResp 保存/同步支付方式响应

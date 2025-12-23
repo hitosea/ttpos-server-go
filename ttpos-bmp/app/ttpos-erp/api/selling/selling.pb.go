@@ -1514,8 +1514,9 @@ func (x *CancelPosInvoiceResp) GetAsyncRecordId() string {
 
 type ModeOfPayment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"支付方式名称"`      // 支付方式名称
-	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty" dc:"是否启用"` // 是否启用
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"支付方式名称"`                                         // 支付方式名称
+	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty" dc:"是否启用"`                                    // 是否启用
+	PaymentId     string                 `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID）"` // 支付方式唯一标识（PaymentID）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1564,15 +1565,23 @@ func (x *ModeOfPayment) GetEnabled() bool {
 	return false
 }
 
+func (x *ModeOfPayment) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
 // SaveModeOfPaymentReq 保存/同步支付方式请求
 type SaveModeOfPaymentReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`  // 公司简称，必填
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支，必填"`                                 // 分支，必填
-	Channel       string                 `protobuf:"bytes,3,opt,name=channel,proto3" json:"channel,omitempty" dc:"渠道，如 LianLianPay，创建时必填"`              // 渠道，如 LianLianPay，创建时必填
-	PayType       string                 `protobuf:"bytes,4,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty" dc:"支付类型（TTPOS 定义），创建时必填"` // 支付类型（TTPOS 定义），创建时必填
-	Enabled       *bool                  `protobuf:"varint,5,opt,name=enabled,proto3,oneof" json:"enabled,omitempty" dc:"是否启用，可选：仅在明确传入时更新 ERP 启用状态"`   // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
-	Name          *string                `protobuf:"bytes,6,opt,name=name,proto3,oneof" json:"name,omitempty" dc:"支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作"`      // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                 // 公司简称，必填
+	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支，必填"`                                                                // 分支，必填
+	Channel       string                 `protobuf:"bytes,3,opt,name=channel,proto3" json:"channel,omitempty" dc:"渠道，如 LianLianPay，创建时必填"`                                             // 渠道，如 LianLianPay，创建时必填
+	PayType       string                 `protobuf:"bytes,4,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty" dc:"支付类型（TTPOS 定义），创建时必填"`                                // 支付类型（TTPOS 定义），创建时必填
+	Enabled       *bool                  `protobuf:"varint,5,opt,name=enabled,proto3,oneof" json:"enabled,omitempty" dc:"是否启用，可选：仅在明确传入时更新 ERP 启用状态"`                                  // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
+	Name          *string                `protobuf:"bytes,6,opt,name=name,proto3,oneof" json:"name,omitempty" dc:"支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作"`                                     // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+	PaymentId     string                 `protobuf:"bytes,7,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字"` // 支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1645,6 +1654,13 @@ func (x *SaveModeOfPaymentReq) GetEnabled() bool {
 func (x *SaveModeOfPaymentReq) GetName() string {
 	if x != nil && x.Name != nil {
 		return *x.Name
+	}
+	return ""
+}
+
+func (x *SaveModeOfPaymentReq) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
 	}
 	return ""
 }
@@ -1909,17 +1925,21 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x14CancelPosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
 	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12&\n" +
-	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"=\n" +
+	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"\\\n" +
 	"\rModeOfPayment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\aenabled\x18\x02 \x01(\bR\aenabled\"\xd3\x01\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\"\xf2\x01\n" +
 	"\x14SaveModeOfPaymentReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x18\n" +
 	"\achannel\x18\x03 \x01(\tR\achannel\x12\x19\n" +
 	"\bpay_type\x18\x04 \x01(\tR\apayType\x12\x1d\n" +
 	"\aenabled\x18\x05 \x01(\bH\x00R\aenabled\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\x06 \x01(\tH\x01R\x04name\x88\x01\x01B\n" +
+	"\x04name\x18\x06 \x01(\tH\x01R\x04name\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\a \x01(\tR\tpaymentIdB\n" +
 	"\n" +
 	"\b_enabledB\a\n" +
 	"\x05_name\"+\n" +

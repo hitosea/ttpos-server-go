@@ -12,6 +12,7 @@ import (
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+	"ttpos-bmp/utility/uuid"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -1082,7 +1083,7 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeModeOfPayment,
 	}, &erp.RequestParams{
-		Fields:  []string{"name", "enabled"},
+		Fields:  []string{"name", "enabled", "custom_payment_id"},
 		Filters: filters,
 	})
 	if err != nil {
@@ -1134,12 +1135,20 @@ func (s *sSelling) createModeOfPayment(ctx context.Context, req *selling.SaveMod
 		}
 		name := fmt.Sprintf("%s%04d - %s", prefix, nextSeq, req.CompanyAbbr)
 
+		// 生成或使用提供的 PaymentID
+		paymentID := req.PaymentId
+		if paymentID == "" {
+			// 自动生成：PID + 16位数字
+			paymentID = fmt.Sprintf("PID%d", uuid.MustGetID())
+		}
+
 		payload := g.Map{
-			"mode_of_payment": name,
-			"name":            name,
-			"type":            "General", // 需求默认通用类型，后续可按渠道扩展
-			"custom_branch":   req.Branch,
-			"custom_company":  companyName,
+			"mode_of_payment":   name,
+			"name":              name,
+			"type":              "General", // 需求默认通用类型，后续可按渠道扩展
+			"custom_branch":     req.Branch,
+			"custom_company":    companyName,
+			"custom_payment_id": paymentID,
 		}
 
 		// 如果请求明确携带enabled字段，则更新ERP的启用状态
@@ -1249,7 +1258,7 @@ func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveMod
 		DocType: erp.DocTypeModeOfPayment,
 		Name:    name,
 	}, &erp.RequestParams{
-		Fields: []string{"name", "custom_company", "custom_branch", "enabled"},
+		Fields: []string{"name", "custom_company", "custom_branch", "enabled", "custom_payment_id"},
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
@@ -1281,6 +1290,11 @@ func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveMod
 		} else {
 			updateData["enabled"] = 0
 		}
+	}
+
+	// 仅在明确传入 payment_id 时才更新
+	if req.PaymentId != "" {
+		updateData["custom_payment_id"] = req.PaymentId
 	}
 
 	// 4. 如果有字段需要更新，则调用 ERP 更新接口
