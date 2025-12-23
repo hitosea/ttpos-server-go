@@ -4031,7 +4031,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_receiver` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_uuid` (`uuid`),
     UNIQUE KEY `uk_takeout_order_uuid` (`takeout_order_uuid`),
-    UNIQUE KEY `uk_takeout_order_uuid` (`takeout_order_uuid`, `delete_time`),
+    UNIQUE KEY `uk_takeout_order_uuid_delete_time` (`takeout_order_uuid`, `delete_time`),
     KEY `idx_delete_time` (`delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单收货人信息表';
 
