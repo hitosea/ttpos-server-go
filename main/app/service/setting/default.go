@@ -279,9 +279,10 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		BatchTagNum:        0,             // 分批类型数量
 		SafetyStockType:    "1",           // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 
-		RequiredParentCompanyApproval: "0",                           // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
-		ViaParentCompanyWarehouse:     "0",                           // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
-		BatchCookingMode:              constant.BatchCookingModePost, // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
+		RequiredParentCompanyApproval: "0",                            // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		ViaParentCompanyWarehouse:     "0",                            // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		BatchCookingMode:              constant.BatchCookingModePost,  // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
+		BatchPrintMode:                constant.BatchPrintModeDefault, // 分批打印模式: "default" 默认 / "merge" 合并
 
 		EnableOrderSource: "0", // 外卖功能开关 0-关闭 1-开启
 		EnableNationality: "0", // 国籍功能开关 0-关闭 1-开启

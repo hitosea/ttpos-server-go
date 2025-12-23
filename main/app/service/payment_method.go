@@ -186,7 +186,11 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	commonRepo := repository.NewCommonRepo()
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
-	excludeCodes := []int{constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan}
+	excludeCodes := []int{
+		constant.PaymentMethodCodeGrab,
+		constant.PaymentMethodCodeLineMan,
+		constant.PaymentMethodCodeFreeMealForErp, // 过滤 Free Meal for ERP
+	}
 	if companySetting.IsOpenMember == 0 {
 		excludeCodes = append(excludeCodes, constant.PaymentMethodCodeBalance)
 	}
@@ -440,9 +444,17 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 				if err != nil || saveModeOfPaymentResp == nil {
 					return err
 				}
+				// 保存 Name 到 erpnext_payment，PaymentId 到 erpnext_payment_id
+				updateData := make(map[string]any)
 				if saveModeOfPaymentResp.Name != "" {
+					updateData["erpnext_payment"] = saveModeOfPaymentResp.Name
+				}
+				if saveModeOfPaymentResp.PaymentId != "" {
+					updateData["erpnext_payment_id"] = saveModeOfPaymentResp.PaymentId
+				}
+				if len(updateData) > 0 {
 					if err := paymentMethodRepo.UpdatePaymentMethod(
-						map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+						updateData,
 						repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 					); err != nil {
 						return err
@@ -479,6 +491,7 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
 		isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
 
 		name := strings.TrimSpace(updateReq.Name)
@@ -507,7 +520,7 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 			// 创建
 			channel := erpService.GetChannelBySource(paymentMethod.Source)
 			erpSrv := erpService.NewIErpSrv(s.dbm)
-			if paymentMethod.ErpnextPayment == "" {
+			if paymentMethod.ErpnextPayment == "" && paymentMethod.ErpnextPaymentId == "" {
 				var erpErr error
 				enabled := updateReq.Status == 1
 				saveModeOfPaymentResp, erpErr := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
@@ -518,12 +531,22 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 				})
 				if erpErr != nil {
 					return erpErr
-				} else if saveModeOfPaymentResp != nil && saveModeOfPaymentResp.Name != "" {
-					if err := paymentMethodRepo.UpdatePaymentMethod(
-						map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
-						repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
-					); err != nil {
-						return err
+				} else if saveModeOfPaymentResp != nil {
+					// 保存 Name 到 erpnext_payment，PaymentId 到 erpnext_payment_id
+					updateData := make(map[string]any)
+					if saveModeOfPaymentResp.Name != "" {
+						updateData["erpnext_payment"] = saveModeOfPaymentResp.Name
+					}
+					if saveModeOfPaymentResp.PaymentId != "" {
+						updateData["erpnext_payment_id"] = saveModeOfPaymentResp.PaymentId
+					}
+					if len(updateData) > 0 {
+						if err := paymentMethodRepo.UpdatePaymentMethod(
+							updateData,
+							repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
+						); err != nil {
+							return err
+						}
 					}
 				}
 			} else {
@@ -532,13 +555,21 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 				if isUpdateStatus {
 					enabled := updateReq.Status == 1
 					var erpErr error
-					_, erpErr = erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+					// 更新时，如果PaymentId不为空，则传PaymentId，否则传Name
+					saveReq := req.SaveModeOfPaymentReq{
 						CompanyUuid: ctx.GetCompanyUuid(),
 						Channel:     channel,
 						PayType:     paymentMethod.PaymentName,
-						Name:        &paymentMethod.ErpnextPayment,
 						Enabled:     &enabled,
-					})
+					}
+					if paymentMethod.ErpnextPaymentId != "" {
+						// 优先使用 PaymentId
+						saveReq.PaymentId = &paymentMethod.ErpnextPaymentId
+					} else if paymentMethod.ErpnextPayment != "" {
+						// 否则使用 Name
+						saveReq.Name = &paymentMethod.ErpnextPayment
+					}
+					_, erpErr = erpSrv.SaveModeOfPayment(ctx, saveReq)
 					if erpErr != nil {
 						return erpErr
 					}
@@ -656,6 +687,61 @@ func (s *paymentMethodSrv) UpdateLianlianPayConfig(ctx context.Context, configRe
 		}
 		if err := paymentAppRepo.UpdatePaymentApp(updateData, companyUuid); err != nil {
 			return errors.WithMessage(err, "更新支付配置失败")
+		}
+	}
+
+	// 配置保存成功后，同步支付方式到 ERP
+	company := ctx.GetCompany()
+	if company.IsOpenErp() && company.CompanySetting != nil && company.CompanySetting.ErpnextSiteCode != "" {
+		erpSrv := erpService.NewIErpSrv(s.dbm)
+
+		paymentMethodRepo := repository.NewPaymentMethodRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+
+		// 批量查询 LIANLIANPAY 支付方式（source=2）且未同步到 ERP 的（erpnext_payment 为空）
+		paymentMethods := paymentMethodRepo.GetPaymentMethodList(
+			repository.CommonRepo.WhereBySource(constant.PaymentMethodSourceLianLianPay),
+			paymentMethodRepo.WhereNotExistsErpnextPayment(),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+
+		for _, paymentMethod := range paymentMethods {
+			// 根据支付方式的 source 获取 channel
+			channel := erpService.GetChannelBySource(paymentMethod.Source)
+
+			// 同步到 ERP
+			saveResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
+				CompanyUuid: ctx.GetCompanyUuid(),
+				Channel:     channel,
+				PayType:     paymentMethod.PaymentName,
+			})
+
+			if err != nil || saveResp == nil {
+				logger.Logger.Error("同步 LIANLIANPAY 支付方式到 ERP 失败",
+					zap.Error(err),
+					zap.Any("payment_method", paymentMethod),
+				)
+				continue
+			}
+
+			// 保存 Name 到 erpnext_payment，PaymentId 到 erpnext_payment_id
+			updateData := make(map[string]any)
+			if saveResp.Name != "" {
+				updateData["erpnext_payment"] = saveResp.Name
+			}
+			if saveResp.PaymentId != "" {
+				updateData["erpnext_payment_id"] = saveResp.PaymentId
+			}
+			if len(updateData) > 0 {
+				if err := paymentMethodRepo.UpdatePaymentMethod(
+					updateData,
+					repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
+				); err != nil {
+					logger.Logger.Error("更新 LIANLIANPAY 支付方式 ERP 信息失败",
+						zap.Error(err),
+						zap.Any("payment_method", paymentMethod),
+					)
+				}
+			}
 		}
 	}
 

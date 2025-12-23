@@ -55,13 +55,14 @@ type ProductPackageGroupList struct {
 
 // ProductPackageGroup 套餐分组
 type ProductPackageGroup struct {
-	Uuid          uint64             `json:"uuid"`           // 套餐分组UUID
-	LocaleName    dto.LocaleResponse `json:"locale_name"`    // 套餐分组名称
-	GroupType     int                `json:"group_type"`     // 分组类型 0-固定 1-可选
-	OptionalCount int                `json:"optional_count"` // 可选数量
-	IsFull        bool               `json:"is_full"`        // 是否选满
-	Num           int                `json:"num"`            // 套餐商品数量
-	Products      ProductList        `json:"products"`       // 套餐商品列表
+	Uuid             uint64             `json:"uuid"`               // 套餐分组UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐分组名称
+	GroupType        int                `json:"group_type"`         // 分组类型 0-固定 1-可选
+	OptionalMinCount int                `json:"optional_min_count"` // 最小可选数量
+	OptionalCount    int                `json:"optional_count"`     // 最大可选数量
+	IsFull           bool               `json:"is_full"`            // 是否选满
+	Num              int                `json:"num"`                // 套餐商品数量
+	Products         ProductList        `json:"products"`           // 套餐商品列表
 }
 
 // 判断套餐分组是否选满
@@ -167,6 +168,7 @@ type ProductAttributeGroup struct {
 	LocaleName dto.LocaleResponse        `json:"locale_name"` // 商品属性组名称
 	Attributes ProductAttributeValueList `json:"attributes"`  // 商品属性值列表
 	IsMust     bool                      `json:"is_must"`     // 是否必选
+	MinSelect  uint                      `json:"min_select"`  // 最小可选数量
 	MaxSelect  uint                      `json:"max_select"`  // 最大可选数量
 }
 
@@ -220,6 +222,7 @@ func (list ProductSlice) InjectStockNum(stockNumMap map[uint64]float64) {
 type ProductSauceList struct {
 	List      []ProductSauce `json:"list"`
 	IsMust    bool           `json:"is_must"`    // 是否必选小料
+	MinSelect int            `json:"min_select"` // 小料最小可选数量
 	MaxSelect int            `json:"max_select"` // 小料最大可选数量
 }
 
@@ -565,11 +568,12 @@ type ProductPackageSubProductList struct {
 }
 
 type ProductPackageSubProductGroup struct {
-	Uuid          uint64                       `json:"uuid"`           // 套餐子商品分组UUID
-	LocaleName    dto.LocaleResponse           `json:"locale_name"`    // 套餐子商品分组名称
-	GroupType     int                          `json:"group_type"`     // 分组类型 0-固定 1-可选
-	OptionalCount int                          `json:"optional_count"` // 可选数量，表示本组商品中要求选择多少个商品
-	Products      ProductPackageSubProductList `json:"products"`       // 套餐子商品列表
+	Uuid             uint64                       `json:"uuid"`               // 套餐子商品分组UUID
+	LocaleName       dto.LocaleResponse           `json:"locale_name"`        // 套餐子商品分组名称
+	GroupType        int                          `json:"group_type"`         // 分组类型 0-固定 1-可选
+	OptionalMinCount int                          `json:"optional_min_count"` // 最小可选数量
+	OptionalCount    int                          `json:"optional_count"`     // 最大可选数量，表示本组商品中要求选择多少个商品
+	Products         ProductPackageSubProductList `json:"products"`           // 套餐子商品列表
 }
 
 type ProductPackageSubProductGroupList struct {

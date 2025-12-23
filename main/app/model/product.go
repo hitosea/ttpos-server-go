@@ -376,6 +376,7 @@ func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductA
 			Uuid:       attributeGroup.ProductAttributeGroup.Uuid,
 			LocaleName: attributeGroup.ProductAttributeGroup.MultiLanguageName.GetNames(),
 			IsMust:     attributeGroup.IsMust == 1,
+			MinSelect:  attributeGroup.MinSelection,
 			MaxSelect:  attributeGroup.MaxSelection,
 			Attributes: product_resp.ProductAttributeValueList{
 				List: attributes,
@@ -417,10 +418,11 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 			})
 		}
 		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
-			Uuid:          packageSubProductGroup.Uuid,
-			LocaleName:    packageSubProductGroup.MultiLanguageName.GetNames(),
-			GroupType:     packageSubProductGroup.GroupType,
-			OptionalCount: packageSubProductGroup.OptionalCount,
+			Uuid:             packageSubProductGroup.Uuid,
+			LocaleName:       packageSubProductGroup.MultiLanguageName.GetNames(),
+			GroupType:        packageSubProductGroup.GroupType,
+			OptionalMinCount: packageSubProductGroup.OptionalMinCount,
+			OptionalCount:    packageSubProductGroup.OptionalCount,
 			Products: product_resp.ProductPackageSubProductList{
 				List: products,
 			},

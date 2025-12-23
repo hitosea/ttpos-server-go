@@ -39413,6 +39413,10 @@ const docTemplate = `{
                     "description": "最大可选数量",
                     "type": "integer"
                 },
+                "min_select": {
+                    "description": "最小可选数量",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "商品属性组UUID",
                     "type": "integer"
@@ -40295,7 +40299,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "optional_count": {
-                    "description": "可选数量",
+                    "description": "最大可选数量",
+                    "type": "integer"
+                },
+                "optional_min_count": {
+                    "description": "最小可选数量",
                     "type": "integer"
                 },
                 "products": {
@@ -40392,7 +40400,11 @@ const docTemplate = `{
                     ]
                 },
                 "optional_count": {
-                    "description": "可选数量，表示本组商品中要求选择多少个商品",
+                    "description": "最大可选数量，表示本组商品中要求选择多少个商品",
+                    "type": "integer"
+                },
+                "optional_min_count": {
+                    "description": "最小可选数量",
                     "type": "integer"
                 },
                 "products": {
@@ -40581,6 +40593,10 @@ const docTemplate = `{
                 },
                 "max_select": {
                     "description": "小料最大可选数量",
+                    "type": "integer"
+                },
+                "min_select": {
+                    "description": "小料最小可选数量",
                     "type": "integer"
                 }
             }
@@ -49098,6 +49114,10 @@ const docTemplate = `{
                     "description": "分批模式 pre-前置模式 post-后置模式，默认为post",
                     "type": "string"
                 },
+                "batch_print_mode": {
+                    "description": "分批打印模式: \"default\" 默认 / \"merge\" 合并",
+                    "type": "string"
+                },
                 "checkout_zeroing_method": {
                     "description": "结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义",
                     "type": "string",
@@ -49862,7 +49882,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "当前状态",
+                    "description": "当前状态 PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED",
                     "type": "string"
                 },
                 "timestamp": {
@@ -61747,6 +61767,24 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TakeoutOrderCampaignResp": {
+            "type": "object",
+            "properties": {
+                "campaign_name": {
+                    "type": "string"
+                },
+                "campaign_type": {
+                    "type": "string"
+                },
+                "deducted_amount": {
+                    "description": "折扣金额(元)",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.TakeoutOrderItemResp": {
             "type": "object",
             "properties": {
@@ -61776,13 +61814,42 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TakeoutOrderListItemResp": {
+            "type": "object",
+            "properties": {
+                "is_abnormal": {
+                    "description": "是否异常",
+                    "type": "integer"
+                },
+                "order_state": {
+                    "description": "订单状态",
+                    "type": "integer"
+                },
+                "platform": {
+                    "description": "平台名称",
+                    "type": "string"
+                },
+                "short_order_number": {
+                    "description": "短订单号",
+                    "type": "string"
+                },
+                "total_items": {
+                    "description": "总商品数量",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "response.TakeoutOrderListResp": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.TakeoutOrderResp"
+                        "$ref": "#/definitions/response.TakeoutOrderListItemResp"
                     }
                 },
                 "meta": {
@@ -61790,67 +61857,146 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TakeoutOrderReceiverResp": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "详细地址",
+                    "type": "string"
+                },
+                "delivery_instruction": {
+                    "description": "配送说明",
+                    "type": "string"
+                },
+                "receiver_name": {
+                    "description": "收货人姓名",
+                    "type": "string"
+                },
+                "receiver_phones": {
+                    "description": "收货人电话",
+                    "type": "string"
+                },
+                "unit_number": {
+                    "description": "单元号/门牌号",
+                    "type": "string"
+                }
+            }
+        },
         "response.TakeoutOrderResp": {
             "type": "object",
             "properties": {
                 "abnormal_detail": {
+                    "description": "异常详情",
                     "type": "string"
                 },
                 "accepted_time": {
+                    "description": "接单时间",
+                    "type": "integer"
+                },
+                "campaigns": {
+                    "description": "活动信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderCampaignResp"
+                    }
+                },
+                "completed_time": {
+                    "description": "完成时间",
                     "type": "integer"
                 },
                 "currency_code": {
+                    "description": "货币信息",
                     "type": "string"
                 },
                 "currency_symbol": {
+                    "description": "货币符号",
                     "type": "string"
                 },
                 "cutlery": {
+                    "description": "是否需要餐具",
                     "type": "integer"
                 },
                 "delivery_fee": {
+                    "description": "配送费",
+                    "type": "integer"
+                },
+                "eater_payment": {
+                    "description": "顾客实付",
+                    "type": "integer"
+                },
+                "estimated_ready_time": {
+                    "description": "预计完成时间",
                     "type": "integer"
                 },
                 "is_abnormal": {
+                    "description": "订单异常",
                     "type": "integer"
                 },
                 "items": {
+                    "description": "订单商品列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/response.TakeoutOrderItemResp"
                     }
                 },
+                "max_ready_time": {
+                    "description": "最大准备时间",
+                    "type": "integer"
+                },
                 "order_state": {
+                    "description": "订单状态",
                     "type": "integer"
                 },
                 "order_time": {
+                    "description": "订单时间",
                     "type": "integer"
                 },
                 "order_type": {
+                    "description": "订单类型",
                     "type": "string"
                 },
                 "payment_type": {
+                    "description": "支付类型",
                     "type": "string"
                 },
                 "platform": {
+                    "description": "平台名称",
                     "type": "string"
                 },
-                "platform_order_id": {
-                    "type": "string"
+                "receiver": {
+                    "description": "收货人信息 (联系人信息)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.TakeoutOrderReceiverResp"
+                        }
+                    ]
                 },
                 "short_order_number": {
+                    "description": "短订单号",
                     "type": "string"
                 },
-                "stock_status": {
+                "small_order_fee": {
+                    "description": "小订单费",
+                    "type": "integer"
+                },
+                "submit_time": {
+                    "description": "提交时间 (提交时间，支付时间)",
                     "type": "integer"
                 },
                 "subtotal": {
+                    "description": "订单金额",
                     "type": "integer"
                 },
                 "total_amount": {
+                    "description": "订单总金额",
+                    "type": "integer"
+                },
+                "total_items": {
+                    "description": "订单商品",
                     "type": "integer"
                 },
                 "uuid": {
+                    "description": "订单UUID",
                     "type": "integer"
                 }
             }
@@ -62057,6 +62203,10 @@ const docTemplate = `{
             "properties": {
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
+                    "type": "string"
+                },
+                "batch_print_mode": {
+                    "description": "分批打印模式: \"default\" 默认 / \"merge\" 合并",
                     "type": "string"
                 },
                 "batch_product_uuids": {
@@ -62953,6 +63103,10 @@ const docTemplate = `{
             "properties": {
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
+                    "type": "string"
+                },
+                "batch_print_mode": {
+                    "description": "分批打印模式: \"default\" 默认 / \"merge\" 合并",
                     "type": "string"
                 },
                 "batch_product_uuids": {

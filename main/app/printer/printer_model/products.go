@@ -25,6 +25,7 @@ type OrderProduct struct {
 	Remark                string               `json:"remark"`              // 备注
 	RemarkLocale          dto.LocaleResponse   `json:"remark_locale"`       // 备注（包含预设备注和自定义备注，多语言）
 	BatchTagUuid          uint64               `json:"batch_tag_uuid"`      // 分批类型UUID
+	ShowDelayTag          bool                 `json:"show_delay_tag"`      // 是否显示延迟送厨标签
 	Reason                dto.LocaleResponse   `json:"reason"`              // 退菜原因
 	CustomReason          string               `json:"custom_reason"`       // 自定义退菜原因
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品

@@ -639,11 +639,12 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 // CountArea 统计区域
 func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error) {
 	areaData := s.statisticsSrv.CountArea(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		CategoryType:   req.CategoryType,
-		DutyNo:         req.DutyNo,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		CategoryType:      req.CategoryType,
+		DutyNo:            req.DutyNo,
+		ExcludeDataManage: req.ExcludeDataManage, // 传递过滤参数
 	})
 
 	var areaList = []business_data_resp.Area{}
@@ -666,9 +667,10 @@ func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankP
 	var productRankData = business_data_resp.BusinessDataProductRank{
 		Ranks: func() []business_data_resp.ProductRank {
 			productRankList := s.statisticsSrv.RankProduct(ctx, CountReq{
-				RankType:       req.RankType,
-				QueryStartTime: req.QueryStartTime,
-				QueryEndTime:   req.QueryEndTime,
+				RankType:          req.RankType,
+				QueryStartTime:    req.QueryStartTime,
+				QueryEndTime:      req.QueryEndTime,
+				ExcludeDataManage: req.ExcludeDataManage, // 传递过滤参数
 			})
 			list := make([]business_data_resp.ProductRank, 0, len(productRankList))
 			for _, productRank := range productRankList {
@@ -724,19 +726,20 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 	}
 
 	productSalesData := s.statisticsSrv.CountProductSale(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		RankType:       req.SortType,
-		RankDirection:  req.SortDirection,
-		PageNo:         req.PageNo,
-		PageSize:       req.PageSize,
-		AreaUuid:       req.AreaUuid,
-		CategoryUuid:   req.CategoryUuid,
-		CategoryUuids:  categoryUuids,
-		ProductName:    req.ProductName,
-		OrderTypes:     orderTypes,
-		OrderSource:    req.OrderSource,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		RankType:          req.SortType,
+		RankDirection:     req.SortDirection,
+		PageNo:            req.PageNo,
+		PageSize:          req.PageSize,
+		AreaUuid:          req.AreaUuid,
+		CategoryUuid:      req.CategoryUuid,
+		CategoryUuids:     categoryUuids,
+		ProductName:       req.ProductName,
+		OrderTypes:        orderTypes,
+		OrderSource:       req.OrderSource,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 
 	var list = []business_data_resp.BusinessDataCountProductSalesItem{}
@@ -1198,18 +1201,20 @@ func (s *businessSrv) CountShiftRefundAmount(ctx context.Context, req req.Busine
 func (s *businessSrv) CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error) {
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		CategoryType:   req.CategoryType,
-		DutyNo:         req.DutyNo,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		CategoryType:      req.CategoryType,
+		DutyNo:            req.DutyNo,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 
 	// 会员数量
 	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
-		TimeType:       req.TimeType,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
+		TimeType:          req.TimeType,
+		QueryStartTime:    req.QueryStartTime,
+		QueryEndTime:      req.QueryEndTime,
+		ExcludeDataManage: req.ExcludeDataManage,
 	})
 
 	// 首页数据
@@ -1221,10 +1226,11 @@ func (s *businessSrv) CountHome(ctx context.Context, req req.BusinessDataCountRe
 		TotalOrderNum:          int(saleData.TotalOrderNum),
 		MemberData: func() business_data_resp.MemberData {
 			memberData := s.statisticsSrv.CountMember(ctx, CountReq{
-				TimeType:       req.TimeType,
-				QueryStartTime: req.QueryStartTime,
-				QueryEndTime:   req.QueryEndTime,
-				CategoryType:   req.CategoryType,
+				TimeType:          req.TimeType,
+				QueryStartTime:    req.QueryStartTime,
+				QueryEndTime:      req.QueryEndTime,
+				CategoryType:      req.CategoryType,
+				ExcludeDataManage: req.ExcludeDataManage,
 			})
 			return business_data_resp.MemberData{
 				RechargeAmount: memberData.TotalRechargeAmount,
@@ -2820,7 +2826,7 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 	}
 
 	// 调用 Repository 获取渠道统计数据
-	channelData, err := statisticsRepo.CountChannelSale(startTime, endTime)
+	channelData, err := statisticsRepo.CountChannelSale(startTime, endTime, req.ExcludeDataManage)
 	if err != nil {
 		return nil, errors.WithMessage(err, "统计渠道营业数据失败")
 	}
@@ -3412,8 +3418,6 @@ func (s *businessSrv) ExportChannelSalesTask(ctx context.Context, params ExportC
 func (s *businessSrv) CountUserAnalysis(ctx context.Context, req req.UserAnalysisReq) (*resp.UserAnalysisResp, error) {
 	db := ctx.GetDB()
 	statisticsRepo := repository.NewStatisticsRepo(db)
-	dataManageRepo := repository.NewDataManageRepo(db)
-	commonRepo := repository.NewCommonRepo()
 
 	// 处理默认时间：如果未传时间，使用今日范围
 	startTime := req.StartTime
@@ -3454,11 +3458,7 @@ func (s *businessSrv) CountUserAnalysis(ctx context.Context, req req.UserAnalysi
 	enableTableOrder := cashierSetting.OrderMethod.IsTableOrder == "1"
 
 	// 调用 Repository 获取统计数据
-	repoResult, err := statisticsRepo.CountUserAnalysis(startTime, endTime, language, enableNationality, enableCashierOrder, enableTableOrder,
-		commonRepo.WhereNotInDataManageSubQuery(db, "sale_bill_uuid",
-			dataManageRepo.WhereByType(model.DataManageTypeOrder),
-		),
-	)
+	repoResult, err := statisticsRepo.CountUserAnalysis(startTime, endTime, language, enableNationality, enableCashierOrder, enableTableOrder, req.ExcludeDataManage)
 	if err != nil {
 		return nil, errors.WithMessage(err, "统计用户分析数据失败")
 	}

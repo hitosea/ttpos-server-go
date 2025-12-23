@@ -602,6 +602,9 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 	if defaultBusiness.BatchCookingMode == "" {
 		defaultBusiness.BatchCookingMode = constant.BatchCookingModePost
 	}
+	if defaultBusiness.BatchPrintMode == "" {
+		defaultBusiness.BatchPrintMode = constant.BatchPrintModeDefault
+	}
 
 	return defaultBusiness, nil
 }

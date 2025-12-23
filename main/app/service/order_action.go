@@ -14,6 +14,8 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
@@ -116,7 +118,8 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
 			return remarkInfo.Remark
 		}(),
-		IsBatch: saleOrderProduct.IsBatchBool(),
+		IsBatch:      saleOrderProduct.IsBatchBool(),
+		BatchTagUuid: saleOrderProduct.BatchTagUuid,
 	}
 
 	// 如果是套餐主商品，添加子商品
@@ -382,6 +385,15 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
+				BatchMode: batchCookingMode,
+				BatchPrintMode: func() string {
+					settingSrv := setting.NewSrvImpl(s.dbm, cache.Global)
+					businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+					if err != nil {
+						return constant.BatchPrintModeDefault
+					}
+					return businessSetting.BatchPrintMode
+				}(),
 				Products: func() event.Products {
 					products := make(event.Products, 0)
 					for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {

@@ -74,6 +74,18 @@ class OrderPayTypeEnum extends Enum
     const LIANLIAN_ALI_PAY = 90222;
 
     const LIANLIAN_QR_PROMPT_PAY = 90333;
+
+    /**
+     * Grab 和 LINE MAN 支付方式
+     */
+    const GRAB = 91100;
+    const LINE_MAN = 91200;
+
+    /**
+     * Free Meal for ERP（用于ERP同步的免单支付方式）
+     */
+    const FREE_MEAL_FOR_ERP = 92000;
+    
     /**
      * 获取枚举数据
      */

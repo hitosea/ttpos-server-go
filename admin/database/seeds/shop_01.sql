@@ -398,6 +398,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `default_img` TEXT COMMENT '默认图片',
     `erpnext_payment` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext支付方式',
+    `erpnext_payment_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext支付方式ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -4033,7 +4034,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_receiver` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_uuid` (`uuid`),
     UNIQUE KEY `uk_takeout_order_uuid` (`takeout_order_uuid`),
-    UNIQUE KEY `uk_takeout_order_uuid` (`takeout_order_uuid`, `delete_time`),
+    UNIQUE KEY `uk_takeout_order_uuid_delete_time` (`takeout_order_uuid`, `delete_time`),
     KEY `idx_delete_time` (`delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单收货人信息表';
 

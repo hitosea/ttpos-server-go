@@ -27,6 +27,7 @@ const (
 	PaymentMethodCodeLianLianQRPromptPay = 90333 // LianLianQRPromptPay
 	PaymentMethodCodeGrab                = 91100 // Grab
 	PaymentMethodCodeLineMan             = 91200 // LINE MAN
+	PaymentMethodCodeFreeMealForErp      = 92000 // Free Meal for ERP（用于ERP同步的免单支付方式）
 )
 
 // 支付方式名称常量

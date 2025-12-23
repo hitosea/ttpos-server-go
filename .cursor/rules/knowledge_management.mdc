@@ -18,7 +18,6 @@ description: 项目知识管理核心规范（后端版）
 | **Graphiti** | ✅ 高      | 无（唯一的项目记忆存储） | **优先使用**   |
 | **Context7** | ⚠️ 中      | WebSearch                | 可选，按需使用 |
 | **Serena**   | ❌ 低      | SemanticSearch + Grep    | 可选，内置优先 |
-| **exa**      | ❌ 低      | WebSearch                | 可选，内置优先 |
 
 ### Graphiti - 唯一必要的 MCP
 
@@ -49,11 +48,6 @@ Serena (可选):
   - 适用: 复杂的符号跳转和引用分析
   - 替代: Cursor 内置的 SemanticSearch + Grep 通常足够
   - 判断: 内置工具优先，Serena 作为备选
-
-exa (可选):
-  - 适用: 需要深度搜索或高质量结果
-  - 替代: WebSearch 通常足够
-  - 判断: 内置工具优先
 ```
 
 ### 决策原则

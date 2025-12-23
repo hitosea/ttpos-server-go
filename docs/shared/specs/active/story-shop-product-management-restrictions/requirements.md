@@ -313,6 +313,63 @@ END IF
 - 数据迁移脚本必须提供回滚方案
 - 迁移后数据验证通过率 > 99.9%
 
+#### 4.2.4 接口响应兼容性
+
+**商品详情接口（GetProductDetail）响应字段：**
+
+查询商品详情时，响应需要同时包含新旧字段，确保新旧客户端都能正常工作：
+
+1. **小料列表（Sauces）**
+   - 旧字段：`is_must` (boolean)
+   - 新字段：`min_select` (int), `max_select` (int)
+   - 转换规则：`is_must = (min_select > 0)`
+
+2. **属性组列表（AttributeGroups）**
+   - 旧字段：`is_must` (boolean)
+   - 新字段：`min_select` (uint), `max_select` (uint)
+   - 转换规则：`is_must = (min_select > 0)`
+
+3. **套餐分组列表（PackageSubProductGroups）**
+   - 新字段：`optional_min_count` (int), `optional_count` (int)
+   - 注意：`optional_count` 字段名保持不变，但语义变为"最大可选数量"
+
+**响应示例：**
+
+```json
+{
+  "sauces": {
+    "list": [...],
+    "is_must": false,      // 旧字段：兼容v2.11
+    "min_select": 0,       // 新字段
+    "max_select": 3        // 新字段
+  },
+  "attribute_groups": {
+    "list": [
+      {
+        "uuid": 123,
+        "locale_name": {...},
+        "is_must": true,    // 旧字段：兼容v2.11
+        "min_select": 1,    // 新字段
+        "max_select": 3,    // 新字段
+        "attributes": {...}
+      }
+    ]
+  },
+  "package_sub_product_groups": {
+    "list": [
+      {
+        "uuid": 456,
+        "locale_name": {...},
+        "group_type": 1,
+        "optional_min_count": 2,  // 新字段：最小可选
+        "optional_count": 5,      // 字段名不变，语义为最大可选
+        "products": {...}
+      }
+    ]
+  }
+}
+```
+
 详细的版本兼容性设计请参考：[VERSION_COMPATIBILITY.md](./VERSION_COMPATIBILITY.md)
 
 ### 4.3 安全性要求
@@ -358,4 +415,6 @@ END IF
 | 1.1  | 2025-12-22 | 曾振华 | 修改套餐分组字段方案：保持 optional_count 字段名不变，只修改注释 |
 | 1.2  | 2025-12-22 | 曾振华 | 移除前端相关需求，聚焦后端功能需求                              |
 | 1.3  | 2025-12-22 | 曾振华 | 新增详细的版本兼容性要求（v2.11 ↔ v2.12）                      |
+| 1.4  | 2025-12-23 | AI     | 补充商品详情接口响应字段兼容性说明                             |
+| 1.5  | 2025-12-23 | AI     | 修复代码中的上限验证：属性组/加料/套餐分组上限统一为100个       |
 

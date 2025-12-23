@@ -16,6 +16,7 @@ import (
 
 type statisticsHandler struct {
 	businessSrv service.IBusinessSrv
+	settingSrv  setting.ISrv
 }
 
 // CountBusiness 统计营业数据，移动管理端首页-店内概况
@@ -35,6 +36,10 @@ func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	businessData, err := h.businessSrv.CountBusiness(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -60,6 +65,10 @@ func (h *statisticsHandler) CountPaymentMethod(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	paymentMethodData, err := h.businessSrv.CountPaymentMethod(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -110,6 +119,10 @@ func (h *statisticsHandler) CountProduct(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	productData, err := h.businessSrv.CountProduct(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -135,6 +148,10 @@ func (h *statisticsHandler) CountArea(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	areaData, err := h.businessSrv.CountArea(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -160,6 +177,10 @@ func (h *statisticsHandler) CountProductRank(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	productRankData, err := h.businessSrv.RankProduct(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -185,6 +206,10 @@ func (h *statisticsHandler) CountProductSales(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	productSalesData, err := h.businessSrv.CountProductSales(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -282,6 +307,10 @@ func (h *statisticsHandler) CountHome(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	homeData, err := h.businessSrv.CountHome(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -407,6 +436,10 @@ func (h *statisticsHandler) ExportProductSales(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	err := h.businessSrv.ExportProductSales(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -432,7 +465,10 @@ func (h *statisticsHandler) CountBusinessTimePeriod(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	businessTimePeriodData := h.businessSrv.CountBusinessTimePeriod(ctx, req)
 	helper.Success(c, businessTimePeriodData)
 }
@@ -454,6 +490,10 @@ func (h *statisticsHandler) CountBusinessSummary(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	businessSummary := h.businessSrv.CountBusinessSummary(ctx, req)
 	helper.Success(c, businessSummary)
 }
@@ -475,6 +515,10 @@ func (h *statisticsHandler) CountBusinessPaymentMethod(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	businessPaymentMethodData := h.businessSrv.CountBusinessPaymentMethod(ctx, req)
 	helper.Success(c, businessPaymentMethodData)
 }
@@ -521,6 +565,10 @@ func (h *statisticsHandler) ExportBusinessTimePeriod(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	err := h.businessSrv.ExportBusinessTimePeriod(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -546,6 +594,10 @@ func (h *statisticsHandler) ExportBusinessSummary(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	err := h.businessSrv.ExportBusinessSummary(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -571,6 +623,10 @@ func (h *statisticsHandler) ExportBusinessPaymentMethod(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	countReq.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	err := h.businessSrv.ExportBusinessPaymentMethod(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -597,6 +653,10 @@ func (h *statisticsHandler) ChannelSales(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	resp, err := h.businessSrv.CountChannelSales(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -623,6 +683,10 @@ func (h *statisticsHandler) ExportChannelSales(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	err := h.businessSrv.ExportChannelSales(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -649,6 +713,10 @@ func (h *statisticsHandler) UserAnalysis(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	resp, err := h.businessSrv.CountUserAnalysis(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -675,6 +743,10 @@ func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
+	// 判断数据管理功能是否开启
+	companySetting := ctx.GetCompanySetting()
+	dataSetting := h.settingSrv.GetDataManageSetting(ctx)
+	req.ExcludeDataManage = companySetting.IsOpenDataManagement() && dataSetting.IsEnableDataManage
 	err := h.businessSrv.ExportUserAnalysis(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -698,6 +770,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 
 	wrapper := &statisticsHandler{
 		businessSrv: businessSrv,
+		settingSrv:  settingSrv,
 	}
 
 	// 需要认证

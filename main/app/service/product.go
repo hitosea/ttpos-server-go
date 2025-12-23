@@ -452,9 +452,10 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				}
 
 				packageGroup := product_resp.ProductPackageGroup{
-					Uuid:       group.Uuid,
-					LocaleName: group.MultiLanguageName.GetNames(),
-					GroupType:  group.GroupType,
+					Uuid:             group.Uuid,
+					LocaleName:       group.MultiLanguageName.GetNames(),
+					GroupType:        group.GroupType,
+					OptionalMinCount: int(group.OptionalMinCount),
 					OptionalCount: func() int {
 						if group.GroupType == 0 { // 兼容前端bug,固定商品要返回商品数量
 							return len(productList)
@@ -625,6 +626,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 						Uuid:       group.ProductAttributeGroupUuid,
 						LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
 						IsMust:     group.IsMust == 1,
+						MinSelect:  group.MinSelection,
 						MaxSelect:  group.MaxSelection,
 						Attributes: product_resp.ProductAttributeValueList{
 							List: attributeValues,
@@ -670,6 +672,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				Sauces: product_resp.ProductSauceList{
 					List:      sauces,
 					IsMust:    product.SauceRequired == 1,
+					MinSelect: int(product.SauceMinSelection),
 					MaxSelect: int(product.SauceMaxSelection),
 				},
 				AttributeGroups: product_resp.ProductAttributeGroupList{
@@ -721,6 +724,7 @@ func getAttributeGroups(product *model.ProductPackage) []product_resp.ProductAtt
 				Uuid:       group.ProductAttributeGroupUuid,
 				LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
 				IsMust:     group.IsMust == 1,
+				MinSelect:  group.MinSelection,
 				MaxSelect:  group.MaxSelection,
 				Attributes: product_resp.ProductAttributeValueList{
 					List: attributeValues,
@@ -5525,6 +5529,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		Sauces: product_resp.ProductSauceList{
 			List:      productPackage.GetRespSaucesList(),
 			IsMust:    productPackage.GetSauceRequired(),
+			MinSelect: int(productPackage.SauceMinSelection),
 			MaxSelect: int(productPackage.SauceMaxSelection),
 		},
 		AttributeGroups: product_resp.ProductAttributeGroupList{
