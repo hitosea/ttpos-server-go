@@ -84,14 +84,13 @@ func NewTakeoutSrv(
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
 func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
-	paymentMethodSrv := NewPaymentMethodSrv(s.dbm, s.settingSrv).(*paymentMethodSrv)
 	if req.Platform == "grab" {
-		err := paymentMethodSrv.SaveGrabPaymentMethod(ctx, ctx.GetDB())
+		err := NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveGrabPaymentMethod(ctx, ctx.GetDB())
 		if err != nil {
 			return nil, errors.WithMessage(err, "保存Grab支付方式失败")
 		}
 	} else if req.Platform == "lineman" {
-		err := paymentMethodSrv.SaveLineManPaymentMethod(ctx, ctx.GetDB())
+		err := NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveLineManPaymentMethod(ctx, ctx.GetDB())
 		if err != nil {
 			return nil, errors.WithMessage(err, "保存LINE MAN支付方式失败")
 		}
@@ -102,7 +101,8 @@ func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.Toggle
 // SyncMenuChanges 同步菜单变更
 func (s *takeoutSrv) SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error) {
 	return s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{
-		Platform: platform,
+		Platform:    platform,
+		CompanyUuid: ctx.GetCompanyUuid(),
 	})
 }
 

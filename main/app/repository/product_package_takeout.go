@@ -252,7 +252,7 @@ func (r *productPackageTakeoutRepoImpl) WithProductCategory(opts ...DBOption) DB
 				db = opt(db)
 			}
 			return db
-		})
+		}).Preload("ProductCategory.MultiLanguageName")
 	}
 }
 
@@ -264,7 +264,7 @@ func (r *productPackageTakeoutRepoImpl) WithProductSpecialCategory(opts ...DBOpt
 				db = opt(db)
 			}
 			return db
-		})
+		}).Preload("ProductSpecialCategory.MultiLanguageName")
 	}
 }
 

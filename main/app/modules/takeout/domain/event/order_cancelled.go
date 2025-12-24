@@ -1,40 +1,40 @@
 package event
 
-// OrderCreatedEvent 订单创建事件
-type OrderCreatedEvent struct {
+// OrderCancelEvent 订单取消事件
+type OrderCancelEvent struct {
 	BaseDomainEvent
 	OrderUuid        uint64 // 订单UUID
 	Platform         string // 平台
 	PlatformOrderId  string // 平台订单ID
 	ShortOrderNumber string // 短订单号
 	TakeoutOrderUuid string // 外卖订单UUID
-	EaterPayment     int64  // 顾客实付(分)
 	CompanyUuid      uint64 // 公司UUID
+	CancelReason     string // 取消原因
 }
 
 // EventName 事件名称
-func (e OrderCreatedEvent) EventName() string {
-	return "takeout.order.created"
+func (e OrderCancelEvent) EventName() string {
+	return "takeout.order.cancelled"
 }
 
-// NewOrderCreatedEvent 创建订单创建事件
-func NewOrderCreatedEvent(
+// NewOrderCancelEvent 创建订单取消事件
+func NewOrderCancelEvent(
 	orderUuid uint64,
 	platform string,
 	platformOrderId string,
 	shortOrderNumber string,
 	takeoutOrderUuid string,
-	eaterPayment int64,
 	companyUuid uint64,
-) OrderCreatedEvent {
-	return OrderCreatedEvent{
+	cancelReason string,
+) OrderCancelEvent {
+	return OrderCancelEvent{
 		BaseDomainEvent:  NewBaseDomainEvent(orderUuid),
 		OrderUuid:        orderUuid,
 		Platform:         platform,
 		PlatformOrderId:  platformOrderId,
 		ShortOrderNumber: shortOrderNumber,
 		TakeoutOrderUuid: takeoutOrderUuid,
-		EaterPayment:     eaterPayment,
 		CompanyUuid:      companyUuid,
+		CancelReason:     cancelReason,
 	}
 }

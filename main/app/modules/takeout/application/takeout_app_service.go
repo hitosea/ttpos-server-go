@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
+	"time"
+	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/service"
@@ -19,8 +22,15 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 
+	"github.com/google/uuid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 	"go.uber.org/zap"
+)
+
+// 全局锁管理器（确保所有 takeoutAppService 实例共享同一套锁）
+var (
+	globalModifierUpdateLocks      sync.Map   // map[merchantID]*sync.Mutex
+	globalModifierUpdateLocksGuard sync.Mutex // 保护锁创建过程的互斥锁
 )
 
 // ITakeoutAppService 外卖应用服务接口
@@ -297,13 +307,13 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 	}
 
 	// 判断 ttpos_takeout表 的 menu 是否存在数据，如果存在就判断是否导入成功，不然就返回空
-	takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
-	if err != nil {
-		return nil, fmt.Errorf("获取平台状态失败: %w", err)
-	}
-	if takeout.Menu != nil && !reflect.ValueOf(takeout.Menu).IsNil() && takeout.ImportStatus != model.ImportStatusSuccess {
-		return nil, fmt.Errorf("正在导入数据到TTPOS中，请稍后再试")
-	}
+	// takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("获取平台状态失败: %w", err)
+	// }
+	// if takeout.Menu != nil && !reflect.ValueOf(takeout.Menu).IsNil() && takeout.ImportStatus != model.ImportStatusSuccess {
+	// 	return nil, fmt.Errorf("正在导入数据到TTPOS中，请稍后再试")
+	// }
 
 	// 获取平台转换器
 	converter, err := s.getConverter(req.Platform)
@@ -624,6 +634,7 @@ func (s *takeoutAppService) UpdateMenuModifier(ctx context.Context, req request.
 }
 
 // SyncMenuChanges 同步菜单变更（灰度更新）
+// SyncMenuChanges 同步菜单变更（灰度更新）
 func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error) {
 	// 初始化结果
 	result := &response.MenuSyncResult{
@@ -673,7 +684,7 @@ func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.Exp
 	}
 
 	// 4. 比较并同步变更
-	err = s.compareAndSyncMenu(ctx, req.Platform, oldMenu, newMenu, result)
+	err = s.compareAndSyncMenu(ctx, req.Platform, req.CompanyUuid, oldMenu, newMenu, result)
 	if err != nil {
 		return nil, fmt.Errorf("同步菜单变更失败: %w", err)
 	}
@@ -698,6 +709,7 @@ func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.Exp
 func (s *takeoutAppService) compareAndSyncMenu(
 	ctx context.Context,
 	platform string,
+	companyUuid uint64,
 	oldMenu *grabfood.GetMenuNewResponse,
 	newMenu *grabfood.GetMenuNewResponse,
 	result *response.MenuSyncResult,
@@ -721,7 +733,17 @@ func (s *takeoutAppService) compareAndSyncMenu(
 		}
 	}
 
-	// 遍历新菜单，比较并更新变更
+	// 收集需要更新的商品和修饰符
+	var changedItems []struct {
+		old *grabfood.MenuItem
+		new *grabfood.MenuItem
+	}
+	var changedModifiers []struct {
+		old *grabfood.MenuModifier
+		new *grabfood.MenuModifier
+	}
+
+	// 遍历新菜单，比较并收集变更
 	for _, category := range newMenu.Categories {
 		for i := range category.Items {
 			newItem := &category.Items[i]
@@ -729,7 +751,13 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 			// 比较商品
 			if oldItem, exists := oldItemsMap[newItem.Id]; exists {
-				s.compareAndSyncItem(ctx, platform, oldItem, newItem, result)
+				if s.hasItemChanged(oldItem, newItem) {
+					changedItems = append(changedItems, struct {
+						old *grabfood.MenuItem
+						new *grabfood.MenuItem
+					}{old: oldItem, new: newItem})
+					result.ChangedItems++
+				}
 			}
 
 			// 比较修饰符
@@ -739,163 +767,306 @@ func (s *takeoutAppService) compareAndSyncMenu(
 					result.TotalModifiers++
 
 					if oldModifier, exists := oldModifiersMap[newModifier.Id]; exists {
-						s.compareAndSyncModifier(ctx, platform, oldModifier, newModifier, result)
+						if s.hasModifierChanged(oldModifier, newModifier) {
+							changedModifiers = append(changedModifiers, struct {
+								old *grabfood.MenuModifier
+								new *grabfood.MenuModifier
+							}{old: oldModifier, new: newModifier})
+							result.ChangedModifiers++
+						}
 					}
 				}
 			}
 		}
 	}
 
+	// 获取商户 ID
+	_, _, merchantID, _, err := s.rpcService.CheckBindingStatusWithMerchantId(ctx, platform, companyUuid)
+	if err != nil {
+		return fmt.Errorf("获取商户ID失败: %w", err)
+	}
+	if merchantID == "" {
+		return fmt.Errorf("商户ID为空，请检查平台绑定状态")
+	}
+
+	// 批量更新商品（每批最多 100 个）
+	if len(changedItems) > 0 {
+		err := s.batchUpdateItems(ctx, merchantID, changedItems, result)
+		if err != nil {
+			logger.Logger.Error("批量更新商品失败", zap.Error(err))
+		}
+	}
+
+	// 逐个更新修饰符（Grab API 暂不支持批量更新修饰符）
+	if len(changedModifiers) > 0 {
+		s.updateModifiersOneByOne(ctx, merchantID, changedModifiers, result)
+	}
+
 	return nil
 }
 
-// compareAndSyncItem 比较并同步单个商品
-func (s *takeoutAppService) compareAndSyncItem(
-	ctx context.Context,
-	platform string,
-	oldItem *grabfood.MenuItem,
-	newItem *grabfood.MenuItem,
-	result *response.MenuSyncResult,
-) {
-	var changes []string
-	var updatePrice *int64
-	var updateStatus string
-	var updateStock int64 = 9999999
-
-	// 检查价格变更
+// hasItemChanged 检查商品是否发生变更
+func (s *takeoutAppService) hasItemChanged(oldItem, newItem *grabfood.MenuItem) bool {
+	// 比较价格变更
 	if oldItem.Price != newItem.Price {
-		changes = append(changes, "price")
+		return true
 	}
-	updatePrice = &newItem.Price
-
-	// 检查状态变更
+	// 比较状态变更
 	if oldItem.AvailableStatus != newItem.AvailableStatus {
-		changes = append(changes, "status")
+		return true
 	}
-	updateStatus = newItem.AvailableStatus
-
-	// 检查库存变更
-	if updateStatus != string(value_object.AvailableStatusAvailable) {
-		updateStock = 0
-	}
-
-	// 如果没有变更，直接返回
-	if len(changes) == 0 {
-		return
-	}
-
-	result.ChangedItems++
-	changeType := strings.Join(changes, ",")
-
-	// 调用更新API
-	updateReq := request.UpdateMenuItemRequest{
-		Platform:        platform,
-		ItemId:          newItem.Id,
-		Price:           updatePrice,
-		AvailableStatus: updateStatus,
-		MaxStock:        &updateStock,
-	}
-
-	err := s.UpdateMenuItem(ctx, updateReq)
-
-	// 记录变更详情
-	change := response.MenuItemChange{
-		ItemID:     newItem.Id,
-		ItemName:   newItem.Name,
-		ChangeType: changeType,
-		Success:    err == nil,
-	}
-
-	if updatePrice != nil {
-		change.OldPrice = &oldItem.Price
-		change.NewPrice = updatePrice
-	}
-
-	if updateStatus != "" {
-		change.OldStatus = oldItem.AvailableStatus
-		change.NewStatus = updateStatus
-	}
-
-	if err != nil {
-		change.ErrorMessage = err.Error()
-		result.FailedItems++
-		result.Errors = append(result.Errors, fmt.Sprintf("商品%s(%s)更新失败: %v", newItem.Name, newItem.Id, err))
-	} else {
-		result.SuccessItems++
-	}
-
-	result.ItemChanges = append(result.ItemChanges, change)
+	return false
 }
 
-// compareAndSyncModifier 比较并同步单个修饰符
-func (s *takeoutAppService) compareAndSyncModifier(
+// hasModifierChanged 检查修饰符是否发生变更
+func (s *takeoutAppService) hasModifierChanged(oldModifier, newModifier *grabfood.MenuModifier) bool {
+	// 比较价格变更（需要处理指针类型）
+	if !isInt64PtrEqual(oldModifier.Price, newModifier.Price) {
+		return true
+	}
+	// 比较状态变更
+	if oldModifier.AvailableStatus != newModifier.AvailableStatus {
+		return true
+	}
+	return false
+}
+
+// isInt64PtrEqual 比较两个 *int64 指针是否相等
+func isInt64PtrEqual(a, b *int64) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+// batchUpdateItems 批量更新商品
+func (s *takeoutAppService) batchUpdateItems(
 	ctx context.Context,
-	platform string,
-	oldModifier *grabfood.MenuModifier,
-	newModifier *grabfood.MenuModifier,
+	merchantID string,
+	items []struct {
+		old *grabfood.MenuItem
+		new *grabfood.MenuItem
+	},
+	result *response.MenuSyncResult,
+) error {
+	const batchSize = 100
+
+	// 创建 RPC 客户端
+	client, err := s.rpcService.GetBMPClient()
+	if err != nil {
+		logger.Logger.Error("创建 RPC 客户端失败", zap.Error(err))
+		return fmt.Errorf("创建 RPC 客户端失败: %w", err)
+	}
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			logger.Logger.Warn("关闭 RPC 客户端失败", zap.Error(closeErr))
+		}
+	}()
+
+	for i := 0; i < len(items); i += batchSize {
+		end := i + batchSize
+		if end > len(items) {
+			end = len(items)
+		}
+		batch := items[i:end]
+
+		// 跳过空批次
+		if len(batch) == 0 {
+			continue
+		}
+
+		// 构建批量更新请求
+		entities := make([]*menuApi.MenuEntity, 0, len(batch))
+
+		for _, item := range batch {
+			// 计算库存
+			maxStock := int64(9999999)
+			if item.new.AvailableStatus != string(value_object.AvailableStatusAvailable) {
+				maxStock = 0
+			}
+
+			entity := &menuApi.MenuEntity{
+				Id:              item.new.Id,
+				Price:           &item.new.Price,
+				AvailableStatus: &item.new.AvailableStatus,
+				MaxStock:        &maxStock,
+			}
+			entities = append(entities, entity)
+		}
+
+		// 再次检查：确保 entities 不为空
+		if len(entities) == 0 {
+			logger.Logger.Warn("批量更新商品: entities 为空，跳过此批次",
+				zap.Int("batchIndex", i/batchSize),
+				zap.Int("batchSize", len(batch)))
+			continue
+		}
+
+		// 调用 RPC 批量更新接口
+		req := &menuApi.BatchUpdateMenuReq{
+			MerchantId:   merchantID,
+			Field:        "ITEM",
+			MenuEntities: entities,
+			RequestId:    uuid.New().String(),
+		}
+
+		resp, err := client.GetMenuClient().BatchUpdateMenu(ctx, req)
+
+		// 处理响应并记录结果
+		for _, item := range batch {
+			var changeErr error
+			var changes []string
+
+			if item.old.Price != item.new.Price {
+				changes = append(changes, "price")
+			}
+			if item.old.AvailableStatus != item.new.AvailableStatus {
+				changes = append(changes, "status")
+			}
+
+			change := response.MenuItemChange{
+				ItemID:     item.new.Id,
+				ItemName:   item.new.Name,
+				ChangeType: strings.Join(changes, ","),
+				OldPrice:   &item.old.Price,
+				NewPrice:   &item.new.Price,
+				OldStatus:  item.old.AvailableStatus,
+				NewStatus:  item.new.AvailableStatus,
+			}
+
+			if err != nil {
+				// 批量调用失败，标记所有为失败
+				changeErr = err
+			} else if resp.Code != "0" {
+				// 业务错误
+				changeErr = fmt.Errorf("业务错误: %s", resp.Message)
+			}
+
+			if changeErr != nil {
+				change.Success = false
+				change.ErrorMessage = changeErr.Error()
+				result.FailedItems++
+				result.Errors = append(result.Errors,
+					fmt.Sprintf("商品%s(%s)更新失败: %v", item.new.Name, item.new.Id, changeErr))
+			} else {
+				change.Success = true
+				result.SuccessItems++
+			}
+
+			result.ItemChanges = append(result.ItemChanges, change)
+		}
+	}
+
+	return nil
+}
+
+// updateModifiersOneByOne 逐个串行更新修饰符
+// 注意：Grab API 暂不支持批量更新修饰符，只能逐个调用
+// 采用简单串行处理 + 请求间隔 + 重试机制，避免触发频率限制
+// 通过商户级互斥锁确保同一商户的修饰符更新排队执行（不同商户之间可并发）
+// FIXME: 让6哥弄队列处理，6哥说后面时间空了再说
+func (s *takeoutAppService) updateModifiersOneByOne(
+	ctx context.Context,
+	merchantID string,
+	modifiers []struct {
+		old *grabfood.MenuModifier
+		new *grabfood.MenuModifier
+	},
 	result *response.MenuSyncResult,
 ) {
-	var changes []string
-	var updatePrice *int64
-	var updateStatus string
-
-	// 检查价格变更
-	if oldModifier.Price != newModifier.Price {
-		changes = append(changes, "price")
+	// 获取或创建当前商户的互斥锁（使用全局锁映射，确保跨实例共享）
+	globalModifierUpdateLocksGuard.Lock()
+	mutexInterface, loaded := globalModifierUpdateLocks.Load(merchantID)
+	if !loaded {
+		mutexInterface = &sync.Mutex{}
+		globalModifierUpdateLocks.Store(merchantID, mutexInterface)
 	}
+	globalModifierUpdateLocksGuard.Unlock()
+	merchantMutex := mutexInterface.(*sync.Mutex)
 
-	// 检查状态变更
-	if oldModifier.AvailableStatus != newModifier.AvailableStatus {
-		changes = append(changes, "status")
-	}
+	// 获取商户级互斥锁，确保同一商户同一时间只有一个修饰符更新任务在执行
+	// 不同商户之间可以并发，避免阻塞其他商户
+	merchantMutex.Lock()
+	defer func() {
+		merchantMutex.Unlock()
+	}()
 
-	updatePrice = newModifier.Price
-	updateStatus = newModifier.AvailableStatus
+	// 频率控制配置
+	const requestInterval = 300 // 每个请求间隔 300ms，约 3 req/s
+	const maxRetries = 2        // 遇到 429 时的最大重试次数
+	const retryDelay = 300      // 重试基础延迟 300ms
 
-	// 如果没有变更，直接返回
-	if len(changes) == 0 {
+	if len(modifiers) == 0 {
 		return
 	}
 
-	result.ChangedModifiers++
-	changeType := strings.Join(changes, ",")
+	// 串行处理每个修饰符
+	for _, modifier := range modifiers {
+		// 计算变更类型
+		var changes []string
+		if !isInt64PtrEqual(modifier.old.Price, modifier.new.Price) {
+			changes = append(changes, "price")
+		}
+		if modifier.old.AvailableStatus != modifier.new.AvailableStatus {
+			changes = append(changes, "status")
+		}
 
-	// 调用更新API
-	updateReq := request.UpdateMenuModifierRequest{
-		Platform:        platform,
-		ModifierId:      newModifier.Id,
-		ModifierName:    newModifier.Name,
-		Price:           updatePrice,
-		AvailableStatus: updateStatus,
+		// 带重试的 RPC 调用
+		var err error
+		for attempt := 0; attempt <= maxRetries; attempt++ {
+			if attempt > 0 {
+				// 重试前等待（指数退避）
+				retryWait := time.Duration(retryDelay*attempt) * time.Millisecond
+				logger.Logger.Warn("修饰符更新失败，准备重试",
+					zap.String("modifierId", modifier.new.Id),
+					zap.String("modifierName", modifier.new.Name),
+					zap.Int("attempt", attempt),
+					zap.Duration("retryWait", retryWait))
+				time.Sleep(retryWait)
+			}
+
+			// 调用 RPC 更新单个修饰符
+			err = s.rpcService.UpdateMenuModifier(
+				ctx,
+				merchantID,
+				modifier.new.Id,
+				modifier.new.Name,
+				modifier.new.Price,
+				modifier.new.AvailableStatus,
+			)
+
+			// 如果成功或者不是 429 错误，跳出重试循环
+			if err == nil || !strings.Contains(err.Error(), "429") {
+				break
+			}
+		}
+
+		// 记录变更详情
+		change := response.MenuModifierChange{
+			ModifierID:   modifier.new.Id,
+			ModifierName: modifier.new.Name,
+			ChangeType:   strings.Join(changes, ","),
+			OldPrice:     modifier.old.Price,
+			NewPrice:     modifier.new.Price,
+			OldStatus:    modifier.old.AvailableStatus,
+			NewStatus:    modifier.new.AvailableStatus,
+			Success:      err == nil,
+		}
+
+		if err != nil {
+			change.ErrorMessage = err.Error()
+			result.FailedModifiers++
+			result.Errors = append(result.Errors,
+				fmt.Sprintf("修饰符%s(%s)更新失败: %v", modifier.new.Name, modifier.new.Id, err))
+		} else {
+			result.SuccessModifiers++
+		}
+		result.ModifierChanges = append(result.ModifierChanges, change)
+
+		// 请求间隔控制
+		time.Sleep(time.Duration(requestInterval) * time.Millisecond)
 	}
-
-	err := s.UpdateMenuModifier(ctx, updateReq)
-
-	// 记录变更详情
-	change := response.MenuModifierChange{
-		ModifierID:   newModifier.Id,
-		ModifierName: newModifier.Name,
-		ChangeType:   changeType,
-		Success:      err == nil,
-	}
-
-	if updatePrice != nil {
-		change.OldPrice = oldModifier.Price
-		change.NewPrice = updatePrice
-	}
-
-	if updateStatus != "" {
-		change.OldStatus = oldModifier.AvailableStatus
-		change.NewStatus = updateStatus
-	}
-
-	if err != nil {
-		change.ErrorMessage = err.Error()
-		result.FailedModifiers++
-		result.Errors = append(result.Errors, fmt.Sprintf("修饰符%s(%s)更新失败: %v", newModifier.Name, newModifier.Id, err))
-	} else {
-		result.SuccessModifiers++
-	}
-
-	result.ModifierChanges = append(result.ModifierChanges, change)
 }

@@ -4,6 +4,19 @@ import (
 	"ttpos-server-go/app/dto"
 )
 
+// TakeoutOrderCancelCheckResp 检查订单是否可取消响应
+type TakeoutOrderCancelCheckResp struct {
+	CanCancel             bool                       `json:"can_cancel"`              // 是否可以取消
+	NonCancellationReason string                     `json:"non_cancellation_reason"` // 不可取消原因（当 can_cancel=false 时）
+	CancelReasons         []TakeoutOrderCancelReason `json:"cancel_reasons"`          // 可选的取消原因列表
+}
+
+// TakeoutOrderCancelReason 取消原因
+type TakeoutOrderCancelReason struct {
+	Code   string `json:"code"`   // 原因代码
+	Reason string `json:"reason"` // 原因描述
+}
+
 // TakeoutOrderResp 订单响应
 type TakeoutOrderResp struct {
 	Uuid             uint64 `json:"uuid"`               // 订单UUID
@@ -23,14 +36,13 @@ type TakeoutOrderResp struct {
 	// 订单优惠
 	Discounts TakeoutOrderDiscountsResp `json:"discounts"` // 订单优惠
 	// 支付类型
-	PaymentType string `json:"payment_type"` // 支付类型
-	OrderType   string `json:"order_type"`   // 订单类型
-	// 订单商品
-	TotalItems int                        `json:"total_items"` // 总商品数量
-	Items      []TakeoutOrderItemResp     `json:"items"`       // 订单商品列表
-	Campaigns  []TakeoutOrderCampaignResp `json:"campaigns"`   // 活动信息
-	Promos     []TakeoutOrderPromoResp    `json:"promos"`      // 促销信息
-	Receiver   TakeoutOrderReceiverResp   `json:"receiver"`    // 收货人信息 (联系人信息)
+	PaymentType string                     `json:"payment_type"` // 支付类型
+	OrderType   string                     `json:"order_type"`   // 订单类型  DELIVERY - 平台配送，RESTAURANT_DELIVERY - 商家配送，TAKEAWAY - 自提/打包，DINEIN - 店内就餐
+	TotalItems  int                        `json:"total_items"`  // 总商品数量
+	Items       []TakeoutOrderItemResp     `json:"items"`        // 订单商品列表
+	Campaigns   []TakeoutOrderCampaignResp `json:"campaigns"`    // 活动信息
+	Promos      []TakeoutOrderPromoResp    `json:"promos"`       // 促销信息
+	Receiver    TakeoutOrderReceiverResp   `json:"receiver"`     // 收货人信息 (联系人信息)
 }
 
 type TakeoutOrderDiscountsResp struct {
@@ -41,6 +53,7 @@ type TakeoutOrderDiscountsResp struct {
 }
 
 type TakeoutOrderTimesResp struct {
+	OrderTime          int64 `json:"order_time"`           // 下单时间
 	SubmitTime         int64 `json:"submit_time"`          // 提交时间 (提交时间，支付时间)
 	AcceptedTime       int64 `json:"accepted_time"`        // 接单时间
 	CompletedTime      int64 `json:"completed_time"`       // 完成时间
@@ -55,7 +68,7 @@ type TakeoutOrderPriceResp struct {
 	EaterPayment      int64 `json:"eater_payment"`       // 顾客实付
 	PlatformDiscount  int64 `json:"platform_discount"`   // 平台优惠
 	MerchantDiscount  int64 `json:"merchant_discount"`   // 商户优惠
-	BasketPromo       int64 `json:"basket_promo"`        // 篮子优惠
+	BasketPromo       int64 `json:"basket_promo"`        // 购物车促销
 	Tax               int64 `json:"tax"`                 // 税费
 	MerchantChargeFee int64 `json:"merchant_charge_fee"` // 商户收取费用
 }
@@ -99,8 +112,8 @@ type TakeoutOrderItemResp struct {
 	Uuid           uint64                 `json:"uuid"`
 	ItemName       dto.LocaleResponse     `json:"item_name"`
 	Quantity       int                    `json:"quantity"`
-	Price          int64                  `json:"price"`
-	Tax            int64                  `json:"tax"`
+	Price          float64                `json:"price"`
+	Tax            float64                `json:"tax"`
 	Specifications string                 `json:"specifications"`
 	Modifiers      string                 `json:"modifiers"`
 	IsPackage      bool                   `json:"is_package"` // 是否套餐
@@ -111,7 +124,7 @@ type TakeoutOrderItemModifierResp struct {
 	Uuid         uint64             `json:"uuid"`
 	ModifierName dto.LocaleResponse `json:"modifier_name"`
 	Quantity     int                `json:"quantity"`
-	Price        int64              `json:"price"`
+	Price        float64            `json:"price"`
 }
 
 // TakeoutOrderListItemResp 订单响应

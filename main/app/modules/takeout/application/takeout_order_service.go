@@ -3,13 +3,21 @@ package application
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
+	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
+	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -24,6 +32,10 @@ type ITakeoutOrderAppService interface {
 	HandlePushOrderState(ctx context.Context, takeoutOrderEvent request.TakeoutOrderEvent) error
 	// 订单同步（从 RPC 接收新订单）
 	SyncNewOrder(ctx context.Context, platform string, takeoutOrderUuid string, rawData map[string]interface{}) error
+	// 接单
+	AcceptOrder(ctx context.Context, req *request.TakeoutOrderAcceptReq) error
+	// 检查订单库存
+	CheckOrderStock(ctx context.Context, order *model.TakeoutOrder) (error, []string)
 }
 
 // takeoutOrderAppService 外卖订单应用服务实现
@@ -155,4 +167,85 @@ func (s *takeoutOrderAppService) SyncNewOrder(ctx context.Context, platform stri
 
 	// 8. 调用 Domain Service 创建订单
 	return s.orderService.CreateOrder(ctx, order)
+}
+
+// AcceptOrder 接单
+func (s *takeoutOrderAppService) AcceptOrder(ctx context.Context, req *request.TakeoutOrderAcceptReq) error {
+	// 1. 获取订单信息（包含商品列表）
+	db := ctx.GetDB()
+	orderRepo := persistence.NewTakeoutOrderRepo(db)
+	order, err := orderRepo.GetByUuid(req.Uuid, orderRepo.WithTakeoutOrderItems(), orderRepo.WithTakeoutOrderItemModifiers())
+	if err != nil {
+		return err
+	}
+	// 2. 检查订单状态
+	if err := order.IsPendingOrder(); err != nil {
+		return err
+	}
+	// 3. 验证库存
+	if err, outOfStockNames := s.CheckOrderStock(ctx, order); err != nil {
+		return errors.NewWithCodeAndData(constant.CodeOrderCheckProductStockZero, outOfStockNames, err.Error())
+	}
+	// 4. 调用 Domain Service 执行接单逻辑
+	return s.orderService.AcceptOrder(ctx, req)
+}
+
+// checkOrderStock 检查订单商品库存
+func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *model.TakeoutOrder) (error, []string) {
+	// 1. 构建 BOM 数量映射（委托给 Domain Service）
+	bomQuantityMap, bomItemMap, err := s.orderService.BuildBomQuantityMap(ctx, order)
+	if err != nil {
+		return err, nil
+	}
+
+	// 2. 如果没有需要检查的 BOM，直接返回
+	if len(bomQuantityMap) == 0 {
+		return nil, nil
+	}
+
+	// 3. 调用库存模块检查库存
+	inventoryAppSrv := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+	insufficientBomUuids, err := inventoryAppSrv.CheckStock(ctx, bomQuantityMap)
+	if err != nil {
+		logger.Logger.Error("检查库存失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+		return errors.WithMessage(errors.New("检查库存失败"), err.Error()), nil
+	}
+
+	// 4. 如果有库存不足的商品，构建提示信息并返回错误
+	if len(insufficientBomUuids) > 0 {
+		outOfStockNames := make([]string, 0, len(insufficientBomUuids))
+		for _, bomUuid := range insufficientBomUuids {
+			if item, ok := bomItemMap[bomUuid]; ok {
+				// 遍历该 item 的所有 modifiers，找到与当前 bomUuid 匹配的 modifier
+				for i := range item.TakeoutOrderItemModifiers {
+					modifier := &item.TakeoutOrderItemModifiers[i]
+
+					if modifier.IsCommodity() {
+						// commodity 类型：显示套餐商品名称(规格)
+						commodityName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
+						flavorName := modifier.TtposSkuName
+						if flavorName != "" {
+							outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", commodityName, flavorName))
+						} else {
+							outOfStockNames = append(outOfStockNames, commodityName)
+						}
+					} else if modifier.IsFlavor() {
+						// flavor 类型：显示主商品名称(规格)
+						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
+						flavorName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
+						outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", itemName, flavorName))
+					} else if modifier.IsSauce() {
+						// sauce 类型：显示主商品名称(加料)
+						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
+						sauceName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
+						outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", itemName, sauceName))
+					}
+				}
+			}
+		}
+		outOfStockMsg := "以下商品库存不足: " + strings.Join(outOfStockNames, ", ")
+		return errors.New(outOfStockMsg), outOfStockNames
+	}
+
+	return nil, nil
 }

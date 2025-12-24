@@ -493,13 +493,13 @@ func (c *GrabConverter) convertProductFlavors(
 	allDown := true
 	for i := range takeoutProduct.ProductBomTakeouts {
 		bomTakeout := &takeoutProduct.ProductBomTakeouts[i]
-		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId == "" {
+		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId != "" {
 			continue
 		}
 		if bomTakeout.ProductBom.IsSoldOut != 1 && bomTakeout.ProductBom.StockNum > 0 {
 			allSoldOut = false
 		}
-		if !bomTakeout.ProductBom.IsDown() {
+		if bomTakeout.ProductBom.Status != 0 && !bomTakeout.ProductBom.IsDelete() {
 			allDown = false
 		}
 	}
@@ -510,7 +510,7 @@ func (c *GrabConverter) convertProductFlavors(
 	}
 
 	modifierGroup := grabfood.NewModifierGroupWithDefaults()
-	modifierGroup.SetId(fmt.Sprintf("TTPOS-FLAVOR-GROUP-%d", takeoutProduct.ProductPackageUuid))
+	modifierGroup.SetId(value_object.PrefixFlavorGroup + strconv.FormatUint(takeoutProduct.ProductPackageUuid, 10))
 	modifierGroup.SetName("Specifications")
 	modifierGroup.SetNameTranslation(map[string]string{
 		"en": "Specifications",
@@ -550,8 +550,8 @@ func (c *GrabConverter) convertProductFlavors(
 		if bomTakeout.ProductBom.IsSoldOut == 1 || bomTakeout.ProductBom.StockNum <= 0 {
 			// 规格售罄
 			modifierStatus = value_object.AvailableStatusUnavailable
-		} else if bomTakeout.ProductBom.IsDown() {
-			// 规格下架或删除
+		}
+		if bomTakeout.ProductBom.Status == 0 || bomTakeout.ProductBom.IsDelete() {
 			modifierStatus = value_object.AvailableStatusHide
 		}
 
@@ -561,7 +561,7 @@ func (c *GrabConverter) convertProductFlavors(
 			if bomTakeout.GrabModifierId != "" {
 				return bomTakeout.GrabModifierId
 			}
-			return fmt.Sprintf("TTPOS-FLAVOR-%d", bomTakeout.ProductBomUuid)
+			return value_object.PrefixFlavor + strconv.FormatUint(bomTakeout.ProductBomUuid, 10)
 		}())
 		modifier.SetName(flavorName)
 		modifier.SetSequence(int32(idx + 1))
@@ -668,7 +668,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		}
 
 		modifier := grabfood.NewMenuModifierWithDefaults()
-		modifier.SetId(fmt.Sprintf("TTPOS-SAUCE-%d", bom.ProductSauce.Uuid))
+		modifier.SetId(value_object.PrefixSauce + strconv.FormatUint(bom.ProductSauce.Uuid, 10))
 		modifier.SetName(sauceName)
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
@@ -714,7 +714,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 			if packageAttrGroup.ProductAttributeGroup.SourceId != "" {
 				return packageAttrGroup.ProductAttributeGroup.SourceId
 			}
-			return fmt.Sprintf("TTPOS-ATTR-GROUP-%d", packageAttrGroup.ProductAttributeGroup.Uuid)
+			return value_object.PrefixAttrGroup + strconv.FormatUint(packageAttrGroup.ProductAttributeGroup.Uuid, 10)
 		}())
 		modifierGroup.SetName(groupName)
 		modifierGroup.SetNameTranslation(c.filterSupportedLanguages(packageAttrGroup.ProductAttributeGroup.MultiLanguageName.ToMap()))
@@ -740,7 +740,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 				if packageAttr.Attribute.SourceId != "" {
 					return packageAttr.Attribute.SourceId
 				}
-				return fmt.Sprintf("TTPOS-ATTR-%d", packageAttr.Uuid)
+				return value_object.PrefixAttr + strconv.FormatUint(packageAttr.Uuid, 10)
 			}())
 			modifier.SetName(attrName)
 			modifier.SetSequence(int32(idx + 1))
@@ -861,7 +861,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 
 		// 创建修饰符组
 		modifierGroup := grabfood.NewModifierGroupWithDefaults()
-		modifierGroup.SetId(fmt.Sprintf("TTPOS-PACKAGE-GROUP-%d", packageGroup.Uuid))
+		modifierGroup.SetId(value_object.PrefixPackageGroup + strconv.FormatUint(packageGroup.Uuid, 10))
 		modifierGroup.SetName(groupName)
 		modifierGroup.SetNameTranslation(nameTranslation)
 		modifierGroup.SetSequence(int32(sequence))
@@ -896,7 +896,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 
 			// 创建修饰符
 			modifier := grabfood.NewMenuModifierWithDefaults()
-			modifier.SetId(fmt.Sprintf("TTPOS-PACKAGE-ITEM-%d", groupItem.Uuid))
+			modifier.SetId(value_object.PrefixPackageItem + strconv.FormatUint(groupItem.Uuid, 10))
 			modifier.SetName(itemName)
 			modifier.SetSequence(int32(idx + 1))
 			modifier.SetAvailableStatus(string(value_object.AvailableStatusAvailable))

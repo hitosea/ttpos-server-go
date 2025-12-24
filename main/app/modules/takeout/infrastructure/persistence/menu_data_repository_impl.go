@@ -398,18 +398,18 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 
 	// 批量查询规格（Flavor）
 	if len(flavorUuids) > 0 {
-		var flavors []model.ProductFlavor
+		var flavors []model.ProductBom
 		err := db.
-			Model(&model.ProductFlavor{}).
+			Model(&model.ProductBom{}).
 			Where("uuid IN ? AND delete_time = ?", flavorUuids, 0).
-			Preload("MultiLanguageName", "delete_time = ?", 0).
+			Preload("ProductFlavor.MultiLanguageName", "delete_time = ?", 0).
 			Find(&flavors).Error
 
 		if err != nil {
 			logger.Logger.Error("批量查询规格失败", zap.Error(err))
 		} else {
 			for _, flavor := range flavors {
-				name := flavor.MultiLanguageName.ToJson()
+				name := flavor.ProductFlavor.MultiLanguageName.ToJson()
 				result[flavor.Uuid] = name
 			}
 		}

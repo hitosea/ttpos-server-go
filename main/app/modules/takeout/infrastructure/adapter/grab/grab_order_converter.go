@@ -135,7 +135,8 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	order.PaymentType = submitOrderReq.GetPaymentType()
 
 	featureFlags := submitOrderReq.GetFeatureFlags()
-	order.OrderType = featureFlags.OrderType
+	// 转换 Grab 订单类型为 TTPOS 通用订单类型
+	order.OrderType = valueobject.ConvertGrabOrderTypeToTakeoutOrderType(featureFlags.OrderType)
 	order.OrderAcceptedType = featureFlags.OrderAcceptedType
 
 	if membershipID, ok := submitOrderReq.GetMembershipIDOk(); ok {
@@ -155,7 +156,6 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	order.Subtotal = price.GetSubtotal() / 100
 	order.DeliveryFee = price.GetDeliveryFee() / 100
 	order.SmallOrderFee = price.GetSmallOrderFee() / 100
-	order.TotalAmount = price.GetSubtotal() / 100 // 使用 EaterPayment 作为总金额
 	order.EaterPayment = price.GetEaterPayment() / 100
 	order.PlatformDiscount = price.GetGrabFundPromo() / 100
 	order.MerchantDiscount = price.GetMerchantFundPromo() / 100
@@ -191,9 +191,6 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 	if len(submitOrderReq.Items) > 0 {
 		order.TakeoutOrderItems = make([]takeoutModel.TakeoutOrderItem, 0, len(submitOrderReq.Items))
 		for _, item := range submitOrderReq.Items {
-			// 将 Grab item 转换为 JSON 保存在 PlatformData
-			itemBytes, _ := json.Marshal(item)
-
 			// 根据 item.Id 前缀判断商品类型
 			// TTPOS-ITEM- 开头为普通商品(0), TTPOS-PACKAGE- 开头为套餐(1)
 			ttposProductType := 0
@@ -208,25 +205,22 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 				PlatformItemId:   item.Id,
 				TtposProductType: ttposProductType,
 				Quantity:         int(item.Quantity),
-				Price:            item.Price,
-				Tax:              item.GetTax(),
+				Price:            float64(item.GetPrice()) / 100.0, // Grab API 返回的是分（exponent=2），转换为元
+				Tax:              float64(item.GetTax()) / 100.0,   // 同上
 				Specifications:   item.GetSpecifications(),
-				PlatformData:     string(itemBytes),
 			}
 
 			// 解析修饰符
 			if len(item.Modifiers) > 0 {
 				orderItem.TakeoutOrderItemModifiers = make([]takeoutModel.TakeoutOrderItemModifier, 0, len(item.Modifiers))
 				for _, modifier := range item.Modifiers {
-					modifierBytes, _ := json.Marshal(modifier)
 					// Grab API 不提供修饰符名称，这里暂时使用 modifier.GetId() 作为名称
 					orderItemModifier := takeoutModel.TakeoutOrderItemModifier{
 						Platform:           platform,
 						PlatformModifierId: modifier.GetId(),
 						Quantity:           int(modifier.GetQuantity()),
-						Price:              modifier.GetPrice(),
-						Tax:                modifier.GetTax(),
-						PlatformData:       string(modifierBytes),
+						Price:              float64(modifier.GetPrice()) / 100.0, // Grab API 返回的是分（exponent=2），转换为元
+						Tax:                float64(modifier.GetTax()) / 100.0,   // 同上
 					}
 					orderItem.TakeoutOrderItemModifiers = append(orderItem.TakeoutOrderItemModifiers, orderItemModifier)
 				}
@@ -415,7 +409,7 @@ func (c *GrabConverter) ConvertCampaigns(
 			orderCampaign.MexFundedRatio = campaign.GetMexFundedRatio()
 		}
 		if campaign.HasDeductedAmount() {
-			orderCampaign.DeductedAmount = campaign.GetDeductedAmount()
+			orderCampaign.DeductedAmount = campaign.GetDeductedAmount() / 100
 		}
 		if campaign.HasDeductedPart() {
 			orderCampaign.DeductedPart = campaign.GetDeductedPart()
@@ -495,27 +489,22 @@ func (c *GrabConverter) ConvertOrderPromos(
 
 		// 金额信息
 		if promo.HasPromoAmountInMin() {
-			orderPromo.PromoAmount = promo.GetPromoAmountInMin()
-			orderPromo.PromoAmountInMin = promo.GetPromoAmountInMin()
+			orderPromo.PromoAmount = promo.GetPromoAmountInMin() / 100
+			orderPromo.PromoAmountInMin = promo.GetPromoAmountInMin() / 100
 		} else if promo.HasPromoAmount() {
 			// 如果没有 PromoAmountInMin，使用 PromoAmount（需要转换为最小单位）
-			orderPromo.PromoAmount = promo.GetPromoAmount() * 100
-			orderPromo.PromoAmountInMin = promo.GetPromoAmount() * 100
+			orderPromo.PromoAmount = promo.GetPromoAmount() / 100
+			orderPromo.PromoAmountInMin = promo.GetPromoAmount() / 100
 		}
 
 		if promo.HasMexFundedRatio() {
 			orderPromo.MexFundedRatio = int(promo.GetMexFundedRatio())
 		}
 		if promo.HasMexFundedAmount() {
-			orderPromo.MexFundedAmount = promo.GetMexFundedAmount()
+			orderPromo.MexFundedAmount = promo.GetMexFundedAmount() / 100
 		}
 		if promo.HasTargetedPrice() {
-			orderPromo.TargetedPrice = promo.GetTargetedPrice()
-		}
-
-		// 保存完整的促销数据为 JSON
-		if promoBytes, err := json.Marshal(promo); err == nil {
-			orderPromo.PlatformData = string(promoBytes)
+			orderPromo.TargetedPrice = promo.GetTargetedPrice() / 100
 		}
 
 		orderPromos = append(orderPromos, orderPromo)

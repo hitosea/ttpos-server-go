@@ -13,20 +13,16 @@ type TakeoutOrderItem struct {
 
 	// TTPOS 商品信息（关联映射后）
 	TtposProductUuid uint64 `gorm:"column:ttpos_product_uuid" json:"ttpos_product_uuid"`
-	TtposSkuUuid     uint64 `gorm:"column:ttpos_sku_uuid" json:"ttpos_sku_uuid"`
 	TtposProductType int    `gorm:"column:ttpos_product_type" json:"ttpos_product_type"` // 0-商品, 1-套餐
 
 	// 商品数量和价格
-	Quantity       int    `gorm:"column:quantity" json:"quantity"`
-	Price          int64  `gorm:"column:price" json:"price"`
-	Tax            int64  `gorm:"column:tax" json:"tax"`
-	Specifications string `gorm:"column:specifications" json:"specifications"`
+	Quantity       int     `gorm:"column:quantity" json:"quantity"`
+	Price          float64 `gorm:"column:price;type:decimal(20,4)" json:"price"` // 单价(元,4位小数)
+	Tax            float64 `gorm:"column:tax;type:decimal(20,4)" json:"tax"`     // 税费(元,4位小数)
+	Specifications string  `gorm:"column:specifications" json:"specifications"`
 
 	// 关联状态
 	IsMapped int `gorm:"column:is_mapped" json:"is_mapped"`
-
-	// 平台特定数据（JSON 格式）
-	PlatformData string `gorm:"column:platform_data;type:text" json:"platform_data"`
 
 	// 关联字表结构
 	TakeoutOrderItemModifiers []TakeoutOrderItemModifier `gorm:"foreignKey:TakeoutOrderItemUuid;references:Uuid"`

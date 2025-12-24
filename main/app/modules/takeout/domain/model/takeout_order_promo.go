@@ -21,9 +21,6 @@ type TakeoutOrderPromo struct {
 	MexFundedAmount  int64 `gorm:"column:mex_funded_amount" json:"mex_funded_amount"`     // 商户承担金额
 	TargetedPrice    int64 `gorm:"column:targeted_price" json:"targeted_price"`           // 目标价格（订单小计）
 	PromoAmountInMin int64 `gorm:"column:promo_amount_in_min" json:"promo_amount_in_min"` // 促销金额（最小单位）
-
-	// 平台特定数据（JSON 格式）
-	PlatformData string `gorm:"column:platform_data;type:text" json:"platform_data"`
 }
 
 func (*TakeoutOrderPromo) TableName() string {

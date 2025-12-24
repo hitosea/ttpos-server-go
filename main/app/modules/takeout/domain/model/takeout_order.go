@@ -1,5 +1,10 @@
 package model
 
+import (
+	"ttpos-server-go/app/errors"
+	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
+)
+
 // TakeoutOrder 外卖订单表（多平台）
 type TakeoutOrder struct {
 	BaseModel
@@ -25,7 +30,6 @@ type TakeoutOrder struct {
 	Subtotal          int64 `gorm:"column:subtotal" json:"subtotal"`                       // 小计金额
 	DeliveryFee       int64 `gorm:"column:delivery_fee" json:"delivery_fee"`               // 配送费
 	SmallOrderFee     int64 `gorm:"column:small_order_fee" json:"small_order_fee"`         // 小单费用
-	TotalAmount       int64 `gorm:"column:total_amount" json:"total_amount"`               // 总金额
 	EaterPayment      int64 `gorm:"column:eater_payment" json:"eater_payment"`             // 顾客实付
 	PlatformDiscount  int64 `gorm:"column:platform_discount" json:"platform_discount"`     // 平台优惠
 	MerchantDiscount  int64 `gorm:"column:merchant_discount" json:"merchant_discount"`     // 商户优惠
@@ -58,9 +62,6 @@ type TakeoutOrder struct {
 	IsMexEditOrder    int    `gorm:"column:is_mex_edit_order" json:"is_mex_edit_order"`
 	MembershipId      string `gorm:"column:membership_id" json:"membership_id"`
 	DriverEta         int64  `gorm:"column:driver_eta" json:"driver_eta"`
-
-	// 平台特定数据（JSON 格式）
-	PlatformData string `gorm:"column:platform_data;type:mediumtext" json:"platform_data"`
 
 	// 完整原始数据（JSON 格式）
 	RawData string `gorm:"column:raw_data;type:mediumtext" json:"raw_data"`
@@ -114,4 +115,25 @@ func (o *TakeoutOrder) SetTakeoutOrderPromos(promos []*TakeoutOrderPromo) {
 	for i, promo := range promos {
 		o.TakeoutOrderPromos[i] = *promo
 	}
+}
+
+// 是否异常订单
+func (o *TakeoutOrder) IsAbnormalOrder() bool {
+	return o.IsAbnormal == 1
+}
+
+// 是否待接单订单
+func (o *TakeoutOrder) IsPendingOrder() error {
+	if o == nil {
+		return errors.New("订单不存在")
+	}
+	// 检查订单状态
+	if o.OrderState != valueobject.TakeoutOrderStatePending {
+		return errors.New("订单状态不正确")
+	}
+	// 检查订单状态
+	if o.IsAbnormalOrder() {
+		return errors.New("订单异常，不能接单")
+	}
+	return nil
 }

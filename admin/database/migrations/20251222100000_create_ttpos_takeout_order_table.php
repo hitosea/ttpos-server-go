@@ -128,19 +128,15 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 
                 // TTPOS 商品信息（从 platform_item_id 解析）
                 ->addColumn('ttpos_product_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS商品UUID (从TTPOS-ITEM-前缀提取)'])
-                ->addColumn('ttpos_sku_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS规格UUID'])
                 
                 // 商品数量和价格
                 ->addColumn('quantity', 'integer', ['signed' => true, 'default' => 0, 'comment' => '数量'])
-                ->addColumn('price', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '单价(分)'])
-                ->addColumn('tax', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '税费(分)'])
+                ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '单价(元,4位小数)'])
+                ->addColumn('tax', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '税费(元,4位小数)'])
                 ->addColumn('specifications', 'string', ['limit' => 500, 'default' => '', 'comment' => '规格说明'])
                 
                 // 关联状态
                 ->addColumn('is_mapped', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否已关联: 0=无TTPOS前缀(异常),1=有TTPOS前缀(正常)'])
-                
-                // 平台特定数据（JSON 格式）
-                ->addColumn('platform_data', 'text', ['null' => true, 'comment' => '平台特定字段(JSON)'])
                 
                 // 标准字段
                 ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
@@ -174,10 +170,9 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('ttpos_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS修饰符UUID(关联后)'])
                 ->addColumn('ttpos_modifier_type', 'string', ['limit' => 20, 'default' => '', 'comment' => 'TTPOS修饰符类型: flavor=规格, sauce=加料, attr=属性'])
                 ->addColumn('quantity', 'integer', ['signed' => false, 'default' => 1, 'comment' => '数量'])
-                ->addColumn('price', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '价格(分)'])
-                ->addColumn('tax', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '税费(分)'])
+                ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '价格(元,4位小数)'])
+                ->addColumn('tax', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '税费(元,4位小数)'])
                 ->addColumn('is_mapped', 'integer', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::INT_TINY, 'default' => 0, 'comment' => '是否已映射: 0=未映射,1=已映射'])
-                ->addColumn('platform_data', 'text', ['null' => true, 'comment' => '平台特定数据(JSON)'])
                 ->addColumn('create_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
                 ->addColumn('update_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '更新时间'])
                 ->addColumn('delete_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '删除时间'])

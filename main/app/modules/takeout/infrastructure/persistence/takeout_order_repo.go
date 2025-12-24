@@ -23,6 +23,8 @@ type ITakeoutOrderRepo interface {
 
 	// 选项方法
 	WithPreload(options ...DBOption) DBOption
+	WithTakeoutOrderItems() DBOption
+	WithTakeoutOrderItemModifiers() DBOption
 	WhereUuid(uuid uint64) DBOption
 	WherePlatform(platform string) DBOption
 	WhereOrderState(orderState int) DBOption
@@ -269,5 +271,19 @@ func (r *TakeoutOrderRepoImpl) WithPreload(options ...DBOption) DBOption {
 			db = option(db)
 		}
 		return db
+	}
+}
+
+// WithTakeoutOrderItems 预加载订单商品
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItems() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderItems")
+	}
+}
+
+// WithTakeoutOrderItemModifiers 预加载订单商品修饰符
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItemModifiers() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderItems.TakeoutOrderItemModifiers")
 	}
 }

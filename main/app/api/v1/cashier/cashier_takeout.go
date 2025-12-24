@@ -142,8 +142,8 @@ func (h *TakeoutHandler) AcceptOrder(c *gin.Context) {
 		return
 	}
 
-	if err := h.orderSrv.AcceptOrder(ctx, &req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	if err := h.orderAppSrv.AcceptOrder(ctx, &req); err != nil {
+		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
 
@@ -193,6 +193,57 @@ func (h *TakeoutHandler) CallRider(c *gin.Context) {
 	}
 
 	if err := h.orderSrv.CallRider(ctx, &req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, nil)
+}
+
+// CheckOrderCancelable 检查订单是否可取消
+// @Summary 检查订单是否可取消
+// @Tags 收银端.外卖管理
+// @Accept json
+// @Produce json
+// @Param request query request.TakeoutOrderCheckCancelableReq true "检查参数"
+// @Success 200 {object} dto.Response{data=response.TakeoutOrderCancelCheckResp} "检查结果"
+// @Router /cashier/takeout/order/check-cancelable [get]
+func (h *TakeoutHandler) CheckOrderCancelable(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var req request.TakeoutOrderCheckCancelableReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+
+	resp, err := h.orderSrv.CheckOrderCancelable(ctx, &req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
+// CancelOrder 取消订单
+// @Summary 取消订单
+// @Tags 收银端.外卖管理
+// @Accept json
+// @Produce json
+// @Param request body request.TakeoutOrderCancelReq true "取消订单参数"
+// @Success 200 {object} nil "取消订单成功"
+// @Router /cashier/takeout/order/cancel [post]
+func (h *TakeoutHandler) CancelOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	var req request.TakeoutOrderCancelReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+
+	if err := h.orderSrv.CancelOrder(ctx, &req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
@@ -276,11 +327,13 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/takeout/settings", wrapper.GetSettings)   // 获取配置
 		privateApi.POST("/takeout/settings", wrapper.SaveSettings) // 保存配置
 		// 订单管理
-		privateApi.GET("/takeout/order/list", wrapper.GetList)          // 获取订单列表
-		privateApi.GET("/takeout/order/detail", wrapper.GetDetail)      // 获取订单详情
-		privateApi.POST("/takeout/order/accept", wrapper.AcceptOrder)   // 接单
-		privateApi.POST("/takeout/order/reject", wrapper.RejectOrder)   // 拒单
-		privateApi.POST("/takeout/order/call-rider", wrapper.CallRider) // 呼叫骑手
+		privateApi.GET("/takeout/order/list", wrapper.GetList)                          // 获取订单列表
+		privateApi.GET("/takeout/order/detail", wrapper.GetDetail)                      // 获取订单详情
+		privateApi.POST("/takeout/order/accept", wrapper.AcceptOrder)                   // 接单
+		privateApi.POST("/takeout/order/reject", wrapper.RejectOrder)                   // 拒单
+		privateApi.POST("/takeout/order/call-rider", wrapper.CallRider)                 // 呼叫骑手
+		privateApi.GET("/takeout/order/check-cancelable", wrapper.CheckOrderCancelable) // 检查订单是否可取消
+		privateApi.POST("/takeout/order/cancel", wrapper.CancelOrder)                   // 取消订单
 		// 模拟接收新订单
 		privateApi.POST("/takeout/order/sync", wrapper.SyncOrder)                  // 同步订单
 		privateApi.POST("/takeout/order/push-state", wrapper.HandlePushOrderState) // 处理订单状态变更

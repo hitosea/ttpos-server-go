@@ -49,12 +49,23 @@ type TakeoutOrderAcceptReq struct {
 // TakeoutOrderRejectReq 拒单请求
 type TakeoutOrderRejectReq struct {
 	Uuid             uint64 `json:"uuid" binding:"required"`
-	RejectReasonCode string `json:"reject_reason_code" binding:"required"`
+	RejectReasonCode string `json:"reject_reason_code"`
 }
 
 // TakeoutOrderCallRiderReq 呼叫骑手请求
 type TakeoutOrderCallRiderReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 订单UUID
+}
+
+// TakeoutOrderCheckCancelableReq 检查订单是否可取消请求
+type TakeoutOrderCheckCancelableReq struct {
+	Uuid uint64 `json:"uuid" form:"uuid" binding:"required"` // 订单UUID
+}
+
+// TakeoutOrderCancelReq 取消订单请求
+type TakeoutOrderCancelReq struct {
+	Uuid       uint64 `json:"uuid" binding:"required"`        // 订单UUID
+	ReasonCode string `json:"reason_code" binding:"required"` // 取消原因码
 }
 
 // TakeoutSettingsGetReq 获取配置请求

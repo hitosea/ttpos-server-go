@@ -15,7 +15,7 @@ class AddTtposProductTypeToTakeoutOrderItemTable extends Migrator
                 'signed' => false,
                 'default' => 0,
                 'comment' => 'TTPOS商品类型: 0-商品, 1-套餐',
-                'after' => 'ttpos_sku_uuid',
+                'after' => 'ttpos_product_uuid',
             ])->update();
         }
     }

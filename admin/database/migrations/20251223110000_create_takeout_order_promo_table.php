@@ -41,9 +41,6 @@ class CreateTakeoutOrderPromoTable extends Migrator
                 ->addColumn('targeted_price', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '目标价格-订单小计 (Grab: targetedPrice)'])
                 ->addColumn('promo_amount_in_min', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '促销金额最小单位 (Grab: promoAmountInMin)'])
                 
-                // 平台特定数据（JSON 格式）
-                ->addColumn('platform_data', 'text', ['null' => true, 'comment' => '平台特定字段(JSON)'])
-                
                 // 标准字段
                 ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
                 ->addColumn('update_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '更新时间'])

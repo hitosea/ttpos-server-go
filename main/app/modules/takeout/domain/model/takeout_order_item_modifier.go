@@ -20,15 +20,15 @@ type TakeoutOrderItemModifier struct {
 	TtposModifierType string `gorm:"column:ttpos_modifier_type" json:"ttpos_modifier_type"` // TTPOS 修饰符类型：flavor=规格, sauce=加料, attr=属性, commodity=套餐商品
 
 	// 数量和价格
-	Quantity int   `gorm:"column:quantity" json:"quantity"`
-	Price    int64 `gorm:"column:price" json:"price"`
-	Tax      int64 `gorm:"column:tax" json:"tax"`
+	Quantity int     `gorm:"column:quantity" json:"quantity"`
+	Price    float64 `gorm:"column:price;type:decimal(10,4)" json:"price"` // 价格(元,4位小数)
+	Tax      float64 `gorm:"column:tax;type:decimal(10,4)" json:"tax"`     // 税费(元,4位小数)
 
 	// 关联状态
 	IsMapped int `gorm:"column:is_mapped" json:"is_mapped"`
 
-	// 平台特定数据（JSON 格式）
-	PlatformData string `gorm:"column:platform_data;type:text" json:"platform_data"`
+	// 临时字段（不映射到数据库）
+	TtposSkuName string `gorm:"-" json:"-"` // TTPOS BOM 的 sku_name（临时存储，用于库存不足提示）
 }
 
 func (*TakeoutOrderItemModifier) TableName() string {
@@ -37,4 +37,20 @@ func (*TakeoutOrderItemModifier) TableName() string {
 
 func (o *TakeoutOrderItemModifier) IsCommodity() bool {
 	return o.TtposModifierType == "commodity"
+}
+
+func (o *TakeoutOrderItemModifier) IsPackage() bool {
+	return o.TtposModifierType == "package"
+}
+
+func (o *TakeoutOrderItemModifier) IsFlavor() bool {
+	return o.TtposModifierType == "flavor"
+}
+
+func (o *TakeoutOrderItemModifier) IsSauce() bool {
+	return o.TtposModifierType == "sauce"
+}
+
+func (o *TakeoutOrderItemModifier) IsAttr() bool {
+	return o.TtposModifierType == "attr"
 }

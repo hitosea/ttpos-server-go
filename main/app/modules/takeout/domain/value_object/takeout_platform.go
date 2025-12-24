@@ -35,3 +35,36 @@ const (
 	TakeoutOrderAcceptedTypeAuto   = "AUTO"   // 自动接单
 	TakeoutOrderAcceptedTypeManual = "MANUAL" // 手动接单
 )
+
+// TTPOS 通用订单类型
+const (
+	TakeoutOrderTypeDelivery           = "DELIVERY"            // 平台配送（如 Grab 配送）
+	TakeoutOrderTypeRestaurantDelivery = "RESTAURANT_DELIVERY" // 商家配送
+	TakeoutOrderTypeTakeaway           = "TAKEAWAY"            // 自提/打包
+	TakeoutOrderTypeDineIn             = "DINEIN"              // 店内就餐
+)
+
+// Grab 平台订单类型
+const (
+	GrabOrderTypeDeliveredByGrab       = "DeliveredByGrab"       // Grab 配送
+	GrabOrderTypeDeliveredByRestaurant = "DeliveredByRestaurant" // 商家配送
+	GrabOrderTypeTakeAway              = "TakeAway"              // 自提
+	GrabOrderTypePickup                = "Pickup"                // 自提（别名）
+	GrabOrderTypeDineIn                = "DineIn"                // 店内就餐
+)
+
+// ConvertGrabOrderTypeToTakeoutOrderType 转换 Grab 订单类型为 TTPOS 通用订单类型
+func ConvertGrabOrderTypeToTakeoutOrderType(grabOrderType string) string {
+	switch grabOrderType {
+	case GrabOrderTypeDeliveredByGrab:
+		return TakeoutOrderTypeDelivery
+	case GrabOrderTypeDeliveredByRestaurant:
+		return TakeoutOrderTypeRestaurantDelivery
+	case GrabOrderTypeTakeAway, GrabOrderTypePickup:
+		return TakeoutOrderTypeTakeaway
+	case GrabOrderTypeDineIn:
+		return TakeoutOrderTypeDineIn
+	default:
+		return TakeoutOrderTypeDelivery // 默认返回配送
+	}
+}

@@ -90,9 +90,6 @@ func isMySQLError(err error) bool {
 
 // ErrorWithDetail 返回错误
 func ErrorWithDetail(c *gin.Context, code int, err error) {
-	// 记录完整错误到日志
-	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
-
 	if config.Server.Mode == constant.ServerModeRelease {
 		// 只有Release模式才返回原始错误信息。如123123
 		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
@@ -118,9 +115,6 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 
 // ErrorWithMessage 返回错误
 func ErrorWithMessage(c *gin.Context, code int, err error) {
-	// 记录完整错误到日志
-	logger.Logger.Info("ErrorWithMessage", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
-
 	if config.Server.Mode == constant.ServerModeRelease {
 		// 只有Release模式才返回原始错误信息。如123123
 		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
@@ -143,9 +137,6 @@ func ErrorWithMessage(c *gin.Context, code int, err error) {
 
 // ErrorWithData 返回错误携带数据
 func ErrorWithData(c *gin.Context, code int, data any, err error) {
-	// 记录完整错误到日志
-	logger.Logger.Info("ErrorWithData", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
-
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)
 		// Release 模式下，如果是 MySQL 错误，返回通用错误信息
@@ -167,9 +158,6 @@ func ErrorWithData(c *gin.Context, code int, data any, err error) {
 
 // ErrorAutoWithData 返回错误携带数据
 func ErrorAutoWithData(c *gin.Context, code int, err error) {
-	// 记录完整错误到日志
-	logger.Logger.Info("ErrorAutoWithData", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
-
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)
 		// Release 模式下，如果是 MySQL 错误，返回通用错误信息
