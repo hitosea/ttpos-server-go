@@ -82,7 +82,7 @@
 
 #### 具体要求
 
-- [ ] 2.1 在 Controller 或 Logic 层添加参数校验逻辑
+- [ ] 2.1 在 Controller 层添加参数校验逻辑
 - [ ] 2.2 校验逻辑在处理 `OpenPosEntryDetail` 列表时对每个 detail 进行检查
 - [ ] 2.3 返回的错误信息应明确指出参数问题
 - [ ] 2.4 使用 GoFrame 的 `gerror` 包进行错误处理
@@ -133,8 +133,8 @@
 
 ### 代码架构和模块化
 
-- **分层设计**: 严格遵循 Controller → Logic → DAO 分层（GoFrame 架构）
-- **单一职责原则**: 参数校验和查询逻辑应在 Logic 层独立实现
+- **分层设计**: 严格遵循 Controller → Logic → Service → DAO 分层
+- **单一职责原则**: 参数校验和查询逻辑应在对应层级独立实现
 - **模块化设计**: 复用现有的 `GetModeOfPayment` 服务
 - **依赖管理**: Logic 层通过 Service 接口调用 `GetModeOfPayment`
 - **遵循规范**:
@@ -145,7 +145,7 @@
 ### API 设计要求
 
 - [ ] gRPC 接口遵循 Protobuf 规范
-- [ ] 响应格式通过 `api.ResponseInfo` 包装
+- [ ] 响应格式通过 `erp.ResponseInfo` 包装
 - [ ] 错误信息使用中文，便于运维和调试
 - [ ] 字段命名使用 snake_case
 - [ ] 参考: `ttpos-bmp/.cursor/rules/proto-rules.mdc` - Protobuf 规范
@@ -221,8 +221,8 @@
 - 禁止修改 dao/entity/do/ 目录（自动生成）
 - gRPC 服务必须注册到 Nacos
 - 遵循 `ttpos-bmp/.cursor/rules/go-rules.mdc`
-- Logic 层不能返回 `api.ResponseInfo` 类型
-- Controller 层负责将业务数据包装为 `api.ResponseInfo`
+- Logic 层不能返回 `erp.ResponseInfo` 类型
+- Controller 层负责将业务数据包装为 `erp.ResponseInfo`
 
 #### Protobuf 规范
 
@@ -240,7 +240,7 @@
 
 ### 资源约束
 
-- 开发时间: 1-1.5 天
+- 开发时间: 1 天
 - Story Point: 2 (必须 ≤ 5)
 
 ---
@@ -338,7 +338,7 @@
 ### 相关 Proposal
 
 - `docs/team/proposals/2025-12/open-pos-entry-payment-id-support.md` - 本功能的需求提案
-- `docs/team/proposals/2025-12/close-pos-entry-payment-id-support.md` - 关账接口 PaymentID 支持（已完成）
+- `docs/team/proposals/2025-12/close-pos-entry-payment-id-support.md` - 关账接口 PaymentID 支持提案
 
 ### 相关 Spec
 
@@ -364,5 +364,4 @@
 **创建日期**: 2025-12-24  
 **作者**: rikugun  
 **审核者**: -
-
 
