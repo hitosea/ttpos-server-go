@@ -7,6 +7,7 @@ package service
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 )
@@ -26,9 +27,18 @@ type (
 		//   - ctx: 上下文对象
 		//   - orderEntity: 订单实体
 		//   - toState: 目标状态 (Accepted/Rejected)
+		//
 		// 返回：
 		//   - err: 错误信息
-		PrepareOrder(ctx context.Context, orderEntity interface{}, toState string) error
+		PrepareOrder(ctx context.Context, orderEntityInterface interface{}, toState string) error
+		// MarkOrderReady 标记订单准备完成
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - orderEntity: 订单实体，包含 ProviderOrderId 等信息
+		//
+		// 返回：
+		//   - err: 错误信息
+		MarkOrderReady(ctx context.Context, orderEntity *entity.Order) error
 	}
 )
 

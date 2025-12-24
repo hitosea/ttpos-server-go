@@ -105,3 +105,46 @@ func (s *sOrder) PrepareOrder(ctx context.Context, req *api.PrepareOrderReq) (re
 	g.Log().Infof(ctx, "订单准备成功, orderUuid: %s, toState: %s", req.TakeoutOrderUuid, req.ToState)
 	return res, nil
 }
+
+// MarkOrderReady 标记订单准备完成
+// 参数：
+//   - ctx: 上下文对象
+//   - takeoutOrderUuid: 外卖订单 UUID
+//   - requestId: 请求追踪 ID（可选）
+//
+// 返回：
+//   - orderUuid: 订单 UUID
+//   - err: 错误信息
+func (s *sOrder) MarkOrderReady(ctx context.Context, takeoutOrderUuid string, requestId string) (orderUuid string, err error) {
+	if requestId != "" {
+		g.Log().Infof(ctx, "开始标记订单准备完成, requestId: %s, orderUuid: %s", requestId, takeoutOrderUuid)
+	}
+
+	// 查询订单信息
+	var orderEntity *entity.Order
+	err = dao.Order.Ctx(ctx).
+		Where(dao.Order.Columns().Uuid, takeoutOrderUuid).
+		Scan(&orderEntity)
+	if err != nil {
+		return "", gerror.Wrap(err, "查询订单失败")
+	}
+
+	if orderEntity == nil {
+		return "", gerror.New("订单不存在")
+	}
+
+	// 根据 provider_name 路由到不同平台的处理逻辑
+	switch orderEntity.ProviderName {
+	case "grab":
+		// 调用 Grab 订单处理逻辑
+		err = service.GrabOrder().MarkOrderReady(ctx, orderEntity)
+		if err != nil {
+			return "", gerror.Wrap(err, "Grab订单标记准备完成失败")
+		}
+	default:
+		return "", gerror.Newf("不支持的平台: %s", orderEntity.ProviderName)
+	}
+
+	g.Log().Infof(ctx, "订单标记准备完成成功, orderUuid: %s", takeoutOrderUuid)
+	return orderEntity.Uuid, nil
+}

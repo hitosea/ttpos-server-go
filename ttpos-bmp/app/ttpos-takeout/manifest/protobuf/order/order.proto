@@ -34,6 +34,17 @@ message PrepareOrderResp {
   string order_uuid = 1; // 订单UUID
 }
 
+// 标记订单准备完成请求
+message MarkOrderReadyReq {
+  string takeout_order_uuid = 1; // 外卖订单UUID
+  string request_id = 2;         // 请求追踪ID (可选)
+}
+
+// 标记订单准备完成响应
+message MarkOrderReadyResp {
+  string order_uuid = 1; // 订单UUID
+}
+
 // 订单服务
 service OrderService {
   // 获取订单信息
@@ -41,4 +52,7 @@ service OrderService {
   
   // 准备订单（接受/拒绝）
   rpc PrepareOrder(PrepareOrderReq) returns (takeout.ApiResponse);
+  
+  // 标记订单准备完成（markStatus 默认为 1）
+  rpc MarkOrderReady(MarkOrderReadyReq) returns (takeout.ApiResponse);
 }

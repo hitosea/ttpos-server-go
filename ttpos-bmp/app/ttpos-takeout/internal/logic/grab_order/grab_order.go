@@ -437,3 +437,42 @@ func (s *sGrabOrder) callGrabAcceptRejectAPI(ctx context.Context, orderEntity *e
 		return gerror.Newf("不支持的订单状态: %s，必须为 %s 或 %s", toState, consts.OrderPrepareStateAccepted, consts.OrderPrepareStateRejected)
 	}
 }
+
+// MarkOrderReady 标记订单准备完成
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体，包含 ProviderOrderId 等信息
+//
+// 返回：
+//   - err: 错误信息
+func (s *sGrabOrder) MarkOrderReady(ctx context.Context, orderEntity *entity.Order) error {
+	// 1. 参数验证
+	if orderEntity == nil {
+		return gerror.New("订单实体不能为空")
+	}
+	if orderEntity.ProviderName != ProviderNameGrab {
+		return gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
+	}
+	if orderEntity.ProviderOrderId == "" {
+		return gerror.New("provider_order_id 不能为空")
+	}
+
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "开始调用 GrabFood MarkOrderReady API: provider_order_id=%s, order_uuid=%s",
+		orderEntity.ProviderOrderId, orderEntity.Uuid)
+
+	// 3. 调用 GrabFood SDK (markStatus 固定传入 1)
+	err := service.Grab().MarkOrderReady(ctx, orderEntity.ProviderOrderId, "1")
+	if err != nil {
+		// 记录详细错误日志
+		g.Log().Errorf(ctx, "调用 GrabFood MarkOrderReady API 失败: order_id=%s, order_uuid=%s, error=%v",
+			orderEntity.ProviderOrderId, orderEntity.Uuid, err)
+		return gerror.Wrapf(err, "调用 GrabFood API 失败")
+	}
+
+	// 4. 记录成功日志
+	g.Log().Infof(ctx, "调用 GrabFood MarkOrderReady API 成功: provider_order_id=%s, order_uuid=%s",
+		orderEntity.ProviderOrderId, orderEntity.Uuid)
+
+	return nil
+}

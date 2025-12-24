@@ -267,6 +267,104 @@ func (x *PrepareOrderResp) GetOrderUuid() string {
 	return ""
 }
 
+// 标记订单准备完成请求
+type MarkOrderReadyReq struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TakeoutOrderUuid string                 `protobuf:"bytes,1,opt,name=takeout_order_uuid,json=takeoutOrderUuid,proto3" json:"takeout_order_uuid,omitempty" dc:"外卖订单UUID"` // 外卖订单UUID
+	RequestId        string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求追踪ID (可选)"`                     // 请求追踪ID (可选)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *MarkOrderReadyReq) Reset() {
+	*x = MarkOrderReadyReq{}
+	mi := &file_order_order_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MarkOrderReadyReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MarkOrderReadyReq) ProtoMessage() {}
+
+func (x *MarkOrderReadyReq) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MarkOrderReadyReq.ProtoReflect.Descriptor instead.
+func (*MarkOrderReadyReq) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *MarkOrderReadyReq) GetTakeoutOrderUuid() string {
+	if x != nil {
+		return x.TakeoutOrderUuid
+	}
+	return ""
+}
+
+func (x *MarkOrderReadyReq) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// 标记订单准备完成响应
+type MarkOrderReadyResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderUuid     string                 `protobuf:"bytes,1,opt,name=order_uuid,json=orderUuid,proto3" json:"order_uuid,omitempty" dc:"订单UUID"` // 订单UUID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MarkOrderReadyResp) Reset() {
+	*x = MarkOrderReadyResp{}
+	mi := &file_order_order_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MarkOrderReadyResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MarkOrderReadyResp) ProtoMessage() {}
+
+func (x *MarkOrderReadyResp) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MarkOrderReadyResp.ProtoReflect.Descriptor instead.
+func (*MarkOrderReadyResp) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *MarkOrderReadyResp) GetOrderUuid() string {
+	if x != nil {
+		return x.OrderUuid
+	}
+	return ""
+}
+
 var File_order_order_proto protoreflect.FileDescriptor
 
 const file_order_order_proto_rawDesc = "" +
@@ -292,10 +390,18 @@ const file_order_order_proto_rawDesc = "" +
 	"request_id\x18\x03 \x01(\tR\trequestId\"1\n" +
 	"\x10PrepareOrderResp\x12\x1d\n" +
 	"\n" +
-	"order_uuid\x18\x01 \x01(\tR\torderUuid2\x8a\x01\n" +
+	"order_uuid\x18\x01 \x01(\tR\torderUuid\"`\n" +
+	"\x11MarkOrderReadyReq\x12,\n" +
+	"\x12takeout_order_uuid\x18\x01 \x01(\tR\x10takeoutOrderUuid\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\"3\n" +
+	"\x12MarkOrderReadyResp\x12\x1d\n" +
+	"\n" +
+	"order_uuid\x18\x01 \x01(\tR\torderUuid2\xcc\x01\n" +
 	"\fOrderService\x12<\n" +
 	"\fGetOrderInfo\x12\x16.order.GetOrderInfoReq\x1a\x14.takeout.ApiResponse\x12<\n" +
-	"\fPrepareOrder\x12\x16.order.PrepareOrderReq\x1a\x14.takeout.ApiResponseB'Z%ttpos-bmp/app/ttpos-takeout/api/orderb\x06proto3"
+	"\fPrepareOrder\x12\x16.order.PrepareOrderReq\x1a\x14.takeout.ApiResponse\x12@\n" +
+	"\x0eMarkOrderReady\x12\x18.order.MarkOrderReadyReq\x1a\x14.takeout.ApiResponseB'Z%ttpos-bmp/app/ttpos-takeout/api/orderb\x06proto3"
 
 var (
 	file_order_order_proto_rawDescOnce sync.Once
@@ -309,21 +415,25 @@ func file_order_order_proto_rawDescGZIP() []byte {
 	return file_order_order_proto_rawDescData
 }
 
-var file_order_order_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_order_order_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_order_order_proto_goTypes = []any{
 	(*GetOrderInfoReq)(nil),     // 0: order.GetOrderInfoReq
 	(*GetOrderInfoResp)(nil),    // 1: order.GetOrderInfoResp
 	(*PrepareOrderReq)(nil),     // 2: order.PrepareOrderReq
 	(*PrepareOrderResp)(nil),    // 3: order.PrepareOrderResp
-	(*takeout.ApiResponse)(nil), // 4: takeout.ApiResponse
+	(*MarkOrderReadyReq)(nil),   // 4: order.MarkOrderReadyReq
+	(*MarkOrderReadyResp)(nil),  // 5: order.MarkOrderReadyResp
+	(*takeout.ApiResponse)(nil), // 6: takeout.ApiResponse
 }
 var file_order_order_proto_depIdxs = []int32{
 	0, // 0: order.OrderService.GetOrderInfo:input_type -> order.GetOrderInfoReq
 	2, // 1: order.OrderService.PrepareOrder:input_type -> order.PrepareOrderReq
-	4, // 2: order.OrderService.GetOrderInfo:output_type -> takeout.ApiResponse
-	4, // 3: order.OrderService.PrepareOrder:output_type -> takeout.ApiResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: order.OrderService.MarkOrderReady:input_type -> order.MarkOrderReadyReq
+	6, // 3: order.OrderService.GetOrderInfo:output_type -> takeout.ApiResponse
+	6, // 4: order.OrderService.PrepareOrder:output_type -> takeout.ApiResponse
+	6, // 5: order.OrderService.MarkOrderReady:output_type -> takeout.ApiResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -340,7 +450,7 @@ func file_order_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_order_order_proto_rawDesc), len(file_order_order_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

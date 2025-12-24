@@ -16,6 +16,7 @@ type (
 		// 参数：
 		//   - ctx: 上下文对象
 		//   - req: 获取订单信息请求，包含 shop_uuid 和 order_uuid
+		//
 		// 返回：
 		//   - res: 订单信息响应
 		//   - err: 错误信息
@@ -24,10 +25,21 @@ type (
 		// 参数：
 		//   - ctx: 上下文对象
 		//   - req: 准备订单请求，包含 order_uuid 和 to_state
+		//
 		// 返回：
 		//   - res: 准备订单响应
 		//   - err: 错误信息
 		PrepareOrder(ctx context.Context, req *api.PrepareOrderReq) (res *api.PrepareOrderResp, err error)
+		// MarkOrderReady 标记订单准备完成
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - takeoutOrderUuid: 外卖订单 UUID
+		//   - requestId: 请求追踪 ID（可选）
+		//
+		// 返回：
+		//   - orderUuid: 订单 UUID
+		//   - err: 错误信息
+		MarkOrderReady(ctx context.Context, takeoutOrderUuid string, requestId string) (orderUuid string, err error)
 	}
 )
 

@@ -92,3 +92,52 @@ func (c *Controller) PrepareOrder(ctx context.Context, req *api.PrepareOrderReq)
 		Data:    dataAny,
 	}, nil
 }
+
+// MarkOrderReady 标记订单准备完成
+func (c *Controller) MarkOrderReady(ctx context.Context, req *api.MarkOrderReadyReq) (*takeout.ApiResponse, error) {
+	// 1. 参数验证
+	if req.TakeoutOrderUuid == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "takeout_order_uuid 不能为空",
+		}, nil
+	}
+
+	// 2. 记录请求日志
+	g.Log().Infof(ctx, "接收到 MarkOrderReady 请求: order_uuid=%s, request_id=%s",
+		req.TakeoutOrderUuid, req.RequestId)
+
+	// 3. 调用 Service 层
+	orderUuid, err := service.Order().MarkOrderReady(ctx, req.TakeoutOrderUuid, req.RequestId)
+	if err != nil {
+		g.Log().Errorf(ctx, "MarkOrderReady 失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 4. 构建响应
+	resp := &api.MarkOrderReadyResp{
+		OrderUuid: orderUuid,
+	}
+
+	// 5. 将 resp 转换为 anypb.Any
+	dataAny, err := anypb.New(resp)
+	if err != nil {
+		g.Log().Errorf(ctx, "序列化响应失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	// 6. 记录成功日志
+	g.Log().Infof(ctx, "MarkOrderReady 成功: order_uuid=%s", orderUuid)
+
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
