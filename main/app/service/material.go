@@ -996,6 +996,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		BarcodeValue:       request.BarcodeValue,
 		Disabled:           request.Status == 0,
 		OpeningStock:       request.InitStock,
+		ValuationRate:      request.Valuation,
 		Uoms:               unitList,
 		InternalCode:       request.InternalCode,
 		Classification:     getMaterialCategoryName,
