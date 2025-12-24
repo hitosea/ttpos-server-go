@@ -35,6 +35,8 @@
 
 ### 2.1 总部数据编辑权限
 
+#### 2.1.1 店内商品编辑权限
+
 **作为**店铺管理员  
 **我想**能够修改来源总部数据的外卖渠道价格  
 **以便于**根据本店实际情况调整价格策略
@@ -44,6 +46,23 @@
 - AC1：来源总部的商品数据，允许修改外卖渠道的价格
 - AC2：来源总部的套餐数据，允许修改外卖渠道的套餐价格和分组商品价格
 - AC3：来源总部的规格数据，允许修改外卖渠道的规格价格
+
+#### 2.1.2 外卖商品编辑权限
+
+**作为**店铺管理员  
+**我想**能够修改来源总部的外卖商品的价格和上下架状态  
+**以便于**根据本店外卖运营需求调整商品展示和定价
+
+**验收标准：**
+
+- AC1：外卖商品关联的店内商品来源总部时（`headquarter_uuid != 0`），允许修改以下内容：
+  - 单规格/多规格商品外卖价格（`ttpos_product_bom_takeout.price`）
+  - 套餐商品外卖价格（`ttpos_product_package_takeout.price`）
+  - 套餐分组子商品外卖加价（`ttpos_product_package_group_item_takeout.add_price`）
+  - 商品上下架状态（`ttpos_product_package_takeout.status`）
+- AC2：禁止修改其他所有内容（商品名称、类型、分类、图片、描述、属性、加料、套餐分组结构等）
+- AC3：前端界面应禁用不可编辑字段的输入控件
+- AC4：后端API应验证字段编辑权限，拒绝修改禁止编辑的字段
 
 ### 2.2 套餐分组可选范围设置
 
@@ -102,13 +121,53 @@
 
 ### 3.1 总部数据编辑权限
 
-#### 3.2.1 权限规则
+#### 3.1.1 店内商品编辑权限
 
 - 字段标识：`headquarter_uuid != 0` 表示来源总部
 - 允许编辑的内容：
   - 外卖渠道价格（单规格、多规格）
   - 套餐外卖渠道价格
   - 套餐分组商品外卖渠道价格
+
+#### 3.1.2 外卖商品编辑权限
+
+当外卖商品关联的店内商品来源总部（`headquarter_uuid != 0`）时，外卖商品只能编辑以下内容：
+
+**允许编辑的字段：**
+
+1. **单规格/多规格商品外卖价格**
+   - 表：`ttpos_product_bom_takeout`
+   - 字段：`price`（外卖规格价格）
+
+2. **套餐商品外卖价格**
+   - 表：`ttpos_product_package_takeout`
+   - 字段：`price`（外卖商品价格/套餐价格）
+
+3. **套餐分组子商品外卖加价**
+   - 表：`ttpos_product_package_group_item_takeout`
+   - 字段：`add_price`（外卖平台的加价金额）
+
+4. **商品上下架状态**
+   - 表：`ttpos_product_package_takeout`
+   - 字段：`status`（0-下架, 1-上架）
+
+**禁止编辑的内容：**
+
+- 商品名称（`name`、`multi_language_name_uuid`）
+- 商品类型（`product_type`）
+- 商品分类（`category_uuid`、`special_category_uuid`）
+- 商品图片（`image_file_uuid`）
+- 商品描述（`describe`、`describe_multi_language_name_uuid`）
+- 其他所有关联数据（属性、加料、套餐分组结构等）
+
+**判断逻辑：**
+
+```
+IF 外卖商品.product_package_uuid 对应的 ttpos_product_package.headquarter_uuid != 0 THEN
+  只允许编辑：价格字段 + 上下架状态
+  禁止编辑：其他所有字段
+END IF
+```
 
 ### 3.2 套餐分组可选范围
 
@@ -262,10 +321,122 @@ END IF
 **兼容性处理：**
 
 1. **添加/编辑商品接口**
-   - 接受新旧字段同时传递
-   - 优先使用新字段
-   - 旧字段自动转换为新字段
-   - v2.11客户端不传新字段时，自动设置合理默认值
+
+   **v2.11客户端 → v2.12后端（接收旧字段，转换为新字段存储）：**
+   
+   属性字段转换：
+   
+   新增商品时：
+   ```
+   IF is_must == 1 THEN
+     min_selection = 1
+   ELSE
+     min_selection = 0
+   END IF
+   
+   IF max_selection > 0 THEN
+     max_selection = max_selection  // 保留用户设置的值
+   ELSE
+     max_selection = 属性组中属性的数量  // 默认值：不限制
+   END IF
+   ```
+   
+   编辑商品时：
+   ```
+   // 处理必选状态切换
+   IF is_must == 0 THEN
+     // 取消必选：重置为0
+     min_selection = 0
+   ELSE IF is_must == 1 THEN
+     // 勾选必选：保留原有的最小选择数量（如果用户之前设置过）
+     IF 原 min_selection == 0 THEN
+       min_selection = 1
+     ELSE
+       min_selection = 原 min_selection  // 保留原值（可能是2、3等）
+     END IF
+   END IF
+   
+   // max_selection 同新增逻辑
+   IF max_selection > 0 THEN
+     max_selection = max_selection
+   ELSE
+     max_selection = 属性组中属性的数量
+   END IF
+   ```
+   
+   小料字段转换：
+   
+   新增商品时：
+   ```
+   IF sauce_required == 1 THEN
+     sauce_min_selection = 1
+   ELSE
+     sauce_min_selection = 0
+   END IF
+   
+   IF sauce_max_selection > 0 THEN
+     sauce_max_selection = sauce_max_selection  // 保留用户设置的值
+   ELSE
+     sauce_max_selection = 加料值数量  // 默认值：不限制
+   END IF
+   ```
+   
+   编辑商品时：
+   ```
+   // 处理必选状态切换
+   IF sauce_required == 0 THEN
+     // 取消必选：重置为0
+     sauce_min_selection = 0
+   ELSE IF sauce_required == 1 THEN
+     // 勾选必选：保留原有的最小选择数量
+     IF 原 sauce_min_selection == 0 THEN
+       sauce_min_selection = 1
+     ELSE
+       sauce_min_selection = 原 sauce_min_selection  // 保留原值
+     END IF
+   END IF
+   
+   // sauce_max_selection 同新增逻辑
+   IF sauce_max_selection > 0 THEN
+     sauce_max_selection = sauce_max_selection
+   ELSE
+     sauce_max_selection = 加料值数量
+   END IF
+   ```
+   
+   套餐分组字段：
+   ```
+   // v2.11客户端不会传 optional_min_count
+   IF optional_min_count 未传递 THEN
+     IF group_type == 1 (可选分组) THEN
+       optional_min_count = 1  // 默认至少选1个
+     ELSE
+       optional_min_count = 分组商品数量  // 固定分组
+     END IF
+   END IF
+   ```
+
+   **v2.12客户端 → v2.12后端（接收新字段，计算旧字段用于响应）：**
+   
+   新增商品和编辑商品统一处理：
+   
+   ```
+   // 属性：根据最小选择数量自动标记必选状态
+   IF min_selection > 0 THEN
+     is_must = 1  // 最小选择>0，标记为必选
+   ELSE
+     is_must = 0  // 可以不选，标记为非必选
+   END IF
+   
+   // 小料：根据最小选择数量自动标记必选状态
+   IF sauce_min_selection > 0 THEN
+     sauce_required = 1  // 最小选择>0，标记为必选
+   ELSE
+     sauce_required = 0  // 可以不选，标记为非必选
+   END IF
+   ```
+   
+   **说明：** v2.12客户端无论新增还是编辑商品，后端都需要根据 `min_selection` 和 `sauce_min_selection` 自动计算并更新 `is_must` 和 `sauce_required` 字段，确保查询接口返回时，v2.11客户端能够正确显示必选状态。
 
 2. **查询商品接口**
    - 响应同时包含新旧字段
@@ -389,4 +560,8 @@ END IF
 | 1.5  | 2025-12-23 | AI     | 修复代码中的上限验证：属性组/加料/套餐分组上限统一为100个       |
 | 1.6  | 2025-12-24 | AI     | 移除商品删除限制需求，允许直接删除商品和规格                    |
 | 1.7  | 2025-12-24 | 曾振华 | 补充子店同步总店商品字段（子任务）                              |
+| 1.8  | 2025-12-24 | AI     | 补充详细的新增商品时的新旧字段双向转换规则和默认值逻辑          |
+| 1.9  | 2025-12-24 | AI     | 补充v2.11编辑商品时的兼容规则：保留用户已设置的min_selection原值 |
+| 1.10 | 2025-12-24 | AI     | 明确v2.12无论新增还是编辑都需要根据min_selection自动标记必选状态 |
+| 1.11 | 2025-12-24 | AI     | 新增外卖商品编辑权限限制：总店同步的外卖商品只能编辑价格和上下架状态 |
 

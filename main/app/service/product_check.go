@@ -267,13 +267,15 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 }
 
 type CheckProductAttributeGroupParam struct {
-	Uuid         uint64                       `json:"uuid"`          // 属性组UUID
-	IsMust       int                          `json:"is_must"`       // 属性组是否必选 0-否 1-是（废弃，使用MinSelection替代）
-	MinSelection int                          `json:"min_selection"` // 属性组最小选择数量（v2.12新增）
-	IsOpenInput  bool                         `json:"is_open_input"` // 属性组最大选择数量是否开启 false-否 true-是
-	MaxSelection int                          `json:"max_selection"` // 属性组最大选择数量
-	Attributes   []CheckProductAttributeParam `json:"attributes"`    // 属性列表
-	IsDelete     bool                         `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid               uint64                       `json:"uuid"`                 // 属性组UUID
+	IsMust             int                          `json:"is_must"`              // 属性组是否必选 0-否 1-是（废弃，使用MinSelection替代）
+	MinSelection       int                          `json:"min_selection"`        // 属性组最小选择数量（v2.12新增）
+	IsOpenInput        bool                         `json:"is_open_input"`        // 属性组最大选择数量是否开启 false-否 true-是
+	MaxSelection       int                          `json:"max_selection"`        // 属性组最大选择数量
+	Attributes         []CheckProductAttributeParam `json:"attributes"`           // 属性列表
+	IsDelete           bool                         `json:"is_delete"`            // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	ProductPackageUuid uint64                       `json:"product_package_uuid"` // 商品包UUID，用于编辑时查询原有值
+	ClientVersion      string                       `json:"client_version"`       // 客户端版本号，用于兼容性判断
 }
 
 type CheckProductAttributeParam struct {
@@ -285,6 +287,7 @@ type CheckProductAttributeParam struct {
 func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckProductAttributeGroupParam) ([]CheckProductAttributeGroupParam, error) {
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
+	productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(db)
 
 	attributeGroupCount := 0
 	for idx, attributeGroupReq := range attributes {
@@ -300,23 +303,79 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			return nil, errors.New("属性组不存在")
 		}
 
-		// 版本兼容：如果MinSelection为0但IsMust为1，自动转换
-		if attributeGroupReq.MinSelection == 0 && attributeGroupReq.IsMust == 1 {
-			attributes[idx].MinSelection = 1
+		// 统计属性数量（用于默认最大可选值）
+		attributeCount := 0
+		for _, attributeReq := range attributeGroupReq.Attributes {
+			if !attributeReq.IsDelete {
+				attributeCount++
+			}
 		}
 
+		// ========== 版本兼容性处理开始 ==========
+		// 判断客户端版本：v2.11.x 使用旧逻辑，v2.12+ 使用新逻辑
+		clientVersion := attributeGroupReq.ClientVersion
+		isV211Client := utils.CompareVersion(clientVersion, utils.VersionLT, "2.12.0")
+
+		if isV211Client {
+			// v2.11客户端 → v2.12后端：旧字段转新字段
+			if attributeGroupReq.ProductPackageUuid > 0 {
+				// 编辑商品：查询原有的 min_selection 值
+				existingGroup, _ := productPackageAttributeGroupRepo.GetProductPackageAttributeGroup(
+					commonRepo.WhereByProductPackageUuid(attributeGroupReq.ProductPackageUuid),
+					commonRepo.WhereByProductAttributeGroupUuid(attributeGroupReq.Uuid),
+					commonRepo.WhereBySoftDelete(),
+				)
+
+				if attributeGroupReq.IsMust == 0 {
+					// 取消必选：重置为0
+					attributes[idx].MinSelection = 0
+				} else if attributeGroupReq.IsMust == 1 {
+					// 勾选必选：保留原有的最小选择数量（如果用户之前设置过）
+					if attributeGroupReq.MinSelection == 0 {
+						// 前端未传 min_selection，需要判断
+						if existingGroup != nil && existingGroup.MinSelection > 0 {
+							// 保留数据库中的原值
+							attributes[idx].MinSelection = int(existingGroup.MinSelection)
+						} else {
+							// 原值为0或首次设置，设置为1
+							attributes[idx].MinSelection = 1
+						}
+					}
+					// else: 前端已传 min_selection > 0，保留前端值
+				}
+			} else {
+				// 新增商品
+				if attributeGroupReq.MinSelection == 0 && attributeGroupReq.IsMust == 1 {
+					attributes[idx].MinSelection = 1
+				}
+			}
+
+			// 处理 max_selection 默认值
+			if attributeGroupReq.MaxSelection == 0 {
+				// 未设置最大可选数量，默认为属性值数量
+				attributes[idx].MaxSelection = attributeCount
+			}
+		}
+
+		// v2.12客户端 → v2.12后端：新字段自动计算旧字段（所有版本都执行）
+		if attributes[idx].MinSelection > 0 {
+			attributes[idx].IsMust = 1
+		} else {
+			attributes[idx].IsMust = 0
+		}
+		// ========== 版本兼容性处理结束 ==========
+
 		// 验证可选范围（v2.12新增）
-		if attributeGroupReq.MaxSelection < attributeGroupReq.MinSelection {
+		if attributes[idx].MaxSelection < attributes[idx].MinSelection {
 			return nil, errors.New("属性组最大可选不可小于最小可选")
 		}
 
-		if !slices.Contains([]int{0, 1}, attributeGroupReq.IsMust) {
+		if !slices.Contains([]int{0, 1}, attributes[idx].IsMust) {
 			return nil, errors.New("属性组是否必选不正确")
 		}
 		if len(attributeGroupReq.Attributes) == 0 {
 			return nil, errors.New("属性值不能为空")
 		}
-		attributeCount := 0
 		attributeDefaultCount := 0
 		for _, attributeReq := range attributeGroupReq.Attributes {
 			if attributeReq.Uuid == 0 {
@@ -341,10 +400,10 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 		}
 		if !isDelete {
 			// 验证最大可选不超过属性值数量
-			if attributeGroupReq.MaxSelection > attributeCount {
+			if attributes[idx].MaxSelection > attributeCount {
 				return nil, errors.New("属性最大可选数量不能超过属性值数量")
 			}
-			if attributeGroupReq.IsOpenInput && attributeDefaultCount > attributeGroupReq.MaxSelection {
+			if attributeGroupReq.IsOpenInput && attributeDefaultCount > attributes[idx].MaxSelection {
 				return nil, errors.New("默认勾选数量不能大于最大选择数量")
 			}
 			attributeGroupCount++
@@ -357,11 +416,13 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 }
 
 type CheckProductSauceParam struct {
-	IsMust       int                          `json:"is_must"`       // 商品加料是否必选 0-否 1-是（废弃，使用MinSelection替代）
-	MinSelection int                          `json:"min_selection"` // 商品加料最小选择数量（v2.12新增）
-	IsOpenInput  bool                         `json:"is_open_input"` // 商品加料最大选择数量是否开启 0-否 1-是
-	MaxSelection int                          `json:"max_selection"` // 商品加料最大选择数量
-	Sauces       []CheckProductSauceItemParam `json:"items"`         // 商品加料列表
+	IsMust             int                          `json:"is_must"`              // 商品加料是否必选 0-否 1-是（废弃，使用MinSelection替代）
+	MinSelection       int                          `json:"min_selection"`        // 商品加料最小选择数量（v2.12新增）
+	IsOpenInput        bool                         `json:"is_open_input"`        // 商品加料最大选择数量是否开启 0-否 1-是
+	MaxSelection       int                          `json:"max_selection"`        // 商品加料最大选择数量
+	Sauces             []CheckProductSauceItemParam `json:"items"`                // 商品加料列表
+	ProductPackageUuid uint64                       `json:"product_package_uuid"` // 商品包UUID，用于编辑时查询原有值
+	ClientVersion      string                       `json:"client_version"`       // 客户端版本号，用于兼容性判断
 }
 
 type CheckProductSauceItemParam struct {
@@ -391,11 +452,68 @@ type CheckProductSauceItemResult struct {
 func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauceParam) (*CheckProductSauceResult, error) {
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
+	productPackageRepo := repository.NewProductPackageRepo(db)
 
-	// 版本兼容：如果MinSelection为0但IsMust为1，自动转换
-	if param.MinSelection == 0 && param.IsMust == 1 {
-		param.MinSelection = 1
+	// 统计小料数量（用于默认最大可选值）
+	sauceCount := 0
+	for _, sauceReq := range param.Sauces {
+		if !sauceReq.IsDelete {
+			sauceCount++
+		}
 	}
+
+	// ========== 版本兼容性处理开始 ==========
+	// 判断客户端版本：v2.11.x 使用旧逻辑，v2.12+ 使用新逻辑
+	clientVersion := param.ClientVersion
+	isV211Client := utils.CompareVersion(clientVersion, utils.VersionLT, "2.12.0")
+
+	if isV211Client {
+		// v2.11客户端 → v2.12后端：旧字段转新字段
+		if param.ProductPackageUuid > 0 {
+			// 编辑商品：查询原有的 sauce_min_selection 值
+			existingPackage, _ := productPackageRepo.GetProductPackage(
+				commonRepo.WhereByUuid(param.ProductPackageUuid),
+				commonRepo.WhereBySoftDelete(),
+			)
+
+			if param.IsMust == 0 {
+				// 取消必选：重置为0
+				param.MinSelection = 0
+			} else if param.IsMust == 1 {
+				// 勾选必选：保留原有的最小选择数量（如果用户之前设置过）
+				if param.MinSelection == 0 {
+					// 前端未传 min_selection，需要判断
+					if existingPackage != nil && existingPackage.SauceMinSelection > 0 {
+						// 保留数据库中的原值
+						param.MinSelection = int(existingPackage.SauceMinSelection)
+					} else {
+						// 原值为0或首次设置，设置为1
+						param.MinSelection = 1
+					}
+				}
+				// else: 前端已传 min_selection > 0，保留前端值
+			}
+		} else {
+			// 新增商品
+			if param.MinSelection == 0 && param.IsMust == 1 {
+				param.MinSelection = 1
+			}
+		}
+
+		// 处理 max_selection 默认值
+		if param.MaxSelection == 0 {
+			// 未设置最大可选数量，默认为加料值数量
+			param.MaxSelection = sauceCount
+		}
+	}
+
+	// v2.12客户端 → v2.12后端：新字段自动计算旧字段（所有版本都执行）
+	if param.MinSelection > 0 {
+		param.IsMust = 1
+	} else {
+		param.IsMust = 0
+	}
+	// ========== 版本兼容性处理结束 ==========
 
 	// 验证可选范围（v2.12新增）
 	if param.MaxSelection < param.MinSelection {
@@ -405,7 +523,6 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 	if !slices.Contains([]int{0, 1}, param.IsMust) {
 		return nil, errors.New("是否必选不正确")
 	}
-	sauceCount := 0
 	sauceDefaultCount := 0
 	sauceResults := make([]CheckProductSauceItemResult, 0)
 	for _, sauceReq := range param.Sauces {
@@ -431,16 +548,24 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 			if sauceReq.IsDefaultSelected == 1 {
 				sauceDefaultCount++
 			}
-			sauceCount++
 		}
 	}
-	if param.IsOpenInput && param.MaxSelection > sauceCount {
+
+	// 重新统计实际的 sauceCount（用于验证）
+	actualSauceCount := len(sauceResults)
+	for _, sr := range sauceResults {
+		if sr.IsDelete {
+			actualSauceCount--
+		}
+	}
+
+	if param.IsOpenInput && param.MaxSelection > actualSauceCount {
 		return nil, errors.New("加料项数量不能大于最大选择数量")
 	}
 	if param.IsOpenInput && sauceDefaultCount > param.MaxSelection {
 		return nil, errors.New("默认勾选数量不能大于最大选择数量")
 	}
-	if sauceCount > 100 {
+	if actualSauceCount > 100 {
 		return nil, errors.New("加料不能超过100个")
 	}
 	return &CheckProductSauceResult{

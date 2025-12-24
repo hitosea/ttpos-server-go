@@ -5779,6 +5779,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		flavorListResult.Status = req.Status
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var attributes []CheckProductAttributeGroupParam
 			for _, attribute := range req.Attributes {
 				var attributeParams []CheckProductAttributeParam
@@ -5789,12 +5792,13 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 					})
 				}
 				attributes = append(attributes, CheckProductAttributeGroupParam{
-					Uuid:         attribute.Uuid,
-					IsMust:       attribute.IsMust,
-					MinSelection: attribute.MinSelection,
-					IsOpenInput:  attribute.IsOpenInput,
-					MaxSelection: attribute.MaxSelection,
-					Attributes:   attributeParams,
+					Uuid:          attribute.Uuid,
+					IsMust:        attribute.IsMust,
+					MinSelection:  attribute.MinSelection,
+					IsOpenInput:   attribute.IsOpenInput,
+					MaxSelection:  attribute.MaxSelection,
+					Attributes:    attributeParams,
+					ClientVersion: clientVersion, // 传递客户端版本号
 				})
 			}
 			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
@@ -5805,6 +5809,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		}
 		// 商品加料, 可选
 		if len(req.Sauce.Sauces) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var sauceListParam []CheckProductSauceItemParam
 			for _, sauceReq := range req.Sauce.Sauces {
 				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
@@ -5813,11 +5820,12 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
-				IsMust:       req.Sauce.IsMust,
-				MinSelection: req.Sauce.MinSelection,
-				IsOpenInput:  req.Sauce.IsOpenInput,
-				MaxSelection: req.Sauce.MaxSelection,
-				Sauces:       sauceListParam,
+				IsMust:        req.Sauce.IsMust,
+				MinSelection:  req.Sauce.MinSelection,
+				IsOpenInput:   req.Sauce.IsOpenInput,
+				MaxSelection:  req.Sauce.MaxSelection,
+				Sauces:        sauceListParam,
+				ClientVersion: clientVersion, // 传递客户端版本号
 			})
 			if err != nil {
 				return 0, err
@@ -6107,6 +6115,9 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		flavorListResult.Status = req.Status
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var attributes []CheckProductAttributeGroupParam
 			for _, attribute := range req.Attributes {
 				var attributeParams []CheckProductAttributeParam
@@ -6118,13 +6129,15 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 					})
 				}
 				attributes = append(attributes, CheckProductAttributeGroupParam{
-					Uuid:         attribute.Uuid,
-					IsMust:       attribute.IsMust,
-					MinSelection: attribute.MinSelection,
-					IsOpenInput:  attribute.IsOpenInput,
-					MaxSelection: attribute.MaxSelection,
-					Attributes:   attributeParams,
-					IsDelete:     attribute.IsDelete,
+					Uuid:               attribute.Uuid,
+					IsMust:             attribute.IsMust,
+					MinSelection:       attribute.MinSelection,
+					IsOpenInput:        attribute.IsOpenInput,
+					MaxSelection:       attribute.MaxSelection,
+					Attributes:         attributeParams,
+					IsDelete:           attribute.IsDelete,
+					ProductPackageUuid: req.Uuid,      // 编辑时传递商品包UUID，用于查询原有值
+					ClientVersion:      clientVersion, // 传递客户端版本号
 				})
 			}
 			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
@@ -6135,6 +6148,9 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		}
 		// 商品加料, 可选
 		if len(req.Sauce.Sauces) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var sauceListParam []CheckProductSauceItemParam
 			for _, sauceReq := range req.Sauce.Sauces {
 				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
@@ -6145,11 +6161,13 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
-				IsMust:       req.Sauce.IsMust,
-				MinSelection: req.Sauce.MinSelection,
-				IsOpenInput:  req.Sauce.IsOpenInput,
-				MaxSelection: req.Sauce.MaxSelection,
-				Sauces:       sauceListParam,
+				IsMust:             req.Sauce.IsMust,
+				MinSelection:       req.Sauce.MinSelection,
+				IsOpenInput:        req.Sauce.IsOpenInput,
+				MaxSelection:       req.Sauce.MaxSelection,
+				Sauces:             sauceListParam,
+				ProductPackageUuid: req.Uuid,      // 编辑时传递商品包UUID，用于查询原有值
+				ClientVersion:      clientVersion, // 传递客户端版本号
 			})
 			if err != nil {
 				return nil, nil, err
