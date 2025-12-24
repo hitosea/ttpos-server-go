@@ -987,7 +987,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 构建出库单
 
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {

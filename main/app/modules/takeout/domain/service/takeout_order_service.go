@@ -900,6 +900,17 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 		return err
 	}
 
+	// 发布订单创建事件
+	event.GetDispatcher().Publish(event.NewOrderCreatedEvent(
+		order.Uuid,
+		order.Platform,
+		order.PlatformOrderId,
+		order.ShortOrderNumber,
+		order.TakeoutOrderUuid,
+		order.EaterPayment,
+		ctx.GetCompanyUuid(),
+	))
+
 	return nil
 }
 
@@ -925,6 +936,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 
 		// 3. 转换并更新订单状态
 		// 使用平台转换器将平台状态转换为内部状态码
+		oldOrderState := order.OrderState
 		newOrderState := grab.ConvertPlatformStateToOrderState(status)
 		if newOrderState == -1 {
 			logger.Logger.Error("转换订单状态失败", zap.String("order_uuid", orderUuid), zap.String("status", status))
@@ -937,6 +949,21 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		if err := orderRepoTx.Update(order); err != nil {
 			logger.Logger.Error("更新订单数据失败", zap.String("order_uuid", orderUuid), zap.Error(err))
 			return errors.WithMessage(err, "更新订单数据失败")
+		}
+
+		// 5. 发布订单状态更新事件（仅在状态发生变化时）
+		if oldOrderState != newOrderState {
+			event.GetDispatcher().Publish(event.NewOrderStatusUpdatedEvent(
+				order.Uuid,
+				order.Platform,
+				order.PlatformOrderId,
+				order.ShortOrderNumber,
+				order.TakeoutOrderUuid,
+				oldOrderState,
+				newOrderState,
+				status,
+				ctx.GetCompanyUuid(),
+			))
 		}
 
 		return nil

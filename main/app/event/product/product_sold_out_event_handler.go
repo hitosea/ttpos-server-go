@@ -4,6 +4,7 @@ import (
 	"sync"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -30,7 +31,7 @@ func ProductSoldOutEventHandler() {
 			})
 			settingSrv := setting.NewSrv(dbm, cache)
 			translateSrv := service.NewTranslateSrv(dbm, cache)
-			takeoutSrv := service.NewTakeoutSrv(dbm, cache, nil, nil, translateSrv, settingSrv)
+			takeoutSrv := takeoutService.NewTakeoutSrv(dbm, cache, nil, nil, translateSrv, settingSrv)
 
 			utils.Go(func() {
 				// 推送菜单到Grab平台

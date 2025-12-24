@@ -1,4 +1,4 @@
-package service
+package takeout
 
 import (
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/modules/takeout/application"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
@@ -21,10 +20,8 @@ import (
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
-	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -33,70 +30,6 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
-
-type ITakeoutSrv interface {
-	// ToggleTakeoutStatus 切换指定平台外卖状态
-	ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
-
-	// 导入菜单到TTPOS
-	ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error)
-
-	// PushMenuToPlatform 推送菜单到外卖平台
-	PushMenuToPlatform(ctx context.Context, platform string) error
-
-	// SyncMenuChanges 同步菜单变更
-	SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error)
-
-	// ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
-	ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*resp.GrabMenuImportResp, error)
-}
-
-type takeoutSrv struct {
-	dbm               *database.DBManager
-	cache             cache.Cache
-	takeoutAppSrv     application.ITakeoutAppService
-	productSrv        IProductSrv
-	translateSrv      ITranslateSrv
-	settingSrv        setting.ISrv
-	uploadFileSrv     IUploadFileSrv
-	productTakeoutSrv IProductTakeoutSrv
-}
-
-func NewTakeoutSrv(
-	dbm *database.DBManager,
-	cache cache.Cache,
-	productSrv IProductSrv,
-	productTakeoutSrv IProductTakeoutSrv,
-	translateSrv ITranslateSrv,
-	settingSrv setting.ISrv,
-) ITakeoutSrv {
-	return &takeoutSrv{
-		dbm:               dbm,
-		cache:             cache,
-		takeoutAppSrv:     application.NewTakeoutAppService(dbm),
-		productSrv:        productSrv,
-		translateSrv:      translateSrv,
-		settingSrv:        settingSrv,
-		uploadFileSrv:     NewUploadFileSrv(dbm),
-		productTakeoutSrv: productTakeoutSrv,
-	}
-}
-
-// ToggleTakeoutStatus 切换指定平台外卖状态
-func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
-	if req.Platform == "grab" {
-		err := NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveGrabPaymentMethod(ctx, ctx.GetDB())
-		if err != nil {
-			return nil, errors.WithMessage(err, "保存Grab支付方式失败")
-		}
-	} else if req.Platform == "lineman" {
-		err := NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveLineManPaymentMethod(ctx, ctx.GetDB())
-		if err != nil {
-			return nil, errors.WithMessage(err, "保存LINE MAN支付方式失败")
-		}
-	}
-	return s.takeoutAppSrv.ToggleTakeoutStatus(ctx, req)
-}
 
 // SyncMenuChanges 同步菜单变更
 func (s *takeoutSrv) SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error) {
@@ -1683,7 +1616,7 @@ func (s *takeoutSrv) getTakeoutTypeByPlatform(platform string) int {
 	switch platform {
 	case "grab":
 		return 1 // Grab
-	case "foodpanda":
+	case "lineman":
 		return 2 // FoodPanda
 	default:
 		return 3 // 其他
@@ -1708,25 +1641,20 @@ func (s *takeoutSrv) getFileNameFromURL(url string, contentType string) string {
 	// 如果文件名没有扩展名，从 Content-Type 推断
 	ext := filepath.Ext(fileName)
 	if ext == "" {
-		ext = s.getExtensionFromContentType(contentType)
+		switch {
+		case strings.Contains(contentType, "image/jpeg"):
+			ext = ".jpg"
+		case strings.Contains(contentType, "image/png"):
+			ext = ".png"
+		case strings.Contains(contentType, "image/webp"):
+			ext = ".webp"
+		case strings.Contains(contentType, "image/gif"):
+			ext = ".gif"
+		default:
+			ext = ".jpg" // 默认使用 jpg
+		}
 		fileName = fileName + ext
 	}
 
 	return fileName
-}
-
-// getExtensionFromContentType 从 Content-Type 获取文件扩展名
-func (s *takeoutSrv) getExtensionFromContentType(contentType string) string {
-	switch {
-	case strings.Contains(contentType, "image/jpeg"):
-		return ".jpg"
-	case strings.Contains(contentType, "image/png"):
-		return ".png"
-	case strings.Contains(contentType, "image/webp"):
-		return ".webp"
-	case strings.Contains(contentType, "image/gif"):
-		return ".gif"
-	default:
-		return ".jpg" // 默认使用 jpg
-	}
 }

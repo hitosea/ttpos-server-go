@@ -7,6 +7,7 @@ import (
 	product "ttpos-server-go/app/event/product"
 	rider "ttpos-server-go/app/event/rider"
 	statistics "ttpos-server-go/app/event/statistics"
+	takeout "ttpos-server-go/app/event/takeout"
 )
 
 // init 初始化事件
@@ -130,4 +131,18 @@ func init() {
 	statistics.StatisticsMemberEventHandler()
 	// 自动注册"销售统计"事件处理器
 	statistics.StatisticsSaleEventHandler()
+
+	// 外卖订单相关事件处理器
+	// 自动注册"外卖订单创建"事件处理器
+	takeout.TakeoutOrderCreatedEventHandler()
+	// 自动注册"外卖订单接单"事件处理器
+	takeout.TakeoutOrderAcceptEventHandler()
+	// 自动注册"外卖订单取消"事件处理器
+	takeout.TakeoutOrderCancelEventHandler()
+	// 自动注册"外卖订单拒单"事件处理器
+	takeout.TakeoutOrderRejectedEventHandler()
+	// 自动注册"外卖订单准备完成"事件处理器
+	takeout.TakeoutOrderReadyEventHandler()
+	// 自动注册"外卖订单状态更新"事件处理器
+	takeout.TakeoutOrderStatusUpdatedEventHandler()
 }

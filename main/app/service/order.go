@@ -1199,7 +1199,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		} else {
 			staffShiftLogUuid = staffShiftLog.Uuid
 		}
-		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {

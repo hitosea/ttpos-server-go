@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	ttposContext "ttpos-server-go/pkg/context"
@@ -65,7 +66,7 @@ func TakeoutProviderMenuUpdateHandler(ctx context.Context, msg *primitive.Messag
 	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, service.NewTranslateSrv(dbm, cache))
 	translateSrv := service.NewTranslateSrv(dbm, cache)
 	productTakeoutSrv := service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
-	takeoutSrv := service.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
+	takeoutSrv := takeoutService.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
 
 	shopUuid, err := strconv.ParseUint(event.ShopUuid, 10, 64)
 	if err != nil {
