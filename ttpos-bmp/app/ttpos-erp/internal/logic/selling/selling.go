@@ -1257,8 +1257,9 @@ func (s *sSelling) GetModeOfPayment(ctx context.Context, req *selling.GetModeOfP
 // SaveModeOfPayment 保存/同步支付方式
 func (s *sSelling) SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error) {
 	// 判断是更新操作还是创建操作
-	// 如果传入了 name，则执行更新操作
-	if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
+	// 如果传入了 name 或 payment_id，则执行更新操作
+	if (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
+		(req.PaymentId != "" && strings.TrimSpace(req.PaymentId) != "") {
 		return s.updateModeOfPayment(ctx, req)
 	}
 
@@ -1407,36 +1408,68 @@ func (s *sSelling) nextModeOfPaymentSeq(ctx context.Context, prefix, companyName
 
 // updateModeOfPayment 更新支付方式
 func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error) {
-	name := strings.TrimSpace(*req.Name)
+	var resp *gjson.Json
+	var err error
+	var name string
+	var queryKey string
 
-	// 1. 查询支付方式是否存在
-	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+	// 构建查询过滤器
+	var filters [][]string
+
+	// 1. 优先使用 PaymentId 查询（业务主键）
+	if req.PaymentId != "" && strings.TrimSpace(req.PaymentId) != "" {
+		paymentId := strings.TrimSpace(req.PaymentId)
+		queryKey = fmt.Sprintf("payment_id=%s", paymentId)
+		filters = [][]string{{"custom_payment_id", "=", paymentId}}
+		g.Log().Infof(ctx, "[updateModeOfPayment] 通过 payment_id 查询支付方式: %s", queryKey)
+	} else if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
+		// 2. 使用 Name 查询（ERP 主键）
+		name = strings.TrimSpace(*req.Name)
+		queryKey = fmt.Sprintf("name=%s", name)
+		filters = [][]string{{"name", "=", name}}
+		g.Log().Infof(ctx, "[updateModeOfPayment] 通过 name 查询支付方式: %s", queryKey)
+	} else {
+		return nil, gerror.New("name 或 payment_id 至少提供一个")
+	}
+
+	// 3. 统一使用 List 接口查询
+	resp, err = service.Document().List(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeModeOfPayment,
-		Name:    name,
 	}, &erp.RequestParams{
-		Fields: []string{"name", "custom_company", "custom_branch", "enabled", "custom_payment_id"},
+		Fields:  []string{"name", "custom_company", "custom_branch", "enabled", "custom_payment_id"},
+		Filters: filters,
+		Limit:   1,
 	})
 	if err != nil {
-		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
-			return nil, gerror.Newf("支付方式 [%s] 不存在", name)
-		}
+		g.Log().Errorf(ctx, "[updateModeOfPayment] 查询支付方式失败: %s, err=%v", queryKey, err)
 		return nil, gerror.Wrapf(err, "查询支付方式失败")
 	}
 
-	// 2. 权限校验：确认支付方式属于当前公司
+	// 4. 检查查询结果
+	dataArray := resp.GetJsons("data")
+	if len(dataArray) == 0 {
+		g.Log().Warningf(ctx, "[updateModeOfPayment] 支付方式不存在: %s", queryKey)
+		return nil, gerror.Newf("支付方式不存在: %s", queryKey)
+	}
+
+	// 5. 获取查询到的支付方式信息
+	data := dataArray[0]
+	name = data.Get("name").String()
+	erpCompany := data.Get("custom_company").String()
+
+	// 6. 权限校验：确认支付方式属于当前公司
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "根据公司缩写[%s]查询公司失败", req.CompanyAbbr)
 	}
 
-	erpCompany := resp.Get("data.custom_company").String()
 	if erpCompany != companyName {
-		g.Log().Warningf(ctx, "尝试越权修改支付方式：name=%s, 请求公司=%s, ERP公司=%s",
+		g.Log().Warningf(ctx, "[updateModeOfPayment] 尝试越权修改支付方式: name=%s, 请求公司=%s, ERP公司=%s",
 			name, companyName, erpCompany)
 		return nil, gerror.New("无权限修改此支付方式")
 	}
 
-	// 3. 构建更新数据
+	// 7. 构建更新数据
 	updateData := g.Map{}
 
 	// 仅在明确传入 enabled 时才更新
@@ -1448,12 +1481,7 @@ func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveMod
 		}
 	}
 
-	// 仅在明确传入 payment_id 时才更新
-	if req.PaymentId != "" {
-		updateData["custom_payment_id"] = req.PaymentId
-	}
-
-	// 4. 如果有字段需要更新，则调用 ERP 更新接口
+	// 8. 如果有字段需要更新，则调用 ERP 更新接口
 	if len(updateData) > 0 {
 		_, err = service.Document().Update(ctx, &erp.ErpReq{
 			DocType: erp.DocTypeModeOfPayment,
@@ -1463,15 +1491,15 @@ func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveMod
 			return nil, gerror.Wrapf(err, "更新支付方式失败")
 		}
 
-		// 5. 记录审计日志
-		g.Log().Infof(ctx, "更新支付方式成功：name=%s, company=%s, branch=%s, updateData=%v",
+		// 9. 记录审计日志
+		g.Log().Infof(ctx, "[updateModeOfPayment] 更新成功: name=%s, company=%s, branch=%s, updateData=%v",
 			name, req.CompanyAbbr, req.Branch, updateData)
 	} else {
-		g.Log().Infof(ctx, "更新支付方式：未传入任何可更新字段，跳过更新：name=%s", name)
+		g.Log().Infof(ctx, "[updateModeOfPayment] 未传入任何可更新字段，跳过更新: name=%s", name)
 	}
 
-	// 读取更新后的 payment_id（优先使用更新值，否则使用原值）
-	finalPaymentID := resp.Get("data.custom_payment_id").String()
+	// 10. 读取更新后的 payment_id（优先使用更新值，否则使用原值）
+	finalPaymentID := data.Get("custom_payment_id").String()
 	if req.PaymentId != "" {
 		finalPaymentID = req.PaymentId
 	}

@@ -173,6 +173,16 @@ type (
 		// GetStockLedger 获取库存分类账信息
 		// 根据查询条件过滤并返回库存分类账记录列表
 		GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error)
+		// GetBin 查询物品在指定仓库的 Bin 记录
+		// 用于获取物品的真实估值率
+		// 参数：
+		//   - ctx: 上下文对象，用于传递请求范围的元数据
+		//   - req: GetBin 请求参数，包含物品代码、仓库名称
+		//
+		// 返回：
+		//   - res: Bin 数据，包含实际库存数量、估值率、库存价值
+		//   - err: 操作过程中产生的错误（若有）
+		GetBin(ctx context.Context, req *stock.GetBinReq) (*stock.BinData, error)
 		// SaveStockReconciliation 保存库存盘点
 		// 参数：ctx 上下文，req 保存库存盘点请求
 		// 返回：保存库存盘点响应，错误信息

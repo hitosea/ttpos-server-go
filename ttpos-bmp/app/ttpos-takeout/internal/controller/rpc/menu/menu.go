@@ -251,3 +251,137 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 		Data:    dataAny,
 	}, nil
 }
+
+// BatchUpdateMenu 批量更新菜单
+// 参数：merchant_id、field、menu_entities 必填
+// 返回：takeout.ApiResponse 统一响应格式
+func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMenuReq) (*takeout.ApiResponse, error) {
+	// 1. 参数校验
+	if req.MerchantId == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: consts.MsgMerchantIDEmpty,
+		}, nil
+	}
+	if req.Field == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "field 不能为空",
+		}, nil
+	}
+	if req.Field != grabDto.MenuItemUpdateFieldItem && req.Field != grabDto.MenuItemUpdateFieldModifier {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "field 必须是 ITEM 或 MODIFIER",
+		}, nil
+	}
+	if len(req.MenuEntities) == 0 {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "menu_entities 不能为空",
+		}, nil
+	}
+	if len(req.MenuEntities) > 100 {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "menu_entities 数量不能超过 100 个",
+		}, nil
+	}
+
+	// 2. Proto → DTO 转换
+	dtoReq := &grabDto.BatchUpdateMenuReq{
+		MerchantID:   req.MerchantId,
+		Field:        req.Field,
+		MenuEntities: make([]grabDto.MenuEntity, 0, len(req.MenuEntities)),
+	}
+
+	// 转换 MenuEntities
+	for _, protoEntity := range req.MenuEntities {
+		dtoEntity := grabDto.MenuEntity{
+			ID: protoEntity.Id,
+		}
+
+		// 处理可选字段 - Price
+		if protoEntity.Price != nil {
+			price := *protoEntity.Price
+			dtoEntity.Price = &price
+		}
+
+		// 处理可选字段 - AvailableStatus
+		if protoEntity.AvailableStatus != nil {
+			dtoEntity.AvailableStatus = *protoEntity.AvailableStatus
+		}
+
+		// 处理可选字段 - MaxStock（仅商品支持）
+		if protoEntity.MaxStock != nil {
+			stock := *protoEntity.MaxStock
+			dtoEntity.MaxStock = &stock
+		}
+
+		// 转换高级定价配置
+		for _, ap := range protoEntity.AdvancedPricings {
+			dtoEntity.AdvancedPricings = append(dtoEntity.AdvancedPricings,
+				grabDto.UpdateAdvancedPricingReq{
+					Key:   ap.Key,
+					Price: ap.Price,
+				})
+		}
+
+		// 转换购买能力配置（仅商品支持）
+		for _, p := range protoEntity.Purchasabilities {
+			dtoEntity.Purchasabilities = append(dtoEntity.Purchasabilities,
+				grabDto.UpdatePurchasabilityReq{
+					Key:         p.Key,
+					Purchasable: p.Purchasable,
+				})
+		}
+
+		dtoReq.MenuEntities = append(dtoReq.MenuEntities, dtoEntity)
+	}
+
+	// 3. 调用 Service 层
+	dtoResp, err := service.GrabMenu().BatchUpdateMenu(ctx, dtoReq)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Menu] BatchUpdateMenu failed: merchantID=%s, field=%s, count=%d, error=%v",
+			req.MerchantId, req.Field, len(req.MenuEntities), err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: "批量更新菜单失败: " + err.Error(),
+		}, nil
+	}
+
+	// 4. DTO → Proto 响应转换
+	protoResp := &api.BatchUpdateMenuResp{
+		MerchantId: dtoResp.MerchantID,
+		Status:     dtoResp.Status,
+	}
+
+	// 转换错误列表
+	if len(dtoResp.Errors) > 0 {
+		protoResp.Errors = make([]*api.MenuEntityError, 0, len(dtoResp.Errors))
+		for _, dtoErr := range dtoResp.Errors {
+			protoResp.Errors = append(protoResp.Errors, &api.MenuEntityError{
+				Id:           dtoErr.ID,
+				ErrorCode:    dtoErr.ErrorCode,
+				ErrorMessage: dtoErr.ErrorMessage,
+			})
+		}
+	}
+
+	// 5. 包装为 ApiResponse
+	dataAny, err := anypb.New(protoResp)
+	if err != nil {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "[Menu] BatchUpdateMenu success: merchantID=%s, field=%s, status=%s, count=%d, errorCount=%d",
+		req.MerchantId, req.Field, dtoResp.Status, len(req.MenuEntities), len(dtoResp.Errors))
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}

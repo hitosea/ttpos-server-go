@@ -74,6 +74,17 @@ type (
 		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record
 		// req 可以是 UpdateMenuItem 或 UpdateMenuModifier
 		UpdateMenuRecord(ctx context.Context, merchantID string, req grabfood.UpdateMenuRequest) error
+		// BatchUpdateMenu 批量更新菜单记录 (商品或修饰符)
+		// 调用 GrabFood API POST /partner/v1/batch/menu
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - merchantID: Grab Merchant ID
+		//   - req: 批量更新请求（GrabFood SDK 结构体）
+		//
+		// 返回：
+		//   - resp: 批量更新响应，包含状态和错误列表
+		//   - err: 错误信息
+		BatchUpdateMenu(ctx context.Context, merchantID string, req *grabfood.BatchUpdateMenuItem) (*grabfood.BatchUpdateMenuResponse, error)
 		// CreateSelfServeJourney 创建自助激活链接
 		// merchantID: Grab Merchant ID
 		// 返回: activation_url, request_id

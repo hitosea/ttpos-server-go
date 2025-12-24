@@ -389,3 +389,211 @@ func (s *sGrabMenu) logMenuRecordUpdate(ctx context.Context, merchantID, recordI
 			logUUID, merchantID, recordID, recordType, success)
 	}
 }
+
+// ============================================================================
+// 批量更新菜单 API
+// ============================================================================
+
+// BatchUpdateMenu 批量更新菜单记录 (商品或修饰符)
+// 调用 GrabFood API POST /partner/v1/batch/menu 批量更新菜单信息
+// 支持批量更新：价格、可用状态、库存、高级定价配置、购买能力配置
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 批量更新请求
+//
+// 返回：
+//   - resp: 批量更新响应，包含状态和错误列表
+//   - err: 错误信息
+func (s *sGrabMenu) BatchUpdateMenu(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabDto.BatchUpdateMenuResp, error) {
+	g.Log().Infof(ctx, "[Grab] 批量更新菜单: merchantID=%s, field=%s, count=%d",
+		req.MerchantID, req.Field, len(req.MenuEntities))
+
+	// 1. 参数验证
+	if err := g.Validator().Data(req).Run(ctx); err != nil {
+		g.Log().Errorf(ctx, "[Grab] 批量更新菜单参数验证失败: %v", err)
+		return nil, gerror.NewCode(gcode.CodeValidationFailed, err.Error())
+	}
+
+	// 2. 验证 Field 类型
+	if req.Field != grabDto.MenuItemUpdateFieldItem && req.Field != grabDto.MenuItemUpdateFieldModifier {
+		return nil, gerror.Newf("字段类型无效: %s，必须是 ITEM 或 MODIFIER", req.Field)
+	}
+
+	// 3. 验证 MenuEntities 数量
+	if len(req.MenuEntities) == 0 {
+		return nil, gerror.New("菜单实体列表不能为空")
+	}
+	if len(req.MenuEntities) > 200 {
+		return nil, gerror.Newf("菜单实体数量不能超过 200 个，当前: %d", len(req.MenuEntities))
+	}
+
+	// 4. 构建 SDK 请求
+	sdkReq, err := s.convertDTOToSDKBatchUpdate(ctx, req)
+	if err != nil {
+		g.Log().Errorf(ctx, "[Grab] 转换 DTO 到 SDK 请求失败: %v", err)
+		return nil, gerror.Wrap(err, "转换请求参数失败")
+	}
+
+	// 5. 调用 Grab API
+	sdkResp, err := service.Grab().BatchUpdateMenu(ctx, req.MerchantID, sdkReq)
+	if err != nil {
+		// 6. 记录失败日志
+		s.logBatchUpdate(ctx, req.MerchantID, req.Field, len(req.MenuEntities), false, err.Error())
+
+		g.Log().Errorf(ctx, "[Grab] 批量更新菜单 API 调用失败: merchantID=%s, field=%s, error=%v",
+			req.MerchantID, req.Field, err)
+		return nil, gerror.Wrap(err, "调用 Grab BatchUpdateMenu API 失败")
+	}
+
+	// 7. 转换 SDK 响应到 DTO
+	dtoResp := s.convertSDKRespToDTO(ctx, sdkResp)
+
+	// 8. 记录成功日志
+	success := dtoResp.Status == "success"
+	errMsg := ""
+	if !success {
+		// 记录错误摘要
+		errMsg = fmt.Sprintf("部分失败: %d 个错误", len(dtoResp.Errors))
+	}
+	s.logBatchUpdate(ctx, req.MerchantID, req.Field, len(req.MenuEntities), success, errMsg)
+
+	g.Log().Infof(ctx, "[Grab] 批量更新菜单完成: merchantID=%s, field=%s, status=%s, errorCount=%d",
+		req.MerchantID, req.Field, dtoResp.Status, len(dtoResp.Errors))
+
+	return dtoResp, nil
+}
+
+// convertDTOToSDKBatchUpdate 转换 DTO BatchUpdateMenuReq 到 SDK BatchUpdateMenuItem
+func (s *sGrabMenu) convertDTOToSDKBatchUpdate(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabfood.BatchUpdateMenuItem, error) {
+	// 1. 创建 SDK 请求
+	sdkReq := grabfood.NewBatchUpdateMenuItem(req.MerchantID, req.Field)
+
+	// 2. 转换 MenuEntities
+	var sdkUpdates []grabfood.MenuEntity
+	for i, entity := range req.MenuEntities {
+		// 2.1 创建 SDK MenuEntity
+		sdkEntity := grabfood.NewMenuEntity()
+		sdkEntity.SetId(entity.ID)
+
+		// 2.2 设置可选字段 - Price
+		if entity.Price != nil {
+			sdkEntity.SetPrice(*entity.Price)
+		}
+
+		// 2.3 设置可选字段 - AvailableStatus
+		if entity.AvailableStatus != "" {
+			sdkEntity.SetAvailableStatus(entity.AvailableStatus)
+		}
+
+		// 2.4 设置可选字段 - MaxStock（仅商品支持）
+		if req.Field == grabDto.MenuItemUpdateFieldItem && entity.MaxStock != nil {
+			sdkEntity.SetMaxStock(*entity.MaxStock)
+		}
+
+		// 2.5 转换高级定价配置
+		if len(entity.AdvancedPricings) > 0 {
+			sdkAdvancedPricings := s.convertAdvancedPricings(entity.AdvancedPricings)
+			sdkEntity.SetAdvancedPricings(sdkAdvancedPricings)
+		}
+
+		// 2.6 转换购买能力配置（仅商品支持）
+		if req.Field == grabDto.MenuItemUpdateFieldItem && len(entity.Purchasabilities) > 0 {
+			sdkPurchasabilities := s.convertPurchasabilities(entity.Purchasabilities)
+			sdkEntity.SetPurchasabilities(sdkPurchasabilities)
+		}
+
+		sdkUpdates = append(sdkUpdates, *sdkEntity)
+
+		g.Log().Debugf(ctx, "[Grab] 转换菜单实体 [%d]: id=%s, price=%v, status=%s",
+			i, entity.ID, entity.Price, entity.AvailableStatus)
+	}
+
+	// 3. 设置 MenuEntities
+	sdkReq.SetMenuEntities(sdkUpdates)
+
+	g.Log().Infof(ctx, "[Grab] SDK 请求构建完成: field=%s, updates=%d", req.Field, len(sdkUpdates))
+	return sdkReq, nil
+}
+
+// convertAdvancedPricings 转换高级定价配置
+func (s *sGrabMenu) convertAdvancedPricings(dtoAdvancedPricings []grabDto.UpdateAdvancedPricingReq) []grabfood.UpdateAdvancedPricing {
+	var sdkAdvancedPricings []grabfood.UpdateAdvancedPricing
+	for _, ap := range dtoAdvancedPricings {
+		pricing := grabfood.NewUpdateAdvancedPricing()
+		pricing.SetKey(ap.Key)
+		pricing.SetPrice(ap.Price)
+		sdkAdvancedPricings = append(sdkAdvancedPricings, *pricing)
+	}
+	return sdkAdvancedPricings
+}
+
+// convertPurchasabilities 转换购买能力配置
+func (s *sGrabMenu) convertPurchasabilities(dtoPurchasabilities []grabDto.UpdatePurchasabilityReq) []grabfood.UpdatePurchasability {
+	var sdkPurchasabilities []grabfood.UpdatePurchasability
+	for _, p := range dtoPurchasabilities {
+		purchasability := grabfood.NewUpdatePurchasability()
+		purchasability.SetKey(p.Key)
+		purchasability.SetPurchasable(p.Purchasable)
+		sdkPurchasabilities = append(sdkPurchasabilities, *purchasability)
+	}
+	return sdkPurchasabilities
+}
+
+// convertSDKRespToDTO 转换 SDK BatchUpdateMenuResponse 到 DTO
+func (s *sGrabMenu) convertSDKRespToDTO(ctx context.Context, sdkResp *grabfood.BatchUpdateMenuResponse) *grabDto.BatchUpdateMenuResp {
+	dtoResp := &grabDto.BatchUpdateMenuResp{
+		MerchantID: sdkResp.GetMerchantID(),
+		Status:     sdkResp.GetStatus(),
+	}
+
+	// 转换错误列表
+	if len(sdkResp.GetErrors()) > 0 {
+		var dtoErrors []grabDto.MenuEntityError
+		for _, sdkErr := range sdkResp.GetErrors() {
+			dtoErrors = append(dtoErrors, grabDto.MenuEntityError{
+				ID:           sdkErr.GetEntityID(),
+				ErrorCode:    "", // SDK 没有 ErrorCode 字段
+				ErrorMessage: sdkErr.GetErrMsg(),
+			})
+		}
+		dtoResp.Errors = dtoErrors
+	}
+
+	return dtoResp
+}
+
+// logBatchUpdate 记录批量更新日志
+// 内部方法，记录到 menu_log 表
+func (s *sGrabMenu) logBatchUpdate(ctx context.Context, merchantID, field string, count int, success bool, errMsg string) {
+	logUUID := uuid.MustGetID()
+	status := grabDto.MenuSyncStatusSuccess
+	if !success {
+		status = grabDto.MenuSyncStatusFail
+	}
+
+	// 根据 field 确定 sync_type
+	var syncType string
+	if field == grabDto.MenuItemUpdateFieldItem {
+		syncType = string(consts.MenuSyncTypeBatchUpdateItem)
+	} else {
+		syncType = string(consts.MenuSyncTypeBatchUpdateModifier)
+	}
+
+	logDo := &do.MenuLog{
+		Uuid:         logUUID,
+		MerchantId:   merchantID,
+		ProviderName: string(consts.ProviderGrab),
+		SyncType:     syncType,
+		Status:       status,
+		ErrorMsg:     errMsg,
+	}
+
+	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
+	if err != nil {
+		g.Log().Errorf(ctx, "[Grab] 插入批量更新日志失败: merchantID=%s, field=%s, count=%d, error=%v",
+			merchantID, field, count, err)
+	} else {
+		g.Log().Debugf(ctx, "[Grab] 批量更新日志已插入: logUUID=%d, merchantID=%s, field=%s, count=%d, success=%v",
+			logUUID, merchantID, field, count, success)
+	}
+}

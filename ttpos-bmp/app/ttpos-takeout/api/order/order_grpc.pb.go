@@ -21,8 +21,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrderService_GetOrderInfo_FullMethodName = "/order.OrderService/GetOrderInfo"
-	OrderService_PrepareOrder_FullMethodName = "/order.OrderService/PrepareOrder"
+	OrderService_GetOrderInfo_FullMethodName   = "/order.OrderService/GetOrderInfo"
+	OrderService_PrepareOrder_FullMethodName   = "/order.OrderService/PrepareOrder"
+	OrderService_MarkOrderReady_FullMethodName = "/order.OrderService/MarkOrderReady"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -35,6 +36,8 @@ type OrderServiceClient interface {
 	GetOrderInfo(ctx context.Context, in *GetOrderInfoReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 	// 准备订单（接受/拒绝）
 	PrepareOrder(ctx context.Context, in *PrepareOrderReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
+	// 标记订单准备完成（markStatus 默认为 1）
+	MarkOrderReady(ctx context.Context, in *MarkOrderReadyReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error)
 }
 
 type orderServiceClient struct {
@@ -65,6 +68,16 @@ func (c *orderServiceClient) PrepareOrder(ctx context.Context, in *PrepareOrderR
 	return out, nil
 }
 
+func (c *orderServiceClient) MarkOrderReady(ctx context.Context, in *MarkOrderReadyReq, opts ...grpc.CallOption) (*takeout.ApiResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(takeout.ApiResponse)
+	err := c.cc.Invoke(ctx, OrderService_MarkOrderReady_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
@@ -75,6 +88,8 @@ type OrderServiceServer interface {
 	GetOrderInfo(context.Context, *GetOrderInfoReq) (*takeout.ApiResponse, error)
 	// 准备订单（接受/拒绝）
 	PrepareOrder(context.Context, *PrepareOrderReq) (*takeout.ApiResponse, error)
+	// 标记订单准备完成（markStatus 默认为 1）
+	MarkOrderReady(context.Context, *MarkOrderReadyReq) (*takeout.ApiResponse, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -90,6 +105,9 @@ func (UnimplementedOrderServiceServer) GetOrderInfo(context.Context, *GetOrderIn
 }
 func (UnimplementedOrderServiceServer) PrepareOrder(context.Context, *PrepareOrderReq) (*takeout.ApiResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PrepareOrder not implemented")
+}
+func (UnimplementedOrderServiceServer) MarkOrderReady(context.Context, *MarkOrderReadyReq) (*takeout.ApiResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MarkOrderReady not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -148,6 +166,24 @@ func _OrderService_PrepareOrder_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_MarkOrderReady_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MarkOrderReadyReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).MarkOrderReady(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_MarkOrderReady_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).MarkOrderReady(ctx, req.(*MarkOrderReadyReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -162,6 +198,10 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PrepareOrder",
 			Handler:    _OrderService_PrepareOrder_Handler,
+		},
+		{
+			MethodName: "MarkOrderReady",
+			Handler:    _OrderService_MarkOrderReady_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

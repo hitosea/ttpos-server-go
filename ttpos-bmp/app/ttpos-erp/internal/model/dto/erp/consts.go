@@ -48,6 +48,9 @@ const (
 	//DocTypeUom 商品单位
 	DocTypeUom = "UOM"
 
+	// DocTypeBin Bin 表（物品仓库库存记录）
+	DocTypeBin = "Bin"
+
 	// DocTypeStockReconciliation 库存盘点单据类型
 	DocTypeStockReconciliation = "Stock Reconciliation"
 	// DocTypeStockReconciliationItem 库存盘点明细类型
