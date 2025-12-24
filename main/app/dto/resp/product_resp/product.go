@@ -687,6 +687,7 @@ type ProductShopListItemFlavorItemResp struct {
 type ProductTakeoutSimpleInfo struct {
 	Uuid        uint64 `json:"uuid"`         // 外卖商品UUID
 	TakeoutType uint   `json:"takeout_type"` // 外卖类型 1-Grab 2-LINE MAN
+	Status      uint   `json:"status"`       // 外卖状态 0-下架 1-上架
 }
 
 // ProductTaxListResp 商品税类列表响应

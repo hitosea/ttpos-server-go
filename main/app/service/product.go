@@ -5602,6 +5602,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 			takeoutList[i] = product_resp.ProductTakeoutSimpleInfo{
 				Uuid:        takeout.Uuid,
 				TakeoutType: takeout.TakeoutType,
+				Status:      takeout.Status,
 			}
 		}
 		productDetailResp.TakeoutProducts = takeoutList
