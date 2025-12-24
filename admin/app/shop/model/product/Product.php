@@ -709,8 +709,8 @@ class Product extends ProductModel
                 }
 
                 // 验证分组可选范围
-                $minSelect = $item['group_min_select'] ?? 1;
-                $maxSelect = $item['group_max_select'] ?? 1;
+                $minSelect = $item['optional_min_count'] ?? 1;
+                $maxSelect = $item['optional_count'] ?? 1;
 
                 // 验证最大可选 >= 最小可选（允许为0）
                 if ($maxSelect < $minSelect) {
