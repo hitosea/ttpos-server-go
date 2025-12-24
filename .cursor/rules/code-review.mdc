@@ -212,6 +212,100 @@ if err := json.Unmarshal(data, &obj); err != nil {
 
 ---
 
+### 7. UPDATE/DELETE 操作中使用子查询导致锁风暴（严重）
+
+**问题描述**：  
+在 UPDATE 或 DELETE 操作中使用 `WHERE col IN (SELECT ...)` 子查询模式，当子查询可能返回大量结果时，可能导致锁风暴，特别是在 REPEATABLE READ 隔离级别下。
+
+**适用范围**：
+- UPDATE 操作（包括软删除：`UPDATE ... SET delete_time = ...`）
+- DELETE 操作（硬删除）
+- 批量更新/删除操作
+
+**问题原因**：
+1. MySQL 子查询执行计划可能选择全索引扫描，特别是当子查询结果集很大时
+2. MySQL 在执行计划优化时，可能会先扫描目标表的索引来"确认"匹配记录，即使子查询结果集很小或为空
+3. 在 REPEATABLE READ 隔离级别下，索引扫描过程中会对扫描到的记录加锁（行锁 + Gap Lock）
+4. 当子查询返回大量结果（成千上万条）时，`IN (大量值)` 会导致 MySQL 锁定大量索引记录和间隙
+5. 如果索引值分布稀疏，Gap Lock 的数量会进一步放大
+
+**检查方法**：
+```go
+// ❌ 错误示例 - 可能导致锁风暴
+err = tx.Model(&model.ProductionOrderProduct{}).
+    Where("sale_order_product_uuid IN (?)", 
+        tx.Model(&model.SaleOrderProduct{}).
+            Where("package_uuid = ?", packageUuid).
+            Select("uuid")).
+    Update("delete_time", timeNow).Error
+
+// ✅ 正确示例 - 先查询再分批处理
+var subProductUuids []uint64
+err = tx.Model(&model.SaleOrderProduct{}).
+    Where("package_uuid = ?", packageUuid).
+    Pluck("uuid", &subProductUuids).Error
+if err != nil {
+    return errors.WithMessage(err)
+}
+// 如果存在数据，分批更新
+if len(subProductUuids) > 0 {
+    const batchSize = 200 // 每批处理200条，避免一次性锁定大量数据
+    for i := 0; i < len(subProductUuids); i += batchSize {
+        end := i + batchSize
+        if end > len(subProductUuids) {
+            end = len(subProductUuids)
+        }
+        batch := subProductUuids[i:end]
+        err = tx.Model(&model.ProductionOrderProduct{}).
+            Where("sale_order_product_uuid IN (?)", batch).
+            Update("delete_time", timeNow).Error
+        if err != nil {
+            return errors.WithMessage(err, fmt.Sprintf("分批更新失败，批次: %d-%d", i, end-1))
+        }
+    }
+}
+```
+
+**检查步骤**：
+1. 搜索所有 `UPDATE`、`.Update()`、`DELETE` 或 `.Delete()` 操作
+2. 检查 `WHERE` 条件中是否包含 `IN (SELECT ...)` 子查询
+3. 检查是否使用了 `Where("col IN (?)", db.Model(...).Select(...))` 模式
+4. 评估子查询可能返回的结果集大小（如果可能很大，需要优化）
+5. 确认是否已优化为先查询再分批处理
+
+**影响**：
+- 大量行锁和 Gap Lock
+- 事务执行时间长（可能几十秒）
+- 锁风暴，阻塞其他事务
+- 数据库性能严重下降
+
+**优化原则**：
+1. **先查询后判断**：先执行子查询获取结果集，判断是否为空
+2. **分批处理**：如果结果集较大（> 100 条），分批处理（建议每批 200 条）
+3. **评估结果集大小**：如果子查询可能返回大量结果（> 1000 条），必须避免使用 `WHERE col IN (SELECT ...)` 模式
+4. **小结果集可接受**：如果子查询结果集很小（< 100 条），且业务场景明确不会增长，可以接受使用子查询
+5. **使用 JOIN**：对于复杂场景，考虑使用 JOIN 替代子查询（但需评估执行计划和锁行为）
+
+**批量大小建议**：
+- UPDATE 操作：200 条/批（会产生行锁和 Gap Lock，建议保守）
+- DELETE 操作：200 条/批（会产生行锁和 Gap Lock，建议保守）
+- INSERT 操作：通常不涉及此问题，但如果使用 `INSERT ... SELECT` 且 SELECT 返回大量结果，也应分批处理
+
+**注意**：批量大小应根据实际场景调整：
+- 如果索引值连续，可以适当增大批量（如 500 条）
+- 如果索引值稀疏，建议减小批量（如 100-200 条）
+- 如果并发压力大，建议减小批量
+
+**检查命令**：
+```bash
+# 搜索 UPDATE/DELETE 操作中的子查询模式
+grep -r "\.Update.*Where.*IN.*Select\|\.Updates.*Where.*IN.*Select" --include="*.go"
+grep -r "\.Delete.*Where.*IN.*Select\|\.Deletes.*Where.*IN.*Select" --include="*.go"
+grep -r "Where.*IN.*\(.*Model.*Select" --include="*.go"
+```
+
+---
+
 ## 检查流程
 
 ### 步骤 1: 识别事务块
@@ -246,6 +340,7 @@ grep -r "s\.\w+Srv\.\w+\|s\.\w+\(ctx" --include="*.go"
 
 | 优先级 | 问题类型 | 影响 | 修复优先级 |
 |--------|---------|------|-----------|
+| **严重** | UPDATE 操作中使用子查询导致锁风暴 | 锁风暴、性能严重下降 | P0 |
 | **严重** | 事务中使用外部 db 而非 tx | 数据不一致、事务失效 | P0 |
 | **高** | 事务调用未检查返回错误 | 事务失败但无提示 | P0 |
 | **高** | 调用方法未检查返回错误 | 错误被忽略 | P0 |
@@ -261,6 +356,12 @@ grep -r "s\.\w+Srv\.\w+\|s\.\w+\(ctx" --include="*.go"
 - [ ] 所有事务调用都检查返回错误
 - [ ] 所有事务中的 Repository 调用都使用 `tx`
 - [ ] 所有事务中的服务方法调用都设置了事务上下文
+
+### 锁风暴检查
+
+- [ ] 所有 UPDATE/DELETE 操作中的 `WHERE col IN (SELECT ...)` 都已优化为先查询再分批处理
+- [ ] 批量操作使用合适的分批大小（UPDATE/DELETE: 200条/批，INSERT: 500-1000条/批）
+- [ ] 子查询结果为空时，直接跳过 UPDATE/DELETE 操作
 
 ### 错误处理检查
 
@@ -332,6 +433,43 @@ if err := db.Transaction(func(tx *gorm.DB) error {
 }
 ```
 
+### 模式 4: UPDATE 操作中使用子查询导致锁风暴
+
+```go
+// ❌ 错误 - 可能导致锁风暴
+err = tx.Model(&model.ProductionOrderProduct{}).
+    Where("sale_order_product_uuid IN (?)", 
+        tx.Model(&model.SaleOrderProduct{}).
+            Where("package_uuid = ?", packageUuid).
+            Select("uuid")).
+    Update("delete_time", timeNow).Error
+
+// ✅ 正确 - 先查询再分批处理
+var subProductUuids []uint64
+err = tx.Model(&model.SaleOrderProduct{}).
+    Where("package_uuid = ?", packageUuid).
+    Pluck("uuid", &subProductUuids).Error
+if err != nil {
+    return errors.WithMessage(err)
+}
+if len(subProductUuids) > 0 {
+    const batchSize = 200
+    for i := 0; i < len(subProductUuids); i += batchSize {
+        end := i + batchSize
+        if end > len(subProductUuids) {
+            end = len(subProductUuids)
+        }
+        batch := subProductUuids[i:end]
+        err = tx.Model(&model.ProductionOrderProduct{}).
+            Where("sale_order_product_uuid IN (?)", batch).
+            Update("delete_time", timeNow).Error
+        if err != nil {
+            return errors.WithMessage(err, fmt.Sprintf("分批更新失败，批次: %d-%d", i, end-1))
+        }
+    }
+}
+```
+
 ## 工具支持
 
 ### 静态检查工具
@@ -351,7 +489,14 @@ grep -r "\.\w+\(.*\)$" --include="*.go" | grep -v "if err\|err :="
 
 # 搜索服务方法调用
 grep -r "s\.\w+Srv\.\w+\|s\.\w+\(ctx" --include="*.go"
+
+# 搜索 UPDATE 操作中的子查询模式（可能导致锁风暴）
+grep -r "\.Update.*Where.*IN.*Select\|\.Updates.*Where.*IN.*Select" --include="*.go"
+grep -r "Where.*IN.*\(.*Model.*Select" --include="*.go"
 ```
+
+
+---
 
 ## 参考文档
 
@@ -361,6 +506,7 @@ grep -r "s\.\w+Srv\.\w+\|s\.\w+\(ctx" --include="*.go"
 
 ---
 
-**版本**: v1.0.0  
+**版本**: v1.1.0  
 **创建日期**: 2025-12-19  
+**最后更新**: 2025-12-24  
 **维护者**: 代码审查组
