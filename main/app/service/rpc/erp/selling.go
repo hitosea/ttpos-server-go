@@ -158,8 +158,12 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 	closePosEntryDetail := make([]*selling.ClosePosEntryDetail, 0)
 	if len(closeEntryReq.ClosePosEntryDetail) != 0 {
 		for _, detail := range closeEntryReq.ClosePosEntryDetail {
+			var modeOfPayment *string
+			if detail.ModeOfPayment != "" {
+				modeOfPayment = &detail.ModeOfPayment
+			}
 			closePosEntryDetail = append(closePosEntryDetail, &selling.ClosePosEntryDetail{
-				ModeOfPayment: detail.ModeOfPayment,
+				ModeOfPayment: modeOfPayment,
 				OpeningAmount: detail.OpeningAmount,
 				ClosingAmount: detail.ClosingAmount,
 			})
