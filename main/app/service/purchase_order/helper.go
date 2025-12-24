@@ -219,11 +219,6 @@ func (h *purchaseOrderHelper) checkAndUpdatePurchaseOrderStatus(
 	return nil
 }
 
-// UpdateRelatedMaterialStock 更新规格/加料关联材料库存
-func (h *purchaseOrderHelper) UpdateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
-	return repository.NewMaterialRepo(db).UpdateRelatedMaterialStock(relatedMaterialUuids)
-}
-
 // HeadquarterUpdateInfo 总部更新信息结构
 type HeadquarterUpdateInfo struct {
 	DB            *gorm.DB                              // 总部数据库连接
@@ -340,7 +335,6 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 		// 获取仓库出入库日志Repository
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
-		materialRepo := repository.NewMaterialRepo(tx)
 
 		// 获取目标仓库信息（通过ERP编码查找）
 		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.TargetWarehouseErpCode)
@@ -367,20 +361,6 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 				logger.Logger.Error("recordErpStockInLog-AddStock", zap.Any("warehouseItemUuid", warehouseItem.Uuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新仓库商品库存失败"), err.Error())
 			}
-
-			// 更新规格/加料关联材料库存
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
-			if err != nil {
-				logger.Logger.Error("recordErpStockInLog-GetMaterialByUuid", zap.Any("materialUuid", item.MaterialUuid), zap.Any("err", err))
-				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
-			}
-			relatedMaterialUuids := material.GetRelatedMaterialUuids()
-			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-			if err != nil {
-				logger.Logger.Error("recordErpStockInLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-			}
-
 			// 记录入库日志
 			supplierUuid := func() uint64 {
 				supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
@@ -515,14 +495,6 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			if err != nil {
 				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
-			}
-
-			// 更新规格/加料关联材料库存
-			relatedMaterialUuids := item.Material.GetRelatedMaterialUuids()
-			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-			if err != nil {
-				logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 			}
 
 			// 记录出库日志

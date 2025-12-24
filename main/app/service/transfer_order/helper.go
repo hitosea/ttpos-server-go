@@ -818,14 +818,6 @@ func (h *transferOrderHelper) UpdateStockInTransit(
 					return nil, errors.WithMessage(errors.New("出库失败"), err.Error())
 				}
 
-				// 更新规格/加料关联材料库存
-				relatedMaterialUuids := material.GetRelatedMaterialUuids()
-				err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-				if err != nil {
-					logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-					return nil, errors.WithMessage(errors.New("更新规格/加料关联材料出库失败"), err.Error())
-				}
-
 				// 对方公司
 				otherApproval := model.TransferOrderApproval{}
 				if senderParentApproval != nil && senderParentApproval.IsViaCompanyWarehouseBool() {
@@ -1148,14 +1140,6 @@ func (h *transferOrderHelper) MoveStockToTargetWarehouse(
 				logger.Logger.Error("MoveStockToTargetWarehouse-AddStock", zap.Any("warehouseItemUuid", warehouseItem.Uuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return targetDbTx, errors.WithMessage(errors.New("更新仓库商品库存失败"), err.Error())
 			}
-		}
-
-		// 更新规格 / 加料关联材料入库
-		relatedMaterialUuids := material.GetRelatedMaterialUuids()
-		err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-		if err != nil {
-			logger.Logger.Error("MoveStockToTargetWarehouse-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-			return targetDbTx, errors.WithMessage(errors.New("更新规格 / 加料关联材料入库失败"), err.Error())
 		}
 
 		// 对方公司
