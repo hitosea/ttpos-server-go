@@ -144,9 +144,7 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 			return s.SyncMultiLanguage(ctx)
 		}},
 		// v2.12 新增同步支付方式任务
-		{constant.SyncTaskTypePaymentMethod, constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod], func(ctx context.Context, syncHeadquarterData bool) error {
-			return s.paymentMethodSrv.SyncPaymentMethod(ctx)
-		}},
+		{constant.SyncTaskTypePaymentMethod, constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod], s.paymentMethodSrv.SyncPaymentMethod},
 	}
 
 	// 如果传递了任务UUID，则为重试模式
@@ -1361,41 +1359,41 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		}
 	}
 
-	if paymentDataChecked {
-		taskItem := &model.SyncTaskItem{
-			SyncTaskUuid: syncTask.Uuid,
-			TaskType:     constant.SyncTaskTypePaymentMethod,
-			TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
-			Status:       constant.SyncTaskItemStatusRunning,
-			StartTime:    time.Now().Unix(),
-		}
+	// 同步支付方式
+	taskItem := &model.SyncTaskItem{
+		SyncTaskUuid: syncTask.Uuid,
+		TaskType:     constant.SyncTaskTypePaymentMethod,
+		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
+		Status:       constant.SyncTaskItemStatusRunning,
+		StartTime:    time.Now().Unix(),
+	}
 
-		syncTaskItemRepo.Create(taskItem)
+	syncTaskItemRepo.Create(taskItem)
 
-		logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-		err := s.paymentMethodSrv.SyncPaymentMethod(ctx)
-		endTime := time.Now().Unix()
+	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+	// 细粒度同步：paymentDataChecked=true 表示用户勾选了支付数据，需要同步总部支付方式
+	err := s.paymentMethodSrv.SyncPaymentMethod(ctx, paymentDataChecked)
+	endTime := time.Now().Unix()
 
-		if err != nil {
-			failCount++
-			logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
-			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-				"status":        constant.SyncTaskItemStatusFailed,
-				"error_message": err.Error(),
-				"end_time":      endTime,
-			})
-		} else {
-			successCount++
-			logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
-			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-				"status":   constant.SyncTaskItemStatusSuccess,
-				"end_time": endTime,
-			})
-		}
+	if err != nil {
+		failCount++
+		logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":        constant.SyncTaskItemStatusFailed,
+			"error_message": err.Error(),
+			"end_time":      endTime,
+		})
+	} else {
+		successCount++
+		logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":   constant.SyncTaskItemStatusSuccess,
+			"end_time": endTime,
+		})
 	}
 
 	// 最后：执行多语言同步
-	taskItem := &model.SyncTaskItem{
+	taskItem = &model.SyncTaskItem{
 		SyncTaskUuid: syncTask.Uuid,
 		TaskType:     constant.SyncTaskTypeMultiLanguage,
 		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage],
@@ -1406,8 +1404,8 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 	syncTaskItemRepo.Create(taskItem)
 
 	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-	err := s.SyncMultiLanguage(ctx)
-	endTime := time.Now().Unix()
+	err = s.SyncMultiLanguage(ctx)
+	endTime = time.Now().Unix()
 
 	if err != nil {
 		failCount++
