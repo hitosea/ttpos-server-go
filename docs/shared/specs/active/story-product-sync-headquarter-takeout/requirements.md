@@ -26,11 +26,11 @@
 
 ## 📋 概述
 
-在商品同步功能中，当前只同步了店内商品数据，缺少外卖商品数据的同步。本需求旨在扩展 `SyncProduct` 方法，在同步完总部店内商品后，增加同步总部外卖商品的逻辑，包括外卖商品基本信息、外卖规格价格、外卖属性价格三个维度的数据。
+在商品同步功能中，当前只同步了店内商品数据，缺少外卖商品数据的同步。本需求旨在扩展 `SyncProduct` 方法，在同步完总部店内商品后，增加同步总部外卖商品的逻辑，包括外卖商品基本信息、外卖规格价格、外卖属性价格、外卖套餐子商品价格四个维度的数据。
 
 同步策略：
-- 首次同步：外卖商品状态默认设置为下架（0），规格价格使用总部数据
-- 再次同步：保留子店已配置的外卖商品状态（status）和规格价格（price），避免覆盖子店的个性化配置
+- 首次同步：外卖商品状态默认设置为下架（0），规格价格和套餐子商品价格使用总部数据
+- 再次同步：保留子店已配置的外卖商品状态（status）、规格价格（price）和套餐子商品价格（add_price），避免覆盖子店的个性化配置
 
 ## 🎯 产品对齐
 
@@ -64,15 +64,17 @@
 2. **WHEN** 查询到总部外卖商品 **THEN** 系统 **SHALL** 包含以下关联数据：
    - 外卖规格价格（`ProductBomTakeouts`）
    - 外卖属性价格（`ProductPackageAttributeTakeouts`）
+   - 外卖套餐子商品价格（`ProductPackageGroupItemTakeouts`）
 3. **WHEN** 子店首次同步某个外卖商品 **THEN** 系统 **SHALL** 将该外卖商品的 `status` 设置为 0（下架）
-4. **WHEN** 子店再次同步某个外卖商品 **AND** 子店已存在该商品 **THEN** 系统 **SHALL** 保留子店原有的 `status` 值
+4. **WHEN** 子店再次同步某个外卖商品 **AND** 子店已存在该商品 **THEN** 系统 **SHALL** 保留子店原有的 `status` 和 `price` 值
 
 #### 具体要求
 
-- [x] 1.1 查询总部外卖商品时，使用 `WithProductBomTakeouts` 和 `WithProductPackageAttributeTakeouts` 预加载关联数据
-- [x] 1.2 同步时复制总部外卖商品的所有字段，除了需要特殊处理的字段（status、HeadquarterUuid）
+- [x] 1.1 查询总部外卖商品时，使用 `WithProductBomTakeouts`、`WithProductPackageAttributeTakeouts` 和 `WithProductPackageGroupItemTakeouts` 预加载关联数据
+- [x] 1.2 同步时复制总部外卖商品的所有字段，除了需要特殊处理的字段（status、price、HeadquarterUuid）
 - [x] 1.3 设置子店外卖商品的 `HeadquarterUuid` 为总部 UUID
 - [x] 1.4 保留总部外卖商品的时间戳（CreateTime、UpdateTime、DeleteTime）
+- [x] 1.5 首次同步时 status 设置为 0，再次同步保留子店的 status 和 price
 
 ---
 
@@ -103,39 +105,62 @@
 #### 验收标准
 
 1. **WHEN** 同步外卖商品 **AND** 总部外卖商品有属性价格 **THEN** 系统 **SHALL** 同步所有属性价格到子店
-2. **WHEN** 同步外卖属性价格 **THEN** 系统 **SHALL** 使用总部的 `price` 值（属性价格不需要保留子店配置）
-3. **WHEN** 属性价格同步失败 **THEN** 系统 **SHALL** 记录错误日志但不中断事务
+2. **WHEN** 子店首次同步某个属性价格 **THEN** 系统 **SHALL** 使用总部的 `price` 值
+3. **WHEN** 子店再次同步某个属性价格 **AND** 子店已存在该属性价格 **THEN** 系统 **SHALL** 保留子店原有的 `price` 值
+4. **WHEN** 属性价格同步失败 **THEN** 系统 **SHALL** 记录错误日志但不中断事务
 
 #### 具体要求
 
-- [x] 3.1 复制总部属性价格的所有字段（ProductPackageAttributeUuid、Price、时间戳等）
-- [x] 3.2 设置子店属性价格的 `HeadquarterUuid` 为总部 UUID
-- [x] 3.3 属性价格不需要保留子店的 price（与规格价格不同）
+- [x] 3.1 查询子店已有的外卖属性价格，根据 `uuid` 判断是否已同步
+- [x] 3.2 对于已同步的属性价格，读取子店的 `price` 值并在新数据中使用
+- [x] 3.3 复制总部属性价格的其他所有字段（ProductPackageAttributeUuid、时间戳等）
+- [x] 3.4 设置子店属性价格的 `HeadquarterUuid` 为总部 UUID
 
 ---
 
-### Requirement 4: 批量删除和批量插入
+### Requirement 4: 同步外卖套餐子商品价格
+
+**用户故事**: 作为系统，我想同步总部的外卖套餐子商品价格到子店，以便于子店可以使用总部配置的套餐子商品定价
+
+#### 验收标准
+
+1. **WHEN** 同步外卖商品 **AND** 总部外卖商品有套餐子商品价格 **THEN** 系统 **SHALL** 同步所有套餐子商品价格到子店
+2. **WHEN** 子店首次同步某个套餐子商品价格 **THEN** 系统 **SHALL** 使用总部的 `add_price` 值
+3. **WHEN** 子店再次同步某个套餐子商品价格 **AND** 子店已存在该价格记录 **THEN** 系统 **SHALL** 保留子店原有的 `add_price` 值
+4. **WHEN** 套餐子商品价格同步失败 **THEN** 系统 **SHALL** 记录错误日志但不中断事务
+
+#### 具体要求
+
+- [x] 4.1 查询子店已有的外卖套餐子商品价格，根据 `uuid`、`product_package_takeout_uuid` 和 `product_package_group_item_uuid` 判断是否已同步
+- [x] 4.2 对于已同步的套餐子商品价格，读取子店的 `add_price` 值并在新数据中使用
+- [x] 4.3 复制总部套餐子商品价格的其他所有字段（ProductPackageGroupUuid、ProductPackageGroupItemUuid、时间戳等）
+- [x] 4.4 设置子店套餐子商品价格的 `HeadquarterUuid` 为总部 UUID
+
+---
+
+### Requirement 5: 批量删除和批量插入
 
 **用户故事**: 作为系统，我想先删除子店现有的外卖商品数据，再批量插入总部数据，以便于保证数据的完整性和一致性
 
 #### 验收标准
 
 1. **WHEN** 开始同步外卖商品 **THEN** 系统 **SHALL** 先查询子店所有来自总部的外卖商品（`HeadquarterUuid = 总部UUID`）
-2. **WHEN** 查询到子店现有外卖商品 **THEN** 系统 **SHALL** 批量物理删除这些商品及其关联数据
+2. **WHEN** 查询到子店现有外卖商品 **THEN** 系统 **SHALL** 批量物理删除这些商品及其关联数据（规格价格、属性价格、套餐子商品价格）
 3. **WHEN** 删除完成 **THEN** 系统 **SHALL** 批量插入新的外卖商品数据
 4. **WHEN** 批量插入失败 **THEN** 系统 **SHALL** 回滚整个事务
 
 #### 具体要求
 
-- [x] 4.1 使用 `DestroyProductPackageTakeout` 物理删除外卖商品
-- [x] 4.2 使用 `DestroyProductBomTakeout` 物理删除外卖规格价格
-- [x] 4.3 使用 `DestroyProductPackageAttributeTakeout` 物理删除外卖属性价格
-- [x] 4.4 批量插入时，外卖商品使用批量创建，关联数据逐条创建
-- [x] 4.5 使用数据库事务保证数据一致性
+- [x] 5.1 使用 `DestroyProductPackageTakeout` 物理删除外卖商品
+- [x] 5.2 使用 `DestroyProductBomTakeout` 物理删除外卖规格价格
+- [x] 5.3 使用 `DestroyProductPackageAttributeTakeout` 物理删除外卖属性价格
+- [x] 5.4 使用 `DestroyProductPackageGroupItemTakeout` 物理删除外卖套餐子商品价格
+- [x] 5.5 批量插入时，外卖商品使用批量创建，关联数据逐条创建
+- [x] 5.6 使用数据库事务保证数据一致性
 
 ---
 
-### Requirement 5: 错误处理和日志
+### Requirement 6: 错误处理和日志
 
 **用户故事**: 作为开发者，我想在同步过程中有完善的错误处理和日志记录，以便于问题排查和数据追溯
 
@@ -147,10 +172,10 @@
 
 #### 具体要求
 
-- [x] 5.1 使用 `errors.WithMessage` 包装错误信息
-- [x] 5.2 使用 `logger.Logger.Error` 记录关键错误
-- [x] 5.3 错误日志包含必要的上下文信息（UUID、表名等）
-- [x] 5.4 整体事务失败时返回明确的错误提示
+- [x] 6.1 使用 `errors.WithMessage` 包装错误信息
+- [x] 6.2 使用 `logger.Logger.Error` 记录关键错误
+- [x] 6.3 错误日志包含必要的上下文信息（UUID、表名等）
+- [x] 6.4 整体事务失败时返回明确的错误提示
 
 ---
 
@@ -195,9 +220,9 @@
 
 ### 功能验收
 
-1. **总部到子店同步**: 子店执行商品同步后，外卖商品、规格价格、属性价格全部同步成功
+1. **总部到子店同步**: 子店执行商品同步后，外卖商品、规格价格、属性价格、套餐子商品价格全部同步成功
 2. **首次同步状态**: 首次同步的外卖商品状态为下架（0）
-3. **再次同步保留**: 再次同步时，子店的外卖商品状态和规格价格保持不变
+3. **再次同步保留**: 再次同步时，子店的外卖商品 price/status、规格价格、属性价格和套餐子商品价格保持不变
 4. **数据完整性**: 同步后的数据包含所有必要字段，关联关系正确
 
 ### 测试验收
@@ -206,7 +231,7 @@
 2. **集成测试**: 端到端同步流程测试通过
 3. **手动测试**: 
    - 首次同步：验证外卖商品状态为下架
-   - 再次同步：验证子店的 status 和 price 保持不变
+   - 再次同步：验证子店的外卖商品 price/status、规格 price、属性 price 和套餐子商品 add_price 保持不变
    - 错误场景：验证事务回滚和错误日志
 
 ### 文档验收
@@ -235,7 +260,7 @@
 - 只同步 `HeadquarterUuid = 0` 的总部外卖商品
 - 子店的外卖商品必须标记 `HeadquarterUuid = 总部UUID`
 - 首次同步时外卖商品必须下架
-- 再次同步时必须保留子店的 status 和规格 price
+- 再次同步时必须保留子店的外卖商品 price/status、规格 price、属性 price 和套餐子商品 add_price
 
 ### 资源约束
 
@@ -257,6 +282,7 @@
 - `repository.ProductPackageTakeoutRepo` - 外卖商品 Repository
 - `repository.ProductBomTakeoutRepo` - 外卖规格价格 Repository
 - `repository.ProductPackageAttributeTakeoutRepo` - 外卖属性价格 Repository
+- `repository.ProductPackageGroupItemTakeoutRepo` - 外卖套餐子商品价格 Repository
 - `repository.CommonRepo` - 通用查询条件
 
 ### 业务依赖
@@ -276,7 +302,7 @@
 **缓解措施**:
 
 - 首次同步前查询子店是否已存在该外卖商品
-- 明确定义保留字段列表（status、price）
+- 明确定义保留字段列表（外卖商品 price/status、规格 price、属性 price、套餐子商品 add_price）
 - 增加单元测试覆盖保留逻辑
 
 ### 风险 2: 大数据量同步性能问题
@@ -331,9 +357,11 @@
 - `main/app/model/product_package_takeout.go` - 外卖商品模型
 - `main/app/model/product_bom_takeout.go` - 外卖规格价格模型
 - `main/app/model/product_package_attribute_takeout.go` - 外卖属性价格模型
+- `main/app/model/product_package_group_item_takeout.go` - 外卖套餐子商品价格模型
 - `main/app/repository/product_package_takeout.go` - 外卖商品 Repository
 - `main/app/repository/product_bom_takeout.go` - 外卖规格价格 Repository
 - `main/app/repository/product_package_attribute_takeout.go` - 外卖属性价格 Repository
+- `main/app/repository/product_package_group_item_takeout.go` - 外卖套餐子商品价格 Repository
 
 ### 外部参考
 

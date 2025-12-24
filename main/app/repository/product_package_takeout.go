@@ -33,6 +33,7 @@ type IProductPackageTakeoutQueryRepo interface {
 	WhereByProductPackageUuids(productPackageUuids []uint64) DBOption      // 根据商品包UUID列表查询
 	WithProductBomTakeouts(opts ...DBOption) DBOption                      // 预加载外卖规格价格列表
 	WithProductPackageAttributeTakeouts(opts ...DBOption) DBOption         // 预加载外卖属性价格列表
+	WithProductPackageGroupItemTakeouts(opts ...DBOption) DBOption         // 预加载外卖套餐子商品价格列表
 	WhereByTakeoutType(takeoutType uint) DBOption                          // 根据外卖类型查询
 	WhereBySource(source string) DBOption                                  // 根据来源平台查询
 	WhereBySourceProductId(sourceProductId string) DBOption                // 根据来源商品ID查询
@@ -295,6 +296,18 @@ func (r *productPackageTakeoutRepoImpl) WithProductBomTakeouts(opts ...DBOption)
 func (r *productPackageTakeoutRepoImpl) WithProductPackageAttributeTakeouts(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackageAttributeTakeouts", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageGroupItemTakeouts 预加载外卖套餐子商品价格列表
+func (r *productPackageTakeoutRepoImpl) WithProductPackageGroupItemTakeouts(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}

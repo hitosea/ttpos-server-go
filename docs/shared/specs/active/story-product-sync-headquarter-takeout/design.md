@@ -8,11 +8,12 @@
 1. 外卖商品基本信息（`ttpos_product_package_takeout`）
 2. 外卖规格价格（`ttpos_product_bom_takeout`）
 3. 外卖属性价格（`ttpos_product_package_attribute_takeout`）
+4. 外卖套餐子商品价格（`ttpos_product_package_group_item_takeout`）
 
 核心设计思路：
 - 复用店内商品同步的整体架构（先删后建）
 - 首次同步时外卖商品状态设置为下架（0）
-- 再次同步时保留子店的 status 和规格 price 配置
+- 再次同步时保留子店的外卖商品 price/status、规格 price、属性 price 和套餐子商品 add_price 配置
 
 ---
 
@@ -66,10 +67,15 @@
   - 使用 `DestroyProductPackageAttributeTakeout` 物理删除
   - 使用 `CreateProductPackageAttributeTakeout` 创建属性价格
 
+- **ProductPackageGroupItemTakeoutRepo**: `main/app/repository/product_package_group_item_takeout.go`
+  - 使用 `GetProductPackageGroupItemTakeoutList` 查询套餐子商品价格
+  - 使用 `DestroyProductPackageGroupItemTakeout` 物理删除
+  - 使用 `CreateProductPackageGroupItemTakeout` 创建套餐子商品价格
+
 ### 集成点
 
-- **现有同步逻辑**: 在 `SyncProduct` 方法的第 8090 行（return 之前）插入外卖商品同步逻辑
-- **数据库表**: 复用外卖商品相关的三张表
+- **现有同步逻辑**: 在 `SyncProduct` 方法的第 8190 行（return 之前）插入外卖商品同步逻辑
+- **数据库表**: 复用外卖商品相关的四张表
 - **事务管理**: 使用与店内商品同步相同的事务管理机制
 
 ---
@@ -83,7 +89,8 @@
 ```
 Service 层 (productSrv.SyncProduct)
   ↓ 依赖
-Repository 层 (ProductPackageTakeoutRepo, ProductBomTakeoutRepo, ProductPackageAttributeTakeoutRepo)
+Repository 层 (ProductPackageTakeoutRepo, ProductBomTakeoutRepo, 
+              ProductPackageAttributeTakeoutRepo, ProductPackageGroupItemTakeoutRepo)
   ↓ 依赖
 数据库 (MySQL)
 ```
@@ -106,10 +113,11 @@ graph TD
     J --> K[批量插入外卖商品]
     K --> L[逐条插入规格价格]
     L --> M[逐条插入属性价格]
-    M --> N{事务提交成功?}
-    N -->|是| END
-    N -->|否| O[回滚事务并返回错误]
-    O --> END
+    M --> N[逐条插入套餐子商品价格]
+    N --> O{事务提交成功?}
+    O -->|是| END
+    O -->|否| P[回滚事务并返回错误]
+    P --> END
 ```
 
 ---
@@ -160,6 +168,7 @@ headTakeoutRepo := repository.NewProductPackageTakeoutRepo(headquarterDb)
 subTakeoutRepo := repository.NewProductPackageTakeoutRepo(subDb)
 subBomTakeoutRepo := repository.NewProductBomTakeoutRepo(subDb)
 subAttrTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(subDb)
+subGroupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(subDb)
 ```
 
 2. 查询总部外卖商品（包含关联数据）
@@ -168,6 +177,7 @@ headTakeoutList, err := headTakeoutRepo.GetProductPackageTakeoutList(
     commonRepo.WhereByHeadquarterUuid(0),
     headTakeoutRepo.WithProductBomTakeouts(),
     headTakeoutRepo.WithProductPackageAttributeTakeouts(),
+    headTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 )
 ```
 
@@ -177,6 +187,7 @@ subTakeoutList, err := subTakeoutRepo.GetProductPackageTakeoutList(
     commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
     subTakeoutRepo.WithProductBomTakeouts(),
     subTakeoutRepo.WithProductPackageAttributeTakeouts(),
+    subTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 )
 ```
 
@@ -184,10 +195,18 @@ subTakeoutList, err := subTakeoutRepo.GetProductPackageTakeoutList(
 ```go
 subTakeoutMap := make(map[uint64]*model.ProductPackageTakeout)
 subBomTakeoutMap := make(map[uint64]*model.ProductBomTakeout)
+subAttrTakeoutMap := make(map[uint64]*model.ProductPackageAttributeTakeout)
+subGroupItemTakeoutMap := make(map[uint64]*model.ProductPackageGroupItemTakeout)
 for _, takeout := range subTakeoutList {
     subTakeoutMap[takeout.Uuid] = takeout
     for _, bom := range takeout.ProductBomTakeouts {
-        subBomTakeoutMap[bom.Uuid] = bom
+        subBomTakeoutMap[bom.Uuid] = &bom
+    }
+    for _, attr := range takeout.ProductPackageAttributeTakeouts {
+        subAttrTakeoutMap[attr.Uuid] = &attr
+    }
+    for _, groupItem := range takeout.ProductPackageGroupItemTakeouts {
+        subGroupItemTakeoutMap[groupItem.Uuid] = &groupItem
     }
 }
 ```
@@ -197,6 +216,7 @@ for _, takeout := range subTakeoutList {
 newTakeoutList := make([]model.ProductPackageTakeout, 0)
 newBomTakeoutList := make([]model.ProductBomTakeout, 0)
 newAttrTakeoutList := make([]model.ProductPackageAttributeTakeout, 0)
+newGroupItemTakeoutList := make([]model.ProductPackageGroupItemTakeout, 0)
 
 for _, headTakeout := range headTakeoutList {
     // 确定 status
@@ -270,6 +290,30 @@ for _, headTakeout := range headTakeoutList {
         }
         newAttrTakeoutList = append(newAttrTakeoutList, newAttr)
     }
+    
+    // 处理套餐子商品价格
+    for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
+        // 确定 add_price
+        addPrice := headGroupItem.AddPrice // 默认使用总部价格
+        if existsGroupItem, ok := subGroupItemTakeoutMap[headGroupItem.Uuid]; ok {
+            addPrice = existsGroupItem.AddPrice // 保留子店价格
+        }
+        
+        newGroupItem := model.ProductPackageGroupItemTakeout{
+            BaseModel: model.BaseModel{
+                Uuid:       headGroupItem.Uuid,
+                CreateTime: headGroupItem.CreateTime,
+                UpdateTime: headGroupItem.UpdateTime,
+                DeleteTime: headGroupItem.DeleteTime,
+            },
+            ProductPackageTakeoutUuid:   headGroupItem.ProductPackageTakeoutUuid,
+            ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
+            ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,
+            HeadquarterUuid:             companySetting.HeadquarterUuid,
+            AddPrice:                    addPrice, // 使用确定的价格
+        }
+        newGroupItemTakeoutList = append(newGroupItemTakeoutList, newGroupItem)
+    }
 }
 ```
 
@@ -279,11 +323,13 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
     takeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
     bomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
     attrTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+    groupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
     
     // 删除子店现有数据
     delTakeoutUuids := make([]uint64, 0)
     delBomTakeoutUuids := make([]uint64, 0)
     delAttrTakeoutUuids := make([]uint64, 0)
+    delGroupItemTakeoutUuids := make([]uint64, 0)
     
     for _, takeout := range subTakeoutList {
         delTakeoutUuids = append(delTakeoutUuids, takeout.Uuid)
@@ -293,12 +339,22 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
         for _, attr := range takeout.ProductPackageAttributeTakeouts {
             delAttrTakeoutUuids = append(delAttrTakeoutUuids, attr.Uuid)
         }
+        for _, groupItem := range takeout.ProductPackageGroupItemTakeouts {
+            delGroupItemTakeoutUuids = append(delGroupItemTakeoutUuids, groupItem.Uuid)
+        }
     }
     
-    if len(delTakeoutUuids) > 0 {
-        err := takeoutRepo.DestroyProductPackageTakeout(commonRepo.WhereInUuids(delTakeoutUuids))
+    if len(delAttrTakeoutUuids) > 0 {
+        err := attrTakeoutRepo.DestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
         if err != nil {
-            return errors.WithMessage(err, "销毁子店外卖商品失败")
+            return errors.WithMessage(err, "销毁子店外卖属性价格失败")
+        }
+    }
+    
+    if len(delGroupItemTakeoutUuids) > 0 {
+        err := groupItemTakeoutRepo.DestroyProductPackageGroupItemTakeout(delGroupItemTakeoutUuids)
+        if err != nil {
+            return errors.WithMessage(err, "销毁子店外卖套餐子商品价格失败")
         }
     }
     
@@ -309,10 +365,10 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
         }
     }
     
-    if len(delAttrTakeoutUuids) > 0 {
-        err := attrTakeoutRepo.DestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
+    if len(delTakeoutUuids) > 0 {
+        err := takeoutRepo.DestroyProductPackageTakeout(commonRepo.WhereInUuids(delTakeoutUuids))
         if err != nil {
-            return errors.WithMessage(err, "销毁子店外卖属性价格失败")
+            return errors.WithMessage(err, "销毁子店外卖商品失败")
         }
     }
     
@@ -347,6 +403,16 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
         }
     }
     
+    if len(newGroupItemTakeoutList) > 0 {
+        for _, groupItem := range newGroupItemTakeoutList {
+            err := groupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(&groupItem)
+            if err != nil {
+                logger.Logger.Error("创建子店外卖套餐子商品价格失败", zap.Uint64("uuid", groupItem.Uuid), zap.Error(err))
+                // 不中断，继续处理
+            }
+        }
+    }
+    
     return nil
 })
 ```
@@ -357,7 +423,7 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
 
 ### 使用现有表
 
-本功能不需要创建新表，使用以下三张现有的外卖商品表：
+本功能不需要创建新表，使用以下四张现有的外卖商品表：
 
 #### 表 1: ttpos_product_package_takeout（外卖商品表）
 
@@ -365,6 +431,7 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
 - `uuid`: 唯一标识（与总部保持一致）
 - `product_package_uuid`: 关联店内商品包
 - `headquarter_uuid`: 总部 UUID（子店外卖商品标记为总部 UUID）
+- `price`: 外卖商品价格（套餐价格）**需保留子店配置**
 - `status`: 外卖状态（0-下架 1-上架）**需保留子店配置**
 - `create_time`, `update_time`, `delete_time`: 时间戳（与总部保持一致）
 
@@ -385,6 +452,19 @@ err = subDb.Transaction(func(tx *gorm.DB) error {
 - `product_package_takeout_uuid`: 关联外卖商品
 - `product_package_attribute_uuid`: 关联店内商品属性
 - `headquarter_uuid`: 总部 UUID
+- `price`: 外卖属性价格 **需保留子店配置**
+- `create_time`, `update_time`, `delete_time`: 时间戳（与总部保持一致）
+
+#### 表 4: ttpos_product_package_group_item_takeout（外卖套餐子商品价格表）
+
+**关键字段**:
+- `uuid`: 唯一标识（与总部保持一致）
+- `product_package_takeout_uuid`: 关联外卖商品
+- `product_package_group_item_uuid`: 关联套餐子商品
+- `product_package_group_uuid`: 关联套餐分组
+- `headquarter_uuid`: 总部 UUID
+- `add_price`: 外卖加价金额 **需保留子店配置**
+- `create_time`, `update_time`, `delete_time`: 时间戳（与总部保持一致）
 - `price`: 外卖属性价格（使用总部价格，不保留子店配置）
 - `create_time`, `update_time`, `delete_time`: 时间戳（与总部保持一致）
 
