@@ -30519,7 +30519,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取打印设置，包括自定义打印联数配置",
+                "description": "获取打印设置，仅返回自定义打印联数相关配置",
                 "consumes": [
                     "application/json"
                 ],
@@ -30542,7 +30542,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/setting.Printer"
+                                            "$ref": "#/definitions/setting.PrintSettingResp"
                                         }
                                     }
                                 }
@@ -63456,6 +63456,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "setting.PrintSettingResp": {
+            "type": "object",
+            "properties": {
+                "checkout_slip_copies": {
+                    "description": "结账单打印联数 0-10",
+                    "type": "integer"
+                },
+                "enable_custom_copies": {
+                    "description": "是否启用自定义打印联数 \"0\"-关闭 \"1\"-开启",
                     "type": "string"
                 }
             }

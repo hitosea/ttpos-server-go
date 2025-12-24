@@ -69,3 +69,9 @@ func (p *PrinterInfo) IsEnableSound() bool {
 func (p *PrinterInfo) IsEnableStatusCheck() bool {
 	return p.EnableStatusCheck == 1
 }
+
+// PrintSettingResp 打印设置响应（仅包含自定义打印联数相关字段）
+type PrintSettingResp struct {
+	EnableCustomCopies string `json:"enable_custom_copies"` // 是否启用自定义打印联数 "0"-关闭 "1"-开启
+	CheckoutSlipCopies int    `json:"checkout_slip_copies"` // 结账单打印联数 0-10
+}
