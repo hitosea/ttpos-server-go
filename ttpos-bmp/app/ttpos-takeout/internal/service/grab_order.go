@@ -7,6 +7,7 @@ package service
 
 import (
 	"context"
+	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
@@ -39,6 +40,25 @@ type (
 		// 返回：
 		//   - err: 错误信息
 		MarkOrderReady(ctx context.Context, orderEntity *entity.Order) error
+		// CheckOrderCancelable 检查订单是否可取消
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - orderEntity: 订单实体
+		//
+		// 返回：
+		//   - res: 检查订单可取消性响应
+		//   - err: 错误信息
+		CheckOrderCancelable(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error)
+		// CancelOrder 取消订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - orderEntity: 订单实体
+		//   - cancelCode: 取消原因码（Grab API 规范）
+		//
+		// 返回：
+		//   - res: 取消订单响应
+		//   - err: 错误信息
+		CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode int32) (res *api.CancelOrderResp, err error)
 	}
 )
 

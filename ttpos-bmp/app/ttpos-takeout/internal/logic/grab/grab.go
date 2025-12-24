@@ -477,10 +477,11 @@ func (s *sGrab) UpdateOrderReadyTime(ctx context.Context, orderID string, newRea
 }
 
 // CheckOrderCancelable 检查订单是否可取消
-func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error) {
+// 返回 Grab SDK 的完整响应对象
+func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error) {
 	auth, err := s.getAuthorizationHeader(ctx)
 	if err != nil {
-		return false, "", gerror.Wrap(err, "获取授权信息失败")
+		return nil, gerror.Wrap(err, "获取授权信息失败")
 	}
 
 	resp, httpResp, err := s.getClient().CheckOrderCancelableAPI.
@@ -491,20 +492,13 @@ func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, ord
 		Execute()
 
 	if err = s.handleSDKError(ctx, err, "CheckOrderCancelable"); err != nil {
-		return false, "", err
+		return nil, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
 	}
 
-	// 注意: SDK 字段名是 CancelAble (而非 Cancelable)
-	cancelable := resp.CancelAble != nil && *resp.CancelAble
-	reason := ""
-	if resp.NonCancellationReason != nil {
-		reason = *resp.NonCancellationReason
-	}
-
-	return cancelable, reason, nil
+	return resp, nil
 }
 
 // ============================================================================

@@ -55,7 +55,8 @@ type (
 		// UpdateOrderReadyTime 更新订单准备时间
 		UpdateOrderReadyTime(ctx context.Context, orderID string, newReadyTime time.Time) error
 		// CheckOrderCancelable 检查订单是否可取消
-		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error)
+		// 返回 Grab SDK 的完整响应对象
+		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error)
 		// PauseStore 暂停门店
 		PauseStore(ctx context.Context, merchantID string, duration int) error
 		// ResumeStore 恢复门店营业

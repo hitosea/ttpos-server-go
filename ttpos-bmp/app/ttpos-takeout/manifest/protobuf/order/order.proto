@@ -45,14 +45,46 @@ message MarkOrderReadyResp {
   string order_uuid = 1; // 订单UUID
 }
 
+// 检查订单是否可取消请求
+message CheckOrderCancelableReq {
+  string takeout_order_uuid = 1; // 外卖订单UUID
+  string request_id = 2;         // 请求追踪ID (可选)
+}
+
+// 检查订单是否可取消响应
+message CheckOrderCancelableResp {
+  string order_uuid = 1;             // 订单UUID
+  bool can_cancel = 2;               // 是否可以取消（true=可取消, false=不可取消）
+  string non_cancellation_reason = 3; // 不可取消原因（当 can_cancel=false 时返回）
+  string raw_data = 4;               // SDK原始响应数据（JSON格式，包含所有SDK返回字段）
+}
+
+// 取消订单请求
+message CancelOrderReq {
+  string takeout_order_uuid = 1; // 外卖订单UUID
+  int32 cancel_code = 2;         // 取消原因码（Grab API 规范）
+  string request_id = 3;         // 请求追踪ID (可选)
+}
+
+// 取消订单响应
+message CancelOrderResp {
+  string order_uuid = 1; // 订单UUID
+}
+
 // 订单服务
 service OrderService {
   // 获取订单信息
   rpc GetOrderInfo(GetOrderInfoReq) returns (takeout.ApiResponse);
-  
+
   // 准备订单（接受/拒绝）
   rpc PrepareOrder(PrepareOrderReq) returns (takeout.ApiResponse);
-  
+
   // 标记订单准备完成（markStatus 默认为 1）
   rpc MarkOrderReady(MarkOrderReadyReq) returns (takeout.ApiResponse);
+
+  // 检查订单是否可取消
+  rpc CheckOrderCancelable(CheckOrderCancelableReq) returns (takeout.ApiResponse);
+
+  // 取消订单
+  rpc CancelOrder(CancelOrderReq) returns (takeout.ApiResponse);
 }

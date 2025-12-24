@@ -141,3 +141,91 @@ func (c *Controller) MarkOrderReady(ctx context.Context, req *api.MarkOrderReady
 		Data:    dataAny,
 	}, nil
 }
+
+// CancelOrder 取消订单（包含预检查机制）
+func (c *Controller) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (*takeout.ApiResponse, error) {
+	// 1. 参数验证
+	if req.TakeoutOrderUuid == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "订单UUID不能为空",
+		}, nil
+	}
+
+	// 2. 记录请求日志
+	g.Log().Infof(ctx, "接收到 CancelOrder 请求: order_uuid=%s, cancel_code=%d, request_id=%s",
+		req.TakeoutOrderUuid, req.CancelCode, req.RequestId)
+
+	// 3. 调用 Service 层
+	res, err := service.Order().CancelOrder(ctx, req)
+	if err != nil {
+		g.Log().Errorf(ctx, "CancelOrder 失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 4. 构建响应
+	dataAny, err := anypb.New(res)
+	if err != nil {
+		g.Log().Errorf(ctx, "序列化响应失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	// 6. 记录成功日志
+	g.Log().Infof(ctx, "CancelOrder 成功: order_uuid=%s", res.OrderUuid)
+
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: "订单已成功取消",
+		Data:    dataAny,
+	}, nil
+}
+
+// CheckOrderCancelable 检查订单是否可取消
+func (c *Controller) CheckOrderCancelable(ctx context.Context, req *api.CheckOrderCancelableReq) (*takeout.ApiResponse, error) {
+	// 1. 参数验证
+	if req.TakeoutOrderUuid == "" {
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeInvalidParam),
+			Message: "订单UUID不能为空",
+		}, nil
+	}
+
+	// 2. 记录请求日志
+	g.Log().Infof(ctx, "接收到 CheckOrderCancelable 请求: order_uuid=%s, request_id=%s",
+		req.TakeoutOrderUuid, req.RequestId)
+
+	// 3. 调用 Service 层
+	res, err := service.Order().CheckOrderCancelable(ctx, req)
+	if err != nil {
+		g.Log().Errorf(ctx, "CheckOrderCancelable 失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeServiceError),
+			Message: err.Error(),
+		}, nil
+	}
+
+	// 4. 构建响应
+	dataAny, err := anypb.New(res)
+	if err != nil {
+		g.Log().Errorf(ctx, "序列化响应失败: %v", err)
+		return &takeout.ApiResponse{
+			Code:    string(consts.CodeSerializeError),
+			Message: consts.MsgSerializeFailed,
+		}, nil
+	}
+
+	// 5. 记录成功日志
+	g.Log().Infof(ctx, "CheckOrderCancelable 成功: order_uuid=%s, can_cancel=%t", res.OrderUuid, res.CanCancel)
+
+	return &takeout.ApiResponse{
+		Code:    string(consts.CodeSuccess),
+		Message: consts.MsgSuccess,
+		Data:    dataAny,
+	}, nil
+}
