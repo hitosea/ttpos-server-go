@@ -9033,6 +9033,20 @@ definitions:
     - site_code
     - supplier_name
     type: object
+  req.UpdatePrintSettingReq:
+    properties:
+      checkout_slip_copies:
+        description: 结账单打印联数 0-10
+        type: integer
+      enable_custom_copies:
+        description: 是否启用自定义打印联数 "0"-关闭 "1"-开启
+        enum:
+        - "0"
+        - "1"
+        type: string
+    required:
+    - enable_custom_copies
+    type: object
   req.UpdateRoleReq:
     properties:
       access_uuids:
@@ -18411,6 +18425,9 @@ definitions:
       cashier_printer_id:
         description: 打印机id
         type: string
+      checkout_slip_copies:
+        description: 结账单打印联数 0-10
+        type: integer
       consumption_tax:
         description: 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
         type: string
@@ -18419,6 +18436,9 @@ definitions:
         type: string
       default_language:
         description: 打印语言（收银）
+        type: string
+      enable_custom_copies:
+        description: 是否启用自定义打印联数 "0"-关闭 "1"-开启
         type: string
       kitchen_language:
         description: 打印语言（送厨）
@@ -36789,6 +36809,62 @@ paths:
       summary: 获取支付方式列表
       tags:
       - 商家端.支付管理
+  /shop/setting/print_setting/get:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印设置，包括自定义打印联数配置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.Printer'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印设置
+      tags:
+      - 商家端.打印设置
+  /shop/setting/print_setting/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新打印设置，包括自定义打印联数配置
+      parameters:
+      - description: 更新打印设置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdatePrintSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  properties:
+                    checkout_slip_copies:
+                      type: integer
+                    enable_custom_copies:
+                      type: string
+                  type: object
+              type: object
+      security:
+      - JwtToken: []
+      summary: 更新打印设置
+      tags:
+      - 商家端.打印设置
   /shop/setting/return_food_reason:
     delete:
       consumes:

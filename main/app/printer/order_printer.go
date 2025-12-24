@@ -44,6 +44,17 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
 
+	// 应用打印联数优先级规则：收银打印设置-结账单打印联数 > 打印设置-打印机打印联数
+	// 仅对结账单（printType == 2）应用此规则
+	if printType == 2 && p.printerSetting.EnableCustomCopies == "1" {
+		if p.printerSetting.CheckoutSlipCopies > 0 {
+			settingPrinterInfo.Copies = uint(p.printerSetting.CheckoutSlipCopies)
+		} else {
+			// 如果设置为0，表示不打印
+			settingPrinterInfo.Copies = 0
+		}
+	}
+
 	// 未开启打印
 	if !settingPrinterInfo.IsCashierOpen {
 		return nil, errors.New("未开启打印, 请联系管理员")
@@ -109,6 +120,11 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "添加打印日志失败")
+	}
+
+	// 如果打印类型为结账单，且启用了自定义打印联数，且打印份数为0，则不打印
+	if printType == 2 && p.printerSetting.EnableCustomCopies == "1" && printerLogData.Copies == 0 {
+		return &resp.PrinterData{}, nil
 	}
 
 	// 代表由服务器进行发送打印
