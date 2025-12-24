@@ -35,6 +35,7 @@ type UnprocessedResp struct {
 	AbnormalPrintCount          int64 `json:"abnormal_print_count"`           // 异常打印数量
 	UnprocessedH5OrderCount     int64 `json:"unprocessed_h5_order_count"`     // 未处理的h5订单数量
 	UnprocessedMemberOrderCount int64 `json:"unprocessed_member_order_count"` // 未处理的外送订单数量
+	UnprocessedTakeoutCount     int64 `json:"unprocessed_takeout_count"`      // 未处理的外卖订单数量（Grab/Lineman等）
 	UpdateTime                  int64 `json:"update_time"`                    // 更新时间
 }
 

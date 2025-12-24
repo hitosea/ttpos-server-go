@@ -19,6 +19,7 @@ type ITakeoutOrderRepo interface {
 	GetByTakeoutOrderUuid(takeoutOrderUuid string, options ...DBOption) (*model.TakeoutOrder, error)
 	GetByPlatformOrderId(platform, platformOrderId string, options ...DBOption) (*model.TakeoutOrder, error)
 	GetList(options ...DBOption) ([]*model.TakeoutOrder, int64, error)
+	GetCount(options ...DBOption) (int64, error) // 获取订单数量
 	Delete(uuid uint64) error
 
 	// 选项方法
@@ -28,6 +29,7 @@ type ITakeoutOrderRepo interface {
 	WhereUuid(uuid uint64) DBOption
 	WherePlatform(platform string) DBOption
 	WhereOrderState(orderState int) DBOption
+	WhereOrderStateIn(orderStates []int) DBOption // 根据多个订单状态筛选
 	WhereTimeRange(startTime, endTime int64) DBOption
 	WhereSearch(search string) DBOption
 	WhereIsHistoryOrder(isHistory bool) DBOption
@@ -164,6 +166,22 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 	return orders, total, nil
 }
 
+// GetCount 获取外卖订单数量
+func (r *TakeoutOrderRepoImpl) GetCount(options ...DBOption) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+
+	for _, option := range options {
+		db = option(db)
+	}
+
+	if err := db.Count(&count).Error; err != nil {
+		return 0, errors.WithMessage(err)
+	}
+
+	return count, nil
+}
+
 // Delete 软删除外卖订单
 func (r *TakeoutOrderRepoImpl) Delete(uuid uint64) error {
 	return errors.WithMessage(
@@ -195,6 +213,16 @@ func (r *TakeoutOrderRepoImpl) WhereOrderState(orderState int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if orderState >= 0 {
 			return db.Where("order_state = ?", orderState)
+		}
+		return db
+	}
+}
+
+// WhereOrderStateIn 根据多个订单状态筛选
+func (r *TakeoutOrderRepoImpl) WhereOrderStateIn(orderStates []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(orderStates) > 0 {
+			return db.Where("order_state IN ?", orderStates)
 		}
 		return db
 	}
