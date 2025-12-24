@@ -27,3 +27,23 @@
 
 
 ----
+## order.OrderService / MarkOrderReady
+
+```json
+{
+    "takeout_order_uuid": "10aftdg7000df63y6ffdno1470xvplo5",
+    "request_id": "{{$string.nanoid}}"
+}
+```
+
+```json
+
+{
+    "code": "0",
+    "message": "success",
+    "data": {
+        "order_uuid": "10aftdg7000df63y6ffdno1470xvplo5",
+        "@type": "type.googleapis.com/order.MarkOrderReadyResp"
+    }
+}
+```
