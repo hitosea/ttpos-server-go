@@ -327,7 +327,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 		// 更新外卖商品信息
 		if err := repository.NewProductPackageTakeoutRepo(tx).UpdateProductPackageTakeout(
 			updateData,
-			repository.CommonRepo.WhereByUuid(editReq.Uuid),
+			repository.CommonRepo.WhereByUuid(existTakeout.Uuid),
 		); err != nil {
 			return errors.WithMessage(err, "更新外卖商品失败")
 		}
