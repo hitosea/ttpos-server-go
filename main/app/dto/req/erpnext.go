@@ -149,6 +149,7 @@ type SavePosInvoiceReq struct {
 
 	AmendedProductsInvoiceName string `form:"amended_products_invoice_name" json:"amended_products_invoice_name" binding:"required"` // 反结账后，重新结账时填写原商品发票名称
 	AmendedMaterialInvoiceName string `form:"amended_material_invoice_name" json:"amended_material_invoice_name" binding:"required"` // 反结账后，重新结账时填写原材料发票名称
+	Remark                     string `form:"remark" json:"remark"`                                                                 // 备注,可选
 
 }
 

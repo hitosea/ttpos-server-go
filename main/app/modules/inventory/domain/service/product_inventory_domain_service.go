@@ -46,7 +46,7 @@ type productInventoryDomainService struct {
 	productBomRepo                  repository.IProductBomRepository
 	productPackageRepo              repository.IProductPackageRepository
 	strategies                      map[string]IInventoryStrategy
-	defaultPackageInventoryStrategy IProductPackageInventoryStrategy // 默认商品包库存策略（最小值）
+	defaultPackageInventoryStrategy IProductPackageInventoryStrategy // 默认商品包库存策略（最大值）
 }
 
 // NewProductInventoryDomainService 创建商品库存领域服务
@@ -249,12 +249,14 @@ func (s *productInventoryDomainService) GetProductPackageInventory(
 		productBom, ok := bomInterface.(*model.ProductBom)
 		if !ok {
 			// 记录错误但继续处理其他BOM
+			logger.Logger.Warn("*model.ProductBom类型错误", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Uint64("product_package_uuid", productPackageUuid), zap.Error(errors.New("商品BOM类型错误")))
 			continue
 		}
 
 		inventory, err := s.GetProductInventory(ctx, productBom.Uuid)
 		if err != nil {
 			// 记录错误但继续处理其他BOM
+			logger.Logger.Warn("获取商品规格库存失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Uint64("product_package_uuid", productPackageUuid), zap.Uint64("product_bom_uuid", productBom.Uuid), zap.Error(err))
 			continue
 		}
 
@@ -263,7 +265,8 @@ func (s *productInventoryDomainService) GetProductPackageInventory(
 
 	// 5. 如果没有有效的库存，返回错误
 	if len(inventories) == 0 {
-		return 0, errors.New("无法计算商品包库存：所有BOM库存查询失败")
+		logger.Logger.Warn("无法计算商品包库存：该商品的规格库存查询失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Uint64("product_package_uuid", productPackageUuid), zap.Error(errors.New("所有BOM库存查询失败")))
+		return 0, nil
 	}
 
 	// 6. 使用策略计算商品包库存

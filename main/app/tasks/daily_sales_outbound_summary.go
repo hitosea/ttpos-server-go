@@ -120,6 +120,8 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	opts := []repository.DBOption{
 		warehouseLogRepo.WhereLogType(1), // 出库
 		warehouseLogRepo.WhereScene(1),   // 销售出库
+		// 未删除的记录
+		repository.CommonRepo.WhereBySoftDelete(),
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("opening_hours = ?", openingYearHours)
 		},
@@ -244,9 +246,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 
 			// 这里需要额外查询单位名称，因为关联查询比较复杂
 			if materialBaseUnitUuid > 0 {
-				var unitName string
 				materialBaseUnitName = item.Material.Unit.Name
-				materialBaseUnitName = unitName
 			}
 
 			recordMap[key] = &OutboundRecord{

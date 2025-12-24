@@ -27,6 +27,7 @@ type PurchaseOrderInfo struct {
 	ReceiptProgress   string             `json:"receipt_progress"`    // 收货进度（百分比0.00%）前端直接显示
 	CompanyUuid       uint64             `json:"company_uuid"`        // V2.6 公司UUID
 	CompanyName       string             `json:"company_name"`        // V2.6 公司名称
+	CompanyStoreCode  string             `json:"company_store_code"`  // 公司店铺编码
 }
 
 // PurchaseOrderDetailResp 采购订单详情响应

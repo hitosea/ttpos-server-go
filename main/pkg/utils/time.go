@@ -31,6 +31,7 @@ type TimeUtil interface {
 	FormatUnixTimeDetail(timestamp int64) TimeDetail                                                  // 获取时间详情
 	GetTimeRange(dayType DayType) (int64, int64, error)                                               // 订单列表：今天、昨天、本周搜索时间范围
 	FormatTimeToUnix(timeStr string) (int64, error)                                                   // 2025-04-30转为时间戳
+	FormatTimeToTime(timeStr string) (time.Time, error)                                               // 2025-04-30转为time.Time对象（使用当前时区）
 	OpeningHoursStartEndUnix(openingHours string, opts ...func(o *OpeningHoursOption)) (int64, int64) // 营业时间开始和结束时间戳
 }
 
@@ -291,6 +292,15 @@ func (t Timezone) FormatTimeToUnix(timeStr string) (int64, error) {
 		return 0, err
 	}
 	return time.Unix(), nil
+}
+
+// FormatTimeToTime 2025-04-30转为time.Time对象（使用当前时区）
+func (t Timezone) FormatTimeToTime(timeStr string) (time.Time, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.ParseInLocation("2006-01-02", timeStr, loc)
 }
 
 type OpeningHoursOption struct {

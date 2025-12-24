@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -57,21 +58,23 @@ type transferOrderSrv struct {
 	lock        lock.Lock
 	validator   *transferOrderValidator
 	helper      *transferOrderHelper
+	settingSrv  setting.ISrv
 }
 
 // NewTransferOrderSrv 创建调拨单服务
-func NewTransferOrderSrv(dbm *database.DBManager, materialSrv service.IMaterialSrv) ITransferOrderSrv {
-	return NewTransferOrderSrvImpl(dbm, materialSrv)
+func NewTransferOrderSrv(dbm *database.DBManager, materialSrv service.IMaterialSrv, settingSrv setting.ISrv) ITransferOrderSrv {
+	return NewTransferOrderSrvImpl(dbm, materialSrv, settingSrv)
 }
 
 // NewTransferOrderSrvImpl 创建调拨单服务实现
-func NewTransferOrderSrvImpl(dbm *database.DBManager, materialSrv service.IMaterialSrv) ITransferOrderSrv {
+func NewTransferOrderSrvImpl(dbm *database.DBManager, materialSrv service.IMaterialSrv, settingSrv setting.ISrv) ITransferOrderSrv {
 	return &transferOrderSrv{
 		dbm:         dbm,
 		materialSrv: materialSrv,
 		lock:        lock.NewSystemLock(),
 		validator:   &transferOrderValidator{},
 		helper:      &transferOrderHelper{},
+		settingSrv:  settingSrv,
 	}
 }
 
@@ -561,20 +564,36 @@ func (s *transferOrderSrv) CreateTransferOrder(
 
 	// 判断发货门店和收货门店是否存在
 	senderCompany := model.Company{}
+	var senderCompanyStoreCode string
 	if reqs.SenderCompanyUuid != 0 {
 		company, err := repository.NewCompanyRepo(s.dbm.GetDB(reqs.SenderCompanyUuid)).GetCompany()
 		if err != nil {
 			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("查询发货门店失败"), err.Error())
 		}
 		senderCompany = company
+		// 获取发货门店的店铺编码
+		ctxSender := ctx.Copy()
+		ctxSender.SetCompanyUuid(reqs.SenderCompanyUuid)
+		ctxSender.SetDB(s.dbm.GetDB(reqs.SenderCompanyUuid))
+		if senderStoreSetting, err := s.settingSrv.GetStoreSetting(ctxSender); err == nil {
+			senderCompanyStoreCode = senderStoreSetting.StoreCode
+		}
 	}
 	receiverCompany := model.Company{}
+	var receiverCompanyStoreCode string
 	if reqs.ReceiverCompanyUuid != 0 {
 		company, err := repository.NewCompanyRepo(s.dbm.GetDB(reqs.ReceiverCompanyUuid)).GetCompany()
 		if err != nil {
 			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("查询收货门店失败"), err.Error())
 		}
 		receiverCompany = company
+		// 获取收货门店的店铺编码
+		ctxReceiver := ctx.Copy()
+		ctxReceiver.SetCompanyUuid(reqs.ReceiverCompanyUuid)
+		ctxReceiver.SetDB(s.dbm.GetDB(reqs.ReceiverCompanyUuid))
+		if receiverStoreSetting, err := s.settingSrv.GetStoreSetting(ctxReceiver); err == nil {
+			receiverCompanyStoreCode = receiverStoreSetting.StoreCode
+		}
 	}
 
 	// 判断仓库是否存在
@@ -618,6 +637,13 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("生成调拨单UUID失败"), err.Error())
 	}
 
+	// 获取店铺编码
+	var companyStoreCode string
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err == nil {
+		companyStoreCode = storeSetting.StoreCode
+	}
+
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 创建调拨单主表
@@ -625,25 +651,28 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			BaseModel: model.BaseModel{
 				Uuid: transferOrderUuid,
 			},
-			CompanyUuid:         companyUuid,
-			CompanyName:         companyName,
-			HeadquarterUuid:     headquarterUuid,
-			OrderNo:             orderNo,
-			TransferType:        reqs.TransferType,
-			SenderCompanyUuid:   reqs.SenderCompanyUuid,
-			SenderCompanyName:   senderCompany.Name,
-			ReceiverCompanyUuid: reqs.ReceiverCompanyUuid,
-			ReceiverCompanyName: receiverCompany.Name,
-			OutWarehouseErpCode: reqs.OutWarehouseErpCode,
-			OutWarehouseName:    outWarehouse.Name,
-			InWarehouseErpCode:  reqs.InWarehouseErpCode,
-			InWarehouseName:     inWarehouse.Name,
-			OrderTime:           reqs.OrderTime,
-			Status:              constant.TransferOrderStatusDraft,
-			CreatorUuid:         ctx.GetStaffUuid(),
-			CreatorName:         ctx.GetStaff().RealName,
-			Remark:              reqs.Remark,
-			ItemCount:           len(reqs.Items),
+			CompanyUuid:              companyUuid,
+			CompanyName:              companyName,
+			CompanyStoreCode:         companyStoreCode,
+			HeadquarterUuid:          headquarterUuid,
+			OrderNo:                  orderNo,
+			TransferType:             reqs.TransferType,
+			SenderCompanyUuid:        reqs.SenderCompanyUuid,
+			SenderCompanyName:        senderCompany.Name,
+			SenderCompanyStoreCode:   senderCompanyStoreCode,
+			ReceiverCompanyUuid:      reqs.ReceiverCompanyUuid,
+			ReceiverCompanyName:      receiverCompany.Name,
+			ReceiverCompanyStoreCode: receiverCompanyStoreCode,
+			OutWarehouseErpCode:      reqs.OutWarehouseErpCode,
+			OutWarehouseName:         outWarehouse.Name,
+			InWarehouseErpCode:       reqs.InWarehouseErpCode,
+			InWarehouseName:          inWarehouse.Name,
+			OrderTime:                reqs.OrderTime,
+			Status:                   constant.TransferOrderStatusDraft,
+			CreatorUuid:              ctx.GetStaffUuid(),
+			CreatorName:              ctx.GetStaff().RealName,
+			Remark:                   reqs.Remark,
+			ItemCount:                len(reqs.Items),
 		}
 		if err := repository.NewTransferOrderRepo(tx).Create(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单失败"), err.Error())
@@ -1560,9 +1589,16 @@ func (s *transferOrderSrv) GetTransferOrderCompanyList(
 		if company.Uuid == currentCompanyUuid {
 			continue
 		}
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetCompanyUuid(company.Uuid)
+		storeSetting, err := s.settingSrv.GetStoreSetting(ctxCopy)
+		if err != nil {
+			return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
+		}
 		list = append(list, resp.TransferOrderCompanyItem{
 			Uuid:          company.Uuid,
 			Name:          company.Name,
+			StoreCode:     storeSetting.StoreCode,
 			IsHeadquarter: company.Uuid == headquarterUuid,
 		})
 	}

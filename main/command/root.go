@@ -236,7 +236,7 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	_, _ = c.AddFunc("0 0 * * * *", func() {
 		// 每5分钟执行一次
 		// _, _ = c.AddFunc("*/5 * * * * *", func() {
-		//_, _ = c.AddFunc("0 * * * * *", func() {
+		// _, _ = c.AddFunc("0 * * * * *", func() {
 		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
 	})
 

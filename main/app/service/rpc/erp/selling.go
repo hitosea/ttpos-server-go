@@ -215,6 +215,7 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		// 反结账后，重新结账时填写原商品发票名称
 		AmendedProductsInvoiceName: savePosInvoiceReq.AmendedProductsInvoiceName,
 		AmendedMaterialInvoiceName: savePosInvoiceReq.AmendedMaterialInvoiceName,
+		Remark:                    savePosInvoiceReq.Remark,
 	}
 	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
 	if err != nil {
