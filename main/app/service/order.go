@@ -4448,27 +4448,51 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		taxes = make([]*selling.PosInvoiceTax, 0)
 	}
 
+	// 获取所有支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	methodMap := make(map[int]string)
+	paymentIdMap := make(map[int]string)
+	for _, paymentMethod := range paymentMethods {
+		if paymentMethod.ErpnextPayment != "" {
+			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
+		}
+		if paymentMethod.ErpnextPaymentId != "" {
+			paymentIdMap[paymentMethod.Code] = paymentMethod.ErpnextPaymentId
+		}
+	}
+
+	getPaymentId := func(paymentMethodCode int) string {
+		if paymentId, ok := paymentIdMap[paymentMethodCode]; ok {
+			return paymentId
+		}
+		return ""
+	}
+
 	payments := make([]*selling.PosInvoicePayment, 0)
 	if saleOrder.IsFreeSaleOrder() {
+		var paymentID *string
+		paymentId := getPaymentId(constant.PaymentMethodCodeFreeMealForErp)
+		if paymentId != "" {
+			paymentID = &paymentId
+		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: "Free Meal", // 免单
+			PaymentId:     paymentID,
 			Amount:        0,
 		})
 	} else if saleOrder.GetAmountValue() == 0 { // 如果订单应收为0元时
+		var paymentID *string
+		paymentId := getPaymentId(constant.PaymentMethodCodeCash)
+		if paymentId != "" {
+			paymentID = &paymentId
+		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: "Cash", // 现金支付
+			PaymentId:     paymentID,
 			Amount:        0,
 		})
 	} else {
-		// 获取所有支付方式
-		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
-		paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
-		methodMap := make(map[int]string)
-		for _, paymentMethod := range paymentMethods {
-			if paymentMethod.ErpnextPayment != "" {
-				methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
-			}
-		}
 		for _, payment := range saleOrder.PaymentOrders {
 			if payment.IsDelete() {
 				continue
@@ -4480,8 +4504,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
 				return nil, errors.WithMessage(errors.New("不支持的支付方式"))
 			}
+			var paymentID *string
+			paymentId := getPaymentId(payment.PaymentMethod.Code)
+			if paymentId != "" {
+				paymentID = &paymentId
+			}
 			payments = append(payments, &selling.PosInvoicePayment{
 				ModeOfPayment: modeOfPayment,
+				PaymentId:     paymentID,
 				Amount:        payment.Amount,
 			})
 		}
