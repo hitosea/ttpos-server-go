@@ -31,6 +31,7 @@ import (
 func init() {
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateCompanyUuidsFlag, "company-uuids", "", "公司UUID列表，逗号分隔")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateStartDateFlag, "start-date", "", "起始日期，格式：YYYY-MM-DD")
+	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateEndDateFlag, "end-date", "", "结束日期，格式：YYYY-MM-DD")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateOpenPosEntryNameFlag, "open-pos-entry-name", "", "OpenPosEntryName")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().StringVar(&batchRegenerateTaskFileFlag, "task-file", "", "任务清单文件路径（可选，默认：./batch-regenerate-task-{timestamp}.json）")
 	batchRegenerateOrderMaterialAndInvoiceCmd.Flags().BoolVar(&batchRegenerateResumeFlag, "resume", false, "从现有任务清单继续执行")
@@ -44,14 +45,15 @@ func init() {
 }
 
 var (
-	batchRegenerateCompanyUuidsFlag      string
-	batchRegenerateStartDateFlag         string
-	batchRegenerateOpenPosEntryNameFlag  string
-	batchRegenerateTaskFileFlag          string
-	batchRegenerateResumeFlag            bool
-	batchRegenerateDryRunFlag            bool
-	batchRegenerateShowProgressFlag      bool
-	batchRegenerateProgressIntervalFlag  int
+	batchRegenerateCompanyUuidsFlag     string
+	batchRegenerateStartDateFlag        string
+	batchRegenerateEndDateFlag          string
+	batchRegenerateOpenPosEntryNameFlag string
+	batchRegenerateTaskFileFlag         string
+	batchRegenerateResumeFlag           bool
+	batchRegenerateDryRunFlag           bool
+	batchRegenerateShowProgressFlag     bool
+	batchRegenerateProgressIntervalFlag int
 )
 
 // 颜色常量（ANSI转义序列）- 使用字符串字面量避免包级别冲突
@@ -122,6 +124,7 @@ var batchRegenerateOrderMaterialAndInvoiceCmd = &cobra.Command{
 		logger.Logger.Info("批量重新生成订单材料消耗和POS发票命令开始执行",
 			zap.String("company_uuids", batchRegenerateCompanyUuidsFlag),
 			zap.String("start_date", batchRegenerateStartDateFlag),
+			zap.String("end_date", batchRegenerateEndDateFlag),
 			zap.String("task_file", batchRegenerateTaskFileFlag),
 			zap.Bool("resume", batchRegenerateResumeFlag),
 			zap.Bool("dry_run", batchRegenerateDryRunFlag),
@@ -146,6 +149,17 @@ var batchRegenerateOrderMaterialAndInvoiceCmd = &cobra.Command{
 				zap.String("start_date", batchRegenerateStartDateFlag),
 				zap.Error(err))
 			return
+		}
+
+		// 验证结束日期格式（如果提供）
+		if batchRegenerateEndDateFlag != "" {
+			if err := validateDate(batchRegenerateEndDateFlag); err != nil {
+				fmt.Printf("%s错误: %s%s\n", batchRegenerateRedColor, err.Error(), batchRegenerateResetColor)
+				logger.Logger.Error("结束日期格式验证失败",
+					zap.String("end_date", batchRegenerateEndDateFlag),
+					zap.Error(err))
+				return
+			}
 		}
 
 		// 验证 OpenPosEntryName
@@ -199,13 +213,15 @@ var batchRegenerateOrderMaterialAndInvoiceCmd = &cobra.Command{
 			fmt.Printf("%s正在生成任务清单...%s\n", batchRegenerateBlueColor, batchRegenerateResetColor)
 			logger.Logger.Info("开始生成任务清单",
 				zap.Int("company_count", len(companyUuids)),
-				zap.String("start_date", batchRegenerateStartDateFlag))
-			task, err = taskManager.GenerateTaskList(companyUuids, batchRegenerateStartDateFlag, taskFilePath)
+				zap.String("start_date", batchRegenerateStartDateFlag),
+				zap.String("end_date", batchRegenerateEndDateFlag))
+			task, err = taskManager.GenerateTaskList(companyUuids, batchRegenerateStartDateFlag, batchRegenerateEndDateFlag, taskFilePath)
 			if err != nil {
 				fmt.Printf("%s错误: 生成任务清单失败: %s%s\n", batchRegenerateRedColor, err.Error(), batchRegenerateResetColor)
 				logger.Logger.Error("生成任务清单失败",
 					zap.Int("company_count", len(companyUuids)),
 					zap.String("start_date", batchRegenerateStartDateFlag),
+					zap.String("end_date", batchRegenerateEndDateFlag),
 					zap.Error(err))
 				return
 			}
