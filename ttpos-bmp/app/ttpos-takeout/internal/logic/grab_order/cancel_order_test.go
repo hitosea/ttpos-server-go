@@ -14,7 +14,7 @@ func TestCancelOrder_参数验证失败_订单实体为空(t *testing.T) {
 	s := New()
 	ctx := context.Background()
 
-	res, err := s.CancelOrder(ctx, nil, 1)
+	res, err := s.CancelOrder(ctx, nil, "1")
 
 	assert.Error(t, err)
 	assert.Nil(t, res)
@@ -27,123 +27,18 @@ func TestCancelOrder_参数验证失败_订单渠道错误(t *testing.T) {
 	ctx := context.Background()
 
 	orderEntity := &entity.Order{
-		Uuid:         "test-uuid",
-		ProviderName: "unsupported_platform", // 非grab平台
-		RawData:      `{"orderID":"G-123","merchantID":"M-001"}`,
+		Uuid:               "test-uuid",
+		ProviderName:       "unsupported_platform", // 非grab平台
+		ProviderOrderId:    "G-123",
+		ProviderMerchantId: "M-001",
+		RawData:            `{"orderID":"G-123","merchantID":"M-001"}`,
 	}
 
-	res, err := s.CancelOrder(ctx, orderEntity, 1)
+	res, err := s.CancelOrder(ctx, orderEntity, "1")
 
 	assert.Error(t, err)
 	assert.Nil(t, res)
 	assert.Contains(t, err.Error(), "订单渠道错误，期望 grab")
-}
-
-// TestParseOrderData_正常解析 测试parseOrderData正常解析
-func TestParseOrderData_正常解析(t *testing.T) {
-	s := New()
-
-	rawData := `{"orderID":"G-123456","merchantID":"M-001"}`
-	orderID, merchantID, err := s.parseOrderData(rawData)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "G-123456", orderID)
-	assert.Equal(t, "M-001", merchantID)
-}
-
-// TestParseOrderData_RawData为空 测试parseOrderData：RawData为空
-func TestParseOrderData_RawData为空(t *testing.T) {
-	s := New()
-
-	orderID, merchantID, err := s.parseOrderData("")
-
-	assert.Error(t, err)
-	assert.Empty(t, orderID)
-	assert.Empty(t, merchantID)
-	assert.Contains(t, err.Error(), "raw_data 为空")
-}
-
-// TestParseOrderData_JSON解析失败 测试parseOrderData：JSON解析失败
-func TestParseOrderData_JSON解析失败(t *testing.T) {
-	s := New()
-
-	rawData := `invalid json`
-	orderID, merchantID, err := s.parseOrderData(rawData)
-
-	assert.Error(t, err)
-	assert.Empty(t, orderID)
-	assert.Empty(t, merchantID)
-	assert.Contains(t, err.Error(), "解析 JSON 失败")
-}
-
-// TestParseOrderData_缺少orderID字段 测试parseOrderData：缺少orderID字段
-func TestParseOrderData_缺少orderID字段(t *testing.T) {
-	s := New()
-
-	rawData := `{"merchantID":"M-001"}`
-	orderID, merchantID, err := s.parseOrderData(rawData)
-
-	assert.Error(t, err)
-	assert.Empty(t, orderID)
-	assert.Empty(t, merchantID)
-	assert.Contains(t, err.Error(), "缺少 orderID 字段")
-}
-
-// TestParseOrderData_缺少merchantID字段 测试parseOrderData：缺少merchantID字段
-func TestParseOrderData_缺少merchantID字段(t *testing.T) {
-	s := New()
-
-	rawData := `{"orderID":"G-123456"}`
-	orderID, merchantID, err := s.parseOrderData(rawData)
-
-	assert.Error(t, err)
-	assert.Empty(t, orderID)
-	assert.Empty(t, merchantID)
-	assert.Contains(t, err.Error(), "缺少 merchantID 字段")
-}
-
-// TestParseOrderData_orderID类型错误 测试parseOrderData：orderID类型错误
-func TestParseOrderData_orderID类型错误(t *testing.T) {
-	s := New()
-
-	rawData := `{"orderID":12345,"merchantID":"M-001"}`
-	orderID, merchantID, err := s.parseOrderData(rawData)
-
-	assert.Error(t, err)
-	assert.Empty(t, orderID)
-	assert.Empty(t, merchantID)
-	assert.Contains(t, err.Error(), "orderID 字段类型错误")
-}
-
-// TestParseOrderData_merchantID类型错误 测试parseOrderData：merchantID类型错误
-func TestParseOrderData_merchantID类型错误(t *testing.T) {
-	s := New()
-
-	rawData := `{"orderID":"G-123456","merchantID":12345}`
-	orderID, merchantID, err := s.parseOrderData(rawData)
-
-	assert.Error(t, err)
-	assert.Empty(t, orderID)
-	assert.Empty(t, merchantID)
-	assert.Contains(t, err.Error(), "merchantID 字段类型错误")
-}
-
-// TestCancelOrder_解析订单数据失败 测试CancelOrder：解析订单数据失败
-func TestCancelOrder_解析订单数据失败(t *testing.T) {
-	s := New()
-	ctx := context.Background()
-
-	orderEntity := &entity.Order{
-		Uuid:         "test-uuid",
-		ProviderName: "grab",
-		RawData:      `invalid json`, // 无效JSON
-	}
-
-	res, err := s.CancelOrder(ctx, orderEntity, 1)
-
-	assert.Error(t, err)
-	assert.Nil(t, res)
-	assert.Contains(t, err.Error(), "解析订单数据失败")
 }
 
 // TestCancelOrder_集成测试说明 集成测试说明

@@ -495,17 +495,11 @@ func (s *sGrabOrder) CheckOrderCancelable(ctx context.Context, orderEntity *enti
 		return nil, gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
 	}
 
-	// 2. 从 RawData 解析 Grab orderID 和 merchantID
-	orderID, merchantID, err := s.parseOrderData(orderEntity.RawData)
-	if err != nil {
-		return nil, gerror.Wrap(err, "解析订单数据失败")
-	}
-
-	// 3. 调用 Grab API 检查订单是否可取消
-	sdkResp, err := service.Grab().CheckOrderCancelable(ctx, merchantID, orderID)
+	// 2. 调用 Grab API 检查订单是否可取消
+	sdkResp, err := service.Grab().CheckOrderCancelable(ctx, orderEntity.ProviderMerchantId, orderEntity.ProviderOrderId)
 	if err != nil {
 		g.Log().Errorf(ctx, "检查订单可取消性失败: order_id=%s, merchant_id=%s, error=%v",
-			orderID, merchantID, err)
+			orderEntity.ProviderOrderId, orderEntity.ProviderMerchantId, err)
 		return nil, gerror.Wrap(err, "检查订单可取消性失败")
 	}
 
@@ -575,42 +569,4 @@ func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order,
 	return &api.CancelOrderResp{
 		OrderUuid: orderEntity.Uuid,
 	}, nil
-}
-
-// parseOrderData 从 RawData JSON 中解析 orderID 和 merchantID
-func (s *sGrabOrder) parseOrderData(rawData string) (orderID, merchantID string, err error) {
-	if rawData == "" {
-		return "", "", gerror.New("raw_data 为空")
-	}
-
-	// 解析 JSON
-	var data map[string]interface{}
-	err = gjson.DecodeTo(rawData, &data)
-	if err != nil {
-		return "", "", gerror.Wrap(err, "解析 JSON 失败")
-	}
-
-	// 提取 orderID（对应 SDK 的 orderID 字段）
-	if orderIDVal, exists := data["orderID"]; exists {
-		if strVal, ok := orderIDVal.(string); ok {
-			orderID = strVal
-		} else {
-			return "", "", gerror.New("orderID 字段类型错误")
-		}
-	} else {
-		return "", "", gerror.New("缺少 orderID 字段")
-	}
-
-	// 提取 merchantID（对应 SDK 的 merchantID 字段）
-	if merchantIDVal, exists := data["merchantID"]; exists {
-		if strVal, ok := merchantIDVal.(string); ok {
-			merchantID = strVal
-		} else {
-			return "", "", gerror.New("merchantID 字段类型错误")
-		}
-	} else {
-		return "", "", gerror.New("缺少 merchantID 字段")
-	}
-
-	return orderID, merchantID, nil
 }

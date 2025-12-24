@@ -17,7 +17,7 @@ func TestCancelOrder_参数验证失败_空UUID(t *testing.T) {
 
 	req := &api.CancelOrderReq{
 		TakeoutOrderUuid: "", // 空UUID
-		CancelCode:       1,
+		CancelCode:       "1",
 	}
 
 	res, err := orderLogic.CancelOrder(ctx, req)
@@ -31,7 +31,7 @@ func TestCancelOrder_参数验证失败_空UUID(t *testing.T) {
 func TestCancelOrder_参数验证通过(t *testing.T) {
 	req := &api.CancelOrderReq{
 		TakeoutOrderUuid: "test-order-uuid",
-		CancelCode:       1,
+		CancelCode:       "1",
 		RequestId:        "test-request-123",
 	}
 
@@ -40,7 +40,7 @@ func TestCancelOrder_参数验证通过(t *testing.T) {
 
 	// 验证请求对象本身是有效的
 	assert.Equal(t, "test-order-uuid", req.TakeoutOrderUuid)
-	assert.Equal(t, int32(1), req.CancelCode)
+	assert.Equal(t, "1", req.CancelCode)
 	assert.Equal(t, "test-request-123", req.RequestId)
 }
 
