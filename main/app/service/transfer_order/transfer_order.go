@@ -281,6 +281,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		copier.Copy(&itemInfo, &item)
 		itemInfo.MaterialName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.MaterialBarcode = item.MaterialBarcodeValue
+
 		// AvailableNum
 		availableNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range warehouseItems {
@@ -289,6 +290,12 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 			}
 		}
 		itemInfo.AvailableNum = availableNum.InexactFloat64()
+
+		// 基准单位名称
+		if item.Material != nil && item.Material.GetBaseUnit() != nil {
+			baseUnit := item.Material.GetBaseUnit()
+			itemInfo.UnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
+		}
 
 		// 转换单位列表
 		itemInfo.Units = make([]resp.TransferOrderItemUnitInfo, 0, len(item.Units))
