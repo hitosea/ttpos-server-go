@@ -610,9 +610,10 @@ func (x *ClosePosEntryReq) GetInvoiceCount() int64 {
 
 type ClosePosEntryDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式,必填"` // 支付方式,必填
-	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额,必填"` // 开帐金额,必填
-	ClosingAmount float64                `protobuf:"fixed64,3,opt,name=closing_amount,json=closingAmount,proto3" json:"closing_amount,omitempty" dc:"关帐金额,必填"` // 关帐金额,必填
+	ModeOfPayment *string                `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3,oneof" json:"mode_of_payment,omitempty" dc:"支付方式，与 payment_id 二选一（必填其中之一）"` // 支付方式，与 payment_id 二选一（必填其中之一）
+	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额,必填"`                             // 开帐金额,必填
+	ClosingAmount float64                `protobuf:"fixed64,3,opt,name=closing_amount,json=closingAmount,proto3" json:"closing_amount,omitempty" dc:"关帐金额,必填"`                             // 关帐金额,必填
+	PaymentId     *string                `protobuf:"bytes,4,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），与 mode_of_payment 二选一"`   // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -648,8 +649,8 @@ func (*ClosePosEntryDetail) Descriptor() ([]byte, []int) {
 }
 
 func (x *ClosePosEntryDetail) GetModeOfPayment() string {
-	if x != nil {
-		return x.ModeOfPayment
+	if x != nil && x.ModeOfPayment != nil {
+		return *x.ModeOfPayment
 	}
 	return ""
 }
@@ -666,6 +667,13 @@ func (x *ClosePosEntryDetail) GetClosingAmount() float64 {
 		return x.ClosingAmount
 	}
 	return 0
+}
+
+func (x *ClosePosEntryDetail) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
 }
 
 type ClosePosEntryInfo struct {
@@ -1966,11 +1974,15 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x13pos_open_entry_name\x18\x01 \x01(\tR\x10posOpenEntryName\x12&\n" +
 	"\x0fperiod_end_date\x18\x02 \x01(\x03R\rperiodEndDate\x12Q\n" +
 	"\x16close_pos_entry_detail\x18\x03 \x03(\v2\x1c.selling.ClosePosEntryDetailR\x13closePosEntryDetail\x12#\n" +
-	"\rinvoice_count\x18\x04 \x01(\x03R\finvoiceCount\"\x8b\x01\n" +
-	"\x13ClosePosEntryDetail\x12&\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\tR\rmodeOfPayment\x12%\n" +
+	"\rinvoice_count\x18\x04 \x01(\x03R\finvoiceCount\"\xd7\x01\n" +
+	"\x13ClosePosEntryDetail\x12+\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\tH\x00R\rmodeOfPayment\x88\x01\x01\x12%\n" +
 	"\x0eopening_amount\x18\x02 \x01(\x01R\ropeningAmount\x12%\n" +
-	"\x0eclosing_amount\x18\x03 \x01(\x01R\rclosingAmount\"\xe9\x01\n" +
+	"\x0eclosing_amount\x18\x03 \x01(\x01R\rclosingAmount\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x04 \x01(\tH\x01R\tpaymentId\x88\x01\x01B\x12\n" +
+	"\x10_mode_of_paymentB\r\n" +
+	"\v_payment_id\"\xe9\x01\n" +
 	"\x11ClosePosEntryInfo\x12/\n" +
 	"\x14close_pos_entry_name\x18\x01 \x01(\tR\x11closePosEntryName\x12(\n" +
 	"\x10pos_profile_name\x18\x02 \x01(\tR\x0eposProfileName\x12&\n" +
@@ -2182,6 +2194,7 @@ func file_selling_selling_proto_init() {
 	if File_selling_selling_proto != nil {
 		return
 	}
+	file_selling_selling_proto_msgTypes[9].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[16].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[22].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[26].OneofWrappers = []any{}

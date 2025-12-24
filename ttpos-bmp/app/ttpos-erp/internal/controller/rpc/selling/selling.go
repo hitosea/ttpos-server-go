@@ -197,8 +197,10 @@ func (c *Controller) validateClosePosEntryReq(req *selling.ClosePosEntryReq) err
 
 	// 验证关帐详情
 	for i, detail := range req.ClosePosEntryDetail {
-		if strings.TrimSpace(detail.ModeOfPayment) == "" {
-			return gerror.Newf("第%d项支付方式不能为空", i+1)
+		// 参数校验：payment_id 和 mode_of_payment 不能同时为空
+		if (detail.PaymentId == nil || strings.TrimSpace(*detail.PaymentId) == "") &&
+			(detail.ModeOfPayment == nil || strings.TrimSpace(*detail.ModeOfPayment) == "") {
+			return gerror.Newf("close_pos_entry_detail[%d]: payment_id 和 mode_of_payment 不能同时为空", i)
 		}
 		if detail.OpeningAmount < 0 {
 			return gerror.Newf("第%d项开帐金额不能为负数", i+1)

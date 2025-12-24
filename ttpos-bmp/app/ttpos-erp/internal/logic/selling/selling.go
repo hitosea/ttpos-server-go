@@ -485,8 +485,11 @@ func (s *sSelling) parseOpeningEntryResponse(resp *gjson.Json) (*erp.POSOpeningE
 //   - *selling.ClosePosEntryResp: 关帐响应信息
 //   - error: 错误信息
 func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error) {
-	// 构建关帐明细
-	closeDetails := s.buildClosingEntryDetails(req.ClosePosEntryDetail)
+	// 构建关帐明细（支持 payment_id 自动查询 mode_of_payment）
+	closeDetails, err := s.buildClosingEntryDetails(ctx, req.ClosePosEntryDetail)
+	if err != nil {
+		return nil, err
+	}
 
 	// 构建关帐请求
 	reqInfo := s.buildClosingEntryRequest(req, closeDetails)
@@ -549,20 +552,48 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 
 // buildClosingEntryDetails 构建关帐明细
 // 参数：
+//   - ctx: 上下文
 //   - details: 关帐明细列表
 //
 // 返回：
 //   - []erp.POSPaymentReconciliation: 关帐明细列表
-func (s *sSelling) buildClosingEntryDetails(details []*selling.ClosePosEntryDetail) []erp.POSPaymentReconciliation {
+//   - error: 错误信息
+func (s *sSelling) buildClosingEntryDetails(ctx context.Context, details []*selling.ClosePosEntryDetail) ([]erp.POSPaymentReconciliation, error) {
 	closeDetails := make([]erp.POSPaymentReconciliation, 0)
-	for _, detail := range details {
+	for i, detail := range details {
+		var modeOfPayment string
+
+		// 如果提供了 payment_id，自动查询 mode_of_payment
+		if detail.PaymentId != nil && *detail.PaymentId != "" {
+			getModeResp, err := service.Selling().GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+				PaymentId: detail.PaymentId,
+			})
+			if err != nil {
+				g.Log().Error(ctx, "查询支付方式失败",
+					g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
+				return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
+			}
+
+			if getModeResp == nil || getModeResp.Name == "" {
+				return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
+			}
+
+			modeOfPayment = getModeResp.Name
+
+			g.Log().Info(ctx, "关账详情: 通过 payment_id 查询到 mode_of_payment",
+				g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
+		} else if detail.ModeOfPayment != nil {
+			// 直接使用 mode_of_payment（向后兼容）
+			modeOfPayment = *detail.ModeOfPayment
+		}
+
 		closeDetails = append(closeDetails, erp.POSPaymentReconciliation{
-			ModeOfPayment: detail.ModeOfPayment,
+			ModeOfPayment: modeOfPayment,
 			ClosingAmount: detail.ClosingAmount,
 			OpeningAmount: detail.OpeningAmount,
 		})
 	}
-	return closeDetails
+	return closeDetails, nil
 }
 
 // buildClosingEntryRequest 构建关帐请求
