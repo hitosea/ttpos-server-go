@@ -703,15 +703,6 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 	return res, nil
 }
 
-// SavePosInvoice 保存POS发票
-// 参数：
-//   - ctx: 上下文对象
-//   - req: 保存POS发票请求参数
-//
-// 返回：
-//   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
-//   - error: 错误信息
-//
 // resolvePaymentIDs 解析支付列表中的 payment_id
 // 参数：
 //   - ctx: 上下文对象
@@ -779,6 +770,14 @@ func (s *sSelling) resolvePaymentIDs(ctx context.Context, payments []*selling.Po
 	return nil
 }
 
+// SavePosInvoice 保存POS发票
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 保存POS发票请求参数
+//
+// 返回：
+//   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
+//   - error: 错误信息
 func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
 	// 新增：支付项预处理 - 解析 payment_id
 	if err := s.resolvePaymentIDs(ctx, req.Payments); err != nil {
