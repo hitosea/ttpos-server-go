@@ -41,11 +41,7 @@ func (s *takeoutOrderStatusUpdatedEventSubscriber) Handle(domainEvent event.Doma
 			orderStatusUpdatedEvent.Platform,
 			orderStatusUpdatedEvent.ShortOrderNumber,
 			"status_updated",
-			map[string]any{
-				"old_order_state": orderStatusUpdatedEvent.OldOrderState,
-				"new_order_state": orderStatusUpdatedEvent.NewOrderState,
-				"platform_state":  orderStatusUpdatedEvent.PlatformState,
-			},
+			map[string]any{},
 		)
 	})
 

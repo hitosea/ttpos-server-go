@@ -70,10 +70,7 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 			orderAcceptedEvent.Platform,
 			orderAcceptedEvent.ShortOrderNumber,
 			"accepted",
-			map[string]any{
-				"accepted_by":         orderAcceptedEvent.AcceptedBy,
-				"order_accepted_type": orderAcceptedEvent.OrderAcceptedType,
-			},
+			map[string]any{},
 		)
 	})
 

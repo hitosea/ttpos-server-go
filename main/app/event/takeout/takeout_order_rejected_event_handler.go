@@ -41,11 +41,7 @@ func (s *takeoutOrderRejectedEventSubscriber) Handle(domainEvent event.DomainEve
 			orderRejectedEvent.Platform,
 			orderRejectedEvent.ShortOrderNumber,
 			"rejected",
-			map[string]any{
-				"rejected_by":        orderRejectedEvent.RejectedBy,
-				"reject_reason_code": orderRejectedEvent.RejectReasonCode,
-				"reject_reason":      orderRejectedEvent.RejectReason,
-			},
+			map[string]any{},
 		)
 	})
 

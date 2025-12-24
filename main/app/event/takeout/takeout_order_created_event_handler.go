@@ -41,9 +41,7 @@ func (s *takeoutOrderCreatedEventSubscriber) Handle(domainEvent event.DomainEven
 			orderCreatedEvent.Platform,
 			orderCreatedEvent.ShortOrderNumber,
 			"create",
-			map[string]any{
-				"eater_payment": orderCreatedEvent.EaterPayment,
-			},
+			map[string]any{},
 		)
 	})
 

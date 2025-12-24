@@ -69,9 +69,7 @@ func (s *takeoutOrderCancelEventSubscriber) Handle(domainEvent event.DomainEvent
 			orderCancelEvent.Platform,
 			orderCancelEvent.ShortOrderNumber,
 			"cancelled",
-			map[string]any{
-				"cancel_reason": orderCancelEvent.CancelReason,
-			},
+			map[string]any{},
 		)
 	})
 
