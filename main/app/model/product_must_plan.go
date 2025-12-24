@@ -181,6 +181,7 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string, productBomStock
 			Attributes: resp.Attributes{List: productAttributeList},
 			IsMust:     group.IsMustBool(),
 			MaxSelect:  group.MaxSelection,
+			MinSelect:  group.MinSelection,
 		}
 		productAttributeGroupList = append(productAttributeGroupList, productAttributeGroup)
 	}

@@ -7991,6 +7991,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					},
 					IsMust:                    productPackageAttributeGroup.IsMust,
 					MaxSelection:              productPackageAttributeGroup.MaxSelection,
+					MinSelection:              productPackageAttributeGroup.MinSelection,
 					ProductPackageUuid:        productPackageAttributeGroup.ProductPackageUuid,
 					ProductAttributeGroupUuid: productPackageAttributeGroup.ProductAttributeGroupUuid,
 				})

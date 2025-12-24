@@ -17,6 +17,7 @@ type ProductAttributeGroup struct {
 	AttributeRequired      uint   `gorm:"default:0;comment:属性组是否必填 0-否 1-是"`
 	AttributeOpenMaxSelect uint   `gorm:"default:0;comment:属性组最开启最多可选数量 0-否 1-是"`
 	AttributeMaxSelect     uint   `gorm:"default:0;comment:属性组最多可选数量"`
+	AttributeMinSelect     uint   `gorm:"default:0;comment:属性组最少可选数量"`
 	ShopSupplierID         uint   `gorm:"default:0;comment:店铺ID"`
 	AppID                  uint   `gorm:"default:0;comment:应用ID"`
 	CreateTime             int64  `gorm:"autoCreateTime;comment:创建时间"`
@@ -58,6 +59,7 @@ func (s *ProductAttributeGroupService) ConvertProductAttributeGroup() error {
 			},
 			IsMust:                    productAttributeGroup.AttributeRequired,
 			MaxSelection:              productAttributeGroup.AttributeMaxSelect,
+			MinSelection:              productAttributeGroup.AttributeMinSelect,
 			ProductPackageUuid:        productAttributeGroup.ProductID,
 			ProductAttributeGroupUuid: uint64(productAttributeGroup.AttributeID),
 		}
