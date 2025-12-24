@@ -491,7 +491,7 @@ func (x *CheckOrderCancelableResp) GetRawData() string {
 type CancelOrderReq struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	TakeoutOrderUuid string                 `protobuf:"bytes,1,opt,name=takeout_order_uuid,json=takeoutOrderUuid,proto3" json:"takeout_order_uuid,omitempty" dc:"外卖订单UUID"` // 外卖订单UUID
-	CancelCode       int32                  `protobuf:"varint,2,opt,name=cancel_code,json=cancelCode,proto3" json:"cancel_code,omitempty" dc:"取消原因码（Grab API 规范）"`          // 取消原因码（Grab API 规范）
+	CancelCode       string                 `protobuf:"bytes,2,opt,name=cancel_code,json=cancelCode,proto3" json:"cancel_code,omitempty" dc:"取消原因码（可根据不同平台传入不同的编码）"`        // 取消原因码（可根据不同平台传入不同的编码）
 	RequestId        string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求追踪ID (可选)"`                     // 请求追踪ID (可选)
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -534,11 +534,11 @@ func (x *CancelOrderReq) GetTakeoutOrderUuid() string {
 	return ""
 }
 
-func (x *CancelOrderReq) GetCancelCode() int32 {
+func (x *CancelOrderReq) GetCancelCode() string {
 	if x != nil {
 		return x.CancelCode
 	}
-	return 0
+	return ""
 }
 
 func (x *CancelOrderReq) GetRequestId() string {
@@ -639,7 +639,7 @@ const file_order_order_proto_rawDesc = "" +
 	"\braw_data\x18\x04 \x01(\tR\arawData\"~\n" +
 	"\x0eCancelOrderReq\x12,\n" +
 	"\x12takeout_order_uuid\x18\x01 \x01(\tR\x10takeoutOrderUuid\x12\x1f\n" +
-	"\vcancel_code\x18\x02 \x01(\x05R\n" +
+	"\vcancel_code\x18\x02 \x01(\tR\n" +
 	"cancelCode\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x03 \x01(\tR\trequestId\"0\n" +

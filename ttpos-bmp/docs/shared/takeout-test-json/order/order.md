@@ -47,3 +47,54 @@
     }
 }
 ```
+
+
+
+---
+## 判断订单是否可以取消 order.OrderService / CheckOrderCancelable
+
+```json
+
+{
+    "takeout_order_uuid": "1r52xq27000df6akf5g84azl00r4ocpa",
+    "request_id": "{{$string.nanoid}}"
+}
+```
+
+```json
+{
+    "code": "0",
+    "message": "success",
+    "data": {
+        "order_uuid": "1r52xq27000df6akf5g84azl00r4ocpa",
+        "can_cancel": true,
+        "non_cancellation_reason": "",
+        "raw_data": "{\"cancelAble\":true,\"cancelReasons\":[{\"code\":1001,\"reason\":\"Most or all items are unavailable\"},{\"code\":1002,\"reason\":\"We're too busy right now\"},{\"code\":1003,\"reason\":\"We're closed right now\"},{\"code\":1004,\"reason\":\"We're closing soon\"}],\"cancelable\":true,\"limitTimes\":0,\"limitType\":\"not approaching limit\",\"nonCancellationReason\":\"\"}",
+        "@type": "type.googleapis.com/order.CheckOrderCancelableResp"
+    }
+}
+```
+
+
+----
+## 取消订单 order.OrderService / CancelOrder
+
+```json
+{
+    "cancel_code": "1001",
+    "takeout_order_uuid": "1r52xq27000df6b41fqk9o8s003p05s2",
+    "request_id": "{{$string.nanoid}}"
+}
+```
+
+```json
+
+{
+    "code": "0",
+    "message": "订单已成功取消",
+    "data": {
+        "order_uuid": "1r52xq27000df6b41fqk9o8s003p05s2",
+        "@type": "type.googleapis.com/order.CancelOrderResp"
+    }
+}
+```

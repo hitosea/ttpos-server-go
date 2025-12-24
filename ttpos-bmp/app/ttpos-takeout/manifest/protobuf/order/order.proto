@@ -62,7 +62,7 @@ message CheckOrderCancelableResp {
 // 取消订单请求
 message CancelOrderReq {
   string takeout_order_uuid = 1; // 外卖订单UUID
-  int32 cancel_code = 2;         // 取消原因码（Grab API 规范）
+  string cancel_code = 2;        // 取消原因码（可根据不同平台传入不同的编码）
   string request_id = 3;         // 请求追踪ID (可选)
 }
 

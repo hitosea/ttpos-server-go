@@ -53,12 +53,12 @@ type (
 		// 参数：
 		//   - ctx: 上下文对象
 		//   - orderEntity: 订单实体
-		//   - cancelCode: 取消原因码（Grab API 规范）
+		//   - cancelCode: 取消原因码（字符串格式，可根据不同平台传入不同的编码）
 		//
 		// 返回：
 		//   - res: 取消订单响应
 		//   - err: 错误信息
-		CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode int32) (res *api.CancelOrderResp, err error)
+		CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error)
 	}
 )
 

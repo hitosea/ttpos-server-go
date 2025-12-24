@@ -159,7 +159,7 @@ func (s *sOrder) MarkOrderReady(ctx context.Context, takeoutOrderUuid string, re
 //   - err: 错误信息
 func (s *sOrder) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res *api.CancelOrderResp, err error) {
 	if req.RequestId != "" {
-		g.Log().Infof(ctx, "开始取消订单, requestId: %s, orderUuid: %s, cancelCode: %d", req.RequestId, req.TakeoutOrderUuid, req.CancelCode)
+		g.Log().Infof(ctx, "开始取消订单, requestId: %s, orderUuid: %s, cancelCode: %s", req.RequestId, req.TakeoutOrderUuid, req.CancelCode)
 	}
 
 	// 参数验证

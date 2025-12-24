@@ -153,7 +153,7 @@ func (c *Controller) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (
 	}
 
 	// 2. 记录请求日志
-	g.Log().Infof(ctx, "接收到 CancelOrder 请求: order_uuid=%s, cancel_code=%d, request_id=%s",
+	g.Log().Infof(ctx, "接收到 CancelOrder 请求: order_uuid=%s, cancel_code=%s, request_id=%s",
 		req.TakeoutOrderUuid, req.CancelCode, req.RequestId)
 
 	// 3. 调用 Service 层

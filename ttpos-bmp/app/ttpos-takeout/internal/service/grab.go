@@ -47,7 +47,7 @@ type (
 		// RejectOrder 拒绝订单
 		RejectOrder(ctx context.Context, orderID string, rejectCode int) error
 		// CancelOrder 取消订单
-		CancelOrder(ctx context.Context, orderID string, cancelCode int) error
+		CancelOrder(ctx context.Context, merchantID string, orderID string, cancelCode string) error
 		// MarkOrderReady 标记订单准备完成
 		MarkOrderReady(ctx context.Context, orderID string, markStatus string) error
 		// UpdateDeliveryState 更新配送状态 (自配送)

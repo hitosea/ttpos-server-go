@@ -538,12 +538,12 @@ func (s *sGrabOrder) CheckOrderCancelable(ctx context.Context, orderEntity *enti
 // 参数：
 //   - ctx: 上下文对象
 //   - orderEntity: 订单实体
-//   - cancelCode: 取消原因码（Grab API 规范）
+//   - cancelCode: 取消原因码（字符串格式，可根据不同平台传入不同的编码）
 //
 // 返回：
 //   - res: 取消订单响应
 //   - err: 错误信息
-func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode int32) (res *api.CancelOrderResp, err error) {
+func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")
@@ -551,27 +551,27 @@ func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order,
 	if orderEntity.ProviderName != ProviderNameGrab {
 		return nil, gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
 	}
-
-	// 2. 从 RawData 解析 Grab orderID 和 merchantID
-	orderID, merchantID, err := s.parseOrderData(orderEntity.RawData)
-	if err != nil {
-		return nil, gerror.Wrap(err, "解析订单数据失败")
+	if orderEntity.ProviderOrderId == "" {
+		return nil, gerror.New("provider_order_id 不能为空")
+	}
+	if orderEntity.ProviderMerchantId == "" {
+		return nil, gerror.New("provider_merchant_id 不能为空")
 	}
 
-	// 3. 记录开始日志
-	g.Log().Infof(ctx, "开始取消订单: order_uuid=%s, order_id=%s, merchant_id=%s, cancel_code=%d",
-		orderEntity.Uuid, orderID, merchantID, cancelCode)
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "开始取消订单: order_uuid=%s, order_id=%s, merchant_id=%s, cancel_code=%s",
+		orderEntity.Uuid, orderEntity.ProviderOrderId, orderEntity.ProviderMerchantId, cancelCode)
 
-	// 4. 执行取消操作（不再包含预检查逻辑）
-	err = service.Grab().CancelOrder(ctx, orderID, int(cancelCode))
+	// 3. 执行取消操作（不再包含预检查逻辑）
+	err = service.Grab().CancelOrder(ctx, orderEntity.ProviderMerchantId, orderEntity.ProviderOrderId, cancelCode)
 	if err != nil {
-		g.Log().Errorf(ctx, "取消订单失败: order_id=%s, cancel_code=%d, error=%v",
-			orderID, cancelCode, err)
+		g.Log().Errorf(ctx, "取消订单失败: order_id=%s, cancel_code=%s, error=%v",
+			orderEntity.ProviderOrderId, cancelCode, err)
 		return nil, gerror.Wrap(err, "取消订单失败")
 	}
 
-	// 5. 返回成功响应
-	g.Log().Infof(ctx, "订单取消成功: order_uuid=%s, order_id=%s", orderEntity.Uuid, orderID)
+	// 4. 返回成功响应
+	g.Log().Infof(ctx, "订单取消成功: order_uuid=%s, order_id=%s", orderEntity.Uuid, orderEntity.ProviderOrderId)
 	return &api.CancelOrderResp{
 		OrderUuid: orderEntity.Uuid,
 	}, nil
