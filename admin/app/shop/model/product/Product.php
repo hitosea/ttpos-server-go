@@ -116,24 +116,24 @@ class Product extends ProductModel
                 $this->error = '属性组数量不能超过100';
                 return false;
             }
-            
+
             foreach ($data['product_attr'] as $attr) {
                 // 验证最小最大可选范围
                 $minSelect = $attr['attribute_min_select'] ?? 0;
                 $maxSelect = $attr['attribute_max_select'] ?? 0;
-                
+
                 // 验证最大可选 >= 最小可选
                 if ($maxSelect > 0 && $maxSelect < $minSelect) {
                     $this->error = '最大可选不可小于最小可选';
                     return false;
                 }
-                
+
                 // 验证默认勾选数量
                 if (isset($attr['default_select']) && is_array($attr['default_select'])) {
                     $defaultSelectCount = count(array_filter($attr['default_select'], function ($item) {
                         return $item == 1;
                     }));
-                    
+
                     // 默认勾选数量必须在可选范围内
                     if ($defaultSelectCount < $minSelect) {
                         $this->error = '默认勾选数量不能少于最小可选数量';
@@ -144,7 +144,7 @@ class Product extends ProductModel
                         return false;
                     }
                 }
-                
+
                 // 验证最大可选不能超过属性值数量
                 if ($maxSelect > 0 && isset($attr['attribute_value'])) {
                     $attrValueCount = count($attr['attribute_value']);
@@ -182,35 +182,35 @@ class Product extends ProductModel
                     $this->errorData = $msg;
                     return false;
                 }
-                
+
                 // 验证分组可选范围
                 $minSelect = $item['group_min_select'] ?? 1;
                 $maxSelect = $item['group_max_select'] ?? 1;
-                
+
                 // 验证最大可选 >= 最小可选（允许为0）
                 if ($maxSelect < $minSelect) {
                     $this->error = sprintf('分组%d最大可选不可小于最小可选', $groupIndex + 1);
                     return false;
                 }
-                
+
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {
                     $this->error = '商品不能为空';
                     return false;
                 }
-                
+
                 // 验证最大可选不能超过分组商品数量
                 $groupProductCount = count($groupProductList);
                 if ($maxSelect > $groupProductCount) {
                     $this->error = sprintf('分组%d最大可选数量不能超过商品数量', $groupIndex + 1);
                     return false;
                 }
-                
+
                 $productIds = array_column($groupProductList, 'product_id');
                 $productBoms = ProductBom::whereIn('uuid', $productIds)->select();
                 foreach ($productBoms as $productBom) {
-                    $groupProducts = array_filter($groupProductList, function($product) use ($productBom) {
+                    $groupProducts = array_filter($groupProductList, function ($product) use ($productBom) {
                         return $product['product_id'] == $productBom->uuid;
                     });
                     $groupProduct = reset($groupProducts); // 取第一个匹配的元素
@@ -242,22 +242,22 @@ class Product extends ProductModel
                 $this->error = '最多可添加100个加料';
                 return false;
             }
-            
+
             // 验证最小最大可选范围
             $minSelect = $data['feed_min_select'] ?? 0;
             $maxSelect = $data['feed_max_select'] ?? 0;
-            
+
             // 验证最大可选 >= 最小可选
             if ($maxSelect > 0 && $maxSelect < $minSelect) {
                 $this->error = '最大可选不可小于最小可选';
                 return false;
             }
-            
+
             // 验证默认勾选数量
             $defaultSelectCount = count(array_filter($data['product_feed'], function ($item) {
                 return isset($item['is_default']) && $item['is_default'] == 1;
             }));
-            
+
             // 默认勾选数量必须在可选范围内
             if ($defaultSelectCount < $minSelect) {
                 $this->error = '默认勾选数量不能少于最小可选数量';
@@ -267,13 +267,13 @@ class Product extends ProductModel
                 $this->error = '默认勾选数量不能超过最大可选数量';
                 return false;
             }
-            
+
             // 验证最大可选不能超过加料数量
             if ($maxSelect > 0 && $maxSelect > count($data['product_feed'])) {
                 $this->error = '最大可选数量不能超过加料数量';
                 return false;
             }
-            
+
             foreach ($data['product_feed'] as &$item) {
                 if (!isset($item['uuid']) || empty($item['uuid'])) {
                     $item['uuid'] = StringHelp::getGuidV4();
@@ -444,7 +444,7 @@ class Product extends ProductModel
                 return false;
             }
         }
-        
+
         if (!$hasContent) {
             $data['describe'] = $this->resolveSellingPointFallback($locales, $data);
             $data['describe_multi_language_name_uuid'] = $currentUuid ?: 0;
@@ -641,24 +641,24 @@ class Product extends ProductModel
                 $this->error = '属性组数量不能超过100';
                 return false;
             }
-            
+
             foreach ($data['product_attr'] as $attr) {
                 // 验证最小最大可选范围
                 $minSelect = $attr['attribute_min_select'] ?? 0;
                 $maxSelect = $attr['attribute_max_select'] ?? 0;
-                
+
                 // 验证最大可选 >= 最小可选
                 if ($maxSelect > 0 && $maxSelect < $minSelect) {
                     $this->error = '最大可选不可小于最小可选';
                     return false;
                 }
-                
+
                 // 验证默认勾选数量
                 if (isset($attr['default_select']) && is_array($attr['default_select'])) {
                     $defaultSelectCount = count(array_filter($attr['default_select'], function ($item) {
                         return $item == 1;
                     }));
-                    
+
                     // 默认勾选数量必须在可选范围内
                     if ($defaultSelectCount < $minSelect) {
                         $this->error = '默认勾选数量不能少于最小可选数量';
@@ -669,7 +669,7 @@ class Product extends ProductModel
                         return false;
                     }
                 }
-                
+
                 // 验证最大可选不能超过属性值数量
                 if ($maxSelect > 0 && isset($attr['attribute_value'])) {
                     $attrValueCount = count($attr['attribute_value']);
@@ -707,31 +707,31 @@ class Product extends ProductModel
                     $this->errorData = $msg;
                     return false;
                 }
-                
+
                 // 验证分组可选范围
                 $minSelect = $item['group_min_select'] ?? 1;
                 $maxSelect = $item['group_max_select'] ?? 1;
-                
+
                 // 验证最大可选 >= 最小可选（允许为0）
                 if ($maxSelect < $minSelect) {
                     $this->error = sprintf('分组%d最大可选不可小于最小可选', $groupIndex + 1);
                     return false;
                 }
-                
+
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {
                     $this->error = '商品不能为空';
                     return false;
                 }
-                
+
                 // 验证最大可选不能超过分组商品数量
                 $groupProductCount = count($groupProductList);
                 if ($maxSelect > $groupProductCount) {
                     $this->error = sprintf('分组%d最大可选数量不能超过商品数量', $groupIndex + 1);
                     return false;
                 }
-                
+
                 $productIds = array_column($groupProductList, 'product_id');
                 $productBoms = ProductBom::whereIn('uuid', $productIds)->select();
                 foreach ($productBoms as $productBom) {
@@ -739,7 +739,7 @@ class Product extends ProductModel
                         $this->error = '商品不能为下架商品';
                         return false;
                     }
-                    $groupProducts = array_filter($groupProductList, function($product) use ($productBom) {
+                    $groupProducts = array_filter($groupProductList, function ($product) use ($productBom) {
                         return $product['product_id'] == $productBom->uuid;
                     });
                     $groupProduct = reset($groupProducts); // 取第一个匹配的元素
@@ -772,22 +772,22 @@ class Product extends ProductModel
                 $this->error = '最多可添加100个加料';
                 return false;
             }
-            
+
             // 验证最小最大可选范围
             $minSelect = $data['feed_min_select'] ?? 0;
             $maxSelect = $data['feed_max_select'] ?? 0;
-            
+
             // 验证最大可选 >= 最小可选
             if ($maxSelect > 0 && $maxSelect < $minSelect) {
                 $this->error = '最大可选不可小于最小可选';
                 return false;
             }
-            
+
             // 验证默认勾选数量
             $defaultSelectCount = count(array_filter($data['product_feed'], function ($item) {
-                return isset($item['is_default']) && $item['is_default'] == 1;
+                return $item['default_select'] == 1;
             }));
-            
+
             // 默认勾选数量必须在可选范围内
             if ($defaultSelectCount < $minSelect) {
                 $this->error = '默认勾选数量不能少于最小可选数量';
@@ -797,13 +797,13 @@ class Product extends ProductModel
                 $this->error = '默认勾选数量不能超过最大可选数量';
                 return false;
             }
-            
+
             // 验证最大可选不能超过加料数量
             if ($maxSelect > 0 && $maxSelect > count($data['product_feed'])) {
                 $this->error = '最大可选数量不能超过加料数量';
                 return false;
             }
-            
+
             foreach ($data['product_feed'] as &$item) {
                 if (!isset($item['uuid']) || empty($item['uuid'])) {
                     $item['uuid'] = StringHelp::getGuidV4();
@@ -1034,14 +1034,14 @@ class Product extends ProductModel
 
             // 删除商品
             $productList = self::with([
-                'sku' => [ 'relatedMaterial' ],
+                'sku' => ['relatedMaterial'],
                 'feed',
-                'productAttributeGroup' => [ 'productAttribute' ],
+                'productAttributeGroup' => ['productAttribute'],
                 'buffetProduct',
                 'orderSchemeProduct'
             ])
-            ->whereIn('uuid', $product_ids)
-            ->select();
+                ->whereIn('uuid', $product_ids)
+                ->select();
 
             foreach ($productList as $product) {
                 // 删除规格
@@ -1064,7 +1064,7 @@ class Product extends ProductModel
                 foreach ($product->productAttributeGroup as $productAttributeGroup) {
                     foreach ($productAttributeGroup->productAttribute as $productAttribute) {
                         $productAttribute->delete();
-                    }   
+                    }
                     $productAttributeGroup->delete();
                 }
                 // 删除产品语言

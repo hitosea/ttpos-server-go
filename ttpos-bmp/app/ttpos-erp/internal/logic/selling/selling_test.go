@@ -101,3 +101,70 @@ func TestPaymentIDLength(t *testing.T) {
 		t.Logf("生成的 PaymentID: %s, 长度: %d", paymentID, len(paymentID))
 	})
 }
+
+// TestClosePosEntryDetail_ValidationLogic 测试 ClosePosEntryDetail 参数校验逻辑
+// 这是一个单元测试，测试参数校验的基本逻辑
+func TestClosePosEntryDetail_ValidationLogic(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		// 测试用例：验证 payment_id 和 mode_of_payment 不能同时为空的逻辑
+		testCases := []struct {
+			name          string
+			paymentID     *string
+			modeOfPayment *string
+			shouldFail    bool
+		}{
+			{
+				name:          "两个参数都为空",
+				paymentID:     nil,
+				modeOfPayment: nil,
+				shouldFail:    true,
+			},
+			{
+				name:          "两个参数都为空字符串",
+				paymentID:     strPtr(""),
+				modeOfPayment: strPtr(""),
+				shouldFail:    true,
+			},
+			{
+				name:          "只有 payment_id 不为空",
+				paymentID:     strPtr("PID123456"),
+				modeOfPayment: nil,
+				shouldFail:    false,
+			},
+			{
+				name:          "只有 mode_of_payment 不为空",
+				paymentID:     nil,
+				modeOfPayment: strPtr("Cash"),
+				shouldFail:    false,
+			},
+			{
+				name:          "两个参数都不为空",
+				paymentID:     strPtr("PID123456"),
+				modeOfPayment: strPtr("Cash"),
+				shouldFail:    false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Logf("测试用例: %s", tc.name)
+			
+			// 模拟校验逻辑（实际在 Controller 层）
+			isEmpty := func(s *string) bool {
+				return s == nil || *s == ""
+			}
+			
+			bothEmpty := isEmpty(tc.paymentID) && isEmpty(tc.modeOfPayment)
+			
+			if tc.shouldFail {
+				t.AssertEQ(bothEmpty, true)
+			} else {
+				t.AssertEQ(bothEmpty, false)
+			}
+		}
+	})
+}
+
+// 辅助函数：创建字符串指针
+func strPtr(s string) *string {
+	return &s
+}

@@ -69,8 +69,7 @@ type IOrderQueryRepo interface {
 	GetSaleBillBatchCookingMode(saleBillUuid uint64) (string, error)                                                                           // 获取销售账单当前的分批送厨模式
 	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
 	GetSaleOrderUuids(opts ...DBOption) []uint64
-	GetSaleBillList(opts ...DBOption) []model.SaleBill                                     // 获取销售账单列表
-	HasUnfinishedTakeoutOrderWithProduct(productPackageUuid, bomUuid uint64) (bool, error) // 检查商品/规格是否存在未完结的外卖订单
+	GetSaleBillList(opts ...DBOption) []model.SaleBill // 获取销售账单列表
 }
 
 // orderRepo 订单仓库
@@ -2439,54 +2438,4 @@ func (r *orderRepo) GetSaleBillList(opts ...DBOption) []model.SaleBill {
 	}
 	db.Find(&saleBills)
 	return saleBills
-}
-
-// HasUnfinishedTakeoutOrderWithProduct 检查商品/规格是否存在未完结的外卖订单
-// 参数：
-//   - productPackageUuid: 商品UUID，传0表示不按商品筛选
-//   - bomUuid: 规格UUID，传0表示不按规格筛选
-//
-// 返回：
-//   - bool: true表示存在未完结订单，false表示不存在
-//   - error: 查询错误
-//
-// 注意：至少需要传入一个UUID（productPackageUuid或bomUuid）
-//
-// TODO: 外卖订单表还未创建，创建后需要修改此方法的查询逻辑
-//
-//	当前使用 sale_bill.bill_type=2 作为外卖订单的判断条件
-//	后续需要改为查询专门的外卖订单表
-func (r *orderRepo) HasUnfinishedTakeoutOrderWithProduct(productPackageUuid, bomUuid uint64) (bool, error) {
-	if productPackageUuid == 0 && bomUuid == 0 {
-		return false, fmt.Errorf("HasUnfinishedTakeoutOrderWithProduct: 至少需要传入一个UUID")
-	}
-
-	// TODO: 外卖订单表创建后，需要修改查询逻辑
-	// 当前临时方案：使用 bill_type = 2 判断外卖订单
-	// 外卖订单：bill_type = 2 (SaleBillTypeTakeout)
-	// 未完结订单：status = 0 (SaleBillStatusPending - 待付款)
-	query := r.db.Table("ttpos_sale_bill AS sb").
-		Select("1").
-		Joins("INNER JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = 0").
-		Joins("INNER JOIN ttpos_sale_order_product AS sop ON so.uuid = sop.sale_order_uuid AND sop.delete_time = 0").
-		Where("sb.delete_time = 0").
-		Where("sb.bill_type = ?", constant.SaleBillTypeTakeout).
-		Where("sb.status = ?", constant.SaleBillStatusPending)
-
-	// 根据传入的参数构建查询条件
-	if bomUuid > 0 {
-		// 优先按规格UUID查询
-		query = query.Where("sop.product_bom_uuid = ?", bomUuid)
-	} else if productPackageUuid > 0 {
-		// 按商品UUID查询
-		query = query.Where("sop.product_package_uuid = ?", productPackageUuid)
-	}
-
-	var exists int
-	err := query.Limit(1).Scan(&exists).Error
-	if err != nil {
-		return false, fmt.Errorf("HasUnfinishedTakeoutOrderWithProduct: %v", err)
-	}
-
-	return exists > 0, nil
 }

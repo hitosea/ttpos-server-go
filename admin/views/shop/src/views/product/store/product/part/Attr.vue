@@ -19,20 +19,23 @@
                   typeof item.attribute_name === 'string' ? JSON.parse(item.attribute_name || '{}')[languageKey] : item.attribute_name ? item.attribute_name[languageKey] : '-'
                 }}
               </div>
-              <div> <el-checkbox v-model="item.attribute_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
+              <!-- 
+              2025年12月24日09:39:56 去掉必选选项 任务37650
+              <div> <el-checkbox v-model="item.attribute_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div> -->
               <div class="table-c-item">
-                <el-checkbox
-                  v-model="item.attribute_open_max_select"
-                  size="large"
-                  :disabled="erp_is_open == 1"
-                  :true-value="1"
-                  :false-value="0"
-                  :label="$t('最多可选')"
-                  @change="checkDefaultSelect(index, item.attribute_value)"
-                />
+                <div class="table-c-item-label">{{ $t('可选') }}</div>
                 <el-input-number
                   :disabled="erp_is_open == 1"
-                  v-if="item.attribute_open_max_select == '1'"
+                  :controls="false"
+                  :min="0"
+                  :max="item.attribute_value.length"
+                  :precision="0"
+                  v-model="item.attribute_min_select"
+                  class="max-w460"
+                ></el-input-number>
+                <span>-</span>
+                <el-input-number
+                  :disabled="erp_is_open == 1"
                   @input="checkDefaultSelect(index, item.attribute_value)"
                   @blur="onBlur"
                   :controls="false"
@@ -65,7 +68,7 @@
                     :rules="[
                       {
                         validator: () => {
-                          return defaultSelect(item.attribute_open_max_select, item.attribute_max_select, item.default_select) ? true : false;
+                          return defaultSelect( item.attribute_max_select, item.default_select) ? true : false;
                         },
                         message: $t('不能超过最多可选数量') + ' ' + item.attribute_max_select,
                       },
@@ -84,7 +87,9 @@
               </el-table-column>
               <el-table-column prop="name" :label="$t('操作')" width="120">
                 <template #default="scope">
-                  <el-button @click="deleteClick(index, scope.$index, item.attribute_value)" type="primary" :disabled="erp_is_open == 1" link size="small"> {{ $t('删除') }}</el-button>
+                  <el-button @click="deleteClick(index, scope.$index, item.attribute_value)" type="primary" :disabled="erp_is_open == 1" link size="small">
+                    {{ $t('删除') }}</el-button
+                  >
                 </template>
               </el-table-column>
             </el-table>
@@ -164,14 +169,14 @@
     });
   };
 
-  const defaultSelect = (attribute_open_max_select, attribute_max_select, default_select) => {
+  const defaultSelect = ( attribute_max_select, default_select) => {
     let count = 0;
     default_select.map((item) => {
       if (item === 1) {
         count++;
       }
     });
-    if (count > attribute_max_select && attribute_open_max_select == '1' && attribute_max_select != null) {
+    if (count > attribute_max_select && attribute_max_select != null) {
       return false;
     } else {
       return true;
@@ -285,9 +290,8 @@
         attribute_value: itemsWithParentId.map((item) => item.attribute_name),
         default_select: itemsWithParentId.map(() => 0),
         attribute_ids: itemsWithParentId.map((item) => item.attribute_id),
+        attribute_min_select: 0,
         attribute_max_select: 0,
-        attribute_open_max_select: 0,
-        attribute_required: 0,
       };
 
       form.model.product_attr.push(newItem);
@@ -347,11 +351,16 @@
     align-items: center;
     gap: 16px;
     background-color: var(--el-table-header-bg-color);
+    margin-bottom: 8px;
   }
   .table-c-item {
     display: flex;
     gap: 8px;
     align-items: center;
+  }
+  .table-c-item-label {
+    flex-shrink: 0;
+    font-size: 14px;
   }
   .table-no-padding {
     :deep(td.el-table__cell) {

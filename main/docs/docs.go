@@ -16424,6 +16424,36 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/takeout/order/call-rider": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "呼叫骑手（标记订单准备完成）",
+                "parameters": [
+                    {
+                        "description": "呼叫骑手参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderCallRiderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "呼叫骑手成功"
+                    }
+                }
+            }
+        },
         "/cashier/takeout/order/detail": {
             "get": {
                 "consumes": [
@@ -16439,9 +16469,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
-                        "description": "订单UUID",
-                        "name": "order_uuid",
+                        "name": "uuid",
                         "in": "query",
                         "required": true
                     }
@@ -16483,48 +16511,54 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "页码",
-                        "name": "page_no",
-                        "in": "query",
-                        "required": true
+                        "description": "结束时间 (默认: 0)",
+                        "name": "end_time",
+                        "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "是否历史订单: true=历史订单, false=未完成订单 (默认: false)",
+                        "name": "is_history",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "每页数量",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
                         "name": "page_size",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "平台筛选: grab,foodpanda,lineman",
+                        "description": "平台筛选: grab,lineman (空=全部) (默认: 空)",
                         "name": "platform",
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "状态: 0=全部,1=待接单,2=已接单,3=制作中,4=已完成,5=已拒单",
-                        "name": "status",
+                        "type": "string",
+                        "description": "搜索关键词 (默认: 空)",
+                        "name": "search",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
-                        "description": "开始时间",
+                        "description": "开始时间 (默认: 0)",
                         "name": "start_time",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
-                        "description": "结束时间",
-                        "name": "end_time",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "搜索关键词",
-                        "name": "search",
+                        "default": -1,
+                        "description": "-1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)",
+                        "name": "status",
                         "in": "query"
                     }
                 ],
@@ -43430,6 +43464,10 @@ const docTemplate = `{
                 "unit_uuid": {
                     "description": "基准单位UUID",
                     "type": "integer"
+                },
+                "valuation": {
+                    "description": "估值率",
+                    "type": "number"
                 }
             }
         },
@@ -45343,6 +45381,10 @@ const docTemplate = `{
                 "unit_uuid": {
                     "description": "基准单位UUID",
                     "type": "integer"
+                },
+                "valuation": {
+                    "description": "估值率",
+                    "type": "number"
                 }
             }
         },
@@ -49962,10 +50004,22 @@ const docTemplate = `{
         "request.TakeoutOrderAcceptReq": {
             "type": "object",
             "required": [
-                "order_uuid"
+                "uuid"
             ],
             "properties": {
-                "order_uuid": {
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "request.TakeoutOrderCallRiderReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "订单UUID",
                     "type": "integer"
                 }
             }
@@ -50010,15 +50064,15 @@ const docTemplate = `{
         "request.TakeoutOrderRejectReq": {
             "type": "object",
             "required": [
-                "order_uuid",
-                "reject_reason_code"
+                "reject_reason_code",
+                "uuid"
             ],
             "properties": {
-                "order_uuid": {
-                    "type": "integer"
-                },
                 "reject_reason_code": {
                     "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },
@@ -61920,9 +61974,11 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "campaign_name": {
+                    "description": "活动名称",
                     "type": "string"
                 },
                 "campaign_type": {
+                    "description": "活动类型",
                     "type": "string"
                 },
                 "deducted_amount": {
@@ -61934,16 +61990,55 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TakeoutOrderCurrencyResp": {
+            "type": "object",
+            "properties": {
+                "currency_code": {
+                    "description": "货币代码",
+                    "type": "string"
+                },
+                "currency_exponent": {
+                    "description": "货币小数位数",
+                    "type": "integer"
+                },
+                "currency_symbol": {
+                    "description": "货币符号",
+                    "type": "string"
+                }
+            }
+        },
+        "response.TakeoutOrderDiscountsResp": {
+            "type": "object",
+            "properties": {
+                "basket_promo": {
+                    "description": "篮子优惠",
+                    "type": "integer"
+                },
+                "merchant_discount": {
+                    "description": "商户优惠",
+                    "type": "integer"
+                },
+                "platform_discount": {
+                    "description": "平台优惠",
+                    "type": "integer"
+                },
+                "tax": {
+                    "description": "税费",
+                    "type": "integer"
+                }
+            }
+        },
         "response.TakeoutOrderItemResp": {
             "type": "object",
             "properties": {
-                "is_mapped": {
-                    "type": "integer"
+                "is_package": {
+                    "description": "是否套餐",
+                    "type": "boolean"
                 },
-                "platform_item_id": {
-                    "type": "string"
+                "item_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
                 },
-                "platform_item_name": {
+                "modifiers": {
                     "type": "string"
                 },
                 "price": {
@@ -61954,6 +62049,13 @@ const docTemplate = `{
                 },
                 "specifications": {
                     "type": "string"
+                },
+                "sub_items": {
+                    "description": "子商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderItemResp"
+                    }
                 },
                 "tax": {
                     "type": "integer"
@@ -61971,7 +62073,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "order_state": {
-                    "description": "订单状态",
+                    "description": "订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单",
                     "type": "integer"
                 },
                 "platform": {
@@ -61981,6 +62083,10 @@ const docTemplate = `{
                 "short_order_number": {
                     "description": "短订单号",
                     "type": "string"
+                },
+                "subtotal": {
+                    "description": "小计金额",
+                    "type": "integer"
                 },
                 "total_items": {
                     "description": "总商品数量",
@@ -62003,6 +62109,75 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/response.Meta"
+                }
+            }
+        },
+        "response.TakeoutOrderPriceResp": {
+            "type": "object",
+            "properties": {
+                "basket_promo": {
+                    "description": "篮子优惠",
+                    "type": "integer"
+                },
+                "delivery_fee": {
+                    "description": "配送费",
+                    "type": "integer"
+                },
+                "eater_payment": {
+                    "description": "顾客实付",
+                    "type": "integer"
+                },
+                "merchant_charge_fee": {
+                    "description": "商户收取费用",
+                    "type": "integer"
+                },
+                "merchant_discount": {
+                    "description": "商户优惠",
+                    "type": "integer"
+                },
+                "platform_discount": {
+                    "description": "平台优惠",
+                    "type": "integer"
+                },
+                "small_order_fee": {
+                    "description": "小订单费",
+                    "type": "integer"
+                },
+                "subtotal": {
+                    "description": "商品小计",
+                    "type": "integer"
+                },
+                "tax": {
+                    "description": "税费",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderPromoResp": {
+            "type": "object",
+            "properties": {
+                "mex_funded_ratio": {
+                    "description": "商户承担比例",
+                    "type": "integer"
+                },
+                "promo_amount": {
+                    "description": "促销金额",
+                    "type": "integer"
+                },
+                "promo_code": {
+                    "description": "促销代码",
+                    "type": "string"
+                },
+                "promo_description": {
+                    "description": "促销描述",
+                    "type": "string"
+                },
+                "promo_name": {
+                    "description": "促销名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },
@@ -62038,10 +62213,6 @@ const docTemplate = `{
                     "description": "异常详情",
                     "type": "string"
                 },
-                "accepted_time": {
-                    "description": "接单时间",
-                    "type": "integer"
-                },
                 "campaigns": {
                     "description": "活动信息",
                     "type": "array",
@@ -62049,33 +62220,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/response.TakeoutOrderCampaignResp"
                     }
                 },
-                "completed_time": {
-                    "description": "完成时间",
-                    "type": "integer"
-                },
-                "currency_code": {
+                "currencies": {
                     "description": "货币信息",
-                    "type": "string"
-                },
-                "currency_symbol": {
-                    "description": "货币符号",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.TakeoutOrderCurrencyResp"
+                        }
+                    ]
                 },
                 "cutlery": {
                     "description": "是否需要餐具",
                     "type": "integer"
                 },
-                "delivery_fee": {
-                    "description": "配送费",
-                    "type": "integer"
-                },
-                "eater_payment": {
-                    "description": "顾客实付",
-                    "type": "integer"
-                },
-                "estimated_ready_time": {
-                    "description": "预计完成时间",
-                    "type": "integer"
+                "discounts": {
+                    "description": "订单优惠",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.TakeoutOrderDiscountsResp"
+                        }
+                    ]
                 },
                 "is_abnormal": {
                     "description": "订单异常",
@@ -62088,17 +62251,17 @@ const docTemplate = `{
                         "$ref": "#/definitions/response.TakeoutOrderItemResp"
                     }
                 },
-                "max_ready_time": {
-                    "description": "最大准备时间",
-                    "type": "integer"
-                },
                 "order_state": {
-                    "description": "订单状态",
+                    "description": "订单状态 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单",
                     "type": "integer"
                 },
-                "order_time": {
+                "order_times": {
                     "description": "订单时间",
-                    "type": "integer"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.TakeoutOrderTimesResp"
+                        }
+                    ]
                 },
                 "order_type": {
                     "description": "订单类型",
@@ -62112,6 +62275,21 @@ const docTemplate = `{
                     "description": "平台名称",
                     "type": "string"
                 },
+                "price": {
+                    "description": "订单金额",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/response.TakeoutOrderPriceResp"
+                        }
+                    ]
+                },
+                "promos": {
+                    "description": "促销信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderPromoResp"
+                    }
+                },
                 "receiver": {
                     "description": "收货人信息 (联系人信息)",
                     "allOf": [
@@ -62124,28 +62302,37 @@ const docTemplate = `{
                     "description": "短订单号",
                     "type": "string"
                 },
-                "small_order_fee": {
-                    "description": "小订单费",
-                    "type": "integer"
-                },
-                "submit_time": {
-                    "description": "提交时间 (提交时间，支付时间)",
-                    "type": "integer"
-                },
-                "subtotal": {
-                    "description": "订单金额",
-                    "type": "integer"
-                },
-                "total_amount": {
-                    "description": "订单总金额",
-                    "type": "integer"
-                },
                 "total_items": {
                     "description": "订单商品",
                     "type": "integer"
                 },
                 "uuid": {
                     "description": "订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TakeoutOrderTimesResp": {
+            "type": "object",
+            "properties": {
+                "accepted_time": {
+                    "description": "接单时间",
+                    "type": "integer"
+                },
+                "completed_time": {
+                    "description": "完成时间",
+                    "type": "integer"
+                },
+                "estimated_ready_time": {
+                    "description": "预计完成时间",
+                    "type": "integer"
+                },
+                "max_ready_time": {
+                    "description": "最大准备时间",
+                    "type": "integer"
+                },
+                "submit_time": {
+                    "description": "提交时间 (提交时间，支付时间)",
                     "type": "integer"
                 }
             }

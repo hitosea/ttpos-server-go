@@ -13,9 +13,9 @@
 ## 📊 进度总览
 
 **总任务数**: 14  
-**已完成**: 10  
+**已完成**: 12  
 **进行中**: -  
-**完成率**: 71%
+**完成率**: 86%
 
 ---
 
@@ -173,17 +173,17 @@
     5. 测试幂等性（重复调用）
   - Success: 手动测试通过，GrabFood 平台显示订单准备完成
 
-- [ ] 4.2 更新 API 文档
+- [x] 4.2 更新 API 文档
 
-  - File: `docs/shared/api/ttpos-takeout-api.md`
+  - File: `docs/shared/api/takeout_api.md`
   - Purpose: 记录新增的 gRPC 接口
   - Requirements: 文档要求
   - Leverage: `docs/agent/templates/api-doc-template.md`
   - Prompt: Role: Technical Writer | Task: 在 ttpos-takeout API 文档中新增 MarkOrderReady 接口说明 | Context: 包含请求参数、响应格式、错误码、使用示例 | Restrictions: 遵循 .cursor/rules/documentation.mdc | Success: API 文档完整且准确
 
-- [ ] 4.3 更新 CHANGELOG.md
+- [x] 4.3 更新 CHANGELOG.md
 
-  - File: `CHANGELOG.md`
+  - File: `ttpos-bmp/CHANGELOG.md`
   - Purpose: 记录版本变更
   - Requirements: 文档要求
   - Leverage: 现有 CHANGELOG 格式

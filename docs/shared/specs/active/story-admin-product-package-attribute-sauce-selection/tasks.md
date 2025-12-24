@@ -11,10 +11,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 21（已排除数据库迁移任务）  
-**已完成**: 8  
-**进行中**: 2.9  
-**完成率**: 38%
+**总任务数**: 22（已排除数据库迁移任务，新增1个任务）  
+**已完成**: 16  
+**进行中**: 0  
+**完成率**: 73%
 
 ---
 
@@ -121,7 +121,7 @@
   - Requirements: 1.1
   - Leverage: 现有 addAttribute() 方法第15-31行，参考 design.md 中的调整逻辑
   - Success: 属性组保存时 min_selection 和 max_selection 字段正确，兼容 is_must 字段
-  - **实施记录**: 已完成，添加对 attribute_min_select 和 attribute_max_select 的支持
+  - **实施记录**: ✅ 已完成，添加对 attribute_min_select 和 attribute_max_select 的支持
 
 - [x] 2.10 调整属性模型 - updateAttribute 方法
 
@@ -130,7 +130,7 @@
   - Requirements: 1.1
   - Leverage: Task 2.9 的调整逻辑，应用到 updateAttribute() 方法第52-77行
   - Success: 属性组更新时 min_selection 和 max_selection 字段正确
-  - **实施记录**: 已完成，移除旧的 attribute_open_max_select 逻辑
+  - **实施记录**: ✅ 已完成，移除旧的 attribute_open_max_select 逻辑
 
 ### 套餐分组模型调整
 
@@ -141,7 +141,7 @@
   - Requirements: 3.1
   - Leverage: 现有 addPackageGroup() 方法，参考 design.md 中的调整逻辑
   - Success: 套餐分组保存时 min_selection 和 max_selection 字段正确
-  - **实施记录**: 已完成，添加 optional_min_count 字段支持和验证逻辑
+  - **实施记录**: ✅ 已完成，添加 optional_min_count 字段支持和验证逻辑
 
 - [x] 2.12 调整套餐分组模型 - updatePackageGroup 方法
 
@@ -150,7 +150,7 @@
   - Requirements: 3.1
   - Leverage: Task 2.11 的调整逻辑，应用到 updatePackageGroup() 方法
   - Success: 套餐分组更新时 min_selection 和 max_selection 字段正确
-  - **实施记录**: 已完成，添加 optional_min_count 字段支持和验证逻辑
+  - **实施记录**: ✅ 已完成，添加 optional_min_count 字段支持和验证逻辑
 
 ### 通用模型调整
 
@@ -161,7 +161,7 @@
   - Requirements: 1.1, 2.1, 3.1
   - Leverage: 现有字段定义第54-56行
   - Success: 字段列表包含 sauce_min_selection
-  - **实施记录**: 已完成，添加 feed_min_select 兼容字段和访问器
+  - **实施记录**: ✅ 已完成，添加 feed_min_select 兼容字段和访问器
 
 ### 订单验证逻辑调整
 
@@ -172,7 +172,7 @@
   - Requirements: 1.1
   - Leverage: 现有验证逻辑第1229-1248行
   - Success: 验证逻辑使用 min_selection 和 max_selection，兼容旧字段
-  - **实施记录**: 已完成，使用 attribute_min_select 和 attribute_max_select 进行范围验证
+  - **实施记录**: ✅ 已完成，使用 attribute_min_select 和 attribute_max_select 进行范围验证
 
 - [x] 2.15 调整订单验证逻辑 - 加料验证
 
@@ -181,7 +181,28 @@
   - Requirements: 2.1
   - Leverage: 现有验证逻辑第1268-1286行
   - Success: 验证逻辑使用 sauce_min_selection 和 sauce_max_selection，兼容旧字段
-  - **实施记录**: 已完成，使用 feed_min_select 和 feed_max_select 进行范围验证
+  - **实施记录**: ✅ 已完成，使用 feed_min_select 和 feed_max_select 进行范围验证
+
+- [x] 2.16 添加商品详情返回字段（新增任务）
+
+  - File: `admin/app/common/model/product/Product.php`
+  - Purpose: 在获取商品详情时返回新增的最小可选字段
+  - Requirements: 1.1, 2.1, 3.1
+  - Leverage: 
+    - getFeedMinSelectAttr() 访问器（第160-163行）
+    - getProductAttr() 方法中的 attribute_min_select 字段（第1534行）
+    - 套餐分组返回中的 optional_min_count 字段（第1642行）
+    - updateProductPackage() 方法中的 sauce_min_selection 字段（第942行）
+  - Success: 
+    - ✅ API 返回包含 feed_min_select 字段（通过访问器）
+    - ✅ API 返回包含 attribute_min_select 字段（第1534行已添加）
+    - ✅ API 返回包含 optional_min_count 字段（第1642行已添加）
+    - ✅ 兼容旧字段（feed_required, attribute_required, feed_open_max_select, attribute_open_max_select）
+    - ✅ updateProductPackage 正确保存 sauce_min_selection 字段（第942行）
+  - **实施记录**: ✅ 已完成
+    - 2025-12-24: 补充 getProductAttr() 返回 attribute_min_select（第1534行）
+    - 2025-12-24: 补充套餐分组返回 optional_min_count（第1642行）
+    - 访问器自动返回 feed_min_select，同时保持旧字段兼容性
 
 ---
 
@@ -411,6 +432,20 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/story-admin-product
 
 ---
 
+## 📝 变更记录
+
+### 2025-12-24
+
+**补充返回字段**:
+- ✅ 任务 2.16：补充商品详情返回字段（attribute_min_select, optional_min_count）
+- ✅ 代码格式化：优化 Product.php 代码风格
+
+**文件修改**:
+- `admin/app/common/model/product/Product.php`: +2 行（新增返回字段）
+- `admin/app/shop/model/product/Product.php`: 格式化调整（移除多余空行）
+
+---
+
 ## Graphiti & 活动日志
 
 - Related Episode: `[待补充]`
@@ -420,7 +455,8 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/story-admin-product
 
 ---
 
-**模板版本**: v1.0.0  
-**最后更新**: 2025-12-23  
+**模板版本**: v1.1.0  
+**创建日期**: 2025-12-23  
+**最后更新**: 2025-12-24  
 **维护者**: 后端开发组
 

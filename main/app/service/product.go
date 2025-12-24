@@ -1477,19 +1477,6 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		return &product_resp.ProductDeleteResp{List: packageNames}, errors.New("商品已关联如下套餐，暂时无法删除，请先修改套餐")
 	}
 
-	// 检查商品/规格是否存在未完结的外卖订单
-	orderRepo := repository.NewOrderRepo(db)
-	for _, productBom := range product.ProductBoms {
-		hasTakeoutOrder, err := orderRepo.HasUnfinishedTakeoutOrderWithProduct(request.Uuid, productBom.Uuid)
-		if err != nil {
-			logger.Logger.Error("检查外卖订单失败", zap.Any("func", "DeleteProductShop"), zap.Any("params", request), zap.Error(err))
-			return nil, errors.New("检查外卖订单失败")
-		}
-		if hasTakeoutOrder {
-			return nil, errors.New("商品/规格存在未完结的外卖订单，无法删除")
-		}
-	}
-
 	err = db.Transaction(func(tx *gorm.DB) error {
 		productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
 		productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)

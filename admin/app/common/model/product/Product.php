@@ -1531,6 +1531,7 @@ class Product extends BaseModel
                 'attribute_value' => $attributeValue,
                 'default_select' => $defaultSelect,
                 'attribute_ids' => $attributeIds,
+                'attribute_min_select' => $group->min_selection,
                 'attribute_max_select' => $group->max_selection,
                 'attribute_open_max_select' => $group->max_selection > 0 ? 1 : 0,
                 'attribute_required' => $group->is_must,
@@ -1638,6 +1639,7 @@ class Product extends BaseModel
                     'group_name' => $group['name'], // 套餐分组名称
                     'group_name_text' => $group['group_name_text'], // 套餐分组名称
                     'group_type' => intval($group['group_type'] ?? 0), // 分组类型 0-固定 1-可选
+                    'optional_min_count' => intval($group['optional_min_count'] ?? 0), // 最小可选数量
                     'optional_count' => intval($group['optional_count'] ?? 0), // 可选数量
                     'product_list' => $productList, // 套餐分组商品列表
                 ];
