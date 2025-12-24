@@ -513,6 +513,58 @@ API 接口保持不变，只调整请求和响应参数：
 
 同添加商品，请求参数增加 `product_id`
 
+#### API 3: 获取商品详情
+
+**响应**:
+
+```json
+{
+  "code": 1,
+  "msg": "获取成功",
+  "data": {
+    "product_id": "xxx",
+    "product_name": "商品名称",
+    "feed_required": 0,
+    "feed_open_max_select": 1,
+    "feed_max_select": 3,
+    "feed_min_select": 0,
+    "product_attr": [
+      {
+        "attribute_name": "规格",
+        "attribute_value": ["大", "中", "小"],
+        "attribute_min_select": 1,
+        "attribute_max_select": 1,
+        "attribute_open_max_select": 1,
+        "attribute_required": 1,
+        "default_select": [1, 0, 0]
+      }
+    ],
+    "package_group": [
+      {
+        "group_name": "主食",
+        "group_type": 1,
+        "optional_min_count": 1,
+        "optional_count": 1,
+        "product_list": [...]
+      }
+    ]
+  }
+}
+```
+
+**字段说明**:
+
+- `feed_min_select`: 加料最小可选数量（新字段）
+- `feed_max_select`: 加料最大可选数量
+- `feed_required`: 兼容字段（根据 feed_min_select 自动计算）
+- `feed_open_max_select`: 兼容字段（根据 feed_max_select 自动计算）
+- `attribute_min_select`: 属性最小可选数量（新字段）
+- `attribute_max_select`: 属性最大可选数量
+- `attribute_required`: 兼容字段（保留 is_must 值）
+- `attribute_open_max_select`: 兼容字段（根据 attribute_max_select 自动计算）
+- `optional_min_count`: 套餐分组最小可选数量（新字段）
+- `optional_count`: 套餐分组最大可选数量
+
 ---
 
 ## 🧩 组件和接口
@@ -521,37 +573,86 @@ API 接口保持不变，只调整请求和响应参数：
 
 #### 1. 读取旧数据时的兼容
 
+**已实现位置**: `admin/app/common/model/product/Product.php`
+
 ```php
-// 在读取商品详情时，兼容旧字段
-public function getProductDetail($productId)
+// 访问器自动处理兼容性（第148-163行）
+public function getFeedRequiredAttr($value, $data = [])
 {
-    $product = Product::find($productId);
-    
-    // 属性组兼容
-    foreach ($product->productAttributeGroup as $group) {
-        // 如果新字段为0（未迁移），则使用旧字段
-        if ($group->min_selection == 0 && $group->is_must == 1) {
-            $group->min_selection = 1;
-        }
-        if ($group->max_selection == 0) {
-            // 计算属性值数量
-            $attrValueCount = $group->productAttribute->count();
-            $group->max_selection = $attrValueCount;
-        }
-    }
-    
-    // 加料兼容
-    if ($product->sauce_min_selection == 0 && $product->sauce_required == 1) {
-        $product->sauce_min_selection = 1;
-    }
-    if ($product->sauce_max_selection == 0) {
-        // 计算加料数量
-        $feedCount = $product->feed->count();
-        $product->sauce_max_selection = $feedCount;
-    }
-    
-    return $product;
+    return $this->sauce_required ?: 0;
 }
+
+public function getFeedOpenMaxSelectAttr($value, $data = [])
+{
+    return $this->sauce_max_selection ? 1 : 0;
+}
+
+public function getFeedMaxSelectAttr($value, $data = [])
+{
+    return $this->sauce_max_selection ?: 0;
+}
+
+public function getFeedMinSelectAttr($value, $data = [])
+{
+    return $this->sauce_min_selection ?: 0;
+}
+```
+
+**getProductAttr() 方法处理属性组字段（第1510-1544行）**:
+
+```php
+public static function getProductAttr($product)
+{
+    $productAttr = [];
+    foreach ($product->productAttributeGroup as $group) {
+        // ... 处理属性值 ...
+        
+        $attr = [
+            'parent_id' => $group['product_attribute_group_uuid'],
+            'parent_name' => $group->attribute->attribute_name_text,
+            'attribute_name' => $group->attribute->attribute_name,
+            'attribute_value' => $attributeValue,
+            'default_select' => $defaultSelect,
+            'attribute_ids' => $attributeIds,
+            'attribute_min_select' => $group->min_selection, // ✅ 新字段（第1534行）
+            'attribute_max_select' => $group->max_selection, // 新字段
+            'attribute_open_max_select' => $group->max_selection > 0 ? 1 : 0, // 兼容旧字段
+            'attribute_required' => $group->is_must, // 兼容旧字段
+            'attribute_name_text' => $group->attribute->attribute_name_text,
+            'attribute_value_text' => $attributeValueText,
+        ];
+        $productAttr[] = $attr;
+    }
+    
+    return $productAttr;
+}
+```
+
+**套餐分组字段处理（第1633-1646行）**:
+
+```php
+// 在获取商品详情时返回套餐分组字段
+$packageGroup[] = [
+    'group_uuid' => $group['product_package_group_uuid'],
+    'group_name' => $group['name'],
+    'group_name_text' => $group['group_name_text'],
+    'group_type' => intval($group['group_type'] ?? 0),
+    'optional_min_count' => intval($group['optional_min_count'] ?? 0), // ✅ 新字段（第1642行）
+    'optional_count' => intval($group['optional_count'] ?? 0), // 新字段（重定义）
+    'product_list' => $productList,
+];
+```
+
+**updateProductPackage() 方法处理加料字段（第920-946行）**:
+
+```php
+$updateData = [
+    // ... 其他字段 ...
+    'sauce_min_selection' => $data['feed_min_select'] ?? 0, // ✅ 加料最小选择数量（第942行）
+    'sauce_max_selection' => $data['feed_max_select'] ?? 0, // 加料最大选择数量
+    // sauce_required 保留但不再使用，兼容旧数据
+    'sauce_required' => ($data['feed_min_select'] ?? 0) > 0 ? 1 : 0, // 兼容字段
+];
 ```
 
 #### 2. 保存时的兼容
@@ -685,14 +786,16 @@ public function saveProduct($data)
 
 ### Phase 2: 后端逻辑调整
 
-- [ ] 调整商品模型 add() 方法
-- [ ] 调整商品模型 edit() 方法
-- [ ] 调整属性模型 addAttribute() 方法
-- [ ] 调整属性模型 updateAttribute() 方法
-- [ ] 调整套餐分组模型 addPackageGroup() 方法
-- [ ] 调整套餐分组模型 updatePackageGroup() 方法
-- [ ] 调整通用商品模型字段定义
-- [ ] 调整订单验证逻辑（BaseModelOrder.php）
+- [x] 调整商品模型 add() 方法
+- [x] 调整商品模型 edit() 方法
+- [x] 调整属性模型 addAttribute() 方法
+- [x] 调整属性模型 updateAttribute() 方法
+- [x] 调整套餐分组模型 addPackageGroup() 方法
+- [x] 调整套餐分组模型 updatePackageGroup() 方法
+- [x] 调整通用商品模型字段定义（添加访问器）
+- [x] 调整订单验证逻辑（BaseModelOrder.php）
+- [x] **新增**: 添加商品详情返回字段（feed_min_select, attribute_min_select, optional_min_count）
+- [x] **代码优化**: 格式化代码，移除多余空行，统一代码风格
 
 ### Phase 3: 前端界面调整
 
@@ -713,6 +816,23 @@ public function saveProduct($data)
 
 ---
 
+## 📝 变更记录
+
+### v1.1.0 - 2025-12-24
+
+**补充商品详情返回字段**:
+
+- ✅ `admin/app/common/model/product/Product.php` 第1534行：补充 `attribute_min_select` 字段返回
+- ✅ `admin/app/common/model/product/Product.php` 第1642行：补充 `optional_min_count` 字段返回
+- ✅ `admin/app/shop/model/product/Product.php` 第942行：确认 `sauce_min_selection` 字段保存逻辑
+- ✅ 代码格式化：统一移除多余空行，优化代码可读性
+
+**影响范围**:
+- API 响应增强：GET 商品详情接口返回完整的最小-最大可选范围字段
+- 向后兼容：保持旧字段（feed_required, attribute_required 等）正常返回
+
+---
+
 ## Graphiti & 活动日志
 
 - Related Episode: `[待补充]`
@@ -722,8 +842,9 @@ public function saveProduct($data)
 
 ---
 
-**版本**: v1.0.0  
+**版本**: v1.1.0  
 **创建日期**: 2025-12-23  
+**最后更新**: 2025-12-24  
 **作者**: 后端开发组  
 **审核者**: 待分配
 

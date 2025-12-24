@@ -148,16 +148,18 @@
 
 ### API 设计要求
 
-- [ ] 保持现有 API 格式不变
-- [ ] 响应格式：`{code, msg, data}`
-- [ ] 参考: `.cursor/rules/api.mdc` - API 设计规范
+- [x] 保持现有 API 格式不变
+- [x] 响应格式：`{code, msg, data}`
+- [x] 新增返回字段：`feed_min_select`, `attribute_min_select`, `optional_min_count`
+- [x] 兼容旧字段：`feed_required`, `attribute_required`, `feed_open_max_select`, `attribute_open_max_select`
+- [x] 参考: `.cursor/rules/api.mdc` - API 设计规范
 
 ### 数据库设计要求
 
-- [ ] 必须包含数据迁移脚本
-- [ ] 时间字段使用 int 类型，_time 结尾，默认值 0
-- [ ] 字段名使用 snake_case
-- [ ] 参考: `.cursor/rules/database.mdc` - 数据库开发规范
+- [x] 必须包含数据迁移脚本（已在任务 #37946 中完成）
+- [x] 时间字段使用 int 类型，_time 结尾，默认值 0
+- [x] 字段名使用 snake_case
+- [x] 参考: `.cursor/rules/database.mdc` - 数据库开发规范
 
 ### 性能要求
 
@@ -193,9 +195,9 @@
 
 ### 可靠性要求
 
-- [ ] 数据迁移脚本可回滚
-- [ ] 错误日志记录
-- [ ] 兼容旧版本前端
+- [x] 数据迁移脚本可回滚（已在任务 #37946 中完成）
+- [x] 错误日志记录
+- [x] 兼容旧版本前端（通过访问器保持旧字段）
 
 ---
 
