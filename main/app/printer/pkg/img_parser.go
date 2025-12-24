@@ -1008,10 +1008,10 @@ func (p *ImgTemplateParser) getFontWeight(attr ImgTemplateBlockAttr) int {
 	}
 
 	if attr.FontBold {
-		return 2
+		return 4
 	}
 
-	return 1
+	return 2
 }
 
 // convertAlign 转换对齐方式
