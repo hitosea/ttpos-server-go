@@ -772,7 +772,6 @@ func (s *paymentMethodSrv) GetLogo(ctx context.Context, method *model.PaymentMet
 // SyncPaymentMethod 同步支付方式
 // 1. 所有商户类型（散户、总店、子店）都先从 ERP 同步支付方式
 // 2. 如果是子店且 syncHeadquarterData=true，额外再从总店同步支付方式
-// @param syncHeadquarterData 是否同步总部数据（仅对子店有效）
 func (s *paymentMethodSrv) SyncPaymentMethod(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
 
