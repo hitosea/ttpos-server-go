@@ -469,6 +469,11 @@ func (c *GrabConverter) convertProductFlavors(
 		return nil
 	}
 
+	// 按价格排序，确保最小价格的规格排在第一位
+	sort.Slice(flavors, func(i, j int) bool {
+		return flavors[i].Price < flavors[j].Price
+	})
+
 	// 找到最小规格价格，用于计算差价（优先使用外卖价格，否则使用店内价格）
 	minFlavorPrice := float64(0)
 	for idx, bomTakeout := range flavors {
