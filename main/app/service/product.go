@@ -7930,6 +7930,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 				Price:                         productPackage.Price,
 				ProductType:                   productPackage.ProductType,
 				SauceRequired:                 productPackage.SauceRequired,
+				SauceMinSelection:             productPackage.SauceMinSelection,
 				SauceMaxSelection:             productPackage.SauceMaxSelection,
 				OpenDiscount:                  productPackage.OpenDiscount,
 				OpenOverallDiscount:           productPackage.OpenOverallDiscount,
@@ -8022,6 +8023,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					MultiLanguageNameUuid: productPackageGroup.MultiLanguageName.Uuid,
 					GroupType:             productPackageGroup.GroupType,
 					OptionalCount:         productPackageGroup.OptionalCount,
+					OptionalMinCount:      productPackageGroup.OptionalMinCount,
 				})
 				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
 					newProductPackageGroupItemList = append(newProductPackageGroupItemList, model.ProductPackageGroupItem{

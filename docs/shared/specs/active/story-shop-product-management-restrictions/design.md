@@ -1202,6 +1202,43 @@ func TestCheckProductPackageGroup_InvalidRange(t *testing.T) {
 
 ---
 
+## 11.5 子店同步设计（2025-12-24 补充）
+
+### 11.5.1 同步场景
+
+当公司为子店时（`IsSubShop() = true`），需要从总店同步商品数据，确保总店和子店的商品配置保持一致。
+
+### 11.5.2 同步字段
+
+**新增可选范围字段需要同步：**
+
+| 字段名 | 所属模型 | 数据表 | 说明 |
+|--------|---------|--------|------|
+| `SauceMinSelection` | `ProductPackage` | `ttpos_product_package` | 加料最小选择数量 |
+| `MinSelection` | `ProductPackageAttributeGroup` | `ttpos_product_package_attribute_group` | 属性组最小选择数量 |
+| `OptionalMinCount` | `ProductPackageGroup` | `ttpos_product_package_group` | 套餐分组最小可选数量 |
+
+### 11.5.3 同步逻辑
+
+**位置：** `main/app/service/product.go` - `SyncProduct` 方法（约7850-8200行）
+
+**核心代码位置：**
+
+```go
+// 行7933: 同步加料最小选择数
+SauceMinSelection: productPackage.SauceMinSelection,
+
+// 行7994: 同步属性组最小选择数
+MinSelection: productPackageAttributeGroup.MinSelection,
+
+// 行8026: 同步套餐分组最小可选数
+OptionalMinCount: productPackageGroup.OptionalMinCount,
+```
+
+**详细设计文档：** 见 `SUBTASK_SYNC_FIELDS.md`
+
+---
+
 ## 12. 参考文档
 
 - DooTask 任务：#37946
@@ -1218,6 +1255,8 @@ func TestCheckProductPackageGroup_InvalidRange(t *testing.T) {
 | ---- | ---------- | ------ | ------------------------------------------------------------- |
 | 1.0  | 2025-12-22 | 曾振华 | 创建设计文档                                                   |
 | 1.1  | 2025-12-22 | AI实现 | 完成核心功能实现，更新实现总结                                   |
+| 1.2  | 2025-12-24 | AI     | 补充子店同步设计（11.5节）                                       |
+| 1.3  | 2025-12-24 | AI     | 更新实现总结，标记删除限制功能已废弃                            |
 
 ---
 
@@ -1242,13 +1281,17 @@ func TestCheckProductPackageGroup_InvalidRange(t *testing.T) {
 - **字段映射**: Go Model与数据库表结构完全一致
 - **废弃标注**: 旧字段已在注释中标注为废弃
 
-#### ✅ Repository层（Task 3.1）
-- **新增方法**: `HasUnfinishedTakeoutOrderWithProduct` (`main/app/repository/order.go`)
-- **功能**: 检查商品/规格是否存在未完结的外卖订单
-- **TODO标记**: 外卖订单表创建后需要修改查询逻辑
+#### ~~✅ Repository层（Task 3.1）~~（已废弃）
+- ~~**新增方法**: `HasUnfinishedTakeoutOrderWithProduct` (`main/app/repository/order.go`)~~
+- ~~**功能**: 检查商品/规格是否存在未完结的外卖订单~~
+- ~~**TODO标记**: 外卖订单表创建后需要修改查询逻辑~~
+- **废弃原因**: 2025-12-24 需求变更，允许直接删除商品
 
-#### ✅ Service层（Task 4.1 & 4.2）
-- **删除限制**: `DeleteProductShop` 方法增加外卖订单检查
+#### ~~✅ Service层 - 删除限制（Task 4.1）~~（已废弃）
+- ~~**删除限制**: `DeleteProductShop` 方法增加外卖订单检查~~
+- **废弃原因**: 2025-12-24 需求变更，允许直接删除商品
+
+#### ✅ Service层 - 验证和保存（Task 4.2）
 - **验证逻辑**: `product_check.go` 实现可选范围验证
   - `CheckProductAttribute`: min ≤ max ≤ 属性值数量
   - `CheckProductSauce`: min ≤ max ≤ 加料数量
@@ -1258,6 +1301,14 @@ func TestCheckProductPackageGroup_InvalidRange(t *testing.T) {
   - `SaveProductPackageBom`: 保存 `sauce_min_selection`
   - `SaveProductPackageAttribute`: 保存 `min_selection`
   - `SaveProductPackageGroup`: 保存 `optional_min_count`
+
+#### ✅ Service层 - 子店同步（2025-12-24 补充）
+- **同步逻辑**: `SyncProduct` 方法中添加新字段同步
+  - 行7933: 同步 `SauceMinSelection` 字段
+  - 行7994: 同步 `MinSelection` 字段
+  - 行8026: 同步 `OptionalMinCount` 字段
+- **功能**: 确保总店和子店的可选范围配置保持一致
+- **详细设计**: 见 11.5 节
 
 #### ✅ API层（Task 5.1）
 - **请求结构**: `main/app/dto/req/product.go`
@@ -1278,10 +1329,11 @@ func TestCheckProductPackageGroup_InvalidRange(t *testing.T) {
 - ⏳ **Task 6.1**: 集成测试（建议后续补充）
 - ⏳ **Task 4.2扩展**: 总部数据编辑权限完整实现（依赖外卖模块）
 - ⏳ **API文档更新**: Swagger或其他API文档
+- ⏳ **部署后同步**: 建议部署后手动触发一次全量同步，更新所有子店商品
 
 ### 14.4 技术债务
 
-1. **外卖订单表**: `HasUnfinishedTakeoutOrderWithProduct` 方法使用临时查询逻辑
+1. ~~**外卖订单表**: `HasUnfinishedTakeoutOrderWithProduct` 方法使用临时查询逻辑~~（已废弃）
 2. **单元测试**: 当前实现未包含完整的单元测试覆盖
 3. **响应结构**: 查询接口暂未返回新字段（可后续补充）
 
@@ -1289,10 +1341,11 @@ func TestCheckProductPackageGroup_InvalidRange(t *testing.T) {
 
 | 需求                           | 状态 | 备注                         |
 | ------------------------------ | ---- | ---------------------------- |
-| 商品/规格删除外卖订单检查       | ✅   | 已实现                       |
+| ~~商品/规格删除外卖订单检查~~ | ❌ 已废弃 | 2025-12-24 需求变更         |
 | 属性可选范围设置                | ✅   | 已实现                       |
 | 加料可选范围设置                | ✅   | 已实现                       |
 | 套餐分组可选范围设置            | ✅   | 已实现                       |
+| 子店同步新字段                  | ✅   | 2025-12-24 补充完成          |
 | 版本兼容性                      | ✅   | v2.11和v2.12双向兼容         |
 | 数据迁移                        | ✅   | 旧数据正确转换               |
 | 总部数据编辑权限                | ⏳   | 方案设计完成，待外卖模块支持 |
