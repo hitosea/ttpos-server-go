@@ -4,6 +4,7 @@
   "fieldname": "custom_payment_id",
   "fieldtype": "Data",
   "insert_after": "custom_company",
-  "dt": "Mode of Payment"
+  "dt": "Mode of Payment",
+  "unique":1
 }
 
