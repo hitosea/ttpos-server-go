@@ -446,8 +446,9 @@ func (x *OpenPosEntryInfo) GetOpenPosEntryDetail() []*OpenPosEntryDetail {
 
 type OpenPosEntryDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式"` // 支付方式
-	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额"` // 开帐金额
+	ModeOfPayment *string                `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3,oneof" json:"mode_of_payment,omitempty" dc:"支付方式，与 payment_id 二选一（必填其中之一）"` // 支付方式，与 payment_id 二选一（必填其中之一）
+	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额,必填"`                             // 开帐金额,必填
+	PaymentId     *string                `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），与 mode_of_payment 二选一"`   // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -483,8 +484,8 @@ func (*OpenPosEntryDetail) Descriptor() ([]byte, []int) {
 }
 
 func (x *OpenPosEntryDetail) GetModeOfPayment() string {
-	if x != nil {
-		return x.ModeOfPayment
+	if x != nil && x.ModeOfPayment != nil {
+		return *x.ModeOfPayment
 	}
 	return ""
 }
@@ -494,6 +495,13 @@ func (x *OpenPosEntryDetail) GetOpeningAmount() float64 {
 		return x.OpeningAmount
 	}
 	return 0
+}
+
+func (x *OpenPosEntryDetail) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
 }
 
 type OpenPosEntryResp struct {
@@ -1964,10 +1972,14 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\rcashier_email\x18\x03 \x01(\tR\fcashierEmail\x12!\n" +
 	"\fcompany_abbr\x18\x04 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x05 \x01(\tR\x06branch\x12N\n" +
-	"\x15open_pos_entry_detail\x18\x06 \x03(\v2\x1b.selling.OpenPosEntryDetailR\x12openPosEntryDetail\"c\n" +
-	"\x12OpenPosEntryDetail\x12&\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\tR\rmodeOfPayment\x12%\n" +
-	"\x0eopening_amount\x18\x02 \x01(\x01R\ropeningAmount\"\\\n" +
+	"\x15open_pos_entry_detail\x18\x06 \x03(\v2\x1b.selling.OpenPosEntryDetailR\x12openPosEntryDetail\"\xaf\x01\n" +
+	"\x12OpenPosEntryDetail\x12+\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\tH\x00R\rmodeOfPayment\x88\x01\x01\x12%\n" +
+	"\x0eopening_amount\x18\x02 \x01(\x01R\ropeningAmount\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tH\x01R\tpaymentId\x88\x01\x01B\x12\n" +
+	"\x10_mode_of_paymentB\r\n" +
+	"\v_payment_id\"\\\n" +
 	"\x10OpenPosEntryResp\x12H\n" +
 	"\x13open_pos_entry_info\x18\x01 \x01(\v2\x19.selling.OpenPosEntryInfoR\x10openPosEntryInfo\"\xe1\x01\n" +
 	"\x10ClosePosEntryReq\x12-\n" +
@@ -2194,6 +2206,7 @@ func file_selling_selling_proto_init() {
 	if File_selling_selling_proto != nil {
 		return
 	}
+	file_selling_selling_proto_msgTypes[6].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[9].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[16].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[22].OneofWrappers = []any{}

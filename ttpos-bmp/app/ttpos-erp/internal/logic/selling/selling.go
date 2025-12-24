@@ -393,8 +393,11 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
 	}
 
-	// 构建开帐信息
-	openDetails := s.buildOpeningEntryDetails(req.OpenPosEntryDetail)
+	// 构建开账明细（支持 payment_id 自动查询 mode_of_payment）
+	openDetails, err := s.buildOpeningEntryDetails(ctx, req.OpenPosEntryDetail)
+	if err != nil {
+		return nil, err
+	}
 	reqInfo := s.buildOpeningEntryRequest(req, companyName, openDetails)
 
 	// 创建开帐记录
@@ -426,21 +429,51 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	}, nil
 }
 
-// buildOpeningEntryDetails 构建开帐明细
+// buildOpeningEntryDetails 构建开账明细
 // 参数：
-//   - details: 开帐明细列表
+//   - ctx: 上下文
+//   - details: 开账明细列表
 //
 // 返回：
-//   - []erp.POSOpeningEntryDetail: 开帐明细列表
-func (s *sSelling) buildOpeningEntryDetails(details []*selling.OpenPosEntryDetail) []erp.POSOpeningEntryDetail {
-	openDetails := make([]erp.POSOpeningEntryDetail, 0)
-	for _, detail := range details {
-		openDetails = append(openDetails, erp.POSOpeningEntryDetail{
-			ModeOfPayment: detail.ModeOfPayment,
+//   - []erp.POSOpeningEntryDetail: 开账明细列表
+//   - error: 错误信息
+func (s *sSelling) buildOpeningEntryDetails(ctx context.Context, details []*selling.OpenPosEntryDetail) ([]erp.POSOpeningEntryDetail, error) {
+	var openingDetails []erp.POSOpeningEntryDetail
+
+	for i, detail := range details {
+		var modeOfPayment string
+
+		// 如果提供了 payment_id，自动查询 mode_of_payment
+		if detail.PaymentId != nil && *detail.PaymentId != "" {
+			getModeResp, err := service.Selling().GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+				PaymentId: detail.PaymentId,
+			})
+			if err != nil {
+				g.Log().Error(ctx, "查询支付方式失败",
+					g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
+				return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
+			}
+
+			if getModeResp == nil || getModeResp.Name == "" {
+				return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
+			}
+
+			modeOfPayment = getModeResp.Name
+
+			g.Log().Info(ctx, "开账详情: 通过 payment_id 查询到 mode_of_payment",
+				g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
+		} else if detail.ModeOfPayment != nil {
+			// 直接使用 mode_of_payment（向后兼容）
+			modeOfPayment = *detail.ModeOfPayment
+		}
+
+		openingDetails = append(openingDetails, erp.POSOpeningEntryDetail{
+			ModeOfPayment: modeOfPayment,
 			OpeningAmount: detail.OpeningAmount,
 		})
 	}
-	return openDetails
+
+	return openingDetails, nil
 }
 
 // buildOpeningEntryRequest 构建开帐请求
