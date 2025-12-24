@@ -19,7 +19,7 @@
 | **审核状态** | 已通过 |
 | **审核人**   | rikugun             |
 | **审核日期** | 2025-12-24             |
-| **审核意见** | 技术任务，需求明确，参考 ClosePosEntry 实现         |
+| **审核意见** | 需求明确，与 ClosePosEntry 功能保持一致，技术方案可行 |
 
 ---
 
@@ -84,7 +84,7 @@
 
 - [ ] 2.1 在 Controller 层添加参数校验逻辑
 - [ ] 2.2 校验逻辑在处理 `OpenPosEntryDetail` 列表时对每个 detail 进行检查
-- [ ] 2.3 返回的错误信息应明确指出参数问题
+- [ ] 2.3 返回的错误信息应明确指出参数问题（包含 detail 索引）
 - [ ] 2.4 使用 GoFrame 的 `gerror` 包进行错误处理
 
 ---
@@ -133,8 +133,8 @@
 
 ### 代码架构和模块化
 
-- **分层设计**: 严格遵循 Controller → Logic → Service → DAO 分层
-- **单一职责原则**: 参数校验和查询逻辑应在对应层级独立实现
+- **分层设计**: 严格遵循 Controller → Service → Repository 分层
+- **单一职责原则**: 参数校验和查询逻辑应在 Logic 层独立实现
 - **模块化设计**: 复用现有的 `GetModeOfPayment` 服务
 - **依赖管理**: Logic 层通过 Service 接口调用 `GetModeOfPayment`
 - **遵循规范**:
@@ -240,7 +240,7 @@
 
 ### 资源约束
 
-- 开发时间: 1 天
+- 开发时间: 1.5 天
 - Story Point: 2 (必须 ≤ 5)
 
 ---
@@ -338,11 +338,11 @@
 ### 相关 Proposal
 
 - `docs/team/proposals/2025-12/open-pos-entry-payment-id-support.md` - 本功能的需求提案
-- `docs/team/proposals/2025-12/close-pos-entry-payment-id-support.md` - 关账接口 PaymentID 支持提案
+- `docs/team/proposals/2025-12/close-pos-entry-payment-id-support.md` - 关账接口 PaymentID 支持提案（已完成）
 
 ### 相关 Spec
 
-- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/` - 关账接口 PaymentID 支持 Spec（参考实现）
+- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/` - 关账接口 PaymentID 支持 Spec（可参考）
 
 ### 外部参考
 
@@ -364,4 +364,3 @@
 **创建日期**: 2025-12-24  
 **作者**: rikugun  
 **审核者**: -
-

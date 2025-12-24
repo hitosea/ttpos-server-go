@@ -4,13 +4,9 @@
 
 ## 📋 概述
 
-本功能为 `OpenPosEntry` gRPC 接口的 `OpenPosEntryDetail` 消息增加 `payment_id` 可选参数支持，使调用方可以直接使用 PaymentID 而无需提前查询 `mode_of_payment`。系统在收到 `payment_id` 后自动调用 `GetModeOfPayment` 服务查询对应的支付方式名称，简化调用流程并与其他接口保持设计一致。
+在 `OpenPosEntry` 接口中增加 `payment_id` 参数支持，当调用方提供 `payment_id` 时，系统自动查询对应的 `mode_of_payment` 完成开账操作。该功能与已完成的 `ClosePosEntry` 接口 PaymentID 支持功能保持完全一致的技术实现方案。
 
-**关键特性**：
-- 向后兼容：保持原有 `mode_of_payment` 字段可用
-- 自动查询：`payment_id` 不为空时自动查询对应的 `mode_of_payment`
-- 参数校验：两个字段不能同时为空
-- 错误处理：查询失败返回明确的错误信息
+**系统位置**: ttpos-bmp (Go BMP 微服务) - ERP 销售模块
 
 ---
 
@@ -18,164 +14,80 @@
 
 ### Go BMP 规范 (go-bmp.mdc)
 
-本功能严格遵循 GoFrame 开发规范：
+该设计严格遵循 Go BMP 开发规范：
 
-- **禁止修改自动生成代码**：`dao/`、`entity/`、`do/` 目录的代码由 `gf gen dao` 自动生成，不手动修改
-- **Protobuf 规范**：遵循 `ttpos-bmp/.cursor/rules/proto-rules.mdc`，字段命名使用 snake_case，消息命名以 Req/Resp 结尾
-- **Logic 层设计**：
-  - 只实现业务逻辑，不返回 `erp.ResponseInfo` 类型
-  - 使用 `gerror` 包处理错误
-  - 通过 Service 接口调用其他服务
-- **Controller 层设计**：
-  - 负责将业务数据包装为 `erp.ResponseInfo`
-  - 处理 gRPC 请求和响应
-
-### Protobuf 规范 (proto-rules.mdc)
-
-- **字段命名**：使用 snake_case（如：`payment_id`、`mode_of_payment`）
-- **字段类型**：使用 `optional string` 表示可选字段
-- **字段编号**：新增字段使用递增编号（避免与现有字段冲突）
-- **注释规范**：使用中文注释说明字段用途和约束
+- ✅ **分层架构**: Controller → Logic → Service → Repository
+- ✅ **依赖注入**: 通过 Service 接口调用依赖服务
+- ✅ **gRPC 服务**: 注册到 Nacos，遵循微服务规范
+- ✅ **错误处理**: 使用 `gerror` 包，错误信息使用中文
+- ✅ **日志记录**: 使用 GoFrame Logger，记录关键操作
+- ✅ **代码生成**: 禁止修改 `dao/entity/do/` 目录
 
 ### API 设计规范 (api.mdc)
 
-- **gRPC 响应格式**：通过 `erp.ResponseInfo` 统一包装
-- **错误信息**：使用中文，便于运维和调试
-- **参数验证**：在 Controller 层进行参数校验，Logic 层进行业务验证
+- ✅ **gRPC 接口**: 遵循 Protobuf 规范，字段命名使用 snake_case
+- ✅ **响应包装**: Controller 层负责将业务数据包装为 `erp.ResponseInfo`
+- ✅ **错误信息**: 使用中文，便于运维和调试
+- ✅ **字段验证**: 在 Controller 层进行参数校验
 
----
+### 数据库规范 (database.mdc)
 
-## 🔄 代码复用分析
+- ✅ **无变更**: 本功能不涉及数据库表结构变更
+- ✅ **复用表**: 使用现有的 `Mode of Payment` 相关表
+- ✅ **缓存优化**: 依赖 `GetModeOfPayment` 服务的缓存机制
 
-### 可复用的现有组件
+### 安全规范 (security.mdc)
 
-1. **GetModeOfPayment 服务**
-   - 路径：`ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
-   - 方法：`GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*selling.ModeOfPayment, error)`
-   - 用途：通过 `payment_id` 查询支付方式信息
-   - 复用方式：在 `OpenPosEntry` Logic 中直接调用
-
-2. **OpenPosEntry 现有逻辑**
-   - 路径：`ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
-   - 方法：`OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error)`
-   - 复用方式：在现有逻辑基础上增加参数校验和自动查询
-
-3. **ClosePosEntry PaymentID 支持实现**
-   - 路径：`ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
-   - 参考：`buildClosingEntryDetails` 方法中的 PaymentID 处理逻辑
-   - 复用方式：类似的参数校验和自动查询逻辑
-
-4. **错误处理**
-   - 使用：`github.com/gogf/gf/v2/errors/gerror`
-   - 方法：`gerror.New()`, `gerror.Wrapf()`
-
-### 集成点
-
-- **现有 API**：扩展 `OpenPosEntry` 接口，不新增接口
-- **内部服务**：集成 `GetModeOfPayment` 服务进行支付方式查询
-- **数据流**：`payment_id` → `GetModeOfPayment` → `mode_of_payment` → 原有开账逻辑
+- ✅ **身份验证**: gRPC 接口已有身份验证机制
+- ✅ **参数校验**: 防止无效输入，校验 `payment_id` 和 `mode_of_payment` 的有效性
+- ✅ **错误信息**: 不泄露敏感数据，只返回必要的错误上下文
 
 ---
 
 ## 🏗️ 架构设计
 
-### 分层设计原则
-
-**Go BMP 微服务架构**：
+### 系统架构
 
 ```
-gRPC Controller 层
-  ↓ 调用
-Logic 层（业务逻辑）
-  ↓ 调用（如需要）
-Service 层（服务调用）
-  ↓
-DAO 层（数据访问）
-  ↓
-Database
-```
-
-**本功能的层次调用**：
-
-```
-OpenPosEntry gRPC Controller
-  ↓
-OpenPosEntry Logic
-  ↓ (if payment_id not empty)
-GetModeOfPayment Service
-  ↓
-原有开账逻辑
-  ↓
+调用方 (Main/Admin)
+    ↓ (gRPC)
+ttpos-bmp Controller
+    ↓ (参数校验)
+ttpos-bmp Logic
+    ↓ (业务逻辑 + 自动查询)
+GetModeOfPayment Service (缓存)
+    ↓
 ERPNext API
+    ↓
+数据库 (Mode of Payment)
 ```
 
-### 组件职责
+### 组件关系
 
-| 组件 | 职责 | 输入 | 输出 |
-|------|------|------|------|
-| **Controller** | 参数校验、响应包装 | `OpenPosEntryReq` | `ResponseInfo` |
-| **Logic** | 业务逻辑、自动查询 | `OpenPosEntryReq` | `OpenPosEntryResp` 或 error |
-| **GetModeOfPayment Service** | 查询支付方式 | `GetModeOfPaymentReq` | `ModeOfPayment` 或 error |
+| 组件 | 职责 | 依赖关系 |
+|------|------|----------|
+| **Controller** | 参数校验、响应包装 | Logic 层 |
+| **Logic** | 业务逻辑、自动查询 | Service 层 |
+| **Service** | 支付方式查询服务 | ERPNext API |
+| **Repository** | 数据访问 | 数据库 |
+
+### 数据流
+
+1. **请求到达**: Controller 接收 gRPC 请求
+2. **参数校验**: Controller 校验 `payment_id` 和 `mode_of_payment` 参数
+3. **业务处理**: Logic 处理开账业务逻辑
+4. **自动查询**: 如提供 `payment_id`，调用 `GetModeOfPayment` 服务
+5. **ERP 操作**: 使用查询到的 `mode_of_payment` 调用 ERPNext API
+6. **响应返回**: Controller 包装响应返回给调用方
 
 ---
 
-## 📊 数据模型
+## 💾 数据模型
 
-### Go DTO 定义
+### Protobuf 定义
 
-本功能不需要新增 DTO，使用 Protobuf 生成的类型：
-
-**OpenPosEntryDetail（更新后）**：
-```go
-type OpenPosEntryDetail struct {
-    ModeOfPayment *string `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3,oneof"`
-    OpeningAmount float64 `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3"`
-    PaymentId     *string `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3,oneof"`
-}
-```
-
-**GetModeOfPaymentReq**：
-```go
-type GetModeOfPaymentReq struct {
-    Name      *string `protobuf:"bytes,1,opt,name=name,proto3,oneof"`
-    PaymentId *string `protobuf:"bytes,2,opt,name=payment_id,json=paymentId,proto3,oneof"`
-}
-```
-
-### 数据转换流程
-
-```
-OpenPosEntryDetail.PaymentId
-  ↓ (非空)
-GetModeOfPaymentReq{PaymentId: detail.PaymentId}
-  ↓ 调用 GetModeOfPayment
-GetModeOfPaymentResp.Name
-  ↓ 提取
-modeOfPayment (string)
-  ↓ 用于
-OpenPosEntry 原有逻辑
-```
-
----
-
-## 🔌 API 设计
-
-### gRPC API
-
-#### Protobuf 定义变更
-
-**文件**: `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto`
-
-**变更前**:
 ```protobuf
-message OpenPosEntryDetail {
-  string mode_of_payment = 1; // 支付方式
-  double opening_amount = 2; // 开帐金额
-}
-```
-
-**变更后**:
-```protobuf
+// OpenPosEntryDetail 开账明细
 message OpenPosEntryDetail {
   optional string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
   double opening_amount = 2; // 开帐金额,必填
@@ -184,187 +96,190 @@ message OpenPosEntryDetail {
 }
 ```
 
-#### 代码生成命令
+### Go DTO 定义
 
-```bash
-cd ttpos-bmp/app/ttpos-erp
-gf gen pb
-```
-
-#### 请求示例
-
-**场景 1：使用 payment_id**
-```json
-{
-  "pos_profile_name": "Main Counter",
-  "cashier_email": "cashier@example.com",
-  "company_abbr": "TTPOS",
-  "period_start_date": 1703980800,
-  "open_pos_entry_detail": [
-    {
-      "payment_id": "PID1234567890123456",
-      "opening_amount": 1000.00
-    }
-  ]
+```go
+// OpenPosEntryDetail 开账明细 DTO
+type OpenPosEntryDetail struct {
+    ModeOfPayment *string  `json:"mode_of_payment,omitempty"` // 支付方式
+    OpeningAmount float64  `json:"opening_amount"`            // 开账金额
+    PaymentId     *string  `json:"payment_id,omitempty"`      // 支付方式 ID
 }
 ```
 
-**场景 2：使用 mode_of_payment（向后兼容）**
-```json
-{
-  "pos_profile_name": "Main Counter",
-  "cashier_email": "cashier@example.com",
-  "company_abbr": "TTPOS",
-  "period_start_date": 1703980800,
-  "open_pos_entry_detail": [
-    {
-      "mode_of_payment": "Cash",
-      "opening_amount": 1000.00
-    }
-  ]
-}
-```
+### 关键变更
+
+| 字段 | 原类型 | 新类型 | 说明 |
+|------|--------|--------|------|
+| `mode_of_payment` | `string` | `optional string` | 支持可选，提供向后兼容性 |
+| `payment_id` | 不存在 | `optional string` (字段编号 3) | 新增字段，支持 PaymentID 查询 |
 
 ---
 
-## ⚡ 核心实现
+## 🔌 API 设计
 
-### Controller 层实现
+### gRPC 接口
+
+**接口名称**: `OpenPosEntry`
+
+**请求消息**: `OpenPosEntryReq`
+```protobuf
+message OpenPosEntryReq {
+  string pos_profile_name = 1; // Pos Profile名称,必填
+  string cashier_email = 2;    // 收银员邮箱,必填
+  string company_abbr = 3;     // 公司缩写,必填
+  int64 period_start_date = 5; // 周期开始时间,必填
+  repeated OpenPosEntryDetail open_pos_entry_detail = 6; // 开帐详情,必填
+  string branch = 7; // 分店名称,可选
+}
+```
+
+**响应消息**: `OpenPosEntryResp`
+```protobuf
+message OpenPosEntryResp {
+  string open_pos_entry_name = 1; // 开帐的Pos Profile名称
+}
+```
+
+### 参数校验规则
+
+1. **必填参数**:
+   - `pos_profile_name`: POS Profile 名称
+   - `cashier_email`: 收银员邮箱
+   - `company_abbr`: 公司缩写
+   - `period_start_date`: 周期开始时间
+   - `open_pos_entry_detail`: 开账明细列表（至少一个）
+
+2. **OpenPosEntryDetail 参数校验**:
+   - `payment_id` 和 `mode_of_payment` 不能同时为空
+   - 允许同时提供两个参数（优先使用 `payment_id`）
+   - `opening_amount` 必须 ≥ 0
+
+### 错误处理
+
+| 错误场景 | 错误码 | 错误信息示例 |
+|----------|--------|--------------|
+| 两个参数都为空 | PARAMETER_ERROR | `open_pos_entry_detail[0]: payment_id 和 mode_of_payment 不能同时为空` |
+| payment_id 查询失败 | SERVICE_ERROR | `查询支付方式失败，payment_id: PID123456` |
+| 支付方式不存在 | NOT_FOUND | `支付方式不存在或未启用，payment_id: PID123456` |
+| ERP 调用失败 | ERP_ERROR | `创建开账记录失败: {ERP错误信息}` |
+
+---
+
+## 🔧 实现方案
+
+### Phase 1: Protobuf 定义调整
+
+**文件**: `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto`
+
+**变更内容**:
+```protobuf
+// 修改前
+message OpenPosEntryDetail {
+  string mode_of_payment = 1; // 支付方式
+  double opening_amount = 2; // 开帐金额
+}
+
+// 修改后
+message OpenPosEntryDetail {
+  optional string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
+  double opening_amount = 2; // 开帐金额,必填
+  optional string payment_id = 3; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
+}
+```
+
+**命令**: `cd ttpos-bmp/app/ttpos-erp && gf gen pb`
+
+### Phase 2: Controller 层参数校验
 
 **文件**: `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/selling/selling.go`
 
-**实现要点**：
-
+**实现逻辑**:
 ```go
+// OpenPosEntry 开账
 func (*Controller) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*api.ResponseInfo, error) {
-    // 参数校验
+    // 验证开账详情
     for i, detail := range req.OpenPosEntryDetail {
-        // 校验 payment_id 和 mode_of_payment 不能同时为空
-        if (detail.PaymentId == nil || *detail.PaymentId == "") &&
-           (detail.ModeOfPayment == nil || *detail.ModeOfPayment == "") {
+        // 参数校验：payment_id 和 mode_of_payment 不能同时为空
+        if (detail.PaymentId == nil || strings.TrimSpace(*detail.PaymentId) == "") &&
+            (detail.ModeOfPayment == nil || strings.TrimSpace(*detail.ModeOfPayment) == "") {
             return rpc.ApiError(fmt.Sprintf("open_pos_entry_detail[%d]: payment_id 和 mode_of_payment 不能同时为空", i)), nil
         }
+        // 其他校验逻辑...
     }
 
     // 调用 Logic 层
     resp, err := service.Selling().OpenPosEntry(ctx, req)
-    if err != nil {
-        return rpc.ApiError(err.Error()), nil
-    }
-
-    return rpc.ApiSuccess("success", resp), nil
+    // ...
 }
 ```
 
-### Logic 层实现
+### Phase 3: Logic 层自动查询
 
 **文件**: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
 
-**核心方法**：
-
-1. **处理 OpenPosEntryDetail 的辅助方法**：
+**核心逻辑**: 参考已实现的 `buildClosingEntryDetails` 方法，创建类似的 `buildOpeningEntryDetails` 方法。
 
 ```go
-// buildOpeningEntryDetails 构建开账明细（支持 payment_id 自动查询）
+// buildOpeningEntryDetails 构建开账明细
 func (s *sSelling) buildOpeningEntryDetails(ctx context.Context, details []*selling.OpenPosEntryDetail) ([]erp.POSOpeningEntryDetail, error) {
-    openDetails := make([]erp.POSOpeningEntryDetail, 0)
+    var openingDetails []erp.POSOpeningEntryDetail
     
     for i, detail := range details {
         var modeOfPayment string
-
+        
         // 如果提供了 payment_id，自动查询 mode_of_payment
         if detail.PaymentId != nil && *detail.PaymentId != "" {
             getModeResp, err := service.Selling().GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
                 PaymentId: detail.PaymentId,
             })
             if err != nil {
-                g.Log().Error(ctx, "查询支付方式失败",
-                    g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
+                g.Log().Error(ctx, "查询支付方式失败", g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
                 return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
             }
-
+            
             if getModeResp == nil || getModeResp.Name == "" {
                 return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
             }
-
+            
             modeOfPayment = getModeResp.Name
-
+            
             g.Log().Info(ctx, "开账详情: 通过 payment_id 查询到 mode_of_payment",
                 g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
         } else if detail.ModeOfPayment != nil {
             // 直接使用 mode_of_payment（向后兼容）
             modeOfPayment = *detail.ModeOfPayment
         }
-
-        openDetails = append(openDetails, erp.POSOpeningEntryDetail{
+        
+        openingDetails = append(openingDetails, erp.POSOpeningEntryDetail{
             ModeOfPayment: modeOfPayment,
             OpeningAmount: detail.OpeningAmount,
         })
     }
     
-    return openDetails, nil
+    return openingDetails, nil
 }
 ```
 
-2. **更新 OpenPosEntry 方法**：
+### Phase 4: 集成现有逻辑
 
+**文件**: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
+
+**OpenPosEntry 方法更新**:
 ```go
 func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error) {
     // 构建开账明细（支持 payment_id 自动查询 mode_of_payment）
-    openDetails, err := s.buildOpeningEntryDetails(ctx, req.OpenPosEntryDetail)
+    openingDetails, err := s.buildOpeningEntryDetails(ctx, req.OpenPosEntryDetail)
     if err != nil {
         return nil, err
     }
 
-    // 原有开账逻辑...
-    // 使用 openDetails 继续处理
+    // 构建开账请求（使用查询到的 mode_of_payment）
+    reqInfo := s.buildOpeningEntryRequest(req, openingDetails)
+    
+    // 后续逻辑保持不变...
 }
-```
-
----
-
-## 🚨 错误处理
-
-### 错误场景和处理策略
-
-| 错误场景 | 错误码 | 错误信息 | HTTP 状态码 | 处理方式 |
-|---------|--------|---------|------------|---------|
-| 两个参数都为空 | INVALID_PARAM | `open_pos_entry_detail[{index}]: payment_id 和 mode_of_payment 不能同时为空` | 400 | Controller 层校验，立即返回 |
-| payment_id 查询失败 | QUERY_FAILED | `查询支付方式失败，payment_id: {payment_id}` | 500 | Logic 层处理，使用 `gerror.Wrapf` 包装原始错误 |
-| 支付方式不存在 | NOT_FOUND | `支付方式不存在或未启用，payment_id: {payment_id}` | 404 | Logic 层检查，返回明确错误 |
-| 网络超时 | TIMEOUT | `查询支付方式超时，payment_id: {payment_id}` | 504 | 由 GetModeOfPayment 内部处理 |
-
-### 错误处理实现
-
-```go
-// Controller 层：参数校验错误
-if bothEmpty {
-    return rpc.ApiError(fmt.Sprintf("open_pos_entry_detail[%d]: payment_id 和 mode_of_payment 不能同时为空", i)), nil
-}
-
-// Logic 层：查询失败错误
-if err != nil {
-    g.Log().Error(ctx, "查询支付方式失败",
-        g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
-    return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
-}
-
-// Logic 层：支付方式不存在错误
-if getModeResp == nil || getModeResp.Name == "" {
-    return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
-}
-```
-
-### 日志记录
-
-```go
-// 成功查询日志
-g.Log().Info(ctx, "开账详情: 通过 payment_id 查询到 mode_of_payment",
-    g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
-
-// 查询失败日志
-g.Log().Error(ctx, "查询支付方式失败",
-    g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
 ```
 
 ---
@@ -375,167 +290,118 @@ g.Log().Error(ctx, "查询支付方式失败",
 
 **文件**: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
 
-**测试用例**：
+**测试场景**:
+1. **参数校验测试**: 验证两个参数同时为空时的错误处理
+2. **自动查询测试**: Mock `GetModeOfPayment` 服务，测试成功和失败场景
+3. **向后兼容测试**: 仅提供 `mode_of_payment` 的正常处理
+4. **优先级测试**: 同时提供两个参数时的处理逻辑
 
-1. **参数校验测试**
-   ```go
-   func Test_OpenPosEntryDetail_ValidationLogic(t *testing.T)
-   ```
-   - 两个参数都为空
-   - 两个参数都为空字符串
-   - 只有 payment_id 不为空
-   - 只有 mode_of_payment 不为空
-   - 两个参数都不为空
-
-2. **自动查询测试**（需要 Mock）
-   - payment_id 查询成功
-   - payment_id 查询失败
-   - 支付方式未启用
-
-3. **向后兼容测试**
-   - 仅使用 mode_of_payment
+**覆盖率目标**: Logic 层 ≥ 80%
 
 ### 集成测试
 
-**测试场景**：
+**工具**: grpcurl / BloomRPC
 
-1. 使用 payment_id 开账成功
-2. 使用 mode_of_payment 开账成功（向后兼容）
-3. 参数都为空时返回错误
-4. payment_id 无效时返回错误
-5. 混合使用多个 detail
+**测试用例**:
+1. 使用 `payment_id` 开账（成功）
+2. 使用 `mode_of_payment` 开账（向后兼容）
+3. 两个参数都为空（错误）
+4. `payment_id` 不存在（错误）
+5. 同时提供两个参数（优先使用 `payment_id`）
 
-**测试工具**：grpcurl 或 BloomRPC
+### 验收标准
 
-**参考**: `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/integration-testing-guide.md`
-
----
-
-## 📈 性能考虑
-
-### 性能指标
-
-- **GetModeOfPayment 查询时间**: < 100ms（有缓存）
-- **整体接口响应时间**: 不显著增加（< 50ms）
-- **缓存命中率**: > 90%（GetModeOfPayment 内部缓存）
-
-### 优化策略
-
-1. **利用现有缓存**
-   - GetModeOfPayment 服务内部已有缓存机制
-   - 无需额外缓存层
-
-2. **错误快速返回**
-   - 参数校验在 Controller 层立即返回
-   - 避免不必要的服务调用
-
-3. **并发处理**
-   - 如果有多个 detail，顺序处理即可
-   - 查询量通常较小（1-3 个）
+1. **功能测试**: 所有测试场景通过
+2. **性能测试**: 接口响应时间 < 500ms
+3. **兼容性测试**: 现有调用方式不受影响
 
 ---
 
-## 🔐 安全考虑
+## 📊 性能评估
 
-### 安全措施
+### 性能影响分析
 
-1. **参数校验**
-   - 防止空值攻击
-   - 防止注入攻击（Protobuf 自动处理）
+| 场景 | 影响 | 说明 |
+|------|------|------|
+| 仅使用 `mode_of_payment` | 无 | 保持原有性能 |
+| 使用 `payment_id` | +50-100ms | 单次查询开销 |
+| 批量开账 | 线性增加 | 按 detail 数量线性增加 |
 
-2. **错误信息**
-   - 不泄露敏感信息
-   - 不暴露内部实现细节
+### 优化措施
 
-3. **身份验证**
-   - gRPC 接口需要身份验证（已有机制）
-   - 使用现有的认证中间件
+1. **缓存机制**: 依赖 `GetModeOfPayment` 服务的内部缓存
+2. **并发查询**: 如有性能需求，可考虑并发查询多个 `payment_id`
+3. **批量查询**: 未来可扩展为批量查询 API
 
----
+### 监控指标
 
-## 📝 文档要求
-
-### Protobuf 注释
-
-```protobuf
-message OpenPosEntryDetail {
-  optional string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
-  double opening_amount = 2; // 开帐金额,必填
-  optional string payment_id = 3; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
-  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
-}
-```
-
-### 代码注释
-
-```go
-// buildOpeningEntryDetails 构建开账明细
-// 参数：
-//   - ctx: 上下文
-//   - details: 开账明细列表
-//
-// 返回：
-//   - []erp.POSOpeningEntryDetail: 开账明细列表
-//   - error: 错误信息
-//
-// 注意：
-//   - 如果 payment_id 不为空，自动调用 GetModeOfPayment 查询 mode_of_payment
-//   - 如果 payment_id 为空，直接使用 mode_of_payment（向后兼容）
-func (s *sSelling) buildOpeningEntryDetails(ctx context.Context, details []*selling.OpenPosEntryDetail) ([]erp.POSOpeningEntryDetail, error)
-```
+- 接口响应时间 (P95 < 500ms)
+- 查询成功率 (> 99%)
+- 缓存命中率 (> 90%)
 
 ---
 
-## 🎯 验收标准
+## 🔄 部署方案
 
-### 功能验收
+### 部署步骤
 
-- [x] Protobuf 定义包含 `payment_id` 字段
-- [x] `mode_of_payment` 改为 optional
-- [ ] 参数校验逻辑正确（两个参数不能同时为空）
-- [ ] 自动查询功能正常（payment_id 不为空时）
-- [ ] 查询失败时返回明确错误
-- [ ] 向后兼容（仅 mode_of_payment 时正常工作）
+1. **代码部署**: 部署 ttpos-bmp 服务新版本
+2. **服务重启**: 重启 ttpos-bmp 服务
+3. **Nacos 更新**: 服务注册信息自动更新
+4. **调用方更新**: 可逐步更新调用方代码（向后兼容）
 
-### 测试验收
+### 回滚方案
 
-- [ ] 单元测试覆盖率 ≥ 80%
-- [ ] 所有测试用例通过
-- [ ] 手动集成测试通过
+1. **快速回滚**: 部署上一版本
+2. **配置开关**: 可考虑添加功能开关控制 `payment_id` 支持
+3. **监控告警**: 部署后 24 小时内重点监控
 
-### 文档验收
+### 验证检查
 
-- [x] Protobuf 注释完整
-- [ ] 代码注释清晰
-- [ ] CHANGELOG.md 已更新
-- [x] 集成测试指南已创建
+- [ ] 服务启动成功
+- [ ] Nacos 服务注册正常
+- [ ] 现有调用方式正常工作
+- [ ] 新功能调用正常工作
 
 ---
 
-## 📚 参考资料
+## 📈 扩展性考虑
 
-### 相关规范
+### 未来扩展
+
+1. **批量查询**: 实现 `GetModeOfPayments` 批量查询 API
+2. **缓存增强**: 增加应用层缓存
+3. **配置开关**: 支持动态开启/关闭 `payment_id` 功能
+
+### 技术债务
+
+- **代码复用**: `buildOpeningEntryDetails` 与 `buildClosingEntryDetails` 逻辑相似，可考虑提取公共方法
+- **错误处理**: 统一错误码定义
+- **监控指标**: 完善性能监控
+
+---
+
+## 🔗 相关文档
+
+### 参考实现
+
+- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/design.md` - 关账接口 PaymentID 支持设计（已完成，可直接参考）
+
+### 核心规范
 
 - `ttpos-bmp/.cursor/rules/go-rules.mdc` - Go BMP 开发规范
 - `ttpos-bmp/.cursor/rules/proto-rules.mdc` - Protobuf 开发规范
 - `.cursor/rules/go-bmp.mdc` - Go BMP 微服务规范
-- `.cursor/rules/api.mdc` - API 设计规范
 
-### 相关实现
+### 相关代码
 
-- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/` - ClosePosEntry PaymentID 支持（参考实现）
-- `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go` - 现有实现
-
-### 外部文档
-
-- [GoFrame 官方文档](https://goframe.org)
-- [Protobuf 官方文档](https://developers.google.com/protocol-buffers)
+- `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto` - Protobuf 定义
+- `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go` - Logic 实现
+- `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/selling/selling.go` - Controller 实现
 
 ---
 
-**版本**: v1.0.0  
+**模板版本**: v1.0.0  
 **创建日期**: 2025-12-24  
 **作者**: rikugun  
 **审核者**: -
-
-

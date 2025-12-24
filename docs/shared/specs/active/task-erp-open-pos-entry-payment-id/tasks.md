@@ -38,15 +38,12 @@
   - File: `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto`
   - Purpose: 在 `OpenPosEntryDetail` 消息中增加 `payment_id` 字段支持
   - Requirements: 1.1, 1.2, 1.3, 1.4
-  - Leverage: 
-    - 现有的 `selling.proto` 文件
-    - 参考 `PosInvoicePayment` 消息（已支持 payment_id）
-    - 参考 `ClosePosEntryDetail` 实现（已完成）
+  - Leverage: 现有的 `selling.proto` 文件，参考 `ClosePosEntryDetail` 消息（已支持 payment_id）
   - Changes:
     - 将 `OpenPosEntryDetail.mode_of_payment` 字段改为 `optional string`
     - 新增 `OpenPosEntryDetail.payment_id` 字段（`optional string`，字段编号 3）
     - 添加字段注释说明两个字段的关系（与 mode_of_payment 二选一）
-  - Prompt: 
+  - Prompt:
     ```
     Role: gRPC Developer
 
@@ -56,7 +53,7 @@
     - File: ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto
     - Message: OpenPosEntryDetail
     - Requirements: 支持通过 payment_id 或 mode_of_payment 指定支付方式，两者至少提供一个
-    - Reference: ClosePosEntryDetail 已有类似实现
+    - Reference: ClosePosEntryDetail 消息已有类似设计
 
     Changes Required:
     1. 将 mode_of_payment 字段改为 optional string（字段编号 1）
@@ -98,18 +95,16 @@
 
 ---
 
-## Phase 2: Controller 层实现
+## Phase 2: Logic 层实现
 
-### 参数校验
+### 参数校验和自动查询
 
 - [ ] 2.1 实现参数校验逻辑
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/controller/rpc/selling/selling.go`
-  - Purpose: 在 `OpenPosEntry` Controller 中添加参数校验逻辑
+  - Purpose: 在 `OpenPosEntry` 方法中添加参数校验逻辑
   - Requirements: 2.1, 2.2, 2.3, 2.4
-  - Leverage: 
-    - 现有的 `OpenPosEntry` Controller 实现
-    - 参考 `ClosePosEntry` Controller 的参数校验逻辑
+  - Leverage: 现有的 `OpenPosEntry` 方法实现
   - Changes:
     - 在处理 `req.OpenPosEntryDetail` 列表时，对每个 detail 进行校验
     - 检查 `detail.PaymentId` 和 `detail.ModeOfPayment` 是否同时为空
@@ -118,30 +113,29 @@
     ```
     Role: Go Developer with GoFrame expertise
 
-    Task: 在 OpenPosEntry Controller 中添加参数校验逻辑
+    Task: 在 OpenPosEntry 方法中添加参数校验逻辑
 
     Context:
     - File: ttpos-bmp/app/ttpos-erp/internal/controller/rpc/selling/selling.go
     - Method: func (*Controller) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*api.ResponseInfo, error)
     - Requirements: 校验 payment_id 和 mode_of_payment 不能同时为空
-    - Reference: ClosePosEntry Controller 已有类似校验
 
     Implementation:
-    在调用 Logic 层前，添加参数校验：
+    在循环处理 req.OpenPosEntryDetail 时，添加校验：
     ```go
-    // 验证开账详情
     for i, detail := range req.OpenPosEntryDetail {
-        // 参数校验：payment_id 和 mode_of_payment 不能同时为空
-        if (detail.PaymentId == nil || strings.TrimSpace(*detail.PaymentId) == "") &&
-           (detail.ModeOfPayment == nil || strings.TrimSpace(*detail.ModeOfPayment) == "") {
+        // 参数校验
+        if (detail.PaymentId == nil || *detail.PaymentId == "") &&
+           (detail.ModeOfPayment == nil || *detail.ModeOfPayment == "") {
             return rpc.ApiError(fmt.Sprintf("open_pos_entry_detail[%d]: payment_id 和 mode_of_payment 不能同时为空", i)), nil
         }
-        // ... 其他校验
+
+        // ... 后续处理
     }
     ```
 
     Restrictions:
-    - 使用 rpc.ApiError() 返回错误
+    - 使用 rpc.ApiError() 创建错误
     - 错误信息使用中文
     - 包含索引 i 便于定位问题
 
@@ -150,50 +144,42 @@
     - 错误信息包含 detail 的索引
     ```
 
----
-
-## Phase 3: Logic 层实现
-
-### 自动查询逻辑
-
-- [ ] 3.1 创建或修改辅助方法处理 OpenPosEntryDetail
+- [ ] 2.2 实现自动查询 mode_of_payment
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
-  - Purpose: 创建辅助方法处理 OpenPosEntryDetail，支持 payment_id 自动查询
+  - Purpose: 当 payment_id 不为空时，自动调用 GetModeOfPayment 查询对应的支付方式名称
   - Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
-  - Leverage: 参考 `buildClosingEntryDetails` 方法实现
+  - Leverage:
+    - 现有的 `GetModeOfPayment` 方法
+    - Task 2.1 的参数校验逻辑
+    - 参考 `buildClosingEntryDetails` 方法的实现
   - Changes:
     - 创建 `buildOpeningEntryDetails` 方法
-    - 实现 payment_id 不为空时的自动查询逻辑
-    - 实现向后兼容（仅使用 mode_of_payment）
+    - 在方法中检查 `detail.PaymentId` 是否不为空
+    - 如果不为空，调用 `service.Selling().GetModeOfPayment()`
+    - 提取 `resp.Name` 用于后续处理
+    - 如果为空，使用 `detail.ModeOfPayment`
   - Prompt:
     ```
     Role: Go Developer with business logic expertise
 
-    Task: 创建 buildOpeningEntryDetails 方法，支持 payment_id 自动查询
+    Task: 在 OpenPosEntry 方法中实现自动查询 mode_of_payment 的逻辑
 
     Context:
     - File: ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go
-    - Method: 新建 buildOpeningEntryDetails 方法
+    - Method: func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error)
     - Requirements: 当 payment_id 不为空时，调用 GetModeOfPayment 查询对应的 mode_of_payment
-    - Reference: buildClosingEntryDetails 方法（ClosePosEntry 的实现）
+    - Leverage: service.Selling().GetModeOfPayment() 服务，参考 buildClosingEntryDetails 方法
 
     Implementation:
+    创建 buildOpeningEntryDetails 方法：
     ```go
-    // buildOpeningEntryDetails 构建开账明细
-    // 参数：
-    //   - ctx: 上下文
-    //   - details: 开账明细列表
-    //
-    // 返回：
-    //   - []erp.POSOpeningEntryDetail: 开账明细列表
-    //   - error: 错误信息
     func (s *sSelling) buildOpeningEntryDetails(ctx context.Context, details []*selling.OpenPosEntryDetail) ([]erp.POSOpeningEntryDetail, error) {
-        openDetails := make([]erp.POSOpeningEntryDetail, 0)
-        
+        var openingDetails []erp.POSOpeningEntryDetail
+
         for i, detail := range details {
             var modeOfPayment string
-            
+
             // 如果提供了 payment_id，自动查询 mode_of_payment
             if detail.PaymentId != nil && *detail.PaymentId != "" {
                 getModeResp, err := service.Selling().GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
@@ -204,27 +190,27 @@
                         g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
                     return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
                 }
-                
+
                 if getModeResp == nil || getModeResp.Name == "" {
                     return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
                 }
-                
+
                 modeOfPayment = getModeResp.Name
-                
+
                 g.Log().Info(ctx, "开账详情: 通过 payment_id 查询到 mode_of_payment",
                     g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
             } else if detail.ModeOfPayment != nil {
                 // 直接使用 mode_of_payment（向后兼容）
                 modeOfPayment = *detail.ModeOfPayment
             }
-            
-            openDetails = append(openDetails, erp.POSOpeningEntryDetail{
+
+            openingDetails = append(openingDetails, erp.POSOpeningEntryDetail{
                 ModeOfPayment: modeOfPayment,
                 OpeningAmount: detail.OpeningAmount,
             })
         }
-        
-        return openDetails, nil
+
+        return openingDetails, nil
     }
     ```
 
@@ -241,143 +227,75 @@
     - payment_id 为空时使用原有逻辑（向后兼容）
     ```
 
-- [ ] 3.2 更新 OpenPosEntry 方法调用新的辅助方法
+- [ ] 2.3 更新原有逻辑使用查询结果
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
-  - Purpose: 在 OpenPosEntry 方法中调用新的 buildOpeningEntryDetails 方法
+  - Purpose: 确保原有关账逻辑使用查询得到的 modeOfPayment 变量
   - Requirements: 3.4, 3.5, 4.1, 4.2, 4.3
-  - Leverage: Task 3.1 的 buildOpeningEntryDetails 方法
+  - Leverage: Task 2.2 的查询逻辑
   - Changes:
-    - 找到 OpenPosEntry 方法中处理 OpenPosEntryDetail 的部分
-    - 替换为调用 buildOpeningEntryDetails 方法
-    - 处理可能的错误
-  - Prompt:
-    ```
-    Role: Go Developer
+    - 修改 `OpenPosEntry` 方法调用 `buildOpeningEntryDetails`
+    - 将原有直接使用 `detail.ModeOfPayment` 的地方改为使用 `modeOfPayment` 变量
+    - 确保不影响其他逻辑的执行
+  - Success: 原有逻辑正常工作，使用统一的 modeOfPayment 变量
 
-    Task: 在 OpenPosEntry 方法中集成 buildOpeningEntryDetails 方法
-
-    Context:
-    - File: ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go
-    - Method: func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error)
-    - Requirements: 调用 buildOpeningEntryDetails 处理开账详情
-
-    Implementation:
-    找到原有处理 OpenPosEntryDetail 的代码，替换为：
-    ```go
-    // 构建开账明细（支持 payment_id 自动查询 mode_of_payment）
-    openDetails, err := s.buildOpeningEntryDetails(ctx, req.OpenPosEntryDetail)
-    if err != nil {
-        return nil, err
-    }
-    
-    // 使用 openDetails 继续后续处理
-    // ...
-    ```
-
-    Success Criteria:
-    - OpenPosEntry 方法调用 buildOpeningEntryDetails
-    - 错误处理正确
-    - 原有逻辑不受影响
-    ```
-
-- [ ] 3.3 添加代码注释
+- [ ] 2.4 添加代码注释
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go`
   - Purpose: 为新增逻辑添加清晰的中文注释
   - Requirements: 所有需求
-  - Leverage: Task 3.1, 3.2 的实现
+  - Leverage: Task 2.1, 2.2, 2.3 的实现
   - Changes:
-    - 为 buildOpeningEntryDetails 方法添加完整注释
+    - 为参数校验逻辑添加注释
     - 为自动查询逻辑添加注释
     - 说明向后兼容性处理
   - Success: 代码注释完整，逻辑清晰易懂
 
 ---
 
-## Phase 4: 单元测试
+## Phase 3: 单元测试
 
-- [ ] 4.1 编写参数校验测试
+- [ ] 3.1 编写参数校验测试
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
   - Purpose: 测试参数校验逻辑（payment_id 和 mode_of_payment 同时为空）
   - Requirements: 2.1, 2.2, 2.3
-  - Leverage: 现有的测试文件结构，参考 ClosePosEntry 的测试
+  - Leverage: 现有的测试文件结构
   - Test Cases:
     - 测试两个参数都为空的情况
-    - 测试两个参数都为空字符串
-    - 测试只有 payment_id 不为空
-    - 测试只有 mode_of_payment 不为空
-    - 测试两个参数都不为空
+    - 验证返回的错误信息格式正确
   - Prompt:
     ```
     Role: QA Engineer with Go testing expertise
 
-    Task: 为 OpenPosEntryDetail 编写参数校验测试
+    Task: 为 OpenPosEntry 方法编写参数校验测试
 
     Context:
     - File: ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go
-    - Test Subject: OpenPosEntryDetail 参数校验逻辑
-    - Reference: Test_ClosePosEntryDetail_ValidationLogic 测试
+    - Method: OpenPosEntry
+    - Test Scenario: payment_id 和 mode_of_payment 同时为空
 
     Test Implementation:
     ```go
-    func Test_OpenPosEntryDetail_ValidationLogic(t *testing.T) {
-        gtest.C(t, func(t *gtest.T) {
-            testCases := []struct {
-                name          string
-                paymentID     *string
-                modeOfPayment *string
-                shouldFail    bool
-            }{
+    func Test_OpenPosEntry_BothEmpty(t *testing.T) {
+        // 测试两个参数都为空的情况
+        req := &selling.OpenPosEntryReq{
+            PosProfileName: "TEST-PROFILE",
+            CashierEmail:   "test@example.com",
+            CompanyAbbr:    "TTPOS",
+            PeriodStartDate: time.Now().Unix(),
+            OpenPosEntryDetail: []*selling.OpenPosEntryDetail{
                 {
-                    name:          "两个参数都为空",
-                    paymentID:     nil,
-                    modeOfPayment: nil,
-                    shouldFail:    true,
+                    // payment_id 和 mode_of_payment 都为 nil
+                    OpeningAmount: 1000.00,
                 },
-                {
-                    name:          "两个参数都为空字符串",
-                    paymentID:     strPtr(""),
-                    modeOfPayment: strPtr(""),
-                    shouldFail:    true,
-                },
-                {
-                    name:          "只有 payment_id 不为空",
-                    paymentID:     strPtr("PID123456"),
-                    modeOfPayment: nil,
-                    shouldFail:    false,
-                },
-                {
-                    name:          "只有 mode_of_payment 不为空",
-                    paymentID:     nil,
-                    modeOfPayment: strPtr("Cash"),
-                    shouldFail:    false,
-                },
-                {
-                    name:          "两个参数都不为空",
-                    paymentID:     strPtr("PID123456"),
-                    modeOfPayment: strPtr("Cash"),
-                    shouldFail:    false,
-                },
-            }
+            },
+        }
 
-            for _, tc := range testCases {
-                t.Logf("测试用例: %s", tc.name)
-                
-                isEmpty := func(s *string) bool {
-                    return s == nil || *s == ""
-                }
-                
-                bothEmpty := isEmpty(tc.paymentID) && isEmpty(tc.modeOfPayment)
-                
-                if tc.shouldFail {
-                    t.AssertEQ(bothEmpty, true)
-                } else {
-                    t.AssertEQ(bothEmpty, false)
-                }
-            }
-        })
+        _, err := service.Selling().OpenPosEntry(ctx, req)
+
+        assert.Error(t, err)
+        assert.Contains(t, err.Error(), "payment_id 和 mode_of_payment 不能同时为空")
     }
     ```
 
@@ -386,48 +304,72 @@
     - 覆盖参数校验逻辑
     ```
 
-- [ ] 4.2 创建集成测试指南
+- [ ] 3.2 编写自动查询测试（成功场景）
 
-  - File: `docs/shared/specs/active/task-erp-open-pos-entry-payment-id/integration-testing-guide.md`
-  - Purpose: 提供完整的手动集成测试指导文档
-  - Requirements: 所有功能需求
-  - Leverage: 参考 `task-erp-close-pos-entry-payment-id/integration-testing-guide.md`
-  - Content: 包含以下测试场景：
-    1. 使用 payment_id 开账（成功）
-    2. 使用 mode_of_payment 开账（向后兼容）
-    3. payment_id 和 mode_of_payment 都为空（失败）
-    4. payment_id 不存在（失败）
-    5. payment_id 对应的支付方式未启用（失败）
-    6. 同时提供 payment_id 和 mode_of_payment
-    7. 混合使用（多个 detail）
-  - Success: 文档完整，测试场景清晰
+  - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
+  - Purpose: 测试使用 payment_id 时的自动查询功能
+  - Requirements: 3.1, 3.2, 3.4
+  - Leverage: Mock `GetModeOfPayment` 服务
+  - Test Cases:
+    - Mock `GetModeOfPayment` 返回成功
+    - 验证开账逻辑正常执行
+    - 验证使用了查询得到的 mode_of_payment
+  - Success: 测试通过，自动查询逻辑正确
+
+- [ ] 3.3 编写自动查询测试（失败场景）
+
+  - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
+  - Purpose: 测试 payment_id 查询失败时的错误处理
+  - Requirements: 3.3
+  - Leverage: Mock `GetModeOfPayment` 服务返回错误
+  - Test Cases:
+    - Mock `GetModeOfPayment` 返回错误
+    - 验证返回的错误信息包含 payment_id
+    - Mock 支付方式未启用，验证错误处理
+  - Success: 测试通过，错误处理正确
+
+- [ ] 3.4 编写向后兼容测试
+
+  - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
+  - Purpose: 测试仅使用 mode_of_payment 的向后兼容性
+  - Requirements: 4.1, 4.2, 4.3, 4.4
+  - Leverage: 现有的开账测试场景
+  - Test Cases:
+    - 仅提供 mode_of_payment（payment_id 为 nil）
+    - 验证开账逻辑正常执行
+    - 验证不调用 GetModeOfPayment
+  - Success: 测试通过，向后兼容性得到保证
+
+- [ ] 3.5 测试覆盖率检查
+
+  - File: -
+  - Purpose: 确保 Logic 层测试覆盖率 ≥ 80%
+  - Requirements: 测试要求
+  - Command: `cd ttpos-bmp/app/ttpos-erp && go test -coverprofile=coverage.out ./internal/logic/selling && go tool cover -func=coverage.out | grep selling.go`
+  - Success: 覆盖率 ≥ 80%，所有测试通过
 
 ---
 
-## Phase 5: 集成测试
+## Phase 4: 集成测试
 
-- [ ] 5.1 手动集成测试
+- [ ] 4.1 手动集成测试
 
   - File: -
   - Purpose: 使用 gRPC 客户端测试各种场景
   - Requirements: 所有功能需求
-  - Reference: `integration-testing-guide.md`
   - Test Scenarios:
     1. 使用真实的 payment_id 进行开账
     2. 使用不存在的 payment_id 验证错误处理
     3. 使用原有的 mode_of_payment 验证向后兼容性
     4. 同时提供两个参数，验证优先使用 payment_id
-    5. 参数都为空的错误处理
-    6. 支付方式未启用的错误处理
-    7. 混合使用多个 detail
   - Tools: grpcurl 或 BloomRPC
   - Success: 所有场景测试通过
 
 ---
 
-## Phase 6: 文档和提交
+## Phase 5: 文档和提交
 
-- [ ] 6.1 更新 CHANGELOG
+- [ ] 5.1 更新 CHANGELOG
 
   - File: `ttpos-bmp/CHANGELOG.md`
   - Purpose: 记录本次功能更新
@@ -437,7 +379,7 @@
     - 格式：`### Enhanced - OpenPosEntry 接口支持通过 PaymentID 指定支付方式`
   - Success: CHANGELOG 更新完成
 
-- [ ] 6.2 提交代码
+- [ ] 5.2 提交代码
 
   - File: -
   - Purpose: 提交所有修改到 Git
@@ -446,15 +388,13 @@
   - Commit Message:
     ```
     feat(ttpos-erp): OpenPosEntry 接口支持 PaymentID
-    
+
     - Protobuf: OpenPosEntryDetail 新增 payment_id 字段
-    - Controller: 参数校验 payment_id 和 mode_of_payment 不能同时为空
     - Logic: 自动查询 mode_of_payment 当 payment_id 不为空时
     - 向后兼容: 保持原有 mode_of_payment 字段可用
-    - 测试: 单元测试和集成测试指南
-    
-    关联 Spec: task-erp-open-pos-entry-payment-id
-    参考实现: task-erp-close-pos-entry-payment-id
+    - 测试: 覆盖率 ≥ 80%
+
+     关联 Spec: task-erp-open-pos-entry-payment-id
     ```
   - Command: `git add . && git commit -m "..." && git push`
   - Success: 代码提交成功
@@ -491,7 +431,6 @@
 - [ ] 代码注释清晰
 - [ ] CHANGELOG.md 已更新
 - [ ] Spec 文档已完成（requirements.md, design.md, tasks.md）
-- [ ] 集成测试指南已创建
 
 ### 规范遵循
 
@@ -512,9 +451,6 @@ grep -c "^- \[" docs/shared/specs/active/task-erp-open-pos-entry-payment-id/task
 
 # 查看已完成任务数
 grep -c "^- \[x\]" docs/shared/specs/active/task-erp-open-pos-entry-payment-id/tasks.md
-
-# 查看未完成任务数
-grep -c "^- \[ \]" docs/shared/specs/active/task-erp-open-pos-entry-payment-id/tasks.md
 
 # 计算完成率
 echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/task-erp-open-pos-entry-payment-id/tasks.md) * 100 / $(grep -c "^- \[" docs/shared/specs/active/task-erp-open-pos-entry-payment-id/tasks.md)" | bc
@@ -541,43 +477,28 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/task-erp-open-pos-e
    - 先完成 Protobuf 定义，确保 API 接口明确
    - 生成代码并验证编译通过
 
-2. **Phase 2: Controller 层实现** (Task 2.1)
-   - 实现参数校验逻辑
+2. **Phase 2: Logic 层实现** (Task 2.1 → 2.2 → 2.3 → 2.4)
+   - 按顺序实现参数校验、自动查询、逻辑集成
+   - 边实现边添加注释
 
-3. **Phase 3: Logic 层实现** (Task 3.1 → 3.2 → 3.3)
-   - 按顺序实现辅助方法、集成调用、添加注释
-
-4. **Phase 4: 单元测试** (Task 4.1 → 4.2)
+3. **Phase 3: 单元测试** (Task 3.1 → 3.2 → 3.3 → 3.4 → 3.5)
    - 完成实现后立即编写测试
-   - 创建集成测试指南
+   - 确保覆盖率达标
 
-5. **Phase 5: 集成测试** (Task 5.1)
+4. **Phase 4: 集成测试** (Task 4.1)
    - 手动测试各种场景
    - 验证端到端功能
 
-6. **Phase 6: 文档和提交** (Task 6.1 → 6.2)
+5. **Phase 5: 文档和提交** (Task 5.1 → 5.2)
    - 更新文档
    - 提交代码
 
 ### 并行执行建议
 
 - Task 1.1, 1.2, 1.3 必须顺序执行
-- Task 2.1, 3.1, 3.2 必须顺序执行
-- Task 4.1 和 4.2 可以并行
-- Task 3.3（添加注释）可以在实现过程中同步完成
-
----
-
-## 参考资料
-
-### 相关实现
-
-- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/` - ClosePosEntry PaymentID 支持（完整参考）
-- `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling.go` - buildClosingEntryDetails 方法
-
-### 测试参考
-
-- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/integration-testing-guide.md` - 集成测试指南
+- Task 2.1, 2.2, 2.3 必须顺序执行
+- Task 3.1-3.4 可以部分并行（不同测试文件）
+- Task 2.4（添加注释）可以在实现过程中同步完成
 
 ---
 
@@ -594,5 +515,3 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/task-erp-open-pos-e
 **创建日期**: 2025-12-24  
 **作者**: rikugun  
 **维护者**: 后端开发组
-
-
