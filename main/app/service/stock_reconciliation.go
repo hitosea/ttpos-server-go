@@ -339,13 +339,28 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 		materialNameMap[material.Uuid] = material.Name
 	}
 
+	// 获取 saas 数据库连接
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	if saasDB == nil {
+		return stockReconciliationUuid, errors.New("saas 数据库连接失败")
+	}
+
+	// 获取公司 UUID（使用总部 UUID 或当前公司 UUID）
+	companyUuid := companySetting.HeadquarterUuid
+	if companyUuid == 0 {
+		companyUuid = ctx.GetCompanyUuid()
+	}
+
 	// 开启事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
 
 		if saveReq.Uuid == 0 { // 新建
-			// 在事务内部生成单据编号
-			orderNo := s.generateOrderNo(tx, timezone)
+			// 生成单据编号
+			orderNo, err := s.generateOrderNo(saasDB, companyUuid, timezone)
+			if err != nil {
+				return errors.WithMessage(err, "生成单据编号失败")
+			}
 			// 创建盘点单
 			stockReconciliation = &model.StockReconciliation{
 				OrderNo:       orderNo,
@@ -852,45 +867,31 @@ func (s *stockReconciliationSrv) RejectStockReconciliation(ctx context.Context, 
 	return nil
 }
 
-// generateOrderNo 生成单据编号（必须在事务内部调用）
-func (s *stockReconciliationSrv) generateOrderNo(db *gorm.DB, timezone string) string {
-	// 生成格式：ST + 年月日 + 0000（4位序列号）
-	// 例如：ST202510160001
-	// 序列号从0001开始递增，每天重置
-	repo := repository.NewStockReconciliationRepo(db)
+// generateOrderNo 生成盘点单编号
+// 格式：ST + yyyyMMddHHmmss + 序列号（4位）
+// 例如：ST202504030915120001
+func (s *stockReconciliationSrv) generateOrderNo(
+	saasDB *gorm.DB,
+	companyUuid uint64,
+	timezone string,
+) (string, error) {
+	// 获取秒级时间戳
+	now := utils.SetTimezone(timezone).Now()
+	timestamp := now.Format("20060102150405") // yyyyMMddHHmmss
 
-	// 使用商家时区格式化日期
-	dateStr := utils.SetTimezone(timezone).Now().Format("20060102")
-	prefix := fmt.Sprintf("ST%s", dateStr)
+	// 获取日期字符串（用于序列号表）
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD
 
-	// 查询当天最大的订单号
-	maxOrderNo, err := repo.GetMaxOrderNoByPrefix(prefix)
+	// 从 ttpos_number_sequence 表获取下一个序列号
+	seqRepo := repository.NewNumberSequenceRepo(saasDB)
+	seq, err := seqRepo.GetNextSequence(companyUuid, constant.NumberTypeStockTake, dateStr)
 	if err != nil {
-		logger.Logger.Error("查询最大单据编号失败", zap.Error(err))
-		// 如果查询失败，返回第一个序列号
-		return fmt.Sprintf("%s0001", prefix)
+		return "", errors.WithMessage(err, "获取序列号失败")
 	}
 
-	// 如果没有找到当天的订单号，从0001开始
-	if maxOrderNo == "" {
-		return fmt.Sprintf("%s0001", prefix)
-	}
-
-	// 从订单号中提取序列号（最后4位）
-	if len(maxOrderNo) < 4 {
-		return fmt.Sprintf("%s0001", prefix)
-	}
-
-	// 获取序列号部分
-	seqStr := maxOrderNo[len(maxOrderNo)-4:]
-	seq := 0
-	fmt.Sscanf(seqStr, "%d", &seq)
-
-	// 序列号+1
-	seq++
-
-	// 生成新的订单号
-	return fmt.Sprintf("%s%04d", prefix, seq)
+	// 组装编号：ST + timestamp + 序列号（4位）
+	orderNo := fmt.Sprintf("ST%s%04d", timestamp, seq)
+	return orderNo, nil
 }
 
 // validateWarehouseAndItems 验证仓库和物品明细

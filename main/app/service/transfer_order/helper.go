@@ -1,11 +1,9 @@
 package transfer_order
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-server-go/app/constant"
@@ -33,50 +31,30 @@ import (
 type transferOrderHelper struct{}
 
 // GenerateOrderNo 生成调拨单订单编号
-// 格式：TR+12位数字（全平台唯一）
-// 组成：8位日期(YYYYMMDD) + 4位序号
-func (h *transferOrderHelper) GenerateOrderNo(db *gorm.DB) string {
-	now := time.Now()
-	dateStr := now.Format("20060102") // 8位日期
+// 格式：TR + yyyyMMddHHmmss + 序列号（4位）
+// 例如：TR202504030915120001
+func (h *transferOrderHelper) GenerateOrderNo(
+	saasDB *gorm.DB,
+	companyUuid uint64,
+	timezone string,
+) (string, error) {
+	// 获取秒级时间戳
+	now := utils.SetTimezone(timezone).Now()
+	timestamp := now.Format("20060102150405") // yyyyMMddHHmmss
 
-	// Redis key: transfer_order:seq:YYYYMMDD
-	redisKey := fmt.Sprintf("transfer_order:seq:%s", dateStr)
-	ctx := context.Background()
+	// 获取日期字符串（用于序列号表）
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD
 
-	// 获取Redis客户端（兼容集群和单机模式）
-	var seq int64
-	var err error
-
-	if clusterClient := cache.Global.GetClusterClient(); clusterClient != nil {
-		// 集群模式
-		seq, err = clusterClient.Incr(ctx, redisKey).Result()
-		if err == nil {
-			clusterClient.Expire(ctx, redisKey, 3*24*time.Hour)
-			if seq > 9999 {
-				clusterClient.Set(ctx, redisKey, 1, 3*24*time.Hour)
-				seq = 1
-			}
-		}
-	} else if client := cache.Global.GetClient(); client != nil {
-		// 单机模式
-		seq, err = client.Incr(ctx, redisKey).Result()
-		if err == nil {
-			client.Expire(ctx, redisKey, 3*24*time.Hour)
-			if seq > 9999 {
-				client.Set(ctx, redisKey, 1, 3*24*time.Hour)
-				seq = 1
-			}
-		}
-	}
-
-	// Redis失败时降级使用时间戳
+	// 从 ttpos_number_sequence 表获取下一个序列号
+	seqRepo := repository.NewNumberSequenceRepo(saasDB)
+	seq, err := seqRepo.GetNextSequence(companyUuid, constant.NumberTypeTransfer, dateStr)
 	if err != nil {
-		return fmt.Sprintf("TR%s%04d", dateStr, now.Unix()%10000)
+		return "", errors.WithMessage(err, "获取序列号失败")
 	}
 
-	// 生成12位数字：TR + 8位日期 + 4位序号
-	orderNo := fmt.Sprintf("TR%s%04d", dateStr, seq)
-	return orderNo
+	// 组装编号：TR + timestamp + 序列号（4位）
+	orderNo := fmt.Sprintf("TR%s%04d", timestamp, seq)
+	return orderNo, nil
 }
 
 // CreateLog 创建操作日志

@@ -635,8 +635,24 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	if err != nil {
 		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("获取物品列表失败"), err.Error())
 	}
+
+	// 获取 saas 数据库连接
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	if saasDB == nil {
+		return resp.TransferOrderCreateResp{}, errors.New("saas 数据库连接失败")
+	}
+
+	// 获取公司 UUID（使用总部 UUID 或当前公司 UUID）
+	numberCompanyUuid := companySetting.HeadquarterUuid
+	if numberCompanyUuid == 0 {
+		numberCompanyUuid = companyUuid
+	}
+
 	// 生成调拨单编号
-	orderNo := s.helper.GenerateOrderNo(db)
+	orderNo, err := s.helper.GenerateOrderNo(saasDB, numberCompanyUuid, companySetting.Timezone)
+	if err != nil {
+		return resp.TransferOrderCreateResp{}, errors.WithMessage(err, "生成调拨单编号失败")
+	}
 
 	// 生成调拨单UUID
 	transferOrderUuid, err := utils.GetID()
