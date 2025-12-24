@@ -394,6 +394,8 @@ type CountPaymentRespList struct {
 	PaymentName        string  `json:"payment_name"`         // 支付方式名称
 	PaymentCode        int     `json:"payment_code"`         // 支付方式编码
 	ErpnextPayment     string  `json:"erpnext_payment"`      // ERPNext支付方式
+	ErpnextPaymentId   string  `json:"erpnext_payment_id"`   // ERPNext支付方式ID
+	Source             int     `json:"source"`               // 来源 0-系统 1-手动 2-LianLianPay
 	TotalOrderNum      int64   `json:"total_order_num"`      // 总订单数量
 	TotalPaymentAmount float64 `json:"total_payment_amount"` // 总支付金额
 }
@@ -451,6 +453,8 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 				}(),
 				PaymentCode:        payment.PaymentCode,
 				ErpnextPayment:     payment.ErpnextPayment,
+				ErpnextPaymentId:   payment.ErpnextPaymentId,
+				Source:             payment.Source,
 				TotalOrderNum:      payment.TotalOrderNum.Int64,
 				TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
 			})
@@ -485,6 +489,8 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 				PaymentCode:        memberPayment.PaymentCode,
 				TotalOrderNum:      memberPayment.TotalOrderNum,
 				ErpnextPayment:     memberPayment.ErpnextPayment,
+				Source:             memberPayment.Source,
+				ErpnextPaymentId:   memberPayment.ErpnextPaymentId,
 				TotalPaymentAmount: memberPayment.TotalPaymentAmount,
 			})
 		} else {
@@ -1947,6 +1953,8 @@ type CountExportPaymentData struct {
 	PaymentName        string  `json:"payment_name"`
 	PaymentCode        int     `json:"payment_code"`
 	ErpnextPayment     string  `json:"erpnext_payment"`
+	ErpnextPaymentId   string  `json:"erpnext_payment_id"`
+	Source             int     `json:"source"`
 	TotalOrderNum      int64   `json:"total_order_num"`
 	TotalPaymentAmount float64 `json:"total_payment_amount"`
 }

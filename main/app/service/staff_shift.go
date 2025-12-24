@@ -85,18 +85,37 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	companySetting := ctx.GetCompanySetting()
 	company := ctx.GetCompany()
 	if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
+		// 查询 Cash 支付方式（系统默认，source = 0）
+		db := s.dbm.GetDB(staff.CompanyUuid)
+		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+		cashPaymentMethod := paymentMethodRepo.GetPaymentMethod(
+			paymentMethodRepo.WhereCode(constant.PaymentMethodCodeCash),
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("source = ?", constant.PaymentMethodSourceSystem) // source = 0
+			},
+		)
+
+		// 如果有 PaymentID 则设置 PaymentId，否则设置 ModeOfPayment
+		// 如果值为空，则不赋值
+		openPosEntryDetail := req.OpenPosEntryDetail{
+			OpeningAmount: previousShiftCash,
+		}
+		if cashPaymentMethod.Uuid > 0 && cashPaymentMethod.ErpnextPaymentId != "" {
+			openPosEntryDetail.PaymentId = &cashPaymentMethod.ErpnextPaymentId
+		} else {
+			// Cash 支付方式默认使用 "Cash"
+			openPosEntryDetail.ModeOfPayment = "Cash"
+		}
+
 		erpSrv := erp.NewIErpSrv(s.dbm)
 		openPosEntryName, err := erpSrv.OpenPosEntry(ctx.GetContext(), req.OpenPosEntryReq{
-			SiteCode:        companySetting.ErpnextSiteCode,
-			PosProfileName:  companySetting.ErpnextPosProfileName,
-			CashierEmail:    companySetting.ErpnextAdminEmail,
-			CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
-			PeriodStartDate: time.Now().Unix(),
-			OpenPosEntryDetail: []req.OpenPosEntryDetail{{
-				ModeOfPayment: "Cash",
-				OpeningAmount: previousShiftCash,
-			}},
-			Branch: companySetting.ErpnextBranchName,
+			SiteCode:           companySetting.ErpnextSiteCode,
+			PosProfileName:     companySetting.ErpnextPosProfileName,
+			CashierEmail:       companySetting.ErpnextAdminEmail,
+			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+			PeriodStartDate:    time.Now().Unix(),
+			OpenPosEntryDetail: []req.OpenPosEntryDetail{openPosEntryDetail},
+			Branch:             companySetting.ErpnextBranchName,
 		})
 		if err != nil {
 			return model.StaffShiftLog{}, errors.WithMessage(err, "开账失败")
@@ -342,9 +361,6 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			DutyNo:            shiftLog.ShiftNo,
 			ExcludeDataManage: excludeDataManage,
 		})
-		company := ctx.GetCompany()
-		needErpClosePos := company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != ""
-		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
 		for _, payment := range paymentData.PaymentList {
 			paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
 				Name:   payment.PaymentName,
@@ -352,32 +368,110 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			})
 			if payment.PaymentCode == constant.PaymentMethodCodeCash {
 				cashAmount = decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
-			} else {
-				if needErpClosePos && decimal.NewFromFloat(payment.TotalPaymentAmount).GreaterThan(decimal.NewFromFloat(999999999999.99)) {
-					return errors.WithMessage(errors.New(paymentMethodMap[payment.ErpnextPayment]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
-				}
-				closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
-					ModeOfPayment: payment.ErpnextPayment,
-					OpeningAmount: 0,
-					ClosingAmount: payment.TotalPaymentAmount,
-				})
 			}
 		}
-		cashAmountDecimal := decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash))
-		if needErpClosePos && cashAmountDecimal.GreaterThan(decimal.NewFromFloat(999999999999.99)) {
-			return errors.WithMessage(errors.New(paymentMethodMap["Cash"]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
-		}
-		closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
-			ModeOfPayment: "Cash",
-			OpeningAmount: shiftLog.PreviousShiftCash,
-			ClosingAmount: cashAmountDecimal.InexactFloat64(),
-		})
-		if saleData.TotalFreeAmount > 0 {
-			closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
-				ModeOfPayment: "Free Meal",
-				OpeningAmount: 0,
-				ClosingAmount: saleData.TotalFreeAmount,
+
+		// ERP交班部分
+		company := ctx.GetCompany()
+		needErpClosePos := company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != ""
+
+		// 新增：获取未排除数据管理的订单的支付数据（用于传给 ERP）
+		var paymentDataForErp CountPaymentResp
+		if needErpClosePos {
+			paymentDataForErp = s.statisticsSrv.CountPayment(ctx, CountReq{
+				DutyNo:            shiftLog.ShiftNo,
+				ExcludeDataManage: false, // 不排除订单管理订单
 			})
+		}
+
+		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
+
+		// 构建 ERP 参数（使用 paymentDataForErp，不排除订单管理订单）
+		if needErpClosePos {
+			// 查询支付方式 PaymentID
+			db := s.dbm.GetDB(ctx.GetCompanyUuid())
+			commonRepo := repository.NewCommonRepo()
+			paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+
+			// 查询 Cash 支付方式（系统默认，source = 0）
+			cashPaymentMethod := paymentMethodRepo.GetPaymentMethod(
+				paymentMethodRepo.WhereCode(constant.PaymentMethodCodeCash),
+				commonRepo.WhereBySource(constant.PaymentMethodSourceSystem),
+				commonRepo.WhereBySoftDelete(),
+			)
+
+			// 查询 Free Meal 支付方式（code = 92000）
+			freeMealPaymentMethod := paymentMethodRepo.GetPaymentMethod(
+				paymentMethodRepo.WhereCode(constant.PaymentMethodCodeFreeMealForErp), // code = 92000
+				commonRepo.WhereBySource(constant.PaymentMethodSourceSystem),
+				commonRepo.WhereBySoftDelete(),
+			)
+
+			// 处理支付方式金额
+			var cashAmountForErp float64
+			for _, payment := range paymentDataForErp.PaymentList {
+				if payment.PaymentCode == constant.PaymentMethodCodeCash && payment.Source == constant.PaymentMethodSourceSystem {
+					cashAmountForErp = decimal.NewFromFloat(cashAmountForErp).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
+				} else {
+					if decimal.NewFromFloat(payment.TotalPaymentAmount).GreaterThan(decimal.NewFromFloat(999999999999.99)) {
+						return errors.WithMessage(errors.New(paymentMethodMap[payment.ErpnextPayment]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
+					}
+
+					// 查询支付方式的 PaymentID
+					paymentMethod := paymentMethodRepo.GetPaymentMethod(
+						paymentMethodRepo.WhereCode(payment.PaymentCode),
+						commonRepo.WhereBySoftDelete(),
+					)
+
+					// 如果有 PaymentID 则传递 PaymentId，否则传递 ModeOfPayment
+					// 如果值为空，则不赋值
+					detail := req.ClosePosEntryDetail{
+						OpeningAmount: 0,
+						ClosingAmount: payment.TotalPaymentAmount,
+					}
+					if paymentMethod.Uuid > 0 && paymentMethod.ErpnextPaymentId != "" {
+						detail.PaymentId = &paymentMethod.ErpnextPaymentId
+					} else if payment.ErpnextPayment != "" {
+						detail.ModeOfPayment = payment.ErpnextPayment
+					}
+
+					closePosEntryDetail = append(closePosEntryDetail, detail)
+				}
+			}
+			cashAmountDecimal := decimal.NewFromFloat(cashAmountForErp).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash))
+			if cashAmountDecimal.GreaterThan(decimal.NewFromFloat(999999999999.99)) {
+				return errors.WithMessage(errors.New(paymentMethodMap["Cash"]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
+			}
+
+			// 处理 Cash 支付方式：如果有 PaymentID 则传递 PaymentId，否则传递 ModeOfPayment
+			// 如果值为空，则不赋值
+			cashDetail := req.ClosePosEntryDetail{
+				OpeningAmount: shiftLog.PreviousShiftCash,
+				ClosingAmount: cashAmountDecimal.InexactFloat64(),
+			}
+			if cashPaymentMethod.Uuid > 0 && cashPaymentMethod.ErpnextPaymentId != "" {
+				cashDetail.PaymentId = &cashPaymentMethod.ErpnextPaymentId
+			} else {
+				// Cash 支付方式默认使用 "Cash"
+				cashDetail.ModeOfPayment = "Cash"
+			}
+			closePosEntryDetail = append(closePosEntryDetail, cashDetail)
+
+			// 处理 Free Meal 支付方式：如果有 PaymentID 则传递 PaymentId，否则传递 ModeOfPayment
+			// 如果值为空，则不赋值
+			if saleData.TotalFreeAmount > 0 {
+				freeMealDetail := req.ClosePosEntryDetail{
+					OpeningAmount: 0,
+					ClosingAmount: saleData.TotalFreeAmount,
+				}
+				if freeMealPaymentMethod.Uuid > 0 && freeMealPaymentMethod.ErpnextPaymentId != "" {
+					freeMealDetail.PaymentId = &freeMealPaymentMethod.ErpnextPaymentId
+				} else {
+					// Free Meal 支付方式默认使用 "Free Meal"
+					freeMealDetail.ModeOfPayment = "Free Meal"
+				}
+				closePosEntryDetail = append(closePosEntryDetail, freeMealDetail)
+			}
 		}
 		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
 		// 更新当班记录

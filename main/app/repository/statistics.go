@@ -213,6 +213,8 @@ var (
 		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
 		"pm.erpnext_payment AS erpnext_payment",
+		"pm.erpnext_payment_id AS erpnext_payment_id",
+		"pm.source AS source",
 		"COUNT(sp.payment_method_uuid) AS total_order_num",
 		"SUM(sp.payment_amount-sp.refund_amount) AS total_payment_amount",
 		"SUM(sp.refund_amount) AS total_refund_amount",
