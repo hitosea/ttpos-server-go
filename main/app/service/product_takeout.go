@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	product_resp "ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
@@ -321,6 +322,27 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			}
 			updateData["name"] = editReq.LocaleName.ToJson()
 		}
+
+		// 处理卖点多语言更新
+		if !editReq.Describe.IsNull() {
+			describe := editReq.Describe.ToJson()
+			describeMultiLanguageName := model.NewMultiLanguageName(describe)
+
+			// 如果已有卖点多语言记录，更新它；否则创建新的
+			if existTakeout.DescribeMultiLanguageNameUuid != 0 {
+				err = repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageName(existTakeout.DescribeMultiLanguageNameUuid, *describeMultiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "更新卖点多语言失败")
+				}
+			} else {
+				describeMultiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*describeMultiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "创建卖点多语言失败")
+				}
+				updateData["describe_multi_language_name_uuid"] = describeMultiLanguageNameUuid
+			}
+			updateData["describe"] = describe
+		}
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -583,6 +605,7 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		repository.CommonRepo.WhereBySoftDelete(),
 		takeoutRepo.WithProductPackage(),
 		takeoutRepo.WithProductPackageMultiLanguageName(),
+		takeoutRepo.WithDescribeMultiLanguageName(), // 预加载卖点多语言
 		takeoutRepo.WithProductCategory(),
 		takeoutRepo.WithProductSpecialCategory(),
 		takeoutRepo.WithImageFile(),
@@ -638,6 +661,14 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		imageUrl = takeout.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 	}
 
+	// 获取卖点数据（如果有自定义卖点则使用，否则使用店内商品卖点）
+	var describe dto.LocaleResponse
+	if takeout.DescribeMultiLanguageNameUuid != 0 {
+		describe = takeout.DescribeMultiLanguageName.GetNames()
+	} else if productPackage.DescribeMultiLanguageNameUuid != 0 {
+		describe = productPackage.DescribeMultiLanguageName.GetNames()
+	}
+
 	result := &product_resp.ProductTakeoutShopDetailResp{
 		Uuid:                takeout.Uuid,
 		ProductPackageUuid:  takeout.ProductPackageUuid,
@@ -645,6 +676,7 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		Price:               takeout.Price,
 		TakeoutType:         int(takeout.TakeoutType),
 		LocaleName:          takeout.ProductPackage.MultiLanguageName.GetNames(),
+		Describe:            describe, // 返回卖点数据
 		CategoryUuid:        takeout.CategoryUuid,
 		CategoryName:        takeout.ProductCategory.MultiLanguageName.GetNames(),
 		SpecialCategoryUuid: takeout.SpecialCategoryUuid,
@@ -865,13 +897,24 @@ func (s *productTakeoutSrv) restoreProductTakeoutShop(ctx context.Context, exist
 			return errors.WithMessage(err, "还原外卖商品失败")
 		}
 
-		// 删除旧的外卖规格价格记录（软删除的可能已过期）
+		// 删除旧的外卖规格价格记录
 		productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
 		commonRepo := repository.NewCommonRepo()
 
-		// 软删除所有旧的规格价格
+		// 先物理删除所有已软删除的旧记录（避免唯一索引冲突）
+		if err := productBomTakeoutRepo.DeleteProductBomTakeout(
+			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("delete_time > 0")
+			},
+		); err != nil {
+			return errors.WithMessage(err, "清理已删除的旧规格价格失败")
+		}
+
+		// 再软删除所有未删除的旧规格价格
 		if err := productBomTakeoutRepo.DestroyProductBomTakeout(
 			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			commonRepo.WhereBySoftDelete(),
 		); err != nil {
 			return errors.WithMessage(err, "清理旧规格价格失败")
 		}
@@ -895,9 +938,20 @@ func (s *productTakeoutSrv) restoreProductTakeoutShop(ctx context.Context, exist
 		// 删除旧的外卖属性价格记录
 		productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
 
-		// 软删除所有旧的属性价格
+		// 先物理删除所有已软删除的旧记录（避免唯一索引冲突）
+		if err := productPackageAttributeTakeoutRepo.DeleteProductPackageAttributeTakeout(
+			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("delete_time > 0")
+			},
+		); err != nil {
+			return errors.WithMessage(err, "清理已删除的旧属性价格失败")
+		}
+
+		// 再软删除所有未删除的旧属性价格
 		if err := productPackageAttributeTakeoutRepo.DestroyProductPackageAttributeTakeout(
 			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			commonRepo.WhereBySoftDelete(),
 		); err != nil {
 			return errors.WithMessage(err, "清理旧属性价格失败")
 		}

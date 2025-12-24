@@ -26,6 +26,7 @@ type IProductPackageTakeoutQueryRepo interface {
 	WithProductPackage(opts ...DBOption) DBOption                          // 预加载商品包
 	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption         // 预加载商品包多语言名称
 	WithMultiLanguageName(opts ...DBOption) DBOption                       // 预加载多语言名称
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption               // 预加载卖点多语言
 	WithProductCategory(opts ...DBOption) DBOption                         // 预加载外卖分类
 	WithProductSpecialCategory(opts ...DBOption) DBOption                  // 预加载外卖特色分类
 	WithImageFile(opts ...DBOption) DBOption                               // 预加载图片
@@ -236,6 +237,18 @@ func (r *productPackageTakeoutRepoImpl) WithProductPackageMultiLanguageName(opts
 func (r *productPackageTakeoutRepoImpl) WithMultiLanguageName(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithDescribeMultiLanguageName 预加载卖点多语言
+func (r *productPackageTakeoutRepoImpl) WithDescribeMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DescribeMultiLanguageName", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}

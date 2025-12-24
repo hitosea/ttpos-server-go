@@ -12,6 +12,7 @@ type ProductTakeoutShopDetailResp struct {
 	Price                   float64                           `json:"price"`                      // 外卖商品价格 (套餐价格)
 	TakeoutType             int                               `json:"takeout_type"`               // 外卖类型 1-Grab 2-FoodPanda 3-其他
 	LocaleName              dto.LocaleResponse                `json:"locale_name"`                // 商品名称（多语言）
+	Describe                dto.LocaleResponse                `json:"describe"`                   // 卖点描述（多语言）
 	CategoryUuid            uint64                            `json:"category_uuid"`              // 外卖分类UUID
 	CategoryName            dto.LocaleResponse                `json:"category_name"`              // 外卖分类名称
 	SpecialCategoryUuid     uint64                            `json:"special_category_uuid"`      // 外卖特色分类UUID
