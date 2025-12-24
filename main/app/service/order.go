@@ -1377,7 +1377,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, _ uint64
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 删除订单商品
-		err := repository.NewOrderRepo(tx).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+		err := repository.NewOrderRepo(tx).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, saleOrderProduct.IsPackageProduct())
 		if err != nil {
 			return errors.WithMessage(err)
 		}

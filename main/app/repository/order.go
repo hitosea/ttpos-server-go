@@ -31,7 +31,7 @@ type IOrderRepo interface {
 	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                 // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                               // 删除订单
 	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
-	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                           // 删除订单产品
+	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, isPackageProduct bool) error    // 删除订单产品
 	ChangePopulation(saleBillUuid uint64, population int) error                                                                // 修改订单人数
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string, sign string) error  // 修改订单商品备注
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
@@ -2180,7 +2180,7 @@ func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrder
 }
 
 // DeleteOrderProduct 删除订单产品
-func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error {
+func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, isPackageProduct bool) error {
 	timeNow := uint(time.Now().Unix())
 	// 删除关联关系
 	err := r.db.Transaction(func(tx *gorm.DB) error {
@@ -2196,10 +2196,32 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		// 套餐子商品送厨单商品标记删除
-		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid in (?)", tx.Model(&model.SaleOrderProduct{}).Where("package_uuid = ?", saleOrderProductUuid).Select("uuid")).Update("delete_time", timeNow).Error
-		if err != nil {
-			return errors.WithMessage(err)
+		if isPackageProduct {
+			// 套餐子商品送厨单商品标记删除 - 分批处理避免锁风暴
+			var subProductUuids []uint64
+			err = tx.Model(&model.SaleOrderProduct{}).
+				Where("package_uuid = ?", saleOrderProductUuid).
+				Pluck("uuid", &subProductUuids).Error
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			// 如果存在套餐子商品，分批更新生产订单商品
+			if len(subProductUuids) > 0 {
+				const batchSize = 1000 // 每批处理1000条，避免一次性锁定大量数据
+				for i := 0; i < len(subProductUuids); i += batchSize {
+					end := i + batchSize
+					if end > len(subProductUuids) {
+						end = len(subProductUuids)
+					}
+					batch := subProductUuids[i:end]
+					err = tx.Model(&model.ProductionOrderProduct{}).
+						Where("sale_order_product_uuid IN (?)", batch).
+						Update("delete_time", timeNow).Error
+					if err != nil {
+						return errors.WithMessage(err, fmt.Sprintf("分批更新生产订单商品失败，批次: %d-%d", i, end-1))
+					}
+				}
+			}
 		}
 		return tx.Model(&model.SaleOrderProduct{}).
 			Where("(status != ? or cancel_time != 0)", constant.OrderProductStatusSentKitchen).
