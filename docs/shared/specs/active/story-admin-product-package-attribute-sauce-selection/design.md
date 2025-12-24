@@ -365,8 +365,8 @@ if ($isPackage) {
         // ...
         
         // 验证分组可选范围
-        $minSelect = $item['group_min_select'] ?? 1;
-        $maxSelect = $item['group_max_select'] ?? 1;
+        $minSelect = $item['optional_min_count'] ?? 1;
+        $maxSelect = $item['optional_count'] ?? 1;
         
         // 验证最大可选 >= 最小可选（允许为0）
         if ($maxSelect < $minSelect) {
@@ -447,8 +447,8 @@ public static function addPackageGroup($data, $product)
             'product_package_uuid' => $product->uuid,
             'group_name' => $group['group_name'],
             'sort' => $groupIndex,
-            'optional_min_count' => $group['group_min_select'] ?? 1, // 最小可选
-            'optional_count' => $group['group_max_select'] ?? 1, // 最大可选
+            'optional_min_count' => $group['optional_min_count'] ?? 1, // 最小可选
+            'optional_count' => $group['optional_count'] ?? 1, // 最大可选
         ]);
         
         // 添加分组商品...
@@ -491,8 +491,8 @@ API 接口保持不变，只调整请求和响应参数：
   "package_group": [
     {
       "group_name": "主食",
-      "group_min_select": 1,
-      "group_max_select": 1,
+      "optional_min_count": 1,
+      "optional_count": 1,
       "product_list": [...]
     }
   ]
@@ -818,6 +818,18 @@ public function saveProduct($data)
 
 ## 📝 变更记录
 
+### v1.2.0 - 2025-12-24
+
+**统一套餐分组字段命名**:
+
+- ✅ `admin/app/shop/model/product/Product.php` 第712-713行：将 `group_min_select`/`group_max_select` 统一改为 `optional_min_count`/`optional_count`
+- ✅ 与数据库字段保持一致（`ttpos_product_package_group` 表使用 `optional_min_count` 和 `optional_count`）
+- ✅ 与 API 返回字段保持一致
+
+**影响范围**:
+- 后端验证逻辑：统一使用数据库字段名称
+- 前端集成：前端表单字段应使用 `optional_min_count` 和 `optional_count`
+
 ### v1.1.0 - 2025-12-24
 
 **补充商品详情返回字段**:
@@ -842,7 +854,7 @@ public function saveProduct($data)
 
 ---
 
-**版本**: v1.1.0  
+**版本**: v1.2.0  
 **创建日期**: 2025-12-23  
 **最后更新**: 2025-12-24  
 **作者**: 后端开发组  

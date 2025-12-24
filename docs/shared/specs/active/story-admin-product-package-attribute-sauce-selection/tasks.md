@@ -71,6 +71,7 @@
   - Requirements: 3.2, 3.3, 3.4, 3.5, 3.6
   - Leverage: 现有 add() 方法第129-187行，参考 design.md 中的调整逻辑
   - Success: 分组数量限制从5调整为100，支持可选范围验证，允许为0
+  - **实施记录**: ✅ 已完成，使用 optional_min_count 和 optional_count 字段进行验证
 
 - [x] 2.4 调整商品模型 - 数据映射（add 方法）
 
@@ -103,6 +104,7 @@
   - Requirements: 3.2, 3.3, 3.4, 3.5, 3.6
   - Leverage: Task 2.3 的调整逻辑，应用到 edit() 方法第582-645行
   - Success: 验证逻辑正确，与 add 方法一致
+  - **实施记录**: ✅ 已完成，使用 optional_min_count 和 optional_count 字段进行验证
 
 - [x] 2.8 调整商品模型 - 数据映射（updateProductPackage 方法）
 
@@ -269,6 +271,7 @@
   - Requirements: 3.2, 3.4
   - Leverage: 现有套餐分组表单组件
   - Success: 表单显示"最小可选"和"最大可选"两个输入框，默认值为 1-1
+  - **字段名称**: 使用 optional_min_count 和 optional_count 字段
 
 - [ ] 3.8 调整套餐分组表单验证
 
@@ -436,11 +439,16 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/story-admin-product
 
 ### 2025-12-24
 
+**字段命名统一**:
+- ✅ 统一套餐分组字段：将 `group_min_select`/`group_max_select` 改为 `optional_min_count`/`optional_count`
+- ✅ 与数据库字段和 API 返回保持一致
+
 **补充返回字段**:
 - ✅ 任务 2.16：补充商品详情返回字段（attribute_min_select, optional_min_count）
 - ✅ 代码格式化：优化 Product.php 代码风格
 
 **文件修改**:
+- `admin/app/shop/model/product/Product.php`: 字段命名统一（第712-713行）
 - `admin/app/common/model/product/Product.php`: +2 行（新增返回字段）
 - `admin/app/shop/model/product/Product.php`: 格式化调整（移除多余空行）
 
