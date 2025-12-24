@@ -2207,7 +2207,7 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 			}
 			// 如果存在套餐子商品，分批更新生产订单商品
 			if len(subProductUuids) > 0 {
-				const batchSize = 1000 // 每批处理1000条，避免一次性锁定大量数据
+				const batchSize = 200 // 每批处理200条，避免一次性锁定大量数据（UPDATE操作会产生行锁和gap lock）
 				for i := 0; i < len(subProductUuids); i += batchSize {
 					end := i + batchSize
 					if end > len(subProductUuids) {
