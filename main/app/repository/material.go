@@ -57,7 +57,6 @@ type IMaterialRepo interface {
 	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)               // 根据erp_code获取物品详情
 	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error              // 更新物品仓库uuid
 	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error                        // 将所有物品的仓库uuid设置为指定仓库uuid
-	UpdateRelatedMaterialStock(relatedMaterialUuids []uint64) error                   // 更新规格/加料关联材料库存
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)                       // 根据名称获取分类UUID
 	CheckBarcodeExist(barcode string, uuid uint64) bool                               // 检查条形码是否存在
