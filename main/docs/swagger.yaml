@@ -4747,6 +4747,9 @@ definitions:
       unit_uuid:
         description: 基准单位UUID
         type: integer
+      valuation:
+        description: 估值率
+        type: number
     type: object
   req.MaterialBatchUpdateVisibleReq:
     properties:
@@ -6075,6 +6078,9 @@ definitions:
       unit_uuid:
         description: 基准单位UUID
         type: integer
+      valuation:
+        description: 估值率
+        type: number
     required:
     - num
     - related_uuid
@@ -9363,10 +9369,18 @@ definitions:
     type: object
   request.TakeoutOrderAcceptReq:
     properties:
-      order_uuid:
+      uuid:
         type: integer
     required:
-    - order_uuid
+    - uuid
+    type: object
+  request.TakeoutOrderCallRiderReq:
+    properties:
+      uuid:
+        description: 订单UUID
+        type: integer
+    required:
+    - uuid
     type: object
   request.TakeoutOrderEvent:
     properties:
@@ -9397,13 +9411,13 @@ definitions:
     type: object
   request.TakeoutOrderRejectReq:
     properties:
-      order_uuid:
-        type: integer
       reject_reason_code:
         type: string
+      uuid:
+        type: integer
     required:
-    - order_uuid
     - reject_reason_code
+    - uuid
     type: object
   request.TakeoutOrderSyncReq:
     properties:
@@ -17420,8 +17434,10 @@ definitions:
   response.TakeoutOrderCampaignResp:
     properties:
       campaign_name:
+        description: 活动名称
         type: string
       campaign_type:
+        description: 活动类型
         type: string
       deducted_amount:
         description: 折扣金额(元)
@@ -17429,13 +17445,41 @@ definitions:
       uuid:
         type: integer
     type: object
+  response.TakeoutOrderCurrencyResp:
+    properties:
+      currency_code:
+        description: 货币代码
+        type: string
+      currency_exponent:
+        description: 货币小数位数
+        type: integer
+      currency_symbol:
+        description: 货币符号
+        type: string
+    type: object
+  response.TakeoutOrderDiscountsResp:
+    properties:
+      basket_promo:
+        description: 篮子优惠
+        type: integer
+      merchant_discount:
+        description: 商户优惠
+        type: integer
+      platform_discount:
+        description: 平台优惠
+        type: integer
+      tax:
+        description: 税费
+        type: integer
+    type: object
   response.TakeoutOrderItemResp:
     properties:
-      is_mapped:
-        type: integer
-      platform_item_id:
-        type: string
-      platform_item_name:
+      is_package:
+        description: 是否套餐
+        type: boolean
+      item_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      modifiers:
         type: string
       price:
         type: integer
@@ -17443,6 +17487,11 @@ definitions:
         type: integer
       specifications:
         type: string
+      sub_items:
+        description: 子商品列表
+        items:
+          $ref: '#/definitions/response.TakeoutOrderItemResp'
+        type: array
       tax:
         type: integer
       uuid:
@@ -17454,7 +17503,7 @@ definitions:
         description: 是否异常
         type: integer
       order_state:
-        description: 订单状态
+        description: '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单'
         type: integer
       platform:
         description: 平台名称
@@ -17462,6 +17511,9 @@ definitions:
       short_order_number:
         description: 短订单号
         type: string
+      subtotal:
+        description: 小计金额
+        type: integer
       total_items:
         description: 总商品数量
         type: integer
@@ -17477,6 +17529,56 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/response.Meta'
+    type: object
+  response.TakeoutOrderPriceResp:
+    properties:
+      basket_promo:
+        description: 篮子优惠
+        type: integer
+      delivery_fee:
+        description: 配送费
+        type: integer
+      eater_payment:
+        description: 顾客实付
+        type: integer
+      merchant_charge_fee:
+        description: 商户收取费用
+        type: integer
+      merchant_discount:
+        description: 商户优惠
+        type: integer
+      platform_discount:
+        description: 平台优惠
+        type: integer
+      small_order_fee:
+        description: 小订单费
+        type: integer
+      subtotal:
+        description: 商品小计
+        type: integer
+      tax:
+        description: 税费
+        type: integer
+    type: object
+  response.TakeoutOrderPromoResp:
+    properties:
+      mex_funded_ratio:
+        description: 商户承担比例
+        type: integer
+      promo_amount:
+        description: 促销金额
+        type: integer
+      promo_code:
+        description: 促销代码
+        type: string
+      promo_description:
+        description: 促销描述
+        type: string
+      promo_name:
+        description: 促销名称
+        type: string
+      uuid:
+        type: integer
     type: object
   response.TakeoutOrderReceiverResp:
     properties:
@@ -17501,35 +17603,22 @@ definitions:
       abnormal_detail:
         description: 异常详情
         type: string
-      accepted_time:
-        description: 接单时间
-        type: integer
       campaigns:
         description: 活动信息
         items:
           $ref: '#/definitions/response.TakeoutOrderCampaignResp'
         type: array
-      completed_time:
-        description: 完成时间
-        type: integer
-      currency_code:
+      currencies:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderCurrencyResp'
         description: 货币信息
-        type: string
-      currency_symbol:
-        description: 货币符号
-        type: string
       cutlery:
         description: 是否需要餐具
         type: integer
-      delivery_fee:
-        description: 配送费
-        type: integer
-      eater_payment:
-        description: 顾客实付
-        type: integer
-      estimated_ready_time:
-        description: 预计完成时间
-        type: integer
+      discounts:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderDiscountsResp'
+        description: 订单优惠
       is_abnormal:
         description: 订单异常
         type: integer
@@ -17538,15 +17627,13 @@ definitions:
         items:
           $ref: '#/definitions/response.TakeoutOrderItemResp'
         type: array
-      max_ready_time:
-        description: 最大准备时间
-        type: integer
       order_state:
-        description: 订单状态
+        description: 订单状态 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
         type: integer
-      order_time:
+      order_times:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderTimesResp'
         description: 订单时间
-        type: integer
       order_type:
         description: 订单类型
         type: string
@@ -17556,6 +17643,15 @@ definitions:
       platform:
         description: 平台名称
         type: string
+      price:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderPriceResp'
+        description: 订单金额
+      promos:
+        description: 促销信息
+        items:
+          $ref: '#/definitions/response.TakeoutOrderPromoResp'
+        type: array
       receiver:
         allOf:
         - $ref: '#/definitions/response.TakeoutOrderReceiverResp'
@@ -17563,23 +17659,29 @@ definitions:
       short_order_number:
         description: 短订单号
         type: string
-      small_order_fee:
-        description: 小订单费
-        type: integer
-      submit_time:
-        description: 提交时间 (提交时间，支付时间)
-        type: integer
-      subtotal:
-        description: 订单金额
-        type: integer
-      total_amount:
-        description: 订单总金额
-        type: integer
       total_items:
         description: 订单商品
         type: integer
       uuid:
         description: 订单UUID
+        type: integer
+    type: object
+  response.TakeoutOrderTimesResp:
+    properties:
+      accepted_time:
+        description: 接单时间
+        type: integer
+      completed_time:
+        description: 完成时间
+        type: integer
+      estimated_ready_time:
+        description: 预计完成时间
+        type: integer
+      max_ready_time:
+        description: 最大准备时间
+        type: integer
+      submit_time:
+        description: 提交时间 (提交时间，支付时间)
         type: integer
     type: object
   response.TakeoutSettingsResp:
@@ -28205,15 +28307,32 @@ paths:
       summary: 接单
       tags:
       - 收银端.外卖管理
+  /cashier/takeout/order/call-rider:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 呼叫骑手参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderCallRiderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 呼叫骑手成功
+      summary: 呼叫骑手（标记订单准备完成）
+      tags:
+      - 收银端.外卖管理
   /cashier/takeout/order/detail:
     get:
       consumes:
       - application/json
       parameters:
-      - description: 订单UUID
-        format: int64
-        in: query
-        name: order_uuid
+      - in: query
+        name: uuid
         required: true
         type: integer
       produces:
@@ -28236,38 +28355,42 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: 页码
-        in: query
-        name: page_no
-        required: true
-        type: integer
-      - description: 每页数量
-        in: query
-        name: page_size
-        required: true
-        type: integer
-      - description: '平台筛选: grab,foodpanda,lineman'
-        in: query
-        name: platform
-        type: string
-      - description: '状态: 0=全部,1=待接单,2=已接单,3=制作中,4=已完成,5=已拒单'
-        in: query
-        name: status
-        type: integer
-      - description: 开始时间
-        format: int64
-        in: query
-        name: start_time
-        type: integer
-      - description: 结束时间
-        format: int64
+      - description: '结束时间 (默认: 0)'
         in: query
         name: end_time
         type: integer
-      - description: 搜索关键词
+      - description: '是否历史订单: true=历史订单, false=未完成订单 (默认: false)'
+        in: query
+        name: is_history
+        type: boolean
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: '平台筛选: grab,lineman (空=全部) (默认: 空)'
+        in: query
+        name: platform
+        type: string
+      - description: '搜索关键词 (默认: 空)'
         in: query
         name: search
         type: string
+      - description: '开始时间 (默认: 0)'
+        in: query
+        name: start_time
+        type: integer
+      - default: -1
+        description: '-1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)'
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
