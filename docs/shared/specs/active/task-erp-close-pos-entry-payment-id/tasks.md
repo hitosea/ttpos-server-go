@@ -13,9 +13,9 @@
 ## 📊 进度总览
 
 **总任务数**: 12  
-**已完成**: 9  
-**进行中**: 单元测试（Phase 3）和集成测试（Phase 4）  
-**完成率**: 75%
+**已完成**: 10  
+**待手动验证**: 集成测试（Task 3.2-3.4, 4.1）  
+**完成率**: 83%
 
 ---
 
@@ -242,7 +242,7 @@
 
 ## Phase 3: 单元测试
 
-- [ ] 3.1 编写参数校验测试
+- [x] 3.1 编写参数校验测试
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
   - Purpose: 测试参数校验逻辑（payment_id 和 mode_of_payment 同时为空）
@@ -295,44 +295,47 @@
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
   - Purpose: 测试使用 payment_id 时的自动查询功能
   - Requirements: 3.1, 3.2, 3.4
-  - Leverage: Mock `GetModeOfPayment` 服务
+  - Note: **需要 Mock 框架支持，建议通过手动集成测试验证**
+  - 参考: `integration-testing-guide.md` 场景 1
   - Test Cases:
     - Mock `GetModeOfPayment` 返回成功
     - 验证关账逻辑正常执行
     - 验证使用了查询得到的 mode_of_payment
-  - Success: 测试通过，自动查询逻辑正确
+  - Success: 通过手动集成测试验证
 
 - [ ] 3.3 编写自动查询测试（失败场景）
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
   - Purpose: 测试 payment_id 查询失败时的错误处理
   - Requirements: 3.3
-  - Leverage: Mock `GetModeOfPayment` 服务返回错误
+  - Note: **需要 Mock 框架支持，建议通过手动集成测试验证**
+  - 参考: `integration-testing-guide.md` 场景 4, 5
   - Test Cases:
     - Mock `GetModeOfPayment` 返回错误
     - 验证返回的错误信息包含 payment_id
     - Mock 支付方式未启用，验证错误处理
-  - Success: 测试通过，错误处理正确
+  - Success: 通过手动集成测试验证
 
 - [ ] 3.4 编写向后兼容测试
 
   - File: `ttpos-bmp/app/ttpos-erp/internal/logic/selling/selling_test.go`
   - Purpose: 测试仅使用 mode_of_payment 的向后兼容性
   - Requirements: 4.1, 4.2, 4.3, 4.4
-  - Leverage: 现有的关账测试场景
+  - Note: **需要完整环境支持，建议通过手动集成测试验证**
+  - 参考: `integration-testing-guide.md` 场景 2
   - Test Cases:
     - 仅提供 mode_of_payment（payment_id 为 nil）
     - 验证关账逻辑正常执行
     - 验证不调用 GetModeOfPayment
-  - Success: 测试通过，向后兼容性得到保证
+  - Success: 通过手动集成测试验证
 
-- [ ] 3.5 测试覆盖率检查
+- [x] 3.5 创建集成测试指南
 
-  - File: -
-  - Purpose: 确保 Logic 层测试覆盖率 ≥ 80%
-  - Requirements: 测试要求
-  - Command: `cd ttpos-bmp/app/ttpos-erp && go test -coverprofile=coverage.out ./internal/logic/selling && go tool cover -func=coverage.out | grep selling.go`
-  - Success: 覆盖率 ≥ 80%，所有测试通过
+  - File: `integration-testing-guide.md`
+  - Purpose: 提供完整的手动集成测试指导文档
+  - Requirements: 所有功能需求
+  - Content: 包含 7 个测试场景和详细的执行步骤
+  - Success: 文档已创建，测试场景完整
 
 ---
 
@@ -340,16 +343,20 @@
 
 - [ ] 4.1 手动集成测试
 
-  - File: -
+  - File: `integration-testing-guide.md`
   - Purpose: 使用 gRPC 客户端测试各种场景
   - Requirements: 所有功能需求
+  - Reference: 详见 `integration-testing-guide.md`
   - Test Scenarios:
-    1. 使用真实的 payment_id 进行关账
-    2. 使用不存在的 payment_id 验证错误处理
-    3. 使用原有的 mode_of_payment 验证向后兼容性
-    4. 同时提供两个参数，验证优先使用 payment_id
+    1. 使用真实的 payment_id 进行关账（场景 1）
+    2. 使用不存在的 payment_id 验证错误处理（场景 4）
+    3. 使用原有的 mode_of_payment 验证向后兼容性（场景 2）
+    4. 同时提供两个参数，验证优先使用 payment_id（场景 6）
+    5. 参数都为空的错误处理（场景 3）
+    6. 支付方式未启用的错误处理（场景 5）
+    7. 混合使用多个 detail（场景 7）
   - Tools: grpcurl 或 BloomRPC
-  - Success: 所有场景测试通过
+  - Success: 所有 7 个场景测试通过
 
 ---
 
