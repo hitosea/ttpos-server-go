@@ -514,7 +514,9 @@ func (c *Controller) validateSaveModeOfPaymentReq(req *selling.SaveModeOfPayment
 	}
 
 	// 判断是更新操作还是创建操作
-	isUpdate := req.Name != nil && strings.TrimSpace(*req.Name) != ""
+	// 如果传入了 name 或 payment_id，则识别为更新操作
+	isUpdate := (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
+		(req.PaymentId != "" && strings.TrimSpace(req.PaymentId) != "")
 
 	// 创建操作时，channel 和 pay_type 必填
 	// 更新操作时，channel 和 pay_type 不是必填
