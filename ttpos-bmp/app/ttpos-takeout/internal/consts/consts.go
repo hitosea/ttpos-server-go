@@ -50,3 +50,13 @@ func MapGrabIntegrationStatus(grabStatus string) ProviderShopStatus {
 		return ProviderShopStatusInactive
 	}
 }
+
+// MenuSyncType 菜单同步类型（用于 menu_log 表的 sync_type 字段）
+type MenuSyncType string
+
+const (
+	// MenuSyncTypeBatchUpdateItem 批量更新商品
+	MenuSyncTypeBatchUpdateItem MenuSyncType = "BATCH_UPDATE_ITEM"
+	// MenuSyncTypeBatchUpdateModifier 批量更新修饰符
+	MenuSyncTypeBatchUpdateModifier MenuSyncType = "BATCH_UPDATE_MODIFIER"
+)

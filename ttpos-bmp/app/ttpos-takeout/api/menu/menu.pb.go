@@ -677,6 +677,282 @@ func (x *UpdateMenuModifierResp) GetRecordType() string {
 	return ""
 }
 
+// 菜单实体 (用于批量更新)
+type MenuEntity struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" dc:"菜单项ID或修饰符ID (partner item id 或 partner modifier id, 必填)"`                                                                                 // 菜单项ID或修饰符ID (partner item id 或 partner modifier id, 必填)
+	Price            *int64                 `protobuf:"varint,2,opt,name=price,proto3,oneof" json:"price,omitempty" dc:"价格 (minor unit，单位：分)"`                                                                                                       // 价格 (minor unit，单位：分)
+	AvailableStatus  *string                `protobuf:"bytes,3,opt,name=available_status,json=availableStatus,proto3,oneof" json:"available_status,omitempty" dc:"可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE (商品), AVAILABLE, UNAVAILABLE (修饰符)"` // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE (商品), AVAILABLE, UNAVAILABLE (修饰符)
+	MaxStock         *int64                 `protobuf:"varint,4,opt,name=max_stock,json=maxStock,proto3,oneof" json:"max_stock,omitempty" dc:"库存数量 (仅商品支持)"`                                                                                         // 库存数量 (仅商品支持)
+	AdvancedPricings []*AdvancedPricing     `protobuf:"bytes,5,rep,name=advanced_pricings,json=advancedPricings,proto3" json:"advanced_pricings,omitempty" dc:"高级定价配置"`                                                                              // 高级定价配置
+	Purchasabilities []*Purchasability      `protobuf:"bytes,6,rep,name=purchasabilities,proto3" json:"purchasabilities,omitempty" dc:"购买能力配置 (仅商品支持)"`                                                                                              // 购买能力配置 (仅商品支持)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *MenuEntity) Reset() {
+	*x = MenuEntity{}
+	mi := &file_menu_menu_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MenuEntity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MenuEntity) ProtoMessage() {}
+
+func (x *MenuEntity) ProtoReflect() protoreflect.Message {
+	mi := &file_menu_menu_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MenuEntity.ProtoReflect.Descriptor instead.
+func (*MenuEntity) Descriptor() ([]byte, []int) {
+	return file_menu_menu_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *MenuEntity) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MenuEntity) GetPrice() int64 {
+	if x != nil && x.Price != nil {
+		return *x.Price
+	}
+	return 0
+}
+
+func (x *MenuEntity) GetAvailableStatus() string {
+	if x != nil && x.AvailableStatus != nil {
+		return *x.AvailableStatus
+	}
+	return ""
+}
+
+func (x *MenuEntity) GetMaxStock() int64 {
+	if x != nil && x.MaxStock != nil {
+		return *x.MaxStock
+	}
+	return 0
+}
+
+func (x *MenuEntity) GetAdvancedPricings() []*AdvancedPricing {
+	if x != nil {
+		return x.AdvancedPricings
+	}
+	return nil
+}
+
+func (x *MenuEntity) GetPurchasabilities() []*Purchasability {
+	if x != nil {
+		return x.Purchasabilities
+	}
+	return nil
+}
+
+// 批量更新菜单请求
+type BatchUpdateMenuReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`   // Grab MerchantID (必填)
+	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty" dc:"字段类型: ITEM (商品) 或 MODIFIER (修饰符) (必填)"`              // 字段类型: ITEM (商品) 或 MODIFIER (修饰符) (必填)
+	MenuEntities  []*MenuEntity          `protobuf:"bytes,3,rep,name=menu_entities,json=menuEntities,proto3" json:"menu_entities,omitempty" dc:"菜单实体列表 (1-100 个)"` // 菜单实体列表 (1-100 个)
+	RequestId     string                 `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`           // 请求 ID (可选，用于追踪)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchUpdateMenuReq) Reset() {
+	*x = BatchUpdateMenuReq{}
+	mi := &file_menu_menu_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchUpdateMenuReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchUpdateMenuReq) ProtoMessage() {}
+
+func (x *BatchUpdateMenuReq) ProtoReflect() protoreflect.Message {
+	mi := &file_menu_menu_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchUpdateMenuReq.ProtoReflect.Descriptor instead.
+func (*BatchUpdateMenuReq) Descriptor() ([]byte, []int) {
+	return file_menu_menu_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *BatchUpdateMenuReq) GetMerchantId() string {
+	if x != nil {
+		return x.MerchantId
+	}
+	return ""
+}
+
+func (x *BatchUpdateMenuReq) GetField() string {
+	if x != nil {
+		return x.Field
+	}
+	return ""
+}
+
+func (x *BatchUpdateMenuReq) GetMenuEntities() []*MenuEntity {
+	if x != nil {
+		return x.MenuEntities
+	}
+	return nil
+}
+
+func (x *BatchUpdateMenuReq) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// 菜单实体错误信息
+type MenuEntityError struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" dc:"菜单项ID或修饰符ID"`                                  // 菜单项ID或修饰符ID
+	ErrorCode     string                 `protobuf:"bytes,2,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty" dc:"错误代码"`          // 错误代码
+	ErrorMessage  string                 `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty" dc:"错误消息"` // 错误消息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MenuEntityError) Reset() {
+	*x = MenuEntityError{}
+	mi := &file_menu_menu_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MenuEntityError) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MenuEntityError) ProtoMessage() {}
+
+func (x *MenuEntityError) ProtoReflect() protoreflect.Message {
+	mi := &file_menu_menu_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MenuEntityError.ProtoReflect.Descriptor instead.
+func (*MenuEntityError) Descriptor() ([]byte, []int) {
+	return file_menu_menu_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *MenuEntityError) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MenuEntityError) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *MenuEntityError) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+// 批量更新菜单响应
+type BatchUpdateMenuResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"商户ID"`       // 商户ID
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty" dc:"更新状态: success, partial_success, fail"` // 更新状态: success, partial_success, fail
+	Errors        []*MenuEntityError     `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty" dc:"错误列表 (仅在 partial_success 或 fail 时返回)"` // 错误列表 (仅在 partial_success 或 fail 时返回)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchUpdateMenuResp) Reset() {
+	*x = BatchUpdateMenuResp{}
+	mi := &file_menu_menu_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchUpdateMenuResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchUpdateMenuResp) ProtoMessage() {}
+
+func (x *BatchUpdateMenuResp) ProtoReflect() protoreflect.Message {
+	mi := &file_menu_menu_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchUpdateMenuResp.ProtoReflect.Descriptor instead.
+func (*BatchUpdateMenuResp) Descriptor() ([]byte, []int) {
+	return file_menu_menu_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *BatchUpdateMenuResp) GetMerchantId() string {
+	if x != nil {
+		return x.MerchantId
+	}
+	return ""
+}
+
+func (x *BatchUpdateMenuResp) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *BatchUpdateMenuResp) GetErrors() []*MenuEntityError {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
 var File_menu_menu_proto protoreflect.FileDescriptor
 
 const file_menu_menu_proto_rawDesc = "" +
@@ -748,12 +1024,42 @@ const file_menu_menu_proto_rawDesc = "" +
 	"merchantId\x12\x1b\n" +
 	"\trecord_id\x18\x02 \x01(\tR\brecordId\x12\x1f\n" +
 	"\vrecord_type\x18\x03 \x01(\tR\n" +
-	"recordType2\xa7\x02\n" +
+	"recordType\"\xbc\x02\n" +
+	"\n" +
+	"MenuEntity\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\x05price\x18\x02 \x01(\x03H\x00R\x05price\x88\x01\x01\x12.\n" +
+	"\x10available_status\x18\x03 \x01(\tH\x01R\x0favailableStatus\x88\x01\x01\x12 \n" +
+	"\tmax_stock\x18\x04 \x01(\x03H\x02R\bmaxStock\x88\x01\x01\x12B\n" +
+	"\x11advanced_pricings\x18\x05 \x03(\v2\x15.menu.AdvancedPricingR\x10advancedPricings\x12@\n" +
+	"\x10purchasabilities\x18\x06 \x03(\v2\x14.menu.PurchasabilityR\x10purchasabilitiesB\b\n" +
+	"\x06_priceB\x13\n" +
+	"\x11_available_statusB\f\n" +
+	"\n" +
+	"_max_stock\"\xa1\x01\n" +
+	"\x12BatchUpdateMenuReq\x12\x1f\n" +
+	"\vmerchant_id\x18\x01 \x01(\tR\n" +
+	"merchantId\x12\x14\n" +
+	"\x05field\x18\x02 \x01(\tR\x05field\x125\n" +
+	"\rmenu_entities\x18\x03 \x03(\v2\x10.menu.MenuEntityR\fmenuEntities\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x04 \x01(\tR\trequestId\"e\n" +
+	"\x0fMenuEntityError\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x02 \x01(\tR\terrorCode\x12#\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"}\n" +
+	"\x13BatchUpdateMenuResp\x12\x1f\n" +
+	"\vmerchant_id\x18\x01 \x01(\tR\n" +
+	"merchantId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12-\n" +
+	"\x06errors\x18\x03 \x03(\v2\x15.menu.MenuEntityErrorR\x06errors2\xec\x02\n" +
 	"\vMenuService\x12C\n" +
 	"\x0fGetMenuSnapshot\x12\x18.menu.GetMenuSnapshotReq\x1a\x14.takeout.ApiResponse\"\x00\x12E\n" +
 	"\x10SaveMenuSnapshot\x12\x19.menu.SaveMenuSnapshotReq\x1a\x14.takeout.ApiResponse\"\x00\x12A\n" +
 	"\x0eUpdateMenuItem\x12\x17.menu.UpdateMenuItemReq\x1a\x14.takeout.ApiResponse\"\x00\x12I\n" +
-	"\x12UpdateMenuModifier\x12\x1b.menu.UpdateMenuModifierReq\x1a\x14.takeout.ApiResponse\"\x00B&Z$ttpos-bmp/app/ttpos-takeout/api/menub\x06proto3"
+	"\x12UpdateMenuModifier\x12\x1b.menu.UpdateMenuModifierReq\x1a\x14.takeout.ApiResponse\"\x00\x12C\n" +
+	"\x0fBatchUpdateMenu\x12\x18.menu.BatchUpdateMenuReq\x1a\x14.takeout.ApiResponse\"\x00B&Z$ttpos-bmp/app/ttpos-takeout/api/menub\x06proto3"
 
 var (
 	file_menu_menu_proto_rawDescOnce sync.Once
@@ -767,7 +1073,7 @@ func file_menu_menu_proto_rawDescGZIP() []byte {
 	return file_menu_menu_proto_rawDescData
 }
 
-var file_menu_menu_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_menu_menu_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_menu_menu_proto_goTypes = []any{
 	(*GetMenuSnapshotReq)(nil),     // 0: menu.GetMenuSnapshotReq
 	(*GetMenuSnapshotResp)(nil),    // 1: menu.GetMenuSnapshotResp
@@ -779,25 +1085,35 @@ var file_menu_menu_proto_goTypes = []any{
 	(*UpdateMenuItemResp)(nil),     // 7: menu.UpdateMenuItemResp
 	(*UpdateMenuModifierReq)(nil),  // 8: menu.UpdateMenuModifierReq
 	(*UpdateMenuModifierResp)(nil), // 9: menu.UpdateMenuModifierResp
-	(*takeout.ApiResponse)(nil),    // 10: takeout.ApiResponse
+	(*MenuEntity)(nil),             // 10: menu.MenuEntity
+	(*BatchUpdateMenuReq)(nil),     // 11: menu.BatchUpdateMenuReq
+	(*MenuEntityError)(nil),        // 12: menu.MenuEntityError
+	(*BatchUpdateMenuResp)(nil),    // 13: menu.BatchUpdateMenuResp
+	(*takeout.ApiResponse)(nil),    // 14: takeout.ApiResponse
 }
 var file_menu_menu_proto_depIdxs = []int32{
 	4,  // 0: menu.UpdateMenuItemReq.advanced_pricings:type_name -> menu.AdvancedPricing
 	5,  // 1: menu.UpdateMenuItemReq.purchasabilities:type_name -> menu.Purchasability
 	4,  // 2: menu.UpdateMenuModifierReq.advanced_pricings:type_name -> menu.AdvancedPricing
-	0,  // 3: menu.MenuService.GetMenuSnapshot:input_type -> menu.GetMenuSnapshotReq
-	2,  // 4: menu.MenuService.SaveMenuSnapshot:input_type -> menu.SaveMenuSnapshotReq
-	6,  // 5: menu.MenuService.UpdateMenuItem:input_type -> menu.UpdateMenuItemReq
-	8,  // 6: menu.MenuService.UpdateMenuModifier:input_type -> menu.UpdateMenuModifierReq
-	10, // 7: menu.MenuService.GetMenuSnapshot:output_type -> takeout.ApiResponse
-	10, // 8: menu.MenuService.SaveMenuSnapshot:output_type -> takeout.ApiResponse
-	10, // 9: menu.MenuService.UpdateMenuItem:output_type -> takeout.ApiResponse
-	10, // 10: menu.MenuService.UpdateMenuModifier:output_type -> takeout.ApiResponse
-	7,  // [7:11] is the sub-list for method output_type
-	3,  // [3:7] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	4,  // 3: menu.MenuEntity.advanced_pricings:type_name -> menu.AdvancedPricing
+	5,  // 4: menu.MenuEntity.purchasabilities:type_name -> menu.Purchasability
+	10, // 5: menu.BatchUpdateMenuReq.menu_entities:type_name -> menu.MenuEntity
+	12, // 6: menu.BatchUpdateMenuResp.errors:type_name -> menu.MenuEntityError
+	0,  // 7: menu.MenuService.GetMenuSnapshot:input_type -> menu.GetMenuSnapshotReq
+	2,  // 8: menu.MenuService.SaveMenuSnapshot:input_type -> menu.SaveMenuSnapshotReq
+	6,  // 9: menu.MenuService.UpdateMenuItem:input_type -> menu.UpdateMenuItemReq
+	8,  // 10: menu.MenuService.UpdateMenuModifier:input_type -> menu.UpdateMenuModifierReq
+	11, // 11: menu.MenuService.BatchUpdateMenu:input_type -> menu.BatchUpdateMenuReq
+	14, // 12: menu.MenuService.GetMenuSnapshot:output_type -> takeout.ApiResponse
+	14, // 13: menu.MenuService.SaveMenuSnapshot:output_type -> takeout.ApiResponse
+	14, // 14: menu.MenuService.UpdateMenuItem:output_type -> takeout.ApiResponse
+	14, // 15: menu.MenuService.UpdateMenuModifier:output_type -> takeout.ApiResponse
+	14, // 16: menu.MenuService.BatchUpdateMenu:output_type -> takeout.ApiResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_menu_menu_proto_init() }
@@ -807,13 +1123,14 @@ func file_menu_menu_proto_init() {
 	}
 	file_menu_menu_proto_msgTypes[6].OneofWrappers = []any{}
 	file_menu_menu_proto_msgTypes[8].OneofWrappers = []any{}
+	file_menu_menu_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_menu_menu_proto_rawDesc), len(file_menu_menu_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

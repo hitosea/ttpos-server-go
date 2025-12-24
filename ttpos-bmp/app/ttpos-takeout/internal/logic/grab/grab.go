@@ -697,6 +697,56 @@ func (s *sGrab) UpdateMenuRecord(ctx context.Context, merchantID string, req gra
 	return nil
 }
 
+// BatchUpdateMenu 批量更新菜单记录 (商品或修饰符)
+// 调用 GrabFood API POST /partner/v1/batch/menu
+// 参数：
+//   - ctx: 上下文对象
+//   - merchantID: Grab Merchant ID
+//   - req: 批量更新请求（GrabFood SDK 结构体）
+//
+// 返回：
+//   - resp: 批量更新响应，包含状态和错误列表
+//   - err: 错误信息
+func (s *sGrab) BatchUpdateMenu(ctx context.Context, merchantID string, req *grabfood.BatchUpdateMenuItem) (*grabfood.BatchUpdateMenuResponse, error) {
+	// 1. 获取授权信息
+	auth, err := s.getAuthorizationHeader(ctx)
+	if err != nil {
+		return nil, gerror.Wrap(err, "获取授权信息失败")
+	}
+
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "[Grab] BatchUpdateMenu 开始: merchantID=%s, field=%s, count=%d",
+		merchantID, req.GetField(), len(req.GetMenuEntities()))
+
+	// 3. 调用 GrabFood SDK BatchUpdateMenu API
+	resp, httpResp, err := s.getClient().UpdateMenuRecordAPI.
+		BatchUpdateMenu(s.getSDKContext(ctx)).
+		ContentType("application/json").
+		Authorization(auth).
+		BatchUpdateMenuItem(*req).
+		Execute()
+
+	// 4. 错误处理
+	if err = s.handleSDKError(ctx, err, "BatchUpdateMenu"); err != nil {
+		return nil, err
+	}
+	if httpResp != nil {
+		defer httpResp.Body.Close()
+	}
+
+	// 5. 检查 HTTP 状态码
+	if httpResp != nil && httpResp.StatusCode >= 400 {
+		return nil, gerror.Newf("Grab API 返回错误: HTTP %d", httpResp.StatusCode)
+	}
+
+	// 6. 记录成功日志
+	status := resp.GetStatus()
+	g.Log().Infof(ctx, "[Grab] BatchUpdateMenu 成功: merchantID=%s, status=%s, errorCount=%d",
+		merchantID, status, len(resp.GetErrors()))
+
+	return resp, nil
+}
+
 // ============================================================================
 // 自助激活链接 API
 // ============================================================================

@@ -35,6 +35,17 @@ type (
 		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新修饰符信息
 		// 支持更新：价格、可用状态、是否免费、高级定价配置
 		UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) error
+		// BatchUpdateMenu 批量更新菜单记录 (商品或修饰符)
+		// 调用 GrabFood API POST /partner/v1/batch/menu 批量更新菜单信息
+		// 支持批量更新：价格、可用状态、库存、高级定价配置、购买能力配置
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 批量更新请求
+		//
+		// 返回：
+		//   - resp: 批量更新响应，包含状态和错误列表
+		//   - err: 错误信息
+		BatchUpdateMenu(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabDto.BatchUpdateMenuResp, error)
 	}
 )
 
