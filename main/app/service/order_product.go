@@ -221,6 +221,43 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	return info, nil
 }
 
+// OrderCartProductAddSimple 向购物车添加商品（无校验版本）
+func (s *orderSrv) OrderCartProductAddSimple(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+	// 跳过订单状态校验
+
+	// 设置添加来源
+	saleBill.SetOperateSource(ctx.GetSource())
+
+	// 加购（无校验版本）
+	if err := s.ActionAddSimple(ctx, request, saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	if ctx.GetCompanyUuid() > constant.OptionalUuid {
+		opts = append(opts, repository.WithCompanyUuid(ctx.GetCompanyUuid()))
+	}
+	// 获取新的购物车商品数据
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
+}
+
 // OrderCartProductNum 修改购物车商品数量
 func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 禁止并发操作
@@ -2470,6 +2507,65 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	// 	},
 	// 	IsH5Product: request.IsH5Product(),
 	// }, opts...)
+	if err != nil {
+		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
+		return nil, errors.WithMessage(err)
+	}
+	return shopCart, nil
+}
+
+// InstantOrderCartProductAddSimple 点餐页面，往购物车添加商品（无校验版本）。
+func (s *orderSrv) InstantOrderCartProductAddSimple(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// 当不填销售账单ID时，表示要新建一个销售账单
+	if request.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return nil, err
+		}
+		if billInfo != nil && hasInstantOrder {
+			request.SaleBillUuid = billInfo.Uuid
+			request.SaleOrderUuid = billInfo.SaleOrders[0].Uuid
+		} else {
+			order, err := s.CreateInstantOrder(ctx)
+			if err != nil {
+				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				return nil, errors.WithMessage(err)
+			}
+			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
+			request.SaleBillUuid = order.SaleBillUuid
+			request.SaleOrderUuid = order.SaleOrderUuid
+		}
+	}
+
+	// 跳过价格校验
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+
+	num := 1.0
+	if request.Num != nil {
+		num = *request.Num
+	}
+
+	// 往销售账单里添加商品（无校验版本）
+	shopCart, err := s.OrderCartProductAddSimple(ctx, req.ProductAddReq{
+		SaleBillUuid:  request.SaleBillUuid,
+		SaleOrderUuid: request.SaleOrderUuid,
+		Products: []req.ProductParams{
+			{
+				FlavorProductBomUuid:            request.FlavorUuid,
+				Num:                             num,
+				SauceProductBomUuidList:         request.SauceUuidList,
+				ProductPackageAttributeUuidList: request.AttributeUuidList,
+				Operation:                       request.Operation,
+				MustPlanUuid:                    request.MustPlanUuid,
+				BatchTagUuid:                    request.BatchTagUuid,
+			},
+		},
+		IsH5Product: request.IsH5Product(),
+	}, opts...)
+
 	if err != nil {
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
 		return nil, errors.WithMessage(err)

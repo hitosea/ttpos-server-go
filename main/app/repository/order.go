@@ -1,6 +1,7 @@
 package repository
 
 import (
+	goCtx "context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,7 +9,12 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/domain/entity"
+	"ttpos-server-go/app/modules/objectstorage/domain/service"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
 
@@ -671,6 +677,7 @@ type OrderCartInfoOption struct {
 	H5AutoAdd            bool   // 是否是H5自动添加的商品
 	NoAutoAdd            bool   // 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
 	CanCloseMustPlanView bool   // 是否可以关闭必点弹窗
+	CompanyUuid          uint64 // 公司UUID，用于控制是否使用对象存储层
 }
 
 const (
@@ -748,6 +755,13 @@ func WithNoAutoAdd() OrderCartInfoOptionFunc {
 func WithCanCloseMustPlanView() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.CanCloseMustPlanView = true
+	}
+}
+
+// WithCompanyUuid 设置公司UUID
+func WithCompanyUuid(companyUuid uint64) OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.CompanyUuid = companyUuid
 	}
 }
 
@@ -936,6 +950,113 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 			}
 		} else {
 			// 当销售账单是桌台订单时，额外查询桌台信息
+			if option.CompanyUuid == 7709131161600000 {
+				// 先获取 SaleBill（不使用 Preload）
+				saleBill, errDesk := repo.GetSaleBill(
+					CommonRepo.WhereByUuid(saleBillUuid),
+					// 只 Preload SaleOrders 和 SaleOrderProducts（这些是必须的，因为需要过滤条件）
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "SaleOrders",
+							Args: []interface{}{
+								func(db *gorm.DB) *gorm.DB {
+									return db.Where("delete_time = ?", constant.NotDeleted)
+								},
+							},
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts",
+							Args:  []any{filterProduct},
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.H5Order",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("id asc")
+								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+							},
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_bom_uuid asc")
+								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+							},
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
+						},
+					),
+				)
+				if errDesk != nil {
+					return nil, errors.WithMessage(errDesk)
+				}
+
+				// 获取 company uuid（优先使用 option 中的，否则从 db 获取）
+				companyUuid := option.CompanyUuid
+				if companyUuid == 0 {
+					companyUuid = GetCompanyUuid(r.db)
+				}
+
+				// 只有 companyUuid 为 7709131161600000 时才使用对象存储层逻辑
+				const targetCompanyUuid = 7709131161600000
+				if companyUuid == targetCompanyUuid {
+					// 使用对象存储层自动注入关联对象
+					ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))
+
+					// 创建缓存适配器
+					cacheAdapter := adapter.NewCacheAdapter(cache.Global)
+
+					// 创建配置
+					config := &service.Config{
+						TTL:          5 * time.Minute,
+						DisableCache: false,
+						CacheLayer:   cacheAdapter,
+					}
+					config.SetTTL("sale_bill_setting", 10*time.Minute)
+					config.SetTTL("desk", 10*time.Minute)
+					config.SetTTL("product_package", 5*time.Minute)
+					config.SetTTL("multi_language_name", 30*time.Minute)
+					config.SetTTL("product_category", 30*time.Minute)
+					config.SetTTL("product_bom", 5*time.Minute)
+					config.SetTTL("product_package_attribute_group", 5*time.Minute)
+					config.SetTTL("product_attribute", 5*time.Minute)
+					config.SetTTL("product_flavor", 5*time.Minute)
+					config.SetTTL("product_sauce", 5*time.Minute)
+					config.SetTTL("batch_tag", 10*time.Minute)
+
+					// 创建对象存储实例
+					objectStorage := persistence.NewObjectStorage[*model.SaleBill](config)
+
+					// 获取关联配置
+					associations := getSaleBillAssociationsForOrderCart(ctx, r.db)
+
+					// 注入关联对象
+					if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
+						// 如果对象存储层注入失败，记录错误但不影响主流程
+						return nil, errors.WithMessage(fmt.Errorf("对象存储层注入失败: %v", err))
+					}
+				}
+
+				bill := &saleBill
+				// 计算一次金额，避免错误
+				bill.CalcAll()
+				return &ro.ShopCartRepo{SaleBill: bill}, nil
+			} else // 当销售账单是桌台订单时，额外查询桌台信息
 			{
 				saleBill, errDesk := repo.GetSaleBill(
 					CommonRepo.WhereByUuid(saleBillUuid),
@@ -2438,4 +2559,435 @@ func (r *orderRepo) GetSaleBillList(opts ...DBOption) []model.SaleBill {
 	}
 	db.Find(&saleBills)
 	return saleBills
+}
+
+// getSaleBillAssociationsForOrderCart 获取 SaleBill 的关联配置（用于订单购物车场景）
+// 这个函数在 repository 层定义，避免循环依赖
+func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB) []entity.Association {
+	deskRepo := NewDeskRepo(db)
+	productPackageRepo := NewProductPackageRepo(db)
+	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
+	productCategoryRepo := NewProductCategoryRepo(db)
+	productBomRepo := NewProductBomRepo(db)
+	productAttributeRepo := NewProductAttributeRepo(db)
+	productFlavorRepo := NewProductFlavorRepo(db)
+	productSauceRepo := NewProductSauceRepo(db)
+	batchTagRepo := NewBatchTagRepo(db)
+
+	return []entity.Association{
+		// 一对一关系：SaleBillSetting
+		{
+			Path:       "SaleBillSetting",
+			ObjectType: "sale_bill_setting",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				var setting model.SaleBillSetting
+				err := db.Where("sale_bill_uuid = ?", uuid).First(&setting).Error
+				if err != nil {
+					return nil, err
+				}
+				return &setting, nil
+			},
+		},
+		// 一对一关系：Desk
+		{
+			Path:       "Desk",
+			ObjectType: "desk",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).DeskUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				desk, err := deskRepo.GetDesk(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return &desk, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.ProductPackage（支持批量优化）
+		{
+			Path:       "SaleOrders.SaleOrderProducts.ProductPackage",
+			ObjectType: "product_package",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderProduct).ProductPackageUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				pkg, err := productPackageRepo.GetProductPackage(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return pkg, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				packages, err := productPackageRepo.GetProductPackageListByUuids(uuids)
+				if err != nil {
+					return nil, err
+				}
+				result := make(map[uint64]interface{})
+				for _, pkg := range packages {
+					if pkg != nil {
+						result[pkg.Uuid] = pkg
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.MultiLanguageName（支持批量优化）
+		{
+			Path:       "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderProduct).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return multiLanguageNameRepo.GetMultiLanguageName(
+					CommonRepo.WhereByUuid(uuid),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					name, err := multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+					if err == nil {
+						result[uuid] = name
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory
+		{
+			Path:       "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
+			ObjectType: "product_category",
+			GetUUID: func(obj interface{}) uint64 {
+				// obj 是 *ProductPackage 类型
+				if pkg, ok := obj.(*model.ProductPackage); ok && pkg != nil {
+					return pkg.CategoryUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return productCategoryRepo.GetProductCategory(
+					CommonRepo.WhereByUuid(uuid),
+				)
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms
+		{
+			Path:       "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
+			ObjectType: "product_bom",
+			GetUUID: func(obj interface{}) uint64 {
+				// obj 是 *ProductPackage 类型（因为 SaleOrderProduct.ProductPackage 是指针类型）
+				if pkg, ok := obj.(*model.ProductPackage); ok && pkg != nil {
+					return pkg.Uuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				productPackage, err := productPackageRepo.GetProductPackage(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.Preload(WithPreload{Query: "ProductBoms"}),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return productPackage.ProductBoms, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				packages, err := productPackageRepo.GetProductPackageList(
+					CommonRepo.WhereInUuids(uuids),
+					CommonRepo.Preload(WithPreload{Query: "ProductBoms"}),
+				)
+				if err != nil {
+					return nil, err
+				}
+				result := make(map[uint64]interface{})
+				for _, pkg := range packages {
+					result[pkg.Uuid] = pkg.ProductBoms
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups
+		{
+			Path:       "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
+			ObjectType: "product_package_attribute_group",
+			GetUUID: func(obj interface{}) uint64 {
+				// obj 是 *ProductPackage 类型
+				if pkg, ok := obj.(*model.ProductPackage); ok && pkg != nil {
+					return pkg.Uuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				productPackage, err := productPackageRepo.GetProductPackage(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.Preload(WithPreload{Query: "ProductPackageAttributeGroups"}),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return productPackage.ProductPackageAttributeGroups, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				packages, err := productPackageRepo.GetProductPackageList(
+					CommonRepo.WhereInUuids(uuids),
+					CommonRepo.Preload(WithPreload{Query: "ProductPackageAttributeGroups"}),
+				)
+				if err != nil {
+					return nil, err
+				}
+				result := make(map[uint64]interface{})
+				for _, pkg := range packages {
+					result[pkg.Uuid] = pkg.ProductPackageAttributeGroups
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute",
+			ObjectType: "product_attribute",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderProductAttribute).ProductAttributeUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return productAttributeRepo.GetProductAttribute(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					attr, err := productAttributeRepo.GetProductAttribute(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err == nil {
+						result[uuid] = &attr
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.ProductAttribute).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return multiLanguageNameRepo.GetMultiLanguageName(
+					CommonRepo.WhereByUuid(uuid),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					name, err := multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+					if err == nil {
+						result[uuid] = name
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom",
+			ObjectType: "product_bom",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderProductBom).ProductBomUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return productBomRepo.GetProductBom(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					bom, err := productBomRepo.GetProductBom(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err == nil {
+						result[uuid] = &bom
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor",
+			ObjectType: "product_flavor",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.ProductBom).ProductFlavorUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return productFlavorRepo.GetProductFlavor(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					flavor, err := productFlavorRepo.GetProductFlavor(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err == nil {
+						result[uuid] = &flavor
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.ProductFlavor).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return multiLanguageNameRepo.GetMultiLanguageName(
+					CommonRepo.WhereByUuid(uuid),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					name, err := multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+					if err == nil {
+						result[uuid] = name
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce",
+			ObjectType: "product_sauce",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.ProductBom).ProductSauceUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return productSauceRepo.GetProductSauce(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					sauce, err := productSauceRepo.GetProductSauce(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err == nil {
+						result[uuid] = &sauce
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.ProductSauce).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return multiLanguageNameRepo.GetMultiLanguageName(
+					CommonRepo.WhereByUuid(uuid),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					name, err := multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+					if err == nil {
+						result[uuid] = name
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.BatchTag
+		{
+			Path:       "SaleOrders.SaleOrderProducts.BatchTag",
+			ObjectType: "batch_tag",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderProduct).BatchTagUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return batchTagRepo.GetBatchTag(
+					CommonRepo.WhereByUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					tag, err := batchTagRepo.GetBatchTag(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err == nil {
+						result[uuid] = &tag
+					}
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.BatchTag.MultiLanguageName
+		{
+			Path:       "SaleOrders.SaleOrderProducts.BatchTag.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BatchTag).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				return multiLanguageNameRepo.GetMultiLanguageName(
+					CommonRepo.WhereByUuid(uuid),
+				)
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				result := make(map[uint64]interface{})
+				for _, uuid := range uuids {
+					name, err := multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+					if err == nil {
+						result[uuid] = name
+					}
+				}
+				return result, nil
+			},
+		},
+	}
 }
