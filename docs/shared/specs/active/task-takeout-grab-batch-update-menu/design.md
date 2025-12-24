@@ -164,7 +164,7 @@ ttpos-bmp/app/ttpos-takeout/
 type BatchUpdateMenuReq struct {
     MerchantID   string       `json:"merchant_id" v:"required#商户ID不能为空"`
     Field        string       `json:"field" v:"required|in:ITEM,MODIFIER#字段类型不能为空|字段类型必须是ITEM或MODIFIER"`
-    MenuEntities []MenuEntity `json:"menu_entities" v:"required|length:1,100#菜单实体不能为空|菜单实体数量必须在1-100之间"`
+    MenuEntities []MenuEntity `json:"menu_entities" v:"required|length:1,200#菜单实体不能为空|菜单实体数量必须在1-200之间"`
 }
 
 // MenuEntity 菜单实体（商品或修饰符）
@@ -474,8 +474,8 @@ func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMe
     if req.Field != "ITEM" && req.Field != "MODIFIER" {
         return rpc.ApiError("字段类型必须是ITEM或MODIFIER"), nil
     }
-    if len(req.MenuEntities) == 0 || len(req.MenuEntities) > 100 {
-        return rpc.ApiError("菜单实体数量必须在1-100之间"), nil
+    if len(req.MenuEntities) == 0 || len(req.MenuEntities) > 200 {
+        return rpc.ApiError("菜单实体数量必须在1-200之间"), nil
     }
 
     // 2. 构建 DTO 请求

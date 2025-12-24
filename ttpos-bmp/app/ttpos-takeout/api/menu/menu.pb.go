@@ -766,8 +766,8 @@ func (x *MenuEntity) GetPurchasabilities() []*Purchasability {
 type BatchUpdateMenuReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" dc:"Grab MerchantID (必填)"`   // Grab MerchantID (必填)
-	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty" dc:"字段类型: ITEM (商品) 或 MODIFIER (修饰符) (必填)"`              // 字段类型: ITEM (商品) 或 MODIFIER (修饰符) (必填)
-	MenuEntities  []*MenuEntity          `protobuf:"bytes,3,rep,name=menu_entities,json=menuEntities,proto3" json:"menu_entities,omitempty" dc:"菜单实体列表 (1-100 个)"` // 菜单实体列表 (1-100 个)
+	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty" dc:"字段类型: ITEM (商品) (必填)"`                               // 字段类型: ITEM (商品) (必填)
+	MenuEntities  []*MenuEntity          `protobuf:"bytes,3,rep,name=menu_entities,json=menuEntities,proto3" json:"menu_entities,omitempty" dc:"菜单实体列表 (1-200 个)"` // 菜单实体列表 (1-200 个)
 	RequestId     string                 `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`           // 请求 ID (可选，用于追踪)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

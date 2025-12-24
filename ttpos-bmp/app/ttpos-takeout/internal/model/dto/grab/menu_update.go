@@ -137,7 +137,7 @@ func (r *UpdateMenuModifierReq) ToSDKUpdateMenuModifier() *grabfood.UpdateMenuMo
 type BatchUpdateMenuReq struct {
 	MerchantID   string       `json:"merchant_id" v:"required#商户ID不能为空"`                                    // Grab MerchantID
 	Field        string       `json:"field" v:"required|in:ITEM,MODIFIER#字段类型不能为空|字段类型必须是 ITEM 或 MODIFIER"` // 字段类型: ITEM (商品) 或 MODIFIER (修饰符)
-	MenuEntities []MenuEntity `json:"menu_entities" v:"required|length:1,100#菜单实体列表不能为空|菜单实体数量必须在1-100之间"`  // 菜单实体列表 (1-100 个)
+	MenuEntities []MenuEntity `json:"menu_entities" v:"required|#菜单实体列表不能为空"`                               // 菜单实体列表 (1-200 个)
 }
 
 // MenuEntity 菜单实体（用于批量更新）
