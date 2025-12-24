@@ -773,12 +773,12 @@ func (h *SettingHandler) UpdatePrintSetting(c *gin.Context) {
 
 // GetPrintSetting 获取打印设置
 // @Summary 获取打印设置
-// @Description 获取打印设置，包括自定义打印联数配置
+// @Description 获取打印设置，仅返回自定义打印联数相关配置
 // @Tags 商家端.打印设置
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=setting.Printer}
+// @Success 200 {object} dto.Response{data=setting.PrintSettingResp}
 // @Router /shop/setting/print_setting/get [get]
 func (h *SettingHandler) GetPrintSetting(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -788,7 +788,12 @@ func (h *SettingHandler) GetPrintSetting(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, printerSetting)
+	// 只返回自定义打印联数相关字段
+	resp := setting.PrintSettingResp{
+		EnableCustomCopies: printerSetting.EnableCustomCopies,
+		CheckoutSlipCopies: printerSetting.CheckoutSlipCopies,
+	}
+	helper.Success(c, resp)
 }
 
 // UploadCashierCarousel 上传收银机轮播内容（图片/视频）

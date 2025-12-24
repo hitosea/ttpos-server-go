@@ -28,7 +28,7 @@
 
 - ✅ 响应格式统一: `{code, message, data{}}`
 - ✅ data 不能为 null 或数组
-- ✅ URL 使用 snake_case: `/api/v1/print_setting`
+- ✅ URL 使用 snake_case: `/shop/setting/print_setting`
 
 ### 数据库规范 (database.mdc)
 
@@ -208,7 +208,11 @@ type UpdatePrintSettingReq struct {
 
 ```go
 // main/app/dto/resp/setting/printer_setting.go
-// 复用现有的 Printer 结构体，已包含新增字段
+// PrintSettingResp 打印设置响应（仅包含自定义打印联数相关字段）
+type PrintSettingResp struct {
+	EnableCustomCopies string `json:"enable_custom_copies"` // 是否启用自定义打印联数 "0"-关闭 "1"-开启
+	CheckoutSlipCopies int    `json:"checkout_slip_copies"` // 结账单打印联数 0-10
+}
 ```
 
 ---
@@ -221,7 +225,7 @@ type UpdatePrintSettingReq struct {
 
 **请求**:
 
-- **URL**: `/api/v1/print_setting/update`
+- **URL**: `/shop/setting/print_setting/update`
 - **Method**: `POST`
 - **Headers**:
   ```json
@@ -243,11 +247,8 @@ type UpdatePrintSettingReq struct {
 ```json
 {
   "code": 1,
-  "message": "success",
-  "data": {
-    "enable_custom_copies": "1",
-    "checkout_slip_copies": 2
-  }
+  "message": "保存成功",
+  "data": {}
 }
 ```
 
@@ -265,7 +266,7 @@ type UpdatePrintSettingReq struct {
 
 **请求**:
 
-- **URL**: `/api/v1/print_setting/get`
+- **URL**: `/api/v1/shop/setting/print_setting/get`
 - **Method**: `GET`
 - **Headers**:
   ```json
@@ -282,12 +283,15 @@ type UpdatePrintSettingReq struct {
   "message": "success",
   "data": {
     "enable_custom_copies": "0",
-    "checkout_slip_copies": 0,
-    "cashier_open": "1",
-    // ... 其他打印设置字段
+    "checkout_slip_copies": 0
   }
 }
 ```
+
+**说明**:
+- 该接口仅返回自定义打印联数相关配置字段
+- `enable_custom_copies`: "0" 表示关闭，"1" 表示开启
+- `checkout_slip_copies`: 结账单打印联数，范围 0-10，0 表示不打印
 
 ---
 
@@ -408,7 +412,7 @@ func NewPrintSettingAPI(settingSrv service.ISrv) *PrintSettingAPI {
 	return &PrintSettingAPI{settingSrv: settingSrv}
 }
 
-// POST /api/v1/print_setting/update
+// POST /shop/setting/print_setting/update
 func (api *PrintSettingAPI) Update(c *gin.Context) {
 	var req dto_req.UpdatePrintSettingReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -436,7 +440,7 @@ func (api *PrintSettingAPI) Update(c *gin.Context) {
 	})
 }
 
-// GET /api/v1/print_setting/get
+// GET /shop/setting/print_setting/get
 func (api *PrintSettingAPI) Get(c *gin.Context) {
 	ctx := context.NewContext(c)
 	printerSetting, err := api.settingSrv.GetPrinterSetting(ctx, nil)
@@ -445,9 +449,12 @@ func (api *PrintSettingAPI) Get(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, gin.H{
-		"data": printerSetting,
-	})
+	// 只返回自定义打印联数相关字段
+	resp := setting.PrintSettingResp{
+		EnableCustomCopies: printerSetting.EnableCustomCopies,
+		CheckoutSlipCopies: printerSetting.CheckoutSlipCopies,
+	}
+	helper.Success(c, resp)
 }
 ```
 

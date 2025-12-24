@@ -114,10 +114,16 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 	openPosEntryDetail := make([]*selling.OpenPosEntryDetail, 0)
 	if len(openEntryReq.OpenPosEntryDetail) != 0 {
 		for _, detail := range openEntryReq.OpenPosEntryDetail {
-			openPosEntryDetail = append(openPosEntryDetail, &selling.OpenPosEntryDetail{
-				ModeOfPayment: detail.ModeOfPayment,
+			openPosEntryDetailErp := &selling.OpenPosEntryDetail{
 				OpeningAmount: detail.OpeningAmount,
-			})
+			}
+			if detail.PaymentId != nil && *detail.PaymentId != "" {
+				openPosEntryDetailErp.PaymentId = detail.PaymentId
+			} else if detail.ModeOfPayment != "" {
+				openPosEntryDetailErp.ModeOfPayment = &detail.ModeOfPayment
+			}
+
+			openPosEntryDetail = append(openPosEntryDetail, openPosEntryDetailErp)
 		}
 	}
 	openPosEntryReq := &selling.OpenPosEntryReq{
@@ -158,15 +164,16 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 	closePosEntryDetail := make([]*selling.ClosePosEntryDetail, 0)
 	if len(closeEntryReq.ClosePosEntryDetail) != 0 {
 		for _, detail := range closeEntryReq.ClosePosEntryDetail {
-			var modeOfPayment *string
-			if detail.ModeOfPayment != "" {
-				modeOfPayment = &detail.ModeOfPayment
-			}
-			closePosEntryDetail = append(closePosEntryDetail, &selling.ClosePosEntryDetail{
-				ModeOfPayment: modeOfPayment,
+			entryDetail := &selling.ClosePosEntryDetail{
 				OpeningAmount: detail.OpeningAmount,
 				ClosingAmount: detail.ClosingAmount,
-			})
+			}
+			if detail.PaymentId != nil && *detail.PaymentId != "" {
+				entryDetail.PaymentId = detail.PaymentId
+			} else if detail.ModeOfPayment != "" {
+				entryDetail.ModeOfPayment = &detail.ModeOfPayment
+			}
+			closePosEntryDetail = append(closePosEntryDetail, entryDetail)
 		}
 	}
 	closePosEntryReq := &selling.ClosePosEntryReq{
