@@ -743,6 +743,54 @@ func (h *SettingHandler) SaveCashierSetting(c *gin.Context) {
 	helper.Success(c, "保存成功")
 }
 
+// UpdatePrintSetting 更新打印设置
+// @Summary 更新打印设置
+// @Description 更新打印设置，包括自定义打印联数配置
+// @Tags 商家端.打印设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.UpdatePrintSettingReq true "更新打印设置"
+// @Success 200 {object} dto.Response{data=object{enable_custom_copies=string,checkout_slip_copies=int}}
+// @Router /shop/setting/print_setting/update [post]
+func (h *SettingHandler) UpdatePrintSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.UpdatePrintSettingReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	// 调用 Service 层更新
+	err := h.settingSrv.UpdatePrintSetting(ctx, &updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, "保存成功")
+}
+
+// GetPrintSetting 获取打印设置
+// @Summary 获取打印设置
+// @Description 获取打印设置，包括自定义打印联数配置
+// @Tags 商家端.打印设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=setting.Printer}
+// @Router /shop/setting/print_setting/get [get]
+func (h *SettingHandler) GetPrintSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	printerSetting, err := h.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, printerSetting)
+}
+
 // UploadCashierCarousel 上传收银机轮播内容（图片/视频）
 // @Summary 上传收银机轮播内容
 // @Description 上传收银机副屏轮播内容，支持图片（JPG、JPEG、PNG、WEBP，<15MB）和视频（MP4，<30MB）
@@ -1242,6 +1290,8 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/cashier", wrapper.GetCashierSetting)                      // 获取收银机设置
 		privateApi.POST("/setting/cashier", wrapper.SaveCashierSetting)                    // 保存收银机设置
 		privateApi.POST("/setting/cashier/carousel/upload", wrapper.UploadCashierCarousel) // 上传收银机轮播内容
+		privateApi.GET("/setting/print_setting/get", wrapper.GetPrintSetting)              // 获取打印设置
+		privateApi.POST("/setting/print_setting/update", wrapper.UpdatePrintSetting)       // 更新打印设置
 		privateApi.GET("/setting/kiosk", wrapper.GetKioskSetting)                          // 获取自助点餐机设置
 		privateApi.POST("/setting/kiosk", wrapper.SaveKioskSetting)                        // 保存自助点餐机设置
 		privateApi.POST("/setting/kiosk/carousel/upload", wrapper.UploadKioskCarousel)     // 上传自助点餐机轮播内容

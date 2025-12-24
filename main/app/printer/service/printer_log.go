@@ -334,6 +334,11 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 		ctx.AddLock()
 	}
 
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("获取打印设置失败"), err.Error())
+	}
+
 	// 获取设备 - 判断网页版的设备 不能获取
 	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
 	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSource(ctx.GetSource()), deviceRepo.WhereSn(ctx.GetDeviceSn()))
@@ -355,9 +360,16 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 		return nil, errors.WithMessage(err)
 	}
 
+	// 是否开启自定义打印联数
+	enableCustomCopies := printerSetting.EnableCustomCopies == "1"
+
 	// 转换为响应数据
 	printerDataList := make([]resp.PrinterData, 0, len(printerLogList))
 	for _, log := range printerLogList {
+		// 如果打印类型为结账单，且启用了自定义打印联数，且打印份数为0，则不打印
+		if log.DataType == 2 && enableCustomCopies && log.Copies == 0 {
+			continue
+		}
 		printerDataList = append(printerDataList, resp.PrinterData{
 			Uuid: log.Uuid,
 			Data: func() string {

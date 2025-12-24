@@ -54,8 +54,10 @@ message OpenPosEntryInfo {
 }
 
 message OpenPosEntryDetail {
-  string mode_of_payment = 1; // 支付方式
-  double opening_amount = 2; // 开帐金额
+  optional string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
+  double opening_amount = 2; // 开帐金额,必填
+  optional string payment_id = 3; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
 }
 
 message OpenPosEntryResp {

@@ -40,6 +40,24 @@ type (
 		//   - orderUuid: 订单 UUID
 		//   - err: 错误信息
 		MarkOrderReady(ctx context.Context, takeoutOrderUuid string, requestId string) (orderUuid string, err error)
+		// CancelOrder 取消订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 取消订单请求，包含 order_uuid 和 cancel_code
+		//
+		// 返回：
+		//   - res: 取消订单响应
+		//   - err: 错误信息
+		CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res *api.CancelOrderResp, err error)
+		// CheckOrderCancelable 检查订单是否可取消
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 检查订单可取消性请求，包含 order_uuid
+		//
+		// 返回：
+		//   - res: 检查订单可取消性响应
+		//   - err: 错误信息
+		CheckOrderCancelable(ctx context.Context, req *api.CheckOrderCancelableReq) (res *api.CheckOrderCancelableResp, err error)
 	}
 )
 

@@ -978,7 +978,7 @@ func (s *stockReconciliationSrv) getIsInventoryStatusException(bookedQuantity de
 		}
 		return true
 	}
-	return countedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))
+	return countedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.3)) // v2.12.0 把盈亏异常的计算由20%调整为30%
 }
 
 func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) {

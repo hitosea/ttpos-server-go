@@ -365,6 +365,234 @@ func (x *MarkOrderReadyResp) GetOrderUuid() string {
 	return ""
 }
 
+// 检查订单是否可取消请求
+type CheckOrderCancelableReq struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TakeoutOrderUuid string                 `protobuf:"bytes,1,opt,name=takeout_order_uuid,json=takeoutOrderUuid,proto3" json:"takeout_order_uuid,omitempty" dc:"外卖订单UUID"` // 外卖订单UUID
+	RequestId        string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求追踪ID (可选)"`                     // 请求追踪ID (可选)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CheckOrderCancelableReq) Reset() {
+	*x = CheckOrderCancelableReq{}
+	mi := &file_order_order_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckOrderCancelableReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckOrderCancelableReq) ProtoMessage() {}
+
+func (x *CheckOrderCancelableReq) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckOrderCancelableReq.ProtoReflect.Descriptor instead.
+func (*CheckOrderCancelableReq) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CheckOrderCancelableReq) GetTakeoutOrderUuid() string {
+	if x != nil {
+		return x.TakeoutOrderUuid
+	}
+	return ""
+}
+
+func (x *CheckOrderCancelableReq) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// 检查订单是否可取消响应
+type CheckOrderCancelableResp struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	OrderUuid             string                 `protobuf:"bytes,1,opt,name=order_uuid,json=orderUuid,proto3" json:"order_uuid,omitempty" dc:"订单UUID"`                                                               // 订单UUID
+	CanCancel             bool                   `protobuf:"varint,2,opt,name=can_cancel,json=canCancel,proto3" json:"can_cancel,omitempty" dc:"是否可以取消（true=可取消, false=不可取消）"`                                        // 是否可以取消（true=可取消, false=不可取消）
+	NonCancellationReason string                 `protobuf:"bytes,3,opt,name=non_cancellation_reason,json=nonCancellationReason,proto3" json:"non_cancellation_reason,omitempty" dc:"不可取消原因（当 can_cancel=false 时返回）"` // 不可取消原因（当 can_cancel=false 时返回）
+	RawData               string                 `protobuf:"bytes,4,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty" dc:"SDK原始响应数据（JSON格式，包含所有SDK返回字段）"`                                              // SDK原始响应数据（JSON格式，包含所有SDK返回字段）
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *CheckOrderCancelableResp) Reset() {
+	*x = CheckOrderCancelableResp{}
+	mi := &file_order_order_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckOrderCancelableResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckOrderCancelableResp) ProtoMessage() {}
+
+func (x *CheckOrderCancelableResp) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckOrderCancelableResp.ProtoReflect.Descriptor instead.
+func (*CheckOrderCancelableResp) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CheckOrderCancelableResp) GetOrderUuid() string {
+	if x != nil {
+		return x.OrderUuid
+	}
+	return ""
+}
+
+func (x *CheckOrderCancelableResp) GetCanCancel() bool {
+	if x != nil {
+		return x.CanCancel
+	}
+	return false
+}
+
+func (x *CheckOrderCancelableResp) GetNonCancellationReason() string {
+	if x != nil {
+		return x.NonCancellationReason
+	}
+	return ""
+}
+
+func (x *CheckOrderCancelableResp) GetRawData() string {
+	if x != nil {
+		return x.RawData
+	}
+	return ""
+}
+
+// 取消订单请求
+type CancelOrderReq struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TakeoutOrderUuid string                 `protobuf:"bytes,1,opt,name=takeout_order_uuid,json=takeoutOrderUuid,proto3" json:"takeout_order_uuid,omitempty" dc:"外卖订单UUID"` // 外卖订单UUID
+	CancelCode       string                 `protobuf:"bytes,2,opt,name=cancel_code,json=cancelCode,proto3" json:"cancel_code,omitempty" dc:"取消原因码（可根据不同平台传入不同的编码）"`        // 取消原因码（可根据不同平台传入不同的编码）
+	RequestId        string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求追踪ID (可选)"`                     // 请求追踪ID (可选)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CancelOrderReq) Reset() {
+	*x = CancelOrderReq{}
+	mi := &file_order_order_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelOrderReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelOrderReq) ProtoMessage() {}
+
+func (x *CancelOrderReq) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelOrderReq.ProtoReflect.Descriptor instead.
+func (*CancelOrderReq) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CancelOrderReq) GetTakeoutOrderUuid() string {
+	if x != nil {
+		return x.TakeoutOrderUuid
+	}
+	return ""
+}
+
+func (x *CancelOrderReq) GetCancelCode() string {
+	if x != nil {
+		return x.CancelCode
+	}
+	return ""
+}
+
+func (x *CancelOrderReq) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// 取消订单响应
+type CancelOrderResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderUuid     string                 `protobuf:"bytes,1,opt,name=order_uuid,json=orderUuid,proto3" json:"order_uuid,omitempty" dc:"订单UUID"` // 订单UUID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelOrderResp) Reset() {
+	*x = CancelOrderResp{}
+	mi := &file_order_order_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelOrderResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelOrderResp) ProtoMessage() {}
+
+func (x *CancelOrderResp) ProtoReflect() protoreflect.Message {
+	mi := &file_order_order_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelOrderResp.ProtoReflect.Descriptor instead.
+func (*CancelOrderResp) Descriptor() ([]byte, []int) {
+	return file_order_order_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CancelOrderResp) GetOrderUuid() string {
+	if x != nil {
+		return x.OrderUuid
+	}
+	return ""
+}
+
 var File_order_order_proto protoreflect.FileDescriptor
 
 const file_order_order_proto_rawDesc = "" +
@@ -397,11 +625,33 @@ const file_order_order_proto_rawDesc = "" +
 	"request_id\x18\x02 \x01(\tR\trequestId\"3\n" +
 	"\x12MarkOrderReadyResp\x12\x1d\n" +
 	"\n" +
-	"order_uuid\x18\x01 \x01(\tR\torderUuid2\xcc\x01\n" +
+	"order_uuid\x18\x01 \x01(\tR\torderUuid\"f\n" +
+	"\x17CheckOrderCancelableReq\x12,\n" +
+	"\x12takeout_order_uuid\x18\x01 \x01(\tR\x10takeoutOrderUuid\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\"\xab\x01\n" +
+	"\x18CheckOrderCancelableResp\x12\x1d\n" +
+	"\n" +
+	"order_uuid\x18\x01 \x01(\tR\torderUuid\x12\x1d\n" +
+	"\n" +
+	"can_cancel\x18\x02 \x01(\bR\tcanCancel\x126\n" +
+	"\x17non_cancellation_reason\x18\x03 \x01(\tR\x15nonCancellationReason\x12\x19\n" +
+	"\braw_data\x18\x04 \x01(\tR\arawData\"~\n" +
+	"\x0eCancelOrderReq\x12,\n" +
+	"\x12takeout_order_uuid\x18\x01 \x01(\tR\x10takeoutOrderUuid\x12\x1f\n" +
+	"\vcancel_code\x18\x02 \x01(\tR\n" +
+	"cancelCode\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\"0\n" +
+	"\x0fCancelOrderResp\x12\x1d\n" +
+	"\n" +
+	"order_uuid\x18\x01 \x01(\tR\torderUuid2\xd6\x02\n" +
 	"\fOrderService\x12<\n" +
 	"\fGetOrderInfo\x12\x16.order.GetOrderInfoReq\x1a\x14.takeout.ApiResponse\x12<\n" +
 	"\fPrepareOrder\x12\x16.order.PrepareOrderReq\x1a\x14.takeout.ApiResponse\x12@\n" +
-	"\x0eMarkOrderReady\x12\x18.order.MarkOrderReadyReq\x1a\x14.takeout.ApiResponseB'Z%ttpos-bmp/app/ttpos-takeout/api/orderb\x06proto3"
+	"\x0eMarkOrderReady\x12\x18.order.MarkOrderReadyReq\x1a\x14.takeout.ApiResponse\x12L\n" +
+	"\x14CheckOrderCancelable\x12\x1e.order.CheckOrderCancelableReq\x1a\x14.takeout.ApiResponse\x12:\n" +
+	"\vCancelOrder\x12\x15.order.CancelOrderReq\x1a\x14.takeout.ApiResponseB'Z%ttpos-bmp/app/ttpos-takeout/api/orderb\x06proto3"
 
 var (
 	file_order_order_proto_rawDescOnce sync.Once
@@ -415,28 +665,36 @@ func file_order_order_proto_rawDescGZIP() []byte {
 	return file_order_order_proto_rawDescData
 }
 
-var file_order_order_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_order_order_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_order_order_proto_goTypes = []any{
-	(*GetOrderInfoReq)(nil),     // 0: order.GetOrderInfoReq
-	(*GetOrderInfoResp)(nil),    // 1: order.GetOrderInfoResp
-	(*PrepareOrderReq)(nil),     // 2: order.PrepareOrderReq
-	(*PrepareOrderResp)(nil),    // 3: order.PrepareOrderResp
-	(*MarkOrderReadyReq)(nil),   // 4: order.MarkOrderReadyReq
-	(*MarkOrderReadyResp)(nil),  // 5: order.MarkOrderReadyResp
-	(*takeout.ApiResponse)(nil), // 6: takeout.ApiResponse
+	(*GetOrderInfoReq)(nil),          // 0: order.GetOrderInfoReq
+	(*GetOrderInfoResp)(nil),         // 1: order.GetOrderInfoResp
+	(*PrepareOrderReq)(nil),          // 2: order.PrepareOrderReq
+	(*PrepareOrderResp)(nil),         // 3: order.PrepareOrderResp
+	(*MarkOrderReadyReq)(nil),        // 4: order.MarkOrderReadyReq
+	(*MarkOrderReadyResp)(nil),       // 5: order.MarkOrderReadyResp
+	(*CheckOrderCancelableReq)(nil),  // 6: order.CheckOrderCancelableReq
+	(*CheckOrderCancelableResp)(nil), // 7: order.CheckOrderCancelableResp
+	(*CancelOrderReq)(nil),           // 8: order.CancelOrderReq
+	(*CancelOrderResp)(nil),          // 9: order.CancelOrderResp
+	(*takeout.ApiResponse)(nil),      // 10: takeout.ApiResponse
 }
 var file_order_order_proto_depIdxs = []int32{
-	0, // 0: order.OrderService.GetOrderInfo:input_type -> order.GetOrderInfoReq
-	2, // 1: order.OrderService.PrepareOrder:input_type -> order.PrepareOrderReq
-	4, // 2: order.OrderService.MarkOrderReady:input_type -> order.MarkOrderReadyReq
-	6, // 3: order.OrderService.GetOrderInfo:output_type -> takeout.ApiResponse
-	6, // 4: order.OrderService.PrepareOrder:output_type -> takeout.ApiResponse
-	6, // 5: order.OrderService.MarkOrderReady:output_type -> takeout.ApiResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: order.OrderService.GetOrderInfo:input_type -> order.GetOrderInfoReq
+	2,  // 1: order.OrderService.PrepareOrder:input_type -> order.PrepareOrderReq
+	4,  // 2: order.OrderService.MarkOrderReady:input_type -> order.MarkOrderReadyReq
+	6,  // 3: order.OrderService.CheckOrderCancelable:input_type -> order.CheckOrderCancelableReq
+	8,  // 4: order.OrderService.CancelOrder:input_type -> order.CancelOrderReq
+	10, // 5: order.OrderService.GetOrderInfo:output_type -> takeout.ApiResponse
+	10, // 6: order.OrderService.PrepareOrder:output_type -> takeout.ApiResponse
+	10, // 7: order.OrderService.MarkOrderReady:output_type -> takeout.ApiResponse
+	10, // 8: order.OrderService.CheckOrderCancelable:output_type -> takeout.ApiResponse
+	10, // 9: order.OrderService.CancelOrder:output_type -> takeout.ApiResponse
+	5,  // [5:10] is the sub-list for method output_type
+	0,  // [0:5] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_order_order_proto_init() }
@@ -450,7 +708,7 @@ func file_order_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_order_order_proto_rawDesc), len(file_order_order_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -65,3 +65,11 @@ func (r *ProductPackageGroupItemTakeoutRepo) SoftDelete(uuid uint64) error {
 		Where("uuid = ?", uuid).
 		Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error
 }
+
+// DestroyProductPackageGroupItemTakeout 物理删除套餐子商品价格
+func (r *ProductPackageGroupItemTakeoutRepo) DestroyProductPackageGroupItemTakeout(uuids []uint64) error {
+	if len(uuids) == 0 {
+		return nil
+	}
+	return r.db.Where("uuid IN ?", uuids).Delete(&model.ProductPackageGroupItemTakeout{}).Error
+}

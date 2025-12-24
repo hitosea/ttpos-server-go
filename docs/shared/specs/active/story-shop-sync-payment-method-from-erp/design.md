@@ -17,15 +17,26 @@ sequenceDiagram
     participant Main as Main模块<br/>(Go)
     participant BMP as BMP模块<br/>(ttpos-erp)
     participant ERP as ERPNext
+    participant HQ as 总店数据库
 
     Shop->>Main: POST /api/v1/shop/sync<br/>触发同步
-    Main->>Main: 判断商户类型<br/>(散户/总店)
+    Main->>Main: 判断商户类型<br/>(散户/总店/子店)
+    
+    Note over Main,ERP: 第一步：所有商户都从ERP同步
     Main->>BMP: gRPC: GetModeOfPaymentList
     BMP->>ERP: GET /api/resource/Mode of Payment
-    ERP-->>BMP: 返回支付方式列表
+    ERP-->>BMP: 返回支付方式列表<br/>(含PaymentID)
     BMP-->>Main: 返回支付方式数据
-    Main->>Main: 比对本地数据<br/>判断新增/更新
-    Main->>Main: 执行同步逻辑
+    Main->>Main: 比对本地数据<br/>优先PaymentID匹配<br/>降级Name匹配
+    Main->>Main: 执行ERP同步逻辑
+    
+    alt 如果是子店
+        Note over Main,HQ: 第二步：子店额外从总店同步
+        Main->>HQ: 查询总店支付方式
+        HQ-->>Main: 返回总店支付方式
+        Main->>Main: 比对子店数据<br/>创建或更新
+    end
+    
     Main-->>Shop: 返回同步结果
 ```
 
@@ -69,7 +80,7 @@ ERPNext Mode of Payment (支付方式主数据)
 | `status` | tinyint(1) | 状态 | 0 | **从ERP同步** |
 | `sort` | int(11) | 排序 | 0 | |
 | `default_img` | varchar(255) | 默认图片 | '' | 使用系统默认 |
-| `erpnext_payment` | varchar(255) | ERP支付方式名称 | '' | **关联字段** |
+| `erpnext_payment_id` | varchar(255) | ERP支付方式ID | '' | **优先关联字段** |
 | `headquarter_uuid` | bigint(20) unsigned | 总部ID | 0 | 散户/总店=0 |
 
 ### 2.2 数据示例
@@ -78,7 +89,8 @@ ERPNext Mode of Payment (支付方式主数据)
 ```json
 {
   "name": "Credit Card",
-  "enabled": 1
+  "enabled": 1,
+  "payment_id": "PAY-2024-001"
 }
 ```
 
@@ -88,12 +100,12 @@ INSERT INTO ttpos_payment_method (
   name, code, payment_name, source,
   logo_file_uuid, fee_percent,
   is_show_cashier, is_show_assistant, is_show_member_recharge,
-  status, default_img, erpnext_payment, headquarter_uuid
+  status, default_img, erpnext_payment_id, headquarter_uuid
 ) VALUES (
   'Credit Card', 20000, 'Credit Card', 1,
   0, 0.0000,
   1, 1, 1,
-  1, '/image/pay/ja_pay.png', 'Credit Card', 0
+  1, '/image/pay/ja_pay.png', 'PAY-2024-001', 0
 );
 ```
 
@@ -105,26 +117,53 @@ INSERT INTO ttpos_payment_method (
 
 ```mermaid
 flowchart TD
-    Start[开始同步] --> CheckType{判断商户类型}
-    CheckType -->|散户/总店| CallRPC[调用 gRPC<br/>GetModeOfPaymentList]
-    CheckType -->|子店| End[跳过,由总店同步]
+    Start[开始同步] --> SyncERP[第一步：从ERP同步]
     
+    SyncERP --> CallRPC[调用 gRPC<br/>GetModeOfPaymentList]
     CallRPC --> ParseData[解析 ERP 数据]
-    ParseData --> Loop[遍历支付方式]
+    ParseData --> LoopERP[遍历ERP支付方式]
     
-    Loop --> CheckExist{检查是否存在?<br/>erpnext_payment}
+    LoopERP --> CheckPaymentId{ERP返回<br/>payment_id?}
     
-    CheckExist -->|不存在| GenCode[生成 code<br/>MAX+1]
-    GenCode --> Create[创建新记录<br/>首次同步规则]
+    CheckPaymentId -->|有PaymentID| MatchById{按PaymentID<br/>查询本地记录}
+    CheckPaymentId -->|无PaymentID| MatchByErpPayment{按erpnext_payment<br/>查询本地记录}
     
-    CheckExist -->|已存在| Update[更新状态<br/>status=enabled]
+    MatchById -->|不存在| GenCode1[生成 code]
+    MatchById -->|已存在| UpdateERP[更新状态]
     
-    Create --> Next{还有下一条?}
-    Update --> Next
+    MatchByErpPayment -->|不存在| GenCode1
+    MatchByErpPayment -->|已存在| UpdateERP
     
-    Next -->|是| Loop
-    Next -->|否| Commit[提交事务]
-    Commit --> End[同步完成]
+    GenCode1 --> CreateERP[创建新记录]
+    
+    CreateERP --> NextERP{还有下一条?}
+    UpdateERP --> NextERP
+    
+    NextERP -->|是| LoopERP
+    NextERP -->|否| CommitERP[提交事务]
+    
+    CommitERP --> CheckSubShop{是否为子店?}
+    
+    CheckSubShop -->|否| End[同步完成]
+    CheckSubShop -->|是| SyncHQ[第二步：从总店同步]
+    
+    SyncHQ --> QueryHQ[查询总店支付方式<br/>排除code=10,40]
+    QueryHQ --> LoopHQ[遍历总店支付方式]
+    
+    LoopHQ --> CheckExistHQ{子店是否<br/>已有同名?}
+    
+    CheckExistHQ -->|不存在| GenCode2[生成新code]
+    CheckExistHQ -->|存在且特殊code| UpdateHQUuid[更新headquarter_uuid]
+    CheckExistHQ -->|存在且普通code| SkipHQ[跳过]
+    
+    GenCode2 --> CreateHQ[创建新记录<br/>关联总店uuid]
+    
+    CreateHQ --> NextHQ{还有下一条?}
+    UpdateHQUuid --> NextHQ
+    SkipHQ --> NextHQ
+    
+    NextHQ -->|是| LoopHQ
+    NextHQ -->|否| End
 ```
 
 ### 3.2 代码结构
@@ -177,18 +216,68 @@ func (s *erpSrv) GetModeOfPaymentList(ctx context.Context, companyAbbr, branch s
 
 ```go
 // SyncPaymentMethod 同步支付方式
-func (s *paymentMethodSrv) SyncPaymentMethod(ctx context.Context) error {
+// 1. 所有商户类型（散户、总店、子店）都先从 ERP 同步支付方式
+// 2. 如果是子店且 syncHeadquarterData=true，额外再从总店同步支付方式
+// @param syncHeadquarterData 是否同步总部数据（仅对子店有效）
+func (s *paymentMethodSrv) SyncPaymentMethod(ctx context.Context, syncHeadquarterData bool) error {
 	companySetting := ctx.GetCompanySetting()
 
-	// 只有散户和总店才能从 ERP 同步
-	if !companySetting.IsHeadquarter() && !companySetting.IsTtposSite() {
-		// 子店走原有逻辑（从总店同步）
-		return s.syncFromHeadquarter(ctx)
+	// 第一步：所有商户都从 ERP 同步支付方式
+	if err := s.syncFromERP(ctx); err != nil {
+		return errors.WithMessage(err, "从 ERP 同步支付方式失败")
 	}
 
-	// 散户/总店从 ERP 同步
-	return s.syncFromERP(ctx)
+	// 第二步：如果是子店且需要同步总部数据，额外从总店同步支付方式
+	if companySetting.IsSubShop() && syncHeadquarterData {
+		if err := s.syncFromHeadquarter(ctx); err != nil {
+			return errors.WithMessage(err, "子店从总店同步支付方式失败")
+		}
+	}
+
+	return nil
 }
+
+// 在 sync.go 中的调用
+
+// 1. 普通同步（syncTasks）
+{constant.SyncTaskTypePaymentMethod, constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod], 
+	s.paymentMethodSrv.SyncPaymentMethod}, // 直接使用方法引用
+
+// 2. 细粒度同步（executeGranularSync）
+// 注意：细粒度同步中，支付方式同步始终执行（不受 paymentDataChecked 控制）
+// paymentDataChecked 仅控制是否同步总店数据
+taskItem := &model.SyncTaskItem{
+	SyncTaskUuid: syncTask.Uuid,
+	TaskType:     constant.SyncTaskTypePaymentMethod,
+	TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
+	Status:       constant.SyncTaskItemStatusRunning,
+	StartTime:    time.Now().Unix(),
+}
+
+syncTaskItemRepo.Create(taskItem)
+
+logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+// 细粒度同步：paymentDataChecked=true 表示用户勾选了支付数据，需要同步总部支付方式
+err := s.paymentMethodSrv.SyncPaymentMethod(ctx, paymentDataChecked)
+endTime := time.Now().Unix()
+
+if err != nil {
+	failCount++
+	logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+	syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+		"status":        constant.SyncTaskItemStatusFailed,
+		"error_message": err.Error(),
+		"end_time":      endTime,
+	})
+} else {
+	successCount++
+	logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+	syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+		"status":   constant.SyncTaskItemStatusSuccess,
+		"end_time": endTime,
+	})
+}
+```
 
 // syncFromERP 从 ERP 同步支付方式
 func (s *paymentMethodSrv) syncFromERP(ctx context.Context) error {
@@ -215,17 +304,19 @@ func (s *paymentMethodSrv) syncFromERP(ctx context.Context) error {
 
 	// 3. 遍历 ERP 支付方式
 	for _, erpPayment := range erpPayments {
-		// 跳过系统保留的支付方式名称
-		if s.isReservedPaymentName(erpPayment.Name) {
-			logger.Logger.Info("跳过系统保留支付方式", 
-				zap.String("name", erpPayment.Name))
-			continue
-		}
-
-		// 4. 检查是否已存在
+		// 4. 检查是否已存在（优先使用 PaymentID 匹配）
 		var existPayment model.PaymentMethod
-		err := tx.Where("erpnext_payment = ? AND delete_time = 0", erpPayment.Name).
-			First(&existPayment).Error
+		var err error
+		
+		if erpPayment.PaymentId != "" {
+			// 优先使用 PaymentID 匹配
+			err = tx.Where("erpnext_payment_id = ? AND delete_time = 0", erpPayment.PaymentId).
+				First(&existPayment).Error
+		} else {
+			// 降级使用 erpnext_payment 匹配
+			err = tx.Where("erpnext_payment = ? AND delete_time = 0", erpPayment.Name).
+				First(&existPayment).Error
+		}
 
 		if err == gorm.ErrRecordNotFound {
 			// 首次同步：创建新记录
@@ -289,7 +380,7 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 		Name:                   erpPayment.Name,
 		Code:                   code,
 		PaymentName:            erpPayment.Name,
-		Source:                 model.PaymentSourceDefault, // 0=系统默认
+		Source:                 model.PaymentSourceDefault, // 1=手动添加
 		LogoFileUuid:           0,                         // 使用默认图标
 		QrcodeFileUuid:         0,
 		FeePercent:             0.0000,
@@ -300,8 +391,8 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 		Status:                 status,
 		Sort:                   0,
 		DefaultImg:             "/image/pay/ja_pay.png", // 使用默认图标
-		ErpnextPayment:         erpPayment.Name,                      // 关联 ERP 名称
-		HeadquarterUuid:        0,                                    // 散户/总店=0
+		ErpnextPaymentId:       erpPayment.PaymentId,    // 保存 ERP PaymentID
+		HeadquarterUuid:        0,                       // 散户/总店/子店=0
 	}
 	newPayment.Uuid = utils.GenerateUuid()
 	newPayment.SetCreate()
@@ -312,6 +403,7 @@ func (s *paymentMethodSrv) createPaymentFromERP(
 
 	logger.Logger.Info("创建支付方式成功", 
 		zap.String("name", erpPayment.Name),
+		zap.String("payment_id", erpPayment.PaymentId),
 		zap.Int("code", code),
 		zap.Uint64("uuid", newPayment.Uuid))
 
@@ -339,21 +431,101 @@ func (s *paymentMethodSrv) generatePaymentCode(tx *gorm.DB) (int, error) {
 	return nextCode, nil
 }
 
-// isReservedPaymentName 判断是否为系统保留的支付方式名称
-func (s *paymentMethodSrv) isReservedPaymentName(name string) bool {
-	reserved := []string{
-		"Cash",                        // 现金 (code=40)
-		"Balance",                     // 余额 (code=10)
-		"LianlianPay-WeChat Pay",      // 连连微信 (code=90111)
-		"LianlianPay-Alipay",          // 连连支付宝 (code=90222)
-		"LianlianPay-QR PromptPay",    // 连连PromptPay (code=90333)
-	}
-	return slices.Contains(reserved, name)
-}
-
-// syncFromHeadquarter 子店从总店同步（原有逻辑保持不变）
+// syncFromHeadquarter 子店从总店同步支付方式
 func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
-	// ... 原有代码（第 754-828 行）保持不变 ...
+	companySetting := ctx.GetCompanySetting()
+	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
+	headquarterUuid := companySetting.HeadquarterUuid
+
+	logger.Logger.Info("开始从总店同步支付方式",
+		zap.Uint64("sub_shop_uuid", companySetting.CompanyUuid),
+		zap.Uint64("headquarter_uuid", headquarterUuid))
+
+	// 查询总部支付方式（排除 code=40 和 code=10）
+	var hqPayments []model.PaymentMethod
+	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
+		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
+		Find(&hqPayments).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询总部支付方式失败")
+	}
+
+	// 特殊code列表（不跳过，只更新headquarter_uuid）
+	specialCodes := map[int]bool{
+		model.PaymentCodeLianlianWechat:      true, // 90111
+		model.PaymentCodeLianlianAli:         true, // 90222
+		model.PaymentCodeLianlianQrPromptPay: true, // 90333
+	}
+
+	var createdCount, updatedCount, skippedCount int
+	for _, hqPayment := range hqPayments {
+		// 检查分店是否已有同名支付方式（payment_name）
+		var existPayment model.PaymentMethod
+		err := subShopDB.Where("payment_name = ? and source = ? AND delete_time = 0", hqPayment.PaymentName, model.PaymentSourceDefault).
+			First(&existPayment).Error
+
+		if err == nil {
+			// 分店已有同名支付方式
+			if specialCodes[existPayment.Code] {
+				// 特殊code：只更新 headquarter_uuid
+				err = subShopDB.Model(&model.PaymentMethod{}).Where("id = ?", existPayment.ID).Update("headquarter_uuid", headquarterUuid).Error
+				if err != nil {
+					logger.Logger.Error("更新支付方式headquarter_uuid失败",
+						zap.String("name", hqPayment.PaymentName),
+						zap.Int("code", existPayment.Code),
+						zap.Error(err))
+				} else {
+					logger.Logger.Info("更新支付方式headquarter_uuid",
+						zap.String("name", hqPayment.PaymentName),
+						zap.Int("code", existPayment.Code))
+					updatedCount++
+				}
+			} else {
+				// 普通code：跳过
+				logger.Logger.Info("支付方式已存在，跳过同步",
+					zap.String("name", hqPayment.PaymentName),
+					zap.Int("code", existPayment.Code))
+				skippedCount++
+			}
+			continue
+		}
+
+		// 分店不存在，创建新支付方式
+		newCode := s.generatePaymentCode(subShopDB)
+
+		newPayment := model.PaymentMethod{
+			HeadquarterUuid: headquarterUuid,
+			PaymentName:     hqPayment.PaymentName,
+			Name:            hqPayment.Name,
+			Code:            newCode,                    // 生成新code
+			Source:          model.PaymentSourceDefault, // 1-手动添加
+			LogoFileUuid:    0,                          // 固定为0
+			Sort:            hqPayment.Sort,             // 排序
+			Status:          hqPayment.Status,           // 同步状态
+		}
+
+		err = subShopDB.Create(&newPayment).Error
+		if err != nil {
+			logger.Logger.Error("创建支付方式失败",
+				zap.String("name", hqPayment.PaymentName),
+				zap.Error(err))
+			continue
+		}
+
+		logger.Logger.Info("从总店创建新支付方式",
+			zap.String("name", hqPayment.PaymentName),
+			zap.Int("code", newCode))
+		createdCount++
+	}
+
+	logger.Logger.Info("从总店同步支付方式完成",
+		zap.Int("total", len(hqPayments)),
+		zap.Int("created", createdCount),
+		zap.Int("updated", updatedCount),
+		zap.Int("skipped", skippedCount))
+
+	return nil
 }
 ```
 
@@ -367,6 +539,7 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 |-----|---------|---------|
 | ERP 服务不可用 | 返回错误，不影响其他功能 | Error |
 | ERP 返回数据为空 | 视为正常，记录日志 | Info |
+| ERP 未返回 PaymentID | 降级使用 erpnext_payment 匹配 | Info |
 | Code 生成冲突 | 重试 3 次，仍失败则返回错误 | Error |
 | 事务提交失败 | 回滚，返回错误 | Error |
 | 部分数据异常 | 跳过该条，继续处理其他 | Warn |
@@ -385,9 +558,8 @@ logger.Logger.Error("获取 ERP 支付方式失败",
 	zap.Error(err))
 
 // 跳过日志
-logger.Logger.Warn("跳过异常支付方式数据", 
-	zap.String("name", erpPayment.Name),
-	zap.String("reason", "名称为空"))
+logger.Logger.Warn("ERP 未返回 PaymentID，使用 Name 匹配", 
+	zap.String("name", erpPayment.Name))
 ```
 
 ---
@@ -432,10 +604,16 @@ func TestSyncPaymentMethodFromERP(t *testing.T) {
 		// 验证生成的 code >= 20000
 	})
 
-	// 测试保留名称过滤
-	t.Run("跳过系统保留支付方式", func(t *testing.T) {
-		// Mock "Cash", "Balance" 等保留名称
-		// 验证未创建记录
+	// 测试 PaymentID 优先匹配
+	t.Run("优先使用PaymentID匹配", func(t *testing.T) {
+		// Mock ERP 返回 PaymentID
+		// 验证使用 erpnext_payment_id 匹配
+	})
+
+	// 测试 erpnext_payment 降级匹配
+	t.Run("降级使用erpnext_payment匹配", func(t *testing.T) {
+		// Mock ERP 未返回 PaymentID
+		// 验证使用 erpnext_payment 匹配
 	})
 }
 ```
@@ -453,24 +631,35 @@ func TestSyncPaymentMethodFromERP(t *testing.T) {
    - 验证创建支付方式成功
 
 3. **子店同步**
-   - 验证走原有逻辑（从总店同步）
+   - 验证从 ERP 获取数据
+   - 验证创建支付方式成功
 
 4. **ERP 服务异常**
    - 模拟 ERP 不可用
    - 验证错误处理
 
+5. **PaymentID 匹配**
+   - ERP 返回 PaymentID
+   - 验证使用 erpnext_payment_id 匹配
+
+6. **erpnext_payment 降级匹配**
+   - ERP 未返回 PaymentID
+   - 验证使用 erpnext_payment 匹配
+
 ### 6.3 手动测试
 
 **测试步骤**：
 
-1. 在 ERP 中创建新支付方式 "Test Payment"
+1. 在 ERP 中创建新支付方式 "Test Payment"，并设置 PaymentID = "PAY-TEST-001"
 2. 在 TTPOS 中触发同步（调用 `/api/v1/shop/sync`）
 3. 验证数据库中生成新记录
-4. 验证字段值符合预期（`is_show_cashier=1`, `fee_percent=0` 等）
+4. 验证字段值符合预期（`is_show_cashier=1`, `fee_percent=0`, `erpnext_payment_id='PAY-TEST-001'` 等）
 5. 在 ERP 中禁用该支付方式
 6. 再次触发同步
 7. 验证 TTPOS 中 `status=0`
 8. 验证其他字段未被修改
+9. 测试无 PaymentID 的情况：在 ERP 中创建 "Test Payment 2" 但不设置 PaymentID
+10. 验证使用 name 字段进行匹配
 
 ---
 
@@ -489,11 +678,11 @@ func TestSyncPaymentMethodFromERP(t *testing.T) {
 
 ### 7.3 回滚方案
 
-如需回滚，删除 `erpnext_payment` 字段非空的记录：
+如需回滚，删除 `erpnext_payment_id` 字段非空的记录：
 
 ```sql
 DELETE FROM ttpos_payment_method 
-WHERE erpnext_payment != '' 
+WHERE erpnext_payment_id != '' 
 AND code >= 20000;
 ```
 

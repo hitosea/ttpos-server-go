@@ -687,6 +687,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			IsEnableErp:          company.IsOpenErp(),
 			IsOpenMap:            companySetting.IsOpenTableMap(),
 			IsOpenDataManagement: companySetting.IsOpenDataManagement(),
+			IsOpenGrabDelivery:   companySetting.IsOpenGrabDelivery(),
 		},
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,

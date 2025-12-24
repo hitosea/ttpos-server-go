@@ -360,16 +360,21 @@ func (s *sGrab) RejectOrder(ctx context.Context, orderID string, rejectCode int)
 }
 
 // CancelOrder 取消订单
-func (s *sGrab) CancelOrder(ctx context.Context, orderID string, cancelCode int) error {
+func (s *sGrab) CancelOrder(ctx context.Context, merchantID string, orderID string, cancelCode string) error {
 	auth, err := s.getAuthorizationHeader(ctx)
 	if err != nil {
 		return gerror.Wrap(err, "获取授权信息失败")
 	}
 
+	// 将 cancelCode 字符串转换为 int（Grab SDK CancelCode 是 int32 类型）
+	cancelCodeInt, err := strconv.Atoi(cancelCode)
+	if err != nil {
+		return gerror.Wrapf(err, "取消原因码格式错误: %s", cancelCode)
+	}
+
 	// SDK CancelCode 是 int32 类型
-	cancelCodeEnum := grabfood.CancelCode(cancelCode)
-	// TODO: 优化接口，传入 merchantID
-	cancelReq := grabfood.NewCancelOrderRequest(orderID, "", cancelCodeEnum)
+	cancelCodeEnum := grabfood.CancelCode(cancelCodeInt)
+	cancelReq := grabfood.NewCancelOrderRequest(orderID, merchantID, cancelCodeEnum)
 
 	_, httpResp, err := s.getClient().CancelOrderAPI.
 		CancelOrder(s.getSDKContext(ctx)).
@@ -385,7 +390,7 @@ func (s *sGrab) CancelOrder(ctx context.Context, orderID string, cancelCode int)
 		defer httpResp.Body.Close()
 	}
 
-	g.Log().Infof(ctx, "[Grab] 订单已取消: %s, code=%d", orderID, cancelCode)
+	g.Log().Infof(ctx, "[Grab] 订单已取消: merchant_id=%s, order_id=%s, code=%s", merchantID, orderID, cancelCode)
 	return nil
 }
 
@@ -477,10 +482,11 @@ func (s *sGrab) UpdateOrderReadyTime(ctx context.Context, orderID string, newRea
 }
 
 // CheckOrderCancelable 检查订单是否可取消
-func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error) {
+// 返回 Grab SDK 的完整响应对象
+func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error) {
 	auth, err := s.getAuthorizationHeader(ctx)
 	if err != nil {
-		return false, "", gerror.Wrap(err, "获取授权信息失败")
+		return nil, gerror.Wrap(err, "获取授权信息失败")
 	}
 
 	resp, httpResp, err := s.getClient().CheckOrderCancelableAPI.
@@ -491,20 +497,13 @@ func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, ord
 		Execute()
 
 	if err = s.handleSDKError(ctx, err, "CheckOrderCancelable"); err != nil {
-		return false, "", err
+		return nil, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
 	}
 
-	// 注意: SDK 字段名是 CancelAble (而非 Cancelable)
-	cancelable := resp.CancelAble != nil && *resp.CancelAble
-	reason := ""
-	if resp.NonCancellationReason != nil {
-		reason = *resp.NonCancellationReason
-	}
-
-	return cancelable, reason, nil
+	return resp, nil
 }
 
 // ============================================================================

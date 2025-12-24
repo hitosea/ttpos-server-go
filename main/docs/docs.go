@@ -30512,6 +30512,105 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/print_setting/get": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印设置，包括自定义打印联数配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印设置"
+                ],
+                "summary": "获取打印设置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/setting.Printer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/print_setting/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新打印设置，包括自定义打印联数配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印设置"
+                ],
+                "summary": "更新打印设置",
+                "parameters": [
+                    {
+                        "description": "更新打印设置",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdatePrintSettingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "checkout_slip_copies": {
+                                                    "type": "integer"
+                                                },
+                                                "enable_custom_copies": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/return_food_reason": {
             "get": {
                 "security": [
@@ -49545,6 +49644,26 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UpdatePrintSettingReq": {
+            "type": "object",
+            "required": [
+                "enable_custom_copies"
+            ],
+            "properties": {
+                "checkout_slip_copies": {
+                    "description": "结账单打印联数 0-10",
+                    "type": "integer"
+                },
+                "enable_custom_copies": {
+                    "description": "是否启用自定义打印联数 \"0\"-关闭 \"1\"-开启",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                }
+            }
+        },
         "req.UpdateRoleReq": {
             "type": "object",
             "required": [
@@ -56931,6 +57050,10 @@ const docTemplate = `{
                 "max_select": {
                     "description": "最大可选的属性数量。0时不限制选择数量",
                     "type": "integer"
+                },
+                "min_select": {
+                    "description": "最小可选的属性数量。0时不限制选择数量",
+                    "type": "integer"
                 }
             }
         },
@@ -63366,6 +63489,10 @@ const docTemplate = `{
                     "description": "打印机id",
                     "type": "string"
                 },
+                "checkout_slip_copies": {
+                    "description": "结账单打印联数 0-10",
+                    "type": "integer"
+                },
                 "consumption_tax": {
                     "description": "消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示",
                     "type": "string"
@@ -63376,6 +63503,10 @@ const docTemplate = `{
                 },
                 "default_language": {
                     "description": "打印语言（收银）",
+                    "type": "string"
+                },
+                "enable_custom_copies": {
+                    "description": "是否启用自定义打印联数 \"0\"-关闭 \"1\"-开启",
                     "type": "string"
                 },
                 "kitchen_language": {

@@ -14,6 +14,7 @@ import (
 	"github.com/gogf/gf/v2/util/guid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
+	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
@@ -475,4 +476,141 @@ func (s *sGrabOrder) MarkOrderReady(ctx context.Context, orderEntity *entity.Ord
 		orderEntity.ProviderOrderId, orderEntity.Uuid)
 
 	return nil
+}
+
+// CheckOrderCancelable 检查订单是否可取消
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体
+//
+// 返回：
+//   - res: 检查订单可取消性响应
+//   - err: 错误信息
+func (s *sGrabOrder) CheckOrderCancelable(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error) {
+	// 1. 参数验证
+	if orderEntity == nil {
+		return nil, gerror.New("订单实体不能为空")
+	}
+	if orderEntity.ProviderName != ProviderNameGrab {
+		return nil, gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
+	}
+
+	// 2. 从 RawData 解析 Grab orderID 和 merchantID
+	orderID, merchantID, err := s.parseOrderData(orderEntity.RawData)
+	if err != nil {
+		return nil, gerror.Wrap(err, "解析订单数据失败")
+	}
+
+	// 3. 调用 Grab API 检查订单是否可取消
+	sdkResp, err := service.Grab().CheckOrderCancelable(ctx, merchantID, orderID)
+	if err != nil {
+		g.Log().Errorf(ctx, "检查订单可取消性失败: order_id=%s, merchant_id=%s, error=%v",
+			orderID, merchantID, err)
+		return nil, gerror.Wrap(err, "检查订单可取消性失败")
+	}
+
+	// 4. 提取核心字段
+	canCancel := sdkResp.CancelAble != nil && *sdkResp.CancelAble
+	nonCancelReason := ""
+	if sdkResp.NonCancellationReason != nil {
+		nonCancelReason = *sdkResp.NonCancellationReason
+	}
+
+	// 5. 序列化 SDK 完整响应为 JSON（包含所有字段）
+	rawDataJSON, err := gjson.EncodeString(sdkResp)
+	if err != nil {
+		g.Log().Warningf(ctx, "序列化SDK响应失败: %v", err)
+		rawDataJSON = "{}"
+	}
+
+	// 6. 返回精简响应
+	g.Log().Infof(ctx, "订单可取消性检查完成: order_uuid=%s, can_cancel=%v, reason=%s",
+		orderEntity.Uuid, canCancel, nonCancelReason)
+	return &api.CheckOrderCancelableResp{
+		OrderUuid:             orderEntity.Uuid,
+		CanCancel:             canCancel,
+		NonCancellationReason: nonCancelReason,
+		RawData:               rawDataJSON,
+	}, nil
+}
+
+// CancelOrder 取消订单
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体
+//   - cancelCode: 取消原因码（字符串格式，可根据不同平台传入不同的编码）
+//
+// 返回：
+//   - res: 取消订单响应
+//   - err: 错误信息
+func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
+	// 1. 参数验证
+	if orderEntity == nil {
+		return nil, gerror.New("订单实体不能为空")
+	}
+	if orderEntity.ProviderName != ProviderNameGrab {
+		return nil, gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
+	}
+	if orderEntity.ProviderOrderId == "" {
+		return nil, gerror.New("provider_order_id 不能为空")
+	}
+	if orderEntity.ProviderMerchantId == "" {
+		return nil, gerror.New("provider_merchant_id 不能为空")
+	}
+
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "开始取消订单: order_uuid=%s, order_id=%s, merchant_id=%s, cancel_code=%s",
+		orderEntity.Uuid, orderEntity.ProviderOrderId, orderEntity.ProviderMerchantId, cancelCode)
+
+	// 3. 执行取消操作（不再包含预检查逻辑）
+	err = service.Grab().CancelOrder(ctx, orderEntity.ProviderMerchantId, orderEntity.ProviderOrderId, cancelCode)
+	if err != nil {
+		g.Log().Errorf(ctx, "取消订单失败: order_id=%s, cancel_code=%s, error=%v",
+			orderEntity.ProviderOrderId, cancelCode, err)
+		return nil, gerror.Wrap(err, "取消订单失败")
+	}
+
+	// 4. 返回成功响应
+	g.Log().Infof(ctx, "订单取消成功: order_uuid=%s, order_id=%s", orderEntity.Uuid, orderEntity.ProviderOrderId)
+	return &api.CancelOrderResp{
+		OrderUuid: orderEntity.Uuid,
+	}, nil
+}
+
+// parseOrderData 从 RawData JSON 中解析 orderID 和 merchantID
+func (s *sGrabOrder) parseOrderData(rawData string) (orderID, merchantID string, err error) {
+	if rawData == "" {
+		return "", "", gerror.New("raw_data 为空")
+	}
+
+	// 解析 JSON
+	var data map[string]interface{}
+	err = gjson.DecodeTo(rawData, &data)
+	if err != nil {
+		return "", "", gerror.Wrap(err, "解析 JSON 失败")
+	}
+
+	// 提取 orderID（对应 SDK 的 orderID 字段）
+	if orderIDVal, exists := data["orderID"]; exists {
+		if strVal, ok := orderIDVal.(string); ok {
+			orderID = strVal
+		} else {
+			return "", "", gerror.New("orderID 字段类型错误")
+		}
+	} else {
+		return "", "", gerror.New("缺少 orderID 字段")
+	}
+
+	// 提取 merchantID（对应 SDK 的 merchantID 字段）
+	if merchantIDVal, exists := data["merchantID"]; exists {
+		if strVal, ok := merchantIDVal.(string); ok {
+			merchantID = strVal
+		} else {
+			return "", "", gerror.New("merchantID 字段类型错误")
+		}
+	} else {
+		return "", "", gerror.New("缺少 merchantID 字段")
+	}
+
+	return orderID, merchantID, nil
 }

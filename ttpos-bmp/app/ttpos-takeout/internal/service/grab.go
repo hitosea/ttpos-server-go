@@ -47,7 +47,7 @@ type (
 		// RejectOrder 拒绝订单
 		RejectOrder(ctx context.Context, orderID string, rejectCode int) error
 		// CancelOrder 取消订单
-		CancelOrder(ctx context.Context, orderID string, cancelCode int) error
+		CancelOrder(ctx context.Context, merchantID string, orderID string, cancelCode string) error
 		// MarkOrderReady 标记订单准备完成
 		MarkOrderReady(ctx context.Context, orderID string, markStatus string) error
 		// UpdateDeliveryState 更新配送状态 (自配送)
@@ -55,7 +55,8 @@ type (
 		// UpdateOrderReadyTime 更新订单准备时间
 		UpdateOrderReadyTime(ctx context.Context, orderID string, newReadyTime time.Time) error
 		// CheckOrderCancelable 检查订单是否可取消
-		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error)
+		// 返回 Grab SDK 的完整响应对象
+		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error)
 		// PauseStore 暂停门店
 		PauseStore(ctx context.Context, merchantID string, duration int) error
 		// ResumeStore 恢复门店营业
