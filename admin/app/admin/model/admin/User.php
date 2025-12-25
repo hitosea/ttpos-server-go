@@ -36,7 +36,10 @@ class User extends UserModel
         // 如果需要升级，异步升级为 bcrypt
         // 注意：超管表在 saas 库中
         if ($needUpgrade) {
-            upgrade_password_async($user['admin_user_id'], 'ttpos_admin_user', 'admin_user_id', 'password', $data['password'] ?? '', 0);
+            $newHash = upgrade_password_async($user['admin_user_id'], 'ttpos_admin_user', 'admin_user_id', 'password', $data['password'] ?? '', 0);
+            if ($newHash) {
+                $user->password = $newHash;
+            }
         }
         
         if ($user->delete_time) {

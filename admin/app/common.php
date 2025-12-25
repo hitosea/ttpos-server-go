@@ -86,6 +86,7 @@ function hash_password_bcrypt($password)
  * @param string $fieldName 密码字段名
  * @param string $password 明文密码
  * @param int $appId 应用ID，0表示saas库，>0表示商家库
+ * @return string 新的加密后的密码
  */
 function upgrade_password_async($id, $table, $idField, $fieldName, $password, $appId = 0)
 {
@@ -104,10 +105,13 @@ function upgrade_password_async($id, $table, $idField, $fieldName, $password, $a
         $db->table($table)
             ->where($idField, $id)
             ->update([$fieldName => $newHash]);
+
+        return $newHash;
     } catch (\Exception $e) {
         // 记录日志但不影响主流程
         log_write('密码升级失败: ' . $e->getMessage());
     }
+    return '';
 }
 
 /**

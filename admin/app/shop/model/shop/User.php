@@ -8,6 +8,7 @@ use app\common\model\shop\Access as AccessModel;
 use app\common\model\shop\LoginLog as LoginLogModel;
 use app\common\model\shop\UserShiftLog;
 use app\shop\model\settings\Setting as SettingModel;
+use app\admin\model\admin\Staff as SaasStaffModel;
 
 /**
  * 后台管理员登录模型
@@ -41,9 +42,13 @@ class User extends UserModel
             return false;
         }
 
+        $newHash = '';
         // 如果需要升级，异步升级为 bcrypt
         if ($needUpgrade) {
-            upgrade_password_async($user['uuid'], 'ttpos_staff', 'uuid', 'password', $password, $user['company_uuid']);
+            $newHash = upgrade_password_async($user['uuid'], 'ttpos_staff', 'uuid', 'password', $password, $user['company_uuid']);
+            if ($newHash) {
+                $user->password = $newHash;
+            }
         }
         if ($user['delete_time'] > 0) {
             $this->error = '账号已删除，请联系管理员';
@@ -154,6 +159,9 @@ class User extends UserModel
         $date['password_change_count'] = $userInfo['password_change_count'] + 1;
         $date['password'] = hash_password_bcrypt($newPassword);
         $userInfo->save($date);
+
+        // 同步更新到saas.ttpos_staff表
+        (new SaasStaffModel([], 0))->setAppId(0)->update($date, ['uuid' => $user['uuid']]);
         //
         return true;
     }
