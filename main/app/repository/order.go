@@ -2607,7 +2607,7 @@ func getCacheLayerForObjectType[T any](groupConfig cache.GroupConfig, underlying
 			}
 		}
 		if group == nil {
-			// 创建 cacheGroup 实例
+			groupConfig.Name = "object-storage-" + typeName
 			group = cache.NewCacheGroup[T](groupConfig)
 			// 存储创建函数（返回同一个实例）
 			createFunc := func() cache.ICacheGroup[T] {
