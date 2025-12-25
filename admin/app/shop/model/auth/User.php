@@ -25,6 +25,7 @@ class User extends UserModel
     public function getList($limit = 20)
     {
         return $this->with(['userRole.role', 'supplier'])
+            ->where('delete_time', 0)
             ->field('uuid, uuid as shop_user_id, username as user_name, real_name, is_super, user_type, is_disable as is_status, create_time')
             ->order(['create_time' => 'desc'])
             ->paginate($limit);
