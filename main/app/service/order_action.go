@@ -14,6 +14,8 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
@@ -116,7 +118,8 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
 			return remarkInfo.Remark
 		}(),
-		IsBatch: saleOrderProduct.IsBatchBool(),
+		IsBatch:      saleOrderProduct.IsBatchBool(),
+		BatchTagUuid: saleOrderProduct.BatchTagUuid,
 	}
 
 	// 如果是套餐主商品，添加子商品
@@ -274,7 +277,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			}
 		}
 		// 构建出库单
-		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 	}
 
 	ctx.Log().Debug("准备开始更新")
@@ -382,6 +385,15 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
+				BatchMode: batchCookingMode,
+				BatchPrintMode: func() string {
+					settingSrv := setting.NewSrvImpl(s.dbm, cache.Global)
+					businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+					if err != nil {
+						return constant.BatchPrintModeDefault
+					}
+					return businessSetting.BatchPrintMode
+				}(),
 				Products: func() event.Products {
 					products := make(event.Products, 0)
 					for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
@@ -844,6 +856,65 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	}
 	// saleBill已经加入了新的商品，并且重新计算了价格
 	return saleBill, nil
+}
+
+// actionAddSimple 加购（无校验版本）。内部方法复用
+func (s *orderSrv) actionAddSimple(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, options ...func(option *ActionAddOption)) (*model.SaleBill, error) {
+	option := &ActionAddOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+	// 录入订单商品数据
+	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
+		IsH5Product: request.IsH5Product,
+		Setting:     *saleBill.SaleBillSetting,
+		SaleBill:    saleBill,
+		SaleOrder:   saleOrder,
+		Products:    request.Products,
+	}, options...)
+	if err != nil {
+		return nil, errors.WithMessage(err, "构建商品失败")
+	}
+
+	// 跳过所有校验：商品数量校验、限购校验、超时加购校验
+	_ = saleOrderProducts
+
+	// saleBill已经加入了新的商品，并且重新计算了价格
+	return saleBill, nil
+}
+
+// ActionAddSimple 加购（无校验版本）
+func (s *orderSrv) ActionAddSimple(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
+	db := ctx.GetDB()
+
+	var err error
+	if request.IsMemberAdd {
+		saleBill, err = s.actionAddSimple(ctx, request, saleBill, WithIsMemberAdd())
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	} else {
+		saleBill, err = s.actionAddSimple(ctx, request, saleBill)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 // 检查限制购 checkLimitPurchase

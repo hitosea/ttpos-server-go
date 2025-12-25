@@ -1079,6 +1079,7 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 // GetWarehouseMaterialList 获取仓库物品列表
 func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.WarehouseMaterialListReq) (resp.WarehouseMaterialListResp, error) {
 	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
 	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
 
@@ -1100,6 +1101,11 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 	var materialOpts []repository.DBOption
 	materialOpts = append(materialOpts, repository.NewCommonRepo().WhereByStatus(uint(1)))
 	materialOpts = append(materialOpts, repository.NotDeleted)
+
+	// 子店查询时自动过滤不可见物品
+	if companySetting.IsSubShop() {
+		materialOpts = append(materialOpts, materialRepo.WhereAllowSubstoreVisible(1))
+	}
 
 	// 获取物品列表
 	paginatedMaterials, total, err := materialRepo.GetMaterialListWithPagination(

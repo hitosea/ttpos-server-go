@@ -492,7 +492,7 @@ class Terminal extends Controller
      * @Apidoc\Param("is_call_service", type="int", require=true, default=0, desc="顾客呼叫提醒 0-关闭 1-开启（v1.0.5）")
      * @Apidoc\Param("server", type="array", require=true, desc="厨显服务器连接")
      * @Apidoc\Param("is_wait_color", type="int", require=true, default=0, desc="是否开启等待颜色 0-关闭 1-开启")
-     * @Apidoc\Param("wait_color", type="array", require=true, desc="等待颜色（旧格式，保持兼容：[\"red\", \"yellow\"]）")
+     * @Apidoc\Param("wait_color", type="array", require=true, desc="等待颜色")
      * @Apidoc\Param("wait_time_color_ranges", type="array", require=true, desc="等待时长颜色区间配置（新格式）", children={
      *     @Apidoc\Param("minute", type="string", require=true, desc="时间阈值（分钟，字符串类型）"),
      *     @Apidoc\Param("color", type="string", require=true, desc="颜色值（RGB格式，如 #100A05）"),

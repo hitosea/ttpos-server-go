@@ -11,19 +11,22 @@
         <!--加料-->
         <template v-if="form.model.product_feed.length > 0">
           <div class="table-checkbox">
-            <div> <el-checkbox v-model="form.model.feed_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
+            <!-- 
+            2025年12月24日09:37:50 去掉必选选项 任务37650
+            <div> <el-checkbox v-model="form.model.feed_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div> -->
             <div class="table-c-item">
-              <el-checkbox
-                v-model="form.model.feed_open_max_select"
-                size="large"
-                :disabled="erp_is_open == 1"
-                :true-value="1"
-                :false-value="0"
-                :label="$t('最多可选')"
-                @change="checkDefaultSelect"
-              />
+              <div class="table-c-item-label">{{ $t('可选') }}</div>
               <el-input-number
-                v-if="form.model.feed_open_max_select == '1'"
+                :disabled="erp_is_open == 1"
+                :controls="false"
+                :min="0"
+                :max="form.model.feed_max_select"
+                :precision="0"
+                v-model="form.model.feed_min_select"
+                class="max-w460"
+              ></el-input-number>
+              <span>-</span>
+              <el-input-number
                 @input="checkDefaultSelect()"
                 @blur="onBlur"
                 :disabled="erp_is_open == 1"
@@ -113,7 +116,7 @@
                   :rules="[
                     {
                       validator: () => {
-                        return defaultSelect(form.model.feed_open_max_select, form.model.feed_max_select, form.model.product_feed) ? true : false;
+                        return defaultSelect(form.model.feed_max_select, form.model.product_feed) ? true : false;
                       },
                       message: $t('不能超过最多可选数量') + ' ' + form.model.feed_max_select,
                     },
@@ -202,8 +205,7 @@
         }
       });
       if (val.model.product_feed.length == 0) {
-        form.model.feed_required = 0;
-        form.model.feed_open_max_select = 0;
+        form.model.feed_min_select = 0;
         form.model.feed_max_select = 0;
       }
     },
@@ -311,14 +313,14 @@
     });
   };
 
-  const defaultSelect = (feed_open_max_select, feed_max_select, product_feed) => {
+  const defaultSelect = (feed_max_select, product_feed) => {
     let count = 0;
     product_feed.map((item) => {
       if (item.default_select === 1) {
         count++;
       }
     });
-    if (count > feed_max_select && feed_open_max_select == '1' && feed_max_select != null) {
+    if (count > feed_max_select && feed_max_select != null) {
       return false;
     } else {
       return true;
@@ -405,6 +407,11 @@
     align-items: center;
     gap: 16px;
     background-color: var(--el-table-header-bg-color);
+    margin-bottom: 8px;
+  }
+  .table-c-item-label {
+    flex-shrink: 0;
+    font-size: 14px;
   }
   .table-c-item {
     display: flex;

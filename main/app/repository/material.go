@@ -36,7 +36,6 @@ type IMaterialRepo interface {
 	UpdateMaterialAllowSubstoreVisible(uuid uint64, allowSubstoreVisible int) error // 更新物品子店可见性
 	UpdateMaterialAllowNegativeStock(uuid uint64, allowNegativeStock bool) error    // 更新物品负库存设置
 	ClearMaterialBarcodeValue(uuid uint64) error                                    // 清空物品条形码值
-	ClearMaterialValuation(uuid uint64) error                                       // 清空物品估值率
 	ClearMaterialInternalCode(uuid uint64) error                                    // 清空物品内部编码
 	ClearMaterialSafetyStock(uuid uint64) error                                     // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
@@ -58,7 +57,6 @@ type IMaterialRepo interface {
 	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)               // 根据erp_code获取物品详情
 	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error              // 更新物品仓库uuid
 	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error                        // 将所有物品的仓库uuid设置为指定仓库uuid
-	UpdateRelatedMaterialStock(relatedMaterialUuids []uint64) error                   // 更新规格/加料关联材料库存
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)                       // 根据名称获取分类UUID
 	CheckBarcodeExist(barcode string, uuid uint64) bool                               // 检查条形码是否存在
@@ -550,13 +548,6 @@ func (r *MaterialRepoImpl) ClearMaterialBarcodeValue(uuid uint64) error {
 	return nil
 }
 
-func (r *MaterialRepoImpl) ClearMaterialValuation(uuid uint64) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("valuation", 0).Error; err != nil {
-		return errors.WithMessage(err, "清空物品估值率失败")
-	}
-	return nil
-}
-
 func (r *MaterialRepoImpl) UpdateMaterialStockNum(materials []*model.Material) error {
 	if len(materials) == 0 {
 		return nil
@@ -873,55 +864,4 @@ func (r *MaterialRepoImpl) GetMaterialByCode(code string, opts ...DBOption) (mod
 		return model.Material{}, errors.WithMessage(err, "根据编码获取物品失败")
 	}
 	return material, nil
-}
-
-// UpdateRelatedMaterialStock 更新规格/加料关联材料库存
-func (r *MaterialRepoImpl) UpdateRelatedMaterialStock(relatedMaterialUuids []uint64) error {
-	// 如果材料UUID列表为空，直接返回
-	if len(relatedMaterialUuids) == 0 {
-		return nil
-	}
-
-	// 使用事务确保数据一致性
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		// 构建复杂SQL查询来按成本卡更新产品BOM的库存数量
-		sql := `
-			UPDATE ttpos_product_bom AS pb 
-			JOIN (
-				SELECT 
-					rm.related_uuid, 
-					LEAST(IFNULL(
-						FLOOR(
-							MIN(
-								wi.stock / rm.num
-							)
-						)
-					, 0), 99999999) AS min_stock_num
-				FROM ttpos_related_material AS rm
-				JOIN ttpos_warehouse_item AS wi ON rm.material_uuid = wi.material_uuid
-				JOIN ttpos_warehouse AS w ON wi.warehouse_uuid = w.uuid
-				WHERE rm.uuid IN (?) 
-				  AND rm.delete_time = 0 
-				  AND rm.unit_uuid > 0
-				  AND w.is_default = 1
-				GROUP BY rm.related_uuid
-			) AS sub ON pb.product_bom_card_uuid = sub.related_uuid
-			SET pb.stock_num = sub.min_stock_num
-			WHERE pb.product_bom_card_uuid IN (
-				SELECT DISTINCT related_uuid 
-				FROM ttpos_related_material 
-				WHERE uuid IN (?) 
-				AND delete_time = 0 
-				AND unit_uuid > 0
-			)
-		`
-
-		// 执行SQL更新
-		err := tx.Exec(sql, relatedMaterialUuids, relatedMaterialUuids).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-		}
-
-		return nil
-	})
 }

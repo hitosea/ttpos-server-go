@@ -1480,6 +1480,136 @@ func (x *CancelStockReconciliationResp) GetMessage() string {
 	return ""
 }
 
+// 查询 Bin 记录请求
+type GetBinReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品代码，必填"` // 物品代码，必填
+	Warehouse     string                 `protobuf:"bytes,2,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，必填"`               // 仓库名称，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBinReq) Reset() {
+	*x = GetBinReq{}
+	mi := &file_stock_stock_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBinReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBinReq) ProtoMessage() {}
+
+func (x *GetBinReq) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBinReq.ProtoReflect.Descriptor instead.
+func (*GetBinReq) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetBinReq) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *GetBinReq) GetWarehouse() string {
+	if x != nil {
+		return x.Warehouse
+	}
+	return ""
+}
+
+// Bin 数据
+type BinData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品代码"`                 // 物品代码
+	Warehouse     string                 `protobuf:"bytes,2,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称"`                               // 仓库名称
+	ActualQty     float64                `protobuf:"fixed64,3,opt,name=actual_qty,json=actualQty,proto3" json:"actual_qty,omitempty" dc:"实际库存数量"`          // 实际库存数量
+	ValuationRate float64                `protobuf:"fixed64,4,opt,name=valuation_rate,json=valuationRate,proto3" json:"valuation_rate,omitempty" dc:"估值率"` // 估值率
+	StockValue    float64                `protobuf:"fixed64,5,opt,name=stock_value,json=stockValue,proto3" json:"stock_value,omitempty" dc:"库存价值"`         // 库存价值
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BinData) Reset() {
+	*x = BinData{}
+	mi := &file_stock_stock_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BinData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BinData) ProtoMessage() {}
+
+func (x *BinData) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BinData.ProtoReflect.Descriptor instead.
+func (*BinData) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *BinData) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *BinData) GetWarehouse() string {
+	if x != nil {
+		return x.Warehouse
+	}
+	return ""
+}
+
+func (x *BinData) GetActualQty() float64 {
+	if x != nil {
+		return x.ActualQty
+	}
+	return 0
+}
+
+func (x *BinData) GetValuationRate() float64 {
+	if x != nil {
+		return x.ValuationRate
+	}
+	return 0
+}
+
+func (x *BinData) GetStockValue() float64 {
+	if x != nil {
+		return x.StockValue
+	}
+	return 0
+}
+
 var File_stock_stock_proto protoreflect.FileDescriptor
 
 const file_stock_stock_proto_rawDesc = "" +
@@ -1607,7 +1737,18 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x1cCancelStockReconciliationReq\x12:\n" +
 	"\x19stock_reconciliation_name\x18\x01 \x01(\tR\x17stockReconciliationName\"9\n" +
 	"\x1dCancelStockReconciliationResp\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xb7\x04\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"F\n" +
+	"\tGetBinReq\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1c\n" +
+	"\twarehouse\x18\x02 \x01(\tR\twarehouse\"\xab\x01\n" +
+	"\aBinData\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1c\n" +
+	"\twarehouse\x18\x02 \x01(\tR\twarehouse\x12\x1d\n" +
+	"\n" +
+	"actual_qty\x18\x03 \x01(\x01R\tactualQty\x12%\n" +
+	"\x0evaluation_rate\x18\x04 \x01(\x01R\rvaluationRate\x12\x1f\n" +
+	"\vstock_value\x18\x05 \x01(\x01R\n" +
+	"stockValue2\xe6\x04\n" +
 	"\fStockService\x12G\n" +
 	"\x13SaveMaterialRequest\x12\x1d.stock.SaveMaterialRequestReq\x1a\x11.erp.ResponseInfo\x12M\n" +
 	"\x16GetMaterialRequestList\x12 .stock.GetMaterialRequestListReq\x1a\x11.erp.ResponseInfo\x12=\n" +
@@ -1615,7 +1756,8 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x17SaveStockReconciliation\x12!.stock.SaveStockReconciliationReq\x1a\x11.erp.ResponseInfo\x12U\n" +
 	"\x1aGetStockReconciliationList\x12$.stock.GetStockReconciliationListReq\x1a\x11.erp.ResponseInfo\x12S\n" +
 	"\x19SubmitStockReconciliation\x12#.stock.SubmitStockReconciliationReq\x1a\x11.erp.ResponseInfo\x12S\n" +
-	"\x19CancelStockReconciliation\x12#.stock.CancelStockReconciliationReq\x1a\x11.erp.ResponseInfoB#Z!ttpos-bmp/app/ttpos-erp/api/stockb\x06proto3"
+	"\x19CancelStockReconciliation\x12#.stock.CancelStockReconciliationReq\x1a\x11.erp.ResponseInfo\x12-\n" +
+	"\x06GetBin\x12\x10.stock.GetBinReq\x1a\x11.erp.ResponseInfoB#Z!ttpos-bmp/app/ttpos-erp/api/stockb\x06proto3"
 
 var (
 	file_stock_stock_proto_rawDescOnce sync.Once
@@ -1629,7 +1771,7 @@ func file_stock_stock_proto_rawDescGZIP() []byte {
 	return file_stock_stock_proto_rawDescData
 }
 
-var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_stock_stock_proto_goTypes = []any{
 	(*MaterialRequest)(nil),                // 0: stock.MaterialRequest
 	(*MaterialRequestItem)(nil),            // 1: stock.MaterialRequestItem
@@ -1650,7 +1792,9 @@ var file_stock_stock_proto_goTypes = []any{
 	(*SubmitStockReconciliationResp)(nil),  // 16: stock.SubmitStockReconciliationResp
 	(*CancelStockReconciliationReq)(nil),   // 17: stock.CancelStockReconciliationReq
 	(*CancelStockReconciliationResp)(nil),  // 18: stock.CancelStockReconciliationResp
-	(*api.ResponseInfo)(nil),               // 19: erp.ResponseInfo
+	(*GetBinReq)(nil),                      // 19: stock.GetBinReq
+	(*BinData)(nil),                        // 20: stock.BinData
+	(*api.ResponseInfo)(nil),               // 21: erp.ResponseInfo
 }
 var file_stock_stock_proto_depIdxs = []int32{
 	1,  // 0: stock.MaterialRequest.items:type_name -> stock.MaterialRequestItem
@@ -1667,15 +1811,17 @@ var file_stock_stock_proto_depIdxs = []int32{
 	12, // 11: stock.StockService.GetStockReconciliationList:input_type -> stock.GetStockReconciliationListReq
 	15, // 12: stock.StockService.SubmitStockReconciliation:input_type -> stock.SubmitStockReconciliationReq
 	17, // 13: stock.StockService.CancelStockReconciliation:input_type -> stock.CancelStockReconciliationReq
-	19, // 14: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
-	19, // 15: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
-	19, // 16: stock.StockService.GetStockLedger:output_type -> erp.ResponseInfo
-	19, // 17: stock.StockService.SaveStockReconciliation:output_type -> erp.ResponseInfo
-	19, // 18: stock.StockService.GetStockReconciliationList:output_type -> erp.ResponseInfo
-	19, // 19: stock.StockService.SubmitStockReconciliation:output_type -> erp.ResponseInfo
-	19, // 20: stock.StockService.CancelStockReconciliation:output_type -> erp.ResponseInfo
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
+	19, // 14: stock.StockService.GetBin:input_type -> stock.GetBinReq
+	21, // 15: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
+	21, // 16: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
+	21, // 17: stock.StockService.GetStockLedger:output_type -> erp.ResponseInfo
+	21, // 18: stock.StockService.SaveStockReconciliation:output_type -> erp.ResponseInfo
+	21, // 19: stock.StockService.GetStockReconciliationList:output_type -> erp.ResponseInfo
+	21, // 20: stock.StockService.SubmitStockReconciliation:output_type -> erp.ResponseInfo
+	21, // 21: stock.StockService.CancelStockReconciliation:output_type -> erp.ResponseInfo
+	21, // 22: stock.StockService.GetBin:output_type -> erp.ResponseInfo
+	15, // [15:23] is the sub-list for method output_type
+	7,  // [7:15] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1692,7 +1838,7 @@ func file_stock_stock_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stock_stock_proto_rawDesc), len(file_stock_stock_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1229,12 +1229,16 @@ class BaseModelOrder extends BaseModel
             $attrIds = array_filter($attrIds);
             $addAttrIds = array_keys($attrIds);
             if (is_array($productAttr) && !empty($productAttr)) {
-                $requiredAttributes = array_filter($productAttr, function ($item) {
-                    return !empty($item['attribute_required']) && $item['attribute_required'] == 1;
-                });
-                foreach ($requiredAttributes as $item) {
-                    // 必选未选
-                    if (!empty($item['attribute_required']) && !in_array($item['parent_id'], $addAttrIds)) {
+                foreach ($productAttr as $item) {
+                    // 获取最小和最大可选数量
+                    $minSelection = $item['attribute_min_select'] ?? 0;
+                    $maxSelection = $item['attribute_max_select'] ?? 0;
+                    
+                    // 已选择的数量
+                    $selectedCount = isset($item['parent_id']) && isset($attrIds[$item['parent_id']]) ? count($attrIds[$item['parent_id']]) : 0;
+                    
+                    // 必选验证（最小可选数量 > 0 时必须选择）
+                    if ($minSelection > 0 && $selectedCount == 0) {
                         $space = checkDetect() == 'zhtw' || checkDetect() == 'zh' ? '' : ' ';
                         return [
                             'code' => 0,
@@ -1243,14 +1247,24 @@ class BaseModelOrder extends BaseModel
                             'message' => __('请选择') . $space . extractLanguage($item['attribute_name'])
                         ];
                     }
-                    // 最多可选
-                    $addMaxNum = isset($item['parent_id']) && isset($attrIds[$item['parent_id']]) ? count($attrIds[$item['parent_id']]) : 0;
-                    if ($addMaxNum > 0 && $item['attribute_open_max_select'] == 1 && ($item['attribute_max_select'] ?? 0) > 0 && $addMaxNum > ($item['attribute_max_select'] ?? 0)) {
+                    
+                    // 最小可选验证
+                    if ($selectedCount > 0 && $minSelection > 0 && $selectedCount < $minSelection) {
                         return [
                             'code' => 0,
                             'status' => false,
                             'data' => [],
-                            'message' => extractLanguage($item['attribute_name']) . ' ' . __('属性超出可选限制')
+                            'message' => extractLanguage($item['attribute_name']) . ' ' . __('至少选择') . $minSelection . __('个')
+                        ];
+                    }
+                    
+                    // 最多可选验证
+                    if ($selectedCount > 0 && $maxSelection > 0 && $selectedCount > $maxSelection) {
+                        return [
+                            'code' => 0,
+                            'status' => false,
+                            'data' => [],
+                            'message' => extractLanguage($item['attribute_name']) . ' ' . __('最多选择') . $maxSelection . __('个')
                         ];
                     }
                 }
@@ -1269,11 +1283,15 @@ class BaseModelOrder extends BaseModel
                 'message' => __('加料已下架')
             ];
         }
-        if ($productDetail->feed_required == 1 && ($productFeed = $productDetail->product_feed)) {
-            if (is_array($productFeed) && !empty($productFeed)) {
-                foreach ($productFeed as $item) {
-                    // 必选未选
-                    if (empty($feedIds)) {
+        if ($productDetail->feed_min_select > 0 || $productDetail->feed_required == 1) {
+            if (($productFeed = $productDetail->product_feed)) {
+                if (is_array($productFeed) && !empty($productFeed)) {
+                    $feedCount = count($feedIds);
+                    $minSelection = $productDetail->feed_min_select ?? 0;
+                    $maxSelection = $productDetail->feed_max_select ?? 0;
+                    
+                    // 必选验证（最小可选数量 > 0 时必须选择）
+                    if ($minSelection > 0 && $feedCount == 0) {
                         $space = checkDetect() == 'zhtw' || checkDetect() == 'zh' ? '' : ' ';
                         return [
                             'code' => 0,
@@ -1282,13 +1300,24 @@ class BaseModelOrder extends BaseModel
                             'message' => __('请选择加料')
                         ];
                     }
-                    // 最多可选
-                    if ($productDetail->feed_open_max_select == 1 && ($productDetail->feed_max_select ?? 0) > 0 && count($feedIds) > $productDetail->feed_max_select) {
+                    
+                    // 最小可选验证
+                    if ($feedCount > 0 && $minSelection > 0 && $feedCount < $minSelection) {
                         return [
                             'code' => 0,
                             'status' => false,
                             'data' => [],
-                            'message' => __('加料超出可选限制')
+                            'message' => __('加料至少选择') . $minSelection . __('个')
+                        ];
+                    }
+                    
+                    // 最多可选验证
+                    if ($feedCount > 0 && $maxSelection > 0 && $feedCount > $maxSelection) {
+                        return [
+                            'code' => 0,
+                            'status' => false,
+                            'data' => [],
+                            'message' => __('加料最多选择') . $maxSelection . __('个')
                         ];
                     }
                 }

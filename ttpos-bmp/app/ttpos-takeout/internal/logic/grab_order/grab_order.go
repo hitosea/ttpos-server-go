@@ -14,6 +14,7 @@ import (
 	"github.com/gogf/gf/v2/util/guid"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
+	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
@@ -372,4 +373,200 @@ func getCustomerPhoneFromSDK(req *grabfood.SubmitOrderRequest) string {
 		return receiver.GetPhones()
 	}
 	return ""
+}
+
+// PrepareOrder 准备订单（接受/拒绝）
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体
+//   - toState: 目标状态 (Accepted/Rejected)
+//
+// 返回：
+//   - err: 错误信息
+func (s *sGrabOrder) PrepareOrder(ctx context.Context, orderEntityInterface interface{}, toState string) error {
+	// 类型断言获取订单实体
+	orderEntity, ok := orderEntityInterface.(*entity.Order)
+	if !ok {
+		return gerror.New("订单实体类型错误")
+	}
+
+	// 调用 GrabFood SDK 接受/拒绝订单
+	err := s.callGrabAcceptRejectAPI(ctx, orderEntity, toState)
+	if err != nil {
+		g.Log().Errorf(ctx, "调用 GrabFood API 失败: %v", err)
+		return gerror.Wrap(err, "调用 GrabFood API 失败")
+	}
+
+	g.Log().Infof(ctx, "订单 %s 已成功调用 Grab API: %s", orderEntity.Uuid, toState)
+	return nil
+}
+
+// callGrabAcceptRejectAPI 调用 GrabFood SDK 的 accept-reject-order API
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体，包含 ProviderOrderId
+//   - toState: 目标状态，"Accepted" 或 "Rejected"
+//
+// 返回：
+//   - err: 错误信息
+func (s *sGrabOrder) callGrabAcceptRejectAPI(ctx context.Context, orderEntity *entity.Order, toState string) error {
+	g.Log().Infof(ctx, "准备调用 GrabFood API: orderID=%s, toState=%s", orderEntity.ProviderOrderId, toState)
+
+	// 根据 toState 调用相应的 Grab 服务方法
+	switch toState {
+	case string(consts.OrderPrepareStateAccepted):
+		// 调用接受订单 API
+		err := service.Grab().AcceptOrder(ctx, orderEntity.ProviderOrderId)
+		if err != nil {
+			g.Log().Errorf(ctx, "接受订单失败: orderID=%s, error=%v", orderEntity.ProviderOrderId, err)
+			return gerror.Wrap(err, "接受订单失败")
+		}
+		g.Log().Infof(ctx, "成功接受订单: orderID=%s", orderEntity.ProviderOrderId)
+		return nil
+
+	case string(consts.OrderPrepareStateRejected):
+		// 调用拒绝订单 API
+		err := service.Grab().RejectOrder(ctx, orderEntity.ProviderOrderId, 0)
+		if err != nil {
+			g.Log().Errorf(ctx, "拒绝订单失败: orderID=%s, error=%v", orderEntity.ProviderOrderId, err)
+			return gerror.Wrap(err, "拒绝订单失败")
+		}
+		g.Log().Infof(ctx, "成功拒绝订单: orderID=%s", orderEntity.ProviderOrderId)
+		return nil
+
+	default:
+		return gerror.Newf("不支持的订单状态: %s，必须为 %s 或 %s", toState, consts.OrderPrepareStateAccepted, consts.OrderPrepareStateRejected)
+	}
+}
+
+// MarkOrderReady 标记订单准备完成
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体，包含 ProviderOrderId 等信息
+//
+// 返回：
+//   - err: 错误信息
+func (s *sGrabOrder) MarkOrderReady(ctx context.Context, orderEntity *entity.Order) error {
+	// 1. 参数验证
+	if orderEntity == nil {
+		return gerror.New("订单实体不能为空")
+	}
+	if orderEntity.ProviderName != ProviderNameGrab {
+		return gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
+	}
+	if orderEntity.ProviderOrderId == "" {
+		return gerror.New("provider_order_id 不能为空")
+	}
+
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "开始调用 GrabFood MarkOrderReady API: provider_order_id=%s, order_uuid=%s",
+		orderEntity.ProviderOrderId, orderEntity.Uuid)
+
+	// 3. 调用 GrabFood SDK (markStatus 固定传入 1)
+	err := service.Grab().MarkOrderReady(ctx, orderEntity.ProviderOrderId, "1")
+	if err != nil {
+		// 记录详细错误日志
+		g.Log().Errorf(ctx, "调用 GrabFood MarkOrderReady API 失败: order_id=%s, order_uuid=%s, error=%v",
+			orderEntity.ProviderOrderId, orderEntity.Uuid, err)
+		return gerror.Wrapf(err, "调用 GrabFood API 失败")
+	}
+
+	// 4. 记录成功日志
+	g.Log().Infof(ctx, "调用 GrabFood MarkOrderReady API 成功: provider_order_id=%s, order_uuid=%s",
+		orderEntity.ProviderOrderId, orderEntity.Uuid)
+
+	return nil
+}
+
+// CheckOrderCancelable 检查订单是否可取消
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体
+//
+// 返回：
+//   - res: 检查订单可取消性响应
+//   - err: 错误信息
+func (s *sGrabOrder) CheckOrderCancelable(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error) {
+	// 1. 参数验证
+	if orderEntity == nil {
+		return nil, gerror.New("订单实体不能为空")
+	}
+	if orderEntity.ProviderName != ProviderNameGrab {
+		return nil, gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
+	}
+
+	// 2. 调用 Grab API 检查订单是否可取消
+	sdkResp, err := service.Grab().CheckOrderCancelable(ctx, orderEntity.ProviderMerchantId, orderEntity.ProviderOrderId)
+	if err != nil {
+		g.Log().Errorf(ctx, "检查订单可取消性失败: order_id=%s, merchant_id=%s, error=%v",
+			orderEntity.ProviderOrderId, orderEntity.ProviderMerchantId, err)
+		return nil, gerror.Wrap(err, "检查订单可取消性失败")
+	}
+
+	// 4. 提取核心字段
+	canCancel := sdkResp.CancelAble != nil && *sdkResp.CancelAble
+	nonCancelReason := ""
+	if sdkResp.NonCancellationReason != nil {
+		nonCancelReason = *sdkResp.NonCancellationReason
+	}
+
+	// 5. 序列化 SDK 完整响应为 JSON（包含所有字段）
+	rawDataJSON, err := gjson.EncodeString(sdkResp)
+	if err != nil {
+		g.Log().Warningf(ctx, "序列化SDK响应失败: %v", err)
+		rawDataJSON = "{}"
+	}
+
+	// 6. 返回精简响应
+	g.Log().Infof(ctx, "订单可取消性检查完成: order_uuid=%s, can_cancel=%v, reason=%s",
+		orderEntity.Uuid, canCancel, nonCancelReason)
+	return &api.CheckOrderCancelableResp{
+		OrderUuid:             orderEntity.Uuid,
+		CanCancel:             canCancel,
+		NonCancellationReason: nonCancelReason,
+		RawData:               rawDataJSON,
+	}, nil
+}
+
+// CancelOrder 取消订单
+// 参数：
+//   - ctx: 上下文对象
+//   - orderEntity: 订单实体
+//   - cancelCode: 取消原因码（字符串格式，可根据不同平台传入不同的编码）
+//
+// 返回：
+//   - res: 取消订单响应
+//   - err: 错误信息
+func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
+	// 1. 参数验证
+	if orderEntity == nil {
+		return nil, gerror.New("订单实体不能为空")
+	}
+	if orderEntity.ProviderName != ProviderNameGrab {
+		return nil, gerror.Newf("订单渠道错误，期望 grab，实际 %s", orderEntity.ProviderName)
+	}
+	if orderEntity.ProviderOrderId == "" {
+		return nil, gerror.New("provider_order_id 不能为空")
+	}
+	if orderEntity.ProviderMerchantId == "" {
+		return nil, gerror.New("provider_merchant_id 不能为空")
+	}
+
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "开始取消订单: order_uuid=%s, order_id=%s, merchant_id=%s, cancel_code=%s",
+		orderEntity.Uuid, orderEntity.ProviderOrderId, orderEntity.ProviderMerchantId, cancelCode)
+
+	// 3. 执行取消操作（不再包含预检查逻辑）
+	err = service.Grab().CancelOrder(ctx, orderEntity.ProviderMerchantId, orderEntity.ProviderOrderId, cancelCode)
+	if err != nil {
+		g.Log().Errorf(ctx, "取消订单失败: order_id=%s, cancel_code=%s, error=%v",
+			orderEntity.ProviderOrderId, cancelCode, err)
+		return nil, gerror.Wrap(err, "取消订单失败")
+	}
+
+	// 4. 返回成功响应
+	g.Log().Infof(ctx, "订单取消成功: order_uuid=%s, order_id=%s", orderEntity.Uuid, orderEntity.ProviderOrderId)
+	return &api.CancelOrderResp{
+		OrderUuid: orderEntity.Uuid,
+	}, nil
 }

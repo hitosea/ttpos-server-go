@@ -29,6 +29,7 @@ const (
 	SellingService_ReturnPosInvoice_FullMethodName     = "/selling.SellingService/ReturnPosInvoice"
 	SellingService_CancelPosInvoice_FullMethodName     = "/selling.SellingService/CancelPosInvoice"
 	SellingService_GetModeOfPaymentList_FullMethodName = "/selling.SellingService/GetModeOfPaymentList"
+	SellingService_GetModeOfPayment_FullMethodName     = "/selling.SellingService/GetModeOfPayment"
 	SellingService_SaveModeOfPayment_FullMethodName    = "/selling.SellingService/SaveModeOfPayment"
 )
 
@@ -52,8 +53,10 @@ type SellingServiceClient interface {
 	ReturnPosInvoice(ctx context.Context, in *ReturnPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 取消 Pos Invoice
 	CancelPosInvoice(ctx context.Context, in *CancelPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
-	// 获取支付方式
+	// 获取支付方式列表
 	GetModeOfPaymentList(ctx context.Context, in *GetModeOfPaymentListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 查询单个支付方式
+	GetModeOfPayment(ctx context.Context, in *GetModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 保存支付方式
 	SaveModeOfPayment(ctx context.Context, in *SaveModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
@@ -146,6 +149,16 @@ func (c *sellingServiceClient) GetModeOfPaymentList(ctx context.Context, in *Get
 	return out, nil
 }
 
+func (c *sellingServiceClient) GetModeOfPayment(ctx context.Context, in *GetModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_GetModeOfPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sellingServiceClient) SaveModeOfPayment(ctx context.Context, in *SaveModeOfPaymentReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
@@ -176,8 +189,10 @@ type SellingServiceServer interface {
 	ReturnPosInvoice(context.Context, *ReturnPosInvoiceReq) (*api.ResponseInfo, error)
 	// 取消 Pos Invoice
 	CancelPosInvoice(context.Context, *CancelPosInvoiceReq) (*api.ResponseInfo, error)
-	// 获取支付方式
+	// 获取支付方式列表
 	GetModeOfPaymentList(context.Context, *GetModeOfPaymentListReq) (*api.ResponseInfo, error)
+	// 查询单个支付方式
+	GetModeOfPayment(context.Context, *GetModeOfPaymentReq) (*api.ResponseInfo, error)
 	// 保存支付方式
 	SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedSellingServiceServer()
@@ -213,6 +228,9 @@ func (UnimplementedSellingServiceServer) CancelPosInvoice(context.Context, *Canc
 }
 func (UnimplementedSellingServiceServer) GetModeOfPaymentList(context.Context, *GetModeOfPaymentListReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetModeOfPaymentList not implemented")
+}
+func (UnimplementedSellingServiceServer) GetModeOfPayment(context.Context, *GetModeOfPaymentReq) (*api.ResponseInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetModeOfPayment not implemented")
 }
 func (UnimplementedSellingServiceServer) SaveModeOfPayment(context.Context, *SaveModeOfPaymentReq) (*api.ResponseInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method SaveModeOfPayment not implemented")
@@ -382,6 +400,24 @@ func _SellingService_GetModeOfPaymentList_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SellingService_GetModeOfPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetModeOfPaymentReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).GetModeOfPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_GetModeOfPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).GetModeOfPayment(ctx, req.(*GetModeOfPaymentReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SellingService_SaveModeOfPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SaveModeOfPaymentReq)
 	if err := dec(in); err != nil {
@@ -438,6 +474,10 @@ var SellingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetModeOfPaymentList",
 			Handler:    _SellingService_GetModeOfPaymentList_Handler,
+		},
+		{
+			MethodName: "GetModeOfPayment",
+			Handler:    _SellingService_GetModeOfPayment_Handler,
 		},
 		{
 			MethodName: "SaveModeOfPayment",

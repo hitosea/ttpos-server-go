@@ -153,6 +153,7 @@ type ProductAttributeGroup struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性组名称
 	Attributes Attributes         `json:"attributes"`  // 商品属性列表
 	IsMust     bool               `json:"is_must"`     // 是否必选
+	MinSelect  uint               `json:"min_select"`  // 最小可选的属性数量。0时不限制选择数量
 	MaxSelect  uint               `json:"max_select"`  // 最大可选的属性数量。0时不限制选择数量
 }
 

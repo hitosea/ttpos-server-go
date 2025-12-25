@@ -304,9 +304,41 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 			return errors.WithMessage(errors.New("获取默认仓库失败"), err.Error())
 		}
 
+		// 获取 saas 数据库连接
+		saasDB := s.dbm.GetDB(constant.DefaultDB)
+		if saasDB == nil {
+			return errors.New("saas 数据库连接失败")
+		}
+
+		// 获取公司 UUID（使用总部 UUID 或当前公司 UUID）
+		companyUuid := ctx.GetCompanySetting().HeadquarterUuid
+		if companyUuid == 0 {
+			companyUuid = ctx.GetCompanyUuid()
+		}
+
+		// 确定前缀和编号类型
+		var prefix, numberType string
+		if req.PurchaseType == 2 {
+			// 品牌采购（内部）
+			prefix = "TPHY"
+			numberType = constant.NumberTypeBrandPurchase
+		} else {
+			// 采购申请（外部）
+			prefix = "PR"
+			numberType = constant.NumberTypePurchaseReq
+		}
+
 		// 生成订单编号
-		prefix := utils.IfString(req.PurchaseType == 2, "TPHY", "CSSQ")
-		orderNo := s.helper.generateOrderNo(tx, prefix, ctx.GetCompanySetting().Timezone)
+		orderNo, err := s.helper.generateOrderNo(
+			saasDB,
+			companyUuid,
+			prefix,
+			numberType,
+			ctx.GetCompanySetting().Timezone,
+		)
+		if err != nil {
+			return errors.WithMessage(err, "生成订单编号失败")
+		}
 
 		// 获取仓库名称
 		warehouseName := ""

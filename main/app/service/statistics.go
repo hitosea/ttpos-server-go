@@ -394,6 +394,8 @@ type CountPaymentRespList struct {
 	PaymentName        string  `json:"payment_name"`         // 支付方式名称
 	PaymentCode        int     `json:"payment_code"`         // 支付方式编码
 	ErpnextPayment     string  `json:"erpnext_payment"`      // ERPNext支付方式
+	ErpnextPaymentId   string  `json:"erpnext_payment_id"`   // ERPNext支付方式ID
+	Source             int     `json:"source"`               // 来源 0-系统 1-手动 2-LianLianPay
 	TotalOrderNum      int64   `json:"total_order_num"`      // 总订单数量
 	TotalPaymentAmount float64 `json:"total_payment_amount"` // 总支付金额
 }
@@ -451,6 +453,8 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 				}(),
 				PaymentCode:        payment.PaymentCode,
 				ErpnextPayment:     payment.ErpnextPayment,
+				ErpnextPaymentId:   payment.ErpnextPaymentId,
+				Source:             payment.Source,
 				TotalOrderNum:      payment.TotalOrderNum.Int64,
 				TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
 			})
@@ -485,6 +489,8 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 				PaymentCode:        memberPayment.PaymentCode,
 				TotalOrderNum:      memberPayment.TotalOrderNum,
 				ErpnextPayment:     memberPayment.ErpnextPayment,
+				Source:             memberPayment.Source,
+				ErpnextPaymentId:   memberPayment.ErpnextPaymentId,
 				TotalPaymentAmount: memberPayment.TotalPaymentAmount,
 			})
 		} else {
@@ -815,6 +821,14 @@ type CountAreaResp struct {
 // CountArea 统计区域
 func (s *statisticsSrv) CountArea(ctx context.Context, req CountReq) []CountAreaResp {
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"ss.sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountArea(opts...)
 
 	var list []CountAreaResp
@@ -980,6 +994,14 @@ type CountProductRankResp struct {
 // RankProduct 统计商品排行
 func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountProductRankResp {
 	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).RankProduct(req.RankType, ctx.GetLanguage(), opts...)
 	var list []CountProductRankResp
 	for _, product := range productData {
@@ -1750,6 +1772,15 @@ type CountProductSale struct {
 func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
+	opts := s.buildCountOpts(ctx, req)
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			db,
+			"sp.sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
 	productSaleData, total := statisticsRepo.CountProductSale(repository.CountProductSaleRepoReq{
 		PageNo:        req.PageNo,
 		PageSize:      req.PageSize,
@@ -1762,7 +1793,7 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		ProductName:   req.ProductName,
 		OrderTypes:    req.OrderTypes,
 		OrderSource:   req.OrderSource,
-	}, s.buildCountOpts(ctx, req)...)
+	}, opts...)
 
 	var data []CountProductSale
 	for _, productSale := range productSaleData {
@@ -1922,6 +1953,8 @@ type CountExportPaymentData struct {
 	PaymentName        string  `json:"payment_name"`
 	PaymentCode        int     `json:"payment_code"`
 	ErpnextPayment     string  `json:"erpnext_payment"`
+	ErpnextPaymentId   string  `json:"erpnext_payment_id"`
+	Source             int     `json:"source"`
 	TotalOrderNum      int64   `json:"total_order_num"`
 	TotalPaymentAmount float64 `json:"total_payment_amount"`
 }
@@ -2141,6 +2174,17 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 		3: 3600, // 1小时
 	}[req.TimePeriod]
 
+	// 构建过滤选项
+	var opts []repository.DBOption
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
+
 	// 统计总时段数和时段数据
 	total, periodData := statisticsRepo.CountBusinessTimePeriod(repository.CountBusinessTimePeriodReq{
 		StartTime:     req.QueryStartTime,
@@ -2152,7 +2196,7 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 		IsDesk:        req.OrderDesk == 1,
 		IsInstant:     req.OrderInstant == 1,
 		IsTakeout:     req.OrderTakeout == 1,
-	})
+	}, opts...)
 
 	// 构建时段列表
 	list := make([]CountBusinessTimePeriodListResp, 0, len(periodData))
@@ -2234,6 +2278,17 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
 	}
 
+	// 构建过滤选项
+	var opts []repository.DBOption
+	if req.ExcludeDataManage {
+		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
+			ctx.GetDB(),
+			"sale_bill_uuid",
+			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
+			repository.CommonRepo.WhereBySoftDelete(),
+		))
+	}
+
 	// 调用Repository层查询
 	total, dataList := statisticsRepo.CountBusinessSummary(repository.CountBusinessSummaryReq{
 		StartTime: req.QueryStartTime,
@@ -2241,7 +2296,7 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 		Cycle:     req.Cycle,
 		PageNo:    utils.IfInt(req.PageNo > 0, req.PageNo, 1),
 		PageSize:  utils.IfInt(req.PageSize > 0, req.PageSize, 10),
-	})
+	}, opts...)
 
 	// 构建返回列表
 	list := make([]StatisticsSummaryItem, 0, len(dataList))
@@ -2337,6 +2392,7 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 		IsInstant:         req.OrderInstant == 1,
 		IsTakeout:         req.OrderTakeout == 1,
 		PaymentMethodList: paymentMethodList,
+		ExcludeDataManage: req.ExcludeDataManage, // 直接传递布尔值
 	})
 
 	// 构建返回列表

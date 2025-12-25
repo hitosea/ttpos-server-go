@@ -398,6 +398,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
     `default_img` TEXT COMMENT '默认图片',
     `erpnext_payment` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext支付方式',
+    `erpnext_payment_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext支付方式ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1020,7 +1021,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
     `name` TEXT COMMENT '原料名称',
     `code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料编码',
-    `valuation` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '估值率',
     `init_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '期初库存',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '类别ID',
@@ -1600,6 +1600,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute_takeout` (
   KEY `idx_delete_time` (`delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖属性价格表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_product_package_group_item_takeout` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint DEFAULT '0' COMMENT '唯一标识',
+  `product_package_takeout_uuid` bigint DEFAULT '0' COMMENT '外卖商品UUID，关联 ttpos_product_package_takeout.uuid',
+  `product_package_group_item_uuid` bigint DEFAULT '0' COMMENT '套餐子商品UUID，关联 ttpos_product_package_group_item.uuid',
+  `product_package_group_uuid` bigint DEFAULT '0' COMMENT '套餐分组UUID，关联 ttpos_product_package_group.uuid',
+  `headquarter_uuid` bigint DEFAULT '0' COMMENT '总部UUID,0表示不是总部商品',
+  `add_price` decimal(22,4) DEFAULT '0.0000' COMMENT '外卖平台的加价金额（覆盖店内加价）',
+  `delete_time` bigint DEFAULT '0' COMMENT '删除时间，0表示未删除',
+  `create_time` bigint DEFAULT '0' COMMENT '创建时间',
+  `update_time` bigint DEFAULT '0' COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_uuid` (`uuid`),
+  KEY `idx_product_package_takeout_uuid` (`product_package_takeout_uuid`),
+  KEY `idx_product_package_group_item_uuid` (`product_package_group_item_uuid`),
+  KEY `idx_product_package_group_uuid` (`product_package_group_uuid`),
+  KEY `idx_headquarter_uuid` (`headquarter_uuid`),
+  KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖套餐子商品价格表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_product_package_group` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐组ID',
@@ -2132,6 +2152,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
     `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid，只有套餐子商品才有这个字段，用于不增加子商品销量',
     `staff_shift_log_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '班次uuid',
+    `takeout_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单uuid,用于记录外卖订单的出库记录',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -3878,5 +3899,210 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom_takeout` (
     KEY `idx_grab_modifier_id` (`grab_modifier_id`),
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖规格价格表';
+
+-- 外卖订单表(多平台)
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `takeout_order_uuid` varchar(255) NOT NULL DEFAULT '' COMMENT 'rpc takeout 订单ID',
+    `platform` varchar(20) NOT NULL DEFAULT '' COMMENT '外卖平台: grab,foodpanda,lineman,etc',
+    `platform_order_id` varchar(255) NOT NULL DEFAULT '' COMMENT '平台订单ID (Grab: orderID)',
+    `platform_order_state` varchar(50) NOT NULL DEFAULT '' COMMENT '平台订单状态 (Grab: orderState)',
+    `short_order_number` varchar(50) NOT NULL DEFAULT '' COMMENT '短订单号(用于展示) (Grab: GF-123)',
+    `merchant_id` varchar(100) NOT NULL DEFAULT '' COMMENT '商户ID (Grab: merchantID)',
+    `partner_merchant_id` varchar(100) NOT NULL DEFAULT '' COMMENT '合作伙伴商户ID (Grab: partnerMerchantID)',
+    `order_state` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单',
+    `is_abnormal` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否异常: 0=正常,1=异常',
+    `abnormal_detail` text COMMENT '异常详情(JSON)',
+    `stock_status` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '库存状态: 1=充足,2=不足',
+    `subtotal` bigint NOT NULL DEFAULT 0 COMMENT '小计金额 (price.subtotal)',
+    `delivery_fee` bigint NOT NULL DEFAULT 0 COMMENT '配送费 (price.deliveryFee)',
+    `small_order_fee` bigint NOT NULL DEFAULT 0 COMMENT '小单费用 (price.smallOrderFee)',
+    `total_amount` bigint NOT NULL DEFAULT 0 COMMENT '总金额 (price.total)',
+    `eater_payment` bigint NOT NULL DEFAULT 0 COMMENT '顾客实付 (price.eaterPayment)',
+    `platform_discount` bigint NOT NULL DEFAULT 0 COMMENT '平台优惠 (price.grabFundPromo)',
+    `merchant_discount` bigint NOT NULL DEFAULT 0 COMMENT '商户优惠 (price.merchantFundPromo)',
+    `basket_promo` bigint NOT NULL DEFAULT 0 COMMENT '购物车优惠 (price.basketPromo)',
+    `tax` bigint NOT NULL DEFAULT 0 COMMENT '税费 (price.tax)',
+    `merchant_charge_fee` bigint NOT NULL DEFAULT 0 COMMENT '商户服务费 (price.merchantChargeFee)',
+    `currency_code` varchar(10) NOT NULL DEFAULT '' COMMENT '货币代码(THB,VND等)',
+    `currency_symbol` varchar(10) NOT NULL DEFAULT '' COMMENT '货币符号(฿,$等)',
+    `currency_exponent` int(4) unsigned NOT NULL DEFAULT 2 COMMENT '货币指数',
+    `payment_type` varchar(20) NOT NULL DEFAULT '' COMMENT '支付方式: CASH,ONLINE',
+    `order_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '下单时间 (orderTime)',
+    `submit_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交时间 (submitTime)',
+    `scheduled_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '预定时间 (scheduledTime)',
+    `accepted_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '接单时间',
+    `completed_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '完成时间 (completeTime)',
+    `rejected_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '拒单时间',
+    `estimated_ready_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '预计完成时间 (estimatedOrderReadyTime)',
+    `max_ready_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '最大完成时间 (maxOrderReadyTime)',
+    `cutlery` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否需要餐具: 0=否,1=是',
+    `order_type` varchar(50) NOT NULL DEFAULT '' COMMENT '订单类型 : 外卖-TAKEAWAY,商家配送-DELIVERY,店内就餐-DINEIN,打包带走-TAKEAWAY',
+    `order_accepted_type` varchar(20) NOT NULL DEFAULT '' COMMENT '接单类型 (featureFlags.orderAcceptedType): AUTO,MANUAL',
+    `is_mex_edit_order` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否商户编辑订单 (featureFlags.isMexEditOrder)',
+    `membership_id` varchar(50) NOT NULL DEFAULT '' COMMENT '会员ID (membershipID)',
+    `driver_eta` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '司机预计到达时间 (driverETA)',
+    `raw_data` mediumtext COMMENT '平台原始订单数据(JSON)',
+    `accepted_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '接单人UUID',
+    `rejected_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '拒单人UUID',
+    `reject_reason_code` varchar(50) NOT NULL DEFAULT '' COMMENT '拒单原因代码',
+    `reject_reason` varchar(255) NOT NULL DEFAULT '' COMMENT '拒单原因',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    UNIQUE KEY `uk_platform_order` (`platform`, `platform_order_id`, `delete_time`),
+    KEY `idx_platform` (`platform`, `delete_time`),
+    KEY `idx_order_state` (`order_state`, `delete_time`),
+    KEY `idx_order_time` (`order_time`, `delete_time`),
+    KEY `idx_short_order_number` (`short_order_number`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单表(多平台)';
+
+-- 外卖订单商品表(多平台)
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_item` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `takeout_order_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖订单UUID',
+    `platform` varchar(20) NOT NULL DEFAULT '' COMMENT '外卖平台: grab,foodpanda,lineman,etc',
+    `platform_item_id` varchar(100) NOT NULL DEFAULT '' COMMENT '平台商品ID (Grab: TTPOS-ITEM-{uuid})',
+    `item_name` text COMMENT '商品名称',
+    `ttpos_product_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS商品UUID (从TTPOS-ITEM-前缀提取)',
+    `ttpos_product_type` int(4) unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS商品类型: 0-商品, 1-套餐',
+    `quantity` int NOT NULL DEFAULT 0 COMMENT '数量',
+    `price` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '单价(元,4位小数)',
+    `tax` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '税费(元,4位小数)',
+    `specifications` varchar(500) NOT NULL DEFAULT '' COMMENT '规格说明',
+    `is_mapped` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否已关联: 0=无TTPOS前缀(异常),1=有TTPOS前缀(正常)',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_takeout_order_uuid` (`takeout_order_uuid`, `delete_time`),
+    KEY `idx_platform_item` (`platform`, `platform_item_id`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单商品表(多平台)';
+
+-- 外卖订单商品修饰符表(多平台)
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_item_modifier` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `takeout_order_item_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '订单商品UUID',
+    `platform` varchar(50) NOT NULL DEFAULT '' COMMENT '平台: grab,foodpanda,lineman',
+    `platform_modifier_id` varchar(255) NOT NULL DEFAULT '' COMMENT '平台修饰符ID',
+    `modifier_name` text COMMENT '修饰符名称',
+    `ttpos_modifier_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS修饰符UUID(关联后)',
+    `ttpos_modifier_type` varchar(20) NOT NULL DEFAULT '' COMMENT 'TTPOS修饰符类型: flavor=规格, sauce=加料, attr=属性',
+    `quantity` int unsigned NOT NULL DEFAULT 1 COMMENT '数量',
+    `price` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '价格(元,4位小数)',
+    `tax` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '税费(元,4位小数)',
+    `is_mapped` tinyint NOT NULL DEFAULT 0 COMMENT '是否已映射: 0=未映射,1=已映射',
+    `create_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_order_item_uuid` (`takeout_order_item_uuid`),
+    KEY `idx_platform_modifier` (`platform`, `platform_modifier_id`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='外卖订单商品修饰符表(多平台)';
+
+-- 外卖订单收货人信息表
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_receiver` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `takeout_order_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖订单UUID',
+    `platform` varchar(50) NOT NULL DEFAULT '' COMMENT '平台名称(grab/lineman/foodpanda等)',
+    `receiver_name` varchar(100) NOT NULL DEFAULT '' COMMENT '收货人姓名',
+    `receiver_phones` varchar(50) NOT NULL DEFAULT '' COMMENT '收货人电话',
+    `unit_number` varchar(50) NOT NULL DEFAULT '' COMMENT '单元号/门牌号',
+    `delivery_instruction` varchar(255) NOT NULL DEFAULT '' COMMENT '配送说明',
+    `poi_source` varchar(50) NOT NULL DEFAULT '' COMMENT 'POI来源(GRAB/GOOGLE/FACEBOOK等)',
+    `poi_id` varchar(100) NOT NULL DEFAULT '' COMMENT 'POI ID',
+    `address` varchar(255) NOT NULL DEFAULT '' COMMENT '详细地址',
+    `postcode` varchar(20) NOT NULL DEFAULT '' COMMENT '邮政编码',
+    `latitude` decimal(10,7) NOT NULL DEFAULT 0.0000000 COMMENT '纬度',
+    `longitude` decimal(10,7) NOT NULL DEFAULT 0.0000000 COMMENT '经度',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    UNIQUE KEY `uk_takeout_order_uuid` (`takeout_order_uuid`),
+    UNIQUE KEY `uk_takeout_order_uuid_delete_time` (`takeout_order_uuid`, `delete_time`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单收货人信息表';
+
+-- 外卖订单活动表
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_campaign` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `takeout_order_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '外卖订单UUID',
+    `platform` varchar(50) NOT NULL DEFAULT '' COMMENT '平台名称(grab/lineman/foodpanda等)',
+    `campaign_id` varchar(100) NOT NULL DEFAULT '' COMMENT '活动ID',
+    `campaign_name` varchar(255) NOT NULL DEFAULT '' COMMENT '活动名称',
+    `campaign_name_for_mex` varchar(255) NOT NULL DEFAULT '' COMMENT '商户提供的活动名称',
+    `campaign_level` varchar(50) NOT NULL DEFAULT '' COMMENT '活动级别(order/item)',
+    `campaign_type` varchar(50) NOT NULL DEFAULT '' COMMENT '活动类型(discount/bundle/free_item)',
+    `usage_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '活动使用次数',
+    `mex_funded_ratio` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '商户资金占比(%)',
+    `deducted_amount` bigint NOT NULL DEFAULT 0 COMMENT '折扣金额(分)',
+    `deducted_part` varchar(50) NOT NULL DEFAULT '' COMMENT '折扣部分(subtotal/delivery_fee)',
+    `applied_item_ids` text COMMENT '应用的商品ID列表(JSON数组)',
+    `free_item_id` varchar(100) NOT NULL DEFAULT '' COMMENT '赠品ID',
+    `free_item_name` varchar(255) NOT NULL DEFAULT '' COMMENT '赠品名称',
+    `free_item_quantity` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '赠品数量',
+    `free_item_price` bigint NOT NULL DEFAULT 0 COMMENT '赠品价格(分)',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_takeout_order_uuid` (`takeout_order_uuid`),
+    KEY `idx_campaign_id` (`campaign_id`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单活动表';
+
+-- 外卖订单促销表(多平台)
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_promo` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `takeout_order_uuid` varchar(255) NOT NULL DEFAULT '' COMMENT '外卖订单UUID',
+    `platform` varchar(20) NOT NULL DEFAULT '' COMMENT '外卖平台: grab,lineman,etc',
+    `promo_code` varchar(100) NOT NULL DEFAULT '' COMMENT '促销代码 (Grab: code)',
+    `promo_name` varchar(255) NOT NULL DEFAULT '' COMMENT '促销名称 (Grab: name)',
+    `promo_description` varchar(500) NOT NULL DEFAULT '' COMMENT '促销描述 (Grab: description)',
+    `promo_amount` bigint NOT NULL DEFAULT 0 COMMENT '促销金额 (Grab: promoAmountInMin)',
+    `mex_funded_ratio` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '商户承担比例 (Grab: mexFundedRatio) 百分比',
+    `mex_funded_amount` bigint NOT NULL DEFAULT 0 COMMENT '商户承担金额 (Grab: mexFundedAmount)',
+    `targeted_price` bigint NOT NULL DEFAULT 0 COMMENT '目标价格-订单小计 (Grab: targetedPrice)',
+    `promo_amount_in_min` bigint NOT NULL DEFAULT 0 COMMENT '促销金额最小单位 (Grab: promoAmountInMin)',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_takeout_order_uuid` (`takeout_order_uuid`, `delete_time`),
+    KEY `idx_platform_promo` (`platform`, `promo_code`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单促销表(多平台)';
+
+-- 外卖平台配置表(多平台)
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+    `platform` varchar(20) NOT NULL DEFAULT '' COMMENT '外卖平台: grab,foodpanda,lineman,etc',
+    `is_enabled` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否启用: 0=关闭,1=开启',
+    `auto_accept` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '自动接单开关: 0=关闭,1=开启',
+    `max_amount` bigint NOT NULL DEFAULT 0 COMMENT '自动接单金额上限(分)',
+    `platform_config` text COMMENT '平台特定配置(JSON)',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    UNIQUE KEY `uk_platform` (`platform`, `delete_time`),
+    KEY `idx_platform` (`platform`, `delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖平台配置表(多平台)';
 
 SET FOREIGN_KEY_CHECKS = 1;

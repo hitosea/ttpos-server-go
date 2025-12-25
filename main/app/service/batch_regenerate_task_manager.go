@@ -23,8 +23,9 @@ type IBatchRegenerateTaskManager interface {
 	// GenerateTaskList 生成任务清单
 	// companyUuids: 公司UUID列表
 	// startDate: 起始日期，格式：YYYY-MM-DD
+	// endDate: 结束日期，格式：YYYY-MM-DD（可选，为空时不限制结束日期）
 	// taskFilePath: 任务清单文件路径（可选，为空时自动生成）
-	GenerateTaskList(companyUuids []uint64, startDate string, taskFilePath string) (*dto.BatchRegenerateTask, error)
+	GenerateTaskList(companyUuids []uint64, startDate string, endDate string, taskFilePath string) (*dto.BatchRegenerateTask, error)
 
 	// LoadTaskList 加载任务清单
 	// taskFilePath: 任务清单文件路径
@@ -73,6 +74,7 @@ func NewBatchRegenerateTaskManager(
 func (m *batchRegenerateTaskManager) GenerateTaskList(
 	companyUuids []uint64,
 	startDate string,
+	endDate string,
 	taskFilePath string,
 ) (*dto.BatchRegenerateTask, error) {
 	now := time.Now().UTC()
@@ -84,14 +86,6 @@ func (m *batchRegenerateTaskManager) GenerateTaskList(
 		CreatedAt: createdAt,
 		UpdatedAt: createdAt,
 	}
-
-	// 解析起始日期
-	timeUtil := utils.Timezone("Asia/Shanghai") // 默认使用东八区
-	startTime, err := timeUtil.FormatTimeToTime(startDate)
-	if err != nil {
-		return nil, errors.WithMessage(err, "日期格式错误，应为 YYYY-MM-DD")
-	}
-	startTimestamp := startTime.Unix()
 
 	// 获取saas数据库连接（用于查询公司信息）
 	saasDB := m.dbm.GetDB(0)
@@ -112,16 +106,39 @@ func (m *batchRegenerateTaskManager) GenerateTaskList(
 		}
 		timeUtil := utils.Timezone(timezone)
 
+		// 使用商家时区解析起始日期
+		startTime, err := timeUtil.FormatTimeToTime(startDate)
+		if err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("日期格式错误，应为 YYYY-MM-DD: company_uuid=%d", companyUuid))
+		}
+		startTimestamp := startTime.Unix()
+
+		// 使用商家时区解析结束日期（如果提供）
+		var endTimestamp int64 = 0
+		if endDate != "" {
+			endTime, err := timeUtil.FormatTimeToTime(endDate)
+			if err != nil {
+				return nil, errors.WithMessage(err, fmt.Sprintf("结束日期格式错误，应为 YYYY-MM-DD: company_uuid=%d", companyUuid))
+			}
+			// 设置为当天的 23:59:59（使用商家时区）
+			endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 23, 59, 59, 0, endTime.Location())
+			endTimestamp = endTime.Unix()
+		}
+
 		// 获取该公司的数据库连接
 		db := m.dbm.GetDB(companyUuid)
 
 		// 查询符合条件的订单（status=1已结账，created_at >= startDate，未删除）
 		var saleOrders []model.SaleOrder
-		err = db.Model(&model.SaleOrder{}).
+		query := db.Model(&model.SaleOrder{}).
 			Where("status = ?", 1). // 已结账
 			Where("create_time >= ?", startTimestamp).
-			Where("delete_time = ?", 0).
-			Order("create_time ASC").
+			Where("delete_time = ?", 0)
+		// 如果提供了结束日期，添加结束日期条件（使用结束日期的 23:59:59）
+		if endTimestamp > 0 {
+			query = query.Where("create_time <= ?", endTimestamp)
+		}
+		err = query.Order("create_time ASC").
 			Find(&saleOrders).Error
 		if err != nil {
 			return nil, errors.WithMessage(err, fmt.Sprintf("查询订单失败: company_uuid=%d", companyUuid))
@@ -553,7 +570,7 @@ func (m *batchRegenerateTaskManager) executeOrderStep(
 	m.SaveTaskList(task, taskFilePath) // 保存状态
 	m.fileLock.Unlock()
 
-	time.Sleep(10 * time.Second)
+	// time.Sleep(10 * time.Second)
 
 	return stepErr
 }

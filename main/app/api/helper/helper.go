@@ -1,7 +1,10 @@
 package helper
 
 import (
+	stdErrors "errors"
 	"net/http"
+	"regexp"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
@@ -18,7 +21,72 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	pkgerrors "github.com/pkg/errors"
+	"gorm.io/gorm"
 )
+
+// isMySQLError 判断是否是数据库错误（MySQL/GORM 相关）
+// 规则：
+// 1. MySQL 错误码格式：Error + 四位数字
+// 2. GORM 特定错误
+// 3. 常见数据库错误关键词
+func isMySQLError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 1. 检查 GORM 特定错误
+	if stdErrors.Is(err, gorm.ErrRecordNotFound) ||
+		stdErrors.Is(err, gorm.ErrInvalidTransaction) ||
+		stdErrors.Is(err, gorm.ErrNotImplemented) ||
+		stdErrors.Is(err, gorm.ErrMissingWhereClause) ||
+		stdErrors.Is(err, gorm.ErrUnsupportedRelation) ||
+		stdErrors.Is(err, gorm.ErrPrimaryKeyRequired) ||
+		stdErrors.Is(err, gorm.ErrModelValueRequired) ||
+		stdErrors.Is(err, gorm.ErrModelAccessibleFieldsRequired) ||
+		stdErrors.Is(err, gorm.ErrSubQueryRequired) ||
+		stdErrors.Is(err, gorm.ErrInvalidData) ||
+		stdErrors.Is(err, gorm.ErrUnsupportedDriver) ||
+		stdErrors.Is(err, gorm.ErrRegistered) ||
+		stdErrors.Is(err, gorm.ErrInvalidField) ||
+		stdErrors.Is(err, gorm.ErrEmptySlice) ||
+		stdErrors.Is(err, gorm.ErrDryRunModeUnsupported) ||
+		stdErrors.Is(err, gorm.ErrInvalidDB) ||
+		stdErrors.Is(err, gorm.ErrInvalidValue) ||
+		stdErrors.Is(err, gorm.ErrInvalidValueOfLength) ||
+		stdErrors.Is(err, gorm.ErrPreloadNotAllowed) ||
+		stdErrors.Is(err, gorm.ErrDuplicatedKey) ||
+		stdErrors.Is(err, gorm.ErrForeignKeyViolated) ||
+		stdErrors.Is(err, gorm.ErrCheckConstraintViolated) {
+		return true
+	}
+
+	errMsg := err.Error()
+
+	// 2. 检查 MySQL 错误码格式（主要规则）
+	// 匹配 "Error " 后跟四位数字的模式（如 Error 1062, Error 1451）
+	matched, _ := regexp.MatchString(`^Error \d{4}`, errMsg)
+	if matched {
+		return true
+	}
+
+	// 3. 检查常见数据库错误关键词（不区分大小写）
+	// 注意：只保留网络层/连接层错误，MySQL 标准错误已被第2层覆盖
+	lowerErrMsg := strings.ToLower(errMsg)
+	dbKeywords := []string{
+		"connection refused", // 网络连接被拒绝
+		"connection reset",   // 网络连接重置
+		"invalid connection", // 连接无效
+		"sql:",               // Go database/sql 错误
+	}
+
+	for _, keyword := range dbKeywords {
+		if strings.Contains(lowerErrMsg, keyword) {
+			return true
+		}
+	}
+
+	return false
+}
 
 // ErrorWithDetail 返回错误
 func ErrorWithDetail(c *gin.Context, code int, err error) {
@@ -26,8 +94,12 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 		// 只有Release模式才返回原始错误信息。如123123
 		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
 		err = pkgerrors.Cause(err)
+		// Release 模式下，如果是 MySQL 错误，返回通用错误信息
+		if isMySQLError(err) {
+			err = stdErrors.New("查询数据失败")
+		}
 	}
-	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+
 	messages := []string{err.Error()}
 	var appErr errors.AppError
 	if pkgerrors.As(err, &appErr) {
@@ -47,8 +119,12 @@ func ErrorWithMessage(c *gin.Context, code int, err error) {
 		// 只有Release模式才返回原始错误信息。如123123
 		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
 		err = pkgerrors.Cause(err)
+		// Release 模式下，如果是 MySQL 错误，返回通用错误信息
+		if isMySQLError(err) {
+			err = stdErrors.New("查询数据失败")
+		}
 	}
-	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+
 	messages := []string{err.Error()}
 	var appErr errors.AppError
 	if pkgerrors.As(err, &appErr) {
@@ -63,7 +139,12 @@ func ErrorWithMessage(c *gin.Context, code int, err error) {
 func ErrorWithData(c *gin.Context, code int, data any, err error) {
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)
+		// Release 模式下，如果是 MySQL 错误，返回通用错误信息
+		if isMySQLError(err) {
+			err = stdErrors.New("查询数据失败")
+		}
 	}
+
 	messages := []string{err.Error()}
 	var appErr errors.AppError
 	if pkgerrors.As(err, &appErr) {
@@ -79,7 +160,12 @@ func ErrorWithData(c *gin.Context, code int, data any, err error) {
 func ErrorAutoWithData(c *gin.Context, code int, err error) {
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)
+		// Release 模式下，如果是 MySQL 错误，返回通用错误信息
+		if isMySQLError(err) {
+			err = stdErrors.New("查询数据失败")
+		}
 	}
+
 	messages := []string{err.Error()}
 	var appErr errors.AppError
 	if pkgerrors.As(err, &appErr) {

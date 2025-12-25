@@ -7,9 +7,10 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/application"
-	"ttpos-server-go/app/modules/takeout/types/request"
+	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -24,7 +25,7 @@ type TakeoutHandler struct {
 	// 外卖菜单应用服务
 	takeoutMenuAppSrv application.ITakeoutMenuAppService
 	// 外卖服务
-	takeoutSrv service.ITakeoutSrv
+	takeoutSrv takeoutService.ITakeoutSrv
 	// 外卖商品服务
 	productTakeoutSrv service.IProductTakeoutSrv
 }
@@ -39,7 +40,7 @@ func NewTakeoutHandler(
 	settingSrv setting.ISrv,
 	takeoutAppSrv application.ITakeoutAppService,
 ) *TakeoutHandler {
-	takeoutSrv := service.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
+	takeoutSrv := takeoutService.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
 	return &TakeoutHandler{
 		takeoutAppSrv:     takeoutAppSrv,
 		takeoutSrv:        takeoutSrv,
@@ -102,7 +103,7 @@ func (h *TakeoutHandler) ToggleTakeoutStatus(c *gin.Context) {
 
 	ctx := helper.GetContext(c)
 
-	status, err := h.takeoutAppSrv.ToggleTakeoutStatus(ctx, req.Platform, req)
+	status, err := h.takeoutSrv.ToggleTakeoutStatus(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

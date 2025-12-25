@@ -95,11 +95,7 @@ func (h *PaymentMethodHandler) GetDetail(c *gin.Context) {
 func (h *PaymentMethodHandler) GetDefaultPayList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	resp, err := h.paymentMethodSrv.GetDefaultPayList(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
+	resp := h.paymentMethodSrv.GetDefaultPayList(ctx)
 
 	helper.Success(c, resp)
 }
@@ -156,32 +152,6 @@ func (h *PaymentMethodHandler) Update(c *gin.Context) {
 	helper.Success(c, "更新成功")
 }
 
-// Delete 删除支付方式
-// @Summary 删除支付方式
-// @Description 删除支付方式（软删除）
-// @Tags 商家端.支付管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body req.PaymentMethodDeleteReq true "删除支付方式参数"
-// @Success 200 {object} dto.Response
-// @Router /shop/payment_method/delete [delete]
-func (h *PaymentMethodHandler) Delete(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var deleteReq req.PaymentMethodDeleteReq
-	if err := c.ShouldBindJSON(&deleteReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-
-	if err := h.paymentMethodSrv.Delete(ctx, &deleteReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-
-	helper.Success(c, "删除成功")
-}
-
 // UpdateSort 批量更新支付方式排序
 // @Summary 批量更新支付方式排序
 // @Description 批量更新支付方式排序，确保排序值连续
@@ -220,11 +190,7 @@ func (h *PaymentMethodHandler) UpdateSort(c *gin.Context) {
 func (h *PaymentMethodHandler) GetLianlianPayConfig(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
-	resp, err := h.paymentMethodSrv.GetLianlianPayConfig(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
+	resp := h.paymentMethodSrv.GetLianlianPayConfig(ctx)
 
 	helper.Success(c, resp)
 }
@@ -323,7 +289,6 @@ func RegisterPaymentMethodHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.GET("/payment_method/default_pay", handler.GetDefaultPayList)              // 获取默认支付方式列表
 		privateApi.POST("/payment_method/create", handler.Create)                             // 创建支付方式
 		privateApi.PUT("/payment_method/update", handler.Update)                              // 更新支付方式
-		privateApi.DELETE("/payment_method/delete", handler.Delete)                           // 删除支付方式
 		privateApi.PUT("/payment_method/update_sort", handler.UpdateSort)                     // 批量更新排序
 		privateApi.POST("/payment_method/upload_image", handler.UploadImage)                  // 上传支付方式图片（Logo或二维码）
 		privateApi.GET("/payment_method/lianlianpay_config", handler.GetLianlianPayConfig)    // 获取 LianlianPay 配置

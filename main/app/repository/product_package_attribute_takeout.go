@@ -11,6 +11,7 @@ type IProductPackageAttributeTakeoutRepo interface {
 	CreateProductPackageAttributeTakeout(productPackageAttributeTakeout *model.ProductPackageAttributeTakeout) error
 	UpdateProductPackageAttributeTakeout(data map[string]any, opts ...DBOption) error
 	DestroyProductPackageAttributeTakeout(opts ...DBOption) error
+	DeleteProductPackageAttributeTakeout(opts ...DBOption) error // 物理删除
 }
 
 type IProductPackageAttributeTakeoutQueryRepo interface {
@@ -52,6 +53,17 @@ func (r *productPackageAttributeTakeoutRepoImpl) DestroyProductPackageAttributeT
 	}
 
 	return db.Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error
+}
+
+// DeleteProductPackageAttributeTakeout 物理删除外卖属性价格记录
+func (r *productPackageAttributeTakeoutRepoImpl) DeleteProductPackageAttributeTakeout(opts ...DBOption) error {
+	db := r.db.Unscoped() // Unscoped 允许物理删除
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.ProductPackageAttributeTakeout{}).Error
 }
 
 func (r *productPackageAttributeTakeoutRepoImpl) GetProductPackageAttributeTakeout(opts ...DBOption) (*model.ProductPackageAttributeTakeout, error) {

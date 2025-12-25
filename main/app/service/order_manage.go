@@ -432,7 +432,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 
 	// 组合信息
 	totalMemberNames := []string{}
-	totalMemberUuids := []string{}
+	totalMemberNameAndPhones := []string{}
 	orderList := make([]resp.OrderInfo, 0)
 	for i, saleOrder := range saleBill.SaleOrders {
 		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
@@ -442,7 +442,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
 		}
 		if saleOrder.ConsumerUuid != 0 {
-			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(uint64(saleOrder.Member.ID), 10))
+			totalMemberNameAndPhones = append(totalMemberNameAndPhones, saleOrder.GetMemberNameAndPhone())
 		}
 		//
 		products := make([]resp.OrderProduct, 0)
@@ -666,7 +666,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			PaymentAmount: saleBill.GetPaymentAmount(),
 			RefundAmount:  saleBill.GetTotalRefundAmount(),
 			MemberNames:   strings.Join(totalMemberNames, ","),
-			MemberUuids:   strings.Join(totalMemberUuids, ","),
+			MemberUuids:   strings.Join(totalMemberNameAndPhones, ","),
 			CashierName:   saleBill.CashierName,
 			IsBuffet:      saleBill.IsBuffet == constant.SaleBillIsBuffetYes,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
@@ -1183,6 +1183,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
 	var publishChangeMemberBalance, publishChangeMemberPoints, isExistCashPay bool
+	refundPoints := 0.0 // 用于记录本次退款的积分
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
@@ -1293,6 +1294,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
 						return errors.WithMessage(err)
 					}
+					refundPoints = points // 用于记录本次退款的积分
 				}
 			} else {
 				// 自动退积分
@@ -1326,6 +1328,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 						return errors.WithMessage(err)
 					}
 				}
+				refundPoints = points // 用于记录本次退款的积分
 			}
 			publishChangeMemberPoints = true
 		}
@@ -1532,6 +1535,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, request req.OrderReturnReq) 
 			PayTypes:        payTypes,
 			RefundType:      returnType,
 			AuthorizedStaff: authorizedStaffInfo,
+			Points:          refundPoints,
 		})
 	})
 	// 发布"统计"事件
@@ -1894,6 +1898,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 		}
 	}
 
+	refundPoints := 0.0 // 用于记录本次退款的积分
+
 	// 构建入库单，将账单的商品重新入库.
 	// 出库记录标记为已撤销，并生成入库单将库存退还
 	// 构建出库单，将账单下单减库存的商品出库
@@ -1958,13 +1964,13 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 			}
 		}
 		// 更新支付订单,状态为已退款
-		for _, saleOrder := range saleBill.SaleOrders {
-			for _, paymentOrder := range saleOrder.PaymentOrders {
-				if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
-					return errors.WithMessage(err)
-				}
-			}
-		}
+		// for _, saleOrder := range saleBill.SaleOrders {
+		// 	for _, paymentOrder := range saleOrder.PaymentOrders {
+		// 		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
+		// 			return errors.WithMessage(err)
+		// 		}
+		// 	}
+		// }
 		// 生成退款单
 		for _, saleOrder := range saleBill.SaleOrders {
 			isUseMember := saleOrder.ConsumerUuid != 0
@@ -2039,6 +2045,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 						return errors.WithMessage(err)
 					}
 				}
+				refundPoints = points // 用于记录本次退款的积分
 			}
 
 			// 退优惠券。如果订单使用了优惠券，需要将优惠券退还给会员。如果使用了通用优惠券，则通用优惠券余量+1并生成记录
@@ -2173,6 +2180,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 					OperatorUuid: int64(ctx.GetStaffUuid()),
 				},
 				PayTypes: payTypes,
+				Points:   refundPoints,
 			})
 		})
 
@@ -2468,10 +2476,22 @@ func (s *orderSrv) verifyPasswordForDiscount(ctx context.Context, req req.Verify
 		return false, errors.WithMessage(errors.New("不是权限员工，请确认信息"), "不是权限员工，请确认信息")
 	}
 
-	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
-	encryptedPassword := utils.EncryptPassword(req.Password)
-	if staff.PermissionPassword != encryptedPassword {
+	// 4. 验证权限密码（支持 MD5 和 bcrypt）
+	isValid, needUpgrade := utils.VerifyPassword(req.Password, staff.PermissionPassword)
+	if !isValid {
 		return false, errors.WithMessage(errors.New("密码错误"), "密码错误")
+	}
+
+	// 如果需要升级权限密码，异步升级为 bcrypt
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			s.dbm.GetDB(staff.CompanyUuid),
+			"ttpos_staff",
+			"permission_password",
+			"uuid",
+			staff.Uuid,
+			req.Password,
+		)
 	}
 
 	// 5. 返回验证结果
@@ -2513,10 +2533,22 @@ func (s *orderSrv) verifyPasswordForRefund(ctx context.Context, req req.VerifyPa
 		return false, errors.New("不是权限员工，请确认信息")
 	}
 
-	// 4. 验证密码（从 staff 表中读取权限密码 permission_password，加密后比较）
-	encryptedPassword := utils.EncryptPassword(req.Password)
-	if staff.PermissionPassword != encryptedPassword {
+	// 4. 验证权限密码（支持 MD5 和 bcrypt）
+	isValid, needUpgrade := utils.VerifyPassword(req.Password, staff.PermissionPassword)
+	if !isValid {
 		return false, errors.New("密码错误")
+	}
+
+	// 如果需要升级权限密码，异步升级为 bcrypt
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			s.dbm.GetDB(staff.CompanyUuid),
+			"ttpos_staff",
+			"permission_password",
+			"uuid",
+			staff.Uuid,
+			req.Password,
+		)
 	}
 
 	// 5. 返回验证结果

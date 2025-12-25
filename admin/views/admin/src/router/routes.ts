@@ -197,6 +197,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: '/log',
+        component: () => import('@/pages/log/grab.vue'),
+        meta: {
+          title: $t('导入日志'),
+        },
+      },
+      {
         path: '/settings',
         component: () => import('@/pages/settings/index.vue'),
         meta: {

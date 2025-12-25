@@ -254,7 +254,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
-				Valuation:            item.Material.Valuation,
+				Valuation:            0.0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				SupplierUuid:         item.Material.SupplierUuid,
 				MaterialName:         materialName,
 				MaterialBaseUnitUuid: materialBaseUnitUuid,

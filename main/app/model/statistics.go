@@ -223,6 +223,8 @@ type StatisticsPaymentData struct {
 	PaymentName        string          `gorm:"column:payment_name;comment:支付方式名称"`
 	PaymentCode        int             `gorm:"column:payment_code;comment:支付方式编码"`
 	ErpnextPayment     string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式"`
+	ErpnextPaymentId   string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式ID"`
+	Source             int             `gorm:"column:source;comment:来源 0-系统 1-手动 2-LianLianPay"`
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalPaymentAmount sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalRefundAmount  sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`

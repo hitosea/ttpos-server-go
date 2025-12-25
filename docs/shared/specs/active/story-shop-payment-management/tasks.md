@@ -12,10 +12,10 @@
 
 ## 📊 进度总览
 
-**总任务数**: 25  
-**已完成**: 17  
+**总任务数**: 27  
+**已完成**: 19  
 **进行中**: -  
-**完成率**: 68.0%
+**完成率**: 70.4%
 
 ---
 
@@ -27,7 +27,7 @@
   - Purpose: 定义所有 API 请求参数结构体
   - Requirements: 1.1, 2.1, 3.1, 5.1, 6.1
   - Leverage: 现有 DTO: `main/app/dto/req/`
-  - Prompt: Role: Go Developer | Task: 创建 PaymentMethod 相关的 Request DTO，包含 ListReq（仅分页参数），CreateReq（无 code、source、sort、default_img 字段），UpdateReq（无 code、source、sort、default_img 字段，包含 status），GetReq，DeleteReq, SortUpdateReq, LianlianPayConfigGetReq, LianlianPayConfigUpdateReq | Context: 使用 binding 标签验证参数，ListReq 仅包含 page_no 和 page_size，CreateReq 和 UpdateReq 的 fee_percent 范围 0-100，字段参考 design.md | Restrictions: 遵循 .cursor/rules/go-main.mdc，fee_percent 范围 0-100 | Success: DTO 创建成功，validation 正确
+  - Prompt: Role: Go Developer | Task: 创建 PaymentMethod 相关的 Request DTO，包含 ListReq（仅分页参数），CreateReq（无 code、source、sort、default_img 字段），UpdateReq（无 code、source、sort、default_img 字段，包含 status），GetReq, SortUpdateReq, LianlianPayConfigGetReq, LianlianPayConfigUpdateReq | Context: 使用 binding 标签验证参数，ListReq 仅包含 page_no 和 page_size，CreateReq 和 UpdateReq 的 fee_percent 范围 0-100，字段参考 design.md | Restrictions: 遵循 .cursor/rules/go-main.mdc，fee_percent 范围 0-100 | Success: DTO 创建成功，validation 正确
 
 - [x] 1.2 创建 Response DTO
 
@@ -47,7 +47,7 @@
   - Purpose: 扩展支付方式 Repository 接口，添加管理方法
   - Requirements: 2.2, 3.2, 5.2, 5.3
   - Leverage: 现有 Repository 接口: `main/app/repository/i_payment_method_repo.go`
-  - Prompt: Role: Go Developer specializing in Repository Pattern | Task: 扩展 IPaymentMethodRepo 接口，添加 CreatePaymentMethod, UpdatePaymentMethod, DeletePaymentMethod, CheckHasOrders, GetMaxSort, BatchUpdateSort 方法 | Context: 使用选项模式(DBOption)，扩展现有接口，不破坏现有方法，无需 CheckCodeExists（code 自动生成） | Restrictions: 遵循 .cursor/rules/go-main.mdc，Repository 不能持有 DBManager | Success: 接口定义完整，方法签名正确
+  - Prompt: Role: Go Developer specializing in Repository Pattern | Task: 扩展 IPaymentMethodRepo 接口，添加 CreatePaymentMethod, UpdatePaymentMethod, GetMaxSort, BatchUpdateSort 方法 | Context: 使用选项模式(DBOption)，扩展现有接口，不破坏现有方法，无需 CheckCodeExists（code 自动生成） | Restrictions: 遵循 .cursor/rules/go-main.mdc，Repository 不能持有 DBManager | Success: 接口定义完整，方法签名正确
 
 - [x] 2.2 实现 Repository 管理方法
 
@@ -55,7 +55,7 @@
   - Purpose: 实现支付方式 Repository 的管理方法
   - Requirements: 2.2, 3.2, 5.2, 5.3
   - Leverage: 现有 Repository 实现: `main/app/repository/payment_method_repo.go`，使用选项模式
-  - Prompt: Role: Go Developer with GORM expertise | Task: 实现 PaymentMethodRepo 的管理方法，包括 CreatePaymentMethod, UpdatePaymentMethod, DeletePaymentMethod, CheckHasOrders, GetMaxSort, BatchUpdateSort | Context: 只持有 db *gorm.DB，CheckHasOrders 查询 ttpos_payment_order 表，BatchUpdateSort 使用事务，无需 CheckCodeExists | Restrictions: 不能持有 DBManager，使用 GORM，软删除(delete_time=0) | Success: Repository 实现完整，选项模式正确，软删除正确
+  - Prompt: Role: Go Developer with GORM expertise | Task: 实现 PaymentMethodRepo 的管理方法，包括 CreatePaymentMethod, UpdatePaymentMethod, GetMaxSort, BatchUpdateSort | Context: 只持有 db *gorm.DB，BatchUpdateSort 使用事务，无需 CheckCodeExists | Restrictions: 不能持有 DBManager，使用 GORM | Success: Repository 实现完整，选项模式正确
 
 - [ ] 2.3 编写 Repository 单元测试
 
@@ -63,7 +63,7 @@
   - Purpose: 确保 Repository 数据访问正确
   - Requirements: 测试要求
   - Leverage: 现有测试: `main/app/repository/*_repo_test.go`
-  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 PaymentMethodRepo 的新增方法编写单元测试，覆盖率 ≥ 80% | Context: 测试 CreatePaymentMethod, UpdatePaymentMethod, DeletePaymentMethod, CheckHasOrders, GetMaxSort, BatchUpdateSort | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 80%，所有测试通过
+  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 PaymentMethodRepo 的新增方法编写单元测试，覆盖率 ≥ 80% | Context: 测试 CreatePaymentMethod, UpdatePaymentMethod, GetMaxSort, BatchUpdateSort | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 80%，所有测试通过
 
 ---
 
@@ -75,7 +75,7 @@
   - Purpose: 扩展支付方式 Service 接口，添加管理方法
   - Requirements: 1.1, 2.1, 3.1, 5.1, 6.1
   - Leverage: 现有 Service 接口: `main/app/service/i_payment_method_srv.go`
-  - Prompt: Role: Go Developer specializing in Service Layer | Task: 扩展 IPaymentMethodSrv 接口，添加 GetManagementList, GetDetail, Create, Update, Delete, UpdateSort, GetLianlianPayConfig, UpdateLianlianPayConfig 方法 | Context: 扩展现有接口，不破坏现有方法，移除 UpdateStatus（状态在 Update 中处理），添加 GetDetail | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 接口定义完整，方法签名正确
+  - Prompt: Role: Go Developer specializing in Service Layer | Task: 扩展 IPaymentMethodSrv 接口，添加 GetManagementList, GetDetail, Create, Update, UpdateSort, GetLianlianPayConfig, UpdateLianlianPayConfig 方法 | Context: 扩展现有接口，不破坏现有方法，移除 UpdateStatus（状态在 Update 中处理），添加 GetDetail | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 接口定义完整，方法签名正确
 
 - [x] 3.2 实现 Service 列表查询方法
 
@@ -109,15 +109,7 @@
   - Leverage: Task 2.1-2.2 的实现
   - Prompt: Role: Go Developer with business logic expertise | Task: 实现 Update 方法，校验系统来源字段修改权限，支持更新 status | Context: 系统来源(source=0)的支付方式，部分字段不可修改，支持更新 status（状态在编辑时更改），fee_percent 范围 0-100（存储时转换为 0-1） | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: Service 实现完整，业务逻辑正确，权限控制正确
 
-- [x] 3.6 实现 Service 删除方法
-
-  - File: `main/app/service/payment_method_srv.go`
-  - Purpose: 实现支付方式删除业务逻辑
-  - Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
-  - Leverage: Task 2.1-2.2 的实现
-  - Prompt: Role: Go Developer with business logic expertise | Task: 实现 Delete 方法，校验系统来源禁止删除，检查关联订单，软删除，重新排序 | Context: 系统来源(source=0)禁止删除，使用 Repository.CheckHasOrders 检查关联订单，使用 Repository.DeletePaymentMethod 软删除，删除后重新排序确保连续 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: Service 实现完整，业务逻辑正确，关联检查正确
-
-- [x] 3.7 实现 Service 排序更新方法
+- [x] 3.6 实现 Service 排序更新方法
 
   - File: `main/app/service/payment_method_srv.go`
   - Purpose: 实现支付方式排序更新业务逻辑
@@ -125,7 +117,7 @@
   - Leverage: Task 2.1-2.2 的实现
   - Prompt: Role: Go Developer with business logic expertise | Task: 实现 UpdateSort 方法，批量更新排序，确保排序值连续 | Context: 使用事务保证一致性，排序值必须连续（1, 2, 3...），使用 Repository.BatchUpdateSort 批量更新 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error，使用事务 | Success: Service 实现完整，业务逻辑正确，排序连续
 
-- [x] 3.8 实现 Service LianlianPay 配置查询方法
+- [x] 3.7 实现 Service LianlianPay 配置查询方法
 
   - File: `main/app/service/payment_method_srv.go`
   - Purpose: 实现 LianlianPay 配置查询业务逻辑
@@ -133,21 +125,49 @@
   - Leverage: 现有 PaymentApp Model: `main/app/model/payment_app.go`
   - Prompt: Role: Go Developer with business logic expertise | Task: 实现 GetLianlianPayConfig 方法，查询 LianlianPay 配置，敏感字段返回占位符 | Context: 按公司 UUID 查询 ttpos_payment_app 表，敏感字段（私钥、Token）返回占位符 `***` | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: Service 实现完整，业务逻辑正确，敏感字段处理正确
 
-- [x] 3.9 实现 Service LianlianPay 配置更新方法
+- [x] 3.8 实现 Service LianlianPay 配置更新方法
 
   - File: `main/app/service/payment_method_srv.go`
   - Purpose: 实现 LianlianPay 配置更新业务逻辑
   - Requirements: 6.1, 6.2, 6.4, 6.5, 6.6
-  - Leverage: 现有 PaymentApp Model: `main/app/model/payment_app.go`，加密工具
-  - Prompt: Role: Go Developer with business logic expertise | Task: 实现 UpdateLianlianPayConfig 方法，更新 LianlianPay 配置，敏感字段加密存储 | Context: 按公司 UUID 查询/更新 ttpos_payment_app 表，敏感字段（私钥、Token）使用 AES 加密存储，配置保存后实时生效 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error，使用加密算法 | Success: Service 实现完整，业务逻辑正确，敏感字段加密正确
+  - Leverage: 现有 PaymentApp Model: `main/app/model/payment_app.go`，RSA 加密工具 `main/pkg/encrypt/rsa.go`，Payment Service `GetSignSalt()` 方法
+  - Prompt: Role: Go Developer with business logic expertise | Task: 实现 UpdateLianlianPayConfig 方法，更新 LianlianPay 配置，使用 RSA 加密与支付服务通信获取签名盐 | Context: 按公司 UUID 查询/更新 ttpos_payment_app 表，使用 PaymentRepo.GetSignSalt() 方法通过 RSA 加密传输配置参数到支付服务，获取签名盐（sign_salt）并存储，配置参数明文存储 | Restrictions: 遵循 .cursor/rules/go-main.mdc，不使用 panic，返回 error | Success: Service 实现完整，业务逻辑正确，RSA 加密通信正确
 
-- [ ] 3.10 编写 Service 单元测试
+- [ ] 3.9 编写 Service 单元测试
 
   - File: `main/app/service/payment_method_srv_test.go`
   - Purpose: 确保 Service 业务逻辑正确
   - Requirements: 测试要求
   - Leverage: 现有测试: `main/app/service/*_srv_test.go`
-  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 PaymentMethodSrv 的新增方法编写单元测试，覆盖率 ≥ 70%（Payment 相关 100%） | Context: 测试所有新增方法（GetManagementList, GetDetail, Create, Update, Delete, UpdateSort, GetLianlianPayConfig, UpdateLianlianPayConfig），测试业务逻辑，测试错误处理，测试权限控制 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 70%（Payment 相关 100%），所有测试通过
+  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 PaymentMethodSrv 的新增方法编写单元测试，覆盖率 ≥ 70%（Payment 相关 100%） | Context: 测试所有新增方法（GetManagementList, GetDetail, Create, Update, UpdateSort, GetLianlianPayConfig, UpdateLianlianPayConfig），测试业务逻辑，测试错误处理，测试权限控制，测试 RSA 加密通信 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 70%（Payment 相关 100%），所有测试通过
+
+---
+
+## Phase 6: RSA 加密工具包（新增）
+
+- [x] 6.1 创建 RSA 加密工具包
+
+  - File: `main/pkg/encrypt/rsa.go`
+  - Purpose: 提供 RSA 加密/解密、签名/验签功能
+  - Requirements: 6.2（LianlianPay 配置安全传输）
+  - Leverage: Go 标准库 `crypto/rsa`, `crypto/x509`, `encoding/pem`
+  - Prompt: Role: Go Developer specializing in cryptography | Task: 创建 RSA 加密工具包，实现公钥加密、私钥解密、签名、验签等功能 | Context: 支持 PKCS1 和 PKCS8 格式，支持从文件或字符串加载密钥，自动格式化 PEM 格式，分段加密/解密支持大数据 | Restrictions: 遵循 Go 标准库规范，错误处理完善 | Success: RSA 工具包创建成功，功能完整
+
+- [x] 6.2 集成 RSA 加密到支付服务
+
+  - File: `main/app/service/payment.go`
+  - Purpose: 在支付服务中添加 `GetSignSalt()` 方法，使用 RSA 加密与支付服务通信
+  - Requirements: 6.1, 6.2
+  - Leverage: RSA 加密工具包 `main/pkg/encrypt/rsa.go`
+  - Prompt: Role: Go Developer with payment integration expertise | Task: 在 PaymentRepo 中添加 GetSignSalt 方法，使用 RSA 公钥加密配置参数，调用支付服务获取签名盐 | Context: 使用环境变量配置支付服务 IP、URL、RSA 公钥，使用 RSA 加密传输配置参数，解析响应获取签名盐 | Restrictions: 遵循 .cursor/rules/go-main.mdc，错误处理完善 | Success: GetSignSalt 方法实现成功，RSA 加密通信正常
+
+- [x] 6.3 扩展 PaymentApp Repository
+
+  - File: `main/app/repository/saas/payment_app.go`
+  - Purpose: 添加更新 PaymentApp 的方法
+  - Requirements: 6.1
+  - Leverage: 现有 Repository 模式
+  - Prompt: Role: Go Developer specializing in Repository Pattern | Task: 在 IPaymentAppRepo 接口中添加 UpdatePaymentApp 方法，支持按公司 UUID 更新配置 | Context: 使用 map[string]any 更新字段，按 company_uuid 条件更新 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: Repository 方法实现成功
 
 ---
 
@@ -159,7 +179,7 @@
   - Purpose: 实现 HTTP API 接口
   - Requirements: 1.1, 2.1, 3.1, 5.1, 6.1
   - Leverage: 现有 API: `main/app/api/v1/shop/shop_setting.go`，Task 3.1-3.10 的 Service
-  - Prompt: Role: Go Developer with Gin framework expertise | Task: 创建 PaymentMethodHandler，实现所有 RESTful 接口 | Context: URL 使用 snake_case，使用 helper.Success() 返回响应，data 必须是对象，实现 GetList, GetDetail, Create, Update, Delete, UpdateSort, GetLianlianPayConfig, UpdateLianlianPayConfig | Restrictions: 遵循 .cursor/rules/api.mdc，不直接使用 c.JSON()，移除 UpdateStatus（状态在 Update 中处理） | Success: API 创建成功，响应格式正确，参数验证正确
+  - Prompt: Role: Go Developer with Gin framework expertise | Task: 创建 PaymentMethodHandler，实现所有 RESTful 接口 | Context: URL 使用 snake_case，使用 helper.Success() 返回响应，data 必须是对象，实现 GetList, GetDetail, Create, Update, UpdateSort, GetLianlianPayConfig, UpdateLianlianPayConfig | Restrictions: 遵循 .cursor/rules/api.mdc，不直接使用 c.JSON()，移除 UpdateStatus（状态在 Update 中处理） | Success: API 创建成功，响应格式正确，参数验证正确
 
 - [x] 4.2 注册 API 路由
 

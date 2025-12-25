@@ -128,3 +128,38 @@ func (r *UpdateMenuModifierReq) ToSDKUpdateMenuModifier() *grabfood.UpdateMenuMo
 
 	return modifier
 }
+
+// ============================================================================
+// Batch Update Menu (POST /partner/v1/batch/menu)
+// ============================================================================
+
+// BatchUpdateMenuReq 批量更新菜单请求
+type BatchUpdateMenuReq struct {
+	MerchantID   string       `json:"merchant_id" v:"required#商户ID不能为空"`                                    // Grab MerchantID
+	Field        string       `json:"field" v:"required|in:ITEM,MODIFIER#字段类型不能为空|字段类型必须是 ITEM 或 MODIFIER"` // 字段类型: ITEM (商品) 或 MODIFIER (修饰符)
+	MenuEntities []MenuEntity `json:"menu_entities" v:"required|#菜单实体列表不能为空"`                               // 菜单实体列表 (1-200 个)
+}
+
+// MenuEntity 菜单实体（用于批量更新）
+type MenuEntity struct {
+	ID               string                     `json:"id" v:"required#菜单项ID不能为空"`   // 菜单项ID或修饰符ID (partner item id 或 partner modifier id)
+	Price            *int64                     `json:"price,omitempty"`             // 价格 (minor unit，单位：分)
+	AvailableStatus  string                     `json:"available_status,omitempty"`  // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE (商品), AVAILABLE, UNAVAILABLE (修饰符)
+	MaxStock         *int64                     `json:"max_stock,omitempty"`         // 库存数量 (仅商品支持)
+	AdvancedPricings []UpdateAdvancedPricingReq `json:"advanced_pricings,omitempty"` // 高级定价配置
+	Purchasabilities []UpdatePurchasabilityReq  `json:"purchasabilities,omitempty"`  // 购买能力配置 (仅商品支持)
+}
+
+// BatchUpdateMenuResp 批量更新菜单响应
+type BatchUpdateMenuResp struct {
+	MerchantID string            `json:"merchant_id"`      // 商户ID
+	Status     string            `json:"status"`           // 更新状态: success, partial_success, fail
+	Errors     []MenuEntityError `json:"errors,omitempty"` // 错误列表 (仅在 partial_success 或 fail 时返回)
+}
+
+// MenuEntityError 菜单实体错误信息
+type MenuEntityError struct {
+	ID           string `json:"id"`            // 菜单项ID或修饰符ID
+	ErrorCode    string `json:"error_code"`    // 错误代码
+	ErrorMessage string `json:"error_message"` // 错误消息
+}

@@ -14,6 +14,7 @@ import (
 	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/grab_self_serve"
 	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/grab_store"
 	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/grab_token"
+	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/order"
 	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/shop_provider_cfg"
 	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/skootar"
 	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/takeout"

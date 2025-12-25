@@ -1155,9 +1155,6 @@ definitions:
       uuid:
         description: 物品UUID
         type: integer
-      valuation:
-        description: 估值率
-        type: number
     type: object
   material_resp.MaterialInfo:
     properties:
@@ -2067,6 +2064,9 @@ definitions:
       max_select:
         description: 最大可选数量
         type: integer
+      min_select:
+        description: 最小可选数量
+        type: integer
       uuid:
         description: 商品属性组UUID
         type: integer
@@ -2661,7 +2661,10 @@ definitions:
         description: 套餐商品数量
         type: integer
       optional_count:
-        description: 可选数量
+        description: 最大可选数量
+        type: integer
+      optional_min_count:
+        description: 最小可选数量
         type: integer
       products:
         allOf:
@@ -2723,7 +2726,10 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐子商品分组名称
       optional_count:
-        description: 可选数量，表示本组商品中要求选择多少个商品
+        description: 最大可选数量，表示本组商品中要求选择多少个商品
+        type: integer
+      optional_min_count:
+        description: 最小可选数量
         type: integer
       products:
         allOf:
@@ -2847,6 +2853,9 @@ definitions:
         type: array
       max_select:
         description: 小料最大可选数量
+        type: integer
+      min_select:
+        description: 小料最小可选数量
         type: integer
     type: object
   product_resp.ProductSauceListResp:
@@ -3147,7 +3156,10 @@ definitions:
       package_sub_product_groups:
         allOf:
         - $ref: '#/definitions/product_resp.ProductPackageSubProductGroupList'
-        description: 关联原商品的套餐信息
+        description: 套餐子商品分组列表
+      price:
+        description: 外卖商品价格 (套餐价格)
+        type: number
       product_package_uuid:
         description: 商品包UUID
         type: integer
@@ -3624,6 +3636,9 @@ definitions:
       category_uuids:
         description: '分类UUID列表, 格式: "uuid1,uuid2,,,," 空字符串=全部'
         type: string
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       order_source:
         description: '订单来源: -1=全部, 1=店内, 2=外卖'
         type: integer
@@ -3720,6 +3735,9 @@ definitions:
     type: object
   req.BusinessDataRankProductReq:
     properties:
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       query_end_time:
         description: 查询结束时间戳
         type: integer
@@ -3732,6 +3750,9 @@ definitions:
     type: object
   req.BusinessTimePeriodReq:
     properties:
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -4840,9 +4861,6 @@ definitions:
       uuid:
         description: 物品UUID
         type: integer
-      valuation:
-        description: 估值率
-        type: number
     type: object
   req.MaterialImportItemReq:
     properties:
@@ -5722,14 +5740,6 @@ definitions:
     required:
     - items
     type: object
-  req.PaymentMethodDeleteReq:
-    properties:
-      uuid:
-        description: 支付方式UUID
-        type: integer
-    required:
-    - uuid
-    type: object
   req.PaymentMethodSortItem:
     properties:
       sort:
@@ -5778,9 +5788,6 @@ definitions:
         type: integer
       name:
         description: 支付方式名称
-        type: string
-      payment_name:
-        description: 支付名称
         type: string
       qrcode_file_uuid:
         description: 二维码图片UUID
@@ -6616,13 +6623,16 @@ definitions:
           $ref: '#/definitions/req.ProductShopAddGroupAttributeReq'
         type: array
       is_must:
-        description: 商品属性组是否必选 0-否 1-是
+        description: 商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 商品属性组最大选择数量是否开启 false-关闭 true-开启
         type: boolean
       max_selection:
         description: 商品属性组最大选择数量
+        type: integer
+      min_selection:
+        description: 商品属性组最小选择数量（v2.12新增）
         type: integer
       uuid:
         description: 商品属性组UUID
@@ -6697,7 +6707,10 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
       optional_count:
-        description: 可选数量（可选分组时有效），默认1
+        description: 最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）
+        type: integer
+      optional_min_count:
+        description: 最小可选数量（v2.12新增，可选分组时有效）
         type: integer
       products:
         description: 套餐分组商品列表
@@ -6810,13 +6823,16 @@ definitions:
   req.ProductShopAddSauceReq:
     properties:
       is_must:
-        description: 是否必选 0-否 1-是
+        description: 是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 是否开启输入 0-否 1-是
         type: boolean
       max_selection:
         description: 最大选择数量
+        type: integer
+      min_selection:
+        description: 最小选择数量（v2.12新增）
         type: integer
       sauces:
         description: 商品加料列表
@@ -6987,13 +7003,16 @@ definitions:
         description: 是否删除, 如果是新增/编辑，则传false，删除时传true
         type: boolean
       is_must:
-        description: 商品属性组是否必选 0-否 1-是
+        description: 商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 商品属性组最大选择数量是否开启 false-否 true-是
         type: boolean
       max_selection:
         description: 商品属性组最大选择数量
+        type: integer
+      min_selection:
+        description: 商品属性组最小选择数量（v2.12新增）
         type: integer
       uuid:
         description: 商品属性组UUID
@@ -7081,7 +7100,10 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
       optional_count:
-        description: 可选数量（可选分组时有效）
+        description: 最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）
+        type: integer
+      optional_min_count:
+        description: 最小可选数量（v2.12新增，可选分组时有效）
         type: integer
       products:
         description: 套餐分组商品列表
@@ -7197,13 +7219,16 @@ definitions:
   req.ProductShopEditSauceReq:
     properties:
       is_must:
-        description: 是否必选 0-否 1-是
+        description: 是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
         type: integer
       is_open_input:
         description: 是否开启输入 0-否 1-是
         type: boolean
       max_selection:
         description: 最大选择数量
+        type: integer
+      min_selection:
+        description: 最小选择数量（v2.12新增）
         type: integer
       sauces:
         description: 商品加料列表
@@ -7284,6 +7309,17 @@ definitions:
     required:
     - bom_uuid
     type: object
+  req.ProductTakeoutShopAddPackageGroupItemReq:
+    properties:
+      add_price:
+        description: 外卖平台的加价金额（覆盖店内加价）
+        type: number
+      product_package_group_item_uuid:
+        description: 套餐子商品 UUID（关联店内套餐子商品）
+        type: integer
+    required:
+    - product_package_group_item_uuid
+    type: object
   req.ProductTakeoutShopAddReq:
     properties:
       attributes:
@@ -7310,14 +7346,22 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 外卖商品名称（多语言），不填则使用店内商品名称
+      package_group_items:
+        description: 外卖套餐子商品列表（加价）
+        items:
+          $ref: '#/definitions/req.ProductTakeoutShopAddPackageGroupItemReq'
+        type: array
+      price:
+        description: 外卖商品价格 (套餐价格)
+        type: number
       product_package_uuid:
         description: 商品包UUID（关联店内商品）
         type: integer
       source:
-        description: 来源平台
+        description: 来源平台 (grab/lineman等 默认grab)
         type: string
       source_product_id:
-        description: 来源平台商品ID
+        description: 来源平台商品ID (grab/lineman等 默认grab)
         type: string
       special_category_uuid:
         description: 外卖特色分类UUID
@@ -7326,7 +7370,7 @@ definitions:
         description: 外卖状态 0-下架 1-上架
         type: integer
       takeout_type:
-        description: 外卖类型 1-Grab 2-FoodPanda 3-其他，默认1
+        description: 外卖类型 1-Grab 2-Lineman 3-其他，默认1
         type: integer
     required:
     - product_package_uuid
@@ -7368,6 +7412,17 @@ definitions:
     required:
     - bom_uuid
     type: object
+  req.ProductTakeoutShopEditPackageGroupItemReq:
+    properties:
+      add_price:
+        description: 外卖平台的加价金额
+        type: number
+      product_package_group_item_uuid:
+        description: 套餐子商品 UUID
+        type: integer
+    required:
+    - product_package_group_item_uuid
+    type: object
   req.ProductTakeoutShopEditReq:
     properties:
       attributes:
@@ -7394,16 +7449,28 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 外卖商品名称（多语言）
+      package_group_items:
+        description: 外卖套餐子商品列表（加价）
+        items:
+          $ref: '#/definitions/req.ProductTakeoutShopEditPackageGroupItemReq'
+        type: array
+      price:
+        description: 外卖商品价格 (套餐价格)
+        type: number
       special_category_uuid:
         description: 外卖特色分类UUID
         type: integer
       status:
         description: 外卖状态 0-下架 1-上架
         type: integer
+      takeout_type:
+        description: 外卖类型 1-Grab 2-Lineman 3-其他，默认1
+        type: integer
       uuid:
-        description: 外卖商品UUID
+        description: 商品UUID
         type: integer
     required:
+    - takeout_type
     - uuid
     type: object
   req.ProductUnitAddReq:
@@ -8139,6 +8206,9 @@ definitions:
       cycle:
         description: '周期: 0=按日、1=按月'
         type: integer
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -8172,6 +8242,9 @@ definitions:
       cycle:
         description: '周期: 0=按日、1=按月'
         type: integer
+      exclude_data_manage:
+        description: 是否排除数据管理订单
+        type: boolean
       page_no:
         description: 页码
         minimum: 1
@@ -8738,6 +8811,9 @@ definitions:
       batch_cooking_mode:
         description: 分批模式 pre-前置模式 post-后置模式，默认为post
         type: string
+      batch_print_mode:
+        description: '分批打印模式: "default" 默认 / "merge" 合并'
+        type: string
       checkout_zeroing_method:
         description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
         enum:
@@ -8956,6 +9032,20 @@ definitions:
     - company_uuid
     - site_code
     - supplier_name
+    type: object
+  req.UpdatePrintSettingReq:
+    properties:
+      checkout_slip_copies:
+        description: 结账单打印联数 0-10
+        type: integer
+      enable_custom_copies:
+        description: 是否启用自定义打印联数 "0"-关闭 "1"-开启
+        enum:
+        - "0"
+        - "1"
+        type: string
+    required:
+    - enable_custom_copies
     type: object
   req.UpdateRoleReq:
     properties:
@@ -9287,6 +9377,84 @@ definitions:
     properties:
       platform:
         description: 平台名称：grab, lineman 等
+        type: string
+    required:
+    - platform
+    type: object
+  request.TakeoutOrderAcceptReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  request.TakeoutOrderCallRiderReq:
+    properties:
+      uuid:
+        description: 订单UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  request.TakeoutOrderEvent:
+    properties:
+      action:
+        description: create, status_update, cancel
+        type: string
+      merchantId:
+        description: 商户 ID
+        type: string
+      orderId:
+        description: 平台订单 ID
+        type: string
+      orderUuid:
+        description: 订单 UUID
+        type: string
+      providerName:
+        description: grab
+        type: string
+      shopUuid:
+        description: TTPOS 店铺 UUID
+        type: string
+      status:
+        description: 当前状态 PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED
+        type: string
+      timestamp:
+        description: 事件时间戳
+        type: integer
+    type: object
+  request.TakeoutOrderRejectReq:
+    properties:
+      reject_reason_code:
+        type: string
+      uuid:
+        type: integer
+    required:
+    - reject_reason_code
+    - uuid
+    type: object
+  request.TakeoutOrderSyncReq:
+    properties:
+      platform:
+        description: grab,foodpanda,lineman
+        type: string
+      raw_data:
+        additionalProperties: true
+        description: 原始订单数据
+        type: object
+    required:
+    - platform
+    - raw_data
+    type: object
+  request.TakeoutSettingsSaveReq:
+    properties:
+      auto_accept:
+        type: boolean
+      max_amount:
+        description: 单位：分
+        type: integer
+      platform:
+        description: grab,foodpanda,lineman
         type: string
     required:
     - platform
@@ -12643,7 +12811,7 @@ definitions:
         description: 会员名称
         type: string
       member_uuids:
-        description: 会员名称
+        description: 昵称+会员手机号 任务:37911【优化】收银机/商家后台-订单详情中调整会员信息内容
         type: string
       nationality_name:
         description: 国籍名称
@@ -13850,6 +14018,9 @@ definitions:
       max_select:
         description: 最大可选的属性数量。0时不限制选择数量
         type: integer
+      min_select:
+        description: 最小可选的属性数量。0时不限制选择数量
+        type: integer
     type: object
   resp.ProductAutoAddReq:
     properties:
@@ -14633,6 +14804,29 @@ definitions:
         description: 采购单列表
         items:
           $ref: '#/definitions/resp.PurchaseOrderInfo'
+        type: array
+    type: object
+  resp.QueryStaffByContactItem:
+    properties:
+      email:
+        description: 邮箱
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      uuid:
+        description: 员工UUID
+        type: integer
+    type: object
+  resp.QueryStaffByContactResp:
+    properties:
+      list:
+        description: 员工列表
+        items:
+          $ref: '#/definitions/resp.QueryStaffByContactItem'
         type: array
     type: object
   resp.QueueDataResp:
@@ -17233,6 +17427,15 @@ definitions:
         description: 日志UUID
         type: integer
     type: object
+  response.Meta:
+    properties:
+      page_no:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
   response.PageResponse:
     properties:
       page_no:
@@ -17243,6 +17446,270 @@ definitions:
         type: integer
       total:
         description: 总数
+        type: integer
+    type: object
+  response.TakeoutOrderCampaignResp:
+    properties:
+      campaign_name:
+        description: 活动名称
+        type: string
+      campaign_type:
+        description: 活动类型
+        type: string
+      deducted_amount:
+        description: 折扣金额(元)
+        type: integer
+      uuid:
+        type: integer
+    type: object
+  response.TakeoutOrderCurrencyResp:
+    properties:
+      currency_code:
+        description: 货币代码
+        type: string
+      currency_exponent:
+        description: 货币小数位数
+        type: integer
+      currency_symbol:
+        description: 货币符号
+        type: string
+    type: object
+  response.TakeoutOrderDiscountsResp:
+    properties:
+      basket_promo:
+        description: 篮子优惠
+        type: integer
+      merchant_discount:
+        description: 商户优惠
+        type: integer
+      platform_discount:
+        description: 平台优惠
+        type: integer
+      tax:
+        description: 税费
+        type: integer
+    type: object
+  response.TakeoutOrderItemResp:
+    properties:
+      is_package:
+        description: 是否套餐
+        type: boolean
+      item_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      modifiers:
+        type: string
+      price:
+        type: integer
+      quantity:
+        type: integer
+      specifications:
+        type: string
+      sub_items:
+        description: 子商品列表
+        items:
+          $ref: '#/definitions/response.TakeoutOrderItemResp'
+        type: array
+      tax:
+        type: integer
+      uuid:
+        type: integer
+    type: object
+  response.TakeoutOrderListItemResp:
+    properties:
+      is_abnormal:
+        description: 是否异常
+        type: integer
+      order_state:
+        description: '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单'
+        type: integer
+      platform:
+        description: 平台名称
+        type: string
+      short_order_number:
+        description: 短订单号
+        type: string
+      subtotal:
+        description: 小计金额
+        type: integer
+      total_items:
+        description: 总商品数量
+        type: integer
+      uuid:
+        description: 订单UUID
+        type: integer
+    type: object
+  response.TakeoutOrderListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/response.TakeoutOrderListItemResp'
+        type: array
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+  response.TakeoutOrderPriceResp:
+    properties:
+      basket_promo:
+        description: 篮子优惠
+        type: integer
+      delivery_fee:
+        description: 配送费
+        type: integer
+      eater_payment:
+        description: 顾客实付
+        type: integer
+      merchant_charge_fee:
+        description: 商户收取费用
+        type: integer
+      merchant_discount:
+        description: 商户优惠
+        type: integer
+      platform_discount:
+        description: 平台优惠
+        type: integer
+      small_order_fee:
+        description: 小订单费
+        type: integer
+      subtotal:
+        description: 商品小计
+        type: integer
+      tax:
+        description: 税费
+        type: integer
+    type: object
+  response.TakeoutOrderPromoResp:
+    properties:
+      mex_funded_ratio:
+        description: 商户承担比例
+        type: integer
+      promo_amount:
+        description: 促销金额
+        type: integer
+      promo_code:
+        description: 促销代码
+        type: string
+      promo_description:
+        description: 促销描述
+        type: string
+      promo_name:
+        description: 促销名称
+        type: string
+      uuid:
+        type: integer
+    type: object
+  response.TakeoutOrderReceiverResp:
+    properties:
+      address:
+        description: 详细地址
+        type: string
+      delivery_instruction:
+        description: 配送说明
+        type: string
+      receiver_name:
+        description: 收货人姓名
+        type: string
+      receiver_phones:
+        description: 收货人电话
+        type: string
+      unit_number:
+        description: 单元号/门牌号
+        type: string
+    type: object
+  response.TakeoutOrderResp:
+    properties:
+      abnormal_detail:
+        description: 异常详情
+        type: string
+      campaigns:
+        description: 活动信息
+        items:
+          $ref: '#/definitions/response.TakeoutOrderCampaignResp'
+        type: array
+      currencies:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderCurrencyResp'
+        description: 货币信息
+      cutlery:
+        description: 是否需要餐具
+        type: integer
+      discounts:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderDiscountsResp'
+        description: 订单优惠
+      is_abnormal:
+        description: 订单异常
+        type: integer
+      items:
+        description: 订单商品列表
+        items:
+          $ref: '#/definitions/response.TakeoutOrderItemResp'
+        type: array
+      order_state:
+        description: 订单状态 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
+        type: integer
+      order_times:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderTimesResp'
+        description: 订单时间
+      order_type:
+        description: 订单类型
+        type: string
+      payment_type:
+        description: 支付类型
+        type: string
+      platform:
+        description: 平台名称
+        type: string
+      price:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderPriceResp'
+        description: 订单金额
+      promos:
+        description: 促销信息
+        items:
+          $ref: '#/definitions/response.TakeoutOrderPromoResp'
+        type: array
+      receiver:
+        allOf:
+        - $ref: '#/definitions/response.TakeoutOrderReceiverResp'
+        description: 收货人信息 (联系人信息)
+      short_order_number:
+        description: 短订单号
+        type: string
+      total_items:
+        description: 订单商品
+        type: integer
+      uuid:
+        description: 订单UUID
+        type: integer
+    type: object
+  response.TakeoutOrderTimesResp:
+    properties:
+      accepted_time:
+        description: 接单时间
+        type: integer
+      completed_time:
+        description: 完成时间
+        type: integer
+      estimated_ready_time:
+        description: 预计完成时间
+        type: integer
+      max_ready_time:
+        description: 最大准备时间
+        type: integer
+      submit_time:
+        description: 提交时间 (提交时间，支付时间)
+        type: integer
+    type: object
+  response.TakeoutSettingsResp:
+    properties:
+      auto_accept:
+        type: boolean
+      max_amount:
+        type: integer
+      platform:
+        type: string
+      uuid:
         type: integer
     type: object
   response.TakeoutStatusResponse:
@@ -17377,6 +17844,9 @@ definitions:
     properties:
       batch_cooking_mode:
         description: '分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"'
+        type: string
+      batch_print_mode:
+        description: '分批打印模式: "default" 默认 / "merge" 合并'
         type: string
       batch_product_uuids:
         description: 分批商品UUID列表
@@ -17934,6 +18404,15 @@ definitions:
       name:
         type: string
     type: object
+  setting.PrintSettingResp:
+    properties:
+      checkout_slip_copies:
+        description: 结账单打印联数 0-10
+        type: integer
+      enable_custom_copies:
+        description: 是否启用自定义打印联数 "0"-关闭 "1"-开启
+        type: string
+    type: object
   setting.Printer:
     properties:
       buffet_sign_open:
@@ -17955,6 +18434,9 @@ definitions:
       cashier_printer_id:
         description: 打印机id
         type: string
+      checkout_slip_copies:
+        description: 结账单打印联数 0-10
+        type: integer
       consumption_tax:
         description: 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示
         type: string
@@ -17963,6 +18445,9 @@ definitions:
         type: string
       default_language:
         description: 打印语言（收银）
+        type: string
+      enable_custom_copies:
+        description: 是否启用自定义打印联数 "0"-关闭 "1"-开启
         type: string
       kitchen_language:
         description: 打印语言（送厨）
@@ -18008,6 +18493,9 @@ definitions:
     properties:
       batch_cooking_mode:
         description: '分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"'
+        type: string
+      batch_print_mode:
+        description: '分批打印模式: "default" 默认 / "merge" 合并'
         type: string
       batch_product_uuids:
         description: 分批商品UUID列表
@@ -20768,6 +21256,33 @@ paths:
       security:
       - JwtToken: []
       summary: 获取商品选购详情
+      tags:
+      - 点餐助手端.订单
+  /assistant/order/query_staff:
+    get:
+      consumes:
+      - application/json
+      description: 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示
+      parameters:
+      - description: 搜索关键词（邮箱或手机号，支持模糊匹配）
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.QueryStaffByContactResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 根据邮箱或手机号查询员工
       tags:
       - 点餐助手端.订单
   /assistant/order/verify_password:
@@ -26492,6 +27007,33 @@ paths:
       summary: 打印发票
       tags:
       - 收银端.订单
+  /cashier/order/query_staff:
+    get:
+      consumes:
+      - application/json
+      description: 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示
+      parameters:
+      - description: 搜索关键词（邮箱或手机号，支持模糊匹配）
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.QueryStaffByContactResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 根据邮箱或手机号查询员工
+      tags:
+      - 收银端.订单
   /cashier/order/re_return:
     post:
       consumes:
@@ -27778,6 +28320,219 @@ paths:
       summary: 门店切换
       tags:
       - 收银端.认证
+  /cashier/takeout/order/accept:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 接单参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderAcceptReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 接单成功
+      summary: 接单
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/call-rider:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 呼叫骑手参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderCallRiderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 呼叫骑手成功
+      summary: 呼叫骑手（标记订单准备完成）
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/detail:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 外卖订单详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.TakeoutOrderResp'
+              type: object
+      summary: 获取外卖订单详情
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/list:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: '结束时间 (默认: 0)'
+        in: query
+        name: end_time
+        type: integer
+      - description: '是否历史订单: true=历史订单, false=未完成订单 (默认: false)'
+        in: query
+        name: is_history
+        type: boolean
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: '平台筛选: grab,lineman (空=全部) (默认: 空)'
+        in: query
+        name: platform
+        type: string
+      - description: '搜索关键词 (默认: 空)'
+        in: query
+        name: search
+        type: string
+      - description: '开始时间 (默认: 0)'
+        in: query
+        name: start_time
+        type: integer
+      - default: -1
+        description: '-1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)'
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 外卖订单列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.TakeoutOrderListResp'
+              type: object
+      summary: 获取外卖订单列表
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/push-state:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 订单状态变更参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderEvent'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 处理订单状态变更成功
+      summary: 处理订单状态变更-模拟接收新订单
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 拒单参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderRejectReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 拒单成功
+      summary: 拒单
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/sync:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 同步订单参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderSyncReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 同步订单成功
+      summary: 同步订单-模拟接收新订单
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/settings:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: '平台: grab,foodpanda,lineman'
+        in: query
+        name: platform
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.TakeoutSettingsResp'
+      summary: 获取外卖配置
+      tags:
+      - 收银端.外卖管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 配置参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutSettingsSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 保存成功
+      summary: 保存外卖配置
+      tags:
+      - 收银端.外卖管理
   /cashier/usb/printer/report:
     post:
       consumes:
@@ -32758,30 +33513,6 @@ paths:
       summary: 获取默认支付方式列表
       tags:
       - 商家端.支付管理
-  /shop/payment_method/delete:
-    delete:
-      consumes:
-      - application/json
-      description: 删除支付方式（软删除）
-      parameters:
-      - description: 删除支付方式参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PaymentMethodDeleteReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 删除支付方式
-      tags:
-      - 商家端.支付管理
   /shop/payment_method/detail:
     get:
       consumes:
@@ -36087,6 +36818,62 @@ paths:
       summary: 获取支付方式列表
       tags:
       - 商家端.支付管理
+  /shop/setting/print_setting/get:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印设置，仅返回自定义打印联数相关配置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/setting.PrintSettingResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印设置
+      tags:
+      - 商家端.打印设置
+  /shop/setting/print_setting/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新打印设置，包括自定义打印联数配置
+      parameters:
+      - description: 更新打印设置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdatePrintSettingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  properties:
+                    checkout_slip_copies:
+                      type: integer
+                    enable_custom_copies:
+                      type: string
+                  type: object
+              type: object
+      security:
+      - JwtToken: []
+      summary: 更新打印设置
+      tags:
+      - 商家端.打印设置
   /shop/setting/return_food_reason:
     delete:
       consumes:

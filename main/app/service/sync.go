@@ -45,11 +45,12 @@ type syncTaskConfig struct {
 
 // SyncSrv同步服务结构体
 type SyncSrv struct {
-	dbm          *database.DBManager
-	warehouseSrv IWarehouseSrv
-	materialSrv  IMaterialSrv
-	supplierSrv  ISupplierSrv
-	productSrv   IProductSrv
+	dbm              *database.DBManager
+	warehouseSrv     IWarehouseSrv
+	materialSrv      IMaterialSrv
+	supplierSrv      ISupplierSrv
+	productSrv       IProductSrv
+	paymentMethodSrv IPaymentMethodSrv
 }
 
 // 全局同步任务管理器
@@ -88,18 +89,19 @@ func (m *SyncTaskManager) getRunningCompanyUuids() []uint64 {
 }
 
 // NewSyncSrv 创建新同步服务
-func NewSyncSrv(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv, materialSrv IMaterialSrv) ISyncSrv {
-	return NewSyncSrvImpl(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv)
+func NewSyncSrv(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv, materialSrv IMaterialSrv, paymentMethodSrv IPaymentMethodSrv) ISyncSrv {
+	return NewSyncSrvImpl(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv, paymentMethodSrv)
 }
 
 // NewSyncSrvImpl 创建新同步服务实现
-func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv, materialSrv IMaterialSrv) ISyncSrv {
+func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv, materialSrv IMaterialSrv, paymentMethodSrv IPaymentMethodSrv) ISyncSrv {
 	return &SyncSrv{
-		dbm:          dbm,
-		warehouseSrv: warehouseSrv,
-		materialSrv:  materialSrv,
-		supplierSrv:  supplierSrv,
-		productSrv:   productSrv,
+		dbm:              dbm,
+		warehouseSrv:     warehouseSrv,
+		materialSrv:      materialSrv,
+		supplierSrv:      supplierSrv,
+		productSrv:       productSrv,
+		paymentMethodSrv: paymentMethodSrv,
 	}
 }
 
@@ -141,6 +143,8 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		{constant.SyncTaskTypeMultiLanguage, constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage], func(ctx context.Context, syncHeadquarterData bool) error {
 			return s.SyncMultiLanguage(ctx)
 		}},
+		// v2.12 新增同步支付方式任务
+		{constant.SyncTaskTypePaymentMethod, constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod], s.paymentMethodSrv.SyncPaymentMethod},
 	}
 
 	// 如果传递了任务UUID，则为重试模式
@@ -1355,42 +1359,41 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 		}
 	}
 
-	// NOTE: v2.11.0 暂不同步支付方式：全量同步
-	// if paymentDataChecked {
-	// 	taskItem := &model.SyncTaskItem{
-	// 		SyncTaskUuid: syncTask.Uuid,
-	// 		TaskType:     constant.SyncTaskTypePaymentMethod,
-	// 		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
-	// 		Status:       constant.SyncTaskItemStatusRunning,
-	// 		StartTime:    time.Now().Unix(),
-	// 	}
+	// 同步支付方式
+	taskItem := &model.SyncTaskItem{
+		SyncTaskUuid: syncTask.Uuid,
+		TaskType:     constant.SyncTaskTypePaymentMethod,
+		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypePaymentMethod],
+		Status:       constant.SyncTaskItemStatusRunning,
+		StartTime:    time.Now().Unix(),
+	}
 
-	// 	syncTaskItemRepo.Create(taskItem)
+	syncTaskItemRepo.Create(taskItem)
 
-	// 	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-	// 	err := s.SyncPaymentMethod(ctx)
-	// 	endTime := time.Now().Unix()
+	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
+	// 细粒度同步：paymentDataChecked=true 表示用户勾选了支付数据，需要同步总部支付方式
+	err := s.paymentMethodSrv.SyncPaymentMethod(ctx, paymentDataChecked)
+	endTime := time.Now().Unix()
 
-	// 	if err != nil {
-	// 		failCount++
-	// 		logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
-	// 		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-	// 			"status":        constant.SyncTaskItemStatusFailed,
-	// 			"error_message": err.Error(),
-	// 			"end_time":      endTime,
-	// 		})
-	// 	} else {
-	// 		successCount++
-	// 		logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
-	// 		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
-	// 			"status":   constant.SyncTaskItemStatusSuccess,
-	// 			"end_time": endTime,
-	// 		})
-	// 	}
-	// }
+	if err != nil {
+		failCount++
+		logger.Logger.Error("同步失败", zap.String("taskName", taskItem.TaskName), zap.Error(err))
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":        constant.SyncTaskItemStatusFailed,
+			"error_message": err.Error(),
+			"end_time":      endTime,
+		})
+	} else {
+		successCount++
+		logger.Logger.Info("同步成功", zap.String("taskName", taskItem.TaskName))
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":   constant.SyncTaskItemStatusSuccess,
+			"end_time": endTime,
+		})
+	}
 
 	// 最后：执行多语言同步
-	taskItem := &model.SyncTaskItem{
+	taskItem = &model.SyncTaskItem{
 		SyncTaskUuid: syncTask.Uuid,
 		TaskType:     constant.SyncTaskTypeMultiLanguage,
 		TaskName:     constant.SyncTaskTypeNames[constant.SyncTaskTypeMultiLanguage],
@@ -1401,8 +1404,8 @@ func (s *SyncSrv) executeGranularSync(ctx context.Context, syncTask *model.SyncT
 	syncTaskItemRepo.Create(taskItem)
 
 	logger.Logger.Info("开始同步", zap.String("taskName", taskItem.TaskName))
-	err := s.SyncMultiLanguage(ctx)
-	endTime := time.Now().Unix()
+	err = s.SyncMultiLanguage(ctx)
+	endTime = time.Now().Unix()
 
 	if err != nil {
 		failCount++
@@ -1605,91 +1608,6 @@ func (s *SyncSrv) SyncMarketingActivity(ctx context.Context) error {
 			logger.Logger.Error("同步营销活动失败", zap.Uint64("uuid", hqActivity.Uuid), zap.Error(err))
 			continue
 		}
-	}
-
-	return nil
-}
-
-// SyncPaymentMethod 全量同步支付方式（遵循原有特殊逻辑，不删除未勾选的支付数据）
-func (s *SyncSrv) SyncPaymentMethod(ctx context.Context) error {
-	companySetting := ctx.GetCompanySetting()
-	headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
-	subShopDB := s.dbm.GetDB(companySetting.CompanyUuid)
-	headquarterUuid := companySetting.HeadquarterUuid
-
-	// 查询总部支付方式（排除 code=40 和 code=10）
-	var hqPayments []model.PaymentMethod
-	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
-		Find(&hqPayments).Error
-	if err != nil {
-		return errors.WithMessage(err, "查询总部支付方式失败")
-	}
-
-	// 特殊code列表（不跳过，只更新headquarter_uuid）
-	specialCodes := map[int]bool{
-		model.PaymentCodeLianlianWechat:      true, // 90111
-		model.PaymentCodeLianlianAli:         true, // 90222
-		model.PaymentCodeLianlianQrPromptPay: true, // 90333
-	}
-
-	for _, hqPayment := range hqPayments {
-		// 检查分店是否已有同名支付方式（payment_name）
-		var existPayment model.PaymentMethod
-		err := subShopDB.Where("payment_name = ? and source = ? AND delete_time = 0", hqPayment.PaymentName, model.PaymentSourceDefault).
-			First(&existPayment).Error
-
-		if err == nil {
-			// 分店已有同名支付方式
-			if specialCodes[existPayment.Code] {
-				// 特殊code：只更新 headquarter_uuid
-				err = subShopDB.Model(&model.PaymentMethod{}).
-					Where("id = ?", existPayment.ID).
-					Update("headquarter_uuid", headquarterUuid).Error
-				if err != nil {
-					logger.Logger.Error("更新支付方式headquarter_uuid失败",
-						zap.String("name", hqPayment.PaymentName),
-						zap.Int("code", existPayment.Code),
-						zap.Error(err))
-				} else {
-					logger.Logger.Info("更新支付方式headquarter_uuid",
-						zap.String("name", hqPayment.PaymentName),
-						zap.Int("code", existPayment.Code))
-				}
-			} else {
-				// 普通code：跳过
-				logger.Logger.Info("支付方式已存在，跳过同步",
-					zap.String("name", hqPayment.PaymentName),
-					zap.Int("code", existPayment.Code))
-			}
-			continue
-		}
-
-		// 分店不存在，创建新支付方式
-		newCode := s.generatePaymentCode(subShopDB)
-
-		newPayment := model.PaymentMethod{
-			HeadquarterUuid: headquarterUuid,
-			PaymentName:     hqPayment.PaymentName,
-			Name:            hqPayment.Name,
-			Code:            newCode,                    // 生成新code
-			Source:          model.PaymentSourceDefault, // 1-手动添加
-			LogoFileUuid:    0,                          // 固定为0
-			Sort:            hqPayment.Sort,             // 排序
-			// 其他字段使用数据库默认值
-		}
-
-		err = subShopDB.Create(&newPayment).Error
-		if err != nil {
-			logger.Logger.Error("创建支付方式失败",
-				zap.String("name", hqPayment.PaymentName),
-				zap.Error(err))
-			continue
-		}
-
-		logger.Logger.Info("创建新支付方式",
-			zap.String("name", hqPayment.PaymentName),
-			zap.Int("code", newCode))
 	}
 
 	return nil

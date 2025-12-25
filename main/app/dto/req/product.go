@@ -429,7 +429,8 @@ type ProductShopAddTaxReq struct {
 // ProductShopAddSauceReq 商品加料添加请求
 type ProductShopAddSauceReq struct {
 	Sauces       []ProductShopAddSauceItemReq `json:"sauces"`        // 商品加料列表
-	IsMust       int                          `json:"is_must"`       // 是否必选 0-否 1-是
+	IsMust       int                          `json:"is_must"`       // 是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
+	MinSelection int                          `json:"min_selection"` // 最小选择数量（v2.12新增）
 	MaxSelection int                          `json:"max_selection"` // 最大选择数量
 	IsOpenInput  bool                         `json:"is_open_input"` // 是否开启输入 0-否 1-是
 }
@@ -443,7 +444,8 @@ type ProductShopAddSauceItemReq struct {
 // ProductShopAddAttributeGroupReq 商品属性组添加请求
 type ProductShopAddAttributeGroupReq struct {
 	Uuid         uint64                            `json:"uuid"`          // 商品属性组UUID
-	IsMust       int                               `json:"is_must"`       // 商品属性组是否必选 0-否 1-是
+	IsMust       int                               `json:"is_must"`       // 商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
+	MinSelection int                               `json:"min_selection"` // 商品属性组最小选择数量（v2.12新增）
 	IsOpenInput  bool                              `json:"is_open_input"` // 商品属性组最大选择数量是否开启 false-关闭 true-开启
 	MaxSelection int                               `json:"max_selection"` // 商品属性组最大选择数量
 	Attributes   []ProductShopAddGroupAttributeReq `json:"attributes"`    // 商品属性列表
@@ -481,10 +483,11 @@ type ProductShopAddPackageReq struct {
 
 // ProductShopAddPackageGroupReq 套餐分组添加请求
 type ProductShopAddPackageGroupReq struct {
-	LocaleName    dto.LocaleResponse                     `json:"locale_name" binding:"required"`   // 套餐分组名称
-	GroupType     int                                    `json:"group_type"`                       // 分组类型 0-固定 1-可选，默认0
-	OptionalCount int                                    `json:"optional_count"`                   // 可选数量（可选分组时有效），默认1
-	Products      []ProductShopAddPackageGroupProductReq `json:"products" binding:"required,dive"` // 套餐分组商品列表
+	LocaleName       dto.LocaleResponse                     `json:"locale_name" binding:"required"`   // 套餐分组名称
+	GroupType        int                                    `json:"group_type"`                       // 分组类型 0-固定 1-可选，默认0
+	OptionalMinCount int                                    `json:"optional_min_count"`               // 最小可选数量（v2.12新增，可选分组时有效）
+	OptionalCount    int                                    `json:"optional_count"`                   // 最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）
+	Products         []ProductShopAddPackageGroupProductReq `json:"products" binding:"required,dive"` // 套餐分组商品列表
 }
 
 // ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
@@ -561,7 +564,8 @@ type ProductShopEditTaxReq struct {
 // ProductShopAddSauceReq 商品加料添加请求
 type ProductShopEditSauceReq struct {
 	Sauces       []ProductShopEditSauceItemReq `json:"sauces"`        // 商品加料列表
-	IsMust       int                           `json:"is_must"`       // 是否必选 0-否 1-是
+	IsMust       int                           `json:"is_must"`       // 是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
+	MinSelection int                           `json:"min_selection"` // 最小选择数量（v2.12新增）
 	IsOpenInput  bool                          `json:"is_open_input"` // 是否开启输入 0-否 1-是
 	MaxSelection int                           `json:"max_selection"` // 最大选择数量
 }
@@ -577,7 +581,8 @@ type ProductShopEditSauceItemReq struct {
 // ProductShopAddAttributeGroupReq 商品属性组添加请求
 type ProductShopEditAttributeGroupReq struct {
 	Uuid         uint64                             `json:"uuid"`          // 商品属性组UUID
-	IsMust       int                                `json:"is_must"`       // 商品属性组是否必选 0-否 1-是
+	IsMust       int                                `json:"is_must"`       // 商品属性组是否必选 0-否 1-是（v2.11废弃，使用MinSelection替代）
+	MinSelection int                                `json:"min_selection"` // 商品属性组最小选择数量（v2.12新增）
 	IsOpenInput  bool                               `json:"is_open_input"` // 商品属性组最大选择数量是否开启 false-否 true-是
 	MaxSelection int                                `json:"max_selection"` // 商品属性组最大选择数量
 	Attributes   []ProductShopEditGroupAttributeReq `json:"attributes"`    // 商品属性列表
@@ -617,12 +622,13 @@ type ProductShopEditPackageReq struct {
 
 // ProductShopEditPackageGroupReq 套餐分组编辑请求
 type ProductShopEditPackageGroupReq struct {
-	Uuid          uint64                                  `json:"uuid"`           // 套餐分组UUID
-	LocaleName    dto.LocaleResponse                      `json:"locale_name"`    // 套餐分组名称
-	GroupType     int                                     `json:"group_type"`     // 分组类型 0-固定 1-可选
-	OptionalCount int                                     `json:"optional_count"` // 可选数量（可选分组时有效）
-	Products      []ProductShopEditPackageGroupProductReq `json:"products"`       // 套餐分组商品列表
-	IsDelete      bool                                    `json:"is_delete"`      // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid             uint64                                  `json:"uuid"`               // 套餐分组UUID
+	LocaleName       dto.LocaleResponse                      `json:"locale_name"`        // 套餐分组名称
+	GroupType        int                                     `json:"group_type"`         // 分组类型 0-固定 1-可选
+	OptionalMinCount int                                     `json:"optional_min_count"` // 最小可选数量（v2.12新增，可选分组时有效）
+	OptionalCount    int                                     `json:"optional_count"`     // 最大可选数量（v2.12语义变更：原为可选数量，现表示最大可选数量）
+	Products         []ProductShopEditPackageGroupProductReq `json:"products"`           // 套餐分组商品列表
+	IsDelete         bool                                    `json:"is_delete"`          // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 // ProductShopEditPackageGroupProductReq 套餐分组商品编辑请求

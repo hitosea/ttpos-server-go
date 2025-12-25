@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	takeoutPersistence "ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -151,11 +152,23 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取待接单外送订单数量失败"), err.Error())
 	}
 
+	// 获取待处理的外卖订单数量（Grab/Lineman等平台）
+	// 包括待接单(0)和已接单配餐中(1)的订单
+	takeoutOrderRepo := takeoutPersistence.NewTakeoutOrderRepo(db)
+	unhandledTakeoutOrderCount, err := takeoutOrderRepo.GetCount(
+		takeoutOrderRepo.WhereOrderStateIn([]int{0, 1}), // 0=待接单, 1=已接单配餐中
+	)
+	if err != nil {
+		logger.Logger.Error("获取待接单外卖订单数量失败", zap.Error(err))
+		return res, errors.WithMessage(errors.New("获取待接单外卖订单数量失败"), err.Error())
+	}
+
 	return resp.UnprocessedResp{
 		UnprocessedCallCount:        unprocessedCallCount,
 		AbnormalPrintCount:          abnormalPrintCount,
 		UnprocessedH5OrderCount:     unhandledH5OrderCount,
 		UnprocessedMemberOrderCount: unhandledMemberSaleOrderCount,
+		UnprocessedTakeoutCount:     unhandledTakeoutOrderCount, // 新增外卖订单数量
 		UpdateTime:                  time.Now().Unix(),
 	}, nil
 }

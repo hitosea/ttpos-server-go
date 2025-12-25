@@ -71,6 +71,20 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
 			if err == nil {
 				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
+				if product.ShowDelayTag {
+					postText := model.MultiLanguageName{
+						EnName:   "Post Cooking",
+						ZhName:   "稍后制作",
+						ZhTwName: "稍後製作",
+						ThName:   "ทำหลัง",
+						MyName:   "အပြီးမှာဖွင့်ပါ",
+						JaName:   "後で作る",
+						KoName:   "나중에 만들어",
+						TrName:   "Sonra yap",
+						SvName:   "Gör efter",
+					}
+					batchTagText = batchTagText + " (" + postText.GetNameByLang(t.base.Lang) + ")"
+				}
 				break
 			}
 		}
@@ -530,6 +544,20 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
 			if err == nil {
 				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
+				if product.ShowDelayTag {
+					postText := model.MultiLanguageName{
+						EnName:   "Post Cooking",
+						ZhName:   "稍后制作",
+						ZhTwName: "稍後製作",
+						ThName:   "ทำหลัง",
+						MyName:   "အပြီးမှာဖွင့်ပါ",
+						JaName:   "後で作る",
+						KoName:   "나중에 만들어",
+						TrName:   "Sonra yap",
+						SvName:   "Gör efter",
+					}
+					batchTagText = batchTagText + " (" + postText.GetNameByLang(t.base.Lang) + ")"
+				}
 				break
 			}
 		}

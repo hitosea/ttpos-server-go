@@ -68,6 +68,7 @@ type ISrv interface {
 	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                       // 获取税率设置
 	VerifyPassword(ctx context.Context, source string, typ string, password string) bool                                                  // 收银机验证密码
 	UpdateSetting(ctx context.Context, settingKey string, values any) error                                                               // 更新设置
+	UpdatePrintSetting(ctx context.Context, req *req.UpdatePrintSettingReq) error                                                         // 更新打印设置
 	VerifyAdvancedPassword(ctx context.Context, password string, options ...func(option *VerifyAdvancedPasswordOption)) error             // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
@@ -401,6 +402,13 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		defaultPrinter.Language = make([]string, 0)
 	}
 
+	// 兼容旧数据：如果新字段不存在，使用默认值
+	if defaultPrinter.EnableCustomCopies == "" {
+		defaultPrinter.EnableCustomCopies = "0"
+	}
+	// CheckoutSlipCopies 如果是 0，可能是默认值也可能是旧数据中没有该字段，这里不做特殊处理
+	// 因为 int 类型的零值就是 0，符合我们的默认值要求
+
 	return defaultPrinter, nil
 }
 
@@ -601,6 +609,9 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 	// 确保 BatchCookingMode 有默认值
 	if defaultBusiness.BatchCookingMode == "" {
 		defaultBusiness.BatchCookingMode = constant.BatchCookingModePost
+	}
+	if defaultBusiness.BatchPrintMode == "" {
+		defaultBusiness.BatchPrintMode = constant.BatchPrintModeDefault
 	}
 
 	return defaultBusiness, nil
@@ -1874,6 +1885,25 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 	return nil
 }
 
+// UpdatePrintSetting 更新打印设置
+func (s *Srv) UpdatePrintSetting(ctx context.Context, req *req.UpdatePrintSettingReq) error {
+	if req.CheckoutSlipCopies < 0 || req.CheckoutSlipCopies > 10 {
+		return errors.New("结账单打印联数必须在0-10之间")
+	}
+	// 获取当前打印设置
+	printerSetting, err := s.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return errors.WithMessage(err, "获取打印设置失败")
+	}
+
+	// 更新字段
+	printerSetting.EnableCustomCopies = req.EnableCustomCopies
+	printerSetting.CheckoutSlipCopies = req.CheckoutSlipCopies
+
+	// 保存设置（会自动删除缓存）
+	return s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
+}
+
 func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateStoreSetting) error {
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyUuid := ctx.GetCompanyUuid()
@@ -2391,6 +2421,7 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
+		paymentRepo.WhereNotCode([]int{constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan}),
 	)
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))

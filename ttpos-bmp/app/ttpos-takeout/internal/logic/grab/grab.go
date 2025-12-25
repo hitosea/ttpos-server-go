@@ -84,6 +84,29 @@ func (s *sGrab) getVerifier() *SignatureVerifier {
 	return s.verifier
 }
 
+// handleSDKError 统一处理 Grab SDK Execute() 返回的错误
+// 参数:
+//   - ctx: 上下文
+//   - err: SDK 返回的错误
+//   - operation: 操作名称（如 "AcceptOrder", "GetStoreStatus"）
+//
+// 返回: 包装后的错误
+func (s *sGrab) handleSDKError(ctx context.Context, err error, operation string) error {
+	if err == nil {
+		return nil
+	}
+	errBody := ""
+	// 安全的类型断言，记录 API 详细错误
+	if apiErr, ok := err.(*grabfood.GenericOpenAPIError); ok {
+		errBody = string(apiErr.Body())
+		g.Log().Errorf(ctx, "[Grab] SDK %s 失败: %s", operation, errBody)
+	} else {
+		g.Log().Errorf(ctx, "[Grab] SDK %s 失败: %v", operation, err)
+	}
+
+	return gerror.Wrapf(err, "[Grab] SDK %s 失败 %s", operation, errBody)
+}
+
 // getSDKContext 获取带环境配置的 Context
 // staging 环境使用 StgEnv (0)，production 环境使用 PrdEnv (1)
 func (s *sGrab) getSDKContext(ctx context.Context) context.Context {
@@ -110,8 +133,8 @@ func (s *sGrab) fetchTokenFromSDK(ctx context.Context) (string, int, error) {
 		GrabOauthRequest(*authReq).
 		Execute()
 
-	if err != nil {
-		return "", 0, gerror.Wrap(err, "SDK OAuth 请求失败")
+	if err = s.handleSDKError(ctx, err, "OAuth"); err != nil {
+		return "", 0, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -289,7 +312,7 @@ func (s *sGrab) AcceptOrder(ctx context.Context, orderID string) error {
 		return gerror.Wrap(err, "获取授权信息失败")
 	}
 
-	acceptReq := grabfood.NewAcceptOrderRequest(orderID, "ACCEPTED")
+	acceptReq := grabfood.NewAcceptOrderRequest(orderID, "Accepted")
 
 	httpResp, err := s.getClient().AcceptRejectOrderAPI.
 		AcceptRejectOrder(s.getSDKContext(ctx)).
@@ -298,8 +321,8 @@ func (s *sGrab) AcceptOrder(ctx context.Context, orderID string) error {
 		AcceptOrderRequest(*acceptReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK AcceptOrder 失败")
+	if err = s.handleSDKError(ctx, err, "AcceptOrder"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -316,7 +339,7 @@ func (s *sGrab) RejectOrder(ctx context.Context, orderID string, rejectCode int)
 		return gerror.Wrap(err, "获取授权信息失败")
 	}
 
-	rejectReq := grabfood.NewAcceptOrderRequest(orderID, "REJECTED")
+	rejectReq := grabfood.NewAcceptOrderRequest(orderID, "Rejected")
 
 	httpResp, err := s.getClient().AcceptRejectOrderAPI.
 		AcceptRejectOrder(s.getSDKContext(ctx)).
@@ -325,8 +348,8 @@ func (s *sGrab) RejectOrder(ctx context.Context, orderID string, rejectCode int)
 		AcceptOrderRequest(*rejectReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK RejectOrder 失败")
+	if err = s.handleSDKError(ctx, err, "RejectOrder"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -337,16 +360,21 @@ func (s *sGrab) RejectOrder(ctx context.Context, orderID string, rejectCode int)
 }
 
 // CancelOrder 取消订单
-func (s *sGrab) CancelOrder(ctx context.Context, orderID string, cancelCode int) error {
+func (s *sGrab) CancelOrder(ctx context.Context, merchantID string, orderID string, cancelCode string) error {
 	auth, err := s.getAuthorizationHeader(ctx)
 	if err != nil {
 		return gerror.Wrap(err, "获取授权信息失败")
 	}
 
+	// 将 cancelCode 字符串转换为 int（Grab SDK CancelCode 是 int32 类型）
+	cancelCodeInt, err := strconv.Atoi(cancelCode)
+	if err != nil {
+		return gerror.Wrapf(err, "取消原因码格式错误: %s", cancelCode)
+	}
+
 	// SDK CancelCode 是 int32 类型
-	cancelCodeEnum := grabfood.CancelCode(cancelCode)
-	// TODO: 优化接口，传入 merchantID
-	cancelReq := grabfood.NewCancelOrderRequest(orderID, "", cancelCodeEnum)
+	cancelCodeEnum := grabfood.CancelCode(cancelCodeInt)
+	cancelReq := grabfood.NewCancelOrderRequest(orderID, merchantID, cancelCodeEnum)
 
 	_, httpResp, err := s.getClient().CancelOrderAPI.
 		CancelOrder(s.getSDKContext(ctx)).
@@ -355,14 +383,14 @@ func (s *sGrab) CancelOrder(ctx context.Context, orderID string, cancelCode int)
 		CancelOrderRequest(*cancelReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK CancelOrder 失败")
+	if err = s.handleSDKError(ctx, err, "CancelOrder"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
 	}
 
-	g.Log().Infof(ctx, "[Grab] 订单已取消: %s, code=%d", orderID, cancelCode)
+	g.Log().Infof(ctx, "[Grab] 订单已取消: merchant_id=%s, order_id=%s, code=%s", merchantID, orderID, cancelCode)
 	return nil
 }
 
@@ -388,8 +416,8 @@ func (s *sGrab) MarkOrderReady(ctx context.Context, orderID string, markStatus s
 		MarkOrderRequest(*markReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK MarkOrderReady 失败")
+	if err = s.handleSDKError(ctx, err, "MarkOrderReady"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -415,8 +443,8 @@ func (s *sGrab) UpdateDeliveryState(ctx context.Context, orderID string, fromSta
 		OrderDeliveryRequest(*deliveryReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK UpdateDeliveryState 失败")
+	if err = s.handleSDKError(ctx, err, "UpdateDeliveryState"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -442,8 +470,8 @@ func (s *sGrab) UpdateOrderReadyTime(ctx context.Context, orderID string, newRea
 		NewOrderTimeRequest(*readyTimeReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK UpdateOrderReadyTime 失败")
+	if err = s.handleSDKError(ctx, err, "UpdateOrderReadyTime"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -454,10 +482,11 @@ func (s *sGrab) UpdateOrderReadyTime(ctx context.Context, orderID string, newRea
 }
 
 // CheckOrderCancelable 检查订单是否可取消
-func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error) {
+// 返回 Grab SDK 的完整响应对象
+func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error) {
 	auth, err := s.getAuthorizationHeader(ctx)
 	if err != nil {
-		return false, "", gerror.Wrap(err, "获取授权信息失败")
+		return nil, gerror.Wrap(err, "获取授权信息失败")
 	}
 
 	resp, httpResp, err := s.getClient().CheckOrderCancelableAPI.
@@ -467,21 +496,14 @@ func (s *sGrab) CheckOrderCancelable(ctx context.Context, merchantID string, ord
 		OrderID(orderID).
 		Execute()
 
-	if err != nil {
-		return false, "", gerror.Wrap(err, "SDK CheckOrderCancelable 失败")
+	if err = s.handleSDKError(ctx, err, "CheckOrderCancelable"); err != nil {
+		return nil, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
 	}
 
-	// 注意: SDK 字段名是 CancelAble (而非 Cancelable)
-	cancelable := resp.CancelAble != nil && *resp.CancelAble
-	reason := ""
-	if resp.NonCancellationReason != nil {
-		reason = *resp.NonCancellationReason
-	}
-
-	return cancelable, reason, nil
+	return resp, nil
 }
 
 // ============================================================================
@@ -518,8 +540,8 @@ func (s *sGrab) updateStoreStatus(ctx context.Context, merchantID string, isPaus
 		PauseStoreRequest(*pauseReq).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "SDK UpdateStoreStatus 失败")
+	if err = s.handleSDKError(ctx, err, "UpdateStoreStatus"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -545,8 +567,8 @@ func (s *sGrab) GetStoreStatus(ctx context.Context, merchantID string) (*grabfoo
 		Authorization(auth).
 		Execute()
 
-	if err != nil {
-		return nil, gerror.Wrap(err, "SDK GetStoreStatus 失败")
+	if err = s.handleSDKError(ctx, err, "GetStoreStatus"); err != nil {
+		return nil, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -567,8 +589,8 @@ func (s *sGrab) GetStoreHours(ctx context.Context, merchantID string) (*grabfood
 		Authorization(auth).
 		Execute()
 
-	if err != nil {
-		return nil, gerror.Wrap(err, "SDK GetStoreHours 失败")
+	if err = s.handleSDKError(ctx, err, "GetStoreHours"); err != nil {
+		return nil, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -599,8 +621,8 @@ func (s *sGrab) NotifyMenuUpdate(ctx context.Context, merchantID string) (string
 		UpdateMenuNotifRequest(*notifReq).
 		Execute()
 
-	if err != nil {
-		return "", gerror.Wrap(err, "SDK NotifyMenuUpdate 失败")
+	if err = s.handleSDKError(ctx, err, "NotifyMenuUpdate"); err != nil {
+		return "", err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -632,8 +654,8 @@ func (s *sGrab) TraceMenuSync(ctx context.Context, merchantID string) (*grabfood
 		MerchantID(merchantID).
 		Execute()
 
-	if err != nil {
-		return nil, gerror.Wrap(err, "SDK TraceMenuSync 失败")
+	if err = s.handleSDKError(ctx, err, "TraceMenuSync"); err != nil {
+		return nil, err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -658,8 +680,8 @@ func (s *sGrab) UpdateMenuRecord(ctx context.Context, merchantID string, req gra
 		UpdateMenuRequest(req).
 		Execute()
 
-	if err != nil {
-		return gerror.Wrap(err, "调用 SDK UpdateMenuRecord 失败")
+	if err = s.handleSDKError(ctx, err, "UpdateMenuRecord"); err != nil {
+		return err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -672,6 +694,56 @@ func (s *sGrab) UpdateMenuRecord(ctx context.Context, merchantID string, req gra
 
 	g.Log().Infof(ctx, "[Grab] UpdateMenuRecord 成功: merchantID=%s", merchantID)
 	return nil
+}
+
+// BatchUpdateMenu 批量更新菜单记录 (商品或修饰符)
+// 调用 GrabFood API POST /partner/v1/batch/menu
+// 参数：
+//   - ctx: 上下文对象
+//   - merchantID: Grab Merchant ID
+//   - req: 批量更新请求（GrabFood SDK 结构体）
+//
+// 返回：
+//   - resp: 批量更新响应，包含状态和错误列表
+//   - err: 错误信息
+func (s *sGrab) BatchUpdateMenu(ctx context.Context, merchantID string, req *grabfood.BatchUpdateMenuItem) (*grabfood.BatchUpdateMenuResponse, error) {
+	// 1. 获取授权信息
+	auth, err := s.getAuthorizationHeader(ctx)
+	if err != nil {
+		return nil, gerror.Wrap(err, "获取授权信息失败")
+	}
+
+	// 2. 记录开始日志
+	g.Log().Infof(ctx, "[Grab] BatchUpdateMenu 开始: merchantID=%s, field=%s, count=%d",
+		merchantID, req.GetField(), len(req.GetMenuEntities()))
+
+	// 3. 调用 GrabFood SDK BatchUpdateMenu API
+	resp, httpResp, err := s.getClient().UpdateMenuRecordAPI.
+		BatchUpdateMenu(s.getSDKContext(ctx)).
+		ContentType("application/json").
+		Authorization(auth).
+		BatchUpdateMenuItem(*req).
+		Execute()
+
+	// 4. 错误处理
+	if err = s.handleSDKError(ctx, err, "BatchUpdateMenu"); err != nil {
+		return nil, err
+	}
+	if httpResp != nil {
+		defer httpResp.Body.Close()
+	}
+
+	// 5. 检查 HTTP 状态码
+	if httpResp != nil && httpResp.StatusCode >= 400 {
+		return nil, gerror.Newf("Grab API 返回错误: HTTP %d", httpResp.StatusCode)
+	}
+
+	// 6. 记录成功日志
+	status := resp.GetStatus()
+	g.Log().Infof(ctx, "[Grab] BatchUpdateMenu 成功: merchantID=%s, status=%s, errorCount=%d",
+		merchantID, status, len(resp.GetErrors()))
+
+	return resp, nil
 }
 
 // ============================================================================
@@ -703,8 +775,8 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (
 		CreateSelfServeJourneyRequest(selfServeReq).
 		Execute()
 
-	if err != nil {
-		return "", "", gerror.Wrap(err, "SDK CreateSelfServeJourney 失败")
+	if err = s.handleSDKError(ctx, err, "CreateSelfServeJourney"); err != nil {
+		return "", "", err
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()

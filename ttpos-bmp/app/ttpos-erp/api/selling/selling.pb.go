@@ -446,8 +446,9 @@ func (x *OpenPosEntryInfo) GetOpenPosEntryDetail() []*OpenPosEntryDetail {
 
 type OpenPosEntryDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式"` // 支付方式
-	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额"` // 开帐金额
+	ModeOfPayment *string                `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3,oneof" json:"mode_of_payment,omitempty" dc:"支付方式，与 payment_id 二选一（必填其中之一）"` // 支付方式，与 payment_id 二选一（必填其中之一）
+	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额,必填"`                             // 开帐金额,必填
+	PaymentId     *string                `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），与 mode_of_payment 二选一"`   // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -483,8 +484,8 @@ func (*OpenPosEntryDetail) Descriptor() ([]byte, []int) {
 }
 
 func (x *OpenPosEntryDetail) GetModeOfPayment() string {
-	if x != nil {
-		return x.ModeOfPayment
+	if x != nil && x.ModeOfPayment != nil {
+		return *x.ModeOfPayment
 	}
 	return ""
 }
@@ -494,6 +495,13 @@ func (x *OpenPosEntryDetail) GetOpeningAmount() float64 {
 		return x.OpeningAmount
 	}
 	return 0
+}
+
+func (x *OpenPosEntryDetail) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
 }
 
 type OpenPosEntryResp struct {
@@ -610,9 +618,10 @@ func (x *ClosePosEntryReq) GetInvoiceCount() int64 {
 
 type ClosePosEntryDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式,必填"` // 支付方式,必填
-	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额,必填"` // 开帐金额,必填
-	ClosingAmount float64                `protobuf:"fixed64,3,opt,name=closing_amount,json=closingAmount,proto3" json:"closing_amount,omitempty" dc:"关帐金额,必填"` // 关帐金额,必填
+	ModeOfPayment *string                `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3,oneof" json:"mode_of_payment,omitempty" dc:"支付方式，与 payment_id 二选一（必填其中之一）"` // 支付方式，与 payment_id 二选一（必填其中之一）
+	OpeningAmount float64                `protobuf:"fixed64,2,opt,name=opening_amount,json=openingAmount,proto3" json:"opening_amount,omitempty" dc:"开帐金额,必填"`                             // 开帐金额,必填
+	ClosingAmount float64                `protobuf:"fixed64,3,opt,name=closing_amount,json=closingAmount,proto3" json:"closing_amount,omitempty" dc:"关帐金额,必填"`                             // 关帐金额,必填
+	PaymentId     *string                `protobuf:"bytes,4,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），与 mode_of_payment 二选一"`   // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -648,8 +657,8 @@ func (*ClosePosEntryDetail) Descriptor() ([]byte, []int) {
 }
 
 func (x *ClosePosEntryDetail) GetModeOfPayment() string {
-	if x != nil {
-		return x.ModeOfPayment
+	if x != nil && x.ModeOfPayment != nil {
+		return *x.ModeOfPayment
 	}
 	return ""
 }
@@ -666,6 +675,13 @@ func (x *ClosePosEntryDetail) GetClosingAmount() float64 {
 		return x.ClosingAmount
 	}
 	return 0
+}
+
+func (x *ClosePosEntryDetail) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
 }
 
 type ClosePosEntryInfo struct {
@@ -1171,8 +1187,9 @@ func (x *PosInvoiceTax) GetDescription() string {
 // PosInvoicePayment POS发票付款
 type PosInvoicePayment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀"` // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
-	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                                                                                                           // 金额，必填
+	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，与 payment_id 二选一（必填其中之一）"`     // 支付方式，与 payment_id 二选一（必填其中之一）
+	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                // 金额，必填
+	PaymentId     *string                `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），与 mode_of_payment 二选一"` // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1219,6 +1236,13 @@ func (x *PosInvoicePayment) GetAmount() float64 {
 		return x.Amount
 	}
 	return 0
+}
+
+func (x *PosInvoicePayment) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
 }
 
 // ReturnPosInvoiceReq 退款POS发票请求消息
@@ -1514,8 +1538,9 @@ func (x *CancelPosInvoiceResp) GetAsyncRecordId() string {
 
 type ModeOfPayment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"支付方式名称"`      // 支付方式名称
-	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty" dc:"是否启用"` // 是否启用
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"支付方式名称"`                                         // 支付方式名称
+	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty" dc:"是否启用"`                                    // 是否启用
+	PaymentId     string                 `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID）"` // 支付方式唯一标识（PaymentID）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1564,15 +1589,23 @@ func (x *ModeOfPayment) GetEnabled() bool {
 	return false
 }
 
+func (x *ModeOfPayment) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
 // SaveModeOfPaymentReq 保存/同步支付方式请求
 type SaveModeOfPaymentReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`  // 公司简称，必填
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支，必填"`                                 // 分支，必填
-	Channel       string                 `protobuf:"bytes,3,opt,name=channel,proto3" json:"channel,omitempty" dc:"渠道，如 LianLianPay，创建时必填"`              // 渠道，如 LianLianPay，创建时必填
-	PayType       string                 `protobuf:"bytes,4,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty" dc:"支付类型（TTPOS 定义），创建时必填"` // 支付类型（TTPOS 定义），创建时必填
-	Enabled       *bool                  `protobuf:"varint,5,opt,name=enabled,proto3,oneof" json:"enabled,omitempty" dc:"是否启用，可选：仅在明确传入时更新 ERP 启用状态"`   // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
-	Name          *string                `protobuf:"bytes,6,opt,name=name,proto3,oneof" json:"name,omitempty" dc:"支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作"`      // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                 // 公司简称，必填
+	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支，必填"`                                                                // 分支，必填
+	Channel       string                 `protobuf:"bytes,3,opt,name=channel,proto3" json:"channel,omitempty" dc:"渠道，如 LianLianPay，创建时必填"`                                             // 渠道，如 LianLianPay，创建时必填
+	PayType       string                 `protobuf:"bytes,4,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty" dc:"支付类型（TTPOS 定义），创建时必填"`                                // 支付类型（TTPOS 定义），创建时必填
+	Enabled       *bool                  `protobuf:"varint,5,opt,name=enabled,proto3,oneof" json:"enabled,omitempty" dc:"是否启用，可选：仅在明确传入时更新 ERP 启用状态"`                                  // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
+	Name          *string                `protobuf:"bytes,6,opt,name=name,proto3,oneof" json:"name,omitempty" dc:"支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作"`                                     // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+	PaymentId     string                 `protobuf:"bytes,7,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字"` // 支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1649,10 +1682,18 @@ func (x *SaveModeOfPaymentReq) GetName() string {
 	return ""
 }
 
+func (x *SaveModeOfPaymentReq) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
 // SaveModeOfPaymentResp 保存/同步支付方式响应
 type SaveModeOfPaymentResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"规范化名称 【channel-]{pay_type"` // 规范化名称 【channel-]{pay_type}-{NNNN} - {company_abbr}
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"规范化名称 [channel-]{pay_type"` // 规范化名称 [channel-]{pay_type}-{NNNN} - {company_abbr}
+	PaymentId     string                 `protobuf:"bytes,2,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`     // 支付方式唯一标识（PaymentID）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1690,6 +1731,13 @@ func (*SaveModeOfPaymentResp) Descriptor() ([]byte, []int) {
 func (x *SaveModeOfPaymentResp) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *SaveModeOfPaymentResp) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
 	}
 	return ""
 }
@@ -1790,6 +1838,104 @@ func (x *GetModeOfPaymentListResp) GetModeOfPaymentList() []*ModeOfPayment {
 	return nil
 }
 
+// GetModeOfPaymentReq 查询单个支付方式请求
+type GetModeOfPaymentReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty" dc:"支付方式名称（精确匹配），与 payment_id 二选一"`                             // 支付方式名称（精确匹配），与 payment_id 二选一
+	PaymentId     *string                `protobuf:"bytes,2,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），与 name 二选一"` // 支付方式唯一标识（PaymentID），与 name 二选一
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModeOfPaymentReq) Reset() {
+	*x = GetModeOfPaymentReq{}
+	mi := &file_selling_selling_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModeOfPaymentReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModeOfPaymentReq) ProtoMessage() {}
+
+func (x *GetModeOfPaymentReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModeOfPaymentReq.ProtoReflect.Descriptor instead.
+func (*GetModeOfPaymentReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetModeOfPaymentReq) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *GetModeOfPaymentReq) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
+}
+
+// GetModeOfPaymentResp 查询单个支付方式响应
+type GetModeOfPaymentResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModeOfPayment *ModeOfPayment         `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式信息"` // 支付方式信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModeOfPaymentResp) Reset() {
+	*x = GetModeOfPaymentResp{}
+	mi := &file_selling_selling_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModeOfPaymentResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModeOfPaymentResp) ProtoMessage() {}
+
+func (x *GetModeOfPaymentResp) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModeOfPaymentResp.ProtoReflect.Descriptor instead.
+func (*GetModeOfPaymentResp) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetModeOfPaymentResp) GetModeOfPayment() *ModeOfPayment {
+	if x != nil {
+		return x.ModeOfPayment
+	}
+	return nil
+}
+
 var File_selling_selling_proto protoreflect.FileDescriptor
 
 const file_selling_selling_proto_rawDesc = "" +
@@ -1826,21 +1972,29 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\rcashier_email\x18\x03 \x01(\tR\fcashierEmail\x12!\n" +
 	"\fcompany_abbr\x18\x04 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x05 \x01(\tR\x06branch\x12N\n" +
-	"\x15open_pos_entry_detail\x18\x06 \x03(\v2\x1b.selling.OpenPosEntryDetailR\x12openPosEntryDetail\"c\n" +
-	"\x12OpenPosEntryDetail\x12&\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\tR\rmodeOfPayment\x12%\n" +
-	"\x0eopening_amount\x18\x02 \x01(\x01R\ropeningAmount\"\\\n" +
+	"\x15open_pos_entry_detail\x18\x06 \x03(\v2\x1b.selling.OpenPosEntryDetailR\x12openPosEntryDetail\"\xaf\x01\n" +
+	"\x12OpenPosEntryDetail\x12+\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\tH\x00R\rmodeOfPayment\x88\x01\x01\x12%\n" +
+	"\x0eopening_amount\x18\x02 \x01(\x01R\ropeningAmount\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tH\x01R\tpaymentId\x88\x01\x01B\x12\n" +
+	"\x10_mode_of_paymentB\r\n" +
+	"\v_payment_id\"\\\n" +
 	"\x10OpenPosEntryResp\x12H\n" +
 	"\x13open_pos_entry_info\x18\x01 \x01(\v2\x19.selling.OpenPosEntryInfoR\x10openPosEntryInfo\"\xe1\x01\n" +
 	"\x10ClosePosEntryReq\x12-\n" +
 	"\x13pos_open_entry_name\x18\x01 \x01(\tR\x10posOpenEntryName\x12&\n" +
 	"\x0fperiod_end_date\x18\x02 \x01(\x03R\rperiodEndDate\x12Q\n" +
 	"\x16close_pos_entry_detail\x18\x03 \x03(\v2\x1c.selling.ClosePosEntryDetailR\x13closePosEntryDetail\x12#\n" +
-	"\rinvoice_count\x18\x04 \x01(\x03R\finvoiceCount\"\x8b\x01\n" +
-	"\x13ClosePosEntryDetail\x12&\n" +
-	"\x0fmode_of_payment\x18\x01 \x01(\tR\rmodeOfPayment\x12%\n" +
+	"\rinvoice_count\x18\x04 \x01(\x03R\finvoiceCount\"\xd7\x01\n" +
+	"\x13ClosePosEntryDetail\x12+\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\tH\x00R\rmodeOfPayment\x88\x01\x01\x12%\n" +
 	"\x0eopening_amount\x18\x02 \x01(\x01R\ropeningAmount\x12%\n" +
-	"\x0eclosing_amount\x18\x03 \x01(\x01R\rclosingAmount\"\xe9\x01\n" +
+	"\x0eclosing_amount\x18\x03 \x01(\x01R\rclosingAmount\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x04 \x01(\tH\x01R\tpaymentId\x88\x01\x01B\x12\n" +
+	"\x10_mode_of_paymentB\r\n" +
+	"\v_payment_id\"\xe9\x01\n" +
 	"\x11ClosePosEntryInfo\x12/\n" +
 	"\x14close_pos_entry_name\x18\x01 \x01(\tR\x11closePosEntryName\x12(\n" +
 	"\x10pos_profile_name\x18\x02 \x01(\tR\x0eposProfileName\x12&\n" +
@@ -1884,10 +2038,13 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x04rate\x18\x01 \x01(\x01R\x04rate\x12\x1d\n" +
 	"\n" +
 	"tax_amount\x18\x02 \x01(\x01R\ttaxAmount\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\"S\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\"\x86\x01\n" +
 	"\x11PosInvoicePayment\x12&\n" +
 	"\x0fmode_of_payment\x18\x01 \x01(\tR\rmodeOfPayment\x12\x16\n" +
-	"\x06amount\x18\x02 \x01(\x01R\x06amount\"\x88\x03\n" +
+	"\x06amount\x18\x02 \x01(\x01R\x06amount\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tH\x00R\tpaymentId\x88\x01\x01B\r\n" +
+	"\v_payment_id\"\x88\x03\n" +
 	"\x13ReturnPosInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12-\n" +
 	"\x13open_pos_entry_name\x18\x02 \x01(\tR\x10openPosEntryName\x12)\n" +
@@ -1909,27 +2066,41 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x14CancelPosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
 	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12&\n" +
-	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"=\n" +
+	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"\\\n" +
 	"\rModeOfPayment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\aenabled\x18\x02 \x01(\bR\aenabled\"\xd3\x01\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\"\xf2\x01\n" +
 	"\x14SaveModeOfPaymentReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x18\n" +
 	"\achannel\x18\x03 \x01(\tR\achannel\x12\x19\n" +
 	"\bpay_type\x18\x04 \x01(\tR\apayType\x12\x1d\n" +
 	"\aenabled\x18\x05 \x01(\bH\x00R\aenabled\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\x06 \x01(\tH\x01R\x04name\x88\x01\x01B\n" +
+	"\x04name\x18\x06 \x01(\tH\x01R\x04name\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\a \x01(\tR\tpaymentIdB\n" +
 	"\n" +
 	"\b_enabledB\a\n" +
-	"\x05_name\"+\n" +
+	"\x05_name\"J\n" +
 	"\x15SaveModeOfPaymentResp\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"T\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x02 \x01(\tR\tpaymentId\"T\n" +
 	"\x17GetModeOfPaymentListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\"c\n" +
 	"\x18GetModeOfPaymentListResp\x12G\n" +
-	"\x14mode_of_payment_list\x18\x01 \x03(\v2\x16.selling.ModeOfPaymentR\x11modeOfPaymentList2\xf8\x04\n" +
+	"\x14mode_of_payment_list\x18\x01 \x03(\v2\x16.selling.ModeOfPaymentR\x11modeOfPaymentList\"j\n" +
+	"\x13GetModeOfPaymentReq\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"payment_id\x18\x02 \x01(\tH\x01R\tpaymentId\x88\x01\x01B\a\n" +
+	"\x05_nameB\r\n" +
+	"\v_payment_id\"V\n" +
+	"\x14GetModeOfPaymentResp\x12>\n" +
+	"\x0fmode_of_payment\x18\x01 \x01(\v2\x16.selling.ModeOfPaymentR\rmodeOfPayment2\xbd\x05\n" +
 	"\x0eSellingService\x12>\n" +
 	"\x11GetPosProfileList\x12\x16.selling.PosProfileReq\x1a\x11.erp.ResponseInfo\x12K\n" +
 	"\x14CreatePaymentAccount\x12 .selling.CreatePaymentAccountReq\x1a\x11.erp.ResponseInfo\x12;\n" +
@@ -1938,7 +2109,8 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x0eSavePosInvoice\x12\x1a.selling.SavePosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
 	"\x10ReturnPosInvoice\x12\x1c.selling.ReturnPosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
 	"\x10CancelPosInvoice\x12\x1c.selling.CancelPosInvoiceReq\x1a\x11.erp.ResponseInfo\x12K\n" +
-	"\x14GetModeOfPaymentList\x12 .selling.GetModeOfPaymentListReq\x1a\x11.erp.ResponseInfo\x12E\n" +
+	"\x14GetModeOfPaymentList\x12 .selling.GetModeOfPaymentListReq\x1a\x11.erp.ResponseInfo\x12C\n" +
+	"\x10GetModeOfPayment\x12\x1c.selling.GetModeOfPaymentReq\x1a\x11.erp.ResponseInfo\x12E\n" +
 	"\x11SaveModeOfPayment\x12\x1d.selling.SaveModeOfPaymentReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
 
 var (
@@ -1953,7 +2125,7 @@ func file_selling_selling_proto_rawDescGZIP() []byte {
 	return file_selling_selling_proto_rawDescData
 }
 
-var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_selling_selling_proto_goTypes = []any{
 	(*PosProfileReq)(nil),            // 0: selling.PosProfileReq
 	(*PosProfile)(nil),               // 1: selling.PosProfile
@@ -1981,7 +2153,9 @@ var file_selling_selling_proto_goTypes = []any{
 	(*SaveModeOfPaymentResp)(nil),    // 23: selling.SaveModeOfPaymentResp
 	(*GetModeOfPaymentListReq)(nil),  // 24: selling.GetModeOfPaymentListReq
 	(*GetModeOfPaymentListResp)(nil), // 25: selling.GetModeOfPaymentListResp
-	(*api.ResponseInfo)(nil),         // 26: erp.ResponseInfo
+	(*GetModeOfPaymentReq)(nil),      // 26: selling.GetModeOfPaymentReq
+	(*GetModeOfPaymentResp)(nil),     // 27: selling.GetModeOfPaymentResp
+	(*api.ResponseInfo)(nil),         // 28: erp.ResponseInfo
 }
 var file_selling_selling_proto_depIdxs = []int32{
 	1,  // 0: selling.PosProfileListResp.profile_list:type_name -> selling.PosProfile
@@ -1999,29 +2173,32 @@ var file_selling_selling_proto_depIdxs = []int32{
 	15, // 12: selling.ReturnPosInvoiceReq.taxes:type_name -> selling.PosInvoiceTax
 	16, // 13: selling.ReturnPosInvoiceReq.payments:type_name -> selling.PosInvoicePayment
 	21, // 14: selling.GetModeOfPaymentListResp.mode_of_payment_list:type_name -> selling.ModeOfPayment
-	0,  // 15: selling.SellingService.GetPosProfileList:input_type -> selling.PosProfileReq
-	3,  // 16: selling.SellingService.CreatePaymentAccount:input_type -> selling.CreatePaymentAccountReq
-	4,  // 17: selling.SellingService.OpenPosEntry:input_type -> selling.OpenPosEntryReq
-	8,  // 18: selling.SellingService.ClosePosEntry:input_type -> selling.ClosePosEntryReq
-	12, // 19: selling.SellingService.SavePosInvoice:input_type -> selling.SavePosInvoiceReq
-	17, // 20: selling.SellingService.ReturnPosInvoice:input_type -> selling.ReturnPosInvoiceReq
-	19, // 21: selling.SellingService.CancelPosInvoice:input_type -> selling.CancelPosInvoiceReq
-	24, // 22: selling.SellingService.GetModeOfPaymentList:input_type -> selling.GetModeOfPaymentListReq
-	22, // 23: selling.SellingService.SaveModeOfPayment:input_type -> selling.SaveModeOfPaymentReq
-	26, // 24: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
-	26, // 25: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
-	26, // 26: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
-	26, // 27: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
-	26, // 28: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
-	26, // 29: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
-	26, // 30: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
-	26, // 31: selling.SellingService.GetModeOfPaymentList:output_type -> erp.ResponseInfo
-	26, // 32: selling.SellingService.SaveModeOfPayment:output_type -> erp.ResponseInfo
-	24, // [24:33] is the sub-list for method output_type
-	15, // [15:24] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	21, // 15: selling.GetModeOfPaymentResp.mode_of_payment:type_name -> selling.ModeOfPayment
+	0,  // 16: selling.SellingService.GetPosProfileList:input_type -> selling.PosProfileReq
+	3,  // 17: selling.SellingService.CreatePaymentAccount:input_type -> selling.CreatePaymentAccountReq
+	4,  // 18: selling.SellingService.OpenPosEntry:input_type -> selling.OpenPosEntryReq
+	8,  // 19: selling.SellingService.ClosePosEntry:input_type -> selling.ClosePosEntryReq
+	12, // 20: selling.SellingService.SavePosInvoice:input_type -> selling.SavePosInvoiceReq
+	17, // 21: selling.SellingService.ReturnPosInvoice:input_type -> selling.ReturnPosInvoiceReq
+	19, // 22: selling.SellingService.CancelPosInvoice:input_type -> selling.CancelPosInvoiceReq
+	24, // 23: selling.SellingService.GetModeOfPaymentList:input_type -> selling.GetModeOfPaymentListReq
+	26, // 24: selling.SellingService.GetModeOfPayment:input_type -> selling.GetModeOfPaymentReq
+	22, // 25: selling.SellingService.SaveModeOfPayment:input_type -> selling.SaveModeOfPaymentReq
+	28, // 26: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
+	28, // 27: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
+	28, // 28: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
+	28, // 29: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
+	28, // 30: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
+	28, // 31: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
+	28, // 32: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
+	28, // 33: selling.SellingService.GetModeOfPaymentList:output_type -> erp.ResponseInfo
+	28, // 34: selling.SellingService.GetModeOfPayment:output_type -> erp.ResponseInfo
+	28, // 35: selling.SellingService.SaveModeOfPayment:output_type -> erp.ResponseInfo
+	26, // [26:36] is the sub-list for method output_type
+	16, // [16:26] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_selling_selling_proto_init() }
@@ -2029,14 +2206,18 @@ func file_selling_selling_proto_init() {
 	if File_selling_selling_proto != nil {
 		return
 	}
+	file_selling_selling_proto_msgTypes[6].OneofWrappers = []any{}
+	file_selling_selling_proto_msgTypes[9].OneofWrappers = []any{}
+	file_selling_selling_proto_msgTypes[16].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[22].OneofWrappers = []any{}
+	file_selling_selling_proto_msgTypes[26].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_selling_selling_proto_rawDesc), len(file_selling_selling_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

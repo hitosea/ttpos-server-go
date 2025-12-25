@@ -26,6 +26,7 @@ type IProductPackageTakeoutQueryRepo interface {
 	WithProductPackage(opts ...DBOption) DBOption                          // 预加载商品包
 	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption         // 预加载商品包多语言名称
 	WithMultiLanguageName(opts ...DBOption) DBOption                       // 预加载多语言名称
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption               // 预加载卖点多语言
 	WithProductCategory(opts ...DBOption) DBOption                         // 预加载外卖分类
 	WithProductSpecialCategory(opts ...DBOption) DBOption                  // 预加载外卖特色分类
 	WithImageFile(opts ...DBOption) DBOption                               // 预加载图片
@@ -33,6 +34,7 @@ type IProductPackageTakeoutQueryRepo interface {
 	WhereByProductPackageUuids(productPackageUuids []uint64) DBOption      // 根据商品包UUID列表查询
 	WithProductBomTakeouts(opts ...DBOption) DBOption                      // 预加载外卖规格价格列表
 	WithProductPackageAttributeTakeouts(opts ...DBOption) DBOption         // 预加载外卖属性价格列表
+	WithProductPackageGroupItemTakeouts(opts ...DBOption) DBOption         // 预加载外卖套餐子商品价格列表
 	WhereByTakeoutType(takeoutType uint) DBOption                          // 根据外卖类型查询
 	WhereBySource(source string) DBOption                                  // 根据来源平台查询
 	WhereBySourceProductId(sourceProductId string) DBOption                // 根据来源商品ID查询
@@ -243,6 +245,18 @@ func (r *productPackageTakeoutRepoImpl) WithMultiLanguageName(opts ...DBOption) 
 	}
 }
 
+// WithDescribeMultiLanguageName 预加载卖点多语言
+func (r *productPackageTakeoutRepoImpl) WithDescribeMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DescribeMultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
 // WithProductCategory 预加载外卖分类
 func (r *productPackageTakeoutRepoImpl) WithProductCategory(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -251,7 +265,7 @@ func (r *productPackageTakeoutRepoImpl) WithProductCategory(opts ...DBOption) DB
 				db = opt(db)
 			}
 			return db
-		})
+		}).Preload("ProductCategory.MultiLanguageName")
 	}
 }
 
@@ -263,7 +277,7 @@ func (r *productPackageTakeoutRepoImpl) WithProductSpecialCategory(opts ...DBOpt
 				db = opt(db)
 			}
 			return db
-		})
+		}).Preload("ProductSpecialCategory.MultiLanguageName")
 	}
 }
 
@@ -295,6 +309,18 @@ func (r *productPackageTakeoutRepoImpl) WithProductBomTakeouts(opts ...DBOption)
 func (r *productPackageTakeoutRepoImpl) WithProductPackageAttributeTakeouts(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackageAttributeTakeouts", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageGroupItemTakeouts 预加载外卖套餐子商品价格列表
+func (r *productPackageTakeoutRepoImpl) WithProductPackageGroupItemTakeouts(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}

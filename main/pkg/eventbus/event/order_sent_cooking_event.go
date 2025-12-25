@@ -9,7 +9,9 @@ import (
 // SentCookingPayload 送厨事件数据结构
 type SentCookingPayload struct {
 	BasePayload
-	Products Products `json:"products"` // 用餐人数
+	Products       Products `json:"products"`         // 用餐人数
+	BatchMode      string   `json:"batch_mode"`       // 分批模式
+	BatchPrintMode string   `json:"batch_print_mode"` // 分批打印模式
 }
 
 // OrderProduct 订单商品
@@ -34,6 +36,7 @@ type OrderProduct struct {
 	Remark                string               `json:"remark"`              // 备注
 	RemarkLocale          dto.LocaleResponse   `json:"remark_locale"`       // 备注（包含预设备注和自定义备注，多语言）
 	IsBatch               bool                 `json:"is_batch"`            // 是否分批商品
+	BatchTagUuid          uint64               `json:"batch_tag_uuid"`      // 分批类型UUID
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
 }
 

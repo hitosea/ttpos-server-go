@@ -29,3 +29,16 @@ type SearchStaffResp struct {
 	RealName    string                    `json:"real_name"`    // 姓名
 	CompanyList []*SearchStaffCompanyInfo `json:"company_list"` // 在当前门店可见范围内的门店列表
 }
+
+// QueryStaffByContactItem 查询员工响应项
+type QueryStaffByContactItem struct {
+	Uuid     uint64 `json:"uuid"`      // 员工UUID
+	RealName string `json:"real_name"` // 姓名
+	Email    string `json:"email"`     // 邮箱
+	Phone    string `json:"phone"`     // 手机号
+}
+
+// QueryStaffByContactResp 查询员工响应
+type QueryStaffByContactResp struct {
+	List []*QueryStaffByContactItem `json:"list"` // 员工列表
+}

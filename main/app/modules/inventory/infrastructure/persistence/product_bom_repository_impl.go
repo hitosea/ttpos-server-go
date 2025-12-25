@@ -199,6 +199,46 @@ func (r *ProductBomRepositoryImpl) FindByProductPackageUuid(
 	return result, nil
 }
 
+// FindByProductPackageUuids 根据商品包UUID列表批量查找BOM列表
+// 性能优化：
+// 1. 使用索引 product_package_uuid 字段进行快速查询
+// 2. 预加载 ProductBomCard.RelatedMaterials.Material.WarehouseItems，避免 N+1 查询
+// 3. 批量查询，减少数据库往返次数
+func (r *ProductBomRepositoryImpl) FindByProductPackageUuids(
+	ctx context.Context,
+	productPackageUuids []uint64,
+) ([]interface{}, error) {
+	if len(productPackageUuids) == 0 {
+		return []interface{}{}, nil
+	}
+
+	db := r.getDB(ctx)
+	repo := appRepo.NewProductBomRepo(db)
+
+	// 创建 DBOption 函数，用于 IN 查询
+	whereProductPackageUuids := func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_uuid IN ?", productPackageUuids)
+	}
+
+	// 批量查询多个商品包下的所有BOM
+	// 预加载关联数据，避免后续查询时的 N+1 问题
+	productBoms, err := repo.GetProductBoms(
+		whereProductPackageUuids,
+		appRepo.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品BOM列表失败")
+	}
+
+	// 转换为 interface{} 切片
+	result := make([]interface{}, len(productBoms))
+	for i, bom := range productBoms {
+		result[i] = bom
+	}
+
+	return result, nil
+}
+
 // getDB 获取数据库连接
 func (r *ProductBomRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
 	return ctx.GetDB()

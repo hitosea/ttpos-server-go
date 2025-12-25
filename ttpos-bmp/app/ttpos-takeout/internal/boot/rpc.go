@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/menu"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/order"
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/takeout"
 	"ttpos-bmp/internal/pkg/nacos/service"
 
@@ -24,6 +25,7 @@ func initRpcServer() {
 	takeout.Register(service.RpcServer.GRpc)
 	grab.Register(service.RpcServer.GRpc)
 	menu.Register(service.RpcServer.GRpc)
+	order.Register(service.RpcServer.GRpc)
 	go service.RpcServer.GRpc.Run()
 }
 

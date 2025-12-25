@@ -336,7 +336,7 @@ func (s *salesOutboundSummarySrv) getDailySalesOutboundRecords(
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
-				Valuation:            item.Material.Valuation,
+				Valuation:            0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				SupplierUuid:         item.Material.SupplierUuid,
 				MaterialName:         materialName,
 				MaterialBaseUnitUuid: materialBaseUnitUuid,
@@ -995,7 +995,6 @@ func (s *salesOutboundSummarySrv) calculateReturnStockMap(tx *gorm.DB, materialI
 // returnStock 执行退回库存操作（增加库存、更新关联库存）
 func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[string]*returnStockInfo) error {
 	warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
-	materialRepo := repository.NewMaterialRepo(tx)
 
 	// 收集需要更新关联库存的材料UUID
 	relatedMaterialUuids := make([]uint64, 0)
@@ -1007,12 +1006,13 @@ func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[st
 			continue
 		}
 
+		valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 		// 获取或创建仓库物品库存记录
 		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialOrCreate(
 			returnInfo.WarehouseUuid,
 			returnInfo.MaterialUuid,
 			returnInfo.Material.Code,
-			returnInfo.Material.Valuation,
+			valuation,
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取仓库物品库存失败")
@@ -1030,13 +1030,6 @@ func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[st
 				relatedMaterialUuids = append(relatedMaterialUuids, uuid)
 				relatedMaterialUuidSet[uuid] = true
 			}
-		}
-	}
-
-	// 更新关联材料库存
-	if len(relatedMaterialUuids) > 0 {
-		if err := materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids); err != nil {
-			return errors.WithMessage(err, "更新关联材料库存失败")
 		}
 	}
 
@@ -1091,7 +1084,6 @@ func (s *salesOutboundSummarySrv) calculateReduceStockMap(tx *gorm.DB, newItems 
 // reduceStock 执行扣减库存操作（扣减库存、更新关联库存）
 func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[string]*reduceStockInfo) error {
 	warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
-	materialRepo := repository.NewMaterialRepo(tx)
 
 	// 收集需要更新关联库存的材料UUID
 	relatedMaterialUuids := make([]uint64, 0)
@@ -1127,13 +1119,6 @@ func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[st
 				relatedMaterialUuids = append(relatedMaterialUuids, uuid)
 				relatedMaterialUuidSet[uuid] = true
 			}
-		}
-	}
-
-	// 更新关联材料库存
-	if len(relatedMaterialUuids) > 0 {
-		if err := materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids); err != nil {
-			return errors.WithMessage(err, "更新关联材料库存失败")
 		}
 	}
 

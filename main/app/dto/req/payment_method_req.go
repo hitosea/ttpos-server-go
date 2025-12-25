@@ -31,7 +31,6 @@ type PaymentMethodCreateItem struct {
 type PaymentMethodUpdateReq struct {
 	Uuid                 uint64  `json:"uuid" binding:"required"`                       // 支付方式UUID
 	Name                 string  `json:"name"`                                          // 支付方式名称
-	PaymentName          string  `json:"payment_name"`                                  // 支付名称
 	LogoFileUuid         uint64  `json:"logo_file_uuid"`                                // Logo图片UUID
 	QrcodeFileUuid       uint64  `json:"qrcode_file_uuid"`                              // 二维码图片UUID
 	FeePercent           float64 `json:"fee_percent" binding:"omitempty,gte=0,lte=100"` // 手续费百分比，取值范围0-100
@@ -45,11 +44,6 @@ type PaymentMethodUpdateReq struct {
 // PaymentMethodGetReq 获取支付方式详情请求
 type PaymentMethodGetReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 支付方式UUID
-}
-
-// PaymentMethodDeleteReq 删除支付方式请求
-type PaymentMethodDeleteReq struct {
-	Uuid uint64 `json:"uuid" binding:"required"` // 支付方式UUID
 }
 
 // PaymentMethodSortUpdateReq 排序更新请求（批量）

@@ -160,6 +160,7 @@ type ProductAttrGroup struct {
 	DefaultSelect          []int    `json:"default_select"`
 	AttributeIDs           []int    `json:"attribute_ids"`
 	AttributeMaxSelect     int      `json:"attribute_max_select"`
+	AttributeMinSelect     int      `json:"attribute_min_select"`
 	AttributeOpenMaxSelect int      `json:"attribute_open_max_select"`
 	AttributeRequired      int      `json:"attribute_required"`
 	AttributeNameText      string   `json:"attribute_name_text"`

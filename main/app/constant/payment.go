@@ -25,6 +25,15 @@ const (
 	PaymentMethodCodeLianLianWechatPay   = 90111 // LianLianWechatPay
 	PaymentMethodCodeLianLianAliPay      = 90222 // LianLianAliPay
 	PaymentMethodCodeLianLianQRPromptPay = 90333 // LianLianQRPromptPay
+	PaymentMethodCodeGrab                = 91100 // Grab
+	PaymentMethodCodeLineMan             = 91200 // LINE MAN
+	PaymentMethodCodeFreeMealForErp      = 92000 // Free Meal for ERP（用于ERP同步的免单支付方式）
+)
+
+// 支付方式名称常量
+const (
+	PaymentMethodNameGrab    = "Grab"     // Grab 支付方式名称
+	PaymentMethodNameLineMan = "LINE MAN" // LINE MAN 支付方式名称
 )
 
 const (

@@ -54,6 +54,7 @@ class Product extends BaseModel
         'feed_required',
         'feed_open_max_select',
         'feed_max_select',
+        'feed_min_select', // 兼容字段：加料最小可选数量
         'selling_point',
         'selling_point_i18n',
         'is_enable_grade',
@@ -68,7 +69,7 @@ class Product extends BaseModel
     private const SELLING_POINT_LANGUAGES = ['zh', 'en', 'zhtw', 'th', 'my', 'ja', 'ko', 'tr', 'sv'];
 
     /*
-     * 类型 10-成品 20-材料
+     * 类型 10-成品 20-材料 30-套餐
      */
     const TYPE_PRODUCT = 10;
     const TYPE_MATERIAL = 20;
@@ -155,6 +156,10 @@ class Product extends BaseModel
     public function getFeedMaxSelectAttr($value, $data = [])
     {
         return $this->sauce_max_selection ?: 0;
+    }
+    public function getFeedMinSelectAttr($value, $data = [])
+    {
+        return $this->sauce_min_selection ?: 0;
     }
     public function getSellingPointAttr($value, $data = [])
     {
@@ -1526,6 +1531,7 @@ class Product extends BaseModel
                 'attribute_value' => $attributeValue,
                 'default_select' => $defaultSelect,
                 'attribute_ids' => $attributeIds,
+                'attribute_min_select' => $group->min_selection,
                 'attribute_max_select' => $group->max_selection,
                 'attribute_open_max_select' => $group->max_selection > 0 ? 1 : 0,
                 'attribute_required' => $group->is_must,
@@ -1633,6 +1639,7 @@ class Product extends BaseModel
                     'group_name' => $group['name'], // 套餐分组名称
                     'group_name_text' => $group['group_name_text'], // 套餐分组名称
                     'group_type' => intval($group['group_type'] ?? 0), // 分组类型 0-固定 1-可选
+                    'optional_min_count' => intval($group['optional_min_count'] ?? 0), // 最小可选数量
                     'optional_count' => intval($group['optional_count'] ?? 0), // 可选数量
                     'product_list' => $productList, // 套餐分组商品列表
                 ];

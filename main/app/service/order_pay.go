@@ -987,7 +987,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 构建出库单
 
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -1007,8 +1007,16 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 	})
 
-	// 该订单的所有出库记录都标记已出库。将预出库的状态改为已出库
-	repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid)
+	// 如果所有子单都已结账，将预出库的状态改为已出库
+	if saleBill.CanFinishSaleBill() {
+		if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatusBySaleBillUuid(saleBill.Uuid); err != nil {
+			logger.Logger.Error("更新出库单记录状态失败", zap.Error(err), zap.Uint64("saleBillUuid", saleBill.Uuid), zap.Uint64("saleOrderUuid", saleOrder.Uuid), zap.Uint64("companyUuid", ctx.GetCompanyUuid()))
+		}
+	} else {
+		if err := repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid); err != nil {
+			logger.Logger.Error("更新出库单记录状态失败", zap.Error(err), zap.Uint64("saleOrderUuid", saleOrder.Uuid), zap.Uint64("companyUuid", ctx.GetCompanyUuid()))
+		}
+	}
 
 	// 发送结账短信
 	if saleOrder.ConsumerUuid != 0 {
@@ -1601,6 +1609,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		isAvailable := true
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
+			continue
+		}
+		if paymentMethod.Code == constant.PaymentMethodCodeFreeMealForErp {
+			continue
+		}
+		// 不显示 Grab 和 LINE MAN 支付方式
+		if paymentMethod.Code == constant.PaymentMethodCodeGrab || paymentMethod.Code == constant.PaymentMethodCodeLineMan {
 			continue
 		}
 		// LianLianPay 没有配置支付信息 不显示

@@ -7,9 +7,7 @@ import (
 // TakeoutImportLog 外卖导入日志实体
 // 记录所有导入操作的历史记录，支持 UI 展示和追溯
 type TakeoutImportLog struct {
-	// 基础字段
-	ID   uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
-	UUID uint64 `gorm:"uniqueIndex:uk_uuid;not null;default:0" json:"uuid"`
+	BaseModel
 
 	// 导入信息字段
 	Platform        string `gorm:"type:varchar(50);not null;default:'';index:idx_platform" json:"platform"`     // 外卖平台(grab/lineman等)
@@ -27,12 +25,9 @@ type TakeoutImportLog struct {
 	ErrorMessage string `gorm:"type:text" json:"error_message"`                       // 错误信息
 
 	// 时间字段
-	StartTime  int64 `gorm:"type:int(10);not null;default:0" json:"start_time"`                       // 开始时间
-	EndTime    int64 `gorm:"type:int(10);not null;default:0" json:"end_time"`                         // 结束时间
-	Duration   int64 `gorm:"type:int(10);not null;default:0" json:"duration"`                         // 耗时(秒)
-	CreateTime int64 `gorm:"type:int(10);not null;default:0;index:idx_create_time" json:"createtime"` // 创建时间
-	UpdateTime int64 `gorm:"type:int(10);not null;default:0" json:"updatetime"`                       // 更新时间
-	DeleteTime int64 `gorm:"type:int(10);not null;default:0;index:idx_delete_time" json:"deletetime"` // 删除时间
+	StartTime int64 `gorm:"type:int(10);not null;default:0" json:"start_time"` // 开始时间
+	EndTime   int64 `gorm:"type:int(10);not null;default:0" json:"end_time"`   // 结束时间
+	Duration  int64 `gorm:"type:int(10);not null;default:0" json:"duration"`   // 耗时(秒)
 }
 
 // TableName 表名

@@ -471,7 +471,7 @@ func (r *TransferOrderRepoImpl) WhereHeadquarterUuid(headquarterUuid uint64) DBO
 // WithItems 预加载明细
 func (r *TransferOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Items").Preload("Items.Units")
+		return db.Preload("Items").Preload("Items.Units").Preload("Items.Material.NotBaseUnitList")
 	}
 }
 

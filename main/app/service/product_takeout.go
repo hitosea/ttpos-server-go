@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	product_resp "ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
@@ -149,6 +150,7 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		Name:                          productName,
 		Describe:                      describe,
 		ProductType:                   uint(productPackage.ProductType),
+		Price:                         addReq.Price,
 		TakeoutType:                   uint(addReq.TakeoutType),
 		Status:                        uint(addReq.Status),
 		CategoryUuid:                  addReq.CategoryUuid,
@@ -201,6 +203,58 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 			}
 		}
 
+		// 处理外卖套餐子商品价格（仅当商品类型为套餐时）
+		if productPackage.ProductType == constant.ProductTypePackage {
+			packageGroupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
+			productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+
+			// 如果前端没有传递 PackageGroupItems，自动使用店内的所有套餐子商品
+			packageGroupItemsToSave := addReq.PackageGroupItems
+			if len(packageGroupItemsToSave) == 0 {
+				// 从商品包中获取所有套餐子商品
+				for _, group := range productPackage.ProductPackageGroups {
+					if group.IsDelete() {
+						continue
+					}
+					for _, groupItem := range group.ProductPackageGroupItems {
+						if groupItem.IsDelete() {
+							continue
+						}
+						packageGroupItemsToSave = append(packageGroupItemsToSave, req.ProductTakeoutShopAddPackageGroupItemReq{
+							ProductPackageGroupItemUuid: groupItem.Uuid,
+							AddPrice:                    groupItem.AddPrice, // 使用店内加价作为默认值
+						})
+					}
+				}
+			}
+
+			for _, groupItemReq := range packageGroupItemsToSave {
+				// 验证套餐子商品是否存在
+				groupItem, err := productPackageGroupRepo.GetProductPackageGroupItem(
+					repository.CommonRepo.WhereByUuid(groupItemReq.ProductPackageGroupItemUuid),
+					repository.CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return errors.WithMessage(err, "套餐子商品不存在")
+				}
+				if groupItem.IsDelete() {
+					return errors.WithMessage(errors.New("套餐子商品已删除"))
+				}
+
+				// 创建外卖套餐子商品价格记录
+				packageGroupItemTakeout := &model.ProductPackageGroupItemTakeout{
+					ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+					ProductPackageGroupItemUuid: groupItemReq.ProductPackageGroupItemUuid,
+					ProductPackageGroupUuid:     groupItem.ProductPackageGroupUuid,
+					HeadquarterUuid:             productPackage.HeadquarterUuid,
+					AddPrice:                    groupItemReq.AddPrice,
+				}
+				if err := packageGroupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(packageGroupItemTakeout); err != nil {
+					return errors.WithMessage(err, "创建外卖套餐子商品价格失败")
+				}
+			}
+		}
+
 		return nil
 	})
 
@@ -225,12 +279,18 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 	companySetting := ctx.GetCompanySetting()
 	db := s.dbm.GetDB(ctx.GetDbId())
 
+	// 检查商品包是否存在
+	productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+		repository.CommonRepo.WhereByUuid(editReq.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(errors.New("商品不存在"))
+	}
+
 	// 检查外卖商品是否存在
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
-	existTakeout, err := takeoutRepo.GetProductPackageTakeout(
-		repository.CommonRepo.WhereByUuid(editReq.Uuid),
-		repository.CommonRepo.WhereBySoftDelete(),
-	)
+	// 检查是否已存在同类型外卖商品（包括软删除的记录）
+	existTakeout, err := takeoutRepo.GetProductPackageTakeoutIncludeSoftDelete(productPackage.Uuid, uint(editReq.TakeoutType))
 	if err != nil {
 		return errors.WithMessage(errors.New("外卖商品不存在"))
 	}
@@ -244,6 +304,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 	// 准备更新数据
 	updateData := map[string]any{
 		"status": editReq.Status,
+		"price":  editReq.Price,
 	}
 
 	// 如果不是总部商品，可以编辑完整信息
@@ -261,13 +322,34 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			}
 			updateData["name"] = editReq.LocaleName.ToJson()
 		}
+
+		// 处理卖点多语言更新
+		if !editReq.Describe.IsNull() {
+			describe := editReq.Describe.ToJson()
+			describeMultiLanguageName := model.NewMultiLanguageName(describe)
+
+			// 如果已有卖点多语言记录，更新它；否则创建新的
+			if existTakeout.DescribeMultiLanguageNameUuid != 0 {
+				err = repository.NewMultiLanguageNameRepo(db).UpdateMultiLanguageName(existTakeout.DescribeMultiLanguageNameUuid, *describeMultiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "更新卖点多语言失败")
+				}
+			} else {
+				describeMultiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*describeMultiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "创建卖点多语言失败")
+				}
+				updateData["describe_multi_language_name_uuid"] = describeMultiLanguageNameUuid
+			}
+			updateData["describe"] = describe
+		}
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新外卖商品信息
 		if err := repository.NewProductPackageTakeoutRepo(tx).UpdateProductPackageTakeout(
 			updateData,
-			repository.CommonRepo.WhereByUuid(editReq.Uuid),
+			repository.CommonRepo.WhereByUuid(existTakeout.Uuid),
 		); err != nil {
 			return errors.WithMessage(err, "更新外卖商品失败")
 		}
@@ -279,7 +361,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 
 			// 获取当前外卖商品的所有规格价格
 			existingBomTakeouts, err := productBomTakeoutRepo.GetProductBomTakeoutList(
-				commonRepo.WhereByProductPackageTakeoutUuid(editReq.Uuid),
+				commonRepo.WhereByProductPackageTakeoutUuid(existTakeout.Uuid),
 				commonRepo.WhereBySoftDelete(),
 			)
 			if err != nil {
@@ -309,7 +391,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 				} else {
 					// 创建新的外卖规格价格
 					productBomTakeout := &model.ProductBomTakeout{
-						ProductPackageTakeoutUuid: editReq.Uuid,
+						ProductPackageTakeoutUuid: existTakeout.Uuid,
 						ProductBomUuid:            flavorReq.BomUuid,
 						HeadquarterUuid:           existTakeout.HeadquarterUuid,
 						Price:                     flavorReq.Price,
@@ -340,7 +422,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			// 获取当前外卖商品的所有属性价格
 			existingAttributeTakeouts, err := productPackageAttributeTakeoutRepo.GetProductPackageAttributeTakeoutList(
 				func(db *gorm.DB) *gorm.DB {
-					return db.Where("product_package_takeout_uuid = ?", editReq.Uuid)
+					return db.Where("product_package_takeout_uuid = ?", existTakeout.Uuid)
 				},
 				commonRepo.WhereBySoftDelete(),
 			)
@@ -371,7 +453,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 				} else {
 					// 创建新的外卖属性价格
 					productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
-						ProductPackageTakeoutUuid:   editReq.Uuid,
+						ProductPackageTakeoutUuid:   existTakeout.Uuid,
 						ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
 						HeadquarterUuid:             existTakeout.HeadquarterUuid,
 						Price:                       attributeReq.Price,
@@ -389,6 +471,92 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 						commonRepo.WhereByUuid(existingAttribute.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "删除外卖属性价格失败")
+					}
+				}
+			}
+		}
+
+		// 处理外卖套餐子商品价格更新（仅当商品类型为套餐时）
+		if existTakeout.ProductType == constant.ProductTypePackage {
+			packageGroupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
+			productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+			commonRepo := repository.NewCommonRepo()
+
+			// 如果前端没有传递 PackageGroupItems，自动使用店内的所有套餐子商品
+			packageGroupItemsToSave := editReq.PackageGroupItems
+			if len(packageGroupItemsToSave) == 0 {
+				// 从商品包中获取所有套餐子商品
+				for _, group := range productPackage.ProductPackageGroups {
+					if group.IsDelete() {
+						continue
+					}
+					for _, groupItem := range group.ProductPackageGroupItems {
+						if groupItem.IsDelete() {
+							continue
+						}
+						packageGroupItemsToSave = append(packageGroupItemsToSave, req.ProductTakeoutShopEditPackageGroupItemReq{
+							ProductPackageGroupItemUuid: groupItem.Uuid,
+							AddPrice:                    groupItem.AddPrice, // 使用店内加价作为默认值
+						})
+					}
+				}
+			}
+
+			// 获取当前外卖商品的所有套餐子商品价格
+			existingGroupItemTakeouts, err := packageGroupItemTakeoutRepo.GetProductPackageGroupItemTakeoutList(existTakeout.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "获取外卖套餐子商品价格失败")
+			}
+
+			// 构建现有套餐子商品的映射（key: product_package_group_item_uuid）
+			existingGroupItemMap := make(map[uint64]*model.ProductPackageGroupItemTakeout)
+			for _, groupItemTakeout := range existingGroupItemTakeouts {
+				existingGroupItemMap[groupItemTakeout.ProductPackageGroupItemUuid] = groupItemTakeout
+			}
+
+			// 处理请求中的套餐子商品
+			requestedGroupItemUuids := make(map[uint64]bool)
+			for _, groupItemReq := range packageGroupItemsToSave {
+				requestedGroupItemUuids[groupItemReq.ProductPackageGroupItemUuid] = true
+
+				// 检查是否已存在
+				if existingGroupItem, exists := existingGroupItemMap[groupItemReq.ProductPackageGroupItemUuid]; exists {
+					// 更新加价
+					if err := packageGroupItemTakeoutRepo.UpdateAddPrice(existingGroupItem.Uuid, groupItemReq.AddPrice); err != nil {
+						return errors.WithMessage(err, "更新外卖套餐子商品价格失败")
+					}
+				} else {
+					// 验证套餐子商品是否存在
+					groupItem, err := productPackageGroupRepo.GetProductPackageGroupItem(
+						commonRepo.WhereByUuid(groupItemReq.ProductPackageGroupItemUuid),
+						commonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return errors.WithMessage(err, "套餐子商品不存在")
+					}
+					if groupItem.IsDelete() {
+						return errors.WithMessage(errors.New("套餐子商品已删除"))
+					}
+
+					// 创建新的外卖套餐子商品价格
+					packageGroupItemTakeout := &model.ProductPackageGroupItemTakeout{
+						ProductPackageTakeoutUuid:   existTakeout.Uuid,
+						ProductPackageGroupItemUuid: groupItemReq.ProductPackageGroupItemUuid,
+						ProductPackageGroupUuid:     groupItem.ProductPackageGroupUuid,
+						HeadquarterUuid:             existTakeout.HeadquarterUuid,
+						AddPrice:                    groupItemReq.AddPrice,
+					}
+					if err := packageGroupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(packageGroupItemTakeout); err != nil {
+						return errors.WithMessage(err, "创建外卖套餐子商品价格失败")
+					}
+				}
+			}
+
+			// 删除不再需要的外卖套餐子商品价格（软删除）
+			for groupItemUuid, existingGroupItem := range existingGroupItemMap {
+				if !requestedGroupItemUuids[groupItemUuid] {
+					if err := packageGroupItemTakeoutRepo.SoftDelete(existingGroupItem.Uuid); err != nil {
+						return errors.WithMessage(err, "删除外卖套餐子商品价格失败")
 					}
 				}
 			}
@@ -437,9 +605,11 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		repository.CommonRepo.WhereBySoftDelete(),
 		takeoutRepo.WithProductPackage(),
 		takeoutRepo.WithProductPackageMultiLanguageName(),
+		takeoutRepo.WithDescribeMultiLanguageName(), // 预加载卖点多语言
 		takeoutRepo.WithProductCategory(),
 		takeoutRepo.WithProductSpecialCategory(),
 		takeoutRepo.WithImageFile(),
+		takeoutRepo.WithProductPackageGroupItemTakeouts(repository.CommonRepo.WhereBySoftDelete()), // 预加载外卖套餐子商品价格（过滤软删除）
 		takeoutRepo.WhereByTakeoutType(uint(s.platformToTakeoutType(detailReq.Platform))),
 	)
 	if err != nil {
@@ -491,12 +661,22 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		imageUrl = takeout.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 	}
 
+	// 获取卖点数据（如果有自定义卖点则使用，否则使用店内商品卖点）
+	var describe dto.LocaleResponse
+	if takeout.DescribeMultiLanguageNameUuid != 0 {
+		describe = takeout.DescribeMultiLanguageName.GetNames()
+	} else if productPackage.DescribeMultiLanguageNameUuid != 0 {
+		describe = productPackage.DescribeMultiLanguageName.GetNames()
+	}
+
 	result := &product_resp.ProductTakeoutShopDetailResp{
 		Uuid:                takeout.Uuid,
 		ProductPackageUuid:  takeout.ProductPackageUuid,
 		ProductType:         uint(productPackage.ProductType),
+		Price:               takeout.Price,
 		TakeoutType:         int(takeout.TakeoutType),
 		LocaleName:          takeout.ProductPackage.MultiLanguageName.GetNames(),
+		Describe:            describe, // 返回卖点数据
 		CategoryUuid:        takeout.CategoryUuid,
 		CategoryName:        takeout.ProductCategory.MultiLanguageName.GetNames(),
 		SpecialCategoryUuid: takeout.SpecialCategoryUuid,
@@ -506,13 +686,76 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		ImageUrl:            imageUrl,
 		HeadquarterUuid:     takeout.HeadquarterUuid,
 		Flavors:             flavors,
-		// 关联原商品的套餐信息
+		// 关联原商品的套餐信息（使用外卖价格）
 		PackageSubProductGroups: product_resp.ProductPackageSubProductGroupList{
-			List: productPackage.GetRespPackageSubProductGroupList(),
+			List: s.getTakeoutPackageSubProductGroupList(productPackage, takeout),
 		},
 	}
 
 	return result, nil
+}
+
+// getTakeoutPackageSubProductGroupList 获取外卖套餐子商品分组列表（使用外卖价格）
+// 与 ProductPackage.GetRespPackageSubProductGroupList() 类似，但使用 ttpos_product_package_group_item_takeout 表的价格
+func (s *productTakeoutSrv) getTakeoutPackageSubProductGroupList(
+	productPackage *model.ProductPackage,
+	takeout *model.ProductPackageTakeout,
+) []product_resp.ProductPackageSubProductGroup {
+	// 构建外卖套餐子商品加价映射表
+	takeoutAddPriceMap := make(map[uint64]float64)
+	for _, item := range takeout.ProductPackageGroupItemTakeouts {
+		takeoutAddPriceMap[item.ProductPackageGroupItemUuid] = item.AddPrice
+	}
+
+	packageSubProductGroupList := make([]product_resp.ProductPackageSubProductGroup, 0)
+	for _, packageSubProductGroup := range productPackage.ProductPackageGroups {
+		if packageSubProductGroup.IsDelete() {
+			continue
+		}
+		products := make([]product_resp.ProductPackageSubProduct, 0)
+		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
+			if product.IsDelete() {
+				continue
+			}
+			// 固定分组时，IsRequired 和 IsDefault 返回 1
+			isRequired := product.IsRequired
+			isDefault := product.IsDefault
+			if packageSubProductGroup.GroupType == 0 {
+				isRequired = 1
+				isDefault = 1
+			}
+
+			// 优先使用外卖加价，如果没有设置则使用店内加价
+			addPrice := product.AddPrice
+			if takeoutAddPrice, hasTakeoutAddPrice := takeoutAddPriceMap[product.Uuid]; hasTakeoutAddPrice {
+				addPrice = takeoutAddPrice
+			}
+
+			products = append(products, product_resp.ProductPackageSubProduct{
+				Uuid:             product.Uuid,
+				BomUuid:          product.ProductBomUuid,
+				ProductUuid:      product.ProductPackage.Uuid,
+				LocaleName:       product.ProductPackage.MultiLanguageName.GetNames(),
+				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
+				Num:              product.Num,
+				Price:            product.ProductBom.Price,
+				AddPrice:         addPrice, // 使用外卖加价
+				IsRequired:       isRequired,
+				IsDefault:        isDefault,
+			})
+		}
+		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
+			Uuid:             packageSubProductGroup.Uuid,
+			LocaleName:       packageSubProductGroup.MultiLanguageName.GetNames(),
+			GroupType:        packageSubProductGroup.GroupType,
+			OptionalMinCount: packageSubProductGroup.OptionalMinCount,
+			OptionalCount:    packageSubProductGroup.OptionalCount,
+			Products: product_resp.ProductPackageSubProductList{
+				List: products,
+			},
+		})
+	}
+	return packageSubProductGroupList
 }
 
 // DeleteProductTakeoutShop 删除外卖商品
@@ -535,11 +778,6 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 	if takeout.HeadquarterUuid != 0 {
 		return errors.WithMessage(errors.New("总部外卖商品不能删除"))
 	}
-
-	// TODO: 检查是否有未完成的外卖订单
-	// 注意：目前外卖订单功能未开发，暂不检查
-	// 后续需要检查 ttpos_sale_order 表中是否有该外卖商品的未完成订单
-	// 如果有，应该阻止删除或给出提示
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除外卖商品
@@ -659,13 +897,24 @@ func (s *productTakeoutSrv) restoreProductTakeoutShop(ctx context.Context, exist
 			return errors.WithMessage(err, "还原外卖商品失败")
 		}
 
-		// 删除旧的外卖规格价格记录（软删除的可能已过期）
+		// 删除旧的外卖规格价格记录
 		productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
 		commonRepo := repository.NewCommonRepo()
 
-		// 软删除所有旧的规格价格
+		// 先物理删除所有已软删除的旧记录（避免唯一索引冲突）
+		if err := productBomTakeoutRepo.DeleteProductBomTakeout(
+			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("delete_time > 0")
+			},
+		); err != nil {
+			return errors.WithMessage(err, "清理已删除的旧规格价格失败")
+		}
+
+		// 再软删除所有未删除的旧规格价格
 		if err := productBomTakeoutRepo.DestroyProductBomTakeout(
 			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			commonRepo.WhereBySoftDelete(),
 		); err != nil {
 			return errors.WithMessage(err, "清理旧规格价格失败")
 		}
@@ -689,9 +938,20 @@ func (s *productTakeoutSrv) restoreProductTakeoutShop(ctx context.Context, exist
 		// 删除旧的外卖属性价格记录
 		productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
 
-		// 软删除所有旧的属性价格
+		// 先物理删除所有已软删除的旧记录（避免唯一索引冲突）
+		if err := productPackageAttributeTakeoutRepo.DeleteProductPackageAttributeTakeout(
+			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("delete_time > 0")
+			},
+		); err != nil {
+			return errors.WithMessage(err, "清理已删除的旧属性价格失败")
+		}
+
+		// 再软删除所有未删除的旧属性价格
 		if err := productPackageAttributeTakeoutRepo.DestroyProductPackageAttributeTakeout(
 			commonRepo.WhereByProductPackageTakeoutUuid(existingTakeout.Uuid),
+			commonRepo.WhereBySoftDelete(),
 		); err != nil {
 			return errors.WithMessage(err, "清理旧属性价格失败")
 		}

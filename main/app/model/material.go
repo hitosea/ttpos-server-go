@@ -10,7 +10,6 @@ type Material struct {
 	BaseModel
 	Name                  string   `gorm:"type:text;default:'';column:name;comment:'原料名称'"`
 	Code                  string   `gorm:"default:'';column:code;comment:'原料编码'"`
-	Valuation             float64  `gorm:"type:decimal(12,2);default:0;column:valuation;comment:'估值率'"`
 	InitStock             float64  `gorm:"type:decimal(14,4);default:0.0000;column:init_stock;comment:'期初库存'"`
 	MultiLanguageNameUuid uint64   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
 	CategoryUuid          uint64   `gorm:"default:0;column:category_uuid;comment:'类别ID'"`
@@ -84,14 +83,6 @@ func (model *Material) GetStockNum(opts ...func(*GetStockNumOption)) float64 {
 		}
 	}
 	return 0
-}
-
-// GetValuation
-func (model *Material) GetValuation() float64 {
-	if model.Valuation != 0 {
-		return model.Valuation
-	}
-	return 1
 }
 
 // 通过uom名获取单位uuid

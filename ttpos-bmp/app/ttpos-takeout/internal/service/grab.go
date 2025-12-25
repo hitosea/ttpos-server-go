@@ -47,7 +47,7 @@ type (
 		// RejectOrder 拒绝订单
 		RejectOrder(ctx context.Context, orderID string, rejectCode int) error
 		// CancelOrder 取消订单
-		CancelOrder(ctx context.Context, orderID string, cancelCode int) error
+		CancelOrder(ctx context.Context, merchantID string, orderID string, cancelCode string) error
 		// MarkOrderReady 标记订单准备完成
 		MarkOrderReady(ctx context.Context, orderID string, markStatus string) error
 		// UpdateDeliveryState 更新配送状态 (自配送)
@@ -55,7 +55,8 @@ type (
 		// UpdateOrderReadyTime 更新订单准备时间
 		UpdateOrderReadyTime(ctx context.Context, orderID string, newReadyTime time.Time) error
 		// CheckOrderCancelable 检查订单是否可取消
-		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (bool, string, error)
+		// 返回 Grab SDK 的完整响应对象
+		CheckOrderCancelable(ctx context.Context, merchantID string, orderID string) (*grabfood.CheckOrderCancelableResponse, error)
 		// PauseStore 暂停门店
 		PauseStore(ctx context.Context, merchantID string, duration int) error
 		// ResumeStore 恢复门店营业
@@ -74,6 +75,17 @@ type (
 		// 调用 GrabFood API PUT /partner/v1/merchants/menu/record
 		// req 可以是 UpdateMenuItem 或 UpdateMenuModifier
 		UpdateMenuRecord(ctx context.Context, merchantID string, req grabfood.UpdateMenuRequest) error
+		// BatchUpdateMenu 批量更新菜单记录 (商品或修饰符)
+		// 调用 GrabFood API POST /partner/v1/batch/menu
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - merchantID: Grab Merchant ID
+		//   - req: 批量更新请求（GrabFood SDK 结构体）
+		//
+		// 返回：
+		//   - resp: 批量更新响应，包含状态和错误列表
+		//   - err: 错误信息
+		BatchUpdateMenu(ctx context.Context, merchantID string, req *grabfood.BatchUpdateMenuItem) (*grabfood.BatchUpdateMenuResponse, error)
 		// CreateSelfServeJourney 创建自助激活链接
 		// merchantID: Grab Merchant ID
 		// 返回: activation_url, request_id

@@ -34,13 +34,23 @@ func SentCookingEventHandler() {
 
 			// 分批商品不打印送厨
 			products := make([]event.OrderProduct, 0)
+			batchProduct := make([]event.OrderProduct, 0)
 			for _, unCookingSaleOrderProduct := range payload.Products {
 				if unCookingSaleOrderProduct.IsBatch {
+					// 如果是分批送厨的商品,此时商品处于预送厨状态,如果是分批前置模式,且开启合并打印模式,则需要打印送厨单. 将这些预送厨商品根据分批类型进行分组,然后每个组进行一次打印送厨单
+					batchProduct = append(batchProduct, unCookingSaleOrderProduct)
 					continue
 				}
 				products = append(products, unCookingSaleOrderProduct)
 			}
 			payload.Products = products
+
+			// 如果有分批商品，处理合并打印逻辑
+			if len(batchProduct) > 0 && payload.BatchMode == constant.BatchCookingModePre && payload.BatchPrintMode == constant.BatchPrintModeMerge {
+				utils.Go(func() {
+					handleBatchProductsMergePrint(payload, batchProduct)
+				})
+			}
 
 			utils.Go(func() {
 				products := printer_model.Products{}
@@ -167,5 +177,56 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 	}); err != nil {
 		logger.Logger.Error("SubscribeSentCookingEvent process, Transaction failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 		return
+	}
+}
+
+// handleBatchProductsMergePrint 处理分批商品的合并打印逻辑
+func handleBatchProductsMergePrint(payload event.SentCookingPayload, batchProduct []event.OrderProduct) {
+	// 按 BatchTagUuid 分组
+	typeGroups := make(map[uint64][]event.OrderProduct)
+	for _, product := range batchProduct {
+		batchTagUuid := product.BatchTagUuid
+		if batchTagUuid == 0 {
+			// 如果没有分批类型，跳过不打印
+			continue
+		}
+		if typeGroups[batchTagUuid] == nil {
+			typeGroups[batchTagUuid] = []event.OrderProduct{product}
+		} else {
+			typeGroups[batchTagUuid] = append(typeGroups[batchTagUuid], product)
+		}
+	}
+
+	// 每个组进行一次打印送厨单
+	for _, products := range typeGroups {
+		if len(products) == 0 {
+			continue
+		}
+
+		// 转换为打印模型
+		printProducts := printer_model.Products{}
+		copier.Copy(&printProducts, products)
+		if len(printProducts) == 0 {
+			continue
+		}
+
+		// 标记显示为延迟送厨
+		for i := range printProducts {
+			product := &printProducts[i]
+			product.ShowDelayTag = true
+		}
+
+		// 使用第一个商品的销售订单UUID（从 payload 中获取）
+		saleOrderUuid := payload.SaleOrderUuid
+		if saleOrderUuid > 0 {
+			printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
+				constant.PrinterProductTypeKitchen,
+				payload.SaleBillUuid,
+				saleOrderUuid,
+				printProducts,
+			)
+		} else {
+			logger.Logger.Warn("打印商品列表不为空但未找到销售订单UUID", zap.Uint64("saleBillUuid", payload.SaleBillUuid), zap.Int("productCount", len(printProducts)))
+		}
 	}
 }

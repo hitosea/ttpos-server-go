@@ -701,10 +701,20 @@ func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrd
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
 	methodMap := make(map[int]string)
+	paymentIdMap := make(map[int]string)
 	for _, paymentMethod := range paymentMethods {
 		if paymentMethod.ErpnextPayment != "" {
 			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
 		}
+		if paymentMethod.ErpnextPaymentId != "" {
+			paymentIdMap[paymentMethod.Code] = paymentMethod.ErpnextPaymentId
+		}
+	}
+	getPaymentId := func(paymentMethodCode int) string {
+		if paymentId, ok := paymentIdMap[paymentMethodCode]; ok {
+			return paymentId
+		}
+		return ""
 	}
 	for _, payment := range memberRechargeOrder.PaymentOrders {
 		if payment.IsDelete() {
@@ -717,8 +727,14 @@ func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrd
 			// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
 			return nil, errors.WithMessage(errors.New("不支持的支付方式"))
 		}
+		var paymentID *string
+		paymentId := getPaymentId(payment.PaymentMethod.Code)
+		if paymentId != "" {
+			paymentID = &paymentId
+		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: modeOfPayment,
+			PaymentId:     paymentID,
 			Amount:        payment.Amount,
 		})
 	}

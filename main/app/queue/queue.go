@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	websocketConstant "ttpos-api/ttpos-websocket/constant"
+	baseQueue "ttpos-server-go/app/queue/base"
 	printerQueue "ttpos-server-go/app/queue/printer"
 	takeoutQueue "ttpos-server-go/app/queue/takeout"
 	"ttpos-server-go/app/service"
@@ -15,18 +16,22 @@ import (
 )
 
 const TAKEOUT = "takeout"
-const MEMBER_ORDER_CANCEL = "member_order_cancel"
 
 const (
-	TopicItemChange         = "erp-item-change"
-	TopicDocChange          = "erp-doc-change"
-	TopicProviderMenuUpdate = "takeout_provider_menu_update"
+	TopicItemChange = "erp-item-change"
+	TopicDocChange  = "erp-doc-change"
+)
+
+const (
+	TopicProviderMenuUpdate    = "takeout_provider_menu_update"
+	TopicProviderOrderUpdate   = "takeout_grab_order"
+	TopicStoreIntegrationState = "takeout_store_integration_state"
 )
 
 var manager *rocketmq.Manager
 
 func Init() {
-	initMemberOrderCancel()
+	baseQueue.InitMemberOrderCancel()
 
 	manager = rocketmq.NewManager(logger.Logger)
 	manager.RegisterConsumer(config.Rocketmq.GroupName, &config.Rocketmq)
@@ -40,7 +45,7 @@ func Init() {
 	}
 
 	//订阅消息RocketmqRocketmq
-	err = manager.Subscribe(config.Rocketmq.GroupName, TopicItemChange, erpItemChangeHandler)
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicItemChange, baseQueue.ErpItemChangeHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicItemChange))
 	}
@@ -55,6 +60,18 @@ func Init() {
 	err = manager.Subscribe(config.Rocketmq.GroupName, TopicProviderMenuUpdate, takeoutQueue.TakeoutProviderMenuUpdateHandler)
 	if err != nil {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicProviderMenuUpdate))
+	}
+
+	// 订阅门店集成状态变更消息
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicStoreIntegrationState, takeoutQueue.HandleIntegrationStatus)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicStoreIntegrationState))
+	}
+
+	// 订阅供应商订单更新消息
+	err = manager.Subscribe(config.Rocketmq.GroupName, TopicProviderOrderUpdate, takeoutQueue.TakeoutProviderOrderUpdateHandler)
+	if err != nil {
+		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err), zap.String("topic", TopicProviderOrderUpdate))
 	}
 
 }

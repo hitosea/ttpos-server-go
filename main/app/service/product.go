@@ -452,9 +452,10 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				}
 
 				packageGroup := product_resp.ProductPackageGroup{
-					Uuid:       group.Uuid,
-					LocaleName: group.MultiLanguageName.GetNames(),
-					GroupType:  group.GroupType,
+					Uuid:             group.Uuid,
+					LocaleName:       group.MultiLanguageName.GetNames(),
+					GroupType:        group.GroupType,
+					OptionalMinCount: int(group.OptionalMinCount),
 					OptionalCount: func() int {
 						if group.GroupType == 0 { // 兼容前端bug,固定商品要返回商品数量
 							return len(productList)
@@ -625,6 +626,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 						Uuid:       group.ProductAttributeGroupUuid,
 						LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
 						IsMust:     group.IsMust == 1,
+						MinSelect:  group.MinSelection,
 						MaxSelect:  group.MaxSelection,
 						Attributes: product_resp.ProductAttributeValueList{
 							List: attributeValues,
@@ -670,6 +672,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				Sauces: product_resp.ProductSauceList{
 					List:      sauces,
 					IsMust:    product.SauceRequired == 1,
+					MinSelect: int(product.SauceMinSelection),
 					MaxSelect: int(product.SauceMaxSelection),
 				},
 				AttributeGroups: product_resp.ProductAttributeGroupList{
@@ -721,6 +724,7 @@ func getAttributeGroups(product *model.ProductPackage) []product_resp.ProductAtt
 				Uuid:       group.ProductAttributeGroupUuid,
 				LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
 				IsMust:     group.IsMust == 1,
+				MinSelect:  group.MinSelection,
 				MaxSelect:  group.MaxSelection,
 				Attributes: product_resp.ProductAttributeValueList{
 					List: attributeValues,
@@ -5245,13 +5249,27 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		return nil, errors.WithMessage(err, "获取商品列表失败")
 	}
 
+	// 批量查询商品包库存
+	productPackageUuids := make([]uint64, 0, len(productPackages))
+	for _, productPackage := range productPackages {
+		productPackageUuids = append(productPackageUuids, productPackage.Uuid)
+	}
+
+	// 创建库存应用服务并批量查询库存
+	appService := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
+	packageInventoryMap, err := appService.GetProductPackageInventoriesBatch(ctx, productPackageUuids)
+	if err != nil {
+		// 如果查询库存失败，记录日志但不影响主流程，使用默认值
+		logger.Logger.Warn("批量查询商品包库存失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(err))
+		packageInventoryMap = make(map[uint64]float64)
+	}
+
 	productList := make([]product_resp.ProductShopListItemResp, 0, len(productPackages))
 	for _, productPackage := range productPackages {
 		// 格式化商品信息
 		minPrice := 0.0
 		maxPrice := 0.0
 		specCount := 0
-		specStockNum := 0.0
 		IsMultipleSpec := false
 		IsAttribute := len(productPackage.ProductPackageAttributeGroups) > 0
 		IsSauce := false
@@ -5271,9 +5289,6 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 						maxPrice = utils.IfFloat64(productBom.Price >= maxPrice, productBom.Price, maxPrice)
 					}
 					specCount++
-					if productBom.StockNum > 0 {
-						specStockNum = productBom.StockNum
-					}
 					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
 						Uuid:         productBom.Uuid,
 						LocaleName:   productBom.ProductFlavor.MultiLanguageName.GetNames(),
@@ -5288,7 +5303,6 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			} else {
 				minPrice = productBom.Price
 				maxPrice = productBom.Price
-				specStockNum = productBom.StockNum
 				// 套餐
 				if productBom.ProductFlavorUuid == 0 && productBom.ProductSauceUuid == 0 {
 					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
@@ -5303,6 +5317,13 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		if specCount > 1 {
 			IsMultipleSpec = true
 		}
+		// 从批量查询结果中获取商品包库存
+		packageInventory, hasInventory := packageInventoryMap[productPackage.Uuid]
+		if !hasInventory {
+			packageInventory = constant.ProductBomInfiniteStock // 无限库存,如果查询到库存数据就显示无限库存
+		}
+		isSoldOut := packageInventory <= 0
+
 		productItem := product_resp.ProductShopListItemResp{
 			Uuid:       productPackage.Uuid,
 			LocaleName: productPackage.MultiLanguageName.GetNames(),
@@ -5323,7 +5344,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			CategoryUuid:        productPackage.CategoryUuid,
 			SpecialCategoryUuid: productPackage.SpecialCategoryUuid,
 			Status:              int(productPackage.Status),
-			IsSoldOut:           specStockNum <= 0,
+			IsSoldOut:           isSoldOut,
 			ProductType:         int(productPackage.ProductType),
 			Sort:                int(productPackage.Sort),
 			Flavors: product_resp.ProductShopListItemFlavorListResp{
@@ -5495,6 +5516,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		Sauces: product_resp.ProductSauceList{
 			List:      productPackage.GetRespSaucesList(),
 			IsMust:    productPackage.GetSauceRequired(),
+			MinSelect: int(productPackage.SauceMinSelection),
 			MaxSelect: int(productPackage.SauceMaxSelection),
 		},
 		AttributeGroups: product_resp.ProductAttributeGroupList{
@@ -5580,6 +5602,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 			takeoutList[i] = product_resp.ProductTakeoutSimpleInfo{
 				Uuid:        takeout.Uuid,
 				TakeoutType: takeout.TakeoutType,
+				Status:      takeout.Status,
 			}
 		}
 		productDetailResp.TakeoutProducts = takeoutList
@@ -5757,6 +5780,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		flavorListResult.Status = req.Status
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var attributes []CheckProductAttributeGroupParam
 			for _, attribute := range req.Attributes {
 				var attributeParams []CheckProductAttributeParam
@@ -5767,11 +5793,13 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 					})
 				}
 				attributes = append(attributes, CheckProductAttributeGroupParam{
-					Uuid:         attribute.Uuid,
-					IsMust:       attribute.IsMust,
-					IsOpenInput:  attribute.IsOpenInput,
-					MaxSelection: attribute.MaxSelection,
-					Attributes:   attributeParams,
+					Uuid:          attribute.Uuid,
+					IsMust:        attribute.IsMust,
+					MinSelection:  attribute.MinSelection,
+					IsOpenInput:   attribute.IsOpenInput,
+					MaxSelection:  attribute.MaxSelection,
+					Attributes:    attributeParams,
+					ClientVersion: clientVersion, // 传递客户端版本号
 				})
 			}
 			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
@@ -5782,6 +5810,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		}
 		// 商品加料, 可选
 		if len(req.Sauce.Sauces) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var sauceListParam []CheckProductSauceItemParam
 			for _, sauceReq := range req.Sauce.Sauces {
 				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
@@ -5790,10 +5821,12 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
-				IsMust:       req.Sauce.IsMust,
-				IsOpenInput:  req.Sauce.IsOpenInput,
-				MaxSelection: req.Sauce.MaxSelection,
-				Sauces:       sauceListParam,
+				IsMust:        req.Sauce.IsMust,
+				MinSelection:  req.Sauce.MinSelection,
+				IsOpenInput:   req.Sauce.IsOpenInput,
+				MaxSelection:  req.Sauce.MaxSelection,
+				Sauces:        sauceListParam,
+				ClientVersion: clientVersion, // 传递客户端版本号
 			})
 			if err != nil {
 				return 0, err
@@ -5822,15 +5855,19 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				})
 			}
 			groupType := group.GroupType
+			optionalMinCount := group.OptionalMinCount
 			optionalCount := group.OptionalCount
 			if groupType == 0 {
+				// 固定分组：最小和最大可选都等于商品数量
+				optionalMinCount = len(group.Products)
 				optionalCount = len(group.Products)
 			}
 			groups = append(groups, CheckProductPackageGroupParam{
-				LocaleName:    group.LocaleName,
-				GroupType:     groupType,
-				OptionalCount: optionalCount,
-				Products:      products,
+				LocaleName:       group.LocaleName,
+				GroupType:        groupType,
+				OptionalMinCount: optionalMinCount,
+				OptionalCount:    optionalCount,
+				Products:         products,
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
@@ -6079,6 +6116,9 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		flavorListResult.Status = req.Status
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var attributes []CheckProductAttributeGroupParam
 			for _, attribute := range req.Attributes {
 				var attributeParams []CheckProductAttributeParam
@@ -6090,12 +6130,15 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 					})
 				}
 				attributes = append(attributes, CheckProductAttributeGroupParam{
-					Uuid:         attribute.Uuid,
-					IsMust:       attribute.IsMust,
-					IsOpenInput:  attribute.IsOpenInput,
-					MaxSelection: attribute.MaxSelection,
-					Attributes:   attributeParams,
-					IsDelete:     attribute.IsDelete,
+					Uuid:               attribute.Uuid,
+					IsMust:             attribute.IsMust,
+					MinSelection:       attribute.MinSelection,
+					IsOpenInput:        attribute.IsOpenInput,
+					MaxSelection:       attribute.MaxSelection,
+					Attributes:         attributeParams,
+					IsDelete:           attribute.IsDelete,
+					ProductPackageUuid: req.Uuid,      // 编辑时传递商品包UUID，用于查询原有值
+					ClientVersion:      clientVersion, // 传递客户端版本号
 				})
 			}
 			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
@@ -6106,6 +6149,9 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		}
 		// 商品加料, 可选
 		if len(req.Sauce.Sauces) > 0 {
+			// 获取客户端版本号
+			clientVersion := ctx.GetVersion()
+
 			var sauceListParam []CheckProductSauceItemParam
 			for _, sauceReq := range req.Sauce.Sauces {
 				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
@@ -6116,10 +6162,13 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
-				IsMust:       req.Sauce.IsMust,
-				IsOpenInput:  req.Sauce.IsOpenInput,
-				MaxSelection: req.Sauce.MaxSelection,
-				Sauces:       sauceListParam,
+				IsMust:             req.Sauce.IsMust,
+				MinSelection:       req.Sauce.MinSelection,
+				IsOpenInput:        req.Sauce.IsOpenInput,
+				MaxSelection:       req.Sauce.MaxSelection,
+				Sauces:             sauceListParam,
+				ProductPackageUuid: req.Uuid,      // 编辑时传递商品包UUID，用于查询原有值
+				ClientVersion:      clientVersion, // 传递客户端版本号
 			})
 			if err != nil {
 				return nil, nil, err
@@ -6144,17 +6193,21 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				})
 			}
 			groupType := group.GroupType
+			optionalMinCount := group.OptionalMinCount
 			optionalCount := group.OptionalCount
 			if groupType == 0 {
+				// 固定分组：最小和最大可选都等于商品数量
+				optionalMinCount = len(group.Products)
 				optionalCount = len(group.Products)
 			}
 			groups = append(groups, CheckProductPackageGroupParam{
-				Uuid:          group.Uuid,
-				LocaleName:    group.LocaleName,
-				GroupType:     groupType,
-				OptionalCount: optionalCount,
-				Products:      products,
-				IsDelete:      group.IsDelete,
+				Uuid:             group.Uuid,
+				LocaleName:       group.LocaleName,
+				GroupType:        groupType,
+				OptionalMinCount: optionalMinCount,
+				OptionalCount:    optionalCount,
+				Products:         products,
+				IsDelete:         group.IsDelete,
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
@@ -6914,6 +6967,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 	// 更新商品包
 	err = productPackageRepo.UpdateProductPackage(map[string]any{
 		"sauce_required":      params.SauceResult.IsMust,
+		"sauce_min_selection": params.SauceResult.MinSelection,
 		"sauce_max_selection": params.SauceResult.MaxSelection,
 	}, commonRepo.WhereByUuid(params.ProductPackageUuid))
 	if err != nil {
@@ -6968,6 +7022,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 						UpdateTime: time.Now().Unix(),
 					},
 					IsMust:                    uint(attributeGroup.IsMust),
+					MinSelection:              uint(attributeGroup.MinSelection),
 					MaxSelection:              uint(attributeGroup.MaxSelection),
 					ProductPackageUuid:        productPackageUuid,
 					ProductAttributeGroupUuid: attributeGroup.Uuid,
@@ -6993,6 +7048,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 				// 更新商品包关联属性组
 				err := productPackageAttributeGroupRepo.UpdateProductPackageAttributeGroup(map[string]any{
 					"is_must":       attributeGroup.IsMust,
+					"min_selection": attributeGroup.MinSelection,
 					"max_selection": attributeGroup.MaxSelection,
 				}, commonRepo.WhereByUuid(productPackageAttributeGroup.Uuid))
 				if err != nil {
@@ -7091,6 +7147,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					MultiLanguageNameUuid: multiLanguageNameUuid,
 					ProductPackageUuid:    productPackageUuid,
 					GroupType:             group.GroupType,
+					OptionalMinCount:      group.OptionalMinCount,
 					OptionalCount:         group.OptionalCount,
 					Sort:                  sortValue, // 设置排序值
 				})
@@ -7149,10 +7206,11 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					return errors.WithMessage(err, "保存多语言名称失败")
 				}
 				err = productPackageGroupRepo.UpdateProductPackageGroup(map[string]any{
-					"name":           group.LocaleName.ToJson(),
-					"group_type":     group.GroupType,
-					"optional_count": group.OptionalCount,
-					"sort":           sortValue, // 更新排序值
+					"name":               group.LocaleName.ToJson(),
+					"group_type":         group.GroupType,
+					"optional_min_count": group.OptionalMinCount,
+					"optional_count":     group.OptionalCount,
+					"sort":               sortValue, // 更新排序值
 				}, commonRepo.WhereByUuid(group.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新套餐组失败")
@@ -7891,6 +7949,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 				Price:                         productPackage.Price,
 				ProductType:                   productPackage.ProductType,
 				SauceRequired:                 productPackage.SauceRequired,
+				SauceMinSelection:             productPackage.SauceMinSelection,
 				SauceMaxSelection:             productPackage.SauceMaxSelection,
 				OpenDiscount:                  productPackage.OpenDiscount,
 				OpenOverallDiscount:           productPackage.OpenOverallDiscount,
@@ -7952,6 +8011,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					},
 					IsMust:                    productPackageAttributeGroup.IsMust,
 					MaxSelection:              productPackageAttributeGroup.MaxSelection,
+					MinSelection:              productPackageAttributeGroup.MinSelection,
 					ProductPackageUuid:        productPackageAttributeGroup.ProductPackageUuid,
 					ProductAttributeGroupUuid: productPackageAttributeGroup.ProductAttributeGroupUuid,
 				})
@@ -7982,6 +8042,7 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 					MultiLanguageNameUuid: productPackageGroup.MultiLanguageName.Uuid,
 					GroupType:             productPackageGroup.GroupType,
 					OptionalCount:         productPackageGroup.OptionalCount,
+					OptionalMinCount:      productPackageGroup.OptionalMinCount,
 				})
 				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
 					newProductPackageGroupItemList = append(newProductPackageGroupItemList, model.ProductPackageGroupItem{
@@ -8177,6 +8238,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		commonRepo.WhereByHeadquarterUuid(0),
 		headTakeoutRepo.WithProductBomTakeouts(),
 		headTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		headTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部外卖商品列表失败")
@@ -8188,6 +8250,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
 		subTakeoutRepo.WithProductBomTakeouts(),
 		subTakeoutRepo.WithProductPackageAttributeTakeouts(),
+		subTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取子店外卖商品列表失败")
@@ -8196,10 +8259,18 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 	// 构建子店已同步数据的 Map（用于快速查找）
 	subTakeoutMap := make(map[uint64]*model.ProductPackageTakeout)
 	subBomTakeoutMap := make(map[uint64]*model.ProductBomTakeout)
+	subAttrTakeoutMap := make(map[uint64]*model.ProductPackageAttributeTakeout)
+	subGroupItemTakeoutMap := make(map[uint64]*model.ProductPackageGroupItemTakeout)
 	for _, takeout := range subTakeoutList {
 		subTakeoutMap[takeout.Uuid] = takeout
 		for _, bom := range takeout.ProductBomTakeouts {
 			subBomTakeoutMap[bom.Uuid] = &bom
+		}
+		for _, attr := range takeout.ProductPackageAttributeTakeouts {
+			subAttrTakeoutMap[attr.Uuid] = &attr
+		}
+		for _, groupItem := range takeout.ProductPackageGroupItemTakeouts {
+			subGroupItemTakeoutMap[groupItem.Uuid] = &groupItem
 		}
 	}
 
@@ -8207,12 +8278,15 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 	newTakeoutList := make([]model.ProductPackageTakeout, 0)
 	newBomTakeoutList := make([]model.ProductBomTakeout, 0)
 	newAttrTakeoutList := make([]model.ProductPackageAttributeTakeout, 0)
+	newGroupItemTakeoutList := make([]model.ProductPackageGroupItemTakeout, 0)
 
 	for _, headTakeout := range headTakeoutList {
-		// 确定外卖商品状态：首次同步默认下架（0），再次同步保留子店状态
-		status := uint(0) // 默认下架
+		// 确定外卖商品状态和价格：首次同步默认下架（0），再次同步保留子店状态和价格
+		status := uint(0)          // 默认下架
+		price := headTakeout.Price // 默认使用总部价格
 		if existsTakeout, ok := subTakeoutMap[headTakeout.Uuid]; ok {
 			status = existsTakeout.Status // 保留子店状态
+			price = existsTakeout.Price   // 保留子店价格
 		}
 
 		// 创建新外卖商品
@@ -8228,6 +8302,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 			HeadquarterUuid:               companySetting.HeadquarterUuid,
 			Name:                          headTakeout.Name,
 			ProductType:                   headTakeout.ProductType,
+			Price:                         price, // 使用确定的价格
 			TakeoutType:                   headTakeout.TakeoutType,
 			Status:                        status, // 使用确定的状态
 			CategoryUuid:                  headTakeout.CategoryUuid,
@@ -8264,8 +8339,14 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 			newBomTakeoutList = append(newBomTakeoutList, newBom)
 		}
 
-		// 处理外卖属性价格（不保留子店价格，始终使用总部价格）
+		// 处理外卖属性价格
 		for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
+			// 确定属性价格：首次同步使用总部价格，再次同步保留子店价格
+			attrPrice := headAttr.Price // 默认使用总部价格
+			if existsAttr, ok := subAttrTakeoutMap[headAttr.Uuid]; ok {
+				attrPrice = existsAttr.Price // 保留子店价格
+			}
+
 			newAttr := model.ProductPackageAttributeTakeout{
 				BaseModel: model.BaseModel{
 					Uuid:       headAttr.Uuid,
@@ -8276,9 +8357,33 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 				ProductPackageTakeoutUuid:   headAttr.ProductPackageTakeoutUuid,
 				ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
 				HeadquarterUuid:             companySetting.HeadquarterUuid,
-				Price:                       headAttr.Price, // 使用总部价格
+				Price:                       attrPrice, // 使用确定的价格
 			}
 			newAttrTakeoutList = append(newAttrTakeoutList, newAttr)
+		}
+
+		// 处理外卖套餐子商品价格
+		for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
+			// 确定套餐子商品加价：首次同步使用总部价格，再次同步保留子店价格
+			addPrice := headGroupItem.AddPrice // 默认使用总部价格
+			if existsGroupItem, ok := subGroupItemTakeoutMap[headGroupItem.Uuid]; ok {
+				addPrice = existsGroupItem.AddPrice // 保留子店价格
+			}
+
+			newGroupItem := model.ProductPackageGroupItemTakeout{
+				BaseModel: model.BaseModel{
+					Uuid:       headGroupItem.Uuid,
+					CreateTime: headGroupItem.CreateTime,
+					UpdateTime: headGroupItem.UpdateTime,
+					DeleteTime: headGroupItem.DeleteTime,
+				},
+				ProductPackageTakeoutUuid:   headGroupItem.ProductPackageTakeoutUuid,
+				ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
+				ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,
+				HeadquarterUuid:             companySetting.HeadquarterUuid,
+				AddPrice:                    addPrice, // 使用确定的价格
+			}
+			newGroupItemTakeoutList = append(newGroupItemTakeoutList, newGroupItem)
 		}
 	}
 
@@ -8287,11 +8392,13 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		takeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
 		bomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
 		attrTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+		groupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
 
 		// 收集需要删除的数据UUID
 		delTakeoutUuids := make([]uint64, 0)
 		delBomTakeoutUuids := make([]uint64, 0)
 		delAttrTakeoutUuids := make([]uint64, 0)
+		delGroupItemTakeoutUuids := make([]uint64, 0)
 
 		for _, takeout := range subTakeoutList {
 			delTakeoutUuids = append(delTakeoutUuids, takeout.Uuid)
@@ -8301,6 +8408,9 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 			for _, attr := range takeout.ProductPackageAttributeTakeouts {
 				delAttrTakeoutUuids = append(delAttrTakeoutUuids, attr.Uuid)
 			}
+			for _, groupItem := range takeout.ProductPackageGroupItemTakeouts {
+				delGroupItemTakeoutUuids = append(delGroupItemTakeoutUuids, groupItem.Uuid)
+			}
 		}
 
 		// 批量物理删除子店现有数据
@@ -8308,6 +8418,13 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 			err := attrTakeoutRepo.DestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
 			if err != nil {
 				return errors.WithMessage(err, "销毁子店外卖属性价格失败")
+			}
+		}
+
+		if len(delGroupItemTakeoutUuids) > 0 {
+			err := groupItemTakeoutRepo.DestroyProductPackageGroupItemTakeout(delGroupItemTakeoutUuids)
+			if err != nil {
+				return errors.WithMessage(err, "销毁子店外卖套餐子商品价格失败")
 			}
 		}
 
@@ -8361,6 +8478,20 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 						zap.Uint64("uuid", attr.Uuid),
 						zap.Uint64("product_package_takeout_uuid", attr.ProductPackageTakeoutUuid),
 						zap.Uint64("product_package_attribute_uuid", attr.ProductPackageAttributeUuid),
+						zap.Error(err))
+					// 不中断，继续处理
+				}
+			}
+		}
+
+		if len(newGroupItemTakeoutList) > 0 {
+			for _, groupItem := range newGroupItemTakeoutList {
+				err := groupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(&groupItem)
+				if err != nil {
+					logger.Logger.Error("创建子店外卖套餐子商品价格失败",
+						zap.Uint64("uuid", groupItem.Uuid),
+						zap.Uint64("product_package_takeout_uuid", groupItem.ProductPackageTakeoutUuid),
+						zap.Uint64("product_package_group_item_uuid", groupItem.ProductPackageGroupItemUuid),
 						zap.Error(err))
 					// 不中断，继续处理
 				}

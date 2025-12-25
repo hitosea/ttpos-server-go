@@ -22,6 +22,8 @@ type PrinterSetting struct {
 	PrintList          []PrintItem                `json:"print_list"`           // 打印方式列表 （1-文本打印 2-图片打印 ）
 	DefaultCalendar    string                     `json:"default_calendar"`     // 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
 	Language           []string                   `json:"language"`             // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+	EnableCustomCopies string                     `json:"enable_custom_copies"` // 是否启用自定义打印联数 "0"-关闭 "1"-开启
+	CheckoutSlipCopies int                        `json:"checkout_slip_copies"` // 结账单打印联数 0-10
 }
 
 // CashierPrinterItem 收银机打印机项

@@ -87,25 +87,26 @@ type IOrderSrv interface {
 	VerifyPassword(ctx context.Context, req req.VerifyPasswordForSensitiveOperationReq) (bool, error)                                            // 密码验证（根据operation_type选择折扣操作或退款操作）
 
 	// product
-	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)              // 删除订单商品
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                // 修改订单商品备注
-	OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                   // 修改购物车商品数量
-	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)              // 修改购物车商品数量
-	AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) // 修改购物车商品数量
-	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)               // 送厨购物车商品
-	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                       // 退菜购物车商品
-	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                             // 退菜购物车商品
-	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                     // 转菜购物车商品
-	OrderCartProductWrap(ctx context.Context, req req.OrderCartProductWrapReq) (*resp.ShopCart, error)                                                        // 打包购物车商品
-	OrderCartProductUnwrap(ctx context.Context, req req.OrderCartProductUnwrapReq) (*resp.ShopCart, error)                                                    // 取消打包购物车商品
-	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                             // 取消赠菜购物车商品
-	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                // 取消赠菜购物车商品
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                           // 获取购物车信息
-	OrderCartProductPackageAdd(ctx context.Context, request req.OrderCartProductPackageAddReq) (*resp.ShopCart, error)                                        // 向购物车添加套餐
-	OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error)    // 查询购物车商品“规格/属性”
-	OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error)            // 修改购物车商品“规格/属性”
-	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)   // 向购物车添加商品
-	ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq) (*resp.ShopCart, error)                                                                    // 更换分批类型（前置模式）
+	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)                  // 删除订单商品
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                    // 修改订单商品备注
+	OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                       // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                  // 修改购物车商品数量
+	AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)     // 修改购物车商品数量
+	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)                   // 送厨购物车商品
+	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                           // 退菜购物车商品
+	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                 // 退菜购物车商品
+	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                         // 转菜购物车商品
+	OrderCartProductWrap(ctx context.Context, req req.OrderCartProductWrapReq) (*resp.ShopCart, error)                                                            // 打包购物车商品
+	OrderCartProductUnwrap(ctx context.Context, req req.OrderCartProductUnwrapReq) (*resp.ShopCart, error)                                                        // 取消打包购物车商品
+	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                 // 取消赠菜购物车商品
+	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                    // 取消赠菜购物车商品
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                               // 获取购物车信息
+	OrderCartProductPackageAdd(ctx context.Context, request req.OrderCartProductPackageAddReq) (*resp.ShopCart, error)                                            // 向购物车添加套餐
+	OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error)        // 查询购物车商品“规格/属性”
+	OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error)                // 修改购物车商品"规格/属性"
+	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)       // 向购物车添加商品
+	InstantOrderCartProductAddSimple(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) // 向购物车添加商品（精简版本，无校验）
+	ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq) (*resp.ShopCart, error)                                                                        // 更换分批类型（前置模式）
 
 	// cooking
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                                                                                                                  // 获取点餐必点方案
@@ -1198,7 +1199,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		} else {
 			staffShiftLogUuid = staffShiftLog.Uuid
 		}
-		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -1377,7 +1378,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, _ uint64
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 删除订单商品
-		err := repository.NewOrderRepo(tx).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+		err := repository.NewOrderRepo(tx).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, saleOrderProduct.IsPackageProduct())
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -3377,6 +3378,7 @@ func (s *orderSrv) getDecreaseStockList(_ context.Context, cookingDeductSaleOrde
 							MaterialUuid:  material.MaterialUuid,
 							WarehouseUuid: material.Material.WarehouseUuid,
 							Num:           num,
+							SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
 						})
 					}
 				}
@@ -4447,27 +4449,51 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		taxes = make([]*selling.PosInvoiceTax, 0)
 	}
 
+	// 获取所有支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	methodMap := make(map[int]string)
+	paymentIdMap := make(map[int]string)
+	for _, paymentMethod := range paymentMethods {
+		if paymentMethod.ErpnextPayment != "" {
+			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
+		}
+		if paymentMethod.ErpnextPaymentId != "" {
+			paymentIdMap[paymentMethod.Code] = paymentMethod.ErpnextPaymentId
+		}
+	}
+
+	getPaymentId := func(paymentMethodCode int) string {
+		if paymentId, ok := paymentIdMap[paymentMethodCode]; ok {
+			return paymentId
+		}
+		return ""
+	}
+
 	payments := make([]*selling.PosInvoicePayment, 0)
 	if saleOrder.IsFreeSaleOrder() {
+		var paymentID *string
+		paymentId := getPaymentId(constant.PaymentMethodCodeFreeMealForErp)
+		if paymentId != "" {
+			paymentID = &paymentId
+		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: "Free Meal", // 免单
+			PaymentId:     paymentID,
 			Amount:        0,
 		})
 	} else if saleOrder.GetAmountValue() == 0 { // 如果订单应收为0元时
+		var paymentID *string
+		paymentId := getPaymentId(constant.PaymentMethodCodeCash)
+		if paymentId != "" {
+			paymentID = &paymentId
+		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: "Cash", // 现金支付
+			PaymentId:     paymentID,
 			Amount:        0,
 		})
 	} else {
-		// 获取所有支付方式
-		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
-		paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
-		methodMap := make(map[int]string)
-		for _, paymentMethod := range paymentMethods {
-			if paymentMethod.ErpnextPayment != "" {
-				methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
-			}
-		}
 		for _, payment := range saleOrder.PaymentOrders {
 			if payment.IsDelete() {
 				continue
@@ -4479,8 +4505,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
 				return nil, errors.WithMessage(errors.New("不支持的支付方式"))
 			}
+			var paymentID *string
+			paymentId := getPaymentId(payment.PaymentMethod.Code)
+			if paymentId != "" {
+				paymentID = &paymentId
+			}
 			payments = append(payments, &selling.PosInvoicePayment{
 				ModeOfPayment: modeOfPayment,
+				PaymentId:     paymentID,
 				Amount:        payment.Amount,
 			})
 		}

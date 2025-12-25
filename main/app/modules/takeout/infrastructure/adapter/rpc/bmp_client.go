@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	grabApi "ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/api/menu"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
+	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/errors"
@@ -37,16 +39,34 @@ type TakeoutRPCClient interface {
 	// UpdateMenuModifier 更新菜单修饰符
 	UpdateMenuModifier(ctx context.Context, req *menuApi.UpdateMenuModifierReq) error
 
+	//  ------------------------- Order Service -------------------------
+
+	// GetOrderInfo 获取订单信息
+	GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error)
+
+	// PrepareOrder 准备订单（接受/拒绝）
+	PrepareOrder(ctx context.Context, takeoutOrderUuid string, toState string) error
+
+	// MarkOrderReady 标记订单准备完成（呼叫骑手）
+	MarkOrderReady(ctx context.Context, takeoutOrderUuid string) error
+
+	// CheckOrderCancelable 检查订单是否可取消
+	CheckOrderCancelable(ctx context.Context, takeoutOrderUuid string) (canCancel bool, reason string, rawData string, err error)
+
+	// CancelOrder 取消订单
+	CancelOrder(ctx context.Context, takeoutOrderUuid string, reasonCode string) error
+
 	// Close 关闭连接
 	Close() error
 }
 
 // BMPTakeoutClient BMP 外送 RPC 客户端实现
 type BMPTakeoutClient struct {
-	conn       *grpc.ClientConn
-	client     api.TakeoutServiceClient
-	grabClient grabApi.GrabClient
-	menuClient menuApi.MenuServiceClient
+	conn        *grpc.ClientConn
+	client      api.TakeoutServiceClient
+	grabClient  grabApi.GrabClient
+	menuClient  menuApi.MenuServiceClient
+	orderClient orderApi.OrderServiceClient
 }
 
 // NewBMPTakeoutClient 创建 BMP 外送 RPC 客户端
@@ -61,11 +81,13 @@ func NewBMPTakeoutClient() (TakeoutRPCClient, error) {
 	client := api.NewTakeoutServiceClient(conn)
 	grabClient := grabApi.NewGrabClient(conn)
 	menuClient := menu.NewMenuServiceClient(conn)
+	orderClient := orderApi.NewOrderServiceClient(conn)
 	return &BMPTakeoutClient{
-		conn:       conn,
-		client:     client,
-		grabClient: grabClient,
-		menuClient: menuClient,
+		conn:        conn,
+		client:      client,
+		grabClient:  grabClient,
+		menuClient:  menuClient,
+		orderClient: orderClient,
 	}, nil
 }
 
@@ -267,7 +289,180 @@ func (c *BMPTakeoutClient) UpdateMenuModifier(ctx context.Context, req *menuApi.
 	return nil
 }
 
+// GetOrderInfo 获取订单信息
+func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error) {
+	req := &orderApi.GetOrderInfoReq{
+		ShopUuid:  shopUuid,
+		OrderUuid: orderUuid,
+		RequestId: uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.GetOrderInfo(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 GetOrderInfo 接口失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "调用获取订单信息接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("GetOrderInfo 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.New(resp.Message)
+	}
+
+	data, err := resp.Data.UnmarshalNew()
+	if err != nil {
+		logger.Logger.Error("GetOrderInfo 返回数据解析失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "获取订单信息数据解析失败")
+	}
+
+	orderResp := data.(*orderApi.GetOrderInfoResp)
+
+	// 解析 raw_data JSON 字符串为 map
+	var rawData map[string]interface{}
+	if err := json.Unmarshal([]byte(orderResp.RawData), &rawData); err != nil {
+		logger.Logger.Error("解析订单原始数据失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "解析订单原始数据失败")
+	}
+
+	return rawData, nil
+}
+
+// PrepareOrder 准备订单（接受/拒绝）
+// toState: "Accepted" 或 "Rejected"
+func (c *BMPTakeoutClient) PrepareOrder(ctx context.Context, takeoutOrderUuid string, toState string) error {
+	req := &orderApi.PrepareOrderReq{
+		TakeoutOrderUuid: takeoutOrderUuid,
+		ToState:          toState,
+		RequestId:        uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.PrepareOrder(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 PrepareOrder 接口失败",
+			zap.Error(err),
+			zap.String("takeoutOrderUuid", takeoutOrderUuid),
+			zap.String("toState", toState))
+		return errors.WithMessage(err, "调用准备订单接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("PrepareOrder 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("takeoutOrderUuid", takeoutOrderUuid),
+			zap.String("toState", toState))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
+// MarkOrderReady 标记订单准备完成（呼叫骑手）
+func (c *BMPTakeoutClient) MarkOrderReady(ctx context.Context, takeoutOrderUuid string) error {
+	req := &orderApi.MarkOrderReadyReq{
+		TakeoutOrderUuid: takeoutOrderUuid,
+		RequestId:        uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.MarkOrderReady(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 MarkOrderReady 接口失败", zap.Error(err), zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return errors.WithMessage(err, "调用标记订单准备完成接口失败")
+	}
+
+	if resp.Code != "0" {
+		// 判断 resp.Message 是否包含 order already marked ready
+		if strings.Contains(resp.Message, "order already marked ready") {
+			return nil
+		}
+		if strings.Contains(resp.Message, "since status is in status: ORDER_DELIVERED") {
+			return nil
+		}
+		logger.Logger.Warn("MarkOrderReady 返回错误", zap.String("code", resp.Code), zap.String("message", resp.Message), zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
+// CheckOrderCancelable 检查订单是否可取消
+func (c *BMPTakeoutClient) CheckOrderCancelable(ctx context.Context, takeoutOrderUuid string) (canCancel bool, reason string, rawData string, err error) {
+	req := &orderApi.CheckOrderCancelableReq{
+		TakeoutOrderUuid: takeoutOrderUuid,
+		RequestId:        uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.CheckOrderCancelable(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 CheckOrderCancelable 接口失败", zap.Error(err), zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return false, "", "", errors.WithMessage(err, "调用检查订单可取消接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("CheckOrderCancelable 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return false, "", "", errors.New(resp.Message)
+	}
+
+	// 解析响应数据
+	var checkResp orderApi.CheckOrderCancelableResp
+	if err := resp.Data.UnmarshalTo(&checkResp); err != nil {
+		logger.Logger.Error("解析 CheckOrderCancelable 响应失败", zap.Error(err), zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return false, "", "", errors.WithMessage(err, "解析响应数据失败")
+	}
+
+	// 如果可以取消，返回提示信息
+	if checkResp.CanCancel {
+		return true, "", checkResp.RawData, nil
+	}
+
+	// 如果不能取消，返回不可取消原因
+	return false, checkResp.NonCancellationReason, "", nil
+}
+
+// CancelOrder 取消订单
+func (c *BMPTakeoutClient) CancelOrder(ctx context.Context, takeoutOrderUuid string, reasonCode string) error {
+	req := &orderApi.CancelOrderReq{
+		TakeoutOrderUuid: takeoutOrderUuid,
+		CancelCode:       reasonCode, // 将取消原因作为取消码传入
+		RequestId:        uuid.New().String(),
+	}
+
+	resp, err := c.orderClient.CancelOrder(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 CancelOrder 接口失败", zap.Error(err), zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return errors.WithMessage(err, "调用取消订单接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("CancelOrder 返回错误", zap.String("code", resp.Code), zap.String("message", resp.Message), zap.String("takeoutOrderUuid", takeoutOrderUuid))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
 // Close 关闭连接
+
+// GetMenuClient 获取菜单服务客户端
+func (c *BMPTakeoutClient) GetMenuClient() menuApi.MenuServiceClient {
+	return c.menuClient
+}
+
 func (c *BMPTakeoutClient) Close() error {
 	if c.conn != nil {
 		return c.conn.Close()

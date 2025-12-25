@@ -114,10 +114,16 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 	openPosEntryDetail := make([]*selling.OpenPosEntryDetail, 0)
 	if len(openEntryReq.OpenPosEntryDetail) != 0 {
 		for _, detail := range openEntryReq.OpenPosEntryDetail {
-			openPosEntryDetail = append(openPosEntryDetail, &selling.OpenPosEntryDetail{
-				ModeOfPayment: detail.ModeOfPayment,
+			openPosEntryDetailErp := &selling.OpenPosEntryDetail{
 				OpeningAmount: detail.OpeningAmount,
-			})
+			}
+			if detail.PaymentId != nil && *detail.PaymentId != "" {
+				openPosEntryDetailErp.PaymentId = detail.PaymentId
+			} else if detail.ModeOfPayment != "" {
+				openPosEntryDetailErp.ModeOfPayment = &detail.ModeOfPayment
+			}
+
+			openPosEntryDetail = append(openPosEntryDetail, openPosEntryDetailErp)
 		}
 	}
 	openPosEntryReq := &selling.OpenPosEntryReq{
@@ -158,11 +164,16 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 	closePosEntryDetail := make([]*selling.ClosePosEntryDetail, 0)
 	if len(closeEntryReq.ClosePosEntryDetail) != 0 {
 		for _, detail := range closeEntryReq.ClosePosEntryDetail {
-			closePosEntryDetail = append(closePosEntryDetail, &selling.ClosePosEntryDetail{
-				ModeOfPayment: detail.ModeOfPayment,
+			entryDetail := &selling.ClosePosEntryDetail{
 				OpeningAmount: detail.OpeningAmount,
 				ClosingAmount: detail.ClosingAmount,
-			})
+			}
+			if detail.PaymentId != nil && *detail.PaymentId != "" {
+				entryDetail.PaymentId = detail.PaymentId
+			} else if detail.ModeOfPayment != "" {
+				entryDetail.ModeOfPayment = &detail.ModeOfPayment
+			}
+			closePosEntryDetail = append(closePosEntryDetail, entryDetail)
 		}
 	}
 	closePosEntryReq := &selling.ClosePosEntryReq{
@@ -215,7 +226,7 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		// 反结账后，重新结账时填写原商品发票名称
 		AmendedProductsInvoiceName: savePosInvoiceReq.AmendedProductsInvoiceName,
 		AmendedMaterialInvoiceName: savePosInvoiceReq.AmendedMaterialInvoiceName,
-		Remark:                    savePosInvoiceReq.Remark,
+		Remark:                     savePosInvoiceReq.Remark,
 	}
 	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
 	if err != nil {
@@ -491,6 +502,11 @@ func (s *erpSrv) SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.
 	if saveModeOfPaymentReq.Enabled != nil {
 		params.Enabled = saveModeOfPaymentReq.Enabled
 	}
+	// 更新时优先使用 PaymentId
+	if saveModeOfPaymentReq.PaymentId != nil {
+		params.PaymentId = *saveModeOfPaymentReq.PaymentId
+	}
+	// 更新时同时传递 Name
 	if saveModeOfPaymentReq.Name != nil {
 		params.Name = saveModeOfPaymentReq.Name
 	}

@@ -117,8 +117,9 @@ type OpenPosEntryReq struct {
 }
 
 type OpenPosEntryDetail struct {
-	ModeOfPayment string  `form:"mode_of_payment" json:"mode_of_payment" binding:"required"` // 支付方式
-	OpeningAmount float64 `form:"opening_amount" json:"opening_amount" binding:"required"`   // 开账金额
+	ModeOfPayment string  `form:"mode_of_payment" json:"mode_of_payment" binding:"omitempty"` // 支付方式，与 payment_id 二选一
+	OpeningAmount float64 `form:"opening_amount" json:"opening_amount" binding:"required"`    // 开账金额
+	PaymentId     *string `form:"payment_id" json:"payment_id" binding:"omitempty"`           // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 }
 
 type ClosePosEntryReq struct {
@@ -131,9 +132,10 @@ type ClosePosEntryReq struct {
 }
 
 type ClosePosEntryDetail struct {
-	ModeOfPayment string  `form:"mode_of_payment" json:"mode_of_payment" binding:"required"` // 支付方式
-	OpeningAmount float64 `form:"opening_amount" json:"opening_amount" binding:"required"`   // 开账金额
-	ClosingAmount float64 `form:"closing_amount" json:"closing_amount" binding:"required"`   // 关账金额
+	ModeOfPayment string  `form:"mode_of_payment" json:"mode_of_payment" binding:"omitempty"` // 支付方式，与 payment_id 二选一
+	OpeningAmount float64 `form:"opening_amount" json:"opening_amount" binding:"required"`    // 开账金额
+	ClosingAmount float64 `form:"closing_amount" json:"closing_amount" binding:"required"`    // 关账金额
+	PaymentId     *string `form:"payment_id" json:"payment_id" binding:"omitempty"`           // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
 }
 
 type SavePosInvoiceReq struct {
@@ -149,7 +151,7 @@ type SavePosInvoiceReq struct {
 
 	AmendedProductsInvoiceName string `form:"amended_products_invoice_name" json:"amended_products_invoice_name" binding:"required"` // 反结账后，重新结账时填写原商品发票名称
 	AmendedMaterialInvoiceName string `form:"amended_material_invoice_name" json:"amended_material_invoice_name" binding:"required"` // 反结账后，重新结账时填写原材料发票名称
-	Remark                     string `form:"remark" json:"remark"`                                                                 // 备注,可选
+	Remark                     string `form:"remark" json:"remark"`                                                                  // 备注,可选
 
 }
 
@@ -194,6 +196,7 @@ type SaveModeOfPaymentReq struct {
 	PayType     string  `form:"pay_type" json:"pay_type" binding:"required"`         // 支付类型（TTPOS 定义），创建时必填
 	Enabled     *bool   `form:"enabled" json:"enabled" binding:"omitempty"`          // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
 	Name        *string `form:"name" json:"name" binding:"omitempty"`                // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+	PaymentId   *string `form:"payment_id" json:"payment_id" binding:"omitempty"`    // PaymentId，可选：更新时传入
 }
 
 type CreateSupplierReq struct {

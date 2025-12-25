@@ -31,6 +31,77 @@ type (
 		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *gjson.Json, err error)
 		// GetSiteCode 获取站点编码
 		GetSiteCode(ctx context.Context) string
+		// GetAndProcessSiteApiSecret 获取并处理 api_secret
+		// 如果 api_secret 不是 base64 编码，则先使用 gaes.Encrypt 加密，再用 gbase64.Encode 编码后保存并返回
+		GetAndProcessSiteAuthorization(ctx context.Context, siteCode string) (*erp.SiteAuthorization, error)
+		// GetAndProcessCashierApiSecret 获取并处理收银员的 api_secret
+		// 如果 api_secret 不是 base64 编码，则先使用 gaes.Encrypt 加密，再用 gbase64.Encode 编码后保存并返回
+		GetAndProcessCashierAuthorization(ctx context.Context, cashierEmail string) (string, error)
+	}
+	IPrintFormat interface {
+		// Meta 获取 Print Format 元数据
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: ERP 请求参数
+		//
+		// 返回：
+		//   - *gjson.Json: Print Format 元数据 JSON
+		//   - error: 错误信息
+		Meta(ctx context.Context, req *erp.ErpReq) (*gjson.Json, error)
+		// List 查询 Print Format 列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: Print Format 列表查询请求
+		//
+		// 返回：
+		//   - []*erp.PrintFormatDetailResp: Print Format 列表
+		//   - error: 错误信息
+		List(ctx context.Context, req *erp.PrintFormatListReq) ([]*erp.PrintFormatDetailResp, error)
+		// Get 查询 Print Format 详情
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: Print Format 名称
+		//
+		// 返回：
+		//   - *erp.PrintFormatDetailResp: Print Format 详细信息
+		//   - error: 错误信息
+		Get(ctx context.Context, name string) (*erp.PrintFormatDetailResp, error)
+		// Create 创建 Print Format
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: Print Format 创建请求
+		//
+		// 返回：
+		//   - *erp.PrintFormatDetailResp: 创建后的 Print Format 信息
+		//   - error: 错误信息
+		Create(ctx context.Context, req *erp.PrintFormatCreateUpdateReq) (*erp.PrintFormatDetailResp, error)
+		// Update 更新 Print Format
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: Print Format 名称
+		//   - req: Print Format 更新请求
+		//
+		// 返回：
+		//   - *erp.PrintFormatDetailResp: 更新后的 Print Format 信息
+		//   - error: 错误信息
+		Update(ctx context.Context, name string, req *erp.PrintFormatCreateUpdateReq) (*erp.PrintFormatDetailResp, error)
+		// Delete 删除 Print Format
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: Print Format 名称
+		//
+		// 返回：
+		//   - error: 错误信息
+		Delete(ctx context.Context, name string) error
+		// Count 统计 Print Format 数量
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: Print Format 列表查询请求（用于过滤条件）
+		//
+		// 返回：
+		//   - int: Print Format 数量
+		//   - error: 错误信息
+		Count(ctx context.Context, req *erp.PrintFormatListReq) (int, error)
 	}
 	IReport interface {
 		Run(ctx context.Context, params *erp.ReportParams) (rst *gjson.Json, err error)
@@ -45,11 +116,12 @@ type (
 )
 
 var (
-	localDoctype  IDoctype
-	localDocument IDocument
-	localRpc      IRpc
-	localReport   IReport
-	localResource IResource
+	localDoctype     IDoctype
+	localDocument    IDocument
+	localRpc         IRpc
+	localPrintFormat IPrintFormat
+	localReport      IReport
+	localResource    IResource
 )
 
 func Doctype() IDoctype {
@@ -83,6 +155,17 @@ func Rpc() IRpc {
 
 func RegisterRpc(i IRpc) {
 	localRpc = i
+}
+
+func PrintFormat() IPrintFormat {
+	if localPrintFormat == nil {
+		panic("implement not found for interface IPrintFormat, forgot register?")
+	}
+	return localPrintFormat
+}
+
+func RegisterPrintFormat(i IPrintFormat) {
+	localPrintFormat = i
 }
 
 func Report() IReport {

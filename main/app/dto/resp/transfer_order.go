@@ -63,6 +63,7 @@ type TransferOrderItemInfo struct {
 	MaterialInternalCode string                       `json:"material_internal_code"` // 物品内部编码
 	Valuation            float64                      `json:"valuation"`              // 估值单价（基准单位）
 	AvailableNum         float64                      `json:"available_num"`          // 可用库存数量
+	UnitLocaleName       dto.LocaleResponse           `json:"unit_locale_name"`       // 单位名称
 	Units                []TransferOrderItemUnitInfo  `json:"units"`                  // 单位列表
 	UnitList             []material_resp.MaterialUnit `json:"unit_list"`              // 单位列表
 }

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-server-go/app/errors"
@@ -21,6 +22,22 @@ func NewTakeoutRPCService() *TakeoutRPCService {
 }
 
 // CheckBindingStatus 检查绑定状态（保持向后兼容）
+// GetBMPClient 获取 BMP 客户端（用于直接调用客户端方法）
+func (s *TakeoutRPCService) GetBMPClient() (*BMPTakeoutClient, error) {
+	client, err := NewBMPTakeoutClient()
+	if err != nil {
+		return nil, err
+	}
+
+	// 类型断言
+	bmpClient, ok := client.(*BMPTakeoutClient)
+	if !ok {
+		return nil, fmt.Errorf("无法将客户端转换为 BMPTakeoutClient 类型")
+	}
+
+	return bmpClient, nil
+}
+
 func (s *TakeoutRPCService) CheckBindingStatus(ctx context.Context, platform string, companyUuid uint64) (bool, error) {
 	status, _, _, _, err := s.CheckBindingStatusWithMerchantId(ctx, platform, companyUuid)
 	return status, err
@@ -218,4 +235,28 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 	}
 
 	return nil
+}
+
+// GetOrderInfo 获取订单信息
+func (s *TakeoutRPCService) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (map[string]interface{}, error) {
+	// 创建客户端
+	client, err := NewBMPTakeoutClient()
+	if err != nil {
+		logger.Logger.Error("创建 RPC 客户端失败", zap.Error(err), zap.String("shopUuid", shopUuid), zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "创建 RPC 客户端失败")
+	}
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			logger.Logger.Warn("关闭 RPC 客户端失败", zap.Error(closeErr))
+		}
+	}()
+
+	// 调用 RPC 接口
+	orderData, err := client.GetOrderInfo(ctx, shopUuid, orderUuid)
+	if err != nil {
+		logger.Logger.Error("获取订单信息失败", zap.Error(err), zap.String("shopUuid", shopUuid), zap.String("orderUuid", orderUuid))
+		return nil, errors.WithMessage(err, "获取订单信息失败")
+	}
+
+	return orderData, nil
 }

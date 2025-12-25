@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	inventorySrv "ttpos-server-go/app/modules/inventory/domain/service"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -63,6 +64,10 @@ func (s *soldOutSrv) GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutLi
 	soldOuts := make([]resp.SoldOut, 0, len(boms))
 
 	for _, bom := range boms {
+		// 过滤掉开启“使用进销存计算库存”的商品
+		if bom.UseBomCardStock == 1 {
+			continue
+		}
 		soldOuts = append(soldOuts, resp.SoldOut{
 			LocaleProductName:    bom.ProductPackage.MultiLanguageName.GetNames(),
 			ProductBomUuid:       bom.Uuid,
@@ -230,7 +235,7 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
 			},
 			repository.WithPreload{
-				Query: "FlavorMaterials",
+				Query: "FlavorMaterials.Material.WarehouseItems",
 			},
 		),
 	)
@@ -250,6 +255,10 @@ func (s *soldOutSrv) GetSettings(companyUuid uint64, req *req.GetSoldOutSettings
 			// 计算成本卡库存：根据成本卡关联的材料库存计算预计可生产数量
 			// CalculateExpectedProductionNum 会遍历所有关联材料，取最小可生产数量
 			bomCardStockNum = bom.ProductBomCard.CalculateExpectedProductionNum()
+		}
+		// 关联库存时也返回关联库存
+		if len(bom.FlavorMaterials) > 0 {
+			bomCardStockNum = inventorySrv.CalculateFlavorMaterialsInventory(bom)
 		}
 
 		sellableQuantity := bom.StockNum

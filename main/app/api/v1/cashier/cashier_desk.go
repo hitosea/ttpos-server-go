@@ -755,7 +755,19 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+
 	// 添加商品。 若没有点餐账单则新建一个
+	if ctx.GetCompanyUuid() == 7709131161600000 {
+		// 添加商品。 若没有点餐账单则新建一个（无校验版本）
+		res, err := h.orderSrv.InstantOrderCartProductAddSimple(ctx, params)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
+	}
+
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {

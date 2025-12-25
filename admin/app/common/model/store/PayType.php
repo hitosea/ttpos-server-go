@@ -211,10 +211,16 @@ class PayType extends BaseModel
         $enumData = self::listAll($shopSupplierId, $appId);
         $licenses = request()->licenses;
         return array_values(array_filter($enumData, function ($item) use ($LianLian_enable, $licenses) {
+            // 过滤 Grab 和 LINE MAN 支付方式
+            if ($item['value'] == OrderPayTypeEnum::GRAB || $item['value'] == OrderPayTypeEnum::LINE_MAN) {
+                return false;
+            }
             switch ($item['value']) {
                 case OrderPayTypeEnum::BALANCE:
                     return $licenses['is_open_member'] == 1; // 会员功能开启时显示 0关闭 1开启
                 case OrderPayTypeEnum::FREE_PAY:
+                    return false;
+                case OrderPayTypeEnum::FREE_MEAL_FOR_ERP:
                     return false;
                 case OrderPayTypeEnum::LIANLIAN_ALI_PAY:
                 case OrderPayTypeEnum::LIANLIAN_QR_PROMPT_PAY:
