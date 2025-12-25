@@ -15,3 +15,31 @@ type ProductPackageGroup struct {
 	MultiLanguageName        MultiLanguageName         `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`   // 多语言名称
 	ProductPackage           *ProductPackage           `gorm:"foreignKey:product_package_uuid;references:uuid"`       // 商品套餐
 }
+
+// 获取最小可选数量、最大可选数量
+// 返回合理的范围，确保 min <= max，兼容 min 或 max 为 0 的情况
+func (model *ProductPackageGroup) GetOptionalRange() (int, int) {
+	min := model.OptionalMinCount
+	max := model.OptionalCount
+
+	// 确保非负数
+	if min < 0 {
+		min = 0
+	}
+	if max < 0 {
+		max = 0
+	}
+
+	// 如果 max 为 0，表示不能选任何，min 也应该为 0
+	if max == 0 {
+		min = 0
+		return min, max
+	}
+
+	// 确保 min <= max
+	if min > max {
+		min = max
+	}
+
+	return min, max
+}
