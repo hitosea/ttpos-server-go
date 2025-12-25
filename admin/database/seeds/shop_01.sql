@@ -3920,7 +3920,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `subtotal` bigint NOT NULL DEFAULT 0 COMMENT '小计金额 (price.subtotal)',
     `delivery_fee` bigint NOT NULL DEFAULT 0 COMMENT '配送费 (price.deliveryFee)',
     `small_order_fee` bigint NOT NULL DEFAULT 0 COMMENT '小单费用 (price.smallOrderFee)',
-    `total_amount` bigint NOT NULL DEFAULT 0 COMMENT '总金额 (price.total)',
     `eater_payment` bigint NOT NULL DEFAULT 0 COMMENT '顾客实付 (price.eaterPayment)',
     `platform_discount` bigint NOT NULL DEFAULT 0 COMMENT '平台优惠 (price.grabFundPromo)',
     `merchant_discount` bigint NOT NULL DEFAULT 0 COMMENT '商户优惠 (price.merchantFundPromo)',
