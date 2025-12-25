@@ -760,10 +760,14 @@ func (s *paymentMethodSrv) GetLogo(ctx context.Context, method *model.PaymentMet
 		logo = method.LogoFile.GetUrl(baseUrl)
 	}
 	if logo == "" && method.DefaultImg != "" {
-		logo = strings.TrimRight(baseUrl, "/") + method.DefaultImg
+		if strings.HasPrefix(method.DefaultImg, "http") || strings.HasPrefix(method.DefaultImg, "https") {
+			logo = method.DefaultImg
+		} else {
+			logo = strings.TrimRight(baseUrl, "/") + method.DefaultImg
+		}
 	}
 	if logo == "" && method.DefaultImg == "" {
-		logo = baseUrl + "/image/pay/ja_pay.png"
+		logo = baseUrl + "image/pay/ja_pay.png"
 	}
 
 	return logo
