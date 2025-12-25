@@ -634,7 +634,6 @@ func (s *takeoutAppService) UpdateMenuModifier(ctx context.Context, req request.
 }
 
 // SyncMenuChanges 同步菜单变更（灰度更新）
-// SyncMenuChanges 同步菜单变更（灰度更新）
 func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error) {
 	// 初始化结果
 	result := &response.MenuSyncResult{
@@ -647,6 +646,10 @@ func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.Exp
 	takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
+	}
+	if takeout.Enabled == false || takeout.IsBound == false {
+		logger.Logger.Info("平台未开启或未绑定，跳过同步", zap.String("platform", req.Platform))
+		return result, nil
 	}
 
 	// 2. 导出最新菜单
