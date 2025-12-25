@@ -12,6 +12,7 @@ troubleshooting/
 │   └── migration-conflict.md
 ├── payment/
 │   └── payment-timeout.md
+├── serena-gopls-initialization.md
 └── README.md
 ```
 
@@ -65,6 +66,7 @@ troubleshooting/
 | -------- | ------------------------------------------------------------------ | --------------------------------------- |
 | Payment  | [payment/payment-timeout.md](./payment/payment-timeout.md)         | Go Service 并发锁、200ms SLA、事件发布  |
 | Database | [database/migration-conflict.md](./database/migration-conflict.md) | Phinx 迁移冲突、Go Model 同步、回滚策略 |
+| MCP      | [serena-gopls-initialization.md](./serena-gopls-initialization.md) | gopls 路径、uvx 隔离环境、软链接方案    |
 
 ---
 
