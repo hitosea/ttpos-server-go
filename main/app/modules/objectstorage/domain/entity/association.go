@@ -20,4 +20,3 @@ type Association struct {
 	// 返回 map[uint64]interface{}，key 为 UUID，value 为对象
 	BatchQueryFunc func(ctx context.Context, uuids []uint64) (map[uint64]interface{}, error)
 }
-

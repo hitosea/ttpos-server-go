@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -33,10 +32,10 @@ func (t *cacheTask[T]) TTL() time.Duration {
 }
 
 // CacheGroupAdapter 使用 ICacheGroup 实现的缓存适配器（泛型版本）
-// 同时保留对底层 cache.Cache 的引用，用于 SET/DEL 操作
+// 同时保留对底层 cache.Cache 的引用，用于 DEL 操作
 type CacheGroupAdapter[T any] struct {
 	group      cache.ICacheGroup[T]
-	underlying cache.Cache // 底层缓存，用于 SET/DEL 操作
+	underlying cache.Cache // 底层缓存，用于 DEL 操作
 	defaultTTL time.Duration
 }
 
@@ -70,19 +69,19 @@ func (a *CacheGroupAdapter[T]) GET(key string, query func() (T, error)) (T, erro
 }
 
 // SET 设置缓存
-// 使用底层缓存直接写入，同时 ICacheGroup 会在下次 GET 时自动使用
-// 直接存储 []byte，不转换为 string
+// 使用 group.Do 方式实现，通过闭包传入 value 值
+// ICacheGroup 会自动处理 L1/L2 缓存的写入
 func (a *CacheGroupAdapter[T]) SET(key string, value T, ttl time.Duration) error {
-	if a.underlying == nil {
-		return fmt.Errorf("底层缓存未设置，无法执行 SET 操作")
+	task := &cacheTask[T]{
+		key: key,
+		query: func() (T, error) {
+			// 通过闭包直接返回传入的 value
+			return value, nil
+		},
+		ttl: ttl,
 	}
-	// 序列化为 JSON 字节数组，直接存储 []byte
-	jsonData, err := json.Marshal(value)
-	if err != nil {
-		return fmt.Errorf("序列化失败: %w", err)
-	}
-	// 直接传递 []byte，不转换为 string
-	return a.underlying.Set(key, jsonData, ttl)
+	_, err := a.group.Do(context.Background(), task)
+	return err
 }
 
 // DEL 删除缓存

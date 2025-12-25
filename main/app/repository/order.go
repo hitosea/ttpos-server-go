@@ -13,7 +13,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/objectstorage/domain/entity"
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
-	"ttpos-server-go/app/modules/objectstorage/domain/service"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository/ro"
@@ -1009,42 +1008,28 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					return nil, errors.WithMessage(errDesk)
 				}
 
-				// 获取 company uuid（优先使用 option 中的，否则从 db 获取）
-				companyUuid := option.CompanyUuid
-				if companyUuid == 0 {
-					companyUuid = GetCompanyUuid(r.db)
+				// 使用对象存储层自动注入关联对象
+				ctx := context.NewContext(context.WithCompanyUuid(option.CompanyUuid), context.WithContext(goCtx.Background()))
+
+				// 创建缓存组配置
+				groupConfig := cache.GroupConfig{
+					Name:             "object-storage",
+					EnableLocalCache: true,             // 开启 L1 本地缓存
+					EnableRedisCache: true,             // 开启 L2 Redis 缓存
+					NegativeTTL:      30 * time.Second, // 负缓存 30 秒
 				}
 
-				// 只有 companyUuid 为 7709131161600000 时才使用对象存储层逻辑
-				const targetCompanyUuid = 7709131161600000
-				if companyUuid == targetCompanyUuid {
-					// 使用对象存储层自动注入关联对象
-					ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))
+				// 获取关联配置（传入 groupConfig 和 underlyingCache，为每种对象类型创建具体的缓存适配器）
+				associations := getSaleBillAssociationsForOrderCart(ctx, r.db, groupConfig, cache.Global)
 
-					// 创建缓存组配置
-					groupConfig := cache.GroupConfig{
-						Name:             "object-storage",
-						EnableLocalCache: true,             // 开启 L1 本地缓存
-						EnableRedisCache: true,             // 开启 L2 Redis 缓存
-						NegativeTTL:      30 * time.Second, // 负缓存 30 秒
-					}
+				// 创建对象存储实例（使用 any 类型用于 PreloadWithConfig，但内部 QueryFunc 使用具体类型）
+				// 注意：PreloadWithConfig 只需要 associations，不需要 config
+				objectStorage := persistence.NewObjectStorage[any]()
 
-					// 获取关联配置（传入 groupConfig 和 underlyingCache，为每种对象类型创建具体的缓存适配器）
-					associations := getSaleBillAssociationsForOrderCart(ctx, r.db, groupConfig, cache.Global)
-
-					// 创建对象存储实例（使用 any 类型用于 PreloadWithConfig，但内部 QueryFunc 使用具体类型）
-					// 注意：PreloadWithConfig 只需要 associations，不需要 config
-					objectStorage := persistence.NewObjectStorage[any](&service.Config[any]{
-						TTL:          5 * time.Minute,
-						DisableCache: false,
-						CacheLayer:   adapter.NewCacheGroupAdapter[any](groupConfig, cache.Global, 5*time.Minute),
-					})
-
-					// 注入关联对象
-					if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
-						// 如果对象存储层注入失败，记录错误但不影响主流程
-						return nil, errors.WithMessage(fmt.Errorf("对象存储层注入失败: %v", err))
-					}
+				// 注入关联对象
+				if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
+					// 如果对象存储层注入失败，记录错误但不影响主流程
+					return nil, errors.WithMessage(fmt.Errorf("对象存储层注入失败: %v", err))
 				}
 
 				bill := &saleBill
