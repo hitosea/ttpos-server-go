@@ -124,7 +124,7 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 		Platform:           platform,
 		PlatformOrderId:    platformOrderId,
 		PlatformOrderState: submitOrderReq.GetOrderState(),
-		OrderState:         ConvertPlatformStateToOrderState(submitOrderReq.GetOrderState(), valueobject.TakeoutOrderStateAccepted), // 使用状态转换函数
+		OrderState:         ConvertPlatformStateToOrderState(submitOrderReq.GetOrderState(), valueobject.TakeoutOrderStatePending), // 使用状态转换函数
 		IsAbnormal:         0,
 		StockStatus:        0, // 库存充足
 		RawData:            string(rawDataJSON),
