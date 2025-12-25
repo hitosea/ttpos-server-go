@@ -32,24 +32,30 @@ import (
 // REFUNDED - Order has been refunded to the consumer
 // CANCELLED - Order has been cancelled by the consumer, merchant, or driver for some reason
 // FAILED - The order might fail because of unallocation, reallocation, system issues, etc
-func ConvertPlatformStateToOrderState(platformState string) int {
+func ConvertPlatformStateToOrderState(platformState string, ttposOrderState int) int {
 	// 转换为大写进行匹配（容错）
 	state := strings.ToUpper(strings.TrimSpace(platformState))
 
 	switch state {
 	case "NEW", "PENDING":
-		return valueobject.TakeoutOrderStatePending // 0 - 待接单
+		return ttposOrderState // 不合法状态，不能从已接单配餐中到店
 
 	case "ACCEPTED", "PREPARING", "READY":
 		return valueobject.TakeoutOrderStateAccepted // 1 - 已接单配餐中
 
-	case "ALLOCATING", "DRIVER_ALLOCATED":
-		return valueobject.TakeoutOrderStateRiderPending // 2 - 待骑手接单/骑手已分配
+	// case "DRIVER_ARRIVED", "DRIVER_ALLOCATED":
+	// 	return valueobject.TakeoutOrderStateRiderPending // 2 - 待骑手接单/骑手已分配
 
-	case "DRIVER_ARRIVED", "COLLECTED", "DELIVERING", "RIDER_PROCESSING", "DRIVER_ASSIGNED":
+	case "COLLECTED":
+		if ttposOrderState == valueobject.TakeoutOrderStateAccepted {
+			return ttposOrderState // 不合法状态，不能从已接单配餐中到店
+		}
 		return valueobject.TakeoutOrderStateRiderProcessing // 3 - 骑手配送中（已到店/已取餐/配送中）
 
-	case "DELIVERED", "COMPLETED", "BILL_PAID":
+	case "DELIVERED":
+		if ttposOrderState == valueobject.TakeoutOrderStateAccepted {
+			return ttposOrderState // 不合法状态，不能从已接单配餐中到店
+		}
 		return valueobject.TakeoutOrderStateCompleted // 4 - 已完成（已送达/已完成/已支付）
 
 	case "CANCELLED", "REJECTED", "CANCELED", "FAILED", "REFUNDED":
@@ -57,7 +63,7 @@ func ConvertPlatformStateToOrderState(platformState string) int {
 
 	default:
 		// 未知状态，默认为待接单
-		return -1
+		return ttposOrderState
 	}
 }
 
@@ -118,7 +124,7 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 		Platform:           platform,
 		PlatformOrderId:    platformOrderId,
 		PlatformOrderState: submitOrderReq.GetOrderState(),
-		OrderState:         ConvertPlatformStateToOrderState(submitOrderReq.GetOrderState()), // 使用状态转换函数
+		OrderState:         ConvertPlatformStateToOrderState(submitOrderReq.GetOrderState(), valueobject.TakeoutOrderStateAccepted), // 使用状态转换函数
 		IsAbnormal:         0,
 		StockStatus:        0, // 库存充足
 		RawData:            string(rawDataJSON),

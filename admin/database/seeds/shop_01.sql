@@ -2124,6 +2124,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出库单uuid',
     `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
     `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库',
+    `order_type` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '订单类型,0-堂食订单 1-外卖订单',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态,0-success已出库 1-canceled已撤销',
     `operator_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员uuid',

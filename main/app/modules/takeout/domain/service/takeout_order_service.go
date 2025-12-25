@@ -44,6 +44,9 @@ type ITakeoutOrderSrv interface {
 	// BuildBomQuantityMap 构建订单商品的 BOM 数量映射（用于库存检查和出库）
 	// 返回: bomQuantityMap (BOM UUID -> 数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), error
 	BuildBomQuantityMap(ctx context.Context, order *model.TakeoutOrder) (map[uint64]int, map[uint64]*model.TakeoutOrderItem, error)
+	// CalculateTakeoutOrderSalesVolume 计算外卖订单销量
+	// 返回: productBoms (BOM UUID -> 销量), productPackages (Package UUID -> 销量), error
+	CalculateTakeoutOrderSalesVolume(order *model.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error)
 }
 
 // takeoutOrderSrv 外卖订单服务实现
@@ -430,7 +433,7 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 
 	// 更新订单状态为待骑手接单
 	updateData := map[string]interface{}{
-		"order_state": valueobject.TakeoutOrderStateRiderPending,
+		"order_state": grab.ConvertPlatformStateToOrderState(order.PlatformOrderState, valueobject.TakeoutOrderStateRiderPending),
 		"update_time": currentTime,
 	}
 
@@ -688,11 +691,9 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 
 	// 开启事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 创建订单仓储
 		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
 		// 1. 创建订单
-		if order.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto {
-			order.OrderState = valueobject.TakeoutOrderStateAccepted
-		}
 		if err := orderRepoTx.Create(order); err != nil {
 			logger.Logger.Error("创建订单失败", zap.Error(err), zap.Any("order", order))
 			return errors.WithMessage(errors.New("创建订单失败"), err.Error())
@@ -911,6 +912,15 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 		ctx.GetCompanyUuid(),
 	))
 
+	// 自动接单
+	if order.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto {
+		if err := s.AcceptOrder(ctx, &request.TakeoutOrderAcceptReq{
+			Uuid: order.Uuid,
+		}); err != nil {
+			logger.Logger.Error("接单失败", zap.Error(err))
+		}
+	}
+
 	return nil
 }
 
@@ -937,13 +947,11 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		// 3. 转换并更新订单状态
 		// 使用平台转换器将平台状态转换为内部状态码
 		oldOrderState := order.OrderState
-		newOrderState := grab.ConvertPlatformStateToOrderState(status)
-		if newOrderState == -1 {
-			logger.Logger.Error("转换订单状态失败", zap.String("order_uuid", orderUuid), zap.String("status", status))
-			return errors.New("转换订单状态失败")
+		newOrderState := grab.ConvertPlatformStateToOrderState(status, order.OrderState)
+		if newOrderState != -1 {
+			order.OrderState = newOrderState // 更新内部状态码
 		}
 		order.PlatformOrderState = status // 更新平台原始状态
-		order.OrderState = newOrderState  // 更新内部状态码
 
 		// 4. 更新订单到数据库
 		if err := orderRepoTx.Update(order); err != nil {
@@ -953,17 +961,29 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 
 		// 5. 发布订单状态更新事件（仅在状态发生变化时）
 		if oldOrderState != newOrderState {
-			event.GetDispatcher().Publish(event.NewOrderStatusUpdatedEvent(
-				order.Uuid,
-				order.Platform,
-				order.PlatformOrderId,
-				order.ShortOrderNumber,
-				order.TakeoutOrderUuid,
-				oldOrderState,
-				newOrderState,
-				status,
-				ctx.GetCompanyUuid(),
-			))
+			switch newOrderState {
+			case valueobject.TakeoutOrderStateRejected:
+				// 订单取消事件
+				event.GetDispatcher().Publish(event.NewOrderCancelEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+					"订单已取消",
+				))
+			case valueobject.TakeoutOrderStateCompleted:
+				// 订单完成事件
+				event.GetDispatcher().Publish(event.NewOrderCompletedEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+				))
+			}
 		}
 
 		return nil
@@ -975,7 +995,8 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 //
 // 出库数量计算规则：
 //   - 主商品：商品数量（item.Quantity）
-//   - 规格(flavor)/加料(sauce)/套餐商品(commodity): modifier.Quantity * item.Quantity (modifier数量 × 主商品数量)
+//   - 规格(flavor)/加料(sauce): modifier.Quantity * item.Quantity (modifier数量 × 主商品数量)
+//   - 套餐商品(commodity): groupItem.Num * item.Quantity (套餐配置数量 × 主商品数量)
 //
 // 销售数量：主商品的 item.Quantity（用于统计销售）
 func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.TakeoutOrder) (map[uint64]int, map[uint64]*model.TakeoutOrderItem, error) {
@@ -986,7 +1007,7 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 	type modifierInfo struct {
 		modifier         *model.TakeoutOrderItemModifier
 		item             *model.TakeoutOrderItem // 主商品
-		outboundQuantity int                     // 出库数量 = modifier.Quantity * item.Quantity
+		outboundQuantity int                     // 出库数量
 	}
 
 	// 按类型分组收集 modifier
@@ -1004,13 +1025,11 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 			if modifier.IsMapped == 0 {
 				continue
 			}
-
 			info := &modifierInfo{
 				modifier:         modifier,
 				item:             item,
 				outboundQuantity: modifier.Quantity * item.Quantity,
 			}
-
 			switch {
 			case modifier.IsFlavor():
 				flavorModifiers[modifier.TtposModifierUuid] = info
@@ -1022,8 +1041,8 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 		}
 	}
 
-	// 2. 查询 commodity 类型的 BOM 映射
-	groupItemToBomMap := make(map[uint64]uint64) // groupItemUuid -> bomUuid
+	// 2. 查询 commodity 类型的 BOM 映射和配置数量
+	groupItemToBomMap := make(map[uint64]persistence.GroupItemBomMapping) // groupItemUuid -> {bomUuid, num}
 	if len(commodityModifiers) > 0 {
 		groupItemUuids := make([]uint64, 0, len(commodityModifiers))
 		for groupItemUuid := range commodityModifiers {
@@ -1036,6 +1055,14 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 			return nil, nil, errors.WithMessage(errors.New("查询套餐商品BOM映射失败"), err.Error())
 		}
 		groupItemToBomMap = groupItemBomMapping
+
+		// 更新 commodity 的出库数量，使用 groupItem.Num 而不是 modifier.Quantity
+		for groupItemUuid, info := range commodityModifiers {
+			if mapping, ok := groupItemToBomMap[groupItemUuid]; ok {
+				// 套餐商品出库数量 = groupItem.Num * item.Quantity
+				info.outboundQuantity = int(mapping.Num * float64(info.item.Quantity))
+			}
+		}
 	}
 
 	// 3. 构建 bomUuid -> [modifierInfo] 映射，并累加出库数量
@@ -1070,8 +1097,8 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 
 	// 添加 commodity（需要通过 groupItemUuid 查找 BOM UUID）
 	for groupItemUuid, info := range commodityModifiers {
-		if bomUuid, ok := groupItemToBomMap[groupItemUuid]; ok {
-			addToBomMap(bomUuid, info)
+		if mapping, ok := groupItemToBomMap[groupItemUuid]; ok {
+			addToBomMap(mapping.ProductBomUuid, info)
 		}
 	}
 
@@ -1113,7 +1140,7 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 							modifier.TtposSkuName = name
 						} else if modifier.IsCommodity() {
 							// commodity: TtposModifierUuid 是 groupItemUuid，需要通过映射查找
-							if mappedBomUuid, exists := groupItemToBomMap[modifier.TtposModifierUuid]; exists && mappedBomUuid == bomUuid {
+							if mappedBomUuid, exists := groupItemToBomMap[modifier.TtposModifierUuid]; exists && mappedBomUuid.ProductBomUuid == bomUuid {
 								modifier.TtposSkuName = name
 							}
 						}
@@ -1124,4 +1151,55 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 	}
 
 	return bomQuantityMap, bomItemMap, nil
+}
+
+// CalculateTakeoutOrderSalesVolume 计算外卖订单销量
+// 返回: productBoms (BOM UUID -> 销量), productPackages (Package UUID -> 销量)
+func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *model.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error) {
+	productBoms := make(map[uint64]float64)     // 规格商品销量 map[BOM UUID]销量
+	productPackages := make(map[uint64]float64) // 套餐商品销量 map[Package UUID]销量
+
+	// 遍历订单商品
+	for _, item := range order.TakeoutOrderItems {
+		// 只处理已映射的商品
+		if item.IsMapped != 1 || item.TtposProductUuid == 0 {
+			continue
+		}
+
+		itemQuantity := float64(item.Quantity)
+
+		// 统计主商品的 Package 销量
+		// 不管是套餐还是普通商品，TtposProductUuid 都是 ProductPackage 的 UUID
+		productPackages[item.TtposProductUuid] += itemQuantity
+
+		// 遍历修饰符，计算规格和加料的销量
+		for _, modifier := range item.TakeoutOrderItemModifiers {
+			if modifier.IsMapped != 1 || modifier.TtposModifierUuid == 0 {
+				continue
+			}
+
+			// 规格(flavor)的销量：这是主商品的 BOM 销量
+			// 规格数量 × 主商品数量
+			if modifier.IsFlavor() {
+				modifierQuantity := float64(modifier.Quantity) * itemQuantity
+				productBoms[modifier.TtposModifierUuid] += modifierQuantity
+			}
+
+			// 加料(sauce)的销量：额外添加的小料 BOM 销量
+			// 加料数量 × 主商品数量
+			if modifier.IsSauce() {
+				modifierQuantity := float64(modifier.Quantity) * itemQuantity
+				productBoms[modifier.TtposModifierUuid] += modifierQuantity
+			}
+
+			// 套餐商品(commodity)的销量：套餐内的子商品 BOM 销量
+			// 子商品数量 × 主商品数量
+			if modifier.IsCommodity() {
+				modifierQuantity := float64(modifier.Quantity) * itemQuantity
+				productBoms[modifier.TtposModifierUuid] += modifierQuantity
+			}
+		}
+	}
+
+	return productBoms, productPackages, nil
 }

@@ -58,7 +58,7 @@ type TakeoutOrder struct {
 	// 其他通用信息
 	Cutlery           int    `gorm:"column:cutlery" json:"cutlery"`
 	OrderType         string `gorm:"column:order_type" json:"order_type"`
-	OrderAcceptedType string `gorm:"column:order_accepted_type" json:"order_accepted_type"`
+	OrderAcceptedType string `gorm:"column:order_accepted_type" json:"order_accepted_type"` // 接单类型: AUTO, MANUAL
 	IsMexEditOrder    int    `gorm:"column:is_mex_edit_order" json:"is_mex_edit_order"`
 	MembershipId      string `gorm:"column:membership_id" json:"membership_id"`
 	DriverEta         int64  `gorm:"column:driver_eta" json:"driver_eta"`
@@ -130,10 +130,6 @@ func (o *TakeoutOrder) IsPendingOrder() error {
 	// 检查订单状态
 	if o.OrderState != valueobject.TakeoutOrderStatePending {
 		return errors.New("订单状态不正确")
-	}
-	// 检查订单状态
-	if o.IsAbnormalOrder() {
-		return errors.New("订单异常，不能接单")
 	}
 	return nil
 }

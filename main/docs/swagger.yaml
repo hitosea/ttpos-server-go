@@ -3135,6 +3135,10 @@ definitions:
       category_uuid:
         description: 外卖分类UUID
         type: integer
+      describe:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 卖点描述（多语言）
       flavors:
         description: 外卖规格列表
         items:
@@ -3198,6 +3202,9 @@ definitions:
     type: object
   product_resp.ProductTakeoutSimpleInfo:
     properties:
+      status:
+        description: 外卖状态 0-下架 1-上架
+        type: integer
       takeout_type:
         description: 外卖类型 1-Grab 2-LINE MAN
         type: integer
@@ -9396,6 +9403,18 @@ definitions:
     required:
     - uuid
     type: object
+  request.TakeoutOrderCancelReq:
+    properties:
+      reason_code:
+        description: 取消原因码
+        type: string
+      uuid:
+        description: 订单UUID
+        type: integer
+    required:
+    - reason_code
+    - uuid
+    type: object
   request.TakeoutOrderEvent:
     properties:
       action:
@@ -9430,7 +9449,6 @@ definitions:
       uuid:
         type: integer
     required:
-    - reject_reason_code
     - uuid
     type: object
   request.TakeoutOrderSyncReq:
@@ -16754,6 +16772,10 @@ definitions:
         items:
           $ref: '#/definitions/material_resp.MaterialUnit'
         type: array
+      unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
       units:
         description: 单位列表
         items:
@@ -16981,6 +17003,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.UnprocessedMemberSaleOrder'
         description: 外送订单消息，最新十条
+      takeout_order:
+        allOf:
+        - $ref: '#/definitions/resp.UnprocessedTakeoutOrder'
+        description: 外卖订单消息，最新十条
     type: object
   resp.UnprocessedMemberSaleOrder:
     properties:
@@ -17024,8 +17050,45 @@ definitions:
       unprocessed_member_order_count:
         description: 未处理的外送订单数量
         type: integer
+      unprocessed_takeout_count:
+        description: 未处理的外卖订单数量（Grab/Lineman等）
+        type: integer
       update_time:
         description: 更新时间
+        type: integer
+    type: object
+  resp.UnprocessedTakeoutOrder:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.UnprocessedTakeoutOrderItem'
+        type: array
+    type: object
+  resp.UnprocessedTakeoutOrderItem:
+    properties:
+      is_abnormal:
+        description: '是否异常订单: 0-正常, 1-异常'
+        type: integer
+      is_auto_accept:
+        description: 是否自动接单
+        type: boolean
+      order_state:
+        description: '订单状态: 0-待接单, 1-已接单配餐中, 2-待骑手接单, 3-骑手配送中, 4-已完成, 5-已拒单'
+        type: integer
+      order_time:
+        description: 下单时间
+        type: integer
+      platform:
+        description: '平台: grab, lineman, foodpanda'
+        type: string
+      short_order_number:
+        description: 短订单号
+        type: string
+      subtotal:
+        description: 订单小计(分)
+        type: integer
+      uuid:
+        description: 外卖订单Uuid
         type: integer
     type: object
   resp.UnsentKitchen:
@@ -17462,6 +17525,29 @@ definitions:
       uuid:
         type: integer
     type: object
+  response.TakeoutOrderCancelCheckResp:
+    properties:
+      can_cancel:
+        description: 是否可以取消
+        type: boolean
+      cancel_reasons:
+        description: 可选的取消原因列表
+        items:
+          $ref: '#/definitions/response.TakeoutOrderCancelReason'
+        type: array
+      non_cancellation_reason:
+        description: 不可取消原因（当 can_cancel=false 时）
+        type: string
+    type: object
+  response.TakeoutOrderCancelReason:
+    properties:
+      code:
+        description: 原因代码
+        type: string
+      reason:
+        description: 原因描述
+        type: string
+    type: object
   response.TakeoutOrderCurrencyResp:
     properties:
       currency_code:
@@ -17499,7 +17585,7 @@ definitions:
       modifiers:
         type: string
       price:
-        type: integer
+        type: number
       quantity:
         type: integer
       specifications:
@@ -17510,7 +17596,7 @@ definitions:
           $ref: '#/definitions/response.TakeoutOrderItemResp'
         type: array
       tax:
-        type: integer
+        type: number
       uuid:
         type: integer
     type: object
@@ -17550,7 +17636,7 @@ definitions:
   response.TakeoutOrderPriceResp:
     properties:
       basket_promo:
-        description: 篮子优惠
+        description: 购物车促销
         type: integer
       delivery_fee:
         description: 配送费
@@ -17652,7 +17738,8 @@ definitions:
         - $ref: '#/definitions/response.TakeoutOrderTimesResp'
         description: 订单时间
       order_type:
-        description: 订单类型
+        description: 订单类型  DELIVERY - 平台配送，RESTAURANT_DELIVERY - 商家配送，TAKEAWAY - 自提/打包，DINEIN
+          - 店内就餐
         type: string
       payment_type:
         description: 支付类型
@@ -17677,7 +17764,7 @@ definitions:
         description: 短订单号
         type: string
       total_items:
-        description: 订单商品
+        description: 总商品数量
         type: integer
       uuid:
         description: 订单UUID
@@ -17696,6 +17783,9 @@ definitions:
         type: integer
       max_ready_time:
         description: 最大准备时间
+        type: integer
+      order_time:
+        description: 下单时间
         type: integer
       submit_time:
         description: 提交时间 (提交时间，支付时间)
@@ -28356,6 +28446,50 @@ paths:
         "200":
           description: 呼叫骑手成功
       summary: 呼叫骑手（标记订单准备完成）
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 取消订单参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.TakeoutOrderCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取消订单成功
+      summary: 取消订单
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/check-cancelable:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 订单UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 检查结果
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.TakeoutOrderCancelCheckResp'
+              type: object
+      summary: 检查订单是否可取消
       tags:
       - 收银端.外卖管理
   /cashier/takeout/order/detail:

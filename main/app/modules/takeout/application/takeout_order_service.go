@@ -182,6 +182,10 @@ func (s *takeoutOrderAppService) AcceptOrder(ctx context.Context, req *request.T
 	if err := order.IsPendingOrder(); err != nil {
 		return err
 	}
+	// 检查订单状态
+	if order.IsAbnormalOrder() {
+		return errors.New("订单异常，不能接单")
+	}
 	// 3. 验证库存
 	if err, outOfStockNames := s.CheckOrderStock(ctx, order); err != nil {
 		return errors.NewWithCodeAndData(constant.CodeOrderCheckProductStockZero, outOfStockNames, err.Error())

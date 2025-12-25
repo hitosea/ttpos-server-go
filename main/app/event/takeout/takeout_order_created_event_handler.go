@@ -34,7 +34,7 @@ func (s *takeoutOrderCreatedEventSubscriber) Handle(domainEvent event.DomainEven
 
 	// 异步处理，不阻塞事件分发
 	utils.Go(func() {
-		// 发送 WebSocket 通知
+		// 发送 WebSocket 通知（订单数据更新）
 		sendTakeoutOrderWebSocketNotification(
 			orderCreatedEvent.CompanyUuid,
 			orderCreatedEvent.TakeoutOrderUuid,
@@ -42,6 +42,16 @@ func (s *takeoutOrderCreatedEventSubscriber) Handle(domainEvent event.DomainEven
 			orderCreatedEvent.ShortOrderNumber,
 			"create",
 			map[string]any{},
+		)
+
+		// 发送 CUSTOMER_CALL 通知（触发前端未处理提醒）
+		sendCustomerCallWebSocketNotification(
+			orderCreatedEvent.CompanyUuid,
+			map[string]any{
+				"takeout_order_uuid": orderCreatedEvent.TakeoutOrderUuid,
+				"platform":           orderCreatedEvent.Platform,
+				"short_order_number": orderCreatedEvent.ShortOrderNumber,
+			},
 		)
 	})
 

@@ -890,7 +890,6 @@ func (s *takeoutAppService) batchUpdateItems(
 			if item.new.AvailableStatus != string(value_object.AvailableStatusAvailable) {
 				maxStock = 0
 			}
-
 			entity := &menuApi.MenuEntity{
 				Id:              item.new.Id,
 				Price:           &item.new.Price,

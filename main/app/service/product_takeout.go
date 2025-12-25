@@ -1021,7 +1021,7 @@ func (s *productTakeoutSrv) GetProductCount(
 	}
 
 	// 3. 查询数据库
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	// 4. 构造查询条件
 	var count int64
@@ -1030,9 +1030,20 @@ func (s *productTakeoutSrv) GetProductCount(
 		Where("ttpos_product_package_takeout.delete_time = ?", 0).
 		Where("ttpos_product_package.delete_time = ?", 0)
 
-	// 6. 如果指定了平台,添加平台过滤 (使用source字段匹配)
+	// 5. 如果指定了平台，添加平台过滤 (使用 takeout_type 字段)
 	if platform != "" {
-		query = query.Where("ttpos_product_package_takeout.source = ?", platform)
+		// 平台名称到 takeout_type 的映射
+		// 1-Grab, 2-FoodPanda/LINE MAN, 3-其他
+		platformTypeMap := map[string]uint{
+			"grab":    1,
+			"lineman": 2, // LINE MAN
+		}
+		if takeoutType, exists := platformTypeMap[platform]; exists {
+			query = query.Where("ttpos_product_package_takeout.takeout_type = ?", takeoutType)
+		} else {
+			// 未知平台，使用类型 3（其他）
+			query = query.Where("ttpos_product_package_takeout.takeout_type = ?", 3)
+		}
 	}
 
 	// 7. 执行统计

@@ -390,6 +390,9 @@ func (c *BMPTakeoutClient) MarkOrderReady(ctx context.Context, takeoutOrderUuid 
 		if strings.Contains(resp.Message, "since status is in status: ORDER_DELIVERED") {
 			return nil
 		}
+		if strings.Contains(resp.Message, "since status is in status: ORDER_COLLECTED") {
+			return nil
+		}
 		logger.Logger.Warn("MarkOrderReady 返回错误", zap.String("code", resp.Code), zap.String("message", resp.Message), zap.String("takeoutOrderUuid", takeoutOrderUuid))
 		return errors.New(resp.Message)
 	}

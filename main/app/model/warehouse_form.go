@@ -67,6 +67,7 @@ type WarehouseOutForm struct {
 	BaseModel
 	FormNo     string `gorm:"column:form_no;type:varchar(255);default:'';comment:编号"`
 	Scene      int    `gorm:"column:scene;type:tinyint(2);default:0;comment:出库类型,0-sales销售出库 1-adjust调整出库 2-loss损耗出库 3-lost丢失出库 4-delete删除出库"`
+	OrderType  int    `gorm:"column:order_type;type:tinyint(1);default:0;comment:订单类型,0-堂食订单 1-外卖订单"`
 	Remark     string `gorm:"column:remark;type:varchar(255);default:'';comment:备注"`
 	Status     int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,0-success已出库 1-canceled已撤销"`
 	RevokeTime int64  `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
@@ -132,6 +133,7 @@ func (model *WarehouseOutFormItem) IsProductBom() bool {
 }
 
 type Product struct {
+	TakeoutOrderUuid     uint64                 `json:"takeout_order_uuid"`      // 外卖订单uuid
 	SaleOrderProductUuid uint64                 `json:"sale_order_product_uuid"` // 销售订单商品uuid
 	ProductBomUuid       uint64                 `json:"product_bom_uuid"`        // 规格商品或小料的uuid
 	PackageUuid          uint64                 `json:"package_uuid"`            // 套餐的uuid
@@ -175,6 +177,12 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		form.Scene = constant.WarehouseOutFormSceneSales // 销售出库
 		form.AssociatedOrderUuid = saleBillUuid
 		form.OperatorUuid = staffUuid
+		// 根据 takeoutOrderUuid 设置订单类型
+		if takeoutOrderUuid > 0 {
+			form.OrderType = constant.WarehouseOutFormOrderTypeTakeout // 外卖订单
+		} else {
+			form.OrderType = constant.WarehouseOutFormOrderTypeDineIn // 堂食订单
+		}
 		return form
 	}
 

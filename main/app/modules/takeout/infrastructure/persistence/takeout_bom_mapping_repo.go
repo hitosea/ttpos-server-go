@@ -4,13 +4,19 @@ import (
 	"gorm.io/gorm"
 )
 
+// GroupItemBomMapping 套餐商品的 BOM 映射信息
+type GroupItemBomMapping struct {
+	ProductBomUuid uint64  // BOM UUID
+	Num            float64 // 套餐配置的数量
+}
+
 // ITakeoutBomMappingRepo 外卖商品 BOM 映射仓储接口
 type ITakeoutBomMappingRepo interface {
 	// GetProductBomMapping 批量查询外卖商品包UUID到BOM UUID的映射
 	GetProductBomMapping(productPackageUuids []uint64) (map[uint64]uint64, error)
 
-	// GetGroupItemBomMapping 批量查询套餐商品项UUID到BOM UUID的映射
-	GetGroupItemBomMapping(groupItemUuids []uint64) (map[uint64]uint64, error)
+	// GetGroupItemBomMapping 批量查询套餐商品项UUID到BOM映射和数量
+	GetGroupItemBomMapping(groupItemUuids []uint64) (map[uint64]GroupItemBomMapping, error)
 
 	// GetProductBomInfo 批量查询 BOM UUID 获取 BOM 信息（name字段）
 	GetProductBomInfo(bomUuids []uint64) (map[uint64]string, error)
@@ -61,18 +67,21 @@ func (r *takeoutBomMappingRepoImpl) GetProductBomMapping(productPackageUuids []u
 // GetGroupItemBomMapping 批量查询套餐商品项UUID到BOM UUID的映射
 // 查询 ttpos_product_package_group_item 表
 // 返回: map[GroupItemUuid]ProductBomUuid
-func (r *takeoutBomMappingRepoImpl) GetGroupItemBomMapping(groupItemUuids []uint64) (map[uint64]uint64, error) {
+// GetGroupItemBomMapping 批量查询套餐商品的 BOM 映射和数量
+// 返回: map[groupItemUuid]GroupItemBomMapping
+func (r *takeoutBomMappingRepoImpl) GetGroupItemBomMapping(groupItemUuids []uint64) (map[uint64]GroupItemBomMapping, error) {
 	if len(groupItemUuids) == 0 {
-		return make(map[uint64]uint64), nil
+		return make(map[uint64]GroupItemBomMapping), nil
 	}
 
 	var results []struct {
-		Uuid           uint64 `gorm:"column:uuid"`
-		ProductBomUuid uint64 `gorm:"column:product_bom_uuid"`
+		Uuid           uint64  `gorm:"column:uuid"`
+		ProductBomUuid uint64  `gorm:"column:product_bom_uuid"`
+		Num            float64 `gorm:"column:num"`
 	}
 
 	err := r.db.Table("ttpos_product_package_group_item").
-		Select("uuid, product_bom_uuid").
+		Select("uuid, product_bom_uuid, num").
 		Where("uuid IN ?", groupItemUuids).
 		Where("delete_time = 0").
 		Find(&results).Error
@@ -82,9 +91,12 @@ func (r *takeoutBomMappingRepoImpl) GetGroupItemBomMapping(groupItemUuids []uint
 	}
 
 	// 转换为 map
-	mapping := make(map[uint64]uint64, len(results))
+	mapping := make(map[uint64]GroupItemBomMapping, len(results))
 	for _, result := range results {
-		mapping[result.Uuid] = result.ProductBomUuid
+		mapping[result.Uuid] = GroupItemBomMapping{
+			ProductBomUuid: result.ProductBomUuid,
+			Num:            result.Num,
+		}
 	}
 
 	return mapping, nil

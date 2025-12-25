@@ -287,11 +287,7 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		price = int64(minPrice * 100) // 转换为分
 	} else {
 		// 没有规格，优先使用外卖商品价格，否则使用店内商品原价
-		if takeoutProduct.Price > 0 {
-			price = int64(takeoutProduct.Price * 100)
-		} else {
-			price = int64(takeoutProduct.ProductPackage.Price * 100)
-		}
+		price = int64(takeoutProduct.Price * 100)
 	}
 
 	// 创建商品值对象
@@ -501,7 +497,7 @@ func (c *GrabConverter) convertProductFlavors(
 		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId != "" {
 			continue
 		}
-		if bomTakeout.ProductBom.IsSoldOut != 1 && bomTakeout.ProductBom.StockNum > 0 {
+		if bomTakeout.ProductBom.StockNum > 0 {
 			allSoldOut = false
 		}
 		if bomTakeout.ProductBom.Status != 0 && !bomTakeout.ProductBom.IsDelete() {
@@ -552,7 +548,7 @@ func (c *GrabConverter) convertProductFlavors(
 		// 2. 下架（Status = 0）或删除 -> HIDE
 		// 3. 正常 -> AVAILABLE
 		modifierStatus := value_object.AvailableStatusAvailable
-		if bomTakeout.ProductBom.IsSoldOut == 1 || bomTakeout.ProductBom.StockNum <= 0 {
+		if bomTakeout.ProductBom.StockNum <= 0 {
 			// 规格售罄
 			modifierStatus = value_object.AvailableStatusUnavailable
 		}
@@ -620,7 +616,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		if !bom.IsSauce() {
 			continue
 		}
-		if bom.IsSoldOut != 1 && bom.StockNum > 0 {
+		if bom.StockNum > 0 {
 			allSoldOut = false
 		}
 		if !bom.IsDown() {
@@ -664,7 +660,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		// 2. 下架（Status = 0）或删除 -> HIDE
 		// 3. 正常 -> AVAILABLE
 		modifierStatus := value_object.AvailableStatusAvailable
-		if bom.IsSoldOut == 1 || bom.StockNum <= 0 {
+		if bom.StockNum <= 0 {
 			// 小料售罄
 			modifierStatus = value_object.AvailableStatusUnavailable
 		} else if bom.IsDown() {
@@ -673,7 +669,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		}
 
 		modifier := grabfood.NewMenuModifierWithDefaults()
-		modifier.SetId(value_object.PrefixSauce + strconv.FormatUint(bom.ProductSauce.Uuid, 10))
+		modifier.SetId(value_object.PrefixSauce + strconv.FormatUint(bom.Uuid, 10))
 		modifier.SetName(sauceName)
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
@@ -941,35 +937,39 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 
 // isAllFlavorsSoldOut 检查商品是否所有规格都售罄
 // 返回 true 表示所有规格都售罄，false 表示至少有一个规格可用
+// isAllFlavorsSoldOut 检查商品的所有规格是否都不可用（售罄或下架）
 func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackageTakeout) bool {
 	// 如果没有规格，商品本身就不能售罄
 	if len(takeoutProduct.ProductPackage.ProductBoms) == 0 {
 		return false
 	}
-
 	// 收集所有规格
 	hasFlavor := false
-	allSoldOut := true
+	allUnavailable := true
 	for i := range takeoutProduct.ProductPackage.ProductBoms {
 		bom := &takeoutProduct.ProductPackage.ProductBoms[i]
-		// 只检查规格和小料
+		// 只检查规格（Flavor）
 		if !bom.IsFlavor() {
 			continue
 		}
 		hasFlavor = true
-		// 如果有任何一个规格未售罄，则商品不是售罄状态
-		if bom.IsSoldOut != 1 && bom.StockNum > 0 {
-			allSoldOut = false
+		// 检查规格是否可用：
+		// 1. 已下架（Status == 0）
+		// 2. 售罄状态（IsSoldOut == 1）
+		// 3. 库存为0（StockNum <= 0）
+		isOffline := bom.Status == 0 || bom.IsDelete()
+		isSoldOut := bom.StockNum <= 0
+		// 如果有任何一个规格可用（上架且未售罄），则商品可用
+		if !isOffline && !isSoldOut {
+			allUnavailable = false
 			break
 		}
 	}
-
 	// 如果没有规格，返回 false
 	if !hasFlavor {
 		return false
 	}
-
-	return allSoldOut
+	return allUnavailable
 }
 
 // ParseGrabMenu 解析 Grab 菜单数据

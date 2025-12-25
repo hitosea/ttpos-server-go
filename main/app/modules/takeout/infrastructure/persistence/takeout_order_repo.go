@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/model"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -31,6 +32,9 @@ type ITakeoutOrderRepo interface {
 	WhereOrderState(orderState int) DBOption
 	WhereOrderStateIn(orderStates []int) DBOption // 根据多个订单状态筛选
 	WhereTimeRange(startTime, endTime int64) DBOption
+	WhereOrderTimeGt(orderTime int64) DBOption // 订单时间大于指定时间
+	WherePendingOrAbnormal() DBOption          // 待接单或异常订单
+	WherePendingOrAutoAccepted() DBOption      // 待接单或已自动接单
 	WhereSearch(search string) DBOption
 	WhereIsHistoryOrder(isHistory bool) DBOption
 	Limit(limit int) DBOption
@@ -269,6 +273,32 @@ func (r *TakeoutOrderRepoImpl) WhereIsHistoryOrder(isHistory bool) DBOption {
 			return db.Where("order_state not in (4, 5)")
 		}
 		return db
+	}
+}
+
+// WhereOrderTimeGt 订单时间大于指定时间
+func (r *TakeoutOrderRepoImpl) WhereOrderTimeGt(orderTime int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if orderTime > 0 {
+			return db.Where("order_time > ?", orderTime)
+		}
+		return db
+	}
+}
+
+// WherePendingOrAbnormal 待接单或异常订单
+func (r *TakeoutOrderRepoImpl) WherePendingOrAbnormal() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		// order_state = 0 (待接单) OR is_abnormal = 1 (异常订单)
+		return db.Where("order_state = ? OR is_abnormal = ?", 0, 1)
+	}
+}
+
+// WherePendingOrAutoAccepted 待接单或已自动接单
+func (r *TakeoutOrderRepoImpl) WherePendingOrAutoAccepted() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		// order_state = 0 (待接单) OR (order_state = 1 AND order_accepted_type = 'AUTO')
+		return db.Where("order_state = ? OR (order_state = ? AND order_accepted_type = ?)", 0, 1, value_object.TakeoutOrderAcceptedTypeAuto)
 	}
 }
 

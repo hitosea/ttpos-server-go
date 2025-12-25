@@ -18,8 +18,6 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 
-	"github.com/shopspring/decimal"
-
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -80,8 +78,8 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 		}
 	}
 
-	// 4. 创建出库单（SaleBillUuid=0 表示外卖订单）
-	warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, 0, acceptedBy, staffShiftLogUuid, orderUuid)
+	// 4. 创建出库单
+	warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, false, order.Uuid, acceptedBy, staffShiftLogUuid, orderUuid)
 
 	// 5. 在事务中创建出库单和更新销量
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -89,18 +87,8 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 		ctxTx.SetDB(tx)
 
 		// 5.1 创建出库单
-		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
-		for _, warehouseOutForm := range warehouseOutForms {
-			if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
-				// 创建出库单
-				if err := warehouseFormRepo.CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
-					return errors.WithMessage(err, "创建出库单失败")
-				}
-				// 创建出库单明细
-				if err := warehouseFormRepo.CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-					return errors.WithMessage(err, "创建出库单明细失败")
-				}
-			}
+		if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecordAll(warehouseOutForms); err != nil {
+			return errors.WithMessage(err, "创建出库单失败")
 		}
 
 		// 5.2 计算并更新销量
@@ -277,12 +265,11 @@ func (s *takeoutSrv) buildTakeoutOrderDecreaseStockList(ctx context.Context, ord
 		// 4.3 添加到出库清单
 		if productNum > 0 {
 			decreaseStockList = append(decreaseStockList, &model.Product{
-				ProductBomUuid:       bomUuid,
-				PackageUuid:          bom.ProductPackageUuid,
-				SaleOrderProductUuid: 0, // 外卖订单没有 SaleOrderProductUuid
-				SaleOrderUuid:        0, // 外卖订单没有 SaleOrderUuid
-				Num:                  productNum,
-				ProductBomMaterials:  productBomMaterials,
+				TakeoutOrderUuid:    order.Uuid,
+				ProductBomUuid:      bomUuid,
+				PackageUuid:         bom.ProductPackageUuid,
+				Num:                 productNum,
+				ProductBomMaterials: productBomMaterials,
 			})
 		}
 	}
@@ -290,57 +277,13 @@ func (s *takeoutSrv) buildTakeoutOrderDecreaseStockList(ctx context.Context, ord
 	return decreaseStockList, nil
 }
 
-// calculateTakeoutOrderSalesVolume 计算外卖订单销量
-func (s *takeoutSrv) calculateTakeoutOrderSalesVolume(order *takeoutModel.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error) {
-	productBoms := make(map[uint64]float64)     // 规格商品销量 map[BOM UUID]销量
-	productPackages := make(map[uint64]float64) // 套餐商品销量 map[Package UUID]销量
-
-	// 遍历订单商品
-	for _, item := range order.TakeoutOrderItems {
-		// 只处理已映射的商品
-		if item.IsMapped != 1 || item.TtposProductUuid == 0 {
-			continue
-		}
-
-		itemQuantity := float64(item.Quantity)
-
-		// 处理套餐商品
-		if item.IsPackage() {
-			productPackages[item.TtposProductUuid] = decimal.NewFromFloat(productPackages[item.TtposProductUuid]).
-				Add(decimal.NewFromFloat(itemQuantity)).InexactFloat64()
-		}
-
-		// 遍历修饰符，计算规格和加料的销量
-		for _, modifier := range item.TakeoutOrderItemModifiers {
-			if modifier.IsMapped != 1 || modifier.TtposModifierUuid == 0 {
-				continue
-			}
-
-			// 规格(flavor)和加料(sauce)的销量 = modifier数量 × 主商品数量
-			if modifier.IsFlavor() || modifier.IsSauce() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
-				productBoms[modifier.TtposModifierUuid] = decimal.NewFromFloat(productBoms[modifier.TtposModifierUuid]).
-					Add(decimal.NewFromFloat(modifierQuantity)).InexactFloat64()
-			}
-
-			// 套餐商品(commodity)的销量
-			if modifier.IsCommodity() {
-				modifierQuantity := float64(modifier.Quantity) * itemQuantity
-				productBoms[modifier.TtposModifierUuid] = decimal.NewFromFloat(productBoms[modifier.TtposModifierUuid]).
-					Add(decimal.NewFromFloat(modifierQuantity)).InexactFloat64()
-			}
-		}
-	}
-
-	return productBoms, productPackages, nil
-}
-
 // updateTakeoutOrderSalesVolume 更新外卖订单销量
 func (s *takeoutSrv) updateTakeoutOrderSalesVolume(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
 	db := ctx.GetDB()
 
-	// 计算销量
-	productBoms, productPackages, err := s.calculateTakeoutOrderSalesVolume(order)
+	// 计算销量（调用 Domain Service 层方法）
+	takeoutOrderSrv := domainService.NewTakeoutOrderSrv(s.dbm)
+	productBoms, productPackages, err := takeoutOrderSrv.CalculateTakeoutOrderSalesVolume(order)
 	if err != nil {
 		return errors.WithMessage(err, "计算销量失败")
 	}
@@ -374,11 +317,11 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 	systemLock.LockUuidString(lockKey)
 	defer systemLock.UnlockUuidString(lockKey)
 
-	// 获取未减库存的出库单明细（SaleBillUuid=0 表示外卖订单）
+	// 获取未减库存的出库单明细
 	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
 	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
 		func(db *gorm.DB) *gorm.DB {
-			return db.Where("sale_bill_uuid = ?", 0)
+			return db.Where("takeout_order_uuid = ?", takeoutOrderUuid)
 		},
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("reduce_stock = ?", constant.WarehouseOutFormItemReduceStockNotProcessed)
@@ -394,7 +337,6 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 
 	// 按类型分组处理
 	productBoms := make(map[uint64]*model.ProductBom)
-	productPackages := make(map[uint64]*model.ProductPackage)
 	materials := make(map[uint64]map[uint64]float64) // map[materialUuid]map[warehouseUuid]reduceStockNum
 
 	for _, item := range warehouseOutFormItems {
@@ -415,20 +357,6 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 			// 扣减 BOM 库存
 			if productBoms[item.ProductBomUuid] != nil {
 				productBoms[item.ProductBomUuid].StockNum -= item.Num
-
-				// 如果是规格商品，记录 Package 信息用于更新销量
-				if productBoms[item.ProductBomUuid].IsFlavor() || productBoms[item.ProductBomUuid].IsPackageFlavor() {
-					packageUuid := productBoms[item.ProductBomUuid].ProductPackageUuid
-					if packageUuid > 0 && productPackages[packageUuid] == nil {
-						productPackageRepo := repository.NewProductPackageRepo(db)
-						pkg, err := productPackageRepo.GetProductPackage(
-							repository.CommonRepo.WhereByUuid(packageUuid),
-						)
-						if err == nil && pkg != nil {
-							productPackages[packageUuid] = pkg
-						}
-					}
-				}
 			}
 		} else if item.IsMaterial() {
 			// 扣减材料库存
@@ -442,7 +370,7 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 	// 在事务中更新库存
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 更新出库单明细状态
-		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStock(0); err != nil {
+		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
 			return errors.WithMessage(err, "更新出库单明细状态失败")
 		}
 
@@ -462,20 +390,6 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 			for warehouseUuid, reduceStockNum := range warehouseMap {
 				if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(materialUuid, warehouseUuid, -reduceStockNum); err != nil {
 					return errors.WithMessage(err, "更新材料库存失败")
-				}
-			}
-		}
-
-		// 更新 Package 销量
-		productPackageList := make([]*model.ProductPackage, 0, len(productPackages))
-		for _, pkg := range productPackages {
-			productPackageList = append(productPackageList, pkg)
-		}
-		if len(productPackageList) > 0 {
-			for _, pkg := range productPackageList {
-				if err := base.NewProductPackageRepo(tx).UpdateProductPackageActualSaleNum(*pkg); err != nil {
-					logger.Logger.Error("更新Package销量失败", zap.Uint64("packageUuid", pkg.Uuid), zap.Error(err))
-					// 继续处理其他Package，不中断流程
 				}
 			}
 		}
@@ -649,8 +563,9 @@ func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, warehouseOutFormItems
 func (s *takeoutSrv) reduceTakeoutOrderSalesVolume(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
 	db := ctx.GetDB()
 
-	// 计算销量
-	productBoms, productPackages, err := s.calculateTakeoutOrderSalesVolume(order)
+	// 计算销量（调用 Domain Service 层方法）
+	takeoutOrderSrv := domainService.NewTakeoutOrderSrv(s.dbm)
+	productBoms, productPackages, err := takeoutOrderSrv.CalculateTakeoutOrderSalesVolume(order)
 	if err != nil {
 		return errors.WithMessage(err, "计算销量失败")
 	}

@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	takeoutPersistence "ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
@@ -156,7 +157,7 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 	// 包括待接单(0)和已接单配餐中(1)的订单
 	takeoutOrderRepo := takeoutPersistence.NewTakeoutOrderRepo(db)
 	unhandledTakeoutOrderCount, err := takeoutOrderRepo.GetCount(
-		takeoutOrderRepo.WhereOrderStateIn([]int{0, 1}), // 0=待接单, 1=已接单配餐中
+		takeoutOrderRepo.WherePendingOrAutoAccepted(), // 待接单或已自动接单
 	)
 	if err != nil {
 		logger.Logger.Error("获取待接单外卖订单数量失败", zap.Error(err))
@@ -187,6 +188,9 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		},
 		MemberSaleOrder: resp.UnprocessedMemberSaleOrder{
 			List: make([]resp.UnprocessedMemberSaleOrderItem, 0),
+		},
+		TakeoutOrder: resp.UnprocessedTakeoutOrder{
+			List: make([]resp.UnprocessedTakeoutOrderItem, 0),
 		},
 	}
 	thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Unix()
@@ -225,6 +229,18 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	memberSaleOrders, err := memberSaleOrderRepo.GetForCall(memberSaleOrderRepo.WhereUpdateTimeGt(thirtyMinutesAgo))
 	if err != nil {
 		return res, errors.WithMessage(errors.New("获取未处理的外送订单失败"), err.Error())
+	}
+
+	// 查询外卖订单（待接单 或 已接单且自动接单）
+	takeoutOrderRepo := takeoutPersistence.NewTakeoutOrderRepo(ctx.GetDB())
+	takeoutOrders, _, err := takeoutOrderRepo.GetList(
+		takeoutOrderRepo.Offset(0),
+		takeoutOrderRepo.Limit(10),
+		takeoutOrderRepo.WherePendingOrAutoAccepted(),       // 待接单或已自动接单
+		takeoutOrderRepo.WhereOrderTimeGt(thirtyMinutesAgo), // 30分钟内的订单
+	)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("获取未处理的外卖订单失败"), err.Error())
 	}
 
 	// 未处理的呼叫
@@ -278,6 +294,20 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			IsAutoAccept: memberSaleOrder.IsAutoAccept == 1,
 			CancelScene:  memberSaleOrder.CancelScene,
 			SerialNumber: memberSaleOrder.SerialNumber,
+		})
+	}
+
+	// 外卖订单
+	for _, takeoutOrder := range takeoutOrders {
+		res.TakeoutOrder.List = append(res.TakeoutOrder.List, resp.UnprocessedTakeoutOrderItem{
+			Uuid:             takeoutOrder.Uuid,
+			Platform:         takeoutOrder.Platform,
+			ShortOrderNumber: takeoutOrder.ShortOrderNumber,
+			OrderState:       takeoutOrder.OrderState,
+			IsAbnormal:       takeoutOrder.IsAbnormal,
+			IsAutoAccept:     takeoutOrder.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto, // 自动接单
+			Subtotal:         takeoutOrder.Subtotal,
+			OrderTime:        takeoutOrder.OrderTime,
 		})
 	}
 

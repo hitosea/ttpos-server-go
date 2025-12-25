@@ -16448,6 +16448,79 @@
                 }
             }
         },
+        "/cashier/takeout/order/cancel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "取消订单",
+                "parameters": [
+                    {
+                        "description": "取消订单参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderCancelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "取消订单成功"
+                    }
+                }
+            }
+        },
+        "/cashier/takeout/order/check-cancelable": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "检查订单是否可取消",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "订单UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "检查结果",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/response.TakeoutOrderCancelCheckResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/takeout/order/detail": {
             "get": {
                 "consumes": [
@@ -41245,6 +41318,14 @@
                     "description": "外卖分类UUID",
                     "type": "integer"
                 },
+                "describe": {
+                    "description": "卖点描述（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "flavors": {
                     "description": "外卖规格列表",
                     "type": "array",
@@ -41342,6 +41423,10 @@
         "product_resp.ProductTakeoutSimpleInfo": {
             "type": "object",
             "properties": {
+                "status": {
+                    "description": "外卖状态 0-下架 1-上架",
+                    "type": "integer"
+                },
                 "takeout_type": {
                     "description": "外卖类型 1-Grab 2-LINE MAN",
                     "type": "integer"
@@ -50137,6 +50222,23 @@
                 }
             }
         },
+        "request.TakeoutOrderCancelReq": {
+            "type": "object",
+            "required": [
+                "reason_code",
+                "uuid"
+            ],
+            "properties": {
+                "reason_code": {
+                    "description": "取消原因码",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "request.TakeoutOrderEvent": {
             "type": "object",
             "properties": {
@@ -50177,7 +50279,6 @@
         "request.TakeoutOrderRejectReq": {
             "type": "object",
             "required": [
-                "reject_reason_code",
                 "uuid"
             ],
             "properties": {
@@ -61066,6 +61167,14 @@
                         "$ref": "#/definitions/material_resp.MaterialUnit"
                     }
                 },
+                "unit_locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "units": {
                     "description": "单位列表",
                     "type": "array",
@@ -61408,6 +61517,14 @@
                             "$ref": "#/definitions/resp.UnprocessedMemberSaleOrder"
                         }
                     ]
+                },
+                "takeout_order": {
+                    "description": "外卖订单消息，最新十条",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.UnprocessedTakeoutOrder"
+                        }
+                    ]
                 }
             }
         },
@@ -61470,8 +61587,60 @@
                     "description": "未处理的外送订单数量",
                     "type": "integer"
                 },
+                "unprocessed_takeout_count": {
+                    "description": "未处理的外卖订单数量（Grab/Lineman等）",
+                    "type": "integer"
+                },
                 "update_time": {
                     "description": "更新时间",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.UnprocessedTakeoutOrder": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UnprocessedTakeoutOrderItem"
+                    }
+                }
+            }
+        },
+        "resp.UnprocessedTakeoutOrderItem": {
+            "type": "object",
+            "properties": {
+                "is_abnormal": {
+                    "description": "是否异常订单: 0-正常, 1-异常",
+                    "type": "integer"
+                },
+                "is_auto_accept": {
+                    "description": "是否自动接单",
+                    "type": "boolean"
+                },
+                "order_state": {
+                    "description": "订单状态: 0-待接单, 1-已接单配餐中, 2-待骑手接单, 3-骑手配送中, 4-已完成, 5-已拒单",
+                    "type": "integer"
+                },
+                "order_time": {
+                    "description": "下单时间",
+                    "type": "integer"
+                },
+                "platform": {
+                    "description": "平台: grab, lineman, foodpanda",
+                    "type": "string"
+                },
+                "short_order_number": {
+                    "description": "短订单号",
+                    "type": "string"
+                },
+                "subtotal": {
+                    "description": "订单小计(分)",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "外卖订单Uuid",
                     "type": "integer"
                 }
             }
@@ -62107,6 +62276,39 @@
                 }
             }
         },
+        "response.TakeoutOrderCancelCheckResp": {
+            "type": "object",
+            "properties": {
+                "can_cancel": {
+                    "description": "是否可以取消",
+                    "type": "boolean"
+                },
+                "cancel_reasons": {
+                    "description": "可选的取消原因列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TakeoutOrderCancelReason"
+                    }
+                },
+                "non_cancellation_reason": {
+                    "description": "不可取消原因（当 can_cancel=false 时）",
+                    "type": "string"
+                }
+            }
+        },
+        "response.TakeoutOrderCancelReason": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "原因代码",
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "原因描述",
+                    "type": "string"
+                }
+            }
+        },
         "response.TakeoutOrderCurrencyResp": {
             "type": "object",
             "properties": {
@@ -62159,7 +62361,7 @@
                     "type": "string"
                 },
                 "price": {
-                    "type": "integer"
+                    "type": "number"
                 },
                 "quantity": {
                     "type": "integer"
@@ -62175,7 +62377,7 @@
                     }
                 },
                 "tax": {
-                    "type": "integer"
+                    "type": "number"
                 },
                 "uuid": {
                     "type": "integer"
@@ -62233,7 +62435,7 @@
             "type": "object",
             "properties": {
                 "basket_promo": {
-                    "description": "篮子优惠",
+                    "description": "购物车促销",
                     "type": "integer"
                 },
                 "delivery_fee": {
@@ -62381,7 +62583,7 @@
                     ]
                 },
                 "order_type": {
-                    "description": "订单类型",
+                    "description": "订单类型  DELIVERY - 平台配送，RESTAURANT_DELIVERY - 商家配送，TAKEAWAY - 自提/打包，DINEIN - 店内就餐",
                     "type": "string"
                 },
                 "payment_type": {
@@ -62420,7 +62622,7 @@
                     "type": "string"
                 },
                 "total_items": {
-                    "description": "订单商品",
+                    "description": "总商品数量",
                     "type": "integer"
                 },
                 "uuid": {
@@ -62446,6 +62648,10 @@
                 },
                 "max_ready_time": {
                     "description": "最大准备时间",
+                    "type": "integer"
+                },
+                "order_time": {
+                    "description": "下单时间",
                     "type": "integer"
                 },
                 "submit_time": {
