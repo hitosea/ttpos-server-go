@@ -2193,5 +2193,10 @@
     "店内": "In-store",
     "外卖": "Takeout",
     "优惠券抵扣": "Coupon Deduction",
-    "活动抵扣": "Activity Deduction"
+    "活动抵扣": "Activity Deduction",
+    "黑色": "black",
+    "选择分钟": "Select minutes",
+    "可选": "Optional",
+    "商品卖点": "Product selling points",
+    "固定": "Fixed"
 }
