@@ -55,7 +55,7 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 		)
 		ctx.SetCompanyUuid(orderAcceptedEvent.CompanyUuid)
 
-		// 调用 service 处理出库和销量
+		// 调用 service 处理出库和销量（包含原料汇总）
 		if err := takeoutSrv.ProcessTakeoutOrderOutboundAndSales(ctx, orderAcceptedEvent.OrderUuid, orderAcceptedEvent.CompanyUuid, orderAcceptedEvent.AcceptedBy); err != nil {
 			logger.Logger.Error("处理外卖订单出库和销量失败",
 				zap.Uint64("orderUuid", orderAcceptedEvent.OrderUuid),

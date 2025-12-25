@@ -399,6 +399,7 @@ func (s *takeoutOrderSrv) RejectOrder(ctx context.Context, req *request.TakeoutO
 // CallRider 呼叫骑手（标记订单准备完成）
 func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrderCallRiderReq) error {
 	db := ctx.GetDB()
+	userUuid := ctx.GetStaffUuid()
 	currentTime := time.Now().Unix()
 
 	// 查询订单
@@ -434,6 +435,7 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 	// 更新订单状态为待骑手接单
 	updateData := map[string]interface{}{
 		"order_state": grab.ConvertPlatformStateToOrderState(order.PlatformOrderState, valueobject.TakeoutOrderStateRiderPending),
+		"accepted_by": userUuid,
 		"update_time": currentTime,
 	}
 
