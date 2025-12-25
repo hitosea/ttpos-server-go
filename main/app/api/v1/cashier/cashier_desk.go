@@ -766,6 +766,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		}
 		// 返回结果
 		helper.Success(c, res)
+		return
 	}
 
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)

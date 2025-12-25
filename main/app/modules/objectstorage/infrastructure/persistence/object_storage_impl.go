@@ -15,11 +15,11 @@ import (
 
 // ObjectStorageImpl 对象存储实现
 type ObjectStorageImpl[T any] struct {
-	config *service.Config
+	config *service.Config[T]
 }
 
 // NewObjectStorage 创建对象存储实例
-func NewObjectStorage[T any](config *service.Config) service.IObjectStorage[T] {
+func NewObjectStorage[T any](config *service.Config[T]) service.IObjectStorage[T] {
 	return &ObjectStorageImpl[T]{
 		config: config,
 	}
@@ -35,20 +35,12 @@ func (s *ObjectStorageImpl[T]) Get(ctx context.Context, key string, query func()
 	}
 
 	// 从三级缓存获取
-	result, err := s.config.CacheLayer.GET(key, func() (any, error) {
-		return query()
-	})
-
+	result, err := s.config.CacheLayer.GET(key, query)
 	if err != nil {
 		return zero, err
 	}
 
-	// 类型断言
-	if typed, ok := result.(T); ok {
-		return typed, nil
-	}
-
-	return zero, fmt.Errorf("类型断言失败: 期望 %T，实际 %T", zero, result)
+	return result, nil
 }
 
 // BatchGet 批量获取对象
@@ -62,33 +54,14 @@ func (s *ObjectStorageImpl[T]) BatchGet(ctx context.Context, keys []string, quer
 	}
 
 	// 批量从三级缓存获取
-	result, err := s.config.CacheLayer.BATCH_GET(uniqueKeys, func(missedKeys []string) (map[string]any, error) {
-		typedResult, err := query(missedKeys)
-		if err != nil {
-			return nil, err
-		}
-
-		// 转换为 any 类型
-		anyResult := make(map[string]any)
-		for k, v := range typedResult {
-			anyResult[k] = v
-		}
-		return anyResult, nil
-	})
+	result, err := s.config.CacheLayer.BATCH_GET(uniqueKeys, query)
 
 	if err != nil {
 		return nil, err
 	}
 
-	// 类型转换
-	typedResult := make(map[string]T)
-	for k, v := range result {
-		if typed, ok := v.(T); ok {
-			typedResult[k] = typed
-		}
-	}
-
-	return typedResult, nil
+	// 直接返回结果，因为 BATCH_GET 已经返回 map[string]T
+	return result, nil
 }
 
 // Invalidate 使缓存失效
@@ -125,13 +98,13 @@ func (s *ObjectStorageImpl[T]) Warmup(ctx context.Context, keys []string, query 
 
 // InvalidateByCompany 按 company 粒度批量失效缓存
 func (s *ObjectStorageImpl[T]) InvalidateByCompany(ctx context.Context, companyUuid uint64) error {
-	pattern := fmt.Sprintf("%d:*", companyUuid)
+	pattern := fmt.Sprintf("%s:%d:*", SystemPrefix, companyUuid)
 	return s.invalidateByPattern(ctx, pattern)
 }
 
 // InvalidateByCompanyAndType 按 company + object_type 粒度批量失效缓存
 func (s *ObjectStorageImpl[T]) InvalidateByCompanyAndType(ctx context.Context, companyUuid uint64, objectType string) error {
-	pattern := fmt.Sprintf("%d:%s:*", companyUuid, objectType)
+	pattern := fmt.Sprintf("%s:%d:%s:*", SystemPrefix, companyUuid, objectType)
 	return s.invalidateByPattern(ctx, pattern)
 }
 

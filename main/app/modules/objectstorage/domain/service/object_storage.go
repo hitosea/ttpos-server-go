@@ -40,8 +40,8 @@ type IObjectStorage[T any] interface {
 	PreloadWithConfig(ctx context.Context, obj interface{}, associations []entity.Association) error
 }
 
-// Config 配置选项
-type Config struct {
+// Config 配置选项（泛型版本）
+type Config[T any] struct {
 	// TTL 缓存过期时间
 	TTL time.Duration
 
@@ -52,7 +52,7 @@ type Config struct {
 	KeyPrefix string
 
 	// CacheLayer 三级缓存基础包实例
-	CacheLayer repository.CacheLayer
+	CacheLayer repository.CacheLayer[T]
 
 	// ttlMap 不同对象类型的 TTL 配置
 	ttlMap map[string]time.Duration
@@ -60,7 +60,7 @@ type Config struct {
 }
 
 // SetTTL 为指定对象类型设置 TTL
-func (c *Config) SetTTL(objectType string, ttl time.Duration) {
+func (c *Config[T]) SetTTL(objectType string, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -71,7 +71,7 @@ func (c *Config) SetTTL(objectType string, ttl time.Duration) {
 }
 
 // GetTTL 获取指定对象类型的 TTL，如果未配置则返回默认 TTL
-func (c *Config) GetTTL(objectType string) time.Duration {
+func (c *Config[T]) GetTTL(objectType string) time.Duration {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -83,4 +83,3 @@ func (c *Config) GetTTL(objectType string) time.Duration {
 
 	return c.TTL
 }
-

@@ -28,7 +28,7 @@ type IObjectStorageAppService interface {
 // objectStorageAppService 对象存储应用服务实现
 type objectStorageAppService struct {
 	objectStorage service.IObjectStorage[*model.SaleBill]
-	config        *service.Config
+	config        *service.Config[*model.SaleBill]
 	dbm           *database.DBManager
 }
 
@@ -37,11 +37,11 @@ func NewObjectStorageAppService(
 	cacheInstance cache.Cache,
 	dbm *database.DBManager,
 ) IObjectStorageAppService {
-	// 创建缓存适配器
-	cacheAdapter := adapter.NewCacheAdapter(cacheInstance)
+	// 创建缓存适配器（使用 *model.SaleBill 作为泛型类型）
+	cacheAdapter := adapter.NewCacheAdapter[*model.SaleBill](cacheInstance)
 
 	// 创建配置
-	config := &service.Config{
+	config := &service.Config[*model.SaleBill]{
 		TTL:          5 * time.Minute, // 默认 5 分钟
 		DisableCache: false,
 		CacheLayer:   cacheAdapter,
@@ -180,4 +180,3 @@ func (s *objectStorageAppService) PreloadSaleBillAssociations(ctx context.Contex
 	associations := s.GetSaleBillAssociations(ctx, db)
 	return s.objectStorage.PreloadWithConfig(ctx, saleBill, associations)
 }
-

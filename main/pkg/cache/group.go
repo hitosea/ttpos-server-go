@@ -2,6 +2,10 @@ package cache
 
 import (
 	"context"
+
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // cacheGroup 是 ICacheGroup 的具体实现
@@ -38,6 +42,11 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 	// 1. 尝试从 L1 本地缓存读取
 	if g.config.EnableLocalCache {
 		if val, ok := g.l1.get(key); ok {
+			logger.Logger.Debug("缓存命中 L1",
+				zap.String("key", key),
+				zap.String("level", "L1"),
+				zap.String("type", "GET"),
+			)
 			return val, nil
 		}
 	}
@@ -49,16 +58,30 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 			if g.config.EnableLocalCache {
 				g.l1.set(key, val, task.TTL())
 			}
+			logger.Logger.Debug("缓存命中 L2",
+				zap.String("key", key),
+				zap.String("level", "L2"),
+				zap.String("type", "GET"),
+			)
 			return val, nil
 		}
 	}
 
 	// 3. L1/L2 均未命中，使用 Singleflight 合并并发请求
+	logger.Logger.Debug("缓存未命中",
+		zap.String("key", key),
+		zap.String("type", "GET"),
+	)
 	return g.sf.do(ctx, key, func(ctx context.Context) (T, error) {
 		// Double Check: 进入 Singleflight 后再次检查缓存，防止并发下的重复执行
 		// (因为在等待 Singleflight 锁的过程中，可能前面的请求已经填好缓存了)
 		if g.config.EnableRedisCache {
 			if val, ok := g.l2.get(ctx, key); ok {
+				logger.Logger.Debug("Singleflight Double Check 缓存命中 L2",
+					zap.String("key", key),
+					zap.String("level", "L2"),
+					zap.String("type", "GET"),
+				)
 				return val, nil
 			}
 		}
@@ -83,10 +106,23 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 		// 填充缓存
 		ttl := task.TTL()
 		if g.config.EnableRedisCache {
-			_ = g.l2.set(ctx, key, val, ttl)
+			if err := g.l2.set(ctx, key, val, ttl); err == nil {
+				logger.Logger.Debug("缓存写入 L2",
+					zap.String("key", key),
+					zap.String("level", "L2"),
+					zap.String("type", "GET"),
+					zap.Duration("ttl", ttl),
+				)
+			}
 		}
 		if g.config.EnableLocalCache {
 			g.l1.set(key, val, ttl)
+			logger.Logger.Debug("缓存写入 L1",
+				zap.String("key", key),
+				zap.String("level", "L1"),
+				zap.String("type", "GET"),
+				zap.Duration("ttl", ttl),
+			)
 		}
 
 		return val, nil
