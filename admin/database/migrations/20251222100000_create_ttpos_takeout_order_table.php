@@ -43,7 +43,6 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('subtotal', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '小计金额 (price.subtotal)'])
                 ->addColumn('delivery_fee', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '配送费 (price.deliveryFee)'])
                 ->addColumn('small_order_fee', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '小单费用 (price.smallOrderFee)'])
-                ->addColumn('total_amount', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '总金额 (price.total)'])
                 ->addColumn('eater_payment', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '顾客实付 (price.eaterPayment)'])
                 ->addColumn('platform_discount', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '平台优惠 (price.grabFundPromo)'])
                 ->addColumn('merchant_discount', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '商户优惠 (price.merchantFundPromo)'])
