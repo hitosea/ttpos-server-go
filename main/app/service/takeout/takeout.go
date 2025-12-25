@@ -97,10 +97,18 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 			// 销量更新失败不影响出库流程，只记录日志
 		}
 
-		// 5.3 触发库存扣减
-		if err := s.reduceTakeoutOrderStock(tx, order.Uuid); err != nil {
+		// 5.3 触发库存扣减，并获取实际扣减的材料列表
+		materials, err := s.reduceTakeoutOrderStock(tx, order.Uuid)
+		if err != nil {
 			logger.Logger.Error("扣减外卖订单库存失败", zap.Uint64("orderUuid", order.Uuid), zap.Error(err))
 			// 库存扣减失败不影响出库流程，只记录日志
+		}
+
+		// 5.4 汇总并保存外卖订单原料（使用实际扣减的材料数据）
+		if len(materials) > 0 {
+			if err := s.saveTakeoutOrderMaterialsFromMap(ctxTx, orderUuid, staffShiftLogUuid, materials); err != nil {
+				return errors.WithMessage(err, "保存外卖订单原料失败")
+			}
 		}
 
 		return nil
@@ -108,8 +116,30 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 }
 
 // getCurrentStaffShiftLog 获取当前员工班次记录
+// 如果 staffUuid 为空，则返回最新的正在当班的班次记录
 func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*model.StaffShiftLog, error) {
 	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 如果 staffUuid 为空，获取最新的正在当班的班次记录
+	if staffUuid == 0 {
+		shiftLog, err := shiftLogRepo.GetShiftLog(
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", constant.StaffNotHandedOver)
+			},
+			func(db *gorm.DB) *gorm.DB {
+				return db.Order("uuid DESC")
+			},
+		)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return nil, nil
+			}
+			return nil, errors.WithMessage(err, "查询最新班次记录失败")
+		}
+		return &shiftLog, nil
+	}
+
+	// 获取指定员工的当班记录
 	shiftLog, err := shiftLogRepo.GetShiftLog(
 		func(db *gorm.DB) *gorm.DB {
 			return db.Where("staff_uuid = ?", staffUuid)
@@ -125,6 +155,81 @@ func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*mo
 		return nil, errors.WithMessage(err, "查询员工班次记录失败")
 	}
 	return &shiftLog, nil
+}
+
+// saveTakeoutOrderMaterialsFromMap 从材料map汇总并保存外卖订单原料到 ttpos_takeout_order_material 表
+func (s *takeoutSrv) saveTakeoutOrderMaterialsFromMap(
+	ctx context.Context,
+	takeoutOrderUuid uint64,
+	staffShiftLogUuid uint64,
+	materials map[uint64]map[uint64]float64, // map[materialUuid]map[warehouseUuid]num
+) error {
+	if len(materials) == 0 {
+		return nil
+	}
+
+	// 构建原料记录
+	takeoutOrderMaterials := make([]*takeoutModel.TakeoutOrderMaterial, 0)
+	for materialUuid, warehouseMap := range materials {
+		for warehouseUuid, num := range warehouseMap {
+			takeoutOrderMaterials = append(takeoutOrderMaterials, &takeoutModel.TakeoutOrderMaterial{
+				TakeoutOrderUuid:  takeoutOrderUuid,
+				MaterialUuid:      materialUuid,
+				WarehouseUuid:     warehouseUuid,
+				Num:               num,
+				StaffShiftLogUuid: staffShiftLogUuid,
+				IsSummarized:      0, // 初始为未统计
+			})
+		}
+	}
+
+	// 保存原料记录
+	if len(takeoutOrderMaterials) > 0 {
+		materialSrv := domainService.NewTakeoutOrderMaterialSrv(s.dbm)
+		if err := materialSrv.SaveOrderMaterials(ctx, takeoutOrderMaterials); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// saveTakeoutOrderMaterials 从decreaseStockList汇总并保存外卖订单原料到 ttpos_takeout_order_material 表
+// 注意：这个方法已弃用，请使用 saveTakeoutOrderMaterialsFromMap 确保数据一致性
+func (s *takeoutSrv) saveTakeoutOrderMaterials(
+	ctx context.Context,
+	takeoutOrderUuid uint64,
+	staffShiftLogUuid uint64,
+	decreaseStockList []*model.Product,
+) error {
+	if len(decreaseStockList) == 0 {
+		return nil
+	}
+
+	// 构建原料记录
+	takeoutOrderMaterials := make([]*takeoutModel.TakeoutOrderMaterial, 0)
+	for _, product := range decreaseStockList {
+		for _, material := range product.ProductBomMaterials {
+			takeoutOrderMaterials = append(takeoutOrderMaterials, &takeoutModel.TakeoutOrderMaterial{
+				TakeoutOrderUuid:  takeoutOrderUuid,
+				MaterialUuid:      material.MaterialUuid,
+				WarehouseUuid:     material.WarehouseUuid,
+				Num:               material.Num,
+				StaffShiftLogUuid: staffShiftLogUuid,
+				IsSummarized:      0, // 初始为未统计
+			})
+		}
+	}
+
+	// 保存原料记录
+	if len(takeoutOrderMaterials) > 0 {
+		materialSrv := domainService.NewTakeoutOrderMaterialSrv(s.dbm)
+		if err := materialSrv.SaveOrderMaterials(ctx, takeoutOrderMaterials); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // buildTakeoutOrderDecreaseStockList 从外卖订单构建出库清单
@@ -309,8 +414,8 @@ func (s *takeoutSrv) updateTakeoutOrderSalesVolume(ctx context.Context, order *t
 	return nil
 }
 
-// reduceTakeoutOrderStock 扣减外卖订单库存
-func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint64) error {
+// reduceTakeoutOrderStock 扣减外卖订单库存，并返回实际扣减的材料列表
+func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint64) (map[uint64]map[uint64]float64, error) {
 	// 加锁，防止并发扣减库存
 	lockKey := fmt.Sprintf("takeout_order_stock:%d", takeoutOrderUuid)
 	systemLock := lock.NewSystemLock()
@@ -328,11 +433,11 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 		},
 	)
 	if err != nil {
-		return errors.WithMessage(err, "查询出库单明细失败")
+		return nil, errors.WithMessage(err, "查询出库单明细失败")
 	}
 
 	if len(warehouseOutFormItems) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// 按类型分组处理
@@ -368,7 +473,7 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 	}
 
 	// 在事务中更新库存
-	return db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新出库单明细状态
 		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
 			return errors.WithMessage(err, "更新出库单明细状态失败")
@@ -396,6 +501,12 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回实际扣减的材料列表（map[materialUuid]map[warehouseUuid]reduceStockNum）
+	return materials, nil
 }
 
 // RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
@@ -492,6 +603,13 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 		if err := s.reduceTakeoutOrderSalesVolume(ctxTx, order); err != nil {
 			logger.Logger.Error("减少外卖订单销量失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 			// 销量减少失败不影响流程，只记录日志
+		}
+
+		// 5.4 标记外卖订单原料为已汇总，避免被日终统计重复处理
+		takeoutOrderMaterialRepo := persistence.NewTakeoutOrderMaterialRepo(tx)
+		if err := takeoutOrderMaterialRepo.MarkTakeoutOrderMaterialsAsSummarized(orderUuid); err != nil {
+			logger.Logger.Error("标记外卖订单原料为已汇总失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			// 标记失败不影响流程，只记录日志
 		}
 
 		return nil

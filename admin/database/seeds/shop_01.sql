@@ -4092,6 +4092,28 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_promo` (
     KEY `idx_platform_promo` (`platform`, `promo_code`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单促销表(多平台)';
 
+-- 外卖订单原料表
+CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_material` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单原料ID',
+    `takeout_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单ID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
+    `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
+    `num` DECIMAL(20, 4) NOT NULL DEFAULT 0.0000 COMMENT '数量,原料的实际使用数量',
+    `staff_shift_log_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '员工班次记录ID',
+    `is_summarized` INT(11) NOT NULL DEFAULT 0 COMMENT '是否已经统计,0-未统计 1-已统计',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    INDEX `idx_takeout_order_uuid` (`takeout_order_uuid`),
+    INDEX `idx_material_uuid` (`material_uuid`),
+    INDEX `idx_warehouse_uuid` (`warehouse_uuid`),
+    INDEX `idx_staff_shift_log_uuid` (`staff_shift_log_uuid`),
+    INDEX `idx_is_summarized_create_time` (`is_summarized`, `create_time`),
+    INDEX `idx_delete_time` (`delete_time`),
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '外卖订单原料表';
+
 -- 外卖平台配置表(多平台)
 CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
     `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
