@@ -18,6 +18,8 @@ import (
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	inventoryDomainService "ttpos-server-go/app/modules/inventory/domain/service"
 	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
@@ -199,76 +201,127 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv
 	}
 }
 
+// buildProductListCacheKey 构建商品列表缓存 key
+func buildProductListCacheKey(ctx context.Context, req req.ProductListReq) string {
+	companyUuid := ctx.GetCompanyUuid()
+	source := ctx.GetSource()
+
+	// 对推荐商品 UUIDs 排序，确保相同 UUIDs 但顺序不同时 key 一致
+	recommendUuids := make([]uint64, len(req.RecommendProductPackageUuids))
+	copy(recommendUuids, req.RecommendProductPackageUuids)
+	sort.Slice(recommendUuids, func(i, j int) bool {
+		return recommendUuids[i] < recommendUuids[j]
+	})
+
+	// 构建 key：{system_prefix}:{company_uuid}:product_list:{source}:{pageNo}:{pageSize}:{isMember}:{recommendUuids}
+	keyParts := []string{
+		objectStoragePersistence.SystemPrefix,
+		fmt.Sprintf("%d", companyUuid),
+		"product_list",
+		source,
+		fmt.Sprintf("%d", req.PageNo),
+		fmt.Sprintf("%d", req.PageSize),
+		fmt.Sprintf("%v", req.IsMember),
+	}
+
+	// 添加推荐商品 UUIDs
+	if len(recommendUuids) > 0 {
+		uuidStrs := make([]string, len(recommendUuids))
+		for i, uuid := range recommendUuids {
+			uuidStrs[i] = fmt.Sprintf("%d", uuid)
+		}
+		keyParts = append(keyParts, strings.Join(uuidStrs, ","))
+	}
+
+	return strings.Join(keyParts, ":")
+}
+
 // GetProductList 获取产品列表
 func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
-	dbId := ctx.GetDbId()
-	// 获取产品列表
-	commonRepo := repository.NewCommonRepo()
-	sourceMap := map[string]repository.DBOption{
-		constant.SourceCashier:   commonRepo.WhereByIsShowCashier(1),
-		constant.SourceAssistant: commonRepo.WhereByIsShowAssistant(1),
-		constant.SourceTablet:    commonRepo.WhereByIsShowTablet(1),
-		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
-		constant.SourceH5:        commonRepo.WhereByIsShowH5(1),
-		constant.SourceMember:    commonRepo.WhereByIsShowMember(1),
-		constant.SourceKiosk:     commonRepo.WhereByIsShowKiosk(1),
-	}
-	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
-	var dbOptions []repository.DBOption
-	if option, ok := sourceMap[ctx.GetSource()]; ok {
-		dbOptions = append(dbOptions, option)
-	}
+	// 检查是否启用缓存（默认启用）
+	enableCache := false
 
-	// 如果查询推荐商品
-	if len(req.RecommendProductPackageUuids) > 0 {
-		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.RecommendProductPackageUuids))
-	}
-
-	dbOptions = append(dbOptions, commonRepo.WhereByStatus(1), commonRepo.WhereBySoftDelete(), commonRepo.SortWithSort("ASC"), commonRepo.SortWithID("DESC"))
-	if req.IsMember {
-		// 会员端查询商品列表，预加载外送税
-		dbOptions = append(dbOptions, commonRepo.Preload(
-			repository.WithPreload{
-				Query: "TakeoutTax",
-			},
-		))
-	}
-
-	products, total, err := productRepo.GetProductListWithPagination(
-		req.PageNo,
-		req.PageSize,
-		dbOptions...,
-	)
-
-	// 处理错误
-	if err != nil {
-		return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
-	}
-
-	// 如果是会员端查询商品列表
-	if req.IsMember {
-		// 获取外送折扣率
-		// 获取门店业务设置
-		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-		if err != nil {
-			return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取门店业务设置失败")
+	// 查询函数（从数据库获取商品列表）
+	queryFunc := func() (product_resp.ProductListWithPaginationResp, error) {
+		dbId := ctx.GetDbId()
+		// 获取产品列表
+		commonRepo := repository.NewCommonRepo()
+		sourceMap := map[string]repository.DBOption{
+			constant.SourceCashier:   commonRepo.WhereByIsShowCashier(1),
+			constant.SourceAssistant: commonRepo.WhereByIsShowAssistant(1),
+			constant.SourceTablet:    commonRepo.WhereByIsShowTablet(1),
+			constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
+			constant.SourceH5:        commonRepo.WhereByIsShowH5(1),
+			constant.SourceMember:    commonRepo.WhereByIsShowMember(1),
+			constant.SourceKiosk:     commonRepo.WhereByIsShowKiosk(1),
 		}
-		// 获取外送折扣率
-		deliveryPriceRatio := businessSetting.GetDeliveryPriceRatio()
-
-		taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
-		if err != nil {
-			return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取门店设置失败")
+		productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
+		var dbOptions []repository.DBOption
+		if option, ok := sourceMap[ctx.GetSource()]; ok {
+			dbOptions = append(dbOptions, option)
 		}
-		taxFeeType := taxRateSetting.GetTaxFeeType()
+
+		// 如果查询推荐商品
+		if len(req.RecommendProductPackageUuids) > 0 {
+			dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.RecommendProductPackageUuids))
+		}
+
+		dbOptions = append(dbOptions, commonRepo.WhereByStatus(1), commonRepo.WhereBySoftDelete(), commonRepo.SortWithSort("ASC"), commonRepo.SortWithID("DESC"))
+		if req.IsMember {
+			// 会员端查询商品列表，预加载外送税
+			dbOptions = append(dbOptions, commonRepo.Preload(
+				repository.WithPreload{
+					Query: "TakeoutTax",
+				},
+			))
+		}
+
+		products, total, err := productRepo.GetProductListWithPagination(
+			req.PageNo,
+			req.PageSize,
+			dbOptions...,
+		)
+
+		// 处理错误
+		if err != nil {
+			return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
+		}
+
+		// 如果是会员端查询商品列表
+		if req.IsMember {
+			// 获取外送折扣率
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取门店业务设置失败")
+			}
+			// 获取外送折扣率
+			deliveryPriceRatio := businessSetting.GetDeliveryPriceRatio()
+
+			taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
+			if err != nil {
+				return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取门店设置失败")
+			}
+			taxFeeType := taxRateSetting.GetTaxFeeType()
+
+			// 格式化产品列表
+			productList := FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType))
+
+			// 返回响应对象（不注入库存，库存数据在缓存外注入）
+			return product_resp.ProductListWithPaginationResp{
+				List: productList,
+				Meta: dto.PageResponse{
+					PageNo:   req.PageNo,
+					PageSize: req.PageSize,
+					Total:    total,
+				},
+			}, nil
+		}
 
 		// 格式化产品列表
-		productList := FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType))
+		productList := FormatProducts(ctx, products)
 
-		// 注入商品规格和小料的库存
-		s.injectProductListStockNum(ctx, productList)
-
-		// 返回响应对象
+		// 返回响应对象（不注入库存，库存数据在缓存外注入）
 		return product_resp.ProductListWithPaginationResp{
 			List: productList,
 			Meta: dto.PageResponse{
@@ -279,21 +332,44 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		}, nil
 	}
 
-	// 格式化产品列表
-	productList := FormatProducts(ctx, products)
+	var result product_resp.ProductListWithPaginationResp
+	var err error
 
-	// 注入商品规格和小料的库存
-	s.injectProductListStockNum(ctx, productList)
+	if enableCache {
+		// 使用缓存
+		// 构建缓存 key
+		cacheKey := buildProductListCacheKey(ctx, req)
 
-	// 返回响应对象
-	return product_resp.ProductListWithPaginationResp{
-		List: productList,
-		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    total,
-		},
-	}, nil
+		// 创建缓存组配置
+		groupConfig := cache.GroupConfig{
+			Name:             "object-storage-product-list",
+			EnableLocalCache: true,
+			EnableRedisCache: true,
+			NegativeTTL:      30 * time.Second,
+		}
+
+		// 创建缓存层
+		cacheLayer := objectStorageAdapter.NewCacheGroupAdapter[product_resp.ProductListWithPaginationResp](
+			groupConfig,
+			cache.Global,
+			2*time.Minute, // 默认 TTL 5 分钟
+		)
+
+		// 从缓存获取或查询数据库
+		result, err = cacheLayer.GET(cacheKey, queryFunc)
+	} else {
+		// 不使用缓存，直接查询数据库
+		result, err = queryFunc()
+	}
+
+	if err != nil {
+		return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
+	}
+
+	// 在缓存外注入商品规格和小料的库存（库存数据实时变化，不应被缓存）
+	s.injectProductListStockNum(ctx, result.List)
+
+	return result, nil
 }
 
 type FormatProductsFn func(opts *FormatProductsOption)
