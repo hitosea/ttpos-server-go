@@ -97,7 +97,7 @@ func (s *takeoutOrderSrv) GetList(ctx context.Context, req *request.TakeoutOrder
 			ShortOrderNumber: order.ShortOrderNumber,
 			OrderState:       order.OrderState,
 			IsAbnormal:       order.IsAbnormal,
-			Subtotal:         order.Subtotal,
+			Subtotal:         order.EaterPayment,
 			TotalItems:       len(order.TakeoutOrderItems),
 		}
 		list = append(list, orderResp)
