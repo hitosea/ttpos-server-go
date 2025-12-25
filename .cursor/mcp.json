@@ -12,6 +12,7 @@
       "url": "https://graph.hitosea.com/mcp/?group_id=ttpos"
     },
     "Serena": {
+      "type": "stdio",
       "command": "uvx",
       "args": [
         "--from",
@@ -21,7 +22,7 @@
         "--context",
         "ide",
         "--project",
-        "ttpos-server-go"
+        "${workspaceFolder}"
       ]
     }
   }
