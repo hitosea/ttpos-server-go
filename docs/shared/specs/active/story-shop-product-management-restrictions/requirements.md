@@ -334,10 +334,12 @@ END IF
      min_selection = 0
    END IF
    
-   IF max_selection > 0 THEN
-     max_selection = max_selection  // 保留用户设置的值
-   ELSE
+   // 处理最大可选数量
+   IF is_open_input == false OR max_selection == 0 THEN
+     // 未开启最大可选限制 或 未设置最大可选值
      max_selection = 属性组中属性的数量  // 默认值：不限制
+   ELSE IF max_selection > 0 THEN
+     max_selection = max_selection  // 保留用户设置的值
    END IF
    ```
    
@@ -356,11 +358,12 @@ END IF
      END IF
    END IF
    
-   // max_selection 同新增逻辑
-   IF max_selection > 0 THEN
-     max_selection = max_selection
-   ELSE
-     max_selection = 属性组中属性的数量
+   // 处理最大可选数量
+   IF is_open_input == false OR max_selection == 0 THEN
+     // 未开启最大可选限制 或 未设置最大可选值
+     max_selection = 属性组中属性的数量  // 默认值：不限制
+   ELSE IF max_selection > 0 THEN
+     max_selection = max_selection  // 保留用户设置的值
    END IF
    ```
    
@@ -374,10 +377,12 @@ END IF
      sauce_min_selection = 0
    END IF
    
-   IF sauce_max_selection > 0 THEN
-     sauce_max_selection = sauce_max_selection  // 保留用户设置的值
-   ELSE
+   // 处理最大可选数量
+   IF sauce_is_open_input == false OR sauce_max_selection == 0 THEN
+     // 未开启最大可选限制 或 未设置最大可选值
      sauce_max_selection = 加料值数量  // 默认值：不限制
+   ELSE IF sauce_max_selection > 0 THEN
+     sauce_max_selection = sauce_max_selection  // 保留用户设置的值
    END IF
    ```
    
@@ -396,11 +401,12 @@ END IF
      END IF
    END IF
    
-   // sauce_max_selection 同新增逻辑
-   IF sauce_max_selection > 0 THEN
-     sauce_max_selection = sauce_max_selection
-   ELSE
-     sauce_max_selection = 加料值数量
+   // 处理最大可选数量
+   IF sauce_is_open_input == false OR sauce_max_selection == 0 THEN
+     // 未开启最大可选限制 或 未设置最大可选值
+     sauce_max_selection = 加料值数量  // 默认值：不限制
+   ELSE IF sauce_max_selection > 0 THEN
+     sauce_max_selection = sauce_max_selection  // 保留用户设置的值
    END IF
    ```
    
@@ -564,4 +570,5 @@ END IF
 | 1.9  | 2025-12-24 | AI     | 补充v2.11编辑商品时的兼容规则：保留用户已设置的min_selection原值 |
 | 1.10 | 2025-12-24 | AI     | 明确v2.12无论新增还是编辑都需要根据min_selection自动标记必选状态 |
 | 1.11 | 2025-12-24 | AI     | 新增外卖商品编辑权限限制：总店同步的外卖商品只能编辑价格和上下架状态 |
+| 1.12 | 2025-12-25 | 曾振华 | 补充v2.11关闭最大可选功能时的兼容性处理逻辑：需考虑is_open_input字段 |
 

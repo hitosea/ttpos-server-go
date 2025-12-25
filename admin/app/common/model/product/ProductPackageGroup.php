@@ -92,9 +92,6 @@ class ProductPackageGroup extends BaseModel
                 if ($requiredOrDefaultCount > $maxCount) {
                     throw new \Exception('必选或默认不可大于最大可选数量');
                 }
-                if ($requiredOrDefaultCount < $minCount) {
-                    throw new \Exception('必选或默认不可小于最小可选数量');
-                }
             }
             
             $insertGroups[] = [
@@ -206,9 +203,6 @@ class ProductPackageGroup extends BaseModel
                 }
                 if ($requiredOrDefaultCount > $maxCount) {
                     throw new \Exception('必选或默认不可大于最大可选数量');
-                }
-                if ($requiredOrDefaultCount < $minCount) {
-                    throw new \Exception('必选或默认不可小于最小可选数量');
                 }
             }
             

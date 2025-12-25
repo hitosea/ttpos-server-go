@@ -133,12 +133,6 @@ class Product extends ProductModel
                     $defaultSelectCount = count(array_filter($attr['default_select'], function ($item) {
                         return $item == 1;
                     }));
-
-                    // 默认勾选数量必须在可选范围内
-                    if ($defaultSelectCount < $minSelect) {
-                        $this->error = '默认勾选数量不能少于最小可选数量';
-                        return false;
-                    }
                     if ($maxSelect > 0 && $defaultSelectCount > $maxSelect) {
                         $this->error = '默认勾选数量不能超过最大可选数量';
                         return false;
@@ -258,11 +252,6 @@ class Product extends ProductModel
                 return isset($item['is_default']) && $item['is_default'] == 1;
             }));
 
-            // 默认勾选数量必须在可选范围内
-            if ($defaultSelectCount < $minSelect) {
-                $this->error = '默认勾选数量不能少于最小可选数量';
-                return false;
-            }
             if ($maxSelect > 0 && $defaultSelectCount > $maxSelect) {
                 $this->error = '默认勾选数量不能超过最大可选数量';
                 return false;
@@ -659,11 +648,6 @@ class Product extends ProductModel
                         return $item == 1;
                     }));
 
-                    // 默认勾选数量必须在可选范围内
-                    if ($defaultSelectCount < $minSelect) {
-                        $this->error = '默认勾选数量不能少于最小可选数量';
-                        return false;
-                    }
                     if ($maxSelect > 0 && $defaultSelectCount > $maxSelect) {
                         $this->error = '默认勾选数量不能超过最大可选数量';
                         return false;
@@ -788,11 +772,6 @@ class Product extends ProductModel
                 return $item['default_select'] == 1;
             }));
 
-            // 默认勾选数量必须在可选范围内
-            if ($defaultSelectCount < $minSelect) {
-                $this->error = '默认勾选数量不能少于最小可选数量';
-                return false;
-            }
             if ($maxSelect > 0 && $defaultSelectCount > $maxSelect) {
                 $this->error = '默认勾选数量不能超过最大可选数量';
                 return false;

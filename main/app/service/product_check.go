@@ -351,8 +351,9 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			}
 
 			// 处理 max_selection 默认值
-			if attributeGroupReq.MaxSelection == 0 {
-				// 未设置最大可选数量，默认为属性值数量
+			// 考虑 is_open_input 字段：关闭最大可选功能 或 未设置最大可选值
+			if !attributeGroupReq.IsOpenInput || attributeGroupReq.MaxSelection == 0 {
+				// 未开启最大可选限制 或 未设置最大可选值，默认为属性值数量（表示不限制）
 				attributes[idx].MaxSelection = attributeCount
 			}
 		}
@@ -501,10 +502,12 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 		}
 
 		// 处理 max_selection 默认值
-		if param.MaxSelection == 0 {
-			// 未设置最大可选数量，默认为加料值数量
+		// 考虑 is_open_input 字段：关闭最大可选功能 或 未设置最大可选值
+		if !param.IsOpenInput || param.MaxSelection == 0 {
+			// 未开启最大可选限制 或 未设置最大可选值，默认为加料值数量（表示不限制）
 			param.MaxSelection = sauceCount
 		}
+
 	}
 
 	// v2.12客户端 → v2.12后端：新字段自动计算旧字段（所有版本都执行）

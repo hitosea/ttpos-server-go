@@ -116,12 +116,12 @@
 ```sql
 -- 新增字段
 ALTER TABLE `ttpos_product_package` 
-ADD COLUMN `sauce_min_selection` INT NOT NULL DEFAULT 0 COMMENT '小料最小选择数量' AFTER `sauce_max_selection`;
+ADD COLUMN `sauce_min_selection` INT NOT NULL DEFAULT 0 COMMENT '小料最小选择数量' AFTER `sauce_required`;
 
 -- 修改说明
 -- sauce_required (已存在) - 标记为废弃，保留用于兼容
+-- sauce_min_selection (新增) - 表示最小选择数量（新增在 sauce_required 之后）
 -- sauce_max_selection (已存在) - 继续使用，表示最大选择数量
--- sauce_min_selection (新增) - 表示最小选择数量
 ```
 
 #### 3.1.2 ttpos_product_package_attribute_group（属性组表）
@@ -488,8 +488,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
         if attr.MinSelection == 0 && attr.IsMust == 1 {
             req.Attributes[idx].MinSelection = 1
         }
-        // 如果max_selection为0，设置为属性值数量
-        if attr.MaxSelection == 0 {
+        // 处理max_selection：考虑is_open_input字段
+        // 关闭最大可选功能 或 未设置最大可选值时，默认为属性值数量（表示不限制）
+        if !attr.IsOpenInput || attr.MaxSelection == 0 {
             req.Attributes[idx].MaxSelection = uint(len(attr.Attributes))
         }
     }
@@ -498,8 +499,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
     if req.Sauce.SauceMinSelection == 0 && req.Sauce.SauceRequired == 1 {
         req.Sauce.SauceMinSelection = 1
     }
-    // 如果sauce_max_selection为0，设置为加料值数量
-    if req.Sauce.SauceMaxSelection == 0 {
+    // 处理sauce_max_selection：考虑is_open_input字段
+    // 关闭最大可选功能 或 未设置最大可选值时，默认为加料值数量（表示不限制）
+    if !req.Sauce.IsOpenInput || req.Sauce.SauceMaxSelection == 0 {
         req.Sauce.SauceMaxSelection = uint(len(req.Sauce.Sauces))
     }
     
@@ -1358,4 +1360,6 @@ OptionalMinCount: productPackageGroup.OptionalMinCount,
 | 1.1  | 2025-12-22 | 曾振华 | 修改套餐分组字段方案：保持 optional_count 字段名不变，只修改注释 |
 | 1.2  | 2025-12-22 | 曾振华 | 移除前端设计章节，仅保留后端Go代码设计                          |
 | 1.3  | 2025-12-22 | 曾振华 | 新增版本兼容性设计章节，详细说明v2.11和v2.12的兼容处理策略      |
+| 1.4  | 2025-12-24 | AI     | 移除删除限制设计，允许直接删除商品和规格                         |
+| 1.5  | 2025-12-25 | 曾振华 | 补充v2.11关闭最大可选功能时的兼容性处理逻辑：需考虑is_open_input字段 |
 
