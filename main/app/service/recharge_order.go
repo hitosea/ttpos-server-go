@@ -1441,19 +1441,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		}
 
 		returnOrderAmounts := make([]model.ReturnOrderAmount, 0, len(order.PaymentOrders))
-		paymentOrderRepo := repository.NewPaymentOrderRepo(tx)
+		// paymentOrderRepo := repository.NewPaymentOrderRepo(tx)
 
 		// 退款现金金额
 		var refundCashAmount float64
 		var currencyUnit string
 		for _, paymentOrder := range order.PaymentOrders {
 			// 标记删除
-			if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
-				"status":      constant.PaymentOrderStatusRefund,
-				"delete_time": time.Now().Unix(),
-			}); err != nil {
-				return errors.WithMessage(errors.ErrInternal, err.Error())
-			}
+			// if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
+			// 	"status":      constant.PaymentOrderStatusRefund,
+			// 	"delete_time": time.Now().Unix(),
+			// }); err != nil {
+			// 	return errors.WithMessage(errors.ErrInternal, err.Error())
+			// }
 
 			amount := paymentOrder.Amount
 			if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
