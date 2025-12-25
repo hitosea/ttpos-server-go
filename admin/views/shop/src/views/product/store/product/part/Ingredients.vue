@@ -6,7 +6,7 @@
     <div>
       <div class="mt16">
         <el-form-item for="no_click" :label="$t('商品加料：')">
-          <el-button type="primary" :disabled="form.model.product_feed.length >= 10 || erp_is_open == 1" @click="addIngredients">{{ $t('添加加料') }}+</el-button>
+          <el-button type="primary" :disabled="form.model.product_feed.length >= 100 || erp_is_open == 1" @click="addIngredients">{{ $t('添加加料') }}+</el-button>
         </el-form-item>
         <!--加料-->
         <template v-if="form.model.product_feed.length > 0">
@@ -141,7 +141,7 @@
         <!-- </el-form-item> -->
       </div>
     </div>
-    <addFeed v-if="open_add_feed" :open="open_add_feed" :feed_ids="feed_ids" :maxSelect="10" @close="handleClose" />
+    <addFeed v-if="open_add_feed" :open="open_add_feed" :feed_ids="feed_ids" :maxSelect="100" @close="handleClose" />
   </div>
 </template>
 

@@ -133,7 +133,7 @@
       </el-card>
     </div>
 
-    <el-button :disabled="form.model.package_group.length >= 5" class="mt16" type="primary" @click="addGroup">{{ $t('添加分组') }}</el-button>
+    <el-button :disabled="form.model.package_group.length >= 100" class="mt16" type="primary" @click="addGroup">{{ $t('添加分组') }}</el-button>
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
