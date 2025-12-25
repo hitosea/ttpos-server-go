@@ -4924,8 +4924,6 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 					}
 				}
 				// 创建新的备注预设原因记录
-				logger.Logger.Info("创建新的备注预设原因记录-222222", zap.Any("saleOrderProduct", saleOrderProduct))
-				logger.Logger.Info("创建新的备注预设原因记录-333333", zap.Any("saleOrderProduct.OrderItemRemarks", saleOrderProduct.OrderItemRemarks))
 				if len(saleOrderProduct.OrderItemRemarks) > 0 {
 					insertReasonList := make([]*model.SaleOrderProductReason, 0)
 					for _, orderItemRemark := range saleOrderProduct.OrderItemRemarks {
@@ -4939,21 +4937,6 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 						}
 					}
 				}
-				// if saleOrderProduct.IsPackageProduct() {
-				// 	for _, subProduct := range saleOrderProduct. {
-				// 		insertReasonList := make([]*model.SaleOrderProductReason, 0)
-				// 		for _, orderItemRemark := range subProduct.OrderItemRemarks {
-				// 			if orderItemRemark.ID == 0 {
-				// 				insertReasonList = append(insertReasonList, orderItemRemark)
-				// 			}
-				// 		}
-				// 		if len(insertReasonList) > 0 {
-				// 			if err := reasonRepo.CreateSaleOrderProductReasons(insertReasonList); err != nil {
-				// 				return errors.WithMessage(err, "保存备注预设原因失败")
-				// 			}
-				// 		}
-				// 	}
-				// }
 			}
 			// 保存自助餐顾客
 			for _, buffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
