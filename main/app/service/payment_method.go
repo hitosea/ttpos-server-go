@@ -116,15 +116,15 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 	opts = append(opts, paymentMethodRepo.WithLogoFile(), paymentMethodRepo.WithQrcodeFile())
 	paymentMethods := paymentMethodRepo.GetPaymentMethodList(opts...)
 
-	// // 连连支付是否可用
-	// lianLianPayAvailable := true
-	// if err := NewPaymentRepo(ctx, s.dbm).ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
-	// 	lianLianPayAvailable = false
-	// }
+	// 连连支付是否可用
+	lianLianPayAvailable := true
+	if err := NewPaymentRepo(ctx, s.dbm).ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		lianLianPayAvailable = false
+	}
 
 	paymentMethodItems := make([]resp.PaymentMethodItem, 0, len(paymentMethods))
 	for _, method := range paymentMethods {
-		// isAvailable := true
+		isAvailable := true
 		// 不显示免单
 		if method.Code == constant.PaymentMethodCodeFreePay {
 			continue
@@ -138,31 +138,35 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			(companySetting.IsOpenMember != 1 || typ == constant.PaymentMethodShowRecharge) {
 			continue
 		}
-		// // LianLianPay 没有配置支付信息 不显示
-		// if !lianLianPayAvailable && method.IsLianLianPay() {
-		// 	if method.IsHeadquarterPayment() {
-		// 		isAvailable = false
-		// 	} else {
-		// 		continue
-		// 	}
-		// }
+		// LianLianPay 没有配置支付信息 不显示
+		if !lianLianPayAvailable && method.IsLianLianPay() {
+			if method.IsHeadquarterPayment() {
+				isAvailable = false
+			} else {
+				continue
+			}
+		}
 		var logo, qrcode string
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 		if method.LogoFile != nil {
 			logo = method.LogoFile.GetUrl(baseUrl)
 		}
 		if logo == "" && method.DefaultImg != "" {
-			logo = strings.TrimRight(baseUrl, "/") + method.DefaultImg
+			if strings.HasPrefix(method.DefaultImg, "http") || strings.HasPrefix(method.DefaultImg, "https") {
+				logo = method.DefaultImg
+			} else {
+				logo = strings.TrimRight(baseUrl, "/") + method.DefaultImg
+			}
 		}
 		if method.QrcodeFile != nil {
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
-		// // 总部支付方式
-		// if method.IsHeadquarterPayment() {
-		// 	if method.Source == constant.PaymentMethodSourceDefault && qrcode == "" {
-		// 		isAvailable = false
-		// 	}
-		// }
+		// 总部支付方式
+		if method.IsHeadquarterPayment() {
+			if method.Source == constant.PaymentMethodSourceDefault && qrcode == "" {
+				isAvailable = false
+			}
+		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:    i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
 			Uuid:          method.Uuid,
@@ -173,7 +177,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			Qrcode:        qrcode,
 			Code:          method.Code,
 			Source:        method.Source,
-			IsAvailable:   true,
+			IsAvailable:   isAvailable,
 		})
 	}
 	return resp.PaymentMethodList{List: paymentMethodItems}
@@ -767,7 +771,7 @@ func (s *paymentMethodSrv) GetLogo(ctx context.Context, method *model.PaymentMet
 		}
 	}
 	if logo == "" && method.DefaultImg == "" {
-		logo = baseUrl + "image/pay/ja_pay.png"
+		logo = baseUrl + "/image/pay/ja_pay.png"
 	}
 
 	return logo
