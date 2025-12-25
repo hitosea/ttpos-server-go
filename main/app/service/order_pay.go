@@ -1634,7 +1634,11 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
 		}
 		if logoUrl == "" && paymentMethod.DefaultImg != "" {
-			logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+			if strings.HasPrefix(paymentMethod.DefaultImg, "http") || strings.HasPrefix(paymentMethod.DefaultImg, "https") {
+				logoUrl = paymentMethod.DefaultImg
+			} else {
+				logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+			}
 		}
 		if paymentMethod.QrcodeFile != nil {
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
