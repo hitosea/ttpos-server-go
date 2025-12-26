@@ -53,11 +53,15 @@ func (s *sShopProviderCfg) UpsertShopProviderCfg(ctx context.Context, shopUUID u
 	}
 
 	if existing != nil {
+		updateMerchantID := merchantID
+		if merchantID == "" {
+			updateMerchantID = existing.ProviderMerchantId
+		}
 		// 更新（不更新 uuid 和 created_at）
 		_, err = dao.ShopProviderCfg.Ctx(ctx).
 			Where(dao.ShopProviderCfg.Columns().Uuid, existing.Uuid).
 			Data(g.Map{
-				dao.ShopProviderCfg.Columns().ProviderMerchantId: merchantID,
+				dao.ShopProviderCfg.Columns().ProviderMerchantId: updateMerchantID,
 				dao.ShopProviderCfg.Columns().ProviderShopStatus: string(status),
 				dao.ShopProviderCfg.Columns().UpdatedAt:          now,
 			}).Update()
