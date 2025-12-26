@@ -1,8 +1,6 @@
 package cashier
 
 import (
-	"strconv"
-
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -260,28 +258,18 @@ func (h *TakeoutHandler) CancelOrder(c *gin.Context) {
 // @Tags 收银端.外卖管理
 // @Accept json
 // @Produce json
-// @Param uuid query uint64 true "订单UUID"
+// @Param uuid  body request.TakeoutOrderPrintReq true "订单UUID"
 // @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/takeout/order/print [post]
 func (h *TakeoutHandler) PrintOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
-
-	// 从 Query 参数获取订单 UUID
-	uuidStr := c.Query("uuid")
-	if uuidStr == "" {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("uuid参数不能为空"))
+	var req request.TakeoutOrderPrintReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-
-	// 转换为 uint64
-	uuid, err := strconv.ParseUint(uuidStr, 10, 64)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("uuid参数格式错误"))
-		return
-	}
-
 	// 调用打印服务
-	printerData, err := h.takeoutSrv.PrintTakeoutOrder(ctx, uuid)
+	printerData, err := h.takeoutSrv.PrintTakeoutOrder(ctx, req.Uuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

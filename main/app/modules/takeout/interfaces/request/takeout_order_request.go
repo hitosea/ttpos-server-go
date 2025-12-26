@@ -70,6 +70,11 @@ type TakeoutOrderCancelReq struct {
 	ReasonCode string `json:"reason_code" binding:"required"` // 取消原因码
 }
 
+// TakeoutOrderPrintReq 打印订单请求
+type TakeoutOrderPrintReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 订单UUID
+}
+
 // TakeoutSettingsGetReq 获取配置请求
 type TakeoutSettingsGetReq struct {
 	Platform string `json:"platform" binding:"required"` // grab,foodpanda,lineman
