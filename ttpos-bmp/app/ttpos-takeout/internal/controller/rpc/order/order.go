@@ -2,11 +2,14 @@ package order
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/grab/grabfood-api-sdk-go"
 	"google.golang.org/protobuf/types/known/anypb"
 
+	"ttpos-bmp/app/ttpos-takeout/api/grab"
 	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	"ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
@@ -69,6 +72,19 @@ func (c *Controller) PrepareOrder(ctx context.Context, req *api.PrepareOrderReq)
 	res, err := service.Order().PrepareOrder(ctx, req)
 	if err != nil {
 		g.Log().Errorf(ctx, "准备订单失败: %v", err)
+		// 如果是 grab 订单，返回异常的详情
+		var apiErr *grabfood.GenericOpenAPIError
+		if errors.As(err, &apiErr) {
+			dataAny, _ := anypb.New(&grab.ErrorDetail{
+				Body: string(apiErr.Body()),
+			})
+			return &takeout.ApiResponse{
+				Code:    string(consts.CodeServiceError),
+				Message: err.Error(),
+				Data:    dataAny,
+			}, nil
+
+		}
 		return &takeout.ApiResponse{
 			Code:    string(consts.CodeServiceError),
 			Message: err.Error(),
