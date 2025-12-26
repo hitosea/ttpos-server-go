@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"slices"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -1218,112 +1220,172 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 
 // CountBusinessSummaryReq 统计综合运营请求
 type CountBusinessSummaryReq struct {
-	StartTime        int64 // 查询开始时间戳
-	EndTime          int64 // 查询结束时间戳
-	Cycle            int   // 周期: 0=按日、1=按月
-	PageNo, PageSize int   // 页码, 每页大小
+	StartTime        int64  // 查询开始时间戳
+	EndTime          int64  // 查询结束时间戳
+	Cycle            int    // 周期: 0=按日、1=按月
+	PageNo, PageSize int    // 页码, 每页大小
+	Timezone         string // 业务时区，如 "Asia/Shanghai"
+}
+
+// businessSummaryRawData 综合运营统计原始数据
+type businessSummaryRawData struct {
+	FinishTime         int64   // 完成时间戳
+	SaleBillUuid       uint64  // 销售账单UUID
+	OrderAmount        float64 // 订单金额
+	PayAmount          float64 // 支付金额
+	RefundAmount       float64 // 退款金额
+	MealNum            uint    // 用餐人数
+	DeskUuid           uint64  // 桌台UUID
+	DeskOrderAmount    float64 // 桌台订单金额
+	InstantOrderAmount float64 // 点餐订单金额
+	TakeoutOrderAmount float64 // 外送订单金额
 }
 
 // CountBusinessSummary 统计综合运营
 func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData) {
-	var result []model.StatisticsBusinessSummaryData
-
-	// 根据周期类型确定日期格式
-	var dateFormat string
-	if req.Cycle == 1 {
-		dateFormat = "%Y-%m" // 按月
-	} else {
-		dateFormat = "%Y-%m-%d" // 按日
-	}
-
-	// 1. 计算总数
-	var total int64
-	totalQuery := fmt.Sprintf(`
-		SELECT COUNT(DISTINCT FROM_UNIXTIME(sb.finish_time, '%s'))
+	// 1. 查询原始数据（不分组）
+	var rawData []businessSummaryRawData
+	rawQuery := `
+		SELECT 
+			sb.finish_time,
+			sb.uuid AS sale_bill_uuid,
+			SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
+			SUM(so_agg.payment_amount) AS pay_amount,
+			SUM(IFNULL(ro_summary.refund_amount, 0)) AS refund_amount,
+			MAX(sb.meal_num) AS meal_num,
+			MAX(sb.desk_uuid) AS desk_uuid,
+			SUM(IF(sb.bill_type = 0, so_agg.origin_amount, 0)) as desk_order_amount,
+			SUM(IF(sb.bill_type = 1, so_agg.origin_amount, 0)) as instant_order_amount,
+			SUM(IF(sb.bill_type = 2, so_agg.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount
 		FROM ttpos_sale_bill AS sb
-		LEFT JOIN ttpos_sale_order AS so ON sb.uuid = so.sale_bill_uuid AND so.delete_time = ? AND so.status = ?
-		LEFT JOIN ttpos_member_sale_order AS mso ON so.uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
+		LEFT JOIN (
+			SELECT 
+				so.sale_bill_uuid,
+				so.uuid AS so_uuid,
+				so.origin_amount,
+				so.payment_amount
+			FROM ttpos_sale_order AS so
+			WHERE so.delete_time = ? AND so.status = ?
+		) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
+		LEFT JOIN (
+			SELECT 
+				related_order_uuid,
+				SUM(refund_amount) AS refund_amount
+			FROM ttpos_return_order
+			WHERE delete_time = ?
+			GROUP BY related_order_uuid
+		) AS ro_summary ON so_agg.so_uuid = ro_summary.related_order_uuid
+		LEFT JOIN ttpos_member_sale_order AS mso ON so_agg.so_uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
 		WHERE sb.delete_time = ?
 			AND sb.status = ?
 			AND sb.finish_time >= ?
 			AND sb.finish_time <= ?
-			AND (sb.bill_type != ? OR (sb.bill_type = ? AND so.uuid IS NOT NULL AND mso.uuid IS NOT NULL))
-	`, dateFormat)
-	r.db.Raw(totalQuery,
-		constant.NotDeleted, constant.SaleOrderStatusFinish,
-		constant.NotDeleted, constant.MemberSaleOrderStatusCompleted,
-		constant.NotDeleted, constant.SaleBillStatusComplete,
-		req.StartTime, req.EndTime,
-		constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout,
-	).Scan(&total)
-
-	// 2. 构建查询SQL
-	// 使用子查询先对 ro 进行聚合，避免因为 ro 有多条记录导致 so 重复计算
-	query := fmt.Sprintf(`
-		SELECT 
-			date,
-			SUM(order_amount) AS order_amount,
-			SUM(pay_amount) AS pay_amount,
-			SUM(refund_amount) AS refund_amount,
-			COUNT(DISTINCT sale_bill_uuid) AS order_num,
-			SUM(meal_num) AS meal_num,
-			COUNT(CASE WHEN desk_uuid > 0 THEN desk_uuid END) AS desk_num,
-			SUM(desk_order_amount) AS desk_order_amount,
-			SUM(instant_order_amount) AS instant_order_amount,
-			SUM(takeout_order_amount) AS takeout_order_amount
-		FROM (
-			SELECT 
-				FROM_UNIXTIME(sb.finish_time, '%s') AS date,
-				SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
-				SUM(so_agg.payment_amount) AS pay_amount,
-				SUM(IFNULL(ro_summary.refund_amount, 0)) AS refund_amount,
-				sb.uuid AS sale_bill_uuid,
-				MAX(sb.meal_num) AS meal_num,
-				MAX(sb.desk_uuid) AS desk_uuid,
-				SUM(IF(sb.bill_type = 0, so_agg.origin_amount, 0)) as desk_order_amount,
-				SUM(IF(sb.bill_type = 1, so_agg.origin_amount, 0)) as instant_order_amount,
-				SUM(IF(sb.bill_type = 2, so_agg.origin_amount, 0)) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) as takeout_order_amount
-			FROM ttpos_sale_bill AS sb
-			LEFT JOIN (
-				SELECT 
-					so.sale_bill_uuid,
-					so.uuid AS so_uuid,
-					so.origin_amount,
-					so.payment_amount
-				FROM ttpos_sale_order AS so
-				WHERE so.delete_time = ? AND so.status = ?
-			) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
-			LEFT JOIN (
-				SELECT 
-					related_order_uuid,
-					SUM(refund_amount) AS refund_amount
-				FROM ttpos_return_order
-				WHERE delete_time = ?
-				GROUP BY related_order_uuid
-			) AS ro_summary ON so_agg.so_uuid = ro_summary.related_order_uuid
-			LEFT JOIN ttpos_member_sale_order AS mso ON so_agg.so_uuid = mso.sale_order_uuid AND mso.delete_time = ? AND mso.status = ?
-			WHERE sb.delete_time = ?
-				AND sb.status = ?
-				AND sb.finish_time >= ?
-				AND sb.finish_time <= ?
-				AND (sb.bill_type != ? OR (sb.bill_type = ? AND so_agg.so_uuid IS NOT NULL AND mso.uuid IS NOT NULL))
-			GROUP BY date, sb.uuid
-		) AS subquery
-		GROUP BY date
-		ORDER BY date ASC
-		LIMIT ? OFFSET ?
-	`, dateFormat)
-
-	// 执行查询
-	r.db.Raw(query,
+			AND (sb.bill_type != ? OR (sb.bill_type = ? AND so_agg.so_uuid IS NOT NULL AND mso.uuid IS NOT NULL))
+		GROUP BY sb.uuid, sb.finish_time
+	`
+	r.db.Raw(rawQuery,
 		constant.NotDeleted, constant.SaleOrderStatusFinish,
 		constant.NotDeleted,
 		constant.NotDeleted, constant.MemberSaleOrderStatusCompleted,
 		constant.NotDeleted, constant.SaleBillStatusComplete,
 		req.StartTime, req.EndTime,
 		constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout,
-		req.PageSize, (req.PageNo-1)*req.PageSize,
-	).Scan(&result)
+	).Scan(&rawData)
+
+	// 2. 在应用层按业务时区分组、统计
+	loc, _ := time.LoadLocation(req.Timezone)
+	if loc == nil {
+		loc = time.UTC
+	}
+
+	// 按日期分组统计
+	// 使用 decimal 进行精确计算
+	type groupData struct {
+		OrderAmount        decimal.Decimal
+		PayAmount          decimal.Decimal
+		RefundAmount       decimal.Decimal
+		OrderNum           int64
+		MealNum            int64
+		DeskNum            int64
+		DeskOrderAmount    decimal.Decimal
+		InstantOrderAmount decimal.Decimal
+		TakeoutOrderAmount decimal.Decimal
+	}
+	groupedData := make(map[string]*groupData)
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		t := time.Unix(item.FinishTime, 0).In(loc)
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = t.Format("2006-01")
+		} else {
+			// 按日
+			dateKey = t.Format("2006-01-02")
+		}
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{}
+		}
+
+		// 使用 decimal 累加统计数据
+		group := groupedData[dateKey]
+		group.OrderAmount = group.OrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
+		group.PayAmount = group.PayAmount.Add(decimal.NewFromFloat(item.PayAmount))
+		group.RefundAmount = group.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		group.OrderNum++
+		group.MealNum += int64(item.MealNum)
+		if item.DeskUuid > 0 {
+			group.DeskNum++
+		}
+		group.DeskOrderAmount = group.DeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
+		group.InstantOrderAmount = group.InstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
+		group.TakeoutOrderAmount = group.TakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+	}
+
+	// 转换为结果格式
+	result := make([]model.StatisticsBusinessSummaryData, 0, len(groupedData))
+	for dateKey, group := range groupedData {
+		result = append(result, model.StatisticsBusinessSummaryData{
+			Date:               sql.NullString{String: dateKey, Valid: true},
+			OrderAmount:        sql.NullFloat64{Float64: group.OrderAmount.InexactFloat64(), Valid: true},
+			PayAmount:          sql.NullFloat64{Float64: group.PayAmount.InexactFloat64(), Valid: true},
+			RefundAmount:       sql.NullFloat64{Float64: group.RefundAmount.InexactFloat64(), Valid: true},
+			OrderNum:           sql.NullInt64{Int64: group.OrderNum, Valid: true},
+			MealNum:            sql.NullInt64{Int64: group.MealNum, Valid: true},
+			DeskNum:            sql.NullInt64{Int64: group.DeskNum, Valid: true},
+			DeskOrderAmount:    sql.NullFloat64{Float64: group.DeskOrderAmount.InexactFloat64(), Valid: true},
+			InstantOrderAmount: sql.NullFloat64{Float64: group.InstantOrderAmount.InexactFloat64(), Valid: true},
+			TakeoutOrderAmount: sql.NullFloat64{Float64: group.TakeoutOrderAmount.InexactFloat64(), Valid: true},
+		})
+	}
+
+	// 3. 按日期排序
+	slices.SortFunc(result, func(a, b model.StatisticsBusinessSummaryData) int {
+		if a.Date.String < b.Date.String {
+			return -1
+		} else if a.Date.String > b.Date.String {
+			return 1
+		}
+		return 0
+	})
+
+	// 4. 分页
+	total := int64(len(result))
+	start := (req.PageNo - 1) * req.PageSize
+	end := start + req.PageSize
+	if start > len(result) {
+		start = len(result)
+	}
+	if end > len(result) {
+		end = len(result)
+	}
+	if start < end {
+		result = result[start:end]
+	} else {
+		result = []model.StatisticsBusinessSummaryData{}
+	}
 
 	return total, result
 }
@@ -1336,22 +1398,26 @@ type CountBusinessPaymentMethodReq struct {
 	PageNo, PageSize             int      // 页码, 每页大小
 	IsDesk, IsInstant, IsTakeout bool     // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
 	PaymentMethodList            []uint64 // 支付方式列表: 空=全部
+	Timezone                     string   // 业务时区，如 "Asia/Shanghai"
+}
+
+// businessPaymentMethodRawData 支付方式统计原始数据
+type businessPaymentMethodRawData struct {
+	CreateTime        int64   // 创建时间戳
+	PaymentMethodUuid uint64  // 支付方式UUID
+	PaymentName       string  // 支付方式名称
+	PaymentAmount     float64 // 支付金额（已扣除退款）
 }
 
 // CountBusinessPaymentMethod 统计收款数据
 func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData) {
-	var result []model.StatisticsBusinessPaymentMethodData
-
-	// 根据周期类型确定日期格式
-	var dateFormat string
-	if req.Cycle == 1 {
-		dateFormat = "%Y-%m" // 按月
-	} else {
-		dateFormat = "%Y-%m-%d" // 按日
-	}
-
-	// 构建基础查询
+	// 1. 查询原始数据（不分组）
 	baseQuery := `
+		SELECT 
+			po.create_time,
+			po.payment_method_uuid,
+			pm.payment_name,
+			po.amount - IFNULL(roa.refund_amount, 0) AS payment_amount
 		FROM ttpos_payment_order AS po
 		LEFT JOIN ttpos_payment_method AS pm ON po.payment_method_uuid = pm.uuid
 		LEFT JOIN ttpos_sale_order AS so ON po.related_uuid = so.uuid AND so.delete_time = 0
@@ -1408,34 +1474,102 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		args = append(args, req.PaymentMethodList)
 	}
 
-	// 计算总数
-	var total int64
-	countQuery := fmt.Sprintf(`
-		SELECT COUNT(DISTINCT CONCAT(FROM_UNIXTIME(po.create_time, '%s'), '_', po.payment_method_uuid))
-		%s
-	`, dateFormat, baseQuery)
-	r.db.Raw(countQuery, args...).Scan(&total)
+	var rawData []businessPaymentMethodRawData
+	r.db.Raw(baseQuery, args...).Scan(&rawData)
 
-	// 查询数据（带分页）
-	dataQuery := fmt.Sprintf(`
-		SELECT 
-			FROM_UNIXTIME(po.create_time, '%s') AS date,
-			pm.payment_name AS payment_name,
-			COUNT(po.uuid) AS payment_num,
-			SUM(po.amount - IFNULL(roa.refund_amount, 0)) AS payment_amount
-		%s
-		GROUP BY date, po.payment_method_uuid
-		ORDER BY date ASC, pm.sort ASC, pm.create_time DESC
-		LIMIT ? OFFSET ?
-	`, dateFormat, baseQuery)
+	// 2. 在应用层按业务时区分组、统计
+	loc, _ := time.LoadLocation(req.Timezone)
+	if loc == nil {
+		loc = time.UTC
+	}
 
-	// 复制args并添加分页参数
-	dataArgs := make([]any, len(args))
-	copy(dataArgs, args)
-	dataArgs = append(dataArgs, req.PageSize, (req.PageNo-1)*req.PageSize)
-	r.db.Raw(dataQuery, dataArgs...).Scan(&result)
+	// 按日期和支付方式分组统计
+	// 使用 decimal 进行精确计算
+	type groupKey struct {
+		Date              string
+		PaymentMethodUuid uint64
+	}
+	type paymentGroupData struct {
+		PaymentName   string
+		PaymentNum    int64
+		PaymentAmount decimal.Decimal
+	}
+	groupedData := make(map[groupKey]*paymentGroupData)
 
-	return total, result
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		t := time.Unix(item.CreateTime, 0).In(loc)
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = t.Format("2006-01")
+		} else {
+			// 按日
+			dateKey = t.Format("2006-01-02")
+		}
+
+		key := groupKey{
+			Date:              dateKey,
+			PaymentMethodUuid: item.PaymentMethodUuid,
+		}
+
+		// 初始化分组数据
+		if groupedData[key] == nil {
+			groupedData[key] = &paymentGroupData{
+				PaymentName: item.PaymentName,
+			}
+		}
+
+		// 使用 decimal 累加统计数据
+		group := groupedData[key]
+		group.PaymentNum++
+		group.PaymentAmount = group.PaymentAmount.Add(decimal.NewFromFloat(item.PaymentAmount))
+	}
+
+	// 转换为结果格式
+	paymentResult := make([]model.StatisticsBusinessPaymentMethodData, 0, len(groupedData))
+	for key, group := range groupedData {
+		paymentResult = append(paymentResult, model.StatisticsBusinessPaymentMethodData{
+			Date:          sql.NullString{String: key.Date, Valid: true},
+			PaymentName:   sql.NullString{String: group.PaymentName, Valid: true},
+			PaymentNum:    sql.NullInt64{Int64: group.PaymentNum, Valid: true},
+			PaymentAmount: sql.NullFloat64{Float64: group.PaymentAmount.InexactFloat64(), Valid: true},
+		})
+	}
+
+	// 3. 按日期和支付方式排序
+	slices.SortFunc(paymentResult, func(a, b model.StatisticsBusinessPaymentMethodData) int {
+		if a.Date.String < b.Date.String {
+			return -1
+		} else if a.Date.String > b.Date.String {
+			return 1
+		}
+		// 日期相同，按支付方式名称排序
+		if a.PaymentName.String < b.PaymentName.String {
+			return -1
+		} else if a.PaymentName.String > b.PaymentName.String {
+			return 1
+		}
+		return 0
+	})
+
+	// 4. 分页
+	total := int64(len(paymentResult))
+	start := (req.PageNo - 1) * req.PageSize
+	end := start + req.PageSize
+	if start > len(paymentResult) {
+		start = len(paymentResult)
+	}
+	if end > len(paymentResult) {
+		end = len(paymentResult)
+	}
+	if start < end {
+		paymentResult = paymentResult[start:end]
+	} else {
+		paymentResult = []model.StatisticsBusinessPaymentMethodData{}
+	}
+
+	return total, paymentResult
 }
 
 // containsOrderType 检查订单类型列表中是否包含指定类型
