@@ -949,7 +949,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 			}
 		} else {
 			// 当销售账单是桌台订单时，额外查询桌台信息
-			if option.CompanyUuid == 7709131161600000 {
+			if constant.IsObjectStorageCacheEnabled(option.CompanyUuid) {
 				// 先获取 SaleBill（不使用 Preload）
 				saleBill, errDesk := repo.GetSaleBill(
 					CommonRepo.WhereByUuid(saleBillUuid),

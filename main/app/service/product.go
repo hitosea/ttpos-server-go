@@ -238,8 +238,9 @@ func buildProductListCacheKey(ctx context.Context, req req.ProductListReq) strin
 
 // GetProductList 获取产品列表
 func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
-	// 检查是否启用缓存（使用全局常量控制）
-	enableCache := constant.ObjectStorageCacheEnabled
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	companyUuid := ctx.GetCompanyUuid()
+	enableCache := constant.IsObjectStorageCacheEnabled(companyUuid)
 
 	// 查询函数（从数据库获取商品列表）
 	queryFunc := func() (product_resp.ProductListWithPaginationResp, error) {

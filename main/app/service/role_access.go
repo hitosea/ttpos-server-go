@@ -286,8 +286,8 @@ func (s *roleAccessSrv) buildPermissionTreeWithoutFilter(permissions []resp.Perm
 }
 
 func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
-	// 检查是否启用缓存（使用全局常量控制）
-	enableCache := constant.ObjectStorageCacheEnabled
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	enableCache := constant.IsObjectStorageCacheEnabled(companyUuid)
 
 	// 查询函数（从数据库获取权限）
 	queryFunc := func() ([]string, error) {

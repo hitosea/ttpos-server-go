@@ -1026,8 +1026,8 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if db == nil {
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
-	// 检查是否启用缓存（使用全局常量控制）
-	enableCache := constant.ObjectStorageCacheEnabled
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	enableCache := constant.IsObjectStorageCacheEnabled(auth.CompanyUuid)
 
 	staffRepo := repository.NewStaffRepo(db)
 
