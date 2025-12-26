@@ -952,6 +952,14 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 		posInvoice.Remarks = req.Remark
 	}
 
+	// 设置外卖订单字段
+	if len(req.GetTakeoutOrderNo()) > 0 {
+		posInvoice.CustomTakeoutOrderNo = req.GetTakeoutOrderNo()
+	}
+	if len(req.GetTakeoutProvider()) > 0 {
+		posInvoice.CustomTakeoutProvider = req.GetTakeoutProvider()
+	}
+
 	return posInvoice
 }
 

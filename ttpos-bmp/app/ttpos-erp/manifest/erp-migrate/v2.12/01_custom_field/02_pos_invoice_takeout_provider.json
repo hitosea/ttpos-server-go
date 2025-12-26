@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Takeout Provider",
+  "fieldname": "custom_takeout_provider",
+  "fieldtype": "Data",
+  "insert_after": "custom_takeout_order_no",
+  "dt": "POS Invoice"
+}
+

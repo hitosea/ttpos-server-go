@@ -109,6 +109,8 @@ message SavePosInvoiceReq {
   string amended_products_invoice_name = 14; // 反结账后，重新结账时填写原商品发票名称
   string amended_material_invoice_name = 15; // 反结账后，重新结账时填写原材料发票名称
   string remark = 16; // 备注,可选
+  optional string takeout_order_no = 17;    // 外卖订单号，可选
+  optional string takeout_provider = 18;    // 外卖平台提供商，可选
 }
 
 // SavePosInvoiceResp 保存POS发票响应消息
