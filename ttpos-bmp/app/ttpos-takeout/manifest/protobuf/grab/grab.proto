@@ -68,3 +68,9 @@ message NotifyMenuUpdateReq {
 message NotifyMenuUpdateResp {
   string request_id = 1; // 请求 ID，用于追踪同步状态
 }
+ 
+ //grab 返回的异常详情
+
+ message ErrorDetail {
+    string body =1 ; // 异常详情
+ }

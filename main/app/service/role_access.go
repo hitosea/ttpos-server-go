@@ -224,6 +224,15 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if permission.Uuid == 2859353116672000 && !companySetting.IsOpenKiosk() {
 			continue
 		}
+		// 新管理端-管理APP-云平台未开启Grab外卖，权限列表无Grab外卖设置
+		if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000, 2859007907840000}, permission.Uuid) && !companySetting.IsOpenGrabDelivery() {
+			continue
+		}
+		// 新管理端-管理APP-云平台未开启LINE MAN外卖，权限列表无Grab外卖设置
+		if slices.Contains([]uint64{2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001, 2859028879360000}, permission.Uuid) {
+			continue
+		}
+
 		filteredPermissions = append(filteredPermissions, permission)
 	}
 	return filteredPermissions

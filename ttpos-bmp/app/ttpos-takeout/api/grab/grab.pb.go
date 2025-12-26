@@ -370,6 +370,50 @@ func (x *NotifyMenuUpdateResp) GetRequestId() string {
 	return ""
 }
 
+type ErrorDetail struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Body          string                 `protobuf:"bytes,1,opt,name=body,proto3" json:"body,omitempty" dc:"异常详情"` // 异常详情
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorDetail) Reset() {
+	*x = ErrorDetail{}
+	mi := &file_grab_grab_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorDetail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorDetail) ProtoMessage() {}
+
+func (x *ErrorDetail) ProtoReflect() protoreflect.Message {
+	mi := &file_grab_grab_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorDetail.ProtoReflect.Descriptor instead.
+func (*ErrorDetail) Descriptor() ([]byte, []int) {
+	return file_grab_grab_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ErrorDetail) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
 var File_grab_grab_proto protoreflect.FileDescriptor
 
 const file_grab_grab_proto_rawDesc = "" +
@@ -400,7 +444,9 @@ const file_grab_grab_proto_rawDesc = "" +
 	"merchantId\"5\n" +
 	"\x14NotifyMenuUpdateResp\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId2\xe5\x01\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"!\n" +
+	"\vErrorDetail\x12\x12\n" +
+	"\x04body\x18\x01 \x01(\tR\x04body2\xe5\x01\n" +
 	"\x04Grab\x12O\n" +
 	"\x16CreateSelfServeJourney\x12\x1f.grab.CreateSelfServeJourneyReq\x1a\x14.takeout.ApiResponse\x12G\n" +
 	"\x12GetShopProviderCfg\x12\x1b.grab.GetShopProviderCfgReq\x1a\x14.takeout.ApiResponse\x12C\n" +
@@ -418,7 +464,7 @@ func file_grab_grab_proto_rawDescGZIP() []byte {
 	return file_grab_grab_proto_rawDescData
 }
 
-var file_grab_grab_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_grab_grab_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_grab_grab_proto_goTypes = []any{
 	(*CreateSelfServeJourneyReq)(nil),  // 0: grab.CreateSelfServeJourneyReq
 	(*CreateSelfServeJourneyResp)(nil), // 1: grab.CreateSelfServeJourneyResp
@@ -426,15 +472,16 @@ var file_grab_grab_proto_goTypes = []any{
 	(*GetShopProviderCfgResp)(nil),     // 3: grab.GetShopProviderCfgResp
 	(*NotifyMenuUpdateReq)(nil),        // 4: grab.NotifyMenuUpdateReq
 	(*NotifyMenuUpdateResp)(nil),       // 5: grab.NotifyMenuUpdateResp
-	(*takeout.ApiResponse)(nil),        // 6: takeout.ApiResponse
+	(*ErrorDetail)(nil),                // 6: grab.ErrorDetail
+	(*takeout.ApiResponse)(nil),        // 7: takeout.ApiResponse
 }
 var file_grab_grab_proto_depIdxs = []int32{
 	0, // 0: grab.Grab.CreateSelfServeJourney:input_type -> grab.CreateSelfServeJourneyReq
 	2, // 1: grab.Grab.GetShopProviderCfg:input_type -> grab.GetShopProviderCfgReq
 	4, // 2: grab.Grab.NotifyMenuUpdate:input_type -> grab.NotifyMenuUpdateReq
-	6, // 3: grab.Grab.CreateSelfServeJourney:output_type -> takeout.ApiResponse
-	6, // 4: grab.Grab.GetShopProviderCfg:output_type -> takeout.ApiResponse
-	6, // 5: grab.Grab.NotifyMenuUpdate:output_type -> takeout.ApiResponse
+	7, // 3: grab.Grab.CreateSelfServeJourney:output_type -> takeout.ApiResponse
+	7, // 4: grab.Grab.GetShopProviderCfg:output_type -> takeout.ApiResponse
+	7, // 5: grab.Grab.NotifyMenuUpdate:output_type -> takeout.ApiResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -453,7 +500,7 @@ func file_grab_grab_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_grab_grab_proto_rawDesc), len(file_grab_grab_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
