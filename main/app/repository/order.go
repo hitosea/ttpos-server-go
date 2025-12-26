@@ -1008,20 +1008,8 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 				// 使用对象存储层自动注入关联对象
 				ctx := context.NewContext(context.WithCompanyUuid(option.CompanyUuid), context.WithContext(goCtx.Background()))
 
-				// 创建缓存组配置（使用阶梯式 TTL）
-				// L1 缓存 1 分钟，L2 缓存 5 分钟
-				// 优势：L1 过期后可从 L2 回填，减少内存占用同时保持缓存命中率
-				groupConfig := cache.GroupConfig{
-					Name:             "object-storage",
-					EnableLocalCache: true,             // 开启 L1 本地缓存
-					EnableRedisCache: true,             // 开启 L2 Redis 缓存
-					NegativeTTL:      30 * time.Second, // 负缓存 30 秒
-					L1TTL:            1 * time.Minute,  // L1 缓存 1 分钟（减少内存占用）
-					L2TTL:            5 * time.Minute,  // L2 缓存 5 分钟（保持缓存命中率）
-				}
-
-				// 获取关联配置（传入 groupConfig 和 underlyingCache，为每种对象类型创建具体的缓存适配器）
-				associations := getSaleBillAssociationsForOrderCart(ctx, r.db, groupConfig, cache.Global)
+				// 获取关联配置（缓存配置和初始化已在 objectstorage 模块中完成）
+				associations := getSaleBillAssociationsForOrderCart(ctx, r.db, cache.Global)
 
 				// 创建对象存储实例（使用 any 类型用于 PreloadWithConfig，但内部 QueryFunc 使用具体类型）
 				// 注意：PreloadWithConfig 只需要 associations，不需要 config
@@ -2577,7 +2565,7 @@ func convertBatchResultToUUIDMap[T any](batchResult map[string]T) map[uint64]int
 
 // getSaleBillAssociationsForOrderCart 获取 SaleBill 的关联配置（用于订单购物车场景）
 // 这个函数在 repository 层定义，避免循环依赖
-func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupConfig cache.GroupConfig, underlyingCache cache.Cache) []entity.Association {
+func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
 	deskRepo := NewDeskRepo(db)
 	productPackageRepo := NewProductPackageRepo(db)
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
@@ -2597,8 +2585,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.SaleBill).Uuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.SaleBillSetting](groupConfig, underlyingCache, 10*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.SaleBillSetting](underlyingCache, 10*time.Minute)
 				key := persistence.BuildKey(ctx, "sale_bill_setting", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.SaleBillSetting, error) {
 					var setting model.SaleBillSetting
@@ -2622,8 +2610,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.SaleBill).DeskUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（使用具体的类型 *model.Desk）
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.Desk](groupConfig, underlyingCache, 10*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.Desk](underlyingCache, 10*time.Minute)
 				key := persistence.BuildKey(ctx, "desk", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.Desk, error) {
 					desk, err := deskRepo.GetDesk(
@@ -2649,8 +2637,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(*model.SaleOrderProduct).ProductPackageUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductPackage](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_package", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductPackage, error) {
 					pkg, err := productPackageRepo.GetProductPackage(
@@ -2673,7 +2661,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_package", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductPackage](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackage, error) {
 					packages, err := productPackageRepo.GetProductPackageListByUuids(uuids)
@@ -2703,8 +2691,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(*model.SaleOrderProduct).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "multi_language_name", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
 					return multiLanguageNameRepo.GetMultiLanguageName(
@@ -2722,7 +2710,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "multi_language_name", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
 					result := make(map[string]*model.MultiLanguageName)
@@ -2755,8 +2743,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return 0
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductCategory](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductCategory](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_category", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductCategory, error) {
 					return productCategoryRepo.GetProductCategory(
@@ -2782,7 +2770,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用对象存储层的缓存（注意：这里缓存的是 ProductPackage，然后提取 ProductBoms）
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductPackage](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_package", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductPackage, error) {
 					productPackage, err := productPackageRepo.GetProductPackage(
@@ -2805,7 +2793,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_package", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductPackage](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackage, error) {
 					packages, err := productPackageRepo.GetProductPackageList(
@@ -2848,7 +2836,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用对象存储层的缓存（注意：这里缓存的是 ProductPackage，然后提取 ProductPackageAttributeGroups）
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductPackage](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_package", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductPackage, error) {
 					productPackage, err := productPackageRepo.GetProductPackage(
@@ -2871,7 +2859,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_package", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductPackage](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackage, error) {
 					packages, err := productPackageRepo.GetProductPackageList(
@@ -2911,7 +2899,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用对象存储层的缓存
 				key := persistence.BuildKey(ctx, "product_attribute", uuid)
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductAttribute](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductAttribute](underlyingCache, 5*time.Minute)
 				result, err := cacheLayer.GET(key, func() (*model.ProductAttribute, error) {
 					attr, err := productAttributeRepo.GetProductAttribute(
 						CommonRepo.WhereByUuid(uuid),
@@ -2933,7 +2921,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_attribute", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductAttribute](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductAttribute](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductAttribute, error) {
 					missedUuids := extractUUIDsFromKeys(keys)
@@ -2970,8 +2958,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.ProductAttribute).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "multi_language_name", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
 					return multiLanguageNameRepo.GetMultiLanguageName(
@@ -2989,7 +2977,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "multi_language_name", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
 					result := make(map[string]*model.MultiLanguageName)
@@ -3018,8 +3006,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(*model.SaleOrderProductBom).ProductBomUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductBom](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_bom", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductBom, error) {
 					bom, err := productBomRepo.GetProductBom(
@@ -3042,7 +3030,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_bom", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductBom](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
 					result := make(map[string]*model.ProductBom)
@@ -3072,8 +3060,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.ProductBom).ProductFlavorUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductFlavor](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductFlavor](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_flavor", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductFlavor, error) {
 					flavor, err := productFlavorRepo.GetProductFlavor(
@@ -3096,7 +3084,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_flavor", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductFlavor](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductFlavor](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductFlavor, error) {
 					result := make(map[string]*model.ProductFlavor)
@@ -3126,8 +3114,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.ProductFlavor).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "multi_language_name", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
 					return multiLanguageNameRepo.GetMultiLanguageName(
@@ -3145,7 +3133,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "multi_language_name", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
 					result := make(map[string]*model.MultiLanguageName)
@@ -3174,8 +3162,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.ProductBom).ProductSauceUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductSauce](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductSauce](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "product_sauce", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.ProductSauce, error) {
 					sauce, err := productSauceRepo.GetProductSauce(
@@ -3198,7 +3186,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "product_sauce", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.ProductSauce](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductSauce](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductSauce, error) {
 					result := make(map[string]*model.ProductSauce)
@@ -3228,8 +3216,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.ProductSauce).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "multi_language_name", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
 					return multiLanguageNameRepo.GetMultiLanguageName(
@@ -3247,7 +3235,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "multi_language_name", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
 					result := make(map[string]*model.MultiLanguageName)
@@ -3276,8 +3264,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(*model.SaleOrderProduct).BatchTagUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.BatchTag](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.BatchTag](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "batch_tag", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.BatchTag, error) {
 					tag, err := batchTagRepo.GetBatchTag(
@@ -3300,7 +3288,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "batch_tag", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.BatchTag](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.BatchTag](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.BatchTag, error) {
 					result := make(map[string]*model.BatchTag)
@@ -3330,8 +3318,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				return obj.(model.BatchTag).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				key := persistence.BuildKey(ctx, "multi_language_name", uuid)
 				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
 					return multiLanguageNameRepo.GetMultiLanguageName(
@@ -3349,7 +3337,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, groupCo
 				for _, uuid := range uuids {
 					keys = append(keys, persistence.BuildKey(ctx, "multi_language_name", uuid))
 				}
-				cacheLayer := adapter.GetOrCreateCacheLayer[*model.MultiLanguageName](groupConfig, underlyingCache, 5*time.Minute)
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
 				// 使用对象存储层的批量缓存
 				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
 					result := make(map[string]*model.MultiLanguageName)

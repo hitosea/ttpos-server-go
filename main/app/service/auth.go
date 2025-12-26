@@ -13,10 +13,12 @@ import (
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -1024,12 +1026,39 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if db == nil {
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
+	// 检查是否启用缓存（使用全局常量控制）
+	enableCache := constant.ObjectStorageCacheEnabled
+
 	staffRepo := repository.NewStaffRepo(db)
-	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+
+	// 查询函数（从数据库获取员工信息）
+	queryStaffFunc := func() (*model.Staff, error) {
+		// 从数据库查询员工信息（包含 Company 和 CompanySetting）
+		staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+		if err != nil {
+			return nil, err
+		}
+		return &staff, nil
+	}
+
+	var staffPtr *model.Staff
+	var err error
+
+	if enableCache {
+		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+		cacheLayer := objectStorageAdapter.GetAuthStaffCache[*model.Staff](cache.Global)
+		cacheKey := objectStorageAdapter.BuildAuthStaffKey(ctx, auth.StaffUuid)
+		staffPtr, err = cacheLayer.GET(cacheKey, queryStaffFunc)
+	} else {
+		// 不使用缓存，直接查询数据库
+		staffPtr, err = queryStaffFunc()
+	}
+
 	if err != nil {
 		logger.Logger.Error("获取员工信息失败", zap.Error(err))
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "没有找到用户信息")
 	}
+	staff = *staffPtr
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, desk, errors.New("用户不存在")
 	}

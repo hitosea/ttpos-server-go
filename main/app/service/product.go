@@ -238,8 +238,8 @@ func buildProductListCacheKey(ctx context.Context, req req.ProductListReq) strin
 
 // GetProductList 获取产品列表
 func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
-	// 检查是否启用缓存（默认启用）
-	enableCache := false
+	// 检查是否启用缓存（使用全局常量控制）
+	enableCache := constant.ObjectStorageCacheEnabled
 
 	// 查询函数（从数据库获取商品列表）
 	queryFunc := func() (product_resp.ProductListWithPaginationResp, error) {
@@ -336,33 +336,9 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	var err error
 
 	if enableCache {
-		// 使用缓存
-		// 构建缓存 key
+		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+		cacheLayer := objectStorageAdapter.GetProductListCache[product_resp.ProductListWithPaginationResp](cache.Global)
 		cacheKey := buildProductListCacheKey(ctx, req)
-
-		// 创建缓存组配置
-		groupConfig := cache.GroupConfig{
-			Name:             "object-storage-product-list",
-			EnableLocalCache: true,
-			EnableRedisCache: true,
-			NegativeTTL:      30 * time.Second,
-		}
-
-		// 获取缓存层（使用单例模式，确保 L1 缓存可以跨请求共享）
-		// 使用阶梯式 TTL：
-		//   - L1 缓存 1 分钟（减少内存占用）
-		//   - L2 缓存 5 分钟（保持缓存命中率）
-		//   - 当 L1 过期后可从 L2 回填，避免直接查数据库
-		cacheLayer := objectStorageAdapter.GetOrCreateCacheLayer[product_resp.ProductListWithPaginationResp](
-			groupConfig,
-			cache.Global,
-			2*time.Minute, // 默认 TTL（用于负缓存等场景）
-			objectStorageAdapter.WithSingletonKey("product_list_cache_group"), // 使用自定义 key
-			objectStorageAdapter.WithL1TTL(1*time.Minute),                     // L1 缓存 1 分钟
-			objectStorageAdapter.WithL2TTL(5*time.Minute),                     // L2 缓存 5 分钟
-		)
-
-		// 从缓存获取或查询数据库
 		result, err = cacheLayer.GET(cacheKey, queryFunc)
 	} else {
 		// 不使用缓存，直接查询数据库

@@ -7,7 +7,9 @@ import (
 	"time"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
@@ -284,15 +286,39 @@ func (s *roleAccessSrv) buildPermissionTreeWithoutFilter(permissions []resp.Perm
 }
 
 func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
-	accesses, _, _, err := s.getDbPermissions(staffUuid, companyUuid)
+	// 检查是否启用缓存（使用全局常量控制）
+	enableCache := constant.ObjectStorageCacheEnabled
+
+	// 查询函数（从数据库获取权限）
+	queryFunc := func() ([]string, error) {
+		accesses, _, _, err := s.getDbPermissions(staffUuid, companyUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		var permissions []string
+		for _, access := range accesses {
+			if !slices.Contains(permissions, access.Path) {
+				permissions = append(permissions, access.Path)
+			}
+		}
+		return permissions, nil
+	}
+
+	var permissions []string
+	var err error
+
+	if enableCache {
+		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+		cacheLayer := objectStorageAdapter.GetApiPermissionCache[[]string](cache.Global)
+		cacheKey := objectStorageAdapter.BuildApiPermissionKey(companyUuid, staffUuid)
+		permissions, err = cacheLayer.GET(cacheKey, queryFunc)
+	} else {
+		// 不使用缓存，直接查询数据库
+		permissions, err = queryFunc()
+	}
+
 	if err != nil {
 		return nil, errors.WithMessage(err)
-	}
-	var permissions []string
-	for _, access := range accesses {
-		if !slices.Contains(permissions, access.Path) {
-			permissions = append(permissions, access.Path)
-		}
 	}
 	return permissions, nil
 }
