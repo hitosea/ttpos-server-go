@@ -1,6 +1,8 @@
 package cashier
 
 import (
+	"strconv"
+
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -9,6 +11,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	appService "ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -21,6 +24,7 @@ type TakeoutHandler struct {
 	settingsSrv service.ITakeoutSettingsSrv
 	orderAppSrv application.ITakeoutOrderAppService
 	orderSrv    service.ITakeoutOrderSrv
+	takeoutSrv  takeout.ITakeoutSrv
 }
 
 // GetSettings 获取外卖配置
@@ -251,6 +255,41 @@ func (h *TakeoutHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// PrintOrder 打印外卖订单小票
+// @Summary 打印外卖订单小票
+// @Tags 收银端.外卖管理
+// @Accept json
+// @Produce json
+// @Param uuid query uint64 true "订单UUID"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/takeout/order/print [post]
+func (h *TakeoutHandler) PrintOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	// 从 Query 参数获取订单 UUID
+	uuidStr := c.Query("uuid")
+	if uuidStr == "" {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("uuid参数不能为空"))
+		return
+	}
+
+	// 转换为 uint64
+	uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.New("uuid参数格式错误"))
+		return
+	}
+
+	// 调用打印服务
+	printerData, err := h.takeoutSrv.PrintTakeoutOrder(ctx, uuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, printerData)
+}
+
 // SyncOrder 同步订单-模拟接收新订单
 // @Summary 同步订单-模拟接收新订单
 // @Tags 收银端.外卖管理
@@ -314,10 +353,19 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	orderAppSrv := application.NewTakeoutOrderAppService(dbm)
 	orderSrv := service.NewTakeoutOrderSrv(dbm)
 	settingsSrv := service.NewTakeoutSettingsSrv(dbm)
+
+	// 初始化打印服务所需的依赖
+	localeSrv := appService.NewLocaleSrv()
+	translateSrv := appService.NewTranslateSrv(dbm, cache)
+	productSrv := appService.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
+	productTakeoutSrv := appService.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
+	takeoutSrv := takeout.NewTakeoutSrv(dbm, cache, productSrv, productTakeoutSrv, translateSrv, settingSrv)
+
 	wrapper := &TakeoutHandler{
 		settingsSrv: settingsSrv,
 		orderAppSrv: orderAppSrv,
 		orderSrv:    orderSrv,
+		takeoutSrv:  takeoutSrv,
 	}
 
 	// 需要认证
@@ -334,6 +382,7 @@ func RegisterTakeoutHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/takeout/order/call-rider", wrapper.CallRider)                 // 呼叫骑手
 		privateApi.GET("/takeout/order/check-cancelable", wrapper.CheckOrderCancelable) // 检查订单是否可取消
 		privateApi.POST("/takeout/order/cancel", wrapper.CancelOrder)                   // 取消订单
+		privateApi.POST("/takeout/order/print", wrapper.PrintOrder)                     // 打印小票
 		// 模拟接收新订单
 		privateApi.POST("/takeout/order/sync", wrapper.SyncOrder)                  // 同步订单
 		privateApi.POST("/takeout/order/push-state", wrapper.HandlePushOrderState) // 处理订单状态变更

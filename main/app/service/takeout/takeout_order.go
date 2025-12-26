@@ -1,11 +1,13 @@
 package takeout
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
@@ -25,6 +27,17 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
+
+type ITakeoutOrderSrv interface {
+	// ProcessTakeoutOrderOutboundAndSales 处理外卖订单出库和销量
+	ProcessTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64, acceptedBy uint64) error
+	// RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
+	RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64) error
+	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
+	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
+	// PrintTakeoutOrder 打印外卖订单小票
+	PrintTakeoutOrder(ctx context.Context, orderUuid uint64) (*resp.PrinterData, error)
+}
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
 func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
@@ -1132,4 +1145,73 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	}
 
 	return nil
+}
+
+// PrintTakeoutOrder 打印外卖订单小票
+func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64) (*resp.PrinterData, error) {
+	return nil, errors.New("功能未实现")
+
+	// 1. 从领域层获取订单数据
+	takeoutOrderSrv := domainService.NewTakeoutOrderSrv(s.dbm)
+	order, err := takeoutOrderSrv.GetOrderForPrint(ctx, orderUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. 构建打印内容（简化版本，返回订单信息）
+	// TODO: 完整实现需要调用 printer 模块创建打印任务
+	printData := map[string]interface{}{
+		"message": "打印小票",
+		"order": map[string]interface{}{
+			"uuid":               order.Uuid,
+			"platform":           order.Platform,
+			"short_order_number": order.ShortOrderNumber,
+			"order_state":        order.OrderState,
+			"currency_symbol":    order.CurrencySymbol,
+			"subtotal":           order.Subtotal,
+			"delivery_fee":       order.DeliveryFee,
+			"eater_payment":      order.EaterPayment,
+			"order_time":         order.OrderTime,
+		},
+	}
+
+	// 3. 添加商品信息
+	items := make([]map[string]interface{}, 0)
+	for _, item := range order.TakeoutOrderItems {
+		itemData := map[string]interface{}{
+			"name":     item.ItemName,
+			"quantity": item.Quantity,
+			"price":    item.Price,
+		}
+
+		// 添加修饰符信息
+		if len(item.TakeoutOrderItemModifiers) > 0 {
+			modifiers := make([]string, 0)
+			for _, modifier := range item.TakeoutOrderItemModifiers {
+				if modifier.ModifierName != "" {
+					modifiers = append(modifiers, modifier.ModifierName)
+				}
+			}
+			if len(modifiers) > 0 {
+				itemData["modifiers"] = modifiers
+			}
+		}
+
+		items = append(items, itemData)
+	}
+	printData["order"].(map[string]interface{})["items"] = items
+
+	// 4. 转换为 JSON 字符串
+	jsonData, err := json.Marshal(printData)
+	if err != nil {
+		return nil, errors.New("序列化打印数据失败")
+	}
+
+	// 5. 构建标准的 PrinterData 响应
+	printerData := &resp.PrinterData{
+		Data:        string(jsonData),
+		PrintMethod: 2, // 2: 图片打印
+	}
+
+	return printerData, nil
 }

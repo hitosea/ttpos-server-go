@@ -284,8 +284,12 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			}
 			// 设置外卖订单标识（只需要设置一次，当 group 还未初始化时）
 			if group.LocaleName == nil {
-				group.IsTakeoutBill = product.SaleBill.IsTakeoutBill()            // 传统外送订单
-				group.TakeoutPlatform = product.TakeoutOrder.GetToLowerPlatform() // 第三方平台外卖平台
+				if product.SaleBillUuid > 0 {
+					group.IsTakeoutBill = product.SaleBill.IsTakeoutBill() // 传统外送订单
+				}
+				if product.TakeoutOrderUuid > 0 {
+					group.TakeoutPlatform = product.TakeoutOrder.GetToLowerPlatform() // 第三方平台外卖平台
+				}
 			}
 			if product.ProductCategory.MultiLanguageName.Uuid != 0 && group.LocaleName == nil {
 				localName := product.ProductCategory.MultiLanguageName.GetNames()

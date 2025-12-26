@@ -31,6 +31,19 @@ import (
 	"gorm.io/gorm"
 )
 
+type ITakeoutMenuSrv interface {
+	// ToggleTakeoutStatus 切换指定平台外卖状态
+	ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error)
+	// 导入菜单到TTPOS
+	ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImportResp, error)
+	// PushMenuToPlatform 推送菜单到外卖平台
+	PushMenuToPlatform(ctx context.Context, platform string) error
+	// SyncMenuChanges 同步菜单变更
+	SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error)
+	// ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
+	ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*resp.GrabMenuImportResp, error)
+}
+
 // SyncMenuChanges 同步菜单变更
 func (s *takeoutSrv) SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error) {
 	return s.takeoutAppSrv.SyncMenuChanges(ctx, request.ExportMenuRequest{

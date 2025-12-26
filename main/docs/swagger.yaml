@@ -28612,6 +28612,32 @@ paths:
       summary: 获取外卖订单列表
       tags:
       - 收银端.外卖管理
+  /cashier/takeout/order/print:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 订单UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      summary: 打印外卖订单小票
+      tags:
+      - 收银端.外卖管理
   /cashier/takeout/order/push-state:
     post:
       consumes:
