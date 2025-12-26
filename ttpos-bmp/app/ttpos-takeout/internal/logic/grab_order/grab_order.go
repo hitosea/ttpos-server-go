@@ -146,7 +146,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 			ProviderOrderId:    req.GetOrderID(),
 			ShortOrderNumber:   req.GetShortOrderNumber(),
 			ProviderName:       string(consts.ProviderGrab),
-			OrderType:          getOrderTypeFromSDK(req),
+			OrderType:          req.OrderType,
 			OrderTime:          parseTime(req.GetOrderTime()),
 			OrderStatus:        req.GetOrderState(),
 			ScheduledTime:      parseTime(req.GetScheduledTime()),
@@ -462,8 +462,12 @@ func (s *sGrabOrder) MarkOrderReady(ctx context.Context, orderEntity *entity.Ord
 	g.Log().Infof(ctx, "开始调用 GrabFood MarkOrderReady API: provider_order_id=%s, order_uuid=%s",
 		orderEntity.ProviderOrderId, orderEntity.Uuid)
 
-	// 3. 调用 GrabFood SDK (markStatus 固定传入 1)
-	err := service.Grab().MarkOrderReady(ctx, orderEntity.ProviderOrderId, "1")
+	// 3. 根据订单类型确定 markStatus
+	markStatus := "1" // 默认值
+	if orderEntity.OrderType == "DineIn" {
+		markStatus = "2"
+	}
+	err := service.Grab().MarkOrderReady(ctx, orderEntity.ProviderOrderId, markStatus)
 	if err != nil {
 		// 记录详细错误日志
 		g.Log().Errorf(ctx, "调用 GrabFood MarkOrderReady API 失败: order_id=%s, order_uuid=%s, error=%v",
