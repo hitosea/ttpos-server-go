@@ -524,7 +524,7 @@ func (s *sItemGroup) DeleteAttributeGroup(ctx context.Context, req *item.DeleteA
 			return nil, gerror.Wrapf(err, "删除物品属性值失败")
 		}
 	}
-	service.Document().Delete(ctx, &erp.ErpReq{
+	_, err = service.Document().Delete(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeItemGroup,
 		Name:    req.GroupName,
 	})
