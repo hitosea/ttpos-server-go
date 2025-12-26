@@ -47,3 +47,8 @@ func (c *localCache[T]) get(key string) (T, bool) {
 func (c *localCache[T]) delete(key string) {
 	c.cache.Delete(key)
 }
+
+// flush 清空所有本地缓存
+func (c *localCache[T]) flush() {
+	c.cache.Flush()
+}

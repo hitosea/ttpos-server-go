@@ -161,3 +161,31 @@ func (s *erpSrv) RejectStockReconciliation(ctx cc.Context, companySetting model.
 	}
 	return &resp, nil
 }
+
+// 获取物品在指定仓库的 Bin 记录
+func (s *erpSrv) GetMaterialStockNumByBin(ctx cc.Context, warehouseErpCode string) ([]*stock.ItemStockBin, error) {
+	client, conn, err := NewErpStockClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.GetBin(WithSiteCode(ctx.GetContext(), ctx.GetCompany().CompanySetting.ErpnextSiteCode), &stock.GetBinReq{
+		Warehouse: warehouseErpCode,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != "0" {
+		return nil, errors.New(result.Message)
+	}
+	if result.Data != nil {
+		var resp stock.GetBinResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("GetBin-UnmarshalTo", zap.Any("err", err))
+			return nil, err
+		}
+		return resp.Items, nil
+	}
+	return nil, nil
+}

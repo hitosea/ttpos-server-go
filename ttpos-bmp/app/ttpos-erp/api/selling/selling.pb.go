@@ -823,6 +823,8 @@ type SavePosInvoiceReq struct {
 	AmendedProductsInvoiceName string                 `protobuf:"bytes,14,opt,name=amended_products_invoice_name,json=amendedProductsInvoiceName,proto3" json:"amended_products_invoice_name,omitempty" dc:"反结账后，重新结账时填写原商品发票名称"` // 反结账后，重新结账时填写原商品发票名称
 	AmendedMaterialInvoiceName string                 `protobuf:"bytes,15,opt,name=amended_material_invoice_name,json=amendedMaterialInvoiceName,proto3" json:"amended_material_invoice_name,omitempty" dc:"反结账后，重新结账时填写原材料发票名称"` // 反结账后，重新结账时填写原材料发票名称
 	Remark                     string                 `protobuf:"bytes,16,opt,name=remark,proto3" json:"remark,omitempty" dc:"备注,可选"`                                                                                             // 备注,可选
+	TakeoutOrderNo             *string                `protobuf:"bytes,17,opt,name=takeout_order_no,json=takeoutOrderNo,proto3,oneof" json:"takeout_order_no,omitempty" dc:"外卖订单号，可选"`                                            // 外卖订单号，可选
+	TakeoutProvider            *string                `protobuf:"bytes,18,opt,name=takeout_provider,json=takeoutProvider,proto3,oneof" json:"takeout_provider,omitempty" dc:"外卖平台提供商，可选"`                                         // 外卖平台提供商，可选
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -965,6 +967,20 @@ func (x *SavePosInvoiceReq) GetAmendedMaterialInvoiceName() string {
 func (x *SavePosInvoiceReq) GetRemark() string {
 	if x != nil {
 		return x.Remark
+	}
+	return ""
+}
+
+func (x *SavePosInvoiceReq) GetTakeoutOrderNo() string {
+	if x != nil && x.TakeoutOrderNo != nil {
+		return *x.TakeoutOrderNo
+	}
+	return ""
+}
+
+func (x *SavePosInvoiceReq) GetTakeoutProvider() string {
+	if x != nil && x.TakeoutProvider != nil {
+		return *x.TakeoutProvider
 	}
 	return ""
 }
@@ -2002,7 +2018,7 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x16close_pos_entry_detail\x18\x04 \x03(\v2\x1c.selling.ClosePosEntryDetailR\x13closePosEntryDetail\"\x88\x01\n" +
 	"\x11ClosePosEntryResp\x12K\n" +
 	"\x14close_pos_entry_info\x18\x01 \x01(\v2\x1a.selling.ClosePosEntryInfoR\x11closePosEntryInfo\x12&\n" +
-	"\x0fasync_record_id\x18\x02 \x01(\tR\rasyncRecordId\"\xca\x05\n" +
+	"\x0fasync_record_id\x18\x02 \x01(\tR\rasyncRecordId\"\xd3\x06\n" +
 	"\x11SavePosInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12-\n" +
 	"\x13open_pos_entry_name\x18\x02 \x01(\tR\x10openPosEntryName\x12!\n" +
@@ -2020,7 +2036,11 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\bpayments\x18\r \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\x12A\n" +
 	"\x1damended_products_invoice_name\x18\x0e \x01(\tR\x1aamendedProductsInvoiceName\x12A\n" +
 	"\x1damended_material_invoice_name\x18\x0f \x01(\tR\x1aamendedMaterialInvoiceName\x12\x16\n" +
-	"\x06remark\x18\x10 \x01(\tR\x06remark\"\xa4\x01\n" +
+	"\x06remark\x18\x10 \x01(\tR\x06remark\x12-\n" +
+	"\x10takeout_order_no\x18\x11 \x01(\tH\x00R\x0etakeoutOrderNo\x88\x01\x01\x12.\n" +
+	"\x10takeout_provider\x18\x12 \x01(\tH\x01R\x0ftakeoutProvider\x88\x01\x01B\x13\n" +
+	"\x11_takeout_order_noB\x13\n" +
+	"\x11_takeout_provider\"\xa4\x01\n" +
 	"\x12SavePosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
 	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12&\n" +
@@ -2208,6 +2228,7 @@ func file_selling_selling_proto_init() {
 	}
 	file_selling_selling_proto_msgTypes[6].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[9].OneofWrappers = []any{}
+	file_selling_selling_proto_msgTypes[12].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[16].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[22].OneofWrappers = []any{}
 	file_selling_selling_proto_msgTypes[26].OneofWrappers = []any{}

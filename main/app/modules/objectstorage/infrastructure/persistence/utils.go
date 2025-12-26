@@ -11,7 +11,7 @@ import (
 
 const (
 	// SystemPrefix 系统前缀，用于区分不同系统的缓存 key
-	SystemPrefix = "ttpos4"
+	SystemPrefix = "ttpos5"
 )
 
 // BuildKey 构建 key 的辅助方法（自动从 context 提取 company UUID）
@@ -30,12 +30,6 @@ func BuildKeyWithCompanyUuid(companyUuid uint64, objectType string, objectUuid u
 // Key 格式：{system_prefix}:{company_uuid}:staff:{staff_uuid}
 func BuildAuthStaffKey(ctx goCtx.Context, staffUuid uint64) string {
 	return BuildKey(ctx, "staff", staffUuid)
-}
-
-// BuildAuthDeskKey 构建桌台信息缓存 key
-// Key 格式：{system_prefix}:{company_uuid}:desk:{device_uuid}
-func BuildAuthDeskKey(ctx goCtx.Context, deviceUuid uint64) string {
-	return BuildKey(ctx, "desk", deviceUuid)
 }
 
 // BuildApiPermissionKey 构建 API 权限缓存 key

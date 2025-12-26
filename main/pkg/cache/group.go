@@ -154,3 +154,10 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 		return val, nil
 	})
 }
+
+// ClearL1 清空 L1 本地缓存
+func (g *cacheGroup[T]) ClearL1() {
+	if g.config.EnableLocalCache && g.l1 != nil {
+		g.l1.flush()
+	}
+}
