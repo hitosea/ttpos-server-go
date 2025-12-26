@@ -1192,6 +1192,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 		Member: resp.RechargeOrderMember{
 			Uuid:     uint64(order.Member.ID),
 			Nickname: order.Member.Nickname,
+			Phone:    order.Member.Phone,
 		},
 		Status: order.Status,
 		Cashier: resp.RechargeOrderCashier{
