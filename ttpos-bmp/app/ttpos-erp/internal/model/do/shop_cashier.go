@@ -11,13 +11,13 @@ import (
 // ShopCashier is the golang structure of table erp_shop_cashier for DAO operations like Where/Data.
 type ShopCashier struct {
 	g.Meta       `orm:"table:erp_shop_cashier, do:true"`
-	Id           interface{} //
-	ShopUuid     interface{} // 商店UUID
-	AdminUuid    interface{} // 商店管理员UUID
-	CashierEmail interface{} // 收银员邮箱
-	ApiKey       interface{} //
-	ApiSecret    interface{} //
-	CompanyAbbr  interface{} // 公司缩写
-	Branch       interface{} // 分支
-	SiteCode     interface{} // 站点编码
+	Id           any //
+	ShopUuid     any // 商店UUID
+	AdminUuid    any // 商店管理员UUID
+	CashierEmail any // 收银员邮箱
+	ApiKey       any //
+	ApiSecret    any //
+	CompanyAbbr  any // 公司缩写
+	Branch       any // 分支
+	SiteCode     any // 站点编码
 }

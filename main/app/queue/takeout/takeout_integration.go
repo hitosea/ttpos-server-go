@@ -3,7 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"strconv"
+	"errors"
 	"ttpos-server-go/app/modules/takeout/application"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/repository"
@@ -34,28 +34,25 @@ func HandleIntegrationStatus(ctx context.Context, msg *primitive.MessageExt) err
 	}
 
 	logger.Logger.Info("收到门店集成状态变更事件",
-		zap.String("shop_uuid", event.ShopUuid),
-		zap.String("status", event.Status),
-		zap.Int64("timestamp", event.Timestamp))
+		zap.Uint64("shop_uuid", event.ShopUuid),
+		zap.String("provider_name", event.ProviderName),
+		zap.String("provider_shop_status", event.ProviderShopStatus),
+		zap.String("provider_merchant_id", event.ProviderMerchantId),
+		zap.Int64("updated_at", event.UpdatedAt))
 
 	// 创建gin上下文
 	dbm := database.GetDBManager(config.Database)
-	shopUuid, err := strconv.ParseUint(event.ShopUuid, 10, 64)
-	if err != nil {
-		logger.Logger.Error("转换ShopUuid失败", zap.Error(err))
-		return err
-	}
 	// 获取数据库连接
-	db := dbm.GetDB(shopUuid)
+	db := dbm.GetDB(event.ShopUuid)
 	if db == nil {
-		logger.Logger.Error("获取数据库连接失败", zap.Uint64("shop_uuid", shopUuid))
-		return err
+		logger.Logger.Error("获取数据库连接失败", zap.Uint64("shop_uuid", event.ShopUuid))
+		return errors.New("获取数据库连接失败")
 	}
 	// 获取公司信息
-	companyInfo, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(shopUuid)
+	companyInfo, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(event.ShopUuid)
 	if err != nil {
 		logger.Logger.Error("获取公司信息失败", zap.Error(err))
-		return err
+		return errors.New("获取公司信息失败")
 	}
 	// 设置上下文
 	ctxHelper := ttposContext.NewDefaultContext()
@@ -64,8 +61,8 @@ func HandleIntegrationStatus(ctx context.Context, msg *primitive.MessageExt) err
 	// 处理门店集成状态变更
 	err = application.NewTakeoutAppService(dbm).HandleIntegrationStatus(ctxHelper, event)
 	if err != nil {
-		logger.Logger.Error("处理门店集成状态变更失败", zap.Error(err), zap.String("shop_uuid", event.ShopUuid))
-		return err
+		logger.Logger.Error("处理门店集成状态变更失败", zap.Error(err), zap.Uint64("shop_uuid", event.ShopUuid))
+		return errors.New("处理门店集成状态变更失败")
 	}
 
 	return nil

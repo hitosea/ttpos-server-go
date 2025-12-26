@@ -64,8 +64,8 @@ type StockServiceClient interface {
 	// 返回：操作结果
 	CancelStockReconciliation(ctx context.Context, in *CancelStockReconciliationReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 查询物品在指定仓库的 Bin 记录
-	// 参数：物品代码、仓库名称
-	// 返回：Bin 数据，包括实际库存数量、估值率、库存价值
+	// 参数：仓库名称（必填）、物品代码（可选，为空时返回该仓库所有物品的 Bin 记录）
+	// 返回：货位库存信息列表，包括实际库存数量、估值率、库存价值
 	GetBin(ctx context.Context, in *GetBinReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
@@ -190,8 +190,8 @@ type StockServiceServer interface {
 	// 返回：操作结果
 	CancelStockReconciliation(context.Context, *CancelStockReconciliationReq) (*api.ResponseInfo, error)
 	// 查询物品在指定仓库的 Bin 记录
-	// 参数：物品代码、仓库名称
-	// 返回：Bin 数据，包括实际库存数量、估值率、库存价值
+	// 参数：仓库名称（必填）、物品代码（可选，为空时返回该仓库所有物品的 Bin 记录）
+	// 返回：货位库存信息列表，包括实际库存数量、估值率、库存价值
 	GetBin(context.Context, *GetBinReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedStockServiceServer()
 }

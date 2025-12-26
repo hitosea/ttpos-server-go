@@ -22,3 +22,7 @@ const (
 	ImportStatusSuccess    = 2 // 导入成功
 	ImportStatusFailed     = 3 // 导入失败
 )
+
+func (t *Takeout) IsEnabled() bool {
+	return t.Enabled
+}

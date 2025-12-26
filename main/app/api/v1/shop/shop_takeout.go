@@ -134,7 +134,7 @@ func (h *TakeoutHandler) GetBindingLink(c *gin.Context) {
 	// 调用应用服务
 	result, err := h.takeoutAppSrv.GetBindingLink(ctx, platform)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "获取绑定链接失败"))
+		helper.ErrorAutoWithData(c, constant.CodeFail, errors.WithMessage(err, "获取绑定链接失败"))
 		return
 	}
 

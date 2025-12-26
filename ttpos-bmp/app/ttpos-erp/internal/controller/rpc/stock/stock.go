@@ -240,9 +240,9 @@ func (*Controller) CancelStockReconciliation(ctx context.Context, req *stock.Can
 // 返回：ResponseInfo 响应，错误信息
 func (c *Controller) GetBin(ctx context.Context, req *stock.GetBinReq) (*api.ResponseInfo, error) {
 	// 参数验证
-	if req.ItemCode == "" || req.Warehouse == "" {
+	if req.Warehouse == "" {
 		g.Log().Warning(ctx, "GetBin 参数错误", req)
-		return rpc.ApiError("参数错误：item_code, warehouse 为必填项"), nil
+		return rpc.ApiError("参数错误：warehouse 为必填项"), nil
 	}
 
 	// 调用 Logic 层

@@ -2,9 +2,11 @@ package request
 
 // TakeoutIntegrationEvent 门店集成状态变更事件
 type TakeoutIntegrationEvent struct {
-	ShopUuid  string `json:"shopUuid"`  // TTPOS 店铺 UUID
-	Status    string `json:"status"`    // 当前状态 PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED
-	Timestamp int64  `json:"timestamp"` // 事件时间戳
+	ShopUuid           uint64 `json:"shopUuid"`           // TTPOS 店铺 UUID
+	ProviderName       string `json:"providerName"`       // 供应商名称 grab,foodpanda,lineman
+	ProviderShopStatus string `json:"providerShopStatus"` // 供应商门店状态 SYNCING, ACTIVE, INACTIVE
+	ProviderMerchantId string `json:"providerMerchantId"` // 供应商商户 ID
+	UpdatedAt          int64  `json:"updatedAt"`          // 更新时间戳
 }
 
 // TakeoutOrderEvent 供应商订单更新事件
