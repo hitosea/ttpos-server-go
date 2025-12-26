@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -310,7 +311,7 @@ func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]strin
 	if enableCache {
 		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
 		cacheLayer := objectStorageAdapter.GetApiPermissionCache[[]string](cache.Global)
-		cacheKey := objectStorageAdapter.BuildApiPermissionKey(companyUuid, staffUuid)
+		cacheKey := objectStoragePersistence.BuildApiPermissionKey(companyUuid, staffUuid)
 		permissions, err = cacheLayer.GET(cacheKey, queryFunc)
 	} else {
 		// 不使用缓存，直接查询数据库

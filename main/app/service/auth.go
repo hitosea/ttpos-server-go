@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -1047,7 +1048,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if enableCache {
 		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
 		cacheLayer := objectStorageAdapter.GetAuthStaffCache[*model.Staff](cache.Global)
-		cacheKey := objectStorageAdapter.BuildAuthStaffKey(ctx, auth.StaffUuid)
+		cacheKey := objectStoragePersistence.BuildAuthStaffKey(ctx, auth.StaffUuid)
 		staffPtr, err = cacheLayer.GET(cacheKey, queryStaffFunc)
 	} else {
 		// 不使用缓存，直接查询数据库
