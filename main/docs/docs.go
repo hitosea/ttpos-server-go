@@ -57798,6 +57798,10 @@ const docTemplate = `{
                     "description": "序列号",
                     "type": "string"
                 },
+                "takeout_platform": {
+                    "description": "外卖平台（第三方平台外卖：grab/lineman）",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "送厨商品Uuid",
                     "type": "integer"

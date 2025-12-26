@@ -8447,7 +8447,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 
 		// 批量物理删除子店现有数据
 		if len(delAttrTakeoutUuids) > 0 {
-			err := attrTakeoutRepo.DestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
+			err := attrTakeoutRepo.ForceDestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
 			if err != nil {
 				return errors.WithMessage(err, "销毁子店外卖属性价格失败")
 			}
@@ -8461,14 +8461,14 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		}
 
 		if len(delBomTakeoutUuids) > 0 {
-			err := bomTakeoutRepo.DestroyProductBomTakeout(commonRepo.WhereInUuids(delBomTakeoutUuids))
+			err := bomTakeoutRepo.ForceDestroyProductBomTakeout(commonRepo.WhereInUuids(delBomTakeoutUuids))
 			if err != nil {
 				return errors.WithMessage(err, "销毁子店外卖规格价格失败")
 			}
 		}
 
 		if len(delTakeoutUuids) > 0 {
-			err := takeoutRepo.DestroyProductPackageTakeout(commonRepo.WhereInUuids(delTakeoutUuids))
+			err := takeoutRepo.ForceDestroyProductPackageTakeout(commonRepo.WhereInUuids(delTakeoutUuids))
 			if err != nil {
 				return errors.WithMessage(err, "销毁子店外卖商品失败")
 			}
