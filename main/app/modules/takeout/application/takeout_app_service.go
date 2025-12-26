@@ -271,6 +271,11 @@ func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform str
 	if !takeout.Enabled {
 		return nil, errors.New("平台未开启")
 	}
+	if takeout.IsBound {
+		return &response.BindingStatusResponse{
+			IsBound: true,
+		}, nil
+	}
 
 	// 调用 bmp RPC 接口检查绑定状态
 	isBound, err := s.rpcService.CheckBindingStatus(ctx.GetContext(), platform, companyUuid)
@@ -280,8 +285,6 @@ func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform str
 
 	if isBound {
 		s.takeoutService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, true)
-	} else {
-		s.takeoutService.UpdatePlatformBoundStatus(ctx, takeout.Uuid, false)
 	}
 
 	return &response.BindingStatusResponse{
