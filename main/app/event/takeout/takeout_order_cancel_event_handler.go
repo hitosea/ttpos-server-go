@@ -71,6 +71,9 @@ func (s *takeoutOrderCancelEventSubscriber) Handle(domainEvent event.DomainEvent
 			"cancelled",
 			map[string]any{},
 		)
+
+		// 成功后，推送到厨显端更新订单
+		sendUpdateKitchenWebSocketNotification(orderCancelEvent.CompanyUuid)
 	})
 
 	return nil

@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	pkgLanguage "ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
@@ -32,7 +33,7 @@ type IProductionSrv interface {
 	Finish(ctx context.Context, req req.FinishReq) error                                                                          // 完成制作、传菜
 	Recovery(ctx context.Context, req req.RecoveryReq) error                                                                      // 恢复制作
 	ConfirmReturn(ctx context.Context, productUuid uint64) error                                                                  // 厨显端确认退菜
-	ConfirmReturnAll(ctx context.Context, saleBillUuid uint64) error                                                              // 厨显端确认退菜整单
+	ConfirmReturnAll(ctx context.Context, req req.ConfirmReturnAllReq) error                                                      // 厨显端确认退菜整单
 }
 
 // productionSrv 收银服务结构体
@@ -110,7 +111,6 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
 	productPackageUuidOpt := productionRepo.WhereProductPackageInPrinter(device.ProductPrinterUuid)
 	saleBillUuidOpt := productionRepo.WhereSaleBillInPrinterRegions(device.ProductPrinterUuid, ctx.Version(context.GTE, "2.4.0"))
-
 	limitedProductOpts := []repository.DBOption{
 		statusOpt,
 		productPackageUuidOpt,
@@ -129,7 +129,10 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 
 	// 非分批商品、或者分批已送厨商品
 	limitedProductOpts = append(limitedProductOpts, productionRepo.WhereIsNotBatchOrBatchTimeGT0())
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, limitedProductOpts...)
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(
+		constant.ProductionOrderProductColumnSaleBill+","+constant.ProductionOrderProductColumnTakeoutOrder,
+		req.PageNo, req.PageSize, limitedProductOpts...,
+	)
 	if err != nil {
 		return notNullResp, errors.ErrInternal
 	}
@@ -137,6 +140,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	for _, limitedProduct := range limitedProducts {
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
+
 	productOpts := []repository.DBOption{
 		productPackageUuidOpt,
 		saleBillUuidOpt,
@@ -148,6 +152,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 			constant.ProductionOrderProductMakeStatusRecovery,
 		}))
 	}
+
 	// 2.4.0 版本之前，只显示大于0的商品
 	if !ctx.Version(context.GTE, "2.4.0") {
 		productOpts = append(productOpts, productionRepo.WhereProductNumGT0())
@@ -160,6 +165,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	if err != nil {
 		return notNullResp, err
 	}
+
 	return resp.ProductionListWithPagination{
 		SendKitchenNum: sendKitchenNum,
 		List:           s.groupByOrder(ctx, limitedProducts, products, nil),
@@ -181,7 +187,7 @@ func (s *productionSrv) getNotNullProductionListResp() resp.ProductionListWithPa
 	}
 }
 
-// GetProductListByCategory 根据订单获取送厨商品
+// GetProductListByCategory 根据订单分类获取送厨商品
 func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) {
 	notNullResp := s.getNotNullProductionListResp()
 	mode, err := s.getMode(ctx, req.Mode)
@@ -276,59 +282,82 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			if paginatedProduct.FirstCategoryUuid != product.FirstCategoryUuid {
 				continue
 			}
+			// 设置外卖订单标识（只需要设置一次，当 group 还未初始化时）
+			if group.LocaleName == nil {
+				group.IsTakeoutBill = product.SaleBill.IsTakeoutBill() // 传统外送订单
+				group.IsTakeoutOrder = product.IsTakeoutOrder()        // 第三方平台外卖订单
+			}
 			if product.ProductCategory.MultiLanguageName.Uuid != 0 && group.LocaleName == nil {
 				localName := product.ProductCategory.MultiLanguageName.GetNames()
 				group.LocaleName = &localName
 			}
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
+			remark := item.Remark
 
-			// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
-			if product.IsBatchBool() {
-				item.CreateTime = product.BatchTime
-			}
-
-			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
-			if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
-				remark := item.Remark
-				if len(orderItemRemarkList) > 0 {
+			if product.TakeoutOrderUuid > 0 {
+				item.LocaleName = *pkgLanguage.JsonToLocaleResponse(product.Name)
+				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
+				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
+				item.DiningMethod = func() uint {
+					if product.TakeoutOrder.IsTakeawayOrder() {
+						return uint(constant.SaleBillDiningMethodTakeout)
+					}
+					return uint(constant.SaleBillDiningMethodDineIn)
+				}()
+				item.DiningMethod = func() uint {
+					if product.TakeoutOrder.IsTakeawayOrder() {
+						return uint(constant.SaleBillDiningMethodTakeout)
+					}
+					return uint(constant.SaleBillDiningMethodDineIn)
+				}()
+			} else {
+				// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
+				if product.IsBatchBool() {
+					item.CreateTime = product.BatchTime
+				}
+				orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+				if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
+					remark := item.Remark
+					if len(orderItemRemarkList) > 0 {
+						remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+						remark = remarkInfo.Remark.GetLocale(language)
+					}
+					item.Remark = i18n.Translate(language, "套餐备注：") + remark
+				}
+				item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
+				item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
+				item.SerialNo = product.SaleBill.SerialNo
+				item.DiningMethod = product.GetWrapStatus()                     // 订单商品的打包状态
+				item.IsSaleBillDeleted = product.SaleBill.IsDeletedOrCanceled() // 是否已经整单取消
+				item.BatchTag = func() resp.BatchTagInfo {
+					if businessSetting.OpenIsBatch() {
+						if product.IsBatchBool() && product.BatchTag != nil {
+							return resp.BatchTagInfo{
+								Uuid:       product.BatchTagUuid,
+								LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
+								Color:      product.BatchTag.Color,
+							}
+						}
+					}
+					return resp.BatchTagInfo{}
+				}()
+				item.OrderRemark = func() resp.OrderRemarkRes {
+					remark, err := product.SaleBill.GetOrderRemarkRes()
+					if err != nil {
+						return resp.OrderRemarkRes{}
+					}
+					if remark == nil {
+						return resp.OrderRemarkRes{}
+					}
+					return *remark
+				}()
+				if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
 					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
 					remark = remarkInfo.Remark.GetLocale(language)
 				}
-				item.Remark = i18n.Translate(language, "套餐备注：") + remark
 			}
-			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
-			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
-			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
-			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
-			item.BatchTag = func() resp.BatchTagInfo {
-				if businessSetting.OpenIsBatch() {
-					if product.IsBatchBool() && product.BatchTag != nil {
-						return resp.BatchTagInfo{
-							Uuid:       product.BatchTagUuid,
-							LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
-							Color:      product.BatchTag.Color,
-						}
-					}
-				}
-				return resp.BatchTagInfo{}
-			}()
-			item.OrderRemark = func() resp.OrderRemarkRes {
-				remark, err := product.SaleBill.GetOrderRemarkRes()
-				if err != nil {
-					return resp.OrderRemarkRes{}
-				}
-				if remark == nil {
-					return resp.OrderRemarkRes{}
-				}
-				return *remark
-			}()
-			remark := item.Remark
-			if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
-				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
-				remark = remarkInfo.Remark.GetLocale(language)
-			}
+
 			item.Remark = remark
 			items = append(items, item)
 		}
@@ -397,14 +426,20 @@ func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProduct
 	for _, product := range products {
 		var item resp.ProductionItem
 		copier.Copy(&item, product)
-		item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
-		item.SerialNo = product.SaleBill.SerialNo
-		item.DiningMethod = product.SaleBill.DiningMethod
 		remark := item.Remark
-		orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
-		if len(orderItemRemarkList) > 0 {
-			remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
-			remark = remarkInfo.Remark.GetLocale(language)
+		if product.TakeoutOrderUuid > 0 {
+			item.LocaleName = *pkgLanguage.JsonToLocaleResponse(product.Name)
+			item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
+			remark = product.TakeoutOrderItem.Specifications
+		} else {
+			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
+			item.SerialNo = product.SaleBill.SerialNo
+			item.DiningMethod = product.SaleBill.DiningMethod
+			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+			if len(orderItemRemarkList) > 0 {
+				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+				remark = remarkInfo.Remark.GetLocale(language)
+			}
 		}
 		item.Remark = remark
 		items = append(items, item)
@@ -417,7 +452,7 @@ func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProduct
 // GetHistory 获取制作完成、传菜完成历史
 func (s *productionSrv) GetHistory(ctx context.Context, req req.HistoryReq) (resp.ProductionHistory, error) {
 	// 获取过去24小时内的制作、传菜历史，按照制作、传菜时间倒序
-	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	productionRepo := repository.NewProductionRepo(ctx.GetDB())
 
 	mode, err := s.getMode(ctx, req.Mode)
 	if err != nil {
@@ -475,55 +510,54 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 					continue
 				}
 			}
-			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
-				continue
+
+			if product.TakeoutOrderUuid > 0 {
+				if paginatedProduct.TakeoutOrderUuid != product.TakeoutOrderUuid {
+					continue
+				}
+				group.LocaleName = &dto.LocaleResponse{}
+				group.LocaleName.SetAllEmptyLocale(product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber())
+				group.TakeoutOrderUuid = product.TakeoutOrderUuid
+				group.DiningMethod = func() uint {
+					if product.TakeoutOrder.IsTakeawayOrder() {
+						return uint(constant.SaleBillDiningMethodTakeout)
+					}
+					return uint(constant.SaleBillDiningMethodDineIn)
+				}()
+				group.IsTakeoutOrder = product.IsTakeoutOrder() // 第三方平台外卖订单
+				group.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
+			} else {
+				if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
+					continue
+				}
+				// 设置订单号
+				if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
+					group.LocaleName = &dto.LocaleResponse{}
+					group.LocaleName.SetAllEmptyLocale(product.SaleBill.SerialNo)
+				}
+				group.DiningMethod = product.SaleBill.DiningMethod
+				group.OrderRemark = func() resp.OrderRemarkRes {
+					remark, err := product.SaleBill.GetOrderRemarkRes()
+					if err != nil {
+						return resp.OrderRemarkRes{}
+					}
+					if remark == nil {
+						return resp.OrderRemarkRes{}
+					}
+					return *remark
+				}()
+				group.SaleBillUuid = product.SaleBillUuid                        // 销售账单Uuid
+				group.IsSaleBillDeleted = product.SaleBill.IsDeletedOrCanceled() // 是否已经整单取消
+				group.IsTakeoutBill = product.SaleBill.IsTakeoutBill()
 			}
-			group.DiningMethod = product.SaleBill.DiningMethod                                                                      // 订单商品的打包状态
-			group.SaleBillUuid = product.SaleBillUuid                                                                               // 销售账单Uuid
-			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
-			group.IsTakeoutBill = product.SaleBill.IsTakeoutBill()
-			group.OrderRemark = func() resp.OrderRemarkRes {
-				remark, err := product.SaleBill.GetOrderRemarkRes()
-				if err != nil {
-					return resp.OrderRemarkRes{}
-				}
-				if remark == nil {
-					return resp.OrderRemarkRes{}
-				}
-				return *remark
-			}()
-			if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
-				group.LocaleName = &dto.LocaleResponse{
-					ZH:   product.SaleBill.SerialNo,
-					TH:   product.SaleBill.SerialNo,
-					EN:   product.SaleBill.SerialNo,
-					ZHTW: product.SaleBill.SerialNo,
-					JA:   product.SaleBill.SerialNo,
-					KO:   product.SaleBill.SerialNo,
-					MY:   product.SaleBill.SerialNo,
-					TR:   product.SaleBill.SerialNo,
-					SV:   product.SaleBill.SerialNo,
-				}
+			if group.LocaleName == nil {
+				group.LocaleName = &dto.LocaleResponse{}
 			}
+
 			var item resp.ProductionItem
 			err := copier.Copy(&item, product)
 			if err != nil {
 				logger.Logger.Error("copier error", zap.Error(err))
-			}
-
-			// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
-			if product.IsBatchBool() {
-				item.CreateTime = product.BatchTime
-			}
-
-			orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
-			if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
-				remark := item.Remark
-				if len(orderItemRemarkList) > 0 {
-					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
-					remark = remarkInfo.Remark.GetLocale(language)
-				}
-				item.Remark = i18n.Translate(language, "套餐备注：") + remark
 			}
 			if modeMake {
 				item.FinishedTime = product.MadeTime
@@ -534,34 +568,55 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 					return product.SendDuration + product.MakeDuration // 海杉说:上菜历史页面中,总耗时 = 传菜时长 + 制作时长
 				}()
 			}
-			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
-			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
-			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
-			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
-			item.BatchTag = func() resp.BatchTagInfo {
-				if businessSetting.OpenIsBatch() {
-					if product.IsBatchBool() && product.BatchTag != nil {
-						return resp.BatchTagInfo{
-							Uuid:       product.BatchTagUuid,
-							LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
-							Color:      product.BatchTag.Color,
+
+			// 设置备注
+			remark := item.Remark
+			if product.TakeoutOrderUuid > 0 { // 不是外卖订单
+				item.LocaleName = *pkgLanguage.JsonToLocaleResponse(product.Name)
+				item.ProductAttributeNames = *pkgLanguage.JsonToLocaleResponse(product.ProductAttributeNames)
+				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
+				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
+				remark = product.TakeoutOrderItem.Specifications
+			} else {
+				item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
+				item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
+				item.SerialNo = product.SaleBill.SerialNo
+				item.DiningMethod = product.GetWrapStatus()
+				item.IsSaleBillDeleted = product.SaleBill.IsDeletedOrCanceled() // 是否已经整单取消                                                                // 订单商品的打包状态
+				item.BatchTag = func() resp.BatchTagInfo {
+					if businessSetting.OpenIsBatch() {
+						if product.IsBatchBool() && product.BatchTag != nil {
+							return resp.BatchTagInfo{
+								Uuid:       product.BatchTagUuid,
+								LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
+								Color:      product.BatchTag.Color,
+							}
 						}
 					}
+					return resp.BatchTagInfo{}
+				}()
+				// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
+				if product.IsBatchBool() {
+					item.CreateTime = product.BatchTime
 				}
-				return resp.BatchTagInfo{}
-			}()
-			remark := item.Remark
-			if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
-				remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
-				remark = remarkInfo.Remark.GetLocale(language)
+				orderItemRemarkList := product.SaleOrderProduct.GetOrderItemRemark()
+				if product.SaleOrderProduct.IsPackageSubProduct() && (item.Remark != "" || len(orderItemRemarkList) > 0) {
+					remark := item.Remark
+					if len(orderItemRemarkList) > 0 {
+						remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+						remark = remarkInfo.Remark.GetLocale(language)
+					}
+					item.Remark = i18n.Translate(language, "套餐备注：") + remark
+				}
+				if !product.SaleOrderProduct.IsPackageSubProduct() && len(orderItemRemarkList) > 0 {
+					remarkInfo := product.SaleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, remark)
+					remark = remarkInfo.Remark.GetLocale(language)
+				}
 			}
 			item.Remark = remark
 			items = append(items, item)
 		}
-		if group.LocaleName == nil {
-			group.LocaleName = &dto.LocaleResponse{}
-		}
+
 		group.ProductionList = resp.ProductionList{
 			List: items,
 		}
@@ -1124,34 +1179,45 @@ func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) e
 }
 
 // ConfirmReturnAll 厨显端确认退菜整单
-func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint64) error {
+func (s *productionSrv) ConfirmReturnAll(ctx context.Context, req req.ConfirmReturnAllReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	saleBillRepo := repository.NewSaleBillRepo(db)
-	saleBill, err := saleBillRepo.GetSaleBillByUuid(saleBillUuid)
-	if err != nil {
-		return errors.ErrInternal
-	}
 
-	if saleBill.DeleteTime == 0 && saleBill.Status != constant.SaleBillStatusCanceled || saleBill.IsKitchenConfirm != 0 {
-		return errors.New("订单未整单取消")
-	}
-	saleBill.IsKitchenConfirm = 1
-
-	// 销售订单更新为厨显端已确认退整单，并更新送厨商品为已删除
-	err = db.Transaction(func(tx *gorm.DB) error {
-		if err := repository.NewSaleBillRepo(tx).UpdateSaleBill(saleBill); err != nil {
-			return err
-		}
-		productionRepo := repository.NewProductionRepo(tx)
-		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleBillUuid(saleBillUuid)}, map[string]any{
+	if req.TakeoutOrderUuid > 0 {
+		productionRepo := repository.NewProductionRepo(db)
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereTakeoutOrderUuid(req.TakeoutOrderUuid)}, map[string]any{
 			"delete_time": time.Now().Unix(),
 		}); err != nil {
-			return err
+			return errors.ErrInternal
 		}
-		return nil
-	})
-	if err != nil {
-		return errors.ErrInternal
+	} else if req.SaleBillUuid > 0 {
+		saleBillRepo := repository.NewSaleBillRepo(db)
+		saleBill, err := saleBillRepo.GetSaleBillByUuid(req.SaleBillUuid)
+		if err != nil {
+			return errors.ErrInternal
+		}
+
+		if saleBill.DeleteTime == 0 && saleBill.Status != constant.SaleBillStatusCanceled || saleBill.IsKitchenConfirm != 0 {
+			return errors.New("订单未整单取消")
+		}
+		saleBill.IsKitchenConfirm = 1
+
+		// 销售订单更新为厨显端已确认退整单，并更新送厨商品为已删除
+		err = db.Transaction(func(tx *gorm.DB) error {
+			if err := repository.NewSaleBillRepo(tx).UpdateSaleBill(saleBill); err != nil {
+				return err
+			}
+			productionRepo := repository.NewProductionRepo(tx)
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleBillUuid(req.SaleBillUuid)}, map[string]any{
+				"delete_time": time.Now().Unix(),
+			}); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return errors.ErrInternal
+		}
+
 	}
 
 	// 恢复制作后，推送更新厨显
@@ -1160,5 +1226,6 @@ func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint6
 			"update_time": time.Now().Unix(),
 		})
 	})
+
 	return nil
 }

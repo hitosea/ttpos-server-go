@@ -2,8 +2,10 @@ package takeout
 
 import (
 	"fmt"
+	"time"
 
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
@@ -15,8 +17,10 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -612,6 +616,13 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 			// 标记失败不影响流程，只记录日志
 		}
 
+		// 5.5 删除关联的生产订单（ttpos_production_order 和 ttpos_production_order_product）
+		productionRepo := repository.NewProductionRepo(tx)
+		if err := productionRepo.DeleteProductionOrderByTakeoutOrderUuid(orderUuid); err != nil {
+			logger.Logger.Error("删除外卖订单关联的生产订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
+			// 删除失败不影响流程，只记录日志
+		}
+
 		return nil
 	})
 }
@@ -704,6 +715,420 @@ func (s *takeoutSrv) reduceTakeoutOrderSalesVolume(ctx context.Context, order *t
 			logger.Logger.Error("减少Package销量失败", zap.Uint64("packageUuid", packageUuid), zap.Float64("saleNum", saleNum), zap.Error(err))
 			// 继续处理其他Package，不中断流程
 		}
+	}
+
+	return nil
+}
+
+// CreateProductionOrderForTakeout 为外卖订单创建送厨单
+func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error {
+	db := ctx.GetDB()
+	currentTime := time.Now().Unix()
+
+	// 查询外卖订单
+	orderRepo := persistence.NewTakeoutOrderRepo(db)
+	order, err := orderRepo.GetByUuid(orderUuid, orderRepo.WithTakeoutOrderItems(), orderRepo.WithTakeoutOrderItemModifiers())
+	if err != nil {
+		return errors.WithMessage(err, "查询外卖订单失败")
+	}
+	if order == nil {
+		return errors.New("外卖订单不存在")
+	}
+
+	// 生成 ProductionOrder UUID
+	productionOrderUuid, err := utils.GetID()
+	if err != nil {
+		return errors.WithMessage(err, "生成送厨单UUID失败")
+	}
+
+	// 初始化 Repo
+	productionRepo := repository.NewProductionRepo(db)
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	productBomRepo := repository.NewProductBomRepo(db)
+	productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(db)
+	bomMappingRepo := persistence.NewTakeoutBomMappingRepo(db)
+
+	// 1. 收集所有需要查询的 UUID
+	var (
+		normalProductPackageUuids = make(map[uint64]bool) // 普通商品的 ProductPackage UUID
+		packageGroupItemUuids     = make([]uint64, 0)     // 套餐商品的 groupItem UUID
+		flavorBomUuids            = make(map[uint64]bool) // flavor 类型的 BOM UUID
+		sauceBomUuids             = make(map[uint64]bool) // sauce 类型的 BOM UUID
+		attrPackageAttributeUuids = make(map[uint64]bool) // attr 类型的 ProductPackageAttribute UUID
+	)
+
+	// 遍历所有商品，收集需要查询的 UUID
+	for _, takeoutItem := range order.TakeoutOrderItems {
+		if takeoutItem.TtposProductType == 0 {
+			// 普通商品：收集 ProductPackage UUID
+			if takeoutItem.TtposProductUuid > 0 {
+				normalProductPackageUuids[takeoutItem.TtposProductUuid] = true
+			}
+			// 收集 modifiers 相关的 UUID
+			for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
+				if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
+					continue
+				}
+				switch modifier.TtposModifierType {
+				case "flavor":
+					flavorBomUuids[modifier.TtposModifierUuid] = true
+				case "sauce":
+					sauceBomUuids[modifier.TtposModifierUuid] = true
+				case "attr":
+					attrPackageAttributeUuids[modifier.TtposModifierUuid] = true
+				}
+			}
+		} else {
+			// 套餐商品：收集 groupItem UUID
+			for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
+				if modifier.IsMapped == 1 && modifier.TtposModifierType == "commodity" && modifier.TtposModifierUuid > 0 {
+					packageGroupItemUuids = append(packageGroupItemUuids, modifier.TtposModifierUuid)
+				}
+			}
+		}
+	}
+
+	// 2. 批量查询所有需要的数据
+	// 2.1 批量查询普通商品的 ProductPackage（预加载 ProductCategory）
+	normalPackageUuidList := make([]uint64, 0, len(normalProductPackageUuids))
+	for uuid := range normalProductPackageUuids {
+		normalPackageUuidList = append(normalPackageUuidList, uuid)
+	}
+	normalProductPackages, err := productPackageRepo.GetProductPackageList(
+		repository.CommonRepo.WhereInUuids(normalPackageUuidList),
+		productPackageRepo.WithProductCategory(),
+	)
+	if err != nil {
+		logger.Logger.Error("批量查询普通商品套餐失败", zap.Error(err))
+		return errors.WithMessage(err, "批量查询普通商品套餐失败")
+	}
+	normalProductPackageMap := make(map[uint64]*model.ProductPackage)
+	for _, pkg := range normalProductPackages {
+		normalProductPackageMap[pkg.Uuid] = pkg
+	}
+
+	// 2.2 批量查询套餐商品的 BOM 映射
+	var groupItemBomMapping map[uint64]persistence.GroupItemBomMapping
+	var packageSubProductPackageUuids = make(map[uint64]bool)
+	var packageBomUuids = make(map[uint64]bool)
+	if len(packageGroupItemUuids) > 0 {
+		groupItemBomMapping, err = bomMappingRepo.GetGroupItemBomMapping(packageGroupItemUuids)
+		if err != nil {
+			logger.Logger.Error("批量查询套餐商品BOM映射失败", zap.Error(err))
+			return errors.WithMessage(err, "批量查询套餐商品BOM映射失败")
+		}
+		// 收集套餐子商品的 ProductPackage UUID 和 BOM UUID
+		for _, mapping := range groupItemBomMapping {
+			if mapping.RelatedUuid > 0 {
+				packageSubProductPackageUuids[mapping.RelatedUuid] = true
+			}
+			if mapping.ProductBomUuid > 0 {
+				packageBomUuids[mapping.ProductBomUuid] = true
+			}
+		}
+	}
+
+	// 2.3 批量查询套餐子商品的 ProductPackage（预加载 ProductCategory）
+	packageSubPackageUuidList := make([]uint64, 0, len(packageSubProductPackageUuids))
+	for uuid := range packageSubProductPackageUuids {
+		packageSubPackageUuidList = append(packageSubPackageUuidList, uuid)
+	}
+	packageSubProductPackages, err := productPackageRepo.GetProductPackageList(
+		repository.CommonRepo.WhereInUuids(packageSubPackageUuidList),
+		productPackageRepo.WithProductCategory(),
+	)
+	if err != nil {
+		logger.Logger.Error("批量查询套餐子商品套餐失败", zap.Error(err))
+		return errors.WithMessage(err, "批量查询套餐子商品套餐失败")
+	}
+	packageSubProductPackageMap := make(map[uint64]*model.ProductPackage)
+	for _, pkg := range packageSubProductPackages {
+		packageSubProductPackageMap[pkg.Uuid] = pkg
+	}
+
+	// 2.4 批量查询所有 BOM（flavor + sauce + package）
+	allBomUuids := make([]uint64, 0)
+	for uuid := range flavorBomUuids {
+		allBomUuids = append(allBomUuids, uuid)
+	}
+	for uuid := range sauceBomUuids {
+		allBomUuids = append(allBomUuids, uuid)
+	}
+	for uuid := range packageBomUuids {
+		allBomUuids = append(allBomUuids, uuid)
+	}
+	// 去重
+	bomUuidMap := make(map[uint64]bool)
+	uniqueBomUuids := make([]uint64, 0)
+	for _, uuid := range allBomUuids {
+		if !bomUuidMap[uuid] {
+			bomUuidMap[uuid] = true
+			uniqueBomUuids = append(uniqueBomUuids, uuid)
+		}
+	}
+	// 批量查询 flavor BOM（需要预加载 ProductFlavor.MultiLanguageName）
+	flavorBomUuidList := make([]uint64, 0)
+	for uuid := range flavorBomUuids {
+		flavorBomUuidList = append(flavorBomUuidList, uuid)
+	}
+	flavorBoms, err := productBomRepo.GetProductBoms(
+		repository.CommonRepo.WhereInUuids(flavorBomUuidList),
+		repository.CommonRepo.Preload(repository.WithPreload{
+			Query: "ProductFlavor.MultiLanguageName",
+		}),
+	)
+	if err != nil {
+		logger.Logger.Error("批量查询规格BOM失败", zap.Error(err))
+		return errors.WithMessage(err, "批量查询规格BOM失败")
+	}
+	flavorBomMap := make(map[uint64]*model.ProductBom)
+	for _, bom := range flavorBoms {
+		flavorBomMap[bom.Uuid] = bom
+	}
+
+	// 批量查询 sauce BOM（需要预加载 ProductSauce.MultiLanguageName）
+	sauceBomUuidList := make([]uint64, 0)
+	for uuid := range sauceBomUuids {
+		sauceBomUuidList = append(sauceBomUuidList, uuid)
+	}
+	sauceBoms, err := productBomRepo.GetProductBoms(
+		repository.CommonRepo.WhereInUuids(sauceBomUuidList),
+		repository.CommonRepo.Preload(repository.WithPreload{
+			Query: "ProductSauce.MultiLanguageName",
+		}),
+	)
+	if err != nil {
+		logger.Logger.Error("批量查询加料BOM失败", zap.Error(err))
+		return errors.WithMessage(err, "批量查询加料BOM失败")
+	}
+	sauceBomMap := make(map[uint64]*model.ProductBom)
+	for _, bom := range sauceBoms {
+		sauceBomMap[bom.Uuid] = bom
+	}
+
+	// 批量查询 package BOM（不需要预加载）
+	packageBomUuidList := make([]uint64, 0)
+	for uuid := range packageBomUuids {
+		packageBomUuidList = append(packageBomUuidList, uuid)
+	}
+	packageBoms, err := productBomRepo.GetProductBomsByUuids(packageBomUuidList)
+	if err != nil {
+		logger.Logger.Error("批量查询套餐BOM失败", zap.Error(err))
+		return errors.WithMessage(err, "批量查询套餐BOM失败")
+	}
+	packageBomMap := make(map[uint64]*model.ProductBom)
+	for _, bom := range packageBoms {
+		packageBomMap[bom.Uuid] = bom
+	}
+
+	// 2.5 批量查询 ProductPackageAttribute
+	attrPackageAttributeUuidList := make([]uint64, 0, len(attrPackageAttributeUuids))
+	for uuid := range attrPackageAttributeUuids {
+		attrPackageAttributeUuidList = append(attrPackageAttributeUuidList, uuid)
+	}
+	productPackageAttributes, err := productPackageAttributeRepo.GetProductPackageAttributesByUuids(attrPackageAttributeUuidList)
+	if err != nil {
+		logger.Logger.Error("批量查询商品属性失败", zap.Error(err))
+		return errors.WithMessage(err, "批量查询商品属性失败")
+	}
+	productPackageAttributeMap := make(map[uint64]*model.ProductPackageAttribute)
+	for _, attr := range productPackageAttributes {
+		productPackageAttributeMap[attr.Uuid] = attr
+	}
+
+	// 3. 创建 ProductionOrderProduct 列表
+	productionOrderProducts := make([]*model.ProductionOrderProduct, 0)
+
+	for _, takeoutItem := range order.TakeoutOrderItems {
+		if takeoutItem.TtposProductType == 0 {
+			// 普通商品处理
+			productPackage, ok := normalProductPackageMap[takeoutItem.TtposProductUuid]
+			if !ok {
+				logger.Logger.Warn("未找到普通商品套餐", zap.Uint64("productPackageUuid", takeoutItem.TtposProductUuid))
+				continue
+			}
+
+			// 生成 ProductionOrderProduct UUID
+			productUuid, err := utils.GetID()
+			if err != nil {
+				logger.Logger.Error("生成送厨商品UUID失败", zap.Error(err))
+				continue
+			}
+
+			// 获取商品信息
+			productPackageUuid := productPackage.Uuid
+			productPackageName := productPackage.Name
+			var firstCategoryUuid uint64
+			if productPackage.ProductCategory.Uuid > 0 {
+				firstCategoryUuid = productPackage.ProductCategory.GetFirstCategoryUuid()
+			}
+
+			// 处理 modifiers，提取属性名称
+			var productBomUuid uint64
+			var productBomName string
+			var attributeMultiLanguageNames []*model.MultiLanguageName
+
+			for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
+				if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
+					continue
+				}
+
+				switch modifier.TtposModifierType {
+				case "flavor":
+					productBomUuid = modifier.TtposModifierUuid
+					if bom, ok := flavorBomMap[productBomUuid]; ok && bom != nil {
+						productBomName = bom.ProductFlavor.MultiLanguageName.ToJson()
+						attributeMultiLanguageNames = append(attributeMultiLanguageNames, &bom.ProductFlavor.MultiLanguageName)
+					}
+				case "attr":
+					if attr, ok := productPackageAttributeMap[modifier.TtposModifierUuid]; ok && attr != nil {
+						attributeMultiLanguageNames = append(attributeMultiLanguageNames, &attr.Attribute.MultiLanguageName)
+					}
+				case "sauce":
+					if bom, ok := sauceBomMap[modifier.TtposModifierUuid]; ok && bom != nil {
+						attributeMultiLanguageNames = append(attributeMultiLanguageNames, &bom.ProductSauce.MultiLanguageName)
+					}
+				}
+			}
+
+			// 合并多个属性的多语言名称
+			var attributeNames string
+			if len(attributeMultiLanguageNames) > 0 {
+				localeResponses := make([]dto.LocaleResponse, 0, len(attributeMultiLanguageNames))
+				for _, attrName := range attributeMultiLanguageNames {
+					localeResp := attrName.GetNames()
+					if !localeResp.IsNull() {
+						localeResponses = append(localeResponses, localeResp)
+					}
+				}
+				if len(localeResponses) > 0 {
+					mergedLocale := language.MergeLocaleResponses(localeResponses, ";")
+					attributeNames = mergedLocale.ToJson()
+				}
+			}
+
+			// 使用商品名称（优先使用 TTPOS 商品名称，否则使用平台商品名称）
+			itemName := takeoutItem.ItemName
+			if productPackageName != "" {
+				itemName = productPackageName
+			}
+
+			// 创建 ProductionOrderProduct
+			productionOrderProduct := &model.ProductionOrderProduct{
+				BaseModel:             model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
+				Name:                  itemName,
+				Num:                   float64(takeoutItem.Quantity),
+				InitNum:               float64(takeoutItem.Quantity),
+				FlavorName:            productBomName,
+				ProductBomUuid:        productBomUuid,
+				ProductAttributeNames: attributeNames,
+				ProductSaucesNames:    "",
+				Status:                constant.ProductionOrderProductStatusCooking,
+				Remark:                "",
+				HasMaterial:           0,
+				ProductPackageUuid:    productPackageUuid,
+				ProductionOrderUuid:   productionOrderUuid,
+				TakeoutOrderUuid:      order.Uuid,
+				TakeoutOrderItemUuid:  takeoutItem.Uuid,
+				FirstCategoryUuid:     firstCategoryUuid,
+			}
+			productionOrderProducts = append(productionOrderProducts, productionOrderProduct)
+		} else {
+			// 套餐商品处理
+			// 收集所有 commodity modifiers
+			commodityModifiers := make([]*takeoutModel.TakeoutOrderItemModifier, 0)
+			for i := range takeoutItem.TakeoutOrderItemModifiers {
+				modifier := &takeoutItem.TakeoutOrderItemModifiers[i]
+				if modifier.IsMapped == 1 && modifier.TtposModifierType == "commodity" && modifier.TtposModifierUuid > 0 {
+					commodityModifiers = append(commodityModifiers, modifier)
+				}
+			}
+
+			if len(commodityModifiers) == 0 {
+				continue
+			}
+
+			// 为每个 commodity modifier 创建一个 ProductionOrderProduct
+			for _, commodityModifier := range commodityModifiers {
+				groupItemUuid := commodityModifier.TtposModifierUuid
+				mapping, ok := groupItemBomMapping[groupItemUuid]
+				if !ok {
+					logger.Logger.Warn("未找到套餐商品BOM映射", zap.Uint64("groupItemUuid", groupItemUuid))
+					continue
+				}
+
+				// 获取子商品的 ProductPackage
+				subProductPackage, ok := packageSubProductPackageMap[mapping.RelatedUuid]
+				if !ok {
+					logger.Logger.Error("未找到子商品套餐", zap.Uint64("relatedUuid", mapping.RelatedUuid))
+					continue
+				}
+
+				productPackageUuid := subProductPackage.Uuid
+				productPackageName := subProductPackage.Name
+				var firstCategoryUuid uint64
+				if subProductPackage.ProductCategory.Uuid > 0 {
+					firstCategoryUuid = subProductPackage.ProductCategory.GetFirstCategoryUuid()
+				}
+
+				// 获取 BOM 信息
+				productBomUuid := mapping.ProductBomUuid
+				var productBomName string
+				if bom, ok := packageBomMap[productBomUuid]; ok && bom != nil {
+					productBomName = bom.Name
+				}
+
+				// 生成 ProductionOrderProduct UUID
+				productUuid, err := utils.GetID()
+				if err != nil {
+					logger.Logger.Error("生成送厨商品UUID失败", zap.Error(err))
+					continue
+				}
+
+				// 使用商品名称（优先使用 TTPOS 商品名称，否则使用平台商品名称）
+				itemName := takeoutItem.ItemName
+				if productPackageName != "" {
+					itemName = productPackageName
+				}
+
+				// 套餐子商品的数量 = groupItem.Num * takeoutItem.Quantity
+				productNum := mapping.Num * float64(takeoutItem.Quantity)
+
+				// 创建 ProductionOrderProduct
+				productionOrderProduct := &model.ProductionOrderProduct{
+					BaseModel:             model.BaseModel{Uuid: productUuid, CreateTime: currentTime, UpdateTime: currentTime},
+					Name:                  itemName,
+					Num:                   productNum,
+					InitNum:               productNum,
+					FlavorName:            productBomName,
+					ProductBomUuid:        productBomUuid,
+					ProductAttributeNames: productBomName,
+					ProductSaucesNames:    "",
+					Status:                constant.ProductionOrderProductStatusCooking,
+					Remark:                "",
+					HasMaterial:           0,
+					ProductPackageUuid:    productPackageUuid,
+					ProductionOrderUuid:   productionOrderUuid,
+					TakeoutOrderUuid:      order.Uuid,
+					TakeoutOrderItemUuid:  takeoutItem.Uuid,
+					FirstCategoryUuid:     firstCategoryUuid,
+				}
+				productionOrderProducts = append(productionOrderProducts, productionOrderProduct)
+			}
+		}
+	}
+
+	// 4. 创建 ProductionOrder
+	productionOrder := &model.ProductionOrder{
+		BaseModel:               model.BaseModel{Uuid: productionOrderUuid, CreateTime: currentTime, UpdateTime: currentTime},
+		TakeoutOrderUuid:        order.Uuid,
+		Source:                  order.Platform,
+		ProductionOrderProducts: productionOrderProducts,
+	}
+
+	// 5. 保存到数据库
+	if err := productionRepo.CreateProductionOrder(productionOrder); err != nil {
+		return errors.WithMessage(err, "创建送厨单失败")
 	}
 
 	return nil

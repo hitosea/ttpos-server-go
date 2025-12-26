@@ -193,15 +193,15 @@ func (h *ProductHandler) ConfirmReturn(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.SaleBillUuid true "按订单查看送厨商品，确认整单取消时传递销售账单Uuid"
+// @param data body req.ConfirmReturnAllReq true "按订单查看送厨商品，确认整单取消时传递销售账单Uuid和外卖订单Uuid"
 // @Router /kitchen/product/confirm_return_all [post]
 func (h *ProductHandler) ConfirmReturnAll(c *gin.Context) {
-	var returnAllReq req.SaleBillUuid
+	var returnAllReq req.ConfirmReturnAllReq
 	if err := c.ShouldBindJSON(&returnAllReq); err != nil {
 		helper.HandleValidationError(c, err, returnAllReq, nil)
 		return
 	}
-	err := h.productionSrv.ConfirmReturnAll(helper.GetContext(c), returnAllReq.SaleBillUuid)
+	err := h.productionSrv.ConfirmReturnAll(helper.GetContext(c), returnAllReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

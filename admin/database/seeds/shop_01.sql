@@ -709,13 +709,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order` (
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台ID',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
-    `source` varchar(255) DEFAULT '' COMMENT '操作来源 shop-商家、cashier-收银机、tablet-平板端、kitchen-厨显端、assistant-点餐助手、h5-H5',
+    `takeout_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单UUID（关联 ttpos_takeout_order.uuid）',
+    `source` varchar(255) DEFAULT '' COMMENT '操作来源 shop-商家、cashier-收银机、tablet-平板端、kitchen-厨显端、assistant-点餐助手、h5-H5、grab、lineman',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_desk_uuid` (`desk_uuid`),
     INDEX `idx_sale_order_uuid` (`sale_order_uuid`),
     INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
+    INDEX `idx_takeout_order_uuid` (`takeout_order_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单表';
 
@@ -736,6 +738,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
+    `takeout_order_item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单商品UUID（关联 ttpos_takeout_order_item.uuid）',
     `first_category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '一级分类ID',
     `finished_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳)',
     `make_status` INT(10) NOT NULL DEFAULT 0 COMMENT '制作状态 0-默认，未制作完成，1-已制作完成，2-已恢复到制作中',
@@ -760,6 +763,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     INDEX `idx_product_package_uuid` (`product_package_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
     INDEX `idx_production_order_uuid` (`production_order_uuid`),
+    INDEX `idx_takeout_order_item_uuid` (`takeout_order_item_uuid`),
     INDEX `idx_first_category_uuid` (`first_category_uuid`),
     INDEX `idx_batch_tag_uuid` (`batch_tag_uuid`),
     INDEX `idx_status` (`status`),
@@ -776,12 +780,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_material` (
     `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位,不随后台改变',
     `production_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
+    `takeout_order_item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单商品UUID（关联 ttpos_takeout_order_item.uuid）',
+    `takeout_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单UUID（关联 ttpos_takeout_order.uuid）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_material_uuid` (`material_uuid`),
     INDEX `idx_production_order_product_uuid` (`production_order_product_uuid`),
     INDEX `idx_sale_order_product_uuid` (`sale_order_product_uuid`),
+    INDEX `idx_takeout_order_item_uuid` (`takeout_order_item_uuid`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '生产订单原料表';
 
@@ -3809,7 +3816,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout` (
     `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
     `platform` varchar(50) NOT NULL DEFAULT '' COMMENT '外卖平台(grab/lineman等)',
-    `enabled` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '是否开启(1:开启 0:关闭)',
+    `enabled` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否开启(1:开启 0:关闭)',
     `import_status` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '导入状态(0:未导入 1:导入中 2:导入成功 3:导入失败)',
     `menu` json COMMENT '平台菜单数据(JSON格式)',
     `ttpos_menu` json COMMENT 'TTPOS导出的菜单数据(JSON格式)',

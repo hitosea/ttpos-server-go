@@ -7,6 +7,7 @@ import (
 // GroupItemBomMapping 套餐商品的 BOM 映射信息
 type GroupItemBomMapping struct {
 	ProductBomUuid uint64  // BOM UUID
+	RelatedUuid    uint64  // 关联商品UUID
 	Num            float64 // 套餐配置的数量
 }
 
@@ -77,11 +78,12 @@ func (r *takeoutBomMappingRepoImpl) GetGroupItemBomMapping(groupItemUuids []uint
 	var results []struct {
 		Uuid           uint64  `gorm:"column:uuid"`
 		ProductBomUuid uint64  `gorm:"column:product_bom_uuid"`
+		RelatedUuid    uint64  `gorm:"column:related_uuid"`
 		Num            float64 `gorm:"column:num"`
 	}
 
 	err := r.db.Table("ttpos_product_package_group_item").
-		Select("uuid, product_bom_uuid, num").
+		Select("uuid, product_bom_uuid, related_uuid, num").
 		Where("uuid IN ?", groupItemUuids).
 		Where("delete_time = 0").
 		Find(&results).Error
@@ -95,6 +97,7 @@ func (r *takeoutBomMappingRepoImpl) GetGroupItemBomMapping(groupItemUuids []uint
 	for _, result := range results {
 		mapping[result.Uuid] = GroupItemBomMapping{
 			ProductBomUuid: result.ProductBomUuid,
+			RelatedUuid:    result.RelatedUuid,
 			Num:            result.Num,
 		}
 	}

@@ -1,16 +1,33 @@
 package model
 
-import "ttpos-server-go/app/constant"
+import (
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/modules/takeout/domain/model"
+)
 
 // ProductionOrder 生产单 `ttpos_production_order`
 type ProductionOrder struct {
 	BaseModel
-	DeskUuid      uint64 `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台ID;NOT NULL" json:"desk_uuid"`
-	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"`
-	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单ID;NOT NULL" json:"sale_bill_uuid"`
-	Source        string `gorm:"column:source;type:varchar(255);comment:操作来源 shop-商家、cashier-收银机、tablet-平板端、kitchen-厨显端、assistant-点餐助手、h5-H5" json:"source"`
+	DeskUuid         uint64 `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台ID;NOT NULL" json:"desk_uuid"`
+	SaleOrderUuid    uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"`
+	SaleBillUuid     uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单ID;NOT NULL" json:"sale_bill_uuid"`
+	TakeoutOrderUuid uint64 `gorm:"column:takeout_order_uuid;type:bigint(20) unsigned;default:0;comment:外卖订单UUID（关联 ttpos_takeout_order.uuid）;NOT NULL" json:"takeout_order_uuid"`
+	Source           string `gorm:"column:source;type:varchar(255);comment:操作来源 shop-商家、cashier-收银机、tablet-平板端、kitchen-厨显端、assistant-点餐助手、h5-H5、grab、lineman" json:"source"`
 
 	ProductionOrderProducts []*ProductionOrderProduct `gorm:"foreignKey:ProductionOrderUuid;references:Uuid" json:"production_order_products"`
+}
+
+// 判断是否为外卖订单
+func (p *ProductionOrder) IsTakeoutOrder() bool {
+	return p.TakeoutOrderUuid > 0
+}
+
+// 获取来源平台
+func (p *ProductionOrder) GetPlatform() string {
+	if p.TakeoutOrderUuid > 0 {
+		return p.Source // grab, lineman
+	}
+	return ""
 }
 
 // ProductionOrderProduct 生产单商品 `ttpos_production_order_product`
@@ -30,6 +47,8 @@ type ProductionOrderProduct struct {
 	ProductPackageUuid    uint64  `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
 	SaleOrderProductUuid  uint64  `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品ID;NOT NULL" json:"sale_order_product_uuid"`
 	ProductionOrderUuid   uint64  `gorm:"column:production_order_uuid;type:bigint(20) unsigned;default:0;comment:生产订单ID;NOT NULL" json:"production_order_uuid"`
+	TakeoutOrderUuid      uint64  `gorm:"column:takeout_order_uuid;type:bigint(20) unsigned;default:0;comment:外卖订单UUID（关联 ttpos_takeout_order.uuid）;NOT NULL" json:"takeout_order_uuid"`
+	TakeoutOrderItemUuid  uint64  `gorm:"column:takeout_order_item_uuid;type:bigint(20) unsigned;default:0;comment:外卖订单商品UUID（关联 ttpos_takeout_order_item.uuid）;NOT NULL" json:"takeout_order_item_uuid"`
 	FirstCategoryUuid     uint64  `gorm:"column:first_category_uuid;type:bigint(20) unsigned;default:0;comment:一级分类ID;NOT NULL" json:"first_category_uuid"`
 	FinishedTime          uint    `gorm:"column:finished_time;type:int(10) unsigned;default:0;comment:完成时间(时间戳);NOT NULL" json:"finished_time"`
 	MakeStatus            int     `gorm:"column:make_status;type:tinyint(1);default:0;comment:制作状态 0-默认，未制作完成，1-已制作完成，2-已恢复到制作中;NOT NULL" json:"make_status"`
@@ -48,10 +67,13 @@ type ProductionOrderProduct struct {
 	AvgAllDuration  float64 `gorm:"column:avg_all_duration;type:decimal(22,4);default:0.00;comment:总时长平均值(秒);NOT NULL" json:"avg_all_duration"`
 
 	ProductionOrderMaterials []*ProductionOrderMaterial `gorm:"foreignKey:ProductionOrderProductUuid;references:Uuid" json:"production_order_materials"`
+	ProductionOrder          ProductionOrder            `gorm:"foreignKey:ProductionOrderUuid;references:Uuid" json:"production_order"`
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`
 	SaleBill                 SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:Uuid" json:"sale_bill"`
 	ProductCategory          ProductCategory            `gorm:"foreignKey:FirstCategoryUuid;references:Uuid" json:"product_category"`
 	BatchTag                 *BatchTag                  `gorm:"foreignKey:BatchTagUuid;references:Uuid" json:"batch_tag"`
+	TakeoutOrder             *model.TakeoutOrder        `gorm:"foreignKey:Uuid;references:TakeoutOrderUuid" json:"takeout_order"`
+	TakeoutOrderItem         *model.TakeoutOrderItem    `gorm:"foreignKey:TakeoutOrderItemUuid;references:Uuid" json:"takeout_order_item"`
 }
 
 // 获取商品的送厨时间
@@ -93,6 +115,11 @@ func (p *ProductionOrderProduct) GetWrapStatus() uint {
 	return constant.SaleBillDiningMethodDineIn // 堂食
 }
 
+// IsTakeoutOrder 是否是外卖订单
+func (p *ProductionOrderProduct) IsTakeoutOrder() bool {
+	return p.TakeoutOrderUuid > 0
+}
+
 // ProductionOrderMaterial 生产单原料 `ttpos_production_order_material`
 type ProductionOrderMaterial struct {
 	BaseModel
@@ -103,4 +130,5 @@ type ProductionOrderMaterial struct {
 	Unit                       string `gorm:"column:unit;type:varchar(255);comment:单位,不随后台改变;NOT NULL" json:"unit"`
 	ProductionOrderProductUuid uint64 `gorm:"column:production_order_product_uuid;type:bigint(20) unsigned;default:0;comment:生产订单商品ID;NOT NULL" json:"production_order_product_uuid"`
 	SaleOrderProductUuid       uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品ID;NOT NULL" json:"sale_order_product_uuid"`
+	TakeoutOrderItemUuid       uint64 `gorm:"column:takeout_order_item_uuid;type:bigint(20) unsigned;default:0;comment:外卖订单商品UUID（关联 ttpos_takeout_order_item.uuid）;NOT NULL" json:"takeout_order_item_uuid"`
 }

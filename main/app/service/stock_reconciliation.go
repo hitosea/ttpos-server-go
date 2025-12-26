@@ -33,6 +33,7 @@ import (
 type IStockReconciliationSrv interface {
 	GetStockReconciliationList(ctx context.Context, req req.StockReconciliationListReq) (resp.StockReconciliationListResp, error)             // 获取盘点单列表
 	GetStockReconciliationDetail(ctx context.Context, req req.StockReconciliationDetailReq) (resp.StockReconciliationDetailResp, error)       // 获取盘点单详情
+	GetStockReconciliationTemplate(ctx context.Context) (resp.StockReconciliationTemplateResp, error)                                         // 获取盘点单模板
 	SaveStockReconciliation(ctx context.Context, req req.StockReconciliationSaveReq) (uint64, error)                                          // 更新盘点单
 	DeleteStockReconciliation(ctx context.Context, req req.StockReconciliationDeleteReq) error                                                // 删除盘点单
 	ApproveStockReconciliation(ctx context.Context, req req.StockReconciliationApproveReq) ([]dto.LocaleResponse, error)                      // 审核盘点单
@@ -129,6 +130,32 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 			Total:    total,
 		},
 	}, nil
+}
+
+// GetStockReconciliationTemplate 获取盘点单模板
+func (s *stockReconciliationSrv) GetStockReconciliationTemplate(ctx context.Context) (resp.StockReconciliationTemplateResp, error) {
+	// TODO: 调用易先生http://nginx/xxxxx接口，获取模板数据
+	// 返回固定的模板数据
+	templateResp := resp.StockReconciliationTemplateResp{
+		LastUpdated: "2025/12/25 12:37",
+		Count:       23,
+		Data: resp.StockReconciliationTemplateData{
+			Daily: []string{
+				"CK01001", "CK01002", "CK02001", "CK01003", "CK02002",
+				"CK02003", "CK02004", "DR01001", "DR01002", "DR01003",
+				"DR02001", "DR02002", "FR01001", "FR01002", "FR01003",
+				"FR01005", "FR01004", "FR02001", "FR02002",
+			},
+			Weekly: []string{
+				"CK01001", "CK01002", "CK01003",
+			},
+			Monthly: []string{
+				"CK01001",
+			},
+		},
+	}
+
+	return templateResp, nil
 }
 
 // getBookedStockMap 获取仓库物品的账面库存数量

@@ -63,6 +63,13 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 				zap.Error(err))
 		}
 
+		// 创建送厨单
+		if err := takeoutSrv.CreateProductionOrderForTakeout(ctx, orderAcceptedEvent.OrderUuid); err != nil {
+			logger.Logger.Error("创建送厨单失败",
+				zap.String("takeoutOrderUuid", orderAcceptedEvent.TakeoutOrderUuid),
+				zap.Error(err))
+		}
+
 		// 发送 WebSocket 通知
 		sendTakeoutOrderWebSocketNotification(
 			orderAcceptedEvent.CompanyUuid,
@@ -72,6 +79,9 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 			"accepted",
 			map[string]any{},
 		)
+
+		// 成功后，推送到厨显端更新订单
+		sendUpdateKitchenWebSocketNotification(orderAcceptedEvent.CompanyUuid)
 	})
 
 	return nil

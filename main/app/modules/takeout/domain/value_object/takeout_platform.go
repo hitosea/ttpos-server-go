@@ -21,7 +21,7 @@ const (
 	TakeoutOrderStateRiderPending    = 2 // 待骑手接单
 	TakeoutOrderStateRiderProcessing = 3 // 骑手配送中
 	TakeoutOrderStateCompleted       = 4 // 已完成
-	TakeoutOrderStateRejected        = 5 // 已拒单
+	TakeoutOrderStateRejected        = 5 // 已拒单/已取消/已退款
 )
 
 // 库存状态

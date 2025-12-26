@@ -16,9 +16,9 @@ type TakeoutOrder struct {
 	Platform           string `gorm:"column:platform" json:"platform"`
 	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`
 	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单 )
-	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`
-	MerchantId         string `gorm:"column:merchant_id" json:"merchant_id"`
-	PartnerMerchantId  string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`
+	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`     // 短单号
+	MerchantId         string `gorm:"column:merchant_id" json:"merchant_id"`                   // 商户ID	(Grab: merchantID)
+	PartnerMerchantId  string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`   // 合作伙伴商户ID (Grab: partnerMerchantID)
 
 	// 订单状态
 	OrderState     int    `gorm:"column:order_state" json:"order_state"`
@@ -57,7 +57,7 @@ type TakeoutOrder struct {
 
 	// 其他通用信息
 	Cutlery           int    `gorm:"column:cutlery" json:"cutlery"`
-	OrderType         string `gorm:"column:order_type" json:"order_type"`
+	OrderType         string `gorm:"column:order_type" json:"order_type"`                   // 订单类型: DeliveryByGrab, Pickup, DineIn
 	OrderAcceptedType string `gorm:"column:order_accepted_type" json:"order_accepted_type"` // 接单类型: AUTO, MANUAL
 	IsMexEditOrder    int    `gorm:"column:is_mex_edit_order" json:"is_mex_edit_order"`
 	MembershipId      string `gorm:"column:membership_id" json:"membership_id"`
@@ -132,4 +132,22 @@ func (o *TakeoutOrder) IsPendingOrder() error {
 		return errors.New("订单状态不正确")
 	}
 	return nil
+}
+
+// 获取外卖订单编号
+func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
+	if o == nil {
+		return ""
+	}
+	return o.ShortOrderNumber
+}
+
+// 是否是打包订单
+func (o *TakeoutOrder) IsTakeawayOrder() bool {
+	return o.OrderType == valueobject.TakeoutOrderTypeTakeaway
+}
+
+// 判断是否删除或者已经取消
+func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
+	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected
 }

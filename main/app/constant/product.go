@@ -184,8 +184,9 @@ const (
 )
 
 const (
-	ProductionOrderProductColumnSaleBill = "sale_bill_uuid"
-	ProductionOrderProductColumnCategory = "first_category_uuid"
+	ProductionOrderProductColumnSaleBill     = "sale_bill_uuid"
+	ProductionOrderProductColumnCategory     = "first_category_uuid"
+	ProductionOrderProductColumnTakeoutOrder = "takeout_order_uuid"
 )
 
 // 服务费计算基准
