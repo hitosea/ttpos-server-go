@@ -260,6 +260,27 @@ func (h *StockReconciliationHandler) RejectStockReconciliation(c *gin.Context) {
 	helper.Success(c, gin.H{}, "驳回成功")
 }
 
+// GetStockReconciliationTemplate 获取盘点单模板
+// @Summary 获取盘点单模板
+// @Description 获取盘点单模板，包含日盘、周盘、月盘的物品编号列表
+// @Tags 商家端.盘点管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.StockReconciliationTemplateResp} "成功"
+// @Router /shop/stock_reconciliation/template [get]
+func (h *StockReconciliationHandler) GetStockReconciliationTemplate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	resp, err := h.stockReconciliationSrv.GetStockReconciliationTemplate(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, resp)
+}
+
 // RegisterStockReconciliationHandlers 注册盘点单相关路由
 func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -284,6 +305,7 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 	{
 		privateApi.GET("/stock_reconciliation/list", wrapper.GetStockReconciliationList)
 		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)
+		privateApi.GET("/stock_reconciliation/template", wrapper.GetStockReconciliationTemplate)
 		privateApi.POST("/stock_reconciliation/save", wrapper.SaveStockReconciliation)
 		privateApi.DELETE("/stock_reconciliation/delete", wrapper.DeleteStockReconciliation)
 		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)
