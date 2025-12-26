@@ -756,6 +756,49 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 			}(),
 		})
 	})
+	// 发起"预送厨"操作的事件
+	utils.Go(func() {
+		// 获取业务设置，检查是否开启合并打印模式
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			ctx.Log().Error("获取业务设置失败", zap.Error(err))
+			return
+		}
+		// 如果该订单是前置分批送厨模式,且开启合并打印模式,则打印预送厨单。否则不打印。
+		// 检查是否是前置分批送厨模式
+		if saleBill.SaleBillSetting != nil && saleBill.SaleBillSetting.BatchCookingMode == constant.BatchCookingModePre &&
+			businessSetting.BatchPrintMode == constant.BatchPrintModeMerge {
+
+			// 获取当前所有 pre_batch_print_time 为0的预送厨状态商品
+			unprintedPreCookingProducts := saleBill.GetSaleOrderProductPreCookingUnprinted()
+			if len(unprintedPreCookingProducts) == 0 {
+				return
+			}
+
+			s.bus.PublishSentCookingPreEvent(event.SentCookingPrePayload{
+				BasePayload: event.BasePayload{ // 送厨
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  saleBill.Uuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				IsPreBatchPrint: true, // 是预先分批打印送厨单
+				Products: func() event.ProductsPre {
+					products := make(event.ProductsPre, 0)
+					// 只传递 pre_batch_print_time 为0的预送厨商品
+					for _, unCookingSaleOrderProduct := range unprintedPreCookingProducts {
+						products = append(products, s.convertToEventOrderProductPre(
+							unCookingSaleOrderProduct,
+							saleBill,
+						))
+					}
+					return products
+				}(),
+			})
+		}
+	})
 	shopCart, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
