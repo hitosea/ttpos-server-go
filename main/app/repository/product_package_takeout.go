@@ -12,6 +12,7 @@ type IProductPackageTakeoutRepo interface {
 	CreateProductPackageTakeout(productPackageTakeout *model.ProductPackageTakeout) error
 	UpdateProductPackageTakeout(data map[string]any, opts ...DBOption) error
 	DestroyProductPackageTakeout(opts ...DBOption) error
+	ForceDestroyProductPackageTakeout(opts ...DBOption) error
 }
 
 type IProductPackageTakeoutQueryRepo interface {
@@ -148,6 +149,16 @@ func (r *productPackageTakeoutRepoImpl) DestroyProductPackageTakeout(opts ...DBO
 	}
 
 	return db.Update("delete_time", time.Now().Unix()).Error
+}
+
+func (r *productPackageTakeoutRepoImpl) ForceDestroyProductPackageTakeout(opts ...DBOption) error {
+	db := r.db.Model(&model.ProductPackageTakeout{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.ProductPackageTakeout{}).Error
 }
 
 // WhereByProductPackageUuid 根据商品包UUID查询

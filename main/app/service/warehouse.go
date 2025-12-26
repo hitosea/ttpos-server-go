@@ -969,7 +969,7 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 
 	var insertingWarehouseItems []model.WarehouseItem
 	for _, warehouse := range warehouses {
-		stockList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNum(ctx, warehouse.ErpCode)
+		stockBinList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
 		if err != nil {
 			return errors.WithMessage(err, "获取仓库物品库存数量失败")
 		}
@@ -990,7 +990,7 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 			materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
 		}
 
-		for _, stock := range stockList {
+		for _, stock := range stockBinList {
 			material, ok := materialMap[stock.ItemCode]
 			if !ok {
 				continue

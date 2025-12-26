@@ -34,6 +34,7 @@ type ProductionItem struct {
 	ProductAttributeNames dto.LocaleResponse `json:"product_attribute_names"` // 商品属性
 	Remark                string             `json:"remark"`                  // 备注
 	IsSaleBillDeleted     bool               `json:"is_sale_bill_deleted"`    // 销售账单是否已删除
+	TakeoutPlatform       string             `json:"takeout_platform"`        // 外卖平台（第三方平台外卖：grab/lineman）
 	MakeStatus            uint               `json:"make_status"`             // 制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中
 	MadeTime              int64              `json:"made_time"`               // 制作完成时间
 	BatchTag              BatchTagInfo       `json:"batch_tag"`               // 分批类型

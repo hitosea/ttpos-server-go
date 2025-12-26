@@ -303,6 +303,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				item.LocaleName = *pkgLanguage.JsonToLocaleResponse(product.Name)
 				item.SerialNo = product.TakeoutOrder.GetKdsTakeoutPlatformAndOrderNumber()
 				item.IsSaleBillDeleted = product.TakeoutOrder.IsDeletedOrCanceled()
+				item.TakeoutPlatform = product.TakeoutOrder.GetToLowerPlatform()
+				remark = product.TakeoutOrderItem.Specifications
 				item.DiningMethod = func() uint {
 					if product.TakeoutOrder.IsTakeawayOrder() {
 						return uint(constant.SaleBillDiningMethodTakeout)
@@ -315,6 +317,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 					}
 					return uint(constant.SaleBillDiningMethodDineIn)
 				}()
+
 			} else {
 				// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
 				if product.IsBatchBool() {
