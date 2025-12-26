@@ -51657,6 +51657,10 @@ const docTemplate = `{
         "resp.CompanyRoleInfo": {
             "type": "object",
             "properties": {
+                "cashier_online": {
+                    "description": "是否登录收银端, 0:不在线, 1:在线",
+                    "type": "integer"
+                },
                 "company_name": {
                     "description": "门店名称",
                     "type": "string"

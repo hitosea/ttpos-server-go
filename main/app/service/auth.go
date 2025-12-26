@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -1026,8 +1027,8 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if db == nil {
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
-	// 检查是否启用缓存（使用全局常量控制）
-	enableCache := constant.ObjectStorageCacheEnabled
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	enableCache := constant.IsObjectStorageCacheEnabled(auth.CompanyUuid)
 
 	staffRepo := repository.NewStaffRepo(db)
 
@@ -1047,7 +1048,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if enableCache {
 		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
 		cacheLayer := objectStorageAdapter.GetAuthStaffCache[*model.Staff](cache.Global)
-		cacheKey := objectStorageAdapter.BuildAuthStaffKey(ctx, auth.StaffUuid)
+		cacheKey := objectStoragePersistence.BuildAuthStaffKey(ctx, auth.StaffUuid)
 		staffPtr, err = cacheLayer.GET(cacheKey, queryStaffFunc)
 	} else {
 		// 不使用缓存，直接查询数据库

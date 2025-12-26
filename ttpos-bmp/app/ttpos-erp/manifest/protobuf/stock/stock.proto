@@ -174,17 +174,25 @@ message CancelStockReconciliationResp {
 
 // 查询 Bin 记录请求
 message GetBinReq {
-  string item_code = 1;                               // 物品代码，必填
+  string item_code = 1;                               // 物品代码，可选
   string warehouse = 2;                               // 仓库名称，必填
 }
 
-// Bin 数据
-message BinData {
-  string item_code = 1;                               // 物品代码
+// 查询 Bin 记录响应
+message GetBinResp {
+  repeated ItemStockBin items = 1;                    // Bin 记录列表
+}
+
+// 货位库存信息（合并 BinData 和 ItemStockByBin）
+message ItemStockBin {
+  string item_code = 1;                               // 商品代码
   string warehouse = 2;                               // 仓库名称
   double actual_qty = 3;                              // 实际库存数量
-  double valuation_rate = 4;                          // 估值率
-  double stock_value = 5;                             // 库存价值
+  double projected_qty = 4;                           // 预计库存数量
+  double reserved_qty = 5;                    // 预留数量
+  string stock_uom = 6;                                // 库存单位
+  double valuation_rate = 7;                           // 估价率
+  double stock_value = 8;                             // 库存价值
 }
 
 service StockService {
@@ -224,7 +232,7 @@ service StockService {
   rpc CancelStockReconciliation(CancelStockReconciliationReq) returns (erp.ResponseInfo);
 
   // 查询物品在指定仓库的 Bin 记录
-  // 参数：物品代码、仓库名称
-  // 返回：Bin 数据，包括实际库存数量、估值率、库存价值
+  // 参数：仓库名称（必填）、物品代码（可选，为空时返回该仓库所有物品的 Bin 记录）
+  // 返回：货位库存信息列表，包括实际库存数量、估值率、库存价值
   rpc GetBin(GetBinReq) returns (erp.ResponseInfo);
 }

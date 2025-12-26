@@ -312,6 +312,10 @@ func (s *staffSrv) GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.
 			continue
 		}
 
+		// 查询员工在该门店的收银端登录状态
+		staffRepo := repository.NewStaffRepo(shopDB)
+		shopStaff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid))
+
 		staffRoleRepo := repository.NewStaffRoleRepo(shopDB)
 		roleUuids, err := staffRoleRepo.GetRoleUuidsByStaffUuid(staffUuid)
 		if err != nil {
@@ -338,11 +342,12 @@ func (s *staffSrv) GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.
 
 		companyName := companyUuidToName[companyUuid]
 		companyList = append(companyList, resp.CompanyRoleInfo{
-			CompanyUuid: companyUuid,
-			CompanyName: companyName,
-			Roles:       roleList,
-			IsSuper:     cs.IsSuper,
-			IsDisable:   cs.IsDisable,
+			CompanyUuid:   companyUuid,
+			CompanyName:   companyName,
+			Roles:         roleList,
+			IsSuper:       cs.IsSuper,
+			IsDisable:     cs.IsDisable,
+			CashierOnline: shopStaff.CashierOnline,
 		})
 	}
 
@@ -823,6 +828,21 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 	saasStaff, err := saasStaffRepo.GetByUuid(updateReq.Uuid)
 	if err != nil || saasStaff == nil || saasStaff.Uuid == 0 {
 		return errors.New("员工不存在"), exists
+	}
+
+	// 如果要移除门店关联，检查员工是否在这些门店登录了收银端
+	if len(updateReq.RemoveCompanyList) > 0 {
+		// 检查员工在要移除的门店中是否登录了收银端
+		for _, companyUuid := range updateReq.RemoveCompanyList {
+			shopDB := s.dbm.GetDB(companyUuid)
+			if shopDB != nil {
+				staffRepo := repository.NewStaffRepo(shopDB)
+				staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+				if err == nil && staff.CashierOnline == 1 {
+					return errors.New("请先完成交班后再移除门店关联"), exists
+				}
+			}
+		}
 	}
 
 	// saas库查询是否存在相同的邮箱或手机号

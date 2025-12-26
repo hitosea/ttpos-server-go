@@ -494,6 +494,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 分批商品相关
     `is_batch` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是分批商品, 0-否 1-是',
     `batch_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '分批时间(时间戳)，表示该商品实际送厨到厨房的时间',
+    `pre_batch_print_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '预先分批打印送厨单的时间(时间戳)，0表示未打印',
     `batch_tag_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '分批类型UUID',
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',

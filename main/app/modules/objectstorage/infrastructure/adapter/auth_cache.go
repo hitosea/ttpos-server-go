@@ -1,14 +1,15 @@
 package adapter
 
 import (
-	goCtx "context"
-	"fmt"
 	"time"
 
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
-	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 )
+
+// =============================
+// 员工信息缓存
+// ============================= =============================
 
 // GetAuthStaffCache 获取员工信息缓存层（包含 Company 和 CompanySetting）
 // 使用阶梯式 TTL：L1 缓存 1 分钟，L2 缓存 5 分钟
@@ -35,40 +36,9 @@ func GetAuthStaffCache[T any](underlyingCache cache.Cache) repository.CacheLayer
 	)
 }
 
-// GetAuthDeskCache 获取桌台信息缓存层
-// 使用阶梯式 TTL：L1 缓存 1 分钟，L2 缓存 5 分钟
-// 返回配置好的缓存层，service 层只需要调用 GET 方法并传入 query 函数
-func GetAuthDeskCache[T any](underlyingCache cache.Cache) repository.CacheLayer[T] {
-	// 创建缓存组配置（使用阶梯式 TTL）
-	groupConfig := cache.GroupConfig{
-		Name:             "object-storage-auth-desk",
-		EnableLocalCache: true,
-		EnableRedisCache: true,
-		NegativeTTL:      30 * time.Second,
-		L1TTL:            1 * time.Minute, // L1 缓存 1 分钟
-		L2TTL:            5 * time.Minute, // L2 缓存 5 分钟
-	}
-
-	// 使用对象存储缓存查询桌台信息
-	return GetOrCreateCacheLayer[T](
-		groupConfig,
-		underlyingCache,
-		5*time.Minute,
-		WithSingletonKey("auth_desk_cache_group"),
-		WithL1TTL(1*time.Minute),
-		WithL2TTL(5*time.Minute),
-	)
-}
-
-// BuildAuthStaffKey 构建员工信息缓存 key
-func BuildAuthStaffKey(ctx goCtx.Context, staffUuid uint64) string {
-	return objectStoragePersistence.BuildKey(ctx, "staff", staffUuid)
-}
-
-// BuildAuthDeskKey 构建桌台信息缓存 key
-func BuildAuthDeskKey(ctx goCtx.Context, deviceUuid uint64) string {
-	return objectStoragePersistence.BuildKey(ctx, "desk", deviceUuid)
-}
+// =============================
+// API 权限缓存
+// ============================= =============================
 
 // GetApiPermissionCache 获取 API 权限缓存层
 // 使用阶梯式 TTL：L1 缓存 1 分钟，L2 缓存 5 分钟
@@ -95,11 +65,9 @@ func GetApiPermissionCache[T any](underlyingCache cache.Cache) repository.CacheL
 	)
 }
 
-// BuildApiPermissionKey 构建 API 权限缓存 key
-// Key 格式：ttpos4:{company_uuid}:api_permission:{staff_uuid}
-func BuildApiPermissionKey(companyUuid, staffUuid uint64) string {
-	return fmt.Sprintf("%s:%d:api_permission:%d", objectStoragePersistence.SystemPrefix, companyUuid, staffUuid)
-}
+// =============================
+// 商品列表缓存
+// ============================= =============================
 
 // GetProductListCache 获取商品列表缓存层
 // 使用阶梯式 TTL：L1 缓存 1 分钟，L2 缓存 5 分钟
@@ -125,6 +93,10 @@ func GetProductListCache[T any](underlyingCache cache.Cache) repository.CacheLay
 		WithL2TTL(5*time.Minute),                     // L2 缓存 5 分钟
 	)
 }
+
+// =============================
+// 订单相关对象缓存
+// ============================= =============================
 
 // GetOrderObjectCache 获取订单相关对象缓存层
 // 使用阶梯式 TTL：L1 缓存 1 分钟，L2 缓存 5 分钟

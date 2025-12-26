@@ -112,16 +112,16 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 				item.ItemCode, item.ValuationRate)
 		} else {
 			// 估值率为 0，从 Bin 表查询
-			binData, err := s.GetBin(ctx, &stock.GetBinReq{
+			binResp, err := s.GetBin(ctx, &stock.GetBinReq{
 				ItemCode:  item.ItemCode,
 				Warehouse: itemData.Warehouse,
 			})
 
-			if err == nil && binData != nil && binData.ValuationRate > 0 {
-				// 使用 Bin 表中的估值率
-				itemData.ValuationRate = binData.ValuationRate
+			if err == nil && binResp != nil && len(binResp.Items) > 0 && binResp.Items[0].ValuationRate > 0 {
+				// 使用 Bin 表中的估值率（因为指定了 item_code 和 warehouse，应该只有一条记录）
+				itemData.ValuationRate = binResp.Items[0].ValuationRate
 				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
-					item.ItemCode, itemData.Warehouse, binData.ValuationRate)
+					item.ItemCode, itemData.Warehouse, binResp.Items[0].ValuationRate)
 			} else {
 				// Bin 表中没有估值率，返回异常
 				return nil, gerror.New("缺少对应仓库的入库记录,无估值率!")

@@ -113,9 +113,10 @@ type SaleOrderProduct struct {
 	ErpCode string `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
 
 	// 分批相关
-	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);not null;default:0;comment:'分批类型UUID'" json:"batch_tag_uuid"`
-	BatchTime    int64  `gorm:"column:batch_time;type:int(10);not null;default:0;comment:'分批时间(时间戳)，表示该商品实际送厨到厨房的时间'" json:"batch_time"`
-	IsBatch      uint8  `gorm:"column:is_batch;type:tinyint(1);not null;default:0;comment:'是否是分批商品, 0-否 1-是'" json:"is_batch"`
+	BatchTagUuid      uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);not null;default:0;comment:'分批类型UUID'" json:"batch_tag_uuid"`
+	BatchTime         int64  `gorm:"column:batch_time;type:int(10);not null;default:0;comment:'分批时间(时间戳)，表示该商品实际送厨到厨房的时间'" json:"batch_time"`
+	PreBatchPrintTime int64  `gorm:"column:pre_batch_print_time;type:int(10);not null;default:0;comment:'预先分批打印送厨单的时间(时间戳)，0表示未打印'" json:"pre_batch_print_time"`
+	IsBatch           uint8  `gorm:"column:is_batch;type:tinyint(1);not null;default:0;comment:'是否是分批商品, 0-否 1-是'" json:"is_batch"`
 
 	// 关联对象
 	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`

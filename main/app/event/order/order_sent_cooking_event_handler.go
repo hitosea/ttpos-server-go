@@ -48,7 +48,7 @@ func SentCookingEventHandler() {
 			// 如果有分批商品，处理合并打印逻辑
 			if len(batchProduct) > 0 && payload.BatchMode == constant.BatchCookingModePre && payload.BatchPrintMode == constant.BatchPrintModeMerge {
 				utils.Go(func() {
-					handleBatchProductsMergePrint(payload, batchProduct)
+					// handleBatchProductsMergePrint(payload, batchProduct)  // 暂时不在“送厨”事件中触发合并打印逻辑, 改为在“预送厨”事件中触发合并打印逻辑
 				})
 			}
 

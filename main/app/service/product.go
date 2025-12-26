@@ -201,45 +201,11 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv
 	}
 }
 
-// buildProductListCacheKey 构建商品列表缓存 key
-func buildProductListCacheKey(ctx context.Context, req req.ProductListReq) string {
-	companyUuid := ctx.GetCompanyUuid()
-	source := ctx.GetSource()
-
-	// 对推荐商品 UUIDs 排序，确保相同 UUIDs 但顺序不同时 key 一致
-	recommendUuids := make([]uint64, len(req.RecommendProductPackageUuids))
-	copy(recommendUuids, req.RecommendProductPackageUuids)
-	sort.Slice(recommendUuids, func(i, j int) bool {
-		return recommendUuids[i] < recommendUuids[j]
-	})
-
-	// 构建 key：{system_prefix}:{company_uuid}:product_list:{source}:{pageNo}:{pageSize}:{isMember}:{recommendUuids}
-	keyParts := []string{
-		objectStoragePersistence.SystemPrefix,
-		fmt.Sprintf("%d", companyUuid),
-		"product_list",
-		source,
-		fmt.Sprintf("%d", req.PageNo),
-		fmt.Sprintf("%d", req.PageSize),
-		fmt.Sprintf("%v", req.IsMember),
-	}
-
-	// 添加推荐商品 UUIDs
-	if len(recommendUuids) > 0 {
-		uuidStrs := make([]string, len(recommendUuids))
-		for i, uuid := range recommendUuids {
-			uuidStrs[i] = fmt.Sprintf("%d", uuid)
-		}
-		keyParts = append(keyParts, strings.Join(uuidStrs, ","))
-	}
-
-	return strings.Join(keyParts, ":")
-}
-
 // GetProductList 获取产品列表
 func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
-	// 检查是否启用缓存（使用全局常量控制）
-	enableCache := constant.ObjectStorageCacheEnabled
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	companyUuid := ctx.GetCompanyUuid()
+	enableCache := constant.IsObjectStorageCacheEnabled(companyUuid)
 
 	// 查询函数（从数据库获取商品列表）
 	queryFunc := func() (product_resp.ProductListWithPaginationResp, error) {
@@ -338,7 +304,14 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	if enableCache {
 		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
 		cacheLayer := objectStorageAdapter.GetProductListCache[product_resp.ProductListWithPaginationResp](cache.Global)
-		cacheKey := buildProductListCacheKey(ctx, req)
+		cacheKey := objectStoragePersistence.BuildProductListCacheKey(
+			ctx.GetCompanyUuid(),
+			ctx.GetSource(),
+			req.PageNo,
+			req.PageSize,
+			req.IsMember,
+			req.RecommendProductPackageUuids,
+		)
 		result, err = cacheLayer.GET(cacheKey, queryFunc)
 	} else {
 		// 不使用缓存，直接查询数据库
