@@ -2,13 +2,13 @@ package application
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/service"
@@ -214,12 +214,36 @@ func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string)
 	if err != nil {
 		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
+	if !takeout.IsEnabled() {
+		return nil, errors.New("平台未开启")
+	}
+
+	// 当前无Grab商品，无法推送订单
+	menu, err := s.ExportMenu(ctx, request.ExportMenuRequest{
+		Platform:     platform,
+		CurrencyUnit: "USD",
+	})
+	if err != nil {
+		return nil, errors.New("获取菜单失败")
+	}
+	if menu == nil || reflect.ValueOf(menu).IsNil() {
+		return nil, errors.NewWithCodeAndData(-1001, nil, "当前无Grab商品，无法推送订单")
+	}
+	// 类型断言为 Grab 菜单格式
+	grabMenu, ok := menu.(*grabfood.GetMenuNewResponse)
+	if !ok {
+		return nil, errors.New("菜单数据格式错误")
+	}
+	// 判断 menu 的 categories 是否为空
+	if len(grabMenu.GetCategories()) == 0 {
+		return nil, errors.NewWithCodeAndData(-1001, nil, "当前无Grab商品，无法推送订单")
+	}
 
 	// 2. 如果缓存不存在，调用 RPC 获取
 	companyUuid := ctx.GetCompanyUuid()
 	bindingLink, err := s.rpcService.GetGrabBindingLink(ctx.GetContext(), companyUuid)
 	if err != nil {
-		return nil, fmt.Errorf("获取绑定链接失败: %w", err)
+		return nil, errors.New("获取绑定链接失败")
 	}
 
 	// 3. 保存到数据库缓存
@@ -228,7 +252,7 @@ func (s *takeoutAppService) GetBindingLink(ctx context.Context, platform string)
 			bindingLink = takeout.BindingLink
 		} else {
 			logger.Logger.Error("认证失败，请核对信息", zap.Error(err))
-			return nil, fmt.Errorf("认证失败，请核对信息")
+			return nil, errors.New("认证失败，请核对信息")
 		}
 	}
 
@@ -306,15 +330,6 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 		return nil, errors.New("公司 UUID 不能为空")
 	}
 
-	// 判断 ttpos_takeout表 的 menu 是否存在数据，如果存在就判断是否导入成功，不然就返回空
-	// takeout, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("获取平台状态失败: %w", err)
-	// }
-	// if takeout.Menu != nil && !reflect.ValueOf(takeout.Menu).IsNil() && takeout.ImportStatus != model.ImportStatusSuccess {
-	// 	return nil, fmt.Errorf("正在导入数据到TTPOS中，请稍后再试")
-	// }
-
 	// 获取平台转换器
 	converter, err := s.getConverter(req.Platform)
 	if err != nil {
@@ -327,7 +342,7 @@ func (s *takeoutAppService) ExportMenu(ctx context.Context, req request.ExportMe
 		// Grab 平台使用专用的加载方法（直接返回 Grab 格式）
 		platformData, err = grabConverter.LoadMenuFromDatabase(ctx, companyUuid, req.CurrencyUnit, []uint64{})
 		if err != nil {
-			return nil, fmt.Errorf("加载菜单数据失败: %w", err)
+			return nil, errors.New("加载菜单数据失败")
 		}
 	} else {
 		return nil, errors.New("暂不支持该平台")
