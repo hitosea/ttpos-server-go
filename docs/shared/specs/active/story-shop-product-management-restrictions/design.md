@@ -170,7 +170,7 @@ MODIFY COLUMN `optional_count` INT NOT NULL DEFAULT 0 COMMENT '最大可选数�
    - 未设置最大可选（`max_selection=0`）→ `max_selection=属性值数量`
 
 3. **套餐分组范围迁移**：
-   - 可选分组（`group_type=1`）→ `optional_min_count=1`
+   - 可选分组（`group_type=1`）→ `optional_min_count=optional_count`（旧的 optional_count 实际代表必须选择的数量）
    - 固定分组（`group_type=0`）→ `optional_min_count=0`（不修改，保持默认）
 
 **关键代码片段：**
@@ -213,7 +213,7 @@ $this->execute("
 // 3. 套餐分组范围迁移（仅可选分组）
 $this->execute("
     UPDATE ttpos_product_package_group 
-    SET optional_min_count = 1
+    SET optional_min_count = optional_count
     WHERE group_type = 1 
     AND optional_min_count = 0
 ");
@@ -1362,4 +1362,5 @@ OptionalMinCount: productPackageGroup.OptionalMinCount,
 | 1.3  | 2025-12-22 | 曾振华 | 新增版本兼容性设计章节，详细说明v2.11和v2.12的兼容处理策略      |
 | 1.4  | 2025-12-24 | AI     | 移除删除限制设计，允许直接删除商品和规格                         |
 | 1.5  | 2025-12-25 | 曾振华 | 补充v2.11关闭最大可选功能时的兼容性处理逻辑：需考虑is_open_input字段 |
+| 1.6  | 2025-12-26 | AI     | 修正套餐分组迁移逻辑：可选分组的 optional_min_count 应设置为 optional_count 的值 |
 

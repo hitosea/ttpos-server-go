@@ -201,13 +201,15 @@ COMMENT ON COLUMN ttpos_product_package_group.optional_count IS '最大可选数
 
 ```
 IF group_type == 1 (可选分组) THEN
-  optional_min_count = 1 (默认至少选1个)
+  optional_min_count = optional_count (旧的 optional_count 实际代表必须选择的数量)
   optional_count 保持不变 (继续作为最大可选数量使用)
 ELSE (固定分组)
   optional_min_count = 分组商品数量
   optional_count 保持不变 (等于分组商品数量)
 END IF
 ```
+
+**说明**：在旧版本中，对于可选分组，`optional_count` 字段实际表示"必须选择的数量"，因此在迁移时应将其值复制到 `optional_min_count`。
 
 ### 3.3 属性设置可选范围
 
@@ -571,4 +573,5 @@ END IF
 | 1.10 | 2025-12-24 | AI     | 明确v2.12无论新增还是编辑都需要根据min_selection自动标记必选状态 |
 | 1.11 | 2025-12-24 | AI     | 新增外卖商品编辑权限限制：总店同步的外卖商品只能编辑价格和上下架状态 |
 | 1.12 | 2025-12-25 | 曾振华 | 补充v2.11关闭最大可选功能时的兼容性处理逻辑：需考虑is_open_input字段 |
+| 1.13 | 2025-12-26 | AI     | 修正套餐分组迁移逻辑：可选分组的 optional_min_count 应设置为 optional_count 的值 |
 
