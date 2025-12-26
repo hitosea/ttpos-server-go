@@ -16657,6 +16657,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/takeout/order/print": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外卖管理"
+                ],
+                "summary": "打印外卖订单小票",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "订单UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/takeout/order/push-state": {
             "post": {
                 "consumes": [
@@ -51613,6 +51657,10 @@ const docTemplate = `{
         "resp.CompanyRoleInfo": {
             "type": "object",
             "properties": {
+                "cashier_online": {
+                    "description": "是否登录收银端, 0:不在线, 1:在线",
+                    "type": "integer"
+                },
                 "company_name": {
                     "description": "门店名称",
                     "type": "string"

@@ -41,6 +41,8 @@ type ITakeoutOrderSrv interface {
 	CallRider(ctx context.Context, req *request.TakeoutOrderCallRiderReq) error
 	CheckOrderCancelable(ctx context.Context, req *request.TakeoutOrderCheckCancelableReq) (*response.TakeoutOrderCancelCheckResp, error)
 	CancelOrder(ctx context.Context, req *request.TakeoutOrderCancelReq) error
+	// GetOrderForPrint 获取打印所需的订单数据
+	GetOrderForPrint(ctx context.Context, orderUuid uint64) (*model.TakeoutOrder, error)
 	// BuildBomQuantityMap 构建订单商品的 BOM 数量映射（用于库存检查和出库）
 	// 返回: bomQuantityMap (BOM UUID -> 数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), error
 	BuildBomQuantityMap(ctx context.Context, order *model.TakeoutOrder) (map[uint64]int, map[uint64]*model.TakeoutOrderItem, error)
@@ -1204,4 +1206,26 @@ func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *model.TakeoutO
 	}
 
 	return productBoms, productPackages, nil
+}
+
+// GetOrderForPrint 获取打印所需的订单数据
+func (s *takeoutOrderSrv) GetOrderForPrint(ctx context.Context, orderUuid uint64) (*model.TakeoutOrder, error) {
+	db := ctx.GetDB()
+
+	// 查询订单（包含商品、修饰符等信息）
+	orderRepo := persistence.NewTakeoutOrderRepo(db)
+	order, err := orderRepo.GetByUuid(
+		orderUuid,
+		orderRepo.WithTakeoutOrderItems(),
+		orderRepo.WithTakeoutOrderItemModifiers(),
+	)
+	if err != nil {
+		logger.Logger.Error("查询订单失败", zap.Error(err), zap.Uint64("uuid", orderUuid))
+		return nil, errors.WithMessage(errors.New("查询订单失败"), err.Error())
+	}
+	if order == nil {
+		return nil, errors.New("订单不存在")
+	}
+
+	return order, nil
 }

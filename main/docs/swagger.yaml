@@ -10291,6 +10291,9 @@ definitions:
     type: object
   resp.CompanyRoleInfo:
     properties:
+      cashier_online:
+        description: 是否登录收银端, 0:不在线, 1:在线
+        type: integer
       company_name:
         description: 门店名称
         type: string
@@ -28610,6 +28613,32 @@ paths:
                   $ref: '#/definitions/response.TakeoutOrderListResp'
               type: object
       summary: 获取外卖订单列表
+      tags:
+      - 收银端.外卖管理
+  /cashier/takeout/order/print:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 订单UUID
+        format: int64
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      summary: 打印外卖订单小票
       tags:
       - 收银端.外卖管理
   /cashier/takeout/order/push-state:
