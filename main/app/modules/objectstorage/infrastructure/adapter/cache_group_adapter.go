@@ -52,9 +52,10 @@ func NewCacheGroupAdapterWithGroup[T any](group cache.ICacheGroup[T], underlying
 }
 
 // cacheGroupSingletonManager 缓存组单例管理器
-// 使用 sync.Map 存储 cacheGroup 创建函数，确保 L1 缓存可以跨请求共享
+// 使用 sync.Map 直接存储 cacheGroup 实例，确保 L1 缓存可以跨请求共享
+// 存储为 L1CacheClearable 接口类型，方便全局操作（如清除所有 L1 缓存）
 var (
-	cacheGroupSingletons sync.Map // map[string]func() any
+	cacheGroupSingletons sync.Map // map[string]cache.L1CacheClearable
 	cacheGroupMutex      sync.Mutex
 )
 
@@ -146,22 +147,22 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 		key = reflect.TypeOf((*T)(nil)).Elem().String()
 	}
 
-	// 尝试从单例池中获取 cacheGroup 创建函数
+	// 尝试从单例池中获取 cacheGroup 实例
 	var group cache.ICacheGroup[T]
 	if cached, ok := cacheGroupSingletons.Load(key); ok {
-		// 使用类型断言获取创建函数
-		if createFunc, ok := cached.(func() cache.ICacheGroup[T]); ok {
-			group = createFunc()
+		// 使用类型断言获取实例
+		if cachedGroup, ok := cached.(cache.ICacheGroup[T]); ok {
+			group = cachedGroup
 		}
 	}
 
-	// 如果不存在，创建新的 cacheGroup 实例和创建函数
+	// 如果不存在，创建新的 cacheGroup 实例
 	if group == nil {
 		cacheGroupMutex.Lock()
 		// Double check
 		if cached, ok := cacheGroupSingletons.Load(key); ok {
-			if createFunc, ok := cached.(func() cache.ICacheGroup[T]); ok {
-				group = createFunc()
+			if cachedGroup, ok := cached.(cache.ICacheGroup[T]); ok {
+				group = cachedGroup
 			}
 		}
 		if group == nil {
@@ -174,11 +175,8 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 				groupConfig.L2TTL = option.L2TTL
 			}
 			group = cache.NewCacheGroup[T](groupConfig)
-			// 存储创建函数（返回同一个实例）
-			createFunc := func() cache.ICacheGroup[T] {
-				return group
-			}
-			cacheGroupSingletons.Store(key, createFunc)
+			// 直接存储实例（作为 L1CacheClearable 接口类型）
+			cacheGroupSingletons.Store(key, group)
 		}
 		cacheGroupMutex.Unlock()
 	}
@@ -273,4 +271,29 @@ func (a *CacheGroupAdapter[T]) SCAN(ctx context.Context, pattern string) ([]stri
 	// ICacheGroup 不支持 SCAN，需要扩展接口或使用底层 Redis 客户端
 	// 这里返回 nil 表示不支持，调用方会使用其他方式处理
 	return nil, nil
+}
+
+// ClearAllL1Cache 清空所有 cacheGroup 单例的 L1 本地缓存
+// 用于紧急情况下立即清除所有 L1 缓存，而不需要等待 TTL 过期
+func ClearAllL1Cache() int {
+	count := 0
+	cacheGroupSingletons.Range(func(key, value interface{}) bool {
+		// value 是 cache.L1CacheClearable 接口类型，直接调用 ClearL1 方法
+		if clearable, ok := value.(cache.L1CacheClearable); ok {
+			clearable.ClearL1()
+			count++
+		}
+		return true
+	})
+	return count
+}
+
+// ClearL1CacheByPattern 根据匹配模式清空 L1 本地缓存
+// pattern: 匹配模式，如 "ttpos4:*", "ttpos4:7709131161600000:*" 等
+// 注意：由于 L1 缓存是内存缓存，无法直接按模式匹配，此方法会清空所有 L1 缓存
+// 如果需要按模式清除，建议先清除 L2 缓存，然后清空所有 L1 缓存
+func ClearL1CacheByPattern(pattern string) int {
+	// L1 缓存是内存缓存，无法按模式匹配，直接清空所有
+	// 这是合理的，因为 L1 缓存通常数据量不大，且清空后会自动从 L2 回填
+	return ClearAllL1Cache()
 }

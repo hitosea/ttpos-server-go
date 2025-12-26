@@ -23,6 +23,15 @@ type Task[T any] interface {
 type ICacheGroup[T any] interface {
 	// Do 执行任务，内部自动处理 L1/L2 缓存及 Singleflight 合并
 	Do(ctx context.Context, task Task[T]) (T, error)
+	// ClearL1 清空 L1 本地缓存
+	ClearL1()
+}
+
+// L1CacheClearable 非泛型接口，用于清空 L1 缓存
+// 允许在 sync.Map 中直接存储 cacheGroup 实例，方便全局操作
+type L1CacheClearable interface {
+	// ClearL1 清空 L1 本地缓存
+	ClearL1()
 }
 
 // GroupConfig 缓存组配置

@@ -6,6 +6,8 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+
 	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	printerPkg "ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/config"
 )
 
 type Handler struct {
@@ -161,6 +164,23 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	router.POST("/lianlian/refund/callback", wrapper.LianLianRefundCallback)
 }
 
+func (h *Handler) ClearL1Cache(c *gin.Context) {
+	// 使用 CommitSHA 作为身份验证，确保只有同一个构建版本才能调用
+	apiKey := c.GetHeader("X-API-KEY")
+	if apiKey != config.CommitSHA && config.Server.Mode != "debug" {
+		helper.Fail(c, constant.CodeAccessDenied, "Unauthorized: Invalid API Key")
+		c.Abort()
+		return
+	}
+
+	clearedCount := objectStorageAdapter.ClearAllL1Cache()
+
+	helper.Success(c, map[string]interface{}{
+		"cleared_count": clearedCount,
+		"message":       "L1 缓存已清空",
+	})
+}
+
 // RegisterInternalHandlers 注册内部接口（需要API Key验证）
 func RegisterInternalHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
@@ -169,4 +189,5 @@ func RegisterInternalHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		encryptSrv: service.NewEncryptSrv(cache),
 	}
 	router.GET("/memory/stats", wrapper.GetMemoryStats)
+	router.POST("/cache/l1/clear", wrapper.ClearL1Cache)
 }
