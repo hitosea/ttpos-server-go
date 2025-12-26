@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"ttpos-server-go/app/errors"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 )
@@ -13,7 +14,7 @@ type TakeoutOrder struct {
 	TakeoutOrderUuid string `gorm:"column:takeout_order_uuid" json:"takeout_order_uuid"`
 
 	// 平台信息
-	Platform           string `gorm:"column:platform" json:"platform"`
+	Platform           string `gorm:"column:platform" json:"platform"` // grab, lineman
 	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`
 	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单 )
 	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`     // 短单号
@@ -150,4 +151,9 @@ func (o *TakeoutOrder) IsTakeawayOrder() bool {
 // 判断是否删除或者已经取消
 func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
 	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected
+}
+
+// 获取外卖平台 全小写
+func (o *TakeoutOrder) GetToLowerPlatform() string {
+	return strings.ToLower(o.Platform)
 }

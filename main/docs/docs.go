@@ -19140,12 +19140,12 @@ const docTemplate = `{
                 "summary": "厨显端确认退菜整单",
                 "parameters": [
                     {
-                        "description": "按订单查看送厨商品，确认整单取消时传递销售账单Uuid",
+                        "description": "按订单查看送厨商品，确认整单取消时传递销售账单Uuid和外卖订单Uuid",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.SaleBillUuid"
+                            "$ref": "#/definitions/req.ConfirmReturnAllReq"
                         }
                     }
                 ],
@@ -42530,6 +42530,19 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ConfirmReturnAllReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单Uuid",
+                    "type": "integer"
+                },
+                "takeout_order_uuid": {
+                    "description": "外卖订单Uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.CookFinishOrderReq": {
             "type": "object",
             "properties": {
@@ -48361,15 +48374,6 @@ const docTemplate = `{
             "properties": {
                 "member_sale_order_uuid": {
                     "description": "会员端销售订单UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.SaleBillUuid": {
-            "type": "object",
-            "properties": {
-                "sale_bill_uuid": {
-                    "description": "销售账单Uuid",
                     "type": "integer"
                 }
             }
@@ -57611,7 +57615,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "is_takeout_bill": {
-                    "description": "是否是外送订单",
+                    "description": "是否是外送订单（传统店内外送）",
                     "type": "boolean"
                 },
                 "locale_name": {
@@ -57641,6 +57645,14 @@ const docTemplate = `{
                 "sale_bill_uuid": {
                     "description": "销售账单Uuid",
                     "type": "integer"
+                },
+                "takeout_order_uuid": {
+                    "description": "外卖订单Uuid",
+                    "type": "integer"
+                },
+                "takeout_platform": {
+                    "description": "外卖平台（第三方平台外卖：grab/lineman）",
+                    "type": "string"
                 }
             }
         },

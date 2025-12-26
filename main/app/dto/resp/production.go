@@ -8,7 +8,7 @@ type ProductionGroup struct {
 	LocaleName        *dto.LocaleResponse `json:"locale_name"`          // 序列号
 	DiningMethod      uint                `json:"dining_method"`        // 用餐方式,0-堂食(店内就餐) 1-打包
 	IsTakeoutBill     bool                `json:"is_takeout_bill"`      // 是否是外送订单（传统店内外送）
-	IsTakeoutOrder    bool                `json:"is_takeout_order"`     // 是否是外卖订单（第三方平台外卖：Grab/LINE MAN）
+	TakeoutPlatform   string              `json:"takeout_platform"`     // 外卖平台（第三方平台外卖：grab/lineman）
 	ProductionList    ProductionList      `json:"product_list"`         // 送厨商品列表
 	SaleBillUuid      uint64              `json:"sale_bill_uuid"`       // 销售账单Uuid
 	TakeoutOrderUuid  uint64              `json:"takeout_order_uuid"`   // 外卖订单Uuid
