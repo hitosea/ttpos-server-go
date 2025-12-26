@@ -1790,6 +1790,16 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 		}
 
+		// 验证属性组可选数量
+		if err := s.validateAttributeGroupSelection(ctx, &productPackage, productAttributes); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+
+		// 验证加料可选数量
+		if err := s.validateSauceSelection(ctx, &productPackage, len(product.SauceProductBomUuidList)); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+
 		// 构建加料信息
 		sauces := make([]model.Sauce, 0)
 		for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
@@ -2202,6 +2212,76 @@ func sortProductAttributes(ctx context.Context, productAttributes map[uint64]*mo
 		attributes = append(attributes, attribute)
 	}
 	return attributes
+}
+
+// validateAttributeGroupSelection 验证属性组可选数量
+func (s *orderSrv) validateAttributeGroupSelection(ctx context.Context, productPackage *model.ProductPackage, selectedAttributes map[uint64]*model.ProductPackageAttribute) error {
+	// 如果没有属性组配置，跳过验证
+	if len(productPackage.ProductPackageAttributeGroups) == 0 {
+		return nil
+	}
+
+	// 按属性组UUID分组统计用户选择的属性
+	selectedCountByGroup := make(map[uint64]int)
+	for _, attr := range selectedAttributes {
+		groupUuid := attr.ProductPackageAttributeGroupUuid
+		selectedCountByGroup[groupUuid]++
+	}
+
+	// 验证每个属性组
+	for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+		selectedCount := selectedCountByGroup[attributeGroup.Uuid]
+		minSelection, maxSelection := attributeGroup.GetSelectionRange()
+
+		// 如果最大可选为0，表示不限制（兼容旧数据）
+		if maxSelection == 0 {
+			// 获取该属性组下的属性值数量
+			attributeCount := len(attributeGroup.ProductPackageAttributes)
+			if attributeCount > 0 {
+				maxSelection = attributeCount
+			}
+		}
+
+		// 验证最小选择数量
+		if selectedCount < minSelection {
+			groupName := attributeGroup.ProductAttributeGroup.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			return fmt.Errorf("%s %s %d %s", groupName, i18n.Translate(ctx.GetLanguage(), "最少选择"), minSelection, i18n.Translate(ctx.GetLanguage(), "份"))
+		}
+
+		// 验证最大选择数量
+		if maxSelection > 0 && selectedCount > maxSelection {
+			groupName := attributeGroup.ProductAttributeGroup.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			return fmt.Errorf("%s %s %d %s", groupName, i18n.Translate(ctx.GetLanguage(), "最多选择"), maxSelection, i18n.Translate(ctx.GetLanguage(), "份"))
+		}
+	}
+
+	return nil
+}
+
+// validateSauceSelection 验证加料可选数量
+func (s *orderSrv) validateSauceSelection(ctx context.Context, productPackage *model.ProductPackage, selectedSauceCount int) error {
+	minSelection, maxSelection := productPackage.GetSauceSelectionRange()
+
+	// 如果最大可选为0，表示不限制（兼容旧数据）
+	if maxSelection == 0 {
+		// 不限制最大数量，只验证最小值
+		if selectedSauceCount < minSelection {
+			return fmt.Errorf("%s %s %d %s", i18n.Translate(ctx.GetLanguage(), "加料"), i18n.Translate(ctx.GetLanguage(), "最少选择"), minSelection, i18n.Translate(ctx.GetLanguage(), "份"))
+		}
+		return nil
+	}
+
+	// 验证最小选择数量
+	if selectedSauceCount < minSelection {
+		return fmt.Errorf("%s %s %d %s", i18n.Translate(ctx.GetLanguage(), "加料"), i18n.Translate(ctx.GetLanguage(), "最少选择"), minSelection, i18n.Translate(ctx.GetLanguage(), "份"))
+	}
+
+	// 验证最大选择数量
+	if selectedSauceCount > maxSelection {
+		return fmt.Errorf("%s %s %d %s", i18n.Translate(ctx.GetLanguage(), "加料"), i18n.Translate(ctx.GetLanguage(), "最多选择"), maxSelection, i18n.Translate(ctx.GetLanguage(), "份"))
+	}
+
+	return nil
 }
 
 // 新建套餐子商品

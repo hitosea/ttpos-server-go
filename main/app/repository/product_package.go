@@ -126,6 +126,10 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 			WithPreload{Query: "ProductPackage.ProductCategory"},
 			WithPreload{Query: "ProductPackage.DineTax"},
 			WithPreload{Query: "ProductFlavor.MultiLanguageName"},
+			WithPreload{Query: "ProductPackage.ProductPackageAttributeGroups"},
+			WithPreload{Query: "ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes"},
+			WithPreload{Query: "ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup"},
+			WithPreload{Query: "ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName"},
 		),
 	)
 	if err != nil {

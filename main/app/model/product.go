@@ -152,6 +152,12 @@ func (model *ProductPackageAttributeGroup) IsMustBool() bool {
 	return model.IsMust == constant.ProductAttributeGroupRequiredOn
 }
 
+func (model *ProductPackageAttributeGroup) GetSelectionRange() (int, int) {
+	min := int(model.MinSelection)
+	max := int(model.MaxSelection)
+	return min, max
+}
+
 // ProductPackageAttribute 产品包属性表,定义产品包的属性信息 ttpos_product_package_attribute
 type ProductPackageAttribute struct {
 	BaseModel
@@ -253,6 +259,13 @@ func (model *ProductPackage) SetNil() {
 	model.TakeoutTax = Tax{}
 	model.ProductCategory = ProductCategory{}
 	model.ImageFile = File{}
+}
+
+// 获取小料可选数量的范围
+func (model *ProductPackage) GetSauceSelectionRange() (int, int) {
+	min := int(model.SauceMinSelection)
+	max := int(model.SauceMaxSelection)
+	return min, max
 }
 
 // 是否是分批商品
