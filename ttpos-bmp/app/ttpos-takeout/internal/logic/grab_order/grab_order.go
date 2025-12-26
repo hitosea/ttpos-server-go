@@ -146,7 +146,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 			ProviderOrderId:    req.GetOrderID(),
 			ShortOrderNumber:   req.GetShortOrderNumber(),
 			ProviderName:       string(consts.ProviderGrab),
-			OrderType:          req.OrderType,
+			OrderType:          req.GetFeatureFlags().OrderType,
 			OrderTime:          parseTime(req.GetOrderTime()),
 			OrderStatus:        req.GetOrderState(),
 			ScheduledTime:      parseTime(req.GetScheduledTime()),
