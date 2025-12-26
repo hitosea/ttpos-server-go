@@ -2264,10 +2264,6 @@ func (s *orderSrv) validateSauceSelection(ctx context.Context, productPackage *m
 
 	// 如果最大可选为0，表示不限制（兼容旧数据）
 	if maxSelection == 0 {
-		// 不限制最大数量，只验证最小值
-		if selectedSauceCount < minSelection {
-			return fmt.Errorf("%s %s %d %s", i18n.Translate(ctx.GetLanguage(), "加料"), i18n.Translate(ctx.GetLanguage(), "最少选择"), minSelection, i18n.Translate(ctx.GetLanguage(), "份"))
-		}
 		return nil
 	}
 

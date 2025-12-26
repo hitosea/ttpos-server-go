@@ -155,6 +155,9 @@ func (model *ProductPackageAttributeGroup) IsMustBool() bool {
 func (model *ProductPackageAttributeGroup) GetSelectionRange() (int, int) {
 	min := int(model.MinSelection)
 	max := int(model.MaxSelection)
+	if max == 0 {
+		max = min // 最大可选数量为0，则最大可选数量为最小可选数量
+	}
 	return min, max
 }
 
@@ -265,6 +268,9 @@ func (model *ProductPackage) SetNil() {
 func (model *ProductPackage) GetSauceSelectionRange() (int, int) {
 	min := int(model.SauceMinSelection)
 	max := int(model.SauceMaxSelection)
+	if max == 0 {
+		max = min // 最大可选数量为0，则最大可选数量为最小可选数量
+	}
 	return min, max
 }
 
