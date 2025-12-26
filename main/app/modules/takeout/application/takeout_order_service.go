@@ -191,7 +191,10 @@ func (s *takeoutOrderAppService) AcceptOrder(ctx context.Context, req *request.T
 		return errors.NewWithCodeAndData(constant.CodeOrderCheckProductStockZero, outOfStockNames, err.Error())
 	}
 	// 4. 调用 Domain Service 执行接单逻辑
-	return s.orderService.AcceptOrder(ctx, req)
+	if err := s.orderService.AcceptOrder(ctx, req); err != nil {
+		return err
+	}
+	return nil
 }
 
 // checkOrderStock 检查订单商品库存

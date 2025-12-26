@@ -33,6 +33,9 @@ type ITakeoutSrv interface {
 
 	// RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
 	RestoreTakeoutOrderOutboundAndSales(ctx context.Context, orderUuid uint64, companyUuid uint64) error
+
+	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
+	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
 }
 
 type takeoutSrv struct {

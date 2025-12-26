@@ -970,3 +970,8 @@ func (model *SaleBill) GetLocaleBuffetPackageNameByUuid(buffetPackageUuid uint64
 
 	return buffetLocaleName
 }
+
+// 判断是否删除或者已经取消
+func (model *SaleBill) IsDeletedOrCanceled() bool {
+	return model.DeleteTime > 0 || model.Status == constant.SaleBillStatusCanceled
+}

@@ -1,6 +1,9 @@
 package model
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/pkg/language"
+)
 
 // ReturnFoodReason 退菜原因表 ttpos_return_food_reason
 type ReturnFoodReason struct {
@@ -47,5 +50,5 @@ func GetReturnFoodReasonNames(list []*ReturnFoodReason) dto.LocaleResponse {
 	for _, reason := range list {
 		nameList = append(nameList, reason.MultiLanguageName.GetNames())
 	}
-	return getLocaleResponse(nameList, "、")
+	return language.MergeLocaleResponses(nameList, "、")
 }

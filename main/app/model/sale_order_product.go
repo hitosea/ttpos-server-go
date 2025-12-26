@@ -1544,7 +1544,7 @@ func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, 
 
 // 获取商品属性 包含规格、属性、小料
 func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
-	return getLocaleResponse(model.GetAttributeNameList(), ";")
+	return language.MergeLocaleResponses(model.GetAttributeNameList(), ";")
 }
 
 // 获取商品属性 - 列表 包含规格、属性、小料
@@ -1590,7 +1590,7 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 
 // 获取商品属性 - 纯属性
 func (model *SaleOrderProduct) GetPureAttributeName() dto.LocaleResponse {
-	return getLocaleResponse(model.GetPureAttributeNameList(), ";")
+	return language.MergeLocaleResponses(model.GetPureAttributeNameList(), ";")
 }
 
 // 获取商品属性 - 纯属性 - 列表
@@ -1633,37 +1633,6 @@ func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
 		nameList = append(nameList, sauceNames...)
 	}
 	return nameList
-}
-
-// 将多个LocaleResponse合并成一个
-func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResponse {
-	if len(nameList) == 0 {
-		return dto.LocaleResponse{}
-	}
-	attributeResultNames := dto.LocaleResponse{}
-	for index, name := range nameList {
-		attributeResultNames.ZH += name.ZH
-		attributeResultNames.TH += name.TH
-		attributeResultNames.EN += name.EN
-		attributeResultNames.ZHTW += name.ZHTW
-		attributeResultNames.JA += name.JA
-		attributeResultNames.KO += name.KO
-		attributeResultNames.MY += name.MY
-		attributeResultNames.TR += name.TR
-		attributeResultNames.SV += name.SV
-		if attributeResultNames.ZH != "" && index != len(nameList)-1 {
-			attributeResultNames.ZH += div
-			attributeResultNames.TH += div
-			attributeResultNames.EN += div
-			attributeResultNames.ZHTW += div
-			attributeResultNames.JA += div
-			attributeResultNames.KO += div
-			attributeResultNames.MY += div
-			attributeResultNames.TR += div
-			attributeResultNames.SV += div
-		}
-	}
-	return attributeResultNames
 }
 
 // Requirement: story-main-product-attribute-snapshot-fix

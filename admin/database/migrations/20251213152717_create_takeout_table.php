@@ -28,7 +28,7 @@ class CreateTakeoutTable extends Migrator
 
                 // 业务字段
                 ->addColumn('platform', 'string', ['limit' => 50, 'default' => '', 'comment' => '外卖平台(grab/lineman等)'])
-                ->addColumn('enabled', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '是否开启(1:开启 0:关闭)'])
+                ->addColumn('enabled', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否开启(1:开启 0:关闭)'])
                 ->addColumn('menu', 'json', ['null' => true, 'comment' => '平台菜单数据(JSON格式)'])
                 ->addColumn('is_bound', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否已经绑定平台(1:已绑定 0:未绑定)'])
 

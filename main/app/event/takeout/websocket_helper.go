@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
@@ -99,4 +100,13 @@ func sendCustomerCallWebSocketNotification(
 			zap.Uint64("companyUuid", companyUuid),
 			zap.Error(err))
 	}
+}
+
+// sendUpdateKitchenWebSocketNotification 成功后，推送到厨显端更新订单
+func sendUpdateKitchenWebSocketNotification(companyUuid uint64) {
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
+	})
 }
