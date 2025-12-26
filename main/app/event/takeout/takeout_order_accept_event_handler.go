@@ -80,6 +80,9 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 			map[string]any{},
 		)
 
+		// 发送 CUSTOMER_CALL 通知（触发前端未处理提醒）
+		sendCustomerCallWebSocketNotification(orderAcceptedEvent.CompanyUuid)
+
 		// 成功后，推送到厨显端更新订单
 		sendUpdateKitchenWebSocketNotification(orderAcceptedEvent.CompanyUuid)
 	})

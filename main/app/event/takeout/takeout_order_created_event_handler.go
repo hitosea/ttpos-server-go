@@ -45,14 +45,7 @@ func (s *takeoutOrderCreatedEventSubscriber) Handle(domainEvent event.DomainEven
 		)
 
 		// 发送 CUSTOMER_CALL 通知（触发前端未处理提醒）
-		sendCustomerCallWebSocketNotification(
-			orderCreatedEvent.CompanyUuid,
-			map[string]any{
-				"takeout_order_uuid": orderCreatedEvent.TakeoutOrderUuid,
-				"platform":           orderCreatedEvent.Platform,
-				"short_order_number": orderCreatedEvent.ShortOrderNumber,
-			},
-		)
+		sendCustomerCallWebSocketNotification(orderCreatedEvent.CompanyUuid)
 	})
 
 	return nil
