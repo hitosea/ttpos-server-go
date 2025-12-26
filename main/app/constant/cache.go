@@ -7,7 +7,7 @@ import "slices"
 // ObjectStorageCacheEnabled 是否启用对象存储缓存（全局开关）
 // true: 启用缓存，false: 禁用缓存（直接查询数据库）
 // 默认值：true（启用缓存）
-const ObjectStorageCacheEnabled = true
+const ObjectStorageCacheEnabled = false
 
 // ObjectStorageCacheWhitelist 对象存储缓存白名单（门店 UUID 列表）
 // 只有当 ObjectStorageCacheEnabled 为 true 且当前门店 UUID 在此白名单内时，才会启用缓存
