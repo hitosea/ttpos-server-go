@@ -38,4 +38,16 @@ type GroupConfig struct {
 
 	// NegativeTTL 负缓存（空结果/错误）的过期时间，设为 0 则不开启
 	NegativeTTL time.Duration
+
+	// L1TTL L1 本地缓存的过期时间，如果为 0 则使用任务 TTL
+	// 建议设置为任务 TTL 的 1/3 到 1/2，例如任务 TTL 为 5 分钟，L1TTL 可设置为 1-2 分钟
+	// 阶梯式 TTL 的优势：
+	//   - L1 使用较短 TTL，减少内存占用
+	//   - L2 使用较长 TTL，保持缓存命中率
+	//   - L1 过期后可从 L2 回填，避免直接查数据库
+	L1TTL time.Duration
+
+	// L2TTL L2 Redis 缓存的过期时间，如果为 0 则使用任务 TTL
+	// 建议设置为任务 TTL 的 1.5 到 2 倍，例如任务 TTL 为 5 分钟，L2TTL 可设置为 7-10 分钟
+	L2TTL time.Duration
 }

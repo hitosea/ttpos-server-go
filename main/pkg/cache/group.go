@@ -54,9 +54,20 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 	// 2. 尝试从 L2 Redis 缓存读取
 	if g.config.EnableRedisCache {
 		if val, ok := g.l2.get(ctx, key); ok {
-			// 命中 L2，回填 L1
+			// 命中 L2，回填 L1（使用 L1 TTL）
 			if g.config.EnableLocalCache {
-				g.l1.set(key, val, task.TTL())
+				l1TTL := task.TTL()
+				if g.config.L1TTL > 0 {
+					l1TTL = g.config.L1TTL
+				}
+				g.l1.set(key, val, l1TTL)
+				logger.Logger.Debug("缓存写入 L1",
+					zap.String("key", key),
+					zap.String("level", "L1"),
+					zap.String("type", "GET"),
+					zap.Duration("ttl", l1TTL),
+					zap.Duration("task_ttl", task.TTL()),
+				)
 			}
 			logger.Logger.Debug("缓存命中 L2",
 				zap.String("key", key),
@@ -103,25 +114,40 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 			return zero, err
 		}
 
-		// 填充缓存
-		ttl := task.TTL()
+		// 填充缓存（使用阶梯式 TTL）
+		taskTTL := task.TTL()
+
+		// 确定 L1 TTL：如果配置了 L1TTL 则使用配置值，否则使用任务 TTL
+		l1TTL := taskTTL
+		if g.config.L1TTL > 0 {
+			l1TTL = g.config.L1TTL
+		}
+
+		// 确定 L2 TTL：如果配置了 L2TTL 则使用配置值，否则使用任务 TTL
+		l2TTL := taskTTL
+		if g.config.L2TTL > 0 {
+			l2TTL = g.config.L2TTL
+		}
+
 		if g.config.EnableRedisCache {
-			if err := g.l2.set(ctx, key, val, ttl); err == nil {
+			if err := g.l2.set(ctx, key, val, l2TTL); err == nil {
 				logger.Logger.Debug("缓存写入 L2",
 					zap.String("key", key),
 					zap.String("level", "L2"),
 					zap.String("type", "GET"),
-					zap.Duration("ttl", ttl),
+					zap.Duration("ttl", l2TTL),
+					zap.Duration("task_ttl", taskTTL),
 				)
 			}
 		}
 		if g.config.EnableLocalCache {
-			g.l1.set(key, val, ttl)
+			g.l1.set(key, val, l1TTL)
 			logger.Logger.Debug("缓存写入 L1",
 				zap.String("key", key),
 				zap.String("level", "L1"),
 				zap.String("type", "GET"),
-				zap.Duration("ttl", ttl),
+				zap.Duration("ttl", l1TTL),
+				zap.Duration("task_ttl", taskTTL),
 			)
 		}
 

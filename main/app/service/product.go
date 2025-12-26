@@ -348,11 +348,18 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 			NegativeTTL:      30 * time.Second,
 		}
 
-		// 创建缓存层
-		cacheLayer := objectStorageAdapter.NewCacheGroupAdapter[product_resp.ProductListWithPaginationResp](
+		// 获取缓存层（使用单例模式，确保 L1 缓存可以跨请求共享）
+		// 使用阶梯式 TTL：
+		//   - L1 缓存 1 分钟（减少内存占用）
+		//   - L2 缓存 5 分钟（保持缓存命中率）
+		//   - 当 L1 过期后可从 L2 回填，避免直接查数据库
+		cacheLayer := objectStorageAdapter.GetOrCreateCacheLayer[product_resp.ProductListWithPaginationResp](
 			groupConfig,
 			cache.Global,
-			2*time.Minute, // 默认 TTL 5 分钟
+			2*time.Minute, // 默认 TTL（用于负缓存等场景）
+			objectStorageAdapter.WithSingletonKey("product_list_cache_group"), // 使用自定义 key
+			objectStorageAdapter.WithL1TTL(1*time.Minute),                     // L1 缓存 1 分钟
+			objectStorageAdapter.WithL2TTL(5*time.Minute),                     // L2 缓存 5 分钟
 		)
 
 		// 从缓存获取或查询数据库
