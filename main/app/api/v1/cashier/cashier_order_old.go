@@ -8,7 +8,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
-	printerService "ttpos-server-go/app/printer/service"
+	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"

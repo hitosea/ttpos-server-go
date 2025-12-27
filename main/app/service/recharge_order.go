@@ -14,7 +14,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/modules/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
-	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/modules/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"

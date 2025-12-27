@@ -3,8 +3,8 @@ package event
 import (
 	"sync"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/printer"
-	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/modules/printer"
+	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
 

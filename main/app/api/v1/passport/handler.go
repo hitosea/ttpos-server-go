@@ -15,7 +15,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
-	printerPkg "ttpos-server-go/app/printer/pkg"
+	printerPkg "ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 )

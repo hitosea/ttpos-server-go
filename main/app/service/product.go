@@ -20,7 +20,7 @@ import (
 	inventoryPersistence "ttpos-server-go/app/modules/inventory/infrastructure/persistence"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
-	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/modules/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
