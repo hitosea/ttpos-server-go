@@ -406,6 +406,9 @@ func (s *sGrab) MarkOrderReady(ctx context.Context, orderID string, markStatus s
 	if markStatus == "1" {
 		status = 1
 	}
+	if markStatus == "2" {
+		status = 2
+	}
 
 	markReq := grabfood.NewMarkOrderRequest(orderID, status)
 
