@@ -8,7 +8,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	takeoutPersistence "ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
@@ -305,7 +304,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			ShortOrderNumber: takeoutOrder.ShortOrderNumber,
 			OrderState:       takeoutOrder.OrderState,
 			IsAbnormal:       takeoutOrder.IsAbnormal,
-			IsAutoAccept:     takeoutOrder.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto, // 自动接单
+			IsAutoAccept:     takeoutOrder.IsAutoAcceptOrder(), // 自动接单
 			Subtotal:         takeoutOrder.Subtotal,
 			OrderTime:        takeoutOrder.OrderTime,
 		})

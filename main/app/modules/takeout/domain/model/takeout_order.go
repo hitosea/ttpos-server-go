@@ -157,3 +157,13 @@ func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
 func (o *TakeoutOrder) GetToLowerPlatform() string {
 	return strings.ToLower(o.Platform)
 }
+
+// 是否店内就餐订单
+func (o *TakeoutOrder) IsDineInOrder() bool {
+	return o.OrderType == valueobject.TakeoutOrderTypeDineIn
+}
+
+// 是否自动接单
+func (o *TakeoutOrder) IsAutoAcceptOrder() bool {
+	return o.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto
+}

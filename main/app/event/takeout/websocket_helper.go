@@ -13,19 +13,13 @@ import (
 func sendTakeoutOrderWebSocketNotification(
 	companyUuid uint64,
 	takeoutOrderUuid string,
-	platform string,
-	shortOrderNumber string,
+	_ string,
+	_ string,
 	eventType string,
 	extraData map[string]any,
 ) {
 	// 构建 WebSocket 消息数据
-	data := map[string]any{
-		"update_time":        time.Now().Unix(),
-		"takeout_order_uuid": takeoutOrderUuid,
-		"platform":           platform,
-		"short_order_number": shortOrderNumber,
-		"type":               eventType,
-	}
+	data := map[string]any{}
 
 	// 合并额外数据
 	for k, v := range extraData {

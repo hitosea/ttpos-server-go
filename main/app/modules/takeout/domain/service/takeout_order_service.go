@@ -287,27 +287,28 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		return err
 	}
 
-	// 调用 BMP RPC 通知平台接受订单
-	rpcClient, err := rpc.NewBMPTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
-	}
-	defer rpcClient.Close()
-
-	// 调用 PrepareOrder 接口（接受订单）
-	if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
-		logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
+	// 如果不是自动接单，则通知平台接受订单
+	if !order.IsAutoAcceptOrder() {
+		// 调用 BMP RPC 通知平台接受订单
+		rpcClient, err := rpc.NewBMPTakeoutClient()
+		if err != nil {
+			logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
+		}
+		defer rpcClient.Close()
+		// 调用 PrepareOrder 接口（接受订单）
+		if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
+			logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
+		}
 	}
 
 	// 更新订单状态
 	updateData := map[string]interface{}{
-		"order_state":         valueobject.TakeoutOrderStateAccepted,
-		"accepted_time":       currentTime,
-		"accepted_by":         userUuid,
-		"order_accepted_type": valueobject.TakeoutOrderAcceptedTypeManual,
-		"update_time":         currentTime,
+		"order_state":   valueobject.TakeoutOrderStateAccepted,
+		"accepted_time": currentTime,
+		"accepted_by":   userUuid,
+		"update_time":   currentTime,
 	}
 
 	if err := orderRepo.UpdateByMap(order.Uuid, updateData); err != nil {
@@ -436,7 +437,15 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 
 	// 更新订单状态为待骑手接单
 	updateData := map[string]interface{}{
-		"order_state": grab.ConvertPlatformStateToOrderState(order.PlatformOrderState, valueobject.TakeoutOrderStateRiderPending),
+		"order_state": func() int {
+			if order.Platform == valueobject.TakeoutPlatformGrab {
+				if order.IsDineInOrder() {
+					return valueobject.TakeoutOrderStateCompleted
+				}
+				return grab.ConvertPlatformStateToOrderState(order.PlatformOrderState, valueobject.TakeoutOrderStateRiderPending)
+			}
+			return valueobject.TakeoutOrderStateRiderProcessing
+		}(),
 		"accepted_by": userUuid,
 		"update_time": currentTime,
 	}
@@ -917,7 +926,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 	))
 
 	// 自动接单
-	if order.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto {
+	if order.IsAutoAcceptOrder() {
 		if err := s.AcceptOrder(ctx, &request.TakeoutOrderAcceptReq{
 			Uuid: order.Uuid,
 		}); err != nil {
