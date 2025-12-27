@@ -14,27 +14,37 @@ import (
 //go:embed invoice_config.json
 //go:embed invoice_data.json
 //go:embed invoice_tmp.json
+//go:embed takeout_merchant_receipt_config.json
+//go:embed takeout_merchant_receipt_data.json
+//go:embed takeout_merchant_receipt_tmp.json
+//go:embed takeout_customer_receipt_config.json
+//go:embed takeout_customer_receipt_data.json
+//go:embed takeout_customer_receipt_tmp.json
 var TemplateJsonFS embed.FS
 
 // StatementOrderTemplateType 结账单模板类型枚举
 type StatementOrderTemplateType string
 
 const (
-	StatementOrder    StatementOrderTemplateType = "statement_order" // StatementOrder 结账单
-	PreStatementOrder StatementOrderTemplateType = "statement_pre"   // PreStatementOrder 预结账单
-	Invoice           StatementOrderTemplateType = "invoice"         // Invoice 发票
+	StatementOrder         StatementOrderTemplateType = "statement_order"          // StatementOrder 结账单
+	PreStatementOrder      StatementOrderTemplateType = "statement_pre"            // PreStatementOrder 预结账单
+	Invoice                StatementOrderTemplateType = "invoice"                  // Invoice 发票
+	TakeoutMerchantReceipt StatementOrderTemplateType = "takeout_merchant_receipt" // TakeoutMerchantReceipt 外卖商家联
+	TakeoutCustomerReceipt StatementOrderTemplateType = "takeout_customer_receipt" // TakeoutCustomerReceipt 外卖顾客联
 )
 
 // 中文名称到枚举的映射表（用于从数据库中文名称查找）
 var chineseNameMap = map[string]StatementOrderTemplateType{
-	"结账单":  StatementOrder,
-	"预结账单": PreStatementOrder,
-	"发票":   Invoice,
+	"结账单":   StatementOrder,
+	"预结账单":  PreStatementOrder,
+	"发票":    Invoice,
+	"外卖商家联": TakeoutMerchantReceipt,
+	"外卖顾客联": TakeoutCustomerReceipt,
 }
 
 // IsValid 验证枚举值是否有效
 func (t StatementOrderTemplateType) IsValid() bool {
-	return t == StatementOrder || t == PreStatementOrder || t == Invoice
+	return t == StatementOrder || t == PreStatementOrder || t == Invoice || t == TakeoutMerchantReceipt || t == TakeoutCustomerReceipt
 }
 
 // ParseFromString 从字符串解析模板类型（支持中文和英文名称）

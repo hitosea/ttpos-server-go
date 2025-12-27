@@ -152,7 +152,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -199,7 +199,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -246,7 +246,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -293,7 +293,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -340,7 +340,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -387,7 +387,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -435,7 +435,7 @@
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
-                    "font_bold": true,
+                    "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,

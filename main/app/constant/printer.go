@@ -53,15 +53,17 @@ const (
 
 // 打印模板
 const (
-	PrinterTemplateHandoverSheet  = 1  // 交班单
-	PrinterTemplateBilling        = 2  // 结账单
-	PrinterTemplatePreBilling     = 3  // 预结账单
-	PrinterTemplateOneDishOneMenu = 4  // 一菜一单
-	PrinterTemplateBusiness       = 5  // 营业数据
-	PrinterTemplateEntireOrder    = 6  // 整单打印
-	PrinterTemplateInvoice        = 7  // 打印发票
-	PrinterTemplateRecharge       = 8  // 充值单
-	PrinterTemplateReturnDish     = 9  // 退菜单
-	PrinterTemplateOutMenu        = 10 // 出菜单
-	PrinterTemplateTakeoutOrder   = 11 // 外送单
+	PrinterTemplateHandoverSheet   = 1  // 交班单
+	PrinterTemplateBilling         = 2  // 结账单
+	PrinterTemplatePreBilling      = 3  // 预结账单
+	PrinterTemplateOneDishOneMenu  = 4  // 一菜一单
+	PrinterTemplateBusiness        = 5  // 营业数据
+	PrinterTemplateEntireOrder     = 6  // 整单打印
+	PrinterTemplateInvoice         = 7  // 打印发票
+	PrinterTemplateRecharge        = 8  // 充值单
+	PrinterTemplateReturnDish      = 9  // 退菜单
+	PrinterTemplateOutMenu         = 10 // 出菜单
+	PrinterTemplateTakeoutOrder    = 11 // 外送单
+	PrinterTemplateTakeoutMerchant = 12 // 外卖商家联
+	PrinterTemplateTakeoutCustomer = 13 // 外卖顾客联
 )

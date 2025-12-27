@@ -1489,7 +1489,7 @@ func DefaultAppendSplitLineOptions() appendSplitlineOptions {
 	return appendSplitlineOptions{
 		isLineFeed: false,
 		lineHeight: 0,
-		fontWeight: 1,
+		fontWeight: 2,
 		fontSize:   20,
 	}
 }

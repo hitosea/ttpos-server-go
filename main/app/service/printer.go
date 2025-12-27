@@ -41,7 +41,7 @@ type IPrinterSrv interface {
 	PreviewPrinterCustomize(ctx context.Context, previewPrinterCustomizeReq req.PreviewPrinterCustomizeReq) (resp.PreviewPrinterCustomizeResp, error) // 预览打印机定制
 	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                           // 删除打印机定制
 	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) (resp.CreatePrinterCustomizeResp, error)     // 创建打印机定制
-	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                              // 使用打印机定制
+	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) (string, error)                                                                    // 使用打印机定制
 	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
 }
 
@@ -319,9 +319,11 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 
 	// 模版ID列表
 	templateOrders := []uint64{
-		constant.PrinterTemplatePreBilling, // 预结账单
-		constant.PrinterTemplateBilling,    // 结账单
-		constant.PrinterTemplateInvoice,    // 发票
+		constant.PrinterTemplatePreBilling,      // 预结账单
+		constant.PrinterTemplateBilling,         // 结账单
+		constant.PrinterTemplateInvoice,         // 发票
+		constant.PrinterTemplateTakeoutMerchant, // 外卖商家联
+		constant.PrinterTemplateTakeoutCustomer, // 外卖顾客联
 		// constant.PrinterTemplateRecharge,      // 充值单
 		// constant.PrinterTemplateBusiness,      // 营业数据
 		// constant.PrinterTemplateHandoverSheet, // 交班单
@@ -539,7 +541,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 	}
 	if testData["order"] != nil {
 		// 备注
-		if testData["order"].(map[string]interface{})["remark"] != nil {
+		if testData["order"].(map[string]interface{})["remark"] != nil && testData["order"].(map[string]interface{})["remark"] != "" {
 			testData["order"].(map[string]interface{})["remark"] = i18n.Translate(ctx.GetLanguage(), "开桌备注")
 		}
 		// 商品
@@ -565,6 +567,9 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 					}
 					if v, ok := product["name"].(string); ok {
 						product["name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if _, ok := product["remark"].(string); ok {
+						product["remark"] = i18n.Translate(ctx.GetLanguage(), "这是单品备注！这是单品备注！这是单品备注！这是单品备注！这是单品备注！")
 					}
 				}
 			}
@@ -607,6 +612,14 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 					}
 				}
 			}
+		}
+		// 异常信息
+		if testData["order"].(map[string]interface{})["warning_message"] != nil && testData["order"].(map[string]interface{})["warning_message"] != "" {
+			testData["order"].(map[string]interface{})["warning_message"] = i18n.Translate(ctx.GetLanguage(), "该订单菜单信息异常,请前去Grab查看!!!")
+		}
+		// customer_address
+		if testData["order"].(map[string]interface{})["customer_address"] != nil {
+			testData["order"].(map[string]interface{})["customer_address"] = i18n.Translate(ctx.GetLanguage(), "顾客地址顾客地址顾客地址顾客地址顾客地址")
 		}
 	}
 	return testData, nil
@@ -679,8 +692,14 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		go func(cust model.PrinterCustomize) {
 			defer wg.Done()
 
+			// 如果 Data 为空，使用默认模板
+			templateData := cust.Data
+			if templateData == "" {
+				templateData = templateJSONStr
+			}
+
 			// 使用并发安全的Parser
-			imgUrl, err := s.ParserConcurrent(ctx, cust.Data, testData, cust.Uuid)
+			imgUrl, err := s.ParserConcurrent(ctx, templateData, testData, cust.Uuid)
 
 			resultChan <- templateResult{
 				customize: cust,
@@ -774,7 +793,7 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
 			BaseModel:  model.BaseModel{Uuid: uuid},
 			Name:       DefaultTemplateName,
-			Data:       templateJSONStr,
+			Data:       "",
 			TemplateId: template.ID,
 			IsAdv:      0,
 		})
@@ -786,9 +805,23 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 
 	// 返回结果
 	return resp.PrintTemplateDetailResp{
-		DefaultTpl:      defaultTemplate,
-		AdvReceiptTpls:  advReceiptTpls,
-		IsAdvReceiptTpl: companySetting.IsOpenAdvancedTicketPrint == 1,
+		DefaultTpl:     defaultTemplate,
+		AdvReceiptTpls: advReceiptTpls,
+		IsEditable: func() bool {
+			if template.ID == constant.PrinterTemplateTakeoutMerchant || template.ID == constant.PrinterTemplateTakeoutCustomer {
+				return false
+			}
+			return true
+		}(),
+		IsAdvReceiptTpl: func() bool {
+			if template.ID == constant.PrinterTemplateTakeoutMerchant || template.ID == constant.PrinterTemplateTakeoutCustomer {
+				return false
+			}
+			if companySetting.IsOpenAdvancedTicketPrint == 1 {
+				return true
+			}
+			return false
+		}(),
 	}, nil
 }
 
@@ -932,25 +965,42 @@ func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCu
 }
 
 // UsePrinterCustomize 使用打印机定制
-func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error {
+func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint64) (string, error) {
 	db := ctx.GetDB()
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	// 检查打印机定制是否存在
 	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(customizeUuid)
 	if err != nil {
-		return errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
+		return "", errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
 	}
 	// 检查打印机定制是否正在使用中
-	return db.Transaction(func(tx *gorm.DB) error {
+	tmpData := ""
+	err = db.Transaction(func(tx *gorm.DB) error {
 		// 按template_id更新is_use为0, 其他字段不变
 		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomizeByTemplateId(customizeInfo.TemplateId)
 		if err != nil {
 			return errors.WithMessage(errors.New("使用打印机定制失败"), err.Error())
 		}
 
+		// 判断 customizeInfo.Data 是否存在值，没有就取默认模板
+		tmpData = customizeInfo.Data
+		if tmpData == "" {
+			// 获取模板信息
+			template, err := repository.NewPrinterTemplateRepo(tx).GetPrinterTemplateInfo(customizeInfo.TemplateId)
+			if err != nil {
+				return errors.WithMessage(errors.New("获取模板信息失败"), err.Error())
+			}
+			// 获取默认模板JSON字符串
+			tmpData, err = s.GetTemplateJSONStr(ctx, template.Name)
+			if err != nil {
+				return errors.WithMessage(errors.New("获取默认模板失败"), err.Error())
+			}
+		}
+
 		// 使用打印机定制
 		customizeInfo.IsUse = 1
 		customizeInfo.UpdateTime = time.Now().Unix()
+		customizeInfo.Data = tmpData
 		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomize(customizeInfo)
 		if err != nil {
 			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
@@ -960,7 +1010,7 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 		err = repository.NewPrinterTemplateRepo(tx).UpdatePrinterTemplate(model.PrinterTemplate{
 			ID:      customizeInfo.TemplateId,
 			TmpUuid: customizeInfo.Uuid,
-			TmpData: customizeInfo.Data,
+			TmpData: tmpData,
 		})
 		if err != nil {
 			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
@@ -968,6 +1018,10 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 
 		return nil
 	})
+	if err != nil {
+		return "", errors.WithMessage(errors.New("使用打印机定制失败"), err.Error())
+	}
+	return tmpData, nil
 }
 
 // GetConfigInfo 获取配置信息
@@ -1004,11 +1058,14 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 		if err != nil {
 			return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
 		}
-		// 格式化模板JSON字符串
-		var templateObj map[string]interface{}
-		if err := json.Unmarshal([]byte(customizeInfo.Data), &templateObj); err == nil {
-			if formattedJSON, err := json.Marshal(templateObj); err == nil {
-				templateJSONStr = string(formattedJSON)
+		// 如果 Data 不为空，使用定制数据；否则使用默认模板
+		if customizeInfo.Data != "" {
+			// 格式化模板JSON字符串
+			var templateObj map[string]interface{}
+			if err := json.Unmarshal([]byte(customizeInfo.Data), &templateObj); err == nil {
+				if formattedJSON, err := json.Marshal(templateObj); err == nil {
+					templateJSONStr = string(formattedJSON)
+				}
 			}
 		}
 		//

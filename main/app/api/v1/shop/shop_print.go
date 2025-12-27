@@ -192,12 +192,12 @@ func (h *PrintHandler) UsePrinterCustomize(c *gin.Context) {
 		helper.HandleValidationError(c, err, printerUseCustomizeReq, nil)
 		return
 	}
-	err := h.printerSrv.UsePrinterCustomize(ctx, printerUseCustomizeReq.CustomizeUuid)
+	resp, err := h.printerSrv.UsePrinterCustomize(ctx, printerUseCustomizeReq.CustomizeUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil, "使用打印机定制成功")
+	helper.Success(c, resp, "使用打印机定制成功")
 }
 
 // GetPrinterCustomizeConfigInfo 获取配置信息
