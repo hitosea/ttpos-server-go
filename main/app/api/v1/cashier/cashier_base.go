@@ -24,7 +24,7 @@ type BaseHandler struct {
 	otherSrv             service.IOtherSrv
 	printerLogSrv        printerService.IPrinterLogSrv
 	staffShiftSrv        service.IStaffShiftSrv
-	printerSrv           service.IPrinterSrv
+	printerSrv           printerService.IPrinterSrv
 	marketingActivitySrv service.IMarketingActivitySrv
 }
 
@@ -598,7 +598,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-	printerSrv := service.NewPrinterSrv(dbm, cache)
+	printerSrv := printerService.NewPrinterSrv(dbm, cache)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	marketingActivitySrv := service.NewMarketingActivitySrv(dbm, cache)
 

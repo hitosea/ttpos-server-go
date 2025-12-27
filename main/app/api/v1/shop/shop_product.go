@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -20,7 +21,7 @@ type ProductHandler struct {
 	productSrv        service.IProductSrv        // 商品服务
 	productTakeoutSrv service.IProductTakeoutSrv // 外卖商品服务
 	uploadFileSrv     service.IUploadFileSrv     // 文件上传服务
-	pinterSrv         service.IPrinterSrv        // 打印服务
+	pinterSrv         printerService.IPrinterSrv // 打印服务
 }
 
 // GetProductCategoryList 获取商品分类列表
@@ -1519,7 +1520,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		),
 		productTakeoutSrv: service.NewProductTakeoutSrv(dbm, localeSrv, settingSrv, cache, translateSrv),
 		uploadFileSrv:     service.NewUploadFileSrv(dbm),
-		pinterSrv:         service.NewPrinterSrv(dbm, cache),
+		pinterSrv:         printerService.NewPrinterSrv(dbm, cache),
 	}
 
 	// 需要认证

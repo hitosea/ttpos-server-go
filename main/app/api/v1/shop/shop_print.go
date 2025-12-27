@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -18,7 +19,7 @@ import (
 // PrintHandler 打印控制器
 type PrintHandler struct {
 	authSrv       service.IAuthSrv
-	printerSrv    service.IPrinterSrv
+	printerSrv    printerService.IPrinterSrv
 	uploadFileSrv service.IUploadFileSrv
 }
 
@@ -271,7 +272,7 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-	printerSrv := service.NewPrinterSrv(dbm, cache)
+	printerSrv := printerService.NewPrinterSrv(dbm, cache)
 
 	// 初始化控制器
 	printerHandler := &PrintHandler{
