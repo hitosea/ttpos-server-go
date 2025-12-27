@@ -308,7 +308,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 // 构建订单菜品打印的内容
 func (p *PrinterRepoImpl) getPrintProductContent(
-	productPrinter model.ProductPrinter,
+	_ model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	saleBill model.SaleBill,
 	saleOrder model.SaleOrder,

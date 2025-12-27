@@ -2629,7 +2629,7 @@ func (s *orderSrv) collectProductBomUuids(product product_resp.Product) map[uint
 
 // getProductBomStockNumMap 使用 ProductInventoryAppService 批量查询库存
 // 返回库存映射表，key 为 BomUuid，value 为库存数量
-func (s *orderSrv) getProductBomStockNumMap(ctx context.Context, bomUuids map[uint64]bool, productPackageUuid uint64) map[uint64]float64 {
+func (s *orderSrv) getProductBomStockNumMap(ctx context.Context, bomUuids map[uint64]bool, _ uint64) map[uint64]float64 {
 	stockNumMap := make(map[uint64]float64)
 	if len(bomUuids) == 0 {
 		return stockNumMap

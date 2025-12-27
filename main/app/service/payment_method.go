@@ -1025,7 +1025,7 @@ func (s *paymentMethodSrv) getModeOfPaymentListFromERP(ctx context.Context, comp
 func (s *paymentMethodSrv) createPaymentFromERP(
 	tx *gorm.DB,
 	erpPayment *selling.ModeOfPayment,
-	companyUuid uint64,
+	_ uint64,
 ) error {
 	// 1. 生成 code（使用 generatePaymentCode，从 20000 开始，每次递增 100）
 	code := s.generatePaymentCode(tx)

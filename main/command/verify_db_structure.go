@@ -688,7 +688,7 @@ func saveSignature(sig *DatabaseSignature, filename string) {
 // compareSignatures 对比两个签名
 // reference: shop_01.sql 执行后的数据库结构
 // current: 迁移文件执行后的数据库结构
-func compareSignatures(reference, current *DatabaseSignature, companyUuid uint64) {
+func compareSignatures(reference, current *DatabaseSignature, _ uint64) {
 	fmt.Println("=" + strings.Repeat("=", 79))
 	fmt.Println("数据库结构签名对比")
 	fmt.Println("参考签名: shop_01.sql 执行后的数据库结构")
@@ -1210,7 +1210,7 @@ func splitSQLStatements(content string) []string {
 }
 
 // runMigrations 执行迁移文件
-func runMigrations(dbName string) error {
+func runMigrations(_ string) error {
 	workDir, err := getProjectRoot()
 	if err != nil {
 		return fmt.Errorf("获取项目根目录失败: %w", err)

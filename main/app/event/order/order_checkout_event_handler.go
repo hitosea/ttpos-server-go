@@ -261,7 +261,7 @@ func CheckoutSaleOrderEventHandler() {
 
 // 增加销量
 func HandleAddSalesVolume(payload event.CheckoutSaleOrderPayload) {
-	ProductBoms, ProducttPackages := GetSalesVolume(payload.SaleBill)
+	ProductBoms, ProductPackages := GetSalesVolume(payload.SaleBill)
 
 	for productBomUuid, saleNum := range ProductBoms {
 		if err := repository.NewProductBomRepo(payload.Ctx.GetDB()).AddActualSaleNum(productBomUuid, saleNum); err != nil {
@@ -269,7 +269,7 @@ func HandleAddSalesVolume(payload event.CheckoutSaleOrderPayload) {
 			continue
 		}
 	}
-	for productPackageUuid, saleNum := range ProducttPackages {
+	for productPackageUuid, saleNum := range ProductPackages {
 		if err := repository.NewProductPackageRepo(payload.Ctx.GetDB()).AddActualSaleNum(productPackageUuid, saleNum); err != nil {
 			logger.Logger.Error("HandleAddSalesVolume process, AddActualSaleNum failed", zap.Any("productPackageUuid", productPackageUuid), zap.Any("saleNum", saleNum), zap.Error(err))
 			continue
