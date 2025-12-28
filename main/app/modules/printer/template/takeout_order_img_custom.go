@@ -38,9 +38,10 @@ func (t *platformTakeoutImgTemplate) GetPrintContent(
 	tmpData string,
 	order *takeoutModel.TakeoutOrder,
 	is58mmPrinter bool,
+	isMerchantReceipt bool, // true: 商家联, false: 客户联
 ) string {
 	// 构建打印数据结构
-	printData := t.buildPrintData(settingPrinterInfo, order)
+	printData := t.buildPrintData(settingPrinterInfo, order, is58mmPrinter, isMerchantReceipt)
 
 	// 将结构体转换为map
 	dataMap, err := utils.StrToMap(utils.ToJsonString(printData))
@@ -88,6 +89,8 @@ func (t *platformTakeoutImgTemplate) GetPrintContent(
 func (t *platformTakeoutImgTemplate) buildPrintData(
 	settingPrinterInfo settingResp.PrinterInfo,
 	order *takeoutModel.TakeoutOrder,
+	is58mmPrinter bool,
+	isMerchantReceipt bool,
 ) *template_struct.StatementOrderData {
 	// 店铺信息
 	storeData := template_struct.StatementStoreData{
@@ -104,7 +107,7 @@ func (t *platformTakeoutImgTemplate) buildPrintData(
 	}
 
 	// 订单信息
-	orderData := t.buildOrderData(order)
+	orderData := t.buildOrderData(order, is58mmPrinter, isMerchantReceipt)
 
 	return &template_struct.StatementOrderData{
 		BrandName: config.Server.BrandName,
@@ -114,14 +117,18 @@ func (t *platformTakeoutImgTemplate) buildPrintData(
 }
 
 // buildOrderData 构建订单数据
-func (t *platformTakeoutImgTemplate) buildOrderData(order *takeoutModel.TakeoutOrder) template_struct.StatementOrderInfoData {
+func (t *platformTakeoutImgTemplate) buildOrderData(
+	order *takeoutModel.TakeoutOrder,
+	is58mmPrinter bool,
+	isMerchantReceipt bool,
+) template_struct.StatementOrderInfoData {
 	orderData := template_struct.StatementOrderInfoData{
 		Platform:   order.Platform,
 		OrderNo:    order.ShortOrderNumber,
 		OrderType:  order.OrderType,
 		CreateTime: t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
 		FinishTime: t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
-		PayTime:    t.base.FormatUnixTimeDefault(order.SubmitTime),    // 支付时间
+		PayTime:    t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
 	}
 
 	// 支付时间
@@ -134,8 +141,16 @@ func (t *platformTakeoutImgTemplate) buildOrderData(order *takeoutModel.TakeoutO
 	productNum := 0.0
 
 	for _, item := range order.TakeoutOrderItems {
+		// 根据打印类型选择商品名称
+		// 商家联：使用 TTPOS 商品名称（TtposItemName）
+		// 客户联：使用平台商品名称（ItemName）
+		itemName := item.ItemName
+		if isMerchantReceipt && item.TtposItemName != "" {
+			itemName = item.TtposItemName
+		}
+
 		product := template_struct.StatementProductData{
-			Name:     language.JsonToLocaleResponse(item.ItemName).GetLocale(t.base.Lang),
+			Name:     language.JsonToLocaleResponse(itemName).GetLocale(t.base.Lang),
 			Price:    t.base.Amount(item.Price), // 使用 base.Amount 添加千分位
 			Num:      float64(item.Quantity),
 			PriceNum: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Quantity),
@@ -156,7 +171,14 @@ func (t *platformTakeoutImgTemplate) buildOrderData(order *takeoutModel.TakeoutO
 					continue
 				}
 
-				modifierName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(t.base.Lang)
+				// 根据打印类型选择修饰符名称
+				// 商家联：使用 TTPOS 修饰符名称（TtposModifierName）
+				// 客户联：使用平台修饰符名称（ModifierName）
+				modifierName := modifier.ModifierName
+				if isMerchantReceipt && modifier.TtposModifierName != "" {
+					modifierName = modifier.TtposModifierName
+				}
+				modifierName = language.JsonToLocaleResponse(modifierName).GetLocale(t.base.Lang)
 
 				// 根据修饰符类型分类
 				switch modifier.TtposModifierType {
@@ -168,6 +190,11 @@ func (t *platformTakeoutImgTemplate) buildOrderData(order *takeoutModel.TakeoutO
 						PriceNum:     fmt.Sprintf("%d", modifier.Quantity),
 						Subtotal:     t.base.Amount(modifier.Price * float64(modifier.Quantity)),
 						IsSubProduct: true, // 标记为子商品
+					}
+					// 商家联：始终使用 TTPOS 规格名称
+					if modifier.TtposFlavorName != "" {
+						flavorName := language.JsonToLocaleResponse(modifier.TtposFlavorName).GetLocale(t.base.Lang)
+						subProduct.FlavorName = flavorName
 					}
 					subProducts = append(subProducts, subProduct)
 				case "flavor": // 规格
@@ -197,12 +224,6 @@ func (t *platformTakeoutImgTemplate) buildOrderData(order *takeoutModel.TakeoutO
 		// 先添加主商品
 		products = append(products, product)
 		productNum += float64(item.Quantity)
-
-		// 再添加子商品（紧跟在主商品后面）
-		for _, subProduct := range subProducts {
-			products = append(products, subProduct)
-			productNum += subProduct.Num
-		}
 	}
 
 	orderData.Products = products
@@ -231,7 +252,18 @@ func (t *platformTakeoutImgTemplate) buildOrderData(order *takeoutModel.TakeoutO
 
 	// 异常提示
 	if order.IsAbnormal == 1 {
-		orderData.WarningMessage = order.AbnormalDetail
+		orderData.WarningMessage = "该订单菜单信息异常,请前去Grab查看!!!"
+		if order.Platform == "Grab" {
+			orderData.WarningMessage = t.base.Translate("该订单菜单信息异常,请前去 Grab 查看!!!")
+		} else if order.Platform == "LINEMAN" {
+			orderData.WarningMessage = t.base.Translate("该订单菜单信息异常,请前去 LINEMAN 查看!!!")
+		}
+		// 判断是否58打印机，如果是则使用58打印机分隔符
+		if is58mmPrinter {
+			orderData.WarningMessageSeparator = "**************************************************************"
+		} else {
+			orderData.WarningMessageSeparator = "**********************************************************************************************"
+		}
 	}
 
 	return orderData

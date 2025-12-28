@@ -756,7 +756,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 		}
 
 		// Step 2: 批量查询商品名称（已映射商品）
-		productNames := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
+		// productInfos 中包含两个名称：Name (显示用), TtposName (标识用)
+		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
 		// Step 3: 批量查询菜单名称（未映射商品）
 		menuNames := s.menuRepo.GetMenuNamesByPlatformItemIds(ctx, order.Platform, productIds)
 
@@ -766,9 +767,14 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 
 			// 设置商品名称
 			if item.IsMapped == 1 && item.TtposProductUuid > 0 {
-				// 已映射商品：使用 TTPOS 商品名称
-				if name, ok := productNames[item.TtposProductUuid]; ok && name != "" {
-					item.ItemName = name
+				// 已映射商品：使用商品名称
+				if info, ok := productInfos[item.TtposProductUuid]; ok {
+					// ItemName: 显示用名称（外卖表优先）
+					if info.Name != "" {
+						item.ItemName = info.Name
+					}
+					// TtposItemName: TTPOS 核心表名称
+					item.TtposItemName = info.TtposName
 				}
 			} else if item.IsMapped == 0 {
 				// 未映射商品：使用平台菜单名称
@@ -824,8 +830,9 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			}
 		}
 
-		// 批量查询未映射修饰符的菜单名称（从 ttpos_takeout 表）
-		modifierNames := s.menuRepo.GetModifierNamesByUuids(ctx, modifierUuids, modifierTypes)
+		// 批量查询修饰符名称
+		// modifierInfos 中包含两个名称：Name (显示用), TtposName (标识用)
+		modifierInfos := s.menuRepo.GetModifierNamesByUuids(ctx, modifierUuids, modifierTypes)
 		platformModifierNames := s.menuRepo.GetModifierNamesByPlatformIds(ctx, order.Platform, modifierPlatformIds)
 
 		// 设置修饰符名称并创建
@@ -835,9 +842,23 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 				modifier := &item.TakeoutOrderItemModifiers[j]
 				// 设置修饰符名称
 				if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
-					// 已映射修饰符：使用 TTPOS 修饰符名称
-					if name, ok := modifierNames[modifier.TtposModifierUuid]; ok && name != "" {
-						modifier.ModifierName = name
+					// 已映射修饰符：使用修饰符名称和数量
+					if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok && info.Name != "" {
+						// ModifierName: 用于显示（commodity: 外卖表优先, 其他: 核心表）
+						modifier.ModifierName = info.Name
+						// TtposModifierName: 用于标识（始终来自核心表）
+						modifier.TtposModifierName = info.TtposName
+
+						// 如果是 commodity 类型，设置规格信息和数量
+						if modifier.TtposModifierType == "commodity" {
+							modifier.TtposFlavorUuid = info.TtposFlavorUuid
+							modifier.TtposFlavorName = info.TtposFlavorName
+
+							// 使用TTPOS数量覆盖平台数量
+							if info.Num > 0 {
+								modifier.Quantity = int(info.Num)
+							}
+						}
 					}
 				} else if modifier.IsMapped == 0 {
 					// 未映射修饰符：使用平台菜单名称
@@ -1078,14 +1099,6 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 			return nil, nil, errors.WithMessage(errors.New("查询套餐商品BOM映射失败"), err.Error())
 		}
 		groupItemToBomMap = groupItemBomMapping
-
-		// 更新 commodity 的出库数量，使用 groupItem.Num 而不是 modifier.Quantity
-		for groupItemUuid, info := range commodityModifiers {
-			if mapping, ok := groupItemToBomMap[groupItemUuid]; ok {
-				// 套餐商品出库数量 = groupItem.Num * item.Quantity
-				info.outboundQuantity = int(mapping.Num * float64(info.item.Quantity))
-			}
-		}
 	}
 
 	// 3. 构建 bomUuid -> [modifierInfo] 映射，并累加出库数量
@@ -1139,38 +1152,6 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 			itemCopy.TakeoutOrderItemModifiers[i] = *info.modifier
 		}
 		bomItemMap[bomUuid] = &itemCopy
-	}
-
-	// 5. 查询并填充 BOM 名称（sku_name）
-	if len(bomMap) > 0 {
-		bomUuids := make([]uint64, 0, len(bomMap))
-		for bomUuid := range bomMap {
-			bomUuids = append(bomUuids, bomUuid)
-		}
-
-		bomInfoMapping, err := bomMappingRepo.GetProductBomInfo(bomUuids)
-		if err != nil {
-			logger.Logger.Error("查询BOM信息失败", zap.Error(err))
-			// 不中断流程，继续执行
-		} else {
-			// 填充 modifier 的 TtposSkuName
-			for bomUuid, name := range bomInfoMapping {
-				if item, ok := bomItemMap[bomUuid]; ok {
-					for i := range item.TakeoutOrderItemModifiers {
-						modifier := &item.TakeoutOrderItemModifiers[i]
-						// flavor/sauce: TtposModifierUuid 就是 BOM UUID
-						if (modifier.IsFlavor() || modifier.IsSauce()) && modifier.TtposModifierUuid == bomUuid {
-							modifier.TtposSkuName = name
-						} else if modifier.IsCommodity() {
-							// commodity: TtposModifierUuid 是 groupItemUuid，需要通过映射查找
-							if mappedBomUuid, exists := groupItemToBomMap[modifier.TtposModifierUuid]; exists && mappedBomUuid.ProductBomUuid == bomUuid {
-								modifier.TtposSkuName = name
-							}
-						}
-					}
-				}
-			}
-		}
 	}
 
 	return bomQuantityMap, bomItemMap, nil

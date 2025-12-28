@@ -60,8 +60,10 @@ func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 
 	// 确定模板类型（商家联或顾客联）
 	templateType := printerConst.PrinterTemplateTakeoutMerchant
+	isMerchantReceipt := true // 默认是商家联
 	if receiptType == "customer" {
 		templateType = printerConst.PrinterTemplateTakeoutCustomer
+		isMerchantReceipt = false
 	}
 
 	// 获取打印模板
@@ -85,6 +87,7 @@ func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 		settingPrinterInfo,
 		tmpDataStr,
 		order,
+		isMerchantReceipt,
 	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
@@ -144,6 +147,7 @@ func (p *PrinterRepoImpl) getPlatformTakeoutPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
 	tmpData string,
 	order *takeoutModel.TakeoutOrder,
+	isMerchantReceipt bool,
 ) string {
 	// 创建打印机基础实例
 	base := template.NewPrinterTemplate(
@@ -171,5 +175,6 @@ func (p *PrinterRepoImpl) getPlatformTakeoutPrintContent(
 		tmpData,
 		order,
 		p.Is58mmPrinter(),
+		isMerchantReceipt,
 	)
 }

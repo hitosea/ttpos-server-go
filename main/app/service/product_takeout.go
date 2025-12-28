@@ -604,8 +604,8 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		},
 		repository.CommonRepo.WhereBySoftDelete(),
 		takeoutRepo.WithProductPackage(),
-		takeoutRepo.WithProductPackageMultiLanguageName(),
 		takeoutRepo.WithDescribeMultiLanguageName(), // 预加载卖点多语言
+		takeoutRepo.WithMultiLanguageName(),         // 预加载商品名称
 		takeoutRepo.WithProductCategory(),
 		takeoutRepo.WithProductSpecialCategory(),
 		takeoutRepo.WithImageFile(),
@@ -675,7 +675,7 @@ func (s *productTakeoutSrv) GetProductTakeoutShopDetail(ctx context.Context, det
 		ProductType:         uint(productPackage.ProductType),
 		Price:               takeout.Price,
 		TakeoutType:         int(takeout.TakeoutType),
-		LocaleName:          takeout.ProductPackage.MultiLanguageName.GetNames(),
+		LocaleName:          takeout.MultiLanguageName.GetNames(),
 		Describe:            describe, // 返回卖点数据
 		CategoryUuid:        takeout.CategoryUuid,
 		CategoryName:        takeout.ProductCategory.MultiLanguageName.GetNames(),

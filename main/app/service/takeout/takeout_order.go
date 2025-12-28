@@ -780,42 +780,23 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	// 初始化 Repo
 	productionRepo := repository.NewProductionRepo(db)
 	productPackageRepo := repository.NewProductPackageRepo(db)
-	productBomRepo := repository.NewProductBomRepo(db)
-	productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(db)
 	bomMappingRepo := persistence.NewTakeoutBomMappingRepo(db)
 
 	// 1. 收集所有需要查询的 UUID
 	var (
-		normalProductPackageUuids = make(map[uint64]bool) // 普通商品的 ProductPackage UUID
-		packageGroupItemUuids     = make([]uint64, 0)     // 套餐商品的 groupItem UUID
-		flavorBomUuids            = make(map[uint64]bool) // flavor 类型的 BOM UUID
-		sauceBomUuids             = make(map[uint64]bool) // sauce 类型的 BOM UUID
-		attrPackageAttributeUuids = make(map[uint64]bool) // attr 类型的 ProductPackageAttribute UUID
+		normalProductPackageUuids = make(map[uint64]bool) // 普通商品的 ProductPackage UUID（用于查询分类）
+		packageGroupItemUuids     = make([]uint64, 0)     // 套餐商品的 groupItem UUID（用于查询 RelatedUuid）
 	)
 
 	// 遍历所有商品，收集需要查询的 UUID
 	for _, takeoutItem := range order.TakeoutOrderItems {
 		if takeoutItem.TtposProductType == 0 {
-			// 普通商品：收集 ProductPackage UUID
+			// 普通商品：收集 ProductPackage UUID（仅用于查询分类）
 			if takeoutItem.TtposProductUuid > 0 {
 				normalProductPackageUuids[takeoutItem.TtposProductUuid] = true
 			}
-			// 收集 modifiers 相关的 UUID
-			for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
-				if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
-					continue
-				}
-				switch modifier.TtposModifierType {
-				case "flavor":
-					flavorBomUuids[modifier.TtposModifierUuid] = true
-				case "sauce":
-					sauceBomUuids[modifier.TtposModifierUuid] = true
-				case "attr":
-					attrPackageAttributeUuids[modifier.TtposModifierUuid] = true
-				}
-			}
 		} else {
-			// 套餐商品：收集 groupItem UUID
+			// 套餐商品：收集 groupItem UUID（用于查询子商品 UUID）
 			for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
 				if modifier.IsMapped == 1 && modifier.TtposModifierType == "commodity" && modifier.TtposModifierUuid > 0 {
 					packageGroupItemUuids = append(packageGroupItemUuids, modifier.TtposModifierUuid)
@@ -843,23 +824,19 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 		normalProductPackageMap[pkg.Uuid] = pkg
 	}
 
-	// 2.2 批量查询套餐商品的 BOM 映射
+	// 2.2 批量查询套餐商品的 BOM 映射（仅需要 RelatedUuid）
 	var groupItemBomMapping map[uint64]persistence.GroupItemBomMapping
 	var packageSubProductPackageUuids = make(map[uint64]bool)
-	var packageBomUuids = make(map[uint64]bool)
 	if len(packageGroupItemUuids) > 0 {
 		groupItemBomMapping, err = bomMappingRepo.GetGroupItemBomMapping(packageGroupItemUuids)
 		if err != nil {
 			logger.Logger.Error("批量查询套餐商品BOM映射失败", zap.Error(err))
 			return errors.WithMessage(err, "批量查询套餐商品BOM映射失败")
 		}
-		// 收集套餐子商品的 ProductPackage UUID 和 BOM UUID
+		// 收集套餐子商品的 ProductPackage UUID（用于查询分类）
 		for _, mapping := range groupItemBomMapping {
 			if mapping.RelatedUuid > 0 {
 				packageSubProductPackageUuids[mapping.RelatedUuid] = true
-			}
-			if mapping.ProductBomUuid > 0 {
-				packageBomUuids[mapping.ProductBomUuid] = true
 			}
 		}
 	}
@@ -880,96 +857,6 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	packageSubProductPackageMap := make(map[uint64]*model.ProductPackage)
 	for _, pkg := range packageSubProductPackages {
 		packageSubProductPackageMap[pkg.Uuid] = pkg
-	}
-
-	// 2.4 批量查询所有 BOM（flavor + sauce + package）
-	allBomUuids := make([]uint64, 0)
-	for uuid := range flavorBomUuids {
-		allBomUuids = append(allBomUuids, uuid)
-	}
-	for uuid := range sauceBomUuids {
-		allBomUuids = append(allBomUuids, uuid)
-	}
-	for uuid := range packageBomUuids {
-		allBomUuids = append(allBomUuids, uuid)
-	}
-	// 去重
-	bomUuidMap := make(map[uint64]bool)
-	uniqueBomUuids := make([]uint64, 0)
-	for _, uuid := range allBomUuids {
-		if !bomUuidMap[uuid] {
-			bomUuidMap[uuid] = true
-			uniqueBomUuids = append(uniqueBomUuids, uuid)
-		}
-	}
-	// 批量查询 flavor BOM（需要预加载 ProductFlavor.MultiLanguageName）
-	flavorBomUuidList := make([]uint64, 0)
-	for uuid := range flavorBomUuids {
-		flavorBomUuidList = append(flavorBomUuidList, uuid)
-	}
-	flavorBoms, err := productBomRepo.GetProductBoms(
-		repository.CommonRepo.WhereInUuids(flavorBomUuidList),
-		repository.CommonRepo.Preload(repository.WithPreload{
-			Query: "ProductFlavor.MultiLanguageName",
-		}),
-	)
-	if err != nil {
-		logger.Logger.Error("批量查询规格BOM失败", zap.Error(err))
-		return errors.WithMessage(err, "批量查询规格BOM失败")
-	}
-	flavorBomMap := make(map[uint64]*model.ProductBom)
-	for _, bom := range flavorBoms {
-		flavorBomMap[bom.Uuid] = bom
-	}
-
-	// 批量查询 sauce BOM（需要预加载 ProductSauce.MultiLanguageName）
-	sauceBomUuidList := make([]uint64, 0)
-	for uuid := range sauceBomUuids {
-		sauceBomUuidList = append(sauceBomUuidList, uuid)
-	}
-	sauceBoms, err := productBomRepo.GetProductBoms(
-		repository.CommonRepo.WhereInUuids(sauceBomUuidList),
-		repository.CommonRepo.Preload(repository.WithPreload{
-			Query: "ProductSauce.MultiLanguageName",
-		}),
-	)
-	if err != nil {
-		logger.Logger.Error("批量查询加料BOM失败", zap.Error(err))
-		return errors.WithMessage(err, "批量查询加料BOM失败")
-	}
-	sauceBomMap := make(map[uint64]*model.ProductBom)
-	for _, bom := range sauceBoms {
-		sauceBomMap[bom.Uuid] = bom
-	}
-
-	// 批量查询 package BOM（不需要预加载）
-	packageBomUuidList := make([]uint64, 0)
-	for uuid := range packageBomUuids {
-		packageBomUuidList = append(packageBomUuidList, uuid)
-	}
-	packageBoms, err := productBomRepo.GetProductBomsByUuids(packageBomUuidList)
-	if err != nil {
-		logger.Logger.Error("批量查询套餐BOM失败", zap.Error(err))
-		return errors.WithMessage(err, "批量查询套餐BOM失败")
-	}
-	packageBomMap := make(map[uint64]*model.ProductBom)
-	for _, bom := range packageBoms {
-		packageBomMap[bom.Uuid] = bom
-	}
-
-	// 2.5 批量查询 ProductPackageAttribute
-	attrPackageAttributeUuidList := make([]uint64, 0, len(attrPackageAttributeUuids))
-	for uuid := range attrPackageAttributeUuids {
-		attrPackageAttributeUuidList = append(attrPackageAttributeUuidList, uuid)
-	}
-	productPackageAttributes, err := productPackageAttributeRepo.GetProductPackageAttributesByUuids(attrPackageAttributeUuidList)
-	if err != nil {
-		logger.Logger.Error("批量查询商品属性失败", zap.Error(err))
-		return errors.WithMessage(err, "批量查询商品属性失败")
-	}
-	productPackageAttributeMap := make(map[uint64]*model.ProductPackageAttribute)
-	for _, attr := range productPackageAttributes {
-		productPackageAttributeMap[attr.Uuid] = attr
 	}
 
 	// 3. 创建 ProductionOrderProduct 列表
@@ -993,16 +880,15 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 
 			// 获取商品信息
 			productPackageUuid := productPackage.Uuid
-			productPackageName := productPackage.Name
 			var firstCategoryUuid uint64
 			if productPackage.ProductCategory.Uuid > 0 {
 				firstCategoryUuid = productPackage.ProductCategory.GetFirstCategoryUuid()
 			}
 
-			// 处理 modifiers，提取属性名称
+			// 处理 modifiers，直接从 modifier 中获取已保存的名称
 			var productBomUuid uint64
 			var productBomName string
-			var attributeMultiLanguageNames []*model.MultiLanguageName
+			var attributeNames []string
 
 			for _, modifier := range takeoutItem.TakeoutOrderItemModifiers {
 				if modifier.IsMapped == 0 || modifier.TtposModifierUuid == 0 {
@@ -1011,42 +897,38 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 
 				switch modifier.TtposModifierType {
 				case "flavor":
+					// 规格：直接使用已保存的 TtposFlavorName
 					productBomUuid = modifier.TtposModifierUuid
-					if bom, ok := flavorBomMap[productBomUuid]; ok && bom != nil {
-						productBomName = bom.ProductFlavor.MultiLanguageName.ToJson()
-						attributeMultiLanguageNames = append(attributeMultiLanguageNames, &bom.ProductFlavor.MultiLanguageName)
-					}
-				case "attr":
-					if attr, ok := productPackageAttributeMap[modifier.TtposModifierUuid]; ok && attr != nil {
-						attributeMultiLanguageNames = append(attributeMultiLanguageNames, &attr.Attribute.MultiLanguageName)
-					}
-				case "sauce":
-					if bom, ok := sauceBomMap[modifier.TtposModifierUuid]; ok && bom != nil {
-						attributeMultiLanguageNames = append(attributeMultiLanguageNames, &bom.ProductSauce.MultiLanguageName)
+					productBomName = modifier.TtposModifierName
+				case "attr", "sauce":
+					// 属性和加料：直接使用已保存的 TtposModifierName
+					if modifier.TtposModifierName != "" {
+						attributeNames = append(attributeNames, modifier.TtposModifierName)
 					}
 				}
 			}
 
-			// 合并多个属性的多语言名称
-			var attributeNames string
-			if len(attributeMultiLanguageNames) > 0 {
-				localeResponses := make([]dto.LocaleResponse, 0, len(attributeMultiLanguageNames))
-				for _, attrName := range attributeMultiLanguageNames {
-					localeResp := attrName.GetNames()
-					if !localeResp.IsNull() {
-						localeResponses = append(localeResponses, localeResp)
+			// 合并多个属性的名称
+			var attributeNamesStr string
+			if len(attributeNames) > 0 {
+				// 假设 attributeNames 已经是多语言JSON格式，需要合并
+				localeResponses := make([]dto.LocaleResponse, 0, len(attributeNames))
+				for _, attrName := range attributeNames {
+					localeResp := language.JsonToLocaleResponse(attrName)
+					if localeResp != nil && !localeResp.IsNull() {
+						localeResponses = append(localeResponses, *localeResp)
 					}
 				}
 				if len(localeResponses) > 0 {
 					mergedLocale := language.MergeLocaleResponses(localeResponses, ";")
-					attributeNames = mergedLocale.ToJson()
+					attributeNamesStr = mergedLocale.ToJson()
 				}
 			}
 
-			// 使用商品名称（优先使用 TTPOS 商品名称，否则使用平台商品名称）
-			itemName := takeoutItem.ItemName
-			if productPackageName != "" {
-				itemName = productPackageName
+			// 使用商品名称（优先使用 TTPOS 商品名称）
+			itemName := takeoutItem.TtposItemName
+			if itemName == "" {
+				itemName = takeoutItem.ItemName
 			}
 
 			// 创建 ProductionOrderProduct
@@ -1057,7 +939,7 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 				InitNum:               float64(takeoutItem.Quantity),
 				FlavorName:            productBomName,
 				ProductBomUuid:        productBomUuid,
-				ProductAttributeNames: attributeNames,
+				ProductAttributeNames: attributeNamesStr,
 				ProductSaucesNames:    "",
 				Status:                constant.ProductionOrderProductStatusCooking,
 				Remark:                "",
@@ -1093,7 +975,7 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 					continue
 				}
 
-				// 获取子商品的 ProductPackage
+				// 获取子商品的 ProductPackage（仅用于获取分类）
 				subProductPackage, ok := packageSubProductPackageMap[mapping.RelatedUuid]
 				if !ok {
 					logger.Logger.Error("未找到子商品套餐", zap.Uint64("relatedUuid", mapping.RelatedUuid))
@@ -1101,17 +983,20 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 				}
 
 				productPackageUuid := subProductPackage.Uuid
-				productPackageName := subProductPackage.Name
 				var firstCategoryUuid uint64
 				if subProductPackage.ProductCategory.Uuid > 0 {
 					firstCategoryUuid = subProductPackage.ProductCategory.GetFirstCategoryUuid()
 				}
 
-				// 获取 BOM 信息
-				productBomUuid := mapping.ProductBomUuid
-				var productBomName string
-				if bom, ok := packageBomMap[productBomUuid]; ok && bom != nil {
-					productBomName = bom.Name
+				// 直接从 modifier 中获取已保存的数据
+				productBomUuid := commodityModifier.TtposFlavorUuid // 规格UUID
+				productBomName := commodityModifier.TtposFlavorName // 规格名称
+				itemName := commodityModifier.TtposModifierName     // 商品名称
+				productNum := float64(commodityModifier.Quantity)   // 数量（已在创建订单时设置为 groupItem.Num * takeoutItem.Quantity）
+
+				// 如果没有 TTPOS 商品名称，回退到平台名称
+				if itemName == "" {
+					itemName = commodityModifier.ModifierName
 				}
 
 				// 生成 ProductionOrderProduct UUID
@@ -1120,15 +1005,6 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 					logger.Logger.Error("生成送厨商品UUID失败", zap.Error(err))
 					continue
 				}
-
-				// 使用商品名称（优先使用 TTPOS 商品名称，否则使用平台商品名称）
-				itemName := takeoutItem.ItemName
-				if productPackageName != "" {
-					itemName = productPackageName
-				}
-
-				// 套餐子商品的数量 = groupItem.Num * takeoutItem.Quantity
-				productNum := mapping.Num * float64(takeoutItem.Quantity)
 
 				// 创建 ProductionOrderProduct
 				productionOrderProduct := &model.ProductionOrderProduct{

@@ -1212,7 +1212,7 @@
                                 "font_bold": false,
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
+                                "trailing_blank_lines": 1,
                                 "width": 52
                             }
                         }
@@ -1393,7 +1393,7 @@
                 },
                 "conditions": [
                     {
-                        "field": "order.delivery_fee",
+                        "field": "order.discount_fee",
                         "operator": "not_empty",
                         "value": 0
                     }

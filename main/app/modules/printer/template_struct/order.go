@@ -73,14 +73,15 @@ type StatementOrderInfoData struct {
 	Barcode                string                    `json:"barcode"`                   // 条形码
 	IsOrderSourceTakeout   bool                      `json:"is_order_source_takeout"`   // 是否订单来源为外卖
 	// 外卖平台订单特有字段
-	Platform        string `json:"platform"`         // 平台名称（Grab、LINE MAN 等）
-	OrderType       string `json:"order_type"`       // 订单类型（DELIVERY、PICKUP 等）
-	DeliveryFee     string `json:"delivery_fee"`     // 配送费
-	CustomerName    string `json:"customer_name"`    // 顾客姓名
-	CustomerPhone   string `json:"customer_phone"`   // 顾客电话
-	CustomerAddress string `json:"customer_address"` // 顾客地址
-	WarningMessage  string `json:"warning_message"`  // 异常提示信息
-	PaidAmount      string `json:"paid_amount"`      // 实付金额
+	Platform                string `json:"platform"`                  // 平台名称（Grab、LINE MAN 等）
+	OrderType               string `json:"order_type"`                // 订单类型（DELIVERY、PICKUP 等）
+	DeliveryFee             string `json:"delivery_fee"`              // 配送费
+	CustomerName            string `json:"customer_name"`             // 顾客姓名
+	CustomerPhone           string `json:"customer_phone"`            // 顾客电话
+	CustomerAddress         string `json:"customer_address"`          // 顾客地址
+	WarningMessage          string `json:"warning_message"`           // 异常提示信息
+	WarningMessageSeparator string `json:"warning_message_separator"` // 异常提示信息分隔符
+	PaidAmount              string `json:"paid_amount"`               // 实付金额
 }
 
 // StatementBuffetData 自助餐数据结构体

@@ -210,7 +210,7 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 				Platform:         platform,
 				PlatformItemId:   item.Id,
 				TtposProductType: ttposProductType,
-				Quantity:         int(item.Quantity),
+				Quantity:         int(item.GetQuantity()),
 				Price:            float64(item.GetPrice()) / 100.0, // Grab API 返回的是分（exponent=2），转换为元
 				Tax:              float64(item.GetTax()) / 100.0,   // 同上
 				Specifications:   item.GetSpecifications(),

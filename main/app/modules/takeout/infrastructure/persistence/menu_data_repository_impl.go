@@ -10,6 +10,7 @@ import (
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
+	"ttpos-server-go/app/modules/takeout/domain/types"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -296,14 +297,16 @@ func (r *menuDataRepositoryImpl) GetProductNameByUuid(ctx context.Context, produ
 
 // GetProductNamesByUuids 批量根据商品UUID获取多语言名称
 // 返回 map[productUuid]name
-func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, productUuids []uint64, productTypes map[uint64]int) map[uint64]string {
+// GetProductNamesByUuids 批量根据商品UUID获取商品名称
+// 返回 map[productUuid]types.ProductInfo（包含显示名称和TTPOS核心表名称）
+func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, productUuids []uint64, productTypes map[uint64]int) map[uint64]types.ProductInfo {
 	db := ctx.GetDB()
 
 	if len(productUuids) == 0 {
-		return make(map[uint64]string)
+		return make(map[uint64]types.ProductInfo)
 	}
 
-	// 第一步：批量查询店内商品
+	// 第一步：批量查询店内商品（核心表）
 	var productPackages []model.ProductPackage
 	err := db.
 		Model(&model.ProductPackage{}).
@@ -312,7 +315,7 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 		Find(&productPackages).Error
 
 	if err != nil {
-		return make(map[uint64]string)
+		return make(map[uint64]types.ProductInfo)
 	}
 
 	// 建立 productPackage 映射
@@ -330,7 +333,7 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 		Find(&takeoutProducts).Error
 
 	if err != nil {
-		return make(map[uint64]string)
+		return make(map[uint64]types.ProductInfo)
 	}
 
 	// 建立 takeoutProduct 映射
@@ -340,51 +343,97 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 	}
 
 	// 第三步：构建返回结果
-	result := make(map[uint64]string)
+	result := make(map[uint64]types.ProductInfo)
 	for _, productUuid := range productUuids {
-		var name string
+		var displayName string // 显示用名称（优先外卖表）
+		var ttposName string   // TTPOS 核心表名称
 
-		// 优先使用外卖商品的多语言名称
+		// TtposName: 始终从核心表获取
+		if productPackage, ok := packageMap[productUuid]; ok {
+			if productPackage.MultiLanguageName.Uuid != 0 {
+				ttposName = productPackage.MultiLanguageName.ToJson()
+			}
+			if ttposName == "" {
+				ttposName = productPackage.Name
+			}
+		}
+
+		// Name (displayName): 优先使用外卖商品的多语言名称
 		if takeoutProduct, ok := takeoutMap[productUuid]; ok {
 			if takeoutProduct.MultiLanguageName.Uuid != 0 {
-				name = takeoutProduct.MultiLanguageName.ToJson()
+				displayName = takeoutProduct.MultiLanguageName.ToJson()
 			}
 			// 如果多语言为空，尝试外卖商品的单语言名称
-			if name == "" && takeoutProduct.Name != "" {
-				name = takeoutProduct.Name
+			if displayName == "" && takeoutProduct.Name != "" {
+				displayName = takeoutProduct.Name
 			}
 		}
 
-		// 回退到店内商品的多语言名称
-		if name == "" {
-			if productPackage, ok := packageMap[productUuid]; ok {
-				if productPackage.MultiLanguageName.Uuid != 0 {
-					name = productPackage.MultiLanguageName.ToJson()
-				}
-				// 最后回退到店内商品名称
-				if name == "" {
-					name = productPackage.Name
-				}
-			}
+		// 如果外卖表没有，回退到核心表
+		if displayName == "" {
+			displayName = ttposName
 		}
 
-		result[productUuid] = name
+		result[productUuid] = types.ProductInfo{
+			Name:      displayName, // 外卖表优先
+			TtposName: ttposName,   // 核心表
+		}
 	}
 
 	return result
 }
 
-// GetModifierNamesByUuids 批量根据修饰符UUID和类型获取多语言名称
-// modifierTypes: map[uuid]type, type 可能是 "flavor"/"sauce"/"attr"/"commodity"
-// 返回 map[modifierUuid]name
-func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, modifierUuids []uint64, modifierTypes map[uint64]string) map[uint64]string {
+// GetTTPOSProductNames 批量从 ttpos_product_package 表获取商品名称（不包含外卖表的名称）
+// 已废弃：建议使用 GetProductNamesByUuids，它会同时返回显示名称和TTPOS名称
+func (r *menuDataRepositoryImpl) GetTTPOSProductNames(ctx context.Context, productUuids []uint64) map[uint64]string {
 	db := ctx.GetDB()
 
-	if len(modifierUuids) == 0 {
+	if len(productUuids) == 0 {
 		return make(map[uint64]string)
 	}
 
+	// 只查询店内商品表 ttpos_product_package
+	var productPackages []model.ProductPackage
+	err := db.
+		Model(&model.ProductPackage{}).
+		Where("uuid IN ? AND delete_time = ?", productUuids, 0).
+		Preload("MultiLanguageName", "delete_time = ?", 0).
+		Find(&productPackages).Error
+
+	if err != nil {
+		logger.Logger.Error("批量查询 TTPOS 商品名称失败", zap.Error(err))
+		return make(map[uint64]string)
+	}
+
+	// 构建返回结果
 	result := make(map[uint64]string)
+	for _, pkg := range productPackages {
+		var name string
+		// 优先使用多语言名称
+		if pkg.MultiLanguageName.Uuid != 0 {
+			name = pkg.MultiLanguageName.ToJson()
+		}
+		// 回退到单语言名称
+		if name == "" {
+			name = pkg.Name
+		}
+		result[pkg.Uuid] = name
+	}
+
+	return result
+}
+
+// GetModifierNamesByUuids 批量根据修饰符UUID和类型获取多语言名称和数量
+// modifierTypes: map[uuid]type, type 可能是 "flavor"/"sauce"/"attr"/"commodity"
+// 返回 map[modifierUuid]ModifierInfo
+func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, modifierUuids []uint64, modifierTypes map[uint64]string) map[uint64]types.ModifierInfo {
+	db := ctx.GetDB()
+
+	if len(modifierUuids) == 0 {
+		return make(map[uint64]types.ModifierInfo)
+	}
+
+	result := make(map[uint64]types.ModifierInfo)
 
 	// 按类型分组
 	flavorUuids := make([]uint64, 0)
@@ -419,7 +468,11 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 		} else {
 			for _, flavor := range flavors {
 				name := flavor.ProductFlavor.MultiLanguageName.ToJson()
-				result[flavor.Uuid] = name
+				result[flavor.Uuid] = types.ModifierInfo{
+					Name:      name,
+					TtposName: name, // flavor 类型：Name 和 TtposName 相同
+					Num:       0,    // 规格没有数量概念
+				}
 			}
 		}
 	}
@@ -438,7 +491,11 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 		} else {
 			for _, sauce := range sauces {
 				name := sauce.ProductSauce.MultiLanguageName.ToJson()
-				result[sauce.Uuid] = name
+				result[sauce.Uuid] = types.ModifierInfo{
+					Name:      name,
+					TtposName: name, // sauce 类型：Name 和 TtposName 相同
+					Num:       0,    // 小料没有数量概念
+				}
 			}
 		}
 	}
@@ -457,12 +514,18 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 		} else {
 			for _, attr := range attrs {
 				name := attr.Attribute.MultiLanguageName.ToJson()
-				result[attr.Uuid] = name
+				result[attr.Uuid] = types.ModifierInfo{
+					Name:      name,
+					TtposName: name, // attr 类型：Name 和 TtposName 相同
+					Num:       0,    // 属性没有数量概念
+				}
 			}
 		}
 	}
 
-	// 批量查询套餐商品（Commodity = ProductPackage）
+	// 批量查询套餐商品（Commodity = ProductPackageGroupItem -> ProductPackage）
+	// 返回两个名称：Name (外卖表优先), TtposName (核心表)
+	// 同时返回规格信息：TtposFlavorUuid, TtposFlavorName (来自 ProductBom)
 	if len(commodityUuids) > 0 {
 		var packages []model.ProductPackageGroupItem
 		err := db.
@@ -474,9 +537,100 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 		if err != nil {
 			logger.Logger.Error("批量查询套餐商品失败", zap.Error(err))
 		} else {
+			// 收集所有关联的 ProductPackage UUID 和 ProductBom UUID
+			packageUuids := make([]uint64, 0, len(packages))
+			bomUuids := make([]uint64, 0, len(packages))
+			packageMap := make(map[uint64]model.ProductPackageGroupItem) // RelatedUuid -> GroupItem
+			bomToGroupItem := make(map[uint64]uint64)                    // BomUuid -> GroupItemUuid
+
 			for _, pkg := range packages {
-				name := pkg.ProductPackage.MultiLanguageName.ToJson()
-				result[pkg.Uuid] = name
+				if pkg.RelatedUuid > 0 {
+					packageUuids = append(packageUuids, pkg.RelatedUuid)
+					packageMap[pkg.RelatedUuid] = pkg
+				}
+				// 收集 ProductBom UUID（规格）
+				if pkg.ProductBomUuid > 0 {
+					bomUuids = append(bomUuids, pkg.ProductBomUuid)
+					bomToGroupItem[pkg.ProductBomUuid] = pkg.Uuid
+				}
+			}
+
+			// 批量查询外卖商品表
+			var takeoutProducts []model.ProductPackageTakeout
+			takeoutMap := make(map[uint64]model.ProductPackageTakeout)
+			if len(packageUuids) > 0 {
+				err := db.
+					Model(&model.ProductPackageTakeout{}).
+					Where("product_package_uuid IN ? AND delete_time = ?", packageUuids, 0).
+					Preload("MultiLanguageName", "delete_time = ?", 0).
+					Find(&takeoutProducts).Error
+				if err == nil {
+					for _, takeout := range takeoutProducts {
+						takeoutMap[takeout.ProductPackageUuid] = takeout
+					}
+				}
+			}
+
+			// 批量查询规格信息（ProductBom）
+			var boms []model.ProductBom
+			bomMap := make(map[uint64]model.ProductBom) // BomUuid -> Bom
+			if len(bomUuids) > 0 {
+				err := db.
+					Model(&model.ProductBom{}).
+					Where("uuid IN ? AND delete_time = ?", bomUuids, 0).
+					Preload("ProductFlavor.MultiLanguageName", "delete_time = ?", 0).
+					Find(&boms).Error
+				if err == nil {
+					for _, bom := range boms {
+						bomMap[bom.Uuid] = bom
+					}
+				}
+			}
+
+			// 组装结果
+			for _, pkg := range packages {
+				var displayName string // 用于显示（优先外卖表）
+				var ttposName string   // TTPOS 核心表名称
+				var flavorUuid uint64  // 规格UUID
+				var flavorName string  // 规格名称
+
+				// TtposName: 始终从核心表获取
+				if pkg.ProductPackage.MultiLanguageName.Uuid != 0 {
+					ttposName = pkg.ProductPackage.MultiLanguageName.ToJson()
+				}
+
+				// Name (displayName): 优先从外卖表获取
+				if takeoutProduct, ok := takeoutMap[pkg.RelatedUuid]; ok {
+					if takeoutProduct.MultiLanguageName.Uuid != 0 {
+						displayName = takeoutProduct.MultiLanguageName.ToJson()
+					}
+					if displayName == "" && takeoutProduct.Name != "" {
+						displayName = takeoutProduct.Name
+					}
+				}
+
+				// 如果外卖表没有，回退到核心表
+				if displayName == "" {
+					displayName = ttposName
+				}
+
+				// 获取规格信息
+				if pkg.ProductBomUuid > 0 {
+					if bom, ok := bomMap[pkg.ProductBomUuid]; ok {
+						flavorUuid = bom.Uuid
+						if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
+							flavorName = bom.ProductFlavor.MultiLanguageName.ToJson()
+						}
+					}
+				}
+
+				result[pkg.Uuid] = types.ModifierInfo{
+					Name:            displayName, // 外卖表优先
+					TtposName:       ttposName,   // 核心表
+					Num:             pkg.Num,     // 套餐商品有数量
+					TtposFlavorUuid: flavorUuid,  // 规格UUID
+					TtposFlavorName: flavorName,  // 规格名称
+				}
 			}
 		}
 	}

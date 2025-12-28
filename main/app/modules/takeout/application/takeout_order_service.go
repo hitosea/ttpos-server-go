@@ -230,7 +230,7 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 					if modifier.IsCommodity() {
 						// commodity 类型：显示套餐商品名称(规格)
 						commodityName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						flavorName := language.JsonToLocaleResponse(modifier.TtposSkuName).GetLocale(ctx.GetLanguage())
+						flavorName := language.JsonToLocaleResponse(modifier.TtposFlavorName).GetLocale(ctx.GetLanguage())
 						if flavorName != "" {
 							outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", commodityName, flavorName))
 						} else {
