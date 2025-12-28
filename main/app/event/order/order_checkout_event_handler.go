@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
@@ -69,7 +70,7 @@ func CheckoutSaleOrderEventHandler() {
 			}
 			if len(products) > 0 {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypePay,
+					printerConstant.PrinterProductTypePay,
 					payload.SaleBillUuid,
 					payload.SaleOrderUuid,
 					products,
@@ -80,7 +81,7 @@ func CheckoutSaleOrderEventHandler() {
 		// 创建结账单打印
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
-				constant.PrinterTemplateBilling,
+				printerConstant.PrinterTemplateBilling,
 				payload.SaleBill,
 				payload.SaleOrderUuid,
 				0,
@@ -121,8 +122,9 @@ func CheckoutSaleOrderEventHandler() {
 
 		// 扣减库存
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
-			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			ReduceStock(db, payload.SaleBillUuid)
+			dbm := database.GetDBManager(config.DatabaseConf{})
+			db := dbm.GetDB(payload.CompanyUuid)
+			ReduceStock(payload.Ctx, db, payload.SaleBillUuid)
 		})
 
 		// 发放积分

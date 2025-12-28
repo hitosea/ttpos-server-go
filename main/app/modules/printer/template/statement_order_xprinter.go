@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -71,9 +72,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	if temp != 3 && temp != 4 && temp != 5 {
 		printer.SetAlignment(pkg.AlignLeft)
 		var title string
-		if printType == constant.PrinterTemplateInvoice {
+		if printType == printerConst.PrinterTemplateInvoice {
 			title = t.base.Translate("发票")
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printType == printerConst.PrinterTemplatePreBilling {
 			title = t.base.Translate("预结账单")
 		} else {
 			title = t.base.Translate("结账单")
@@ -181,9 +182,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
 		var title string
-		if printType == constant.PrinterTemplateInvoice {
+		if printType == printerConst.PrinterTemplateInvoice {
 			title = t.base.Translate("发票")
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printType == printerConst.PrinterTemplatePreBilling {
 			title = t.base.Translate("预结账单")
 		} else {
 			title = t.base.Translate("结账单")
@@ -228,7 +229,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			printer.SetLineSpacing(40)
 			printer.LineFeed(2)
 		}
-		if temp == 5 && printType == constant.PrinterTemplateBilling {
+		if temp == 5 && printType == printerConst.PrinterTemplateBilling {
 			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
 				printer.SetLineSpacing(80)
 				printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
@@ -243,7 +244,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			}
 		}
 		// 发票信息
-		if printType == constant.PrinterTemplateInvoice {
+		if printType == printerConst.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
 			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				printer.SetLineSpacing(48)

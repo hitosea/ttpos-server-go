@@ -9,6 +9,7 @@ import (
 	"time"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/takeout/domain/helper"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/service"
@@ -29,8 +30,12 @@ import (
 
 // 全局锁管理器（确保所有 takeoutAppService 实例共享同一套锁）
 var (
-	globalModifierUpdateLocks      sync.Map   // map[merchantID]*sync.Mutex
-	globalModifierUpdateLocksGuard sync.Mutex // 保护锁创建过程的互斥锁
+	globalModifierUpdateLocks      sync.Map // map[merchantID]*sync.Mutex
+	globalModifierUpdateLocksGuard sync.Mutex
+
+	// 菜单同步防抖管理器
+	menuSyncDebounceTimers  sync.Map // map[syncKey]*time.Timer
+	menuSyncDebounceMutexes sync.Map // map[syncKey]*sync.Mutex
 )
 
 // ITakeoutAppService 外卖应用服务接口
@@ -93,8 +98,6 @@ type ITakeoutAppService interface {
 	SyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error)
 }
 
-type ITakeoutMenuAppService = ITakeoutAppService
-
 // takeoutAppService 外卖应用服务实现
 type takeoutAppService struct {
 	// 状态管理相关
@@ -143,13 +146,6 @@ func NewTakeoutAppService(
 		// 订单管理相关
 		orderService: orderService,
 	}
-}
-
-// NewTakeoutMenuAppService 创建外卖菜单应用服务（向后兼容）
-func NewTakeoutMenuAppService(
-	dbm *database.DBManager,
-) ITakeoutMenuAppService {
-	return NewTakeoutAppService(dbm)
 }
 
 // HandleIntegrationStatus 处理门店集成状态变更
@@ -652,7 +648,61 @@ func (s *takeoutAppService) UpdateMenuModifier(ctx context.Context, req request.
 }
 
 // SyncMenuChanges 同步菜单变更（灰度更新）
+// 实现防抖机制：在2秒内如果有相同同步请求，则取消旧请求的执行
 func (s *takeoutAppService) SyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error) {
+	// 启动异步防抖处理
+	go s.handleDebouncedMenuSync(ctx, req)
+
+	// 立即返回初始结果，表示已接受请求
+	return &response.MenuSyncResult{
+		ItemChanges:     []response.MenuItemChange{},
+		ModifierChanges: []response.MenuModifierChange{},
+		Errors:          []string{},
+	}, nil
+}
+
+// handleDebouncedMenuSync 处理防抖菜单同步
+// 优化后：使用 Timer 机制，避免阻塞，减少 Redis 操作，降低锁竞争
+func (s *takeoutAppService) handleDebouncedMenuSync(ctx context.Context, req request.ExportMenuRequest) {
+	// 生成同步键：platform_companyUuid
+	syncKey := fmt.Sprintf("menu_sync_%s_%d", req.Platform, req.CompanyUuid)
+
+	// 获取或创建该 syncKey 的专用锁
+	muInterface, _ := menuSyncDebounceMutexes.LoadOrStore(syncKey, &sync.Mutex{})
+	mu := muInterface.(*sync.Mutex)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// 如果存在旧的 timer，取消它
+	if oldTimer, exists := menuSyncDebounceTimers.Load(syncKey); exists {
+		oldTimer.(*time.Timer).Stop()
+		logger.Logger.Debug("取消旧的菜单同步任务",
+			zap.String("sync_key", syncKey),
+			zap.String("platform", req.Platform),
+			zap.Uint64("company_uuid", req.CompanyUuid))
+	}
+
+	// 创建新的 timer，2秒后执行同步
+	timer := time.AfterFunc(2*time.Second, func() {
+		_, err := s.directSyncMenuChanges(ctx, req)
+		if err != nil {
+			logger.Logger.Error("防抖菜单同步失败",
+				zap.Error(err),
+				zap.String("sync_key", syncKey),
+				zap.String("platform", req.Platform),
+				zap.Uint64("company_uuid", req.CompanyUuid))
+		}
+		// 清理 timer
+		menuSyncDebounceTimers.Delete(syncKey)
+	})
+
+	// 保存新的 timer
+	menuSyncDebounceTimers.Store(syncKey, timer)
+}
+
+// directSyncMenuChanges 直接执行菜单变更同步（不含防抖逻辑）
+func (s *takeoutAppService) directSyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error) {
 	// 初始化结果
 	result := &response.MenuSyncResult{
 		ItemChanges:     []response.MenuItemChange{},
@@ -772,7 +822,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 
 			// 比较商品
 			if oldItem, exists := oldItemsMap[newItem.Id]; exists {
-				if s.hasItemChanged(oldItem, newItem) {
+				if helper.HasMenuItemChanged(oldItem, newItem) {
 					changedItems = append(changedItems, struct {
 						old *grabfood.MenuItem
 						new *grabfood.MenuItem
@@ -788,7 +838,7 @@ func (s *takeoutAppService) compareAndSyncMenu(
 					result.TotalModifiers++
 
 					if oldModifier, exists := oldModifiersMap[newModifier.Id]; exists {
-						if s.hasModifierChanged(oldModifier, newModifier) {
+						if helper.HasMenuModifierChanged(oldModifier, newModifier) {
 							changedModifiers = append(changedModifiers, struct {
 								old *grabfood.MenuModifier
 								new *grabfood.MenuModifier
@@ -824,43 +874,6 @@ func (s *takeoutAppService) compareAndSyncMenu(
 	}
 
 	return nil
-}
-
-// hasItemChanged 检查商品是否发生变更
-func (s *takeoutAppService) hasItemChanged(oldItem, newItem *grabfood.MenuItem) bool {
-	// 比较价格变更
-	if oldItem.Price != newItem.Price {
-		return true
-	}
-	// 比较状态变更
-	if oldItem.AvailableStatus != newItem.AvailableStatus {
-		return true
-	}
-	return false
-}
-
-// hasModifierChanged 检查修饰符是否发生变更
-func (s *takeoutAppService) hasModifierChanged(oldModifier, newModifier *grabfood.MenuModifier) bool {
-	// 比较价格变更（需要处理指针类型）
-	if !isInt64PtrEqual(oldModifier.Price, newModifier.Price) {
-		return true
-	}
-	// 比较状态变更
-	if oldModifier.AvailableStatus != newModifier.AvailableStatus {
-		return true
-	}
-	return false
-}
-
-// isInt64PtrEqual 比较两个 *int64 指针是否相等
-func isInt64PtrEqual(a, b *int64) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
 }
 
 // batchUpdateItems 批量更新商品
@@ -1027,7 +1040,7 @@ func (s *takeoutAppService) updateModifiersOneByOne(
 	for _, modifier := range modifiers {
 		// 计算变更类型
 		var changes []string
-		if !isInt64PtrEqual(modifier.old.Price, modifier.new.Price) {
+		if !helper.IsInt64PtrEqual(modifier.old.Price, modifier.new.Price) {
 			changes = append(changes, "price")
 		}
 		if modifier.old.AvailableStatus != modifier.new.AvailableStatus {

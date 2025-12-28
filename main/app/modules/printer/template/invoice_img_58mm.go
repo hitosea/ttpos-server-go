@@ -4,7 +4,7 @@ package template
 import (
 	"fmt"
 	"strconv"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -43,7 +43,7 @@ func (t *invoiceImg58mmTemplate) GetPrintContent58mm(
 	if temp == 2 {
 		return NewStatementOrderImg58mmTemplate(t.base).GetPrintContent58mm(
 			settingPrinterInfo,
-			constant.PrinterTemplateInvoice,
+			printerConst.PrinterTemplateInvoice,
 			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
 			saleOrder,

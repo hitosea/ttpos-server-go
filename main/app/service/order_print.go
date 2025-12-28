@@ -3,6 +3,7 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -60,9 +61,9 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	}
 
 	// 判断是否已支付
-	printType := constant.PrinterTemplatePreBilling
+	printType := printerConstant.PrinterTemplatePreBilling
 	if saleOrder.IsPaid() {
-		printType = constant.PrinterTemplateBilling
+		printType = printerConstant.PrinterTemplateBilling
 	} else if saleOrder.FullReductionActivityUuid > 0 {
 		discountAmount, _, _ := s.calculateActivityDiscount(ctx, saleOrder, saleOrder.FullReductionActivityUuid)
 		saleOrder.ActivityAmount = discountAmount

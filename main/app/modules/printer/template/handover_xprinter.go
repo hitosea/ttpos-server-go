@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
@@ -70,7 +71,7 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.AppendText(t.base.Translate("交班单"))
 		printer.SetCharacterSize(1, 1)
 		printer.LineFeed(1)
-		if printerType == constant.PrinterTypeXPrinterWifi {
+		if printerType == printerConst.PrinterTypeXPrinterWifi {
 			printer.LineFeed(1)
 		}
 		printer.AppendText(fmt.Sprintf("%s %s %s", startTime, t.base.Translate("至"), endTime))

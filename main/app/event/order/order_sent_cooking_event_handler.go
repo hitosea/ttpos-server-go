@@ -5,10 +5,14 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -56,7 +60,7 @@ func SentCookingEventHandler() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypeKitchen,
+					printerConstant.PrinterProductTypeKitchen,
 					payload.SaleBillUuid,
 					payload.SaleOrderUuid,
 					products,
@@ -89,12 +93,12 @@ func SentCookingEventHandler() {
 		// 扣减库存
 		event.NewSystemBus().SubscribeSentCookingEvent(func(payload event.SentCookingPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			ReduceStock(db, payload.SaleBillUuid)
+			ReduceStock(payload.Ctx, db, payload.SaleBillUuid)
 		})
 	})
 }
 
-func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
+func ReduceStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 	// 加锁。防止多个送厨事件并发扣减库存
 	lock.NewSystemLock().LockUuid(saleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
@@ -178,6 +182,16 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 		logger.Logger.Error("SubscribeSentCookingEvent process, Transaction failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 		return
 	}
+
+	// 同步外卖平台
+	utils.Go(func() {
+		dbm := database.GetDBManager(config.DatabaseConf{})
+		// 同步外卖平台
+		_, err := takeoutService.NewTakeoutSrv(dbm, cache.Global, nil, nil, nil, nil).SyncMenuChanges(payloadCtx, "grab")
+		if err != nil {
+			logger.Logger.Error("同步外卖平台失败", zap.Error(err))
+		}
+	})
 }
 
 // handleBatchProductsMergePrint 处理分批商品的合并打印逻辑
@@ -220,7 +234,7 @@ func handleBatchProductsMergePrint(payload event.SentCookingPayload, batchProduc
 		saleOrderUuid := payload.SaleOrderUuid
 		if saleOrderUuid > 0 {
 			printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-				constant.PrinterProductTypeKitchen,
+				printerConstant.PrinterProductTypeKitchen,
 				payload.SaleBillUuid,
 				saleOrderUuid,
 				printProducts,

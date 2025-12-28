@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -63,7 +64,7 @@ func FreeSaleOrderEventHandler() {
 
 			if len(products) > 0 {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypePay,
+					printerConstant.PrinterProductTypePay,
 					payload.SaleBillUuid,
 					payload.SaleOrderUuid,
 					products,
@@ -74,7 +75,7 @@ func FreeSaleOrderEventHandler() {
 		// 创建结账单打印
 		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
 			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
-				constant.PrinterTemplateBilling,
+				printerConstant.PrinterTemplateBilling,
 				payload.SaleBill,
 				payload.SaleOrderUuid,
 				0,

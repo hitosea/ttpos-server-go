@@ -143,6 +143,8 @@ func init() {
 	takeout.TakeoutOrderRejectedEventHandler()
 	// 自动注册"外卖订单准备完成"事件处理器
 	takeout.TakeoutOrderReadyEventHandler()
+	// 自动注册"外卖订单骑手配送中"事件处理器
+	takeout.TakeoutOrderRiderProcessingEventHandler()
 	// 自动注册"外卖订单完成"事件处理器
 	takeout.TakeoutOrderCompletedEventHandler()
 }

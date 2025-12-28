@@ -3,6 +3,7 @@ package template
 
 import (
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -42,7 +43,7 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	printer := pkg.NewPrinter(567)
 	printer.SetAlignment(pkg.AlignLeft)
 	printer.AppendText(t.base.Translate("充值单"))
-	if printerType == constant.PrinterTypeXPrinterWifi {
+	if printerType == printerConst.PrinterTypeXPrinterWifi {
 		printer.SetLineSpacing(40)
 	} else {
 		printer.SetLineSpacing(20)
@@ -79,7 +80,7 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	printer.AppendText(t.base.PrintText(t.base.Translate("合计应收："), "", t.base.GetPriceAndUnit(order.GetReceivableAmount()), width))
 	printer.SetPrintModes(false, false, false)
 	printer.SetCharacterSize(1, 1)
-	if printerType == constant.PrinterTypeXPrinterWifi {
+	if printerType == printerConst.PrinterTypeXPrinterWifi {
 		printer.SetLineSpacing(22)
 		printer.LineFeed(2)
 	}

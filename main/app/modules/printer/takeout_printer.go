@@ -2,13 +2,16 @@ package printer
 
 import (
 	"slices"
+
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/modules/printer/template"
+	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/logger"
@@ -17,20 +20,20 @@ import (
 )
 
 /**
- * 外送单打印
+ * 打印外卖平台订单小票（Grab、LINE MAN 等平台订单）
+ * 与 PrintingTakeoutOrder 不同，这个方法处理的是第三方平台的外卖订单
  */
-func (p *PrinterRepoImpl) PrintingTakeoutOrder(
-	memberSaleOrder *model.MemberSaleOrder,
-	saleBill *model.SaleBill,
-	saleOrderUuid uint64,
+func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
+	order *takeoutModel.TakeoutOrder,
+	receiptType string, // "merchant" 或 "customer"
+	firstExecution int,
 ) (*resp.PrinterData, error) {
-
 	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
 
 	// 设备sn
 	deviceSn := p.ctx.GetDeviceSn()
 
-	// 如果不是收银端端，从主设备获取
+	// 如果不是收银端，从主设备获取
 	if deviceSn == "" || p.ctx.GetSource() != constant.SourceCashier {
 		deviceRepo := repository.NewDeviceRepo(db)
 		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereMain())
@@ -55,43 +58,57 @@ func (p *PrinterRepoImpl) PrintingTakeoutOrder(
 		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
-	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
-	if saleOrder == nil {
-		return nil, errors.New("销售订单不存在")
+	// 确定模板类型（商家联或顾客联）
+	templateType := printerConst.PrinterTemplateTakeoutMerchant
+	if receiptType == "customer" {
+		templateType = printerConst.PrinterTemplateTakeoutCustomer
 	}
 
-	// 打印方式
-	printMethod := p.SetPrinterMethod(settingPrinterInfo.PrintMethod)
-
-	// 打印日志服务
-	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
+	// 获取打印模板
+	tmpId := uint64(templateType)
+	_, tmpUuid, tmpDataStr := p.GetPrinterTemplate(tmpId)
+	if tmpUuid == 0 || tmpDataStr == "" {
+		printerSrv := service.NewPrinterSrv(p.dbm, p.cache)
+		defaultCustomize, err := printerSrv.GetOrCreateDefaultCustomize(p.ctx, tmpId)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取或创建默认定制数据失败")
+		}
+		tmpData, err := printerSrv.UsePrinterCustomize(p.ctx, defaultCustomize.Uuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "使用打印机定制失败")
+		}
+		tmpDataStr = tmpData
+	}
 
 	// 获取打印内容
-	printContent := p.getPrintingContent(
+	printContent := p.getPlatformTakeoutPrintContent(
 		settingPrinterInfo,
-		constant.PrinterTemplateTakeoutOrder,
-		memberSaleOrder,
-		saleBill,
-		saleOrder,
+		tmpDataStr,
+		order,
 	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
 
-	// 添加打印日志，依赖打印日志服务
+	// 打印方式
+	printMethod := 2
+
+	// 打印日志服务
+	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
+
+	// 添加打印日志
 	printerLogData, err := printerLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 		PrinterType: settingPrinterInfo.PrinterType,
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
-		RelatedType:     1,
-		RelatedUuid:     saleOrderUuid,
+		RelatedType:     4, // 4: 外卖平台订单
+		RelatedUuid:     order.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        constant.PrinterTemplateTakeoutOrder,
+		DataType:        templateType,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  0,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 		PrintSpeed:      settingPrinterInfo.PrintSpeed,
 	}, "")
@@ -105,7 +122,7 @@ func (p *PrinterRepoImpl) PrintingTakeoutOrder(
 		return &resp.PrinterData{}, nil
 	}
 
-	// 打印
+	// 返回打印数据
 	return &resp.PrinterData{
 		Data:              printerLogData.Data,
 		PrintMethod:       printMethod,
@@ -122,18 +139,13 @@ func (p *PrinterRepoImpl) PrintingTakeoutOrder(
 	}, nil
 }
 
-// 构建订单打印的内容
-func (p *PrinterRepoImpl) getPrintingContent(
-	settingPrinterInfo settingResp.PrinterInfo, // 打印机设置
-	printType int, // 打印类型 11-外送单
-	memberSaleOrder *model.MemberSaleOrder,
-	saleBill *model.SaleBill,
-	saleOrder *model.SaleOrder,
+// getPlatformTakeoutPrintContent 获取外卖平台订单打印内容
+func (p *PrinterRepoImpl) getPlatformTakeoutPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
+	tmpData string,
+	order *takeoutModel.TakeoutOrder,
 ) string {
-	// 获取打印模板
-	tmp, _, _ := p.GetPrinterTemplate(uint64(printType))
-
-	// 创建打印机实例
+	// 创建打印机基础实例
 	base := template.NewPrinterTemplate(
 		p.ctx,
 		p.setting,
@@ -146,79 +158,18 @@ func (p *PrinterRepoImpl) getPrintingContent(
 
 	// 商米打印机
 	if slices.Contains([]string{
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeCashierSunmi,
 	}, settingPrinterInfo.PrinterType) {
 		base.IsSunMi = true
 	}
 
 	// 图片打印
-	if p.IsImagePrinterMethod() {
-		return template.NewTakeoutOrderImgTemplate(base).GetPrintContent(
-			settingPrinterInfo,
-			tmp,
-			memberSaleOrder,
-			saleBill,
-			saleOrder,
-		)
-	}
-
-	/* *
-	* Compax 收银打印机 80mm 自带
-	 */
-	if settingPrinterInfo.PrinterType == constant.PrinterTypeCashierCompax {
-		return template.NewTakeoutOrderCompaxTemplate(base).GetPrintContent(
-			settingPrinterInfo,
-			tmp,
-			memberSaleOrder,
-			saleBill,
-			saleOrder,
-		)
-	}
-
-	/* *
-	 * 芯烨打印机
-	 */
-	if slices.Contains([]string{
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCashierImmin,
-	}, settingPrinterInfo.PrinterType) {
-		return template.NewTakeoutOrderXprinterTemplate(base).GetPrintContent(
-			settingPrinterInfo,
-			tmp,
-			memberSaleOrder,
-			saleBill,
-			saleOrder,
-		)
-	}
-
-	/* *
-	* 商米打印机
-	 */
-	if base.IsSunMi {
-		return template.NewTakeoutOrderSunmiTemplate(base).GetPrintContent(
-			settingPrinterInfo,
-			tmp,
-			memberSaleOrder,
-			saleBill,
-			saleOrder,
-		)
-	}
-
-	/* *
-	* CODESOFT 打印机
-	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
-		return template.NewTakeoutOrderCodesoftTemplate(base).GetPrintContent(
-			settingPrinterInfo,
-			tmp,
-			memberSaleOrder,
-			saleBill,
-			saleOrder,
-		)
-	}
-
-	return ""
+	return template.NewPlatformTakeoutImgTemplate(base).GetPrintContent(
+		settingPrinterInfo,
+		tmpData,
+		order,
+		p.Is58mmPrinter(),
+	)
 }

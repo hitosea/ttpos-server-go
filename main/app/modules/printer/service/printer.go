@@ -15,6 +15,7 @@ import (
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	template_info "ttpos-server-go/app/modules/printer/pkg/template"
 	"ttpos-server-go/app/modules/printer/template"
@@ -43,11 +44,12 @@ type IPrinterSrv interface {
 	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) (resp.CreatePrinterCustomizeResp, error)     // 创建打印机定制
 	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) (string, error)                                                                    // 使用打印机定制
 	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
+	GetOrCreateDefaultCustomize(ctx context.Context, templateId uint64) (model.PrinterCustomize, error)                                               // 根据模板ID获取或创建默认定制数据
 }
 
 const (
 	DefaultTemplateName = "门店-默认模版"
-	TemplatePngPath     = "app/printer/pkg/text/tmp/printer/complex_template_test.png"
+	TemplatePngPath     = "app/modules/printer/pkg/text/tmp/printer/complex_template_test.png"
 )
 
 const (
@@ -181,14 +183,14 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 				} else {
 					uuid, _ := utils.GetID()
 					// 区分类型
-					printerTypeKey := constant.PRINTER_TYPE_XPRINTER_LAN
+					printerTypeKey := printerConst.PRINTER_TYPE_XPRINTER_LAN
 					if usbPrinter.Vid.(float64) == 1137 && usbPrinter.Pid.(float64) == 85 {
 						if usbPrinter.M_name == "Zhuhai Howbest Label Printer Co.,Ltd." {
-							printerTypeKey = constant.PRINTER_TYPE_GP_C200IV
+							printerTypeKey = printerConst.PRINTER_TYPE_GP_C200IV
 						} else if usbPrinter.M_name == "ZHU HAI HOWBEST Receipt Printer Co.,Ltd." {
-							printerTypeKey = constant.PRINTER_TYPE_GP_D300I
+							printerTypeKey = printerConst.PRINTER_TYPE_GP_D300I
 						} else {
-							printerTypeKey = constant.PRINTER_TYPE_GP_D300I
+							printerTypeKey = printerConst.PRINTER_TYPE_GP_D300I
 						}
 					}
 					// 获取打印机类型(只查询一次)
@@ -319,21 +321,21 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 
 	// 模版ID列表
 	templateOrders := []uint64{
-		constant.PrinterTemplatePreBilling,      // 预结账单
-		constant.PrinterTemplateBilling,         // 结账单
-		constant.PrinterTemplateInvoice,         // 发票
-		constant.PrinterTemplateTakeoutMerchant, // 外卖商家联
-		constant.PrinterTemplateTakeoutCustomer, // 外卖顾客联
+		printerConst.PrinterTemplatePreBilling,      // 预结账单
+		printerConst.PrinterTemplateBilling,         // 结账单
+		printerConst.PrinterTemplateInvoice,         // 发票
+		printerConst.PrinterTemplateTakeoutMerchant, // 外卖商家联
+		printerConst.PrinterTemplateTakeoutCustomer, // 外卖顾客联
 		// constant.PrinterTemplateRecharge,      // 充值单
 		// constant.PrinterTemplateBusiness,      // 营业数据
 		// constant.PrinterTemplateHandoverSheet, // 交班单
 		// constant.PrinterTemplateTakeoutOrder,  // 外送单
 	}
 	templateKitchen := []uint64{
-		constant.PrinterTemplateOneDishOneMenu, // 一菜一单
-		constant.PrinterTemplateEntireOrder,    // 整单打印
-		constant.PrinterTemplateReturnDish,     // 退菜单
-		constant.PrinterTemplateOutMenu,        // 出菜单
+		printerConst.PrinterTemplateOneDishOneMenu, // 一菜一单
+		printerConst.PrinterTemplateEntireOrder,    // 整单打印
+		printerConst.PrinterTemplateReturnDish,     // 退菜单
+		printerConst.PrinterTemplateOutMenu,        // 出菜单
 	}
 
 	// 创建模板ID到模板的映射
@@ -808,13 +810,13 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		DefaultTpl:     defaultTemplate,
 		AdvReceiptTpls: advReceiptTpls,
 		IsEditable: func() bool {
-			if template.ID == constant.PrinterTemplateTakeoutMerchant || template.ID == constant.PrinterTemplateTakeoutCustomer {
+			if template.ID == printerConst.PrinterTemplateTakeoutMerchant || template.ID == printerConst.PrinterTemplateTakeoutCustomer {
 				return false
 			}
 			return true
 		}(),
 		IsAdvReceiptTpl: func() bool {
-			if template.ID == constant.PrinterTemplateTakeoutMerchant || template.ID == constant.PrinterTemplateTakeoutCustomer {
+			if template.ID == printerConst.PrinterTemplateTakeoutMerchant || template.ID == printerConst.PrinterTemplateTakeoutCustomer {
 				return false
 			}
 			if companySetting.IsOpenAdvancedTicketPrint == 1 {
@@ -1278,4 +1280,68 @@ func (s *printerSrv) extractBlocksRecursive(rows []interface{}, blocksByGroupBlo
 			}
 		}
 	}
+}
+
+// GetOrCreateDefaultCustomize 根据模板ID获取或创建默认定制数据
+func (s *printerSrv) GetOrCreateDefaultCustomize(ctx context.Context, templateId uint64) (model.PrinterCustomize, error) {
+	db := ctx.GetDB()
+	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
+	printerTemplateRepo := repository.NewPrinterTemplateRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 1. 检查模板是否存在
+	template, err := printerTemplateRepo.GetPrinterTemplateInfo(templateId)
+	if err != nil {
+		return model.PrinterCustomize{}, errors.WithMessage(errors.New("获取打印模板信息失败"), err.Error())
+	}
+
+	// 2. 查询该模板的定制数据列表
+	customizes, err := printerCustomizeRepo.GetPrinterCustomizeList(
+		commonRepo.WhereBySoftDelete(),
+		printerCustomizeRepo.WhereByTemplateId(templateId),
+	)
+	if err != nil {
+		return model.PrinterCustomize{}, errors.WithMessage(errors.New("查询定制数据失败"), err.Error())
+	}
+
+	// 3. 查找默认定制数据（IsAdv=0）
+	for _, customize := range customizes {
+		if customize.IsAdv == 0 {
+			// 如果存在默认定制数据，直接返回
+			return customize, nil
+		}
+	}
+
+	// 4. 不存在默认定制数据，创建一个新的
+	uuid, err := utils.GetID()
+	if err != nil {
+		return model.PrinterCustomize{}, errors.WithMessage(errors.New("生成雪花ID失败"), err.Error())
+	}
+
+	// 获取默认模板JSON字符串
+	defaultTemplateJSON, err := s.GetTemplateJSONStr(ctx, template.Name)
+	if err != nil {
+		return model.PrinterCustomize{}, errors.WithMessage(errors.New("获取默认模板JSON失败"), err.Error())
+	}
+
+	defaultCustomize := model.PrinterCustomize{
+		BaseModel: model.BaseModel{
+			Uuid:       uuid,
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+		},
+		Name:       DefaultTemplateName, // "门店-默认模版"
+		Data:       defaultTemplateJSON, // 使用默认模板JSON
+		TemplateId: templateId,
+		IsAdv:      0, // 0表示默认模板
+		IsUse:      0, // 0表示未使用
+	}
+
+	// 创建默认定制数据
+	err = printerCustomizeRepo.CreatePrinterCustomize(defaultCustomize)
+	if err != nil {
+		return model.PrinterCustomize{}, errors.WithMessage(errors.New("创建默认定制数据失败"), err.Error())
+	}
+
+	return defaultCustomize, nil
 }

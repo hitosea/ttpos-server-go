@@ -2,8 +2,8 @@ package event
 
 import (
 	"sync"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
@@ -28,7 +28,7 @@ func FinishMenuEventHandler() {
 				repo := printer.NewPrinterRepo(payload.Ctx, "")
 				repo.SetFinishedTime(payload.FinishedTime)
 				repo.PrintingDishes(
-					constant.PrinterProductTypeOutMenu,
+					printerConstant.PrinterProductTypeOutMenu,
 					payload.SaleBillUuid,
 					payload.SaleOrderUuid,
 					products,

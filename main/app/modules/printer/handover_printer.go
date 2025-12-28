@@ -2,7 +2,7 @@ package printer
 
 import (
 	"slices"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
@@ -74,7 +74,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 		RelatedUuid:     log.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        constant.PrinterTemplateHandoverSheet,
+		DataType:        printerConst.PrinterTemplateHandoverSheet,
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  firstExecution,
@@ -117,7 +117,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 ) string {
 	printerType := settingPrinterInfo.PrinterType
 	// 获取打印模板
-	tmp, _, _ := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
+	tmp, _, _ := p.GetPrinterTemplate(uint64(printerConst.PrinterTemplateHandoverSheet))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -132,9 +132,9 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 
 	// 商米打印机
 	if slices.Contains([]string{
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeCashierSunmi,
 	}, printerType) {
 		base.IsSunMi = true
 	}
@@ -163,7 +163,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
-	if printerType == constant.PrinterTypeCashierCompax {
+	if printerType == printerConst.PrinterTypeCashierCompax {
 		return template.NewHandoverCompaxTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			tmp,
@@ -177,9 +177,9 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCashierImmin,
+		printerConst.PrinterTypeXPrinterLan,
+		printerConst.PrinterTypeXPrinterWifi,
+		printerConst.PrinterTypeCashierImmin,
 	}, printerType) {
 		return template.NewHandoverXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
@@ -206,7 +206,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
+	if slices.Contains([]string{printerConst.PrinterTypeCodesoftLan, printerConst.PrinterTypeCodesoftWifi, printerConst.PrinterTypeGpCloud}, printerType) {
 		return template.NewHandoverCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			tmp,

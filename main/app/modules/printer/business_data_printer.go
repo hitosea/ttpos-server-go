@@ -2,7 +2,7 @@ package printer
 
 import (
 	"slices"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
@@ -65,7 +65,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 		RelatedUuid:     0,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        constant.PrinterTemplateBusiness,
+		DataType:        printerConst.PrinterTemplateBusiness,
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  firstExecution,
@@ -121,9 +121,9 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 
 	// 商米打印机
 	if slices.Contains([]string{
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeCashierSunmi,
 	}, printerType) {
 		base.IsSunMi = true
 	}
@@ -154,13 +154,13 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
-		constant.PrinterTypeGpCloud,
-		constant.PrinterTypeCashierCompax,
-		constant.PrinterTypeCashierImmin,
+		printerConst.PrinterTypeXPrinterLan,
+		printerConst.PrinterTypeXPrinterWifi,
+		printerConst.PrinterTypeCodesoftLan,
+		printerConst.PrinterTypeCodesoftWifi,
+		printerConst.PrinterTypeGpCloud,
+		printerConst.PrinterTypeCashierCompax,
+		printerConst.PrinterTypeCashierImmin,
 	}, printerType) {
 		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(
 			printerInfo,

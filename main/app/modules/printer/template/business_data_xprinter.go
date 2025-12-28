@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -49,9 +50,9 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 	isTrThEn := t.base.Lang == "tr" || t.base.Lang == "th" || t.base.Lang == "en"
 
 	// 宽度
-	width := 48 - utils.IfInt(printerType == constant.PrinterTypeCashierCompax, 1, 0)
+	width := 48 - utils.IfInt(printerType == printerConst.PrinterTypeCashierCompax, 1, 0)
 	differenceWidth := 0
-	if printerType == constant.PrinterTypeCashierCompax && (t.base.CurrencyUnit == "￥" || t.base.CurrencyUnit == "¥" || t.base.CurrencyUnit == "\xC2\xA5") {
+	if printerType == printerConst.PrinterTypeCashierCompax && (t.base.CurrencyUnit == "￥" || t.base.CurrencyUnit == "¥" || t.base.CurrencyUnit == "\xC2\xA5") {
 		differenceWidth = 1
 	}
 
@@ -67,7 +68,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 	printer.LineFeed(1)
 	printer.SetLineSpacing(25)
 	printer.LineFeed()
-	if printerType == constant.PrinterTypeXPrinterWifi {
+	if printerType == printerConst.PrinterTypeXPrinterWifi {
 		printer.LineFeed(2)
 	}
 	printer.SetLineSpacing(70)
@@ -149,7 +150,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		}
 	} else if businessData.All != nil {
 		// 全部
-		printer.SetLineSpacing(utils.IfInt(printerType == constant.PrinterTypeCashierCompax, 40, 90))
+		printer.SetLineSpacing(utils.IfInt(printerType == printerConst.PrinterTypeCashierCompax, 40, 90))
 		printer.AppendText(t.base.PrintText(t.base.Translate("总销售额"), "", t.base.GetPriceAndUnit(businessData.All.TotalSales), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("原商品金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalProductPrice), width))

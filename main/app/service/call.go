@@ -3,6 +3,7 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -78,8 +79,8 @@ func (s *callSrv) GetAbnormalPrintList(companyUuid uint64, listReq req.AbnormalP
 	printerLogs, total, err := printerLogRepo.PaginateGet(
 		listReq.PageNo,
 		listReq.PageSize,
-		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
-		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WhereStatus(printerConstant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(printerConstant.PrinterLogTypeDefault),
 		printerLogRepo.WithPrinter(),
 		printerLogRepo.WithSaleOrder(),
 		printerLogRepo.WithSaleBill(),
@@ -132,8 +133,8 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取未处理呼叫数量失败"), err.Error())
 	}
 	printerLogRepo := repository.NewPrinterLogRepo(db)
-	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
-		printerLogRepo.WhereType(constant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
+	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(printerConstant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(printerConstant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
 	if err != nil {
 		logger.Logger.Error("获取异常打印数量失败", zap.Error(err))
 		return res, errors.WithMessage(errors.New("获取异常打印数量失败"), err.Error())
@@ -205,8 +206,8 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	abnormalPrints, _, err := printerLogRepo.PaginateGet(
 		1,
 		10,
-		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
-		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WhereStatus(printerConstant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(printerConstant.PrinterLogTypeDefault),
 		printerLogRepo.WhereCreateTimeGt(thirtyMinutesAgo),
 		printerLogRepo.WithPrinter(),
 		printerLogRepo.WithSaleOrder(),

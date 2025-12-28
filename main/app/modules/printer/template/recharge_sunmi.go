@@ -3,6 +3,7 @@ package template
 
 import (
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -36,7 +37,7 @@ func (t *rechargeSunmiPrinterTemplate) GetPrintContent(
 	cashierName := utils.IfString(order.Staff.RealName != "", order.Staff.RealName, order.Staff.Username)
 
 	// 是否自己打印
-	isOneself := printerType != constant.PrinterTypeSunmiLan && printerType != constant.PrinterTypeSunmiCloud
+	isOneself := printerType != printerConst.PrinterTypeSunmiLan && printerType != printerConst.PrinterTypeSunmiCloud
 
 	/* *
 	* 打印模版

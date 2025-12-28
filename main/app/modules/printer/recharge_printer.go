@@ -2,7 +2,7 @@ package printer
 
 import (
 	"slices"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
@@ -61,7 +61,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		RelatedUuid:     order.Uuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        constant.PrinterTemplateRecharge,
+		DataType:        printerConst.PrinterTemplateRecharge,
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  firstExecution,
@@ -115,9 +115,9 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 
 	// 商米打印机
 	if slices.Contains([]string{
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeCashierSunmi,
 	}, printerType) {
 		base.IsSunMi = true
 	}
@@ -130,7 +130,7 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
-	if printerType == constant.PrinterTypeCashierCompax {
+	if printerType == printerConst.PrinterTypeCashierCompax {
 		return template.NewRechargeCompaxTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
 
@@ -138,9 +138,9 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCashierImmin,
+		printerConst.PrinterTypeXPrinterLan,
+		printerConst.PrinterTypeXPrinterWifi,
+		printerConst.PrinterTypeCashierImmin,
 	}, printerType) {
 		return template.NewRechargeXPrinterTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
@@ -158,7 +158,7 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
+	if slices.Contains([]string{printerConst.PrinterTypeCodesoftLan, printerConst.PrinterTypeCodesoftWifi, printerConst.PrinterTypeGpCloud}, printerType) {
 		return template.NewRechargeCodesoftTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
 

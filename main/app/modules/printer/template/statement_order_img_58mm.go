@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -76,9 +77,9 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 	}
 	if temp != 3 && temp != 4 && temp != 5 {
 		img.SetAlignment(pkg.AlignLeft)
-		if printOrderType == constant.PrinterTemplateInvoice {
+		if printOrderType == printerConst.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
-		} else if printOrderType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == printerConst.PrinterTemplatePreBilling {
 			img.AppendText(t.base.Translate("预结账单"))
 		} else {
 			img.AppendText(t.base.Translate("结账单"))
@@ -189,9 +190,9 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 		img.SetFontWeight(2)
 		img.SetFontSize(26)
 		img.SetTextLineHeight(50)
-		if printOrderType == constant.PrinterTemplateInvoice {
+		if printOrderType == printerConst.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
-		} else if printOrderType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == printerConst.PrinterTemplatePreBilling {
 			img.AppendText(t.base.Translate("预结账单"))
 		} else {
 			img.AppendText(t.base.Translate("结账单"))
@@ -222,7 +223,7 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("税号"), taxNumber))
 			img.LineFeed(1)
 		}
-		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+		if temp == 5 && printOrderType == printerConst.PrinterTemplateBilling {
 			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
 				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
 				img.LineFeed(1)
@@ -233,7 +234,7 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 			}
 		}
 		// 发票信息
-		if printOrderType == constant.PrinterTemplateInvoice {
+		if printOrderType == printerConst.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
 			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				img.AppendText("------------------------------------------") // 结账单58mm专用分割线
@@ -680,7 +681,7 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 			img.SetTextLineHeight(50)
 		}
 	} else {
-		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+		if temp == 5 && printOrderType == printerConst.PrinterTemplateBilling {
 			img.AppendText("------------------------------------------") // 结账单58mm专用分割线
 			img.LineFeed(1)
 			img.AppendBarcode(saleOrder.OrderNo, 338, 81) // 500 * 0.676 ≈ 338, 120 * 0.676 ≈ 81

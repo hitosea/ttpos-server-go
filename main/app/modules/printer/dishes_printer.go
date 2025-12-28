@@ -3,6 +3,7 @@ package printer
 import (
 	"slices"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/printer_model"
@@ -49,7 +50,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	pinterLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 出菜单打印
-	if printType == constant.PrinterProductTypeOutMenu {
+	if printType == printerConst.PrinterProductTypeOutMenu {
 		// 获取设备
 		device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSource(p.ctx.GetSource()), deviceRepo.WhereSn(p.ctx.GetDeviceSn()))
 		if errDevice != nil || device.RelatedPrinterUuid == 0 {
@@ -62,7 +63,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			return false
 		}
 		// 打印机类型
-		printerType := constant.PrinterTypeXPrinterLan
+		printerType := printerConst.PrinterTypeXPrinterLan
 		if printer.PrinterType != nil {
 			printerType = printer.PrinterType.Key
 		}
@@ -91,7 +92,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 					}
 					return cashierDeviceId
 				}(),
-				DataType:           constant.PrinterTemplateOutMenu,
+				DataType:           printerConst.PrinterTemplateOutMenu,
 				Data:               data,
 				Type:               1,
 				FirstExecution:     0,
@@ -178,7 +179,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				}
 
 				// 退菜单打印
-				if printType == constant.PrinterProductTypeBackFood {
+				if printType == printerConst.PrinterProductTypeBackFood {
 					data := p.getPrintReturnProductContent(printerItem, billInfo, newProducts)
 					if data != "" {
 						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
@@ -195,7 +196,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							RelatedUuid:        saleBillUuid,
 							PrinterUuid:        printerItem.PrinterUuid,
 							CashierDeviceId:    cashierDeviceId,
-							DataType:           constant.PrinterTemplateReturnDish,
+							DataType:           printerConst.PrinterTemplateReturnDish,
 							Data:               data,
 							Type:               1,
 							FirstExecution:     0,
@@ -235,7 +236,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 									RelatedUuid:        saleBillUuid,
 									PrinterUuid:        printerItem.PrinterUuid,
 									CashierDeviceId:    cashierDeviceId,
-									DataType:           constant.PrinterTemplateOneDishOneMenu,
+									DataType:           printerConst.PrinterTemplateOneDishOneMenu,
 									Data:               data,
 									Type:               1,
 									FirstExecution:     0,
@@ -281,7 +282,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						RelatedUuid:        saleBillUuid,
 						PrinterUuid:        printerItem.PrinterUuid,
 						CashierDeviceId:    cashierDeviceId,
-						DataType:           constant.PrinterTemplateEntireOrder,
+						DataType:           printerConst.PrinterTemplateEntireOrder,
 						Data:               data,
 						Type:               1,
 						FirstExecution:     0,
@@ -314,7 +315,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	saleOrder model.SaleOrder,
 	products printer_model.Products,
 ) string {
-	tmpInfo := p.GetPrinterTemplateInfo(constant.PrinterTemplateEntireOrder)
+	tmpInfo := p.GetPrinterTemplateInfo(printerConst.PrinterTemplateEntireOrder)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -349,8 +350,8 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 
 	// CODESOFT 打印机
 	if printerItem.Printer != nil && slices.Contains([]string{
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
+		printerConst.PrinterTypeCodesoftLan,
+		printerConst.PrinterTypeCodesoftWifi,
 	}, printerType) {
 		t := template.NewDishesCodesoftTemplate(base)
 		return t.CompleteOrder(tmpInfo, printerItem, saleBill, products)
@@ -373,7 +374,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	saleOrder model.SaleOrder,
 	product printer_model.OrderProduct,
 ) string {
-	tmpInfo := p.GetPrinterTemplateInfo(constant.PrinterTemplateOneDishOneMenu)
+	tmpInfo := p.GetPrinterTemplateInfo(printerConst.PrinterTemplateOneDishOneMenu)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -415,9 +416,9 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 
 	// CODESOFT 打印机
 	if printerItem.Printer != nil && slices.Contains([]string{
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
-		constant.PrinterTypeGpCloud,
+		printerConst.PrinterTypeCodesoftLan,
+		printerConst.PrinterTypeCodesoftWifi,
+		printerConst.PrinterTypeGpCloud,
 	}, printerType) {
 		t := template.NewDishesCodesoftTemplate(base)
 		return t.OneDishOneOrder(tmpInfo, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
@@ -438,7 +439,7 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-	tmp, _, _ := p.GetPrinterTemplate(constant.PrinterTemplateReturnDish)
+	tmp, _, _ := p.GetPrinterTemplate(printerConst.PrinterTemplateReturnDish)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -471,7 +472,7 @@ func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-	tmp, _, _ := p.GetPrinterTemplate(constant.PrinterTemplateOutMenu)
+	tmp, _, _ := p.GetPrinterTemplate(printerConst.PrinterTemplateOutMenu)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(

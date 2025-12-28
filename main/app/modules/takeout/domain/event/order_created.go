@@ -3,13 +3,13 @@ package event
 // OrderCreatedEvent 订单创建事件
 type OrderCreatedEvent struct {
 	BaseDomainEvent
-	OrderUuid        uint64 // 订单UUID
-	Platform         string // 平台
-	PlatformOrderId  string // 平台订单ID
-	ShortOrderNumber string // 短订单号
-	TakeoutOrderUuid string // 外卖订单UUID
-	EaterPayment     int64  // 顾客实付(分)
-	CompanyUuid      uint64 // 公司UUID
+	OrderUuid        uint64  // 订单UUID
+	Platform         string  // 平台
+	PlatformOrderId  string  // 平台订单ID
+	ShortOrderNumber string  // 短订单号
+	TakeoutOrderUuid string  // 外卖订单UUID
+	EaterPayment     float64 // 顾客实付(分)
+	CompanyUuid      uint64  // 公司UUID
 }
 
 // EventName 事件名称
@@ -24,7 +24,7 @@ func NewOrderCreatedEvent(
 	platformOrderId string,
 	shortOrderNumber string,
 	takeoutOrderUuid string,
-	eaterPayment int64,
+	eaterPayment float64,
 	companyUuid uint64,
 ) OrderCreatedEvent {
 	return OrderCreatedEvent{

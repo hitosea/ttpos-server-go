@@ -23,7 +23,7 @@ type TakeoutHandler struct {
 	// 外卖应用服务（统一服务）
 	takeoutAppSrv application.ITakeoutAppService
 	// 外卖菜单应用服务
-	takeoutMenuAppSrv application.ITakeoutMenuAppService
+	takeoutMenuAppSrv application.ITakeoutAppService
 	// 外卖服务
 	takeoutSrv takeoutService.ITakeoutSrv
 	// 外卖商品服务

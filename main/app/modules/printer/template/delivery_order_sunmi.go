@@ -4,7 +4,7 @@ package template
 import (
 	"fmt"
 	"strconv"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -41,7 +41,7 @@ func (t *takeoutOrderSunmiTemplate) GetPrintContent(
 	// 日历
 	payTime := t.base.FormatUnixTimeDefault(memberSaleOrder.PayTime)
 	// 是否自己打印
-	isOneself := printerType != constant.PrinterTypeSunmiLan && printerType != constant.PrinterTypeSunmiCloud
+	isOneself := printerType != printerConst.PrinterTypeSunmiLan && printerType != printerConst.PrinterTypeSunmiCloud
 
 	// 宽度
 	width := 48

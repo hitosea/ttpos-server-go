@@ -46,10 +46,10 @@ type TakeoutOrderResp struct {
 }
 
 type TakeoutOrderDiscountsResp struct {
-	PlatformDiscount int64 `json:"platform_discount"` // 平台优惠
-	MerchantDiscount int64 `json:"merchant_discount"` // 商户优惠
-	BasketPromo      int64 `json:"basket_promo"`      // 篮子优惠
-	Tax              int64 `json:"tax"`               // 税费
+	PlatformDiscount float64 `json:"platform_discount"` // 平台优惠
+	MerchantDiscount float64 `json:"merchant_discount"` // 商户优惠
+	BasketPromo      float64 `json:"basket_promo"`      // 篮子优惠
+	Tax              float64 `json:"tax"`               // 税费
 }
 
 type TakeoutOrderTimesResp struct {
@@ -62,15 +62,15 @@ type TakeoutOrderTimesResp struct {
 }
 
 type TakeoutOrderPriceResp struct {
-	Subtotal          int64 `json:"subtotal"`            // 商品小计
-	DeliveryFee       int64 `json:"delivery_fee"`        // 配送费
-	SmallOrderFee     int64 `json:"small_order_fee"`     // 小订单费
-	EaterPayment      int64 `json:"eater_payment"`       // 顾客实付
-	PlatformDiscount  int64 `json:"platform_discount"`   // 平台优惠
-	MerchantDiscount  int64 `json:"merchant_discount"`   // 商户优惠
-	BasketPromo       int64 `json:"basket_promo"`        // 购物车促销
-	Tax               int64 `json:"tax"`                 // 税费
-	MerchantChargeFee int64 `json:"merchant_charge_fee"` // 商户收取费用
+	Subtotal          float64 `json:"subtotal"`            // 商品小计
+	DeliveryFee       float64 `json:"delivery_fee"`        // 配送费
+	SmallOrderFee     float64 `json:"small_order_fee"`     // 小订单费
+	EaterPayment      float64 `json:"eater_payment"`       // 顾客实付
+	PlatformDiscount  float64 `json:"platform_discount"`   // 平台优惠
+	MerchantDiscount  float64 `json:"merchant_discount"`   // 商户优惠
+	BasketPromo       float64 `json:"basket_promo"`        // 购物车促销
+	Tax               float64 `json:"tax"`                 // 税费
+	MerchantChargeFee float64 `json:"merchant_charge_fee"` // 商户收取费用
 }
 
 // CurrencyResp 货币响应
@@ -129,13 +129,13 @@ type TakeoutOrderItemModifierResp struct {
 
 // TakeoutOrderListItemResp 订单响应
 type TakeoutOrderListItemResp struct {
-	Uuid             uint64 `json:"uuid"`               // 订单UUID
-	Platform         string `json:"platform"`           // 平台名称
-	ShortOrderNumber string `json:"short_order_number"` // 短订单号
-	OrderState       int    `json:"order_state"`        // 订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
-	IsAbnormal       int    `json:"is_abnormal"`        // 是否异常
-	Subtotal         int64  `json:"subtotal"`           // 小计金额
-	TotalItems       int    `json:"total_items"`        // 总商品数量
+	Uuid             uint64  `json:"uuid"`               // 订单UUID
+	Platform         string  `json:"platform"`           // 平台名称
+	ShortOrderNumber string  `json:"short_order_number"` // 短订单号
+	OrderState       int     `json:"order_state"`        // 订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
+	IsAbnormal       int     `json:"is_abnormal"`        // 是否异常
+	Subtotal         float64 `json:"subtotal"`           // 小计金额
+	TotalItems       int     `json:"total_items"`        // 总商品数量
 }
 
 // TakeoutOrderListResp 订单列表响应
@@ -146,8 +146,8 @@ type TakeoutOrderListResp struct {
 
 // TakeoutSettingsResp 配置响应
 type TakeoutSettingsResp struct {
-	Uuid       uint64 `json:"uuid"`
-	Platform   string `json:"platform"`
-	AutoAccept bool   `json:"auto_accept"`
-	MaxAmount  int64  `json:"max_amount"`
+	Uuid       uint64  `json:"uuid"`
+	Platform   string  `json:"platform"`
+	AutoAccept bool    `json:"auto_accept"`
+	MaxAmount  float64 `json:"max_amount"`
 }

@@ -82,7 +82,7 @@ type TakeoutSettingsGetReq struct {
 
 // TakeoutSettingsSaveReq 配置保存请求
 type TakeoutSettingsSaveReq struct {
-	Platform   string `json:"platform" binding:"required"` // grab,foodpanda,lineman
-	AutoAccept bool   `json:"auto_accept"`
-	MaxAmount  int64  `json:"max_amount"` // 单位：分
+	Platform   string  `json:"platform" binding:"required"` // grab,foodpanda,lineman
+	AutoAccept bool    `json:"auto_accept"`
+	MaxAmount  float64 `json:"max_amount"` // 单位：分
 }

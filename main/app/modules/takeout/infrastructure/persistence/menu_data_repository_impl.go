@@ -143,21 +143,6 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 							return db.Where("delete_time = ?", 0).
 								Preload("Attribute.MultiLanguageName", "delete_time = ?", 0)
 						})
-				}).
-				Preload("ProductPackageGroups", func(db *gorm.DB) *gorm.DB {
-					return db.Where("delete_time = ?", 0).
-						Preload("MultiLanguageName", "delete_time = ?", 0).
-						Preload("ProductPackageGroupItems", func(db *gorm.DB) *gorm.DB {
-							return db.Where("delete_time = ?", 0).
-								Preload("ProductPackage", func(db *gorm.DB) *gorm.DB {
-									return db.Where("delete_time = ?", 0).
-										Preload("MultiLanguageName", "delete_time = ?", 0)
-								}).
-								Preload("ProductBom", func(db *gorm.DB) *gorm.DB {
-									return db.Where("delete_time = ?", 0).
-										Preload("ProductFlavor.MultiLanguageName", "delete_time = ?", 0)
-								})
-						})
 				})
 		}).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
@@ -178,7 +163,16 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 				Preload("ProductPackageAttribute.Attribute.MultiLanguageName", "delete_time = ?", 0)
 		}).
 		Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0)
+			return db.Where("delete_time = ?", 0).
+				Preload("ProductPackageGroupItem.ProductBom").
+				Preload("ProductPackageGroupItem.ProductPackage", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0).
+						Preload("MultiLanguageName", "delete_time = ?", 0)
+				}).
+				Preload("ProductPackageGroupItem.ProductPackageGroup", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0).
+						Preload("MultiLanguageName", "delete_time = ?", 0)
+				})
 		}).
 		Order("id ASC").
 		Find(&products).Error
@@ -205,14 +199,19 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 
 	// Step 1: 收集所有需要查询库存的 BOM UUID 及其对应的对象引用
 	bomUuids := make([]uint64, 0)
-	bomMap := make(map[uint64]*model.ProductBom) // 用于快速定位 BOM 对象
-
+	bomMap := make(map[uint64]*model.ProductBom)        // 用于快速定位 BOM 对象
+	packageBomMap := make(map[uint64]*model.ProductBom) // 用于快速定位 ProductPackage 对象
 	for _, takeoutProduct := range takeoutProducts {
 		// 使用索引遍历以获取可修改的引用
 		for i := range takeoutProduct.ProductPackage.ProductBoms {
 			bom := &takeoutProduct.ProductPackage.ProductBoms[i]
 			bomUuids = append(bomUuids, bom.Uuid)
 			bomMap[bom.Uuid] = bom
+		}
+		for j := range takeoutProduct.ProductPackageGroupItemTakeouts {
+			groupItem := &takeoutProduct.ProductPackageGroupItemTakeouts[j]
+			bomUuids = append(bomUuids, groupItem.ProductPackageGroupItem.ProductBom.Uuid)
+			packageBomMap[groupItem.ProductPackageGroupItem.ProductBom.Uuid] = groupItem.ProductPackageGroupItem.ProductBom
 		}
 	}
 
@@ -229,6 +228,9 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		for _, bom := range bomMap {
 			bom.StockNum = 99999999
 		}
+		for _, groupItem := range packageBomMap {
+			groupItem.StockNum = 99999999
+		}
 		return
 	}
 
@@ -237,9 +239,16 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		if inventory, ok := inventoryMap[bomUuid]; ok {
 			bom.StockNum = inventory
 		} else {
-			// 如果某个 BOM 没有返回库存数据，设置为无限库存
-			logger.Logger.Warn("未查询到商品规格/小料库存，设置为无限库存", zap.Uint64("bom_uuid", bomUuid))
 			bom.StockNum = 99999999
+		}
+	}
+
+	// 注入套餐商品库存
+	for _, groupItem := range packageBomMap {
+		if inventory, ok := inventoryMap[groupItem.Uuid]; ok {
+			groupItem.StockNum = inventory
+		} else {
+			groupItem.StockNum = 99999999
 		}
 	}
 }

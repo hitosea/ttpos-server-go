@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/repository"
@@ -119,9 +120,9 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 			// 执行打印
 			var err error
 			if slices.Contains([]string{
-				constant.PrinterTypeSunmiLan,
-				constant.PrinterTypeSunmiCloud,
-				constant.PrinterTypeCashierSunmi,
+				printerConst.PrinterTypeSunmiLan,
+				printerConst.PrinterTypeSunmiCloud,
+				printerConst.PrinterTypeCashierSunmi,
 			}, printerLog.PrinterType) {
 				err = pkg.PrintSunmiTicket(configJson, content, printerLog.GetTradeNo(companyUuid))
 			} else {

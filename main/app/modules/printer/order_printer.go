@@ -3,6 +3,7 @@ package printer
 import (
 	"slices"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
@@ -174,9 +175,9 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 
 	// 商米打印机
 	if slices.Contains([]string{
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeCashierSunmi,
 	}, settingPrinterInfo.PrinterType) {
 		base.IsSunMi = true
 	}
@@ -216,7 +217,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
-	if settingPrinterInfo.PrinterType == constant.PrinterTypeCashierCompax {
+	if settingPrinterInfo.PrinterType == printerConst.PrinterTypeCashierCompax {
 		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printType,
@@ -230,9 +231,9 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCashierImmin,
+		printerConst.PrinterTypeXPrinterLan,
+		printerConst.PrinterTypeXPrinterWifi,
+		printerConst.PrinterTypeCashierImmin,
 	}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
@@ -259,7 +260,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
+	if slices.Contains([]string{printerConst.PrinterTypeCodesoftLan, printerConst.PrinterTypeCodesoftWifi, printerConst.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printType,

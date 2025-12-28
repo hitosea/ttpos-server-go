@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -71,9 +72,9 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	printer := pkg.NewPrinter(567)
 	if temp != 3 && temp != 4 && temp != 5 {
 		printer.SetAlignment(pkg.AlignLeft)
-		if printType == constant.PrinterTemplateInvoice {
+		if printType == printerConst.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printType == printerConst.PrinterTemplatePreBilling {
 			printer.AppendText(t.base.Translate("预结账单"))
 		} else {
 			printer.AppendText(t.base.Translate("结账单"))
@@ -154,9 +155,9 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		//
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
-		if printType == constant.PrinterTemplateInvoice {
+		if printType == printerConst.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printType == printerConst.PrinterTemplatePreBilling {
 			printer.AppendText(t.base.Translate("预结账单"))
 		} else {
 			printer.AppendText(t.base.Translate("结账单"))
@@ -185,7 +186,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			printer.AppendText(t.base.Translate("税号") + ": " + taxNumber)
 			printer.LineFeed(1)
 		}
-		if temp == 5 && printType == constant.PrinterTemplateBilling {
+		if temp == 5 && printType == printerConst.PrinterTemplateBilling {
 			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
 				printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
 				printer.LineFeed(1)
@@ -542,7 +543,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	}
 
 	// 发票信息
-	if printType == constant.PrinterTemplateInvoice {
+	if printType == printerConst.PrinterTemplateInvoice {
 		invoiceInfo := saleOrder.InvoiceInfo
 		if invoiceInfo != nil && invoiceInfo.HasContent() {
 			printer.AppendText("------------------------------------------------\n")

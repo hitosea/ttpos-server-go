@@ -159,15 +159,15 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 
 	// 价格信息映射
 	price := submitOrderReq.GetPrice()
-	order.Subtotal = price.GetSubtotal() / 100
-	order.DeliveryFee = price.GetDeliveryFee() / 100
-	order.SmallOrderFee = price.GetSmallOrderFee() / 100
-	order.EaterPayment = price.GetEaterPayment() / 100
-	order.PlatformDiscount = price.GetGrabFundPromo() / 100
-	order.MerchantDiscount = price.GetMerchantFundPromo() / 100
-	order.BasketPromo = price.GetBasketPromo() / 100
-	order.Tax = price.GetTax() / 100
-	order.MerchantChargeFee = price.GetMerchantChargeFee() / 100
+	order.Subtotal = float64(price.GetSubtotal()) / 100
+	order.DeliveryFee = float64(price.GetDeliveryFee()) / 100
+	order.SmallOrderFee = float64(price.GetSmallOrderFee()) / 100
+	order.EaterPayment = float64(price.GetEaterPayment()) / 100
+	order.PlatformDiscount = float64(price.GetGrabFundPromo()) / 100
+	order.MerchantDiscount = float64(price.GetMerchantFundPromo()) / 100
+	order.BasketPromo = float64(price.GetBasketPromo()) / 100
+	order.Tax = float64(price.GetTax()) / 100
+	order.MerchantChargeFee = float64(price.GetMerchantChargeFee()) / 100
 
 	// 货币信息映射
 	currency := submitOrderReq.GetCurrency()

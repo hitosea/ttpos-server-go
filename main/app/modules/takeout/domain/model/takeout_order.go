@@ -27,16 +27,16 @@ type TakeoutOrder struct {
 	AbnormalDetail string `gorm:"column:abnormal_detail;type:text" json:"abnormal_detail"`
 	StockStatus    int    `gorm:"column:stock_status" json:"stock_status"`
 
-	// 价格信息（单位：分）
-	Subtotal          int64 `gorm:"column:subtotal" json:"subtotal"`                       // 小计金额
-	DeliveryFee       int64 `gorm:"column:delivery_fee" json:"delivery_fee"`               // 配送费
-	SmallOrderFee     int64 `gorm:"column:small_order_fee" json:"small_order_fee"`         // 小单费用
-	EaterPayment      int64 `gorm:"column:eater_payment" json:"eater_payment"`             // 顾客实付
-	PlatformDiscount  int64 `gorm:"column:platform_discount" json:"platform_discount"`     // 平台优惠
-	MerchantDiscount  int64 `gorm:"column:merchant_discount" json:"merchant_discount"`     // 商户优惠
-	BasketPromo       int64 `gorm:"column:basket_promo" json:"basket_promo"`               // 购物车优惠
-	Tax               int64 `gorm:"column:tax" json:"tax"`                                 // 税费
-	MerchantChargeFee int64 `gorm:"column:merchant_charge_fee" json:"merchant_charge_fee"` // 商户收取费用
+	// 价格信息（单位：元）
+	Subtotal          float64 `gorm:"column:subtotal" json:"subtotal"`                       // 小计金额
+	DeliveryFee       float64 `gorm:"column:delivery_fee" json:"delivery_fee"`               // 配送费
+	SmallOrderFee     float64 `gorm:"column:small_order_fee" json:"small_order_fee"`         // 小单费用
+	EaterPayment      float64 `gorm:"column:eater_payment" json:"eater_payment"`             // 顾客实付
+	PlatformDiscount  float64 `gorm:"column:platform_discount" json:"platform_discount"`     // 平台优惠
+	MerchantDiscount  float64 `gorm:"column:merchant_discount" json:"merchant_discount"`     // 商户优惠
+	BasketPromo       float64 `gorm:"column:basket_promo" json:"basket_promo"`               // 购物车优惠
+	Tax               float64 `gorm:"column:tax" json:"tax"`                                 // 税费
+	MerchantChargeFee float64 `gorm:"column:merchant_charge_fee" json:"merchant_charge_fee"` // 商户收取费用
 
 	// 货币信息
 	CurrencyCode     string `gorm:"column:currency_code" json:"currency_code"`

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -73,9 +74,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if temp != 3 && temp != 4 && temp != 5 {
 		img.SetAlignment(pkg.AlignLeft)
 		var title string
-		if printOrderType == constant.PrinterTemplateInvoice {
+		if printOrderType == printerConst.PrinterTemplateInvoice {
 			title = t.base.Translate("发票")
-		} else if printOrderType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == printerConst.PrinterTemplatePreBilling {
 			title = t.base.Translate("预结账单")
 		} else {
 			title = t.base.Translate("结账单")
@@ -189,9 +190,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontSize(26)
 		img.SetTextLineHeight(50)
 		var title string
-		if printOrderType == constant.PrinterTemplateInvoice {
+		if printOrderType == printerConst.PrinterTemplateInvoice {
 			title = t.base.Translate("发票")
-		} else if printOrderType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == printerConst.PrinterTemplatePreBilling {
 			title = t.base.Translate("预结账单")
 		} else {
 			title = t.base.Translate("结账单")
@@ -223,7 +224,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("税号"), taxNumber))
 			img.LineFeed(1)
 		}
-		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+		if temp == 5 && printOrderType == printerConst.PrinterTemplateBilling {
 			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
 				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
 				img.LineFeed(1)
@@ -234,7 +235,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			}
 		}
 		// 发票信息
-		if printOrderType == constant.PrinterTemplateInvoice {
+		if printOrderType == printerConst.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
 			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				img.AppendSplitLine()
@@ -679,7 +680,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.SetTextLineHeight(50)
 		}
 	} else {
-		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+		if temp == 5 && printOrderType == printerConst.PrinterTemplateBilling {
 			img.AppendSplitLine()
 			img.LineFeed(1)
 			img.AppendBarcode(saleOrder.OrderNo, 500, 120)

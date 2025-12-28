@@ -3,8 +3,8 @@ package event
 import (
 	"sync"
 	"time"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -39,7 +39,7 @@ func SentCookingPreEventHandler() {
 					products := printer_model.Products{}
 					copier.Copy(&products, payload.Products)
 					printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-						constant.PrinterProductTypeKitchen,
+						printerConstant.PrinterProductTypeKitchen,
 						payload.SaleBillUuid,
 						payload.SaleOrderUuid,
 						products,
@@ -117,7 +117,7 @@ func handlePreBatchProductsMergePrint(payload event.SentCookingPrePayload) {
 		saleOrderUuid := payload.SaleOrderUuid
 		if saleOrderUuid > 0 {
 			printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-				constant.PrinterProductTypeKitchen,
+				printerConstant.PrinterProductTypeKitchen,
 				payload.SaleBillUuid,
 				saleOrderUuid,
 				printProducts,

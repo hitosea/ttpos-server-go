@@ -83,14 +83,14 @@ type UnprocessedMemberSaleOrder struct {
 
 // UnprocessedTakeoutOrderItem 未处理的外卖订单项
 type UnprocessedTakeoutOrderItem struct {
-	Uuid             uint64 `json:"uuid"`               // 外卖订单Uuid
-	Platform         string `json:"platform"`           // 平台: grab, lineman, foodpanda
-	ShortOrderNumber string `json:"short_order_number"` // 短订单号
-	OrderState       int    `json:"order_state"`        // 订单状态: 0-待接单, 1-已接单配餐中, 2-待骑手接单, 3-骑手配送中, 4-已完成, 5-已拒单
-	IsAbnormal       int    `json:"is_abnormal"`        // 是否异常订单: 0-正常, 1-异常
-	IsAutoAccept     bool   `json:"is_auto_accept"`     // 是否自动接单
-	Subtotal         int64  `json:"subtotal"`           // 订单小计(分)
-	OrderTime        int64  `json:"order_time"`         // 下单时间
+	Uuid             uint64  `json:"uuid"`               // 外卖订单Uuid
+	Platform         string  `json:"platform"`           // 平台: grab, lineman, foodpanda
+	ShortOrderNumber string  `json:"short_order_number"` // 短订单号
+	OrderState       int     `json:"order_state"`        // 订单状态: 0-待接单, 1-已接单配餐中, 2-待骑手接单, 3-骑手配送中, 4-已完成, 5-已拒单
+	IsAbnormal       int     `json:"is_abnormal"`        // 是否异常订单: 0-正常, 1-异常
+	IsAutoAccept     bool    `json:"is_auto_accept"`     // 是否自动接单
+	Subtotal         float64 `json:"subtotal"`           // 订单小计
+	OrderTime        int64   `json:"order_time"`         // 下单时间
 }
 
 type UnprocessedTakeoutOrder struct {

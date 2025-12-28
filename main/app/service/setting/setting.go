@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -486,13 +487,13 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
-				printerType = constant.PrinterTypeCashierSunmi
+				printerType = printerConstant.PrinterTypeCashierSunmi
 			} else if slices.Contains([]string{constant.BrandA11510P}, brand) {
 				// compax打印机
-				printerType = constant.PrinterTypeCashierCompax
+				printerType = printerConstant.PrinterTypeCashierCompax
 			} else if slices.Contains([]string{constant.BrandD1, constant.BrandD4}, brand) {
 				// imin打印机
-				printerType = constant.PrinterTypeCashierImmin
+				printerType = printerConstant.PrinterTypeCashierImmin
 			} else {
 				// 未知打印机
 				printerType = ""

@@ -4,7 +4,7 @@ package template
 import (
 	"fmt"
 	"strconv"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -44,7 +44,7 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 	if temp == 2 {
 		return NewStatementOrderXprinterTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
-			constant.PrinterTemplateInvoice,
+			printerConst.PrinterTemplateInvoice,
 			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
 			saleOrder,
@@ -67,7 +67,7 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 	// 宽度
 	width := 48
 	leftWidth := 28
-	isXinyeWifi := printerType == constant.PrinterTypeXPrinterWifi || printerType == constant.PrinterTypeXPrinterLan
+	isXinyeWifi := printerType == printerConst.PrinterTypeXPrinterWifi || printerType == printerConst.PrinterTypeXPrinterLan
 	lineSpacing := "\x1B\x33\x32"
 	if isXinyeWifi {
 		lineSpacing = "\x1B\x33\x38"

@@ -13,8 +13,10 @@ import (
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/modules/printer/template"
+	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -35,6 +37,7 @@ type PPrinterRepo interface {
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, firstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
 	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, firstExecution int) (*resp.PrinterData, error)
 	PrintingTakeoutOrder(memberSaleOrder *model.MemberSaleOrder, saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
+	PrintingPlatformTakeoutReceipt(order *takeoutModel.TakeoutOrder, receiptType string, firstExecution int) (*resp.PrinterData, error)
 	DeleteProductPrinterListCache()     // 删除商品打印机列表缓存
 	SetFinishedTime(finishedTime int64) // 设置完成时间
 	GetFinishedTime() int64             // 获取完成时间
@@ -274,14 +277,14 @@ func (p *PrinterRepoImpl) GetPrinterMethod(isKitchen ...bool) int {
 	if p.printMethod != 0 {
 		return p.printMethod
 	}
-	printMethod := constant.PrinterLogPrintMethodText
+	printMethod := printerConst.PrinterLogPrintMethodText
 	if len(isKitchen) > 0 && isKitchen[0] {
 		if p.printerSetting.KitchenPrintMethod == "2" {
-			printMethod = constant.PrinterLogPrintMethodImage
+			printMethod = printerConst.PrinterLogPrintMethodImage
 		}
 	} else {
 		if p.printerSetting.PrintMethod == "2" {
-			printMethod = constant.PrinterLogPrintMethodImage
+			printMethod = printerConst.PrinterLogPrintMethodImage
 		}
 	}
 	return printMethod
@@ -289,7 +292,7 @@ func (p *PrinterRepoImpl) GetPrinterMethod(isKitchen ...bool) int {
 
 // 获取打印机打印方式
 func (p *PrinterRepoImpl) IsImagePrinterMethod(isKitchen ...bool) bool {
-	return p.GetPrinterMethod(isKitchen...) == constant.PrinterLogPrintMethodImage
+	return p.GetPrinterMethod(isKitchen...) == printerConst.PrinterLogPrintMethodImage
 }
 
 // 获取打印机宽度

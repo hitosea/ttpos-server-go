@@ -975,6 +975,16 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 		// 5. 发布订单状态更新事件（仅在状态发生变化时）
 		if oldOrderState != newOrderState {
 			switch newOrderState {
+			case valueobject.TakeoutOrderStateRiderProcessing:
+				// 骑手配送中事件
+				event.GetDispatcher().Publish(event.NewOrderRiderProcessingEvent(
+					order.Uuid,
+					order.Platform,
+					order.PlatformOrderId,
+					order.ShortOrderNumber,
+					order.TakeoutOrderUuid,
+					ctx.GetCompanyUuid(),
+				))
 			case valueobject.TakeoutOrderStateRejected:
 				// 订单取消事件
 				event.GetDispatcher().Publish(event.NewOrderCancelEvent(

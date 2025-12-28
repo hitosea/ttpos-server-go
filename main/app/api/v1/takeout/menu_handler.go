@@ -18,14 +18,14 @@ import (
 
 // Handler 外卖菜单 Handler
 type Handler struct {
-	menuAppSrv application.ITakeoutMenuAppService
+	menuAppSrv application.ITakeoutAppService
 	dbm        *database.DBManager
 	cache      cache.Cache
 }
 
 // NewHandler 创建 Handler
 func NewHandler(dbm *database.DBManager, cache cache.Cache) *Handler {
-	menuAppSrv := application.NewTakeoutMenuAppService(dbm)
+	menuAppSrv := application.NewTakeoutAppService(dbm)
 
 	return &Handler{
 		menuAppSrv: menuAppSrv,

@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +20,7 @@ type PrinterLog struct {
 	BaseModel
 	PrinterUuid        uint64 `gorm:"column:printer_uuid;type:bigint(20) unsigned;default:0;comment:打印机id;NOT NULL" json:"printer_uuid"`
 	CashierDeviceId    string `gorm:"column:cashier_device_id;type:varchar(255);comment:收银机绑定的id;NOT NULL" json:"cashier_device_id"`
-	RelatedType        int    `gorm:"column:related_type;type:tinyint(1);default:0;comment:关联订单类型：0-销售账单；1-销售订单, 2-充值订单, 3-交班单;NOT NULL" json:"related_type"`
+	RelatedType        int    `gorm:"column:related_type;type:tinyint(1);default:0;comment:关联订单类型：0-销售账单；1-销售订单, 2-充值订单, 3-交班单 4-外卖平台订单;NOT NULL" json:"related_type"`
 	RelatedUuid        uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:销售账单、充值订单id;NOT NULL" json:"related_uuid"`
 	Data               string `gorm:"column:data;type:varchar(255);comment:打印数据" json:"data"`
 	Type               int    `gorm:"column:type;type:int(11);default:0;comment:类型:0系统默认队列,1云上服务下放;NOT NULL" json:"type"`
@@ -144,20 +144,20 @@ func (model *PrinterLog) GetCopies() uint {
 // 是否收银打印机
 func (model *PrinterLog) IsCashierPrinter() bool {
 	return slices.Contains([]string{
-		constant.PrinterTypeCashierCompax,
-		constant.PrinterTypeCashierSunmi,
-		constant.PrinterTypeCashierImmin,
+		printerConst.PrinterTypeCashierCompax,
+		printerConst.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeCashierImmin,
 	}, model.PrinterType) || !slices.Contains([]string{
-		constant.PrinterTypeFeiEYun,
-		constant.PrinterTypeFeiEYunTag,
-		constant.PrinterTypePrintCenter,
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
-		constant.PrinterTypeGpCloud,
+		printerConst.PrinterTypeFeiEYun,
+		printerConst.PrinterTypeFeiEYunTag,
+		printerConst.PrinterTypePrintCenter,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeXPrinterLan,
+		printerConst.PrinterTypeXPrinterWifi,
+		printerConst.PrinterTypeCodesoftLan,
+		printerConst.PrinterTypeCodesoftWifi,
+		printerConst.PrinterTypeGpCloud,
 	}, model.PrinterType)
 }
 
@@ -204,15 +204,15 @@ func (model *PrinterLog) CalculationTime(data string) int64 {
 	t := int64(200)
 	speed := 200
 	//
-	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
+	if model.PrinterType == printerConst.PrinterTypeXPrinterWifi {
 		speed = 70
-	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
+	} else if model.PrinterType == printerConst.PrinterTypeCodesoftWifi {
 		speed = 70
 	}
 	//
 	t = int64(math.Ceil(float64(len(data)) / float64(speed)))
 	//
-	if model.PrinterType == constant.PrinterTypeXPrinterWifi || model.PrinterType == constant.PrinterTypeCodesoftWifi {
+	if model.PrinterType == printerConst.PrinterTypeXPrinterWifi || model.PrinterType == printerConst.PrinterTypeCodesoftWifi {
 		if t < 1200 {
 			return 1200
 		}

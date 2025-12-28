@@ -326,155 +326,46 @@
                     "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
-                    "line_height": 40,
                     "width": 100
                 },
-                "conditions": []
+                "conditions": [
+                    {
+                        "field": "store.company_tax_number",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
             {
-                "group_block_id": "order_no",
-                "block_id": "order.order_no",
-                "block_type": "label:value",
-                "block_label": {
-                    "de": "Bestell-Nr.: ",
-                    "en": "Order No.: ",
-                    "ja": "注文番号: ",
-                    "ko": "주문번호: ",
-                    "my": "အမှာစာနံပါတ်: ",
-                    "sv": "Beställningsnr: ",
-                    "th": "หมายเลขคำสั่งซื้อ: ",
-                    "tr": "Sipariş No.: ",
-                    "zh": "订单号: ",
-                    "zhtw": "訂單號: "
-                },
+                "group_block_id": "blank_line",
+                "block_id": "blank_line",
+                "block_type": "blank_line",
+                "block_label": {},
                 "block_name": {
-                    "en": "Order No.",
-                    "ja": "注文番号",
-                    "ko": "주문번호",
-                    "my": "အမှာစာနံပါတ်",
-                    "th": "หมายเลขคำสั่งซื้อ",
-                    "tr": "Sipariş No.",
-                    "zh": "订单号",
-                    "zhtw": "訂單號",
-                    "de": "Bestell-Nr.",
-                    "sv": "Beställningsnr"
+                    "th": "ส่วนขวาง",
+                    "en": "Dividing line",
+                    "ko": "구분선",
+                    "my": "ခွဲစိုက်ခြင်း",
+                    "tr": "Bölme çizgisi",
+                    "de": "Trennlinie",
+                    "sv": "Delningslinje",
+                    "ja": "区切り線",
+                    "zhtw": "分割線",
+                    "zh": "分割线"
                 },
                 "block_attr": {
-                    "font_size": 18,
-                    "align": "left",
+                    "font_size": 20,
+                    "align": "center",
                     "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
                     "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.order_no",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
+                }
             }
         ],
-        [
-            {
-                "group_block_id": "order_time",
-                "block_id": "order.order_time",
-                "block_type": "label:value",
-                "block_label": {
-                    "de": "Bestellzeit: ",
-                    "en": "Order Time: ",
-                    "ja": "注文時間: ",
-                    "ko": "주문 시간: ",
-                    "my": "အမှာစာအချိန်: ",
-                    "sv": "Beställningstid: ",
-                    "th": "เวลาสั่งซื้อ: ",
-                    "tr": "Sipariş Zamanı: ",
-                    "zh": "下单时间: ",
-                    "zhtw": "下單時間: "
-                },
-                "block_name": {
-                    "en": "Order Time",
-                    "ja": "注文時間",
-                    "ko": "주문 시간",
-                    "my": "အမှာစာအချိန်",
-                    "th": "เวลาสั่งซื้อ",
-                    "tr": "Sipariş Zamanı",
-                    "zh": "下单时间",
-                    "zhtw": "下單時間",
-                    "de": "Bestellzeit",
-                    "sv": "Beställningstid"
-                },
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "left",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.order_time",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "group_block_id": "order_time",
-                "block_id": "order.pay_time",
-                "block_type": "label:value",
-                "block_label": {
-                    "de": "Zahlungszeit: ",
-                    "en": "Pay Time: ",
-                    "ja": "支払い時間: ",
-                    "ko": "결제 시간: ",
-                    "my": "ငွေပေးချေမှုအချိန်: ",
-                    "sv": "Betalningstid: ",
-                    "th": "เวลาชำระเงิน: ",
-                    "tr": "Ödeme Zamanı: ",
-                    "zh": "支付时间: ",
-                    "zhtw": "支付時間: "
-                },
-                "block_name": {
-                    "en": "Pay Time",
-                    "ja": "支払い時間",
-                    "ko": "결제 시간",
-                    "my": "ငွေပေးချေမှုအချိန်",
-                    "th": "เวลาชำระเงิน",
-                    "tr": "Ödeme Zamanı",
-                    "zh": "支付时间",
-                    "zhtw": "支付時間",
-                    "de": "Zahlungszeit",
-                    "sv": "Betalningstid"
-                },
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "left",
-                    "font_bold": false,
-                    "dividing_line": true,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 1,
-                    "line_height": 32,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.pay_time",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-
         [
             {
                 "group_block_id": "customer_info",
@@ -585,6 +476,143 @@
                     "zhtw": "地址",
                     "de": "Adresse",
                     "sv": "Adress"
+                },
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 1,
+                    "line_height": 32,
+                    "width": 100
+                },
+                "conditions": []
+            }
+        ],
+
+        [
+            {
+                "group_block_id": "order_no",
+                "block_id": "order.order_no",
+                "block_type": "label:value",
+                "block_label": {
+                    "de": "Bestell-Nr.: ",
+                    "en": "Order No.: ",
+                    "ja": "注文番号: ",
+                    "ko": "주문번호: ",
+                    "my": "အမှာစာနံပါတ်: ",
+                    "sv": "Beställningsnr: ",
+                    "th": "หมายเลขคำสั่งซื้อ: ",
+                    "tr": "Sipariş No.: ",
+                    "zh": "订单号: ",
+                    "zhtw": "訂單號: "
+                },
+                "block_name": {
+                    "en": "Order No.",
+                    "ja": "注文番号",
+                    "ko": "주문번호",
+                    "my": "အမှာစာနံပါတ်",
+                    "th": "หมายเลขคำสั่งซื้อ",
+                    "tr": "Sipariş No.",
+                    "zh": "订单号",
+                    "zhtw": "訂單號",
+                    "de": "Bestell-Nr.",
+                    "sv": "Beställningsnr"
+                },
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.order_no",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "order_time",
+                "block_id": "order.create_time",
+                "block_type": "label:value",
+                "block_label": {
+                    "de": "Bestellzeit: ",
+                    "en": "Order Time: ",
+                    "ja": "注文時間: ",
+                    "ko": "주문 시간: ",
+                    "my": "အမှာစာအချိန်: ",
+                    "sv": "Beställningstid: ",
+                    "th": "เวลาสั่งซื้อ: ",
+                    "tr": "Sipariş Zamanı: ",
+                    "zh": "下单时间: ",
+                    "zhtw": "下單時間: "
+                },
+                "block_name": {
+                    "en": "Order Time",
+                    "ja": "注文時間",
+                    "ko": "주문 시간",
+                    "my": "အမှာစာအချိန်",
+                    "th": "เวลาสั่งซื้อ",
+                    "tr": "Sipariş Zamanı",
+                    "zh": "下单时间",
+                    "zhtw": "下單時間",
+                    "de": "Bestellzeit",
+                    "sv": "Beställningstid"
+                },
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "order.create_time",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "order_time",
+                "block_id": "order.pay_time",
+                "block_type": "label:value",
+                "block_label": {
+                    "de": "Zahlungszeit: ",
+                    "en": "Pay Time: ",
+                    "ja": "支払い時間: ",
+                    "ko": "결제 시간: ",
+                    "my": "ငွေပေးချေမှုအချိန်: ",
+                    "sv": "Betalningstid: ",
+                    "th": "เวลาชำระเงิน: ",
+                    "tr": "Ödeme Zamanı: ",
+                    "zh": "支付时间: ",
+                    "zhtw": "支付時間: "
+                },
+                "block_name": {
+                    "en": "Pay Time",
+                    "ja": "支払い時間",
+                    "ko": "결제 시간",
+                    "my": "ငွေပေးချေမှုအချိန်",
+                    "th": "เวลาชำระเงิน",
+                    "tr": "Ödeme Zamanı",
+                    "zh": "支付时间",
+                    "zhtw": "支付時間",
+                    "de": "Zahlungszeit",
+                    "sv": "Betalningstid"
                 },
                 "block_attr": {
                     "font_size": 18,

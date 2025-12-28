@@ -2,13 +2,15 @@ package printer
 
 import (
 	"slices"
+	"ttpos-server-go/app/constant"
 	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
-	respSetting "ttpos-server-go/app/dto/resp/setting"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/modules/printer/template"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/logger"
 
@@ -16,14 +18,27 @@ import (
 )
 
 /**
- * 打印发票
+ * 外送单打印
  */
-func (p *PrinterRepoImpl) PrintingInvoice(
+func (p *PrinterRepoImpl) PrintingTakeoutOrder(
+	memberSaleOrder *model.MemberSaleOrder,
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
-	firstExecution int,
 ) (*resp.PrinterData, error) {
+
+	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
+
+	// 设备sn
 	deviceSn := p.ctx.GetDeviceSn()
+
+	// 如果不是收银端端，从主设备获取
+	if deviceSn == "" || p.ctx.GetSource() != constant.SourceCashier {
+		deviceRepo := repository.NewDeviceRepo(db)
+		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereMain())
+		if deviceSn == "" {
+			return nil, errors.New("找不到收银机设备")
+		}
+	}
 
 	// 获取打印设置
 	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
@@ -50,19 +65,16 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	// 打印方式
 	printMethod := p.SetPrinterMethod(settingPrinterInfo.PrintMethod)
 
-	// 设置打印机宽度
-	p.SetPrinterWidth(settingPrinterInfo.PrinterWidth)
-
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingInvoiceContent(
+	printContent := p.getPrintingContent(
 		settingPrinterInfo,
-		settingPrinterInfo.PrinterType,
+		printerConst.PrinterTemplateTakeoutOrder,
+		memberSaleOrder,
 		saleBill,
 		saleOrder,
-		settingPrinterInfo.IsCashierPrinter,
 	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
@@ -77,10 +89,10 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        printerConst.PrinterTemplateInvoice,
+		DataType:        printerConst.PrinterTemplateTakeoutOrder,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  firstExecution,
+		FirstExecution:  0,
 		Copies:          settingPrinterInfo.Copies,
 		PrintSpeed:      settingPrinterInfo.PrintSpeed,
 	}, "")
@@ -111,16 +123,16 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	}, nil
 }
 
-// 构建发票打印的内容
-func (p *PrinterRepoImpl) getPrintingInvoiceContent(
-	settingPrinterInfo respSetting.PrinterInfo,
-	printerType string,
+// 构建订单打印的内容
+func (p *PrinterRepoImpl) getPrintingContent(
+	settingPrinterInfo settingResp.PrinterInfo, // 打印机设置
+	printType int, // 打印类型 11-外送单
+	memberSaleOrder *model.MemberSaleOrder,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
-	isCashierPrinter bool,
 ) string {
 	// 获取打印模板
-	tmpInfo := p.GetPrinterTemplateInfo(uint64(printerConst.PrinterTemplateInvoice))
+	tmp, _, _ := p.GetPrinterTemplate(uint64(printType))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -138,49 +150,31 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		printerConst.PrinterTypeSunmiLan,
 		printerConst.PrinterTypeSunmiCloud,
 		printerConst.PrinterTypeCashierSunmi,
-	}, printerType) {
+	}, settingPrinterInfo.PrinterType) {
 		base.IsSunMi = true
 	}
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		if tmpInfo.TmpUuid > 0 {
-			return template.NewInvoiceImgTemplateCustom(base).GetPrintContent(
-				settingPrinterInfo,
-				tmpInfo.TmpData,
-				saleBill,
-				saleOrder,
-				p.Is58mmPrinter(),
-			)
-		}
-		if !p.Is58mmPrinter() {
-			return template.NewInvoiceImgTemplate(base).GetPrintContent(
-				settingPrinterInfo,
-				tmpInfo,
-				saleBill,
-				saleOrder,
-			)
-		} else {
-			return template.NewInvoiceImg58mmTemplate(base).GetPrintContent58mm(
-				settingPrinterInfo,
-				tmpInfo,
-				saleBill,
-				saleOrder,
-			)
-		}
-
+		return template.NewTakeoutOrderImgTemplate(base).GetPrintContent(
+			settingPrinterInfo,
+			tmp,
+			memberSaleOrder,
+			saleBill,
+			saleOrder,
+		)
 	}
 
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
-	if printerType == printerConst.PrinterTypeCashierCompax {
-		return template.NewInvoiceCompaxTemplate(base).GetPrintContent(
+	if settingPrinterInfo.PrinterType == printerConst.PrinterTypeCashierCompax {
+		return template.NewTakeoutOrderCompaxTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			tmpInfo,
+			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
@@ -191,13 +185,13 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		printerConst.PrinterTypeXPrinterLan,
 		printerConst.PrinterTypeXPrinterWifi,
 		printerConst.PrinterTypeCashierImmin,
-	}, printerType) {
-		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
+	}, settingPrinterInfo.PrinterType) {
+		return template.NewTakeoutOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			tmpInfo,
+			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
@@ -205,25 +199,25 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	* 商米打印机
 	 */
 	if base.IsSunMi {
-		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
+		return template.NewTakeoutOrderSunmiTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			tmpInfo,
+			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{printerConst.PrinterTypeCodesoftLan, printerConst.PrinterTypeCodesoftWifi, printerConst.PrinterTypeGpCloud}, printerType) {
-		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
+	if slices.Contains([]string{printerConst.PrinterTypeCodesoftLan, printerConst.PrinterTypeCodesoftWifi, printerConst.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
+		return template.NewTakeoutOrderCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			tmpInfo,
+			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
-			isCashierPrinter,
 		)
 	}
 

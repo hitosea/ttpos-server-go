@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -80,39 +81,39 @@ func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseRe
 	language := ctx.GetLanguage()
 	printerTypes := make([]resp.PrinterBase, 0)
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateHandoverSheet,
+		Uuid: printerConst.PrinterTemplateHandoverSheet,
 		Name: i18n.Translate(language, "交班单"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateBilling,
+		Uuid: printerConst.PrinterTemplateBilling,
 		Name: i18n.Translate(language, "结账单"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplatePreBilling,
+		Uuid: printerConst.PrinterTemplatePreBilling,
 		Name: i18n.Translate(language, "预结账单"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateOneDishOneMenu,
+		Uuid: printerConst.PrinterTemplateOneDishOneMenu,
 		Name: i18n.Translate(language, "一菜一单"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateBusiness,
+		Uuid: printerConst.PrinterTemplateBusiness,
 		Name: i18n.Translate(language, "营业数据"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateEntireOrder,
+		Uuid: printerConst.PrinterTemplateEntireOrder,
 		Name: i18n.Translate(language, "整单打印"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateInvoice,
+		Uuid: printerConst.PrinterTemplateInvoice,
 		Name: i18n.Translate(language, "打印发票"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateRecharge,
+		Uuid: printerConst.PrinterTemplateRecharge,
 		Name: i18n.Translate(language, "充值单"),
 	})
 	printerTypes = append(printerTypes, resp.PrinterBase{
-		Uuid: constant.PrinterTemplateReturnDish,
+		Uuid: printerConst.PrinterTemplateReturnDish,
 		Name: i18n.Translate(language, "退菜单"),
 	})
 	//
@@ -254,23 +255,23 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 			}(),
 			DataTypeName: func() string {
 				switch log.DataType {
-				case constant.PrinterTemplateHandoverSheet:
+				case printerConst.PrinterTemplateHandoverSheet:
 					return i18n.Translate(language, "交班单")
-				case constant.PrinterTemplateBilling:
+				case printerConst.PrinterTemplateBilling:
 					return i18n.Translate(language, "结账单")
-				case constant.PrinterTemplatePreBilling:
+				case printerConst.PrinterTemplatePreBilling:
 					return i18n.Translate(language, "预结账单")
-				case constant.PrinterTemplateOneDishOneMenu:
+				case printerConst.PrinterTemplateOneDishOneMenu:
 					return i18n.Translate(language, "一菜一单")
-				case constant.PrinterTemplateBusiness:
+				case printerConst.PrinterTemplateBusiness:
 					return i18n.Translate(language, "营业数据")
-				case constant.PrinterTemplateEntireOrder:
+				case printerConst.PrinterTemplateEntireOrder:
 					return i18n.Translate(language, "整单打印")
-				case constant.PrinterTemplateInvoice:
+				case printerConst.PrinterTemplateInvoice:
 					return i18n.Translate(language, "打印发票")
-				case constant.PrinterTemplateRecharge:
+				case printerConst.PrinterTemplateRecharge:
 					return i18n.Translate(language, "充值单")
-				case constant.PrinterTemplateReturnDish:
+				case printerConst.PrinterTemplateReturnDish:
 					return i18n.Translate(language, "退菜单")
 				default:
 					return "-"
@@ -495,19 +496,19 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) {
 	companyUuid := ctx.GetCompanyUuid()
 	// 标记进行中
-	printerLogData.Status = constant.PrinterLogStatusInProgress
+	printerLogData.Status = printerConst.PrinterLogStatusInProgress
 	// 获取商家设置，判断是否开启本地打印
 	companySetting := ctx.GetCompanySetting()
 
 	// 如果是商米云打印 - 就都队列打印
-	if printer.PrinterType == constant.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
-		printerLogData.Type = constant.PrinterLogTypeDefault
+	if printer.PrinterType == printerConst.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
+		printerLogData.Type = printerConst.PrinterLogTypeDefault
 		printerLogData.FirstExecution = 0
 	}
 
 	// 打印机不存在
 	if printer.PrinterType == "" {
-		printerLogData.Status = constant.PrinterLogStatusEnd
+		printerLogData.Status = printerConst.PrinterLogStatusEnd
 		printerLogData.Reason = "打印机不存在"
 	}
 
@@ -555,7 +556,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLog.PrinterLogData = &LogData
 
 	// 进行队列打印
-	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
+	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == printerConst.PrinterLogTypeDefault {
 		utils.Go(func() {
 			if printerLog.Printer == nil {
 				printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
@@ -586,9 +587,9 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 	data := "1014010001"
 	// 商米打印机
 	if slices.Contains([]string{
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeCashierSunmi,
+		printerConst.PrinterTypeSunmiLan,
+		printerConst.PrinterTypeSunmiCloud,
+		printerConst.PrinterTypeCashierSunmi,
 	}, settingPrinterInfo.PrinterType) {
 		data = "1014010001"
 	}
@@ -644,7 +645,7 @@ func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReport
 				Uuid: report.Uuid,
 			},
 			Num:    currentNum,
-			Status: utils.IfInt(report.Status == 0, constant.PrinterLogStatusEnd, constant.PrinterLogStatusSuccess),
+			Status: utils.IfInt(report.Status == 0, printerConst.PrinterLogStatusEnd, printerConst.PrinterLogStatusSuccess),
 			Reason: report.Reason,
 		})
 	}

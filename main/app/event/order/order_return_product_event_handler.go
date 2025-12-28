@@ -6,10 +6,12 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -55,7 +57,7 @@ func CancelSaleOrderProductEventHandler() {
 				products := printer_model.OrderProduct{}
 				copier.Copy(&products, payload)
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypeBackFood,
+					printerConstant.PrinterProductTypeBackFood,
 					payload.SaleBillUuid,
 					payload.SaleOrderUuid,
 					[]printer_model.OrderProduct{products},
@@ -64,12 +66,12 @@ func CancelSaleOrderProductEventHandler() {
 		})
 		event.NewSystemBus().SubscribeCancelSaleOrderProductEvent(func(payload event.CancelSaleOrderProductPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			AddStock(db, payload.SaleBillUuid)
+			AddStock(payload.Ctx, db, payload.SaleBillUuid)
 		})
 	})
 }
 
-func AddStock(db *gorm.DB, saleBillUuid uint64) {
+func AddStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 	// 加锁。防止多个取消退菜事件并发退还库存
 	lock.NewSystemLock().LockUuid(saleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)

@@ -4,7 +4,7 @@ package template
 import (
 	"fmt"
 	"strconv"
-	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
@@ -44,7 +44,7 @@ func (t *invoiceSunmiTemplate) GetPrintContent(
 	if temp == 2 {
 		return NewStatementOrderSunmiTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
-			constant.PrinterTemplateInvoice,
+			printerConst.PrinterTemplateInvoice,
 			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
 			saleOrder,
@@ -65,7 +65,7 @@ func (t *invoiceSunmiTemplate) GetPrintContent(
 	finalPrice := saleOrder.GetPrintReceivablePrice()
 
 	// 是否自己打印
-	isOneself := printerType != constant.PrinterTypeSunmiLan && printerType != constant.PrinterTypeSunmiCloud
+	isOneself := printerType != printerConst.PrinterTypeSunmiLan && printerType != printerConst.PrinterTypeSunmiCloud
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)

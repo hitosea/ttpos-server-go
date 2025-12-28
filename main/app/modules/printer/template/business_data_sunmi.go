@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -50,7 +51,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 	isTrMyEn := t.base.Lang == "tr" || t.base.Lang == "my" || t.base.Lang == "en"
 
 	// 是否自己打印
-	isOneself := printerType != constant.PrinterTypeSunmiLan && printerType != constant.PrinterTypeSunmiCloud
+	isOneself := printerType != printerConst.PrinterTypeSunmiLan && printerType != printerConst.PrinterTypeSunmiCloud
 
 	//  创建打印机实例
 	printer := pkg.NewPrinter(567)

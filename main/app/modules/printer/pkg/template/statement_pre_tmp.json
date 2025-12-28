@@ -1555,7 +1555,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
-                    "width": 60,
+                    "width": 70,
                     "show_currency_unit": false
                 },
                 "block_after_label": {
@@ -1615,7 +1615,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
-                    "width": 60,
+                    "width": 70,
                     "show_currency_unit": true
                 },
                 "conditions": [
