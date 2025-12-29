@@ -7,7 +7,9 @@ import (
 
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -119,6 +121,7 @@ func queryConfigFromDB() (ObjectStorageCacheConfig, error) {
 	// 解析 JSON 配置
 	var config ObjectStorageCacheConfig
 	if err := json.Unmarshal([]byte(setting.Values), &config); err != nil {
+		logger.Logger.Error("解析对象存储缓存配置失败", zap.Error(err), zap.String("setting", setting.Values))
 		// 解析失败，返回默认值
 		return defaultObjectStorageCacheConfig, nil
 	}
