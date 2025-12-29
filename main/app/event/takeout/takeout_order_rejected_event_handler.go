@@ -43,6 +43,8 @@ func (s *takeoutOrderRejectedEventSubscriber) Handle(domainEvent event.DomainEve
 			"rejected",
 			map[string]any{},
 		)
+		// 发送 CUSTOMER_CALL 通知（触发前端未处理提醒）
+		sendCustomerCallWebSocketNotification(orderRejectedEvent.CompanyUuid)
 	})
 
 	return nil

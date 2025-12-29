@@ -123,7 +123,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else if order.IsTakeout {
-			printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo + "\n")
+			printer.AppendText(order.OrderSourceTakeoutText + ": " + order.SerialNo + "\n")
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 		}
@@ -302,7 +302,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else if order.IsTakeout {
-			printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo + "\n")
+			printer.AppendText(order.OrderSourceTakeoutText + ": " + order.SerialNo + "\n")
 		} else if order.SerialNo != "" {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 		}
@@ -596,7 +596,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + order.SerialNo)
 		} else if order.IsTakeout {
-			printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo + "\n")
+			printer.AppendText(order.OrderSourceTakeoutText + ": " + order.SerialNo + "\n")
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
@@ -772,7 +772,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + order.SerialNo)
 		} else if order.IsTakeout {
-			printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo)
+			printer.AppendText(order.OrderSourceTakeoutText + ": " + order.SerialNo)
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
@@ -1022,7 +1022,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 	} else if order.IsTakeoutBill {
 		printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 	} else if order.IsTakeout {
-		printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo)
+		printer.AppendText(order.OrderSourceTakeoutText + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText)
 	}
@@ -1293,7 +1293,7 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.SetLineSpacing(30)
 		printer.LineFeed()
 	} else if order.IsTakeout {
-		printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo)
+		printer.AppendText(order.OrderSourceTakeoutText + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo)
 	}
