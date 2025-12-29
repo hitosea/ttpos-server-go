@@ -2332,7 +2332,7 @@ func (s *materialSrv) unlinkSauceBomCard(ctx context.Context, req req.ProductBom
 func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error {
 	db := ctx.GetDB()
 	productBomRepo := repository.NewProductBomRepo(db)
-	productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+	productBom, err := productBomRepo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), req.RelatedUuid)
 	if err != nil {
 		return errors.WithMessage(err, "获取商品规格失败")
 	}
@@ -2384,7 +2384,7 @@ func (s *materialSrv) CopyProductBomCard(ctx context.Context, req req.ProductBom
 	relatedName := ""
 	if req.RelatedType == constant.ProductBomCardRelatedTypeFlavor {
 		productBomRepo := repository.NewProductBomRepo(db)
-		productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+		productBom, err := productBomRepo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), req.RelatedUuid)
 		if err != nil {
 			return errors.WithMessage(err, "获取商品规格失败")
 		}
@@ -2555,7 +2555,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 				})
 			}
 			productBomRepo := repository.NewProductBomRepo(db)
-			productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+			productBom, err := productBomRepo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), req.RelatedUuid)
 			if err != nil {
 				return errors.WithMessage(err, "获取商品规格失败")
 			}

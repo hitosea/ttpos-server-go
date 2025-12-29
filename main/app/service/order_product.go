@@ -924,7 +924,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			returnSaleOrderProduct = newSaleOrderProduct
 			// 补全newSaleOrderProduct对象的ProductBom对象
 			for _, saleOrderProductBom := range newSaleOrderProduct.SaleOrderProductBoms {
-				productBom, err := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(saleOrderProductBom.ProductBomUuid)
+				productBom, err := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), saleOrderProductBom.ProductBomUuid)
 				if err != nil {
 					return nil, errors.WithMessage(err)
 				}

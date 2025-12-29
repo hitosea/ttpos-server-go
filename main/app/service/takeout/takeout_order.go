@@ -120,7 +120,7 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 		}
 
 		// 5.3 触发库存扣减，并获取实际扣减的材料列表
-		materials, err := s.reduceTakeoutOrderStock(tx, order.Uuid)
+		materials, err := s.reduceTakeoutOrderStock(tx, companyUuid, order.Uuid)
 		if err != nil {
 			logger.Logger.Error("扣减外卖订单库存失败", zap.Uint64("orderUuid", order.Uuid), zap.Error(err))
 			// 库存扣减失败不影响出库流程，只记录日志
@@ -449,7 +449,7 @@ func (s *takeoutSrv) updateTakeoutOrderSalesVolume(ctx context.Context, order *t
 }
 
 // reduceTakeoutOrderStock 扣减外卖订单库存，并返回实际扣减的材料列表
-func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint64) (map[uint64]map[uint64]float64, error) {
+func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, takeoutOrderUuid uint64) (map[uint64]map[uint64]float64, error) {
 	// 加锁，防止并发扣减库存
 	lockKey := fmt.Sprintf("takeout_order_stock:%d", takeoutOrderUuid)
 	systemLock := lock.NewSystemLock()
@@ -485,7 +485,7 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, takeoutOrderUuid uint6
 			// 查询 BOM 信息
 			if productBoms[item.ProductBomUuid] == nil {
 				productBomRepo := repository.NewProductBomRepo(db)
-				bom, err := productBomRepo.GetFlavorProductBomByUuid(item.ProductBomUuid)
+				bom, err := productBomRepo.GetFlavorProductBomByUuid(companyUuid, item.ProductBomUuid)
 				if err != nil {
 					logger.Logger.Error("查询BOM信息失败", zap.Uint64("bomUuid", item.ProductBomUuid), zap.Error(err))
 					continue
@@ -628,7 +628,7 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 		}
 
 		// 5.2 恢复库存
-		if err := s.restoreTakeoutOrderStock(tx, warehouseOutFormItems); err != nil {
+		if err := s.restoreTakeoutOrderStock(tx, companyUuid, warehouseOutFormItems); err != nil {
 			logger.Logger.Error("恢复外卖订单库存失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 			// 库存恢复失败不影响流程，只记录日志
 		}
@@ -669,7 +669,7 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 }
 
 // restoreTakeoutOrderStock 恢复外卖订单库存
-func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, warehouseOutFormItems []*model.WarehouseOutFormItem) error {
+func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, companyUuid uint64, warehouseOutFormItems []*model.WarehouseOutFormItem) error {
 	// 按类型分组处理
 	productBoms := make(map[uint64]*model.ProductBom)
 	materials := make(map[uint64]map[uint64]float64) // map[materialUuid]map[warehouseUuid]restoreStockNum
@@ -684,7 +684,7 @@ func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, warehouseOutFormItems
 			// 查询 BOM 信息
 			if productBoms[item.ProductBomUuid] == nil {
 				productBomRepo := repository.NewProductBomRepo(db)
-				bom, err := productBomRepo.GetFlavorProductBomByUuid(item.ProductBomUuid)
+				bom, err := productBomRepo.GetFlavorProductBomByUuid(companyUuid, item.ProductBomUuid)
 				if err != nil {
 					logger.Logger.Error("查询BOM信息失败", zap.Uint64("bomUuid", item.ProductBomUuid), zap.Error(err))
 					continue

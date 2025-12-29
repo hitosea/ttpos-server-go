@@ -37,7 +37,7 @@ func (r *ProductBomRepositoryImpl) FindByUuid(
 	// 使用现有的 GetFlavorProductBomByUuid 方法，它已经包含了必要的预加载
 	// 预加载链：ProductBomCard -> RelatedMaterials -> Material -> WarehouseItems
 	// 这样可以一次性加载所有需要的数据，避免 N+1 查询问题
-	productBom, err := repo.GetFlavorProductBomByUuid(uuid)
+	productBom, err := repo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), uuid)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil

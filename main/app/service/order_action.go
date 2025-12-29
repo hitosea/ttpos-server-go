@@ -486,7 +486,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
 			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]float64)
 		}
-		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
+		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -1335,7 +1335,7 @@ func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, 
 	keys := make([]string, 0, len(uuids))
 	for _, uuid := range uuids {
 		if uuid > 0 {
-			keys = append(keys, persistence.BuildKey(ctx, "product_bom", uuid))
+			keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid))
 		}
 	}
 
@@ -1356,7 +1356,7 @@ func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, 
 		// 转换为 map[string]*model.ProductBom
 		result := make(map[string]*model.ProductBom)
 		for _, bom := range boms {
-			key := persistence.BuildKey(ctx, "product_bom", bom.Uuid)
+			key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, bom.Uuid)
 			result[key] = bom
 		}
 		return result, nil
@@ -1371,7 +1371,7 @@ func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, 
 	result := make([]*model.ProductBom, 0, len(uuids))
 	for _, uuid := range uuids {
 		if uuid > 0 {
-			key := persistence.BuildKey(ctx, "product_bom", uuid)
+			key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
 			if bom, ok := batchResult[key]; ok && bom != nil {
 				result = append(result, bom)
 			}

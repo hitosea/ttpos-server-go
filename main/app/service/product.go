@@ -5354,7 +5354,13 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		if !hasInventory {
 			packageInventory = constant.ProductBomInfiniteStock // 无限库存,如果查询到库存数据就显示无限库存
 		}
+		// 判断售罄状态
 		isSoldOut := packageInventory <= 0
+		if productPackage.IsPackage() {
+			// 批量查询套餐子商品库存
+			packageSubProductInventoryMap := s.getPackageSubProductInventories(ctx, productPackages, appService)
+			isSoldOut = s.checkProductSoldOut(productPackage, packageSubProductInventoryMap)
+		}
 
 		productItem := product_resp.ProductShopListItemResp{
 			Uuid:       productPackage.Uuid,
@@ -5439,6 +5445,82 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 	}
 
 	return &productResp, nil
+}
+
+// getPackageSubProductInventories 批量查询套餐子商品库存
+// 收集所有套餐子商品的 BOM UUID，并批量查询库存
+func (s *productSrv) getPackageSubProductInventories(
+	ctx context.Context,
+	productPackages []model.ProductPackage,
+	appService *inventoryApp.ProductInventoryAppService,
+) map[uint64]float64 {
+	// 收集所有套餐子商品的 BOM UUID，用于批量查询子商品库存
+	packageSubProductBomUuids := make([]uint64, 0)
+	for _, productPackage := range productPackages {
+		// 只处理套餐类型
+		if productPackage.IsPackage() {
+			for _, group := range productPackage.ProductPackageGroups {
+				for _, item := range group.ProductPackageGroupItems {
+					if item.IsDelete() {
+						continue
+					}
+					// 收集子商品的 BOM UUID（规格）
+					if item.ProductBomUuid > 0 {
+						packageSubProductBomUuids = append(packageSubProductBomUuids, item.ProductBomUuid)
+					}
+				}
+			}
+		}
+	}
+
+	// 批量查询套餐子商品库存
+	packageSubProductInventoryMap := make(map[uint64]float64)
+	if len(packageSubProductBomUuids) > 0 {
+		subProductInventoryMap, err := appService.GetProductInventoriesBatch(ctx, packageSubProductBomUuids)
+		if err != nil {
+			// 如果查询库存失败，记录日志但不影响主流程，使用默认值
+			logger.Logger.Warn("批量查询套餐子商品库存失败", zap.Uint64("company_uuid", ctx.GetCompanyUuid()), zap.Error(err))
+		} else {
+			packageSubProductInventoryMap = subProductInventoryMap
+		}
+	}
+
+	return packageSubProductInventoryMap
+}
+
+// checkProductSoldOut 判断套餐是否售罄
+func (s *productSrv) checkProductSoldOut(
+	productPackage model.ProductPackage,
+	packageSubProductInventoryMap map[uint64]float64,
+) bool {
+	// 如果是套餐，只要有一个子商品售罄，套餐就显示售罄
+	hasSubProducts := false
+	isSoldOut := false
+	for _, group := range productPackage.ProductPackageGroups {
+		for _, item := range group.ProductPackageGroupItems {
+			if item.IsDelete() {
+				continue
+			}
+			if item.ProductBomUuid > 0 {
+				hasSubProducts = true
+				subProductInventory := packageSubProductInventoryMap[item.ProductBomUuid]
+				// 如果子商品库存 <= 0，套餐售罄
+				if subProductInventory <= 0 {
+					isSoldOut = true
+					break
+				}
+			}
+		}
+		if isSoldOut {
+			break
+		}
+	}
+
+	if !hasSubProducts {
+		isSoldOut = true
+	}
+
+	return isSoldOut
 }
 
 // SortProductShopList 排序商品列表
