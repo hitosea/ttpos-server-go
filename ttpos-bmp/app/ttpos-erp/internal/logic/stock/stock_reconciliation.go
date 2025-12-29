@@ -117,7 +117,7 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 				Warehouse: itemData.Warehouse,
 			})
 
-			if err == nil && binResp != nil && len(binResp.Items) > 0 && binResp.Items[0].ValuationRate > 0 {
+			if err == nil && binResp != nil && len(binResp.Items) > 0 {
 				// 使用 Bin 表中的估值率（因为指定了 item_code 和 warehouse，应该只有一条记录）
 				itemData.ValuationRate = binResp.Items[0].ValuationRate
 				g.Log().Infof(ctx, "从 Bin 表获取估值率: item_code=%s, warehouse=%s, valuation_rate=%.2f",
