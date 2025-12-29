@@ -146,7 +146,10 @@ func (s *orderSrv) GetProductNameByItemCode(ctx context.Context, itemCode string
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+			bom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(ctx.GetCompanyUuid(), product.SaleOrderProductBoms[0].ProductBomUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
 			localeName = product.GetNameAndFlavorNameFrom(bom, &names)
 		}
 		productInfos = append(productInfos, ProductInfo{

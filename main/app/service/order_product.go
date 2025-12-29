@@ -2495,23 +2495,6 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		},
 		IsH5Product: request.IsH5Product(),
 	}, opts...)
-
-	// 往销售账单里添加商品
-	// shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
-	// 	SaleBillUuid:  request.SaleBillUuid,
-	// 	SaleOrderUuid: request.SaleOrderUuid,
-	// 	Products: []req.ProductParams{
-	// 		{
-	// 			FlavorProductBomUuid:            request.FlavorUuid,
-	// 			Num:                             num,
-	// 			SauceProductBomUuidList:         request.SauceUuidList,
-	// 			ProductPackageAttributeUuidList: request.AttributeUuidList,
-	// 			Operation:                       request.Operation,
-	// 			MustPlanUuid:                    request.MustPlanUuid,
-	// 		},
-	// 	},
-	// 	IsH5Product: request.IsH5Product(),
-	// }, opts...)
 	if err != nil {
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
 		return nil, errors.WithMessage(err)

@@ -1696,7 +1696,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 	for _, product := range params.Products {
 		// 获取商品包信息
-		productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.FlavorProductBomUuid)
+		productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(ctx.GetCompanyUuid(), product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -2297,7 +2297,7 @@ func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.
 func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint, packageNum float64, remarkUuids []uint64) (*model.SaleOrderProduct, error) {
 	db := ctx.GetDB()
 	// 获取商品包信息
-	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.FlavorProductBomUuid)
+	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(ctx.GetCompanyUuid(), product.FlavorProductBomUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -3114,7 +3114,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
-					bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+					bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(ctx.GetCompanyUuid(), product.SaleOrderProductBoms[0].ProductBomUuid)
 					localeName = product.GetNameAndFlavorNameFrom(bom, &names)
 				}
 				products = append(products, resp.Product{
