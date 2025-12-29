@@ -80,6 +80,7 @@ type StockReconciliationCheckMaterialsResp struct {
 	Status                     bool               `json:"status"`                        // 物品状态,true上架 false下架
 	IsDeleted                  bool               `json:"is_deleted"`                    // 是否已删除
 	UnitCount                  uint               `json:"unit_count"`                    // 单位数量
+	ExistsInWarehouse          bool               `json:"exists_in_warehouse"`           // 是否在仓库中
 }
 
 type StockReconciliationCheckMaterialsListResp struct {

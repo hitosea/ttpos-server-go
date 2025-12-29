@@ -42485,6 +42485,19 @@ const docTemplate = `{
                 }
             }
         },
+        "req.CheckMaterialsItem": {
+            "type": "object",
+            "properties": {
+                "counted_quantity": {
+                    "description": "实盘库存数量",
+                    "type": "number"
+                },
+                "material_uuid": {
+                    "description": "待盘点物品UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.CheckMemberPasswordReq": {
             "type": "object",
             "required": [
@@ -48787,19 +48800,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.StockReconciliationCheckMaterialsItem": {
-            "type": "object",
-            "properties": {
-                "counted_quantity": {
-                    "description": "实盘库存数量",
-                    "type": "number"
-                },
-                "material_uuid": {
-                    "description": "待盘点物品UUID",
-                    "type": "integer"
-                }
-            }
-        },
         "req.StockReconciliationCheckMaterialsReq": {
             "type": "object",
             "properties": {
@@ -48807,7 +48807,7 @@ const docTemplate = `{
                     "description": "待盘点物品列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/req.StockReconciliationCheckMaterialsItem"
+                        "$ref": "#/definitions/req.CheckMaterialsItem"
                     }
                 },
                 "uuid": {
@@ -60179,6 +60179,10 @@ const docTemplate = `{
         "resp.StockReconciliationCheckMaterialsResp": {
             "type": "object",
             "properties": {
+                "exists_in_warehouse": {
+                    "description": "是否在仓库中",
+                    "type": "boolean"
+                },
                 "is_deleted": {
                     "description": "是否已删除",
                     "type": "boolean"

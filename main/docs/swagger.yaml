@@ -3877,6 +3877,15 @@ definitions:
     required:
     - operation_type
     type: object
+  req.CheckMaterialsItem:
+    properties:
+      counted_quantity:
+        description: 实盘库存数量
+        type: number
+      material_uuid:
+        description: 待盘点物品UUID
+        type: integer
+    type: object
   req.CheckMemberPasswordReq:
     properties:
       member_uuid:
@@ -8282,21 +8291,12 @@ definitions:
     required:
     - uuid
     type: object
-  req.StockReconciliationCheckMaterialsItem:
-    properties:
-      counted_quantity:
-        description: 实盘库存数量
-        type: number
-      material_uuid:
-        description: 待盘点物品UUID
-        type: integer
-    type: object
   req.StockReconciliationCheckMaterialsReq:
     properties:
       items:
         description: 待盘点物品列表
         items:
-          $ref: '#/definitions/req.StockReconciliationCheckMaterialsItem'
+          $ref: '#/definitions/req.CheckMaterialsItem'
         type: array
       uuid:
         description: 盘点单UUID
@@ -16023,6 +16023,9 @@ definitions:
     type: object
   resp.StockReconciliationCheckMaterialsResp:
     properties:
+      exists_in_warehouse:
+        description: 是否在仓库中
+        type: boolean
       is_deleted:
         description: 是否已删除
         type: boolean

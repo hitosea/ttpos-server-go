@@ -73,7 +73,8 @@ type IMaterialRepo interface {
 	WithUnit() DBOption
 	WithMultiLanguageName(opts ...DBOption) DBOption
 	WithNotBaseUnitList(opts ...DBOption) DBOption
-	WhereAllowSubstoreVisible(visible int) DBOption // 可见性过滤选项方法
+	WhereAllowSubstoreVisible(visible int) DBOption         // 可见性过滤选项方法
+	WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption // 物品UUID必须在仓库物品列表中
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -131,13 +132,20 @@ func (r *MaterialRepoImpl) WhereAllowSubstoreVisible(visible int) DBOption {
 	}
 }
 
+func (r *MaterialRepoImpl) WhereUuidInWarehouseItem(warehouseUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid in (?)",
+			r.db.Model(&model.WarehouseItem{}).Select("material_uuid").Where("warehouse_uuid = ?", warehouseUuid).Scopes(NotDeleted))
+	}
+}
+
 // GetMaterialListWithPagination 获取物品列表（分页）
 func (r *MaterialRepoImpl) GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error) {
 	var materials []model.Material
 	var total int64
 
 	// 构建查询
-	query := r.db.Model(&model.Material{}).Where("delete_time = ?", 0)
+	query := r.db.Model(&model.Material{}).Where("delete_time = ?", 0).Debug()
 
 	// 应用查询选项
 	for _, opt := range opts {
