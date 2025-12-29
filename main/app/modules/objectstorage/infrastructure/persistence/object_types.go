@@ -3,8 +3,14 @@ package persistence
 // ObjectType 对象类型常量定义
 // 用于统一管理缓存 key 中的对象类型字符串，避免硬编码
 const (
+	// ProductList 商品列表
+	ObjectTypeProductList = "product_list"
+
 	// ProductBom 普通商品BOM
 	ObjectTypeProductBom = "product_bom"
+
+	// ProductFlavor 商品口味
+	ObjectTypeProductFlavor = "product_flavor"
 
 	// ProductBomFlavor 规格商品BOM（包含预加载的规格信息）
 	ObjectTypeProductBomFlavor = "product_bom_flavor"
@@ -18,8 +24,8 @@ const (
 	// ProductPackage 商品包
 	ObjectTypeProductPackage = "product_package"
 
-	// SaleBill 销售单
-	ObjectTypeSaleBill = "sale_bill"
+	// ProductAttribute 商品属性
+	ObjectTypeProductAttribute = "product_attribute"
 
 	// SaleBillSetting 销售单设置
 	ObjectTypeSaleBillSetting = "sale_bill_setting"
@@ -39,7 +45,9 @@ const (
 	// MultiLanguageName 多语言名称
 	ObjectTypeMultiLanguageName = "multi_language_name"
 
+	// ProductCategory 商品分类
+	ObjectTypeProductCategory = "product_category"
+
 	// ProductSauce 商品小料
 	ObjectTypeProductSauce = "product_sauce"
 )
-

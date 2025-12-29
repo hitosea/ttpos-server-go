@@ -29,13 +29,13 @@ func BuildKeyWithCompanyUuid(companyUuid uint64, objectType string, objectUuid u
 // BuildAuthStaffKey 构建员工信息缓存 key
 // Key 格式：{system_prefix}:{company_uuid}:staff:{staff_uuid}
 func BuildAuthStaffKey(ctx goCtx.Context, staffUuid uint64) string {
-	return BuildKey(ctx, "staff", staffUuid)
+	return BuildKey(ctx, ObjectTypeStaff, staffUuid)
 }
 
 // BuildApiPermissionKey 构建 API 权限缓存 key
 // Key 格式：{system_prefix}:{company_uuid}:api_permission:{staff_uuid}
 func BuildApiPermissionKey(companyUuid, staffUuid uint64) string {
-	return BuildKeyWithCompanyUuid(companyUuid, "api_permission", staffUuid)
+	return BuildKeyWithCompanyUuid(companyUuid, ObjectTypeApiPermission, staffUuid)
 }
 
 // BuildProductListCacheKey 构建商品列表缓存 key
@@ -59,7 +59,7 @@ func BuildProductListCacheKey(companyUuid uint64, source string, pageNo, pageSiz
 	keyParts := []string{
 		SystemPrefix,
 		fmt.Sprintf("%d", companyUuid),
-		"product_list",
+		ObjectTypeProductList,
 		source,
 		fmt.Sprintf("%d", pageNo),
 		fmt.Sprintf("%d", pageSize),
