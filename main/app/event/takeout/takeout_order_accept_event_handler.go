@@ -53,7 +53,7 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 	ctx.SetCompanyUuid(orderAcceptedEvent.CompanyUuid)
 	ctx.SetDB(db)
 	// 创建 service（只传入必要的依赖，其他为 nil）
-	takeoutSrv := takeoutService.NewTakeoutSrv(dbm, nil, nil, nil, nil, nil)
+	takeoutSrv := takeoutService.NewTakeoutSrvImpl(dbm)
 
 	// 异步处理，不阻塞事件分发
 	utils.Go(func() {
@@ -97,7 +97,7 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 
 	// 异步打印送厨单
 	utils.Go(func() {
-		_, err := takeoutSrv.PrintProductionOrder(ctx, orderAcceptedEvent.OrderUuid, printerConstant.PrinterProductTypeKitchen)
+		_, err := takeoutSrv.PrintProductionOrder(ctx, orderAcceptedEvent.OrderUuid, printerConstant.PrinterProductTypeKitchen, nil)
 		if err != nil {
 			logger.Logger.Error("打印送厨单失败",
 				zap.String("takeoutOrderUuid", orderAcceptedEvent.TakeoutOrderUuid),

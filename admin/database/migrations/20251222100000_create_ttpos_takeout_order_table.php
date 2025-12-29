@@ -166,7 +166,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('platform', 'string', ['limit' => 50, 'default' => '', 'comment' => '平台: grab,foodpanda,lineman'])
                 ->addColumn('platform_modifier_id', 'string', ['limit' => 255, 'default' => '', 'comment' => '平台修饰符ID'])
                 ->addColumn('modifier_name', 'text', ['null' => true, 'comment' => '修饰符名称'])
-                ->addColumn('ttpos_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS修饰符UUID(关联后)'])
+                ->addColumn('ttpos_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS修饰符UUID(关联后：规格/加料/属性值的UUID/套餐商品组UUID)'])
                 ->addColumn('ttpos_modifier_type', 'string', ['limit' => 20, 'default' => '', 'comment' => 'TTPOS修饰符类型: flavor=规格, sauce=加料, attr=属性'])
                 ->addColumn('quantity', 'integer', ['signed' => false, 'default' => 1, 'comment' => '数量'])
                 ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '价格(元,4位小数)'])

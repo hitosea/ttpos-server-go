@@ -3,6 +3,7 @@
 namespace app\common\service\websocket;
 
 use think\facade\Config;
+use stdClass as StdClass;
 
 class Websocket
 {
@@ -126,7 +127,7 @@ class Websocket
                 'not_device_id' => $notDeviceId,
                 'message_type' => $messageType,
                 'message_key' => $cacheKey,
-                'data' => $data,
+                'data' => count($data) > 0 ? $data : new stdClass(),
             ];
 
             // 发送POST请求

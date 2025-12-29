@@ -319,11 +319,11 @@ func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.Defaul
 		Img         string
 		Sort        int
 	}{
-		{constant.PaymentMethodCodeKbankAlipay, "Alipay（Kbank）", "Alipay", "/image/pay/alipay.png", 0},
-		{constant.PaymentMethodCodeKbankWechat, "WeChatPay（Kbank）", "WeChatPay", "/image/pay/wechat_pay.png", 1},
-		{constant.PaymentMethodCodeKbankCreditQR, "Credit QR（Kbank）", "Credit QR", "/image/pay/credit_qr.png", 2},
-		{constant.PaymentMethodCodeKbankThaiQR, "Thai QR（Kbank）", "Thai QR", "/image/pay/thai_qr.png", 3},
-		{constant.PaymentMethodCodeKbankCreditCard, "Credit Card（Kbank）", "Credit Card", "/image/pay/credit_card.png", 4},
+		{constant.PaymentMethodCodeKbankAlipay, "Alipay", "Alipay", "/image/pay/alipay.png", 0},
+		{constant.PaymentMethodCodeKbankWechat, "WeChatPay", "WeChatPay", "/image/pay/wechat_pay.png", 1},
+		{constant.PaymentMethodCodeKbankCreditQR, "Credit QR", "Credit QR", "/image/pay/credit_qr.png", 2},
+		{constant.PaymentMethodCodeKbankThaiQR, "Thai QR", "Thai QR", "/image/pay/thai_qr.png", 3},
+		{constant.PaymentMethodCodeKbankCreditCard, "Credit Card", "Credit Card", "/image/pay/credit_card.png", 4},
 	}
 
 	// 2. 查询已添加的Kbank支付方式

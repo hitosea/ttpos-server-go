@@ -43,3 +43,13 @@ func NewTakeoutSrv(
 		productTakeoutSrv: productTakeoutSrv,
 	}
 }
+
+func NewTakeoutSrvImpl(
+	dbm *database.DBManager,
+) ITakeoutSrv {
+	return &takeoutSrv{
+		dbm:           dbm,
+		takeoutAppSrv: application.NewTakeoutAppService(dbm),
+		uploadFileSrv: service.NewUploadFileSrv(dbm),
+	}
+}

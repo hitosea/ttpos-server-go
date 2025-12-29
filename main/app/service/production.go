@@ -913,67 +913,98 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 
 	// 完成制作事件
 	utils.Go(func() {
-		// 把 products  按 SaleBillUuid 分组
-		productsBySaleBillUuid := make(map[uint64][]model.ProductionOrderProduct, 0)
-		for _, product := range products {
-			productsBySaleBillUuid[product.SaleBillUuid] = append(productsBySaleBillUuid[product.SaleBillUuid], product)
-		}
-		// 获取套餐商品
-		if len(req.ProductUuids) > 0 {
-			packageSubProductUuidMap := make(map[uint64]bool)
+		// 判断是否为外卖订单
+		isTakeoutOrder := len(products) > 0 && products[0].TakeoutOrderUuid > 0
+		if isTakeoutOrder {
+			// 外卖订单：按 TakeoutOrderUuid 分组
+			productsByTakeoutOrderUuid := make(map[uint64][]model.ProductionOrderProduct, 0)
 			for _, product := range products {
-				if product.SaleOrderProduct.IsPackageSubProduct() {
-					packageSubProductUuidMap[product.SaleOrderProduct.PackageUuid] = true
+				productsByTakeoutOrderUuid[product.TakeoutOrderUuid] = append(productsByTakeoutOrderUuid[product.TakeoutOrderUuid], product)
+			}
+			for takeoutOrderUuid, products := range productsByTakeoutOrderUuid {
+				event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
+					BasePayload: event.BasePayload{
+						Ctx:              ctx,
+						CompanyUuid:      ctx.GetCompanyUuid(),
+						Source:           ctx.GetSource(),
+						TakeoutOrderUuid: takeoutOrderUuid,
+					},
+					FinishedTime: finishedTime,
+					Products: func() event.Products {
+						orderProducts := make(event.Products, 0)
+						for _, product := range products {
+							orderProducts = append(orderProducts, event.OrderProduct{
+								ProductId:      product.ProductPackageUuid,
+								ProductBomUuid: product.ProductBomUuid,
+							})
+						}
+						return orderProducts
+					}(),
+				})
+			}
+		} else {
+			// 堂食/外送订单：按 SaleBillUuid 分组
+			productsBySaleBillUuid := make(map[uint64][]model.ProductionOrderProduct, 0)
+			for _, product := range products {
+				productsBySaleBillUuid[product.SaleBillUuid] = append(productsBySaleBillUuid[product.SaleBillUuid], product)
+			}
+			// 获取套餐商品
+			if len(req.ProductUuids) > 0 {
+				packageSubProductUuidMap := make(map[uint64]bool)
+				for _, product := range products {
+					if product.SaleOrderProduct.IsPackageSubProduct() {
+						packageSubProductUuidMap[product.SaleOrderProduct.PackageUuid] = true
+					}
 				}
-			}
-			packageSubProductUuids := make([]uint64, 0, len(packageSubProductUuidMap))
-			for uuid := range packageSubProductUuidMap {
-				packageSubProductUuids = append(packageSubProductUuids, uuid)
-			}
-			if len(packageSubProductUuids) > 0 {
-				productionRepo := repository.NewSaleOrderProductRepo(db)
-				saleOrderProducts, err := productionRepo.GetSaleOrderProductsByUuidIn(packageSubProductUuids, productionRepo.WithSaleOrderProductAll())
-				if err != nil {
-					logger.Logger.Error("获取套餐子商品失败", zap.Error(err))
-				} else {
-					for _, saleOrderProduct := range saleOrderProducts {
-						productsBySaleBillUuid[saleOrderProduct.SaleBillUuid] = append(productsBySaleBillUuid[saleOrderProduct.SaleBillUuid], model.ProductionOrderProduct{
-							BaseModel: model.BaseModel{
-								Uuid: saleOrderProduct.Uuid,
-							},
-							ProductPackageUuid: saleOrderProduct.PackageUuid,
-							SaleOrderProduct:   *saleOrderProduct,
-							SaleBill:           *saleOrderProduct.SaleBill,
-						})
+				packageSubProductUuids := make([]uint64, 0, len(packageSubProductUuidMap))
+				for uuid := range packageSubProductUuidMap {
+					packageSubProductUuids = append(packageSubProductUuids, uuid)
+				}
+				if len(packageSubProductUuids) > 0 {
+					productionRepo := repository.NewSaleOrderProductRepo(db)
+					saleOrderProducts, err := productionRepo.GetSaleOrderProductsByUuidIn(packageSubProductUuids, productionRepo.WithSaleOrderProductAll())
+					if err != nil {
+						logger.Logger.Error("获取套餐子商品失败", zap.Error(err))
+					} else {
+						for _, saleOrderProduct := range saleOrderProducts {
+							productsBySaleBillUuid[saleOrderProduct.SaleBillUuid] = append(productsBySaleBillUuid[saleOrderProduct.SaleBillUuid], model.ProductionOrderProduct{
+								BaseModel: model.BaseModel{
+									Uuid: saleOrderProduct.Uuid,
+								},
+								ProductPackageUuid: saleOrderProduct.PackageUuid,
+								SaleOrderProduct:   *saleOrderProduct,
+								SaleBill:           *saleOrderProduct.SaleBill,
+							})
+						}
 					}
 				}
 			}
-		}
-		for saleBillUuid, products := range productsBySaleBillUuid {
-			event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
-				BasePayload: event.BasePayload{
-					Ctx:           ctx,
-					CompanyUuid:   ctx.GetCompanyUuid(),
-					Source:        ctx.GetSource(),
-					SaleBillUuid:  saleBillUuid,
-					SaleOrderUuid: saleBillUuid,
-				},
-				FinishedTime: finishedTime,
-				Products: func() event.Products {
-					orderProducts := make(event.Products, 0)
-					for _, product := range products {
-						if product.SaleOrderProduct.ID == 0 {
-							continue
+			for saleBillUuid, products := range productsBySaleBillUuid {
+				event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
+					BasePayload: event.BasePayload{
+						Ctx:           ctx,
+						CompanyUuid:   ctx.GetCompanyUuid(),
+						Source:        ctx.GetSource(),
+						SaleBillUuid:  saleBillUuid,
+						SaleOrderUuid: saleBillUuid,
+					},
+					FinishedTime: finishedTime,
+					Products: func() event.Products {
+						orderProducts := make(event.Products, 0)
+						for _, product := range products {
+							if product.SaleOrderProduct.ID == 0 {
+								continue
+							}
+							// 套餐子商品不显示送厨记录
+							if len(req.ProductUuids) > 0 && product.SaleOrderProduct.IsPackageSubProduct() {
+								continue
+							}
+							orderProducts = append(orderProducts, s.convertToEventOrderProduct(&product, products))
 						}
-						// 套餐子商品不显示送厨记录
-						if len(req.ProductUuids) > 0 && product.SaleOrderProduct.IsPackageSubProduct() {
-							continue
-						}
-						orderProducts = append(orderProducts, s.convertToEventOrderProduct(&product, products))
-					}
-					return orderProducts
-				}(),
-			})
+						return orderProducts
+					}(),
+				})
+			}
 		}
 	})
 

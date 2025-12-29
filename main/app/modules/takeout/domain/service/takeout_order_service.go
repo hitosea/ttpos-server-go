@@ -840,6 +840,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			item := &order.TakeoutOrderItems[i]
 			for j := range item.TakeoutOrderItemModifiers {
 				modifier := &item.TakeoutOrderItemModifiers[j]
+
 				// 设置修饰符名称
 				if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
 					// 已映射修饰符：使用修饰符名称和数量
@@ -851,6 +852,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 
 						// 如果是 commodity 类型，设置规格信息和数量
 						if modifier.TtposModifierType == string(valueobject.ModifierTypeCommodity) {
+							modifier.TtposProductUuid = info.TtposProductUuid
 							modifier.TtposFlavorUuid = info.TtposFlavorUuid
 							modifier.TtposFlavorName = info.TtposFlavorName
 

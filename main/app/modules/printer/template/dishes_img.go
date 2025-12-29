@@ -780,6 +780,8 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s%s: %s%s", orderSourceTakeoutText, t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
+	} else if order.IsTakeout {
+		img.AppendText(orderSourceTakeoutText + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -804,7 +806,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 	// 订单号和时间
 	img.PrintInColumns(
-		pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 210, Align: pkg.AlignLeft},
+		pkg.ColumnConfig{Text: t.base.Translate("订单号"), Width: 200, Align: pkg.AlignLeft},
 		pkg.ColumnConfig{Text: order.OrderNo, Width: 0, Align: pkg.AlignRight},
 	)
 	img.PrintInColumns(

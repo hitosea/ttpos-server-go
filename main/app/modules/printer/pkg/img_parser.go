@@ -1008,7 +1008,7 @@ func (p *ImgTemplateParser) getFontWeight(attr ImgTemplateBlockAttr) int {
 	}
 
 	if attr.FontBold {
-		return 4
+		return 3
 	}
 
 	return 2

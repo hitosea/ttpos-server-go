@@ -152,7 +152,10 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if slices.Contains([]uint64{58, 124, 125, 128, 129, 160, 162, 1724320603, 1724320604, 1724320605}, permission.Uuid) {
 			continue
 		}
-
+		// 暂时去掉收银交班权限
+		if permission.Uuid == 1704881155 {
+			continue
+		}
 		// 暂时去掉外卖管理
 		if permission.ID == 1626688443 {
 			continue
