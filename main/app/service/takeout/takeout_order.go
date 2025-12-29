@@ -1207,10 +1207,8 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 
 		// 3. 执行打印
 		printerRepo := printer.NewPrinterRepo(ctx, "")
-		printerRepo.PrintingDishes(
-			printType,
-			printOrder,
-		)
+		printerRepo.SetFinishedTime(time.Now().Unix())
+		printerRepo.PrintingDishes(printType, printOrder)
 	})
 
 	return nil, nil
