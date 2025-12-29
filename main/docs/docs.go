@@ -14171,7 +14171,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示",
+                "description": "根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示。根据操作类型（operation_type）区分优惠折扣场景和退款场景，不同场景返回对应授权列表中的员工。",
                 "consumes": [
                     "application/json"
                 ],
@@ -14183,6 +14183,13 @@ const docTemplate = `{
                 ],
                 "summary": "根据邮箱或手机号查询员工",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "操作类型，discount-折扣操作，refund-退款操作",
+                        "name": "operation_type",
+                        "in": "query",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "搜索关键词（邮箱或手机号，支持模糊匹配）",
@@ -16671,12 +16678,13 @@ const docTemplate = `{
                 "summary": "打印外卖订单小票",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "format": "int64",
                         "description": "订单UUID",
                         "name": "uuid",
-                        "in": "query",
-                        "required": true
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TakeoutOrderPrintReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -50370,6 +50378,18 @@ const docTemplate = `{
                 }
             }
         },
+        "request.TakeoutOrderPrintReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "request.TakeoutOrderRejectReq": {
             "type": "object",
             "required": [
@@ -50413,7 +50433,7 @@ const docTemplate = `{
                 },
                 "max_amount": {
                     "description": "单位：分",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "platform": {
                     "description": "grab,foodpanda,lineman",
@@ -56843,6 +56863,10 @@ const docTemplate = `{
                 "is_adv_receipt_tpl": {
                     "description": "是否启用高级模板",
                     "type": "boolean"
+                },
+                "is_editable": {
+                    "description": "是否可编辑模板",
+                    "type": "boolean"
                 }
             }
         },
@@ -58864,6 +58888,10 @@ const docTemplate = `{
             "properties": {
                 "nickname": {
                     "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "会员手机号",
                     "type": "string"
                 },
                 "uuid": {
@@ -61793,8 +61821,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "subtotal": {
-                    "description": "订单小计(分)",
-                    "type": "integer"
+                    "description": "订单小计",
+                    "type": "number"
                 },
                 "uuid": {
                     "description": "外卖订单Uuid",
@@ -62488,19 +62516,19 @@ const docTemplate = `{
             "properties": {
                 "basket_promo": {
                     "description": "篮子优惠",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "merchant_discount": {
                     "description": "商户优惠",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "platform_discount": {
                     "description": "平台优惠",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "tax": {
                     "description": "税费",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -62562,7 +62590,7 @@ const docTemplate = `{
                 },
                 "subtotal": {
                     "description": "小计金额",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_items": {
                     "description": "总商品数量",
@@ -62593,39 +62621,39 @@ const docTemplate = `{
             "properties": {
                 "basket_promo": {
                     "description": "购物车促销",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "delivery_fee": {
                     "description": "配送费",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "eater_payment": {
                     "description": "顾客实付",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "merchant_charge_fee": {
                     "description": "商户收取费用",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "merchant_discount": {
                     "description": "商户优惠",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "platform_discount": {
                     "description": "平台优惠",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "small_order_fee": {
                     "description": "小订单费",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "subtotal": {
                     "description": "商品小计",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "tax": {
                     "description": "税费",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -62824,7 +62852,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "max_amount": {
-                    "type": "integer"
+                    "type": "number"
                 },
                 "platform": {
                     "type": "string"
