@@ -207,13 +207,14 @@ func (s *saasStaffSrv) QueryStaffByContact(ctx context.Context, queryReq req.Que
 		return &resp.QueryStaffByContactResp{List: []*resp.QueryStaffByContactItem{}}, nil
 	}
 
-	// 2.2 合并折扣和退款的授权员工列表（去重）
-	authorizedStaffIdsMap := make(map[uint64]bool)
-	for _, id := range businessSetting.DiscountAuthorizedStaffIds {
-		authorizedStaffIdsMap[id] = true
-	}
-	for _, id := range businessSetting.RefundAuthorizedStaffIds {
-		authorizedStaffIdsMap[id] = true
+	// 2.2 根据操作类型选择对应的授权员工列表
+	var authorizedStaffIds []uint64
+	if queryReq.OperationType == string(SensitiveOperationTypeRefund) {
+		// 退款操作：使用退款授权列表
+		authorizedStaffIds = businessSetting.RefundAuthorizedStaffIds
+	} else {
+		// 折扣操作：使用折扣授权列表（默认）
+		authorizedStaffIds = businessSetting.DiscountAuthorizedStaffIds
 	}
 
 	// 2.3 获取当前门店下的授权员工（统一账号UUID）
@@ -221,6 +222,12 @@ func (s *saasStaffSrv) QueryStaffByContact(ctx context.Context, queryReq req.Que
 	currentCompanyUuid := ctx.GetCompanyUuid()
 	authorizedStaffUuids := make([]uint64, 0)
 	authorizedStaffUuidsSet := make(map[uint64]bool) // 用于去重
+
+	// 构建授权员工ID映射，便于快速查找
+	authorizedStaffIdsMap := make(map[uint64]bool)
+	for _, id := range authorizedStaffIds {
+		authorizedStaffIdsMap[id] = true
+	}
 
 	// 只查询当前门店下的员工
 	companyStaffList, _ := companyStaffRepo.GetByCompanyUuid(currentCompanyUuid)

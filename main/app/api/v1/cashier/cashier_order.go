@@ -298,11 +298,12 @@ func (h *OrderHandler) VerifyPassword(c *gin.Context) {
 
 // QueryStaffByContact 根据邮箱或手机号查询员工
 // @Summary 根据邮箱或手机号查询员工
-// @Description 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示
+// @Description 根据邮箱或手机号查询员工，支持模糊搜索，返回员工基本信息，用于下拉列表展示。根据操作类型（operation_type）区分优惠折扣场景和退款场景，不同场景返回对应授权列表中的员工。
 // @Tags 收银端.订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param operation_type query string true "操作类型，discount-折扣操作，refund-退款操作"
 // @Param keyword query string false "搜索关键词（邮箱或手机号，支持模糊匹配）"
 // @Success 200 {object} dto.Response{data=resp.QueryStaffByContactResp}
 // @Router /cashier/order/query_staff [get]
