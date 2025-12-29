@@ -20,7 +20,7 @@
           <el-col :span="6" v-if="detail.member_uuids">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ detail?.member_names }}</span>
+              <span>{{ detail?.member_uuids }}</span>
             </div>
           </el-col>
 
