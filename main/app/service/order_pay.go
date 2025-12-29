@@ -1620,11 +1620,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		}
 		// LianLianPay 没有配置支付信息 不显示
 		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
-			if paymentMethod.IsHeadquarterPayment() {
-				isAvailable = false
-			} else {
-				continue
-			}
+			continue
 		}
 
 		// 获取支付方式logo和二维码
@@ -1645,10 +1641,8 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		}
 
 		// 总部支付方式
-		if paymentMethod.IsHeadquarterPayment() {
-			if paymentMethod.Source == constant.PaymentMethodSourceDefault && qrcodeUrl == "" {
-				isAvailable = false
-			}
+		if paymentMethod.IsHeadquarterPayment() && paymentMethod.ErpnextPayment == "" {
+			isAvailable = false
 		}
 
 		methodItem := resp.PaymentMethodItem{
