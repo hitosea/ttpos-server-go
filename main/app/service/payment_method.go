@@ -986,17 +986,15 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 	// 查询总部支付方式（排除 code=40 和 code=10）
 	var hqPayments []model.PaymentMethod
 	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
+		Where("code NOT IN (?)", []int{
+			model.PaymentMethodCash,
+			model.PaymentMethodBalance,
+			model.PaymentCodeLianlianWechat,
+			model.PaymentCodeLianlianAli,
+			model.PaymentCodeLianlianQrPromptPay}).
 		Find(&hqPayments).Error
 	if err != nil {
 		return errors.WithMessage(err, "查询总部支付方式失败")
-	}
-
-	// 特殊code列表（不跳过，只更新headquarter_uuid）
-	specialCodes := map[int]bool{
-		model.PaymentCodeLianlianWechat:      true, // 90111
-		model.PaymentCodeLianlianAli:         true, // 90222
-		model.PaymentCodeLianlianQrPromptPay: true, // 90333
 	}
 
 	var createdCount, updatedCount, skippedCount int
@@ -1007,28 +1005,10 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 			First(&existPayment).Error
 
 		if err == nil {
-			// 分店已有同名支付方式
-			if specialCodes[existPayment.Code] {
-				// 特殊code：只更新 headquarter_uuid
-				err = subShopDB.Model(&model.PaymentMethod{}).Where("id = ?", existPayment.ID).Update("headquarter_uuid", headquarterUuid).Error
-				if err != nil {
-					logger.Logger.Error("更新支付方式headquarter_uuid失败",
-						zap.String("name", hqPayment.PaymentName),
-						zap.Int("code", existPayment.Code),
-						zap.Error(err))
-				} else {
-					logger.Logger.Info("更新支付方式headquarter_uuid",
-						zap.String("name", hqPayment.PaymentName),
-						zap.Int("code", existPayment.Code))
-					updatedCount++
-				}
-			} else {
-				// 普通code：跳过
-				logger.Logger.Info("支付方式已存在，跳过同步",
-					zap.String("name", hqPayment.PaymentName),
-					zap.Int("code", existPayment.Code))
-				skippedCount++
-			}
+			logger.Logger.Info("支付方式已存在，跳过同步",
+				zap.String("name", hqPayment.PaymentName),
+				zap.Int("code", existPayment.Code))
+			skippedCount++
 			continue
 		}
 
