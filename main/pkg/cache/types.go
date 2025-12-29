@@ -54,9 +54,11 @@ type GroupConfig struct {
 	//   - L1 使用较短 TTL，减少内存占用
 	//   - L2 使用较长 TTL，保持缓存命中率
 	//   - L1 过期后可从 L2 回填，避免直接查数据库
+	// TTL 优先级：L1TTL > taskTTL
 	L1TTL time.Duration
 
 	// L2TTL L2 Redis 缓存的过期时间，如果为 0 则使用任务 TTL
 	// 建议设置为任务 TTL 的 1.5 到 2 倍，例如任务 TTL 为 5 分钟，L2TTL 可设置为 7-10 分钟
+	// TTL 优先级：L2TTL > taskTTL
 	L2TTL time.Duration
 }

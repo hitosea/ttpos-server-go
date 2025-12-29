@@ -12,6 +12,8 @@ import (
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/service/setting"
@@ -545,7 +547,20 @@ func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *g
 	uuids := make([]uint64, 0)
 	uuids = append(uuids, product.FlavorProductBomUuid)
 	uuids = append(uuids, product.SauceProductBomUuidList...)
-	productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+
+	var productBoms []*model.ProductBom
+	var err error
+
+	// 检查是否启用对象存储缓存
+	companyUuid := ctx.GetCompanyUuid()
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBoms, err = s.getProductBomsWithCache(ctx, uuids, db)
+	} else {
+		// 直接查询数据库
+		productBoms, err = repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	}
+
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -1308,4 +1323,60 @@ func (s *orderSrv) checkMaterialStockByProductOrder(ctx context.Context, db *gor
 
 	// 返回库存不足的商品列表
 	return insufficientProducts, nil
+}
+
+// getProductBomsWithCache 使用对象存储模块缓存查询 ProductBom 列表
+func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, db *gorm.DB) ([]*model.ProductBom, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 构建批量查询的 keys
+	keys := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			keys = append(keys, persistence.BuildKey(ctx, "product_bom", uuid))
+		}
+	}
+
+	if len(keys) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
+
+	// 使用批量查询缓存
+	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
+		// 缓存未命中时，从数据库查询
+		boms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+		if err != nil {
+			return nil, err
+		}
+		// 转换为 map[string]*model.ProductBom
+		result := make(map[string]*model.ProductBom)
+		for _, bom := range boms {
+			key := persistence.BuildKey(ctx, "product_bom", bom.Uuid)
+			result[key] = bom
+		}
+		return result, nil
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	}
+
+	// 将批量查询结果转换为列表，保持原有顺序
+	result := make([]*model.ProductBom, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			key := persistence.BuildKey(ctx, "product_bom", uuid)
+			if bom, ok := batchResult[key]; ok && bom != nil {
+				result = append(result, bom)
+			}
+		}
+	}
+
+	return result, nil
 }
