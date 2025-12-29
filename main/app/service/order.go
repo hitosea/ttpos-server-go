@@ -1598,7 +1598,7 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 	// 获取加料信息
 	sauceProductBoms := make(map[uint64]*model.ProductBom)
 	if len(sauceProductBomUuidList) > 0 {
-		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(sauceProductBomUuidList)
+		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(ctx.GetCompanyUuid(), sauceProductBomUuidList)
 		if errSauceProductBomList != nil {
 			return nil, errors.WithMessage(errSauceProductBomList)
 		}
@@ -1735,7 +1735,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		// 获取加料信息
 		sauceProductBoms := make(map[uint64]*model.ProductBom)
 		if len(product.SauceProductBomUuidList) > 0 {
-			sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(product.SauceProductBomUuidList)
+			sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(ctx.GetCompanyUuid(), product.SauceProductBomUuidList)
 			if errSauceProductBomList != nil {
 				return nil, errors.WithMessage(errSauceProductBomList)
 			}

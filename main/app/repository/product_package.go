@@ -172,7 +172,7 @@ func (r *productPackageRepoImpl) getProductBomWithCache(companyUuid uint64, flav
 		return nil, errors.New("companyUuid cannot be 0")
 	}
 	// 构建缓存 key（使用 companyUuid 而不是 context）
-	key := persistence.BuildKeyWithCompanyUuid(companyUuid, "product_bom_base_info", flavorBomUuid)
+	key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomBaseInfo, flavorBomUuid)
 
 	// 获取缓存层（使用订单相关对象缓存配置）
 	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)

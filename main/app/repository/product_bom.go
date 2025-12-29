@@ -30,7 +30,7 @@ type IProductBomQueryRepo interface {
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)
 	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
-	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+	GetSauceProductBomsByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error)
 	GetFlavorProductBomUuidsByCardUuids(uuids []uint64) ([]uint64, error) // 通过成本卡uuid列表获取规格商品uuid列表
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	GetProductBomByItemCode(itemCode string) (*model.ProductBom, error)
@@ -168,7 +168,7 @@ func (r *productBomRepoImpl) getFlavorProductBomWithCache(companyUuid uint64, uu
 	}
 
 	// 构建缓存 key（使用 companyUuid 而不是 context）
-	key := persistence.BuildKeyWithCompanyUuid(companyUuid, "product_bom_flavor", uuid)
+	key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomFlavor, uuid)
 
 	// 获取缓存层（使用订单相关对象缓存配置）
 	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
@@ -201,7 +201,28 @@ func (r *productBomRepoImpl) GetSauceProductBomByUuid(uuid uint64) (*model.Produ
 	return productBom, nil
 }
 
-func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error) {
+func (r *productBomRepoImpl) GetSauceProductBomsByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) {
+	// 检查是否启用对象存储缓存
+	var productBoms []*model.ProductBom
+	var err error
+
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBoms, err = r.getSauceProductBomsWithCache(companyUuid, uuids)
+	} else {
+		// 直接查询数据库
+		productBoms, err = r.querySauceProductBoms(uuids)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBoms, nil
+}
+
+// querySauceProductBoms 查询小料商品 ProductBom 列表（包含预加载的关联数据）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *productBomRepoImpl) querySauceProductBoms(uuids []uint64) ([]*model.ProductBom, error) {
 	productBoms, err := r.GetProductBoms(
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereInUuids(uuids),
@@ -218,6 +239,65 @@ func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*mode
 		return nil, errors.WithMessage(err)
 	}
 	return productBoms, nil
+}
+
+// getSauceProductBomsWithCache 使用对象存储模块缓存查询小料商品 ProductBom 列表
+func (r *productBomRepoImpl) getSauceProductBomsWithCache(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("getSauceProductBomsWithCache companyUuid cannot be 0")
+	}
+
+	// 构建批量查询的 keys
+	keys := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			keys = append(keys, persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomSauce, uuid))
+		}
+	}
+
+	if len(keys) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
+
+	// 使用批量查询缓存
+	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
+		// 缓存未命中时，从数据库查询
+		boms, err := r.querySauceProductBoms(uuids)
+		if err != nil {
+			return nil, err
+		}
+		// 转换为 map[string]*model.ProductBom
+		result := make(map[string]*model.ProductBom)
+		for _, bom := range boms {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomSauce, bom.Uuid)
+			result[key] = bom
+		}
+		return result, nil
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.querySauceProductBoms(uuids)
+	}
+
+	// 将批量查询结果转换为列表，保持原有顺序
+	result := make([]*model.ProductBom, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomSauce, uuid)
+			if bom, ok := batchResult[key]; ok && bom != nil {
+				result = append(result, bom)
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (r *productBomRepoImpl) GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error) {
