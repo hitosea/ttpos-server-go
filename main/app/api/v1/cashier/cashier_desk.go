@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -757,7 +758,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	}
 
 	// 添加商品。 若没有点餐账单则新建一个
-	if ctx.GetCompanyUuid() == 7709131161600000 {
+	if objectStorageAdapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		// 添加商品。 若没有点餐账单则新建一个（无校验版本）
 		res, err := h.orderSrv.InstantOrderCartProductAddSimple(ctx, params)
 		if err != nil {

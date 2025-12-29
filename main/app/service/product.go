@@ -205,7 +205,7 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv
 func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) {
 	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
 	companyUuid := ctx.GetCompanyUuid()
-	enableCache := constant.IsObjectStorageCacheEnabled(companyUuid)
+	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid)
 
 	// 查询函数（从数据库获取商品列表）
 	queryFunc := func() (product_resp.ProductListWithPaginationResp, error) {
