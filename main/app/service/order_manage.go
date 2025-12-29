@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	builtinerrors "errors"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -433,16 +432,19 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	// 组合信息
 	totalMemberNames := []string{}
 	totalMemberNameAndPhones := []string{}
+	consumerUuidSet := make(map[uint64]bool) // 用于根据 ConsumerUuid 去重
 	orderList := make([]resp.OrderInfo, 0)
 	for i, saleOrder := range saleBill.SaleOrders {
 		if req.SaleOrderUuid > 0 && req.SaleOrderUuid != saleOrder.Uuid {
 			continue
 		}
-		if saleOrder.GetMemberName() != "" && !slices.Contains(totalMemberNames, saleOrder.GetMemberName()) {
-			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
-		}
-		if saleOrder.ConsumerUuid != 0 {
+		if saleOrder.ConsumerUuid != 0 && !consumerUuidSet[saleOrder.ConsumerUuid] {
+			memberName := saleOrder.GetMemberName()
+			if memberName != "" {
+				totalMemberNames = append(totalMemberNames, memberName)
+			}
 			totalMemberNameAndPhones = append(totalMemberNameAndPhones, saleOrder.GetMemberNameAndPhone())
+			consumerUuidSet[saleOrder.ConsumerUuid] = true
 		}
 		//
 		products := make([]resp.OrderProduct, 0)
