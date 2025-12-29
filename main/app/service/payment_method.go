@@ -238,7 +238,7 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 
 		items = append(items, &resp.PaymentMethodListItemResp{
 			Uuid:     method.Uuid,
-			Name:     method.Name,
+			Name:     method.PaymentName,
 			Source:   method.Source,
 			Status:   status,
 			Sort:     method.Sort,
@@ -285,8 +285,8 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 
 	return &resp.PaymentMethodDetailResp{
 		Uuid:                 paymentMethod.Uuid,
-		Name:                 paymentMethod.Name,
-		PaymentName:          paymentMethod.PaymentName,
+		Name:                 paymentMethod.PaymentName,
+		PaymentName:          paymentMethod.Name,
 		Source:               paymentMethod.Source,
 		LogoFileUuid:         paymentMethod.LogoFileUuid,
 		LogoFile:             logo,
@@ -491,9 +491,9 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 		}
 
 		paymentMethod := &model.PaymentMethod{
-			Name:                 item.Name,
+			Name:                 item.PaymentName,
 			Code:                 code,
-			PaymentName:          item.PaymentName,
+			PaymentName:          item.Name,
 			Source:               source,
 			LogoFileUuid:         item.LogoFileUuid,
 			QrcodeFileUuid:       item.QrcodeFileUuid,
@@ -582,14 +582,15 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	err = db.Transaction(func(tx *gorm.DB) error {
 		paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
 		isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
+		isKbank := paymentMethod.Source == constant.PaymentMethodSourceKbank
 
 		name := strings.TrimSpace(updateReq.Name)
 
 		// 构建更新数据
 		updateData := map[string]any{}
-		// LianLianPay支付跳过名称、图片logo修改
-		if !isLianLianPay {
-			updateData["name"] = name
+		// LianLianPay支付、Kbank支付跳过名称、图片logo修改
+		if !isLianLianPay && !isKbank {
+			updateData["payment_name"] = name
 			updateData["logo_file_uuid"] = updateReq.LogoFileUuid
 		}
 		updateData["qrcode_file_uuid"] = updateReq.QrcodeFileUuid
