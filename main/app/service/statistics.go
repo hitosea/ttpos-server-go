@@ -2278,25 +2278,16 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
 	}
 
-	// 构建过滤选项
-	var opts []repository.DBOption
-	if req.ExcludeDataManage {
-		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
-			ctx.GetDB(),
-			"sale_bill_uuid",
-			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
-			repository.CommonRepo.WhereBySoftDelete(),
-		))
-	}
-
 	// 调用Repository层查询
 	total, dataList := statisticsRepo.CountBusinessSummary(repository.CountBusinessSummaryReq{
-		StartTime: req.QueryStartTime,
-		EndTime:   req.QueryEndTime,
-		Cycle:     req.Cycle,
-		PageNo:    utils.IfInt(req.PageNo > 0, req.PageNo, 1),
-		PageSize:  utils.IfInt(req.PageSize > 0, req.PageSize, 10),
-	}, opts...)
+		StartTime:         req.QueryStartTime,
+		EndTime:           req.QueryEndTime,
+		Cycle:             req.Cycle,
+		PageNo:            utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:          utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		ExcludeDataManage: req.ExcludeDataManage,
+		Timezone:          timezone,
+	})
 
 	// 构建返回列表
 	list := make([]StatisticsSummaryItem, 0, len(dataList))
@@ -2392,7 +2383,8 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 		IsInstant:         req.OrderInstant == 1,
 		IsTakeout:         req.OrderTakeout == 1,
 		PaymentMethodList: paymentMethodList,
-		ExcludeDataManage: req.ExcludeDataManage, // 直接传递布尔值
+		ExcludeDataManage: req.ExcludeDataManage,
+		Timezone:          timezone,
 	})
 
 	// 构建返回列表

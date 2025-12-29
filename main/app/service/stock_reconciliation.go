@@ -1,7 +1,10 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"slices"
 	"strings"
@@ -25,6 +28,7 @@ import (
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -134,28 +138,80 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 
 // GetStockReconciliationTemplate 获取盘点单模板
 func (s *stockReconciliationSrv) GetStockReconciliationTemplate(ctx context.Context) (resp.StockReconciliationTemplateResp, error) {
-	// TODO: 调用易先生http://nginx/xxxxx接口，获取模板数据
-	// 返回固定的模板数据
-	templateResp := resp.StockReconciliationTemplateResp{
-		LastUpdated: "2025/12/25 12:37",
-		Count:       23,
-		Data: resp.StockReconciliationTemplateData{
-			Daily: []string{
-				"CK01001", "CK01002", "CK02001", "CK01003", "CK02002",
-				"CK02003", "CK02004", "DR01001", "DR01002", "DR01003",
-				"DR02001", "DR02002", "FR01001", "FR01002", "FR01003",
-				"FR01005", "FR01004", "FR02001", "FR02002",
+	// 调用盘点模板服务获取模板数据
+	templateResp, err := s.fetchReconciliationTemplate(ctx)
+	if err != nil {
+		logger.Logger.Error("获取盘点单模板失败", zap.Error(err))
+		return resp.StockReconciliationTemplateResp{
+			Data: resp.StockReconciliationTemplateData{
+				Daily:   []string{},
+				Weekly:  []string{},
+				Monthly: []string{},
 			},
-			Weekly: []string{
-				"CK01001", "CK01002", "CK01003",
-			},
-			Monthly: []string{
-				"CK01001",
-			},
-		},
+		}, nil
 	}
 
 	return templateResp, nil
+}
+
+// fetchReconciliationTemplate 从盘点模板服务获取模板数据
+func (s *stockReconciliationSrv) fetchReconciliationTemplate(_ context.Context) (resp.StockReconciliationTemplateResp, error) {
+	// 创建 HTTP 客户端
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// 构建请求 URL
+	url := viper.GetString("RECONCILIATION_TEMPLATES_URL")
+	if url == "" {
+		url = "http://reconciliation_templates:3000"
+	}
+
+	// 创建请求
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	// 设置请求头
+	req.Header.Set("Content-Type", "application/json")
+
+	// 发送请求
+	httpResp, err := client.Do(req)
+	if err != nil {
+		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("调用盘点模板服务失败: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	// 读取响应体
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	// 检查 HTTP 状态码
+	if httpResp.StatusCode != http.StatusOK {
+		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("盘点模板服务返回错误状态码: %d, 响应: %s", httpResp.StatusCode, string(body))
+	}
+
+	// 定义包装响应结构
+	var apiResp struct {
+		Code    int                                  `json:"code"`
+		Message string                               `json:"message"`
+		Data    resp.StockReconciliationTemplateResp `json:"data"`
+	}
+
+	// 解析响应数据
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("解析响应数据失败: %w, 响应: %s", err, string(body))
+	}
+
+	// 检查业务状态码
+	if apiResp.Code != 0 {
+		return resp.StockReconciliationTemplateResp{}, fmt.Errorf("盘点模板服务返回业务错误: code=%d, message=%s", apiResp.Code, apiResp.Message)
+	}
+
+	return apiResp.Data, nil
 }
 
 // getBookedStockMap 获取仓库物品的账面库存数量

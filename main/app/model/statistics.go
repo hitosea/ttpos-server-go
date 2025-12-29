@@ -371,10 +371,12 @@ type StatisticsBusinessSummaryData struct {
 
 // StatisticsBusinessPaymentMethodData 支付方式统计数据
 type StatisticsBusinessPaymentMethodData struct {
-	Date          sql.NullString  `gorm:"column:date;comment:日期"`
-	PaymentName   sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
-	PaymentNum    sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
-	PaymentAmount sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
+	Date                    sql.NullString  `gorm:"column:date;comment:日期"`
+	PaymentMethodSort       sql.NullInt64   `gorm:"column:payment_method_sort;comment:支付方式排序"`
+	PaymentMethodCreateTime sql.NullInt64   `gorm:"column:payment_method_create_time;comment:支付方式创建时间"`
+	PaymentName             sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
+	PaymentNum              sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
+	PaymentAmount           sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
 }
 
 // ChannelSaleRepoResult 渠道营业统计 Repository 返回结果

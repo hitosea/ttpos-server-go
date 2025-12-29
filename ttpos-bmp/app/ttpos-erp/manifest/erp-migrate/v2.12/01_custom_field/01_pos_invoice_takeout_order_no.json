@@ -3,7 +3,7 @@
   "label": "Takeout Order No",
   "fieldname": "custom_takeout_order_no",
   "fieldtype": "Data",
-  "insert_after": "custom_pos_opening_entry",
+  "insert_after": "po_date",
   "dt": "POS Invoice"
 }
 
