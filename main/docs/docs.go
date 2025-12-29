@@ -45108,7 +45108,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "code": {
-                    "description": "支付方式代号（可选，用于系统默认支付方式）",
+                    "description": "支付方式代号（可选，用于Kbank支付方式）",
                     "type": "integer"
                 },
                 "default_img": {
@@ -45151,6 +45151,10 @@ const docTemplate = `{
                 },
                 "qrcode_file_uuid": {
                     "description": "二维码图片UUID",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "来源（可选，默认1，Kbank支付方式为3）",
                     "type": "integer"
                 },
                 "status": {
@@ -52016,6 +52020,10 @@ const docTemplate = `{
         "resp.DefaultPaymentMethodResp": {
             "type": "object",
             "properties": {
+                "can_add": {
+                    "description": "是否可添加",
+                    "type": "boolean"
+                },
                 "code": {
                     "description": "支付方式code",
                     "type": "integer"
@@ -52025,11 +52033,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "description": "支付方式名称",
+                    "description": "名称",
+                    "type": "string"
+                },
+                "payment_name": {
+                    "description": "支付方式",
                     "type": "string"
                 },
                 "sort": {
                     "description": "排序",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "来源",
                     "type": "integer"
                 },
                 "url": {
@@ -56647,7 +56663,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "source": {
-                    "description": "来源 0-系统 1-手动 2-LianLianPay",
+                    "description": "来源 0-系统 1-手动 2-LianLianPay 3-Kbank",
                     "type": "integer"
                 },
                 "status": {

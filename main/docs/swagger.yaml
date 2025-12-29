@@ -5704,7 +5704,7 @@ definitions:
   req.PaymentMethodCreateItem:
     properties:
       code:
-        description: 支付方式代号（可选，用于系统默认支付方式）
+        description: 支付方式代号（可选，用于Kbank支付方式）
         type: integer
       default_img:
         description: 默认图片
@@ -5737,6 +5737,9 @@ definitions:
         type: string
       qrcode_file_uuid:
         description: 二维码图片UUID
+        type: integer
+      source:
+        description: 来源（可选，默认1，Kbank支付方式为3）
         type: integer
       status:
         description: 状态 0-禁用 1-启用 2-草稿
@@ -10541,6 +10544,9 @@ definitions:
     type: object
   resp.DefaultPaymentMethodResp:
     properties:
+      can_add:
+        description: 是否可添加
+        type: boolean
       code:
         description: 支付方式code
         type: integer
@@ -10548,10 +10554,16 @@ definitions:
         description: 图片路径
         type: string
       name:
-        description: 支付方式名称
+        description: 名称
+        type: string
+      payment_name:
+        description: 支付方式
         type: string
       sort:
         description: 排序
+        type: integer
+      source:
+        description: 来源
         type: integer
       url:
         description: 图片路径
@@ -13633,7 +13645,7 @@ definitions:
         description: 排序
         type: integer
       source:
-        description: 来源 0-系统 1-手动 2-LianLianPay
+        description: 来源 0-系统 1-手动 2-LianLianPay 3-Kbank
         type: integer
       status:
         description: 状态 0-禁用 1-启用 2-草稿

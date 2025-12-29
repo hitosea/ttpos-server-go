@@ -15,7 +15,8 @@ type PaymentMethodCreateReq struct {
 type PaymentMethodCreateItem struct {
 	Name                 string  `json:"name" binding:"required"`             // 支付方式名称
 	PaymentName          string  `json:"payment_name" binding:"required"`     // 支付名称
-	Code                 int     `json:"code"`                                // 支付方式代号（可选，用于系统默认支付方式）
+	Code                 int     `json:"code"`                                // 支付方式代号（可选，用于Kbank支付方式）
+	Source               int     `json:"source"`                              // 来源（可选，默认1，Kbank支付方式为3）
 	LogoFileUuid         uint64  `json:"logo_file_uuid"`                      // Logo图片UUID
 	QrcodeFileUuid       uint64  `json:"qrcode_file_uuid"`                    // 二维码图片UUID
 	DefaultImg           string  `json:"default_img"`                         // 默认图片
