@@ -124,7 +124,8 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 ) template_struct.StatementOrderInfoData {
 	orderData := template_struct.StatementOrderInfoData{
 		Platform:   order.Platform,
-		OrderNo:    order.ShortOrderNumber,
+		OrderNo:    order.PlatformOrderId,
+		SerialNo:   order.ShortOrderNumber,
 		OrderType:  order.OrderType,
 		CreateTime: t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
 		FinishTime: t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
@@ -185,10 +186,10 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 				case "commodity": // 商品类型，作为套餐子商品显示
 					subProduct := template_struct.StatementProductData{
 						Name:         modifierName,
-						Price:        t.base.Amount(modifier.Price),
+						Price:        t.base.Amount(modifier.Price / float64(modifier.Quantity)),
 						Num:          float64(modifier.Quantity),
 						PriceNum:     fmt.Sprintf("%d", modifier.Quantity),
-						Subtotal:     t.base.Amount(modifier.Price * float64(modifier.Quantity)),
+						Subtotal:     t.base.Amount(modifier.Price),
 						IsSubProduct: true, // 标记为子商品
 					}
 					// 商家联：始终使用 TTPOS 规格名称

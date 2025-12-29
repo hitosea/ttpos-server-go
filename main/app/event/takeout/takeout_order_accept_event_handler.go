@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"sync"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/takeout/domain/event"
 	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
@@ -40,20 +41,22 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 		return nil
 	}
 
+	// 创建数据库管理器
+	dbm := database.GetDBManager(config.DatabaseConf{})
+	db := dbm.GetDB(orderAcceptedEvent.CompanyUuid)
+
+	// 创建上下文
+	ctx := appContext.NewContext(
+		appContext.WithContext(context.Background()),
+		appContext.WithStaffUuid(orderAcceptedEvent.AcceptedBy),
+	)
+	ctx.SetCompanyUuid(orderAcceptedEvent.CompanyUuid)
+	ctx.SetDB(db)
+	// 创建 service（只传入必要的依赖，其他为 nil）
+	takeoutSrv := takeoutService.NewTakeoutSrv(dbm, nil, nil, nil, nil, nil)
+
 	// 异步处理，不阻塞事件分发
 	utils.Go(func() {
-		// 创建数据库管理器
-		dbm := database.GetDBManager(config.DatabaseConf{})
-
-		// 创建 service（只传入必要的依赖，其他为 nil）
-		takeoutSrv := takeoutService.NewTakeoutSrv(dbm, nil, nil, nil, nil, nil)
-
-		// 创建上下文
-		ctx := appContext.NewContext(
-			appContext.WithContext(context.Background()),
-			appContext.WithStaffUuid(orderAcceptedEvent.AcceptedBy),
-		)
-		ctx.SetCompanyUuid(orderAcceptedEvent.CompanyUuid)
 
 		// 调用 service 处理出库和销量（包含原料汇总）
 		if err := takeoutSrv.ProcessTakeoutOrderOutboundAndSales(ctx, orderAcceptedEvent.OrderUuid, orderAcceptedEvent.CompanyUuid, orderAcceptedEvent.AcceptedBy); err != nil {
@@ -85,6 +88,21 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 
 		// 成功后，推送到厨显端更新订单
 		sendUpdateKitchenWebSocketNotification(orderAcceptedEvent.CompanyUuid)
+	})
+
+	// 异步打印外卖订单小票
+	utils.Go(func() {
+		takeoutSrv.PrintTakeoutOrder(ctx, orderAcceptedEvent.OrderUuid, 0)
+	})
+
+	// 异步打印送厨单
+	utils.Go(func() {
+		_, err := takeoutSrv.PrintProductionOrder(ctx, orderAcceptedEvent.OrderUuid, printerConstant.PrinterProductTypeKitchen)
+		if err != nil {
+			logger.Logger.Error("打印送厨单失败",
+				zap.String("takeoutOrderUuid", orderAcceptedEvent.TakeoutOrderUuid),
+				zap.Error(err))
+		}
 	})
 
 	return nil

@@ -38,11 +38,46 @@ func SentCookingPreEventHandler() {
 				utils.Go(func() {
 					products := printer_model.Products{}
 					copier.Copy(&products, payload.Products)
+					// 获取订单信息
+					db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+					billInfo, err := repository.NewOrderRepo(db).GetSaleBill(
+						repository.CommonRepo.WhereByUuid(payload.SaleBillUuid),
+						repository.CommonRepo.Preload(repository.WithPreload{Query: "Desk"}),
+					)
+					if err != nil {
+						logger.Logger.Error("SentCookingPreEventHandler process, GetSaleBill failed", zap.Error(err))
+						return
+					}
 					printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 						printerConstant.PrinterProductTypeKitchen,
-						payload.SaleBillUuid,
-						payload.SaleOrderUuid,
-						products,
+						printer_model.Order{
+							Uuid:                   payload.SaleBillUuid,
+							SaleOrderUuid:          payload.SaleOrderUuid,
+							OrderNo:                billInfo.OrderNo,
+							MealNum:                billInfo.MealNum,
+							IsTakeoutBill:          billInfo.IsTakeoutBill(),
+							OrderSourceTakeoutText: billInfo.GetOrderSourceTakeoutText(),
+							SerialNo:               billInfo.SerialNo,
+							OrderRemark:            billInfo.GetLatestOrderRemarkRes(),
+							DeskUuid:               billInfo.DeskUuid,
+							Desk: &printer_model.OrderDesk{
+								DeskNo: func() string {
+									if billInfo.Desk == nil {
+										return ""
+									}
+									return billInfo.Desk.DeskNo
+								}(),
+								RegionUuid: func() uint64 {
+									if billInfo.Desk == nil {
+										return 0
+									}
+									return billInfo.Desk.RegionUuid
+								}(),
+							},
+							UpdateTime: billInfo.UpdateTime,
+							FinishTime: billInfo.FinishTime,
+							Products:   products,
+						},
 					)
 				})
 			}
@@ -74,10 +109,11 @@ func handlePreBatchProductsMergePrint(payload event.SentCookingPrePayload) {
 		return
 	}
 
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+
 	// 更新 pre_batch_print_time 为当前时间戳
 	{
 		// 打印完成后，更新这些商品的 pre_batch_print_time 为当前时间戳
-		db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 		if db == nil {
 			logger.Logger.Error("获取数据库连接失败", zap.Uint64("companyUuid", payload.CompanyUuid))
 			return
@@ -116,11 +152,45 @@ func handlePreBatchProductsMergePrint(payload event.SentCookingPrePayload) {
 		// 使用第一个商品的销售订单UUID（从 payload 中获取）
 		saleOrderUuid := payload.SaleOrderUuid
 		if saleOrderUuid > 0 {
+			// 获取订单信息
+			billInfo, err := repository.NewOrderRepo(db).GetSaleBill(
+				repository.CommonRepo.WhereByUuid(payload.SaleBillUuid),
+				repository.CommonRepo.Preload(repository.WithPreload{Query: "Desk"}),
+			)
+			if err != nil {
+				logger.Logger.Error("handlePreBatchProductsMergePrint process, GetSaleBill failed", zap.Error(err))
+				return
+			}
 			printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 				printerConstant.PrinterProductTypeKitchen,
-				payload.SaleBillUuid,
-				saleOrderUuid,
-				printProducts,
+				printer_model.Order{
+					Uuid:                   payload.SaleBillUuid,
+					SaleOrderUuid:          saleOrderUuid,
+					OrderNo:                billInfo.OrderNo,
+					MealNum:                billInfo.MealNum,
+					IsTakeoutBill:          billInfo.IsTakeoutBill(),
+					OrderSourceTakeoutText: billInfo.GetOrderSourceTakeoutText(),
+					SerialNo:               billInfo.SerialNo,
+					OrderRemark:            billInfo.GetLatestOrderRemarkRes(),
+					DeskUuid:               billInfo.DeskUuid,
+					Desk: &printer_model.OrderDesk{
+						DeskNo: func() string {
+							if billInfo.Desk == nil {
+								return ""
+							}
+							return billInfo.Desk.DeskNo
+						}(),
+						RegionUuid: func() uint64 {
+							if billInfo.Desk == nil {
+								return 0
+							}
+							return billInfo.Desk.RegionUuid
+						}(),
+					},
+					UpdateTime: billInfo.UpdateTime,
+					FinishTime: billInfo.FinishTime,
+					Products:   printProducts,
+				},
 			)
 		} else {
 			logger.Logger.Warn("打印商品列表不为空但未找到销售订单UUID", zap.Uint64("saleBillUuid", payload.SaleBillUuid), zap.Int("productCount", len(printProducts)))

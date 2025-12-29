@@ -220,36 +220,43 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 
 	// 4. 如果有库存不足的商品，构建提示信息并返回错误
 	if len(insufficientBomUuids) > 0 {
-		outOfStockNames := make([]string, 0, len(insufficientBomUuids))
+		outOfStockNamesMap := make(map[string]struct{})
 		for _, bomUuid := range insufficientBomUuids {
 			if item, ok := bomItemMap[bomUuid]; ok {
-				// 遍历该 item 的所有 modifiers，找到与当前 bomUuid 匹配的 modifier
 				for i := range item.TakeoutOrderItemModifiers {
 					modifier := &item.TakeoutOrderItemModifiers[i]
+					var name string
 
 					if modifier.IsCommodity() {
-						// commodity 类型：显示套餐商品名称(规格)
 						commodityName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.TtposFlavorName).GetLocale(ctx.GetLanguage())
 						if flavorName != "" {
-							outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", commodityName, flavorName))
+							name = fmt.Sprintf("%s(%s)", commodityName, flavorName)
 						} else {
-							outOfStockNames = append(outOfStockNames, commodityName)
+							name = commodityName
 						}
 					} else if modifier.IsFlavor() {
-						// flavor 类型：显示主商品名称(规格)
 						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", itemName, flavorName))
+						name = fmt.Sprintf("%s(%s)", itemName, flavorName)
 					} else if modifier.IsSauce() {
-						// sauce 类型：显示主商品名称(加料)
 						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
 						sauceName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						outOfStockNames = append(outOfStockNames, fmt.Sprintf("%s(%s)", itemName, sauceName))
+						name = fmt.Sprintf("%s(%s)", itemName, sauceName)
+					}
+
+					if name != "" {
+						outOfStockNamesMap[name] = struct{}{}
 					}
 				}
 			}
 		}
+		// 转为切片
+		outOfStockNames := make([]string, 0, len(outOfStockNamesMap))
+		for name := range outOfStockNamesMap {
+			outOfStockNames = append(outOfStockNames, name)
+		}
+		//
 		outOfStockMsg := "以下商品库存不足: " + strings.Join(outOfStockNames, ", ")
 		return errors.New(outOfStockMsg), outOfStockNames
 	}

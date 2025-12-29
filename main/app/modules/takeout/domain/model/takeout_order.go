@@ -11,11 +11,11 @@ type TakeoutOrder struct {
 	BaseModel
 
 	// 关联外卖平台订单
-	TakeoutOrderUuid string `gorm:"column:takeout_order_uuid" json:"takeout_order_uuid"`
+	TakeoutOrderUuid string `gorm:"column:takeout_order_uuid" json:"takeout_order_uuid"` // 外卖平台订单UUID
 
 	// 平台信息
-	Platform           string `gorm:"column:platform" json:"platform"` // grab, lineman
-	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`
+	Platform           string `gorm:"column:platform" json:"platform"`                         // grab, lineman
+	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`       // 平台订单ID
 	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单 )
 	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`     // 短单号
 	MerchantId         string `gorm:"column:merchant_id" json:"merchant_id"`                   // 商户ID	(Grab: merchantID)
@@ -156,6 +156,11 @@ func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
 // 获取外卖平台 全小写
 func (o *TakeoutOrder) GetToLowerPlatform() string {
 	return strings.ToLower(o.Platform)
+}
+
+// 获取外卖平台 首字母大写
+func (o *TakeoutOrder) GetCapitalPlatform() string {
+	return strings.ToUpper(o.Platform[0:1]) + strings.ToLower(o.Platform[1:])
 }
 
 // 是否店内就餐订单

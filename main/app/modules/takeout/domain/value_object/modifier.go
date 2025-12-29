@@ -4,6 +4,16 @@ import (
 	"ttpos-server-go/app/errors"
 )
 
+// ModifierType 修饰符类型
+type ModifierType string
+
+const (
+	ModifierTypeFlavor    ModifierType = "flavor"    // 规格（如大杯、中杯、小杯）
+	ModifierTypeSauce     ModifierType = "sauce"     // 加料（如珍珠、椰果、布丁）
+	ModifierTypeAttr      ModifierType = "attr"      // 属性（如冰度、糖度）
+	ModifierTypeCommodity ModifierType = "commodity" // 套餐商品
+)
+
 // AvailableStatus 可用状态
 type AvailableStatus string
 

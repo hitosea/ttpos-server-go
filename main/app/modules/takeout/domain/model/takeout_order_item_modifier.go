@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/modules/takeout/domain/value_object"
+
 // TakeoutOrderItemModifier 外卖订单商品修饰符表（多平台）
 //
 // 此表对应 TTPOS 的三种修饰符类型：
@@ -36,21 +38,17 @@ func (*TakeoutOrderItemModifier) TableName() string {
 }
 
 func (o *TakeoutOrderItemModifier) IsCommodity() bool {
-	return o.TtposModifierType == "commodity"
-}
-
-func (o *TakeoutOrderItemModifier) IsPackage() bool {
-	return o.TtposModifierType == "package"
+	return o.TtposModifierType == string(value_object.ModifierTypeCommodity)
 }
 
 func (o *TakeoutOrderItemModifier) IsFlavor() bool {
-	return o.TtposModifierType == "flavor"
+	return o.TtposModifierType == string(value_object.ModifierTypeFlavor)
 }
 
 func (o *TakeoutOrderItemModifier) IsSauce() bool {
-	return o.TtposModifierType == "sauce"
+	return o.TtposModifierType == string(value_object.ModifierTypeSauce)
 }
 
 func (o *TakeoutOrderItemModifier) IsAttr() bool {
-	return o.TtposModifierType == "attr"
+	return o.TtposModifierType == string(value_object.ModifierTypeAttr)
 }

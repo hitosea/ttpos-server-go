@@ -50,34 +50,56 @@ app/modules/takeout/
 │   ├── types/                       # 值对象和类型定义
 │   │   ├── modifier_info.go         # 修饰符信息（含名称和数量）
 │   │   └── product_info.go          # 商品信息（含显示名和标识名）
+│   ├── value_object/                # 值对象
+│   │   ├── item_id_parser.go        # 商品ID解析器
+│   │   ├── modifier.go              # 修饰符值对象
+│   │   └── takeout_platform.go      # 平台枚举
+│   ├── event/                       # 领域事件
+│   │   ├── event.go                 # 事件基类
+│   │   ├── order_created.go         # 订单创建事件
+│   │   ├── order_accepted.go        # 订单接单事件
+│   │   ├── order_rejected.go        # 订单拒单事件
+│   │   ├── order_ready.go           # 订单准备完成事件
+│   │   ├── order_rider_processing.go # 骑手配送中事件
+│   │   ├── order_completed.go       # 订单完成事件
+│   │   └── order_cancelled.go       # 订单取消事件
 │   ├── repository/                  # 仓储接口
-│   │   └── menu_data_repository.go  # 菜单数据仓储接口
+│   │   ├── menu_data_repository.go  # 菜单数据仓储接口
+│   │   └── takeout_import_log_repository.go  # 导入日志仓储接口
 │   ├── service/                     # 领域服务
 │   │   ├── takeout_order_service.go # 订单领域服务
-│   │   └── platform_converter.go    # 平台转换器接口（策略模式）
-│   └── menu/                        # 菜单聚合（用于菜单导入导出）
-│       ├── entity/                  # 聚合根
-│       │   └── takeout_menu.go      # 外卖菜单聚合根
-│       ├── valueobject/             # 值对象（平台无关）
-│       │   ├── currency.go          # 货币
-│       │   ├── selling_time.go      # 售卖时段
-│       │   ├── category.go          # 分类
-│       │   ├── menu_item.go         # 商品
-│       │   └── modifier.go          # 规格/加料
-│       └── repository/              # 仓储接口
-│           └── takeout_menu_repository.go
+│   │   ├── takeout_order_material_service.go  # 订单原料服务
+│   │   ├── takeout_service.go       # 平台管理服务
+│   │   ├── takeout_settings_service.go  # 平台设置服务
+│   │   ├── order_converter.go       # 订单转换服务
+│   │   ├── platform_converter.go    # 平台转换器接口（策略模式）
+│   │   └── import_progress_service.go  # 导入进度服务
+│   └── helper/                      # 辅助工具
+│       └── comparison.go            # 数据对比工具
 ├── application/                     # 应用层（编排与协调）
 │   ├── takeout_order_service.go     # 订单应用服务
-│   └── takeout_menu_app_service.go  # 菜单应用服务
+│   └── takeout_app_service.go       # 外卖应用服务（平台管理、菜单导入等）
 └── infrastructure/                  # 基础设施层
     ├── persistence/                 # 持久化实现
+    │   ├── base.go                  # 仓储基类
+    │   ├── takeout_repository.go    # 平台管理仓储
+    │   ├── takeout_settings_repo.go # 平台设置仓储
     │   ├── takeout_order_repo.go    # 订单仓储实现
-    │   ├── menu_data_repository_impl.go  # 菜单数据仓储实现
-    │   └── takeout_menu_repository_impl.go
-    └── adapter/                     # 平台适配器（适配器模式）
-        └── grab/                    # Grab 平台适配器
-            ├── grab_converter.go    # Grab 转换器实现
-            └── grab_models.go       # Grab 数据模型
+    │   ├── takeout_order_item_repo.go  # 订单商品仓储
+    │   ├── takeout_order_item_modifier_repo.go  # 订单修饰符仓储
+    │   ├── takeout_order_receiver_repo.go       # 订单收货人仓储
+    │   ├── takeout_order_campaign_repo.go       # 订单活动仓储
+    │   ├── takeout_order_material_repo.go       # 订单原料仓储
+    │   ├── takeout_bom_mapping_repo.go          # BOM映射仓储
+    │   ├── takeout_import_log_repository_impl.go # 导入日志仓储
+    │   └── menu_data_repository_impl.go         # 菜单数据仓储实现
+    └── adapter/                     # 平台适配器
+        ├── grab/                    # Grab 平台适配器
+        │   ├── grab_menu_converter.go   # Grab 菜单转换器
+        │   └── grab_order_converter.go  # Grab 订单转换器
+        └── rpc/                     # RPC 客户端
+            ├── bmp_client.go        # BMP 微服务客户端
+            └── takeout_rpc_service.go   # 外卖 RPC 服务
 ```
 
 ### 设计模式
@@ -331,48 +353,51 @@ func (s *TakeoutOrderService) CreateOrder(ctx context.Context, platform string, 
 
 ### 菜单同步扩展
 
-#### Step 1：创建平台适配器
+#### Step 1：创建平台菜单转换器
 
 在 `infrastructure/adapter/{platform}/` 下创建：
 
 ```go
-// {platform}_converter.go
-type {Platform}Converter struct {
+// {platform}_menu_converter.go
+type {Platform}MenuConverter struct {
     dbm *database.DBManager
 }
 
-func New{Platform}Converter(dbm *database.DBManager) service.IPlatformConverter {
-    return &{Platform}Converter{dbm: dbm}
+func New{Platform}MenuConverter(dbm *database.DBManager) *{Platform}MenuConverter {
+    return &{Platform}MenuConverter{dbm: dbm}
 }
 
-// 实现 IPlatformConverter 接口
-func (c *{Platform}Converter) ConvertFromTTPOS(ctx context.Context, menu *entity.TakeoutMenu) (interface{}, error) {
-    // 实现转换逻辑
+// 导出菜单（TTPOS → 平台格式）
+func (c *{Platform}MenuConverter) ExportMenu(ctx context.Context, shopUuid uint64) (interface{}, error) {
+    // 1. 从 TTPOS 数据库读取菜单数据
+    // 2. 转换为平台格式
+    // 3. 返回平台菜单数据
 }
 
-func (c *{Platform}Converter) ConvertToTTPOS(ctx context.Context, platformData interface{}) (*entity.TakeoutMenu, error) {
-    // 实现转换逻辑
-}
-
-func (c *{Platform}Converter) ValidateData(platformData interface{}) error {
-    // 实现验证逻辑
-}
-
-func (c *{Platform}Converter) GetPlatformName() string {
-    return "{platform}"
+// 导入菜单（平台格式 → TTPOS）
+func (c *{Platform}MenuConverter) ImportMenu(ctx context.Context, platformMenu interface{}) error {
+    // 1. 解析平台菜单数据
+    // 2. 转换为 TTPOS 格式
+    // 3. 保存到数据库
 }
 ```
 
 #### Step 2：注册转换器
 
-在 `application/takeout_menu_app_service.go` 中注册：
+在 `application/takeout_app_service.go` 中注册：
 
 ```go
-func NewTakeoutMenuAppService(dbm *database.DBManager, menuRepo repository.ITakeoutMenuRepository) ITakeoutMenuAppService {
-    converters := make(map[string]service.IPlatformConverter)
-    converters["grab"] = grab.NewGrabConverter(dbm)
-    converters["lineman"] = lineman.NewLinemanConverter(dbm)  // 新增平台
-    // ...
+func NewTakeoutAppService(dbm *database.DBManager) ITakeoutAppService {
+    service := &TakeoutAppService{
+        dbm: dbm,
+        menuConverters: make(map[string]MenuConverter),
+    }
+    
+    // 注册菜单转换器
+    service.menuConverters["grab"] = grab.NewGrabMenuConverter(dbm)
+    service.menuConverters["lineman"] = lineman.NewLinemanMenuConverter(dbm)  // 新增平台
+    
+    return service
 }
 ```
 

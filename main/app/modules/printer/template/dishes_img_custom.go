@@ -12,7 +12,6 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
-	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -33,12 +32,9 @@ func NewDishesImgTemplateCustom(
 // getData 构建订单数据结构体
 func (t *dishesImgTemplateCustom) getData(
 	printer *model.Printer,
-	saleBill model.SaleBill,
-	saleOrder model.SaleOrder,
-	orderName string,
+	order printer_model.Order,
 	mealNumStr string,
 	products []template_struct.StatementProductData,
-	productNum decimal.Decimal,
 ) *template_struct.StatementOrderData {
 	// 构建订单数据结构体
 	return &template_struct.StatementOrderData{
@@ -56,107 +52,11 @@ func (t *dishesImgTemplateCustom) getData(
 			PrinterSn:        printer.Sn,
 		},
 		Order: template_struct.StatementOrderInfoData{
-			Status: saleOrder.Status,
-			SerialNo: func() string {
-				if saleBill.DeskUuid > 0 {
-					return fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr)
-				} else if saleBill.IsTakeoutBill() {
-					return t.base.Translate("外送") + ": " + saleBill.SerialNo
-				} else {
-					return fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName)
-				}
-			}(),
-			OrderNo:     saleOrder.OrderNo,
-			Remark:      saleBill.Remark,
-			CashierName: saleOrder.CashierName,
-			FinishTime:  t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
-			CreateTime:  t.base.FormatUnixTimeDefault(saleOrder.CreateTime),
-			PayTime:     t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
-			UpdateTime:  t.base.FormatUnixTimeDefault(saleOrder.UpdateTime),
+			SerialNo: order.SerialNo,
+			OrderNo:  order.OrderNo,
+			PayTime:  t.base.FormatUnixTimeDefault(order.FinishTime),
 			// 商品
 			Products: products,
-			//
-			ProductNum:    productNum.InexactFloat64(),
-			ProductAmount: t.base.Amount(saleOrder.ProductAmount),
-			ServiceFee:    t.base.Amount(saleOrder.ServiceFee),
-			TaxFeeType:    saleBill.SaleBillSetting.TaxFeeType,
-			IsContainTax: func() uint {
-				if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
-					return 1
-				}
-				if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
-					return 2
-				}
-				return 0
-			}(),
-			DiscountFee: t.base.Amount(saleOrder.CustomDiscountFee),
-			DiscountRate: func() string {
-				// 计算折扣率：折扣金额 / 原始金额 * 100
-				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
-				return t.base.Number(discountRate.InexactFloat64())
-			}(),
-			// 会员
-			MemberDiscountFee: t.base.Amount(saleOrder.MemberDiscountFee),
-			MemberDiscountRate: func() float64 {
-				oldGradeEquity := float64(100)
-				gradeEquity := float64(100)
-				if saleOrder.MemberDiscountRate != 0 {
-					gradeEquity = saleOrder.MemberDiscountRate * 100
-					oldGradeEquity = gradeEquity
-				}
-				if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
-					gradeEquity /= 10
-				}
-				if oldGradeEquity != 100 && gradeEquity > 0 {
-					return gradeEquity
-				}
-				return 0
-			}(),
-			MemberCardDiscountRate: func() float64 {
-				oldCardDiscount := float64(100)
-				cardDiscount := float64(100)
-				if saleOrder.MemberCardDiscountRate != 0 {
-					cardDiscount = saleOrder.MemberCardDiscountRate * 100
-					oldCardDiscount = cardDiscount
-				}
-				if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
-					cardDiscount /= 10
-				}
-				if oldCardDiscount != 100 && cardDiscount > 0 {
-					return oldCardDiscount
-				}
-				return 0
-			}(),
-			MemberPointsDiscount: func() float64 {
-				if saleOrder.PayPointsAmount > 0 && saleOrder.PayPoints > 0 {
-					return saleOrder.PayPointsAmount
-				}
-				return 0
-			}(),
-			//
-			CouponExchangeAmount: saleOrder.CalcCouponExchangeAmount(),
-			CheckOutZeroFee:      t.base.Amount(saleOrder.GetCheckOutZeroFee()),
-			ReturnAmount:         t.base.Amount(saleOrder.GetReturnAmount()),
-			PaymentCommissionFee: saleOrder.PaymentCommissionFee,
-			FreeAmount: func() string {
-				if saleOrder.IsFreeSaleOrder() {
-					return t.base.Amount(saleOrder.GetAmount())
-				}
-				return "0"
-			}(),
-			ActualReceivePrice: t.base.Amount(saleOrder.GetPrintReceivablePrice()),
-			PaymentMethods:     []template_struct.StatementPaymentMethod{},
-			PercentageLists:    []template_struct.StatementPercentageData{},
-			IsFree:             saleOrder.IsFreeSaleOrder(),
-			// 会员
-			IsMember:               saleOrder.Member != nil,
-			MemberRemainingBalance: "0",
-			MemberPoints:           0,
-			//
-			PaymentName:   "",
-			PaymentQrcode: "",
-			//
-			Barcode: saleOrder.OrderNo,
 		},
 	}
 }
@@ -165,16 +65,10 @@ func (t *dishesImgTemplateCustom) getData(
 func (t *dishesImgTemplateCustom) GetCompleteOrderPrintContent(
 	printer *model.Printer,
 	tmpData string,
-	saleBill model.SaleBill,
-	saleOrder model.SaleOrder,
-	printer_products printer_model.Products,
+	order printer_model.Order,
 ) string {
-	// 订单名称
-	orderName := saleOrder.GetOrderName()
 	// 就餐人数
-	mealNumStr := utils.IfString(saleBill.MealNum > 0, fmt.Sprintf(" (%d%s)", saleBill.MealNum, t.base.Translate("人")), "")
-	// 商品数量
-	productNum := decimal.NewFromFloat(0)
+	mealNumStr := utils.IfString(order.MealNum > 0, fmt.Sprintf(" (%d%s)", order.MealNum, t.base.Translate("人")), "")
 
 	// 商品列表
 	products := []template_struct.StatementProductData{}
@@ -230,10 +124,10 @@ func (t *dishesImgTemplateCustom) GetCompleteOrderPrintContent(
 			}
 		}
 	}
-	processProducts(printer_products, false)
+	processProducts(order.Products, false)
 
 	// 构建订单数据结构体
-	statementData := t.getData(printer, saleBill, saleOrder, orderName, mealNumStr, products, productNum)
+	statementData := t.getData(printer, order, mealNumStr, products)
 
 	// 将结构体转换为map
 	dataMap, _ := utils.StrToMap(utils.ToJsonString(statementData))
@@ -274,16 +168,10 @@ func (t *dishesImgTemplateCustom) GetOneDishOneOrderPrintContent(
 	productPrinter model.ProductPrinter,
 	printer *model.Printer,
 	tmpData string,
-	saleBill model.SaleBill,
-	saleOrder model.SaleOrder,
-	printer_products printer_model.Products,
+	order printer_model.Order,
 ) string {
-	// 订单名称
-	orderName := saleOrder.GetOrderName()
 	// 就餐人数
-	mealNumStr := utils.IfString(saleBill.MealNum > 0, fmt.Sprintf(" (%d%s)", saleBill.MealNum, t.base.Translate("人")), "")
-	// 商品数量
-	productNum := decimal.NewFromFloat(0)
+	mealNumStr := utils.IfString(order.MealNum > 0, fmt.Sprintf(" (%d%s)", order.MealNum, t.base.Translate("人")), "")
 
 	// 商品列表
 	products := []template_struct.StatementProductData{}
@@ -344,10 +232,10 @@ func (t *dishesImgTemplateCustom) GetOneDishOneOrderPrintContent(
 			}
 		}
 	}
-	processProducts(printer_products, false)
+	processProducts(order.Products, false)
 
 	// 构建订单数据结构体
-	statementData := t.getData(printer, saleBill, saleOrder, orderName, mealNumStr, products, productNum)
+	statementData := t.getData(printer, order, mealNumStr, products)
 
 	// 将结构体转换为map
 	dataMap, _ := utils.StrToMap(utils.ToJsonString(statementData))

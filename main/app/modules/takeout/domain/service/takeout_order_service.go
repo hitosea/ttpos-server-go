@@ -666,13 +666,13 @@ func (s *takeoutOrderSrv) findModifierMapping(platform, platformModifierId strin
 	var modifierType string
 	switch result.IDType {
 	case valueobject.IDTypeFlavor:
-		modifierType = "flavor" // 规格
+		modifierType = string(valueobject.ModifierTypeFlavor) // 规格
 	case valueobject.IDTypeSauce:
-		modifierType = "sauce" // 加料
+		modifierType = string(valueobject.ModifierTypeSauce) // 加料
 	case valueobject.IDTypeAttr:
-		modifierType = "attr" // 属性
+		modifierType = string(valueobject.ModifierTypeAttr) // 属性
 	case valueobject.IDTypePackageItem:
-		modifierType = "commodity" // 套餐商品
+		modifierType = string(valueobject.ModifierTypeCommodity) // 套餐商品
 	default:
 		// 不是修饰符类型，标记为未映射
 		return 0, 0, "", nil
@@ -850,7 +850,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 						modifier.TtposModifierName = info.TtposName
 
 						// 如果是 commodity 类型，设置规格信息和数量
-						if modifier.TtposModifierType == "commodity" {
+						if modifier.TtposModifierType == string(valueobject.ModifierTypeCommodity) {
 							modifier.TtposFlavorUuid = info.TtposFlavorUuid
 							modifier.TtposFlavorName = info.TtposFlavorName
 
