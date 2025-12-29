@@ -926,13 +926,16 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 	if err != nil {
 		return disabledMaterials, err
 	}
-	utils.Go(func() {
-		// 计算所有关联成本卡的商品的库存
-		err = s.productSrv.SyncProductStockByBomCard(ctx)
-		if err != nil {
-			logger.Logger.Error("审核通过盘点单-计算商品库存失败", zap.Error(err))
-		}
-	})
+
+	// 修复任务:38268 v2.12.5-收银端-将成本卡中物品盘点为0后，可售设置自动变为0
+	// utils.Go(func() {
+	// 	// 计算所有关联成本卡的商品的库存
+	// 	err = s.productSrv.SyncProductStockByBomCard(ctx)
+	// 	if err != nil {
+	// 		logger.Logger.Error("审核通过盘点单-计算商品库存失败", zap.Error(err))
+	// 	}
+	// })
+
 	return disabledMaterials, nil
 }
 
