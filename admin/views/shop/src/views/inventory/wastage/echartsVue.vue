@@ -30,10 +30,39 @@ export default {
     methods: {
         /*创建图表对象*/
         myEcharts() {
-            // 基于准备好的dom，初始化echarts实例
-            myChart = echarts.init(document.getElementById('TransactionChart'));
-            myChart.setOption(this.option);
-            myChart.resize();
+            // 检查 DOM 元素是否存在
+            const chartDom = document.getElementById('TransactionChart');
+            if (!chartDom) {
+                console.warn('图表容器不存在，延迟初始化');
+                // 延迟重试
+                this.$nextTick(() => {
+                    setTimeout(() => {
+                        this.myEcharts();
+                    }, 100);
+                });
+                return;
+            }
+
+            try {
+                // 如果已存在实例，先销毁
+                if (myChart) {
+                    myChart.dispose();
+                    myChart = null;
+                }
+
+                // 基于准备好的dom，初始化echarts实例
+                myChart = echarts.init(chartDom);
+                
+                if (!myChart) {
+                    console.error('ECharts 实例初始化失败');
+                    return;
+                }
+
+                myChart.setOption(this.option);
+                myChart.resize();
+            } catch (error) {
+                console.error('初始化图表失败:', error);
+            }
         },
     },
     mounted() {
@@ -98,6 +127,13 @@ export default {
             ]
         }
         this.myEcharts();
+    },
+    beforeUnmount() {
+        // 组件卸载前清理图表实例
+        if (myChart) {
+            myChart.dispose();
+            myChart = null;
+        }
     },
 }
 </script>
