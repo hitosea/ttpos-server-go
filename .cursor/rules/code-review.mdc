@@ -498,15 +498,643 @@ grep -r "Where.*IN.*\(.*Model.*Select" --include="*.go"
 
 ---
 
+## 八、安全审计检查
+
+### 8.1 SQL 注入漏洞（高危）
+
+#### 8.1.1 JSON_EXTRACT 路径注入
+
+**问题描述**：  
+在 SQL 查询中使用 `JSON_EXTRACT` 时，如果路径参数直接拼接，可能被注入恶意 JSON 路径表达式。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name"
+
+// ✅ 正确示例 - 使用白名单验证
+allowedLanguages := map[string]bool{"en": true, "zh": true, "es": true}
+if !allowedLanguages[language] {
+    return nil, errors.New("invalid language")
+}
+"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name"
+```
+
+**检查步骤**：
+1. 搜索所有 `JSON_EXTRACT` 或 `JSON_UNQUOTE(JSON_EXTRACT` 调用
+2. 检查路径参数是否直接拼接
+3. 确认是否使用白名单验证
+
+**影响**：
+- SQL 注入攻击
+- 数据泄露
+- 数据库被篡改
+
+#### 8.1.2 fmt.Sprintf SQL 拼接
+
+**问题描述**：  
+使用 `fmt.Sprintf` 直接拼接 SQL 语句，未使用参数化查询。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+baseSQL += fmt.Sprintf(" AND (order_no LIKE '%%%s%%' OR erp_order_no LIKE '%%%s%%') ", query.OrderNo, query.OrderNo)
+
+// ✅ 正确示例 - 使用 GORM 参数化查询
+db = db.Where("order_no LIKE ? OR erp_order_no LIKE ?", "%"+query.OrderNo+"%", "%"+query.OrderNo+"%")
+```
+
+**检查步骤**：
+1. 搜索所有 `fmt.Sprintf` 包含 SQL 关键字的调用
+2. 检查是否使用参数化查询
+3. 确认所有用户输入都通过参数传递
+
+**影响**：
+- SQL 注入攻击
+- 数据泄露
+
+#### 8.1.3 CREATE/DROP DATABASE 注入
+
+**问题描述**：  
+执行 `CREATE DATABASE` 或 `DROP DATABASE` 时，数据库名称未验证。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+
+// ✅ 正确示例 - 验证数据库名称
+if !isValidDatabaseName(dbName) {
+    return errors.New("invalid database name")
+}
+db.Exec(fmt.Sprintf("CREATE DATABASE `%s`", dbName))
+```
+
+**检查步骤**：
+1. 搜索所有 `CREATE DATABASE` 或 `DROP DATABASE` 调用
+2. 检查数据库名称是否验证（只包含字母数字下划线）
+3. 确认使用反引号包裹数据库名称
+
+**影响**：
+- 数据库被删除或创建
+- 数据泄露
+
+---
+
+### 8.2 命令注入漏洞（低危）
+
+#### 8.2.1 Shell 命令执行
+
+**问题描述**：  
+使用 `exec.Command` 执行 shell 命令，如果命令参数来自用户输入，可能被注入恶意命令。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+cmd := exec.Command("sh", "-c", "ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}'")
+
+// ✅ 正确示例 - 使用 Go 原生网络库
+func GetLocalIP() (string, error) {
+    conn, err := net.Dial("udp", "8.8.8.8:80")
+    if err != nil {
+        return "", err
+    }
+    defer conn.Close()
+    return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
+}
+```
+
+**检查步骤**：
+1. 搜索所有 `exec.Command` 调用
+2. 检查命令参数是否来自用户输入
+3. 确认是否可以使用 Go 原生库替代
+
+**影响**：
+- 命令注入攻击
+- 服务器被控制
+
+---
+
+### 8.3 认证和授权漏洞
+
+#### 8.3.1 JWT 签名算法未验证（高危）
+
+**问题描述**：  
+解析 JWT Token 时未验证签名算法，可能受到 "none" 算法或算法替换攻击。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+    return []byte(secret), nil  // 未验证签名算法！
+})
+
+// ✅ 正确示例 - 验证签名算法
+token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+    if token.Method.Alg() != "HS256" {
+        return nil, fmt.Errorf("invalid signing method: %v", token.Header["alg"])
+    }
+    return []byte(secret), nil
+})
+```
+
+**检查步骤**：
+1. 搜索所有 `jwt.ParseWithClaims` 调用
+2. 检查是否验证签名算法
+3. 确认只接受预期的算法（如 HS256）
+
+**影响**：
+- Token 伪造
+- 身份认证绕过
+
+#### 8.3.2 Token 过期时间过长（高危）
+
+**问题描述**：  
+Token 过期时间设置过长（如 100 年），一旦泄露无法撤销。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+token, err := auth.GenerateToken(claims, config.JWT.Secret, 3155673600, false)  // 100年！
+
+// ✅ 正确示例 - 使用合理的过期时间
+token, err := auth.GenerateToken(claims, config.JWT.Secret, 86400, false)  // 24小时
+```
+
+**检查步骤**：
+1. 搜索所有 `GenerateToken` 调用
+2. 检查过期时间参数
+3. 确认过期时间合理（建议不超过 7 天）
+
+**影响**：
+- Token 泄露后无法撤销
+- 长期安全风险
+
+#### 8.3.3 MD5 用于 Token 完整性验证（中危）
+
+**问题描述**：  
+使用 MD5 进行 Token 完整性验证，MD5 已被证明不安全。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+h := md5.New()
+h.Write([]byte(data + secret))
+token := hex.EncodeToString(h.Sum(nil))
+
+// ✅ 正确示例 - 使用 HMAC-SHA256
+mac := hmac.New(sha256.New, []byte(secret))
+mac.Write([]byte(data))
+token := hex.EncodeToString(mac.Sum(nil))
+```
+
+**检查步骤**：
+1. 搜索所有 `md5.New()` 或 `md5.Sum()` 调用
+2. 检查是否用于 Token 验证
+3. 确认是否可以使用 HMAC-SHA256 替代
+
+**影响**：
+- Token 伪造
+- 完整性验证失效
+
+---
+
+### 8.4 敏感信息泄露（高危）
+
+#### 8.4.1 硬编码凭据
+
+**问题描述**：  
+代码中硬编码密码、密钥、API Secret 等敏感信息。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+const DefaultSalt = "jjjshop_salt_2020"
+aesSecretKey = []byte("TTPOS-HITOSEA-SECRET-KEY-HERE!!!")
+
+// ✅ 正确示例 - 从环境变量加载
+salt := os.Getenv("PASSWORD_SALT")
+if salt == "" {
+    return errors.New("PASSWORD_SALT not set")
+}
+```
+
+**检查步骤**：
+1. 搜索所有硬编码的密码、密钥、Secret
+2. 检查 `.env.example` 文件是否包含真实密码
+3. 确认敏感信息从环境变量加载
+
+**影响**：
+- 凭据泄露
+- 系统被入侵
+
+#### 8.4.2 API 响应返回密码
+
+**问题描述**：  
+API 响应中包含密码字段（明文或哈希）。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+type UserResp struct {
+    ID       uint64 `json:"id"`
+    Username string `json:"username"`
+    Password string `json:"password"`  // ❌ 危险
+}
+
+// ✅ 正确示例 - 移除密码字段
+type UserResp struct {
+    ID       uint64 `json:"id"`
+    Username string `json:"username"`
+    // Password 字段已移除
+}
+```
+
+**检查步骤**：
+1. 搜索所有响应结构体定义
+2. 检查是否包含 `Password`、`password`、`pwd` 等字段
+3. 确认密码字段已从响应中移除
+
+**影响**：
+- 密码泄露
+- 账户被盗用
+
+#### 8.4.3 日志泄露密码
+
+**问题描述**：  
+日志中记录密码（明文或哈希）。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
+
+// ✅ 正确示例 - 只记录验证结果
+if err := verifyPassword(password, member.Password); err != nil {
+    ctx.Log().Debug("密码验证失败", zap.Error(err))
+    return err
+}
+ctx.Log().Debug("密码验证成功")
+```
+
+**检查步骤**：
+1. 搜索所有日志调用中包含 `password`、`Password`、`pwd` 的情况
+2. 检查是否记录密码值
+3. 确认只记录验证结果，不记录密码本身
+
+**影响**：
+- 密码泄露
+- 账户被盗用
+
+---
+
+### 8.5 XSS 和输入验证
+
+#### 8.5.1 CORS 配置过于开放（高危）
+
+**问题描述**：  
+CORS 配置允许任何来源（`*`），与 Credentials 结合可导致 CSRF 攻击。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+// ✅ 正确示例 - 限制 CORS 来源
+allowedOrigins := []string{"https://example.com", "https://admin.example.com"}
+origin := c.GetHeader("Origin")
+if contains(allowedOrigins, origin) {
+    c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+    c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+}
+```
+
+**检查步骤**：
+1. 搜索所有 CORS 配置
+2. 检查是否使用 `*` 作为来源
+3. 确认是否与 `Access-Control-Allow-Credentials: true` 同时使用
+
+**影响**：
+- CSRF 攻击
+- 数据泄露
+
+#### 8.5.2 缺少 HTTP 安全响应头（中危）
+
+**问题描述**：  
+缺少必要的 HTTP 安全响应头。
+
+**检查方法**：
+```go
+// ✅ 正确示例 - 添加安全响应头
+c.Writer.Header().Set("X-Frame-Options", "DENY")
+c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
+c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
+c.Writer.Header().Set("Content-Security-Policy", "default-src 'self'")
+```
+
+**检查步骤**：
+1. 检查中间件或全局响应头设置
+2. 确认是否包含以下安全头：
+   - `X-Frame-Options`
+   - `X-Content-Type-Options`
+   - `Strict-Transport-Security`
+   - `X-XSS-Protection`
+   - `Content-Security-Policy`
+
+**影响**：
+- XSS 攻击
+- 点击劫持
+- MIME 类型嗅探
+
+#### 8.5.3 输入参数缺少验证（中危）
+
+**问题描述**：  
+API 参数缺少长度和格式验证。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+type GetShopReq struct {
+    Cid string `json:"cid"`  // 未验证
+}
+
+// ✅ 正确示例 - 添加验证标签
+type GetShopReq struct {
+    Cid string `json:"cid" binding:"required,min=1,max=100,alphanum"`
+}
+```
+
+**检查步骤**：
+1. 搜索所有请求结构体定义
+2. 检查是否包含验证标签
+3. 确认字符串参数有长度限制
+
+**影响**：
+- 输入注入攻击
+- 缓冲区溢出
+
+---
+
+### 8.6 文件上传和路径遍历（高危）
+
+#### 8.6.1 Delete 函数路径遍历
+
+**问题描述**：  
+文件删除函数未验证路径，可能被路径遍历攻击删除任意文件。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+func (l *Local) Delete(fileName string) error {
+    fullPath := filepath.Join(l.config.UploadPath, fileName)  // 危险！
+    return os.Remove(fullPath)
+}
+
+// ✅ 正确示例 - 验证路径
+func (l *Local) Delete(fileName string) error {
+    fileName = filepath.Base(fileName)  // 只提取文件名
+    fullPath := filepath.Join(l.config.UploadPath, fileName)
+    
+    // 验证路径在上传目录内
+    absUploadPath, _ := filepath.Abs(l.config.UploadPath)
+    absFullPath, _ := filepath.Abs(fullPath)
+    if !strings.HasPrefix(absFullPath, absUploadPath) {
+        return fmt.Errorf("attempted path traversal")
+    }
+    
+    return os.Remove(absFullPath)
+}
+```
+
+**检查步骤**：
+1. 搜索所有文件删除函数
+2. 检查是否使用 `filepath.Base()` 提取文件名
+3. 确认是否验证路径在上传目录内
+
+**影响**：
+- 任意文件删除
+- 系统文件被删除
+
+#### 8.6.2 文件写入路径遍历
+
+**问题描述**：  
+文件写入函数未验证路径，可能被路径遍历攻击写入任意文件。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+func DownloadFile(url, filePath string) error {
+    // filePath 可能包含 ../ 导致路径遍历
+    return os.WriteFile(filePath, data, 0644)
+}
+
+// ✅ 正确示例 - 验证路径
+func DownloadFile(url, filePath string) error {
+    filePath = filepath.Base(filePath)  // 只提取文件名
+    fullPath := filepath.Join(uploadDir, filePath)
+    
+    // 验证路径在上传目录内
+    absUploadDir, _ := filepath.Abs(uploadDir)
+    absFullPath, _ := filepath.Abs(fullPath)
+    if !strings.HasPrefix(absFullPath, absUploadDir) {
+        return fmt.Errorf("attempted path traversal")
+    }
+    
+    return os.WriteFile(absFullPath, data, 0644)
+}
+```
+
+**检查步骤**：
+1. 搜索所有文件写入函数
+2. 检查是否验证路径
+3. 确认是否限制在上传目录内
+
+**影响**：
+- 任意文件写入
+- 系统文件被篡改
+
+#### 8.6.3 文件扩展名验证不足（中危）
+
+**问题描述**：  
+文件上传只基于扩展名验证，未检查文件实际内容。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+ext := filepath.Ext(fileName)
+if ext != ".jpg" && ext != ".png" {
+    return errors.New("invalid file type")
+}
+
+// ✅ 正确示例 - 验证文件魔术字节
+func validateFileType(filePath string, expectedType string) error {
+    file, err := os.Open(filePath)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+    
+    header := make([]byte, 512)
+    if _, err := file.Read(header); err != nil {
+        return err
+    }
+    
+    mimeType := http.DetectContentType(header)
+    if mimeType != expectedType {
+        return fmt.Errorf("invalid file type: %s", mimeType)
+    }
+    
+    return nil
+}
+```
+
+**检查步骤**：
+1. 搜索所有文件上传验证逻辑
+2. 检查是否只基于扩展名验证
+3. 确认是否验证文件魔术字节和 MIME 类型
+
+**影响**：
+- 恶意文件上传
+- 服务器被攻击
+
+---
+
+### 8.7 加密和密码安全（高危）
+
+#### 8.7.1 MD5 用于密码加密
+
+**问题描述**：  
+使用 MD5 进行密码加密，MD5 已被证明不安全。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+func EncryptPassword(password string) string {
+    h1 := md5.New()
+    h1.Write([]byte(password))
+    firstMd5 := hex.EncodeToString(h1.Sum(nil))
+    h2 := md5.New()
+    h2.Write([]byte(firstMd5 + DefaultSalt))
+    return hex.EncodeToString(h2.Sum(nil))
+}
+
+// ✅ 正确示例 - 使用 bcrypt
+import "golang.org/x/crypto/bcrypt"
+
+func EncryptPassword(password string) (string, error) {
+    hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    if err != nil {
+        return "", err
+    }
+    return string(hash), nil
+}
+
+func VerifyPassword(password, hash string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+    return err == nil
+}
+```
+
+**检查步骤**：
+1. 搜索所有密码加密函数
+2. 检查是否使用 MD5
+3. 确认是否可以使用 bcrypt 替代
+
+**影响**：
+- 密码被破解
+- 账户被盗用
+
+#### 8.7.2 硬编码 AES 密钥
+
+**问题描述**：  
+代码中硬编码 AES 加密密钥。
+
+**检查方法**：
+```go
+// ❌ 错误示例
+aesSecretKey = []byte("TTPOS-HITOSEA-SECRET-KEY-HERE!!!")  // 硬编码后备密钥
+
+// ✅ 正确示例 - 从环境变量加载
+aesSecretKey := os.Getenv("AES_SECRET_KEY")
+if aesSecretKey == "" {
+    return errors.New("AES_SECRET_KEY not set")
+}
+```
+
+**检查步骤**：
+1. 搜索所有硬编码的密钥
+2. 检查是否从环境变量加载
+3. 确认移除所有硬编码密钥
+
+**影响**：
+- 加密数据被破解
+- 敏感信息泄露
+
+---
+
+## 安全检查清单
+
+### SQL 注入检查
+
+- [ ] 所有 SQL 查询都使用参数化查询
+- [ ] JSON_EXTRACT 路径参数使用白名单验证
+- [ ] CREATE/DROP DATABASE 操作验证数据库名称
+- [ ] 不使用 fmt.Sprintf 拼接 SQL 语句
+
+### 命令注入检查
+
+- [ ] 不使用 exec.Command 执行 shell 命令
+- [ ] 如需执行命令，使用 Go 原生库替代
+
+### 认证授权检查
+
+- [ ] JWT 解析时验证签名算法
+- [ ] Token 过期时间合理（不超过 7 天）
+- [ ] 不使用 MD5 进行 Token 验证
+- [ ] 登录接口添加速率限制
+
+### 敏感信息泄露检查
+
+- [ ] 代码中无硬编码凭据
+- [ ] .env.example 不包含真实密码
+- [ ] API 响应不包含密码字段
+- [ ] 日志中不记录密码
+
+### XSS 和输入验证检查
+
+- [ ] CORS 配置限制具体域名
+- [ ] 添加 HTTP 安全响应头
+- [ ] 所有输入参数都有验证标签
+- [ ] 字符串参数有长度限制
+
+### 文件上传检查
+
+- [ ] 文件删除函数验证路径
+- [ ] 文件写入函数验证路径
+- [ ] 文件上传验证文件内容类型
+- [ ] 使用 filepath.Base() 提取文件名
+
+### 加密和密码安全检查
+
+- [ ] 不使用 MD5 进行密码加密
+- [ ] 使用 bcrypt 加密密码（成本因子≥10）
+- [ ] 无硬编码加密密钥
+- [ ] 所有密钥从环境变量加载
+
+---
+
 ## 参考文档
 
 - 事务错误处理扫描报告: `docs/shared/troubleshooting/transaction-error-handling-scan-report.md`
 - Go Main 核心约束: `.cursor/rules/go-main.mdc`
 - 错误处理示例: `docs/agent/workflows/development/error-handling-examples.md`
+- 安全开发规范: `.cursor/rules/security.mdc`
 
 ---
 
-**版本**: v1.1.0  
+**版本**: v2.0.0  
 **创建日期**: 2025-12-19  
-**最后更新**: 2025-12-24  
+**最后更新**: 2025-12-29  
 **维护者**: 代码审查组
