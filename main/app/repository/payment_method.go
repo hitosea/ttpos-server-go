@@ -25,6 +25,7 @@ type IPaymentMethodRepo interface {
 	WherePaymentName(paymentName string) DBOption // 按支付方式名称查询
 	WhereCode(code int) DBOption                  // 按支付方式code查询
 	WhereSource(source int) DBOption              // 按来源查询
+	WhereNotSource(source int) DBOption           // 排除指定来源
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
@@ -339,6 +340,12 @@ func (r *paymentMethodRepo) WhereCode(code int) DBOption {
 func (r *paymentMethodRepo) WhereSource(source int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("source = ?", source)
+	}
+}
+
+func (r *paymentMethodRepo) WhereNotSource(source int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("source != ?", source)
 	}
 }
 

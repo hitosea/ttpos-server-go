@@ -33,10 +33,12 @@ class PayType extends BaseModel
     const SOURCE_SYSTEM = 0;
     const SOURCE_DEFAULT = 1;
     const SOURCE_LIANLIANPAY = 2;
+    const SOURCE_KBANK = 3;
     const SOURCE = [
         0 => '系统默认',
         1 => '自行添加',
         2 => 'LianLianPay',
+        3 => 'Kbank',
     ];
 
     /**
@@ -49,6 +51,20 @@ class PayType extends BaseModel
         90111 => 'LIANLIAN_WECHAT_PAY',
         90222 => 'LIANLIAN_ALI_PAY',
         90333 => 'LIANLIAN_QR_PROMPT_PAY',
+    ];
+
+    // Kbank渠道支付方式
+    const SOURCE_KBANK_ALIPAY = 93000;
+    const SOURCE_KBANK_WECHAT = 93100;
+    const SOURCE_KBANK_CREDIT_QR = 93200;
+    const SOURCE_KBANK_THAI_QR = 93300;
+    const SOURCE_KBANK_CREDIT_CARD = 93400;
+    const SOURCE_KBANK_PAY_METHOD = [
+        93000 => 'KBANK_ALIPAY',
+        93100 => 'KBANK_WECHAT',
+        93200 => 'KBANK_CREDIT_QR',
+        93300 => 'KBANK_THAI_QR',
+        93400 => 'KBANK_CREDIT_CARD',
     ];
 
     // 结账显示类型
@@ -303,8 +319,37 @@ class PayType extends BaseModel
 
         //
         unset($param['id']);
-        $max_value = self::withTrashed()->where('source', self::SOURCE_DEFAULT)->max('code');
-        $param['code'] = ($max_value !== null && $max_value >= 20000)  ? $max_value + 100 : 20000; // 删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
+        $source = $param['source'] ?? self::SOURCE_DEFAULT;
+        if ($source == self::SOURCE_KBANK) {
+            switch ($remark) {
+                case 'Alipay':
+                    $param['code'] = self::SOURCE_KBANK_ALIPAY;
+                    break;
+                case 'WeChatPay':
+                    $param['code'] = self::SOURCE_KBANK_WECHAT;
+                    break;
+                case 'Credit QR':
+                    $param['code'] = self::SOURCE_KBANK_CREDIT_QR;
+                    break;
+                case 'Credit Card':
+                    $param['code'] = self::SOURCE_KBANK_CREDIT_CARD;
+                    break;
+                case 'Thai QR':
+                    $param['code'] = self::SOURCE_KBANK_THAI_QR;
+                    break;
+            }
+            if (!in_array($param['code'], self::SOURCE_KBANK_PAY_METHOD)) {
+                $this->error = '支付方式' . $remark . '(' . self::SOURCE[$source] . ')不存在';
+            }
+            $find = self::where('code', $param['code'])->where('source', self::SOURCE_KBANK)->find();
+            if ($find) {
+                $this->error = '支付方式' . $remark . '(' . self::SOURCE[$source] . ')已存在';
+                return false;
+            }
+        } else {
+            $max_value = self::withTrashed()->where('source', self::SOURCE_DEFAULT)->max('code');
+            $param['code'] = ($max_value !== null && $max_value >= 20000)  ? $max_value + 100 : 20000; // 删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
+        }
         $param['logo_file_uuid'] = $param['img']['file_id'] ?? 0;
         $param['qrcode_file_uuid'] = $param['qrcode']['file_id'] ?? 0;
         $param['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path'] ?? '');

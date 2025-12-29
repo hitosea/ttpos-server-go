@@ -130,6 +130,9 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		if method.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
+		if method.Code == constant.PaymentMethodCodeFreeMealForErp {
+			continue
+		}
 		// 不显示 Grab 和 LINE MAN 支付方式
 		if method.Code == constant.PaymentMethodCodeGrab || method.Code == constant.PaymentMethodCodeLineMan {
 			continue
@@ -141,11 +144,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		}
 		// LianLianPay 没有配置支付信息 不显示
 		if !lianLianPayAvailable && method.IsLianLianPay() {
-			if method.IsHeadquarterPayment() {
-				isAvailable = false
-			} else {
-				continue
-			}
+			continue
 		}
 		var logo, qrcode string
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
@@ -163,10 +162,8 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
 		// 总部支付方式
-		if method.IsHeadquarterPayment() {
-			if method.Source == constant.PaymentMethodSourceDefault && qrcode == "" {
-				isAvailable = false
-			}
+		if method.IsHeadquarterPayment() && method.ErpnextPayment == "" {
+			isAvailable = false
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:    i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
@@ -190,6 +187,7 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	commonRepo := repository.NewCommonRepo()
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
 
 	excludeCodes := []int{
 		constant.PaymentMethodCodeGrab,
@@ -204,6 +202,11 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 		commonRepo.WhereBySoftDelete(),
 		paymentMethodRepo.WithLogoFile(),
 		paymentMethodRepo.WhereNotCode(excludeCodes),
+	}
+
+	// 如果LianLianPay未配置，则过滤LianLianPay支付方式
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		opts = append(opts, paymentMethodRepo.WhereNotSource(constant.PaymentMethodSourceLianLianPay))
 	}
 
 	// 查询支付方式列表
