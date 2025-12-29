@@ -48900,8 +48900,15 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "type": {
-                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
-                    "type": "integer"
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ]
                 },
                 "uuid": {
                     "description": "盘点单UUID，如果为0，表示新建",
