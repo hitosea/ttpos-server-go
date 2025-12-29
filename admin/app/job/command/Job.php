@@ -45,6 +45,9 @@ class Job extends Command
             $argv[] = '-g';
         }
 
+        // 设置 PID 文件路径到 runtime 目录
+        Worker::$pidFile = runtime_path() . 'workerman.pid';
+
         // 修复 workerman 的原始bug
         $this->repairIntBug();
 
