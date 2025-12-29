@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
+	"ttpos-server-go/pkg/cache"
 
 	"gorm.io/gorm"
 )
@@ -24,7 +28,7 @@ type IProductBomRepo interface {
 type IProductBomQueryRepo interface {
 	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
-	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
+	GetFlavorProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)
 	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	GetFlavorProductBomUuidsByCardUuids(uuids []uint64) ([]uint64, error) // 通过成本卡uuid列表获取规格商品uuid列表
@@ -97,7 +101,28 @@ func (r *productBomRepoImpl) GetProductBoms(opts ...DBOption) ([]*model.ProductB
 	return productBoms, nil
 }
 
-func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
+func (r *productBomRepoImpl) GetFlavorProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error) {
+	// 检查是否启用对象存储缓存
+	var productBom *model.ProductBom
+	var err error
+
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBom, err = r.getFlavorProductBomWithCache(companyUuid, uuid)
+	} else {
+		// 直接查询数据库
+		productBom, err = r.queryFlavorProductBom(uuid)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBom, nil
+}
+
+// queryFlavorProductBom 查询规格商品 ProductBom（包含预加载的关联数据）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *productBomRepoImpl) queryFlavorProductBom(uuid uint64) (*model.ProductBom, error) {
 	productBom, err := r.GetProductBom(
 		CommonRepo.WhereByUuid(uuid),
 		CommonRepo.Preload(
@@ -131,6 +156,35 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 		return nil, errors.WithMessage(err)
 	}
 	return productBom, nil
+}
+
+// getFlavorProductBomWithCache 使用对象存储模块缓存查询规格商品 ProductBom（包含预加载的关联数据）
+func (r *productBomRepoImpl) getFlavorProductBomWithCache(companyUuid uint64, uuid uint64) (*model.ProductBom, error) {
+	if uuid == 0 {
+		return nil, errors.New("getFlavorProductBomWithCache uuid cannot be 0")
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("getFlavorProductBomWithCache companyUuid cannot be 0")
+	}
+
+	// 构建缓存 key（使用 companyUuid 而不是 context）
+	key := persistence.BuildKeyWithCompanyUuid(companyUuid, "product_bom_flavor", uuid)
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
+
+	// 使用缓存查询
+	result, err := cacheLayer.GET(key, func() (*model.ProductBom, error) {
+		// 缓存未命中时，从数据库查询（包含所有预加载）
+		return r.queryFlavorProductBom(uuid)
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.queryFlavorProductBom(uuid)
+	}
+
+	return result, nil
 }
 
 // GetSauceProductBomByUuid 获取小料商品信息

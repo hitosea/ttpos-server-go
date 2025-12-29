@@ -124,8 +124,7 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(companyUuid 
 	var productBom *model.ProductBom
 	var err error
 
-	if false { // TODO: 临时关闭对象存储缓存
-		// if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
 		// 使用对象存储模块缓存查询
 		productBom, err = r.getProductBomWithCache(companyUuid, flavorBomUuid)
 	} else {
