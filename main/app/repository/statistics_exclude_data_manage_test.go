@@ -356,25 +356,17 @@ func TestStatisticsRepo_ExcludeDataManage_CountBusinessSummary(t *testing.T) {
 	}
 
 	t.Run("应用数据管理过滤-应排除已选择订单", func(t *testing.T) {
-		commonRepo := NewCommonRepo()
-		dataManageRepo := NewDataManageRepo(db)
-		opts := []DBOption{
-			commonRepo.WhereNotInDataManageSubQuery(
-				db,
-				"sale_bill_uuid",
-				dataManageRepo.WhereByType(model.DataManageTypeOrder),
-				commonRepo.WhereBySoftDelete(),
-			),
-		}
 
 		req := CountBusinessSummaryReq{
-			StartTime: now,
-			EndTime:   now + 86400,
-			PageNo:    1,
-			PageSize:  10,
+			StartTime:         now,
+			EndTime:           now + 86400,
+			PageNo:            1,
+			PageSize:          10,
+			ExcludeDataManage: true,
+			Timezone:          "Asia/Shanghai",
 		}
 
-		total, result := repo.CountBusinessSummary(req, opts...)
+		total, result := repo.CountBusinessSummary(req)
 
 		if total < 0 {
 			t.Errorf("Expected total >= 0, got %d", total)
@@ -461,6 +453,7 @@ func TestStatisticsRepo_ExcludeDataManage_CountBusinessPaymentMethod(t *testing.
 			PageNo:            1,
 			PageSize:          10,
 			ExcludeDataManage: true,
+			Timezone:          "Asia/Shanghai",
 		}
 
 		total, result := repo.CountBusinessPaymentMethod(req)
@@ -481,6 +474,7 @@ func TestStatisticsRepo_ExcludeDataManage_CountBusinessPaymentMethod(t *testing.
 			PageNo:            1,
 			PageSize:          10,
 			ExcludeDataManage: false,
+			Timezone:          "Asia/Shanghai",
 		}
 
 		total, result := repo.CountBusinessPaymentMethod(req)
