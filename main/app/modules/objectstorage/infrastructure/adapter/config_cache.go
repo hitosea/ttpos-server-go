@@ -12,7 +12,8 @@ import (
 )
 
 // SettingObjectStorageCache 对象存储缓存配置的 key（存储在 saas 库的 ttpos_setting 表中）
-const SettingObjectStorageCache = "object_storage_cache"
+// 使用 pkg/cache 包中的常量，保持一致性
+const SettingObjectStorageCache = cache.ObjectStorageCacheConfigKey
 
 // ObjectStorageCacheConfig 对象存储缓存配置结构
 type ObjectStorageCacheConfig struct {
@@ -36,23 +37,20 @@ var configCacheLayer repository.CacheLayer[ObjectStorageCacheConfig]
 //   - underlyingCache: 底层缓存实例
 //   - dbGetter: 数据库获取函数（用于查询 saas 库的 ttpos_setting 表）
 func InitObjectStorageCacheConfigCache(underlyingCache cache.Cache, dbGetter func() *gorm.DB) {
-	// 创建缓存组配置：开启 L1 缓存，关闭 L2 缓存，L1 TTL 5 分钟
+	// 创建缓存组配置：开启 L1 缓存，关闭 L2 缓存，L1 TTL 1 分钟
 	groupConfig := cache.GroupConfig{
 		Name:             "object-storage-cache-config",
 		EnableLocalCache: true,             // 开启 L1 本地缓存
 		EnableRedisCache: false,            // 关闭 L2 Redis 缓存
 		NegativeTTL:      30 * time.Second, // 开启负缓存
-		L1TTL:            5 * time.Minute,  // L1 缓存 5 分钟
-		L2TTL:            0,                // L2 缓存不启用
 	}
 
 	// 创建缓存层（使用单例模式）
 	configCacheLayer = GetOrCreateCacheLayer[ObjectStorageCacheConfig](
 		groupConfig,
 		underlyingCache,
-		5*time.Minute, // 默认 TTL 5 分钟
-		WithSingletonKey("object_storage_cache_config"),
-		WithL1TTL(5*time.Minute), // L1 缓存 5 分钟
+		1*time.Minute,            // 默认 TTL 1 分钟
+		WithL1TTL(1*time.Minute), // L1 缓存 1 分钟
 	)
 
 	// 设置数据库查询函数（用于缓存未命中时查询数据库）
@@ -139,6 +137,10 @@ func queryConfigFromDB() (ObjectStorageCacheConfig, error) {
 // 返回：
 //   - true: 启用缓存，false: 禁用缓存
 func IsObjectStorageCacheEnabled(companyUuid uint64) bool {
+	if companyUuid == 0 {
+		return false
+	}
+
 	config := GetObjectStorageCacheConfig()
 
 	// 如果全局开关关闭，直接返回 false

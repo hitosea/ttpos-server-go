@@ -8,6 +8,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// ObjectStorageCacheConfigKey 对象存储缓存配置的 key（用于日志过滤）
+// 此常量与 objectstorage 模块中的 SettingObjectStorageCache 保持一致
+const ObjectStorageCacheConfigKey = "object_storage_cache"
+
 // cacheGroup 是 ICacheGroup 的具体实现
 // 它协调 L1 本地缓存、L2 Redis 缓存和 Singleflight 请求合并
 type cacheGroup[T any] struct {
@@ -42,11 +46,13 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 	// 1. 尝试从 L1 本地缓存读取
 	if g.config.EnableLocalCache {
 		if val, ok := g.l1.get(key); ok {
-			logger.Logger.Debug("缓存命中 L1",
-				zap.String("key", key),
-				zap.String("level", "L1"),
-				zap.String("type", "GET"),
-			)
+			if key != ObjectStorageCacheConfigKey { // 排除对象存储缓存配置的日志
+				logger.Logger.Debug("缓存命中 L1",
+					zap.String("key", key),
+					zap.String("level", "L1"),
+					zap.String("type", "GET"),
+				)
+			}
 			return val, nil
 		}
 	}
