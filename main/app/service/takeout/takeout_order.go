@@ -10,8 +10,10 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	printer "ttpos-server-go/app/modules/printer"
+	"ttpos-server-go/app/modules/printer/printer_model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
+	valueObject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
@@ -36,7 +38,9 @@ type ITakeoutOrderSrv interface {
 	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
 	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
 	// PrintTakeoutOrder 打印外卖订单小票
-	PrintTakeoutOrder(ctx context.Context, orderUuid uint64) (*resp.PrinterData, error)
+	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, firstExecution int) (*resp.PrinterData, error)
+	// 打印送厨单
+	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int) (*resp.PrinterData, error)
 }
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
@@ -896,11 +900,11 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 				}
 
 				switch modifier.TtposModifierType {
-				case "flavor":
+				case string(valueObject.ModifierTypeFlavor):
 					// 规格：直接使用已保存的 TtposFlavorName
 					productBomUuid = modifier.TtposModifierUuid
 					productBomName = modifier.TtposModifierName
-				case "attr", "sauce":
+				case string(valueObject.ModifierTypeAttr), string(valueObject.ModifierTypeSauce):
 					// 属性和加料：直接使用已保存的 TtposModifierName
 					if modifier.TtposModifierName != "" {
 						attributeNames = append(attributeNames, modifier.TtposModifierName)
@@ -1047,20 +1051,9 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 }
 
 // PrintTakeoutOrder 打印外卖订单小票
-func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64) (*resp.PrinterData, error) {
+func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, firstExecution int) (*resp.PrinterData, error) {
 	// 1. 从领域层获取订单数据
-	takeoutOrderSrv := domainService.NewTakeoutOrderSrv(s.dbm)
-	order, err := takeoutOrderSrv.GetOrderForPrint(ctx, orderUuid)
-	if err != nil {
-		return nil, err
-	}
-
-	//打印商家联
-	receiptData, err := printer.NewPrinterRepo(ctx).PrintingPlatformTakeoutReceipt(
-		order,
-		"merchant",
-		1,
-	)
+	order, err := domainService.NewTakeoutOrderSrv(s.dbm).GetOrderForPrint(ctx, orderUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -1074,5 +1067,134 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64) (*
 		)
 	})
 
+	//打印商家联
+	receiptData, err := printer.NewPrinterRepo(ctx).PrintingPlatformTakeoutReceipt(
+		order,
+		"merchant",
+		firstExecution,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return receiptData, nil
+}
+
+// PrintProductionOrder 打印送厨单
+func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int) (*resp.PrinterData, error) {
+	db := ctx.GetDB()
+	if db == nil {
+		return nil, errors.New("数据库连接失败")
+	}
+
+	// 1. 从领域层获取订单数据
+	order, err := domainService.NewTakeoutOrderSrv(s.dbm).GetOrderForPrint(ctx, orderUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// 6. 打印送厨单
+	// 异步打印
+	utils.Go(func() {
+		// 1. 准备打印商品数据
+		// 直接从外卖订单商品转换为打印模型
+		products := make([]printer_model.OrderProduct, 0, len(order.TakeoutOrderItems))
+
+		for _, item := range order.TakeoutOrderItems {
+			// 使用 TTPOS 标准名称（商家联打印）
+			itemName := item.TtposItemName
+			if itemName == "" {
+				itemName = item.ItemName // 回退到平台名称
+			}
+
+			// 构建商品规格、属性、加料的完整信息
+			attrList := make([]dto.LocaleResponse, 0)
+			saucesList := make([]dto.LocaleResponse, 0)
+			flavorName := dto.LocaleResponse{}
+			flavorNameList := make([]dto.LocaleResponse, 0)
+			subProducts := make([]printer_model.OrderProduct, 0)
+			// 遍历修饰符，分类处理
+			for _, modifier := range item.TakeoutOrderItemModifiers {
+				if modifier.IsMapped == 0 {
+					continue // 跳过未映射的修饰符
+				}
+
+				modifierName := modifier.TtposModifierName
+				if modifierName == "" {
+					modifierName = modifier.ModifierName
+				}
+
+				switch modifier.TtposModifierType {
+				case string(valueObject.ModifierTypeFlavor):
+					// 规格
+					attrList = append(attrList, *language.JsonToLocaleResponse(modifierName))
+					flavorName = *language.JsonToLocaleResponse(modifier.TtposFlavorName)
+					flavorNameList = append(flavorNameList, *language.JsonToLocaleResponse(modifier.TtposFlavorName))
+				case string(valueObject.ModifierTypeAttr):
+					// 属性
+					attrList = append(attrList, *language.JsonToLocaleResponse(modifierName))
+				case string(valueObject.ModifierTypeSauce):
+					// 加料
+					saucesList = append(saucesList, *language.JsonToLocaleResponse(modifierName))
+				case string(valueObject.ModifierTypeCommodity):
+					subProducts = append(subProducts, printer_model.OrderProduct{
+						OrderProductId:  modifier.Uuid,
+						ProductId:       modifier.TtposModifierUuid,
+						ProductName:     *language.JsonToLocaleResponse(modifierName),                                   // 商品名称
+						FlavorName:      *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品规格
+						Attr:            *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品属性
+						ProductAttrList: []dto.LocaleResponse{*language.JsonToLocaleResponse(modifier.TtposFlavorName)}, // 规格+属性列表
+						TotalNum:        float64(modifier.Quantity),                                                     // 商品数量
+						ProductPrice:    utils.Round(modifier.Price/float64(modifier.Quantity), 2),                      // 商品价格
+						TotalPrice:      modifier.Price,                                                                 // 商品总价格
+					})
+					continue
+				}
+			}
+
+			product := printer_model.OrderProduct{
+				OrderProductId:        item.Uuid,
+				ProductId:             item.TtposProductUuid,
+				ProductName:           *language.JsonToLocaleResponse(itemName),           // 商品名称
+				ProductType:           uint8(item.TtposProductType),                       // 商品类型
+				FlavorName:            flavorName,                                         // 商品规格
+				Attr:                  language.MergeLocaleResponses(flavorNameList, ","), // 商品属性
+				ProductAttrList:       attrList,                                           // 规格+属性列表
+				ProductSauceNamesList: saucesList,                                         // 加料列表
+				TotalNum:              float64(item.Quantity),                             // 商品数量
+				ProductPrice:          utils.Round(item.Price/float64(item.Quantity), 2),  // 商品价格
+				TotalPrice:            item.Price,                                         // 商品总价格
+				Remark:                item.Specifications,                                // 商品备注
+				IsWrap:                order.IsTakeawayOrder(),                            // 是否打包
+				SubProducts:           subProducts,                                        // 套餐子商品列表
+			}
+			products = append(products, product)
+		}
+
+		// 2. 构建打印数据
+		printOrder := printer_model.Order{
+			Uuid:                   order.Uuid,                 // 使用外卖订单 UUID
+			SaleOrderUuid:          0,                          // 外卖订单没有 SaleOrder
+			OrderNo:                order.PlatformOrderId,      // 订单号
+			MealNum:                1,                          // 外卖订单默认1人
+			OrderSourceTakeoutText: order.GetCapitalPlatform(), // 显示平台名称（grab/lineman）
+			SerialNo:               order.ShortOrderNumber,     // 外卖订单流水号
+			OrderRemark:            nil,                        // 外卖订单备注（目前无此信息）
+			DeskUuid:               0,                          // 外卖订单无桌台
+			Desk:                   nil,                        // 外卖订单无桌台信息
+			UpdateTime:             int64(order.UpdateTime),    // 订单更新时间
+			FinishTime:             0,                          // 外卖订单无完成时间
+			IsTakeout:              true,                       // 标记为第三方外卖平台订单
+			Products:               products,                   // 商品列表
+		}
+
+		// 3. 执行打印
+		printerRepo := printer.NewPrinterRepo(ctx, "")
+		printerRepo.PrintingDishes(
+			printType,
+			printOrder,
+		)
+	})
+
+	return nil, nil
 }

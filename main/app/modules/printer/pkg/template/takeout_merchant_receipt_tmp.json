@@ -49,8 +49,8 @@
         ],
         [
             {
-                "group_block_id": "platform_name",
-                "block_id": "order.platform",
+                "group_block_id": "table_no_order_no",
+                "block_id": "order.serial_no",
                 "block_type": "value",
                 "block_label": {},
                 "block_name": {

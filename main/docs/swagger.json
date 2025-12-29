@@ -42479,6 +42479,19 @@
                 }
             }
         },
+        "req.CheckMaterialsItem": {
+            "type": "object",
+            "properties": {
+                "counted_quantity": {
+                    "description": "实盘库存数量",
+                    "type": "number"
+                },
+                "material_uuid": {
+                    "description": "待盘点物品UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.CheckMemberPasswordReq": {
             "type": "object",
             "required": [
@@ -45102,7 +45115,7 @@
             ],
             "properties": {
                 "code": {
-                    "description": "支付方式代号（可选，用于系统默认支付方式）",
+                    "description": "支付方式代号（可选，用于Kbank支付方式）",
                     "type": "integer"
                 },
                 "default_img": {
@@ -45145,6 +45158,10 @@
                 },
                 "qrcode_file_uuid": {
                     "description": "二维码图片UUID",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "来源（可选，默认1，Kbank支付方式为3）",
                     "type": "integer"
                 },
                 "status": {
@@ -48777,19 +48794,6 @@
                 }
             }
         },
-        "req.StockReconciliationCheckMaterialsItem": {
-            "type": "object",
-            "properties": {
-                "counted_quantity": {
-                    "description": "实盘库存数量",
-                    "type": "number"
-                },
-                "material_uuid": {
-                    "description": "待盘点物品UUID",
-                    "type": "integer"
-                }
-            }
-        },
         "req.StockReconciliationCheckMaterialsReq": {
             "type": "object",
             "properties": {
@@ -48797,7 +48801,7 @@
                     "description": "待盘点物品列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/req.StockReconciliationCheckMaterialsItem"
+                        "$ref": "#/definitions/req.CheckMaterialsItem"
                     }
                 },
                 "uuid": {
@@ -52010,6 +52014,10 @@
         "resp.DefaultPaymentMethodResp": {
             "type": "object",
             "properties": {
+                "can_add": {
+                    "description": "是否可添加",
+                    "type": "boolean"
+                },
                 "code": {
                     "description": "支付方式code",
                     "type": "integer"
@@ -52019,11 +52027,19 @@
                     "type": "string"
                 },
                 "name": {
-                    "description": "支付方式名称",
+                    "description": "名称",
+                    "type": "string"
+                },
+                "payment_name": {
+                    "description": "支付方式",
                     "type": "string"
                 },
                 "sort": {
                     "description": "排序",
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "来源",
                     "type": "integer"
                 },
                 "url": {
@@ -56641,7 +56657,7 @@
                     "type": "integer"
                 },
                 "source": {
-                    "description": "来源 0-系统 1-手动 2-LianLianPay",
+                    "description": "来源 0-系统 1-手动 2-LianLianPay 3-Kbank",
                     "type": "integer"
                 },
                 "status": {
@@ -60157,6 +60173,10 @@
         "resp.StockReconciliationCheckMaterialsResp": {
             "type": "object",
             "properties": {
+                "exists_in_warehouse": {
+                    "description": "是否在仓库中",
+                    "type": "boolean"
+                },
                 "is_deleted": {
                     "description": "是否已删除",
                     "type": "boolean"

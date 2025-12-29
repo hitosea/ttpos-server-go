@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
-	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -19,6 +18,7 @@ import (
 	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/cache"
@@ -137,13 +137,29 @@ func (s *Srv) fromCache(ctx context.Context) ([]model.Setting, error) {
 	return settings, nil
 }
 
+// deduplicateLanguageList 去重 LanguageItem 列表，基于 Value 字段（语言代码）
+func deduplicateLanguageList(list []dto.LanguageItem) []dto.LanguageItem {
+	if len(list) == 0 {
+		return list
+	}
+	seen := make(map[string]bool)
+	result := make([]dto.LanguageItem, 0, len(list))
+	for _, item := range list {
+		if !seen[item.Value] {
+			seen[item.Value] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 // GetStoreLanguageList 获取商家语言列表
 func (s *Srv) GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error) {
 	set, err := s.GetStoreSetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	return set.Language, nil
+	return deduplicateLanguageList(set.Language), nil
 }
 
 func (s *Srv) GetStoreLanguage(ctx context.Context) ([]string, error) {
@@ -274,6 +290,9 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		defaultStore.Language = make([]dto.LanguageItem, 0)
 	}
 
+	// 去重 Language 列表
+	defaultStore.Language = deduplicateLanguageList(defaultStore.Language)
+
 	if defaultStore.Coordinates != "" {
 		latLng := strings.Split(defaultStore.Coordinates, ",")
 		if len(latLng) == 2 {
@@ -393,6 +412,8 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	if len(defaultPrinter.LanguageList) == 0 {
 		defaultPrinter.LanguageList = make([]dto.LanguageItem, 0)
 	}
+	// 去重 LanguageList
+	defaultPrinter.LanguageList = deduplicateLanguageList(defaultPrinter.LanguageList)
 	if len(defaultPrinter.CalendarList) == 0 {
 		defaultPrinter.CalendarList = make([]setting.CalendarItem, 0)
 	}
@@ -766,7 +787,8 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultTablet.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultTablet.LanguageList = deduplicateLanguageList(validLanguageList)
 	return defaultTablet, nil
 }
 
@@ -904,7 +926,8 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultCashier.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultCashier.LanguageList = deduplicateLanguageList(validLanguageList)
 	return defaultCashier, nil
 }
 
@@ -954,6 +977,9 @@ func (s *Srv) GetKioskSetting(ctx context.Context) (setting.Kiosk, error) {
 	if kiosk.LanguageList == nil {
 		kiosk.LanguageList = make([]dto.LanguageItem, 0)
 	}
+
+	// 去重 LanguageList
+	kiosk.LanguageList = deduplicateLanguageList(kiosk.LanguageList)
 
 	return kiosk, nil
 }
@@ -1086,7 +1112,8 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultAssistant.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultAssistant.LanguageList = deduplicateLanguageList(validLanguageList)
 
 	return defaultAssistant, nil
 }
@@ -1206,7 +1233,8 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultKitchen.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultKitchen.LanguageList = deduplicateLanguageList(validLanguageList)
 
 	return defaultKitchen, nil
 }
@@ -1297,7 +1325,8 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultH5.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultH5.LanguageList = deduplicateLanguageList(validLanguageList)
 	return defaultH5, nil
 }
 
@@ -1337,7 +1366,8 @@ func (s *Srv) GetCashierLanguage(c context.Context) (resp.LanguageResp, error) {
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	languageResp.LanguageList = validLanguageList
+	// 去重 LanguageList
+	languageResp.LanguageList = deduplicateLanguageList(validLanguageList)
 	return languageResp, nil
 }
 

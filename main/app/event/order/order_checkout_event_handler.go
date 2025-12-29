@@ -71,9 +71,34 @@ func CheckoutSaleOrderEventHandler() {
 			if len(products) > 0 {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					printerConstant.PrinterProductTypePay,
-					payload.SaleBillUuid,
-					payload.SaleOrderUuid,
-					products,
+					printer_model.Order{
+						Uuid:                   payload.SaleBillUuid,
+						SaleOrderUuid:          payload.SaleOrderUuid,
+						OrderNo:                payload.SaleBill.OrderNo,
+						MealNum:                payload.SaleBill.MealNum,
+						IsTakeoutBill:          payload.SaleBill.IsTakeoutBill(),
+						OrderSourceTakeoutText: payload.SaleBill.GetOrderSourceTakeoutText(),
+						SerialNo:               payload.SaleBill.SerialNo,
+						OrderRemark:            payload.SaleBill.GetLatestOrderRemarkRes(),
+						DeskUuid:               payload.SaleBill.DeskUuid,
+						Desk: &printer_model.OrderDesk{
+							DeskNo: func() string {
+								if payload.SaleBill.Desk == nil {
+									return ""
+								}
+								return payload.SaleBill.Desk.DeskNo
+							}(),
+							RegionUuid: func() uint64 {
+								if payload.SaleBill.Desk == nil {
+									return 0
+								}
+								return payload.SaleBill.Desk.RegionUuid
+							}(),
+						},
+						UpdateTime: payload.SaleBill.UpdateTime,
+						FinishTime: payload.SaleBill.FinishTime,
+						Products:   products,
+					},
 				)
 			}
 		})

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
@@ -301,7 +302,58 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 // GetDefaultPayList 获取默认支付方式列表（参考PHP defaultPay）
 // 返回系统默认的支付方式列表，过滤掉余额、现金、微信、支付宝、POS、免费支付
 func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.DefaultPaymentMethodResp {
-	// 定义系统默认支付方式列表（参考PHP OrderPayTypeEnum::data()）
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	if strings.HasSuffix(baseUrl, "/") {
+		baseUrl = baseUrl[:len(baseUrl)-1]
+	}
+
+	result := make([]*resp.DefaultPaymentMethodResp, 0)
+
+	// 1. 定义Kbank支付方式列表（在最前面）
+	kbankPayments := []struct {
+		Code        int
+		Name        string
+		PaymentName string
+		Img         string
+		Sort        int
+	}{
+		{constant.PaymentMethodCodeKbankAlipay, "Alipay（Kbank）", "Alipay", "/image/pay/alipay.png", 0},
+		{constant.PaymentMethodCodeKbankWechat, "WeChatPay（Kbank）", "WeChatPay", "/image/pay/wechat_pay.png", 1},
+		{constant.PaymentMethodCodeKbankCreditQR, "Credit QR（Kbank）", "Credit QR", "/image/pay/credit_qr.png", 2},
+		{constant.PaymentMethodCodeKbankThaiQR, "Thai QR（Kbank）", "Thai QR", "/image/pay/thai_qr.png", 3},
+		{constant.PaymentMethodCodeKbankCreditCard, "Credit Card（Kbank）", "Credit Card", "/image/pay/credit_card.png", 4},
+	}
+
+	// 2. 查询已添加的Kbank支付方式
+	existingKbankPayments := paymentMethodRepo.GetPaymentMethodList(
+		paymentMethodRepo.WhereSource(constant.PaymentMethodSourceKbank),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+
+	// 构建已添加的payment_name集合（用于快速查找）
+	existingPaymentNames := make(map[int]bool)
+	for _, pm := range existingKbankPayments {
+		existingPaymentNames[pm.Code] = true
+	}
+
+	// 3. 构建Kbank支付方式响应列表
+	for _, kp := range kbankPayments {
+		canAdd := !existingPaymentNames[kp.Code]
+		result = append(result, &resp.DefaultPaymentMethodResp{
+			Code:        kp.Code,
+			Name:        kp.Name,
+			PaymentName: kp.PaymentName,
+			Url:         baseUrl + kp.Img,
+			Img:         kp.Img,
+			Sort:        kp.Sort,
+			CanAdd:      canAdd,
+			Source:      constant.PaymentMethodSourceKbank,
+		})
+	}
+
+	// 4. 定义系统默认支付方式列表（参考PHP OrderPayTypeEnum::data()）
 	defaultPayments := []struct {
 		Value int
 		Name  string
@@ -324,7 +376,7 @@ func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.Defaul
 		{constant.PaymentMethodCodeJAQCreditDebit, "Credit/Debit", "/image/pay/ja_pay.png", 14},
 	}
 
-	// 过滤掉余额、现金、微信、支付宝、POS、免费支付（参考PHP defaultPay逻辑）
+	// 5. 过滤掉余额、现金、微信、支付宝、POS、免费支付（参考PHP defaultPay逻辑）
 	excludedCodes := []int{
 		constant.PaymentMethodCodeBalance,
 		constant.PaymentMethodCodeCash,
@@ -334,22 +386,21 @@ func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.Defaul
 		constant.PaymentMethodCodeFreePay,
 	}
 
-	result := make([]*resp.DefaultPaymentMethodResp, 0)
+	// 6. 添加其他默认支付方式
 	for _, payment := range defaultPayments {
 		// 排除指定的支付方式
 		if slices.Contains(excludedCodes, payment.Value) {
 			continue
 		}
-		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
-		if strings.HasSuffix(baseUrl, "/") {
-			baseUrl = baseUrl[:len(baseUrl)-1]
-		}
 		result = append(result, &resp.DefaultPaymentMethodResp{
-			Code: payment.Value,
-			Name: payment.Name,
-			Url:  baseUrl + payment.Img,
-			Img:  payment.Img,
-			Sort: payment.Sort,
+			Code:        payment.Value,
+			Name:        payment.Name,
+			PaymentName: payment.Name,
+			Url:         baseUrl + payment.Img,
+			Img:         payment.Img,
+			Sort:        payment.Sort,
+			CanAdd:      true,                                // 默认支付方式默认可添加
+			Source:      constant.PaymentMethodSourceDefault, // 默认source为1
 		})
 	}
 
@@ -381,20 +432,51 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 	// 获取起始code（用于批量创建时递增）
 	baseCode := s.generatePaymentCode(db)
 
+	kbankCodes := []int{
+		constant.PaymentMethodCodeKbankAlipay,
+		constant.PaymentMethodCodeKbankWechat,
+		constant.PaymentMethodCodeKbankCreditQR,
+		constant.PaymentMethodCodeKbankThaiQR,
+		constant.PaymentMethodCodeKbankCreditCard,
+	}
+
+	// 重复检测：检查是否已存在相同的payment_name和source组合
+	for _, item := range createReq.Items {
+		// 处理source字段：如果传入source=0则使用默认值1，否则使用传入的值
+		source := constant.PaymentMethodSourceDefault // 默认值
+		if item.Source > 0 {
+			source = item.Source
+		}
+		if source == constant.PaymentMethodSourceKbank {
+			if !slices.Contains(kbankCodes, item.Code) {
+				return errors.New(fmt.Sprintf("支付方式 %d (%s) 不存在", item.Code, constant.PaymentMethodSourceTextMap[source]))
+			}
+			existing := paymentMethodRepo.GetPaymentMethod(
+				paymentMethodRepo.WherePaymentName(item.PaymentName),
+				paymentMethodRepo.WhereCode(item.Code),
+				paymentMethodRepo.WhereSource(source),
+				repository.CommonRepo.WhereBySoftDelete(),
+			)
+			if existing.Uuid > 0 {
+				return errors.New(fmt.Sprintf("支付方式 %s (%s) 已存在", item.PaymentName, constant.PaymentMethodSourceTextMap[source]))
+			}
+		}
+	}
+
 	// 批量创建支付方式
 	paymentMethods := make([]*model.PaymentMethod, 0, len(createReq.Items))
 	for i, item := range createReq.Items {
 		// 如果指定了code（系统默认支付方式），使用指定的code；否则自动生成
-		var code int
+		code := baseCode + i*100
 		if item.Code > 0 {
-			// 使用指定的code，如果多个code一致，递增（参考PHP逻辑：code + key * 100）
-			code = item.Code + i*100
-		} else {
-			// 自动生成code
-			code = baseCode + i*100
+			code = item.Code
 		}
 
-		source := constant.PaymentMethodSourceDefault // 手动添加为 1
+		// 处理source字段：如果传入source=0则使用默认值1，否则使用传入的值
+		source := constant.PaymentMethodSourceDefault // 默认值
+		if item.Source > 0 {
+			source = item.Source
+		}
 
 		// fee_percent 从 0-100 转换为 0-1
 		feePercent := item.FeePercent / 100

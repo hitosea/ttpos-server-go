@@ -56,11 +56,46 @@ func CancelSaleOrderProductEventHandler() {
 			utils.Go(func() {
 				products := printer_model.OrderProduct{}
 				copier.Copy(&products, payload)
+				// 获取订单信息
+				billInfo, err := repository.NewOrderRepo(db).GetSaleBill(
+					repository.CommonRepo.WhereByUuid(payload.SaleBillUuid),
+					repository.CommonRepo.Preload(repository.WithPreload{Query: "Desk"}),
+				)
+				if err != nil {
+					logger.Logger.Error("FinishMenuEventHandler process, GetSaleBillInfo failed", zap.Error(err))
+					return
+				}
+				// 打印退菜
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					printerConstant.PrinterProductTypeBackFood,
-					payload.SaleBillUuid,
-					payload.SaleOrderUuid,
-					[]printer_model.OrderProduct{products},
+					printer_model.Order{
+						Uuid:                   payload.SaleBillUuid,
+						SaleOrderUuid:          payload.SaleOrderUuid,
+						OrderNo:                billInfo.OrderNo,
+						MealNum:                billInfo.MealNum,
+						IsTakeoutBill:          billInfo.IsTakeoutBill(),
+						OrderSourceTakeoutText: billInfo.GetOrderSourceTakeoutText(),
+						SerialNo:               billInfo.SerialNo,
+						OrderRemark:            billInfo.GetLatestOrderRemarkRes(),
+						DeskUuid:               billInfo.DeskUuid,
+						Desk: &printer_model.OrderDesk{
+							DeskNo: func() string {
+								if billInfo.Desk == nil {
+									return ""
+								}
+								return billInfo.Desk.DeskNo
+							}(),
+							RegionUuid: func() uint64 {
+								if billInfo.Desk == nil {
+									return 0
+								}
+								return billInfo.Desk.RegionUuid
+							}(),
+						},
+						UpdateTime: billInfo.UpdateTime,
+						FinishTime: billInfo.FinishTime,
+						Products:   []printer_model.OrderProduct{products},
+					},
 				)
 			})
 		})

@@ -204,3 +204,10 @@ func ParseFloat(numStr string) (float64, error) {
 	}
 	return strconv.ParseFloat(numStr, 64)
 }
+
+// Round 保留指定位数的小数（四舍五入）
+// value: 需要处理的浮点数
+// places: 保留的小数位数
+func Round(value float64, places int32) float64 {
+	return decimal.NewFromFloat(value).Round(places).InexactFloat64()
+}

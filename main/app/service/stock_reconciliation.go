@@ -549,6 +549,20 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	return stockReconciliationUuid, nil
 }
 
+// getWarehouseMaterialUuidMap 获取仓库物品UUID映射
+func (s *stockReconciliationSrv) getWarehouseMaterialUuidMap(db *gorm.DB, warehouseUuid uint64) (map[uint64]bool, error) {
+	warehouseMaterialUUidMap := make(map[uint64]bool)
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	warehouseItems, err := warehouseItemRepo.GetByWarehouseUuid(warehouseUuid)
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+	}
+	for _, item := range warehouseItems {
+		warehouseMaterialUUidMap[item.MaterialUuid] = true
+	}
+	return warehouseMaterialUUidMap, nil
+}
+
 // 提交盘点单
 // stockReconciliationUuid: 盘点单UUID
 // isDirectSubmit: 是否列表上直接提交，true表示在列表上点击提交，false表示保存后提交
@@ -584,6 +598,11 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		}
 	}
 
+	warehouseMaterialUUidMap, err := s.getWarehouseMaterialUuidMap(db, stockReconciliation.WarehouseUuid)
+	if err != nil {
+		return errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+	}
+
 	companySetting := ctx.GetCompanySetting()
 
 	// 根据时区获取过账日期和时间
@@ -593,6 +612,9 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
 		for _, item := range stockReconciliation.StockReconciliationItems {
+			if !warehouseMaterialUUidMap[item.MaterialUuid] {
+				return errors.New("盘点单中有不在此仓库的物品")
+			}
 			// 物品已禁用，标记item的delete_time(删除)
 			if !item.Material.Status {
 				if err := stockReconciliationRepo.DeleteStockReconciliationItem(item.Uuid); err != nil {
@@ -1074,6 +1096,11 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 	var materialUuids []uint64
 
+	warehouseMaterialUUidMap, err := s.getWarehouseMaterialUuidMap(db, checkReq.WarehouseUuid)
+	if err != nil {
+		return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+	}
+
 	bookedQuantityMap := make(map[uint64]decimal.Decimal)
 
 	if checkReq.Uuid != 0 {
@@ -1125,6 +1152,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 				Status:                     item.Material.Status,
 				IsDeleted:                  item.Material.DeleteTime > 0,
 				UnitCount:                  unitCount,
+				ExistsInWarehouse:          warehouseMaterialUUidMap[item.MaterialUuid],
 			})
 		}
 	}
@@ -1149,7 +1177,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 	if len(checkReq.Items) > 0 {
 		var newMaterialUuids []uint64
-		itemMap := make(map[uint64]req.StockReconciliationCheckMaterialsItem)
+		itemMap := make(map[uint64]req.CheckMaterialsItem)
 		// 过滤掉在materialUuids中的物品
 		for _, item := range checkReq.Items {
 			if !slices.Contains(materialUuids, item.MaterialUuid) {
@@ -1168,6 +1196,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 				Status:                     material.Status,
 				IsDeleted:                  material.DeleteTime > 0,
 				IsInventoryStatusException: s.getIsInventoryStatusException(bookedQuantityMap[material.Uuid], countedQuantity),
+				ExistsInWarehouse:          warehouseMaterialUUidMap[material.Uuid],
 			})
 		}
 	}

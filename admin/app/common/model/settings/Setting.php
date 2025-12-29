@@ -326,6 +326,9 @@ class Setting extends BaseModel
         // v1.0.8 语言数据兼容处理
         $result = ArrayHelp::arrayMergeMultiple($defaultData, $userData);
 
+        // 过滤语言数组中的重复项（根据 value 字段去重）
+        $result = self::deduplicateLanguageArrays($result);
+
         //
         return $result;
     }
@@ -1272,5 +1275,69 @@ class Setting extends BaseModel
                 ],
             ],
         ];
+    }
+
+    /**
+     * 过滤语言数组中的重复项（根据 value 字段去重）
+     * @param array $result 合并后的设置数据
+     * @return array
+     */
+    private static function deduplicateLanguageArrays(array $result): array
+    {
+        // store 设置中的 language 数组去重
+        if (isset($result['store']['values']['language']) && is_array($result['store']['values']['language'])) {
+            $result['store']['values']['language'] = self::deduplicateByValue($result['store']['values']['language']);
+        }
+
+        // printer、cashier、tablet、h5、kitchen、assistant、kiosk 设置中的 language_list 数组去重
+        $settingsWithLanguageList = ['printer', 'cashier', 'tablet', 'h5', 'kitchen', 'assistant', 'kiosk'];
+        foreach ($settingsWithLanguageList as $settingKey) {
+            if (isset($result[$settingKey]['values']['language_list']) && is_array($result[$settingKey]['values']['language_list'])) {
+                $result[$settingKey]['values']['language_list'] = self::deduplicateByValue($result[$settingKey]['values']['language_list']);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * 根据 value 字段对二维数组去重
+     * @param array $array 二维数组
+     * @return array 去重后的数组
+     */
+    private static function deduplicateByValue(array $array): array
+    {
+        if (empty($array)) {
+            return $array;
+        }
+
+        $seen = [];
+        $result = [];
+
+        foreach ($array as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            // 获取 value 字段的值（可能在不同的键名下）
+            $value = $item['value'] ?? null;
+
+            // 如果 value 为空，跳过
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            // 如果 value 已经出现过，跳过
+            if (isset($seen[$value])) {
+                continue;
+            }
+
+            // 记录已出现的 value
+            $seen[$value] = true;
+            // 添加到结果数组
+            $result[] = $item;
+        }
+
+        return $result;
     }
 }

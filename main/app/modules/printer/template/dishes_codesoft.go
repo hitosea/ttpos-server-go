@@ -30,11 +30,10 @@ func NewDishesCodesoftTemplate(
 func (t *dishesCodesoftTemplate) CompleteOrder(
 	tmpInfo model.PrinterTemplate,
 	printerItem *model.ProductPrinterItem,
-	order model.SaleBill,
-	products printer_model.Products,
+	order printer_model.Order,
 ) string {
 	// 检查是否有打印内容
-	if len(products) == 0 {
+	if len(order.Products) == 0 {
 		return ""
 	}
 
@@ -55,7 +54,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 
 	// 分批类型
 	batchTagText := ""
-	for _, product := range products {
+	for _, product := range order.Products {
 		if product.BatchTagUuid > 0 {
 			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
 			if err == nil {
@@ -80,7 +79,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 	}
 
 	// 订单来源为外卖的文本
-	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.OrderSourceTakeoutText)
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
@@ -106,14 +105,16 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
-		} else if order.IsTakeoutBill() {
+		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
+		} else if order.IsTakeout {
+			printer.AppendText(orderSourceTakeoutText + ": " + serialNoText + "\n")
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 		}
 
 		// 整单备注
-		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		if orderRemark := order.OrderRemark; orderRemark != nil {
 			printer.AppendText("\n------------------------------------------------\n")
 			printer.SetAlignment(pkg.AlignLeft)
 			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
@@ -141,7 +142,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		printer.LineFeed()
 
 		// 分批类型
-		if batchTagText != "" && !order.IsTakeoutBill() {
+		if batchTagText != "" && !order.IsTakeoutBill {
 			printer.SetCharacterSize(2, 2)
 			printer.SetPrintModes(true, true, false)
 			printer.SetAlignment(pkg.AlignCenter)
@@ -253,7 +254,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 				}
 			}
 		}
-		processProducts(products, false)
+		processProducts(order.Products, false)
 
 	} else {
 		/**
@@ -274,14 +275,16 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
-		} else if order.IsTakeoutBill() {
+		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
+		} else if order.IsTakeout {
+			printer.AppendText(orderSourceTakeoutText + ": " + serialNoText + "\n")
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 		}
 
 		// 整单备注
-		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		if orderRemark := order.OrderRemark; orderRemark != nil {
 			printer.SetAlignment(pkg.AlignLeft)
 			printer.AppendText("\n------------------------------------------------\n")
 			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
@@ -310,7 +313,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		printer.LineFeed()
 
 		// 分批类型
-		if batchTagText != "" && !order.IsTakeoutBill() {
+		if batchTagText != "" && !order.IsTakeoutBill {
 			printer.SetCharacterSize(2, 2)
 			printer.SetPrintModes(true, true, false)
 			printer.SetAlignment(pkg.AlignCenter)
@@ -433,7 +436,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 				}
 			}
 		}
-		processProducts(products, false)
+		processProducts(order.Products, false)
 	}
 
 	// 恢复默认行间距
@@ -457,8 +460,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 	tmpInfo model.PrinterTemplate,
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
-	order model.SaleBill,
-	products printer_model.Products,
+	order printer_model.Order,
 ) string {
 
 	templateID := tmpInfo.Template
@@ -480,7 +482,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 
 	// 分批类型
 	batchTagText := ""
-	for _, product := range products {
+	for _, product := range order.Products {
 		if product.BatchTagUuid > 0 {
 			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
 			if err == nil {
@@ -505,7 +507,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 	}
 
 	// 订单来源为外卖的文本
-	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.GetOrderSourceTakeoutText())
+	orderSourceTakeoutText := t.base.GetOrderSourceTakeoutText(order.OrderSourceTakeoutText)
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
@@ -530,14 +532,16 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 			printer.SetLineSpacing(spacing)
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
-		} else if order.IsTakeoutBill() {
+		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
+		} else if order.IsTakeout {
+			printer.AppendText(orderSourceTakeoutText + ": " + serialNoText)
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + mealNumStr)
 		}
 
 		// 整单备注
-		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		if orderRemark := order.OrderRemark; orderRemark != nil {
 			printer.LineFeed(1)
 			printer.AppendText("\n------------------------\n")
 			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
@@ -547,7 +551,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		printer.LineFeed(3)
 
 		// 分批类型
-		if batchTagText != "" && !order.IsTakeoutBill() {
+		if batchTagText != "" && !order.IsTakeoutBill {
 			printer.SetAlignment(pkg.AlignCenter)
 			printer.AppendText(batchTagText)
 			printer.LineFeed(2)
@@ -561,7 +565,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		)
 
 		// 遍历订单中的产品
-		for _, product := range products {
+		for _, product := range order.Products {
 			// 打包商品
 			wrapText := ""
 			if product.IsWrap {
@@ -663,9 +667,6 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 
 		// 处理桌号或取单号
 		serialNoText := order.SerialNo
-		if order.IsOrderSourceTakeout() {
-			serialNoText = t.base.Translate("外卖") + " " + serialNoText
-		}
 		if order.DeskUuid > 0 {
 			// 判断文字是否包含缅甸语
 			spacing := 60
@@ -675,14 +676,16 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 			printer.SetLineSpacing(spacing)
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + serialNoText + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
-		} else if order.IsTakeoutBill() {
+		} else if order.IsTakeoutBill {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
+		} else if order.IsTakeout {
+			printer.AppendText(orderSourceTakeoutText + ": " + serialNoText)
 		} else {
 			printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + mealNumStr)
 		}
 
 		// 整单备注
-		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		if orderRemark := order.OrderRemark; orderRemark != nil {
 			printer.LineFeed(1)
 			printer.AppendText("\n------------------------\n")
 			printer.SetLineSpacing(120)
@@ -698,7 +701,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		printer.AppendText(updateTime)
 
 		// 分批类型
-		if batchTagText != "" && !order.IsTakeoutBill() {
+		if batchTagText != "" && !order.IsTakeoutBill {
 			printer.SetCharacterSize(2, 2)
 			printer.SetPrintModes(true, true, false)
 			printer.LineFeed(2)
@@ -716,7 +719,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		isPrinter = false
 
 		// 遍历订单中的产品
-		for _, product := range products {
+		for _, product := range order.Products {
 
 			// 打包商品
 			wrapText := ""

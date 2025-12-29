@@ -1107,6 +1107,9 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 		materialOpts = append(materialOpts, materialRepo.WhereAllowSubstoreVisible(1))
 	}
 
+	// 物品uuid必须在仓库物品列表中
+	materialOpts = append(materialOpts, materialRepo.WhereUuidInWarehouseItem(req.WarehouseUuid))
+
 	// 获取物品列表
 	paginatedMaterials, total, err := materialRepo.GetMaterialListWithPagination(
 		req.PageNo,
