@@ -246,9 +246,6 @@ func (r *saasStaffRepo) QueryByKeyword(keyword string, staffUuids []uint64, limi
 		if strings.Contains(keywordLower, "@") {
 			// 包含 @：只查询匹配邮箱
 			db = db.Where("LOWER(email) LIKE ?", "%"+keywordLower+"%")
-		} else if isNumeric(keyword) {
-			// 只有数字：只查询匹配手机号
-			db = db.Where("phone LIKE ?", "%"+keyword+"%")
 		} else {
 			// 其他情况：同时查询邮箱和手机号
 			db = db.Where("LOWER(email) LIKE ? OR phone LIKE ?", "%"+keywordLower+"%", "%"+keyword+"%")
