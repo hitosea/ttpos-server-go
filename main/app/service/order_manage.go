@@ -48,11 +48,22 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 	// 组合列表源数据
 	billList := make([]resp.BillLists, len(lists))
 	for i, bill := range lists {
-		consumerUuids := []string{}
+		// 使用 map 根据 ConsumerUuid 去重，key 是 ConsumerUuid，value 是昵称/手机号
+		consumerUuidsMap := make(map[uint64]string)
 		totalPayTypeNames := []string{}
 		isSplit := len(bill.SaleOrders) > 1 // 拆单
 		orderList := make([]resp.BillListsOrder, 0)
 		var paymentAmounts float64
+		// 格式化会员信息：昵称/手机号
+		formatMemberInfo := func(member *model.Member) string {
+			if member == nil {
+				return ""
+			}
+			if member.Phone != "" {
+				return member.Nickname + "(" + member.Phone + ")"
+			}
+			return member.Nickname
+		}
 		//
 		billListsExtra := resp.BillListsExtra{
 			IsCellRefund:        false,
@@ -106,10 +117,10 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					BillType:      bill.BillType,
 					SerialNo:      bill.SerialNo + "-" + strconv.Itoa(k+1),
 					ConsumerUuids: func() string {
-						if order.ConsumerUuid == 0 {
+						if order.ConsumerUuid == 0 || order.Member == nil {
 							return ""
 						}
-						return strconv.FormatUint(uint64(order.Member.ID), 10)
+						return formatMemberInfo(order.Member)
 					}(),
 					OrderNo:       order.OrderNo,
 					Status:        order.Status,
@@ -120,8 +131,8 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					Extra:         orderExtra,
 				})
 				//
-				if order.ConsumerUuid > 0 {
-					consumerUuids = append(consumerUuids, strconv.FormatUint(uint64(order.Member.ID), 10))
+				if order.ConsumerUuid > 0 && order.Member != nil {
+					consumerUuidsMap[order.ConsumerUuid] = formatMemberInfo(order.Member)
 				}
 			}
 		} else {
@@ -131,8 +142,9 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 				if order.ConsumerUuid > 0 {
 					if order.Member == nil {
 						logger.Logger.Info("member is nil", zap.Any("order", order))
+					} else {
+						consumerUuidsMap[order.ConsumerUuid] = formatMemberInfo(order.Member)
 					}
-					consumerUuids = append(consumerUuids, strconv.FormatUint(uint64(order.Member.ID), 10))
 				}
 				if order.IsFree == 1 {
 					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
@@ -169,10 +181,16 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			FinishTime:    bill.FinishTime,
 			OrderAmount:   bill.OriginAmount,
 			PaymentAmount: bill.GetPaymentAmount(),
-			ConsumerUuids: strings.Join(consumerUuids, ","),
-			PayTypeName:   strings.Join(utils.RemoveDuplicates(totalPayTypeNames), ","),
-			SaleOrders:    orderList,
-			Extra:         billListsExtra,
+			ConsumerUuids: func() string {
+				consumerUuids := make([]string, 0, len(consumerUuidsMap))
+				for _, info := range consumerUuidsMap {
+					consumerUuids = append(consumerUuids, info)
+				}
+				return strings.Join(consumerUuids, ",")
+			}(),
+			PayTypeName: strings.Join(utils.RemoveDuplicates(totalPayTypeNames), ","),
+			SaleOrders:  orderList,
+			Extra:       billListsExtra,
 		}
 	}
 	// 获取数量
