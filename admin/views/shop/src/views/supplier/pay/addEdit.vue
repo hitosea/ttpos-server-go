@@ -539,7 +539,7 @@
                 name: item.name,
                 img: item.img ? [{ file_path: item.img || '' }] : [],
                 qrcode: [],
-                remark: item.source == '3' ? item.name + '（Kbank）' : item.name,
+                remark: item.name,
                 fee: 0,
                 sort: 0,
                 status: 1,
