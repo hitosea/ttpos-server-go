@@ -15,6 +15,7 @@ import (
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerCache "ttpos-server-go/app/modules/printer/cache"
 	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	template_info "ttpos-server-go/app/modules/printer/pkg/template"
@@ -882,6 +883,10 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 			if err != nil {
 				return errors.WithMessage(errors.New("更新打印机模板失败"), err.Error())
 			}
+
+			// 清除 TmpData 缓存
+			tmpDataCache := printerCache.NewPrinterTemplateTmpDataCache(cache.Global)
+			tmpDataCache.Delete(ctx.GetCompanyUuid(), customizeInfo.TemplateId)
 		}
 		return nil
 	}); err != nil {
@@ -1017,6 +1022,10 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 		if err != nil {
 			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
 		}
+
+		// 清除 TmpData 缓存
+		tmpDataCache := printerCache.NewPrinterTemplateTmpDataCache(cache.Global)
+		tmpDataCache.Delete(ctx.GetCompanyUuid(), customizeInfo.TemplateId)
 
 		return nil
 	})
