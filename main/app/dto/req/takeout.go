@@ -53,3 +53,9 @@ type GetImportLogsReq struct {
 	PageNo     int    `form:"page_no" binding:"required,min=1" json:"page_no"`    // 页码
 	PageSize   int    `form:"page_size" binding:"min=1,max=100" json:"page_size"` // 每页数量
 }
+
+// PrintProductItem 打印送厨单商品项
+type PrintProductItem struct {
+	ProductUuid    uint64 `json:"product_uuid"`     // 商品UUID
+	ProductBomUuid uint64 `json:"product_bom_uuid"` // 规格UUID (BOM UUID)
+}

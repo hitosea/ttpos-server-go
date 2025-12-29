@@ -107,6 +107,9 @@ func NewCallBoardService(dbm *database.DBManager, cache cache.Cache) ICallBoardS
 
 	// 订阅处理整单完成制作事件
 	srv.bus.SubscribeFinishMenuEvent(func(payload event.FinishMenuPayload) {
+		if payload.TakeoutOrderUuid > 0 {
+			return
+		}
 		err := srv.handleProductionOrderCookingEvent(payload.CompanyUuid, payload.SaleBillUuid)
 		if err != nil {
 			logger.Logger.Error("callboard srv handleProductionOrderCookingEvent failed", zap.Error(err))

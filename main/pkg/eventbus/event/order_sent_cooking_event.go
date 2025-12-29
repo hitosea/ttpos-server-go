@@ -18,6 +18,7 @@ type SentCookingPayload struct {
 type OrderProduct struct {
 	OrderProductId        uint64               `json:"order_product_id"`    // 订单商品ID
 	ProductId             uint64               `json:"product_id"`          // 商品ID
+	ProductBomUuid        uint64               `json:"product_bom_uuid"`    // 商品BOM UUID
 	ProductName           dto.LocaleResponse   `json:"product_name"`        // 商品名称
 	ProductType           uint8                `json:"product_type"`        // 商品类型
 	ProductAttr           dto.LocaleResponse   `json:"product_attr"`        // 商品属性, 包含规格、属性、小料

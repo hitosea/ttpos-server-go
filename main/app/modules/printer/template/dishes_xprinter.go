@@ -1292,6 +1292,8 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.AppendText(orderSourceTakeoutText + t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 		printer.SetLineSpacing(30)
 		printer.LineFeed()
+	} else if order.IsTakeout {
+		printer.AppendText(orderSourceTakeoutText + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo)
 	}

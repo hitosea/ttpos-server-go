@@ -625,11 +625,12 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				}
 
 				result[pkg.Uuid] = types.ModifierInfo{
-					Name:            displayName, // 外卖表优先
-					TtposName:       ttposName,   // 核心表
-					Num:             pkg.Num,     // 套餐商品有数量
-					TtposFlavorUuid: flavorUuid,  // 规格UUID
-					TtposFlavorName: flavorName,  // 规格名称
+					Name:             displayName,     // 外卖表优先
+					TtposName:        ttposName,       // 核心表
+					Num:              pkg.Num,         // 套餐商品有数量
+					TtposProductUuid: pkg.RelatedUuid, // 套餐商品UUID
+					TtposFlavorUuid:  flavorUuid,      // 规格UUID
+					TtposFlavorName:  flavorName,      // 规格名称
 				}
 			}
 		}

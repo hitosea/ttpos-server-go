@@ -6,6 +6,7 @@ import (
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -40,7 +41,7 @@ type ITakeoutOrderSrv interface {
 	// PrintTakeoutOrder 打印外卖订单小票
 	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, firstExecution int) (*resp.PrinterData, error)
 	// 打印送厨单
-	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int) (*resp.PrinterData, error)
+	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int, productItems []req.PrintProductItem) (*resp.PrinterData, error)
 }
 
 // ToggleTakeoutStatus 切换指定平台外卖状态
@@ -1081,7 +1082,7 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, fi
 }
 
 // PrintProductionOrder 打印送厨单
-func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int) (*resp.PrinterData, error) {
+func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int, productItems []req.PrintProductItem) (*resp.PrinterData, error) {
 	db := ctx.GetDB()
 	if db == nil {
 		return nil, errors.New("数据库连接失败")
@@ -1091,6 +1092,13 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 	order, err := domainService.NewTakeoutOrderSrv(s.dbm).GetOrderForPrint(ctx, orderUuid)
 	if err != nil {
 		return nil, err
+	}
+
+	productItemsMap := make(map[uint64]bool)
+	productItemsBomMap := make(map[uint64]bool)
+	for _, productItem := range productItems {
+		productItemsMap[productItem.ProductUuid] = true
+		productItemsBomMap[productItem.ProductBomUuid] = true
 	}
 
 	// 6. 打印送厨单
@@ -1105,6 +1113,10 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 			itemName := item.TtposItemName
 			if itemName == "" {
 				itemName = item.ItemName // 回退到平台名称
+			}
+
+			if len(productItemsMap) > 0 && !item.IsPackage() && !productItemsMap[item.TtposProductUuid] {
+				continue
 			}
 
 			// 构建商品规格、属性、加料的完整信息
@@ -1137,6 +1149,11 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 					// 加料
 					saucesList = append(saucesList, *language.JsonToLocaleResponse(modifierName))
 				case string(valueObject.ModifierTypeCommodity):
+					if len(productItemsBomMap) > 0 {
+						if !productItemsMap[modifier.TtposProductUuid] || !productItemsBomMap[modifier.TtposFlavorUuid] {
+							continue
+						}
+					}
 					subProducts = append(subProducts, printer_model.OrderProduct{
 						OrderProductId:  modifier.Uuid,
 						ProductId:       modifier.TtposModifierUuid,
@@ -1183,7 +1200,7 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 			DeskUuid:               0,                          // 外卖订单无桌台
 			Desk:                   nil,                        // 外卖订单无桌台信息
 			UpdateTime:             int64(order.UpdateTime),    // 订单更新时间
-			FinishTime:             0,                          // 外卖订单无完成时间
+			FinishTime:             time.Now().Unix(),          // 订单完成时间
 			IsTakeout:              true,                       // 标记为第三方外卖平台订单
 			Products:               products,                   // 商品列表
 		}

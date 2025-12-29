@@ -2,6 +2,7 @@ package event
 
 import (
 	"sync"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/modules/printer"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
@@ -35,12 +36,23 @@ func FinishMenuEventHandler() {
 			// 异步打印送厨单 如果TakeoutOrderUuid不为0，则打印
 			if payload.TakeoutOrderUuid != 0 {
 				utils.Go(func() {
-					takeoutSrv := takeoutService.NewTakeoutSrv(dbm, nil, nil, nil, nil, nil)
-					_, err := takeoutSrv.PrintProductionOrder(payload.Ctx, payload.TakeoutOrderUuid, printerConstant.PrinterProductTypeOutMenu)
+					_, err := takeoutService.NewTakeoutSrvImpl(dbm).PrintProductionOrder(
+						payload.Ctx,
+						payload.TakeoutOrderUuid,
+						printerConstant.PrinterProductTypeOutMenu,
+						func() []req.PrintProductItem {
+							productItems := make([]req.PrintProductItem, 0)
+							for _, product := range payload.Products {
+								productItems = append(productItems, req.PrintProductItem{
+									ProductUuid:    product.ProductId,
+									ProductBomUuid: product.ProductBomUuid,
+								})
+							}
+							return productItems
+						}(),
+					)
 					if err != nil {
-						logger.Logger.Error("打印送厨单失败",
-							zap.Uint64("takeoutOrderUuid", payload.TakeoutOrderUuid),
-							zap.Error(err))
+						logger.Logger.Error("打印送厨单失败", zap.Uint64("takeoutOrderUuid", payload.TakeoutOrderUuid), zap.Error(err))
 					}
 				})
 			} else {
