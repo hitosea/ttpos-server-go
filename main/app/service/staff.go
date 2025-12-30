@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -9,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -373,6 +375,10 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
 	if staff.Uuid == 0 {
 		return errors.New("获取员工失败"), exists
+	}
+	// 如果状态为禁用，且员工在线，则不允许禁用
+	if updateReq.IsDisable != nil && *updateReq.IsDisable == 1 && staff.CashierOnline == 1 {
+		return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "该用户在（%s）未交班，请交班后再禁用"), ctx.GetCompany().Name)), exists
 	}
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	// saas库查询是否存在相同的邮箱或手机号
@@ -824,6 +830,8 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
 
+	currentCompanyUuid := ctx.GetCompanyUuid()
+
 	// 查询 saas.ttpos_staff 是否存在该 saas 员工，不存在则报错
 	saasStaff, err := saasStaffRepo.GetByUuid(updateReq.Uuid)
 	if err != nil || saasStaff == nil || saasStaff.Uuid == 0 {
@@ -841,6 +849,21 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				if err == nil && staff.CashierOnline == 1 {
 					return errors.New("请先完成交班后再移除门店关联"), exists
 				}
+			}
+		}
+	}
+
+	// 未交班不能禁用
+	for _, companyRole := range updateReq.CompanyRoleList {
+		if companyRole.CompanyUuid != currentCompanyUuid {
+			continue
+		}
+		shopDB := s.dbm.GetDB(currentCompanyUuid)
+		if shopDB != nil {
+			staffRepo := repository.NewStaffRepo(shopDB)
+			staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+			if updateReq.IsDisable != nil && *updateReq.IsDisable == 1 && staff.CashierOnline == 1 {
+				return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "该用户在（%s）未交班，请交班后再禁用"), ctx.GetCompany().Name)), exists
 			}
 		}
 	}
@@ -877,7 +900,6 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		return errors.WithMessage(errors.New("编辑员工失败"), err.Error()), exists
 	}
 
-	currentCompanyUuid := ctx.GetCompanyUuid()
 	companySetting := ctx.GetCompanySetting()
 
 	// 判断当前商家是否总部或者有子级商家

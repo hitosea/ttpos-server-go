@@ -13905,9 +13905,21 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "查询结束时间戳",
                         "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_start_date",
                         "in": "query"
                     },
                     {
@@ -14025,9 +14037,21 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "查询结束时间戳",
                         "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_start_date",
                         "in": "query"
                     },
                     {
@@ -14700,9 +14724,21 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "查询结束时间戳",
                         "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_start_date",
                         "in": "query"
                     },
                     {
@@ -24429,9 +24465,21 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "查询结束时间戳",
                         "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_start_date",
                         "in": "query"
                     },
                     {
@@ -24677,9 +24725,21 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_end_date",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "查询结束时间戳",
                         "name": "query_end_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                        "name": "query_start_date",
                         "in": "query"
                     },
                     {
@@ -42223,9 +42283,17 @@ const docTemplate = `{
                     "description": "商品名称",
                     "type": "string"
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
@@ -42264,9 +42332,17 @@ const docTemplate = `{
                     "description": "是否不查询免费使用场景",
                     "type": "boolean"
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
@@ -42301,9 +42377,17 @@ const docTemplate = `{
                     "description": "是否不查询免费使用场景",
                     "type": "boolean"
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
@@ -42334,9 +42418,17 @@ const docTemplate = `{
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
@@ -42378,9 +42470,17 @@ const docTemplate = `{
                     "maximum": 1100,
                     "minimum": 1
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
@@ -43438,6 +43538,10 @@ const docTemplate = `{
                     "description": "支付金额, 必填",
                     "type": "number"
                 },
+                "payment_info": {
+                    "description": "支付信息, 非必填",
+                    "type": "string"
+                },
                 "payment_method_uuid": {
                     "description": "支付方式UUID, 必填",
                     "type": "integer"
@@ -43590,6 +43694,14 @@ const docTemplate = `{
                     "description": "查询结束时间戳",
                     "type": "integer"
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "start_time": {
                     "description": "查询开始时间戳",
                     "type": "integer"
@@ -43625,6 +43737,14 @@ const docTemplate = `{
                     "maximum": 1100,
                     "minimum": 1
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "start_time": {
                     "description": "查询开始时间戳",
                     "type": "integer"
@@ -43659,6 +43779,14 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 1100,
                     "minimum": 1
+                },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "start_time": {
                     "description": "查询开始时间戳",
@@ -48770,9 +48898,17 @@ const docTemplate = `{
                     "description": "支付方式列表: 空=全部, 多个用\"uuid1,uuid2,uuid3,,,\"分割",
                     "type": "string"
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
@@ -48802,9 +48938,17 @@ const docTemplate = `{
                     "maximum": 1100,
                     "minimum": 1
                 },
+                "query_end_date": {
+                    "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
+                },
                 "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
+                },
+                "query_start_date": {
+                    "description": "查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
+                    "type": "string"
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",

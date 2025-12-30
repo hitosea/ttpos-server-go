@@ -6079,6 +6079,7 @@
   "该材料已被使用，无法删除": "Detta material har redan använts och kan inte tas bort",
   "该标签下存在商品，不允许删除": "Det finns produkter under denna tagg, borttagning är inte tillåten",
   "该桌台非空闲桌台": "Detta bord är inte ledigt",
+  "该用户在（%s）未交班，请交班后再禁用": "Användaren har inte överlämnat vid (%s); inaktivera efter överlämning",
   "该用户已在其它收银机登录，请先退出": "Den här användaren är redan inloggad på en annan kassa, logga ut först.",
   "该用户已绑定": "Den här användaren är redan bunden",
   "该类别已经关联了物品，不可删除": "Denna kategori är redan kopplad till artiklar och kan inte tas bort",
