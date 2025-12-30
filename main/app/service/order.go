@@ -2239,6 +2239,9 @@ func (s *orderSrv) validateAttributeGroupSelection(ctx context.Context, productP
 
 	// 验证每个属性组
 	for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+		if attributeGroup.IsDelete() {
+			continue
+		}
 		selectedCount := selectedCountByGroup[attributeGroup.Uuid]
 		minSelection, maxSelection := attributeGroup.GetSelectionRange()
 
