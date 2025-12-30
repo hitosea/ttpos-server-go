@@ -29,7 +29,7 @@ type IProductBomQueryRepo interface {
 	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)
-	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
+	GetSauceProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
 	GetSauceProductBomsByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error)
 	GetFlavorProductBomUuidsByCardUuids(uuids []uint64) ([]uint64, error) // 通过成本卡uuid列表获取规格商品uuid列表
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
@@ -188,7 +188,28 @@ func (r *productBomRepoImpl) getFlavorProductBomWithCache(companyUuid uint64, uu
 }
 
 // GetSauceProductBomByUuid 获取小料商品信息
-func (r *productBomRepoImpl) GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
+func (r *productBomRepoImpl) GetSauceProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error) {
+	// 检查是否启用对象存储缓存
+	var productBom *model.ProductBom
+	var err error
+
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBom, err = r.getSauceProductBomWithCache(companyUuid, uuid)
+	} else {
+		// 直接查询数据库
+		productBom, err = r.querySauceProductBom(uuid)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBom, nil
+}
+
+// querySauceProductBom 查询小料商品 ProductBom（包含预加载的关联数据）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *productBomRepoImpl) querySauceProductBom(uuid uint64) (*model.ProductBom, error) {
 	productBom, err := r.GetProductBom(
 		CommonRepo.WhereByUuid(uuid),
 		CommonRepo.Preload(WithPreload{
@@ -199,6 +220,35 @@ func (r *productBomRepoImpl) GetSauceProductBomByUuid(uuid uint64) (*model.Produ
 		return nil, errors.WithMessage(err)
 	}
 	return productBom, nil
+}
+
+// getSauceProductBomWithCache 使用对象存储模块缓存查询小料商品 ProductBom（包含预加载的关联数据）
+func (r *productBomRepoImpl) getSauceProductBomWithCache(companyUuid uint64, uuid uint64) (*model.ProductBom, error) {
+	if uuid == 0 {
+		return nil, errors.New("getSauceProductBomWithCache uuid cannot be 0")
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("getSauceProductBomWithCache companyUuid cannot be 0")
+	}
+
+	// 构建缓存 key（使用 companyUuid 而不是 context）
+	key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomSauce, uuid)
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
+
+	// 使用缓存查询
+	result, err := cacheLayer.GET(key, func() (*model.ProductBom, error) {
+		// 缓存未命中时，从数据库查询（包含所有预加载）
+		return r.querySauceProductBom(uuid)
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.querySauceProductBom(uuid)
+	}
+
+	return result, nil
 }
 
 func (r *productBomRepoImpl) GetSauceProductBomsByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) {

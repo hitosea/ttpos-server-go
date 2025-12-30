@@ -1611,8 +1611,9 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 				delete(sauceUuidMap, bom.Uuid)
 			}
 			names := make([]string, 0)
+			companyUuid := ctx.GetCompanyUuid()
 			for uuid := range sauceUuidMap {
-				bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
+				bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(companyUuid, uuid)
 				if err != nil {
 					return nil, errors.WithMessage(err)
 				}
@@ -1748,8 +1749,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					delete(sauceUuidMap, bom.Uuid)
 				}
 				names := make([]string, 0)
+				companyUuid := ctx.GetCompanyUuid()
 				for uuid := range sauceUuidMap {
-					bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
+					bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(companyUuid, uuid)
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
