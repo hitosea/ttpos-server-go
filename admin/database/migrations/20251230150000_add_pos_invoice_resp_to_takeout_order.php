@@ -15,6 +15,11 @@ class AddPosInvoiceRespToTakeoutOrder extends Migrator
         if ($this->hasTable('takeout_order')) {
             $table = $this->table('takeout_order');
 
+            // 检查字段是否已存在
+            if (!$table->hasColumn('staff_shift_log_uuid')) {
+                $table->addColumn('staff_shift_log_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '员工班次日志UUID', 'after' => 'accepted_by'])->update();
+            }
+
             // 检查字段是否已存在，如果不存在则添加
             if (!$table->hasColumn('erp_pos_invoice_resp')) {
                 $table->addColumn('erp_pos_invoice_resp', 'text', [
@@ -22,11 +27,6 @@ class AddPosInvoiceRespToTakeoutOrder extends Migrator
                     'comment' => 'ERP POS Invoice响应数据(JSON格式)',
                     'after' => 'staff_shift_log_uuid',
                 ])->update();
-            }
-
-            // 检查字段是否已存在
-            if (!$table->hasColumn('staff_shift_log_uuid')) {
-                $table->addColumn('staff_shift_log_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '员工班次日志UUID', 'after' => 'accepted_by'])->update();
             }
             
             // 检查索引是否已存在
