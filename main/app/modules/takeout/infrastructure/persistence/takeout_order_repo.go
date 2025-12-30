@@ -30,6 +30,7 @@ type ITakeoutOrderRepo interface {
 	WithPreload(options ...DBOption) DBOption
 	WithTakeoutOrderItems() DBOption
 	WithTakeoutOrderItemModifiers() DBOption
+	WithTakeoutOrderMaterials() DBOption
 	WhereUuid(uuid uint64) DBOption
 	WherePlatform(platform string) DBOption
 	WhereOrderState(orderState int) DBOption
@@ -213,6 +214,7 @@ func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder, s
 	err := r.db.Table("ttpos_staff_shift_log").
 		Select("uuid").
 		Where("staff_uuid = ? AND status = ?", staffUuid, constant.StaffNotHandedOver).
+		Order("id DESC").
 		First(&shiftLog).Error
 	if err != nil {
 		// 如果没有找到班次记录，不报错，返回 nil
@@ -412,5 +414,12 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItems() DBOption {
 func (r *TakeoutOrderRepoImpl) WithTakeoutOrderItemModifiers() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderItems.TakeoutOrderItemModifiers")
+	}
+}
+
+// WithTakeoutOrderMaterials 预加载订单原材料（含 Material 和 Unit 信息）
+func (r *TakeoutOrderRepoImpl) WithTakeoutOrderMaterials() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("TakeoutOrderMaterials.Material.Unit")
 	}
 }

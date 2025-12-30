@@ -2776,7 +2776,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `erpnext_open_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext开账名称',
     `erpnext_close_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext结账名称',
     `erpnext_async_record_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext异步记录ID',
-    `opening_payment_methods` VARCHAR(2000) DEFAULT NULL COMMENT '开账时的支付方式UUID列表（逗号分隔）',
+    `opening_payment_methods` VARCHAR(2000) NOT NULL DEFAULT '' COMMENT '开账时的支付方式UUID列表（逗号分隔）',
     `shift_end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班结束时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -4122,10 +4122,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_material` (
     `takeout_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单ID',
     `takeout_order_item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单商品UUID(关联ttpos_takeout_order_item.uuid)',
     `takeout_order_item_modifier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外卖订单商品修饰符UUID(关联ttpos_takeout_order_item_modifier.uuid)',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'BOM UUID(关联ttpos_product_bom.uuid)',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
+    `material_name` TEXT COMMENT '原料名称(来自Material.Name)',
     `erp_code` VARCHAR(50) NOT NULL DEFAULT '' COMMENT 'ERP编码(来自Material.Code)',
     `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
-    `num` DECIMAL(20, 4) NOT NULL DEFAULT 0.0000 COMMENT '数量,原料的实际使用数量',
+    `num` DECIMAL(20, 4) NOT NULL DEFAULT 0.0000 COMMENT '出库数量', 
     `is_summarized` INT(11) NOT NULL DEFAULT 0 COMMENT '是否已经统计,0-未统计 1-已统计',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -4133,12 +4135,14 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_material` (
     INDEX `idx_takeout_order_uuid` (`takeout_order_uuid`),
     INDEX `idx_takeout_order_item_uuid` (`takeout_order_item_uuid`),
     INDEX `idx_takeout_order_item_modifier_uuid` (`takeout_order_item_modifier_uuid`),
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
     INDEX `idx_material_uuid` (`material_uuid`),
     INDEX `idx_warehouse_uuid` (`warehouse_uuid`),
     INDEX `idx_is_summarized_create_time` (`is_summarized`, `create_time`),
     INDEX `idx_delete_time` (`delete_time`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '外卖订单原料表';
+
 
 -- 外卖平台配置表(多平台)
 CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (

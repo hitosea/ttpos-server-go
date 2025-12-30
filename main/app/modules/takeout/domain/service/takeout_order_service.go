@@ -1025,213 +1025,250 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 }
 
 // extractAndSaveTakeoutOrderMaterials 提取并保存外卖订单原料（在创建订单时调用）
+//
+// 功能：根据订单商品的 BOM 配方，计算并保存原料消耗记录
+// 流程：商品 → BOM配方 → 原料清单 → 计算消耗量 → 保存记录
 func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
 	db := ctx.GetDB()
 
-	// 1. 构建 BOM 数量映射
-	bomQuantityMap, _, err := s.BuildBomQuantityMap(ctx, order)
+	// ==================== Step 1: 构建 BOM 数量映射 ====================
+	// bomQuantityMap: BOM UUID → 出库数量（用于计算原料消耗）
+	// bomItemMap: BOM UUID → 订单商品信息（包含来源追溯）
+	bomQuantityMap, bomItemMap, err := s.BuildBomQuantityMap(ctx, order)
 	if err != nil {
 		return errors.WithMessage(err, "构建BOM数量映射失败")
 	}
-
 	if len(bomQuantityMap) == 0 {
-		return nil // 没有BOM，不需要保存原料
+		return nil // 订单没有配方商品，无需处理原料
 	}
 
-	// 2. 批量查询 BOM 信息（包含原材料信息）
+	// ==================== Step 2: 批量查询 BOM 配方（预加载原材料） ====================
 	bomUuids := make([]uint64, 0, len(bomQuantityMap))
 	for bomUuid := range bomQuantityMap {
 		bomUuids = append(bomUuids, bomUuid)
 	}
-
-	productBomRepo := repository.NewProductBomRepo(db)
-	productBoms, err := productBomRepo.GetProductBoms(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("uuid IN ?", bomUuids)
-		},
-		repository.CommonRepo.Preload(
-			repository.WithPreload{
-				Query: "FlavorMaterials",
-				Args: []interface{}{
-					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			repository.WithPreload{
-				Query: "FlavorMaterials.Material.WarehouseItems",
-			},
-			repository.WithPreload{
-				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-			},
-			repository.WithPreload{
-				Query: "ProductSauce.SauceMaterials",
-				Args: []interface{}{
-					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			repository.WithPreload{
-				Query: "ProductSauce.SauceMaterials.Material.WarehouseItems",
-			},
-			repository.WithPreload{
-				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-			},
-		),
-	)
+	productBoms, err := persistence.NewTakeoutBomMappingRepo(db).GetProductBomsWithMaterials(bomUuids)
 	if err != nil {
-		return errors.WithMessage(err, "查询BOM信息失败")
+		return errors.WithMessage(err, "查询BOM配方信息失败")
 	}
 
-	// 3. 构建 BOM UUID -> ProductBom 映射
-	bomMap := make(map[uint64]*coreModel.ProductBom)
+	// 构建 BOM UUID → ProductBom 的快速查找映射
+	bomConfigMap := make(map[uint64]*coreModel.ProductBom, len(productBoms))
 	for _, bom := range productBoms {
-		bomMap[bom.Uuid] = bom
+		bomConfigMap[bom.Uuid] = bom
 	}
 
-	// 4. 收集所有原料UUID
+	// ==================== Step 3: 收集原料并查询 ERP 编码 ====================
+	// 收集所有涉及的原料UUID
 	materialUuidSet := make(map[uint64]bool)
 
-	// 4.1 从BOM中收集原料信息
+	// 定义辅助函数：获取配方的原材料清单（优先使用配方卡）
+	getMaterials := func(bom *coreModel.ProductBom, isFlavor bool) []*coreModel.RelatedMaterial {
+		if isFlavor {
+			if bom.HasProductBomCard() && bom.ProductBomCard != nil {
+				return bom.ProductBomCard.RelatedMaterials
+			}
+			return bom.FlavorMaterials
+		} else { // sauce
+			if bom.ProductSauce.HasProductBomCard() && bom.ProductSauce.ProductBomCard != nil {
+				return bom.ProductSauce.ProductBomCard.RelatedMaterials
+			}
+			return bom.ProductSauce.SauceMaterials
+		}
+	}
+
+	// 遍历所有BOM，收集原料UUID
 	for bomUuid := range bomQuantityMap {
-		bom, ok := bomMap[bomUuid]
+		bom, ok := bomConfigMap[bomUuid]
 		if !ok {
 			continue
 		}
 
-		// 处理规格商品的原材料
+		// 收集规格的原材料
 		if bom.IsFlavor() {
-			var flavorMaterials []*coreModel.RelatedMaterial
-			if bom.HasProductBomCard() && bom.ProductBomCard != nil {
-				flavorMaterials = bom.ProductBomCard.RelatedMaterials
-			} else {
-				flavorMaterials = bom.FlavorMaterials
-			}
-
-			for _, flavorMaterial := range flavorMaterials {
-				if flavorMaterial.Material != nil {
-					materialUuidSet[flavorMaterial.MaterialUuid] = true
+			for _, material := range getMaterials(bom, true) {
+				if material.Material != nil {
+					materialUuidSet[material.MaterialUuid] = true
 				}
 			}
 		}
 
-		// 处理加料的原材料
+		// 收集加料的原材料
 		if bom.IsSauce() && bom.ProductSauceUuid > 0 {
-			var sauceMaterials []*coreModel.RelatedMaterial
-			if bom.ProductSauce.HasProductBomCard() && bom.ProductSauce.ProductBomCard != nil {
-				sauceMaterials = bom.ProductSauce.ProductBomCard.RelatedMaterials
-			} else {
-				sauceMaterials = bom.ProductSauce.SauceMaterials
-			}
-			for _, sauceMaterial := range sauceMaterials {
-				if sauceMaterial.Material != nil {
-					materialUuidSet[sauceMaterial.MaterialUuid] = true
+			for _, material := range getMaterials(bom, false) {
+				if material.Material != nil {
+					materialUuidSet[material.MaterialUuid] = true
 				}
 			}
 		}
 	}
 
-	// 5. 批量查询原料信息获取 ErpCode
+	// 批量查询原料信息（获取ERP编码和名称）
 	materialUuids := make([]uint64, 0, len(materialUuidSet))
 	for materialUuid := range materialUuidSet {
 		materialUuids = append(materialUuids, materialUuid)
 	}
-
-	materialRepo := repository.NewMaterialRepo(db)
-	dbMaterials, err := materialRepo.GetMaterialContainsDeletedByUuids(materialUuids)
+	materials, err := repository.NewMaterialRepo(db).GetMaterialContainsDeletedByUuids(materialUuids)
 	if err != nil {
 		return errors.WithMessage(err, "批量查询原料信息失败")
 	}
 
-	// 构建 materialUuid -> Code 的映射
-	materialCodeMap := make(map[uint64]string, len(dbMaterials))
-	for _, material := range dbMaterials {
-		materialCodeMap[material.Uuid] = material.Code
+	// 构建 原料UUID → (ERP编码, 名称) 的映射
+	type materialInfo struct {
+		erpCode string
+		name    string
+	}
+	materialInfoMap := make(map[uint64]materialInfo, len(materials))
+	for _, material := range materials {
+		materialInfoMap[material.Uuid] = materialInfo{
+			erpCode: material.Code,
+			name:    material.Name,
+		}
 	}
 
-	// 6. 计算原料使用量（map[materialUuid]map[warehouseUuid]num）
-	materialsMap := make(map[uint64]map[uint64]float64)
+	// ==================== Step 4: 计算原料消耗量（带来源追溯） ====================
+	// 原料消耗来源记录
+	type materialSource struct {
+		materialUuid                 uint64  // 原料UUID
+		warehouseUuid                uint64  // 仓库UUID
+		consumptionNum               float64 // 消耗数量
+		productBomUuid               uint64  // BOM UUID（用于出库清单聚合）
+		takeoutOrderItemUuid         uint64  // 来源：订单商品项
+		takeoutOrderItemModifierUuid uint64  // 来源：订单商品修饰符
+		baseUnitUom                  string  // 基准单位UOM（来自RelatedMaterial.BaseUnitUom）
+	}
 
-	for bomUuid, quantity := range bomQuantityMap {
-		bom, ok := bomMap[bomUuid]
+	// 定义组合键：material + warehouse + modifier（确保每个 modifier 独立记录）
+	type sourceKey struct {
+		materialUuid  uint64
+		warehouseUuid uint64
+		modifierUuid  uint64 // 关键：按 modifier 区分
+	}
+
+	// 消耗映射：sourceKey → source
+	consumptionMap := make(map[sourceKey]*materialSource)
+
+	// 定义辅助函数：获取默认仓库
+	getDefaultWarehouse := func(material *coreModel.Material) uint64 {
+		if material.WarehouseUuid > 0 {
+			return material.WarehouseUuid
+		}
+		if len(material.WarehouseItems) > 0 {
+			return material.WarehouseItems[0].WarehouseUuid
+		}
+		return 0
+	}
+
+	// 遍历每个BOM，计算原料消耗
+	for bomUuid := range bomQuantityMap {
+		bom, ok := bomConfigMap[bomUuid]
 		if !ok {
 			continue
 		}
 
-		productNum := float64(quantity)
-
-		// 处理规格商品的原材料
-		if bom.IsFlavor() {
-			var flavorMaterials []*coreModel.RelatedMaterial
-			if bom.HasProductBomCard() && bom.ProductBomCard != nil {
-				flavorMaterials = bom.ProductBomCard.RelatedMaterials
-			} else {
-				flavorMaterials = bom.FlavorMaterials
-			}
-
-			for _, flavorMaterial := range flavorMaterials {
-				if flavorMaterial.Material != nil {
-					// 获取默认仓库
-					warehouseUuid := flavorMaterial.Material.WarehouseUuid
-					if warehouseUuid == 0 && len(flavorMaterial.Material.WarehouseItems) > 0 {
-						warehouseUuid = flavorMaterial.Material.WarehouseItems[0].WarehouseUuid
-					}
-
-					materialNum := flavorMaterial.Num * productNum
-
-					if materialsMap[flavorMaterial.MaterialUuid] == nil {
-						materialsMap[flavorMaterial.MaterialUuid] = make(map[uint64]float64)
-					}
-					materialsMap[flavorMaterial.MaterialUuid][warehouseUuid] += materialNum
-				}
-			}
+		// 获取该 BOM 对应的商品项信息
+		sourceItem := bomItemMap[bomUuid]
+		if sourceItem == nil {
+			continue
 		}
 
-		// 处理加料的原材料
-		if bom.IsSauce() && bom.ProductSauceUuid > 0 {
-			var sauceMaterials []*coreModel.RelatedMaterial
-			if bom.ProductSauce.HasProductBomCard() && bom.ProductSauce.ProductBomCard != nil {
-				sauceMaterials = bom.ProductSauce.ProductBomCard.RelatedMaterials
-			} else {
-				sauceMaterials = bom.ProductSauce.SauceMaterials
+		// 关键：遍历该 BOM 的每个 modifier，独立计算原料消耗
+		for _, modifier := range sourceItem.TakeoutOrderItemModifiers {
+			sourceItemUuid := sourceItem.Uuid
+			sourceModifierUuid := modifier.Uuid
+
+			// 每个 modifier 的消耗数量：modifier.Quantity * item.Quantity
+			productNum := float64(modifier.Quantity * sourceItem.Quantity)
+
+			// 处理规格的原料消耗
+			if bom.IsFlavor() {
+				for _, material := range getMaterials(bom, true) {
+					if material.Material == nil {
+						continue
+					}
+					warehouseUuid := getDefaultWarehouse(material.Material)
+					consumptionNum := material.Num * productNum // 原料配比 × 商品数量
+
+					// 构建唯一键（按 modifier 区分）
+					key := sourceKey{
+						materialUuid:  material.MaterialUuid,
+						warehouseUuid: warehouseUuid,
+						modifierUuid:  sourceModifierUuid,
+					}
+
+					// 如果已存在则累加，否则创建新记录
+					if consumptionMap[key] == nil {
+						consumptionMap[key] = &materialSource{
+							materialUuid:                 material.MaterialUuid,
+							warehouseUuid:                warehouseUuid,
+							consumptionNum:               0,
+							productBomUuid:               bomUuid,
+							takeoutOrderItemUuid:         sourceItemUuid,
+							takeoutOrderItemModifierUuid: sourceModifierUuid,
+							baseUnitUom:                  material.BaseUnitUom,
+						}
+					}
+					consumptionMap[key].consumptionNum += consumptionNum
+				}
 			}
 
-			for _, sauceMaterial := range sauceMaterials {
-				if sauceMaterial.Material != nil {
-					// 获取默认仓库
-					warehouseUuid := sauceMaterial.Material.WarehouseUuid
-					if warehouseUuid == 0 && len(sauceMaterial.Material.WarehouseItems) > 0 {
-						warehouseUuid = sauceMaterial.Material.WarehouseItems[0].WarehouseUuid
+			// 处理加料的原料消耗
+			if bom.IsSauce() && bom.ProductSauceUuid > 0 {
+				for _, material := range getMaterials(bom, false) {
+					if material.Material == nil {
+						continue
+					}
+					warehouseUuid := getDefaultWarehouse(material.Material)
+					consumptionNum := material.Num * productNum // 原料配比 × 商品数量
+
+					// 构建唯一键（按 modifier 区分）
+					key := sourceKey{
+						materialUuid:  material.MaterialUuid,
+						warehouseUuid: warehouseUuid,
+						modifierUuid:  sourceModifierUuid,
 					}
 
-					materialNum := sauceMaterial.Num * productNum
-
-					if materialsMap[sauceMaterial.MaterialUuid] == nil {
-						materialsMap[sauceMaterial.MaterialUuid] = make(map[uint64]float64)
+					// 如果已存在则累加，否则创建新记录
+					if consumptionMap[key] == nil {
+						consumptionMap[key] = &materialSource{
+							materialUuid:                 material.MaterialUuid,
+							warehouseUuid:                warehouseUuid,
+							consumptionNum:               0,
+							productBomUuid:               bomUuid,
+							takeoutOrderItemUuid:         sourceItemUuid,
+							takeoutOrderItemModifierUuid: sourceModifierUuid,
+							baseUnitUom:                  material.BaseUnitUom,
+						}
 					}
-					materialsMap[sauceMaterial.MaterialUuid][warehouseUuid] += materialNum
+					consumptionMap[key].consumptionNum += consumptionNum
 				}
 			}
 		}
 	}
 
-	// 7. 构建原料记录
-	takeoutOrderMaterials := make([]*takeoutModel.TakeoutOrderMaterial, 0)
-	for materialUuid, warehouseMap := range materialsMap {
-		erpCode := materialCodeMap[materialUuid] // 获取 ErpCode
-		for warehouseUuid, num := range warehouseMap {
-			takeoutOrderMaterials = append(takeoutOrderMaterials, &takeoutModel.TakeoutOrderMaterial{
-				TakeoutOrderUuid: order.Uuid,
-				MaterialUuid:     materialUuid,
-				ErpCode:          erpCode,
-				WarehouseUuid:    warehouseUuid,
-				Num:              num,
-				IsSummarized:     0, // 初始为未统计
-			})
-		}
+	// ==================== Step 5: 构建并保存原料消耗记录 ====================
+	materialRecords := make([]*takeoutModel.TakeoutOrderMaterial, 0)
+	for _, source := range consumptionMap {
+		info := materialInfoMap[source.materialUuid]
+		materialRecords = append(materialRecords, &takeoutModel.TakeoutOrderMaterial{
+			TakeoutOrderUuid:             order.Uuid,
+			TakeoutOrderItemUuid:         source.takeoutOrderItemUuid,
+			TakeoutOrderItemModifierUuid: source.takeoutOrderItemModifierUuid,
+			MaterialUuid:                 source.materialUuid,
+			MaterialName:                 info.name,
+			ErpCode:                      info.erpCode,
+			BaseUnitUom:                  source.baseUnitUom, // 从 source 中获取
+			WarehouseUuid:                source.warehouseUuid,
+			Num:                          source.consumptionNum,
+			IsSummarized:                 0, // 初始为未统计
+			ProductBomUuid:               source.productBomUuid,
+		})
 	}
 
-	// 8. 保存原料记录
-	if len(takeoutOrderMaterials) > 0 {
+	// 批量保存
+	if len(materialRecords) > 0 {
 		materialSrv := NewTakeoutOrderMaterialSrv(s.dbm)
-		if err := materialSrv.SaveOrderMaterials(ctx, takeoutOrderMaterials); err != nil {
+		if err := materialSrv.SaveOrderMaterials(ctx, materialRecords); err != nil {
 			return errors.WithMessage(err, "保存订单原料失败")
 		}
 	}

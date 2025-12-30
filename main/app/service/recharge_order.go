@@ -105,10 +105,7 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 
 		respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
 		respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
-		respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
-			constant.PaymentMethodCodeLianLianAliPay,
-			constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
-
+		respPaymentOrder.DisabledCancel = paymentOrder.PaymentMethod.IsDisabledCancel()
 		respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 	}
 
@@ -291,9 +288,17 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 		return orderResp, errors.New("不能使用余额支付充值")
 	}
 
-	isValid, err := s.staffShiftSrv.ValidatePaymentMethod(ctx, order.DutyNo, paymentMethod.Uuid)
-	if err != nil || !isValid {
-		return orderResp, errors.WithMessage(err, "请交班后再重新选择该支付方式")
+	if order.DutyNo != "" {
+		isValid, err := s.staffShiftSrv.ValidatePaymentMethod(ctx, order.DutyNo, paymentMethod.Uuid)
+
+		if err != nil {
+			return orderResp, errors.WithMessage(err)
+		}
+		if !isValid {
+			return orderResp, errors.New("请交班后再重新选择该支付方式")
+		}
+	} else {
+		return orderResp, errors.New("请交班后再重新选择该支付方式")
 	}
 
 	// 默认支付订单状态

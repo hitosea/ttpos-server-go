@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/language"
@@ -42,6 +43,22 @@ type ITakeoutMenuSrv interface {
 	SyncMenuChanges(ctx context.Context, platform string) (*response.MenuSyncResult, error)
 	// ReimportMenuToTTPOS 重新导入菜单到TTPOS（基于失败日志重试）
 	ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*resp.GrabMenuImportResp, error)
+}
+
+// ToggleTakeoutStatus 切换指定平台外卖状态
+func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
+	if req.Platform == "grab" {
+		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveGrabPaymentMethod(ctx, ctx.GetDB())
+		if err != nil {
+			return nil, errors.WithMessage(err, "保存Grab支付方式失败")
+		}
+	} else if req.Platform == "lineman" {
+		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveLineManPaymentMethod(ctx, ctx.GetDB())
+		if err != nil {
+			return nil, errors.WithMessage(err, "保存LINE MAN支付方式失败")
+		}
+	}
+	return s.takeoutAppSrv.ToggleTakeoutStatus(ctx, req)
 }
 
 // SyncMenuChanges 同步菜单变更

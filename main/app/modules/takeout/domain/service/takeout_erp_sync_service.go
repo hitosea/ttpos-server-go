@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 
@@ -68,6 +69,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		orderUuid,
 		takeoutOrderRepo.WithTakeoutOrderItems(),
 		takeoutOrderRepo.WithTakeoutOrderItemModifiers(),
+		takeoutOrderRepo.WithTakeoutOrderMaterials(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "查询外卖订单失败")
@@ -185,8 +187,8 @@ func buildPosInvoiceRequest(
 	// 构建税费列表
 	taxes := buildPosInvoiceTaxes(takeoutOrder)
 
-	// 构建原材料列表（外卖订单暂不支持原材料扣减）
-	materialItems := make([]*selling.PosInvoiceItem, 0)
+	// 构建原材料列表（从 takeoutOrder.TakeoutOrderMaterials 中读取）
+	materialItems := buildPosInvoiceMaterialItems(takeoutOrder)
 
 	// 会员 UUID（外卖平台订单通常无会员）
 	customerUuid := ""
@@ -381,4 +383,50 @@ func buildPosInvoicePayments(takeoutOrder *takeoutModel.TakeoutOrder, existPayme
 	}
 
 	return payments
+}
+
+// buildPosInvoiceMaterialItems 构建 POS Invoice 原材料列表
+// @version v2.12.0
+// @spec story-erp-grab-invoice-sync
+// @reference main/app/service/order.go:4445-4455
+func buildPosInvoiceMaterialItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.PosInvoiceItem {
+	materialItems := make([]*selling.PosInvoiceItem, 0)
+
+	// 如果没有原材料记录，直接返回空列表
+	if len(takeoutOrder.TakeoutOrderMaterials) == 0 {
+		return materialItems
+	}
+	// 按 ErpCode 和 Unit 去重并累加数量
+	splitKey := "--@--"
+	materialMap := make(map[string]float64) // key: erp_code--@--unit, value: 原材料数量
+	uomMap := make(map[string]string)       // key: erp_code--@--unit, value: unit name
+	for _, material := range takeoutOrder.TakeoutOrderMaterials {
+		// 如果原材料信息缺失或 ErpCode 为空，跳过
+		if material.ErpCode == "" {
+			logger.Logger.Warn("外卖订单原材料缺少 ErpCode，跳过",
+				zap.Uint64("orderUuid", takeoutOrder.Uuid),
+				zap.Uint64("materialUuid", material.MaterialUuid),
+				zap.String("materialName", material.MaterialName))
+			continue
+		}
+		// 构建 key
+		key := fmt.Sprintf("%s%s%s", material.ErpCode, splitKey, material.BaseUnitUom)
+		materialMap[key] += material.Num
+		uomMap[key] = material.BaseUnitUom
+	}
+
+	// 转换为列表
+	for key, num := range materialMap {
+		parts := strings.Split(key, splitKey)
+		erpCode := parts[0]
+		materialItems = append(materialItems, &selling.PosInvoiceItem{
+			ItemCode: erpCode,
+			Qty:      num,         // 原材料数量
+			Uom:      uomMap[key], // 原材料单位
+			Rate:     0,           // 原材料没有单价
+			Amount:   0,           // 原材料没有金额
+		})
+	}
+
+	return materialItems
 }

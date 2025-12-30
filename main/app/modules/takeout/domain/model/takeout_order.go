@@ -81,6 +81,7 @@ type TakeoutOrder struct {
 	TakeoutOrderItems     []TakeoutOrderItem     `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 	TakeoutOrderReceiver  *TakeoutOrderReceiver  `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 	TakeoutOrderCampaigns []TakeoutOrderCampaign `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
+	TakeoutOrderMaterials []TakeoutOrderMaterial `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 	TakeoutOrderPromos    []TakeoutOrderPromo    `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
 }
 

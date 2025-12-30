@@ -347,6 +347,7 @@ class PayType extends BaseModel
                 return false;
             }
         } else {
+            $param['source'] = self::SOURCE_DEFAULT;
             $max_value = self::withTrashed()->where('source', self::SOURCE_DEFAULT)->max('code');
             $param['code'] = ($max_value !== null && $max_value >= 20000)  ? $max_value + 100 : 20000; // 删除的值也要计算，防止重复，如果数据库找不到，则默认从20000开始
         }

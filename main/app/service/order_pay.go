@@ -361,8 +361,11 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		statisticsSrv := NewStatisticsSrv()
 		staffShiftSrv := NewStaffShiftSrv(cache.Global, s.dbm, cashBoxSrv, statisticsSrv)
 		isValid, err := staffShiftSrv.ValidatePaymentMethod(ctx, staff.DutyNo, paymentMethod.Uuid)
-		if err != nil || !isValid {
-			return nil, errors.WithMessage(err, "请交班后再重新选择该支付方式")
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if !isValid {
+			return nil, errors.New("请交班后再重新选择该支付方式")
 		}
 	} else {
 		return nil, errors.New("请交班后再重新选择该支付方式")

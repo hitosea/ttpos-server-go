@@ -18,6 +18,8 @@ type ITakeoutOrderMaterialRepo interface {
 	UpdateTakeoutOrderMaterialIsSummarized(uuids []uint64) error
 	// MarkTakeoutOrderMaterialsAsSummarized 标记外卖订单的所有原料为已汇总
 	MarkTakeoutOrderMaterialsAsSummarized(takeoutOrderUuid uint64) error
+	// GetByOrderUuid 根据订单UUID查询原料消耗记录（预加载原料信息）
+	GetByOrderUuid(takeoutOrderUuid uint64) ([]*takeoutModel.TakeoutOrderMaterial, error)
 }
 
 type takeoutOrderMaterialRepoImpl struct {
@@ -75,4 +77,16 @@ func (r *takeoutOrderMaterialRepoImpl) MarkTakeoutOrderMaterialsAsSummarized(tak
 		Where("takeout_order_uuid = ?", takeoutOrderUuid).
 		Where("is_summarized = ?", 0).
 		Update("is_summarized", 1).Error
+}
+
+// GetByOrderUuid 根据订单UUID查询原料消耗记录（预加载原料信息）
+// 用于构建出库清单时直接读取已保存的原料消耗记录
+func (r *takeoutOrderMaterialRepoImpl) GetByOrderUuid(takeoutOrderUuid uint64) ([]*takeoutModel.TakeoutOrderMaterial, error) {
+	var materials []*takeoutModel.TakeoutOrderMaterial
+	err := r.db.Model(&takeoutModel.TakeoutOrderMaterial{}).
+		Where("takeout_order_uuid = ?", takeoutOrderUuid).
+		Where("delete_time = 0").
+		Preload("Material").
+		Find(&materials).Error
+	return materials, err
 }

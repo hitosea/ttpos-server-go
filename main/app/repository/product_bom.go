@@ -29,7 +29,8 @@ type IProductBomQueryRepo interface {
 	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)
-	GetSauceProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
+	GetFlavorProductBomByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) // 批量获取规格商品信息
+	GetSauceProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)        // 获取小料商品信息
 	GetSauceProductBomsByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error)
 	GetFlavorProductBomUuidsByCardUuids(uuids []uint64) ([]uint64, error) // 通过成本卡uuid列表获取规格商品uuid列表
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
@@ -185,6 +186,119 @@ func (r *productBomRepoImpl) getFlavorProductBomWithCache(companyUuid uint64, uu
 	}
 
 	return result, nil
+}
+
+// GetFlavorProductBomByUuids 批量获取规格商品信息
+func (r *productBomRepoImpl) GetFlavorProductBomByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) {
+	// 检查是否启用对象存储缓存
+	var productBoms []*model.ProductBom
+	var err error
+
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBoms, err = r.getFlavorProductBomsWithCache(companyUuid, uuids)
+	} else {
+		// 直接查询数据库
+		productBoms, err = r.queryFlavorProductBoms(uuids)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBoms, nil
+}
+
+// queryFlavorProductBoms 批量查询规格商品 ProductBom 列表（包含预加载的关联数据）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *productBomRepoImpl) queryFlavorProductBoms(uuids []uint64) ([]*model.ProductBom, error) {
+	productBoms, err := r.GetProductBoms(
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereInUuids(uuids),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "FlavorMaterials",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "FlavorMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "ProductPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductPackage.ProductUnit",
+			},
+			WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBoms, nil
+}
+
+// getFlavorProductBomsWithCache 使用对象存储模块缓存批量查询规格商品 ProductBom 列表
+func (r *productBomRepoImpl) getFlavorProductBomsWithCache(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("getFlavorProductBomsWithCache companyUuid cannot be 0")
+	}
+
+	// 构建批量查询的 keys
+	keys := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			keys = append(keys, persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomFlavor, uuid))
+		}
+	}
+
+	if len(keys) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
+
+	// 使用批量查询缓存
+	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
+		// 缓存未命中时，从数据库查询
+		boms, err := r.queryFlavorProductBoms(uuids)
+		if err != nil {
+			return nil, err
+		}
+		// 转换为 map[string]*model.ProductBom
+		result := make(map[string]*model.ProductBom)
+		for _, bom := range boms {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeProductBomFlavor, bom.Uuid)
+			result[key] = bom
+		}
+		return result, nil
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.queryFlavorProductBoms(uuids)
+	}
+
+	// 将 map[string]*model.ProductBom 转换为 []*model.ProductBom
+	productBoms := make([]*model.ProductBom, 0, len(batchResult))
+	for _, bom := range batchResult {
+		productBoms = append(productBoms, bom)
+	}
+
+	return productBoms, nil
 }
 
 // GetSauceProductBomByUuid 获取小料商品信息
