@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/cache"
@@ -1975,6 +1976,18 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				ReminderOrderTime:     int64(shopCart.SaleBill.ReminderOrderTime) * 60,
 				IsTabletH5TimeSet:     shopCart.SaleBill.IsBuffetTabletH5TimeSet(),
 			}
+		}
+	}
+
+	// 先判断商户是否有生效的必点方案（仅在对象存储缓存开启时执行）
+	companyUuid := ctx.GetCompanyUuid()
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
+		if err != nil {
+			ctx.Log().Error("判断商户是否有生效的必点方案失败", zap.Error(err))
+		}
+		if !hasActiveMustPlan {
+			option.NoQueryMustPlan = true // 如果商户无生效的必点方案，则不查询必点方案
 		}
 	}
 
