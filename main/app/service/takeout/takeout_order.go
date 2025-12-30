@@ -185,146 +185,73 @@ func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*mo
 }
 
 // buildTakeoutOrderDecreaseStockList 从外卖订单构建出库清单
+// 优化策略：直接从 ttpos_takeout_order_material 表读取已保存的原料消耗记录
+// 通过 product_bom_uuid 字段准确聚合原料到具体的 BOM
 func (s *takeoutSrv) buildTakeoutOrderDecreaseStockList(ctx context.Context, order *takeoutModel.TakeoutOrder) ([]*model.Product, error) {
 	db := ctx.GetDB()
 
-	// 1. 构建 BOM 数量映射
-	orderService := domainService.NewTakeoutOrderSrv(s.dbm)
-	bomQuantityMap, _, err := orderService.BuildBomQuantityMap(ctx, order)
+	// 1. 构建 BOM 数量映射（获取 BOM UUID 和商品数量信息）
+	bomQuantityMap, bomItemMap, err := domainService.NewTakeoutOrderSrv(s.dbm).BuildBomQuantityMap(ctx, order)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建BOM数量映射失败")
 	}
-
 	if len(bomQuantityMap) == 0 {
 		return []*model.Product{}, nil
 	}
 
-	// 2. 批量查询 BOM 信息（包含原材料信息）
-	bomUuids := make([]uint64, 0, len(bomQuantityMap))
-	for bomUuid := range bomQuantityMap {
-		bomUuids = append(bomUuids, bomUuid)
-	}
-
-	productBomRepo := repository.NewProductBomRepo(db)
-	productBoms, err := productBomRepo.GetProductBoms(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("uuid IN ?", bomUuids)
-		},
-		repository.CommonRepo.Preload(
-			repository.WithPreload{
-				Query: "FlavorMaterials",
-				Args: []interface{}{
-					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			repository.WithPreload{
-				Query: "FlavorMaterials.Material.WarehouseItems",
-			},
-			repository.WithPreload{
-				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-			},
-			repository.WithPreload{
-				Query: "ProductSauce.SauceMaterials",
-				Args: []interface{}{
-					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			repository.WithPreload{
-				Query: "ProductSauce.SauceMaterials.Material.WarehouseItems",
-			},
-			repository.WithPreload{
-				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-			},
-		),
-	)
+	// 2. 从 ttpos_takeout_order_material 表查询已保存的原料消耗记录
+	orderMaterials, err := persistence.NewTakeoutOrderMaterialRepo(db).GetByOrderUuid(order.Uuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询BOM信息失败")
+		return nil, errors.WithMessage(err, "查询订单原料消耗记录失败")
+	}
+	if len(orderMaterials) == 0 {
+		return []*model.Product{}, nil
 	}
 
-	// 3. 构建 BOM UUID -> ProductBom 映射
-	bomMap := make(map[uint64]*model.ProductBom)
-	for _, bom := range productBoms {
-		bomMap[bom.Uuid] = bom
+	// 3. 按 BOM UUID 聚合原料消耗（使用 product_bom_uuid 字段）
+	// 结构：map[bomUuid][]*ProductBomMaterials
+	bomMaterialsMap := make(map[uint64][]*model.ProductBomMaterials)
+	for _, orderMaterial := range orderMaterials {
+		// 跳过被禁用的原料
+		if orderMaterial.Material != nil && !orderMaterial.Material.Status {
+			continue
+		}
+		bomUuid := orderMaterial.ProductBomUuid
+		if bomUuid == 0 {
+			logger.Logger.Warn("原料消耗记录缺少BOM UUID", zap.Uint64("materialUuid", orderMaterial.MaterialUuid), zap.Uint64("orderUuid", order.Uuid))
+			continue
+		}
+		// 聚合原料到对应的 BOM
+		if bomMaterialsMap[bomUuid] == nil {
+			bomMaterialsMap[bomUuid] = make([]*model.ProductBomMaterials, 0)
+		}
+		bomMaterialsMap[bomUuid] = append(bomMaterialsMap[bomUuid], &model.ProductBomMaterials{
+			MaterialUuid:  orderMaterial.MaterialUuid,
+			WarehouseUuid: orderMaterial.WarehouseUuid,
+			Num:           orderMaterial.Num,
+			SaleOrderUuid: 0, // 外卖订单没有 SaleOrderUuid
+		})
 	}
 
 	// 4. 构建出库清单
-	decreaseStockList := make([]*model.Product, 0)
+	decreaseStockList := make([]*model.Product, 0, len(bomQuantityMap))
 	for bomUuid, quantity := range bomQuantityMap {
-		bom, ok := bomMap[bomUuid]
-		if !ok {
-			logger.Logger.Warn("BOM不存在", zap.Uint64("bomUuid", bomUuid))
-			continue
-		}
-
 		productNum := float64(quantity)
-		productBomMaterials := make([]*model.ProductBomMaterials, 0)
-
-		// 4.1 处理规格商品的原材料
-		if bom.IsFlavor() {
-			// 优先使用成本卡的原材料
-			var flavorMaterials []*model.RelatedMaterial
-			if bom.HasProductBomCard() && bom.ProductBomCard != nil {
-				flavorMaterials = bom.ProductBomCard.RelatedMaterials
-			} else {
-				flavorMaterials = bom.FlavorMaterials
-			}
-
-			// 遍历原材料
-			for _, material := range flavorMaterials {
-				if material.IsDelete() || material.Material == nil {
-					continue
-				}
-				// 如果材料被禁用，则跳过
-				if !material.Material.Status {
-					continue
-				}
-				if num := material.GetDecreaseNum(productNum); num > 0 {
-					productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-						MaterialUuid:  material.MaterialUuid,
-						WarehouseUuid: material.Material.WarehouseUuid,
-						Num:           num,
-						SaleOrderUuid: 0, // 外卖订单没有 SaleOrderUuid
-					})
-				}
-			}
+		productBomMaterials := bomMaterialsMap[bomUuid]
+		if productBomMaterials == nil {
+			productBomMaterials = make([]*model.ProductBomMaterials, 0)
 		}
-
-		// 4.2 处理小料的原材料
-		if bom.IsSauce() {
-			// 优先使用成本卡的原材料
-			var sauceMaterials []*model.RelatedMaterial
-			if bom.ProductSauce.HasProductBomCard() && bom.ProductSauce.ProductBomCard != nil {
-				sauceMaterials = bom.ProductSauce.ProductBomCard.RelatedMaterials
-			} else {
-				sauceMaterials = bom.ProductSauce.SauceMaterials
-			}
-
-			// 遍历原材料
-			for _, material := range sauceMaterials {
-				if material.Material == nil {
-					continue
-				}
-				// 如果材料被禁用，则跳过
-				if !material.Material.Status {
-					continue
-				}
-				if num := material.GetDecreaseNum(productNum); num > 0 {
-					productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-						MaterialUuid:  material.MaterialUuid,
-						WarehouseUuid: material.Material.WarehouseUuid,
-						Num:           num,
-						SaleOrderUuid: 0, // 外卖订单没有 SaleOrderUuid
-					})
-				}
-			}
+		// 获取 PackageUuid
+		packageUuid := uint64(0)
+		if bomItem, ok := bomItemMap[bomUuid]; ok {
+			packageUuid = bomItem.TtposProductPackageUuid
 		}
-
-		// 4.3 添加到出库清单
+		// 添加到出库清单
 		if productNum > 0 {
 			decreaseStockList = append(decreaseStockList, &model.Product{
 				TakeoutOrderUuid:    order.Uuid,
 				ProductBomUuid:      bomUuid,
-				PackageUuid:         bom.ProductPackageUuid,
+				PackageUuid:         packageUuid,
 				Num:                 productNum,
 				ProductBomMaterials: productBomMaterials,
 			})
@@ -367,6 +294,7 @@ func (s *takeoutSrv) updateTakeoutOrderSalesVolume(ctx context.Context, order *t
 }
 
 // reduceTakeoutOrderStock 扣减外卖订单库存
+// 优化：直接从 ttpos_takeout_order_material 表获取原料消耗记录，避免查询 warehouse_out_form_item
 func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, takeoutOrderUuid uint64) error {
 	// 加锁，防止并发扣减库存
 	lockKey := fmt.Sprintf("takeout_order_stock:%d", takeoutOrderUuid)
@@ -374,61 +302,74 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, ta
 	systemLock.LockUuidString(lockKey)
 	defer systemLock.UnlockUuidString(lockKey)
 
-	// 获取未减库存的出库单明细
-	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
-	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("takeout_order_uuid = ?", takeoutOrderUuid)
-		},
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("reduce_stock = ?", constant.WarehouseOutFormItemReduceStockNotProcessed)
-		},
-	)
+	// Step 1: 从 ttpos_takeout_order_material 表查询原料消耗记录
+	orderMaterials, err := persistence.NewTakeoutOrderMaterialRepo(db).GetByOrderUuid(takeoutOrderUuid)
 	if err != nil {
-		return errors.WithMessage(err, "查询出库单明细失败")
+		return errors.WithMessage(err, "查询订单原料消耗记录失败")
 	}
-
-	if len(warehouseOutFormItems) == 0 {
+	if len(orderMaterials) == 0 {
 		return nil
 	}
 
-	// 按类型分组处理
+	// Step 2: 按类型分组处理（BOM 和 原料）
 	productBoms := make(map[uint64]*model.ProductBom)
 	materials := make(map[uint64]map[uint64]float64) // map[materialUuid]map[warehouseUuid]reduceStockNum
 
-	for _, item := range warehouseOutFormItems {
-		item.ReduceStock = constant.WarehouseOutFormItemReduceStockSuccess
-
-		if item.IsProductBom() {
-			// 查询 BOM 信息
-			if productBoms[item.ProductBomUuid] == nil {
-				productBomRepo := repository.NewProductBomRepo(db)
-				bom, err := productBomRepo.GetFlavorProductBomByUuid(companyUuid, item.ProductBomUuid)
-				if err != nil {
-					logger.Logger.Error("查询BOM信息失败", zap.Uint64("bomUuid", item.ProductBomUuid), zap.Error(err))
-					continue
-				}
-				productBoms[item.ProductBomUuid] = bom
-			}
-
-			// 扣减 BOM 库存
-			if productBoms[item.ProductBomUuid] != nil {
-				productBoms[item.ProductBomUuid].StockNum -= item.Num
-			}
-		} else if item.IsMaterial() {
-			// 扣减材料库存
-			if materials[item.MaterialUuid] == nil {
-				materials[item.MaterialUuid] = make(map[uint64]float64)
-			}
-			materials[item.MaterialUuid][item.WarehouseUuid] += item.Num
+	// 收集需要查询的 BOM UUID（去重）
+	bomUuidSet := make(map[uint64]bool)
+	for _, orderMaterial := range orderMaterials {
+		if orderMaterial.ProductBomUuid > 0 {
+			bomUuidSet[orderMaterial.ProductBomUuid] = true
 		}
 	}
 
-	// 在事务中更新库存
+	// Step 3: 批量查询所有 BOM（一次性查询）
+	if len(bomUuidSet) > 0 {
+		bomUuidsToQuery := make([]uint64, 0, len(bomUuidSet))
+		for bomUuid := range bomUuidSet {
+			bomUuidsToQuery = append(bomUuidsToQuery, bomUuid)
+		}
+		boms, err := repository.NewProductBomRepo(db).GetFlavorProductBomByUuids(companyUuid, bomUuidsToQuery)
+		if err != nil {
+			logger.Logger.Error("批量查询BOM信息失败", zap.Error(err))
+		} else {
+			// 构建 BOM UUID -> BOM 的映射
+			for _, bom := range boms {
+				productBoms[bom.Uuid] = bom
+			}
+		}
+	}
+
+	// Step 4: 按 BOM 聚合原料消耗，并扣减 BOM 库存
+	// 结构：map[bomUuid]totalNum
+	bomConsumptionMap := make(map[uint64]float64)
+	for _, orderMaterial := range orderMaterials {
+		bomUuid := orderMaterial.ProductBomUuid
+		if bomUuid > 0 {
+			bomConsumptionMap[bomUuid] += orderMaterial.Num
+		}
+		// 同时累加原料消耗（用于直接扣减原料库存）
+		if materials[orderMaterial.MaterialUuid] == nil {
+			materials[orderMaterial.MaterialUuid] = make(map[uint64]float64)
+		}
+		materials[orderMaterial.MaterialUuid][orderMaterial.WarehouseUuid] += orderMaterial.Num
+	}
+
+	// Step 5: 扣减 BOM 库存（按聚合后的消耗量）
+	for bomUuid, consumptionNum := range bomConsumptionMap {
+		if bom, ok := productBoms[bomUuid]; ok {
+			bom.StockNum -= consumptionNum
+		} else {
+			logger.Logger.Warn("BOM不存在", zap.Uint64("bomUuid", bomUuid))
+		}
+	}
+
+	// Step 6: 在事务中更新库存
 	err = db.Transaction(func(tx *gorm.DB) error {
-		// 更新出库单明细状态
+		// 更新出库单明细状态（保持兼容性）
 		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
-			return errors.WithMessage(err, "更新出库单明细状态失败")
+			// 如果出库单不存在，不影响库存扣减
+			logger.Logger.Warn("更新出库单明细状态失败", zap.Error(err))
 		}
 
 		// 更新 BOM 库存

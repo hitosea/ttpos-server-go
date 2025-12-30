@@ -1,6 +1,9 @@
 package persistence
 
 import (
+	coreModel "ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
+
 	"gorm.io/gorm"
 )
 
@@ -21,6 +24,9 @@ type ITakeoutBomMappingRepo interface {
 
 	// GetProductBomInfo 批量查询 BOM UUID 获取 BOM 信息（name字段）
 	GetProductBomInfo(bomUuids []uint64) (map[uint64]string, error)
+
+	// GetProductBomsWithMaterials 批量查询 BOM 配方（预加载原材料信息）
+	GetProductBomsWithMaterials(bomUuids []uint64) ([]*coreModel.ProductBom, error)
 }
 
 // takeoutBomMappingRepoImpl 外卖商品 BOM 映射仓储实现
@@ -135,4 +141,48 @@ func (r *takeoutBomMappingRepoImpl) GetProductBomInfo(bomUuids []uint64) (map[ui
 	}
 
 	return mapping, nil
+}
+
+// GetProductBomsWithMaterials 批量查询 BOM 配方（预加载原材料信息）
+// 用于计算订单原料消耗时使用
+// 返回: ProductBom 列表（包含规格/加料的原材料及仓库信息）
+func (r *takeoutBomMappingRepoImpl) GetProductBomsWithMaterials(bomUuids []uint64) ([]*coreModel.ProductBom, error) {
+	if len(bomUuids) == 0 {
+		return []*coreModel.ProductBom{}, nil
+	}
+
+	productBomRepo := repository.NewProductBomRepo(r.db)
+	productBoms, err := productBomRepo.GetProductBoms(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("uuid IN ?", bomUuids)
+		},
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "FlavorMaterials", // 规格的原材料
+				Args: []interface{}{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "FlavorMaterials.Material.WarehouseItems", // 规格原材料的仓库
+			},
+			repository.WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems", // 配方卡原材料
+			},
+			repository.WithPreload{
+				Query: "ProductSauce.SauceMaterials", // 加料的原材料
+				Args: []interface{}{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "ProductSauce.SauceMaterials.Material.WarehouseItems", // 加料原材料的仓库
+			},
+			repository.WithPreload{
+				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems", // 加料配方卡原材料
+			},
+		),
+	)
+
+	return productBoms, err
 }

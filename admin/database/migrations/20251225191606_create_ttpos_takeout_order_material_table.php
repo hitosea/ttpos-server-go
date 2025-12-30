@@ -35,7 +35,7 @@ class CreateTtposTakeoutOrderMaterialTable extends Migrator
                 ->addColumn('warehouse_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '仓库ID'])
                 
                 // 数量字段
-                ->addColumn('num', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '数量(原料的实际使用数量)'])
+                ->addColumn('num', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '出库数量'])
                 
                 // 统计字段
                 ->addColumn('is_summarized', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否已经统计: 0=未统计,1=已统计'])
