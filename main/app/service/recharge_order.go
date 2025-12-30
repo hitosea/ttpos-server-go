@@ -62,14 +62,15 @@ type rechargeOrderSrv struct {
 	cashBoxSrv       ICashBoxSrv
 	memberSrv        IMemberSrv
 	smsSrv           ISmsSrv
+	staffShiftSrv    IStaffShiftSrv
 	lock             lock.Lock
 }
 
-func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
-	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
+func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv, staffShiftSrv IStaffShiftSrv) IRechargeOrderSrv {
+	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv, staffShiftSrv)
 }
 
-func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
+func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv, staffShiftSrv IStaffShiftSrv) IRechargeOrderSrv {
 	return &rechargeOrderSrv{
 		dbm:              dbm,
 		bus:              event.NewSystemBus(),
@@ -79,6 +80,7 @@ func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, payment
 		cashBoxSrv:       cashBoxSrv,
 		memberSrv:        memberSrv,
 		smsSrv:           smsSrv,
+		staffShiftSrv:    staffShiftSrv,
 		lock:             lock.NewSystemLock(),
 	}
 }
@@ -284,6 +286,11 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 	}
 	if paymentMethod.Code == constant.PaymentMethodCodeBalance {
 		return orderResp, errors.New("不能使用余额支付充值")
+	}
+
+	isValid, err := s.staffShiftSrv.ValidatePaymentMethod(ctx, order.DutyNo, paymentMethod.Uuid)
+	if err != nil || !isValid {
+		return orderResp, errors.WithMessage(err, "请交班后再重新选择该支付方式")
 	}
 
 	// 默认支付订单状态

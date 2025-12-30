@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -44,6 +45,7 @@ type IStaffShiftSrv interface {
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error)
 	CreateShiftSnapshot(ctx context.Context, shiftLog model.StaffShiftLog) error
+	ValidatePaymentMethod(ctx context.Context, shiftNo string, paymentMethodUuid uint64) (bool, error) // 验证支付方式是否在开账时保存的列表中
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -81,30 +83,54 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	}
 
 	var erpnextOpenPosEntryName string
+	var openingPaymentMethodsStr string
 	// 调用rpc接口生成PosEntry
 	companySetting := ctx.GetCompanySetting()
 	company := ctx.GetCompany()
 	if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
-		// 查询 Cash 支付方式（系统默认，source = 0）
 		db := s.dbm.GetDB(staff.CompanyUuid)
+		commonRepo := repository.NewCommonRepo()
 		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
-		cashPaymentMethod := paymentMethodRepo.GetPaymentMethod(
-			paymentMethodRepo.WhereCode(constant.PaymentMethodCodeCash),
-			func(db *gorm.DB) *gorm.DB {
-				return db.Where("source = ?", constant.PaymentMethodSourceSystem) // source = 0
-			},
+		// 查询所有已开启的支付方式（status = 1）
+		paymentMethodList := paymentMethodRepo.GetPaymentMethodList(
+			paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
+			commonRepo.WhereBySoftDelete(),
 		)
 
-		// 如果有 PaymentID 则设置 PaymentId，否则设置 ModeOfPayment
-		// 如果值为空，则不赋值
-		openPosEntryDetail := req.OpenPosEntryDetail{
-			OpeningAmount: previousShiftCash,
+		// 保存支付方式UUID列表（逗号分隔）
+		uuids := make([]string, 0)
+		for _, paymentMethod := range paymentMethodList {
+			uuids = append(uuids, fmt.Sprintf("%d", paymentMethod.Uuid))
 		}
-		if cashPaymentMethod.Uuid > 0 && cashPaymentMethod.ErpnextPaymentId != "" {
-			openPosEntryDetail.PaymentId = &cashPaymentMethod.ErpnextPaymentId
-		} else {
-			// Cash 支付方式默认使用 "Cash"
-			openPosEntryDetail.ModeOfPayment = "Cash"
+		if len(uuids) > 0 {
+			openingPaymentMethodsStr = strings.Join(uuids, ",")
+		}
+
+		openPosEntryDetailList := make([]req.OpenPosEntryDetail, 0)
+		for _, paymentMethod := range paymentMethodList {
+			openPosEntryDetail := req.OpenPosEntryDetail{}
+			// 如果是系统默认的现金支付方式，则设置开账金额为上一班次遗留金额
+			if paymentMethod.Source == constant.PaymentMethodSourceSystem && paymentMethod.Code == constant.PaymentMethodCodeCash {
+				if paymentMethod.ErpnextPaymentId != "" {
+					openPosEntryDetail.PaymentId = &paymentMethod.ErpnextPaymentId
+				} else {
+					openPosEntryDetail.ModeOfPayment = "Cash"
+				}
+				openPosEntryDetail.OpeningAmount = previousShiftCash
+				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
+				continue
+			}
+			// 如果是其他支付方式，并且有 PaymentID 则设置 PaymentID，否则设置 ModeOfPayment
+			// 如果两个字段都为空，则跳过该支付方式（兼容旧数据）
+			if paymentMethod.ErpnextPaymentId != "" {
+				openPosEntryDetail.PaymentId = &paymentMethod.ErpnextPaymentId
+				openPosEntryDetail.OpeningAmount = 0
+				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
+			} else if paymentMethod.ErpnextPayment != "" {
+				openPosEntryDetail.ModeOfPayment = paymentMethod.ErpnextPayment
+				openPosEntryDetail.OpeningAmount = 0
+				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
+			}
 		}
 
 		erpSrv := erp.NewIErpSrv(s.dbm)
@@ -114,7 +140,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 			CashierEmail:       companySetting.ErpnextAdminEmail,
 			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
 			PeriodStartDate:    time.Now().Unix(),
-			OpenPosEntryDetail: []req.OpenPosEntryDetail{openPosEntryDetail},
+			OpenPosEntryDetail: openPosEntryDetailList,
 			Branch:             companySetting.ErpnextBranchName,
 		})
 		if err != nil {
@@ -133,6 +159,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		ShiftEndTime:      0,
 
 		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
+		OpeningPaymentMethods:   openingPaymentMethodsStr,
 	})
 	return shiftLog, nil
 }
@@ -431,11 +458,11 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 					}
 					if paymentMethod.Uuid > 0 && paymentMethod.ErpnextPaymentId != "" {
 						detail.PaymentId = &paymentMethod.ErpnextPaymentId
+						closePosEntryDetail = append(closePosEntryDetail, detail)
 					} else if payment.ErpnextPayment != "" {
 						detail.ModeOfPayment = payment.ErpnextPayment
+						closePosEntryDetail = append(closePosEntryDetail, detail)
 					}
-
-					closePosEntryDetail = append(closePosEntryDetail, detail)
 				}
 			}
 			cashAmountDecimal := decimal.NewFromFloat(cashAmountForErp).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash))
@@ -1243,4 +1270,42 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	}
 
 	return nil
+}
+
+// ValidatePaymentMethod 验证支付方式是否在开账时保存的列表中
+func (s *staffShiftSrv) ValidatePaymentMethod(ctx context.Context, shiftNo string, paymentMethodUuid uint64) (bool, error) {
+	// 未开启 ERP 时，返回 true（允许使用）
+	if !ctx.GetCompany().IsOpenErp() {
+		return true, nil
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询班次记录
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		commonRepo.WhereByShiftNo(shiftNo),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return false, errors.WithMessage(err, "班次记录不存在")
+	}
+
+	// 如果未保存支付方式列表（历史数据），返回 false（不允许使用）
+	if shiftLog.OpeningPaymentMethods == "" {
+		return false, nil
+	}
+
+	// 检查支付方式UUID是否在列表中（逗号分隔的字符串）
+	paymentMethodUuidStr := fmt.Sprintf("%d", paymentMethodUuid)
+	uuids := strings.Split(shiftLog.OpeningPaymentMethods, ",")
+	for _, uuidStr := range uuids {
+		trimmedUuidStr := strings.TrimSpace(uuidStr) // 去除空格
+		if trimmedUuidStr == paymentMethodUuidStr {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

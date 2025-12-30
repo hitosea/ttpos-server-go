@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -351,6 +352,20 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("支付方式未开启"))
+	}
+
+	// 验证支付方式是否在开账时保存的列表中
+	staff := ctx.GetStaff()
+	if staff.DutyNo != "" {
+		cashBoxSrv := NewCashBoxSrv(s.dbm)
+		statisticsSrv := NewStatisticsSrv()
+		staffShiftSrv := NewStaffShiftSrv(cache.Global, s.dbm, cashBoxSrv, statisticsSrv)
+		isValid, err := staffShiftSrv.ValidatePaymentMethod(ctx, staff.DutyNo, paymentMethod.Uuid)
+		if err != nil || !isValid {
+			return nil, errors.WithMessage(err, "请交班后再重新选择该支付方式")
+		}
+	} else {
+		return nil, errors.New("请交班后再重新选择该支付方式")
 	}
 
 	// 支付方式是否可用
