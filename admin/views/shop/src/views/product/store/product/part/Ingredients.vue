@@ -23,7 +23,7 @@
                 :max="form.model.feed_max_select"
                 :precision="0"
                 v-model="form.model.feed_min_select"
-                class="max-w460"
+                class="max-w45"
               ></el-input-number>
               <span>-</span>
               <el-input-number
@@ -34,7 +34,7 @@
                 :min="1"
                 :max="form.model.product_feed.length"
                 v-model="form.model.feed_max_select"
-                class="max-w460"
+                class="max-w45"
               ></el-input-number>
             </div>
             <el-icon class="delete-icon" @click="handleDelete()" :disabled="erp_is_open == 1">
@@ -412,6 +412,9 @@
   .table-c-item-label {
     flex-shrink: 0;
     font-size: 14px;
+  }
+  .max-w45{
+    max-width: 45px;
   }
   .table-c-item {
     display: flex;
