@@ -24,7 +24,6 @@ class ModifySignToNullableInSaleOrderProduct extends Migrator
             // 注意：ThinkPHP Migration (Phinx) 中 text 类型长度通常不需要指定，或者指定 limit
             $table->changeColumn('flavor_name', 'text', [
                 'null' => true,
-                'default' => '',
                 'comment' => '规格名称'
             ])->update();
         }

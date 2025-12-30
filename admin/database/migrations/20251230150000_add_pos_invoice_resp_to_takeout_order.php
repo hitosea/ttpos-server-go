@@ -36,15 +36,15 @@ class AddPosInvoiceRespToTakeoutOrder extends Migrator
             
             // 修改价格相关字段类型为 decimal(20,4)
             $priceFields = [
-                'subtotal' => '小计金额',
-                'delivery_fee' => '配送费',
-                'small_order_fee' => '小单费用',
-                'eater_payment' => '顾客实付',
-                'platform_discount' => '平台优惠',
-                'merchant_discount' => '商户优惠',
-                'basket_promo' => '购物车优惠',
-                'tax' => '税费',
-                'merchant_charge_fee' => '商户服务费',
+                'subtotal' => '小计金额 (price.subtotal)',
+                'delivery_fee' => '配送费 (price.deliveryFee)',
+                'small_order_fee' => '小单费用 (price.smallOrderFee)',
+                'eater_payment' => '顾客实付 (price.eaterPayment)',
+                'platform_discount' => '平台优惠 (price.grabFundPromo)',
+                'merchant_discount' => '商户优惠 (price.merchantFundPromo)',
+                'basket_promo' => '购物车优惠 (price.basketPromo)',
+                'tax' => '税费 (price.tax)',
+                'merchant_charge_fee' => '商户服务费 (price.merchantChargeFee)',
             ];
             
             foreach ($priceFields as $fieldName => $comment) {
