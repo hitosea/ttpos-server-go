@@ -1436,7 +1436,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 1. 查询原始数据（不分组）
 	baseQuery := `
 		SELECT 
-			po.create_time,
+			sb.finish_time AS create_time,
 			po.payment_method_uuid,
 			pm.payment_name,
 			pm.sort AS payment_method_sort,
@@ -1459,8 +1459,8 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		WHERE po.delete_time = 0
 			AND po.related_type = 0
 			AND po.status = 1
-			AND po.create_time >= ?
-			AND po.create_time <= ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
 			AND sb.status = ?
 			AND so.status = ?
 			AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.uuid IS NOT NULL AND mso.status = ?))
