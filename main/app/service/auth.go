@@ -771,14 +771,24 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	return resp.AssistantBase{
 		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
-			RealName:     staff.RealName,
+			RealName: func() string {
+				if staff.RealName != "" {
+					return staff.RealName
+				}
+				return staff.Username
+			}(),
 			Username:     staff.Username,
 			DeviceId:     staff.BindKey,
 			DeviceRemark: device.Remark,
 		},
 		AssistantStaff: resp.AssistantStaff{
-			Uuid:     assistantStaff.Uuid,
-			RealName: assistantStaff.RealName,
+			Uuid: assistantStaff.Uuid,
+			RealName: func() string {
+				if assistantStaff.RealName != "" {
+					return assistantStaff.RealName
+				}
+				return assistantStaff.Username
+			}(),
 			Phone:    assistantStaff.Phone,
 			DeviceId: assistantStaff.BindKey,
 		},
