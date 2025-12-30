@@ -92,7 +92,7 @@ func (s *takeoutOrderAcceptEventSubscriber) Handle(domainEvent event.DomainEvent
 
 	// 异步打印外卖订单小票
 	utils.Go(func() {
-		takeoutSrv.PrintTakeoutOrder(ctx, orderAcceptedEvent.OrderUuid, 0)
+		takeoutSrv.PrintTakeoutOrder(ctx, orderAcceptedEvent.OrderUuid, "", 0)
 	})
 
 	// 异步打印送厨单

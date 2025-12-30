@@ -145,7 +145,7 @@ func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
 
 // 是否是打包订单
 func (o *TakeoutOrder) IsTakeawayOrder() bool {
-	return o.OrderType == valueobject.TakeoutOrderTypeTakeaway
+	return o.OrderType != valueobject.TakeoutOrderTypeDineIn
 }
 
 // 判断是否删除或者已经取消

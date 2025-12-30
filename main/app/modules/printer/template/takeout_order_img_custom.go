@@ -125,16 +125,11 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	orderData := template_struct.StatementOrderInfoData{
 		Platform:   order.Platform,
 		OrderNo:    order.PlatformOrderId,
-		SerialNo:   order.ShortOrderNumber,
+		SerialNo:   fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
 		OrderType:  order.OrderType,
 		CreateTime: t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
 		FinishTime: t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
 		PayTime:    t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
-	}
-
-	// 支付时间
-	if order.SubmitTime > 0 && order.SubmitTime != order.OrderTime {
-		orderData.PayTime = t.base.FormatUnixTimeDefault(order.SubmitTime)
 	}
 
 	// 商品列表

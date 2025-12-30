@@ -269,7 +269,7 @@ func (h *TakeoutHandler) PrintOrder(c *gin.Context) {
 		return
 	}
 	// 调用打印服务
-	printerData, err := h.takeoutSrv.PrintTakeoutOrder(ctx, req.Uuid, 1)
+	printerData, err := h.takeoutSrv.PrintTakeoutOrder(ctx, req.Uuid, req.PrintLang, 1)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

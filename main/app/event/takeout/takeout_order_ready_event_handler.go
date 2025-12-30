@@ -43,6 +43,9 @@ func (s *takeoutOrderReadyEventSubscriber) Handle(domainEvent event.DomainEvent)
 			"ready",
 			map[string]any{},
 		)
+
+		// 发送 CUSTOMER_CALL 通知（触发前端未处理提醒）
+		sendCustomerCallWebSocketNotification(orderReadyEvent.CompanyUuid)
 	})
 
 	return nil

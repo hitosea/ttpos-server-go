@@ -47,13 +47,16 @@ func sendTakeoutOrderWebSocketNotification(
 func sendCustomerCallWebSocketNotification(
 	companyUuid uint64,
 ) {
+	data := map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	}
 	// 推送 CUSTOMER_CALL 消息到多个客户端
 	if err := websocket.PushClient(
 		companyUuid,
 		websocket.SourceCashier, // 推送给收银机客户端
 		websocket.SourceAll,     // 所有设备
 		websocket.CUSTOMER_CALL,
-		map[string]any{},
+		data,
 	); err != nil {
 		logger.Logger.Error("推送客户呼叫通知失败(收银机)",
 			zap.Uint64("companyUuid", companyUuid),

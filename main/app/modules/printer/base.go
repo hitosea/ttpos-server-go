@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
+	printerCache "ttpos-server-go/app/modules/printer/cache"
 	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/modules/printer/template"
@@ -107,13 +108,33 @@ func NewPrinterRepo(ctx context.Context, langs ...string) PPrinterRepo {
 
 // 获取打印机模板
 func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) (int, uint64, string) {
-	// 获取打印机模板
-	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
+	companyUuid := p.ctx.GetCompanyUuid()
+	db := p.dbm.GetDB(companyUuid)
+
+	// 尝试从缓存获取 TmpData
+	tmpDataCache := printerCache.NewPrinterTemplateTmpDataCache(p.cache)
+	if cachedData, ok := tmpDataCache.Get(companyUuid, id); ok {
+		// 缓存命中，只需从数据库获取 Template 和 TmpUuid（不读取 TmpData）
+		template, tmpUuid, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateBasicInfo(id)
+		if err != nil {
+			logger.Logger.Error("获取打印机模板基础信息失败", zap.Error(err))
+			return 1, 0, ""
+		}
+		return template, tmpUuid, cachedData
+	}
+
+	// 缓存未命中，从数据库获取完整数据
 	printerTemplateRepo, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(id)
 	if err != nil {
 		logger.Logger.Error("获取打印机模板失败", zap.Error(err))
 		return 1, 0, ""
 	}
+
+	// 将 TmpData 存入缓存
+	if printerTemplateRepo.TmpData != "" {
+		tmpDataCache.Set(companyUuid, id, printerTemplateRepo.TmpData)
+	}
+
 	return printerTemplateRepo.Template, printerTemplateRepo.TmpUuid, printerTemplateRepo.TmpData
 }
 

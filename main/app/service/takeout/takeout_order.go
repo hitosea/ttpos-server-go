@@ -39,7 +39,7 @@ type ITakeoutOrderSrv interface {
 	// CreateProductionOrderForTakeout 为外卖订单创建送厨单
 	CreateProductionOrderForTakeout(ctx context.Context, orderUuid uint64) error
 	// PrintTakeoutOrder 打印外卖订单小票
-	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, firstExecution int) (*resp.PrinterData, error)
+	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error)
 	// 打印送厨单
 	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int, productItems []req.PrintProductItem) (*resp.PrinterData, error)
 }
@@ -1052,7 +1052,7 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 }
 
 // PrintTakeoutOrder 打印外卖订单小票
-func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, firstExecution int) (*resp.PrinterData, error) {
+func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error) {
 	// 1. 从领域层获取订单数据
 	order, err := domainService.NewTakeoutOrderSrv(s.dbm).GetOrderForPrint(ctx, orderUuid)
 	if err != nil {
@@ -1061,7 +1061,7 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, fi
 
 	// 异步打印顾客联
 	utils.Go(func() {
-		printer.NewPrinterRepo(ctx).PrintingPlatformTakeoutReceipt(
+		printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
 			order,
 			"customer",
 			0,
@@ -1069,7 +1069,7 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, fi
 	})
 
 	//打印商家联
-	receiptData, err := printer.NewPrinterRepo(ctx).PrintingPlatformTakeoutReceipt(
+	receiptData, err := printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
 		order,
 		"merchant",
 		firstExecution,

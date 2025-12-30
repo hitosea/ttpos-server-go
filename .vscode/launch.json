@@ -18,12 +18,12 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${workspaceFolder}/main/app/printer/pkg/test",
+            "program": "${workspaceFolder}/main/app/modules/printer/pkg/test",
             "args": [
                 "-test.run",
                 "TestComplexImgTemplate"
             ],
-            "cwd": "${workspaceFolder}/main/app/printer/pkg/test",
+            "cwd": "${workspaceFolder}/main/app/modules/printer/pkg/test",
             "env": {},
             "console": "integratedTerminal",
             "showLog": true

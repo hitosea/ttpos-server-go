@@ -72,7 +72,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	} else if order.IsTakeoutBill {
 		img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
 	} else if order.IsTakeout {
-		img.AppendText(orderSourceTakeoutText + ": " + serialNoText + "\n")
+		img.AppendText(order.OrderSourceTakeoutText + ": " + serialNoText + "\n")
 	} else {
 		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 	}
@@ -228,7 +228,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		} else if order.IsTakeoutBill {
 			img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 		} else if order.IsTakeout {
-			img.AppendText(orderSourceTakeoutText + ": " + serialNoText)
+			img.AppendText(order.OrderSourceTakeoutText + ": " + serialNoText)
 		} else {
 			img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText)
 		}
@@ -384,7 +384,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		} else if order.IsTakeoutBill {
 			img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText)
 		} else if order.IsTakeout {
-			img.AppendText(orderSourceTakeoutText + ": " + serialNoText)
+			img.AppendText(order.OrderSourceTakeoutText + ": " + serialNoText)
 		} else {
 			img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText)
 		}
@@ -579,7 +579,7 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	} else if order.IsTakeoutBill {
 		img.AppendText(orderSourceTakeoutText + t.base.Translate("外送") + ": " + serialNoText + "\n")
 	} else if order.IsTakeout {
-		img.AppendText(orderSourceTakeoutText + ": " + serialNoText + "\n")
+		img.AppendText(order.OrderSourceTakeoutText + ": " + serialNoText + "\n")
 	} else {
 		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + serialNoText + "\n")
 	}
@@ -781,7 +781,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
 	} else if order.IsTakeout {
-		img.AppendText(orderSourceTakeoutText + ": " + order.SerialNo + "\n")
+		img.AppendText(order.OrderSourceTakeoutText + " : " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(orderSourceTakeoutText + t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}

@@ -130,6 +130,9 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		if method.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
+		if method.Code == constant.PaymentMethodCodeFreeMealForErp {
+			continue
+		}
 		// 不显示 Grab 和 LINE MAN 支付方式
 		if method.Code == constant.PaymentMethodCodeGrab || method.Code == constant.PaymentMethodCodeLineMan {
 			continue
@@ -141,11 +144,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		}
 		// LianLianPay 没有配置支付信息 不显示
 		if !lianLianPayAvailable && method.IsLianLianPay() {
-			if method.IsHeadquarterPayment() {
-				isAvailable = false
-			} else {
-				continue
-			}
+			continue
 		}
 		var logo, qrcode string
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
@@ -163,10 +162,8 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
 		// 总部支付方式
-		if method.IsHeadquarterPayment() {
-			if method.Source == constant.PaymentMethodSourceDefault && qrcode == "" {
-				isAvailable = false
-			}
+		if method.IsHeadquarterPayment() && method.ErpnextPayment == "" {
+			isAvailable = false
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:    i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
@@ -190,6 +187,7 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	commonRepo := repository.NewCommonRepo()
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentRepo := NewPaymentRepo(ctx, s.dbm)
 
 	excludeCodes := []int{
 		constant.PaymentMethodCodeGrab,
@@ -204,6 +202,11 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 		commonRepo.WhereBySoftDelete(),
 		paymentMethodRepo.WithLogoFile(),
 		paymentMethodRepo.WhereNotCode(excludeCodes),
+	}
+
+	// 如果LianLianPay未配置，则过滤LianLianPay支付方式
+	if err := paymentRepo.ValidateConfigError(ctx.GetCompanyUuid()); err != nil {
+		opts = append(opts, paymentMethodRepo.WhereNotSource(constant.PaymentMethodSourceLianLianPay))
 	}
 
 	// 查询支付方式列表
@@ -235,7 +238,7 @@ func (s *paymentMethodSrv) GetManagementList(ctx context.Context, listReq *req.P
 
 		items = append(items, &resp.PaymentMethodListItemResp{
 			Uuid:     method.Uuid,
-			Name:     method.Name,
+			Name:     method.PaymentName,
 			Source:   method.Source,
 			Status:   status,
 			Sort:     method.Sort,
@@ -282,8 +285,8 @@ func (s *paymentMethodSrv) GetDetail(ctx context.Context, getReq *req.PaymentMet
 
 	return &resp.PaymentMethodDetailResp{
 		Uuid:                 paymentMethod.Uuid,
-		Name:                 paymentMethod.Name,
-		PaymentName:          paymentMethod.PaymentName,
+		Name:                 paymentMethod.PaymentName,
+		PaymentName:          paymentMethod.Name,
 		Source:               paymentMethod.Source,
 		LogoFileUuid:         paymentMethod.LogoFileUuid,
 		LogoFile:             logo,
@@ -488,9 +491,9 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 		}
 
 		paymentMethod := &model.PaymentMethod{
-			Name:                 item.Name,
+			Name:                 item.PaymentName,
 			Code:                 code,
-			PaymentName:          item.PaymentName,
+			PaymentName:          item.Name,
 			Source:               source,
 			LogoFileUuid:         item.LogoFileUuid,
 			QrcodeFileUuid:       item.QrcodeFileUuid,
@@ -579,14 +582,15 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	err = db.Transaction(func(tx *gorm.DB) error {
 		paymentMethodRepo := repository.NewPaymentMethodRepo(tx)
 		isLianLianPay := paymentMethod.Source == constant.PaymentMethodSourceLianLianPay
+		isKbank := paymentMethod.Source == constant.PaymentMethodSourceKbank
 
 		name := strings.TrimSpace(updateReq.Name)
 
 		// 构建更新数据
 		updateData := map[string]any{}
-		// LianLianPay支付跳过名称、图片logo修改
-		if !isLianLianPay {
-			updateData["name"] = name
+		// LianLianPay支付、Kbank支付跳过名称、图片logo修改
+		if !isLianLianPay && !isKbank {
+			updateData["payment_name"] = name
 			updateData["logo_file_uuid"] = updateReq.LogoFileUuid
 		}
 		updateData["qrcode_file_uuid"] = updateReq.QrcodeFileUuid
@@ -986,17 +990,15 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 	// 查询总部支付方式（排除 code=40 和 code=10）
 	var hqPayments []model.PaymentMethod
 	err := headquarterDB.Where("delete_time = 0 AND headquarter_uuid = 0").
-		Where("code NOT IN (?)", []int{model.PaymentMethodCash, model.PaymentMethodBalance}).
+		Where("code NOT IN (?)", []int{
+			model.PaymentMethodCash,
+			model.PaymentMethodBalance,
+			model.PaymentCodeLianlianWechat,
+			model.PaymentCodeLianlianAli,
+			model.PaymentCodeLianlianQrPromptPay}).
 		Find(&hqPayments).Error
 	if err != nil {
 		return errors.WithMessage(err, "查询总部支付方式失败")
-	}
-
-	// 特殊code列表（不跳过，只更新headquarter_uuid）
-	specialCodes := map[int]bool{
-		model.PaymentCodeLianlianWechat:      true, // 90111
-		model.PaymentCodeLianlianAli:         true, // 90222
-		model.PaymentCodeLianlianQrPromptPay: true, // 90333
 	}
 
 	var createdCount, updatedCount, skippedCount int
@@ -1007,28 +1009,10 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 			First(&existPayment).Error
 
 		if err == nil {
-			// 分店已有同名支付方式
-			if specialCodes[existPayment.Code] {
-				// 特殊code：只更新 headquarter_uuid
-				err = subShopDB.Model(&model.PaymentMethod{}).Where("id = ?", existPayment.ID).Update("headquarter_uuid", headquarterUuid).Error
-				if err != nil {
-					logger.Logger.Error("更新支付方式headquarter_uuid失败",
-						zap.String("name", hqPayment.PaymentName),
-						zap.Int("code", existPayment.Code),
-						zap.Error(err))
-				} else {
-					logger.Logger.Info("更新支付方式headquarter_uuid",
-						zap.String("name", hqPayment.PaymentName),
-						zap.Int("code", existPayment.Code))
-					updatedCount++
-				}
-			} else {
-				// 普通code：跳过
-				logger.Logger.Info("支付方式已存在，跳过同步",
-					zap.String("name", hqPayment.PaymentName),
-					zap.Int("code", existPayment.Code))
-				skippedCount++
-			}
+			logger.Logger.Info("支付方式已存在，跳过同步",
+				zap.String("name", hqPayment.PaymentName),
+				zap.Int("code", existPayment.Code))
+			skippedCount++
 			continue
 		}
 
