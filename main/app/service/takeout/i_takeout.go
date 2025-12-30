@@ -11,12 +11,14 @@ import (
 type ITakeoutSrv interface {
 	ITakeoutMenuSrv
 	ITakeoutOrderSrv
+	ITakeoutHelpSrv
 }
 
 type takeoutSrv struct {
 	dbm               *database.DBManager
 	cache             cache.Cache
 	takeoutAppSrv     application.ITakeoutAppService
+	takeoutOrderSrv   application.ITakeoutOrderAppService
 	productSrv        service.IProductSrv
 	translateSrv      service.ITranslateSrv
 	settingSrv        setting.ISrv
@@ -36,6 +38,7 @@ func NewTakeoutSrv(
 		dbm:               dbm,
 		cache:             cache,
 		takeoutAppSrv:     application.NewTakeoutAppService(dbm),
+		takeoutOrderSrv:   application.NewTakeoutOrderAppService(dbm),
 		productSrv:        productSrv,
 		translateSrv:      translateSrv,
 		settingSrv:        settingSrv,

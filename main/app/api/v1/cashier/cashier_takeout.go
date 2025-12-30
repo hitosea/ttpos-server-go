@@ -143,12 +143,16 @@ func (h *TakeoutHandler) AcceptOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-
+	// 验证支付方式是否在班次中
+	if err := h.takeoutSrv.ValidatePaymentMethod(ctx, &req); err != nil {
+		helper.ErrorAutoWithData(c, constant.CodeFail, err)
+		return
+	}
+	// 接单
 	if err := h.orderAppSrv.AcceptOrder(ctx, &req); err != nil {
 		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
-
 	helper.Success(c, nil)
 }
 
@@ -194,6 +198,13 @@ func (h *TakeoutHandler) CallRider(c *gin.Context) {
 		return
 	}
 
+	// 验证支付方式是否在班次中
+	if err := h.takeoutSrv.ValidatePaymentMethod(ctx, &request.TakeoutOrderAcceptReq{Uuid: req.Uuid}); err != nil {
+		helper.ErrorAutoWithData(c, constant.CodeFail, err)
+		return
+	}
+
+	// 呼叫骑手
 	if err := h.orderSrv.CallRider(ctx, &req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

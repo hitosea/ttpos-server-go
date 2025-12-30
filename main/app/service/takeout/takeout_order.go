@@ -17,10 +17,8 @@ import (
 	valueObject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
-	"ttpos-server-go/app/modules/takeout/interfaces/response"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/lock"
@@ -42,22 +40,6 @@ type ITakeoutOrderSrv interface {
 	PrintTakeoutOrder(ctx context.Context, orderUuid uint64, printLang string, firstExecution int) (*resp.PrinterData, error)
 	// 打印送厨单
 	PrintProductionOrder(ctx context.Context, orderUuid uint64, printType int, productItems []req.PrintProductItem) (*resp.PrinterData, error)
-}
-
-// ToggleTakeoutStatus 切换指定平台外卖状态
-func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.ToggleTakeoutStatusRequest) (*response.TakeoutStatusResponse, error) {
-	if req.Platform == "grab" {
-		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveGrabPaymentMethod(ctx, ctx.GetDB())
-		if err != nil {
-			return nil, errors.WithMessage(err, "保存Grab支付方式失败")
-		}
-	} else if req.Platform == "lineman" {
-		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveLineManPaymentMethod(ctx, ctx.GetDB())
-		if err != nil {
-			return nil, errors.WithMessage(err, "保存LINE MAN支付方式失败")
-		}
-	}
-	return s.takeoutAppSrv.ToggleTakeoutStatus(ctx, req)
 }
 
 // ProcessTakeoutOrderOutboundAndSales 处理外卖订单出库和销量
