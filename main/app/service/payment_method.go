@@ -426,6 +426,10 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
+	if len(createReq.Items) == 0 {
+		return errors.New("参数错误")
+	}
+
 	// 获取最大排序值
 	maxSort, err := paymentMethodRepo.GetMaxSort()
 	if err != nil {
@@ -445,6 +449,12 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 
 	// 重复检测：检查是否已存在相同的payment_name和source组合
 	for _, item := range createReq.Items {
+		if item.Name == "" {
+			return errors.New("名称不能为空")
+		}
+		if item.PaymentName == "" {
+			return errors.New("支付方式不能为空")
+		}
 		// 处理source字段：如果传入source=0则使用默认值1，否则使用传入的值
 		source := constant.PaymentMethodSourceDefault // 默认值
 		if item.Source > 0 {
@@ -570,6 +580,10 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 
+	if updateReq.Uuid == 0 {
+		return errors.New("支付方式不存在")
+	}
+
 	// 查询现有支付方式（验证是否存在）
 	paymentMethod, err := paymentMethodRepo.GetPaymentMethodError(
 		paymentMethodRepo.WhereUuid(updateReq.Uuid),
@@ -577,6 +591,10 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 	)
 	if err != nil {
 		return errors.WithMessage(err, "支付方式不存在")
+	}
+
+	if updateReq.Name == "" {
+		return errors.New("名称不能为空")
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
