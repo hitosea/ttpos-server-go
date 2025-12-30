@@ -1,10 +1,9 @@
 package utils
 
 import (
-	"bytes"
+	"net"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"strconv"
 	"strings"
 	"ttpos-server-go/config"
@@ -16,26 +15,13 @@ type VersionInfo struct {
 	Version string `json:"version"`
 }
 
-// GetLocalIP 获取本机IP地址（排除127.0.0.1）
 func GetLocalIP() (string, error) {
-	// 执行命令
-	cmd := exec.Command("sh", "-c", "ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}'")
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "", err
 	}
-
-	// 处理输出结果
-	ip := strings.TrimSpace(out.String())
-	if ip == "" {
-		return "", nil
-	}
-
-	return ip, nil
+	defer conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
 }
 
 func GetBaseURL(r *http.Request) string {

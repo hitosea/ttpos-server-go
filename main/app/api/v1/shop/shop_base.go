@@ -1,7 +1,6 @@
 package shop
 
 import (
-	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -55,20 +54,21 @@ func (h *BaseHandler) SubmitShift(c *gin.Context) {
 }
 
 // GetRemainingSmsQuota 获取商家剩余短信额度
+// @Summary 获取商家剩余短信额度
+// @Description 获取商家剩余短信额度
+// @Tags 商家端.基础信息
+// @Accept json
+// @Produce json
+// @param cid query int64 true "店铺ID"
+// @Success 200 {object} dto.Response
+// @Router /shop/remaining_sms_quota [get]
 func (h *BaseHandler) GetRemainingSmsQuota(c *gin.Context) {
-	cid := c.Query("cid")
-	if cid == "" {
-		helper.Fail(c, constant.CodeFail, "店铺ID参数错误")
+	var getReq req.GetRemainingSmsQuotaReq
+	if err := c.ShouldBindQuery(&getReq); err != nil {
+		helper.HandleValidationError(c, err, getReq, nil)
 		return
 	}
-	companyUuid, err := strconv.ParseUint(cid, 10, 64)
-	if err != nil {
-		helper.Fail(c, constant.CodeFail, "店铺ID参数值错误")
-		return
-	}
-	ctx := context.NewContext(
-		context.WithCompanyUuid(companyUuid),
-	)
+	ctx := context.NewContext(context.WithCompanyUuid(getReq.CompanyUuid))
 	companySetting, err := h.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "获取店铺信息错误")

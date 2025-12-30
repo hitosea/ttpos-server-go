@@ -3,11 +3,11 @@ package printer
 import (
 	"slices"
 	"ttpos-server-go/app/constant"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/modules/printer/template"
 	"ttpos-server-go/app/repository"
@@ -48,8 +48,9 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	// 应用打印联数优先级规则：收银打印设置-结账单打印联数 > 打印设置-打印机打印联数
 	// 仅对结账单（printType == 2）应用此规则
 	if printType == 2 && p.printerSetting.EnableCustomCopies == "1" {
-		if p.printerSetting.CheckoutSlipCopies > 0 {
-			settingPrinterInfo.Copies = uint(p.printerSetting.CheckoutSlipCopies)
+		copies := *p.printerSetting.CheckoutSlipCopies
+		if copies > 0 {
+			settingPrinterInfo.Copies = uint(copies)
 		} else {
 			// 如果设置为0，表示不打印
 			settingPrinterInfo.Copies = 0

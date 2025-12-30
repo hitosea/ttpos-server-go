@@ -20,7 +20,7 @@ import (
 //	Host:          "localhost",
 //	Port:          25443,
 //	User:          "root",
-//	Password:      "69c1e9542d2a7f19",
+//	Password:      "",
 //	TablePrefix:   "jjjfood_",
 //	SlowQueryTime: 0,
 //}
@@ -30,7 +30,7 @@ var sourceConf = config.DatabaseConf{
 	Host:          "localhost",
 	Port:          25443,
 	User:          "root",
-	Password:      "69c1e9542d2a7f19",
+	Password:      "",
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
@@ -40,7 +40,7 @@ var targetConf = config.DatabaseConf{
 	Host:          "localhost",
 	Port:          13306,
 	User:          "root",
-	Password:      "cfeb18fa768c2d5f",
+	Password:      "",
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }

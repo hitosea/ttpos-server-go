@@ -29291,6 +29291,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/remaining_sms_quota": {
+            "get": {
+                "description": "获取商家剩余短信额度",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.基础信息"
+                ],
+                "summary": "获取商家剩余短信额度",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "店铺ID",
+                        "name": "cid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/role": {
             "get": {
                 "security": [
@@ -50385,9 +50418,14 @@ const docTemplate = `{
         "request.TakeoutOrderPrintReq": {
             "type": "object",
             "required": [
+                "print_lang",
                 "uuid"
             ],
             "properties": {
+                "print_lang": {
+                    "description": "语言",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "订单UUID",
                     "type": "integer"

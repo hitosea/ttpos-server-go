@@ -138,3 +138,7 @@ type UpdateBusinessSetting struct {
 	EnableOrderSource string `json:"enable_order_source" binding:"omitempty,oneof=0 1"` // 外卖功能开关 0-关闭 1-开启
 	EnableNationality string `json:"enable_nationality" binding:"omitempty,oneof=0 1"`  // 国籍功能开关 0-关闭 1-开启
 }
+
+type GetRemainingSmsQuotaReq struct {
+	CompanyUuid uint64 `form:"cid" binding:"required"` // 店铺ID
+}
