@@ -32,15 +32,23 @@ func NewSaleOrderPeakTimeRepo(db *gorm.DB) ISaleOrderPeakTimeRepo {
 // recordType: inc - 增加, dec - 减少
 func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error {
 	tz := string(utils.ZH_TIMEZONE)
+	var finishTime int64 = 0
 	if len(timezone) > 0 {
 		tz = timezone[0]
+	}
+	if len(timezone) > 1 {
+		finishTimeInt, err := strconv.ParseInt(timezone[1], 10, 64)
+		if err == nil {
+			finishTime = finishTimeInt
+		}
 	}
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		loc = time.Local
 	}
 	// 将时间戳转换为time.Time
-	tm := time.Unix(saleBill.FinishTime, 0).In(loc)
+	finishTime = utils.IfInt64(saleBill.FinishTime > 0, saleBill.FinishTime, finishTime)
+	tm := time.Unix(finishTime, 0).In(loc)
 	// 获取日期时间戳 - 将时间设置为当天的0点0分0秒
 	dateTime := time.Date(tm.Year(), tm.Month(), tm.Day(), 0, 0, 0, 0, tm.Location())
 	dateTimestamp := dateTime.Unix()

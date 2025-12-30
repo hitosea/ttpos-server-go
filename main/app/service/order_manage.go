@@ -1875,6 +1875,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 			return errors.WithMessage(errors.New("桌台UUID不能为0"))
 		}
 	}
+	finishTime := saleBill.FinishTime
 
 	// 销售账单状态变为未结账状态
 	// 销售订单状态变为未结账状态
@@ -1952,7 +1953,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 			}
 		}
 		// 更新高峰时段
-		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, 0, storeSetting.TimeZone); err != nil {
+		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, 0, storeSetting.TimeZone, fmt.Sprintf("%d", finishTime)); err != nil {
 			return errors.WithMessage(err)
 		}
 		// 更新销售账单
