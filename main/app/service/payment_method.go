@@ -1065,7 +1065,6 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 			Status:               1,                          // 同步状态
 			IsShowCashier:        1,
 			IsShowAssistant:      1,
-			IsShowKiosk:          1,
 			IsShowMemberRecharge: 1,
 			// 其他字段使用数据库默认值
 		}
