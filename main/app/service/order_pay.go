@@ -440,6 +440,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		Amount:               amount, // 实收金额
 		TransactionNumber:    "",
 		Status:               paymentOrderStatus,
+		PaymentInfo:          req.PaymentInfo,
 	}
 
 	// 判断这个支付方式是否已经支付过，如果已经支付过，则更新支付单
@@ -517,6 +518,7 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
 	// 撤销支付单
 	paymentOrder.Cancel()
 	paymentOrder.SetNil()

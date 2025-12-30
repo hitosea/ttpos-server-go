@@ -176,6 +176,7 @@ type PaymentOrder struct {
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
 	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常;NOT NULL" json:"status"`
 	StatusReason         string  `gorm:"column:status_reason;type:text;default:'';comment:支付状态原因;NOT NULL" json:"status_reason"`
+	PaymentInfo          string  `gorm:"column:payment_info;type:text;default:'';comment:支付信息(JSON格式,存储第三方支付返回的详细信息);NOT NULL" json:"payment_info"`
 
 	// 余额支付相关
 	BalanceAmount     float64 `gorm:"column:balance_amount;type:decimal(12,2);default:0;comment:主账户金额,用于反结账时退款;NOT NULL" json:"balance_amount"`
