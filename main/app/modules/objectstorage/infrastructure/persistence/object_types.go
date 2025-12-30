@@ -53,4 +53,7 @@ const (
 
 	// ProductPackageAttribute 商品包属性
 	ObjectTypeProductPackageAttribute = "product_package_attribute"
+
+	// ProductMustPlanActive 商户是否有生效的必点方案（bool值）
+	ObjectTypeProductMustPlanActive = "product_must_plan_active"
 )

@@ -1957,42 +1957,49 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 设置必点信息
 		if !option.IsMemberAdd { // 会员端加购不设置必点信息
-			var mustPlanUuid uint64
-			var isRequire bool
-			mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, innerParams.SaleBillUuid, productPackage.Uuid, innerParams.DeskUuid)
+			// 先判断商户是否有生效的必点方案
+			hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
 			if err != nil {
-				return nil, errors.WithMessage(err)
+				ctx.Log().Error("判断商户是否有生效的必点方案失败", zap.Error(err))
 			}
-			ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
-			// 判断该必点方案是不是这个sale_bill的
-			shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(innerParams.SaleBillUuid)
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
-			var mustPlanList []resp.InstantProductMustPlan
-			var errMustPlanList error
-			if innerParams.IsDeskSaleBill {
-				mustPlanList, errMustPlanList = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), innerParams.DeskUuid)
-			} else {
-				mustPlanList, errMustPlanList = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
-			}
-			if errMustPlanList != nil {
-				return nil, errors.WithMessage(errMustPlanList)
-			}
-			mustPlanUuidMap := make(map[uint64]bool)
-			for _, mustPlan := range mustPlanList {
-				if mustPlan.Uuid == mustPlanUuid {
-					isRequire = true
+			if hasActiveMustPlan {
+				var mustPlanUuid uint64
+				var isRequire bool
+				mustPlanUuid, err = s.mustPlanSrv.GetMustPlanUuidByProductPackage(ctx, innerParams.SaleBillUuid, productPackage.Uuid, innerParams.DeskUuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
 				}
-				mustPlanUuidMap[mustPlan.Uuid] = true
-			}
+				ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
+				// 判断该必点方案是不是这个sale_bill的
+				shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(innerParams.SaleBillUuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				var mustPlanList []resp.InstantProductMustPlan
+				var errMustPlanList error
+				if innerParams.IsDeskSaleBill {
+					mustPlanList, errMustPlanList = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), innerParams.DeskUuid)
+				} else {
+					mustPlanList, errMustPlanList = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+				}
+				if errMustPlanList != nil {
+					return nil, errors.WithMessage(errMustPlanList)
+				}
+				mustPlanUuidMap := make(map[uint64]bool)
+				for _, mustPlan := range mustPlanList {
+					if mustPlan.Uuid == mustPlanUuid {
+						isRequire = true
+					}
+					mustPlanUuidMap[mustPlan.Uuid] = true
+				}
 
-			if isRequire {
-				if mustPlanUuidMap[product.MustPlanUuid] {
-					// 如果请求中填写的必点方案uuid是该桌台的必点方案之一，则标记该商品是该方案的
-					mustPlanUuid = product.MustPlanUuid
+				if isRequire {
+					if mustPlanUuidMap[product.MustPlanUuid] {
+						// 如果请求中填写的必点方案uuid是该桌台的必点方案之一，则标记该商品是该方案的
+						mustPlanUuid = product.MustPlanUuid
+					}
+					saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
 				}
-				saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
 			}
 		}
 		// 如果是打包订单，则更新商品打包状态
