@@ -45148,10 +45148,6 @@ const docTemplate = `{
         },
         "req.PaymentMethodCreateItem": {
             "type": "object",
-            "required": [
-                "name",
-                "payment_name"
-            ],
             "properties": {
                 "code": {
                     "description": "支付方式代号（可选，用于Kbank支付方式）",
@@ -45163,9 +45159,7 @@ const docTemplate = `{
                 },
                 "fee_percent": {
                     "description": "手续费百分比，取值范围0-100",
-                    "type": "number",
-                    "maximum": 100,
-                    "minimum": 0
+                    "type": "number"
                 },
                 "is_show_assistant": {
                     "description": "0-不显示 1-点餐助手结账显示",
@@ -45211,14 +45205,10 @@ const docTemplate = `{
         },
         "req.PaymentMethodCreateReq": {
             "type": "object",
-            "required": [
-                "items"
-            ],
             "properties": {
                 "items": {
                     "description": "支付方式列表",
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/req.PaymentMethodCreateItem"
                     }
@@ -45261,9 +45251,6 @@ const docTemplate = `{
         },
         "req.PaymentMethodUpdateReq": {
             "type": "object",
-            "required": [
-                "uuid"
-            ],
             "properties": {
                 "fee_percent": {
                     "description": "手续费百分比，取值范围0-100",
@@ -63907,7 +63894,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "checkout_slip_copies": {
-                    "description": "结账单打印联数 0-10",
+                    "description": "结账单打印联数 0-10 nil表示未设置",
                     "type": "integer"
                 },
                 "enable_custom_copies": {
@@ -63946,7 +63933,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "checkout_slip_copies": {
-                    "description": "结账单打印联数 0-10",
+                    "description": "结账单打印联数 0-10 nil表示未设置",
                     "type": "integer"
                 },
                 "consumption_tax": {
