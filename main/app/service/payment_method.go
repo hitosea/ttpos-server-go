@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -535,10 +536,13 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 				// 根据 source 确定 channel
 				channel := erpService.GetChannelBySource(paymentMethod.Source)
 
+				enabled := paymentMethod.Status == 1
+
 				saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 					CompanyUuid: ctx.GetCompanyUuid(),
 					Channel:     channel,
 					PayType:     paymentMethod.PaymentName,
+					Enabled:     &enabled,
 				})
 				if err != nil || saveModeOfPaymentResp == nil {
 					return err
@@ -723,16 +727,20 @@ func (s *paymentMethodSrv) UpdateSort(ctx context.Context, sortReq *req.PaymentM
 func (s *paymentMethodSrv) GetLianlianPayConfig(ctx context.Context) resp.LianlianPayConfigResp {
 	companyUuid := ctx.GetCompanyUuid()
 
+	llWhiteIp := viper.GetString("PAY_SERVICE_IP")
+
 	// 使用 Repository 方法获取配置
 	paymentAppRepo := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB))
 	paymentApp, err := paymentAppRepo.GetPaymentAppCompanyUuid(companyUuid)
 
 	if err != nil || paymentApp == nil {
-		return resp.LianlianPayConfigResp{}
+		return resp.LianlianPayConfigResp{
+			LlWhiteIp: llWhiteIp,
+		}
 	}
 
 	return resp.LianlianPayConfigResp{
-		LlWhiteIp:            paymentApp.LlWhiteIp,
+		LlWhiteIp:            llWhiteIp,
 		LlMerchantId:         paymentApp.LlMerchantId,
 		LlStoreId:            paymentApp.LlStoreId,
 		LlPublicKey:          paymentApp.LlPublicKey,

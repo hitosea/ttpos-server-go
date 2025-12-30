@@ -163,6 +163,8 @@ func (model *PaymentMethod) GetSourceText(language string) string {
 		return i18n.Translate(language, "自行添加")
 	} else if model.Source == 2 {
 		return i18n.Translate(language, "LianLianPay")
+	} else if model.Source == 3 {
+		return i18n.Translate(language, "Kbank")
 	}
 	return ""
 }
