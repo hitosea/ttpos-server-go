@@ -44773,6 +44773,10 @@ const docTemplate = `{
                     "description": "支付方式UUID, 可选 (打印码时用)",
                     "type": "integer"
                 },
+                "pay_qrcode": {
+                    "description": "支付二维码, 可选。支付二维码为base64图片",
+                    "type": "string"
+                },
                 "print_lang": {
                     "description": "打印语言, 可选",
                     "type": "string"
@@ -50405,7 +50409,6 @@ const docTemplate = `{
         "request.TakeoutOrderPrintReq": {
             "type": "object",
             "required": [
-                "print_lang",
                 "uuid"
             ],
             "properties": {

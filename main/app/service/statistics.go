@@ -2162,6 +2162,19 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
 	timezone := ctx.GetCompanySetting().Timezone
 
+	// 处理日期时间字符串参数（优先级：QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && req.QueryStartTime == 0 && req.QueryEndTime == 0 {
+		timeUtil := utils.SetTimezone(timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			req.QueryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			req.QueryEndTime = endTime
+		}
+	}
+
 	// 如果查询开始时间或查询结束时间为0，则设置为昨天开始和结束时间
 	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {
 		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).YesterdayStartEndUnix()
@@ -2273,6 +2286,19 @@ func (s *statisticsSrv) CountBusinessSummary(ctx context.Context, req req.Statis
 
 	timezone := ctx.GetCompanySetting().Timezone
 
+	// 处理日期时间字符串参数（优先级：QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && req.QueryStartTime == 0 && req.QueryEndTime == 0 {
+		timeUtil := utils.SetTimezone(timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			req.QueryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			req.QueryEndTime = endTime
+		}
+	}
+
 	// 如果查询开始时间或查询结束时间为0，则设置为昨天开始和结束时间
 	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {
 		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
@@ -2355,6 +2381,19 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
 
 	timezone := ctx.GetCompanySetting().Timezone
+
+	// 处理日期时间字符串参数（优先级：QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && req.QueryStartTime == 0 && req.QueryEndTime == 0 {
+		timeUtil := utils.SetTimezone(timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			req.QueryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			req.QueryEndTime = endTime
+		}
+	}
 
 	// 如果查询开始时间或查询结束时间为0，则设置为昨天开始和结束时间
 	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {

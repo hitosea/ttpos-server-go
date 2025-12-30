@@ -977,6 +977,19 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 		countOptions = append(countOptions, dateTypeOption)
 	}
 
+	// 处理日期时间字符串参数
+	if listReq.QueryStartDate != "" && listReq.QueryEndDate != "" {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(listReq.QueryStartDate)
+		if err == nil {
+			listReq.QueryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(listReq.QueryEndDate)
+		if err == nil {
+			listReq.QueryEndTime = endTime
+		}
+	}
+
 	// 日期范围
 	if listReq.QueryStartTime != 0 || listReq.QueryEndTime != 0 {
 		var timeRanges []repository.TimeRange
