@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -709,8 +710,9 @@ func (s *productCheckSrv) CheckProductOverallDiscount(isEnableOverallDiscount in
 }
 
 type CheckProductPackageParam struct {
-	Price  float64                         `json:"price"`  // 套餐价格
-	Groups []CheckProductPackageGroupParam `json:"groups"` // 套餐分组列表
+	Price         float64                         `json:"price"`          // 套餐价格
+	Groups        []CheckProductPackageGroupParam `json:"groups"`         // 套餐分组列表
+	ClientVersion string                          `json:"client_version"` // 客户端版本号，用于兼容性判断
 }
 
 type CheckProductPackageGroupParam struct {
@@ -772,13 +774,17 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 	if len(param.Groups) == 0 {
 		return nil, errors.New("分组不能为空")
 	}
+
+	isV211Client := utils.CompareVersion(param.ClientVersion, utils.VersionLT, "2.12.0")
+
 	var count int64 = 0
 	var stockNum float64 = 0
 	groups := make([]CheckProductPackageGroupResult, 0)
 	for _, group := range param.Groups {
+		var productPackageGroup *model.ProductPackageGroup
 		// 判断套餐分组是否存在
 		if group.Uuid != 0 {
-			productPackageGroup, _ := productPackageGroupRepo.GetProductPackageGroup(
+			productPackageGroup, _ = productPackageGroupRepo.GetProductPackageGroup(
 				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByUuid(group.Uuid),
 			)
@@ -804,28 +810,17 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 
 			// 可选分组：验证可选范围（v2.12新增）
 			if group.GroupType == 1 {
-				// 版本兼容：如果OptionalMinCount为0，默认设置为1
-				if group.OptionalMinCount == 0 {
-					group.OptionalMinCount = 1
+				if isV211Client {
+					if productPackageGroup != nil {
+						group.OptionalMinCount = productPackageGroup.OptionalCount
+					} else {
+						group.OptionalMinCount = 0
+					}
 				}
-
 				// 验证可选范围
 				if group.OptionalCount < group.OptionalMinCount {
 					return nil, errors.New("分组最大可选不可小于最小可选")
 				}
-
-				// 验证最大可选不超过分组商品数量
-				if group.OptionalCount > len(group.Products) {
-					return nil, errors.New("分组最大可选数量不能超过分组商品数量")
-				}
-
-				// 验证最小可选至少为1
-				if group.OptionalMinCount < 1 {
-					return nil, errors.New("可选分组最小可选数量必须 >= 1")
-				}
-			} else {
-				// 固定分组：不需要设置可选范围，通过group_type=0来表达"必须全选"的语义
-				// 保持 OptionalMinCount = 0（默认值）
 			}
 		}
 		products := make([]CheckProductPackageGroupProductResult, 0)
