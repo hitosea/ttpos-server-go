@@ -1242,7 +1242,7 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 		}
 		if saveModeOfPaymentResp.Name != "" {
 			if err := paymentMethodRepo.UpdatePaymentMethod(
-				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name, "erpnext_payment_id": saveModeOfPaymentResp.PaymentId},
 				repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 			); err != nil {
 				logger.Logger.Error("更新 Grab 支付方式 ERP 名称失败", zap.Error(err))
@@ -1327,7 +1327,7 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 		}
 		if saveModeOfPaymentResp.Name != "" {
 			if err := paymentMethodRepo.UpdatePaymentMethod(
-				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name, "erpnext_payment_id": saveModeOfPaymentResp.PaymentId},
 				repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 			); err != nil {
 				logger.Logger.Error("更新 LINE MAN 支付方式 ERP 名称失败", zap.Error(err))
