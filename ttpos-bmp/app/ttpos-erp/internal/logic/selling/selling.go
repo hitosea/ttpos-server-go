@@ -1376,76 +1376,78 @@ func (s *sSelling) createModeOfPayment(ctx context.Context, req *selling.SaveMod
 		parts = append(parts, req.PayType)
 	}
 	prefix := strings.Join(parts, "-") + "-"
-	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
-		nextSeq, err := s.nextModeOfPaymentSeq(ctx, prefix, companyName)
+
+	// 根据 added_by 字段决定序号生成策略
+	var nextSeq int
+	if req.AddedBy != nil && strings.TrimSpace(*req.AddedBy) == consts.PaymentAddedBySystem {
+		// 系统创建：使用固定序号
+		nextSeq = consts.PaymentSeqSystem
+		g.Log().Infof(ctx, "[createModeOfPayment] 系统创建支付方式，使用固定序号 %04d, company=%s, prefix=%s",
+			nextSeq, req.CompanyAbbr, prefix)
+	} else {
+		// 用户创建：自动递增序号
+		nextSeq, err = s.nextModeOfPaymentSeq(ctx, prefix, companyName)
 		if err != nil {
 			return nil, err
 		}
-		name := fmt.Sprintf("%s%04d - %s", prefix, nextSeq, req.CompanyAbbr)
-
-		// 生成或使用提供的 PaymentID
-		paymentID := req.PaymentId
-		if paymentID == "" {
-			// 自动生成：PID + 16位数字
-			paymentID = fmt.Sprintf("PID%d", uuid.MustGetID())
-		}
-
-		payload := g.Map{
-			"mode_of_payment":   name,
-			"name":              name,
-			"type":              "General", // 需求默认通用类型，后续可按渠道扩展
-			"custom_branch":     req.Branch,
-			"custom_company":    companyName,
-			"custom_payment_id": paymentID,
-		}
-
-		// 如果请求明确携带enabled字段，则更新ERP的启用状态
-		// 如果未携带，则不设置enabled字段（保持ERP原值，兼容旧客户端）
-		if req.Enabled != nil {
-			// BoolValue.Value 为实际的bool值
-			if req.GetEnabled() {
-				payload["enabled"] = 1
-			} else {
-				payload["enabled"] = 0
-			}
-		}
-
-		resp, err := service.Document().Create(ctx, erp.DocTypeModeOfPayment, payload)
-		if err != nil {
-			lastErr = err
-			// 并发/重复情况下重试
-			if strings.Contains(err.Error(), "exists") || strings.Contains(err.Error(), "Duplicate") {
-				continue
-			}
-			return nil, gerror.Wrapf(err, "创建支付方式失败")
-		}
-
-		createdName := name
-		if resp != nil {
-			if v := resp.Get("data.name").String(); v != "" {
-				createdName = v
-			}
-		}
-
-		// 创建对应公司的支付账户关联，确保新支付方式可用
-		if err := service.Selling().CreateModePaymentAccount(ctx, &setup.CreateModePaymentAccountInp{
-			CompanyAbbr: req.CompanyAbbr,
-			PaymentType: createdName,
-		}); err != nil {
-			return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
-		}
-
-		return &selling.SaveModeOfPaymentResp{
-			Name:      createdName,
-			PaymentId: paymentID, // 返回生成或指定的 PaymentID
-		}, nil
+		g.Log().Debugf(ctx, "[createModeOfPayment] 用户创建支付方式，使用递增序号 %04d, company=%s, prefix=%s",
+			nextSeq, req.CompanyAbbr, prefix)
 	}
 
-	if lastErr != nil {
-		return nil, gerror.Wrapf(lastErr, "创建支付方式失败")
+	name := fmt.Sprintf("%s%04d - %s", prefix, nextSeq, req.CompanyAbbr)
+
+	// 生成或使用提供的 PaymentID
+	paymentID := req.PaymentId
+	if paymentID == "" {
+		// 自动生成：PID + 16位数字
+		paymentID = fmt.Sprintf("PID%d", uuid.MustGetID())
 	}
-	return nil, gerror.New("创建支付方式失败")
+
+	payload := g.Map{
+		"mode_of_payment":   name,
+		"name":              name,
+		"type":              "General", // 需求默认通用类型，后续可按渠道扩展
+		"custom_branch":     req.Branch,
+		"custom_company":    companyName,
+		"custom_payment_id": paymentID,
+	}
+
+	// 如果请求明确携带enabled字段，则更新ERP的启用状态
+	// 如果未携带，则不设置enabled字段（保持ERP原值，兼容旧客户端）
+	if req.Enabled != nil {
+		// BoolValue.Value 为实际的bool值
+		if req.GetEnabled() {
+			payload["enabled"] = 1
+		} else {
+			payload["enabled"] = 0
+		}
+	}
+
+	resp, err := service.Document().Create(ctx, erp.DocTypeModeOfPayment, payload)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建支付方式失败")
+	}
+
+	createdName := name
+	if resp != nil {
+		if v := resp.Get("data.name").String(); v != "" {
+			createdName = v
+		}
+	}
+
+	// 创建对应公司的支付账户关联，确保新支付方式可用
+	if err := service.Selling().CreateModePaymentAccount(ctx, &setup.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: createdName,
+	}); err != nil {
+		return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
+	}
+
+	return &selling.SaveModeOfPaymentResp{
+		Name:      createdName,
+		PaymentId: paymentID, // 返回生成或指定的 PaymentID
+	}, nil
+
 }
 
 // nextModeOfPaymentSeq 计算下一个支付方式序号
