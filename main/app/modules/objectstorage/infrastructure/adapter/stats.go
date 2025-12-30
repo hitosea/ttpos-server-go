@@ -452,7 +452,14 @@ func saveCacheHitRateSnapshot(dbGetter func(uint64) *gorm.DB) func(stats CacheSt
 		if db == nil {
 			return gorm.ErrRecordNotFound
 		}
-		return db.Create(snapshot).Error
+		err = db.Create(snapshot).Error
+		if err == nil {
+			// 保存成功后，启动协程执行清理任务（带防抖）
+			utils.Go(func() {
+				cleanupSnapshots(dbGetter)
+			})
+		}
+		return err
 	}
 }
 
@@ -462,6 +469,128 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// cleanupSnapshots 清理快照表中的冗余数据（带防抖机制）
+// 清理逻辑：
+// 仅处理上一周的数据（7天前到14天前），对这些数据进行清洗：
+// 对于同一个 instance_id，且 is_restart = 0 的连续记录，只保留最新的一条，删除旧的
+func cleanupSnapshots(dbGetter func(uint64) *gorm.DB) {
+	cleanupMutex.Lock()
+	// 检查是否需要执行清理（防抖：每小时最多执行一次）
+	now := time.Now()
+	if !lastCleanupTime.IsZero() && now.Sub(lastCleanupTime) < cleanupInterval {
+		cleanupMutex.Unlock()
+		return
+	}
+	lastCleanupTime = now
+	cleanupMutex.Unlock()
+
+	// 获取数据库连接
+	db := dbGetter(0) // saas 库的 index 是 0
+	if db == nil {
+		logger.Logger.Warn("清理快照失败：无法获取数据库连接")
+		return
+	}
+
+	// 计算上一周的时间范围（7天前到14天前）
+	oneWeekAgo := now.AddDate(0, 0, -7).Unix()   // 7天前
+	twoWeeksAgo := now.AddDate(0, 0, -14).Unix() // 14天前
+	// oneWeekAgo := now.Unix()                    // 今天
+	// twoWeeksAgo := now.AddDate(0, 0, -1).Unix() // 昨天
+
+	// 查询上一周的数据中所有不同的 instance_id
+	var instanceIDs []string
+	if err := db.Model(&model.CacheHitRateSnapshot{}).
+		Where("create_time >= ? AND create_time < ?", twoWeeksAgo, oneWeekAgo).
+		Distinct("instance_id").
+		Pluck("instance_id", &instanceIDs).Error; err != nil {
+		logger.Logger.Warn("查询上一周实例ID列表失败", zap.Error(err))
+		return
+	}
+
+	if len(instanceIDs) == 0 {
+		logger.Logger.Debug("清理快照：上一周没有数据需要清理")
+		return
+	}
+
+	totalDeleted := int64(0)
+	for _, instanceID := range instanceIDs {
+		// 获取该实例在上一周的所有快照（按时间排序）
+		var snapshots []model.CacheHitRateSnapshot
+		if err := db.Where("instance_id = ? AND create_time >= ? AND create_time < ?", instanceID, twoWeeksAgo, oneWeekAgo).
+			Order("snapshot_time ASC").
+			Find(&snapshots).Error; err != nil {
+			logger.Logger.Warn("查询实例快照失败",
+				zap.String("instance_id", instanceID),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		if len(snapshots) == 0 {
+			continue
+		}
+
+		// 找出连续的 is_restart = 0 的记录组
+		var toDelete []uint64
+		var consecutiveGroup []*model.CacheHitRateSnapshot
+
+		// 处理连续组的函数
+		processConsecutiveGroup := func() {
+			if len(consecutiveGroup) > 1 {
+				// 保留最后一条（最新的），删除前面的
+				for j := 0; j < len(consecutiveGroup)-1; j++ {
+					toDelete = append(toDelete, consecutiveGroup[j].ID)
+				}
+			}
+			consecutiveGroup = make([]*model.CacheHitRateSnapshot, 0)
+
+		}
+
+		for i := range snapshots {
+			snapshot := &snapshots[i]
+			if snapshot.IsRestart == 1 {
+				// 遇到重启标记，结束当前连续组
+				processConsecutiveGroup()
+				continue
+			}
+
+			// is_restart = 0，加入连续组
+			consecutiveGroup = append(consecutiveGroup, snapshot)
+
+			// 如果是最后一条记录，也需要处理连续组
+			if i == len(snapshots)-1 {
+				processConsecutiveGroup()
+			}
+		}
+
+		if len(toDelete) > 0 {
+			if err := db.Where("id IN ?", toDelete).
+				Delete(&model.CacheHitRateSnapshot{}).Error; err != nil {
+				logger.Logger.Warn("删除连续记录失败",
+					zap.String("instance_id", instanceID),
+					zap.Error(err),
+				)
+				continue
+			}
+			totalDeleted += int64(len(toDelete))
+			logger.Logger.Debug("清理快照：已删除实例连续记录",
+				zap.String("instance_id", instanceID),
+				zap.Int("count", len(toDelete)),
+			)
+		}
+	}
+
+	if totalDeleted > 0 {
+		logger.Logger.Info("清理快照：已删除上一周的连续记录",
+			zap.Int64("count", totalDeleted),
+			zap.Int64("time_range_start", twoWeeksAgo),
+			zap.Int64("time_range_end", oneWeekAgo),
+		)
+	} else {
+		logger.Logger.Debug("清理快照：上一周没有需要删除的连续记录")
+	}
 }
 
 // Start 启动快照保存器
@@ -536,6 +665,10 @@ var (
 	globalStatsOnce      sync.Once
 	snapshotReporter     *SnapshotReporter
 	snapshotReporterOnce sync.Once
+	// 清理任务防抖：记录最后一次清理时间，避免频繁执行
+	lastCleanupTime time.Time
+	cleanupMutex    sync.Mutex
+	cleanupInterval = 1 * time.Hour // 清理任务执行间隔：1小时
 )
 
 // GetGlobalStatsManager 获取全局统计管理器（单例模式）
