@@ -28,9 +28,10 @@ func NewErpRpcAdapter(dbm *database.DBManager) *ErpRpcAdapter {
 }
 
 // SavePosInvoice 保存 POS Invoice 到 ERP
-// @param ctx 上下文（需包含 company、staff 等信息）
-// @param req POS Invoice 请求参数
-// @return 返回 ERP 发票信息（products_invoice_name、material_invoice_name）
+// ctx 上下文（需包含 company、staff 等信息）
+// req POS Invoice 请求参数
+//
+//	返回 ERP 发票信息（products_invoice_name、material_invoice_name）
 func (a *ErpRpcAdapter) SavePosInvoice(
 	ctx appContext.Context,
 	req req.SavePosInvoiceReq,
