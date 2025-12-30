@@ -1402,11 +1402,15 @@ func (s *sSelling) createModeOfPayment(ctx context.Context, req *selling.SaveMod
 		// 自动生成：PID + 16位数字
 		paymentID = fmt.Sprintf("PID%d", uuid.MustGetID())
 	}
-
+	paymentType := "General"
+	//名字是Cash 才设置成 Cash
+	if name == "Cash" {
+		paymentType = "Cash"
+	}
 	payload := g.Map{
 		"mode_of_payment":   name,
 		"name":              name,
-		"type":              "General", // 需求默认通用类型，后续可按渠道扩展
+		"type":              paymentType, // 需求默认通用类型，后续可按渠道扩展
 		"custom_branch":     req.Branch,
 		"custom_company":    companyName,
 		"custom_payment_id": paymentID,
