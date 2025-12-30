@@ -114,7 +114,7 @@ services:
         ipv4_address: 10.0.0.18
 
   reconciliation_templates:
-    container_name: reconciliation_templates
+    container_name: "saas-reconciliation-templates-${APP_ID}"
     image: hub.hitosea.com/ttpos-server/ttpos-server-reconciliation-templates:1.1.0
     environment:
       - PORT=3000
