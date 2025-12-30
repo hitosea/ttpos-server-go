@@ -1055,14 +1055,17 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 		newCode := s.generatePaymentCode(subShopDB)
 
 		newPayment := model.PaymentMethod{
-			HeadquarterUuid: headquarterUuid,
-			PaymentName:     hqPayment.PaymentName,
-			Name:            hqPayment.Name,
-			Code:            newCode,                    // 生成新code
-			Source:          model.PaymentSourceDefault, // 1-手动添加
-			LogoFileUuid:    0,                          // 固定为0
-			Sort:            hqPayment.Sort,             // 排序
-			Status:          hqPayment.Status,           // 同步状态
+			HeadquarterUuid:      headquarterUuid,
+			PaymentName:          hqPayment.PaymentName,
+			Name:                 hqPayment.Name,
+			Code:                 newCode,                    // 生成新code
+			Source:               model.PaymentSourceDefault, // 1-手动添加
+			LogoFileUuid:         0,                          // 固定为0
+			Sort:                 hqPayment.Sort,             // 排序
+			Status:               1,                          // 同步状态
+			IsShowCashier:        1,
+			IsShowAssistant:      1,
+			IsShowMemberRecharge: 1,
 			// 其他字段使用数据库默认值
 		}
 
