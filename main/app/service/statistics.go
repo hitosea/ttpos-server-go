@@ -2098,6 +2098,7 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 	opts := []repository.DBOption{
 		commonRepo.WhereByDutyNo(req.DutyNo),
 		commonRepo.WhereBySoftDelete(),
+		returnOrderRepo.WhereNotReverseSettlement(),
 	}
 	if req.ExcludeDataManage {
 		saleOrderUuids := []uint64{}
