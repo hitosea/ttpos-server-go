@@ -70,6 +70,7 @@ type StaffShiftLog struct {
 	ErpnextOpenPosEntryName  string `gorm:"column:erpnext_open_pos_entry_name;type:varchar(255);NOT NULL;default:'';comment:erpnext开账名称" json:"erpnext_open_pos_entry_name"`
 	ErpnextClosePosEntryName string `gorm:"column:erpnext_close_pos_entry_name;type:varchar(255);NOT NULL;default:'';comment:erpnext结账名称" json:"erpnext_close_pos_entry_name"`
 	ErpnextAsyncRecordId     string `gorm:"column:erpnext_async_record_id;type:varchar(255);NOT NULL;default:'';comment:erpnext异步记录ID" json:"erpnext_async_record_id"`
+	OpeningPaymentMethods    string `gorm:"column:opening_payment_methods;type:varchar(2000);comment:开账时的支付方式UUID列表（逗号分隔）" json:"opening_payment_methods"`
 
 	Staff *Staff `gorm:"foreignKey:StaffUuid;references:Uuid"`
 }
