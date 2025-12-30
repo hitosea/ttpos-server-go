@@ -186,12 +186,28 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 }
 
 // GET 从缓存获取，未命中时调用 query 函数查询并写入缓存
-func (a *CacheGroupAdapter[T]) GET(key string, query func() (T, error)) (T, error) {
+func (a *CacheGroupAdapter[T]) GET(key string, query func() (T, error), opts ...func(*repository.GetOption)) (T, error) {
+	// 解析选项
+	option := &repository.GetOption{
+		SkipCache: false, // 默认不跳过缓存
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	// 构建任务
 	task := &cacheTask[T]{
 		key:   key,
 		query: query,
 		ttl:   a.defaultTTL,
 	}
+
+	// 如果配置了跳过缓存，使用 Do 方法并传入 SkipCache 选项
+	if option.SkipCache {
+		return a.group.Do(context.Background(), task, cache.WithSkipCache())
+	}
+
+	// 默认行为：正常检查缓存（L1 -> L2 -> L3）
 	return a.group.Do(context.Background(), task)
 }
 
@@ -207,7 +223,7 @@ func (a *CacheGroupAdapter[T]) SET(key string, value T, ttl time.Duration) error
 		},
 		ttl: ttl,
 	}
-	_, err := a.group.Do(context.Background(), task)
+	_, err := a.group.Do(context.Background(), task, cache.WithSkipCache())
 	return err
 }
 
@@ -222,9 +238,17 @@ func (a *CacheGroupAdapter[T]) DEL(keys ...string) error {
 }
 
 // BATCH_GET 批量获取缓存
-func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (map[string]T, error)) (map[string]T, error) {
+func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (map[string]T, error), opts ...func(*repository.GetOption)) (map[string]T, error) {
 	if len(keys) == 0 {
 		return make(map[string]T), nil
+	}
+
+	// 解析选项
+	option := &repository.GetOption{
+		SkipCache: false, // 默认不跳过缓存
+	}
+	for _, opt := range opts {
+		opt(option)
 	}
 
 	// 为每个 key 单独调用 GET，利用 ICacheGroup 的 Singleflight 合并并发请求
@@ -245,7 +269,16 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 			},
 			ttl: a.defaultTTL,
 		}
-		val, err := a.group.Do(context.Background(), task)
+
+		// 根据选项决定是否跳过缓存
+		var val T
+		var err error
+		if option.SkipCache {
+			val, err = a.group.Do(context.Background(), task, cache.WithSkipCache())
+		} else {
+			val, err = a.group.Do(context.Background(), task)
+		}
+
 		if err != nil {
 			missCount++
 			continue // 单个失败不影响其他

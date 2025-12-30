@@ -40,8 +40,25 @@ func NewCacheGroup[T any](config GroupConfig) ICacheGroup[T] {
 }
 
 // Do 执行任务，实现多级缓存和请求合并的核心逻辑
-func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
+func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T], opts ...func(*DoOption)) (T, error) {
+	// 解析选项
+	option := &DoOption{
+		SkipCache: false, // 默认不跳过缓存
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
 	key := task.Hash()
+
+	// 如果配置了跳过缓存，直接执行查询逻辑
+	if option.SkipCache {
+		logger.Logger.Debug("跳过缓存检查，直接执行查询",
+			zap.String("key", key),
+			zap.String("type", "GET"),
+		)
+		return g.executeTask(ctx, key, task, true) // 传入 skipCache=true
+	}
 
 	// 1. 尝试从 L1 本地缓存读取
 	if g.config.EnableLocalCache {
@@ -89,10 +106,17 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 		zap.String("key", key),
 		zap.String("type", "GET"),
 	)
+	return g.executeTask(ctx, key, task, false) // 传入 skipCache=false，执行 Double Check
+}
+
+// executeTask 执行任务的核心逻辑（包含 Singleflight 和缓存写入）
+// skipCache: 是否跳过缓存检查（包括 Double Check）
+func (g *cacheGroup[T]) executeTask(ctx context.Context, key string, task Task[T], skipCache bool) (T, error) {
 	return g.sf.do(ctx, key, func(ctx context.Context) (T, error) {
 		// Double Check: 进入 Singleflight 后再次检查缓存，防止并发下的重复执行
 		// (因为在等待 Singleflight 锁的过程中，可能前面的请求已经填好缓存了)
-		if g.config.EnableRedisCache {
+		// 注意：如果 skipCache=true，跳过 Double Check，直接执行查询
+		if !skipCache && g.config.EnableRedisCache {
 			if val, ok := g.l2.get(ctx, key); ok {
 				logger.Logger.Debug("Singleflight Double Check 缓存命中 L2",
 					zap.String("key", key),

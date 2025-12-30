@@ -18,11 +18,31 @@ type Task[T any] interface {
 	TTL() time.Duration
 }
 
+// DoOption Do 方法的选项
+type DoOption struct {
+	// SkipCache 是否跳过 L1/L2 缓存检查，直接执行查询逻辑
+	// true: 跳过缓存检查，直接执行 g.sf.do 逻辑（仍会写入缓存）
+	// false: 正常流程，先检查 L1/L2 缓存，未命中再执行查询
+	SkipCache bool
+}
+
+// WithSkipCache 设置跳过缓存选项
+func WithSkipCache() func(*DoOption) {
+	return func(opt *DoOption) {
+		opt.SkipCache = true
+	}
+}
+
 // ICacheGroup 定义缓存组接口
 // 提供统一的 Read-Through 访问入口
 type ICacheGroup[T any] interface {
 	// Do 执行任务，内部自动处理 L1/L2 缓存及 Singleflight 合并
-	Do(ctx context.Context, task Task[T]) (T, error)
+	// 参数：
+	//   - ctx: 上下文
+	//   - task: 任务
+	//   - opts: 选项函数（可选），如 WithSkipCache(true) 跳过缓存直接查询
+	Do(ctx context.Context, task Task[T], opts ...func(*DoOption)) (T, error)
+
 	// ClearL1 清空 L1 本地缓存
 	ClearL1()
 }

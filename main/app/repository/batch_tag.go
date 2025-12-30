@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	cacheRepo "ttpos-server-go/app/modules/objectstorage/domain/repository"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
@@ -11,17 +12,32 @@ import (
 	"gorm.io/gorm"
 )
 
+// GetBatchTagInfoOption GetBatchTagInfo 方法的选项
+type GetBatchTagInfoOption struct {
+	// SkipCache 是否跳过缓存检查，直接执行查询
+	// true: 跳过所有缓存（L1/L2），直接从数据库查询（仍会写入缓存）
+	// false: 正常流程，按配置决定是否使用缓存（默认）
+	SkipCache bool
+}
+
+// WithSkipCacheForBatchTag 设置是否跳过缓存选项
+func WithSkipCacheForBatchTag() func(*GetBatchTagInfoOption) {
+	return func(opt *GetBatchTagInfoOption) {
+		opt.SkipCache = true
+	}
+}
+
 type IBatchTagRepo interface {
-	GetBatchTags(opts ...DBOption) ([]*model.BatchTag, error)                 // 获取分批类型列表
-	GetBatchTag(opts ...DBOption) (*model.BatchTag, error)                    // 获取分批类型详情
-	GetBatchTagList() ([]*model.BatchTag, error)                              // 获取分批类型列表
-	GetBatchTagCount() (int64, error)                                         // 获取分批类型数量
-	GetBatchTagInfo(companyUuid uint64, uuid uint64) (*model.BatchTag, error) // 获取分批类型详情
-	CreateBatchTag(batchTag model.BatchTag) error                             // 创建分批类型
-	GetMaxSort() (int, error)                                                 // 获取当前最大的排序值
-	CheckColorExists(color string, uuid uint64) bool                          // 检查颜色是否已被使用
-	UpdateBatchTag(batchTag model.BatchTag) error                             // 更新分批类型
-	DeleteBatchTag(uuid uint64) error                                         // 删除分批类型
+	GetBatchTags(opts ...DBOption) ([]*model.BatchTag, error)                                                       // 获取分批类型列表
+	GetBatchTag(opts ...DBOption) (*model.BatchTag, error)                                                          // 获取分批类型详情
+	GetBatchTagList() ([]*model.BatchTag, error)                                                                    // 获取分批类型列表
+	GetBatchTagCount() (int64, error)                                                                               // 获取分批类型数量
+	GetBatchTagInfo(companyUuid uint64, uuid uint64, opts ...func(*GetBatchTagInfoOption)) (*model.BatchTag, error) // 获取分批类型详情
+	CreateBatchTag(batchTag model.BatchTag) error                                                                   // 创建分批类型
+	GetMaxSort() (int, error)                                                                                       // 获取当前最大的排序值
+	CheckColorExists(color string, uuid uint64) bool                                                                // 检查颜色是否已被使用
+	UpdateBatchTag(batchTag model.BatchTag) error                                                                   // 更新分批类型
+	DeleteBatchTag(uuid uint64) error                                                                               // 删除分批类型
 }
 
 func NewBatchTagRepo(db *gorm.DB) IBatchTagRepo {
@@ -91,14 +107,22 @@ func (r *BatchTagRepoImpl) GetBatchTag(opts ...DBOption) (*model.BatchTag, error
 	return &batchTag, nil
 }
 
-func (r *BatchTagRepoImpl) GetBatchTagInfo(companyUuid uint64, uuid uint64) (*model.BatchTag, error) {
+func (r *BatchTagRepoImpl) GetBatchTagInfo(companyUuid uint64, uuid uint64, opts ...func(*GetBatchTagInfoOption)) (*model.BatchTag, error) {
+	// 解析选项
+	option := &GetBatchTagInfoOption{
+		SkipCache: false, // 默认不跳过缓存
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
 	// 检查是否启用对象存储缓存
 	var batchTag *model.BatchTag
 	var err error
 
 	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
 		// 使用对象存储模块缓存查询
-		batchTag, err = r.getBatchTagInfoWithCache(companyUuid, uuid)
+		batchTag, err = r.getBatchTagInfoWithCache(companyUuid, uuid, option.SkipCache)
 	} else {
 		// 直接查询数据库
 		batchTag, err = r.queryBatchTagInfo(uuid)
@@ -129,7 +153,7 @@ func (r *BatchTagRepoImpl) queryBatchTagInfo(uuid uint64) (*model.BatchTag, erro
 }
 
 // getBatchTagInfoWithCache 使用对象存储模块缓存查询分批标签信息（包含预加载的关联数据）
-func (r *BatchTagRepoImpl) getBatchTagInfoWithCache(companyUuid uint64, uuid uint64) (*model.BatchTag, error) {
+func (r *BatchTagRepoImpl) getBatchTagInfoWithCache(companyUuid uint64, uuid uint64, skipCache bool) (*model.BatchTag, error) {
 	if uuid == 0 {
 		return nil, errors.New("getBatchTagInfoWithCache uuid cannot be 0")
 	}
@@ -143,11 +167,21 @@ func (r *BatchTagRepoImpl) getBatchTagInfoWithCache(companyUuid uint64, uuid uin
 	// 获取缓存层（使用订单相关对象缓存配置）
 	cacheLayer := adapter.GetOrderObjectCache[*model.BatchTag](cache.Global, 5*time.Minute)
 
-	// 使用缓存查询
-	result, err := cacheLayer.GET(key, func() (*model.BatchTag, error) {
-		// 缓存未命中时，从数据库查询（包含所有预加载）
-		return r.queryBatchTagInfo(uuid)
-	})
+	// 使用缓存查询，根据 skipCache 选项决定是否跳过缓存
+	var result *model.BatchTag
+	var err error
+	if skipCache {
+		// 跳过缓存，直接查询数据库
+		result, err = cacheLayer.GET(key, func() (*model.BatchTag, error) {
+			return r.queryBatchTagInfo(uuid)
+		}, cacheRepo.WithSkipCache())
+	} else {
+		// 正常流程，检查缓存
+		result, err = cacheLayer.GET(key, func() (*model.BatchTag, error) {
+			// 缓存未命中时，从数据库查询（包含所有预加载）
+			return r.queryBatchTagInfo(uuid)
+		})
+	}
 
 	if err != nil {
 		// 缓存查询失败，降级到直接查询数据库
