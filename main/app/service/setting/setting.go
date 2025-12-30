@@ -428,8 +428,6 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	if defaultPrinter.EnableCustomCopies == "" {
 		defaultPrinter.EnableCustomCopies = "0"
 	}
-	// CheckoutSlipCopies 如果是 0，可能是默认值也可能是旧数据中没有该字段，这里不做特殊处理
-	// 因为 int 类型的零值就是 0，符合我们的默认值要求
 
 	return defaultPrinter, nil
 }
@@ -1929,7 +1927,7 @@ func (s *Srv) UpdatePrintSetting(ctx context.Context, req *req.UpdatePrintSettin
 
 	// 更新字段
 	printerSetting.EnableCustomCopies = req.EnableCustomCopies
-	printerSetting.CheckoutSlipCopies = req.CheckoutSlipCopies
+	printerSetting.CheckoutSlipCopies = &req.CheckoutSlipCopies
 
 	// 保存设置（会自动删除缓存）
 	return s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
