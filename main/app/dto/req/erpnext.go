@@ -199,6 +199,7 @@ type SaveModeOfPaymentReq struct {
 	Enabled     *bool   `form:"enabled" json:"enabled" binding:"omitempty"`          // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
 	Name        *string `form:"name" json:"name" binding:"omitempty"`                // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
 	PaymentId   *string `form:"payment_id" json:"payment_id" binding:"omitempty"`    // PaymentId，可选：更新时传入
+	AddedBy     *string `form:"added_by" json:"added_by" binding:"omitempty"`        // 创建来源标识，"sys" 表示系统创建
 }
 
 type CreateSupplierReq struct {

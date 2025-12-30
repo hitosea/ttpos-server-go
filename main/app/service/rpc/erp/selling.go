@@ -512,6 +512,9 @@ func (s *erpSrv) SaveModeOfPayment(ctx pkgCtx.Context, saveModeOfPaymentReq req.
 	if saveModeOfPaymentReq.Name != nil {
 		params.Name = saveModeOfPaymentReq.Name
 	}
+	if saveModeOfPaymentReq.AddedBy != nil && *saveModeOfPaymentReq.AddedBy != "" {
+		params.AddedBy = saveModeOfPaymentReq.AddedBy
+	}
 	logger.Logger.Info("保存/同步支付方式", zap.Any("params", params))
 	result, err := client.SaveModeOfPayment(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), params)
 	if err != nil {

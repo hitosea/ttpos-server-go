@@ -228,11 +228,16 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 
 		// 根据 source 获取 channel
 		channel := GetChannelBySource(paymentMethod.Source)
+		addedBy := ""
+		if paymentMethod.Source == constant.PaymentMethodSourceSystem {
+			addedBy = "sys"
+		}
 		params := &selling.SaveModeOfPaymentReq{
 			CompanyAbbr: initShopReq.CompanyAbbr,
 			Branch:      response.BranchName,
 			Channel:     channel,
 			PayType:     paymentMethod.PaymentName,
+			AddedBy:     &addedBy,
 		}
 		saveResp, err := sellingClient.SaveModeOfPayment(WithSiteCode(context.Background(), initShopReq.SiteCode), params)
 		if err != nil {
