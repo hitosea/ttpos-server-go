@@ -126,7 +126,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('item_name', 'text', ['null' => true, 'comment' => '商品名称'])
                 
                 // TTPOS 商品信息（从 platform_item_id 解析）
-                ->addColumn('ttpos_product_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS商品UUID (从TTPOS-ITEM-前缀提取)'])
+                ->addColumn('ttpos_product_package_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS商品套餐UUID (从TTPOS-ITEM-前缀提取, 关联ttpos_product_package.uuid)'])
                 
                 // 商品数量和价格
                 ->addColumn('quantity', 'integer', ['signed' => true, 'default' => 0, 'comment' => '数量'])
@@ -166,12 +166,14 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('platform', 'string', ['limit' => 50, 'default' => '', 'comment' => '平台: grab,foodpanda,lineman'])
                 ->addColumn('platform_modifier_id', 'string', ['limit' => 255, 'default' => '', 'comment' => '平台修饰符ID'])
                 ->addColumn('modifier_name', 'text', ['null' => true, 'comment' => '修饰符名称'])
-                ->addColumn('ttpos_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS修饰符UUID(关联后：规格/加料/属性值的UUID/套餐商品组UUID)'])
+                ->addColumn('ttpos_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS修饰符UUID(关联后：规格-加料 ttpos_product_bom /属性值的UUID ttpos_product_attribute /套餐商品组UUID ttpos_product_package_group_item)'])
                 ->addColumn('ttpos_modifier_type', 'string', ['limit' => 20, 'default' => '', 'comment' => 'TTPOS修饰符类型: flavor=规格, sauce=加料, attr=属性'])
                 ->addColumn('quantity', 'integer', ['signed' => false, 'default' => 1, 'comment' => '数量'])
                 ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '价格(元,4位小数)'])
                 ->addColumn('tax', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '税费(元,4位小数)'])
                 ->addColumn('is_mapped', 'integer', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::INT_TINY, 'default' => 0, 'comment' => '是否已映射: 0=未映射,1=已映射'])
+                ->addColumn('ttpos_product_package_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS商品套餐UUID（关联ttpos_product_package.uuid, commodity类型使用）'])
+                ->addColumn('ttpos_flavor_product_bom_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'TTPOS规格商品物料UUID（commodity类型对应product_package_group_item.product_bom_uuid）'])
                 ->addColumn('create_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])
                 ->addColumn('update_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '更新时间'])
                 ->addColumn('delete_time', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '删除时间'])

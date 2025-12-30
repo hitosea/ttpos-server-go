@@ -4,12 +4,14 @@ package model
 type TakeoutOrderMaterial struct {
 	BaseModel
 	// 基础标识字段
-	TakeoutOrderUuid  uint64  `gorm:"column:takeout_order_uuid;type:bigint(20);default:0;comment:外卖订单ID" json:"takeout_order_uuid"`
-	MaterialUuid      uint64  `gorm:"column:material_uuid;type:bigint(20);default:0;comment:原料ID" json:"material_uuid"`
-	WarehouseUuid     uint64  `gorm:"column:warehouse_uuid;type:bigint(20);default:0;comment:仓库ID" json:"warehouse_uuid"`
-	Num               float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:数量,原料的实际使用数量" json:"num"`
-	StaffShiftLogUuid uint64  `gorm:"column:staff_shift_log_uuid;type:bigint(20);default:0;comment:员工班次记录ID" json:"staff_shift_log_uuid"`
-	IsSummarized      int     `gorm:"column:is_summarized;type:int(11);default:0;comment:是否已经统计,0-未统计 1-已统计" json:"is_summarized"`
+	TakeoutOrderUuid             uint64  `gorm:"column:takeout_order_uuid;type:bigint(20);default:0;comment:外卖订单ID" json:"takeout_order_uuid"`
+	TakeoutOrderItemUuid         uint64  `gorm:"column:takeout_order_item_uuid;type:bigint(20);default:0;comment:外卖订单商品UUID(关联ttpos_takeout_order_item.uuid)" json:"takeout_order_item_uuid"`
+	TakeoutOrderItemModifierUuid uint64  `gorm:"column:takeout_order_item_modifier_uuid;type:bigint(20);default:0;comment:外卖订单商品修饰符UUID(关联ttpos_takeout_order_item_modifier.uuid)" json:"takeout_order_item_modifier_uuid"`
+	MaterialUuid                 uint64  `gorm:"column:material_uuid;type:bigint(20);default:0;comment:原料ID" json:"material_uuid"`
+	ErpCode                      string  `gorm:"column:erp_code;type:varchar(50);default:'';comment:ERP编码(来自Material.Code)" json:"erp_code"`
+	WarehouseUuid                uint64  `gorm:"column:warehouse_uuid;type:bigint(20);default:0;comment:仓库ID" json:"warehouse_uuid"`
+	Num                          float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:数量,原料的实际使用数量" json:"num"`
+	IsSummarized                 int     `gorm:"column:is_summarized;type:int(11);default:0;comment:是否已经统计,0-未统计 1-已统计" json:"is_summarized"`
 
 	Material *Material `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 }

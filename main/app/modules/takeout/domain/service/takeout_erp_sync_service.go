@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 
@@ -11,11 +10,13 @@ import (
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	appContext "ttpos-server-go/pkg/context"
@@ -69,13 +70,13 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		takeoutOrderRepo.WithTakeoutOrderItemModifiers(),
 	)
 	if err != nil {
-		return fmt.Errorf("查询外卖订单失败: %w", err)
+		return errors.WithMessage(err, "查询外卖订单失败")
 	}
 	if takeoutOrder == nil {
-		return fmt.Errorf("外卖订单不存在: %d", orderUuid)
+		return errors.WithMessage(errors.New("外卖订单不存在"), fmt.Sprintf("外卖订单不存在: %d", orderUuid))
 	}
 	if takeoutOrder.OrderState != valueobject.TakeoutOrderStateAccepted && takeoutOrder.OrderState != valueobject.TakeoutOrderStateRiderPending {
-		return fmt.Errorf("外卖订单状态不正确: %d", takeoutOrder.OrderState)
+		return errors.WithMessage(errors.New("外卖订单状态不正确"), fmt.Sprintf("外卖订单状态不正确: %d", takeoutOrder.OrderState))
 	}
 	// 检查订单是否已同步到 ERP
 	if len(takeoutOrder.ErpPosInvoiceResp) > 0 {
@@ -89,7 +90,24 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 4. 查询 ERP 开账名称
 	erpOpenPosEntryName, err := takeoutOrderRepo.GetErpOpenPosEntryNameByOrderUuid(takeoutOrder.Uuid)
 	if erpOpenPosEntryName == "" {
-		return fmt.Errorf("查询 ERP 开账名称失败: %w", err)
+		return errors.WithMessage(err, "查询 ERP 开账名称失败")
+	}
+
+	// 检查支付方式是否已存在（通过 payment_name 或 code）
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	existPayment := repository.NewPaymentMethodRepo(db).GetPaymentMethod(
+		paymentMethodRepo.WhereCode(
+			func() int {
+				if takeoutOrder.IsGrabOrder() {
+					return constant.PaymentMethodCodeGrab
+				}
+				return constant.PaymentMethodCodeLineMan
+			}(),
+		),
+	)
+	if existPayment.Uuid == 0 {
+		logger.Logger.Error("支付方式不存在，跳过同步", zap.Int("paymentCode", constant.PaymentMethodCodeGrab))
+		return nil
 	}
 
 	// 9. 构建 POS Invoice 请求参数
@@ -97,6 +115,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		takeoutOrder,
 		company.CompanySetting,
 		erpOpenPosEntryName,
+		&existPayment,
 	)
 
 	// 10. 创建 ERP 上下文
@@ -118,7 +137,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 			zap.Uint64("orderUuid", orderUuid),
 			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
 			zap.Error(err))
-		return fmt.Errorf("保存 POS Invoice 失败: %w", err)
+		return errors.WithMessage(err, "保存 POS Invoice 失败")
 	}
 
 	// 12. 保存 ERP 响应数据到订单
@@ -155,12 +174,13 @@ func buildPosInvoiceRequest(
 	takeoutOrder *takeoutModel.TakeoutOrder,
 	companySetting *model.CompanySetting,
 	erpOpenPosEntryName string,
+	existPayment *model.PaymentMethod,
 ) req.SavePosInvoiceReq {
 	// 构建商品列表
 	items := buildPosInvoiceItems(takeoutOrder)
 
 	// 构建支付列表
-	payments := buildPosInvoicePayments(takeoutOrder)
+	payments := buildPosInvoicePayments(takeoutOrder, existPayment)
 
 	// 构建税费列表
 	taxes := buildPosInvoiceTaxes(takeoutOrder)
@@ -344,23 +364,19 @@ func buildPosInvoiceTaxes(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 // buildPosInvoicePayments 构建 POS Invoice 支付列表
 // @version v2.12.0
 // @spec story-erp-grab-invoice-sync
-func buildPosInvoicePayments(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.PosInvoicePayment {
+func buildPosInvoicePayments(takeoutOrder *takeoutModel.TakeoutOrder, existPayment *model.PaymentMethod) []*selling.PosInvoicePayment {
 	payments := make([]*selling.PosInvoicePayment, 0)
 
 	if takeoutOrder.IsGrabOrder() {
-		paymentID := strconv.Itoa(constant.PaymentMethodCodeGrab)
 		payments = append(payments, &selling.PosInvoicePayment{
-			ModeOfPayment: constant.PaymentMethodNameGrab, // 支付方式
-			Amount:        takeoutOrder.EaterPayment,      // 实付金额
-			PaymentId:     &paymentID,                     // 支付方式唯一标识
+			ModeOfPayment: existPayment.ErpnextPayment, // 支付方式
+			Amount:        takeoutOrder.EaterPayment,   // 实付金额
 		})
 	}
 	if takeoutOrder.IsLinemanOrder() {
-		paymentID := strconv.Itoa(constant.PaymentMethodCodeLineMan)
 		payments = append(payments, &selling.PosInvoicePayment{
-			ModeOfPayment: constant.PaymentMethodNameLineMan, // 支付方式
-			Amount:        takeoutOrder.EaterPayment,         // 实付金额
-			PaymentId:     &paymentID,                        // 支付方式唯一标识
+			ModeOfPayment: existPayment.PaymentName,  // 支付方式
+			Amount:        takeoutOrder.EaterPayment, // 实付金额
 		})
 	}
 

@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
+	coreModel "ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/event"
-	"ttpos-server-go/app/modules/takeout/domain/model"
+	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
@@ -15,6 +16,7 @@ import (
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/modules/takeout/interfaces/request"
 	"ttpos-server-go/app/modules/takeout/interfaces/response"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -32,7 +34,7 @@ type ITakeoutOrderSrv interface {
 	GetList(ctx context.Context, req *request.TakeoutOrderListReq) (*response.TakeoutOrderListResp, error)
 	GetByUuid(ctx context.Context, uuid uint64) (*response.TakeoutOrderResp, error)
 	// 创建订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
-	CreateOrder(ctx context.Context, order *model.TakeoutOrder) error
+	CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error
 	// 更新订单状态 - 由 Application 层调用
 	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string) error
 	// 订单操作
@@ -42,13 +44,13 @@ type ITakeoutOrderSrv interface {
 	CheckOrderCancelable(ctx context.Context, req *request.TakeoutOrderCheckCancelableReq) (*response.TakeoutOrderCancelCheckResp, error)
 	CancelOrder(ctx context.Context, req *request.TakeoutOrderCancelReq) error
 	// GetOrderForPrint 获取打印所需的订单数据
-	GetOrderForPrint(ctx context.Context, orderUuid uint64) (*model.TakeoutOrder, error)
+	GetOrderForPrint(ctx context.Context, orderUuid uint64) (*takeoutModel.TakeoutOrder, error)
 	// BuildBomQuantityMap 构建订单商品的 BOM 数量映射（用于库存检查和出库）
 	// 返回: bomQuantityMap (BOM UUID -> 数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), error
-	BuildBomQuantityMap(ctx context.Context, order *model.TakeoutOrder) (map[uint64]int, map[uint64]*model.TakeoutOrderItem, error)
+	BuildBomQuantityMap(ctx context.Context, order *takeoutModel.TakeoutOrder) (map[uint64]int, map[uint64]*takeoutModel.TakeoutOrderItem, error)
 	// CalculateTakeoutOrderSalesVolume 计算外卖订单销量
 	// 返回: productBoms (BOM UUID -> 销量), productPackages (Package UUID -> 销量), error
-	CalculateTakeoutOrderSalesVolume(order *model.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error)
+	CalculateTakeoutOrderSalesVolume(order *takeoutModel.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error)
 }
 
 // takeoutOrderSrv 外卖订单服务实现
@@ -300,8 +302,11 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		defer rpcClient.Close()
 		// 调用 PrepareOrder 接口（接受订单）
 		if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
+			// 检查是否是订单状态不允许更新的错误
 			logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-			return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
+			if !strings.Contains(err.Error(), "order status can't be updated, because order state isn't NEW") {
+				return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
+			}
 		}
 	}
 
@@ -729,7 +734,7 @@ func (s *takeoutOrderSrv) findModifierMapping(platform, platformModifierId strin
 }
 
 // CreateOrder 创建订单（接受已转换的订单对象）- 由 Application 层调用
-func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutOrder) error {
+func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
 	db := ctx.GetDB()
 	currentTime := time.Now().Unix()
 
@@ -751,6 +756,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 
 	// 开启事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		ctxTx := ctx.Copy()
+		ctxTx.SetDB(tx)
 		// 创建订单仓储
 		orderRepoTx := persistence.NewTakeoutOrderRepo(tx)
 		// 1. 创建订单
@@ -789,7 +796,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			}
 
 			item.IsMapped = isMapped
-			item.TtposProductUuid = productUuid
+			item.TtposProductPackageUuid = productUuid
 			item.TtposProductType = productType
 
 			// 收集查询参数
@@ -813,9 +820,9 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			item := &order.TakeoutOrderItems[i]
 
 			// 设置商品名称
-			if item.IsMapped == 1 && item.TtposProductUuid > 0 {
+			if item.IsMapped == 1 && item.TtposProductPackageUuid > 0 {
 				// 已映射商品：使用商品名称
-				if info, ok := productInfos[item.TtposProductUuid]; ok {
+				if info, ok := productInfos[item.TtposProductPackageUuid]; ok {
 					// ItemName: 显示用名称（外卖表优先）
 					if info.Name != "" {
 						item.ItemName = info.Name
@@ -903,8 +910,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 
 						// 如果是 commodity 类型，设置规格信息和数量
 						if modifier.TtposModifierType == string(valueobject.ModifierTypeCommodity) {
-							modifier.TtposProductUuid = info.TtposProductUuid
-							modifier.TtposFlavorUuid = info.TtposFlavorUuid
+							modifier.TtposProductPackageUuid = info.TtposProductPackageUuid
+							modifier.TtposFlavorProductBomUuid = info.TtposFlavorProductBomUuid
 							modifier.TtposFlavorName = info.TtposFlavorName
 
 							// 使用TTPOS数量覆盖平台数量
@@ -962,7 +969,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			}
 
 			// 批量创建活动
-			campaignsPtr := make([]*model.TakeoutOrderCampaign, len(order.TakeoutOrderCampaigns))
+			campaignsPtr := make([]*takeoutModel.TakeoutOrderCampaign, len(order.TakeoutOrderCampaigns))
 			for i := range order.TakeoutOrderCampaigns {
 				campaignsPtr[i] = &order.TakeoutOrderCampaigns[i]
 			}
@@ -981,6 +988,12 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 				logger.Logger.Error("更新订单异常状态失败", zap.Error(err))
 				return errors.WithMessage(err, "更新订单异常状态失败")
 			}
+		}
+
+		// 6. 计算并保存订单原料（提前计算，不等到接单）
+		if err := s.extractAndSaveTakeoutOrderMaterials(ctxTx, order); err != nil {
+			logger.Logger.Warn("提取并保存订单原料失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(err, "提取并保存订单原料失败")
 		}
 
 		return nil
@@ -1005,6 +1018,221 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 			Uuid: order.Uuid,
 		}); err != nil {
 			logger.Logger.Error("接单失败", zap.Error(err))
+		}
+	}
+
+	return nil
+}
+
+// extractAndSaveTakeoutOrderMaterials 提取并保存外卖订单原料（在创建订单时调用）
+func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Context, order *takeoutModel.TakeoutOrder) error {
+	db := ctx.GetDB()
+
+	// 1. 构建 BOM 数量映射
+	bomQuantityMap, _, err := s.BuildBomQuantityMap(ctx, order)
+	if err != nil {
+		return errors.WithMessage(err, "构建BOM数量映射失败")
+	}
+
+	if len(bomQuantityMap) == 0 {
+		return nil // 没有BOM，不需要保存原料
+	}
+
+	// 2. 批量查询 BOM 信息（包含原材料信息）
+	bomUuids := make([]uint64, 0, len(bomQuantityMap))
+	for bomUuid := range bomQuantityMap {
+		bomUuids = append(bomUuids, bomUuid)
+	}
+
+	productBomRepo := repository.NewProductBomRepo(db)
+	productBoms, err := productBomRepo.GetProductBoms(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("uuid IN ?", bomUuids)
+		},
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "FlavorMaterials",
+				Args: []interface{}{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "FlavorMaterials.Material.WarehouseItems",
+			},
+			repository.WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			repository.WithPreload{
+				Query: "ProductSauce.SauceMaterials",
+				Args: []interface{}{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			repository.WithPreload{
+				Query: "ProductSauce.SauceMaterials.Material.WarehouseItems",
+			},
+			repository.WithPreload{
+				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+		),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "查询BOM信息失败")
+	}
+
+	// 3. 构建 BOM UUID -> ProductBom 映射
+	bomMap := make(map[uint64]*coreModel.ProductBom)
+	for _, bom := range productBoms {
+		bomMap[bom.Uuid] = bom
+	}
+
+	// 4. 收集所有原料UUID
+	materialUuidSet := make(map[uint64]bool)
+
+	// 4.1 从BOM中收集原料信息
+	for bomUuid := range bomQuantityMap {
+		bom, ok := bomMap[bomUuid]
+		if !ok {
+			continue
+		}
+
+		// 处理规格商品的原材料
+		if bom.IsFlavor() {
+			var flavorMaterials []*coreModel.RelatedMaterial
+			if bom.HasProductBomCard() && bom.ProductBomCard != nil {
+				flavorMaterials = bom.ProductBomCard.RelatedMaterials
+			} else {
+				flavorMaterials = bom.FlavorMaterials
+			}
+
+			for _, flavorMaterial := range flavorMaterials {
+				if flavorMaterial.Material != nil {
+					materialUuidSet[flavorMaterial.MaterialUuid] = true
+				}
+			}
+		}
+
+		// 处理加料的原材料
+		if bom.IsSauce() && bom.ProductSauceUuid > 0 {
+			var sauceMaterials []*coreModel.RelatedMaterial
+			if bom.ProductSauce.HasProductBomCard() && bom.ProductSauce.ProductBomCard != nil {
+				sauceMaterials = bom.ProductSauce.ProductBomCard.RelatedMaterials
+			} else {
+				sauceMaterials = bom.ProductSauce.SauceMaterials
+			}
+			for _, sauceMaterial := range sauceMaterials {
+				if sauceMaterial.Material != nil {
+					materialUuidSet[sauceMaterial.MaterialUuid] = true
+				}
+			}
+		}
+	}
+
+	// 5. 批量查询原料信息获取 ErpCode
+	materialUuids := make([]uint64, 0, len(materialUuidSet))
+	for materialUuid := range materialUuidSet {
+		materialUuids = append(materialUuids, materialUuid)
+	}
+
+	materialRepo := repository.NewMaterialRepo(db)
+	dbMaterials, err := materialRepo.GetMaterialContainsDeletedByUuids(materialUuids)
+	if err != nil {
+		return errors.WithMessage(err, "批量查询原料信息失败")
+	}
+
+	// 构建 materialUuid -> Code 的映射
+	materialCodeMap := make(map[uint64]string, len(dbMaterials))
+	for _, material := range dbMaterials {
+		materialCodeMap[material.Uuid] = material.Code
+	}
+
+	// 6. 计算原料使用量（map[materialUuid]map[warehouseUuid]num）
+	materialsMap := make(map[uint64]map[uint64]float64)
+
+	for bomUuid, quantity := range bomQuantityMap {
+		bom, ok := bomMap[bomUuid]
+		if !ok {
+			continue
+		}
+
+		productNum := float64(quantity)
+
+		// 处理规格商品的原材料
+		if bom.IsFlavor() {
+			var flavorMaterials []*coreModel.RelatedMaterial
+			if bom.HasProductBomCard() && bom.ProductBomCard != nil {
+				flavorMaterials = bom.ProductBomCard.RelatedMaterials
+			} else {
+				flavorMaterials = bom.FlavorMaterials
+			}
+
+			for _, flavorMaterial := range flavorMaterials {
+				if flavorMaterial.Material != nil {
+					// 获取默认仓库
+					warehouseUuid := flavorMaterial.Material.WarehouseUuid
+					if warehouseUuid == 0 && len(flavorMaterial.Material.WarehouseItems) > 0 {
+						warehouseUuid = flavorMaterial.Material.WarehouseItems[0].WarehouseUuid
+					}
+
+					materialNum := flavorMaterial.Num * productNum
+
+					if materialsMap[flavorMaterial.MaterialUuid] == nil {
+						materialsMap[flavorMaterial.MaterialUuid] = make(map[uint64]float64)
+					}
+					materialsMap[flavorMaterial.MaterialUuid][warehouseUuid] += materialNum
+				}
+			}
+		}
+
+		// 处理加料的原材料
+		if bom.IsSauce() && bom.ProductSauceUuid > 0 {
+			var sauceMaterials []*coreModel.RelatedMaterial
+			if bom.ProductSauce.HasProductBomCard() && bom.ProductSauce.ProductBomCard != nil {
+				sauceMaterials = bom.ProductSauce.ProductBomCard.RelatedMaterials
+			} else {
+				sauceMaterials = bom.ProductSauce.SauceMaterials
+			}
+
+			for _, sauceMaterial := range sauceMaterials {
+				if sauceMaterial.Material != nil {
+					// 获取默认仓库
+					warehouseUuid := sauceMaterial.Material.WarehouseUuid
+					if warehouseUuid == 0 && len(sauceMaterial.Material.WarehouseItems) > 0 {
+						warehouseUuid = sauceMaterial.Material.WarehouseItems[0].WarehouseUuid
+					}
+
+					materialNum := sauceMaterial.Num * productNum
+
+					if materialsMap[sauceMaterial.MaterialUuid] == nil {
+						materialsMap[sauceMaterial.MaterialUuid] = make(map[uint64]float64)
+					}
+					materialsMap[sauceMaterial.MaterialUuid][warehouseUuid] += materialNum
+				}
+			}
+		}
+	}
+
+	// 7. 构建原料记录
+	takeoutOrderMaterials := make([]*takeoutModel.TakeoutOrderMaterial, 0)
+	for materialUuid, warehouseMap := range materialsMap {
+		erpCode := materialCodeMap[materialUuid] // 获取 ErpCode
+		for warehouseUuid, num := range warehouseMap {
+			takeoutOrderMaterials = append(takeoutOrderMaterials, &takeoutModel.TakeoutOrderMaterial{
+				TakeoutOrderUuid: order.Uuid,
+				MaterialUuid:     materialUuid,
+				ErpCode:          erpCode,
+				WarehouseUuid:    warehouseUuid,
+				Num:              num,
+				IsSummarized:     0, // 初始为未统计
+			})
+		}
+	}
+
+	// 8. 保存原料记录
+	if len(takeoutOrderMaterials) > 0 {
+		materialSrv := NewTakeoutOrderMaterialSrv(s.dbm)
+		if err := materialSrv.SaveOrderMaterials(ctx, takeoutOrderMaterials); err != nil {
+			return errors.WithMessage(err, "保存订单原料失败")
 		}
 	}
 
@@ -1088,7 +1316,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 }
 
 // BuildBomQuantityMap 构建订单商品的 BOM 数量映射（用于库存检查和出库）
-// 返回: bomQuantityMap (BOM UUID -> 出库数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), error
+// 返回: bomQuantityMap (BOM UUID -> 出库数量), bomItemMap (BOM UUID -> 订单商品，包含 modifiers), bomUuids (BOM UUID 列表), error
 //
 // 出库数量计算规则：
 //   - 主商品：商品数量（item.Quantity）
@@ -1096,15 +1324,15 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 //   - 套餐商品(commodity): groupItem.Num * item.Quantity (套餐配置数量 × 主商品数量)
 //
 // 销售数量：主商品的 item.Quantity（用于统计销售）
-func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.TakeoutOrder) (map[uint64]int, map[uint64]*model.TakeoutOrderItem, error) {
+func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *takeoutModel.TakeoutOrder) (map[uint64]int, map[uint64]*takeoutModel.TakeoutOrderItem, error) {
 	db := ctx.GetDB()
 	bomMappingRepo := persistence.NewTakeoutBomMappingRepo(db)
 
 	// 收集 modifier 信息的辅助结构
 	type modifierInfo struct {
-		modifier         *model.TakeoutOrderItemModifier
-		item             *model.TakeoutOrderItem // 主商品
-		outboundQuantity int                     // 出库数量
+		modifier         *takeoutModel.TakeoutOrderItemModifier
+		item             *takeoutModel.TakeoutOrderItem // 主商品
+		outboundQuantity int                            // 出库数量
 	}
 
 	// 按类型分组收集 modifier
@@ -1156,9 +1384,9 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 
 	// 3. 构建 bomUuid -> [modifierInfo] 映射，并累加出库数量
 	type bomData struct {
-		quantity  int                     // 出库数量
-		modifiers []*modifierInfo         // 关联的 modifiers
-		item      *model.TakeoutOrderItem // 主商品（取第一个 modifier 的 item）
+		quantity  int                            // 出库数量
+		modifiers []*modifierInfo                // 关联的 modifiers
+		item      *takeoutModel.TakeoutOrderItem // 主商品（取第一个 modifier 的 item）
 	}
 	bomMap := make(map[uint64]*bomData)
 
@@ -1193,14 +1421,14 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 
 	// 4. 构建返回结果
 	bomQuantityMap := make(map[uint64]int, len(bomMap))
-	bomItemMap := make(map[uint64]*model.TakeoutOrderItem, len(bomMap))
+	bomItemMap := make(map[uint64]*takeoutModel.TakeoutOrderItem, len(bomMap))
 
 	for bomUuid, data := range bomMap {
 		bomQuantityMap[bomUuid] = data.quantity
 
 		// 创建 item 副本，包含该 BOM 对应的所有 modifiers
 		itemCopy := *data.item
-		itemCopy.TakeoutOrderItemModifiers = make([]model.TakeoutOrderItemModifier, len(data.modifiers))
+		itemCopy.TakeoutOrderItemModifiers = make([]takeoutModel.TakeoutOrderItemModifier, len(data.modifiers))
 		for i, info := range data.modifiers {
 			itemCopy.TakeoutOrderItemModifiers[i] = *info.modifier
 		}
@@ -1212,22 +1440,22 @@ func (s *takeoutOrderSrv) BuildBomQuantityMap(ctx context.Context, order *model.
 
 // CalculateTakeoutOrderSalesVolume 计算外卖订单销量
 // 返回: productBoms (BOM UUID -> 销量), productPackages (Package UUID -> 销量)
-func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *model.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error) {
+func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *takeoutModel.TakeoutOrder) (map[uint64]float64, map[uint64]float64, error) {
 	productBoms := make(map[uint64]float64)     // 规格商品销量 map[BOM UUID]销量
 	productPackages := make(map[uint64]float64) // 套餐商品销量 map[Package UUID]销量
 
 	// 遍历订单商品
 	for _, item := range order.TakeoutOrderItems {
 		// 只处理已映射的商品
-		if item.IsMapped != 1 || item.TtposProductUuid == 0 {
+		if item.IsMapped != 1 || item.TtposProductPackageUuid == 0 {
 			continue
 		}
 
 		itemQuantity := float64(item.Quantity)
 
 		// 统计主商品的 Package 销量
-		// 不管是套餐还是普通商品，TtposProductUuid 都是 ProductPackage 的 UUID
-		productPackages[item.TtposProductUuid] += itemQuantity
+		// 不管是套餐还是普通商品，TtposProductPackageUuid 都是 ProductPackage 的 UUID
+		productPackages[item.TtposProductPackageUuid] += itemQuantity
 
 		// 遍历修饰符，计算规格和加料的销量
 		for _, modifier := range item.TakeoutOrderItemModifiers {
@@ -1262,7 +1490,7 @@ func (s *takeoutOrderSrv) CalculateTakeoutOrderSalesVolume(order *model.TakeoutO
 }
 
 // GetOrderForPrint 获取打印所需的订单数据
-func (s *takeoutOrderSrv) GetOrderForPrint(ctx context.Context, orderUuid uint64) (*model.TakeoutOrder, error) {
+func (s *takeoutOrderSrv) GetOrderForPrint(ctx context.Context, orderUuid uint64) (*takeoutModel.TakeoutOrder, error) {
 	db := ctx.GetDB()
 
 	// 查询订单（包含商品、修饰符等信息）

@@ -250,7 +250,7 @@ KEY idx_short_order_number (short_order_number, delete_time)              -- 订
 | `platform_item_id` | varchar(100) | 平台商品ID | TTPOS-ITEM-{uuid} |
 | `item_name` | text | 商品名称 | 平台名称（优先外卖表） |
 | **TTPOS 映射信息** ||||
-| `ttpos_product_uuid` | bigint | TTPOS商品UUID | → `ttpos_product_package.uuid` |
+| `ttpos_product_package_uuid` | bigint | TTPOS商品套餐UUID | → `ttpos_product_package.uuid` |
 | `ttpos_product_type` | int | TTPOS商品类型 | 0=商品, 1=套餐 |
 | **✨ 新增：TTPOS 核心表名称** ||||
 | `ttpos_item_name` | text | TTPOS商品名称 | **来自 `ttpos_product_package`（核心表）** |
@@ -304,7 +304,7 @@ ttpos_product_package (1) ----< (N) ttpos_takeout_order_item
 | **✨ 新增：TTPOS 核心表名称** ||||
 | `ttpos_modifier_name` | text | TTPOS修饰符名称 | **来自核心表（各类型对应的表）** |
 | **✨ 新增：商品规格信息（commodity 专用）** ||||
-| `ttpos_flavor_uuid` | bigint | TTPOS规格UUID | **对应 `product_bom_uuid`** |
+| `ttpos_flavor_product_bom_uuid` | bigint | TTPOS规格商品物料UUID | **对应 `product_bom_uuid`** |
 | `ttpos_flavor_name` | text | TTPOS规格名称 | **来自 `ttpos_product_bom`** |
 | **订单信息** ||||
 | `quantity` | int | 数量 | commodity 类型的数量 |
@@ -329,7 +329,7 @@ ttpos_product_package (1) ----< (N) ttpos_takeout_order_item
 套餐商品: 珍珠奶茶 (大杯) x2
 ├─ ttpos_modifier_uuid  → product_package_group_item.uuid (套餐项ID)
 ├─ ttpos_modifier_name  → "珍珠奶茶" (商品名称，来自 ttpos_product_package)
-├─ ttpos_flavor_uuid    → product_bom.uuid (规格ID)
+├─ ttpos_flavor_product_bom_uuid    → product_bom.uuid (规格ID)
 ├─ ttpos_flavor_name    → "大杯" (规格名称，来自 ttpos_product_bom)
 └─ quantity             → 2 (已计算好的数量: groupItem.Num * item.Quantity)
 ```
@@ -686,7 +686,7 @@ KEY idx_create_time (create_time)  -- 时间范围查询
 3. 规格名称 (commodity 专用):
    ttpos_product_bom → ProductFlavor
         ↓
-   ttpos_flavor_uuid (规格UUID)
+   ttpos_flavor_product_bom_uuid (规格UUID)
    ttpos_flavor_name (规格名称)
 ```
 
@@ -715,7 +715,7 @@ KEY idx_create_time (create_time)  -- 时间范围查询
        ├─ attr: 设置 ttpos_modifier_name ✨
        └─ commodity: 
            ├─ 设置 ttpos_modifier_name ✨
-           ├─ 设置 ttpos_flavor_uuid ✨
+           ├─ 设置 ttpos_flavor_product_bom_uuid ✨
            ├─ 设置 ttpos_flavor_name ✨
            └─ 计算 quantity (groupItem.Num * item.Quantity) ✨
    ↓
@@ -819,7 +819,7 @@ TTPOS → 平台 (推送)
 |------|--------|------|----------|
 | `ttpos_takeout_order_item` | `ttpos_item_name` | TTPOS 标识用商品名称 | `ttpos_product_package` (核心表) |
 | `ttpos_takeout_order_item_modifier` | `ttpos_modifier_name` | TTPOS 标识用修饰符名称 | 核心表（根据类型不同） |
-| `ttpos_takeout_order_item_modifier` | `ttpos_flavor_uuid` | 规格UUID（commodity专用） | `product_package_group_item.product_bom_uuid` |
+| `ttpos_takeout_order_item_modifier` | `ttpos_flavor_product_bom_uuid` | 规格UUID（commodity专用） | `product_package_group_item.product_bom_uuid` |
 | `ttpos_takeout_order_item_modifier` | `ttpos_flavor_name` | 规格名称（commodity专用） | `ttpos_product_bom.ProductFlavor` |
 
 **设计理念**:
@@ -922,7 +922,7 @@ KEY idx_is_summarized_create_time (is_summarized, create_time)
    
    // commodity 类型额外保存规格
    if modifier.TtposModifierType == "commodity" {
-       modifier.TtposFlavorUuid = modifierInfo.TtposFlavorUuid
+       modifier.TtposFlavorBomUuid = modifierInfo.TtposFlavorBomUuid
        modifier.TtposFlavorName = modifierInfo.TtposFlavorName
    }
    ```

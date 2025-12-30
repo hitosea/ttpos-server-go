@@ -28,14 +28,14 @@ class CreateTtposTakeoutOrderMaterialTable extends Migrator
                 
                 // 关联字段
                 ->addColumn('takeout_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '外卖订单ID'])
+                ->addColumn('takeout_order_item_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '外卖订单商品UUID(关联ttpos_takeout_order_item.uuid)'])
+                ->addColumn('takeout_order_item_modifier_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '外卖订单商品修饰符UUID(关联ttpos_takeout_order_item_modifier.uuid)'])
                 ->addColumn('material_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '原料ID'])
+                ->addColumn('erp_code', 'string', ['limit' => 50, 'default' => '', 'comment' => 'ERP编码(来自Material.Code)'])
                 ->addColumn('warehouse_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '仓库ID'])
                 
                 // 数量字段
                 ->addColumn('num', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '数量(原料的实际使用数量)'])
-                
-                // 班次字段
-                ->addColumn('staff_shift_log_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '员工班次记录ID'])
                 
                 // 统计字段
                 ->addColumn('is_summarized', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否已经统计: 0=未统计,1=已统计'])
@@ -48,9 +48,10 @@ class CreateTtposTakeoutOrderMaterialTable extends Migrator
                 // 索引
                 ->addIndex(['uuid'], ['unique' => true, 'name' => 'uk_uuid'])
                 ->addIndex(['takeout_order_uuid'], ['name' => 'idx_takeout_order_uuid'])
+                ->addIndex(['takeout_order_item_uuid'], ['name' => 'idx_takeout_order_item_uuid'])
+                ->addIndex(['takeout_order_item_modifier_uuid'], ['name' => 'idx_takeout_order_item_modifier_uuid'])
                 ->addIndex(['material_uuid'], ['name' => 'idx_material_uuid'])
                 ->addIndex(['warehouse_uuid'], ['name' => 'idx_warehouse_uuid'])
-                ->addIndex(['staff_shift_log_uuid'], ['name' => 'idx_staff_shift_log_uuid'])
                 ->addIndex(['is_summarized', 'create_time'], ['name' => 'idx_is_summarized_create_time'])
                 ->addIndex(['delete_time'], ['name' => 'idx_delete_time'])
                 

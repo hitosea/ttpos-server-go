@@ -244,7 +244,7 @@ graph TD
 - `takeout_order_uuid` - 外卖订单 UUID
 - `item_name` - 商品名称（JSON，多语言）
 - `platform_item_id` - 平台商品 ID
-- `ttpos_product_uuid` - 店内商品 UUID
+- `ttpos_product_package_uuid` - 店内商品套餐 UUID
 - `is_mapped` - 是否已映射到店内商品（0: 未映射, 1: 已映射）
 - `quantity` - 数量
 - `price` - 价格

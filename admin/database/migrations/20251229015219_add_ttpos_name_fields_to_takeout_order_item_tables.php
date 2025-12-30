@@ -8,6 +8,8 @@ class AddTtposNameFieldsToTakeoutOrderItemTables extends Migrator
      * 为外卖订单商品和修饰符表添加 TTPOS 名称字段
      * - takeout_order_item.ttpos_item_name (text) - TTPOS 商品名称
      * - takeout_order_item_modifier.ttpos_modifier_name (text) - TTPOS 修饰符名称
+     * - takeout_order_item_modifier.ttpos_flavor_uuid (bigint) - TTPOS 规格UUID
+     * - takeout_order_item_modifier.ttpos_flavor_name (text) - TTPOS 规格名称
      */
     public function change()
     {
@@ -25,11 +27,11 @@ class AddTtposNameFieldsToTakeoutOrderItemTables extends Migrator
             if (!$modifierTable->hasColumn('ttpos_modifier_name')) {
                 $modifierTable->addColumn('ttpos_modifier_name', 'text', ['null' => true, 'comment' => 'TTPOS修饰符名称', 'after' => 'ttpos_modifier_type'])->update();
             }
-            if (!$modifierTable->hasColumn('ttpos_flavor_uuid')) {
-                $modifierTable->addColumn('ttpos_flavor_uuid', 'biginteger', [
+            if (!$modifierTable->hasColumn('ttpos_flavor_product_bom_uuid')) {
+                $modifierTable->addColumn('ttpos_flavor_product_bom_uuid', 'biginteger', [
                     'signed' => false,
                     'default' => 0,
-                    'comment' => 'TTPOS规格UUID(commodity类型对应product_package_group_item.product_bom_uuid)',
+                    'comment' => 'TTPOS规格商品物料UUID(commodity类型对应product_package_group_item.product_bom_uuid)',
                     'after' => 'ttpos_modifier_name',
                 ])->update();
             }
@@ -37,7 +39,7 @@ class AddTtposNameFieldsToTakeoutOrderItemTables extends Migrator
                 $modifierTable->addColumn('ttpos_flavor_name', 'text', [
                     'null' => true,
                     'comment' => 'TTPOS规格名称(commodity类型使用)',
-                    'after' => 'ttpos_flavor_uuid',
+                    'after' => 'ttpos_flavor_product_bom_uuid',
                 ])->update();
             }
         }

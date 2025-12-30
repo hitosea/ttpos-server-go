@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_items` (
     `platform_item_name` varchar(255) NOT NULL DEFAULT '' COMMENT '平台商品名称',
     
     -- TTPOS 商品信息（关联映射后）
-    `ttpos_product_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS商品UUID',
+    `ttpos_product_package_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS商品套餐UUID',
     `ttpos_sku_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS规格UUID',
     
     -- 商品数量和价格
@@ -348,7 +348,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_item_mapping` (
     `platform_item_name` varchar(255) NOT NULL DEFAULT '' COMMENT '平台商品名称',
     
     -- TTPOS 商品信息
-    `ttpos_product_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS商品UUID',
+    `ttpos_product_package_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS商品套餐UUID',
     `ttpos_sku_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS规格UUID',
     
     -- 状态
@@ -363,7 +363,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_item_mapping` (
     UNIQUE KEY `uk_uuid` (`uuid`),
     UNIQUE KEY `uk_platform_item` (`platform`, `platform_item_id`, `delete_time`),
     KEY `idx_platform` (`platform`, `delete_time`),
-    KEY `idx_ttpos_product` (`ttpos_product_uuid`, `delete_time`)
+    KEY `idx_ttpos_product` (`ttpos_product_package_uuid`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='外卖商品关联映射表(多平台)';
 ```
 
@@ -582,8 +582,8 @@ type TakeoutOrderItem struct {
     PlatformItemName     string `gorm:"column:platform_item_name" json:"platform_item_name"`
     
     // TTPOS 商品信息
-    TtposProductUuid     uint64 `gorm:"column:ttpos_product_uuid" json:"ttpos_product_uuid"`
-    TtposSkuUuid         uint64 `gorm:"column:ttpos_sku_uuid" json:"ttpos_sku_uuid"`
+    TtposProductPackageUuid uint64 `gorm:"column:ttpos_product_package_uuid" json:"ttpos_product_package_uuid"`
+    TtposSkuUuid            uint64 `gorm:"column:ttpos_sku_uuid" json:"ttpos_sku_uuid"`
     
     // 商品数量和价格
     Quantity             int    `gorm:"column:quantity" json:"quantity"`

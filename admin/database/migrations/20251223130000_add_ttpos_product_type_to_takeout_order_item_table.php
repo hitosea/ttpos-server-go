@@ -4,6 +4,9 @@ use think\migration\Migrator;
 
 class AddTtposProductTypeToTakeoutOrderItemTable extends Migrator
 {
+    /**
+     * 为 takeout_order_item 表添加 ttpos_product_type 字段
+     */
     public function change()
     {
         $table = $this->table('takeout_order_item');
@@ -15,7 +18,7 @@ class AddTtposProductTypeToTakeoutOrderItemTable extends Migrator
                 'signed' => false,
                 'default' => 0,
                 'comment' => 'TTPOS商品类型: 0-商品, 1-套餐',
-                'after' => 'ttpos_product_uuid',
+                'after' => 'item_name',
             ])->update();
         }
     }

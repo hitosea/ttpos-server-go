@@ -553,7 +553,7 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 
 	// 批量查询套餐商品（Commodity = ProductPackageGroupItem -> ProductPackage）
 	// 返回两个名称：Name (外卖表优先), TtposName (核心表)
-	// 同时返回规格信息：TtposFlavorUuid, TtposFlavorName (来自 ProductBom)
+	// 同时返回规格信息：TtposFlavorBomUuid, TtposFlavorName (来自 ProductBom)
 	if len(commodityUuids) > 0 {
 		var packages []model.ProductPackageGroupItem
 		err := db.
@@ -655,13 +655,13 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				}
 
 				result[pkg.Uuid] = types.ModifierInfo{
-					Name:             displayName,     // 外卖表优先
-					TtposName:        ttposName,       // 核心表
-					Num:              pkg.Num,         // 套餐商品有数量
-					TtposProductUuid: pkg.RelatedUuid, // 套餐商品UUID
-					TtposFlavorUuid:  flavorUuid,      // 规格UUID
-					TtposFlavorName:  flavorName,      // 规格名称
-					TtposErpCode:     erpCode,         // ERP编码
+					Name:                      displayName,     // 外卖表优先
+					Num:                       pkg.Num,         // 套餐商品有数量
+					TtposName:                 ttposName,       // 核心表
+					TtposProductPackageUuid:   pkg.RelatedUuid, // 套餐商品UUID
+					TtposFlavorProductBomUuid: flavorUuid,      // 规格UUID
+					TtposFlavorName:           flavorName,      // 规格名称
+					TtposErpCode:              erpCode,         // ERP编码
 				}
 			}
 		}

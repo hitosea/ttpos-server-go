@@ -127,7 +127,7 @@ modifier.TtposModifierName = modifierInfo.TtposName // 标识用
 
 // commodity 类型额外保存规格
 if modifier.TtposModifierType == "commodity" {
-    modifier.TtposFlavorUuid = modifierInfo.TtposFlavorUuid
+    modifier.TtposFlavorBomUuid = modifierInfo.TtposFlavorBomUuid
     modifier.TtposFlavorName = modifierInfo.TtposFlavorName
 }
 ```

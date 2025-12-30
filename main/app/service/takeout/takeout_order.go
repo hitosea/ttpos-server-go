@@ -120,17 +120,10 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 		}
 
 		// 5.3 触发库存扣减，并获取实际扣减的材料列表
-		materials, err := s.reduceTakeoutOrderStock(tx, companyUuid, order.Uuid)
+		err := s.reduceTakeoutOrderStock(tx, companyUuid, order.Uuid)
 		if err != nil {
 			logger.Logger.Error("扣减外卖订单库存失败", zap.Uint64("orderUuid", order.Uuid), zap.Error(err))
 			// 库存扣减失败不影响出库流程，只记录日志
-		}
-
-		// 5.4 汇总并保存外卖订单原料（使用实际扣减的材料数据）
-		if len(materials) > 0 {
-			if err := s.saveTakeoutOrderMaterialsFromMap(ctxTx, orderUuid, staffShiftLogUuid, materials); err != nil {
-				return errors.WithMessage(err, "保存外卖订单原料失败")
-			}
 		}
 
 		return nil
@@ -189,81 +182,6 @@ func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*mo
 		return nil, errors.WithMessage(err, "查询员工班次记录失败")
 	}
 	return &shiftLog, nil
-}
-
-// saveTakeoutOrderMaterialsFromMap 从材料map汇总并保存外卖订单原料到 ttpos_takeout_order_material 表
-func (s *takeoutSrv) saveTakeoutOrderMaterialsFromMap(
-	ctx context.Context,
-	takeoutOrderUuid uint64,
-	staffShiftLogUuid uint64,
-	materials map[uint64]map[uint64]float64, // map[materialUuid]map[warehouseUuid]num
-) error {
-	if len(materials) == 0 {
-		return nil
-	}
-
-	// 构建原料记录
-	takeoutOrderMaterials := make([]*takeoutModel.TakeoutOrderMaterial, 0)
-	for materialUuid, warehouseMap := range materials {
-		for warehouseUuid, num := range warehouseMap {
-			takeoutOrderMaterials = append(takeoutOrderMaterials, &takeoutModel.TakeoutOrderMaterial{
-				TakeoutOrderUuid:  takeoutOrderUuid,
-				MaterialUuid:      materialUuid,
-				WarehouseUuid:     warehouseUuid,
-				Num:               num,
-				StaffShiftLogUuid: staffShiftLogUuid,
-				IsSummarized:      0, // 初始为未统计
-			})
-		}
-	}
-
-	// 保存原料记录
-	if len(takeoutOrderMaterials) > 0 {
-		materialSrv := domainService.NewTakeoutOrderMaterialSrv(s.dbm)
-		if err := materialSrv.SaveOrderMaterials(ctx, takeoutOrderMaterials); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// saveTakeoutOrderMaterials 从decreaseStockList汇总并保存外卖订单原料到 ttpos_takeout_order_material 表
-// 注意：这个方法已弃用，请使用 saveTakeoutOrderMaterialsFromMap 确保数据一致性
-func (s *takeoutSrv) saveTakeoutOrderMaterials(
-	ctx context.Context,
-	takeoutOrderUuid uint64,
-	staffShiftLogUuid uint64,
-	decreaseStockList []*model.Product,
-) error {
-	if len(decreaseStockList) == 0 {
-		return nil
-	}
-
-	// 构建原料记录
-	takeoutOrderMaterials := make([]*takeoutModel.TakeoutOrderMaterial, 0)
-	for _, product := range decreaseStockList {
-		for _, material := range product.ProductBomMaterials {
-			takeoutOrderMaterials = append(takeoutOrderMaterials, &takeoutModel.TakeoutOrderMaterial{
-				TakeoutOrderUuid:  takeoutOrderUuid,
-				MaterialUuid:      material.MaterialUuid,
-				WarehouseUuid:     material.WarehouseUuid,
-				Num:               material.Num,
-				StaffShiftLogUuid: staffShiftLogUuid,
-				IsSummarized:      0, // 初始为未统计
-			})
-		}
-	}
-
-	// 保存原料记录
-	if len(takeoutOrderMaterials) > 0 {
-		materialSrv := domainService.NewTakeoutOrderMaterialSrv(s.dbm)
-		if err := materialSrv.SaveOrderMaterials(ctx, takeoutOrderMaterials); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // buildTakeoutOrderDecreaseStockList 从外卖订单构建出库清单
@@ -448,8 +366,8 @@ func (s *takeoutSrv) updateTakeoutOrderSalesVolume(ctx context.Context, order *t
 	return nil
 }
 
-// reduceTakeoutOrderStock 扣减外卖订单库存，并返回实际扣减的材料列表
-func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, takeoutOrderUuid uint64) (map[uint64]map[uint64]float64, error) {
+// reduceTakeoutOrderStock 扣减外卖订单库存
+func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, takeoutOrderUuid uint64) error {
 	// 加锁，防止并发扣减库存
 	lockKey := fmt.Sprintf("takeout_order_stock:%d", takeoutOrderUuid)
 	systemLock := lock.NewSystemLock()
@@ -467,11 +385,11 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, ta
 		},
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询出库单明细失败")
+		return errors.WithMessage(err, "查询出库单明细失败")
 	}
 
 	if len(warehouseOutFormItems) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	// 按类型分组处理
@@ -536,11 +454,10 @@ func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, ta
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// 返回实际扣减的材料列表（map[materialUuid]map[warehouseUuid]reduceStockNum）
-	return materials, nil
+	return nil
 }
 
 // RestoreTakeoutOrderOutboundAndSales 恢复外卖订单出库和销量（取消订单时调用）
@@ -797,8 +714,8 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	for _, takeoutItem := range order.TakeoutOrderItems {
 		if takeoutItem.TtposProductType == 0 {
 			// 普通商品：收集 ProductPackage UUID（仅用于查询分类）
-			if takeoutItem.TtposProductUuid > 0 {
-				normalProductPackageUuids[takeoutItem.TtposProductUuid] = true
+			if takeoutItem.TtposProductPackageUuid > 0 {
+				normalProductPackageUuids[takeoutItem.TtposProductPackageUuid] = true
 			}
 		} else {
 			// 套餐商品：收集 groupItem UUID（用于查询子商品 UUID）
@@ -870,9 +787,9 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 	for _, takeoutItem := range order.TakeoutOrderItems {
 		if takeoutItem.TtposProductType == 0 {
 			// 普通商品处理
-			productPackage, ok := normalProductPackageMap[takeoutItem.TtposProductUuid]
+			productPackage, ok := normalProductPackageMap[takeoutItem.TtposProductPackageUuid]
 			if !ok {
-				logger.Logger.Warn("未找到普通商品套餐", zap.Uint64("productPackageUuid", takeoutItem.TtposProductUuid))
+				logger.Logger.Warn("未找到普通商品套餐", zap.Uint64("productPackageUuid", takeoutItem.TtposProductPackageUuid))
 				continue
 			}
 
@@ -994,10 +911,10 @@ func (s *takeoutSrv) CreateProductionOrderForTakeout(ctx context.Context, orderU
 				}
 
 				// 直接从 modifier 中获取已保存的数据
-				productBomUuid := commodityModifier.TtposFlavorUuid // 规格UUID
-				productBomName := commodityModifier.TtposFlavorName // 规格名称
-				itemName := commodityModifier.TtposModifierName     // 商品名称
-				productNum := float64(commodityModifier.Quantity)   // 数量（已在创建订单时设置为 groupItem.Num * takeoutItem.Quantity）
+				productBomUuid := commodityModifier.TtposFlavorProductBomUuid // 规格UUID
+				productBomName := commodityModifier.TtposFlavorName           // 规格名称
+				itemName := commodityModifier.TtposModifierName               // 商品名称
+				productNum := float64(commodityModifier.Quantity)             // 数量（已在创建订单时设置为 groupItem.Num * takeoutItem.Quantity）
 
 				// 如果没有 TTPOS 商品名称，回退到平台名称
 				if itemName == "" {
@@ -1115,7 +1032,7 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 				itemName = item.ItemName // 回退到平台名称
 			}
 
-			if len(productItemsMap) > 0 && !item.IsPackage() && !productItemsMap[item.TtposProductUuid] {
+			if len(productItemsMap) > 0 && !item.IsPackage() && !productItemsMap[item.TtposProductPackageUuid] {
 				continue
 			}
 
@@ -1150,7 +1067,7 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 					saucesList = append(saucesList, *language.JsonToLocaleResponse(modifierName))
 				case string(valueObject.ModifierTypeCommodity):
 					if len(productItemsBomMap) > 0 {
-						if !productItemsMap[modifier.TtposProductUuid] || !productItemsBomMap[modifier.TtposFlavorUuid] {
+						if !productItemsMap[modifier.TtposProductPackageUuid] || !productItemsBomMap[modifier.TtposFlavorProductBomUuid] {
 							continue
 						}
 					}
@@ -1171,7 +1088,7 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 
 			product := printer_model.OrderProduct{
 				OrderProductId:        item.Uuid,
-				ProductId:             item.TtposProductUuid,
+				ProductId:             item.TtposProductPackageUuid,
 				ProductName:           *language.JsonToLocaleResponse(itemName),           // 商品名称
 				ProductType:           uint8(item.TtposProductType),                       // 商品类型
 				FlavorName:            flavorName,                                         // 商品规格
