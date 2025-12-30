@@ -961,20 +961,25 @@ func (s *paymentMethodSrv) syncFromERP(ctx context.Context) error {
 			return errors.WithMessage(err, "查询支付方式失败")
 		} else {
 			// 后续同步：仅更新状态
-			status := 0
+			updates := map[string]any{
+				"status": 0,
+			}
 			if erpPayment.Enabled {
-				status = 1
+				updates["status"] = 1
+			}
+			if erpPayment.PaymentId != "" {
+				updates["erpnext_payment_id"] = erpPayment.PaymentId
 			}
 			if err := tx.Model(&model.PaymentMethod{}).
 				Where("uuid = ?", existPayment.Uuid).
-				Update("status", status).Error; err != nil {
+				Updates(updates).Error; err != nil {
 				tx.Rollback()
 				return errors.WithMessage(err, "更新支付方式状态失败")
 			}
 			logger.Logger.Info("更新支付方式状态",
 				zap.String("name", erpPayment.Name),
 				zap.String("payment_id", erpPayment.PaymentId),
-				zap.Int("status", status),
+				zap.Any("updates", updates),
 				zap.Uint64("uuid", existPayment.Uuid))
 			updatedCount++
 		}
