@@ -3664,9 +3664,15 @@ definitions:
       product_name:
         description: 商品名称
         type: string
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -3694,9 +3700,15 @@ definitions:
       not_query_free:
         description: 是否不查询免费使用场景
         type: boolean
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -3721,9 +3733,15 @@ definitions:
       not_query_free:
         description: 是否不查询免费使用场景
         type: boolean
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -3745,9 +3763,15 @@ definitions:
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -3778,9 +3802,15 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -4511,6 +4541,9 @@ definitions:
       payment_amount:
         description: 支付金额, 必填
         type: number
+      payment_info:
+        description: 支付信息, 非必填
+        type: string
       payment_method_uuid:
         description: 支付方式UUID, 必填
         type: integer
@@ -4618,6 +4651,12 @@ definitions:
       end_time:
         description: 查询结束时间戳
         type: integer
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       start_time:
         description: 查询开始时间戳
         type: integer
@@ -4644,6 +4683,12 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       start_time:
         description: 查询开始时间戳
         type: integer
@@ -4670,6 +4715,12 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       start_time:
         description: 查询开始时间戳
         type: integer
@@ -8245,9 +8296,15 @@ definitions:
       payment_method_list:
         description: '支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割'
         type: string
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -8269,9 +8326,15 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
+      query_end_date:
+        description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_end_time:
         description: 查询结束时间戳
         type: integer
+      query_start_date:
+        description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        type: string
       query_start_time:
         description: 查询开始时间戳
         type: integer
@@ -15939,6 +16002,9 @@ definitions:
     type: object
   resp.Staff:
     properties:
+      cashier_online:
+        description: 是否登录收银端, 0:不在线, 1:在线
+        type: integer
       company_list:
         description: 员工在当前商家可见范围内的门店列表（包含角色信息）
         items:
@@ -27001,10 +27067,18 @@ paths:
         minimum: 1
         name: page_size
         type: integer
+      - description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_end_date
+        type: string
       - description: 查询结束时间戳
         in: query
         name: query_end_time
         type: integer
+      - description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_start_date
+        type: string
       - description: 查询开始时间戳
         in: query
         name: query_start_time
@@ -27080,10 +27154,18 @@ paths:
         minimum: 1
         name: page_size
         type: integer
+      - description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_end_date
+        type: string
       - description: 查询结束时间戳
         in: query
         name: query_end_time
         type: integer
+      - description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_start_date
+        type: string
       - description: 查询开始时间戳
         in: query
         name: query_start_time
@@ -27478,10 +27560,18 @@ paths:
         in: query
         name: printer_uuid
         type: integer
+      - description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_end_date
+        type: string
       - description: 查询结束时间戳
         in: query
         name: query_end_time
         type: integer
+      - description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_start_date
+        type: string
       - description: 查询开始时间戳
         in: query
         name: query_start_time
@@ -33288,10 +33378,18 @@ paths:
         minimum: 1
         name: page_size
         type: integer
+      - description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_end_date
+        type: string
       - description: 查询结束时间戳
         in: query
         name: query_end_time
         type: integer
+      - description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_start_date
+        type: string
       - description: 查询开始时间戳
         in: query
         name: query_start_time
@@ -33447,10 +33545,18 @@ paths:
         minimum: 1
         name: page_size
         type: integer
+      - description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_end_date
+        type: string
       - description: 查询结束时间戳
         in: query
         name: query_end_time
         type: integer
+      - description: 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+        in: query
+        name: query_start_date
+        type: string
       - description: 查询开始时间戳
         in: query
         name: query_start_time

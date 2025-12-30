@@ -537,11 +537,14 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 
 				enabled := paymentMethod.Status == 1
 
+				addedBy := s.getAddedBy(paymentMethod.Source)
+
 				saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 					CompanyUuid: ctx.GetCompanyUuid(),
 					Channel:     channel,
 					PayType:     paymentMethod.PaymentName,
 					Enabled:     &enabled,
+					AddedBy:     &addedBy,
 				})
 				if err != nil || saveModeOfPaymentResp == nil {
 					return err
@@ -634,11 +637,13 @@ func (s *paymentMethodSrv) Update(ctx context.Context, updateReq *req.PaymentMet
 			if paymentMethod.ErpnextPayment == "" && paymentMethod.ErpnextPaymentId == "" {
 				var erpErr error
 				enabled := updateReq.Status == 1
+				addedBy := s.getAddedBy(paymentMethod.Source)
 				saveModeOfPaymentResp, erpErr := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 					CompanyUuid: ctx.GetCompanyUuid(),
 					Channel:     channel,
 					PayType:     paymentMethod.PaymentName,
 					Enabled:     &enabled,
+					AddedBy:     &addedBy,
 				})
 				if erpErr != nil {
 					return erpErr
@@ -824,10 +829,12 @@ func (s *paymentMethodSrv) UpdateLianlianPayConfig(ctx context.Context, configRe
 			channel := erpService.GetChannelBySource(paymentMethod.Source)
 
 			// 同步到 ERP
+			addedBy := "sys"
 			saveResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 				CompanyUuid: ctx.GetCompanyUuid(),
 				Channel:     channel,
 				PayType:     paymentMethod.PaymentName,
+				AddedBy:     &addedBy,
 			})
 
 			if err != nil || saveResp == nil {
@@ -1230,10 +1237,13 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 		// 根据 source 确定 channel
 		channel := erpService.GetChannelBySource(paymentMethod.Source)
 
+		addedBy := s.getAddedBy(paymentMethod.Source)
+
 		saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 			CompanyUuid: ctx.GetCompanyUuid(),
 			Channel:     channel,
 			PayType:     paymentMethod.PaymentName,
+			AddedBy:     &addedBy,
 		})
 		if err != nil || saveModeOfPaymentResp == nil {
 			logger.Logger.Error("同步 Grab 支付方式到 ERP 失败", zap.Error(err))
@@ -1241,7 +1251,7 @@ func (s *paymentMethodSrv) SaveGrabPaymentMethod(ctx context.Context, tx *gorm.D
 		}
 		if saveModeOfPaymentResp.Name != "" {
 			if err := paymentMethodRepo.UpdatePaymentMethod(
-				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name, "erpnext_payment_id": saveModeOfPaymentResp.PaymentId},
 				repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 			); err != nil {
 				logger.Logger.Error("更新 Grab 支付方式 ERP 名称失败", zap.Error(err))
@@ -1315,10 +1325,13 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 		// 根据 source 确定 channel
 		channel := erpService.GetChannelBySource(paymentMethod.Source)
 
+		addedBy := s.getAddedBy(paymentMethod.Source)
+
 		saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 			CompanyUuid: ctx.GetCompanyUuid(),
 			Channel:     channel,
 			PayType:     paymentMethod.PaymentName,
+			AddedBy:     &addedBy,
 		})
 		if err != nil || saveModeOfPaymentResp == nil {
 			logger.Logger.Error("同步 LINE MAN 支付方式到 ERP 失败", zap.Error(err))
@@ -1326,7 +1339,7 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 		}
 		if saveModeOfPaymentResp.Name != "" {
 			if err := paymentMethodRepo.UpdatePaymentMethod(
-				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name},
+				map[string]any{"erpnext_payment": saveModeOfPaymentResp.Name, "erpnext_payment_id": saveModeOfPaymentResp.PaymentId},
 				repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 			); err != nil {
 				logger.Logger.Error("更新 LINE MAN 支付方式 ERP 名称失败", zap.Error(err))
@@ -1336,4 +1349,14 @@ func (s *paymentMethodSrv) SaveLineManPaymentMethod(ctx context.Context, tx *gor
 	}
 
 	return nil
+}
+
+// getAddedBy 获取创建来源标识
+func (s *paymentMethodSrv) getAddedBy(source int) string {
+	if source == constant.PaymentMethodSourceSystem ||
+		source == constant.PaymentMethodSourceLianLianPay ||
+		source == constant.PaymentMethodSourceKbank {
+		return "sys"
+	}
+	return ""
 }

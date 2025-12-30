@@ -13,7 +13,8 @@ type Staff struct {
 	HasDataPermission bool        `json:"has_data_permission"` // 是否有数据管理权限
 	CreateTime        int64       `json:"create_time"`         // 创建时间
 
-	CompanyList []CompanyRoleInfo `json:"company_list"` // 员工在当前商家可见范围内的门店列表（包含角色信息）
+	CashierOnline int               `json:"cashier_online"` // 是否登录收银端, 0:不在线, 1:在线
+	CompanyList   []CompanyRoleInfo `json:"company_list"`   // 员工在当前商家可见范围内的门店列表（包含角色信息）
 }
 
 type StaffRole struct {
@@ -50,10 +51,10 @@ type RoleDetailResp struct {
 
 // CompanyRoleInfo 门店角色信息（员工详情页）
 type CompanyRoleInfo struct {
-	CompanyUuid   uint64      `json:"company_uuid"`    // 门店UUID
-	CompanyName   string      `json:"company_name"`    // 门店名称
-	Roles         []StaffRole `json:"roles"`           // 角色列表
-	IsSuper       int         `json:"is_super"`        // 是否超级管理员
-	IsDisable     int         `json:"is_disable"`      // 是否禁用, 1:禁用, 0:未禁用
-	CashierOnline int         `json:"cashier_online"`  // 是否登录收银端, 0:不在线, 1:在线
+	CompanyUuid   uint64      `json:"company_uuid"`   // 门店UUID
+	CompanyName   string      `json:"company_name"`   // 门店名称
+	Roles         []StaffRole `json:"roles"`          // 角色列表
+	IsSuper       int         `json:"is_super"`       // 是否超级管理员
+	IsDisable     int         `json:"is_disable"`     // 是否禁用, 1:禁用, 0:未禁用
+	CashierOnline int         `json:"cashier_online"` // 是否登录收银端, 0:不在线, 1:在线
 }

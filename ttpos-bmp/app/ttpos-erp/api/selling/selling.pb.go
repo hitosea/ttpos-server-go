@@ -1622,6 +1622,7 @@ type SaveModeOfPaymentReq struct {
 	Enabled       *bool                  `protobuf:"varint,5,opt,name=enabled,proto3,oneof" json:"enabled,omitempty" dc:"是否启用，可选：仅在明确传入时更新 ERP 启用状态"`                                  // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
 	Name          *string                `protobuf:"bytes,6,opt,name=name,proto3,oneof" json:"name,omitempty" dc:"支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作"`                                     // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
 	PaymentId     string                 `protobuf:"bytes,7,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty" dc:"支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字"` // 支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字
+	AddedBy       *string                `protobuf:"bytes,8,opt,name=added_by,json=addedBy,proto3,oneof" json:"added_by,omitempty" dc:"创建来源标识，'sys' 表示系统创建"`                           // 创建来源标识，"sys" 表示系统创建
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1701,6 +1702,13 @@ func (x *SaveModeOfPaymentReq) GetName() string {
 func (x *SaveModeOfPaymentReq) GetPaymentId() string {
 	if x != nil {
 		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *SaveModeOfPaymentReq) GetAddedBy() string {
+	if x != nil && x.AddedBy != nil {
+		return *x.AddedBy
 	}
 	return ""
 }
@@ -2091,7 +2099,7 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x12\x1d\n" +
 	"\n" +
-	"payment_id\x18\x03 \x01(\tR\tpaymentId\"\xf2\x01\n" +
+	"payment_id\x18\x03 \x01(\tR\tpaymentId\"\x9f\x02\n" +
 	"\x14SaveModeOfPaymentReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x18\n" +
@@ -2100,10 +2108,12 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\aenabled\x18\x05 \x01(\bH\x00R\aenabled\x88\x01\x01\x12\x17\n" +
 	"\x04name\x18\x06 \x01(\tH\x01R\x04name\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"payment_id\x18\a \x01(\tR\tpaymentIdB\n" +
+	"payment_id\x18\a \x01(\tR\tpaymentId\x12\x1e\n" +
+	"\badded_by\x18\b \x01(\tH\x02R\aaddedBy\x88\x01\x01B\n" +
 	"\n" +
 	"\b_enabledB\a\n" +
-	"\x05_name\"J\n" +
+	"\x05_nameB\v\n" +
+	"\t_added_by\"J\n" +
 	"\x15SaveModeOfPaymentResp\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +

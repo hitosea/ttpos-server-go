@@ -157,39 +157,39 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 		// 暂时去掉外卖管理
-		if permission.ID == 1626688443 {
+		if permission.Uuid == 1626688443 {
 			continue
 		}
 		// 授权无进销存权限
-		if companySetting.SaleStock == 0 && slices.Contains([]int{1711006072, 1711009130}, permission.ID) {
+		if companySetting.SaleStock == 0 && slices.Contains([]uint64{1711006072, 1711009130}, permission.Uuid) {
 			continue
 		}
 		// 授权无会员权限
-		if companySetting.IsOpenMember == 0 && slices.Contains([]int{1636183779, 1704881218}, permission.ID) {
+		if companySetting.IsOpenMember == 0 && slices.Contains([]uint64{1636183779, 1704881218}, permission.Uuid) {
 			continue
 		}
 		// 授权无平板点餐权限
-		if companySetting.IsOpenTablet == 0 && permission.ID == 87 {
+		if companySetting.IsOpenTablet == 0 && permission.Uuid == 87 {
 			continue
 		}
 		// 授权无H5点餐权限
-		if companySetting.IsOpenH5 == 0 && permission.ID == 1724220505 {
+		if companySetting.IsOpenH5 == 0 && permission.Uuid == 1724220505 {
 			continue
 		}
 		// 授权无点餐助手权限
-		if companySetting.IsOpenAssistant == 0 && permission.ID == 1720753338 {
+		if companySetting.IsOpenAssistant == 0 && permission.Uuid == 1720753338 {
 			continue
 		}
 		// 授权无后厨权限
-		if companySetting.IsOpenKitchenKds == 0 && permission.ID == 88 {
+		if companySetting.IsOpenKitchenKds == 0 && permission.Uuid == 88 {
 			continue
 		}
 		// 授权无自助餐权限
-		if companySetting.IsOpenBuffet == 0 && permission.ID == 1708671616 {
+		if companySetting.IsOpenBuffet == 0 && permission.Uuid == 1708671616 {
 			continue
 		}
 		// 授权无扫码点餐接单权限
-		if companySetting.IsOpenH5Order == 0 && permission.ID == 1724320522 {
+		if companySetting.IsOpenH5Order == 0 && permission.Uuid == 1724320522 {
 			continue
 		}
 		// 授权无外送权限

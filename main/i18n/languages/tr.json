@@ -6079,6 +6079,7 @@
   "该材料已被使用，无法删除": "Bu malzeme kullanılmıştır, silinemiyor",
   "该标签下存在商品，不允许删除": "Bu etiket altında ürün var, silmeye izin verilmiyor",
   "该桌台非空闲桌台": "Bu masa boşta değil",
+  "该用户在（%s）未交班，请交班后再禁用": "Kullanıcı (%s) üzerinde devir teslim yapmadı, lütfen devri tamamladıktan sonra devre dışı bırakın",
   "该用户已在其它收银机登录，请先退出": "Bu kullanıcı zaten başka bir kasada oturum açmış, lütfen önce oturumu kapatın.",
   "该用户已绑定": "Bu kullanıcı bağlandı",
   "该类别已经关联了物品，不可删除": "Bu kategori zaten ürünlerle ilişkilendirilmiş, silinemez",

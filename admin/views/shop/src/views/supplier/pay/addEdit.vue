@@ -120,7 +120,7 @@
             <el-checkbox label="10" size="small">
               {{ $t('收银机') }}
             </el-checkbox>
-            <el-checkbox label="20" size="small">
+            <el-checkbox label="20" size="small" v-if="form.source != 3">
               {{ $t('点餐助手') }}
             </el-checkbox>
           </el-checkbox-group>
@@ -266,7 +266,7 @@
               <el-checkbox label="10" size="small">
                 {{ $t('收银机') }}
               </el-checkbox>
-              <el-checkbox label="20" size="small">
+              <el-checkbox label="20" size="small" v-if="item.source != 3">
                 {{ $t('点餐助手') }}
               </el-checkbox>
             </el-checkbox-group>
@@ -313,6 +313,7 @@
         this.form.status = this.editItem.status;
         this.form.is_show_checkout = this.editItem.is_show_checkout;
         this.form.is_show_recharge = this.editItem.is_show_recharge;
+        this.form.source = this.editItem.source;
         if (this.editItem.img) {
           this.form.img.push({ file_id: this.editItem.logo_file_uuid, file_path: this.editItem.img });
         }
@@ -338,6 +339,7 @@
           status: 1,
           is_show_checkout: [],
           is_show_recharge: [],
+          source: 0,
         },
         formIncludes: [],
         imgType: 1,

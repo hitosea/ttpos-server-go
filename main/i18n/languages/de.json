@@ -6079,6 +6079,7 @@
   "该材料已被使用，无法删除": "Dieses Material wurde bereits verwendet und kann nicht gelöscht werden",
   "该标签下存在商品，不允许删除": "Unter diesem Tag befinden sich Produkte, Löschen ist nicht erlaubt",
   "该桌台非空闲桌台": "Dieser Tisch ist nicht frei",
+  "该用户在（%s）未交班，请交班后再禁用": "Der Benutzer hat bei (%s) nicht übergeben. Bitte nach der Übergabe deaktivieren",
   "该用户已在其它收银机登录，请先退出": "Dieser Benutzer ist bereits an einer anderen Kasse angemeldet, bitte zuerst abmelden",
   "该用户已绑定": "Dieser Benutzer ist bereits verbunden",
   "该类别已经关联了物品，不可删除": "Diese Kategorie ist bereits mit Artikeln verknüpft und kann nicht gelöscht werden",
