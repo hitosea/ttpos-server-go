@@ -33,8 +33,8 @@ class AddOpeningPaymentMethodsToStaffShiftLog extends Migrator
         if (!$table->hasColumn('opening_payment_methods')) {
             $table->addColumn('opening_payment_methods', 'string', [
                 'limit' => 2000,
-                'null' => true,
-                'default' => null,
+                'null' => false,
+                'default' => '',
                 'comment' => '开账时的支付方式UUID列表（逗号分隔）',
                 'after' => 'erpnext_async_record_id'
             ])->update();

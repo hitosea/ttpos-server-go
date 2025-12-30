@@ -2776,7 +2776,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `erpnext_open_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext开账名称',
     `erpnext_close_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext结账名称',
     `erpnext_async_record_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext异步记录ID',
-    `opening_payment_methods` VARCHAR(2000) DEFAULT NULL COMMENT '开账时的支付方式UUID列表（逗号分隔）',
+    `opening_payment_methods` VARCHAR(2000) NOT NULL DEFAULT '' COMMENT '开账时的支付方式UUID列表（逗号分隔）',
     `shift_end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班结束时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
