@@ -103,10 +103,7 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 
 		respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
 		respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
-		respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
-			constant.PaymentMethodCodeLianLianAliPay,
-			constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
-
+		respPaymentOrder.DisabledCancel = paymentOrder.PaymentMethod.IsDisabledCancel()
 		respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 	}
 
