@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -155,10 +156,41 @@ var clearCacheCmd = &cobra.Command{
 
 		if clearCacheAllFlag {
 			// 清空所有系统缓存
-			pattern = fmt.Sprintf("%s:*", objectStoragePersistence.SystemPrefix)
+			patterns := []string{
+				fmt.Sprintf("%s:*", objectStoragePersistence.SystemPrefix), // ttpos5:*
+			}
+
 			fmt.Printf("%s模式: 清空所有系统缓存%s\n", blueColor, resetColor)
-			fmt.Printf("%s匹配模式: %s%s\n", blueColor, pattern, resetColor)
-			keys, err = cache.ScanRedisKeysDefault(ctx, client, pattern)
+			fmt.Printf("%s扫描模式: %s%s\n", blueColor, strings.Join(patterns, ", "), resetColor)
+
+			// 合并所有模式的 keys
+			allKeys := make(map[string]bool) // 使用 map 去重
+			var scanErr error
+			for _, pattern := range patterns {
+				fmt.Printf("%s正在扫描模式: %s...%s\n", blueColor, pattern, resetColor)
+				patternKeys, patternErr := cache.ScanRedisKeys(ctx, client, pattern, 5000) // 使用更大的 count 值
+				if patternErr != nil {
+					fmt.Printf("%s警告: 扫描模式 %s 失败: %v%s\n", yellowColor, pattern, patternErr, resetColor)
+					logger.Logger.Warn("扫描 Redis keys 失败", zap.String("pattern", pattern), zap.Error(patternErr))
+					scanErr = patternErr // 记录错误，但不中断扫描其他模式
+					continue
+				}
+				for _, key := range patternKeys {
+					allKeys[key] = true
+				}
+				fmt.Printf("%s  找到 %d 个 keys%s\n", blueColor, len(patternKeys), resetColor)
+			}
+
+			// 转换为切片
+			keys = make([]string, 0, len(allKeys))
+			for key := range allKeys {
+				keys = append(keys, key)
+			}
+
+			// 如果所有模式都扫描失败，设置 err
+			if len(keys) == 0 && scanErr != nil {
+				err = scanErr
+			}
 		} else if clearCacheKeyFlag != "" {
 			// 清除指定 key
 			keys = []string{clearCacheKeyFlag}
@@ -198,17 +230,14 @@ var clearCacheCmd = &cobra.Command{
 		fmt.Printf("%s找到 %d 个匹配的缓存 key%s\n", blueColor, len(keys), resetColor)
 		fmt.Printf("%s========================================%s\n", blueColor, resetColor)
 
-		// 显示前10个 keys 预览
-		previewCount := 10
-		if len(keys) < previewCount {
-			previewCount = len(keys)
-		}
-		fmt.Printf("%s前 %d 个 keys 预览：%s\n", yellowColor, previewCount, resetColor)
-		for i := 0; i < previewCount; i++ {
-			fmt.Printf("  %d. %s\n", i+1, keys[i])
-		}
-		if len(keys) > previewCount {
-			fmt.Printf("%s  ... 还有 %d 个 keys%s\n", yellowColor, len(keys)-previewCount, resetColor)
+		// 显示所有 keys（按字母顺序排序，便于查看）
+		sortedKeys := make([]string, len(keys))
+		copy(sortedKeys, keys)
+		sort.Strings(sortedKeys)
+
+		fmt.Printf("%s所有 keys 列表：%s\n", yellowColor, resetColor)
+		for i := 0; i < len(sortedKeys); i++ {
+			fmt.Printf("  %d. %s\n", i+1, sortedKeys[i])
 		}
 
 		// 确认提示（除非使用 --force）
@@ -227,25 +256,106 @@ var clearCacheCmd = &cobra.Command{
 		// 执行删除
 		fmt.Printf("%s开始删除缓存...%s\n", blueColor, resetColor)
 
+		// 验证 Global 是否已初始化
+		if cache.Global == nil {
+			fmt.Printf("%s错误: cache.Global 未初始化%s\n", redColor, resetColor)
+			logger.Logger.Error("cache.Global 未初始化")
+			return
+		}
+
+		// 验证 client 是否已获取（在之前已经获取过了）
+		if client == nil {
+			fmt.Printf("%s错误: Redis 客户端未初始化%s\n", redColor, resetColor)
+			logger.Logger.Error("Redis 客户端未初始化")
+			return
+		}
+
+		// 判断是否为集群模式
+		isCluster := false
+		if _, ok := client.(*redis.ClusterClient); ok {
+			isCluster = true
+		}
+
 		// 批量删除，每次删除一批（避免一次性删除过多）
+		// 注意：Redis 集群模式下，一次 DEL 只能删除同一个 slot 的 keys
+		// 如果是集群模式，需要逐个删除或按 slot 分组删除
 		batchSize := 1000
+		if isCluster {
+			// 集群模式下，逐个删除以避免 CROSSSLOT 错误
+			batchSize = 1
+			fmt.Printf("%s检测到 Redis 集群模式，将逐个删除 keys（避免 CROSSSLOT 错误）%s\n", blueColor, resetColor)
+		}
+
 		deletedCount := 0
+		failedCount := 0
 		for i := 0; i < len(keys); i += batchSize {
 			end := i + batchSize
 			if end > len(keys) {
 				end = len(keys)
 			}
 			batch := keys[i:end]
-			cache.Global.Del(batch...)
-			deletedCount += len(batch)
-			fmt.Printf("%s已删除 %d/%d 个 keys...%s\r", blueColor, deletedCount, len(keys), resetColor)
+
+			// 使用 Redis 客户端直接删除，并检查结果
+			delResult := client.Del(ctx, batch...)
+			if err := delResult.Err(); err != nil {
+				// 如果是集群模式且是 CROSSSLOT 错误，尝试逐个删除
+				if isCluster && strings.Contains(err.Error(), "CROSSSLOT") {
+					// 逐个删除这个批次中的 keys
+					for _, key := range batch {
+						singleDelResult := client.Del(ctx, key)
+						if singleErr := singleDelResult.Err(); singleErr != nil {
+							fmt.Printf("%s警告: 删除 key 失败: %s, 错误: %v%s\n", yellowColor, key, singleErr, resetColor)
+							logger.Logger.Warn("删除单个 key 失败", zap.String("key", key), zap.Error(singleErr))
+							failedCount++
+						} else {
+							deletedCount++
+						}
+					}
+				} else {
+					fmt.Printf("%s警告: 删除批次失败: %v%s\n", yellowColor, err, resetColor)
+					logger.Logger.Warn("删除缓存批次失败", zap.Error(err), zap.Int("batch_start", i), zap.Int("batch_end", end), zap.Strings("keys", batch))
+					failedCount += len(batch)
+				}
+			} else {
+				// 检查实际删除的数量
+				actualDeleted := delResult.Val()
+				deletedCount += int(actualDeleted)
+				if int(actualDeleted) != len(batch) {
+					fmt.Printf("%s警告: 批次删除数量不匹配，期望 %d，实际 %d%s\n", yellowColor, len(batch), actualDeleted, resetColor)
+					logger.Logger.Warn("删除数量不匹配", zap.Int("expected", len(batch)), zap.Int64("actual", actualDeleted))
+					failedCount += len(batch) - int(actualDeleted)
+				}
+			}
+
+			// 每删除 100 个 keys 显示一次进度（避免输出过多）
+			if deletedCount%100 == 0 || deletedCount == len(keys) {
+				fmt.Printf("%s已删除 %d/%d 个 keys...%s\r", blueColor, deletedCount, len(keys), resetColor)
+			}
 		}
 		fmt.Printf("\n")
+
+		if failedCount > 0 {
+			fmt.Printf("%s警告: %d 个 keys 删除失败%s\n", yellowColor, failedCount, resetColor)
+		}
+
+		// 同时清除 L1 本地缓存（通过 HTTP 接口）
+		fmt.Printf("%s正在清除 L1 本地缓存...%s\n", blueColor, resetColor)
+		l1ClearedCount := 0
+		if err := clearL1CacheViaHTTP(); err != nil {
+			fmt.Printf("%s警告: 清除 L1 缓存失败: %v%s\n", yellowColor, err, resetColor)
+			logger.Logger.Warn("清除 L1 缓存失败", zap.Error(err))
+		} else {
+			l1ClearedCount = 1 // HTTP 接口会返回清除的 cacheGroup 数量
+			fmt.Printf("%sL1 缓存清除成功%s\n", greenColor, resetColor)
+		}
 
 		// 显示删除结果
 		fmt.Printf("%s========================================%s\n", greenColor, resetColor)
 		fmt.Printf("%s操作成功完成！%s\n", greenColor, resetColor)
-		fmt.Printf("%s删除的 key 数量: %d%s\n", greenColor, deletedCount, resetColor)
+		fmt.Printf("%s删除的 L2 Redis key 数量: %d%s\n", greenColor, deletedCount, resetColor)
+		if l1ClearedCount > 0 {
+			fmt.Printf("%s清除的 L1 缓存组数量: %d%s\n", greenColor, l1ClearedCount, resetColor)
+		}
 		fmt.Printf("%s========================================%s\n", greenColor, resetColor)
 	},
 }
