@@ -95,6 +95,7 @@ type InstantOrderPaymentCreateReq struct {
 	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式UUID, 必填
 	PaymentAmount     float64 `json:"payment_amount"`      // 支付金额, 必填
 	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单UUID, 非必填
+	PaymentInfo       string  `json:"payment_info"`        // 支付信息, 非必填
 }
 
 // InstantOrderPaymentCancelReq 撤销一个支付单请求
@@ -195,6 +196,7 @@ type OrderPrintReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID, 必填
 	PrintLang     string `json:"print_lang"`      // 打印语言, 可选
+	PayQrcode     string `json:"pay_qrcode"`      // 支付二维码, 可选。支付二维码为base64图片
 	PayMethodUuid uint64 `json:"pay_method_uuid"` // 支付方式UUID, 可选 (打印码时用)
 }
 

@@ -227,6 +227,8 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		AmendedProductsInvoiceName: savePosInvoiceReq.AmendedProductsInvoiceName,
 		AmendedMaterialInvoiceName: savePosInvoiceReq.AmendedMaterialInvoiceName,
 		Remark:                     savePosInvoiceReq.Remark,
+		TakeoutOrderNo:             savePosInvoiceReq.TakeoutOrderNo,
+		TakeoutProvider:            savePosInvoiceReq.TakeoutProvider,
 	}
 	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
 	if err != nil {

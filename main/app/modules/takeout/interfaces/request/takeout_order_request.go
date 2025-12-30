@@ -72,8 +72,8 @@ type TakeoutOrderCancelReq struct {
 
 // TakeoutOrderPrintReq 打印订单请求
 type TakeoutOrderPrintReq struct {
-	Uuid      uint64 `json:"uuid" binding:"required"`       // 订单UUID
-	PrintLang string `json:"print_lang" binding:"required"` // 语言
+	Uuid      uint64 `json:"uuid" binding:"required"` // 订单UUID
+	PrintLang string `json:"print_lang"`              // 语言
 }
 
 // TakeoutSettingsGetReq 获取配置请求

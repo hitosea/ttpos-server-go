@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -324,7 +325,6 @@ func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.Defaul
 	}{
 		{constant.PaymentMethodCodeKbankAlipay, "Alipay", "Alipay", "/image/pay/alipay.png", 0},
 		{constant.PaymentMethodCodeKbankWechat, "WeChatPay", "WeChatPay", "/image/pay/wechat_pay.png", 1},
-		{constant.PaymentMethodCodeKbankCreditQR, "Credit QR", "Credit QR", "/image/pay/credit_qr.png", 2},
 		{constant.PaymentMethodCodeKbankThaiQR, "Thai QR", "Thai QR", "/image/pay/thai_qr.png", 3},
 		{constant.PaymentMethodCodeKbankCreditCard, "Credit Card", "Credit Card", "/image/pay/credit_card.png", 4},
 	}
@@ -535,10 +535,13 @@ func (s *paymentMethodSrv) Create(ctx context.Context, createReq *req.PaymentMet
 				// 根据 source 确定 channel
 				channel := erpService.GetChannelBySource(paymentMethod.Source)
 
+				enabled := paymentMethod.Status == 1
+
 				saveModeOfPaymentResp, err := erpSrv.SaveModeOfPayment(ctx, req.SaveModeOfPaymentReq{
 					CompanyUuid: ctx.GetCompanyUuid(),
 					Channel:     channel,
 					PayType:     paymentMethod.PaymentName,
+					Enabled:     &enabled,
 				})
 				if err != nil || saveModeOfPaymentResp == nil {
 					return err
@@ -723,16 +726,20 @@ func (s *paymentMethodSrv) UpdateSort(ctx context.Context, sortReq *req.PaymentM
 func (s *paymentMethodSrv) GetLianlianPayConfig(ctx context.Context) resp.LianlianPayConfigResp {
 	companyUuid := ctx.GetCompanyUuid()
 
+	llWhiteIp := viper.GetString("PAY_SERVICE_IP")
+
 	// 使用 Repository 方法获取配置
 	paymentAppRepo := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB))
 	paymentApp, err := paymentAppRepo.GetPaymentAppCompanyUuid(companyUuid)
 
 	if err != nil || paymentApp == nil {
-		return resp.LianlianPayConfigResp{}
+		return resp.LianlianPayConfigResp{
+			LlWhiteIp: llWhiteIp,
+		}
 	}
 
 	return resp.LianlianPayConfigResp{
-		LlWhiteIp:            paymentApp.LlWhiteIp,
+		LlWhiteIp:            llWhiteIp,
 		LlMerchantId:         paymentApp.LlMerchantId,
 		LlStoreId:            paymentApp.LlStoreId,
 		LlPublicKey:          paymentApp.LlPublicKey,
@@ -961,20 +968,25 @@ func (s *paymentMethodSrv) syncFromERP(ctx context.Context) error {
 			return errors.WithMessage(err, "查询支付方式失败")
 		} else {
 			// 后续同步：仅更新状态
-			status := 0
+			updates := map[string]any{
+				"status": 0,
+			}
 			if erpPayment.Enabled {
-				status = 1
+				updates["status"] = 1
+			}
+			if erpPayment.PaymentId != "" {
+				updates["erpnext_payment_id"] = erpPayment.PaymentId
 			}
 			if err := tx.Model(&model.PaymentMethod{}).
 				Where("uuid = ?", existPayment.Uuid).
-				Update("status", status).Error; err != nil {
+				Updates(updates).Error; err != nil {
 				tx.Rollback()
 				return errors.WithMessage(err, "更新支付方式状态失败")
 			}
 			logger.Logger.Info("更新支付方式状态",
 				zap.String("name", erpPayment.Name),
 				zap.String("payment_id", erpPayment.PaymentId),
-				zap.Int("status", status),
+				zap.Any("updates", updates),
 				zap.Uint64("uuid", existPayment.Uuid))
 			updatedCount++
 		}

@@ -194,13 +194,6 @@ class Product extends ProductModel
                     return false;
                 }
 
-                // 验证最大可选不能超过分组商品数量
-                $groupProductCount = count($groupProductList);
-                if ($maxSelect > $groupProductCount) {
-                    $this->error = sprintf('分组%d最大可选数量不能超过商品数量', $groupIndex + 1);
-                    return false;
-                }
-
                 $productIds = array_column($groupProductList, 'product_id');
                 $productBoms = ProductBom::whereIn('uuid', $productIds)->select();
                 foreach ($productBoms as $productBom) {
@@ -706,13 +699,6 @@ class Product extends ProductModel
                 $groupProductList = $item['product_list'] ?? [];
                 if (count($groupProductList) <= 0) {
                     $this->error = '商品不能为空';
-                    return false;
-                }
-
-                // 验证最大可选不能超过分组商品数量
-                $groupProductCount = count($groupProductList);
-                if ($maxSelect > $groupProductCount) {
-                    $this->error = sprintf('分组%d最大可选数量不能超过商品数量', $groupIndex + 1);
                     return false;
                 }
 

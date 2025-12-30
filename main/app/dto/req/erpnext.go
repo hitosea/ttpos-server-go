@@ -153,6 +153,8 @@ type SavePosInvoiceReq struct {
 	AmendedMaterialInvoiceName string `form:"amended_material_invoice_name" json:"amended_material_invoice_name" binding:"required"` // 反结账后，重新结账时填写原材料发票名称
 	Remark                     string `form:"remark" json:"remark"`                                                                  // 备注,可选
 
+	TakeoutOrderNo  *string `form:"takeout_order_no" json:"takeout_order_no" binding:"omitempty"` // 外卖订单号，可选
+	TakeoutProvider *string `form:"takeout_provider" json:"takeout_provider" binding:"omitempty"` // 外卖平台提供商，可选
 }
 
 type CancelPosInvoiceReq struct {

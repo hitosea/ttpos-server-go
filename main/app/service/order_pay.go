@@ -440,6 +440,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		Amount:               amount, // 实收金额
 		TransactionNumber:    "",
 		Status:               paymentOrderStatus,
+		PaymentInfo:          req.PaymentInfo,
 	}
 
 	// 判断这个支付方式是否已经支付过，如果已经支付过，则更新支付单
@@ -513,10 +514,17 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 获取支付单
 	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// Kbank支付不支持撤销
+	if paymentOrder.PaymentMethod != nil && paymentOrder.PaymentMethod.IsKbankPay() {
+		return nil, errors.New("Kbank支付不支持撤销")
+	}
+
 	// 撤销支付单
 	paymentOrder.Cancel()
 	paymentOrder.SetNil()

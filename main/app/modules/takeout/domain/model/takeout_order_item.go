@@ -15,6 +15,7 @@ type TakeoutOrderItem struct {
 	TtposProductUuid uint64 `gorm:"column:ttpos_product_uuid" json:"ttpos_product_uuid"`
 	TtposProductType int    `gorm:"column:ttpos_product_type" json:"ttpos_product_type"`     // 0-商品, 1-套餐
 	TtposItemName    string `gorm:"column:ttpos_item_name;type:text" json:"ttpos_item_name"` // TTPOS 商品名称(来自 ttpos_product_package)
+	TtposItemErpCode string `gorm:"column:ttpos_item_erp_code" json:"ttpos_item_erp_code"`   // TTPOS 商品 ERP 编码(来自 ProductBom.ErpCode)
 
 	// 商品数量和价格
 	Quantity       int     `gorm:"column:quantity" json:"quantity"`
@@ -39,4 +40,9 @@ func (o *TakeoutOrderItem) SetTakeoutOrderItemModifiersNil() {
 
 func (o *TakeoutOrderItem) IsPackage() bool {
 	return o.TtposProductType == 1
+}
+
+// 获取商品价格
+func (o *TakeoutOrderItem) GetTotalPrice() float64 {
+	return o.Price * float64(o.Quantity)
 }

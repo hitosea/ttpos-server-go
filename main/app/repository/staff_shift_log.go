@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -14,6 +15,7 @@ type IShiftLogRepo interface {
 	Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error)
 	CreateSnapshot(shiftLogSnapshot model.StaffShiftSnapshot) (model.StaffShiftSnapshot, error)
 	GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error)
+	GetShiftLogByStaffUuid(staffUuid uint64, opts ...DBOption) (model.StaffShiftLog, error)
 	GetShiftLogList(opts ...DBOption) ([]model.StaffShiftLog, error)
 	Update(shiftLog model.StaffShiftLog, updates map[string]interface{}) (model.StaffShiftLog, error)
 	GetSnapshot(opts ...DBOption) (model.StaffShiftSnapshot, error)
@@ -102,4 +104,17 @@ func (r *ShiftLogRepo) GetShiftLogList(opts ...DBOption) ([]model.StaffShiftLog,
 		return nil, errors.WithMessage(err)
 	}
 	return logs, nil
+}
+
+// GetShiftLogByStaffUuid 根据员工UUID获取班次记录
+func (r *ShiftLogRepo) GetShiftLogByStaffUuid(staffUuid uint64, opts ...DBOption) (model.StaffShiftLog, error) {
+	var (
+		shiftLog model.StaffShiftLog
+		db       *gorm.DB = r.db
+	)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Where("staff_uuid = ?", staffUuid).Where("status = ?", constant.StaffNotHandedOver).First(&shiftLog).Error
+	return shiftLog, errors.WithMessage(err)
 }

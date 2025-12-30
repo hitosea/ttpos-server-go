@@ -298,7 +298,7 @@ func (r *menuDataRepositoryImpl) GetProductNameByUuid(ctx context.Context, produ
 // GetProductNamesByUuids 批量根据商品UUID获取多语言名称
 // 返回 map[productUuid]name
 // GetProductNamesByUuids 批量根据商品UUID获取商品名称
-// 返回 map[productUuid]types.ProductInfo（包含显示名称和TTPOS核心表名称）
+// 返回 map[productUuid]types.ProductInfo（包含显示名称、TTPOS核心表名称和ERP编码）
 func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, productUuids []uint64, productTypes map[uint64]int) map[uint64]types.ProductInfo {
 	db := ctx.GetDB()
 
@@ -342,11 +342,31 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 		takeoutMap[takeout.ProductPackageUuid] = takeout
 	}
 
-	// 第三步：构建返回结果
+	// 第三步：批量查询ProductBom获取ErpCode（只查询商品类型的，即product_flavor_uuid != 0）
+	var productBoms []model.ProductBom
+	err = db.
+		Model(&model.ProductBom{}).
+		Where("product_package_uuid IN ? AND product_flavor_uuid != 0 AND delete_time = ?", productUuids, 0).
+		Find(&productBoms).Error
+
+	if err != nil {
+		logger.Logger.Error("批量查询商品BOM失败", zap.Error(err))
+	}
+
+	// 建立 ProductBom 映射（一个商品可能有多个BOM，只取第一个）
+	bomMap := make(map[uint64]model.ProductBom)
+	for _, bom := range productBoms {
+		if _, exists := bomMap[bom.ProductPackageUuid]; !exists {
+			bomMap[bom.ProductPackageUuid] = bom
+		}
+	}
+
+	// 第四步：构建返回结果
 	result := make(map[uint64]types.ProductInfo)
 	for _, productUuid := range productUuids {
-		var displayName string // 显示用名称（优先外卖表）
-		var ttposName string   // TTPOS 核心表名称
+		var displayName string  // 显示用名称（优先外卖表）
+		var ttposName string    // TTPOS 核心表名称
+		var ttposErpCode string // ERP编码
 
 		// TtposName: 始终从核心表获取
 		if productPackage, ok := packageMap[productUuid]; ok {
@@ -374,9 +394,15 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 			displayName = ttposName
 		}
 
+		// ErpCode: 从ProductBom获取
+		if bom, ok := bomMap[productUuid]; ok {
+			ttposErpCode = bom.ErpCode
+		}
+
 		result[productUuid] = types.ProductInfo{
-			Name:      displayName, // 外卖表优先
-			TtposName: ttposName,   // 核心表
+			Name:         displayName,  // 外卖表优先
+			TtposName:    ttposName,    // 核心表
+			TtposErpCode: ttposErpCode, // ERP编码
 		}
 	}
 
@@ -469,9 +495,10 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 			for _, flavor := range flavors {
 				name := flavor.ProductFlavor.MultiLanguageName.ToJson()
 				result[flavor.Uuid] = types.ModifierInfo{
-					Name:      name,
-					TtposName: name, // flavor 类型：Name 和 TtposName 相同
-					Num:       0,    // 规格没有数量概念
+					Name:         name,
+					TtposName:    name,           // flavor 类型：Name 和 TtposName 相同
+					Num:          0,              // 规格没有数量概念
+					TtposErpCode: flavor.ErpCode, // ERP编码来自ProductBom
 				}
 			}
 		}
@@ -492,9 +519,10 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 			for _, sauce := range sauces {
 				name := sauce.ProductSauce.MultiLanguageName.ToJson()
 				result[sauce.Uuid] = types.ModifierInfo{
-					Name:      name,
-					TtposName: name, // sauce 类型：Name 和 TtposName 相同
-					Num:       0,    // 小料没有数量概念
+					Name:         name,
+					TtposName:    name,                       // sauce 类型：Name 和 TtposName 相同
+					Num:          0,                          // 小料没有数量概念
+					TtposErpCode: sauce.ProductSauce.ErpCode, // ERP编码来自ProductBom
 				}
 			}
 		}
@@ -593,6 +621,7 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				var ttposName string   // TTPOS 核心表名称
 				var flavorUuid uint64  // 规格UUID
 				var flavorName string  // 规格名称
+				var erpCode string     // ERP编码
 
 				// TtposName: 始终从核心表获取
 				if pkg.ProductPackage.MultiLanguageName.Uuid != 0 {
@@ -614,13 +643,14 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 					displayName = ttposName
 				}
 
-				// 获取规格信息
+				// 获取规格信息和ERP编码
 				if pkg.ProductBomUuid > 0 {
 					if bom, ok := bomMap[pkg.ProductBomUuid]; ok {
 						flavorUuid = bom.Uuid
 						if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
 							flavorName = bom.ProductFlavor.MultiLanguageName.ToJson()
 						}
+						erpCode = bom.ErpCode // ERP编码来自ProductBom
 					}
 				}
 
@@ -631,6 +661,7 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 					TtposProductUuid: pkg.RelatedUuid, // 套餐商品UUID
 					TtposFlavorUuid:  flavorUuid,      // 规格UUID
 					TtposFlavorName:  flavorName,      // 规格名称
+					TtposErpCode:     erpCode,         // ERP编码
 				}
 			}
 		}

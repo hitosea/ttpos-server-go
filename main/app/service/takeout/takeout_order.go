@@ -1179,8 +1179,8 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 				ProductAttrList:       attrList,                                           // 规格+属性列表
 				ProductSauceNamesList: saucesList,                                         // 加料列表
 				TotalNum:              float64(item.Quantity),                             // 商品数量
-				ProductPrice:          utils.Round(item.Price/float64(item.Quantity), 2),  // 商品价格
-				TotalPrice:            item.Price,                                         // 商品总价格
+				ProductPrice:          item.Price,                                         // 商品价格
+				TotalPrice:            item.GetTotalPrice(),                               // 商品总价格
 				Remark:                item.Specifications,                                // 商品备注
 				IsWrap:                order.IsTakeawayOrder(),                            // 是否打包
 				SubProducts:           subProducts,                                        // 套餐子商品列表

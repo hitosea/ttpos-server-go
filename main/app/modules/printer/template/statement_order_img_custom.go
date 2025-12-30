@@ -41,6 +41,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
 	is58mmPrinter bool,
+	payQrcode string,
 ) string {
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
@@ -52,7 +53,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	// 支付方式
 	var paymentMethodName string
 	var qrCodeUrl string
-	if payMethodUuid != 0 {
+	if payMethodUuid != 0 || payQrcode != "" {
 		db := t.base.Ctx.GetDB()
 		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 		paymentMethod := paymentMethodRepo.GetPaymentMethod(
@@ -61,27 +62,31 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		)
 		if paymentMethod.Uuid != 0 {
 			paymentMethodName = paymentMethod.Name
-			if paymentMethod.IsLianLianPay() {
-				llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
-					repository.CommonRepo.WhereBySoftDelete(),
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("related_uuid = ?", saleOrder.Uuid)
-						db = db.Where("order_type = ?", constant.PaymentOrderRelatedTypeSaleOrder)
-						db = db.Where("payment_method_uuid = ?", paymentMethod.Uuid)
-						return db.Order("id desc")
-					},
-				)
-				if err == nil && llPaymentOrder.Uuid > 0 {
-					qrCodeUrl = llPaymentOrder.LinkUrl
-				} else {
-					qrCodeUrl = t.base.Translate("获取二维码错误") + ":" + qrCodeUrl
-				}
+			if payQrcode != "" {
+				qrCodeUrl = payQrcode
 			} else {
-				qrCodeUrl = paymentMethod.QrcodeFile.GetUrl(utils.GetBaseURL(t.base.Ctx.GetGin().Request))
-				if url := t.base.GetQrcodeAddr(qrCodeUrl); url != "" {
-					qrCodeUrl = url
+				if paymentMethod.IsLianLianPay() {
+					llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
+						repository.CommonRepo.WhereBySoftDelete(),
+						func(db *gorm.DB) *gorm.DB {
+							db = db.Where("related_uuid = ?", saleOrder.Uuid)
+							db = db.Where("order_type = ?", constant.PaymentOrderRelatedTypeSaleOrder)
+							db = db.Where("payment_method_uuid = ?", paymentMethod.Uuid)
+							return db.Order("id desc")
+						},
+					)
+					if err == nil && llPaymentOrder.Uuid > 0 {
+						qrCodeUrl = llPaymentOrder.LinkUrl
+					} else {
+						qrCodeUrl = t.base.Translate("获取二维码错误") + ":" + qrCodeUrl
+					}
 				} else {
-					qrCodeUrl = t.base.Translate("获取二维码错误") + ":" + qrCodeUrl
+					qrCodeUrl = paymentMethod.QrcodeFile.GetUrl(utils.GetBaseURL(t.base.Ctx.GetGin().Request))
+					if url := t.base.GetQrcodeAddr(qrCodeUrl); url != "" {
+						qrCodeUrl = url
+					} else {
+						qrCodeUrl = t.base.Translate("获取二维码错误") + ":" + qrCodeUrl
+					}
 				}
 			}
 		}

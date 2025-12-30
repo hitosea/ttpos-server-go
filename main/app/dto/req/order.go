@@ -27,6 +27,8 @@ type OrderListReq struct {
 	EnablePayTime       bool   `form:"enable_pay_time"`                  // 启用支付时间 false-不启用，true-启用
 	QueryStartTime      uint   `form:"query_start_time"`                 // 查询开始时间戳
 	QueryEndTime        uint   `form:"query_end_time"`                   // 查询结束时间戳
+	QueryStartDate      string `form:"query_start_date"`                 // 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+	QueryEndDate        string `form:"query_end_date"`                   // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
 	Status              int    `form:"status,default=-1"`                // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
 	BillType            int    `form:"bill_type,default=-1"`             // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
 	DiningMethod        int    `form:"dining_method,default=-1"`         // 用餐方式, -1=全都、 0-堂食 1-打包

@@ -3,12 +3,13 @@ package service
 import (
 	"time"
 	"ttpos-server-go/app/constant"
-	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/utils"
@@ -70,13 +71,14 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(
-		printType,
-		saleBill,
-		saleOrder.Uuid,
-		utils.IfInt(ctx.GetSource() == constant.SourceAssistant, 0, 1),
-		request.PayMethodUuid,
-	)
+	printerData, err := printer.NewPrinterRepo(ctx, request.PrintLang).PrintingStatementOrder(&printer_request.PrintingStatementOrderReq{
+		PrintType:      printType,
+		SaleBill:       saleBill,
+		SaleOrderUuid:  saleOrder.Uuid,
+		FirstExecution: utils.IfInt(ctx.GetSource() == constant.SourceAssistant, 0, 1),
+		PayMethodUuid:  request.PayMethodUuid,
+		PayQrcode:      request.PayQrcode,
+	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

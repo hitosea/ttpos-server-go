@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/modules/printer"
 	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -99,13 +100,11 @@ func FreeSaleOrderEventHandler() {
 
 		// 创建结账单打印
 		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
-			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
-				printerConstant.PrinterTemplateBilling,
-				payload.SaleBill,
-				payload.SaleOrderUuid,
-				0,
-				0,
-			)
+			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(&printer_request.PrintingStatementOrderReq{
+				PrintType:     printerConstant.PrinterTemplateBilling,
+				SaleBill:      payload.SaleBill,
+				SaleOrderUuid: payload.SaleOrderUuid,
+			})
 			if err != nil {
 				fmt.Println("FreeSaleOrderEvent process, PrintingStatementOrder failed ", err)
 			}

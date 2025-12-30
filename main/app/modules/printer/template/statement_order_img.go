@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -39,6 +39,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
+	payQrcode string,
 ) string {
 	name := t.base.Translate("人")
 	// 店铺设置
@@ -629,7 +630,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 打印支付二维码
-	if payMethodUuid != 0 {
+	if payMethodUuid != 0 || payQrcode != "" {
 		db := t.base.Ctx.GetDB()
 		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
 		paymentMethod := paymentMethodRepo.GetPaymentMethod(
@@ -643,41 +644,47 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.SetTextLineHeight(35)
 			img.AppendText(t.base.Translate("请用") + " " + paymentMethod.Name + " " + t.base.Translate("扫一扫支付"))
 			img.LineFeed(1)
-			if paymentMethod.IsLianLianPay() {
-				llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
-					repository.CommonRepo.WhereBySoftDelete(),
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("related_uuid = ?", saleOrder.Uuid)
-						db = db.Where("order_type = ?", constant.PaymentOrderRelatedTypeSaleOrder)
-						db = db.Where("payment_method_uuid = ?", paymentMethod.Uuid)
-						return db.Order("id desc")
-					},
-				)
-				if err == nil && llPaymentOrder.Uuid > 0 {
-					img.AppendQrcode(llPaymentOrder.LinkUrl, 280, 0, true)
-					if !paymentMethod.IsQrPromptPay() {
-						img.LineFeed(1)
+			// 支付二维码
+			if payQrcode != "" {
+				img.AppendQrcode(payQrcode, 280, 0, true)
+				img.LineFeed(1)
+			} else {
+				if paymentMethod.IsLianLianPay() {
+					llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
+						repository.CommonRepo.WhereBySoftDelete(),
+						func(db *gorm.DB) *gorm.DB {
+							db = db.Where("related_uuid = ?", saleOrder.Uuid)
+							db = db.Where("order_type = ?", constant.PaymentOrderRelatedTypeSaleOrder)
+							db = db.Where("payment_method_uuid = ?", paymentMethod.Uuid)
+							return db.Order("id desc")
+						},
+					)
+					if err == nil && llPaymentOrder.Uuid > 0 {
+						img.AppendQrcode(llPaymentOrder.LinkUrl, 280, 0, true)
+						if !paymentMethod.IsQrPromptPay() {
+							img.LineFeed(1)
+						} else {
+							img.SetTextTotalHeight(35)
+						}
 					} else {
-						img.SetTextTotalHeight(35)
+						img.LineFeed(1)
+						img.AppendText(t.base.Translate("获取二维码错误"))
+						img.LineFeed(1)
 					}
 				} else {
-					img.LineFeed(1)
-					img.AppendText(t.base.Translate("获取二维码错误"))
-					img.LineFeed(1)
+					qrCodeUrl := paymentMethod.QrcodeFile.GetUrl(utils.GetBaseURL(t.base.Ctx.GetGin().Request))
+					if url := t.base.GetQrcodeAddr(qrCodeUrl); url != "" {
+						img.AppendImg(url, 280, false, 10)
+					} else {
+						img.LineFeed(1)
+						img.AppendText(t.base.Translate("获取二维码错误"))
+						img.LineFeed(1)
+						img.AppendText(qrCodeUrl)
+						img.LineFeed(1)
+					}
 				}
-			} else {
-				qrCodeUrl := paymentMethod.QrcodeFile.GetUrl(utils.GetBaseURL(t.base.Ctx.GetGin().Request))
-				if url := t.base.GetQrcodeAddr(qrCodeUrl); url != "" {
-					img.AppendImg(url, 280, false, 10)
-				} else {
-					img.LineFeed(1)
-					img.AppendText(t.base.Translate("获取二维码错误"))
-					img.LineFeed(1)
-					img.AppendText(qrCodeUrl)
-					img.LineFeed(1)
-				}
+				img.SetTextLineHeight(50)
 			}
-			img.SetTextLineHeight(50)
 		}
 	} else {
 		if temp == 5 && printOrderType == printerConst.PrinterTemplateBilling {

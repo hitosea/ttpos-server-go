@@ -1198,6 +1198,48 @@ func (*sSelling) CancelPosInvoice(ctx context.Context, invoiceName string) error
 //	return nil
 //}
 
+// queryModeOfPaymentList 查询支付方式列表（内部方法）
+// 参数：
+//   - ctx: 上下文对象
+//   - filters: 查询过滤条件
+//   - limit: 返回数量限制，0 表示不限制
+//
+// 返回：
+//   - []*selling.ModeOfPayment: 支付方式列表
+//   - error: 错误信息
+func (s *sSelling) queryModeOfPaymentList(ctx context.Context, filters [][]string, limit int) ([]*selling.ModeOfPayment, error) {
+	params := &erp.RequestParams{
+		Fields:  []string{"name", "enabled", "custom_payment_id"},
+		Filters: filters,
+	}
+
+	if limit > 0 {
+		params.Limit = limit
+	}
+
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeModeOfPayment,
+	}, params)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询支付方式失败")
+	}
+
+	// 手动解析数据，确保字段映射正确
+	dataArray := resp.GetJsons("data")
+	result := make([]*selling.ModeOfPayment, 0, len(dataArray))
+
+	for _, item := range dataArray {
+		modeOfPayment := &selling.ModeOfPayment{
+			Name:      item.Get("name").String(),
+			Enabled:   item.Get("enabled").Int() == 1,
+			PaymentId: item.Get("custom_payment_id").String(),
+		}
+		result = append(result, modeOfPayment)
+	}
+
+	return result, nil
+}
+
 // GetModeOfPaymentList 获取支付方式列表
 // 参数：
 //   - ctx: 上下文对象
@@ -1210,7 +1252,7 @@ func (*sSelling) CancelPosInvoice(ctx context.Context, invoiceName string) error
 // 功能：
 //   - 获取支付方式列表（包含所有支付方式，不管启用状态）
 //   - 从ERP读取enabled字段并填充到响应中
-func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error) {
+func (s *sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error) {
 	filters := make([][]string, 0)
 	if len(req.CompanyAbbr) > 0 {
 		companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
@@ -1222,20 +1264,12 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 	if len(req.Branch) > 0 {
 		filters = append(filters, []string{"custom_branch", "=", req.Branch})
 	}
-	// 返回所有支付方式（不限制enabled状态）
-	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeModeOfPayment,
-	}, &erp.RequestParams{
-		Fields:  []string{"name", "enabled", "custom_payment_id"},
-		Filters: filters,
-	})
+
+	// 调用统一查询方法，直接获取解析后的数据
+	modeOfPaymentList, err := s.queryModeOfPaymentList(ctx, filters, 0)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取支付方式列表失败")
 	}
-	// 解析响应数据
-	j := resp
-	var modeOfPaymentList []*selling.ModeOfPayment
-	j.GetJson("data").Scan(&modeOfPaymentList)
 
 	return &selling.GetModeOfPaymentListResp{
 		ModeOfPaymentList: modeOfPaymentList,
@@ -1293,32 +1327,20 @@ func (s *sSelling) GetModeOfPayment(ctx context.Context, req *selling.GetModeOfP
 	g.Log().Infof(ctx, "[GetModeOfPayment] 通过 payment_id 查询支付方式: payment_id=%s", *req.PaymentId)
 
 	filters := [][]string{{"custom_payment_id", "=", *req.PaymentId}}
-	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeModeOfPayment,
-	}, &erp.RequestParams{
-		Fields:  []string{"name", "enabled", "custom_payment_id"},
-		Filters: filters,
-		Limit:   1,
-	})
+	modeOfPaymentList, err := s.queryModeOfPaymentList(ctx, filters, 1)
 	if err != nil {
 		g.Log().Errorf(ctx, "[GetModeOfPayment] 查询支付方式失败: payment_id=%s, err=%v", *req.PaymentId, err)
 		return nil, gerror.Wrapf(err, "查询支付方式失败: payment_id=%s", *req.PaymentId)
 	}
 
 	// 4. 检查结果
-	dataArray := resp.GetJsons("data")
-	if len(dataArray) == 0 {
+	if len(modeOfPaymentList) == 0 {
 		g.Log().Warningf(ctx, "[GetModeOfPayment] 支付方式不存在: payment_id=%s", *req.PaymentId)
 		return nil, gerror.Newf("支付方式不存在: payment_id=%s", *req.PaymentId)
 	}
 
-	// 5. 数据映射
-	data := dataArray[0]
-	modeOfPayment = &selling.ModeOfPayment{
-		Name:      data.Get("name").String(),
-		Enabled:   data.Get("enabled").Int() == 1,
-		PaymentId: data.Get("custom_payment_id").String(),
-	}
+	// 5. 返回第一条记录
+	modeOfPayment = modeOfPaymentList[0]
 
 	g.Log().Infof(ctx, "[GetModeOfPayment] 查询成功: name=%s, enabled=%v, payment_id=%s",
 		modeOfPayment.Name, modeOfPayment.Enabled, modeOfPayment.PaymentId)

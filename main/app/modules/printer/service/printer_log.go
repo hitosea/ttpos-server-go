@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_tasks"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
@@ -137,6 +137,19 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 		printerLogRepo.WithSaleBill(),
 		printerLogRepo.WithProductPrinter(),
 		printerLogRepo.WithMemberRechargeOrder(),
+	}
+
+	// 处理日期时间字符串参数
+	if req.QueryStartDate != "" && req.QueryEndDate != "" {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			req.QueryStartTime = uint(startTime)
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			req.QueryEndTime = uint(endTime)
+		}
 	}
 
 	// 添加时间范围查询
