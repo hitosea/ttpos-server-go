@@ -56,7 +56,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 	batchTagText := ""
 	for _, product := range order.Products {
 		if product.BatchTagUuid > 0 {
-			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
+			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(t.base.Ctx.GetCompanyUuid(), product.BatchTagUuid)
 			if err == nil {
 				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
 				if product.ShowDelayTag {
@@ -484,7 +484,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 	batchTagText := ""
 	for _, product := range order.Products {
 		if product.BatchTagUuid > 0 {
-			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
+			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(t.base.Ctx.GetCompanyUuid(), product.BatchTagUuid)
 			if err == nil {
 				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
 				if product.ShowDelayTag {

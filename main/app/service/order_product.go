@@ -2594,7 +2594,7 @@ func (s *orderSrv) ChangeBatchTag(ctx context.Context, req req.ChangeBatchTagReq
 
 	// 验证新的 batch_tag_uuid 的有效性
 	batchTagRepo := repository.NewBatchTagRepo(db)
-	_, err := batchTagRepo.GetBatchTagInfo(req.BatchTagUuid)
+	_, err := batchTagRepo.GetBatchTagInfo(ctx.GetCompanyUuid(), req.BatchTagUuid)
 	if err != nil {
 		return nil, errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
 	}

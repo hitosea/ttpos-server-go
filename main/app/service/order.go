@@ -1851,7 +1851,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			batchTagRepo := repository.NewBatchTagRepo(db)
 			if product.BatchTagUuid > 0 {
 				// 验证 batch_tag_uuid 的有效性
-				_, err := batchTagRepo.GetBatchTagInfo(product.BatchTagUuid)
+				_, err := batchTagRepo.GetBatchTagInfo(ctx.GetCompanyUuid(), product.BatchTagUuid)
 				if err != nil {
 					return nil, errors.WithMessage(fmt.Errorf("分批类型不存在"), err.Error())
 				}

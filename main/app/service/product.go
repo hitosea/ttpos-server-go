@@ -8659,7 +8659,7 @@ func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListRe
 // GetBatchTag 获取分批类型详情
 func (s *productSrv) GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.BatchTagDetail, error) {
 	batchTagRepo := repository.NewBatchTagRepo(s.dbm.GetDB(ctx.GetDbId()))
-	batchTag, err := batchTagRepo.GetBatchTagInfo(req.Uuid)
+	batchTag, err := batchTagRepo.GetBatchTagInfo(ctx.GetCompanyUuid(), req.Uuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取分批类型详情失败")
 	}
@@ -8735,7 +8735,7 @@ func (s *productSrv) EditBatchTag(ctx context.Context, req req.BatchTagEditReq) 
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		batchTagRepo := repository.NewBatchTagRepo(tx)
-		batchTag, err := batchTagRepo.GetBatchTagInfo(req.Uuid)
+		batchTag, err := batchTagRepo.GetBatchTagInfo(ctx.GetCompanyUuid(), req.Uuid)
 		if err != nil {
 			return errors.WithMessage(err, "获取分批类型详情失败")
 		}
