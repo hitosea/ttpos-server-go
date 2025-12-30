@@ -50,6 +50,7 @@ const (
 	PaymentSourceSystem      = 0 // 系统默认
 	PaymentSourceDefault     = 1 // 自行添加
 	PaymentSourceLianlianpay = 2 // LianLianPay
+	PaymentSourceKbank       = 3 // Kbank
 )
 
 // LianLian渠道支付方式code（特殊code）
@@ -147,6 +148,11 @@ func (model *PaymentMethod) IsDisabledCancel() bool {
 // IsDraft 判断是否草稿状态
 func (model *PaymentMethod) IsDraft() bool {
 	return model.IsHeadquarterPayment() && model.ErpnextPayment == ""
+}
+
+// IsKbankPay 判断是否Kbank支付
+func (model *PaymentMethod) IsKbankPay() bool {
+	return model.Source == constant.PaymentMethodSourceKbank
 }
 
 // GetSourceText 获取来源文本

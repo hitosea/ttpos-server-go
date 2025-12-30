@@ -514,9 +514,15 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 获取支付单
 	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// Kbank支付不支持撤销
+	if paymentOrder.PaymentMethod != nil && paymentOrder.PaymentMethod.IsKbankPay() {
+		return nil, errors.New("Kbank支付不支持撤销")
 	}
 
 	// 撤销支付单
