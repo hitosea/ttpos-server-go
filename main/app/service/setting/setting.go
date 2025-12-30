@@ -372,6 +372,27 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		}
 		jsonMap["language_list"] = languageList
 	}
+	// 处理checkout_slip_copies字段，将字符串转换为整数
+	if checkoutSlipCopies, ok := jsonMap["checkout_slip_copies"]; ok {
+		if strVal, ok := checkoutSlipCopies.(string); ok {
+			// 如果是字符串，尝试转换为整数
+			if strVal == "" {
+				// 空字符串设置为nil
+				jsonMap["checkout_slip_copies"] = nil
+			} else if intVal, err := strconv.Atoi(strVal); err == nil {
+				jsonMap["checkout_slip_copies"] = intVal
+			} else {
+				// 转换失败，设置为nil
+				jsonMap["checkout_slip_copies"] = nil
+			}
+		} else if checkoutSlipCopies == nil {
+			// 如果已经是nil，保持不变
+			jsonMap["checkout_slip_copies"] = nil
+		} else if numVal, ok := checkoutSlipCopies.(float64); ok {
+			// 如果是数字（JSON解析后的float64），转换为整数
+			jsonMap["checkout_slip_copies"] = int(numVal)
+		}
+	}
 	// 重新序列化为JSON
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
