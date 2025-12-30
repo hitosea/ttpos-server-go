@@ -943,7 +943,7 @@ func (s *orderSrv) updateMemberOrder(ctx context.Context, request req.CreateMemb
 	commitProductMap := make(map[string]req.OrderProductAddReq)
 	for index := range request.Products {
 		product := request.Products[index]
-		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(ctx.GetDB()).GetProductPackageAttributesByUuids(product.AttributeUuidList)
+		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(ctx.GetDB()).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), product.AttributeUuidList)
 		if err != nil {
 			return nil, nil, errors.WithMessage(err)
 		}
@@ -1582,7 +1582,7 @@ func GetAttributeInfo(ctx context.Context, db *gorm.DB, productPackageAttributeU
 	// 获取属性信息
 	productAttributes := make(map[uint64]*model.ProductPackageAttribute)
 	if len(productPackageAttributeUuidList) > 0 {
-		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(productPackageAttributeUuidList)
+		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), productPackageAttributeUuidList)
 		if errProductAttributeList != nil {
 			return nil, errors.WithMessage(errProductAttributeList)
 		}
@@ -1783,7 +1783,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		// 获取属性信息
 		productAttributes := make(map[uint64]*model.ProductPackageAttribute)
 		if len(product.ProductPackageAttributeUuidList) > 0 {
-			productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(product.ProductPackageAttributeUuidList)
+			productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(ctx.GetCompanyUuid(), product.ProductPackageAttributeUuidList)
 			if errProductAttributeList != nil {
 				return nil, errors.WithMessage(errProductAttributeList)
 			}

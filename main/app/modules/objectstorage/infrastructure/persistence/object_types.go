@@ -50,4 +50,7 @@ const (
 
 	// ProductSauce 商品小料
 	ObjectTypeProductSauce = "product_sauce"
+
+	// ProductPackageAttribute 商品包属性
+	ObjectTypeProductPackageAttribute = "product_package_attribute"
 )
