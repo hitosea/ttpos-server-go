@@ -20,7 +20,7 @@ type MenuToken struct {
 	QrCode      string `json:"qr_code"`
 }
 
-// DecodeMenuToken 解码点子菜单token
+// DecodeMenuToken 解码电子菜单token
 func DecodeMenuToken(token string) (*MenuToken, error) {
 	decodedToken, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {

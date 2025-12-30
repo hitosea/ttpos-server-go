@@ -10,8 +10,6 @@ import (
 	"ttpos-server-go/pkg/context"
 
 	"github.com/duke-git/lancet/v2/cryptor"
-
-	"go.uber.org/zap"
 )
 
 // OrderMemberCancel 不使用此会员
@@ -91,9 +89,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	// 如果会员有密码的话，验证会员密码
 	if member.HasPassword() {
 		md5Password := cryptor.Md5String(request.Password)
-		ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
 		if member.Password != md5Password {
-			ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
 			return nil, false, errors.New("会员密码错误")
 		}
 	}

@@ -9450,10 +9450,14 @@ definitions:
     type: object
   request.TakeoutOrderPrintReq:
     properties:
+      print_lang:
+        description: 语言
+        type: string
       uuid:
         description: 订单UUID
         type: integer
     required:
+    - print_lang
     - uuid
     type: object
   request.TakeoutOrderRejectReq:
@@ -36257,6 +36261,28 @@ paths:
       summary: 刷新token
       tags:
       - 商家端.认证
+  /shop/remaining_sms_quota:
+    get:
+      consumes:
+      - application/json
+      description: 获取商家剩余短信额度
+      parameters:
+      - description: 店铺ID
+        format: int64
+        in: query
+        name: cid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取商家剩余短信额度
+      tags:
+      - 商家端.基础信息
   /shop/role:
     get:
       consumes:
