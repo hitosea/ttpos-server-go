@@ -325,7 +325,6 @@ func (s *paymentMethodSrv) GetDefaultPayList(ctx context.Context) []*resp.Defaul
 	}{
 		{constant.PaymentMethodCodeKbankAlipay, "Alipay", "Alipay", "/image/pay/alipay.png", 0},
 		{constant.PaymentMethodCodeKbankWechat, "WeChatPay", "WeChatPay", "/image/pay/wechat_pay.png", 1},
-		{constant.PaymentMethodCodeKbankCreditQR, "Credit QR", "Credit QR", "/image/pay/credit_qr.png", 2},
 		{constant.PaymentMethodCodeKbankThaiQR, "Thai QR", "Thai QR", "/image/pay/thai_qr.png", 3},
 		{constant.PaymentMethodCodeKbankCreditCard, "Credit Card", "Credit Card", "/image/pay/credit_card.png", 4},
 	}
