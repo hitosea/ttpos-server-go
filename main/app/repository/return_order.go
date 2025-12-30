@@ -161,6 +161,6 @@ func (r *returnOrderRepo) WhereUuid(uuid uint64) DBOption {
 
 func (r *returnOrderRepo) WhereNotReverseSettlement() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("is_reverse_settlement = 0 AND related_order_type = 1")
+		return db.Where("is_reverse_settlement = 0")
 	}
 }
