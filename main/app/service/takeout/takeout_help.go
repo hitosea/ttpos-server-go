@@ -41,8 +41,7 @@ func (s *takeoutSrv) ValidatePaymentMethod(ctx context.Context, req *request.Tak
 		return errors.New("支付方式未开启")
 	}
 	// 验证支付方式是否在班次中
-	staffShiftSrv := service.NewStaffShiftSrv(cache.Global, s.dbm, service.NewCashBoxSrv(s.dbm), service.NewStatisticsSrv())
-	isValid, err := staffShiftSrv.ValidatePaymentMethod(ctx, staff.DutyNo, existPayment.Uuid)
+	isValid, err := service.NewStaffShiftSrv(cache.Global, s.dbm, nil, nil).ValidatePaymentMethod(ctx, staff.DutyNo, existPayment.Uuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
