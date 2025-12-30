@@ -110,7 +110,9 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 			if g.config.NegativeTTL > 0 {
 				var zero T
 				if g.config.EnableRedisCache {
-					_ = g.l2.set(ctx, key, zero, g.config.NegativeTTL)
+					if err := g.l2.set(ctx, key, zero, g.config.NegativeTTL); err != nil {
+						logger.Logger.Error("缓存写入 L2 失败", zap.String("key", key), zap.Error(err))
+					}
 				}
 				if g.config.EnableLocalCache {
 					g.l1.set(key, zero, g.config.NegativeTTL)
@@ -136,15 +138,17 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T]) (T, error) {
 		}
 
 		if g.config.EnableRedisCache {
-			if err := g.l2.set(ctx, key, val, l2TTL); err == nil {
-				logger.Logger.Debug("缓存写入 L2",
+			// 写入 L2 缓存（大小监控和日志记录在 l2.set 方法中完成）
+			if err := g.l2.set(ctx, key, val, l2TTL); err != nil {
+				logger.Logger.Error("缓存写入 L2 失败",
 					zap.String("key", key),
 					zap.String("level", "L2"),
-					zap.String("type", "GET"),
+					zap.String("type", "SET"),
 					zap.Duration("ttl", l2TTL),
-					zap.Duration("task_ttl", taskTTL),
+					zap.Error(err),
 				)
 			}
+			// 注意：成功写入的日志（包括大小信息）在 l2.set 方法中记录
 		}
 		if g.config.EnableLocalCache {
 			g.l1.set(key, val, l1TTL)
