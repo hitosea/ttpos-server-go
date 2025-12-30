@@ -110,7 +110,7 @@
             </tr>
             <tr>
               <td class="meta-label">PAYMENT TERMS</td>
-              <td>{{ doc.payment_terms or '30 DAYS' }}</td>
+              <td>{{ doc.payment_schedule[0].payment_term or '30 DAYS' }}</td>
             </tr>
             <tr>
               <td class="meta-label">VENDOR CODE</td>
