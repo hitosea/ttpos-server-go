@@ -10,7 +10,7 @@
       <el-form-item for="no_click" class="h-auto" v-if="form.add_method == 2" prop="add_pay_type" :rules="[{ required: true, message: $t('请选择') }]">
         <el-select v-model="form.add_pay_type" multiple @change="handleChange">
           <template v-for="(item, index) in payList" :key="index">
-            <el-option :value="item.value" :label="item.name" :disabled="item.can_add == false">{{ item.name }}</el-option>
+            <el-option :value="item.value" :label="item.source == 3 ? item.name + ' (Kbank)' : item.name" :disabled="item.can_add == false">{{ item.source == 3 ? item.name + ' (Kbank)' : item.name }}</el-option>
           </template>
         </el-select>
       </el-form-item>
