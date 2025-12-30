@@ -4,7 +4,10 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/cache"
 
 	"gorm.io/gorm"
 )
@@ -36,6 +39,26 @@ type OrderItemRemarkRepoImpl struct {
 }
 
 func (r *OrderItemRemarkRepoImpl) GetOrderItemRemarkListByUuids(uuids []uint64) ([]*model.OrderItemRemark, error) {
+	// 获取商户UUID
+	companyUuid := repository.GetCompanyUuid(r.db)
+	if companyUuid == 0 {
+		// 如果无法获取商户UUID，直接查询数据库
+		return r.queryOrderItemRemarks(uuids)
+	}
+
+	// 检查是否启用对象存储缓存
+	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 未启用缓存，直接查询数据库
+		return r.queryOrderItemRemarks(uuids)
+	}
+
+	// 使用对象存储模块缓存查询
+	return r.getOrderItemRemarksWithCache(companyUuid, uuids)
+}
+
+// queryOrderItemRemarks 查询订单商品备注列表（包含预加载的关联数据）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *OrderItemRemarkRepoImpl) queryOrderItemRemarks(uuids []uint64) ([]*model.OrderItemRemark, error) {
 	remarks, err := r.GetOrderItemRemarks(
 		repository.CommonRepo.WhereInUuids(uuids),
 		repository.CommonRepo.WhereBySoftDelete(),
@@ -48,6 +71,65 @@ func (r *OrderItemRemarkRepoImpl) GetOrderItemRemarkListByUuids(uuids []uint64) 
 		return nil, errors.WithMessage(err)
 	}
 	return remarks, nil
+}
+
+// getOrderItemRemarksWithCache 使用对象存储模块缓存查询订单商品备注列表
+func (r *OrderItemRemarkRepoImpl) getOrderItemRemarksWithCache(companyUuid uint64, uuids []uint64) ([]*model.OrderItemRemark, error) {
+	if len(uuids) == 0 {
+		return []*model.OrderItemRemark{}, nil
+	}
+	if companyUuid == 0 {
+		return nil, errors.New("getOrderItemRemarksWithCache companyUuid cannot be 0")
+	}
+
+	// 构建批量查询的 keys
+	keys := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			keys = append(keys, persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeOrderItemRemark, uuid))
+		}
+	}
+
+	if len(keys) == 0 {
+		return []*model.OrderItemRemark{}, nil
+	}
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.OrderItemRemark](cache.Global, 5*time.Minute)
+
+	// 使用批量查询缓存
+	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.OrderItemRemark, error) {
+		// 缓存未命中时，从数据库查询
+		remarks, err := r.queryOrderItemRemarks(uuids)
+		if err != nil {
+			return nil, err
+		}
+		// 转换为 map[string]*model.OrderItemRemark
+		result := make(map[string]*model.OrderItemRemark)
+		for _, remark := range remarks {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeOrderItemRemark, remark.Uuid)
+			result[key] = remark
+		}
+		return result, nil
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.queryOrderItemRemarks(uuids)
+	}
+
+	// 将批量查询结果转换为列表，保持原有顺序
+	result := make([]*model.OrderItemRemark, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeOrderItemRemark, uuid)
+			if remark, ok := batchResult[key]; ok && remark != nil {
+				result = append(result, remark)
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (r *OrderItemRemarkRepoImpl) GetOrderItemRemarks(opts ...repository.DBOption) ([]*model.OrderItemRemark, error) {

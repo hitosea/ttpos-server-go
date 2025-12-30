@@ -449,8 +449,8 @@
         sort: maxSort + index + 1, // 递增排序
         num: 1, // 保持原有num值，如果没有则为null
         add_price: 0, // 加价
-        is_required: 1, // 是否必选  0-否 1-是
-        is_default: 1, // 是否默认 0-否 1-是
+        is_required: 0, // 是否必选  0-否 1-是
+        is_default: 0, // 是否默认 0-否 1-是
       };
       form.model.package_group[selectIndex.value].product_list.push(newProduct);
     });

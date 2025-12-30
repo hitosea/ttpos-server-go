@@ -41,13 +41,22 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
 
-	planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
-	if errMustPlan != nil {
-		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
-		return nil, false, errors.New("获取必点列表失败")
+	// 先判断商户是否有生效的必点方案
+	hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
+	if err != nil {
+		ctx.Log().Error("判断商户是否有生效的必点方案失败", zap.Error(err))
 	}
-	mustPlanList = planList
-	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
+	if hasActiveMustPlan {
+		planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+		if errMustPlan != nil {
+			ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
+			return nil, false, errors.New("获取必点列表失败")
+		}
+		mustPlanList = planList
+		ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
+	} else {
+		ctx.Log().Debug("商户无生效必点方案，跳过查询")
+	}
 
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {

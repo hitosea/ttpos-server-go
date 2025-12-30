@@ -116,15 +116,6 @@ class OrderPayTypeEnum extends Enum
                 'source' => 3,
                 'can_add' => true,
             ],
-            self::KBANK_CREDIT_QR => [
-                'name' => "Credit QR",
-                'value' => self::KBANK_CREDIT_QR,
-                'status' => 1,
-                'sort' => 2,
-                'img' => '/image/pay/credit_qr.png',
-                'source' => 3,
-                'can_add' => true,
-            ],
             self::KBANK_THAI_QR => [
                 'name' => "Thai QR",
                 'value' => self::KBANK_THAI_QR,
