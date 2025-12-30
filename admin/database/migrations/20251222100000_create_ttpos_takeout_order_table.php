@@ -40,15 +40,15 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('stock_status', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '库存状态: 1=充足,2=不足'])
                 
                 // 价格信息（单位：分）
-                ->addColumn('subtotal', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '小计金额 (price.subtotal)'])
-                ->addColumn('delivery_fee', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '配送费 (price.deliveryFee)'])
-                ->addColumn('small_order_fee', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '小单费用 (price.smallOrderFee)'])
-                ->addColumn('eater_payment', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '顾客实付 (price.eaterPayment)'])
-                ->addColumn('platform_discount', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '平台优惠 (price.grabFundPromo)'])
-                ->addColumn('merchant_discount', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '商户优惠 (price.merchantFundPromo)'])
-                ->addColumn('basket_promo', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '购物车优惠 (price.basketPromo)'])
-                ->addColumn('tax', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '税费 (price.tax)'])
-                ->addColumn('merchant_charge_fee', 'biginteger', ['signed' => true, 'default' => 0, 'comment' => '商户服务费 (price.merchantChargeFee)'])
+                ->addColumn('subtotal', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '小计金额 (price.subtotal)'])
+                ->addColumn('delivery_fee', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '配送费 (price.deliveryFee)'])
+                ->addColumn('small_order_fee', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '小单费用 (price.smallOrderFee)'])
+                ->addColumn('eater_payment', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '顾客实付 (price.eaterPayment)'])
+                ->addColumn('platform_discount', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '平台优惠 (price.grabFundPromo)'])
+                ->addColumn('merchant_discount', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '商户优惠 (price.merchantFundPromo)'])
+                ->addColumn('basket_promo', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '购物车优惠 (price.basketPromo)'])
+                ->addColumn('tax', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '税费 (price.tax)'])
+                ->addColumn('merchant_charge_fee', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '商户服务费 (price.merchantChargeFee)'])
                 
                 // 货币信息
                 ->addColumn('currency_code', 'string', ['limit' => 10, 'default' => '', 'comment' => '货币代码(THB,VND等)'])

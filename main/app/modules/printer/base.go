@@ -17,6 +17,7 @@ import (
 	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/modules/printer/template"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -32,7 +33,7 @@ import (
 // PPrinterRepo 打印
 type PPrinterRepo interface {
 	PrintingDishes(printType int, order printer_model.Order) bool
-	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, firstExecution int, payMethodUuid uint64) (*resp.PrinterData, error)
+	PrintingStatementOrder(req *printer_request.PrintingStatementOrderReq) (*resp.PrinterData, error)
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64, firstExecution int) (*resp.PrinterData, error)
 	PrintingRechargeOrder(order model.MemberRechargeOrder, firstExecution int) (*resp.PrinterData, error)
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, firstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)

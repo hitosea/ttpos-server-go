@@ -1,7 +1,9 @@
 package model
 
 import (
+	"encoding/json"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/errors"
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 )
@@ -68,10 +70,12 @@ type TakeoutOrder struct {
 	RawData string `gorm:"column:raw_data;type:mediumtext" json:"raw_data"`
 
 	// 操作信息
-	AcceptedBy       uint64 `gorm:"column:accepted_by" json:"accepted_by"`
-	RejectedBy       uint64 `gorm:"column:rejected_by" json:"rejected_by"`
-	RejectReasonCode string `gorm:"column:reject_reason_code" json:"reject_reason_code"`
-	RejectReason     string `gorm:"column:reject_reason" json:"reject_reason"`
+	AcceptedBy        uint64 `gorm:"column:accepted_by" json:"accepted_by"`
+	StaffShiftLogUuid uint64 `gorm:"column:staff_shift_log_uuid" json:"staff_shift_log_uuid"`
+	ErpPosInvoiceResp string `gorm:"column:erp_pos_invoice_resp;type:text" json:"erp_pos_invoice_resp"` // ERP POS Invoice响应数据(JSON格式)
+	RejectedBy        uint64 `gorm:"column:rejected_by" json:"rejected_by"`
+	RejectReasonCode  string `gorm:"column:reject_reason_code" json:"reject_reason_code"`
+	RejectReason      string `gorm:"column:reject_reason" json:"reject_reason"`
 
 	// 关联字表结构
 	TakeoutOrderItems     []TakeoutOrderItem     `gorm:"foreignKey:TakeoutOrderUuid;references:Uuid"`
@@ -171,4 +175,26 @@ func (o *TakeoutOrder) IsDineInOrder() bool {
 // 是否自动接单
 func (o *TakeoutOrder) IsAutoAcceptOrder() bool {
 	return o.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto
+}
+
+// 是否grab订单
+func (o *TakeoutOrder) IsGrabOrder() bool {
+	return o.Platform == valueobject.TakeoutPlatformGrab
+}
+
+// 是否lineman订单
+func (o *TakeoutOrder) IsLinemanOrder() bool {
+	return o.Platform == valueobject.TakeoutPlatformLineman
+}
+
+// 获取ERP POS Invoice响应数据
+func (o *TakeoutOrder) GetErpPosInvoiceResp() *selling.SavePosInvoiceResp {
+	if len(o.ErpPosInvoiceResp) == 0 {
+		return nil
+	}
+	var erpPosInvoiceResp selling.SavePosInvoiceResp
+	if err := json.Unmarshal([]byte(o.ErpPosInvoiceResp), &erpPosInvoiceResp); err != nil {
+		return nil
+	}
+	return &erpPosInvoiceResp
 }

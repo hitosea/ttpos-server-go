@@ -22,6 +22,9 @@ type ITakeoutOrderRepo interface {
 	GetList(options ...DBOption) ([]*model.TakeoutOrder, int64, error)
 	GetCount(options ...DBOption) (int64, error) // 获取订单数量
 	Delete(uuid uint64) error
+	SetStaffShiftLogUuid(order *model.TakeoutOrder, staffUuid uint64) error     // 设置员工班次日志UUID
+	BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error) // 批量更新班次UUID
+	GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error)         // 获取当前订单的ERP开账名称
 
 	// 选项方法
 	WithPreload(options ...DBOption) DBOption
@@ -193,6 +196,72 @@ func (r *TakeoutOrderRepoImpl) Delete(uuid uint64) error {
 			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
 			Update("delete_time", time.Now().Unix()).Error,
 	)
+}
+
+// SetStaffShiftLogUuid 设置员工班次日志UUID
+func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder, staffUuid uint64) error {
+	if order.StaffShiftLogUuid != 0 {
+		return nil
+	}
+	if staffUuid == 0 {
+		return nil
+	}
+	// 查询员工当前班次
+	var shiftLog struct {
+		Uuid uint64 `gorm:"column:uuid"`
+	}
+	err := r.db.Table("ttpos_staff_shift_log").
+		Select("uuid").
+		Where("staff_uuid = ? AND status = ?", staffUuid, constant.StaffNotHandedOver).
+		First(&shiftLog).Error
+	if err != nil {
+		// 如果没有找到班次记录，不报错，返回 nil
+		if err == gorm.ErrRecordNotFound {
+			return nil
+		}
+		return errors.WithMessage(err)
+	}
+	// 设置订单的班次UUID
+	order.StaffShiftLogUuid = shiftLog.Uuid
+	return nil
+}
+
+// BatchUpdateStaffShiftLogUuid 批量更新班次UUID
+// 将 staff_shift_log_uuid 为 0 的订单批量更新为当前班次
+func (r *TakeoutOrderRepoImpl) BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error) {
+	result := r.db.Model(&model.TakeoutOrder{}).
+		Where("staff_shift_log_uuid = ?", 0).
+		Where("delete_time = ?", constant.NotDeleted).
+		Updates(map[string]interface{}{
+			"staff_shift_log_uuid": shiftLogUuid,
+			"accepted_by":          staffUuid,
+		})
+
+	if result.Error != nil {
+		return 0, errors.WithMessage(result.Error)
+	}
+
+	return result.RowsAffected, nil
+}
+
+// GetErpOpenPosEntryNameByOrderUuid 获取当前订单的ERP开账名称
+func (r *TakeoutOrderRepoImpl) GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error) {
+	var erpOpenPosEntryName string
+	err := r.db.Table("ttpos_takeout_order as o").
+		Select("s.erpnext_open_pos_entry_name").
+		Joins("LEFT JOIN ttpos_staff_shift_log as s ON o.staff_shift_log_uuid = s.uuid").
+		Where("o.uuid = ?", orderUuid).
+		Where("o.delete_time = ?", constant.NotDeleted).
+		Scan(&erpOpenPosEntryName).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", nil
+		}
+		return "", errors.WithMessage(err)
+	}
+
+	return erpOpenPosEntryName, nil
 }
 
 // WhereUuid 根据UUID查询选项

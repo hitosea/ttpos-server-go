@@ -3929,15 +3929,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `is_abnormal` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否异常: 0=正常,1=异常',
     `abnormal_detail` text COMMENT '异常详情(JSON)',
     `stock_status` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '库存状态: 1=充足,2=不足',
-    `subtotal` bigint NOT NULL DEFAULT 0 COMMENT '小计金额 (price.subtotal)',
-    `delivery_fee` bigint NOT NULL DEFAULT 0 COMMENT '配送费 (price.deliveryFee)',
-    `small_order_fee` bigint NOT NULL DEFAULT 0 COMMENT '小单费用 (price.smallOrderFee)',
-    `eater_payment` bigint NOT NULL DEFAULT 0 COMMENT '顾客实付 (price.eaterPayment)',
-    `platform_discount` bigint NOT NULL DEFAULT 0 COMMENT '平台优惠 (price.grabFundPromo)',
-    `merchant_discount` bigint NOT NULL DEFAULT 0 COMMENT '商户优惠 (price.merchantFundPromo)',
-    `basket_promo` bigint NOT NULL DEFAULT 0 COMMENT '购物车优惠 (price.basketPromo)',
-    `tax` bigint NOT NULL DEFAULT 0 COMMENT '税费 (price.tax)',
-    `merchant_charge_fee` bigint NOT NULL DEFAULT 0 COMMENT '商户服务费 (price.merchantChargeFee)',
+    `subtotal` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '小计金额 (price.subtotal)',
+    `delivery_fee` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '配送费 (price.deliveryFee)',
+    `small_order_fee` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '小单费用 (price.smallOrderFee)',
+    `eater_payment` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '顾客实付 (price.eaterPayment)',
+    `platform_discount` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '平台优惠 (price.grabFundPromo)',
+    `merchant_discount` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '商户优惠 (price.merchantFundPromo)',
+    `basket_promo` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '购物车优惠 (price.basketPromo)',
+    `tax` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '税费 (price.tax)',
+    `merchant_charge_fee` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '商户服务费 (price.merchantChargeFee)',
     `currency_code` varchar(10) NOT NULL DEFAULT '' COMMENT '货币代码(THB,VND等)',
     `currency_symbol` varchar(10) NOT NULL DEFAULT '' COMMENT '货币符号(฿,$等)',
     `currency_exponent` int(4) unsigned NOT NULL DEFAULT 2 COMMENT '货币指数',
@@ -3958,6 +3958,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `driver_eta` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '司机预计到达时间 (driverETA)',
     `raw_data` mediumtext COMMENT '平台原始订单数据(JSON)',
     `accepted_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '接单人UUID',
+    `staff_shift_log_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '员工班次日志UUID',
     `rejected_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '拒单人UUID',
     `reject_reason_code` varchar(50) NOT NULL DEFAULT '' COMMENT '拒单原因代码',
     `reject_reason` varchar(255) NOT NULL DEFAULT '' COMMENT '拒单原因',
@@ -3970,7 +3971,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     KEY `idx_platform` (`platform`, `delete_time`),
     KEY `idx_order_state` (`order_state`, `delete_time`),
     KEY `idx_order_time` (`order_time`, `delete_time`),
-    KEY `idx_short_order_number` (`short_order_number`, `delete_time`)
+    KEY `idx_short_order_number` (`short_order_number`, `delete_time`),
+    KEY `idx_staff_shift_log_uuid` (`staff_shift_log_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖订单表(多平台)';
 
 -- 外卖订单商品表(多平台)

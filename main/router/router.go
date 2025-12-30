@@ -18,7 +18,8 @@ import (
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
 	"ttpos-server-go/app/api/v1/takeout"
-	_ "ttpos-server-go/app/event" // 注册事件
+	_ "ttpos-server-go/app/event"                                // 注册事件
+	_ "ttpos-server-go/app/modules/takeout/infrastructure/event" // 注册 takeout 模块事件处理器
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc"
 	"ttpos-server-go/middleware"

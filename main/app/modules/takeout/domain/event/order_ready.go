@@ -9,6 +9,7 @@ type OrderReadyEvent struct {
 	ShortOrderNumber string // 短订单号
 	TakeoutOrderUuid string // 外卖订单UUID
 	CompanyUuid      uint64 // 公司UUID
+	AcceptedBy       uint64 // 接单人UUID
 }
 
 // EventName 事件名称
@@ -24,6 +25,7 @@ func NewOrderReadyEvent(
 	shortOrderNumber string,
 	takeoutOrderUuid string,
 	companyUuid uint64,
+	acceptedBy uint64,
 ) OrderReadyEvent {
 	return OrderReadyEvent{
 		BaseDomainEvent:  NewBaseDomainEvent(orderUuid),
@@ -33,5 +35,6 @@ func NewOrderReadyEvent(
 		ShortOrderNumber: shortOrderNumber,
 		TakeoutOrderUuid: takeoutOrderUuid,
 		CompanyUuid:      companyUuid,
+		AcceptedBy:       acceptedBy,
 	}
 }

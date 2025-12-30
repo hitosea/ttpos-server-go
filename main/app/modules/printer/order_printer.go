@@ -10,6 +10,7 @@ import (
 	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/modules/printer/template"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/logger"
@@ -20,20 +21,14 @@ import (
 /**
  * 结账单打印
  */
-func (p *PrinterRepoImpl) PrintingStatementOrder(
-	printType int, // 打印类型 1-预结账单 2-结账单 11-外送单
-	saleBill *model.SaleBill,
-	saleOrderUuid uint64,
-	firstExecution int,
-	payMethodUuid uint64,
-) (*resp.PrinterData, error) {
+func (p *PrinterRepoImpl) PrintingStatementOrder(req *printer_request.PrintingStatementOrderReq) (*resp.PrinterData, error) {
 
 	// 设备sn
 	deviceSn := p.ctx.GetDeviceSn()
 	// 如果不是收银端和助手端，从订单获取 获取设备品牌
 	if p.ctx.GetSource() != constant.SourceCashier && p.ctx.GetSource() != constant.SourceAssistant {
 		deviceRepo := repository.NewDeviceRepo(p.ctx.GetDB())
-		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereUuid(saleBill.DeviceUuid))
+		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereUuid(req.SaleBill.DeviceUuid))
 		if deviceSn == "" {
 			return nil, errors.New("获取设备失败")
 		}
@@ -47,7 +42,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 	// 应用打印联数优先级规则：收银打印设置-结账单打印联数 > 打印设置-打印机打印联数
 	// 仅对结账单（printType == 2）应用此规则
-	if printType == 2 && p.printerSetting.EnableCustomCopies == "1" {
+	if req.PrintType == 2 && p.printerSetting.EnableCustomCopies == "1" {
 		copies := *p.printerSetting.CheckoutSlipCopies
 		if copies > 0 {
 			settingPrinterInfo.Copies = uint(copies)
@@ -68,13 +63,13 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}
 
 	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	saleOrder := req.SaleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
 
 	// 获取打印模板
-	tmp, tmpUuid, tmpData := p.GetPrinterTemplate(uint64(printType))
+	tmp, tmpUuid, tmpData := p.GetPrinterTemplate(uint64(req.PrintType))
 
 	// 打印方式
 	printMethod := p.SetPrinterMethod(settingPrinterInfo.PrintMethod)
@@ -91,13 +86,14 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	// 获取打印内容
 	printContent := p.getPrintingStatementOrderContent(
 		settingPrinterInfo,
-		printType,
-		saleBill,
+		req.PrintType,
+		req.SaleBill,
 		saleOrder,
-		payMethodUuid,
+		req.PayMethodUuid,
 		tmp,
 		tmpUuid,
 		tmpData,
+		req.PayQrcode,
 	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
@@ -109,13 +105,13 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}, model.PrinterLog{
 		PrintMethod:     printMethod,
 		RelatedType:     1,
-		RelatedUuid:     saleOrderUuid,
+		RelatedUuid:     req.SaleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        printType,
+		DataType:        req.PrintType,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  firstExecution,
+		FirstExecution:  req.FirstExecution,
 		Copies:          settingPrinterInfo.Copies,
 		PrintSpeed:      settingPrinterInfo.PrintSpeed,
 	}, "")
@@ -125,7 +121,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}
 
 	// 如果打印类型为结账单，且启用了自定义打印联数，且打印份数为0，则不打印
-	if printType == 2 && p.printerSetting.EnableCustomCopies == "1" && printerLogData.Copies == 0 {
+	if req.PrintType == 2 && p.printerSetting.EnableCustomCopies == "1" && printerLogData.Copies == 0 {
 		return &resp.PrinterData{}, nil
 	}
 
@@ -161,6 +157,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	tmp int,
 	tmpUuid uint64,
 	tmpData string,
+	payQrcode string,
 ) string {
 
 	// 创建打印机实例
@@ -193,6 +190,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 				saleOrder,
 				payMethodUuid,
 				p.Is58mmPrinter(),
+				payQrcode,
 			)
 		} else if !p.Is58mmPrinter() {
 			return template.NewStatementOrderImgTemplate(base).GetPrintContent(
@@ -202,6 +200,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 				saleBill,
 				saleOrder,
 				payMethodUuid,
+				payQrcode,
 			)
 		} else {
 			return template.NewStatementOrderImg58mmTemplate(base).GetPrintContent58mm(
@@ -211,6 +210,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 				saleBill,
 				saleOrder,
 				payMethodUuid,
+				payQrcode,
 			)
 		}
 	}

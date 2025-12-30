@@ -53,15 +53,17 @@ type ITakeoutOrderSrv interface {
 
 // takeoutOrderSrv 外卖订单服务实现
 type takeoutOrderSrv struct {
-	dbm      *database.DBManager
-	menuRepo menuRepo.IMenuDataRepository
+	dbm            *database.DBManager
+	menuRepo       menuRepo.IMenuDataRepository
+	erpSyncService ITakeoutErpSyncService
 }
 
 // NewTakeoutOrderSrv 创建外卖订单服务
 func NewTakeoutOrderSrv(dbm *database.DBManager) ITakeoutOrderSrv {
 	return &takeoutOrderSrv{
-		dbm:      dbm,
-		menuRepo: persistence.NewMenuDataRepository(dbm),
+		dbm:            dbm,
+		menuRepo:       persistence.NewMenuDataRepository(dbm),
+		erpSyncService: NewTakeoutErpSyncService(),
 	}
 }
 
@@ -147,11 +149,11 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 	itemList := make([]response.TakeoutOrderItemResp, 0, len(order.TakeoutOrderItems))
 	for _, item := range order.TakeoutOrderItems {
 		itemList = append(itemList, response.TakeoutOrderItemResp{
-			Uuid:           item.Uuid,           // 商品UUID
-			Specifications: item.Specifications, // 规格说明
-			Quantity:       item.Quantity,       // 数量
-			Price:          item.Price,          // 价格
-			Tax:            item.Tax,            // 税费
+			Uuid:           item.Uuid,            // 商品UUID
+			Specifications: item.Specifications,  // 规格说明
+			Quantity:       item.Quantity,        // 数量
+			Price:          item.GetTotalPrice(), // 价格
+			Tax:            item.Tax,             // 税费
 			ItemName:       *language.JsonToLocaleResponse(item.ItemName),
 			IsPackage:      item.IsPackage(),
 			SubItems: func() []response.TakeoutOrderItemResp {
@@ -303,17 +305,35 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		}
 	}
 
-	// 更新订单状态
-	updateData := map[string]interface{}{
-		"order_state":   valueobject.TakeoutOrderStateAccepted,
-		"accepted_time": currentTime,
-		"accepted_by":   userUuid,
-		"update_time":   currentTime,
+	// 设置员工班次信息
+	if err := orderRepo.SetStaffShiftLogUuid(order, userUuid); err != nil {
+		logger.Logger.Error("设置员工班次日志UUID失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 	}
 
-	if err := orderRepo.UpdateByMap(order.Uuid, updateData); err != nil {
-		logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetDB(tx)
+		// 更新订单状态
+		updateData := map[string]interface{}{
+			"order_state":          valueobject.TakeoutOrderStateAccepted,
+			"accepted_time":        currentTime,
+			"staff_shift_log_uuid": order.StaffShiftLogUuid,
+			"accepted_by":          userUuid,
+			"update_time":          currentTime,
+		}
+		if err := persistence.NewTakeoutOrderRepo(tx).UpdateByMap(order.Uuid, updateData); err != nil {
+			logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
+		}
+		// 同步到 ERP
+		if !order.IsAutoAcceptOrder() {
+			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
+				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
 	}
 
 	// 发布订单接受事件
@@ -327,7 +347,6 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		valueobject.TakeoutOrderAcceptedTypeManual,
 		ctx.GetCompanyUuid(),
 	))
-
 	return nil
 }
 
@@ -421,6 +440,13 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 		return errors.New("订单状态不正确，只有已接单配餐中的订单才能呼叫骑手")
 	}
 
+	// 自动接单的订单在呼叫骑手时设置班次
+	if order.IsAutoAcceptOrder() && order.StaffShiftLogUuid == 0 {
+		if err := orderRepo.SetStaffShiftLogUuid(order, userUuid); err != nil {
+			logger.Logger.Error("自动接单订单呼叫骑手时设置班次失败", zap.Error(err), zap.Uint64("order_uuid", order.Uuid))
+		}
+	}
+
 	// 调用 BMP RPC 标记订单准备完成
 	rpcClient, err := rpc.NewBMPTakeoutClient()
 	if err != nil {
@@ -446,13 +472,33 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 			}
 			return valueobject.TakeoutOrderStateRiderProcessing
 		}(),
-		"accepted_by": userUuid,
 		"update_time": currentTime,
 	}
 
-	if err := orderRepo.UpdateByMap(order.Uuid, updateData); err != nil {
-		logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
+	// 如果是自动接单的订单，且已设置班次，则同时更新班次信息
+	if order.IsAutoAcceptOrder() && order.StaffShiftLogUuid > 0 {
+		updateData["staff_shift_log_uuid"] = order.StaffShiftLogUuid
+		updateData["accepted_by"] = userUuid
+	}
+
+	// 更新订单状态并同步到 ERP
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetDB(tx)
+		// 更新订单状态
+		if err := persistence.NewTakeoutOrderRepo(tx).UpdateByMap(order.Uuid, updateData); err != nil {
+			logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
+		}
+		// 同步到 ERP
+		if order.IsAutoAcceptOrder() {
+			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
+				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
 	}
 
 	// 发布订单呼叫骑手事件
@@ -463,6 +509,7 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 		order.ShortOrderNumber,
 		order.TakeoutOrderUuid,
 		ctx.GetCompanyUuid(),
+		userUuid,
 	))
 
 	return nil
@@ -775,6 +822,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 					}
 					// TtposItemName: TTPOS 核心表名称
 					item.TtposItemName = info.TtposName
+					// TtposItemErpCode: ERP编码
+					item.TtposItemErpCode = info.TtposErpCode
 				}
 			} else if item.IsMapped == 0 {
 				// 未映射商品：使用平台菜单名称
@@ -849,6 +898,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *model.TakeoutO
 						modifier.ModifierName = info.Name
 						// TtposModifierName: 用于标识（始终来自核心表）
 						modifier.TtposModifierName = info.TtposName
+						// TtposModifierErpCode: ERP编码
+						modifier.TtposModifierErpCode = info.TtposErpCode
 
 						// 如果是 commodity 类型，设置规格信息和数量
 						if modifier.TtposModifierType == string(valueobject.ModifierTypeCommodity) {

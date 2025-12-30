@@ -150,7 +150,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 			Price:    t.base.Amount(item.Price), // 使用 base.Amount 添加千分位
 			Num:      float64(item.Quantity),
 			PriceNum: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Quantity),
-			Subtotal: t.base.Amount(item.Price * float64(item.Quantity)),
+			Subtotal: t.base.Amount(item.GetTotalPrice()),
 			Remark:   item.Specifications, // 添加备注字段
 		}
 
