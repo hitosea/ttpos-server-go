@@ -237,9 +237,9 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		}
 		// v2.12暂时不上外卖
 		// 收银机-接单-外卖
-		// if slices.Contains([]uint64{1734000001}, permission.Uuid) {
-		// 	continue
-		// }
+		if slices.Contains([]uint64{1734000001}, permission.Uuid) {
+			continue
+		}
 
 		// // TODO 新管理端-管理APP-云平台未开启Grab外卖，权限列表无Grab外卖设置
 		// if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000}, permission.Uuid) && !companySetting.IsOpenGrabDelivery() {
