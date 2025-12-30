@@ -59,4 +59,7 @@ const (
 
 	// OrderItemRemark 订单商品备注
 	ObjectTypeOrderItemRemark = "order_item_remark"
+
+	// CompanySetting 商户设置
+	ObjectTypeCompanySetting = "company_setting"
 )
