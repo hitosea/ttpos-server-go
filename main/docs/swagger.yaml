@@ -5720,8 +5720,6 @@ definitions:
         type: string
       fee_percent:
         description: 手续费百分比，取值范围0-100
-        maximum: 100
-        minimum: 0
         type: number
       is_show_assistant:
         description: 0-不显示 1-点餐助手结账显示
@@ -5753,9 +5751,6 @@ definitions:
       status:
         description: 状态 0-禁用 1-启用 2-草稿
         type: integer
-    required:
-    - name
-    - payment_name
     type: object
   req.PaymentMethodCreateReq:
     properties:
@@ -5763,10 +5758,7 @@ definitions:
         description: 支付方式列表
         items:
           $ref: '#/definitions/req.PaymentMethodCreateItem'
-        minItems: 1
         type: array
-    required:
-    - items
     type: object
   req.PaymentMethodSortItem:
     properties:
@@ -5826,8 +5818,6 @@ definitions:
       uuid:
         description: 支付方式UUID
         type: integer
-    required:
-    - uuid
     type: object
   req.PreviewPrinterCustomizeReq:
     properties:
@@ -18576,7 +18566,7 @@ definitions:
   setting.PrintSettingResp:
     properties:
       checkout_slip_copies:
-        description: 结账单打印联数 0-10
+        description: 结账单打印联数 0-10 nil表示未设置
         type: integer
       enable_custom_copies:
         description: 是否启用自定义打印联数 "0"-关闭 "1"-开启
@@ -18604,7 +18594,7 @@ definitions:
         description: 打印机id
         type: string
       checkout_slip_copies:
-        description: 结账单打印联数 0-10
+        description: 结账单打印联数 0-10 nil表示未设置
         type: integer
       consumption_tax:
         description: 消费税 1显示全部类型 2仅显示商品已含税 3仅显示商品未含税 4全部不显示

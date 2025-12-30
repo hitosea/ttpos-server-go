@@ -141,12 +141,12 @@ services:
     environment:
       - PORT=3000
       - GCS_BUCKET=ttpos-stock-reconciliation
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/app/credentials/gcs-key.json}
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - CACHE_TTL_SEC=${CACHE_TTL_SEC:-60}
     volumes:
-      - ./docker/certificate:/app/credentials:ro
+      - ./docker/certificate/${GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME}:/app/credentials/gcs-key.json:ro
     restart: unless-stopped
     logging:
       driver: "json-file"
