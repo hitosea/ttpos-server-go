@@ -1404,7 +1404,7 @@ func (s *sSelling) createModeOfPayment(ctx context.Context, req *selling.SaveMod
 	}
 	paymentType := "General"
 	//名字是Cash 才设置成 Cash
-	if name == "Cash" {
+	if req.PayType == "Cash" {
 		paymentType = "Cash"
 	}
 	payload := g.Map{
