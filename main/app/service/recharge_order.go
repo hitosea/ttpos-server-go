@@ -293,7 +293,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 
 	isValid, err := s.staffShiftSrv.ValidatePaymentMethod(ctx, order.DutyNo, paymentMethod.Uuid)
 	if err != nil || !isValid {
-		return orderResp, errors.WithMessage(err, "支付方式不可用")
+		return orderResp, errors.WithMessage(err, "请交班后再重新选择该支付方式")
 	}
 
 	// 默认支付订单状态
