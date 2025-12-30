@@ -5236,6 +5236,11 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.SortWithSort("ASC"),
 		commonRepo.SortWithID("DESC"),
+		commonRepo.Preload(
+			repository.WithPreload{
+				Query: "ProductPackageGroups.ProductPackageGroupItems",
+			},
+		),
 	}
 
 	// 搜索商品名称
