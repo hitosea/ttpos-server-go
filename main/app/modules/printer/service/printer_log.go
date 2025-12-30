@@ -139,6 +139,19 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 		printerLogRepo.WithMemberRechargeOrder(),
 	}
 
+	// 处理日期时间字符串参数
+	if req.QueryStartDate != "" && req.QueryEndDate != "" {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			req.QueryStartTime = uint(startTime)
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			req.QueryEndTime = uint(endTime)
+		}
+	}
+
 	// 添加时间范围查询
 	if req.QueryStartTime > 0 || req.QueryEndTime > 0 {
 		queryOpts = append(queryOpts, printerLogRepo.WhereTimeRange(req.QueryStartTime, req.QueryEndTime))

@@ -26,13 +26,15 @@ type GetMemberOrderManageDetailReq struct {
 // MemberOrderManageListReq 外送订单管理列表查询
 type MemberOrderManageListReq struct {
 	dto.PageReq           // 分页参数
-	Status         string `form:"status"`           // 账单状态, ""=全都, “unpaid”=待付款 "unaccept"=待接单, "accept" 备餐中, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
+	Status         string `form:"status"`           // 账单状态, ""=全都, "unpaid"=待付款 "unaccept"=待接单, "accept" 备餐中, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
 	OrderNo        string `form:"order_no"`         // 订单编号
 	SerialNo       string `form:"serial_no"`        // 订单序号
 	DateRange      int    `form:"date_range"`       // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
 	TimeType       int    `form:"time_type"`        // 时间类型  1=下单时间、 2=支付时间
 	QueryStartTime int64  `form:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   int64  `form:"query_end_time"`   // 查询结束时间戳
+	QueryStartDate string `form:"query_start_date"` // 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+	QueryEndDate   string `form:"query_end_date"`   // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
 }
 
 type TimeFilterParams struct {
@@ -42,18 +44,11 @@ type TimeFilterParams struct {
 }
 
 func (req *MemberOrderManageListReq) GetTimeFilterParams(timezone string) *TimeFilterParams {
-	if req.QueryEndTime != 0 && req.QueryStartTime != 0 {
-		// 通过自定义时间筛选
-		if req.TimeType == 0 {
-			req.TimeType = 1 // 默认选择下单时间
-		}
-		return &TimeFilterParams{
-			TimeType:       req.TimeType,
-			QueryStartTime: req.QueryStartTime,
-			QueryEndTime:   req.QueryEndTime,
-		}
-	}
-	// 日期类型 -1-全都 0-今天 1-昨天 2-本周
+	// 处理日期时间字符串参数（优先级：DateRange > QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	queryStartTime := req.QueryStartTime
+	queryEndTime := req.QueryEndTime
+
+	// 1. 优先处理日期类型
 	if req.DateRange >= 0 && req.DateRange <= 2 {
 		var startTime, endTime int64
 		switch req.DateRange {
@@ -64,16 +59,41 @@ func (req *MemberOrderManageListReq) GetTimeFilterParams(timezone string) *TimeF
 		case constant.OrderDateTypeWeek: // 本周
 			startTime, endTime, _ = utils.SetTimezone(timezone).GetTimeRange(utils.DayTypeThisWeek)
 		}
-		// 通过自定义时间筛选
+		queryStartTime = startTime
+		queryEndTime = endTime
+	}
+
+	// 2. 其次处理时间戳参数（如果设置了，会覆盖 DateRange）
+	if req.QueryStartTime != 0 && req.QueryEndTime != 0 {
+		queryStartTime = req.QueryStartTime
+		queryEndTime = req.QueryEndTime
+	}
+
+	// 3. 最后处理日期时间字符串参数（如果设置了，会覆盖前面的）
+	if req.QueryStartDate != "" && req.QueryEndDate != "" {
+		timeUtil := utils.SetTimezone(timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			queryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			queryEndTime = endTime
+		}
+	}
+
+	// 如果有时间范围，返回时间过滤参数
+	if queryStartTime != 0 && queryEndTime != 0 {
 		if req.TimeType == 0 {
 			req.TimeType = 1 // 默认选择下单时间
 		}
 		return &TimeFilterParams{
 			TimeType:       req.TimeType,
-			QueryStartTime: startTime,
-			QueryEndTime:   endTime,
+			QueryStartTime: queryStartTime,
+			QueryEndTime:   queryEndTime,
 		}
 	}
+
 	// 没有时间筛选条件
 	return nil
 }

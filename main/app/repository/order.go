@@ -292,6 +292,8 @@ type GetCashierOrderListWithPaginationType struct {
 	EnablePayTime       bool   // 是否启用支付时间
 	QueryStartTime      uint   // 查询开始时间
 	QueryEndTime        uint   // 查询结束时间
+	QueryStartDate      string // 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+	QueryEndDate        string // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
 	Status              int    // 订单状态,-1=全部、0=待支付、1=已支付、2=已取消、3=已完成
 	BillType            int    // 订单类型,-1=全部、0=餐单、1=外卖
 	DiningMethod        int    // 用餐方式,-1=全都、 0-堂食 1-打包
@@ -345,6 +347,20 @@ func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPagination
 			param.QueryStartTime = uint(startTime)
 			param.QueryEndTime = uint(endTime)
 		}
+
+		// 处理日期时间字符串参数
+		if param.QueryStartDate != "" && param.QueryEndDate != "" {
+			timeUtil := utils.SetTimezone(tz)
+			startTime, err := timeUtil.FormatDateTimeToUnix(param.QueryStartDate)
+			if err == nil {
+				param.QueryStartTime = uint(startTime)
+			}
+			endTime, err := timeUtil.FormatDateTimeToUnix(param.QueryEndDate)
+			if err == nil {
+				param.QueryEndTime = uint(endTime)
+			}
+		}
+
 		// 日期范围
 		if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
 			timeFields := []string{}

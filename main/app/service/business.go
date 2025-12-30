@@ -638,6 +638,14 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 
 // CountArea 统计区域
 func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error) {
+	// 使用 GetParam 方法处理时间参数（包括日期时间字符串）
+	settingSrv := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取营业设置失败", zap.Error(err))
+	}
+	req = req.GetParam(ctx.GetCompanySetting().Timezone, businessSetting.OpeningHours)
+
 	areaData := s.statisticsSrv.CountArea(ctx, CountReq{
 		TimeType:          req.TimeType,
 		QueryStartTime:    req.QueryStartTime,
@@ -664,12 +672,27 @@ func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountRe
 
 // RankProduct 统计商品排行
 func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error) {
+	// 处理日期时间字符串参数（优先级：QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	queryStartTime := req.QueryStartTime
+	queryEndTime := req.QueryEndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && queryStartTime == 0 && queryEndTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			queryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			queryEndTime = endTime
+		}
+	}
+
 	var productRankData = business_data_resp.BusinessDataProductRank{
 		Ranks: func() []business_data_resp.ProductRank {
 			productRankList := s.statisticsSrv.RankProduct(ctx, CountReq{
 				RankType:          req.RankType,
-				QueryStartTime:    req.QueryStartTime,
-				QueryEndTime:      req.QueryEndTime,
+				QueryStartTime:    queryStartTime,
+				QueryEndTime:      queryEndTime,
 				ExcludeDataManage: req.ExcludeDataManage, // 传递过滤参数
 			})
 			list := make([]business_data_resp.ProductRank, 0, len(productRankList))
@@ -725,10 +748,25 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 		}
 	}
 
+	// 处理日期时间字符串参数（优先级：TimeType > QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	queryStartTime := req.QueryStartTime
+	queryEndTime := req.QueryEndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && queryStartTime == 0 && queryEndTime == 0 && req.TimeType == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			queryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			queryEndTime = endTime
+		}
+	}
+
 	productSalesData := s.statisticsSrv.CountProductSale(ctx, CountReq{
 		TimeType:          req.TimeType,
-		QueryStartTime:    req.QueryStartTime,
-		QueryEndTime:      req.QueryEndTime,
+		QueryStartTime:    queryStartTime,
+		QueryEndTime:      queryEndTime,
 		RankType:          req.SortType,
 		RankDirection:     req.SortDirection,
 		PageNo:            req.PageNo,
@@ -975,6 +1013,14 @@ func (s *businessSrv) ExportProductSalesTask(ctx context.Context, req req.Busine
 
 // Count7Days 统计7天
 func (s *businessSrv) Count7Days(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataCount7Days, error) {
+	// 使用 GetParam 方法处理时间参数（包括日期时间字符串）
+	settingSrv := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取营业设置失败", zap.Error(err))
+	}
+	req = req.GetParam(ctx.GetCompanySetting().Timezone, businessSetting.OpeningHours)
+
 	sevenDaysData := s.statisticsSrv.Count7Days(ctx, CountReq{
 		QueryStartTime: req.QueryStartTime,
 		QueryEndTime:   req.QueryEndTime,
@@ -1096,6 +1142,14 @@ func (s *businessSrv) BuildCategoryList(ctx context.Context, req req.BusinessDat
 
 // CountExport 统计导出
 func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error) {
+	// 使用 GetParam 方法处理时间参数（包括日期时间字符串）
+	settingSrv := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取营业设置失败", zap.Error(err))
+	}
+	req = req.GetParam(ctx.GetCompanySetting().Timezone, businessSetting.OpeningHours)
+
 	exportData, err := s.statisticsSrv.CountExport(ctx, CountReq{
 		QueryStartTime: req.QueryStartTime,
 		QueryEndTime:   req.QueryEndTime,
@@ -1199,6 +1253,14 @@ func (s *businessSrv) CountShiftRefundAmount(ctx context.Context, req req.Busine
 
 // CountHome 统计首页
 func (s *businessSrv) CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error) {
+	// 使用 GetParam 方法处理时间参数（包括日期时间字符串）
+	settingSrv := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取营业设置失败", zap.Error(err))
+	}
+	req = req.GetParam(ctx.GetCompanySetting().Timezone, businessSetting.OpeningHours)
+
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
 		TimeType:          req.TimeType,
@@ -1264,7 +1326,22 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysis(ctx context.Context, req re
 		productPackageUuids = append(productPackageUuids, product.Uuid)
 	}
 
-	efficiencyAnalysisResults, err := repository.NewKitchenEfficiencyAnalysisRepo(ctx.GetDB()).GetKitchenEfficiencyAnalysisByProductPackageUuid(productPackageUuids, req.StartTime, req.EndTime)
+	// 处理日期时间字符串参数（优先级：StartTime/EndTime > QueryStartDate/QueryEndDate）
+	startTime := req.StartTime
+	endTime := req.EndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && startTime == 0 && endTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		start, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			startTime = start
+		}
+		end, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			endTime = end
+		}
+	}
+
+	efficiencyAnalysisResults, err := repository.NewKitchenEfficiencyAnalysisRepo(ctx.GetDB()).GetKitchenEfficiencyAnalysisByProductPackageUuid(productPackageUuids, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -1316,7 +1393,22 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysis(ctx context.Context, req re
 }
 
 func (s *businessSrv) CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req req.KitchenEfficiencyAnalysisAvgReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg, error) {
-	avg, err := repository.NewKitchenEfficiencyAnalysisRepo(ctx.GetDB()).GetKitchenEfficiencyAnalysisAvg(req.StartTime, req.EndTime)
+	// 处理日期时间字符串参数（优先级：StartTime/EndTime > QueryStartDate/QueryEndDate）
+	startTime := req.StartTime
+	endTime := req.EndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && startTime == 0 && endTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		start, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			startTime = start
+		}
+		end, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			endTime = end
+		}
+	}
+
+	avg, err := repository.NewKitchenEfficiencyAnalysisRepo(ctx.GetDB()).GetKitchenEfficiencyAnalysisAvg(startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -1326,6 +1418,21 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req
 }
 
 func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error) {
+	// 处理日期时间字符串参数（优先级：StartTime/EndTime > QueryStartDate/QueryEndDate）
+	startTime := req.StartTime
+	endTime := req.EndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && startTime == 0 && endTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		start, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			startTime = start
+		}
+		end, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			endTime = end
+		}
+	}
+
 	db := ctx.GetDB()
 	productionRepo := repository.NewProductionRepo(db)
 	// 根据过滤条件,获取商品bom_uuid列表
@@ -1362,12 +1469,12 @@ func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.Kitch
 			},
 		),
 	}
-	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, productBomUuids, req.StartTime, req.EndTime, opts...)
+	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, productBomUuids, startTime, endTime, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	count, err := productionRepo.GetProductionOrderListCount(productBomUuids, req.StartTime, req.EndTime)
+	count, err := productionRepo.GetProductionOrderListCount(productBomUuids, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -1456,6 +1563,21 @@ func (s *businessSrv) getKitchenProductionDetailProductBomUuids(ctx context.Cont
 
 // KitchenProductionDetailCount 统计后厨菜品出品明细数量
 func (s *businessSrv) KitchenProductionDetailCount(ctx context.Context, req req.KitchenProductionDetailReq) (int64, error) {
+	// 处理日期时间字符串参数（优先级：StartTime/EndTime > QueryStartDate/QueryEndDate）
+	startTime := req.StartTime
+	endTime := req.EndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && startTime == 0 && endTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		start, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			startTime = start
+		}
+		end, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			endTime = end
+		}
+	}
+
 	db := ctx.GetDB()
 	productionRepo := repository.NewProductionRepo(db)
 	// 根据过滤条件,获取商品bom_uuid列表
@@ -1464,7 +1586,7 @@ func (s *businessSrv) KitchenProductionDetailCount(ctx context.Context, req req.
 		return 0, err
 	}
 
-	count, err := productionRepo.GetProductionOrderListCount(productBomUuids, req.StartTime, req.EndTime)
+	count, err := productionRepo.GetProductionOrderListCount(productBomUuids, startTime, endTime)
 	if err != nil {
 		return 0, err
 	}
@@ -2811,9 +2933,22 @@ func (s *businessSrv) CountChannelSales(ctx context.Context, req req.ChannelSale
 	db := ctx.GetDB()
 	statisticsRepo := repository.NewStatisticsRepo(db)
 
-	// 处理默认时间：如果未传时间，使用今日范围
+	// 处理日期时间字符串参数（优先级：StartTime/EndTime > QueryStartDate/QueryEndDate）
 	startTime := req.StartTime
 	endTime := req.EndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && startTime == 0 && endTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		start, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			startTime = start
+		}
+		end, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			endTime = end
+		}
+	}
+
+	// 处理默认时间：如果未传时间，使用今日范围
 	if startTime == 0 || endTime == 0 {
 		timezone := ctx.GetCompanySetting().Timezone
 		timezoneUtil := utils.SetTimezone(timezone)
@@ -3419,9 +3554,22 @@ func (s *businessSrv) CountUserAnalysis(ctx context.Context, req req.UserAnalysi
 	db := ctx.GetDB()
 	statisticsRepo := repository.NewStatisticsRepo(db)
 
-	// 处理默认时间：如果未传时间，使用今日范围
+	// 处理日期时间字符串参数（优先级：StartTime/EndTime > QueryStartDate/QueryEndDate）
 	startTime := req.StartTime
 	endTime := req.EndTime
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && startTime == 0 && endTime == 0 {
+		timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		start, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			startTime = start
+		}
+		end, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			endTime = end
+		}
+	}
+
+	// 处理默认时间：如果未传时间，使用今日范围
 	if startTime == 0 || endTime == 0 {
 		timezone := ctx.GetCompanySetting().Timezone
 		timezoneUtil := utils.SetTimezone(timezone)
