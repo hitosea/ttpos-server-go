@@ -11,6 +11,7 @@ type TakeoutOrderMaterial struct {
 	MaterialUuid                 uint64  `gorm:"column:material_uuid;type:bigint(20);default:0;comment:原料ID" json:"material_uuid"`
 	MaterialName                 string  `gorm:"column:material_name;type:text;comment:原料名称(来自Material.Name)" json:"material_name"`
 	ErpCode                      string  `gorm:"column:erp_code;type:varchar(50);default:'';comment:ERP编码(来自Material.Code)" json:"erp_code"`
+	BaseUnitUom                  string  `gorm:"column:base_unit_uom;type:varchar(255);default:'';comment:基准单位ERPNext UOM(来自RelatedMaterial.BaseUnitUom)" json:"base_unit_uom"`
 	WarehouseUuid                uint64  `gorm:"column:warehouse_uuid;type:bigint(20);default:0;comment:仓库ID" json:"warehouse_uuid"`
 	Num                          float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:出库数量" json:"num"`
 	IsSummarized                 int     `gorm:"column:is_summarized;type:int(11);default:0;comment:是否已经统计,0-未统计 1-已统计" json:"is_summarized"`

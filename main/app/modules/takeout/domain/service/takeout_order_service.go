@@ -1135,6 +1135,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 		productBomUuid               uint64  // BOM UUID（用于出库清单聚合）
 		takeoutOrderItemUuid         uint64  // 来源：订单商品项
 		takeoutOrderItemModifierUuid uint64  // 来源：订单商品修饰符
+		baseUnitUom                  string  // 基准单位UOM（来自RelatedMaterial.BaseUnitUom）
 	}
 
 	// 消耗映射：materialUuid → warehouseUuid → bomUuid → source
@@ -1152,7 +1153,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 	}
 
 	// 定义辅助函数：累加原料消耗
-	addConsumption := func(bomUuid, materialUuid, warehouseUuid uint64, consumptionNum float64, sourceItemUuid, sourceModifierUuid uint64) {
+	addConsumption := func(bomUuid, materialUuid, warehouseUuid uint64, consumptionNum float64, sourceItemUuid, sourceModifierUuid uint64, baseUnitUom string) {
 		if consumptionMap[materialUuid] == nil {
 			consumptionMap[materialUuid] = make(map[uint64]map[uint64]*materialSource)
 		}
@@ -1167,6 +1168,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 				productBomUuid:               bomUuid,
 				takeoutOrderItemUuid:         sourceItemUuid,
 				takeoutOrderItemModifierUuid: sourceModifierUuid,
+				baseUnitUom:                  baseUnitUom, // 保存 BaseUnitUom
 			}
 		}
 		consumptionMap[materialUuid][warehouseUuid][bomUuid].consumptionNum += consumptionNum
@@ -1197,7 +1199,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 				}
 				warehouseUuid := getDefaultWarehouse(material.Material)
 				consumptionNum := material.Num * productNum // 原料配比 × 商品数量
-				addConsumption(bomUuid, material.MaterialUuid, warehouseUuid, consumptionNum, sourceItemUuid, sourceModifierUuid)
+				addConsumption(bomUuid, material.MaterialUuid, warehouseUuid, consumptionNum, sourceItemUuid, sourceModifierUuid, material.BaseUnitUom)
 			}
 		}
 
@@ -1209,7 +1211,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 				}
 				warehouseUuid := getDefaultWarehouse(material.Material)
 				consumptionNum := material.Num * productNum // 原料配比 × 商品数量
-				addConsumption(bomUuid, material.MaterialUuid, warehouseUuid, consumptionNum, sourceItemUuid, sourceModifierUuid)
+				addConsumption(bomUuid, material.MaterialUuid, warehouseUuid, consumptionNum, sourceItemUuid, sourceModifierUuid, material.BaseUnitUom)
 			}
 		}
 	}
@@ -1225,6 +1227,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 					MaterialUuid:                 source.materialUuid,
 					MaterialName:                 info.name,
 					ErpCode:                      info.erpCode,
+					BaseUnitUom:                  source.baseUnitUom, // 从 source 中获取
 					WarehouseUuid:                source.warehouseUuid,
 					Num:                          source.consumptionNum,
 					IsSummarized:                 0, // 初始为未统计
