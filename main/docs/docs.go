@@ -60238,6 +60238,10 @@ const docTemplate = `{
         "resp.Staff": {
             "type": "object",
             "properties": {
+                "cashier_online": {
+                    "description": "是否登录收银端, 0:不在线, 1:在线",
+                    "type": "integer"
+                },
                 "company_list": {
                     "description": "员工在当前商家可见范围内的门店列表（包含角色信息）",
                     "type": "array",

@@ -354,15 +354,16 @@ func (s *staffSrv) GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.
 	}
 
 	return &resp.Staff{
-		Uuid:        saasStaff.Uuid,
-		Username:    saasStaff.Email,
-		Phone:       saasStaff.Phone,
-		RealName:    saasStaff.RealName,
-		Roles:       currentCompanyRoles,
-		IsDisable:   isDisable,
-		IsSuper:     isSuper,
-		CreateTime:  saasStaff.CreateTime,
-		CompanyList: companyList,
+		Uuid:          saasStaff.Uuid,
+		Username:      saasStaff.Email,
+		Phone:         saasStaff.Phone,
+		RealName:      saasStaff.RealName,
+		Roles:         currentCompanyRoles,
+		IsDisable:     isDisable,
+		IsSuper:       isSuper,
+		CreateTime:    saasStaff.CreateTime,
+		CashierOnline: ctx.GetStaff().CashierOnline,
+		CompanyList:   companyList,
 	}, nil
 }
 
