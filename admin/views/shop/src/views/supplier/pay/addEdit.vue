@@ -85,7 +85,7 @@
           </div>
         </el-form-item>
 
-        <el-form-item v-if="!editItem.id || editItem.source == '1'" for="no_click" :label="$t('二维码')">
+        <el-form-item v-if="!editItem.id || editItem.source == '1' || editItem.source == '3'" for="no_click" :label="$t('二维码')">
           <div class="draggable-list">
             <draggable class="wrapper" v-model="form.qrcode">
               <transition-group>
@@ -203,7 +203,7 @@
               <div class="tips">{{ $t('支持JPG、JPEG、PNG、WEBP格式，小于15MB，尺寸：48*48px') }}</div>
             </div>
           </el-form-item>
-          <el-form-item for="no_click" :label="$t('二维码')">
+          <el-form-item for="no_click" :label="$t('二维码')" v-if="item.source != '3'">
             <div class="draggable-list">
               <draggable class="wrapper" v-model="item.qrcode">
                 <transition-group>
