@@ -1274,6 +1274,11 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 
 // ValidatePaymentMethod 验证支付方式是否在开账时保存的列表中
 func (s *staffShiftSrv) ValidatePaymentMethod(ctx context.Context, shiftNo string, paymentMethodUuid uint64) (bool, error) {
+	// 未开启 ERP 时，返回 true（允许使用）
+	if !ctx.GetCompany().IsOpenErp() {
+		return true, nil
+	}
+
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	shiftLogRepo := repository.NewShiftLogRepo(db)
 	commonRepo := repository.NewCommonRepo()
@@ -1281,6 +1286,7 @@ func (s *staffShiftSrv) ValidatePaymentMethod(ctx context.Context, shiftNo strin
 	// 查询班次记录
 	shiftLog, err := shiftLogRepo.GetShiftLog(
 		commonRepo.WhereByShiftNo(shiftNo),
+		commonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
 		return false, errors.WithMessage(err, "班次记录不存在")
@@ -1295,8 +1301,8 @@ func (s *staffShiftSrv) ValidatePaymentMethod(ctx context.Context, shiftNo strin
 	paymentMethodUuidStr := fmt.Sprintf("%d", paymentMethodUuid)
 	uuids := strings.Split(shiftLog.OpeningPaymentMethods, ",")
 	for _, uuidStr := range uuids {
-		uuidStr = strings.TrimSpace(uuidStr) // 去除空格
-		if uuidStr == paymentMethodUuidStr {
+		trimmedUuidStr := strings.TrimSpace(uuidStr) // 去除空格
+		if trimmedUuidStr == paymentMethodUuidStr {
 			return true, nil
 		}
 	}
