@@ -212,7 +212,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				if productPrinter.PrintMethod == constant.Yes || productPrinter.PrintMethod == constant.All {
 					for _, product := range newProducts {
 						// 定义产品导出函数
-						order.Products = []printer_model.OrderProduct{product}
 						exportation := func(product printer_model.OrderProduct) {
 							order.Products = []printer_model.OrderProduct{product}
 							if data := p.getPrintProductOneContent(productPrinter, printerItem, order); data != "" {
