@@ -136,6 +136,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				product.SubProducts = subProducts
 				newProducts = append(newProducts, product)
 			}
+			order.Products = newProducts
 
 			// 循环下拉选中的打印机一个个打印
 			for _, printerItem := range productPrinter.ProductPrinterItems {
@@ -171,7 +172,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 				// 退菜单打印
 				if printType == printerConst.PrinterProductTypeBackFood {
-					order.Products = newProducts
 					data := p.getPrintReturnProductContent(printerItem, order)
 					if data != "" {
 						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
@@ -212,6 +212,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				if productPrinter.PrintMethod == constant.Yes || productPrinter.PrintMethod == constant.All {
 					for _, product := range newProducts {
 						// 定义产品导出函数
+						order.Products = []printer_model.OrderProduct{product}
 						exportation := func(product printer_model.OrderProduct) {
 							order.Products = []printer_model.OrderProduct{product}
 							if data := p.getPrintProductOneContent(productPrinter, printerItem, order); data != "" {
