@@ -896,7 +896,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_abnormal_record` (
     `duty_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '当班编号',
     `action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '行为',
     `sub_action` VARCHAR(150) NOT NULL DEFAULT '' COMMENT '自定义子行为',
-    `sign` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作签名',
+    `sign` VARCHAR(2000) NOT NULL DEFAULT '' COMMENT '操作签名',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `cashier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收银员ID',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

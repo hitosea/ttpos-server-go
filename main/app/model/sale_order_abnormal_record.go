@@ -9,7 +9,7 @@ type SaleOrderAbnormalRecord struct {
 	DutyNo        string `gorm:"column:duty_no;type:varchar(64);not null;default:'';comment:当班编号" json:"duty_no"`
 	Action        string `gorm:"column:action;type:varchar(150);not null;default:'';comment:行为" json:"action"`
 	SubAction     string `gorm:"column:sub_action;type:varchar(150);not null;default:'';comment:自定义子行为" json:"sub_action"`
-	Sign          string `gorm:"column:sign;type:varchar(255);not null;default:'';comment:操作签名" json:"sign"`
+	Sign          string `gorm:"column:sign;type:varchar(2000);not null;default:'';comment:操作签名" json:"sign"`
 	Remark        string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:备注" json:"remark"`
 	CashierUuid   uint64 `gorm:"column:cashier_uuid;type:bigint(20) unsigned;not null;default:0;comment:收银员ID" json:"cashier_uuid"`
 }
