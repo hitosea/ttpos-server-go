@@ -82,9 +82,13 @@ type Context interface {
 	GetCache() cache.Cache                    // 获取缓存
 	Version(op Operator, version string) bool // 比较版本
 	GetVersion() string                       // 获取客户端版本号
+	SetVersion(version string)                // 设置版本
 	Log() *zap.Logger                         // 获取日志实例
 
 	GetBrand() string // 获取品牌名称
+
+	// 基础信息
+	SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error // 设置基础信息
 }
 
 type ContextImpl struct {
@@ -107,6 +111,7 @@ type ContextImpl struct {
 	requestUuid    string               // 请求uuid
 	h5OrderUuid    string               // H5订单ID
 	hasLock        bool                 // 是否已经上锁
+	version        string               // 客户端版本号（用于队列等非HTTP场景）
 	log            *zap.Logger
 	db             *gorm.DB
 }
@@ -336,7 +341,7 @@ func (c *ContextImpl) GetAssistantUuid() uint64 {
 }
 
 func (c *ContextImpl) GetDeviceSn() string {
-	if c.deviceSn == "" {
+	if c.deviceSn == "" && c.cc != nil {
 		c.deviceSn = c.cc.GetHeader("Device-Id")
 	}
 	return c.deviceSn
@@ -359,9 +364,25 @@ func (c *ContextImpl) AddLock() {
 }
 
 func (c *ContextImpl) GetVersion() string {
-	return c.cc.GetHeader("Client-Version")
+	// 队列或后台任务场景，从内部变量读取
+	if c.version != "" {
+		return c.version
+	}
+	// HTTP 场景，从 Header 读取
+	if c.cc != nil {
+		return c.cc.GetHeader("Client-Version")
+	}
+	return ""
 }
 
+func (c *ContextImpl) SetVersion(version string) {
+	// 设置内部变量
+	c.version = version
+	// 如果有 gin.Context，同步到 Header
+	if c.cc != nil {
+		c.cc.Request.Header.Set("Client-Version", version)
+	}
+}
 func (c *ContextImpl) Log() *zap.Logger {
 	return c.log
 }
@@ -413,7 +434,8 @@ func (c *ContextImpl) GetCfIPCountry() string {
 
 // Version 比较客户端版本号
 func (c *ContextImpl) Version(op Operator, version string) bool {
-	clientVersion := c.cc.GetHeader("Client-Version")
+	// 使用 GetVersion() 方法，支持队列和 HTTP 两种场景
+	clientVersion := c.GetVersion()
 	return utils.CompareVersion(clientVersion, op, version)
 }
 
@@ -470,4 +492,14 @@ func (c *ContextImpl) GetCache() cache.Cache {
 
 func (c *ContextImpl) GetBrand() string {
 	return c.cc.GetString(jwt.Brand)
+}
+
+// 设置基础信息
+func (c *ContextImpl) SetBasicInfo(db *gorm.DB, companyInfo *model.Company) error {
+	c.SetDB(db)
+	c.SetCompanyUuid(companyInfo.Uuid)
+	c.SetCompany(*companyInfo)
+	c.SetCompanySetting(*companyInfo.CompanySetting)
+	c.SetVersion("v2.11.0")
+	return nil
 }

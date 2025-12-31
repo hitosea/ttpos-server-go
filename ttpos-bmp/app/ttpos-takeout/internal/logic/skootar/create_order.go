@@ -13,7 +13,9 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 
+	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/gmeta"
 	"github.com/gogf/gf/v2/util/guid"
@@ -78,53 +80,75 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		return nil, gerror.Newf("创建订单异常:%v", resp.ResponseDesc)
 	}
 
-	//保存订单数据，后面移到通用的服务里面
-	job := &entity.Job{
-		Uuid:                 guid.S(),
-		ShopLocationUuid:     guid.S(),
-		ConsumerLocationUuid: guid.S(),
-		TakeoutRefNo:         resp.JobDetail.JobId,
-		ShopRefNo:            req.ShopOrderUuid,
-		PaymentType:          reqInp.PaymentType,
-		CallbackUrl:          req.CallbackUrl, // 来源订单的回调
-		ProviderName:         gconv.String(consts.ProviderSkootar),
-		JobDate:              reqInp.JobDate,
-		StartTime:            reqInp.StartTime,
-		FinishTime:           resp.JobDetail.FinishTime,
-		JobStatus:            gconv.String(resp.JobDetail.JobStatus),
-		Remark:               reqInp.Remark,
-	}
-	locationModel := dao.JobLocation.Ctx(ctx)
-	if _, err = locationModel.Data(do.JobLocation{
-		Uuid:         job.ShopLocationUuid,
-		LocationType: 0, //餐馆
-		AddressName:  req.MerchantLocation.AddressName,
-		Address:      req.MerchantLocation.Address,
-		Lat:          req.MerchantLocation.Lat,
-		Lng:          req.MerchantLocation.Lng,
-		ContactName:  req.MerchantLocation.ContactName,
-		ContactPhone: req.MerchantLocation.ContactPhone,
-		Seq:          1,
-	}).Insert(); err != nil {
-		return nil, gerror.Wrap(err, "保存商家位置失败")
-	}
-	if _, err = locationModel.Data(do.JobLocation{
-		Uuid:         job.ConsumerLocationUuid,
-		LocationType: 1, //客户
-		AddressName:  req.CustomerLocation.AddressName,
-		Address:      req.CustomerLocation.Address,
-		Lat:          req.CustomerLocation.Lat,
-		Lng:          req.CustomerLocation.Lng,
-		ContactName:  req.CustomerLocation.ContactName,
-		ContactPhone: req.CustomerLocation.ContactPhone,
-		Seq:          2,
-	}).Insert(); err != nil {
-		return nil, gerror.Wrap(err, "保存商家位置失败")
-	}
+	// 保存订单数据到新的双表结构
+	orderUuid := guid.S()
+	shopLocationUuid := guid.S()
+	consumerLocationUuid := guid.S()
 
-	// 保存订单
-	if _, err = dao.Job.Ctx(ctx).Data(job).Insert(); err != nil {
-		return nil, gerror.Wrap(err, "创建订单失败")
+	// 使用事务确保数据一致性
+	err = g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		// 1. 写入主表 takeout_order (通用字段)
+		order := &entity.Order{
+			Uuid:               orderUuid,
+			ShopUuid:           "", // TODO: 从配置或上下文获取 shop_uuid
+			ProviderMerchantId: "", // Skootar 没有 merchant_id
+			ProviderOrderId:    resp.JobDetail.JobId,
+			ShopRefNo:          req.ShopOrderUuid, // TTPOS 内部订单号
+			ProviderName:       gconv.String(consts.ProviderSkootar),
+			OrderStatus:        gconv.String(resp.JobDetail.JobStatus),
+			OrderTime:          gtime.Now(),
+			PaymentType:        reqInp.PaymentType,
+			CustomerPhone:      req.CustomerLocation.ContactPhone,
+			Note:               reqInp.Remark,
+		}
+		if _, err := dao.Order.Ctx(ctx).TX(tx).Data(order).Insert(); err != nil {
+			return gerror.Wrap(err, "创建订单主表失败")
+		}
+
+		// 2. 写入扩展表 takeout_order_skootar (Skootar 特有字段)
+		// 注意：此时司机信息可能为空，等待回调更新
+		orderSkootar := &entity.OrderSkootar{
+			Uuid:      guid.S(),
+			OrderUuid: orderUuid,
+		}
+		if _, err := dao.OrderSkootar.Ctx(ctx).TX(tx).Data(orderSkootar).Insert(); err != nil {
+			return gerror.Wrap(err, "创建订单扩展表失败")
+		}
+
+		// 3. 写入位置信息 (保持原有逻辑)
+		locationModel := dao.JobLocation.Ctx(ctx).TX(tx)
+		if _, err := locationModel.Data(do.JobLocation{
+			Uuid:         shopLocationUuid,
+			LocationType: 0, //餐馆
+			AddressName:  req.MerchantLocation.AddressName,
+			Address:      req.MerchantLocation.Address,
+			Lat:          req.MerchantLocation.Lat,
+			Lng:          req.MerchantLocation.Lng,
+			ContactName:  req.MerchantLocation.ContactName,
+			ContactPhone: req.MerchantLocation.ContactPhone,
+			Seq:          1,
+		}).Insert(); err != nil {
+			return gerror.Wrap(err, "保存商家位置失败")
+		}
+		if _, err := locationModel.Data(do.JobLocation{
+			Uuid:         consumerLocationUuid,
+			LocationType: 1, //客户
+			AddressName:  req.CustomerLocation.AddressName,
+			Address:      req.CustomerLocation.Address,
+			Lat:          req.CustomerLocation.Lat,
+			Lng:          req.CustomerLocation.Lng,
+			ContactName:  req.CustomerLocation.ContactName,
+			ContactPhone: req.CustomerLocation.ContactPhone,
+			Seq:          2,
+		}).Insert(); err != nil {
+			return gerror.Wrap(err, "保存客户位置失败")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	res = &api.CreateOrderResp{
@@ -132,11 +156,11 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 			Code:    resp.ResponseCode,
 			Message: resp.ResponseDesc,
 		},
-		TakeoutJobUuid: job.Uuid,
-		TakeoutRefNo:   job.TakeoutRefNo,
-		ShopOrderUuid:  job.ShopRefNo,
-		Status:         job.JobStatus,
-		FinishTime:     job.FinishTime,
+		TakeoutJobUuid: orderUuid,
+		TakeoutRefNo:   resp.JobDetail.JobId,
+		ShopOrderUuid:  req.ShopOrderUuid,
+		Status:         gconv.String(resp.JobDetail.JobStatus),
+		FinishTime:     resp.JobDetail.FinishTime,
 	}
 	return
 }

@@ -17,8 +17,8 @@ func ChangeStockEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			// 发布"加库存"事件
 			utils.Go(func() {
-				AddStock(db, payload.SaleBillUuid)
-				ReduceStock(db, payload.SaleBillUuid)
+				AddStock(payload.Ctx, db, payload.SaleBillUuid)
+				ReduceStock(payload.Ctx, db, payload.SaleBillUuid)
 			})
 		})
 	})

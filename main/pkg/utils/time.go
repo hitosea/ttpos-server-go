@@ -32,6 +32,8 @@ type TimeUtil interface {
 	GetTimeRange(dayType DayType) (int64, int64, error)                                               // 订单列表：今天、昨天、本周搜索时间范围
 	FormatTimeToUnix(timeStr string) (int64, error)                                                   // 2025-04-30转为时间戳
 	FormatTimeToTime(timeStr string) (time.Time, error)                                               // 2025-04-30转为time.Time对象（使用当前时区）
+	FormatDateTimeToUnix(timeStr string) (int64, error)                                               // 将日期时间字符串转换为时间戳（支持 YYYY-MM-DD HH:mm:ss 和 YYYY-MM-DD 格式）
+	FormatDateTimeToTime(timeStr string) (time.Time, error)                                           // 将日期时间字符串转换为time.Time对象（支持 YYYY-MM-DD HH:mm:ss 和 YYYY-MM-DD 格式）
 	OpeningHoursStartEndUnix(openingHours string, opts ...func(o *OpeningHoursOption)) (int64, int64) // 营业时间开始和结束时间戳
 }
 
@@ -301,6 +303,61 @@ func (t Timezone) FormatTimeToTime(timeStr string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return time.ParseInLocation("2006-01-02", timeStr, loc)
+}
+
+// FormatDateTimeToUnix 将日期时间字符串转换为时间戳（支持商户时区）
+// timeStr: 日期时间字符串，支持两种格式：
+//   - "YYYY-MM-DD HH:mm:ss" - 完整日期时间格式，如 "2025-12-30 11:42:00"
+//   - "YYYY-MM-DD" - 仅日期格式，如 "2025-12-30"（时间默认为 00:00:00）
+// 返回：时间戳（Unix 时间戳，10位）
+func (t Timezone) FormatDateTimeToUnix(timeStr string) (int64, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return 0, fmt.Errorf("加载时区失败: %w", err)
+	}
+
+	// 支持两种格式：YYYY-MM-DD 和 YYYY-MM-DD HH:mm:ss
+	var layout string
+	timeStr = strings.TrimSpace(timeStr)
+	if len(timeStr) == 10 {
+		layout = "2006-01-02"
+	} else if len(timeStr) == 19 {
+		layout = "2006-01-02 15:04:05"
+	} else {
+		return 0, errors.New("日期时间格式错误，应为 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss")
+	}
+
+	tm, err := time.ParseInLocation(layout, timeStr, loc)
+	if err != nil {
+		return 0, fmt.Errorf("解析日期时间失败: %w", err)
+	}
+
+	return tm.Unix(), nil
+}
+
+// FormatDateTimeToTime 将日期时间字符串转换为 time.Time 对象（使用商户时区）
+// timeStr: 日期时间字符串，支持两种格式：
+//   - "YYYY-MM-DD HH:mm:ss" - 完整日期时间格式，如 "2025-12-30 11:42:00"
+//   - "YYYY-MM-DD" - 仅日期格式，如 "2025-12-30"（时间默认为 00:00:00）
+// 返回：time.Time 对象（使用商户时区）
+func (t Timezone) FormatDateTimeToTime(timeStr string) (time.Time, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("加载时区失败: %w", err)
+	}
+
+	// 支持两种格式：YYYY-MM-DD 和 YYYY-MM-DD HH:mm:ss
+	var layout string
+	timeStr = strings.TrimSpace(timeStr)
+	if len(timeStr) == 10 {
+		layout = "2006-01-02"
+	} else if len(timeStr) == 19 {
+		layout = "2006-01-02 15:04:05"
+	} else {
+		return time.Time{}, errors.New("日期时间格式错误，应为 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss")
+	}
+
+	return time.ParseInLocation(layout, timeStr, loc)
 }
 
 type OpeningHoursOption struct {

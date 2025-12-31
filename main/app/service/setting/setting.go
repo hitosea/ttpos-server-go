@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/app/errors"
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/cache"
@@ -68,6 +69,7 @@ type ISrv interface {
 	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                       // 获取税率设置
 	VerifyPassword(ctx context.Context, source string, typ string, password string) bool                                                  // 收银机验证密码
 	UpdateSetting(ctx context.Context, settingKey string, values any) error                                                               // 更新设置
+	UpdatePrintSetting(ctx context.Context, req *req.UpdatePrintSettingReq) error                                                         // 更新打印设置
 	VerifyAdvancedPassword(ctx context.Context, password string, options ...func(option *VerifyAdvancedPasswordOption)) error             // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
@@ -135,13 +137,29 @@ func (s *Srv) fromCache(ctx context.Context) ([]model.Setting, error) {
 	return settings, nil
 }
 
+// deduplicateLanguageList 去重 LanguageItem 列表，基于 Value 字段（语言代码）
+func deduplicateLanguageList(list []dto.LanguageItem) []dto.LanguageItem {
+	if len(list) == 0 {
+		return list
+	}
+	seen := make(map[string]bool)
+	result := make([]dto.LanguageItem, 0, len(list))
+	for _, item := range list {
+		if !seen[item.Value] {
+			seen[item.Value] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 // GetStoreLanguageList 获取商家语言列表
 func (s *Srv) GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error) {
 	set, err := s.GetStoreSetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	return set.Language, nil
+	return deduplicateLanguageList(set.Language), nil
 }
 
 func (s *Srv) GetStoreLanguage(ctx context.Context) ([]string, error) {
@@ -272,6 +290,9 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		defaultStore.Language = make([]dto.LanguageItem, 0)
 	}
 
+	// 去重 Language 列表
+	defaultStore.Language = deduplicateLanguageList(defaultStore.Language)
+
 	if defaultStore.Coordinates != "" {
 		latLng := strings.Split(defaultStore.Coordinates, ",")
 		if len(latLng) == 2 {
@@ -351,6 +372,27 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		}
 		jsonMap["language_list"] = languageList
 	}
+	// 处理checkout_slip_copies字段，将字符串转换为整数
+	if checkoutSlipCopies, ok := jsonMap["checkout_slip_copies"]; ok {
+		if strVal, ok := checkoutSlipCopies.(string); ok {
+			// 如果是字符串，尝试转换为整数
+			if strVal == "" {
+				// 空字符串设置为nil
+				jsonMap["checkout_slip_copies"] = nil
+			} else if intVal, err := strconv.Atoi(strVal); err == nil {
+				jsonMap["checkout_slip_copies"] = intVal
+			} else {
+				// 转换失败，设置为nil
+				jsonMap["checkout_slip_copies"] = nil
+			}
+		} else if checkoutSlipCopies == nil {
+			// 如果已经是nil，保持不变
+			jsonMap["checkout_slip_copies"] = nil
+		} else if numVal, ok := checkoutSlipCopies.(float64); ok {
+			// 如果是数字（JSON解析后的float64），转换为整数
+			jsonMap["checkout_slip_copies"] = int(numVal)
+		}
+	}
 	// 重新序列化为JSON
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
@@ -391,6 +433,8 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	if len(defaultPrinter.LanguageList) == 0 {
 		defaultPrinter.LanguageList = make([]dto.LanguageItem, 0)
 	}
+	// 去重 LanguageList
+	defaultPrinter.LanguageList = deduplicateLanguageList(defaultPrinter.LanguageList)
 	if len(defaultPrinter.CalendarList) == 0 {
 		defaultPrinter.CalendarList = make([]setting.CalendarItem, 0)
 	}
@@ -399,6 +443,11 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	}
 	if len(defaultPrinter.Language) == 0 {
 		defaultPrinter.Language = make([]string, 0)
+	}
+
+	// 兼容旧数据：如果新字段不存在，使用默认值
+	if defaultPrinter.EnableCustomCopies == "" {
+		defaultPrinter.EnableCustomCopies = "0"
 	}
 
 	return defaultPrinter, nil
@@ -478,13 +527,13 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
-				printerType = constant.PrinterTypeCashierSunmi
+				printerType = printerConstant.PrinterTypeCashierSunmi
 			} else if slices.Contains([]string{constant.BrandA11510P}, brand) {
 				// compax打印机
-				printerType = constant.PrinterTypeCashierCompax
+				printerType = printerConstant.PrinterTypeCashierCompax
 			} else if slices.Contains([]string{constant.BrandD1, constant.BrandD4}, brand) {
 				// imin打印机
-				printerType = constant.PrinterTypeCashierImmin
+				printerType = printerConstant.PrinterTypeCashierImmin
 			} else {
 				// 未知打印机
 				printerType = ""
@@ -601,6 +650,9 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 	// 确保 BatchCookingMode 有默认值
 	if defaultBusiness.BatchCookingMode == "" {
 		defaultBusiness.BatchCookingMode = constant.BatchCookingModePost
+	}
+	if defaultBusiness.BatchPrintMode == "" {
+		defaultBusiness.BatchPrintMode = constant.BatchPrintModeDefault
 	}
 
 	return defaultBusiness, nil
@@ -754,7 +806,8 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultTablet.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultTablet.LanguageList = deduplicateLanguageList(validLanguageList)
 	return defaultTablet, nil
 }
 
@@ -892,7 +945,8 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultCashier.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultCashier.LanguageList = deduplicateLanguageList(validLanguageList)
 	return defaultCashier, nil
 }
 
@@ -942,6 +996,9 @@ func (s *Srv) GetKioskSetting(ctx context.Context) (setting.Kiosk, error) {
 	if kiosk.LanguageList == nil {
 		kiosk.LanguageList = make([]dto.LanguageItem, 0)
 	}
+
+	// 去重 LanguageList
+	kiosk.LanguageList = deduplicateLanguageList(kiosk.LanguageList)
 
 	return kiosk, nil
 }
@@ -1074,7 +1131,8 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultAssistant.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultAssistant.LanguageList = deduplicateLanguageList(validLanguageList)
 
 	return defaultAssistant, nil
 }
@@ -1194,7 +1252,8 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultKitchen.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultKitchen.LanguageList = deduplicateLanguageList(validLanguageList)
 
 	return defaultKitchen, nil
 }
@@ -1285,7 +1344,8 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	defaultH5.LanguageList = validLanguageList
+	// 去重 LanguageList
+	defaultH5.LanguageList = deduplicateLanguageList(validLanguageList)
 	return defaultH5, nil
 }
 
@@ -1325,7 +1385,8 @@ func (s *Srv) GetCashierLanguage(c context.Context) (resp.LanguageResp, error) {
 			languageNames = append(languageNames, item.Name)
 		}
 	}
-	languageResp.LanguageList = validLanguageList
+	// 去重 LanguageList
+	languageResp.LanguageList = deduplicateLanguageList(validLanguageList)
 	return languageResp, nil
 }
 
@@ -1874,6 +1935,25 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 	return nil
 }
 
+// UpdatePrintSetting 更新打印设置
+func (s *Srv) UpdatePrintSetting(ctx context.Context, req *req.UpdatePrintSettingReq) error {
+	if req.CheckoutSlipCopies < 0 || req.CheckoutSlipCopies > 10 {
+		return errors.New("结账单打印联数必须在0-10之间")
+	}
+	// 获取当前打印设置
+	printerSetting, err := s.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return errors.WithMessage(err, "获取打印设置失败")
+	}
+
+	// 更新字段
+	printerSetting.EnableCustomCopies = req.EnableCustomCopies
+	printerSetting.CheckoutSlipCopies = &req.CheckoutSlipCopies
+
+	// 保存设置（会自动删除缓存）
+	return s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
+}
+
 func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateStoreSetting) error {
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyUuid := ctx.GetCompanyUuid()
@@ -2391,6 +2471,7 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
+		paymentRepo.WhereNotCode([]int{constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan}),
 	)
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))

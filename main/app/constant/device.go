@@ -14,6 +14,7 @@ const (
 	SourceAssistant = "assistant" // 点餐助手
 	SourceH5        = "h5"        // H5
 	SourceRider     = "rider"     // 骑手端. skootar
+	SourceKiosk     = "kiosk"     // 自助点餐机
 )
 
 // SaleBillSource 销售账单来源（整数类型）
@@ -33,6 +34,7 @@ var SourceTextMap = map[string]string{
 	SourceShop:      "商家后台",
 	SourceTablet:    "平板端",
 	SourceH5:        "扫码点餐",
+	SourceKiosk:     "自助点餐机",
 }
 
 const (

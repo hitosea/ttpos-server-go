@@ -109,8 +109,8 @@ type MaterialAddReq struct {
 	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 物品名称
 	CategoryUuid         uint64             `json:"category_uuid"`          // 分类UUID
 	Status               int                `json:"status"`                 // 状态，1-启用 0-停用
-	Valuation            float64            `json:"valuation"`              // 估值率
 	InitStock            float64            `json:"init_stock"`             // 期初库存
+	Valuation            float64            `json:"valuation"`              // 估值率
 	BarcodeValue         string             `json:"barcode_value"`          // 条形码值
 	UnitUuid             uint64             `json:"unit_uuid"`              // 基准单位UUID
 	UnitList             []MaterialUnitReq  `json:"unit_list"`              // 单位列表
@@ -185,12 +185,10 @@ func (r *MaterialAddReq) Validate() error {
 			}
 		}
 	}
-	// 创建的时候期初库存跟估值率要大于0
-	if r.Valuation <= 0 {
-		return errors.WithMessage(errors.New("估值率需大于零"))
-	}
-	if r.InitStock <= 0 {
-		return errors.WithMessage(errors.New("期初库存需大于零"))
+	if r.InitStock > 0 {
+		if r.Valuation <= 0 {
+			return errors.WithMessage(errors.New("估值率需大于零"))
+		}
 	}
 	// 非必填，门店唯一，1-13位（可输入纯数字/纯字母/数字+字母）
 	if r.InternalCode != "" {
@@ -295,7 +293,6 @@ type MaterialEditReq struct {
 	LocaleName           dto.LocaleResponse `json:"locale_name"`            // 物品名称
 	CategoryUuid         uint64             `json:"category_uuid"`          // 分类UUID
 	Status               int                `json:"status"`                 // 状态，1-启用 0-停用
-	Valuation            float64            `json:"valuation"`              // 估值率
 	BarcodeValue         string             `json:"barcode_value"`          // 条形码值
 	UnitList             []MaterialUnitReq  `json:"unit_list"`              // 单位列表,新增的非基准单位
 	PurchaseUnitUuid     uint64             `json:"purchase_unit_uuid"`     // 采购单位UUID

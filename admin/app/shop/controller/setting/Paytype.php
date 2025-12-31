@@ -65,6 +65,14 @@ class Paytype extends Controller
             }
             return true;
         }));
+        foreach ($list as $key => $item) {
+            if ($item['source'] == PayTypeModel::SOURCE_KBANK) {
+                $find = PayTypeModel::where('code', $item['value'])->where('source', PayTypeModel::SOURCE_KBANK)->find();
+                if ($find) {
+                    $list[$key]['can_add'] = false;
+                }
+            }
+        }
         return $this->renderSuccess('', compact('list'));
     }
 
@@ -129,7 +137,11 @@ class Paytype extends Controller
             }
             // 兼容快捷添加多个code一致
             foreach ($validatedItems as $key => $item) {
-                $validatedItems[$key]['code'] = $item['code'] + $key * 100;
+                if ($item['source'] == PayTypeModel::SOURCE_KBANK) {
+                    $validatedItems[$key]['code'] = $item['code'];
+                } else {
+                    $validatedItems[$key]['code'] = $item['code'] + $key * 100;
+                }
                 if ($item['logo_file_uuid'] == 0) {
                     $validatedItems[$key]['default_img'] = $item['logo_url'];
                 }

@@ -96,8 +96,10 @@ type TableStructure struct {
 
 // 字段信息
 type FieldInfo struct {
-	Name string
-	Type string
+	Name    string
+	Type    string
+	Default sql.NullString // 默认值（可能为NULL）
+	Comment string         // 字段注释
 }
 
 // 验证数据库结构命令
@@ -252,10 +254,22 @@ func extractDatabaseStructure(db *gorm.DB, dbName string) (*DatabaseSignature, e
 			return nil, fmt.Errorf("提取表 %s 的字段失败: %w", originalTable, err)
 		}
 
-		// 生成字段签名列表（字段名:类型）
+		// 生成字段签名列表（字段名:类型:默认值:注释）
 		fieldSignatures := make([]string, 0, len(fields))
 		for _, field := range fields {
-			fieldSignatures = append(fieldSignatures, fmt.Sprintf("%s:%s", field.Name, field.Type))
+			// 处理默认值
+			defaultValue := "NULL"
+			if field.Default.Valid {
+				defaultValue = field.Default.String
+			}
+
+			// 转义注释中的特殊字符，避免影响签名解析
+			comment := strings.ReplaceAll(field.Comment, ":", "&#58;")
+			comment = strings.ReplaceAll(comment, "\n", " ")
+
+			// 格式：字段名:类型:默认值:注释
+			fieldSignatures = append(fieldSignatures, fmt.Sprintf("%s:%s:%s:%s",
+				field.Name, field.Type, defaultValue, comment))
 		}
 		sort.Strings(fieldSignatures)
 
@@ -297,21 +311,31 @@ func extractDatabaseStructure(db *gorm.DB, dbName string) (*DatabaseSignature, e
 // extractTableFields 提取表的字段信息
 func extractTableFields(db *gorm.DB, tableName string) ([]FieldInfo, error) {
 	var results []struct {
-		Field string `gorm:"column:Field"`
-		Type  string `gorm:"column:Type"`
+		Field   string         `gorm:"column:COLUMN_NAME"`
+		Type    string         `gorm:"column:COLUMN_TYPE"`
+		Default sql.NullString `gorm:"column:COLUMN_DEFAULT"`
+		Comment string         `gorm:"column:COLUMN_COMMENT"`
 	}
 
-	if err := db.Raw(fmt.Sprintf("DESCRIBE `%s`", tableName)).Scan(&results).Error; err != nil {
+	// 使用 information_schema 获取完整的字段信息，包括注释
+	query := fmt.Sprintf(`
+		SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_DEFAULT, COLUMN_COMMENT
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+		ORDER BY ORDINAL_POSITION
+	`)
+
+	if err := db.Raw(query, tableName).Scan(&results).Error; err != nil {
 		return nil, err
 	}
 
 	fields := make([]FieldInfo, 0, len(results))
 	for _, r := range results {
-		// 简化类型定义（移除长度、精度等细节，只保留基本类型）
-		fieldType := simplifyFieldType(r.Type)
 		fields = append(fields, FieldInfo{
-			Name: r.Field,
-			Type: fieldType,
+			Name:    r.Field,
+			Type:    r.Type, // 保留完整类型（包括长度）
+			Default: r.Default,
+			Comment: r.Comment,
 		})
 	}
 
@@ -664,7 +688,7 @@ func saveSignature(sig *DatabaseSignature, filename string) {
 // compareSignatures 对比两个签名
 // reference: shop_01.sql 执行后的数据库结构
 // current: 迁移文件执行后的数据库结构
-func compareSignatures(reference, current *DatabaseSignature, companyUuid uint64) {
+func compareSignatures(reference, current *DatabaseSignature, _ uint64) {
 	fmt.Println("=" + strings.Repeat("=", 79))
 	fmt.Println("数据库结构签名对比")
 	fmt.Println("参考签名: shop_01.sql 执行后的数据库结构")
@@ -760,30 +784,32 @@ func compareSignatures(reference, current *DatabaseSignature, companyUuid uint64
 		}
 	}
 
-	// 对比共同表的字段（包括类型检查）
+	// 对比共同表的字段（包括类型、默认值、注释检查）
 	type FieldDiff struct {
-		MissingInSQL []string // shop_01.sql 执行后缺失的字段（迁移文件执行后新增的）
-		ExtraInDB    []string // 当前数据库中多出的字段
-		TypeMismatch []string // 字段类型不一致（格式：字段名 (参考类型 -> 当前类型)）
+		MissingInSQL    []string // shop_01.sql 执行后缺失的字段（迁移文件执行后新增的）
+		ExtraInDB       []string // 当前数据库中多出的字段
+		TypeMismatch    []string // 字段类型不一致（格式：字段名 (参考类型 -> 当前类型)）
+		DefaultMismatch []string // 默认值不一致
+		CommentMismatch []string // 注释不一致
 	}
 
 	fieldDiffs := make(map[string]*FieldDiff)
 
 	for _, table := range commonTables {
-		// 构建字段映射：字段名 -> 类型
-		refFieldMap := make(map[string]string) // 字段名 -> 类型
+		// 构建字段映射：字段名 -> 完整签名（类型:默认值:注释）
+		refFieldMap := make(map[string]string) // 字段名 -> 完整信息
 		for _, f := range refTables[table].Fields {
-			// 解析字段签名：字段名:类型
-			parts := strings.Split(f, ":")
-			if len(parts) == 2 {
-				refFieldMap[parts[0]] = parts[1]
+			// 解析字段签名：字段名:类型:默认值:注释
+			parts := strings.SplitN(f, ":", 2)
+			if len(parts) >= 2 {
+				refFieldMap[parts[0]] = parts[1] // 保存类型:默认值:注释
 			}
 		}
 
 		curFieldMap := make(map[string]string)
 		for _, f := range curTables[table].Fields {
-			parts := strings.Split(f, ":")
-			if len(parts) == 2 {
+			parts := strings.SplitN(f, ":", 2)
+			if len(parts) >= 2 {
 				curFieldMap[parts[0]] = parts[1]
 			}
 		}
@@ -791,27 +817,59 @@ func compareSignatures(reference, current *DatabaseSignature, companyUuid uint64
 		diff := &FieldDiff{}
 
 		// 检查参考签名中的字段（迁移文件中的字段）
-		for fieldName, refType := range refFieldMap {
-			curType, exists := curFieldMap[fieldName]
+		for fieldName, refFullInfo := range refFieldMap {
+			curFullInfo, exists := curFieldMap[fieldName]
 			if !exists {
 				// 字段在参考签名中存在，但在当前数据库中不存在
+				refParts := strings.SplitN(refFullInfo, ":", 3)
+				refType := refParts[0]
 				diff.MissingInSQL = append(diff.MissingInSQL, fmt.Sprintf("%s (%s)", fieldName, refType))
-			} else if refType != curType {
-				// 字段存在但类型不一致
-				diff.TypeMismatch = append(diff.TypeMismatch, fmt.Sprintf("%s (%s -> %s)", fieldName, refType, curType))
+			} else if refFullInfo != curFullInfo {
+				// 字段存在但信息不一致，详细对比
+				refParts := strings.SplitN(refFullInfo, ":", 3)
+				curParts := strings.SplitN(curFullInfo, ":", 3)
+
+				if len(refParts) >= 1 && len(curParts) >= 1 {
+					refType := refParts[0]
+					curType := curParts[0]
+					if refType != curType {
+						diff.TypeMismatch = append(diff.TypeMismatch,
+							fmt.Sprintf("%s (%s -> %s)", fieldName, refType, curType))
+					}
+				}
+
+				if len(refParts) >= 2 && len(curParts) >= 2 {
+					refDefault := refParts[1]
+					curDefault := curParts[1]
+					if refDefault != curDefault {
+						diff.DefaultMismatch = append(diff.DefaultMismatch,
+							fmt.Sprintf("%s (%s -> %s)", fieldName, refDefault, curDefault))
+					}
+				}
+
+				if len(refParts) >= 3 && len(curParts) >= 3 {
+					refComment := refParts[2]
+					curComment := curParts[2]
+					if refComment != curComment {
+						diff.CommentMismatch = append(diff.CommentMismatch,
+							fmt.Sprintf("%s (%s -> %s)", fieldName, refComment, curComment))
+					}
+				}
 			}
 		}
 
 		// 检查当前数据库中的额外字段
 		for fieldName := range curFieldMap {
 			if _, exists := refFieldMap[fieldName]; !exists {
-				curType := curFieldMap[fieldName]
+				curParts := strings.SplitN(curFieldMap[fieldName], ":", 3)
+				curType := curParts[0]
 				diff.ExtraInDB = append(diff.ExtraInDB, fmt.Sprintf("%s (%s)", fieldName, curType))
 			}
 		}
 
 		// 如果有差异，记录
-		if len(diff.MissingInSQL) > 0 || len(diff.ExtraInDB) > 0 || len(diff.TypeMismatch) > 0 {
+		if len(diff.MissingInSQL) > 0 || len(diff.ExtraInDB) > 0 || len(diff.TypeMismatch) > 0 ||
+			len(diff.DefaultMismatch) > 0 || len(diff.CommentMismatch) > 0 {
 			fieldDiffs[table] = diff
 		}
 	}
@@ -846,6 +904,26 @@ func compareSignatures(reference, current *DatabaseSignature, companyUuid uint64
 				sort.Strings(diff.TypeMismatch)
 				fmt.Printf("  ⚠️  字段类型不一致:\n")
 				for _, field := range diff.TypeMismatch {
+					fmt.Printf("     - %s\n", field)
+				}
+			}
+
+			// 显示默认值不一致
+			if len(diff.DefaultMismatch) > 0 {
+				hasAnyDiff = true
+				sort.Strings(diff.DefaultMismatch)
+				fmt.Printf("  ⚠️  默认值不一致:\n")
+				for _, field := range diff.DefaultMismatch {
+					fmt.Printf("     - %s\n", field)
+				}
+			}
+
+			// 显示注释不一致
+			if len(diff.CommentMismatch) > 0 {
+				hasAnyDiff = true
+				sort.Strings(diff.CommentMismatch)
+				fmt.Printf("  ⚠️  注释不一致:\n")
+				for _, field := range diff.CommentMismatch {
 					fmt.Printf("     - %s\n", field)
 				}
 			}
@@ -1132,7 +1210,7 @@ func splitSQLStatements(content string) []string {
 }
 
 // runMigrations 执行迁移文件
-func runMigrations(dbName string) error {
+func runMigrations(_ string) error {
 	workDir, err := getProjectRoot()
 	if err != nil {
 		return fmt.Errorf("获取项目根目录失败: %w", err)

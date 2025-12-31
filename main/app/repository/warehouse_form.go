@@ -13,19 +13,21 @@ import (
 
 type IWarehouseFormRepo interface {
 	IWarehouseFormQueryRepo
-	CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                   // 创建出库单记录
-	CreateWarehouseFormRecord(obj model.WarehouseForm) error                         // 创建入库单记录
-	CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error           // 创建出库单记录
-	CreateWarehouseOutFormItemRecords(list []*model.WarehouseOutFormItem) error      // 批量创建出库单明细记录
-	CreateWarehouseFormItemRecords(list []*model.WarehouseFormItem) error            // 批量创建入库单明细记录
-	UpdateWarehouseOutFormItemRecordsStatus(saleOrderUuid uint64) error              // 更新该销售订单的所有出库单记录为已出库
-	UpdateWarehouseOutFormItemRecordsStatusBySaleBillUuid(saleBillUuid uint64) error // 更新该销售账单的所有出库单记录为已出库
-	UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error          // 更新该销售账单的所有出库单记录为已扣减库存
-	UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error                // 更新该销售账单的所有入库单记录为已加库存
-	UpdateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                   // 更新出库单记录
-	UpdateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error           // 更新出库单明细记录
-	GenerateWarehouseFormNo(timezone string) string                                  // 生成入库单编号
-	GenerateWarehouseOutFormNo(timezone string) string                               // 生成出库单编号
+	CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                                // 创建出库单记录
+	CreateWarehouseOutFormRecordAll(objs []*model.WarehouseOutForm) error                         // 批量创建出库单记录
+	CreateWarehouseFormRecord(obj model.WarehouseForm) error                                      // 创建入库单记录
+	CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error                        // 创建出库单记录
+	CreateWarehouseOutFormItemRecords(list []*model.WarehouseOutFormItem) error                   // 批量创建出库单明细记录
+	CreateWarehouseFormItemRecords(list []*model.WarehouseFormItem) error                         // 批量创建入库单明细记录
+	UpdateWarehouseOutFormItemRecordsStatus(saleOrderUuid uint64) error                           // 更新该销售订单的所有出库单记录为已出库
+	UpdateWarehouseOutFormItemRecordsStatusBySaleBillUuid(saleBillUuid uint64) error              // 更新该销售账单的所有出库单记录为已出库
+	UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error                       // 更新该销售账单的所有出库单记录为已扣减库存
+	UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid uint64) error // 更新该外卖订单的所有出库单记录为已扣减库存
+	UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error                             // 更新该销售账单的所有入库单记录为已加库存
+	UpdateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                                // 更新出库单记录
+	UpdateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error                        // 更新出库单明细记录
+	GenerateWarehouseFormNo(timezone string) string                                               // 生成入库单编号
+	GenerateWarehouseOutFormNo(timezone string) string                                            // 生成出库单编号
 }
 
 type IWarehouseFormQueryRepo interface {
@@ -197,6 +199,10 @@ func (r *warehouseFormRepoImpl) CreateWarehouseOutFormRecord(obj model.Warehouse
 	return r.db.Model(&model.WarehouseOutForm{}).Create(&obj).Error
 }
 
+func (r *warehouseFormRepoImpl) CreateWarehouseOutFormRecordAll(objs []*model.WarehouseOutForm) error {
+	return r.db.Model(&model.WarehouseOutForm{}).CreateInBatches(objs, 100).Error
+}
+
 func (r *warehouseFormRepoImpl) CreateWarehouseFormRecord(obj model.WarehouseForm) error {
 	obj.SetNil()
 	return r.db.Model(&model.WarehouseForm{}).Create(&obj).Error
@@ -242,6 +248,11 @@ func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecordsStatusBySaleBil
 // UpdateWarehouseOutFormItemRecordsReduceStock 更新该销售账单的所有出库单记录为已扣减库存
 func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error {
 	return r.db.Model(&model.WarehouseOutFormItem{}).Where("sale_bill_uuid = ? AND delete_time = ?", saleBillUuid, constant.NotDeleted).Update("reduce_stock", constant.WarehouseOutFormItemReduceStockSuccess).Error
+}
+
+// UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid 更新该外卖订单的所有出库单记录为已扣减库存
+func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid uint64) error {
+	return r.db.Model(&model.WarehouseOutFormItem{}).Where("takeout_order_uuid = ? AND delete_time = ?", takeoutOrderUuid, constant.NotDeleted).Update("reduce_stock", constant.WarehouseOutFormItemReduceStockSuccess).Error
 }
 
 // UpdateWarehouseFormItemRecordsAddStock 更新该销售账单的所有入库单记录为已加库存

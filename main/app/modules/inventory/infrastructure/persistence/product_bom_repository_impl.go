@@ -37,7 +37,7 @@ func (r *ProductBomRepositoryImpl) FindByUuid(
 	// 使用现有的 GetFlavorProductBomByUuid 方法，它已经包含了必要的预加载
 	// 预加载链：ProductBomCard -> RelatedMaterials -> Material -> WarehouseItems
 	// 这样可以一次性加载所有需要的数据，避免 N+1 查询问题
-	productBom, err := repo.GetFlavorProductBomByUuid(uuid)
+	productBom, err := repo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), uuid)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -188,6 +188,46 @@ func (r *ProductBomRepositoryImpl) FindByProductPackageUuid(
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询商品BOM列表失败")
+	}
+
+	// 转换为 interface{} 切片
+	result := make([]interface{}, len(productBoms))
+	for i, bom := range productBoms {
+		result[i] = bom
+	}
+
+	return result, nil
+}
+
+// FindByProductPackageUuids 根据商品包UUID列表批量查找BOM列表
+// 性能优化：
+// 1. 使用索引 product_package_uuid 字段进行快速查询
+// 2. 预加载 ProductBomCard.RelatedMaterials.Material.WarehouseItems，避免 N+1 查询
+// 3. 批量查询，减少数据库往返次数
+func (r *ProductBomRepositoryImpl) FindByProductPackageUuids(
+	ctx context.Context,
+	productPackageUuids []uint64,
+) ([]interface{}, error) {
+	if len(productPackageUuids) == 0 {
+		return []interface{}{}, nil
+	}
+
+	db := r.getDB(ctx)
+	repo := appRepo.NewProductBomRepo(db)
+
+	// 创建 DBOption 函数，用于 IN 查询
+	whereProductPackageUuids := func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_uuid IN ?", productPackageUuids)
+	}
+
+	// 批量查询多个商品包下的所有BOM
+	// 预加载关联数据，避免后续查询时的 N+1 问题
+	productBoms, err := repo.GetProductBoms(
+		whereProductPackageUuids,
+		appRepo.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询商品BOM列表失败")
 	}
 
 	// 转换为 interface{} 切片

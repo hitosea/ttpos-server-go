@@ -50,7 +50,7 @@ type IRpc interface {
     GetSiteCode(ctx context.Context) string
     
     // GetAndProcessSiteAuthorization 获取站点授权信息
-    GetAndProcessSiteAuthorization(ctx context.Context, siteCode string) (*SiteAuth, error)
+    GetAndProcessSiteAuthorization(ctx context.Context, siteCode string) (*erp.SiteAuthorization, error)
     
     // GetAndProcessCashierAuthorization 获取收银员授权信息
     GetAndProcessCashierAuthorization(ctx context.Context, userEmail string) (string, error)
@@ -207,15 +207,20 @@ type ReportParams struct {
 }
 ```
 
-### SiteAuth 站点授权
+### SiteAuthorization 站点授权（v2.12.0 更新）
 
 ```go
-type SiteAuth struct {
-    SiteCode      string // 站点编码
+// 定义位置：internal/model/dto/erp/authorization.go
+type SiteAuthorization struct {
     SiteUrl       string // 站点 URL
-    Authorization string // 授权头
+    Authorization string // 授权令牌
 }
 ```
+
+**架构说明**（v2.12.0）：
+- `SiteAuthorization` 已从 Logic 层（`internal/logic/erpnext/token.go`）移至 DTO 层
+- 新位置：`internal/model/dto/erp/authorization.go`
+- 原因：Service 接口层不应依赖 Logic 层类型，符合 GoFrame 架构规范
 
 ## 🔄 使用流程
 
@@ -350,4 +355,33 @@ ERPNext 集成服务作为 ttpos-erp 的基础设施层，提供了统一、可�
 - **可扩展**: 易于添加新的 DocType 和方法
 - **可维护**: 集中的 API 调用管理
 - **可测试**: 接口抽象便于 Mock 测试
+
+## 🆕 v2.12.0 版本更新
+
+### 架构优化
+
+1. **类型定义重构**
+   - `SiteAuthorization` 从 Logic 层移至 DTO 层
+   - 新位置：`internal/model/dto/erp/authorization.go`
+   - 原因：符合 GoFrame 架构规范，Service 接口层不依赖 Logic 层类型
+
+### 影响说明
+
+- **接口签名**: `IRpc.GetAndProcessSiteAuthorization` 返回类型从 `*SiteAuth` 更新为 `*erp.SiteAuthorization`
+- **向后兼容**: 类型字段保持不变，无需修改业务逻辑
+- **代码生成**: `gf gen service` 自动生成正确的接口定义
+
+### 迁移指南
+
+无需手动迁移，执行 `gf gen service` 即可自动更新接口定义。如有自定义代码引用 `SiteAuthorization`，请更新导入路径：
+
+```go
+// 旧代码
+import "ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"
+auth := &erpnext.SiteAuthorization{...}
+
+// 新代码
+import "ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+auth := &erp.SiteAuthorization{...}
+```
 

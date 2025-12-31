@@ -23,7 +23,7 @@ type PaymentMethodList struct {
 type PaymentMethodListItemResp struct {
 	Uuid     uint64 `json:"uuid"`      // 支付方式UUID
 	Name     string `json:"name"`      // 支付方式名称
-	Source   int    `json:"source"`    // 来源 0-系统 1-手动 2-LianLianPay
+	Source   int    `json:"source"`    // 来源 0-系统 1-手动 2-LianLianPay 3-Kbank
 	Status   int    `json:"status"`    // 状态 0-禁用 1-启用 2-草稿
 	Sort     int    `json:"sort"`      // 排序
 	LogoFile string `json:"logo_file"` // Logo文件URL
@@ -56,11 +56,14 @@ type PaymentMethodListResp struct {
 
 // DefaultPaymentMethodResp 默认支付方式响应
 type DefaultPaymentMethodResp struct {
-	Code int    `json:"code"` // 支付方式code
-	Name string `json:"name"` // 支付方式名称
-	Url  string `json:"url"`  // 图片路径
-	Img  string `json:"img"`  // 图片路径
-	Sort int    `json:"sort"` // 排序
+	Code        int    `json:"code"`         // 支付方式code
+	Name        string `json:"name"`         // 名称
+	PaymentName string `json:"payment_name"` // 支付方式
+	Url         string `json:"url"`          // 图片路径
+	Img         string `json:"img"`          // 图片路径
+	Sort        int    `json:"sort"`         // 排序
+	CanAdd      bool   `json:"can_add"`      // 是否可添加
+	Source      int    `json:"source"`       // 来源
 }
 
 // LianlianPayConfigResp LianlianPay 配置响应

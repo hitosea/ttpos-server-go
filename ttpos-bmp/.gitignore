@@ -20,3 +20,7 @@ temp.yaml
 **/hack/config.yaml
 app/**/internal/controller/rpc/api/api.go
 
+# 构建成品
+app/ttpos-erp/ttpos-erp
+app/ttpos-takeout/ttpos-takeout
+app/ttpos-message/ttpos-message

@@ -11,6 +11,8 @@ type IProductBomTakeoutRepo interface {
 	CreateProductBomTakeout(productBomTakeout *model.ProductBomTakeout) error
 	UpdateProductBomTakeout(data map[string]any, opts ...DBOption) error
 	DestroyProductBomTakeout(opts ...DBOption) error
+	ForceDestroyProductBomTakeout(opts ...DBOption) error
+	DeleteProductBomTakeout(opts ...DBOption) error // 物理删除
 }
 
 type IProductBomTakeoutQueryRepo interface {
@@ -52,6 +54,27 @@ func (r *productBomTakeoutRepoImpl) DestroyProductBomTakeout(opts ...DBOption) e
 	}
 
 	return db.Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error
+}
+
+func (r *productBomTakeoutRepoImpl) ForceDestroyProductBomTakeout(opts ...DBOption) error {
+	db := r.db.Model(&model.ProductBomTakeout{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.ProductBomTakeout{}).Error
+}
+
+// DeleteProductBomTakeout 物理删除外卖规格价格记录
+func (r *productBomTakeoutRepoImpl) DeleteProductBomTakeout(opts ...DBOption) error {
+	db := r.db.Unscoped() // Unscoped 允许物理删除
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.ProductBomTakeout{}).Error
 }
 
 func (r *productBomTakeoutRepoImpl) GetProductBomTakeout(opts ...DBOption) (*model.ProductBomTakeout, error) {

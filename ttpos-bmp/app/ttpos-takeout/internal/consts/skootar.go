@@ -27,7 +27,8 @@ const (
 // EstimateOption 表示配送额外可选服务的类型。
 type EstimateOption string
 
-/**
+/*
+*
 Extra optional for delivery
 
 1 is Delivery Document, Collect cheque, Deliver invoice

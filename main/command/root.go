@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/constant"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
@@ -36,6 +38,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 var rootCommand = &cobra.Command{
@@ -92,6 +95,14 @@ var rootCommand = &cobra.Command{
 
 		// 初始化数据库管理器
 		var dbm *database.DBManager = database.GetDBManager(config.Database)
+
+		// 初始化对象存储缓存配置的缓存层（使用三级缓存基础设施）
+		objectStorageAdapter.InitObjectStorageCacheConfigCache(
+			cache.Global,
+			func() *gorm.DB {
+				return dbm.GetDB(constant.DefaultDB)
+			},
+		)
 
 		// 初始化系统事件总线
 		event.NewSystemBus()

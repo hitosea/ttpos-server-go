@@ -25,7 +25,8 @@ func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
 // ICategoryRepositorySrv 分类仓库接口
 type ICategoryRepositorySrv interface {
 	CreateCategory(params req.CreateCategoryRequest) (uint64, error)
-	GetCategoryUuidByNameOptimized(name string) (uint64, error) // 根据分类名称获取分类UUID（支持多语言）
+	GetCategoryUuidByNameOptimized(name string) (uint64, error)             // 根据分类名称获取分类UUID（支持多语言）
+	UpdateCategorySource(uuid uint64, source string, sourceID string) error // 更新分类的来源信息
 }
 
 func NewCategoryRepositoryService(db *gorm.DB) ICategoryRepositorySrv {
@@ -87,6 +88,16 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 
 func (s *CategoryRepositoryService) UpdateProductCategory(uuid uint64, productCategory model.ProductCategory) error {
 	return s.db.Model(&model.ProductCategory{}).Where("uuid = ?", uuid).Updates(productCategory).Error
+}
+
+// UpdateCategorySource 更新分类的来源信息
+func (s *CategoryRepositoryService) UpdateCategorySource(uuid uint64, source string, sourceID string) error {
+	return s.db.Model(&model.ProductCategory{}).
+		Where("uuid = ?", uuid).
+		Updates(map[string]interface{}{
+			"source":    source,
+			"source_id": sourceID,
+		}).Error
 }
 
 // GetCategoryUuidByNameOptimized 支持分级分类路径查询 (例如: "主分类/子分类")

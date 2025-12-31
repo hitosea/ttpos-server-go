@@ -20,4 +20,8 @@ type IProductBomRepository interface {
 	// FindByProductPackageUuid 根据商品包UUID查找BOM列表
 	// 用于批量查询某个商品包下的所有BOM
 	FindByProductPackageUuid(ctx context.Context, productPackageUuid uint64) ([]interface{}, error)
+
+	// FindByProductPackageUuids 根据商品包UUID列表批量查找BOM列表
+	// 用于批量查询多个商品包下的所有BOM
+	FindByProductPackageUuids(ctx context.Context, productPackageUuids []uint64) ([]interface{}, error)
 }

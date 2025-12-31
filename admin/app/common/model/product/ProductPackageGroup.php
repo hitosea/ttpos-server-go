@@ -55,21 +55,28 @@ class ProductPackageGroup extends BaseModel
         // 根据数组索引设置排序值
         foreach ($packageGroup as $index => $item) {
             $sortValue = $index + 1; // 排序从 1 开始
-            // 支持 group_type 和 optional_count 字段
+            // 支持 group_type、optional_min_count 和 optional_count 字段
             $groupUuid = createUuid();
             $multiLanguageNameUuid = (new MultiLanguageName)->saveNames($item['group_name']);
             $groupData = [
                 'group_type' => $item['group_type'] ?? 0, // 分组类型 0-固定 1-可选
-                'optional_count' => $item['optional_count'] ?? 0, // 可选数量
+                'optional_min_count' => $item['optional_min_count'] ?? 0, // 最小可选数量
+                'optional_count' => $item['optional_count'] ?? 0, // 最大可选数量
             ];
             
-            // 数据校验：可选数量必须 >= 1
-            $optionalCount = $groupData['optional_count'] ?? 0;
-            if ($optionalCount < 1) {
-                throw new \Exception('套餐组可选数量不能小于 1');
+            // 数据校验：最小可选数量不能大于最大可选数量
+            $minCount = $groupData['optional_min_count'] ?? 0;
+            $maxCount = $groupData['optional_count'] ?? 0;
+            if ($minCount > $maxCount) {
+                throw new \Exception('套餐组最小可选数量不能大于最大可选数量');
             }
             
-            // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否大于可选数量
+            // 数据校验：最大可选数量必须 >= 1
+            if ($maxCount < 1) {
+                throw new \Exception('套餐组最大可选数量不能小于 1');
+            }
+            
+            // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否满足要求
             if ($groupData['group_type'] == 1) { // 可选类型
                 $productList = $item['product_list'] ?? [];
                 // 统计必选+默认商品总数（去重：一个商品可能既是必选又是默认，只算一次）
@@ -82,8 +89,8 @@ class ProductPackageGroup extends BaseModel
                         $requiredOrDefaultCount++;
                     }
                 }
-                if ($requiredOrDefaultCount > $optionalCount) {
-                    throw new \Exception('必选或默认不可大于可选数量');
+                if ($requiredOrDefaultCount > $maxCount) {
+                    throw new \Exception('必选或默认不可大于最大可选数量');
                 }
             }
             
@@ -93,7 +100,8 @@ class ProductPackageGroup extends BaseModel
                 'multi_language_name_uuid' => $multiLanguageNameUuid, // 多语言名称uuid
                 'product_package_uuid' => $product['uuid'], // 套餐uuid
                 'group_type' => $groupData['group_type'], // 分组类型
-                'optional_count' => $groupData['optional_count'], // 可选数量
+                'optional_min_count' => $groupData['optional_min_count'], // 最小可选数量
+                'optional_count' => $groupData['optional_count'], // 最大可选数量
                 'sort' => $sortValue, // 排序字段
                 'create_time' => time(), // 创建时间
                 'update_time' => time(), // 更新时间
@@ -137,19 +145,26 @@ class ProductPackageGroup extends BaseModel
         // 根据数组索引设置排序值
         foreach ($groupList as $index => $item) {
             $sortValue = $index + 1; // 排序从 1 开始
-            // 支持 group_type 和 optional_count 字段
+            // 支持 group_type、optional_min_count 和 optional_count 字段
             $groupData = [
                 'name' => $item['group_name'], // 套餐分组名称
                 'product_package_uuid' => $product['uuid'], // 套餐uuid
                 'group_type' => $item['group_type'] ?? 0, // 分组类型 0-固定 1-可选
-                'optional_count' => $item['optional_count'] ?? 0, // 可选数量
+                'optional_min_count' => $item['optional_min_count'] ?? 0, // 最小可选数量
+                'optional_count' => $item['optional_count'] ?? 0, // 最大可选数量
                 'sort' => $sortValue, // 排序字段
             ];
             
-            // 数据校验：可选数量必须 >= 1
-            $optionalCount = $groupData['optional_count'] ?? 0;
-            if ($optionalCount < 1) {
-                throw new \Exception('套餐组可选数量不能小于 1');
+            // 数据校验：最小可选数量不能大于最大可选数量
+            $minCount = $groupData['optional_min_count'] ?? 0;
+            $maxCount = $groupData['optional_count'] ?? 0;
+            if ($minCount > $maxCount) {
+                throw new \Exception('套餐组最小可选数量不能大于最大可选数量');
+            }
+            
+            // 数据校验：最大可选数量必须 >= 1
+            if ($maxCount < 1) {
+                throw new \Exception('套餐组最大可选数量不能小于 1');
             }
             
             $groupUuid = $item['group_id'] ?? 0;
@@ -174,7 +189,7 @@ class ProductPackageGroup extends BaseModel
             }
             $groupItemList = $item['product_list'] ?? [];
             
-            // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否大于可选数量
+            // 数据校验：当 group_type 为可选时，检查必选+默认商品总数是否满足要求
             if ($groupData['group_type'] == 1) { // 可选类型
                 // 统计必选+默认商品总数（去重：一个商品可能既是必选又是默认，只算一次）
                 $requiredOrDefaultCount = 0;
@@ -186,8 +201,8 @@ class ProductPackageGroup extends BaseModel
                         $requiredOrDefaultCount++;
                     }
                 }
-                if ($requiredOrDefaultCount > $optionalCount) {
-                    throw new \Exception('必选或默认不可大于可选数量');
+                if ($requiredOrDefaultCount > $maxCount) {
+                    throw new \Exception('必选或默认不可大于最大可选数量');
                 }
             }
             

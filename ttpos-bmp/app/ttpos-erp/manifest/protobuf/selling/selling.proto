@@ -54,8 +54,10 @@ message OpenPosEntryInfo {
 }
 
 message OpenPosEntryDetail {
-  string mode_of_payment = 1; // 支付方式
-  double opening_amount = 2; // 开帐金额
+  optional string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
+  double opening_amount = 2; // 开帐金额,必填
+  optional string payment_id = 3; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
 }
 
 message OpenPosEntryResp {
@@ -70,9 +72,11 @@ message ClosePosEntryReq {
 }
 
 message ClosePosEntryDetail {
-  string mode_of_payment = 1; // 支付方式,必填
+  optional string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
   double opening_amount = 2; // 开帐金额,必填
   double closing_amount = 3; // 关帐金额,必填
+  optional string payment_id = 4; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
 }
 
 message ClosePosEntryInfo {
@@ -105,6 +109,8 @@ message SavePosInvoiceReq {
   string amended_products_invoice_name = 14; // 反结账后，重新结账时填写原商品发票名称
   string amended_material_invoice_name = 15; // 反结账后，重新结账时填写原材料发票名称
   string remark = 16; // 备注,可选
+  optional string takeout_order_no = 17;    // 外卖订单号，可选
+  optional string takeout_provider = 18;    // 外卖平台提供商，可选
 }
 
 // SavePosInvoiceResp 保存POS发票响应消息
@@ -134,8 +140,10 @@ message PosInvoiceTax {
 
 // PosInvoicePayment POS发票付款
 message PosInvoicePayment {
-  string mode_of_payment = 1; // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
+  string mode_of_payment = 1; // 支付方式，与 payment_id 二选一（必填其中之一）
   double amount = 2;          // 金额，必填
+  optional string payment_id = 3; // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+  // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
 }
 
 // ReturnPosInvoiceReq 退款POS发票请求消息
@@ -175,6 +183,7 @@ message CancelPosInvoiceResp {
 message ModeOfPayment {
   string name = 1; // 支付方式名称
   bool enabled = 2; // 是否启用
+  string payment_id = 3; // 支付方式唯一标识（PaymentID）
 }
 
 // SaveModeOfPaymentReq 保存/同步支付方式请求
@@ -185,11 +194,14 @@ message SaveModeOfPaymentReq {
   string pay_type = 4;     // 支付类型（TTPOS 定义），创建时必填
   optional bool enabled = 5; // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
   optional string name = 6;  // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+  string payment_id = 7;     // 支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字
+  optional string added_by = 8; // 创建来源标识，"sys" 表示系统创建
 }
 
 // SaveModeOfPaymentResp 保存/同步支付方式响应
 message SaveModeOfPaymentResp {
-  string name = 1; // 规范化名称 【channel-]{pay_type}-{NNNN} - {company_abbr}
+  string name = 1;       // 规范化名称 [channel-]{pay_type}-{NNNN} - {company_abbr}
+  string payment_id = 2; // 支付方式唯一标识（PaymentID）
 }
 
 message GetModeOfPaymentListReq {
@@ -199,6 +211,17 @@ message GetModeOfPaymentListReq {
 
 message GetModeOfPaymentListResp {
   repeated ModeOfPayment mode_of_payment_list = 1; // 支付方式列表
+}
+
+// GetModeOfPaymentReq 查询单个支付方式请求
+message GetModeOfPaymentReq {
+  optional string name = 1;       // 支付方式名称（精确匹配），与 payment_id 二选一
+  optional string payment_id = 2; // 支付方式唯一标识（PaymentID），与 name 二选一
+}
+
+// GetModeOfPaymentResp 查询单个支付方式响应
+message GetModeOfPaymentResp {
+  ModeOfPayment mode_of_payment = 1; // 支付方式信息
 }
 
 // SellingService 服务定义
@@ -222,8 +245,11 @@ service SellingService {
   // 取消 Pos Invoice
   rpc CancelPosInvoice (CancelPosInvoiceReq) returns (erp.ResponseInfo);
 
-  //获取支付方式
+  //获取支付方式列表
   rpc GetModeOfPaymentList (GetModeOfPaymentListReq) returns (erp.ResponseInfo);
+
+  // 查询单个支付方式
+  rpc GetModeOfPayment (GetModeOfPaymentReq) returns (erp.ResponseInfo);
 
   // 保存支付方式
   rpc SaveModeOfPayment (SaveModeOfPaymentReq) returns (erp.ResponseInfo);

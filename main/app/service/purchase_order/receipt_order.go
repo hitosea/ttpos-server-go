@@ -89,6 +89,42 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			headquarterInfo = hqInfo
 		}
 
+		// 获取 saas 数据库连接
+		saasDB := s.dbm.GetDB(constant.DefaultDB)
+		if saasDB == nil {
+			return errors.New("saas 数据库连接失败")
+		}
+
+		// 获取公司 UUID（使用总部 UUID 或当前公司 UUID）
+		companyUuid := ctx.GetCompanySetting().HeadquarterUuid
+		if companyUuid == 0 {
+			companyUuid = ctx.GetCompanyUuid()
+		}
+
+		// 确定前缀和编号类型
+		var prefix, numberType string
+		if purchaseOrder.PurchaseType == 2 {
+			// 品采收货（内部）
+			prefix = "TPHY"
+			numberType = constant.NumberTypeBrandReceipt
+		} else {
+			// 采购收货（外部）
+			prefix = "PRC"
+			numberType = constant.NumberTypePurchaseReceipt
+		}
+
+		// 生成收货单编号
+		receiptNo, err := s.helper.generateReceiptNo(
+			saasDB,
+			companyUuid,
+			prefix,
+			numberType,
+			ctx.GetCompanySetting().Timezone,
+		)
+		if err != nil {
+			return errors.WithMessage(err, "生成收货单编号失败")
+		}
+
 		// 创建收货单
 		receiptOrderUuid, err := utils.GetID()
 		if err != nil {
@@ -99,7 +135,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			BaseModel: model.BaseModel{
 				Uuid: receiptOrderUuid,
 			},
-			OrderNo:                s.helper.generateReceiptNo(tx, ctx.GetCompanySetting().Timezone),
+			OrderNo:                receiptNo,
 			Status:                 utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending),
 			PurchaseOrderUuid:      req.PurchaseOrderUuid,
 			PurchaseOrderNo:        purchaseOrder.OrderNo,

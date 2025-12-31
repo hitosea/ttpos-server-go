@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -104,11 +105,11 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 		saleOrder.AddCoupon(req.CouponUuid, req.CouponRequirement, couponAmount)
 	}
 
-	db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 选择优惠券后，将积分自动抵扣失效改为手动抵扣
 		saleOrder.AutoPointsExchange = 0
 
-		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
 		if hasCoupon {
@@ -123,7 +124,9 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	// 获取支付结账页面信息
 	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
@@ -351,6 +354,23 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(errors.New("支付方式未开启"))
 	}
 
+	// 验证支付方式是否在开账时保存的列表中
+	staff := ctx.GetStaff()
+	if staff.DutyNo != "" {
+		cashBoxSrv := NewCashBoxSrv(s.dbm)
+		statisticsSrv := NewStatisticsSrv()
+		staffShiftSrv := NewStaffShiftSrv(cache.Global, s.dbm, cashBoxSrv, statisticsSrv)
+		isValid, err := staffShiftSrv.ValidatePaymentMethod(ctx, staff.DutyNo, paymentMethod.Uuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if !isValid {
+			return nil, errors.New("请交班后再重新选择该支付方式")
+		}
+	} else {
+		return nil, errors.New("请交班后再重新选择该支付方式")
+	}
+
 	// 支付方式是否可用
 	if ctx.GetSource() == jwt.SourceAssistant {
 		if paymentMethod.IsShowAssistant == 0 {
@@ -438,6 +458,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		Amount:               amount, // 实收金额
 		TransactionNumber:    "",
 		Status:               paymentOrderStatus,
+		PaymentInfo:          req.PaymentInfo,
 	}
 
 	// 判断这个支付方式是否已经支付过，如果已经支付过，则更新支付单
@@ -511,10 +532,17 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 获取支付单
 	paymentOrder, err := repository.NewPaymentOrderRepo(db).GetPaymentOrderRecord(req.PaymentOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// Kbank支付不支持撤销
+	if paymentOrder.PaymentMethod != nil && paymentOrder.PaymentMethod.IsKbankPay() {
+		return nil, errors.New("Kbank支付不支持撤销")
+	}
+
 	// 撤销支付单
 	paymentOrder.Cancel()
 	paymentOrder.SetNil()
@@ -825,8 +853,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 更新会员消费金额和消费次数
 		consumptionAmount := decimal.NewFromFloat(saleOrder.GetAmountValue()).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).Truncate(2).InexactFloat64()
-		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount)
-		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
+		if err := repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if err := repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 		// 处理会员升级 todo 如果后面的逻辑报错，这个升级没有回滚，应该放在事务中升级
 		utils.Go(func() {
 			s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), saleOrder.ConsumerUuid)
@@ -981,7 +1013,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		}
 		// 构建出库单
 
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -1605,13 +1637,16 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
 			continue
 		}
+		if paymentMethod.Code == constant.PaymentMethodCodeFreeMealForErp {
+			continue
+		}
+		// 不显示 Grab 和 LINE MAN 支付方式
+		if paymentMethod.Code == constant.PaymentMethodCodeGrab || paymentMethod.Code == constant.PaymentMethodCodeLineMan {
+			continue
+		}
 		// LianLianPay 没有配置支付信息 不显示
 		if !lianLianPayAvailable && paymentMethod.IsLianLianPay() {
-			if paymentMethod.IsHeadquarterPayment() {
-				isAvailable = false
-			} else {
-				continue
-			}
+			continue
 		}
 
 		// 获取支付方式logo和二维码
@@ -1621,17 +1656,19 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
 		}
 		if logoUrl == "" && paymentMethod.DefaultImg != "" {
-			logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+			if strings.HasPrefix(paymentMethod.DefaultImg, "http") || strings.HasPrefix(paymentMethod.DefaultImg, "https") {
+				logoUrl = paymentMethod.DefaultImg
+			} else {
+				logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+			}
 		}
 		if paymentMethod.QrcodeFile != nil {
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
 
 		// 总部支付方式
-		if paymentMethod.IsHeadquarterPayment() {
-			if paymentMethod.Source == constant.PaymentMethodSourceDefault && qrcodeUrl == "" {
-				isAvailable = false
-			}
+		if paymentMethod.IsHeadquarterPayment() && paymentMethod.ErpnextPayment == "" {
+			isAvailable = false
 		}
 
 		methodItem := resp.PaymentMethodItem{

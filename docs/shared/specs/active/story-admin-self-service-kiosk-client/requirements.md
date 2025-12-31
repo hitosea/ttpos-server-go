@@ -64,13 +64,13 @@
 
 #### 具体要求
 
-- [ ] 1.1 在商品数据模型中添加 `is_show_kiosk` 字段（uint类型，0-否，1-是）
-- [ ] 1.2 在商品新建接口 (`/shop/product/add` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
-- [ ] 1.3 在商品编辑接口 (`/shop/product/edit` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
-- [ ] 1.4 在商品列表查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
-- [ ] 1.5 在商品详情查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
-- [ ] 1.6 实现云平台自助点餐机开启状态检查逻辑（查询 `company_setting` 表的 `enable_kiosk` 字段）
-- [ ] 1.7 创建数据库迁移脚本，为 `ttpos_product_package` 表添加 `is_show_kiosk` 字段
+- [x] 1.1 在商品数据模型中添加 `is_show_kiosk` 字段（uint类型，0-否，1-是）
+- [x] 1.2 在商品新建接口 (`/shop/product/add` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
+- [x] 1.3 在商品编辑接口 (`/shop/product/edit` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
+- [x] 1.4 在商品列表查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
+- [x] 1.5 在商品详情查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
+- [x] 1.6 实现云平台自助点餐机开启状态检查逻辑（查询 `company_setting` 表的 `enable_kiosk` 字段）
+- [x] 1.7 创建数据库迁移脚本，为 `ttpos_product_package` 表添加 `is_show_kiosk` 字段
 
 ---
 
@@ -88,13 +88,13 @@
 
 #### 具体要求
 
-- [ ] 2.1 在标签数据模型中添加 `is_show_kiosk` 字段（uint类型，0-否，1-是）
-- [ ] 2.2 在标签新建接口 (`/shop/product_label/add` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
-- [ ] 2.3 在标签编辑接口 (`/shop/product_label/edit` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
-- [ ] 2.4 在标签列表查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
-- [ ] 2.5 在标签详情查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
-- [ ] 2.6 实现云平台自助点餐机开启状态检查逻辑（查询 `company_setting` 表的 `enable_kiosk` 字段）
-- [ ] 2.7 创建数据库迁移脚本，为 `ttpos_product_label` 表添加 `is_show_kiosk` 字段
+- [x] 2.1 在标签数据模型中添加 `is_show_kiosk` 字段（uint类型，0-否，1-是）
+- [x] 2.2 在标签新建接口 (`/shop/product_label/add` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
+- [x] 2.3 在标签编辑接口 (`/shop/product_label/edit` 或类似) 中添加 `is_show_kiosk` 参数（可选，int类型，默认值根据云平台自助点餐机开启状态：已开启则为1，未开启则为0）
+- [x] 2.4 在标签列表查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
+- [x] 2.5 在标签详情查询接口中返回 `is_show_kiosk` 字段（int类型，0-否，1-是）
+- [x] 2.6 实现云平台自助点餐机开启状态检查逻辑（查询 `company_setting` 表的 `enable_kiosk` 字段）
+- [x] 2.7 创建数据库迁移脚本，为 `ttpos_product_label` 表添加 `is_show_kiosk` 字段
 
 ---
 

@@ -281,6 +281,7 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		copier.Copy(&itemInfo, &item)
 		itemInfo.MaterialName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.MaterialBarcode = item.MaterialBarcodeValue
+
 		// AvailableNum
 		availableNum := decimal.NewFromFloat(0)
 		for _, warehouseItem := range warehouseItems {
@@ -289,6 +290,12 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 			}
 		}
 		itemInfo.AvailableNum = availableNum.InexactFloat64()
+
+		// 基准单位名称
+		if item.Material != nil && item.Material.GetBaseUnit() != nil {
+			baseUnit := item.Material.GetBaseUnit()
+			itemInfo.UnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
+		}
 
 		// 转换单位列表
 		itemInfo.Units = make([]resp.TransferOrderItemUnitInfo, 0, len(item.Units))
@@ -489,7 +496,7 @@ func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transfe
 			MaterialName:         material.Name,
 			MaterialInternalCode: material.InternalCode,
 			MaterialBarcodeValue: material.BarcodeValue,
-			Valuation:            material.GetValuation(),
+			Valuation:            0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 		}
 
 		if err := transferOrderItemRepoTx.Create(item); err != nil {
@@ -628,8 +635,24 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	if err != nil {
 		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("获取物品列表失败"), err.Error())
 	}
+
+	// 获取 saas 数据库连接
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	if saasDB == nil {
+		return resp.TransferOrderCreateResp{}, errors.New("saas 数据库连接失败")
+	}
+
+	// 获取公司 UUID（使用总部 UUID 或当前公司 UUID）
+	numberCompanyUuid := companySetting.HeadquarterUuid
+	if numberCompanyUuid == 0 {
+		numberCompanyUuid = companyUuid
+	}
+
 	// 生成调拨单编号
-	orderNo := s.helper.GenerateOrderNo(db)
+	orderNo, err := s.helper.GenerateOrderNo(saasDB, numberCompanyUuid, companySetting.Timezone)
+	if err != nil {
+		return resp.TransferOrderCreateResp{}, errors.WithMessage(err, "生成调拨单编号失败")
+	}
 
 	// 生成调拨单UUID
 	transferOrderUuid, err := utils.GetID()
@@ -683,11 +706,6 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
 
-		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, db, transferOrder.Uuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
-			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
-		}
-
 		// 提交调拨单
 		if reqs.IsSubmit {
 			ctx.SetDB(tx)
@@ -700,6 +718,12 @@ func (s *transferOrderSrv) CreateTransferOrder(
 
 	if err != nil {
 		return resp.TransferOrderCreateResp{}, err
+	}
+
+	// 故意为之: 操作日志 不重要可以不再事务中
+	// 记录操作日志
+	if err := s.helper.CreateLog(ctx, db, transferOrderUuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
+		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 
 	return resp.TransferOrderCreateResp{
@@ -1478,15 +1502,18 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 			return errors.WithMessage(errors.New("提交事务失败"), err.Error())
 		}
 
-		// 记录操作日志
-		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
-			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
-		}
-
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	// 故意为之: 操作日志 不重要可以不再事务中
+	// 记录操作日志
+	if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
+		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
+	}
+	return nil
 }
 
 // GetTransferOrderApprovalList 获取调拨单审批流程列表

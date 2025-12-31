@@ -7,9 +7,11 @@ import (
 type ProductionGroup struct {
 	LocaleName        *dto.LocaleResponse `json:"locale_name"`          // 序列号
 	DiningMethod      uint                `json:"dining_method"`        // 用餐方式,0-堂食(店内就餐) 1-打包
-	IsTakeoutBill     bool                `json:"is_takeout_bill"`      // 是否是外送订单
+	IsTakeoutBill     bool                `json:"is_takeout_bill"`      // 是否是外送订单（传统店内外送）
+	TakeoutPlatform   string              `json:"takeout_platform"`     // 外卖平台（第三方平台外卖：grab/lineman）
 	ProductionList    ProductionList      `json:"product_list"`         // 送厨商品列表
 	SaleBillUuid      uint64              `json:"sale_bill_uuid"`       // 销售账单Uuid
+	TakeoutOrderUuid  uint64              `json:"takeout_order_uuid"`   // 外卖订单Uuid
 	IsSaleBillDeleted bool                `json:"is_sale_bill_deleted"` // 销售账单是否已删除
 	OrderRemark       OrderRemarkRes      `json:"order_remark"`         // 整单备注
 }
@@ -32,6 +34,7 @@ type ProductionItem struct {
 	ProductAttributeNames dto.LocaleResponse `json:"product_attribute_names"` // 商品属性
 	Remark                string             `json:"remark"`                  // 备注
 	IsSaleBillDeleted     bool               `json:"is_sale_bill_deleted"`    // 销售账单是否已删除
+	TakeoutPlatform       string             `json:"takeout_platform"`        // 外卖平台（第三方平台外卖：grab/lineman）
 	MakeStatus            uint               `json:"make_status"`             // 制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中
 	MadeTime              int64              `json:"made_time"`               // 制作完成时间
 	BatchTag              BatchTagInfo       `json:"batch_tag"`               // 分批类型

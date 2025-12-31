@@ -91,6 +91,7 @@ type PrintTemplateDetail struct {
 type PrintTemplateDetailResp struct {
 	DefaultTpl      PrintTemplateDetail   `json:"default_tpl"`        // 默认模板
 	AdvReceiptTpls  []PrintTemplateDetail `json:"adv_receipt_tpls"`   // 高级模板列表
+	IsEditable      bool                  `json:"is_editable"`        // 是否可编辑模板
 	IsAdvReceiptTpl bool                  `json:"is_adv_receipt_tpl"` // 是否启用高级模板
 }
 

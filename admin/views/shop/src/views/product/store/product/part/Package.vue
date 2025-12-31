@@ -68,7 +68,9 @@
           label-position="left"
           v-if="form.model.package_group[groupIndex].group_type == 1"
         >
-          <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
+        <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_min_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
+        <span>-</span>
+        <numInput class="max-w80" v-model="form.model.package_group[groupIndex].optional_count" :min="0" :max="99999999" :precision="0" :disabled="erp_is_open == 1" />
         </el-form-item>
 
         <el-form-item :prop="`model.package_group.${groupIndex}.product_list`" :rules="[{ required: true, validator: validatePackageGroup, message: $t('请添加套餐商品') }]">
@@ -131,7 +133,7 @@
       </el-card>
     </div>
 
-    <el-button :disabled="form.model.package_group.length >= 5" class="mt16" type="primary" @click="addGroup">{{ $t('添加分组') }}</el-button>
+    <el-button :disabled="form.model.package_group.length >= 100" class="mt16" type="primary" @click="addGroup">{{ $t('添加分组') }}</el-button>
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
@@ -359,6 +361,7 @@
     form.model.package_group.push({
       group_name: JSON.parse(languageData),
       group_type: 0,
+      optional_min_count: 0,
       optional_count: 1,
       product_list: [],
     });
@@ -446,8 +449,8 @@
         sort: maxSort + index + 1, // 递增排序
         num: 1, // 保持原有num值，如果没有则为null
         add_price: 0, // 加价
-        is_required: 1, // 是否必选  0-否 1-是
-        is_default: 1, // 是否默认 0-否 1-是
+        is_required: 0, // 是否必选  0-否 1-是
+        is_default: 0, // 是否默认 0-否 1-是
       };
       form.model.package_group[selectIndex.value].product_list.push(newProduct);
     });

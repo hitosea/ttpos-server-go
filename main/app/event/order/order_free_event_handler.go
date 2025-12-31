@@ -5,8 +5,10 @@ import (
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
-	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
+	"ttpos-server-go/app/modules/printer/printer_model"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -63,23 +65,46 @@ func FreeSaleOrderEventHandler() {
 
 			if len(products) > 0 {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypePay,
-					payload.SaleBillUuid,
-					payload.SaleOrderUuid,
-					products,
+					printerConstant.PrinterProductTypePay,
+					printer_model.Order{
+						Uuid:                   payload.SaleBillUuid,
+						SaleOrderUuid:          payload.SaleOrderUuid,
+						OrderNo:                payload.SaleBill.OrderNo,
+						MealNum:                payload.SaleBill.MealNum,
+						IsTakeoutBill:          payload.SaleBill.IsTakeoutBill(),
+						OrderSourceTakeoutText: payload.SaleBill.GetOrderSourceTakeoutText(),
+						SerialNo:               payload.SaleBill.SerialNo,
+						OrderRemark:            payload.SaleBill.GetLatestOrderRemarkRes(),
+						DeskUuid:               payload.SaleBill.DeskUuid,
+						Desk: &printer_model.OrderDesk{
+							DeskNo: func() string {
+								if payload.SaleBill.Desk == nil {
+									return ""
+								}
+								return payload.SaleBill.Desk.DeskNo
+							}(),
+							RegionUuid: func() uint64 {
+								if payload.SaleBill.Desk == nil {
+									return 0
+								}
+								return payload.SaleBill.Desk.RegionUuid
+							}(),
+						},
+						UpdateTime: payload.SaleBill.UpdateTime,
+						FinishTime: payload.SaleBill.FinishTime,
+						Products:   products,
+					},
 				)
 			}
 		})
 
 		// 创建结账单打印
 		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
-			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
-				constant.PrinterTemplateBilling,
-				payload.SaleBill,
-				payload.SaleOrderUuid,
-				0,
-				0,
-			)
+			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(&printer_request.PrintingStatementOrderReq{
+				PrintType:     printerConstant.PrinterTemplateBilling,
+				SaleBill:      payload.SaleBill,
+				SaleOrderUuid: payload.SaleOrderUuid,
+			})
 			if err != nil {
 				fmt.Println("FreeSaleOrderEvent process, PrintingStatementOrder failed ", err)
 			}

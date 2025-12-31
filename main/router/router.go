@@ -10,13 +10,16 @@ import (
 	"ttpos-server-go/app/api/v1/callboard"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
+	"ttpos-server-go/app/api/v1/kiosk"
 	"ttpos-server-go/app/api/v1/kitchen"
 	"ttpos-server-go/app/api/v1/member"
 	"ttpos-server-go/app/api/v1/menu"
 	"ttpos-server-go/app/api/v1/passport"
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
-	_ "ttpos-server-go/app/event" // 注册事件
+	"ttpos-server-go/app/api/v1/takeout"
+	_ "ttpos-server-go/app/event"                                // 注册事件
+	_ "ttpos-server-go/app/modules/takeout/infrastructure/event" // 注册 takeout 模块事件处理器
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc"
 	"ttpos-server-go/middleware"
@@ -62,6 +65,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		adminGroup := apiV1.Group("/admin")
 		{
 			admin.RegisterHandlers(adminGroup, dbm, cache)
+			admin.RegisterTakeoutHandlers(adminGroup, dbm)
 		}
 
 		// 通用接口
@@ -100,7 +104,6 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache)           // 叫号展示
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)           // 仓库管理
 			shop.RegisterPrintHandlers(shopGroup, dbm, cache)               // 打印管理
-			shop.RegisterCostCardCorrectionHandlers(shopGroup, dbm, cache)  // 成本卡修正
 			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache) // 盘点
 			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache)        // 分批商品
 			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache)       // 调拨单
@@ -110,6 +113,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterCountryRoutes(shopGroup, dbm, cache)               // 国家管理
 			shop.RegisterOrderSourceRoutes(shopGroup, dbm, cache)           // 外卖来源管理
 			shop.RegisterFullReductionActivityRoutes(shopGroup, dbm, cache) // 满减活动管理
+			shop.RegisterTakeoutHandlers(shopGroup, dbm, cache)             // 外卖平台集成
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
@@ -133,6 +137,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterStatisticsHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterOrderSourceRoutes(cashierGroup, dbm, cache)
 			cashier.RegisterNationalityRoutes(cashierGroup, dbm, cache)
+			cashier.RegisterTakeoutHandlers(cashierGroup, dbm, cache)
 		}
 		// 点餐助手端
 		assistantGroup := apiV1.Group("/assistant")
@@ -176,6 +181,15 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			tablet.RegisterProductHandlers(tabletGroup, dbm, cache)
 			tablet.RegisterBuffetHandlers(tabletGroup, dbm, cache)
 		}
+		// 自助点餐机
+		kioskGroup := apiV1.Group("/kiosk")
+		{
+			kiosk.RegisterAuthHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterBaseHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterCallHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterProductHandlers(kioskGroup, dbm, cache)
+			kiosk.RegisterOrderHandlers(kioskGroup, dbm, cache)
+		}
 		// 会员端
 		memberGroup := apiV1.Group("/member")
 		{
@@ -193,6 +207,12 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		callBoardGroup := apiV1.Group("/callboard")
 		{
 			callboard.RegisterHandlers(callBoardGroup, dbm, cache)
+		}
+
+		// 外卖平台集成（使用 shop 的认证）
+		takeoutGroup := apiV1.Group("/takeout")
+		{
+			takeout.RegisterTakeoutHandlers(takeoutGroup, dbm, cache)
 		}
 	}
 }

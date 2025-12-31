@@ -223,6 +223,8 @@ type StatisticsPaymentData struct {
 	PaymentName        string          `gorm:"column:payment_name;comment:支付方式名称"`
 	PaymentCode        int             `gorm:"column:payment_code;comment:支付方式编码"`
 	ErpnextPayment     string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式"`
+	ErpnextPaymentId   string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式ID"`
+	Source             int             `gorm:"column:source;comment:来源 0-系统 1-手动 2-LianLianPay"`
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalPaymentAmount sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalRefundAmount  sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
@@ -369,10 +371,12 @@ type StatisticsBusinessSummaryData struct {
 
 // StatisticsBusinessPaymentMethodData 支付方式统计数据
 type StatisticsBusinessPaymentMethodData struct {
-	Date          sql.NullString  `gorm:"column:date;comment:日期"`
-	PaymentName   sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
-	PaymentNum    sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
-	PaymentAmount sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
+	Date                    sql.NullString  `gorm:"column:date;comment:日期"`
+	PaymentMethodSort       sql.NullInt64   `gorm:"column:payment_method_sort;comment:支付方式排序"`
+	PaymentMethodCreateTime sql.NullInt64   `gorm:"column:payment_method_create_time;comment:支付方式创建时间"`
+	PaymentName             sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
+	PaymentNum              sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
+	PaymentAmount           sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
 }
 
 // ChannelSaleRepoResult 渠道营业统计 Repository 返回结果

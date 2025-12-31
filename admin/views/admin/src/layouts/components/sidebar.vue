@@ -185,6 +185,12 @@
       ],
     },
     {
+      icon: 'log',
+      title: $t('日志管理'),
+      path: '/log',
+      permission: ['admin_takeout_logs'],
+    },
+    {
       icon: 'settings',
       title: $t('系统设置'),
       path: '/settings',

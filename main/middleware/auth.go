@@ -269,7 +269,6 @@ func ParseMenuToken(c *gin.Context, token *auth.MenuToken, authSrv service.IAuth
 	c.Set(jwt.Company, *company)                       // 商家信息
 	c.Set(jwt.CompanySetting, *company.CompanySetting) // 商家设置信息
 	c.Set(jwt.DB, dbm.GetDB(token.CompanyUuid))        // 数据库连接
-	fmt.Println(fmt.Sprintf("ParseMenuToken companyUuid: %d", token.CompanyUuid))
 }
 
 // MemberAuth

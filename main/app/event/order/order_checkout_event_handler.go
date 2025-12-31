@@ -7,8 +7,10 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
-	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
+	"ttpos-server-go/app/modules/printer/printer_model"
+	printer_request "ttpos-server-go/app/modules/printer/tyeps/request"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -69,23 +71,46 @@ func CheckoutSaleOrderEventHandler() {
 			}
 			if len(products) > 0 {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypePay,
-					payload.SaleBillUuid,
-					payload.SaleOrderUuid,
-					products,
+					printerConstant.PrinterProductTypePay,
+					printer_model.Order{
+						Uuid:                   payload.SaleBillUuid,
+						SaleOrderUuid:          payload.SaleOrderUuid,
+						OrderNo:                payload.SaleBill.OrderNo,
+						MealNum:                payload.SaleBill.MealNum,
+						IsTakeoutBill:          payload.SaleBill.IsTakeoutBill(),
+						OrderSourceTakeoutText: payload.SaleBill.GetOrderSourceTakeoutText(),
+						SerialNo:               payload.SaleBill.SerialNo,
+						OrderRemark:            payload.SaleBill.GetLatestOrderRemarkRes(),
+						DeskUuid:               payload.SaleBill.DeskUuid,
+						Desk: &printer_model.OrderDesk{
+							DeskNo: func() string {
+								if payload.SaleBill.Desk == nil {
+									return ""
+								}
+								return payload.SaleBill.Desk.DeskNo
+							}(),
+							RegionUuid: func() uint64 {
+								if payload.SaleBill.Desk == nil {
+									return 0
+								}
+								return payload.SaleBill.Desk.RegionUuid
+							}(),
+						},
+						UpdateTime: payload.SaleBill.UpdateTime,
+						FinishTime: payload.SaleBill.FinishTime,
+						Products:   products,
+					},
 				)
 			}
 		})
 
 		// 创建结账单打印
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
-			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
-				constant.PrinterTemplateBilling,
-				payload.SaleBill,
-				payload.SaleOrderUuid,
-				0,
-				0,
-			)
+			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(&printer_request.PrintingStatementOrderReq{
+				PrintType:     printerConstant.PrinterTemplateBilling,
+				SaleBill:      payload.SaleBill,
+				SaleOrderUuid: payload.SaleOrderUuid,
+			})
 			if err != nil {
 				fmt.Println("CheckoutSaleOrderEvent process, PrintingStatementOrder failed ", err)
 			}
@@ -121,8 +146,9 @@ func CheckoutSaleOrderEventHandler() {
 
 		// 扣减库存
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
-			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			ReduceStock(db, payload.SaleBillUuid)
+			dbm := database.GetDBManager(config.DatabaseConf{})
+			db := dbm.GetDB(payload.CompanyUuid)
+			ReduceStock(payload.Ctx, db, payload.SaleBillUuid)
 		})
 
 		// 发放积分
@@ -261,7 +287,7 @@ func CheckoutSaleOrderEventHandler() {
 
 // 增加销量
 func HandleAddSalesVolume(payload event.CheckoutSaleOrderPayload) {
-	ProductBoms, ProducttPackages := GetSalesVolume(payload.SaleBill)
+	ProductBoms, ProductPackages := GetSalesVolume(payload.SaleBill)
 
 	for productBomUuid, saleNum := range ProductBoms {
 		if err := repository.NewProductBomRepo(payload.Ctx.GetDB()).AddActualSaleNum(productBomUuid, saleNum); err != nil {
@@ -269,7 +295,7 @@ func HandleAddSalesVolume(payload event.CheckoutSaleOrderPayload) {
 			continue
 		}
 	}
-	for productPackageUuid, saleNum := range ProducttPackages {
+	for productPackageUuid, saleNum := range ProductPackages {
 		if err := repository.NewProductPackageRepo(payload.Ctx.GetDB()).AddActualSaleNum(productPackageUuid, saleNum); err != nil {
 			logger.Logger.Error("HandleAddSalesVolume process, AddActualSaleNum failed", zap.Any("productPackageUuid", productPackageUuid), zap.Any("saleNum", saleNum), zap.Error(err))
 			continue

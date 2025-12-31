@@ -286,6 +286,10 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var reverseSettle event.OrderReverseSettlePayload
 		if err := json.Unmarshal([]byte(log.Data), &reverseSettle); err == nil {
 			var payTypeList []string
+			descStr := ""
+			if reverseSettle.Points > 0 {
+				descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(reverseSettle.Points) + ") "
+			}
 			for _, payType := range reverseSettle.PayTypes {
 				payTypeName := payType.Name
 				if payType.Value == constant.PaymentMethodCodeFreePay {
@@ -293,14 +297,18 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				payTypeList = append(payTypeList, payTypeName+": "+s.settingSrv.SymbolPosition(ctx, payType.Price))
 			}
-			desc := strings.Join(payTypeList, "、")
+			desc := descStr + strings.Join(payTypeList, "、")
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderRefund: // 退款
 		var refundPayload event.ReturnOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
 			if refundPayload.RefundType == constant.ReturnOrderRefundTypeTotal { // 整单退款不显示商品
-				return ActionDescription{Desc: "", SplitMessage: ""}
+				descStr := " "
+				if refundPayload.Points > 0 {
+					descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(refundPayload.Points) + ") " + i18n.Translate(language, "退款金额")
+				}
+				return ActionDescription{Desc: descStr, SplitMessage: ""}
 			}
 			var desc []string
 			for _, product := range refundPayload.Products {
@@ -313,7 +321,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				desc = append(desc, item)
 			}
-			descStr := strings.Join(desc, "、")
+			descStr := ""
+			if refundPayload.Points > 0 {
+				descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(refundPayload.Points) + ") "
+			}
+			descStr = descStr + strings.Join(desc, "、")
 			return ActionDescription{Desc: descStr, SplitMessage: ""}
 		}
 	case constant.OrderOrderTaking: // 接单 不需要解析data

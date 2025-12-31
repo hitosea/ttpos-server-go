@@ -1,0 +1,129 @@
+syntax = "proto3";
+package menu;
+import "takeout_api.proto" ;
+option go_package = "ttpos-bmp/app/ttpos-takeout/api/menu";
+
+
+message GetMenuSnapshotReq {
+  string provider_name = 1; // 渠道名称: grab,lineman
+  string shop_uuid = 2;     // 店铺 UUID
+  string request_id = 3;    // 请求 ID,可选
+}
+
+message GetMenuSnapshotResp {
+  string menu_data = 2;        // Provider 侧原始菜单 JSON
+  int64 updated_at = 3;        // 快照更新时间
+  string sync_state = 4;       // 同步状态  QUEUED/PROCESSING/SUCCESS/FAIL
+}
+
+message SaveMenuSnapshotReq {
+  string provider_name = 1; // 渠道名称: grab,lineman
+  string shop_uuid = 2;     // 店铺 UUID
+  string menu_data = 3;     // 菜单数据 JSON 字符串
+  string request_id = 4;    // 请求 ID
+}
+
+message SaveMenuSnapshotResp {
+}
+
+// ============= 菜单项/修饰符更新 =============
+
+// 高级定价配置
+message AdvancedPricing {
+  string key = 1;    // 定价键 (格式: serviceType.orderType.channel)
+  int64 price = 2;   // 价格 (minor unit，单位：分)
+}
+
+// 购买能力配置
+message Purchasability {
+  string key = 1;          // 购买能力键 (格式: serviceType.orderType.channel)
+  bool purchasable = 2;    // 是否可购买
+}
+
+// 更新菜单项请求
+message UpdateMenuItemReq {
+  string merchant_id = 1;                         // Grab MerchantID (必填)
+  string item_id = 2;                             // 商品ID (partner item id, 必填)
+  optional int64 price = 3;                       // 价格 (minor unit，单位：分)
+  optional string available_status = 4;           // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE
+  optional int64 max_stock = 5;                   // 库存数量
+  repeated AdvancedPricing advanced_pricings = 6; // 高级定价配置
+  repeated Purchasability purchasabilities = 7;   // 购买能力配置
+  string request_id = 8;                          // 请求 ID (可选，用于追踪)
+}
+
+// 更新菜单项响应
+message UpdateMenuItemResp {
+  string merchant_id = 1;    // 商户ID
+  string record_id = 2;      // 记录ID (ItemID)
+  string record_type = 3;    // 记录类型: ITEM
+  // success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
+}
+
+// 更新菜单修饰符请求
+message UpdateMenuModifierReq {
+  string merchant_id = 1;                         // Grab MerchantID (必填)
+  string modifier_id = 2;                         // 修饰符ID (partner modifier id, 必填)
+  string modifier_name = 3;                       // 修饰符名称 (用于定位记录, 必填)
+  optional int64 price = 4;                       // 价格 (minor unit，单位：分)
+  optional string available_status = 5;           // 可用状态: AVAILABLE, UNAVAILABLE
+  optional bool is_free = 6;                      // 是否免费
+  repeated AdvancedPricing advanced_pricings = 7; // 高级定价配置
+  string request_id = 8;                          // 请求 ID (可选，用于追踪)
+}
+
+// 更新菜单修饰符响应
+message UpdateMenuModifierResp {
+  string merchant_id = 1;    // 商户ID
+  string record_id = 2;      // 记录ID (ModifierID)
+  string record_type = 3;    // 记录类型: MODIFIER
+  // success, error_code 和 error_message 已移除，由 ApiResponse 统一处理
+}
+
+// ============= 批量更新菜单 =============
+
+// 菜单实体 (用于批量更新)
+message MenuEntity {
+  string id = 1;                                  // 菜单项ID或修饰符ID (partner item id 或 partner modifier id, 必填)
+  optional int64 price = 2;                       // 价格 (minor unit，单位：分)
+  optional string available_status = 3;           // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE (商品), AVAILABLE, UNAVAILABLE (修饰符)
+  optional int64 max_stock = 4;                   // 库存数量 (仅商品支持)
+  repeated AdvancedPricing advanced_pricings = 5; // 高级定价配置
+  repeated Purchasability purchasabilities = 6;   // 购买能力配置 (仅商品支持)
+}
+
+// 批量更新菜单请求
+message BatchUpdateMenuReq {
+  string merchant_id = 1;               // Grab MerchantID (必填)
+  string field = 2;                     // 字段类型: ITEM (商品) (必填)
+  repeated MenuEntity menu_entities = 3; // 菜单实体列表 (1-200 个)
+  string request_id = 4;                // 请求 ID (可选，用于追踪)
+}
+
+// 菜单实体错误信息
+message MenuEntityError {
+  string id = 1;            // 菜单项ID或修饰符ID
+  string error_code = 2;    // 错误代码
+  string error_message = 3; // 错误消息
+}
+
+// 批量更新菜单响应
+message BatchUpdateMenuResp {
+  string merchant_id = 1;                    // 商户ID
+  string status = 2;                         // 更新状态: success, partial_success, fail
+  repeated MenuEntityError errors = 3;       // 错误列表 (仅在 partial_success 或 fail 时返回)
+}
+
+// 外卖菜单服务
+service MenuService {
+    // 获取菜单快照
+    rpc GetMenuSnapshot (GetMenuSnapshotReq) returns (takeout.ApiResponse) {}
+    // 保存ttpos 菜单快照数据
+    rpc SaveMenuSnapshot (SaveMenuSnapshotReq) returns (takeout.ApiResponse) {}
+    // 更新菜单项 (商品)
+    rpc UpdateMenuItem (UpdateMenuItemReq) returns (takeout.ApiResponse) {}
+    // 更新菜单修饰符
+    rpc UpdateMenuModifier (UpdateMenuModifierReq) returns (takeout.ApiResponse) {}
+    // 批量更新菜单 (商品或修饰符)
+    rpc BatchUpdateMenu (BatchUpdateMenuReq) returns (takeout.ApiResponse) {}
+}

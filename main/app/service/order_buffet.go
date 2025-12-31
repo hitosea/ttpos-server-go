@@ -117,7 +117,9 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	// 修改
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 删除原来的 CustomerType
-		repository.NewOrderRepo(tx).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid)
+		if err := repository.NewOrderRepo(tx).DeleteSaleOrderBuffetCustomerType(saleOrder.Uuid); err != nil {
+			return errors.WithMessage(err)
+		}
 		saleBill.DeleteSaleOrderBuffetCustomerTypeAll(saleOrder.Uuid)
 
 		// 创建新的顾客

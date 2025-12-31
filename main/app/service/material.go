@@ -450,7 +450,6 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		Status:               int(utils.BoolToUint(material.Status)),
 		AllowSubstoreVisible: material.AllowSubstoreVisible,
 		AllowNegativeStock:   material.AllowNegativeStock == constant.Yes, // 是否允许负库存：true-允许，false-不允许
-		Valuation:            material.Valuation,
 		BarcodeValue:         material.BarcodeValue,
 		InternalCode:         material.InternalCode,
 		SafetyStock:          material.SafetyStock,
@@ -688,7 +687,6 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 				}
 				return 1
 			}(),
-			Valuation:          request.ValuationRate,
 			InitStock:          request.OpeningStock,
 			BarcodeValue:       request.BarcodeValue,
 			UnitUuid:           productUnit.Uuid,
@@ -894,7 +892,6 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		},
 		Name:                  request.LocaleName.ToJson(),
 		Code:                  "", // 先添加物品，之后调用erp接口后再更新编码
-		Valuation:             request.Valuation,
 		InitStock:             request.InitStock,
 		StockNum:              request.InitStock,
 		MultiLanguageNameUuid: nameId,
@@ -951,7 +948,6 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 			MaterialUuid:  materialUuid,
 			MaterialCode:  "",
 			Stock:         request.InitStock,
-			Valuation:     request.Valuation,
 		}
 		err = repository.NewWarehouseItemRepo(tx).Create(&warehouseItem)
 		if err != nil {
@@ -999,8 +995,8 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		StockUom:           productUnit.ErpnextUom,
 		BarcodeValue:       request.BarcodeValue,
 		Disabled:           request.Status == 0,
-		ValuationRate:      request.Valuation,
 		OpeningStock:       request.InitStock,
+		ValuationRate:      request.Valuation,
 		Uoms:               unitList,
 		InternalCode:       request.InternalCode,
 		Classification:     getMaterialCategoryName,
@@ -1128,7 +1124,6 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				}
 				return false
 			}(),
-			Valuation:    request.Valuation,
 			BarcodeValue: request.BarcodeValue,
 			InternalCode: request.InternalCode,
 			SafetyStock:  request.SafetyStock,
@@ -1202,13 +1197,6 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}
 		}
 
-		if request.Valuation == 0 {
-			err = materialRepo.ClearMaterialValuation(request.Uuid)
-			if err != nil {
-				return errors.WithMessage(err, "清空物品估值率失败")
-			}
-		}
-
 		if request.InternalCode == "" {
 			err = materialRepo.ClearMaterialInternalCode(request.Uuid)
 			if err != nil {
@@ -1276,13 +1264,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 			allowNegativeStock := request.AllowNegativeStock
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
-				ItemCode:      existingMaterial.Code,
-				ItemName:      enName,
-				StockUom:      existingMaterial.Unit.Unit.ErpnextUom,
-				Disabled:      request.Status == 0,
-				ValuationRate: material.Valuation,
-				BarcodeValue:  material.BarcodeValue,
-				Uoms:          unitList,
+				ItemCode:     existingMaterial.Code,
+				ItemName:     enName,
+				StockUom:     existingMaterial.Unit.Unit.ErpnextUom,
+				Disabled:     request.Status == 0,
+				BarcodeValue: material.BarcodeValue,
+				Uoms:         unitList,
 				InternalCode: func() string {
 					if request.InternalCode != "" {
 						return request.InternalCode
@@ -1551,15 +1538,14 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 				}
 
 				_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
-					ItemCode:      existingMaterial.Code,
-					ItemName:      enName,
-					StockUom:      existingMaterial.Unit.Unit.ErpnextUom,
-					Disabled:      request.Status == 0,
-					ValuationRate: existingMaterial.Valuation,
-					BarcodeValue:  existingMaterial.BarcodeValue,
-					Uoms:          unitList,
-					InternalCode:  existingMaterial.InternalCode,
-					PurchaseUom:   purchaseUom,
+					ItemCode:     existingMaterial.Code,
+					ItemName:     enName,
+					StockUom:     existingMaterial.Unit.Unit.ErpnextUom,
+					Disabled:     request.Status == 0,
+					BarcodeValue: existingMaterial.BarcodeValue,
+					Uoms:         unitList,
+					InternalCode: existingMaterial.InternalCode,
+					PurchaseUom:  purchaseUom,
 				})
 				if errErp != nil {
 					return errors.WithMessage(errErp)
@@ -1810,7 +1796,6 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 						ItemName:       enName,
 						StockUom:       material.Unit.Unit.ErpnextUom,
 						Disabled:       material.Status == false,
-						ValuationRate:  material.Valuation,
 						BarcodeValue:   material.BarcodeValue,
 						Uoms:           unitList,
 						InternalCode:   material.InternalCode,
@@ -2012,7 +1997,6 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: material.Material.Code,
-					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
 					Uom:      erpnextUom,
 				})
@@ -2168,7 +2152,6 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: material.Material.Code,
-					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
 					Uom:      erpnextUom,
 				})
@@ -2349,7 +2332,7 @@ func (s *materialSrv) unlinkSauceBomCard(ctx context.Context, req req.ProductBom
 func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error {
 	db := ctx.GetDB()
 	productBomRepo := repository.NewProductBomRepo(db)
-	productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+	productBom, err := productBomRepo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), req.RelatedUuid)
 	if err != nil {
 		return errors.WithMessage(err, "获取商品规格失败")
 	}
@@ -2401,7 +2384,7 @@ func (s *materialSrv) CopyProductBomCard(ctx context.Context, req req.ProductBom
 	relatedName := ""
 	if req.RelatedType == constant.ProductBomCardRelatedTypeFlavor {
 		productBomRepo := repository.NewProductBomRepo(db)
-		productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+		productBom, err := productBomRepo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), req.RelatedUuid)
 		if err != nil {
 			return errors.WithMessage(err, "获取商品规格失败")
 		}
@@ -2567,13 +2550,12 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: code,
-					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
 					Uom:      erpnextUom,
 				})
 			}
 			productBomRepo := repository.NewProductBomRepo(db)
-			productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+			productBom, err := productBomRepo.GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), req.RelatedUuid)
 			if err != nil {
 				return errors.WithMessage(err, "获取商品规格失败")
 			}
@@ -2758,7 +2740,6 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 				CategoryUuid:         item.CategoryUuid,
 				UnitUuid:             item.UnitUuid,
 				Status:               item.Status,
-				Valuation:            item.Valuation,
 				InitStock:            item.InitStock,
 				BarcodeValue:         item.BarcodeValue,
 				PurchaseUnitUuid:     item.UnitUuid,
@@ -3096,7 +3077,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context, syncHeadquarterData bool
 					BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: material.CreateTime, UpdateTime: material.UpdateTime, DeleteTime: material.DeleteTime},
 					Name:                  material.Name,
 					Code:                  material.Code,
-					Valuation:             material.Valuation,
 					InitStock:             material.InitStock,
 					MultiLanguageNameUuid: material.MultiLanguageNameUuid,
 					CategoryUuid:          material.CategoryUuid,

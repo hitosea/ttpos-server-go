@@ -121,6 +121,7 @@ type UpdateBusinessSetting struct {
 	StartSerialNo         string `json:"start_serial_no" binding:"required"`                       // 开始序列号
 	IsBatch               string `json:"is_batch" binding:"required,oneof=0 1"`                    // 是否是分批商品 0-否 1-是
 	BatchCookingMode      string `json:"batch_cooking_mode"`                                       // 分批模式 pre-前置模式 post-后置模式，默认为post
+	BatchPrintMode        string `json:"batch_print_mode"`                                         // 分批打印模式: "default" 默认 / "merge" 合并
 	SafetyStockType       string `json:"safety_stock_type" binding:"required,oneof=1 2"`           // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 
 	// 调拨规则
@@ -136,4 +137,8 @@ type UpdateBusinessSetting struct {
 	// 外卖来源和国籍功能开关
 	EnableOrderSource string `json:"enable_order_source" binding:"omitempty,oneof=0 1"` // 外卖功能开关 0-关闭 1-开启
 	EnableNationality string `json:"enable_nationality" binding:"omitempty,oneof=0 1"`  // 国籍功能开关 0-关闭 1-开启
+}
+
+type GetRemainingSmsQuotaReq struct {
+	CompanyUuid uint64 `form:"cid" binding:"required"` // 店铺ID
 }

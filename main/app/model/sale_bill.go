@@ -244,6 +244,18 @@ func (model *SaleBill) GetSaleOrderProductPreCooking() []*SaleOrderProduct {
 	return preCookingSaleOrderProducts
 }
 
+// 获取未打印的预送厨商品（pre_batch_print_time 为0的预送厨商品）
+func (model *SaleBill) GetSaleOrderProductPreCookingUnprinted() []*SaleOrderProduct {
+	unprintedPreCookingProducts := make([]*SaleOrderProduct, 0)
+	preCookingProducts := model.GetSaleOrderProductPreCooking()
+	for _, saleOrderProduct := range preCookingProducts {
+		if saleOrderProduct.PreBatchPrintTime == 0 {
+			unprintedPreCookingProducts = append(unprintedPreCookingProducts, saleOrderProduct)
+		}
+	}
+	return unprintedPreCookingProducts
+}
+
 // 获取分批送厨的商品
 func (model *SaleBill) GetSaleOrderProductBatchCooking() []*SaleOrderProduct {
 	batchCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
@@ -969,4 +981,9 @@ func (model *SaleBill) GetLocaleBuffetPackageNameByUuid(buffetPackageUuid uint64
 	}
 
 	return buffetLocaleName
+}
+
+// 判断是否删除或者已经取消
+func (model *SaleBill) IsDeletedOrCanceled() bool {
+	return model.DeleteTime > 0 || model.Status == constant.SaleBillStatusCanceled
 }

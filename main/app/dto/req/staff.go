@@ -228,3 +228,9 @@ type GetStaffDetailReq struct {
 var GetStaffDetailRequestMessage = map[string]string{
 	"uuid.required": "员工UUID不能为空",
 }
+
+// QueryStaffByContactReq 根据邮箱或手机号查询员工请求
+type QueryStaffByContactReq struct {
+	OperationType string `form:"operation_type"`              // 操作类型，discount-折扣操作，refund-退款操作
+	Keyword       string `form:"keyword" binding:"omitempty"` // 搜索关键词（邮箱或手机号，支持模糊匹配）
+}

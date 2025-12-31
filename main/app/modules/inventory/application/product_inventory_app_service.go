@@ -142,6 +142,47 @@ func (s *ProductInventoryAppService) GetProductInventoriesBatch(
 	return s.domainService.GetProductInventoriesBatch(ctx, productBomUuids)
 }
 
+// CheckStock 检查商品库存是否充足
+// 参数: bomQuantityMap - BOM UUID -> 需要的数量
+// 返回: 库存不足的 BOM UUID 列表, 错误信息
+func (s *ProductInventoryAppService) CheckStock(
+	ctx context.Context,
+	bomQuantityMap map[uint64]int,
+) ([]uint64, error) {
+	if len(bomQuantityMap) == 0 {
+		return nil, nil
+	}
+
+	// 1. 提取所有 BOM UUID
+	bomUuids := make([]uint64, 0, len(bomQuantityMap))
+	for bomUuid := range bomQuantityMap {
+		bomUuids = append(bomUuids, bomUuid)
+	}
+
+	// 2. 批量查询库存
+	inventoryMap, err := s.GetProductInventoriesBatch(ctx, bomUuids)
+	if err != nil {
+		// 查询失败时，为了不影响业务流程，返回空列表（表示库存充足）
+		return nil, nil
+	}
+
+	// 3. 检查库存是否充足
+	insufficientBomUuids := make([]uint64, 0)
+	for bomUuid, requiredQty := range bomQuantityMap {
+		availableStock, ok := inventoryMap[bomUuid]
+		if !ok {
+			// 没有查询到库存信息，默认为充足（无限库存）
+			continue
+		}
+		// 检查库存是否充足
+		if availableStock < float64(requiredQty) {
+			insufficientBomUuids = append(insufficientBomUuids, bomUuid)
+		}
+	}
+
+	return insufficientBomUuids, nil
+}
+
 // InvalidateProductInventoryCache 使商品库存缓存失效
 func (s *ProductInventoryAppService) InvalidateProductInventoryCache(
 	companyUuid uint64,
@@ -189,6 +230,16 @@ func (s *ProductInventoryAppService) GetProductPackageInventory(
 	}
 
 	return inventory, nil
+}
+
+// GetProductPackageInventoriesBatch 批量获取商品包库存
+// opts: 可选参数，使用 domainService.WithStrategy 设置策略
+func (s *ProductInventoryAppService) GetProductPackageInventoriesBatch(
+	ctx context.Context,
+	productPackageUuids []uint64,
+	opts ...func(option *domainService.GetProductPackageInventoryOption),
+) (map[uint64]float64, error) {
+	return s.domainService.GetProductPackageInventoriesBatch(ctx, productPackageUuids, opts...)
 }
 
 // InvalidateProductPackageInventoryCache 使商品包库存缓存失效

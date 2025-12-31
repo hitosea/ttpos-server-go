@@ -25,6 +25,7 @@ class User extends UserModel
     public function getList($limit = 20)
     {
         return $this->with(['userRole.role', 'supplier'])
+            ->where('delete_time', 0)
             ->field('uuid, uuid as shop_user_id, username as user_name, real_name, is_super, user_type, is_disable as is_status, create_time')
             ->order(['create_time' => 'desc'])
             ->paginate($limit);
@@ -116,12 +117,13 @@ class User extends UserModel
         $this->startTrans();
         try {
             //
+            // 使用 bcrypt 加密密码
             $arr = [
                 'uuid' => createUuid(),
                 'phone' => trim($data['phone']),
                 'username' => trim($data['user_name']),
-                'password' => salt_hash($data['password']),
-                'permission_password' => salt_hash($data['permission_password']),
+                'password' => hash_password_bcrypt($data['password']),
+                'permission_password' => hash_password_bcrypt($data['permission_password']),
                 'real_name' => trim($data['real_name']),
                 'user_type' => $user['user_type'],
                 'company_uuid' => $appId
@@ -225,17 +227,18 @@ class User extends UserModel
             $arr = [
                 'phone' => $data['phone'],
                 'username' => $data['user_name'],
-                'password' => salt_hash($data['password']),
                 'real_name' => $data['real_name'],
             ];
-            if (empty($data['password'])) {
-                unset($arr['password']);
-            } else {
+            
+            // 密码处理：如果提供了新密码，使用 bcrypt 加密
+            if (!empty($data['password'])) {
+                $arr['password'] = hash_password_bcrypt($data['password']);
                 $arr['password_change_time'] = time();
             }
-            // 权限密码处理：如果传了且不为空，则更新；否则不更新（保持原值）
+            
+            // 权限密码处理：如果传了且不为空，使用 bcrypt 加密
             if (!empty($data['permission_password'])) {
-                $arr['permission_password'] = salt_hash($data['permission_password']);
+                $arr['permission_password'] = hash_password_bcrypt($data['permission_password']);
             }
 
             $where['uuid'] = $data['shop_user_id'];
@@ -314,7 +317,7 @@ class User extends UserModel
         $userToDelete->delete();
         UserRole::destroy(['staff_uuid' => $shop_user_id]);
         //
-        return (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $shop_user_id)->find()?->delete();
+        return (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $shop_user_id)->where('company_uuid', $this['company_uuid'])->find()?->delete();
     }
 
     /**

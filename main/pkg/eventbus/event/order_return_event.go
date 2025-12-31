@@ -34,6 +34,7 @@ type ReturnOrderPayload struct {
 	IsSplitOrder    bool                 `json:"is_split_order"`             // 是否拆单
 	Index           int                  `json:"index"`                      // 子单索引
 	AuthorizedStaff *AuthorizedStaffInfo `json:"authorized_staff,omitempty"` // 授权员工信息（如果使用了授权验证）
+	Points          float64              `json:"points"`                     // 退款积分
 }
 
 func (payload *ReturnOrderPayload) ToJsonString() string {

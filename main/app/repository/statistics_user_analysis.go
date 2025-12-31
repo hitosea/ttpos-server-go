@@ -6,10 +6,11 @@ import (
 	"ttpos-server-go/config"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 // CountUserAnalysis 统计用户分析数据
-func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) {
+func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, excludeDataManage bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) {
 	result := &model.UserAnalysisRepoResult{
 		Nationality:  []model.UserAnalysisItemRepo{},
 		OrderSource:  []model.UserAnalysisItemRepo{},
@@ -34,10 +35,13 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 	// 构建语言字段名
 	langField := getLanguageField(language)
 
-	// 构建数据管理过滤条件（使用子查询，避免字段歧义）
-	dataManageSubQuery := r.db.Model(&model.DataManage{}).
-		Select("data_uuid").
-		Where("type = ? AND delete_time = ?", model.DataManageTypeOrder, constant.NotDeleted)
+	// 构建数据管理过滤条件（仅在需要时使用）
+	var dataManageSubQuery *gorm.DB
+	if excludeDataManage {
+		dataManageSubQuery = r.db.Model(&model.DataManage{}).
+			Select("data_uuid").
+			Where("type = ? AND delete_time = ?", model.DataManageTypeOrder, constant.NotDeleted)
+	}
 
 	// 1. 按国籍统计（仅在开启国籍功能时统计）
 	if enableNationality {
@@ -53,14 +57,16 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 		for _, opt := range opts {
 			queryDb = opt(queryDb)
 		}
-		err = queryDb.Table(statisticsSaleTable+" AS ss").
+		query := queryDb.Table(statisticsSaleTable+" AS ss").
 			Select("ss.nationality_uuid, COALESCE(NULLIF(mln."+langField+", ''), NULLIF(mln.en_name, ''), 'Unknown') AS name, COUNT(DISTINCT ss.sale_bill_uuid) AS order_count").
 			Joins("LEFT JOIN "+nationalityTable+" AS n ON ss.nationality_uuid = n.uuid").
 			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON n.multi_language_name_uuid = mln.uuid").
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
-			Where("ss.nationality_uuid > 0").
-			Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery).
-			Group("ss.nationality_uuid, name").
+			Where("ss.nationality_uuid > 0")
+		if excludeDataManage && dataManageSubQuery != nil {
+			query = query.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
+		}
+		err = query.Group("ss.nationality_uuid, name").
 			Order("order_count ASC").
 			Scan(&nationalityResults).Error
 
@@ -104,7 +110,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 		for _, opt := range opts {
 			queryDb2 = opt(queryDb2)
 		}
-		err = queryDb2.Table(statisticsSaleTable+" AS ss").
+		query2 := queryDb2.Table(statisticsSaleTable+" AS ss").
 			Select("ss.order_source_uuid, "+
 				"CASE "+
 				"WHEN ss.order_source_uuid = 0 THEN '店内' "+
@@ -115,9 +121,11 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			Joins("LEFT JOIN "+orderSourceTable+" AS os ON ss.order_source_uuid = os.uuid").
 			Joins("LEFT JOIN "+multiLanguageNameTable+" AS mln ON os.multi_language_name_uuid = mln.uuid").
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
-			Where("sb.bill_type = ?", constant.SaleBillTypeInstant).
-			Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery).
-			Group("ss.order_source_uuid, name").
+			Where("sb.bill_type = ?", constant.SaleBillTypeInstant)
+		if excludeDataManage && dataManageSubQuery != nil {
+			query2 = query2.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
+		}
+		err = query2.Group("ss.order_source_uuid, name").
 			Order("order_count ASC").
 			Scan(&orderSourceResults).Error
 
@@ -161,7 +169,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 		for _, opt := range opts {
 			queryDb3 = opt(queryDb3)
 		}
-		err = queryDb3.Table(statisticsSaleTable+" AS ss").
+		query3 := queryDb3.Table(statisticsSaleTable+" AS ss").
 			Select("ss.source, "+
 				"CASE "+
 				"WHEN ss.source = ? THEN '收银机' "+
@@ -178,9 +186,11 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			Joins("LEFT JOIN "+saleBillTable+" AS sb ON ss.sale_bill_uuid = sb.uuid AND sb.delete_time = ?", constant.NotDeleted).
 			Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
 			Where("sb.bill_type = ?", constant.SaleBillTypeDesk).
-			Where("ss.source > ?", constant.SaleBillSourceDefault).
-			Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery).
-			Group("ss.source, name").
+			Where("ss.source > ?", constant.SaleBillSourceDefault)
+		if excludeDataManage && dataManageSubQuery != nil {
+			query3 = query3.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
+		}
+		err = query3.Group("ss.source, name").
 			Order("order_count ASC").
 			Scan(&deskSourceResults).Error
 
@@ -223,7 +233,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 	for _, opt := range opts {
 		queryDb4 = opt(queryDb4)
 	}
-	err = queryDb4.Table(statisticsSaleTable+" AS ss").
+	query4 := queryDb4.Table(statisticsSaleTable+" AS ss").
 		Select("CASE "+
 			"WHEN sb.bill_type = ? THEN 0 "+
 			"ELSE sb.dining_method "+
@@ -238,9 +248,11 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			constant.SaleBillTypeDesk, constant.SaleBillTypeDesk).
 		Joins("LEFT JOIN "+saleBillTable+" AS sb ON ss.sale_bill_uuid = sb.uuid AND sb.delete_time = ?", constant.NotDeleted).
 		Where("ss.complete_time >= ? AND ss.complete_time <= ?", startTime, endTime).
-		Where("sb.bill_type IN (?, ?)", constant.SaleBillTypeInstant, constant.SaleBillTypeDesk).
-		Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery).
-		Group("dining_method, name").
+		Where("sb.bill_type IN (?, ?)", constant.SaleBillTypeInstant, constant.SaleBillTypeDesk)
+	if excludeDataManage && dataManageSubQuery != nil {
+		query4 = query4.Where("ss.sale_bill_uuid NOT IN (?)", dataManageSubQuery)
+	}
+	err = query4.Group("dining_method, name").
 		Order("order_count ASC").
 		Scan(&diningMethodResults).Error
 

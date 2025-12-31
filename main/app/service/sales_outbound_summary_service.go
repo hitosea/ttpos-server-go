@@ -336,7 +336,7 @@ func (s *salesOutboundSummarySrv) getDailySalesOutboundRecords(
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
-				Valuation:            item.Material.Valuation,
+				Valuation:            0, // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 				SupplierUuid:         item.Material.SupplierUuid,
 				MaterialName:         materialName,
 				MaterialBaseUnitUuid: materialBaseUnitUuid,
@@ -999,18 +999,23 @@ func (s *salesOutboundSummarySrv) calculateReturnStockMap(tx *gorm.DB, materialI
 func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[string]*returnStockInfo) error {
 	warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 
+	// 收集需要更新关联库存的材料UUID
+	relatedMaterialUuids := make([]uint64, 0)
+	relatedMaterialUuidSet := make(map[uint64]bool)
+
 	// 退回库存
 	for _, returnInfo := range returnStockMap {
 		if returnInfo.ReturnNum <= 0 {
 			continue
 		}
 
+		valuation := 0.0 // TODO v2.12.0: ttpos测没有估值率的值,若需要请调用erp接口获取
 		// 获取或创建仓库物品库存记录
 		warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialOrCreate(
 			returnInfo.WarehouseUuid,
 			returnInfo.MaterialUuid,
 			returnInfo.Material.Code,
-			returnInfo.Material.Valuation,
+			valuation,
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取仓库物品库存失败")
@@ -1019,6 +1024,15 @@ func (s *salesOutboundSummarySrv) returnStock(tx *gorm.DB, returnStockMap map[st
 		// 增加库存
 		if err := warehouseItemRepo.AddStock(warehouseItem.Uuid, returnInfo.ReturnNum); err != nil {
 			return errors.WithMessage(err, "增加材料库存失败")
+		}
+
+		// 收集需要更新关联库存的材料UUID
+		relatedUuids := returnInfo.Material.GetRelatedMaterialUuids()
+		for _, uuid := range relatedUuids {
+			if !relatedMaterialUuidSet[uuid] {
+				relatedMaterialUuids = append(relatedMaterialUuids, uuid)
+				relatedMaterialUuidSet[uuid] = true
+			}
 		}
 	}
 
@@ -1110,6 +1124,7 @@ func (s *salesOutboundSummarySrv) reduceStock(tx *gorm.DB, reduceStockMap map[st
 			}
 		}
 	}
+
 	return nil
 }
 

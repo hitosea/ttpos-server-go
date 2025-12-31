@@ -10,7 +10,14 @@
       <el-form-item for="no_click" class="h-auto" v-if="form.add_method == 2" prop="add_pay_type" :rules="[{ required: true, message: $t('请选择') }]">
         <el-select v-model="form.add_pay_type" multiple @change="handleChange">
           <template v-for="(item, index) in payList" :key="index">
-            <el-option :value="item.value" :label="item.name">{{ item.name }}</el-option>
+            <el-option :value="item.value" :label="item.source == 3 ? item.name + ' (Kbank)' : item.name" :disabled="item.can_add == false">
+              <template v-if="item.source == 3">
+                {{ item.name }} <span style="color: #aaaaaa;">(Kbank)</span>
+              </template>
+              <template v-else>
+                {{ item.name }}
+              </template>
+            </el-option>
           </template>
         </el-select>
       </el-form-item>
@@ -24,10 +31,14 @@
             { validator: uniqueNameValidator('pay_type', editItem?.id, 'SINGLE'), trigger: 'blur' },
           ]"
         >
-          <el-input v-model="form.remark" :placeholder="$t('请输入名称')" :maxlength="100" :disabled="editItem.id && editItem.source == '2'"></el-input>
+          <el-input v-model="form.remark" :placeholder="$t('请输入名称')" :maxlength="100" :disabled="editItem.id && (editItem.source == '2' || editItem.source == '3')"></el-input>
         </el-form-item>
         <el-form-item for="no_click" :label="$t('支付方式')" prop="name" :rules="[{ required: true, message: $t('请输入支付方式') }]">
-          <el-input v-model="form.name" :placeholder="$t('请输入支付方式')" :disabled="(editItem.id && editItem.source == '2') || editItem.id || erp_is_open == 1"></el-input>
+          <el-input
+            v-model="form.name"
+            :placeholder="$t('请输入支付方式')"
+            :disabled="(editItem.id && (editItem.source == '2' || editItem.source == '3')) || editItem.id || erp_is_open == 1"
+          ></el-input>
           <div class="tips">{{ $t('注：需为正确的支付方式，用于显示给用户查看') }}</div>
         </el-form-item>
         <el-form-item
@@ -51,11 +62,11 @@
         >
           <div class="draggable-list">
             <template v-if="!editItem.id || (editItem.id && editItem.source != '2')">
-              <draggable class="wrapper" v-model="form.img">
+              <draggable class="wrapper" v-model="form.img" :disabled="editItem.source == '3'">
                 <transition-group>
                   <div class="item" v-for="(item, index) in form.img" :key="item.file_path">
                     <img v-img-url="item.file_path" />
-                    <a href="javascript:void(0);" v-if="!editItem.id || (editItem.id && editItem.source != '2')" class="delete-btn" @click.stop="deleteImg(index)"
+                    <a href="javascript:void(0);" v-if="!editItem.id || (editItem.id && editItem.source != '2' && editItem.source != '3')" class="delete-btn" @click.stop="deleteImg(index)"
                       ><el-icon> <Close /> </el-icon
                     ></a>
                   </div>
@@ -116,7 +127,7 @@
             <el-checkbox label="10" size="small">
               {{ $t('收银机') }}
             </el-checkbox>
-            <el-checkbox label="20" size="small">
+            <el-checkbox label="20" size="small" v-if="form.source != 3">
               {{ $t('点餐助手') }}
             </el-checkbox>
           </el-checkbox-group>
@@ -147,7 +158,7 @@
             ]"
           >
             <template #label> <span class="must">*</span>{{ $t('名称') }} </template>
-            <el-input v-model="item.remark" :placeholder="$t('请输入名称')" :maxlength="100"></el-input>
+            <el-input v-model="item.remark" :placeholder="$t('请输入名称')" :maxlength="100" :disabled="item.source == '3'"></el-input>
           </el-form-item>
           <el-form-item
             for="no_click"
@@ -163,7 +174,7 @@
               },
             ]"
           >
-            <el-input v-model="item.name" :disabled="editItem.id" :placeholder="$t('请输入支付方式')"></el-input>
+            <el-input v-model="item.name" :disabled="editItem.id || item.source == '3'" :placeholder="$t('请输入支付方式')"></el-input>
           </el-form-item>
           <el-form-item
             for="no_click"
@@ -181,11 +192,11 @@
             ]"
           >
             <div class="draggable-list">
-              <draggable class="wrapper" v-model="item.img">
+              <draggable class="wrapper" v-model="item.img" :disabled="item.source == '3'">
                 <transition-group>
                   <div class="item" v-for="(items, indexs) in item.img" :key="items.file_path">
                     <img v-img-url="items.file_path ? items.file_path : ''" />
-                    <a href="javascript:void(0);" class="delete-btn" @click.stop="deleteQuicklyImg(index, indexs)"
+                    <a href="javascript:void(0);" v-if="item.source != '3'" class="delete-btn" @click.stop="deleteQuicklyImg(index, indexs)"
                       ><el-icon> <Close /> </el-icon
                     ></a>
                   </div>
@@ -199,7 +210,7 @@
               <div class="tips">{{ $t('支持JPG、JPEG、PNG、WEBP格式，小于15MB，尺寸：48*48px') }}</div>
             </div>
           </el-form-item>
-          <el-form-item for="no_click" :label="$t('二维码')">
+          <el-form-item for="no_click" :label="$t('二维码')" v-if="item.source != '3'">
             <div class="draggable-list">
               <draggable class="wrapper" v-model="item.qrcode">
                 <transition-group>
@@ -262,7 +273,7 @@
               <el-checkbox label="10" size="small">
                 {{ $t('收银机') }}
               </el-checkbox>
-              <el-checkbox label="20" size="small">
+              <el-checkbox label="20" size="small" v-if="item.source != 3">
                 {{ $t('点餐助手') }}
               </el-checkbox>
             </el-checkbox-group>
@@ -309,6 +320,7 @@
         this.form.status = this.editItem.status;
         this.form.is_show_checkout = this.editItem.is_show_checkout;
         this.form.is_show_recharge = this.editItem.is_show_recharge;
+        this.form.source = this.editItem.source;
         if (this.editItem.img) {
           this.form.img.push({ file_id: this.editItem.logo_file_uuid, file_path: this.editItem.img });
         }
@@ -334,6 +346,7 @@
           status: 1,
           is_show_checkout: [],
           is_show_recharge: [],
+          source: 0,
         },
         formIncludes: [],
         imgType: 1,
@@ -344,7 +357,7 @@
     methods: {
       /*打开上传图片*/
       openProductUpload: function (e, index) {
-        if (this.editItem.id && this.editItem.source == '2') return;
+        if (this.editItem.id && (this.editItem.source == '2' || this.editItem.source == '3')) return;
         this.isProductUpload = true;
         this.imgType = e;
         this.imgIndex = index;
@@ -391,12 +404,14 @@
 
       /*删除商品图片*/
       deleteImg(index) {
+        if (this.editItem.source == '3') return;
         this.form.img.splice(index, 1);
         this.$refs.form.validateField('img');
       },
 
       /*快捷添加删除商品图片*/
       deleteQuicklyImg(index, indexs) {
+        if (this.form.params[index].source == '3') return;
         this.form.params[index].img.splice(indexs, 1);
         this.$refs.form.validateField(`params[${index}].img[${indexs}].file_path`);
       },
@@ -539,6 +554,7 @@
                 status: 1,
                 is_show_checkout: [],
                 is_show_recharge: [],
+                source: item.source,
               });
             }
           });

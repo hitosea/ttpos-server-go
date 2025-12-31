@@ -45,12 +45,16 @@ func GenerateModeOfPaymentID(db *gorm.DB, paymentMethod *model.PaymentMethod, co
 }
 
 // getChannelBySource 根据 source 确定 channel
+// source=3(Kbank) -> channel="Kbank"
 // source=2(LianLianPay) -> channel="LianLianPay"
 // source=1(自行添加) -> channel=""
 // source=0(系统默认) -> channel=""
 func getChannelBySource(source int) string {
 	if source == constant.PaymentMethodSourceLianLianPay {
 		return "LianLianPay"
+	}
+	if source == constant.PaymentMethodSourceKbank {
+		return "Kbank"
 	}
 	return ""
 }

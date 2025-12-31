@@ -141,9 +141,13 @@ think:
 
 # 监听今天的日志（格式化输出，显示完整JSON）
 log:
-	@echo "🔍 监听今天的日志（完整JSON格式）..."
-	@tail -f -n 100 ./main/log/$$(date +%Y-%m-%d).log | while IFS= read -r line; do \
-		echo "$$line" | jq . 2>/dev/null || echo "$$line"; \
+	@echo "🔍 监听今天的日志（完整JSON格式，忽略warn级别）..."
+	@tail -f -n 100 ./main/log/$$(date +%Y-%m-%d).log | grep --line-buffered -v '"level":"warn"' | grep --line-buffered -v '"level":"debug"' | while IFS= read -r line; do \
+		if echo "$$line" | grep -q '"level":"error"'; then \
+			echo "$$line" | jq -C . 2>/dev/null || echo "$$line" | sed 's/.*/\x1b[0;31m&\x1b[0m/'; \
+		else \
+			echo "$$line" | jq -C . 2>/dev/null || echo "$$line"; \
+		fi; \
 	done
 
 # 添加物品库存
@@ -161,6 +165,9 @@ rmi-docker-images:
 # 授权所有文件
 chown-all:
 	sudo chown -R coder:coder /home/coder/workspaces/ttpos-server-go
+	sudo chown -R www-data:www-data /home/coder/workspaces/ttpos-server-go/admin/runtime
+	sudo chmod -R 755 /home/coder/workspaces/ttpos-server-go/admin/runtime
+	sudo rm -rf /home/coder/workspaces/ttpos-server-go/admin/runtime/logs/*
 
 # 更新 MCP Token
 update-mcp-token:

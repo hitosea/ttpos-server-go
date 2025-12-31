@@ -12,12 +12,10 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/app/tasks"
-	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -758,7 +756,20 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
+
 	// 添加商品。 若没有点餐账单则新建一个
+	if objectStorageAdapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		// 添加商品。 若没有点餐账单则新建一个（无校验版本）
+		res, err := h.orderSrv.InstantOrderCartProductAddSimple(ctx, params)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
+		return
+	}
+
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
@@ -1888,51 +1899,6 @@ func (h *DeskHandler) GetOrderMemberList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetDailySalesOutboundSummary 获取每日销售出库汇总
-// @Summary 获取每日销售出库汇总
-// @Description 获取每日销售出库汇总
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Router /cashier/desk/order/daily_sales_outbound_summary [get]
-func (h *DeskHandler) GetDailySalesOutboundSummary(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
-	dbm := database.GetDBManager(config.Database)
-	company, err := repository.NewCompanyRepo(dbm.GetDB(companyUuid)).GetCompany(repository.CommonRepo.WhereByUuid(companyUuid))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	tasks.NewDailySalesOutboundSummaryTask(dbm, cache.Global).ProcessCompany(&company)
-	helper.Success(c, gin.H{})
-}
-
-// GetHeadquarterMaterialList 获取总部物品列表
-// @Summary 获取总部物品列表
-// @Description 获取总部物品列表
-// @Tags 收银端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response
-// @Router /cashier/desk/order/headquarter_material_list [get]
-func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
-	var req req.GetHeadquarterMaterialListReq
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, nil)
-		return
-	}
-	ctx := helper.GetContext(c)
-	erpSrv := erp.NewIErpSrv(database.GetDBManager(config.Database))
-	res, err := erpSrv.GetHeadquarterMaterialList(ctx, req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, res)
-}
-
 // OrderCartProductBatchCooking 获取分批送厨弹框的销售订单商品列表
 // @Summary 获取分批送厨弹框的销售订单商品列表
 // @Description 获取分批送厨弹框的销售订单商品列表
@@ -2071,7 +2037,6 @@ func (h *DeskHandler) GetBatchTagList(c *gin.Context) {
 }
 
 // OrderItemRemarkList 获取单品备注列表
-
 // @Summary 获取单品备注列表
 // @Description 获取单品备注列表
 // @Tags 收银端.桌台
@@ -2184,8 +2149,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                                            // 打印发票
 		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                                         // 订单解锁
 		privateApi.GET("/desk/order/member/list", wrapper.GetOrderMemberList)                                              // 使用会员列表
-		privateApi.GET("/desk/order/daily_sales_outbound_summary", wrapper.GetDailySalesOutboundSummary)                   // 获取每日销售出库汇总
-		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
 		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
 		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
 		privateApi.POST("/desk/order/cart/batch/change_tag", wrapper.ChangeBatchTag)                                       // 更换分批类型（前置模式）

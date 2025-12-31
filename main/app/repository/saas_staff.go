@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -31,6 +33,12 @@ type ISaasStaffRepo interface {
 	// 唯一性检查方法
 	CheckEmailExists(email string, excludeUuid uint64) (bool, error)
 	CheckPhoneExists(phone string, excludeUuid uint64) (bool, error)
+
+	// QueryByKeyword 根据关键词查询员工（支持模糊搜索）
+	// keyword: 搜索关键词（邮箱或手机号），为空时返回所有匹配的员工
+	// staffUuids: 员工UUID列表（用于过滤）
+	// limit: 返回结果数量限制
+	QueryByKeyword(keyword string, staffUuids []uint64, limit int) ([]*model.SaasStaff, error)
 }
 
 func NewSaasStaffRepo(db *gorm.DB) ISaasStaffRepo {
@@ -220,4 +228,52 @@ func (r *saasStaffRepo) GetSaasStaff(opts ...DBOption) model.SaasStaff {
 	}
 	db.First(&staff)
 	return staff
+}
+
+// QueryByKeyword 根据关键词查询员工（支持模糊搜索）
+func (r *saasStaffRepo) QueryByKeyword(keyword string, staffUuids []uint64, limit int) ([]*model.SaasStaff, error) {
+	var list []*model.SaasStaff
+	db := r.db.Model(&model.SaasStaff{}).Scopes(NotDeleted)
+
+	// 1. 过滤授权员工
+	if len(staffUuids) > 0 {
+		db = db.Where("uuid IN (?)", staffUuids)
+	}
+
+	// 2. 根据关键词过滤（模糊搜索）
+	if keyword != "" {
+		keywordLower := strings.ToLower(keyword)
+		if strings.Contains(keywordLower, "@") {
+			// 包含 @：只查询匹配邮箱
+			db = db.Where("LOWER(email) LIKE ?", "%"+keywordLower+"%")
+		} else {
+			// 其他情况：同时查询邮箱和手机号
+			db = db.Where("LOWER(email) LIKE ? OR phone LIKE ?", "%"+keywordLower+"%", "%"+keyword+"%")
+		}
+	}
+
+	// 3. 限制返回数量
+	if limit > 0 {
+		db = db.Limit(limit)
+	}
+
+	// 4. 查询
+	if err := db.Find(&list).Error; err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+// isNumeric 判断字符串是否只包含数字
+func isNumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }

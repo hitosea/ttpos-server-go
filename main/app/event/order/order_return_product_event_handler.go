@@ -5,11 +5,13 @@ import (
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
-	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/modules/printer"
+	printerConstant "ttpos-server-go/app/modules/printer/constant"
+	"ttpos-server-go/app/modules/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
@@ -54,22 +56,57 @@ func CancelSaleOrderProductEventHandler() {
 			utils.Go(func() {
 				products := printer_model.OrderProduct{}
 				copier.Copy(&products, payload)
+				// 获取订单信息
+				billInfo, err := repository.NewOrderRepo(db).GetSaleBill(
+					repository.CommonRepo.WhereByUuid(payload.SaleBillUuid),
+					repository.CommonRepo.Preload(repository.WithPreload{Query: "Desk"}),
+				)
+				if err != nil {
+					logger.Logger.Error("FinishMenuEventHandler process, GetSaleBillInfo failed", zap.Error(err))
+					return
+				}
+				// 打印退菜
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
-					constant.PrinterProductTypeBackFood,
-					payload.SaleBillUuid,
-					payload.SaleOrderUuid,
-					[]printer_model.OrderProduct{products},
+					printerConstant.PrinterProductTypeBackFood,
+					printer_model.Order{
+						Uuid:                   payload.SaleBillUuid,
+						SaleOrderUuid:          payload.SaleOrderUuid,
+						OrderNo:                billInfo.OrderNo,
+						MealNum:                billInfo.MealNum,
+						IsTakeoutBill:          billInfo.IsTakeoutBill(),
+						OrderSourceTakeoutText: billInfo.GetOrderSourceTakeoutText(),
+						SerialNo:               billInfo.SerialNo,
+						OrderRemark:            billInfo.GetLatestOrderRemarkRes(),
+						DeskUuid:               billInfo.DeskUuid,
+						Desk: &printer_model.OrderDesk{
+							DeskNo: func() string {
+								if billInfo.Desk == nil {
+									return ""
+								}
+								return billInfo.Desk.DeskNo
+							}(),
+							RegionUuid: func() uint64 {
+								if billInfo.Desk == nil {
+									return 0
+								}
+								return billInfo.Desk.RegionUuid
+							}(),
+						},
+						UpdateTime: billInfo.UpdateTime,
+						FinishTime: billInfo.FinishTime,
+						Products:   []printer_model.OrderProduct{products},
+					},
 				)
 			})
 		})
 		event.NewSystemBus().SubscribeCancelSaleOrderProductEvent(func(payload event.CancelSaleOrderProductPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			AddStock(db, payload.SaleBillUuid)
+			AddStock(payload.Ctx, db, payload.SaleBillUuid)
 		})
 	})
 }
 
-func AddStock(db *gorm.DB, saleBillUuid uint64) {
+func AddStock(payloadCtx context.Context, db *gorm.DB, saleBillUuid uint64) {
 	// 加锁。防止多个取消退菜事件并发退还库存
 	lock.NewSystemLock().LockUuid(saleBillUuid)
 	defer lock.NewSystemLock().UnlockUuid(saleBillUuid)

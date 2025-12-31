@@ -55,13 +55,14 @@ type ProductPackageGroupList struct {
 
 // ProductPackageGroup 套餐分组
 type ProductPackageGroup struct {
-	Uuid          uint64             `json:"uuid"`           // 套餐分组UUID
-	LocaleName    dto.LocaleResponse `json:"locale_name"`    // 套餐分组名称
-	GroupType     int                `json:"group_type"`     // 分组类型 0-固定 1-可选
-	OptionalCount int                `json:"optional_count"` // 可选数量
-	IsFull        bool               `json:"is_full"`        // 是否选满
-	Num           int                `json:"num"`            // 套餐商品数量
-	Products      ProductList        `json:"products"`       // 套餐商品列表
+	Uuid             uint64             `json:"uuid"`               // 套餐分组UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐分组名称
+	GroupType        int                `json:"group_type"`         // 分组类型 0-固定 1-可选
+	OptionalMinCount int                `json:"optional_min_count"` // 最小可选数量
+	OptionalCount    int                `json:"optional_count"`     // 最大可选数量
+	IsFull           bool               `json:"is_full"`            // 是否选满
+	Num              int                `json:"num"`                // 套餐商品数量
+	Products         ProductList        `json:"products"`           // 套餐商品列表
 }
 
 // 判断套餐分组是否选满
@@ -167,6 +168,7 @@ type ProductAttributeGroup struct {
 	LocaleName dto.LocaleResponse        `json:"locale_name"` // 商品属性组名称
 	Attributes ProductAttributeValueList `json:"attributes"`  // 商品属性值列表
 	IsMust     bool                      `json:"is_must"`     // 是否必选
+	MinSelect  uint                      `json:"min_select"`  // 最小可选数量
 	MaxSelect  uint                      `json:"max_select"`  // 最大可选数量
 }
 
@@ -220,6 +222,7 @@ func (list ProductSlice) InjectStockNum(stockNumMap map[uint64]float64) {
 type ProductSauceList struct {
 	List      []ProductSauce `json:"list"`
 	IsMust    bool           `json:"is_must"`    // 是否必选小料
+	MinSelect int            `json:"min_select"` // 小料最小可选数量
 	MaxSelect int            `json:"max_select"` // 小料最大可选数量
 }
 
@@ -565,11 +568,12 @@ type ProductPackageSubProductList struct {
 }
 
 type ProductPackageSubProductGroup struct {
-	Uuid          uint64                       `json:"uuid"`           // 套餐子商品分组UUID
-	LocaleName    dto.LocaleResponse           `json:"locale_name"`    // 套餐子商品分组名称
-	GroupType     int                          `json:"group_type"`     // 分组类型 0-固定 1-可选
-	OptionalCount int                          `json:"optional_count"` // 可选数量，表示本组商品中要求选择多少个商品
-	Products      ProductPackageSubProductList `json:"products"`       // 套餐子商品列表
+	Uuid             uint64                       `json:"uuid"`               // 套餐子商品分组UUID
+	LocaleName       dto.LocaleResponse           `json:"locale_name"`        // 套餐子商品分组名称
+	GroupType        int                          `json:"group_type"`         // 分组类型 0-固定 1-可选
+	OptionalMinCount int                          `json:"optional_min_count"` // 最小可选数量
+	OptionalCount    int                          `json:"optional_count"`     // 最大可选数量，表示本组商品中要求选择多少个商品
+	Products         ProductPackageSubProductList `json:"products"`           // 套餐子商品列表
 }
 
 type ProductPackageSubProductGroupList struct {
@@ -626,7 +630,8 @@ type ProductDetailResp struct {
 
 	HeadquarterUuid uint64 `json:"headquarter_uuid"` // 总部UUID,0表示不是总部商品
 
-	IsEditable bool `json:"is_editable"` // 是否可编辑 1-是 0-否
+	IsEditable      bool                       `json:"is_editable"`      // 是否可编辑 1-是 0-否
+	TakeoutProducts []ProductTakeoutSimpleInfo `json:"takeout_products"` // 外卖商品信息列表
 }
 
 // ProductListResp 商品列表响应
@@ -653,6 +658,7 @@ type ProductShopListItemResp struct {
 	Flavors             ProductShopListItemFlavorListResp `json:"flavors"`               // 商品规格列表
 	NumType             uint                              `json:"num_type"`              // 商品数量计算方法 0-整数 1-小数
 	IsEditable          bool                              `json:"is_editable"`           // 是否可编辑
+	TakeoutProducts     []ProductTakeoutSimpleInfo        `json:"takeout_products"`      // 外卖商品信息列表
 }
 
 // ProductShopListItemTagResp 商品标签列表
@@ -675,6 +681,13 @@ type ProductShopListItemFlavorItemResp struct {
 	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品Bom名称
 	Price        float64            `json:"price"`         // 商品Bom价格
 	InternalCode string             `json:"internal_code"` // 商品Bom内部编码
+}
+
+// ProductTakeoutSimpleInfo 外卖商品简要信息
+type ProductTakeoutSimpleInfo struct {
+	Uuid        uint64 `json:"uuid"`         // 外卖商品UUID
+	TakeoutType uint   `json:"takeout_type"` // 外卖类型 1-Grab 2-LINE MAN
+	Status      uint   `json:"status"`       // 外卖状态 0-下架 1-上架
 }
 
 // ProductTaxListResp 商品税类列表响应

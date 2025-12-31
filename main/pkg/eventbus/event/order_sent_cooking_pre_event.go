@@ -9,7 +9,8 @@ import (
 // SentCookingPayload 预送厨事件数据结构
 type SentCookingPrePayload struct {
 	BasePayload
-	Products ProductsPre `json:"products"` // 用餐人数
+	Products        ProductsPre `json:"products"`           // 正式送厨的分批商品
+	IsPreBatchPrint bool        `json:"is_pre_batch_print"` // 是否是预先分批打印送厨单. 只有前置送厨且开启合并打印模式时，才会是true
 }
 
 // OrderProduct 订单商品

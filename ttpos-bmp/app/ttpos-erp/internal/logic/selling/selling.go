@@ -12,6 +12,7 @@ import (
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+	"ttpos-bmp/utility/uuid"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -392,8 +393,11 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
 	}
 
-	// 构建开帐信息
-	openDetails := s.buildOpeningEntryDetails(req.OpenPosEntryDetail)
+	// 构建开账明细（支持 payment_id 自动查询 mode_of_payment）
+	openDetails, err := s.buildOpeningEntryDetails(ctx, req.OpenPosEntryDetail)
+	if err != nil {
+		return nil, err
+	}
 	reqInfo := s.buildOpeningEntryRequest(req, companyName, openDetails)
 
 	// 创建开帐记录
@@ -425,21 +429,51 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	}, nil
 }
 
-// buildOpeningEntryDetails 构建开帐明细
+// buildOpeningEntryDetails 构建开账明细
 // 参数：
-//   - details: 开帐明细列表
+//   - ctx: 上下文
+//   - details: 开账明细列表
 //
 // 返回：
-//   - []erp.POSOpeningEntryDetail: 开帐明细列表
-func (s *sSelling) buildOpeningEntryDetails(details []*selling.OpenPosEntryDetail) []erp.POSOpeningEntryDetail {
-	openDetails := make([]erp.POSOpeningEntryDetail, 0)
-	for _, detail := range details {
-		openDetails = append(openDetails, erp.POSOpeningEntryDetail{
-			ModeOfPayment: detail.ModeOfPayment,
+//   - []erp.POSOpeningEntryDetail: 开账明细列表
+//   - error: 错误信息
+func (s *sSelling) buildOpeningEntryDetails(ctx context.Context, details []*selling.OpenPosEntryDetail) ([]erp.POSOpeningEntryDetail, error) {
+	var openingDetails []erp.POSOpeningEntryDetail
+
+	for i, detail := range details {
+		var modeOfPayment string
+
+		// 如果提供了 payment_id，自动查询 mode_of_payment
+		if detail.PaymentId != nil && *detail.PaymentId != "" {
+			getModeResp, err := service.Selling().GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+				PaymentId: detail.PaymentId,
+			})
+			if err != nil {
+				g.Log().Error(ctx, "查询支付方式失败",
+					g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
+				return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
+			}
+
+			if getModeResp == nil || getModeResp.Name == "" {
+				return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
+			}
+
+			modeOfPayment = getModeResp.Name
+
+			g.Log().Info(ctx, "开账详情: 通过 payment_id 查询到 mode_of_payment",
+				g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
+		} else if detail.ModeOfPayment != nil {
+			// 直接使用 mode_of_payment（向后兼容）
+			modeOfPayment = *detail.ModeOfPayment
+		}
+
+		openingDetails = append(openingDetails, erp.POSOpeningEntryDetail{
+			ModeOfPayment: modeOfPayment,
 			OpeningAmount: detail.OpeningAmount,
 		})
 	}
-	return openDetails
+
+	return openingDetails, nil
 }
 
 // buildOpeningEntryRequest 构建开帐请求
@@ -484,8 +518,11 @@ func (s *sSelling) parseOpeningEntryResponse(resp *gjson.Json) (*erp.POSOpeningE
 //   - *selling.ClosePosEntryResp: 关帐响应信息
 //   - error: 错误信息
 func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error) {
-	// 构建关帐明细
-	closeDetails := s.buildClosingEntryDetails(req.ClosePosEntryDetail)
+	// 构建关帐明细（支持 payment_id 自动查询 mode_of_payment）
+	closeDetails, err := s.buildClosingEntryDetails(ctx, req.ClosePosEntryDetail)
+	if err != nil {
+		return nil, err
+	}
 
 	// 构建关帐请求
 	reqInfo := s.buildClosingEntryRequest(req, closeDetails)
@@ -548,20 +585,48 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 
 // buildClosingEntryDetails 构建关帐明细
 // 参数：
+//   - ctx: 上下文
 //   - details: 关帐明细列表
 //
 // 返回：
 //   - []erp.POSPaymentReconciliation: 关帐明细列表
-func (s *sSelling) buildClosingEntryDetails(details []*selling.ClosePosEntryDetail) []erp.POSPaymentReconciliation {
+//   - error: 错误信息
+func (s *sSelling) buildClosingEntryDetails(ctx context.Context, details []*selling.ClosePosEntryDetail) ([]erp.POSPaymentReconciliation, error) {
 	closeDetails := make([]erp.POSPaymentReconciliation, 0)
-	for _, detail := range details {
+	for i, detail := range details {
+		var modeOfPayment string
+
+		// 如果提供了 payment_id，自动查询 mode_of_payment
+		if detail.PaymentId != nil && *detail.PaymentId != "" {
+			getModeResp, err := service.Selling().GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+				PaymentId: detail.PaymentId,
+			})
+			if err != nil {
+				g.Log().Error(ctx, "查询支付方式失败",
+					g.Map{"payment_id": *detail.PaymentId, "error": err.Error()})
+				return nil, gerror.Wrapf(err, "查询支付方式失败，payment_id: %s", *detail.PaymentId)
+			}
+
+			if getModeResp == nil || getModeResp.Name == "" {
+				return nil, gerror.Newf("支付方式不存在或未启用，payment_id: %s", *detail.PaymentId)
+			}
+
+			modeOfPayment = getModeResp.Name
+
+			g.Log().Info(ctx, "关账详情: 通过 payment_id 查询到 mode_of_payment",
+				g.Map{"index": i, "payment_id": *detail.PaymentId, "mode_of_payment": modeOfPayment})
+		} else if detail.ModeOfPayment != nil {
+			// 直接使用 mode_of_payment（向后兼容）
+			modeOfPayment = *detail.ModeOfPayment
+		}
+
 		closeDetails = append(closeDetails, erp.POSPaymentReconciliation{
-			ModeOfPayment: detail.ModeOfPayment,
+			ModeOfPayment: modeOfPayment,
 			ClosingAmount: detail.ClosingAmount,
 			OpeningAmount: detail.OpeningAmount,
 		})
 	}
-	return closeDetails
+	return closeDetails, nil
 }
 
 // buildClosingEntryRequest 构建关帐请求
@@ -671,6 +736,73 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 	return res, nil
 }
 
+// resolvePaymentIDs 解析支付列表中的 payment_id
+// 参数：
+//   - ctx: 上下文对象
+//   - payments: 支付列表
+//
+// 返回：
+//   - error: 错误信息
+//
+// 功能：
+//   - 遍历支付列表，如果 payment_id 不为空，调用 GetModeOfPayment 查询 mode_of_payment
+//   - 验证支付方式是否启用（enabled = true）
+//   - 使用缓存优化：相同 payment_id 只查询一次
+func (s *sSelling) resolvePaymentIDs(ctx context.Context, payments []*selling.PosInvoicePayment) error {
+	// 1. 收集所有需要解析的 payment_id（去重）
+	cache := make(map[string]string) // payment_id -> mode_of_payment
+
+	for i, payment := range payments {
+		// 2. 如果 payment_id 不为空，进行解析
+		if payment.PaymentId != nil && *payment.PaymentId != "" {
+			paymentID := *payment.PaymentId
+
+			// 检查缓存
+			if modeOfPayment, cached := cache[paymentID]; cached {
+				g.Log().Infof(ctx, "[resolvePaymentIDs] 使用缓存: payment_id=%s -> mode_of_payment=%s",
+					paymentID, modeOfPayment)
+				payment.ModeOfPayment = modeOfPayment
+				continue
+			}
+
+			// 3. 调用 GetModeOfPayment 查询
+			g.Log().Infof(ctx, "[resolvePaymentIDs] 解析支付项 %d: payment_id=%s", i+1, paymentID)
+			mopResp, err := s.GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+				PaymentId: &paymentID,
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "[resolvePaymentIDs] 解析支付项 %d 失败: payment_id=%s, err=%v",
+					i+1, paymentID, err)
+				return gerror.Wrapf(err, "解析支付项 %d 的 payment_id 失败", i+1)
+			}
+
+			// 4. 验证支付方式是否启用
+			if !mopResp.Enabled {
+				g.Log().Warningf(ctx, "[resolvePaymentIDs] 支付方式已禁用: name=%s, payment_id=%s",
+					mopResp.Name, paymentID)
+				return gerror.Newf("支付项 %d: 支付方式 %s 已禁用", i+1, mopResp.Name)
+			}
+
+			// 5. 赋值并缓存
+			payment.ModeOfPayment = mopResp.Name
+			cache[paymentID] = mopResp.Name
+
+			g.Log().Infof(ctx, "[resolvePaymentIDs] 解析成功: payment_id=%s -> mode_of_payment=%s",
+				paymentID, mopResp.Name)
+		}
+
+		// 6. 验证 mode_of_payment 是否存在
+		if payment.ModeOfPayment == "" {
+			g.Log().Errorf(ctx, "[resolvePaymentIDs] 支付项 %d: mode_of_payment 和 payment_id 都未提供", i+1)
+			return gerror.Newf("支付项 %d: mode_of_payment 和 payment_id 至少提供一个", i+1)
+		}
+	}
+
+	g.Log().Infof(ctx, "[resolvePaymentIDs] 支付项解析完成，共处理 %d 项，缓存 %d 个",
+		len(payments), len(cache))
+	return nil
+}
+
 // SavePosInvoice 保存POS发票
 // 参数：
 //   - ctx: 上下文对象
@@ -680,6 +812,10 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 //   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
 //   - error: 错误信息
 func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
+	// 新增：支付项预处理 - 解析 payment_id
+	if err := s.resolvePaymentIDs(ctx, req.Payments); err != nil {
+		return nil, err
+	}
 
 	// 获取开帐记录
 	openingEntry, err := s.GetPosOpeningEntry(ctx, req.OpenPosEntryName)
@@ -814,6 +950,14 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 	// 设置备注
 	if len(req.Remark) > 0 {
 		posInvoice.Remarks = req.Remark
+	}
+
+	// 设置外卖订单字段
+	if len(req.GetTakeoutOrderNo()) > 0 {
+		posInvoice.CustomTakeoutOrderNo = req.GetTakeoutOrderNo()
+	}
+	if len(req.GetTakeoutProvider()) > 0 {
+		posInvoice.CustomTakeoutProvider = req.GetTakeoutProvider()
 	}
 
 	return posInvoice
@@ -1054,6 +1198,48 @@ func (*sSelling) CancelPosInvoice(ctx context.Context, invoiceName string) error
 //	return nil
 //}
 
+// queryModeOfPaymentList 查询支付方式列表（内部方法）
+// 参数：
+//   - ctx: 上下文对象
+//   - filters: 查询过滤条件
+//   - limit: 返回数量限制，0 表示不限制
+//
+// 返回：
+//   - []*selling.ModeOfPayment: 支付方式列表
+//   - error: 错误信息
+func (s *sSelling) queryModeOfPaymentList(ctx context.Context, filters [][]string, limit int) ([]*selling.ModeOfPayment, error) {
+	params := &erp.RequestParams{
+		Fields:  []string{"name", "enabled", "custom_payment_id"},
+		Filters: filters,
+	}
+
+	if limit > 0 {
+		params.Limit = limit
+	}
+
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeModeOfPayment,
+	}, params)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询支付方式失败")
+	}
+
+	// 手动解析数据，确保字段映射正确
+	dataArray := resp.GetJsons("data")
+	result := make([]*selling.ModeOfPayment, 0, len(dataArray))
+
+	for _, item := range dataArray {
+		modeOfPayment := &selling.ModeOfPayment{
+			Name:      item.Get("name").String(),
+			Enabled:   item.Get("enabled").Int() == 1,
+			PaymentId: item.Get("custom_payment_id").String(),
+		}
+		result = append(result, modeOfPayment)
+	}
+
+	return result, nil
+}
+
 // GetModeOfPaymentList 获取支付方式列表
 // 参数：
 //   - ctx: 上下文对象
@@ -1066,7 +1252,7 @@ func (*sSelling) CancelPosInvoice(ctx context.Context, invoiceName string) error
 // 功能：
 //   - 获取支付方式列表（包含所有支付方式，不管启用状态）
 //   - 从ERP读取enabled字段并填充到响应中
-func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error) {
+func (s *sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error) {
 	filters := make([][]string, 0)
 	if len(req.CompanyAbbr) > 0 {
 		companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
@@ -1078,31 +1264,95 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 	if len(req.Branch) > 0 {
 		filters = append(filters, []string{"custom_branch", "=", req.Branch})
 	}
-	// 返回所有支付方式（不限制enabled状态）
-	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeModeOfPayment,
-	}, &erp.RequestParams{
-		Fields:  []string{"name", "enabled"},
-		Filters: filters,
-	})
+
+	// 调用统一查询方法，直接获取解析后的数据
+	modeOfPaymentList, err := s.queryModeOfPaymentList(ctx, filters, 0)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取支付方式列表失败")
 	}
-	// 解析响应数据
-	j := resp
-	var modeOfPaymentList []*selling.ModeOfPayment
-	j.GetJson("data").Scan(&modeOfPaymentList)
 
 	return &selling.GetModeOfPaymentListResp{
 		ModeOfPaymentList: modeOfPaymentList,
 	}, nil
 }
 
+// GetModeOfPayment 查询单个支付方式
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 查询单个支付方式请求参数（name 或 payment_id 至少提供一个）
+//
+// 返回：
+//   - *selling.ModeOfPayment: 支付方式信息
+//   - error: 错误信息
+//
+// 功能：
+//   - 支持通过 name 查询（主键查询，性能最优）
+//   - 支持通过 payment_id 查询（Filter 查询）
+func (s *sSelling) GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*selling.ModeOfPayment, error) {
+	// 1. 参数校验
+	if (req.Name == nil || *req.Name == "") && (req.PaymentId == nil || *req.PaymentId == "") {
+		return nil, gerror.New("name 或 payment_id 至少提供一个")
+	}
+
+	var modeOfPayment *selling.ModeOfPayment
+
+	// 2. 通过 name 查询（主键查询，性能最优）
+	if req.Name != nil && *req.Name != "" {
+		g.Log().Infof(ctx, "[GetModeOfPayment] 通过 name 查询支付方式: name=%s", *req.Name)
+
+		resp, err := service.Document().Get(ctx, &erp.ErpReq{
+			DocType: erp.DocTypeModeOfPayment,
+			Name:    *req.Name,
+		}, &erp.RequestParams{
+			Fields: []string{"name", "enabled", "custom_payment_id"},
+		})
+		if err != nil {
+			g.Log().Errorf(ctx, "[GetModeOfPayment] 查询支付方式失败: name=%s, err=%v", *req.Name, err)
+			return nil, gerror.Wrapf(err, "查询支付方式失败: name=%s", *req.Name)
+		}
+
+		// 数据映射
+		modeOfPayment = &selling.ModeOfPayment{
+			Name:      resp.Get("data.name").String(),
+			Enabled:   resp.Get("data.enabled").Int() == 1,
+			PaymentId: resp.Get("data.custom_payment_id").String(),
+		}
+
+		g.Log().Infof(ctx, "[GetModeOfPayment] 查询成功: name=%s, enabled=%v, payment_id=%s",
+			modeOfPayment.Name, modeOfPayment.Enabled, modeOfPayment.PaymentId)
+		return modeOfPayment, nil
+	}
+
+	// 3. 通过 payment_id 查询（Filter 查询）
+	g.Log().Infof(ctx, "[GetModeOfPayment] 通过 payment_id 查询支付方式: payment_id=%s", *req.PaymentId)
+
+	filters := [][]string{{"custom_payment_id", "=", *req.PaymentId}}
+	modeOfPaymentList, err := s.queryModeOfPaymentList(ctx, filters, 1)
+	if err != nil {
+		g.Log().Errorf(ctx, "[GetModeOfPayment] 查询支付方式失败: payment_id=%s, err=%v", *req.PaymentId, err)
+		return nil, gerror.Wrapf(err, "查询支付方式失败: payment_id=%s", *req.PaymentId)
+	}
+
+	// 4. 检查结果
+	if len(modeOfPaymentList) == 0 {
+		g.Log().Warningf(ctx, "[GetModeOfPayment] 支付方式不存在: payment_id=%s", *req.PaymentId)
+		return nil, gerror.Newf("支付方式不存在: payment_id=%s", *req.PaymentId)
+	}
+
+	// 5. 返回第一条记录
+	modeOfPayment = modeOfPaymentList[0]
+
+	g.Log().Infof(ctx, "[GetModeOfPayment] 查询成功: name=%s, enabled=%v, payment_id=%s",
+		modeOfPayment.Name, modeOfPayment.Enabled, modeOfPayment.PaymentId)
+	return modeOfPayment, nil
+}
+
 // SaveModeOfPayment 保存/同步支付方式
 func (s *sSelling) SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error) {
 	// 判断是更新操作还是创建操作
-	// 如果传入了 name，则执行更新操作
-	if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
+	// 如果传入了 name 或 payment_id，则执行更新操作
+	if (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
+		(req.PaymentId != "" && strings.TrimSpace(req.PaymentId) != "") {
 		return s.updateModeOfPayment(ctx, req)
 	}
 
@@ -1126,67 +1376,82 @@ func (s *sSelling) createModeOfPayment(ctx context.Context, req *selling.SaveMod
 		parts = append(parts, req.PayType)
 	}
 	prefix := strings.Join(parts, "-") + "-"
-	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
-		nextSeq, err := s.nextModeOfPaymentSeq(ctx, prefix, companyName)
+
+	// 根据 added_by 字段决定序号生成策略
+	var nextSeq int
+	if req.AddedBy != nil && strings.TrimSpace(*req.AddedBy) == consts.PaymentAddedBySystem {
+		// 系统创建：使用固定序号
+		nextSeq = consts.PaymentSeqSystem
+		g.Log().Infof(ctx, "[createModeOfPayment] 系统创建支付方式，使用固定序号 %04d, company=%s, prefix=%s",
+			nextSeq, req.CompanyAbbr, prefix)
+	} else {
+		// 用户创建：自动递增序号
+		nextSeq, err = s.nextModeOfPaymentSeq(ctx, prefix, companyName)
 		if err != nil {
 			return nil, err
 		}
-		name := fmt.Sprintf("%s%04d - %s", prefix, nextSeq, req.CompanyAbbr)
-
-		payload := g.Map{
-			"mode_of_payment": name,
-			"name":            name,
-			"type":            "General", // 需求默认通用类型，后续可按渠道扩展
-			"custom_branch":   req.Branch,
-			"custom_company":  companyName,
-		}
-
-		// 如果请求明确携带enabled字段，则更新ERP的启用状态
-		// 如果未携带，则不设置enabled字段（保持ERP原值，兼容旧客户端）
-		if req.Enabled != nil {
-			// BoolValue.Value 为实际的bool值
-			if req.GetEnabled() {
-				payload["enabled"] = 1
-			} else {
-				payload["enabled"] = 0
-			}
-		}
-
-		resp, err := service.Document().Create(ctx, erp.DocTypeModeOfPayment, payload)
-		if err != nil {
-			lastErr = err
-			// 并发/重复情况下重试
-			if strings.Contains(err.Error(), "exists") || strings.Contains(err.Error(), "Duplicate") {
-				continue
-			}
-			return nil, gerror.Wrapf(err, "创建支付方式失败")
-		}
-
-		createdName := name
-		if resp != nil {
-			if v := resp.Get("data.name").String(); v != "" {
-				createdName = v
-			}
-		}
-
-		// 创建对应公司的支付账户关联，确保新支付方式可用
-		if err := service.Selling().CreateModePaymentAccount(ctx, &setup.CreateModePaymentAccountInp{
-			CompanyAbbr: req.CompanyAbbr,
-			PaymentType: createdName,
-		}); err != nil {
-			return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
-		}
-
-		return &selling.SaveModeOfPaymentResp{
-			Name: createdName,
-		}, nil
+		g.Log().Debugf(ctx, "[createModeOfPayment] 用户创建支付方式，使用递增序号 %04d, company=%s, prefix=%s",
+			nextSeq, req.CompanyAbbr, prefix)
 	}
 
-	if lastErr != nil {
-		return nil, gerror.Wrapf(lastErr, "创建支付方式失败")
+	name := fmt.Sprintf("%s%04d - %s", prefix, nextSeq, req.CompanyAbbr)
+
+	// 生成或使用提供的 PaymentID
+	paymentID := req.PaymentId
+	if paymentID == "" {
+		// 自动生成：PID + 16位数字
+		paymentID = fmt.Sprintf("PID%d", uuid.MustGetID())
 	}
-	return nil, gerror.New("创建支付方式失败")
+	paymentType := "General"
+	//名字是Cash 才设置成 Cash
+	if req.PayType == "Cash" {
+		paymentType = "Cash"
+	}
+	payload := g.Map{
+		"mode_of_payment":   name,
+		"name":              name,
+		"type":              paymentType, // 需求默认通用类型，后续可按渠道扩展
+		"custom_branch":     req.Branch,
+		"custom_company":    companyName,
+		"custom_payment_id": paymentID,
+	}
+
+	// 如果请求明确携带enabled字段，则更新ERP的启用状态
+	// 如果未携带，则不设置enabled字段（保持ERP原值，兼容旧客户端）
+	if req.Enabled != nil {
+		// BoolValue.Value 为实际的bool值
+		if req.GetEnabled() {
+			payload["enabled"] = 1
+		} else {
+			payload["enabled"] = 0
+		}
+	}
+
+	resp, err := service.Document().Create(ctx, erp.DocTypeModeOfPayment, payload)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建支付方式失败")
+	}
+
+	createdName := name
+	if resp != nil {
+		if v := resp.Get("data.name").String(); v != "" {
+			createdName = v
+		}
+	}
+
+	// 创建对应公司的支付账户关联，确保新支付方式可用
+	if err := service.Selling().CreateModePaymentAccount(ctx, &setup.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: createdName,
+	}); err != nil {
+		return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
+	}
+
+	return &selling.SaveModeOfPaymentResp{
+		Name:      createdName,
+		PaymentId: paymentID, // 返回生成或指定的 PaymentID
+	}, nil
+
 }
 
 // nextModeOfPaymentSeq 计算下一个支付方式序号
@@ -1242,36 +1507,68 @@ func (s *sSelling) nextModeOfPaymentSeq(ctx context.Context, prefix, companyName
 
 // updateModeOfPayment 更新支付方式
 func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error) {
-	name := strings.TrimSpace(*req.Name)
+	var resp *gjson.Json
+	var err error
+	var name string
+	var queryKey string
 
-	// 1. 查询支付方式是否存在
-	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+	// 构建查询过滤器
+	var filters [][]string
+
+	// 1. 优先使用 PaymentId 查询（业务主键）
+	if req.PaymentId != "" && strings.TrimSpace(req.PaymentId) != "" {
+		paymentId := strings.TrimSpace(req.PaymentId)
+		queryKey = fmt.Sprintf("payment_id=%s", paymentId)
+		filters = [][]string{{"custom_payment_id", "=", paymentId}}
+		g.Log().Infof(ctx, "[updateModeOfPayment] 通过 payment_id 查询支付方式: %s", queryKey)
+	} else if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
+		// 2. 使用 Name 查询（ERP 主键）
+		name = strings.TrimSpace(*req.Name)
+		queryKey = fmt.Sprintf("name=%s", name)
+		filters = [][]string{{"name", "=", name}}
+		g.Log().Infof(ctx, "[updateModeOfPayment] 通过 name 查询支付方式: %s", queryKey)
+	} else {
+		return nil, gerror.New("name 或 payment_id 至少提供一个")
+	}
+
+	// 3. 统一使用 List 接口查询
+	resp, err = service.Document().List(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeModeOfPayment,
-		Name:    name,
 	}, &erp.RequestParams{
-		Fields: []string{"name", "custom_company", "custom_branch", "enabled"},
+		Fields:  []string{"name", "custom_company", "custom_branch", "enabled", "custom_payment_id"},
+		Filters: filters,
+		Limit:   1,
 	})
 	if err != nil {
-		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
-			return nil, gerror.Newf("支付方式 [%s] 不存在", name)
-		}
+		g.Log().Errorf(ctx, "[updateModeOfPayment] 查询支付方式失败: %s, err=%v", queryKey, err)
 		return nil, gerror.Wrapf(err, "查询支付方式失败")
 	}
 
-	// 2. 权限校验：确认支付方式属于当前公司
+	// 4. 检查查询结果
+	dataArray := resp.GetJsons("data")
+	if len(dataArray) == 0 {
+		g.Log().Warningf(ctx, "[updateModeOfPayment] 支付方式不存在: %s", queryKey)
+		return nil, gerror.Newf("支付方式不存在: %s", queryKey)
+	}
+
+	// 5. 获取查询到的支付方式信息
+	data := dataArray[0]
+	name = data.Get("name").String()
+	erpCompany := data.Get("custom_company").String()
+
+	// 6. 权限校验：确认支付方式属于当前公司
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "根据公司缩写[%s]查询公司失败", req.CompanyAbbr)
 	}
 
-	erpCompany := resp.Get("data.custom_company").String()
 	if erpCompany != companyName {
-		g.Log().Warningf(ctx, "尝试越权修改支付方式：name=%s, 请求公司=%s, ERP公司=%s",
+		g.Log().Warningf(ctx, "[updateModeOfPayment] 尝试越权修改支付方式: name=%s, 请求公司=%s, ERP公司=%s",
 			name, companyName, erpCompany)
 		return nil, gerror.New("无权限修改此支付方式")
 	}
 
-	// 3. 构建更新数据
+	// 7. 构建更新数据
 	updateData := g.Map{}
 
 	// 仅在明确传入 enabled 时才更新
@@ -1283,7 +1580,7 @@ func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveMod
 		}
 	}
 
-	// 4. 如果有字段需要更新，则调用 ERP 更新接口
+	// 8. 如果有字段需要更新，则调用 ERP 更新接口
 	if len(updateData) > 0 {
 		_, err = service.Document().Update(ctx, &erp.ErpReq{
 			DocType: erp.DocTypeModeOfPayment,
@@ -1293,14 +1590,21 @@ func (s *sSelling) updateModeOfPayment(ctx context.Context, req *selling.SaveMod
 			return nil, gerror.Wrapf(err, "更新支付方式失败")
 		}
 
-		// 5. 记录审计日志
-		g.Log().Infof(ctx, "更新支付方式成功：name=%s, company=%s, branch=%s, updateData=%v",
+		// 9. 记录审计日志
+		g.Log().Infof(ctx, "[updateModeOfPayment] 更新成功: name=%s, company=%s, branch=%s, updateData=%v",
 			name, req.CompanyAbbr, req.Branch, updateData)
 	} else {
-		g.Log().Infof(ctx, "更新支付方式：未传入任何可更新字段，跳过更新：name=%s", name)
+		g.Log().Infof(ctx, "[updateModeOfPayment] 未传入任何可更新字段，跳过更新: name=%s", name)
+	}
+
+	// 10. 读取更新后的 payment_id（优先使用更新值，否则使用原值）
+	finalPaymentID := data.Get("custom_payment_id").String()
+	if req.PaymentId != "" {
+		finalPaymentID = req.PaymentId
 	}
 
 	return &selling.SaveModeOfPaymentResp{
-		Name: name,
+		Name:      name,
+		PaymentId: finalPaymentID,
 	}, nil
 }

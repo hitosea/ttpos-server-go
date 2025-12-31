@@ -2,10 +2,11 @@ package skootar
 
 import (
 	"fmt"
-	"github.com/gogf/gf/v2/crypto/gmd5"
+
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
@@ -49,14 +50,4 @@ func (s *sSkootar) ReqBase() skootar.ReqBase {
 		UserName: s.MustConf().UserName,
 		Channel:  s.MustConf().Channel,
 	}
-}
-
-// getCallBackAuth 获取回调Auth
-func (*sSkootar) getCallBackAuth(shopRefNo string) string {
-	if res, err := gmd5.EncryptString(shopRefNo + g.Cfg().MustGet(gctx.GetInitCtx(), "app.callbackSecret").String()); err == nil {
-		return res
-	} else {
-		g.Log().Error(gctx.GetInitCtx(), "获取回调Auth失败", err)
-	}
-	return ""
 }

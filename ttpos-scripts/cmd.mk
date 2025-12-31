@@ -183,7 +183,7 @@ build-web:
 	@echo "🔍 检查前端文件变化..."
 	@if [ -d "admin/views" ]; then \
 		FRONTEND_CHANGED=0; \
-		BUILD_MARKER="./admin/runtime/frontend_build_marker"; \
+		BUILD_MARKER="./admin/vendor/frontend_build_marker"; \
 		if [ ! -f "$$BUILD_MARKER" ]; then \
 			echo "📝 首次构建，开始构建前端..."; \
 			FRONTEND_CHANGED=1; \
@@ -221,7 +221,7 @@ build-run:
 # 快速增加版本号
 add-version:
 	@echo "快速增加版本号..."
-	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/version/version.go | sed 's/.*"\(.*\)".*/\1/'); \
+	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/config/version.go | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \

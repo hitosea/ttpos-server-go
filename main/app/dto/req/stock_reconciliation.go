@@ -37,7 +37,7 @@ type StockReconciliationSaveReq struct {
 	SubmitAfterSave bool                          `json:"submit_after_save"` // 是否在保存后提交
 	WarehouseUuid   uint64                        `json:"warehouse_uuid"`    // 仓库UUID
 	Purpose         int                           `json:"purpose"`           // 盘点目的 1-库存盘点 2-期初盘点
-	Type            int                           `json:"type"`              // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	Type            int                           `json:"type"`              // 盘点类型 1-指定物品盘点 2-全部物品盘点 3-日盘 4-周盘 5-月盘
 	Items           []*StockReconciliationItemReq `json:"items"`             // 盘点单物品明细
 }
 
@@ -66,13 +66,13 @@ type StockReconciliationReCheckDiffReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 盘点单UUID
 }
 
-type StockReconciliationCheckMaterialsItem struct {
+type CheckMaterialsItem struct {
 	MaterialUuid    uint64          `json:"material_uuid"`    // 待盘点物品UUID
 	CountedQuantity decimal.Decimal `json:"counted_quantity"` // 实盘库存数量
 }
 
 type StockReconciliationCheckMaterialsReq struct {
-	Uuid          uint64                                  `json:"uuid"`           // 盘点单UUID
-	WarehouseUuid uint64                                  `json:"warehouse_uuid"` // 仓库UUID
-	Items         []StockReconciliationCheckMaterialsItem `json:"items"`          // 待盘点物品列表
+	Uuid          uint64               `json:"uuid"`           // 盘点单UUID
+	WarehouseUuid uint64               `json:"warehouse_uuid"` // 仓库UUID
+	Items         []CheckMaterialsItem `json:"items"`          // 待盘点物品列表
 }

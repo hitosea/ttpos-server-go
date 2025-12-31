@@ -3,7 +3,6 @@ package purchase_order
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -31,106 +30,62 @@ func NewPurchaseOrderHelper() *purchaseOrderHelper {
 	return &purchaseOrderHelper{}
 }
 
-// generateOrderNo 生成采购申请订单编号
-// 格式：prefix+年月日+0000自增序列号
-func (h *purchaseOrderHelper) generateOrderNo(db *gorm.DB, prefix string, timezone string) string {
-	// 年月日部分
-	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
+// generateOrderNo 生成采购申请/品牌采购订单编号
+// 格式：prefix + yyyyMMddHHmmss + 序列号（4位）
+// 例如：PR202504030915120001, TPHY202504030915120001
+func (h *purchaseOrderHelper) generateOrderNo(
+	saasDB *gorm.DB,
+	companyUuid uint64,
+	prefix string,
+	numberType string,
+	timezone string,
+) (string, error) {
+	// 获取秒级时间戳
+	now := utils.SetTimezone(timezone).Now()
+	timestamp := now.Format("20060102150405") // yyyyMMddHHmmss
 
-	// 生成自增序列号
-	serialNo, err := h.generatePurchaseOrderSerialNo(db)
+	// 获取日期字符串（用于序列号表）
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD
+
+	// 从 ttpos_number_sequence 表获取下一个序列号
+	seqRepo := repository.NewNumberSequenceRepo(saasDB)
+	seq, err := seqRepo.GetNextSequence(companyUuid, numberType, dateStr)
 	if err != nil {
-		return ""
+		return "", errors.WithMessage(err, "获取序列号失败")
 	}
 
-	// 组装订单编号：prefix+年月日+0000自增序列号
-	orderNo := prefix + datePart + serialNo
-
-	return orderNo
+	// 组装编号：prefix + timestamp + 序列号（4位）
+	orderNo := fmt.Sprintf("%s%s%04d", prefix, timestamp, seq)
+	return orderNo, nil
 }
 
-// generatePurchaseOrderSerialNo 生成采购申请自增序列号
-func (h *purchaseOrderHelper) generatePurchaseOrderSerialNo(db *gorm.DB) (string, error) {
-	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
+// generateReceiptNo 生成采购收货/品采收货编号
+// 格式：prefix + yyyyMMddHHmmss + 序列号（4位）
+// 例如：PRC202504030915120001, TPHY202504030915120001
+func (h *purchaseOrderHelper) generateReceiptNo(
+	saasDB *gorm.DB,
+	companyUuid uint64,
+	prefix string,
+	numberType string,
+	timezone string,
+) (string, error) {
+	// 获取秒级时间戳
+	now := utils.SetTimezone(timezone).Now()
+	timestamp := now.Format("20060102150405") // yyyyMMddHHmmss
 
-	// 获取今天最新的采购申请
-	latestOrder, err := purchaseOrderRepo.GetLatestOrderToday()
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", errors.WithMessage(errors.New("获取最新采购申请失败"), err.Error())
-	}
+	// 获取日期字符串（用于序列号表）
+	dateStr := now.Format("2006-01-02") // YYYY-MM-DD
 
-	// 如果没有查询到今天的采购申请，则设置为0001
-	if latestOrder == nil {
-		return "0001", nil
-	}
-
-	// 从订单编号中提取序列号部分（最后4位）
-	if len(latestOrder.OrderNo) >= 4 {
-		lastSerialNo := latestOrder.OrderNo[len(latestOrder.OrderNo)-4:]
-		serialNoNum, err := strconv.Atoi(lastSerialNo)
-		if err != nil {
-			// 如果解析失败，重新从0001开始
-			return "0001", nil
-		}
-		// 序列号加1
-		newSerialNoNum := serialNoNum + 1
-		return fmt.Sprintf("%04d", newSerialNoNum), nil
-	}
-
-	// 如果订单编号格式不正确，重新从0001开始
-	return "0001", nil
-}
-
-// generateReceiptNo 生成收货单号
-// 格式：SHRK+年月日+0000自增序列号
-func (h *purchaseOrderHelper) generateReceiptNo(db *gorm.DB, timezone string) string {
-	// 固定前缀
-	prefix := "SHRK"
-	// 年月日部分
-	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
-
-	// 生成自增序列号
-	serialNo, err := h.generateReceiptOrderSerialNo(db)
+	// 从 ttpos_number_sequence 表获取下一个序列号
+	seqRepo := repository.NewNumberSequenceRepo(saasDB)
+	seq, err := seqRepo.GetNextSequence(companyUuid, numberType, dateStr)
 	if err != nil {
-		return ""
+		return "", errors.WithMessage(err, "获取序列号失败")
 	}
 
-	// 组装收货单号：SHRK+年月日+0000自增序列号
-	receiptNo := prefix + datePart + serialNo
-
-	return receiptNo
-}
-
-// generateReceiptOrderSerialNo 生成收货单自增序列号
-func (h *purchaseOrderHelper) generateReceiptOrderSerialNo(db *gorm.DB) (string, error) {
-	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
-
-	// 获取今天最新的收货单
-	latestReceipt, err := receiptOrderRepo.GetLatestReceiptToday()
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", errors.WithMessage(errors.New("获取最新收货单失败"), err.Error())
-	}
-
-	// 如果没有查询到今天的收货单，则设置为0001
-	if latestReceipt == nil {
-		return "0001", nil
-	}
-
-	// 从收货单号中提取序列号部分（最后4位）
-	if len(latestReceipt.OrderNo) >= 4 {
-		lastSerialNo := latestReceipt.OrderNo[len(latestReceipt.OrderNo)-4:]
-		serialNoNum, err := strconv.Atoi(lastSerialNo)
-		if err != nil {
-			// 如果解析失败，重新从0001开始
-			return "0001", nil
-		}
-		// 序列号加1
-		newSerialNoNum := serialNoNum + 1
-		return fmt.Sprintf("%04d", newSerialNoNum), nil
-	}
-
-	// 如果收货单号格式不正确，重新从0001开始
-	return "0001", nil
+	// 组装编号：prefix + timestamp + 序列号（4位）
+	receiptNo := fmt.Sprintf("%s%s%04d", prefix, timestamp, seq)
+	return receiptNo, nil
 }
 
 // createPurchaseOrderLog 创建采购订单操作日志
@@ -217,11 +172,6 @@ func (h *purchaseOrderHelper) checkAndUpdatePurchaseOrderStatus(
 	}
 
 	return nil
-}
-
-// UpdateRelatedMaterialStock 更新规格/加料关联材料库存
-func (h *purchaseOrderHelper) UpdateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
-	return repository.NewMaterialRepo(db).UpdateRelatedMaterialStock(relatedMaterialUuids)
 }
 
 // HeadquarterUpdateInfo 总部更新信息结构
@@ -340,7 +290,6 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 		// 获取仓库出入库日志Repository
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
-		materialRepo := repository.NewMaterialRepo(tx)
 
 		// 获取目标仓库信息（通过ERP编码查找）
 		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.TargetWarehouseErpCode)
@@ -367,20 +316,6 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 				logger.Logger.Error("recordErpStockInLog-AddStock", zap.Any("warehouseItemUuid", warehouseItem.Uuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新仓库商品库存失败"), err.Error())
 			}
-
-			// 更新规格/加料关联材料库存
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
-			if err != nil {
-				logger.Logger.Error("recordErpStockInLog-GetMaterialByUuid", zap.Any("materialUuid", item.MaterialUuid), zap.Any("err", err))
-				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
-			}
-			relatedMaterialUuids := material.GetRelatedMaterialUuids()
-			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-			if err != nil {
-				logger.Logger.Error("recordErpStockInLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-			}
-
 			// 记录入库日志
 			supplierUuid := func() uint64 {
 				supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
@@ -515,14 +450,6 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			if err != nil {
 				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
-			}
-
-			// 更新规格/加料关联材料库存
-			relatedMaterialUuids := item.Material.GetRelatedMaterialUuids()
-			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
-			if err != nil {
-				logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 			}
 
 			// 记录出库日志

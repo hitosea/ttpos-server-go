@@ -4,60 +4,60 @@ import (
 	"database/sql"
 	"fmt"
 	"slices"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
 type IStatisticsRepo interface {
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                                                                                          // 统计销售
-	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                                                                                                // 统计销售天数
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                                  // 统计支付
-	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                          // 统计支付天数
-	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                          // 统计税类
-	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                    // 统计自助餐税类
-	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                               // 统计自助餐加钟税类
-	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData)                                                                    // 统计分类
-	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                 // 统计商品
-	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                                                                                        // 统计区域
-	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                                                                                                // 统计区域
-	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                                                                                        // 统计销售天数
-	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                                                                                            // 统计未结订单
-	CountMemberNum(opts ...DBOption) int64                                                                                                                                                        // 统计会员数量
-	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                                                                                           // 统计会员数量天数
-	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                                                                                      // 统计会员
-	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                                                                                            // 统计会员天数
-	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                            // 统计会员支付
-	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                    // 统计会员支付天数
-	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                                                                                    // 统计商品销售
-	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                                                                                            // 统计免单支付
-	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                                                                                                  // 统计免单支付天数
-	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                                                                                            // 统计取消订单
-	CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData)                                                                                     // 统计营业时段
-	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                                                                                              // 统计综合运用数据
-	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)                                                                            // 统计支付方式
-	CountChannelSale(startTime, endTime int64, opts ...DBOption) (map[string]*model.ChannelSaleRepoResult, error)                                                                                 // 统计渠道营业数据
-	CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) // 统计用户分析数据
-	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                                                                                    // 统计商品排行
-	SaveSale(sales []model.StatisticsSale) error                                                                                                                                                  // 保存销售
-	SavePayment(payments []model.StatisticsPayment) error                                                                                                                                         // 保存支付
-	SaveProduct(products []model.StatisticsProduct) error                                                                                                                                         // 保存商品
-	SaveCustomerType(customerTypes []model.StatisticsCustomerType) error                                                                                                                          // 保存客户类型
-	SaveDelay(delays []model.StatisticsDelay) error                                                                                                                                               // 保存加钟
-	DeleteSale(saleBillUuid uint64) error                                                                                                                                                         // 删除销售
-	DeletePayment(saleBillUuid uint64) error                                                                                                                                                      // 删除支付
-	DeleteProduct(saleBillUuid uint64) error                                                                                                                                                      // 删除商品
-	DeleteCustomerType(saleBillUuid uint64) error                                                                                                                                                 // 删除客户类型
-	DeleteDelay(saleBillUuid uint64) error                                                                                                                                                        // 删除加钟
-	SaveMember(member model.StatisticsMember) error                                                                                                                                               // 保存会员
-	SaveMembers(members []model.StatisticsMember) error                                                                                                                                           // 保存会员
-	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                                                                                             // 保存会员支付
-	DeleteMember(memberRechargeOrderUuid uint64) error                                                                                                                                            // 删除会员
-	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                                                                                     // 删除会员支付
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                                                                                                                  // 统计销售
+	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                                                                                                                        // 统计销售天数
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                                                          // 统计支付
+	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                                                  // 统计支付天数
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                                                  // 统计税类
+	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                                            // 统计自助餐税类
+	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                                       // 统计自助餐加钟税类
+	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData)                                                                                            // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                                         // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                                                                                                                // 统计区域
+	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                                                                                                                        // 统计区域
+	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                                                                                                                // 统计销售天数
+	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                                                                                                                    // 统计未结订单
+	CountMemberNum(opts ...DBOption) int64                                                                                                                                                                                // 统计会员数量
+	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                                                                                                                   // 统计会员数量天数
+	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                                                                                                              // 统计会员
+	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                                                                                                                    // 统计会员天数
+	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                                                    // 统计会员支付
+	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                                            // 统计会员支付天数
+	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                                                                                                            // 统计商品销售
+	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                                                                                                                    // 统计免单支付
+	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                                                                                                                          // 统计免单支付天数
+	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                                                                                                                    // 统计取消订单
+	CountBusinessTimePeriod(req CountBusinessTimePeriodReq, opts ...DBOption) (int64, []model.StatisticsBusinessTimePeriodData)                                                                                           // 统计营业时段
+	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                                                                                                                      // 统计综合运用数据
+	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)                                                                                                    // 统计支付方式
+	CountChannelSale(startTime, endTime int64, excludeDataManage bool) (map[string]*model.ChannelSaleRepoResult, error)                                                                                                   // 统计渠道营业数据
+	CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, excludeDataManage bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) // 统计用户分析数据
+	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                            // 统计商品排行
+	SaveSale(sales []model.StatisticsSale) error                                                                                                                                                                          // 保存销售
+	SavePayment(payments []model.StatisticsPayment) error                                                                                                                                                                 // 保存支付
+	SaveProduct(products []model.StatisticsProduct) error                                                                                                                                                                 // 保存商品
+	SaveCustomerType(customerTypes []model.StatisticsCustomerType) error                                                                                                                                                  // 保存客户类型
+	SaveDelay(delays []model.StatisticsDelay) error                                                                                                                                                                       // 保存加钟
+	DeleteSale(saleBillUuid uint64) error                                                                                                                                                                                 // 删除销售
+	DeletePayment(saleBillUuid uint64) error                                                                                                                                                                              // 删除支付
+	DeleteProduct(saleBillUuid uint64) error                                                                                                                                                                              // 删除商品
+	DeleteCustomerType(saleBillUuid uint64) error                                                                                                                                                                         // 删除客户类型
+	DeleteDelay(saleBillUuid uint64) error                                                                                                                                                                                // 删除加钟
+	SaveMember(member model.StatisticsMember) error                                                                                                                                                                       // 保存会员
+	SaveMembers(members []model.StatisticsMember) error                                                                                                                                                                   // 保存会员
+	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                                                                                                                     // 保存会员支付
+	DeleteMember(memberRechargeOrderUuid uint64) error                                                                                                                                                                    // 删除会员
+	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                                                                                                             // 删除会员支付
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -214,6 +214,8 @@ var (
 		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
 		"pm.erpnext_payment AS erpnext_payment",
+		"pm.erpnext_payment_id AS erpnext_payment_id",
+		"pm.source AS source",
 		"COUNT(sp.payment_method_uuid) AS total_order_num",
 		"SUM(sp.payment_amount-sp.refund_amount) AS total_payment_amount",
 		"SUM(sp.refund_amount) AS total_refund_amount",
@@ -1085,7 +1087,7 @@ type CountBusinessTimePeriodReq struct {
 }
 
 // CountBusinessTimePeriod 统计营业时段
-func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq) (int64, []model.StatisticsBusinessTimePeriodData) {
+func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq, opts ...DBOption) (int64, []model.StatisticsBusinessTimePeriodData) {
 	// 确定时间字段
 	timeField := "sb.finish_time"
 	if req.IsCreateTime {
@@ -1101,6 +1103,11 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 		Where("sb.status = ?", constant.SaleBillStatusComplete).
 		Where(fmt.Sprintf("%s >= ?", timeField), req.StartTime).
 		Where(fmt.Sprintf("%s <= ?", timeField), req.EndTime)
+
+	// 应用过滤选项
+	for _, opt := range opts {
+		baseQuery = opt(baseQuery)
+	}
 
 	if req.IsDesk || req.IsInstant || req.IsTakeout {
 		var billTypeList []uint
@@ -1176,6 +1183,12 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 	// 添加额外的查询条件
 	args := []any{constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
+	// 应用过滤选项（数据管理订单过滤）
+	if len(opts) > 0 {
+		// 直接添加过滤子查询条件
+		mainQuery += " AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
+	}
+
 	if req.IsDesk || req.IsInstant || req.IsTakeout {
 		var billTypeList []uint
 		if req.IsDesk {
@@ -1220,11 +1233,12 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 
 // CountBusinessSummaryReq 统计综合运营请求
 type CountBusinessSummaryReq struct {
-	StartTime        int64  // 查询开始时间戳
-	EndTime          int64  // 查询结束时间戳
-	Cycle            int    // 周期: 0=按日、1=按月
-	PageNo, PageSize int    // 页码, 每页大小
-	Timezone         string // 业务时区，如 "Asia/Shanghai"
+	StartTime         int64  // 查询开始时间戳
+	EndTime           int64  // 查询结束时间戳
+	Cycle             int    // 周期: 0=按日、1=按月
+	PageNo, PageSize  int    // 页码, 每页大小
+	ExcludeDataManage bool   // 是否排除数据管理订单
+	Timezone          string // 业务时区，如 "Asia/Shanghai"
 }
 
 // businessSummaryRawData 综合运营统计原始数据
@@ -1281,8 +1295,17 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 			AND sb.finish_time >= ?
 			AND sb.finish_time <= ?
 			AND (sb.bill_type != ? OR (sb.bill_type = ? AND so_agg.so_uuid IS NOT NULL AND mso.uuid IS NOT NULL))
+	`
+
+	// 如果排除数据管理订单，添加过滤条件
+	if req.ExcludeDataManage {
+		rawQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
+	}
+
+	rawQuery += `
 		GROUP BY sb.uuid, sb.finish_time
 	`
+
 	r.db.Raw(rawQuery,
 		constant.NotDeleted, constant.SaleOrderStatusFinish,
 		constant.NotDeleted,
@@ -1293,10 +1316,7 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 	).Scan(&rawData)
 
 	// 2. 在应用层按业务时区分组、统计
-	loc, _ := time.LoadLocation(req.Timezone)
-	if loc == nil {
-		loc = time.UTC
-	}
+	timeUtil := utils.SetTimezone(req.Timezone)
 
 	// 按日期分组统计
 	// 使用 decimal 进行精确计算
@@ -1314,14 +1334,13 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 	groupedData := make(map[string]*groupData)
 	for _, item := range rawData {
 		// 将时间戳转换为业务时区的日期
-		t := time.Unix(item.FinishTime, 0).In(loc)
 		var dateKey string
 		if req.Cycle == 1 {
 			// 按月
-			dateKey = t.Format("2006-01")
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01")
 		} else {
 			// 按日
-			dateKey = t.Format("2006-01-02")
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01-02")
 		}
 
 		// 初始化分组数据
@@ -1398,15 +1417,18 @@ type CountBusinessPaymentMethodReq struct {
 	PageNo, PageSize             int      // 页码, 每页大小
 	IsDesk, IsInstant, IsTakeout bool     // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
 	PaymentMethodList            []uint64 // 支付方式列表: 空=全部
+	ExcludeDataManage            bool     // 是否排除数据管理订单
 	Timezone                     string   // 业务时区，如 "Asia/Shanghai"
 }
 
 // businessPaymentMethodRawData 支付方式统计原始数据
 type businessPaymentMethodRawData struct {
-	CreateTime        int64   // 创建时间戳
-	PaymentMethodUuid uint64  // 支付方式UUID
-	PaymentName       string  // 支付方式名称
-	PaymentAmount     float64 // 支付金额（已扣除退款）
+	CreateTime              int64   // 创建时间戳
+	PaymentMethodUuid       uint64  // 支付方式UUID
+	PaymentMethodSort       int     // 支付方式排序
+	PaymentMethodCreateTime int64   // 支付方式创建时间戳
+	PaymentName             string  // 支付方式名称
+	PaymentAmount           float64 // 支付金额（已扣除退款）
 }
 
 // CountBusinessPaymentMethod 统计收款数据
@@ -1414,9 +1436,11 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 1. 查询原始数据（不分组）
 	baseQuery := `
 		SELECT 
-			po.create_time,
+			sb.finish_time AS create_time,
 			po.payment_method_uuid,
 			pm.payment_name,
+			pm.sort AS payment_method_sort,
+			pm.create_time AS payment_method_create_time,
 			po.amount - IFNULL(roa.refund_amount, 0) AS payment_amount
 		FROM ttpos_payment_order AS po
 		LEFT JOIN ttpos_payment_method AS pm ON po.payment_method_uuid = pm.uuid
@@ -1435,8 +1459,8 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		WHERE po.delete_time = 0
 			AND po.related_type = 0
 			AND po.status = 1
-			AND po.create_time >= ?
-			AND po.create_time <= ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
 			AND sb.status = ?
 			AND so.status = ?
 			AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.uuid IS NOT NULL AND mso.status = ?))
@@ -1450,6 +1474,11 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		constant.SaleBillTypeTakeout,
 		constant.SaleBillTypeTakeout,
 		constant.MemberSaleOrderStatusCompleted,
+	}
+
+	// 如果排除数据管理订单，添加过滤条件
+	if req.ExcludeDataManage {
+		baseQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
 	}
 
 	// 订单类型筛选
@@ -1478,10 +1507,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	r.db.Raw(baseQuery, args...).Scan(&rawData)
 
 	// 2. 在应用层按业务时区分组、统计
-	loc, _ := time.LoadLocation(req.Timezone)
-	if loc == nil {
-		loc = time.UTC
-	}
+	timeUtil := utils.SetTimezone(req.Timezone)
 
 	// 按日期和支付方式分组统计
 	// 使用 decimal 进行精确计算
@@ -1490,22 +1516,23 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		PaymentMethodUuid uint64
 	}
 	type paymentGroupData struct {
-		PaymentName   string
-		PaymentNum    int64
-		PaymentAmount decimal.Decimal
+		PaymentName             string
+		PaymentMethodSort       int
+		PaymentMethodCreateTime int64
+		PaymentNum              int64
+		PaymentAmount           decimal.Decimal
 	}
 	groupedData := make(map[groupKey]*paymentGroupData)
 
 	for _, item := range rawData {
 		// 将时间戳转换为业务时区的日期
-		t := time.Unix(item.CreateTime, 0).In(loc)
 		var dateKey string
 		if req.Cycle == 1 {
 			// 按月
-			dateKey = t.Format("2006-01")
+			dateKey = timeUtil.FormatUnixTime(item.CreateTime, "2006-01")
 		} else {
 			// 按日
-			dateKey = t.Format("2006-01-02")
+			dateKey = timeUtil.FormatUnixTime(item.CreateTime, "2006-01-02")
 		}
 
 		key := groupKey{
@@ -1516,7 +1543,9 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		// 初始化分组数据
 		if groupedData[key] == nil {
 			groupedData[key] = &paymentGroupData{
-				PaymentName: item.PaymentName,
+				PaymentName:             item.PaymentName,
+				PaymentMethodSort:       item.PaymentMethodSort,
+				PaymentMethodCreateTime: item.PaymentMethodCreateTime,
 			}
 		}
 
@@ -1530,10 +1559,12 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	paymentResult := make([]model.StatisticsBusinessPaymentMethodData, 0, len(groupedData))
 	for key, group := range groupedData {
 		paymentResult = append(paymentResult, model.StatisticsBusinessPaymentMethodData{
-			Date:          sql.NullString{String: key.Date, Valid: true},
-			PaymentName:   sql.NullString{String: group.PaymentName, Valid: true},
-			PaymentNum:    sql.NullInt64{Int64: group.PaymentNum, Valid: true},
-			PaymentAmount: sql.NullFloat64{Float64: group.PaymentAmount.InexactFloat64(), Valid: true},
+			Date:                    sql.NullString{String: key.Date, Valid: true},
+			PaymentMethodSort:       sql.NullInt64{Int64: int64(group.PaymentMethodSort), Valid: true},
+			PaymentMethodCreateTime: sql.NullInt64{Int64: group.PaymentMethodCreateTime, Valid: true},
+			PaymentName:             sql.NullString{String: group.PaymentName, Valid: true},
+			PaymentNum:              sql.NullInt64{Int64: group.PaymentNum, Valid: true},
+			PaymentAmount:           sql.NullFloat64{Float64: group.PaymentAmount.InexactFloat64(), Valid: true},
 		})
 	}
 
@@ -1544,13 +1575,19 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		} else if a.Date.String > b.Date.String {
 			return 1
 		}
-		// 日期相同，按支付方式名称排序
-		if a.PaymentName.String < b.PaymentName.String {
+		// 日期相同，按支付方式Sort排序
+		if a.PaymentMethodSort.Int64 < b.PaymentMethodSort.Int64 {
 			return -1
-		} else if a.PaymentName.String > b.PaymentName.String {
+		} else if a.PaymentMethodSort.Int64 > b.PaymentMethodSort.Int64 {
 			return 1
+		} else {
+			if a.PaymentMethodCreateTime.Int64 < b.PaymentMethodCreateTime.Int64 {
+				return 1
+			} else if a.PaymentMethodCreateTime.Int64 > b.PaymentMethodCreateTime.Int64 {
+				return -1
+			}
+			return 0
 		}
-		return 0
 	})
 
 	// 4. 分页
@@ -1578,18 +1615,21 @@ func containsOrderType(orderTypes []uint, orderType uint) bool {
 }
 
 // CountChannelSale 统计渠道营业数据
-func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, opts ...DBOption) (map[string]*model.ChannelSaleRepoResult, error) {
+func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataManage bool) (map[string]*model.ChannelSaleRepoResult, error) {
 	result := make(map[string]*model.ChannelSaleRepoResult)
 	db := r.db
-	for _, opt := range opts {
-		db = opt(db)
-	}
 
 	// 复用 CountSale 的子查询逻辑
 	subQuery := db.Model(&model.StatisticsSale{}).
 		Select(countSaleSubQuerySelect).
-		Where("complete_time >= ? AND complete_time <= ?", startTime, endTime).
-		Group("sale_bill_uuid")
+		Where("complete_time >= ? AND complete_time <= ?", startTime, endTime)
+
+	// 应用数据管理过滤条件
+	if excludeDataManage {
+		subQuery = subQuery.Where("sale_bill_uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)")
+	}
+
+	subQuery = subQuery.Group("sale_bill_uuid")
 
 	// 定义渠道分组条件
 	channelSelects := map[string][]string{

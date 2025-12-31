@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
+	"ttpos-server-go/pkg/cache"
 
 	"gorm.io/gorm"
 )
@@ -33,9 +37,59 @@ func NewCompanySettingRepoImpl(db *gorm.DB) ICompanySettingRepo {
 }
 
 func (r *companySettingRepo) Get() model.CompanySetting {
+	// 获取商户UUID
+	companyUuid := GetCompanyUuid(r.db)
+	if companyUuid == 0 {
+		// 如果无法获取商户UUID，直接查询数据库
+		return r.queryCompanySetting()
+	}
+
+	// 检查是否启用对象存储缓存
+	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 未启用缓存，直接查询数据库
+		return r.queryCompanySetting()
+	}
+
+	// 使用对象存储模块缓存查询
+	companySetting, err := r.getCompanySettingWithCache(companyUuid)
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.queryCompanySetting()
+	}
+	return *companySetting
+}
+
+// queryCompanySetting 查询商户设置（数据库查询）
+func (r *companySettingRepo) queryCompanySetting() model.CompanySetting {
 	var companySetting model.CompanySetting
 	r.db.Model(&model.CompanySetting{}).First(&companySetting)
 	return companySetting
+}
+
+// getCompanySettingWithCache 使用对象存储模块缓存查询商户设置
+func (r *companySettingRepo) getCompanySettingWithCache(companyUuid uint64) (*model.CompanySetting, error) {
+	if companyUuid == 0 {
+		return nil, errors.New("getCompanySettingWithCache companyUuid cannot be 0")
+	}
+
+	// 构建缓存 key（使用固定的 uuid=0 表示商户级别的查询，因为每个商户只有一条设置记录）
+	key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeCompanySetting, 0)
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.CompanySetting](cache.Global, 10*time.Minute)
+
+	// 使用缓存查询
+	result, err := cacheLayer.GET(key, func() (*model.CompanySetting, error) {
+		// 缓存未命中时，从数据库查询
+		companySetting := r.queryCompanySetting()
+		return &companySetting, nil
+	})
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return result, nil
 }
 
 func (r *companySettingRepo) UpdateSmsQuota(companyUuid uint64, quota int) error {

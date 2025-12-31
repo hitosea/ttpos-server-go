@@ -87,7 +87,7 @@ class CompanyStaff extends BaseModel
         }
 
         $uuid = createUuid();
-        $password = salt_hash($data['password']);
+        $password = hash_password_bcrypt($data['password']);
 
         // 同时保存到ttpos_staff表中
         $saasStaff = new SaasStaffModel(); 

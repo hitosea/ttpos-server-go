@@ -55,12 +55,31 @@ app:
   serviceUrl: $TAKEOUT_SERVICE_URL
   # 换成 jwt的密钥
   callbackSecret:  $JWT_SECRET
+  # TTPOS 主模块地址，用于回退调用菜单导出接口
+  ttposEndpoint: $TTPOS_MAIN_ENDPOINT
+  # TTPOS HTTP Client 配置
+  ttpos-client:
+    dump: false  # 是否打印请求/响应详情
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT
       username: $SKOOTAR_USERNAME
       apiKey: $SKOOTAR_API_KEY
       channel: $SKOOTAR_CHANNEL
+    grab:
+      platform:
+        clientId: "$GRAB_PLATFORM_CLIENT_ID"
+        clientSecret: "$GRAB_PLATFORM_CLIENT_SECRET"
+        secretKey: "$GRAB_PLATFORM_SECRET_KEY"  # Webhook 签名密钥
+        environment: "$GRAB_ENV"  # production 或 staging
+        timeout: "30s"
+      partner:
+        $GRAB_PARTNER_DEFAULT_CLIENT_ID:
+          clientId: "$GRAB_PARTNER_DEFAULT_CLIENT_ID"
+          clientSecret: "$GRAB_PARTNER_DEFAULT_CLIENT_SECRET"
+          scope: "food.partner_api"     # 未配置时逻辑默认 food.partner_api
+          environment: "$GRAB_ENV"        # production 或 staging
+          timeout: "60s"
 
 
 queue:

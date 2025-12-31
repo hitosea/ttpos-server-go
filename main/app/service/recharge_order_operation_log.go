@@ -70,6 +70,7 @@ type ReverseSettleLog struct {
 	PayPrice  float64   `json:"pay_price"`  //  应收金额
 	ChangeDue float64   `json:"change_due"` //  找零
 	PayType   []PayType `json:"pay_type"`
+	Points    float64   `json:"points"` //  退回的积分
 }
 
 // 订单反结账日志data
@@ -86,6 +87,7 @@ func (s *rechargeOrderSrv) getReverseSettleLogData(order model.MemberRechargeOrd
 		PayPrice:  order.Amount,
 		ChangeDue: s.getChargeDue(order.PaymentOrders),
 		PayType:   payTypes,
+		Points:    order.GiftPoint,
 	})
 	return string(operationData)
 }
@@ -133,6 +135,10 @@ func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.M
 	case constant.RechargeOrderActionReverseSettle:
 		var reverseSettle ReverseSettleLog
 		json.Unmarshal([]byte(log.Data), &reverseSettle)
+		descStr := ""
+		if reverseSettle.Points > 0 {
+			descStr = descStr + "(" + i18n.Translate(language, "扣除积分") + ": " + utils.FormatFloat(reverseSettle.Points) + ") "
+		}
 		var payTypeList []string
 		for _, payType := range reverseSettle.PayType {
 			price := payType.Price
@@ -141,7 +147,7 @@ func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.M
 			}
 			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s", payType.Name, s.settingSrv.SymbolPosition(ctx, price)))
 		}
-		return strings.Join(payTypeList, "、")
+		return descStr + strings.Join(payTypeList, "、")
 	case constant.RechargeOrderActionRefund:
 		var refundLog RefundLog
 		json.Unmarshal([]byte(log.Data), &refundLog)

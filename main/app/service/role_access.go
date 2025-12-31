@@ -7,7 +7,10 @@ import (
 	"time"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
@@ -149,52 +152,49 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if slices.Contains([]uint64{58, 124, 125, 128, 129, 160, 162, 1724320603, 1724320604, 1724320605}, permission.Uuid) {
 			continue
 		}
-
+		// 暂时去掉收银交班权限
+		if permission.Uuid == 1704881155 {
+			continue
+		}
 		// 暂时去掉外卖管理
-		if permission.ID == 1626688443 {
+		if permission.Uuid == 1626688443 {
 			continue
 		}
 		// 授权无进销存权限
-		if companySetting.SaleStock == 0 && slices.Contains([]int{1711006072, 1711009130}, permission.ID) {
+		if companySetting.SaleStock == 0 && slices.Contains([]uint64{1711006072, 1711009130}, permission.Uuid) {
 			continue
 		}
 		// 授权无会员权限
-		if companySetting.IsOpenMember == 0 && slices.Contains([]int{1636183779, 1704881218}, permission.ID) {
+		if companySetting.IsOpenMember == 0 && slices.Contains([]uint64{1636183779, 1704881218}, permission.Uuid) {
 			continue
 		}
 		// 授权无平板点餐权限
-		if companySetting.IsOpenTablet == 0 && permission.ID == 87 {
+		if companySetting.IsOpenTablet == 0 && permission.Uuid == 87 {
 			continue
 		}
 		// 授权无H5点餐权限
-		if companySetting.IsOpenH5 == 0 && permission.ID == 1724220505 {
+		if companySetting.IsOpenH5 == 0 && permission.Uuid == 1724220505 {
 			continue
 		}
 		// 授权无点餐助手权限
-		if companySetting.IsOpenAssistant == 0 && permission.ID == 1720753338 {
+		if companySetting.IsOpenAssistant == 0 && permission.Uuid == 1720753338 {
 			continue
 		}
 		// 授权无后厨权限
-		if companySetting.IsOpenKitchenKds == 0 && permission.ID == 88 {
+		if companySetting.IsOpenKitchenKds == 0 && permission.Uuid == 88 {
 			continue
 		}
 		// 授权无自助餐权限
-		if companySetting.IsOpenBuffet == 0 && permission.ID == 1708671616 {
+		if companySetting.IsOpenBuffet == 0 && permission.Uuid == 1708671616 {
 			continue
 		}
 		// 授权无扫码点餐接单权限
-		if companySetting.IsOpenH5Order == 0 && permission.ID == 1724320522 {
+		if companySetting.IsOpenH5Order == 0 && permission.Uuid == 1724320522 {
 			continue
 		}
 		// 授权无外送权限
 		if companySetting.DeliveryStatus != 1 && permission.Uuid == 1752716650 {
 			continue
-		}
-		// 授权无Grab外卖权限（未开启Grab外卖时，隐藏外卖接单权限）
-		if !companySetting.IsOpenGrabDelivery() {
-			if permission.Uuid == 1734000001 { // 外卖权限UUID
-				continue
-			}
 		}
 		// 新管理端-管理APP-总部无品采收货权限
 		if permission.Uuid == 2858548203520000 && companySetting.IsHeadquarter() {
@@ -224,6 +224,32 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if permission.Uuid == 2859353116672000 && !companySetting.IsOpenKiosk() {
 			continue
 		}
+
+		// v2.12暂时不上外卖
+		// 新管理端-管理APP-外卖管理
+		if slices.Contains([]uint64{2858986936320000, 2859007907840000, 2859028879360000}, permission.Uuid) {
+			continue
+		}
+		// v2.12暂时不上外卖
+		// 新管理端-管理APP-批量Grab、批量LINE MAN
+		if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000, 2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001}, permission.Uuid) {
+			continue
+		}
+		// v2.12暂时不上外卖
+		// 收银机-接单-外卖
+		if slices.Contains([]uint64{1734000001}, permission.Uuid) {
+			continue
+		}
+
+		// // TODO 新管理端-管理APP-云平台未开启Grab外卖，权限列表无Grab外卖设置
+		// if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000}, permission.Uuid) && !companySetting.IsOpenGrabDelivery() {
+		// 	continue
+		// }
+		// // 新管理端-管理APP-云平台未开启LINE MAN外卖，权限列表无LINE MAN外卖设置
+		// if slices.Contains([]uint64{2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001, 2859028879360000}, permission.Uuid) {
+		// 	continue
+		// }
+
 		filteredPermissions = append(filteredPermissions, permission)
 	}
 	return filteredPermissions
@@ -275,15 +301,39 @@ func (s *roleAccessSrv) buildPermissionTreeWithoutFilter(permissions []resp.Perm
 }
 
 func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {
-	accesses, _, _, err := s.getDbPermissions(staffUuid, companyUuid)
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid)
+
+	// 查询函数（从数据库获取权限）
+	queryFunc := func() ([]string, error) {
+		accesses, _, _, err := s.getDbPermissions(staffUuid, companyUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		var permissions []string
+		for _, access := range accesses {
+			if !slices.Contains(permissions, access.Path) {
+				permissions = append(permissions, access.Path)
+			}
+		}
+		return permissions, nil
+	}
+
+	var permissions []string
+	var err error
+
+	if enableCache {
+		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+		cacheLayer := objectStorageAdapter.GetApiPermissionCache[[]string](cache.Global)
+		cacheKey := objectStoragePersistence.BuildApiPermissionKey(companyUuid, staffUuid)
+		permissions, err = cacheLayer.GET(cacheKey, queryFunc)
+	} else {
+		// 不使用缓存，直接查询数据库
+		permissions, err = queryFunc()
+	}
+
 	if err != nil {
 		return nil, errors.WithMessage(err)
-	}
-	var permissions []string
-	for _, access := range accesses {
-		if !slices.Contains(permissions, access.Path) {
-			permissions = append(permissions, access.Path)
-		}
 	}
 	return permissions, nil
 }

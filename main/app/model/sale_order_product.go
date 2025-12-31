@@ -113,9 +113,10 @@ type SaleOrderProduct struct {
 	ErpCode string `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
 
 	// 分批相关
-	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);not null;default:0;comment:'分批类型UUID'" json:"batch_tag_uuid"`
-	BatchTime    int64  `gorm:"column:batch_time;type:int(10);not null;default:0;comment:'分批时间(时间戳)，表示该商品实际送厨到厨房的时间'" json:"batch_time"`
-	IsBatch      uint8  `gorm:"column:is_batch;type:tinyint(1);not null;default:0;comment:'是否是分批商品, 0-否 1-是'" json:"is_batch"`
+	BatchTagUuid      uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);not null;default:0;comment:'分批类型UUID'" json:"batch_tag_uuid"`
+	BatchTime         int64  `gorm:"column:batch_time;type:int(10);not null;default:0;comment:'分批时间(时间戳)，表示该商品实际送厨到厨房的时间'" json:"batch_time"`
+	PreBatchPrintTime int64  `gorm:"column:pre_batch_print_time;type:int(10);not null;default:0;comment:'预先分批打印送厨单的时间(时间戳)，0表示未打印'" json:"pre_batch_print_time"`
+	IsBatch           uint8  `gorm:"column:is_batch;type:tinyint(1);not null;default:0;comment:'是否是分批商品, 0-否 1-是'" json:"is_batch"`
 
 	// 关联对象
 	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
@@ -1544,7 +1545,7 @@ func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, 
 
 // 获取商品属性 包含规格、属性、小料
 func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
-	return getLocaleResponse(model.GetAttributeNameList(), ";")
+	return language.MergeLocaleResponses(model.GetAttributeNameList(), ";")
 }
 
 // 获取商品属性 - 列表 包含规格、属性、小料
@@ -1590,7 +1591,7 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 
 // 获取商品属性 - 纯属性
 func (model *SaleOrderProduct) GetPureAttributeName() dto.LocaleResponse {
-	return getLocaleResponse(model.GetPureAttributeNameList(), ";")
+	return language.MergeLocaleResponses(model.GetPureAttributeNameList(), ";")
 }
 
 // 获取商品属性 - 纯属性 - 列表
@@ -1633,37 +1634,6 @@ func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
 		nameList = append(nameList, sauceNames...)
 	}
 	return nameList
-}
-
-// 将多个LocaleResponse合并成一个
-func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResponse {
-	if len(nameList) == 0 {
-		return dto.LocaleResponse{}
-	}
-	attributeResultNames := dto.LocaleResponse{}
-	for index, name := range nameList {
-		attributeResultNames.ZH += name.ZH
-		attributeResultNames.TH += name.TH
-		attributeResultNames.EN += name.EN
-		attributeResultNames.ZHTW += name.ZHTW
-		attributeResultNames.JA += name.JA
-		attributeResultNames.KO += name.KO
-		attributeResultNames.MY += name.MY
-		attributeResultNames.TR += name.TR
-		attributeResultNames.SV += name.SV
-		if attributeResultNames.ZH != "" && index != len(nameList)-1 {
-			attributeResultNames.ZH += div
-			attributeResultNames.TH += div
-			attributeResultNames.EN += div
-			attributeResultNames.ZHTW += div
-			attributeResultNames.JA += div
-			attributeResultNames.KO += div
-			attributeResultNames.MY += div
-			attributeResultNames.TR += div
-			attributeResultNames.SV += div
-		}
-	}
-	return attributeResultNames
 }
 
 // Requirement: story-main-product-attribute-snapshot-fix

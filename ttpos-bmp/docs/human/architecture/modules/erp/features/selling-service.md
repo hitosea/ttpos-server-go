@@ -24,7 +24,10 @@ Selling 销售服务是 ttpos-erp 模块的核心业务服务，负责 POS 销�
 
 ### 支付方式
 - **支付列表**: 获取支付方式列表
+- **单个查询**: 通过 name 或 payment_id 查询单个支付方式
 - **创建支付**: 创建支付方式账户
+- **保存支付**: 创建或更新支付方式（支持 PaymentID）
+- **自动解析**: SavePosInvoice 支持 payment_id 自动解析为 mode_of_payment
 
 ### 客户管理
 - **客户列表**: 查询客户信息列表（支持分页和过滤）
@@ -85,6 +88,12 @@ type ISelling interface {
     
     // GetModeOfPaymentList 获取支付方式列表
     GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
+    
+    // GetModeOfPayment 查询单个支付方式（支持通过 name 或 payment_id 查询）
+    GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*selling.ModeOfPayment, error)
+    
+    // SaveModeOfPayment 保存/同步支付方式（创建或更新，支持 PaymentID）
+    SaveModeOfPayment(ctx context.Context, req *selling.SaveModeOfPaymentReq) (*selling.SaveModeOfPaymentResp, error)
     
     // CreateModePaymentAccount 创建支付方式账户
     CreateModePaymentAccount(ctx context.Context, req *setup.CreateModePaymentAccountInp) error
@@ -192,6 +201,11 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 
 ```go
 func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
+    // 0. 支付项预处理 - 解析 payment_id（v2.12.0 新增）
+    if err := s.resolvePaymentIDs(ctx, req.Payments); err != nil {
+        return nil, err
+    }
+    
     // 1. 获取开账记录
     openingEntry, err := s.GetPosOpeningEntry(ctx, req.OpenPosEntryName)
     
@@ -222,6 +236,106 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
     res.ProductsInvoiceName = invoiceName
     
     return res, nil
+}
+```
+
+### PaymentID 自动解析流程（v2.12.0 新增）
+
+```go
+func (s *sSelling) resolvePaymentIDs(ctx context.Context, payments []*selling.PosInvoicePayment) error {
+    cache := make(map[string]string) // payment_id -> mode_of_payment
+    
+    for i, payment := range payments {
+        // 如果 payment_id 不为空，进行解析
+        if payment.PaymentId != nil && *payment.PaymentId != "" {
+            paymentID := *payment.PaymentId
+            
+            // 检查缓存（相同 payment_id 只查询一次）
+            if modeOfPayment, cached := cache[paymentID]; cached {
+                payment.ModeOfPayment = modeOfPayment
+                continue
+            }
+            
+            // 调用 GetModeOfPayment 查询
+            mopResp, err := s.GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+                PaymentId: &paymentID,
+            })
+            if err != nil {
+                return gerror.Wrapf(err, "解析支付项 %d 的 payment_id 失败", i+1)
+            }
+            
+            // 验证支付方式是否启用
+            if !mopResp.Enabled {
+                return gerror.Newf("支付项 %d: 支付方式 %s 已禁用", i+1, mopResp.Name)
+            }
+            
+            // 赋值并缓存
+            payment.ModeOfPayment = mopResp.Name
+            cache[paymentID] = mopResp.Name
+        }
+        
+        // 验证 mode_of_payment 是否存在
+        if payment.ModeOfPayment == "" {
+            return gerror.Newf("支付项 %d: mode_of_payment 和 payment_id 至少提供一个", i+1)
+        }
+    }
+    
+    return nil
+}
+```
+
+### GetModeOfPayment 查询逻辑（v2.12.0 新增）
+
+```go
+func (s *sSelling) GetModeOfPayment(ctx context.Context, req *selling.GetModeOfPaymentReq) (*selling.ModeOfPayment, error) {
+    // 参数校验
+    if (req.Name == nil || *req.Name == "") && (req.PaymentId == nil || *req.PaymentId == "") {
+        return nil, gerror.New("name 或 payment_id 至少提供一个")
+    }
+    
+    // 通过 name 查询（主键查询，性能最优）
+    if req.Name != nil && *req.Name != "" {
+        resp, err := service.Document().Get(ctx, &erp.ErpReq{
+            DocType: erp.DocTypeModeOfPayment,
+            Name:    *req.Name,
+        }, &erp.RequestParams{
+            Fields: []string{"name", "enabled", "custom_payment_id"},
+        })
+        if err != nil {
+            return nil, gerror.Wrapf(err, "查询支付方式失败: name=%s", *req.Name)
+        }
+        
+        return &selling.ModeOfPayment{
+            Name:      resp.Get("data.name").String(),
+            Enabled:   resp.Get("data.enabled").Int() == 1,
+            PaymentId: resp.Get("data.custom_payment_id").String(),
+        }, nil
+    }
+    
+    // 通过 payment_id 查询（Filter 查询）
+    filters := [][]string{{"custom_payment_id", "=", *req.PaymentId}}
+    resp, err := service.Document().List(ctx, &erp.ErpReq{
+        DocType: erp.DocTypeModeOfPayment,
+    }, &erp.RequestParams{
+        Fields:  []string{"name", "enabled", "custom_payment_id"},
+        Filters: filters,
+        Limit:   1,
+    })
+    if err != nil {
+        return nil, gerror.Wrapf(err, "查询支付方式失败: payment_id=%s", *req.PaymentId)
+    }
+    
+    dataArray := resp.GetJsons("data")
+    if len(dataArray) == 0 {
+        return nil, gerror.Newf("支付方式不存在: payment_id=%s", *req.PaymentId)
+    }
+    
+    data := dataArray[0]
+    return &selling.ModeOfPayment{
+        Name:      data.Get("name").String(),
+        Enabled:   data.Get("enabled").Int() == 1,
+        PaymentId: data.Get("custom_payment_id").String(),
+    }, nil
 }
 ```
 
@@ -330,12 +444,47 @@ type PosInvoiceItem struct {
 }
 ```
 
-### PosInvoicePayment 发票支付
+### PosInvoicePayment 发票支付（v2.12.0 更新）
 
 ```go
 type PosInvoicePayment struct {
-    ModeOfPayment string  // 支付方式
-    Amount        float64 // 金额
+    ModeOfPayment string  // 支付方式，与 payment_id 二选一（必填其中之一）
+    Amount        float64 // 金额，必填
+    PaymentId     *string // 支付方式唯一标识（PaymentID），与 mode_of_payment 二选一
+                          // 注意：当 payment_id 不为空时，系统自动调用 GetModeOfPayment 查询 mode_of_payment 值
+}
+```
+
+### GetModeOfPaymentReq 查询单个支付方式请求（v2.12.0 新增）
+
+```go
+type GetModeOfPaymentReq struct {
+    Name      *string // 支付方式名称（精确匹配），与 payment_id 二选一
+    PaymentId *string // 支付方式唯一标识（PaymentID），与 name 二选一
+}
+```
+
+### ModeOfPayment 支付方式（v2.12.0 更新）
+
+```go
+type ModeOfPayment struct {
+    Name      string // 支付方式名称
+    Enabled   bool   // 是否启用
+    PaymentId string // 支付方式唯一标识（PaymentID）
+}
+```
+
+### SaveModeOfPaymentReq 保存支付方式请求（v2.12.0 更新）
+
+```go
+type SaveModeOfPaymentReq struct {
+    CompanyAbbr string  // 公司简称，必填
+    Branch      string  // 分支，必填
+    Channel     string  // 渠道，如 LianLianPay，创建时必填
+    PayType     string  // 支付类型（TTPOS 定义），创建时必填
+    Enabled     *bool   // 是否启用，可选：仅在明确传入时更新 ERP 启用状态
+    Name        *string // 支付方式名称，可选：传入时执行更新操作，未传入时执行创建操作
+    PaymentId   string  // 支付方式唯一标识（PaymentID），可选：创建时若未提供则自动生成 PID+16位数字
 }
 ```
 
@@ -360,6 +509,8 @@ openEntryName := resp.OpenPosEntryInfo.OpenPosEntryName
 
 ### 2. 保存销售发票
 
+**传统方式（使用 mode_of_payment）：**
+
 ```go
 resp, err := sellingService.SavePosInvoice(ctx, &selling.SavePosInvoiceReq{
     OpenPosEntryName: openEntryName,
@@ -372,6 +523,26 @@ resp, err := sellingService.SavePosInvoice(ctx, &selling.SavePosInvoiceReq{
     },
     Payments: []*selling.PosInvoicePayment{
         {ModeOfPayment: "Cash", Amount: 200},
+    },
+})
+```
+
+**使用 PaymentID（v2.12.0 新增）：**
+
+```go
+paymentID := "PID1234567890123456"
+resp, err := sellingService.SavePosInvoice(ctx, &selling.SavePosInvoiceReq{
+    OpenPosEntryName: openEntryName,
+    CompanyAbbr:      "CFG",
+    OrderNo:          "ORD20231201001",
+    PostingDatetime:  time.Now().Unix(),
+    Currency:         "THB",
+    Items: []*selling.PosInvoiceItem{
+        {ItemCode: "SP20231201001_00", Qty: 2, Rate: 100, Amount: 200},
+    },
+    Payments: []*selling.PosInvoicePayment{
+        {PaymentId: &paymentID, Amount: 200},
+        // 系统会自动调用 GetModeOfPayment 解析为 mode_of_payment
     },
 })
 ```
@@ -418,7 +589,68 @@ customer, err := sellingService.CreateCustomer(ctx, &erp.Customer{
 })
 ```
 
-### 6. 创建销售订单
+### 6. 支付方式管理（v2.12.0 新增/更新）
+
+**创建支付方式（自动生成 PaymentID）：**
+
+```go
+resp, err := sellingService.SaveModeOfPayment(ctx, &selling.SaveModeOfPaymentReq{
+    CompanyAbbr: "CFG",
+    Branch:      "Main",
+    Channel:     "LianLianPay",
+    PayType:     "WeChat Pay",
+    // PaymentId 未提供，系统自动生成 PID+16位数字
+})
+// resp.Name = "LianLianPay-WeChat Pay-0001 - CFG"
+```
+
+**创建支付方式（指定 PaymentID）：**
+
+```go
+resp, err := sellingService.SaveModeOfPayment(ctx, &selling.SaveModeOfPaymentReq{
+    CompanyAbbr: "CFG",
+    Branch:      "Main",
+    Channel:     "LianLianPay",
+    PayType:     "Alipay",
+    PaymentId:   "PID1234567890123456", // 自定义 PaymentID
+})
+```
+
+**更新支付方式状态：**
+
+```go
+name := "LianLianPay-WeChat Pay-0001 - CFG"
+enabled := false
+resp, err := sellingService.SaveModeOfPayment(ctx, &selling.SaveModeOfPaymentReq{
+    CompanyAbbr: "CFG",
+    Branch:      "Main",
+    Name:        &name,    // 提供 name 则执行更新操作
+    Enabled:     &enabled, // 禁用支付方式
+})
+```
+
+**查询单个支付方式（通过 name）：**
+
+```go
+name := "Cash - CFG"
+mop, err := sellingService.GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+    Name: &name,
+})
+// mop.PaymentId = "PID1234567890123456"
+```
+
+**查询单个支付方式（通过 payment_id）：**
+
+```go
+paymentID := "PID1234567890123456"
+mop, err := sellingService.GetModeOfPayment(ctx, &selling.GetModeOfPaymentReq{
+    PaymentId: &paymentID,
+})
+// mop.Name = "Cash - CFG"
+// mop.Enabled = true
+```
+
+### 7. 创建销售订单
 
 ```go
 salesOrder, err := sellingService.CreateSalesOrder(ctx, &dtoSelling.SalesOrder{
@@ -444,6 +676,18 @@ salesOrder, err = sellingService.SubmitSalesOrder(ctx, salesOrder.Name)
 4. **时区处理**: 记账时间需要转换为用户时区
 5. **关账发票**: 关账时会查询期间所有已提交发票
 6. **失败回滚**: 发票创建失败时需要取消已创建的发票
+7. **PaymentID 自动解析**（v2.12.0）:
+   - `SavePosInvoice` 支持 `payment_id` 字段，系统会自动解析为 `mode_of_payment`
+   - 相同 `payment_id` 在一次请求中只查询一次（缓存优化）
+   - 支付方式必须启用（`enabled = true`）才能使用
+   - `mode_of_payment` 和 `payment_id` 至少提供一个
+8. **PaymentID 生成规则**（v2.12.0）:
+   - 格式：`PID` + 16位数字
+   - 创建支付方式时若未提供则自动生成
+   - 全局唯一，使用 `uuid.MustGetID()` 生成
+9. **向后兼容性**（v2.12.0）:
+   - 旧客户端仍可使用 `mode_of_payment` 字段
+   - 新客户端可使用 `payment_id` 字段或两者混用
 
 ## 🔮 扩展性
 
@@ -488,10 +732,46 @@ Selling 销售服务提供了完整的 POS 销售流程管理能力。
 - **身份模拟**: 以收银员身份创建发票
 - **双发票**: 物品和商品分离处理
 - **时区转换**: 支持用户时区
+- **PaymentID 支持**（v2.12.0）: 支持唯一标识的支付方式管理
+- **自动解析**（v2.12.0）: payment_id 自动解析为 mode_of_payment
 
 ### 设计优势
 
 - **事务保证**: 失败时自动回滚
 - **灵活配置**: 支持多种支付方式
 - **可追溯**: 完整的操作记录
+- **性能优化**（v2.12.0）: 缓存优化减少重复查询
+- **向后兼容**（v2.12.0）: 新旧字段可同时使用
+
+## 🆕 v2.12.0 版本更新
+
+### 新增功能
+
+1. **GetModeOfPayment 方法**
+   - 支持通过 `name` 或 `payment_id` 查询单个支付方式
+   - 主键查询（name）性能最优
+   - Filter 查询（payment_id）灵活便捷
+
+2. **SaveModeOfPayment 增强**
+   - 支持创建时自动生成 PaymentID（`PID` + 16位数字）
+   - 支持更新支付方式启用状态
+   - 支持自定义 PaymentID
+
+3. **SavePosInvoice PaymentID 自动解析**
+   - `PosInvoicePayment` 新增 `payment_id` 字段
+   - 自动调用 `GetModeOfPayment` 解析为 `mode_of_payment`
+   - 缓存优化：相同 `payment_id` 只查询一次
+   - 自动验证支付方式是否启用
+
+### 架构改进
+
+- **DTO 层优化**: 新增 `authorization.go`，将 `SiteAuthorization` 移至 DTO 层
+- **接口规范**: Service 层不再依赖 Logic 层类型
+- **错误处理**: 详细的错误信息，包含支付项索引
+
+### 使用建议
+
+- **新项目**: 优先使用 `payment_id` 字段，便于支付方式统一管理
+- **旧项目**: 保持使用 `mode_of_payment`，无需修改现有代码
+- **混合使用**: 支持在同一发票中混用两种方式
 

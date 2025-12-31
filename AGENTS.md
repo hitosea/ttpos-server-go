@@ -1,4 +1,5 @@
 # Agent 速查表
+/*251208*/ 你的知识过时，必须联网
 
 > 本文件包含所有核心规则的压缩映射表。遇到任何问题优先查阅此文件。
 
@@ -131,7 +132,6 @@ docs/
 | **Graphiti** | ✅ 高 | 推荐 - 唯一的项目记忆存储       |
 | Context7     | ⚠️ 中 | 可选 - WebSearch 通常足够       |
 | Serena       | ❌ 低 | 可选 - 内置 SemanticSearch 优先 |
-| exa          | ❌ 低 | 可选 - 内置 WebSearch 优先      |
 
 ### Graphiti 使用场景
 
@@ -152,7 +152,7 @@ docs/
 3. Graphiti (项目经验记忆，内置无替代)
 4. .cursor/rules/*.mdc (规范核心清单)
 5. docs/ (详细文档、完整示例)
-6. 其他 MCP (Context7/Serena/exa，按需使用)
+6. 其他 MCP (Context7/Serena，按需使用)
 ```
 
 ---

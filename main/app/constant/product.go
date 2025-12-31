@@ -184,8 +184,9 @@ const (
 )
 
 const (
-	ProductionOrderProductColumnSaleBill = "sale_bill_uuid"
-	ProductionOrderProductColumnCategory = "first_category_uuid"
+	ProductionOrderProductColumnSaleBill     = "sale_bill_uuid"
+	ProductionOrderProductColumnCategory     = "first_category_uuid"
+	ProductionOrderProductColumnTakeoutOrder = "takeout_order_uuid"
 )
 
 // 服务费计算基准
@@ -202,7 +203,7 @@ const (
 
 // 外卖类型
 const (
-	TakeoutTypeGrab      = 1 // Grab
-	TakeoutTypeFoodPanda = 2 // FoodPanda
-	TakeoutTypeOther     = 3 // 其他（预留扩展）
+	TakeoutTypeGrab    = 1 // Grab
+	TakeoutTypeLINEMAN = 2 // LINE MAN
+	TakeoutTypeOther   = 3 // 其他（预留扩展）
 )

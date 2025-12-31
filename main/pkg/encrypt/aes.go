@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base32"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -18,7 +19,7 @@ func EncryptAesString(text string) (string, error) {
 	if config.Encrypt.AesSecretKey != "" {
 		aesSecretKey = []byte(config.Encrypt.AesSecretKey)
 	} else {
-		aesSecretKey = []byte("TTPOS-HITOSEA-SECRET-KEY-HERE!!!")
+		return "", errors.New("aes secret key is not set")
 	}
 	// 创建cipher
 	block, err := aes.NewCipher(aesSecretKey)

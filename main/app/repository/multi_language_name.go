@@ -19,6 +19,7 @@ type IMultiLanguageNameRepo interface {
 	UpdateMultiLanguageNameData(data map[string]any, opts ...DBOption) error                    // 更新多语言名称数据
 	DeleteMultiLanguageName(id uint64) error                                                    // 删除多语言名称
 	DestroyMultiLanguageName(opts ...DBOption) error                                            // 销毁多语言名称
+	NotOverwriteMultiLanguageName(id uint64) error                                              // 不要覆盖多语言名称
 }
 
 type IMultiLanguageNameQueryRepo interface {
@@ -137,4 +138,9 @@ func (r *MultiLanguageNameRepoImpl) DestroyMultiLanguageName(opts ...DBOption) e
 	}
 
 	return db.Delete(&model.MultiLanguageName{}).Error
+}
+
+// NotOverwriteMultiLanguageName 不要覆盖多语言名称
+func (r *MultiLanguageNameRepoImpl) NotOverwriteMultiLanguageName(id uint64) error {
+	return r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", id).Update("not_overwrite", 1).Error
 }

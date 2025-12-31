@@ -969,7 +969,7 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 
 	var insertingWarehouseItems []model.WarehouseItem
 	for _, warehouse := range warehouses {
-		stockList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNum(ctx, warehouse.ErpCode)
+		stockBinList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNumByBin(ctx, warehouse.ErpCode)
 		if err != nil {
 			return errors.WithMessage(err, "获取仓库物品库存数量失败")
 		}
@@ -990,7 +990,7 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 			materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
 		}
 
-		for _, stock := range stockList {
+		for _, stock := range stockBinList {
 			material, ok := materialMap[stock.ItemCode]
 			if !ok {
 				continue
@@ -1079,6 +1079,7 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 // GetWarehouseMaterialList 获取仓库物品列表
 func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.WarehouseMaterialListReq) (resp.WarehouseMaterialListResp, error) {
 	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
 	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
 
@@ -1100,6 +1101,14 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 	var materialOpts []repository.DBOption
 	materialOpts = append(materialOpts, repository.NewCommonRepo().WhereByStatus(uint(1)))
 	materialOpts = append(materialOpts, repository.NotDeleted)
+
+	// 子店查询时自动过滤不可见物品
+	if companySetting.IsSubShop() {
+		materialOpts = append(materialOpts, materialRepo.WhereAllowSubstoreVisible(1))
+	}
+
+	// 物品uuid必须在仓库物品列表中
+	materialOpts = append(materialOpts, materialRepo.WhereUuidInWarehouseItem(req.WarehouseUuid))
 
 	// 获取物品列表
 	paginatedMaterials, total, err := materialRepo.GetMaterialListWithPagination(

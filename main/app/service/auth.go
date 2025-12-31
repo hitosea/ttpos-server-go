@@ -13,10 +13,13 @@ import (
 	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -36,6 +39,7 @@ type IAuthSrv interface {
 	AssistantBase(ctx context.Context) (resp.AssistantBase, error)                                                         // 点餐助手端基本信息
 	TabletBase(ctx context.Context) (resp.TabletBase, error)                                                               // 平板端基本信息
 	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                             // 厨显端基本信息
+	KioskBase(ctx context.Context) (resp.KioskBase, error)                                                                 // 自助点餐机基本信息
 	Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) // 鉴权
 	AuthDesk(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权桌台
 	AuthMenu(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权点子菜单
@@ -150,8 +154,26 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	if staff.Company == nil {
 		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
-	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
+
+	// 验证密码（支持 MD5 和 bcrypt）
+	if staff.Uuid == 0 {
 		return loginResp, errors.New("账号或密码错误")
+	}
+	isValid, needUpgrade := utils.VerifyPassword(loginReq.Password, staff.Password)
+	if !isValid {
+		return loginResp, errors.New("账号或密码错误")
+	}
+
+	// 如果需要升级密码，异步升级为 bcrypt
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			s.dbm.GetDB(staff.CompanyUuid),
+			"ttpos_staff",
+			"password",
+			"uuid",
+			staff.Uuid,
+			loginReq.Password,
+		)
 	}
 	// 检查员工状态
 	if staff.DeleteTime != 0 {
@@ -231,6 +253,11 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if companySetting.IsOpenTablet != 1 {
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
+	case constant.SourceKiosk: // 自助点餐机
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if !companySetting.IsOpenKiosk() {
+			return loginResp, errors.New("当前尚未开启自助点餐机功能，如有需要，请联系销售代表")
+		}
 	case constant.SourceShop: // 移动管理端
 		// 权限获取在 shop_auth.go 中完成，这里不需要处理
 	default:
@@ -304,9 +331,22 @@ func (s *authSrv) SaasLogin(ctx context.Context, loginReq req.LoginReq) (resp.Lo
 		}
 	}
 
-	// 验证密码
-	if utils.EncryptPassword(loginReq.Password) != saasStaff.Password {
+	// 验证密码（支持 MD5 和 bcrypt）
+	isValid, needUpgrade := utils.VerifyPassword(loginReq.Password, saasStaff.Password)
+	if !isValid {
 		return loginResp, errors.New("账号或密码错误")
+	}
+
+	// 如果需要升级密码，异步升级为 bcrypt
+	if needUpgrade {
+		utils.UpgradePasswordAsync(
+			saasDB,
+			"ttpos_staff",
+			"password",
+			"uuid",
+			saasStaff.Uuid,
+			loginReq.Password,
+		)
 	}
 
 	// 检查账号是否被禁用
@@ -471,6 +511,11 @@ func (s *authSrv) loginWithCompany(ctx context.Context, loginReq req.LoginReq, s
 		companySetting := repository.NewCompanySettingRepo(companyDB).Get()
 		if companySetting.IsOpenTablet != 1 {
 			return resp.LoginResp{}, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceKiosk: // 自助点餐机
+		companySetting := repository.NewCompanySettingRepo(companyDB).Get()
+		if !companySetting.IsOpenKiosk() {
+			return resp.LoginResp{}, errors.New("当前尚未开启自助点餐机功能，如有需要，请联系销售代表")
 		}
 	case constant.SourceShop: // 移动管理端
 		// 权限获取在 shop_auth.go 中完成，这里不需要处理
@@ -645,6 +690,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			IsEnableErp:          company.IsOpenErp(),
 			IsOpenMap:            companySetting.IsOpenTableMap(),
 			IsOpenDataManagement: companySetting.IsOpenDataManagement(),
+			IsOpenGrabDelivery:   companySetting.IsOpenGrabDelivery(),
 		},
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,
@@ -725,14 +771,24 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	return resp.AssistantBase{
 		Permissions: permissions,
 		CashierStaff: resp.CashierStaff{
-			RealName:     staff.RealName,
+			RealName: func() string {
+				if staff.RealName != "" {
+					return staff.RealName
+				}
+				return staff.Username
+			}(),
 			Username:     staff.Username,
 			DeviceId:     staff.BindKey,
 			DeviceRemark: device.Remark,
 		},
 		AssistantStaff: resp.AssistantStaff{
-			Uuid:     assistantStaff.Uuid,
-			RealName: assistantStaff.RealName,
+			Uuid: assistantStaff.Uuid,
+			RealName: func() string {
+				if assistantStaff.RealName != "" {
+					return assistantStaff.RealName
+				}
+				return assistantStaff.Username
+			}(),
 			Phone:    assistantStaff.Phone,
 			DeviceId: assistantStaff.BindKey,
 		},
@@ -908,6 +964,66 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	}, nil
 }
 
+// KioskBase 获取自助点餐机基本信息
+func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
+	var kioskBase resp.KioskBase
+
+	// 如果 company_uuid 为 0，只返回可用门店列表
+	// 设计原因：
+	// 1. 支持统一账号认证的多门店切换场景：用户登录后可能未选择门店，需要返回可用门店列表供用户选择
+	// 2. 保持与其他终端（Cashier、Tablet、Assistant等）Base 接口的一致性
+	// 3. 前端可以根据 company_list 判断是否需要显示门店选择界面
+	// 参考：story-auth-unified-account 统一账号认证功能设计
+	if ctx.GetCompanyUuid() == 0 {
+		kioskBase.CompanyList = s.getCompanyList(ctx)
+		return kioskBase, nil
+	}
+
+	// company_uuid 不为 0，走原有逻辑
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	staff := ctx.GetStaff()
+	var (
+		source   = ctx.GetSource()
+		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
+	)
+	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
+
+	// 获取自助点餐机设置（包含语言列表、轮播广告）
+	kioskSetting, err := s.settingSrv.GetKioskSetting(ctx)
+	if err != nil {
+		return kioskBase, errors.WithMessage(err)
+	}
+
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return kioskBase, errors.WithMessage(err)
+	}
+
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return kioskBase, errors.WithMessage(err)
+	}
+
+	return resp.KioskBase{
+		Username:     staff.Username,
+		DeviceId:     deviceId,
+		DeviceRemark: deviceRemark,
+		Company: resp.Company{
+			Uuid:       company.Uuid,
+			Name:       company.Name,
+			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:   companySetting.Timezone,
+			ExpireTime: company.ExpireTime,
+		},
+		Currency:    currencySetting,
+		Business:    businessSetting,
+		Kiosk:       kioskSetting.KioskResp,
+		UpdateTime:  time.Now().Unix(),
+		CompanyList: s.getCompanyList(ctx),
+	}, nil
+}
+
 // Auth 鉴权
 func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) {
 	var (
@@ -921,12 +1037,39 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	if db == nil {
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
+	// 检查是否启用缓存（需要全局开关开启且门店在白名单内）
+	enableCache := objectStorageAdapter.IsObjectStorageCacheEnabled(auth.CompanyUuid)
+
 	staffRepo := repository.NewStaffRepo(db)
-	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+
+	// 查询函数（从数据库获取员工信息）
+	queryStaffFunc := func() (*model.Staff, error) {
+		// 从数据库查询员工信息（包含 Company 和 CompanySetting）
+		staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+		if err != nil {
+			return nil, err
+		}
+		return &staff, nil
+	}
+
+	var staffPtr *model.Staff
+	var err error
+
+	if enableCache {
+		// 使用缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+		cacheLayer := objectStorageAdapter.GetAuthStaffCache[*model.Staff](cache.Global)
+		cacheKey := objectStoragePersistence.BuildAuthStaffKey(ctx, auth.StaffUuid)
+		staffPtr, err = cacheLayer.GET(cacheKey, queryStaffFunc)
+	} else {
+		// 不使用缓存，直接查询数据库
+		staffPtr, err = queryStaffFunc()
+	}
+
 	if err != nil {
 		logger.Logger.Error("获取员工信息失败", zap.Error(err))
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "没有找到用户信息")
 	}
+	staff = *staffPtr
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, desk, errors.New("用户不存在")
 	}
@@ -1381,13 +1524,21 @@ func (s *authSrv) ChangePassword(ctx context.Context, changePasswordReq req.Chan
 		return errors.WithMessage(err)
 	}
 
-	if staff.Password != utils.EncryptPassword(changePasswordReq.OldPassword) {
+	// 验证旧密码（支持 MD5 和 bcrypt）
+	isValid, _ := utils.VerifyPassword(changePasswordReq.OldPassword, staff.Password)
+	if !isValid {
 		return errors.New("旧密码错误")
+	}
+
+	// 使用 bcrypt 加密新密码
+	newPasswordHash, err := utils.HashPasswordBcrypt(changePasswordReq.NewPassword)
+	if err != nil {
+		return errors.New("密码加密失败")
 	}
 
 	// 更新统一账号表
 	update := map[string]any{
-		"password":              utils.EncryptPassword(changePasswordReq.NewPassword),
+		"password":              newPasswordHash,
 		"password_change_count": staff.PasswordChangeCount + 1,
 		"password_change_time":  time.Now().Unix(),
 	}
@@ -1524,6 +1675,11 @@ func (s *authSrv) StoreSwitch(ctx context.Context, switchReq req.StoreSwitchReq)
 		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
 		if companySetting.IsOpenTablet != 1 {
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
+		}
+	case constant.SourceKiosk: // 自助点餐机
+		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+		if !companySetting.IsOpenKiosk() {
+			return loginResp, errors.New("当前尚未开启自助点餐机功能，如有需要，请联系销售代表")
 		}
 	case constant.SourceShop: // 移动管理端
 		// 权限获取在 shop_auth.go 中完成，这里不需要处理

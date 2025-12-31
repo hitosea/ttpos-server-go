@@ -74,7 +74,7 @@
     "Ziyaretiniz","ZZCJZ", "Resipi","Makanan","Kassafaktura","Keluaran","Tiramisu","Tunai","Cacl","rmqnamesrv","rmqbroker",
     "mqnamesrv","NAMESRV","namesrv","mqbroker","BROKER","broker","apacherocketmq","mqproxy","Drocketmq","rmqproxy",
     "gctx","tuln","gcmd","Debugf","Warningf","Errorf","Infof","gjson","Comstomer","Println","gtime","Wrapf","Newf",
-    "categorys", "cust"
+    "categorys", "cust", "gcat", "Sonra", "Strs", "Cmdable", "Hediye"
   ],
   
   // ===== 文件监听排除（减少 gopls 文件监听负担）=====

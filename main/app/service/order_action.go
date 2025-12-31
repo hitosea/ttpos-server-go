@@ -12,8 +12,12 @@ import (
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
@@ -116,7 +120,8 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 			remarkInfo := saleOrderProduct.BuildOrderItemRemarkInfo(orderItemRemarkList, saleOrderProduct.Remark)
 			return remarkInfo.Remark
 		}(),
-		IsBatch: saleOrderProduct.IsBatchBool(),
+		IsBatch:      saleOrderProduct.IsBatchBool(),
+		BatchTagUuid: saleOrderProduct.BatchTagUuid,
 	}
 
 	// 如果是套餐主商品，添加子商品
@@ -274,7 +279,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			}
 		}
 		// 构建出库单
-		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
+		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid, 0)
 	}
 
 	ctx.Log().Debug("准备开始更新")
@@ -382,6 +387,15 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
+				BatchMode: batchCookingMode,
+				BatchPrintMode: func() string {
+					settingSrv := setting.NewSrvImpl(s.dbm, cache.Global)
+					businessSetting, err := settingSrv.GetBusinessSetting(ctx)
+					if err != nil {
+						return constant.BatchPrintModeDefault
+					}
+					return businessSetting.BatchPrintMode
+				}(),
 				Products: func() event.Products {
 					products := make(event.Products, 0)
 					for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
@@ -472,7 +486,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
 			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]float64)
 		}
-		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
+		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(ctx.GetCompanyUuid(), product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -533,7 +547,20 @@ func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *g
 	uuids := make([]uint64, 0)
 	uuids = append(uuids, product.FlavorProductBomUuid)
 	uuids = append(uuids, product.SauceProductBomUuidList...)
-	productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+
+	var productBoms []*model.ProductBom
+	var err error
+
+	// 检查是否启用对象存储缓存
+	companyUuid := ctx.GetCompanyUuid()
+	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 使用对象存储模块缓存查询
+		productBoms, err = s.getProductBomsWithCache(ctx, uuids, db)
+	} else {
+		// 直接查询数据库
+		productBoms, err = repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	}
+
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -844,6 +871,65 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	}
 	// saleBill已经加入了新的商品，并且重新计算了价格
 	return saleBill, nil
+}
+
+// actionAddSimple 加购（无校验版本）。内部方法复用
+func (s *orderSrv) actionAddSimple(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, options ...func(option *ActionAddOption)) (*model.SaleBill, error) {
+	option := &ActionAddOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	// 获取当前销售订单信息
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
+	// 录入订单商品数据
+	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
+		IsH5Product: request.IsH5Product,
+		Setting:     *saleBill.SaleBillSetting,
+		SaleBill:    saleBill,
+		SaleOrder:   saleOrder,
+		Products:    request.Products,
+	}, options...)
+	if err != nil {
+		return nil, errors.WithMessage(err, "构建商品失败")
+	}
+
+	// 跳过所有校验：商品数量校验、限购校验、超时加购校验
+	_ = saleOrderProducts
+
+	// saleBill已经加入了新的商品，并且重新计算了价格
+	return saleBill, nil
+}
+
+// ActionAddSimple 加购（无校验版本）
+func (s *orderSrv) ActionAddSimple(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
+	db := ctx.GetDB()
+
+	var err error
+	if request.IsMemberAdd {
+		saleBill, err = s.actionAddSimple(ctx, request, saleBill, WithIsMemberAdd())
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	} else {
+		saleBill, err = s.actionAddSimple(ctx, request, saleBill)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 // 检查限制购 checkLimitPurchase
@@ -1237,4 +1323,60 @@ func (s *orderSrv) checkMaterialStockByProductOrder(ctx context.Context, db *gor
 
 	// 返回库存不足的商品列表
 	return insufficientProducts, nil
+}
+
+// getProductBomsWithCache 使用对象存储模块缓存查询 ProductBom 列表
+func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, db *gorm.DB) ([]*model.ProductBom, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 构建批量查询的 keys
+	keys := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid))
+		}
+	}
+
+	if len(keys) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+
+	// 获取缓存层（使用订单相关对象缓存配置）
+	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
+
+	// 使用批量查询缓存
+	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
+		// 缓存未命中时，从数据库查询
+		boms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+		if err != nil {
+			return nil, err
+		}
+		// 转换为 map[string]*model.ProductBom
+		result := make(map[string]*model.ProductBom)
+		for _, bom := range boms {
+			key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, bom.Uuid)
+			result[key] = bom
+		}
+		return result, nil
+	})
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	}
+
+	// 将批量查询结果转换为列表，保持原有顺序
+	result := make([]*model.ProductBom, 0, len(uuids))
+	for _, uuid := range uuids {
+		if uuid > 0 {
+			key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
+			if bom, ok := batchResult[key]; ok && bom != nil {
+				result = append(result, bom)
+			}
+		}
+	}
+
+	return result, nil
 }

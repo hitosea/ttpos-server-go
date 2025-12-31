@@ -62,7 +62,6 @@ type MaterialDetailResp struct {
 	Status                 int                  `json:"status"`                    // 状态 1-启用 0-停用
 	AllowSubstoreVisible   int                  `json:"allow_substore_visible"`    // 允许子店可见：1-允许，0-不允许（仅总店可用）
 	AllowNegativeStock     bool                 `json:"allow_negative_stock"`      // 是否允许负库存：true-允许，false-不允许
-	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	InternalCode           string               `json:"internal_code"`             // 内部编码
 	SafetyStock            *float64             `json:"safety_stock"`              // 安全库存数量

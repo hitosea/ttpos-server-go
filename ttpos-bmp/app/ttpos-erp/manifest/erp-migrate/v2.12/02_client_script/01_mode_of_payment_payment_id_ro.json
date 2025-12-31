@@ -1,0 +1,7 @@
+{
+    "dt": "Mode of Payment",
+"script":"frappe.ui.form.on('Mode of Payment', {\n\trefresh(frm) {\n\t\t// your code here\n\t\tif (!frm.is_new()) {\n            frm.set_df_property('custom_payment_id', 'read_only', 1);\n        }\n\t}\n})",
+    "__newname": "PaymentIdRO",
+    "module": "Accounts",
+    "enabled":1
+}

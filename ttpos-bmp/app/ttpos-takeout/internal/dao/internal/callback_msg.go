@@ -22,25 +22,25 @@ type CallbackMsgDao struct {
 // CallbackMsgColumns defines and stores column names for the table takeout_callback_msg.
 type CallbackMsgColumns struct {
 	Id             string // 主键
-	CreatedAt      string // 创建时间
-	UpdatedAt      string // 修改时间
-	DeletedAt      string // 软删除
 	Uuid           string // 全局唯一ID
 	TakeoutRefNo   string // 外送系统订单号，如skootar.jobId
 	Content        string // 消息内容
 	StatusDatetime string // 状态变更时间
+	CreatedAt      string // 创建时间
+	UpdatedAt      string // 修改时间
+	DeletedAt      string // 软删除
 }
 
 // callbackMsgColumns holds the columns for the table takeout_callback_msg.
 var callbackMsgColumns = CallbackMsgColumns{
 	Id:             "id",
-	CreatedAt:      "created_at",
-	UpdatedAt:      "updated_at",
-	DeletedAt:      "deleted_at",
 	Uuid:           "uuid",
 	TakeoutRefNo:   "takeout_ref_no",
 	Content:        "content",
 	StatusDatetime: "status_datetime",
+	CreatedAt:      "created_at",
+	UpdatedAt:      "updated_at",
+	DeletedAt:      "deleted_at",
 }
 
 // NewCallbackMsgDao creates and returns a new DAO object for table data access.

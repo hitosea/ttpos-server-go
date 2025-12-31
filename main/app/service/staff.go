@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -9,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -312,6 +314,10 @@ func (s *staffSrv) GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.
 			continue
 		}
 
+		// 查询员工在该门店的收银端登录状态
+		staffRepo := repository.NewStaffRepo(shopDB)
+		shopStaff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staffUuid))
+
 		staffRoleRepo := repository.NewStaffRoleRepo(shopDB)
 		roleUuids, err := staffRoleRepo.GetRoleUuidsByStaffUuid(staffUuid)
 		if err != nil {
@@ -338,24 +344,26 @@ func (s *staffSrv) GetStaffDetail(ctx context.Context, staffUuid uint64) (*resp.
 
 		companyName := companyUuidToName[companyUuid]
 		companyList = append(companyList, resp.CompanyRoleInfo{
-			CompanyUuid: companyUuid,
-			CompanyName: companyName,
-			Roles:       roleList,
-			IsSuper:     cs.IsSuper,
-			IsDisable:   cs.IsDisable,
+			CompanyUuid:   companyUuid,
+			CompanyName:   companyName,
+			Roles:         roleList,
+			IsSuper:       cs.IsSuper,
+			IsDisable:     cs.IsDisable,
+			CashierOnline: shopStaff.CashierOnline,
 		})
 	}
 
 	return &resp.Staff{
-		Uuid:        saasStaff.Uuid,
-		Username:    saasStaff.Email,
-		Phone:       saasStaff.Phone,
-		RealName:    saasStaff.RealName,
-		Roles:       currentCompanyRoles,
-		IsDisable:   isDisable,
-		IsSuper:     isSuper,
-		CreateTime:  saasStaff.CreateTime,
-		CompanyList: companyList,
+		Uuid:          saasStaff.Uuid,
+		Username:      saasStaff.Email,
+		Phone:         saasStaff.Phone,
+		RealName:      saasStaff.RealName,
+		Roles:         currentCompanyRoles,
+		IsDisable:     isDisable,
+		IsSuper:       isSuper,
+		CreateTime:    saasStaff.CreateTime,
+		CashierOnline: ctx.GetStaff().CashierOnline,
+		CompanyList:   companyList,
 	}, nil
 }
 
@@ -368,6 +376,10 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
 	if staff.Uuid == 0 {
 		return errors.New("获取员工失败"), exists
+	}
+	// 如果状态为禁用，且员工在线，则不允许禁用
+	if updateReq.IsDisable != nil && *updateReq.IsDisable == 1 && staff.CashierOnline == 1 {
+		return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "该用户在（%s）未交班，请交班后再禁用"), ctx.GetCompany().Name)), exists
 	}
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	// saas库查询是否存在相同的邮箱或手机号
@@ -412,14 +424,24 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 		"phone":     updateReq.Phone,
 	}
 	if updateReq.Password != "" {
-		update["password"] = utils.EncryptPassword(updateReq.Password)
+		// 使用 bcrypt 加密密码
+		passwordHash, err := utils.HashPasswordBcrypt(updateReq.Password)
+		if err != nil {
+			return errors.New("密码加密失败"), exists
+		}
+		update["password"] = passwordHash
 		update["password_change_time"] = time.Now().Unix()
 
-		saasStaffUpdate["password"] = utils.EncryptPassword(updateReq.Password)
+		saasStaffUpdate["password"] = passwordHash
 		saasStaffUpdate["password_change_time"] = time.Now().Unix()
 	}
 	if updateReq.PermissionPassword != "" {
-		update["permission_password"] = utils.EncryptPassword(updateReq.PermissionPassword)
+		// 使用 bcrypt 加密权限密码
+		permPasswordHash, err := utils.HashPasswordBcrypt(updateReq.PermissionPassword)
+		if err != nil {
+			return errors.New("权限密码加密失败"), exists
+		}
+		update["permission_password"] = permPasswordHash
 	}
 
 	// 更新统一账号表
@@ -486,11 +508,17 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 		return errors.New("角色参数错误"), exists
 	}
 
+	// 使用 bcrypt 加密密码
+	passwordHash, err := utils.HashPasswordBcrypt(addReq.Password)
+	if err != nil {
+		return errors.New("密码加密失败"), exists
+	}
+
 	saasStaff := model.SaasStaff{
 		Email:     addReq.Username,
 		Phone:     addReq.Phone,
 		RealName:  addReq.RealName,
-		Password:  utils.EncryptPassword(addReq.Password),
+		Password:  passwordHash,
 		IsDisable: 0,
 	}
 	saasDB.Transaction(func(tx *gorm.DB) error {
@@ -513,13 +541,19 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 		return errors.WithMessage(errors.New("添加员工失败"), err.Error()), exists
 	}
 
+	// 使用 bcrypt 加密权限密码
+	permPasswordHash, err := utils.HashPasswordBcrypt(addReq.PermissionPassword)
+	if err != nil {
+		return errors.New("权限密码加密失败"), exists
+	}
+
 	staff := model.Staff{
 		CompanyUuid:        ctx.GetCompanyUuid(),
 		Username:           addReq.Username,
 		RealName:           addReq.RealName,
 		Phone:              addReq.Phone,
-		Password:           utils.EncryptPassword(addReq.Password),
-		PermissionPassword: utils.EncryptPassword(addReq.PermissionPassword),
+		Password:           passwordHash,
+		PermissionPassword: permPasswordHash,
 		IsDisable:          0,
 		IsSuper:            0,
 	}
@@ -587,19 +621,25 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 		return errors.New("此内容已被占用"), exists
 	}
 
+	// 使用 bcrypt 加密密码
+	passwordHash, err := utils.HashPasswordBcrypt(addReq.Password)
+	if err != nil {
+		return errors.New("密码加密失败"), exists
+	}
+
 	// 在 saas 上创建 ttpos_staff
 	saasStaff := model.SaasStaff{
 		Email:     addReq.Username,
 		Phone:     addReq.Phone,
 		RealName:  addReq.RealName,
-		Password:  utils.EncryptPassword(addReq.Password),
+		Password:  passwordHash,
 		IsDisable: 0,
 	}
 	if addReq.IsDisable != nil {
 		saasStaff.IsDisable = *addReq.IsDisable
 	}
 
-	err := saasDB.Model(&model.SaasStaff{}).Create(&saasStaff).Error
+	err = saasDB.Model(&model.SaasStaff{}).Create(&saasStaff).Error
 	if err != nil {
 		return errors.WithMessage(errors.New("创建统一账号失败"), err.Error()), exists
 	}
@@ -652,14 +692,20 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 				return errors.New("角色参数错误"), exists
 			}
 
+			// 使用 bcrypt 加密权限密码
+			permPasswordHash, err := utils.HashPasswordBcrypt(addReq.PermissionPassword)
+			if err != nil {
+				return errors.New("权限密码加密失败"), exists
+			}
+
 			// 在对应商家数据库 ttpos_staff 添加数据
 			staff := model.Staff{
 				CompanyUuid:        companyRoleItem.CompanyUuid,
 				Username:           addReq.Username,
 				RealName:           addReq.RealName,
 				Phone:              addReq.Phone,
-				Password:           utils.EncryptPassword(addReq.Password),
-				PermissionPassword: utils.EncryptPassword(addReq.PermissionPassword),
+				Password:           passwordHash,
+				PermissionPassword: permPasswordHash,
 				IsDisable:          0,
 				IsSuper:            0,
 			}
@@ -719,14 +765,20 @@ func (s *staffSrv) SaasAddStaff(ctx context.Context, addReq req.AddStaffReq) (er
 			return errors.New("角色参数错误"), exists
 		}
 
+		// 使用 bcrypt 加密权限密码
+		permPasswordHash, err := utils.HashPasswordBcrypt(addReq.PermissionPassword)
+		if err != nil {
+			return errors.New("权限密码加密失败"), exists
+		}
+
 		// 在当前商家数据库添加 ttpos_staff
 		staff := model.Staff{
 			CompanyUuid:        currentCompanyUuid,
 			Username:           addReq.Username,
 			RealName:           addReq.RealName,
 			Phone:              addReq.Phone,
-			Password:           utils.EncryptPassword(addReq.Password),
-			PermissionPassword: utils.EncryptPassword(addReq.PermissionPassword),
+			Password:           passwordHash,
+			PermissionPassword: permPasswordHash,
 			IsDisable:          0,
 			IsSuper:            0,
 		}
@@ -779,10 +831,42 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	saasStaffRepo := repository.NewSaasStaffRepo(saasDB)
 
+	currentCompanyUuid := ctx.GetCompanyUuid()
+
 	// 查询 saas.ttpos_staff 是否存在该 saas 员工，不存在则报错
 	saasStaff, err := saasStaffRepo.GetByUuid(updateReq.Uuid)
 	if err != nil || saasStaff == nil || saasStaff.Uuid == 0 {
 		return errors.New("员工不存在"), exists
+	}
+
+	// 如果要移除门店关联，检查员工是否在这些门店登录了收银端
+	if len(updateReq.RemoveCompanyList) > 0 {
+		// 检查员工在要移除的门店中是否登录了收银端
+		for _, companyUuid := range updateReq.RemoveCompanyList {
+			shopDB := s.dbm.GetDB(companyUuid)
+			if shopDB != nil {
+				staffRepo := repository.NewStaffRepo(shopDB)
+				staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+				if err == nil && staff.CashierOnline == 1 {
+					return errors.New("请先完成交班后再移除门店关联"), exists
+				}
+			}
+		}
+	}
+
+	// 未交班不能禁用
+	for _, companyRole := range updateReq.CompanyRoleList {
+		if companyRole.CompanyUuid != currentCompanyUuid {
+			continue
+		}
+		shopDB := s.dbm.GetDB(currentCompanyUuid)
+		if shopDB != nil {
+			staffRepo := repository.NewStaffRepo(shopDB)
+			staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+			if updateReq.IsDisable != nil && *updateReq.IsDisable == 1 && staff.CashierOnline == 1 {
+				return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "该用户在（%s）未交班，请交班后再禁用"), ctx.GetCompany().Name)), exists
+			}
+		}
 	}
 
 	// saas库查询是否存在相同的邮箱或手机号
@@ -805,14 +889,18 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 		"phone":     updateReq.Phone,
 	}
 	if updateReq.Password != "" {
-		saasStaffUpdate["password"] = utils.EncryptPassword(updateReq.Password)
+		// 使用 bcrypt 加密密码
+		passwordHash, err := utils.HashPasswordBcrypt(updateReq.Password)
+		if err != nil {
+			return errors.New("密码加密失败"), exists
+		}
+		saasStaffUpdate["password"] = passwordHash
 		saasStaffUpdate["password_change_time"] = time.Now().Unix()
 	}
 	if err := saasStaffRepo.Update(updateReq.Uuid, saasStaffUpdate); err != nil {
 		return errors.WithMessage(errors.New("编辑员工失败"), err.Error()), exists
 	}
 
-	currentCompanyUuid := ctx.GetCompanyUuid()
 	companySetting := ctx.GetCompanySetting()
 
 	// 判断当前商家是否总部或者有子级商家
@@ -876,11 +964,21 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				"delete_time": 0, // 恢复员工(如果被软删除)
 			}
 			if updateReq.Password != "" {
-				staffUpdate["password"] = utils.EncryptPassword(updateReq.Password)
+				// 使用 bcrypt 加密密码
+				passwordHash, err := utils.HashPasswordBcrypt(updateReq.Password)
+				if err != nil {
+					return errors.New("密码加密失败"), nil
+				}
+				staffUpdate["password"] = passwordHash
 				staffUpdate["password_change_time"] = time.Now().Unix()
 			}
 			if updateReq.PermissionPassword != "" {
-				staffUpdate["permission_password"] = utils.EncryptPassword(updateReq.PermissionPassword)
+				// 使用 bcrypt 加密权限密码
+				permPasswordHash, err := utils.HashPasswordBcrypt(updateReq.PermissionPassword)
+				if err != nil {
+					return errors.New("权限密码加密失败"), nil
+				}
+				staffUpdate["permission_password"] = permPasswordHash
 			}
 			// 如果 CompanyRoleList 中存在当前商家uuid，更新 is_disable
 			if updateReq.IsDisable != nil && companyRoleItem.CompanyUuid == currentCompanyUuid {
@@ -907,14 +1005,24 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 					}
 					newStaff.Uuid = updateReq.Uuid
 					if updateReq.Password != "" {
-						newStaff.Password = utils.EncryptPassword(updateReq.Password)
+						// 使用 bcrypt 加密密码
+						passwordHash, err := utils.HashPasswordBcrypt(updateReq.Password)
+						if err != nil {
+							return errors.New("密码加密失败")
+						}
+						newStaff.Password = passwordHash
 						newStaff.PasswordChangeTime = time.Now().Unix()
 					} else {
 						// 如果密码为空，使用 saasStaff 的密码
 						newStaff.Password = saasStaff.Password
 					}
 					if updateReq.PermissionPassword != "" {
-						newStaff.PermissionPassword = utils.EncryptPassword(updateReq.PermissionPassword)
+						// 使用 bcrypt 加密权限密码
+						permPasswordHash, err := utils.HashPasswordBcrypt(updateReq.PermissionPassword)
+						if err != nil {
+							return errors.New("权限密码加密失败")
+						}
+						newStaff.PermissionPassword = permPasswordHash
 					}
 					if updateReq.IsDisable != nil && companyRoleItem.CompanyUuid == currentCompanyUuid {
 						newStaff.IsDisable = *updateReq.IsDisable
@@ -1014,11 +1122,21 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 			"delete_time": 0, // 恢复员工(如果被软删除)
 		}
 		if updateReq.Password != "" {
-			staffUpdate["password"] = utils.EncryptPassword(updateReq.Password)
+			// 使用 bcrypt 加密密码
+			passwordHash, err := utils.HashPasswordBcrypt(updateReq.Password)
+			if err != nil {
+				return errors.New("密码加密失败"), nil
+			}
+			staffUpdate["password"] = passwordHash
 			staffUpdate["password_change_time"] = time.Now().Unix()
 		}
 		if updateReq.PermissionPassword != "" {
-			staffUpdate["permission_password"] = utils.EncryptPassword(updateReq.PermissionPassword)
+			// 使用 bcrypt 加密权限密码
+			permPasswordHash, err := utils.HashPasswordBcrypt(updateReq.PermissionPassword)
+			if err != nil {
+				return errors.New("权限密码加密失败"), nil
+			}
+			staffUpdate["permission_password"] = permPasswordHash
 		}
 		// 如果是子店，更新 is_disable
 		if updateReq.IsDisable != nil {
@@ -1045,14 +1163,24 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				}
 				newStaff.Uuid = updateReq.Uuid
 				if updateReq.Password != "" {
-					newStaff.Password = utils.EncryptPassword(updateReq.Password)
+					// 使用 bcrypt 加密密码
+					passwordHash, err := utils.HashPasswordBcrypt(updateReq.Password)
+					if err != nil {
+						return errors.New("密码加密失败")
+					}
+					newStaff.Password = passwordHash
 					newStaff.PasswordChangeTime = time.Now().Unix()
 				} else {
 					// 如果密码为空，使用 saasStaff 的密码
 					newStaff.Password = saasStaff.Password
 				}
 				if updateReq.PermissionPassword != "" {
-					newStaff.PermissionPassword = utils.EncryptPassword(updateReq.PermissionPassword)
+					// 使用 bcrypt 加密权限密码
+					permPasswordHash, err := utils.HashPasswordBcrypt(updateReq.PermissionPassword)
+					if err != nil {
+						return errors.New("权限密码加密失败")
+					}
+					newStaff.PermissionPassword = permPasswordHash
 				}
 				if updateReq.IsDisable != nil {
 					newStaff.IsDisable = *updateReq.IsDisable

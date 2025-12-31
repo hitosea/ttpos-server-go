@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"regexp"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -12,8 +13,8 @@ import (
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/printer"
-	printerService "ttpos-server-go/app/printer/service"
+	"ttpos-server-go/app/modules/printer"
+	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
@@ -44,6 +45,7 @@ type IStaffShiftSrv interface {
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error)
 	CreateShiftSnapshot(ctx context.Context, shiftLog model.StaffShiftLog) error
+	ValidatePaymentMethod(ctx context.Context, shiftNo string, paymentMethodUuid uint64) (bool, error) // 验证支付方式是否在开账时保存的列表中
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -81,22 +83,69 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	}
 
 	var erpnextOpenPosEntryName string
+	var openingPaymentMethodsStr string
 	// 调用rpc接口生成PosEntry
 	companySetting := ctx.GetCompanySetting()
 	company := ctx.GetCompany()
 	if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
+		db := s.dbm.GetDB(staff.CompanyUuid)
+		commonRepo := repository.NewCommonRepo()
+		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+		// 查询所有已开启的支付方式（status = 1）
+		paymentMethodList := paymentMethodRepo.GetPaymentMethodList(
+			paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
+			commonRepo.WhereBySoftDelete(),
+		)
+
+		// 保存支付方式UUID列表（逗号分隔）
+		uuids := make([]string, 0)
+		for _, paymentMethod := range paymentMethodList {
+			uuids = append(uuids, fmt.Sprintf("%d", paymentMethod.Uuid))
+		}
+		if len(uuids) > 0 {
+			openingPaymentMethodsStr = strings.Join(uuids, ",")
+		}
+
+		openPosEntryDetailList := make([]req.OpenPosEntryDetail, 0)
+		for _, paymentMethod := range paymentMethodList {
+			openPosEntryDetail := req.OpenPosEntryDetail{}
+			// 如果是系统默认的现金支付方式，则设置开账金额为上一班次遗留金额
+			if paymentMethod.Source == constant.PaymentMethodSourceSystem && paymentMethod.Code == constant.PaymentMethodCodeCash {
+				if paymentMethod.ErpnextPaymentId != "" {
+					openPosEntryDetail.PaymentId = &paymentMethod.ErpnextPaymentId
+				} else {
+					openPosEntryDetail.ModeOfPayment = "Cash"
+				}
+				openPosEntryDetail.OpeningAmount = previousShiftCash
+				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
+				continue
+			}
+			// 如果是连连支付，并且没有 PaymentID，则跳过该支付方式
+			if paymentMethod.Source == constant.PaymentMethodSourceLianLianPay && paymentMethod.ErpnextPaymentId == "" {
+				continue
+			}
+			// 如果是其他支付方式，并且有 PaymentID 则设置 PaymentID，否则设置 ModeOfPayment
+			// 如果两个字段都为空，则跳过该支付方式（兼容旧数据）
+			if paymentMethod.ErpnextPaymentId != "" {
+				openPosEntryDetail.PaymentId = &paymentMethod.ErpnextPaymentId
+				openPosEntryDetail.OpeningAmount = 0
+				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
+			} else if paymentMethod.ErpnextPayment != "" {
+				openPosEntryDetail.ModeOfPayment = paymentMethod.ErpnextPayment
+				openPosEntryDetail.OpeningAmount = 0
+				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
+			}
+		}
+
 		erpSrv := erp.NewIErpSrv(s.dbm)
 		openPosEntryName, err := erpSrv.OpenPosEntry(ctx.GetContext(), req.OpenPosEntryReq{
-			SiteCode:        companySetting.ErpnextSiteCode,
-			PosProfileName:  companySetting.ErpnextPosProfileName,
-			CashierEmail:    companySetting.ErpnextAdminEmail,
-			CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
-			PeriodStartDate: time.Now().Unix(),
-			OpenPosEntryDetail: []req.OpenPosEntryDetail{{
-				ModeOfPayment: "Cash",
-				OpeningAmount: previousShiftCash,
-			}},
-			Branch: companySetting.ErpnextBranchName,
+			SiteCode:           companySetting.ErpnextSiteCode,
+			PosProfileName:     companySetting.ErpnextPosProfileName,
+			CashierEmail:       companySetting.ErpnextAdminEmail,
+			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+			PeriodStartDate:    time.Now().Unix(),
+			OpenPosEntryDetail: openPosEntryDetailList,
+			Branch:             companySetting.ErpnextBranchName,
 		})
 		if err != nil {
 			return model.StaffShiftLog{}, errors.WithMessage(err, "开账失败")
@@ -114,6 +163,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 		ShiftEndTime:      0,
 
 		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
+		OpeningPaymentMethods:   openingPaymentMethodsStr,
 	})
 	return shiftLog, nil
 }
@@ -342,9 +392,6 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			DutyNo:            shiftLog.ShiftNo,
 			ExcludeDataManage: excludeDataManage,
 		})
-		company := ctx.GetCompany()
-		needErpClosePos := company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != ""
-		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
 		for _, payment := range paymentData.PaymentList {
 			paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
 				Name:   payment.PaymentName,
@@ -352,32 +399,110 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			})
 			if payment.PaymentCode == constant.PaymentMethodCodeCash {
 				cashAmount = decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
-			} else {
-				if needErpClosePos && decimal.NewFromFloat(payment.TotalPaymentAmount).GreaterThan(decimal.NewFromFloat(999999999999.99)) {
-					return errors.WithMessage(errors.New(paymentMethodMap[payment.ErpnextPayment]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
-				}
-				closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
-					ModeOfPayment: payment.ErpnextPayment,
-					OpeningAmount: 0,
-					ClosingAmount: payment.TotalPaymentAmount,
-				})
 			}
 		}
-		cashAmountDecimal := decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash))
-		if needErpClosePos && cashAmountDecimal.GreaterThan(decimal.NewFromFloat(999999999999.99)) {
-			return errors.WithMessage(errors.New(paymentMethodMap["Cash"]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
-		}
-		closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
-			ModeOfPayment: "Cash",
-			OpeningAmount: shiftLog.PreviousShiftCash,
-			ClosingAmount: cashAmountDecimal.InexactFloat64(),
-		})
-		if saleData.TotalFreeAmount > 0 {
-			closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
-				ModeOfPayment: "Free Meal",
-				OpeningAmount: 0,
-				ClosingAmount: saleData.TotalFreeAmount,
+
+		// ERP交班部分
+		company := ctx.GetCompany()
+		needErpClosePos := company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != ""
+
+		// 新增：获取未排除数据管理的订单的支付数据（用于传给 ERP）
+		var paymentDataForErp CountPaymentResp
+		if needErpClosePos {
+			paymentDataForErp = s.statisticsSrv.CountPayment(ctx, CountReq{
+				DutyNo:            shiftLog.ShiftNo,
+				ExcludeDataManage: false, // 不排除订单管理订单
 			})
+		}
+
+		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
+
+		// 构建 ERP 参数（使用 paymentDataForErp，不排除订单管理订单）
+		if needErpClosePos {
+			// 查询支付方式 PaymentID
+			db := s.dbm.GetDB(ctx.GetCompanyUuid())
+			commonRepo := repository.NewCommonRepo()
+			paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+
+			// 查询 Cash 支付方式（系统默认，source = 0）
+			cashPaymentMethod := paymentMethodRepo.GetPaymentMethod(
+				paymentMethodRepo.WhereCode(constant.PaymentMethodCodeCash),
+				commonRepo.WhereBySource(constant.PaymentMethodSourceSystem),
+				commonRepo.WhereBySoftDelete(),
+			)
+
+			// 查询 Free Meal 支付方式（code = 92000）
+			freeMealPaymentMethod := paymentMethodRepo.GetPaymentMethod(
+				paymentMethodRepo.WhereCode(constant.PaymentMethodCodeFreeMealForErp), // code = 92000
+				commonRepo.WhereBySource(constant.PaymentMethodSourceSystem),
+				commonRepo.WhereBySoftDelete(),
+			)
+
+			// 处理支付方式金额
+			var cashAmountForErp float64
+			for _, payment := range paymentDataForErp.PaymentList {
+				if payment.PaymentCode == constant.PaymentMethodCodeCash && payment.Source == constant.PaymentMethodSourceSystem {
+					cashAmountForErp = decimal.NewFromFloat(cashAmountForErp).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
+				} else {
+					if decimal.NewFromFloat(payment.TotalPaymentAmount).GreaterThan(decimal.NewFromFloat(999999999999.99)) {
+						return errors.WithMessage(errors.New(paymentMethodMap[payment.ErpnextPayment]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
+					}
+
+					// 查询支付方式的 PaymentID
+					paymentMethod := paymentMethodRepo.GetPaymentMethod(
+						paymentMethodRepo.WhereCode(payment.PaymentCode),
+						commonRepo.WhereBySoftDelete(),
+					)
+
+					// 如果有 PaymentID 则传递 PaymentId，否则传递 ModeOfPayment
+					// 如果值为空，则不赋值
+					detail := req.ClosePosEntryDetail{
+						OpeningAmount: 0,
+						ClosingAmount: payment.TotalPaymentAmount,
+					}
+					if paymentMethod.Uuid > 0 && paymentMethod.ErpnextPaymentId != "" {
+						detail.PaymentId = &paymentMethod.ErpnextPaymentId
+						closePosEntryDetail = append(closePosEntryDetail, detail)
+					} else if payment.ErpnextPayment != "" {
+						detail.ModeOfPayment = payment.ErpnextPayment
+						closePosEntryDetail = append(closePosEntryDetail, detail)
+					}
+				}
+			}
+			cashAmountDecimal := decimal.NewFromFloat(cashAmountForErp).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash))
+			if cashAmountDecimal.GreaterThan(decimal.NewFromFloat(999999999999.99)) {
+				return errors.WithMessage(errors.New(paymentMethodMap["Cash"]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
+			}
+
+			// 处理 Cash 支付方式：如果有 PaymentID 则传递 PaymentId，否则传递 ModeOfPayment
+			// 如果值为空，则不赋值
+			cashDetail := req.ClosePosEntryDetail{
+				OpeningAmount: shiftLog.PreviousShiftCash,
+				ClosingAmount: cashAmountDecimal.InexactFloat64(),
+			}
+			if cashPaymentMethod.Uuid > 0 && cashPaymentMethod.ErpnextPaymentId != "" {
+				cashDetail.PaymentId = &cashPaymentMethod.ErpnextPaymentId
+			} else {
+				// Cash 支付方式默认使用 "Cash"
+				cashDetail.ModeOfPayment = "Cash"
+			}
+			closePosEntryDetail = append(closePosEntryDetail, cashDetail)
+
+			// 处理 Free Meal 支付方式：如果有 PaymentID 则传递 PaymentId，否则传递 ModeOfPayment
+			// 如果值为空，则不赋值
+			if saleData.TotalFreeAmount > 0 {
+				freeMealDetail := req.ClosePosEntryDetail{
+					OpeningAmount: 0,
+					ClosingAmount: saleData.TotalFreeAmount,
+				}
+				if freeMealPaymentMethod.Uuid > 0 && freeMealPaymentMethod.ErpnextPaymentId != "" {
+					freeMealDetail.PaymentId = &freeMealPaymentMethod.ErpnextPaymentId
+				} else {
+					// Free Meal 支付方式默认使用 "Free Meal"
+					freeMealDetail.ModeOfPayment = "Free Meal"
+				}
+				closePosEntryDetail = append(closePosEntryDetail, freeMealDetail)
+			}
 		}
 		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
 		// 更新当班记录
@@ -1149,4 +1274,42 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	}
 
 	return nil
+}
+
+// ValidatePaymentMethod 验证支付方式是否在开账时保存的列表中
+func (s *staffShiftSrv) ValidatePaymentMethod(ctx context.Context, shiftNo string, paymentMethodUuid uint64) (bool, error) {
+	// 未开启 ERP 时，返回 true（允许使用）
+	if !ctx.GetCompany().IsOpenErp() {
+		return true, nil
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	commonRepo := repository.NewCommonRepo()
+
+	// 查询班次记录
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		commonRepo.WhereByShiftNo(shiftNo),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return false, errors.WithMessage(err, "班次记录不存在")
+	}
+
+	// 如果未保存支付方式列表（历史数据），返回 false（不允许使用）
+	if shiftLog.OpeningPaymentMethods == "" {
+		return false, nil
+	}
+
+	// 检查支付方式UUID是否在列表中（逗号分隔的字符串）
+	paymentMethodUuidStr := fmt.Sprintf("%d", paymentMethodUuid)
+	uuids := strings.Split(shiftLog.OpeningPaymentMethods, ",")
+	for _, uuidStr := range uuids {
+		trimmedUuidStr := strings.TrimSpace(uuidStr) // 去除空格
+		if trimmedUuidStr == paymentMethodUuidStr {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

@@ -338,7 +338,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	smsSrv := service.NewSMSSrv(dbm)
-	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
+	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv, staffShiftSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv:        memberSrv,

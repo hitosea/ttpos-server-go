@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	printerService "ttpos-server-go/app/modules/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -18,7 +19,7 @@ import (
 // PrintHandler 打印控制器
 type PrintHandler struct {
 	authSrv       service.IAuthSrv
-	printerSrv    service.IPrinterSrv
+	printerSrv    printerService.IPrinterSrv
 	uploadFileSrv service.IUploadFileSrv
 }
 
@@ -192,12 +193,12 @@ func (h *PrintHandler) UsePrinterCustomize(c *gin.Context) {
 		helper.HandleValidationError(c, err, printerUseCustomizeReq, nil)
 		return
 	}
-	err := h.printerSrv.UsePrinterCustomize(ctx, printerUseCustomizeReq.CustomizeUuid)
+	resp, err := h.printerSrv.UsePrinterCustomize(ctx, printerUseCustomizeReq.CustomizeUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil, "使用打印机定制成功")
+	helper.Success(c, resp, "使用打印机定制成功")
 }
 
 // GetPrinterCustomizeConfigInfo 获取配置信息
@@ -271,7 +272,7 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-	printerSrv := service.NewPrinterSrv(dbm, cache)
+	printerSrv := printerService.NewPrinterSrv(dbm, cache)
 
 	// 初始化控制器
 	printerHandler := &PrintHandler{

@@ -20,7 +20,7 @@
           <el-col :span="6" v-if="detail.member_uuids">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member_uuids }})</span>
+              <span>{{ detail?.member_uuids }}</span>
             </div>
           </el-col>
 
@@ -159,7 +159,7 @@
         </p>
         <p class="sub-order-item">
           {{ $t('会员：') }}
-          <span v-if="detail?.sale_orders[activeName].member_uuid">{{ $t('会员ID') }}({{ detail?.sale_orders[activeName].member_uuid }})</span>
+          <span v-if="detail?.sale_orders[activeName].member_uuid">{{ detail?.sale_orders[activeName].member_name }}</span>
           <span v-else>-</span>
         </p>
       </div>
