@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"ttpos-server-go/app/modules/takeout/domain/event"
+	valueObject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
 	appContext "ttpos-server-go/pkg/context"
@@ -77,6 +78,13 @@ func (s *takeoutOrderCancelEventSubscriber) Handle(domainEvent event.DomainEvent
 
 		// 成功后，推送到厨显端更新订单
 		sendUpdateKitchenWebSocketNotification(orderCancelEvent.CompanyUuid)
+
+		// 异步打印退单联
+		if orderCancelEvent.OrderState == valueObject.TakeoutOrderStateCanceled {
+			utils.Go(func() {
+				takeoutSrv.PrintTakeoutOrder(ctx, orderCancelEvent.OrderUuid, "", 0)
+			})
+		}
 	})
 
 	return nil

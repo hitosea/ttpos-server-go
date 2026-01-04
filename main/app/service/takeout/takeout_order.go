@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	printer "ttpos-server-go/app/modules/printer"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/printer_model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	domainService "ttpos-server-go/app/modules/takeout/domain/service"
@@ -899,26 +900,38 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, pr
 		return nil, err
 	}
 
-	// 异步打印顾客联
-	utils.Go(func() {
-		printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
+	//打印退单联
+	if order.OrderState == valueObject.TakeoutOrderStateCanceled {
+		receiptData, err := printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
 			order,
-			"customer",
-			0,
+			printerConst.TakeoutReceiptTypeRefund,
+			firstExecution,
 		)
-	})
+		if err != nil {
+			return nil, err
+		}
+		return receiptData, nil
+	} else {
+		// 异步打印顾客联
+		utils.Go(func() {
+			printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
+				order,
+				printerConst.TakeoutReceiptTypeCustomer,
+				0,
+			)
+		})
 
-	//打印商家联
-	receiptData, err := printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
-		order,
-		"merchant",
-		firstExecution,
-	)
-	if err != nil {
-		return nil, err
+		//打印商家联
+		receiptData, err := printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
+			order,
+			printerConst.TakeoutReceiptTypeMerchant,
+			firstExecution,
+		)
+		if err != nil {
+			return nil, err
+		}
+		return receiptData, nil
 	}
-
-	return receiptData, nil
 }
 
 // PrintProductionOrder 打印送厨单

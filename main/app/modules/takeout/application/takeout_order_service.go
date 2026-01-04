@@ -107,7 +107,7 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 			}
 		}
 		// 更新订单状态
-		return s.orderService.UpdateOrderStatus(ctx, takeoutOrderEvent.OrderUuid, takeoutOrderEvent.Status)
+		return s.orderService.UpdateOrderStatus(ctx, takeoutOrderEvent.OrderUuid, takeoutOrderEvent.Status, takeoutOrderEvent.Message)
 	}
 	return nil
 }

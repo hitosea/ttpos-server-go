@@ -41,6 +41,7 @@ func TakeoutProviderOrderUpdateHandler(ctx context.Context, msg *primitive.Messa
 		zap.String("order_uuid", event.OrderUuid),
 		zap.String("order_id", event.OrderId),
 		zap.String("status", event.Status),
+		zap.String("message", event.Message),
 		zap.Int64("timestamp", event.Timestamp))
 
 	// 创建gin上下文

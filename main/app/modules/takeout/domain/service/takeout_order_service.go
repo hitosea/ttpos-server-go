@@ -36,7 +36,7 @@ type ITakeoutOrderSrv interface {
 	// 创建订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
 	CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error
 	// 更新订单状态 - 由 Application 层调用
-	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string) error
+	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, message string) error
 	// 订单操作
 	AcceptOrder(ctx context.Context, req *request.TakeoutOrderAcceptReq) error
 	RejectOrder(ctx context.Context, req *request.TakeoutOrderRejectReq) error
@@ -668,6 +668,7 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 		order.TakeoutOrderUuid,
 		ctx.GetCompanyUuid(),
 		reasonText,
+		valueobject.TakeoutOrderStateCanceled,
 	))
 
 	return nil
@@ -1277,7 +1278,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 }
 
 // UpdateOrderStatus 更新订单状态
-func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, status string) error {
+func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, status string, message string) error {
 	db := ctx.GetDB()
 
 	// 开启事务
@@ -1304,6 +1305,12 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 			order.OrderState = newOrderState // 更新内部状态码
 		}
 		order.PlatformOrderState = status // 更新平台原始状态
+
+		// 更新取消时间
+		if newOrderState == valueobject.TakeoutOrderStateCanceled || newOrderState == valueobject.TakeoutOrderStateRejected {
+			order.RejectedTime = time.Now().Unix()
+			order.RejectReason = message
+		}
 
 		// 4. 更新订单到数据库
 		if err := orderRepoTx.Update(order); err != nil {
@@ -1334,6 +1341,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 					order.TakeoutOrderUuid,
 					ctx.GetCompanyUuid(),
 					"订单已取消",
+					newOrderState,
 				))
 			case valueobject.TakeoutOrderStateCompleted:
 				// 订单完成事件
