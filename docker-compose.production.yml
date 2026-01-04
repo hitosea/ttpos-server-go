@@ -141,6 +141,7 @@ services:
     environment:
       - PORT=3000
       - GCS_BUCKET=ttpos-stock-reconciliation
+      - GCS_ENV=${GCS_ENV:-dev}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-/app/credentials/gcs-key.json}
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
       - LOG_LEVEL=${LOG_LEVEL:-info}
