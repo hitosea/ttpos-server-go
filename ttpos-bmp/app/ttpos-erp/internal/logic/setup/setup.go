@@ -475,7 +475,8 @@ type DocumentInitConfig struct {
 }
 
 // initDocumentsFromDir 通用的文档初始化方法
-// 遍历指定目录下的所有JSON文件，解析并创建对应类型的文档
+// 遍历指定目录下的所有JSON文件，解析并创建或更新对应类型的文档
+// 如果JSON数据中包含非空的name字段，则更新已有文档；否则创建新文档
 // 参数：
 //   - ctx: 上下文对象
 //   - config: 初始化配置
@@ -517,13 +518,27 @@ func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitCo
 				return gerror.Wrapf(err, "解析JSON失败: %s", path)
 			}
 
-			// 调用service.Document.Create创建文档
-			if _, err := service.Document().Create(ctx, config.DocType, docData); err != nil {
-				g.Log().Error(ctx, fmt.Sprintf("创建%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
-				//return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
-			}
+			// 检查 docData 中的 name 字段，智能判断是创建还是更新
+			docName, hasName := docData["name"].(string)
 
-			g.Log().Infof(ctx, "%s创建成功: %s", config.ItemName, path)
+			if hasName && docName != "" {
+				// name 不为空，调用 Update 方法更新文档
+				if _, err := service.Document().Update(ctx, &erp.ErpReq{
+					DocType: config.DocType,
+					Name:    docName,
+				}, docData); err != nil {
+					g.Log().Error(ctx, fmt.Sprintf("更新%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
+				} else {
+					g.Log().Infof(ctx, "%s更新成功: %s", config.ItemName, path)
+				}
+			} else {
+				// name 为空，调用 Create 方法创建文档
+				if _, err := service.Document().Create(ctx, config.DocType, docData); err != nil {
+					g.Log().Error(ctx, fmt.Sprintf("创建%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
+				} else {
+					g.Log().Infof(ctx, "%s创建成功: %s", config.ItemName, path)
+				}
+			}
 		}
 
 		return nil
