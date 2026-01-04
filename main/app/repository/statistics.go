@@ -330,6 +330,7 @@ func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.Statistic
 // CountCategory 统计分类
 func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) {
 	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
 	locale := constant.LocaleList.GetLocaleType(language)
 	language = string(locale)
 
@@ -400,6 +401,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 // CountProduct 统计商品
 func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model.StatisticsProductData {
 	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
 	locale := constant.LocaleList.GetLocaleType(language)
 	language = string(locale)
 
@@ -832,6 +834,7 @@ type CountProductSaleRepoReq struct {
 // CountProductSale 统计商品销售
 func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
 	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
 	locale := constant.LocaleList.GetLocaleType(req.Language)
 	req.Language = string(locale)
 
