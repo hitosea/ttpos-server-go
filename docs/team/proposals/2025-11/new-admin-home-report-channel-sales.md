@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 待评审   |
 | **关联任务** | DooTask #36937 |
-| **关联 Spec** | [story-shop-channel-sales](../../shared/specs/active/story-shop-channel-sales/requirements.md) |
+| **关联 Spec** | [story-shop-channel-sales](../../shared/specs/archived/v2.12/story-shop-channel-sales/requirements.md) |
 
 ---
 

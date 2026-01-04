@@ -2,8 +2,8 @@
 
 - **提案人**: rikugun
 - **日期**: 2025-12-09
-- **状态**: 已采纳
-- **关联 Spec**: [task-takeout-optimize-order-model](../../../shared/specs/active/task-takeout-optimize-order-model/requirements.md)
+- **状态**: ✅ 已完成 - 已发布 v2.12
+- **关联 Spec**: [task-takeout-optimize-order-model](../../../shared/specs/archived/v2.12/task-takeout-optimize-order-model/requirements.md)
 
 ## 1. 背景和动机
 

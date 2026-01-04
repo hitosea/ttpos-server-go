@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-callboard-order-auto-hide-after-completion-timeout](../../../shared/specs/active/story-callboard-order-auto-hide-after-completion-timeout/requirements.md)      |
+| **关联 Spec** | [story-callboard-order-auto-hide-after-completion-timeout](../../../shared/specs/archived/v2.12/story-callboard-order-auto-hide-after-completion-timeout/requirements.md)      |
 
 ---
 

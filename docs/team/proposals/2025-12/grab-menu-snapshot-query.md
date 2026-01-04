@@ -13,7 +13,7 @@
 | **目标版本** | v2.36.0 |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [docs/shared/specs/active/story-takeout-grab-menu-snapshot-query/requirements.md](../../../shared/specs/active/story-takeout-grab-menu-snapshot-query/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.12/story-takeout-grab-menu-snapshot-query/requirements.md](../../../shared/specs/archived/v2.12/story-takeout-grab-menu-snapshot-query/requirements.md) |
 
 ---
 

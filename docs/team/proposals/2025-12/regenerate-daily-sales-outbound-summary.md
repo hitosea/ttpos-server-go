@@ -13,7 +13,7 @@
 | **目标版本** | -            |
 | **状态**   | 待评审       |
 | **关联任务** | -            |
-| **关联 Spec** | [story-main-regenerate-sales-outbound-summary](../../../shared/specs/active/story-main-regenerate-sales-outbound-summary/requirements.md) |
+| **关联 Spec** | [story-main-regenerate-sales-outbound-summary](../../../shared/specs/archived/v2.12/story-main-regenerate-sales-outbound-summary/requirements.md) |
 
 ---
 

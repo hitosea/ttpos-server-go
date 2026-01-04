@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 待评审   |
 | **关联任务** | -      |
-| **关联 Spec** | [story-shop-user-analysis](../../shared/specs/active/story-shop-user-analysis/requirements.md) |
+| **关联 Spec** | [story-shop-user-analysis](../../shared/specs/archived/v2.12/story-shop-user-analysis/requirements.md) |
 
 ---
 

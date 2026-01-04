@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.x |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-takeout-channel-menu-storage](../../../shared/specs/active/story-takeout-channel-menu-storage/requirements.md) |
+| **关联 Spec** | [story-takeout-channel-menu-storage](../../../shared/specs/archived/v2.12/story-takeout-channel-menu-storage/requirements.md) |
 
 ---
 

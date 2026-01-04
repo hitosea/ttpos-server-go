@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-admin-product-combo](../../../shared/specs/active/story-admin-product-combo/requirements.md)      |
+| **关联 Spec** | [story-admin-product-combo](../../../shared/specs/archived/v2.12/story-admin-product-combo/requirements.md)      |
 
 ---
 

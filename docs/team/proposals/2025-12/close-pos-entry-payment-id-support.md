@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 进行中   |
 | **关联任务** | - |
-| **关联 Spec** | [task-erp-close-pos-entry-payment-id](../../shared/specs/active/task-erp-close-pos-entry-payment-id/) |
+| **关联 Spec** | [task-erp-close-pos-entry-payment-id](../../shared/specs/archived/v2.12/task-erp-close-pos-entry-payment-id/) |
 
 ---
 

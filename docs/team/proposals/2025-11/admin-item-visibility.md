@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                  |
 | **状态**      | ✅ 已创建 Spec                                                                           |
 | **关联任务**  | DooTask #36932                                                                           |
-| **关联 Spec** | [story-admin-item-visibility](../../../shared/specs/active/story-admin-item-visibility/) |
+| **关联 Spec** | [story-admin-item-visibility](../../../shared/specs/archived/v2.12/story-admin-item-visibility/) |
 
 ---
 

@@ -13,7 +13,7 @@
 | **目标版本** | v2.12.0 |
 | **状态**   | ✅ 已批准 - 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-bmp-grab-mark-order-ready](../../shared/specs/active/story-bmp-grab-mark-order-ready/requirements.md)      |
+| **关联 Spec** | [story-bmp-grab-mark-order-ready](../../shared/specs/archived/v2.12/story-bmp-grab-mark-order-ready/requirements.md)      |
 
 ---
 

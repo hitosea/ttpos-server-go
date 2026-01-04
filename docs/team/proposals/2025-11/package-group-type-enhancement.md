@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                                                                       |
 | **状态**      | 已创建 Spec                                                                                                                                                   |
 | **关联任务**  | DooTask #36913, DooTask #36904                                                                                                                                |
-| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-shop-package-group-type-enhancement/](../../../shared/specs/active/story-shop-package-group-type-enhancement/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.10.0/story-shop-package-group-type-enhancement/](../../../shared/specs/archived/v2.12/story-shop-package-group-type-enhancement/requirements.md) |
 
 ---
 

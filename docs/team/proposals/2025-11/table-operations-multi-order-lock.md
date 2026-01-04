@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 进行中   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-table-multi-order-lock](../../../shared/specs/active/story-main-table-multi-order-lock/)      |
+| **关联 Spec** | [story-main-table-multi-order-lock](../../../shared/specs/archived/v2.12/story-main-table-multi-order-lock/)      |
 | **关联提案** | `table-merge-transfer-lock-uuid.md`（已放弃公司锁方案） |
 
 ---

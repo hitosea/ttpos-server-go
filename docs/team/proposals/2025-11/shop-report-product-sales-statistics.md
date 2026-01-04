@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                                               |
 | **状态**      | 待评审                                                                                                                                |
 | **关联任务**  | DooTask #36927                                                                                                                        |
-| **关联 Spec** | [story-shop-report-product-sales-statistics](../../../shared/specs/active/story-shop-report-product-sales-statistics/requirements.md) |
+| **关联 Spec** | [story-shop-report-product-sales-statistics](../../../shared/specs/archived/v2.12/story-shop-report-product-sales-statistics/requirements.md) |
 
 ---
 

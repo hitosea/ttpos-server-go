@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已批准 → Spec 已创建   |
 | **关联任务** | -      |
-| **关联 Spec** | [story-main-buffet-customer-type-package-name-snapshot-fix](../../shared/specs/active/story-main-buffet-customer-type-package-name-snapshot-fix/) |
+| **关联 Spec** | [story-main-buffet-customer-type-package-name-snapshot-fix](../../shared/specs/archived/v2.12/story-main-buffet-customer-type-package-name-snapshot-fix/) |
 | **父提案** | `order-attribute-snapshot-fix.md` |
 
 ---
@@ -277,7 +277,7 @@
 
 - 订单信息获取逻辑分析: `docs/shared/api/cashier-order-info-analysis.md`
 - 数据模型定义: `main/app/model/sale_order_buffet_customer_type.go`
-- 自助餐名称快照修复 Spec: `docs/shared/specs/active/story-main-buffet-package-name-snapshot-fix/`
+- 自助餐名称快照修复 Spec: `docs/shared/specs/archived/v2.12/story-main-buffet-package-name-snapshot-fix/`
 
 ### 代码位置
 

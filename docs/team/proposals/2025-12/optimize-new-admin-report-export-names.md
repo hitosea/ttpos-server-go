@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-shop-report-export-optimize](../../../shared/specs/active/story-shop-report-export-optimize/requirements.md)      |
+| **关联 Spec** | [story-shop-report-export-optimize](../../../shared/specs/archived/v2.12/story-shop-report-export-optimize/requirements.md)      |
 
 ---
 
