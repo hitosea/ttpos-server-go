@@ -341,7 +341,7 @@ func (r *TakeoutOrderRepoImpl) WhereSearch(search string) DBOption {
 func (r *TakeoutOrderRepoImpl) WhereIsHistoryOrder(isHistory bool) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if !isHistory {
-			return db.Where("order_state not in (4, 5)")
+			return db.Where("order_state not in (?, ?, ?)", value_object.TakeoutOrderStateCompleted, value_object.TakeoutOrderStateRejected, value_object.TakeoutOrderStateCanceled)
 		}
 		return db
 	}
@@ -361,15 +361,15 @@ func (r *TakeoutOrderRepoImpl) WhereOrderTimeGt(orderTime int64) DBOption {
 func (r *TakeoutOrderRepoImpl) WherePendingOrAbnormal() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		// order_state = 0 (待接单) OR is_abnormal = 1 (异常订单)
-		return db.Where("order_state = ? OR is_abnormal = ?", 0, 1)
+		return db.Where("order_state = ? OR is_abnormal = ?", value_object.TakeoutOrderStatePending, 1)
 	}
 }
 
 // WherePendingOrAutoAccepted 待接单或已自动接单
 func (r *TakeoutOrderRepoImpl) WherePendingOrAutoAccepted() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		// order_state = 0 (待接单) OR (order_state = 1 AND order_accepted_type = 'AUTO')
-		return db.Where("order_state = ? OR (order_state = ? AND order_accepted_type = ?)", 0, 1, value_object.TakeoutOrderAcceptedTypeAuto)
+		// order_state = 0 (待接单) OR (order_state	= 10 AND order_accepted_type = 'AUTO')
+		return db.Where("order_state = ? OR (order_state = ? AND order_accepted_type = ?)", value_object.TakeoutOrderStatePending, value_object.TakeoutOrderStateAccepted, value_object.TakeoutOrderAcceptedTypeAuto)
 	}
 }
 

@@ -3930,7 +3930,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order` (
     `short_order_number` varchar(50) NOT NULL DEFAULT '' COMMENT '短订单号(用于展示) (Grab: GF-123)',
     `merchant_id` varchar(100) NOT NULL DEFAULT '' COMMENT '商户ID (Grab: merchantID)',
     `partner_merchant_id` varchar(100) NOT NULL DEFAULT '' COMMENT '合作伙伴商户ID (Grab: partnerMerchantID)',
-    `order_state` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单',
+    `order_state` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消',
     `is_abnormal` int(4) unsigned NOT NULL DEFAULT 0 COMMENT '是否异常: 0=正常,1=异常',
     `abnormal_detail` text COMMENT '异常详情(JSON)',
     `stock_status` int(4) unsigned NOT NULL DEFAULT 1 COMMENT '库存状态: 1=充足,2=不足',

@@ -25,7 +25,7 @@ type TakeoutOrderEvent struct {
 type TakeoutOrderListReq struct {
 	PageReq
 	Platform  string `json:"platform" form:"platform"`          // 平台筛选: grab,lineman (空=全部) (默认: 空)
-	Status    int    `json:"status" form:"status" default:"-1"` // -1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)
+	Status    int    `json:"status" form:"status" default:"-1"` // -1=全部, 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消 (默认: -1)
 	StartTime int64  `json:"start_time" form:"start_time"`      // 开始时间 (默认: 0)
 	EndTime   int64  `json:"end_time" form:"end_time"`          // 结束时间 (默认: 0)
 	Search    string `json:"search" form:"search"`              // 搜索关键词 (默认: 空)
