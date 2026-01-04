@@ -423,6 +423,22 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	return info, nil
 }
 
+// 异步预加载销售账单信息缓存
+func (s *orderSrv) AsyncPreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) {
+	utils.Go(func() {
+		// 禁止并发操作
+		if ctx.NoLock() {
+			lock.NewSystemLock().LockUuid(saleBillUuid)
+			defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+			ctx.AddLock()
+		}
+		_, err := s.PreloadSaleBillAllInfoCache(ctx, saleBillUuid)
+		if err != nil {
+			ctx.Log().Error("预加载销售账单信息缓存失败", zap.Error(err))
+		}
+	})
+}
+
 // AssistantOrderCartProductNum 助手端修改购物车商品数量
 func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 禁止并发操作
@@ -547,22 +563,6 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
-	// FIXME 暂时废弃，只在送厨和结账时检查
-	// 检查限购
-	// {
-	// 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-	// 	if request.Num > beforeNum {
-	// 		limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
-	// 		if err != nil {
-	// 			return nil, errors.WithMessage(err)
-	// 		}
-	// 		overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
-	// 		if len(overLimitProducts) > 0 {
-	// 			return nil, errors.WithMessage(errors.New("商品超过限购"))
-	// 		}
-	// 	}
-	// }
-
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
 	if request.Num > beforeNum {
@@ -598,14 +598,16 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
+	// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
 	// 获取新的桌台数据
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	ctx.Log().Debug("获取新的账单数据")
+	// info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
+	// if err != nil {
+	// 	return nil, errors.WithMessage(err)
+	// }
+	// ctx.Log().Debug("获取新的账单数据")0
+	// return info, nil
 
-	return info, nil
+	return nil, nil
 }
 
 // InstantOrderCartProductCooking 送厨购物车商品

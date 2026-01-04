@@ -170,6 +170,8 @@ type IOrderSrv interface {
 	// invoice
 	SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) // 保存发票到ERP
 
+	// cache
+	AsyncPreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) // 异步预加载销售账单所有信息缓存
 }
 
 // orderSrv 订单服务结构
@@ -5586,4 +5588,26 @@ func (s *orderSrv) generateInvoiceNumber(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("INV-%04d-%02d-%02d-%05d", now.Year(), now.Month(), now.Day(), seq), nil
+}
+
+// PreloadSaleBillAllInfoCache 预加载销售账单所有信息缓存
+// 跳过缓存检查，直接从数据库查询并写入缓存，用于缓存预热场景
+// 参数：
+//   - ctx: 上下文
+//   - saleBillUuid: 销售账单UUID
+//
+// 返回：
+//   - *model.SaleBill: 销售账单信息
+//   - error: 错误信息
+func (s *orderSrv) PreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) (*model.SaleBill, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 调用 repository 方法，跳过缓存检查，直接从数据库查询并写入缓存
+	saleBill, err := orderRepo.GetSaleBillAllInfo(saleBillUuid, repository.WithSkipCache())
+	if err != nil {
+		return nil, errors.WithMessage(err, "预加载销售账单缓存失败")
+	}
+
+	return saleBill, nil
 }

@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/objectstorage/domain/entity"
+	cacheRepo "ttpos-server-go/app/modules/objectstorage/domain/repository"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository/ro"
@@ -1954,11 +1955,31 @@ type GetSaleBillAllInfoOption func(option *GetSaleBillAllInfoOptions)
 
 type GetSaleBillAllInfoOptions struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID. 不为0时，根据会员端销售订单UUID查询
+	SkipCache           bool   `json:"skip_cache"`             // 是否跳过缓存检查，直接执行查询. true: 跳过所有缓存（L1/L2），直接从数据库查询（仍会写入缓存）. false: 正常流程，按配置决定是否使用缓存（默认）
+	EnableCache         bool   `json:"enable_cache"`           // 是否启用对象缓存. true: 使用对象缓存. false: 不使用对象缓存，直接查询数据库（默认）
 }
 
 func WithMemberSaleOrderUuid(uuid uint64) func(option *GetSaleBillAllInfoOptions) {
 	return func(option *GetSaleBillAllInfoOptions) {
 		option.MemberSaleOrderUuid = uuid
+	}
+}
+
+// WithSkipCache 设置是否跳过缓存选项
+func WithSkipCache() func(option *GetSaleBillAllInfoOptions) {
+	return func(option *GetSaleBillAllInfoOptions) {
+		option.SkipCache = true
+	}
+}
+
+// WithEnableCache 设置是否启用对象缓存选项
+// 默认情况下不使用对象缓存，只有明确调用此函数才会启用缓存
+// 与 WithSkipCache 的区别：
+//   - WithEnableCache: 启用对象缓存，按 L1 -> L2 -> L3 的顺序查找
+//   - WithSkipCache: 跳过缓存检查，但查询结果仍会写入缓存（用于缓存预热）
+func WithEnableCache() func(option *GetSaleBillAllInfoOptions) {
+	return func(option *GetSaleBillAllInfoOptions) {
+		option.EnableCache = true
 	}
 }
 
@@ -1968,6 +1989,37 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 	for _, opt := range opts {
 		opt(option)
 	}
+
+	// 如果未启用缓存，直接查询数据库
+	if !option.EnableCache {
+		return r.querySaleBillAllInfo(saleBillUuid, option)
+	}
+
+	// 获取商户UUID
+	companyUuid := GetCompanyUuid(r.db)
+	if companyUuid == 0 {
+		// 如果无法获取商户UUID，直接查询数据库
+		return r.querySaleBillAllInfo(saleBillUuid, option)
+	}
+
+	// 检查是否启用对象存储缓存
+	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 未启用缓存，直接查询数据库
+		return r.querySaleBillAllInfo(saleBillUuid, option)
+	}
+
+	// 如果提供了 MemberSaleOrderUuid，降级到直接查询数据库
+	if option.MemberSaleOrderUuid != 0 {
+		return r.querySaleBillAllInfo(saleBillUuid, option)
+	}
+
+	// 使用对象存储模块缓存查询
+	return r.getSaleBillAllInfoWithCache(companyUuid, saleBillUuid, option)
+}
+
+// querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *orderRepo) querySaleBillAllInfo(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
 	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
 	if option.MemberSaleOrderUuid != 0 {
 		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
@@ -2200,6 +2252,46 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
 	return &info, nil
+}
+
+// getSaleBillAllInfoWithCache 使用对象存储模块缓存查询销售账单所有信息
+func (r *orderRepo) getSaleBillAllInfoWithCache(companyUuid, saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
+	if companyUuid == 0 {
+		return nil, errors.New("getSaleBillAllInfoWithCache companyUuid cannot be 0")
+	}
+	if saleBillUuid == 0 {
+		return nil, errors.New("getSaleBillAllInfoWithCache saleBillUuid cannot be 0")
+	}
+
+	// 构建缓存 key
+	key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeSaleBill, saleBillUuid)
+
+	// 获取缓存层（使用订单相关对象缓存配置，TTL 设置为 5 分钟）
+	cacheLayer := adapter.GetOrderObjectCache[*model.SaleBill](cache.Global, 5*time.Minute)
+
+	// 使用缓存查询
+	var result *model.SaleBill
+	var err error
+	if option.SkipCache {
+		// 跳过缓存检查，直接执行查询（仍会写入缓存）
+		result, err = cacheLayer.GET(key, func() (*model.SaleBill, error) {
+			// 缓存未命中时，从数据库查询
+			return r.querySaleBillAllInfo(saleBillUuid, option)
+		}, cacheRepo.WithSkipCache())
+	} else {
+		// 正常流程，按 L1 -> L2 -> L3 的顺序查找
+		result, err = cacheLayer.GET(key, func() (*model.SaleBill, error) {
+			// 缓存未命中时，从数据库查询
+			return r.querySaleBillAllInfo(saleBillUuid, option)
+		})
+	}
+
+	if err != nil {
+		// 缓存查询失败，降级到直接查询数据库
+		return r.querySaleBillAllInfo(saleBillUuid, option)
+	}
+
+	return result, nil
 }
 
 // GetSaleBillWithProducts 获取销售账单所有商品信息
