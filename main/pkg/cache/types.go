@@ -54,6 +54,13 @@ type L1CacheClearable interface {
 	ClearL1()
 }
 
+// HitStatsCallback 缓存命中率统计回调函数
+// 参数：
+//   - key: 缓存 key
+//   - hit: 是否命中（true=命中，false=未命中）
+//   - level: 缓存层级（"L1"、"L2" 或 ""，空字符串表示未命中）
+type HitStatsCallback func(key string, hit bool, level string)
+
 // GroupConfig 缓存组配置
 type GroupConfig struct {
 	// Name 缓存组名称，用于日志和监控埋点
@@ -81,4 +88,9 @@ type GroupConfig struct {
 	// 建议设置为任务 TTL 的 1.5 到 2 倍，例如任务 TTL 为 5 分钟，L2TTL 可设置为 7-10 分钟
 	// TTL 优先级：L2TTL > taskTTL
 	L2TTL time.Duration
+
+	// HitStatsCallback 缓存命中率统计回调函数（可选）
+	// 当缓存命中或未命中时，会调用此回调函数进行统计
+	// 如果为 nil，则不进行统计
+	HitStatsCallback HitStatsCallback
 }

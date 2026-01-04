@@ -80,6 +80,7 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 	lockKey := fmt.Sprintf("takeout_order:%s:%s", takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid)
 	s.systemLock.LockUuidString(lockKey)
 	defer s.systemLock.UnlockUuidString(lockKey)
+
 	// 根据 Action 处理订单
 	switch takeoutOrderEvent.Action {
 	case "create":
@@ -91,6 +92,21 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 		}
 		return s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo)
 	case "status_update", "cancel":
+		// 查询订单是否存在
+		order, err := persistence.NewTakeoutOrderRepo(ctx.GetDB()).GetByTakeoutOrderUuid(takeoutOrderEvent.OrderUuid)
+		if err != nil || order == nil {
+			// 订单不存在，通过 RPC 查询订单信息
+			orderInfo, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
+			if err != nil {
+				logger.Logger.Error("RPC查询订单失败", zap.Error(err))
+				return fmt.Errorf("RPC查询订单失败: %w", err)
+			}
+			if err := s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo); err != nil {
+				logger.Logger.Error("同步订单失败", zap.Error(err))
+				return fmt.Errorf("同步订单失败: %w", err)
+			}
+		}
+		// 更新订单状态
 		return s.orderService.UpdateOrderStatus(ctx, takeoutOrderEvent.OrderUuid, takeoutOrderEvent.Status)
 	}
 	return nil

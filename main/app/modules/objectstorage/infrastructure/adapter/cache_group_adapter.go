@@ -174,6 +174,15 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 			if option.L2TTL > 0 {
 				groupConfig.L2TTL = option.L2TTL
 			}
+			// 设置统计回调函数（使用全局统计管理器）
+			globalStats := GetGlobalStatsManager()
+			groupConfig.HitStatsCallback = func(key string, hit bool, level string) {
+				if hit {
+					globalStats.RecordHit(key)
+				} else {
+					globalStats.RecordMiss(key)
+				}
+			}
 			group = cache.NewCacheGroup[T](groupConfig)
 			// 直接存储实例（作为 L1CacheClearable 接口类型）
 			cacheGroupSingletons.Store(key, group)
@@ -284,8 +293,6 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 			continue // 单个失败不影响其他
 		}
 		result[key] = val
-		// 注意：这里无法准确判断是命中还是未命中，因为 ICacheGroup 内部处理了缓存逻辑
-		// 实际的命中/未命中日志会在 cacheGroup.Do 中记录
 	}
 
 	// 记录批量查询的总体情况

@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -824,20 +825,31 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	shopCart, err := h.orderSrv.AssistantOrderCartProductNum(ctx, params)
+	_, err := h.orderSrv.AssistantOrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
+	// 异步预加载销售账单所有信息缓存（只有使用缓存的商户才执行）
+	if params.SaleBillUuid != 0 {
+		companyUuid := ctx.GetCompanyUuid()
+		if objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid) {
+			h.orderSrv.AsyncPreloadSaleBillAllInfoCache(ctx, params.SaleBillUuid)
+		}
 	}
-	// 返回结果
-	helper.Success(c, res)
+
+	// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
+	// res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// // 处理错误
+	// if err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, err)
+	// 	return
+	// }
+	// // 返回结果
+	// helper.Success(c, res)
+
+	helper.Success(c, nil)
 }
 
 // OrderCartProductCooking 送厨购物车商品

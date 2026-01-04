@@ -104,6 +104,13 @@ var rootCommand = &cobra.Command{
 			},
 		)
 
+		// 初始化并启动缓存命中率快照保存器（每30分钟保存一次）
+		objectStorageAdapter.InitSnapshotReporter(
+			dbm.GetDB,
+			utils.GetInstanceID(),
+			1*time.Minute,
+		)
+
 		// 初始化系统事件总线
 		event.NewSystemBus()
 
