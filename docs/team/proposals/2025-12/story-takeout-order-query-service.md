@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已评审   |
 | **关联任务** | - |
-| **关联 Spec** | [docs/shared/specs/active/story-takeout-order-query-service/requirements.md](../../../shared/specs/active/story-takeout-order-query-service/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.12/story-takeout-order-query-service/requirements.md](../../../shared/specs/archived/v2.12/story-takeout-order-query-service/requirements.md) |
 
 ---
 

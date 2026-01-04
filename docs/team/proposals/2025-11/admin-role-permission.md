@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                  |
 | **状态**      | 待评审                                                                                   |
 | **关联任务**  | DooTask #36929                                                                           |
-| **关联 Spec** | [story-admin-role-permission](../../../shared/specs/active/story-admin-role-permission/) |
+| **关联 Spec** | [story-admin-role-permission](../../../shared/specs/archived/v2.12/story-admin-role-permission/) |
 
 ---
 

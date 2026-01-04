@@ -14,7 +14,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 待评审   |
 | **关联任务** | -      |
-| **关联 Spec** | [story-main-gift-reason-snapshot-fix](../../shared/specs/active/story-main-gift-reason-snapshot-fix/requirements.md) |
+| **关联 Spec** | [story-main-gift-reason-snapshot-fix](../../shared/specs/archived/v2.12/story-main-gift-reason-snapshot-fix/requirements.md) |
 | **关联提案** | [订单商品信息快照修复](../2025-01/order-attribute-snapshot-fix.md) |
 
 ---

@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.x                             |
 | **状态**     | 已创建 Spec                         |
 | **关联任务** | -                                   |
-| **关联 Spec** | [task-bmp-grpc-menu-update-service](../../../shared/specs/active/task-bmp-grpc-menu-update-service/requirements.md) |
+| **关联 Spec** | [task-bmp-grpc-menu-update-service](../../../shared/specs/archived/v2.12/task-bmp-grpc-menu-update-service/requirements.md) |
 
 ---
 
@@ -152,7 +152,7 @@ message UpdateMenuItemReq {
   string merchant_id = 1;                         // Grab MerchantID (必填)
   string item_id = 2;                             // 商品ID (partner item id, 必填)
   optional int64 price = 3;                       // 价格 (minor unit，单位：分)
-  optional string available_status = 4;           // 可用状态: AVAILABLE, UNAVAILABLE, UNAVAILABLEHIDE
+  optional string available_status = 4;           // 可用状态: ✅ 已完成 - 已发布 v2.12
   optional int64 max_stock = 5;                   // 库存数量
   repeated AdvancedPricing advanced_pricings = 6; // 高级定价配置
   repeated Purchasability purchasabilities = 7;   // 购买能力配置
@@ -175,7 +175,7 @@ message UpdateMenuModifierReq {
   string modifier_id = 2;                         // 修饰符ID (partner modifier id, 必填)
   string modifier_name = 3;                       // 修饰符名称 (用于定位记录, 必填)
   optional int64 price = 4;                       // 价格 (minor unit，单位：分)
-  optional string available_status = 5;           // 可用状态: AVAILABLE, UNAVAILABLE
+  optional string available_status = 5;           // 可用状态: ✅ 已完成 - 已发布 v2.12
   optional bool is_free = 6;                      // 是否免费
   repeated AdvancedPricing advanced_pricings = 7; // 高级定价配置
   string request_id = 8;                          // 请求 ID (可选)

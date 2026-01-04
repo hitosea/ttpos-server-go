@@ -13,7 +13,7 @@
 | **目标版本** | 待定 |
 | **状态** | 待评审 |
 | **关联任务** | DooTask #37464（未能自动同步任务详情，需补充） |
-| **关联 Spec** | [docs/shared/specs/active/story-bmp-saveitem-allow-negative-stock/requirements.md](../../shared/specs/active/story-bmp-saveitem-allow-negative-stock/requirements.md) |
+| **关联 Spec** | [docs/shared/specs/archived/v2.12/story-bmp-saveitem-allow-negative-stock/requirements.md](../../shared/specs/archived/v2.12/story-bmp-saveitem-allow-negative-stock/requirements.md) |
 
 ---
 

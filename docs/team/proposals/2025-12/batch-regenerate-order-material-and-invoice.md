@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0    |
 | **状态**   | 已创建 Spec  |
 | **关联任务** | -            |
-| **关联 Spec** | [story-main-batch-regenerate-order-material-and-invoice](../../shared/specs/active/story-main-batch-regenerate-order-material-and-invoice/requirements.md) |
+| **关联 Spec** | [story-main-batch-regenerate-order-material-and-invoice](../../shared/specs/archived/v2.12/story-main-batch-regenerate-order-material-and-invoice/requirements.md) |
 
 ---
 
@@ -306,10 +306,10 @@
 ### 参考需求
 
 - **关联命令**：
-  - `regenerate-order-material` - [提案文档](./regenerate-order-material.md) | [Spec文档](../../shared/specs/active/story-main-regenerate-order-material/requirements.md)
-  - `regenerate-sales-outbound` - [提案文档](./regenerate-daily-sales-outbound-summary.md) | [Spec文档](../../shared/specs/active/story-main-regenerate-sales-outbound-summary/requirements.md)
-  - `regenerate-sale-order-material-outbound` - [提案文档](./regenerate-sale-bill-material-outbound.md) | [Spec文档](../../shared/specs/active/story-main-regenerate-sale-bill-material-outbound/requirements.md)
-  - `regenerate-order-pos-invoice` - [提案文档](./regenerate-order-pos-invoice.md) | [Spec文档](../../shared/specs/active/story-main-regenerate-order-pos-invoice/requirements.md)
+  - `regenerate-order-material` - [提案文档](./regenerate-order-material.md) | [Spec文档](../../shared/specs/archived/v2.12/story-main-regenerate-order-material/requirements.md)
+  - `regenerate-sales-outbound` - [提案文档](./regenerate-daily-sales-outbound-summary.md) | [Spec文档](../../shared/specs/archived/v2.12/story-main-regenerate-sales-outbound-summary/requirements.md)
+  - `regenerate-sale-order-material-outbound` - [提案文档](./regenerate-sale-bill-material-outbound.md) | [Spec文档](../../shared/specs/archived/v2.12/story-main-regenerate-sale-bill-material-outbound/requirements.md)
+  - `regenerate-order-pos-invoice` - [提案文档](./regenerate-order-pos-invoice.md) | [Spec文档](../../shared/specs/archived/v2.12/story-main-regenerate-order-pos-invoice/requirements.md)
 
 ### 相关文档
 

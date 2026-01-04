@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0 |
 | **状态**   | 待评审 |
 | **关联任务** | DooTask #36916、DooTask #36918 |
-| **关联 Spec** | [story-pos-order-source-stat](../../shared/specs/active/story-pos-order-source-stat/) |
+| **关联 Spec** | [story-pos-order-source-stat](../../shared/specs/archived/v2.12/story-pos-order-source-stat/) |
 
 ---
 

@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | ✅ 已批准   |
 | **关联任务** | - |
-| **关联 Spec** | [task-infra-grab-staging](../../shared/specs/active/task-infra-grab-staging/requirements.md) |
+| **关联 Spec** | [task-infra-grab-staging](../../shared/specs/archived/v2.12/task-infra-grab-staging/requirements.md) |
 
 ---
 

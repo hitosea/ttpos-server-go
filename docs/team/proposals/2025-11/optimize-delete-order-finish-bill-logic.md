@@ -13,7 +13,7 @@
 | **目标版本** | v2.x |
 | **状态**   | ✅ 已批准 - 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [task-main-optimize-delete-order-finish-bill-logic](../../shared/specs/active/task-main-optimize-delete-order-finish-bill-logic/requirements.md)      |
+| **关联 Spec** | [task-main-optimize-delete-order-finish-bill-logic](../../shared/specs/archived/v2.12/task-main-optimize-delete-order-finish-bill-logic/requirements.md)      |
 | **原始 Spec** | story-main-table-multi-order-lock      |
 | **关联文档** | [InstantOrderSaleOrderDelete 方法分析](../../human/guides/order-instant-order-sale-order-delete-analysis.md) |
 

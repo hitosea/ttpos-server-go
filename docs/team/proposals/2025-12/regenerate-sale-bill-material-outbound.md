@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0       |
 | **状态**   | 待评审         |
 | **关联任务** | -              |
-| **关联 Spec** | [story-main-regenerate-sale-bill-material-outbound](../../shared/specs/active/story-main-regenerate-sale-bill-material-outbound/requirements.md) |
+| **关联 Spec** | [story-main-regenerate-sale-bill-material-outbound](../../shared/specs/archived/v2.12/story-main-regenerate-sale-bill-material-outbound/requirements.md) |
 
 ---
 
@@ -167,8 +167,8 @@
 
 ### 相关文档
 
-- 产品需求文档 (PRD): [成本卡材料消耗修正需求文档](../../shared/specs/active/story-main-cost-card-material-consumption-correction/requirements.md)
-- 技术设计文档: [成本卡材料消耗修正设计文档](../../shared/specs/active/story-main-cost-card-material-consumption-correction/design.md)
+- 产品需求文档 (PRD): [成本卡材料消耗修正需求文档](../../shared/specs/archived/v2.12/story-main-cost-card-material-consumption-correction/requirements.md)
+- 技术设计文档: [成本卡材料消耗修正设计文档](../../shared/specs/archived/v2.12/story-main-cost-card-material-consumption-correction/design.md)
 - API 文档: [销售出库单明细业务逻辑文档](../../shared/api/warehouse-out-form-item-sales.md)
 
 ---

@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                    |
 | **状态**      | 待评审                                                                                                     |
 | **关联任务**  | DooTask #36928                                                                                             |
-| **关联 Spec** | [story-shop-staff-permission-password](../../../shared/specs/active/story-shop-staff-permission-password/) |
+| **关联 Spec** | [story-shop-staff-permission-password](../../../shared/specs/archived/v2.12/story-shop-staff-permission-password/) |
 
 ---
 

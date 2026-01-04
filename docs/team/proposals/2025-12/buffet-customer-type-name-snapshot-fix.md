@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已批准 → Spec 已创建   |
 | **关联任务** | -      |
-| **关联 Spec** | [story-main-buffet-customer-type-name-snapshot-fix](../../shared/specs/active/story-main-buffet-customer-type-name-snapshot-fix/) |
+| **关联 Spec** | [story-main-buffet-customer-type-name-snapshot-fix](../../shared/specs/archived/v2.12/story-main-buffet-customer-type-name-snapshot-fix/) |
 | **父提案** | `order-attribute-snapshot-fix.md` |
 
 ---
@@ -176,8 +176,8 @@
 
 ### 相关文档
 
-- 订单商品信息快照修复 Spec: `docs/shared/specs/active/story-main-product-attribute-snapshot-fix/`
-- 自助餐顾客类型套餐名称快照修复 Spec: `docs/shared/specs/active/story-main-buffet-customer-type-package-name-snapshot-fix/`
+- 订单商品信息快照修复 Spec: `docs/shared/specs/archived/v2.12/story-main-product-attribute-snapshot-fix/`
+- 自助餐顾客类型套餐名称快照修复 Spec: `docs/shared/specs/archived/v2.12/story-main-buffet-customer-type-package-name-snapshot-fix/`
 
 ---
 

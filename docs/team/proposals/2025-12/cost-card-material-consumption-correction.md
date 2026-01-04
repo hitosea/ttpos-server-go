@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-cost-card-material-consumption-correction](../../../shared/specs/active/story-main-cost-card-material-consumption-correction/requirements.md)      |
+| **关联 Spec** | [story-main-cost-card-material-consumption-correction](../../../shared/specs/archived/v2.12/story-main-cost-card-material-consumption-correction/requirements.md)      |
 
 ---
 

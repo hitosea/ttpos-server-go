@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-order-batch-cooking-mode-snapshot](../../shared/specs/active/story-main-order-batch-cooking-mode-snapshot/requirements.md)      |
+| **关联 Spec** | [story-main-order-batch-cooking-mode-snapshot](../../shared/specs/archived/v2.12/story-main-order-batch-cooking-mode-snapshot/requirements.md)      |
 
 ---
 

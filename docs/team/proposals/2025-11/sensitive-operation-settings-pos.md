@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                        |
 | **状态**      | 已创建 Spec                                                                                                    |
 | **关联任务**  | DooTask #36989                                                                                                 |
-| **关联 Spec** | [story-pos-sensitive-operation-settings](../../../shared/specs/active/story-pos-sensitive-operation-settings/) |
+| **关联 Spec** | [story-pos-sensitive-operation-settings](../../../shared/specs/archived/v2.12/story-pos-sensitive-operation-settings/) |
 
 ---
 

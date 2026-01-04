@@ -13,7 +13,7 @@
 | **目标版本**  | v2.11.0                                                                                                      |
 | **状态**      | 已创建 Spec                                                                                                  |
 | **关联任务**  | -                                                                                                            |
-| **关联 Spec** | [task-bmp-nacos-multi-instance-support](../../../shared/specs/active/task-bmp-nacos-multi-instance-support/) |
+| **关联 Spec** | [task-bmp-nacos-multi-instance-support](../../../shared/specs/archived/v2.12/task-bmp-nacos-multi-instance-support/) |
 
 ---
 

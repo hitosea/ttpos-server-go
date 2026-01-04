@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-shop-callboard-settings](../../../shared/specs/active/story-shop-callboard-settings/)      |
+| **关联 Spec** | [story-shop-callboard-settings](../../../shared/specs/archived/v2.12/story-shop-callboard-settings/)      |
 
 ---
 

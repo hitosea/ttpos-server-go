@@ -3,7 +3,7 @@
 **编号**: DooTask #37078  
 **提案人**: weifashi  
 **提交日期**: 2025-11-25  
-**状态**: 待评审
+**状态**: ✅ 已完成 - 已发布 v2.12
 
 ---
 
@@ -290,7 +290,7 @@
 **评审结果**: ✅ 已通过  
 **决策**: 已批准开发  
 **Spec 文档**: [task-printer-activity-deduction](../../../shared/specs/archived/v2.10.0/task-printer-activity-deduction/)  
-**状态**: ✅ 已完成 - 已发布 v2.10.0
+**状态**: ✅ 已完成 - 已发布 v2.12
 
 ---
 

@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-order-direct-add-products-domain-service](../../../shared/specs/active/story-order-direct-add-products-domain-service/requirements.md)      |
+| **关联 Spec** | [story-order-direct-add-products-domain-service](../../../shared/specs/archived/v2.12/story-order-direct-add-products-domain-service/requirements.md)      |
 
 ---
 
@@ -270,7 +270,7 @@
 
 - 类似功能: `main/app/modules/inventory/domain/service/warehouse_domain_service.go` - 仓库领域服务示例
 - 相关提案: [加购领域服务需求提案](./add-to-cart-domain-service.md)
-- 相关 Spec: [story-order-add-to-cart-domain-service](../../../shared/specs/active/story-order-add-to-cart-domain-service/requirements.md)
+- 相关 Spec: [story-order-add-to-cart-domain-service](../../../shared/specs/archived/v2.12/story-order-add-to-cart-domain-service/requirements.md)
 - 竞品分析: 无
 
 ### 相关文档

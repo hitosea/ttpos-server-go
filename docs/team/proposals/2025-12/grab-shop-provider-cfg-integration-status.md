@@ -13,7 +13,7 @@
 | **目标版本** | vNext |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-takeout-grab-shop-provider-cfg](../../shared/specs/active/story-takeout-grab-shop-provider-cfg/requirements.md)      |
+| **关联 Spec** | [story-takeout-grab-shop-provider-cfg](../../shared/specs/archived/v2.12/story-takeout-grab-shop-provider-cfg/requirements.md)      |
 
 ---
 
@@ -112,7 +112,7 @@
 ### 参考需求
 
 - Grab 官方 integrationStatus webhook 文档
-- 现有 Grab 外卖集成相关 Spec：`docs/shared/specs/active/task-takeout-push-grab-menu-webhook/requirements.md`
+- 现有 Grab 外卖集成相关 Spec：`docs/shared/specs/archived/v2.12/task-takeout-push-grab-menu-webhook/requirements.md`
 
 ### 相关文档
 

@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已通过   |
 | **关联任务** | - |
-| **关联 Spec** | [`task-takeout-push-grab-menu-webhook`](../../shared/specs/active/task-takeout-push-grab-menu-webhook/requirements.md) |
+| **关联 Spec** | [`task-takeout-push-grab-menu-webhook`](../../shared/specs/archived/v2.12/task-takeout-push-grab-menu-webhook/requirements.md) |
 
 ---
 

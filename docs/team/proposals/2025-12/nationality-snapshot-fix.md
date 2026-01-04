@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已批准 → Spec 已创建   |
 | **关联任务** | -      |
-| **关联 Spec** | [story-main-nationality-snapshot-fix](../../shared/specs/active/story-main-nationality-snapshot-fix/) |
+| **关联 Spec** | [story-main-nationality-snapshot-fix](../../shared/specs/archived/v2.12/story-main-nationality-snapshot-fix/) |
 | **父提案** | `order-attribute-snapshot-fix.md` |
 
 ---

@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已批准 - Spec 已创建   |
 | **关联任务** | - |
-| **关联 Spec** | [story-cloud-platform-merchant-grab-delivery-toggle](../../../shared/specs/active/story-cloud-platform-merchant-grab-delivery-toggle/requirements.md)      |
+| **关联 Spec** | [story-cloud-platform-merchant-grab-delivery-toggle](../../../shared/specs/archived/v2.12/story-cloud-platform-merchant-grab-delivery-toggle/requirements.md)      |
 
 ---
 
