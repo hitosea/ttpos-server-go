@@ -65,4 +65,7 @@ const (
 
 	// CompanySetting 商户设置
 	ObjectTypeCompanySetting = "company_setting"
+
+	// BuffetPackage 自助餐套餐
+	ObjectTypeBuffetPackage = "buffet_package"
 )

@@ -1034,7 +1034,6 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 
 				// 注入关联对象
 				if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
-					// 如果对象存储层注入失败，记录错误但不影响主流程
 					return nil, errors.WithMessage(fmt.Errorf("对象存储层注入失败: %v", err))
 				}
 
@@ -2017,9 +2016,269 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 	return r.getSaleBillAllInfoWithCache(companyUuid, saleBillUuid, option)
 }
 
+func (r *orderRepo) querySaleBillAllInfo(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
+	companyUuid := GetCompanyUuid(r.db)
+	// 检查是否启用对象存储缓存
+	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 未启用缓存，直接查询数据库
+		return r.querySaleBillAllInfoUsingDbQuery(saleBillUuid, option)
+	}
+
+	// 使用对象存储模块缓存查询
+	return r.querySaleBillAllInfoUsingObjectStorage(saleBillUuid, option)
+}
+
 // querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
 // 这是一个私有方法，用于统一查询逻辑，避免代码重复
-func (r *orderRepo) querySaleBillAllInfo(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
+func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
+	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
+	if option.MemberSaleOrderUuid != 0 {
+		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
+	}
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			// ==================== 销售账单的自助餐套餐1、2信息 ====================
+			// 加载自助餐套餐1多语言名称
+			WithPreload{
+				Query: "BuffetPackage1.MultiLanguageName",
+			},
+			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
+			WithPreload{
+				Query: "BuffetPackage1.BuffetCustomerTypePrices",
+			},
+			// 加载自助餐套餐1商品bom。用于判断加购的商品是否属于自助餐套餐1
+			WithPreload{
+				Query: "BuffetPackage1.BuffetProducts.ProductPackage",
+			},
+			// 加载自助餐套餐2多语言名称
+			WithPreload{
+				Query: "BuffetPackage2.MultiLanguageName",
+			},
+			// 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
+			WithPreload{
+				Query: "BuffetPackage2.BuffetCustomerTypePrices",
+			},
+			// 加载自助餐套餐2商品bom。用于判断加购的商品是否属于自助餐套餐2
+			WithPreload{
+				Query: "BuffetPackage2.BuffetProducts.ProductPackage",
+			},
+			// ==================== 销售账单的账单设置 ====================
+			WithPreload{
+				Query: "SaleBillSetting",
+			},
+			// ==================== 销售账单的优惠券信息 ====================
+			WithPreload{
+				Query: "SaleOrders.Coupons",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MarketingCoupon",
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MemberCoupon",
+			},
+			// ==================== 销售账单的订单信息 ====================
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.PaymentMethod",
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member.MemberLevel",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member.MemberCard.MemberCardType",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member.MemberBalanceLog",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ImageFile",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ReturnOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.ReturnOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts.ReturnOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.DineTax",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.TakeoutTax",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductUnit",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductUnit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("id asc")
+					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_bom_uuid asc")
+					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductPackage",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.BatchTag",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.MemberPointLogs",
+			},
+			// ==================== 销售账单的收银员信息 ====================
+			WithPreload{
+				Query: "Cashier",
+			},
+			// ==================== 销售账单的订单来源和国籍信息 ====================
+			WithPreload{
+				Query: "OrderSource.MultiLanguageName",
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
+			},
+			WithPreload{
+				Query: "Nationality.MultiLanguageName",
+				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		uuidFilter,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
+	}
+
+	// 使用对象存储层自动注入关联对象（Desk）
+	companyUuid := GetCompanyUuid(r.db)
+	if companyUuid != 0 {
+		ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))
+
+		// 获取关联配置（缓存配置和初始化已在 objectstorage 模块中完成）
+		associations := getSaleBillAssociationsForAllInfo(ctx, r.db, cache.Global)
+
+		// 创建对象存储实例（使用 any 类型用于 PreloadWithConfig，但内部 QueryFunc 使用具体类型）
+		objectStorage := persistence.NewObjectStorage[any]()
+
+		// 注入关联对象
+		if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
+			return nil, errors.WithMessage(errors.New("对象存储层注入失败: " + err.Error()))
+		}
+	}
+
+	return &saleBill, nil
+}
+
+// querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
+func (r *orderRepo) querySaleBillAllInfoUsingDbQuery(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
 	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
 	if option.MemberSaleOrderUuid != 0 {
 		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
@@ -3464,6 +3723,42 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 					return nil, err
 				}
 				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+	}
+}
+
+// getSaleBillAssociationsForAllInfo 获取 SaleBill 的关联配置（用于 GetSaleBillAllInfo 场景）
+// 这个函数在 repository 层定义，避免循环依赖
+func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
+	deskRepo := NewDeskRepo(db)
+
+	return []entity.Association{
+		// 一对一关系：Desk
+		{
+			Path:       "Desk",
+			ObjectType: "desk",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).DeskUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.Desk](underlyingCache, 10*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeDesk, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.Desk, error) {
+					desk, err := deskRepo.GetDesk(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					return &desk, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
 			},
 		},
 	}
