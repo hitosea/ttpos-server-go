@@ -16,7 +16,7 @@ const (
 
 type Locales []LocaleType
 
-var LocaleList = Locales{LocaleZH, LocaleTH, LocaleEN, LocaleZHTW, LocaleJA, LocaleKO, LocaleMY, LocaleTR}
+var LocaleList = Locales{LocaleZH, LocaleTH, LocaleEN, LocaleZHTW, LocaleJA, LocaleKO, LocaleMY, LocaleTR, LocaleSV}
 
 func (l Locales) GetLocaleType(language string) LocaleType {
 	switch language {
@@ -36,6 +36,8 @@ func (l Locales) GetLocaleType(language string) LocaleType {
 		return LocaleMY
 	case "tr":
 		return LocaleTR
+	case "sv":
+		return LocaleSV
 	}
 	return LocaleZHTW
 }
