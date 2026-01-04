@@ -79,9 +79,10 @@ func TestBoolToInt(t *testing.T) {
 
 // TestOrderEvent 测试订单事件结构
 func TestOrderEvent(t *testing.T) {
-	event := &OrderEvent{
+	event := &grab.OrderEvent{
 		Action:       "create",
 		ProviderName: "grab",
+		ShopUUID:     "shop-001",
 		OrderUUID:    "uuid-123",
 		OrderID:      "G-123456",
 		MerchantID:   "M-001",
