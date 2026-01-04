@@ -123,14 +123,15 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	isMerchantReceipt bool,
 ) structs.StatementOrderInfoData {
 	orderData := structs.StatementOrderInfoData{
-		Platform:   order.Platform,
-		OrderNo:    order.PlatformOrderId,
-		SerialNo:   fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
-		OrderType:  order.OrderType,
-		CreateTime: t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
-		FinishTime: t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
-		PayTime:    t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
-		CancelTime: t.base.FormatUnixTimeDefault(order.RejectedTime),  // 取消时间
+		Platform:     order.Platform,
+		OrderNo:      order.PlatformOrderId,
+		SerialNo:     fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
+		OrderType:    order.OrderType,
+		CreateTime:   t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
+		FinishTime:   t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
+		PayTime:      t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
+		CancelTime:   t.base.FormatUnixTimeDefault(order.RejectedTime),  // 取消时间
+		CancelReason: order.RejectReason,                                // 取消原因
 	}
 
 	// 商品列表
