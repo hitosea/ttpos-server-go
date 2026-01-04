@@ -120,6 +120,10 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 				openPosEntryDetailList = append(openPosEntryDetailList, openPosEntryDetail)
 				continue
 			}
+			// 如果是连连支付，并且没有 PaymentID，则跳过该支付方式
+			if paymentMethod.Source == constant.PaymentMethodSourceLianLianPay && paymentMethod.ErpnextPaymentId == "" {
+				continue
+			}
 			// 如果是其他支付方式，并且有 PaymentID 则设置 PaymentID，否则设置 ModeOfPayment
 			// 如果两个字段都为空，则跳过该支付方式（兼容旧数据）
 			if paymentMethod.ErpnextPaymentId != "" {

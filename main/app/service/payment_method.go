@@ -820,11 +820,13 @@ func (s *paymentMethodSrv) UpdateLianlianPayConfig(ctx context.Context, configRe
 		// 批量查询 LIANLIANPAY 支付方式（source=2）且未同步到 ERP 的（erpnext_payment 为空）
 		paymentMethods := paymentMethodRepo.GetPaymentMethodList(
 			repository.CommonRepo.WhereBySource(constant.PaymentMethodSourceLianLianPay),
-			paymentMethodRepo.WhereNotExistsErpnextPayment(),
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 
 		for _, paymentMethod := range paymentMethods {
+			if paymentMethod.ErpnextPaymentId != "" {
+				continue
+			}
 			// 根据支付方式的 source 获取 channel
 			channel := erpService.GetChannelBySource(paymentMethod.Source)
 
@@ -846,16 +848,12 @@ func (s *paymentMethodSrv) UpdateLianlianPayConfig(ctx context.Context, configRe
 			}
 
 			// 保存 Name 到 erpnext_payment，PaymentId 到 erpnext_payment_id
-			updateData := make(map[string]any)
-			if saveResp.Name != "" {
-				updateData["erpnext_payment"] = saveResp.Name
-			}
-			if saveResp.PaymentId != "" {
-				updateData["erpnext_payment_id"] = saveResp.PaymentId
-			}
-			if len(updateData) > 0 {
+			if saveResp.PaymentId != "" || saveResp.Name != "" {
 				if err := paymentMethodRepo.UpdatePaymentMethod(
-					updateData,
+					map[string]any{
+						"erpnext_payment":    saveResp.Name,
+						"erpnext_payment_id": saveResp.PaymentId,
+					},
 					repository.CommonRepo.WhereByUuid(paymentMethod.Uuid),
 				); err != nil {
 					logger.Logger.Error("更新 LIANLIANPAY 支付方式 ERP 信息失败",
@@ -1057,14 +1055,17 @@ func (s *paymentMethodSrv) syncFromHeadquarter(ctx context.Context) error {
 		newCode := s.generatePaymentCode(subShopDB)
 
 		newPayment := model.PaymentMethod{
-			HeadquarterUuid: headquarterUuid,
-			PaymentName:     hqPayment.PaymentName,
-			Name:            hqPayment.Name,
-			Code:            newCode,                    // 生成新code
-			Source:          model.PaymentSourceDefault, // 1-手动添加
-			LogoFileUuid:    0,                          // 固定为0
-			Sort:            hqPayment.Sort,             // 排序
-			Status:          hqPayment.Status,           // 同步状态
+			HeadquarterUuid:      headquarterUuid,
+			PaymentName:          hqPayment.PaymentName,
+			Name:                 hqPayment.Name,
+			Code:                 newCode,                    // 生成新code
+			Source:               model.PaymentSourceDefault, // 1-手动添加
+			LogoFileUuid:         0,                          // 固定为0
+			Sort:                 hqPayment.Sort,             // 排序
+			Status:               1,                          // 同步状态
+			IsShowCashier:        1,
+			IsShowAssistant:      1,
+			IsShowMemberRecharge: 1,
 			// 其他字段使用数据库默认值
 		}
 

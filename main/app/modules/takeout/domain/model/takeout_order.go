@@ -24,10 +24,10 @@ type TakeoutOrder struct {
 	PartnerMerchantId  string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`   // 合作伙伴商户ID (Grab: partnerMerchantID)
 
 	// 订单状态
-	OrderState     int    `gorm:"column:order_state" json:"order_state"`
-	IsAbnormal     int    `gorm:"column:is_abnormal" json:"is_abnormal"`
-	AbnormalDetail string `gorm:"column:abnormal_detail;type:text" json:"abnormal_detail"`
-	StockStatus    int    `gorm:"column:stock_status" json:"stock_status"`
+	OrderState     int    `gorm:"column:order_state" json:"order_state"`                   // : 0=待接单, 10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消
+	IsAbnormal     int    `gorm:"column:is_abnormal" json:"is_abnormal"`                   // 是否异常: 0=正常, 1=异常
+	AbnormalDetail string `gorm:"column:abnormal_detail;type:text" json:"abnormal_detail"` // 异常详情
+	StockStatus    int    `gorm:"column:stock_status" json:"stock_status"`                 // 库存状态: 1=充足, 2=不足
 
 	// 价格信息（单位：元）
 	Subtotal          float64 `gorm:"column:subtotal" json:"subtotal"`                       // 小计金额
@@ -155,7 +155,7 @@ func (o *TakeoutOrder) IsTakeawayOrder() bool {
 
 // 判断是否删除或者已经取消
 func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
-	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected
+	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected || o.OrderState == valueobject.TakeoutOrderStateCanceled
 }
 
 // 获取外卖平台 全小写

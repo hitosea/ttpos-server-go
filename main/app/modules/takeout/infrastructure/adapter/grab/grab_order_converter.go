@@ -58,8 +58,11 @@ func ConvertPlatformStateToOrderState(platformState string, ttposOrderState int)
 		}
 		return valueobject.TakeoutOrderStateCompleted // 4 - 已完成（已送达/已完成/已支付）
 
-	case "CANCELLED", "REJECTED", "CANCELED", "FAILED", "REFUNDED":
-		return valueobject.TakeoutOrderStateRejected // 5 - 已拒单/取消/失败/退款
+	case "REJECTED":
+		return valueobject.TakeoutOrderStateRejected // 5 - 已拒单
+
+	case "CANCELLED", "CANCELED", "FAILED", "REFUNDED":
+		return valueobject.TakeoutOrderStateCanceled // 6 - 已取消
 
 	default:
 		// 未知状态，默认为待接单

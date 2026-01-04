@@ -62773,7 +62773,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "order_state": {
-                    "description": "订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单",
+                    "description": "订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消",
                     "type": "integer"
                 },
                 "platform": {

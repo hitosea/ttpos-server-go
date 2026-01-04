@@ -329,6 +329,11 @@ func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.Statistic
 
 // CountCategory 统计分类
 func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) {
+	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
+	locale := constant.LocaleList.GetLocaleType(language)
+	language = string(locale)
+
 	db := r.db
 	dbOrder := r.db
 	for _, opt := range opts {
@@ -395,6 +400,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 
 // CountProduct 统计商品
 func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model.StatisticsProductData {
+	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
+	locale := constant.LocaleList.GetLocaleType(language)
+	language = string(locale)
+
 	var result []model.StatisticsProductData
 	db := r.db
 	for _, opt := range opts {
@@ -823,6 +833,11 @@ type CountProductSaleRepoReq struct {
 
 // CountProductSale 统计商品销售
 func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
+	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
+	locale := constant.LocaleList.GetLocaleType(req.Language)
+	req.Language = string(locale)
+
 	var result []model.StatisticsProductSaleData
 	db := r.db
 	db2 := r.db
@@ -1436,7 +1451,7 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 	// 1. 查询原始数据（不分组）
 	baseQuery := `
 		SELECT 
-			po.create_time,
+			sb.finish_time AS create_time,
 			po.payment_method_uuid,
 			pm.payment_name,
 			pm.sort AS payment_method_sort,
@@ -1459,8 +1474,8 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		WHERE po.delete_time = 0
 			AND po.related_type = 0
 			AND po.status = 1
-			AND po.create_time >= ?
-			AND po.create_time <= ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
 			AND sb.status = ?
 			AND so.status = ?
 			AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.uuid IS NOT NULL AND mso.status = ?))

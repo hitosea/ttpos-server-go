@@ -535,10 +535,10 @@ func (s *takeoutOrderSrv) CheckOrderCancelable(ctx context.Context, req *request
 		return nil, errors.New("订单不存在")
 	}
 	// 检查订单状态
-	if order.OrderState == valueobject.TakeoutOrderStateCompleted || order.OrderState == valueobject.TakeoutOrderStateRejected {
+	if order.OrderState == valueobject.TakeoutOrderStateCompleted || order.IsDeletedOrCanceled() {
 		return &response.TakeoutOrderCancelCheckResp{
 			CanCancel:             false,
-			NonCancellationReason: i18n.Translate(ctx.GetLanguage(), "已完成或已拒单的订单不能取消"),
+			NonCancellationReason: i18n.Translate(ctx.GetLanguage(), "已完成或已拒单或已取消的订单不能取消"),
 			CancelReasons:         []response.TakeoutOrderCancelReason{},
 		}, nil
 	}
@@ -610,7 +610,7 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 	}
 
 	// 检查订单状态
-	if order.OrderState == valueobject.TakeoutOrderStateCompleted || order.OrderState == valueobject.TakeoutOrderStateRejected {
+	if order.OrderState == valueobject.TakeoutOrderStateCompleted || order.IsDeletedOrCanceled() {
 		return errors.New("已完成或已拒单的订单不能取消")
 	}
 
@@ -637,7 +637,7 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 		return err
 	}
 
-	// 更新订单状态为已拒单（取消订单使用拒单状态）
+	// 更新订单状态为已取消
 	reasonText := ""
 	for _, reason := range checkResp.CancelReasons {
 		if reason.Code == req.ReasonCode {
@@ -646,7 +646,7 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 		}
 	}
 	updateData := map[string]interface{}{
-		"order_state":        valueobject.TakeoutOrderStateRejected,
+		"order_state":        valueobject.TakeoutOrderStateCanceled,
 		"rejected_by":        userUuid,
 		"rejected_time":      currentTime,
 		"reject_reason_code": req.ReasonCode,
@@ -1324,7 +1324,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 					order.TakeoutOrderUuid,
 					ctx.GetCompanyUuid(),
 				))
-			case valueobject.TakeoutOrderStateRejected:
+			case valueobject.TakeoutOrderStateCanceled, valueobject.TakeoutOrderStateRejected:
 				// 订单取消事件
 				event.GetDispatcher().Publish(event.NewOrderCancelEvent(
 					order.Uuid,

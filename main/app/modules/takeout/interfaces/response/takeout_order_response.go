@@ -132,7 +132,7 @@ type TakeoutOrderListItemResp struct {
 	Uuid             uint64  `json:"uuid"`               // 订单UUID
 	Platform         string  `json:"platform"`           // 平台名称
 	ShortOrderNumber string  `json:"short_order_number"` // 短订单号
-	OrderState       int     `json:"order_state"`        // 订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
+	OrderState       int     `json:"order_state"`        // 订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消
 	IsAbnormal       int     `json:"is_abnormal"`        // 是否异常
 	Subtotal         float64 `json:"subtotal"`           // 小计金额
 	TotalItems       int     `json:"total_items"`        // 总商品数量
