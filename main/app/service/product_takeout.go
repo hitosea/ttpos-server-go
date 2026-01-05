@@ -67,7 +67,10 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	}
 
 	// 检查商品包是否存在
-	productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	productPackage, err := productPackageRepo.GetProductPackage(
+		productPackageRepo.WithProductBoms(),
+		productPackageRepo.WithProductPackageAttributeGroupAttributes(),
 		repository.CommonRepo.WhereByUuid(addReq.ProductPackageUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
 	)
@@ -144,28 +147,86 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		Name:                          productName,
 		Describe:                      describe,
 		ProductType:                   uint(productPackage.ProductType),
-		Price:                         addReq.Price,
-		TakeoutType:                   uint(addReq.TakeoutType),
-		Status:                        uint(addReq.Status),
-		CategoryUuid:                  addReq.CategoryUuid,
-		SpecialCategoryUuid:           addReq.SpecialCategoryUuid,
-		ImageFileUuid:                 addReq.ImageFileUuid,
-		Source:                        addReq.Source,
-		SourceProductId:               addReq.SourceProductId,
+		Price: func() float64 {
+			if addReq.IsBatch {
+				return productPackage.Price
+			}
+			return addReq.Price
+		}(),
+		TakeoutType: uint(addReq.TakeoutType),
+		Status:      uint(addReq.Status),
+		CategoryUuid: func() uint64 {
+			if addReq.CategoryUuid != 0 {
+				return addReq.CategoryUuid
+			}
+			return productPackage.CategoryUuid
+		}(),
+		SpecialCategoryUuid: func() uint64 {
+			if addReq.SpecialCategoryUuid != 0 {
+				return addReq.SpecialCategoryUuid
+			}
+			return productPackage.SpecialCategoryUuid
+		}(),
+		ImageFileUuid: func() uint64 {
+			if addReq.ImageFileUuid != 0 {
+				return addReq.ImageFileUuid
+			}
+			return productPackage.ImageFileUuid
+		}(),
+		Source:          addReq.Source,
+		SourceProductId: addReq.SourceProductId,
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
+		productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+
 		// 创建外卖商品记录
 		if err := repository.NewProductPackageTakeoutRepo(tx).CreateProductPackageTakeout(productPackageTakeout); err != nil {
 			return errors.WithMessage(err, "创建外卖商品失败")
 		}
 
 		// 处理外卖规格价格
-		if len(addReq.Flavors) > 0 {
-			productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
+		// 如果是批量创建
+		if addReq.IsBatch {
+			for _, flavorReq := range productPackage.ProductBoms {
+				if flavorReq.IsDelete() || !flavorReq.IsFlavor() {
+					continue
+				}
+				if err := productBomTakeoutRepo.CreateProductBomTakeout(&model.ProductBomTakeout{
+					ProductPackageTakeoutUuid: productPackageTakeout.Uuid,
+					ProductBomUuid:            flavorReq.Uuid,
+					HeadquarterUuid:           productPackage.HeadquarterUuid,
+					Price:                     flavorReq.Price,
+				}); err != nil {
+					return errors.WithMessage(err, "创建外卖规格价格失败")
+				}
+			}
 
+			// 处理外卖属性价格
+			if len(productPackage.ProductPackageAttributeGroups) > 0 {
+				for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+					for _, attribute := range attributeGroup.ProductPackageAttributes {
+						if attribute.IsDelete() {
+							continue
+						}
+						// 创建外卖属性价格记录
+						productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+							ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+							ProductPackageAttributeUuid: attribute.Uuid,
+							HeadquarterUuid:             productPackage.HeadquarterUuid,
+							Price:                       attribute.Price,
+						}
+						if err := repository.NewProductPackageAttributeTakeoutRepo(tx).CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+							return errors.WithMessage(err, "创建外卖属性价格失败")
+						}
+					}
+				}
+			}
+		} else if len(addReq.Flavors) > 0 {
+
+			// 创建外卖规格价格记录
 			for _, flavorReq := range addReq.Flavors {
-				// 创建外卖规格价格记录
 				productBomTakeout := &model.ProductBomTakeout{
 					ProductPackageTakeoutUuid: productPackageTakeout.Uuid,
 					ProductBomUuid:            flavorReq.BomUuid,
@@ -177,22 +238,20 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 					return errors.WithMessage(err, "创建外卖规格价格失败")
 				}
 			}
-		}
 
-		// 处理外卖属性价格
-		if len(addReq.Attributes) > 0 {
-			productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
-
-			for _, attributeReq := range addReq.Attributes {
-				// 创建外卖属性价格记录
-				productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
-					ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
-					ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
-					HeadquarterUuid:             productPackage.HeadquarterUuid,
-					Price:                       attributeReq.Price,
-				}
-				if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
-					return errors.WithMessage(err, "创建外卖属性价格失败")
+			// 处理外卖属性价格
+			if len(addReq.Attributes) > 0 {
+				for _, attributeReq := range addReq.Attributes {
+					// 创建外卖属性价格记录
+					productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+						ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+						ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
+						HeadquarterUuid:             productPackage.HeadquarterUuid,
+						Price:                       attributeReq.Price,
+					}
+					if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+						return errors.WithMessage(err, "创建外卖属性价格失败")
+					}
 				}
 			}
 		}
@@ -1120,6 +1179,7 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 			addReq := req.ProductTakeoutShopAddReq{
 				ProductPackageUuid: uuid,
 				TakeoutType:        takeoutType,
+				IsBatch:            true,
 			}
 			_, err := s.AddProductTakeoutShop(ctx, addReq)
 			mu.Lock()

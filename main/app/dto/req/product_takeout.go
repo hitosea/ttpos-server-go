@@ -21,6 +21,7 @@ type ProductTakeoutShopAddReq struct {
 	ImageFileUuid       uint64                                     `json:"image_file_uuid"`                         // 外卖商品图片文件UUID
 	Source              string                                     `json:"source"`                                  // 来源平台 (grab/lineman等 默认grab)
 	SourceProductId     string                                     `json:"source_product_id"`                       // 来源平台商品ID (grab/lineman等 默认grab)
+	IsBatch             bool                                       `json:"is_batch"`                                // 是否批量创建 默认false
 }
 
 // ProductTakeoutShopAddFlavorReq 外卖商品规格添加请求
