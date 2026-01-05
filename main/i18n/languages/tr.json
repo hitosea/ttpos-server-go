@@ -6508,6 +6508,7 @@
   "超级员工不能修改": "Süper çalışan değişiklik yapamaz",
   "超级管理员不能修改": "Süper Yönetici Değişiklik Yapamaz",
   "超级管理员不能删除": "Süper yönetici silinemez",
+  "超级管理员不能移除门店关联": "Süper yönetici mağaza ilişkilendirmesini kaldıramaz",
   "超级管理员不能被删除": "Süper yönetici silinemez",
   "超级管理员不能被禁用": "Süper yönetici devre dışı bırakılamaz",
   "超级管理员用户信息不存在": "Süper yönetici kullanıcı bilgisi mevcut değil",
