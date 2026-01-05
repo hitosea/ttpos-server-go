@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已通过   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-decoupled-order-module](../../../shared/specs/active/story-main-decoupled-order-module/requirements.md) |
+| **关联 Spec** | [story-main-decoupled-order-module](../../../shared/specs/archived/v2.12/story-main-decoupled-order-module/requirements.md) |
 
 ---
 

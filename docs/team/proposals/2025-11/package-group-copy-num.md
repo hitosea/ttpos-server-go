@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 开发中（部分完成）   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-package-group-copy-num](../../../shared/specs/active/story-main-package-group-copy-num/requirements.md)      |
+| **关联 Spec** | [story-main-package-group-copy-num](../../../shared/specs/archived/v2.12/story-main-package-group-copy-num/requirements.md)      |
 
 ---
 

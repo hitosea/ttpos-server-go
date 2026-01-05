@@ -66,4 +66,12 @@ const (
 	PrinterTemplateTakeoutOrder    = 11 // 外送单
 	PrinterTemplateTakeoutMerchant = 12 // 外卖商家联
 	PrinterTemplateTakeoutCustomer = 13 // 外卖顾客联
+	PrinterTemplateTakeoutRefund   = 14 // 外卖退单联
+)
+
+// 外卖小票类型
+const (
+	TakeoutReceiptTypeMerchant = "merchant" // 商家联
+	TakeoutReceiptTypeCustomer = "customer" // 顾客联
+	TakeoutReceiptTypeRefund   = "refund"   // 退单联
 )

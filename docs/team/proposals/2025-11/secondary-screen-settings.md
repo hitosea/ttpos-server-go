@@ -12,7 +12,7 @@
 | **日期**      | 2025-11-20                                                                                                 |
 | **目标版本**  | v2.10.0                                                                                                    |
 | **状态**      | 进行中                                                                                                     |
-| **关联 Spec** | [story-shop-secondary-screen-settings](../../../shared/specs/active/story-shop-secondary-screen-settings/) |
+| **关联 Spec** | [story-shop-secondary-screen-settings](../../../shared/specs/archived/v2.12/story-shop-secondary-screen-settings/) |
 | **关联任务**  | #36935 (新管理端-副屏设置), #36982 (收银机-副屏)                                                           |
 
 ---

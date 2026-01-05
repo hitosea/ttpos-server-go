@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-item-remark-preset-printing](../../../shared/specs/active/story-main-item-remark-preset-printing/requirements.md) |
+| **关联 Spec** | [story-main-item-remark-preset-printing](../../../shared/specs/archived/v2.12/story-main-item-remark-preset-printing/requirements.md) |
 
 ---
 
@@ -126,7 +126,7 @@
 
 ### 参考需求
 
-- 类似功能: [story-order-item-remark-preset](../../../shared/specs/active/story-order-item-remark-preset/requirements.md) - 单品备注预设功能
+- 类似功能: [story-order-item-remark-preset](../../../shared/specs/archived/v2.12/story-order-item-remark-preset/requirements.md) - 单品备注预设功能
 - 参考实现: 整单备注打印逻辑
   - `main/app/printer/template/dishes_codesoft.go` - CodeSoft 模板
   - `main/app/printer/template/dishes_xprinter.go` - XPrinter 模板

@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                        |
 | **状态**      | ✅ 已实现                                                                                                      |
 | **关联任务**  | -                                                                                                              |
-| **关联 Spec** | [story-pos-sensitive-operation-settings](../../../shared/specs/active/story-pos-sensitive-operation-settings/) |
+| **关联 Spec** | [story-pos-sensitive-operation-settings](../../../shared/specs/archived/v2.12/story-pos-sensitive-operation-settings/) |
 
 ---
 
@@ -156,7 +156,7 @@
 
 ### 参考需求
 
-- 关联 Spec: [story-pos-sensitive-operation-settings](../../../shared/specs/active/story-pos-sensitive-operation-settings/)
+- 关联 Spec: [story-pos-sensitive-operation-settings](../../../shared/specs/archived/v2.12/story-pos-sensitive-operation-settings/)
 - 前置功能: 敏感操作权限验证功能（`story-pos-sensitive-operation-settings`）
 
 ### 相关文档

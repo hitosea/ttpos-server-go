@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [task-bmp-menu-snapshot-field-rename](../../../shared/specs/active/task-bmp-menu-snapshot-field-rename/requirements.md)      |
+| **关联 Spec** | [task-bmp-menu-snapshot-field-rename](../../../shared/specs/archived/v2.12/task-bmp-menu-snapshot-field-rename/requirements.md)      |
 
 ---
 

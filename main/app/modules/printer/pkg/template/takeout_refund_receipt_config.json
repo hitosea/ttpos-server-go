@@ -1,0 +1,231 @@
+{
+    "metadata": {
+        "name": "外卖退单联"
+    },
+    "rows": [
+        {
+            "group_name": {
+                "th": "ข้อมูลพื้นฐาน",
+                "en": "Basic information",
+                "ko": "기초 정보",
+                "my": "အခြေခံအချက်အလက်",
+                "tr": "Temel bilgiler",
+                "de": "Grundinformationen",
+                "sv": "Grundinformation",
+                "ja": "基本情報",
+                "zhtw": "基礎資訊",
+                "zh": "基础信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ชื่อใบเสร็จ",
+                        "en": "Receipt name",
+                        "ko": "영수증 이름",
+                        "my": "ပြေစာနာမည်",
+                        "tr": "Makbuz adı",
+                        "de": "Belegname",
+                        "sv": "Kvittonamn",
+                        "ja": "レシート名",
+                        "zhtw": "收據名稱",
+                        "zh": "票据名称"
+                    },
+                    "block_id": "receipt_name",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "ชื่อร้าน",
+                        "en": "Store Name",
+                        "ko": "가게 이름",
+                        "my": "ဆိုင်အမည်",
+                        "tr": "Dükkan adı",
+                        "de": "Geschäftsname",
+                        "sv": "Butiksnamn",
+                        "ja": "店舗名",
+                        "zhtw": "店家名稱",
+                        "zh": "店铺名称"
+                    },
+                    "block_id": "store_name",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "ข้อมูลร้าน",
+                        "en": "Store information",
+                        "ko": "매장 정보",
+                        "my": "ဆိုင်အချက်အလက်",
+                        "tr": "Mağaza bilgisi",
+                        "de": "Geschäftsinformationen",
+                        "sv": "Butiksinformation",
+                        "ja": "店舗情報",
+                        "zhtw": "店家資訊",
+                        "zh": "店铺信息"
+                    },
+                    "block_id": "store_information",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "หมายเลขคำสั่งซื้อ",
+                        "en": "Order No.",
+                        "ko": "주문번호",
+                        "my": "အမှာစာနံပါတ်",
+                        "tr": "Sipariş No.",
+                        "de": "Bestell-Nr.",
+                        "sv": "Beställningsnr",
+                        "ja": "注文番号",
+                        "zhtw": "訂單號",
+                        "zh": "订单号"
+                    },
+                    "block_id": "order_no",
+                    "data_rows": []
+                },
+                {
+                    "block_name": {
+                        "th": "เวลาสั่งซื้อ",
+                        "en": "Order Time",
+                        "ko": "주문 시간",
+                        "my": "အမှာစာအချိန်",
+                        "tr": "Sipariş Zamanı",
+                        "de": "Bestellzeit",
+                        "sv": "Beställningstid",
+                        "ja": "注文時間",
+                        "zhtw": "下單時間",
+                        "zh": "下单时间"
+                    },
+                    "block_id": "order_time",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ข้อมูลผลิตภัณฑ์",
+                "en": "Commodity information",
+                "ko": "상품 정보",
+                "my": "ထုတ်ကုန်အချက်အလက်",
+                "tr": "Ürün Bilgisi",
+                "de": "Produktinformationen",
+                "sv": "Produktinformation",
+                "ja": "商品情報",
+                "zhtw": "商品資訊",
+                "zh": "商品信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "สินค้า (ชื่อในร้าน)",
+                        "en": "Items (Store Name)",
+                        "ko": "상품 (매장 이름)",
+                        "my": "ကုန်စည် (ဆိုင်နာမည်)",
+                        "tr": "Ürünler (Mağaza Adı)",
+                        "de": "Artikel (Geschäftsname)",
+                        "sv": "Artiklar (Butiksnamn)",
+                        "ja": "商品（店舗名）",
+                        "zhtw": "商品（店內名稱）",
+                        "zh": "商品（店内名称）"
+                    },
+                    "block_id": "commodity",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ข้อมูลการชำระเงิน",
+                "en": "Payment information",
+                "ko": "결제 정보",
+                "my": "ငွေပေးချေမှုအချက်အလက်",
+                "tr": "Ödeme bilgisi",
+                "de": "Zahlungsinformationen",
+                "sv": "Betalningsinformation",
+                "ja": "決済情報",
+                "zhtw": "結算資訊",
+                "zh": "结算信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ยอดเงิน",
+                        "en": "Amount",
+                        "ko": "금액",
+                        "my": "ပမာဏ",
+                        "tr": "Tutar",
+                        "de": "Betrag",
+                        "sv": "Belopp",
+                        "ja": "金額",
+                        "zhtw": "金額",
+                        "zh": "金额"
+                    },
+                    "block_id": "amount_information",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ข้อมูลลูกค้า",
+                "en": "Customer information",
+                "ko": "고객 정보",
+                "my": "ဖောက်သည်အချက်အလက်",
+                "tr": "Müşteri bilgisi",
+                "de": "Kundeninformationen",
+                "sv": "Kundinformation",
+                "ja": "顧客情報",
+                "zhtw": "客戶資訊",
+                "zh": "客户信息"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ลูกค้า",
+                        "en": "Customer",
+                        "ko": "고객",
+                        "my": "ဖောက်သည်",
+                        "tr": "Müşteri",
+                        "de": "Kunde",
+                        "sv": "Kund",
+                        "ja": "顧客",
+                        "zhtw": "客戶",
+                        "zh": "客户"
+                    },
+                    "block_id": "customer_info",
+                    "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "ส่วนท้าย",
+                "en": "Footer",
+                "ko": "바닥글",
+                "my": "အောက်ခြေ",
+                "tr": "Alt bilgi",
+                "de": "Fußzeile",
+                "sv": "Sidfot",
+                "ja": "フッター",
+                "zhtw": "底部",
+                "zh": "底部"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "หมายเหตุ",
+                        "en": "Remarks",
+                        "ko": "비고",
+                        "my": "မှတ်ချက်",
+                        "tr": "Notlar",
+                        "de": "Bemerkungen",
+                        "sv": "Anmärkningar",
+                        "ja": "備考",
+                        "zhtw": "備註",
+                        "zh": "备注"
+                    },
+                    "block_id": "remarks",
+                    "data_rows": []
+                }
+            ]
+        }
+    ]
+}

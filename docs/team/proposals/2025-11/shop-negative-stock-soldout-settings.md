@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-shop-negative-stock-soldout-settings](../../shared/specs/active/story-shop-negative-stock-soldout-settings/requirements.md)      |
+| **关联 Spec** | [story-shop-negative-stock-soldout-settings](../../shared/specs/archived/v2.12/story-shop-negative-stock-soldout-settings/requirements.md)      |
 
 ---
 

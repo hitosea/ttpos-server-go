@@ -51,7 +51,7 @@ docs/team/proposals/{YYYY-MM}/{feature-name}.md
 
 详细流程:
 /propose         → 创建提案文档
-/spec-create     → 创建 requirements.md（审核状态: 待审核）
+/spec-create     → 创建 requirements.md（审核状态: ✅ 已完成 - 已发布 v2.12
 产品审核         → 更新审核状态为「已通过」
 /spec-design     → 创建 design.md + tasks.md
 ```

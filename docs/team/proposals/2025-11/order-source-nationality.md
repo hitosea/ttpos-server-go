@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                        |
 | **状态**      | ✅ 已批准 - Spec 已创建                                                                                        |
 | **关联任务**  | #36931, #36914, #36919                                                                                         |
-| **关联 Spec** | [story-order-source-nationality](../../../shared/specs/active/story-order-source-nationality/)                 |
+| **关联 Spec** | [story-order-source-nationality](../../../shared/specs/archived/v2.12/story-order-source-nationality/)                 |
 | **原型链接**  | [墨刀原型](https://modao.cc/proto/NYlDfREZt0gr57g5xvn9XE/sharing?view_mode=read_only&screen=rbpUwSqjkR28u5f0y) |
 
 ---

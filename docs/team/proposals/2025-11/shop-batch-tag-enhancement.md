@@ -12,7 +12,7 @@
 | **日期**         | 2025-11-20                                                                                         |
 | **目标版本**     | v2.10.0                                                                                            |
 | **状态**         | 已创建 Spec                                                                                        |
-| **关联 Spec**    | [story-shop-batch-tag-enhancement](../../../shared/specs/active/story-shop-batch-tag-enhancement/) |
+| **关联 Spec**    | [story-shop-batch-tag-enhancement](../../../shared/specs/archived/v2.12/story-shop-batch-tag-enhancement/) |
 | **关联 Dootask** | #36921 - 新管理端/点餐助手/收银端-分批送厨功能                                                     |
 
 ---

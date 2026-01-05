@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-order-item-remark-preset](../../../shared/specs/active/story-order-item-remark-preset/requirements.md)      |
+| **关联 Spec** | [story-order-item-remark-preset](../../../shared/specs/archived/v2.12/story-order-item-remark-preset/requirements.md)      |
 
 ---
 

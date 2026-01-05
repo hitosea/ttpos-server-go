@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已通过   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-legacy-order-adapter](../../../shared/specs/active/story-main-legacy-order-adapter/requirements.md)      |
+| **关联 Spec** | [story-main-legacy-order-adapter](../../../shared/specs/archived/v2.12/story-main-legacy-order-adapter/requirements.md)      |
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### 问题描述
 
-我们已经确立了 [story-main-decoupled-order-module](../../shared/specs/active/story-main-decoupled-order-module/requirements.md) (Order Core) 作为未来订单处理的核心模块。然而，现有的 TTPOS 业务（包括 POS 收银、会员积分、库存扣减等）仍然依赖于庞大且耦合严重的 `SaleOrder` 和 `SaleBill` 旧模型。
+我们已经确立了 [story-main-decoupled-order-module](../../shared/specs/archived/v2.12/story-main-decoupled-order-module/requirements.md) (Order Core) 作为未来订单处理的核心模块。然而，现有的 TTPOS 业务（包括 POS 收银、会员积分、库存扣减等）仍然依赖于庞大且耦合严重的 `SaleOrder` 和 `SaleBill` 旧模型。
 
 目前面临的问题是：如何将现有的复杂业务逻辑平滑迁移到新的 `order_core` 架构上，既能利用新架构的纯净性和稳定性，又不破坏现有的业务流程。直接重写风险过大，需要一种渐进式的适配方案。
 
@@ -107,7 +107,7 @@
 
 ### 参考需求
 
-- 基础 Spec: [story-main-decoupled-order-module](../../shared/specs/active/story-main-decoupled-order-module/requirements.md)
+- 基础 Spec: [story-main-decoupled-order-module](../../shared/specs/archived/v2.12/story-main-decoupled-order-module/requirements.md)
 
 ### 相关文档
 

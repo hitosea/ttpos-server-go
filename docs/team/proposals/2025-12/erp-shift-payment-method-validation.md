@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已批准   |
 | **关联任务** | - |
-| **关联 Spec** | [story-erp-shift-payment-method-validation](../../../shared/specs/active/story-erp-shift-payment-method-validation/requirements.md)      |
+| **关联 Spec** | [story-erp-shift-payment-method-validation](../../../shared/specs/archived/v2.12/story-erp-shift-payment-method-validation/requirements.md)      |
 
 ---
 

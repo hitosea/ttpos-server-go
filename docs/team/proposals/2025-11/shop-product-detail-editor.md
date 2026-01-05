@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                            |
 | **状态**      | 进行中                                                                                             |
 | **关联任务**  | DooTask #36939                                                                                     |
-| **关联 Spec** | [story-shop-product-detail-editor](../../../shared/specs/active/story-shop-product-detail-editor/) |
+| **关联 Spec** | [story-shop-product-detail-editor](../../../shared/specs/archived/v2.12/story-shop-product-detail-editor/) |
 
 ---
 

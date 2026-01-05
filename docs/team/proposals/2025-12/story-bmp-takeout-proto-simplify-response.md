@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-bmp-takeout-proto-simplify-response](../../shared/specs/active/story-bmp-takeout-proto-simplify-response/requirements.md) |
+| **关联 Spec** | [story-bmp-takeout-proto-simplify-response](../../shared/specs/archived/v2.12/story-bmp-takeout-proto-simplify-response/requirements.md) |
 
 ---
 
@@ -146,7 +146,7 @@ message UpdateMenuModifierResp {
 ### 参考文件
 
 - Proto 文件: `ttpos-bmp/app/ttpos-takeout/manifest/protobuf/menu/menu.proto`
-- 关联 Spec: `docs/shared/specs/active/story-bmp-grab-menu-update-item-modifier/`
+- 关联 Spec: `docs/shared/specs/archived/v2.12/story-bmp-grab-menu-update-item-modifier/`
 - DTO 定义: `ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab/menu_update.go`
 
 ### 相关文档

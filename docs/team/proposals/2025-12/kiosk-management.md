@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已批准   |
 | **关联任务** | - |
-| **关联 Spec** | [story-shop-kiosk-management](../../../shared/specs/active/story-shop-kiosk-management/requirements.md)      |
+| **关联 Spec** | [story-shop-kiosk-management](../../../shared/specs/archived/v2.12/story-shop-kiosk-management/requirements.md)      |
 
 ---
 
