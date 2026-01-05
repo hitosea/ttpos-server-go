@@ -85,19 +85,39 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		return nil, errors.WithMessage(errors.New("商品已删除"))
 	}
 
+	// 处理分类
+	addReq.CategoryUuid = func() uint64 {
+		if addReq.CategoryUuid != 0 {
+			return addReq.CategoryUuid
+		}
+		return productPackage.CategoryUuid
+	}()
+	addReq.SpecialCategoryUuid = func() uint64 {
+		if addReq.SpecialCategoryUuid != 0 {
+			return addReq.SpecialCategoryUuid
+		}
+		return productPackage.SpecialCategoryUuid
+	}()
+
+	// 处理图片
+	addReq.ImageFileUuid = func() uint64 {
+		if addReq.ImageFileUuid != 0 {
+			return addReq.ImageFileUuid
+		}
+		return productPackage.ImageFileUuid
+	}()
+
 	// 检查是否已存在同类型外卖商品（包括软删除的记录）
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutIncludeSoftDelete(addReq.ProductPackageUuid, uint(addReq.TakeoutType))
-
 	// 如果存在未删除的记录，返回错误
 	if err == nil && existingTakeout.DeleteTime == 0 {
 		return existingTakeout, nil
 	}
-
-	// 如果存在已软删除的记录，还原它
-	if err == nil && existingTakeout.DeleteTime != 0 {
-		return s.restoreProductTakeoutShop(ctx, existingTakeout, addReq)
-	}
+	// // 如果存在已软删除的记录，还原它
+	// if err == nil && existingTakeout.DeleteTime != 0 {
+	// 	return s.restoreProductTakeoutShop(ctx, existingTakeout, addReq)
+	// }
 
 	// 生成UUID
 	uuid, err := utils.GetID()
@@ -157,28 +177,13 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 			}
 			return addReq.Price
 		}(),
-		TakeoutType: uint(addReq.TakeoutType),
-		Status:      uint(addReq.Status),
-		CategoryUuid: func() uint64 {
-			if addReq.CategoryUuid != 0 {
-				return addReq.CategoryUuid
-			}
-			return productPackage.CategoryUuid
-		}(),
-		SpecialCategoryUuid: func() uint64 {
-			if addReq.SpecialCategoryUuid != 0 {
-				return addReq.SpecialCategoryUuid
-			}
-			return productPackage.SpecialCategoryUuid
-		}(),
-		ImageFileUuid: func() uint64 {
-			if addReq.ImageFileUuid != 0 {
-				return addReq.ImageFileUuid
-			}
-			return productPackage.ImageFileUuid
-		}(),
-		Source:          addReq.Source,
-		SourceProductId: addReq.SourceProductId,
+		TakeoutType:         uint(addReq.TakeoutType),
+		Status:              uint(addReq.Status),
+		CategoryUuid:        addReq.CategoryUuid,
+		SpecialCategoryUuid: addReq.SpecialCategoryUuid,
+		ImageFileUuid:       addReq.ImageFileUuid,
+		Source:              addReq.Source,
+		SourceProductId:     addReq.SourceProductId,
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {

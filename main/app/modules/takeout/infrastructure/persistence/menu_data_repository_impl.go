@@ -175,6 +175,7 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 						Preload("MultiLanguageName", "delete_time = ?", 0)
 				})
 		}).
+		Where("delete_time = ?", 0).
 		Order("id ASC").
 		Find(&products).Error
 
@@ -201,6 +202,7 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 	// Step 1: 收集所有需要查询库存的 BOM UUID 及其对应的对象引用
 	bomUuids := make([]uint64, 0)
 	bomMap := make(map[uint64]*model.ProductBom)        // 用于快速定位 BOM 对象
+	bomTakeoutMap := make(map[uint64]*model.ProductBom) // 用于快速定位 ProductBomTakeout 对象
 	packageBomMap := make(map[uint64]*model.ProductBom) // 用于快速定位 ProductPackage 对象
 	for _, takeoutProduct := range takeoutProducts {
 		// 使用索引遍历以获取可修改的引用
@@ -208,6 +210,11 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 			bom := &takeoutProduct.ProductPackage.ProductBoms[i]
 			bomUuids = append(bomUuids, bom.Uuid)
 			bomMap[bom.Uuid] = bom
+		}
+		for k := range takeoutProduct.ProductBomTakeouts {
+			bomTakeout := &takeoutProduct.ProductBomTakeouts[k]
+			bomUuids = append(bomUuids, bomTakeout.ProductBomUuid)
+			bomTakeoutMap[bomTakeout.ProductBomUuid] = &bomTakeout.ProductBom
 		}
 		for j := range takeoutProduct.ProductPackageGroupItemTakeouts {
 			groupItem := &takeoutProduct.ProductPackageGroupItemTakeouts[j]
@@ -235,7 +242,16 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		return
 	}
 
-	// Step 4: 将库存值注入到对应的 BOM 对象中
+	// 注入规格库存
+	for bomUuid, bom := range bomTakeoutMap {
+		if inventory, ok := inventoryMap[bomUuid]; ok {
+			bom.StockNum = inventory
+		} else {
+			bom.StockNum = 99999999
+		}
+	}
+
+	// 注入店内商品库存
 	for bomUuid, bom := range bomMap {
 		if inventory, ok := inventoryMap[bomUuid]; ok {
 			bom.StockNum = inventory
