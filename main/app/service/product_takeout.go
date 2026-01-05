@@ -1109,8 +1109,10 @@ func (s *productTakeoutSrv) GetProductCount(
 	var count int64
 	query := db.Model(&model.ProductPackageTakeout{}).
 		Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
+		Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
 		Where("ttpos_product_package_takeout.delete_time = ?", 0).
-		Where("ttpos_product_package.delete_time = ?", 0)
+		Where("ttpos_product_package.delete_time = ?", 0).
+		Where("(ttpos_product_package_takeout.category_uuid = 0 OR (ttpos_product_category.status = 1 AND ttpos_product_category.delete_time = 0))")
 
 	// 5. 如果指定了平台，添加平台过滤 (使用 takeout_type 字段)
 	if platform != "" {
@@ -1185,8 +1187,8 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
@@ -1227,6 +1229,12 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 	}
 
 	wg.Wait()
+
+	// 打印错误
+	for _, product := range result.FailedProducts {
+		logger.Logger.Error("批量创建外卖商品失败", zap.Uint64("product_uuid", product.ProductUuid), zap.String("product_name", product.ProductName), zap.String("error", product.Error))
+	}
+
 	return result, nil
 }
 
@@ -1283,8 +1291,8 @@ func (s *productTakeoutSrv) BatchOnlineProducts(ctx context.Context, batchReq re
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
@@ -1349,8 +1357,8 @@ func (s *productTakeoutSrv) BatchOfflineProducts(ctx context.Context, batchReq r
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
@@ -1415,8 +1423,8 @@ func (s *productTakeoutSrv) BatchDeleteProducts(ctx context.Context, batchReq re
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
