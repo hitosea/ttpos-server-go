@@ -16667,7 +16667,7 @@
                     {
                         "type": "integer",
                         "default": -1,
-                        "description": "-1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)",
+                        "description": "-1=全部, 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消 (默认: -1)",
                         "name": "status",
                         "in": "query"
                     }
@@ -50518,6 +50518,10 @@
                     "description": "商户 ID",
                     "type": "string"
                 },
+                "message": {
+                    "description": "消息，取消原因",
+                    "type": "string"
+                },
                 "orderId": {
                     "description": "平台订单 ID",
                     "type": "string"
@@ -59961,6 +59965,13 @@
                     "description": "服务端版本",
                     "type": "string"
                 },
+                "takeout_status": {
+                    "description": "外卖平台状态列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TakeoutStatusResp"
+                    }
+                },
                 "update_time": {
                     "description": "更新时间",
                     "type": "integer"
@@ -61092,6 +61103,19 @@
                 },
                 "platform": {
                     "description": "平台名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.TakeoutStatusResp": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "description": "是否开启",
+                    "type": "boolean"
+                },
+                "platform": {
+                    "description": "外卖平台 (grab/lineman等)",
                     "type": "string"
                 }
             }
