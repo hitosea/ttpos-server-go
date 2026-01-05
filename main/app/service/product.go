@@ -147,7 +147,7 @@ type IProductSrv interface {
 	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)                       // 获取商品详情
 	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                                     // 修改商品状态
 	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                                            // 获取商品税类列表
-	AddProductShop(ctx context.Context, req req.ProductShopAddReq) (uint64, error)                                                 // 添加商品，返回商品uuid
+	AddProductShop(ctx context.Context, req req.ProductShopAddReq) (*product_resp.ProductDetailResp, error)                        // 添加商品，返回商品uuid
 	EditProductShop(ctx context.Context, req req.ProductShopEditReq) (*product_resp.ProductEditResp, []string, error)              // 编辑商品
 	DeleteProductShop(ctx context.Context, req req.ProductShopDeleteReq) (*product_resp.ProductDeleteResp, error)                  // 删除商品
 	ProductShopChangePrice(ctx context.Context, req req.ProductShopChangePriceReq) error                                           // 商品改价
@@ -5917,39 +5917,39 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 }
 
 // AddProductShop 添加商品
-func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddReq) (uint64, error) {
+func (s *productSrv) AddProductShop(ctx context.Context, reqs req.ProductShopAddReq) (*product_resp.ProductDetailResp, error) {
 	db := ctx.GetDB()
 	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
 
 	// 检查商品类型
-	if err := productCheckSrv.CheckProductType(req.Type); err != nil {
-		return 0, errors.WithMessage(err, "检查商品类型失败")
+	if err := productCheckSrv.CheckProductType(reqs.Type); err != nil {
+		return nil, errors.WithMessage(err, "检查商品类型失败")
 	}
-	if !req.IsImport {
+	if !reqs.IsImport {
 		// 检查商品名称
-		if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
-			return 0, errors.WithMessage(err, "检查商品名称失败")
+		if err := productCheckSrv.CheckProductName(ctx, 0, reqs.LocaleName); err != nil {
+			return nil, errors.WithMessage(err, "检查商品名称失败")
 		}
-		if err := productCheckSrv.CheckProductSellingPoint(ctx, req.SellingPoint); err != nil {
-			return 0, errors.WithMessage(err, "检查商品卖点失败")
+		if err := productCheckSrv.CheckProductSellingPoint(ctx, reqs.SellingPoint); err != nil {
+			return nil, errors.WithMessage(err, "检查商品卖点失败")
 		}
 	}
 	// 检查商品分类
-	if err := productCheckSrv.CheckProductCategory(db, req.CategoryUuid); err != nil {
-		return 0, errors.WithMessage(err, "检查商品分类失败")
+	if err := productCheckSrv.CheckProductCategory(db, reqs.CategoryUuid); err != nil {
+		return nil, errors.WithMessage(err, "检查商品分类失败")
 	}
 	// 检查商品单位
-	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
-		return 0, errors.WithMessage(err, "检查商品单位失败")
+	if err := productCheckSrv.CheckProductUnique(db, reqs.UnitUuid); err != nil {
+		return nil, errors.WithMessage(err, "检查商品单位失败")
 	}
 	// 检查商品规格内部编码
-	for idx, flavor := range req.Flavors {
+	for idx, flavor := range reqs.Flavors {
 		if flavor.InternalCode != "" {
 			// 大写编码
 			internalCode := strings.ToUpper(strings.TrimSpace(flavor.InternalCode))
-			req.Flavors[idx].InternalCode = internalCode
+			reqs.Flavors[idx].InternalCode = internalCode
 			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(internalCode, flavor.Uuid) {
-				return 0, errors.New("内部编码已存在")
+				return nil, errors.New("内部编码已存在")
 			}
 		}
 	}
@@ -5961,10 +5961,10 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	sauceListResult := CheckProductSauceResult{}
 	attributeListResult := []CheckProductAttributeGroupParam{}
 	packageResult := CheckProductPackageResult{}
-	if req.Type == constant.ProductTypeProduct {
+	if reqs.Type == constant.ProductTypeProduct {
 		// 商品规格, 必填
 		var flavors []CheckProductFlavorParam
-		for _, flavor := range req.Flavors {
+		for _, flavor := range reqs.Flavors {
 			flavors = append(flavors, CheckProductFlavorParam{
 				Uuid:         flavor.Uuid,
 				Price:        flavor.Price,
@@ -5974,14 +5974,14 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		}
 		result, err := productCheckSrv.CheckProductFlavor(db, flavors)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		flavorListResult = *result
-		flavorListResult.Status = req.Status
+		flavorListResult.Status = reqs.Status
 		// 商品属性, 可选
-		if len(req.Attributes) > 0 {
+		if len(reqs.Attributes) > 0 {
 			var attributes []CheckProductAttributeGroupParam
-			for _, attribute := range req.Attributes {
+			for _, attribute := range reqs.Attributes {
 				var attributeParams []CheckProductAttributeParam
 				for _, attribute := range attribute.Attributes {
 					attributeParams = append(attributeParams, CheckProductAttributeParam{
@@ -6001,42 +6001,42 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			}
 			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
 			if err != nil {
-				return 0, errors.WithMessage(err, "检查商品属性失败")
+				return nil, errors.WithMessage(err, "检查商品属性失败")
 			}
 			attributeListResult = result
 		}
 		// 商品加料, 可选
-		if len(req.Sauce.Sauces) > 0 {
+		if len(reqs.Sauce.Sauces) > 0 {
 			var sauceListParam []CheckProductSauceItemParam
-			for _, sauceReq := range req.Sauce.Sauces {
+			for _, sauceReq := range reqs.Sauce.Sauces {
 				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
 					Uuid:              sauceReq.Uuid,
 					IsDefaultSelected: sauceReq.IsDefaultSelected,
 				})
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
-				IsMust:        req.Sauce.IsMust,
-				MinSelection:  req.Sauce.MinSelection,
-				IsOpenInput:   req.Sauce.IsOpenInput,
-				MaxSelection:  req.Sauce.MaxSelection,
+				IsMust:        reqs.Sauce.IsMust,
+				MinSelection:  reqs.Sauce.MinSelection,
+				IsOpenInput:   reqs.Sauce.IsOpenInput,
+				MaxSelection:  reqs.Sauce.MaxSelection,
 				Sauces:        sauceListParam,
 				ClientVersion: clientVersion,
 			})
 			if err != nil {
-				return 0, err
+				return nil, err
 			}
 			sauceListResult = *result
-			sauceListResult.Status = req.Status
+			sauceListResult.Status = reqs.Status
 		}
 	} else {
-		if req.Package.InternalCode != "" {
-			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(req.Package.InternalCode, 0) {
-				return 0, errors.New("内部编码已存在")
+		if reqs.Package.InternalCode != "" {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(reqs.Package.InternalCode, 0) {
+				return nil, errors.New("内部编码已存在")
 			}
 		}
 		// 添加套餐
 		var groups []CheckProductPackageGroupParam
-		for _, group := range req.Package.Groups {
+		for _, group := range reqs.Package.Groups {
 			var products []CheckProductPackageGroupProductParam
 			for _, product := range group.Products {
 				products = append(products, CheckProductPackageGroupProductParam{
@@ -6065,23 +6065,23 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			})
 		}
 		result, err := productCheckSrv.CheckProductPackage(ctx, db, CheckProductPackageParam{
-			Price:         req.Package.Price,
+			Price:         reqs.Package.Price,
 			Groups:        groups,
 			ClientVersion: clientVersion,
 		})
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		packageResult = *result
 		flavorListResult = CheckProductFlavorResult{
 			MinPrice: packageResult.Price,
 			MaxPrice: packageResult.Price,
-			Status:   req.Status,
+			Status:   reqs.Status,
 			Flavors: []CheckProductFlavorItemResult{
 				{
-					Name:         req.LocaleName.ToJson(),
+					Name:         reqs.LocaleName.ToJson(),
 					Price:        packageResult.Price,
-					InternalCode: req.Package.InternalCode,
+					InternalCode: reqs.Package.InternalCode,
 				},
 			},
 			IsPackage: true,
@@ -6089,48 +6089,48 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	}
 	// 商品税类
 	if err := productCheckSrv.CheckProductTax(ctx, db, CheckProductTaxParam{
-		DineUuid:    req.Tax.DineUuid,
-		TakeoutUuid: req.Tax.TakeoutUuid,
+		DineUuid:    reqs.Tax.DineUuid,
+		TakeoutUuid: reqs.Tax.TakeoutUuid,
 	}); err != nil {
-		return 0, err
+		return nil, err
 	}
 	// 商品状态
-	if err := productCheckSrv.CheckProductStatus(req.Status); err != nil {
-		return 0, err
+	if err := productCheckSrv.CheckProductStatus(reqs.Status); err != nil {
+		return nil, err
 	}
 	// 商品图片
-	if req.ImageFileUuid != 0 {
-		if err := productCheckSrv.CheckProductImage(ctx, db, req.ImageFileUuid); err != nil {
-			return 0, err
+	if reqs.ImageFileUuid != 0 {
+		if err := productCheckSrv.CheckProductImage(ctx, db, reqs.ImageFileUuid); err != nil {
+			return nil, err
 		}
 	}
 	// 商品计价方式
-	if err := productCheckSrv.CheckProductNumType(req.NumType); err != nil {
-		return 0, err
+	if err := productCheckSrv.CheckProductNumType(reqs.NumType); err != nil {
+		return nil, err
 	}
 	// 商品库存计算方式
-	if err := productCheckSrv.CheckProductDeductStockType(req.DeductStockType); err != nil {
-		return 0, err
+	if err := productCheckSrv.CheckProductDeductStockType(reqs.DeductStockType); err != nil {
+		return nil, err
 	}
 	// 商品显示设置
 	if err := productCheckSrv.CheckProductShow(CheckProductShowParam{
-		IsShowCashier:   req.Show.IsShowCashier,
-		IsShowTablet:    req.Show.IsShowTablet,
-		IsShowKitchen:   req.Show.IsShowKitchen,
-		IsShowAssistant: req.Show.IsShowAssistant,
-		IsShowH5:        req.Show.IsShowH5,
-		IsShowDelivery:  req.Show.IsShowDelivery,
-		IsShowKiosk:     req.Show.IsShowKiosk,
+		IsShowCashier:   reqs.Show.IsShowCashier,
+		IsShowTablet:    reqs.Show.IsShowTablet,
+		IsShowKitchen:   reqs.Show.IsShowKitchen,
+		IsShowAssistant: reqs.Show.IsShowAssistant,
+		IsShowH5:        reqs.Show.IsShowH5,
+		IsShowDelivery:  reqs.Show.IsShowDelivery,
+		IsShowKiosk:     reqs.Show.IsShowKiosk,
 	}); err != nil {
-		return 0, err
+		return nil, err
 	}
 	// 商品会员折扣
-	if err := productCheckSrv.CheckProductMemberDiscount(req.Discount.IsEnableMemberDiscount); err != nil {
-		return 0, err
+	if err := productCheckSrv.CheckProductMemberDiscount(reqs.Discount.IsEnableMemberDiscount); err != nil {
+		return nil, err
 	}
 	// 商品整单折扣
-	if err := productCheckSrv.CheckProductOverallDiscount(req.Discount.IsEnableOverallDiscount); err != nil {
-		return 0, err
+	if err := productCheckSrv.CheckProductOverallDiscount(reqs.Discount.IsEnableOverallDiscount); err != nil {
+		return nil, err
 	}
 
 	// 添加商品
@@ -6138,7 +6138,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	err := db.Transaction(func(tx *gorm.DB) error {
 
 		// 添加商品包
-		productPackageRes, err := s.AddProductPackage(ctx, tx, req, flavorListResult.MinPrice)
+		productPackageRes, err := s.AddProductPackage(ctx, tx, reqs, flavorListResult.MinPrice)
 		if err != nil {
 			return err
 		}
@@ -6147,11 +6147,11 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		// 保存商品bom
 		err = s.SaveProductPackageBom(ctx, tx, SaveProductPackageBomParams{
 			ProductPackageUuid: productPackageUuid,
-			UnitUuid:           req.UnitUuid,
+			UnitUuid:           reqs.UnitUuid,
 			TemplateItemCode:   erpCode,
 			FlavorListResult:   flavorListResult,
 			SauceResult:        sauceListResult,
-			CategoryUuid:       req.CategoryUuid,
+			CategoryUuid:       reqs.CategoryUuid,
 		})
 		if err != nil {
 			return err
@@ -6163,18 +6163,18 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		}
 
 		// 套餐商品组
-		if req.Type == constant.ProductTypePackage {
+		if reqs.Type == constant.ProductTypePackage {
 			err = s.SaveProductPackageGroup(tx, packageResult.Groups, productPackageUuid)
 			if err != nil {
 				return err
 			}
 		} else if ctx.Version(context.GTE, "2.7.0") {
 			// 检查商品打印机
-			if err := productCheckSrv.CheckProductPrinter(ctx, db, productPackageUuid, req.ProductPrinterUuids); err != nil {
+			if err := productCheckSrv.CheckProductPrinter(ctx, db, productPackageUuid, reqs.ProductPrinterUuids); err != nil {
 				return errors.WithMessage(err)
 			}
 			// 新增商品包关联打印机
-			err = repository.NewProductPrinterRepo(tx).CreateProductPackagePrinter(productPackageUuid, req.ProductPrinterUuids)
+			err = repository.NewProductPrinterRepo(tx).CreateProductPackagePrinter(productPackageUuid, reqs.ProductPrinterUuids)
 			if err != nil {
 				return errors.WithMessage(err, "保存商品包关联打印机失败")
 			}
@@ -6186,11 +6186,13 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	})
 
 	if err != nil {
-		logger.Logger.Error("添加商品失败", zap.Any("func", "AddProductShop"), zap.Any("params", req), zap.Error(err))
-		return 0, errors.WithMessage(err, "添加商品失败")
+		logger.Logger.Error("添加商品失败", zap.Any("func", "AddProductShop"), zap.Any("params", reqs), zap.Error(err))
+		return nil, errors.WithMessage(err, "添加商品失败")
 	}
 
-	return productPackageUuid, nil
+	return s.GetProductDetail(ctx, req.ProductDetailReq{
+		Uuid: productPackageUuid,
+	})
 }
 
 // EditProductShop 编辑商品

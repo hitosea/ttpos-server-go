@@ -24,6 +24,35 @@ type ProductTakeoutShopAddReq struct {
 	IsBatch             bool                                       `json:"is_batch"`                                // 是否批量创建 默认false
 }
 
+// Validate 验证外卖商品添加请求
+func (r *ProductTakeoutShopAddReq) Validate() error {
+	if r.ProductPackageUuid == 0 {
+		return errors.WithMessage(errors.New("商品包UUID不能为空"))
+	}
+	if len(r.Flavors) > 0 {
+		for _, flavor := range r.Flavors {
+			if flavor.BomUuid == 0 {
+				return errors.WithMessage(errors.New("规格UUID不能为空"))
+			}
+		}
+	}
+	if len(r.Attributes) > 0 {
+		for _, attribute := range r.Attributes {
+			if attribute.ProductPackageAttributeUuid == 0 {
+				return errors.WithMessage(errors.New("属性UUID不能为空"))
+			}
+		}
+	}
+	if len(r.PackageGroupItems) > 0 {
+		for _, packageGroupItem := range r.PackageGroupItems {
+			if packageGroupItem.ProductPackageGroupItemUuid == 0 {
+				return errors.WithMessage(errors.New("套餐子商品UUID不能为空"))
+			}
+		}
+	}
+	return nil
+}
+
 // ProductTakeoutShopAddFlavorReq 外卖商品规格添加请求
 type ProductTakeoutShopAddFlavorReq struct {
 	BomUuid        uint64  `json:"bom_uuid" binding:"required"` // 商品BOM UUID（关联店内规格）

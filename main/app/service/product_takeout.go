@@ -60,6 +60,10 @@ func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv, setting
 // AddProductTakeoutShop 添加外卖商品
 func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error) {
 	db := ctx.GetDB()
+	// 验证请求参数
+	if err := addReq.Validate(); err != nil {
+		return nil, errors.WithMessage(err, "参数验证失败")
+	}
 
 	// 设置默认外卖类型
 	if addReq.TakeoutType == 0 {
@@ -224,7 +228,6 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 				}
 			}
 		} else if len(addReq.Flavors) > 0 {
-
 			// 创建外卖规格价格记录
 			for _, flavorReq := range addReq.Flavors {
 				productBomTakeout := &model.ProductBomTakeout{
@@ -251,6 +254,24 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 					}
 					if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
 						return errors.WithMessage(err, "创建外卖属性价格失败")
+					}
+				}
+			} else if len(productPackage.ProductPackageAttributeGroups) > 0 {
+				for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+					for _, attribute := range attributeGroup.ProductPackageAttributes {
+						if attribute.IsDelete() {
+							continue
+						}
+						// 创建外卖属性价格记录
+						productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+							ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+							ProductPackageAttributeUuid: attribute.Uuid,
+							HeadquarterUuid:             productPackage.HeadquarterUuid,
+							Price:                       attribute.Price,
+						}
+						if err := repository.NewProductPackageAttributeTakeoutRepo(tx).CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+							return errors.WithMessage(err, "创建外卖属性价格失败")
+						}
 					}
 				}
 			}

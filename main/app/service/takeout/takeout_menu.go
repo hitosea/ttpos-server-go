@@ -1285,10 +1285,11 @@ func (s *takeoutSrv) createProduct(
 	productReq := s.buildProductAddReq(ctx, item, categoryUuid, productFlavorUuid, unitUuid, taxUuid, attributeGroups)
 
 	// 调用 ProductSrv 创建商品
-	productUuid, err := s.productSrv.AddProductShop(ctx, productReq)
+	productDetailResp, err := s.productSrv.AddProductShop(ctx, productReq)
 	if err != nil {
-		return 0, err
+		return 0, errors.WithMessage(err, "创建商品失败")
 	}
+	productUuid := productDetailResp.Uuid
 
 	// 如果有图片 URL，异步下载并上传
 	imageURL := ""
