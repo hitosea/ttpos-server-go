@@ -2842,7 +2842,6 @@ func convertBatchResultToUUIDMap[T any](batchResult map[string]T) map[uint64]int
 // getSaleBillAssociationsForOrderCart 获取 SaleBill 的关联配置（用于订单购物车场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
-	orderRepo := NewOrderRepo(db)
 	// 获取 Desk 控制器单例（保证非 nil）
 	deskController := objectStorageController.GetDeskController()
 	productPackageRepo := NewProductPackageRepo(db)
@@ -2863,12 +2862,9 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(model.SaleBill).Uuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.SaleBillSetting](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeSaleBillSetting, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.SaleBillSetting, error) {
-					return orderRepo.GetSaleBillSetting(uuid)
-				})
+				// 使用 SaleBillSetting 控制器查询（统一管理缓存）
+				saleBillSettingController := objectStorageController.GetSaleBillSettingController()
+				result, err := saleBillSettingController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -3626,7 +3622,6 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 // getSaleBillAssociationsForAllInfo 获取 SaleBill 的关联配置（用于 GetSaleBillAllInfo 场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
-	orderRepo := NewOrderRepo(db)
 	// 获取 Desk 控制器单例（保证非 nil）
 	deskController := objectStorageController.GetDeskController()
 	buffetPackageRepo := NewBuffetPackageRepo(db)
@@ -3655,12 +3650,9 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return obj.(model.SaleBill).Uuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.SaleBillSetting](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeSaleBillSetting, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.SaleBillSetting, error) {
-					return orderRepo.GetSaleBillSetting(uuid)
-				})
+				// 使用 SaleBillSetting 控制器查询（统一管理缓存）
+				saleBillSettingController := objectStorageController.GetSaleBillSettingController()
+				result, err := saleBillSettingController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}

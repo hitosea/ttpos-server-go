@@ -16,6 +16,7 @@ import (
 //   - underlyingCache: 底层缓存实例
 //   - ttl: 缓存 TTL（默认 10 分钟）
 func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
+	// 初始化 Desk 对象的缓存控制器
 	objectStorageController.InitDeskController(
 		underlyingCache,
 		ttl,
@@ -42,5 +43,32 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return desks, nil
 		},
 	)
-}
 
+	// 初始化 SaleBillSetting 对象的缓存控制器
+	objectStorageController.InitSaleBillSettingController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, saleBillUuid uint64) (*model.SaleBillSetting, error) {
+			orderRepo := NewOrderRepo(db)
+			return orderRepo.GetSaleBillSetting(saleBillUuid)
+		},
+		func(db *gorm.DB, saleBillUuids []uint64) ([]*model.SaleBillSetting, error) {
+			// 批量查询 SaleBillSetting
+			orderRepo := NewOrderRepo(db)
+			settings := make([]*model.SaleBillSetting, 0, len(saleBillUuids))
+			for _, saleBillUuid := range saleBillUuids {
+				if saleBillUuid > 0 {
+					setting, err := orderRepo.GetSaleBillSetting(saleBillUuid)
+					if err != nil {
+						// 单个查询失败不影响其他，继续查询
+						continue
+					}
+					if setting != nil {
+						settings = append(settings, setting)
+					}
+				}
+			}
+			return settings, nil
+		},
+	)
+}

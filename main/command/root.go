@@ -105,12 +105,8 @@ var rootCommand = &cobra.Command{
 			},
 		)
 
-		// 初始化 Desk 对象的缓存控制器（单例模式）
-		// 在 repository 包中初始化，可以访问 DeskRepo 和 CommonRepo
-		repository.InitCacheObjectController(
-			cache.Global,
-			10*time.Minute,
-		)
+		// 初始化缓存对象控制器（单例模式）
+		repository.InitCacheObjectController(cache.Global, 10*time.Minute)
 
 		// 初始化并启动缓存命中率快照保存器（每30分钟保存一次）
 		objectStorageAdapter.InitSnapshotReporter(
