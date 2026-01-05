@@ -92,4 +92,10 @@ const (
 
 	// ProductBomCard 成本卡
 	ObjectTypeProductBomCard = "product_bom_card"
+
+	// OrderSource 订单来源
+	ObjectTypeOrderSource = "order_source"
+
+	// Nationality 国籍
+	ObjectTypeNationality = "nationality"
 )

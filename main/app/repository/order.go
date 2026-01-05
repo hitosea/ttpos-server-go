@@ -2164,14 +2164,7 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 				Query: "Cashier",
 			},
 			// ==================== 销售账单的订单来源和国籍信息 ====================
-			WithPreload{
-				Query: "OrderSource.MultiLanguageName",
-				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
-			},
-			WithPreload{
-				Query: "Nationality.MultiLanguageName",
-				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
-			},
+			// OrderSource 和 Nationality 及其 MultiLanguageName 通过对象存储层注入，此处不再预加载
 		),
 		CommonRepo.WhereBySoftDelete(),
 		uuidFilter,
@@ -3667,6 +3660,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	productCategoryRepo := NewProductCategoryRepo(db)
 	productBomRepo := NewProductBomRepo(db)
 	productBomCardRepo := NewProductBomCardRepo(db)
+	orderSourceRepo := NewOrderSourceRepo(db)
+	nationalityRepo := NewNationalityRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：Desk
@@ -4604,6 +4599,141 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 						if pkg != nil {
 							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, pkg.Uuid)
 							result[key] = pkg
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// ==================== 销售账单的订单来源和国籍信息 ====================
+		// 一对一关系：OrderSource
+		{
+			Path:       "OrderSource",
+			ObjectType: "order_source",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if bill, ok := obj.(*model.SaleBill); ok && bill != nil {
+					return bill.OrderSourceUuid
+				}
+				// 处理值类型
+				if bill, ok := obj.(model.SaleBill); ok {
+					return bill.OrderSourceUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				if uuid == 0 {
+					return nil, nil
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.OrderSource](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeOrderSource, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.OrderSource, error) {
+					// 使用 FindByUuidWithDeleted，保证历史订单可显示已删除的配置名称
+					return orderSourceRepo.FindByUuidWithDeleted(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 过滤掉 0 值
+				validUuids := make([]uint64, 0, len(uuids))
+				for _, uuid := range uuids {
+					if uuid > 0 {
+						validUuids = append(validUuids, uuid)
+					}
+				}
+				if len(validUuids) == 0 {
+					return make(map[uint64]interface{}), nil
+				}
+				keys := make([]string, 0, len(validUuids))
+				for _, uuid := range validUuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeOrderSource, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.OrderSource](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.OrderSource, error) {
+					// 使用批量查询方法，提高性能
+					orderSources, err := orderSourceRepo.FindByUuidsWithDeleted(validUuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.OrderSource)
+					for _, orderSource := range orderSources {
+						if orderSource != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeOrderSource, orderSource.Uuid)
+							result[key] = orderSource
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// 一对一关系：Nationality
+		{
+			Path:       "Nationality",
+			ObjectType: "nationality",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if bill, ok := obj.(*model.SaleBill); ok && bill != nil {
+					return bill.NationalityUuid
+				}
+				// 处理值类型
+				if bill, ok := obj.(model.SaleBill); ok {
+					return bill.NationalityUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				if uuid == 0 {
+					return nil, nil
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.Nationality](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeNationality, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.Nationality, error) {
+					// 使用 FindByUuidWithDeleted，保证历史订单可显示已删除的配置名称
+					return nationalityRepo.FindByUuidWithDeleted(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 过滤掉 0 值
+				validUuids := make([]uint64, 0, len(uuids))
+				for _, uuid := range uuids {
+					if uuid > 0 {
+						validUuids = append(validUuids, uuid)
+					}
+				}
+				if len(validUuids) == 0 {
+					return make(map[uint64]interface{}), nil
+				}
+				keys := make([]string, 0, len(validUuids))
+				for _, uuid := range validUuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeNationality, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.Nationality](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.Nationality, error) {
+					// 使用批量查询方法，提高性能
+					nationalities, err := nationalityRepo.FindByUuidsWithDeleted(validUuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.Nationality)
+					for _, nationality := range nationalities {
+						if nationality != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeNationality, nationality.Uuid)
+							result[key] = nationality
 						}
 					}
 					return result, nil
