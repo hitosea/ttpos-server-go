@@ -2054,12 +2054,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
-			WithPreload{
-				Query: "SaleOrders.Coupons.MarketingCoupon",
-			},
-			WithPreload{
-				Query: "SaleOrders.Coupons.MemberCoupon",
-			},
 			// ==================== 销售账单的订单信息 ====================
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders",
@@ -3712,6 +3706,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	buffetCustomerTypePricesRepo := NewBuffetCustomerTypePricesRepo(db)
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
 	productPackageRepo := NewProductPackageRepo(db)
+	marketingCouponRepo := NewMarketingCouponRepo(db)
+	memberCouponRepo := NewMemberCouponRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：Desk
@@ -3927,6 +3923,107 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 						if pkg != nil {
 							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, pkg.Uuid)
 							result[key] = pkg
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// ==================== 销售账单的优惠券信息 ====================
+		// 嵌套关联：SaleOrders.Coupons.MarketingCoupon
+		{
+			Path:       "SaleOrders.Coupons.MarketingCoupon",
+			ObjectType: "marketing_coupon",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderCoupon).MarketingCouponUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.MarketingCoupon](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeMarketingCoupon, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.MarketingCoupon, error) {
+					coupon, err := marketingCouponRepo.GetCouponByUuid(uuid)
+					if err != nil {
+						return nil, err
+					}
+					return coupon, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMarketingCoupon, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.MarketingCoupon](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MarketingCoupon, error) {
+					// 批量查询 MarketingCoupon 列表
+					coupons, err := marketingCouponRepo.GetCoupons(
+						CommonRepo.WhereInUuids(uuids),
+					)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.MarketingCoupon)
+					for _, coupon := range coupons {
+						if coupon != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeMarketingCoupon, coupon.Uuid)
+							result[key] = coupon
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// 嵌套关联：SaleOrders.Coupons.MemberCoupon
+		{
+			Path:       "SaleOrders.Coupons.MemberCoupon",
+			ObjectType: "member_coupon",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrderCoupon).MemberCouponUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.MemberCoupon](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeMemberCoupon, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.MemberCoupon, error) {
+					coupon, err := memberCouponRepo.GetMemberCouponByUuid(uuid)
+					if err != nil {
+						return nil, err
+					}
+					return coupon, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMemberCoupon, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.MemberCoupon](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MemberCoupon, error) {
+					// 批量查询 MemberCoupon 列表
+					coupons, err := memberCouponRepo.GetMembersByUuids(uuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.MemberCoupon)
+					for _, coupon := range coupons {
+						if coupon != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeMemberCoupon, coupon.Uuid)
+							result[key] = coupon
 						}
 					}
 					return result, nil

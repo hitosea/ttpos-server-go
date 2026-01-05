@@ -68,4 +68,10 @@ const (
 
 	// BuffetPackage 自助餐套餐
 	ObjectTypeBuffetPackage = "buffet_package"
+
+	// MarketingCoupon 营销优惠券
+	ObjectTypeMarketingCoupon = "marketing_coupon"
+
+	// MemberCoupon 会员优惠券
+	ObjectTypeMemberCoupon = "member_coupon"
 )
