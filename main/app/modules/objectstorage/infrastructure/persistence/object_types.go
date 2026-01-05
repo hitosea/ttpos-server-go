@@ -98,4 +98,7 @@ const (
 
 	// Nationality 国籍
 	ObjectTypeNationality = "nationality"
+
+	// PaymentMethod 支付方式
+	ObjectTypePaymentMethod = "payment_method"
 )

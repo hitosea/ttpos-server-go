@@ -26,6 +26,7 @@ type IOrderRepo interface {
 	IOrderQueryRepo
 	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                               // 创建销售单
 	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                          // 创建销售账单设置
+	GetSaleBillSetting(saleBillUuid uint64) (*model.SaleBillSetting, error)                                                    // 根据销售账单UUID获取销售账单设置
 	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                            // 更新销售账单设置
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                            // 创建订单
 	CountSaleBill(opts ...DBOption) (int64, error)                                                                             // 统计销售单数据
@@ -111,6 +112,18 @@ func (r *orderRepo) CreateSaleBillSetting(model model.SaleBillSetting) (model.Sa
 	}
 
 	return model, nil
+}
+
+// GetSaleBillSetting 根据销售账单UUID获取销售账单设置
+func (r *orderRepo) GetSaleBillSetting(saleBillUuid uint64) (*model.SaleBillSetting, error) {
+	var setting model.SaleBillSetting
+	err := r.db.Model(&model.SaleBillSetting{}).
+		Where("sale_bill_uuid = ?", saleBillUuid).
+		First(&setting).Error
+	if err != nil {
+		return nil, fmt.Errorf("GetSaleBillSetting: %v", err)
+	}
+	return &setting, nil
 }
 
 // UpdateSaleBillSetting 更新销售账单设置
@@ -2043,10 +2056,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
-			// ==================== 销售账单的账单设置 ====================
-			WithPreload{
-				Query: "SaleBillSetting",
-			},
 			// ==================== 销售账单的优惠券信息 ====================
 			WithPreload{
 				Query: "SaleOrders.Coupons",
@@ -2063,16 +2072,10 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 				},
 			},
 			WithPreload{
-				Query: "SaleOrders.PaymentOrders.PaymentMethod",
-			},
-			WithPreload{
 				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts",
 				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
-			},
-			WithPreload{
-				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
 			},
 			WithPreload{
 				Query: "SaleOrders.Member.MemberLevel",
@@ -2849,6 +2852,7 @@ func convertBatchResultToUUIDMap[T any](batchResult map[string]T) map[uint64]int
 // getSaleBillAssociationsForOrderCart 获取 SaleBill 的关联配置（用于订单购物车场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
+	orderRepo := NewOrderRepo(db)
 	deskRepo := NewDeskRepo(db)
 	productPackageRepo := NewProductPackageRepo(db)
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
@@ -2872,12 +2876,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				cacheLayer := adapter.GetOrderObjectCache[*model.SaleBillSetting](underlyingCache, 10*time.Minute)
 				key := persistence.BuildKey(ctx, persistence.ObjectTypeSaleBillSetting, uuid)
 				result, err := cacheLayer.GET(key, func() (*model.SaleBillSetting, error) {
-					var setting model.SaleBillSetting
-					err := db.Where("sale_bill_uuid = ?", uuid).First(&setting).Error
-					if err != nil {
-						return nil, err
-					}
-					return &setting, nil
+					return orderRepo.GetSaleBillSetting(uuid)
 				})
 				if err != nil {
 					return nil, err
@@ -3647,6 +3646,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 // getSaleBillAssociationsForAllInfo 获取 SaleBill 的关联配置（用于 GetSaleBillAllInfo 场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
+	orderRepo := NewOrderRepo(db)
 	deskRepo := NewDeskRepo(db)
 	buffetPackageRepo := NewBuffetPackageRepo(db)
 	buffetProductRepo := NewBuffetProductRepo(db)
@@ -3662,8 +3662,29 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	productBomCardRepo := NewProductBomCardRepo(db)
 	orderSourceRepo := NewOrderSourceRepo(db)
 	nationalityRepo := NewNationalityRepo(db)
+	paymentMethodRepo := NewPaymentMethodRepo(db)
 
 	return []entity.Association{
+		// 一对一关系：SaleBillSetting
+		{
+			Path:       "SaleBillSetting",
+			ObjectType: "sale_bill_setting",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.SaleBillSetting](underlyingCache, 10*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeSaleBillSetting, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.SaleBillSetting, error) {
+					return orderRepo.GetSaleBillSetting(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
 		// 一对一关系：Desk
 		{
 			Path:       "Desk",
@@ -4734,6 +4755,139 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 						if nationality != nil {
 							key := persistence.BuildKey(ctx, persistence.ObjectTypeNationality, nationality.Uuid)
 							result[key] = nationality
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// ==================== 销售账单的支付方式信息 ====================
+		// 嵌套关联：SaleOrders.PaymentOrders.PaymentMethod
+		{
+			Path:       "SaleOrders.PaymentOrders.PaymentMethod",
+			ObjectType: "payment_method",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if paymentOrder, ok := obj.(*model.PaymentOrder); ok && paymentOrder != nil {
+					return paymentOrder.PaymentMethodUuid
+				}
+				// 处理值类型
+				if paymentOrder, ok := obj.(model.PaymentOrder); ok {
+					return paymentOrder.PaymentMethodUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				if uuid == 0 {
+					return nil, nil
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.PaymentMethod, error) {
+					return paymentMethodRepo.GetPaymentMethodByUuid(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 过滤掉 0 值
+				validUuids := make([]uint64, 0, len(uuids))
+				for _, uuid := range uuids {
+					if uuid > 0 {
+						validUuids = append(validUuids, uuid)
+					}
+				}
+				if len(validUuids) == 0 {
+					return make(map[uint64]interface{}), nil
+				}
+				keys := make([]string, 0, len(validUuids))
+				for _, uuid := range validUuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.PaymentMethod, error) {
+					// 使用批量查询方法，提高性能
+					paymentMethods, err := paymentMethodRepo.GetPaymentMethodsByUuids(validUuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.PaymentMethod)
+					for _, paymentMethod := range paymentMethods {
+						if paymentMethod != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, paymentMethod.Uuid)
+							result[key] = paymentMethod
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// 嵌套关联：SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod
+		{
+			Path:       "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
+			ObjectType: "payment_method",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if returnOrderAmount, ok := obj.(*model.ReturnOrderAmount); ok && returnOrderAmount != nil {
+					return returnOrderAmount.PaymentMethodUuid
+				}
+				// 处理值类型
+				if returnOrderAmount, ok := obj.(model.ReturnOrderAmount); ok {
+					return returnOrderAmount.PaymentMethodUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				if uuid == 0 {
+					return nil, nil
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.PaymentMethod, error) {
+					return paymentMethodRepo.GetPaymentMethodByUuid(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 过滤掉 0 值
+				validUuids := make([]uint64, 0, len(uuids))
+				for _, uuid := range uuids {
+					if uuid > 0 {
+						validUuids = append(validUuids, uuid)
+					}
+				}
+				if len(validUuids) == 0 {
+					return make(map[uint64]interface{}), nil
+				}
+				keys := make([]string, 0, len(validUuids))
+				for _, uuid := range validUuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.PaymentMethod, error) {
+					// 使用批量查询方法，提高性能
+					paymentMethods, err := paymentMethodRepo.GetPaymentMethodsByUuids(validUuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.PaymentMethod)
+					for _, paymentMethod := range paymentMethods {
+						if paymentMethod != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, paymentMethod.Uuid)
+							result[key] = paymentMethod
 						}
 					}
 					return result, nil
