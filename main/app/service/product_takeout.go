@@ -436,7 +436,6 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			// 获取当前外卖商品的所有规格价格
 			existingBomTakeouts, err := productBomTakeoutRepo.GetProductBomTakeoutList(
 				commonRepo.WhereByProductPackageTakeoutUuid(existTakeout.Uuid),
-				commonRepo.WhereBySoftDelete(),
 			)
 			if err != nil {
 				return errors.WithMessage(err, "获取外卖规格价格失败")
@@ -457,7 +456,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 				if existingBom, exists := existingBomMap[flavorReq.BomUuid]; exists {
 					// 更新价格
 					if err := productBomTakeoutRepo.UpdateProductBomTakeout(
-						map[string]any{"price": flavorReq.Price},
+						map[string]any{"price": flavorReq.Price, "delete_time": 0},
 						commonRepo.WhereByUuid(existingBom.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "更新外卖规格价格失败")
