@@ -59,7 +59,6 @@ func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv, setting
 
 // AddProductTakeoutShop 添加外卖商品
 func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error) {
-	companySetting := ctx.GetCompanySetting()
 	db := ctx.GetDB()
 
 	// 设置默认外卖类型
@@ -77,11 +76,6 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	}
 	if productPackage.IsDelete() {
 		return nil, errors.WithMessage(errors.New("商品已删除"))
-	}
-
-	// 检查是否是总部商品，并且当前不是总店，则总部商品不能添加为外卖商品
-	if productPackage.HeadquarterUuid != 0 && !companySetting.IsHeadquarter() {
-		return nil, errors.WithMessage(errors.New("总部商品不能添加为外卖商品"))
 	}
 
 	// 检查是否已存在同类型外卖商品（包括软删除的记录）

@@ -1229,14 +1229,21 @@ func runMigrations(_ string) error {
 	}
 
 	// 执行迁移命令: make php-migrate (需要在根目录执行，因为 php-migrate 定义在根目录的 Makefile 中)
+	fmt.Printf("  开始执行迁移文件...\n")
+	startTime := time.Now()
+
 	cmd := exec.Command("make", "php-migrate")
 	cmd.Dir = workDir
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
+	elapsed := time.Since(startTime)
+
 	if err != nil {
 		return fmt.Errorf("迁移命令执行失败: %w\n输出: %s", err, string(output))
 	}
+
+	fmt.Printf("%s  ✓ 迁移文件执行成功，耗时: %s %s\n", greenColor, elapsed.Round(time.Millisecond), resetColor)
 
 	return nil
 }

@@ -298,14 +298,23 @@ func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 	return json.Marshal(ss)
 }
 
+// TakeoutStatusResp 外卖平台状态响应
+// 参考: main/app/modules/takeout/interfaces/response/TakeoutStatusResponse
+// 对应接口: /api/v1/shop/takeout/status/info
+type TakeoutStatusResp struct {
+	Platform string `json:"platform"` // 外卖平台 (grab/lineman等)
+	Enabled  bool   `json:"enabled"`  // 是否开启
+}
+
 type ShopBase struct {
-	Username     string        `json:"username"`      // 登录账号
-	RealName     string        `json:"real_name"`     // 姓名
-	ProfileUuid  uint64        `json:"profile_uuid"`  // 收银员UUID
-	Phone        string        `json:"phone"`         // 登录账号手机号
-	DeviceId     string        `json:"device_id"`     // 设备ID
-	DeviceRemark string        `json:"device_remark"` // 设备备注
-	Permissions  []*Permission `json:"permissions"`   // 页面权限
+	Username      string              `json:"username"`       // 登录账号
+	RealName      string              `json:"real_name"`      // 姓名
+	ProfileUuid   uint64              `json:"profile_uuid"`   // 收银员UUID
+	Phone         string              `json:"phone"`          // 登录账号手机号
+	DeviceId      string              `json:"device_id"`      // 设备ID
+	DeviceRemark  string              `json:"device_remark"`  // 设备备注
+	TakeoutStatus []TakeoutStatusResp `json:"takeout_status"` // 外卖平台状态列表
+	Permissions   []*Permission       `json:"permissions"`    // 页面权限
 
 	Buffet     setting.BuffetResp `json:"buffet"`      // 自助餐设置
 	CloudBasic setting.CloudBasic `json:"cloud"`       // 云端基础信息

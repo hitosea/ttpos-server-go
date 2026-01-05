@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
+	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/repository"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -1454,13 +1455,14 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	}
 
 	return resp.ShopBase{
-		Username:     staff.Username,
-		RealName:     staff.RealName,
-		ProfileUuid:  staff.Uuid,
-		DeviceId:     deviceId,
-		DeviceRemark: deviceRemark,
-		Permissions:  permissions,
-		Phone:        staff.Phone,
+		Username:      staff.Username,
+		RealName:      staff.RealName,
+		ProfileUuid:   staff.Uuid,
+		DeviceId:      deviceId,
+		DeviceRemark:  deviceRemark,
+		Permissions:   permissions,
+		Phone:         staff.Phone,
+		TakeoutStatus: s.getTakeoutStatusList(ctx),
 
 		Business: businessSetting,
 		Buffet:   buffetSetting,
@@ -1507,6 +1509,28 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		HasDataPermission: hasDataPermission,
 		CompanyList:       s.getCompanyList(ctx),
 	}, nil
+}
+
+// getTakeoutStatusList 获取外卖平台状态列表
+func (s *authSrv) getTakeoutStatusList(ctx context.Context) []resp.TakeoutStatusResp {
+	// 直接使用外卖领域服务获取所有平台状态
+	takeouts, err := service.NewTakeoutService(ctx.GetDB()).GetAllPlatformStatus(ctx)
+	if err != nil {
+		// 获取失败时返回空列表，不影响整体登录流程
+		logger.Logger.Error("获取外卖平台状态失败", zap.Error(err))
+		return []resp.TakeoutStatusResp{}
+	}
+
+	// 转换为响应格式
+	statusList := make([]resp.TakeoutStatusResp, 0, len(takeouts))
+	for _, takeout := range takeouts {
+		statusList = append(statusList, resp.TakeoutStatusResp{
+			Platform: takeout.Platform,
+			Enabled:  takeout.Enabled,
+		})
+	}
+
+	return statusList
 }
 
 // 修改密码

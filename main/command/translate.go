@@ -25,11 +25,13 @@ var URL = "https://aitrans.ttpos.com/translate"
 
 var newLanguage string
 var num int
+var forceTrans bool
 
 func init() {
 	rootCommand.AddCommand(translateCmd)
 	translateCmd.Flags().StringVar(&newLanguage, "new-language", "", "新语言文件名")
 	translateCmd.Flags().IntVar(&num, "num", 10, "每次关键字翻译数量")
+	translateCmd.Flags().BoolVar(&forceTrans, "force-trans", false, "强制翻译")
 }
 
 var translateCmd = &cobra.Command{
@@ -159,6 +161,10 @@ func processGroup(texts []string) {
 	data["data"] = textData
 	if newLanguage != "" {
 		data["trans"] = []string{newLanguage}
+	}
+
+	if forceTrans {
+		data["force_trans"] = true
 	}
 
 	jsonData, err := json.Marshal(data)
