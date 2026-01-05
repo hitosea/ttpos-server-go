@@ -32068,6 +32068,164 @@
                 }
             }
         },
+        "/shop/statistics/company/business/summary": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）和支付方式汇总（indicator_type=payment_method）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "获取门店汇总统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsCompanySummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp，indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/company/business/summary/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新管理端-报表-门店汇总统计导出。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出门店汇总统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsCompanySummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "导出任务已创建",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/company/payment_methods": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取有权限的所有门店的支付方式，汇总去重后返回",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "获取门店支付方式列表",
+                "responses": {
+                    "200": {
+                        "description": "支付方式列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyPaymentMethodListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/company_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取门店汇总统计可选择的门店列表（总店返回本店及下级所有子店，子店返回本店及已授权的其他门店）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "获取门店列表",
+                "responses": {
+                    "200": {
+                        "description": "门店列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanySummaryListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/export": {
             "get": {
                 "security": [
@@ -47661,6 +47819,10 @@
                     "description": "外卖商品图片文件UUID",
                     "type": "integer"
                 },
+                "is_batch": {
+                    "description": "是否批量创建 默认false",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "外卖商品名称（多语言），不填则使用店内商品名称",
                     "allOf": [
@@ -48854,6 +49016,56 @@
                 }
             }
         },
+        "req.StatisticsCompanySummaryReq": {
+            "type": "object",
+            "properties": {
+                "company_uuids": {
+                    "description": "门店UUID列表（多选），为空时默认为当前门店",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "cycle": {
+                    "description": "周期: 0=按日、1=按月",
+                    "type": "integer"
+                },
+                "indicator_type": {
+                    "description": "数据指标类型：business(营业数据汇总)、payment_method(支付方式汇总)、refund(退款金额汇总)",
+                    "type": "string"
+                },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "payment_method_names": {
+                    "description": "支付方式名称列表（仅支付方式汇总时使用，可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "query_end_date": {
+                    "description": "结束日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日结束日期：YYYY-MM-DD 23:59:59",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "开始日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日开始日期：YYYY-MM-DD 00:00:00",
+                    "type": "string"
+                },
+                "report": {
+                    "description": "报表类型: 0=明细表、1=汇总表",
+                    "type": "integer"
+                }
+            }
+        },
         "req.StatisticsPaymentMethodReq": {
             "type": "object",
             "properties": {
@@ -48889,8 +49101,15 @@
                     "minimum": 1
                 },
                 "payment_method_list": {
-                    "description": "支付方式列表: 空=全部, 多个用\"uuid1,uuid2,uuid3,,,\"分割",
+                    "description": "支付方式UUID列表: 空=全部, 多个用\"uuid1,uuid2,uuid3,,,\"分割（优先使用）",
                     "type": "string"
+                },
+                "payment_method_names": {
+                    "description": "支付方式名称列表: 空=全部（PaymentMethodList为空时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "query_end_date": {
                     "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
@@ -51852,6 +52071,27 @@
                 }
             }
         },
+        "resp.CompanyPaymentMethodItem": {
+            "type": "object",
+            "properties": {
+                "payment_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "支付方式列表（已去重）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyPaymentMethodItem"
+                    }
+                }
+            }
+        },
         "resp.CompanyRoleInfo": {
             "type": "object",
             "properties": {
@@ -51976,6 +52216,31 @@
                 "uuid": {
                     "description": "门店UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.CompanySummaryItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanySummaryListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanySummaryItem"
+                    }
                 }
             }
         },

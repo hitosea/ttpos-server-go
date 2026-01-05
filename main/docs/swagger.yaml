@@ -7414,6 +7414,9 @@ definitions:
       image_file_uuid:
         description: 外卖商品图片文件UUID
         type: integer
+      is_batch:
+        description: 是否批量创建 默认false
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -8267,6 +8270,43 @@ definitions:
     required:
     - list
     type: object
+  req.StatisticsCompanySummaryReq:
+    properties:
+      company_uuids:
+        description: 门店UUID列表（多选），为空时默认为当前门店
+        items:
+          type: integer
+        type: array
+      cycle:
+        description: '周期: 0=按日、1=按月'
+        type: integer
+      indicator_type:
+        description: 数据指标类型：business(营业数据汇总)、payment_method(支付方式汇总)、refund(退款金额汇总)
+        type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      payment_method_names:
+        description: 支付方式名称列表（仅支付方式汇总时使用，可选）
+        items:
+          type: string
+        type: array
+      query_end_date:
+        description: 结束日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日结束日期：YYYY-MM-DD 23:59:59
+        type: string
+      query_start_date:
+        description: 开始日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日开始日期：YYYY-MM-DD 00:00:00
+        type: string
+      report:
+        description: '报表类型: 0=明细表、1=汇总表'
+        type: integer
+    type: object
   req.StatisticsPaymentMethodReq:
     properties:
       cycle:
@@ -8294,8 +8334,13 @@ definitions:
         minimum: 1
         type: integer
       payment_method_list:
-        description: '支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割'
+        description: '支付方式UUID列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割（优先使用）'
         type: string
+      payment_method_names:
+        description: '支付方式名称列表: 空=全部（PaymentMethodList为空时使用）'
+        items:
+          type: string
+        type: array
       query_end_date:
         description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
         type: string
@@ -10365,6 +10410,20 @@ definitions:
         description: 门店UUID
         type: integer
     type: object
+  resp.CompanyPaymentMethodItem:
+    properties:
+      payment_name:
+        description: 支付方式名称
+        type: string
+    type: object
+  resp.CompanyPaymentMethodListResp:
+    properties:
+      list:
+        description: 支付方式列表（已去重）
+        items:
+          $ref: '#/definitions/resp.CompanyPaymentMethodItem'
+        type: array
+    type: object
   resp.CompanyRoleInfo:
     properties:
       cashier_online:
@@ -10456,6 +10515,23 @@ definitions:
       uuid:
         description: 门店UUID
         type: integer
+    type: object
+  resp.CompanySummaryItem:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.CompanySummaryListResp:
+    properties:
+      list:
+        description: 门店列表
+        items:
+          $ref: '#/definitions/resp.CompanySummaryItem'
+        type: array
     type: object
   resp.ConfigInfoResp:
     properties:
@@ -37997,6 +38073,99 @@ paths:
       security:
       - JwtToken: []
       summary: 导出渠道营业统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/company/business/summary:
+    get:
+      consumes:
+      - application/json
+      description: 新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）和支付方式汇总（indicator_type=payment_method）
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsCompanySummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp，indicator_type=payment_method
+            返回 CompanyPaymentMethodSummaryResp
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取门店汇总统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/company/business/summary/export:
+    get:
+      consumes:
+      - application/json
+      description: 新管理端-报表-门店汇总统计导出。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsCompanySummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出任务已创建
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出门店汇总统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/company/payment_methods:
+    get:
+      consumes:
+      - application/json
+      description: 获取有权限的所有门店的支付方式，汇总去重后返回
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 支付方式列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyPaymentMethodListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店支付方式列表
+      tags:
+      - 商家端.报表
+  /shop/statistics/company_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取门店汇总统计可选择的门店列表（总店返回本店及下级所有子店，子店返回本店及已授权的其他门店）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 门店列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanySummaryListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店列表
       tags:
       - 商家端.报表
   /shop/statistics/export:

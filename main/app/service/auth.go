@@ -52,6 +52,7 @@ type IAuthSrv interface {
 	RefreshToken(ctx context.Context) (resp.LoginResp, error)                                                              // 刷新token
 	ShopBase(ctx context.Context) (resp.ShopBase, error)                                                                   // 移动管理端基本信息
 	ChangePassword(ctx context.Context, changePasswordReq req.ChangePasswordReq) error                                     // 移动管理端-修改密码
+	GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp                                                           // 获取员工可用的商家列表（过滤已过期、异常的商家）
 }
 
 func NewAuthSrv(
@@ -623,7 +624,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		cashierBase.CompanyList = s.getCompanyList(ctx)
+		cashierBase.CompanyList = s.GetCompanyList(ctx)
 		return cashierBase, nil
 	}
 
@@ -700,7 +701,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		Printer:    printerSetting,
 		UpdateTime: time.Now().Unix(),
 
-		CompanyList: s.getCompanyList(ctx),
+		CompanyList: s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -710,7 +711,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		assistantBase.CompanyList = s.getCompanyList(ctx)
+		assistantBase.CompanyList = s.GetCompanyList(ctx)
 		return assistantBase, nil
 	}
 
@@ -820,7 +821,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Kitchen:       kitchenSettingResp,
 		ClientVersion: clientVersion,
 		ServerVersion: utils.GetVersion(),
-		CompanyList:   s.getCompanyList(ctx),
+		CompanyList:   s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -830,7 +831,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		tabletBase.CompanyList = s.getCompanyList(ctx)
+		tabletBase.CompanyList = s.GetCompanyList(ctx)
 		return tabletBase, nil
 	}
 
@@ -896,7 +897,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		Tablet:   tabletSettingResp,
 		Kitchen:  kitchenSettingResp,
 
-		CompanyList: s.getCompanyList(ctx),
+		CompanyList: s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -909,7 +910,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 
 	// 如果 company_uuid 为 0，返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		kitchenBase.CompanyList = s.getCompanyList(ctx)
+		kitchenBase.CompanyList = s.GetCompanyList(ctx)
 		return kitchenBase, nil
 	}
 
@@ -964,7 +965,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		Kitchen:       kitchenSettingResp,
 		ServerVersion: utils.GetVersion(),
 		ClientVersion: clientVersion,
-		CompanyList:   s.getCompanyList(ctx),
+		CompanyList:   s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -979,7 +980,7 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 	// 3. 前端可以根据 company_list 判断是否需要显示门店选择界面
 	// 参考：story-auth-unified-account 统一账号认证功能设计
 	if ctx.GetCompanyUuid() == 0 {
-		kioskBase.CompanyList = s.getCompanyList(ctx)
+		kioskBase.CompanyList = s.GetCompanyList(ctx)
 		return kioskBase, nil
 	}
 
@@ -1024,7 +1025,7 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 		Business:    businessSetting,
 		Kiosk:       kioskSetting.KioskResp,
 		UpdateTime:  time.Now().Unix(),
-		CompanyList: s.getCompanyList(ctx),
+		CompanyList: s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -1405,7 +1406,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		shopBase.CompanyList = s.getCompanyList(ctx)
+		shopBase.CompanyList = s.GetCompanyList(ctx)
 		return shopBase, nil
 	}
 
@@ -1511,7 +1512,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		LastSyncTime:      company.LastSyncTime,
 		HasChildren:       companySetting.HasChildren == 1,
 		HasDataPermission: hasDataPermission,
-		CompanyList:       s.getCompanyList(ctx),
+		CompanyList:       s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -1765,8 +1766,8 @@ func (s *authSrv) StoreSwitch(ctx context.Context, switchReq req.StoreSwitchReq)
 	}, nil
 }
 
-// getAvailableCompanyList 获取员工可用的商家列表（过滤已过期、异常的商家）
-func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
+// GetCompanyList 获取员工可用的商家列表（过滤已过期、异常的商家）
+func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 	// 过滤可用门店（过滤已过期、异常的商家）
 	availableCompanyList := make([]*resp.CompanyStaffResp, 0)
 

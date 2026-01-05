@@ -232,15 +232,28 @@ type StatisticsSummaryReq struct {
 
 // StatisticsPaymentMethodReq 统计收款数据请求
 type StatisticsPaymentMethodReq struct {
-	dto.PageReq              // 分页参数
-	QueryStartTime    int64  `form:"query_start_time" json:"query_start_time"`       // 查询开始时间戳
-	QueryEndTime      int64  `form:"query_end_time" json:"query_end_time"`           // 查询结束时间戳
-	QueryStartDate    string `form:"query_start_date" json:"query_start_date"`       // 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
-	QueryEndDate      string `form:"query_end_date" json:"query_end_date"`           // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
-	Cycle             int    `form:"cycle" json:"cycle"`                             // 周期: 0=按日、1=按月
-	OrderInstant      int    `form:"order_instant" json:"order_instant"`             // 点餐订单， 0=否、 1=是
-	OrderDesk         int    `form:"order_desk" json:"order_desk"`                   // 桌台订单， 0=否、 1=是
-	OrderTakeout      int    `form:"order_takeout" json:"order_takeout"`             // 外送订单， 0=否、 1=是
-	PaymentMethodList string `form:"payment_method_list" json:"payment_method_list"` // 支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割
-	ExcludeDataManage bool   `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
+	dto.PageReq                 // 分页参数
+	QueryStartTime     int64    `form:"query_start_time" json:"query_start_time"`         // 查询开始时间戳
+	QueryEndTime       int64    `form:"query_end_time" json:"query_end_time"`             // 查询结束时间戳
+	QueryStartDate     string   `form:"query_start_date" json:"query_start_date"`         // 查询开始日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+	QueryEndDate       string   `form:"query_end_date" json:"query_end_date"`             // 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
+	Cycle              int      `form:"cycle" json:"cycle"`                               // 周期: 0=按日、1=按月
+	OrderInstant       int      `form:"order_instant" json:"order_instant"`               // 点餐订单， 0=否、 1=是
+	OrderDesk          int      `form:"order_desk" json:"order_desk"`                     // 桌台订单， 0=否、 1=是
+	OrderTakeout       int      `form:"order_takeout" json:"order_takeout"`               // 外送订单， 0=否、 1=是
+	PaymentMethodList  string   `form:"payment_method_list" json:"payment_method_list"`   // 支付方式UUID列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割（优先使用）
+	PaymentMethodNames []string `form:"payment_method_names" json:"payment_method_names"` // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
+	ExcludeDataManage  bool     `form:"exclude_data_manage" json:"exclude_data_manage"`   // 是否排除数据管理订单
+}
+
+// StatisticsCompanySummaryReq 门店汇总统计请求
+type StatisticsCompanySummaryReq struct {
+	dto.PageReq                 // 分页参数
+	IndicatorType      string   `form:"indicator_type" json:"indicator_type"`             // 数据指标类型：business(营业数据汇总)、payment_method(支付方式汇总)、refund(退款金额汇总)
+	CompanyUuids       []uint64 `form:"company_uuids" json:"company_uuids"`               // 门店UUID列表（多选），为空时默认为当前门店
+	QueryStartDate     string   `form:"query_start_date" json:"query_start_date"`         // 开始日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日开始日期：YYYY-MM-DD 00:00:00
+	QueryEndDate       string   `form:"query_end_date" json:"query_end_date"`             // 结束日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日结束日期：YYYY-MM-DD 23:59:59
+	Cycle              int      `form:"cycle" json:"cycle"`                               // 周期: 0=按日、1=按月
+	Report             int      `form:"report" json:"report"`                             // 报表类型: 0=明细表、1=汇总表
+	PaymentMethodNames []string `form:"payment_method_names" json:"payment_method_names"` // 支付方式名称列表（仅支付方式汇总时使用，可选）
 }
