@@ -2142,34 +2142,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 				},
 			},
 			WithPreload{
-				// 用于检查商品包是否下架
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductPackage",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material.WarehouseItems",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material.WarehouseItems",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
-			},
-			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.BatchTag",
 			},
 			WithPreload{
@@ -3693,6 +3665,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	taxRepo := NewTaxRepo(db)
 	productUnitRepo := NewProductUnitRepo(db)
 	productCategoryRepo := NewProductCategoryRepo(db)
+	productBomRepo := NewProductBomRepo(db)
+	productBomCardRepo := NewProductBomCardRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：Desk
@@ -4327,6 +4301,116 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 					return productCategoryRepo.GetProductCategory(
 						CommonRepo.WhereByUuid(uuid),
 					)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		// ==================== 销售账单的订单商品BOM信息 ====================
+		// 注意：SaleOrderProductBoms 列表通过 GORM Preload 加载，不使用对象存储层
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom",
+			ObjectType: "product_bom",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if bom, ok := obj.(*model.SaleOrderProductBom); ok && bom != nil {
+					return bom.ProductBomUuid
+				}
+				// 处理值类型
+				if bom, ok := obj.(model.SaleOrderProductBom); ok {
+					return bom.ProductBomUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.ProductBom, error) {
+					return productBomRepo.GetProductBomByUuid(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
+					boms, err := productBomRepo.GetProductBomsByUuidsWithAssociations(uuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.ProductBom)
+					for _, bom := range boms {
+						if bom != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, bom.Uuid)
+							result[key] = bom
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard",
+			ObjectType: "product_bom_card",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if sauce, ok := obj.(*model.ProductSauce); ok && sauce != nil {
+					return sauce.ProductBomCardUuid
+				}
+				// 处理值类型
+				if sauce, ok := obj.(model.ProductSauce); ok {
+					return sauce.ProductBomCardUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBomCard](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBomCard, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.ProductBomCard, error) {
+					// 使用 GetProductBomCardWithMaterials 方法，一次性加载所有关联数据
+					// 包括 RelatedMaterials.Material.WarehouseItems
+					return productBomCardRepo.GetProductBomCardWithMaterials(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard
+		{
+			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard",
+			ObjectType: "product_bom_card",
+			GetUUID: func(obj interface{}) uint64 {
+				// 处理指针类型
+				if bom, ok := obj.(*model.ProductBom); ok && bom != nil {
+					return bom.ProductBomCardUuid
+				}
+				// 处理值类型
+				if bom, ok := obj.(model.ProductBom); ok {
+					return bom.ProductBomCardUuid
+				}
+				return 0
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBomCard](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBomCard, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.ProductBomCard, error) {
+					return productBomCardRepo.GetProductBomCardWithMaterials(uuid)
 				})
 				if err != nil {
 					return nil, err
