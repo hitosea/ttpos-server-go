@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -175,6 +176,15 @@ type IProductSrv interface {
 	SyncProduct(ctx context.Context, syncHeadquarterData bool) error             // 同步商品
 	SyncProductStockByBomCard(ctx context.Context) error                         // 计算所有关联成本卡的商品的库存
 	SyncProductPackageImage(ctx context.Context, syncHeadquarterData bool) error // 同步商品包图片
+
+	// ========== 总店删除资源时检查子店使用情况 ==========
+	// 删除前检查接口
+	CheckFlavorUsageBeforeDelete(ctx context.Context, flavorUuid uint64) (*product_resp.ResourceUsageResp, error)                 // 检查规格删除前的子店使用情况
+	CheckAttributeGroupUsageBeforeDelete(ctx context.Context, attributeGroupUuid uint64) (*product_resp.ResourceUsageResp, error) // 检查属性组删除前的子店使用情况
+	CheckAttributeUsageBeforeDelete(ctx context.Context, attributeUuid uint64) (*product_resp.ResourceUsageResp, error)           // 检查属性删除前的子店使用情况
+	CheckSauceUsageBeforeDelete(ctx context.Context, sauceUuid uint64) (*product_resp.ResourceUsageResp, error)                   // 检查加料删除前的子店使用情况
+	CheckUnitUsageBeforeDelete(ctx context.Context, unitUuid uint64) (*product_resp.ResourceUsageResp, error)                     // 检查单位删除前的子店使用情况
+	CheckProductUsageBeforeDelete(ctx context.Context, productUuid uint64) (*product_resp.ResourceUsageResp, error)               // 检查商品删除前的子店使用情况
 }
 
 type productSrv struct {
@@ -1487,6 +1497,15 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		return nil, errors.New("商品不可删除")
 	}
 
+	// ========== 总店删除时检查子店使用情况 ==========
+	usage, err := s.CheckProductUsageBeforeDelete(ctx, request.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "检查子店使用情况失败")
+	}
+	if usage.IsUsed {
+		return &product_resp.ProductDeleteResp{List: usage.UsedByShops}, errors.NewWithReplace("删除失败，%s正在使用该商品", []string{strings.Join(usage.UsedByShops, "、")})
+	}
+
 	productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.WhereByRelatedUuid(request.Uuid),
@@ -2570,6 +2589,16 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 	if !isEditable(ctx, productUnit.HeadquarterUuid) {
 		return errors.New("单位不可删除")
 	}
+
+	// ========== 总店删除时检查子店使用情况 ==========
+	usage, err := s.CheckUnitUsageBeforeDelete(ctx, deleteUnitReq.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "检查子店使用情况失败")
+	}
+	if usage.IsUsed {
+		return errors.NewWithReplace("删除失败，%s正在使用该单位", []string{strings.Join(usage.UsedByShops, "、")})
+	}
+
 	// 是否关联商品
 	if len(productUnit.ProductPackages) > 0 {
 		return errors.New("该单位下存在商品，不允许删除")
@@ -2941,6 +2970,16 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 	if !isEditable(ctx, productSauce.HeadquarterUuid) {
 		return errors.New("加料不可删除")
 	}
+
+	// ========== 总店删除时检查子店使用情况 ==========
+	usage, err := s.CheckSauceUsageBeforeDelete(ctx, deleteReq.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "检查子店使用情况失败")
+	}
+	if usage.IsUsed {
+		return errors.NewWithReplace("删除失败，%s正在使用该加料", []string{strings.Join(usage.UsedByShops, "、")})
+	}
+
 	// bom是否存在
 	bomRepo := repository.NewProductBomRepo(db)
 	boms, _ := bomRepo.GetProductBoms(bomRepo.WhereProductSauceUuid(deleteReq.Uuid), repository.NotDeleted)
@@ -3719,6 +3758,17 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		manualTranslatedUuids = append(manualTranslatedUuids, attribute.MultiLanguageNameUuid)
 		if !slices.Contains(attributeUuids, attribute.Uuid) {
 			deletingAttributeUuids = append(deletingAttributeUuids, attribute.Uuid)
+			// ========== 总店编辑属性组时，检查被移除的属性是否被子店使用 ==========
+			usage, err := s.CheckAttributeUsageBeforeDelete(ctx, attribute.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "检查子店使用情况失败")
+			}
+			if usage.IsUsed {
+				return errors.NewWithReplace("编辑失败，%s正在使用属性值%s", []string{
+					strings.Join(usage.UsedByShops, "、"),
+					attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				})
+			}
 		}
 	}
 
@@ -4393,6 +4443,15 @@ func (s *productSrv) DeleteProductAttribute(ctx context.Context, req req.Product
 		return errors.New("属性值不可删除")
 	}
 
+	// ========== 总店删除时检查子店使用情况 ==========
+	usage, err := s.CheckAttributeUsageBeforeDelete(ctx, req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "检查子店使用情况失败")
+	}
+	if usage.IsUsed {
+		return errors.NewWithReplace("删除失败，%s正在使用该属性值", []string{strings.Join(usage.UsedByShops, "、")})
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除商品属性
 		err = tx.Model(&model.ProductAttribute{}).Where("uuid = ?", productAttribute.Uuid).Update("delete_time", time.Now().Unix()).Error
@@ -4475,6 +4534,15 @@ func (s *productSrv) DeleteProductAttributeGroup(ctx context.Context, req req.Pr
 		return errors.New("属性组不可删除")
 	}
 
+	// ========== 总店删除时检查子店使用情况 ==========
+	usage, err := s.CheckAttributeGroupUsageBeforeDelete(ctx, req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "检查子店使用情况失败")
+	}
+	if usage.IsUsed {
+		return errors.NewWithReplace("删除失败，%s正在使用该属性组", []string{strings.Join(usage.UsedByShops, "、")})
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 
 		// 删除属性组
@@ -4527,6 +4595,16 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 	if productFlavor.HeadquarterUuid != 0 {
 		return errors.New("无法删除总部商品规格")
 	}
+
+	// ========== 总店删除时检查子店使用情况 ==========
+	usage, err := s.CheckFlavorUsageBeforeDelete(ctx, deleteReq.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "检查子店使用情况失败")
+	}
+	if usage.IsUsed {
+		return errors.NewWithReplace("删除失败，%s正在使用该规格", []string{strings.Join(usage.UsedByShops, "、")})
+	}
+
 	// 判断商品规格是否关联了商品
 	productBomCount, _ := productRepo.GetProductBomCount(
 		commonRepo.WhereByProductFlavorUuid(productFlavor.Uuid),
@@ -7183,7 +7261,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 							commonRepo.WhereByAttributeUuid(attribute.Uuid),
 							commonRepo.WhereBySoftDelete(),
 						)
-						if productPackageAttribute.Uuid == 0 {
+						if productPackageAttribute == nil || productPackageAttribute.Uuid == 0 {
 							uuid, _ := utils.GetID()
 							productPackageAttribute = &model.ProductPackageAttribute{
 								BaseModel: model.BaseModel{
@@ -9209,4 +9287,159 @@ func (s *productSrv) injectProductListStockNum(ctx context.Context, productList 
 	}
 	// 为商品列表注入库存（包括规格和小料）
 	product_resp.ProductSlice(productList).InjectStockNum(stockNumMap)
+}
+
+// ========== 总店删除资源时检查子店使用情况 ==========
+// checkResourceUsageAcrossShops 通用的跨数据库资源使用情况检查方法
+func (s *productSrv) checkResourceUsageAcrossShops(
+	ctx context.Context,
+	resourceUuid uint64,
+	checkFunc func(*gorm.DB, uint64) (bool, error),
+) (*product_resp.ResourceUsageResp, error) {
+	companySetting := ctx.GetCompanySetting()
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 如果是子店，直接返回未使用
+	if companySetting.IsSubShop() {
+		return &product_resp.ResourceUsageResp{
+			IsUsed:      false,
+			UsedByShops: []string{},
+			TotalCount:  0,
+		}, nil
+	}
+
+	// 从 SAAS 数据库获取所有子店列表
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
+
+	childShops, err := companyRepo.GetNoDeleteListByHeadquarterUuid(companyUuid)
+	if err != nil {
+		logger.Logger.Error("获取子店列表失败", zap.Error(err))
+		return nil, errors.WithMessage(err, "获取子店列表失败")
+	}
+
+	// 并发查询每个子店
+	type shopResult struct {
+		ShopName string
+		IsUsed   bool
+	}
+
+	results := make([]shopResult, 0)
+	mu := &sync.Mutex{}
+	wg := &sync.WaitGroup{}
+
+	// 信号量限流（最多同时 20 个子店）
+	semaphore := make(chan struct{}, 20)
+
+	for _, shop := range childShops {
+		// 跳过总店自己
+		if shop.Uuid == companyUuid {
+			continue
+		}
+
+		wg.Add(1)
+		go func(shopUuid uint64, shopName string) {
+			defer wg.Done()
+
+			// 限流
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// 获取子店数据库连接
+			shopDB := s.dbm.GetDB(shopUuid)
+			if shopDB == nil {
+				logger.Logger.Warn("无法连接子店数据库",
+					zap.String("shop", shopName),
+					zap.Uint64("shop_uuid", shopUuid),
+				)
+				return
+			}
+
+			// 调用检查函数
+			isUsed, err := checkFunc(shopDB, resourceUuid)
+			if err != nil {
+				logger.Logger.Warn("查询子店使用情况失败",
+					zap.String("shop", shopName),
+					zap.Error(err),
+				)
+				return
+			}
+
+			if isUsed {
+				mu.Lock()
+				results = append(results, shopResult{
+					ShopName: shopName,
+					IsUsed:   true,
+				})
+				mu.Unlock()
+			}
+		}(shop.Uuid, shop.Name)
+	}
+
+	wg.Wait()
+
+	// 按名称排序
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].ShopName < results[j].ShopName
+	})
+
+	// 构造响应（返回所有子店名称）
+	usedShops := make([]string, 0, len(results))
+	for _, result := range results {
+		usedShops = append(usedShops, result.ShopName)
+	}
+
+	return &product_resp.ResourceUsageResp{
+		IsUsed:      len(results) > 0,
+		UsedByShops: usedShops,
+		TotalCount:  len(results),
+	}, nil
+}
+
+// CheckFlavorUsageBeforeDelete 检查规格删除前的子店使用情况
+func (s *productSrv) CheckFlavorUsageBeforeDelete(ctx context.Context, flavorUuid uint64) (*product_resp.ResourceUsageResp, error) {
+	return s.checkResourceUsageAcrossShops(ctx, flavorUuid, func(db *gorm.DB, uuid uint64) (bool, error) {
+		productRepo := repository.NewProductRepo(db)
+		return productRepo.CheckFlavorUsageInShop(uuid)
+	})
+}
+
+// CheckAttributeGroupUsageBeforeDelete 检查属性组删除前的子店使用情况
+func (s *productSrv) CheckAttributeGroupUsageBeforeDelete(ctx context.Context, attributeGroupUuid uint64) (*product_resp.ResourceUsageResp, error) {
+	return s.checkResourceUsageAcrossShops(ctx, attributeGroupUuid, func(db *gorm.DB, uuid uint64) (bool, error) {
+		productRepo := repository.NewProductRepo(db)
+		return productRepo.CheckAttributeGroupUsageInShop(uuid)
+	})
+}
+
+// CheckAttributeUsageBeforeDelete 检查属性删除前的子店使用情况
+func (s *productSrv) CheckAttributeUsageBeforeDelete(ctx context.Context, attributeUuid uint64) (*product_resp.ResourceUsageResp, error) {
+	return s.checkResourceUsageAcrossShops(ctx, attributeUuid, func(db *gorm.DB, uuid uint64) (bool, error) {
+		productRepo := repository.NewProductRepo(db)
+		return productRepo.CheckAttributeUsageInShop(uuid)
+	})
+}
+
+// CheckSauceUsageBeforeDelete 检查加料删除前的子店使用情况
+func (s *productSrv) CheckSauceUsageBeforeDelete(ctx context.Context, sauceUuid uint64) (*product_resp.ResourceUsageResp, error) {
+	return s.checkResourceUsageAcrossShops(ctx, sauceUuid, func(db *gorm.DB, uuid uint64) (bool, error) {
+		productRepo := repository.NewProductRepo(db)
+		return productRepo.CheckSauceUsageInShop(uuid)
+	})
+}
+
+// CheckUnitUsageBeforeDelete 检查单位删除前的子店使用情况
+func (s *productSrv) CheckUnitUsageBeforeDelete(ctx context.Context, unitUuid uint64) (*product_resp.ResourceUsageResp, error) {
+	return s.checkResourceUsageAcrossShops(ctx, unitUuid, func(db *gorm.DB, uuid uint64) (bool, error) {
+		productRepo := repository.NewProductRepo(db)
+		return productRepo.CheckUnitUsageInShop(uuid)
+	})
+}
+
+// CheckProductUsageBeforeDelete 检查商品删除前的子店使用情况
+func (s *productSrv) CheckProductUsageBeforeDelete(ctx context.Context, productUuid uint64) (*product_resp.ResourceUsageResp, error) {
+	return s.checkResourceUsageAcrossShops(ctx, productUuid, func(db *gorm.DB, uuid uint64) (bool, error) {
+		productRepo := repository.NewProductRepo(db)
+		return productRepo.CheckProductUsageInPackage(uuid)
+	})
 }
