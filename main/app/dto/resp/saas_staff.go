@@ -4,6 +4,7 @@ package resp
 type CompanyStaffResp struct {
 	CompanyUuid uint64   `json:"company_uuid"` // 门店UUID
 	CompanyName string   `json:"company_name"` // 门店名称
+	StoreCode   string   `json:"store_code"`   // 店铺编号
 	Roles       []string `json:"roles"`        // 角色列表
 	IsSuper     int      `json:"is_super"`     // 是否超级管理员
 }

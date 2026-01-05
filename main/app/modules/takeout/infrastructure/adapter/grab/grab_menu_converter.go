@@ -19,6 +19,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
+	"github.com/shopspring/decimal"
 )
 
 // GrabConverter Grab 平台转换器实现
@@ -284,10 +285,11 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 				minPrice = flavorPrice
 			}
 		}
-		price = int64(minPrice * 100) // 转换为分
+		// 使用 decimal 包避免浮点数精度问题，转换为分
+		price = decimal.NewFromFloat(minPrice).Mul(decimal.NewFromInt(100)).IntPart()
 	} else {
 		// 没有规格，优先使用外卖商品价格，否则使用店内商品原价
-		price = int64(takeoutProduct.Price * 100)
+		price = decimal.NewFromFloat(takeoutProduct.Price).Mul(decimal.NewFromInt(100)).IntPart()
 	}
 
 	// 创建商品值对象
@@ -541,7 +543,7 @@ func (c *GrabConverter) convertProductFlavors(
 
 		// 计算规格价格：与最小规格的差价（当前规格价格 - 最小规格价格）
 		priceDiff := flavorPrice - minFlavorPrice
-		priceInCents := int64(priceDiff * 100) // 转换为分
+		priceInCents := decimal.NewFromFloat(priceDiff).Mul(decimal.NewFromInt(100)).IntPart() // 转换为分
 
 		// 判断规格状态：
 		// 1. 售罄（is_sold_out = 1）-> UNAVAILABLE
@@ -673,7 +675,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		modifier.SetName(sauceName)
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
-		modifier.SetPrice(int64(bom.Price * 100)) // 转换为分
+		modifier.SetPrice(decimal.NewFromFloat(bom.Price).Mul(decimal.NewFromInt(100)).IntPart()) // 转换为分
 		if bom.ProductSauce.MultiLanguageName.Uuid != 0 {
 			modifier.SetNameTranslation(c.filterSupportedLanguages(bom.ProductSauce.MultiLanguageName.ToMap()))
 		}
@@ -916,7 +918,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 			}
 
 			// 使用外卖平台的加价（从 ProductPackageGroupItemTakeout.AddPrice）
-			priceInCents := int64(itemTakeout.AddPrice * 100)
+			priceInCents := decimal.NewFromFloat(itemTakeout.AddPrice).Mul(decimal.NewFromInt(100)).IntPart()
 
 			// 创建修饰符
 			modifier := grabfood.NewMenuModifierWithDefaults()

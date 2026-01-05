@@ -1109,14 +1109,12 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, nil)
 		return
 	}
-	uuid, err := h.productSrv.AddProductShop(ctx, addReq)
+	productDetailResp, err := h.productSrv.AddProductShop(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, map[string]interface{}{
-		"uuid": uuid,
-	}, "保存成功")
+	helper.Success(c, productDetailResp, "保存成功")
 }
 
 // ProductShopEdit 编辑商品
