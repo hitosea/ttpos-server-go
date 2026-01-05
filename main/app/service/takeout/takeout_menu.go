@@ -50,12 +50,12 @@ func (s *takeoutSrv) ToggleTakeoutStatus(ctx context.Context, req request.Toggle
 	if req.Platform == "grab" {
 		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveGrabPaymentMethod(ctx, ctx.GetDB())
 		if err != nil {
-			return nil, errors.WithMessage(err, "保存Grab支付方式失败")
+			return nil, errors.WithMessage(errors.New("保存Grab支付方式失败"), err.Error())
 		}
 	} else if req.Platform == "lineman" {
 		err := service.NewPaymentMethodSrv(s.dbm, s.settingSrv).SaveLineManPaymentMethod(ctx, ctx.GetDB())
 		if err != nil {
-			return nil, errors.WithMessage(err, "保存LINE MAN支付方式失败")
+			return nil, errors.WithMessage(errors.New("保存LINE MAN支付方式失败"), err.Error())
 		}
 	}
 	return s.takeoutAppSrv.ToggleTakeoutStatus(ctx, req)
@@ -80,7 +80,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 	// 1. 检查推送状态
 	canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, platform)
 	if err != nil {
-		return errors.WithMessage(err, "检查推送状态失败")
+		return errors.WithMessage(errors.New("检查推送状态失败"), err.Error())
 	}
 	if !canImport {
 		errMsg := fmt.Sprintf("已有推送任务正在进行中 (UUID: %d)", inProgressLog.Uuid)
@@ -98,7 +98,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 	importDirection := fmt.Sprintf("TTPOS推送到%s", platformName)
 	importLog, err := progressService.StartImport(ctx, platform, 1, importDirection)
 	if err != nil {
-		return errors.WithMessage(err, "开始推送失败")
+		return errors.WithMessage(errors.New("开始推送失败"), err.Error())
 	}
 
 	// 3. 获取货币设置 (进度 0-20%)
@@ -110,7 +110,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 		)
 		// 标记推送失败
 		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, "获取货币设置失败: "+err.Error())
-		return errors.WithMessage(err, "获取货币设置失败")
+		return errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
 	}
 
 	// 更新进度到 20%
@@ -125,7 +125,7 @@ func (s *takeoutSrv) PushMenuToPlatform(ctx context.Context, platform string) er
 		)
 		// 标记推送失败
 		_ = progressService.CompleteImport(ctx, importLog.Uuid, false, "推送菜单失败: "+err.Error())
-		return errors.WithMessage(err, "推送菜单失败")
+		return errors.WithMessage(errors.New("推送菜单失败"), err.Error())
 	}
 
 	// 更新进度到 100%
@@ -153,7 +153,7 @@ func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImpor
 	// 保存菜单到数据库
 	err = s.takeoutAppSrv.UpdateTakeoutMenu(ctx, "grab", takeoutMenu.Menu)
 	if err != nil {
-		return nil, errors.WithMessage(err, "保存菜单到数据库失败")
+		return nil, errors.WithMessage(errors.New("保存菜单到数据库失败"), err.Error())
 	}
 
 	// TODO: 传产品说 "导入菜单到TTPOS的功能不需要了，我认为不合理 就先保留注释"
@@ -168,7 +168,7 @@ func (s *takeoutSrv) ImportMenuToTTPOS(ctx context.Context) (*resp.GrabMenuImpor
 
 	err = s.PushMenuToPlatform(ctx, "grab")
 	if err != nil {
-		return nil, errors.WithMessage(err, "推送菜单到Grab失败")
+		return nil, errors.WithMessage(errors.New("推送菜单到Grab失败"), err.Error())
 	}
 
 	return nil, nil
@@ -182,7 +182,7 @@ func (s *takeoutSrv) ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*
 	// 1. 查询日志
 	log, err := persistence.NewTakeoutImportLogRepository(db).FindByUUID(ctx, logUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询导入日志失败")
+		return nil, errors.WithMessage(errors.New("查询导入日志失败"), err.Error())
 	}
 	if log == nil {
 		return nil, errors.New("导入日志不存在")
@@ -203,7 +203,7 @@ func (s *takeoutSrv) ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*
 	// 3. 检查是否有正在进行的导入
 	canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, log.Platform)
 	if err != nil {
-		return nil, errors.WithMessage(err, "检查导入状态失败")
+		return nil, errors.WithMessage(errors.New("检查导入状态失败"), err.Error())
 	}
 	if !canImport {
 		errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.Uuid)
@@ -213,7 +213,7 @@ func (s *takeoutSrv) ReimportMenuToTTPOS(ctx context.Context, logUuid uint64) (*
 	// 4. 获取菜单数据
 	takeoutMenu, err := s.takeoutAppSrv.GetGrabMenu(ctx)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取菜单数据失败")
+		return nil, errors.WithMessage(errors.New("获取菜单数据失败"), err.Error())
 	}
 
 	// 5. 调用 ImportMenu，传入日志 UUID 进行重新导入
@@ -239,7 +239,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	grabConverter := grab.NewGrabConverter(s.dbm, nil)
 	result, err := grabConverter.ConvertToTTPOS(ctx, grabMenu)
 	if err != nil {
-		return nil, errors.WithMessage(err, "转换菜单格式失败")
+		return nil, errors.WithMessage(errors.New("转换菜单格式失败"), err.Error())
 	}
 
 	// 类型断言为 grabfood.GetMenuNewResponse
@@ -258,7 +258,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 	// 检查Takeout表的导入状态
 	takeoutStatus, err := takeoutService.GetImportStatus(ctx, platform)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取Takeout表失败")
+		return nil, errors.WithMessage(errors.New("获取Takeout表失败"), err.Error())
 	}
 	if takeoutStatus == takeoutModel.ImportStatusSuccess {
 		return nil, nil
@@ -271,7 +271,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		// 查询并重置日志
 		log, err := persistence.NewTakeoutImportLogRepository(db).FindByUUID(ctx, *reimportLogUuid)
 		if err != nil {
-			return nil, errors.WithMessage(err, "查询导入日志失败")
+			return nil, errors.WithMessage(errors.New("查询导入日志失败"), err.Error())
 		}
 		if log == nil {
 			return nil, errors.New("导入日志不存在")
@@ -289,14 +289,14 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		log.UpdateTime = time.Now().Unix()
 
 		if err := persistence.NewTakeoutImportLogRepository(db).Update(ctx, log); err != nil {
-			return nil, errors.WithMessage(err, "重置日志状态失败")
+			return nil, errors.WithMessage(errors.New("重置日志状态失败"), err.Error())
 		}
 		importLog = log
 	} else {
 		// 1. 检查导入状态
 		canImport, inProgressLog, err := progressService.CheckImportStatus(ctx, platform)
 		if err != nil {
-			return nil, errors.WithMessage(err, "检查导入状态失败")
+			return nil, errors.WithMessage(errors.New("检查导入状态失败"), err.Error())
 		}
 		if !canImport {
 			errMsg := fmt.Sprintf("已有导入任务正在进行中 (UUID: %d)", inProgressLog.Uuid)
@@ -309,7 +309,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		importDirection := fmt.Sprintf("%s推送到TTPOS", strings.ToUpper(platform))
 		log, err := progressService.StartImport(ctx, platform, 2, importDirection)
 		if err != nil {
-			return nil, errors.WithMessage(err, "开始导入失败")
+			return nil, errors.WithMessage(errors.New("开始导入失败"), err.Error())
 		}
 		importLog = log
 	}
@@ -334,7 +334,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		// 3.1 提取分类并创建或更新 (进度 0-10%)
 		categoryMap, err := s.syncCategories(copyCtx, platform, takeoutMenu.GetCategories())
 		if err != nil {
-			return err
+			return errors.WithMessage(errors.New("同步分类失败"), err.Error())
 		}
 
 		// 更新进度到 10%
@@ -343,7 +343,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		// 3.2 同步商品规格（标准规格）(进度 10-15%)
 		productFlavorUuid, err := s.syncProductFlavor(copyCtx, platform)
 		if err != nil {
-			return err
+			return errors.WithMessage(errors.New("同步商品规格失败"), err.Error())
 		}
 
 		// 更新进度到 15%
@@ -352,7 +352,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 		// 3.3 同步商品单位（标准单位）(进度 15-20%)
 		unitUuid, err := s.syncProductUnit(copyCtx, platform)
 		if err != nil {
-			return err
+			return errors.WithMessage(errors.New("同步商品单位失败"), err.Error())
 		}
 
 		// 更新进度到 20%
@@ -398,7 +398,7 @@ func (s *takeoutSrv) importMenuWithLog(ctx context.Context, reqs request.ImportM
 			)
 		}
 
-		return nil, errors.WithMessage(err, "导入菜单失败")
+		return nil, errors.WithMessage(errors.New("导入菜单失败"), err.Error())
 	}
 
 	// 标记导入成功
@@ -466,7 +466,7 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 		commonRepo.Preload(repository.WithPreload{Query: "MultiLanguageName"}),
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取现有分类失败")
+		return nil, errors.WithMessage(errors.New("获取现有分类失败"), err.Error())
 	}
 
 	// 建立 source_id 到分类的映射
@@ -509,7 +509,7 @@ func (s *takeoutSrv) syncCategories(ctx context.Context, platform string, catego
 			// 创建新分类
 			productCategory, err := s.createCategory(ctx, category, platform)
 			if err != nil {
-				return nil, errors.WithMessage(err, fmt.Sprintf("创建分类失败: %s", category.GetName()))
+				return nil, errors.WithMessage(errors.New(fmt.Sprintf("创建分类失败: %s", category.GetName())), err.Error())
 			}
 			categoryMap[platformCategoryID] = productCategory.Uuid
 		}
@@ -550,12 +550,12 @@ func (s *takeoutSrv) createCategory(ctx context.Context, category *grabfood.Menu
 
 	productCategory, err := s.productSrv.AddProductShopCategory(ctx, categoryReq)
 	if err != nil {
-		return model.ProductCategory{}, errors.WithMessage(err, "创建分类失败")
+		return model.ProductCategory{}, errors.WithMessage(errors.New("创建分类失败"), err.Error())
 	}
 
 	if productCategory.MultiLanguageNameUuid > 0 {
 		if err := s.translateSrv.AddMultiLanguageNameUuidToSet(ctx.GetCompanyUuid(), productCategory.MultiLanguageNameUuid); err != nil {
-			return model.ProductCategory{}, errors.WithMessage(err, "同步基础规格添加多语言uuid到待翻译集合中失败")
+			return model.ProductCategory{}, errors.WithMessage(errors.New("同步基础规格添加多语言uuid到待翻译集合中失败"), err.Error())
 		}
 	}
 
@@ -611,18 +611,18 @@ func (s *takeoutSrv) updateCategory(ctx context.Context, existingCat model.Produ
 
 	productCategory, err := s.productSrv.EditProductShopCategory(ctx, categoryReq)
 	if err != nil {
-		return errors.WithMessage(err, "更新分类失败")
+		return errors.WithMessage(errors.New("更新分类失败"), err.Error())
 	}
 
 	if productCategory.MultiLanguageNameUuid > 0 {
 		// 不要覆盖多语言名称
 		err = repository.NewMultiLanguageNameRepo(ctx.GetDB()).NotOverwriteMultiLanguageName(productCategory.MultiLanguageNameUuid)
 		if err != nil {
-			return errors.WithMessage(err, "更新多语言名称失败")
+			return errors.WithMessage(errors.New("更新多语言名称失败"), err.Error())
 		}
 		// 添加多语言名称到待翻译集合
 		if err := s.translateSrv.AddMultiLanguageNameUuidToSet(ctx.GetCompanyUuid(), productCategory.MultiLanguageNameUuid); err != nil {
-			return errors.WithMessage(err, "同步基础规格添加多语言uuid到待翻译集合中失败")
+			return errors.WithMessage(errors.New("同步基础规格添加多语言uuid到待翻译集合中失败"), err.Error())
 		}
 	}
 
@@ -663,7 +663,7 @@ func (s *takeoutSrv) syncProductFlavor(ctx context.Context, platform string) (ui
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		// 查询出错
-		return 0, errors.WithMessage(err, "查询商品规格失败")
+		return 0, errors.WithMessage(errors.New("查询商品规格失败"), err.Error())
 	}
 
 	// 规格不存在，创建新规格
@@ -683,7 +683,7 @@ func (s *takeoutSrv) syncProductFlavor(ctx context.Context, platform string) (ui
 		SourceId: "standard",
 	})
 	if err != nil {
-		return 0, errors.WithMessage(err, "创建商品规格失败")
+		return 0, errors.WithMessage(errors.New("创建商品规格失败"), err.Error())
 	}
 
 	return productFlavorUuid, nil
@@ -711,7 +711,7 @@ func (s *takeoutSrv) syncProductUnit(ctx context.Context, platform string) (uint
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		// 查询出错
-		return 0, errors.WithMessage(err, "查询商品单位失败")
+		return 0, errors.WithMessage(errors.New("查询商品单位失败"), err.Error())
 	}
 
 	// 单位不存在，创建新单位
@@ -731,7 +731,7 @@ func (s *takeoutSrv) syncProductUnit(ctx context.Context, platform string) (uint
 		SourceId: "standard",
 	})
 	if err != nil {
-		return 0, errors.WithMessage(err, "创建商品单位失败")
+		return 0, errors.WithMessage(errors.New("创建商品单位失败"), err.Error())
 	}
 
 	// 重新查询获取 UUID
@@ -742,7 +742,7 @@ func (s *takeoutSrv) syncProductUnit(ctx context.Context, platform string) (uint
 		},
 	)
 	if err != nil {
-		return 0, errors.WithMessage(err, "获取商品单位UUID失败")
+		return 0, errors.WithMessage(errors.New("获取商品单位UUID失败"), err.Error())
 	}
 
 	return existingUnit.Uuid, nil
@@ -765,7 +765,7 @@ func (s *takeoutSrv) syncModifierGroups(ctx context.Context, platform string, mo
 		// 1. 同步属性组
 		attributeGroupUuid, err := s.syncAttributeGroup(ctx, platform, &modifierGroup)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessage(errors.New("同步属性组失败"), err.Error())
 		}
 		if attributeGroupUuid == 0 {
 			continue
