@@ -148,6 +148,7 @@ type Company struct {
 	IsOpenDataManagement bool   `json:"is_open_data_management"` // 是否开启数据管理功能
 	IsOpenKiosk          bool   `json:"is_open_kiosk"`           // 是否开启自助点餐机功能
 	IsOpenGrabDelivery   bool   `json:"is_open_grab_delivery"`   // 是否开启Grab外卖功能
+	StoreCode            string `json:"store_code"`              // 店铺编码，shop端用于显示
 }
 
 type Permission struct {

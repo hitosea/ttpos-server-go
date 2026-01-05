@@ -51812,6 +51812,10 @@ const docTemplate = `{
                     "description": "商家名称",
                     "type": "string"
                 },
+                "store_code": {
+                    "description": "店铺编码，shop端用于显示",
+                    "type": "string"
+                },
                 "time_zone": {
                     "description": "时区，形如 Asia/Shanghai",
                     "type": "string"
@@ -51907,6 +51911,10 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "store_code": {
+                    "description": "店铺编号",
+                    "type": "string"
                 }
             }
         },
