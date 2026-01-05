@@ -28,6 +28,8 @@ type IMemberRepo interface {
 	Update(uuid uint64, vars map[string]any) error       // 更新会员信息
 
 	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
+	GetMemberWithAssociations(memberUuid uint64) (*model.Member, error)                      // 根据会员UUID查询会员信息（包含MemberLevel、MemberCard.MemberCardType、MemberBalanceLog）
+	GetMembersWithAssociations(memberUuids []uint64) ([]*model.Member, error)                // 批量根据会员UUID列表查询会员信息（包含MemberLevel、MemberCard.MemberCardType、MemberBalanceLog）
 	UpdateProcessed(uuids []uint64) error                                                    // 更新会员积分日志为已处理
 
 	IncConsumptionAmount(uuid uint64, amount float64) error // 增加会员消费金额
@@ -321,6 +323,46 @@ func (r *memberRepo) GetMemberInfoForSaleOrder(ctx context.Context, memberUuid u
 		return nil, errors.New("会员不存在")
 	}
 	return &member, nil
+}
+
+// GetMemberWithAssociations 根据会员UUID查询会员信息（包含MemberLevel、MemberCard.MemberCardType、MemberBalanceLog）
+func (r *memberRepo) GetMemberWithAssociations(memberUuid uint64) (*model.Member, error) {
+	if memberUuid == 0 {
+		return nil, errors.New("会员UUID不能为0")
+	}
+	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberLevel(), r.WithMemberCardType(), r.WithMemberBalanceLog())
+	if member.Uuid == 0 {
+		return nil, errors.New("会员不存在")
+	}
+	return &member, nil
+}
+
+// GetMembersWithAssociations 批量根据会员UUID列表查询会员信息（包含MemberLevel、MemberCard.MemberCardType、MemberBalanceLog）
+func (r *memberRepo) GetMembersWithAssociations(memberUuids []uint64) ([]*model.Member, error) {
+	if len(memberUuids) == 0 {
+		return []*model.Member{}, nil
+	}
+	// 过滤掉 0 值
+	validUuids := make([]uint64, 0, len(memberUuids))
+	for _, uuid := range memberUuids {
+		if uuid > 0 {
+			validUuids = append(validUuids, uuid)
+		}
+	}
+	if len(validUuids) == 0 {
+		return []*model.Member{}, nil
+	}
+	// 批量查询会员列表，并预加载关联数据
+	members, err := r.GetMemberList(
+		CommonRepo.WhereInUuids(validUuids),
+		r.WithMemberLevel(),
+		r.WithMemberCardType(),
+		r.WithMemberBalanceLog(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "批量查询会员信息失败")
+	}
+	return members, nil
 }
 
 // UpdateProcessed 更新会员积分日志为已处理

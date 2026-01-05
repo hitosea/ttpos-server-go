@@ -101,4 +101,19 @@ const (
 
 	// PaymentMethod 支付方式
 	ObjectTypePaymentMethod = "payment_method"
+
+	// Member 会员
+	ObjectTypeMember = "member"
+
+	// MemberLevel 会员等级
+	ObjectTypeMemberLevel = "member_level"
+
+	// MemberCard 会员卡
+	ObjectTypeMemberCard = "member_card"
+
+	// MemberCardType 会员卡类型
+	ObjectTypeMemberCardType = "member_card_type"
+
+	// MemberBalanceLog 会员余额变动记录
+	ObjectTypeMemberBalanceLog = "member_balance_log"
 )

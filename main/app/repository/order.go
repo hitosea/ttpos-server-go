@@ -2078,15 +2078,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 				},
 			},
 			WithPreload{
-				Query: "SaleOrders.Member.MemberLevel",
-			},
-			WithPreload{
-				Query: "SaleOrders.Member.MemberCard.MemberCardType",
-			},
-			WithPreload{
-				Query: "SaleOrders.Member.MemberBalanceLog",
-			},
-			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts",
 				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
@@ -2166,8 +2157,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 			WithPreload{
 				Query: "Cashier",
 			},
-			// ==================== 销售账单的订单来源和国籍信息 ====================
-			// OrderSource 和 Nationality 及其 MultiLanguageName 通过对象存储层注入，此处不再预加载
 		),
 		CommonRepo.WhereBySoftDelete(),
 		uuidFilter,
@@ -3663,6 +3652,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	orderSourceRepo := NewOrderSourceRepo(db)
 	nationalityRepo := NewNationalityRepo(db)
 	paymentMethodRepo := NewPaymentMethodRepo(db)
+	memberRepo := NewMemberRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：SaleBillSetting
@@ -3999,6 +3989,65 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 						if coupon != nil {
 							key := persistence.BuildKey(ctx, persistence.ObjectTypeMemberCoupon, coupon.Uuid)
 							result[key] = coupon
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// ==================== 销售账单的会员信息 ====================
+		// 嵌套关联：SaleOrders.Member
+		{
+			Path:       "SaleOrders.Member",
+			ObjectType: "member",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(*model.SaleOrder).ConsumerUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				if uuid == 0 {
+					return nil, nil
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.Member](underlyingCache, 10*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeMember, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.Member, error) {
+					return memberRepo.GetMemberWithAssociations(uuid)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 过滤掉 0 值
+				validUuids := make([]uint64, 0, len(uuids))
+				for _, uuid := range uuids {
+					if uuid > 0 {
+						validUuids = append(validUuids, uuid)
+					}
+				}
+				if len(validUuids) == 0 {
+					return make(map[uint64]interface{}), nil
+				}
+				keys := make([]string, 0, len(validUuids))
+				for _, uuid := range validUuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMember, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.Member](underlyingCache, 10*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.Member, error) {
+					// 批量查询 Member 列表（包含关联数据）
+					members, err := memberRepo.GetMembersWithAssociations(validUuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.Member)
+					for _, member := range members {
+						if member != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeMember, member.Uuid)
+							result[key] = member
 						}
 					}
 					return result, nil
