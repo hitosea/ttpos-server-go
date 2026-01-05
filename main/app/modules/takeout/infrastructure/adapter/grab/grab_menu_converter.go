@@ -43,6 +43,20 @@ func (c *GrabConverter) GetPlatformName() string {
 	return "Grab"
 }
 
+// truncateName 截取名称，限制为 40 个字符（UTF-8 安全截取）
+// Grab 平台对名称长度有限制，超过限制会导致上传失败
+func (c *GrabConverter) truncateName(name string, maxLength ...int) string {
+	maxLengthValue := 40
+	if len(maxLength) > 0 {
+		maxLengthValue = maxLength[0]
+	}
+	nameRunes := []rune(name)
+	if len(nameRunes) > maxLengthValue {
+		return string(nameRunes[:maxLengthValue])
+	}
+	return name
+}
+
 // ConvertToTTPOS 从 Grab 格式转换为 TTPOS 数据
 // 现在直接返回 grabfood.GetMenuNewResponse，不再转换为 entity
 func (c *GrabConverter) ConvertToTTPOS(ctx context.Context, platformData interface{}) (interface{}, error) {
@@ -127,7 +141,7 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 	// 设置售卖时段
 	grabSellingTime := grabfood.NewSellingTimeWithDefaults()
 	grabSellingTime.SetId("SELLINGTIME-01")
-	grabSellingTime.SetName("全天")
+	grabSellingTime.SetName(c.truncateName("全天"))
 	grabSellingTime.SetStartTime("1000-01-01 00:00:00")
 	grabSellingTime.SetEndTime("9999-12-31 23:59:59")
 	grabSellingTime.SetServiceHours(grabfood.ServiceHours{
@@ -216,7 +230,7 @@ func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, seque
 		}
 		return fmt.Sprintf("TTPOS-CAT-%d", category.Uuid)
 	}())
-	categoryVO.SetName(categoryName)
+	categoryVO.SetName(c.truncateName(categoryName))
 	categoryVO.SetSequence(int32(sequence))
 	categoryVO.SetAvailableStatus(string(categoryStatus))
 	categoryVO.SetSellingTimeID("SELLINGTIME-01")
@@ -295,7 +309,7 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	// 创建商品值对象
 	menuItem := grabfood.NewMenuItemWithDefaults()
 	menuItem.SetSellingTimeID("SELLINGTIME-01")
-	menuItem.SetName(itemName)
+	menuItem.SetName(c.truncateName(itemName))
 	menuItem.SetSequence(int32(sequence))
 	menuItem.SetAvailableStatus(string(status))
 	menuItem.SetPrice(price)
@@ -389,7 +403,7 @@ func (c *GrabConverter) filterSupportedLanguages(translations map[string]string)
 	filtered := make(map[string]string)
 	for lang, value := range translations {
 		if supportedLangs[lang] && value != "" {
-			filtered[lang] = value
+			filtered[lang] = c.truncateName(value)
 		}
 	}
 
@@ -514,7 +528,7 @@ func (c *GrabConverter) convertProductFlavors(
 
 	modifierGroup := grabfood.NewModifierGroupWithDefaults()
 	modifierGroup.SetId(value_object.PrefixFlavorGroup + strconv.FormatUint(takeoutProduct.ProductPackageUuid, 10))
-	modifierGroup.SetName("Specifications")
+	modifierGroup.SetName(c.truncateName("Specifications"))
 	modifierGroup.SetNameTranslation(map[string]string{
 		"en": "Specifications",
 		"zh": "规格",
@@ -566,7 +580,7 @@ func (c *GrabConverter) convertProductFlavors(
 			}
 			return value_object.PrefixFlavor + strconv.FormatUint(bomTakeout.ProductBomUuid, 10)
 		}())
-		modifier.SetName(flavorName)
+		modifier.SetName(c.truncateName(flavorName))
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
 		modifier.SetPrice(priceInCents)
@@ -633,7 +647,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 
 	modifierGroup := grabfood.NewModifierGroupWithDefaults()
 	modifierGroup.SetId(fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", productPackage.Uuid))
-	modifierGroup.SetName("Add Toppings")
+	modifierGroup.SetName(c.truncateName("Add Toppings"))
 	modifierGroup.SetNameTranslation(map[string]string{
 		"en": "Add Toppings",
 		"zh": "加料",
@@ -672,7 +686,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 
 		modifier := grabfood.NewMenuModifierWithDefaults()
 		modifier.SetId(value_object.PrefixSauce + strconv.FormatUint(bom.Uuid, 10))
-		modifier.SetName(sauceName)
+		modifier.SetName(c.truncateName(sauceName))
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
 		modifier.SetPrice(decimal.NewFromFloat(bom.Price).Mul(decimal.NewFromInt(100)).IntPart()) // 转换为分
@@ -719,7 +733,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 			}
 			return value_object.PrefixAttrGroup + strconv.FormatUint(packageAttrGroup.ProductAttributeGroup.Uuid, 10)
 		}())
-		modifierGroup.SetName(groupName)
+		modifierGroup.SetName(c.truncateName(groupName))
 		modifierGroup.SetNameTranslation(c.filterSupportedLanguages(packageAttrGroup.ProductAttributeGroup.MultiLanguageName.ToMap()))
 		modifierGroup.SetSequence(int32(sequence))
 		modifierGroup.SetAvailableStatus(string(value_object.AvailableStatusAvailable))
@@ -745,7 +759,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 				}
 				return value_object.PrefixAttr + strconv.FormatUint(packageAttr.Uuid, 10)
 			}())
-			modifier.SetName(attrName)
+			modifier.SetName(c.truncateName(attrName))
 			modifier.SetSequence(int32(idx + 1))
 			modifier.SetAvailableStatus(string(value_object.AvailableStatusAvailable))
 			modifier.SetPrice(0)
@@ -890,7 +904,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 		// 创建修饰符组
 		modifierGroup := grabfood.NewModifierGroupWithDefaults()
 		modifierGroup.SetId(value_object.PrefixPackageGroup + strconv.FormatUint(packageGroup.Uuid, 10))
-		modifierGroup.SetName(groupName)
+		modifierGroup.SetName(c.truncateName(groupName))
 		modifierGroup.SetNameTranslation(nameTranslation)
 		modifierGroup.SetSequence(int32(sequence))
 		modifierGroup.SetAvailableStatus(string(value_object.AvailableStatusAvailable))
@@ -911,9 +925,9 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 			if groupItem.Num > 0 {
 				// 如果数量是整数，显示为整数；否则显示小数
 				if groupItem.Num == float64(int64(groupItem.Num)) {
-					itemName = fmt.Sprintf("%s * %d", itemName, int64(groupItem.Num))
+					itemName = fmt.Sprintf("%s * %d", c.truncateName(itemName, 32), int64(groupItem.Num))
 				} else {
-					itemName = fmt.Sprintf("%s * %.2f", itemName, groupItem.Num)
+					itemName = fmt.Sprintf("%s * %.2f", c.truncateName(itemName, 32), groupItem.Num)
 				}
 			}
 
@@ -923,7 +937,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 			// 创建修饰符
 			modifier := grabfood.NewMenuModifierWithDefaults()
 			modifier.SetId(value_object.PrefixPackageItem + strconv.FormatUint(groupItem.Uuid, 10))
-			modifier.SetName(itemName)
+			modifier.SetName(c.truncateName(itemName))
 			modifier.SetSequence(int32(idx + 1))
 			modifier.SetAvailableStatus(string(value_object.AvailableStatusAvailable))
 			modifier.SetPrice(priceInCents)
@@ -938,9 +952,9 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 				for lang, name := range translations {
 					if groupItem.Num > 0 {
 						if groupItem.Num == float64(int64(groupItem.Num)) {
-							translations[lang] = fmt.Sprintf("%s * %d", name, int64(groupItem.Num))
+							translations[lang] = fmt.Sprintf("%s * %d", c.truncateName(name, 32), int64(groupItem.Num))
 						} else {
-							translations[lang] = fmt.Sprintf("%s * %.2f", name, groupItem.Num)
+							translations[lang] = fmt.Sprintf("%s * %.2f", c.truncateName(name, 32), groupItem.Num)
 						}
 					}
 				}
