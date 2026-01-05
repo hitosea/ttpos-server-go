@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/modules/objectstorage/domain/entity"
 	cacheRepo "ttpos-server-go/app/modules/objectstorage/domain/repository"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/cache"
@@ -2842,7 +2843,8 @@ func convertBatchResultToUUIDMap[T any](batchResult map[string]T) map[uint64]int
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
 	orderRepo := NewOrderRepo(db)
-	deskRepo := NewDeskRepo(db)
+	// 获取 Desk 控制器单例（保证非 nil）
+	deskController := objectStorageController.GetDeskController()
 	productPackageRepo := NewProductPackageRepo(db)
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
 	productCategoryRepo := NewProductCategoryRepo(db)
@@ -2881,19 +2883,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(model.SaleBill).DeskUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.Desk](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeDesk, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.Desk, error) {
-					desk, err := deskRepo.GetDesk(
-						CommonRepo.WhereByUuid(uuid),
-						CommonRepo.WhereBySoftDelete(),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return &desk, nil
-				})
+				// 使用 Desk 控制器查询（统一管理缓存）
+				result, err := deskController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -3636,7 +3627,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
 	orderRepo := NewOrderRepo(db)
-	deskRepo := NewDeskRepo(db)
+	// 获取 Desk 控制器单例（保证非 nil）
+	deskController := objectStorageController.GetDeskController()
 	buffetPackageRepo := NewBuffetPackageRepo(db)
 	buffetProductRepo := NewBuffetProductRepo(db)
 	buffetCustomerTypePricesRepo := NewBuffetCustomerTypePricesRepo(db)
@@ -3683,19 +3675,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return obj.(model.SaleBill).DeskUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.Desk](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeDesk, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.Desk, error) {
-					desk, err := deskRepo.GetDesk(
-						CommonRepo.WhereByUuid(uuid),
-						CommonRepo.WhereBySoftDelete(),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return &desk, nil
-				})
+				// 使用 Desk 控制器查询（统一管理缓存）
+				result, err := deskController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
