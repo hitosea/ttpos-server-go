@@ -2043,31 +2043,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
-			// ==================== 销售账单的自助餐套餐1、2信息 ====================
-			// 加载自助餐套餐1多语言名称
-			WithPreload{
-				Query: "BuffetPackage1.MultiLanguageName",
-			},
-			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
-			WithPreload{
-				Query: "BuffetPackage1.BuffetCustomerTypePrices",
-			},
-			// 加载自助餐套餐1商品bom。用于判断加购的商品是否属于自助餐套餐1
-			WithPreload{
-				Query: "BuffetPackage1.BuffetProducts.ProductPackage",
-			},
-			// 加载自助餐套餐2多语言名称
-			WithPreload{
-				Query: "BuffetPackage2.MultiLanguageName",
-			},
-			// 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
-			WithPreload{
-				Query: "BuffetPackage2.BuffetCustomerTypePrices",
-			},
-			// 加载自助餐套餐2商品bom。用于判断加购的商品是否属于自助餐套餐2
-			WithPreload{
-				Query: "BuffetPackage2.BuffetProducts.ProductPackage",
-			},
 			// ==================== 销售账单的账单设置 ====================
 			WithPreload{
 				Query: "SaleBillSetting",
@@ -3732,6 +3707,11 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
 	deskRepo := NewDeskRepo(db)
+	buffetPackageRepo := NewBuffetPackageRepo(db)
+	buffetProductRepo := NewBuffetProductRepo(db)
+	buffetCustomerTypePricesRepo := NewBuffetCustomerTypePricesRepo(db)
+	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
+	productPackageRepo := NewProductPackageRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：Desk
@@ -3759,6 +3739,398 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 					return nil, err
 				}
 				return result, nil
+			},
+		},
+		// ==================== 销售账单的自助餐套餐1信息 ====================
+		// 一对一关系：BuffetPackage1
+		{
+			Path:       "BuffetPackage1",
+			ObjectType: "buffet_package",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).BuffetPackage1Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.BuffetPackage](underlyingCache, 10*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeBuffetPackage, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.BuffetPackage, error) {
+					buffetPackage, err := buffetPackageRepo.GetBuffetPackage(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					return &buffetPackage, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		// 一对一关系：BuffetPackage1.MultiLanguageName
+		{
+			Path:       "BuffetPackage1.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetPackage).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
+					return multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
+					names, err := multiLanguageNameRepo.GetMultiLanguageNameListByUuids(uuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.MultiLanguageName)
+					for _, name := range names {
+						if name != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, name.Uuid)
+							result[key] = name
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// 一对多关系：BuffetPackage1.BuffetProducts（列表）
+		{
+			Path:       "BuffetPackage1.BuffetProducts",
+			ObjectType: "buffet_products",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetPackage).Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 根据 BuffetPackageUuid 查询整个列表
+				products, err := buffetProductRepo.GetBuffetProducts(
+					CommonRepo.WhereByBuffetPackageUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return products, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 批量查询每个 BuffetPackage 对应的 BuffetProducts 列表
+				result := make(map[uint64]interface{})
+				for _, buffetPackageUuid := range uuids {
+					products, err := buffetProductRepo.GetBuffetProducts(
+						CommonRepo.WhereByBuffetPackageUuid(buffetPackageUuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						// 单个查询失败不影响其他，记录错误但继续
+						continue
+					}
+					result[buffetPackageUuid] = products
+				}
+				return result, nil
+			},
+		},
+		// 一对多关系：BuffetPackage1.BuffetCustomerTypePrices（列表）
+		{
+			Path:       "BuffetPackage1.BuffetCustomerTypePrices",
+			ObjectType: "buffet_customer_type_prices",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetPackage).Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 根据 BuffetPackageUuid 查询整个列表
+				prices, err := buffetCustomerTypePricesRepo.GetBuffetCustomerTypePrices(
+					CommonRepo.WhereByBuffetPackageUuid(uuid),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return prices, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 批量查询每个 BuffetPackage 对应的 BuffetCustomerTypePrices 列表
+				result := make(map[uint64]interface{})
+				for _, buffetPackageUuid := range uuids {
+					prices, err := buffetCustomerTypePricesRepo.GetBuffetCustomerTypePrices(
+						CommonRepo.WhereByBuffetPackageUuid(buffetPackageUuid),
+					)
+					if err != nil {
+						// 单个查询失败不影响其他，记录错误但继续
+						continue
+					}
+					result[buffetPackageUuid] = prices
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：BuffetPackage1.BuffetProducts.ProductPackage
+		{
+			Path:       "BuffetPackage1.BuffetProducts.ProductPackage",
+			ObjectType: "product_package",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetProduct).ProductPackageUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.ProductPackage, error) {
+					pkg, err := productPackageRepo.GetProductPackage(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					return pkg, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackage, error) {
+					packages, err := productPackageRepo.GetProductPackageList(
+						CommonRepo.WhereInUuids(uuids),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.ProductPackage)
+					for _, pkg := range packages {
+						if pkg != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, pkg.Uuid)
+							result[key] = pkg
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// ==================== 销售账单的自助餐套餐2信息 ====================
+		// 一对一关系：BuffetPackage2
+		{
+			Path:       "BuffetPackage2",
+			ObjectType: "buffet_package",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).BuffetPackage2Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
+				cacheLayer := adapter.GetOrderObjectCache[*model.BuffetPackage](underlyingCache, 10*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeBuffetPackage, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.BuffetPackage, error) {
+					buffetPackage, err := buffetPackageRepo.GetBuffetPackage(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					return &buffetPackage, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		// 一对一关系：BuffetPackage2.MultiLanguageName
+		{
+			Path:       "BuffetPackage2.MultiLanguageName",
+			ObjectType: "multi_language_name",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetPackage).MultiLanguageNameUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
+					return multiLanguageNameRepo.GetMultiLanguageName(
+						CommonRepo.WhereByUuid(uuid),
+					)
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
+					names, err := multiLanguageNameRepo.GetMultiLanguageNameListByUuids(uuids)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.MultiLanguageName)
+					for _, name := range names {
+						if name != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, name.Uuid)
+							result[key] = name
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
+			},
+		},
+		// 一对多关系：BuffetPackage2.BuffetProducts（列表）
+		{
+			Path:       "BuffetPackage2.BuffetProducts",
+			ObjectType: "buffet_products",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetPackage).Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 根据 BuffetPackageUuid 查询整个列表
+				products, err := buffetProductRepo.GetBuffetProducts(
+					CommonRepo.WhereByBuffetPackageUuid(uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return products, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 批量查询每个 BuffetPackage 对应的 BuffetProducts 列表
+				result := make(map[uint64]interface{})
+				for _, buffetPackageUuid := range uuids {
+					products, err := buffetProductRepo.GetBuffetProducts(
+						CommonRepo.WhereByBuffetPackageUuid(buffetPackageUuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						// 单个查询失败不影响其他，记录错误但继续
+						continue
+					}
+					result[buffetPackageUuid] = products
+				}
+				return result, nil
+			},
+		},
+		// 一对多关系：BuffetPackage2.BuffetCustomerTypePrices（列表）
+		{
+			Path:       "BuffetPackage2.BuffetCustomerTypePrices",
+			ObjectType: "buffet_customer_type_prices",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetPackage).Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				// 根据 BuffetPackageUuid 查询整个列表
+				prices, err := buffetCustomerTypePricesRepo.GetBuffetCustomerTypePrices(
+					CommonRepo.WhereByBuffetPackageUuid(uuid),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return prices, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				// 批量查询每个 BuffetPackage 对应的 BuffetCustomerTypePrices 列表
+				result := make(map[uint64]interface{})
+				for _, buffetPackageUuid := range uuids {
+					prices, err := buffetCustomerTypePricesRepo.GetBuffetCustomerTypePrices(
+						CommonRepo.WhereByBuffetPackageUuid(buffetPackageUuid),
+					)
+					if err != nil {
+						// 单个查询失败不影响其他，记录错误但继续
+						continue
+					}
+					result[buffetPackageUuid] = prices
+				}
+				return result, nil
+			},
+		},
+		// 嵌套关联：BuffetPackage2.BuffetProducts.ProductPackage
+		{
+			Path:       "BuffetPackage2.BuffetProducts.ProductPackage",
+			ObjectType: "product_package",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.BuffetProduct).ProductPackageUuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
+				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, uuid)
+				result, err := cacheLayer.GET(key, func() (*model.ProductPackage, error) {
+					pkg, err := productPackageRepo.GetProductPackage(
+						CommonRepo.WhereByUuid(uuid),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					return pkg, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
+				keys := make([]string, 0, len(uuids))
+				for _, uuid := range uuids {
+					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, uuid))
+				}
+				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
+				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackage, error) {
+					packages, err := productPackageRepo.GetProductPackageList(
+						CommonRepo.WhereInUuids(uuids),
+						CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return nil, err
+					}
+					result := make(map[string]*model.ProductPackage)
+					for _, pkg := range packages {
+						if pkg != nil {
+							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, pkg.Uuid)
+							result[key] = pkg
+						}
+					}
+					return result, nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return convertBatchResultToUUIDMap(batchResult), nil
 			},
 		},
 	}
