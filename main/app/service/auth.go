@@ -3,6 +3,8 @@ package service
 import (
 	"regexp"
 	"slices"
+	"sort"
+	"strings"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -29,6 +31,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type IAuthSrv interface {
@@ -1483,6 +1486,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			IsOpenDataManagement: companySetting.IsOpenDataManagement(),
 			IsOpenKiosk:          companySetting.IsOpenKiosk(),
 			IsOpenGrabDelivery:   companySetting.IsOpenGrabDelivery(),
+			StoreCode:            storeSetting.StoreCode,
 		},
 		CloudBasic: cloudBasicSetting,
 		Profile: resp.ShopProfile{
@@ -1769,6 +1773,7 @@ func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 	staffUuid := ctx.GetStaffUuid()
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
 
 	// 获取员工关联的门店列表
 	companyList, _ := companyStaffRepo.GetByStaffUuid(staffUuid, companyStaffRepo.WithCompany())
@@ -1791,13 +1796,94 @@ func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 		if company == nil || company.IsExpired() || company.IsException() {
 			continue
 		}
+
+		// 从 saas 数据库查询 company
+		targetCompany, err := companyRepo.GetCompanyInfoByUuid(cs.CompanyUuid)
+		if err != nil || targetCompany == nil {
+			continue
+		}
+		companySettingRepo := repository.NewCompanySettingRepo(shopDb)
+		companySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
+			return db.Where("company_uuid = ?", cs.CompanyUuid)
+		})
+		if err != nil {
+			continue
+		}
+
+		// 获取门店设置中的店铺编号
+		var storeCode string
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetCompanyUuid(cs.CompanyUuid)
+		ctxCopy.SetDB(shopDb)
+		ctxCopy.SetCompany(*targetCompany)
+		ctxCopy.SetCompanySetting(companySetting)
+
+		if storeSetting, err := s.settingSrv.GetStoreSetting(ctxCopy); err == nil {
+			storeCode = storeSetting.StoreCode
+		}
+
 		availableCompanyList = append(availableCompanyList, &resp.CompanyStaffResp{
 			CompanyUuid: cs.CompanyUuid,
 			CompanyName: company.Name,
+			StoreCode:   storeCode,
 			Roles:       roleNames,
 			IsSuper:     cs.IsSuper,
 		})
 	}
 
+	// 对 availableCompanyList 按 StoreCode 排序
+	// 排序规则：
+	// 1. StoreCode 为空的排在最前面
+	// 2. 空 StoreCode 之间：IsSuper > 0 的排前面，都 > 0 则按 CompanyName 排序
+	// 3. 非空 StoreCode：含数字的排前面，同组内按字符串排序（不区分大小写）
+	sort.Slice(availableCompanyList, func(i, j int) bool {
+		item1 := availableCompanyList[i]
+		item2 := availableCompanyList[j]
+
+		isEmpty1 := item1.StoreCode == ""
+		isEmpty2 := item2.StoreCode == ""
+
+		// 1. StoreCode 为空的排在最前面
+		if isEmpty1 != isEmpty2 {
+			return isEmpty1 // true 排在前面
+		}
+
+		// 2. 如果都是空字符串，按 IsSuper 和 CompanyName 排序
+		if isEmpty1 && isEmpty2 {
+			// IsSuper > 0 的排在前面
+			if (item1.IsSuper > 0) != (item2.IsSuper > 0) {
+				return item1.IsSuper > 0
+			}
+			// 如果 IsSuper 都大于 0 或都不大于 0，按 CompanyName 排序
+			return strings.ToLower(item1.CompanyName) < strings.ToLower(item2.CompanyName)
+		}
+
+		// 3. 如果都有 StoreCode，按原规则排序
+		code1Lower := strings.ToLower(item1.StoreCode)
+		code2Lower := strings.ToLower(item2.StoreCode)
+
+		// 判断是否含数字
+		hasDigit1 := containsDigit(code1Lower)
+		hasDigit2 := containsDigit(code2Lower)
+
+		// 含数字的排在不含数字的前面
+		if hasDigit1 != hasDigit2 {
+			return hasDigit1
+		}
+
+		// 同组内按字符串排序
+		return code1Lower < code2Lower
+	})
+
 	return availableCompanyList
+}
+
+// containsDigit 检查字符串是否包含数字
+func containsDigit(s string) bool {
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			return true
+		}
+	}
+	return false
 }
