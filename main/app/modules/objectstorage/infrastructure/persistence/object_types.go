@@ -74,4 +74,10 @@ const (
 
 	// MemberCoupon 会员优惠券
 	ObjectTypeMemberCoupon = "member_coupon"
+
+	// Tax 税种
+	ObjectTypeTax = "tax"
+
+	// ProductUnit 商品单位
+	ObjectTypeProductUnit = "product_unit"
 )
