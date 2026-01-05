@@ -17,7 +17,7 @@ class AddDescribeFieldsToProductPackageTakeout extends Migrator
             return;
         }
 
-        $table->addColumn('describe', 'string', ['limit' => 255, 'default' => '', 'after' => 'image_file_uuid', 'comment' => '卖点描述'])
+        $table->addColumn('describe', 'text', ['after' => 'image_file_uuid', 'comment' => '卖点描述'])
             ->addColumn('describe_multi_language_name_uuid', 'biginteger', ['default' => 0, 'after' => 'describe', 'comment' => '商品卖点多语言UUID'])
             ->addIndex(['describe_multi_language_name_uuid'], ['name' => 'idx_describe_multi_language_name_uuid'])
             ->update();

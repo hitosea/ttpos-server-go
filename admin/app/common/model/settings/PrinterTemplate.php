@@ -27,11 +27,11 @@ class PrinterTemplate extends BaseModel
     public function getList($shop_supplier_id)
     {
         // 未开启外送，不显示外送单模板
-        // 不显示外卖商家联和外卖顾客联模板（这两个模板仅供Go服务端使用）
+        // 不显示外卖商家联、外卖顾客联和外卖退单联模板（这三个模板仅供Go服务端使用）
         $list = $this->when(request()->licenses['is_open_delivery'] == 0, function ($q) {
             return $q->where('uuid', '<>', 12);
         })
-        ->whereNotIn('uuid', [13, 14]) // 过滤外卖商家联和顾客联
+        ->whereNotIn('uuid', [13, 14, 15]) // 过滤外卖商家联、顾客联和退单联
         ->field('id, name, template, is_show_sku, tmp_uuid, create_time,update_time,delete_time')->select()->toArray() ?: [];
         $printerSettings = Setting::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
         // 授权无排队叫号权限

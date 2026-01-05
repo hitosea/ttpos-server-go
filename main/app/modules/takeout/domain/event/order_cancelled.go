@@ -10,6 +10,7 @@ type OrderCancelEvent struct {
 	TakeoutOrderUuid string // 外卖订单UUID
 	CompanyUuid      uint64 // 公司UUID
 	CancelReason     string // 取消原因
+	OrderState       int    // 订单状态
 }
 
 // EventName 事件名称
@@ -26,6 +27,7 @@ func NewOrderCancelEvent(
 	takeoutOrderUuid string,
 	companyUuid uint64,
 	cancelReason string,
+	orderState int,
 ) OrderCancelEvent {
 	return OrderCancelEvent{
 		BaseDomainEvent:  NewBaseDomainEvent(orderUuid),
@@ -36,5 +38,6 @@ func NewOrderCancelEvent(
 		TakeoutOrderUuid: takeoutOrderUuid,
 		CompanyUuid:      companyUuid,
 		CancelReason:     cancelReason,
+		OrderState:       orderState,
 	}
 }

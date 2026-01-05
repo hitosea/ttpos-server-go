@@ -18,6 +18,7 @@ type TakeoutOrderEvent struct {
 	OrderId      string `json:"orderId"`      // 平台订单 ID
 	MerchantId   string `json:"merchantId"`   // 商户 ID
 	Status       string `json:"status"`       // 当前状态 PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED
+	Message      string `json:"message"`      // 消息，取消原因
 	Timestamp    int64  `json:"timestamp"`    // 事件时间戳
 }
 

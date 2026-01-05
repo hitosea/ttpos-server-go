@@ -17,6 +17,6 @@ upstream ups2 {
 }
 
 upstream upstest {
-    server ttpos-test1.ttpos.com:443;
+    server ttpos-takeout:14031;
 }
 
