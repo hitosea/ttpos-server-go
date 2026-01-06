@@ -39,6 +39,7 @@ type IProductPackageTakeoutQueryRepo interface {
 	WithProductPackageAttributeTakeouts(opts ...DBOption) DBOption         // 预加载外卖属性价格列表
 	WithProductPackageGroupItemTakeouts(opts ...DBOption) DBOption         // 预加载外卖套餐子商品价格列表
 	WhereByTakeoutType(takeoutType uint) DBOption                          // 根据外卖类型查询
+	WhereByTakeoutTypes(takeoutTypes []uint) DBOption                      // 根据外卖类型列表查询
 	WhereBySource(source string) DBOption                                  // 根据来源平台查询
 	WhereBySourceProductId(sourceProductId string) DBOption                // 根据来源商品ID查询
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                      // 根据分类UUID查询
@@ -58,7 +59,7 @@ func (r *productPackageTakeoutRepoImpl) GetProductPackageTakeoutList(opts ...DBO
 	var list []*model.ProductPackageTakeout
 	db := r.db
 
-	db = db.Model(&model.ProductPackageTakeout{})
+	db = db.Model(&model.ProductPackageTakeout{}).Debug()
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -191,6 +192,13 @@ func (r *productPackageTakeoutRepoImpl) WhereByProductPackageUuids(productPackag
 func (r *productPackageTakeoutRepoImpl) WhereByTakeoutType(takeoutType uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("takeout_type = ?", takeoutType)
+	}
+}
+
+// WhereByTakeoutTypes 根据外卖类型列表查询
+func (r *productPackageTakeoutRepoImpl) WhereByTakeoutTypes(takeoutTypes []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("takeout_type IN (?)", takeoutTypes)
 	}
 }
 

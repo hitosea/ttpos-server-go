@@ -130,13 +130,7 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 	menu.SetPartnerMerchantID(strconv.FormatUint(companyUuid, 10))
 
 	// 根据货币符号推断货币代码和 exponent
-	currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
-	currencyCode, exponent := c.getCurrencyInfoBySymbol(currencySymbol)
-	menu.SetCurrency(grabfood.Currency{
-		Code:     currencyCode,
-		Symbol:   currencySymbol,
-		Exponent: int32(exponent),
-	})
+	menu.SetCurrency(c.getCurrencyInfoBySymbol(currencyUnit))
 
 	// 设置售卖时段
 	grabSellingTime := grabfood.NewSellingTimeWithDefaults()
@@ -432,33 +426,37 @@ func (c *GrabConverter) loadCategoryProducts(ctx context.Context, companyUuid ui
 }
 
 // getCurrencyInfoBySymbol 根据货币符号返回货币代码和 exponent
-func (c *GrabConverter) getCurrencyInfoBySymbol(symbol string) (code string, exponent int) {
-	// 货币符号到代码和 exponent 的映射
-	symbolToInfo := map[string]struct {
-		code     string
-		exponent int
-	}{
-		"฿":  {"THB", 2}, // 泰铢
-		"S$": {"SGD", 2}, // 新加坡元
-		"RM": {"MYR", 2}, // 马来西亚林吉特
-		"Rp": {"IDR", 2}, // 印尼盾
-		"₫":  {"VND", 0}, // 越南盾（exponent 为 0）
-		"₱":  {"PHP", 2}, // 菲律宾比索
-		"៛":  {"KHR", 2}, // 柬埔寨瑞尔
-		"K":  {"MMK", 2}, // 缅甸元
-		"$":  {"USD", 2}, // 美元
-		"￥":  {"CNY", 2}, // 人民币
-		"¥":  {"CNY", 2}, // 人民币（另一种表示）
-		"€":  {"EUR", 2}, // 欧元
-		"£":  {"GBP", 2}, // 英镑
-	}
+func (c *GrabConverter) getCurrencyInfoBySymbol(_ string) grabfood.Currency {
+	// currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
+	// // 货币符号到代码和 exponent 的映射
+	// symbolToInfo := map[string]struct {
+	// 	code     string
+	// 	exponent int32
+	// }{
+	// 	"฿":  {"THB", 2}, // 泰铢
+	// 	"S$": {"SGD", 2}, // 新加坡元
+	// 	"RM": {"MYR", 2}, // 马来西亚林吉特
+	// 	"Rp": {"IDR", 2}, // 印尼盾
+	// 	"₫":  {"VND", 0}, // 越南盾（exponent 为 0）
+	// 	"₱":  {"PHP", 2}, // 菲律宾比索
+	// 	"៛":  {"KHR", 2}, // 柬埔寨瑞尔
+	// 	"K":  {"MMK", 2}, // 缅甸元
+	// }
 
-	if info, ok := symbolToInfo[symbol]; ok {
-		return info.code, info.exponent
-	}
+	// if info, ok := symbolToInfo[currencySymbol]; ok {
+	// 	return grabfood.Currency{
+	// 		Code:     info.code,
+	// 		Symbol:   currencySymbol,
+	// 		Exponent: info.exponent,
+	// 	}
+	// }
 
 	// 默认返回泰铢
-	return "THB", 2
+	return grabfood.Currency{
+		Code:     "THB",
+		Symbol:   "฿",
+		Exponent: 2,
+	}
 }
 
 // convertProductFlavors 转换商品规格为修饰符组
