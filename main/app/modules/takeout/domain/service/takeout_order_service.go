@@ -499,6 +499,7 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 		// 同步到 ERP
 		if order.IsAutoAcceptOrder() {
 			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
+				logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
 			}
 		}
