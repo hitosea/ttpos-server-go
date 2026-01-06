@@ -32081,7 +32081,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）和支付方式汇总（indicator_type=payment_method）",
+                "description": "新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）",
                 "consumes": [
                     "application/json"
                 ],
@@ -32105,9 +32105,57 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp，indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp",
+                        "description": "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyBusinessSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "201": {
+                        "description": "统计数据。indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyPaymentMethodSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "202": {
+                        "description": "统计数据。indicator_type=refund 返回 CompanyRefundSummaryResp",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyRefundSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -52045,6 +52093,95 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CompanyBusinessSummaryItem": {
+            "type": "object",
+            "properties": {
+                "avg_customer_price": {
+                    "description": "平均客单价（实付金额/用餐人数，保留2位小数）",
+                    "type": "number"
+                },
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "营业日（格式：YYYY-MM-DD）",
+                    "type": "string"
+                },
+                "desk_num": {
+                    "description": "消费桌数",
+                    "type": "integer"
+                },
+                "desk_order_amount": {
+                    "description": "桌台订单金额（保留2位小数）",
+                    "type": "number"
+                },
+                "instant_order_amount": {
+                    "description": "点餐订单金额（保留2位小数）",
+                    "type": "number"
+                },
+                "meal_num": {
+                    "description": "用餐人数",
+                    "type": "integer"
+                },
+                "order_amount": {
+                    "description": "订单金额（含优惠前，保留2位小数）",
+                    "type": "number"
+                },
+                "order_amount_avg": {
+                    "description": "订单金额单均（订单金额/订单数量，保留2位小数）",
+                    "type": "number"
+                },
+                "order_amount_meal_avg": {
+                    "description": "订单金额人均（订单金额/用餐人数，保留2位小数）",
+                    "type": "number"
+                },
+                "order_num": {
+                    "description": "订单数量",
+                    "type": "integer"
+                },
+                "pay_amount": {
+                    "description": "实付金额（保留2位小数）",
+                    "type": "number"
+                },
+                "pay_amount_avg": {
+                    "description": "实付金额单均（实付金额/订单数量，保留2位小数）",
+                    "type": "number"
+                },
+                "takeout_order_amount": {
+                    "description": "外送订单金额（保留2位小数）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.CompanyBusinessSummaryResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "明细列表或汇总列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyBusinessSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                },
+                "summary_row": {
+                    "description": "汇总行（明细表返回默认值，汇总表返回汇总数据）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyBusinessSummaryItem"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.CompanyInfoResp": {
             "type": "object",
             "properties": {
@@ -52095,6 +52232,131 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.CompanyPaymentMethodItem"
                     }
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodSummaryItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "营业日（格式：YYYY-MM-DD 或 YYYY-MM）",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额（保留2位小数）",
+                    "type": "number"
+                },
+                "payment_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_num": {
+                    "description": "支付笔数",
+                    "type": "integer"
+                },
+                "payment_ratio": {
+                    "description": "支付占比（保留2位小数，百分比）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodSummaryResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "明细列表或汇总列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyPaymentMethodSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                },
+                "summary_row": {
+                    "description": "汇总行（明细表返回空数组，汇总表返回按支付方式分组的汇总数据）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyPaymentMethodSummaryItem"
+                    }
+                }
+            }
+        },
+        "resp.CompanyRefundSummaryItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "营业日（格式：YYYY-MM-DD 或 YYYY-MM）",
+                    "type": "string"
+                },
+                "full_refund_amount": {
+                    "description": "整单退款金额（保留2位小数）",
+                    "type": "number"
+                },
+                "full_refund_num": {
+                    "description": "整单退款笔数",
+                    "type": "integer"
+                },
+                "partial_refund_amount": {
+                    "description": "部分退款金额（保留2位小数）",
+                    "type": "number"
+                },
+                "partial_refund_num": {
+                    "description": "部分退款笔数",
+                    "type": "integer"
+                },
+                "refund_amount": {
+                    "description": "退款金额（保留2位小数）",
+                    "type": "number"
+                },
+                "refund_num": {
+                    "description": "退款笔数",
+                    "type": "integer"
+                },
+                "refund_rate": {
+                    "description": "退款率（保留2位小数，百分比）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.CompanyRefundSummaryResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "明细列表或汇总列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyRefundSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                },
+                "summary_row": {
+                    "description": "汇总行（明细表返回默认值，汇总表返回汇总数据）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyRefundSummaryItem"
+                        }
+                    ]
                 }
             }
         },
