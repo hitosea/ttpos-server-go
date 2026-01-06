@@ -3852,11 +3852,11 @@ func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryL
 		// 创建必要的服务实例
 		captchaSrv := NewCaptchaSrv(nil) // 这里不需要验证码服务，传 nil
 		roleAccessSrv := NewRoleAccessSrv(dbm)
-		settingSrv := setting.NewSrv(dbm, nil) // 这里不需要缓存，传 nil
+		settingSrv := setting.NewSrv(dbm, cache.Global)
 		deviceSrv := NewDeviceSrv(settingSrv, dbm)
 		cashBoxSrv := NewCashBoxSrv(dbm)
 		statisticsSrv := NewStatisticsSrv()
-		staffShiftSrv := NewStaffShiftSrv(nil, dbm, cashBoxSrv, statisticsSrv)
+		staffShiftSrv := NewStaffShiftSrv(cache.Global, dbm, cashBoxSrv, statisticsSrv)
 		authSrv := NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 		// 获取子店的门店列表
@@ -5223,39 +5223,39 @@ func (s *businessSrv) ExportCompanyBusinessSummary(ctx context.Context, request 
 	switch request.IndicatorType {
 	case "business":
 		fileNameMul = model.MultiLanguageName{
-			EnName:   "Store Business Summary Statistics",
-			ZhName:   "门店营业数据汇总统计",
-			ZhTwName: "門店營業數據匯總統計",
-			ThName:   "สถิติสรุปข้อมูลธุรกิจของร้าน",
-			MyName:   "ဆိုင်လုပ်ငန်းဒေတာစုပေါင်းစာရင်း",
-			JaName:   "店舗営業データ集計統計",
-			KoName:   "매장 영업 데이터 요약 통계",
-			TrName:   "Mağaza İşletme Verileri Özet İstatistikleri",
-			SvName:   "Butiksaffärsdata Sammanfattningsstatistik",
+			EnName:   "Business Data Summary",
+			ZhName:   "营业数据汇总",
+			ZhTwName: "營業數據匯總",
+			ThName:   "สรุปข้อมูลธุรกิจ",
+			MyName:   "လုပ်ငန်းဒေတာစုပေါင်းစာရင်း",
+			JaName:   "営業データ集計",
+			KoName:   "영업 데이터 요약",
+			TrName:   "İşletme Verileri Özeti",
+			SvName:   "Affärsdata Sammanfattning",
 		}
 	case "payment_method":
 		fileNameMul = model.MultiLanguageName{
-			EnName:   "Store Payment Method Summary Statistics",
-			ZhName:   "门店支付方式汇总统计",
-			ZhTwName: "門店支付方式匯總統計",
-			ThName:   "สถิติสรุปวิธีการชำระเงินของร้าน",
-			MyName:   "ဆိုင်ငွေပေးချေမှုနည်းလမ်းစုပေါင်းစာရင်း",
-			JaName:   "店舗支払方法集計統計",
-			KoName:   "매장 결제 방식 요약 통계",
-			TrName:   "Mağaza Ödeme Yöntemi Özet İstatistikleri",
-			SvName:   "Butiksbetalningsmetod Sammanfattningsstatistik",
+			EnName:   "Payment Method Summary",
+			ZhName:   "支付方式汇总",
+			ZhTwName: "支付方式匯總",
+			ThName:   "สรุปวิธีการชำระเงิน",
+			MyName:   "ငွေပေးချေမှုနည်းလမ်းစုပေါင်းစာရင်း",
+			JaName:   "支払方法集計",
+			KoName:   "결제 방식 요약",
+			TrName:   "Ödeme Yöntemi Özeti",
+			SvName:   "Betalningsmetod Sammanfattning",
 		}
 	case "refund":
 		fileNameMul = model.MultiLanguageName{
-			EnName:   "Store Refund Summary Statistics",
-			ZhName:   "门店退款金额汇总统计",
-			ZhTwName: "門店退款金額匯總統計",
-			ThName:   "สถิติสรุปจำนวนเงินคืนของร้าน",
-			MyName:   "ဆိုင်ငွေပြန်လည်ပေးအပ်မှုစုပေါင်းစာရင်း",
-			JaName:   "店舗返金金額集計統計",
-			KoName:   "매장 환불 금액 요약 통계",
-			TrName:   "Mağaza İade Tutarı Özet İstatistikleri",
-			SvName:   "Butiksåterbetalningsbelopp Sammanfattningsstatistik",
+			EnName:   "Refund Amount Summary",
+			ZhName:   "退款金额汇总",
+			ZhTwName: "退款金額匯總",
+			ThName:   "สรุปจำนวนเงินคืน",
+			MyName:   "ငွေပြန်လည်ပေးအပ်မှုစုပေါင်းစာရင်း",
+			JaName:   "返金金額集計",
+			KoName:   "환불 금액 요약",
+			TrName:   "İade Tutarı Özeti",
+			SvName:   "Återbetalningsbelopp Sammanfattning",
 		}
 	default:
 		fileNameMul = model.MultiLanguageName{
@@ -5601,7 +5601,18 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(ctx context.Context, xls
 	}()
 
 	// Sheet1: 明细表
-	sheet1Name := "Sheet1"
+	sheet1NameMul := model.MultiLanguageName{
+		EnName:   "Details",
+		ZhName:   "明细表",
+		ZhTwName: "明細表",
+		ThName:   "รายละเอียด",
+		MyName:   "အသေးစား",
+		JaName:   "明細表",
+		KoName:   "상세",
+		TrName:   "Detaylar",
+		SvName:   "Detaljer",
+	}
+	sheet1Name := sheet1NameMul.GetNameByLang(lang)
 	sheet1Index, err := xlsxFile.NewSheet(sheet1Name)
 	if err != nil {
 		return errors.WithMessage(err, "创建明细表Sheet失败")
@@ -5636,7 +5647,18 @@ func (s *businessSrv) exportPaymentMethodSummaryToExcel(ctx context.Context, xls
 	}
 
 	// Sheet2: 汇总表
-	sheet2Name := "Sheet2"
+	sheet2NameMul := model.MultiLanguageName{
+		EnName:   "Summary",
+		ZhName:   "汇总表",
+		ZhTwName: "匯總表",
+		ThName:   "สรุป",
+		MyName:   "စုပေါင်းစာရင်း",
+		JaName:   "集計表",
+		KoName:   "요약",
+		TrName:   "Özet",
+		SvName:   "Sammanfattning",
+	}
+	sheet2Name := sheet2NameMul.GetNameByLang(lang)
 	_, err = xlsxFile.NewSheet(sheet2Name)
 	if err != nil {
 		return errors.WithMessage(err, "创建汇总表Sheet失败")
