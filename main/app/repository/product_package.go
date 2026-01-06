@@ -133,6 +133,12 @@ func (r *productPackageRepoImpl) GetProductPackageByUuidWithAssociations(product
 			WithPreload{
 				Query: "ProductCategory",
 			},
+			WithPreload{
+				Query: "ProductBoms",
+			},
+			WithPreload{
+				Query: "productPackageAttributeGroups",
+			},
 		),
 	)
 	if err != nil {
@@ -167,6 +173,12 @@ func (r *productPackageRepoImpl) GetProductPackagesByUuidsWithAssociations(produ
 			},
 			WithPreload{
 				Query: "ProductCategory",
+			},
+			WithPreload{
+				Query: "ProductBoms",
+			},
+			WithPreload{
+				Query: "productPackageAttributeGroups",
 			},
 		),
 	)
