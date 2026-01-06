@@ -18,6 +18,7 @@ type ICompanySettingRepo interface {
 
 	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
+	GetCompanySetting() model.CompanySetting
 	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) // 获取总部下所有公司的设置
 	UpdateSmsQuota(companyUuid uint64, quota int) error                             // 扣减公司的短信余额
 
@@ -41,26 +42,26 @@ func (r *companySettingRepo) Get() model.CompanySetting {
 	companyUuid := GetCompanyUuid(r.db)
 	if companyUuid == 0 {
 		// 如果无法获取商户UUID，直接查询数据库
-		return r.queryCompanySetting()
+		return r.GetCompanySetting()
 	}
 
 	// 检查是否启用对象存储缓存
 	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
 		// 未启用缓存，直接查询数据库
-		return r.queryCompanySetting()
+		return r.GetCompanySetting()
 	}
 
 	// 使用对象存储模块缓存查询
 	companySetting, err := r.getCompanySettingWithCache(companyUuid)
 	if err != nil {
 		// 缓存查询失败，降级到直接查询数据库
-		return r.queryCompanySetting()
+		return r.GetCompanySetting()
 	}
 	return *companySetting
 }
 
 // queryCompanySetting 查询商户设置（数据库查询）
-func (r *companySettingRepo) queryCompanySetting() model.CompanySetting {
+func (r *companySettingRepo) GetCompanySetting() model.CompanySetting {
 	var companySetting model.CompanySetting
 	r.db.Model(&model.CompanySetting{}).First(&companySetting)
 	return companySetting
@@ -81,7 +82,7 @@ func (r *companySettingRepo) getCompanySettingWithCache(companyUuid uint64) (*mo
 	// 使用缓存查询
 	result, err := cacheLayer.GET(key, func() (*model.CompanySetting, error) {
 		// 缓存未命中时，从数据库查询
-		companySetting := r.queryCompanySetting()
+		companySetting := r.GetCompanySetting()
 		return &companySetting, nil
 	})
 
