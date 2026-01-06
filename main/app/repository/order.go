@@ -3638,7 +3638,6 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	orderSourceRepo := NewOrderSourceRepo(db)
 	nationalityRepo := NewNationalityRepo(db)
 	paymentMethodRepo := NewPaymentMethodRepo(db)
-	memberRepo := NewMemberRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：SaleBillSetting
@@ -3983,11 +3982,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if uuid == 0 {
 					return nil, nil
 				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.Member](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeMember, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.Member, error) {
-					return memberRepo.GetMemberWithAssociations(uuid)
-				})
+				controller := objectStorageController.GetMemberController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -4004,30 +4000,17 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if len(validUuids) == 0 {
 					return make(map[uint64]interface{}), nil
 				}
-				keys := make([]string, 0, len(validUuids))
-				for _, uuid := range validUuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMember, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.Member](underlyingCache, 10*time.Minute)
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.Member, error) {
-					// 批量查询 Member 列表（包含关联数据）
-					members, err := memberRepo.GetMembersWithAssociations(validUuids)
-					if err != nil {
-						return nil, err
-					}
-					result := make(map[string]*model.Member)
-					for _, member := range members {
-						if member != nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeMember, member.Uuid)
-							result[key] = member
-						}
-					}
-					return result, nil
-				})
+				controller := objectStorageController.GetMemberController()
+				batchResult, err := controller.BatchGetByUuids(ctx, db, validUuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, member := range batchResult {
+					result[uuid] = member
+				}
+				return result, nil
 			},
 		},
 		// ==================== 销售账单的订单商品信息 ====================

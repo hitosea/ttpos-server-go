@@ -85,4 +85,18 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return productBomCardRepo.GetProductBomCardsWithMaterials(uuids)
 		},
 	)
+
+	// 初始化 Member 对象的缓存控制器
+	objectStorageController.InitMemberController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.Member, error) {
+			memberRepo := NewMemberRepo(db)
+			return memberRepo.GetMemberWithAssociations(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.Member, error) {
+			memberRepo := NewMemberRepo(db)
+			return memberRepo.GetMembersWithAssociations(uuids)
+		},
+	)
 }

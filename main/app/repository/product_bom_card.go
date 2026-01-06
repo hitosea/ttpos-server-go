@@ -24,7 +24,7 @@ type IProductBomCardQueryRepo interface {
 	GetProductBomCard(opts ...DBOption) (*model.ProductBomCard, error)
 	GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error)
 	GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error)
-	GetProductBomCardWithMaterials(uuid uint64) (*model.ProductBomCard, error) // 获取成本卡信息，包括 RelatedMaterials.Material.WarehouseItems
+	GetProductBomCardWithMaterials(uuid uint64) (*model.ProductBomCard, error)       // 获取成本卡信息，包括 RelatedMaterials.Material.WarehouseItems
 	GetProductBomCardsWithMaterials(uuids []uint64) ([]*model.ProductBomCard, error) // 批量获取成本卡信息，包括 RelatedMaterials.Material.WarehouseItems
 	GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error)
 }
