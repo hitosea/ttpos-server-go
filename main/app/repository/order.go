@@ -59,15 +59,10 @@ type IOrderQueryRepo interface {
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                              // 获取桌台的销售账单详细信息
 	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                                           // 获取点餐购物车信息
 	GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                             // 获取订单自助餐信息
-	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)                  // 获取销售账单详细信息-包含商品信息
 	GetSaleBillInfoAndMember(saleBillUuid uint64) (model.SaleBill, error)                                                                      // 获取销售账单详细信息-包含会员信息
 	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error)            // 获取销售账单详细信息-包含商品信息
-	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)                           // 根据销售订单商品uuid列表获取销售订单商品列表
-	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                      // 获取销售账单详细信息-丰富的-几乎包含所有的关联
 	IsPartiallyPaid(param any) bool                                                                                                            // 判断是否存在部分支付
-	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                                             // 查询销售订单的所有bom
 	GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillAllInfoOption) (*model.SaleBill, error)                                         // 获取销售账单所有信息
-	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单所有商品信息
 	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                            // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
 	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
@@ -1324,56 +1319,6 @@ func (r *orderRepo) GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (mode
 	)
 }
 
-// GetSaleBillInfoAndProduct 获取销售账单详细信息-包含商品信息
-func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error) {
-	info, err := r.GetSaleBill(
-		CommonRepo.Preload(
-			WithPreload{
-				Query: "SaleOrders",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", 0)
-						if saleOrderUuid > 0 {
-							db = db.Where("uuid = ?", saleOrderUuid)
-						}
-						return db
-					},
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", 0)
-						if saleOrderProductUuid > 0 {
-							db = db.Where("uuid = ?", saleOrderProductUuid)
-						}
-						return db
-					},
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", 0)
-						return db
-					},
-				},
-			},
-			WithPreload{
-				Query: "SaleBillSetting",
-			},
-		),
-		CommonRepo.WhereBySoftDelete(),
-		CommonRepo.WhereByUuid(saleBillUuid),
-	)
-	if err != nil {
-		return model.SaleBill{}, fmt.Errorf("GetSaleBillInfoAndProduct: %v", err)
-	}
-	return info, nil
-}
-
 // GetSaleBillInfoAndMember 获取销售账单详细信息-包含会员信息
 func (r *orderRepo) GetSaleBillInfoAndMember(saleBillUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
@@ -1440,80 +1385,6 @@ func (r *orderRepo) GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrd
 	)
 	if err != nil {
 		return model.SaleBill{}, fmt.Errorf("GetSaleBillInfoAndProduct: %v", err)
-	}
-	return info, nil
-}
-
-// GetSaleOrderProductListBySaleOrderProductUuids 根据销售订单商品uuid列表获取销售订单商品列表
-func (r *orderRepo) GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error) {
-	products := make([]model.SaleOrderProduct, 0)
-	err := r.db.Model(&model.SaleOrderProduct{}).Where("uuid in ?", saleOrderProductUuids).Find(&products).Error
-	if err != nil {
-		return nil, fmt.Errorf("GetSaleOrderProductListBySaleOrderProductUuids: %v", err)
-	}
-	return products, nil
-}
-
-// GetSaleBillDetails 获取销售账单详细信息 - 几乎包含所有的关联
-func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error) {
-	info, err := r.GetSaleBill(
-		CommonRepo.Preload(
-			WithPreload{
-				Query: "SaleOrders",
-				Args: []interface{}{
-					func(db *gorm.DB) *gorm.DB {
-						db = db.Where("delete_time = ?", constant.NotDeleted)
-						if saleOrderUuid > 0 {
-							db = db.Where("uuid = ?", saleOrderUuid)
-						}
-						return db
-					},
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.PaymentOrders",
-			},
-			WithPreload{
-				Query: "SaleOrders.Member",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.ReturnOrders",
-			},
-			WithPreload{
-				Query: "Cashier",
-			},
-			WithPreload{
-				Query: "OrderSource.MultiLanguageName",
-				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
-			},
-			WithPreload{
-				Query: "Nationality.MultiLanguageName",
-				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
-			},
-		),
-		CommonRepo.WhereBySoftDelete(),
-		CommonRepo.WhereByUuid(saleBillUuid),
-	)
-	if err != nil {
-		return model.SaleBill{}, fmt.Errorf("GetSaleBillDetails: %v", err)
 	}
 	return info, nil
 }
@@ -2381,44 +2252,6 @@ func (r *orderRepo) querySaleBillAllInfoUsingDbQuery(saleBillUuid uint64, option
 	return &info, nil
 }
 
-// GetSaleBillWithProducts 获取销售账单所有商品信息
-func (r *orderRepo) GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error) {
-	info, err := r.GetSaleBill(
-		CommonRepo.Preload(
-			WithPreload{
-				Query: "SaleOrders",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-					CommonRepo.DBOption(CommonRepo.WhereBySaleBillUuid(saleBillUuid)),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
-			},
-			WithPreload{
-				Query: "OrderSource.MultiLanguageName",
-				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
-			},
-			WithPreload{
-				Query: "Nationality.MultiLanguageName",
-				// 移除 delete_time 过滤，保证历史订单可显示已删除的配置名称
-			},
-		),
-		CommonRepo.WhereBySoftDelete(),
-		CommonRepo.WhereByUuid(saleBillUuid),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("GetSaleBillWithProducts: %v", err)
-	}
-	return &info, nil
-}
-
 // IsPartiallyPaid 是否已经被部分支付
 func (r *orderRepo) IsPartiallyPaid(param any) bool {
 	var info model.SaleBill
@@ -2452,15 +2285,6 @@ func (r *orderRepo) IsPartiallyPaid(param any) bool {
 		}
 	}
 	return false
-}
-
-// GetSaleOrderBomList 查询销售订单的所有bom
-func (r *orderRepo) GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error) {
-	var saleOrderProductBoms []model.SaleOrderProductBom
-	if err := r.db.Preload("ProductBom.ProductPackage").Preload("SaleOrderProduct").Model(&model.SaleOrderProductBom{}).Where("sale_order_uuid = ? AND delete_time = ?", saleOrderUuid, constant.NotDeleted).Find(&saleOrderProductBoms).Error; err != nil {
-		return nil, fmt.Errorf("GetSaleOrderBomList: %v", err)
-	}
-	return saleOrderProductBoms, nil
 }
 
 // DeleteOrderProduct 删除订单产品
