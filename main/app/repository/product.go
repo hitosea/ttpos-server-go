@@ -83,12 +83,12 @@ type IProductRepo interface {
 	WithProductPackageAttributes() DBOption              // 预加载商品属性关联的产品包属性
 
 	// 总店删除资源时检查子店使用情况
-	CheckFlavorUsageInShop(flavorUuid uint64) (bool, error)                   // 检查当前子店是否使用了指定规格
-	CheckAttributeGroupUsageInShop(attributeGroupUuid uint64) (bool, error)   // 检查当前子店是否使用了指定属性组
-	CheckAttributeUsageInShop(attributeUuid uint64) (bool, error)             // 检查当前子店是否使用了指定属性
-	CheckSauceUsageInShop(sauceUuid uint64) (bool, error)                     // 检查当前子店是否使用了指定加料
-	CheckUnitUsageInShop(unitUuid uint64) (bool, error)                       // 检查当前子店是否使用了指定单位
-	CheckProductUsageInPackage(productUuid uint64) (bool, error)              // 检查当前子店的套餐是否使用了指定商品
+	CheckFlavorUsageInShop(flavorUuid uint64) (bool, error)                 // 检查当前子店是否使用了指定规格
+	CheckAttributeGroupUsageInShop(attributeGroupUuid uint64) (bool, error) // 检查当前子店是否使用了指定属性组
+	CheckAttributeUsageInShop(attributeUuid uint64) (bool, error)           // 检查当前子店是否使用了指定属性
+	CheckSauceUsageInShop(sauceUuid uint64) (bool, error)                   // 检查当前子店是否使用了指定加料
+	CheckUnitUsageInShop(unitUuid uint64) (bool, error)                     // 检查当前子店是否使用了指定单位
+	CheckProductUsageInPackage(productUuid uint64) (bool, error)            // 检查当前子店的套餐是否使用了指定商品
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -1612,7 +1612,7 @@ func (r *productRepo) CheckFlavorUsageInShop(flavorUuid uint64) (bool, error) {
 	var count int64
 
 	err := r.db.Table("ttpos_product_bom pb").
-		Joins("INNER JOIN ttpos_product_package p ON pb.product_package_uuid = p.uuid AND p.delete_time = 0").
+		Joins("INNER JOIN ttpos_product_package p ON pb.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
 		Where("pb.product_flavor_uuid = ?", flavorUuid).
 		Where("pb.delete_time = 0").
 		Count(&count).Error
@@ -1629,7 +1629,7 @@ func (r *productRepo) CheckAttributeGroupUsageInShop(attributeGroupUuid uint64) 
 	var count int64
 
 	err := r.db.Table("ttpos_product_package_attribute_group pag").
-		Joins("INNER JOIN ttpos_product_package p ON pag.product_package_uuid = p.uuid AND p.delete_time = 0").
+		Joins("INNER JOIN ttpos_product_package p ON pag.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
 		Where("pag.product_attribute_group_uuid = ?", attributeGroupUuid).
 		Where("pag.delete_time = 0").
 		Count(&count).Error
@@ -1647,7 +1647,7 @@ func (r *productRepo) CheckAttributeUsageInShop(attributeUuid uint64) (bool, err
 
 	err := r.db.Table("ttpos_product_package_attribute ppa").
 		Joins("INNER JOIN ttpos_product_package_attribute_group pag ON ppa.product_package_attribute_group_uuid = pag.uuid AND pag.delete_time = 0").
-		Joins("INNER JOIN ttpos_product_package p ON pag.product_package_uuid = p.uuid AND p.delete_time = 0").
+		Joins("INNER JOIN ttpos_product_package p ON pag.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
 		Where("ppa.attribute_uuid = ?", attributeUuid).
 		Where("ppa.delete_time = 0").
 		Count(&count).Error
@@ -1664,7 +1664,7 @@ func (r *productRepo) CheckSauceUsageInShop(sauceUuid uint64) (bool, error) {
 	var count int64
 
 	err := r.db.Table("ttpos_product_bom pb").
-		Joins("INNER JOIN ttpos_product_package p ON pb.product_package_uuid = p.uuid AND p.delete_time = 0").
+		Joins("INNER JOIN ttpos_product_package p ON pb.product_package_uuid = p.uuid AND p.delete_time = 0 and p.headquarter_uuid = 0").
 		Where("pb.product_sauce_uuid = ?", sauceUuid).
 		Where("pb.delete_time = 0").
 		Count(&count).Error
@@ -1683,6 +1683,7 @@ func (r *productRepo) CheckUnitUsageInShop(unitUuid uint64) (bool, error) {
 	err := r.db.Table("ttpos_product_package p").
 		Where("p.unit_uuid = ?", unitUuid).
 		Where("p.delete_time = 0").
+		Where("p.headquarter_uuid = 0").
 		Count(&count).Error
 
 	if err != nil {
@@ -1698,7 +1699,7 @@ func (r *productRepo) CheckProductUsageInPackage(productUuid uint64) (bool, erro
 
 	err := r.db.Table("ttpos_product_package_group_item pgi").
 		Joins("INNER JOIN ttpos_product_package_group pg ON pgi.product_package_group_uuid = pg.uuid AND pg.delete_time = 0").
-		Joins("INNER JOIN ttpos_product_package p ON pg.product_package_uuid = p.uuid AND p.delete_time = 0 AND p.product_type = 1").
+		Joins("INNER JOIN ttpos_product_package p ON pg.product_package_uuid = p.uuid AND p.delete_time = 0 AND p.product_type = 1 and p.headquarter_uuid = 0").
 		Where("pgi.related_uuid = ?", productUuid).
 		Where("pgi.delete_time = 0").
 		Count(&count).Error
