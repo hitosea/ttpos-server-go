@@ -176,17 +176,19 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 		},
 	)
 
-	// 初始化 BuffetPackage 对象的缓存控制器
-	objectStorageController.InitBuffetPackageController(
+	// 初始化 CompanySetting 对象的缓存控制器
+	objectStorageController.InitCompanySettingController(
 		underlyingCache,
 		ttl,
-		func(db *gorm.DB, uuid uint64) (*model.BuffetPackage, error) {
-			buffetPackageRepo := NewBuffetPackageRepo(db)
-			return buffetPackageRepo.GetBuffetPackageByUuidWithAssociations(uuid)
+		func(db *gorm.DB, uuid uint64) (*model.CompanySetting, error) {
+			companySettingRepo := NewCompanySettingRepo(db)
+			// 每个商户只有一条设置记录，直接查询
+			companySetting := companySettingRepo.GetCompanySetting()
+			return &companySetting, nil
 		},
-		func(db *gorm.DB, uuids []uint64) ([]*model.BuffetPackage, error) {
-			buffetPackageRepo := NewBuffetPackageRepo(db)
-			return buffetPackageRepo.GetBuffetPackagesByUuidsWithAssociations(uuids)
+		func(db *gorm.DB, uuids []uint64) ([]*model.CompanySetting, error) {
+			companySettingRepo := NewCompanySettingRepo(db)
+			return companySettingRepo.GetCompanySettingsByCompanyUuids(uuids)
 		},
 	)
 }

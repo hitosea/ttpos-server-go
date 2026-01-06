@@ -1,12 +1,12 @@
 package repository
 
 import (
-	"time"
+	goCtx "context"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
-	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
-	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	"ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
@@ -19,6 +19,7 @@ type ICompanySettingRepo interface {
 	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
 	GetCompanySetting() model.CompanySetting
+	GetCompanySettingsByCompanyUuids(companyUuids []uint64) ([]*model.CompanySetting, error)
 	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) // 获取总部下所有公司的设置
 	UpdateSmsQuota(companyUuid uint64, quota int) error                             // 扣减公司的短信余额
 
@@ -73,19 +74,15 @@ func (r *companySettingRepo) getCompanySettingWithCache(companyUuid uint64) (*mo
 		return nil, errors.New("getCompanySettingWithCache companyUuid cannot be 0")
 	}
 
-	// 构建缓存 key（使用固定的 uuid=0 表示商户级别的查询，因为每个商户只有一条设置记录）
-	key := persistence.BuildKeyWithCompanyUuid(companyUuid, persistence.ObjectTypeCompanySetting, 0)
+	// 创建包含 companyUuid 的 context
+	ctx := context.NewContext(
+		context.WithCompanyUuid(companyUuid),
+		context.WithContext(goCtx.Background()),
+	)
 
-	// 获取缓存层（使用订单相关对象缓存配置）
-	cacheLayer := adapter.GetOrderObjectCache[*model.CompanySetting](cache.Global, 10*time.Minute)
-
-	// 使用缓存查询
-	result, err := cacheLayer.GET(key, func() (*model.CompanySetting, error) {
-		// 缓存未命中时，从数据库查询
-		companySetting := r.GetCompanySetting()
-		return &companySetting, nil
-	})
-
+	// 使用控制器查询
+	controller := controller.GetCompanySettingController()
+	result, err := controller.GetByUuid(ctx, r.db, companyUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -103,6 +100,22 @@ func (r *companySettingRepo) UpdateSmsQuota(companyUuid uint64, quota int) error
 func (r *companySettingRepo) GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) {
 	var companySettings []model.CompanySetting
 	err := r.db.Model(&model.CompanySetting{}).Scopes(NotDeleted).Where("headquarter_uuid = ? or (company_uuid = ? and headquarter_uuid = 0)", headquarterUuid, headquarterUuid).Find(&companySettings).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return companySettings, nil
+}
+
+// GetCompanySettingsByCompanyUuids 批量通过companyUuids列表查询商户设置
+func (r *companySettingRepo) GetCompanySettingsByCompanyUuids(companyUuids []uint64) ([]*model.CompanySetting, error) {
+	if len(companyUuids) == 0 {
+		return []*model.CompanySetting{}, nil
+	}
+	var companySettings []*model.CompanySetting
+	err := r.db.Model(&model.CompanySetting{}).
+		Scopes(NotDeleted).
+		Where("company_uuid IN (?)", companyUuids).
+		Find(&companySettings).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
