@@ -9,9 +9,6 @@ const (
 	// ProductBom 普通商品BOM
 	ObjectTypeProductBom = "product_bom"
 
-	// ProductFlavor 商品口味
-	ObjectTypeProductFlavor = "product_flavor"
-
 	// ProductBomFlavor 规格商品BOM（包含预加载的规格信息）
 	ObjectTypeProductBomFlavor = "product_bom_flavor"
 
@@ -65,4 +62,28 @@ const (
 
 	// CompanySetting 商户设置
 	ObjectTypeCompanySetting = "company_setting"
+
+	// BuffetPackage 自助餐套餐
+	ObjectTypeBuffetPackage = "buffet_package"
+
+	// MarketingCoupon 营销优惠券
+	ObjectTypeMarketingCoupon = "marketing_coupon"
+
+	// MemberCoupon 会员优惠券
+	ObjectTypeMemberCoupon = "member_coupon"
+
+	// ProductBomCard 成本卡
+	ObjectTypeProductBomCard = "product_bom_card"
+
+	// OrderSource 订单来源
+	ObjectTypeOrderSource = "order_source"
+
+	// Nationality 国籍
+	ObjectTypeNationality = "nationality"
+
+	// PaymentMethod 支付方式
+	ObjectTypePaymentMethod = "payment_method"
+
+	// Member 会员
+	ObjectTypeMember = "member"
 )

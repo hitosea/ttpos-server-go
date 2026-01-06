@@ -25,6 +25,7 @@ type IMultiLanguageNameRepo interface {
 type IMultiLanguageNameQueryRepo interface {
 	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
 	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) // 获取多语言名称
+	GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error) // 根据UUID列表批量获取多语言名称
 }
 
 // NewMultiLanguageNameRepo 创建新的多语言名称仓库
@@ -62,6 +63,26 @@ func (r *MultiLanguageNameRepoImpl) GetMultiLanguageNameByUuid(uuid uint64) (mod
 		return model.MultiLanguageName{}, errors.WithMessage(err)
 	}
 	return *multiLanguageName, nil
+}
+
+// GetMultiLanguageNameListByUuids 根据UUID列表批量获取多语言名称
+func (r *MultiLanguageNameRepoImpl) GetMultiLanguageNameListByUuids(uuids []uint64) ([]*model.MultiLanguageName, error) {
+	if len(uuids) == 0 {
+		return []*model.MultiLanguageName{}, nil
+	}
+	var multiLanguageNames []model.MultiLanguageName
+	err := r.db.Model(&model.MultiLanguageName{}).
+		Where("uuid IN ?", uuids).
+		Find(&multiLanguageNames).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 转换为指针切片
+	result := make([]*model.MultiLanguageName, len(multiLanguageNames))
+	for i := range multiLanguageNames {
+		result[i] = &multiLanguageNames[i]
+	}
+	return result, nil
 }
 
 // CreateMultiLanguageName 创建多语言名称

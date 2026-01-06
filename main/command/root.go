@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/constant"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/queue"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -103,6 +104,9 @@ var rootCommand = &cobra.Command{
 				return dbm.GetDB(constant.DefaultDB)
 			},
 		)
+
+		// 初始化缓存对象控制器（单例模式）
+		repository.InitCacheObjectController(cache.Global, 5*time.Minute)
 
 		// 初始化并启动缓存命中率快照保存器（每30分钟保存一次）
 		objectStorageAdapter.InitSnapshotReporter(
