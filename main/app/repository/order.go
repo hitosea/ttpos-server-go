@@ -3622,9 +3622,9 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 // getSaleBillAssociationsForAllInfo 获取 SaleBill 的关联配置（用于 GetSaleBillAllInfo 场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
-	// 获取 Desk 控制器单例（保证非 nil）
+	// 获取控制器单例（保证非 nil）
 	deskController := objectStorageController.GetDeskController()
-	productPackageRepo := NewProductPackageRepo(db)
+	productPackageController := objectStorageController.GetProductPackageController()
 	productBomRepo := NewProductBomRepo(db)
 
 	return []entity.Association{
@@ -3838,47 +3838,25 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return obj.(*model.SaleOrderProduct).ProductPackageUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductPackage, error) {
-					pkg, err := productPackageRepo.GetProductPackageByUuidWithAssociations(uuid)
-					if err != nil {
-						return nil, err
-					}
-					return pkg, nil
-				})
+				// 使用 ProductPackage 控制器查询（统一管理缓存）
+				result, err := productPackageController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductPackage](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductPackage, error) {
-					packages, err := productPackageRepo.GetProductPackagesByUuidsWithAssociations(uuids)
-					if err != nil {
-						return nil, err
-					}
-					result := make(map[string]*model.ProductPackage)
-					for _, pkg := range packages {
-						if pkg != nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductPackage, pkg.Uuid)
-							result[key] = pkg
-						}
-					}
-					return result, nil
-				})
+				// 使用 ProductPackage 控制器批量查询（统一管理缓存）
+				batchResult, err := productPackageController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, pkg := range batchResult {
+					result[uuid] = pkg
+				}
+				return result, nil
 			},
 		},
 		// ==================== 销售账单的订单商品BOM信息 ====================

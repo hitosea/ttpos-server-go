@@ -191,4 +191,18 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return companySettingRepo.GetCompanySettingsByCompanyUuids(uuids)
 		},
 	)
+
+	// 初始化 ProductPackage 对象的缓存控制器
+	objectStorageController.InitProductPackageController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.ProductPackage, error) {
+			productPackageRepo := NewProductPackageRepo(db)
+			return productPackageRepo.GetProductPackageByUuidWithAssociations(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.ProductPackage, error) {
+			productPackageRepo := NewProductPackageRepo(db)
+			return productPackageRepo.GetProductPackagesByUuidsWithAssociations(uuids)
+		},
+	)
 }
