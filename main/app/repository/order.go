@@ -3630,10 +3630,6 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
 	productPackageRepo := NewProductPackageRepo(db)
 	marketingCouponRepo := NewMarketingCouponRepo(db)
-	memberCouponRepo := NewMemberCouponRepo(db)
-	taxRepo := NewTaxRepo(db)
-	productUnitRepo := NewProductUnitRepo(db)
-	productCategoryRepo := NewProductCategoryRepo(db)
 	productBomRepo := NewProductBomRepo(db)
 
 	return []entity.Association{
