@@ -49547,8 +49547,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49573,8 +49571,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49599,8 +49595,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49625,8 +49619,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }

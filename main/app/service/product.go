@@ -22,6 +22,7 @@ import (
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/modules/printer"
+	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -8423,6 +8424,30 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 	headquarterDb *gorm.DB,
 	companySetting *model.CompanySetting,
 ) error {
+	var takeouts []takeoutModel.Takeout
+	err := headquarterDb.Model(&takeoutModel.Takeout{}).Where("enabled = 1").Find(&takeouts).Error
+	if err != nil {
+		return errors.WithMessage(err, "获取ttpos_takeout中enabled=1的数据失败")
+	}
+	takeOutMap := make(map[uint]bool)
+	for _, takeout := range takeouts {
+		if strings.ToLower(takeout.Platform) == "grab" {
+			takeOutMap[constant.TakeoutTypeGrab] = true
+		}
+		// NOTE: 后面加LINEMAN后，需要在这里加判断
+	}
+	takeoutTypes := make([]uint, 0)
+	// 云平台开启了Grab 并且 门店也开启了Grab
+	if companySetting.EnableGrabDelivery == 1 && takeOutMap[constant.TakeoutTypeGrab] {
+		takeoutTypes = append(takeoutTypes, constant.TakeoutTypeGrab)
+	}
+
+	// NOTE: 后面加LINEMAN后，需要在这里加判断
+
+	if len(takeoutTypes) == 0 {
+		return nil
+	}
+
 	commonRepo := repository.NewCommonRepo()
 
 	// 查询总部外卖商品（包含关联数据）
@@ -8433,6 +8458,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		headTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		headTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 		commonRepo.WhereBySoftDelete(),
+		headTakeoutRepo.WhereByTakeoutTypes(takeoutTypes),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部外卖商品列表失败")
@@ -8446,6 +8472,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		subTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		subTakeoutRepo.WithProductPackageGroupItemTakeouts(),
 		commonRepo.WhereBySoftDelete(),
+		subTakeoutRepo.WhereByTakeoutTypes(takeoutTypes),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取子店外卖商品列表失败")
