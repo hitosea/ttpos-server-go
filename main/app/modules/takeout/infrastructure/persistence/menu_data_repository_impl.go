@@ -148,6 +148,7 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 				})
 		}).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
+		Preload("DescribeMultiLanguageName", "delete_time = ?", 0).
 		Preload("ImageFile").
 		Preload("ProductBomTakeouts", func(db *gorm.DB) *gorm.DB {
 			return db.Where("delete_time = ?", 0).
@@ -167,6 +168,7 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 		Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
 			return db.Where("delete_time = ?", 0).
 				Preload("ProductPackageGroupItem.ProductBom").
+				Preload("ProductPackageGroupItem.ProductBom.ProductFlavor.MultiLanguageName", "delete_time = ?", 0).
 				Preload("ProductPackageGroupItem.ProductPackage", func(db *gorm.DB) *gorm.DB {
 					return db.Where("delete_time = ?", 0).
 						Preload("MultiLanguageName", "delete_time = ?", 0)

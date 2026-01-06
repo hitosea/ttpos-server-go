@@ -5498,6 +5498,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 				takeoutMap[takeout.ProductPackageUuid] = append(takeoutMap[takeout.ProductPackageUuid], product_resp.ProductTakeoutSimpleInfo{
 					Uuid:        takeout.Uuid,
 					TakeoutType: takeout.TakeoutType,
+					Status:      takeout.Status,
 				})
 			}
 

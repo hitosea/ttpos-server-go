@@ -307,21 +307,25 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	menuItem.SetSequence(int32(sequence))
 	menuItem.SetAvailableStatus(string(status))
 	menuItem.SetPrice(price)
+
 	// 设置多语言名称（只包含 Grab 支持的语言）
 	if takeoutProduct.MultiLanguageName.Uuid != 0 {
 		menuItem.SetNameTranslation(c.filterSupportedLanguages(takeoutProduct.MultiLanguageName.ToMap()))
 	} else if takeoutProduct.ProductPackage.MultiLanguageName.Uuid != 0 {
 		menuItem.SetNameTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.MultiLanguageName.ToMap()))
 	}
+
 	// 设置商品描述（优先使用多语言字段）
-	if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
+	if takeoutProduct.DescribeMultiLanguageName.Uuid != 0 {
+		// 使用多语言描述
+		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.DescribeMultiLanguageName.ToMap()))
+		// 设置默认描述（使用英文，如果没有则回退）
+		menuItem.SetDescription(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
+	} else if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
 		// 使用多语言描述
 		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.DescribeMultiLanguageName.ToMap()))
 		// 设置默认描述（使用英文，如果没有则回退）
 		menuItem.SetDescription(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
-	} else if takeoutProduct.ProductPackage.Describe != "" {
-		// 回退到单语言描述字段
-		menuItem.SetDescription(takeoutProduct.ProductPackage.Describe)
 	}
 
 	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
@@ -548,6 +552,9 @@ func (c *GrabConverter) convertProductFlavors(
 		flavorName := bomTakeout.ProductBom.ProductFlavor.Name
 		if bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.Uuid != 0 {
 			flavorName = bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
+		}
+		if flavorName == "" {
+			flavorName = "delete"
 		}
 
 		// 获取规格价格（优先使用外卖价格，否则使用店内价格）

@@ -42,6 +42,7 @@ type IProductPackageQueryRepo interface {
 	WithProductCategoryMultiLanguageName(opts ...DBOption) DBOption       // 预加载商品分类多语言名称
 	WithProductPackageAttributeGroups(opts ...DBOption) DBOption          // 预加载产品包装属性组
 	WithProductPackageAttributeGroupAttributes(opts ...DBOption) DBOption // 预加载产品包装属性组产品属性
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption              // 预加载卖点多语言
 	WithProductPackageGroups(opts ...DBOption) DBOption                   // 预加载商品套餐组
 	WithProductPackageGroupItems(opts ...DBOption) DBOption               // 预加载商品套餐组商品
 	WithProductPackageGroupMultiLanguageName(opts ...DBOption) DBOption   // 预加载商品套餐组多语言名称
@@ -481,6 +482,18 @@ func (r *productPackageRepoImpl) WithProductPackageGroupMultiLanguageName(opts .
 func (r *productPackageRepoImpl) WithProductPackageAttributeGroupAttributes(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithDescribeMultiLanguageName 预加载卖点多语言
+func (r *productPackageRepoImpl) WithDescribeMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("DescribeMultiLanguageName", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}
