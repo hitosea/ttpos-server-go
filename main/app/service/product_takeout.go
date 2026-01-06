@@ -855,11 +855,6 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 		return errors.WithMessage(errors.New("外卖商品不存在"))
 	}
 
-	// 检查是否是总部外卖商品，总部商品不能删除
-	if takeout.HeadquarterUuid != 0 {
-		return errors.WithMessage(errors.New("总部外卖商品不能删除"))
-	}
-
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除外卖商品
 		if err := repository.NewProductPackageTakeoutRepo(tx).DestroyProductPackageTakeout(
