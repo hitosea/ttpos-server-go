@@ -178,7 +178,7 @@ func (r *productPackageRepoImpl) GetProductPackagesByUuidsWithAssociations(produ
 				Query: "ProductBoms",
 			},
 			WithPreload{
-				Query: "productPackageAttributeGroups",
+				Query: "ProductPackageAttributeGroups",
 			},
 		),
 	)
