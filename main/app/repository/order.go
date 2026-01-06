@@ -3635,7 +3635,6 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	productUnitRepo := NewProductUnitRepo(db)
 	productCategoryRepo := NewProductCategoryRepo(db)
 	productBomRepo := NewProductBomRepo(db)
-	productBomCardRepo := NewProductBomCardRepo(db)
 	orderSourceRepo := NewOrderSourceRepo(db)
 	nationalityRepo := NewNationalityRepo(db)
 	paymentMethodRepo := NewPaymentMethodRepo(db)
@@ -4416,13 +4415,11 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return 0
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBomCard](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBomCard, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductBomCard, error) {
-					// 使用 GetProductBomCardWithMaterials 方法，一次性加载所有关联数据
-					// 包括 RelatedMaterials.Material.WarehouseItems
-					return productBomCardRepo.GetProductBomCardWithMaterials(uuid)
-				})
+				if uuid == 0 {
+					return nil, nil
+				}
+				controller := objectStorageController.GetProductBomCardController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -4445,11 +4442,11 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return 0
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBomCard](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBomCard, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductBomCard, error) {
-					return productBomCardRepo.GetProductBomCardWithMaterials(uuid)
-				})
+				if uuid == 0 {
+					return nil, nil
+				}
+				controller := objectStorageController.GetProductBomCardController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}

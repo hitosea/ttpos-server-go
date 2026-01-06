@@ -106,7 +106,7 @@ var rootCommand = &cobra.Command{
 		)
 
 		// 初始化缓存对象控制器（单例模式）
-		repository.InitCacheObjectController(cache.Global, 10*time.Minute)
+		repository.InitCacheObjectController(cache.Global, 5*time.Minute)
 
 		// 初始化并启动缓存命中率快照保存器（每30分钟保存一次）
 		objectStorageAdapter.InitSnapshotReporter(

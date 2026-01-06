@@ -71,4 +71,18 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return settings, nil
 		},
 	)
+
+	// 初始化 ProductBomCard 对象的缓存控制器
+	objectStorageController.InitProductBomCardController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.ProductBomCard, error) {
+			productBomCardRepo := NewProductBomCardRepo(db)
+			return productBomCardRepo.GetProductBomCardWithMaterials(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.ProductBomCard, error) {
+			productBomCardRepo := NewProductBomCardRepo(db)
+			return productBomCardRepo.GetProductBomCardsWithMaterials(uuids)
+		},
+	)
 }

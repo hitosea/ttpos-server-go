@@ -25,6 +25,7 @@ type IProductBomCardQueryRepo interface {
 	GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error)
 	GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error)
 	GetProductBomCardWithMaterials(uuid uint64) (*model.ProductBomCard, error) // 获取成本卡信息，包括 RelatedMaterials.Material.WarehouseItems
+	GetProductBomCardsWithMaterials(uuids []uint64) ([]*model.ProductBomCard, error) // 批量获取成本卡信息，包括 RelatedMaterials.Material.WarehouseItems
 	GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error)
 }
 
@@ -167,6 +168,39 @@ func (r *productBomCardRepoImpl) GetProductBomCardWithMaterials(uuid uint64) (*m
 		return nil, err
 	}
 	return card, nil
+}
+
+// GetProductBomCardsWithMaterials 批量获取成本卡信息，包括 RelatedMaterials.Material.WarehouseItems
+func (r *productBomCardRepoImpl) GetProductBomCardsWithMaterials(uuids []uint64) ([]*model.ProductBomCard, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBomCard{}, nil
+	}
+
+	cards, err := r.GetProductBomCardList(
+		CommonRepo.WhereInUuids(uuids),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "RelatedMaterials",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "RelatedMaterials.Material.WarehouseItems",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return cards, nil
 }
 
 func (r *productBomCardRepoImpl) GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error) {
