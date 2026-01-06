@@ -3118,11 +3118,6 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 // getSaleBillAssociationsForAllInfo 获取 SaleBill 的关联配置（用于 GetSaleBillAllInfo 场景）
 // 这个函数在 repository 层定义，避免循环依赖
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
-	// 获取控制器单例（保证非 nil）
-	deskController := objectStorageController.GetDeskController()
-	productPackageController := objectStorageController.GetProductPackageController()
-	productBomController := objectStorageController.GetProductBomController()
-
 	return []entity.Association{
 		// 一对一关系：SaleBillSetting
 		{
@@ -3150,7 +3145,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 Desk 控制器查询（统一管理缓存）
-				result, err := deskController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetDeskController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -3335,7 +3330,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 ProductPackage 控制器查询（统一管理缓存）
-				result, err := productPackageController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetProductPackageController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -3343,7 +3338,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 ProductPackage 控制器批量查询（统一管理缓存）
-				batchResult, err := productPackageController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetProductPackageController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
@@ -3374,7 +3369,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
 				// 使用 ProductBom 控制器查询（统一管理缓存）
-				result, err := productBomController.GetByUuid(ctx, db, uuid)
+				result, err := objectStorageController.GetProductBomController().GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -3382,7 +3377,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
 				// 使用 ProductBom 控制器批量查询（统一管理缓存）
-				batchResult, err := productBomController.BatchGetByUuids(ctx, db, uuids)
+				batchResult, err := objectStorageController.GetProductBomController().BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
