@@ -250,7 +250,7 @@ type StatisticsPaymentMethodReq struct {
 type StatisticsCompanySummaryReq struct {
 	dto.PageReq                 // 分页参数
 	IndicatorType      string   `form:"indicator_type" json:"indicator_type"`             // 数据指标类型：business(营业数据汇总)、payment_method(支付方式汇总)、refund(退款金额汇总)
-	CompanyUuids       []uint64 `form:"company_uuids" json:"company_uuids"`               // 门店UUID列表（多选），为空时默认为当前门店
+	CompanyUuids       []uint64 `form:"company_uuids" json:"company_uuids"`               // 门店UUID列表（多选），为空时默认为所有门店
 	QueryStartDate     string   `form:"query_start_date" json:"query_start_date"`         // 开始日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日开始日期：YYYY-MM-DD 00:00:00
 	QueryEndDate       string   `form:"query_end_date" json:"query_end_date"`             // 结束日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日结束日期：YYYY-MM-DD 23:59:59
 	Cycle              int      `form:"cycle" json:"cycle"`                               // 周期: 0=按日、1=按月

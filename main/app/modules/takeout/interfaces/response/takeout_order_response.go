@@ -91,20 +91,20 @@ type TakeoutOrderReceiverResp struct {
 
 // TakeoutOrderCampaignResp 订单活动响应
 type TakeoutOrderCampaignResp struct {
-	Uuid           uint64 `json:"uuid"`
-	CampaignName   string `json:"campaign_name"`   // 活动名称
-	CampaignType   string `json:"campaign_type"`   // 活动类型
-	DeductedAmount int64  `json:"deducted_amount"` // 折扣金额(元)
+	Uuid           uint64  `json:"uuid"`
+	CampaignName   string  `json:"campaign_name"`   // 活动名称
+	CampaignType   string  `json:"campaign_type"`   // 活动类型
+	DeductedAmount float64 `json:"deducted_amount"` // 折扣金额(元)
 }
 
 // TakeoutOrderPromoResp 订单促销响应
 type TakeoutOrderPromoResp struct {
-	Uuid             uint64 `json:"uuid"`
-	PromoCode        string `json:"promo_code"`        // 促销代码
-	PromoName        string `json:"promo_name"`        // 促销名称
-	PromoDescription string `json:"promo_description"` // 促销描述
-	PromoAmount      int64  `json:"promo_amount"`      // 促销金额
-	MexFundedRatio   int    `json:"mex_funded_ratio"`  // 商户承担比例
+	Uuid             uint64  `json:"uuid"`
+	PromoCode        string  `json:"promo_code"`        // 促销代码
+	PromoName        string  `json:"promo_name"`        // 促销名称
+	PromoDescription string  `json:"promo_description"` // 促销描述
+	PromoAmount      float64 `json:"promo_amount"`      // 促销金额
+	MexFundedRatio   int32   `json:"mex_funded_ratio"`  // 商户承担比例
 }
 
 // TakeoutOrderItemResp 订单商品响应

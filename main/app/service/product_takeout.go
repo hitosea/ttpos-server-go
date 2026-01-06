@@ -1111,8 +1111,7 @@ func (s *productTakeoutSrv) GetProductCount(
 		Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
 		Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
 		Where("ttpos_product_package_takeout.delete_time = ?", 0).
-		Where("ttpos_product_package.delete_time = ?", 0).
-		Where("(ttpos_product_package_takeout.category_uuid = 0 OR (ttpos_product_category.status = 1 AND ttpos_product_category.delete_time = 0))")
+		Where("ttpos_product_package.delete_time = ?", 0)
 
 	// 5. 如果指定了平台，添加平台过滤 (使用 takeout_type 字段)
 	if platform != "" {

@@ -340,6 +340,8 @@ type ShopBase struct {
 	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
 
 	HasDataPermission bool `json:"has_data_permission"` // 是否有数据管理权限
+
+	AllowedTransferTypes string `json:"allowed_transfer_types"` // 允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
 }
 
 type ShopProfile struct {

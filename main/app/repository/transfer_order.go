@@ -142,15 +142,15 @@ func (r *TransferOrderRepoImpl) GetListWithPagination(pageNo, pageSize int, opts
 //   - pageSize: 每页大小
 //   - shopDbName: 门店数据库名称，例如 "shop8609817471094784"
 type TransferOrderQueryReq struct {
-	PageNo              int
-	PageSize            int
-	CompanyUuid         uint64
-	OrderNo             string
-	StatusIn            []int
-	OrderTimeStart      int
-	OrderTimeEnd        int
-	OppositeCompanyUuid []uint64
-	MyRole              []string // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批
+	PageNo              int      // 页码
+	PageSize            int      // 每页大小
+	CompanyUuid         uint64   // 当前公司UUID
+	OrderNo             string   // 单据编号
+	StatusIn            []int    // 状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
+	OrderTimeStart      int      // 单据时间开始
+	OrderTimeEnd        int      // 单据时间结束
+	OppositeCompanyUuid []uint64 // 对方机构UUID列表
+	MyRole              []string // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批 my_approver-我审批
 	SubmitSide          string   // 提交方筛选：all-全部 self-本店提交 other-他店提交
 }
 
@@ -249,11 +249,14 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 			if slices.Contains(query.MyRole, "approver") {
 				baseSQL += fmt.Sprintf(` EXISTS (
 					SELECT 1 FROM saas.ttpos_transfer_order_approval b
-					WHERE b.transfer_order_uuid = t.uuid 
+					WHERE b.transfer_order_uuid = t.uuid
 					AND b.approval_company_uuid = %d
 					AND b.delete_time = 0
 					AND b.approval_type in ('sender_parent', 'receiver_parent')
 				) OR`, companyUuid)
+			}
+			if slices.Contains(query.MyRole, "my_approver") {
+				baseSQL += fmt.Sprintf(" next_approval_company_uuid = %d OR ", companyUuid)
 			}
 			baseSQL += fmt.Sprintf(" 0 = 1 )")
 		}
