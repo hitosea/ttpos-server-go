@@ -11,6 +11,7 @@ import (
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/types"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -234,10 +235,10 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		logger.Logger.Error("批量查询商品规格/小料库存失败", zap.Error(err), zap.Int("bom_count", len(bomUuids)))
 		// 查询失败，设置所有 BOM 为无限库存
 		for _, bom := range bomMap {
-			bom.StockNum = 99999999
+			bom.StockNum = value_object.TakeoutStockUnlimited
 		}
 		for _, groupItem := range packageBomMap {
-			groupItem.StockNum = 99999999
+			groupItem.StockNum = value_object.TakeoutStockUnlimited
 		}
 		return
 	}
@@ -247,7 +248,7 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		if inventory, ok := inventoryMap[bomUuid]; ok {
 			bom.StockNum = inventory
 		} else {
-			bom.StockNum = 99999999
+			bom.StockNum = value_object.TakeoutStockUnlimited
 		}
 	}
 
@@ -256,7 +257,7 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		if inventory, ok := inventoryMap[bomUuid]; ok {
 			bom.StockNum = inventory
 		} else {
-			bom.StockNum = 99999999
+			bom.StockNum = value_object.TakeoutStockUnlimited
 		}
 	}
 
@@ -265,7 +266,7 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		if inventory, ok := inventoryMap[groupItem.Uuid]; ok {
 			groupItem.StockNum = inventory
 		} else {
-			groupItem.StockNum = 99999999
+			groupItem.StockNum = value_object.TakeoutStockUnlimited
 		}
 	}
 }

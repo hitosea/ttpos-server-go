@@ -26,6 +26,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -73,18 +74,13 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 	}
 
 	// 3. 获取员工班次记录
-	staffShiftLogUuid := uint64(0)
-	if acceptedBy > 0 {
-		staffShiftLog, err := s.getCurrentStaffShiftLog(db, acceptedBy)
-		if err != nil {
-			logger.Logger.Warn("获取员工班次记录失败", zap.Uint64("staffUuid", acceptedBy), zap.Error(err))
-		} else if staffShiftLog != nil {
-			staffShiftLogUuid = staffShiftLog.Uuid
-		}
+	staffShiftLogUuid, err := s.getCurrentStaffShiftLogUuid(db, acceptedBy)
+	if err != nil {
+		logger.Logger.Warn("获取员工班次记录失败", zap.Uint64("staffUuid", acceptedBy), zap.Error(err))
 	}
 
 	// 4. 创建出库单
-	warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, false, order.Uuid, acceptedBy, staffShiftLogUuid, orderUuid)
+	warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, false, 0, acceptedBy, staffShiftLogUuid, orderUuid)
 
 	// 5. 在事务中创建出库单和更新销量
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -127,7 +123,7 @@ func (s *takeoutSrv) ProcessTakeoutOrderOutboundAndSales(ctx context.Context, or
 
 // getCurrentStaffShiftLog 获取当前员工班次记录
 // 如果 staffUuid 为空，则返回最新的正在当班的班次记录
-func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*model.StaffShiftLog, error) {
+func (s *takeoutSrv) getCurrentStaffShiftLogUuid(db *gorm.DB, staffUuid uint64) (uint64, error) {
 	shiftLogRepo := repository.NewShiftLogRepo(db)
 
 	// 如果 staffUuid 为空，获取最新的正在当班的班次记录
@@ -142,11 +138,11 @@ func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*mo
 		)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
-				return nil, nil
+				return 0, nil
 			}
-			return nil, errors.WithMessage(err, "查询最新班次记录失败")
+			return 0, errors.WithMessage(err, "查询最新班次记录失败")
 		}
-		return &shiftLog, nil
+		return shiftLog.Uuid, nil
 	}
 
 	// 获取指定员工的当班记录
@@ -160,11 +156,11 @@ func (s *takeoutSrv) getCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*mo
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, nil
+			return 0, nil
 		}
-		return nil, errors.WithMessage(err, "查询员工班次记录失败")
+		return 0, errors.WithMessage(err, "查询员工班次记录失败")
 	}
-	return &shiftLog, nil
+	return shiftLog.Uuid, nil
 }
 
 // buildTakeoutOrderDecreaseStockList 从外卖订单构建出库清单
@@ -186,9 +182,6 @@ func (s *takeoutSrv) buildTakeoutOrderDecreaseStockList(ctx context.Context, ord
 	orderMaterials, err := persistence.NewTakeoutOrderMaterialRepo(db).GetByOrderUuid(order.Uuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询订单原料消耗记录失败")
-	}
-	if len(orderMaterials) == 0 {
-		return []*model.Product{}, nil
 	}
 
 	// 3. 按 BOM UUID 聚合原料消耗（使用 product_bom_uuid 字段）
@@ -212,7 +205,6 @@ func (s *takeoutSrv) buildTakeoutOrderDecreaseStockList(ctx context.Context, ord
 			MaterialUuid:  orderMaterial.MaterialUuid,
 			WarehouseUuid: orderMaterial.WarehouseUuid,
 			Num:           orderMaterial.Num,
-			SaleOrderUuid: 0, // 外卖订单没有 SaleOrderUuid
 		})
 	}
 
@@ -226,17 +218,22 @@ func (s *takeoutSrv) buildTakeoutOrderDecreaseStockList(ctx context.Context, ord
 		}
 		// 获取 PackageUuid
 		packageUuid := uint64(0)
+		SaleOrderProductUuid := uint64(0)
 		if bomItem, ok := bomItemMap[bomUuid]; ok {
-			packageUuid = bomItem.TtposProductPackageUuid
+			if bomItem.TtposProductType > 0 {
+				packageUuid = bomItem.TtposProductPackageUuid
+			}
+			SaleOrderProductUuid = bomItem.Uuid
 		}
 		// 添加到出库清单
 		if productNum > 0 {
 			decreaseStockList = append(decreaseStockList, &model.Product{
-				TakeoutOrderUuid:    order.Uuid,
-				ProductBomUuid:      bomUuid,
-				PackageUuid:         packageUuid,
-				Num:                 productNum,
-				ProductBomMaterials: productBomMaterials,
+				TakeoutOrderUuid:     order.Uuid,
+				SaleOrderProductUuid: SaleOrderProductUuid, // 外卖订单没有 SaleOrderProductUuid
+				ProductBomUuid:       bomUuid,
+				PackageUuid:          packageUuid,
+				Num:                  productNum,
+				ProductBomMaterials:  productBomMaterials,
 			})
 		}
 	}
@@ -276,102 +273,89 @@ func (s *takeoutSrv) updateTakeoutOrderSalesVolume(ctx context.Context, order *t
 	return nil
 }
 
-// reduceTakeoutOrderStock 扣减外卖订单库存
-// 优化：直接从 ttpos_takeout_order_material 表获取原料消耗记录，避免查询 warehouse_out_form_item
+// reduceTakeoutOrderStock 扣减外卖订单库存（从出入库记录表读取数据，与结账单保持一致）
 func (s *takeoutSrv) reduceTakeoutOrderStock(db *gorm.DB, companyUuid uint64, takeoutOrderUuid uint64) error {
 	// 加锁，防止并发扣减库存
-	lockKey := fmt.Sprintf("takeout_order_stock:%d", takeoutOrderUuid)
+	lockKey := fmt.Sprintf("takeout_order_stock:%d:%d", companyUuid, takeoutOrderUuid)
 	systemLock := lock.NewSystemLock()
 	systemLock.LockUuidString(lockKey)
 	defer systemLock.UnlockUuidString(lockKey)
 
-	// Step 1: 从 ttpos_takeout_order_material 表查询原料消耗记录
-	orderMaterials, err := persistence.NewTakeoutOrderMaterialRepo(db).GetByOrderUuid(takeoutOrderUuid)
+	// Step 1: 从出入库记录表（ttpos_warehouse_out_form_item）查询未减库存的出库记录
+	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
+	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItemNotProcessedByTakeoutOrderUuid(takeoutOrderUuid)
 	if err != nil {
-		return errors.WithMessage(err, "查询订单原料消耗记录失败")
+		logger.Logger.Error("reduceTakeoutOrderStock, GetWarehouseOutFormItemNotProcessedByTakeoutOrderUuid failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+		return err
 	}
-	if len(orderMaterials) == 0 {
+	if len(warehouseOutFormItems) == 0 {
 		return nil
 	}
 
 	// Step 2: 按类型分组处理（BOM 和 原料）
-	productBoms := make(map[uint64]*model.ProductBom)
-	materials := make(map[uint64]map[uint64]float64) // map[materialUuid]map[warehouseUuid]reduceStockNum
-
-	// 收集需要查询的 BOM UUID（去重）
-	bomUuidSet := make(map[uint64]bool)
-	for _, orderMaterial := range orderMaterials {
-		if orderMaterial.ProductBomUuid > 0 {
-			bomUuidSet[orderMaterial.ProductBomUuid] = true
-		}
+	ProductBoms := make(map[uint64]*model.ProductBom)
+	type StockNum struct {
+		MaterialUuid   uint64
+		WarehouseUuid  uint64
+		ReduceStockNum float64
 	}
+	Materials := make(map[uint64]*StockNum)
 
-	// Step 3: 批量查询所有 BOM（一次性查询）
-	if len(bomUuidSet) > 0 {
-		bomUuidsToQuery := make([]uint64, 0, len(bomUuidSet))
-		for bomUuid := range bomUuidSet {
-			bomUuidsToQuery = append(bomUuidsToQuery, bomUuid)
-		}
-		boms, err := repository.NewProductBomRepo(db).GetFlavorProductBomByUuids(companyUuid, bomUuidsToQuery)
-		if err != nil {
-			logger.Logger.Error("批量查询BOM信息失败", zap.Error(err))
-		} else {
-			// 构建 BOM UUID -> BOM 的映射
-			for _, bom := range boms {
-				productBoms[bom.Uuid] = bom
+	for _, warehouseOutFormItem := range warehouseOutFormItems {
+		if warehouseOutFormItem.IsProductBom() {
+			if ProductBoms[warehouseOutFormItem.ProductBomUuid] == nil {
+				ProductBoms[warehouseOutFormItem.ProductBomUuid] = warehouseOutFormItem.ProductBom
 			}
+			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num // 扣减库存
+		} else if warehouseOutFormItem.IsMaterial() {
+			if Materials[warehouseOutFormItem.MaterialUuid] == nil {
+				Materials[warehouseOutFormItem.MaterialUuid] = &StockNum{
+					MaterialUuid:   warehouseOutFormItem.MaterialUuid,
+					WarehouseUuid:  warehouseOutFormItem.Material.WarehouseUuid,
+					ReduceStockNum: 0,
+				}
+			}
+			Materials[warehouseOutFormItem.MaterialUuid].ReduceStockNum += warehouseOutFormItem.Num
 		}
 	}
 
-	// Step 4: 按 BOM 聚合原料消耗，并扣减 BOM 库存
-	// 结构：map[bomUuid]totalNum
-	bomConsumptionMap := make(map[uint64]float64)
-	for _, orderMaterial := range orderMaterials {
-		bomUuid := orderMaterial.ProductBomUuid
-		if bomUuid > 0 {
-			bomConsumptionMap[bomUuid] += orderMaterial.Num
-		}
-		// 同时累加原料消耗（用于直接扣减原料库存）
-		if materials[orderMaterial.MaterialUuid] == nil {
-			materials[orderMaterial.MaterialUuid] = make(map[uint64]float64)
-		}
-		materials[orderMaterial.MaterialUuid][orderMaterial.WarehouseUuid] += orderMaterial.Num
+	ProductBomsList := make([]*model.ProductBom, 0)
+	for _, productBom := range ProductBoms {
+		ProductBomsList = append(ProductBomsList, productBom)
 	}
 
-	// Step 5: 扣减 BOM 库存（按聚合后的消耗量）
-	for bomUuid, consumptionNum := range bomConsumptionMap {
-		if bom, ok := productBoms[bomUuid]; ok {
-			bom.StockNum -= consumptionNum
-		} else {
-			logger.Logger.Warn("BOM不存在", zap.Uint64("bomUuid", bomUuid))
-		}
+	MaterialSalesVolume := make(map[uint64]float64) // 材料销量 map[材料UUID]销量
+	for _, warehouseOutFormItem := range warehouseOutFormItems {
+		MaterialSalesVolume[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(MaterialSalesVolume[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
 	}
 
-	// Step 6: 在事务中更新库存
-	err = db.Transaction(func(tx *gorm.DB) error {
-		// 更新出库单明细状态（保持兼容性）
+	// Step 3: 在事务中更新库存
+	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新出库单明细状态（标记为已减库存）
 		if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsReduceStockByTakeoutOrderUuid(takeoutOrderUuid); err != nil {
-			// 如果出库单不存在，不影响库存扣减
-			logger.Logger.Warn("更新出库单明细状态失败", zap.Error(err))
+			logger.Logger.Error("reduceTakeoutOrderStock, UpdateWarehouseOutFormItemRecordsReduceStock failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+			return err
 		}
 
 		// 更新 BOM 库存
-		productBomList := make([]*model.ProductBom, 0, len(productBoms))
-		for _, bom := range productBoms {
-			productBomList = append(productBomList, bom)
-		}
-		if len(productBomList) > 0 {
-			if err := repository.NewProductBomRepo(tx).UpdateProductBoms(productBomList); err != nil {
-				return errors.WithMessage(err, "更新BOM库存失败")
-			}
+		if err := repository.NewProductBomRepo(tx).UpdateProductBoms(ProductBomsList); err != nil {
+			logger.Logger.Error("reduceTakeoutOrderStock, UpdateProductBoms failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+			return err
 		}
 
 		// 更新材料库存
-		for materialUuid, warehouseMap := range materials {
-			for warehouseUuid, reduceStockNum := range warehouseMap {
-				if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(materialUuid, warehouseUuid, -reduceStockNum); err != nil {
-					return errors.WithMessage(err, "更新材料库存失败")
-				}
+		for _, material := range Materials {
+			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
+				logger.Logger.Error("reduceTakeoutOrderStock, UpdateMaterialsStockNum failed", zap.Uint64("takeoutOrderUuid", takeoutOrderUuid), zap.Error(err))
+				return err
+			}
+		}
+
+		// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
+		for materialUuid, saleNum := range MaterialSalesVolume {
+			if err := repository.NewMaterialRepo(tx).AddActualSaleNum(materialUuid, saleNum); err != nil {
+				logger.Logger.Error("HandleAddMaterialSalesVolume process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+				continue
 			}
 		}
 
@@ -406,10 +390,7 @@ func (s *takeoutSrv) RestoreTakeoutOrderOutboundAndSales(ctx context.Context, or
 	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
 	warehouseOutFormItems, err := warehouseFormRepo.GetWarehouseOutFormItem(
 		func(db *gorm.DB) *gorm.DB {
-			return db.Where("takeout_order_uuid = ?", orderUuid)
-		},
-		func(db *gorm.DB) *gorm.DB {
-			return db.Where("revoke_time = ?", 0) // 只查询未撤销的出库单
+			return db.Where("takeout_order_uuid = ? AND revoke_time = ?", orderUuid, 0)
 		},
 	)
 	if err != nil {
@@ -564,6 +545,18 @@ func (s *takeoutSrv) restoreTakeoutOrderStock(db *gorm.DB, companyUuid uint64, w
 			if err := base.NewMaterialRepo(db).UpdateMaterialsStockNum(materialUuid, warehouseUuid, restoreStockNum); err != nil {
 				return errors.WithMessage(err, "恢复材料库存失败")
 			}
+		}
+	}
+
+	// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
+	materialSalesVolumes := make(map[uint64]float64)
+	for _, warehouseOutFormItem := range warehouseOutFormItems {
+		materialSalesVolumes[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(materialSalesVolumes[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
+	}
+	for materialUuid, saleNum := range materialSalesVolumes {
+		if err := repository.NewMaterialRepo(db).AddActualSaleNum(materialUuid, -saleNum); err != nil {
+			logger.Logger.Error("restoreTakeoutOrderStock process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
 		}
 	}
 

@@ -24,13 +24,15 @@ type IProductPackageTakeoutQueryRepo interface {
 	GetProductPackageTakeoutIncludeSoftDelete(productPackageUuid uint64, takeoutType uint) (*model.ProductPackageTakeout, error) // 获取外卖商品（包括软删除的记录）
 	GetProductPackageTakeoutCount(opts ...DBOption) (int64, error)                                                               // 统计外卖商品数量
 
-	WithProductPackage(opts ...DBOption) DBOption                          // 预加载商品包
-	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption         // 预加载商品包多语言名称
-	WithMultiLanguageName(opts ...DBOption) DBOption                       // 预加载多语言名称
-	WithDescribeMultiLanguageName(opts ...DBOption) DBOption               // 预加载卖点多语言
-	WithProductCategory(opts ...DBOption) DBOption                         // 预加载外卖分类
-	WithProductSpecialCategory(opts ...DBOption) DBOption                  // 预加载外卖特色分类
-	WithImageFile(opts ...DBOption) DBOption                               // 预加载图片
+	WithProductPackage(opts ...DBOption) DBOption                  // 预加载商品包
+	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption // 预加载商品包多语言名称
+	WithMultiLanguageName(opts ...DBOption) DBOption               // 预加载多语言名称
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption       // 预加载卖点多语言
+	WithProductCategory(opts ...DBOption) DBOption                 // 预加载外卖分类
+	WithProductSpecialCategory(opts ...DBOption) DBOption          // 预加载外卖特色分类
+	WithImageFile(opts ...DBOption) DBOption                       // 预加载图片
+
+	WhereByUuid(uuid uint64) DBOption                                      // 根据UUID查询
 	WhereByProductPackageUuid(productPackageUuid uint64) DBOption          // 根据商品包UUID查询
 	WhereByProductPackageUuids(productPackageUuids []uint64) DBOption      // 根据商品包UUID列表查询
 	WithProductBomTakeouts(opts ...DBOption) DBOption                      // 预加载外卖规格价格列表
@@ -159,6 +161,13 @@ func (r *productPackageTakeoutRepoImpl) ForceDestroyProductPackageTakeout(opts .
 	}
 
 	return db.Delete(&model.ProductPackageTakeout{}).Error
+}
+
+// WhereByUuid 根据UUID查询
+func (r *productPackageTakeoutRepoImpl) WhereByUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
 }
 
 // WhereByProductPackageUuid 根据商品包UUID查询
