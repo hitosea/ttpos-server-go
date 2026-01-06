@@ -66,4 +66,3 @@ func GetNationalityController() *CacheObjectController[*model.Nationality] {
 		"Nationality 缓存控制器未初始化，请先调用 InitNationalityController",
 	)
 }
-

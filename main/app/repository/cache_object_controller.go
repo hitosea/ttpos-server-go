@@ -129,4 +129,20 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return nationalityRepo.FindByUuidsWithDeleted(uuids)
 		},
 	)
+
+	// 初始化 OrderSource 对象的缓存控制器
+	objectStorageController.InitOrderSourceController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.OrderSource, error) {
+			orderSourceRepo := NewOrderSourceRepo(db)
+			// 使用 FindByUuidWithDeleted，保证历史订单可显示已删除的配置名称
+			return orderSourceRepo.FindByUuidWithDeleted(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.OrderSource, error) {
+			orderSourceRepo := NewOrderSourceRepo(db)
+			// 使用批量查询方法，提高性能
+			return orderSourceRepo.FindByUuidsWithDeleted(uuids)
+		},
+	)
 }
