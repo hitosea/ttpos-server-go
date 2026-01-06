@@ -9,9 +9,6 @@ const (
 	// ProductBom 普通商品BOM
 	ObjectTypeProductBom = "product_bom"
 
-	// ProductFlavor 商品口味
-	ObjectTypeProductFlavor = "product_flavor"
-
 	// ProductBomFlavor 规格商品BOM（包含预加载的规格信息）
 	ObjectTypeProductBomFlavor = "product_bom_flavor"
 

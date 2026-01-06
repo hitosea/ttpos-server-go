@@ -233,4 +233,23 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return productBomRepo.GetProductBomsByUuidsWithAssociations(uuids)
 		},
 	)
+
+	// 初始化 MultiLanguageName 对象的缓存控制器
+	objectStorageController.InitMultiLanguageNameController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.MultiLanguageName, error) {
+			multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
+			// GetMultiLanguageNameByUuid 返回值类型，需要转换为指针
+			name, err := multiLanguageNameRepo.GetMultiLanguageNameByUuid(uuid)
+			if err != nil {
+				return nil, err
+			}
+			return &name, nil
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.MultiLanguageName, error) {
+			multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
+			return multiLanguageNameRepo.GetMultiLanguageNameListByUuids(uuids)
+		},
+	)
 }

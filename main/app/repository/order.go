@@ -2847,7 +2847,7 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 	productPackageController := objectStorageController.GetProductPackageController()
 	productAttributeController := objectStorageController.GetProductAttributeController()
 	productBomController := objectStorageController.GetProductBomController()
-	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
+	multiLanguageNameController := objectStorageController.GetMultiLanguageNameController()
 	batchTagRepo := NewBatchTagRepo(db)
 
 	return []entity.Association{
@@ -2921,44 +2921,25 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(*model.SaleOrderProduct).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
-					return multiLanguageNameRepo.GetMultiLanguageName(
-						CommonRepo.WhereByUuid(uuid),
-					)
-				})
+				// 使用 MultiLanguageName 控制器查询（统一管理缓存）
+				result, err := multiLanguageNameController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
-					result := make(map[string]*model.MultiLanguageName)
-					for _, uuid := range uuids {
-						name, err := multiLanguageNameRepo.GetMultiLanguageName(
-							CommonRepo.WhereByUuid(uuid),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-							result[key] = name
-						}
-					}
-					return result, nil
-				})
+				// 使用 MultiLanguageName 控制器批量查询（统一管理缓存）
+				batchResult, err := multiLanguageNameController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, name := range batchResult {
+					result[uuid] = name
+				}
+				return result, nil
 			},
 		},
 		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute
@@ -2998,44 +2979,25 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(model.ProductAttribute).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
-					return multiLanguageNameRepo.GetMultiLanguageName(
-						CommonRepo.WhereByUuid(uuid),
-					)
-				})
+				// 使用 MultiLanguageName 控制器查询（统一管理缓存）
+				result, err := multiLanguageNameController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
-					result := make(map[string]*model.MultiLanguageName)
-					for _, uuid := range uuids {
-						name, err := multiLanguageNameRepo.GetMultiLanguageName(
-							CommonRepo.WhereByUuid(uuid),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-							result[key] = name
-						}
-					}
-					return result, nil
-				})
+				// 使用 MultiLanguageName 控制器批量查询（统一管理缓存）
+				batchResult, err := multiLanguageNameController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, name := range batchResult {
+					result[uuid] = name
+				}
+				return result, nil
 			},
 		},
 		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom
@@ -3129,44 +3091,25 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(model.BatchTag).MultiLanguageNameUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
-					return multiLanguageNameRepo.GetMultiLanguageName(
-						CommonRepo.WhereByUuid(uuid),
-					)
-				})
+				// 使用 MultiLanguageName 控制器查询（统一管理缓存）
+				result, err := multiLanguageNameController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
-					result := make(map[string]*model.MultiLanguageName)
-					for _, uuid := range uuids {
-						name, err := multiLanguageNameRepo.GetMultiLanguageName(
-							CommonRepo.WhereByUuid(uuid),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-							result[key] = name
-						}
-					}
-					return result, nil
-				})
+				// 使用 MultiLanguageName 控制器批量查询（统一管理缓存）
+				batchResult, err := multiLanguageNameController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, name := range batchResult {
+					result[uuid] = name
+				}
+				return result, nil
 			},
 		},
 	}
