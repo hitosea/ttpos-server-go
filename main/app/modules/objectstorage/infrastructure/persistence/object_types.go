@@ -81,15 +81,6 @@ const (
 	// ProductUnit 商品单位
 	ObjectTypeProductUnit = "product_unit"
 
-	// RelatedMaterial 关联材料
-	ObjectTypeRelatedMaterial = "related_material"
-
-	// Material 材料/物品
-	ObjectTypeMaterial = "material"
-
-	// WarehouseItem 仓库物品
-	ObjectTypeWarehouseItem = "warehouse_item"
-
 	// ProductBomCard 成本卡
 	ObjectTypeProductBomCard = "product_bom_card"
 

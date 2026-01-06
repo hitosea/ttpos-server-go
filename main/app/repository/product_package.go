@@ -27,11 +27,13 @@ type IProductPackageQueryRepo interface {
 	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(companyUuid uint64, flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
-	GetProductPackageBatchTagCount() ([]uint64, error)                                                    // 获取分批商品数量
-	SetProductPackageBatch(uuids []uint64, isBatch uint) error                                            // 将is_batch设置为1或0
-	GetProductPackageListByUuidsAndIsBatch(uuids []uint64, isBatch uint) ([]*model.ProductPackage, error) // 根据uuid列表和is_batch查询商品包列表
-	GetProductPackageListByIsBatch(isBatch uint) ([]*model.ProductPackage, error)                         // 根据is_batch查询商品包列表
-	GetProductPackageUuidsByIsPackage() ([]uint64, error)                                                 // 查询所有套餐的uuid列表
+	GetProductPackageBatchTagCount() ([]uint64, error)                                                       // 获取分批商品数量
+	SetProductPackageBatch(uuids []uint64, isBatch uint) error                                               // 将is_batch设置为1或0
+	GetProductPackageListByUuidsAndIsBatch(uuids []uint64, isBatch uint) ([]*model.ProductPackage, error)    // 根据uuid列表和is_batch查询商品包列表
+	GetProductPackageListByIsBatch(isBatch uint) ([]*model.ProductPackage, error)                            // 根据is_batch查询商品包列表
+	GetProductPackageUuidsByIsPackage() ([]uint64, error)                                                    // 查询所有套餐的uuid列表
+	GetProductPackageByUuidWithAssociations(productPackageUuid uint64) (*model.ProductPackage, error)        // 通过UUID查询商品包信息，包括MultiLanguageName、DineTax、TakeoutTax、ProductUnit、ProductUnit.MultiLanguageName、ProductCategory
+	GetProductPackagesByUuidsWithAssociations(productPackageUuids []uint64) ([]*model.ProductPackage, error) // 批量通过UUID列表查询商品包信息，包括MultiLanguageName、DineTax、TakeoutTax、ProductUnit、ProductUnit.MultiLanguageName、ProductCategory
 
 	WithMultiLanguageName(opts ...DBOption) DBOption                      // 预加载多语言名称
 	WithProductBoms(opts ...DBOption) DBOption                            // 预加载商品bom
@@ -105,6 +107,73 @@ func (r *productPackageRepoImpl) GetProductPackageBoms(productPackageUuid uint64
 		return nil, errors.WithMessage(err)
 	}
 	return productPackage, nil
+}
+
+// GetProductPackageByUuidWithAssociations 通过UUID查询商品包信息，包括MultiLanguageName、DineTax、TakeoutTax、ProductUnit、ProductUnit.MultiLanguageName、ProductCategory
+func (r *productPackageRepoImpl) GetProductPackageByUuidWithAssociations(productPackageUuid uint64) (*model.ProductPackage, error) {
+	productPackage, err := r.GetProductPackage(
+		CommonRepo.WhereByUuid(productPackageUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "DineTax",
+			},
+			WithPreload{
+				Query: "TakeoutTax",
+			},
+			WithPreload{
+				Query: "ProductUnit",
+			},
+			WithPreload{
+				Query: "ProductUnit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductCategory",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackage, nil
+}
+
+// GetProductPackagesByUuidsWithAssociations 批量通过UUID列表查询商品包信息，包括MultiLanguageName、DineTax、TakeoutTax、ProductUnit、ProductUnit.MultiLanguageName、ProductCategory
+func (r *productPackageRepoImpl) GetProductPackagesByUuidsWithAssociations(productPackageUuids []uint64) ([]*model.ProductPackage, error) {
+	if len(productPackageUuids) == 0 {
+		return []*model.ProductPackage{}, nil
+	}
+	productPackages, err := r.GetProductPackageList(
+		CommonRepo.WhereInUuids(productPackageUuids),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "DineTax",
+			},
+			WithPreload{
+				Query: "TakeoutTax",
+			},
+			WithPreload{
+				Query: "ProductUnit",
+			},
+			WithPreload{
+				Query: "ProductUnit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductCategory",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackages, nil
 }
 
 // WithProductBomsProductFlavor 预加载商品bom产品-规格
