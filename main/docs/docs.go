@@ -35031,7 +35031,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批",
+                        "description": "我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批 my_approver-我的上级审批",
                         "name": "my_role",
                         "in": "query"
                     },
@@ -49074,7 +49074,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "company_uuids": {
-                    "description": "门店UUID列表（多选），为空时默认为当前门店",
+                    "description": "门店UUID列表（多选），为空时默认为所有门店",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -49987,6 +49987,10 @@ const docTemplate = `{
                 "zeroing_method"
             ],
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "batch_cooking_mode": {
                     "description": "分批模式 pre-前置模式 post-后置模式，默认为post",
                     "type": "string"
@@ -60392,6 +60396,10 @@ const docTemplate = `{
         "resp.ShopBase": {
             "type": "object",
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "buffet": {
                     "description": "自助餐设置",
                     "allOf": [
@@ -63209,7 +63217,7 @@ const docTemplate = `{
                 },
                 "deducted_amount": {
                     "description": "折扣金额(元)",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "uuid": {
                     "type": "integer"
@@ -63421,7 +63429,7 @@ const docTemplate = `{
                 },
                 "promo_amount": {
                     "description": "促销金额",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "promo_code": {
                     "description": "促销代码",
@@ -63800,6 +63808,10 @@ const docTemplate = `{
         "setting.Business": {
             "type": "object",
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
                     "type": "string"
@@ -64721,6 +64733,10 @@ const docTemplate = `{
         "setting.ShopBusiness": {
             "type": "object",
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
                     "type": "string"

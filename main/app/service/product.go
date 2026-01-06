@@ -1503,7 +1503,7 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		return nil, errors.WithMessage(err, "检查子店使用情况失败")
 	}
 	if usage.IsUsed {
-		return &product_resp.ProductDeleteResp{List: usage.UsedByShops}, errors.NewWithReplace("删除失败，%s正在使用该商品", []string{strings.Join(usage.UsedByShops, "、")})
+		return nil, errors.NewWithReplace("删除失败，%s正在使用该商品", []string{strings.Join(usage.UsedByShops, "、")})
 	}
 
 	productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
@@ -8434,6 +8434,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		headTakeoutRepo.WithProductBomTakeouts(),
 		headTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		headTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+		commonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部外卖商品列表失败")
@@ -8446,140 +8447,28 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		subTakeoutRepo.WithProductBomTakeouts(),
 		subTakeoutRepo.WithProductPackageAttributeTakeouts(),
 		subTakeoutRepo.WithProductPackageGroupItemTakeouts(),
+		commonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取子店外卖商品列表失败")
 	}
 
-	// 构建子店已同步数据的 Map（用于快速查找）
-	subTakeoutMap := make(map[uint64]*model.ProductPackageTakeout)
-	subBomTakeoutMap := make(map[uint64]*model.ProductBomTakeout)
-	subAttrTakeoutMap := make(map[uint64]*model.ProductPackageAttributeTakeout)
-	subGroupItemTakeoutMap := make(map[uint64]*model.ProductPackageGroupItemTakeout)
-	for _, takeout := range subTakeoutList {
-		subTakeoutMap[takeout.Uuid] = takeout
-		for _, bom := range takeout.ProductBomTakeouts {
-			subBomTakeoutMap[bom.Uuid] = &bom
+	// 构建总部外卖商品 Map：商品UUID -> takeout_type -> 外卖商品信息
+	headTakeoutMap := make(map[uint64]map[uint]*model.ProductPackageTakeout)
+	for _, takeout := range headTakeoutList {
+		if headTakeoutMap[takeout.ProductPackageUuid] == nil {
+			headTakeoutMap[takeout.ProductPackageUuid] = make(map[uint]*model.ProductPackageTakeout)
 		}
-		for _, attr := range takeout.ProductPackageAttributeTakeouts {
-			subAttrTakeoutMap[attr.Uuid] = &attr
-		}
-		for _, groupItem := range takeout.ProductPackageGroupItemTakeouts {
-			subGroupItemTakeoutMap[groupItem.Uuid] = &groupItem
-		}
+		headTakeoutMap[takeout.ProductPackageUuid][takeout.TakeoutType] = takeout
 	}
 
-	// 准备新数据
-	newTakeoutList := make([]model.ProductPackageTakeout, 0)
-	newBomTakeoutList := make([]model.ProductBomTakeout, 0)
-	newAttrTakeoutList := make([]model.ProductPackageAttributeTakeout, 0)
-	newGroupItemTakeoutList := make([]model.ProductPackageGroupItemTakeout, 0)
-
-	for _, headTakeout := range headTakeoutList {
-		// 确定外卖商品状态和价格：首次同步默认下架（0），再次同步保留子店状态和价格
-		status := uint(0)          // 默认下架
-		price := headTakeout.Price // 默认使用总部价格
-		if existsTakeout, ok := subTakeoutMap[headTakeout.Uuid]; ok {
-			status = existsTakeout.Status // 保留子店状态
-			price = existsTakeout.Price   // 保留子店价格
+	// 构建子店外卖商品 Map：商品UUID -> takeout_type -> 外卖商品信息
+	subTakeoutMap := make(map[uint64]map[uint]*model.ProductPackageTakeout)
+	for _, takeout := range subTakeoutList {
+		if subTakeoutMap[takeout.ProductPackageUuid] == nil {
+			subTakeoutMap[takeout.ProductPackageUuid] = make(map[uint]*model.ProductPackageTakeout)
 		}
-
-		// 创建新外卖商品
-		newTakeout := model.ProductPackageTakeout{
-			BaseModel: model.BaseModel{
-				Uuid:       headTakeout.Uuid,
-				CreateTime: headTakeout.CreateTime,
-				UpdateTime: headTakeout.UpdateTime,
-				DeleteTime: headTakeout.DeleteTime,
-			},
-			ProductPackageUuid:            headTakeout.ProductPackageUuid,
-			MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
-			HeadquarterUuid:               companySetting.HeadquarterUuid,
-			Name:                          headTakeout.Name,
-			ProductType:                   headTakeout.ProductType,
-			Price:                         price, // 使用确定的价格
-			TakeoutType:                   headTakeout.TakeoutType,
-			Status:                        status, // 使用确定的状态
-			CategoryUuid:                  headTakeout.CategoryUuid,
-			SpecialCategoryUuid:           headTakeout.SpecialCategoryUuid,
-			ImageFileUuid:                 headTakeout.ImageFileUuid,
-			Describe:                      headTakeout.Describe,
-			DescribeMultiLanguageNameUuid: headTakeout.DescribeMultiLanguageNameUuid,
-			Source:                        headTakeout.Source,
-			SourceProductId:               headTakeout.SourceProductId,
-		}
-		newTakeoutList = append(newTakeoutList, newTakeout)
-
-		// 处理外卖规格价格
-		for _, headBom := range headTakeout.ProductBomTakeouts {
-			// 确定规格价格：首次同步使用总部价格，再次同步保留子店价格
-			price := headBom.Price // 默认使用总部价格
-			if existsBom, ok := subBomTakeoutMap[headBom.Uuid]; ok {
-				price = existsBom.Price // 保留子店价格
-			}
-
-			newBom := model.ProductBomTakeout{
-				BaseModel: model.BaseModel{
-					Uuid:       headBom.Uuid,
-					CreateTime: headBom.CreateTime,
-					UpdateTime: headBom.UpdateTime,
-					DeleteTime: headBom.DeleteTime,
-				},
-				ProductPackageTakeoutUuid: headBom.ProductPackageTakeoutUuid,
-				ProductBomUuid:            headBom.ProductBomUuid,
-				HeadquarterUuid:           companySetting.HeadquarterUuid,
-				Price:                     price, // 使用确定的价格
-				GrabModifierId:            headBom.GrabModifierId,
-			}
-			newBomTakeoutList = append(newBomTakeoutList, newBom)
-		}
-
-		// 处理外卖属性价格
-		for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
-			// 确定属性价格：首次同步使用总部价格，再次同步保留子店价格
-			attrPrice := headAttr.Price // 默认使用总部价格
-			if existsAttr, ok := subAttrTakeoutMap[headAttr.Uuid]; ok {
-				attrPrice = existsAttr.Price // 保留子店价格
-			}
-
-			newAttr := model.ProductPackageAttributeTakeout{
-				BaseModel: model.BaseModel{
-					Uuid:       headAttr.Uuid,
-					CreateTime: headAttr.CreateTime,
-					UpdateTime: headAttr.UpdateTime,
-					DeleteTime: headAttr.DeleteTime,
-				},
-				ProductPackageTakeoutUuid:   headAttr.ProductPackageTakeoutUuid,
-				ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
-				HeadquarterUuid:             companySetting.HeadquarterUuid,
-				Price:                       attrPrice, // 使用确定的价格
-			}
-			newAttrTakeoutList = append(newAttrTakeoutList, newAttr)
-		}
-
-		// 处理外卖套餐子商品价格
-		for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
-			// 确定套餐子商品加价：首次同步使用总部价格，再次同步保留子店价格
-			addPrice := headGroupItem.AddPrice // 默认使用总部价格
-			if existsGroupItem, ok := subGroupItemTakeoutMap[headGroupItem.Uuid]; ok {
-				addPrice = existsGroupItem.AddPrice // 保留子店价格
-			}
-
-			newGroupItem := model.ProductPackageGroupItemTakeout{
-				BaseModel: model.BaseModel{
-					Uuid:       headGroupItem.Uuid,
-					CreateTime: headGroupItem.CreateTime,
-					UpdateTime: headGroupItem.UpdateTime,
-					DeleteTime: headGroupItem.DeleteTime,
-				},
-				ProductPackageTakeoutUuid:   headGroupItem.ProductPackageTakeoutUuid,
-				ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
-				ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,
-				HeadquarterUuid:             companySetting.HeadquarterUuid,
-				AddPrice:                    addPrice, // 使用确定的价格
-			}
-			newGroupItemTakeoutList = append(newGroupItemTakeoutList, newGroupItem)
-		}
+		subTakeoutMap[takeout.ProductPackageUuid][takeout.TakeoutType] = takeout
 	}
 
 	// 执行数据库事务
@@ -8589,106 +8478,38 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		attrTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
 		groupItemTakeoutRepo := repository.NewProductPackageGroupItemTakeoutRepo(tx)
 
-		// 收集需要删除的数据UUID
-		delTakeoutUuids := make([]uint64, 0)
-		delBomTakeoutUuids := make([]uint64, 0)
-		delAttrTakeoutUuids := make([]uint64, 0)
-		delGroupItemTakeoutUuids := make([]uint64, 0)
+		// 遍历总部商品
+		for _, headTakeout := range headTakeoutList {
+			productPackageUuid := headTakeout.ProductPackageUuid
+			takeoutType := headTakeout.TakeoutType
 
-		for _, takeout := range subTakeoutList {
-			delTakeoutUuids = append(delTakeoutUuids, takeout.Uuid)
-			for _, bom := range takeout.ProductBomTakeouts {
-				delBomTakeoutUuids = append(delBomTakeoutUuids, bom.Uuid)
+			// 查找子店是否有对应的外卖商品
+			var subTakeout *model.ProductPackageTakeout
+			if subMap, ok := subTakeoutMap[productPackageUuid]; ok {
+				if existsTakeout, exists := subMap[takeoutType]; exists {
+					subTakeout = existsTakeout
+				}
 			}
-			for _, attr := range takeout.ProductPackageAttributeTakeouts {
-				delAttrTakeoutUuids = append(delAttrTakeoutUuids, attr.Uuid)
-			}
-			for _, groupItem := range takeout.ProductPackageGroupItemTakeouts {
-				delGroupItemTakeoutUuids = append(delGroupItemTakeoutUuids, groupItem.Uuid)
-			}
-		}
 
-		// 批量物理删除子店现有数据
-		if len(delAttrTakeoutUuids) > 0 {
-			err := attrTakeoutRepo.ForceDestroyProductPackageAttributeTakeout(commonRepo.WhereInUuids(delAttrTakeoutUuids))
-			if err != nil {
-				return errors.WithMessage(err, "销毁子店外卖属性价格失败")
-			}
-		}
-
-		if len(delGroupItemTakeoutUuids) > 0 {
-			err := groupItemTakeoutRepo.DestroyProductPackageGroupItemTakeout(delGroupItemTakeoutUuids)
-			if err != nil {
-				return errors.WithMessage(err, "销毁子店外卖套餐子商品价格失败")
-			}
-		}
-
-		if len(delBomTakeoutUuids) > 0 {
-			err := bomTakeoutRepo.ForceDestroyProductBomTakeout(commonRepo.WhereInUuids(delBomTakeoutUuids))
-			if err != nil {
-				return errors.WithMessage(err, "销毁子店外卖规格价格失败")
-			}
-		}
-
-		if len(delTakeoutUuids) > 0 {
-			err := takeoutRepo.ForceDestroyProductPackageTakeout(commonRepo.WhereInUuids(delTakeoutUuids))
-			if err != nil {
-				return errors.WithMessage(err, "销毁子店外卖商品失败")
-			}
-		}
-
-		// 插入新数据（逐条插入，错误记录日志但不中断）
-		if len(newTakeoutList) > 0 {
-			for _, takeout := range newTakeoutList {
-				err := takeoutRepo.CreateProductPackageTakeout(&takeout)
+			if subTakeout != nil {
+				// 更新场景：子店已存在该外卖商品
+				err := s.updateSubTakeoutProduct(tx, headTakeout, subTakeout, companySetting, takeoutRepo, bomTakeoutRepo, attrTakeoutRepo, groupItemTakeoutRepo)
+				if err != nil {
+					logger.Logger.Error("更新子店外卖商品失败",
+						zap.Uint64("product_package_uuid", productPackageUuid),
+						zap.Uint("takeout_type", takeoutType),
+						zap.Error(err))
+					// 继续处理下一个，不中断事务
+				}
+			} else {
+				// 新增场景：子店不存在该外卖商品
+				err := s.createSubTakeoutProduct(tx, headTakeout, companySetting, takeoutRepo, bomTakeoutRepo, attrTakeoutRepo, groupItemTakeoutRepo)
 				if err != nil {
 					logger.Logger.Error("创建子店外卖商品失败",
-						zap.Uint64("uuid", takeout.Uuid),
-						zap.Uint64("product_package_uuid", takeout.ProductPackageUuid),
+						zap.Uint64("product_package_uuid", productPackageUuid),
+						zap.Uint("takeout_type", takeoutType),
 						zap.Error(err))
-					// 不中断，继续处理
-				}
-			}
-		}
-
-		if len(newBomTakeoutList) > 0 {
-			for _, bom := range newBomTakeoutList {
-				err := bomTakeoutRepo.CreateProductBomTakeout(&bom)
-				if err != nil {
-					logger.Logger.Error("创建子店外卖规格价格失败",
-						zap.Uint64("uuid", bom.Uuid),
-						zap.Uint64("product_package_takeout_uuid", bom.ProductPackageTakeoutUuid),
-						zap.Uint64("product_bom_uuid", bom.ProductBomUuid),
-						zap.Error(err))
-					// 不中断，继续处理
-				}
-			}
-		}
-
-		if len(newAttrTakeoutList) > 0 {
-			for _, attr := range newAttrTakeoutList {
-				err := attrTakeoutRepo.CreateProductPackageAttributeTakeout(&attr)
-				if err != nil {
-					logger.Logger.Error("创建子店外卖属性价格失败",
-						zap.Uint64("uuid", attr.Uuid),
-						zap.Uint64("product_package_takeout_uuid", attr.ProductPackageTakeoutUuid),
-						zap.Uint64("product_package_attribute_uuid", attr.ProductPackageAttributeUuid),
-						zap.Error(err))
-					// 不中断，继续处理
-				}
-			}
-		}
-
-		if len(newGroupItemTakeoutList) > 0 {
-			for _, groupItem := range newGroupItemTakeoutList {
-				err := groupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(&groupItem)
-				if err != nil {
-					logger.Logger.Error("创建子店外卖套餐子商品价格失败",
-						zap.Uint64("uuid", groupItem.Uuid),
-						zap.Uint64("product_package_takeout_uuid", groupItem.ProductPackageTakeoutUuid),
-						zap.Uint64("product_package_group_item_uuid", groupItem.ProductPackageGroupItemUuid),
-						zap.Error(err))
-					// 不中断，继续处理
+					// 继续处理下一个，不中断事务
 				}
 			}
 		}
@@ -8698,6 +8519,298 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 
 	if err != nil {
 		return errors.WithMessage(err, "同步总店外卖商品到子店事务执行失败")
+	}
+
+	return nil
+}
+
+// updateSubTakeoutProduct 更新子店外卖商品
+func (s *productSrv) updateSubTakeoutProduct(
+	tx *gorm.DB,
+	headTakeout *model.ProductPackageTakeout,
+	subTakeout *model.ProductPackageTakeout,
+	companySetting *model.CompanySetting,
+	takeoutRepo repository.IProductPackageTakeoutRepo,
+	bomTakeoutRepo repository.IProductBomTakeoutRepo,
+	attrTakeoutRepo repository.IProductPackageAttributeTakeoutRepo,
+	groupItemTakeoutRepo *repository.ProductPackageGroupItemTakeoutRepo,
+) error {
+	commonRepo := repository.NewCommonRepo()
+
+	// 更新外卖商品主表（不更新 uuid、price、status，保留子店个性化配置）
+	updateData := map[string]any{
+		"product_package_uuid":              headTakeout.ProductPackageUuid,
+		"multi_language_name_uuid":          headTakeout.MultiLanguageNameUuid,
+		"name":                              headTakeout.Name,
+		"product_type":                      headTakeout.ProductType,
+		"takeout_type":                      headTakeout.TakeoutType,
+		"category_uuid":                     headTakeout.CategoryUuid,
+		"special_category_uuid":             headTakeout.SpecialCategoryUuid,
+		"image_file_uuid":                   headTakeout.ImageFileUuid,
+		"describe":                          headTakeout.Describe,
+		"describe_multi_language_name_uuid": headTakeout.DescribeMultiLanguageNameUuid,
+		"source":                            headTakeout.Source,
+		"source_product_id":                 headTakeout.SourceProductId,
+		"create_time":                       headTakeout.CreateTime,
+		"update_time":                       headTakeout.UpdateTime,
+		"delete_time":                       headTakeout.DeleteTime,
+	}
+
+	err := takeoutRepo.UpdateProductPackageTakeout(updateData, commonRepo.WhereByUuid(subTakeout.Uuid))
+	if err != nil {
+		return errors.WithMessage(err, "更新外卖商品主表失败")
+	}
+
+	// 处理外卖规格价格：构建子店已有数据的 Map
+	subBomMap := make(map[uint64]*model.ProductBomTakeout)
+	for _, bom := range subTakeout.ProductBomTakeouts {
+		subBomMap[bom.ProductBomUuid] = &bom
+	}
+
+	for _, headBom := range headTakeout.ProductBomTakeouts {
+		if subBom, exists := subBomMap[headBom.ProductBomUuid]; exists {
+			// 更新：同步 create_time、update_time、delete_time
+			updateBomData := map[string]any{
+				"create_time": headBom.CreateTime,
+				"update_time": headBom.UpdateTime,
+				"delete_time": headBom.DeleteTime,
+			}
+			err := bomTakeoutRepo.UpdateProductBomTakeout(updateBomData, commonRepo.WhereByUuid(subBom.Uuid))
+			if err != nil {
+				logger.Logger.Error("更新子店外卖规格价格失败",
+					zap.Uint64("uuid", subBom.Uuid),
+					zap.Uint64("product_bom_uuid", headBom.ProductBomUuid),
+					zap.Error(err))
+			}
+		} else {
+			// 新增：总部有，子店没有
+			newBom := model.ProductBomTakeout{
+				BaseModel: model.BaseModel{
+					Uuid:       headBom.Uuid,
+					CreateTime: headBom.CreateTime,
+					UpdateTime: headBom.UpdateTime,
+					DeleteTime: headBom.DeleteTime,
+				},
+				ProductPackageTakeoutUuid: subTakeout.Uuid, // 使用子店外卖商品UUID
+				ProductBomUuid:            headBom.ProductBomUuid,
+				HeadquarterUuid:           companySetting.HeadquarterUuid,
+				Price:                     headBom.Price,
+				GrabModifierId:            headBom.GrabModifierId,
+			}
+			err := bomTakeoutRepo.CreateProductBomTakeout(&newBom)
+			if err != nil {
+				logger.Logger.Error("创建子店外卖规格价格失败",
+					zap.Uint64("product_bom_uuid", headBom.ProductBomUuid),
+					zap.Error(err))
+			}
+		}
+	}
+
+	// 处理外卖属性价格：构建子店已有数据的 Map
+	subAttrMap := make(map[uint64]*model.ProductPackageAttributeTakeout)
+	for _, attr := range subTakeout.ProductPackageAttributeTakeouts {
+		subAttrMap[attr.ProductPackageAttributeUuid] = &attr
+	}
+
+	for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
+		if subAttr, exists := subAttrMap[headAttr.ProductPackageAttributeUuid]; exists {
+			// 更新：同步 create_time、update_time、delete_time
+			updateAttrData := map[string]any{
+				"create_time": headAttr.CreateTime,
+				"update_time": headAttr.UpdateTime,
+				"delete_time": headAttr.DeleteTime,
+			}
+			err := attrTakeoutRepo.UpdateProductPackageAttributeTakeout(updateAttrData, commonRepo.WhereByUuid(subAttr.Uuid))
+			if err != nil {
+				logger.Logger.Error("更新子店外卖属性价格失败",
+					zap.Uint64("uuid", subAttr.Uuid),
+					zap.Uint64("product_package_attribute_uuid", headAttr.ProductPackageAttributeUuid),
+					zap.Error(err))
+			}
+		} else {
+			// 新增：总部有，子店没有
+			newAttr := model.ProductPackageAttributeTakeout{
+				BaseModel: model.BaseModel{
+					Uuid:       headAttr.Uuid,
+					CreateTime: headAttr.CreateTime,
+					UpdateTime: headAttr.UpdateTime,
+					DeleteTime: headAttr.DeleteTime,
+				},
+				ProductPackageTakeoutUuid:   subTakeout.Uuid, // 使用子店外卖商品UUID
+				ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
+				HeadquarterUuid:             companySetting.HeadquarterUuid,
+				Price:                       headAttr.Price,
+			}
+			err := attrTakeoutRepo.CreateProductPackageAttributeTakeout(&newAttr)
+			if err != nil {
+				logger.Logger.Error("创建子店外卖属性价格失败",
+					zap.Uint64("product_package_attribute_uuid", headAttr.ProductPackageAttributeUuid),
+					zap.Error(err))
+			}
+		}
+	}
+
+	// 处理外卖套餐子商品价格：构建子店已有数据的 Map（联合键：product_package_group_uuid + product_package_group_item_uuid）
+	subGroupItemMap := make(map[string]*model.ProductPackageGroupItemTakeout)
+	for _, groupItem := range subTakeout.ProductPackageGroupItemTakeouts {
+		key := fmt.Sprintf("%d-%d", groupItem.ProductPackageGroupUuid, groupItem.ProductPackageGroupItemUuid)
+		subGroupItemMap[key] = &groupItem
+	}
+
+	for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
+		key := fmt.Sprintf("%d-%d", headGroupItem.ProductPackageGroupUuid, headGroupItem.ProductPackageGroupItemUuid)
+		if subGroupItem, exists := subGroupItemMap[key]; exists {
+			// 更新：同步 create_time、update_time、delete_time
+			// 注意：这里需要使用原生 SQL 或 gorm 的 Model 更新，因为 ProductPackageGroupItemTakeoutRepo 没有通用的 Update 方法
+			err := tx.Model(&model.ProductPackageGroupItemTakeout{}).
+				Where("uuid = ?", subGroupItem.Uuid).
+				Updates(map[string]any{
+					"create_time": headGroupItem.CreateTime,
+					"update_time": headGroupItem.UpdateTime,
+					"delete_time": headGroupItem.DeleteTime,
+				}).Error
+			if err != nil {
+				logger.Logger.Error("更新子店外卖套餐子商品价格失败",
+					zap.Uint64("uuid", subGroupItem.Uuid),
+					zap.Uint64("product_package_group_uuid", headGroupItem.ProductPackageGroupUuid),
+					zap.Uint64("product_package_group_item_uuid", headGroupItem.ProductPackageGroupItemUuid),
+					zap.Error(err))
+			}
+		} else {
+			// 新增：总部有，子店没有
+			newGroupItem := model.ProductPackageGroupItemTakeout{
+				BaseModel: model.BaseModel{
+					Uuid:       headGroupItem.Uuid,
+					CreateTime: headGroupItem.CreateTime,
+					UpdateTime: headGroupItem.UpdateTime,
+					DeleteTime: headGroupItem.DeleteTime,
+				},
+				ProductPackageTakeoutUuid:   subTakeout.Uuid, // 使用子店外卖商品UUID
+				ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
+				ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,
+				HeadquarterUuid:             companySetting.HeadquarterUuid,
+				AddPrice:                    headGroupItem.AddPrice,
+			}
+			err := groupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(&newGroupItem)
+			if err != nil {
+				logger.Logger.Error("创建子店外卖套餐子商品价格失败",
+					zap.Uint64("product_package_group_uuid", headGroupItem.ProductPackageGroupUuid),
+					zap.Uint64("product_package_group_item_uuid", headGroupItem.ProductPackageGroupItemUuid),
+					zap.Error(err))
+			}
+		}
+	}
+
+	return nil
+}
+
+// createSubTakeoutProduct 创建子店外卖商品
+func (s *productSrv) createSubTakeoutProduct(
+	tx *gorm.DB,
+	headTakeout *model.ProductPackageTakeout,
+	companySetting *model.CompanySetting,
+	takeoutRepo repository.IProductPackageTakeoutRepo,
+	bomTakeoutRepo repository.IProductBomTakeoutRepo,
+	attrTakeoutRepo repository.IProductPackageAttributeTakeoutRepo,
+	groupItemTakeoutRepo *repository.ProductPackageGroupItemTakeoutRepo,
+) error {
+	// 创建外卖商品主表（使用总部的 UUID，首次同步默认下架）
+	newTakeout := model.ProductPackageTakeout{
+		BaseModel: model.BaseModel{
+			Uuid:       headTakeout.Uuid,
+			CreateTime: headTakeout.CreateTime,
+			UpdateTime: headTakeout.UpdateTime,
+			DeleteTime: headTakeout.DeleteTime,
+		},
+		ProductPackageUuid:            headTakeout.ProductPackageUuid,
+		MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
+		HeadquarterUuid:               companySetting.HeadquarterUuid,
+		Name:                          headTakeout.Name,
+		ProductType:                   headTakeout.ProductType,
+		Price:                         headTakeout.Price, // 首次同步使用总部价格
+		TakeoutType:                   headTakeout.TakeoutType,
+		Status:                        0, // 默认下架
+		CategoryUuid:                  headTakeout.CategoryUuid,
+		SpecialCategoryUuid:           headTakeout.SpecialCategoryUuid,
+		ImageFileUuid:                 headTakeout.ImageFileUuid,
+		Describe:                      headTakeout.Describe,
+		DescribeMultiLanguageNameUuid: headTakeout.DescribeMultiLanguageNameUuid,
+		Source:                        headTakeout.Source,
+		SourceProductId:               headTakeout.SourceProductId,
+	}
+
+	err := takeoutRepo.CreateProductPackageTakeout(&newTakeout)
+	if err != nil {
+		return errors.WithMessage(err, "创建外卖商品主表失败")
+	}
+
+	// 创建外卖规格价格
+	for _, headBom := range headTakeout.ProductBomTakeouts {
+		newBom := model.ProductBomTakeout{
+			BaseModel: model.BaseModel{
+				Uuid:       headBom.Uuid,
+				CreateTime: headBom.CreateTime,
+				UpdateTime: headBom.UpdateTime,
+				DeleteTime: headBom.DeleteTime,
+			},
+			ProductPackageTakeoutUuid: newTakeout.Uuid, // 使用新创建的外卖商品UUID
+			ProductBomUuid:            headBom.ProductBomUuid,
+			HeadquarterUuid:           companySetting.HeadquarterUuid,
+			Price:                     headBom.Price,
+			GrabModifierId:            headBom.GrabModifierId,
+		}
+		err := bomTakeoutRepo.CreateProductBomTakeout(&newBom)
+		if err != nil {
+			logger.Logger.Error("创建子店外卖规格价格失败",
+				zap.Uint64("product_bom_uuid", headBom.ProductBomUuid),
+				zap.Error(err))
+		}
+	}
+
+	// 创建外卖属性价格
+	for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
+		newAttr := model.ProductPackageAttributeTakeout{
+			BaseModel: model.BaseModel{
+				Uuid:       headAttr.Uuid,
+				CreateTime: headAttr.CreateTime,
+				UpdateTime: headAttr.UpdateTime,
+				DeleteTime: headAttr.DeleteTime,
+			},
+			ProductPackageTakeoutUuid:   newTakeout.Uuid, // 使用新创建的外卖商品UUID
+			ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
+			HeadquarterUuid:             companySetting.HeadquarterUuid,
+			Price:                       headAttr.Price,
+		}
+		err := attrTakeoutRepo.CreateProductPackageAttributeTakeout(&newAttr)
+		if err != nil {
+			logger.Logger.Error("创建子店外卖属性价格失败",
+				zap.Uint64("product_package_attribute_uuid", headAttr.ProductPackageAttributeUuid),
+				zap.Error(err))
+		}
+	}
+
+	// 创建外卖套餐子商品价格
+	for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
+		newGroupItem := model.ProductPackageGroupItemTakeout{
+			BaseModel: model.BaseModel{
+				Uuid:       headGroupItem.Uuid,
+				CreateTime: headGroupItem.CreateTime,
+				UpdateTime: headGroupItem.UpdateTime,
+				DeleteTime: headGroupItem.DeleteTime,
+			},
+			ProductPackageTakeoutUuid:   newTakeout.Uuid, // 使用新创建的外卖商品UUID
+			ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
+			ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,
+			HeadquarterUuid:             companySetting.HeadquarterUuid,
+			AddPrice:                    headGroupItem.AddPrice,
+		}
+		err := groupItemTakeoutRepo.CreateProductPackageGroupItemTakeout(&newGroupItem)
+		if err != nil {
+			logger.Logger.Error("创建子店外卖套餐子商品价格失败",
+				zap.Uint64("product_package_group_uuid", headGroupItem.ProductPackageGroupUuid),
+				zap.Uint64("product_package_group_item_uuid", headGroupItem.ProductPackageGroupItemUuid),
+				zap.Error(err))
+		}
 	}
 
 	return nil
