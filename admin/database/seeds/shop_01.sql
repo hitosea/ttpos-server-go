@@ -1474,7 +1474,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_attribute` (
     `price` DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品属性价格',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `attribute_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '属性组ID',
-    `product_attribute_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '属性组UUID（用于关联查询）',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序(数字越小越靠前)',
     `erpnext_attribute_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext Attribute Value',
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
@@ -1482,7 +1481,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_attribute` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_attr_source_id` (`source_id`),
-    INDEX `idx_attr_group_source` (`product_attribute_group_uuid`, `source`, `source_id`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品属性表';
 

@@ -3323,11 +3323,10 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			}
 			// 添加商品属性
 			productAttributeModel := model.ProductAttribute{
-				Name:                      productAttribute.LocaleName.ToJson(),
-				MultiLanguageNameUuid:     multiLanguageName.Uuid,
-				AttributeGroupUuid:        productAttributeGroup.Uuid,
-				ProductAttributeGroupUuid: productAttributeGroup.Uuid,
-				Sort:                      i + 1,
+				Name:                  productAttribute.LocaleName.ToJson(),
+				MultiLanguageNameUuid: multiLanguageName.Uuid,
+				AttributeGroupUuid:    productAttributeGroup.Uuid,
+				Sort:                  i + 1,
 			}
 			err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 			if err != nil {
@@ -3919,14 +3918,13 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					return errors.WithMessage(errors.New("添加属性值名称多语言失败"), err.Error())
 				}
 				productAttributeModel := model.ProductAttribute{
-					Name:                      productAttribute.LocaleName.ToJson(),
-					MultiLanguageNameUuid:     multiLanguageName.Uuid,
-					AttributeGroupUuid:        attributeGroup.Uuid,
-					ProductAttributeGroupUuid: attributeGroup.Uuid,
-					Sort:                      productAttribute.Sort,
-					Price:                     productAttribute.Price,
-					Source:                    productAttribute.Source,
-					SourceId:                  productAttribute.SourceId,
+					Name:                  productAttribute.LocaleName.ToJson(),
+					MultiLanguageNameUuid: multiLanguageName.Uuid,
+					AttributeGroupUuid:    attributeGroup.Uuid,
+					Sort:                  productAttribute.Sort,
+					Price:                 productAttribute.Price,
+					Source:                productAttribute.Source,
+					SourceId:              productAttribute.SourceId,
 				}
 				err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 				if err != nil {
