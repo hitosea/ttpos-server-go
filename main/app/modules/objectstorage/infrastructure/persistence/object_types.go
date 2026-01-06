@@ -27,9 +27,6 @@ const (
 	// SaleBillSetting 销售单设置
 	ObjectTypeSaleBillSetting = "sale_bill_setting"
 
-	// SaleBill 销售账单（包含完整关联数据）
-	ObjectTypeSaleBill = "sale_bill"
-
 	// BatchTag 分批标签
 	ObjectTypeBatchTag = "batch_tag"
 
@@ -44,12 +41,6 @@ const (
 
 	// MultiLanguageName 多语言名称
 	ObjectTypeMultiLanguageName = "multi_language_name"
-
-	// ProductCategory 商品分类
-	ObjectTypeProductCategory = "product_category"
-
-	// ProductSauce 商品小料
-	ObjectTypeProductSauce = "product_sauce"
 
 	// ProductPackageAttribute 商品包属性
 	ObjectTypeProductPackageAttribute = "product_package_attribute"
