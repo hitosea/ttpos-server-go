@@ -1513,6 +1513,19 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		HasChildren:       companySetting.HasChildren == 1,
 		HasDataPermission: hasDataPermission,
 		CompanyList:       s.GetCompanyList(ctx),
+		AllowedTransferTypes: func() string {
+			headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+			if headquarterUuid == 0 {
+				return "in,out"
+			}
+			copyCtx := ctx.Copy()
+			copyCtx.SetCompanyUuid(headquarterUuid)
+			businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
+			if err != nil {
+				return "in,out"
+			}
+			return businessSetting.AllowedTransferTypes
+		}(),
 	}, nil
 }
 
