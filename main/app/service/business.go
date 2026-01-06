@@ -7,7 +7,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -62,8 +64,12 @@ type IBusinessSrv interface {
 	ExportBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) error                                                                            // 导出收款统计数据
 	CountChannelSales(ctx context.Context, req req.ChannelSalesReq) (*resp.ChannelSalesResp, error)                                                                       // 统计渠道营业数据
 	ExportChannelSales(ctx context.Context, req req.ChannelSalesReq) error                                                                                                // 导出渠道营业统计数据
+	CountCompanyBusinessSummary(ctx context.Context, req req.StatisticsCompanySummaryReq) (interface{}, error)                                                            // 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
+	ExportCompanyBusinessSummary(ctx context.Context, req req.StatisticsCompanySummaryReq) error                                                                          // 导出门店汇总统计
+	GetCompanyPaymentMethods(ctx context.Context) (*resp.CompanyPaymentMethodListResp, error)                                                                             // 获取有权限的所有门店的支付方式（汇总去重）
 	CountUserAnalysis(ctx context.Context, req req.UserAnalysisReq) (*resp.UserAnalysisResp, error)                                                                       // 统计用户分析数据
 	ExportUserAnalysis(ctx context.Context, req req.UserAnalysisReq) error                                                                                                // 导出用户分析统计数据
+	GetCompanyList(ctx context.Context) (*resp.CompanySummaryListResp, error)                                                                                             // 获取门店汇总统计可选择的门店列表
 }
 
 // businessSrv 收银服务结构体
@@ -3811,4 +3817,2029 @@ func (s *businessSrv) ExportUserAnalysisTask(ctx context.Context, params ExportU
 	}
 
 	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
+}
+
+// GetCompanyList 获取门店汇总统计可选择的门店列表
+func (s *businessSrv) GetCompanyList(ctx context.Context) (*resp.CompanySummaryListResp, error) {
+	// 获取当前门店和设置
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+
+	var companyList []*resp.CompanySummaryItem
+
+	// 获取数据库管理器
+	dbm := database.GetDBManager(config.Database)
+	saasDB := dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
+
+	// 总店：使用 GetVisibleCompanyList 获取本店及下级所有子店
+	if companySetting.IsHeadquarter() {
+		visibleCompanies, err := companyRepo.GetVisibleCompanyList(company.Uuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取可见门店列表失败")
+		}
+
+		// 转换为 CompanySummaryItem 格式
+		companyList = make([]*resp.CompanySummaryItem, 0, len(visibleCompanies))
+		for _, c := range visibleCompanies {
+			companyList = append(companyList, &resp.CompanySummaryItem{
+				CompanyUuid: c.Uuid,
+				CompanyName: c.Name,
+			})
+		}
+	} else {
+		// 子店：使用 AuthService.GetCompanyList 获取本店及已授权的其他门店
+		// 创建必要的服务实例
+		captchaSrv := NewCaptchaSrv(nil) // 这里不需要验证码服务，传 nil
+		roleAccessSrv := NewRoleAccessSrv(dbm)
+		settingSrv := setting.NewSrv(dbm, cache.Global)
+		deviceSrv := NewDeviceSrv(settingSrv, dbm)
+		cashBoxSrv := NewCashBoxSrv(dbm)
+		statisticsSrv := NewStatisticsSrv()
+		staffShiftSrv := NewStaffShiftSrv(cache.Global, dbm, cashBoxSrv, statisticsSrv)
+		authSrv := NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+
+		// 获取子店的门店列表
+		authCompanyList := authSrv.GetCompanyList(ctx)
+		// 转换为 CompanySummaryItem 格式
+		companyList = make([]*resp.CompanySummaryItem, 0, len(authCompanyList))
+		for _, c := range authCompanyList {
+			companyList = append(companyList, &resp.CompanySummaryItem{
+				CompanyUuid: c.CompanyUuid,
+				CompanyName: c.CompanyName,
+			})
+		}
+	}
+
+	return &resp.CompanySummaryListResp{
+		List: companyList,
+	}, nil
+}
+
+// GetCompanyPaymentMethods 获取有权限的所有门店的支付方式（汇总去重）
+func (s *businessSrv) GetCompanyPaymentMethods(ctx context.Context) (*resp.CompanyPaymentMethodListResp, error) {
+	// 1. 获取有权限的门店列表
+	companyListResp, err := s.GetCompanyList(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取门店列表失败")
+	}
+
+	if len(companyListResp.List) == 0 {
+		return &resp.CompanyPaymentMethodListResp{
+			List: []resp.CompanyPaymentMethodItem{},
+		}, nil
+	}
+
+	// 2. 获取数据库管理器
+	dbm := database.GetDBManager(config.Database)
+
+	// 3. 使用 goroutine 并发查询各个门店，提高性能
+	// 使用带缓冲的 channel 控制并发数量，最多10个协程，避免资源消耗过大
+	maxConcurrent := 10
+	semaphore := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
+	// 使用 channel 收集结果，避免竞态条件
+	type paymentMethodInfo struct {
+		PaymentName string
+		Sort        int
+		CreateTime  int64
+		ID          uint
+	}
+	type resultItem struct {
+		paymentMethods []paymentMethodInfo
+		err            error
+	}
+	resultChan := make(chan resultItem, len(companyListResp.List))
+
+	// 并发查询各个门店
+	for _, companyItem := range companyListResp.List {
+		wg.Add(1)
+		utils.Go(func() {
+			func(item *resp.CompanySummaryItem) {
+				defer wg.Done()
+
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				companyUuid := item.CompanyUuid
+
+				// 获取门店数据库连接
+				shopDB := dbm.GetDB(companyUuid)
+				if shopDB == nil {
+					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
+					resultChan <- resultItem{paymentMethods: nil, err: errors.New("获取门店数据库连接失败")}
+					return
+				}
+
+				// 获取支付方式列表（只获取启用的支付方式）
+				paymentMethodRepo := repository.NewPaymentMethodRepo(shopDB)
+				paymentMethods := paymentMethodRepo.GetPaymentMethodList(
+					paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable),
+				)
+
+				// 收集支付方式信息（包含名称、排序、创建时间、ID）
+				paymentMethodInfos := make([]paymentMethodInfo, 0, len(paymentMethods))
+				for _, method := range paymentMethods {
+					if method.PaymentName != "" {
+						paymentMethodInfos = append(paymentMethodInfos, paymentMethodInfo{
+							PaymentName: method.PaymentName,
+							Sort:        method.Sort,
+							CreateTime:  method.CreateTime,
+							ID:          method.ID,
+						})
+					}
+				}
+
+				resultChan <- resultItem{paymentMethods: paymentMethodInfos, err: nil}
+			}(companyItem)
+		})
+	}
+
+	// 等待所有 goroutine 完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 4. 收集所有门店的支付方式（用于去重）
+	// 使用 map 存储支付方式信息，key 为支付方式名称
+	// 如果支付方式名称相同，保留 Sort 最小、CreateTime 最大、ID 最大的那个
+	paymentMethodMap := make(map[string]paymentMethodInfo)
+	for result := range resultChan {
+		if result.err != nil {
+			logger.Logger.Warn("查询门店支付方式失败", zap.Error(result.err))
+			continue
+		}
+		for _, pmInfo := range result.paymentMethods {
+			existing, exists := paymentMethodMap[pmInfo.PaymentName]
+			if !exists {
+				// 如果不存在，直接添加
+				paymentMethodMap[pmInfo.PaymentName] = pmInfo
+			} else {
+				// 如果存在，比较 Sort、CreateTime 和 ID
+				// 优先按 Sort 升序，如果 Sort 相同则按 CreateTime 倒序，如果都相同则按 ID 倒序
+				if pmInfo.Sort < existing.Sort {
+					paymentMethodMap[pmInfo.PaymentName] = pmInfo
+				} else if pmInfo.Sort == existing.Sort {
+					if pmInfo.CreateTime > existing.CreateTime {
+						paymentMethodMap[pmInfo.PaymentName] = pmInfo
+					} else if pmInfo.CreateTime == existing.CreateTime && pmInfo.ID > existing.ID {
+						paymentMethodMap[pmInfo.PaymentName] = pmInfo
+					}
+				}
+			}
+		}
+	}
+
+	// 5. 转换为响应格式（去重后的支付方式列表）
+	paymentMethodList := make([]resp.CompanyPaymentMethodItem, 0, len(paymentMethodMap))
+	for _, pmInfo := range paymentMethodMap {
+		paymentMethodList = append(paymentMethodList, resp.CompanyPaymentMethodItem{
+			PaymentName: pmInfo.PaymentName,
+		})
+	}
+
+	// 6. 按 Sort 升序、CreateTime 倒序、ID 倒序排序
+	sort.Slice(paymentMethodList, func(i, j int) bool {
+		pmI := paymentMethodMap[paymentMethodList[i].PaymentName]
+		pmJ := paymentMethodMap[paymentMethodList[j].PaymentName]
+		if pmI.Sort != pmJ.Sort {
+			return pmI.Sort < pmJ.Sort // Sort 升序
+		}
+		if pmI.CreateTime != pmJ.CreateTime {
+			return pmI.CreateTime > pmJ.CreateTime // CreateTime 倒序
+		}
+		return pmI.ID > pmJ.ID // ID 倒序
+	})
+
+	return &resp.CompanyPaymentMethodListResp{
+		List: paymentMethodList,
+	}, nil
+}
+
+// CountCompanyBusinessSummary 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
+func (s *businessSrv) CountCompanyBusinessSummary(ctx context.Context, request req.StatisticsCompanySummaryReq) (interface{}, error) {
+	// 根据指标类型调用不同的处理逻辑
+	if request.IndicatorType == "payment_method" {
+		return s.countCompanyPaymentMethodSummary(ctx, request)
+	}
+	if request.IndicatorType == "refund" {
+		return s.countCompanyRefundSummary(ctx, request)
+	}
+
+	// 默认处理营业数据汇总
+	if request.IndicatorType != "business" && request.IndicatorType != "" {
+		return nil, errors.New("当前仅支持营业数据汇总、支付方式汇总和退款金额汇总指标类型")
+	}
+
+	// 获取当前用户时区
+	timezone := ctx.GetCompanySetting().Timezone
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 调用 GetCompanyList 获取所有可见商家列表（包含 CompanyUuid 和 CompanyName）
+	companyListResp, err := s.GetCompanyList(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取门店列表失败")
+	}
+
+	// 处理 CompanyUuids：如果为空，使用所有可见门店；否则过滤出匹配的门店
+	var companyList []*resp.CompanySummaryItem
+	if len(request.CompanyUuids) == 0 {
+		// CompanyUuids 为空时，使用所有可见门店
+		companyList = companyListResp.List
+	} else {
+		// CompanyUuids 不为空时，过滤出匹配的门店（保持顺序）
+		companyUuidSet := make(map[uint64]bool)
+		for _, uuid := range request.CompanyUuids {
+			companyUuidSet[uuid] = true
+		}
+		companyList = make([]*resp.CompanySummaryItem, 0, len(request.CompanyUuids))
+		for _, c := range companyListResp.List {
+			if companyUuidSet[c.CompanyUuid] {
+				companyList = append(companyList, c)
+			}
+		}
+	}
+
+	// 处理默认值：QueryStartDate 为空时，默认为今日开始日期：YYYY-MM-DD 00:00:00
+	queryStartDate := request.QueryStartDate
+	if queryStartDate == "" {
+		startTime, _ := timeUtil.TodayStartEnd()
+		queryStartDate = startTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 处理默认值：QueryEndDate 为空时，默认为今日结束日期：YYYY-MM-DD 23:59:59
+	queryEndDate := request.QueryEndDate
+	if queryEndDate == "" {
+		_, endTime := timeUtil.TodayStartEnd()
+		queryEndDate = endTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 获取数据库管理器
+	dbm := database.GetDBManager(config.Database)
+	settingSrv := setting.NewSrv(dbm, cache.Global)
+	saasDB := dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
+
+	// 使用 goroutine 并发查询各个门店，提高性能
+	// 使用带缓冲的 channel 控制并发数量，最多10个协程，避免资源消耗过大
+	maxConcurrent := 10
+	semaphore := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
+	// 使用 channel 收集结果，避免竞态条件
+	type resultItem struct {
+		items []resp.CompanyBusinessSummaryItem
+		err   error
+	}
+	resultChan := make(chan resultItem, len(companyList))
+
+	// 并发查询各个门店
+	for _, companyItem := range companyList {
+		wg.Add(1)
+		utils.Go(func() {
+			func(item *resp.CompanySummaryItem) {
+				defer wg.Done()
+
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				companyUuid := item.CompanyUuid
+				companyName := item.CompanyName
+
+				// 获取完整的 Company 信息（用于 SetCompany）
+				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
+				if err != nil {
+					logger.Logger.Warn("获取门店信息失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
+					resultChan <- resultItem{items: nil, err: err}
+					return
+				}
+
+				// 获取门店数据库连接
+				shopDB := dbm.GetDB(companyUuid)
+				if shopDB == nil {
+					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
+					resultChan <- resultItem{items: nil, err: errors.New("获取门店数据库连接失败")}
+					return
+				}
+
+				// 创建门店 context
+				shopCtx := ctx.Copy()
+				shopCtx.SetCompanyUuid(companyUuid)
+				shopCtx.SetCompany(*company)
+				shopCtx.SetDB(shopDB)
+
+				// 获取门店设置
+				companySettingRepo := repository.NewCompanySettingRepo(shopDB)
+				shopCompanySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
+					return db.Where("company_uuid = ?", companyUuid)
+				})
+				if err != nil {
+					logger.Logger.Warn("获取门店设置失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
+					resultChan <- resultItem{items: nil, err: err}
+					return
+				}
+				shopCtx.SetCompanySetting(shopCompanySetting)
+				dataManageSetting := settingSrv.GetDataManageSetting(shopCtx)
+				excludeDataManage := shopCompanySetting.IsOpenDataManagement() && dataManageSetting.IsEnableDataManage
+
+				// 调用统计服务获取门店数据
+				statisticsReq := req.StatisticsSummaryReq{
+					PageReq: dto.PageReq{
+						PageNo:   1,
+						PageSize: 1000, // 获取所有数据，不分页
+					},
+					QueryStartDate:    queryStartDate,
+					QueryEndDate:      queryEndDate,
+					Cycle:             request.Cycle, // 使用请求参数中的周期设置
+					ExcludeDataManage: excludeDataManage,
+				}
+
+				statisticsData := s.statisticsSrv.CountBusinessSummary(shopCtx, statisticsReq)
+
+				// 转换为响应格式
+				items := make([]resp.CompanyBusinessSummaryItem, 0, len(statisticsData.StatisticsComprehensiveList))
+				for _, statItem := range statisticsData.StatisticsComprehensiveList {
+					items = append(items, resp.CompanyBusinessSummaryItem{
+						Date:               statItem.Date,
+						CompanyName:        companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
+						OrderAmount:        statItem.OrderAmount,
+						PayAmount:          statItem.PayAmount,
+						OrderNum:           statItem.OrderNum,
+						MealNum:            statItem.MealNum,
+						DeskNum:            statItem.DeskNum,
+						AvgCustomerPrice:   statItem.PayAmountMealAvg,
+						OrderAmountMealAvg: statItem.OrderAmountMealAvg,
+						OrderAmountAvg:     statItem.OrderAmountAvg,
+						PayAmountAvg:       statItem.PayAmountAvg,
+						InstantOrderAmount: statItem.InstantOrderAmount,
+						DeskOrderAmount:    statItem.DeskOrderAmount,
+						TakeoutOrderAmount: statItem.TakeoutOrderAmount,
+					})
+				}
+
+				resultChan <- resultItem{items: items, err: nil}
+			}(companyItem)
+		})
+	}
+
+	// 等待所有 goroutine 完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集所有门店的统计数据
+	allItems := make([]resp.CompanyBusinessSummaryItem, 0)
+	for result := range resultChan {
+		if result.err != nil {
+			// 记录错误但继续处理其他门店
+			continue
+		}
+		allItems = append(allItems, result.items...)
+	}
+
+	// 根据 report 参数决定返回明细表还是汇总表
+	// report = 0: 明细表，返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
+	// report = 1: 汇总表，返回每个营业日每个商家数据总和，包括汇总行
+	var finalList []resp.CompanyBusinessSummaryItem
+	var summaryRow resp.CompanyBusinessSummaryItem
+
+	if request.Report == 1 {
+		// 汇总表：按日期分组汇总
+		// 记录每个日期对应的商家名称集合（用于去重）
+		dateCompanyNamesMap := make(map[string]map[string]bool)
+
+		// 使用 decimal 进行金额累加，避免精度错误
+		type dateSummaryDecimal struct {
+			OrderAmount        decimal.Decimal
+			PayAmount          decimal.Decimal
+			InstantOrderAmount decimal.Decimal
+			DeskOrderAmount    decimal.Decimal
+			TakeoutOrderAmount decimal.Decimal
+			OrderNum           int64
+			MealNum            int64
+			DeskNum            int64
+		}
+		dateDecimalMap := make(map[string]*dateSummaryDecimal)
+
+		for _, item := range allItems {
+			if dateDecimal, exists := dateDecimalMap[item.Date]; exists {
+				// 累加同一天的数据（使用 decimal）
+				dateDecimal.OrderAmount = dateDecimal.OrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
+				dateDecimal.PayAmount = dateDecimal.PayAmount.Add(decimal.NewFromFloat(item.PayAmount))
+				dateDecimal.InstantOrderAmount = dateDecimal.InstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
+				dateDecimal.DeskOrderAmount = dateDecimal.DeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
+				dateDecimal.TakeoutOrderAmount = dateDecimal.TakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+				dateDecimal.OrderNum += item.OrderNum
+				dateDecimal.MealNum += item.MealNum
+				dateDecimal.DeskNum += item.DeskNum
+				// 收集商家名称
+				if dateCompanyNamesMap[item.Date] == nil {
+					dateCompanyNamesMap[item.Date] = make(map[string]bool)
+				}
+				dateCompanyNamesMap[item.Date][item.CompanyName] = true
+			} else {
+				// 创建新的日期汇总项（使用 decimal）
+				dateDecimalMap[item.Date] = &dateSummaryDecimal{
+					OrderAmount:        decimal.NewFromFloat(item.OrderAmount),
+					PayAmount:          decimal.NewFromFloat(item.PayAmount),
+					InstantOrderAmount: decimal.NewFromFloat(item.InstantOrderAmount),
+					DeskOrderAmount:    decimal.NewFromFloat(item.DeskOrderAmount),
+					TakeoutOrderAmount: decimal.NewFromFloat(item.TakeoutOrderAmount),
+					OrderNum:           item.OrderNum,
+					MealNum:            item.MealNum,
+					DeskNum:            item.DeskNum,
+				}
+				// 初始化商家名称集合
+				if dateCompanyNamesMap[item.Date] == nil {
+					dateCompanyNamesMap[item.Date] = make(map[string]bool)
+				}
+				dateCompanyNamesMap[item.Date][item.CompanyName] = true
+			}
+		}
+
+		// 转换为列表并计算人均和单均，设置商家名称
+		finalList = make([]resp.CompanyBusinessSummaryItem, 0, len(dateDecimalMap))
+		for date, dateDecimal := range dateDecimalMap {
+			dateItem := resp.CompanyBusinessSummaryItem{
+				Date:               date,
+				CompanyName:        "", // 稍后设置
+				OrderAmount:        dateDecimal.OrderAmount.InexactFloat64(),
+				PayAmount:          dateDecimal.PayAmount.InexactFloat64(),
+				OrderNum:           dateDecimal.OrderNum,
+				MealNum:            dateDecimal.MealNum,
+				DeskNum:            dateDecimal.DeskNum,
+				InstantOrderAmount: dateDecimal.InstantOrderAmount.InexactFloat64(),
+				DeskOrderAmount:    dateDecimal.DeskOrderAmount.InexactFloat64(),
+				TakeoutOrderAmount: dateDecimal.TakeoutOrderAmount.InexactFloat64(),
+			}
+
+			// 计算人均和单均（使用 decimal）
+			if dateDecimal.MealNum > 0 {
+				avgCustomerPrice := dateDecimal.PayAmount.Div(decimal.NewFromInt(dateDecimal.MealNum))
+				orderAmountMealAvg := dateDecimal.OrderAmount.Div(decimal.NewFromInt(dateDecimal.MealNum))
+				dateItem.AvgCustomerPrice = utils.Round(avgCustomerPrice.InexactFloat64(), 2)
+				dateItem.OrderAmountMealAvg = utils.Round(orderAmountMealAvg.InexactFloat64(), 2)
+			}
+			if dateDecimal.OrderNum > 0 {
+				orderAmountAvg := dateDecimal.OrderAmount.Div(decimal.NewFromInt(dateDecimal.OrderNum))
+				payAmountAvg := dateDecimal.PayAmount.Div(decimal.NewFromInt(dateDecimal.OrderNum))
+				dateItem.OrderAmountAvg = utils.Round(orderAmountAvg.InexactFloat64(), 2)
+				dateItem.PayAmountAvg = utils.Round(payAmountAvg.InexactFloat64(), 2)
+			}
+
+			// 设置商家名称：将所有商家名称用、符号连接
+			companyNames := make([]string, 0, len(dateCompanyNamesMap[date]))
+			for name := range dateCompanyNamesMap[date] {
+				companyNames = append(companyNames, name)
+			}
+			sort.Strings(companyNames) // 排序以保证一致性
+			dateItem.CompanyName = strings.Join(companyNames, "、")
+			finalList = append(finalList, dateItem)
+		}
+
+		// 按日期排序
+		sort.Slice(finalList, func(i, j int) bool {
+			return finalList[i].Date < finalList[j].Date
+		})
+
+		// 计算总汇总行（使用 decimal）
+		var totalOrderAmount, totalPayAmount, totalInstantOrderAmount, totalDeskOrderAmount, totalTakeoutOrderAmount decimal.Decimal
+		var totalOrderNum, totalMealNum, totalDeskNum int64
+
+		for _, item := range finalList {
+			totalOrderAmount = totalOrderAmount.Add(decimal.NewFromFloat(item.OrderAmount))
+			totalPayAmount = totalPayAmount.Add(decimal.NewFromFloat(item.PayAmount))
+			totalOrderNum += item.OrderNum
+			totalMealNum += item.MealNum
+			totalDeskNum += item.DeskNum
+			totalInstantOrderAmount = totalInstantOrderAmount.Add(decimal.NewFromFloat(item.InstantOrderAmount))
+			totalDeskOrderAmount = totalDeskOrderAmount.Add(decimal.NewFromFloat(item.DeskOrderAmount))
+			totalTakeoutOrderAmount = totalTakeoutOrderAmount.Add(decimal.NewFromFloat(item.TakeoutOrderAmount))
+		}
+
+		// 计算总汇总行的人均和单均（使用 decimal）
+		var avgCustomerPrice, orderAmountMealAvg, orderAmountAvg, payAmountAvg decimal.Decimal
+
+		if totalMealNum > 0 {
+			avgCustomerPrice = totalPayAmount.Div(decimal.NewFromInt(totalMealNum))
+			orderAmountMealAvg = totalOrderAmount.Div(decimal.NewFromInt(totalMealNum))
+		}
+		if totalOrderNum > 0 {
+			orderAmountAvg = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
+			payAmountAvg = totalPayAmount.Div(decimal.NewFromInt(totalOrderNum))
+		}
+
+		// 收集所有商家名称（用于汇总行）
+		allCompanyNamesSet := make(map[string]bool)
+		for _, namesMap := range dateCompanyNamesMap {
+			for name := range namesMap {
+				allCompanyNamesSet[name] = true
+			}
+		}
+		allCompanyNames := make([]string, 0, len(allCompanyNamesSet))
+		for name := range allCompanyNamesSet {
+			allCompanyNames = append(allCompanyNames, name)
+		}
+		sort.Strings(allCompanyNames) // 排序以保证一致性
+
+		summaryRow = resp.CompanyBusinessSummaryItem{
+			Date:               "汇总",
+			CompanyName:        strings.Join(allCompanyNames, "、"), // 所有商家名称用、符号连接
+			OrderAmount:        utils.Round(totalOrderAmount.InexactFloat64(), 2),
+			PayAmount:          utils.Round(totalPayAmount.InexactFloat64(), 2),
+			OrderNum:           totalOrderNum,
+			MealNum:            totalMealNum,
+			DeskNum:            totalDeskNum,
+			AvgCustomerPrice:   utils.Round(avgCustomerPrice.InexactFloat64(), 2),
+			OrderAmountMealAvg: utils.Round(orderAmountMealAvg.InexactFloat64(), 2),
+			OrderAmountAvg:     utils.Round(orderAmountAvg.InexactFloat64(), 2),
+			PayAmountAvg:       utils.Round(payAmountAvg.InexactFloat64(), 2),
+			InstantOrderAmount: utils.Round(totalInstantOrderAmount.InexactFloat64(), 2),
+			DeskOrderAmount:    utils.Round(totalDeskOrderAmount.InexactFloat64(), 2),
+			TakeoutOrderAmount: utils.Round(totalTakeoutOrderAmount.InexactFloat64(), 2),
+		}
+	} else {
+		// 明细表：返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
+		// 按日期排序
+		sort.Slice(allItems, func(i, j int) bool {
+			return allItems[i].Date < allItems[j].Date
+		})
+		finalList = allItems
+		// 明细表返回默认值
+		summaryRow = resp.CompanyBusinessSummaryItem{}
+	}
+
+	// 分页处理
+	total := int64(len(finalList))
+	pageNo := utils.IfInt(request.PageNo > 0, request.PageNo, 1)
+	pageSize := utils.IfInt(request.PageSize > 0, request.PageSize, 20)
+	start := (pageNo - 1) * pageSize
+	end := start + pageSize
+
+	if start > len(finalList) {
+		start = len(finalList)
+	}
+	if end > len(finalList) {
+		end = len(finalList)
+	}
+
+	var list []resp.CompanyBusinessSummaryItem
+	if start < len(finalList) {
+		list = finalList[start:end]
+	} else {
+		list = make([]resp.CompanyBusinessSummaryItem, 0)
+	}
+
+	return &resp.CompanyBusinessSummaryResp{
+		Meta: dto.PageResponse{
+			PageNo:   pageNo,
+			PageSize: pageSize,
+			Total:    total,
+		},
+		List:       list,
+		SummaryRow: summaryRow,
+	}, nil
+}
+
+// countCompanyPaymentMethodSummary 获取门店支付方式汇总统计
+func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, request req.StatisticsCompanySummaryReq) (*resp.CompanyPaymentMethodSummaryResp, error) {
+	// 获取当前用户时区
+	timezone := ctx.GetCompanySetting().Timezone
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 调用 GetCompanyList 获取所有可见商家列表（包含 CompanyUuid 和 CompanyName）
+	companyListResp, err := s.GetCompanyList(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取门店列表失败")
+	}
+
+	// 处理 CompanyUuids：如果为空，使用所有可见门店；否则过滤出匹配的门店
+	var companyList []*resp.CompanySummaryItem
+	if len(request.CompanyUuids) == 0 {
+		// CompanyUuids 为空时，使用所有可见门店
+		companyList = companyListResp.List
+	} else {
+		// CompanyUuids 不为空时，过滤出匹配的门店（保持顺序）
+		companyUuidSet := make(map[uint64]bool)
+		for _, uuid := range request.CompanyUuids {
+			companyUuidSet[uuid] = true
+		}
+		companyList = make([]*resp.CompanySummaryItem, 0, len(request.CompanyUuids))
+		for _, c := range companyListResp.List {
+			if companyUuidSet[c.CompanyUuid] {
+				companyList = append(companyList, c)
+			}
+		}
+	}
+
+	// 处理默认值：QueryStartDate 为空时，默认为今日开始日期：YYYY-MM-DD 00:00:00
+	queryStartDate := request.QueryStartDate
+	if queryStartDate == "" {
+		startTime, _ := timeUtil.TodayStartEnd()
+		queryStartDate = startTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 处理默认值：QueryEndDate 为空时，默认为今日结束日期：YYYY-MM-DD 23:59:59
+	queryEndDate := request.QueryEndDate
+	if queryEndDate == "" {
+		_, endTime := timeUtil.TodayStartEnd()
+		queryEndDate = endTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 获取数据库管理器
+	dbm := database.GetDBManager(config.Database)
+	settingSrv := setting.NewSrv(dbm, cache.Global)
+	saasDB := dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
+
+	// 使用 goroutine 并发查询各个门店，提高性能
+	// 使用带缓冲的 channel 控制并发数量，最多10个协程，避免资源消耗过大
+	maxConcurrent := 10
+	semaphore := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
+	// 使用 channel 收集结果，避免竞态条件
+	type resultItem struct {
+		items []resp.CompanyPaymentMethodSummaryItem
+		err   error
+	}
+	resultChan := make(chan resultItem, len(companyList))
+
+	// 并发查询各个门店
+	for _, companyItem := range companyList {
+		wg.Add(1)
+		utils.Go(func() {
+			func(item *resp.CompanySummaryItem) {
+				defer wg.Done()
+
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				companyUuid := item.CompanyUuid
+				companyName := item.CompanyName
+
+				// 获取完整的 Company 信息（用于 SetCompany）
+				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
+				if err != nil {
+					logger.Logger.Warn("获取门店信息失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
+					resultChan <- resultItem{items: nil, err: err}
+					return
+				}
+
+				// 获取门店数据库连接
+				shopDB := dbm.GetDB(companyUuid)
+				if shopDB == nil {
+					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
+					resultChan <- resultItem{items: nil, err: errors.New("获取门店数据库连接失败")}
+					return
+				}
+
+				// 创建门店 context
+				shopCtx := ctx.Copy()
+				shopCtx.SetCompanyUuid(companyUuid)
+				shopCtx.SetCompany(*company)
+				shopCtx.SetDB(shopDB)
+
+				// 获取门店设置
+				companySettingRepo := repository.NewCompanySettingRepo(shopDB)
+				shopCompanySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
+					return db.Where("company_uuid = ?", companyUuid)
+				})
+				if err != nil {
+					logger.Logger.Warn("获取门店设置失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
+					resultChan <- resultItem{items: nil, err: err}
+					return
+				}
+				shopCtx.SetCompanySetting(shopCompanySetting)
+				dataManageSetting := settingSrv.GetDataManageSetting(shopCtx)
+				excludeDataManage := shopCompanySetting.IsOpenDataManagement() && dataManageSetting.IsEnableDataManage
+
+				// 调用统计服务获取门店支付方式数据
+				statisticsReq := req.StatisticsPaymentMethodReq{
+					PageReq: dto.PageReq{
+						PageNo:   1,
+						PageSize: 1000, // 获取所有数据，不分页
+					},
+					QueryStartDate:    queryStartDate,
+					QueryEndDate:      queryEndDate,
+					Cycle:             request.Cycle, // 使用请求参数中的周期设置
+					ExcludeDataManage: excludeDataManage,
+				}
+
+				// 处理支付方式筛选：使用支付方式名称（因为不同商家的同一支付方式UUID可能不同）
+				if len(request.PaymentMethodNames) > 0 {
+					statisticsReq.PaymentMethodNames = request.PaymentMethodNames
+				}
+
+				statisticsData := s.statisticsSrv.CountBusinessPaymentMethod(shopCtx, statisticsReq)
+
+				// 转换为响应格式
+				items := make([]resp.CompanyPaymentMethodSummaryItem, 0, len(statisticsData.StatisticsPaymentMethodList))
+				for _, statItem := range statisticsData.StatisticsPaymentMethodList {
+					items = append(items, resp.CompanyPaymentMethodSummaryItem{
+						Date:          statItem.Date,
+						CompanyName:   companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
+						PaymentName:   statItem.PaymentName,
+						PaymentAmount: statItem.PaymentAmount,
+						PaymentNum:    statItem.PaymentNum,
+						PaymentRatio:  0.0, // 稍后计算占比
+					})
+				}
+
+				resultChan <- resultItem{items: items, err: nil}
+			}(companyItem)
+		})
+	}
+
+	// 等待所有 goroutine 完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集所有门店的统计数据
+	allItems := make([]resp.CompanyPaymentMethodSummaryItem, 0)
+	for result := range resultChan {
+		if result.err != nil {
+			// 记录错误但继续处理其他门店
+			continue
+		}
+		allItems = append(allItems, result.items...)
+	}
+
+	// 计算支付占比：需要先计算每个日期/门店的总支付金额（使用 decimal）
+	// 按日期和门店分组，计算总支付金额
+	type dateCompanyKey struct {
+		Date        string
+		CompanyName string
+	}
+	dateCompanyTotalMap := make(map[dateCompanyKey]decimal.Decimal)
+	for _, item := range allItems {
+		key := dateCompanyKey{
+			Date:        item.Date,
+			CompanyName: item.CompanyName,
+		}
+		if total, exists := dateCompanyTotalMap[key]; exists {
+			dateCompanyTotalMap[key] = total.Add(decimal.NewFromFloat(item.PaymentAmount))
+		} else {
+			dateCompanyTotalMap[key] = decimal.NewFromFloat(item.PaymentAmount)
+		}
+	}
+
+	// 计算占比（使用 decimal）
+	// 支付占比 = 某个支付方式的支付金额 / 该日期该门店所有支付方式的总金额（实付金额）
+	for i := range allItems {
+		key := dateCompanyKey{
+			Date:        allItems[i].Date,
+			CompanyName: allItems[i].CompanyName,
+		}
+		totalAmount := dateCompanyTotalMap[key] // 该日期该门店所有支付方式的总金额（实付金额）
+		if totalAmount.GreaterThan(decimal.Zero) {
+			paymentAmount := decimal.NewFromFloat(allItems[i].PaymentAmount) // 某个支付方式的支付金额
+			ratio := paymentAmount.Div(totalAmount).Mul(decimal.NewFromInt(100))
+			allItems[i].PaymentRatio = utils.Round(ratio.InexactFloat64(), 2)
+		}
+	}
+
+	// 根据 report 参数决定返回明细表还是汇总表
+	// report = 0: 明细表，返回每个营业日每个商家每个支付方式的数据，不包括汇总行（SummaryRow 返回空数组）
+	// report = 1: 汇总表，返回每个营业日每个支付方式的数据总和（跨门店），包括汇总行（按支付方式分组）
+	var finalList []resp.CompanyPaymentMethodSummaryItem
+	var summaryRow []resp.CompanyPaymentMethodSummaryItem
+
+	if request.Report == 1 {
+		// 汇总表：按日期、支付方式分组汇总，跨门店汇总
+		// 同一营业日，同一支付方式，不同门店的数据合并为一条记录
+		type datePaymentKey struct {
+			Date        string
+			PaymentName string
+		}
+		// 记录每个日期+支付方式对应的所有门店名称集合
+		datePaymentCompanyNamesMap := make(map[datePaymentKey]map[string]bool)
+
+		// 使用 decimal 进行金额累加，避免精度错误
+		type datePaymentDecimal struct {
+			PaymentAmount decimal.Decimal
+			PaymentNum    int64
+		}
+		datePaymentDecimalMap := make(map[datePaymentKey]*datePaymentDecimal)
+
+		for _, item := range allItems {
+			key := datePaymentKey{
+				Date:        item.Date,
+				PaymentName: item.PaymentName,
+			}
+
+			if decimalItem, exists := datePaymentDecimalMap[key]; exists {
+				// 累加同一日期、同一支付方式的数据（跨门店汇总，使用 decimal）
+				decimalItem.PaymentAmount = decimalItem.PaymentAmount.Add(decimal.NewFromFloat(item.PaymentAmount))
+				decimalItem.PaymentNum += item.PaymentNum
+			} else {
+				// 创建新的日期支付方式汇总项（使用 decimal）
+				datePaymentDecimalMap[key] = &datePaymentDecimal{
+					PaymentAmount: decimal.NewFromFloat(item.PaymentAmount),
+					PaymentNum:    item.PaymentNum,
+				}
+			}
+
+			// 收集每个日期+支付方式对应的所有门店名称（用于显示）
+			if datePaymentCompanyNamesMap[key] == nil {
+				datePaymentCompanyNamesMap[key] = make(map[string]bool)
+			}
+			datePaymentCompanyNamesMap[key][item.CompanyName] = true
+		}
+
+		// 计算每个日期的总支付金额（用于计算占比，使用 decimal）
+		dateTotalMap := make(map[string]decimal.Decimal)
+		for key, decimalItem := range datePaymentDecimalMap {
+			if total, exists := dateTotalMap[key.Date]; exists {
+				dateTotalMap[key.Date] = total.Add(decimalItem.PaymentAmount)
+			} else {
+				dateTotalMap[key.Date] = decimalItem.PaymentAmount
+			}
+		}
+
+		// 转换为列表并计算占比
+		finalList = make([]resp.CompanyPaymentMethodSummaryItem, 0, len(datePaymentDecimalMap))
+		for key, decimalItem := range datePaymentDecimalMap {
+			// 收集该日期+支付方式涉及的所有门店名称
+			companyNames := make([]string, 0, len(datePaymentCompanyNamesMap[key]))
+			for name := range datePaymentCompanyNamesMap[key] {
+				companyNames = append(companyNames, name)
+			}
+			sort.Strings(companyNames) // 排序以保证一致性
+			companyNamesStr := strings.Join(companyNames, "、")
+
+			datePaymentItem := resp.CompanyPaymentMethodSummaryItem{
+				Date:          key.Date,
+				CompanyName:   companyNamesStr, // 合并所有涉及的门店名称
+				PaymentName:   key.PaymentName,
+				PaymentAmount: decimalItem.PaymentAmount.InexactFloat64(),
+				PaymentNum:    decimalItem.PaymentNum,
+				PaymentRatio:  0.0, // 稍后计算
+			}
+
+			// 计算占比：某个支付方式的支付金额 / 该日期所有门店所有支付方式的总金额（实付金额）（使用 decimal）
+			totalAmount := dateTotalMap[key.Date] // 该日期所有门店所有支付方式的总金额（实付金额）
+			if totalAmount.GreaterThan(decimal.Zero) {
+				ratio := decimalItem.PaymentAmount.Div(totalAmount).Mul(decimal.NewFromInt(100)) // 某个支付方式的支付金额 / 实付金额
+				datePaymentItem.PaymentRatio = utils.Round(ratio.InexactFloat64(), 2)
+			}
+			datePaymentItem.PaymentAmount = utils.Round(datePaymentItem.PaymentAmount, 2)
+			finalList = append(finalList, datePaymentItem)
+		}
+
+		// 按日期、支付方式排序
+		sort.Slice(finalList, func(i, j int) bool {
+			if finalList[i].Date != finalList[j].Date {
+				return finalList[i].Date < finalList[j].Date
+			}
+			return finalList[i].PaymentName < finalList[j].PaymentName
+		})
+
+		// 计算汇总行：按支付方式分组，跨所有门店汇总，每个支付方式一条汇总记录
+		// 汇总所有日期的数据，按支付方式分组
+		// 按支付方式汇总所有日期的数据（使用 decimal）
+		type paymentSummaryDecimal struct {
+			PaymentAmount decimal.Decimal
+			PaymentNum    int64
+			CompanyNames  map[string]bool // 记录该支付方式涉及的所有门店名称
+		}
+		paymentSummaryDecimalMap := make(map[string]*paymentSummaryDecimal)
+
+		for _, item := range finalList {
+			if paymentDecimal, exists := paymentSummaryDecimalMap[item.PaymentName]; exists {
+				paymentDecimal.PaymentAmount = paymentDecimal.PaymentAmount.Add(decimal.NewFromFloat(item.PaymentAmount))
+				paymentDecimal.PaymentNum += item.PaymentNum
+				// 拆分门店名称（可能包含多个门店，用"、"分隔），逐个添加到 map 中自动去重
+				companyNames := strings.Split(item.CompanyName, "、")
+				for _, name := range companyNames {
+					name = strings.TrimSpace(name)
+					if name != "" {
+						paymentDecimal.CompanyNames[name] = true
+					}
+				}
+			} else {
+				// 拆分门店名称（可能包含多个门店，用"、"分隔），逐个添加到 map 中自动去重
+				companyNamesMap := make(map[string]bool)
+				companyNames := strings.Split(item.CompanyName, "、")
+				for _, name := range companyNames {
+					name = strings.TrimSpace(name)
+					if name != "" {
+						companyNamesMap[name] = true
+					}
+				}
+				paymentSummaryDecimalMap[item.PaymentName] = &paymentSummaryDecimal{
+					PaymentAmount: decimal.NewFromFloat(item.PaymentAmount),
+					PaymentNum:    item.PaymentNum,
+					CompanyNames:  companyNamesMap,
+				}
+			}
+		}
+
+		// 计算总支付金额（用于计算占比，使用 decimal）
+		// 汇总所有支付方式的总金额，作为实付金额（所有支付方式的总和）
+		var totalPaymentAmount decimal.Decimal // 所有支付方式的总金额（实付金额）
+		for _, paymentDecimal := range paymentSummaryDecimalMap {
+			totalPaymentAmount = totalPaymentAmount.Add(paymentDecimal.PaymentAmount)
+		}
+
+		// 转换为汇总行列表并计算占比
+		summaryRow = make([]resp.CompanyPaymentMethodSummaryItem, 0, len(paymentSummaryDecimalMap))
+		for paymentName, paymentDecimal := range paymentSummaryDecimalMap {
+			// 收集该支付方式涉及的所有门店名称
+			companyNames := make([]string, 0, len(paymentDecimal.CompanyNames))
+			for name := range paymentDecimal.CompanyNames {
+				companyNames = append(companyNames, name)
+			}
+			sort.Strings(companyNames) // 排序以保证一致性
+			companyNamesStr := strings.Join(companyNames, "、")
+
+			paymentSummaryItem := resp.CompanyPaymentMethodSummaryItem{
+				Date:          "汇总",
+				CompanyName:   companyNamesStr, // 合并所有涉及的门店名称
+				PaymentName:   paymentName,
+				PaymentAmount: paymentDecimal.PaymentAmount.InexactFloat64(),
+				PaymentNum:    paymentDecimal.PaymentNum,
+				PaymentRatio:  0.0, // 稍后计算
+			}
+
+			// 计算占比（使用 decimal）
+			// 支付占比 = 某个支付方式的总支付金额 / 所有支付方式的总支付金额（实付金额）
+			if totalPaymentAmount.GreaterThan(decimal.Zero) {
+				ratio := paymentDecimal.PaymentAmount.Div(totalPaymentAmount).Mul(decimal.NewFromInt(100)) // 某个支付方式的支付金额 / 实付金额
+				paymentSummaryItem.PaymentRatio = utils.Round(ratio.InexactFloat64(), 2)
+			}
+			paymentSummaryItem.PaymentAmount = utils.Round(paymentSummaryItem.PaymentAmount, 2)
+			summaryRow = append(summaryRow, paymentSummaryItem)
+		}
+
+		// 按支付方式名称排序汇总行
+		sort.Slice(summaryRow, func(i, j int) bool {
+			return summaryRow[i].PaymentName < summaryRow[j].PaymentName
+		})
+	} else {
+		// 明细表：返回每个营业日每个商家每个支付方式的数据，不包括汇总行（SummaryRow 返回空数组）
+		// 按日期、商家名称、支付方式排序
+		sort.Slice(allItems, func(i, j int) bool {
+			if allItems[i].Date != allItems[j].Date {
+				return allItems[i].Date < allItems[j].Date
+			}
+			if allItems[i].CompanyName != allItems[j].CompanyName {
+				return allItems[i].CompanyName < allItems[j].CompanyName
+			}
+			return allItems[i].PaymentName < allItems[j].PaymentName
+		})
+		finalList = allItems
+		// 明细表返回空数组
+		summaryRow = make([]resp.CompanyPaymentMethodSummaryItem, 0)
+	}
+
+	// 分页处理
+	total := int64(len(finalList))
+	pageNo := utils.IfInt(request.PageNo > 0, request.PageNo, 1)
+	pageSize := utils.IfInt(request.PageSize > 0, request.PageSize, 20)
+	start := (pageNo - 1) * pageSize
+	end := start + pageSize
+
+	if start > len(finalList) {
+		start = len(finalList)
+	}
+	if end > len(finalList) {
+		end = len(finalList)
+	}
+
+	var list []resp.CompanyPaymentMethodSummaryItem
+	if start < len(finalList) {
+		list = finalList[start:end]
+	} else {
+		list = make([]resp.CompanyPaymentMethodSummaryItem, 0)
+	}
+
+	return &resp.CompanyPaymentMethodSummaryResp{
+		Meta: dto.PageResponse{
+			PageNo:   pageNo,
+			PageSize: pageSize,
+			Total:    total,
+		},
+		List:       list,
+		SummaryRow: summaryRow,
+	}, nil
+}
+
+// countCompanyRefundSummary 获取门店退款金额汇总统计
+func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req.StatisticsCompanySummaryReq) (*resp.CompanyRefundSummaryResp, error) {
+	// 获取当前用户时区
+	timezone := ctx.GetCompanySetting().Timezone
+	timeUtil := utils.SetTimezone(timezone)
+
+	// 调用 GetCompanyList 获取所有可见商家列表（包含 CompanyUuid 和 CompanyName）
+	companyListResp, err := s.GetCompanyList(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取门店列表失败")
+	}
+
+	// 处理 CompanyUuids：如果为空，使用所有可见门店；否则过滤出匹配的门店
+	var companyList []*resp.CompanySummaryItem
+	if len(request.CompanyUuids) == 0 {
+		// CompanyUuids 为空时，使用所有可见门店
+		companyList = companyListResp.List
+	} else {
+		// CompanyUuids 不为空时，过滤出匹配的门店（保持顺序）
+		companyUuidSet := make(map[uint64]bool)
+		for _, uuid := range request.CompanyUuids {
+			companyUuidSet[uuid] = true
+		}
+		companyList = make([]*resp.CompanySummaryItem, 0, len(request.CompanyUuids))
+		for _, c := range companyListResp.List {
+			if companyUuidSet[c.CompanyUuid] {
+				companyList = append(companyList, c)
+			}
+		}
+	}
+
+	// 处理默认值：QueryStartDate 为空时，默认为今日开始日期：YYYY-MM-DD 00:00:00
+	queryStartDate := request.QueryStartDate
+	if queryStartDate == "" {
+		startTime, _ := timeUtil.TodayStartEnd()
+		queryStartDate = startTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 处理默认值：QueryEndDate 为空时，默认为今日结束日期：YYYY-MM-DD 23:59:59
+	queryEndDate := request.QueryEndDate
+	if queryEndDate == "" {
+		_, endTime := timeUtil.TodayStartEnd()
+		queryEndDate = endTime.Format("2006-01-02 15:04:05")
+	}
+
+	// 获取数据库管理器
+	dbm := database.GetDBManager(config.Database)
+	settingSrv := setting.NewSrv(dbm, cache.Global)
+	saasDB := dbm.GetDB(constant.DefaultDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
+
+	// 使用 goroutine 并发查询各个门店，提高性能
+	// 使用带缓冲的 channel 控制并发数量，最多10个协程，避免资源消耗过大
+	maxConcurrent := 10
+	semaphore := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
+	// 使用 channel 收集结果，避免竞态条件
+	type resultItem struct {
+		items []resp.CompanyRefundSummaryItem
+		err   error
+	}
+	resultChan := make(chan resultItem, len(companyList))
+
+	// 并发查询各个门店
+	for _, companyItem := range companyList {
+		wg.Add(1)
+		utils.Go(func() {
+			func(item *resp.CompanySummaryItem) {
+				defer wg.Done()
+
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				companyUuid := item.CompanyUuid
+				companyName := item.CompanyName
+
+				// 获取完整的 Company 信息（用于 SetCompany）
+				company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
+				if err != nil {
+					logger.Logger.Warn("获取门店信息失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
+					resultChan <- resultItem{items: nil, err: err}
+					return
+				}
+
+				// 获取门店数据库连接
+				shopDB := dbm.GetDB(companyUuid)
+				if shopDB == nil {
+					logger.Logger.Warn("获取门店数据库连接失败", zap.Uint64("company_uuid", companyUuid))
+					resultChan <- resultItem{items: nil, err: errors.New("获取门店数据库连接失败")}
+					return
+				}
+
+				// 创建门店 context
+				shopCtx := ctx.Copy()
+				shopCtx.SetCompanyUuid(companyUuid)
+				shopCtx.SetCompany(*company)
+				shopCtx.SetDB(shopDB)
+
+				// 获取门店设置
+				companySettingRepo := repository.NewCompanySettingRepo(shopDB)
+				shopCompanySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
+					return db.Where("company_uuid = ?", companyUuid)
+				})
+				if err != nil {
+					logger.Logger.Warn("获取门店设置失败", zap.Uint64("company_uuid", companyUuid), zap.Error(err))
+					resultChan <- resultItem{items: nil, err: err}
+					return
+				}
+				shopCtx.SetCompanySetting(shopCompanySetting)
+				dataManageSetting := settingSrv.GetDataManageSetting(shopCtx)
+				excludeDataManage := shopCompanySetting.IsOpenDataManagement() && dataManageSetting.IsEnableDataManage
+
+				// 调用统计服务获取门店退款数据
+				statisticsReq := req.StatisticsSummaryReq{
+					PageReq: dto.PageReq{
+						PageNo:   1,
+						PageSize: 1000, // 获取所有数据，不分页
+					},
+					QueryStartDate:    queryStartDate,
+					QueryEndDate:      queryEndDate,
+					Cycle:             request.Cycle, // 使用请求参数中的周期设置
+					ExcludeDataManage: excludeDataManage,
+				}
+
+				statisticsData := s.statisticsSrv.CountRefundSummary(shopCtx, statisticsReq)
+
+				// 转换为响应格式
+				items := make([]resp.CompanyRefundSummaryItem, 0, len(statisticsData.StatisticsRefundSummaryList))
+				for _, statItem := range statisticsData.StatisticsRefundSummaryList {
+					items = append(items, resp.CompanyRefundSummaryItem{
+						Date:                statItem.Date,
+						CompanyName:         companyName, // 使用 GetCompanyList 返回的 CompanyName，避免重复查询
+						RefundAmount:        statItem.RefundAmount,
+						RefundNum:           statItem.RefundNum,
+						RefundRate:          statItem.RefundRate,
+						PartialRefundAmount: statItem.PartialRefundAmount,
+						PartialRefundNum:    statItem.PartialRefundNum,
+						FullRefundAmount:    statItem.FullRefundAmount,
+						FullRefundNum:       statItem.FullRefundNum,
+					})
+				}
+
+				resultChan <- resultItem{items: items, err: nil}
+			}(companyItem)
+		})
+	}
+
+	// 等待所有 goroutine 完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集所有门店的统计数据
+	allItems := make([]resp.CompanyRefundSummaryItem, 0)
+	for result := range resultChan {
+		if result.err != nil {
+			// 记录错误但继续处理其他门店
+			continue
+		}
+		allItems = append(allItems, result.items...)
+	}
+
+	// 根据 report 参数决定返回明细表还是汇总表
+	// report = 0: 明细表，返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
+	// report = 1: 汇总表，返回每个营业日每个商家数据总和，包括汇总行
+	var finalList []resp.CompanyRefundSummaryItem
+	var summaryRow resp.CompanyRefundSummaryItem
+
+	if request.Report == 1 {
+		// 汇总表：按日期分组汇总
+		// 记录每个日期对应的商家名称集合（用于去重）
+		dateCompanyNamesMap := make(map[string]map[string]bool)
+
+		// 使用 decimal 进行金额累加，避免精度错误
+		type dateSummaryDecimal struct {
+			RefundAmount        decimal.Decimal
+			RefundNum           int64
+			PartialRefundAmount decimal.Decimal
+			PartialRefundNum    int64
+			FullRefundAmount    decimal.Decimal
+			FullRefundNum       int64
+			OrderNum            int64 // 用于计算退款率
+		}
+		dateDecimalMap := make(map[string]*dateSummaryDecimal)
+
+		for _, item := range allItems {
+			if dateDecimal, exists := dateDecimalMap[item.Date]; exists {
+				// 累加同一天的数据（使用 decimal）
+				dateDecimal.RefundAmount = dateDecimal.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+				dateDecimal.RefundNum += item.RefundNum
+				dateDecimal.PartialRefundAmount = dateDecimal.PartialRefundAmount.Add(decimal.NewFromFloat(item.PartialRefundAmount))
+				dateDecimal.PartialRefundNum += item.PartialRefundNum
+				dateDecimal.FullRefundAmount = dateDecimal.FullRefundAmount.Add(decimal.NewFromFloat(item.FullRefundAmount))
+				dateDecimal.FullRefundNum += item.FullRefundNum
+				// 收集商家名称
+				if dateCompanyNamesMap[item.Date] == nil {
+					dateCompanyNamesMap[item.Date] = make(map[string]bool)
+				}
+				dateCompanyNamesMap[item.Date][item.CompanyName] = true
+			} else {
+				// 创建新的日期汇总项（使用 decimal）
+				dateDecimalMap[item.Date] = &dateSummaryDecimal{
+					RefundAmount:        decimal.NewFromFloat(item.RefundAmount),
+					RefundNum:           item.RefundNum,
+					PartialRefundAmount: decimal.NewFromFloat(item.PartialRefundAmount),
+					PartialRefundNum:    item.PartialRefundNum,
+					FullRefundAmount:    decimal.NewFromFloat(item.FullRefundAmount),
+					FullRefundNum:       item.FullRefundNum,
+					OrderNum:            0, // 订单数量需要从原始数据中获取
+				}
+				// 初始化商家名称集合
+				if dateCompanyNamesMap[item.Date] == nil {
+					dateCompanyNamesMap[item.Date] = make(map[string]bool)
+				}
+				dateCompanyNamesMap[item.Date][item.CompanyName] = true
+			}
+		}
+
+		// 转换为列表并计算退款率，设置商家名称
+		finalList = make([]resp.CompanyRefundSummaryItem, 0, len(dateDecimalMap))
+		for date, dateDecimal := range dateDecimalMap {
+			// 计算退款率：退款笔数 / 订单数量 * 100
+			var refundRate decimal.Decimal
+			if dateDecimal.OrderNum > 0 {
+				refundRate = decimal.NewFromInt(dateDecimal.RefundNum).Div(decimal.NewFromInt(dateDecimal.OrderNum)).Mul(decimal.NewFromInt(100))
+			}
+
+			dateItem := resp.CompanyRefundSummaryItem{
+				Date:                date,
+				CompanyName:         "", // 稍后设置
+				RefundAmount:        utils.Round(dateDecimal.RefundAmount.InexactFloat64(), 2),
+				RefundNum:           dateDecimal.RefundNum,
+				RefundRate:          utils.Round(refundRate.InexactFloat64(), 2),
+				PartialRefundAmount: utils.Round(dateDecimal.PartialRefundAmount.InexactFloat64(), 2),
+				PartialRefundNum:    dateDecimal.PartialRefundNum,
+				FullRefundAmount:    utils.Round(dateDecimal.FullRefundAmount.InexactFloat64(), 2),
+				FullRefundNum:       dateDecimal.FullRefundNum,
+			}
+
+			// 设置商家名称：将所有商家名称用、符号连接
+			companyNames := make([]string, 0, len(dateCompanyNamesMap[date]))
+			for name := range dateCompanyNamesMap[date] {
+				companyNames = append(companyNames, name)
+			}
+			sort.Strings(companyNames) // 排序以保证一致性
+			dateItem.CompanyName = strings.Join(companyNames, "、")
+			finalList = append(finalList, dateItem)
+		}
+
+		// 按日期排序
+		sort.Slice(finalList, func(i, j int) bool {
+			return finalList[i].Date < finalList[j].Date
+		})
+
+		// 计算总汇总行（使用 decimal）
+		var totalRefundAmount, totalPartialRefundAmount, totalFullRefundAmount decimal.Decimal
+		var totalRefundNum, totalPartialRefundNum, totalFullRefundNum, totalOrderNum int64
+
+		for _, item := range finalList {
+			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+			totalRefundNum += item.RefundNum
+			totalPartialRefundAmount = totalPartialRefundAmount.Add(decimal.NewFromFloat(item.PartialRefundAmount))
+			totalPartialRefundNum += item.PartialRefundNum
+			totalFullRefundAmount = totalFullRefundAmount.Add(decimal.NewFromFloat(item.FullRefundAmount))
+			totalFullRefundNum += item.FullRefundNum
+		}
+
+		// 计算总退款率：汇总退款订单数量 ÷ 汇总总订单数量 × 100%
+		var totalRefundRate decimal.Decimal
+		if totalOrderNum > 0 {
+			totalRefundRate = decimal.NewFromInt(totalRefundNum).Div(decimal.NewFromInt(totalOrderNum)).Mul(decimal.NewFromInt(100))
+		}
+
+		// 收集所有商家名称（用于汇总行）
+		allCompanyNamesSet := make(map[string]bool)
+		for _, namesMap := range dateCompanyNamesMap {
+			for name := range namesMap {
+				allCompanyNamesSet[name] = true
+			}
+		}
+		allCompanyNames := make([]string, 0, len(allCompanyNamesSet))
+		for name := range allCompanyNamesSet {
+			allCompanyNames = append(allCompanyNames, name)
+		}
+		sort.Strings(allCompanyNames) // 排序以保证一致性
+
+		summaryRow = resp.CompanyRefundSummaryItem{
+			Date:                "汇总",
+			CompanyName:         strings.Join(allCompanyNames, "、"), // 所有商家名称用、符号连接
+			RefundAmount:        utils.Round(totalRefundAmount.InexactFloat64(), 2),
+			RefundNum:           totalRefundNum,
+			RefundRate:          utils.Round(totalRefundRate.InexactFloat64(), 2),
+			PartialRefundAmount: utils.Round(totalPartialRefundAmount.InexactFloat64(), 2),
+			PartialRefundNum:    totalPartialRefundNum,
+			FullRefundAmount:    utils.Round(totalFullRefundAmount.InexactFloat64(), 2),
+			FullRefundNum:       totalFullRefundNum,
+		}
+	} else {
+		// 明细表：返回每个营业日每个商家的数据，不包括汇总行（SummaryRow 返回默认值）
+		// 按日期排序
+		sort.Slice(allItems, func(i, j int) bool {
+			return allItems[i].Date < allItems[j].Date
+		})
+		finalList = allItems
+		// 明细表返回默认值
+		summaryRow = resp.CompanyRefundSummaryItem{}
+	}
+
+	// 分页处理
+	total := int64(len(finalList))
+	pageNo := utils.IfInt(request.PageNo > 0, request.PageNo, 1)
+	pageSize := utils.IfInt(request.PageSize > 0, request.PageSize, 20)
+	start := (pageNo - 1) * pageSize
+	end := start + pageSize
+
+	if start > len(finalList) {
+		start = len(finalList)
+	}
+	if end > len(finalList) {
+		end = len(finalList)
+	}
+
+	var list []resp.CompanyRefundSummaryItem
+	if start < len(finalList) {
+		list = finalList[start:end]
+	} else {
+		list = make([]resp.CompanyRefundSummaryItem, 0)
+	}
+
+	return &resp.CompanyRefundSummaryResp{
+		Meta: dto.PageResponse{
+			PageNo:   pageNo,
+			PageSize: pageSize,
+			Total:    total,
+		},
+		List:       list,
+		SummaryRow: summaryRow,
+	}, nil
+}
+
+// ExportCompanyBusinessSummary 导出门店汇总统计
+func (s *businessSrv) ExportCompanyBusinessSummary(ctx context.Context, request req.StatisticsCompanySummaryReq) error {
+	db := ctx.GetDB()
+	// 判断是否还有正在导出的任务
+	oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeCompanyBusinessSummary)
+	if err != nil {
+		return err
+	}
+	if oldRecord != nil {
+		return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+	}
+
+	// 获取统计数据，检查是否有数据
+	result, err := s.CountCompanyBusinessSummary(ctx, request)
+	if err != nil {
+		return err
+	}
+
+	// 根据指标类型判断数据量
+	var total int64
+	switch request.IndicatorType {
+	case "business":
+		if resp, ok := result.(*resp.CompanyBusinessSummaryResp); ok {
+			total = resp.Meta.Total
+		}
+	case "payment_method":
+		if resp, ok := result.(*resp.CompanyPaymentMethodSummaryResp); ok {
+			total = resp.Meta.Total
+		}
+	case "refund":
+		if resp, ok := result.(*resp.CompanyRefundSummaryResp); ok {
+			total = resp.Meta.Total
+		}
+	}
+
+	if total == 0 {
+		return errors.WithMessage(errors.New("没有数据需要导出"))
+	}
+	if total > 1000 {
+		return errors.WithMessage(errors.New("请选择具体时间段，最多可导出1000条以下的数据"))
+	}
+
+	// 根据指标类型设置文件名
+	var fileNameMul model.MultiLanguageName
+	switch request.IndicatorType {
+	case "business":
+		fileNameMul = model.MultiLanguageName{
+			EnName:   "Business Data Summary",
+			ZhName:   "营业数据汇总",
+			ZhTwName: "營業數據匯總",
+			ThName:   "สรุปข้อมูลธุรกิจ",
+			MyName:   "လုပ်ငန်းဒေတာစုပေါင်းစာရင်း",
+			JaName:   "営業データ集計",
+			KoName:   "영업 데이터 요약",
+			TrName:   "İşletme Verileri Özeti",
+			SvName:   "Affärsdata Sammanfattning",
+		}
+	case "payment_method":
+		fileNameMul = model.MultiLanguageName{
+			EnName:   "Payment Method Summary",
+			ZhName:   "支付方式汇总",
+			ZhTwName: "支付方式匯總",
+			ThName:   "สรุปวิธีการชำระเงิน",
+			MyName:   "ငွေပေးချေမှုနည်းလမ်းစုပေါင်းစာရင်း",
+			JaName:   "支払方法集計",
+			KoName:   "결제 방식 요약",
+			TrName:   "Ödeme Yöntemi Özeti",
+			SvName:   "Betalningsmetod Sammanfattning",
+		}
+	case "refund":
+		fileNameMul = model.MultiLanguageName{
+			EnName:   "Refund Amount Summary",
+			ZhName:   "退款金额汇总",
+			ZhTwName: "退款金額匯總",
+			ThName:   "สรุปจำนวนเงินคืน",
+			MyName:   "ငွေပြန်လည်ပေးအပ်မှုစုပေါင်းစာရင်း",
+			JaName:   "返金金額集計",
+			KoName:   "환불 금액 요약",
+			TrName:   "İade Tutarı Özeti",
+			SvName:   "Återbetalningsbelopp Sammanfattning",
+		}
+	default:
+		fileNameMul = model.MultiLanguageName{
+			EnName:   "Store Summary Statistics",
+			ZhName:   "门店汇总统计",
+			ZhTwName: "門店匯總統計",
+			ThName:   "สถิติสรุปของร้าน",
+			MyName:   "ဆိုင်စုပေါင်းစာရင်း",
+			JaName:   "店舗集計統計",
+			KoName:   "매장 요약 통계",
+			TrName:   "Mağaza Özet İstatistikleri",
+			SvName:   "Butikssammanfattningsstatistik",
+		}
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	reportName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	fileName, err := s.generateExportFileName(ctx, reportName, model.ExportTypeCompanyBusinessSummary)
+	if err != nil {
+		return errors.WithMessage(err, "生成文件名失败")
+	}
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeCompanyBusinessSummary,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	err = repository.NewExportRecordRepo(db).Create(record)
+	if err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		_, err := s.ExportCompanyBusinessSummaryTask(ctx, ExportCompanyBusinessSummaryTaskParams{
+			Record:      *record,
+			FillNameMul: fileNameMul,
+			Request:     request,
+		})
+		if err != nil {
+			if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出门店汇总统计数据失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			}
+			return
+		}
+	})
+
+	return nil
+}
+
+// ExportCompanyBusinessSummaryTaskParams 导出门店汇总统计数据参数
+type ExportCompanyBusinessSummaryTaskParams struct {
+	Request     req.StatisticsCompanySummaryReq // 请求参数
+	Record      model.ExportRecord              // 导出记录
+	FillNameMul model.MultiLanguageName         // 多语言名称
+}
+
+// ExportCompanyBusinessSummaryTask 导出门店汇总统计数据任务
+func (s *businessSrv) ExportCompanyBusinessSummaryTask(ctx context.Context, params ExportCompanyBusinessSummaryTaskParams) (*resp.FileExportResp, error) {
+	// 获取统计数据（明细表和汇总表）
+	// 明细表：report=0，获取所有数据（不分页）
+	detailRequest := params.Request
+	detailRequest.Report = 0 // 明细表
+	detailRequest.PageNo = 1
+	detailRequest.PageSize = 10000 // 设置一个很大的值，确保获取所有数据
+	detailResult, err := s.CountCompanyBusinessSummary(ctx, detailRequest)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取明细表数据失败")
+	}
+
+	// 汇总表：report=1，获取所有数据（不分页）
+	summaryRequest := params.Request
+	summaryRequest.Report = 1 // 汇总表
+	summaryRequest.PageNo = 1
+	summaryRequest.PageSize = 10000 // 设置一个很大的值，确保获取所有数据
+	summaryResult, err := s.CountCompanyBusinessSummary(ctx, summaryRequest)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取汇总表数据失败")
+	}
+
+	// 创建Excel文件
+	xlsxFile := excelize.NewFile()
+	defer xlsxFile.Close()
+
+	// 删除默认的Sheet1（excelize.NewFile()会自动创建一个默认Sheet1，我们需要删除它）
+	defaultSheetName := xlsxFile.GetSheetName(0)
+	if defaultSheetName != "" {
+		xlsxFile.DeleteSheet(defaultSheetName)
+	}
+
+	lang := ctx.GetLanguage()
+
+	// 根据指标类型处理导出
+	switch params.Request.IndicatorType {
+	case "business":
+		err = s.exportBusinessSummaryToExcel(ctx, xlsxFile, detailResult, summaryResult, lang)
+	case "payment_method":
+		err = s.exportPaymentMethodSummaryToExcel(ctx, xlsxFile, detailResult, summaryResult, lang)
+	case "refund":
+		err = s.exportRefundSummaryToExcel(ctx, xlsxFile, detailResult, summaryResult, lang)
+	default:
+		err = s.exportBusinessSummaryToExcel(ctx, xlsxFile, detailResult, summaryResult, lang)
+	}
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "生成Excel文件失败")
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		return nil, errors.WithMessage(err, "写入Excel文件到内存失败")
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, params.Record.ExportName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err, "上传文件失败")
+	}
+
+	if err := repository.NewExportRecordRepo(ctx.GetDB()).Update(params.Record.Uuid, map[string]any{
+		"file_uuid": res.Uuid,
+		"status":    model.ExportStatusSuccess,
+	}); err != nil {
+		return nil, errors.WithMessage(err, "更新导出记录失败")
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil
+}
+
+// exportBusinessSummaryToExcel 导出营业数据汇总到Excel
+func (s *businessSrv) exportBusinessSummaryToExcel(ctx context.Context, xlsxFile *excelize.File, detailResult, summaryResult interface{}, lang string) error {
+	detailResp, ok1 := detailResult.(*resp.CompanyBusinessSummaryResp)
+	summaryResp, ok2 := summaryResult.(*resp.CompanyBusinessSummaryResp)
+	if !ok1 || !ok2 {
+		return errors.New("数据类型错误")
+	}
+
+	// 表头映射
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"营业日", "门店名称", "订单金额", "实付金额", "订单量", "用餐人数", "消费桌数", "平均客单价", "订单金额人均", "订单金额单均", "实付金额单均", "点餐订单金额", "桌台订单金额", "外送订单金额",
+		},
+		"en": { // 英文
+			"Business Day", "Store Name", "Order Amount", "Paid Amount", "Order Count", "Number of Diners", "Number of Tables Consumed", "Average Customer Price", "Order Amount Per Person", "Order Amount Per Order", "Paid Amount Per Order", "Meal Order Amount", "Table Order Amount", "Takeout Order Amount",
+		},
+		"th": { // 泰语
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "ยอดคำสั่งซื้อ", "ยอดชำระเงิน", "จำนวนออเดอร์", "จำนวนลูกค้า", "จำนวนโต๊ะที่ใช้", "ราคาเฉลี่ยต่อลูกค้า", "ยอดคำสั่งซื้อต่อคน", "ยอดคำสั่งซื้อต่อบิล", "ยอดชำระเงินต่อบิล", "ยอดคำสั่งซื้อรับประทานอาหาร", "ยอดคำสั่งซื้อโต๊ะ", "ยอดคำสั่งซื้อนำกลับบ้าน",
+		},
+		"zhtw": { // 繁体中文
+			"營業日", "門店名稱", "訂單金額", "實付金額", "訂單量", "用餐人數", "消費桌數", "平均客單價", "訂單金額人均", "訂單金額單均", "實付金額單均", "點餐訂單金額", "桌台訂單金額", "外送訂單金額",
+		},
+		"ja": { // 日语
+			"営業日", "店舗名", "注文金額", "支払い金額", "注文数", "来店人数", "利用テーブル数", "平均客単価", "一人当たり注文金額", "一件当たり注文金額", "一件当たり支払い金額", "食事注文金額", "テーブル注文金額", "テイクアウト注文金額",
+		},
+		"ko": { // 韩语
+			"영업일", "매장명", "주문 금액", "실제 결제 금액", "주문 건수", "식사 인원", "소비 테이블 수", "평균 고객 단가", "인당 주문 금액", "주문당 주문 금액", "주문당 실제 결제 금액", "식사 주문 금액", "테이블 주문 금액", "포장 주문 금액",
+		},
+		"my": { // 缅甸语
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "အော်ဒါစုစုပေါင်းပမာဏ", "ပေးသွင်းငွေ", "အော်ဒါအရေအတွက်", "စားသုံးသူအရေအတွက်", "စားသုံးထားသောစားပွဲအရေအတွက်", "ပျမ်းမျှဖောက်သည်စျေးနှုန်း", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်အော်ဒါပမာဏ", "တစ်ဦးလျှင်ပေးသွင်းငွေ", "အစားအသောက်အော်ဒါပမာဏ", "စားပွဲအော်ဒါပမာဏ", "ယူဆောင်အော်ဒါပမာဏ",
+		},
+		"tr": { // 土耳其语
+			"İşletme Günü", "Mağaza Adı", "Sipariş Tutarı", "Ödenen Tutar", "Sipariş Sayısı", "Yemek Yiyen Kişi Sayısı", "Tüketilen Masa Sayısı", "Ortalama Müşteri Fiyatı", "Kişi Başına Sipariş Tutarı", "Sipariş Başına Sipariş Tutarı", "Sipariş Başına Ödenen Tutar", "Yemek Sipariş Tutarı", "Masa Sipariş Tutarı", "Paket Sipariş Tutarı",
+		},
+		"sv": { // 瑞典语
+			"Affärsdag", "Butiksnamn", "Orderbelopp", "Betalt Belopp", "Antal Order", "Antal Gäster", "Antal Konsumerade Bord", "Genomsnittligt Kundpris", "Orderbelopp per Person", "Orderbelopp per Order", "Betalt Belopp per Order", "Matbeställningsbelopp", "Bordsorderbelopp", "Takeaway Orderbelopp",
+		},
+	}
+
+	headers := func() []string {
+		h := headerMap[lang]
+		if h == nil {
+			h = headerMap["en"]
+		}
+		return h
+	}()
+
+	// Sheet1: 明细表
+	sheet1Name := "Sheet1"
+	sheet1Index, err := xlsxFile.NewSheet(sheet1Name)
+	if err != nil {
+		return errors.WithMessage(err, "创建明细表Sheet失败")
+	}
+	xlsxFile.SetActiveSheet(sheet1Index)
+
+	// 写入明细表表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheet1Name, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
+	}
+
+	// 写入明细表数据
+	for rowIdx, item := range detailResp.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", offsetRow), item.OrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", offsetRow), item.PayAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", offsetRow), item.OrderNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("J%d", offsetRow), item.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("K%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("L%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("M%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("N%d", offsetRow), item.TakeoutOrderAmount)
+	}
+
+	// 自动调整明细表列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheet1Name, colName, colName, 20)
+	}
+
+	// Sheet2: 汇总表
+	sheet2Name := "Sheet2"
+	_, err = xlsxFile.NewSheet(sheet2Name)
+	if err != nil {
+		return errors.WithMessage(err, "创建汇总表Sheet失败")
+	}
+
+	// 写入汇总表表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheet2Name, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheet2Name, cell, cell, style)
+	}
+
+	// 写入汇总表数据
+	for rowIdx, item := range summaryResp.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", offsetRow), item.OrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", offsetRow), item.PayAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", offsetRow), item.OrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", offsetRow), item.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", offsetRow), item.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", offsetRow), item.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", offsetRow), item.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", offsetRow), item.TakeoutOrderAmount)
+	}
+
+	// 写入汇总行
+	if summaryResp.SummaryRow.Date != "" || summaryResp.SummaryRow.CompanyName != "" {
+		summaryRow := len(summaryResp.List) + 2
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), summaryResp.SummaryRow.Date)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", summaryRow), summaryResp.SummaryRow.CompanyName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), summaryResp.SummaryRow.OrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), summaryResp.SummaryRow.PayAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), summaryResp.SummaryRow.OrderNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.MealNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.DeskNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.AvgCustomerPrice)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.OrderAmountMealAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("J%d", summaryRow), summaryResp.SummaryRow.OrderAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("K%d", summaryRow), summaryResp.SummaryRow.PayAmountAvg)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("L%d", summaryRow), summaryResp.SummaryRow.InstantOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("M%d", summaryRow), summaryResp.SummaryRow.DeskOrderAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("N%d", summaryRow), summaryResp.SummaryRow.TakeoutOrderAmount)
+	}
+
+	// 自动调整汇总表列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheet2Name, colName, colName, 20)
+	}
+
+	return nil
+}
+
+// exportPaymentMethodSummaryToExcel 导出支付方式汇总到Excel
+func (s *businessSrv) exportPaymentMethodSummaryToExcel(ctx context.Context, xlsxFile *excelize.File, detailResult, summaryResult interface{}, lang string) error {
+	detailResp, ok1 := detailResult.(*resp.CompanyPaymentMethodSummaryResp)
+	summaryResp, ok2 := summaryResult.(*resp.CompanyPaymentMethodSummaryResp)
+	if !ok1 || !ok2 {
+		return errors.New("数据类型错误")
+	}
+
+	// 表头映射
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"营业日", "门店名称", "支付方式", "支付金额", "支付笔数", "支付占比",
+		},
+		"en": { // 英文
+			"Business Day", "Store Name", "Payment Method", "Payment Amount", "Payment Count", "Payment Ratio",
+		},
+		"th": { // 泰语
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "วิธีการชำระเงิน", "จำนวนเงินที่ชำระ", "จำนวนครั้งที่ชำระ", "สัดส่วนการชำระเงิน",
+		},
+		"zhtw": { // 繁体中文
+			"營業日", "門店名稱", "支付方式", "支付金額", "支付筆數", "支付占比",
+		},
+		"ja": { // 日语
+			"営業日", "店舗名", "支払方法", "支払金額", "支払回数", "支払比率",
+		},
+		"ko": { // 韩语
+			"영업일", "매장명", "결제 방식", "결제 금액", "결제 건수", "결제 비율",
+		},
+		"my": { // 缅甸语
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "ငွေပေးချေမှုနည်းလမ်း", "ငွေပေးချေမှုပမာဏ", "ငွေပေးချေမှုအကြိမ်အရေအတွက်", "ငွေပေးချေမှုရာခိုင်နှုန်း",
+		},
+		"tr": { // 土耳其语
+			"İşletme Günü", "Mağaza Adı", "Ödeme Yöntemi", "Ödeme Tutarı", "Ödeme Sayısı", "Ödeme Oranı",
+		},
+		"sv": { // 瑞典语
+			"Affärsdag", "Butiksnamn", "Betalningsmetod", "Betalningsbelopp", "Betalningsantal", "Betalningsandel",
+		},
+	}
+
+	headers := func() []string {
+		h := headerMap[lang]
+		if h == nil {
+			h = headerMap["en"]
+		}
+		return h
+	}()
+
+	// Sheet1: 明细表
+	sheet1NameMul := model.MultiLanguageName{
+		EnName:   "Details",
+		ZhName:   "明细表",
+		ZhTwName: "明細表",
+		ThName:   "รายละเอียด",
+		MyName:   "အသေးစား",
+		JaName:   "明細表",
+		KoName:   "상세",
+		TrName:   "Detaylar",
+		SvName:   "Detaljer",
+	}
+	sheet1Name := sheet1NameMul.GetNameByLang(lang)
+	sheet1Index, err := xlsxFile.NewSheet(sheet1Name)
+	if err != nil {
+		return errors.WithMessage(err, "创建明细表Sheet失败")
+	}
+	xlsxFile.SetActiveSheet(sheet1Index)
+
+	// 写入明细表表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheet1Name, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
+	}
+
+	// 写入明细表数据
+	for rowIdx, item := range detailResp.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", offsetRow), item.PaymentName)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", offsetRow), item.PaymentAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", offsetRow), item.PaymentNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.PaymentRatio)
+	}
+
+	// 自动调整明细表列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheet1Name, colName, colName, 20)
+	}
+
+	// Sheet2: 汇总表
+	sheet2NameMul := model.MultiLanguageName{
+		EnName:   "Summary",
+		ZhName:   "汇总表",
+		ZhTwName: "匯總表",
+		ThName:   "สรุป",
+		MyName:   "စုပေါင်းစာရင်း",
+		JaName:   "集計表",
+		KoName:   "요약",
+		TrName:   "Özet",
+		SvName:   "Sammanfattning",
+	}
+	sheet2Name := sheet2NameMul.GetNameByLang(lang)
+	_, err = xlsxFile.NewSheet(sheet2Name)
+	if err != nil {
+		return errors.WithMessage(err, "创建汇总表Sheet失败")
+	}
+
+	// 写入汇总表表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheet2Name, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheet2Name, cell, cell, style)
+	}
+
+	// 写入汇总表数据
+	for rowIdx, item := range summaryResp.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", offsetRow), item.PaymentName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", offsetRow), item.PaymentAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", offsetRow), item.PaymentNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.PaymentRatio)
+	}
+
+	// 写入汇总行（支付方式汇总的汇总行是数组）
+	for rowIdx, item := range summaryResp.SummaryRow {
+		summaryRow := len(summaryResp.List) + 2 + rowIdx
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), item.Date)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", summaryRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), item.PaymentName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), item.PaymentAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), item.PaymentNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), item.PaymentRatio)
+	}
+
+	// 自动调整汇总表列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheet2Name, colName, colName, 20)
+	}
+
+	return nil
+}
+
+// exportRefundSummaryToExcel 导出退款金额汇总到Excel
+func (s *businessSrv) exportRefundSummaryToExcel(ctx context.Context, xlsxFile *excelize.File, detailResult, summaryResult interface{}, lang string) error {
+	detailResp, ok1 := detailResult.(*resp.CompanyRefundSummaryResp)
+	summaryResp, ok2 := summaryResult.(*resp.CompanyRefundSummaryResp)
+	if !ok1 || !ok2 {
+		return errors.New("数据类型错误")
+	}
+
+	// 表头映射
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"营业日", "门店名称", "退款金额", "退款笔数", "退款率", "部分退款金额", "部分退款笔数", "整单退款金额", "整单退款笔数",
+		},
+		"en": { // 英文
+			"Business Day", "Store Name", "Refund Amount", "Refund Count", "Refund Rate", "Partial Refund Amount", "Partial Refund Count", "Full Refund Amount", "Full Refund Count",
+		},
+		"th": { // 泰语
+			"วันดำเนินธุรกิจ", "ชื่อร้าน", "จำนวนเงินคืน", "จำนวนครั้งที่คืน", "อัตราการคืนเงิน", "จำนวนเงินคืนบางส่วน", "จำนวนครั้งที่คืนบางส่วน", "จำนวนเงินคืนเต็มจำนวน", "จำนวนครั้งที่คืนเต็มจำนวน",
+		},
+		"zhtw": { // 繁体中文
+			"營業日", "門店名稱", "退款金額", "退款筆數", "退款率", "部分退款金額", "部分退款筆數", "整單退款金額", "整單退款筆數",
+		},
+		"ja": { // 日语
+			"営業日", "店舗名", "返金金額", "返金回数", "返金率", "一部返金金額", "一部返金回数", "全額返金金額", "全額返金回数",
+		},
+		"ko": { // 韩语
+			"영업일", "매장명", "환불 금액", "환불 건수", "환불률", "부분 환불 금액", "부분 환불 건수", "전액 환불 금액", "전액 환불 건수",
+		},
+		"my": { // 缅甸语
+			"လုပ်ငန်းသက်တမ်းနေ့", "ဆိုင်အမည်", "ငွေပြန်လည်ပေးအပ်မှုပမာဏ", "ငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်", "ငွေပြန်လည်ပေးအပ်မှုရာခိုင်နှုန်း", "အပိုင်းငွေပြန်လည်ပေးအပ်မှုပမာဏ", "အပိုင်းငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်", "အပြည့်အဝငွေပြန်လည်ပေးအပ်မှုပမာဏ", "အပြည့်အဝငွေပြန်လည်ပေးအပ်မှုအကြိမ်အရေအတွက်",
+		},
+		"tr": { // 土耳其语
+			"İşletme Günü", "Mağaza Adı", "İade Tutarı", "İade Sayısı", "İade Oranı", "Kısmi İade Tutarı", "Kısmi İade Sayısı", "Tam İade Tutarı", "Tam İade Sayısı",
+		},
+		"sv": { // 瑞典语
+			"Affärsdag", "Butiksnamn", "Återbetalningsbelopp", "Återbetalningsantal", "Återbetalningsandel", "Delvis återbetalningsbelopp", "Delvis återbetalningsantal", "Fullt återbetalningsbelopp", "Fullt återbetalningsantal",
+		},
+	}
+
+	headers := func() []string {
+		h := headerMap[lang]
+		if h == nil {
+			h = headerMap["en"]
+		}
+		return h
+	}()
+
+	// Sheet1: 明细表
+	sheet1Name := "Sheet1"
+	sheet1Index, err := xlsxFile.NewSheet(sheet1Name)
+	if err != nil {
+		return errors.WithMessage(err, "创建明细表Sheet失败")
+	}
+	xlsxFile.SetActiveSheet(sheet1Index)
+
+	// 写入明细表表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheet1Name, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheet1Name, cell, cell, style)
+	}
+
+	// 写入明细表数据
+	for rowIdx, item := range detailResp.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("C%d", offsetRow), item.RefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("D%d", offsetRow), item.RefundNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("E%d", offsetRow), item.RefundRate)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("F%d", offsetRow), item.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("G%d", offsetRow), item.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("H%d", offsetRow), item.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet1Name, fmt.Sprintf("I%d", offsetRow), item.FullRefundNum)
+	}
+
+	// 自动调整明细表列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheet1Name, colName, colName, 20)
+	}
+
+	// Sheet2: 汇总表
+	sheet2Name := "Sheet2"
+	_, err = xlsxFile.NewSheet(sheet2Name)
+	if err != nil {
+		return errors.WithMessage(err, "创建汇总表Sheet失败")
+	}
+
+	// 写入汇总表表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		xlsxFile.SetCellValue(sheet2Name, cell, header)
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheet2Name, cell, cell, style)
+	}
+
+	// 写入汇总表数据
+	for rowIdx, item := range summaryResp.List {
+		offsetRow := rowIdx + 2
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", offsetRow), item.Date)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", offsetRow), item.CompanyName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", offsetRow), item.RefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", offsetRow), item.RefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", offsetRow), item.RefundRate)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", offsetRow), item.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", offsetRow), item.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", offsetRow), item.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", offsetRow), item.FullRefundNum)
+	}
+
+	// 写入汇总行
+	if summaryResp.SummaryRow.Date != "" || summaryResp.SummaryRow.CompanyName != "" {
+		summaryRow := len(summaryResp.List) + 2
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("A%d", summaryRow), summaryResp.SummaryRow.Date)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("B%d", summaryRow), summaryResp.SummaryRow.CompanyName)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("C%d", summaryRow), summaryResp.SummaryRow.RefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("D%d", summaryRow), summaryResp.SummaryRow.RefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("E%d", summaryRow), summaryResp.SummaryRow.RefundRate)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("F%d", summaryRow), summaryResp.SummaryRow.PartialRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("G%d", summaryRow), summaryResp.SummaryRow.PartialRefundNum)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("H%d", summaryRow), summaryResp.SummaryRow.FullRefundAmount)
+		xlsxFile.SetCellValue(sheet2Name, fmt.Sprintf("I%d", summaryRow), summaryResp.SummaryRow.FullRefundNum)
+	}
+
+	// 自动调整汇总表列宽
+	for i := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheet2Name, colName, colName, 20)
+	}
+
+	return nil
 }

@@ -4126,6 +4126,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_material` (
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
     `material_name` TEXT COMMENT '原料名称(来自Material.Name)',
     `erp_code` VARCHAR(50) NOT NULL DEFAULT '' COMMENT 'ERP编码(来自Material.Code)',
+    `base_unit_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '基准单位ERPNext UOM(来自RelatedMaterial.BaseUnitUom)',
     `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `num` DECIMAL(20, 4) NOT NULL DEFAULT 0.0000 COMMENT '出库数量', 
     `is_summarized` INT(11) NOT NULL DEFAULT 0 COMMENT '是否已经统计,0-未统计 1-已统计',

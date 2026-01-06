@@ -369,6 +369,19 @@ type StatisticsBusinessSummaryData struct {
 	TakeoutOrderAmount sql.NullFloat64 `gorm:"column:takeout_order_amount;comment:外送订单金额"`
 }
 
+// StatisticsRefundSummaryData 退款金额汇总统计数据
+type StatisticsRefundSummaryData struct {
+	Date                sql.NullString  `gorm:"column:date;comment:日期"`
+	RefundAmount        sql.NullFloat64 `gorm:"column:refund_amount;comment:退款金额"`
+	RefundNum           sql.NullInt64   `gorm:"column:refund_num;comment:退款笔数"`
+	RefundRate          sql.NullFloat64 `gorm:"column:refund_rate;comment:退款率"`
+	PartialRefundAmount sql.NullFloat64 `gorm:"column:partial_refund_amount;comment:部分退款金额"`
+	PartialRefundNum    sql.NullInt64   `gorm:"column:partial_refund_num;comment:部分退款笔数"`
+	FullRefundAmount    sql.NullFloat64 `gorm:"column:full_refund_amount;comment:整单退款金额"`
+	FullRefundNum       sql.NullInt64   `gorm:"column:full_refund_num;comment:整单退款笔数"`
+	OrderNum            sql.NullInt64   `gorm:"column:order_num;comment:订单数量"`
+}
+
 // StatisticsBusinessPaymentMethodData 支付方式统计数据
 type StatisticsBusinessPaymentMethodData struct {
 	Date                    sql.NullString  `gorm:"column:date;comment:日期"`

@@ -31,16 +31,17 @@ type IWarehouseFormRepo interface {
 }
 
 type IWarehouseFormQueryRepo interface {
-	GetWarehouseForm(opts ...DBOption) (*model.WarehouseForm, error)                                    // 获取入库单
-	GetWarehouseOutForms(opts ...DBOption) ([]*model.WarehouseOutForm, error)                           // 获取出库单
-	GetWarehouseOutFormsBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutForm, error)          // 获取该销售账单的所有出库单记录
-	GetWarehouseOutFormItem(opts ...DBOption) ([]*model.WarehouseOutFormItem, error)                    // 获取出库单明细
-	GetWarehouseFormItem(opts ...DBOption) ([]*model.WarehouseFormItem, error)                          // 获取入库单明细
-	GetWarehouseOutFormItemBySaleOrderUuid(saleOrderUuid uint64) ([]*model.WarehouseOutFormItem, error) // 获取该销售订单的所有出库单记录
-	GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)   // 获取该销售账单的所有出库单记录
-	GetWarehouseOutFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)     // 获取该销售账单的所有未减库存的出库单记录
-	GetWarehouseFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseFormItem, error)           // 获取该销售账单的所有未加库存的入库单记录
-	GetValidWarehouseOutFormItem(startTime, endTime int64) ([]*model.WarehouseOutFormItem, error)       // 获取某时间范围内的有效单物品出库记录
+	GetWarehouseForm(opts ...DBOption) (*model.WarehouseForm, error)                                                      // 获取入库单
+	GetWarehouseOutForms(opts ...DBOption) ([]*model.WarehouseOutForm, error)                                             // 获取出库单
+	GetWarehouseOutFormsBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutForm, error)                            // 获取该销售账单的所有出库单记录
+	GetWarehouseOutFormItem(opts ...DBOption) ([]*model.WarehouseOutFormItem, error)                                      // 获取出库单明细
+	GetWarehouseFormItem(opts ...DBOption) ([]*model.WarehouseFormItem, error)                                            // 获取入库单明细
+	GetWarehouseOutFormItemBySaleOrderUuid(saleOrderUuid uint64) ([]*model.WarehouseOutFormItem, error)                   // 获取该销售订单的所有出库单记录
+	GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)                     // 获取该销售账单的所有出库单记录
+	GetWarehouseOutFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)                       // 获取该销售账单的所有未减库存的出库单记录
+	GetWarehouseOutFormItemNotProcessedByTakeoutOrderUuid(takeoutOrderUuid uint64) ([]*model.WarehouseOutFormItem, error) // 获取该外卖订单的所有未减库存的出库单记录
+	GetWarehouseFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseFormItem, error)                             // 获取该销售账单的所有未加库存的入库单记录
+	GetValidWarehouseOutFormItem(startTime, endTime int64) ([]*model.WarehouseOutFormItem, error)                         // 获取某时间范围内的有效单物品出库记录
 }
 
 type warehouseFormRepoImpl struct {
@@ -192,6 +193,29 @@ func (r *warehouseFormRepoImpl) GetWarehouseFormItemNotProcessed(saleBillUuid ui
 		return nil, errors.WithMessage(err)
 	}
 	return warehouseFormItems, nil
+}
+
+// GetWarehouseOutFormItemNotProcessedByTakeoutOrderUuid 获取外卖订单的所有未减库存的出库单记录
+func (r *warehouseFormRepoImpl) GetWarehouseOutFormItemNotProcessedByTakeoutOrderUuid(takeoutOrderUuid uint64) ([]*model.WarehouseOutFormItem, error) {
+	warehouseOutFormItems, err := r.GetWarehouseOutFormItem(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("takeout_order_uuid = ?", takeoutOrderUuid)
+		},
+		CommonRepo.WhereByReduceStock(constant.WarehouseOutFormItemReduceStockNotProcessed),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductBom",
+			},
+			WithPreload{
+				Query: "Material",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return warehouseOutFormItems, nil
 }
 
 func (r *warehouseFormRepoImpl) CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error {

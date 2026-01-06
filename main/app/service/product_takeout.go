@@ -25,17 +25,22 @@ import (
 
 type IProductTakeoutSrv interface {
 	// 外卖商品管理
+	// 添加外卖商品
 	AddProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error)
+	// 编辑外卖商品
 	EditProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopEditReq) error
+	// 获取外卖商品详情
 	GetProductTakeoutShopDetail(ctx context.Context, req req.ProductTakeoutShopDetailReq) (*product_resp.ProductTakeoutShopDetailResp, error)
+	// 删除外卖商品
 	DeleteProductTakeoutShop(ctx context.Context, req req.ProductTakeoutShopDeleteReq) error
+	// 更新外卖商品状态
 	UpdateProductTakeoutShopStatus(ctx context.Context, req req.ProductTakeoutShopStatusReq) error
 
 	// 批量操作
-	BatchCreateProducts(ctx context.Context, req req.TakeoutBatchCreateReq) (*product_resp.TakeoutBatchResp, error)
-	BatchOnlineProducts(ctx context.Context, req req.TakeoutBatchOnlineReq) (*product_resp.TakeoutBatchResp, error)
-	BatchOfflineProducts(ctx context.Context, req req.TakeoutBatchOfflineReq) (*product_resp.TakeoutBatchResp, error)
-	BatchDeleteProducts(ctx context.Context, req req.TakeoutBatchDeleteReq) (*product_resp.TakeoutBatchResp, error)
+	BatchCreateProducts(ctx context.Context, req req.TakeoutBatchCreateReq) (*product_resp.TakeoutBatchResp, error)   // 批量创建外卖商品
+	BatchOnlineProducts(ctx context.Context, req req.TakeoutBatchOnlineReq) (*product_resp.TakeoutBatchResp, error)   // 批量上线外卖商品
+	BatchOfflineProducts(ctx context.Context, req req.TakeoutBatchOfflineReq) (*product_resp.TakeoutBatchResp, error) // 批量下线外卖商品
+	BatchDeleteProducts(ctx context.Context, req req.TakeoutBatchDeleteReq) (*product_resp.TakeoutBatchResp, error)   // 批量删除外卖商品
 
 	// GetProductCount 获取外卖商品统计
 	GetProductCount(ctx context.Context, companyUuid uint64, platform string, forceRefresh bool) (int64, error)
@@ -59,8 +64,11 @@ func NewProductTakeoutSrv(dbm *database.DBManager, localeSrv ILocaleSrv, setting
 
 // AddProductTakeoutShop 添加外卖商品
 func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq req.ProductTakeoutShopAddReq) (*model.ProductPackageTakeout, error) {
-	companySetting := ctx.GetCompanySetting()
 	db := ctx.GetDB()
+	// 验证请求参数
+	if err := addReq.Validate(); err != nil {
+		return nil, errors.WithMessage(err, "参数验证失败")
+	}
 
 	// 设置默认外卖类型
 	if addReq.TakeoutType == 0 {
@@ -68,7 +76,10 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	}
 
 	// 检查商品包是否存在
-	productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	productPackage, err := productPackageRepo.GetProductPackage(
+		productPackageRepo.WithProductBoms(),
+		productPackageRepo.WithProductPackageAttributeGroupAttributes(),
 		repository.CommonRepo.WhereByUuid(addReq.ProductPackageUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
 	)
@@ -79,24 +90,39 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		return nil, errors.WithMessage(errors.New("商品已删除"))
 	}
 
-	// 检查是否是总部商品，并且当前不是总店，则总部商品不能添加为外卖商品
-	if productPackage.HeadquarterUuid != 0 && !companySetting.IsHeadquarter() {
-		return nil, errors.WithMessage(errors.New("总部商品不能添加为外卖商品"))
-	}
+	// 处理分类
+	addReq.CategoryUuid = func() uint64 {
+		if addReq.CategoryUuid != 0 {
+			return addReq.CategoryUuid
+		}
+		return productPackage.CategoryUuid
+	}()
+	addReq.SpecialCategoryUuid = func() uint64 {
+		if addReq.SpecialCategoryUuid != 0 {
+			return addReq.SpecialCategoryUuid
+		}
+		return productPackage.SpecialCategoryUuid
+	}()
+
+	// 处理图片
+	addReq.ImageFileUuid = func() uint64 {
+		if addReq.ImageFileUuid != 0 {
+			return addReq.ImageFileUuid
+		}
+		return productPackage.ImageFileUuid
+	}()
 
 	// 检查是否已存在同类型外卖商品（包括软删除的记录）
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
-	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutIncludeSoftDelete(addReq.ProductPackageUuid, uint(addReq.TakeoutType))
-
+	existingTakeout, err := takeoutRepo.GetProductPackageTakeoutByProductPackageUuid(addReq.ProductPackageUuid, uint(addReq.TakeoutType))
 	// 如果存在未删除的记录，返回错误
 	if err == nil && existingTakeout.DeleteTime == 0 {
 		return existingTakeout, nil
 	}
-
-	// 如果存在已软删除的记录，还原它
-	if err == nil && existingTakeout.DeleteTime != 0 {
-		return s.restoreProductTakeoutShop(ctx, existingTakeout, addReq)
-	}
+	// // 如果存在已软删除的记录，还原它
+	// if err == nil && existingTakeout.DeleteTime != 0 {
+	// 	return s.restoreProductTakeoutShop(ctx, existingTakeout, addReq)
+	// }
 
 	// 生成UUID
 	uuid, err := utils.GetID()
@@ -150,28 +176,70 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		Name:                          productName,
 		Describe:                      describe,
 		ProductType:                   uint(productPackage.ProductType),
-		Price:                         addReq.Price,
-		TakeoutType:                   uint(addReq.TakeoutType),
-		Status:                        uint(addReq.Status),
-		CategoryUuid:                  addReq.CategoryUuid,
-		SpecialCategoryUuid:           addReq.SpecialCategoryUuid,
-		ImageFileUuid:                 addReq.ImageFileUuid,
-		Source:                        addReq.Source,
-		SourceProductId:               addReq.SourceProductId,
+		Price: func() float64 {
+			if addReq.IsBatch {
+				return productPackage.Price
+			}
+			return addReq.Price
+		}(),
+		TakeoutType:         uint(addReq.TakeoutType),
+		Status:              uint(addReq.Status),
+		CategoryUuid:        addReq.CategoryUuid,
+		SpecialCategoryUuid: addReq.SpecialCategoryUuid,
+		ImageFileUuid:       addReq.ImageFileUuid,
+		Source:              addReq.Source,
+		SourceProductId:     addReq.SourceProductId,
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
+		productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
+
 		// 创建外卖商品记录
 		if err := repository.NewProductPackageTakeoutRepo(tx).CreateProductPackageTakeout(productPackageTakeout); err != nil {
 			return errors.WithMessage(err, "创建外卖商品失败")
 		}
 
 		// 处理外卖规格价格
-		if len(addReq.Flavors) > 0 {
-			productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
+		// 如果是批量创建
+		if addReq.IsBatch {
+			for _, flavorReq := range productPackage.ProductBoms {
+				if flavorReq.IsDelete() || !flavorReq.IsFlavor() {
+					continue
+				}
+				if err := productBomTakeoutRepo.CreateProductBomTakeout(&model.ProductBomTakeout{
+					ProductPackageTakeoutUuid: productPackageTakeout.Uuid,
+					ProductBomUuid:            flavorReq.Uuid,
+					HeadquarterUuid:           productPackage.HeadquarterUuid,
+					Price:                     flavorReq.Price,
+				}); err != nil {
+					return errors.WithMessage(err, "创建外卖规格价格失败")
+				}
+			}
 
+			// 处理外卖属性价格
+			if len(productPackage.ProductPackageAttributeGroups) > 0 {
+				for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+					for _, attribute := range attributeGroup.ProductPackageAttributes {
+						if attribute.IsDelete() {
+							continue
+						}
+						// 创建外卖属性价格记录
+						productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+							ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+							ProductPackageAttributeUuid: attribute.Uuid,
+							HeadquarterUuid:             productPackage.HeadquarterUuid,
+							Price:                       attribute.Price,
+						}
+						if err := repository.NewProductPackageAttributeTakeoutRepo(tx).CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+							return errors.WithMessage(err, "创建外卖属性价格失败")
+						}
+					}
+				}
+			}
+		} else if len(addReq.Flavors) > 0 {
+			// 创建外卖规格价格记录
 			for _, flavorReq := range addReq.Flavors {
-				// 创建外卖规格价格记录
 				productBomTakeout := &model.ProductBomTakeout{
 					ProductPackageTakeoutUuid: productPackageTakeout.Uuid,
 					ProductBomUuid:            flavorReq.BomUuid,
@@ -183,22 +251,38 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 					return errors.WithMessage(err, "创建外卖规格价格失败")
 				}
 			}
-		}
 
-		// 处理外卖属性价格
-		if len(addReq.Attributes) > 0 {
-			productPackageAttributeTakeoutRepo := repository.NewProductPackageAttributeTakeoutRepo(tx)
-
-			for _, attributeReq := range addReq.Attributes {
-				// 创建外卖属性价格记录
-				productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
-					ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
-					ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
-					HeadquarterUuid:             productPackage.HeadquarterUuid,
-					Price:                       attributeReq.Price,
+			// 处理外卖属性价格
+			if len(addReq.Attributes) > 0 {
+				for _, attributeReq := range addReq.Attributes {
+					// 创建外卖属性价格记录
+					productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+						ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+						ProductPackageAttributeUuid: attributeReq.ProductPackageAttributeUuid,
+						HeadquarterUuid:             productPackage.HeadquarterUuid,
+						Price:                       attributeReq.Price,
+					}
+					if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+						return errors.WithMessage(err, "创建外卖属性价格失败")
+					}
 				}
-				if err := productPackageAttributeTakeoutRepo.CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
-					return errors.WithMessage(err, "创建外卖属性价格失败")
+			} else if len(productPackage.ProductPackageAttributeGroups) > 0 {
+				for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+					for _, attribute := range attributeGroup.ProductPackageAttributes {
+						if attribute.IsDelete() {
+							continue
+						}
+						// 创建外卖属性价格记录
+						productPackageAttributeTakeout := &model.ProductPackageAttributeTakeout{
+							ProductPackageTakeoutUuid:   productPackageTakeout.Uuid,
+							ProductPackageAttributeUuid: attribute.Uuid,
+							HeadquarterUuid:             productPackage.HeadquarterUuid,
+							Price:                       attribute.Price,
+						}
+						if err := repository.NewProductPackageAttributeTakeoutRepo(tx).CreateProductPackageAttributeTakeout(productPackageAttributeTakeout); err != nil {
+							return errors.WithMessage(err, "创建外卖属性价格失败")
+						}
+					}
 				}
 			}
 		}
@@ -290,12 +374,9 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 	// 检查外卖商品是否存在
 	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
 	// 检查是否已存在同类型外卖商品（包括软删除的记录）
-	existTakeout, err := takeoutRepo.GetProductPackageTakeoutIncludeSoftDelete(productPackage.Uuid, uint(editReq.TakeoutType))
+	existTakeout, err := takeoutRepo.GetProductPackageTakeoutByProductPackageUuid(productPackage.Uuid, uint(editReq.TakeoutType))
 	if err != nil {
 		return errors.WithMessage(errors.New("外卖商品不存在"))
-	}
-	if existTakeout.DeleteTime != 0 {
-		return errors.WithMessage(errors.New("外卖商品已删除"))
 	}
 
 	// 判断是否是总部外卖商品
@@ -362,7 +443,6 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			// 获取当前外卖商品的所有规格价格
 			existingBomTakeouts, err := productBomTakeoutRepo.GetProductBomTakeoutList(
 				commonRepo.WhereByProductPackageTakeoutUuid(existTakeout.Uuid),
-				commonRepo.WhereBySoftDelete(),
 			)
 			if err != nil {
 				return errors.WithMessage(err, "获取外卖规格价格失败")
@@ -383,7 +463,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 				if existingBom, exists := existingBomMap[flavorReq.BomUuid]; exists {
 					// 更新价格
 					if err := productBomTakeoutRepo.UpdateProductBomTakeout(
-						map[string]any{"price": flavorReq.Price},
+						map[string]any{"price": flavorReq.Price, "delete_time": 0},
 						commonRepo.WhereByUuid(existingBom.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "更新外卖规格价格失败")
@@ -766,6 +846,7 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 	takeout, err := takeoutRepo.GetProductPackageTakeout(
 		takeoutRepo.WhereByProductPackageUuid(deleteReq.Uuid),
 		takeoutRepo.WhereByTakeoutType(uint(s.platformToTakeoutType(deleteReq.Platform))),
+		repository.CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -814,6 +895,7 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 	takeout, err := takeoutRepo.GetProductPackageTakeout(
 		takeoutRepo.WhereByProductPackageUuid(statusReq.Uuid),
 		takeoutRepo.WhereByTakeoutType(uint(s.platformToTakeoutType(statusReq.Platform))),
+		repository.CommonRepo.WhereBySoftDelete(),
 	)
 	if err != nil {
 		return errors.WithMessage(errors.New("外卖商品不存在"))
@@ -821,7 +903,7 @@ func (s *productTakeoutSrv) UpdateProductTakeoutShopStatus(ctx context.Context, 
 
 	if err := takeoutRepo.UpdateProductPackageTakeout(
 		map[string]any{"status": *statusReq.Status},
-		repository.CommonRepo.WhereByUuid(takeout.Uuid),
+		takeoutRepo.WhereByUuid(takeout.Uuid),
 	); err != nil {
 		logger.Logger.Error("更新外卖商品状态失败", zap.Any("func", "UpdateProductTakeoutShopStatus"), zap.Any("params", statusReq), zap.Error(err))
 		return errors.WithMessage(err, "更新外卖商品状态失败")
@@ -1027,6 +1109,7 @@ func (s *productTakeoutSrv) GetProductCount(
 	var count int64
 	query := db.Model(&model.ProductPackageTakeout{}).
 		Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package_takeout.product_package_uuid = ttpos_product_package.uuid").
+		Joins("LEFT JOIN ttpos_product_category ON ttpos_product_package_takeout.category_uuid = ttpos_product_category.uuid").
 		Where("ttpos_product_package_takeout.delete_time = ?", 0).
 		Where("ttpos_product_package.delete_time = ?", 0)
 
@@ -1103,8 +1186,8 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
@@ -1126,6 +1209,7 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 			addReq := req.ProductTakeoutShopAddReq{
 				ProductPackageUuid: uuid,
 				TakeoutType:        takeoutType,
+				IsBatch:            true,
 			}
 			_, err := s.AddProductTakeoutShop(ctx, addReq)
 			mu.Lock()
@@ -1144,6 +1228,12 @@ func (s *productTakeoutSrv) BatchCreateProducts(ctx context.Context, batchReq re
 	}
 
 	wg.Wait()
+
+	// 打印错误
+	for _, product := range result.FailedProducts {
+		logger.Logger.Error("批量创建外卖商品失败", zap.Uint64("product_uuid", product.ProductUuid), zap.String("product_name", product.ProductName), zap.String("error", product.Error))
+	}
+
 	return result, nil
 }
 
@@ -1200,8 +1290,8 @@ func (s *productTakeoutSrv) BatchOnlineProducts(ctx context.Context, batchReq re
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
@@ -1266,8 +1356,8 @@ func (s *productTakeoutSrv) BatchOfflineProducts(ctx context.Context, batchReq r
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成
@@ -1332,8 +1422,8 @@ func (s *productTakeoutSrv) BatchDeleteProducts(ctx context.Context, batchReq re
 		FailedProducts: make([]product_resp.TakeoutBatchFailedProduct, 0),
 	}
 
-	// 限流器: 每秒10个请求
-	limiter := time.NewTicker(100 * time.Millisecond)
+	// 限流器: 每秒50个请求
+	limiter := time.NewTicker(35 * time.Millisecond)
 	defer limiter.Stop()
 
 	// 使用 WaitGroup 等待所有 Goroutine 完成

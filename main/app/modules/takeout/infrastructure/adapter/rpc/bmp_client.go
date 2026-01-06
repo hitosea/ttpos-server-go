@@ -354,7 +354,7 @@ func (c *BMPTakeoutClient) PrepareOrder(ctx context.Context, takeoutOrderUuid st
 			zap.Error(err),
 			zap.String("takeoutOrderUuid", takeoutOrderUuid),
 			zap.String("toState", toState))
-		return errors.WithMessage(err, "调用准备订单接口失败")
+		return errors.WithMessage(err, "调用订单接口失败")
 	}
 
 	if resp.Code != "0" {

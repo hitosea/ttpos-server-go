@@ -127,6 +127,7 @@ type UpdateBusinessSetting struct {
 	// 调拨规则
 	RequiredParentCompanyApproval string `json:"required_parent_company_approval" binding:"omitempty,oneof=0 1"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
 	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse" binding:"omitempty,oneof=0 1"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
+	AllowedTransferTypes          string `json:"allowed_transfer_types"`                                         // 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
 
 	// 敏感操作设置
 	DiscountNeedPassword       string   `json:"discount_need_password" binding:"omitempty,oneof=0 1"` // 折扣操作是否需要密码 0-否 1-是

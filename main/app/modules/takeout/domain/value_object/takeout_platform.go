@@ -31,6 +31,11 @@ const (
 	TakeoutStockStatusInsufficient = 2 // 不足
 )
 
+// 库存数量
+const (
+	TakeoutStockUnlimited = 99999999 // 无限库存（用于表示库存充足或不限制库存）
+)
+
 // 接单类型
 const (
 	TakeoutOrderAcceptedTypeAuto   = "AUTO"   // 自动接单

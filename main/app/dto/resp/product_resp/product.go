@@ -5,6 +5,13 @@ import (
 	"ttpos-server-go/app/dto"
 )
 
+// ResourceUsageResp 资源使用情况响应
+type ResourceUsageResp struct {
+	IsUsed      bool     `json:"is_used"`       // 是否被使用
+	UsedByShops []string `json:"used_by_shops"` // 使用的子店名称列表
+	TotalCount  int      `json:"total_count"`   // 总使用子店数量
+}
+
 type ProductSearchResp struct {
 	List []Product `json:"list"`
 }

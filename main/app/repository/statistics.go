@@ -40,6 +40,7 @@ type IStatisticsRepo interface {
 	CountBusinessTimePeriod(req CountBusinessTimePeriodReq, opts ...DBOption) (int64, []model.StatisticsBusinessTimePeriodData)                                                                                           // 统计营业时段
 	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                                                                                                                      // 统计综合运用数据
 	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)                                                                                                    // 统计支付方式
+	CountRefundSummary(req CountRefundSummaryReq) (int64, []model.StatisticsRefundSummaryData)                                                                                                                            // 统计退款金额汇总
 	CountChannelSale(startTime, endTime int64, excludeDataManage bool) (map[string]*model.ChannelSaleRepoResult, error)                                                                                                   // 统计渠道营业数据
 	CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, excludeDataManage bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) // 统计用户分析数据
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                            // 统计商品排行
@@ -1431,7 +1432,8 @@ type CountBusinessPaymentMethodReq struct {
 	Cycle                        int      // 周期: 0=按日、1=按月
 	PageNo, PageSize             int      // 页码, 每页大小
 	IsDesk, IsInstant, IsTakeout bool     // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
-	PaymentMethodList            []uint64 // 支付方式列表: 空=全部
+	PaymentMethodList            []uint64 // 支付方式UUID列表: 空=全部（优先使用）
+	PaymentMethodNames           []string // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
 	ExcludeDataManage            bool     // 是否排除数据管理订单
 	Timezone                     string   // 业务时区，如 "Asia/Shanghai"
 }
@@ -1512,10 +1514,15 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		args = append(args, billTypes)
 	}
 
-	// 支付方式筛选
+	// 支付方式筛选：优先使用 PaymentMethodList（UUID），如果没有则使用 PaymentMethodNames（名称）
 	if len(req.PaymentMethodList) > 0 {
+		// 使用支付方式UUID筛选
 		baseQuery += " AND po.payment_method_uuid IN (?)"
 		args = append(args, req.PaymentMethodList)
+	} else if len(req.PaymentMethodNames) > 0 {
+		// 使用支付方式名称筛选（因为不同商家的同一支付方式UUID可能不同）
+		baseQuery += " AND pm.payment_name IN (?)"
+		args = append(args, req.PaymentMethodNames)
 	}
 
 	var rawData []businessPaymentMethodRawData
@@ -1704,4 +1711,213 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 	}
 
 	return result, nil
+}
+
+// CountRefundSummaryReq 统计退款金额汇总请求
+type CountRefundSummaryReq struct {
+	StartTime         int64  // 查询开始时间戳
+	EndTime           int64  // 查询结束时间戳
+	Cycle             int    // 周期: 0=按日、1=按月
+	PageNo, PageSize  int    // 页码, 每页大小
+	ExcludeDataManage bool   // 是否排除数据管理订单
+	Timezone          string // 业务时区，如 "Asia/Shanghai"
+}
+
+// refundSummaryRawData 退款金额汇总统计原始数据
+type refundSummaryRawData struct {
+	FinishTime          int64   // 完成时间戳
+	SaleBillUuid        uint64  // 销售账单UUID
+	RefundAmount        float64 // 退款金额
+	PartialRefundAmount float64 // 部分退款金额
+	FullRefundAmount    float64 // 整单退款金额
+	PartialRefundNum    int64   // 部分退款笔数
+	FullRefundNum       int64   // 整单退款笔数
+	RefundNum           int64   // 退款笔数（每个退货单算一笔）
+}
+
+// CountRefundSummary 统计退款金额汇总
+func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, []model.StatisticsRefundSummaryData) {
+	// 1. 查询原始数据（不分组）
+	var rawData []refundSummaryRawData
+	rawQuery := `
+		SELECT 
+			sb.finish_time,
+			sb.uuid AS sale_bill_uuid,
+			SUM(ro.refund_amount) AS refund_amount,
+			SUM(IF(ro.return_type = 2, ro.refund_amount, 0)) AS partial_refund_amount,
+			SUM(IF(ro.return_type = 1, ro.refund_amount, 0)) AS full_refund_amount,
+			COUNT(DISTINCT IF(ro.return_type = 2, ro.uuid, NULL)) AS partial_refund_num,
+			COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) AS full_refund_num,
+			COUNT(DISTINCT ro.uuid) AS refund_num
+		FROM ttpos_return_order AS ro
+		LEFT JOIN ttpos_sale_order AS so ON ro.related_order_uuid = so.uuid AND so.delete_time = ?
+		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = ?
+		WHERE ro.delete_time = ?
+			AND ro.related_order_type = ?
+			AND sb.status = ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
+	`
+
+	// 如果排除数据管理订单，添加过滤条件
+	if req.ExcludeDataManage {
+		rawQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
+	}
+
+	rawQuery += `
+		GROUP BY sb.uuid, sb.finish_time
+	`
+
+	r.db.Raw(rawQuery,
+		constant.NotDeleted,
+		constant.NotDeleted,
+		constant.NotDeleted,
+		constant.ReturnOrderRelatedOrderTypeSaleOrder,
+		constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+	).Scan(&rawData)
+
+	// 2. 查询订单总数（用于计算退款率）
+	var orderCountData []struct {
+		FinishTime int64
+		OrderNum   int64
+	}
+	orderCountQuery := `
+		SELECT 
+			sb.finish_time,
+			COUNT(DISTINCT sb.uuid) AS order_num
+		FROM ttpos_sale_bill AS sb
+		WHERE sb.delete_time = ?
+			AND sb.status = ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
+	`
+
+	if req.ExcludeDataManage {
+		orderCountQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
+	}
+
+	orderCountQuery += `
+		GROUP BY FROM_UNIXTIME(sb.finish_time, IF(? = 1, '%Y-%m', '%Y-%m-%d'))
+	`
+
+	r.db.Raw(orderCountQuery,
+		constant.NotDeleted,
+		constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+		req.Cycle,
+	).Scan(&orderCountData)
+
+	// 3. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(req.Timezone)
+
+	// 构建订单数量映射（按日期）
+	orderCountMap := make(map[string]int64)
+	for _, item := range orderCountData {
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01")
+		} else {
+			// 按日
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01-02")
+		}
+		orderCountMap[dateKey] += item.OrderNum
+	}
+
+	// 按日期分组统计
+	// 使用 decimal 进行精确计算
+	type groupData struct {
+		RefundAmount        decimal.Decimal
+		RefundNum           int64
+		PartialRefundAmount decimal.Decimal
+		PartialRefundNum    int64
+		FullRefundAmount    decimal.Decimal
+		FullRefundNum       int64
+		OrderNum            int64
+	}
+	groupedData := make(map[string]*groupData)
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01")
+		} else {
+			// 按日
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01-02")
+		}
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{}
+		}
+
+		// 使用 decimal 累加统计数据
+		group := groupedData[dateKey]
+		group.RefundAmount = group.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		group.RefundNum += item.RefundNum
+		// 累加部分退款和整单退款（已在 SQL 中按类型分别统计）
+		group.PartialRefundAmount = group.PartialRefundAmount.Add(decimal.NewFromFloat(item.PartialRefundAmount))
+		group.PartialRefundNum += item.PartialRefundNum
+		group.FullRefundAmount = group.FullRefundAmount.Add(decimal.NewFromFloat(item.FullRefundAmount))
+		group.FullRefundNum += item.FullRefundNum
+	}
+
+	// 设置订单数量（从订单数量映射中获取）
+	for dateKey, group := range groupedData {
+		if orderNum, exists := orderCountMap[dateKey]; exists {
+			group.OrderNum = orderNum
+		}
+	}
+
+	// 转换为结果格式
+	result := make([]model.StatisticsRefundSummaryData, 0, len(groupedData))
+	for dateKey, group := range groupedData {
+		// 计算退款率：退款订单数量 / 总订单数量 * 100
+		var refundRate decimal.Decimal
+		if group.OrderNum > 0 {
+			refundRate = decimal.NewFromInt(group.RefundNum).Div(decimal.NewFromInt(group.OrderNum)).Mul(decimal.NewFromInt(100))
+		}
+
+		result = append(result, model.StatisticsRefundSummaryData{
+			Date:                sql.NullString{String: dateKey, Valid: true},
+			RefundAmount:        sql.NullFloat64{Float64: group.RefundAmount.InexactFloat64(), Valid: true},
+			RefundNum:           sql.NullInt64{Int64: group.RefundNum, Valid: true},
+			RefundRate:          sql.NullFloat64{Float64: refundRate.InexactFloat64(), Valid: true},
+			PartialRefundAmount: sql.NullFloat64{Float64: group.PartialRefundAmount.InexactFloat64(), Valid: true},
+			PartialRefundNum:    sql.NullInt64{Int64: group.PartialRefundNum, Valid: true},
+			FullRefundAmount:    sql.NullFloat64{Float64: group.FullRefundAmount.InexactFloat64(), Valid: true},
+			FullRefundNum:       sql.NullInt64{Int64: group.FullRefundNum, Valid: true},
+			OrderNum:            sql.NullInt64{Int64: group.OrderNum, Valid: true},
+		})
+	}
+
+	// 4. 按日期排序
+	slices.SortFunc(result, func(a, b model.StatisticsRefundSummaryData) int {
+		if a.Date.String < b.Date.String {
+			return -1
+		} else if a.Date.String > b.Date.String {
+			return 1
+		}
+		return 0
+	})
+
+	// 5. 分页
+	total := int64(len(result))
+	start := (req.PageNo - 1) * req.PageSize
+	end := start + req.PageSize
+	if start > len(result) {
+		start = len(result)
+	}
+	if end > len(result) {
+		end = len(result)
+	}
+	if start < end {
+		result = result[start:end]
+	} else {
+		result = []model.StatisticsRefundSummaryData{}
+	}
+
+	return total, result
 }

@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -365,13 +367,16 @@ func NewLogObserver(name string) *LogObserver {
 
 // OnHitRateChanged 命中率变化通知
 func (o *LogObserver) OnHitRateChanged(stats CacheStats) {
-	logger.Logger.Debug("缓存命中率变化",
-		zap.String("observer", o.name),
-		zap.Float64("hit_rate", stats.HitRate),
-		zap.Int64("hits", stats.Hits),
-		zap.Int64("misses", stats.Misses),
-		zap.Int64("total", stats.Total),
-	)
+	// 仅在开发模式下输出
+	if config.Server.Mode == gin.DebugMode {
+		logger.Logger.Debug("缓存命中率变化",
+			zap.String("observer", o.name),
+			zap.Float64("hit_rate", stats.HitRate),
+			zap.Int64("hits", stats.Hits),
+			zap.Int64("misses", stats.Misses),
+			zap.Int64("total", stats.Total),
+		)
+	}
 }
 
 // OnHitRateAlert 命中率告警通知

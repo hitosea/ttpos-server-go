@@ -47,6 +47,7 @@ type IStatisticsSrv interface {
 	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) CountBusinessTimePeriodResp         // 统计营业时段
 	CountBusinessSummary(ctx context.Context, req req.StatisticsSummaryReq) StatisticsSummaryResp                   // 统计综合运营
 	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp // 统计收款数据
+	CountRefundSummary(ctx context.Context, req req.StatisticsSummaryReq) StatisticsRefundSummaryResp               // 统计退款金额汇总
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                                           // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                                                            // 保存销售
 	SaveMember(ctx context.Context, req SaveMemberReq) error                                                        // 保存会员
@@ -2414,17 +2415,18 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 
 	// 调用Repository层查询
 	total, dataList := statisticsRepo.CountBusinessPaymentMethod(repository.CountBusinessPaymentMethodReq{
-		StartTime:         req.QueryStartTime,
-		EndTime:           req.QueryEndTime,
-		Cycle:             req.Cycle,
-		PageNo:            utils.IfInt(req.PageNo > 0, req.PageNo, 1),
-		PageSize:          utils.IfInt(req.PageSize > 0, req.PageSize, 10),
-		IsDesk:            req.OrderDesk == 1,
-		IsInstant:         req.OrderInstant == 1,
-		IsTakeout:         req.OrderTakeout == 1,
-		PaymentMethodList: paymentMethodList,
-		ExcludeDataManage: req.ExcludeDataManage,
-		Timezone:          timezone,
+		StartTime:          req.QueryStartTime,
+		EndTime:            req.QueryEndTime,
+		Cycle:              req.Cycle,
+		PageNo:             utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:           utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		IsDesk:             req.OrderDesk == 1,
+		IsInstant:          req.OrderInstant == 1,
+		IsTakeout:          req.OrderTakeout == 1,
+		PaymentMethodList:  paymentMethodList,      // 优先使用UUID列表
+		PaymentMethodNames: req.PaymentMethodNames, // 如果PaymentMethodList为空，使用名称列表
+		ExcludeDataManage:  req.ExcludeDataManage,
+		Timezone:           timezone,
 	})
 
 	// 构建返回列表
@@ -2441,5 +2443,82 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 	return StatisticsPaymentMethodResp{
 		TotalStatisticsPaymentMethodNum: total,
 		StatisticsPaymentMethodList:     list,
+	}
+}
+
+// StatisticsRefundSummaryResp 统计退款金额汇总响应
+type StatisticsRefundSummaryResp struct {
+	TotalStatisticsRefundSummaryNum int64                         `json:"total_statistics_refund_summary_num"` // 总退款金额汇总统计数
+	StatisticsRefundSummaryList     []StatisticsRefundSummaryItem `json:"statistics_refund_summary_list"`      // 退款金额汇总统计列表
+}
+
+// StatisticsRefundSummaryItem 统计退款金额汇总列表
+type StatisticsRefundSummaryItem struct {
+	Date                string  `json:"date"`                  // 日期
+	RefundAmount        float64 `json:"refund_amount"`         // 退款金额
+	RefundNum           int64   `json:"refund_num"`            // 退款笔数
+	RefundRate          float64 `json:"refund_rate"`           // 退款率（百分比）
+	PartialRefundAmount float64 `json:"partial_refund_amount"` // 部分退款金额
+	PartialRefundNum    int64   `json:"partial_refund_num"`    // 部分退款笔数
+	FullRefundAmount    float64 `json:"full_refund_amount"`    // 整单退款金额
+	FullRefundNum       int64   `json:"full_refund_num"`       // 整单退款笔数
+}
+
+// CountRefundSummary 统计退款金额汇总
+func (s *statisticsSrv) CountRefundSummary(ctx context.Context, req req.StatisticsSummaryReq) StatisticsRefundSummaryResp {
+	// 获取数据库连接
+	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
+
+	timezone := ctx.GetCompanySetting().Timezone
+
+	// 处理日期时间字符串参数（优先级：QueryStartTime/QueryEndTime > QueryStartDate/QueryEndDate）
+	if req.QueryStartDate != "" && req.QueryEndDate != "" && req.QueryStartTime == 0 && req.QueryEndTime == 0 {
+		timeUtil := utils.SetTimezone(timezone)
+		startTime, err := timeUtil.FormatDateTimeToUnix(req.QueryStartDate)
+		if err == nil {
+			req.QueryStartTime = startTime
+		}
+		endTime, err := timeUtil.FormatDateTimeToUnix(req.QueryEndDate)
+		if err == nil {
+			req.QueryEndTime = endTime
+		}
+	}
+
+	// 如果查询开始时间或查询结束时间为0，则设置为今天开始和结束时间
+	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {
+		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
+	}
+
+	// 调用Repository层查询
+	total, dataList := statisticsRepo.CountRefundSummary(repository.CountRefundSummaryReq{
+		StartTime:         req.QueryStartTime,
+		EndTime:           req.QueryEndTime,
+		Cycle:             req.Cycle,
+		PageNo:            utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:          utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		ExcludeDataManage: req.ExcludeDataManage,
+		Timezone:          timezone,
+	})
+
+	// 构建返回列表
+	list := make([]StatisticsRefundSummaryItem, 0, len(dataList))
+	for _, data := range dataList {
+		item := StatisticsRefundSummaryItem{
+			Date:                data.Date.String,
+			RefundAmount:        utils.Round(data.RefundAmount.Float64, 2),
+			RefundNum:           data.RefundNum.Int64,
+			RefundRate:          utils.Round(data.RefundRate.Float64, 2),
+			PartialRefundAmount: utils.Round(data.PartialRefundAmount.Float64, 2),
+			PartialRefundNum:    data.PartialRefundNum.Int64,
+			FullRefundAmount:    utils.Round(data.FullRefundAmount.Float64, 2),
+			FullRefundNum:       data.FullRefundNum.Int64,
+		}
+
+		list = append(list, item)
+	}
+
+	return StatisticsRefundSummaryResp{
+		TotalStatisticsRefundSummaryNum: total,
+		StatisticsRefundSummaryList:     list,
 	}
 }

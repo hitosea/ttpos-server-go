@@ -58,6 +58,9 @@ func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
+	// 设置打印机宽度
+	p.SetPrinterWidth(settingPrinterInfo.PrinterWidth)
+
 	// 确定模板类型（商家联、顾客联或退单联）
 	templateType := printerConst.PrinterTemplateTakeoutMerchant
 	isMerchantReceipt := true // 默认是商家联
