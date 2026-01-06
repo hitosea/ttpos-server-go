@@ -452,6 +452,23 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			// 处理请求中的规格
 			requestedBomUuids := make(map[uint64]bool)
 			for _, flavorReq := range editReq.Flavors {
+				//  如果 flavorReq.Uuid 不为0，则判断 flavorReq.BomUuid 是否已经删除，如果删除，则使用 flavorReq.Uuid 获取商品BOM
+				if flavorReq.Uuid != 0 {
+					bom, err := repository.NewProductBomRepo(tx).GetProductBom(
+						commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+						commonRepo.WhereByUuid(flavorReq.BomUuid),
+					)
+					if err != nil || bom.IsDelete() {
+						bom, err := repository.NewProductBomRepo(tx).GetProductBom(
+							commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+							commonRepo.WhereByProductFlavorUuid(flavorReq.Uuid),
+						)
+						if err == nil {
+							flavorReq.BomUuid = bom.Uuid
+						}
+					}
+				}
+
 				requestedBomUuids[flavorReq.BomUuid] = true
 
 				// 检查是否已存在
@@ -520,7 +537,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 				if existingAttribute, exists := existingAttributeMap[attributeReq.ProductPackageAttributeUuid]; exists {
 					// 更新价格
 					if err := productPackageAttributeTakeoutRepo.UpdateProductPackageAttributeTakeout(
-						map[string]any{"price": attributeReq.Price},
+						map[string]any{"price": attributeReq.Price, "delete_time": 0},
 						commonRepo.WhereByUuid(existingAttribute.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "更新外卖属性价格失败")
