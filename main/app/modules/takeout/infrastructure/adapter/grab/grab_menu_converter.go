@@ -426,30 +426,30 @@ func (c *GrabConverter) loadCategoryProducts(ctx context.Context, companyUuid ui
 }
 
 // getCurrencyInfoBySymbol 根据货币符号返回货币代码和 exponent
-func (c *GrabConverter) getCurrencyInfoBySymbol(currencyUnit string) grabfood.Currency {
-	currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
-	// 货币符号到代码和 exponent 的映射
-	symbolToInfo := map[string]struct {
-		code     string
-		exponent int32
-	}{
-		"฿":  {"THB", 2}, // 泰铢
-		"S$": {"SGD", 2}, // 新加坡元
-		"RM": {"MYR", 2}, // 马来西亚林吉特
-		"Rp": {"IDR", 2}, // 印尼盾
-		"₫":  {"VND", 0}, // 越南盾（exponent 为 0）
-		"₱":  {"PHP", 2}, // 菲律宾比索
-		"៛":  {"KHR", 2}, // 柬埔寨瑞尔
-		"K":  {"MMK", 2}, // 缅甸元
-	}
+func (c *GrabConverter) getCurrencyInfoBySymbol(_ string) grabfood.Currency {
+	// currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
+	// // 货币符号到代码和 exponent 的映射
+	// symbolToInfo := map[string]struct {
+	// 	code     string
+	// 	exponent int32
+	// }{
+	// 	"฿":  {"THB", 2}, // 泰铢
+	// 	"S$": {"SGD", 2}, // 新加坡元
+	// 	"RM": {"MYR", 2}, // 马来西亚林吉特
+	// 	"Rp": {"IDR", 2}, // 印尼盾
+	// 	"₫":  {"VND", 0}, // 越南盾（exponent 为 0）
+	// 	"₱":  {"PHP", 2}, // 菲律宾比索
+	// 	"៛":  {"KHR", 2}, // 柬埔寨瑞尔
+	// 	"K":  {"MMK", 2}, // 缅甸元
+	// }
 
-	if info, ok := symbolToInfo[currencySymbol]; ok {
-		return grabfood.Currency{
-			Code:     info.code,
-			Symbol:   currencySymbol,
-			Exponent: info.exponent,
-		}
-	}
+	// if info, ok := symbolToInfo[currencySymbol]; ok {
+	// 	return grabfood.Currency{
+	// 		Code:     info.code,
+	// 		Symbol:   currencySymbol,
+	// 		Exponent: info.exponent,
+	// 	}
+	// }
 
 	// 默认返回泰铢
 	return grabfood.Currency{
