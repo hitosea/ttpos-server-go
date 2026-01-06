@@ -795,13 +795,15 @@ func (h *statisticsHandler) GetCompanyPaymentMethods(c *gin.Context) {
 
 // CountCompanyBusinessSummary 获取门店汇总统计
 // @Summary 获取门店汇总统计
-// @Description 新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）和支付方式汇总（indicator_type=payment_method）
+// @Description 新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）
 // @Tags 商家端.报表
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.StatisticsCompanySummaryReq true "统计参数"
-// @Success 200 {object} dto.Response "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp，indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp"
+// @Success 200 {object} dto.Response{data=resp.CompanyBusinessSummaryResp} "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp"
+// @Success 201 {object} dto.Response{data=resp.CompanyPaymentMethodSummaryResp} "统计数据。indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp"
+// @Success 202 {object} dto.Response{data=resp.CompanyRefundSummaryResp} "统计数据。indicator_type=refund 返回 CompanyRefundSummaryResp"
 // @Router /shop/statistics/company/business/summary [get]
 func (h *statisticsHandler) CountCompanyBusinessSummary(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -895,7 +897,7 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/user_analysis/export", wrapper.ExportUserAnalysis)                            // 导出用户分析统计
 		privateApi.GET("/statistics/company_list", wrapper.GetCompanyList)                                        // 获取门店汇总统计可选择的门店列表
 		privateApi.GET("/statistics/company/payment_methods", wrapper.GetCompanyPaymentMethods)                   // 获取门店支付方式列表（汇总去重）
-		privateApi.GET("/statistics/company/business/summary", wrapper.CountCompanyBusinessSummary)               // 获取门店汇总统计（营业数据汇总），新管理端-报表-门店汇总统计
-		privateApi.GET("/statistics/company/business/summary/export", wrapper.ExportCompanyBusinessSummary)       // 导出门店汇总统计，新管理端-报表-门店汇总统计
+		privateApi.GET("/statistics/company/business/summary", wrapper.CountCompanyBusinessSummary)               // 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
+		privateApi.GET("/statistics/company/business/summary/export", wrapper.ExportCompanyBusinessSummary)       // 导出门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
 	}
 }
