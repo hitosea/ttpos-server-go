@@ -3624,10 +3624,6 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyingCache cache.Cache) []entity.Association {
 	// 获取 Desk 控制器单例（保证非 nil）
 	deskController := objectStorageController.GetDeskController()
-	buffetPackageRepo := NewBuffetPackageRepo(db)
-	buffetProductRepo := NewBuffetProductRepo(db)
-	buffetCustomerTypePricesRepo := NewBuffetCustomerTypePricesRepo(db)
-	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
 	productPackageRepo := NewProductPackageRepo(db)
 	productBomRepo := NewProductBomRepo(db)
 
@@ -3674,16 +3670,31 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return obj.(model.SaleBill).BuffetPackage1Uuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.BuffetPackage](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeBuffetPackage, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.BuffetPackage, error) {
-					buffetPackage, err := buffetPackageRepo.GetBuffetPackageByUuidWithAssociations(uuid)
-					if err != nil {
-						return nil, err
-					}
-					return buffetPackage, nil
-				})
+				if uuid == 0 {
+					return nil, nil
+				}
+				controller := objectStorageController.GetBuffetPackageController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
+				if err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		// ==================== 销售账单的自助餐套餐2信息 ====================
+		// 一对一关系：BuffetPackage2
+		{
+			Path:       "BuffetPackage2",
+			ObjectType: "buffet_package",
+			GetUUID: func(obj interface{}) uint64 {
+				return obj.(model.SaleBill).BuffetPackage2Uuid
+			},
+			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
+				if uuid == 0 {
+					return nil, nil
+				}
+				controller := objectStorageController.GetBuffetPackageController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -3972,31 +3983,6 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				}
 				controller := objectStorageController.GetProductBomCardController()
 				result, err := controller.GetByUuid(ctx, db, uuid)
-				if err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-		},
-		// ==================== 销售账单的自助餐套餐2信息 ====================
-		// 一对一关系：BuffetPackage2
-		{
-			Path:       "BuffetPackage2",
-			ObjectType: "buffet_package",
-			GetUUID: func(obj interface{}) uint64 {
-				return obj.(model.SaleBill).BuffetPackage2Uuid
-			},
-			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.BuffetPackage](underlyingCache, 10*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeBuffetPackage, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.BuffetPackage, error) {
-					buffetPackage, err := buffetPackageRepo.GetBuffetPackageByUuidWithAssociations(uuid)
-					if err != nil {
-						return nil, err
-					}
-					return buffetPackage, nil
-				})
 				if err != nil {
 					return nil, err
 				}

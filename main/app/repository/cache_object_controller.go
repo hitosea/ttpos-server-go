@@ -175,4 +175,18 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			)
 		},
 	)
+
+	// 初始化 BuffetPackage 对象的缓存控制器
+	objectStorageController.InitBuffetPackageController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.BuffetPackage, error) {
+			buffetPackageRepo := NewBuffetPackageRepo(db)
+			return buffetPackageRepo.GetBuffetPackageByUuidWithAssociations(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.BuffetPackage, error) {
+			buffetPackageRepo := NewBuffetPackageRepo(db)
+			return buffetPackageRepo.GetBuffetPackagesByUuidsWithAssociations(uuids)
+		},
+	)
 }
