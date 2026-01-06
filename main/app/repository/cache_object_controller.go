@@ -113,4 +113,20 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return paymentMethodRepo.GetPaymentMethodsByUuids(uuids)
 		},
 	)
+
+	// 初始化 Nationality 对象的缓存控制器
+	objectStorageController.InitNationalityController(
+		underlyingCache,
+		5*time.Minute, // 使用 5 分钟 TTL，与现有代码保持一致
+		func(db *gorm.DB, uuid uint64) (*model.Nationality, error) {
+			nationalityRepo := NewNationalityRepo(db)
+			// 使用 FindByUuidWithDeleted，保证历史订单可显示已删除的配置名称
+			return nationalityRepo.FindByUuidWithDeleted(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.Nationality, error) {
+			nationalityRepo := NewNationalityRepo(db)
+			// 使用批量查询方法，提高性能
+			return nationalityRepo.FindByUuidsWithDeleted(uuids)
+		},
+	)
 }

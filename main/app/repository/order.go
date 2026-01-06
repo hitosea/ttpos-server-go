@@ -3636,7 +3636,6 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	productCategoryRepo := NewProductCategoryRepo(db)
 	productBomRepo := NewProductBomRepo(db)
 	orderSourceRepo := NewOrderSourceRepo(db)
-	nationalityRepo := NewNationalityRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：SaleBillSetting
@@ -4718,12 +4717,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if uuid == 0 {
 					return nil, nil
 				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.Nationality](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeNationality, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.Nationality, error) {
-					// 使用 FindByUuidWithDeleted，保证历史订单可显示已删除的配置名称
-					return nationalityRepo.FindByUuidWithDeleted(uuid)
-				})
+				controller := objectStorageController.GetNationalityController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -4740,30 +4735,17 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if len(validUuids) == 0 {
 					return make(map[uint64]interface{}), nil
 				}
-				keys := make([]string, 0, len(validUuids))
-				for _, uuid := range validUuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeNationality, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.Nationality](underlyingCache, 5*time.Minute)
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.Nationality, error) {
-					// 使用批量查询方法，提高性能
-					nationalities, err := nationalityRepo.FindByUuidsWithDeleted(validUuids)
-					if err != nil {
-						return nil, err
-					}
-					result := make(map[string]*model.Nationality)
-					for _, nationality := range nationalities {
-						if nationality != nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeNationality, nationality.Uuid)
-							result[key] = nationality
-						}
-					}
-					return result, nil
-				})
+				controller := objectStorageController.GetNationalityController()
+				batchResult, err := controller.BatchGetByUuids(ctx, db, validUuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, nationality := range batchResult {
+					result[uuid] = nationality
+				}
+				return result, nil
 			},
 		},
 		// ==================== 销售账单的支付方式信息 ====================
