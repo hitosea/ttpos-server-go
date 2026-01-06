@@ -15,10 +15,10 @@ type TakeoutOrderCampaign struct {
 	CampaignType       string `gorm:"column:campaign_type;size:50;comment:活动类型(discount/bundle/free_item)" json:"campaign_type"`
 
 	// 活动使用信息
-	UsageCount     int32  `gorm:"column:usage_count;default:0;comment:活动使用次数" json:"usage_count"`
-	MexFundedRatio int32  `gorm:"column:mex_funded_ratio;default:0;comment:商户资金占比(%)" json:"mex_funded_ratio"`
-	DeductedAmount int64  `gorm:"column:deducted_amount;default:0;comment:折扣金额(分)" json:"deducted_amount"`
-	DeductedPart   string `gorm:"column:deducted_part;size:50;comment:折扣部分(subtotal/delivery_fee)" json:"deducted_part"`
+	UsageCount     int32   `gorm:"column:usage_count;default:0;comment:活动使用次数" json:"usage_count"`
+	MexFundedRatio int32   `gorm:"column:mex_funded_ratio;default:0;comment:商户资金占比(%)" json:"mex_funded_ratio"`
+	DeductedAmount float64 `gorm:"column:deducted_amount;default:0;comment:折扣金额(分)" json:"deducted_amount"`
+	DeductedPart   string  `gorm:"column:deducted_part;size:50;comment:折扣部分(subtotal/delivery_fee)" json:"deducted_part"`
 
 	// 应用的商品
 	AppliedItemIDs string `gorm:"column:applied_item_ids;type:text;comment:应用的商品ID列表(JSON数组)" json:"applied_item_ids"`
