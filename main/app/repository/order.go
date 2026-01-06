@@ -2846,10 +2846,8 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 	deskController := objectStorageController.GetDeskController()
 	productPackageController := objectStorageController.GetProductPackageController()
 	productAttributeController := objectStorageController.GetProductAttributeController()
+	productBomController := objectStorageController.GetProductBomController()
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
-	productBomRepo := NewProductBomRepo(db)
-	productFlavorRepo := NewProductFlavorRepo(db)
-	productSauceRepo := NewProductSauceRepo(db)
 	batchTagRepo := NewBatchTagRepo(db)
 
 	return []entity.Association{
@@ -3048,254 +3046,25 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(*model.SaleOrderProductBom).ProductBomUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductBom, error) {
-					bom, err := productBomRepo.GetProductBom(
-						CommonRepo.WhereByUuid(uuid),
-						CommonRepo.WhereBySoftDelete(),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return bom, nil
-				})
+				// 使用 ProductBom 控制器查询（统一管理缓存）
+				result, err := productBomController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
-					result := make(map[string]*model.ProductBom)
-					for _, uuid := range uuids {
-						bom, err := productBomRepo.GetProductBom(
-							CommonRepo.WhereByUuid(uuid),
-							CommonRepo.WhereBySoftDelete(),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
-							result[key] = bom
-						}
-					}
-					return result, nil
-				})
+				// 使用 ProductBom 控制器批量查询（统一管理缓存）
+				batchResult, err := productBomController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
-			},
-		},
-		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor
-		{
-			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor",
-			ObjectType: "product_flavor",
-			GetUUID: func(obj interface{}) uint64 {
-				return obj.(model.ProductBom).ProductFlavorUuid
-			},
-			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductFlavor](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductFlavor, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductFlavor, error) {
-					flavor, err := productFlavorRepo.GetProductFlavor(
-						CommonRepo.WhereByUuid(uuid),
-						CommonRepo.WhereBySoftDelete(),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return &flavor, nil
-				})
-				if err != nil {
-					return nil, err
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, bom := range batchResult {
+					result[uuid] = bom
 				}
 				return result, nil
-			},
-			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductFlavor, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductFlavor](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductFlavor, error) {
-					result := make(map[string]*model.ProductFlavor)
-					for _, uuid := range uuids {
-						flavor, err := productFlavorRepo.GetProductFlavor(
-							CommonRepo.WhereByUuid(uuid),
-							CommonRepo.WhereBySoftDelete(),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductFlavor, uuid)
-							result[key] = &flavor
-						}
-					}
-					return result, nil
-				})
-				if err != nil {
-					return nil, err
-				}
-				return convertBatchResultToUUIDMap(batchResult), nil
-			},
-		},
-		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName
-		{
-			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
-			ObjectType: "multi_language_name",
-			GetUUID: func(obj interface{}) uint64 {
-				return obj.(model.ProductFlavor).MultiLanguageNameUuid
-			},
-			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
-					return multiLanguageNameRepo.GetMultiLanguageName(
-						CommonRepo.WhereByUuid(uuid),
-					)
-				})
-				if err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
-					result := make(map[string]*model.MultiLanguageName)
-					for _, uuid := range uuids {
-						name, err := multiLanguageNameRepo.GetMultiLanguageName(
-							CommonRepo.WhereByUuid(uuid),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-							result[key] = name
-						}
-					}
-					return result, nil
-				})
-				if err != nil {
-					return nil, err
-				}
-				return convertBatchResultToUUIDMap(batchResult), nil
-			},
-		},
-		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce
-		{
-			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce",
-			ObjectType: "product_sauce",
-			GetUUID: func(obj interface{}) uint64 {
-				return obj.(model.ProductBom).ProductSauceUuid
-			},
-			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductSauce](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductSauce, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductSauce, error) {
-					sauce, err := productSauceRepo.GetProductSauce(
-						CommonRepo.WhereByUuid(uuid),
-						CommonRepo.WhereBySoftDelete(),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return sauce, nil
-				})
-				if err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductSauce, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductSauce](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductSauce, error) {
-					result := make(map[string]*model.ProductSauce)
-					for _, uuid := range uuids {
-						sauce, err := productSauceRepo.GetProductSauce(
-							CommonRepo.WhereByUuid(uuid),
-							CommonRepo.WhereBySoftDelete(),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductSauce, uuid)
-							result[key] = sauce
-						}
-					}
-					return result, nil
-				})
-				if err != nil {
-					return nil, err
-				}
-				return convertBatchResultToUUIDMap(batchResult), nil
-			},
-		},
-		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName
-		{
-			Path:       "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
-			ObjectType: "multi_language_name",
-			GetUUID: func(obj interface{}) uint64 {
-				return obj.(model.ProductSauce).MultiLanguageNameUuid
-			},
-			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存（缓存配置和初始化已在 objectstorage 模块中完成）
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.MultiLanguageName, error) {
-					return multiLanguageNameRepo.GetMultiLanguageName(
-						CommonRepo.WhereByUuid(uuid),
-					)
-				})
-				if err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.MultiLanguageName](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.MultiLanguageName, error) {
-					result := make(map[string]*model.MultiLanguageName)
-					for _, uuid := range uuids {
-						name, err := multiLanguageNameRepo.GetMultiLanguageName(
-							CommonRepo.WhereByUuid(uuid),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeMultiLanguageName, uuid)
-							result[key] = name
-						}
-					}
-					return result, nil
-				})
-				if err != nil {
-					return nil, err
-				}
-				return convertBatchResultToUUIDMap(batchResult), nil
 			},
 		},
 		// 嵌套关联：SaleOrders.SaleOrderProducts.BatchTag
@@ -3409,7 +3178,7 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	// 获取控制器单例（保证非 nil）
 	deskController := objectStorageController.GetDeskController()
 	productPackageController := objectStorageController.GetProductPackageController()
-	productBomRepo := NewProductBomRepo(db)
+	productBomController := objectStorageController.GetProductBomController()
 
 	return []entity.Association{
 		// 一对一关系：SaleBillSetting
@@ -3661,40 +3430,25 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				return 0
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.ProductBom, error) {
-					return productBomRepo.GetProductBomByUuid(uuid)
-				})
+				// 使用 ProductBom 控制器查询（统一管理缓存）
+				result, err := productBomController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](underlyingCache, 5*time.Minute)
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
-					boms, err := productBomRepo.GetProductBomsByUuidsWithAssociations(uuids)
-					if err != nil {
-						return nil, err
-					}
-					result := make(map[string]*model.ProductBom)
-					for _, bom := range boms {
-						if bom != nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, bom.Uuid)
-							result[key] = bom
-						}
-					}
-					return result, nil
-				})
+				// 使用 ProductBom 控制器批量查询（统一管理缓存）
+				batchResult, err := productBomController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, bom := range batchResult {
+					result[uuid] = bom
+				}
+				return result, nil
 			},
 		},
 		// 嵌套关联：SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard
