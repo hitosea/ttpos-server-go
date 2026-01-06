@@ -79,7 +79,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	if takeoutOrder == nil {
 		return errors.WithMessage(errors.New("外卖订单不存在"), fmt.Sprintf("外卖订单不存在: %d", orderUuid))
 	}
-	if takeoutOrder.OrderState != valueobject.TakeoutOrderStateAccepted && takeoutOrder.OrderState != valueobject.TakeoutOrderStateRiderPending {
+	if takeoutOrder.OrderState != valueobject.TakeoutOrderStateAccepted && takeoutOrder.OrderState != valueobject.TakeoutOrderStateRiderPending && takeoutOrder.OrderState != valueobject.TakeoutOrderStateRiderProcessing {
 		return errors.WithMessage(errors.New("外卖订单状态不正确"), fmt.Sprintf("外卖订单状态不正确: %d", takeoutOrder.OrderState))
 	}
 	// 检查订单是否已同步到 ERP
