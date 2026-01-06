@@ -2845,9 +2845,9 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 	// 获取控制器单例（保证非 nil）
 	deskController := objectStorageController.GetDeskController()
 	productPackageController := objectStorageController.GetProductPackageController()
+	productAttributeController := objectStorageController.GetProductAttributeController()
 	multiLanguageNameRepo := NewMultiLanguageNameRepo(db)
 	productBomRepo := NewProductBomRepo(db)
-	productAttributeRepo := NewProductAttributeRepo(db)
 	productFlavorRepo := NewProductFlavorRepo(db)
 	productSauceRepo := NewProductSauceRepo(db)
 	batchTagRepo := NewBatchTagRepo(db)
@@ -2971,55 +2971,23 @@ func getSaleBillAssociationsForOrderCart(ctx goCtx.Context, db *gorm.DB, underly
 				return obj.(*model.SaleOrderProductAttribute).ProductAttributeUuid
 			},
 			QueryFunc: func(ctx goCtx.Context, uuid uint64) (interface{}, error) {
-				// 使用对象存储层的缓存
-				key := persistence.BuildKey(ctx, persistence.ObjectTypeProductAttribute, uuid)
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductAttribute](underlyingCache, 5*time.Minute)
-				result, err := cacheLayer.GET(key, func() (*model.ProductAttribute, error) {
-					attr, err := productAttributeRepo.GetProductAttribute(
-						CommonRepo.WhereByUuid(uuid),
-						CommonRepo.WhereBySoftDelete(),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return attr, nil
-				})
+				// 使用 ProductAttribute 控制器查询（统一管理缓存）
+				result, err := productAttributeController.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
 				return result, nil
 			},
 			BatchQueryFunc: func(ctx goCtx.Context, uuids []uint64) (map[uint64]interface{}, error) {
-				// 构建批量查询的 keys
-				keys := make([]string, 0, len(uuids))
-				for _, uuid := range uuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductAttribute, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.ProductAttribute](underlyingCache, 5*time.Minute)
-				// 使用对象存储层的批量缓存
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductAttribute, error) {
-					missedUuids := extractUUIDsFromKeys(keys)
-					result := make(map[string]*model.ProductAttribute)
-					for _, uuid := range missedUuids {
-						attr, err := productAttributeRepo.GetProductAttribute(
-							CommonRepo.WhereByUuid(uuid),
-							CommonRepo.WhereBySoftDelete(),
-						)
-						if err == nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypeProductAttribute, uuid)
-							result[key] = attr
-						}
-					}
-					return result, nil
-				})
+				// 使用 ProductAttribute 控制器批量查询（统一管理缓存）
+				batchResult, err := productAttributeController.BatchGetByUuids(ctx, db, uuids)
 				if err != nil {
 					return nil, err
 				}
+				// 转换为 map[uint64]interface{}
 				result := make(map[uint64]interface{})
-				for key, val := range batchResult {
-					if uuid, err := extractUUIDFromKey(key); err == nil {
-						result[uuid] = val
-					}
+				for uuid, attr := range batchResult {
+					result[uuid] = attr
 				}
 				return result, nil
 			},

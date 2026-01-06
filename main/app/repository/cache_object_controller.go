@@ -205,4 +205,18 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return productPackageRepo.GetProductPackagesByUuidsWithAssociations(uuids)
 		},
 	)
+
+	// 初始化 ProductAttribute 对象的缓存控制器
+	objectStorageController.InitProductAttributeController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.ProductAttribute, error) {
+			productAttributeRepo := NewProductAttributeRepo(db)
+			return productAttributeRepo.GetProductAttributeByUuid(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.ProductAttribute, error) {
+			productAttributeRepo := NewProductAttributeRepo(db)
+			return productAttributeRepo.GetProductAttributesByUuids(uuids)
+		},
+	)
 }
