@@ -99,4 +99,18 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return memberRepo.GetMembersWithAssociations(uuids)
 		},
 	)
+
+	// 初始化 PaymentMethod 对象的缓存控制器
+	objectStorageController.InitPaymentMethodController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.PaymentMethod, error) {
+			paymentMethodRepo := NewPaymentMethodRepo(db)
+			return paymentMethodRepo.GetPaymentMethodByUuid(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.PaymentMethod, error) {
+			paymentMethodRepo := NewPaymentMethodRepo(db)
+			return paymentMethodRepo.GetPaymentMethodsByUuids(uuids)
+		},
+	)
 }

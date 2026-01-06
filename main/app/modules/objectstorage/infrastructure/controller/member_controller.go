@@ -66,4 +66,3 @@ func GetMemberController() *CacheObjectController[*model.Member] {
 		"Member 缓存控制器未初始化，请先调用 InitMemberController",
 	)
 }
-

@@ -3637,7 +3637,6 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 	productBomRepo := NewProductBomRepo(db)
 	orderSourceRepo := NewOrderSourceRepo(db)
 	nationalityRepo := NewNationalityRepo(db)
-	paymentMethodRepo := NewPaymentMethodRepo(db)
 
 	return []entity.Association{
 		// 一对一关系：SaleBillSetting
@@ -4787,11 +4786,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if uuid == 0 {
 					return nil, nil
 				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.PaymentMethod, error) {
-					return paymentMethodRepo.GetPaymentMethodByUuid(uuid)
-				})
+				controller := objectStorageController.GetPaymentMethodController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -4808,30 +4804,17 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if len(validUuids) == 0 {
 					return make(map[uint64]interface{}), nil
 				}
-				keys := make([]string, 0, len(validUuids))
-				for _, uuid := range validUuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.PaymentMethod, error) {
-					// 使用批量查询方法，提高性能
-					paymentMethods, err := paymentMethodRepo.GetPaymentMethodsByUuids(validUuids)
-					if err != nil {
-						return nil, err
-					}
-					result := make(map[string]*model.PaymentMethod)
-					for _, paymentMethod := range paymentMethods {
-						if paymentMethod != nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, paymentMethod.Uuid)
-							result[key] = paymentMethod
-						}
-					}
-					return result, nil
-				})
+				controller := objectStorageController.GetPaymentMethodController()
+				batchResult, err := controller.BatchGetByUuids(ctx, db, validUuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, paymentMethod := range batchResult {
+					result[uuid] = paymentMethod
+				}
+				return result, nil
 			},
 		},
 		// 嵌套关联：SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod
@@ -4853,11 +4836,8 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if uuid == 0 {
 					return nil, nil
 				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
-				key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid)
-				result, err := cacheLayer.GET(key, func() (*model.PaymentMethod, error) {
-					return paymentMethodRepo.GetPaymentMethodByUuid(uuid)
-				})
+				controller := objectStorageController.GetPaymentMethodController()
+				result, err := controller.GetByUuid(ctx, db, uuid)
 				if err != nil {
 					return nil, err
 				}
@@ -4874,30 +4854,17 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 				if len(validUuids) == 0 {
 					return make(map[uint64]interface{}), nil
 				}
-				keys := make([]string, 0, len(validUuids))
-				for _, uuid := range validUuids {
-					keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, uuid))
-				}
-				cacheLayer := adapter.GetOrderObjectCache[*model.PaymentMethod](underlyingCache, 5*time.Minute)
-				batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.PaymentMethod, error) {
-					// 使用批量查询方法，提高性能
-					paymentMethods, err := paymentMethodRepo.GetPaymentMethodsByUuids(validUuids)
-					if err != nil {
-						return nil, err
-					}
-					result := make(map[string]*model.PaymentMethod)
-					for _, paymentMethod := range paymentMethods {
-						if paymentMethod != nil {
-							key := persistence.BuildKey(ctx, persistence.ObjectTypePaymentMethod, paymentMethod.Uuid)
-							result[key] = paymentMethod
-						}
-					}
-					return result, nil
-				})
+				controller := objectStorageController.GetPaymentMethodController()
+				batchResult, err := controller.BatchGetByUuids(ctx, db, validUuids)
 				if err != nil {
 					return nil, err
 				}
-				return convertBatchResultToUUIDMap(batchResult), nil
+				// 转换为 map[uint64]interface{}
+				result := make(map[uint64]interface{})
+				for uuid, paymentMethod := range batchResult {
+					result[uuid] = paymentMethod
+				}
+				return result, nil
 			},
 		},
 	}
