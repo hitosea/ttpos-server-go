@@ -159,4 +159,20 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return memberCouponRepo.GetMembersByUuids(uuids)
 		},
 	)
+
+	// 初始化 MarketingCoupon 对象的缓存控制器
+	objectStorageController.InitMarketingCouponController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.MarketingCoupon, error) {
+			marketingCouponRepo := NewMarketingCouponRepo(db)
+			return marketingCouponRepo.GetCouponByUuid(uuid)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.MarketingCoupon, error) {
+			marketingCouponRepo := NewMarketingCouponRepo(db)
+			return marketingCouponRepo.GetCoupons(
+				CommonRepo.WhereInUuids(uuids),
+			)
+		},
+	)
 }
