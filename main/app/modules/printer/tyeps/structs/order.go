@@ -41,7 +41,7 @@ type StatementOrderInfoData struct {
 	PayTime                string                    `json:"pay_time"`                  // 支付时间
 	UpdateTime             string                    `json:"update_time"`               // 更新时间
 	CancelTime             string                    `json:"cancel_time"`               // 取消时间
-	CancelReason           string                    `json:"cancel_reason"`             // 取消原因
+	RejectReason           string                    `json:"reject_reason"`             // 拒单原因
 	Buffets                []StatementBuffetData     `json:"buffets"`                   // 自助餐列表
 	Delays                 []StatementDelayData      `json:"delays"`                    // 加钟列表
 	Products               []StatementProductData    `json:"products"`                  // 商品列表
