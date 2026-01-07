@@ -13,4 +13,5 @@ type UserAnalysisResp struct {
 	OrderSource  []UserAnalysisItem `json:"order_source"`  // 点餐方式来源统计
 	DeskSource   []UserAnalysisItem `json:"desk_source"`   // 桌台方式来源统计
 	DiningMethod []UserAnalysisItem `json:"dining_method"` // 用餐方式统计
+	TakeoutMethod []UserAnalysisItem `json:"takeout_method"` // 外卖方式统计（Grab/LINE MAN）
 }
