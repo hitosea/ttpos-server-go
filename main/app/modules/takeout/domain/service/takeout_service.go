@@ -101,6 +101,15 @@ func (s *TakeoutServiceImpl) GetByPlatform(ctx context.Context, platform string)
 	}
 
 	takeout, err := s.takeoutRepo.GetByPlatform(ctx, platform)
+	if err == gorm.ErrRecordNotFound || takeout == nil {
+		// 如果记录不存在，自动创建一条默认记录（不开启，未绑定）
+		createdTakeout, createErr := s.CreatePlatformStatus(ctx, platform, false)
+		if createErr != nil {
+			return nil, fmt.Errorf("获取平台状态失败，且创建默认记录失败: %w", createErr)
+		}
+		return createdTakeout, nil
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("获取平台%s状态失败: %w", platform, err)
 	}

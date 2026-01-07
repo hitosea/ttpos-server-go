@@ -5498,6 +5498,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 				takeoutMap[takeout.ProductPackageUuid] = append(takeoutMap[takeout.ProductPackageUuid], product_resp.ProductTakeoutSimpleInfo{
 					Uuid:        takeout.Uuid,
 					TakeoutType: takeout.TakeoutType,
+					Status:      takeout.Status,
 				})
 			}
 
@@ -6865,9 +6866,20 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 	productBomRepo := repository.NewProductBomRepo(tx)
 	warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 	warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
+	productPackageTakeoutRepo := repository.NewProductPackageTakeoutRepo(tx)
+	productBomTakeoutRepo := repository.NewProductBomTakeoutRepo(tx)
 	setting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
 		return errors.WithMessage(err, "获取公司设置失败")
+	}
+
+	// 获取外卖商品列表
+	productPackageTakeouts, err := productPackageTakeoutRepo.GetProductPackageTakeoutList(
+		repository.CommonRepo.WhereByProductPackageUuid(params.ProductPackageUuid),
+		repository.CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取外卖商品列表失败")
 	}
 
 	// flavorListResult.Flavors 根据IsDelete排序，如果IsDelete=true，则排在前面，优先删除，然后再添加
@@ -6926,6 +6938,19 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					NotForSale: true,
 				}); errErp != nil {
 					return errors.WithMessage(errErp, "设置商品规格禁售失败")
+				}
+			}
+			// 删除外卖规格价格
+			if len(productPackageTakeouts) > 0 {
+				for _, productPackageTakeout := range productPackageTakeouts {
+					err = repository.NewProductBomTakeoutRepo(tx).DestroyProductBomTakeout(
+						repository.CommonRepo.WhereByProductBomUuid(flavor.BomUuid),
+						repository.CommonRepo.WhereByProductPackageTakeoutUuid(productPackageTakeout.Uuid),
+						repository.CommonRepo.WhereBySoftDelete(),
+					)
+					if err != nil {
+						return errors.WithMessage(err, "删除外卖规格价格失败")
+					}
 				}
 			}
 		} else {
@@ -7023,6 +7048,39 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 						return errors.WithMessage(err, "更新商品bom失败")
 					}
 				}
+				// 添加外卖规格价格
+				if len(productPackageTakeouts) > 0 {
+					for _, productPackageTakeout := range productPackageTakeouts {
+						productBomTakeout, err := productBomTakeoutRepo.GetProductBomTakeout(
+							commonRepo.WhereByProductBomUuid(flavorUuid),
+							commonRepo.WhereByProductPackageTakeoutUuid(productPackageTakeout.Uuid),
+						)
+						if err != nil {
+							if err == gorm.ErrRecordNotFound {
+								err = productBomTakeoutRepo.CreateProductBomTakeout(&model.ProductBomTakeout{
+									ProductPackageTakeoutUuid: productPackageTakeout.Uuid,
+									ProductBomUuid:            flavorUuid,
+									HeadquarterUuid:           0,
+									Price:                     flavor.Price,
+								})
+								if err != nil {
+									return errors.WithMessage(err, "保存外卖规格价格失败")
+								}
+							} else {
+								return errors.WithMessage(err, "获取外卖规格价格失败")
+							}
+						}
+						if productBomTakeout != nil && productBomTakeout.Uuid > 0 {
+							err = productBomTakeoutRepo.UpdateProductBomTakeout(map[string]any{
+								"delete_time": 0, // 还原删除时间
+								"price":       flavor.Price,
+							}, commonRepo.WhereByProductBomUuid(flavorUuid), commonRepo.WhereByProductPackageTakeoutUuid(productPackageTakeout.Uuid))
+							if err != nil {
+								return errors.WithMessage(err, "更新外卖规格失败")
+							}
+						}
+					}
+				}
 				// 开启库存管理
 				if setting.SaleStock == 1 {
 					// 添加入库
@@ -7066,6 +7124,19 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					return errors.WithMessage(err, "更新商品bom失败")
 				}
 
+				// 调整外卖规格价格记录
+				if len(productPackageTakeouts) > 0 {
+					for _, productPackageTakeout := range productPackageTakeouts {
+						err = productBomTakeoutRepo.UpdateProductBomTakeout(map[string]any{
+							"delete_time": 0, // 还原删除时间
+						}, commonRepo.WhereByProductBomUuid(flavor.BomUuid), commonRepo.WhereByProductPackageTakeoutUuid(productPackageTakeout.Uuid))
+						if err != nil {
+							return errors.WithMessage(err, "更新外卖规格价格失败")
+						}
+					}
+				}
+
+				// 调整库存
 				if setting.SaleStock == 1 {
 					bom, err := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
 					if err != nil {

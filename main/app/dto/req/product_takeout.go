@@ -98,6 +98,7 @@ func (r *ProductTakeoutShopEditReq) Validate() error {
 
 // ProductTakeoutShopEditFlavorReq 外卖商品规格编辑请求
 type ProductTakeoutShopEditFlavorReq struct {
+	Uuid    uint64  `json:"uuid"`                        // 外卖规格UUID
 	BomUuid uint64  `json:"bom_uuid" binding:"required"` // 商品BOM UUID
 	Price   float64 `json:"price"`                       // 外卖规格价格
 }

@@ -307,21 +307,25 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	menuItem.SetSequence(int32(sequence))
 	menuItem.SetAvailableStatus(string(status))
 	menuItem.SetPrice(price)
+
 	// 设置多语言名称（只包含 Grab 支持的语言）
 	if takeoutProduct.MultiLanguageName.Uuid != 0 {
 		menuItem.SetNameTranslation(c.filterSupportedLanguages(takeoutProduct.MultiLanguageName.ToMap()))
 	} else if takeoutProduct.ProductPackage.MultiLanguageName.Uuid != 0 {
 		menuItem.SetNameTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.MultiLanguageName.ToMap()))
 	}
+
 	// 设置商品描述（优先使用多语言字段）
-	if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
+	if takeoutProduct.DescribeMultiLanguageName.Uuid != 0 {
+		// 使用多语言描述
+		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.DescribeMultiLanguageName.ToMap()))
+		// 设置默认描述（使用英文，如果没有则回退）
+		menuItem.SetDescription(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
+	} else if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
 		// 使用多语言描述
 		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.DescribeMultiLanguageName.ToMap()))
 		// 设置默认描述（使用英文，如果没有则回退）
 		menuItem.SetDescription(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
-	} else if takeoutProduct.ProductPackage.Describe != "" {
-		// 回退到单语言描述字段
-		menuItem.SetDescription(takeoutProduct.ProductPackage.Describe)
 	}
 
 	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
@@ -347,12 +351,12 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 		}
 
 		// 2. 处理 ProductSauce（小料）
-		if err := c.convertProductSauces(ctx, menuItem, &takeoutProduct.ProductPackage); err != nil {
+		if err := c.convertProductSauces(ctx, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换商品小料失败")
 		}
 
 		// 3. 处理 ProductAttributeGroup（属性组）
-		if err := c.convertProductAttributeGroups(ctx, menuItem, &takeoutProduct.ProductPackage); err != nil {
+		if err := c.convertProductAttributeGroups(ctx, menuItem, takeoutProduct); err != nil {
 			return nil, errors.WithMessage(err, "转换商品属性组失败")
 		}
 	} else {
@@ -465,33 +469,59 @@ func (c *GrabConverter) convertProductFlavors(
 	menuItem *grabfood.MenuItem,
 	takeoutProduct *model.ProductPackageTakeout,
 ) error {
-	// 收集所有规格
-	flavors := make([]*model.ProductBomTakeout, 0)
+	// 检查是否有规格
+	if takeoutProduct.ProductPackage.Uuid == 0 || len(takeoutProduct.ProductPackage.ProductBoms) == 0 {
+		return nil
+	}
+
+	// 构建外卖价格映射表: key = ProductBomUuid, value = Price
+	takeoutPriceMap := make(map[uint64]float64)
+	takeoutModifierIdMap := make(map[uint64]string)
 	for i := range takeoutProduct.ProductBomTakeouts {
 		bomTakeout := &takeoutProduct.ProductBomTakeouts[i]
-		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId != "" {
+		if !bomTakeout.IsDelete() {
+			takeoutPriceMap[bomTakeout.ProductBomUuid] = bomTakeout.Price
+			takeoutModifierIdMap[bomTakeout.ProductBomUuid] = bomTakeout.GrabModifierId
+		}
+	}
+
+	// 收集所有规格（从 ProductPackage.ProductBoms）
+	flavors := make([]*model.ProductBom, 0)
+	for i := range takeoutProduct.ProductPackage.ProductBoms {
+		bom := &takeoutProduct.ProductPackage.ProductBoms[i]
+		// 跳过已删除的规格，跳过小料
+		if bom.IsDelete() || !bom.IsFlavor() {
 			continue
 		}
-		flavors = append(flavors, bomTakeout)
+		// 只取规格类型的 ProductBom（ProductFlavorUuid > 0）
+		if bom.ProductFlavorUuid > 0 {
+			flavors = append(flavors, bom)
+		}
 	}
 
 	if len(flavors) == 0 {
 		return nil
 	}
 
+	// 为每个规格获取价格（优先外卖价格，否则店内价格）
+	flavorPrices := make(map[uint64]float64)
+	for _, bom := range flavors {
+		if price, exists := takeoutPriceMap[bom.Uuid]; exists {
+			flavorPrices[bom.Uuid] = price
+		} else {
+			flavorPrices[bom.Uuid] = bom.Price
+		}
+	}
+
 	// 按价格排序，确保最小价格的规格排在第一位
 	sort.Slice(flavors, func(i, j int) bool {
-		return flavors[i].Price < flavors[j].Price
+		return flavorPrices[flavors[i].Uuid] < flavorPrices[flavors[j].Uuid]
 	})
 
-	// 找到最小规格价格，用于计算差价（优先使用外卖价格，否则使用店内价格）
+	// 找到最小规格价格
 	minFlavorPrice := float64(0)
-	for idx, bomTakeout := range flavors {
-		// 优先从外卖价格表获取价格
-		price := bomTakeout.Price
-		if idx == 0 || price < minFlavorPrice {
-			minFlavorPrice = price
-		}
+	if len(flavors) > 0 {
+		minFlavorPrice = flavorPrices[flavors[0].Uuid]
 	}
 
 	// 判断规格是否必选：通常如果有多个规格，可能是可选的；如果只有一个规格，可能是必选的
@@ -506,15 +536,11 @@ func (c *GrabConverter) convertProductFlavors(
 	modifierGroupStatus := value_object.AvailableStatusAvailable
 	allSoldOut := true
 	allDown := true
-	for i := range takeoutProduct.ProductBomTakeouts {
-		bomTakeout := &takeoutProduct.ProductBomTakeouts[i]
-		if bomTakeout.IsDelete() || bomTakeout.GrabModifierId != "" {
-			continue
-		}
-		if bomTakeout.ProductBom.StockNum > 0 {
+	for _, bom := range flavors {
+		if bom.StockNum > 0 {
 			allSoldOut = false
 		}
-		if bomTakeout.ProductBom.Status != 0 && !bomTakeout.ProductBom.IsDelete() {
+		if bom.Status != 0 {
 			allDown = false
 		}
 	}
@@ -543,15 +569,18 @@ func (c *GrabConverter) convertProductFlavors(
 	modifierGroup.SetSelectionRangeMax(int32(maxSelection))
 
 	// 转换每个规格为修饰符
-	for idx, bomTakeout := range flavors {
+	for idx, bom := range flavors {
 		// 获取规格名称
-		flavorName := bomTakeout.ProductBom.ProductFlavor.Name
-		if bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.Uuid != 0 {
-			flavorName = bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
+		flavorName := bom.ProductFlavor.Name
+		if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
+			flavorName = bom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
+		}
+		if flavorName == "" {
+			flavorName = "delete"
 		}
 
 		// 获取规格价格（优先使用外卖价格，否则使用店内价格）
-		flavorPrice := bomTakeout.Price
+		flavorPrice := flavorPrices[bom.Uuid]
 
 		// 计算规格价格：与最小规格的差价（当前规格价格 - 最小规格价格）
 		priceDiff := flavorPrice - minFlavorPrice
@@ -562,28 +591,28 @@ func (c *GrabConverter) convertProductFlavors(
 		// 2. 下架（Status = 0）或删除 -> HIDE
 		// 3. 正常 -> AVAILABLE
 		modifierStatus := value_object.AvailableStatusAvailable
-		if bomTakeout.ProductBom.StockNum <= 0 {
+		if bom.StockNum <= 0 {
 			// 规格售罄
 			modifierStatus = value_object.AvailableStatusUnavailable
 		}
-		if bomTakeout.ProductBom.Status == 0 || bomTakeout.ProductBom.IsDelete() {
+		if bom.Status == 0 || bom.IsDelete() {
 			modifierStatus = value_object.AvailableStatusHide
 		}
 
 		// 创建修饰符
 		modifier := grabfood.NewMenuModifierWithDefaults()
 		modifier.SetId(func() string {
-			if bomTakeout.GrabModifierId != "" {
-				return bomTakeout.GrabModifierId
+			if takeoutModifierId, exists := takeoutModifierIdMap[bom.Uuid]; exists && takeoutModifierId != "" {
+				return takeoutModifierId
 			}
-			return value_object.PrefixFlavor + strconv.FormatUint(bomTakeout.ProductBomUuid, 10)
+			return value_object.PrefixFlavor + strconv.FormatUint(bom.Uuid, 10)
 		}())
 		modifier.SetName(c.truncateName(flavorName))
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
 		modifier.SetPrice(priceInCents)
-		if bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.Uuid != 0 {
-			modifier.SetNameTranslation(c.filterSupportedLanguages(bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.ToMap()))
+		if bom.ProductFlavor.MultiLanguageName.Uuid != 0 {
+			modifier.SetNameTranslation(c.filterSupportedLanguages(bom.ProductFlavor.MultiLanguageName.ToMap()))
 		}
 		modifierGroup.SetModifiers(append(modifierGroup.GetModifiers(), *modifier))
 
@@ -594,11 +623,16 @@ func (c *GrabConverter) convertProductFlavors(
 }
 
 // convertProductSauces 转换商品小料为修饰符组
-func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grabfood.MenuItem, productPackage *model.ProductPackage) error {
-	// 收集所有小料
+func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+	// 检查是否有小料
+	if takeoutProduct.ProductPackage.Uuid == 0 {
+		return nil
+	}
+
+	// 收集所有小料（从 ProductPackage.ProductBoms）
 	sauces := make([]*model.ProductBom, 0)
-	for i := range productPackage.ProductBoms {
-		bom := &productPackage.ProductBoms[i]
+	for i := range takeoutProduct.ProductPackage.ProductBoms {
+		bom := &takeoutProduct.ProductPackage.ProductBoms[i]
 		if bom.IsSauce() && !bom.IsDelete() && bom.Status == 1 {
 			sauces = append(sauces, bom)
 		}
@@ -609,7 +643,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 	}
 
 	// 根据 ProductPackage 的配置判断小料是否必选
-	maxSelection := int(productPackage.SauceMaxSelection)
+	maxSelection := int(takeoutProduct.ProductPackage.SauceMaxSelection)
 	if maxSelection == 0 {
 		maxSelection = len(sauces) // 如果未配置，使用小料总数
 	}
@@ -625,11 +659,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 	modifierGroupStatus := value_object.AvailableStatusAvailable
 	allSoldOut := true
 	allDown := true
-	for i := range productPackage.ProductBoms {
-		bom := &productPackage.ProductBoms[i]
-		if !bom.IsSauce() {
-			continue
-		}
+	for _, bom := range sauces {
 		if bom.StockNum > 0 {
 			allSoldOut = false
 		}
@@ -644,7 +674,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 	}
 
 	modifierGroup := grabfood.NewModifierGroupWithDefaults()
-	modifierGroup.SetId(fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", productPackage.Uuid))
+	modifierGroup.SetId(fmt.Sprintf("TTPOS-SAUCE-GROUP-%d", takeoutProduct.ProductPackage.Uuid))
 	modifierGroup.SetName(c.truncateName("Add Toppings"))
 	modifierGroup.SetNameTranslation(map[string]string{
 		"en": "Add Toppings",
@@ -658,7 +688,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 	})
 	modifierGroup.SetSequence(2)
 	modifierGroup.SetAvailableStatus(string(modifierGroupStatus))
-	modifierGroup.SetSelectionRangeMin(int32(productPackage.SauceMinSelection))
+	modifierGroup.SetSelectionRangeMin(int32(takeoutProduct.ProductPackage.SauceMinSelection))
 	modifierGroup.SetSelectionRangeMax(int32(maxSelection))
 
 	// 转换每个小料为修饰符
@@ -668,6 +698,9 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		if bom.ProductSauce.MultiLanguageName.Uuid != 0 {
 			sauceName = bom.ProductSauce.MultiLanguageName.GetNameByLangWithFallback("en")
 		}
+
+		// 获取小料价格：优先从外卖价格映射表中取，如果没有则使用店内价格
+		saucePrice := bom.Price
 
 		// 判断小料状态：
 		// 1. 售罄（is_sold_out = 1 或 StockNum <= 0）-> UNAVAILABLE
@@ -687,7 +720,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 		modifier.SetName(c.truncateName(sauceName))
 		modifier.SetSequence(int32(idx + 1))
 		modifier.SetAvailableStatus(string(modifierStatus))
-		modifier.SetPrice(decimal.NewFromFloat(bom.Price).Mul(decimal.NewFromInt(100)).IntPart()) // 转换为分
+		modifier.SetPrice(decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromInt(100)).IntPart()) // 转换为分
 		if bom.ProductSauce.MultiLanguageName.Uuid != 0 {
 			modifier.SetNameTranslation(c.filterSupportedLanguages(bom.ProductSauce.MultiLanguageName.ToMap()))
 		}
@@ -699,10 +732,24 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 }
 
 // convertProductAttributeGroups 转换商品属性组为修饰符组
-func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuItem *grabfood.MenuItem, productPackage *model.ProductPackage) error {
+func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+	// 检查是否有属性组
+	if takeoutProduct.ProductPackage.Uuid == 0 || len(takeoutProduct.ProductPackage.ProductPackageAttributeGroups) == 0 {
+		return nil
+	}
+
+	// 构建外卖价格映射表: key = ProductPackageAttributeUuid, value = Price
+	takeoutPriceMap := make(map[uint64]float64)
+	for i := range takeoutProduct.ProductPackageAttributeTakeouts {
+		attrTakeout := &takeoutProduct.ProductPackageAttributeTakeouts[i]
+		if !attrTakeout.IsDelete() {
+			takeoutPriceMap[attrTakeout.ProductPackageAttributeUuid] = attrTakeout.Price
+		}
+	}
+
 	// 遍历所有属性组
 	sequence := 3 // 从3开始，因为规格是1，小料是2
-	for _, packageAttrGroup := range productPackage.ProductPackageAttributeGroups {
+	for _, packageAttrGroup := range takeoutProduct.ProductPackage.ProductPackageAttributeGroups {
 		if packageAttrGroup.IsDelete() {
 			continue
 		}
@@ -750,6 +797,12 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 				attrName = packageAttr.Attribute.MultiLanguageName.GetNameByLangWithFallback("en")
 			}
 
+			// 获取属性价格：优先从外卖价格映射表中取，如果没有则使用店内价格（默认为0）
+			attrPrice := float64(0)
+			if takeoutPrice, exists := takeoutPriceMap[packageAttr.Uuid]; exists {
+				attrPrice = takeoutPrice
+			}
+
 			modifier := grabfood.NewMenuModifierWithDefaults()
 			modifier.SetId(func() string {
 				if packageAttr.Attribute.SourceId != "" {
@@ -760,7 +813,7 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 			modifier.SetName(c.truncateName(attrName))
 			modifier.SetSequence(int32(idx + 1))
 			modifier.SetAvailableStatus(string(value_object.AvailableStatusAvailable))
-			modifier.SetPrice(0)
+			modifier.SetPrice(decimal.NewFromFloat(attrPrice).Mul(decimal.NewFromInt(100)).IntPart()) // 转换为分
 			if packageAttr.Attribute.MultiLanguageName.Uuid != 0 {
 				modifier.SetNameTranslation(c.filterSupportedLanguages(packageAttr.Attribute.MultiLanguageName.ToMap()))
 			}
@@ -778,87 +831,74 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 }
 
 // convertPackageGroups 转换套餐分组为修饰符组
-func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
-	// 检查是否有外卖套餐子商品配置
-	if len(takeoutProduct.ProductPackageGroupItemTakeouts) == 0 {
+func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfood.MenuItem, takeoutProduct *model.ProductPackageTakeout) error {
+	// 检查是否有套餐分组
+	if takeoutProduct.ProductPackage.Uuid == 0 || len(takeoutProduct.ProductPackage.ProductPackageGroups) == 0 {
 		return nil
 	}
 
-	// 按分组聚合套餐子商品
-	// key: ProductPackageGroup.Uuid, value: 该分组下的所有 ProductPackageGroupItemTakeout
-	groupMap := make(map[uint64][]*model.ProductPackageGroupItemTakeout)
-	groupInfoMap := make(map[uint64]*model.ProductPackageGroup) // 存储分组信息
-
+	// 构建外卖价格映射表: key = ProductPackageGroupItemUuid, value = AddPrice
+	takeoutPriceMap := make(map[uint64]float64)
 	for i := range takeoutProduct.ProductPackageGroupItemTakeouts {
 		itemTakeout := &takeoutProduct.ProductPackageGroupItemTakeouts[i]
-		if itemTakeout.DeleteTime != 0 {
-			continue
+		if !itemTakeout.IsDelete() {
+			takeoutPriceMap[itemTakeout.ProductPackageGroupItemUuid] = itemTakeout.AddPrice
 		}
-		// 获取关联的 ProductPackageGroupItem
-		if itemTakeout.ProductPackageGroupItemUuid == 0 {
-			continue
-		}
-		groupItem := itemTakeout.ProductPackageGroupItem
+	}
 
-		// 获取关联的 ProductPackageGroup
-		if groupItem.ProductPackageGroup == nil || groupItem.ProductPackageGroup.IsDelete() {
-			continue
-		}
-		packageGroup := groupItem.ProductPackageGroup
-
-		// 检查子商品的 ProductPackage 是否有效
-		if groupItem.ProductPackage == nil || groupItem.ProductPackage.IsDelete() {
-			continue
-		}
-
-		// 聚合到分组
-		groupUuid := packageGroup.Uuid
-		groupMap[groupUuid] = append(groupMap[groupUuid], itemTakeout)
-		if _, exists := groupInfoMap[groupUuid]; !exists {
-			groupInfoMap[groupUuid] = packageGroup
+	// 将分组按 Sort 排序
+	sortedGroups := make([]*model.ProductPackageGroup, 0, len(takeoutProduct.ProductPackage.ProductPackageGroups))
+	for i := range takeoutProduct.ProductPackage.ProductPackageGroups {
+		group := &takeoutProduct.ProductPackage.ProductPackageGroups[i]
+		// 跳过已删除的分组
+		if !group.IsDelete() {
+			sortedGroups = append(sortedGroups, group)
 		}
 	}
 
 	// 如果没有有效的分组，直接返回
-	if len(groupMap) == 0 {
+	if len(sortedGroups) == 0 {
 		return nil
 	}
 
-	// 将分组按 Sort 排序
-	type groupWithSort struct {
-		group *model.ProductPackageGroup
-		items []*model.ProductPackageGroupItemTakeout
-	}
-	sortedGroups := make([]groupWithSort, 0, len(groupMap))
-	for groupUuid, items := range groupMap {
-		sortedGroups = append(sortedGroups, groupWithSort{
-			group: groupInfoMap[groupUuid],
-			items: items,
-		})
-	}
+	// 按 Sort 排序
 	sort.Slice(sortedGroups, func(i, j int) bool {
-		if sortedGroups[i].group.Sort != sortedGroups[j].group.Sort {
-			return sortedGroups[i].group.Sort < sortedGroups[j].group.Sort
+		if sortedGroups[i].Sort != sortedGroups[j].Sort {
+			return sortedGroups[i].Sort < sortedGroups[j].Sort
 		}
-		return sortedGroups[i].group.Uuid < sortedGroups[j].group.Uuid
+		return sortedGroups[i].Uuid < sortedGroups[j].Uuid
 	})
 
 	// sequence 从 4 开始（规格=1，小料=2，属性组=3）
 	sequence := 4
 
 	// 遍历所有套餐分组
-	for _, groupData := range sortedGroups {
-		packageGroup := groupData.group
-		itemTakeouts := groupData.items
-
-		// 按 ProductPackageGroupItem.Sort 排序子商品
-		sort.Slice(itemTakeouts, func(i, j int) bool {
-			itemI := itemTakeouts[i].ProductPackageGroupItem
-			itemJ := itemTakeouts[j].ProductPackageGroupItem
-			if itemI.Sort != itemJ.Sort {
-				return itemI.Sort < itemJ.Sort
+	for _, packageGroup := range sortedGroups {
+		// 过滤有效的套餐子商品
+		validItems := make([]*model.ProductPackageGroupItem, 0)
+		for i := range packageGroup.ProductPackageGroupItems {
+			groupItem := &packageGroup.ProductPackageGroupItems[i]
+			// 跳过已删除的子商品，或者关联商品已删除的子商品
+			if groupItem.IsDelete() {
+				continue
 			}
-			return itemI.Uuid < itemJ.Uuid
+			if groupItem.ProductPackage == nil || groupItem.ProductPackage.IsDelete() {
+				continue
+			}
+			validItems = append(validItems, groupItem)
+		}
+
+		// 如果没有有效的子商品，跳过该分组
+		if len(validItems) == 0 {
+			continue
+		}
+
+		// 按 Sort 排序子商品
+		sort.Slice(validItems, func(i, j int) bool {
+			if validItems[i].Sort != validItems[j].Sort {
+				return validItems[i].Sort < validItems[j].Sort
+			}
+			return validItems[i].Uuid < validItems[j].Uuid
 		})
 
 		// 获取分组名称
@@ -869,18 +909,18 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 
 		// 根据 GroupType 设置选择范围
 		// GroupType=0: 固定组（必选），必须选择所有子商品，min=子商品数量，max=子商品数量
-		// GroupType=1: 可选组，最小选择=0，最大选择=OptionalCount（本组可选数量）
+		// GroupType=1: 可选组，最小选择=OptionalMinCount，最大选择=OptionalCount（本组可选数量）
 		var minSelection, maxSelection int
 		if packageGroup.GroupType == 0 {
 			// 固定组：必须选择所有子商品
-			minSelection = len(itemTakeouts)
-			maxSelection = len(itemTakeouts)
+			minSelection = len(validItems)
+			maxSelection = len(validItems)
 		} else {
-			// 可选组：最小选择=0，最大选择=OptionalCount
+			// 可选组：最小选择=OptionalMinCount，最大选择=OptionalCount
 			maxSelection = packageGroup.OptionalCount
 			// 如果 OptionalCount 为 0 或未配置，使用子商品数量
 			if maxSelection == 0 {
-				maxSelection = len(itemTakeouts)
+				maxSelection = len(validItems)
 			}
 			minSelection = packageGroup.OptionalMinCount
 		}
@@ -910,9 +950,7 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 		modifierGroup.SetSelectionRangeMax(int32(maxSelection))
 
 		// 转换每个子商品为修饰符
-		for idx, itemTakeout := range itemTakeouts {
-			groupItem := itemTakeout.ProductPackageGroupItem
-
+		for idx, groupItem := range validItems {
 			// 获取子商品名称
 			itemName := groupItem.ProductPackage.Name
 			if groupItem.ProductPackage.MultiLanguageName.Uuid != 0 {
@@ -929,8 +967,12 @@ func (c *GrabConverter) convertPackageGroups(ctx context.Context, menuItem *grab
 				}
 			}
 
-			// 使用外卖平台的加价（从 ProductPackageGroupItemTakeout.AddPrice）
-			priceInCents := decimal.NewFromFloat(itemTakeout.AddPrice).Mul(decimal.NewFromInt(100)).IntPart()
+			// 获取加价：优先从外卖价格映射表中取，如果没有则使用店内加价
+			addPrice := groupItem.AddPrice
+			if takeoutPrice, exists := takeoutPriceMap[groupItem.Uuid]; exists {
+				addPrice = takeoutPrice
+			}
+			priceInCents := decimal.NewFromFloat(addPrice).Mul(decimal.NewFromInt(100)).IntPart()
 
 			// 创建修饰符
 			modifier := grabfood.NewMenuModifierWithDefaults()
@@ -979,27 +1021,43 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 	// 如果不是套餐，返回 false（只有套餐才需要检查子商品）
 	if takeoutProduct.ProductType == constant.ProductTypePackage {
 		// 如果是套餐，则判断套餐子商品是否都售罄
-		if len(takeoutProduct.ProductPackageGroupItemTakeouts) == 0 {
-			// 套餐没有子商品，返回 true
+		if len(takeoutProduct.ProductPackage.ProductPackageGroups) == 0 {
+			// 套餐没有分组，返回 true
 			return true
 		}
 		// 检查所有子商品是否都售罄或下架
 		hasAvailableSubProduct := false
-		for i := range takeoutProduct.ProductPackageGroupItemTakeouts {
-			subItem := &takeoutProduct.ProductPackageGroupItemTakeouts[i]
-			if subItem.ProductPackageGroupItem.ProductBom == nil {
+		for i := range takeoutProduct.ProductPackage.ProductPackageGroups {
+			group := &takeoutProduct.ProductPackage.ProductPackageGroups[i]
+			if group.IsDelete() {
 				continue
 			}
-			bom := subItem.ProductPackageGroupItem.ProductBom
-			if !bom.IsFlavor() {
-				continue
+			for j := range group.ProductPackageGroupItems {
+				groupItem := &group.ProductPackageGroupItems[j]
+				if groupItem.IsDelete() || groupItem.ProductPackage == nil {
+					continue
+				}
+				// 检查子商品的规格
+				for k := range groupItem.ProductPackage.ProductBoms {
+					bom := &groupItem.ProductPackage.ProductBoms[k]
+					if !bom.IsFlavor() || bom.IsDelete() {
+						continue
+					}
+					// 如果有任何一个子商品的规格可用（有库存且未下架），则套餐可用
+					if bom.StockNum <= 0 {
+						hasAvailableSubProduct = true
+						break
+					}
+				}
+				if hasAvailableSubProduct {
+					break
+				}
 			}
-			// 如果有任何一个子商品售罄，则套餐售罄
-			if bom.StockNum <= 0 {
-				hasAvailableSubProduct = true
+			if hasAvailableSubProduct {
 				break
 			}
 		}
+		// 返回 true 表示所有子商品都售罄/下架，返回 false 表示至少有一个可用
 		return hasAvailableSubProduct
 	} else {
 		// 如果没有规格，商品本身就不能售罄
@@ -1012,7 +1070,7 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 		for i := range takeoutProduct.ProductPackage.ProductBoms {
 			bom := &takeoutProduct.ProductPackage.ProductBoms[i]
 			// 只检查规格（Flavor）
-			if !bom.IsFlavor() {
+			if !bom.IsFlavor() || bom.IsDelete() {
 				continue
 			}
 			hasFlavor = true
@@ -1020,7 +1078,7 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 			// 1. 已下架（Status == 0）
 			// 2. 售罄状态（IsSoldOut == 1）
 			// 3. 库存为0（StockNum <= 0）
-			isOffline := bom.Status == 0 || bom.IsDelete()
+			isOffline := bom.Status == 0
 			isSoldOut := bom.StockNum <= 0
 			// 如果有任何一个规格可用（上架且未售罄），则商品可用
 			if !isOffline && !isSoldOut {
