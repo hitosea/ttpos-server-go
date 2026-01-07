@@ -3346,6 +3346,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			productPackageAttributeGroup := model.ProductPackageAttributeGroup{
 				ProductPackageUuid:        productPackageUuid,
 				ProductAttributeGroupUuid: productAttributeGroup.Uuid,
+				MaxSelection:              uint(len(attributeUuids)),
 			}
 			err = tx.Model(&model.ProductPackageAttributeGroup{}).Create(&productPackageAttributeGroup).Error
 			if err != nil {
@@ -3917,6 +3918,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 				newProductPackageAttributeGroup := model.ProductPackageAttributeGroup{
 					ProductPackageUuid:        productPackageUuid,
 					ProductAttributeGroupUuid: attributeGroup.Uuid,
+					MaxSelection:              uint(len(attributeUuids)),
 				}
 				tx.Model(&model.ProductPackageAttributeGroup{}).Create(&newProductPackageAttributeGroup)
 				productPackageAttributeGroupMap[productPackageUuid] = newProductPackageAttributeGroup.Uuid
