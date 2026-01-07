@@ -467,5 +467,22 @@
     "添加门店": "Add store",
     "手机号": "Mobile Number",
     "关联门店和角色": "Associated stores and roles",
-    "无角色": "No role"
+    "无角色": "No role",
+    "日志管理": "Log Management",
+    "类型": "Type",
+    "全部": "All",
+    "TTPOS推送到平台": "TTPOS push to platform",
+    "平台推送到TTPOS": "Platform push to TTPOS",
+    "进行中": "In progress",
+    "成功": "Success",
+    "失败": "Failure",
+    "门店": "Store",
+    "时间": "Time",
+    "原因": "Reason",
+    "不修改请留空": "Leave blank if no changes",
+    "请输入正确的手机号格式": "Please enter a valid mobile phone number format",
+    "请至少添加一个门店": "Please add at least one store",
+    "邮箱/手机号/员工ID": "Email/Mobile Number/Employee ID",
+    "添加账号": "Add account",
+    "导入日志": "Import logs"
 }

@@ -49,25 +49,29 @@ services:
     networks:
       bmp-mid-network:
         ipv4_address: 10.0.11.41
-    command: sh mqbroker
+    command: sh mqbroker -c /opt/rocketmq/conf/broker-dev.conf
+    volumes:
+      - ../docker/rocketmq/conf/broker-dev.conf:/opt/rocketmq/conf/broker-dev.conf
+      # 添加持久化存储，挂载到宿主机有足够空间的目录
+      - ../docker/rocketmq/data:/home/rocketmq/store
 
-  mq-proxy:
-    image: apache/rocketmq:5.3.4
-    container_name: "bmp-rmqproxy-${APP_ID}"
-    networks:
-      bmp-mid-network:
-        ipv4_address: 10.0.11.42
-    depends_on:
-      - broker
-      - namesrv
-    ports:
-      - "28080:8080"
-      - "28081:8081"
-    restart: on-failure
-    environment:
-      - NAMESRV_ADDR=namesrv:9876
-      - JVM_OPTS="-Xms256m -Xmx1g -Xss256k -XX:+UseG1GC -XX:MaxDirectMemorySize=1g"
-    command: sh mqproxy
+  # mq-proxy:
+  #   image: apache/rocketmq:5.3.4
+  #   container_name: "bmp-rmqproxy-${APP_ID}"
+  #   networks:
+  #     bmp-mid-network:
+  #       ipv4_address: 10.0.11.42
+  #   depends_on:
+  #     - broker
+  #     - namesrv
+  #   ports:
+  #     - "28080:8080"
+  #     - "28081:8081"
+  #   restart: on-failure
+  #   environment:
+  #     - NAMESRV_ADDR=namesrv:9876
+  #     - JVM_OPTS="-Xms256m -Xmx1g -Xss256k -XX:+UseG1GC -XX:MaxDirectMemorySize=1g"
+  #   command: sh mqproxy
   mq-dashboard:
     image: apacherocketmq/rocketmq-dashboard:latest
     container_name: "bmp-dashboard-${APP_ID}"

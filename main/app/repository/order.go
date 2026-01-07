@@ -693,15 +693,16 @@ func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64)
 }
 
 type OrderCartInfoOption struct {
-	UnorderedH5Product   int    // 1-查询H5未下单的商品 2-查询H5已下单的商品 3-查询H5已下单的商品和被拒单的商品
-	H5OrderUuid          uint64 // 指定某个h5订单
-	FilterEndStatus      bool   // 指定传入的salebill状态
-	NotDeleted           bool   // 查询未被删除的商品
-	NoQueryMustPlan      bool   // 不查询必点信息
-	H5AutoAdd            bool   // 是否是H5自动添加的商品
-	NoAutoAdd            bool   // 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
-	CanCloseMustPlanView bool   // 是否可以关闭必点弹窗
-	CompanyUuid          uint64 // 公司UUID，用于控制是否使用对象存储层
+	UnorderedH5Product   int             // 1-查询H5未下单的商品 2-查询H5已下单的商品 3-查询H5已下单的商品和被拒单的商品
+	H5OrderUuid          uint64          // 指定某个h5订单
+	FilterEndStatus      bool            // 指定传入的salebill状态
+	NotDeleted           bool            // 查询未被删除的商品
+	NoQueryMustPlan      bool            // 不查询必点信息
+	H5AutoAdd            bool            // 是否是H5自动添加的商品
+	NoAutoAdd            bool            // 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
+	CanCloseMustPlanView bool            // 是否可以关闭必点弹窗
+	CompanyUuid          uint64          // 公司UUID，用于控制是否使用对象存储层
+	SaleBill             *model.SaleBill // 用于避免助手端的ping接口两次查询salebill信息
 }
 
 const (
@@ -711,6 +712,13 @@ const (
 )
 
 type OrderCartInfoOptionFunc func(option *OrderCartInfoOption)
+
+// WithSaleBill 设置销售账单
+func WithSaleBill(saleBill *model.SaleBill) OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.SaleBill = saleBill
+	}
+}
 
 // WithUnorderedH5Product 查询H5未下单的商品
 func WithUnorderedH5Product() OrderCartInfoOptionFunc {
@@ -934,61 +942,66 @@ func (r *orderRepo) GetOrderCartInfoInDeskSaleBill(saleBillUuid uint64, filterPr
 	repo := NewSaleBillRepo(r.db)
 	// 当销售账单是桌台订单时，额外查询桌台信息
 	if adapter.IsObjectStorageCacheEnabled(option.CompanyUuid) {
-		// 先获取 SaleBill（不使用 Preload）
-		saleBill, errDesk := repo.GetSaleBill(
-			CommonRepo.WhereByUuid(saleBillUuid),
-			// 只 Preload SaleOrders 和 SaleOrderProducts（这些是必须的，因为需要过滤条件）
-			CommonRepo.Preload(
-				WithPreload{
-					Query: "SaleOrders",
-					Args: []interface{}{
-						func(db *gorm.DB) *gorm.DB {
-							return db.Where("delete_time = ?", constant.NotDeleted)
+		var saleBill *model.SaleBill
+		if option.SaleBill != nil {
+			saleBill = option.SaleBill
+		} else {
+			// 先获取 SaleBill（不使用 Preload）
+			newSaleBill, errDesk := repo.GetSaleBill(
+				CommonRepo.WhereByUuid(saleBillUuid),
+				// 只 Preload SaleOrders 和 SaleOrderProducts（这些是必须的，因为需要过滤条件）
+				CommonRepo.Preload(
+					WithPreload{
+						Query: "SaleOrders",
+						Args: []interface{}{
+							func(db *gorm.DB) *gorm.DB {
+								return db.Where("delete_time = ?", constant.NotDeleted)
+							},
 						},
 					},
-				},
-			),
-			CommonRepo.Preload(
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts",
-					Args:  []any{filterProduct},
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.H5Order",
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
-					Args: []any{
-						CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-							return db.Order("id asc")
-						}),
-						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				),
+				CommonRepo.Preload(
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts",
+						Args:  []any{filterProduct},
 					},
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
-					Args: []any{
-						CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-							return db.Order("product_bom_uuid asc")
-						}),
-						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.H5Order",
 					},
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
-				},
-			),
-		)
-		if errDesk != nil {
-			return nil, errors.WithMessage(errDesk)
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+						Args: []any{
+							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+								return db.Order("id asc")
+							}),
+							CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+						},
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+						Args: []any{
+							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+								return db.Order("product_bom_uuid asc")
+							}),
+							CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+						},
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
+					},
+				),
+			)
+			if errDesk != nil {
+				return nil, errors.WithMessage(errDesk)
+			}
+			saleBill = &newSaleBill
 		}
-
 		// 使用对象存储层自动注入关联对象
 		ctx := context.NewContext(context.WithCompanyUuid(option.CompanyUuid), context.WithContext(goCtx.Background()))
 
@@ -1000,11 +1013,11 @@ func (r *orderRepo) GetOrderCartInfoInDeskSaleBill(saleBillUuid uint64, filterPr
 		objectStorage := persistence.NewObjectStorage[any]()
 
 		// 注入关联对象
-		if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
+		if err := objectStorage.PreloadWithConfig(ctx, saleBill, associations); err != nil {
 			return nil, errors.WithMessage(fmt.Errorf("对象存储层注入失败: %v", err))
 		}
 
-		bill := &saleBill
+		bill := saleBill
 		// 计算一次金额，避免错误
 		bill.CalcAll()
 		return &ro.ShopCartRepo{SaleBill: bill}, nil
@@ -1036,98 +1049,6 @@ func (r *orderRepo) GetOrderCartInfoInDeskSaleBill(saleBillUuid uint64, filterPr
 			}
 		}
 
-		bill := &saleBill
-		// 计算一次金额，避免错误
-		bill.CalcAll()
-		return &ro.ShopCartRepo{SaleBill: bill}, nil
-	}
-}
-
-// 获取点餐销售账单的购物车信息
-func (r *orderRepo) GetOrderCartInfoInInstantSaleBill(saleBillUuid uint64, filterProduct func(*gorm.DB) *gorm.DB, option OrderCartInfoOption) (*ro.ShopCartRepo, error) {
-	// 当销售账单是点餐订单时，额外查询账单信息
-	if adapter.IsObjectStorageCacheEnabled(option.CompanyUuid) {
-		// 先获取 SaleBill（不使用 Preload）
-		saleBill, err := NewSaleBillRepo(r.db).GetSaleBill(
-			CommonRepo.WhereByUuid(saleBillUuid),
-			// 只 Preload SaleOrders 和 SaleOrderProducts（这些是必须的，因为需要过滤条件）
-			CommonRepo.Preload(
-				WithPreload{
-					Query: "SaleOrders",
-					Args: []interface{}{
-						func(db *gorm.DB) *gorm.DB {
-							return db.Where("delete_time = ?", constant.NotDeleted)
-						},
-					},
-				},
-			),
-			CommonRepo.Preload(
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts",
-					Args:  []any{filterProduct},
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.H5Order",
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.OrderItemRemarks",
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
-					Args: []any{
-						CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-							return db.Order("id asc")
-						}),
-						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-					},
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
-					Args: []any{
-						CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-							return db.Order("product_bom_uuid asc")
-						}),
-						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-					},
-				},
-				WithPreload{
-					Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
-				},
-			),
-		)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-
-		// 使用对象存储层自动注入关联对象
-		ctx := context.NewContext(context.WithCompanyUuid(option.CompanyUuid), context.WithContext(goCtx.Background()))
-
-		// 获取关联配置（缓存配置和初始化已在 objectstorage 模块中完成）
-		associations := getSaleBillAssociationsForOrderCart(ctx, r.db, cache.Global)
-
-		// 创建对象存储实例（使用 any 类型用于 PreloadWithConfig，但内部 QueryFunc 使用具体类型）
-		// 注意：PreloadWithConfig 只需要 associations，不需要 config
-		objectStorage := persistence.NewObjectStorage[any]()
-
-		// 注入关联对象
-		if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
-			return nil, errors.WithMessage(fmt.Errorf("对象存储层注入失败: %v", err))
-		}
-
-		bill := &saleBill
-		// 计算一次金额，避免错误
-		bill.CalcAll()
-		return &ro.ShopCartRepo{SaleBill: bill}, nil
-	} else {
-		// 当销售账单是点餐订单时，只查询账单信息
-		// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
-		saleBill, errSaleBill := r.querySaleBillInfo(saleBillUuid, filterProduct)
-		if errSaleBill != nil {
-			return nil, errors.WithMessage(fmt.Errorf("GetOrderCartInfo errSaleBill: %v", errSaleBill))
-		}
 		bill := &saleBill
 		// 计算一次金额，避免错误
 		bill.CalcAll()
@@ -1771,6 +1692,7 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 	if option.MemberSaleOrderUuid != 0 {
 		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
 	}
+	ttt := time.Now()
 	saleBill, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1880,6 +1802,16 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 			WithPreload{
 				Query: "Cashier",
 			},
+			// ==================== 兼容获取购物车信息的数据,多一些数据,为以后统一一个查询做准备.同时优化助手端ping接口 ====================
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.H5Order",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductMustPlan",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductionOrderProduct",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		uuidFilter,
@@ -1887,7 +1819,7 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
-
+	fmt.Println("querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
 	// 使用对象存储层自动注入关联对象（Desk）
 	companyUuid := GetCompanyUuid(r.db)
 	if companyUuid != 0 {
