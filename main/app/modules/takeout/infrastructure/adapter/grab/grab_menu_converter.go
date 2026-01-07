@@ -1044,7 +1044,7 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 						continue
 					}
 					// 如果有任何一个子商品的规格可用（有库存且未下架），则套餐可用
-					if bom.StockNum <= 0 {
+					if bom.StockNum < groupItem.Num {
 						hasAvailableSubProduct = true
 						break
 					}
