@@ -144,7 +144,7 @@ func (h *TakeoutHandler) AcceptOrder(c *gin.Context) {
 		return
 	}
 	// 验证支付方式是否在班次中
-	if err := h.takeoutSrv.ValidatePaymentMethod(ctx, &req); err != nil {
+	if err := h.takeoutSrv.ValidatePaymentMethod(ctx, &req, "accept"); err != nil {
 		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
@@ -199,7 +199,7 @@ func (h *TakeoutHandler) CallRider(c *gin.Context) {
 	}
 
 	// 验证支付方式是否在班次中
-	if err := h.takeoutSrv.ValidatePaymentMethod(ctx, &request.TakeoutOrderAcceptReq{Uuid: req.Uuid}); err != nil {
+	if err := h.takeoutSrv.ValidatePaymentMethod(ctx, &request.TakeoutOrderAcceptReq{Uuid: req.Uuid}, "call_rider"); err != nil {
 		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
