@@ -10,7 +10,7 @@
 | ---------- | -------- |
 | **提案人** | rikugun   |
 | **日期**   | 2026-01-07   |
-| **目标版本** | v2.11.0 |
+| **目标版本** | v2.13.1 |
 | **状态**   | 待评审   |
 | **关联任务** | - |
 | **关联 Spec** | -      |
@@ -279,14 +279,15 @@ import "github.com/gogf/gf/v2/frame/g"
 // OAuthTokenReq OAuth 令牌请求
 // Content-Type: application/x-www-form-urlencoded
 type OAuthTokenReq struct {
-	g.Meta       `path:"/v1/lmwn/oauth2/token" method:"post" tags:"LINE MAN OAuth" summary:"OAuth 认证接口"`
+	g.Meta       `path:"/oauth2/token" method:"post" tags:"LINE MAN OAuth" summary:"OAuth 认证接口"`
 	GrantType    string `json:"grant_type" v:"required|in:client_credentials#授权类型不能为空|授权类型必须为client_credentials" dc:"OAuth 授权类型，固定值：client_credentials"`
 	ClientId     string `json:"client_id" v:"required#客户端ID不能为空" dc:"LINE MAN 分配的客户端 ID"`
 	ClientSecret string `json:"client_secret" v:"required#客户端密钥不能为空" dc:"LINE MAN 分配的客户端密钥"`
 }
 
-// OAuthTokenResp OAuth 令牌响应
-type OAuthTokenResp struct {
+// OAuthTokenRes OAuth 令牌响应
+type OAuthTokenRes struct {
+	g.Meta      `mime:"application/json"`
 	AccessToken string `json:"access_token" dc:"访问令牌，用于后续 API 调用"`
 	TokenType   string `json:"token_type" dc:"令牌类型，固定值：Bearer"`
 	ExpiresIn   int    `json:"expires_in" dc:"令牌有效期（秒），通常为 3600"`
@@ -298,7 +299,7 @@ type OAuthTokenResp struct {
 ```go
 // PlaceOrderReq 订单创建请求
 type PlaceOrderReq struct {
-	g.Meta            `path:"/v1/lmwn/partners/:partnerId/stores/:storeId/orders" method:"post" tags:"LINE MAN Order" summary:"接收订单创建通知"`
+	g.Meta            `path:"/partners/:partnerId/stores/:storeId/orders" method:"post" tags:"LINE MAN Order" summary:"接收订单创建通知"`
 	PartnerId         string               `json:"partnerId" v:"required#合作伙伴ID不能为空" dc:"合作伙伴唯一 ID"`
 	StoreId           string               `json:"storeId" v:"required#门店ID不能为空" dc:"门店唯一 ID"`
 	OrderId           string               `json:"orderId" v:"required|length:1,20#订单ID不能为空|订单ID长度不能超过20" dc:"订单唯一 ID，格式：LMF-yyMMdd-{generated number}"`
@@ -341,6 +342,7 @@ type LinemanCommonResp struct {
 - 使用 `dc` 标签添加字段描述（用于文档生成）
 - OAuth 认证使用 `application/x-www-form-urlencoded`，其他接口使用 `application/json`
 - 路径参数使用 `:paramName` 格式（如 `:partnerId`、`:storeId`）
+- **路由前缀**: API 定义中的 path 不包含 `/v1/lmwn/` 前缀，实际路由绑定时手动添加
 
 ### 集成说明文档大纲
 
