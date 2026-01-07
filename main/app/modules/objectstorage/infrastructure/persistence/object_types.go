@@ -77,4 +77,7 @@ const (
 
 	// Member 会员
 	ObjectTypeMember = "member"
+
+	// BusinessSetting 门店业务设置
+	ObjectTypeBusinessSetting = "business_setting"
 )

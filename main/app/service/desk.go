@@ -260,6 +260,7 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 		if ctx.GetSource() == constant.SourceTablet { // 平板端查询购物车必点信息时，不自动加购
 			opts = append(opts, repository.WithNoAutoAdd())
 		}
+		opts = append(opts, repository.WithCompanyUuid(ctx.GetCompanyUuid()))
 		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid, opts...)
 		if err != nil {
 			return res, errors.WithMessage(errors.New("订单不存在"), fmt.Sprintf("获取销售账单信息失败,SaleBillUuid: %d", desk.SaleBillUuid))
