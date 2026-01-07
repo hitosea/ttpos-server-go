@@ -1171,6 +1171,10 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 		return nil, errors.WithMessage(fmt.Errorf("GetOrderCartInfo: %v, saleBillUuid: %d", err, saleBillUuid))
 	}
 
+	xxx := time.Now()
+	defer func() {
+		fmt.Println("ms: ", time.Since(xxx).Milliseconds())
+	}()
 	if saleBill.IsDeskSaleBill() {
 		if saleBill.IsBuffetSaleBill() {
 			return r.GetOrderCartInfoInDeskSaleBill(saleBillUuid, filterProduct, *option, false)

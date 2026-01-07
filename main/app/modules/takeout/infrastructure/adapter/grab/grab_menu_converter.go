@@ -689,7 +689,6 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 	modifierGroup.SetSequence(2)
 	modifierGroup.SetAvailableStatus(string(modifierGroupStatus))
 	modifierGroup.SetSelectionRangeMin(int32(takeoutProduct.ProductPackage.SauceMinSelection))
-	modifierGroup.SetSelectionRangeMax(int32(maxSelection))
 
 	// 转换每个小料为修饰符
 	for idx, bom := range sauces {
@@ -725,6 +724,12 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 			modifier.SetNameTranslation(c.filterSupportedLanguages(bom.ProductSauce.MultiLanguageName.ToMap()))
 		}
 		modifierGroup.SetModifiers(append(modifierGroup.GetModifiers(), *modifier))
+	}
+
+	if maxSelection > len(modifierGroup.GetModifiers()) {
+		modifierGroup.SetSelectionRangeMax(int32(len(modifierGroup.GetModifiers())))
+	} else {
+		modifierGroup.SetSelectionRangeMax(int32(maxSelection))
 	}
 
 	menuItem.SetModifierGroups(append(menuItem.GetModifierGroups(), *modifierGroup))
@@ -822,6 +827,13 @@ func (c *GrabConverter) convertProductAttributeGroups(ctx context.Context, menuI
 
 		// 只有包含修饰符的组才添加
 		if len(modifierGroup.Modifiers) > 0 {
+			// 如果最大可选数量大于修饰符数量，则设置为修饰符数量
+			if maxSelection > len(modifierGroup.GetModifiers()) {
+				modifierGroup.SetSelectionRangeMax(int32(len(modifierGroup.GetModifiers())))
+			} else {
+				modifierGroup.SetSelectionRangeMax(int32(maxSelection))
+			}
+			// 添加修饰符组
 			menuItem.SetModifierGroups(append(menuItem.GetModifierGroups(), *modifierGroup))
 			sequence++
 		}
@@ -1006,6 +1018,13 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfo
 
 		// 只有包含修饰符的组才添加
 		if len(modifierGroup.Modifiers) > 0 {
+			// 如果最大可选数量大于修饰符数量，则设置为修饰符数量
+			if maxSelection > len(modifierGroup.GetModifiers()) {
+				modifierGroup.SetSelectionRangeMax(int32(len(modifierGroup.GetModifiers())))
+			} else {
+				modifierGroup.SetSelectionRangeMax(int32(maxSelection))
+			}
+			// 添加修饰符组
 			menuItem.SetModifierGroups(append(menuItem.GetModifierGroups(), *modifierGroup))
 			sequence++
 		}
