@@ -227,11 +227,7 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 	// 调用 RPC 接口
 	err = client.UpdateMenuModifier(ctx, req)
 	if err != nil {
-		logger.Logger.Error("更新菜单修饰符失败",
-			zap.Error(err),
-			zap.String("merchantId", merchantId),
-			zap.String("modifierId", modifierId))
-		return errors.WithMessage(err, "更新菜单修饰符失败")
+		return err
 	}
 
 	return nil
