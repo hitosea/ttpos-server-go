@@ -13,11 +13,11 @@ import (
 
 type ITakeoutHelpSrv interface {
 	// 验证支付方式是否在班次中
-	ValidatePaymentMethod(ctx context.Context, req *request.TakeoutOrderAcceptReq) error
+	ValidatePaymentMethod(ctx context.Context, req *request.TakeoutOrderAcceptReq, action string) error
 }
 
 // ValidatePaymentMethod  验证支付方式是否在班次中
-func (s *takeoutSrv) ValidatePaymentMethod(ctx context.Context, req *request.TakeoutOrderAcceptReq) error {
+func (s *takeoutSrv) ValidatePaymentMethod(ctx context.Context, req *request.TakeoutOrderAcceptReq, action string) error {
 	db := ctx.GetDB()
 	staff := ctx.GetStaff()
 	orderRepo := persistence.NewTakeoutOrderRepo(db)
@@ -46,7 +46,10 @@ func (s *takeoutSrv) ValidatePaymentMethod(ctx context.Context, req *request.Tak
 		return errors.WithMessage(err)
 	}
 	if !isValid {
-		return errors.New("请交班后再重新选择该支付方式")
+		if action == "accept" {
+			return errors.New("请交班后再重新接单")
+		}
+		return errors.New("请交班后再重新完成")
 	}
 	return nil
 }

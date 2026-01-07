@@ -540,7 +540,7 @@ func (c *GrabConverter) convertProductFlavors(
 		if bom.StockNum > 0 {
 			allSoldOut = false
 		}
-		if bom.Status != 0 {
+		if !bom.IsDelete() {
 			allDown = false
 		}
 	}
@@ -595,7 +595,7 @@ func (c *GrabConverter) convertProductFlavors(
 			// 规格售罄
 			modifierStatus = value_object.AvailableStatusUnavailable
 		}
-		if bom.Status == 0 || bom.IsDelete() {
+		if bom.IsDelete() {
 			modifierStatus = value_object.AvailableStatusHide
 		}
 
@@ -1075,13 +1075,8 @@ func (c *GrabConverter) isAllFlavorsSoldOut(takeoutProduct *model.ProductPackage
 			}
 			hasFlavor = true
 			// 检查规格是否可用：
-			// 1. 已下架（Status == 0）
-			// 2. 售罄状态（IsSoldOut == 1）
-			// 3. 库存为0（StockNum <= 0）
-			isOffline := bom.Status == 0
-			isSoldOut := bom.StockNum <= 0
 			// 如果有任何一个规格可用（上架且未售罄），则商品可用
-			if !isOffline && !isSoldOut {
+			if bom.StockNum > 0 {
 				allUnavailable = false
 				break
 			}

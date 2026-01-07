@@ -1054,6 +1054,10 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 		// 3. 执行打印
 		printerRepo := printer.NewPrinterRepo(ctx, "")
 		printerRepo.SetFinishedTime(time.Now().Unix())
+		// 送厨打印
+		if printType == printerConst.PrinterProductTypeKitchen {
+			printerRepo.PrintingDishes(printerConst.PrinterProductTypePay, printOrder)
+		}
 		printerRepo.PrintingDishes(printType, printOrder)
 	})
 

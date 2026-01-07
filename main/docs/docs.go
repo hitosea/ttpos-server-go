@@ -47972,6 +47972,10 @@ const docTemplate = `{
                 "price": {
                     "description": "外卖规格价格",
                     "type": "number"
+                },
+                "uuid": {
+                    "description": "外卖规格UUID",
+                    "type": "integer"
                 }
             }
         },

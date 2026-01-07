@@ -168,7 +168,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 func (h *Handler) ClearL1Cache(c *gin.Context) {
 	// 使用 CommitSHA 作为身份验证，确保只有同一个构建版本才能调用
 	apiKey := c.GetHeader("X-API-KEY")
-	if apiKey != config.CommitSHA && config.Server.Mode != "debug" {
+	if apiKey != config.CommitSHA {
 		helper.Fail(c, constant.CodeAccessDenied, "Unauthorized: Invalid API Key")
 		c.Abort()
 		return
@@ -186,7 +186,7 @@ func (h *Handler) ClearL1Cache(c *gin.Context) {
 func (h *Handler) GetCacheHitRateStats(c *gin.Context) {
 	// 使用 CommitSHA 作为身份验证，确保只有同一个构建版本才能调用
 	apiKey := c.GetHeader("X-API-KEY")
-	if apiKey != config.CommitSHA && config.Server.Mode != "debug" {
+	if apiKey != config.CommitSHA {
 		helper.Fail(c, constant.CodeAccessDenied, "Unauthorized: Invalid API Key")
 		c.Abort()
 		return
