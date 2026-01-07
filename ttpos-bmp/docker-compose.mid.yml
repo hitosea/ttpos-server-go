@@ -44,8 +44,6 @@ services:
     environment:
       - NAMESRV_ADDR=namesrv:9876
       - JVM_OPTS="-Xms256m -Xmx1g -Xss256k -XX:+UseG1GC -XX:MaxDirectMemorySize=1g"
-      # 调整磁盘使用阈值（默认90%）
-      - diskMaxUsedSpaceRatio=99
     depends_on:
       - namesrv
     networks:
