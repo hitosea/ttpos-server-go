@@ -18,3 +18,23 @@ type Grab struct {
 	Environment  string        `json:"environment"`  // production 或 staging
 	Timeout      time.Duration `json:"timeout"`      // API 超时时间
 }
+
+// Lineman LINE MAN 平台配置（platform 节点）
+type Lineman struct {
+	ClientID     string        `json:"clientId"`     // OAuth Client ID
+	ClientSecret string        `json:"clientSecret"` // OAuth Client Secret
+	SecretKey    string        `json:"secretKey"`    // JWT 签名密钥
+	Environment  string        `json:"environment"`  // production 或 staging
+	Timeout      time.Duration `json:"timeout"`      // API 超时时间
+}
+
+// LinemanPartner LINE MAN Partner 配置
+type LinemanPartner struct {
+	ClientID     string        `json:"clientId"`     // OAuth Client ID
+	ClientSecret string        `json:"clientSecret"` // OAuth Client Secret
+	Environment  string        `json:"environment"`  // production 或 staging
+	Timeout      time.Duration `json:"timeout"`      // API 超时时间
+}
+
+// LinemanPartnerMap LINE MAN Partner 配置映射（partner_code -> config）
+type LinemanPartnerMap map[string]*LinemanPartner

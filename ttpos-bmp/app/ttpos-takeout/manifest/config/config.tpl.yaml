@@ -80,6 +80,19 @@ app:
           scope: "food.partner_api"     # 未配置时逻辑默认 food.partner_api
           environment: "$GRAB_ENV"        # production 或 staging
           timeout: "60s"
+    lineman:
+      platform:
+        clientId: "$LINEMAN_PLATFORM_CLIENT_ID"
+        clientSecret: "$LINEMAN_PLATFORM_CLIENT_SECRET"
+        secretKey: "$LINEMAN_PLATFORM_SECRET_KEY"  # JWT 签名密钥
+        environment: "$LINEMAN_ENV"  # production 或 staging
+        timeout: "30s"
+      partner:
+        $LINEMAN_PARTNER_DEFAULT_CLIENT_ID:
+          clientId: "$LINEMAN_PARTNER_DEFAULT_CLIENT_ID"
+          clientSecret: "$LINEMAN_PARTNER_DEFAULT_CLIENT_SECRET"
+          environment: "$LINEMAN_ENV"  # production 或 staging
+          timeout: "60s"
 
 
 queue:
