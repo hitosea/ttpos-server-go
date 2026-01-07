@@ -70,8 +70,8 @@ func (s *sShopActivate) ActivateShop(ctx context.Context, req *shop.ActivateShop
 //   - res: 激活结果
 //   - err: 操作过程中产生的错误（若有）
 func (s *sShopActivate) activateLineman(ctx context.Context, shopUUID uint64, requestID string) (*shop.ActivateShopResp, error) {
-	// 创建配置记录（状态 INACTIVE）
-	err := service.ShopProviderCfg().UpsertShopProviderCfg(ctx, shopUUID, string(consts.ProviderLineman), "", consts.ProviderShopStatusInactive)
+	// 创建配置记录（状态 ACTIVE） 直接激活
+	err := service.ShopProviderCfg().UpsertShopProviderCfg(ctx, shopUUID, string(consts.ProviderLineman), "", consts.ProviderShopStatusActive)
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopActivate] LINE MAN 渠道激活失败: shop_uuid=%d, error=%v", shopUUID, err)
 		return nil, gerror.Wrap(err, "LINE MAN 渠道激活失败")
