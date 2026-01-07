@@ -215,6 +215,7 @@ type BusinessTimePeriodReq struct {
 	OrderInstant      int    `form:"order_instant" json:"order_instant"`             // 点餐订单， 0=否、 1=是
 	OrderDesk         int    `form:"order_desk" json:"order_desk"`                   // 桌台订单， 0=否、 1=是
 	OrderTakeout      int    `form:"order_takeout" json:"order_takeout"`             // 外送订单， 0=否、 1=是
+	OrderDelivery     int    `form:"order_delivery" json:"order_delivery"`           // 外卖订单， 0=否、 1=是
 	StatisticsType    int    `form:"statistics_type" json:"statistics_type"`         // 统计类型， 0=开台时间、 1=结账时间
 	ExcludeDataManage bool   `form:"exclude_data_manage" json:"exclude_data_manage"` // 是否排除数据管理订单
 }
@@ -241,6 +242,7 @@ type StatisticsPaymentMethodReq struct {
 	OrderInstant       int      `form:"order_instant" json:"order_instant"`               // 点餐订单， 0=否、 1=是
 	OrderDesk          int      `form:"order_desk" json:"order_desk"`                     // 桌台订单， 0=否、 1=是
 	OrderTakeout       int      `form:"order_takeout" json:"order_takeout"`               // 外送订单， 0=否、 1=是
+	OrderDelivery      int      `form:"order_delivery" json:"order_delivery"`             // 外卖订单， 0=否、 1=是
 	PaymentMethodList  string   `form:"payment_method_list" json:"payment_method_list"`   // 支付方式UUID列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割（优先使用）
 	PaymentMethodNames []string `form:"payment_method_names" json:"payment_method_names"` // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
 	ExcludeDataManage  bool     `form:"exclude_data_manage" json:"exclude_data_manage"`   // 是否排除数据管理订单

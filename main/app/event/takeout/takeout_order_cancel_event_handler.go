@@ -79,6 +79,15 @@ func (s *takeoutOrderCancelEventSubscriber) Handle(domainEvent event.DomainEvent
 		// 成功后，推送到厨显端更新订单
 		sendUpdateKitchenWebSocketNotification(orderCancelEvent.CompanyUuid)
 
+		// 记录高峰期（减少）
+		db := dbm.GetDB(orderCancelEvent.CompanyUuid)
+		if err := recordTakeoutOrderPeakTime(db, orderCancelEvent.CompanyUuid, orderCancelEvent.OrderUuid, "dec"); err != nil {
+			logger.Logger.Error("记录外卖订单高峰期失败",
+				zap.Uint64("orderUuid", orderCancelEvent.OrderUuid),
+				zap.String("takeoutOrderUuid", orderCancelEvent.TakeoutOrderUuid),
+				zap.Error(err))
+		}
+
 		// 异步打印退单联
 		if orderCancelEvent.OrderState == valueObject.TakeoutOrderStateCanceled {
 			utils.Go(func() {
