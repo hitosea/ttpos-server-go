@@ -44,6 +44,8 @@ services:
     environment:
       - NAMESRV_ADDR=namesrv:9876
       - JVM_OPTS="-Xms256m -Xmx1g -Xss256k -XX:+UseG1GC -XX:MaxDirectMemorySize=1g"
+      # 调整磁盘使用阈值（默认90%）
+      - diskMaxUsedSpaceRatio=99
     depends_on:
       - namesrv
     networks:
@@ -51,23 +53,23 @@ services:
         ipv4_address: 10.0.11.41
     command: sh mqbroker
 
-  mq-proxy:
-    image: apache/rocketmq:5.3.4
-    container_name: "bmp-rmqproxy-${APP_ID}"
-    networks:
-      bmp-mid-network:
-        ipv4_address: 10.0.11.42
-    depends_on:
-      - broker
-      - namesrv
-    ports:
-      - "28080:8080"
-      - "28081:8081"
-    restart: on-failure
-    environment:
-      - NAMESRV_ADDR=namesrv:9876
-      - JVM_OPTS="-Xms256m -Xmx1g -Xss256k -XX:+UseG1GC -XX:MaxDirectMemorySize=1g"
-    command: sh mqproxy
+  # mq-proxy:
+  #   image: apache/rocketmq:5.3.4
+  #   container_name: "bmp-rmqproxy-${APP_ID}"
+  #   networks:
+  #     bmp-mid-network:
+  #       ipv4_address: 10.0.11.42
+  #   depends_on:
+  #     - broker
+  #     - namesrv
+  #   ports:
+  #     - "28080:8080"
+  #     - "28081:8081"
+  #   restart: on-failure
+  #   environment:
+  #     - NAMESRV_ADDR=namesrv:9876
+  #     - JVM_OPTS="-Xms256m -Xmx1g -Xss256k -XX:+UseG1GC -XX:MaxDirectMemorySize=1g"
+  #   command: sh mqproxy
   mq-dashboard:
     image: apacherocketmq/rocketmq-dashboard:latest
     container_name: "bmp-dashboard-${APP_ID}"
