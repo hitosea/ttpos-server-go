@@ -163,12 +163,7 @@ func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform strin
 	// 从数据库获取
 	takeout, err := s.takeoutService.GetByPlatform(ctx, platform)
 	if err != nil {
-		// 如果记录不存在，自动创建一条默认记录（不开启，未绑定）
-		createdTakeout, createErr := s.takeoutService.CreatePlatformStatus(ctx, platform, false)
-		if createErr != nil {
-			return nil, fmt.Errorf("获取平台状态失败，且创建默认记录失败: %w", createErr)
-		}
-		takeout = createdTakeout
+		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
 
 	resp := &response.TakeoutStatusResponse{

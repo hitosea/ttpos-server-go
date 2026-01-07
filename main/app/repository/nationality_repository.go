@@ -25,6 +25,7 @@ type INationalityQueryRepo interface {
 	FindList() ([]model.Nationality, error)
 	FindByUuid(uuid uint64) (*model.Nationality, error)
 	FindByUuidWithDeleted(uuid uint64) (*model.Nationality, error)
+	FindByUuidsWithDeleted(uuids []uint64) ([]*model.Nationality, error) // 批量根据UUID查找国籍（包含已删除）
 	CountOrdersByNationalityUuid(uuid uint64) (int64, error)
 }
 
@@ -121,6 +122,26 @@ func (r *NationalityRepoImpl) FindByUuidWithDeleted(uuid uint64) (*model.Nationa
 	}
 
 	return &nationality, nil
+}
+
+// FindByUuidsWithDeleted 批量根据UUID查找国籍（包含已删除）
+// 用于订单详情查询，保证历史订单仍可显示已删除的配置名称
+func (r *NationalityRepoImpl) FindByUuidsWithDeleted(uuids []uint64) ([]*model.Nationality, error) {
+	if len(uuids) == 0 {
+		return []*model.Nationality{}, nil
+	}
+
+	var nationalities []*model.Nationality
+	err := r.db.Model(&model.Nationality{}).
+		Preload("MultiLanguageName").
+		Where("uuid IN (?)", uuids).
+		Find(&nationalities).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return nationalities, nil
 }
 
 // CountOrdersByNationalityUuid 统计使用该国籍的订单数量

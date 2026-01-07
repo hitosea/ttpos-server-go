@@ -1309,9 +1309,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		materialUnitRepo := repository.NewMaterialUnitRepo(tx)
 
 		updateData := map[string]any{
-			"valuation":     request.ValuationRate, // 估值率
-			"barcode_value": request.BarcodeValue,  // 条形码值
-			"internal_code": request.InternalCode,  // 内部编码
+			"barcode_value": request.BarcodeValue, // 条形码值
+			"internal_code": request.InternalCode, // 内部编码
 			"status": func() int {
 				if request.Disabled {
 					return 0

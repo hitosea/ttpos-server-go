@@ -130,13 +130,7 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 	menu.SetPartnerMerchantID(strconv.FormatUint(companyUuid, 10))
 
 	// 根据货币符号推断货币代码和 exponent
-	currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
-	currencyCode, exponent := c.getCurrencyInfoBySymbol(currencySymbol)
-	menu.SetCurrency(grabfood.Currency{
-		Code:     currencyCode,
-		Symbol:   currencySymbol,
-		Exponent: int32(exponent),
-	})
+	menu.SetCurrency(c.getCurrencyInfoBySymbol(currencyUnit))
 
 	// 设置售卖时段
 	grabSellingTime := grabfood.NewSellingTimeWithDefaults()
@@ -313,21 +307,25 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	menuItem.SetSequence(int32(sequence))
 	menuItem.SetAvailableStatus(string(status))
 	menuItem.SetPrice(price)
+
 	// 设置多语言名称（只包含 Grab 支持的语言）
 	if takeoutProduct.MultiLanguageName.Uuid != 0 {
 		menuItem.SetNameTranslation(c.filterSupportedLanguages(takeoutProduct.MultiLanguageName.ToMap()))
 	} else if takeoutProduct.ProductPackage.MultiLanguageName.Uuid != 0 {
 		menuItem.SetNameTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.MultiLanguageName.ToMap()))
 	}
+
 	// 设置商品描述（优先使用多语言字段）
-	if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
+	if takeoutProduct.DescribeMultiLanguageName.Uuid != 0 {
+		// 使用多语言描述
+		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.DescribeMultiLanguageName.ToMap()))
+		// 设置默认描述（使用英文，如果没有则回退）
+		menuItem.SetDescription(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
+	} else if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
 		// 使用多语言描述
 		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.DescribeMultiLanguageName.ToMap()))
 		// 设置默认描述（使用英文，如果没有则回退）
 		menuItem.SetDescription(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
-	} else if takeoutProduct.ProductPackage.Describe != "" {
-		// 回退到单语言描述字段
-		menuItem.SetDescription(takeoutProduct.ProductPackage.Describe)
 	}
 
 	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
@@ -432,33 +430,37 @@ func (c *GrabConverter) loadCategoryProducts(ctx context.Context, companyUuid ui
 }
 
 // getCurrencyInfoBySymbol 根据货币符号返回货币代码和 exponent
-func (c *GrabConverter) getCurrencyInfoBySymbol(symbol string) (code string, exponent int) {
-	// 货币符号到代码和 exponent 的映射
-	symbolToInfo := map[string]struct {
-		code     string
-		exponent int
-	}{
-		"฿":  {"THB", 2}, // 泰铢
-		"S$": {"SGD", 2}, // 新加坡元
-		"RM": {"MYR", 2}, // 马来西亚林吉特
-		"Rp": {"IDR", 2}, // 印尼盾
-		"₫":  {"VND", 0}, // 越南盾（exponent 为 0）
-		"₱":  {"PHP", 2}, // 菲律宾比索
-		"៛":  {"KHR", 2}, // 柬埔寨瑞尔
-		"K":  {"MMK", 2}, // 缅甸元
-		"$":  {"USD", 2}, // 美元
-		"￥":  {"CNY", 2}, // 人民币
-		"¥":  {"CNY", 2}, // 人民币（另一种表示）
-		"€":  {"EUR", 2}, // 欧元
-		"£":  {"GBP", 2}, // 英镑
-	}
+func (c *GrabConverter) getCurrencyInfoBySymbol(_ string) grabfood.Currency {
+	// currencySymbol := utils.IfString(currencyUnit == "", "฿", currencyUnit)
+	// // 货币符号到代码和 exponent 的映射
+	// symbolToInfo := map[string]struct {
+	// 	code     string
+	// 	exponent int32
+	// }{
+	// 	"฿":  {"THB", 2}, // 泰铢
+	// 	"S$": {"SGD", 2}, // 新加坡元
+	// 	"RM": {"MYR", 2}, // 马来西亚林吉特
+	// 	"Rp": {"IDR", 2}, // 印尼盾
+	// 	"₫":  {"VND", 0}, // 越南盾（exponent 为 0）
+	// 	"₱":  {"PHP", 2}, // 菲律宾比索
+	// 	"៛":  {"KHR", 2}, // 柬埔寨瑞尔
+	// 	"K":  {"MMK", 2}, // 缅甸元
+	// }
 
-	if info, ok := symbolToInfo[symbol]; ok {
-		return info.code, info.exponent
-	}
+	// if info, ok := symbolToInfo[currencySymbol]; ok {
+	// 	return grabfood.Currency{
+	// 		Code:     info.code,
+	// 		Symbol:   currencySymbol,
+	// 		Exponent: info.exponent,
+	// 	}
+	// }
 
 	// 默认返回泰铢
-	return "THB", 2
+	return grabfood.Currency{
+		Code:     "THB",
+		Symbol:   "฿",
+		Exponent: 2,
+	}
 }
 
 // convertProductFlavors 转换商品规格为修饰符组
@@ -550,6 +552,9 @@ func (c *GrabConverter) convertProductFlavors(
 		flavorName := bomTakeout.ProductBom.ProductFlavor.Name
 		if bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.Uuid != 0 {
 			flavorName = bomTakeout.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLangWithFallback("en")
+		}
+		if flavorName == "" {
+			flavorName = "delete"
 		}
 
 		// 获取规格价格（优先使用外卖价格，否则使用店内价格）

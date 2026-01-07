@@ -817,6 +817,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
 		// Step 3: 批量查询菜单名称（未映射商品）
 		menuNames := s.menuRepo.GetMenuNamesByPlatformItemIds(ctx, order.Platform, productIds)
+		// 标记异常商品
+		abnormalProductIds := make([]uint64, 0)
 
 		// 处理订单商品和修饰符
 		for i := range order.TakeoutOrderItems {
@@ -834,6 +836,10 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 					item.TtposItemName = info.TtposName
 					// TtposItemErpCode: ERP编码
 					item.TtposItemErpCode = info.TtposErpCode
+					// 标记异常商品
+					if info.TtposName == "" || info.Name == "" {
+						abnormalProductIds = append(abnormalProductIds, item.TtposProductPackageUuid)
+					}
 				}
 			} else if item.IsMapped == 0 {
 				// 未映射商品：使用平台菜单名称
@@ -912,7 +918,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 						modifier.TtposModifierErpCode = info.TtposErpCode
 
 						// 如果是 commodity 类型，设置规格信息和数量
-						if modifier.TtposModifierType == string(valueobject.ModifierTypeCommodity) {
+						if modifier.IsCommodity() {
 							modifier.TtposProductPackageUuid = info.TtposProductPackageUuid
 							modifier.TtposFlavorProductBomUuid = info.TtposFlavorProductBomUuid
 							modifier.TtposFlavorName = info.TtposFlavorName
@@ -922,9 +928,13 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 								modifier.Quantity = int(info.Num)
 							}
 						}
+
+						// 标记异常修饰符
+						if info.Name == "" || info.TtposName == "" {
+							abnormalProductIds = append(abnormalProductIds, modifier.TtposProductPackageUuid)
+						}
 					}
 				} else if modifier.IsMapped == 0 {
-					// 未映射修饰符：使用平台菜单名称
 					if name, ok := platformModifierNames[modifier.PlatformModifierId]; ok && name != "" {
 						modifier.ModifierName = name
 					}
@@ -983,10 +993,18 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 		}
 
 		// 5. 检查商品映射状态
-		if hasUnmapped {
+		if hasUnmapped || len(abnormalProductIds) > 0 {
 			// 标记订单为异常状态
 			order.IsAbnormal = 1
-			order.AbnormalDetail = "订单包含未映射的商品"
+			if len(abnormalProductIds) > 0 {
+				abnormalProductIdsStr := make([]string, 0, len(abnormalProductIds))
+				for _, productId := range abnormalProductIds {
+					abnormalProductIdsStr = append(abnormalProductIdsStr, strconv.FormatUint(productId, 10))
+				}
+				order.AbnormalDetail = "订单包含被删除的商品: " + strings.Join(abnormalProductIdsStr, ",")
+			} else {
+				order.AbnormalDetail = "订单包含未映射的商品"
+			}
 			if err := orderRepoTx.Update(order); err != nil {
 				logger.Logger.Error("更新订单异常状态失败", zap.Error(err))
 				return errors.WithMessage(err, "更新订单异常状态失败")

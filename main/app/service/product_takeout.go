@@ -80,6 +80,8 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	productPackage, err := productPackageRepo.GetProductPackage(
 		productPackageRepo.WithProductBoms(),
 		productPackageRepo.WithProductPackageAttributeGroupAttributes(),
+		productPackageRepo.WithMultiLanguageName(),
+		productPackageRepo.WithDescribeMultiLanguageName(),
 		repository.CommonRepo.WhereByUuid(addReq.ProductPackageUuid),
 		repository.CommonRepo.WhereBySoftDelete(),
 	)
@@ -119,10 +121,6 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	if err == nil && existingTakeout.DeleteTime == 0 {
 		return existingTakeout, nil
 	}
-	// // 如果存在已软删除的记录，还原它
-	// if err == nil && existingTakeout.DeleteTime != 0 {
-	// 	return s.restoreProductTakeoutShop(ctx, existingTakeout, addReq)
-	// }
 
 	// 生成UUID
 	uuid, err := utils.GetID()
@@ -133,24 +131,25 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 	// 处理多语言名称
 	var multiLanguageNameUuid uint64
 	var productName string
-
+	if addReq.LocaleName.IsNull() {
+		addReq.LocaleName = productPackage.MultiLanguageName.GetNames()
+	}
 	if !addReq.LocaleName.IsNull() {
+		productName = productPackage.MultiLanguageName.ToJson()
 		productName = addReq.LocaleName.ToJson()
 		multiLanguageName := model.NewMultiLanguageName(productName)
 		multiLanguageNameUuid, err = repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(*multiLanguageName)
 		if err != nil {
 			return nil, errors.WithMessage(err, "创建多语言名称失败")
 		}
-	} else {
-		// 未提供自定义名称，使用店内商品的名称
-		multiLanguageNameUuid = productPackage.MultiLanguageNameUuid
-		productName = productPackage.Name
 	}
 
 	// 处理卖点多语言
 	var describeMultiLanguageNameUuid uint64
 	var describe string
-
+	if addReq.Describe.IsNull() {
+		addReq.Describe = productPackage.DescribeMultiLanguageName.GetNames()
+	}
 	if !addReq.Describe.IsNull() {
 		describe = addReq.Describe.ToJson()
 		describeMultiLanguageName := model.NewMultiLanguageName(describe)
@@ -158,10 +157,6 @@ func (s *productTakeoutSrv) AddProductTakeoutShop(ctx context.Context, addReq re
 		if err != nil {
 			return nil, errors.WithMessage(err, "创建卖点多语言失败")
 		}
-	} else {
-		// 未提供自定义卖点，使用店内商品的卖点
-		describeMultiLanguageNameUuid = productPackage.DescribeMultiLanguageNameUuid
-		describe = productPackage.Describe
 	}
 
 	// 创建外卖商品
@@ -457,6 +452,23 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 			// 处理请求中的规格
 			requestedBomUuids := make(map[uint64]bool)
 			for _, flavorReq := range editReq.Flavors {
+				//  如果 flavorReq.Uuid 不为0，则判断 flavorReq.BomUuid 是否已经删除，如果删除，则使用 flavorReq.Uuid 获取商品BOM
+				if flavorReq.Uuid != 0 {
+					bom, err := repository.NewProductBomRepo(tx).GetProductBom(
+						commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+						commonRepo.WhereByUuid(flavorReq.BomUuid),
+					)
+					if err != nil || bom.IsDelete() {
+						bom, err := repository.NewProductBomRepo(tx).GetProductBom(
+							commonRepo.WhereByProductPackageUuid(productPackage.Uuid),
+							commonRepo.WhereByProductFlavorUuid(flavorReq.Uuid),
+						)
+						if err == nil {
+							flavorReq.BomUuid = bom.Uuid
+						}
+					}
+				}
+
 				requestedBomUuids[flavorReq.BomUuid] = true
 
 				// 检查是否已存在
@@ -525,7 +537,7 @@ func (s *productTakeoutSrv) EditProductTakeoutShop(ctx context.Context, editReq 
 				if existingAttribute, exists := existingAttributeMap[attributeReq.ProductPackageAttributeUuid]; exists {
 					// 更新价格
 					if err := productPackageAttributeTakeoutRepo.UpdateProductPackageAttributeTakeout(
-						map[string]any{"price": attributeReq.Price},
+						map[string]any{"price": attributeReq.Price, "delete_time": 0},
 						commonRepo.WhereByUuid(existingAttribute.Uuid),
 					); err != nil {
 						return errors.WithMessage(err, "更新外卖属性价格失败")
@@ -853,11 +865,6 @@ func (s *productTakeoutSrv) DeleteProductTakeoutShop(ctx context.Context, delete
 			return nil
 		}
 		return errors.WithMessage(errors.New("外卖商品不存在"))
-	}
-
-	// 检查是否是总部外卖商品，总部商品不能删除
-	if takeout.HeadquarterUuid != 0 {
-		return errors.WithMessage(errors.New("总部外卖商品不能删除"))
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {

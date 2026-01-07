@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -95,7 +96,9 @@ func (r *memberCouponRepo) GetMemberCouponByUuid(uuid uint64) (*model.MemberCoup
 func (r *memberCouponRepo) GetMembersByUuids(uuids []uint64) ([]*model.MemberCoupon, error) {
 	var memberCoupons []*model.MemberCoupon
 	db := r.db.Model(&model.MemberCoupon{}).Scopes(NotDeleted)
-	db.Where("uuid IN ?", uuids).Find(&memberCoupons)
+	if err := db.Where("uuid IN ?", uuids).Preload("MarketingCoupon").Find(&memberCoupons).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	return memberCoupons, nil
 }
 

@@ -8616,8 +8616,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8635,8 +8633,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8654,8 +8650,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8673,8 +8667,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform

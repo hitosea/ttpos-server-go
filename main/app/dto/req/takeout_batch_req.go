@@ -21,9 +21,6 @@ func (r *TakeoutBatchCreateReq) Validate() error {
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
 	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量创建100个商品"))
-	}
 	return nil
 }
 
@@ -43,9 +40,6 @@ func (r *TakeoutBatchOnlineReq) Validate() error {
 	}
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
-	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量上架100个商品"))
 	}
 	return nil
 }
@@ -67,9 +61,6 @@ func (r *TakeoutBatchOfflineReq) Validate() error {
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
 	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量下架100个商品"))
-	}
 	return nil
 }
 
@@ -89,9 +80,6 @@ func (r *TakeoutBatchDeleteReq) Validate() error {
 	}
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
-	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量删除100个商品"))
 	}
 	return nil
 }

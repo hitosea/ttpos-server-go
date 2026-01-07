@@ -13,7 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
-	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
+	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/service/setting"
@@ -1331,36 +1331,21 @@ func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, 
 		return []*model.ProductBom{}, nil
 	}
 
-	// 构建批量查询的 keys
-	keys := make([]string, 0, len(uuids))
+	// 过滤掉 0 值
+	validUuids := make([]uint64, 0, len(uuids))
 	for _, uuid := range uuids {
 		if uuid > 0 {
-			keys = append(keys, persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid))
+			validUuids = append(validUuids, uuid)
 		}
 	}
 
-	if len(keys) == 0 {
+	if len(validUuids) == 0 {
 		return []*model.ProductBom{}, nil
 	}
 
-	// 获取缓存层（使用订单相关对象缓存配置）
-	cacheLayer := adapter.GetOrderObjectCache[*model.ProductBom](cache.Global, 5*time.Minute)
-
-	// 使用批量查询缓存
-	batchResult, err := cacheLayer.BATCH_GET(keys, func([]string) (map[string]*model.ProductBom, error) {
-		// 缓存未命中时，从数据库查询
-		boms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
-		if err != nil {
-			return nil, err
-		}
-		// 转换为 map[string]*model.ProductBom
-		result := make(map[string]*model.ProductBom)
-		for _, bom := range boms {
-			key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, bom.Uuid)
-			result[key] = bom
-		}
-		return result, nil
-	})
+	// 使用 ProductBom 控制器批量查询（统一管理缓存）
+	productBomController := objectStorageController.GetProductBomController()
+	batchResult, err := productBomController.BatchGetByUuids(ctx, db, validUuids)
 
 	if err != nil {
 		// 缓存查询失败，降级到直接查询数据库
@@ -1371,8 +1356,7 @@ func (s *orderSrv) getProductBomsWithCache(ctx context.Context, uuids []uint64, 
 	result := make([]*model.ProductBom, 0, len(uuids))
 	for _, uuid := range uuids {
 		if uuid > 0 {
-			key := persistence.BuildKey(ctx, persistence.ObjectTypeProductBom, uuid)
-			if bom, ok := batchResult[key]; ok && bom != nil {
+			if bom, ok := batchResult[uuid]; ok {
 				result = append(result, bom)
 			}
 		}

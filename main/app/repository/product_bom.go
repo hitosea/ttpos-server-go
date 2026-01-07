@@ -28,6 +28,8 @@ type IProductBomRepo interface {
 type IProductBomQueryRepo interface {
 	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
+	GetProductBomByUuid(uuid uint64) (*model.ProductBom, error)                        // 通过UUID查询ProductBom，包含ProductPackage、ProductFlavor.MultiLanguageName、ProductSauce.MultiLanguageName
+	GetProductBomsByUuidsWithAssociations(uuids []uint64) ([]*model.ProductBom, error) // 批量通过UUID查询ProductBom，包含ProductPackage、ProductFlavor.MultiLanguageName、ProductSauce.MultiLanguageName
 	GetFlavorProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)
 	GetFlavorProductBomByUuids(companyUuid uint64, uuids []uint64) ([]*model.ProductBom, error) // 批量获取规格商品信息
 	GetSauceProductBomByUuid(companyUuid uint64, uuid uint64) (*model.ProductBom, error)        // 获取小料商品信息
@@ -99,6 +101,53 @@ func (r *productBomRepoImpl) GetProductBoms(opts ...DBOption) ([]*model.ProductB
 		return nil, result.Error
 	}
 
+	return productBoms, nil
+}
+
+// GetProductBomByUuid 通过UUID查询ProductBom，包含ProductPackage、ProductFlavor.MultiLanguageName、ProductSauce.MultiLanguageName
+func (r *productBomRepoImpl) GetProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
+	productBom, err := r.GetProductBom(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductPackage",
+			},
+			WithPreload{
+				Query: "ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductSauce.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return productBom, nil
+}
+
+// GetProductBomsByUuidsWithAssociations 批量通过UUID查询ProductBom，包含ProductPackage、ProductFlavor.MultiLanguageName、ProductSauce.MultiLanguageName
+func (r *productBomRepoImpl) GetProductBomsByUuidsWithAssociations(uuids []uint64) ([]*model.ProductBom, error) {
+	if len(uuids) == 0 {
+		return []*model.ProductBom{}, nil
+	}
+	productBoms, err := r.GetProductBoms(
+		CommonRepo.WhereInUuids(uuids),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductPackage",
+			},
+			WithPreload{
+				Query: "ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductSauce.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return productBoms, nil
 }
 

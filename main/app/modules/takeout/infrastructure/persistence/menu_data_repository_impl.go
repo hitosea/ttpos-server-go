@@ -148,6 +148,7 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 				})
 		}).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
+		Preload("DescribeMultiLanguageName", "delete_time = ?", 0).
 		Preload("ImageFile").
 		Preload("ProductBomTakeouts", func(db *gorm.DB) *gorm.DB {
 			return db.Where("delete_time = ?", 0).
@@ -167,6 +168,7 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 		Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
 			return db.Where("delete_time = ?", 0).
 				Preload("ProductPackageGroupItem.ProductBom").
+				Preload("ProductPackageGroupItem.ProductBom.ProductFlavor.MultiLanguageName", "delete_time = ?", 0).
 				Preload("ProductPackageGroupItem.ProductPackage", func(db *gorm.DB) *gorm.DB {
 					return db.Where("delete_time = ?", 0).
 						Preload("MultiLanguageName", "delete_time = ?", 0)
@@ -406,10 +408,10 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 			}
 		}
 
-		// 如果外卖表没有，回退到核心表
-		if displayName == "" {
-			displayName = ttposName
-		}
+		// // 如果外卖表没有，回退到核心表
+		// if displayName == "" {
+		// 	displayName = ttposName
+		// }
 
 		// ErpCode: 从ProductBom获取
 		if bom, ok := bomMap[productUuid]; ok {
@@ -656,9 +658,9 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				}
 
 				// 如果外卖表没有，回退到核心表
-				if displayName == "" {
-					displayName = ttposName
-				}
+				// if displayName == "" {
+				// 	displayName = ttposName
+				// }
 
 				// 获取规格信息和ERP编码
 				if pkg.ProductBomUuid > 0 {
