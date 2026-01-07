@@ -49,7 +49,9 @@ services:
     networks:
       bmp-mid-network:
         ipv4_address: 10.0.11.41
-    command: sh mqbroker
+    command: sh mqbroker -c /opt/rocketmq/conf/broker-dev.conf
+    volumes:
+      - ../docker/rocketmq/conf/broker-dev.conf:/opt/rocketmq/conf/broker-dev.conf
 
   # mq-proxy:
   #   image: apache/rocketmq:5.3.4
