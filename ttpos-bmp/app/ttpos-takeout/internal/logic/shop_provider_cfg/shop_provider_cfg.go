@@ -120,6 +120,30 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 	return &cfg, nil
 }
 
+// GetAllShopProviderCfg 查询门店的所有渠道配置
+// 参数：
+//   - ctx: 上下文对象
+//   - shopUUID: 门店 UUID
+//
+// 返回：
+//   - cfgList: 该门店的所有渠道配置列表
+//   - err: 操作过程中产生的错误（若有）
+func (s *sShopProviderCfg) GetAllShopProviderCfg(ctx context.Context, shopUUID uint64) ([]*entity.ShopProviderCfg, error) {
+	var cfgList []*entity.ShopProviderCfg
+	err := dao.ShopProviderCfg.Ctx(ctx).
+		Where(dao.ShopProviderCfg.Columns().ShopUuid, shopUUID).
+		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
+		Scan(&cfgList)
+
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 批量查询失败: shop_uuid=%d, error: %v", shopUUID, err)
+		return nil, gerror.Wrap(err, "批量查询门店渠道配置失败")
+	}
+
+	g.Log().Debugf(ctx, "[ShopProviderCfg] 批量查询成功: shop_uuid=%d, 记录数=%d", shopUUID, len(cfgList))
+	return cfgList, nil
+}
+
 // GetShopProviderCfgByMerchantID 通过 MerchantID 查询门店第三方配置
 // merchantID: 第三方商户 ID（如 Grab MerchantID）
 // providerName: 第三方名称（如 grab），为空默认 grab
@@ -291,36 +315,20 @@ func (s *sShopProviderCfg) GetShopProviderCfgForRPC(ctx context.Context, shopUUI
 			})
 		}
 	} else {
-		// 未指定 provider_name，查询所有支持的渠道
-		providers := []consts.ProviderName{
-			consts.ProviderLineman,
-			consts.ProviderGrab,
+		// 未指定 provider_name，批量查询该门店的所有渠道配置
+		cfgList, err := s.GetAllShopProviderCfg(ctx, shopUUID)
+		if err != nil {
+			return nil, err
 		}
 
-		for _, pName := range providers {
-			cfg, err := s.GetShopProviderCfg(ctx, shopUUID, string(pName))
-			if err != nil {
-				g.Log().Warningf(ctx, "[ShopProviderCfg] 查询渠道配置失败: shop_uuid=%d, provider=%s, error=%v",
-					shopUUID, pName, err)
-				continue
-			}
-
-			// 如果配置不存在，返回默认 INACTIVE 状态
-			if cfg == nil {
-				cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
-					ProviderName:       string(pName),
-					ProviderMerchantId: "",
-					ProviderShopStatus: string(consts.ProviderShopStatusInactive),
-					UpdatedAt:          0,
-				})
-			} else {
-				cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
-					ProviderName:       cfg.ProviderName,
-					ProviderMerchantId: cfg.ProviderMerchantId,
-					ProviderShopStatus: cfg.ProviderShopStatus,
-					UpdatedAt:          int64(cfg.UpdatedAt),
-				})
-			}
+		// 直接返回数据库中已有的全部配置
+		for _, cfg := range cfgList {
+			cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+				ProviderName:       cfg.ProviderName,
+				ProviderMerchantId: cfg.ProviderMerchantId,
+				ProviderShopStatus: cfg.ProviderShopStatus,
+				UpdatedAt:          int64(cfg.UpdatedAt),
+			})
 		}
 	}
 
