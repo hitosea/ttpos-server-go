@@ -13,7 +13,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
-	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -230,7 +229,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -271,7 +270,7 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -693,7 +692,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -741,7 +740,7 @@ func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -818,7 +817,7 @@ func (h *DeskHandler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -856,31 +855,26 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	_, err := h.orderSrv.AssistantOrderCartProductNum(ctx, params)
+	shopCart, err := h.orderSrv.AssistantOrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	// 异步预加载销售账单所有信息缓存（只有使用缓存的商户才执行）
-	if params.SaleBillUuid != 0 {
-		companyUuid := ctx.GetCompanyUuid()
-		if objectStorageAdapter.IsObjectStorageCacheEnabled(companyUuid) {
-			h.orderSrv.AsyncPreloadSaleBillAllInfoCache(ctx, params.SaleBillUuid)
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		helper.Success(c, nil)
+		return
+	} else {
+		// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
 		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-
-	// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
-	// res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// // 处理错误
-	// if err != nil {
-	// 	helper.ErrorWithDetail(c, constant.CodeFail, err)
-	// 	return
-	// }
-	// // 返回结果
-	// helper.Success(c, res)
-
-	helper.Success(c, nil)
 }
 
 // OrderCartProductCooking 送厨购物车商品
@@ -1042,7 +1036,7 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 		return
 	}
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1084,7 +1078,7 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1127,7 +1121,7 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1170,7 +1164,7 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 	}
 	ctx.Log().Debug("退菜购物车商品成功", zap.Any("res", shopCart))
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1213,7 +1207,7 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1255,7 +1249,7 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("转菜购物车商品成功", zap.Any("res", shopCart))
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1357,7 +1351,7 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1400,7 +1394,7 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1577,7 +1571,7 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1644,7 +1638,7 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {
@@ -1952,7 +1946,7 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
 		helper.Success(c, nil)
 		return
 	} else {

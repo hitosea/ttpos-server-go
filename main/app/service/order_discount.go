@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -93,12 +94,6 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		return nil, errors.WithMessage(err, "更新销售订单失败")
 	}
 
-	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
 	// 发布"改价"事件
 	utils.Go(func() {
 		event.NewSystemBus().PublishChangeSaleOrderProductPriceEvent(event.ChangeSaleOrderProductPricePayload{
@@ -119,6 +114,17 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		})
 	})
 
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	return info, nil
 }
 
@@ -206,6 +212,12 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, request req.OrderAmoun
 			AuthorizedStaff: authorizedStaffInfo,
 		})
 	})
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
@@ -315,6 +327,12 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, request req.OrderDiscountR
 		})
 	})
 
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
@@ -406,6 +424,12 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, request req.OrderZeroRuleR
 		})
 	})
 
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
 	if err != nil {
@@ -470,6 +494,12 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 			OrderName: req.SaleOrderUuid,
 		})
 	})
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)

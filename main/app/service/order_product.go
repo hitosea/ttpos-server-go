@@ -170,6 +170,12 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.WithMessage(err)
 	}
 
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
 	if err != nil {
@@ -211,6 +217,12 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	// 加购
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
 	}
 
 	// 获取新的购物车商品数据
@@ -598,16 +610,20 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
 	// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
 	// 获取新的桌台数据
-	// info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
-	// if err != nil {
-	// 	return nil, errors.WithMessage(err)
-	// }
-	// ctx.Log().Debug("获取新的账单数据")0
-	// return info, nil
-
-	return nil, nil
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	ctx.Log().Debug("获取新的账单数据")
+	return info, nil
 }
 
 // InstantOrderCartProductCooking 送厨购物车商品
@@ -1111,6 +1127,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		})
 	})
 
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1214,6 +1236,12 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 			Sign:           saleOrderProduct.Sign,
 		})
 	})
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
 
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
@@ -1421,6 +1449,12 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 			ToTableNo:      targetDesk.DeskNo,
 		})
 	})
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
 
 	// 获取新的购物车信息
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1729,6 +1763,13 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 			FreeRemark:     req.Reason,
 		})
 	})
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1831,6 +1872,12 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 			OrderName:      saleOrder.Uuid,
 		})
 	})
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
+	}
 
 	// 获取新的购物车信息
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -2431,6 +2478,12 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		return nil
 	}); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+		}
 	}
 
 	// 获取新的购物车商品数据

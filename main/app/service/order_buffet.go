@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/context"
@@ -198,6 +199,12 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 		}
 		if err := s.CalcAndSaveSaleBill(ctx, db, newSaleBill); err != nil {
 			return nil, errors.WithMessage(err)
+		}
+	}
+
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		if ctx.GetSource() == constant.SourceAssistant {
+			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
 		}
 	}
 
