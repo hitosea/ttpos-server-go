@@ -208,7 +208,7 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil)
+	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

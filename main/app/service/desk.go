@@ -216,10 +216,16 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 		}(),
 	}
 	// 获取桌台详情
-	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
+	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskRecord(deskUuid)
 	if err != nil {
 		return res, errors.WithMessage(errors.New("桌台不存在"), "获取桌台详情失败")
 	}
+	// 获取销售账单信息并计算未送厨商品总金额
+	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(desk.SaleBillUuid)
+	if err != nil {
+		return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+	}
+	desk.SaleBill = saleBill
 	res.DeskInfo = desk.GetDeskResp()
 
 	// 如果没有销售账单,直接返回
@@ -240,9 +246,9 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 		}
 	}
 	// 未送厨商品信息
-	res.UnsentKitchen, _ = s.orderSrv.GetUnsentKitchen(ctx, desk.SaleBillUuid, shopCart)
+	res.UnsentKitchen, _ = s.orderSrv.GetUnsentKitchen(ctx, desk.SaleBillUuid, shopCart, saleBill)
 	// 已送厨商品信息
-	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart)
+	res.SentKitchen, _ = s.orderSrv.GetSentKitchen(ctx, desk.SaleBill.Uuid, shopCart, saleBill)
 	// 自助餐信息
 	if shopCart.Buffet != nil {
 		res.Buffet = *shopCart.Buffet

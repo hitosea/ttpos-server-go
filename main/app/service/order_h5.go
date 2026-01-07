@@ -25,7 +25,7 @@ import (
 
 // GetUnOrderedH5ProductList 获取扫码h5购物车未下单商品列表
 func (s *orderSrv) GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error) {
-	res, err := s.GetUnsentKitchen(ctx, saleBillUuid, shopCart, opts...)
+	res, err := s.GetUnsentKitchen(ctx, saleBillUuid, shopCart, nil, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

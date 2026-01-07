@@ -1671,7 +1671,7 @@ func (h *DeskHandler) GetUnsentKitchen(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	info, err := h.orderSrv.GetUnsentKitchen(ctx, params.SaleBillUuid, nil)
+	info, err := h.orderSrv.GetUnsentKitchen(ctx, params.SaleBillUuid, nil, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1699,7 +1699,7 @@ func (h *DeskHandler) GetSentKitchen(c *gin.Context) {
 		return
 	}
 	//
-	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil)
+	info, err := h.orderSrv.GetSentKitchen(ctx, params.SaleBillUuid, nil, nil)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
