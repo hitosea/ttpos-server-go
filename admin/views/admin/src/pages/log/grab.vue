@@ -91,6 +91,7 @@
   import { useQuery } from 'vue-query';
   import { useUserInfoStore } from '@/stores/userInfo';
   import { $t } from '@/i18n';
+  import { message } from '@/utils/feedback';
 
   const { hasPermission } = useUserInfoStore();
 
@@ -155,6 +156,11 @@
 
   // 查询
   const handleSearch = () => {
+    if (!searchParams.value.company_uuid) {
+      message.warning($t('请选择门店'));
+      return;
+    }
+
     searchParams.value.page = 1;
     if (hasPermission(['admin_takeout_logs'])) {
       refetch.value();

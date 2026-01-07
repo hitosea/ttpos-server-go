@@ -467,5 +467,22 @@
     "添加门店": "Lägg till butik",
     "手机号": "Mobilnummer",
     "关联门店和角色": "Associerade butiker och roller",
-    "无角色": "Ingen roll"
+    "无角色": "Ingen roll",
+    "日志管理": "Logghantering",
+    "类型": "Typ",
+    "全部": "Alla",
+    "TTPOS推送到平台": "TTPOS push till plattform",
+    "平台推送到TTPOS": "Plattform push till TTPOS",
+    "进行中": "Pågår",
+    "成功": "Framgång",
+    "失败": "Misslyckande",
+    "门店": "Butik",
+    "时间": "Tid",
+    "原因": "Orsak",
+    "不修改请留空": "Lämna tomt om du inte ändrar",
+    "请输入正确的手机号格式": "Ange ett giltigt mobilnummerformat",
+    "请至少添加一个门店": "Vänligen lägg till minst en butik",
+    "邮箱/手机号/员工ID": "E-post/Mobilnummer/Anställd ID",
+    "添加账号": "Lägg till konto",
+    "导入日志": "Importera loggar"
 }
