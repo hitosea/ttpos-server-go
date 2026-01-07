@@ -11,9 +11,9 @@
 | **提案人** | rikugun   |
 | **日期**   | 2026-01-04   |
 | **目标版本** | - |
-| **状态**   | 待评审   |
+| **状态**   | 已通过 - 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | -      |
+| **关联 Spec** | [feature-takeout-lineman-api-wrapper](../../shared/specs/active/feature-takeout-lineman-api-wrapper/requirements.md)      |
 
 ---
 
