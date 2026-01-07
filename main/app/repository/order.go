@@ -1692,6 +1692,7 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 	if option.MemberSaleOrderUuid != 0 {
 		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
 	}
+	ttt := time.Now()
 	saleBill, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1818,7 +1819,7 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
-
+	fmt.Println("querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
 	// 使用对象存储层自动注入关联对象（Desk）
 	companyUuid := GetCompanyUuid(r.db)
 	if companyUuid != 0 {
