@@ -39,6 +39,7 @@ import (
 
 	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/duke-git/lancet/v2/cryptor"
+	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -3683,9 +3684,6 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 
 // EditProductAttributeGroup 编辑商品属性组
 func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.ProductAttributeGroupEditReq) error {
-	// companySetting := ctx.GetCompanySetting()
-	var relatedProductUuid bool
-
 	db := ctx.GetDB()
 	productRepo := repository.NewProductRepo(db)
 	// 检查属性组是否存在
@@ -3722,37 +3720,59 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 			return errors.New("属性组名称不能为空")
 		}
 		for _, productAttribute := range editReq.ProductAttributes {
-			if !relatedProductUuid && len(productAttribute.ProductPackageUuids) > 0 {
-				relatedProductUuid = true
-			}
 			if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
 				return errors.New("属性值名称不能为空")
 			}
 		}
 	}
 
-	var manualTranslatedUuids []uint64
-	manualTranslatedUuids = append(manualTranslatedUuids, attributeGroup.MultiLanguageNameUuid)
-
-	// 检查传递的属性值是否存在
+	// 检查传递的属性值、关联商品是否存在
 	var attributeUuids []uint64
+	productPackageUuidMap := make(map[uint64]bool)
 	for _, attribute := range editReq.ProductAttributes {
-		if attribute.Uuid != 0 {
+		if attribute.Uuid != 0 && !slices.Contains(attributeUuids, attribute.Uuid) {
 			attributeUuids = append(attributeUuids, attribute.Uuid)
 		}
-	}
-	attributes, err := productRepo.GetProductAttributes(
-		productRepo.WhereAttributeGroupUuid(attributeGroup.Uuid),
-		productRepo.WhereUuidIn(attributeUuids),
-	)
-	if err != nil {
-		return errors.WithMessage(errors.New("属性值不存在"), err.Error())
-	}
-	if len(attributes) != len(attributeUuids) {
-		return errors.New("属性值参数错误")
+		for _, productPackageUuid := range attribute.ProductPackageUuids {
+			if productPackageUuid > 0 {
+				productPackageUuidMap[productPackageUuid] = true
+			}
+		}
 	}
 
-	// 要删掉的属性值
+	var attributes []model.ProductAttribute
+	// 属性值uuid和多语言uuid映射
+	attributeUuidToMultiLanguageUuidMap := make(map[uint64]uint64)
+	// 检查传递的属性值
+	if len(attributeUuids) > 0 {
+		attributes, err = productRepo.GetProductAttributes(
+			productRepo.WhereAttributeGroupUuid(attributeGroup.Uuid),
+			productRepo.WhereUuidIn(attributeUuids),
+		)
+		if err != nil {
+			return errors.WithMessage(errors.New("属性值不存在"), err.Error())
+		}
+		if len(attributes) != len(attributeUuids) {
+			return errors.New("属性值参数错误")
+		}
+		for _, attribute := range attributes {
+			attributeUuidToMultiLanguageUuidMap[attribute.Uuid] = attribute.MultiLanguageNameUuid
+		}
+	}
+	// 关联商品是否存在
+	if len(productPackageUuidMap) > 0 {
+		productPackageList, err := productRepo.GetProductPackageListByUuids(maputil.Keys(productPackageUuidMap))
+		if err != nil {
+			return errors.WithMessage(errors.New("商品不存在"), err.Error())
+		}
+		if len(productPackageList) != len(productPackageUuidMap) {
+			return errors.New("关联商品参数错误")
+		}
+	}
+
+	// 手动翻译的多语言uuid，需要将这些多语言从同步时的多语言集合中删除
+	manualTranslatedUuids := []uint64{attributeGroup.MultiLanguageNameUuid}
+	// 获取要删掉的属性值，以及检查被移除的属性是否被子店使用（这里不应该有数据，因为编辑页面删除属性值是，需要调用删除属性值的接口）
 	var deletingAttributeUuids []uint64
 	for _, attribute := range attributeGroup.ProductAttributes {
 		manualTranslatedUuids = append(manualTranslatedUuids, attribute.MultiLanguageNameUuid)
@@ -3772,96 +3792,30 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		}
 	}
 
-	// 检查所有属性关联的商品包是否存在
-	productPackageUuids := []uint64{}
-	for _, productAttribute := range editReq.ProductAttributes {
-		productPackageUuids = append(productPackageUuids, productAttribute.ProductPackageUuids...)
-	}
-	// 去重，判断商品是否存在
-	productPackageUuids = slice.Unique(productPackageUuids)
-	if len(productPackageUuids) > 0 {
-		productPackageList, err := productRepo.GetProductPackageListByUuids(productPackageUuids)
-		if err != nil {
-			return errors.WithMessage(errors.New("商品不存在"), err.Error())
-		}
-		if len(productPackageList) != len(productPackageUuids) {
-			return errors.New("关联商品参数错误")
-		}
-	}
-
-	// 原商品包属性组、商品包属性
+	// 取消关联的商品
+	var removingProductPackageUuids []uint64
+	// 原商品属性组、商品属性
 	productPackageAttributeGroups, _ := productRepo.GetProductPackageAttributeGroups(
 		productRepo.WhereProductAttributeGroupUuid(attributeGroup.Uuid),
 		productRepo.WithProductPackageAttributes(),
 	)
-
-	type ProductPackageInfo struct {
-		ProductPackageAttributeGroupUuid uint64
-		AttributeUuids                   []uint64
-	}
-
-	// 整理关系，每个商品包和属性组的关系
-	productPackageInfoMap := make(map[uint64]ProductPackageInfo)
+	productPackageAttributeGroupMap := make(map[uint64]uint64)
+	productPackageAttributeMap := make(map[uint64][]uint64)
 	for _, productPackageAttributeGroup := range productPackageAttributeGroups {
-		oldAttributeUuids := make([]uint64, 0)
+		existsAttributeUuids := make([]uint64, 0)
 		for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
-			oldAttributeUuids = append(oldAttributeUuids, productPackageAttribute.AttributeUuid)
+			existsAttributeUuids = append(existsAttributeUuids, productPackageAttribute.AttributeUuid)
 		}
-		productPackageInfoMap[productPackageAttributeGroup.ProductPackageUuid] = ProductPackageInfo{
-			ProductPackageAttributeGroupUuid: productPackageAttributeGroup.Uuid,
-			AttributeUuids:                   oldAttributeUuids,
+		productPackageAttributeGroupMap[productPackageAttributeGroup.ProductPackageUuid] = productPackageAttributeGroup.Uuid
+		productPackageAttributeMap[productPackageAttributeGroup.ProductPackageUuid] = existsAttributeUuids
+
+		// 参数中取消关联的商品
+		if !productPackageUuidMap[productPackageAttributeGroup.ProductPackageUuid] {
+			removingProductPackageUuids = append(removingProductPackageUuids, productPackageAttributeGroup.ProductPackageUuid)
 		}
 	}
-
-	// 属性值uuid和多语言uuid映射
-	uuidAttributeMap := make(map[uint64]model.ProductAttribute)
-	for _, attribute := range attributes {
-		uuidAttributeMap[attribute.Uuid] = attribute
-	}
-
-	uuidLocaleMap := make(map[uint64]dto.LocaleResponse)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-
-		// 删除属性值 product_attribute.Uuid in deletingAttributeUuids
-		// 删除商品包属性 product_package_attribute.attribute_uuid in deletingAttributeUuids
-		if len(deletingAttributeUuids) > 0 {
-			err := tx.Model(&model.ProductAttribute{}).Where("uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
-			if err != nil {
-				return errors.WithMessage(errors.New("删除属性值失败"), err.Error())
-			}
-			err = tx.Model(&model.ProductPackageAttribute{}).Where("attribute_uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
-			if err != nil {
-				return errors.WithMessage(errors.New("删除属性值关联商品失败"), err.Error())
-			}
-		}
-
-		// 删除 product_package_attribute_group 和 product_package_attribute 的数据
-		if len(productPackageAttributeGroups) > 0 {
-			var deletingProductPackageAttributeGroupUuids []uint64
-			if len(productPackageUuids) == 0 { // 取消了所有商品和属性组的关系
-				for _, productPackageAttributeGroup := range productPackageAttributeGroups {
-					deletingProductPackageAttributeGroupUuids = append(deletingProductPackageAttributeGroupUuids, productPackageAttributeGroup.Uuid)
-				}
-			} else { // 可能取消了部分商品和属性组的关系
-				for _, productPackageAttributeGroup := range productPackageAttributeGroups {
-					if !slices.Contains(productPackageUuids, productPackageAttributeGroup.ProductPackageUuid) {
-						deletingProductPackageAttributeGroupUuids = append(deletingProductPackageAttributeGroupUuids, productPackageAttributeGroup.Uuid)
-					}
-				}
-			}
-			if len(deletingProductPackageAttributeGroupUuids) > 0 {
-				err := tx.Model(&model.ProductPackageAttributeGroup{}).Where("uuid IN (?)", deletingProductPackageAttributeGroupUuids).Update("delete_time", time.Now().Unix()).Error
-				if err != nil {
-					return errors.WithMessage(errors.New("删除属性组关联商品失败"), err.Error())
-				}
-				err = tx.Model(&model.ProductPackageAttribute{}).Where("product_package_attribute_group_uuid IN (?)", deletingProductPackageAttributeGroupUuids).Update("delete_time", time.Now().Unix()).Error
-				if err != nil {
-					return errors.WithMessage(errors.New("删除属性关联商品失败"), err.Error())
-				}
-			}
-		}
-
 		// 更新属性组多语言
 		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeGroup.MultiLanguageNameUuid).Updates(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
@@ -3877,10 +3831,13 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		if err != nil {
 			return errors.WithMessage(errors.New("保存属性组名称多语言失败"), err.Error())
 		}
-		for k, productAttribute := range editReq.ProductAttributes {
+
+		// 参数中的商品属性值
+		newProductPackageAttributeMap := make(map[uint64][]uint64)
+		for _, productAttribute := range editReq.ProductAttributes {
+			productAttributeUuid := productAttribute.Uuid
 			if productAttribute.Uuid != 0 { // 更新属性值多语言
-				uuidLocaleMap[productAttribute.Uuid] = productAttribute.LocaleName
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", uuidAttributeMap[productAttribute.Uuid].MultiLanguageNameUuid).Updates(map[string]any{
+				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeUuidToMultiLanguageUuidMap[productAttribute.Uuid]).Updates(map[string]any{
 					"zh_name":    productAttribute.LocaleName.ZH,
 					"th_name":    productAttribute.LocaleName.TH,
 					"en_name":    productAttribute.LocaleName.EN,
@@ -3931,47 +3888,76 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 				if err != nil {
 					return errors.WithMessage(errors.New("保存属性值失败"), err.Error())
 				}
-				editReq.ProductAttributes[k].Uuid = productAttributeModel.Uuid
-				uuidLocaleMap[productAttributeModel.Uuid] = productAttribute.LocaleName
+				productAttributeUuid = productAttributeModel.Uuid
+			}
+			for _, productPackageUuid := range productAttribute.ProductPackageUuids {
+				newProductPackageAttributeMap[productPackageUuid] = append(newProductPackageAttributeMap[productPackageUuid], productAttributeUuid)
 			}
 		}
 
-		if relatedProductUuid {
-			productPackageUuidToAttributeUuids := s.getAttributeUuidListByProductPackageUuid(editReq.ProductAttributes)
-			var newProductPackageAttributes []model.ProductPackageAttribute
-			for productPackageUuid, attributeUuids := range productPackageUuidToAttributeUuids {
-				if productPackageInfo, ok := productPackageInfoMap[productPackageUuid]; !ok { // 新增的关联商品包
-					newProductPackageAttributeGroup := model.ProductPackageAttributeGroup{
-						ProductPackageUuid:        productPackageUuid,
-						ProductAttributeGroupUuid: attributeGroup.Uuid,
-					}
-					err := tx.Model(&model.ProductPackageAttributeGroup{}).Create(&newProductPackageAttributeGroup).Error
+		// 遍历原商品和属性值的关联，删除不在参数中的属性值
+		for productPackageUuid, attributeUuids := range productPackageAttributeMap {
+			for _, attributeUuid := range attributeUuids {
+				if !slices.Contains(newProductPackageAttributeMap[productPackageUuid], attributeUuid) {
+					// 删除商品属性值
+					err := tx.Model(&model.ProductPackageAttribute{}).
+						Where("product_package_attribute_group_uuid = ?", productPackageAttributeGroupMap[productPackageUuid]).
+						Where("attribute_uuid = ?", attributeUuid).Update("delete_time", time.Now().Unix()).Error
 					if err != nil {
-						return errors.WithMessage(errors.New("添加属性组关联商品失败"), err.Error())
-					}
-					for _, attributeUuid := range attributeUuids {
-						newProductPackageAttributes = append(newProductPackageAttributes, model.ProductPackageAttribute{
-							ProductPackageAttributeGroupUuid: newProductPackageAttributeGroup.Uuid,
-							AttributeUuid:                    attributeUuid,
-						})
-					}
-				} else { // 已有的关联商品包，可能关联了新的属性
-					addingAttributeUuids := slice.Difference(attributeUuids, productPackageInfo.AttributeUuids)
-					if len(addingAttributeUuids) > 0 {
-						for _, attributeUuid := range addingAttributeUuids {
-							newProductPackageAttributes = append(newProductPackageAttributes, model.ProductPackageAttribute{
-								ProductPackageAttributeGroupUuid: productPackageInfo.ProductPackageAttributeGroupUuid,
-								AttributeUuid:                    attributeUuid,
-							})
-						}
+						return errors.WithMessage(errors.New("删除商品属性值失败"), err.Error())
 					}
 				}
 			}
-			if len(newProductPackageAttributes) > 0 {
-				err := tx.Model(&model.ProductPackageAttribute{}).Create(&newProductPackageAttributes).Error
-				if err != nil {
-					return errors.WithMessage(errors.New("添加属性关联商品失败"), err.Error())
+		}
+
+		// 新增的商品属性组（如果需要）、商品属性值
+		var newProductPackageAttributes []model.ProductPackageAttribute
+		for productPackageUuid, attributeUuids := range newProductPackageAttributeMap {
+			if productPackageAttributeGroupMap[productPackageUuid] == 0 {
+				newProductPackageAttributeGroup := model.ProductPackageAttributeGroup{
+					ProductPackageUuid:        productPackageUuid,
+					ProductAttributeGroupUuid: attributeGroup.Uuid,
 				}
+				tx.Model(&model.ProductPackageAttributeGroup{}).Create(&newProductPackageAttributeGroup)
+				productPackageAttributeGroupMap[productPackageUuid] = newProductPackageAttributeGroup.Uuid
+			}
+			for _, attributeUuid := range attributeUuids {
+				if !slices.Contains(productPackageAttributeMap[productPackageUuid], attributeUuid) {
+					newProductPackageAttributes = append(newProductPackageAttributes, model.ProductPackageAttribute{
+						ProductPackageAttributeGroupUuid: productPackageAttributeGroupMap[productPackageUuid],
+						AttributeUuid:                    attributeUuid,
+					})
+				}
+			}
+		}
+		if len(newProductPackageAttributes) > 0 {
+			err := tx.Model(&model.ProductPackageAttribute{}).Create(&newProductPackageAttributes).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("保存商品属性值失败"), err.Error())
+			}
+		}
+
+		// 删除属性值、商品属性值
+		if len(deletingAttributeUuids) > 0 {
+			err := tx.Model(&model.ProductAttribute{}).Where("uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("删除属性值失败"), err.Error())
+			}
+			err = tx.Model(&model.ProductPackageAttribute{}).Where("attribute_uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("删除属性值关联商品失败"), err.Error())
+			}
+		}
+
+		// 删除商品属性值、商品属性组
+		if len(removingProductPackageUuids) > 0 {
+			if err := tx.Model(model.ProductPackageAttribute{}).Where("product_package_attribute_group_uuid in (?)",
+				tx.Model(&model.ProductPackageAttributeGroup{}).Select("uuid").Where("product_package_uuid IN (?)", removingProductPackageUuids).Where("product_attribute_group_uuid = ?", attributeGroup.Uuid),
+			).Update("delete_time", time.Now().Unix()).Error; err != nil {
+				return errors.WithMessage(errors.New("删除商品包属性失败"), err.Error())
+			}
+			if err := tx.Model(&model.ProductPackageAttributeGroup{}).Where("product_package_uuid IN (?)", removingProductPackageUuids).Where("product_attribute_group_uuid = ?", attributeGroup.Uuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+				return errors.WithMessage(errors.New("删除商品包属性组失败"), err.Error())
 			}
 		}
 
@@ -3994,85 +3980,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), manualTranslatedUuids...)
 	}
 
-	// company := ctx.GetCompany()
-	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
-	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
-	// if company.IsOpenErp() {
-	// 	var valueList []req.SaveAttributeValueReq
-	// 	uuidErpValueNameMap := make(map[uint64]string)
-	// 	// 构建 valueList
-	// 	for uuid, locale := range uuidLocaleMap {
-	// 		enValueName, err := s.getEnName(ctx, locale)
-	// 		if err != nil {
-	// 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-	// 		}
-	// 		var erpValueName string
-	// 		if v, ok := uuidAttributeMap[uuid]; !ok || v.ErpnextAttributeValue == "" { // 新增属性值，或erpnext_attribute_value为空
-	// 			erpValueName = company.Name + "-" + enValueName
-	// 			uuidErpValueNameMap[uuid] = erpValueName
-	// 		} else { // 已存在属性值，且erpnext_attribute_value不为空，则使用旧值
-	// 			erpValueName = v.ErpnextAttributeValue
-	// 		}
-	// 		valueList = append(valueList, req.SaveAttributeValueReq{
-	// 			AttributeValue: erpValueName,
-	// 			Abbr:           enValueName, // 总是获取最新别名
-	// 		})
-	// 	}
-	// 	// 新属性组别名
-	// 	enGroupName, err := s.getEnName(ctx, editReq.LocaleName)
-	// 	if err != nil {
-	// 		return errors.WithMessage(errors.New("翻译失败"), err.Error())
-	// 	}
-	// 	err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
-	// 		SiteCode:           companySetting.ErpnextSiteCode,
-	// 		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
-	// 		Branch:             companySetting.ErpnextBranchName,
-	// 		AttributeName:      attributeGroup.ErpnextAttributeGroupName,
-	// 		AliasName:          enGroupName,
-	// 		AttributeValueList: valueList,
-	// 	})
-	// 	if err != nil {
-	// 		return errors.WithMessage(errors.New("同步属性值到erp失败"), err.Error())
-	// 	}
-	// 	for uuid, erpValueName := range uuidErpValueNameMap {
-	// 		err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", uuid).Update("erpnext_attribute_value", erpValueName).Error
-	// 		if err != nil {
-	// 			return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
-	// 		}
-	// 	}
-	// }
-
 	return err
-}
-
-func (s *productSrv) getAttributeUuidListByProductPackageUuid(productAttributes []req.ProductAttributeGroupEditProductAttributeReq) map[uint64][]uint64 {
-	// 使用map存储每个ProductPackageUuid对应的AttributeUuid集合（用于去重）
-	productPackageUuidToAttributeUuids := make(map[uint64]map[uint64]bool)
-
-	// 遍历所有productAttributes
-	for _, productAttribute := range productAttributes {
-		// 遍历每个productAttribute的ProductPackageUuids
-		for _, productPackageUuid := range productAttribute.ProductPackageUuids {
-			// 如果该ProductPackageUuid还没有记录，则初始化
-			if productPackageUuidToAttributeUuids[productPackageUuid] == nil {
-				productPackageUuidToAttributeUuids[productPackageUuid] = make(map[uint64]bool)
-			}
-			// 将AttributeUuid添加到对应ProductPackageUuid的集合中（使用map去重）
-			productPackageUuidToAttributeUuids[productPackageUuid][productAttribute.Uuid] = true
-		}
-	}
-
-	// 将map转换为切片，得到每个ProductPackageUuid关联的AttributeUuid列表
-	result := make(map[uint64][]uint64)
-	for productPackageUuid, attributeUuids := range productPackageUuidToAttributeUuids {
-		uuidList := make([]uint64, 0, len(attributeUuids))
-		for uuid := range attributeUuids {
-			uuidList = append(uuidList, uuid)
-		}
-		result[productPackageUuid] = uuidList
-	}
-
-	return result
 }
 
 // EditProductFlavor 编辑商品规格
