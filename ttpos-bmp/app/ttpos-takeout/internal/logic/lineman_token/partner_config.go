@@ -75,4 +75,3 @@ func (l *PartnerConfigLoader) GetByClientID(ctx context.Context, clientID string
 	}
 	return partner, nil
 }
-

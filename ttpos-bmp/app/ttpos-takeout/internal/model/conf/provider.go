@@ -24,6 +24,7 @@ type Lineman struct {
 	ClientID     string        `json:"clientId"`     // OAuth Client ID
 	ClientSecret string        `json:"clientSecret"` // OAuth Client Secret
 	SecretKey    string        `json:"secretKey"`    // JWT 签名密钥
+	Endpoint     string        `json:"endpoint"`     // API 端点地址
 	Environment  string        `json:"environment"`  // production 或 staging
 	Timeout      time.Duration `json:"timeout"`      // API 超时时间
 }

@@ -53,6 +53,31 @@ type (
 		//   - partner: Partner 配置
 		//   - err: 错误信息
 		GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.LinemanPartner, error)
+		// FetchTokenFromAPI 从 LINE MAN OAuth 服务器获取 Access Token
+		// 参数：
+		//   - ctx: 上下文
+		//
+		// 返回：
+		//   - token: OAuth Access Token
+		//   - expiresIn: Token 有效期（秒）
+		//   - err: 错误信息
+		FetchTokenFromAPI(ctx context.Context) (string, int, error)
+		// GetAccessToken 获取或刷新 Access Token（使用 Redis 缓存 + 双重检查锁）
+		// 参数：
+		//   - ctx: 上下文
+		//
+		// 返回：
+		//   - token: OAuth Access Token
+		//   - err: 错误信息
+		GetAccessToken(ctx context.Context) (string, error)
+		// GetAuthorizationHeader 获取 Authorization 请求头（Bearer Token 格式）
+		// 参数：
+		//   - ctx: 上下文
+		//
+		// 返回：
+		//   - header: Authorization 请求头值（格式: "Bearer {token}"）
+		//   - err: 错误信息
+		GetAuthorizationHeader(ctx context.Context) (string, error)
 	}
 )
 
