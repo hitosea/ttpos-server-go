@@ -540,7 +540,7 @@ func (c *GrabConverter) convertProductFlavors(
 		if bom.StockNum > 0 {
 			allSoldOut = false
 		}
-		if bom.IsDelete() {
+		if !bom.IsDelete() {
 			allDown = false
 		}
 	}
