@@ -7,7 +7,6 @@ package service
 
 import (
 	"context"
-
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
 )

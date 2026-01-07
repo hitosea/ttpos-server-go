@@ -6,6 +6,7 @@ type ProviderName string
 const (
 	ProviderSkootar ProviderName = "skootar"
 	ProviderGrab    ProviderName = "grab"
+	ProviderLineman ProviderName = "lineman"
 )
 
 // ProviderShopStatus 第三方门店集成状态

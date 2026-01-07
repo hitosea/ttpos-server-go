@@ -11,6 +11,7 @@ import (
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
+	"ttpos-bmp/app/ttpos-takeout/api/shop"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
@@ -247,4 +248,84 @@ func (s *sShopProviderCfg) HandleIntegrationStatus(ctx context.Context, req *gra
 
 	// 3. 更新配置并发送通知
 	return s.UpsertAndNotify(ctx, shopUUID, string(consts.ProviderGrab), grabMerchantID, internalStatus)
+}
+
+// GetShopProviderCfgForRPC 查询门店渠道配置（gRPC 接口，支持可选 providerName）
+// 参数：
+//   - ctx: 上下文对象
+//   - shopUUID: 门店 UUID
+//   - providerName: 第三方名称（可选，为空时返回所有支持渠道的配置）
+//
+// 返回：
+//   - res: 查询结果，包含门店 UUID 和渠道配置列表
+//   - err: 操作过程中产生的错误（若有）
+func (s *sShopProviderCfg) GetShopProviderCfgForRPC(ctx context.Context, shopUUID uint64, providerName string) (*shop.GetShopProviderCfgResp, error) {
+	// 参数校验
+	if shopUUID == 0 {
+		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "shop_uuid 不能为 0")
+	}
+
+	var cfgItems []*shop.ShopProviderCfgItem
+
+	// 如果指定了 provider_name，只查询该渠道
+	if providerName != "" {
+		cfg, err := s.GetShopProviderCfg(ctx, shopUUID, providerName)
+		if err != nil {
+			return nil, err
+		}
+
+		// 如果配置不存在，返回默认 INACTIVE 状态
+		if cfg == nil {
+			cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+				ProviderName:       providerName,
+				ProviderMerchantId: "",
+				ProviderShopStatus: string(consts.ProviderShopStatusInactive),
+				UpdatedAt:          0,
+			})
+		} else {
+			cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+				ProviderName:       cfg.ProviderName,
+				ProviderMerchantId: cfg.ProviderMerchantId,
+				ProviderShopStatus: cfg.ProviderShopStatus,
+				UpdatedAt:          int64(cfg.UpdatedAt),
+			})
+		}
+	} else {
+		// 未指定 provider_name，查询所有支持的渠道
+		providers := []consts.ProviderName{
+			consts.ProviderLineman,
+			consts.ProviderGrab,
+		}
+
+		for _, pName := range providers {
+			cfg, err := s.GetShopProviderCfg(ctx, shopUUID, string(pName))
+			if err != nil {
+				g.Log().Warningf(ctx, "[ShopProviderCfg] 查询渠道配置失败: shop_uuid=%d, provider=%s, error=%v",
+					shopUUID, pName, err)
+				continue
+			}
+
+			// 如果配置不存在，返回默认 INACTIVE 状态
+			if cfg == nil {
+				cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+					ProviderName:       string(pName),
+					ProviderMerchantId: "",
+					ProviderShopStatus: string(consts.ProviderShopStatusInactive),
+					UpdatedAt:          0,
+				})
+			} else {
+				cfgItems = append(cfgItems, &shop.ShopProviderCfgItem{
+					ProviderName:       cfg.ProviderName,
+					ProviderMerchantId: cfg.ProviderMerchantId,
+					ProviderShopStatus: cfg.ProviderShopStatus,
+					UpdatedAt:          int64(cfg.UpdatedAt),
+				})
+			}
+		}
+	}
+
+	return &shop.GetShopProviderCfgResp{
+		ShopUuid:  shopUUID,
+		Providers: cfgItems,
+	}, nil
 }

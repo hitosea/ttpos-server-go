@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-takeout/api/grab"
+	"ttpos-bmp/app/ttpos-takeout/api/shop"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
@@ -40,6 +41,15 @@ type (
 		// HandleIntegrationStatus 处理 Grab 门店集成状态 Webhook
 		// 包含: partnerMerchantID 解析、状态映射、配置更新、通知发送
 		HandleIntegrationStatus(ctx context.Context, req *grabfood.PushIntegrationStatusWebhookRequest) error
+		// GetShopProviderCfgForRPC 查询门店渠道配置（gRPC 接口，支持可选 providerName）
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - shopUUID: 门店 UUID
+		//   - providerName: 第三方名称（可选，为空时返回所有支持渠道的配置）
+		// 返回：
+		//   - res: 查询结果，包含门店 UUID 和渠道配置列表
+		//   - err: 操作过程中产生的错误（若有）
+		GetShopProviderCfgForRPC(ctx context.Context, shopUUID uint64, providerName string) (*shop.GetShopProviderCfgResp, error)
 	}
 )
 

@@ -8,4 +8,3 @@ type LinemanTokenClaims struct {
 	Scope    string `json:"scope,omitempty"`
 	jwt.RegisteredClaims
 }
-
