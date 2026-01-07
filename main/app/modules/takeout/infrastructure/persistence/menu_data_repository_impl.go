@@ -650,9 +650,9 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				}
 
 				// 如果外卖表没有，回退到核心表
-				// if displayName == "" {
-				// 	displayName = ttposName
-				// }
+				if displayName == "" {
+					displayName = ttposName
+				}
 
 				// 获取规格信息和ERP编码
 				if pkg.ProductBomUuid > 0 {

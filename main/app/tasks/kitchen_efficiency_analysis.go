@@ -36,14 +36,11 @@ func (t *KitchenEfficiencyAnalysisTask) Execute() {
 			logger.Logger.Error("后厨效率分析定时任务,发生panic: %v", zap.Any("panic", r))
 		}
 	}()
-	logger.Logger.Info("开始执行后厨效率分析定时任务")
-
 	start := time.Now()
 	// 分布式锁,避免多个节点同时执行
 	lock.NewSystemLock().LockUuid(lock.KitchenEfficiencyAnalysisLock)
 	defer lock.NewSystemLock().UnlockUuid(lock.KitchenEfficiencyAnalysisLock)
 	spend := time.Since(start)
-	logger.Logger.Info("厨效率分析定时任务,分布式锁耗时: %v", zap.Duration("spend", spend))
 	if spend > 1*time.Second {
 		logger.Logger.Warn("厨效率分析定时任务.其他节点已经处理该任务，本节点跳过")
 		return
@@ -56,16 +53,12 @@ func (t *KitchenEfficiencyAnalysisTask) Execute() {
 		return
 	}
 
-	logger.Logger.Info("厨效率分析定时任务,找到 %d 个门店,开始统计后厨效率分析", zap.Int("company_count", len(companies)))
-
 	for _, company := range companies {
 		if err := t.ProcessCompany(company); err != nil {
 			logger.Logger.Error("厨效率分析定时任务,处理门店失败", zap.String("company_name", company.Name), zap.Uint64("company_uuid", company.Uuid), zap.Error(err))
 			continue
 		}
 	}
-
-	logger.Logger.Info("厨效率分析定时任务执行完成")
 }
 
 // getAllCompanies 获取所有门店
@@ -96,6 +89,5 @@ func (t *KitchenEfficiencyAnalysisTask) ProcessCompany(company *model.Company) e
 	if err != nil {
 		return err
 	}
-	logger.Logger.Info("统计后厨效率分析成功", zap.String("company_name", company.Name), zap.Uint64("company_uuid", company.Uuid))
 	return nil
 }
