@@ -909,7 +909,7 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 				// 设置修饰符名称
 				if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
 					// 已映射修饰符：使用修饰符名称和数量
-					if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok && info.Name != "" {
+					if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok {
 						// ModifierName: 用于显示（commodity: 外卖表优先, 其他: 核心表）
 						modifier.ModifierName = info.Name
 						// TtposModifierName: 用于标识（始终来自核心表）
