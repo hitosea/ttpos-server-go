@@ -978,8 +978,8 @@ func (s *takeoutAppService) updateModifiersOneByOne(
 
 	// 频率控制配置
 	const requestInterval = 350 // 每个请求间隔 300ms，约 3 req/s
-	const maxRetries = 2        // 遇到 429 时的最大重试次数
-	const retryDelay = 300      // 重试基础延迟 300ms
+	const maxRetries = 3        // 遇到 429 时的最大重试次数
+	const retryDelay = 600      // 重试基础延迟 300ms
 
 	if len(modifiers) == 0 {
 		return
