@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
@@ -229,14 +230,20 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderRemark 处理桌台订单整单备注
@@ -264,14 +271,20 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderRemarkList 处理获取整单备注列表
@@ -680,14 +693,20 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductPackageAdd 向购物车添加套餐
@@ -722,14 +741,20 @@ func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductFlavorAndAttribute 查询购物车商品“规格/属性”
@@ -793,14 +818,20 @@ func (h *DeskHandler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductNum 修改购物车商品数量
@@ -1011,14 +1042,20 @@ func (h *DeskHandler) OrderDiscount(c *gin.Context) {
 		return
 	}
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderDiscountCancel 处理桌台订单取消打折
@@ -1047,15 +1084,21 @@ func (h *DeskHandler) OrderDiscountCancel(c *gin.Context) {
 		return
 	}
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
-	}
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
 
-	// 返回结果
-	helper.Success(c, res, "操作成功")
+		// 返回结果
+		helper.Success(c, res, "操作成功")
+	}
 }
 
 // OrderProductChangePrice 处理桌台订单商品改价
@@ -1084,14 +1127,20 @@ func (h *DeskHandler) OrderProductChangePrice(c *gin.Context) {
 		return
 	}
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductReturning 退菜购物车商品
@@ -1121,14 +1170,20 @@ func (h *DeskHandler) OrderCartProductReturning(c *gin.Context) {
 	}
 	ctx.Log().Debug("退菜购物车商品成功", zap.Any("res", shopCart))
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductCancelReturning 取消退菜购物车商品
@@ -1158,14 +1213,20 @@ func (h *DeskHandler) OrderCartProductCancelReturning(c *gin.Context) {
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductChangeDesk 转菜购物车商品
@@ -1194,14 +1255,20 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("转菜购物车商品成功", zap.Any("res", shopCart))
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductWrap 打包单商品
@@ -1290,14 +1357,20 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 		return
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // OrderCartProductCancelGiving 取消赠菜购物车商品
@@ -1327,14 +1400,20 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 	}
 	ctx.Log().Debug("取消退菜购物车商品成功", zap.Any("res", shopCart))
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // GetMemberDiscount 获取订单会员优惠
@@ -1498,14 +1577,20 @@ func (h *DeskHandler) OrderProductDelete(c *gin.Context) {
 		return
 	}
 
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // GetOrderChangeBuffet 获取订单自助餐信息
@@ -1559,14 +1644,20 @@ func (h *DeskHandler) OrderChangeBuffet(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // GetUnsentKitchen 获取未送厨商品
@@ -1861,14 +1952,20 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+	if !adapter.IsObjectStorageCacheEnabled(helper.GetCompanyUuid(c)) {
+		helper.Success(c, nil)
 		return
+	} else {
+		// 可以暂时不返回ping信息,因为前端已经单独请求了ping接口
+		res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+		// 处理错误
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeFail, err)
+			return
+		}
+		// 返回结果
+		helper.Success(c, res)
 	}
-	// 返回结果
-	helper.Success(c, res)
 }
 
 // CompleteDesk 处理清台
