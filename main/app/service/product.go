@@ -3622,7 +3622,6 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 	productRepo := repository.NewProductRepo(tx)
 	productFlavorRepo := repository.NewProductFlavorRepo(tx)
 	flavorList, err := productRepo.GetProductFlavorList([]repository.DBOption{
-		commonRepo.WhereBySoftDelete(),
 		commonRepo.WhereByHeadquarterUuid(0),
 		productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 	}...)
@@ -3638,18 +3637,99 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 		return errors.WithMessage(err, "获取最大erpnext规格值编号失败")
 	}
 	valueList := make([]req.SaveErpFlavorValueReq, 0, len(flavorList))
-	for _, flavor := range flavorList {
-		enName, err := s.getEnName(ctx, flavor.MultiLanguageName.GetNames())
-		if err != nil {
-			return errors.WithMessage(err, "翻译失败")
+
+	// 辅助函数：检查别名是否已在 valueList 中存在
+	isAliasExists := func(alias string) bool {
+		for _, item := range valueList {
+			if item.ValueAliasName == alias {
+				return true
+			}
 		}
-		if flavor.ErpnextValueNo == 0 {
+		return false
+	}
+
+	// 辅助函数：提取基础名称，去除末尾的 -数字 后缀
+	// 例如：zdgg22-0001 -> zdgg22, zdgg22-1122 -> zdgg22, zdgg22 -> zdgg22
+	extractBaseName := func(name string) string {
+		// 查找最后一个 - 的位置
+		lastDashIndex := -1
+		for i := len(name) - 1; i >= 0; i-- {
+			if name[i] == '-' {
+				lastDashIndex = i
+				break
+			}
+		}
+
+		// 如果没有找到 -，直接返回原名称
+		if lastDashIndex == -1 {
+			return name
+		}
+
+		// 检查 - 后面是否全是数字
+		suffix := name[lastDashIndex+1:]
+		if len(suffix) == 0 {
+			return name
+		}
+
+		for _, ch := range suffix {
+			if ch < '0' || ch > '9' {
+				// 后缀不全是数字，返回原名称
+				return name
+			}
+		}
+
+		// 后缀全是数字，返回基础名称
+		return name[:lastDashIndex]
+	}
+
+	// 辅助函数：生成唯一的别名，如果重复则添加后缀
+	ensureUniqueAlias := func(inputName string) string {
+		// 先提取基础名称，避免嵌套后缀
+		baseName := extractBaseName(inputName)
+
+		// 尝试使用原始输入名称
+		if !isAliasExists(inputName) {
+			return inputName
+		}
+
+		// 如果原始名称已占用，使用基础名称 + 递增后缀
+		suffix := 1
+		for {
+			newAlias := fmt.Sprintf("%s-%04d", baseName, suffix)
+			if !isAliasExists(newAlias) {
+				return newAlias
+			}
+			suffix++
+		}
+	}
+
+	// 第一遍：先处理所有已存在的数据，添加到 valueList
+	// 确保新增数据在检查唯一性时，能看到所有已存在的别名
+	for _, flavor := range flavorList {
+		if flavor.ErpnextValueNo != 0 { // 已存在的数据
+			valueList = append(valueList, req.SaveErpFlavorValueReq{
+				ValueName:      flavor.ErpnextValueName,
+				ValueAliasName: flavor.ErpnextAliasName,
+			})
+		}
+	}
+
+	// 第二遍：处理新增的数据
+	for _, flavor := range flavorList {
+		if flavor.ErpnextValueNo == 0 { // 新增推送到erp的
+			enName, err := s.getEnName(ctx, flavor.MultiLanguageName.GetNames())
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
+
 			maxErpnextValueNo += 1
+			// 确保别名唯一（此时 valueList 已包含所有已存在数据）
+			uniqueAliasName := ensureUniqueAlias(enName)
 			valueName := fmt.Sprintf("%s-%s-%s", companySetting.ErpnextCompanyAbbr, enName, fmt.Sprintf("%04d", maxErpnextValueNo))
 			err = productFlavorRepo.UpdateProductFlavor(map[string]any{
 				"erpnext_group_name": groupName,
 				"erpnext_value_name": valueName,
-				"erpnext_alias_name": enName,
+				"erpnext_alias_name": uniqueAliasName,
 				"erpnext_value_no":   maxErpnextValueNo,
 			}, commonRepo.WhereByUuid(flavor.Uuid))
 			if err != nil {
@@ -3657,15 +3737,14 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 			}
 			valueList = append(valueList, req.SaveErpFlavorValueReq{
 				ValueName:      valueName,
-				ValueAliasName: enName,
-			})
-		} else {
-			valueList = append(valueList, req.SaveErpFlavorValueReq{
-				ValueName:      flavor.ErpnextValueName,
-				ValueAliasName: flavor.ErpnextAliasName,
+				ValueAliasName: uniqueAliasName,
 			})
 		}
 	}
+
+	fmt.Println("+++++")
+	fmt.Println("valueList", utils.ToJson(valueList))
+	fmt.Println("+++++")
 
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	err = erpSrv.SaveFlavor(ctx.GetContext(), req.SaveErpFlavorReq{
@@ -4524,7 +4603,7 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 	}
 
 	// 获取公司
-	company := ctx.GetCompany()
+	// company := ctx.GetCompany()
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 软删除商品规格
@@ -4551,14 +4630,6 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 		err = productRepo.BatchUpdateSort(&model.ProductFlavor{}, sorts)
 		if err != nil {
 			return errors.WithMessage(errors.New("重新排序规格失败"), err.Error())
-		}
-
-		// 同步规格到erp
-		if company.IsOpenErp() {
-			err = s.UpdateProductFlavorErp(ctx, tx)
-			if err != nil {
-				return errors.WithMessage(err, "更新规格到erp失败")
-			}
 		}
 
 		return nil
@@ -4699,7 +4770,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, syncHeadquarterData 
 			}
 			for _, erpFlavorValue := range erpFlavor.AttributeValueList {
 				existsFlavor, _ := productFlavorRepo.GetProductFlavor(
-					commonRepo.WhereBySoftDelete(),
+					// commonRepo.WhereBySoftDelete(),
 					commonRepo.WhereByErpnextValueName(erpFlavorValue.AttributeValue),
 				)
 				if existsFlavor.Uuid == 0 {
@@ -4749,6 +4820,9 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, syncHeadquarterData 
 					}
 					saveProductFlavorUuids = append(saveProductFlavorUuids, newProductFlavor.Uuid)
 				} else {
+					if existsFlavor.DeleteTime != 0 {
+						continue // 如果规格已删除，则跳过 v2.13
+					}
 					// 更新
 					err = productFlavorRepo.UpdateProductFlavor(map[string]any{
 						"erpnext_group_name": erpFlavor.AttributeName,
@@ -4778,9 +4852,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, syncHeadquarterData 
 		productRepo := repository.NewProductRepo(headquarterDb)
 
 		headquarterFlavorList, err := productRepo.GetProductFlavorList(
-			commonRepo.WhereBySoftDelete(),
 			commonRepo.WhereByHeadquarterUuid(0),
-			productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部规格列表失败")
@@ -4789,11 +4861,15 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, syncHeadquarterData 
 		delFlavorUuids := make([]uint64, 0)
 		newFlavorList := make([]model.ProductFlavor, 0)
 		for _, flavor := range headquarterFlavorList {
-			time := time.Now().Unix()
 			newFlavorList = append(newFlavorList, model.ProductFlavor{
-				BaseModel:             model.BaseModel{Uuid: flavor.Uuid, CreateTime: time, UpdateTime: time},
+				BaseModel: model.BaseModel{
+					Uuid:       flavor.Uuid,
+					CreateTime: flavor.CreateTime,
+					UpdateTime: flavor.UpdateTime,
+					DeleteTime: flavor.DeleteTime,
+				},
 				Name:                  flavor.Name,
-				MultiLanguageNameUuid: flavor.MultiLanguageName.Uuid,
+				MultiLanguageNameUuid: flavor.MultiLanguageNameUuid,
 				Sort:                  flavor.Sort,
 				HeadquarterUuid:       companySetting.HeadquarterUuid,
 				ErpnextGroupName:      flavor.ErpnextGroupName,
@@ -4806,9 +4882,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context, syncHeadquarterData 
 
 		db := s.dbm.GetDB(ctx.GetDbId())
 		subFlavorList, err := productRepo.GetProductFlavorList(
-			commonRepo.WhereBySoftDelete(),
 			commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
-			productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取子店规格列表失败")

@@ -1487,7 +1487,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 
 func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFlavor, error) {
 	var flavors []model.ProductFlavor
-	db := r.db.Model(&model.ProductFlavor{}).Scopes(NotDeleted)
+	db := r.db.Model(&model.ProductFlavor{})
 	for _, opt := range opts {
 		db = opt(db)
 	}

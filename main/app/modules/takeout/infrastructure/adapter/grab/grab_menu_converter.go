@@ -318,14 +318,14 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	// 设置商品描述（优先使用多语言字段）
 	if takeoutProduct.DescribeMultiLanguageName.Uuid != 0 {
 		// 使用多语言描述
-		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.DescribeMultiLanguageName.ToMap()))
+		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.DescribeMultiLanguageName.ToMap(), 300))
 		// 设置默认描述（使用英文，如果没有则回退）
-		menuItem.SetDescription(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
+		menuItem.SetDescription(c.truncateName(takeoutProduct.DescribeMultiLanguageName.GetNameByLangWithFallback("en"), 300))
 	} else if takeoutProduct.ProductPackage.DescribeMultiLanguageName.Uuid != 0 {
 		// 使用多语言描述
-		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.DescribeMultiLanguageName.ToMap()))
+		menuItem.SetDescriptionTranslation(c.filterSupportedLanguages(takeoutProduct.ProductPackage.DescribeMultiLanguageName.ToMap(), 300))
 		// 设置默认描述（使用英文，如果没有则回退）
-		menuItem.SetDescription(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback("en"))
+		menuItem.SetDescription(c.truncateName(takeoutProduct.ProductPackage.DescribeMultiLanguageName.GetNameByLangWithFallback("en"), 300))
 	}
 
 	// 设置商品图片（使用 GetUrl 方法，如果没有本地图片则使用外部URL）
@@ -386,7 +386,7 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 // filterSupportedLanguages 过滤出 Grab 支持的语言代码
 // 根据 Grab 官方文档，支持的语言：en, zh, th, ms, vi, id, km, my
 // 不支持：zhtw, ja, ko, tr, sv
-func (c *GrabConverter) filterSupportedLanguages(translations map[string]string) map[string]string {
+func (c *GrabConverter) filterSupportedLanguages(translations map[string]string, maxLength ...int) map[string]string {
 	supportedLangs := map[string]bool{
 		"en": true, // 英文 - 所有国家
 		"zh": true, // 中文 - Thailand, Singapore, Indonesia
@@ -401,7 +401,7 @@ func (c *GrabConverter) filterSupportedLanguages(translations map[string]string)
 	filtered := make(map[string]string)
 	for lang, value := range translations {
 		if supportedLangs[lang] && value != "" {
-			filtered[lang] = c.truncateName(value)
+			filtered[lang] = c.truncateName(value, maxLength...)
 		}
 	}
 
