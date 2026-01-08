@@ -349,8 +349,7 @@ class User extends UserModel
             }
             $data['member_card_no'] = $cardNumber;
             $data['referrer_uuid'] = $referrerUuid;
-            // 使用 force(true) 强制更新所有字段，确保 member_card_no 被更新
-            return $this->force(true)->save($data);
+            return $this->save($data);
         });
     }
 
