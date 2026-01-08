@@ -1009,6 +1009,7 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 						ProductAttrList: []dto.LocaleResponse{*language.JsonToLocaleResponse(modifier.TtposFlavorName)}, // 规格+属性列表
 						TotalNum:        float64(modifier.Quantity),                                                     // 商品数量
 						ProductPrice:    modifier.Price,                                                                 // 商品价格
+						ProductType:     uint8(item.TtposProductType),                                                   // 商品类型
 						IsWrap:          order.IsTakeawayOrder(),                                                        // 是否打包
 						TotalPrice:      utils.Round(modifier.Price*float64(modifier.Quantity), 2),                      // 商品总价格
 					})
