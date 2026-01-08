@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
@@ -198,7 +199,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid, repository.WithUseSaleBillCache())
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
@@ -219,6 +220,17 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	// 加购
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 更新缓存的salebill信息
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		saleBillController := controller.GetSaleBillController()
+		if err := saleBillController.Update(ctx, ctx.GetDB(),
+			[]uint64{request.SaleBillUuid},
+			controller.WithUpdateValue(map[uint64]interface{}{request.SaleBillUuid: saleBill}),
+		); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {

@@ -188,10 +188,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.tax, 0)), 0) AS total_tax", businessStatesStr),
 		// 9. 总营业收入：当 order_state 为营业收入状态时统计（实付金额 - 税费）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment - t.tax, 0)), 0) AS total_business_amount", businessStatesStr),
-		// 10. 取消订单数：当 order_state = 50 时统计（拒单状态）
-		fmt.Sprintf("COALESCE(COUNT(DISTINCT IF(t.order_state = %d, t.uuid, NULL)), 0) AS cancel_order_num", rejectedOrderState),
-		// 11. 取消订单金额：当 order_state = 50 时统计（拒单状态的小计金额）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.subtotal, 0)), 0) AS cancel_order_amount", rejectedOrderState),
+		// 10. 取消订单数：当 order_state = 60 时统计（已取消订单）
+		fmt.Sprintf("COALESCE(COUNT(DISTINCT IF(t.order_state = %d, t.uuid, NULL)), 0) AS cancel_order_num", canceledOrderState),
+		// 11. 取消订单金额：当 order_state = 60 时统计（已取消订单的顾客实付）
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS cancel_order_amount", canceledOrderState),
 		// 12. 总商品数量：当 order_state 为有效状态时统计，关联商品表的 quantity 字段
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, IFNULL(t.total_quantity, 0), 0)), 0) AS total_product_num", validStatesStr),
 	}

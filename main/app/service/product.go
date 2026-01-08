@@ -8480,7 +8480,7 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 	companySetting *model.CompanySetting,
 ) error {
 	var takeouts []takeoutModel.Takeout
-	err := headquarterDb.Model(&takeoutModel.Takeout{}).Where("enabled = 1").Find(&takeouts).Error
+	err := subDb.Model(&takeoutModel.Takeout{}).Where("enabled = 1").Find(&takeouts).Error
 	if err != nil {
 		return errors.WithMessage(err, "获取ttpos_takeout中enabled=1的数据失败")
 	}
@@ -8796,12 +8796,6 @@ func (s *productSrv) createSubTakeoutProduct(
 ) error {
 	// 创建外卖商品主表（使用总部的 UUID，首次同步默认下架）
 	newTakeout := model.ProductPackageTakeout{
-		BaseModel: model.BaseModel{
-			Uuid:       headTakeout.Uuid,
-			CreateTime: headTakeout.CreateTime,
-			UpdateTime: headTakeout.UpdateTime,
-			DeleteTime: headTakeout.DeleteTime,
-		},
 		ProductPackageUuid:            headTakeout.ProductPackageUuid,
 		MultiLanguageNameUuid:         headTakeout.MultiLanguageNameUuid,
 		HeadquarterUuid:               companySetting.HeadquarterUuid,
@@ -8827,12 +8821,6 @@ func (s *productSrv) createSubTakeoutProduct(
 	// 创建外卖规格价格
 	for _, headBom := range headTakeout.ProductBomTakeouts {
 		newBom := model.ProductBomTakeout{
-			BaseModel: model.BaseModel{
-				Uuid:       headBom.Uuid,
-				CreateTime: headBom.CreateTime,
-				UpdateTime: headBom.UpdateTime,
-				DeleteTime: headBom.DeleteTime,
-			},
 			ProductPackageTakeoutUuid: newTakeout.Uuid, // 使用新创建的外卖商品UUID
 			ProductBomUuid:            headBom.ProductBomUuid,
 			HeadquarterUuid:           companySetting.HeadquarterUuid,
@@ -8850,12 +8838,6 @@ func (s *productSrv) createSubTakeoutProduct(
 	// 创建外卖属性价格
 	for _, headAttr := range headTakeout.ProductPackageAttributeTakeouts {
 		newAttr := model.ProductPackageAttributeTakeout{
-			BaseModel: model.BaseModel{
-				Uuid:       headAttr.Uuid,
-				CreateTime: headAttr.CreateTime,
-				UpdateTime: headAttr.UpdateTime,
-				DeleteTime: headAttr.DeleteTime,
-			},
 			ProductPackageTakeoutUuid:   newTakeout.Uuid, // 使用新创建的外卖商品UUID
 			ProductPackageAttributeUuid: headAttr.ProductPackageAttributeUuid,
 			HeadquarterUuid:             companySetting.HeadquarterUuid,
@@ -8872,12 +8854,6 @@ func (s *productSrv) createSubTakeoutProduct(
 	// 创建外卖套餐子商品价格
 	for _, headGroupItem := range headTakeout.ProductPackageGroupItemTakeouts {
 		newGroupItem := model.ProductPackageGroupItemTakeout{
-			BaseModel: model.BaseModel{
-				Uuid:       headGroupItem.Uuid,
-				CreateTime: headGroupItem.CreateTime,
-				UpdateTime: headGroupItem.UpdateTime,
-				DeleteTime: headGroupItem.DeleteTime,
-			},
 			ProductPackageTakeoutUuid:   newTakeout.Uuid, // 使用新创建的外卖商品UUID
 			ProductPackageGroupItemUuid: headGroupItem.ProductPackageGroupItemUuid,
 			ProductPackageGroupUuid:     headGroupItem.ProductPackageGroupUuid,

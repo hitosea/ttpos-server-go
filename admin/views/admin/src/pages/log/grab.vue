@@ -40,6 +40,11 @@
 
     <!-- 表格 -->
     <el-table v-loading="isFetching" :data="data?.data?.list" row-key="uuid" border>
+      <template #empty>
+        <div class="empty-text">
+          {{ getEmptyText() }}
+        </div>
+      </template>
       <el-table-column prop="import_type" :label="$t('类型')" width="180">
         <template #default="scope">
           {{ scope.row.import_type === 1 ? $t('TTPOS推送到平台') : scope.row.import_type === 2 ? $t('平台推送到TTPOS') : '-' }}
@@ -87,13 +92,14 @@
 <script setup lang="ts">
   import { getLogList, logListType } from '@/api/log';
   import { getShopList, ShopListData } from '@/api/merchant';
-  import { ref } from 'vue';
-  import { useQuery } from 'vue-query';
+  import { ref, onMounted, onUnmounted, onActivated } from 'vue';
+  import { useQuery, useQueryClient } from 'vue-query';
   import { useUserInfoStore } from '@/stores/userInfo';
   import { $t } from '@/i18n';
   import { message } from '@/utils/feedback';
 
   const { hasPermission } = useUserInfoStore();
+  const queryClient = useQueryClient();
 
   const searchParams = ref<logListType>({
     page: 1,
@@ -101,10 +107,11 @@
   });
 
   const shopList = ref<ShopListData[]>([]);
+  const hasSearched = ref(false); // 是否已经查询过
 
   const { isFetching, data, refetch } = useQuery(['getLogList'], () => getLogList(searchParams.value), {
     enabled: false,
-    keepPreviousData: true,
+    keepPreviousData: false,
   });
 
   // 远程搜索门店
@@ -140,6 +147,16 @@
     return shop?.shop_supplier_name || '';
   };
 
+  // 获取空状态文本
+  const getEmptyText = () => {
+    // 如果还没有查询过，或者没有选择门店，显示"请选择门店"
+    if (!hasSearched.value || !searchParams.value.company_uuid) {
+      return $t('请选择门店');
+    }
+    // 如果已经查询过且有选择门店，但数据为空，显示"暂无数据"
+    return $t('暂无数据');
+  };
+
   // 格式化时间
   const formatTime = (timestamp?: number) => {
     if (!timestamp) return '-';
@@ -162,6 +179,7 @@
     }
 
     searchParams.value.page = 1;
+    hasSearched.value = true; // 标记已查询
     if (hasPermission(['admin_takeout_logs'])) {
       refetch.value();
     }
@@ -171,23 +189,43 @@
   const handlePageSizeChange = (page: number, pageSize: number) => {
     searchParams.value.page = page || 1;
     searchParams.value.page_size = pageSize || 10;
+    // 分页也是查询，保持 hasSearched 为 true
+    hasSearched.value = true;
     refetch.value();
   };
 
-  // 初始化数据
-  //   const initData = () => {
-  //     searchParams.value = {
-  //       page: 1,
-  //       page_size: 10,
-  //     };
-  //     getShopListData();
-  //     handleSearch();
-  //   };
+  // 重置数据
+  const resetData = () => {
+    searchParams.value = {
+      page: 1,
+      page_size: 10,
+    };
+    shopList.value = [];
+    hasSearched.value = false; // 重置查询状态
+    // 清除 vue-query 缓存
+    queryClient.removeQueries(['getLogList']);
+  };
 
-  //   onMounted(() => {
-  //     if (roleListPath.value && roleListPath.value.length > 0) {
-  //       initData();
-  //     }
-  //   });
+  // 组件挂载时重置数据
+  onMounted(() => {
+    resetData();
+  });
+
+  // 组件激活时重置数据（处理 keep-alive 情况）
+  onActivated(() => {
+    resetData();
+  });
+
+  // 组件卸载时清理缓存
+  onUnmounted(() => {
+    queryClient.removeQueries(['getLogList']);
+  });
 </script>
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+  .empty-text {
+    padding: 40px 0;
+    text-align: center;
+    color: #909399;
+    font-size: 14px;
+  }
+</style>
