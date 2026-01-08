@@ -1922,6 +1922,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
+	opts = append(opts, repository.WithCompanyUuid(ctx.GetCompanyUuid())) // 传入公司UUID，用于判断是否使用缓存
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
