@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -1848,8 +1849,8 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 	// 对 availableCompanyList 按 StoreCode 排序
 	// 排序规则：
 	// 1. StoreCode 为空的排在最前面
-	// 2. 空 StoreCode 之间：IsSuper > 0 的排前面，都 > 0 则按 CompanyName 排序
-	// 3. 非空 StoreCode：含数字的排前面，同组内按字符串排序（不区分大小写）
+	// 2. 空 StoreCode 之间：按 CompanyUuid 升序排序（保证稳定性）
+	// 3. 非空 StoreCode：去掉 "No." 前缀后，纯数字按数字大小排序（去掉前缀0），否则按字符串排序（不区分大小写）
 	sort.Slice(availableCompanyList, func(i, j int) bool {
 		item1 := availableCompanyList[i]
 		item2 := availableCompanyList[j]
@@ -1862,42 +1863,68 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 			return isEmpty1 // true 排在前面
 		}
 
-		// 2. 如果都是空字符串，按 IsSuper 和 CompanyName 排序
+		// 2. 如果都是空字符串，按 CompanyUuid 排序
 		if isEmpty1 && isEmpty2 {
-			// IsSuper > 0 的排在前面
-			if (item1.IsSuper > 0) != (item2.IsSuper > 0) {
-				return item1.IsSuper > 0
-			}
-			// 如果 IsSuper 都大于 0 或都不大于 0，按 CompanyName 排序
-			return strings.ToLower(item1.CompanyName) < strings.ToLower(item2.CompanyName)
+			return item1.CompanyUuid < item2.CompanyUuid
 		}
 
-		// 3. 如果都有 StoreCode，按原规则排序
-		code1Lower := strings.ToLower(item1.StoreCode)
-		code2Lower := strings.ToLower(item2.StoreCode)
+		// 3. 如果都有 StoreCode，按新规则排序
+		// 去掉 "No." 前缀（如果有）
+		processed1 := processStoreCodeForSort(item1.StoreCode)
+		processed2 := processStoreCodeForSort(item2.StoreCode)
 
-		// 判断是否含数字
-		hasDigit1 := containsDigit(code1Lower)
-		hasDigit2 := containsDigit(code2Lower)
+		// 判断处理后的内容是否只有数字
+		isDigits1 := isOnlyDigits(processed1)
+		isDigits2 := isOnlyDigits(processed2)
 
-		// 含数字的排在不含数字的前面
-		if hasDigit1 != hasDigit2 {
-			return hasDigit1
+		// 如果都是纯数字，按数字大小排序
+		if isDigits1 && isDigits2 {
+			num1, _ := parseNumberWithoutLeadingZeros(processed1)
+			num2, _ := parseNumberWithoutLeadingZeros(processed2)
+			return num1 < num2
 		}
 
-		// 同组内按字符串排序
-		return code1Lower < code2Lower
+		// 如果一个是数字一个不是，数字排在前面
+		if isDigits1 != isDigits2 {
+			return isDigits1
+		}
+
+		// 否则按不区分大小写的字符串排序
+		return strings.ToLower(processed1) < strings.ToLower(processed2)
 	})
 
 	return availableCompanyList
 }
 
-// containsDigit 检查字符串是否包含数字
-func containsDigit(s string) bool {
+// processStoreCodeForSort 处理 StoreCode 用于排序
+// 去掉 "No." 前缀（不区分大小写），返回处理后的字符串
+func processStoreCodeForSort(storeCode string) string {
+	codeLower := strings.ToLower(storeCode)
+	if strings.HasPrefix(codeLower, "no.") {
+		return storeCode[3:] // 去掉前3个字符 "No."
+	}
+	return storeCode
+}
+
+// isOnlyDigits 判断字符串是否只包含数字
+func isOnlyDigits(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
 	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			return true
+		if c < '0' || c > '9' {
+			return false
 		}
 	}
-	return false
+	return true
+}
+
+// parseNumberWithoutLeadingZeros 去掉前缀0并转换为数字
+func parseNumberWithoutLeadingZeros(s string) (int, error) {
+	// 去掉前缀0
+	trimmed := strings.TrimLeft(s, "0")
+	if trimmed == "" {
+		return 0, nil
+	}
+	return strconv.Atoi(trimmed)
 }
