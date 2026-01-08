@@ -71,6 +71,9 @@ type CacheLayerOption struct {
 	// L2TTL L2 Redis 缓存的过期时间，如果为 0 则使用任务 TTL
 	// 建议设置为任务 TTL 的 1.5 到 2 倍
 	L2TTL time.Duration
+
+	// EnableL1Cache 是否开启 L1 本地缓存，默认为 true
+	EnableL1Cache bool
 }
 
 // WithSingletonKey 设置单例 key
@@ -95,6 +98,17 @@ func WithL1TTL(ttl time.Duration) func(*CacheLayerOption) {
 func WithL2TTL(ttl time.Duration) func(*CacheLayerOption) {
 	return func(opt *CacheLayerOption) {
 		opt.L2TTL = ttl
+	}
+}
+
+// WithEnableL1Cache 设置是否开启 L1 本地缓存
+// 参数：
+//   - enable: true 开启 L1 缓存（默认），false 禁用 L1 缓存
+//
+// 示例：WithEnableL1Cache(false) // 禁用 L1 缓存，只使用 L2 Redis 缓存
+func WithEnableL1Cache(enable bool) func(*CacheLayerOption) {
+	return func(opt *CacheLayerOption) {
+		opt.EnableL1Cache = enable
 	}
 }
 
