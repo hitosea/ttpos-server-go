@@ -183,10 +183,10 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 				case "commodity": // 商品类型，作为套餐子商品显示
 					subProduct := structs.StatementProductData{
 						Name:         modifierName,
-						Price:        t.base.Amount(modifier.Price / float64(modifier.Quantity)),
+						Price:        t.base.Amount(modifier.Price),
 						Num:          float64(modifier.Quantity),
 						PriceNum:     fmt.Sprintf("%d", modifier.Quantity),
-						Subtotal:     t.base.Amount(modifier.Price),
+						Subtotal:     t.base.Amount(modifier.Price * float64(modifier.Quantity)),
 						IsSubProduct: true, // 标记为子商品
 					}
 					// 商家联：始终使用 TTPOS 规格名称

@@ -199,7 +199,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid, repository.WithUseSaleBillCache())
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}

@@ -4021,7 +4021,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_order_item_modifier` (
     `ttpos_flavor_product_bom_uuid` bigint unsigned NOT NULL DEFAULT 0 COMMENT 'TTPOS规格商品物料UUID（commodity类型对应product_package_group_item.product_bom_uuid）',
     `ttpos_flavor_name` text COMMENT 'TTPOS规格名称(commodity类型使用)',
     `quantity` int unsigned NOT NULL DEFAULT 1 COMMENT '数量',
-    `price` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '价格(元,4位小数)',
+    `price` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '加价-单价',
     `tax` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '税费(元,4位小数)',
     `is_mapped` tinyint NOT NULL DEFAULT 0 COMMENT '是否已映射: 0=未映射,1=已映射',
     `create_time` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
