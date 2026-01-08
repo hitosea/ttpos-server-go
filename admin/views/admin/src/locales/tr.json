@@ -467,5 +467,22 @@
     "添加门店": "店舗を追加",
     "手机号": "Telefon Numarası",
     "关联门店和角色": "İlişkili mağazalar ve roller",
-    "无角色": "Rol yok"
+    "无角色": "Rol yok",
+    "日志管理": "ログ管理",
+    "类型": "Tür",
+    "全部": "Tümü",
+    "TTPOS推送到平台": "TTPOS platforma gönderiliyor",
+    "平台推送到TTPOS": "Platforma TTPOS'a gönderiliyor",
+    "进行中": "Devam ediyor",
+    "成功": "Başarılı",
+    "失败": "Başarısız",
+    "门店": "Mağaza",
+    "时间": "Zaman",
+    "原因": "Sebep",
+    "不修改请留空": "如不修改請留空",
+    "请输入正确的手机号格式": "Lütfen doğru telefon numarası formatını girin",
+    "请至少添加一个门店": "Lütfen en az bir mağaza ekleyin",
+    "邮箱/手机号/员工ID": "E-posta/Telefon Numarası/Personel ID",
+    "添加账号": "Hesap ekle",
+    "导入日志": "Günlükleri içe aktar"
 }

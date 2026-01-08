@@ -416,4 +416,43 @@ type UserAnalysisRepoResult struct {
 	OrderSource  []UserAnalysisItemRepo `json:"order_source"`  // 点餐方式来源统计
 	DeskSource   []UserAnalysisItemRepo `json:"desk_source"`   // 桌台方式来源统计
 	DiningMethod []UserAnalysisItemRepo `json:"dining_method"` // 用餐方式统计
+	TakeoutMethod []UserAnalysisItemRepo `json:"takeout_method"` // 外卖方式统计（Grab/LINE MAN）
+}
+
+// StatisticsTakeoutData 外卖订单统计数据
+type StatisticsTakeoutSaleData struct {
+	TotalSaleAmount     float64 `gorm:"column:total_sale_amount;comment:总销售额(小计金额)"`
+	TotalPayAmount      float64 `gorm:"column:total_pay_amount;comment:总实付金额(顾客实付)"`
+	TotalOrderNum       int64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalRefundAmount   float64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+	MinOrderAmount      float64 `gorm:"column:min_order_amount;comment:最小订单金额"`
+	MaxOrderAmount      float64 `gorm:"column:max_order_amount;comment:最大订单金额"`
+	TotalDiscount       float64 `gorm:"column:total_discount;comment:总优惠折扣(平台优惠+商户优惠)"`
+	TotalTax            float64 `gorm:"column:total_tax;comment:总税费"`
+	TotalBusinessAmount float64 `gorm:"column:total_business_amount;comment:总营业收入(实付金额-税费)"`
+	CancelOrderNum      int64   `gorm:"column:cancel_order_num;comment:取消订单数"`
+	CancelOrderAmount   float64 `gorm:"column:cancel_order_amount;comment:取消订单金额(拒单状态的小计金额)"`
+	TotalProductNum     int64   `gorm:"column:total_product_num;comment:总商品数量"`
+}
+
+// StatisticsTakeoutPaymentData 外卖订单支付方式统计数据
+type StatisticsTakeoutPaymentData struct {
+	ID                 uint64  `gorm:"column:id;comment:支付方式ID"`
+	Sort               int     `gorm:"column:sort;comment:支付方式排序"`
+	CreateTime         int64   `gorm:"column:create_time;comment:支付方式创建时间"`
+	PaymentName        string  `gorm:"column:payment_name;comment:支付方式名称"`
+	PaymentCode        int     `gorm:"column:payment_code;comment:支付方式编码"`
+	ErpnextPayment     string  `gorm:"column:erpnext_payment;comment:ERPNext支付方式"`
+	ErpnextPaymentId   string  `gorm:"column:erpnext_payment;comment:ERPNext支付方式ID"`
+	Source             int     `gorm:"column:source;comment:来源 0-系统 1-手动 2-LianLianPay"`
+	TotalOrderNum      int64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalPaymentAmount float64 `gorm:"column:total_payment_amount;comment:总支付金额"`
+	TotalRefundAmount  float64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+}
+
+// StatisticsTakeoutReceivedAmountData 外卖订单实收金额统计数据
+type StatisticsTakeoutReceivedAmountData struct {
+	AcceptedTime        int64   `gorm:"column:accepted_time"`         // 接单时间
+	TakeoutOrderUuid    uint64  `gorm:"column:takeout_order_uuid"`    // 外卖订单UUID
+	TotalReceivedAmount float64 `gorm:"column:total_received_amount"` // 总实收金额
 }

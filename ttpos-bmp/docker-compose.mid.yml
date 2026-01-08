@@ -53,7 +53,7 @@ services:
     volumes:
       - ../docker/rocketmq/conf/broker-dev.conf:/opt/rocketmq/conf/broker-dev.conf
       # 添加持久化存储，挂载到宿主机有足够空间的目录
-      - ../docker/rocketmq/data:/home/rocketmq/store
+      # - ../docker/rocketmq/data:/home/rocketmq/store
 
   # mq-proxy:
   #   image: apache/rocketmq:5.3.4

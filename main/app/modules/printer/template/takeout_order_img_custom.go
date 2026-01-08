@@ -131,7 +131,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 		FinishTime:   t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
 		PayTime:      t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
 		CancelTime:   t.base.FormatUnixTimeDefault(order.RejectedTime),  // 取消时间
-		CancelReason: order.RejectReason,                                // 取消原因
+		RejectReason: order.RejectReason,                                // 取消原因
 	}
 
 	// 商品列表
@@ -221,6 +221,11 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 
 		// 先添加主商品
 		products = append(products, product)
+		// 添加套餐子商品
+		for _, subProduct := range subProducts {
+			products = append(products, subProduct)
+		}
+		// 商品数量
 		productNum += float64(item.Quantity)
 	}
 

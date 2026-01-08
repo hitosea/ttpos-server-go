@@ -263,7 +263,7 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 	flavorsForPrice := make([]*model.ProductBom, 0)
 	for i := range takeoutProduct.ProductPackage.ProductBoms {
 		bom := &takeoutProduct.ProductPackage.ProductBoms[i]
-		if bom.IsFlavor() && !bom.IsDelete() && bom.Status == 1 {
+		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorsForPrice = append(flavorsForPrice, bom)
 		}
 	}
@@ -633,7 +633,7 @@ func (c *GrabConverter) convertProductSauces(ctx context.Context, menuItem *grab
 	sauces := make([]*model.ProductBom, 0)
 	for i := range takeoutProduct.ProductPackage.ProductBoms {
 		bom := &takeoutProduct.ProductPackage.ProductBoms[i]
-		if bom.IsSauce() && !bom.IsDelete() && bom.Status == 1 {
+		if bom.IsSauce() && !bom.IsDelete() {
 			sauces = append(sauces, bom)
 		}
 	}

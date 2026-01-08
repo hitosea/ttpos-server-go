@@ -1002,7 +1002,7 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 					}
 					subProducts = append(subProducts, printer_model.OrderProduct{
 						OrderProductId:  modifier.Uuid,
-						ProductId:       modifier.TtposModifierUuid,
+						ProductId:       modifier.TtposProductPackageUuid,
 						ProductName:     *language.JsonToLocaleResponse(modifierName),                                   // 商品名称
 						FlavorName:      *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品规格
 						Attr:            *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品属性

@@ -3784,6 +3784,9 @@ definitions:
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
+      order_delivery:
+        description: 外卖订单， 0=否、 1=是
+        type: integer
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -8318,6 +8321,9 @@ definitions:
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
+      order_delivery:
+        description: 外卖订单， 0=否、 1=是
+        type: integer
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -10287,6 +10293,18 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
         description: 点餐-店内
+      dine_in_store:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 堂食
+      grab:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: Grab 外卖
+      lineman:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: LINE MAN 外卖
       meta:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesMeta'
@@ -10299,6 +10317,14 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
         description: 桌台
+      takeaway:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 外带
+      takeout:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 外卖
       takeout_delivery:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
@@ -17594,6 +17620,11 @@ definitions:
         type: array
       order_source:
         description: 点餐方式来源统计
+        items:
+          $ref: '#/definitions/resp.UserAnalysisItem'
+        type: array
+      takeout_method:
+        description: 外卖方式统计（Grab/LINE MAN）
         items:
           $ref: '#/definitions/resp.UserAnalysisItem'
         type: array
