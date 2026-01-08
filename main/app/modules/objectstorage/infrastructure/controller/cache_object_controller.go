@@ -20,12 +20,41 @@ import (
 type BatchGetByUuidsOption struct {
 	// SkipCache 是否跳过缓存检查，直接执行查询
 	SkipCache bool
+
+	// Value 当 SkipCache=true 时，如果提供了 Value（非空），则直接使用此值更新缓存，不执行查询
+	// 如果为 nil，则正常执行查询
+	// map[uint64]T: UUID 到对象的映射
+	Value map[uint64]interface{}
 }
 
 // WithSkipCache 设置是否跳过缓存选项（用于 BatchGetByUuids）
-func WithSkipCache() func(*BatchGetByUuidsOption) {
+// 参数：
+//   - val: 可选的值映射（map[uint64]interface{}），如果提供且非空，则直接使用此值更新缓存，不执行查询
+//     如果为 nil，则正常执行查询
+func WithSkipCache(val ...map[uint64]interface{}) func(*BatchGetByUuidsOption) {
 	return func(opt *BatchGetByUuidsOption) {
 		opt.SkipCache = true
+		if len(val) > 0 && val[0] != nil && len(val[0]) > 0 {
+			opt.Value = val[0]
+		}
+	}
+}
+
+// UpdateOption Update 方法的选项
+type UpdateOption struct {
+	// Value 如果提供了 Value（非空），则直接使用此值更新缓存，不执行查询
+	// 如果为 nil，则正常执行查询
+	// map[uint64]interface{}: UUID 到对象的映射
+	Value map[uint64]interface{}
+}
+
+// WithUpdateValue 设置直接更新的值（用于 Update）
+// 参数：
+//   - val: 值映射（map[uint64]interface{}），如果提供且非空，则直接使用此值更新缓存，不执行查询
+//     如果为 nil，则正常执行查询
+func WithUpdateValue(val map[uint64]interface{}) func(*UpdateOption) {
+	return func(opt *UpdateOption) {
+		opt.Value = val
 	}
 }
 
@@ -124,25 +153,45 @@ func (c *CacheObjectController[T]) BatchGetByUuids(ctx goCtx.Context, db *gorm.D
 	var batchResult map[string]T
 	var err error
 	if option.SkipCache {
-		// 跳过缓存，直接查询数据库（仍会写入缓存）
-		batchResult, err = c.cacheLayer.BATCH_GET(keys, func([]string) (map[string]T, error) {
-			// 批量查询数据库
-			objects, err := c.batchQueryFunc(db, validUuids)
-			if err != nil {
-				return nil, err
-			}
-
-			// 转换为 map[string]T
+		// 如果提供了 Value，直接使用这些值更新缓存，不执行查询
+		if option.Value != nil && len(option.Value) > 0 {
+			// 直接使用提供的值更新缓存
 			result := make(map[string]T)
-			for _, obj := range objects {
-				uuid := c.getUUIDFunc(obj)
-				if uuid > 0 {
-					key := persistence.BuildKey(ctx, c.objectType, uuid)
-					result[key] = obj
+			for _, uuid := range validUuids {
+				if val, ok := option.Value[uuid]; ok {
+					// 类型断言为 T
+					if typedVal, ok := val.(T); ok {
+						key := persistence.BuildKey(ctx, c.objectType, uuid)
+						// 直接设置缓存
+						if err := c.cacheLayer.SET(key, typedVal, c.ttl); err != nil {
+							return nil, fmt.Errorf("直接更新缓存失败 (uuid=%d): %v", uuid, err)
+						}
+						result[key] = typedVal
+					}
 				}
 			}
-			return result, nil
-		}, repository.WithSkipCache())
+			batchResult = result
+		} else {
+			// 跳过缓存，直接查询数据库（仍会写入缓存）
+			batchResult, err = c.cacheLayer.BATCH_GET(keys, func([]string) (map[string]T, error) {
+				// 批量查询数据库
+				objects, err := c.batchQueryFunc(db, validUuids)
+				if err != nil {
+					return nil, err
+				}
+
+				// 转换为 map[string]T
+				result := make(map[string]T)
+				for _, obj := range objects {
+					uuid := c.getUUIDFunc(obj)
+					if uuid > 0 {
+						key := persistence.BuildKey(ctx, c.objectType, uuid)
+						result[key] = obj
+					}
+				}
+				return result, nil
+			}, repository.WithSkipCache())
+		}
 	} else {
 		// 正常流程：按 L1 -> L2 -> L3 的顺序查找
 		batchResult, err = c.cacheLayer.BATCH_GET(keys, func([]string) (map[string]T, error) {
@@ -183,23 +232,39 @@ func (c *CacheObjectController[T]) BatchGetByUuids(ctx goCtx.Context, db *gorm.D
 
 // Update 更新对象的缓存（用于观察者模式）
 // 当对象发生变化时，调用此方法更新缓存
-// 通过重新调用 BatchGetByUuids 并跳过缓存，从数据库重新查询并更新缓存
 // 参数：
 //   - ctx: 上下文（用于提取 companyUuid）
 //   - db: 数据库连接
 //   - uuids: 对象 UUID 列表
+//   - opts: 选项函数（可选），如 WithUpdateValue() 直接提供值更新缓存
 //
 // 返回：
 //   - error: 错误信息
-func (c *CacheObjectController[T]) Update(ctx goCtx.Context, db *gorm.DB, uuids []uint64) error {
+func (c *CacheObjectController[T]) Update(ctx goCtx.Context, db *gorm.DB, uuids []uint64, opts ...func(*UpdateOption)) error {
 	if len(uuids) == 0 {
 		return nil
 	}
 
-	// 重新调用 BatchGetByUuids 并跳过缓存，从数据库重新查询并自动更新缓存
-	_, err := c.BatchGetByUuids(ctx, db, uuids, WithSkipCache())
-	if err != nil {
-		return fmt.Errorf("Update: %v", err)
+	// 解析选项
+	option := &UpdateOption{
+		Value: nil, // 默认不提供值，正常执行查询
+	}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	// 如果提供了 Value，直接使用这些值更新缓存
+	if option.Value != nil && len(option.Value) > 0 {
+		_, err := c.BatchGetByUuids(ctx, db, uuids, WithSkipCache(option.Value))
+		if err != nil {
+			return fmt.Errorf("Update: %v", err)
+		}
+	} else {
+		// 重新调用 BatchGetByUuids 并跳过缓存，从数据库重新查询并自动更新缓存
+		_, err := c.BatchGetByUuids(ctx, db, uuids, WithSkipCache())
+		if err != nil {
+			return fmt.Errorf("Update: %v", err)
+		}
 	}
 
 	return nil
@@ -231,6 +296,7 @@ func extractUUIDFromKey(key string) (uint64, error) {
 //   - instance: 单例实例指针（用于存储控制器实例）
 //   - once: sync.Once 实例（确保只初始化一次）
 //   - mutex: sync.RWMutex 实例（用于线程安全访问）
+//   - opts: 可选参数，如 adapter.WithEnableL1Cache(false) 禁用 L1 缓存
 func InitCacheObjectController[T any](
 	underlyingCache cache.Cache,
 	ttl time.Duration,
@@ -241,6 +307,7 @@ func InitCacheObjectController[T any](
 	instance **CacheObjectController[T],
 	once *sync.Once,
 	mutex *sync.RWMutex,
+	opts ...func(*adapter.CacheLayerOption),
 ) {
 	if ttl == 0 {
 		ttl = 10 * time.Minute
@@ -248,7 +315,7 @@ func InitCacheObjectController[T any](
 
 	once.Do(func() {
 		// 创建缓存层
-		cacheLayer := adapter.GetOrderObjectCache[T](underlyingCache, ttl)
+		cacheLayer := adapter.GetOrderObjectCache[T](underlyingCache, ttl, opts...)
 
 		*instance = &CacheObjectController[T]{
 			cacheLayer:     cacheLayer,

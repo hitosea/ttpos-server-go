@@ -252,4 +252,24 @@ func InitCacheObjectController(underlyingCache cache.Cache, ttl time.Duration) {
 			return multiLanguageNameRepo.GetMultiLanguageNameListByUuids(uuids)
 		},
 	)
+
+	// 初始化 SaleBill 对象的缓存控制器
+	objectStorageController.InitSaleBillController(
+		underlyingCache,
+		ttl,
+		func(db *gorm.DB, uuid uint64) (*model.SaleBill, error) {
+			return NewOrderRepo(db).QuerySaleBillForObjectStorage(uuid, nil)
+		},
+		func(db *gorm.DB, uuids []uint64) ([]*model.SaleBill, error) {
+			saleBills := make([]*model.SaleBill, 0, len(uuids))
+			for _, uuid := range uuids {
+				saleBill, err := NewOrderRepo(db).QuerySaleBillForObjectStorage(uuid, nil)
+				if err != nil {
+					continue
+				}
+				saleBills = append(saleBills, saleBill)
+			}
+			return saleBills, nil
+		},
+	)
 }

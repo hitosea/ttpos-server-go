@@ -63,6 +63,7 @@ type IOrderQueryRepo interface {
 	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error)            // 获取销售账单详细信息-包含商品信息
 	IsPartiallyPaid(param any) bool                                                                                                            // 判断是否存在部分支付
 	GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillAllInfoOption) (*model.SaleBill, error)                                         // 获取销售账单所有信息
+	QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilter DBOption) (*model.SaleBill, error)                                           // 查询销售账单信息-对象存储层
 	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                            // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
 	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
@@ -1682,17 +1683,13 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 	}
 
 	// 使用对象存储模块缓存查询
-	return r.querySaleBillAllInfoUsingObjectStorage(saleBillUuid, option)
+	return r.QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid, option)
 }
 
-// querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
-// 这是一个私有方法，用于统一查询逻辑，避免代码重复
-func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
-	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
-	if option.MemberSaleOrderUuid != 0 {
-		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
+func (r *orderRepo) QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilter DBOption) (*model.SaleBill, error) {
+	if uuidFilter == nil {
+		uuidFilter = CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
 	}
-	ttt := time.Now()
 	saleBill, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1819,6 +1816,33 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
+	return &saleBill, nil
+}
+
+// querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
+// 这是一个私有方法，用于统一查询逻辑，避免代码重复
+func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
+	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
+	if option.MemberSaleOrderUuid != 0 {
+		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
+	}
+	ttt := time.Now()
+	saleBill, err := r.QuerySaleBillForObjectStorage(saleBillUuid, uuidFilter)
+	if err != nil {
+		return nil, err
+	}
+	saleBillController := objectStorageController.GetSaleBillController()
+	ctx := context.NewContext(context.WithCompanyUuid(GetCompanyUuid(r.db)), context.WithContext(goCtx.Background()))
+	saleBill, err = saleBillController.GetByUuid(ctx, r.db, saleBillUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查并补全 SaleOrderProduct 的 Id
+	if err := r.fillSaleOrderProductIds(saleBill); err != nil {
+		return nil, errors.WithMessage(err, "补全销售订单商品ID失败")
+	}
+
 	fmt.Println("querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
 	// 使用对象存储层自动注入关联对象（Desk）
 	companyUuid := GetCompanyUuid(r.db)
@@ -1832,12 +1856,12 @@ func (r *orderRepo) querySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 		objectStorage := persistence.NewObjectStorage[any]()
 
 		// 注入关联对象
-		if err := objectStorage.PreloadWithConfig(ctx, &saleBill, associations); err != nil {
+		if err := objectStorage.PreloadWithConfig(ctx, saleBill, associations); err != nil {
 			return nil, errors.WithMessage(errors.New("对象存储层注入失败: " + err.Error()))
 		}
 	}
 
-	return &saleBill, nil
+	return saleBill, nil
 }
 
 // querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
@@ -3213,4 +3237,53 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 			},
 		},
 	}
+}
+
+// fillSaleOrderProductIds 补全 SaleOrderProduct 的 Id
+// 检查 saleOrder 的 saleOrderProduct 中有哪些 uuid 不为 0 但 id 为 0 的 saleOrderProduct，
+// 使用 uuid 查询并设置补全 id
+func (r *orderRepo) fillSaleOrderProductIds(saleBill *model.SaleBill) error {
+	if saleBill == nil {
+		return nil
+	}
+
+	// 收集所有需要补全 Id 的 SaleOrderProduct Uuid
+	needFillUuids := make([]uint64, 0)
+	uuidToProductMap := make(map[uint64]*model.SaleOrderProduct)
+
+	for _, saleOrder := range saleBill.SaleOrders {
+		for _, product := range saleOrder.SaleOrderProducts {
+			if product == nil {
+				continue
+			}
+			// 检查 uuid 不为 0 但 id 为 0 的商品
+			if product.Uuid != 0 && product.ID == 0 {
+				needFillUuids = append(needFillUuids, product.Uuid)
+				uuidToProductMap[product.Uuid] = product
+			}
+		}
+	}
+
+	// 如果没有需要补全的商品，直接返回
+	if len(needFillUuids) == 0 {
+		return nil
+	}
+
+	// 批量查询这些商品的 Id
+	saleOrderProductRepo := NewSaleOrderProductRepo(r.db)
+	products, err := saleOrderProductRepo.GetSaleOrderProductsByUuids(needFillUuids)
+	if err != nil {
+		return errors.WithMessage(err, "批量查询销售订单商品失败")
+	}
+
+	// 将查询到的 Id 设置到对应的商品中
+	for _, product := range products {
+		if product != nil {
+			if targetProduct, ok := uuidToProductMap[product.Uuid]; ok {
+				targetProduct.ID = product.ID
+			}
+		}
+	}
+
+	return nil
 }

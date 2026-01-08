@@ -27,6 +27,9 @@ const (
 	// SaleBillSetting 销售单设置
 	ObjectTypeSaleBillSetting = "sale_bill_setting"
 
+	// SaleBill 销售账单
+	ObjectTypeSaleBill = "sale_bill"
+
 	// BatchTag 分批标签
 	ObjectTypeBatchTag = "batch_tag"
 

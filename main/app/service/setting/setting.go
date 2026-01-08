@@ -1240,7 +1240,7 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	}
 
 	// 转换旧格式到新格式（如果只有旧格式数据）
-	if len(defaultKitchen.WaitTimeColorRanges) == 0 && len(defaultKitchen.WaitColor) > 0 {
+	if len(defaultKitchen.WaitTimeColorRanges) == 0 {
 		defaultKitchen.WaitTimeColorRanges = s.convertFromOldFormat(defaultKitchen.WaitColor)
 	}
 

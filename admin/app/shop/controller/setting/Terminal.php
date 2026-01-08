@@ -747,7 +747,7 @@ class Terminal extends Controller
             }
 
             // 判断如果wait_color不为空，则将wait_color转换为wait_time_color_ranges
-            if (!empty($ret['wait_color']) && empty($ret['wait_time_color_ranges'])) {
+            if (empty($ret['wait_time_color_ranges'])) {
                 $waitColor = $ret['wait_color'];
                 $waitTimeColorRanges = [];
                 
