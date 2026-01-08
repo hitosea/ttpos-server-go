@@ -199,9 +199,9 @@ func (s *takeoutOrderAppService) AcceptOrder(ctx context.Context, req *request.T
 		return err
 	}
 	// 检查订单状态
-	if order.IsAbnormalOrder() {
-		return errors.New("订单异常，不能接单")
-	}
+	// if order.IsAbnormalOrder() {
+	// 	return errors.New("订单异常，不能接单")
+	// }
 	// 3. 验证库存
 	if err, outOfStockNames := s.CheckOrderStock(ctx, order); err != nil {
 		return errors.NewWithCodeAndData(constant.CodeOrderCheckProductStockZero, outOfStockNames, err.Error())
@@ -255,6 +255,11 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
 						name = fmt.Sprintf("%s (%s)", itemName, flavorName)
+					} else if modifier.IsSauce() {
+						// sauce 类型：显示主商品名称(加料)
+						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
+						sauceName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
+						name = fmt.Sprintf("%s (%s)", itemName, sauceName)
 					}
 					if name != "" {
 						outOfStockNamesMap[name] = struct{}{}
@@ -263,13 +268,15 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 			}
 		}
 		// 转为切片
-		outOfStockNames := make([]string, 0, len(outOfStockNamesMap))
-		for name := range outOfStockNamesMap {
-			outOfStockNames = append(outOfStockNames, name)
+		if len(outOfStockNamesMap) == 0 {
+			outOfStockNames := make([]string, 0, len(outOfStockNamesMap))
+			for name := range outOfStockNamesMap {
+				outOfStockNames = append(outOfStockNames, name)
+			}
+			//
+			outOfStockMsg := "以下商品库存不足: " + strings.Join(outOfStockNames, ", ")
+			return errors.New(outOfStockMsg), outOfStockNames
 		}
-		//
-		outOfStockMsg := "以下商品库存不足: " + strings.Join(outOfStockNames, ", ")
-		return errors.New(outOfStockMsg), outOfStockNames
 	}
 
 	return nil, nil
