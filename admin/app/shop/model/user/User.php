@@ -347,9 +347,21 @@ class User extends UserModel
                     }
                 }
             }
-            $data['member_card_no'] = $cardNumber;
-            $data['referrer_uuid'] = $referrerUuid;
-            return $this->save($data);
+
+            $saveData = [
+                'nickname' => $data['nick_name'],
+                'gender' => $data['gender'],
+                'member_level_uuid' => $data['grade_id'],
+                'phone' => $data['mobile'],
+                'birthday' => $data['birthday'],
+                'referrer_uuid' => $referrerUuid,
+                'member_card_no' => $cardNumber,
+            ];
+            if (isset($data['password']) && $data['password']) {
+                $saveData['password'] = $data['password'];
+            }
+
+            return $this->where('uuid', '=', $this['uuid'])->update($saveData);
         });
     }
 
