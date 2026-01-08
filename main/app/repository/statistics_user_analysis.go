@@ -12,10 +12,11 @@ import (
 // CountUserAnalysis 统计用户分析数据
 func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, excludeDataManage bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) {
 	result := &model.UserAnalysisRepoResult{
-		Nationality:  []model.UserAnalysisItemRepo{},
-		OrderSource:  []model.UserAnalysisItemRepo{},
-		DeskSource:   []model.UserAnalysisItemRepo{},
-		DiningMethod: []model.UserAnalysisItemRepo{},
+		Nationality:   []model.UserAnalysisItemRepo{},
+		OrderSource:   []model.UserAnalysisItemRepo{},
+		DeskSource:    []model.UserAnalysisItemRepo{},
+		DiningMethod:  []model.UserAnalysisItemRepo{},
+		TakeoutMethod: []model.UserAnalysisItemRepo{},
 	}
 
 	var err error
@@ -276,6 +277,66 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 				Round(2)
 		}
 		result.DiningMethod = append(result.DiningMethod, model.UserAnalysisItemRepo{
+			Name:       item.Name,
+			OrderCount: item.OrderCount,
+			Percentage: percentage,
+		})
+	}
+
+	// 5. 按外卖方式统计（Grab/LINE MAN）
+	var takeoutMethodResults []struct {
+		Platform   string
+		Name       string
+		OrderCount int64
+	}
+
+	// 重新构建查询，应用 opts
+	queryDb5 := r.db
+	for _, opt := range opts {
+		queryDb5 = opt(queryDb5)
+	}
+
+	// 查询外卖订单，按 platform 分组统计
+	takeoutOrderTable := prefix + "takeout_order"
+	// validOrderStates: 10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
+	validOrderStates := []int{10, 20, 30, 40, 60}
+
+	query5 := queryDb5.Table(takeoutOrderTable+" AS to_order").
+		Select("to_order.platform, "+
+			"CASE "+
+			"WHEN to_order.platform = 'grab' THEN 'Grab' "+
+			"WHEN to_order.platform = 'lineman' THEN 'LINE MAN' "+
+			"ELSE 'Unknown' "+
+			"END AS name, "+
+			"COUNT(DISTINCT to_order.uuid) AS order_count").
+		Where("to_order.delete_time = ?", constant.NotDeleted).
+		Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", startTime, endTime).
+		Where("to_order.order_state IN (?)", validOrderStates).
+		Where("to_order.platform IN (?, ?)", "grab", "lineman") // 只统计 Grab 和 LINE MAN
+	err = query5.Group("to_order.platform, name").
+		Order("order_count ASC").
+		Scan(&takeoutMethodResults).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 计算总订单数
+	var totalTakeoutMethodCount int64
+	for _, item := range takeoutMethodResults {
+		totalTakeoutMethodCount += item.OrderCount
+	}
+
+	// 计算占比并转换
+	for _, item := range takeoutMethodResults {
+		var percentage decimal.Decimal
+		if totalTakeoutMethodCount > 0 {
+			percentage = decimal.NewFromInt(item.OrderCount).
+				Div(decimal.NewFromInt(totalTakeoutMethodCount)).
+				Mul(decimal.NewFromInt(100)).
+				Round(2)
+		}
+		result.TakeoutMethod = append(result.TakeoutMethod, model.UserAnalysisItemRepo{
 			Name:       item.Name,
 			OrderCount: item.OrderCount,
 			Percentage: percentage,

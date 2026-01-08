@@ -134,12 +134,23 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	saleData := repository.NewStatisticsRepo(db).CountSale(opts...)
 	memberData := s.CountMember(ctx, req)
 	cancelOrderData := s.CountCancelOrder(ctx, req)
-
-	// 总优惠折扣率 = 总优惠折扣 / 总销售额
-	var discountRatio decimal.Decimal
-	if saleData.TotalSaleAmount.Float64 > 0 {
-		discountRatio = decimal.NewFromFloat(saleData.TotalDiscount.Float64).Div(decimal.NewFromFloat(saleData.TotalSaleAmount.Float64)).Mul(decimal.NewFromInt(100))
+	var staffShiftLogUuid uint64 = 0
+	if req.DutyNo != "" {
+		shiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
+			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			staffShiftLogUuid = shiftLog.Uuid
+		}
 	}
+	takeoutSaleData := repository.NewStatisticsTakeoutRepo(db).CountTakeoutSale(repository.CountTakeoutReq{
+		TimeStart:         req.QueryStartTime,
+		TimeEnd:           req.QueryEndTime,
+		StaffShiftLogUuid: staffShiftLogUuid,
+	})
+	statisticsUtilSrv := NewStatisticsUtilSrv()
+	mergeSaleData := statisticsUtilSrv.MergeTakeoutStatistics(saleData, takeoutSaleData, cancelOrderData)
 
 	// 平均桌台每人订单金额 = 总桌台订单金额 / 总桌台数量 / 总用餐人数
 	var avgDeskPeopleOrderAmount decimal.Decimal
@@ -147,48 +158,48 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		avgDeskPeopleOrderAmount = decimal.NewFromFloat(saleData.TotalDeskOrderAmount.Float64).Div(decimal.NewFromInt(saleData.TotalMealNum.Int64))
 	}
 
-	totalSaleAmount := decimal.NewFromFloat(saleData.TotalSaleAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalSaleAmount))
-	totalReceivedAmount := decimal.NewFromFloat(saleData.TotalReceivedAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
+	totalSaleAmount := decimal.NewFromFloat(mergeSaleData.TotalSaleAmount).Add(decimal.NewFromFloat(memberData.TotalSaleAmount))
+	totalReceivedAmount := decimal.NewFromFloat(mergeSaleData.TotalReceivedAmount).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 	totalPaymentFee := decimal.NewFromFloat(saleData.TotalPaymentFee.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee))
-	totalRefundAmount := decimal.NewFromFloat(saleData.TotalRefundAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalRefundAmount))
-	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
+	totalRefundAmount := decimal.NewFromFloat(mergeSaleData.TotalRefundAmount).Add(decimal.NewFromFloat(memberData.TotalRefundAmount))
+	totalBusinessAmount := decimal.NewFromFloat(mergeSaleData.TotalBusinessAmount).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 
 	return CountSaleResp{
 		TotalSaleAmount:                 totalSaleAmount.Round(2).InexactFloat64(),
 		TotalReceivedAmount:             totalReceivedAmount.Round(2).InexactFloat64(),
 		TotalProductPrice:               saleData.TotalProductPrice.Float64,
 		TotalProductOriginPrice:         saleData.TotalProductOriginPrice.Float64,
-		TotalProductNum:                 saleData.TotalProductNum.Float64,
+		TotalProductNum:                 mergeSaleData.TotalProductNum,
 		TotalDiscountMember:             saleData.TotalDiscountMember.Float64,
 		TotalBusinessAmount:             totalBusinessAmount.Round(2).InexactFloat64(),
 		TotalServiceFee:                 saleData.TotalServiceFee.Float64,
 		TotalPaymentFee:                 totalPaymentFee.Round(2).InexactFloat64(),
-		TotalTax:                        saleData.TotalTax.Float64,
+		TotalTax:                        mergeSaleData.TotalTax,
 		TotalRefundAmount:               totalRefundAmount.Round(2).InexactFloat64(),
-		TotalDiscount:                   saleData.TotalDiscount.Float64,
-		TotalDiscountRatio:              discountRatio.Round(2).InexactFloat64(),
+		TotalDiscount:                   mergeSaleData.TotalDiscount,
+		TotalDiscountRatio:              mergeSaleData.TotalDiscountRatio,
 		TotalGiftAmount:                 saleData.TotalGiftAmount.Float64,
 		TotalGiftNum:                    saleData.TotalGiftNum.Float64,
 		TotalFreeAmount:                 saleData.TotalFreeAmount.Float64,
 		TotalFreeNum:                    saleData.TotalFreeNum.Float64,
-		TotalOrderNum:                   saleData.TotalOrderNum.Int64,
+		TotalOrderNum:                   mergeSaleData.TotalOrderNum,
 		TotalTakeoutSaleAmount:          saleData.TotalTakeoutSaleAmount.Float64,
 		TotalTakeoutBusinessAmount:      saleData.TotalTakeoutBusinessAmount.Float64,
 		TotalTakeoutRefundAmount:        saleData.TotalTakeoutRefundAmount.Float64,
 		TotalTakeoutDeliveryFee:         saleData.TotalTakeoutDeliveryFee.Float64,
 		TotalDeskNum:                    saleData.TotalDeskNum.Int64,
 		TotalMealNum:                    saleData.TotalMealNum.Int64,
-		TotalCancelOrderNum:             cancelOrderData.TotalCancelOrderNum,
-		TotalCancelOrderAmount:          cancelOrderData.TotalCancelOrderAmount,
+		TotalCancelOrderNum:             mergeSaleData.TotalCancelOrderNum,
+		TotalCancelOrderAmount:          mergeSaleData.TotalCancelOrderAmount,
 		TotalInstantOrderNum:            saleData.TotalInstantOrderNum.Int64,
 		TotalInstantOrderAmount:         saleData.TotalInstantOrderAmount.Float64,
 		TotalInstantOrderTakeawayNum:    saleData.TotalInstantOrderTakeawayNum.Int64,
 		TotalInstantOrderTakeawayAmount: saleData.TotalInstantOrderTakeawayAmount.Float64,
 		TotalTakeoutOrderNum:            saleData.TotalTakeoutOrderNum.Int64,
 		TotalTakeoutOrderAmount:         saleData.TotalTakeoutOrderAmount.Float64,
-		MinOrderAmount:                  saleData.MinOrderAmount.Float64,
-		MaxOrderAmount:                  saleData.MaxOrderAmount.Float64,
-		AvgOrderAmount:                  saleData.AvgOrderAmount.Float64,
+		MinOrderAmount:                  mergeSaleData.MinOrderAmount,
+		MaxOrderAmount:                  mergeSaleData.MaxOrderAmount,
+		AvgOrderAmount:                  mergeSaleData.AvgOrderAmount,
 		MinDeskOrderAmount:              saleData.MinDeskOrderAmount.Float64,
 		MaxDeskOrderAmount:              saleData.MaxDeskOrderAmount.Float64,
 		AvgDeskOrderAmount:              saleData.AvgDeskOrderAmount.Float64,
@@ -426,6 +437,24 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		memberPaymentData = s.CountMemberPayment(ctx, req)
 	}
 
+	// 获取外卖支付方式统计
+	var staffShiftLogUuid uint64 = 0
+	if req.DutyNo != "" {
+		db := ctx.GetDB()
+		shiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
+			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			staffShiftLogUuid = shiftLog.Uuid
+		}
+	}
+	takeoutPaymentData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutPayment(repository.CountTakeoutReq{
+		TimeStart:         req.QueryStartTime,
+		TimeEnd:           req.QueryEndTime,
+		StaffShiftLogUuid: staffShiftLogUuid,
+	})
+
 	var (
 		totalReceivedAmount decimal.Decimal
 		totalRefundAmount   decimal.Decimal
@@ -516,6 +545,27 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 
 	totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalReceivedAmount))
 	totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalRefundAmount))
+
+	// 追加外卖支付方式统计到 PaymentList（在排序之后追加）
+	// 如果没有外卖支付方式数据，此循环不会执行，不影响原有逻辑
+	for _, takeoutPayment := range takeoutPaymentData {
+		list = append(list, CountPaymentRespList{
+			ID:                 takeoutPayment.ID,
+			Sort:               takeoutPayment.Sort,
+			CreateTime:         takeoutPayment.CreateTime,
+			PaymentName:        takeoutPayment.PaymentName,
+			PaymentCode:        takeoutPayment.PaymentCode,
+			ErpnextPayment:     takeoutPayment.ErpnextPayment,
+			ErpnextPaymentId:   takeoutPayment.ErpnextPaymentId,
+			Source:             takeoutPayment.Source,
+			TotalOrderNum:      takeoutPayment.TotalOrderNum,
+			TotalPaymentAmount: takeoutPayment.TotalPaymentAmount,
+		})
+		// 累加总实收金额和总退款金额
+		// 注意：外卖支付方式统计中，TotalPaymentAmount 已经是营业收入状态（10,20,30,40）的金额
+		totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(takeoutPayment.TotalPaymentAmount))
+		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(takeoutPayment.TotalRefundAmount))
+	}
 
 	return CountPaymentResp{
 		TotalReceivedAmount: totalReceivedAmount.Round(2).InexactFloat64(),
@@ -756,16 +806,68 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 	}
 	orderNum, categoryData := repository.NewStatisticsRepo(ctx.GetDB()).CountCategory(req.CategoryType, ctx.GetLanguage(), opts...)
 
+	// 合并外卖订单商品的分类统计
+	var staffShiftLogUuid uint64 = 0
+	if req.DutyNo != "" {
+		shiftLog, err := repository.NewShiftLogRepo(ctx.GetDB()).GetShiftLog(
+			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			staffShiftLogUuid = shiftLog.Uuid
+		}
+	}
+
+	takeoutCategoryData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutCategory(
+		repository.CountTakeoutReq{
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+		},
+		req.CategoryType,
+		ctx.GetLanguage(),
+	)
+
+	// 合并分类数据：使用 map 按分类UUID合并
+	categoryMap := make(map[string]*CountCategoryListResp)
 	for _, category := range categoryData {
 		categoryName := category.CategoryParentName.String
 		if category.CategoryName.String != "" {
 			categoryName = categoryName + "-" + category.CategoryName.String
 		}
-		list = append(list, CountCategoryListResp{
+		key := categoryName
+		categoryMap[key] = &CountCategoryListResp{
 			CategoryName: categoryName,
 			SaleNum:      category.SaleNum.Float64,
 			SaleAmount:   category.SaleAmount.Float64,
-		})
+		}
+	}
+
+	// 合并外卖订单商品的分类数据
+	for _, takeoutCategory := range takeoutCategoryData {
+		takeoutCategoryName := takeoutCategory.CategoryParentName.String
+		if takeoutCategory.CategoryName.String != "" {
+			takeoutCategoryName = takeoutCategoryName + "-" + takeoutCategory.CategoryName.String
+		}
+		key := takeoutCategoryName
+		if existing, exists := categoryMap[key]; exists {
+			// 累加销售量和销售额
+			existing.SaleNum += takeoutCategory.SaleNum.Float64
+			existing.SaleAmount += takeoutCategory.SaleAmount.Float64
+		} else {
+			// 新增分类
+			categoryMap[key] = &CountCategoryListResp{
+				CategoryName: takeoutCategoryName,
+				SaleNum:      takeoutCategory.SaleNum.Float64,
+				SaleAmount:   takeoutCategory.SaleAmount.Float64,
+			}
+		}
+	}
+
+	// 转换为列表
+	for _, category := range categoryMap {
+		list = append(list, *category)
 	}
 
 	return CountCategoryResp{
@@ -795,19 +897,89 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 	}
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).CountProduct(ctx.GetLanguage(), opts...)
 
-	var list []CountProductResp
+	// 合并外卖订单商品的统计
+	var staffShiftLogUuid uint64 = 0
+	if req.DutyNo != "" {
+		shiftLog, err := repository.NewShiftLogRepo(ctx.GetDB()).GetShiftLog(
+			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			staffShiftLogUuid = shiftLog.Uuid
+		}
+	}
+
+	takeoutProductData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutProduct(
+		repository.CountTakeoutReq{
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+		},
+		ctx.GetLanguage(),
+	)
+
+	// 合并商品数据：使用 map 按商品名称+规格名称合并
+	// 店内商品按 product_bom_uuid 分组（有规格），外卖订单商品按 product_package_uuid 分组（没有规格）
+	productMap := make(map[string]*CountProductResp)
+	// 用于记录商品基础名称（不含规格）到商品列表的映射，用于合并外卖订单商品
+	baseNameMap := make(map[string][]*CountProductResp)
 	for _, product := range productData {
 		productName := product.ProductName.String
+		baseProductName := product.ProductName.String // 基础商品名称（不含规格）
 		if product.ProductType.Int64 != constant.ProductTypePackage {
 			productName = product.ProductName.String + "（" + product.FlavorName.String + "）"
 		}
-		list = append(list, CountProductResp{
+		key := productName
+		productResp := &CountProductResp{
 			ProductName: productName,
 			SalePrice:   product.SalePrice.Float64,
 			SaleNum:     product.SaleNum.Float64,
 			SaleAmount:  product.SaleAmount.Float64,
-		})
+		}
+		productMap[key] = productResp
+		// 记录基础商品名称到商品列表的映射
+		baseNameMap[baseProductName] = append(baseNameMap[baseProductName], productResp)
 	}
+
+	// 合并外卖订单商品的统计
+	for _, takeoutProduct := range takeoutProductData {
+		// 商品名称：使用店内名称（从 ttpos_item_name JSON 字段提取）
+		takeoutProductName := takeoutProduct.ProductName.String
+		// 规格名称：从 ttpos_takeout_order_item_modifier 表的 ttpos_modifier_name 获取
+		takeoutFlavorName := takeoutProduct.FlavorName.String
+		// 构建完整的商品名称（如果有规格，则添加规格名称）
+		takeoutFullProductName := takeoutProductName
+		if takeoutFlavorName != "" {
+			takeoutFullProductName = takeoutProductName + "（" + takeoutFlavorName + "）"
+		}
+		// 查找是否有匹配的店内商品（按完整商品名称匹配，包括规格）
+		key := takeoutFullProductName
+		if existing, exists := productMap[key]; exists {
+			// 如果有匹配的店内商品，合并到该商品
+			existing.SaleNum += takeoutProduct.SaleNum.Float64
+			existing.SaleAmount += takeoutProduct.SaleAmount.Float64
+			// 单价：使用加权平均
+			if existing.SaleNum > 0 {
+				existing.SalePrice = existing.SaleAmount / existing.SaleNum
+			}
+		} else {
+			// 如果没有匹配的店内商品，单独显示为一个商品
+			productMap[key] = &CountProductResp{
+				ProductName: takeoutFullProductName,
+				SalePrice:   takeoutProduct.SalePrice.Float64,
+				SaleNum:     takeoutProduct.SaleNum.Float64,
+				SaleAmount:  takeoutProduct.SaleAmount.Float64,
+			}
+		}
+	}
+
+	// 转换为列表
+	var list []CountProductResp
+	for _, product := range productMap {
+		list = append(list, *product)
+	}
+
 	return list
 }
 
@@ -893,20 +1065,113 @@ type Count7DaysDataResp struct {
 // Count7Days 统计7天
 func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7DaysResp {
 	days := s.buildDays(req)
-	sevenDayList := make([]Count7DaysDataResp, 0, len(days))
-	for _, day := range days {
-		timezone := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	timezone := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+
+	// 获取所有需要统计的数据（不进行日期分组）
+	// 计算所有日期的开始和结束时间戳范围
+	var minStartTime, maxEndTime int64 = 0, 0
+	for i, day := range days {
 		startTime, _ := timezone.FormatTimeToUnix(day)
 		endTime := startTime + 86399
-		sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(
-			repository.NewCommonRepoImpl().WhereBetweenByCompleteTime(startTime, endTime),
-		)
-		oneDayData := Count7DaysDataResp{
-			Day:        day,
-			TotalNum:   sevenDayData.TotalOrderNum.Int64,
-			TotalMoney: sevenDayData.TotalReceivedAmount.Float64,
+		if i == 0 {
+			minStartTime = startTime
+			maxEndTime = endTime
+		} else {
+			if startTime < minStartTime {
+				minStartTime = startTime
+			}
+			if endTime > maxEndTime {
+				maxEndTime = endTime
+			}
 		}
-		sevenDayList = append(sevenDayList, oneDayData)
+	}
+
+	// 查询该时间范围内的所有数据
+	rawData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(
+		repository.NewCommonRepoImpl().WhereBetweenByCompleteTime(minStartTime, maxEndTime),
+	)
+
+	// 查询外卖订单实收金额数据
+	takeoutReceivedAmountData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutReceivedAmount(
+		repository.CountTakeoutReq{
+			TimeStart: minStartTime,
+			TimeEnd:   maxEndTime,
+		},
+	)
+
+	// 在应用层按商家时区分组统计
+	// 使用 map 去重订单（按 sale_order_uuid），并累加金额
+	groupedData := make(map[string]struct {
+		OrderUuids          map[uint64]bool // 用于去重订单
+		TotalReceivedAmount float64
+	})
+
+	// 累加普通订单数据
+	for _, item := range rawData {
+		// 使用商家时区将时间戳转换为日期
+		day := timezone.FormatUnixTime(item.CompleteTime, "2006-01-02")
+
+		// 累加统计数据
+		if group, exists := groupedData[day]; exists {
+			// 去重订单
+			if !group.OrderUuids[item.SaleOrderUuid] {
+				group.OrderUuids[item.SaleOrderUuid] = true
+			}
+			group.TotalReceivedAmount += item.TotalReceivedAmount
+			groupedData[day] = group
+		} else {
+			groupedData[day] = struct {
+				OrderUuids          map[uint64]bool
+				TotalReceivedAmount float64
+			}{
+				OrderUuids:          map[uint64]bool{item.SaleOrderUuid: true},
+				TotalReceivedAmount: item.TotalReceivedAmount,
+			}
+		}
+	}
+
+	// 累加外卖订单数据
+	for _, item := range takeoutReceivedAmountData {
+		// 使用商家时区将时间戳转换为日期（使用接单时间）
+		day := timezone.FormatUnixTime(item.AcceptedTime, "2006-01-02")
+
+		// 累加统计数据
+		if group, exists := groupedData[day]; exists {
+			// 去重订单（使用外卖订单UUID）
+			if !group.OrderUuids[item.TakeoutOrderUuid] {
+				group.OrderUuids[item.TakeoutOrderUuid] = true
+			}
+			group.TotalReceivedAmount += item.TotalReceivedAmount
+			groupedData[day] = group
+		} else {
+			groupedData[day] = struct {
+				OrderUuids          map[uint64]bool
+				TotalReceivedAmount float64
+			}{
+				OrderUuids:          map[uint64]bool{item.TakeoutOrderUuid: true},
+				TotalReceivedAmount: item.TotalReceivedAmount,
+			}
+		}
+	}
+
+	// 构建返回结果
+	sevenDayList := make([]Count7DaysDataResp, 0, len(days))
+	for _, day := range days {
+		group, exists := groupedData[day]
+		var totalOrderNum int64 = 0
+		if exists {
+			totalOrderNum = int64(len(group.OrderUuids))
+		}
+		sevenDayList = append(sevenDayList, Count7DaysDataResp{
+			Day:      day,
+			TotalNum: totalOrderNum,
+			TotalMoney: func() float64 {
+				if exists {
+					return group.TotalReceivedAmount
+				}
+				return 0
+			}(),
+		})
 	}
 
 	return Count7DaysResp{
@@ -1003,7 +1268,39 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 			repository.CommonRepo.WhereBySoftDelete(),
 		))
 	}
-	productData := repository.NewStatisticsRepo(ctx.GetDB()).RankProduct(req.RankType, ctx.GetLanguage(), opts...)
+
+	// 提取时间范围，用于外卖订单查询（使用 accepted_time）
+	// 复用 buildCountOpts 中的时间范围提取逻辑
+	var timeStart, timeEnd int64
+	timezone := req.Timezone
+	if timezone == "" {
+		timezone = ctx.GetCompanySetting().Timezone
+	}
+	// 处理时间范围
+	if req.TimeType > 0 && req.TimeType <= 7 {
+		switch req.TimeType {
+		case 1: // 今天
+			timeStart, timeEnd = utils.SetTimezone(timezone).TodayStartEndUnix()
+		case 2: // 昨天
+			timeStart, timeEnd = utils.SetTimezone(timezone).YesterdayStartEndUnix()
+		case 3: // 本周
+			timeStart, timeEnd = utils.SetTimezone(timezone).WeekStartEndUnix()
+		case 4: // 本月
+			timeStart, timeEnd = utils.SetTimezone(timezone).MonthStartEndUnix()
+		case 5: // 近7天
+			timeStart, timeEnd = utils.SetTimezone(timezone).Last7DaysStartEndUnix()
+		case 6: // 上月
+			timeStart, timeEnd = utils.SetTimezone(timezone).LastMonthStartEndUnix()
+		case 7: // 今年
+			timeStart, timeEnd = utils.SetTimezone(timezone).YearStartEndUnix()
+		}
+	}
+	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
+		timeStart = req.QueryStartTime
+		timeEnd = req.QueryEndTime
+	}
+
+	productData := repository.NewStatisticsRepo(ctx.GetDB()).RankProduct(req.RankType, ctx.GetLanguage(), timeStart, timeEnd, opts...)
 	var list []CountProductRankResp
 	for _, product := range productData {
 		list = append(list, CountProductRankResp{
@@ -2120,7 +2417,31 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 			)
 		}
 	}
-	return returnOrderRepo.SumRefundAmount(opts...)
+	refundAmount := returnOrderRepo.SumRefundAmount(opts...)
+
+	// 合并外卖订单退款金额
+	var staffShiftLogUuid uint64 = 0
+	if req.DutyNo != "" {
+		shiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
+			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereBySoftDelete(),
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			staffShiftLogUuid = shiftLog.Uuid
+		}
+	}
+
+	// 获取外卖订单退款金额（状态为 canceledOrderState，退款金额为 eater_payment）
+	takeoutRefundAmount := repository.NewStatisticsTakeoutRepo(db).CountTakeoutRefundAmount(
+		repository.CountTakeoutReq{
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+		},
+	)
+
+	return refundAmount + takeoutRefundAmount
 }
 
 // CountCancelOrderResp 统计取消订单响应
@@ -2210,6 +2531,7 @@ func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.Bus
 		PageSize:      utils.IfInt(req.PageSize > 0, req.PageSize, 10),
 		IsDesk:        req.OrderDesk == 1,
 		IsInstant:     req.OrderInstant == 1,
+		IsDelivery:    req.OrderDelivery == 1,
 		IsTakeout:     req.OrderTakeout == 1,
 	}, opts...)
 
@@ -2423,6 +2745,7 @@ func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.
 		IsDesk:             req.OrderDesk == 1,
 		IsInstant:          req.OrderInstant == 1,
 		IsTakeout:          req.OrderTakeout == 1,
+		IsDelivery:         req.OrderDelivery == 1, // 外卖订单（Grab/LINE MAN等）
 		PaymentMethodList:  paymentMethodList,      // 优先使用UUID列表
 		PaymentMethodNames: req.PaymentMethodNames, // 如果PaymentMethodList为空，使用名称列表
 		ExcludeDataManage:  req.ExcludeDataManage,

@@ -42653,6 +42653,10 @@ const docTemplate = `{
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
                 },
+                "order_delivery": {
+                    "description": "外卖订单， 0=否、 1=是",
+                    "type": "integer"
+                },
                 "order_desk": {
                     "description": "桌台订单， 0=否、 1=是",
                     "type": "integer"
@@ -49135,6 +49139,10 @@ const docTemplate = `{
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
                 },
+                "order_delivery": {
+                    "description": "外卖订单， 0=否、 1=是",
+                    "type": "integer"
+                },
                 "order_desk": {
                     "description": "桌台订单， 0=否、 1=是",
                     "type": "integer"
@@ -51942,6 +51950,30 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "dine_in_store": {
+                    "description": "堂食",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "grab": {
+                    "description": "Grab 外卖",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "lineman": {
+                    "description": "LINE MAN 外卖",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
                 "meta": {
                     "description": "元数据",
                     "allOf": [
@@ -51960,6 +51992,22 @@ const docTemplate = `{
                 },
                 "table": {
                     "description": "桌台",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "takeaway": {
+                    "description": "外带",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "takeout": {
+                    "description": "外卖",
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ChannelSalesBlock"
@@ -62764,6 +62812,13 @@ const docTemplate = `{
                 },
                 "order_source": {
                     "description": "点餐方式来源统计",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UserAnalysisItem"
+                    }
+                },
+                "takeout_method": {
+                    "description": "外卖方式统计（Grab/LINE MAN）",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.UserAnalysisItem"

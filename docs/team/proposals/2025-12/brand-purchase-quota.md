@@ -28,10 +28,10 @@
 | **提案人**    | BenDaye                                                                                          |
 | **日期**      | 2025-12-25                                                                                       |
 | **目标版本**  | 待定                                                                                             |
-| **状态**      | 进行中                                                                                           |
+| **状态**      | 已通过 - Spec 已创建                                                                                           |
 | **版本类型**  | MVP（最小可行产品）                                                                              |
-| **关联任务**  | -                                                                                                |
-| **关联 Spec** | [story-shop-brand-purchase-quota](../../../shared/specs/archived/v2.12/story-shop-brand-purchase-quota/) |
+| **关联任务**  | DooTask #38158                                                                                                |
+| **关联 Spec** | [story-shop-brand-procurement-monthly-quota](../../../shared/specs/active/story-shop-brand-procurement-monthly-quota/) |
 
 ---
 
