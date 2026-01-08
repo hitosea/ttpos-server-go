@@ -329,6 +329,7 @@ class User extends UserModel
                 return false;
             }
         }
+
         return $this->transaction(function () use ($card, $cardNumber, $data, $referrerUuid) {
             if ($card) {
                 // 会员未拥有此会员卡，发卡
@@ -361,7 +362,13 @@ class User extends UserModel
                 $saveData['password'] = $data['password'];
             }
 
-            return $this->where('uuid', '=', $this['uuid'])->update($saveData);
+            try {
+                $this->where('uuid', '=', $this['uuid'])->update($saveData); 
+                return true;
+            } catch (\Exception $e) {
+                $this->error = $e->getMessage();
+                return false;
+            }
         });
     }
 
