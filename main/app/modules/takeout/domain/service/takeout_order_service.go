@@ -838,6 +838,13 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 					item.TtposItemName = info.TtposName
 					// TtposItemErpCode: ERP编码
 					item.TtposItemErpCode = info.TtposErpCode
+					// TtposPrice: TTPOS 店内价格
+					item.TtposPrice = info.TtposPrice
+					// 分类信息
+					item.TtposCategoryUuid = info.TtposCategoryUuid
+					item.TtposCategoryName = info.TtposCategoryName
+					item.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+					item.TtposParentCategoryName = info.TtposParentCategoryName
 					// 标记异常商品
 					if info.TtposName == "" || info.Name == "" {
 						abnormalProductIds = append(abnormalProductIds, item.TtposProductPackageUuid)
@@ -918,6 +925,13 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 						modifier.TtposModifierName = info.TtposName
 						// TtposModifierErpCode: ERP编码
 						modifier.TtposModifierErpCode = info.TtposErpCode
+						// TtposPrice: TTPOS 店内价格
+						modifier.TtposPrice = info.TtposPrice
+						// 分类信息
+						modifier.TtposCategoryUuid = info.TtposCategoryUuid
+						modifier.TtposCategoryName = info.TtposCategoryName
+						modifier.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+						modifier.TtposParentCategoryName = info.TtposParentCategoryName
 						// 计算单价
 						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(modifier.Quantity))).InexactFloat64()
 						// 如果是 commodity 类型，设置规格信息和数量
