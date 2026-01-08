@@ -172,11 +172,11 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.WithMessage(err)
 	}
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
@@ -221,11 +221,11 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(err)
 	}
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车商品数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
@@ -612,11 +612,11 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
 	// 获取新的桌台数据
@@ -1129,11 +1129,11 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		})
 	})
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
@@ -1239,11 +1239,11 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		})
 	})
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
@@ -1452,11 +1452,11 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		})
 	})
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1766,11 +1766,11 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		})
 	})
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
@@ -1875,11 +1875,11 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 		})
 	})
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -2531,11 +2531,11 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		return nil, errors.WithMessage(err)
 	}
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车商品数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
