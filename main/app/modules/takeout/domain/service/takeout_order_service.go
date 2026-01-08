@@ -231,6 +231,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 		Platform:         order.Platform,
 		ShortOrderNumber: order.ShortOrderNumber,
 		OrderState:       order.OrderState,
+		RiderStatus:      order.GetRiderStatus(),
 		IsAbnormal:       order.IsAbnormal,
 		AbnormalDetail:   order.AbnormalDetail,
 		OrderTimes: response.TakeoutOrderTimesResp{

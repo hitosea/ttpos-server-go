@@ -63616,6 +63616,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "rider_status": {
+                    "description": "骑手状态 骑手待接单 - rider_pending, 骑手已接单 - rider_accepted",
+                    "type": "string"
+                },
                 "short_order_number": {
                     "description": "短订单号",
                     "type": "string"

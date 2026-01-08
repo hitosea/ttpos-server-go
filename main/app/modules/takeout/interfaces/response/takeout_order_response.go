@@ -23,6 +23,7 @@ type TakeoutOrderResp struct {
 	Platform         string `json:"platform"`           // 平台名称
 	ShortOrderNumber string `json:"short_order_number"` // 短订单号
 	OrderState       int    `json:"order_state"`        // 订单状态 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
+	RiderStatus      string `json:"rider_status"`       // 骑手状态 骑手待接单 - rider_pending, 骑手已接单 - rider_accepted
 	Cutlery          int    `json:"cutlery"`            // 是否需要餐具
 	// 订单时间
 	OrderTimes TakeoutOrderTimesResp `json:"order_times"` // 订单时间

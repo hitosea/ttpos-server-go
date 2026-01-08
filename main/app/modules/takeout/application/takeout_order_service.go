@@ -247,20 +247,15 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 						commodityName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.TtposFlavorName).GetLocale(ctx.GetLanguage())
 						if flavorName != "" {
-							name = fmt.Sprintf("%s(%s)", commodityName, flavorName)
+							name = fmt.Sprintf("%s (%s)", commodityName, flavorName)
 						} else {
 							name = commodityName
 						}
 					} else if modifier.IsFlavor() {
 						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						name = fmt.Sprintf("%s(%s)", itemName, flavorName)
-					} else if modifier.IsSauce() {
-						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
-						sauceName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						name = fmt.Sprintf("%s(%s)", itemName, sauceName)
+						name = fmt.Sprintf("%s (%s)", itemName, flavorName)
 					}
-
 					if name != "" {
 						outOfStockNamesMap[name] = struct{}{}
 					}
