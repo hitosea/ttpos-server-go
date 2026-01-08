@@ -1654,6 +1654,7 @@ type GetSaleBillAllInfoOptions struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID. 不为0时，根据会员端销售订单UUID查询
 	SkipCache           bool   `json:"skip_cache"`             // 是否跳过缓存检查，直接执行查询. true: 跳过所有缓存（L1/L2），直接从数据库查询（仍会写入缓存）. false: 正常流程，按配置决定是否使用缓存（默认）
 	EnableCache         bool   `json:"enable_cache"`           // 是否启用对象缓存. true: 使用对象缓存. false: 不使用对象缓存，直接查询数据库（默认）
+	UseSaleBillCache    bool   `json:"use_sale_bill_cache"`    // 是否使用 saleBill 缓存. true: 使用 saleBillController.GetByUuid 获取缓存并补全 Id. false: 直接使用 QuerySaleBillForObjectStorage 查询（默认）
 }
 
 func WithMemberSaleOrderUuid(uuid uint64) func(option *GetSaleBillAllInfoOptions) {
@@ -1666,6 +1667,15 @@ func WithMemberSaleOrderUuid(uuid uint64) func(option *GetSaleBillAllInfoOptions
 func WithSkipCache() func(option *GetSaleBillAllInfoOptions) {
 	return func(option *GetSaleBillAllInfoOptions) {
 		option.SkipCache = true
+	}
+}
+
+// WithUseSaleBillCache 设置是否使用 saleBill 缓存选项
+// true: 使用 saleBillController.GetByUuid 获取缓存并补全 Id
+// false: 直接使用 QuerySaleBillForObjectStorage 查询（默认）
+func WithUseSaleBillCache() func(option *GetSaleBillAllInfoOptions) {
+	return func(option *GetSaleBillAllInfoOptions) {
+		option.UseSaleBillCache = true
 	}
 }
 
@@ -1827,20 +1837,30 @@ func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
 	}
 	ttt := time.Now()
-	saleBill, err := r.QuerySaleBillForObjectStorage(saleBillUuid, uuidFilter)
-	if err != nil {
-		return nil, err
-	}
-	saleBillController := objectStorageController.GetSaleBillController()
-	ctx := context.NewContext(context.WithCompanyUuid(GetCompanyUuid(r.db)), context.WithContext(goCtx.Background()))
-	saleBill, err = saleBillController.GetByUuid(ctx, r.db, saleBillUuid)
-	if err != nil {
-		return nil, err
-	}
 
-	// 检查并补全 SaleOrderProduct 的 Id
-	if err := r.fillSaleOrderProductIds(saleBill); err != nil {
-		return nil, errors.WithMessage(err, "补全销售订单商品ID失败")
+	var saleBill *model.SaleBill
+	var err error
+
+	// 根据 UseSaleBillCache 选项决定使用哪个逻辑
+	if option.UseSaleBillCache {
+		// 使用 saleBill 缓存：通过 saleBillController.GetByUuid 获取缓存并补全 Id
+		saleBillController := objectStorageController.GetSaleBillController()
+		ctx := context.NewContext(context.WithCompanyUuid(GetCompanyUuid(r.db)), context.WithContext(goCtx.Background()))
+		saleBill, err = saleBillController.GetByUuid(ctx, r.db, saleBillUuid)
+		if err != nil {
+			return nil, err
+		}
+
+		// 检查并补全 SaleOrderProduct 的 Id
+		if err := r.fillSaleOrderProductIds(saleBill); err != nil {
+			return nil, errors.WithMessage(err, "补全销售订单商品ID失败")
+		}
+	} else {
+		// 不使用 saleBill 缓存：直接使用 QuerySaleBillForObjectStorage 查询
+		saleBill, err = r.QuerySaleBillForObjectStorage(saleBillUuid, uuidFilter)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	fmt.Println("querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
