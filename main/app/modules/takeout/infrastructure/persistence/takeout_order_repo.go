@@ -343,7 +343,11 @@ func (r *TakeoutOrderRepoImpl) WhereSearch(search string) DBOption {
 func (r *TakeoutOrderRepoImpl) WhereIsHistoryOrder(isHistory bool) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if !isHistory {
-			return db.Where("order_state not in (?, ?, ?)", value_object.TakeoutOrderStateCompleted, value_object.TakeoutOrderStateRejected, value_object.TakeoutOrderStateCanceled)
+			return db.Where("order_state not in (?, ?, ?)",
+				value_object.TakeoutOrderStateCompleted,
+				value_object.TakeoutOrderStateRejected,
+				value_object.TakeoutOrderStateCanceled,
+			)
 		}
 		return db
 	}
