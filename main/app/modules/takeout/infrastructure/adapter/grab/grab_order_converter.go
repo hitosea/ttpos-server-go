@@ -163,15 +163,15 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 
 	// 价格信息映射
 	price := submitOrderReq.GetPrice()
-	order.Subtotal = decimal.NewFromInt(int64(price.GetSubtotal())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.DeliveryFee = decimal.NewFromInt(int64(price.GetDeliveryFee())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.SmallOrderFee = decimal.NewFromInt(int64(price.GetSmallOrderFee())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.EaterPayment = decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.PlatformDiscount = decimal.NewFromInt(int64(price.GetGrabFundPromo())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.MerchantDiscount = decimal.NewFromInt(int64(price.GetMerchantFundPromo())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.BasketPromo = decimal.NewFromInt(int64(price.GetBasketPromo())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.Tax = decimal.NewFromInt(int64(price.GetTax())).Div(decimal.NewFromInt(100)).InexactFloat64()
-	order.MerchantChargeFee = decimal.NewFromInt(int64(price.GetMerchantChargeFee())).Div(decimal.NewFromInt(100)).InexactFloat64()
+	order.Subtotal = decimal.NewFromInt(int64(price.GetSubtotal())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.DeliveryFee = decimal.NewFromInt(int64(price.GetDeliveryFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.SmallOrderFee = decimal.NewFromInt(int64(price.GetSmallOrderFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.EaterPayment = decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.PlatformDiscount = decimal.NewFromInt(int64(price.GetGrabFundPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.MerchantDiscount = decimal.NewFromInt(int64(price.GetMerchantFundPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.BasketPromo = decimal.NewFromInt(int64(price.GetBasketPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.Tax = decimal.NewFromInt(int64(price.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.MerchantChargeFee = decimal.NewFromInt(int64(price.GetMerchantChargeFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 
 	// 货币信息映射
 	currency := submitOrderReq.GetCurrency()
@@ -215,8 +215,8 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 				PlatformItemId:   item.Id,
 				TtposProductType: ttposProductType,
 				Quantity:         int(item.GetQuantity()),
-				Price:            decimal.NewFromInt(int64(item.GetPrice())).Div(decimal.NewFromInt(100)).InexactFloat64(), // Grab API 返回的是分（exponent=2），转换为元
-				Tax:              decimal.NewFromInt(int64(item.GetTax())).Div(decimal.NewFromInt(100)).InexactFloat64(),   // 同上
+				Price:            decimal.NewFromInt(int64(item.GetPrice())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(), // Grab API 返回的是分（exponent=2），转换为元
+				Tax:              decimal.NewFromInt(int64(item.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(),   // 同上
 				Specifications:   item.GetSpecifications(),
 			}
 
@@ -229,8 +229,8 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 						Platform:           platform,
 						PlatformModifierId: modifier.GetId(),
 						Quantity:           int(modifier.GetQuantity()),
-						Price:              decimal.NewFromInt(int64(modifier.GetPrice())).Div(decimal.NewFromInt(100)).InexactFloat64(), // Grab API 返回的是分（exponent=2），转换为元
-						Tax:                decimal.NewFromInt(int64(modifier.GetTax())).Div(decimal.NewFromInt(100)).InexactFloat64(),   // 同上
+						Price:              decimal.NewFromInt(int64(modifier.GetPrice())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(), // Grab API 返回的是分（exponent=2），转换为元
+						Tax:                decimal.NewFromInt(int64(modifier.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(),   // 同上
 					}
 					orderItem.TakeoutOrderItemModifiers = append(orderItem.TakeoutOrderItemModifiers, orderItemModifier)
 				}
@@ -419,7 +419,7 @@ func (c *GrabConverter) ConvertCampaigns(
 			orderCampaign.MexFundedRatio = campaign.GetMexFundedRatio()
 		}
 		if campaign.HasDeductedAmount() {
-			orderCampaign.DeductedAmount = decimal.NewFromInt(int64(campaign.GetDeductedAmount())).Div(decimal.NewFromInt(100)).InexactFloat64()
+			orderCampaign.DeductedAmount = decimal.NewFromInt(int64(campaign.GetDeductedAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 		if campaign.HasDeductedPart() {
 			orderCampaign.DeductedPart = campaign.GetDeductedPart()
@@ -499,22 +499,22 @@ func (c *GrabConverter) ConvertOrderPromos(
 
 		// 金额信息
 		if promo.HasPromoAmountInMin() {
-			orderPromo.PromoAmount = decimal.NewFromInt(int64(promo.GetPromoAmountInMin())).Div(decimal.NewFromInt(100)).InexactFloat64()
-			orderPromo.PromoAmountInMin = decimal.NewFromInt(int64(promo.GetPromoAmountInMin())).Div(decimal.NewFromInt(100)).InexactFloat64()
+			orderPromo.PromoAmount = decimal.NewFromInt(int64(promo.GetPromoAmountInMin())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+			orderPromo.PromoAmountInMin = decimal.NewFromInt(int64(promo.GetPromoAmountInMin())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		} else if promo.HasPromoAmount() {
 			// 如果没有 PromoAmountInMin，使用 PromoAmount（需要转换为最小单位）
-			orderPromo.PromoAmount = decimal.NewFromInt(int64(promo.GetPromoAmount())).Div(decimal.NewFromInt(100)).InexactFloat64()
-			orderPromo.PromoAmountInMin = decimal.NewFromInt(int64(promo.GetPromoAmount())).Div(decimal.NewFromInt(100)).InexactFloat64()
+			orderPromo.PromoAmount = decimal.NewFromInt(int64(promo.GetPromoAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+			orderPromo.PromoAmountInMin = decimal.NewFromInt(int64(promo.GetPromoAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 
 		if promo.HasMexFundedRatio() {
 			orderPromo.MexFundedRatio = int32(promo.GetMexFundedRatio())
 		}
 		if promo.HasMexFundedAmount() {
-			orderPromo.MexFundedAmount = decimal.NewFromInt(int64(promo.GetMexFundedAmount())).Div(decimal.NewFromInt(100)).InexactFloat64()
+			orderPromo.MexFundedAmount = decimal.NewFromInt(int64(promo.GetMexFundedAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 		if promo.HasTargetedPrice() {
-			orderPromo.TargetedPrice = decimal.NewFromInt(int64(promo.GetTargetedPrice())).Div(decimal.NewFromInt(100)).InexactFloat64()
+			orderPromo.TargetedPrice = decimal.NewFromInt(int64(promo.GetTargetedPrice())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 
 		orderPromos = append(orderPromos, orderPromo)

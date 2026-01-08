@@ -24,6 +24,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -917,16 +918,17 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 						modifier.TtposModifierName = info.TtposName
 						// TtposModifierErpCode: ERP编码
 						modifier.TtposModifierErpCode = info.TtposErpCode
-
+						// 计算单价
+						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(modifier.Quantity))).InexactFloat64()
 						// 如果是 commodity 类型，设置规格信息和数量
 						if modifier.IsCommodity() {
 							modifier.TtposProductPackageUuid = info.TtposProductPackageUuid
 							modifier.TtposFlavorProductBomUuid = info.TtposFlavorProductBomUuid
 							modifier.TtposFlavorName = info.TtposFlavorName
-
 							// 使用TTPOS数量覆盖平台数量
 							if info.Num > 0 {
-								modifier.Quantity = int(info.Num)
+								modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(info.Num))).InexactFloat64()
+								modifier.Quantity = int(decimal.NewFromInt(int64(info.Num)).Mul(decimal.NewFromInt(int64(item.Quantity))).InexactFloat64())
 							}
 						}
 

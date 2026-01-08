@@ -1008,8 +1008,9 @@ func (s *takeoutSrv) PrintProductionOrder(ctx context.Context, orderUuid uint64,
 						Attr:            *language.JsonToLocaleResponse(modifier.TtposFlavorName),                       // 商品属性
 						ProductAttrList: []dto.LocaleResponse{*language.JsonToLocaleResponse(modifier.TtposFlavorName)}, // 规格+属性列表
 						TotalNum:        float64(modifier.Quantity),                                                     // 商品数量
-						ProductPrice:    utils.Round(modifier.Price/float64(modifier.Quantity), 2),                      // 商品价格
-						TotalPrice:      modifier.Price,                                                                 // 商品总价格
+						ProductPrice:    modifier.Price,                                                                 // 商品价格
+						IsWrap:          order.IsTakeawayOrder(),                                                        // 是否打包
+						TotalPrice:      utils.Round(modifier.Price*float64(modifier.Quantity), 2),                      // 商品总价格
 					})
 					continue
 				}
