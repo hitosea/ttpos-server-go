@@ -25,6 +25,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	pkgLanguage "ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -1491,8 +1492,18 @@ func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.Kitch
 			continue // 跳过套餐商品
 		}
 		item := business_data_resp.KitchenProductionDetailItem{
-			ProductName:  productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
-			FlavorName:   productionOrderProduct.SaleOrderProduct.GetFlavorName(),
+			ProductName: func() dto.LocaleResponse {
+				if productionOrderProduct.IsTakeoutOrder() {
+					return *pkgLanguage.JsonToLocaleResponse(productionOrderProduct.Name)
+				}
+				return productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames()
+			}(),
+			FlavorName: func() dto.LocaleResponse {
+				if productionOrderProduct.IsTakeoutOrder() {
+					return *pkgLanguage.JsonToLocaleResponse(productionOrderProduct.FlavorName)
+				}
+				return productionOrderProduct.SaleOrderProduct.GetFlavorName()
+			}(),
 			CategoryName: productionOrderProduct.ProductCategory.MultiLanguageName.GetNames(),
 			Number:       productionOrderProduct.Num,
 			CreateTime:   productionOrderProduct.CreateTime,
