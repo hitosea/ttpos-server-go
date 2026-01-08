@@ -112,12 +112,14 @@
 
 #### 具体要求
 
-- [x] 3.1 新增 `ttpos_purchase_quota_config` 限购配置表
-- [x] 3.2 支持物品级别的限购配置（material_uuid + unit_uuid）
-- [x] 3.3 支持多门店维度配置（shop_uuids 字段存储门店列表）
+- [x] 3.1 新增 `ttpos_purchase_quota_config` 限购配置主表
+- [x] 3.2 新增 `ttpos_purchase_quota_config_shop` 门店关联表
+- [x] 3.3 支持物品级别的限购配置（material_uuid + unit_uuid）
 - [x] 3.4 支持"应用到全部店铺"选项（apply_to_all_shops 字段）
-- [x] 3.5 预留扩展字段：周期类型、超限策略、配置来源
-- [x] 3.6 使用雪花算法生成业务 UUID
+- [x] 3.5 支持多门店选择（通过关联表存储门店列表）
+- [x] 3.6 预留扩展字段：周期类型、超限策略、配置来源
+- [x] 3.7 使用雪花算法生成业务 UUID
+- [x] 3.8 查询时支持 JOIN 关联表过滤门店
 
 ---
 
@@ -224,12 +226,12 @@ WHERE po.purchase_type = 2                    -- 品牌采购
 
 ### Requirement 7: 门店配置界面
 
-**用户故事**: 作为管理员，我想在门店管理页面配置每日采购申请次数限制，以便于灵活管理不同门店的采购规则。
+**用户故事**: 作为管理员，我想在门店管理页面配置每日品类申请数限制，以便于灵活管理不同门店的采购规则。
 
 #### 验收标准
 
 1. **WHEN** 点击门店管理列表中的"门店配置"按钮 **THEN** 系统 **SHALL** 打开门店配置页面
-2. **WHEN** 在配置页面输入"每日采购申请次数"并保存 **THEN** 系统 **SHALL** 更新该门店的配置
+2. **WHEN** 在配置页面输入"每日品类申请数"并保存 **THEN** 系统 **SHALL** 更新该门店的配置
 3. **IF** 门店未配置 **THEN** 系统 **SHALL** 使用全局默认值
 
 #### 具体要求
@@ -238,6 +240,11 @@ WHERE po.purchase_type = 2                    -- 品牌采购
 - [x] 7.2 门店配置页面包含"每日采购申请次数"输入框
 - [x] 7.3 支持保存和重置操作
 - [x] 7.4 显示当前配置值或默认值
+
+#### 字段说明
+
+- **每日品类申请数**：限制门店每天提交品牌采购申请单的次数（如配置为2次，门店今天最多提交2个品牌采购申请单）
+- **存储字段**：`purchase_daily_limit`（数据库字段保持不变）
 
 ---
 
@@ -511,16 +518,21 @@ WHERE po.purchase_type = 2                    -- 品牌采购
 
 ### 表结构
 
+#### 表1: 品牌采购限购配置表
+
 ```sql
--- 品牌采购限购配置表（门店级）
+-- 品牌采购限购配置表（主表）
 CREATE TABLE ttpos_purchase_quota_config (
   id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   uuid BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '绑定记录ID（雪花算法生成）',
   material_uuid BIGINT(20) UNSIGNED NOT NULL COMMENT '物品UUID',
-  material_code VARCHAR(100) NOT NULL COMMENT '物品编码（冗余，便于查询）',
+  material_code VARCHAR(100) NOT NULL DEFAULT '' COMMENT '物品编码（冗余，便于查询）',
   unit_uuid BIGINT(20) UNSIGNED NOT NULL COMMENT '限购单位UUID',
-  unit_name VARCHAR(50) NOT NULL COMMENT '限购单位名称（冗余）',
-  quota_limit DECIMAL(10,2) NOT NULL COMMENT '限购数量',
+  unit_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '限购单位名称（冗余）',
+  quota_limit DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '限购数量',
+  
+  -- 门店范围控制
+  apply_to_all_shops TINYINT(4) NOT NULL DEFAULT 1 COMMENT '是否应用到全部店铺: 1=是 0=否',
   
   -- 扩展字段（预留）
   period_type TINYINT(4) NOT NULL DEFAULT 0 COMMENT '周期类型: 0=按天(默认) 1=月度',
@@ -534,10 +546,40 @@ CREATE TABLE ttpos_purchase_quota_config (
   delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
   
   PRIMARY KEY (id),
-  UNIQUE KEY uk_material (material_uuid),
-  INDEX idx_status (status)
+  UNIQUE KEY uk_uuid (uuid),
+  KEY idx_material (material_uuid),
+  KEY idx_status (status),
+  KEY idx_delete_time (delete_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='品牌采购限购配置';
 ```
+
+#### 表2: 限购配置门店关联表
+
+```sql
+-- 品牌采购限购配置门店关联表
+CREATE TABLE ttpos_purchase_quota_config_shop (
+  id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  config_uuid BIGINT(20) UNSIGNED NOT NULL COMMENT '限购配置UUID',
+  shop_uuid BIGINT(20) UNSIGNED NOT NULL COMMENT '门店UUID',
+  
+  -- 状态字段
+  create_time INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  delete_time INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_config_shop (config_uuid, shop_uuid),
+  KEY idx_config (config_uuid),
+  KEY idx_shop (shop_uuid),
+  KEY idx_delete_time (delete_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='品牌采购限购配置门店关联';
+```
+
+**设计说明**：
+
+- **apply_to_all_shops=1**：应用到全部店铺，关联表无记录
+- **apply_to_all_shops=0**：应用到指定店铺，关联表存储门店列表
+- **查询逻辑**：先查主表，若 `apply_to_all_shops=0` 则 JOIN 关联表过滤门店
+- **数据一致性**：删除配置时需同步删除关联表记录（级联或手动）
 
 ### 状态常量
 

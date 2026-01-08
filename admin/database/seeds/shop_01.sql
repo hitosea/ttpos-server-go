@@ -4161,4 +4161,44 @@ CREATE TABLE IF NOT EXISTS `ttpos_takeout_settings` (
     KEY `idx_platform` (`platform`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外卖平台配置表(多平台)';
 
+-- ----------------------------
+-- Table structure for ttpos_purchase_quota_config
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `uuid` bigint(20) unsigned NOT NULL COMMENT '配置UUID',
+    `material_code` varchar(100) NOT NULL COMMENT '物品编码',
+    `unit_code` varchar(50) NOT NULL COMMENT '限购单位编码',
+    `quota_limit` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '限购数量',
+    `apply_to_all_shops` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '是否应用到全部店铺: 1=是 0=否',
+    `period_type` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '周期类型: 0=按天(默认) 1=月度',
+    `strict_mode` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '超限策略: 1=严格拒绝',
+    `config_source` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '配置来源: 1=门店 2=总部',
+    `status` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '状态: 1=启用 0=禁用',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_uuid` (`uuid`),
+    KEY `idx_material` (`material_code`, `delete_time`),
+    KEY `idx_status` (`status`, `delete_time`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌采购限购配置主表';
+
+-- ----------------------------
+-- Table structure for ttpos_purchase_quota_config_shop
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_quota_config_shop` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `config_uuid` bigint(20) unsigned NOT NULL COMMENT '限购配置UUID',
+    `company_uuid` bigint(20) unsigned NOT NULL COMMENT '公司UUID（门店UUID）',
+    `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_config_company` (`config_uuid`, `company_uuid`),
+    KEY `idx_config` (`config_uuid`),
+    KEY `idx_company` (`company_uuid`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌采购限购配置门店关联表';
+
 SET FOREIGN_KEY_CHECKS = 1;
