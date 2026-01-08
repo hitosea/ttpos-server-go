@@ -24,17 +24,19 @@ import (
 
 // GrabConverter Grab 平台转换器实现
 type GrabConverter struct {
-	dbm      *database.DBManager
-	menuRepo menuRepo.IMenuDataRepository
-	cache    cache.Cache
+	dbm                    *database.DBManager
+	menuRepo               menuRepo.IMenuDataRepository
+	cache                  cache.Cache
+	amountConversionFactor int64 // 金额转换因子(分转元)
 }
 
 // NewGrabConverter 创建 Grab 转换器
 func NewGrabConverter(dbm *database.DBManager, cache cache.Cache) *GrabConverter {
 	return &GrabConverter{
-		dbm:      dbm,
-		menuRepo: persistence.NewMenuDataRepository(dbm),
-		cache:    cache,
+		dbm:                    dbm,
+		menuRepo:               persistence.NewMenuDataRepository(dbm),
+		cache:                  cache,
+		amountConversionFactor: 100,
 	}
 }
 
@@ -294,10 +296,10 @@ func (c *GrabConverter) convertTTPOSProduct(ctx context.Context, pkg any, sequen
 			}
 		}
 		// 使用 decimal 包避免浮点数精度问题，转换为分
-		price = decimal.NewFromFloat(minPrice).Mul(decimal.NewFromInt(100)).IntPart()
+		price = decimal.NewFromFloat(minPrice).Mul(decimal.NewFromInt(c.amountConversionFactor)).IntPart()
 	} else {
 		// 没有规格，优先使用外卖商品价格，否则使用店内商品原价
-		price = decimal.NewFromFloat(takeoutProduct.Price).Mul(decimal.NewFromInt(100)).IntPart()
+		price = decimal.NewFromFloat(takeoutProduct.Price).Mul(decimal.NewFromInt(c.amountConversionFactor)).IntPart()
 	}
 
 	// 创建商品值对象
@@ -584,7 +586,7 @@ func (c *GrabConverter) convertProductFlavors(
 
 		// 计算规格价格：与最小规格的差价（当前规格价格 - 最小规格价格）
 		priceDiff := flavorPrice - minFlavorPrice
-		priceInCents := decimal.NewFromFloat(priceDiff).Mul(decimal.NewFromInt(100)).IntPart() // 转换为分
+		priceInCents := decimal.NewFromFloat(priceDiff).Mul(decimal.NewFromInt(c.amountConversionFactor)).IntPart() // 转换为分
 
 		// 判断规格状态：
 		// 1. 售罄（is_sold_out = 1）-> UNAVAILABLE
@@ -984,7 +986,7 @@ func (c *GrabConverter) convertPackageGroups(_ context.Context, menuItem *grabfo
 			if takeoutPrice, exists := takeoutPriceMap[groupItem.Uuid]; exists {
 				addPrice = takeoutPrice
 			}
-			priceInCents := decimal.NewFromFloat(addPrice).Mul(decimal.NewFromInt(100)).IntPart()
+			priceInCents := decimal.NewFromFloat(addPrice).Mul(decimal.NewFromInt(c.amountConversionFactor)).IntPart()
 
 			// 创建修饰符
 			modifier := grabfood.NewMenuModifierWithDefaults()
