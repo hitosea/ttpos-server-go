@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/objectstorage/domain/entity"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	objectStorageController "ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository/ro"
@@ -1832,6 +1833,7 @@ func (r *orderRepo) QuerySaleBillForObjectStorage(saleBillUuid uint64, uuidFilte
 // querySaleBillAllInfo 查询销售账单所有信息（数据库查询）
 // 这是一个私有方法，用于统一查询逻辑，避免代码重复
 func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, option *GetSaleBillAllInfoOptions) (*model.SaleBill, error) {
+	companyUuid := GetCompanyUuid(r.db)
 	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
 	if option.MemberSaleOrderUuid != 0 {
 		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
@@ -1845,15 +1847,30 @@ func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 	if option.UseSaleBillCache {
 		// 使用 saleBill 缓存：通过 saleBillController.GetByUuid 获取缓存并补全 Id
 		saleBillController := objectStorageController.GetSaleBillController()
-		ctx := context.NewContext(context.WithCompanyUuid(GetCompanyUuid(r.db)), context.WithContext(goCtx.Background()))
+		ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))
 		saleBill, err = saleBillController.GetByUuid(ctx, r.db, saleBillUuid)
 		if err != nil {
 			return nil, err
 		}
 
+		ttt := time.Now()
 		// 检查并补全 SaleOrderProduct 的 Id
-		if err := r.fillSaleOrderProductIds(saleBill); err != nil {
+		fill, err := r.fillSaleOrderProductIds(saleBill)
+		if err != nil {
 			return nil, errors.WithMessage(err, "补全销售订单商品ID失败")
+		}
+		fmt.Println("检查并补全 SaleOrderProduct 的 Id ms: ", time.Since(ttt).Milliseconds())
+
+		if fill {
+			ttt = time.Now()
+			// 将补全后的结果写到缓存中
+			if err := saleBillController.Update(ctx, r.db,
+				[]uint64{saleBillUuid},
+				controller.WithUpdateValue(map[uint64]interface{}{saleBillUuid: saleBill}),
+			); err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			fmt.Println("将补全后的结果写到缓存中 ms: ", time.Since(ttt).Milliseconds())
 		}
 	} else {
 		// 不使用 saleBill 缓存：直接使用 QuerySaleBillForObjectStorage 查询
@@ -1861,11 +1878,21 @@ func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 		if err != nil {
 			return nil, err
 		}
+
+		ttt = time.Now()
+		// 将新查询到的结果写到缓存中
+		ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))
+		if err := objectStorageController.GetSaleBillController().Update(ctx, r.db,
+			[]uint64{saleBillUuid},
+			controller.WithUpdateValue(map[uint64]interface{}{saleBillUuid: saleBill}),
+		); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		fmt.Println("将新查询到的saleBill写到缓存中 ms: ", time.Since(ttt).Milliseconds())
 	}
 
 	fmt.Println("querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
 	// 使用对象存储层自动注入关联对象（Desk）
-	companyUuid := GetCompanyUuid(r.db)
 	if companyUuid != 0 {
 		ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))
 
@@ -3262,9 +3289,10 @@ func getSaleBillAssociationsForAllInfo(ctx goCtx.Context, db *gorm.DB, underlyin
 // fillSaleOrderProductIds 补全 SaleOrderProduct 的 Id
 // 检查 saleOrder 的 saleOrderProduct 中有哪些 uuid 不为 0 但 id 为 0 的 saleOrderProduct，
 // 使用 uuid 查询并设置补全 id
-func (r *orderRepo) fillSaleOrderProductIds(saleBill *model.SaleBill) error {
+func (r *orderRepo) fillSaleOrderProductIds(saleBill *model.SaleBill) (bool, error) {
+	fill := false
 	if saleBill == nil {
-		return nil
+		return fill, nil
 	}
 
 	// 收集所有需要补全 Id 的 SaleOrderProduct Uuid
@@ -3286,14 +3314,14 @@ func (r *orderRepo) fillSaleOrderProductIds(saleBill *model.SaleBill) error {
 
 	// 如果没有需要补全的商品，直接返回
 	if len(needFillUuids) == 0 {
-		return nil
+		return fill, nil
 	}
 
 	// 批量查询这些商品的 Id
 	saleOrderProductRepo := NewSaleOrderProductRepo(r.db)
 	products, err := saleOrderProductRepo.GetSaleOrderProductsByUuids(needFillUuids)
 	if err != nil {
-		return errors.WithMessage(err, "批量查询销售订单商品失败")
+		return fill, errors.WithMessage(err, "批量查询销售订单商品失败")
 	}
 
 	// 将查询到的 Id 设置到对应的商品中
@@ -3301,9 +3329,10 @@ func (r *orderRepo) fillSaleOrderProductIds(saleBill *model.SaleBill) error {
 		if product != nil {
 			if targetProduct, ok := uuidToProductMap[product.Uuid]; ok {
 				targetProduct.ID = product.ID
+				fill = true
 			}
 		}
 	}
 
-	return nil
+	return fill, nil
 }
