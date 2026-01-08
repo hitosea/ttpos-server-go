@@ -1112,7 +1112,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 
 	xxx := time.Now()
 	defer func() {
-		fmt.Println("ms: ", time.Since(xxx).Milliseconds())
+		fmt.Println("cache_time_xie_log GetOrderCartInfoInDeskSaleBill ms: ", time.Since(xxx).Milliseconds())
 	}()
 	if saleBill.IsDeskSaleBill() {
 		if saleBill.IsBuffetSaleBill() {
@@ -1903,10 +1903,10 @@ func (r *orderRepo) QuerySaleBillAllInfoUsingObjectStorage(saleBillUuid uint64, 
 		); err != nil {
 			return nil, errors.WithMessage(err)
 		}
-		fmt.Println("将新查询到的saleBill写到缓存中 ms: ", time.Since(ttt).Milliseconds())
+		fmt.Println("cache_time_xie_log 将新查询到的saleBill写到缓存中 ms: ", time.Since(ttt).Milliseconds())
 	}
 
-	fmt.Println("querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
+	fmt.Println("cache_time_xie_log querySaleBillAllInfoUsingObjectStorage get saleBill ms: ", time.Since(ttt).Milliseconds())
 	// 使用对象存储层自动注入关联对象（Desk）
 	if companyUuid != 0 {
 		ctx := context.NewContext(context.WithCompanyUuid(companyUuid), context.WithContext(goCtx.Background()))

@@ -1905,7 +1905,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	xxx := time.Now()
 	defer func() {
-		fmt.Println("GetOrderCartInfo ms: ", time.Since(xxx).Milliseconds())
+		fmt.Println("cache_time_xie_log GetOrderCartInfo ms: ", time.Since(xxx).Milliseconds())
 	}()
 	// 追加请求头参数，从http的header中获取h5_order_uuid
 	h5OrderUuid := context.GetH5OrderUuid(ctx)
@@ -1938,7 +1938,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 如果从待接单进入桌台时，要把h5订单商品计算在内
 		shopCart.SaleBill.CalcAll(model.WithAllAndOneH5Order(option.H5OrderUuid))
 	}
-	fmt.Println("GetOrderCartInfo22222 ms: ", time.Since(yyyyy).Milliseconds())
+	fmt.Println("cache_time_xie_log GetOrderCartInfo22222 ms: ", time.Since(yyyyy).Milliseconds())
 
 	// 获取门店业务设置（使用对象存储模块缓存）
 	getBusinessSettingStartTime := time.Now()
@@ -2180,7 +2180,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 		}
 	}
-	fmt.Println("GetOrderCartInfo11111 ms: ", time.Since(hhh).Milliseconds())
+	fmt.Println("cache_time_xie_log sGetOrderCartInfo11111 ms: ", time.Since(hhh).Milliseconds())
 	return shopCartInfo, nil
 }
 
