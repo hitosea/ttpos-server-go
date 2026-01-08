@@ -20,7 +20,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
-	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -1406,11 +1405,11 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, _ uint64
 		return nil, errors.WithMessage(err, "更新销售订单失败")
 	}
 
-	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
-		if ctx.GetSource() == constant.SourceAssistant {
-			return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
-		}
-	}
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
