@@ -5646,6 +5646,9 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 
 	productPackage, err := repository.NewProductRepo(db).GetProductDetail(req.Uuid)
 	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, errors.WithMessage(errors.New("商品不存在"))
+		}
 		return nil, errors.WithMessage(err, "获取商品失败")
 	}
 
