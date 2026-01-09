@@ -329,6 +329,7 @@ class User extends UserModel
                 return false;
             }
         }
+
         return $this->transaction(function () use ($card, $cardNumber, $data, $referrerUuid) {
             if ($card) {
                 // 会员未拥有此会员卡，发卡
@@ -347,10 +348,27 @@ class User extends UserModel
                     }
                 }
             }
-            $data['member_card_no'] = $cardNumber;
-            $data['referrer_uuid'] = $referrerUuid;
-            // 使用 force(true) 强制更新所有字段，确保 member_card_no 被更新
-            return $this->force(true)->save($data);
+
+            $saveData = [
+                'nickname' => $data['nick_name'],
+                'gender' => $data['gender'],
+                'member_level_uuid' => $data['grade_id'],
+                'phone' => $data['mobile'],
+                'birthday' => $data['birthday'],
+                'referrer_uuid' => $referrerUuid,
+                'member_card_no' => $cardNumber,
+            ];
+            if (isset($data['password']) && $data['password']) {
+                $saveData['password'] = $data['password'];
+            }
+
+            try {
+                $this->where('uuid', '=', $this['uuid'])->update($saveData); 
+                return true;
+            } catch (\Exception $e) {
+                $this->error = $e->getMessage();
+                return false;
+            }
         });
     }
 
