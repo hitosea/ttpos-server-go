@@ -166,7 +166,7 @@ func (c *OAuthTokenClient) FetchTokenFromAPI(ctx context.Context) (string, int, 
 	cfg := MustConfig(ctx)
 
 	// 构造 OAuth Token URL
-	tokenURL := cfg.Endpoint + "/oauth/token"
+	tokenURL := cfg.Endpoint + "/v1/oauth/token"
 
 	// 构造请求体
 	reqBody := lineman.LinemanOAuthTokenRequest{

@@ -12,8 +12,6 @@ import (
 
 type (
 	IChannelMenu interface {
-		// SaveChannelMenu 保存外卖渠道菜单快照
-		SaveChannelMenu(ctx context.Context, shopUUID uint64, providerName string, menuData string) error
 		// GetChannelMenu 读取外卖渠道菜单快照
 		GetChannelMenu(ctx context.Context, shopUUID uint64, providerName string) (string, error)
 		// GetTtposMenu 读取TTPOS菜单快照

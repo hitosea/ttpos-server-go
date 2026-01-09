@@ -70,7 +70,7 @@ app:
       platform: #请求平台时使用
         clientId: "$GRAB_PLATFORM_CLIENT_ID"
         clientSecret: "$GRAB_PLATFORM_CLIENT_SECRET"
-        secretKey: "$GRAB_PLATFORM_SECRET_KEY"  # Webhook 签名密钥
+        secretKey: "$GRAB_PLATFORM_SECRET_KEY"  # Webhook 签名密钥 Grab 调用TTPOS时也用这个
         environment: "$GRAB_ENV"  # production 或 staging
         timeout: "30s"
       partner: #请求合作伙伴时使用
@@ -85,7 +85,7 @@ app:
         partnerId: "$LINEMAN_PARTNER_ID"  # Partner ID，默认 wallace
         clientId: "$LINEMAN_PLATFORM_CLIENT_ID"
         clientSecret: "$LINEMAN_PLATFORM_CLIENT_SECRET"
-        secretKey: "$LINEMAN_PLATFORM_SECRET_KEY"  # JWT 签名密钥
+        secretKey: "$LINEMAN_PLATFORM_SECRET_KEY"  # JWT 签名密钥 验证lineman 调用TTPOS时也用这个
         endpoint: "$LINEMAN_PLATFORM_ENDPOINT"  # API 端点地址，staging: https://beta-partner-order.wndv.co
         environment: "$LINEMAN_ENV"  # production 或 staging
         timeout: "30s"

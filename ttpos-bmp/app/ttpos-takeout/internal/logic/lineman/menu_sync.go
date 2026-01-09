@@ -30,13 +30,13 @@ func (s *sLineman) SyncMenu(ctx context.Context, shopUUID uint64) error {
 	g.Log().Infof(ctx, "[Lineman] 开始同步菜单: shopUUID=%d", shopUUID)
 
 	// 1. 获取门店配置（复用 shop_provider_cfg）
-	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderLineman))
-	if err != nil {
-		return gerror.Wrap(err, "[Lineman] 获取门店配置失败")
-	}
-	if cfg == nil {
-		return gerror.Newf("[Lineman] 门店未配置 Lineman: shopUUID=%d", shopUUID)
-	}
+	// cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderLineman))
+	// if err != nil {
+	// 	return gerror.Wrap(err, "[Lineman] 获取门店配置失败")
+	// }
+	// if cfg == nil {
+	// 	return gerror.Newf("[Lineman] 门店未配置 Lineman: shopUUID=%d", shopUUID)
+	// }
 
 	// 对于 Lineman，storeId 直接使用 shopUUID
 	storeId := fmt.Sprintf("%d", shopUUID)

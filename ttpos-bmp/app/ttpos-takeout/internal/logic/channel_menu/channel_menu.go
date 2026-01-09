@@ -26,36 +26,6 @@ func New() *sChannelMenu {
 	return &sChannelMenu{}
 }
 
-// SaveChannelMenu 保存外卖渠道菜单快照
-func (s *sChannelMenu) SaveChannelMenu(ctx context.Context, shopUUID uint64, providerName string, menuData string) error {
-	// 1. 检查是否存在
-	count, err := dao.ChannelMenuSnapshot.Ctx(ctx).
-		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
-		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, providerName).
-		Count()
-	if err != nil {
-		return err
-	}
-
-	if count > 0 {
-		// Update
-		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().MenuData: menuData,
-		}).Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
-			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, providerName).Update()
-		return err
-	} else {
-		// Insert
-		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().Uuid:         uuid.MustGetID(),
-			dao.ChannelMenuSnapshot.Columns().ShopUuid:     shopUUID,
-			dao.ChannelMenuSnapshot.Columns().ProviderName: providerName,
-			dao.ChannelMenuSnapshot.Columns().MenuData:     menuData,
-		}).Insert()
-		return err
-	}
-}
-
 // GetChannelMenu 读取外卖渠道菜单快照
 func (s *sChannelMenu) GetChannelMenu(ctx context.Context, shopUUID uint64, providerName string) (string, error) {
 	record, err := dao.ChannelMenuSnapshot.Ctx(ctx).
@@ -159,6 +129,7 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 	if record.IsEmpty() {
 		// 4a. 不存在，创建新记录
 		_, err = dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
+			dao.ChannelMenuSnapshot.Columns().Uuid:           uuid.MustGetID(),
 			dao.ChannelMenuSnapshot.Columns().ShopUuid:       shopUuidInt,
 			dao.ChannelMenuSnapshot.Columns().ProviderName:   req.ProviderName,
 			dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
@@ -169,7 +140,7 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 		_, err = dao.ChannelMenuSnapshot.Ctx(ctx).
 			Where(dao.ChannelMenuSnapshot.Columns().Id, record["id"].Uint64()).
 			Data(g.Map{
-				dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
+				// dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
 				dao.ChannelMenuSnapshot.Columns().TtposUpdatedAt: nowTs,
 			}).Update()
 	}
@@ -183,6 +154,14 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 	// 5. 如果是 Grab 渠道，异步通知菜单更新
 	if req.ProviderName == string(consts.ProviderGrab) {
 		go s.notifyGrabMenuUpdate(context.Background(), shopUuidInt)
+	}
+	// 6. 如果是 Lineman 渠道， 实时同步调用lineman SyncMenu
+	if req.ProviderName == string(consts.ProviderLineman) {
+		err = service.Lineman().SyncMenu(ctx, shopUuidInt)
+		if err != nil {
+			g.Log().Errorf(ctx, "SyncMenu failed: shop_uuid=%d, err=%v", shopUuidInt, err)
+			return nil, gerror.Wrap(err, "同步菜单失败")
+		}
 	}
 
 	return &api.SaveMenuSnapshotResp{}, nil
