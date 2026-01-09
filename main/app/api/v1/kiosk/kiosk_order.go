@@ -350,6 +350,72 @@ func (h *OrderHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// PayOrderInfo 获取支付信息
+// @Summary 获取支付信息
+// @Description 获取支付信息（创建支付订单，返回二维码和支付信息，可轮询此接口查询支付状态）
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query uint64 true "销售账单UUID"
+// @param sale_order_uuid query uint64 true "销售订单UUID"
+// @param payment_method_uuid query uint64 true "支付方式UUID"
+// @param payment_amount query float64 true "支付金额"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/pay/info [get]
+func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取kiosk支付信息", zap.Any("params", params))
+	// 获取支付信息
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// PayOrderStatus 获取支付状态
+// @Summary 获取支付状态
+// @Description 获取支付状态（查询订单的支付状态）
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query uint64 true "销售账单UUID"
+// @param sale_order_uuid query uint64 true "销售订单UUID"
+// @param payment_method_uuid query uint64 true "支付方式UUID"
+// @param payment_amount query float64 true "支付金额"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/pay/status [get]
+func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取kiosk支付状态", zap.Any("params", params))
+	// 获取支付状态（复用 InstantOrderPaymentQrcode 方法，如果支付订单已存在会返回状态）
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -383,5 +449,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/check", wrapper.OrderCheck)                               // 订单检查
 		privateApi.POST("/order/takeout", wrapper.OrderTakeout)                          // 打包
 		privateApi.GET("/order/payment/info", wrapper.OrderPaymentInfo)                  // 获取结账页面信息
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                          // 获取支付信息
+		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
 	}
 }
