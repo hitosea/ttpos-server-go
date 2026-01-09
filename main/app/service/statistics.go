@@ -1237,7 +1237,7 @@ func (s *statisticsSrv) CountUnpaidOrder(ctx context.Context, req CountReq) Coun
 	if req.ExcludeDataManage {
 		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
 			db,
-			"sale_bill_uuid",
+			"uuid",
 			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
 			repository.CommonRepo.WhereBySoftDelete(),
 		))

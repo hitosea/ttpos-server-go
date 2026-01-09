@@ -14,6 +14,7 @@ type IPrinterTemplateRepo interface {
 	// 获取打印菜单列表
 	GetPrinterTemplates() ([]model.PrinterTemplate, error)             // 获取所有打印模版列表
 	UpdatePrinterTemplate(printerTemplate model.PrinterTemplate) error // 更新打印机模板
+	GetPrinterTemplateName(id uint64) (string, error)                  // 根据id获取打印机模板名称
 }
 
 func NewPrinterTemplateRepo(db *gorm.DB) IPrinterTemplateRepo {
@@ -27,6 +28,13 @@ func NewPrinterTemplateRepoImpl(db *gorm.DB) *PrinterTemplateRepoImpl {
 
 type PrinterTemplateRepoImpl struct {
 	db *gorm.DB
+}
+
+// GetPrinterTemplateName 获取打印机模板名称
+func (r *PrinterTemplateRepoImpl) GetPrinterTemplateName(id uint64) (string, error) {
+	var name string
+	err := r.db.Model(&model.PrinterTemplate{}).Where("id = ?", id).Pluck("name", &name).Error
+	return name, err
 }
 
 // GetPrinterTemplateInfo 获取打印机模板详情

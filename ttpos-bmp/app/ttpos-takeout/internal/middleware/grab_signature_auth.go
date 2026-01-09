@@ -7,7 +7,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
-	"ttpos-bmp/app/ttpos-takeout/internal/logic/grab"
+	grabclient "ttpos-bmp/app/ttpos-takeout/internal/client/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
@@ -30,8 +30,8 @@ func MiddlewareGrabSignatureAuth(r *ghttp.Request) {
 	}
 
 	// 1. 从 Header 获取签名和时间戳
-	signature := r.Header.Get(grab.HeaderXGrabSignature)
-	timestamp := r.Header.Get(grab.HeaderXGrabTimestamp)
+	signature := r.Header.Get(grabclient.HeaderXGrabSignature)
+	timestamp := r.Header.Get(grabclient.HeaderXGrabTimestamp)
 
 	// 2. 获取请求体（GoFrame 自动缓存，后续 handler 可再次读取）
 	body := r.GetBody()
@@ -42,11 +42,11 @@ func MiddlewareGrabSignatureAuth(r *ghttp.Request) {
 
 		// 根据错误类型返回不同的错误信息
 		errorMsg := "Signature verification failed"
-		if errors.Is(err, grab.ErrMissingHeader) {
+		if errors.Is(err, grabclient.ErrMissingHeader) {
 			errorMsg = "Missing required header"
-		} else if errors.Is(err, grab.ErrExpiredTimestamp) {
+		} else if errors.Is(err, grabclient.ErrExpiredTimestamp) {
 			errorMsg = "Timestamp expired"
-		} else if errors.Is(err, grab.ErrInvalidSignature) {
+		} else if errors.Is(err, grabclient.ErrInvalidSignature) {
 			errorMsg = "Invalid signature"
 		}
 

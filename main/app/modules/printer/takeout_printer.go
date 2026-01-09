@@ -73,19 +73,14 @@ func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 	}
 
 	// 获取打印模板
-	tmpId := uint64(templateType)
-	_, tmpUuid, tmpDataStr := p.GetPrinterTemplate(tmpId)
-	if tmpUuid == 0 || tmpDataStr == "" {
-		printerSrv := service.NewPrinterSrv(p.dbm, p.cache)
-		defaultCustomize, err := printerSrv.GetOrCreateDefaultCustomize(p.ctx, tmpId)
-		if err != nil {
-			return nil, errors.WithMessage(err, "获取或创建默认定制数据失败")
-		}
-		tmpData, err := printerSrv.UsePrinterCustomize(p.ctx, defaultCustomize.Uuid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "使用打印机定制失败")
-		}
-		tmpDataStr = tmpData
+	printerSrv := service.NewPrinterSrv(p.dbm, p.cache)
+	templateName, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateName(uint64(templateType))
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取打印机模板名称失败")
+	}
+	tmpDataStr, err := printerSrv.GetTemplateJSONStr(p.ctx, templateName)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取打印机模板JSON字符串失败")
 	}
 
 	// 获取打印内容

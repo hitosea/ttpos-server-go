@@ -130,7 +130,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 
                 // 商品数量和价格
                 ->addColumn('quantity', 'integer', ['signed' => true, 'default' => 0, 'comment' => '数量'])
-                ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '单价(元,4位小数)'])
+                ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '单价(元,4位小数)-外卖平台价格'])
                 ->addColumn('tax', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '税费(元,4位小数)'])
                 ->addColumn('specifications', 'string', ['limit' => 500, 'default' => '', 'comment' => '规格说明'])
                 

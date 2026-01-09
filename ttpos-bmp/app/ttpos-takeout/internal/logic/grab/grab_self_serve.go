@@ -1,5 +1,5 @@
 // Package grab_self_serve 提供 GrabFood 自助激活链接服务的业务逻辑
-package grab_self_serve
+package grab
 
 import (
 	"context"
@@ -15,21 +15,9 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
-// sGrabSelfServe 自助激活链接服务
-type sGrabSelfServe struct{}
-
-func init() {
-	service.RegisterGrabSelfServe(New())
-}
-
-// New 创建自助激活链接服务实例
-func New() *sGrabSelfServe {
-	return &sGrabSelfServe{}
-}
-
-// CreateSelfServeJourney 创建自助激活链接
+// CreateSelfServeJourneyWithReq 创建自助激活链接 (使用请求对象)
 // 根据 shop_uuid 获取 Grab 配置，调用 SDK 生成激活链接
-func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.CreateSelfServeJourneyReq) (*grab.CreateSelfServeJourneyResp, error) {
+func (s *sGrab) CreateSelfServeJourneyWithReq(ctx context.Context, req *grab.CreateSelfServeJourneyReq) (*grab.CreateSelfServeJourneyResp, error) {
 	// 1. 参数校验
 	if req.ProviderName == "" {
 		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "provider_name 不能为空")
@@ -58,10 +46,10 @@ func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.C
 		return nil, gerror.NewCode(gcode.CodeInternalError, "Grab 配置不完整：缺少 Environment，请检查配置文件 app.provider.grab.platform.environment")
 	}
 
-	// 4. 调用 Grab 服务创建自助激活链接
+	// 4. 调用 Grab API 创建自助激活链接
 	// 注意：shop_uuid 作为 merchantID 传入，实际应该根据业务需求从数据库查询 Grab Merchant ID
 	// 当前实现假设 shop_uuid 就是 Grab Merchant ID
-	activationURL, requestID, err := service.Grab().CreateSelfServeJourney(ctx, req.ShopUuid)
+	activationURL, requestID, err := s.CreateSelfServeJourney(ctx, req.ShopUuid)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Grab] 创建自助激活链接失败: shop_uuid=%s, error=%v", req.ShopUuid, err)
 		// 错误映射：根据错误类型返回不同的错误码
@@ -96,7 +84,7 @@ func (s *sGrabSelfServe) CreateSelfServeJourney(ctx context.Context, req *grab.C
 }
 
 // mapGrabError 映射 Grab SDK 错误到业务错误
-func (s *sGrabSelfServe) mapGrabError(err error) error {
+func (s *sGrab) mapGrabError(err error) error {
 	if err == nil {
 		return nil
 	}
