@@ -12,7 +12,6 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
-	grabclient "ttpos-bmp/app/ttpos-takeout/internal/client/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
@@ -21,14 +20,6 @@ import (
 // ============================================================================
 // Webhook 处理 (包装层 - 处理一些额外逻辑)
 // ============================================================================
-
-// VerifyWebhookSignature 验证 Grab Webhook 签名 (公开方法，供其他服务调用)
-// signature: X-Grab-Signature 请求头值
-// timestamp: X-Grab-Timestamp 请求头值
-// body: 请求体原始字节
-func (s *sGrab) VerifyWebhookSignature(ctx context.Context, signature, timestamp string, body []byte) error {
-	return grabclient.Default().GetVerifier().VerifySignature(signature, timestamp, body)
-}
 
 // HandleGetMenu 处理 Grab 获取菜单请求 (Partner Endpoint)
 // 签名验证已由中间件完成

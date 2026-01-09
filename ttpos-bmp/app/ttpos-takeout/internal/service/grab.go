@@ -11,7 +11,6 @@ import (
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
-	grabApi "ttpos-bmp/app/ttpos-takeout/api/grab"
 	api "ttpos-bmp/app/ttpos-takeout/api/order"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
@@ -138,9 +137,6 @@ type (
 		//   - res: 取消订单响应
 		//   - err: 错误信息
 		CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error)
-		// CreateSelfServeJourneyWithReq 创建自助激活链接 (使用请求对象)
-		// 根据 shop_uuid 获取 Grab 配置，调用 SDK 生成激活链接
-		CreateSelfServeJourneyWithReq(ctx context.Context, req *grabApi.CreateSelfServeJourneyReq) (*grabApi.CreateSelfServeJourneyResp, error)
 
 		// GeneratePartnerToken 根据 client_id / client_secret 生成访问 Token
 		// 采用 JWT（HS256）实现
@@ -155,21 +151,7 @@ type (
 		//   - expiresIn: Token 有效期（秒）
 		//   - err: 错误信息
 		GetPartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (token string, expiresIn int, err error)
-		// ParsePartnerToken 校验并解析 Partner Token
-		// 参数：
-		//   - ctx: 上下文
-		//   - tokenStr: JWT Token 字符串
-		//
-		// 返回：
-		//   - claims: Token 中的声明信息
-		//   - err: 错误信息
-		ParsePartnerToken(tokenStr string) (*grabDto.PartnerTokenClaims, error)
 
-		// VerifyWebhookSignature 验证 Grab Webhook 签名 (公开方法，供其他服务调用)
-		// signature: X-Grab-Signature 请求头值
-		// timestamp: X-Grab-Timestamp 请求头值
-		// body: 请求体原始字节
-		VerifyWebhookSignature(ctx context.Context, signature string, timestamp string, body []byte) error
 		// HandleGetMenu 处理 Grab 获取菜单请求 (Partner Endpoint)
 		// 签名验证已由中间件完成
 		HandleGetMenu(ctx context.Context, merchantID string) (*grabfood.GetMenuNewResponse, error)
