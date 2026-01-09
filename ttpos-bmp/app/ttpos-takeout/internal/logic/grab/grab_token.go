@@ -44,7 +44,7 @@ func getTokenSecretKey(ctx context.Context) string {
 		return tokenSecretKey
 	}
 	tokenMu.RUnlock()
-	
+
 	tokenMu.Lock()
 	defer tokenMu.Unlock()
 	if tokenSecretKey == "" {
@@ -148,28 +148,4 @@ func (s *sGrab) ParsePartnerToken(tokenStr string) (*grab.PartnerTokenClaims, er
 		return nil, gerror.New("Token 无效")
 	}
 	return claims, nil
-}
-
-// GetPartnerConfig 通过 partner code 获取配置
-// 参数：
-//   - ctx: 上下文
-//   - code: Partner 代码
-//
-// 返回：
-//   - partner: Partner 配置
-//   - err: 错误信息
-func (s *sGrab) GetPartnerConfig(ctx context.Context, code string) (*conf.GrabPartner, error) {
-	return getTokenConfigLoader().GetByCode(ctx, code)
-}
-
-// GetPartnerConfigByClientID 通过 client_id 获取配置
-// 参数：
-//   - ctx: 上下文
-//   - clientID: Client ID
-//
-// 返回：
-//   - partner: Partner 配置
-//   - err: 错误信息
-func (s *sGrab) GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.GrabPartner, error) {
-	return getTokenConfigLoader().GetByClientID(ctx, clientID)
 }

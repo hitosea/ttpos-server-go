@@ -32,7 +32,7 @@ func (s *sGrab) CreateSelfServeJourneyWithReq(ctx context.Context, req *grab.Cre
 	}
 
 	// 3. 获取 Grab 配置（包含 Environment, Credentials）
-	conf := service.Grab().MustConf()
+	conf := MustConfig(ctx)
 	if conf == nil {
 		return nil, gerror.NewCode(gcode.CodeInternalError, "Grab 平台配置未加载，请检查配置文件 app.provider.grab.platform")
 	}

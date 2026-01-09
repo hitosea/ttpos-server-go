@@ -12,7 +12,6 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
-
 	"ttpos-bmp/utility/uuid"
 )
 
@@ -24,36 +23,6 @@ func init() {
 
 func New() *sChannelMenu {
 	return &sChannelMenu{}
-}
-
-// SaveChannelMenu 保存外卖渠道菜单快照
-func (s *sChannelMenu) SaveChannelMenu(ctx context.Context, shopUUID uint64, providerName string, menuData string) error {
-	// 1. 检查是否存在
-	count, err := dao.ChannelMenuSnapshot.Ctx(ctx).
-		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
-		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, providerName).
-		Count()
-	if err != nil {
-		return err
-	}
-
-	if count > 0 {
-		// Update
-		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().MenuData: menuData,
-		}).Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
-			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, providerName).Update()
-		return err
-	} else {
-		// Insert
-		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().Uuid:         uuid.MustGetID(),
-			dao.ChannelMenuSnapshot.Columns().ShopUuid:     shopUUID,
-			dao.ChannelMenuSnapshot.Columns().ProviderName: providerName,
-			dao.ChannelMenuSnapshot.Columns().MenuData:     menuData,
-		}).Insert()
-		return err
-	}
 }
 
 // GetChannelMenu 读取外卖渠道菜单快照
@@ -159,6 +128,7 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 	if record.IsEmpty() {
 		// 4a. 不存在，创建新记录
 		_, err = dao.ChannelMenuSnapshot.Ctx(ctx).Data(g.Map{
+			dao.ChannelMenuSnapshot.Columns().Uuid:           uuid.MustGetID(),
 			dao.ChannelMenuSnapshot.Columns().ShopUuid:       shopUuidInt,
 			dao.ChannelMenuSnapshot.Columns().ProviderName:   req.ProviderName,
 			dao.ChannelMenuSnapshot.Columns().TtposMenuData:  req.MenuData,
