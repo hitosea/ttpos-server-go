@@ -288,6 +288,36 @@ func (h *OrderHandler) OrderCheck(c *gin.Context) {
 	helper.Success(c, resp.OrderCheckRes{})
 }
 
+// OrderTakeout 处理打包
+// @Summary 打包
+// @Description 打包
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderTakeoutReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/takeout [post]
+func (h *OrderHandler) OrderTakeout(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderTakeoutReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("kiosk打包", zap.Any("params", params))
+	// 打包
+	res, err := h.orderSrv.OrderTakeout(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -319,5 +349,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.DELETE("/order/cart/product/delete", wrapper.DeleteProduct)           // 删除购物车商品
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                            // 取消订单
 		privateApi.GET("/order/check", wrapper.OrderCheck)                               // 订单检查
+		privateApi.POST("/order/takeout", wrapper.OrderTakeout)                          // 打包
 	}
 }
