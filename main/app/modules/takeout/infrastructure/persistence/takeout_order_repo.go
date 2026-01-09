@@ -2,12 +2,10 @@ package persistence
 
 import (
 	"time"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	appModel "ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
-	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
@@ -496,63 +494,47 @@ func (r *TakeoutOrderRepoImpl) GetShiftLogByOrderUuid(orderUuid uint64) (*appMod
 }
 
 // getAvailableShiftLogUuid 获取可用的班次UUID
-// 优先级：
-// 1. 主收银机的班次（主收银机已登录且未交班）
-// 2. 已登录的收银机中，最先登录的班次
-// 3. 若都没有，返回0（等待下次登录时处理）
+// 优先级规则（只管班次，不管登录状态）：
+// 1. 主收银机的班次（优先级最高）
+// 2. 非主收银机中，最先登录的班次（按 finally_login_time ASC 排序）
+// 3. 若都没有未交班的班次，返回0（等待下次登录时处理）
 func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, uint64, error) {
 	db := r.db
-	deviceRepo := repository.NewDeviceRepo(db)
-	shiftLogRepo := repository.NewShiftLogRepo(db)
 
-	// 1. 尝试获取主收银机的班次
-	mainDevice, err := deviceRepo.GetDevice(
-		deviceRepo.WhereSource(constant.SourceCashier),
-		deviceRepo.WhereMain(),
-	)
-	if err == nil && mainDevice.FinallyLoginUuid > 0 {
-		// 主收银机已登录，获取其班次
-		shiftLog, err := shiftLogRepo.GetShiftLog(
-			func(db *gorm.DB) *gorm.DB {
-				return db.Where("staff_uuid = ? AND status = ?", mainDevice.FinallyLoginUuid, constant.StaffNotHandedOver)
-			},
-			func(db *gorm.DB) *gorm.DB {
-				return db.Order("uuid DESC")
-			},
-		)
-		if err == nil && shiftLog.Uuid > 0 {
-			return shiftLog.Uuid, shiftLog.StaffUuid, nil
-		}
+	// 定义查询结果结构体
+	type ShiftLogWithDevice struct {
+		appModel.StaffShiftLog
+		IsMain           uint8     `gorm:"column:is_main"`
+		FinallyLoginTime time.Time `gorm:"column:finally_login_time"`
 	}
 
-	// 2. 主收银机退出登录或已交班，获取已登录的收银机中，最先登录的班次
-	var devices []appModel.Device
-	err = db.Model(&appModel.Device{}).
-		Where("source = ? AND finally_login_uuid > 0 AND delete_time = ?", constant.SourceCashier, 0).
-		Order("finally_login_time ASC"). // 按登录时间升序，最先登录的在前
-		Find(&devices).Error
-	if err == nil && len(devices) > 0 {
-		// 遍历已登录的收银机，找到第一个有未交班班次的
-		for _, device := range devices {
-			shiftLog, err := shiftLogRepo.GetShiftLog(
-				func(db *gorm.DB) *gorm.DB {
-					return db.Where("staff_uuid = ? AND status = ?", device.FinallyLoginUuid, constant.StaffNotHandedOver)
-				},
-				func(db *gorm.DB) *gorm.DB {
-					return db.Order("uuid DESC")
-				},
-			)
-			if err == nil && shiftLog.Uuid > 0 {
-				logger.Logger.Info("分配到已登录收银机班次",
-					zap.Uint64("shiftLogUuid", shiftLog.Uuid),
-					zap.Uint64("staffUuid", device.FinallyLoginUuid),
-					zap.String("deviceId", device.DeviceId))
-				return shiftLog.Uuid, shiftLog.StaffUuid, nil
-			}
-		}
+	// 一次性查询所有未交班的班次（关联设备信息）
+	var shiftLogs []ShiftLogWithDevice
+	err := db.Model(&appModel.StaffShiftLog{}).
+		Select("ttpos_staff_shift_log.*, ttpos_device.is_main, ttpos_device.finally_login_time").
+		Joins("INNER JOIN ttpos_staff ON ttpos_staff_shift_log.staff_uuid = ttpos_staff.uuid").
+		Joins("INNER JOIN ttpos_device ON ttpos_staff.bind_key = ttpos_device.device_id").
+		Where("ttpos_staff_shift_log.status = ?", 0).
+		Where("ttpos_device.source = ?", "cashier").
+		Where("ttpos_device.delete_time = ?", 0).
+		Where("ttpos_staff.delete_time = ?", 0).
+		Order("ttpos_device.is_main DESC").           // 主收银机优先（1 在前，0 在后）
+		Order("ttpos_device.finally_login_time ASC"). // 同为非主收银机时，按登录时间升序
+		Order("ttpos_staff_shift_log.uuid DESC").     // 同一设备多个班次时，取最新的
+		Find(&shiftLogs).Error
+
+	if err != nil {
+		logger.Logger.Error("查询未交班班次失败", zap.Error(err))
+		return 0, 0, err
 	}
 
-	// 3. 若都没有班次在登录，返回0（等待下次登录时处理）
-	logger.Logger.Info("未找到可用班次，等待下次登录时处理")
-	return 0, 0, nil
+	if len(shiftLogs) == 0 {
+		logger.Logger.Info("未找到可用班次，等待下次登录时处理")
+		return 0, 0, nil
+	}
+
+	// 返回优先级最高的班次（已按规则排序，直接取第一个）
+	shiftLog := shiftLogs[0]
+
+	return shiftLog.Uuid, shiftLog.StaffUuid, nil
 }
