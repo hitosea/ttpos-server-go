@@ -2860,6 +2860,7 @@ type StatisticsRefundSummaryItem struct {
 	PartialRefundNum    int64   `json:"partial_refund_num"`    // 部分退款笔数
 	FullRefundAmount    float64 `json:"full_refund_amount"`    // 整单退款金额
 	FullRefundNum       int64   `json:"full_refund_num"`       // 整单退款笔数
+	OrderNum            int64   `json:"order_num"`             // 订单数量（用于计算退款率）
 }
 
 // CountRefundSummary 统计退款金额汇总
@@ -2910,6 +2911,7 @@ func (s *statisticsSrv) CountRefundSummary(ctx context.Context, req req.Statisti
 			PartialRefundNum:    data.PartialRefundNum.Int64,
 			FullRefundAmount:    utils.Round(data.FullRefundAmount.Float64, 2),
 			FullRefundNum:       data.FullRefundNum.Int64,
+			OrderNum:            data.OrderNum.Int64,
 		}
 
 		list = append(list, item)

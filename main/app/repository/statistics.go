@@ -2185,14 +2185,9 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		// 如果外卖订单数不为0，则使用总订单金额 / 总订单数
 		var avgOrderAmount decimal.Decimal
 		var totalOrderNum = summary.TotalOrderNum.Int64
-		if takeoutRawData.TotalOrderNum > 0 {
-			totalOrderAmount := decimal.NewFromFloat(summary.TotalOrderAmount.Float64).
-				Add(decimal.NewFromFloat(takeoutRawData.TotalOrderAmount)).
-				Sub(decimal.NewFromFloat(takeoutRawData.TotalRefundAmount))
-			curTotalOrderNum := totalOrderNum - takeoutRawData.CancelOrderNum
-			if curTotalOrderNum > 0 {
-				avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(curTotalOrderNum))
-			}
+		if totalOrderNum > 0 {
+			totalOrderAmount := decimal.NewFromFloat(summary.TotalOrderAmount.Float64).Add(decimal.NewFromFloat(takeoutRawData.TotalOrderAmount))
+			avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
 		} else {
 			avgOrderAmount = decimal.NewFromFloat(summary.AvgOrderAmount.Float64)
 		}
@@ -2231,40 +2226,30 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 	var allTakeoutPayAmounts []float64
 	var allTakeoutOrderNum int64
 	var allTakeoutPayAmountSum decimal.Decimal
-	var allTakeoutPayOrderNum int64
 
 	// 添加点餐订单（标记外卖）
 	for _, item := range takeoutShopOrderData {
 		allTakeoutOrderNum++
 		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.OrderAmount))
-		if item.OrderAmount > 0 {
-			allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.OrderAmount)
-			allTakeoutPayOrderNum++
-		}
+		allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.OrderAmount)
 	}
 
 	// 添加 Grab 订单
 	for _, item := range grabRawData {
 		allTakeoutOrderNum++
 		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
-		if item.PayAmount > 0 {
-			allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
-			allTakeoutPayOrderNum++
-		}
+		allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
 	}
 
 	// 添加 LINE MAN 订单
 	for _, item := range linemanRawData {
 		allTakeoutOrderNum++
 		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
-		if item.PayAmount > 0 {
-			allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
-			allTakeoutPayOrderNum++
-		}
+		allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
 	}
 
 	// 计算外卖统计
-	result["takeout"] = calculateChannelSaleFromRawDataAndAmounts(allTakeoutOrderNum, allTakeoutPayAmounts, allTakeoutPayAmountSum, allTakeoutPayOrderNum)
+	result["takeout"] = calculateChannelSaleFromRawDataAndAmounts(allTakeoutOrderNum, allTakeoutPayAmounts, allTakeoutPayAmountSum)
 
 	return result, nil
 }
@@ -2279,13 +2264,13 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 	var payAmounts []float64
 	var orderNum int64
 	var payAmountSum decimal.Decimal
-	var payOrderNum int64
 
 	for _, item := range rawData {
 		orderNum++
+		// 包含所有金额（包括0）用于计算最小最大值
+		payAmounts = append(payAmounts, item.PayAmount)
+		// 只统计大于0的金额用于计算总和
 		if item.PayAmount > 0 {
-			payAmounts = append(payAmounts, item.PayAmount)
-			payOrderNum++
 			payAmountSum = payAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
 		}
 	}
@@ -2297,7 +2282,8 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 		minAmount := payAmounts[0]
 		maxAmount := payAmounts[0]
 		for _, amount := range payAmounts {
-			if amount > 0 && (minAmount <= 0 || amount < minAmount) {
+			// 允许0值作为最小值
+			if amount < minAmount {
 				minAmount = amount
 			}
 			if amount > maxAmount {
@@ -2310,8 +2296,8 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 		result.MaxOrderAmount.Valid = true
 	}
 
-	if payOrderNum > 0 {
-		avgAmount := payAmountSum.Div(decimal.NewFromInt(payOrderNum))
+	if orderNum > 0 {
+		avgAmount := payAmountSum.Div(decimal.NewFromInt(orderNum))
 		result.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
 		result.AvgOrderAmount.Valid = true
 	}
@@ -2320,7 +2306,7 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 }
 
 // calculateChannelSaleFromRawDataAndAmounts 从订单数和金额数据计算渠道统计
-func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []float64, payAmountSum decimal.Decimal, payOrderNum int64) *model.ChannelSaleRepoResult {
+func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []float64, payAmountSum decimal.Decimal) *model.ChannelSaleRepoResult {
 	result := &model.ChannelSaleRepoResult{}
 
 	result.TotalOrderNum.Int64 = orderNum
@@ -2330,7 +2316,8 @@ func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []floa
 		minAmount := payAmounts[0]
 		maxAmount := payAmounts[0]
 		for _, amount := range payAmounts {
-			if amount > 0 && (minAmount <= 0 || amount < minAmount) {
+			// 允许0值作为最小值
+			if amount < minAmount {
 				minAmount = amount
 			}
 			if amount > maxAmount {
@@ -2343,8 +2330,8 @@ func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []floa
 		result.MaxOrderAmount.Valid = true
 	}
 
-	if payOrderNum > 0 {
-		avgAmount := payAmountSum.Div(decimal.NewFromInt(payOrderNum))
+	if orderNum > 0 {
+		avgAmount := payAmountSum.Div(decimal.NewFromInt(orderNum))
 		result.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
 		result.AvgOrderAmount.Valid = true
 	}
@@ -2379,15 +2366,15 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 	// 1. 查询原始数据（不分组）
 	var rawData []refundSummaryRawData
 	rawQuery := `
-		SELECT 
+		SELECT
 			sb.finish_time,
 			sb.uuid AS sale_bill_uuid,
 			SUM(ro.refund_amount) AS refund_amount,
-			SUM(IF(ro.return_type = 2, ro.refund_amount, 0)) AS partial_refund_amount,
-			SUM(IF(ro.return_type = 1, ro.refund_amount, 0)) AS full_refund_amount,
-			COUNT(DISTINCT IF(ro.return_type = 2, ro.uuid, NULL)) AS partial_refund_num,
-			COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) AS full_refund_num,
-			COUNT(DISTINCT ro.uuid) AS refund_num
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, 0, SUM(IF(ro.return_type = 2, ro.refund_amount, 0))) AS partial_refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, SUM(ro.refund_amount), 0) AS full_refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0,0, IF(COUNT(DISTINCT IF(ro.return_type = 2, ro.uuid, NULL)) > 0, 1, 0)) AS partial_refund_num,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, 1, 0) AS full_refund_num,
+			1 AS refund_num
 		FROM ttpos_return_order AS ro
 		LEFT JOIN ttpos_sale_order AS so ON ro.related_order_uuid = so.uuid AND so.delete_time = ?
 		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = ?
