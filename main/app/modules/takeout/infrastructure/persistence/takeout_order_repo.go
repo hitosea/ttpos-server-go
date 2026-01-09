@@ -208,11 +208,12 @@ func (r *TakeoutOrderRepoImpl) Delete(uuid uint64) error {
 
 // SetStaffShiftLogUuid 设置员工班次日志UUID
 func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder) error {
-	shiftLogUuid, err := r.GetAvailableShiftLogUuid()
+	shiftLogUuid, staffUuid, err := r.GetAvailableShiftLogUuid()
 	if err != nil {
 		logger.Logger.Warn("获取可用班次失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 	} else if shiftLogUuid > 0 {
 		order.StaffShiftLogUuid = shiftLogUuid
+		order.AcceptedBy = staffUuid
 	}
 	return nil
 }
@@ -499,7 +500,7 @@ func (r *TakeoutOrderRepoImpl) GetShiftLogByOrderUuid(orderUuid uint64) (*appMod
 // 1. 主收银机的班次（主收银机已登录且未交班）
 // 2. 已登录的收银机中，最先登录的班次
 // 3. 若都没有，返回0（等待下次登录时处理）
-func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, error) {
+func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, uint64, error) {
 	db := r.db
 	deviceRepo := repository.NewDeviceRepo(db)
 	shiftLogRepo := repository.NewShiftLogRepo(db)
@@ -520,7 +521,7 @@ func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, error) {
 			},
 		)
 		if err == nil && shiftLog.Uuid > 0 {
-			return shiftLog.Uuid, nil
+			return shiftLog.Uuid, shiftLog.StaffUuid, nil
 		}
 	}
 
@@ -546,12 +547,12 @@ func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, error) {
 					zap.Uint64("shiftLogUuid", shiftLog.Uuid),
 					zap.Uint64("staffUuid", device.FinallyLoginUuid),
 					zap.String("deviceId", device.DeviceId))
-				return shiftLog.Uuid, nil
+				return shiftLog.Uuid, shiftLog.StaffUuid, nil
 			}
 		}
 	}
 
 	// 3. 若都没有班次在登录，返回0（等待下次登录时处理）
 	logger.Logger.Info("未找到可用班次，等待下次登录时处理")
-	return 0, nil
+	return 0, 0, nil
 }

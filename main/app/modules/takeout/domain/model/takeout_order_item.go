@@ -53,3 +53,13 @@ func (o *TakeoutOrderItem) IsPackage() bool {
 func (o *TakeoutOrderItem) GetTotalPrice() float64 {
 	return o.Price * float64(o.Quantity)
 }
+
+// 获取未含税商品单价
+func (o *TakeoutOrderItem) GetPriceNoneTax() float64 {
+	return o.Price - o.Tax
+}
+
+// 获取未含税商品总价
+func (o *TakeoutOrderItem) GetTotalPriceNoneTaxTotal() float64 {
+	return o.GetPriceNoneTax() * float64(o.Quantity)
+}
