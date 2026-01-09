@@ -368,7 +368,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 }
 
 // RankTakeoutProduct 统计外卖订单商品排行
-// 只统计营业收入状态的订单（10,20,30,40）
+// 统计有效状态的订单（10,20,30,40,60）
 // 按 product_package_uuid 分组统计销售数量和金额
 func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.StatisticsProductData {
 	var result []model.StatisticsProductData
@@ -377,8 +377,8 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 	takeoutOrderTable := prefix + "takeout_order"
 	takeoutOrderItemTable := prefix + "takeout_order_item"
 
-	// 只统计营业收入状态的订单（10,20,30,40）
-	businessStatesStr := buildStateInCondition(businessOrderStates)
+	// 统计有效状态的订单（10,20,30,40,60）
+	validStatesStr := buildStateInCondition(businessOrderStates)
 
 	query := r.db.Table(takeoutOrderItemTable+" AS toi").
 		Select(
@@ -390,7 +390,7 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 		Joins(fmt.Sprintf("INNER JOIN %s AS to_order ON toi.takeout_order_uuid = to_order.uuid", takeoutOrderTable)).
 		Where("toi.delete_time = ?", constant.NotDeleted).
 		Where("to_order.delete_time = ?", constant.NotDeleted).
-		Where(fmt.Sprintf("to_order.order_state IN %s", businessStatesStr)).
+		Where(fmt.Sprintf("to_order.order_state IN %s", validStatesStr)).
 		Where("toi.ttpos_product_package_uuid > 0"). // 只统计已映射的商品
 		Group("toi.ttpos_product_package_uuid")
 
