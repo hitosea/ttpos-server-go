@@ -23,6 +23,7 @@ type TakeoutOrderResp struct {
 	Platform         string `json:"platform"`           // 平台名称
 	ShortOrderNumber string `json:"short_order_number"` // 短订单号
 	OrderState       int    `json:"order_state"`        // 订单状态 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单
+	RiderStatus      string `json:"rider_status"`       // 骑手状态 骑手待接单 - rider_pending, 骑手已接单 - rider_accepted
 	Cutlery          int    `json:"cutlery"`            // 是否需要餐具
 	// 订单时间
 	OrderTimes TakeoutOrderTimesResp `json:"order_times"` // 订单时间
@@ -91,20 +92,20 @@ type TakeoutOrderReceiverResp struct {
 
 // TakeoutOrderCampaignResp 订单活动响应
 type TakeoutOrderCampaignResp struct {
-	Uuid           uint64 `json:"uuid"`
-	CampaignName   string `json:"campaign_name"`   // 活动名称
-	CampaignType   string `json:"campaign_type"`   // 活动类型
-	DeductedAmount int64  `json:"deducted_amount"` // 折扣金额(元)
+	Uuid           uint64  `json:"uuid"`
+	CampaignName   string  `json:"campaign_name"`   // 活动名称
+	CampaignType   string  `json:"campaign_type"`   // 活动类型
+	DeductedAmount float64 `json:"deducted_amount"` // 折扣金额(元)
 }
 
 // TakeoutOrderPromoResp 订单促销响应
 type TakeoutOrderPromoResp struct {
-	Uuid             uint64 `json:"uuid"`
-	PromoCode        string `json:"promo_code"`        // 促销代码
-	PromoName        string `json:"promo_name"`        // 促销名称
-	PromoDescription string `json:"promo_description"` // 促销描述
-	PromoAmount      int64  `json:"promo_amount"`      // 促销金额
-	MexFundedRatio   int    `json:"mex_funded_ratio"`  // 商户承担比例
+	Uuid             uint64  `json:"uuid"`
+	PromoCode        string  `json:"promo_code"`        // 促销代码
+	PromoName        string  `json:"promo_name"`        // 促销名称
+	PromoDescription string  `json:"promo_description"` // 促销描述
+	PromoAmount      float64 `json:"promo_amount"`      // 促销金额
+	MexFundedRatio   int32   `json:"mex_funded_ratio"`  // 商户承担比例
 }
 
 // TakeoutOrderItemResp 订单商品响应

@@ -2,6 +2,7 @@ package uuid
 
 import (
 	"context"
+	"time"
 
 	goid "github.com/ace-zhaoy/go-id"
 	"github.com/gogf/gf/v2/frame/g"
@@ -39,6 +40,8 @@ var (
 // 示例：
 //   - ttpos-erp 实例1：(1 << 6) | 1 = 65
 //   - ttpos-message 实例1：(2 << 6) | 1 = 129
+//
+// 为避免多实例在同一秒生成 ID 时发生冲突，初始化时会设置随机增量
 func InitIdGenerator(ctx context.Context, appType uint32) {
 	// 创建 ID 生成器实例
 	idGenerator = goid.NewID()
@@ -62,8 +65,22 @@ func InitIdGenerator(ctx context.Context, appType uint32) {
 	// 设置节点（10 位 nodeBits）
 	idGenerator.SetNode(nodeID, totalNodeBits)
 
-	g.Log().Infof(ctx, "[UUID] Initialized: appType=%d, instanceID=%d, nodeID=%d",
-		appType, instanceID, nodeID)
+	// 设置随机增量，避免多实例在同一秒生成 ID 时发生冲突
+	// 计数器位数 = 21 - nodeBits = 21 - 10 = 11
+	// 最大随机增量 = (1 << 11) - 1 = 2047
+	// 使用纳秒时间戳生成随机增量，确保每个实例的增量不同
+	counterBits := uint32(21 - totalNodeBits)
+	maxRandomDelta := uint32((1 << counterBits) - 1)
+	randomDelta := uint32((time.Now().UnixNano() % int64(maxRandomDelta)) + 2)
+
+	if randomDelta >= maxRandomDelta {
+		randomDelta = maxRandomDelta - 1
+	}
+
+	idGenerator.SetRandomDelta(randomDelta)
+
+	g.Log().Infof(ctx, "[UUID] Initialized: appType=%d, instanceID=%d, nodeID=%d, randomDelta=%d",
+		appType, instanceID, nodeID, randomDelta)
 }
 
 // GetID 获取id

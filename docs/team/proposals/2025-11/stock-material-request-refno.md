@@ -13,7 +13,7 @@
 | **目标版本** | 待定                           |
 | **状态**     | ✅ 已创建 Spec                 |
 | **关联任务** | -                              |
-| **关联 Spec**| [task-erp-material-request-refno](../../../shared/specs/active/task-erp-material-request-refno/requirements.md) |
+| **关联 Spec**| [task-erp-material-request-refno](../../../shared/specs/archived/v2.12/task-erp-material-request-refno/requirements.md) |
 
 ---
 

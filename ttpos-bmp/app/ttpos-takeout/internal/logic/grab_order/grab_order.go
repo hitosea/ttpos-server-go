@@ -18,6 +18,7 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 	"ttpos-bmp/internal/pkg/queue"
@@ -29,18 +30,6 @@ const (
 	// ProviderNameGrab Grab 供应商名称常量
 	ProviderNameGrab = string(consts.ProviderGrab) // "grab"
 )
-
-// OrderEvent 订单事件
-type OrderEvent struct {
-	Action       string `json:"action"`       // create, status_update, cancel
-	ProviderName string `json:"providerName"` // grab
-	ShopUUID     string `json:"shopUuid"`     // TTPOS 店铺 UUID
-	OrderUUID    string `json:"orderUuid"`    // 订单 UUID
-	OrderID      string `json:"orderId"`      // 平台订单 ID
-	MerchantID   string `json:"merchantId"`   // 商户 ID
-	Status       string `json:"status"`       // 当前状态
-	Timestamp    int64  `json:"timestamp"`    // 事件时间戳
-}
 
 // sGrabOrder 订单服务
 type sGrabOrder struct{}
@@ -66,7 +55,7 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, req *grabfood.Submit
 	}
 
 	// 3. 发送 MQ 消息
-	event := &OrderEvent{
+	event := &grab.OrderEvent{
 		Action:       "create",
 		ProviderName: string(consts.ProviderGrab),
 		ShopUUID:     req.GetPartnerMerchantID(), // partnerMerchantID 即为 shopUuid
@@ -284,7 +273,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, req *grabfood.Ord
 	}
 
 	// 6. 发送 MQ 消息
-	event := &OrderEvent{
+	event := &grab.OrderEvent{
 		Action:       "status_update",
 		ProviderName: string(consts.ProviderGrab),
 		ShopUUID:     order.ShopUuid,
@@ -293,6 +282,7 @@ func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, req *grabfood.Ord
 		MerchantID:   req.GetMerchantID(),
 		Status:       req.GetState(),
 		Timestamp:    gtime.Now().Unix(),
+		Message:      req.GetMessage(),
 	}
 	if err := queue.PushWithContext(ctx, TopicGrabOrder, event); err != nil {
 		g.Log().Warningf(ctx, "发送订单状态更新 MQ 事件失败 %s: %v", order.Uuid, err)

@@ -110,7 +110,7 @@
             </tr>
             <tr>
               <td class="meta-label">PAYMENT TERMS</td>
-              <td>{{ doc.payment_schedule[0].payment_term or '30 DAYS' }}</td>
+              <td>{{ doc.custom_payment_terms or '-' }}</td>
             </tr>
             <tr>
               <td class="meta-label">VENDOR CODE</td>
@@ -499,8 +499,8 @@
   {% endif %}
 </div>
 <style>
-      /* ========== 分页控制 ========== */
-      @page {
+         /* ========== 分页控制 ========== */
+    @page {
       size: A4;
       margin: 10mm 10mm 10mm 10mm; /* 上、右、下、左 - 确保跨页时有页边距 */
     }

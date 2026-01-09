@@ -18,7 +18,7 @@ type TakeoutOrder struct {
 	// 平台信息
 	Platform           string `gorm:"column:platform" json:"platform"`                         // grab, lineman
 	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`       // 平台订单ID
-	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单 )
+	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单, ACCEPTED 已接单, ALLOCATING 待骑手接单, DRIVER_ALLOCATED 骑手已分配, DRIVER_ARRIVED 骑手已到店, COLLECTED 已取餐, DELIVERING 配送中, DELIVERED 已送达, COMPLETED 已完成, CANCELLED 已取消, REJECTED 已拒单, FAILED 失败, REFUNDED 已退款)
 	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`     // 短单号
 	MerchantId         string `gorm:"column:merchant_id" json:"merchant_id"`                   // 商户ID	(Grab: merchantID)
 	PartnerMerchantId  string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`   // 合作伙伴商户ID (Grab: partnerMerchantID)
@@ -198,4 +198,12 @@ func (o *TakeoutOrder) GetErpPosInvoiceResp() *selling.SavePosInvoiceResp {
 		return nil
 	}
 	return &erpPosInvoiceResp
+}
+
+// 获取骑手状态
+func (o *TakeoutOrder) GetRiderStatus() string {
+	if o.PlatformOrderState == "DRIVER_ARRIVED" {
+		return "rider_accepted"
+	}
+	return "rider_pending"
 }

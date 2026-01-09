@@ -175,12 +175,13 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
 		form.FormNo = "CK" + time.Now().Format("20060102150405")
 		form.Scene = constant.WarehouseOutFormSceneSales // 销售出库
-		form.AssociatedOrderUuid = saleBillUuid
 		form.OperatorUuid = staffUuid
 		// 根据 takeoutOrderUuid 设置订单类型
 		if takeoutOrderUuid > 0 {
 			form.OrderType = constant.WarehouseOutFormOrderTypeTakeout // 外卖订单
+			form.AssociatedOrderUuid = takeoutOrderUuid
 		} else {
+			form.AssociatedOrderUuid = saleBillUuid
 			form.OrderType = constant.WarehouseOutFormOrderTypeDineIn // 堂食订单
 		}
 		return form

@@ -317,7 +317,7 @@ class User extends UserModel
         $userToDelete->delete();
         UserRole::destroy(['staff_uuid' => $shop_user_id]);
         //
-        return (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $shop_user_id)->where('company_uuid', $this['company_uuid'])->find()?->delete();
+        return (new CompanyStaff([], 0))->setAppId(0)->where('uuid', $shop_user_id)->where('company_uuid', $user['company_uuid'])->find()?->delete();
     }
 
     /**

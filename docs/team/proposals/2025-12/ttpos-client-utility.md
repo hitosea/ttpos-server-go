@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | ✅ 已批准   |
 | **关联任务** | - |
-| **关联 Spec** | [task-bmp-ttpos-client-utility](../../../shared/specs/active/task-bmp-ttpos-client-utility/requirements.md) |
+| **关联 Spec** | [task-bmp-ttpos-client-utility](../../../shared/specs/archived/v2.12/task-bmp-ttpos-client-utility/requirements.md) |
 
 ---
 

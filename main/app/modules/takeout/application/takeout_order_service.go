@@ -80,6 +80,7 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 	lockKey := fmt.Sprintf("takeout_order:%s:%s", takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid)
 	s.systemLock.LockUuidString(lockKey)
 	defer s.systemLock.UnlockUuidString(lockKey)
+
 	// 根据 Action 处理订单
 	switch takeoutOrderEvent.Action {
 	case "create":
@@ -91,7 +92,22 @@ func (s *takeoutOrderAppService) HandlePushOrderState(ctx context.Context, takeo
 		}
 		return s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo)
 	case "status_update", "cancel":
-		return s.orderService.UpdateOrderStatus(ctx, takeoutOrderEvent.OrderUuid, takeoutOrderEvent.Status)
+		// 查询订单是否存在
+		order, err := persistence.NewTakeoutOrderRepo(ctx.GetDB()).GetByTakeoutOrderUuid(takeoutOrderEvent.OrderUuid)
+		if err != nil || order == nil {
+			// 订单不存在，通过 RPC 查询订单信息
+			orderInfo, err := s.rpcService.GetOrderInfo(ctx, takeoutOrderEvent.ShopUuid, takeoutOrderEvent.OrderUuid)
+			if err != nil {
+				logger.Logger.Error("RPC查询订单失败", zap.Error(err))
+				return fmt.Errorf("RPC查询订单失败: %w", err)
+			}
+			if err := s.SyncNewOrder(ctx, takeoutOrderEvent.ProviderName, takeoutOrderEvent.OrderUuid, orderInfo); err != nil {
+				logger.Logger.Error("同步订单失败", zap.Error(err))
+				return fmt.Errorf("同步订单失败: %w", err)
+			}
+		}
+		// 更新订单状态
+		return s.orderService.UpdateOrderStatus(ctx, takeoutOrderEvent.OrderUuid, takeoutOrderEvent.Status, takeoutOrderEvent.Message)
 	}
 	return nil
 }
@@ -199,18 +215,16 @@ func (s *takeoutOrderAppService) AcceptOrder(ctx context.Context, req *request.T
 
 // checkOrderStock 检查订单商品库存
 func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *model.TakeoutOrder) (error, []string) {
-	// 1. 构建 BOM 数量映射（委托给 Domain Service）
+	// ==================== Step 1: 构建 BOM 数量映射 ====================
 	bomQuantityMap, bomItemMap, err := s.orderService.BuildBomQuantityMap(ctx, order)
 	if err != nil {
-		return err, nil
+		return errors.NewWithCodeAndData(constant.CodeOrderCheckProductStockZero, []string{}, "构建BOM数量映射失败"), nil
 	}
-
-	// 2. 如果没有需要检查的 BOM，直接返回
 	if len(bomQuantityMap) == 0 {
-		return nil, nil
+		return nil, nil // 订单没有配方商品，无需处理原料
 	}
 
-	// 3. 调用库存模块检查库存
+	// ==================== Step 2: 调用库存模块检查库存 ====================
 	inventoryAppSrv := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	insufficientBomUuids, err := inventoryAppSrv.CheckStock(ctx, bomQuantityMap)
 	if err != nil {
@@ -218,7 +232,7 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 		return errors.WithMessage(errors.New("检查库存失败"), err.Error()), nil
 	}
 
-	// 4. 如果有库存不足的商品，构建提示信息并返回错误
+	// ==================== Step 3: 如果有库存不足的商品，构建提示信息并返回错误 ====================
 	if len(insufficientBomUuids) > 0 {
 		outOfStockNamesMap := make(map[string]struct{})
 		for _, bomUuid := range insufficientBomUuids {
@@ -231,20 +245,20 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 						commodityName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.TtposFlavorName).GetLocale(ctx.GetLanguage())
 						if flavorName != "" {
-							name = fmt.Sprintf("%s(%s)", commodityName, flavorName)
+							name = fmt.Sprintf("%s (%s)", commodityName, flavorName)
 						} else {
 							name = commodityName
 						}
 					} else if modifier.IsFlavor() {
 						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
 						flavorName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						name = fmt.Sprintf("%s(%s)", itemName, flavorName)
+						name = fmt.Sprintf("%s (%s)", itemName, flavorName)
 					} else if modifier.IsSauce() {
+						// sauce 类型：显示主商品名称(加料)
 						itemName := language.JsonToLocaleResponse(item.ItemName).GetLocale(ctx.GetLanguage())
 						sauceName := language.JsonToLocaleResponse(modifier.ModifierName).GetLocale(ctx.GetLanguage())
-						name = fmt.Sprintf("%s(%s)", itemName, sauceName)
+						name = fmt.Sprintf("%s (%s)", itemName, sauceName)
 					}
-
 					if name != "" {
 						outOfStockNamesMap[name] = struct{}{}
 					}
@@ -252,13 +266,15 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 			}
 		}
 		// 转为切片
-		outOfStockNames := make([]string, 0, len(outOfStockNamesMap))
-		for name := range outOfStockNamesMap {
-			outOfStockNames = append(outOfStockNames, name)
+		if len(outOfStockNamesMap) > 0 {
+			outOfStockNames := make([]string, 0, len(outOfStockNamesMap))
+			for name := range outOfStockNamesMap {
+				outOfStockNames = append(outOfStockNames, name)
+			}
+			//
+			outOfStockMsg := "以下商品库存不足: " + strings.Join(outOfStockNames, ", ")
+			return errors.New(outOfStockMsg), outOfStockNames
 		}
-		//
-		outOfStockMsg := "以下商品库存不足: " + strings.Join(outOfStockNames, ", ")
-		return errors.New(outOfStockMsg), outOfStockNames
 	}
 
 	return nil, nil

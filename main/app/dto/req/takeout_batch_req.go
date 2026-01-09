@@ -7,7 +7,7 @@ import (
 // TakeoutBatchCreateReq 批量创建外卖商品请求
 type TakeoutBatchCreateReq struct {
 	Platform     string   `json:"platform" binding:"required,oneof=grab lineman"` // 外卖平台标识: grab/lineman
-	ProductUuids []uint64 `json:"product_uuids" binding:"required,min=1,max=100"` // 商品UUID列表,最多100个
+	ProductUuids []uint64 `json:"product_uuids" binding:"required"`               // 商品UUID列表,最多100个
 }
 
 // Validate 验证批量创建请求
@@ -21,16 +21,13 @@ func (r *TakeoutBatchCreateReq) Validate() error {
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
 	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量创建100个商品"))
-	}
 	return nil
 }
 
 // TakeoutBatchOnlineReq 批量上架外卖商品请求
 type TakeoutBatchOnlineReq struct {
 	Platform     string   `json:"platform" binding:"required,oneof=grab lineman"` // 外卖平台标识: grab/lineman
-	ProductUuids []uint64 `json:"product_uuids" binding:"required,min=1,max=100"` // 商品UUID列表,最多100个
+	ProductUuids []uint64 `json:"product_uuids" binding:"required"`               // 商品UUID列表,最多100个
 }
 
 // Validate 验证批量上架请求
@@ -44,16 +41,13 @@ func (r *TakeoutBatchOnlineReq) Validate() error {
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
 	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量上架100个商品"))
-	}
 	return nil
 }
 
 // TakeoutBatchOfflineReq 批量下架外卖商品请求
 type TakeoutBatchOfflineReq struct {
 	Platform     string   `json:"platform" binding:"required,oneof=grab lineman"` // 外卖平台标识: grab/lineman
-	ProductUuids []uint64 `json:"product_uuids" binding:"required,min=1,max=100"` // 商品UUID列表,最多100个
+	ProductUuids []uint64 `json:"product_uuids" binding:"required"`               // 商品UUID列表,最多100个
 }
 
 // Validate 验证批量下架请求
@@ -67,16 +61,13 @@ func (r *TakeoutBatchOfflineReq) Validate() error {
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
 	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量下架100个商品"))
-	}
 	return nil
 }
 
 // TakeoutBatchDeleteReq 批量删除外卖商品请求
 type TakeoutBatchDeleteReq struct {
 	Platform     string   `json:"platform" binding:"required,oneof=grab lineman"` // 外卖平台标识: grab/lineman
-	ProductUuids []uint64 `json:"product_uuids" binding:"required,min=1,max=100"` // 商品UUID列表,最多100个
+	ProductUuids []uint64 `json:"product_uuids" binding:"required"`               // 商品UUID列表,最多100个
 }
 
 // Validate 验证批量删除请求
@@ -89,9 +80,6 @@ func (r *TakeoutBatchDeleteReq) Validate() error {
 	}
 	if len(r.ProductUuids) == 0 {
 		return errors.WithMessage(errors.New("商品UUID列表不能为空"))
-	}
-	if len(r.ProductUuids) > 100 {
-		return errors.WithMessage(errors.New("单次最多批量删除100个商品"))
 	}
 	return nil
 }

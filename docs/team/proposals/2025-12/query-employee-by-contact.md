@@ -13,7 +13,7 @@
 | **目标版本** | v2.12.0          |
 | **状态**   | 待评审            |
 | **关联任务** | DooTask #37897   |
-| **关联 Spec** | [story-main-query-employee-by-contact](../../../shared/specs/active/story-main-query-employee-by-contact/requirements.md) |
+| **关联 Spec** | [story-main-query-employee-by-contact](../../../shared/specs/archived/v2.12/story-main-query-employee-by-contact/requirements.md) |
 
 ---
 

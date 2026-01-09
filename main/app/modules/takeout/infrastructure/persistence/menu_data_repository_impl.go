@@ -11,6 +11,7 @@ import (
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	menuRepo "ttpos-server-go/app/modules/takeout/domain/repository"
 	"ttpos-server-go/app/modules/takeout/domain/types"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -104,7 +105,6 @@ func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, compa
 	var categories []*model.ProductCategory
 
 	query := db.Model(&model.ProductCategory{}).
-		Where("is_display_in_takeout = ?", 1).
 		Where("delete_time = ?", 0).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
 		Order("sort ASC, id ASC")
@@ -144,37 +144,35 @@ func (r *menuDataRepositoryImpl) GetTakeoutProducts(ctx context.Context, company
 							return db.Where("delete_time = ?", 0).
 								Preload("Attribute.MultiLanguageName", "delete_time = ?", 0)
 						})
+				}).
+				Preload("ProductPackageGroups", func(db *gorm.DB) *gorm.DB {
+					return db.Where("delete_time = ?", 0).
+						Preload("ProductPackageGroupItems", func(db *gorm.DB) *gorm.DB {
+							return db.Where("delete_time = ?", 0)
+						}).
+						Preload("ProductPackageGroupItems.ProductPackage", func(db *gorm.DB) *gorm.DB {
+							return db.Where("delete_time = ?", 0).
+								Preload("ProductBoms", func(db *gorm.DB) *gorm.DB {
+									return db.Where("delete_time = ?", 0)
+								}).
+								Preload("MultiLanguageName", "delete_time = ?", 0)
+						}).
+						Preload("MultiLanguageName", "delete_time = ?", 0)
 				})
 		}).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
+		Preload("DescribeMultiLanguageName", "delete_time = ?", 0).
 		Preload("ImageFile").
 		Preload("ProductBomTakeouts", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0).
-				Preload("ProductBom", func(db *gorm.DB) *gorm.DB {
-					return db.Where("delete_time = ?", 0)
-				}).
-				Preload("ProductBom.ProductFlavor.MultiLanguageName", "delete_time = ?", 0).
-				Preload("ProductBom.ProductSauce.MultiLanguageName", "delete_time = ?", 0)
+			return db.Where("delete_time = ?", 0)
 		}).
 		Preload("ProductPackageAttributeTakeouts", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0).
-				Preload("ProductPackageAttribute", func(db *gorm.DB) *gorm.DB {
-					return db.Where("delete_time = ?", 0)
-				}).
-				Preload("ProductPackageAttribute.Attribute.MultiLanguageName", "delete_time = ?", 0)
+			return db.Where("delete_time = ?", 0)
 		}).
 		Preload("ProductPackageGroupItemTakeouts", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", 0).
-				Preload("ProductPackageGroupItem.ProductBom").
-				Preload("ProductPackageGroupItem.ProductPackage", func(db *gorm.DB) *gorm.DB {
-					return db.Where("delete_time = ?", 0).
-						Preload("MultiLanguageName", "delete_time = ?", 0)
-				}).
-				Preload("ProductPackageGroupItem.ProductPackageGroup", func(db *gorm.DB) *gorm.DB {
-					return db.Where("delete_time = ?", 0).
-						Preload("MultiLanguageName", "delete_time = ?", 0)
-				})
+			return db.Where("delete_time = ?", 0)
 		}).
+		Where("delete_time = ?", 0).
 		Order("id ASC").
 		Find(&products).Error
 
@@ -200,19 +198,31 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 
 	// Step 1: 收集所有需要查询库存的 BOM UUID 及其对应的对象引用
 	bomUuids := make([]uint64, 0)
-	bomMap := make(map[uint64]*model.ProductBom)        // 用于快速定位 BOM 对象
-	packageBomMap := make(map[uint64]*model.ProductBom) // 用于快速定位 ProductPackage 对象
+	bomMap := make(map[uint64]*model.ProductBom)        // 用于快速定位当前商品的 BOM 对象（规格和小料）
+	packageBomMap := make(map[uint64]*model.ProductBom) // 用于快速定位套餐子商品的 BOM 对象
 	for _, takeoutProduct := range takeoutProducts {
-		// 使用索引遍历以获取可修改的引用
+		// 收集当前商品的所有规格和小料（从 ProductPackage.ProductBoms）
 		for i := range takeoutProduct.ProductPackage.ProductBoms {
 			bom := &takeoutProduct.ProductPackage.ProductBoms[i]
 			bomUuids = append(bomUuids, bom.Uuid)
 			bomMap[bom.Uuid] = bom
 		}
-		for j := range takeoutProduct.ProductPackageGroupItemTakeouts {
-			groupItem := &takeoutProduct.ProductPackageGroupItemTakeouts[j]
-			bomUuids = append(bomUuids, groupItem.ProductPackageGroupItem.ProductBom.Uuid)
-			packageBomMap[groupItem.ProductPackageGroupItem.ProductBom.Uuid] = groupItem.ProductPackageGroupItem.ProductBom
+		// 遍历套餐分组中的子商品（从 ProductPackage.ProductPackageGroups）
+		for i := range takeoutProduct.ProductPackage.ProductPackageGroups {
+			group := &takeoutProduct.ProductPackage.ProductPackageGroups[i]
+			for j := range group.ProductPackageGroupItems {
+				groupItem := &group.ProductPackageGroupItems[j]
+				// 检查关联的 ProductPackage 是否有效
+				if groupItem.ProductPackage == nil || groupItem.ProductPackage.Uuid == 0 {
+					continue
+				}
+				// 遍历子商品的所有 BOM（规格和小料）
+				for k := range groupItem.ProductPackage.ProductBoms {
+					bom := &groupItem.ProductPackage.ProductBoms[k]
+					bomUuids = append(bomUuids, bom.Uuid)
+					packageBomMap[bom.Uuid] = bom
+				}
+			}
 		}
 	}
 
@@ -227,20 +237,20 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		logger.Logger.Error("批量查询商品规格/小料库存失败", zap.Error(err), zap.Int("bom_count", len(bomUuids)))
 		// 查询失败，设置所有 BOM 为无限库存
 		for _, bom := range bomMap {
-			bom.StockNum = 99999999
+			bom.StockNum = value_object.TakeoutStockUnlimited
 		}
 		for _, groupItem := range packageBomMap {
-			groupItem.StockNum = 99999999
+			groupItem.StockNum = value_object.TakeoutStockUnlimited
 		}
 		return
 	}
 
-	// Step 4: 将库存值注入到对应的 BOM 对象中
+	// 注入当前商品的规格/小料库存
 	for bomUuid, bom := range bomMap {
 		if inventory, ok := inventoryMap[bomUuid]; ok {
 			bom.StockNum = inventory
 		} else {
-			bom.StockNum = 99999999
+			bom.StockNum = value_object.TakeoutStockUnlimited
 		}
 	}
 
@@ -249,7 +259,7 @@ func (r *menuDataRepositoryImpl) InjectStockNum(ctx context.Context, takeoutProd
 		if inventory, ok := inventoryMap[groupItem.Uuid]; ok {
 			groupItem.StockNum = inventory
 		} else {
-			groupItem.StockNum = 99999999
+			groupItem.StockNum = value_object.TakeoutStockUnlimited
 		}
 	}
 }
@@ -320,8 +330,12 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 
 	// 建立 productPackage 映射
 	packageMap := make(map[uint64]model.ProductPackage)
+	categoryUuids := make([]uint64, 0)
 	for _, pkg := range productPackages {
 		packageMap[pkg.Uuid] = pkg
+		if pkg.CategoryUuid > 0 {
+			categoryUuids = append(categoryUuids, pkg.CategoryUuid)
+		}
 	}
 
 	// 第二步：批量查询外卖商品
@@ -361,12 +375,66 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 		}
 	}
 
-	// 第四步：构建返回结果
+	// 第四步：批量查询分类信息
+	var categories []model.ProductCategory
+	categoryMap := make(map[uint64]model.ProductCategory)
+	parentCategoryMap := make(map[uint64]model.ProductCategory)
+
+	if len(categoryUuids) > 0 {
+		// 查询所有分类
+		err = db.
+			Model(&model.ProductCategory{}).
+			Where("uuid IN ? AND delete_time = ?", categoryUuids, 0).
+			Preload("MultiLanguageName", "delete_time = ?", 0).
+			Find(&categories).Error
+
+		if err != nil {
+			logger.Logger.Error("批量查询商品分类失败", zap.Error(err))
+		}
+
+		// 建立分类映射
+		for _, cat := range categories {
+			categoryMap[cat.Uuid] = cat
+		}
+
+		// 收集父分类UUID
+		parentCategoryUuids := make([]uint64, 0)
+		for _, cat := range categories {
+			if cat.ParentUuid > 0 {
+				parentCategoryUuids = append(parentCategoryUuids, cat.ParentUuid)
+			}
+		}
+
+		// 查询父分类
+		if len(parentCategoryUuids) > 0 {
+			var parentCategories []model.ProductCategory
+			err = db.Model(&model.ProductCategory{}).
+				Where("uuid IN ? AND delete_time = ?", parentCategoryUuids, 0).
+				Preload("MultiLanguageName", "delete_time = ?", 0).
+				Find(&parentCategories).Error
+
+			if err != nil {
+				logger.Logger.Error("批量查询父分类失败", zap.Error(err))
+			}
+
+			// 建立父分类映射
+			for _, pCat := range parentCategories {
+				parentCategoryMap[pCat.Uuid] = pCat
+			}
+		}
+	}
+
+	// 第五步：构建返回结果
 	result := make(map[uint64]types.ProductInfo)
 	for _, productUuid := range productUuids {
 		var displayName string  // 显示用名称（优先外卖表）
 		var ttposName string    // TTPOS 核心表名称
 		var ttposErpCode string // ERP编码
+		var ttposPrice float64  // TTPOS 店内价格
+		var categoryUuid uint64
+		var categoryName string
+		var parentCategoryUuid uint64
+		var parentCategoryName string
 
 		// TtposName: 始终从核心表获取
 		if productPackage, ok := packageMap[productUuid]; ok {
@@ -376,6 +444,10 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 			if ttposName == "" {
 				ttposName = productPackage.Name
 			}
+			// 获取店内价格
+			ttposPrice = productPackage.Price
+			// 获取分类UUID
+			categoryUuid = productPackage.CategoryUuid
 		}
 
 		// Name (displayName): 优先使用外卖商品的多语言名称
@@ -389,20 +461,47 @@ func (r *menuDataRepositoryImpl) GetProductNamesByUuids(ctx context.Context, pro
 			}
 		}
 
-		// 如果外卖表没有，回退到核心表
-		if displayName == "" {
-			displayName = ttposName
-		}
+		// // 如果外卖表没有，回退到核心表
+		// if displayName == "" {
+		// 	displayName = ttposName
+		// }
 
 		// ErpCode: 从ProductBom获取
 		if bom, ok := bomMap[productUuid]; ok {
 			ttposErpCode = bom.ErpCode
 		}
 
+		// 分类信息
+		if category, ok := categoryMap[categoryUuid]; ok {
+			// 分类名称
+			if category.MultiLanguageName.Uuid != 0 {
+				categoryName = category.MultiLanguageName.ToJson()
+			}
+			if categoryName == "" {
+				categoryName = category.Name
+			}
+
+			// 父分类信息
+			parentCategoryUuid = category.ParentUuid
+			if parentCategory, ok := parentCategoryMap[parentCategoryUuid]; ok {
+				if parentCategory.MultiLanguageName.Uuid != 0 {
+					parentCategoryName = parentCategory.MultiLanguageName.ToJson()
+				}
+				if parentCategoryName == "" {
+					parentCategoryName = parentCategory.Name
+				}
+			}
+		}
+
 		result[productUuid] = types.ProductInfo{
-			Name:         displayName,  // 外卖表优先
-			TtposName:    ttposName,    // 核心表
-			TtposErpCode: ttposErpCode, // ERP编码
+			Name:                    displayName,  // 外卖表优先
+			TtposName:               ttposName,    // 核心表
+			TtposErpCode:            ttposErpCode, // ERP编码
+			TtposPrice:              ttposPrice,   // 店内价格
+			TtposCategoryUuid:       categoryUuid,
+			TtposCategoryName:       categoryName,
+			TtposParentCategoryUuid: parentCategoryUuid,
+			TtposParentCategoryName: parentCategoryName,
 		}
 	}
 
@@ -492,14 +591,45 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 		if err != nil {
 			logger.Logger.Error("批量查询规格失败", zap.Error(err))
 		} else {
+			// 收集商品UUID用于查询价格和分类
+			packageUuids := make([]uint64, 0)
+			bomToPackageMap := make(map[uint64]uint64) // BomUuid -> PackageUuid
+			for _, flavor := range flavors {
+				if flavor.ProductPackageUuid > 0 {
+					packageUuids = append(packageUuids, flavor.ProductPackageUuid)
+					bomToPackageMap[flavor.Uuid] = flavor.ProductPackageUuid
+				}
+			}
+
+			// 批量查询商品价格和分类信息
+			packageInfoMap := make(map[uint64]types.ProductInfo)
+			if len(packageUuids) > 0 {
+				packageTypes := make(map[uint64]int)
+				for _, uuid := range packageUuids {
+					packageTypes[uuid] = 0 // 0表示商品类型
+				}
+				packageInfoMap = r.GetProductNamesByUuids(ctx, packageUuids, packageTypes)
+			}
+
 			for _, flavor := range flavors {
 				name := flavor.ProductFlavor.MultiLanguageName.ToJson()
-				result[flavor.Uuid] = types.ModifierInfo{
+				info := types.ModifierInfo{
 					Name:         name,
 					TtposName:    name,           // flavor 类型：Name 和 TtposName 相同
 					Num:          0,              // 规格没有数量概念
 					TtposErpCode: flavor.ErpCode, // ERP编码来自ProductBom
 				}
+
+				// 填充价格和分类信息
+				if packageInfo, ok := packageInfoMap[bomToPackageMap[flavor.Uuid]]; ok {
+					info.TtposPrice = packageInfo.TtposPrice
+					info.TtposCategoryUuid = packageInfo.TtposCategoryUuid
+					info.TtposCategoryName = packageInfo.TtposCategoryName
+					info.TtposParentCategoryUuid = packageInfo.TtposParentCategoryUuid
+					info.TtposParentCategoryName = packageInfo.TtposParentCategoryName
+				}
+
+				result[flavor.Uuid] = info
 			}
 		}
 	}
@@ -516,14 +646,46 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 		if err != nil {
 			logger.Logger.Error("批量查询小料失败", zap.Error(err))
 		} else {
+			// 收集ProductSauce UUID用于查询价格
+			sauceProductUuids := make([]uint64, 0)
+			bomToSauceMap := make(map[uint64]uint64) // BomUuid -> ProductSauceUuid
+			for _, sauce := range sauces {
+				if sauce.ProductSauceUuid > 0 {
+					sauceProductUuids = append(sauceProductUuids, sauce.ProductSauceUuid)
+					bomToSauceMap[sauce.Uuid] = sauce.ProductSauceUuid
+				}
+			}
+
+			// 查询ProductSauce的价格信息（小料没有分类信息）
+			var productSauces []model.ProductSauce
+			sauceInfoMap := make(map[uint64]model.ProductSauce)
+
+			if len(sauceProductUuids) > 0 {
+				err := db.Model(&model.ProductSauce{}).
+					Where("uuid IN ? AND delete_time = ?", sauceProductUuids, 0).
+					Find(&productSauces).Error
+				if err == nil {
+					for _, ps := range productSauces {
+						sauceInfoMap[ps.Uuid] = ps
+					}
+				}
+			}
+
 			for _, sauce := range sauces {
 				name := sauce.ProductSauce.MultiLanguageName.ToJson()
-				result[sauce.Uuid] = types.ModifierInfo{
+				info := types.ModifierInfo{
 					Name:         name,
 					TtposName:    name,                       // sauce 类型：Name 和 TtposName 相同
 					Num:          0,                          // 小料没有数量概念
-					TtposErpCode: sauce.ProductSauce.ErpCode, // ERP编码来自ProductBom
+					TtposErpCode: sauce.ProductSauce.ErpCode, // ERP编码来自ProductSauce
 				}
+
+				// 填充价格信息（小料没有分类信息）
+				if sauceInfo, ok := sauceInfoMap[bomToSauceMap[sauce.Uuid]]; ok {
+					info.TtposPrice = sauceInfo.Price
+				}
+
+				result[sauce.Uuid] = info
 			}
 		}
 	}
@@ -568,6 +730,7 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 			// 收集所有关联的 ProductPackage UUID 和 ProductBom UUID
 			packageUuids := make([]uint64, 0, len(packages))
 			bomUuids := make([]uint64, 0, len(packages))
+			categoryUuids := make([]uint64, 0)
 			packageMap := make(map[uint64]model.ProductPackageGroupItem) // RelatedUuid -> GroupItem
 			bomToGroupItem := make(map[uint64]uint64)                    // BomUuid -> GroupItemUuid
 
@@ -575,6 +738,10 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				if pkg.RelatedUuid > 0 {
 					packageUuids = append(packageUuids, pkg.RelatedUuid)
 					packageMap[pkg.RelatedUuid] = pkg
+					// 收集分类UUID
+					if pkg.ProductPackage.CategoryUuid > 0 {
+						categoryUuids = append(categoryUuids, pkg.ProductPackage.CategoryUuid)
+					}
 				}
 				// 收集 ProductBom UUID（规格）
 				if pkg.ProductBomUuid > 0 {
@@ -615,6 +782,9 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				}
 			}
 
+			// 批量查询分类信息
+			categoryInfoMap := r.getCategoryInfoMap(db, categoryUuids)
+
 			// 组装结果
 			for _, pkg := range packages {
 				var displayName string // 用于显示（优先外卖表）
@@ -622,11 +792,19 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 				var flavorUuid uint64  // 规格UUID
 				var flavorName string  // 规格名称
 				var erpCode string     // ERP编码
+				var ttposPrice float64 // TTPOS 店内价格
+				var categoryUuid uint64
+				var categoryName string
+				var parentCategoryUuid uint64
+				var parentCategoryName string
 
 				// TtposName: 始终从核心表获取
 				if pkg.ProductPackage.MultiLanguageName.Uuid != 0 {
 					ttposName = pkg.ProductPackage.MultiLanguageName.ToJson()
 				}
+				// 获取商品价格和分类UUID
+				ttposPrice = pkg.ProductPackage.Price
+				categoryUuid = pkg.ProductPackage.CategoryUuid
 
 				// Name (displayName): 优先从外卖表获取
 				if takeoutProduct, ok := takeoutMap[pkg.RelatedUuid]; ok {
@@ -654,6 +832,13 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 					}
 				}
 
+				// 获取分类信息
+				if catInfo, ok := categoryInfoMap[categoryUuid]; ok {
+					categoryName = catInfo.CategoryName
+					parentCategoryUuid = catInfo.ParentCategoryUuid
+					parentCategoryName = catInfo.ParentCategoryName
+				}
+
 				result[pkg.Uuid] = types.ModifierInfo{
 					Name:                      displayName,     // 外卖表优先
 					Num:                       pkg.Num,         // 套餐商品有数量
@@ -662,6 +847,11 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByUuids(ctx context.Context, mo
 					TtposFlavorProductBomUuid: flavorUuid,      // 规格UUID
 					TtposFlavorName:           flavorName,      // 规格名称
 					TtposErpCode:              erpCode,         // ERP编码
+					TtposPrice:                ttposPrice,      // 店内价格
+					TtposCategoryUuid:         categoryUuid,
+					TtposCategoryName:         categoryName,
+					TtposParentCategoryUuid:   parentCategoryUuid,
+					TtposParentCategoryName:   parentCategoryName,
 				}
 			}
 		}
@@ -910,6 +1100,96 @@ func (r *menuDataRepositoryImpl) GetModifierNamesByPlatformIds(ctx context.Conte
 					}
 				}
 			}
+		}
+	}
+
+	return result
+}
+
+// CategoryInfo 分类信息结构
+type CategoryInfo struct {
+	CategoryUuid       uint64
+	CategoryName       string
+	ParentCategoryUuid uint64
+	ParentCategoryName string
+}
+
+// getCategoryInfoMap 批量查询分类信息（含父分类）
+func (r *menuDataRepositoryImpl) getCategoryInfoMap(db *gorm.DB, categoryUuids []uint64) map[uint64]CategoryInfo {
+	result := make(map[uint64]CategoryInfo)
+
+	if len(categoryUuids) == 0 {
+		return result
+	}
+
+	// 查询分类
+	var categories []model.ProductCategory
+	err := db.Model(&model.ProductCategory{}).
+		Where("uuid IN ? AND delete_time = ?", categoryUuids, 0).
+		Preload("MultiLanguageName", "delete_time = ?", 0).
+		Find(&categories).Error
+
+	if err != nil {
+		logger.Logger.Error("批量查询分类失败", zap.Error(err))
+		return result
+	}
+
+	// 收集父分类UUID
+	parentCategoryUuids := make([]uint64, 0)
+	categoryMap := make(map[uint64]model.ProductCategory)
+	for _, cat := range categories {
+		categoryMap[cat.Uuid] = cat
+		if cat.ParentUuid > 0 {
+			parentCategoryUuids = append(parentCategoryUuids, cat.ParentUuid)
+		}
+	}
+
+	// 查询父分类
+	parentCategoryMap := make(map[uint64]model.ProductCategory)
+	if len(parentCategoryUuids) > 0 {
+		var parentCategories []model.ProductCategory
+		err := db.Model(&model.ProductCategory{}).
+			Where("uuid IN ? AND delete_time = ?", parentCategoryUuids, 0).
+			Preload("MultiLanguageName", "delete_time = ?", 0).
+			Find(&parentCategories).Error
+
+		if err == nil {
+			for _, pCat := range parentCategories {
+				parentCategoryMap[pCat.Uuid] = pCat
+			}
+		}
+	}
+
+	// 组装结果
+	for _, cat := range categories {
+		var categoryName string
+		var parentCategoryName string
+
+		// 分类名称
+		if cat.MultiLanguageName.Uuid != 0 {
+			categoryName = cat.MultiLanguageName.ToJson()
+		}
+		if categoryName == "" {
+			categoryName = cat.Name
+		}
+
+		// 父分类名称
+		if cat.ParentUuid > 0 {
+			if pCat, ok := parentCategoryMap[cat.ParentUuid]; ok {
+				if pCat.MultiLanguageName.Uuid != 0 {
+					parentCategoryName = pCat.MultiLanguageName.ToJson()
+				}
+				if parentCategoryName == "" {
+					parentCategoryName = pCat.Name
+				}
+			}
+		}
+
+		result[cat.Uuid] = CategoryInfo{
+			CategoryUuid:       cat.Uuid,
+			CategoryName:       categoryName,
+			ParentCategoryUuid: cat.ParentUuid,
+			ParentCategoryName: parentCategoryName,
 		}
 	}
 

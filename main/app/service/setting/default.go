@@ -281,6 +281,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 
 		RequiredParentCompanyApproval: "0",                            // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
 		ViaParentCompanyWarehouse:     "0",                            // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		AllowedTransferTypes:          "in,out",                       // 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许, 默认都允许
 		BatchCookingMode:              constant.BatchCookingModePost,  // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
 		BatchPrintMode:                constant.BatchPrintModeDefault, // 分批打印模式: "default" 默认 / "merge" 合并
 

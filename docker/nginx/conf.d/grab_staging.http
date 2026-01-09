@@ -1,0 +1,22 @@
+# Nginx Grab Staging Upstream 配置
+# 用于多环境对比测试、版本验证和问题排查
+# 创建日期: 2026-01-04
+# 维护者: rikugun
+
+# ⚠️ 重要提示：
+# 1. upstream 指令必须在 http 块级别定义
+# 2. 本文件会被 default.conf 第 1 行的 include 指令包含
+
+# 定义上游服务器
+upstream ups1 {
+    server 14031--main--ttpos-go--weifashi.coder.hitosea.com:443;
+}
+
+upstream ups2 {
+    server 14031--main--rikugun--rikugun.coder.hitosea.com:443;
+}
+
+upstream upstest {
+    server ttpos-takeout:14031;
+}
+

@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
+	appModel "ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
 
@@ -25,6 +26,7 @@ type ITakeoutOrderRepo interface {
 	SetStaffShiftLogUuid(order *model.TakeoutOrder, staffUuid uint64) error     // 设置员工班次日志UUID
 	BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error) // 批量更新班次UUID
 	GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error)         // 获取当前订单的ERP开账名称
+	GetShiftLogByOrderUuid(orderUuid uint64) (*appModel.StaffShiftLog, error)   // 根据订单UUID获取班次信息
 
 	// 选项方法
 	WithPreload(options ...DBOption) DBOption
@@ -341,7 +343,11 @@ func (r *TakeoutOrderRepoImpl) WhereSearch(search string) DBOption {
 func (r *TakeoutOrderRepoImpl) WhereIsHistoryOrder(isHistory bool) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if !isHistory {
-			return db.Where("order_state not in (?, ?, ?)", value_object.TakeoutOrderStateCompleted, value_object.TakeoutOrderStateRejected, value_object.TakeoutOrderStateCanceled)
+			return db.Where("order_state not in (?, ?, ?)",
+				value_object.TakeoutOrderStateCompleted,
+				value_object.TakeoutOrderStateRejected,
+				value_object.TakeoutOrderStateCanceled,
+			)
 		}
 		return db
 	}
@@ -422,4 +428,44 @@ func (r *TakeoutOrderRepoImpl) WithTakeoutOrderMaterials() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("TakeoutOrderMaterials.Material.Unit")
 	}
+}
+
+// GetShiftLogByOrderUuid 根据订单UUID获取班次信息
+// @version v2.12.0
+// @spec story-erp-grab-invoice-sync
+func (r *TakeoutOrderRepoImpl) GetShiftLogByOrderUuid(orderUuid uint64) (*appModel.StaffShiftLog, error) {
+	// 1. 查询订单获取 staff_shift_log_uuid
+	var order model.TakeoutOrder
+	err := r.db.Model(&model.TakeoutOrder{}).
+		Where("uuid = ?", orderUuid).
+		Where("delete_time = ?", constant.NotDeleted).
+		Select("staff_shift_log_uuid").
+		First(&order).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.WithMessage(errors.New("订单不存在"), "查询订单失败")
+		}
+		return nil, errors.WithMessage(err, "查询订单失败")
+	}
+
+	// 2. 检查订单是否有班次信息
+	if order.StaffShiftLogUuid == 0 {
+		return nil, errors.WithMessage(errors.New("订单没有班次信息"), "订单未关联班次")
+	}
+
+	// 3. 查询班次信息
+	var shiftLog appModel.StaffShiftLog
+	err = r.db.Model(&appModel.StaffShiftLog{}).
+		Where("uuid = ?", order.StaffShiftLogUuid).
+		First(&shiftLog).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.WithMessage(errors.New("班次不存在"), "查询班次失败")
+		}
+		return nil, errors.WithMessage(err, "查询班次失败")
+	}
+
+	return &shiftLog, nil
 }

@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 进行中   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-object-storage-layer](../../../shared/specs/active/story-main-object-storage-layer/)      |
+| **关联 Spec** | [story-main-object-storage-layer](../../../shared/specs/archived/v2.12/story-main-object-storage-layer/)      |
 
 ---
 

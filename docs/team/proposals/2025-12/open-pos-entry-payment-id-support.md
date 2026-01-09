@@ -10,7 +10,7 @@
 | **优先级**   | 中                                                                 |
 | **Story Point** | 2                                                                |
 | **涉及模块** | ttpos-erp (Go BMP)                                                 |
-| **关联 Spec** | [task-erp-open-pos-entry-payment-id](../../../shared/specs/active/task-erp-open-pos-entry-payment-id/) |
+| **关联 Spec** | [task-erp-open-pos-entry-payment-id](../../../shared/specs/archived/v2.12/task-erp-open-pos-entry-payment-id/) |
 | **关联任务** | -                                                                 |
 
 ---
@@ -233,7 +233,7 @@ g.Log().Error(ctx, "查询支付方式失败",
 
 ### 相关 Spec
 
-- `docs/shared/specs/active/task-erp-close-pos-entry-payment-id/` - 关账接口 PaymentID 支持 Spec
+- `docs/shared/specs/archived/v2.12/task-erp-close-pos-entry-payment-id/` - 关账接口 PaymentID 支持 Spec
 
 ### 相关代码
 
@@ -298,7 +298,7 @@ g.Log().Error(ctx, "查询支付方式失败",
 | **评审人**   | rikugun   |
 | **评审日期** | 2025-12-24 |
 | **评审意见** | 技术方案与 ClosePosEntry 一致，可行性高 |
-| **下一步**   | ✅ Spec 已创建：[task-erp-open-pos-entry-payment-id](../../../shared/specs/active/task-erp-open-pos-entry-payment-id/)<br>✅ 技术设计已创建：[design.md](../../../shared/specs/active/task-erp-open-pos-entry-payment-id/design.md)<br>✅ 任务分解已创建：[tasks.md](../../../shared/specs/active/task-erp-open-pos-entry-payment-id/tasks.md)<br>⏳ 等待产品审核 requirements.md |
+| **下一步**   | ✅ Spec 已创建：[task-erp-open-pos-entry-payment-id](../../../shared/specs/archived/v2.12/task-erp-open-pos-entry-payment-id/)<br>✅ 技术设计已创建：[design.md](../../../shared/specs/archived/v2.12/task-erp-open-pos-entry-payment-id/design.md)<br>✅ 任务分解已创建：[tasks.md](../../../shared/specs/archived/v2.12/task-erp-open-pos-entry-payment-id/tasks.md)<br>⏳ 等待产品审核 requirements.md |
 
 ---
 

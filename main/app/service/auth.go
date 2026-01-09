@@ -3,6 +3,9 @@ package service
 import (
 	"regexp"
 	"slices"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -15,6 +18,7 @@ import (
 	"ttpos-server-go/app/model"
 	objectStorageAdapter "ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
 	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
+	"ttpos-server-go/app/modules/takeout/domain/service"
 	"ttpos-server-go/app/repository"
 	settingSrv "ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -28,6 +32,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type IAuthSrv interface {
@@ -48,6 +53,7 @@ type IAuthSrv interface {
 	RefreshToken(ctx context.Context) (resp.LoginResp, error)                                                              // 刷新token
 	ShopBase(ctx context.Context) (resp.ShopBase, error)                                                                   // 移动管理端基本信息
 	ChangePassword(ctx context.Context, changePasswordReq req.ChangePasswordReq) error                                     // 移动管理端-修改密码
+	GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp                                                           // 获取员工可用的商家列表（过滤已过期、异常的商家）
 }
 
 func NewAuthSrv(
@@ -619,7 +625,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		cashierBase.CompanyList = s.getCompanyList(ctx)
+		cashierBase.CompanyList = s.GetCompanyList(ctx)
 		return cashierBase, nil
 	}
 
@@ -696,7 +702,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		Printer:    printerSetting,
 		UpdateTime: time.Now().Unix(),
 
-		CompanyList: s.getCompanyList(ctx),
+		CompanyList: s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -706,7 +712,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		assistantBase.CompanyList = s.getCompanyList(ctx)
+		assistantBase.CompanyList = s.GetCompanyList(ctx)
 		return assistantBase, nil
 	}
 
@@ -816,7 +822,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Kitchen:       kitchenSettingResp,
 		ClientVersion: clientVersion,
 		ServerVersion: utils.GetVersion(),
-		CompanyList:   s.getCompanyList(ctx),
+		CompanyList:   s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -826,7 +832,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		tabletBase.CompanyList = s.getCompanyList(ctx)
+		tabletBase.CompanyList = s.GetCompanyList(ctx)
 		return tabletBase, nil
 	}
 
@@ -892,7 +898,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		Tablet:   tabletSettingResp,
 		Kitchen:  kitchenSettingResp,
 
-		CompanyList: s.getCompanyList(ctx),
+		CompanyList: s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -905,7 +911,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 
 	// 如果 company_uuid 为 0，返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		kitchenBase.CompanyList = s.getCompanyList(ctx)
+		kitchenBase.CompanyList = s.GetCompanyList(ctx)
 		return kitchenBase, nil
 	}
 
@@ -960,7 +966,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		Kitchen:       kitchenSettingResp,
 		ServerVersion: utils.GetVersion(),
 		ClientVersion: clientVersion,
-		CompanyList:   s.getCompanyList(ctx),
+		CompanyList:   s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -975,7 +981,7 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 	// 3. 前端可以根据 company_list 判断是否需要显示门店选择界面
 	// 参考：story-auth-unified-account 统一账号认证功能设计
 	if ctx.GetCompanyUuid() == 0 {
-		kioskBase.CompanyList = s.getCompanyList(ctx)
+		kioskBase.CompanyList = s.GetCompanyList(ctx)
 		return kioskBase, nil
 	}
 
@@ -1020,7 +1026,7 @@ func (s *authSrv) KioskBase(ctx context.Context) (resp.KioskBase, error) {
 		Business:    businessSetting,
 		Kiosk:       kioskSetting.KioskResp,
 		UpdateTime:  time.Now().Unix(),
-		CompanyList: s.getCompanyList(ctx),
+		CompanyList: s.GetCompanyList(ctx),
 	}, nil
 }
 
@@ -1401,7 +1407,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 
 	// 如果 company_uuid 为 0，只返回可用门店列表
 	if ctx.GetCompanyUuid() == 0 {
-		shopBase.CompanyList = s.getCompanyList(ctx)
+		shopBase.CompanyList = s.GetCompanyList(ctx)
 		return shopBase, nil
 	}
 
@@ -1454,13 +1460,14 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	}
 
 	return resp.ShopBase{
-		Username:     staff.Username,
-		RealName:     staff.RealName,
-		ProfileUuid:  staff.Uuid,
-		DeviceId:     deviceId,
-		DeviceRemark: deviceRemark,
-		Permissions:  permissions,
-		Phone:        staff.Phone,
+		Username:      staff.Username,
+		RealName:      staff.RealName,
+		ProfileUuid:   staff.Uuid,
+		DeviceId:      deviceId,
+		DeviceRemark:  deviceRemark,
+		Permissions:   permissions,
+		Phone:         staff.Phone,
+		TakeoutStatus: s.getTakeoutStatusList(ctx),
 
 		Business: businessSetting,
 		Buffet:   buffetSetting,
@@ -1481,6 +1488,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			IsOpenDataManagement: companySetting.IsOpenDataManagement(),
 			IsOpenKiosk:          companySetting.IsOpenKiosk(),
 			IsOpenGrabDelivery:   companySetting.IsOpenGrabDelivery(),
+			StoreCode:            storeSetting.StoreCode,
 		},
 		CloudBasic: cloudBasicSetting,
 		Profile: resp.ShopProfile{
@@ -1505,8 +1513,43 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		LastSyncTime:      company.LastSyncTime,
 		HasChildren:       companySetting.HasChildren == 1,
 		HasDataPermission: hasDataPermission,
-		CompanyList:       s.getCompanyList(ctx),
+		CompanyList:       s.GetCompanyList(ctx),
+		AllowedTransferTypes: func() string {
+			headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+			if headquarterUuid == 0 {
+				return "in,out"
+			}
+			copyCtx := ctx.Copy()
+			copyCtx.SetCompanyUuid(headquarterUuid)
+			businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
+			if err != nil {
+				return "in,out"
+			}
+			return businessSetting.AllowedTransferTypes
+		}(),
 	}, nil
+}
+
+// getTakeoutStatusList 获取外卖平台状态列表
+func (s *authSrv) getTakeoutStatusList(ctx context.Context) []resp.TakeoutStatusResp {
+	// 直接使用外卖领域服务获取所有平台状态
+	takeouts, err := service.NewTakeoutService(ctx.GetDB()).GetAllPlatformStatus(ctx)
+	if err != nil {
+		// 获取失败时返回空列表，不影响整体登录流程
+		logger.Logger.Error("获取外卖平台状态失败", zap.Error(err))
+		return []resp.TakeoutStatusResp{}
+	}
+
+	// 转换为响应格式
+	statusList := make([]resp.TakeoutStatusResp, 0, len(takeouts))
+	for _, takeout := range takeouts {
+		statusList = append(statusList, resp.TakeoutStatusResp{
+			Platform: takeout.Platform,
+			Enabled:  takeout.Enabled,
+		})
+	}
+
+	return statusList
 }
 
 // 修改密码
@@ -1737,14 +1780,15 @@ func (s *authSrv) StoreSwitch(ctx context.Context, switchReq req.StoreSwitchReq)
 	}, nil
 }
 
-// getAvailableCompanyList 获取员工可用的商家列表（过滤已过期、异常的商家）
-func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
+// GetCompanyList 获取员工可用的商家列表（过滤已过期、异常的商家）
+func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 	// 过滤可用门店（过滤已过期、异常的商家）
 	availableCompanyList := make([]*resp.CompanyStaffResp, 0)
 
 	staffUuid := ctx.GetStaffUuid()
 	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+	companyRepo := repository.NewCompanyRepo(saasDB)
 
 	// 获取员工关联的门店列表
 	companyList, _ := companyStaffRepo.GetByStaffUuid(staffUuid, companyStaffRepo.WithCompany())
@@ -1767,13 +1811,120 @@ func (s *authSrv) getCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 		if company == nil || company.IsExpired() || company.IsException() {
 			continue
 		}
+
+		// 从 saas 数据库查询 company
+		targetCompany, err := companyRepo.GetCompanyInfoByUuid(cs.CompanyUuid)
+		if err != nil || targetCompany == nil {
+			continue
+		}
+		companySettingRepo := repository.NewCompanySettingRepo(shopDb)
+		companySetting, err := companySettingRepo.GetOne(func(db *gorm.DB) *gorm.DB {
+			return db.Where("company_uuid = ?", cs.CompanyUuid)
+		})
+		if err != nil {
+			continue
+		}
+
+		// 获取门店设置中的店铺编号
+		var storeCode string
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetCompanyUuid(cs.CompanyUuid)
+		ctxCopy.SetDB(shopDb)
+		ctxCopy.SetCompany(*targetCompany)
+		ctxCopy.SetCompanySetting(companySetting)
+
+		if storeSetting, err := s.settingSrv.GetStoreSetting(ctxCopy); err == nil {
+			storeCode = storeSetting.StoreCode
+		}
+
 		availableCompanyList = append(availableCompanyList, &resp.CompanyStaffResp{
 			CompanyUuid: cs.CompanyUuid,
 			CompanyName: company.Name,
+			StoreCode:   storeCode,
 			Roles:       roleNames,
 			IsSuper:     cs.IsSuper,
 		})
 	}
 
+	// 对 availableCompanyList 按 StoreCode 排序
+	// 排序规则：
+	// 1. StoreCode 为空的排在最前面
+	// 2. 空 StoreCode 之间：按 CompanyUuid 升序排序（保证稳定性）
+	// 3. 非空 StoreCode：去掉 "No." 前缀后，纯数字按数字大小排序（去掉前缀0），否则按字符串排序（不区分大小写）
+	sort.Slice(availableCompanyList, func(i, j int) bool {
+		item1 := availableCompanyList[i]
+		item2 := availableCompanyList[j]
+
+		isEmpty1 := item1.StoreCode == ""
+		isEmpty2 := item2.StoreCode == ""
+
+		// 1. StoreCode 为空的排在最前面
+		if isEmpty1 != isEmpty2 {
+			return isEmpty1 // true 排在前面
+		}
+
+		// 2. 如果都是空字符串，按 CompanyUuid 排序
+		if isEmpty1 && isEmpty2 {
+			return item1.CompanyUuid < item2.CompanyUuid
+		}
+
+		// 3. 如果都有 StoreCode，按新规则排序
+		// 去掉 "No." 前缀（如果有）
+		processed1 := processStoreCodeForSort(item1.StoreCode)
+		processed2 := processStoreCodeForSort(item2.StoreCode)
+
+		// 判断处理后的内容是否只有数字
+		isDigits1 := isOnlyDigits(processed1)
+		isDigits2 := isOnlyDigits(processed2)
+
+		// 如果都是纯数字，按数字大小排序
+		if isDigits1 && isDigits2 {
+			num1, _ := parseNumberWithoutLeadingZeros(processed1)
+			num2, _ := parseNumberWithoutLeadingZeros(processed2)
+			return num1 < num2
+		}
+
+		// 如果一个是数字一个不是，数字排在前面
+		if isDigits1 != isDigits2 {
+			return isDigits1
+		}
+
+		// 否则按不区分大小写的字符串排序
+		return strings.ToLower(processed1) < strings.ToLower(processed2)
+	})
+
 	return availableCompanyList
+}
+
+// processStoreCodeForSort 处理 StoreCode 用于排序
+// 去掉 "No." 前缀（不区分大小写），返回处理后的字符串
+func processStoreCodeForSort(storeCode string) string {
+	codeLower := strings.ToLower(storeCode)
+	if strings.HasPrefix(codeLower, "no.") {
+		return storeCode[3:] // 去掉前3个字符 "No."
+	}
+	return storeCode
+}
+
+// isOnlyDigits 判断字符串是否只包含数字
+func isOnlyDigits(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// parseNumberWithoutLeadingZeros 去掉前缀0并转换为数字
+func parseNumberWithoutLeadingZeros(s string) (int, error) {
+	// 去掉前缀0
+	trimmed := strings.TrimLeft(s, "0")
+	if trimmed == "" {
+		return 0, nil
+	}
+	return strconv.Atoi(trimmed)
 }

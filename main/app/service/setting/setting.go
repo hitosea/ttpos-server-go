@@ -1240,7 +1240,7 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	}
 
 	// 转换旧格式到新格式（如果只有旧格式数据）
-	if len(defaultKitchen.WaitTimeColorRanges) == 0 && len(defaultKitchen.WaitColor) > 0 {
+	if len(defaultKitchen.WaitTimeColorRanges) == 0 {
 		defaultKitchen.WaitTimeColorRanges = s.convertFromOldFormat(defaultKitchen.WaitColor)
 	}
 
@@ -1998,6 +1998,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
 	storeSetting.StoreCode = storeSettingReq.StoreCode
+	storeSetting.TaxNumber = storeSettingReq.TaxNumber
 
 	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####
 	// ##### 1、处理 cashier 设置 #####
@@ -2471,7 +2472,6 @@ func (s *Srv) GetPaymentMethodList(ctx context.Context) setting.PaymentMethodLis
 	paymentMethodList := paymentRepo.GetAllPaymentMethodList(
 		commonRepo.SortWithSort("asc"),
 		commonRepo.SortWithCreateTime("desc"),
-		paymentRepo.WhereNotCode([]int{constant.PaymentMethodCodeGrab, constant.PaymentMethodCodeLineMan}),
 	)
 
 	list := make([]setting.PaymentMethod, 0, len(paymentMethodList))

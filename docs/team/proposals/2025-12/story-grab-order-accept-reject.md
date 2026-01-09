@@ -5,7 +5,7 @@
 - **提案人**: AI Assistant
 - **日期**: 2025-12-22
 - **版本**: v1.0.0
-- **状态**: 待评审
+- **状态**: ✅ 已完成 - 已发布 v2.12
 - **优先级**: 中等
 
 ## 背景和动机
@@ -52,7 +52,7 @@
 // 新增 PrepareOrder 请求消息
 message PrepareOrderReq {
   string takeout_order_uuid = 1;  // TTPOS 订单 UUID
-  string to_state = 2;            // 目标状态: Accepted/Rejected
+  string to_state = 2;            // 目标状态: ✅ 已完成 - 已发布 v2.12
   string request_id = 3;          // 请求追踪ID (可选)
 }
 
@@ -137,7 +137,7 @@ func (s *sGrabOrder) PrepareOrder(ctx context.Context, orderUUID string, toState
 
 ## 相关文档
 
-- **Spec 需求文档**: [docs/shared/specs/active/story-grab-order-accept-reject/requirements.md](../../../../shared/specs/active/story-grab-order-accept-reject/requirements.md)
+- **Spec 需求文档**: [docs/shared/specs/archived/v2.12/story-grab-order-accept-reject/requirements.md](../../../../shared/specs/archived/v2.12/story-grab-order-accept-reject/requirements.md)
 
 ## 评审清单
 

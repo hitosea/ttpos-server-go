@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.x |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | `docs/shared/specs/active/story-ttpos-erp-mode-of-payment-enabled/requirements.md` |
+| **关联 Spec** | `docs/shared/specs/archived/v2.12/story-ttpos-erp-mode-of-payment-enabled/requirements.md` |
 
 ---
 

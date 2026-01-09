@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-regenerate-order-pos-invoice](../../shared/specs/active/story-main-regenerate-order-pos-invoice/requirements.md)      |
+| **关联 Spec** | [story-main-regenerate-order-pos-invoice](../../shared/specs/archived/v2.12/story-main-regenerate-order-pos-invoice/requirements.md)      |
 
 ---
 

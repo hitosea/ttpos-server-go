@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 已创建Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-shop-payment-method-quick-add-kbank](../../shared/specs/active/story-shop-payment-method-quick-add-kbank/requirements.md)      |
+| **关联 Spec** | [story-shop-payment-method-quick-add-kbank](../../shared/specs/archived/v2.12/story-shop-payment-method-quick-add-kbank/requirements.md)      |
 
 ---
 

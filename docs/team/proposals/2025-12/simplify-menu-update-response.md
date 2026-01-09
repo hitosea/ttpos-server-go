@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已批准   |
 | **关联任务** | - |
-| **关联 Spec** | [task-bmp-simplify-menu-update-response](../../../shared/specs/active/task-bmp-simplify-menu-update-response/requirements.md) |
+| **关联 Spec** | [task-bmp-simplify-menu-update-response](../../../shared/specs/archived/v2.12/task-bmp-simplify-menu-update-response/requirements.md) |
 
 ---
 

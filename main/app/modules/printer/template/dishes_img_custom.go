@@ -7,7 +7,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/modules/printer/printer_model"
-	"ttpos-server-go/app/modules/printer/template_struct"
+	"ttpos-server-go/app/modules/printer/tyeps/structs"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -33,13 +33,13 @@ func NewDishesImgTemplateCustom(
 func (t *dishesImgTemplateCustom) getData(
 	printer *model.Printer,
 	order printer_model.Order,
-	mealNumStr string,
-	products []template_struct.StatementProductData,
-) *template_struct.StatementOrderData {
+	_ string,
+	products []structs.StatementProductData,
+) *structs.StatementOrderData {
 	// 构建订单数据结构体
-	return &template_struct.StatementOrderData{
+	return &structs.StatementOrderData{
 		BrandName: config.Server.BrandName,
-		Store: template_struct.StatementStoreData{
+		Store: structs.StatementStoreData{
 			Name:             t.base.StoreSetting.Name,
 			Address:          t.base.StoreSetting.Address,
 			Phone:            t.base.StoreSetting.Phone,
@@ -51,7 +51,7 @@ func (t *dishesImgTemplateCustom) getData(
 			CashierSn:        t.base.GetCashierSn(printer.SourceDeviceSn),
 			PrinterSn:        printer.Sn,
 		},
-		Order: template_struct.StatementOrderInfoData{
+		Order: structs.StatementOrderInfoData{
 			SerialNo: order.SerialNo,
 			OrderNo:  order.OrderNo,
 			PayTime:  t.base.FormatUnixTimeDefault(order.FinishTime),
@@ -71,11 +71,11 @@ func (t *dishesImgTemplateCustom) GetCompleteOrderPrintContent(
 	mealNumStr := utils.IfString(order.MealNum > 0, fmt.Sprintf(" (%d%s)", order.MealNum, t.base.Translate("人")), "")
 
 	// 商品列表
-	products := []template_struct.StatementProductData{}
+	products := []structs.StatementProductData{}
 	var processProducts func(printer_products printer_model.Products, isSubProduct bool)
 	processProducts = func(printer_products printer_model.Products, isSubProduct bool) {
 		for _, product := range printer_products {
-			products = append(products, template_struct.StatementProductData{
+			products = append(products, structs.StatementProductData{
 				Name:     product.ProductName.GetLocale(t.base.Lang),
 				PriceNum: fmt.Sprintf("%s*%v", t.base.Amount(product.TotalNum), product.ProductPrice),
 				Price:    t.base.Amount(product.ProductPrice),
@@ -84,10 +84,10 @@ func (t *dishesImgTemplateCustom) GetCompleteOrderPrintContent(
 				Remark:   product.Remark,
 				Attrs:    product.ProductAttr.GetLocale(t.base.Lang),
 				Attr:     product.Attr.GetLocale(t.base.Lang),
-				AttrList: func() []template_struct.StatementProductDataAttrList {
-					attrs := []template_struct.StatementProductDataAttrList{}
+				AttrList: func() []structs.StatementProductDataAttrList {
+					attrs := []structs.StatementProductDataAttrList{}
 					for _, attr := range product.AttrList {
-						attrs = append(attrs, template_struct.StatementProductDataAttrList{
+						attrs = append(attrs, structs.StatementProductDataAttrList{
 							Name: attr.GetLocale(t.base.Lang),
 							Text: attr.GetLocale(t.base.Lang),
 						})
@@ -102,10 +102,10 @@ func (t *dishesImgTemplateCustom) GetCompleteOrderPrintContent(
 					}
 					return strings.Join(sauces, ";")
 				}(),
-				SauceList: func() []template_struct.StatementProductDataSauceList {
-					sauces := []template_struct.StatementProductDataSauceList{}
+				SauceList: func() []structs.StatementProductDataSauceList {
+					sauces := []structs.StatementProductDataSauceList{}
 					for _, sauce := range product.ProductSauceNamesList {
-						sauces = append(sauces, template_struct.StatementProductDataSauceList{
+						sauces = append(sauces, structs.StatementProductDataSauceList{
 							Name: sauce.GetLocale(t.base.Lang),
 							Text: sauce.GetLocale(t.base.Lang),
 						})
@@ -174,12 +174,12 @@ func (t *dishesImgTemplateCustom) GetOneDishOneOrderPrintContent(
 	mealNumStr := utils.IfString(order.MealNum > 0, fmt.Sprintf(" (%d%s)", order.MealNum, t.base.Translate("人")), "")
 
 	// 商品列表
-	products := []template_struct.StatementProductData{}
+	products := []structs.StatementProductData{}
 	var processProducts func(printer_products printer_model.Products, isSubProduct bool)
 	processProducts = func(printer_products printer_model.Products, isSubProduct bool) {
 		for _, product := range printer_products {
 			exportation := func(num float64) {
-				products = append(products, template_struct.StatementProductData{
+				products = append(products, structs.StatementProductData{
 					Name:     product.ProductName.GetLocale(t.base.Lang),
 					PriceNum: fmt.Sprintf("%s*%v", t.base.Amount(num), product.ProductPrice),
 					Price:    t.base.Amount(product.ProductPrice),
@@ -188,10 +188,10 @@ func (t *dishesImgTemplateCustom) GetOneDishOneOrderPrintContent(
 					Remark:   product.Remark,
 					Attrs:    product.ProductAttr.GetLocale(t.base.Lang),
 					Attr:     product.Attr.GetLocale(t.base.Lang),
-					AttrList: func() []template_struct.StatementProductDataAttrList {
-						attrs := []template_struct.StatementProductDataAttrList{}
+					AttrList: func() []structs.StatementProductDataAttrList {
+						attrs := []structs.StatementProductDataAttrList{}
 						for _, attr := range product.AttrList {
-							attrs = append(attrs, template_struct.StatementProductDataAttrList{
+							attrs = append(attrs, structs.StatementProductDataAttrList{
 								Name: attr.GetLocale(t.base.Lang),
 								Text: attr.GetLocale(t.base.Lang),
 							})
@@ -206,10 +206,10 @@ func (t *dishesImgTemplateCustom) GetOneDishOneOrderPrintContent(
 						}
 						return strings.Join(sauces, ";")
 					}(),
-					SauceList: func() []template_struct.StatementProductDataSauceList {
-						sauces := []template_struct.StatementProductDataSauceList{}
+					SauceList: func() []structs.StatementProductDataSauceList {
+						sauces := []structs.StatementProductDataSauceList{}
 						for _, sauce := range product.ProductSauceNamesList {
-							sauces = append(sauces, template_struct.StatementProductDataSauceList{
+							sauces = append(sauces, structs.StatementProductDataSauceList{
 								Name: sauce.GetLocale(t.base.Lang),
 								Text: sauce.GetLocale(t.base.Lang),
 							})

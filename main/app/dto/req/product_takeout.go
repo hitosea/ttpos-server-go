@@ -21,6 +21,36 @@ type ProductTakeoutShopAddReq struct {
 	ImageFileUuid       uint64                                     `json:"image_file_uuid"`                         // 外卖商品图片文件UUID
 	Source              string                                     `json:"source"`                                  // 来源平台 (grab/lineman等 默认grab)
 	SourceProductId     string                                     `json:"source_product_id"`                       // 来源平台商品ID (grab/lineman等 默认grab)
+	IsBatch             bool                                       `json:"is_batch"`                                // 是否批量创建 默认false
+}
+
+// Validate 验证外卖商品添加请求
+func (r *ProductTakeoutShopAddReq) Validate() error {
+	if r.ProductPackageUuid == 0 {
+		return errors.WithMessage(errors.New("商品包UUID不能为空"))
+	}
+	if len(r.Flavors) > 0 {
+		for _, flavor := range r.Flavors {
+			if flavor.BomUuid == 0 {
+				return errors.WithMessage(errors.New("规格UUID不能为空"))
+			}
+		}
+	}
+	if len(r.Attributes) > 0 {
+		for _, attribute := range r.Attributes {
+			if attribute.ProductPackageAttributeUuid == 0 {
+				return errors.WithMessage(errors.New("属性UUID不能为空"))
+			}
+		}
+	}
+	if len(r.PackageGroupItems) > 0 {
+		for _, packageGroupItem := range r.PackageGroupItems {
+			if packageGroupItem.ProductPackageGroupItemUuid == 0 {
+				return errors.WithMessage(errors.New("套餐子商品UUID不能为空"))
+			}
+		}
+	}
+	return nil
 }
 
 // ProductTakeoutShopAddFlavorReq 外卖商品规格添加请求
@@ -68,6 +98,7 @@ func (r *ProductTakeoutShopEditReq) Validate() error {
 
 // ProductTakeoutShopEditFlavorReq 外卖商品规格编辑请求
 type ProductTakeoutShopEditFlavorReq struct {
+	Uuid    uint64  `json:"uuid"`                        // 外卖规格UUID
 	BomUuid uint64  `json:"bom_uuid" binding:"required"` // 商品BOM UUID
 	Price   float64 `json:"price"`                       // 外卖规格价格
 }

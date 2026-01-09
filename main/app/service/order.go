@@ -115,8 +115,8 @@ type IOrderSrv interface {
 	OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                                                                                                                                           // 订单检查
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                                                                                                            // 计算并保存销售账单
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                                                                                                                                 // 必点方案列表                                                                                                                                                                                                       // 拒单商家的所有待接单h5订单
-	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)                                                                                                 // 未送厨商品列表
-	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                                                                                                                 // 已送厨商品列表
+	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)                                                                       // 未送厨商品列表
+	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill) (resp.SentKitchen, error)                                                                                                                       // 已送厨商品列表
 	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, isAutoOrder bool, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, IgnoreMust bool) (*resp.OrderCheckServiceRes, error)                                                                                                          // 加购并送厨
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (*TabletAddAndCookingRes, error)                                                                                                                                         // 平板端加购并送厨
@@ -170,6 +170,8 @@ type IOrderSrv interface {
 	// invoice
 	SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB, opts ...func(*SavePosInvoiceOption)) (*selling.SavePosInvoiceResp, error) // 保存发票到ERP
 
+	// cache
+	AsyncPreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) // 异步预加载销售账单所有信息缓存
 }
 
 // orderSrv 订单服务结构
@@ -1402,6 +1404,12 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, _ uint64
 	}); err != nil {
 		return nil, errors.WithMessage(err, "更新销售订单失败")
 	}
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -5586,4 +5594,26 @@ func (s *orderSrv) generateInvoiceNumber(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("INV-%04d-%02d-%02d-%05d", now.Year(), now.Month(), now.Day(), seq), nil
+}
+
+// PreloadSaleBillAllInfoCache 预加载销售账单所有信息缓存
+// 跳过缓存检查，直接从数据库查询并写入缓存，用于缓存预热场景
+// 参数：
+//   - ctx: 上下文
+//   - saleBillUuid: 销售账单UUID
+//
+// 返回：
+//   - *model.SaleBill: 销售账单信息
+//   - error: 错误信息
+func (s *orderSrv) PreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) (*model.SaleBill, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	orderRepo := repository.NewOrderRepo(db)
+
+	// 调用 repository 方法，跳过缓存检查，直接从数据库查询并写入缓存
+	saleBill, err := orderRepo.GetSaleBillAllInfo(saleBillUuid, repository.WithSkipCache())
+	if err != nil {
+		return nil, errors.WithMessage(err, "预加载销售账单缓存失败")
+	}
+
+	return saleBill, nil
 }

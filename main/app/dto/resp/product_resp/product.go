@@ -5,6 +5,13 @@ import (
 	"ttpos-server-go/app/dto"
 )
 
+// ResourceUsageResp 资源使用情况响应
+type ResourceUsageResp struct {
+	IsUsed      bool     `json:"is_used"`       // 是否被使用
+	UsedByShops []string `json:"used_by_shops"` // 使用的子店名称列表
+	TotalCount  int      `json:"total_count"`   // 总使用子店数量
+}
+
 type ProductSearchResp struct {
 	List []Product `json:"list"`
 }
@@ -375,7 +382,8 @@ type ProductShopCategoryDetailResp struct {
 	IsDisplayInStore    int                `json:"is_display_in_store"`   // v2.11.0 是否在店内显示: 1-是 0-否，永远等于1
 	IsDisplayInTakeout  int                `json:"is_display_in_takeout"` // v2.11.0 是否在外卖平台显示: 1-是 0-否, 当takeout_product_count大于0的时候 不能设置为0
 	ProductCount        int64              `json:"product_count"`         // 商品数量
-	TakeoutProductCount int64              `json:"takeout_product_count"` // v2.11.0 被外卖商品选中的数量
+	TakeoutGrabCount    int64              `json:"takeout_grab_count"`    // v2.11.0 被Grab平台选中的数量
+	TakeoutLinemanCount int64              `json:"takeout_lineman_count"` // v2.11.0 被LINE MAN平台选中的数量
 	ChildCount          int64              `json:"child_count"`           // 子级数量
 	Code                string             `json:"code"`                  // 分类编码
 	IsEditable          bool               `json:"is_editable"`           // 是否可编辑

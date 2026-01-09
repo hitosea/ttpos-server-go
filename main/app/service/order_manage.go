@@ -1792,7 +1792,15 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 
 	var resDesks *resp.OrderReverseSettleDeskList
 	if saleBill.IsDeskSaleBill() {
-		desk := saleBill.Desk
+		// 通过 repository 从数据库查询桌台信息
+		deskRepo := repository.NewDeskRepo(db)
+		desk, err := deskRepo.GetDeskRecord(saleBill.DeskUuid)
+		if err != nil {
+			if strings.Contains(err.Error(), "record not found") {
+				return nil, errors.WithMessage(errors.New("桌台不存在"))
+			}
+			return nil, errors.WithMessage(err)
+		}
 		desks := make([]resp.OrderReverseSettleDesk, 0)
 		// 如果原桌台空闲
 		if desk.IsAvailableDesk() {
@@ -2370,6 +2378,12 @@ func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts
 	}); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)

@@ -16673,7 +16673,7 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": -1,
-                        "description": "-1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)",
+                        "description": "-1=全部, 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消 (默认: -1)",
                         "name": "status",
                         "in": "query"
                     }
@@ -32074,6 +32074,212 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/company/business/summary": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "获取门店汇总统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsCompanySummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyBusinessSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "201": {
+                        "description": "统计数据。indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyPaymentMethodSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "202": {
+                        "description": "统计数据。indicator_type=refund 返回 CompanyRefundSummaryResp",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyRefundSummaryResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/company/business/summary/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新管理端-报表-门店汇总统计导出。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "导出门店汇总统计",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StatisticsCompanySummaryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "导出任务已创建",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/company/payment_methods": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取有权限的所有门店的支付方式，汇总去重后返回",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "获取门店支付方式列表",
+                "responses": {
+                    "200": {
+                        "description": "支付方式列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanyPaymentMethodListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/company_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取门店汇总统计可选择的门店列表（总店返回本店及下级所有子店，子店返回本店及已授权的其他门店）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.报表"
+                ],
+                "summary": "获取门店列表",
+                "responses": {
+                    "200": {
+                        "description": "门店列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CompanySummaryListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/export": {
             "get": {
                 "security": [
@@ -34825,7 +35031,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批",
+                        "description": "我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批 my_approver-我的上级审批",
                         "name": "my_role",
                         "in": "query"
                     },
@@ -42447,6 +42653,10 @@ const docTemplate = `{
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
                 },
+                "order_delivery": {
+                    "description": "外卖订单， 0=否、 1=是",
+                    "type": "integer"
+                },
                 "order_desk": {
                     "description": "桌台订单， 0=否、 1=是",
                     "type": "integer"
@@ -47667,6 +47877,10 @@ const docTemplate = `{
                     "description": "外卖商品图片文件UUID",
                     "type": "integer"
                 },
+                "is_batch": {
+                    "description": "是否批量创建 默认false",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "外卖商品名称（多语言），不填则使用店内商品名称",
                     "allOf": [
@@ -47762,6 +47976,10 @@ const docTemplate = `{
                 "price": {
                     "description": "外卖规格价格",
                     "type": "number"
+                },
+                "uuid": {
+                    "description": "外卖规格UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -48860,6 +49078,56 @@ const docTemplate = `{
                 }
             }
         },
+        "req.StatisticsCompanySummaryReq": {
+            "type": "object",
+            "properties": {
+                "company_uuids": {
+                    "description": "门店UUID列表（多选），为空时默认为所有门店",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "cycle": {
+                    "description": "周期: 0=按日、1=按月",
+                    "type": "integer"
+                },
+                "indicator_type": {
+                    "description": "数据指标类型：business(营业数据汇总)、payment_method(支付方式汇总)、refund(退款金额汇总)",
+                    "type": "string"
+                },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "payment_method_names": {
+                    "description": "支付方式名称列表（仅支付方式汇总时使用，可选）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "query_end_date": {
+                    "description": "结束日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日结束日期：YYYY-MM-DD 23:59:59",
+                    "type": "string"
+                },
+                "query_start_date": {
+                    "description": "开始日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日开始日期：YYYY-MM-DD 00:00:00",
+                    "type": "string"
+                },
+                "report": {
+                    "description": "报表类型: 0=明细表、1=汇总表",
+                    "type": "integer"
+                }
+            }
+        },
         "req.StatisticsPaymentMethodReq": {
             "type": "object",
             "properties": {
@@ -48870,6 +49138,10 @@ const docTemplate = `{
                 "exclude_data_manage": {
                     "description": "是否排除数据管理订单",
                     "type": "boolean"
+                },
+                "order_delivery": {
+                    "description": "外卖订单， 0=否、 1=是",
+                    "type": "integer"
                 },
                 "order_desk": {
                     "description": "桌台订单， 0=否、 1=是",
@@ -48895,8 +49167,15 @@ const docTemplate = `{
                     "minimum": 1
                 },
                 "payment_method_list": {
-                    "description": "支付方式列表: 空=全部, 多个用\"uuid1,uuid2,uuid3,,,\"分割",
+                    "description": "支付方式UUID列表: 空=全部, 多个用\"uuid1,uuid2,uuid3,,,\"分割（优先使用）",
                     "type": "string"
+                },
+                "payment_method_names": {
+                    "description": "支付方式名称列表: 空=全部（PaymentMethodList为空时使用）",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "query_end_date": {
                     "description": "查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）",
@@ -49280,8 +49559,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49306,8 +49583,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49332,8 +49607,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49358,8 +49631,6 @@ const docTemplate = `{
                 "product_uuids": {
                     "description": "商品UUID列表,最多100个",
                     "type": "array",
-                    "maxItems": 100,
-                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -49720,6 +49991,10 @@ const docTemplate = `{
                 "zeroing_method"
             ],
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "batch_cooking_mode": {
                     "description": "分批模式 pre-前置模式 post-后置模式，默认为post",
                     "type": "string"
@@ -50522,6 +50797,10 @@ const docTemplate = `{
                 },
                 "merchantId": {
                     "description": "商户 ID",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "消息，取消原因",
                     "type": "string"
                 },
                 "orderId": {
@@ -51671,6 +51950,30 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "dine_in_store": {
+                    "description": "堂食",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "grab": {
+                    "description": "Grab 外卖",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "lineman": {
+                    "description": "LINE MAN 外卖",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
                 "meta": {
                     "description": "元数据",
                     "allOf": [
@@ -51689,6 +51992,22 @@ const docTemplate = `{
                 },
                 "table": {
                     "description": "桌台",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "takeaway": {
+                    "description": "外带",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ChannelSalesBlock"
+                        }
+                    ]
+                },
+                "takeout": {
+                    "description": "外卖",
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ChannelSalesBlock"
@@ -51808,6 +52127,10 @@ const docTemplate = `{
                     "description": "商家名称",
                     "type": "string"
                 },
+                "store_code": {
+                    "description": "店铺编码，shop端用于显示",
+                    "type": "string"
+                },
                 "time_zone": {
                     "description": "时区，形如 Asia/Shanghai",
                     "type": "string"
@@ -51815,6 +52138,95 @@ const docTemplate = `{
                 "uuid": {
                     "description": "商家UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyBusinessSummaryItem": {
+            "type": "object",
+            "properties": {
+                "avg_customer_price": {
+                    "description": "平均客单价（实付金额/用餐人数，保留2位小数）",
+                    "type": "number"
+                },
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "营业日（格式：YYYY-MM-DD）",
+                    "type": "string"
+                },
+                "desk_num": {
+                    "description": "消费桌数",
+                    "type": "integer"
+                },
+                "desk_order_amount": {
+                    "description": "桌台订单金额（保留2位小数）",
+                    "type": "number"
+                },
+                "instant_order_amount": {
+                    "description": "点餐订单金额（保留2位小数）",
+                    "type": "number"
+                },
+                "meal_num": {
+                    "description": "用餐人数",
+                    "type": "integer"
+                },
+                "order_amount": {
+                    "description": "订单金额（含优惠前，保留2位小数）",
+                    "type": "number"
+                },
+                "order_amount_avg": {
+                    "description": "订单金额单均（订单金额/订单数量，保留2位小数）",
+                    "type": "number"
+                },
+                "order_amount_meal_avg": {
+                    "description": "订单金额人均（订单金额/用餐人数，保留2位小数）",
+                    "type": "number"
+                },
+                "order_num": {
+                    "description": "订单数量",
+                    "type": "integer"
+                },
+                "pay_amount": {
+                    "description": "实付金额（保留2位小数）",
+                    "type": "number"
+                },
+                "pay_amount_avg": {
+                    "description": "实付金额单均（实付金额/订单数量，保留2位小数）",
+                    "type": "number"
+                },
+                "takeout_order_amount": {
+                    "description": "外送订单金额（保留2位小数）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.CompanyBusinessSummaryResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "明细列表或汇总列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyBusinessSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                },
+                "summary_row": {
+                    "description": "汇总行（明细表返回默认值，汇总表返回汇总数据）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyBusinessSummaryItem"
+                        }
+                    ]
                 }
             }
         },
@@ -51847,6 +52259,152 @@ const docTemplate = `{
                 "uuid": {
                     "description": "门店UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodItem": {
+            "type": "object",
+            "properties": {
+                "payment_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "支付方式列表（已去重）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyPaymentMethodItem"
+                    }
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodSummaryItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "营业日（格式：YYYY-MM-DD 或 YYYY-MM）",
+                    "type": "string"
+                },
+                "payment_amount": {
+                    "description": "支付金额（保留2位小数）",
+                    "type": "number"
+                },
+                "payment_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_num": {
+                    "description": "支付笔数",
+                    "type": "integer"
+                },
+                "payment_ratio": {
+                    "description": "支付占比（保留2位小数，百分比）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.CompanyPaymentMethodSummaryResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "明细列表或汇总列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyPaymentMethodSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                },
+                "summary_row": {
+                    "description": "汇总行（明细表返回空数组，汇总表返回按支付方式分组的汇总数据）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyPaymentMethodSummaryItem"
+                    }
+                }
+            }
+        },
+        "resp.CompanyRefundSummaryItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "date": {
+                    "description": "营业日（格式：YYYY-MM-DD 或 YYYY-MM）",
+                    "type": "string"
+                },
+                "full_refund_amount": {
+                    "description": "整单退款金额（保留2位小数）",
+                    "type": "number"
+                },
+                "full_refund_num": {
+                    "description": "整单退款笔数",
+                    "type": "integer"
+                },
+                "partial_refund_amount": {
+                    "description": "部分退款金额（保留2位小数）",
+                    "type": "number"
+                },
+                "partial_refund_num": {
+                    "description": "部分退款笔数",
+                    "type": "integer"
+                },
+                "refund_amount": {
+                    "description": "退款金额（保留2位小数）",
+                    "type": "number"
+                },
+                "refund_num": {
+                    "description": "退款笔数",
+                    "type": "integer"
+                },
+                "refund_rate": {
+                    "description": "退款率（保留2位小数，百分比）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.CompanyRefundSummaryResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "明细列表或汇总列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanyRefundSummaryItem"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                },
+                "summary_row": {
+                    "description": "汇总行（明细表返回默认值，汇总表返回汇总数据）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CompanyRefundSummaryItem"
+                        }
+                    ]
                 }
             }
         },
@@ -51903,6 +52461,10 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "store_code": {
+                    "description": "店铺编号",
+                    "type": "string"
                 }
             }
         },
@@ -51970,6 +52532,31 @@ const docTemplate = `{
                 "uuid": {
                     "description": "门店UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.CompanySummaryItem": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.CompanySummaryListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CompanySummaryItem"
+                    }
                 }
             }
         },
@@ -59853,6 +60440,10 @@ const docTemplate = `{
         "resp.ShopBase": {
             "type": "object",
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "buffet": {
                     "description": "自助餐设置",
                     "allOf": [
@@ -59966,6 +60557,13 @@ const docTemplate = `{
                 "server_version": {
                     "description": "服务端版本",
                     "type": "string"
+                },
+                "takeout_status": {
+                    "description": "外卖平台状态列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TakeoutStatusResp"
+                    }
                 },
                 "update_time": {
                     "description": "更新时间",
@@ -61102,6 +61700,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.TakeoutStatusResp": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "description": "是否开启",
+                    "type": "boolean"
+                },
+                "platform": {
+                    "description": "外卖平台 (grab/lineman等)",
+                    "type": "string"
+                }
+            }
+        },
         "resp.TransferOrderApprovalInfo": {
             "type": "object",
             "properties": {
@@ -62205,6 +62816,13 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.UserAnalysisItem"
                     }
+                },
+                "takeout_method": {
+                    "description": "外卖方式统计（Grab/LINE MAN）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UserAnalysisItem"
+                    }
                 }
             }
         },
@@ -62650,7 +63268,7 @@ const docTemplate = `{
                 },
                 "deducted_amount": {
                     "description": "折扣金额(元)",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "uuid": {
                     "type": "integer"
@@ -62862,7 +63480,7 @@ const docTemplate = `{
                 },
                 "promo_amount": {
                     "description": "促销金额",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "promo_code": {
                     "description": "促销代码",
@@ -62997,6 +63615,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.TakeoutOrderReceiverResp"
                         }
                     ]
+                },
+                "rider_status": {
+                    "description": "骑手状态 骑手待接单 - rider_pending, 骑手已接单 - rider_accepted",
+                    "type": "string"
                 },
                 "short_order_number": {
                     "description": "短订单号",
@@ -63241,6 +63863,10 @@ const docTemplate = `{
         "setting.Business": {
             "type": "object",
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
                     "type": "string"
@@ -64162,6 +64788,10 @@ const docTemplate = `{
         "setting.ShopBusiness": {
             "type": "object",
             "properties": {
+                "allowed_transfer_types": {
+                    "description": "调拨规则-允许的调拨类型 \"in\"-只允许调入 \"out\"-只允许调出 \"in,out\"-都允许",
+                    "type": "string"
+                },
                 "batch_cooking_mode": {
                     "description": "分批送厨模式: \"pre\" 前置 / \"post\" 后置，默认 \"post\"",
                     "type": "string"

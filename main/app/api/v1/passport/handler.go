@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	printerPkg "ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
@@ -167,7 +168,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 func (h *Handler) ClearL1Cache(c *gin.Context) {
 	// 使用 CommitSHA 作为身份验证，确保只有同一个构建版本才能调用
 	apiKey := c.GetHeader("X-API-KEY")
-	if apiKey != config.CommitSHA && config.Server.Mode != "debug" {
+	if apiKey != config.CommitSHA {
 		helper.Fail(c, constant.CodeAccessDenied, "Unauthorized: Invalid API Key")
 		c.Abort()
 		return
@@ -181,6 +182,77 @@ func (h *Handler) ClearL1Cache(c *gin.Context) {
 	})
 }
 
+// GetCacheHitRateStats 获取缓存命中率统计（内部接口）
+func (h *Handler) GetCacheHitRateStats(c *gin.Context) {
+	// 使用 CommitSHA 作为身份验证，确保只有同一个构建版本才能调用
+	apiKey := c.GetHeader("X-API-KEY")
+	if apiKey != config.CommitSHA {
+		helper.Fail(c, constant.CodeAccessDenied, "Unauthorized: Invalid API Key")
+		c.Abort()
+		return
+	}
+
+	statsManager := objectStorageAdapter.GetGlobalStatsManager()
+	stats := statsManager.GetStats()
+
+	// 绑定请求参数
+	var listReq req.CacheHitRateStatsReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, req.CacheHitRateStatsReqMessage)
+		return
+	}
+
+	// 如果指定了 key，返回该 key 的统计信息
+	if listReq.Key != "" {
+		keyStats, exists := statsManager.GetKeyStats(listReq.Key)
+		if !exists {
+			helper.Fail(c, constant.CodeFail, "Key 统计信息不存在")
+			return
+		}
+		keyStatsResp := resp.CacheHitRateKeyStatsResp{
+			Key:        keyStats.Key,
+			Hits:       keyStats.Hits,
+			Misses:     keyStats.Misses,
+			HitRate:    keyStats.HitRate,
+			Total:      keyStats.Total,
+			LastAccess: keyStats.LastAccess,
+		}
+		helper.Success(c, keyStatsResp)
+		return
+	}
+
+	// 获取 Top N
+	topKeys := statsManager.GetTopKeys(listReq.Top, listReq.Sort)
+
+	// 构建响应结构体
+	statsResp := resp.CacheHitRateStatsResp{
+		Stats: resp.CacheHitRateStatsDataResp{
+			Hits:       stats.Hits,
+			Misses:     stats.Misses,
+			HitRate:    stats.HitRate,
+			Total:      stats.Total,
+			LastUpdate: stats.LastUpdate,
+			KeyCount:   len(stats.KeyStats),
+		},
+		TopKeys: make([]resp.CacheHitRateKeyStatsResp, 0, len(topKeys)),
+	}
+
+	// 转换 TopKeys
+	for _, keyStats := range topKeys {
+		keyStatsResp := resp.CacheHitRateKeyStatsResp{
+			Key:        keyStats.Key,
+			Hits:       keyStats.Hits,
+			Misses:     keyStats.Misses,
+			HitRate:    keyStats.HitRate,
+			Total:      keyStats.Total,
+			LastAccess: keyStats.LastAccess,
+		}
+		statsResp.TopKeys = append(statsResp.TopKeys, keyStatsResp)
+	}
+
+	helper.Success(c, statsResp)
+}
+
 // RegisterInternalHandlers 注册内部接口（需要API Key验证）
 func RegisterInternalHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
@@ -190,4 +262,5 @@ func RegisterInternalHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	}
 	router.GET("/memory/stats", wrapper.GetMemoryStats)
 	router.POST("/cache/l1/clear", wrapper.ClearL1Cache)
+	router.GET("/cache/hit-rate/stats", wrapper.GetCacheHitRateStats)
 }

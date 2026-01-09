@@ -33,6 +33,7 @@ type BusinessSetting struct {
 	SafetyStockType               string                      `json:"safety_stock_type"`                // 安全库存类型
 	RequiredParentCompanyApproval string                      `json:"required_parent_company_approval"` // 需要总部审批
 	ViaParentCompanyWarehouse     string                      `json:"via_parent_company_warehouse"`     // 通过总部仓库
+	AllowedTransferTypes          string                      `json:"allowed_transfer_types"`           // 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
 	DiscountNeedPassword          string                      `json:"discount_need_password"`           // 折扣操作是否需要密码 0-否 1-是
 	DiscountAuthorizedStaffIds    []uint64                    `json:"discount_authorized_staff_ids"`    // 折扣授权员工ID
 	RefundNeedPassword            string                      `json:"refund_need_password"`             // 退款操作是否需要密码 0-否 1-是
@@ -213,6 +214,7 @@ func DefaultBusinessSetting() *BusinessSetting {
 		SafetyStockType:               "1",               // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 		RequiredParentCompanyApproval: "0",               // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
 		ViaParentCompanyWarehouse:     "0",               // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		AllowedTransferTypes:          "in,out",          // 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许, 默认都允许
 		BatchCookingMode:              "post",            // 分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"
 		EnableOrderSource:             "0",               // 外卖功能开关 0-关闭 1-开启
 		EnableNationality:             "0",               // 国籍功能开关 0-关闭 1-开启

@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-management-takeout-payment-methods](../../../shared/specs/active/story-management-takeout-payment-methods/requirements.md)      |
+| **关联 Spec** | [story-management-takeout-payment-methods](../../../shared/specs/archived/v2.12/story-management-takeout-payment-methods/requirements.md)      |
 
 ---
 

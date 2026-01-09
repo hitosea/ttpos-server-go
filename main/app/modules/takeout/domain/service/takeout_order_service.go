@@ -24,6 +24,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -36,7 +37,7 @@ type ITakeoutOrderSrv interface {
 	// 创建订单（接受已转换的订单对象，商品数据从 order.RawData 中解析）- 由 Application 层调用
 	CreateOrder(ctx context.Context, order *takeoutModel.TakeoutOrder) error
 	// 更新订单状态 - 由 Application 层调用
-	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string) error
+	UpdateOrderStatus(ctx context.Context, orderUuid string, newStatus string, message string) error
 	// 订单操作
 	AcceptOrder(ctx context.Context, req *request.TakeoutOrderAcceptReq) error
 	RejectOrder(ctx context.Context, req *request.TakeoutOrderRejectReq) error
@@ -231,6 +232,7 @@ func (s *takeoutOrderSrv) GetByUuid(ctx context.Context, uuid uint64) (*response
 		Platform:         order.Platform,
 		ShortOrderNumber: order.ShortOrderNumber,
 		OrderState:       order.OrderState,
+		RiderStatus:      order.GetRiderStatus(),
 		IsAbnormal:       order.IsAbnormal,
 		AbnormalDetail:   order.AbnormalDetail,
 		OrderTimes: response.TakeoutOrderTimesResp{
@@ -333,6 +335,7 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		// 同步到 ERP
 		if !order.IsAutoAcceptOrder() {
 			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
+				logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
 			}
 		}
@@ -498,6 +501,7 @@ func (s *takeoutOrderSrv) CallRider(ctx context.Context, req *request.TakeoutOrd
 		// 同步到 ERP
 		if order.IsAutoAcceptOrder() {
 			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
+				logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
 			}
 		}
@@ -668,6 +672,7 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 		order.TakeoutOrderUuid,
 		ctx.GetCompanyUuid(),
 		reasonText,
+		valueobject.TakeoutOrderStateCanceled,
 	))
 
 	return nil
@@ -814,6 +819,8 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 		productInfos := s.menuRepo.GetProductNamesByUuids(ctx, productUuids, productTypes)
 		// Step 3: 批量查询菜单名称（未映射商品）
 		menuNames := s.menuRepo.GetMenuNamesByPlatformItemIds(ctx, order.Platform, productIds)
+		// 标记异常商品
+		abnormalProductIds := make([]uint64, 0)
 
 		// 处理订单商品和修饰符
 		for i := range order.TakeoutOrderItems {
@@ -831,6 +838,17 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 					item.TtposItemName = info.TtposName
 					// TtposItemErpCode: ERP编码
 					item.TtposItemErpCode = info.TtposErpCode
+					// TtposPrice: TTPOS 店内价格
+					item.TtposPrice = info.TtposPrice
+					// 分类信息
+					item.TtposCategoryUuid = info.TtposCategoryUuid
+					item.TtposCategoryName = info.TtposCategoryName
+					item.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+					item.TtposParentCategoryName = info.TtposParentCategoryName
+					// 标记异常商品
+					if info.TtposName == "" || info.Name == "" {
+						abnormalProductIds = append(abnormalProductIds, item.TtposProductPackageUuid)
+					}
 				}
 			} else if item.IsMapped == 0 {
 				// 未映射商品：使用平台菜单名称
@@ -900,28 +918,40 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 				// 设置修饰符名称
 				if modifier.IsMapped == 1 && modifier.TtposModifierUuid > 0 {
 					// 已映射修饰符：使用修饰符名称和数量
-					if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok && info.Name != "" {
+					if info, ok := modifierInfos[modifier.TtposModifierUuid]; ok {
 						// ModifierName: 用于显示（commodity: 外卖表优先, 其他: 核心表）
 						modifier.ModifierName = info.Name
 						// TtposModifierName: 用于标识（始终来自核心表）
 						modifier.TtposModifierName = info.TtposName
 						// TtposModifierErpCode: ERP编码
 						modifier.TtposModifierErpCode = info.TtposErpCode
-
+						// TtposPrice: TTPOS 店内价格
+						modifier.TtposPrice = info.TtposPrice
+						// 分类信息
+						modifier.TtposCategoryUuid = info.TtposCategoryUuid
+						modifier.TtposCategoryName = info.TtposCategoryName
+						modifier.TtposParentCategoryUuid = info.TtposParentCategoryUuid
+						modifier.TtposParentCategoryName = info.TtposParentCategoryName
+						// 计算单价
+						modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(modifier.Quantity))).InexactFloat64()
 						// 如果是 commodity 类型，设置规格信息和数量
-						if modifier.TtposModifierType == string(valueobject.ModifierTypeCommodity) {
+						if modifier.IsCommodity() {
 							modifier.TtposProductPackageUuid = info.TtposProductPackageUuid
 							modifier.TtposFlavorProductBomUuid = info.TtposFlavorProductBomUuid
 							modifier.TtposFlavorName = info.TtposFlavorName
-
 							// 使用TTPOS数量覆盖平台数量
 							if info.Num > 0 {
-								modifier.Quantity = int(info.Num)
+								modifier.Price = decimal.NewFromInt(int64(modifier.Price)).Div(decimal.NewFromInt(int64(info.Num))).InexactFloat64()
+								modifier.Quantity = int(decimal.NewFromInt(int64(info.Num)).Mul(decimal.NewFromInt(int64(item.Quantity))).InexactFloat64())
 							}
+						}
+
+						// 标记异常修饰符
+						if info.Name == "" || info.TtposName == "" {
+							abnormalProductIds = append(abnormalProductIds, modifier.TtposProductPackageUuid)
 						}
 					}
 				} else if modifier.IsMapped == 0 {
-					// 未映射修饰符：使用平台菜单名称
 					if name, ok := platformModifierNames[modifier.PlatformModifierId]; ok && name != "" {
 						modifier.ModifierName = name
 					}
@@ -980,10 +1010,18 @@ func (s *takeoutOrderSrv) CreateOrder(ctx context.Context, order *takeoutModel.T
 		}
 
 		// 5. 检查商品映射状态
-		if hasUnmapped {
+		if hasUnmapped || len(abnormalProductIds) > 0 {
 			// 标记订单为异常状态
 			order.IsAbnormal = 1
-			order.AbnormalDetail = "订单包含未映射的商品"
+			if len(abnormalProductIds) > 0 {
+				abnormalProductIdsStr := make([]string, 0, len(abnormalProductIds))
+				for _, productId := range abnormalProductIds {
+					abnormalProductIdsStr = append(abnormalProductIdsStr, strconv.FormatUint(productId, 10))
+				}
+				order.AbnormalDetail = "订单包含被删除的商品: " + strings.Join(abnormalProductIdsStr, ",")
+			} else {
+				order.AbnormalDetail = "订单包含未映射的商品"
+			}
 			if err := orderRepoTx.Update(order); err != nil {
 				logger.Logger.Error("更新订单异常状态失败", zap.Error(err))
 				return errors.WithMessage(err, "更新订单异常状态失败")
@@ -1277,7 +1315,7 @@ func (s *takeoutOrderSrv) extractAndSaveTakeoutOrderMaterials(ctx context.Contex
 }
 
 // UpdateOrderStatus 更新订单状态
-func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, status string) error {
+func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid string, status string, message string) error {
 	db := ctx.GetDB()
 
 	// 开启事务
@@ -1304,6 +1342,12 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 			order.OrderState = newOrderState // 更新内部状态码
 		}
 		order.PlatformOrderState = status // 更新平台原始状态
+
+		// 更新取消时间
+		if newOrderState == valueobject.TakeoutOrderStateCanceled || newOrderState == valueobject.TakeoutOrderStateRejected {
+			order.RejectedTime = time.Now().Unix()
+			order.RejectReason = message
+		}
 
 		// 4. 更新订单到数据库
 		if err := orderRepoTx.Update(order); err != nil {
@@ -1334,6 +1378,7 @@ func (s *takeoutOrderSrv) UpdateOrderStatus(ctx context.Context, orderUuid strin
 					order.TakeoutOrderUuid,
 					ctx.GetCompanyUuid(),
 					"订单已取消",
+					newOrderState,
 				))
 			case valueobject.TakeoutOrderStateCompleted:
 				// 订单完成事件

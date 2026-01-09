@@ -553,6 +553,24 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	companyName := ctx.GetCompany().Name
 	companySetting := ctx.GetCompanySetting()
 	headquarterUuid := companySetting.HeadquarterUuid
+
+	// 这里要验证是否允许调入和调出
+	if headquarterUuid > 0 {
+		copyCtx := ctx.Copy()
+		copyCtx.SetCompanyUuid(headquarterUuid)
+		businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
+		if err != nil {
+			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("获取公司业务设置失败"), err.Error())
+		}
+		if !businessSetting.IsAllowTransferIn() && reqs.TransferType == 1 {
+			return resp.TransferOrderCreateResp{}, errors.New("不允许调入")
+		}
+		if !businessSetting.IsAllowTransferOut() && reqs.TransferType == 2 {
+			return resp.TransferOrderCreateResp{}, errors.New("不允许调出")
+		}
+	}
+
+	// 获取数据库
 	if companySetting.IsHeadquarter() {
 		headquarterUuid = companyUuid
 	}

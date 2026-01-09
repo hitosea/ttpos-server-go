@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-cashier-business-data-product-summary-category-sales](../../../shared/specs/active/story-cashier-business-data-product-summary-category-sales/requirements.md)      |
+| **关联 Spec** | [story-cashier-business-data-product-summary-category-sales](../../../shared/specs/archived/v2.12/story-cashier-business-data-product-summary-category-sales/requirements.md)      |
 
 ---
 

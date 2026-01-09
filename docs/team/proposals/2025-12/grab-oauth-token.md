@@ -1,7 +1,7 @@
 # 提案: Grab OAuth2 Token 接口实现
 
-> **状态**: 已采纳
-> **关联 Spec**: [task-takeout-grab-oauth-token](../../../shared/specs/active/task-takeout-grab-oauth-token/requirements.md)
+> **状态**: ✅ 已完成 - 已发布 v2.12
+> **关联 Spec**: [task-takeout-grab-oauth-token](../../../shared/specs/archived/v2.12/task-takeout-grab-oauth-token/requirements.md)
 
 ## 1. 背景与动机 (Background and Motivation)
 目前 `ttpos-takeout` 模块集成了 GrabFood 业务。为了调用 GrabFood API，需要获取 OAuth2 Access Token。

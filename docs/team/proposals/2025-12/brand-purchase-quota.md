@@ -28,10 +28,10 @@
 | **提案人**    | BenDaye                                                                                          |
 | **日期**      | 2025-12-25                                                                                       |
 | **目标版本**  | 待定                                                                                             |
-| **状态**      | 进行中                                                                                           |
+| **状态**      | 已通过 - Spec 已创建                                                                                           |
 | **版本类型**  | MVP（最小可行产品）                                                                              |
-| **关联任务**  | -                                                                                                |
-| **关联 Spec** | [story-shop-brand-purchase-quota](../../../shared/specs/active/story-shop-brand-purchase-quota/) |
+| **关联任务**  | DooTask #38158                                                                                                |
+| **关联 Spec** | [story-shop-brand-procurement-monthly-quota](../../../shared/specs/active/story-shop-brand-procurement-monthly-quota/) |
 
 ---
 
@@ -217,7 +217,7 @@ CREATE TABLE ttpos_purchase_quota_config (
     headquarter_config_uuid BIGINT(20) UNSIGNED DEFAULT NULL COMMENT '总部配置UUID',
 
     -- 状态字段
-    status            TINYINT(4) NOT NULL DEFAULT 1 COMMENT '状态: 1=启用 0=禁用',
+    status            TINYINT(4) NOT NULL DEFAULT 1 COMMENT '状态: ✅ 已完成 - 已发布 v2.12
     create_time       INT(10) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     update_time       INT(10) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     delete_time       INT(10) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

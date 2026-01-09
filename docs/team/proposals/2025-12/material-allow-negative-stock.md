@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-erp-material-allow-negative-stock](../../../shared/specs/active/story-erp-material-allow-negative-stock/requirements.md)      |
+| **关联 Spec** | [story-erp-material-allow-negative-stock](../../../shared/specs/archived/v2.12/story-erp-material-allow-negative-stock/requirements.md)      |
 
 ---
 

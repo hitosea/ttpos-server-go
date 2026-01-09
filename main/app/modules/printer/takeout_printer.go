@@ -25,7 +25,7 @@ import (
  */
 func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 	order *takeoutModel.TakeoutOrder,
-	receiptType string, // "merchant" 或 "customer"
+	receiptType string, // printerConst.TakeoutReceiptTypeMerchant、TakeoutReceiptTypeCustomer 或 TakeoutReceiptTypeRefund
 	firstExecution int,
 ) (*resp.PrinterData, error) {
 	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
@@ -58,12 +58,18 @@ func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
-	// 确定模板类型（商家联或顾客联）
+	// 设置打印机宽度
+	p.SetPrinterWidth(settingPrinterInfo.PrinterWidth)
+
+	// 确定模板类型（商家联、顾客联或退单联）
 	templateType := printerConst.PrinterTemplateTakeoutMerchant
 	isMerchantReceipt := true // 默认是商家联
-	if receiptType == "customer" {
+	if receiptType == printerConst.TakeoutReceiptTypeCustomer {
 		templateType = printerConst.PrinterTemplateTakeoutCustomer
 		isMerchantReceipt = false
+	} else if receiptType == printerConst.TakeoutReceiptTypeRefund {
+		templateType = printerConst.PrinterTemplateTakeoutRefund
+		isMerchantReceipt = true // 退单联与商家联类似，显示完整信息
 	}
 
 	// 获取打印模板

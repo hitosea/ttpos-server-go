@@ -26,10 +26,17 @@ type TakeoutOrderItemModifier struct {
 	TtposFlavorProductBomUuid uint64 `gorm:"column:ttpos_flavor_product_bom_uuid" json:"ttpos_flavor_product_bom_uuid"` // TTPOS 规格商品物料UUID（commodity类型对应product_package_group_item.product_bom_uuid）
 	TtposFlavorName           string `gorm:"column:ttpos_flavor_name;type:text" json:"ttpos_flavor_name"`               // TTPOS 规格名称（commodity类型使用）
 
+	// TTPOS 修饰符分类信息
+	TtposCategoryUuid       uint64 `gorm:"column:ttpos_category_uuid" json:"ttpos_category_uuid"`               // TTPOS分类UUID(关联 ttpos_product_category.uuid)
+	TtposCategoryName       string `gorm:"column:ttpos_category_name" json:"ttpos_category_name"`               // TTPOS分类名称
+	TtposParentCategoryUuid uint64 `gorm:"column:ttpos_parent_category_uuid" json:"ttpos_parent_category_uuid"` // TTPOS父分类UUID
+	TtposParentCategoryName string `gorm:"column:ttpos_parent_category_name" json:"ttpos_parent_category_name"` // TTPOS父分类名称
+
 	// 数量和价格
-	Quantity int     `gorm:"column:quantity" json:"quantity"`
-	Price    float64 `gorm:"column:price;type:decimal(10,4)" json:"price"` // 价格(元,4位小数)
-	Tax      float64 `gorm:"column:tax;type:decimal(10,4)" json:"tax"`     // 税费(元,4位小数)
+	Quantity   int     `gorm:"column:quantity" json:"quantity"`
+	Price      float64 `gorm:"column:price;type:decimal(10,4)" json:"price"`             // 价格(元,4位小数) - 外卖平台价格
+	TtposPrice float64 `gorm:"column:ttpos_price;type:decimal(20,4)" json:"ttpos_price"` // TTPOS店内价格(元,4位小数)
+	Tax        float64 `gorm:"column:tax;type:decimal(10,4)" json:"tax"`                 // 税费(元,4位小数)
 
 	// 关联状态
 	IsMapped int `gorm:"column:is_mapped" json:"is_mapped"`
