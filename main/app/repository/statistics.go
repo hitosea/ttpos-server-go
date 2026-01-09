@@ -556,6 +556,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 	}
 
 	// 再处理外卖订单数据，累加到统计表数据上
+	// 使用 decimal 进行精确计算，避免浮点数精度问题
 	for _, item := range takeoutData {
 		if !item.ProductPackageUuid.Valid {
 			continue
@@ -566,14 +567,22 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart in
 			// sale_price 保持使用统计表的值（原有逻辑）
 			if item.SaleNum.Valid {
 				if existing.SaleNum.Valid {
-					existing.SaleNum.Float64 += item.SaleNum.Float64
+					// 使用 decimal 进行精确累加
+					existingDecimal := decimal.NewFromFloat(existing.SaleNum.Float64)
+					itemDecimal := decimal.NewFromFloat(item.SaleNum.Float64)
+					sumDecimal := existingDecimal.Add(itemDecimal)
+					existing.SaleNum.Float64 = sumDecimal.InexactFloat64()
 				} else {
 					existing.SaleNum = item.SaleNum
 				}
 			}
 			if item.SaleAmount.Valid {
 				if existing.SaleAmount.Valid {
-					existing.SaleAmount.Float64 += item.SaleAmount.Float64
+					// 使用 decimal 进行精确累加
+					existingDecimal := decimal.NewFromFloat(existing.SaleAmount.Float64)
+					itemDecimal := decimal.NewFromFloat(item.SaleAmount.Float64)
+					sumDecimal := existingDecimal.Add(itemDecimal)
+					existing.SaleAmount.Float64 = sumDecimal.InexactFloat64()
 				} else {
 					existing.SaleAmount = item.SaleAmount
 				}
