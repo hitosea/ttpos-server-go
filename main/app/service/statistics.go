@@ -829,6 +829,17 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 		ctx.GetLanguage(),
 	)
 
+	// 获取外卖订单数量并累加到 orderNum
+	takeoutSaleData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutSale(
+		repository.CountTakeoutReq{
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+		},
+	)
+	orderNum += takeoutSaleData.TotalOrderNum
+
 	// 合并分类数据：使用 map 按分类UUID合并
 	categoryMap := make(map[string]*CountCategoryListResp)
 	for _, category := range categoryData {

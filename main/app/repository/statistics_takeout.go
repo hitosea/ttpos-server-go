@@ -185,9 +185,9 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		// 4. 总退款金额：当 order_state = 60 时统计（已取消订单的顾客实付）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS total_refund_amount", canceledOrderState),
 		// 5. 最小订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS min_order_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS min_order_amount", businessStatesStr),
 		// 6. 最大订单金额：当 order_state 为有效状态时统计（使用顾客实付）
-		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS max_order_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS max_order_amount", businessStatesStr),
 		// 7. 总优惠折扣：当 order_state 为有效状态时统计 platform_discount + merchant_discount + basket_promo
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_discount + t.merchant_discount + t.basket_promo, 0)), 0) AS total_discount", validStatesStr),
 		// 8. 总税费：当 order_state 为营业收入状态时统计 tax
@@ -201,7 +201,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		// 12. 总商品数量：当 order_state 为有效状态时统计，关联商品表的 quantity 字段
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, IFNULL(t.total_quantity, 0), 0)), 0) AS total_product_num", validStatesStr),
 		// 13. 总订单金额：当 order_state 为有效状态时统计（使用顾客实付，用于计算平均值）
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_order_amount", validStatesStr),
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_order_amount", businessStatesStr),
 		// 14. 原商品金额：当 order_state 为有效状态时统计（使用小计金额，兼容前端）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.subtotal, 0)), 0) AS total_product_origin_price", validStatesStr),
 	}
@@ -779,7 +779,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutProduct(req CountTakeoutReq, languag
 		// 规格名称：如果是套餐商品（ttpos_product_type = 1），则为空；否则从修饰符表获取（JSON格式需要提取）
 		// 注意：在 GROUP BY 中需要使用原始表达式，不能使用聚合函数
 		fmt.Sprintf("IF(MAX(toi.ttpos_product_type) = 1, '', COALESCE(MAX(JSON_UNQUOTE(JSON_EXTRACT(toim.ttpos_modifier_name, '$.%s'))), '')) AS flavor_name", language),
-		"AVG(toi.price) AS sale_price", // 使用 AVG 因为同一个商品可能有不同的单价
+		"toi.ttpos_price AS sale_price", // 使用 ttpos_price 店内商品价格
 		// 销量：所有 validOrderStates 都统计（包括取消订单）
 		"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
 		// 合计：只统计 businessOrderStates（不包括取消订单），使用商品实收=单价*数量
