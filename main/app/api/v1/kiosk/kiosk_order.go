@@ -318,6 +318,38 @@ func (h *OrderHandler) OrderTakeout(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentInfo 获取结账页面信息
+// @Summary 获取结账页面信息
+// @Description 获取结账页面信息
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query string true "销售账单UUID"
+// @param sale_order_uuid query string true "销售订单UUID"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/payment/info [get]
+func (h *OrderHandler) OrderPaymentInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到kiosk结账页面信息接口请求")
+
+	params := &req.InstantOrderPaymentInfoReq{}
+	if err := params.Parse(c); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Info("查询kiosk销售订单结账页面信息", zap.Any("params", params))
+	// 获取销售订单的付款信息
+	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, nil, params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -350,5 +382,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                            // 取消订单
 		privateApi.GET("/order/check", wrapper.OrderCheck)                               // 订单检查
 		privateApi.POST("/order/takeout", wrapper.OrderTakeout)                          // 打包
+		privateApi.GET("/order/payment/info", wrapper.OrderPaymentInfo)                  // 获取结账页面信息
 	}
 }
