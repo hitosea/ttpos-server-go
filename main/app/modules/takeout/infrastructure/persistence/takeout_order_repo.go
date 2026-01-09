@@ -504,8 +504,8 @@ func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, uint64, error
 	// 定义查询结果结构体
 	type ShiftLogWithDevice struct {
 		appModel.StaffShiftLog
-		IsMain           uint8     `gorm:"column:is_main"`
-		FinallyLoginTime time.Time `gorm:"column:finally_login_time"`
+		IsMain           uint8 `gorm:"column:is_main"`
+		FinallyLoginTime int64 `gorm:"column:finally_login_time"`
 	}
 
 	// 一次性查询所有未交班的班次（关联设备信息）
