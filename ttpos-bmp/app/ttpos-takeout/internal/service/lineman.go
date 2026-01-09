@@ -12,7 +12,24 @@ import (
 )
 
 type (
-	ILinemanToken interface {
+	ILineman interface {
+		// SyncMenu 同步菜单到 Lineman
+		// 参数:
+		//   - ctx: 上下文
+		//   - shopUUID: 门店UUID
+		//
+		// 返回:
+		//   - error: 错误信息
+		SyncMenu(ctx context.Context, shopUUID uint64) error
+		// BuildMenuPayload 构建菜单数据
+		// 参数:
+		//   - ctx: 上下文
+		//   - ttposMenuJSON: TTPOS 菜单 JSON 字符串
+		//
+		// 返回:
+		//   - *lineman.MenuSyncRequest: 菜单数据
+		//   - error: 错误信息
+		BuildMenuPayload(ctx context.Context, ttposMenuJSON string) (*lineman.MenuSyncRequest, error)
 		// GenerateToken 根据 client_id / client_secret 生成访问 Token
 		// 采用 JWT（HS256）实现
 		// 参数：
@@ -81,16 +98,16 @@ type (
 )
 
 var (
-	localLinemanToken ILinemanToken
+	localLineman ILineman
 )
 
-func LinemanToken() ILinemanToken {
-	if localLinemanToken == nil {
-		panic("implement not found for interface ILinemanToken, forgot register?")
+func Lineman() ILineman {
+	if localLineman == nil {
+		panic("implement not found for interface ILineman, forgot register?")
 	}
-	return localLinemanToken
+	return localLineman
 }
 
-func RegisterLinemanToken(i ILinemanToken) {
-	localLinemanToken = i
+func RegisterLineman(i ILineman) {
+	localLineman = i
 }

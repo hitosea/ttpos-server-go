@@ -82,6 +82,7 @@ app:
           timeout: "60s"
     lineman:
       platform:
+        partnerId: "$LINEMAN_PARTNER_ID"  # Partner ID，默认 wallace
         clientId: "$LINEMAN_PLATFORM_CLIENT_ID"
         clientSecret: "$LINEMAN_PLATFORM_CLIENT_SECRET"
         secretKey: "$LINEMAN_PLATFORM_SECRET_KEY"  # JWT 签名密钥

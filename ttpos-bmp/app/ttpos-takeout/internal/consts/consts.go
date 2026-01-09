@@ -56,6 +56,8 @@ func MapGrabIntegrationStatus(grabStatus string) ProviderShopStatus {
 type MenuSyncType string
 
 const (
+	// MenuSyncTypeFull 全量菜单同步
+	MenuSyncTypeFull MenuSyncType = "FULL"
 	// MenuSyncTypeBatchUpdateItem 批量更新商品
 	MenuSyncTypeBatchUpdateItem MenuSyncType = "BATCH_UPDATE_ITEM"
 	// MenuSyncTypeBatchUpdateModifier 批量更新修饰符

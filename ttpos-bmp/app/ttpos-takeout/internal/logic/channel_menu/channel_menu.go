@@ -188,6 +188,48 @@ func (s *sChannelMenu) SaveMenuSnapshot(ctx context.Context, req *api.SaveMenuSn
 	return &api.SaveMenuSnapshotResp{}, nil
 }
 
+// LogMenuSync 记录菜单同步日志
+// 通用方法，供各个渠道（grab、lineman 等）调用
+// 参数：
+//   - ctx: 上下文
+//   - merchantID: 商户ID
+//   - providerName: 渠道名称（grab/lineman）
+//   - syncType: 同步类型（FULL/PARTIAL/BATCH_UPDATE_ITEM等）
+//   - requestID: 请求ID（来自第三方API响应）
+//   - success: 是否成功
+//   - menuSnapshot: 菜单快照（JSON 字符串，可选）
+//   - errMsg: 错误信息（失败时）
+func (s *sChannelMenu) LogMenuSync(ctx context.Context, merchantID, providerName, syncType, requestID string, success bool, menuSnapshot, errMsg string) error {
+	logUUID := uuid.MustGetID()
+	status := "SUCCESS"
+	if !success {
+		status = "FAIL"
+	}
+
+	logDo := g.Map{
+		dao.MenuLog.Columns().Uuid:         logUUID,
+		dao.MenuLog.Columns().MerchantId:   merchantID,
+		dao.MenuLog.Columns().ProviderName: providerName,
+		dao.MenuLog.Columns().SyncType:     syncType,
+		dao.MenuLog.Columns().RequestId:    requestID,
+		dao.MenuLog.Columns().Status:       status,
+		dao.MenuLog.Columns().MenuSnapshot: menuSnapshot,
+		dao.MenuLog.Columns().ErrorMsg:     errMsg,
+	}
+
+	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
+	if err != nil {
+		g.Log().Errorf(ctx, "[ChannelMenu] 插入菜单同步日志失败: merchantID=%s, provider=%s, syncType=%s, error=%v",
+			merchantID, providerName, syncType, err)
+		return gerror.Wrap(err, "插入菜单同步日志失败")
+	}
+
+	g.Log().Debugf(ctx, "[ChannelMenu] 菜单同步日志已插入: logUUID=%d, merchantID=%s, provider=%s, syncType=%s, success=%v",
+		logUUID, merchantID, providerName, syncType, success)
+
+	return nil
+}
+
 // notifyGrabMenuUpdate 异步通知 Grab 菜单更新
 func (s *sChannelMenu) notifyGrabMenuUpdate(ctx context.Context, shopUuid uint64) {
 	// 1. 获取门店的 Grab 配置

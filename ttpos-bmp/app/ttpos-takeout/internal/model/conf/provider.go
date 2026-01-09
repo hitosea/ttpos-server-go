@@ -21,6 +21,7 @@ type Grab struct {
 
 // Lineman LINE MAN 平台配置（platform 节点）
 type Lineman struct {
+	PartnerId    string        `json:"partnerId"`    // Partner ID（默认值）
 	ClientID     string        `json:"clientId"`     // OAuth Client ID
 	ClientSecret string        `json:"clientSecret"` // OAuth Client Secret
 	SecretKey    string        `json:"secretKey"`    // JWT 签名密钥
