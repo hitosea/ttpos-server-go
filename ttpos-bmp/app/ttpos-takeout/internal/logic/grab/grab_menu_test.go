@@ -1,4 +1,4 @@
-package grab_menu
+package grab
 
 import (
 	"context"
@@ -88,7 +88,7 @@ app:
 
 		// 测试
 		ctx := context.Background()
-		svc := &sGrabMenu{}
+		svc := &sGrab{}
 		result, err := svc.fetchMenuFromTTpos(ctx, 12345)
 
 		// 验证
@@ -118,7 +118,7 @@ app:
 
 		// 测试
 		ctx := context.Background()
-		svc := &sGrabMenu{}
+		svc := &sGrab{}
 		result, err := svc.fetchMenuFromTTpos(ctx, 12345)
 
 		// 验证：应该返回错误
@@ -137,7 +137,7 @@ app:
 
 		// 测试
 		ctx := context.Background()
-		svc := &sGrabMenu{}
+		svc := &sGrab{}
 		result, err := svc.fetchMenuFromTTpos(ctx, 12345)
 
 		// 验证：应该返回配置缺失错误
@@ -170,7 +170,7 @@ app:
 
 		// 测试
 		ctx := context.Background()
-		svc := &sGrabMenu{}
+		svc := &sGrab{}
 		result, err := svc.fetchMenuFromTTpos(ctx, 12345)
 
 		// 验证：应该返回业务错误

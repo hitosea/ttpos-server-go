@@ -1,5 +1,5 @@
 // Package grab_store 提供 GrabFood 门店服务的业务逻辑
-package grab_store
+package grab
 
 import (
 	"context"
@@ -16,19 +16,12 @@ import (
 // sGrabStore 门店服务
 type sGrabStore struct{}
 
-func init() {
-	service.RegisterGrabStore(New())
-}
 
-// New 创建门店服务实例
-func New() *sGrabStore {
-	return &sGrabStore{}
-}
 
 // HandleIntegrationStatus 处理门店集成状态回调
 // 签名验证已由中间件完成，此处只处理业务逻辑
 // 使用 SDK grabfood.PushIntegrationStatusWebhookRequest
-func (s *sGrabStore) HandleIntegrationStatus(ctx context.Context, body []byte) error {
+func (s *sGrab) HandleIntegrationStatus(ctx context.Context, body []byte) error {
 	// 1. 解析请求 - 使用 SDK Model
 	var req grabfood.PushIntegrationStatusWebhookRequest
 	if err := json.Unmarshal(body, &req); err != nil {

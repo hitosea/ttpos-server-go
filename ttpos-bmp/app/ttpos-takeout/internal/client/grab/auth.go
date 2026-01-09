@@ -1,4 +1,4 @@
-// Package grab 提供 GrabFood API 集成的业务逻辑
+// Package grab 提供 Grab SDK 客户端封装
 package grab
 
 import (
@@ -37,11 +37,16 @@ type SignatureVerifier struct {
 }
 
 // newSignatureVerifier 创建签名验证器 (内部使用)
-// 生产环境通过 service.Grab().getVerifier() 获取
+// 生产环境通过 client.Default().GetVerifier() 获取
 func newSignatureVerifier(secretKey string) *SignatureVerifier {
 	return &SignatureVerifier{
 		secretKey: secretKey,
 	}
+}
+
+// NewSignatureVerifier 创建签名验证器 (公开方法，用于测试)
+func NewSignatureVerifier(secretKey string) *SignatureVerifier {
+	return newSignatureVerifier(secretKey)
 }
 
 // VerifySignature 验证 Grab Webhook 签名
