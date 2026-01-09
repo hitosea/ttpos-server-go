@@ -108,7 +108,7 @@ func (s *sShopActivate) activateGrab(ctx context.Context, req *shop.ActivateShop
 		ShopUuid:     req.ShopUuid,
 		RequestId:    req.RequestId,
 	}
-	grabResp, err := service.GrabSelfServe().CreateSelfServeJourney(ctx, grabReq)
+	grabResp, err := service.Grab().CreateSelfServeJourneyWithReq(ctx, grabReq)
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopActivate] Grab 渠道激活失败: shop_uuid=%s, error=%v", req.ShopUuid, err)
 		return nil, gerror.Wrap(err, "Grab 渠道激活失败")
