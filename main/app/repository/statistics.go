@@ -1047,6 +1047,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 
 	// 构建外卖商品销售查询（子查询）
 	// 使用 validOrderStates 状态筛选：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
+	// 仅统计 accepted_time > 0 的订单（有效状态和取消状态都需要接单后才能统计）
 	validStatesStr := buildStateInCondition(validOrderStates)
 	takeoutQuery := r.db.Table(takeoutOrderItemTable).
 		Select(
@@ -1072,6 +1073,9 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	if req.StartTime > 0 && req.EndTime > 0 {
 		takeoutQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.StartTime, req.EndTime)
 	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	takeoutQuery.Where("to_order.accepted_time > 0")
 
 	// 商品分类筛选
 	if len(allCategoryUuids) > 0 {
@@ -1366,30 +1370,25 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 	var takeoutOrderQuery string
 	var takeoutOrderArgs []any
 	if req.IsDelivery {
-		validStatesStr := "("
-		for i, state := range []int{10, 20, 30, 40, 60} {
-			if i > 0 {
-				validStatesStr += ","
-			}
-			validStatesStr += fmt.Sprintf("%d", state)
-		}
-		validStatesStr += ")"
-		businessStatesStr := "(10,20,30,40)"
+		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
+		validStatesStr := buildStateInCondition(validOrderStates)
+		businessStatesStr := buildStateInCondition(businessOrderStates)
 
 		takeoutOrderQuery = fmt.Sprintf(`
 		SELECT 
 			FLOOR(accepted_time / %d) * %d AS period_start_time,
 			IF(order_state IN %s, eater_payment, 0) AS order_amount,
-			IF(order_state = 60, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount,
+			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount,
 			0 AS refund_amount,
 			uuid AS sale_bill_uuid,
 			0 AS meal_num
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
+			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
-		`, req.PeriodSeconds, req.PeriodSeconds, validStatesStr, businessStatesStr, validStatesStr)
+		`, req.PeriodSeconds, req.PeriodSeconds, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr)
 		takeoutOrderArgs = []any{constant.NotDeleted, req.StartTime, req.EndTime}
 	}
 
@@ -1476,11 +1475,13 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 			countArgs = append(countArgs, billTypeList)
 		}
 
-		countQuery += `
+		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
+		takeoutValidStatesStr := buildStateInCondition(validOrderStates)
+		countQuery += fmt.Sprintf(`
 			UNION
-			SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN (10,20,30,40,60) AND accepted_time >= ? AND accepted_time <= ?
+			SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
 			) AS all_periods
-		`
+		`, takeoutValidStatesStr)
 		countArgs = append(countArgs, req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime)
 		r.db.Raw(countQuery, countArgs...).Scan(&total)
 	} else {
@@ -2464,7 +2465,7 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 		req.Cycle,
 	).Scan(&orderCountData)
 
-	// 2.1. 查询外卖订单取消订单数据（order_state = 60）
+	// 2.1. 查询外卖订单取消订单数据（order_state = 60，且 accepted_time > 0）
 	type takeoutRefundRawData struct {
 		AcceptedTime int64   // 接单时间戳
 		RefundAmount float64 // 退款金额（eater_payment）
@@ -2479,9 +2480,10 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state = ?
+			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
-	`
+		`
 	r.db.Raw(takeoutRefundQuery,
 		constant.NotDeleted,
 		canceledOrderState, // 60 = 已取消
@@ -2503,6 +2505,7 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
 			AND order_state IN %s
+			AND accepted_time > 0
 			AND accepted_time >= ?
 			AND accepted_time <= ?
 		GROUP BY FROM_UNIXTIME(accepted_time, IF(? = 1, '%%Y-%%m', '%%Y-%%m-%%d'))

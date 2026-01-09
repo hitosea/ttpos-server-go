@@ -8,7 +8,6 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	grabclient "ttpos-bmp/app/ttpos-takeout/internal/client/grab"
-	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 // MiddlewareGrabSignatureAuth Grab Webhook HMAC-SHA256 签名验证中间件
@@ -36,8 +35,8 @@ func MiddlewareGrabSignatureAuth(r *ghttp.Request) {
 	// 2. 获取请求体（GoFrame 自动缓存，后续 handler 可再次读取）
 	body := r.GetBody()
 
-	// 3. 调用 service 验证签名
-	if err := service.Grab().VerifyWebhookSignature(ctx, signature, timestamp, body); err != nil {
+	// 3. 验证签名
+	if err := grabclient.Default().GetVerifier().VerifySignature(signature, timestamp, body); err != nil {
 		g.Log().Warningf(ctx, "[grab-signature-auth] Signature verification failed: %v", err)
 
 		// 根据错误类型返回不同的错误信息

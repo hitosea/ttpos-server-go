@@ -7,7 +7,10 @@ import (
 	appModel "ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/value_object"
+	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -23,10 +26,12 @@ type ITakeoutOrderRepo interface {
 	GetList(options ...DBOption) ([]*model.TakeoutOrder, int64, error)
 	GetCount(options ...DBOption) (int64, error) // 获取订单数量
 	Delete(uuid uint64) error
-	SetStaffShiftLogUuid(order *model.TakeoutOrder, staffUuid uint64) error     // 设置员工班次日志UUID
-	BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error) // 批量更新班次UUID
-	GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error)         // 获取当前订单的ERP开账名称
-	GetShiftLogByOrderUuid(orderUuid uint64) (*appModel.StaffShiftLog, error)   // 根据订单UUID获取班次信息
+	SetStaffShiftLogUuid(order *model.TakeoutOrder) error                                   // 设置员工班次日志UUID
+	BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error)             // 批量更新班次UUID
+	GetPendingShiftLogOrders() ([]*model.TakeoutOrder, error)                               // 获取待分配班次的订单（staff_shift_log_uuid = 0，排除已取消和已拒单）
+	BatchAssignShiftLog(shiftLogUuid, staffUuid uint64, orderUuids []uint64) (int64, error) // 批量分配班次给订单
+	GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error)                     // 获取当前订单的ERP开账名称
+	GetShiftLogByOrderUuid(orderUuid uint64) (*appModel.StaffShiftLog, error)               // 根据订单UUID获取班次信息
 
 	// 选项方法
 	WithPreload(options ...DBOption) DBOption
@@ -83,7 +88,7 @@ func (r *TakeoutOrderRepoImpl) UpdateByMap(uuid uint64, data map[string]interfac
 // GetByUuid 根据UUID获取外卖订单
 func (r *TakeoutOrderRepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*model.TakeoutOrder, error) {
 	var order model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -104,7 +109,7 @@ func (r *TakeoutOrderRepoImpl) GetByUuid(uuid uint64, options ...DBOption) (*mod
 // GetByTakeoutOrderUuid 根据 TakeoutOrderUuid 字符串获取外卖订单
 func (r *TakeoutOrderRepoImpl) GetByTakeoutOrderUuid(takeoutOrderUuid string, options ...DBOption) (*model.TakeoutOrder, error) {
 	var order model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -125,7 +130,7 @@ func (r *TakeoutOrderRepoImpl) GetByTakeoutOrderUuid(takeoutOrderUuid string, op
 // GetByPlatformOrderId 根据平台订单ID获取外卖订单
 func (r *TakeoutOrderRepoImpl) GetByPlatformOrderId(platform, platformOrderId string, options ...DBOption) (*model.TakeoutOrder, error) {
 	var order model.TakeoutOrder
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -148,7 +153,7 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 	var orders []*model.TakeoutOrder
 	var total int64
 
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
 
 	// 应用选项构建查询条件
 	countDB := db
@@ -179,7 +184,7 @@ func (r *TakeoutOrderRepoImpl) GetList(options ...DBOption) ([]*model.TakeoutOrd
 // GetCount 获取外卖订单数量
 func (r *TakeoutOrderRepoImpl) GetCount(options ...DBOption) (int64, error) {
 	var count int64
-	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", constant.NotDeleted)
+	db := r.db.Model(&model.TakeoutOrder{}).Where("delete_time = ?", 0)
 
 	for _, option := range options {
 		db = option(db)
@@ -196,37 +201,19 @@ func (r *TakeoutOrderRepoImpl) GetCount(options ...DBOption) (int64, error) {
 func (r *TakeoutOrderRepoImpl) Delete(uuid uint64) error {
 	return errors.WithMessage(
 		r.db.Model(&model.TakeoutOrder{}).
-			Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
+			Where("uuid = ? AND delete_time = ?", uuid, 0).
 			Update("delete_time", time.Now().Unix()).Error,
 	)
 }
 
 // SetStaffShiftLogUuid 设置员工班次日志UUID
-func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder, staffUuid uint64) error {
-	if order.StaffShiftLogUuid != 0 {
-		return nil
-	}
-	if staffUuid == 0 {
-		return nil
-	}
-	// 查询员工当前班次
-	var shiftLog struct {
-		Uuid uint64 `gorm:"column:uuid"`
-	}
-	err := r.db.Table("ttpos_staff_shift_log").
-		Select("uuid").
-		Where("staff_uuid = ? AND status = ?", staffUuid, constant.StaffNotHandedOver).
-		Order("id DESC").
-		First(&shiftLog).Error
+func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder) error {
+	shiftLogUuid, err := r.GetAvailableShiftLogUuid()
 	if err != nil {
-		// 如果没有找到班次记录，不报错，返回 nil
-		if err == gorm.ErrRecordNotFound {
-			return nil
-		}
-		return errors.WithMessage(err)
+		logger.Logger.Warn("获取可用班次失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+	} else if shiftLogUuid > 0 {
+		order.StaffShiftLogUuid = shiftLogUuid
 	}
-	// 设置订单的班次UUID
-	order.StaffShiftLogUuid = shiftLog.Uuid
 	return nil
 }
 
@@ -235,7 +222,7 @@ func (r *TakeoutOrderRepoImpl) SetStaffShiftLogUuid(order *model.TakeoutOrder, s
 func (r *TakeoutOrderRepoImpl) BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffUuid uint64) (int64, error) {
 	result := r.db.Model(&model.TakeoutOrder{}).
 		Where("staff_shift_log_uuid = ?", 0).
-		Where("delete_time = ?", constant.NotDeleted).
+		Where("delete_time = ?", 0).
 		Updates(map[string]interface{}{
 			"staff_shift_log_uuid": shiftLogUuid,
 			"accepted_by":          staffUuid,
@@ -248,6 +235,43 @@ func (r *TakeoutOrderRepoImpl) BatchUpdateStaffShiftLogUuid(shiftLogUuid, staffU
 	return result.RowsAffected, nil
 }
 
+// GetPendingShiftLogOrders 获取待分配班次的订单（staff_shift_log_uuid = 0，排除已取消和已拒单）
+func (r *TakeoutOrderRepoImpl) GetPendingShiftLogOrders() ([]*model.TakeoutOrder, error) {
+	var orders []*model.TakeoutOrder
+	err := r.db.Model(&model.TakeoutOrder{}).
+		Where("staff_shift_log_uuid = ?", 0).
+		Where("delete_time = ?", 0).
+		Find(&orders).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询待分配班次的订单失败")
+	}
+
+	return orders, nil
+}
+
+// BatchAssignShiftLog 批量分配班次给订单
+func (r *TakeoutOrderRepoImpl) BatchAssignShiftLog(shiftLogUuid, staffUuid uint64, orderUuids []uint64) (int64, error) {
+	if len(orderUuids) == 0 {
+		return 0, nil
+	}
+
+	result := r.db.Model(&model.TakeoutOrder{}).
+		Where("uuid IN ?", orderUuids).
+		Where("staff_shift_log_uuid = ?", 0).
+		Where("delete_time = ?", 0).
+		Updates(map[string]interface{}{
+			"staff_shift_log_uuid": shiftLogUuid,
+			"accepted_by":          staffUuid,
+		})
+
+	if result.Error != nil {
+		return 0, errors.WithMessage(result.Error, "批量分配班次失败")
+	}
+
+	return result.RowsAffected, nil
+}
+
 // GetErpOpenPosEntryNameByOrderUuid 获取当前订单的ERP开账名称
 func (r *TakeoutOrderRepoImpl) GetErpOpenPosEntryNameByOrderUuid(orderUuid uint64) (string, error) {
 	var erpOpenPosEntryName string
@@ -255,7 +279,7 @@ func (r *TakeoutOrderRepoImpl) GetErpOpenPosEntryNameByOrderUuid(orderUuid uint6
 		Select("s.erpnext_open_pos_entry_name").
 		Joins("LEFT JOIN ttpos_staff_shift_log as s ON o.staff_shift_log_uuid = s.uuid").
 		Where("o.uuid = ?", orderUuid).
-		Where("o.delete_time = ?", constant.NotDeleted).
+		Where("o.delete_time = ?", 0).
 		Scan(&erpOpenPosEntryName).Error
 
 	if err != nil {
@@ -438,7 +462,7 @@ func (r *TakeoutOrderRepoImpl) GetShiftLogByOrderUuid(orderUuid uint64) (*appMod
 	var order model.TakeoutOrder
 	err := r.db.Model(&model.TakeoutOrder{}).
 		Where("uuid = ?", orderUuid).
-		Where("delete_time = ?", constant.NotDeleted).
+		Where("delete_time = ?", 0).
 		Select("staff_shift_log_uuid").
 		First(&order).Error
 
@@ -468,4 +492,66 @@ func (r *TakeoutOrderRepoImpl) GetShiftLogByOrderUuid(orderUuid uint64) (*appMod
 	}
 
 	return &shiftLog, nil
+}
+
+// getAvailableShiftLogUuid 获取可用的班次UUID
+// 优先级：
+// 1. 主收银机的班次（主收银机已登录且未交班）
+// 2. 已登录的收银机中，最先登录的班次
+// 3. 若都没有，返回0（等待下次登录时处理）
+func (r *TakeoutOrderRepoImpl) GetAvailableShiftLogUuid() (uint64, error) {
+	db := r.db
+	deviceRepo := repository.NewDeviceRepo(db)
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 1. 尝试获取主收银机的班次
+	mainDevice, err := deviceRepo.GetDevice(
+		deviceRepo.WhereSource(constant.SourceCashier),
+		deviceRepo.WhereMain(),
+	)
+	if err == nil && mainDevice.FinallyLoginUuid > 0 {
+		// 主收银机已登录，获取其班次
+		shiftLog, err := shiftLogRepo.GetShiftLog(
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("staff_uuid = ? AND status = ?", mainDevice.FinallyLoginUuid, constant.StaffNotHandedOver)
+			},
+			func(db *gorm.DB) *gorm.DB {
+				return db.Order("uuid DESC")
+			},
+		)
+		if err == nil && shiftLog.Uuid > 0 {
+			return shiftLog.Uuid, nil
+		}
+	}
+
+	// 2. 主收银机退出登录或已交班，获取已登录的收银机中，最先登录的班次
+	var devices []appModel.Device
+	err = db.Model(&appModel.Device{}).
+		Where("source = ? AND finally_login_uuid > 0 AND delete_time = ?", constant.SourceCashier, 0).
+		Order("finally_login_time ASC"). // 按登录时间升序，最先登录的在前
+		Find(&devices).Error
+	if err == nil && len(devices) > 0 {
+		// 遍历已登录的收银机，找到第一个有未交班班次的
+		for _, device := range devices {
+			shiftLog, err := shiftLogRepo.GetShiftLog(
+				func(db *gorm.DB) *gorm.DB {
+					return db.Where("staff_uuid = ? AND status = ?", device.FinallyLoginUuid, constant.StaffNotHandedOver)
+				},
+				func(db *gorm.DB) *gorm.DB {
+					return db.Order("uuid DESC")
+				},
+			)
+			if err == nil && shiftLog.Uuid > 0 {
+				logger.Logger.Info("分配到已登录收银机班次",
+					zap.Uint64("shiftLogUuid", shiftLog.Uuid),
+					zap.Uint64("staffUuid", device.FinallyLoginUuid),
+					zap.String("deviceId", device.DeviceId))
+				return shiftLog.Uuid, nil
+			}
+		}
+	}
+
+	// 3. 若都没有班次在登录，返回0（等待下次登录时处理）
+	logger.Logger.Info("未找到可用班次，等待下次登录时处理")
+	return 0, nil
 }

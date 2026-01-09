@@ -1,20 +1,29 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/golang-jwt/jwt/v5"
 
-	"ttpos-bmp/app/ttpos-takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 )
 
 const (
 	// ContextKeyGrabPartnerClaims 用于在 Context 中存储 Grab Partner Token Claims
 	ContextKeyGrabPartnerClaims = "GrabPartnerClaims"
+)
+
+var (
+	tokenSecretKey string
+	tokenMu        sync.RWMutex
 )
 
 // MiddlewareGrabJWTAuth Grab Partner API JWT Token 认证中间件
@@ -60,19 +69,8 @@ func MiddlewareGrabJWTAuth(r *ghttp.Request) {
 		return
 	}
 
-	// 验证 JWT Token 格式：应该包含三个部分，用点号分隔
-	tokenParts := strings.Split(token, ".")
-	if len(tokenParts) != 3 {
-		g.Log().Warningf(ctx, "[grab-jwt-auth] Invalid token format: expected 3 segments, got %d. Token preview: %s...", len(tokenParts), getTokenPreview(token))
-		r.Response.WriteJsonExit(g.Map{
-			"error":             "unauthorized",
-			"error_description": "Invalid token format",
-		})
-		return
-	}
-
-	// 调用 Grab Service 验证 Token
-	claims, err := service.Grab().ParsePartnerToken(token)
+	// 调用本地函数验证 Token
+	claims, err := parsePartnerToken(token)
 	if err != nil {
 		g.Log().Warningf(ctx, "[grab-jwt-auth] Token validation failed: %v. Token preview: %s...", err, getTokenPreview(token))
 		r.Response.WriteJsonExit(g.Map{
@@ -171,4 +169,62 @@ func getTokenPreview(token string) string {
 		previewLen = len(token)
 	}
 	return token[:previewLen]
+}
+
+// getTokenSecretKey 获取密钥（懒加载）
+func getTokenSecretKey(ctx context.Context) string {
+	tokenMu.RLock()
+	if tokenSecretKey != "" {
+		defer tokenMu.RUnlock()
+		return tokenSecretKey
+	}
+	tokenMu.RUnlock()
+
+	tokenMu.Lock()
+	defer tokenMu.Unlock()
+	if tokenSecretKey == "" {
+		var grabCfg conf.Grab
+		if err := g.Cfg().MustGet(ctx, "app.provider.grab.platform").Scan(&grabCfg); err != nil {
+			g.Log().Fatal(ctx, err)
+		}
+		tokenSecretKey = grabCfg.SecretKey
+	}
+	return tokenSecretKey
+}
+
+// parsePartnerToken 校验并解析 Partner Token
+// 参数：
+//   - tokenStr: JWT Token 字符串
+//
+// 返回：
+//   - claims: Token 中的声明信息
+//   - err: 错误信息
+func parsePartnerToken(tokenStr string) (*grab.PartnerTokenClaims, error) {
+	// 清理 token 字符串
+	tokenStr = strings.TrimSpace(tokenStr)
+	if tokenStr == "" {
+		return nil, gerror.New("Token 不能为空")
+	}
+
+	// 验证 JWT Token 格式：应该包含三个部分，用点号分隔
+	tokenParts := strings.Split(tokenStr, ".")
+	if len(tokenParts) != 3 {
+		return nil, gerror.Newf("Token 格式错误: 期望 3 个部分，实际 %d 个部分", len(tokenParts))
+	}
+
+	secretKey := getTokenSecretKey(context.Background())
+	token, err := jwt.ParseWithClaims(tokenStr, &grab.PartnerTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if t.Method != jwt.SigningMethodHS256 {
+			return nil, gerror.Newf("不支持的签名方法: %s", t.Method.Alg())
+		}
+		return []byte(secretKey), nil
+	})
+	if err != nil {
+		return nil, gerror.Wrap(err, "Token 解析失败")
+	}
+	claims, ok := token.Claims.(*grab.PartnerTokenClaims)
+	if !ok || !token.Valid {
+		return nil, gerror.New("Token 无效")
+	}
+	return claims, nil
 }
