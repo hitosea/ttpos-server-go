@@ -92,14 +92,9 @@ func (s *statisticsUtilSrv) MergeTakeoutStatistics(saleData model.StatisticsSale
 	// 如果外卖订单数为0，则使用原有平均订单金额
 	// 如果外卖订单数不为0，则使用总订单金额 / 总订单数
 	var avgOrderAmount decimal.Decimal
-	if takeoutData.TotalOrderNum > 0 {
-		totalOrderAmount := decimal.NewFromFloat(saleData.TotalOrderAmount.Float64).
-			Add(decimal.NewFromFloat(takeoutData.TotalOrderAmount)).
-			Sub(decimal.NewFromFloat(takeoutData.TotalRefundAmount))
-		curTotalOrderNum := totalOrderNum - takeoutData.CancelOrderNum
-		if curTotalOrderNum > 0 {
-			avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(curTotalOrderNum))
-		}
+	if totalOrderNum > 0 {
+		totalOrderAmount := decimal.NewFromFloat(saleData.TotalOrderAmount.Float64).Add(decimal.NewFromFloat(takeoutData.TotalOrderAmount))
+		avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
 	} else {
 		avgOrderAmount = decimal.NewFromFloat(saleData.AvgOrderAmount.Float64)
 	}

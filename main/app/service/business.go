@@ -4862,8 +4862,9 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 
 	// 使用 channel 收集结果，避免竞态条件
 	type resultItem struct {
-		items []resp.CompanyRefundSummaryItem
-		err   error
+		items     []resp.CompanyRefundSummaryItem
+		orderNums map[string]int64 // 日期 -> 订单数，用于汇总时计算退款率
+		err       error
 	}
 	resultChan := make(chan resultItem, len(companyList))
 
@@ -4931,8 +4932,9 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 
 				statisticsData := s.statisticsSrv.CountRefundSummary(shopCtx, statisticsReq)
 
-				// 转换为响应格式
+				// 转换为响应格式，同时保存订单数信息
 				items := make([]resp.CompanyRefundSummaryItem, 0, len(statisticsData.StatisticsRefundSummaryList))
+				orderNums := make(map[string]int64) // 日期 -> 订单数
 				for _, statItem := range statisticsData.StatisticsRefundSummaryList {
 					items = append(items, resp.CompanyRefundSummaryItem{
 						Date:                statItem.Date,
@@ -4945,9 +4947,11 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 						FullRefundAmount:    statItem.FullRefundAmount,
 						FullRefundNum:       statItem.FullRefundNum,
 					})
+					// 保存订单数（按日期累加，因为同一日期可能有多个商家）
+					orderNums[statItem.Date] += statItem.OrderNum
 				}
 
-				resultChan <- resultItem{items: items, err: nil}
+				resultChan <- resultItem{items: items, orderNums: orderNums, err: nil}
 			}(companyItem)
 		})
 	}
@@ -4958,14 +4962,19 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		close(resultChan)
 	}()
 
-	// 收集所有门店的统计数据
+	// 收集所有门店的统计数据，同时收集订单数信息
 	allItems := make([]resp.CompanyRefundSummaryItem, 0)
+	dateOrderNumMap := make(map[string]int64) // 日期 -> 订单数总和（所有商家累加）
 	for result := range resultChan {
 		if result.err != nil {
 			// 记录错误但继续处理其他门店
 			continue
 		}
 		allItems = append(allItems, result.items...)
+		// 累加订单数
+		for date, orderNum := range result.orderNums {
+			dateOrderNumMap[date] += orderNum
+		}
 	}
 
 	// 根据 report 参数决定返回明细表还是汇总表
@@ -5014,7 +5023,7 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 					PartialRefundNum:    item.PartialRefundNum,
 					FullRefundAmount:    decimal.NewFromFloat(item.FullRefundAmount),
 					FullRefundNum:       item.FullRefundNum,
-					OrderNum:            0, // 订单数量需要从原始数据中获取
+					OrderNum:            dateOrderNumMap[item.Date], // 从订单数 map 中获取
 				}
 				// 初始化商家名称集合
 				if dateCompanyNamesMap[item.Date] == nil {
@@ -5063,6 +5072,11 @@ func (s *businessSrv) countCompanyRefundSummary(ctx context.Context, request req
 		// 计算总汇总行（使用 decimal）
 		var totalRefundAmount, totalPartialRefundAmount, totalFullRefundAmount decimal.Decimal
 		var totalRefundNum, totalPartialRefundNum, totalFullRefundNum, totalOrderNum int64
+
+		// 累加所有日期的订单数
+		for _, orderNum := range dateOrderNumMap {
+			totalOrderNum += orderNum
+		}
 
 		for _, item := range finalList {
 			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
