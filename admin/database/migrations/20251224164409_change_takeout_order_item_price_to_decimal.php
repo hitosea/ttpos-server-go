@@ -22,7 +22,7 @@ class ChangeTakeoutOrderItemPriceToDecimal extends Migrator
                     'precision' => 20,
                     'scale' => 4,
                     'default' => '0.0000',
-                    'comment' => '单价(元,4位小数)',
+                    'comment' => '单价(元,4位小数)-外卖平台价格',
                 ])
                 ->changeColumn('tax', 'decimal', [
                     'precision' => 20,
