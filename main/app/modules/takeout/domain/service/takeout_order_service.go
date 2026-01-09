@@ -296,25 +296,6 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		return err
 	}
 
-	// 如果不是自动接单，则通知平台接受订单
-	if !order.IsAutoAcceptOrder() {
-		// 调用 BMP RPC 通知平台接受订单
-		rpcClient, err := rpc.NewBMPTakeoutClient()
-		if err != nil {
-			logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-			return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
-		}
-		defer rpcClient.Close()
-		// 调用 PrepareOrder 接口（接受订单）
-		if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
-			// 检查是否是订单状态不允许更新的错误
-			logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-			if !strings.Contains(err.Error(), "order status can't be updated, because order state isn't NEW") {
-				return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
-			}
-		}
-	}
-
 	// 设置员工班次信息】
 	if !order.IsExistShiftLog() {
 		if err := orderRepo.SetStaffShiftLogUuid(order); err != nil {
@@ -322,10 +303,8 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 		}
 	}
 
+	// 更新订单状态
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		ctxCopy := ctx.Copy()
-		ctxCopy.SetDB(tx)
-		// 更新订单状态
 		updateData := map[string]interface{}{
 			"order_state":          valueobject.TakeoutOrderStateAccepted,
 			"accepted_time":        currentTime,
@@ -337,16 +316,17 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 			logger.Logger.Error("更新订单状态失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
 			return errors.WithMessage(errors.New("更新订单状态失败"), err.Error())
 		}
-		// 同步到 ERP
-		if order.IsExistShiftLog() {
-			if err := s.erpSyncService.SyncOrderToERP(ctxCopy, order.Uuid); err != nil {
-				logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-				return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
-			}
-		}
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
+	}
+
+	// 同步到 ERP
+	if order.IsExistShiftLog() {
+		if err := s.erpSyncService.SyncOrderToERP(ctx, order.Uuid); err != nil {
+			logger.Logger.Error("同步 Grab 订单到 ERP 失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("同步 Grab 订单到 ERP 失败"), err.Error())
+		}
 	}
 
 	// 发布订单接受事件
@@ -626,17 +606,18 @@ func (s *takeoutOrderSrv) CancelOrder(ctx context.Context, req *request.TakeoutO
 	}
 
 	// 调用 BMP RPC 取消订单
-	rpcClient, err := rpc.NewBMPTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return err
-	}
-	defer rpcClient.Close()
-
-	// 调用 CancelOrder 接口（通知平台取消订单）
-	if err := rpcClient.CancelOrder(ctx.GetContext(), order.TakeoutOrderUuid, req.ReasonCode); err != nil {
-		logger.Logger.Error("调用 BMP CancelOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return err
+	if order.IsErpInvoiceSynced() {
+		rpcClient, err := rpc.NewBMPTakeoutClient()
+		if err != nil {
+			logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return err
+		}
+		defer rpcClient.Close()
+		// 调用 CancelOrder 接口（通知平台取消订单）
+		if err := rpcClient.CancelOrder(ctx.GetContext(), order.TakeoutOrderUuid, req.ReasonCode); err != nil {
+			logger.Logger.Error("调用 BMP CancelOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return err
+		}
 	}
 
 	// 更新订单状态为已取消
