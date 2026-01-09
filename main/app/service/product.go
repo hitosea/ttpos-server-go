@@ -1716,6 +1716,20 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 	if productCount > 0 {
 		return errors.New("该分类已经关联了商品，不可删除")
 	}
+
+	// 检查外卖商品数量
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	takeoutCount, err := takeoutRepo.GetProductPackageTakeoutCount(
+		commonRepo.WhereBySoftDelete(),
+		takeoutRepo.WhereByCategoryUuid(deleteReq.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取外卖商品数量失败")
+	}
+	if takeoutCount > 0 {
+		return errors.New("该分类已经关联了外卖商品，不可删除")
+	}
+
 	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
 		categoryCount, err := productRepo.GetProductCategoryCount(
 			commonRepo.WhereBySoftDelete(),
