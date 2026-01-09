@@ -1,10 +1,5 @@
-// Package lineman_token 提供 LINE MAN OAuth Token 生成与验证服务
-//
-// ⚠️ 临时方案说明:
-// 本包为临时实现方案,参考 Grab OAuth 架构快速支持 LINE MAN 平台接入。
-// 后续将迁移到统一的权限中心单点登录系统 (SSO),届时本包将被废弃。
-// 开发者在维护时应保持代码简洁,避免过度复杂化,以便未来迁移。
-package lineman_token
+// Package lineman Lineman API 客户端
+package lineman
 
 import (
 	"context"
@@ -19,7 +14,6 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
-	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 const (
@@ -28,40 +22,32 @@ const (
 	redisKeyTokenPrefix    = "lineman:oauth:token:" // Redis Key 前缀
 )
 
-// sLinemanToken LINE MAN Token 服务
-type sLinemanToken struct {
+// ============================================================================
+// JWT Token 客户端
+// ============================================================================
+
+// JWTTokenClient JWT Token 生成和解析客户端
+type JWTTokenClient struct {
 	cfgLoader *PartnerConfigLoader
 	secretKey string
 	expiresIn int
-	tokenLock sync.Mutex // Token 获取互斥锁（用于双重检查锁）
 }
 
-func init() {
-	service.RegisterLinemanToken(New())
-}
-
-// New 创建 LinemanToken 服务实例
-func New() *sLinemanToken {
-	return &sLinemanToken{
+// NewJWTTokenClient 创建 JWT Token 客户端
+func NewJWTTokenClient() *JWTTokenClient {
+	return &JWTTokenClient{
+		cfgLoader: &PartnerConfigLoader{},
 		expiresIn: defaultLinemanTokenTTL,
 	}
 }
 
-// getConfigLoader 获取配置加载器（懒加载）
-func (s *sLinemanToken) getConfigLoader() *PartnerConfigLoader {
-	if s.cfgLoader == nil {
-		s.cfgLoader = &PartnerConfigLoader{}
-	}
-	return s.cfgLoader
-}
-
 // getSecretKey 获取密钥（懒加载）
-func (s *sLinemanToken) getSecretKey(ctx context.Context) string {
-	if s.secretKey == "" {
+func (c *JWTTokenClient) getSecretKey(ctx context.Context) string {
+	if c.secretKey == "" {
 		cfg := MustConfig(ctx)
-		s.secretKey = cfg.SecretKey
+		c.secretKey = cfg.SecretKey
 	}
-	return s.secretKey
+	return c.secretKey
 }
 
 // GenerateToken 根据 client_id / client_secret 生成访问 Token
@@ -75,7 +61,7 @@ func (s *sLinemanToken) getSecretKey(ctx context.Context) string {
 //   - token: 生成的 JWT Token
 //   - expiresIn: Token 有效期（秒）
 //   - err: 错误信息
-func (s *sLinemanToken) GenerateToken(ctx context.Context, clientID string, clientSecret string) (token string, expiresIn int, err error) {
+func (c *JWTTokenClient) GenerateToken(ctx context.Context, clientID string, clientSecret string) (token string, expiresIn int, err error) {
 	if clientID == "" {
 		return "", 0, gerror.New("client_id 不能为空")
 	}
@@ -85,7 +71,7 @@ func (s *sLinemanToken) GenerateToken(ctx context.Context, clientID string, clie
 
 	// 根据 client_id 获取配置
 	var partnerCfg *conf.LinemanPartner
-	partnerCfg, err = s.getConfigLoader().GetByClientID(ctx, clientID)
+	partnerCfg, err = c.cfgLoader.GetByClientID(ctx, clientID)
 	if err != nil {
 		return "", 0, gerror.Wrap(err, "根据 client_id 获取配置失败")
 	}
@@ -96,7 +82,7 @@ func (s *sLinemanToken) GenerateToken(ctx context.Context, clientID string, clie
 	}
 
 	now := time.Now()
-	expireAt := now.Add(time.Duration(s.expiresIn) * time.Second)
+	expireAt := now.Add(time.Duration(c.expiresIn) * time.Second)
 	claims := lineman.LinemanTokenClaims{
 		ClientID: clientID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -106,12 +92,12 @@ func (s *sLinemanToken) GenerateToken(ctx context.Context, clientID string, clie
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := jwtToken.SignedString([]byte(s.getSecretKey(ctx)))
+	signed, err := jwtToken.SignedString([]byte(c.getSecretKey(ctx)))
 	if err != nil {
 		return "", 0, gerror.Wrap(err, "签发 Token 失败")
 	}
 
-	return signed, s.expiresIn, nil
+	return signed, c.expiresIn, nil
 }
 
 // ParseToken 校验并解析 LINE MAN Token
@@ -122,7 +108,7 @@ func (s *sLinemanToken) GenerateToken(ctx context.Context, clientID string, clie
 // 返回：
 //   - claims: 解析后的 Claims
 //   - err: 错误信息
-func (s *sLinemanToken) ParseToken(ctx context.Context, tokenStr string) (*lineman.LinemanTokenClaims, error) {
+func (c *JWTTokenClient) ParseToken(ctx context.Context, tokenStr string) (*lineman.LinemanTokenClaims, error) {
 	tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 
 	token, err := jwt.ParseWithClaims(tokenStr, &lineman.LinemanTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -130,7 +116,7 @@ func (s *sLinemanToken) ParseToken(ctx context.Context, tokenStr string) (*linem
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, gerror.Newf("不支持的签名算法: %v", token.Header["alg"])
 		}
-		return []byte(s.getSecretKey(ctx)), nil
+		return []byte(c.getSecretKey(ctx)), nil
 	})
 
 	if err != nil {
@@ -145,32 +131,28 @@ func (s *sLinemanToken) ParseToken(ctx context.Context, tokenStr string) (*linem
 }
 
 // GetPartnerConfig 通过 partner code 获取配置
-// 参数：
-//   - ctx: 上下文
-//   - code: Partner 代码
-//
-// 返回：
-//   - partner: Partner 配置
-//   - err: 错误信息
-func (s *sLinemanToken) GetPartnerConfig(ctx context.Context, code string) (*conf.LinemanPartner, error) {
-	return s.getConfigLoader().GetByCode(ctx, code)
+func (c *JWTTokenClient) GetPartnerConfig(ctx context.Context, code string) (*conf.LinemanPartner, error) {
+	return c.cfgLoader.GetByCode(ctx, code)
 }
 
 // GetPartnerConfigByClientID 通过 client_id 获取配置
-// 参数：
-//   - ctx: 上下文
-//   - clientID: Client ID
-//
-// 返回：
-//   - partner: Partner 配置
-//   - err: 错误信息
-func (s *sLinemanToken) GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.LinemanPartner, error) {
-	return s.getConfigLoader().GetByClientID(ctx, clientID)
+func (c *JWTTokenClient) GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.LinemanPartner, error) {
+	return c.cfgLoader.GetByClientID(ctx, clientID)
 }
 
 // ============================================================================
-// OAuth Access Token 管理
+// OAuth Token 客户端
 // ============================================================================
+
+// OAuthTokenClient OAuth Access Token 管理客户端
+type OAuthTokenClient struct {
+	tokenLock sync.Mutex // Token 获取互斥锁（用于双重检查锁）
+}
+
+// NewOAuthTokenClient 创建 OAuth Token 客户端
+func NewOAuthTokenClient() *OAuthTokenClient {
+	return &OAuthTokenClient{}
+}
 
 // FetchTokenFromAPI 从 LINE MAN OAuth 服务器获取 Access Token
 // 参数：
@@ -180,7 +162,7 @@ func (s *sLinemanToken) GetPartnerConfigByClientID(ctx context.Context, clientID
 //   - token: OAuth Access Token
 //   - expiresIn: Token 有效期（秒）
 //   - err: 错误信息
-func (s *sLinemanToken) FetchTokenFromAPI(ctx context.Context) (string, int, error) {
+func (c *OAuthTokenClient) FetchTokenFromAPI(ctx context.Context) (string, int, error) {
 	cfg := MustConfig(ctx)
 
 	// 构造 OAuth Token URL
@@ -235,7 +217,7 @@ func (s *sLinemanToken) FetchTokenFromAPI(ctx context.Context) (string, int, err
 // 返回：
 //   - token: OAuth Access Token
 //   - err: 错误信息
-func (s *sLinemanToken) GetAccessToken(ctx context.Context) (string, error) {
+func (c *OAuthTokenClient) GetAccessToken(ctx context.Context) (string, error) {
 	cfg := MustConfig(ctx)
 	// 构造 Redis Key
 	redisKey := redisKeyTokenPrefix + cfg.ClientID
@@ -249,8 +231,8 @@ func (s *sLinemanToken) GetAccessToken(ctx context.Context) (string, error) {
 	}
 
 	// 2. Redis Miss 或错误，获取互斥锁
-	s.tokenLock.Lock()
-	defer s.tokenLock.Unlock()
+	c.tokenLock.Lock()
+	defer c.tokenLock.Unlock()
 
 	// 3. 双重检查：获取锁后再次检查缓存
 	cachedToken, err = g.Redis().Get(ctx, redisKey)
@@ -262,7 +244,7 @@ func (s *sLinemanToken) GetAccessToken(ctx context.Context) (string, error) {
 
 	// 4. 从 LINE MAN OAuth API 获取新 Token
 	g.Log().Infof(ctx, "[LINE MAN] OAuth Token 缓存未命中，从远程获取")
-	token, expiresIn, err := s.FetchTokenFromAPI(ctx)
+	token, expiresIn, err := c.FetchTokenFromAPI(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -288,8 +270,8 @@ func (s *sLinemanToken) GetAccessToken(ctx context.Context) (string, error) {
 // 返回：
 //   - header: Authorization 请求头值（格式: "Bearer {token}"）
 //   - err: 错误信息
-func (s *sLinemanToken) GetAuthorizationHeader(ctx context.Context) (string, error) {
-	token, err := s.GetAccessToken(ctx)
+func (c *OAuthTokenClient) GetAuthorizationHeader(ctx context.Context) (string, error) {
+	token, err := c.GetAccessToken(ctx)
 	if err != nil {
 		return "", err
 	}

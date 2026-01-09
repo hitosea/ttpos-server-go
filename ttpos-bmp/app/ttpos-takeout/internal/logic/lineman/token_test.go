@@ -1,4 +1,4 @@
-package lineman_token
+package lineman
 
 import (
 	"encoding/json"

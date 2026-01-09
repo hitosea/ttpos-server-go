@@ -1,7 +1,5 @@
-// Package lineman_token 提供 LINE MAN OAuth Token 生成与验证服务
-//
-// ⚠️ 临时方案: 后续将迁移到统一权限中心 SSO
-package lineman_token
+// Package lineman Lineman API 客户端
+package lineman
 
 import (
 	"context"
@@ -14,6 +12,30 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 )
+
+// ============================================================================
+// 平台配置加载
+// ============================================================================
+
+// MustConfig 获取 LINE MAN 平台配置
+// 读取 app.provider.lineman.platform 节点
+func MustConfig(ctx context.Context) *conf.Lineman {
+	if ctx == nil {
+		ctx = gctx.New()
+	}
+
+	var linemanCfg conf.Lineman
+	if err := g.Cfg().MustGet(ctx, "app.provider.lineman.platform").Scan(&linemanCfg); err != nil {
+		g.Log().Fatal(ctx, err)
+		panic(gerror.Newf("获取 LINE MAN 平台配置失败: %v", err))
+	}
+
+	return &linemanCfg
+}
+
+// ============================================================================
+// Partner 配置加载器
+// ============================================================================
 
 // PartnerConfigLoader 负责加载并缓存 lineman.partner.* 配置
 type PartnerConfigLoader struct {

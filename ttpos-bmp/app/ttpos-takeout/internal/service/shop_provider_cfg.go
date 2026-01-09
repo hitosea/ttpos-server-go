@@ -28,6 +28,15 @@ type (
 		// shopUUID: 门店 UUID
 		// providerName: 第三方名称（如 grab），为空默认 grab
 		GetShopProviderCfg(ctx context.Context, shopUUID uint64, providerName string) (*entity.ShopProviderCfg, error)
+		// GetAllShopProviderCfg 查询门店的所有渠道配置
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - shopUUID: 门店 UUID
+		//
+		// 返回：
+		//   - cfgList: 该门店的所有渠道配置列表
+		//   - err: 操作过程中产生的错误（若有）
+		GetAllShopProviderCfg(ctx context.Context, shopUUID uint64) ([]*entity.ShopProviderCfg, error)
 		// GetShopProviderCfgByMerchantID 通过 MerchantID 查询门店第三方配置
 		// merchantID: 第三方商户 ID（如 Grab MerchantID）
 		// providerName: 第三方名称（如 grab），为空默认 grab
@@ -46,6 +55,7 @@ type (
 		//   - ctx: 上下文对象
 		//   - shopUUID: 门店 UUID
 		//   - providerName: 第三方名称（可选，为空时返回所有支持渠道的配置）
+		//
 		// 返回：
 		//   - res: 查询结果，包含门店 UUID 和渠道配置列表
 		//   - err: 操作过程中产生的错误（若有）
