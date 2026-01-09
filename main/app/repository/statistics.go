@@ -1057,6 +1057,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	// 构建外卖商品销售查询（子查询）
 	// 使用 validOrderStates 状态筛选：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
 	// 仅统计 accepted_time > 0 的订单（有效状态和取消状态都需要接单后才能统计）
+	// 实际销售额和营业收入需要减去已取消订单的金额（已接单并且已取消的订单，order_state = 60）
 	validStatesStr := buildStateInCondition(validOrderStates)
 	takeoutQuery := r.db.Table(takeoutOrderItemTable).
 		Select(
@@ -1066,8 +1067,8 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			"COALESCE(to_item.ttpos_product_package_uuid, 0) AS product_package_uuid",
 			"SUM(to_item.quantity) AS sale_num",
 			"SUM(to_item.price * to_item.quantity) AS origin_sale_amount",
-			"SUM(to_item.price * to_item.quantity) AS actual_sale_amount",
-			"SUM((to_item.price - to_item.tax) * to_item.quantity) AS business_amount",
+			"SUM(IF(to_order.order_state = 60, 0, to_item.price * to_item.quantity)) AS actual_sale_amount",
+			"SUM(IF(to_order.order_state = 60, 0, (to_item.price - to_item.tax) * to_item.quantity)) AS business_amount",
 			"0 AS give_num",
 		).
 		Joins("INNER JOIN "+takeoutOrderTable+" ON to_item.takeout_order_uuid = to_order.uuid").
