@@ -3,9 +3,9 @@ package grab
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -49,8 +49,8 @@ func (s *sGrab) HandleGetMenu(ctx context.Context, merchantID string) (*grabfood
 
 	// 4. 解析本地快照 JSON 为 PushGrabMenuDTO (使用 SDK 类型)
 	var pushDTO grabDto.PushGrabMenuDTO
-	if err := json.Unmarshal([]byte(menuJSON), &pushDTO); err != nil {
-		g.Log().Errorf(ctx, "[Grab] 解析菜单 JSON 失败: error: %v", err)
+	if err := gjson.New([]byte(menuJSON)).Scan(&pushDTO); err != nil {
+		g.Log().Errorf(ctx, "[Grab] 解析菜单数据失败: error: %v", err)
 		return nil, gerror.Wrap(err, "解析菜单数据失败")
 	}
 
