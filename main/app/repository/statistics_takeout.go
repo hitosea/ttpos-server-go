@@ -509,7 +509,7 @@ func (r *StatisticsTakeoutRepo) CountTakeoutBusinessSummary(req CountTakeoutBusi
 		SELECT 
 			accepted_time,
 			uuid AS order_uuid,
-			IF(order_state IN %s, subtotal, 0) AS order_amount,
+			IF(order_state IN %s, eater_payment, 0) AS order_amount,
 			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount
 		FROM ttpos_takeout_order
 		WHERE delete_time = ?
