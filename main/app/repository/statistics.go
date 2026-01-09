@@ -138,6 +138,7 @@ var (
 		"SUM(t.gift_num) AS total_gift_num",                                                // 总赠菜数量
 		"SUM(t.free_amount) AS total_free_amount",                                          // 总免单金额
 		"SUM(t.free_num) AS total_free_num",                                                // 总免单数量
+		"SUM(t.order_amount) AS total_order_amount",                                        // 总订单金额
 		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",                                 // 总订单数量
 		"SUM(t.takeout_sale_amount) AS total_takeout_sale_amount",                          // 总外送销售
 		"SUM(t.takeout_business_amount) AS total_takeout_business_amount",                  // 总外送营收
@@ -680,7 +681,7 @@ func (r *StatisticsRepo) Count7Days(opts ...DBOption) []struct {
 		Select(
 			"complete_time",
 			"sale_order_uuid",
-			"payment_amount AS total_received_amount",
+			"(payment_amount - refund_amount - payment_balance) AS total_received_amount",
 		).
 		Find(&result)
 
@@ -1333,7 +1334,7 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 		takeoutOrderQuery = fmt.Sprintf(`
 		SELECT 
 			FLOOR(accepted_time / %d) * %d AS period_start_time,
-			IF(order_state IN %s, subtotal, 0) AS order_amount,
+			IF(order_state IN %s, eater_payment, 0) AS order_amount,
 			IF(order_state = 60, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount,
 			0 AS refund_amount,
 			uuid AS sale_bill_uuid,

@@ -90,28 +90,39 @@ func (s *statisticsUtilSrv) MergeTakeoutStatistics(saleData model.StatisticsSale
 		maxOrderAmount = takeoutData.MaxOrderAmount
 	}
 
-	// 14. AvgOrderAmount（平均订单金额）= 总销售额 / 总订单数
+	// 14. AvgOrderAmount（平均订单金额）= 总订单金额 / 总订单数
+	// 如果外卖订单数为0，则使用原有平均订单金额
+	// 如果外卖订单数不为0，则使用总订单金额 / 总订单数
 	var avgOrderAmount decimal.Decimal
-	if totalOrderNum > 0 {
-		avgOrderAmount = totalSaleAmount.Div(decimal.NewFromInt(totalOrderNum))
+	if takeoutData.TotalOrderNum > 0 {
+		totalOrderAmount := decimal.NewFromFloat(saleData.TotalOrderAmount.Float64).
+			Add(decimal.NewFromFloat(takeoutData.TotalOrderAmount))
+		avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
+	} else {
+		avgOrderAmount = decimal.NewFromFloat(saleData.AvgOrderAmount.Float64)
 	}
+
+	// 15. TotalProductPrice（总原商品金额）= 原有原商品金额 + 外卖原商品金额
+	totalProductOriginPrice := decimal.NewFromFloat(saleData.TotalProductOriginPrice.Float64).
+		Add(decimal.NewFromFloat(takeoutData.TotalProductOriginPrice))
 
 	// 构建返回结果
 	// 注意：这里只返回合并后的字段，其他字段需要调用方从原有统计中获取并填充
 	return CountSaleResp{
-		TotalSaleAmount:        totalSaleAmount.Round(2).InexactFloat64(),
-		TotalReceivedAmount:    totalReceivedAmount.Round(2).InexactFloat64(),
-		TotalProductNum:        totalProductNum.Round(2).InexactFloat64(),
-		TotalBusinessAmount:    totalBusinessAmount.Round(2).InexactFloat64(),
-		TotalTax:               totalTax.Round(2).InexactFloat64(),
-		TotalRefundAmount:      totalRefundAmount.Round(2).InexactFloat64(),
-		TotalDiscount:          totalDiscount.Round(2).InexactFloat64(),
-		TotalDiscountRatio:     totalDiscountRatio.Round(2).InexactFloat64(),
-		TotalOrderNum:          totalOrderNum,
-		TotalCancelOrderNum:    totalCancelOrderNum,
-		TotalCancelOrderAmount: totalCancelOrderAmount.Round(2).InexactFloat64(),
-		MinOrderAmount:         minOrderAmount,
-		MaxOrderAmount:         maxOrderAmount,
-		AvgOrderAmount:         avgOrderAmount.Round(2).InexactFloat64(),
+		TotalSaleAmount:         totalSaleAmount.Round(2).InexactFloat64(),
+		TotalReceivedAmount:     totalReceivedAmount.Round(2).InexactFloat64(),
+		TotalProductNum:         totalProductNum.Round(2).InexactFloat64(),
+		TotalBusinessAmount:     totalBusinessAmount.Round(2).InexactFloat64(),
+		TotalTax:                totalTax.Round(2).InexactFloat64(),
+		TotalRefundAmount:       totalRefundAmount.Round(2).InexactFloat64(),
+		TotalDiscount:           totalDiscount.Round(2).InexactFloat64(),
+		TotalDiscountRatio:      totalDiscountRatio.Round(2).InexactFloat64(),
+		TotalOrderNum:           totalOrderNum,
+		TotalCancelOrderNum:     totalCancelOrderNum,
+		TotalCancelOrderAmount:  totalCancelOrderAmount.Round(2).InexactFloat64(),
+		MinOrderAmount:          minOrderAmount,
+		MaxOrderAmount:          maxOrderAmount,
+		AvgOrderAmount:          avgOrderAmount.Round(2).InexactFloat64(),
+		TotalProductOriginPrice: totalProductOriginPrice.Round(2).InexactFloat64(),
 	}
 }

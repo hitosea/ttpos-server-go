@@ -1012,26 +1012,35 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 
 	// 统计被外卖商品选中的数量（包含普通分类和特殊分类）
 	takeoutProductRepo := repository.NewProductPackageTakeoutRepo(db)
-	takeoutProductCount, err := takeoutProductRepo.GetProductPackageTakeoutCount(
+	// 统计各个平台的外卖商品数量
+	takeoutGrabCount, _ := takeoutProductRepo.GetProductPackageTakeoutCount(
 		commonRepo.WhereBySoftDelete(),
 		takeoutProductRepo.WhereByCategoryUuidOrSpecialCategoryUuid(productCategory.Uuid),
+		takeoutProductRepo.WhereByTakeoutType(1),
 	)
-	if err != nil {
-		// 如果查询失败，设置为 0，不影响主流程
-		takeoutProductCount = 0
-	}
+	takeoutLinemanCount, _ := takeoutProductRepo.GetProductPackageTakeoutCount(
+		commonRepo.WhereBySoftDelete(),
+		takeoutProductRepo.WhereByCategoryUuidOrSpecialCategoryUuid(productCategory.Uuid),
+		takeoutProductRepo.WhereByTakeoutType(2),
+	)
 
 	return product_resp.ProductShopCategoryDetailResp{
-		Uuid:                productCategory.Uuid,
-		LocaleName:          productCategory.MultiLanguageName.GetNames(),
-		ParentUuid:          productCategory.ParentUuid,
-		ParentName:          parentName,
-		Sort:                productCategory.Sort,
-		Status:              productCategory.Status,
-		IsDisplayInStore:    productCategory.IsDisplayInStore,
-		IsDisplayInTakeout:  productCategory.IsDisplayInTakeout,
+		Uuid:             productCategory.Uuid,
+		LocaleName:       productCategory.MultiLanguageName.GetNames(),
+		ParentUuid:       productCategory.ParentUuid,
+		ParentName:       parentName,
+		Sort:             productCategory.Sort,
+		Status:           productCategory.Status,
+		IsDisplayInStore: productCategory.IsDisplayInStore,
+		IsDisplayInTakeout: func() int {
+			if takeoutGrabCount > 0 || takeoutLinemanCount > 0 {
+				return 1
+			}
+			return 0
+		}(),
 		ProductCount:        productCount,
-		TakeoutProductCount: takeoutProductCount,
+		TakeoutGrabCount:    takeoutGrabCount,
+		TakeoutLinemanCount: takeoutLinemanCount,
 		ChildCount:          childCount,
 		Code:                productCategory.Code,
 		IsEditable:          isEditable(ctx, productCategory.HeadquarterUuid),

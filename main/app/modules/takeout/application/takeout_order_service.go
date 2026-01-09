@@ -215,18 +215,16 @@ func (s *takeoutOrderAppService) AcceptOrder(ctx context.Context, req *request.T
 
 // checkOrderStock 检查订单商品库存
 func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *model.TakeoutOrder) (error, []string) {
-	// 1. 构建 BOM 数量映射（委托给 Domain Service）
+	// ==================== Step 1: 构建 BOM 数量映射 ====================
 	bomQuantityMap, bomItemMap, err := s.orderService.BuildBomQuantityMap(ctx, order)
 	if err != nil {
-		return err, nil
+		return errors.NewWithCodeAndData(constant.CodeOrderCheckProductStockZero, []string{}, "构建BOM数量映射失败"), nil
 	}
-
-	// 2. 如果没有需要检查的 BOM，直接返回
 	if len(bomQuantityMap) == 0 {
-		return nil, nil
+		return nil, nil // 订单没有配方商品，无需处理原料
 	}
 
-	// 3. 调用库存模块检查库存
+	// ==================== Step 2: 调用库存模块检查库存 ====================
 	inventoryAppSrv := inventoryApp.NewProductInventoryAppServiceWithDependencies(s.dbm, cache.Global)
 	insufficientBomUuids, err := inventoryAppSrv.CheckStock(ctx, bomQuantityMap)
 	if err != nil {
@@ -234,7 +232,7 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 		return errors.WithMessage(errors.New("检查库存失败"), err.Error()), nil
 	}
 
-	// 4. 如果有库存不足的商品，构建提示信息并返回错误
+	// ==================== Step 3: 如果有库存不足的商品，构建提示信息并返回错误 ====================
 	if len(insufficientBomUuids) > 0 {
 		outOfStockNamesMap := make(map[string]struct{})
 		for _, bomUuid := range insufficientBomUuids {
@@ -268,7 +266,7 @@ func (s *takeoutOrderAppService) CheckOrderStock(ctx context.Context, order *mod
 			}
 		}
 		// 转为切片
-		if len(outOfStockNamesMap) == 0 {
+		if len(outOfStockNamesMap) > 0 {
 			outOfStockNames := make([]string, 0, len(outOfStockNamesMap))
 			for name := range outOfStockNamesMap {
 				outOfStockNames = append(outOfStockNames, name)

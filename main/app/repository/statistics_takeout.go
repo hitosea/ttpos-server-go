@@ -140,6 +140,12 @@ func NewStatisticsTakeoutRepoImpl(db *gorm.DB) *StatisticsTakeoutRepo {
 //   - TimeStart/TimeEnd: 按时间范围筛选
 //   - StaffShiftLogUuid: 按员工班次日志UUID筛选（>0时生效）
 //   - Platform: 按平台筛选（非空时生效）
+//
+// 字段说明：
+//   - TotalSaleAmount: 总销售额（使用顾客实付 eater_payment，与堂食统计统一）
+//   - MinOrderAmount/MaxOrderAmount: 最小/最大订单金额（使用顾客实付 eater_payment）
+//   - TotalOrderAmount: 总订单金额（使用顾客实付 eater_payment，用于计算平均值）
+//   - TotalProductAmount: 原商品金额（使用小计金额 subtotal，兼容前端）
 func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.StatisticsTakeoutSaleData {
 	var result model.StatisticsTakeoutSaleData
 	baseQuery := r.db.Model(&takeoutmodel.TakeoutOrder{})
@@ -170,18 +176,18 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 	// 订单级别的字段在子查询中已经去重（每个订单一行），商品数量通过关联查询统计
 	// 使用 COALESCE 处理 NULL 值，直接返回普通类型
 	selectFields := []string{
-		// 1. 总销售额：当 order_state 为有效状态时统计
-		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.subtotal, 0)), 0) AS total_sale_amount", validStatesStr),
+		// 1. 总销售额：当 order_state 为有效状态时统计（使用顾客实付）
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_sale_amount", validStatesStr),
 		// 2. 总实付金额：当 order_state 为营业收入状态时统计
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_pay_amount", businessStatesStr),
 		// 3. 总订单数：当 order_state 为有效状态时统计
 		fmt.Sprintf("COALESCE(COUNT(DISTINCT IF(t.order_state IN %s, t.uuid, NULL)), 0) AS total_order_num", validStatesStr),
 		// 4. 总退款金额：当 order_state = 60 时统计（已取消订单的顾客实付）
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS total_refund_amount", canceledOrderState),
-		// 5. 最小订单金额：当 order_state 为有效状态时统计
-		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.subtotal, NULL)), 0) AS min_order_amount", validStatesStr),
-		// 6. 最大订单金额：当 order_state 为有效状态时统计
-		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.subtotal, NULL)), 0) AS max_order_amount", validStatesStr),
+		// 5. 最小订单金额：当 order_state 为有效状态时统计（使用顾客实付）
+		fmt.Sprintf("COALESCE(MIN(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS min_order_amount", validStatesStr),
+		// 6. 最大订单金额：当 order_state 为有效状态时统计（使用顾客实付）
+		fmt.Sprintf("COALESCE(MAX(IF(t.order_state IN %s, t.eater_payment, NULL)), 0) AS max_order_amount", validStatesStr),
 		// 7. 总优惠折扣：当 order_state 为有效状态时统计 platform_discount + merchant_discount + basket_promo
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.platform_discount + t.merchant_discount + t.basket_promo, 0)), 0) AS total_discount", validStatesStr),
 		// 8. 总税费：当 order_state 为营业收入状态时统计 tax
@@ -194,6 +200,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutSale(req CountTakeoutReq) model.Stat
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state = %d, t.eater_payment, 0)), 0) AS cancel_order_amount", canceledOrderState),
 		// 12. 总商品数量：当 order_state 为有效状态时统计，关联商品表的 quantity 字段
 		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, IFNULL(t.total_quantity, 0), 0)), 0) AS total_product_num", validStatesStr),
+		// 13. 总订单金额：当 order_state 为有效状态时统计（使用顾客实付，用于计算平均值）
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.eater_payment, 0)), 0) AS total_order_amount", validStatesStr),
+		// 14. 原商品金额：当 order_state 为有效状态时统计（使用小计金额，兼容前端）
+		fmt.Sprintf("COALESCE(SUM(IF(t.order_state IN %s, t.subtotal, 0)), 0) AS total_product_origin_price", validStatesStr),
 	}
 
 	// 构建子查询：先对订单进行聚合（避免重复），同时关联商品表统计每个订单的商品数量

@@ -178,6 +178,7 @@ type StatisticsSaleData struct {
 	TotalGiftNum                    sql.NullFloat64 `gorm:"column:total_gift_num;comment:总赠菜数量"`
 	TotalFreeAmount                 sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
 	TotalFreeNum                    sql.NullFloat64 `gorm:"column:total_free_num;comment:总免单数量"`
+	TotalOrderAmount                sql.NullFloat64 `gorm:"column:total_order_amount;comment:总订单金额"`
 	TotalOrderNum                   sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalTakeoutSaleAmount          sql.NullFloat64 `gorm:"total_takeout_sale_amount;comment:总外送销售"`
 	TotalTakeoutBusinessAmount      sql.NullFloat64 `gorm:"total_takeout_business_amount;comment:总外送营收"`
@@ -412,27 +413,29 @@ type UserAnalysisItemRepo struct {
 
 // UserAnalysisRepoResult 用户分析统计结果（Repository层）
 type UserAnalysisRepoResult struct {
-	Nationality  []UserAnalysisItemRepo `json:"nationality"`   // 国籍统计
-	OrderSource  []UserAnalysisItemRepo `json:"order_source"`  // 点餐方式来源统计
-	DeskSource   []UserAnalysisItemRepo `json:"desk_source"`   // 桌台方式来源统计
-	DiningMethod []UserAnalysisItemRepo `json:"dining_method"` // 用餐方式统计
+	Nationality   []UserAnalysisItemRepo `json:"nationality"`    // 国籍统计
+	OrderSource   []UserAnalysisItemRepo `json:"order_source"`   // 点餐方式来源统计
+	DeskSource    []UserAnalysisItemRepo `json:"desk_source"`    // 桌台方式来源统计
+	DiningMethod  []UserAnalysisItemRepo `json:"dining_method"`  // 用餐方式统计
 	TakeoutMethod []UserAnalysisItemRepo `json:"takeout_method"` // 外卖方式统计（Grab/LINE MAN）
 }
 
 // StatisticsTakeoutData 外卖订单统计数据
 type StatisticsTakeoutSaleData struct {
-	TotalSaleAmount     float64 `gorm:"column:total_sale_amount;comment:总销售额(小计金额)"`
-	TotalPayAmount      float64 `gorm:"column:total_pay_amount;comment:总实付金额(顾客实付)"`
-	TotalOrderNum       int64   `gorm:"column:total_order_num;comment:总订单数量"`
-	TotalRefundAmount   float64 `gorm:"column:total_refund_amount;comment:总退款金额"`
-	MinOrderAmount      float64 `gorm:"column:min_order_amount;comment:最小订单金额"`
-	MaxOrderAmount      float64 `gorm:"column:max_order_amount;comment:最大订单金额"`
-	TotalDiscount       float64 `gorm:"column:total_discount;comment:总优惠折扣(平台优惠+商户优惠)"`
-	TotalTax            float64 `gorm:"column:total_tax;comment:总税费"`
-	TotalBusinessAmount float64 `gorm:"column:total_business_amount;comment:总营业收入(实付金额-税费)"`
-	CancelOrderNum      int64   `gorm:"column:cancel_order_num;comment:取消订单数"`
-	CancelOrderAmount   float64 `gorm:"column:cancel_order_amount;comment:取消订单金额(拒单状态的小计金额)"`
-	TotalProductNum     int64   `gorm:"column:total_product_num;comment:总商品数量"`
+	TotalSaleAmount         float64 `gorm:"column:total_sale_amount;comment:总销售额(顾客实付)"`
+	TotalPayAmount          float64 `gorm:"column:total_pay_amount;comment:总实付金额(顾客实付)"`
+	TotalOrderNum           int64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalRefundAmount       float64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+	MinOrderAmount          float64 `gorm:"column:min_order_amount;comment:最小订单金额(顾客实付)"`
+	MaxOrderAmount          float64 `gorm:"column:max_order_amount;comment:最大订单金额(顾客实付)"`
+	TotalDiscount           float64 `gorm:"column:total_discount;comment:总优惠折扣(平台优惠+商户优惠)"`
+	TotalTax                float64 `gorm:"column:total_tax;comment:总税费"`
+	TotalBusinessAmount     float64 `gorm:"column:total_business_amount;comment:总营业收入(实付金额-税费)"`
+	CancelOrderNum          int64   `gorm:"column:cancel_order_num;comment:取消订单数"`
+	CancelOrderAmount       float64 `gorm:"column:cancel_order_amount;comment:取消订单金额(拒单状态的小计金额)"`
+	TotalProductNum         int64   `gorm:"column:total_product_num;comment:总商品数量"`
+	TotalOrderAmount        float64 `gorm:"column:total_order_amount;comment:总订单金额(顾客实付,用于计算平均值)"`
+	TotalProductOriginPrice float64 `gorm:"column:total_product_origin_price;comment:总原商品金额(小计金额,兼容前端)"`
 }
 
 // StatisticsTakeoutPaymentData 外卖订单支付方式统计数据

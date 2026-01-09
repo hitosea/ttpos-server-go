@@ -137,7 +137,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	var staffShiftLogUuid uint64 = 0
 	if req.DutyNo != "" {
 		shiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
-			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereByShiftNo(req.DutyNo),
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		if err == nil && shiftLog.Uuid > 0 {
@@ -168,7 +168,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalSaleAmount:                 totalSaleAmount.Round(2).InexactFloat64(),
 		TotalReceivedAmount:             totalReceivedAmount.Round(2).InexactFloat64(),
 		TotalProductPrice:               saleData.TotalProductPrice.Float64,
-		TotalProductOriginPrice:         saleData.TotalProductOriginPrice.Float64,
+		TotalProductOriginPrice:         mergeSaleData.TotalProductOriginPrice,
 		TotalProductNum:                 mergeSaleData.TotalProductNum,
 		TotalDiscountMember:             saleData.TotalDiscountMember.Float64,
 		TotalBusinessAmount:             totalBusinessAmount.Round(2).InexactFloat64(),
@@ -442,7 +442,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 	if req.DutyNo != "" {
 		db := ctx.GetDB()
 		shiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
-			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereByShiftNo(req.DutyNo),
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		if err == nil && shiftLog.Uuid > 0 {
@@ -810,7 +810,7 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 	var staffShiftLogUuid uint64 = 0
 	if req.DutyNo != "" {
 		shiftLog, err := repository.NewShiftLogRepo(ctx.GetDB()).GetShiftLog(
-			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereByShiftNo(req.DutyNo),
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		if err == nil && shiftLog.Uuid > 0 {
@@ -901,7 +901,7 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 	var staffShiftLogUuid uint64 = 0
 	if req.DutyNo != "" {
 		shiftLog, err := repository.NewShiftLogRepo(ctx.GetDB()).GetShiftLog(
-			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereByShiftNo(req.DutyNo),
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		if err == nil && shiftLog.Uuid > 0 {
@@ -2423,7 +2423,7 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 	var staffShiftLogUuid uint64 = 0
 	if req.DutyNo != "" {
 		shiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
-			repository.CommonRepo.WhereByDutyNo(req.DutyNo),
+			repository.CommonRepo.WhereByShiftNo(req.DutyNo),
 			repository.CommonRepo.WhereBySoftDelete(),
 		)
 		if err == nil && shiftLog.Uuid > 0 {
