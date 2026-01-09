@@ -16,7 +16,7 @@ class UpdateTakeoutOrderItemModifierPriceComment extends Migrator
                     'precision' => 20,
                     'scale' => 4,
                     'default' => '0.0000',
-                    'comment' => '加价-单价',
+                    'comment' => '加价-单价-外卖平台价格',
                 ])
             ->update();
         }
