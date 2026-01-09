@@ -221,6 +221,36 @@ func (h *OrderHandler) DeleteProduct(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CancelOrder 取消订单
+// @Summary 取消订单
+// @Description 取消订单
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCancelReq true "取消订单参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cancel [post]
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	var cancelReq req.OrderCancelReq
+	if err := c.ShouldBindJSON(&cancelReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("取消订单", zap.Any("params", cancelReq))
+	// 取消订单
+	err := h.orderSrv.CancelOrder(ctx, cancelReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -250,5 +280,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/cart/product/num", wrapper.UpdateProductNum)             // 修改购物车商品数量
 		privateApi.GET("/order/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 		privateApi.DELETE("/order/cart/product/delete", wrapper.DeleteProduct)           // 删除购物车商品
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)                            // 取消订单
 	}
 }
