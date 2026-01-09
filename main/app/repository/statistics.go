@@ -2083,6 +2083,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 			"ROUND(SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)), 2) AS avg_order_amount",
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
+			"SUM(t.order_amount) AS total_order_amount", // 总订单金额
 		},
 		"table": { // 桌台：desk_uuid > 0 && is_takeout = 0
 			"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
@@ -2149,90 +2150,55 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 
 	// 查询外卖订单原始数据
 	takeoutRepo := NewStatisticsTakeoutRepo(r.db)
-	takeoutRawData := takeoutRepo.CountTakeoutChannelSale(CountTakeoutChannelSaleReq{
-		StartTime: startTime,
-		EndTime:   endTime,
+	takeoutRawData := takeoutRepo.CountTakeoutSale(CountTakeoutReq{
+		TimeStart: startTime,
+		TimeEnd:   endTime,
 	})
 
-	// 合并外卖订单数据到 summary（合计）渠道
-	if len(takeoutRawData) > 0 {
+	if takeoutRawData.TotalOrderNum > 0 {
 		// 确保 summary 渠道存在
 		if result["summary"] == nil {
 			result["summary"] = &model.ChannelSaleRepoResult{}
 		}
 		summary := result["summary"]
 
-		// 收集外卖订单的实付金额（用于计算最小/最大/平均）
-		var takeoutPayAmounts []float64
-		var takeoutOrderNum int64
-		var takeoutPayAmountSum decimal.Decimal
+		summary.TotalOrderNum.Int64 += takeoutRawData.TotalOrderNum
 
-		for _, takeoutItem := range takeoutRawData {
-			takeoutOrderNum++
-			// 累加所有订单的实付金额（包括0，用于计算平均订单金额）
-			takeoutPayAmountSum = takeoutPayAmountSum.Add(decimal.NewFromFloat(takeoutItem.PayAmount))
-			// 只统计实付金额 > 0 的订单（用于最小/最大订单金额计算）
-			if takeoutItem.PayAmount > 0 {
-				takeoutPayAmounts = append(takeoutPayAmounts, takeoutItem.PayAmount)
+		minOrderAmount := summary.MinOrderAmount.Float64
+		if takeoutRawData.MinOrderAmount < minOrderAmount {
+			minOrderAmount = takeoutRawData.MinOrderAmount
+		}
+
+		summary.MinOrderAmount.Float64 = minOrderAmount
+		summary.MinOrderAmount.Valid = true
+
+		maxOrderAmount := summary.MaxOrderAmount.Float64
+		if takeoutRawData.MaxOrderAmount > maxOrderAmount {
+			maxOrderAmount = takeoutRawData.MaxOrderAmount
+		}
+
+		summary.MaxOrderAmount.Float64 = maxOrderAmount
+		summary.MaxOrderAmount.Valid = true
+
+		// （平均订单金额）= 总订单金额 / 总订单数
+		// 如果外卖订单数为0，则使用原有平均订单金额
+		// 如果外卖订单数不为0，则使用总订单金额 / 总订单数
+		var avgOrderAmount decimal.Decimal
+		var totalOrderNum = summary.TotalOrderNum.Int64
+		if takeoutRawData.TotalOrderNum > 0 {
+			totalOrderAmount := decimal.NewFromFloat(summary.TotalOrderAmount.Float64).
+				Add(decimal.NewFromFloat(takeoutRawData.TotalOrderAmount)).
+				Sub(decimal.NewFromFloat(takeoutRawData.TotalRefundAmount))
+			curTotalOrderNum := totalOrderNum - takeoutRawData.CancelOrderNum
+			if curTotalOrderNum > 0 {
+				avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(curTotalOrderNum))
 			}
+		} else {
+			avgOrderAmount = decimal.NewFromFloat(summary.AvgOrderAmount.Float64)
 		}
 
-		// 合并订单数
-		summary.TotalOrderNum.Int64 += takeoutOrderNum
-
-		// 查询店内订单的实付金额（用于合并计算最小/最大/平均）
-		// 查询所有订单（包括实付金额为0的订单，用于计算平均订单金额）
-		var storeOrderData []struct {
-			OrderAmount float64
-		}
-		db.Table("(?) AS t", subQuery).
-			Select("t.order_amount").
-			Where("t.is_meger = 0").
-			Scan(&storeOrderData)
-
-		// 收集店内订单的实付金额
-		var storePayAmounts []float64
-		var storePayAmountSum decimal.Decimal
-		for _, storeItem := range storeOrderData {
-			// 累加所有订单的实付金额（包括0，用于计算平均订单金额）
-			storePayAmountSum = storePayAmountSum.Add(decimal.NewFromFloat(storeItem.OrderAmount))
-			// 只统计实付金额 > 0 且非特殊订单（用于最小/最大订单金额计算）
-			if storeItem.OrderAmount > 0 {
-				storePayAmounts = append(storePayAmounts, storeItem.OrderAmount)
-			}
-		}
-
-		// 合并所有实付金额（用于最小/最大订单金额计算）
-		allPayAmounts := append(storePayAmounts, takeoutPayAmounts...)
-		// 总订单数：所有订单（包括实付金额为0的订单）
-		totalOrderNum := int64(len(storeOrderData)) + takeoutOrderNum
-		// 总实付金额：所有订单的实付金额总和（包括0）
-		totalPayAmountSum := storePayAmountSum.Add(takeoutPayAmountSum)
-
-		// 重新计算最小订单金额（只考虑实付金额 > 0 的订单）
-		if len(allPayAmounts) > 0 {
-			minAmount := allPayAmounts[0]
-			maxAmount := allPayAmounts[0]
-			for _, amount := range allPayAmounts {
-				if amount > 0 && (minAmount <= 0 || amount < minAmount) {
-					minAmount = amount
-				}
-				if amount > maxAmount {
-					maxAmount = amount
-				}
-			}
-			summary.MinOrderAmount.Float64 = minAmount
-			summary.MinOrderAmount.Valid = true
-			summary.MaxOrderAmount.Float64 = maxAmount
-			summary.MaxOrderAmount.Valid = true
-		}
-
-		// 重新计算平均订单金额（基于所有订单，包括实付金额为0的订单）
-		if totalOrderNum > 0 {
-			avgAmount := totalPayAmountSum.Div(decimal.NewFromInt(totalOrderNum))
-			summary.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
-			summary.AvgOrderAmount.Valid = true
-		}
+		summary.AvgOrderAmount.Float64 = avgOrderAmount.Round(2).InexactFloat64()
+		summary.AvgOrderAmount.Valid = true
 	}
 
 	// 查询 Grab 和 LINE MAN 外卖订单数据
@@ -2265,6 +2231,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 	var allTakeoutPayAmounts []float64
 	var allTakeoutOrderNum int64
 	var allTakeoutPayAmountSum decimal.Decimal
+	var allTakeoutPayOrderNum int64
 
 	// 添加点餐订单（标记外卖）
 	for _, item := range takeoutShopOrderData {
@@ -2272,6 +2239,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.OrderAmount))
 		if item.OrderAmount > 0 {
 			allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.OrderAmount)
+			allTakeoutPayOrderNum++
 		}
 	}
 
@@ -2281,6 +2249,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
 		if item.PayAmount > 0 {
 			allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
+			allTakeoutPayOrderNum++
 		}
 	}
 
@@ -2290,11 +2259,12 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
 		if item.PayAmount > 0 {
 			allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
+			allTakeoutPayOrderNum++
 		}
 	}
 
 	// 计算外卖统计
-	result["takeout"] = calculateChannelSaleFromRawDataAndAmounts(allTakeoutOrderNum, allTakeoutPayAmounts, allTakeoutPayAmountSum)
+	result["takeout"] = calculateChannelSaleFromRawDataAndAmounts(allTakeoutOrderNum, allTakeoutPayAmounts, allTakeoutPayAmountSum, allTakeoutPayOrderNum)
 
 	return result, nil
 }
@@ -2309,12 +2279,14 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 	var payAmounts []float64
 	var orderNum int64
 	var payAmountSum decimal.Decimal
+	var payOrderNum int64
 
 	for _, item := range rawData {
 		orderNum++
-		payAmountSum = payAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
 		if item.PayAmount > 0 {
 			payAmounts = append(payAmounts, item.PayAmount)
+			payOrderNum++
+			payAmountSum = payAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
 		}
 	}
 
@@ -2338,8 +2310,8 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 		result.MaxOrderAmount.Valid = true
 	}
 
-	if orderNum > 0 {
-		avgAmount := payAmountSum.Div(decimal.NewFromInt(orderNum))
+	if payOrderNum > 0 {
+		avgAmount := payAmountSum.Div(decimal.NewFromInt(payOrderNum))
 		result.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
 		result.AvgOrderAmount.Valid = true
 	}
@@ -2348,7 +2320,7 @@ func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model
 }
 
 // calculateChannelSaleFromRawDataAndAmounts 从订单数和金额数据计算渠道统计
-func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []float64, payAmountSum decimal.Decimal) *model.ChannelSaleRepoResult {
+func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []float64, payAmountSum decimal.Decimal, payOrderNum int64) *model.ChannelSaleRepoResult {
 	result := &model.ChannelSaleRepoResult{}
 
 	result.TotalOrderNum.Int64 = orderNum
@@ -2371,8 +2343,8 @@ func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []floa
 		result.MaxOrderAmount.Valid = true
 	}
 
-	if orderNum > 0 {
-		avgAmount := payAmountSum.Div(decimal.NewFromInt(orderNum))
+	if payOrderNum > 0 {
+		avgAmount := payAmountSum.Div(decimal.NewFromInt(payOrderNum))
 		result.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
 		result.AvgOrderAmount.Valid = true
 	}

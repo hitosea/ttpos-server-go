@@ -107,6 +107,8 @@ type takeoutChannelSaleRawData struct {
 	OrderUuid    uint64  // 订单UUID
 	OrderAmount  float64 // 订单金额（subtotal）
 	PayAmount    float64 // 实付金额（状态为60时=0，其他状态=eater_payment）
+	OrderNum     int64   // 订单数
+	RefundNum    int64   // 退款笔数
 }
 
 // takeoutPaymentMethodRawData 外卖订单支付方式统计原始数据
