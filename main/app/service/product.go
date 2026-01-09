@@ -8483,6 +8483,11 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 		if err != nil {
 			return errors.WithMessage(err, "同步总店外卖商品到子店失败")
 		}
+		// 处理已删除的商品的外卖商品
+		err = s.deleteSubTakeoutProduct(db)
+		if err != nil {
+			return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除失败")
+		}
 	}
 
 	if len(multiLanguageNameUuids) > 0 {
@@ -8624,6 +8629,43 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		return errors.WithMessage(err, "同步总店外卖商品到子店事务执行失败")
 	}
 
+	return nil
+}
+
+// 已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除
+func (s *productSrv) deleteSubTakeoutProduct(db *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		now := time.Now().Unix()
+		// 如果商品删除了，相关的外卖商品以及外卖商品关联的表都标记删除
+		err := tx.Model(&model.ProductPackageTakeout{}).Where("product_package_uuid in (?)",
+			tx.Model(&model.ProductPackage{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductBomTakeout{}).Where("product_package_takeout_uuid in (?)",
+			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductPackageAttributeTakeout{}).Where("product_package_takeout_uuid in (?)",
+			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductPackageGroupItemTakeout{}).Where("product_package_takeout_uuid in (?)",
+			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的表都标记删除失败")
+	}
 	return nil
 }
 
