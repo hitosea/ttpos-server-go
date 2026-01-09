@@ -2090,6 +2090,36 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 			repository.CommonRepo.WhereBySoftDelete(),
 		))
 	}
+
+	// 提取时间范围（用于外卖订单筛选）
+	var queryStartTime, queryEndTime int64
+	if req.Timezone == "" {
+		req.Timezone = ctx.GetCompanySetting().Timezone
+	}
+	// 处理时间范围
+	if req.TimeType > 0 && req.TimeType <= 7 {
+		switch req.TimeType {
+		case 1: // 今天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).TodayStartEndUnix()
+		case 2: // 昨天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YesterdayStartEndUnix()
+		case 3: // 本周
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).WeekStartEndUnix()
+		case 4: // 本月
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).MonthStartEndUnix()
+		case 5: // 近7天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).Last7DaysStartEndUnix()
+		case 6: // 上月
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).LastMonthStartEndUnix()
+		case 7: // 今年
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YearStartEndUnix()
+		}
+	}
+	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
+		queryStartTime = req.QueryStartTime
+		queryEndTime = req.QueryEndTime
+	}
+
 	productSaleData, total := statisticsRepo.CountProductSale(repository.CountProductSaleRepoReq{
 		PageNo:        req.PageNo,
 		PageSize:      req.PageSize,
@@ -2102,6 +2132,8 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		ProductName:   req.ProductName,
 		OrderTypes:    req.OrderTypes,
 		OrderSource:   req.OrderSource,
+		StartTime:     queryStartTime,
+		EndTime:       queryEndTime,
 	}, opts...)
 
 	var data []CountProductSale
