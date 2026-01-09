@@ -384,8 +384,10 @@ func (r *StatisticsTakeoutRepo) CountTakeoutReceivedAmount(req CountTakeoutReq) 
 }
 
 // RankTakeoutProduct 统计外卖订单商品排行
-// 统计有效状态的订单（10,20,30,40），且 accepted_time > 0（接单后才能统计）
+// 统计有效状态的订单（10,20,30,40,60），且 accepted_time > 0（接单后才能统计）
 // 按 product_package_uuid 分组统计销售数量和金额
+// 销量：所有 validOrderStates 都统计（包括取消订单60）
+// 销售金额：只统计 businessOrderStates（不包括取消订单60）
 func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.StatisticsProductData {
 	var result []model.StatisticsProductData
 
@@ -393,15 +395,19 @@ func (r *StatisticsTakeoutRepo) RankTakeoutProduct(req CountTakeoutReq) []model.
 	takeoutOrderTable := prefix + "takeout_order"
 	takeoutOrderItemTable := prefix + "takeout_order_item"
 
-	// 统计营业收入状态的订单（10,20,30,40），不包括取消订单（60）
-	validStatesStr := buildStateInCondition(businessOrderStates)
+	// 统计有效状态的订单（10,20,30,40,60），包括取消订单（60）
+	validStatesStr := buildStateInCondition(validOrderStates)
+	// 营业收入状态（10,20,30,40），不包括取消订单（60），用于计算销售金额
+	businessStatesStr := buildStateInCondition(businessOrderStates)
 
 	query := r.db.Table(takeoutOrderItemTable+" AS toi").
 		Select(
 			"toi.price AS sale_price",
 			"toi.ttpos_product_package_uuid AS product_package_uuid",
+			// 销量：所有 validOrderStates 都统计（包括取消订单60）
 			"SUM(CAST(toi.quantity AS DECIMAL(14,2))) AS sale_num",
-			"SUM(toi.price * toi.quantity) AS sale_amount",
+			// 销售金额：只统计 businessOrderStates（不包括取消订单60）
+			fmt.Sprintf("SUM(IF(to_order.order_state IN %s, toi.price * toi.quantity, 0)) AS sale_amount", businessStatesStr),
 		).
 		Joins(fmt.Sprintf("INNER JOIN %s AS to_order ON toi.takeout_order_uuid = to_order.uuid", takeoutOrderTable)).
 		Where("toi.delete_time = ?", constant.NotDeleted).
