@@ -168,7 +168,7 @@ func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuS
 			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
 			Data(g.Map{
 				dao.ChannelMenuSnapshot.Columns().SyncState: status,
-				dao.ChannelMenuSnapshot.Columns().UpdatedAt: gtime.Now(),
+				dao.ChannelMenuSnapshot.Columns().UpdatedAt: gtime.Now().Unix(),
 			}).Update()
 		if err != nil {
 			g.Log().Errorf(ctx, "[Grab] 更新渠道菜单快照状态失败: shopUUID=%d, status=%s, error: %v", shopUUID, status, err)
@@ -213,8 +213,8 @@ func (s *sGrabMenu) SyncMenu(ctx context.Context, merchantID string, menu *grabf
 		SyncType:     "FULL",
 		Status:       grabDto.MenuSyncStatusQueued,
 		MenuSnapshot: string(menuSnapshot),
-		CreatedAt:    gtime.Now(),
-		UpdatedAt:    gtime.Now(),
+		CreatedAt:    gtime.Now().Unix(),
+		UpdatedAt:    gtime.Now().Unix(),
 	}
 
 	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
@@ -228,7 +228,7 @@ func (s *sGrabMenu) SyncMenu(ctx context.Context, merchantID string, menu *grabf
 		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
 		Data(g.Map{
 			dao.ChannelMenuSnapshot.Columns().TtposMenuData: string(menuSnapshot),
-			dao.ChannelMenuSnapshot.Columns().UpdatedAt:     gtime.Now(),
+			dao.ChannelMenuSnapshot.Columns().UpdatedAt:     gtime.Now().Unix(),
 		}).Update()
 	if err != nil {
 		return fmt.Errorf("更新菜单快照失败: %w", err)
@@ -242,7 +242,7 @@ func (s *sGrabMenu) SyncMenu(ctx context.Context, merchantID string, menu *grabf
 			Data(g.Map{
 				dao.MenuLog.Columns().Status:    grabDto.MenuSyncStatusFail,
 				dao.MenuLog.Columns().ErrorMsg:  err.Error(),
-				dao.MenuLog.Columns().UpdatedAt: gtime.Now(),
+				dao.MenuLog.Columns().UpdatedAt: gtime.Now().Unix(),
 			}).Update()
 		return fmt.Errorf("通知 Grab 失败: %w", err)
 	}
