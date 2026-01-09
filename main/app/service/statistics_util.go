@@ -78,10 +78,8 @@ func (s *statisticsUtilSrv) MergeTakeoutStatistics(saleData model.StatisticsSale
 
 	// 12. MinOrderAmount（最小订单金额）= 取原有最小值和外卖最小值的较小值
 	minOrderAmount := saleData.MinOrderAmount.Float64
-	if takeoutData.MinOrderAmount > 0 {
-		if minOrderAmount == 0 || takeoutData.MinOrderAmount < minOrderAmount {
-			minOrderAmount = takeoutData.MinOrderAmount
-		}
+	if takeoutData.MinOrderAmount < minOrderAmount {
+		minOrderAmount = takeoutData.MinOrderAmount
 	}
 
 	// 13. MaxOrderAmount（最大订单金额）= 取原有最大值和外卖最大值的较大值
@@ -96,8 +94,10 @@ func (s *statisticsUtilSrv) MergeTakeoutStatistics(saleData model.StatisticsSale
 	var avgOrderAmount decimal.Decimal
 	if takeoutData.TotalOrderNum > 0 {
 		totalOrderAmount := decimal.NewFromFloat(saleData.TotalOrderAmount.Float64).
-			Add(decimal.NewFromFloat(takeoutData.TotalOrderAmount))
-		avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
+			Add(decimal.NewFromFloat(takeoutData.TotalOrderAmount)).
+			Sub(decimal.NewFromFloat(takeoutData.TotalRefundAmount))
+		curTotalOrderNum := totalOrderNum - takeoutData.CancelOrderNum
+		avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(curTotalOrderNum))
 	} else {
 		avgOrderAmount = decimal.NewFromFloat(saleData.AvgOrderAmount.Float64)
 	}
