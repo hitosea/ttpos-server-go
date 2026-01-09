@@ -107,7 +107,7 @@ var (
 		"SUM(IF(is_takeout = 1, payment_amount - refund_amount - delivery_fee, 0)) AS takeout_business_amount",
 		"SUM(IF(is_takeout = 1, refund_amount, 0)) AS takeout_refund_amount",
 		"SUM(IF(is_takeout = 1, delivery_fee, 0)) AS takeout_delivery_fee",
-		"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
+		"COALESCE(MAX(CASE WHEN desk_uuid > 0 THEN meal_num ELSE NULL END), 0) AS meal_num",
 		"SUM(IF(is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS order_amount",
 		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
