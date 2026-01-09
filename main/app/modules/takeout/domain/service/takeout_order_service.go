@@ -297,18 +297,20 @@ func (s *takeoutOrderSrv) AcceptOrder(ctx context.Context, req *request.TakeoutO
 	}
 
 	// 调用 BMP RPC 通知平台接受订单
-	rpcClient, err := rpc.NewBMPTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
-	}
-	defer rpcClient.Close()
-	// 调用 PrepareOrder 接口（接受订单）
-	if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
-		// 检查是否是订单状态不允许更新的错误
-		logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
-		if !strings.Contains(err.Error(), "order status can't be updated, because order state isn't NEW") {
-			return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
+	if !order.IsAutoAcceptOrder() {
+		rpcClient, err := rpc.NewBMPTakeoutClient()
+		if err != nil {
+			logger.Logger.Error("创建 BMP RPC 客户端失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			return errors.WithMessage(errors.New("创建 BMP RPC 客户端失败"), err.Error())
+		}
+		defer rpcClient.Close()
+		// 调用 PrepareOrder 接口（接受订单）
+		if err := rpcClient.PrepareOrder(ctx.GetContext(), order.TakeoutOrderUuid, "Accepted"); err != nil {
+			// 检查是否是订单状态不允许更新的错误
+			logger.Logger.Error("调用 BMP PrepareOrder 接口失败", zap.Error(err), zap.Uint64("orderUuid", order.Uuid))
+			if !strings.Contains(err.Error(), "order status can't be updated, because order state isn't NEW") {
+				return errors.WithMessage(errors.New("通知平台接受订单失败"), err.Error())
+			}
 		}
 	}
 
