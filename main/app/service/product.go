@@ -1727,7 +1727,7 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 		return errors.WithMessage(err, "获取外卖商品数量失败")
 	}
 	if takeoutCount > 0 {
-		return errors.New("该分类已经关联了外卖商品，不可删除")
+		return errors.New("该分类已经关联了商品，不可删除")
 	}
 
 	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
