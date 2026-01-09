@@ -927,9 +927,10 @@ type CountProductSaleRepoReq struct {
 	ProductName   string
 	OrderTypes    []uint
 	OrderSource   int
+	StartTime     int64 // 查询开始时间（用于外卖订单筛选）
+	EndTime       int64 // 查询结束时间（用于外卖订单筛选）
 }
 
-// CountProductSale 统计商品销售
 func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
 	// 获取语言，确保语言是支持的语言
 	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
@@ -951,12 +952,44 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	productParentCategoryTable := prefix + "product_category as ppc"
 	deskTable := prefix + "desk as d"
 	saleBillTable := prefix + "sale_bill as sb"
-	takeoutOrderItemTable := prefix + "takeout_order_item as toi"
 	takeoutOrderTable := prefix + "takeout_order as to_order"
+	takeoutOrderItemTable := prefix + "takeout_order_item as to_item"
 
-	var total int64
-	db = db.Table(statisticsProductTable).
-		Select("COUNT(DISTINCT sp.product_package_uuid) AS total").
+	// 构建商品分类筛选条件（用于店内和外卖查询）
+	var allCategoryUuids []uint64
+	if len(req.CategoryUuids) > 0 {
+		for _, categoryUuid := range req.CategoryUuids {
+			allCategoryUuids = append(allCategoryUuids, categoryUuid)
+			var subCategoryUuids []uint64
+			r.db.Table(productCategoryTable).
+				Select("uuid").
+				Where("parent_uuid = ?", categoryUuid).
+				Pluck("uuid", &subCategoryUuids)
+			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
+		}
+	} else if req.CategoryUuid > 0 {
+		allCategoryUuids = append(allCategoryUuids, req.CategoryUuid)
+		var subCategoryUuids []uint64
+		r.db.Table(productCategoryTable).
+			Select("uuid").
+			Where("parent_uuid = ?", req.CategoryUuid).
+			Pluck("uuid", &subCategoryUuids)
+		allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
+	}
+
+	// 构建店内商品销售查询（子查询）
+	storeQuery := db2.Table(statisticsProductTable).
+		Select(
+			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')) AS product_name",
+			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
+			"JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')) AS category_parent_name",
+			"sp.product_package_uuid AS product_package_uuid",
+			"SUM(sp.product_num) AS sale_num",
+			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + sp.service_tax) * sp.product_num) AS origin_sale_amount",
+			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS actual_sale_amount",
+			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, (sp.product_final_price - sp.tax_fee - sp.service_tax) * (sp.product_num - sp.refund_num))) AS business_amount",
+			"SUM(IF(sp.free_num > 0, sp.free_num, sp.give_num)) AS give_num",
+		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
@@ -964,43 +997,25 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	// 订单类型筛选：需要关联 sale_bill 表
 	needJoinSaleBill := len(req.OrderTypes) > 0 || (req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1))
 	if needJoinSaleBill {
-		db.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+		storeQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
 	}
 
 	if req.AreaUuid > 0 {
-		db.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
-		db.Where("d.region_uuid = ?", req.AreaUuid)
+		storeQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
+		storeQuery.Where("d.region_uuid = ?", req.AreaUuid)
 	}
 
-	// 商品分类筛选（支持多选和向后兼容）
-	if len(req.CategoryUuids) > 0 {
-		// 查询所有子分类
-		var allCategoryUuids []uint64
-		for _, categoryUuid := range req.CategoryUuids {
-			allCategoryUuids = append(allCategoryUuids, categoryUuid)
-			// 查询子分类
-			var subCategoryUuids []uint64
-			r.db.Table(productCategoryTable).
-				Select("uuid").
-				Where("parent_uuid = ?", categoryUuid).
-				Pluck("uuid", &subCategoryUuids)
-			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
-		}
-		if len(allCategoryUuids) > 0 {
-			db.Where("pp.category_uuid IN (?)", allCategoryUuids)
-		}
-	} else if req.CategoryUuid > 0 {
-		// 向后兼容：单个分类UUID
-		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
+	// 商品分类筛选
+	if len(allCategoryUuids) > 0 {
+		storeQuery.Where("pp.category_uuid IN (?)", allCategoryUuids)
 	}
 
 	if req.ProductName != "" {
-		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
+		storeQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
 
 	// 订单类型筛选
 	if len(req.OrderTypes) > 0 {
-		// 映射订单类型到SaleBillType
 		var billTypes []uint
 		for _, orderType := range req.OrderTypes {
 			switch orderType {
@@ -1013,7 +1028,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			}
 		}
 		if len(billTypes) > 0 {
-			db.Where("sb.bill_type IN (?)", billTypes)
+			storeQuery.Where("sb.bill_type IN (?)", billTypes)
 		}
 	}
 
@@ -1021,119 +1036,149 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
 		if req.OrderSource == 1 {
 			// 1=店内
-			db.Where("sb.order_source_uuid = 0")
+			storeQuery.Where("sb.order_source_uuid = 0")
 		} else if req.OrderSource == 2 {
 			// 2=外卖
-			db.Where("sb.order_source_uuid > 0")
+			storeQuery.Where("sb.order_source_uuid > 0")
 		}
 	}
 
-	db.Pluck("total", &total)
+	storeQuery.Group("sp.product_package_uuid")
 
-	listQuery := db2.Table(statisticsProductTable).
+	// 构建外卖商品销售查询（子查询）
+	// 使用 validOrderStates 状态筛选：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
+	validStatesStr := buildStateInCondition(validOrderStates)
+	takeoutQuery := r.db.Table(takeoutOrderItemTable).
 		Select(
-			// 商品名称：优先使用外卖订单商品的 ttpos_item_name（JSON格式），否则使用 product_package 的 name
-			fmt.Sprintf("COALESCE(MAX(JSON_UNQUOTE(JSON_EXTRACT(toi.ttpos_item_name, '$.%s'))), JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$.%s'))) AS product_name", req.Language, req.Language),
-			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
-			"JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')) AS category_parent_name",
-			fmt.Sprintf("SUM(sp.product_num) + COALESCE(SUM(toi.quantity), 0) AS sale_num"),
-			fmt.Sprintf("SUM((sp.product_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) + COALESCE(SUM(toi.price * toi.quantity), 0) AS origin_sale_amount"),
-			fmt.Sprintf("SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) + COALESCE(SUM(toi.price * toi.quantity), 0) AS actual_sale_amount"),
-			// 营业收入：已取消订单（order_state = 60）的营业收入为0
-			fmt.Sprintf("SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, (sp.product_final_price - sp.tax_fee - sp.service_tax) * (sp.product_num - sp.refund_num))) + COALESCE(SUM(CASE WHEN to_order.order_state = %d THEN 0 ELSE toi.price * toi.quantity END), 0) AS business_amount", canceledOrderState),
-			"SUM(IF(sp.free_num > 0, sp.free_num, sp.give_num)) AS give_num",
+			"COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')), to_item.item_name) AS product_name",
+			"COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')), IF(to_item.ttpos_category_name IS NULL OR to_item.ttpos_category_name = '', NULL, JSON_UNQUOTE(JSON_EXTRACT(to_item.ttpos_category_name, '$."+req.Language+"')))) AS category_name",
+			"COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')), IF(to_item.ttpos_parent_category_name IS NULL OR to_item.ttpos_parent_category_name = '', NULL, JSON_UNQUOTE(JSON_EXTRACT(to_item.ttpos_parent_category_name, '$."+req.Language+"')))) AS category_parent_name",
+			"COALESCE(to_item.ttpos_product_package_uuid, 0) AS product_package_uuid",
+			"SUM(to_item.quantity) AS sale_num",
+			"SUM(to_item.price * to_item.quantity) AS origin_sale_amount",
+			"SUM(to_item.price * to_item.quantity) AS actual_sale_amount",
+			"SUM((to_item.price - to_item.tax) * to_item.quantity) AS business_amount",
+			"0 AS give_num",
 		).
-		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
-		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
-		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
-		Joins(fmt.Sprintf("LEFT JOIN %s ON toi.ttpos_product_package_uuid = pp.uuid AND toi.delete_time = %d", takeoutOrderItemTable, constant.NotDeleted)).
-		Joins(fmt.Sprintf("LEFT JOIN %s ON to_order.uuid = toi.takeout_order_uuid AND to_order.order_state = %d AND to_order.delete_time = %d", takeoutOrderTable, canceledOrderState, constant.NotDeleted))
+		Joins("INNER JOIN "+takeoutOrderTable+" ON to_item.takeout_order_uuid = to_order.uuid").
+		Joins("LEFT JOIN "+productPackageTable+" ON to_item.ttpos_product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN "+productCategoryTable+" ON COALESCE(pp.category_uuid, to_item.ttpos_category_uuid) = pc.uuid").
+		Joins("LEFT JOIN "+productParentCategoryTable+" ON pc.parent_uuid = ppc.uuid").
+		Where("to_order.delete_time = ?", constant.NotDeleted).
+		Where("to_item.delete_time = ?", constant.NotDeleted).
+		Where("to_order.order_state IN " + validStatesStr)
 
-	// 订单类型筛选：需要关联 sale_bill 表
-	if needJoinSaleBill {
-		listQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+	// 时间范围筛选（使用 accepted_time）
+	if req.StartTime > 0 && req.EndTime > 0 {
+		takeoutQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.StartTime, req.EndTime)
 	}
 
-	if req.AreaUuid > 0 {
-		listQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
-		listQuery.Where("d.region_uuid = ?", req.AreaUuid)
+	// 商品分类筛选
+	if len(allCategoryUuids) > 0 {
+		takeoutQuery.Where("(pp.category_uuid IN (?) OR to_item.ttpos_category_uuid IN (?))", allCategoryUuids, allCategoryUuids)
 	}
 
-	// 商品分类筛选（支持多选和向后兼容）
-	if len(req.CategoryUuids) > 0 {
-		// 查询所有子分类
-		var allCategoryUuids []uint64
-		for _, categoryUuid := range req.CategoryUuids {
-			allCategoryUuids = append(allCategoryUuids, categoryUuid)
-			// 查询子分类
-			var subCategoryUuids []uint64
-			r.db.Table(productCategoryTable).
-				Select("uuid").
-				Where("parent_uuid = ?", categoryUuid).
-				Pluck("uuid", &subCategoryUuids)
-			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
-		}
-		if len(allCategoryUuids) > 0 {
-			listQuery.Where("pp.category_uuid IN (?)", allCategoryUuids)
-		}
-	} else if req.CategoryUuid > 0 {
-		// 向后兼容：单个分类UUID
-		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
-	}
-
+	// 商品名称筛选
 	if req.ProductName != "" {
-		listQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
+		takeoutQuery.Where("(JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ? OR to_item.item_name LIKE ?)", "$."+req.Language, "%"+req.ProductName+"%", "%"+req.ProductName+"%")
 	}
 
-	// 订单类型筛选
-	if len(req.OrderTypes) > 0 {
-		// 映射订单类型到SaleBillType
-		var billTypes []uint
-		for _, orderType := range req.OrderTypes {
-			switch orderType {
-			case 1: // 点餐订单
-				billTypes = append(billTypes, constant.SaleBillTypeInstant)
-			case 2: // 桌台订单
-				billTypes = append(billTypes, constant.SaleBillTypeDesk)
-			case 3: // 外送订单
-				billTypes = append(billTypes, constant.SaleBillTypeTakeout)
-			}
-		}
-		if len(billTypes) > 0 {
-			listQuery.Where("sb.bill_type IN (?)", billTypes)
+	takeoutQuery.Group("COALESCE(to_item.ttpos_product_package_uuid, 0)")
+
+	// 临时结构，包含 product_package_uuid
+	type productSaleDataWithUuid struct {
+		model.StatisticsProductSaleData
+		ProductPackageUuid uint64 `gorm:"column:product_package_uuid"`
+	}
+
+	// 执行店内商品销售查询
+	var storeData []productSaleDataWithUuid
+	storeQuery.Find(&storeData)
+
+	// 执行外卖商品销售查询
+	var takeoutData []productSaleDataWithUuid
+	takeoutQuery.Find(&takeoutData)
+
+	// 合并数据：按 product_package_uuid 分组
+	productMap := make(map[uint64]*model.StatisticsProductSaleData)
+	for i := range storeData {
+		item := &storeData[i]
+		key := item.ProductPackageUuid
+		if existing, exists := productMap[key]; exists {
+			// 合并数据
+			existing.SaleNum.Float64 += item.SaleNum.Float64
+			existing.OriginSaleAmount.Float64 += item.OriginSaleAmount.Float64
+			existing.ActualSaleAmount.Float64 += item.ActualSaleAmount.Float64
+			existing.BusinessAmount.Float64 += item.BusinessAmount.Float64
+			existing.GiveNum.Float64 += item.GiveNum.Float64
+		} else {
+			// 创建新条目
+			newItem := item.StatisticsProductSaleData
+			productMap[key] = &newItem
 		}
 	}
 
-	// 订单来源筛选（仅在订单类型包含点餐订单时生效）
-	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
-		if req.OrderSource == 1 {
-			// 1=店内
-			listQuery.Where("sb.order_source_uuid = 0")
-		} else if req.OrderSource == 2 {
-			// 2=外卖
-			listQuery.Where("sb.order_source_uuid > 0")
+	// 合并外卖数据
+	for i := range takeoutData {
+		item := &takeoutData[i]
+		key := item.ProductPackageUuid
+		if existing, exists := productMap[key]; exists {
+			// 合并数据
+			existing.SaleNum.Float64 += item.SaleNum.Float64
+			existing.OriginSaleAmount.Float64 += item.OriginSaleAmount.Float64
+			existing.ActualSaleAmount.Float64 += item.ActualSaleAmount.Float64
+			existing.BusinessAmount.Float64 += item.BusinessAmount.Float64
+			existing.GiveNum.Float64 += item.GiveNum.Float64
+		} else {
+			// 创建新条目
+			newItem := item.StatisticsProductSaleData
+			productMap[key] = &newItem
 		}
 	}
-	listQuery.Group("sp.product_package_uuid")
 
-	direction := "DESC"
+	// 转换为切片
+	var combinedData []model.StatisticsProductSaleData
+	for _, item := range productMap {
+		combinedData = append(combinedData, *item)
+	}
+
+	// 排序
+	direction := 1
 	if req.RankDirection == 1 {
-		direction = "ASC"
+		direction = -1
 	}
+	sort.Slice(combinedData, func(i, j int) bool {
+		if req.RankType == 2 {
+			// 按原价销售额排序
+			if direction > 0 {
+				return combinedData[i].OriginSaleAmount.Float64 > combinedData[j].OriginSaleAmount.Float64
+			}
+			return combinedData[i].OriginSaleAmount.Float64 < combinedData[j].OriginSaleAmount.Float64
+		}
+		// 按销售数量排序
+		if direction > 0 {
+			return combinedData[i].SaleNum.Float64 > combinedData[j].SaleNum.Float64
+		}
+		return combinedData[i].SaleNum.Float64 < combinedData[j].SaleNum.Float64
+	})
 
-	if req.RankType == 0 {
-		listQuery = listQuery.Order("sale_num " + direction)
+	// 计算总数
+	total := int64(len(combinedData))
+
+	// 分页
+	start := (req.PageNo - 1) * req.PageSize
+	end := start + req.PageSize
+	if start > len(combinedData) {
+		start = len(combinedData)
 	}
-
-	if req.RankType == 1 {
-		listQuery = listQuery.Order("sale_num " + direction)
+	if end > len(combinedData) {
+		end = len(combinedData)
 	}
-
-	if req.RankType == 2 {
-		listQuery = listQuery.Order("origin_sale_amount " + direction)
+	if start < end {
+		result = combinedData[start:end]
+	} else {
+		result = []model.StatisticsProductSaleData{}
 	}
-
-	listQuery.Limit(req.PageSize).Offset((req.PageNo - 1) * req.PageSize).Find(&result)
 
 	return result, total
 }
