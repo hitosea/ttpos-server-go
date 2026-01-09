@@ -150,51 +150,81 @@ func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
 
 // 是否是打包订单
 func (o *TakeoutOrder) IsTakeawayOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.OrderType != valueobject.TakeoutOrderTypeDineIn
 }
 
 // 判断是否删除或者已经取消
 func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
+	if o == nil {
+		return true
+	}
 	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected || o.OrderState == valueobject.TakeoutOrderStateCanceled
 }
 
 // 获取外卖平台 全小写
 func (o *TakeoutOrder) GetToLowerPlatform() string {
+	if o == nil {
+		return ""
+	}
 	return strings.ToLower(o.Platform)
 }
 
 // 获取外卖平台 首字母大写
 func (o *TakeoutOrder) GetCapitalPlatform() string {
+	if o == nil || len(o.Platform) == 0 {
+		return ""
+	}
 	return strings.ToUpper(o.Platform[0:1]) + strings.ToLower(o.Platform[1:])
 }
 
 // 是否店内就餐订单
 func (o *TakeoutOrder) IsDineInOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.OrderType == valueobject.TakeoutOrderTypeDineIn
 }
 
 // 是否自动接单
 func (o *TakeoutOrder) IsAutoAcceptOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto
 }
 
 // 是否grab订单
 func (o *TakeoutOrder) IsGrabOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.Platform == valueobject.TakeoutPlatformGrab
 }
 
 // 是否lineman订单
 func (o *TakeoutOrder) IsLinemanOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.Platform == valueobject.TakeoutPlatformLineman
 }
 
 // 是否存在班次
 func (o *TakeoutOrder) IsExistShiftLog() bool {
+	if o == nil {
+		return false
+	}
 	return o.StaffShiftLogUuid > 0
 }
 
 // 是否 ERP发票已同步
 func (o *TakeoutOrder) IsErpInvoiceSynced() bool {
+	if o == nil {
+		return false
+	}
 	return len(o.ErpPosInvoiceResp) > 0
 }
 
