@@ -90,7 +90,7 @@ func (s *sOrder) PrepareOrder(ctx context.Context, req *api.PrepareOrderReq) (re
 	switch orderEntity.ProviderName {
 	case "grab":
 		// 调用 Grab 订单处理逻辑
-		err = service.GrabOrder().PrepareOrder(ctx, orderEntity, req.ToState)
+		err = service.Grab().PrepareOrder(ctx, orderEntity, req.ToState)
 		if err != nil {
 			return nil, gerror.Wrap(err, "Grab订单准备失败")
 		}
@@ -137,7 +137,7 @@ func (s *sOrder) MarkOrderReady(ctx context.Context, takeoutOrderUuid string, re
 	switch orderEntity.ProviderName {
 	case "grab":
 		// 调用 Grab 订单处理逻辑
-		err = service.GrabOrder().MarkOrderReady(ctx, orderEntity)
+		err = service.Grab().MarkOrderReadyEntity(ctx, orderEntity)
 		if err != nil {
 			return "", gerror.Wrap(err, "Grab订单标记准备完成失败")
 		}
@@ -184,7 +184,7 @@ func (s *sOrder) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res 
 	switch orderEntity.ProviderName {
 	case "grab":
 		// 调用 Grab 订单处理逻辑
-		res, err = service.GrabOrder().CancelOrder(ctx, orderEntity, req.CancelCode)
+		res, err = service.Grab().CancelOrderEntity(ctx, orderEntity, req.CancelCode)
 		if err != nil {
 			return nil, gerror.Wrap(err, "Grab订单取消失败")
 		}
@@ -231,7 +231,7 @@ func (s *sOrder) CheckOrderCancelable(ctx context.Context, req *api.CheckOrderCa
 	switch orderEntity.ProviderName {
 	case "grab":
 		// 调用 Grab 订单处理逻辑
-		res, err = service.GrabOrder().CheckOrderCancelable(ctx, orderEntity)
+		res, err = service.Grab().CheckOrderCancelableEntity(ctx, orderEntity)
 		if err != nil {
 			return nil, gerror.Wrap(err, "Grab订单检查可取消性失败")
 		}

@@ -1,4 +1,4 @@
-// Package grab 提供 GrabFood API 集成的业务逻辑
+// Package grab 提供 Grab SDK 客户端封装
 package grab
 
 import (

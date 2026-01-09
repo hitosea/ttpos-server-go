@@ -105,7 +105,6 @@ func (r *menuDataRepositoryImpl) GetTakeoutCategories(ctx context.Context, compa
 	var categories []*model.ProductCategory
 
 	query := db.Model(&model.ProductCategory{}).
-		Where("is_display_in_takeout = ?", 1).
 		Where("delete_time = ?", 0).
 		Preload("MultiLanguageName", "delete_time = ?", 0).
 		Order("sort ASC, id ASC")

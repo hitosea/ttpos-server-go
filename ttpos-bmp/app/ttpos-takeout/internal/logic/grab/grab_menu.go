@@ -1,5 +1,5 @@
 // Package grab_menu 提供 GrabFood 菜单服务的业务逻辑
-package grab_menu
+package grab
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -19,7 +18,6 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
-	"ttpos-bmp/app/ttpos-takeout/utility"
 	"ttpos-bmp/internal/pkg/queue"
 	"ttpos-bmp/utility/uuid"
 )
@@ -32,119 +30,9 @@ const (
 // sGrabMenu 菜单服务
 type sGrabMenu struct{}
 
-func init() {
-	service.RegisterGrabMenu(New())
-}
-
-// New 创建菜单服务实例
-func New() *sGrabMenu {
-	return &sGrabMenu{}
-}
-
-// HandleGetMenu 处理 Grab 获取菜单请求 (Partner Endpoint)
-// 签名验证已由中间件完成
-func (s *sGrabMenu) HandleGetMenu(ctx context.Context, partnerMerchantID string) (*grabfood.GetMenuNewResponse, error) {
-	g.Log().Infof(ctx, "[Grab] 收到获取菜单请求: partnerMerchantID=%s", partnerMerchantID)
-
-	// 1. 将 partnerMerchantID 转换为 shopUUID (uint64)
-	// 假设 partnerMerchantID 是数字字符串格式的 shopUUID
-	shopUUID := g.NewVar(partnerMerchantID).Uint64()
-	if shopUUID == 0 {
-		g.Log().Errorf(ctx, "[Grab] partnerMerchantID 格式无效: %s", partnerMerchantID)
-		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "partnerMerchantID 格式无效")
-	}
-
-	// 2. 优先从本地快照读取菜单
-	menuJSON, err := service.ChannelMenu().GetTtposMenu(ctx, shopUUID, string(consts.ProviderGrab))
-	if err != nil {
-		g.Log().Errorf(ctx, "[Grab] 获取渠道菜单失败: shopUUID=%d, error: %v", shopUUID, err)
-		return nil, gerror.Wrap(err, "获取渠道菜单失败")
-	}
-
-	// 3. 如果本地快照为空，回退调用 TTPOS 导出接口
-	if menuJSON == "" {
-		g.Log().Infof(ctx, "[Grab] 本地菜单快照不存在，回退调用 TTPOS 导出接口: shopUUID=%d", shopUUID)
-		resp, err := s.fetchMenuFromTTpos(ctx, shopUUID)
-		if err != nil {
-			g.Log().Errorf(ctx, "[Grab] 从 TTPOS 获取菜单失败: shopUUID=%d, error=%v", shopUUID, err)
-			return nil, gerror.NewCode(gcode.CodeNotFound, "菜单不存在")
-		}
-		// 清空 MerchantID 和 PartnerMerchantID，由 grab.go 的 HandleGetMenu 设置
-		resp.MerchantID = nil
-		resp.PartnerMerchantID = nil
-		g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自 TTPOS）: categories=%d,sellingTimes=%d",
-			len(resp.Categories), len(resp.SellingTimes))
-		return resp, nil
-	}
-
-	// 4. 解析本地快照 JSON 为 PushGrabMenuDTO (使用 SDK 类型)
-	var pushDTO grabDto.PushGrabMenuDTO
-	if err := json.Unmarshal([]byte(menuJSON), &pushDTO); err != nil {
-		g.Log().Errorf(ctx, "[Grab] 解析菜单 JSON 失败: error: %v", err)
-		return nil, gerror.Wrap(err, "解析菜单数据失败")
-	}
-
-	// 5. 构建响应结构，MerchantID 和 PartnerMerchantID 由 grab.go 的 HandleGetMenu 设置
-	resp := &grabfood.GetMenuNewResponse{
-		MerchantID:        nil, // 由 grab.go 设置
-		PartnerMerchantID: nil, // 由 grab.go 设置
-		Currency:          pushDTO.Currency,
-		SellingTimes:      pushDTO.SellingTimes,
-		Categories:        pushDTO.Categories,
-	}
-
-	g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自本地）: categories=%d", len(resp.Categories))
-
-	return resp, nil
-}
-
-// fetchMenuFromTTpos 从 TTPOS 主模块获取菜单数据
-// 当本地菜单快照为空时，回退调用此方法
-func (s *sGrabMenu) fetchMenuFromTTpos(ctx context.Context, shopUUID uint64) (*grabfood.GetMenuNewResponse, error) {
-	// 1. 获取带认证的 Client
-	client, err := utility.GetTtposClientWithAuth(ctx, fmt.Sprintf("%d", shopUUID))
-	if err != nil {
-		return nil, gerror.Wrap(err, "创建 TTPOS 客户端失败")
-	}
-
-	// 2. 构建请求体
-	reqBody := g.Map{
-		"platform":     string(consts.ProviderGrab),
-		"company_uuid": shopUUID,
-	}
-
-	// 3. 发起请求
-	resp := client.ContentJson().PostVar(ctx, "/api/v1/takeout/menu/export", reqBody)
-	if resp == nil || resp.IsEmpty() {
-		return nil, gerror.New("TTPOS 导出接口返回空响应")
-	}
-
-	// 4. 解析响应
-	resultJson, err := gjson.DecodeToJson(resp)
-	if err != nil {
-		return nil, gerror.Wrap(err, "解析 TTPOS 导出接口响应失败")
-	}
-
-	// 5. 检查业务状态码（兼容 code=200 和 code=1 两种成功状态）
-	code := resultJson.Get("code").Int()
-	if code != 0 {
-		message := resultJson.Get("message").String()
-		return nil, gerror.Newf("TTPOS 导出接口错误: code=%d, message=%s", code, message)
-	}
-
-	// 6. 解析菜单数据
-	menuData := &grabfood.GetMenuNewResponse{}
-	if err := resultJson.Get("data.menuData").Struct(&menuData); err != nil {
-		return nil, gerror.Wrap(err, "解析菜单数据失败")
-	}
-
-	g.Log().Infof(ctx, "[Grab] 从 TTPOS 获取菜单成功: shopUUID=%d", shopUUID)
-	return menuData, nil
-}
-
 // HandleMenuSyncState 处理菜单同步状态回调
 // 使用 SDK grabfood.MenuSyncWebhookRequest
-func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error {
+func (s *sGrab) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error {
 	requestID := req.GetRequestID()
 	status := req.GetStatus()
 
@@ -168,7 +56,7 @@ func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuS
 			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
 			Data(g.Map{
 				dao.ChannelMenuSnapshot.Columns().SyncState: status,
-				dao.ChannelMenuSnapshot.Columns().UpdatedAt: gtime.Now(),
+				dao.ChannelMenuSnapshot.Columns().UpdatedAt: gtime.Now().Unix(),
 			}).Update()
 		if err != nil {
 			g.Log().Errorf(ctx, "[Grab] 更新渠道菜单快照状态失败: shopUUID=%d, status=%s, error: %v", shopUUID, status, err)
@@ -200,60 +88,9 @@ func (s *sGrabMenu) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuS
 	return nil
 }
 
-// SyncMenu 主动同步菜单到 Grab
-func (s *sGrabMenu) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse, notifier grabDto.MenuNotifier) error {
-	// 1. 保存菜单快照
-	menuSnapshot, _ := json.Marshal(menu)
-	logUUID := uuid.MustGetID()
-
-	logDo := &do.MenuLog{
-		Uuid:         logUUID,
-		MerchantId:   merchantID,
-		ProviderName: string(consts.ProviderGrab),
-		SyncType:     "FULL",
-		Status:       grabDto.MenuSyncStatusQueued,
-		MenuSnapshot: string(menuSnapshot),
-		CreatedAt:    gtime.Now(),
-		UpdatedAt:    gtime.Now(),
-	}
-
-	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
-	if err != nil {
-		return fmt.Errorf("保存菜单日志失败: %w", err)
-	}
-
-	// 2. 更新菜单快照表
-	_, err = dao.ChannelMenuSnapshot.Ctx(ctx).
-		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, g.NewVar(merchantID).Uint64()).
-		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
-		Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().TtposMenuData: string(menuSnapshot),
-			dao.ChannelMenuSnapshot.Columns().UpdatedAt:     gtime.Now(),
-		}).Update()
-	if err != nil {
-		return fmt.Errorf("更新菜单快照失败: %w", err)
-	}
-	// 3. 调用 Grab API 通知菜单更新
-	requestID, err := notifier.NotifyMenuUpdate(ctx, *menu.MerchantID)
-	if err != nil {
-		// 更新日志状态为失败
-		_, _ = dao.MenuLog.Ctx(ctx).
-			Where(dao.MenuLog.Columns().Uuid, logUUID).
-			Data(g.Map{
-				dao.MenuLog.Columns().Status:    grabDto.MenuSyncStatusFail,
-				dao.MenuLog.Columns().ErrorMsg:  err.Error(),
-				dao.MenuLog.Columns().UpdatedAt: gtime.Now(),
-			}).Update()
-		return fmt.Errorf("通知 Grab 失败: %w", err)
-	}
-
-	g.Log().Infof(ctx, "[Grab] 菜单同步已启动: merchant=%s, requestId=%s", merchantID, requestID)
-	return nil
-}
-
 // SaveMenuSnapshot 保存菜单快照到数据库
 // 使用 shop_uuid + provider_name 作为唯一键，存在则更新，不存在则插入
-func (s *sGrabMenu) SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGrabMenuDTO) (uint64, error) {
+func (s *sGrab) SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGrabMenuDTO) (uint64, error) {
 	// 序列化菜单数据为 JSON
 	menuData, err := json.Marshal(dto)
 	if err != nil {
@@ -279,7 +116,7 @@ func (s *sGrabMenu) SaveMenuSnapshot(ctx context.Context, dto *grabDto.PushGrabM
 }
 
 // NotifyMenuUpdate 发送菜单更新通知 (RocketMQ)
-func (s *sGrabMenu) NotifyMenuUpdate(ctx context.Context, event *grabDto.ProviderMenuUpdateEvent) error {
+func (s *sGrab) NotifyMenuUpdateEvent(ctx context.Context, event *grabDto.ProviderMenuUpdateEvent) error {
 	// 使用 queue 包发送消息
 	if err := queue.PushWithContext(ctx, TopicProviderMenuUpdate, event); err != nil {
 		return fmt.Errorf("发送菜单更新事件失败: %w", err)
@@ -296,7 +133,7 @@ func (s *sGrabMenu) NotifyMenuUpdate(ctx context.Context, event *grabDto.Provide
 // UpdateMenuItem 更新单个菜单项 (商品)
 // 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新商品信息
 // 支持更新：价格、可用状态、库存、高级定价配置、购买能力配置
-func (s *sGrabMenu) UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) error {
+func (s *sGrab) UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuItemReq) error {
 	g.Log().Infof(ctx, "[Grab] 更新菜单项: merchantID=%s, itemID=%s", req.MerchantID, req.ItemID)
 
 	// 1. 参数验证
@@ -330,7 +167,7 @@ func (s *sGrabMenu) UpdateMenuItem(ctx context.Context, req *grabDto.UpdateMenuI
 // UpdateMenuModifier 更新单个修饰符
 // 调用 GrabFood API PUT /partner/v1/merchants/menu/record 更新修饰符信息
 // 支持更新：价格、可用状态、是否免费、高级定价配置
-func (s *sGrabMenu) UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) error {
+func (s *sGrab) UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateMenuModifierReq) error {
 	g.Log().Infof(ctx, "[Grab] 更新菜单修饰符: merchantID=%s, modifierID=%s, modifierName=%s",
 		req.MerchantID, req.ModifierID, req.ModifierName)
 
@@ -364,7 +201,7 @@ func (s *sGrabMenu) UpdateMenuModifier(ctx context.Context, req *grabDto.UpdateM
 
 // logMenuRecordUpdate 记录菜单记录更新日志
 // 内部方法，记录到 menu_log 表
-func (s *sGrabMenu) logMenuRecordUpdate(ctx context.Context, merchantID, recordID, recordType string, success bool, errMsg string) {
+func (s *sGrab) logMenuRecordUpdate(ctx context.Context, merchantID, recordID, recordType string, success bool, errMsg string) {
 	logUUID := uuid.MustGetID()
 	status := grabDto.MenuSyncStatusSuccess
 	if !success {
@@ -404,7 +241,7 @@ func (s *sGrabMenu) logMenuRecordUpdate(ctx context.Context, merchantID, recordI
 // 返回：
 //   - resp: 批量更新响应，包含状态和错误列表
 //   - err: 错误信息
-func (s *sGrabMenu) BatchUpdateMenu(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabDto.BatchUpdateMenuResp, error) {
+func (s *sGrab) BatchUpdateMenuItems(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabDto.BatchUpdateMenuResp, error) {
 	g.Log().Infof(ctx, "[Grab] 批量更新菜单: merchantID=%s, field=%s, count=%d",
 		req.MerchantID, req.Field, len(req.MenuEntities))
 
@@ -464,7 +301,7 @@ func (s *sGrabMenu) BatchUpdateMenu(ctx context.Context, req *grabDto.BatchUpdat
 }
 
 // convertDTOToSDKBatchUpdate 转换 DTO BatchUpdateMenuReq 到 SDK BatchUpdateMenuItem
-func (s *sGrabMenu) convertDTOToSDKBatchUpdate(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabfood.BatchUpdateMenuItem, error) {
+func (s *sGrab) convertDTOToSDKBatchUpdate(ctx context.Context, req *grabDto.BatchUpdateMenuReq) (*grabfood.BatchUpdateMenuItem, error) {
 	// 1. 创建 SDK 请求
 	sdkReq := grabfood.NewBatchUpdateMenuItem(req.MerchantID, req.Field)
 
@@ -516,7 +353,7 @@ func (s *sGrabMenu) convertDTOToSDKBatchUpdate(ctx context.Context, req *grabDto
 }
 
 // convertAdvancedPricings 转换高级定价配置
-func (s *sGrabMenu) convertAdvancedPricings(dtoAdvancedPricings []grabDto.UpdateAdvancedPricingReq) []grabfood.UpdateAdvancedPricing {
+func (s *sGrab) convertAdvancedPricings(dtoAdvancedPricings []grabDto.UpdateAdvancedPricingReq) []grabfood.UpdateAdvancedPricing {
 	var sdkAdvancedPricings []grabfood.UpdateAdvancedPricing
 	for _, ap := range dtoAdvancedPricings {
 		pricing := grabfood.NewUpdateAdvancedPricing()
@@ -528,7 +365,7 @@ func (s *sGrabMenu) convertAdvancedPricings(dtoAdvancedPricings []grabDto.Update
 }
 
 // convertPurchasabilities 转换购买能力配置
-func (s *sGrabMenu) convertPurchasabilities(dtoPurchasabilities []grabDto.UpdatePurchasabilityReq) []grabfood.UpdatePurchasability {
+func (s *sGrab) convertPurchasabilities(dtoPurchasabilities []grabDto.UpdatePurchasabilityReq) []grabfood.UpdatePurchasability {
 	var sdkPurchasabilities []grabfood.UpdatePurchasability
 	for _, p := range dtoPurchasabilities {
 		purchasability := grabfood.NewUpdatePurchasability()
@@ -540,7 +377,7 @@ func (s *sGrabMenu) convertPurchasabilities(dtoPurchasabilities []grabDto.Update
 }
 
 // convertSDKRespToDTO 转换 SDK BatchUpdateMenuResponse 到 DTO
-func (s *sGrabMenu) convertSDKRespToDTO(ctx context.Context, sdkResp *grabfood.BatchUpdateMenuResponse) *grabDto.BatchUpdateMenuResp {
+func (s *sGrab) convertSDKRespToDTO(ctx context.Context, sdkResp *grabfood.BatchUpdateMenuResponse) *grabDto.BatchUpdateMenuResp {
 	dtoResp := &grabDto.BatchUpdateMenuResp{
 		MerchantID: sdkResp.GetMerchantID(),
 		Status:     sdkResp.GetStatus(),
@@ -564,7 +401,7 @@ func (s *sGrabMenu) convertSDKRespToDTO(ctx context.Context, sdkResp *grabfood.B
 
 // logBatchUpdate 记录批量更新日志
 // 内部方法，记录到 menu_log 表
-func (s *sGrabMenu) logBatchUpdate(ctx context.Context, merchantID, field string, count int, success bool, errMsg string) {
+func (s *sGrab) logBatchUpdate(ctx context.Context, merchantID, field string, count int, success bool, errMsg string) {
 	logUUID := uuid.MustGetID()
 	status := grabDto.MenuSyncStatusSuccess
 	if !success {

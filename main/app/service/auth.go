@@ -1517,15 +1517,20 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		AllowedTransferTypes: func() string {
 			headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
 			if headquarterUuid == 0 {
-				return "in,out"
+				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+				if err != nil {
+					return "in,out"
+				}
+				return businessSetting.AllowedTransferTypes
+			} else {
+				copyCtx := ctx.Copy()
+				copyCtx.SetCompanyUuid(headquarterUuid)
+				businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
+				if err != nil {
+					return "in,out"
+				}
+				return businessSetting.AllowedTransferTypes
 			}
-			copyCtx := ctx.Copy()
-			copyCtx.SetCompanyUuid(headquarterUuid)
-			businessSetting, err := s.settingSrv.GetBusinessSetting(copyCtx)
-			if err != nil {
-				return "in,out"
-			}
-			return businessSetting.AllowedTransferTypes
 		}(),
 	}, nil
 }

@@ -41720,8 +41720,12 @@
                     "description": "商品类别状态 0-关闭 1-开启",
                     "type": "integer"
                 },
-                "takeout_product_count": {
-                    "description": "v2.11.0 被外卖商品选中的数量",
+                "takeout_grab_count": {
+                    "description": "v2.11.0 被Grab平台选中的数量",
+                    "type": "integer"
+                },
+                "takeout_lineman_count": {
+                    "description": "v2.11.0 被LINE MAN平台选中的数量",
                     "type": "integer"
                 },
                 "uuid": {

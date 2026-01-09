@@ -188,6 +188,16 @@ func (o *TakeoutOrder) IsLinemanOrder() bool {
 	return o.Platform == valueobject.TakeoutPlatformLineman
 }
 
+// 是否存在班次
+func (o *TakeoutOrder) IsExistShiftLog() bool {
+	return o.StaffShiftLogUuid > 0
+}
+
+// 是否 ERP发票已同步
+func (o *TakeoutOrder) IsErpInvoiceSynced() bool {
+	return len(o.ErpPosInvoiceResp) > 0
+}
+
 // 获取ERP POS Invoice响应数据
 func (o *TakeoutOrder) GetErpPosInvoiceResp() *selling.SavePosInvoiceResp {
 	if len(o.ErpPosInvoiceResp) == 0 {

@@ -12,7 +12,7 @@ import (
 
 // GetShopProviderCfg 查询门店第三方配置
 func (c *Controller) GetShopProviderCfg(ctx context.Context, req *api.GetShopProviderCfgReq) (res *takeout.ApiResponse, err error) {
-	resp, err := service.Grab().GetShopProviderCfg(ctx, req)
+	resp, err := service.ShopProviderCfg().GetShopProviderCfgResp(ctx, req)
 	if err != nil {
 		return &takeout.ApiResponse{
 			Code:    "5001",

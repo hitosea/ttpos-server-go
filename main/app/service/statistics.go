@@ -490,7 +490,10 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			})
 		} else {
 			item.TotalOrderNum += payment.TotalOrderNum.Int64
-			item.TotalPaymentAmount += payment.TotalPaymentAmount.Float64
+			// 使用 decimal 进行金额累加，避免精度问题
+			existingAmount := decimal.NewFromFloat(item.TotalPaymentAmount)
+			paymentAmount := decimal.NewFromFloat(payment.TotalPaymentAmount.Float64)
+			item.TotalPaymentAmount = existingAmount.Add(paymentAmount).InexactFloat64()
 			list[i] = *item
 		}
 		if payment.PaymentCode != 10 {
@@ -525,7 +528,10 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			})
 		} else {
 			item.TotalOrderNum += memberPayment.TotalOrderNum
-			item.TotalPaymentAmount += memberPayment.TotalPaymentAmount
+			// 使用 decimal 进行金额累加，避免精度问题
+			existingAmount := decimal.NewFromFloat(item.TotalPaymentAmount)
+			memberAmount := decimal.NewFromFloat(memberPayment.TotalPaymentAmount)
+			item.TotalPaymentAmount = existingAmount.Add(memberAmount).InexactFloat64()
 			list[i] = *item
 		}
 	}
@@ -829,6 +835,17 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 		ctx.GetLanguage(),
 	)
 
+	// 获取外卖订单数量并累加到 orderNum
+	takeoutSaleData := repository.NewStatisticsTakeoutRepo(ctx.GetDB()).CountTakeoutSale(
+		repository.CountTakeoutReq{
+			TimeStart:         req.QueryStartTime,
+			TimeEnd:           req.QueryEndTime,
+			StaffShiftLogUuid: staffShiftLogUuid,
+			Platform:          "", // 不筛选平台
+		},
+	)
+	orderNum += takeoutSaleData.TotalOrderNum
+
 	// 合并分类数据：使用 map 按分类UUID合并
 	categoryMap := make(map[string]*CountCategoryListResp)
 	for _, category := range categoryData {
@@ -852,9 +869,14 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 		}
 		key := takeoutCategoryName
 		if existing, exists := categoryMap[key]; exists {
-			// 累加销售量和销售额
-			existing.SaleNum += takeoutCategory.SaleNum.Float64
-			existing.SaleAmount += takeoutCategory.SaleAmount.Float64
+			// 累加销售量和销售额，使用 decimal 避免精度问题
+			existingSaleNum := decimal.NewFromFloat(existing.SaleNum)
+			existingSaleAmount := decimal.NewFromFloat(existing.SaleAmount)
+			takeoutSaleNum := decimal.NewFromFloat(takeoutCategory.SaleNum.Float64)
+			takeoutSaleAmount := decimal.NewFromFloat(takeoutCategory.SaleAmount.Float64)
+
+			existing.SaleNum = existingSaleNum.Add(takeoutSaleNum).InexactFloat64()
+			existing.SaleAmount = existingSaleAmount.Add(takeoutSaleAmount).InexactFloat64()
 		} else {
 			// 新增分类
 			categoryMap[key] = &CountCategoryListResp{
@@ -957,11 +979,23 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 		key := takeoutFullProductName
 		if existing, exists := productMap[key]; exists {
 			// 如果有匹配的店内商品，合并到该商品
-			existing.SaleNum += takeoutProduct.SaleNum.Float64
-			existing.SaleAmount += takeoutProduct.SaleAmount.Float64
+			// 使用 decimal 进行运算，避免精度问题
+			existingSaleNum := decimal.NewFromFloat(existing.SaleNum)
+			existingSaleAmount := decimal.NewFromFloat(existing.SaleAmount)
+			takeoutSaleNum := decimal.NewFromFloat(takeoutProduct.SaleNum.Float64)
+			takeoutSaleAmount := decimal.NewFromFloat(takeoutProduct.SaleAmount.Float64)
+
+			// 累加数量和金额
+			existingSaleNum = existingSaleNum.Add(takeoutSaleNum)
+			existingSaleAmount = existingSaleAmount.Add(takeoutSaleAmount)
+
+			// 更新结构体字段
+			existing.SaleNum = existingSaleNum.InexactFloat64()
+			existing.SaleAmount = existingSaleAmount.InexactFloat64()
+
 			// 单价：使用加权平均
-			if existing.SaleNum > 0 {
-				existing.SalePrice = existing.SaleAmount / existing.SaleNum
+			if existingSaleNum.GreaterThan(decimal.Zero) {
+				existing.SalePrice = existingSaleAmount.Div(existingSaleNum).Round(2).InexactFloat64()
 			}
 		} else {
 			// 如果没有匹配的店内商品，单独显示为一个商品
@@ -1117,7 +1151,10 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 			if !group.OrderUuids[item.SaleOrderUuid] {
 				group.OrderUuids[item.SaleOrderUuid] = true
 			}
-			group.TotalReceivedAmount += item.TotalReceivedAmount
+			// 使用 decimal 进行金额累加，避免精度问题
+			existingAmount := decimal.NewFromFloat(group.TotalReceivedAmount)
+			itemAmount := decimal.NewFromFloat(item.TotalReceivedAmount)
+			group.TotalReceivedAmount = existingAmount.Add(itemAmount).InexactFloat64()
 			groupedData[day] = group
 		} else {
 			groupedData[day] = struct {
@@ -1141,7 +1178,10 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 			if !group.OrderUuids[item.TakeoutOrderUuid] {
 				group.OrderUuids[item.TakeoutOrderUuid] = true
 			}
-			group.TotalReceivedAmount += item.TotalReceivedAmount
+			// 使用 decimal 进行金额累加，避免精度问题
+			existingAmount := decimal.NewFromFloat(group.TotalReceivedAmount)
+			itemAmount := decimal.NewFromFloat(item.TotalReceivedAmount)
+			group.TotalReceivedAmount = existingAmount.Add(itemAmount).InexactFloat64()
 			groupedData[day] = group
 		} else {
 			groupedData[day] = struct {
@@ -1237,7 +1277,7 @@ func (s *statisticsSrv) CountUnpaidOrder(ctx context.Context, req CountReq) Coun
 	if req.ExcludeDataManage {
 		opts = append(opts, repository.CommonRepo.WhereNotInDataManageSubQuery(
 			db,
-			"sale_bill_uuid",
+			"uuid",
 			repository.CommonRepo.WhereByType(model.DataManageTypeOrder),
 			repository.CommonRepo.WhereBySoftDelete(),
 		))
@@ -2079,6 +2119,36 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 			repository.CommonRepo.WhereBySoftDelete(),
 		))
 	}
+
+	// 提取时间范围（用于外卖订单筛选）
+	var queryStartTime, queryEndTime int64
+	if req.Timezone == "" {
+		req.Timezone = ctx.GetCompanySetting().Timezone
+	}
+	// 处理时间范围
+	if req.TimeType > 0 && req.TimeType <= 7 {
+		switch req.TimeType {
+		case 1: // 今天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).TodayStartEndUnix()
+		case 2: // 昨天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YesterdayStartEndUnix()
+		case 3: // 本周
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).WeekStartEndUnix()
+		case 4: // 本月
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).MonthStartEndUnix()
+		case 5: // 近7天
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).Last7DaysStartEndUnix()
+		case 6: // 上月
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).LastMonthStartEndUnix()
+		case 7: // 今年
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YearStartEndUnix()
+		}
+	}
+	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
+		queryStartTime = req.QueryStartTime
+		queryEndTime = req.QueryEndTime
+	}
+
 	productSaleData, total := statisticsRepo.CountProductSale(repository.CountProductSaleRepoReq{
 		PageNo:        req.PageNo,
 		PageSize:      req.PageSize,
@@ -2091,6 +2161,8 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		ProductName:   req.ProductName,
 		OrderTypes:    req.OrderTypes,
 		OrderSource:   req.OrderSource,
+		StartTime:     queryStartTime,
+		EndTime:       queryEndTime,
 	}, opts...)
 
 	var data []CountProductSale
@@ -2441,7 +2513,10 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 		},
 	)
 
-	return refundAmount + takeoutRefundAmount
+	// 使用 decimal 进行金额相加，避免精度问题
+	refundAmountDec := decimal.NewFromFloat(refundAmount)
+	takeoutRefundAmountDec := decimal.NewFromFloat(takeoutRefundAmount)
+	return refundAmountDec.Add(takeoutRefundAmountDec).InexactFloat64()
 }
 
 // CountCancelOrderResp 统计取消订单响应

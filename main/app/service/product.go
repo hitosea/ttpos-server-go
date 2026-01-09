@@ -1012,26 +1012,35 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 
 	// 统计被外卖商品选中的数量（包含普通分类和特殊分类）
 	takeoutProductRepo := repository.NewProductPackageTakeoutRepo(db)
-	takeoutProductCount, err := takeoutProductRepo.GetProductPackageTakeoutCount(
+	// 统计各个平台的外卖商品数量
+	takeoutGrabCount, _ := takeoutProductRepo.GetProductPackageTakeoutCount(
 		commonRepo.WhereBySoftDelete(),
 		takeoutProductRepo.WhereByCategoryUuidOrSpecialCategoryUuid(productCategory.Uuid),
+		takeoutProductRepo.WhereByTakeoutType(1),
 	)
-	if err != nil {
-		// 如果查询失败，设置为 0，不影响主流程
-		takeoutProductCount = 0
-	}
+	takeoutLinemanCount, _ := takeoutProductRepo.GetProductPackageTakeoutCount(
+		commonRepo.WhereBySoftDelete(),
+		takeoutProductRepo.WhereByCategoryUuidOrSpecialCategoryUuid(productCategory.Uuid),
+		takeoutProductRepo.WhereByTakeoutType(2),
+	)
 
 	return product_resp.ProductShopCategoryDetailResp{
-		Uuid:                productCategory.Uuid,
-		LocaleName:          productCategory.MultiLanguageName.GetNames(),
-		ParentUuid:          productCategory.ParentUuid,
-		ParentName:          parentName,
-		Sort:                productCategory.Sort,
-		Status:              productCategory.Status,
-		IsDisplayInStore:    productCategory.IsDisplayInStore,
-		IsDisplayInTakeout:  productCategory.IsDisplayInTakeout,
+		Uuid:             productCategory.Uuid,
+		LocaleName:       productCategory.MultiLanguageName.GetNames(),
+		ParentUuid:       productCategory.ParentUuid,
+		ParentName:       parentName,
+		Sort:             productCategory.Sort,
+		Status:           productCategory.Status,
+		IsDisplayInStore: productCategory.IsDisplayInStore,
+		IsDisplayInTakeout: func() int {
+			if takeoutGrabCount > 0 || takeoutLinemanCount > 0 {
+				return 1
+			}
+			return 0
+		}(),
 		ProductCount:        productCount,
-		TakeoutProductCount: takeoutProductCount,
+		TakeoutGrabCount:    takeoutGrabCount,
+		TakeoutLinemanCount: takeoutLinemanCount,
 		ChildCount:          childCount,
 		Code:                productCategory.Code,
 		IsEditable:          isEditable(ctx, productCategory.HeadquarterUuid),
@@ -1707,6 +1716,20 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 	if productCount > 0 {
 		return errors.New("该分类已经关联了商品，不可删除")
 	}
+
+	// 检查外卖商品数量
+	takeoutRepo := repository.NewProductPackageTakeoutRepo(db)
+	takeoutCount, err := takeoutRepo.GetProductPackageTakeoutCount(
+		commonRepo.WhereBySoftDelete(),
+		takeoutRepo.WhereByCategoryUuid(deleteReq.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取外卖商品数量失败")
+	}
+	if takeoutCount > 0 {
+		return errors.New("该分类已经关联了商品，不可删除")
+	}
+
 	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
 		categoryCount, err := productRepo.GetProductCategoryCount(
 			commonRepo.WhereBySoftDelete(),
@@ -8463,6 +8486,11 @@ func (s *productSrv) SyncProduct(ctx context.Context, syncHeadquarterData bool) 
 		if err != nil {
 			return errors.WithMessage(err, "同步总店外卖商品到子店失败")
 		}
+		// 处理已删除的商品的外卖商品
+		err = s.deleteSubTakeoutProduct(db)
+		if err != nil {
+			return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除失败")
+		}
 	}
 
 	if len(multiLanguageNameUuids) > 0 {
@@ -8604,6 +8632,43 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		return errors.WithMessage(err, "同步总店外卖商品到子店事务执行失败")
 	}
 
+	return nil
+}
+
+// 已删除的商品关联的外卖商品以及外卖商品关联的数据标记删除
+func (s *productSrv) deleteSubTakeoutProduct(db *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		now := time.Now().Unix()
+		// 如果商品删除了，相关的外卖商品以及外卖商品关联的表都标记删除
+		err := tx.Model(&model.ProductPackageTakeout{}).Where("product_package_uuid in (?)",
+			tx.Model(&model.ProductPackage{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductBomTakeout{}).Where("product_package_takeout_uuid in (?)",
+			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductPackageAttributeTakeout{}).Where("product_package_takeout_uuid in (?)",
+			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductPackageGroupItemTakeout{}).Where("product_package_takeout_uuid in (?)",
+			tx.Model(&model.ProductPackageTakeout{}).Where("delete_time > 0").Select("uuid")).
+			Update("delete_time", now).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err, "已删除的商品关联的外卖商品以及外卖商品关联的表都标记删除失败")
+	}
 	return nil
 }
 
