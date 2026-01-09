@@ -4,25 +4,25 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	grabclient "ttpos-bmp/app/ttpos-takeout/internal/client/grab"
 )
 
 // TestNewSignatureVerifier 测试签名验证器创建
 func TestNewSignatureVerifier(t *testing.T) {
 	secretKey := "test-secret-key"
-	verifier := newSignatureVerifier(secretKey)
+	verifier := grabclient.NewSignatureVerifier(secretKey)
 
 	if verifier == nil {
-		t.Fatal("newSignatureVerifier returned nil")
+		t.Fatal("grabclient.NewSignatureVerifier returned nil")
 	}
-	if verifier.secretKey != secretKey {
-		t.Errorf("secretKey mismatch: got %s, want %s", verifier.secretKey, secretKey)
-	}
+	// 验证器创建成功即可，不需要访问内部字段
 }
 
 // TestVerifySignature_Success 测试签名验证成功场景
 func TestVerifySignature_Success(t *testing.T) {
 	secretKey := "my-webhook-secret"
-	verifier := newSignatureVerifier(secretKey)
+	verifier := grabclient.NewSignatureVerifier(secretKey)
 
 	// 构造测试数据
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
@@ -40,7 +40,7 @@ func TestVerifySignature_Success(t *testing.T) {
 
 // TestVerifySignature_MissingSignature 测试缺少签名的场景
 func TestVerifySignature_MissingSignature(t *testing.T) {
-	verifier := newSignatureVerifier("secret")
+	verifier := grabclient.NewSignatureVerifier("secret")
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte(`{"test":"data"}`)
 
@@ -48,28 +48,28 @@ func TestVerifySignature_MissingSignature(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing signature, got nil")
 	}
-	if !containsError(err, ErrMissingHeader) {
-		t.Errorf("Expected ErrMissingHeader, got: %v", err)
+	if !containsError(err, grabclient.ErrMissingHeader) {
+		t.Errorf("Expected grabclient.ErrMissingHeader, got: %v", err)
 	}
 }
 
 // TestVerifySignature_MissingTimestamp 测试缺少时间戳的场景
 func TestVerifySignature_MissingTimestamp(t *testing.T) {
-	verifier := newSignatureVerifier("secret")
+	verifier := grabclient.NewSignatureVerifier("secret")
 	body := []byte(`{"test":"data"}`)
 
 	err := verifier.VerifySignature("some-signature", "", body)
 	if err == nil {
 		t.Error("Expected error for missing timestamp, got nil")
 	}
-	if !containsError(err, ErrMissingHeader) {
-		t.Errorf("Expected ErrMissingHeader, got: %v", err)
+	if !containsError(err, grabclient.ErrMissingHeader) {
+		t.Errorf("Expected grabclient.ErrMissingHeader, got: %v", err)
 	}
 }
 
 // TestVerifySignature_InvalidTimestamp 测试无效时间戳格式
 func TestVerifySignature_InvalidTimestamp(t *testing.T) {
-	verifier := newSignatureVerifier("secret")
+	verifier := grabclient.NewSignatureVerifier("secret")
 	body := []byte(`{"test":"data"}`)
 
 	err := verifier.VerifySignature("some-signature", "not-a-number", body)
@@ -80,7 +80,7 @@ func TestVerifySignature_InvalidTimestamp(t *testing.T) {
 
 // TestVerifySignature_ExpiredTimestamp 测试过期时间戳
 func TestVerifySignature_ExpiredTimestamp(t *testing.T) {
-	verifier := newSignatureVerifier("secret")
+	verifier := grabclient.NewSignatureVerifier("secret")
 
 	// 使用 10 分钟前的时间戳 (超过 5 分钟有效窗口)
 	expiredTime := time.Now().Add(-10 * time.Minute).Unix()
@@ -92,14 +92,14 @@ func TestVerifySignature_ExpiredTimestamp(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for expired timestamp, got nil")
 	}
-	if err != ErrExpiredTimestamp {
-		t.Errorf("Expected ErrExpiredTimestamp, got: %v", err)
+	if err != grabclient.ErrExpiredTimestamp {
+		t.Errorf("Expected grabclient.ErrExpiredTimestamp, got: %v", err)
 	}
 }
 
 // TestVerifySignature_InvalidSignature 测试无效签名
 func TestVerifySignature_InvalidSignature(t *testing.T) {
-	verifier := newSignatureVerifier("secret")
+	verifier := grabclient.NewSignatureVerifier("secret")
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte(`{"test":"data"}`)
 
@@ -108,14 +108,14 @@ func TestVerifySignature_InvalidSignature(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for invalid signature, got nil")
 	}
-	if err != ErrInvalidSignature {
-		t.Errorf("Expected ErrInvalidSignature, got: %v", err)
+	if err != grabclient.ErrInvalidSignature {
+		t.Errorf("Expected grabclient.ErrInvalidSignature, got: %v", err)
 	}
 }
 
 // TestVerifySignature_TamperedBody 测试被篡改的请求体
 func TestVerifySignature_TamperedBody(t *testing.T) {
-	verifier := newSignatureVerifier("secret")
+	verifier := grabclient.NewSignatureVerifier("secret")
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	originalBody := []byte(`{"orderID":"G-123"}`)
 	tamperedBody := []byte(`{"orderID":"G-456"}`)
@@ -128,14 +128,14 @@ func TestVerifySignature_TamperedBody(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for tampered body, got nil")
 	}
-	if err != ErrInvalidSignature {
-		t.Errorf("Expected ErrInvalidSignature, got: %v", err)
+	if err != grabclient.ErrInvalidSignature {
+		t.Errorf("Expected grabclient.ErrInvalidSignature, got: %v", err)
 	}
 }
 
 // TestGenerateSignature_Consistency 测试签名生成的一致性
 func TestGenerateSignature_Consistency(t *testing.T) {
-	verifier := newSignatureVerifier("consistent-secret")
+	verifier := grabclient.NewSignatureVerifier("consistent-secret")
 	timestamp := "1234567890"
 	body := []byte(`{"key":"value"}`)
 
@@ -149,8 +149,8 @@ func TestGenerateSignature_Consistency(t *testing.T) {
 
 // TestGenerateSignature_DifferentSecrets 测试不同密钥生成不同签名
 func TestGenerateSignature_DifferentSecrets(t *testing.T) {
-	verifier1 := newSignatureVerifier("secret-1")
-	verifier2 := newSignatureVerifier("secret-2")
+	verifier1 := grabclient.NewSignatureVerifier("secret-1")
+	verifier2 := grabclient.NewSignatureVerifier("secret-2")
 
 	timestamp := "1234567890"
 	body := []byte(`{"key":"value"}`)
@@ -165,8 +165,12 @@ func TestGenerateSignature_DifferentSecrets(t *testing.T) {
 
 // TestComputeHMAC_Format 测试 HMAC 计算结果格式
 func TestComputeHMAC_Format(t *testing.T) {
-	verifier := newSignatureVerifier("test-key")
-	result := verifier.computeHMAC("test-message")
+	verifier := grabclient.NewSignatureVerifier("test-key")
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	body := []byte("test-message")
+	
+	// 使用公开方法 GenerateSignature 来测试
+	result := verifier.GenerateSignature(timestamp, body)
 
 	// HMAC-SHA256 输出为 64 个十六进制字符
 	if len(result) != 64 {
@@ -191,7 +195,7 @@ func containsError(err, target error) bool {
 
 // BenchmarkVerifySignature 性能测试
 func BenchmarkVerifySignature(b *testing.B) {
-	verifier := newSignatureVerifier("benchmark-secret")
+	verifier := grabclient.NewSignatureVerifier("benchmark-secret")
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte(`{"orderID":"G-123456","merchantID":"M-001","items":[{"id":"item1","quantity":2}]}`)
 	signature := verifier.GenerateSignature(timestamp, body)
@@ -204,7 +208,7 @@ func BenchmarkVerifySignature(b *testing.B) {
 
 // BenchmarkGenerateSignature 签名生成性能测试
 func BenchmarkGenerateSignature(b *testing.B) {
-	verifier := newSignatureVerifier("benchmark-secret")
+	verifier := grabclient.NewSignatureVerifier("benchmark-secret")
 	timestamp := "1234567890"
 	body := []byte(`{"orderID":"G-123456","merchantID":"M-001","items":[{"id":"item1","quantity":2}]}`)
 

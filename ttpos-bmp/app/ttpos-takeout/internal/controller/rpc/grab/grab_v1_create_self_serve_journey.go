@@ -28,7 +28,7 @@ func (c *Controller) CreateSelfServeJourney(ctx context.Context, req *api.Create
 	}
 
 	// 调用 Logic 层
-	resp, err := service.GrabSelfServe().CreateSelfServeJourney(ctx, req)
+	resp, err := service.Grab().CreateSelfServeJourneyWithReq(ctx, req)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Grab] CreateSelfServeJourney failed: %v", err)
 		return &takeout.ApiResponse{
