@@ -114,7 +114,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 9. 构建 POS Invoice 请求参数
 	savePosInvoiceReq := buildPosInvoiceRequest(
 		takeoutOrder,
-		company.CompanySetting,
+		&companySetting,
 		erpOpenPosEntryName,
 		&existPayment,
 	)
@@ -124,7 +124,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		appContext.WithContext(ctx.GetContext()),
 		appContext.WithCompanyUuid(ctx.GetCompanyUuid()),
 		appContext.WithCompany(*company),
-		appContext.WithCompanySetting(*company.CompanySetting),
+		appContext.WithCompanySetting(companySetting),
 		appContext.WithStaff(ctx.GetStaff()),
 		appContext.WithStaffUuid(ctx.GetStaffUuid()),
 		appContext.WithLogger(logger.Logger),
@@ -144,17 +144,13 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 12. 保存 ERP 响应数据到订单
 	respJson, err := json.Marshal(savePosInvoiceResp)
 	if err != nil {
-		logger.Logger.Error("序列化 ERP 响应数据失败",
-			zap.Uint64("orderUuid", orderUuid),
-			zap.Error(err))
+		logger.Logger.Error("序列化 ERP 响应数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 	} else {
 		// 更新订单的 ERP 响应字段
 		if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
 			"erp_pos_invoice_resp": string(respJson),
 		}); err != nil {
-			logger.Logger.Error("保存 ERP 响应数据到订单失败",
-				zap.Uint64("orderUuid", orderUuid),
-				zap.Error(err))
+			logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 		}
 	}
 
