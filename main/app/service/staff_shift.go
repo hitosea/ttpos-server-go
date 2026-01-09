@@ -174,8 +174,10 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 	// 当收银员登录并创建新班次时，将那些没有找到可用班次的订单分配给当前新创建的班次
 	// 对于已接单的订单，会同步生成 ERP 发票
 	utils.Go(func() {
+		ctxCopy := ctx.Copy()
+		ctxCopy.SetDB(db)
 		takeoutOrderSrv := takeoutOrderService.NewTakeoutOrderSrv(s.dbm)
-		if err := takeoutOrderSrv.BatchAssignShiftLogToPendingOrders(ctx, shiftLog.Uuid, staff.Uuid); err != nil {
+		if err := takeoutOrderSrv.BatchAssignShiftLogToPendingOrders(ctxCopy, shiftLog.Uuid, staff.Uuid); err != nil {
 			logger.Logger.Warn("批量分配外卖订单班次失败", zap.Error(err), zap.Uint64("shiftLogUuid", shiftLog.Uuid), zap.Uint64("staffUuid", staff.Uuid))
 		}
 	})
