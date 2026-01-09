@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-takeout-save-menu-snapshot](../../../shared/specs/active/story-takeout-save-menu-snapshot/requirements.md) |
+| **关联 Spec** | [story-takeout-save-menu-snapshot](../../../shared/specs/archived/v2.12/story-takeout-save-menu-snapshot/requirements.md) |
 
 ---
 

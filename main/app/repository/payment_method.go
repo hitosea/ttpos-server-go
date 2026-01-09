@@ -45,6 +45,7 @@ type IPaymentMethodQueryRepo interface {
 	GetPaymentMethod(opts ...DBOption) model.PaymentMethod
 	GetPaymentMethodError(opts ...DBOption) (*model.PaymentMethod, error)
 	GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error)
+	GetPaymentMethodsByUuids(uuids []uint64) ([]*model.PaymentMethod, error) // 批量根据UUID查询支付方式
 	GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod
 	GetAllPaymentMethodList(opts ...DBOption) []*model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
@@ -193,6 +194,30 @@ func (r *paymentMethodRepo) GetPaymentMethodByUuid(uuid uint64) (*model.PaymentM
 		return nil, errors.WithMessage(err)
 	}
 	return paymentMethod, nil
+}
+
+// GetPaymentMethodsByUuids 批量根据UUID查询支付方式
+func (r *paymentMethodRepo) GetPaymentMethodsByUuids(uuids []uint64) ([]*model.PaymentMethod, error) {
+	if len(uuids) == 0 {
+		return []*model.PaymentMethod{}, nil
+	}
+
+	// 使用 GetAllPaymentMethodList 方法查询
+	paymentMethods := r.GetAllPaymentMethodList(
+		CommonRepo.WhereInUuids(uuids),
+		r.WhereStatus(constant.PaymentMethodStatusEnable),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "LogoFile",
+			},
+			WithPreload{
+				Query: "QrcodeFile",
+			},
+		),
+	)
+
+	return paymentMethods, nil
 }
 
 func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod {

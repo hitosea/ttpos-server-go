@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"slices"
+	"sort"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
@@ -14,18 +15,22 @@ import (
 )
 
 type IStatisticsRepo interface {
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                                                                                                                  // 统计销售
-	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                                                                                                                        // 统计销售天数
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                                                                                                                          // 统计支付
-	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                                                                                                                  // 统计支付天数
-	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                                                  // 统计税类
-	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                                            // 统计自助餐税类
-	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                                                                                                                       // 统计自助餐加钟税类
-	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData)                                                                                            // 统计分类
-	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                                         // 统计商品
-	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                                                                                                                // 统计区域
-	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                                                                                                                        // 统计区域
-	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                                                                                                                // 统计销售天数
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                       // 统计销售
+	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                             // 统计销售天数
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                               // 统计支付
+	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                       // 统计支付天数
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                       // 统计税类
+	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                 // 统计自助餐税类
+	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                            // 统计自助餐加钟税类
+	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
+	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                             // 统计区域
+	Count7Days(opts ...DBOption) []struct {
+		CompleteTime        int64   `gorm:"column:complete_time"`
+		SaleOrderUuid       uint64  `gorm:"column:sale_order_uuid"`
+		TotalReceivedAmount float64 `gorm:"column:total_received_amount"`
+	} // 统计销售天数（返回原始数据，不进行日期分组）
 	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                                                                                                                    // 统计未结订单
 	CountMemberNum(opts ...DBOption) int64                                                                                                                                                                                // 统计会员数量
 	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                                                                                                                   // 统计会员数量天数
@@ -40,9 +45,10 @@ type IStatisticsRepo interface {
 	CountBusinessTimePeriod(req CountBusinessTimePeriodReq, opts ...DBOption) (int64, []model.StatisticsBusinessTimePeriodData)                                                                                           // 统计营业时段
 	CountBusinessSummary(req CountBusinessSummaryReq) (int64, []model.StatisticsBusinessSummaryData)                                                                                                                      // 统计综合运用数据
 	CountBusinessPaymentMethod(req CountBusinessPaymentMethodReq) (int64, []model.StatisticsBusinessPaymentMethodData)                                                                                                    // 统计支付方式
+	CountRefundSummary(req CountRefundSummaryReq) (int64, []model.StatisticsRefundSummaryData)                                                                                                                            // 统计退款金额汇总
 	CountChannelSale(startTime, endTime int64, excludeDataManage bool) (map[string]*model.ChannelSaleRepoResult, error)                                                                                                   // 统计渠道营业数据
 	CountUserAnalysis(startTime, endTime int64, language string, enableNationality bool, enableCashierOrder bool, enableTableOrder bool, excludeDataManage bool, opts ...DBOption) (*model.UserAnalysisRepoResult, error) // 统计用户分析数据
-	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                                                                                                            // 统计商品排行
+	RankProduct(rankType int, language string, timeStart int64, timeEnd int64, opts ...DBOption) []model.StatisticsProductData                                                                                            // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                                                                                                                                          // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                                                                                                                                 // 保存支付
 	SaveProduct(products []model.StatisticsProduct) error                                                                                                                                                                 // 保存商品
@@ -101,7 +107,7 @@ var (
 		"SUM(IF(is_takeout = 1, payment_amount - refund_amount - delivery_fee, 0)) AS takeout_business_amount",
 		"SUM(IF(is_takeout = 1, refund_amount, 0)) AS takeout_refund_amount",
 		"SUM(IF(is_takeout = 1, delivery_fee, 0)) AS takeout_delivery_fee",
-		"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
+		"COALESCE(MAX(CASE WHEN desk_uuid > 0 THEN meal_num ELSE NULL END), 0) AS meal_num",
 		"SUM(IF(is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS order_amount",
 		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
 		"SUM(IF(desk_uuid > 0 AND is_takeout = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
@@ -132,6 +138,7 @@ var (
 		"SUM(t.gift_num) AS total_gift_num",                                                // 总赠菜数量
 		"SUM(t.free_amount) AS total_free_amount",                                          // 总免单金额
 		"SUM(t.free_num) AS total_free_num",                                                // 总免单数量
+		"SUM(t.order_amount) AS total_order_amount",                                        // 总订单金额
 		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",                                 // 总订单数量
 		"SUM(t.takeout_sale_amount) AS total_takeout_sale_amount",                          // 总外送销售
 		"SUM(t.takeout_business_amount) AS total_takeout_business_amount",                  // 总外送营收
@@ -329,6 +336,11 @@ func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.Statistic
 
 // CountCategory 统计分类
 func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) {
+	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
+	locale := constant.LocaleList.GetLocaleType(language)
+	language = string(locale)
+
 	db := r.db
 	dbOrder := r.db
 	for _, opt := range opts {
@@ -395,6 +407,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 
 // CountProduct 统计商品
 func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model.StatisticsProductData {
+	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
+	locale := constant.LocaleList.GetLocaleType(language)
+	language = string(locale)
+
 	var result []model.StatisticsProductData
 	db := r.db
 	for _, opt := range opts {
@@ -495,8 +512,7 @@ func (r *StatisticsRepo) CountAreaDays(opts ...DBOption) []model.StatisticsAreaD
 }
 
 // RankProduct 统计商品排行
-func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData {
-	var result []model.StatisticsProductData
+func (r *StatisticsRepo) RankProduct(rankType int, language string, timeStart int64, timeEnd int64, opts ...DBOption) []model.StatisticsProductData {
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
@@ -505,7 +521,10 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 	prefix := config.Database.TablePrefix
 	statisticsProductTable := prefix + "statistics_product as sp"
 
-	query := db.Table(statisticsProductTable).
+	// 查询1：原有逻辑（ttpos_statistics_product 表）
+	// 保持原有逻辑完全不变，应用所有 opts 条件
+	var statisticsData []model.StatisticsProductData
+	statisticsQuery := db.Table(statisticsProductTable).
 		Select(
 			"sp.product_sale_price AS sale_price",
 			"sp.product_package_uuid AS product_package_uuid",
@@ -514,17 +533,101 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 		).
 		Where("sp.refund_time = 0").
 		Group("sp.product_package_uuid")
+	statisticsQuery.Find(&statisticsData)
 
+	// 查询2：外卖订单商品（通过 StatisticsTakeoutRepo 查询）
+	var takeoutData []model.StatisticsProductData
+	takeoutRepo := NewStatisticsTakeoutRepo(r.db)
+	takeoutData = takeoutRepo.RankTakeoutProduct(CountTakeoutReq{
+		TimeStart: timeStart,
+		TimeEnd:   timeEnd,
+	})
+
+	// 在应用层合并两个表的数据
+	// 使用 map 按 product_package_uuid 合并，保持原有逻辑不变
+	mergedData := make(map[uint64]*model.StatisticsProductData)
+
+	// 先处理统计表数据（保持原有逻辑，sale_price 使用统计表的值）
+	for i := range statisticsData {
+		if statisticsData[i].ProductPackageUuid.Valid {
+			uuid := uint64(statisticsData[i].ProductPackageUuid.Int64)
+			mergedData[uuid] = &statisticsData[i]
+		}
+	}
+
+	// 再处理外卖订单数据，累加到统计表数据上
+	// 使用 decimal 进行精确计算，避免浮点数精度问题
+	for _, item := range takeoutData {
+		if !item.ProductPackageUuid.Valid {
+			continue
+		}
+		uuid := uint64(item.ProductPackageUuid.Int64)
+		if existing, exists := mergedData[uuid]; exists {
+			// 如果已存在，累加 sale_num 和 sale_amount
+			// sale_price 保持使用统计表的值（原有逻辑）
+			if item.SaleNum.Valid {
+				if existing.SaleNum.Valid {
+					// 使用 decimal 进行精确累加
+					existingDecimal := decimal.NewFromFloat(existing.SaleNum.Float64)
+					itemDecimal := decimal.NewFromFloat(item.SaleNum.Float64)
+					sumDecimal := existingDecimal.Add(itemDecimal)
+					existing.SaleNum.Float64 = sumDecimal.InexactFloat64()
+				} else {
+					existing.SaleNum = item.SaleNum
+				}
+			}
+			if item.SaleAmount.Valid {
+				if existing.SaleAmount.Valid {
+					// 使用 decimal 进行精确累加
+					existingDecimal := decimal.NewFromFloat(existing.SaleAmount.Float64)
+					itemDecimal := decimal.NewFromFloat(item.SaleAmount.Float64)
+					sumDecimal := existingDecimal.Add(itemDecimal)
+					existing.SaleAmount.Float64 = sumDecimal.InexactFloat64()
+				} else {
+					existing.SaleAmount = item.SaleAmount
+				}
+			}
+		} else {
+			// 如果不存在，直接添加（只有外卖订单数据）
+			mergedData[uuid] = &item
+		}
+	}
+
+	// 转换为切片
+	result := make([]model.StatisticsProductData, 0, len(mergedData))
+	for _, item := range mergedData {
+		result = append(result, *item)
+	}
+
+	// 排序
 	if rankType == constant.RankTypeSaleNum {
-		query = query.Order("sale_num DESC")
+		sort.Slice(result, func(i, j int) bool {
+			var numI, numJ float64
+			if result[i].SaleNum.Valid {
+				numI = result[i].SaleNum.Float64
+			}
+			if result[j].SaleNum.Valid {
+				numJ = result[j].SaleNum.Float64
+			}
+			return numI > numJ
+		})
+	} else if rankType == constant.RankTypeSaleAmount {
+		sort.Slice(result, func(i, j int) bool {
+			var amountI, amountJ float64
+			if result[i].SaleAmount.Valid {
+				amountI = result[i].SaleAmount.Float64
+			}
+			if result[j].SaleAmount.Valid {
+				amountJ = result[j].SaleAmount.Float64
+			}
+			return amountI > amountJ
+		})
 	}
 
-	if rankType == constant.RankTypeSaleAmount {
-		query = query.Order("sale_amount DESC")
+	// 限制前10条
+	if len(result) > 10 {
+		result = result[:10]
 	}
-
-	query = query.Limit(10)
-	query.Find(&result)
 
 	// 单独查询商品包名称
 	result = r.QueryName(result, language)
@@ -563,19 +666,33 @@ func (r *StatisticsRepo) QueryProductPackageName(uuids []uint64, language string
 }
 
 // Count7Days 统计销售天数
-func (r *StatisticsRepo) Count7Days(opts ...DBOption) model.Statistics7DaysData {
-	var result model.Statistics7DaysData
+// 返回原始数据（包含 complete_time 时间戳和 sale_order_uuid），不进行日期分组
+// 日期分组应在应用层使用商家时区进行
+func (r *StatisticsRepo) Count7Days(opts ...DBOption) []struct {
+	CompleteTime        int64   `gorm:"column:complete_time"`
+	SaleOrderUuid       uint64  `gorm:"column:sale_order_uuid"`
+	TotalReceivedAmount float64 `gorm:"column:total_received_amount"`
+} {
+	var result []struct {
+		CompleteTime        int64   `gorm:"column:complete_time"`
+		SaleOrderUuid       uint64  `gorm:"column:sale_order_uuid"`
+		TotalReceivedAmount float64 `gorm:"column:total_received_amount"`
+	}
 
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
-	db.Model(&model.StatisticsSale{}).Select(
-		"count(DISTINCT sale_order_uuid) as total_order_num",
-		"FROM_UNIXTIME(complete_time, '%Y-%m-%d') day",
-		"SUM(payment_amount) AS TotalReceivedAmount",
-	).Find(&result)
+	// 返回每个订单的完成时间和支付金额
+	// 不在这里进行日期分组，避免使用数据库时区
+	db.Model(&model.StatisticsSale{}).
+		Select(
+			"complete_time",
+			"sale_order_uuid",
+			"(payment_amount - refund_amount - payment_balance) AS total_received_amount",
+		).
+		Find(&result)
 
 	return result
 }
@@ -819,10 +936,16 @@ type CountProductSaleRepoReq struct {
 	ProductName   string
 	OrderTypes    []uint
 	OrderSource   int
+	StartTime     int64 // 查询开始时间（用于外卖订单筛选）
+	EndTime       int64 // 查询结束时间（用于外卖订单筛选）
 }
 
-// CountProductSale 统计商品销售
 func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
+	// 获取语言，确保语言是支持的语言
+	// GetLocaleType 会将无效的语言（包括空字符串）转换为默认值 LocaleZHTW
+	locale := constant.LocaleList.GetLocaleType(req.Language)
+	req.Language = string(locale)
+
 	var result []model.StatisticsProductSaleData
 	db := r.db
 	db2 := r.db
@@ -838,32 +961,14 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	productParentCategoryTable := prefix + "product_category as ppc"
 	deskTable := prefix + "desk as d"
 	saleBillTable := prefix + "sale_bill as sb"
+	takeoutOrderTable := prefix + "takeout_order as to_order"
+	takeoutOrderItemTable := prefix + "takeout_order_item as to_item"
 
-	var total int64
-	db = db.Table(statisticsProductTable).
-		Select("COUNT(DISTINCT sp.product_package_uuid) AS total").
-		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
-		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
-		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
-
-	// 订单类型筛选：需要关联 sale_bill 表
-	needJoinSaleBill := len(req.OrderTypes) > 0 || (req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1))
-	if needJoinSaleBill {
-		db.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
-	}
-
-	if req.AreaUuid > 0 {
-		db.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
-		db.Where("d.region_uuid = ?", req.AreaUuid)
-	}
-
-	// 商品分类筛选（支持多选和向后兼容）
+	// 构建商品分类筛选条件（用于店内和外卖查询）
+	var allCategoryUuids []uint64
 	if len(req.CategoryUuids) > 0 {
-		// 查询所有子分类
-		var allCategoryUuids []uint64
 		for _, categoryUuid := range req.CategoryUuids {
 			allCategoryUuids = append(allCategoryUuids, categoryUuid)
-			// 查询子分类
 			var subCategoryUuids []uint64
 			r.db.Table(productCategoryTable).
 				Select("uuid").
@@ -871,57 +976,25 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 				Pluck("uuid", &subCategoryUuids)
 			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
 		}
-		if len(allCategoryUuids) > 0 {
-			db.Where("pp.category_uuid IN (?)", allCategoryUuids)
-		}
 	} else if req.CategoryUuid > 0 {
-		// 向后兼容：单个分类UUID
-		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
+		allCategoryUuids = append(allCategoryUuids, req.CategoryUuid)
+		var subCategoryUuids []uint64
+		r.db.Table(productCategoryTable).
+			Select("uuid").
+			Where("parent_uuid = ?", req.CategoryUuid).
+			Pluck("uuid", &subCategoryUuids)
+		allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
 	}
 
-	if req.ProductName != "" {
-		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
-	}
-
-	// 订单类型筛选
-	if len(req.OrderTypes) > 0 {
-		// 映射订单类型到SaleBillType
-		var billTypes []uint
-		for _, orderType := range req.OrderTypes {
-			switch orderType {
-			case 1: // 点餐订单
-				billTypes = append(billTypes, constant.SaleBillTypeInstant)
-			case 2: // 桌台订单
-				billTypes = append(billTypes, constant.SaleBillTypeDesk)
-			case 3: // 外送订单
-				billTypes = append(billTypes, constant.SaleBillTypeTakeout)
-			}
-		}
-		if len(billTypes) > 0 {
-			db.Where("sb.bill_type IN (?)", billTypes)
-		}
-	}
-
-	// 订单来源筛选（仅在订单类型包含点餐订单时生效）
-	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
-		if req.OrderSource == 1 {
-			// 1=店内
-			db.Where("sb.order_source_uuid = 0")
-		} else if req.OrderSource == 2 {
-			// 2=外卖
-			db.Where("sb.order_source_uuid > 0")
-		}
-	}
-
-	db.Pluck("total", &total)
-
-	listQuery := db2.Table(statisticsProductTable).
+	// 构建店内商品销售查询（子查询）
+	storeQuery := db2.Table(statisticsProductTable).
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')) AS product_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')) AS category_parent_name",
+			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
+			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + sp.service_tax) * sp.product_num) AS origin_sale_amount",
 			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS actual_sale_amount",
 			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, (sp.product_final_price - sp.tax_fee - sp.service_tax) * (sp.product_num - sp.refund_num))) AS business_amount",
 			"SUM(IF(sp.free_num > 0, sp.free_num, sp.give_num)) AS give_num",
@@ -931,44 +1004,27 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	// 订单类型筛选：需要关联 sale_bill 表
+	needJoinSaleBill := len(req.OrderTypes) > 0 || (req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1))
 	if needJoinSaleBill {
-		listQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+		storeQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
 	}
 
 	if req.AreaUuid > 0 {
-		listQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
-		listQuery.Where("d.region_uuid = ?", req.AreaUuid)
+		storeQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
+		storeQuery.Where("d.region_uuid = ?", req.AreaUuid)
 	}
 
-	// 商品分类筛选（支持多选和向后兼容）
-	if len(req.CategoryUuids) > 0 {
-		// 查询所有子分类
-		var allCategoryUuids []uint64
-		for _, categoryUuid := range req.CategoryUuids {
-			allCategoryUuids = append(allCategoryUuids, categoryUuid)
-			// 查询子分类
-			var subCategoryUuids []uint64
-			r.db.Table(productCategoryTable).
-				Select("uuid").
-				Where("parent_uuid = ?", categoryUuid).
-				Pluck("uuid", &subCategoryUuids)
-			allCategoryUuids = append(allCategoryUuids, subCategoryUuids...)
-		}
-		if len(allCategoryUuids) > 0 {
-			listQuery.Where("pp.category_uuid IN (?)", allCategoryUuids)
-		}
-	} else if req.CategoryUuid > 0 {
-		// 向后兼容：单个分类UUID
-		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
+	// 商品分类筛选
+	if len(allCategoryUuids) > 0 {
+		storeQuery.Where("pp.category_uuid IN (?)", allCategoryUuids)
 	}
 
 	if req.ProductName != "" {
-		listQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
+		storeQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
 
 	// 订单类型筛选
 	if len(req.OrderTypes) > 0 {
-		// 映射订单类型到SaleBillType
 		var billTypes []uint
 		for _, orderType := range req.OrderTypes {
 			switch orderType {
@@ -981,7 +1037,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			}
 		}
 		if len(billTypes) > 0 {
-			listQuery.Where("sb.bill_type IN (?)", billTypes)
+			storeQuery.Where("sb.bill_type IN (?)", billTypes)
 		}
 	}
 
@@ -989,32 +1045,154 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	if req.OrderSource > 0 && containsOrderType(req.OrderTypes, 1) {
 		if req.OrderSource == 1 {
 			// 1=店内
-			listQuery.Where("sb.order_source_uuid = 0")
+			storeQuery.Where("sb.order_source_uuid = 0")
 		} else if req.OrderSource == 2 {
 			// 2=外卖
-			listQuery.Where("sb.order_source_uuid > 0")
+			storeQuery.Where("sb.order_source_uuid > 0")
 		}
 	}
-	listQuery.Group("sp.product_package_uuid")
 
-	direction := "DESC"
+	storeQuery.Group("sp.product_package_uuid")
+
+	// 构建外卖商品销售查询（子查询）
+	// 使用 validOrderStates 状态筛选：10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
+	// 仅统计 accepted_time > 0 的订单（有效状态和取消状态都需要接单后才能统计）
+	// 实际销售额和营业收入需要减去已取消订单的金额（已接单并且已取消的订单，order_state = 60）
+	validStatesStr := buildStateInCondition(validOrderStates)
+	takeoutQuery := r.db.Table(takeoutOrderItemTable).
+		Select(
+			"COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')), to_item.item_name) AS product_name",
+			"COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')), IF(to_item.ttpos_category_name IS NULL OR to_item.ttpos_category_name = '', NULL, JSON_UNQUOTE(JSON_EXTRACT(to_item.ttpos_category_name, '$."+req.Language+"')))) AS category_name",
+			"COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')), IF(to_item.ttpos_parent_category_name IS NULL OR to_item.ttpos_parent_category_name = '', NULL, JSON_UNQUOTE(JSON_EXTRACT(to_item.ttpos_parent_category_name, '$."+req.Language+"')))) AS category_parent_name",
+			"COALESCE(to_item.ttpos_product_package_uuid, 0) AS product_package_uuid",
+			"SUM(to_item.quantity) AS sale_num",
+			"SUM(to_item.price * to_item.quantity) AS origin_sale_amount",
+			"SUM(IF(to_order.order_state = 60, 0, to_item.price * to_item.quantity)) AS actual_sale_amount",
+			"SUM(IF(to_order.order_state = 60, 0, (to_item.price - to_item.tax) * to_item.quantity)) AS business_amount",
+			"0 AS give_num",
+		).
+		Joins("INNER JOIN "+takeoutOrderTable+" ON to_item.takeout_order_uuid = to_order.uuid").
+		Joins("LEFT JOIN "+productPackageTable+" ON to_item.ttpos_product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN "+productCategoryTable+" ON COALESCE(pp.category_uuid, to_item.ttpos_category_uuid) = pc.uuid").
+		Joins("LEFT JOIN "+productParentCategoryTable+" ON pc.parent_uuid = ppc.uuid").
+		Where("to_order.delete_time = ?", constant.NotDeleted).
+		Where("to_item.delete_time = ?", constant.NotDeleted).
+		Where("to_order.order_state IN " + validStatesStr)
+
+	// 时间范围筛选（使用 accepted_time）
+	if req.StartTime > 0 && req.EndTime > 0 {
+		takeoutQuery.Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", req.StartTime, req.EndTime)
+	}
+
+	// 仅统计接单时间>0的订单（有效状态和取消状态都需要接单后才能统计）
+	takeoutQuery.Where("to_order.accepted_time > 0")
+
+	// 商品分类筛选
+	if len(allCategoryUuids) > 0 {
+		takeoutQuery.Where("(pp.category_uuid IN (?) OR to_item.ttpos_category_uuid IN (?))", allCategoryUuids, allCategoryUuids)
+	}
+
+	// 商品名称筛选
+	if req.ProductName != "" {
+		takeoutQuery.Where("(JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ? OR to_item.item_name LIKE ?)", "$."+req.Language, "%"+req.ProductName+"%", "%"+req.ProductName+"%")
+	}
+
+	takeoutQuery.Group("COALESCE(to_item.ttpos_product_package_uuid, 0)")
+
+	// 临时结构，包含 product_package_uuid
+	type productSaleDataWithUuid struct {
+		model.StatisticsProductSaleData
+		ProductPackageUuid uint64 `gorm:"column:product_package_uuid"`
+	}
+
+	// 执行店内商品销售查询
+	var storeData []productSaleDataWithUuid
+	storeQuery.Find(&storeData)
+
+	// 执行外卖商品销售查询
+	var takeoutData []productSaleDataWithUuid
+	takeoutQuery.Find(&takeoutData)
+
+	// 合并数据：按 product_package_uuid 分组
+	productMap := make(map[uint64]*model.StatisticsProductSaleData)
+	for i := range storeData {
+		item := &storeData[i]
+		key := item.ProductPackageUuid
+		if existing, exists := productMap[key]; exists {
+			// 合并数据
+			existing.SaleNum.Float64 += item.SaleNum.Float64
+			existing.OriginSaleAmount.Float64 += item.OriginSaleAmount.Float64
+			existing.ActualSaleAmount.Float64 += item.ActualSaleAmount.Float64
+			existing.BusinessAmount.Float64 += item.BusinessAmount.Float64
+			existing.GiveNum.Float64 += item.GiveNum.Float64
+		} else {
+			// 创建新条目
+			newItem := item.StatisticsProductSaleData
+			productMap[key] = &newItem
+		}
+	}
+
+	// 合并外卖数据
+	for i := range takeoutData {
+		item := &takeoutData[i]
+		key := item.ProductPackageUuid
+		if existing, exists := productMap[key]; exists {
+			// 合并数据
+			existing.SaleNum.Float64 += item.SaleNum.Float64
+			existing.OriginSaleAmount.Float64 += item.OriginSaleAmount.Float64
+			existing.ActualSaleAmount.Float64 += item.ActualSaleAmount.Float64
+			existing.BusinessAmount.Float64 += item.BusinessAmount.Float64
+			existing.GiveNum.Float64 += item.GiveNum.Float64
+		} else {
+			// 创建新条目
+			newItem := item.StatisticsProductSaleData
+			productMap[key] = &newItem
+		}
+	}
+
+	// 转换为切片
+	var combinedData []model.StatisticsProductSaleData
+	for _, item := range productMap {
+		combinedData = append(combinedData, *item)
+	}
+
+	// 排序
+	direction := 1
 	if req.RankDirection == 1 {
-		direction = "ASC"
+		direction = -1
 	}
+	sort.Slice(combinedData, func(i, j int) bool {
+		if req.RankType == 2 {
+			// 按原价销售额排序
+			if direction > 0 {
+				return combinedData[i].OriginSaleAmount.Float64 > combinedData[j].OriginSaleAmount.Float64
+			}
+			return combinedData[i].OriginSaleAmount.Float64 < combinedData[j].OriginSaleAmount.Float64
+		}
+		// 按销售数量排序
+		if direction > 0 {
+			return combinedData[i].SaleNum.Float64 > combinedData[j].SaleNum.Float64
+		}
+		return combinedData[i].SaleNum.Float64 < combinedData[j].SaleNum.Float64
+	})
 
-	if req.RankType == 0 {
-		listQuery = listQuery.Order("sale_num " + direction)
+	// 计算总数
+	total := int64(len(combinedData))
+
+	// 分页
+	start := (req.PageNo - 1) * req.PageSize
+	end := start + req.PageSize
+	if start > len(combinedData) {
+		start = len(combinedData)
 	}
-
-	if req.RankType == 1 {
-		listQuery = listQuery.Order("sale_num " + direction)
+	if end > len(combinedData) {
+		end = len(combinedData)
 	}
-
-	if req.RankType == 2 {
-		listQuery = listQuery.Order("origin_sale_amount " + direction)
+	if start < end {
+		result = combinedData[start:end]
+	} else {
+		result = []model.StatisticsProductSaleData{}
 	}
-
-	listQuery.Limit(req.PageSize).Offset((req.PageNo - 1) * req.PageSize).Find(&result)
 
 	return result, total
 }
@@ -1083,7 +1261,8 @@ type CountBusinessTimePeriodReq struct {
 	PeriodSeconds                int   // 时段: 1=15分钟, 2=30分钟, 3=1小时
 	IsCreateTime                 bool  // 是否是创建时间
 	PageNo, PageSize             int   // 页码, 每页大小
-	IsDesk, IsInstant, IsTakeout bool  // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
+	IsDesk, IsInstant, IsTakeout bool  // 是否是桌台订单, 是否是点餐订单, 是否是配送订单
+	IsDelivery                   bool  // 是否包含外卖订单
 }
 
 // CountBusinessTimePeriod 统计营业时段
@@ -1128,65 +1307,48 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 		baseQuery.Where("(sb.bill_type != ? OR (sb.bill_type = ? AND mso.status IS NOT NULL AND mso.status = ?))", constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout, 7)
 	}
 
-	// 1. 计算总时段数
-	var total int64
-	countQuery := baseQuery.
-		Select(fmt.Sprintf("COUNT(DISTINCT FLOOR(%s / %d))", timeField, req.PeriodSeconds))
-	countQuery.Count(&total)
-
-	// 2. 查询时段数据（使用子查询优化）
-	var result []model.StatisticsBusinessTimePeriodData
-
-	// 构建主查询SQL
+	// 构建店内订单查询SQL
 	// 使用子查询先对 ro 进行聚合，避免因为 ro 有多条记录导致 so 重复计算
-	mainQuery := fmt.Sprintf(`
+	storeOrderQuery := fmt.Sprintf(`
 		SELECT 
-			period_start_time,
-			SUM(order_amount) AS order_amount,
-			SUM(pay_amount) AS pay_amount,
-			SUM(refund_amount) AS refund_amount,
-			COUNT(DISTINCT sale_bill_uuid) AS order_num,
-			SUM(meal_num) AS meal_num
-		FROM (
+			FLOOR(%s / %d) * %d AS period_start_time,
+			SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
+			SUM(so_agg.payment_amount) AS pay_amount,
+			SUM(IFNULL(ro_summary.refund_amount, 0)) AS refund_amount,
+			sb.uuid AS sale_bill_uuid,
+			MAX(sb.meal_num) AS meal_num
+		FROM ttpos_sale_bill AS sb
+		LEFT JOIN (
 			SELECT 
-				FLOOR(%s / %d) * %d AS period_start_time,
-				SUM(so_agg.origin_amount) + MAX(IF(sb.bill_type = 2, IFNULL(mso.delivery_fee_amount, 0), 0)) AS order_amount,
-				SUM(so_agg.payment_amount) AS pay_amount,
-				SUM(IFNULL(ro_summary.refund_amount, 0)) AS refund_amount,
-				sb.uuid AS sale_bill_uuid,
-				MAX(sb.meal_num) AS meal_num
-			FROM ttpos_sale_bill AS sb
-			LEFT JOIN (
-				SELECT 
-					so.sale_bill_uuid,
-					so.uuid AS so_uuid,
-					so.origin_amount,
-					so.payment_amount
-				FROM ttpos_sale_order AS so
-				WHERE so.delete_time = 0 AND so.status = 1
-			) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
-			LEFT JOIN (
-				SELECT 
-					related_order_uuid,
-					SUM(refund_amount) AS refund_amount
-				FROM ttpos_return_order
-				WHERE delete_time = 0
-				GROUP BY related_order_uuid
-			) AS ro_summary ON so_agg.so_uuid = ro_summary.related_order_uuid
-			LEFT JOIN ttpos_member_sale_order AS mso ON so_agg.so_uuid = mso.sale_order_uuid AND mso.delete_time = 0 AND mso.status = 7
-			WHERE sb.delete_time = 0
-				AND sb.status = ?
-				AND %s >= ?
-				AND %s <= ?
+				so.sale_bill_uuid,
+				so.uuid AS so_uuid,
+				so.origin_amount,
+				so.payment_amount
+			FROM ttpos_sale_order AS so
+			WHERE so.delete_time = 0 AND so.status = 1
+		) AS so_agg ON sb.uuid = so_agg.sale_bill_uuid
+		LEFT JOIN (
+			SELECT 
+				related_order_uuid,
+				SUM(refund_amount) AS refund_amount
+			FROM ttpos_return_order
+			WHERE delete_time = 0
+			GROUP BY related_order_uuid
+		) AS ro_summary ON so_agg.so_uuid = ro_summary.related_order_uuid
+		LEFT JOIN ttpos_member_sale_order AS mso ON so_agg.so_uuid = mso.sale_order_uuid AND mso.delete_time = 0 AND mso.status = 7
+		WHERE sb.delete_time = 0
+			AND sb.status = ?
+			AND %s >= ?
+			AND %s <= ?
 	`, timeField, req.PeriodSeconds, req.PeriodSeconds, timeField, timeField)
 
 	// 添加额外的查询条件
-	args := []any{constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
+	storeOrderArgs := []any{constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
 	// 应用过滤选项（数据管理订单过滤）
 	if len(opts) > 0 {
 		// 直接添加过滤子查询条件
-		mainQuery += " AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
+		storeOrderQuery += " AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
 	}
 
 	if req.IsDesk || req.IsInstant || req.IsTakeout {
@@ -1200,33 +1362,144 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq,
 		if req.IsTakeout {
 			billTypeList = append(billTypeList, constant.SaleBillTypeTakeout)
 		}
-		mainQuery += " AND sb.bill_type IN (?)"
-		args = append(args, billTypeList)
+		storeOrderQuery += " AND sb.bill_type IN (?)"
+		storeOrderArgs = append(storeOrderArgs, billTypeList)
 	}
 
 	// 对于外送订单，需要确保 mso.status = 7（mso 必须存在且 status = 7）
 	if req.IsTakeout {
-		mainQuery += " AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.status IS NOT NULL AND mso.status = ?))"
-		args = append(args, constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout, 7)
+		storeOrderQuery += " AND (sb.bill_type != ? OR (sb.bill_type = ? AND mso.status IS NOT NULL AND mso.status = ?))"
+		storeOrderArgs = append(storeOrderArgs, constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout, 7)
 	}
 
-	// 完成子查询
-	mainQuery += `
-			GROUP BY period_start_time, sb.uuid
-		) AS subquery
+	storeOrderQuery += `
+		GROUP BY period_start_time, sb.uuid
 	`
 
-	// 分组、排序和分页
-	mainQuery += `
-		GROUP BY period_start_time
-		ORDER BY period_start_time ASC
-		LIMIT ? OFFSET ?
-	`
+	// 构建外卖订单查询SQL（如果需要）
+	var takeoutOrderQuery string
+	var takeoutOrderArgs []any
+	if req.IsDelivery {
+		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
+		validStatesStr := buildStateInCondition(validOrderStates)
+		businessStatesStr := buildStateInCondition(businessOrderStates)
 
-	args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+		takeoutOrderQuery = fmt.Sprintf(`
+		SELECT 
+			FLOOR(accepted_time / %d) * %d AS period_start_time,
+			IF(order_state IN %s, eater_payment, 0) AS order_amount,
+			IF(order_state = %d, 0, IF(order_state IN %s, eater_payment, 0)) AS pay_amount,
+			0 AS refund_amount,
+			uuid AS sale_bill_uuid,
+			0 AS meal_num
+		FROM ttpos_takeout_order
+		WHERE delete_time = ?
+			AND order_state IN %s
+			AND accepted_time > 0
+			AND accepted_time >= ?
+			AND accepted_time <= ?
+		`, req.PeriodSeconds, req.PeriodSeconds, validStatesStr, canceledOrderState, businessStatesStr, validStatesStr)
+		takeoutOrderArgs = []any{constant.NotDeleted, req.StartTime, req.EndTime}
+	}
+
+	// 构建合并查询
+	var mainQuery string
+	var args []any
+
+	if req.IsDelivery && takeoutOrderQuery != "" {
+		// 合并店内订单和外卖订单
+		mainQuery = fmt.Sprintf(`
+			SELECT 
+				period_start_time,
+				SUM(order_amount) AS order_amount,
+				SUM(pay_amount) AS pay_amount,
+				SUM(refund_amount) AS refund_amount,
+				COUNT(DISTINCT sale_bill_uuid) AS order_num,
+				SUM(meal_num) AS meal_num
+			FROM (
+				(%s)
+				UNION ALL
+				(%s)
+			) AS combined_orders
+			GROUP BY period_start_time
+			ORDER BY period_start_time ASC
+			LIMIT ? OFFSET ?
+		`, storeOrderQuery, takeoutOrderQuery)
+		args = append(storeOrderArgs, takeoutOrderArgs...)
+		args = append(args, req.PageSize, (req.PageNo-1)*req.PageSize)
+	} else {
+		// 仅店内订单
+		mainQuery = fmt.Sprintf(`
+			SELECT 
+				period_start_time,
+				SUM(order_amount) AS order_amount,
+				SUM(pay_amount) AS pay_amount,
+				SUM(refund_amount) AS refund_amount,
+				COUNT(DISTINCT sale_bill_uuid) AS order_num,
+				SUM(meal_num) AS meal_num
+			FROM (
+				%s
+			) AS subquery
+			GROUP BY period_start_time
+			ORDER BY period_start_time ASC
+			LIMIT ? OFFSET ?
+		`, storeOrderQuery)
+		args = append(storeOrderArgs, req.PageSize, (req.PageNo-1)*req.PageSize)
+	}
 
 	// 执行查询
+	var result []model.StatisticsBusinessTimePeriodData
 	r.db.Raw(mainQuery, args...).Scan(&result)
+
+	// 计算总时段数（需要考虑合并后的时段）
+	var total int64
+	if req.IsDelivery {
+		// 计算合并后的总时段数
+		// 注意：timeField 包含表别名（sb.finish_time 或 sb.create_time），需要提取字段名
+		timeFieldName := "finish_time"
+		if req.IsCreateTime {
+			timeFieldName = "create_time"
+		}
+		countQuery := fmt.Sprintf(`
+			SELECT COUNT(DISTINCT period_start_time) FROM (
+				SELECT FLOOR(%s / %d) * %d AS period_start_time FROM ttpos_sale_bill WHERE delete_time = ? AND status = ? AND %s >= ? AND %s <= ?
+		`, timeFieldName, req.PeriodSeconds, req.PeriodSeconds, timeFieldName, timeFieldName)
+		countArgs := []any{constant.NotDeleted, constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
+
+		if len(opts) > 0 {
+			countQuery += " AND uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)"
+		}
+
+		if req.IsDesk || req.IsInstant || req.IsTakeout {
+			var billTypeList []uint
+			if req.IsDesk {
+				billTypeList = append(billTypeList, constant.SaleBillTypeDesk)
+			}
+			if req.IsInstant {
+				billTypeList = append(billTypeList, constant.SaleBillTypeInstant)
+			}
+			if req.IsTakeout {
+				billTypeList = append(billTypeList, constant.SaleBillTypeTakeout)
+			}
+			countQuery += " AND bill_type IN (?)"
+			countArgs = append(countArgs, billTypeList)
+		}
+
+		// 使用 statistics_takeout.go 中定义的变量，保持代码一致性
+		takeoutValidStatesStr := buildStateInCondition(validOrderStates)
+		countQuery += fmt.Sprintf(`
+			UNION
+			SELECT FLOOR(accepted_time / ?) * ? AS period_start_time FROM ttpos_takeout_order WHERE delete_time = ? AND order_state IN %s AND accepted_time > 0 AND accepted_time >= ? AND accepted_time <= ?
+			) AS all_periods
+		`, takeoutValidStatesStr)
+		countArgs = append(countArgs, req.PeriodSeconds, req.PeriodSeconds, constant.NotDeleted, req.StartTime, req.EndTime)
+		r.db.Raw(countQuery, countArgs...).Scan(&total)
+	} else {
+		// 仅店内订单的总时段数
+		countQuery := baseQuery.
+			Select(fmt.Sprintf("COUNT(DISTINCT FLOOR(%s / %d))", timeField, req.PeriodSeconds))
+		countQuery.Count(&total)
+	}
 
 	return total, result
 }
@@ -1314,6 +1587,29 @@ func (r *StatisticsRepo) CountBusinessSummary(req CountBusinessSummaryReq) (int6
 		req.StartTime, req.EndTime,
 		constant.SaleBillTypeTakeout, constant.SaleBillTypeTakeout,
 	).Scan(&rawData)
+
+	// 1.1 查询外卖订单原始数据
+	takeoutRepo := NewStatisticsTakeoutRepo(r.db)
+	takeoutRawData := takeoutRepo.CountTakeoutBusinessSummary(CountTakeoutBusinessSummaryReq{
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
+	})
+
+	// 将外卖订单数据转换为与店内订单相同的结构
+	for _, takeoutItem := range takeoutRawData {
+		rawData = append(rawData, businessSummaryRawData{
+			FinishTime:         takeoutItem.AcceptedTime, // 使用 accepted_time
+			SaleBillUuid:       takeoutItem.OrderUuid,
+			OrderAmount:        takeoutItem.OrderAmount,
+			PayAmount:          takeoutItem.PayAmount,
+			RefundAmount:       0, // 外卖订单退款已在实付金额中体现
+			MealNum:            0, // 外卖订单无用餐人数
+			DeskUuid:           0, // 外卖订单无桌台
+			DeskOrderAmount:    0, // 外卖订单不归入桌台订单
+			InstantOrderAmount: 0, // 外卖订单不归入点餐订单
+			TakeoutOrderAmount: 0, // 外卖订单不归入外送订单（单独统计）
+		})
+	}
 
 	// 2. 在应用层按业务时区分组、统计
 	timeUtil := utils.SetTimezone(req.Timezone)
@@ -1416,7 +1712,9 @@ type CountBusinessPaymentMethodReq struct {
 	Cycle                        int      // 周期: 0=按日、1=按月
 	PageNo, PageSize             int      // 页码, 每页大小
 	IsDesk, IsInstant, IsTakeout bool     // 是否是桌台订单, 是否是点餐订单, 是否是外送订单
-	PaymentMethodList            []uint64 // 支付方式列表: 空=全部
+	IsDelivery                   bool     // 是否是外卖订单（Grab/LINE MAN等）
+	PaymentMethodList            []uint64 // 支付方式UUID列表: 空=全部（优先使用）
+	PaymentMethodNames           []string // 支付方式名称列表: 空=全部（PaymentMethodList为空时使用）
 	ExcludeDataManage            bool     // 是否排除数据管理订单
 	Timezone                     string   // 业务时区，如 "Asia/Shanghai"
 }
@@ -1497,14 +1795,112 @@ func (r *StatisticsRepo) CountBusinessPaymentMethod(req CountBusinessPaymentMeth
 		args = append(args, billTypes)
 	}
 
-	// 支付方式筛选
+	// 支付方式筛选：优先使用 PaymentMethodList（UUID），如果没有则使用 PaymentMethodNames（名称）
 	if len(req.PaymentMethodList) > 0 {
+		// 使用支付方式UUID筛选
 		baseQuery += " AND po.payment_method_uuid IN (?)"
 		args = append(args, req.PaymentMethodList)
+	} else if len(req.PaymentMethodNames) > 0 {
+		// 使用支付方式名称筛选（因为不同商家的同一支付方式UUID可能不同）
+		baseQuery += " AND pm.payment_name IN (?)"
+		args = append(args, req.PaymentMethodNames)
 	}
 
 	var rawData []businessPaymentMethodRawData
 	r.db.Raw(baseQuery, args...).Scan(&rawData)
+
+	// 1.1 如果需要查询外卖订单数据，合并外卖订单支付方式数据
+	needQueryTakeout := false
+	var grabPaymentMethodUuid, linemanPaymentMethodUuid uint64
+
+	// 检查是否需要查询外卖订单数据
+	if req.IsDelivery {
+		// 如果 OrderDelivery=1，需要查询外卖订单
+		needQueryTakeout = true
+	} else if len(req.PaymentMethodList) > 0 {
+		// 如果 paymentMethodList != ""，检查是否包含 Grab/LINE MAN 的支付方式UUID
+		// 查询 Grab 和 LINE MAN 的支付方式UUID
+		var grabPaymentMethod, linemanPaymentMethod model.PaymentMethod
+		r.db.Model(&model.PaymentMethod{}).
+			Where("payment_name = ? AND delete_time = ? AND source = ?", "Grab", constant.NotDeleted, constant.PaymentMethodSourceSystem).
+			First(&grabPaymentMethod)
+		r.db.Model(&model.PaymentMethod{}).
+			Where("payment_name = ? AND delete_time = ? AND source = ?", "LINE MAN", constant.NotDeleted, constant.PaymentMethodSourceSystem).
+			First(&linemanPaymentMethod)
+
+		grabPaymentMethodUuid = grabPaymentMethod.Uuid
+		linemanPaymentMethodUuid = linemanPaymentMethod.Uuid
+
+		// 检查 PaymentMethodList 中是否包含 Grab 或 LINE MAN 的UUID
+		for _, uuid := range req.PaymentMethodList {
+			if uuid == grabPaymentMethodUuid || uuid == linemanPaymentMethodUuid {
+				needQueryTakeout = true
+				break
+			}
+		}
+	} else if len(req.PaymentMethodNames) > 0 {
+		// 如果使用 PaymentMethodNames，检查是否包含 Grab 或 LINE MAN
+		for _, name := range req.PaymentMethodNames {
+			if name == "Grab" || name == "LINE MAN" {
+				needQueryTakeout = true
+				break
+			}
+		}
+	}
+
+	// 如果需要查询外卖订单数据，查询并合并
+	if needQueryTakeout {
+		takeoutRepo := NewStatisticsTakeoutRepo(r.db)
+		takeoutRawData := takeoutRepo.CountTakeoutPaymentMethodRawData(CountTakeoutReq{
+			TimeStart: req.StartTime,
+			TimeEnd:   req.EndTime,
+		})
+
+		// 将外卖订单数据转换为 businessPaymentMethodRawData 格式
+		for _, takeoutItem := range takeoutRawData {
+			// 如果 PaymentMethodUuid 为 0，说明没有匹配到支付方式，跳过
+			if takeoutItem.PaymentMethodUuid == 0 {
+				continue
+			}
+
+			// 如果指定了 PaymentMethodList，需要过滤（当 IsDelivery=false 时）
+			if len(req.PaymentMethodList) > 0 && !req.IsDelivery {
+				// 检查是否在 PaymentMethodList 中
+				found := false
+				for _, uuid := range req.PaymentMethodList {
+					if uuid == takeoutItem.PaymentMethodUuid {
+						found = true
+						break
+					}
+				}
+				if !found {
+					continue
+				}
+			} else if len(req.PaymentMethodNames) > 0 && !req.IsDelivery {
+				// 如果使用 PaymentMethodNames，检查是否匹配（当 IsDelivery=false 时）
+				found := false
+				for _, name := range req.PaymentMethodNames {
+					if name == takeoutItem.PaymentName {
+						found = true
+						break
+					}
+				}
+				if !found {
+					continue
+				}
+			}
+
+			// 转换为 businessPaymentMethodRawData 格式
+			rawData = append(rawData, businessPaymentMethodRawData{
+				CreateTime:              takeoutItem.AcceptedTime,
+				PaymentMethodUuid:       takeoutItem.PaymentMethodUuid,
+				PaymentMethodSort:       takeoutItem.PaymentMethodSort,
+				PaymentMethodCreateTime: takeoutItem.PaymentMethodCreateTime,
+				PaymentName:             takeoutItem.PaymentName,
+				PaymentAmount:           takeoutItem.PaymentAmount,
+			})
+		}
+	}
 
 	// 2. 在应用层按业务时区分组、统计
 	timeUtil := utils.SetTimezone(req.Timezone)
@@ -1619,17 +2015,64 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 	result := make(map[string]*model.ChannelSaleRepoResult)
 	db := r.db
 
-	// 复用 CountSale 的子查询逻辑
-	subQuery := db.Model(&model.StatisticsSale{}).
-		Select(countSaleSubQuerySelect).
-		Where("complete_time >= ? AND complete_time <= ?", startTime, endTime)
+	// 复用 CountSale 的子查询逻辑，并关联 sale_bill 表获取 dining_method 字段
+	prefix := config.Database.TablePrefix
+	saleBillTable := prefix + "sale_bill"
+	statisticsSaleTable := prefix + "statistics_sale"
+
+	// 构建子查询，添加 dining_method 字段，并为所有字段添加表别名以避免歧义
+	subQuerySelect := []string{
+		statisticsSaleTable + ".sale_bill_uuid",
+		statisticsSaleTable + ".desk_uuid",
+		statisticsSaleTable + ".order_source_uuid",
+		statisticsSaleTable + ".is_meger",
+		statisticsSaleTable + ".is_special",
+		statisticsSaleTable + ".is_takeout",
+		"SUM(" + statisticsSaleTable + ".product_price + " + statisticsSaleTable + ".product_tax + " + statisticsSaleTable + ".service_fee + " + statisticsSaleTable + ".service_tax + " + statisticsSaleTable + ".payment_fee + " + statisticsSaleTable + ".extend_price) AS sale_amount",
+		"SUM(" + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".payment_balance) AS received_amount",
+		"SUM(" + statisticsSaleTable + ".product_price) AS product_price",
+		"SUM(" + statisticsSaleTable + ".product_origin_price) AS product_origin_price",
+		"SUM(" + statisticsSaleTable + ".product_num) AS product_num",
+		"SUM(" + statisticsSaleTable + ".discount_member) AS discount_member",
+		"SUM(" + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance - " + statisticsSaleTable + ".product_tax - " + statisticsSaleTable + ".service_tax + " + statisticsSaleTable + ".refund_tax) AS business_amount",
+		"SUM(" + statisticsSaleTable + ".payment_fee - " + statisticsSaleTable + ".refund_fee) AS payment_fee",
+		"SUM(" + statisticsSaleTable + ".service_fee - " + statisticsSaleTable + ".refund_service_fee) AS service_fee",
+		"SUM(" + statisticsSaleTable + ".product_tax + " + statisticsSaleTable + ".service_tax - " + statisticsSaleTable + ".refund_tax) AS tax",
+		"SUM(" + statisticsSaleTable + ".refund_amount + " + statisticsSaleTable + ".refund_payment_balance) AS refund_amount",
+		"SUM(" + statisticsSaleTable + ".discount - " + statisticsSaleTable + ".refund_discount) AS discount",
+		"SUM(" + statisticsSaleTable + ".gift_amount) AS gift_amount",
+		"SUM(" + statisticsSaleTable + ".gift_num) AS gift_num",
+		"SUM(" + statisticsSaleTable + ".free_amount) AS free_amount",
+		"SUM(" + statisticsSaleTable + ".free_num) AS free_num",
+		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1, " + statisticsSaleTable + ".payment_amount, 0)) AS takeout_sale_amount",
+		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".delivery_fee, 0)) AS takeout_business_amount",
+		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1, " + statisticsSaleTable + ".refund_amount, 0)) AS takeout_refund_amount",
+		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1, " + statisticsSaleTable + ".delivery_fee, 0)) AS takeout_delivery_fee",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid > 0, " + statisticsSaleTable + ".meal_num, 0)) AS meal_num",
+		"SUM(IF(" + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS order_amount",
+		"SUM(" + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance) AS avg_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid > 0 AND " + statisticsSaleTable + ".is_takeout = 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS desk_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid > 0 AND " + statisticsSaleTable + ".is_takeout = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_desk_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid = 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_instant_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid > 0 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS instant_order_takeaway_amount",
+		"SUM(IF(" + statisticsSaleTable + ".desk_uuid = 0 AND " + statisticsSaleTable + ".order_source_uuid > 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_instant_order_takeaway_amount",
+		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1 AND " + statisticsSaleTable + ".is_meger = 0, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS takeout_order_amount",
+		"SUM(IF(" + statisticsSaleTable + ".is_takeout = 1, " + statisticsSaleTable + ".payment_amount - " + statisticsSaleTable + ".refund_amount - " + statisticsSaleTable + ".refund_payment_balance, 0)) AS avg_takeout_order_amount",
+		statisticsSaleTable + ".complete_time",
+		"sb.dining_method",
+	}
+	subQuery := db.Table(statisticsSaleTable).
+		Select(subQuerySelect).
+		Joins("LEFT JOIN "+saleBillTable+" AS sb ON "+statisticsSaleTable+".sale_bill_uuid = sb.uuid AND sb.delete_time = ?", constant.NotDeleted).
+		Where(statisticsSaleTable+".complete_time >= ? AND "+statisticsSaleTable+".complete_time <= ?", startTime, endTime)
 
 	// 应用数据管理过滤条件
 	if excludeDataManage {
-		subQuery = subQuery.Where("sale_bill_uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)")
+		subQuery = subQuery.Where(statisticsSaleTable + ".sale_bill_uuid NOT IN (SELECT data_uuid FROM " + prefix + "data_manage WHERE type = 0 AND delete_time = 0)")
 	}
 
-	subQuery = subQuery.Group("sale_bill_uuid")
+	subQuery = subQuery.Group(statisticsSaleTable + ".sale_bill_uuid")
 
 	// 定义渠道分组条件
 	channelSelects := map[string][]string{
@@ -1640,6 +2083,7 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 			"ROUND(SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)), 2) AS avg_order_amount",
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
+			"SUM(t.order_amount) AS total_order_amount", // 总订单金额
 		},
 		"table": { // 桌台：desk_uuid > 0 && is_takeout = 0
 			"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
@@ -1674,6 +2118,22 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 			"0 AS total_desk_num",
 			"0 AS total_meal_num",
 		},
+		"dine_in_store": { // 堂食：桌台订单 + 点餐订单（非打包）
+			"COUNT(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN t.avg_order_amount ELSE 0 END) / COUNT(CASE WHEN ((t.desk_uuid > 0 AND t.is_takeout = 0) OR (t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND (t.dining_method = 0 OR t.dining_method IS NULL))) AND t.is_meger = 0 THEN 1 END), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
+		"takeaway": { // 外带：点餐订单（打包）
+			"COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.is_meger = 0 THEN 1 END) AS total_order_num",
+			"MIN(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_order_amount",
+			"MAX(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_order_amount",
+			"ROUND(SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.order_source_uuid = 0 AND t.is_takeout = 0 AND t.dining_method = 1 AND t.is_meger = 0 AND t.instant_order_amount > 0 THEN 1 END), 2) AS avg_order_amount",
+			"0 AS total_desk_num",
+			"0 AS total_meal_num",
+		},
 	}
 
 	// 为每个渠道执行查询
@@ -1688,5 +2148,496 @@ func (r *StatisticsRepo) CountChannelSale(startTime, endTime int64, excludeDataM
 		result[channelKey] = &channelResult
 	}
 
+	// 查询外卖订单原始数据
+	takeoutRepo := NewStatisticsTakeoutRepo(r.db)
+	takeoutRawData := takeoutRepo.CountTakeoutSale(CountTakeoutReq{
+		TimeStart: startTime,
+		TimeEnd:   endTime,
+	})
+
+	if takeoutRawData.TotalOrderNum > 0 {
+		// 确保 summary 渠道存在
+		if result["summary"] == nil {
+			result["summary"] = &model.ChannelSaleRepoResult{}
+		}
+		summary := result["summary"]
+
+		summary.TotalOrderNum.Int64 += takeoutRawData.TotalOrderNum
+
+		minOrderAmount := summary.MinOrderAmount.Float64
+		if takeoutRawData.MinOrderAmount < minOrderAmount {
+			minOrderAmount = takeoutRawData.MinOrderAmount
+		}
+
+		summary.MinOrderAmount.Float64 = minOrderAmount
+		summary.MinOrderAmount.Valid = true
+
+		maxOrderAmount := summary.MaxOrderAmount.Float64
+		if takeoutRawData.MaxOrderAmount > maxOrderAmount {
+			maxOrderAmount = takeoutRawData.MaxOrderAmount
+		}
+
+		summary.MaxOrderAmount.Float64 = maxOrderAmount
+		summary.MaxOrderAmount.Valid = true
+
+		// （平均订单金额）= 总订单金额 / 总订单数
+		// 如果外卖订单数为0，则使用原有平均订单金额
+		// 如果外卖订单数不为0，则使用总订单金额 / 总订单数
+		var avgOrderAmount decimal.Decimal
+		var totalOrderNum = summary.TotalOrderNum.Int64
+		if totalOrderNum > 0 {
+			totalOrderAmount := decimal.NewFromFloat(summary.TotalOrderAmount.Float64).Add(decimal.NewFromFloat(takeoutRawData.TotalOrderAmount))
+			avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(totalOrderNum))
+		} else {
+			avgOrderAmount = decimal.NewFromFloat(summary.AvgOrderAmount.Float64)
+		}
+
+		summary.AvgOrderAmount.Float64 = avgOrderAmount.Round(2).InexactFloat64()
+		summary.AvgOrderAmount.Valid = true
+	}
+
+	// 查询 Grab 和 LINE MAN 外卖订单数据
+	grabRawData := takeoutRepo.CountTakeoutChannelSaleByPlatform(CountTakeoutChannelSaleReq{
+		StartTime: startTime,
+		EndTime:   endTime,
+	}, "grab")
+	linemanRawData := takeoutRepo.CountTakeoutChannelSaleByPlatform(CountTakeoutChannelSaleReq{
+		StartTime: startTime,
+		EndTime:   endTime,
+	}, "lineman")
+
+	// 计算 Grab 统计
+	result["grab"] = calculateChannelSaleFromRawData(grabRawData)
+
+	// 计算 LINE MAN 统计
+	result["lineman"] = calculateChannelSaleFromRawData(linemanRawData)
+
+	// 计算外卖统计（点餐标记外卖 + Grab + LINE MAN）
+	// 查询点餐订单（标记外卖）的原始数据
+	var takeoutShopOrderData []struct {
+		OrderAmount float64
+	}
+	db.Table("(?) AS t", subQuery).
+		Select("t.instant_order_takeaway_amount AS order_amount").
+		Where("t.desk_uuid = 0 AND t.order_source_uuid > 0 AND t.is_takeout = 0 AND t.is_meger = 0 AND t.instant_order_takeaway_amount > 0").
+		Scan(&takeoutShopOrderData)
+
+	// 合并所有外卖订单数据（点餐标记外卖 + Grab + LINE MAN）
+	var allTakeoutPayAmounts []float64
+	var allTakeoutOrderNum int64
+	var allTakeoutPayAmountSum decimal.Decimal
+
+	// 添加点餐订单（标记外卖）
+	for _, item := range takeoutShopOrderData {
+		allTakeoutOrderNum++
+		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.OrderAmount))
+		allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.OrderAmount)
+	}
+
+	// 添加 Grab 订单
+	for _, item := range grabRawData {
+		allTakeoutOrderNum++
+		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
+		allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
+	}
+
+	// 添加 LINE MAN 订单
+	for _, item := range linemanRawData {
+		allTakeoutOrderNum++
+		allTakeoutPayAmountSum = allTakeoutPayAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
+		allTakeoutPayAmounts = append(allTakeoutPayAmounts, item.PayAmount)
+	}
+
+	// 计算外卖统计
+	result["takeout"] = calculateChannelSaleFromRawDataAndAmounts(allTakeoutOrderNum, allTakeoutPayAmounts, allTakeoutPayAmountSum)
+
 	return result, nil
+}
+
+// calculateChannelSaleFromRawData 从原始数据计算渠道统计
+func calculateChannelSaleFromRawData(rawData []takeoutChannelSaleRawData) *model.ChannelSaleRepoResult {
+	result := &model.ChannelSaleRepoResult{}
+	if len(rawData) == 0 {
+		return result
+	}
+
+	var payAmounts []float64
+	var orderNum int64
+	var payAmountSum decimal.Decimal
+
+	for _, item := range rawData {
+		orderNum++
+		// 包含所有金额（包括0）用于计算最小最大值
+		payAmounts = append(payAmounts, item.PayAmount)
+		// 只统计大于0的金额用于计算总和
+		if item.PayAmount > 0 {
+			payAmountSum = payAmountSum.Add(decimal.NewFromFloat(item.PayAmount))
+		}
+	}
+
+	result.TotalOrderNum.Int64 = orderNum
+	result.TotalOrderNum.Valid = true
+
+	if len(payAmounts) > 0 {
+		minAmount := payAmounts[0]
+		maxAmount := payAmounts[0]
+		for _, amount := range payAmounts {
+			// 允许0值作为最小值
+			if amount < minAmount {
+				minAmount = amount
+			}
+			if amount > maxAmount {
+				maxAmount = amount
+			}
+		}
+		result.MinOrderAmount.Float64 = minAmount
+		result.MinOrderAmount.Valid = true
+		result.MaxOrderAmount.Float64 = maxAmount
+		result.MaxOrderAmount.Valid = true
+	}
+
+	if orderNum > 0 {
+		avgAmount := payAmountSum.Div(decimal.NewFromInt(orderNum))
+		result.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
+		result.AvgOrderAmount.Valid = true
+	}
+
+	return result
+}
+
+// calculateChannelSaleFromRawDataAndAmounts 从订单数和金额数据计算渠道统计
+func calculateChannelSaleFromRawDataAndAmounts(orderNum int64, payAmounts []float64, payAmountSum decimal.Decimal) *model.ChannelSaleRepoResult {
+	result := &model.ChannelSaleRepoResult{}
+
+	result.TotalOrderNum.Int64 = orderNum
+	result.TotalOrderNum.Valid = true
+
+	if len(payAmounts) > 0 {
+		minAmount := payAmounts[0]
+		maxAmount := payAmounts[0]
+		for _, amount := range payAmounts {
+			// 允许0值作为最小值
+			if amount < minAmount {
+				minAmount = amount
+			}
+			if amount > maxAmount {
+				maxAmount = amount
+			}
+		}
+		result.MinOrderAmount.Float64 = minAmount
+		result.MinOrderAmount.Valid = true
+		result.MaxOrderAmount.Float64 = maxAmount
+		result.MaxOrderAmount.Valid = true
+	}
+
+	if orderNum > 0 {
+		avgAmount := payAmountSum.Div(decimal.NewFromInt(orderNum))
+		result.AvgOrderAmount.Float64 = avgAmount.Round(2).InexactFloat64()
+		result.AvgOrderAmount.Valid = true
+	}
+
+	return result
+}
+
+// CountRefundSummaryReq 统计退款金额汇总请求
+type CountRefundSummaryReq struct {
+	StartTime         int64  // 查询开始时间戳
+	EndTime           int64  // 查询结束时间戳
+	Cycle             int    // 周期: 0=按日、1=按月
+	PageNo, PageSize  int    // 页码, 每页大小
+	ExcludeDataManage bool   // 是否排除数据管理订单
+	Timezone          string // 业务时区，如 "Asia/Shanghai"
+}
+
+// refundSummaryRawData 退款金额汇总统计原始数据
+type refundSummaryRawData struct {
+	FinishTime          int64   // 完成时间戳
+	SaleBillUuid        uint64  // 销售账单UUID
+	RefundAmount        float64 // 退款金额
+	PartialRefundAmount float64 // 部分退款金额
+	FullRefundAmount    float64 // 整单退款金额
+	PartialRefundNum    int64   // 部分退款笔数
+	FullRefundNum       int64   // 整单退款笔数
+	RefundNum           int64   // 退款笔数（每个退货单算一笔）
+}
+
+// CountRefundSummary 统计退款金额汇总
+func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, []model.StatisticsRefundSummaryData) {
+	// 1. 查询原始数据（不分组）
+	var rawData []refundSummaryRawData
+	rawQuery := `
+		SELECT
+			sb.finish_time,
+			sb.uuid AS sale_bill_uuid,
+			SUM(ro.refund_amount) AS refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, 0, SUM(IF(ro.return_type = 2, ro.refund_amount, 0))) AS partial_refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, SUM(ro.refund_amount), 0) AS full_refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0,0, IF(COUNT(DISTINCT IF(ro.return_type = 2, ro.uuid, NULL)) > 0, 1, 0)) AS partial_refund_num,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, 1, 0) AS full_refund_num,
+			1 AS refund_num
+		FROM ttpos_return_order AS ro
+		LEFT JOIN ttpos_sale_order AS so ON ro.related_order_uuid = so.uuid AND so.delete_time = ?
+		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = ?
+		WHERE ro.delete_time = ?
+			AND ro.related_order_type = ?
+			AND sb.status = ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
+	`
+
+	// 如果排除数据管理订单，添加过滤条件
+	if req.ExcludeDataManage {
+		rawQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
+	}
+
+	rawQuery += `
+		GROUP BY sb.uuid, sb.finish_time
+	`
+
+	r.db.Raw(rawQuery,
+		constant.NotDeleted,
+		constant.NotDeleted,
+		constant.NotDeleted,
+		constant.ReturnOrderRelatedOrderTypeSaleOrder,
+		constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+	).Scan(&rawData)
+
+	// 2. 查询订单总数（用于计算退款率）
+	var orderCountData []struct {
+		FinishTime int64
+		OrderNum   int64
+	}
+	orderCountQuery := `
+		SELECT 
+			sb.finish_time,
+			COUNT(DISTINCT sb.uuid) AS order_num
+		FROM ttpos_sale_bill AS sb
+		WHERE sb.delete_time = ?
+			AND sb.status = ?
+			AND sb.finish_time >= ?
+			AND sb.finish_time <= ?
+	`
+
+	if req.ExcludeDataManage {
+		orderCountQuery += ` AND sb.uuid NOT IN (SELECT data_uuid FROM ttpos_data_manage WHERE type = 0 AND delete_time = 0)`
+	}
+
+	orderCountQuery += `
+		GROUP BY FROM_UNIXTIME(sb.finish_time, IF(? = 1, '%Y-%m', '%Y-%m-%d'))
+	`
+
+	r.db.Raw(orderCountQuery,
+		constant.NotDeleted,
+		constant.SaleBillStatusComplete,
+		req.StartTime, req.EndTime,
+		req.Cycle,
+	).Scan(&orderCountData)
+
+	// 2.1. 查询外卖订单取消订单数据（order_state = 60，且 accepted_time > 0）
+	type takeoutRefundRawData struct {
+		AcceptedTime int64   // 接单时间戳
+		RefundAmount float64 // 退款金额（eater_payment）
+		RefundNum    int64   // 退款笔数（每个订单算一笔）
+	}
+	var takeoutRefundData []takeoutRefundRawData
+	takeoutRefundQuery := `
+		SELECT 
+			accepted_time,
+			eater_payment AS refund_amount,
+			1 AS refund_num
+		FROM ttpos_takeout_order
+		WHERE delete_time = ?
+			AND order_state = ?
+			AND accepted_time > 0
+			AND accepted_time >= ?
+			AND accepted_time <= ?
+		`
+	r.db.Raw(takeoutRefundQuery,
+		constant.NotDeleted,
+		canceledOrderState, // 60 = 已取消
+		req.StartTime, req.EndTime,
+	).Scan(&takeoutRefundData)
+
+	// 2.2. 查询外卖订单总数（用于计算退款率）
+	type takeoutOrderCountData struct {
+		AcceptedTime int64
+		OrderNum     int64
+	}
+	var takeoutOrderCount []takeoutOrderCountData
+	// 使用 statistics_takeout.go 中定义的 validOrderStates（包含所有有效状态：10, 20, 30, 40, 60）
+	validStatesStr := buildStateInCondition(validOrderStates)
+	takeoutOrderCountQuery := fmt.Sprintf(`
+		SELECT 
+			MIN(accepted_time) AS accepted_time,
+			COUNT(DISTINCT uuid) AS order_num
+		FROM ttpos_takeout_order
+		WHERE delete_time = ?
+			AND order_state IN %s
+			AND accepted_time > 0
+			AND accepted_time >= ?
+			AND accepted_time <= ?
+		GROUP BY FROM_UNIXTIME(accepted_time, IF(? = 1, '%%Y-%%m', '%%Y-%%m-%%d'))
+	`, validStatesStr)
+	r.db.Raw(takeoutOrderCountQuery,
+		constant.NotDeleted,
+		req.StartTime, req.EndTime,
+		req.Cycle,
+	).Scan(&takeoutOrderCount)
+
+	// 3. 在应用层按业务时区分组、统计
+	timeUtil := utils.SetTimezone(req.Timezone)
+
+	// 构建订单数量映射（按日期）- 包含销售订单和外卖订单
+	orderCountMap := make(map[string]int64)
+	for _, item := range orderCountData {
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01")
+		} else {
+			// 按日
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01-02")
+		}
+		orderCountMap[dateKey] += item.OrderNum
+	}
+	// 合并外卖订单总数
+	for _, item := range takeoutOrderCount {
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = timeUtil.FormatUnixTime(item.AcceptedTime, "2006-01")
+		} else {
+			// 按日
+			dateKey = timeUtil.FormatUnixTime(item.AcceptedTime, "2006-01-02")
+		}
+		orderCountMap[dateKey] += item.OrderNum
+	}
+
+	// 按日期分组统计
+	// 使用 decimal 进行精确计算
+	type groupData struct {
+		RefundAmount        decimal.Decimal
+		RefundNum           int64
+		PartialRefundAmount decimal.Decimal
+		PartialRefundNum    int64
+		FullRefundAmount    decimal.Decimal
+		FullRefundNum       int64
+		OrderNum            int64
+	}
+	groupedData := make(map[string]*groupData)
+	for _, item := range rawData {
+		// 将时间戳转换为业务时区的日期
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01")
+		} else {
+			// 按日
+			dateKey = timeUtil.FormatUnixTime(item.FinishTime, "2006-01-02")
+		}
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{}
+		}
+
+		// 使用 decimal 累加统计数据
+		group := groupedData[dateKey]
+		group.RefundAmount = group.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		group.RefundNum += item.RefundNum
+		// 累加部分退款和整单退款（已在 SQL 中按类型分别统计）
+		group.PartialRefundAmount = group.PartialRefundAmount.Add(decimal.NewFromFloat(item.PartialRefundAmount))
+		group.PartialRefundNum += item.PartialRefundNum
+		group.FullRefundAmount = group.FullRefundAmount.Add(decimal.NewFromFloat(item.FullRefundAmount))
+		group.FullRefundNum += item.FullRefundNum
+	}
+
+	// 合并外卖订单退款数据
+	for _, item := range takeoutRefundData {
+		// 将时间戳转换为业务时区的日期
+		var dateKey string
+		if req.Cycle == 1 {
+			// 按月
+			dateKey = timeUtil.FormatUnixTime(item.AcceptedTime, "2006-01")
+		} else {
+			// 按日
+			dateKey = timeUtil.FormatUnixTime(item.AcceptedTime, "2006-01-02")
+		}
+
+		// 初始化分组数据
+		if groupedData[dateKey] == nil {
+			groupedData[dateKey] = &groupData{}
+		}
+
+		// 使用 decimal 累加统计数据
+		group := groupedData[dateKey]
+		// 退款金额：+ 外卖订单取消金额 "eaterPayment"
+		group.RefundAmount = group.RefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		// 退款笔数：+ 外卖订单取消笔数
+		group.RefundNum += item.RefundNum
+		// 部分退款金额：+外卖订单（无部分退款金额，所以不加）
+		// 部分退款笔数：+外卖订单（无部分退款笔数，所以不加）
+		// 整单退款金额：+外卖订单取消金额 "eaterPayment"
+		group.FullRefundAmount = group.FullRefundAmount.Add(decimal.NewFromFloat(item.RefundAmount))
+		// 整单退款笔数：+外卖订单取消笔数
+		group.FullRefundNum += item.RefundNum
+	}
+
+	// 设置订单数量（从订单数量映射中获取）
+	for dateKey, group := range groupedData {
+		if orderNum, exists := orderCountMap[dateKey]; exists {
+			group.OrderNum = orderNum
+		}
+	}
+
+	// 转换为结果格式
+	result := make([]model.StatisticsRefundSummaryData, 0, len(groupedData))
+	for dateKey, group := range groupedData {
+		// 计算退款率：退款订单数量 / 总订单数量 * 100
+		var refundRate decimal.Decimal
+		if group.OrderNum > 0 {
+			refundRate = decimal.NewFromInt(group.RefundNum).Div(decimal.NewFromInt(group.OrderNum)).Mul(decimal.NewFromInt(100))
+		}
+
+		result = append(result, model.StatisticsRefundSummaryData{
+			Date:                sql.NullString{String: dateKey, Valid: true},
+			RefundAmount:        sql.NullFloat64{Float64: group.RefundAmount.InexactFloat64(), Valid: true},
+			RefundNum:           sql.NullInt64{Int64: group.RefundNum, Valid: true},
+			RefundRate:          sql.NullFloat64{Float64: refundRate.InexactFloat64(), Valid: true},
+			PartialRefundAmount: sql.NullFloat64{Float64: group.PartialRefundAmount.InexactFloat64(), Valid: true},
+			PartialRefundNum:    sql.NullInt64{Int64: group.PartialRefundNum, Valid: true},
+			FullRefundAmount:    sql.NullFloat64{Float64: group.FullRefundAmount.InexactFloat64(), Valid: true},
+			FullRefundNum:       sql.NullInt64{Int64: group.FullRefundNum, Valid: true},
+			OrderNum:            sql.NullInt64{Int64: group.OrderNum, Valid: true},
+		})
+	}
+
+	// 4. 按日期排序
+	slices.SortFunc(result, func(a, b model.StatisticsRefundSummaryData) int {
+		if a.Date.String < b.Date.String {
+			return -1
+		} else if a.Date.String > b.Date.String {
+			return 1
+		}
+		return 0
+	})
+
+	// 5. 分页
+	total := int64(len(result))
+	start := (req.PageNo - 1) * req.PageSize
+	end := start + req.PageSize
+	if start > len(result) {
+		start = len(result)
+	}
+	if end > len(result) {
+		end = len(result)
+	}
+	if start < end {
+		result = result[start:end]
+	} else {
+		result = []model.StatisticsRefundSummaryData{}
+	}
+
+	return total, result
 }

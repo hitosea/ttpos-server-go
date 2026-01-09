@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.0    |
 | **状态**   | 已创建 Spec  |
 | **关联任务** | -            |
-| **关联 Spec** | [story-main-regenerate-order-material](../../shared/specs/active/story-main-regenerate-order-material/requirements.md) |
+| **关联 Spec** | [story-main-regenerate-order-material](../../shared/specs/archived/v2.12/story-main-regenerate-order-material/requirements.md) |
 
 ---
 

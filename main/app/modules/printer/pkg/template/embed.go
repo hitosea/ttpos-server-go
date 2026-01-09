@@ -20,6 +20,9 @@ import (
 //go:embed takeout_customer_receipt_config.json
 //go:embed takeout_customer_receipt_data.json
 //go:embed takeout_customer_receipt_tmp.json
+//go:embed takeout_refund_receipt_config.json
+//go:embed takeout_refund_receipt_data.json
+//go:embed takeout_refund_receipt_tmp.json
 var TemplateJsonFS embed.FS
 
 // StatementOrderTemplateType 结账单模板类型枚举
@@ -31,6 +34,7 @@ const (
 	Invoice                StatementOrderTemplateType = "invoice"                  // Invoice 发票
 	TakeoutMerchantReceipt StatementOrderTemplateType = "takeout_merchant_receipt" // TakeoutMerchantReceipt 外卖商家联
 	TakeoutCustomerReceipt StatementOrderTemplateType = "takeout_customer_receipt" // TakeoutCustomerReceipt 外卖顾客联
+	TakeoutRefundReceipt   StatementOrderTemplateType = "takeout_refund_receipt"   // TakeoutRefundReceipt 外卖退单联
 )
 
 // 中文名称到枚举的映射表（用于从数据库中文名称查找）
@@ -40,11 +44,12 @@ var chineseNameMap = map[string]StatementOrderTemplateType{
 	"发票":    Invoice,
 	"外卖商家联": TakeoutMerchantReceipt,
 	"外卖顾客联": TakeoutCustomerReceipt,
+	"外卖退单联": TakeoutRefundReceipt,
 }
 
 // IsValid 验证枚举值是否有效
 func (t StatementOrderTemplateType) IsValid() bool {
-	return t == StatementOrder || t == PreStatementOrder || t == Invoice || t == TakeoutMerchantReceipt || t == TakeoutCustomerReceipt
+	return t == StatementOrder || t == PreStatementOrder || t == Invoice || t == TakeoutMerchantReceipt || t == TakeoutCustomerReceipt || t == TakeoutRefundReceipt
 }
 
 // ParseFromString 从字符串解析模板类型（支持中文和英文名称）

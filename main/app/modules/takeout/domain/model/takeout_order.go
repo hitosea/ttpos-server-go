@@ -18,16 +18,16 @@ type TakeoutOrder struct {
 	// 平台信息
 	Platform           string `gorm:"column:platform" json:"platform"`                         // grab, lineman
 	PlatformOrderId    string `gorm:"column:platform_order_id" json:"platform_order_id"`       // 平台订单ID
-	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单 )
+	PlatformOrderState string `gorm:"column:platform_order_state" json:"platform_order_state"` // 平台订单状态 (Grab: NEW 待接单, ACCEPTED 已接单, ALLOCATING 待骑手接单, DRIVER_ALLOCATED 骑手已分配, DRIVER_ARRIVED 骑手已到店, COLLECTED 已取餐, DELIVERING 配送中, DELIVERED 已送达, COMPLETED 已完成, CANCELLED 已取消, REJECTED 已拒单, FAILED 失败, REFUNDED 已退款)
 	ShortOrderNumber   string `gorm:"column:short_order_number" json:"short_order_number"`     // 短单号
 	MerchantId         string `gorm:"column:merchant_id" json:"merchant_id"`                   // 商户ID	(Grab: merchantID)
 	PartnerMerchantId  string `gorm:"column:partner_merchant_id" json:"partner_merchant_id"`   // 合作伙伴商户ID (Grab: partnerMerchantID)
 
 	// 订单状态
-	OrderState     int    `gorm:"column:order_state" json:"order_state"`
-	IsAbnormal     int    `gorm:"column:is_abnormal" json:"is_abnormal"`
-	AbnormalDetail string `gorm:"column:abnormal_detail;type:text" json:"abnormal_detail"`
-	StockStatus    int    `gorm:"column:stock_status" json:"stock_status"`
+	OrderState     int    `gorm:"column:order_state" json:"order_state"`                   // : 0=待接单, 10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消
+	IsAbnormal     int    `gorm:"column:is_abnormal" json:"is_abnormal"`                   // 是否异常: 0=正常, 1=异常
+	AbnormalDetail string `gorm:"column:abnormal_detail;type:text" json:"abnormal_detail"` // 异常详情
+	StockStatus    int    `gorm:"column:stock_status" json:"stock_status"`                 // 库存状态: 1=充足, 2=不足
 
 	// 价格信息（单位：元）
 	Subtotal          float64 `gorm:"column:subtotal" json:"subtotal"`                       // 小计金额
@@ -150,42 +150,82 @@ func (o *TakeoutOrder) GetKdsTakeoutPlatformAndOrderNumber() string {
 
 // 是否是打包订单
 func (o *TakeoutOrder) IsTakeawayOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.OrderType != valueobject.TakeoutOrderTypeDineIn
 }
 
 // 判断是否删除或者已经取消
 func (o *TakeoutOrder) IsDeletedOrCanceled() bool {
-	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected
+	if o == nil {
+		return true
+	}
+	return o.DeleteTime > 0 || o.OrderState == valueobject.TakeoutOrderStateRejected || o.OrderState == valueobject.TakeoutOrderStateCanceled
 }
 
 // 获取外卖平台 全小写
 func (o *TakeoutOrder) GetToLowerPlatform() string {
+	if o == nil {
+		return ""
+	}
 	return strings.ToLower(o.Platform)
 }
 
 // 获取外卖平台 首字母大写
 func (o *TakeoutOrder) GetCapitalPlatform() string {
+	if o == nil || len(o.Platform) == 0 {
+		return ""
+	}
 	return strings.ToUpper(o.Platform[0:1]) + strings.ToLower(o.Platform[1:])
 }
 
 // 是否店内就餐订单
 func (o *TakeoutOrder) IsDineInOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.OrderType == valueobject.TakeoutOrderTypeDineIn
 }
 
 // 是否自动接单
 func (o *TakeoutOrder) IsAutoAcceptOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.OrderAcceptedType == valueobject.TakeoutOrderAcceptedTypeAuto
 }
 
 // 是否grab订单
 func (o *TakeoutOrder) IsGrabOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.Platform == valueobject.TakeoutPlatformGrab
 }
 
 // 是否lineman订单
 func (o *TakeoutOrder) IsLinemanOrder() bool {
+	if o == nil {
+		return false
+	}
 	return o.Platform == valueobject.TakeoutPlatformLineman
+}
+
+// 是否存在班次
+func (o *TakeoutOrder) IsExistShiftLog() bool {
+	if o == nil {
+		return false
+	}
+	return o.StaffShiftLogUuid > 0
+}
+
+// 是否 ERP发票已同步
+func (o *TakeoutOrder) IsErpInvoiceSynced() bool {
+	if o == nil {
+		return false
+	}
+	return len(o.ErpPosInvoiceResp) > 0
 }
 
 // 获取ERP POS Invoice响应数据
@@ -198,4 +238,12 @@ func (o *TakeoutOrder) GetErpPosInvoiceResp() *selling.SavePosInvoiceResp {
 		return nil
 	}
 	return &erpPosInvoiceResp
+}
+
+// 获取骑手状态
+func (o *TakeoutOrder) GetRiderStatus() string {
+	if o.PlatformOrderState == "DRIVER_ARRIVED" {
+		return "rider_accepted"
+	}
+	return "rider_pending"
 }

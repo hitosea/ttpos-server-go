@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"ttpos-server-go/app/modules/takeout/domain/event"
+	valueObject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	takeoutService "ttpos-server-go/app/service/takeout"
 	"ttpos-server-go/config"
 	appContext "ttpos-server-go/pkg/context"
@@ -77,6 +78,22 @@ func (s *takeoutOrderCancelEventSubscriber) Handle(domainEvent event.DomainEvent
 
 		// 成功后，推送到厨显端更新订单
 		sendUpdateKitchenWebSocketNotification(orderCancelEvent.CompanyUuid)
+
+		// 记录高峰期（减少）
+		db := dbm.GetDB(orderCancelEvent.CompanyUuid)
+		if err := recordTakeoutOrderPeakTime(db, orderCancelEvent.CompanyUuid, orderCancelEvent.OrderUuid, "dec"); err != nil {
+			logger.Logger.Error("记录外卖订单高峰期失败",
+				zap.Uint64("orderUuid", orderCancelEvent.OrderUuid),
+				zap.String("takeoutOrderUuid", orderCancelEvent.TakeoutOrderUuid),
+				zap.Error(err))
+		}
+
+		// 异步打印退单联
+		if orderCancelEvent.OrderState == valueObject.TakeoutOrderStateCanceled {
+			utils.Go(func() {
+				takeoutSrv.PrintTakeoutOrder(ctx, orderCancelEvent.OrderUuid, "", 0)
+			})
+		}
 	})
 
 	return nil

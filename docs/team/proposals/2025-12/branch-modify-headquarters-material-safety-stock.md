@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 待评审   |
 | **关联任务** | DooTask #37482 |
-| **关联 Spec** | [story-shop-branch-modify-headquarters-material-safety-stock](../../shared/specs/active/story-shop-branch-modify-headquarters-material-safety-stock/requirements.md) |
+| **关联 Spec** | [story-shop-branch-modify-headquarters-material-safety-stock](../../shared/specs/archived/v2.12/story-shop-branch-modify-headquarters-material-safety-stock/requirements.md) |
 
 ---
 

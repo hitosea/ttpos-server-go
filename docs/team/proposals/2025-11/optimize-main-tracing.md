@@ -12,7 +12,7 @@
 | **日期**      | 2025-11-20                                                                                                        |
 | **目标版本**  | v2025.11.x                                                                                                        |
 | **状态**      | 评审通过                                                                                                          |
-| **关联 Spec** | [story-main-observability-tracing](../../../shared/specs/active/story-main-observability-tracing/requirements.md) |
+| **关联 Spec** | [story-main-observability-tracing](../../../shared/specs/archived/v2.12/story-main-observability-tracing/requirements.md) |
 
 ---
 

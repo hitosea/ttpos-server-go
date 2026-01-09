@@ -8,10 +8,13 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/adapter"
+	"ttpos-server-go/app/modules/objectstorage/infrastructure/controller"
+	objectStoragePersistence "ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/cache"
@@ -170,6 +173,12 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.WithMessage(err)
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
 	if err != nil {
@@ -190,7 +199,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid, repository.WithUseSaleBillCache())
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
@@ -212,6 +221,23 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 更新缓存的salebill信息
+	if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+		saleBillController := controller.GetSaleBillController()
+		if err := saleBillController.Update(ctx, ctx.GetDB(),
+			[]uint64{request.SaleBillUuid},
+			controller.WithUpdateValue(map[uint64]interface{}{request.SaleBillUuid: saleBill}),
+		); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车商品数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
@@ -423,6 +449,22 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	return info, nil
 }
 
+// 异步预加载销售账单信息缓存
+func (s *orderSrv) AsyncPreloadSaleBillAllInfoCache(ctx context.Context, saleBillUuid uint64) {
+	utils.Go(func() {
+		// 禁止并发操作
+		if ctx.NoLock() {
+			lock.NewSystemLock().LockUuid(saleBillUuid)
+			defer lock.NewSystemLock().UnlockUuid(saleBillUuid)
+			ctx.AddLock()
+		}
+		_, err := s.PreloadSaleBillAllInfoCache(ctx, saleBillUuid)
+		if err != nil {
+			ctx.Log().Error("预加载销售账单信息缓存失败", zap.Error(err))
+		}
+	})
+}
+
 // AssistantOrderCartProductNum 助手端修改购物车商品数量
 func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 禁止并发操作
@@ -547,22 +589,6 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
-	// FIXME 暂时废弃，只在送厨和结账时检查
-	// 检查限购
-	// {
-	// 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-	// 	if request.Num > beforeNum {
-	// 		limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
-	// 		if err != nil {
-	// 			return nil, errors.WithMessage(err)
-	// 		}
-	// 		overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
-	// 		if len(overLimitProducts) > 0 {
-	// 			return nil, errors.WithMessage(errors.New("商品超过限购"))
-	// 		}
-	// 	}
-	// }
-
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
 	if request.Num > beforeNum {
@@ -598,13 +624,19 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
+	// 任务38050: 优化接口性能,暂时不返回桌台详情. 因为返回后前端也不使用
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	ctx.Log().Debug("获取新的账单数据")
-
 	return info, nil
 }
 
@@ -1109,6 +1141,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		})
 	})
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1212,6 +1250,12 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 			Sign:           saleOrderProduct.Sign,
 		})
 	})
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
@@ -1419,6 +1463,12 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 			ToTableNo:      targetDesk.DeskNo,
 		})
 	})
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车信息
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1727,6 +1777,13 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 			FreeRemark:     req.Reason,
 		})
 	})
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -1830,6 +1887,12 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 		})
 	})
 
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
+
 	// 获取新的购物车信息
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -1840,6 +1903,10 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	xxx := time.Now()
+	defer func() {
+		fmt.Println("cache_time_xie_log GetOrderCartInfo ms: ", time.Since(xxx).Milliseconds())
+	}()
 	// 追加请求头参数，从http的header中获取h5_order_uuid
 	h5OrderUuid := context.GetH5OrderUuid(ctx)
 	if h5OrderUuid != 0 {
@@ -1855,6 +1922,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	orderRepo := repository.NewOrderRepo(db)
 
 	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
+	opts = append(opts, repository.WithCompanyUuid(ctx.GetCompanyUuid())) // 传入公司UUID，用于判断是否使用缓存
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
@@ -1862,6 +1930,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	if !option.FilterEndStatus && shopCart.SaleBill.IsEndStatus() {
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
+	yyyyy := time.Now()
 	// 重新计算金额
 	if option.H5OrderUuid == 0 {
 		shopCart.SaleBill.CalcAll()
@@ -1869,36 +1938,75 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 如果从待接单进入桌台时，要把h5订单商品计算在内
 		shopCart.SaleBill.CalcAll(model.WithAllAndOneH5Order(option.H5OrderUuid))
 	}
+	fmt.Println("cache_time_xie_log GetOrderCartInfo22222 ms: ", time.Since(yyyyy).Milliseconds())
+
+	// 获取门店业务设置（使用对象存储模块缓存）
+	getBusinessSettingStartTime := time.Now()
+	var businessSetting *setting.Business
+
+	// 检查是否启用对象存储缓存
+	companyUuid := ctx.GetCompanyUuid()
+	if !adapter.IsObjectStorageCacheEnabled(companyUuid) {
+		// 未启用缓存，直接查询
+		bs, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		businessSetting = &bs
+		fmt.Printf("cache_time_xie_log 获取门店业务设置完成 duration=%dms\n", time.Since(getBusinessSettingStartTime).Milliseconds())
+	} else {
+		// 使用对象存储模块缓存查询（复用订单对象缓存层）
+		cacheLayer := adapter.GetOrderObjectCache[setting.Business](cache.Global, 5*time.Minute)
+		cacheKey := objectStoragePersistence.BuildKey(ctx, objectStoragePersistence.ObjectTypeBusinessSetting, ctx.GetCompanyUuid())
+
+		bs, err := cacheLayer.GET(cacheKey, func() (setting.Business, error) {
+			return s.settingSrv.GetBusinessSetting(ctx)
+		})
+
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		businessSetting = &bs
+		fmt.Printf("cache_time_xie_log 获取门店业务设置完成 duration=%dms\n", time.Since(getBusinessSettingStartTime).Milliseconds())
+	}
 
 	// 给订单列表添加订单
 	saleOrderList := make([]resp.SaleOrder, 0)
 	for _, saleOrder := range shopCart.SaleBill.SaleOrders {
+		orderStartTime := time.Now()
+
 		productList := make([]resp.Product, 0)
 		// 给商品列表条件顾客类型
 		// 如不是桌台订单、不是自助餐，这个Buffets列表是空的，故不会往productList里加入商品
+		getCustomerListStartTime := time.Now()
 		{
 			customerList := saleOrder.GetCustomerList()
 			productList = append(productList, customerList...)
 		}
+		fmt.Printf("cache_time_xie_log 获取顾客类型商品列表完成 duration=%dms saleOrderUuid=%d\n", time.Since(getCustomerListStartTime).Milliseconds(), saleOrder.Uuid)
 
 		// 添加加钟商品
+		getDelayProductStartTime := time.Now()
 		{
 			delayProductList := saleOrder.GetDelayProductList()
 			productList = append(productList, delayProductList...)
 		}
+		fmt.Printf("cache_time_xie_log 获取加钟商品列表完成 duration=%dms saleOrderUuid=%d\n", time.Since(getDelayProductStartTime).Milliseconds(), saleOrder.Uuid)
 
 		// 添加正常商品
+		getNormalProductStartTime := time.Now()
 		{
-			// 获取门店业务设置
-			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
+
+			getProductListStartTime := time.Now()
 			products := saleOrder.GetProductList(ctx.GetVersion(), option.UnorderedH5Product == repository.OrderedH5ProductWithReject, businessSetting.OpenIsBatch())
+			fmt.Printf("cache_time_xie_log 获取正常商品列表完成 duration=%dms saleOrderUuid=%d productCount=%d\n", time.Since(getProductListStartTime).Milliseconds(), saleOrder.Uuid, len(products))
+
 			productList = append(productList, products...)
 		}
+		fmt.Printf("cache_time_xie_log 添加正常商品完成 duration=%dms saleOrderUuid=%d\n", time.Since(getNormalProductStartTime).Milliseconds(), saleOrder.Uuid)
 
 		// 商品计数
+		calcProductNumStartTime := time.Now()
 		productNum := 0.0
 		for _, product := range productList {
 			// 退菜的商品不计入
@@ -1907,8 +2015,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 			productNum += product.Num
 		}
+		fmt.Printf("cache_time_xie2_log 商品计数完成 duration=%dms saleOrderUuid=%d productNum=%.2f\n", time.Since(calcProductNumStartTime).Milliseconds(), saleOrder.Uuid, productNum)
 
 		// 填写订单信息
+		buildOrderStartTime := time.Now()
 		order := resp.SaleOrder{
 			Uuid:                saleOrder.Uuid,
 			OrderNo:             saleOrder.OrderNo,
@@ -1932,6 +2042,9 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			},
 		}
 		saleOrderList = append(saleOrderList, order)
+		fmt.Printf("cache_time_xie_log 构建订单信息完成 duration=%dms saleOrderUuid=%d\n", time.Since(buildOrderStartTime).Milliseconds(), saleOrder.Uuid)
+		fmt.Printf("cache_time_xie_log 处理单个订单完成 duration=%dms saleOrderUuid=%d totalProductCount=%d\n", time.Since(orderStartTime).Milliseconds(), saleOrder.Uuid, len(productList))
+
 	}
 
 	takeout := shopCart.SaleBill.IsTakeout()
@@ -1978,9 +2091,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 		}
 	}
-
+	hhh := time.Now()
 	// 先判断商户是否有生效的必点方案（仅在对象存储缓存开启时执行）
-	companyUuid := ctx.GetCompanyUuid()
 	if adapter.IsObjectStorageCacheEnabled(companyUuid) {
 		hasActiveMustPlan, err := repository.NewProductMustPlanRepo(db).HasActiveProductMustPlan(ctx)
 		if err != nil {
@@ -2068,6 +2180,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 		}
 	}
+	fmt.Println("cache_time_xie_log sGetOrderCartInfo11111 ms: ", time.Since(hhh).Milliseconds())
 	return shopCartInfo, nil
 }
 
@@ -2430,6 +2543,12 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 	}); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// if adapter.IsObjectStorageCacheEnabled(ctx.GetCompanyUuid()) {
+	// 	if ctx.GetSource() == constant.SourceAssistant {
+	// 		return nil, nil // 如果开启对象存储缓存且是助手端，则不返回购物车商品数据
+	// 	}
+	// }
 
 	// 获取新的购物车商品数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)

@@ -60,7 +60,7 @@ class Supplier extends SupplierModel
 
         //
         $host = env('DB_HOST');
-        $port = env('DB_PORT');
+        $port = config('database.connections.mysql.hostport'); // 使用配置文件中的端口
         $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
 
         // 检测数据库
@@ -98,7 +98,7 @@ class Supplier extends SupplierModel
         $shopUser = CompanyStaff::where('company_uuid', $companyUuid)->find();
         //
         $host = env('DB_HOST');
-        $port = env('DB_PORT');
+        $port = config('database.connections.mysql.hostport'); // 使用配置文件中的端口
         $prefix = env('DB_PREFIX');
         $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
         // 检测数据库

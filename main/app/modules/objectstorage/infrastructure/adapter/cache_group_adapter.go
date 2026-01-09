@@ -71,6 +71,9 @@ type CacheLayerOption struct {
 	// L2TTL L2 Redis 缓存的过期时间，如果为 0 则使用任务 TTL
 	// 建议设置为任务 TTL 的 1.5 到 2 倍
 	L2TTL time.Duration
+
+	// EnableL1Cache 是否开启 L1 本地缓存，默认为 true
+	EnableL1Cache bool
 }
 
 // WithSingletonKey 设置单例 key
@@ -95,6 +98,17 @@ func WithL1TTL(ttl time.Duration) func(*CacheLayerOption) {
 func WithL2TTL(ttl time.Duration) func(*CacheLayerOption) {
 	return func(opt *CacheLayerOption) {
 		opt.L2TTL = ttl
+	}
+}
+
+// WithEnableL1Cache 设置是否开启 L1 本地缓存
+// 参数：
+//   - enable: true 开启 L1 缓存（默认），false 禁用 L1 缓存
+//
+// 示例：WithEnableL1Cache(false) // 禁用 L1 缓存，只使用 L2 Redis 缓存
+func WithEnableL1Cache(enable bool) func(*CacheLayerOption) {
+	return func(opt *CacheLayerOption) {
+		opt.EnableL1Cache = enable
 	}
 }
 
@@ -173,6 +187,15 @@ func GetOrCreateCacheLayer[T any](groupConfig cache.GroupConfig, underlyingCache
 			}
 			if option.L2TTL > 0 {
 				groupConfig.L2TTL = option.L2TTL
+			}
+			// 设置统计回调函数（使用全局统计管理器）
+			globalStats := GetGlobalStatsManager()
+			groupConfig.HitStatsCallback = func(key string, hit bool, level string) {
+				if hit {
+					globalStats.RecordHit(key)
+				} else {
+					globalStats.RecordMiss(key)
+				}
 			}
 			group = cache.NewCacheGroup[T](groupConfig)
 			// 直接存储实例（作为 L1CacheClearable 接口类型）
@@ -284,8 +307,6 @@ func (a *CacheGroupAdapter[T]) BATCH_GET(keys []string, query func([]string) (ma
 			continue // 单个失败不影响其他
 		}
 		result[key] = val
-		// 注意：这里无法准确判断是命中还是未命中，因为 ICacheGroup 内部处理了缓存逻辑
-		// 实际的命中/未命中日志会在 cacheGroup.Do 中记录
 	}
 
 	// 记录批量查询的总体情况

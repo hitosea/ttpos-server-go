@@ -13,7 +13,7 @@
 | **目标版本** | v2.10.x                 |
 | **状态**     | 待评审                   |
 | **关联任务** | -                        |
-| **关联 Spec** | [task-takeout-grab-oauth-partner-webhook-simple](../../shared/specs/active/task-takeout-grab-oauth-partner-webhook-simple/requirements.md) |
+| **关联 Spec** | [task-takeout-grab-oauth-partner-webhook-simple](../../shared/specs/archived/v2.12/task-takeout-grab-oauth-partner-webhook-simple/requirements.md) |
 
 ---
 

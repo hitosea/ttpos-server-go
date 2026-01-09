@@ -12,7 +12,7 @@
 | **日期**      | 2025-11-19                                                                                                                   |
 | **目标版本**  | v2.1.0                                                                                                                       |
 | **状态**      | ✅ 已批准 → 已创建 Spec                                                                                                      |
-| **关联 Spec** | [story-bmp-inter-company-no-auto-delivery-note](../../../shared/specs/active/story-bmp-inter-company-no-auto-delivery-note/) |
+| **关联 Spec** | [story-bmp-inter-company-no-auto-delivery-note](../../../shared/specs/archived/v2.12/story-bmp-inter-company-no-auto-delivery-note/) |
 | **任务编号**  | 36978                                                                                                                        |
 
 ---

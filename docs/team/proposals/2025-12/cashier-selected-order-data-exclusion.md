@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-cashier-selected-order-data-exclusion](../../shared/specs/active/story-cashier-selected-order-data-exclusion/requirements.md)      |
+| **关联 Spec** | [story-cashier-selected-order-data-exclusion](../../shared/specs/archived/v2.12/story-cashier-selected-order-data-exclusion/requirements.md)      |
 
 ---
 

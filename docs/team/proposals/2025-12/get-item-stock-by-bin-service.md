@@ -13,7 +13,7 @@
 | **目标版本** | 待定 |
 | **状态**   | 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [docs/shared/specs/active/story-bmp-get-item-stock-by-bin/requirements.md](../../../shared/specs/active/story-bmp-get-item-stock-by-bin/requirements.md)      |
+| **关联 Spec** | [docs/shared/specs/archived/v2.12/story-bmp-get-item-stock-by-bin/requirements.md](../../../shared/specs/archived/v2.12/story-bmp-get-item-stock-by-bin/requirements.md)      |
 
 ---
 

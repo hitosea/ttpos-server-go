@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"ttpos-bmp/app/ttpos-erp/api/selling"
@@ -14,12 +15,10 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
-	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/context"
 	appContext "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
@@ -31,7 +30,9 @@ import (
 // @spec story-erp-grab-invoice-sync
 type ITakeoutErpSyncService interface {
 	// SyncOrderToERP 同步外卖订单到 ERP
-	SyncOrderToERP(ctx context.Context, orderUuid uint64) error
+	SyncOrderToERP(ctx appContext.Context, orderUuid uint64) error
+	// SyncOrderCancelledToERP 同步订单取消到 ERP
+	SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64) error
 }
 
 // takeoutErpSyncService ERP 同步领域服务实现
@@ -77,15 +78,13 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	if takeoutOrder == nil {
 		return errors.WithMessage(errors.New("外卖订单不存在"), fmt.Sprintf("外卖订单不存在: %d", orderUuid))
 	}
-	if takeoutOrder.OrderState != valueobject.TakeoutOrderStateAccepted && takeoutOrder.OrderState != valueobject.TakeoutOrderStateRiderPending {
-		return errors.WithMessage(errors.New("外卖订单状态不正确"), fmt.Sprintf("外卖订单状态不正确: %d", takeoutOrder.OrderState))
-	}
+
 	// 检查订单是否已同步到 ERP
-	if len(takeoutOrder.ErpPosInvoiceResp) > 0 {
+	if takeoutOrder.IsErpInvoiceSynced() {
 		return nil // 如果订单已同步到 ERP，则不重复同步
 	}
 	// 如果订单没有班次，则不同步 ERP
-	if takeoutOrder.StaffShiftLogUuid == 0 {
+	if !takeoutOrder.IsExistShiftLog() {
 		return nil
 	}
 
@@ -115,7 +114,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 9. 构建 POS Invoice 请求参数
 	savePosInvoiceReq := buildPosInvoiceRequest(
 		takeoutOrder,
-		company.CompanySetting,
+		&companySetting,
 		erpOpenPosEntryName,
 		&existPayment,
 	)
@@ -125,7 +124,7 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 		appContext.WithContext(ctx.GetContext()),
 		appContext.WithCompanyUuid(ctx.GetCompanyUuid()),
 		appContext.WithCompany(*company),
-		appContext.WithCompanySetting(*company.CompanySetting),
+		appContext.WithCompanySetting(companySetting),
 		appContext.WithStaff(ctx.GetStaff()),
 		appContext.WithStaffUuid(ctx.GetStaffUuid()),
 		appContext.WithLogger(logger.Logger),
@@ -145,17 +144,13 @@ func (s *takeoutErpSyncService) SyncOrderToERP(ctx appContext.Context, orderUuid
 	// 12. 保存 ERP 响应数据到订单
 	respJson, err := json.Marshal(savePosInvoiceResp)
 	if err != nil {
-		logger.Logger.Error("序列化 ERP 响应数据失败",
-			zap.Uint64("orderUuid", orderUuid),
-			zap.Error(err))
+		logger.Logger.Error("序列化 ERP 响应数据失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 	} else {
 		// 更新订单的 ERP 响应字段
 		if err := takeoutOrderRepo.UpdateByMap(takeoutOrder.Uuid, map[string]interface{}{
 			"erp_pos_invoice_resp": string(respJson),
 		}); err != nil {
-			logger.Logger.Error("保存 ERP 响应数据到订单失败",
-				zap.Uint64("orderUuid", orderUuid),
-				zap.Error(err))
+			logger.Logger.Error("保存 ERP 响应数据到订单失败", zap.Uint64("orderUuid", orderUuid), zap.Error(err))
 		}
 	}
 
@@ -197,7 +192,7 @@ func buildPosInvoiceRequest(
 
 	return req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
-		OrderNo:          takeoutOrder.PlatformOrderId, // 使用平台订单号作为 ERP 订单号
+		OrderNo:          strconv.FormatUint(takeoutOrder.Uuid, 10), // 使用订单UUID作为 ERP 订单号
 		OpenPosEntryName: erpOpenPosEntryName,
 		PostingDatetime:  takeoutOrder.AcceptedTime, // 使用接单时间作为过账时间
 		CustomerUuid:     customerUuid,
@@ -224,11 +219,11 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 		if item.IsPackage() {
 			// 套餐使用固定虚拟商品编码
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:    "TC001",                // 套餐虚拟商品编码
-				Qty:         float64(item.Quantity), // 套餐数量
-				Rate:        item.Price,             // 套餐单价
-				Amount:      item.GetTotalPrice(),   // 套餐总价
-				Description: packageName.EN,         // 套餐名称
+				ItemCode:    "TC001",                          // 套餐虚拟商品编码
+				Qty:         float64(item.Quantity),           // 套餐数量
+				Rate:        item.GetPriceNoneTax(),           // 套餐单价
+				Amount:      item.GetTotalPriceNoneTaxTotal(), // 套餐总价
+				Description: packageName.EN,                   // 套餐名称
 				IsFreeItem: func() bool {
 					if item.Price == 0 {
 						return true
@@ -253,11 +248,11 @@ func buildPosInvoiceItems(takeoutOrder *takeoutModel.TakeoutOrder) []*selling.Po
 		} else {
 			// 普通商品
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:    item.TtposItemErpCode,  // 使用 ERP Code
-				Qty:         float64(item.Quantity), // 数量
-				Rate:        item.Price,             // 单价
-				Amount:      item.GetTotalPrice(),   // 小计
-				Description: packageName.EN,         // 商品名称
+				ItemCode:    item.TtposItemErpCode,            // 使用 ERP Code
+				Qty:         float64(item.Quantity),           // 数量
+				Rate:        item.GetPriceNoneTax(),           // 单价
+				Amount:      item.GetTotalPriceNoneTaxTotal(), // 小计
+				Description: packageName.EN,                   // 商品名称
 				IsFreeItem: func() bool {
 					if item.Price == 0 {
 						return true
@@ -429,4 +424,92 @@ func buildPosInvoiceMaterialItems(takeoutOrder *takeoutModel.TakeoutOrder) []*se
 	}
 
 	return materialItems
+}
+
+// SyncOrderCancelledToERP 同步订单取消到 ERP
+// @version v2.12.0
+// @spec story-erp-grab-invoice-sync
+func (s *takeoutErpSyncService) SyncOrderCancelledToERP(ctx appContext.Context, orderUuid uint64) error {
+	// 1. 获取数据库连接
+	db := ctx.GetDB()
+	if db == nil {
+		return fmt.Errorf("数据库连接失败")
+	}
+
+	// 2. 获取公司信息
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+
+	// 3. 检查 ERP 集成是否启用
+	if !company.IsOpenErp() || companySetting.ErpnextSiteCode == "" {
+		logger.Logger.Info("公司未启用 ERP 集成或未配置站点编码，跳过同步", zap.Uint64("companyUuid", ctx.GetCompanyUuid()), zap.Uint64("orderUuid", orderUuid))
+		return nil
+	}
+
+	// 4. 查询外卖订单信息
+	takeoutOrderRepo := persistence.NewTakeoutOrderRepo(db)
+	takeoutOrder, err := persistence.NewTakeoutOrderRepo(db).GetByUuid(orderUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询外卖订单失败")
+	}
+	if takeoutOrder == nil {
+		return errors.WithMessage(errors.New("外卖订单不存在"), fmt.Sprintf("外卖订单不存在: %d", orderUuid))
+	}
+
+	// 5. 检查订单是否已同步到 ERP
+	if len(takeoutOrder.ErpPosInvoiceResp) == 0 {
+		logger.Logger.Info("外卖订单未同步到 ERP，无需取消发票",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platformOrderId", takeoutOrder.PlatformOrderId))
+		return nil
+	}
+
+	// 6. 解析 ERP 响应数据，获取发票名称
+	erpResp := takeoutOrder.GetErpPosInvoiceResp()
+
+	// 8. 如果订单没有班次，则无法取消发票
+	if takeoutOrder.StaffShiftLogUuid == 0 {
+		logger.Logger.Warn("外卖订单没有班次信息，无法取消 ERP 发票",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platformOrderId", takeoutOrder.PlatformOrderId))
+		return nil
+	}
+
+	// 9. 查询班次信息
+	shiftLog, err := takeoutOrderRepo.GetShiftLogByOrderUuid(orderUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询班次信息失败")
+	}
+	if shiftLog.IsHandedOver() {
+		return errors.New("当前班次已交班，无法取消发票")
+	}
+
+	// 10. 调用 ERP 服务取消发票
+	erpAdapter := rpc.NewErpRpcAdapter(database.GetDBManager(config.Database))
+	err = erpAdapter.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+		ProductsInvoiceName: func() string {
+			if erpResp != nil {
+				return erpResp.ProductsInvoiceName
+			}
+			return ""
+		}(),
+		MaterialInvoiceName: func() string {
+			if erpResp != nil {
+				return erpResp.MaterialInvoiceName
+			}
+			return ""
+		}(),
+		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,          // 异步模式必填
+		OrderNo:          strconv.FormatUint(takeoutOrder.Uuid, 10), // 使用订单UUID作为 ERP 订单号, 异步模式必填
+	})
+	if err != nil {
+		logger.Logger.Error("取消外卖订单 ERP 发票失败",
+			zap.Uint64("orderUuid", orderUuid),
+			zap.String("platformOrderId", takeoutOrder.PlatformOrderId),
+			zap.String("erpResp", erpResp.String()),
+			zap.Error(err))
+		return errors.WithMessage(err, "取消 ERP 发票失败")
+	}
+
+	return nil
 }

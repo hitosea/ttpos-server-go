@@ -830,12 +830,12 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 				product.IsDelete = true
 			} else {
 				if product.Uuid != 0 {
-					productPackageGroupItem, _ := productPackageGroupRepo.GetProductPackageGroupItem(
+					productPackageGroupItem, err := productPackageGroupRepo.GetProductPackageGroupItem(
 						commonRepo.WhereBySoftDelete(),
 						commonRepo.WhereByProductPackageGroupUuid(group.Uuid),
 						commonRepo.WhereByUuid(product.Uuid),
 					)
-					if productPackageGroupItem.ID == 0 {
+					if err != nil || productPackageGroupItem.ID == 0 {
 						return nil, errors.New("套餐分组商品不存在")
 					}
 				}

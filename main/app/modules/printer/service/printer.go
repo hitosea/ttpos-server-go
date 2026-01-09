@@ -46,6 +46,7 @@ type IPrinterSrv interface {
 	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) (string, error)                                                                    // 使用打印机定制
 	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
 	GetOrCreateDefaultCustomize(ctx context.Context, templateId uint64) (model.PrinterCustomize, error)                                               // 根据模板ID获取或创建默认定制数据
+	GetTemplateJSONStr(ctx context.Context, templateName string) (string, error)                                                                      // 获取模板JSON字符串
 }
 
 const (
@@ -327,6 +328,7 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 		printerConst.PrinterTemplateInvoice,         // 发票
 		printerConst.PrinterTemplateTakeoutMerchant, // 外卖商家联
 		printerConst.PrinterTemplateTakeoutCustomer, // 外卖顾客联
+		printerConst.PrinterTemplateTakeoutRefund,   // 外卖退单联
 		// constant.PrinterTemplateRecharge,      // 充值单
 		// constant.PrinterTemplateBusiness,      // 营业数据
 		// constant.PrinterTemplateHandoverSheet, // 交班单
@@ -572,7 +574,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 						product["name"] = i18n.Translate(ctx.GetLanguage(), v)
 					}
 					if _, ok := product["remark"].(string); ok {
-						product["remark"] = i18n.Translate(ctx.GetLanguage(), "这是单品备注！这是单品备注！这是单品备注！这是单品备注！这是单品备注！")
+						product["remark"] = i18n.Translate(ctx.GetLanguage(), "这是单品备注！！")
 					}
 				}
 			}
@@ -623,6 +625,10 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 		// customer_address
 		if testData["order"].(map[string]interface{})["customer_address"] != nil {
 			testData["order"].(map[string]interface{})["customer_address"] = i18n.Translate(ctx.GetLanguage(), "顾客地址顾客地址顾客地址顾客地址顾客地址")
+		}
+		// 取消原因
+		if testData["order"].(map[string]interface{})["reject_reason"] != nil && testData["order"].(map[string]interface{})["reject_reason"] != "" {
+			testData["order"].(map[string]interface{})["reject_reason"] = i18n.Translate(ctx.GetLanguage(), "这是退单原因！")
 		}
 	}
 	return testData, nil
@@ -811,13 +817,13 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		DefaultTpl:     defaultTemplate,
 		AdvReceiptTpls: advReceiptTpls,
 		IsEditable: func() bool {
-			if template.ID == printerConst.PrinterTemplateTakeoutMerchant || template.ID == printerConst.PrinterTemplateTakeoutCustomer {
+			if template.ID == printerConst.PrinterTemplateTakeoutMerchant || template.ID == printerConst.PrinterTemplateTakeoutCustomer || template.ID == printerConst.PrinterTemplateTakeoutRefund {
 				return false
 			}
 			return true
 		}(),
 		IsAdvReceiptTpl: func() bool {
-			if template.ID == printerConst.PrinterTemplateTakeoutMerchant || template.ID == printerConst.PrinterTemplateTakeoutCustomer {
+			if template.ID == printerConst.PrinterTemplateTakeoutMerchant || template.ID == printerConst.PrinterTemplateTakeoutCustomer || template.ID == printerConst.PrinterTemplateTakeoutRefund {
 				return false
 			}
 			if companySetting.IsOpenAdvancedTicketPrint == 1 {

@@ -48,3 +48,28 @@ func (a *ErpRpcAdapter) SavePosInvoice(
 
 	return resp, nil
 }
+
+// CancelPosInvoice 取消 POS Invoice
+// ctx 上下文（需包含 company、staff 等信息）
+// req 取消 POS Invoice 请求参数
+//
+//	@version v2.12.0
+//	@spec story-erp-grab-invoice-sync
+func (a *ErpRpcAdapter) CancelPosInvoice(
+	ctx appContext.Context,
+	req req.CancelPosInvoiceReq,
+) error {
+	// 调用全局 ERP Service
+	err := erp.NewIErpSrv(a.dbm).CancelPosInvoice(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 ERP CancelPosInvoice 失败",
+			zap.Uint64("company_uuid", ctx.GetCompanyUuid()),
+			zap.String("order_no", req.OrderNo),
+			zap.String("products_invoice_name", req.ProductsInvoiceName),
+			zap.String("material_invoice_name", req.MaterialInvoiceName),
+			zap.Error(err))
+		return errors.WithMessage(err, "取消 POS Invoice 失败")
+	}
+
+	return nil
+}

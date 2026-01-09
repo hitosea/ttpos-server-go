@@ -66,7 +66,7 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 		// 4. 更新主表订单状态
 		if _, err = orderModel.Data(do.Order{
 			OrderStatus: gconv.String(req.StatusAfter),
-			UpdatedAt:   gtime.Now(),
+			UpdatedAt:   gtime.Now().Unix(),
 		}).Update(); err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 			SkootarPhone:    jobDetail.SkootarPhone,
 			SkootarImageUrl: jobDetail.SkootarImageUrl,
 			SkootarRating:   jobDetail.SkootarRating,
-			UpdatedAt:       gtime.Now(),
+			UpdatedAt:       gtime.Now().Unix(),
 		}).Update(); err != nil {
 			return nil, gerror.Wrap(err, "更新骑手信息失败")
 		}

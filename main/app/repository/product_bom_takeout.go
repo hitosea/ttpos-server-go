@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -53,7 +54,7 @@ func (r *productBomTakeoutRepoImpl) DestroyProductBomTakeout(opts ...DBOption) e
 		db = opt(db)
 	}
 
-	return db.Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error
+	return db.Update("delete_time", time.Now().Unix()).Error
 }
 
 func (r *productBomTakeoutRepoImpl) ForceDestroyProductBomTakeout(opts ...DBOption) error {

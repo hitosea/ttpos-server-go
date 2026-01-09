@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 已通过   |
 | **关联任务** | - |
-| **关联 Spec** | [docs/shared/specs/active/task-takeout-skootar-integration/requirements.md](../../../shared/specs/active/task-takeout-skootar-integration/requirements.md)      |
+| **关联 Spec** | [docs/shared/specs/archived/v2.12/task-takeout-skootar-integration/requirements.md](../../../shared/specs/archived/v2.12/task-takeout-skootar-integration/requirements.md)      |
 
 ---
 

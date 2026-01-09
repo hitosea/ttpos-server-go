@@ -8,7 +8,7 @@ import (
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/modules/printer/pkg"
-	"ttpos-server-go/app/modules/printer/template_struct"
+	"ttpos-server-go/app/modules/printer/tyeps/structs"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
@@ -47,7 +47,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 	productNum := decimal.NewFromFloat(0)
 
 	// 商品列表
-	products := []template_struct.StatementProductData{}
+	products := []structs.StatementProductData{}
 
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -58,7 +58,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 		originPrice := orderBuffetCustomer.GetOriginPrice()
 		// Requirement: story-main-buffet-customer-type-name-snapshot-fix
 		customerTypeLocaleName := orderBuffetCustomer.GetLocaleName()
-		products = append(products, template_struct.StatementProductData{
+		products = append(products, structs.StatementProductData{
 			Name:            orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
 			PriceNum:        fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
 			Price:           t.base.Amount(originPrice),
@@ -79,7 +79,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, delay := range buffetDelayProducts {
-		products = append(products, template_struct.StatementProductData{
+		products = append(products, structs.StatementProductData{
 			Name:            delay.DelayName,
 			PriceNum:        fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
 			Price:           t.base.Amount(delay.DelayPrice),
@@ -106,7 +106,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range mergeProducts {
-		products = append(products, template_struct.StatementProductData{
+		products = append(products, structs.StatementProductData{
 			Name:     product.Name,
 			PriceNum: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
 			Price:    t.base.Amount(product.ProductPrice),
@@ -114,10 +114,10 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 			Subtotal: t.base.Amount(product.ProductTotalPrice),
 			Attrs:    product.Attrs,
 			Attr:     product.Attr,
-			AttrList: func() []template_struct.StatementProductDataAttrList {
-				attrs := []template_struct.StatementProductDataAttrList{}
+			AttrList: func() []structs.StatementProductDataAttrList {
+				attrs := []structs.StatementProductDataAttrList{}
 				for _, attr := range product.AttrList {
-					attrs = append(attrs, template_struct.StatementProductDataAttrList{
+					attrs = append(attrs, structs.StatementProductDataAttrList{
 						Name: attr,
 						Text: attr,
 					})
@@ -125,10 +125,10 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 				return attrs
 			}(),
 			FlavorName: product.FlavorName,
-			SauceList: func() []template_struct.StatementProductDataSauceList {
-				sauces := []template_struct.StatementProductDataSauceList{}
+			SauceList: func() []structs.StatementProductDataSauceList {
+				sauces := []structs.StatementProductDataSauceList{}
 				for _, sauce := range product.SauceList {
-					sauces = append(sauces, template_struct.StatementProductDataSauceList{
+					sauces = append(sauces, structs.StatementProductDataSauceList{
 						Name: sauce,
 						Text: sauce,
 					})
@@ -144,7 +144,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 		})
 		// 套餐子商品
 		for _, subProduct := range product.SubProducts {
-			products = append(products, template_struct.StatementProductData{
+			products = append(products, structs.StatementProductData{
 				Name:     subProduct.Name,
 				PriceNum: fmt.Sprintf("%v", subProduct.ProductNum),
 				Price:    t.base.Amount(subProduct.ProductPrice),
@@ -152,20 +152,20 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 				Subtotal: t.base.Amount(subProduct.ProductTotalPrice),
 				Attrs:    subProduct.Attrs,
 				Attr:     subProduct.Attr,
-				AttrList: func() []template_struct.StatementProductDataAttrList {
-					attrs := []template_struct.StatementProductDataAttrList{}
+				AttrList: func() []structs.StatementProductDataAttrList {
+					attrs := []structs.StatementProductDataAttrList{}
 					for _, attr := range subProduct.AttrList {
-						attrs = append(attrs, template_struct.StatementProductDataAttrList{
+						attrs = append(attrs, structs.StatementProductDataAttrList{
 							Name: attr,
 							Text: attr,
 						})
 					}
 					return attrs
 				}(),
-				SauceList: func() []template_struct.StatementProductDataSauceList {
-					sauces := []template_struct.StatementProductDataSauceList{}
+				SauceList: func() []structs.StatementProductDataSauceList {
+					sauces := []structs.StatementProductDataSauceList{}
 					for _, sauce := range subProduct.SauceList {
-						sauces = append(sauces, template_struct.StatementProductDataSauceList{
+						sauces = append(sauces, structs.StatementProductDataSauceList{
 							Name: sauce,
 							Text: sauce,
 						})
@@ -183,35 +183,35 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 	}
 
 	// 支付方式
-	paymentMethods := []template_struct.StatementPaymentMethod{}
+	paymentMethods := []structs.StatementPaymentMethod{}
 	if saleOrder.IsFreeSaleOrder() {
-		paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
+		paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 			Name: t.base.Translate("支付方式"),
 			Text: t.base.Translate("免单"),
 		})
-		paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
+		paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 			Name: t.base.Translate("实收金额"),
 			Text: t.base.Amount(0),
 		})
 	}
 	if len(saleOrder.PaymentOrders) > 0 {
 		for _, paymentOrder := range saleOrder.PaymentOrders {
-			paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
+			paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 				Name: t.base.Translate("支付方式"),
 				Text: paymentOrder.PaymentMethod.GetName(),
 			})
-			paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
+			paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 				Name: t.base.Translate("实收金额"),
 				Text: t.base.Amount(paymentOrder.Amount),
 			})
 			if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
-				paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
+				paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 					Name: t.base.Translate("找零"),
 					Text: t.base.Amount(saleOrder.ChangeAmount),
 				})
 			}
 			if paymentOrder.TransactionNumber != "" {
-				paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
+				paymentMethods = append(paymentMethods, structs.StatementPaymentMethod{
 					Name: t.base.Translate("交易单号"),
 					Text: paymentOrder.TransactionNumber,
 				})
@@ -220,12 +220,12 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 	}
 
 	// 百分比列表
-	percentageLists := []template_struct.StatementPercentageData{}
+	percentageLists := []structs.StatementPercentageData{}
 	for _, percentage := range saleOrder.GetPercentageList() {
 		taxRate := percentage["TaxRate"]
 		taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
 		totalPrice, _ := strconv.ParseFloat(percentage["TotalPrice"], 64)
-		percentageLists = append(percentageLists, template_struct.StatementPercentageData{
+		percentageLists = append(percentageLists, structs.StatementPercentageData{
 			TaxRate:    taxRate,
 			TaxFee:     t.base.Amount(taxFee),
 			TotalPrice: t.base.Amount(totalPrice),
@@ -233,9 +233,9 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 	}
 
 	// 构建订单数据结构体（包含发票数据）
-	statementData := &template_struct.StatementOrderData{
+	statementData := &structs.StatementOrderData{
 		BrandName: config.Server.BrandName,
-		Store: template_struct.StatementStoreData{
+		Store: structs.StatementStoreData{
 			Name:             t.base.StoreSetting.Name,
 			StoreCode:        t.base.StoreSetting.StoreCode,
 			Address:          t.base.StoreSetting.Address,
@@ -248,7 +248,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 			CashierSn:        t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn),
 			PrinterSn:        settingPrinterInfo.PrinterSn,
 		},
-		Order: template_struct.StatementOrderInfoData{
+		Order: structs.StatementOrderInfoData{
 			Status:               saleOrder.Status,
 			SerialNo:             saleBill.SerialNo,
 			IsOrderSourceTakeout: saleBill.IsOrderSourceTakeout(),
@@ -372,7 +372,7 @@ func (t *invoiceImgTemplateCustom) GetPrintContent(
 			Barcode: saleOrder.OrderNo,
 		},
 		// 发票数据
-		Invoice: template_struct.StatementInvoiceData{
+		Invoice: structs.StatementInvoiceData{
 			InvoiceNumber:    saleOrder.InvoiceInfo.GetInvoiceNumber(),
 			CompanyName:      saleOrder.InvoiceInfo.CompanyName,
 			CompanyAddress:   saleOrder.InvoiceInfo.CompanyAddr,

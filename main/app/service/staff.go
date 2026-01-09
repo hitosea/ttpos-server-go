@@ -850,6 +850,9 @@ func (s *staffSrv) SaasUpdateStaff(ctx context.Context, updateReq req.UpdateStaf
 				if err == nil && staff.CashierOnline == 1 {
 					return errors.New("请先完成交班后再移除门店关联"), exists
 				}
+				if staff.IsSuper == 1 {
+					return errors.New("超级管理员不能移除门店关联"), exists
+				}
 			}
 		}
 	}

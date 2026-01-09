@@ -225,30 +225,14 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 
-		// v2.12暂时不上外卖
-		// 新管理端-管理APP-外卖管理
-		if slices.Contains([]uint64{2858986936320000, 2859007907840000, 2859028879360000}, permission.Uuid) {
+		// 新管理端-管理APP-云平台未开启Grab外卖，权限列表无Grab外卖设置
+		if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000}, permission.Uuid) && !companySetting.IsOpenGrabDelivery() {
 			continue
 		}
-		// v2.12暂时不上外卖
-		// 新管理端-管理APP-批量Grab、批量LINE MAN
-		if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000, 2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001}, permission.Uuid) {
+		// 新管理端-管理APP-云平台未开启LINE MAN外卖，权限列表无LINE MAN外卖设置
+		if slices.Contains([]uint64{2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001, 2859028879360000}, permission.Uuid) {
 			continue
 		}
-		// v2.12暂时不上外卖
-		// 收银机-接单-外卖
-		if slices.Contains([]uint64{1734000001}, permission.Uuid) {
-			continue
-		}
-
-		// // TODO 新管理端-管理APP-云平台未开启Grab外卖，权限列表无Grab外卖设置
-		// if slices.Contains([]uint64{2857076002816000, 2857096974336000, 2857117945856000, 2857138917376000}, permission.Uuid) && !companySetting.IsOpenGrabDelivery() {
-		// 	continue
-		// }
-		// // 新管理端-管理APP-云平台未开启LINE MAN外卖，权限列表无LINE MAN外卖设置
-		// if slices.Contains([]uint64{2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001, 2859028879360000}, permission.Uuid) {
-		// 	continue
-		// }
 
 		filteredPermissions = append(filteredPermissions, permission)
 	}

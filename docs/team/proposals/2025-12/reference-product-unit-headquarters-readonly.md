@@ -13,7 +13,7 @@
 | **目标版本** | v2.11.0 |
 | **状态**   | 待评审   |
 | **关联任务** | DooTask #37479 |
-| **关联 Spec** | [story-shop-headquarters-data-readonly](../../../shared/specs/active/story-shop-headquarters-data-readonly/requirements.md) |
+| **关联 Spec** | [story-shop-headquarters-data-readonly](../../../shared/specs/archived/v2.12/story-shop-headquarters-data-readonly/requirements.md) |
 
 ---
 
@@ -145,14 +145,14 @@
 ### 参考需求
 
 - **类似功能实现**：
-  - 菜品标签总部来源不可编辑：`docs/shared/specs/active/shop-headquarters-branch-granular-sync-backend/`
+  - 菜品标签总部来源不可编辑：`docs/shared/specs/archived/v2.12/shop-headquarters-branch-granular-sync-backend/`
   - 商品总部来源不可编辑：同上
   - 支付方式总部来源不可编辑：同上
 
 ### 相关文档
 
-- **总部-分店颗粒化同步需求文档**：`docs/shared/specs/active/shop-headquarters-branch-granular-sync-backend/requirements.md`
-- **相关数据指南**：`docs/shared/specs/active/shop-headquarters-branch-granular-sync-backend/RELATED_DATA_GUIDE.md`
+- **总部-分店颗粒化同步需求文档**：`docs/shared/specs/archived/v2.12/shop-headquarters-branch-granular-sync-backend/requirements.md`
+- **相关数据指南**：`docs/shared/specs/archived/v2.12/shop-headquarters-branch-granular-sync-backend/RELATED_DATA_GUIDE.md`
 - **前端仓库**：shop-headquarters-branch-granular-sync
 
 ### 代码参考

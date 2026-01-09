@@ -10,6 +10,7 @@ import (
 	valueobject "ttpos-server-go/app/modules/takeout/domain/value_object"
 
 	grabfood "github.com/grab/grabfood-api-sdk-go"
+	"github.com/shopspring/decimal"
 )
 
 // ConvertPlatformStateToOrderState 将 Grab 平台订单状态转换为内部订单状态
@@ -58,8 +59,11 @@ func ConvertPlatformStateToOrderState(platformState string, ttposOrderState int)
 		}
 		return valueobject.TakeoutOrderStateCompleted // 4 - 已完成（已送达/已完成/已支付）
 
-	case "CANCELLED", "REJECTED", "CANCELED", "FAILED", "REFUNDED":
-		return valueobject.TakeoutOrderStateRejected // 5 - 已拒单/取消/失败/退款
+	case "REJECTED":
+		return valueobject.TakeoutOrderStateRejected // 5 - 已拒单
+
+	case "CANCELLED", "CANCELED", "FAILED", "REFUNDED":
+		return valueobject.TakeoutOrderStateCanceled // 6 - 已取消
 
 	default:
 		// 未知状态，默认为待接单
@@ -159,15 +163,15 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 
 	// 价格信息映射
 	price := submitOrderReq.GetPrice()
-	order.Subtotal = float64(price.GetSubtotal()) / 100
-	order.DeliveryFee = float64(price.GetDeliveryFee()) / 100
-	order.SmallOrderFee = float64(price.GetSmallOrderFee()) / 100
-	order.EaterPayment = float64(price.GetEaterPayment()) / 100
-	order.PlatformDiscount = float64(price.GetGrabFundPromo()) / 100
-	order.MerchantDiscount = float64(price.GetMerchantFundPromo()) / 100
-	order.BasketPromo = float64(price.GetBasketPromo()) / 100
-	order.Tax = float64(price.GetTax()) / 100
-	order.MerchantChargeFee = float64(price.GetMerchantChargeFee()) / 100
+	order.Subtotal = decimal.NewFromInt(int64(price.GetSubtotal())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.DeliveryFee = decimal.NewFromInt(int64(price.GetDeliveryFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.SmallOrderFee = decimal.NewFromInt(int64(price.GetSmallOrderFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.EaterPayment = decimal.NewFromInt(int64(price.GetEaterPayment())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.PlatformDiscount = decimal.NewFromInt(int64(price.GetGrabFundPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.MerchantDiscount = decimal.NewFromInt(int64(price.GetMerchantFundPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.BasketPromo = decimal.NewFromInt(int64(price.GetBasketPromo())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.Tax = decimal.NewFromInt(int64(price.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+	order.MerchantChargeFee = decimal.NewFromInt(int64(price.GetMerchantChargeFee())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 
 	// 货币信息映射
 	currency := submitOrderReq.GetCurrency()
@@ -211,8 +215,8 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 				PlatformItemId:   item.Id,
 				TtposProductType: ttposProductType,
 				Quantity:         int(item.GetQuantity()),
-				Price:            float64(item.GetPrice()) / 100.0, // Grab API 返回的是分（exponent=2），转换为元
-				Tax:              float64(item.GetTax()) / 100.0,   // 同上
+				Price:            decimal.NewFromInt(int64(item.GetPrice())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(), // Grab API 返回的是分（exponent=2），转换为元
+				Tax:              decimal.NewFromInt(int64(item.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(),   // 同上
 				Specifications:   item.GetSpecifications(),
 			}
 
@@ -225,8 +229,8 @@ func (c *GrabConverter) ConvertOrderToTakeoutOrder(
 						Platform:           platform,
 						PlatformModifierId: modifier.GetId(),
 						Quantity:           int(modifier.GetQuantity()),
-						Price:              float64(modifier.GetPrice()) / 100.0, // Grab API 返回的是分（exponent=2），转换为元
-						Tax:                float64(modifier.GetTax()) / 100.0,   // 同上
+						Price:              decimal.NewFromInt(int64(modifier.GetPrice())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(), // Grab API 返回的是分（exponent=2），转换为元
+						Tax:                decimal.NewFromInt(int64(modifier.GetTax())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64(),   // 同上
 					}
 					orderItem.TakeoutOrderItemModifiers = append(orderItem.TakeoutOrderItemModifiers, orderItemModifier)
 				}
@@ -415,7 +419,7 @@ func (c *GrabConverter) ConvertCampaigns(
 			orderCampaign.MexFundedRatio = campaign.GetMexFundedRatio()
 		}
 		if campaign.HasDeductedAmount() {
-			orderCampaign.DeductedAmount = campaign.GetDeductedAmount() / 100
+			orderCampaign.DeductedAmount = decimal.NewFromInt(int64(campaign.GetDeductedAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 		if campaign.HasDeductedPart() {
 			orderCampaign.DeductedPart = campaign.GetDeductedPart()
@@ -495,22 +499,22 @@ func (c *GrabConverter) ConvertOrderPromos(
 
 		// 金额信息
 		if promo.HasPromoAmountInMin() {
-			orderPromo.PromoAmount = promo.GetPromoAmountInMin() / 100
-			orderPromo.PromoAmountInMin = promo.GetPromoAmountInMin() / 100
+			orderPromo.PromoAmount = decimal.NewFromInt(int64(promo.GetPromoAmountInMin())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+			orderPromo.PromoAmountInMin = decimal.NewFromInt(int64(promo.GetPromoAmountInMin())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		} else if promo.HasPromoAmount() {
 			// 如果没有 PromoAmountInMin，使用 PromoAmount（需要转换为最小单位）
-			orderPromo.PromoAmount = promo.GetPromoAmount() / 100
-			orderPromo.PromoAmountInMin = promo.GetPromoAmount() / 100
+			orderPromo.PromoAmount = decimal.NewFromInt(int64(promo.GetPromoAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
+			orderPromo.PromoAmountInMin = decimal.NewFromInt(int64(promo.GetPromoAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 
 		if promo.HasMexFundedRatio() {
-			orderPromo.MexFundedRatio = int(promo.GetMexFundedRatio())
+			orderPromo.MexFundedRatio = int32(promo.GetMexFundedRatio())
 		}
 		if promo.HasMexFundedAmount() {
-			orderPromo.MexFundedAmount = promo.GetMexFundedAmount() / 100
+			orderPromo.MexFundedAmount = decimal.NewFromInt(int64(promo.GetMexFundedAmount())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 		if promo.HasTargetedPrice() {
-			orderPromo.TargetedPrice = promo.GetTargetedPrice() / 100
+			orderPromo.TargetedPrice = decimal.NewFromInt(int64(promo.GetTargetedPrice())).Div(decimal.NewFromInt(c.amountConversionFactor)).InexactFloat64()
 		}
 
 		orderPromos = append(orderPromos, orderPromo)

@@ -119,7 +119,7 @@
 ### 参考需求
 
 - 接口文件: `ttpos-bmp/app/ttpos-erp/manifest/protobuf/selling/selling.proto`
-- 相关 Spec: `docs/shared/specs/active/story-ttpos-erp-mode-of-payment-enabled/`
+- 相关 Spec: `docs/shared/specs/archived/v2.12/story-ttpos-erp-mode-of-payment-enabled/`
 
 ### 相关文档
 

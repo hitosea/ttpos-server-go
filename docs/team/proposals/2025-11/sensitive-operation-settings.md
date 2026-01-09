@@ -13,7 +13,7 @@
 | **目标版本**  | v2.10.0                                                                                                          |
 | **状态**      | 待评审                                                                                                           |
 | **关联任务**  | DooTask #36940                                                                                                   |
-| **关联 Spec** | [story-shop-sensitive-operation-settings](../../../shared/specs/active/story-shop-sensitive-operation-settings/) |
+| **关联 Spec** | [story-shop-sensitive-operation-settings](../../../shared/specs/archived/v2.12/story-shop-sensitive-operation-settings/) |
 
 ---
 

@@ -519,4 +519,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_approval` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单审批流程表';
 
+-- ----------------------------
+-- Table structure for ttpos_cache_hit_rate_snapshot
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_cache_hit_rate_snapshot`;
+CREATE TABLE `ttpos_cache_hit_rate_snapshot` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `instance_id` varchar(128) NOT NULL DEFAULT '' COMMENT '实例标识（hostname或配置的实例ID）',
+  `snapshot_time` datetime NOT NULL COMMENT '快照时间',
+  `hits` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '命中次数',
+  `misses` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '未命中次数',
+  `total` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '总请求数',
+  `hit_rate` decimal(5,2) NOT NULL DEFAULT '0.00' COMMENT '命中率（百分比）',
+  `key_count` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Key数量',
+  `key_stats` json DEFAULT NULL COMMENT 'Key级别统计（JSON格式）',
+  `is_restart` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '是否是重启后的第一条快照（1:是 0:否）',
+  `create_time` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT '创建时间（时间戳）',
+  PRIMARY KEY (`id`),
+  KEY `idx_instance_snapshot` (`instance_id`, `snapshot_time`),
+  KEY `idx_snapshot_time` (`snapshot_time`),
+  KEY `idx_instance_restart` (`instance_id`, `is_restart`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='缓存命中率快照表';
+
 SET FOREIGN_KEY_CHECKS = 1;

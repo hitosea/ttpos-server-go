@@ -14,7 +14,7 @@
 | **日期**         | 2025-11-19                                                                                      |
 | **目标版本**     | v2.10.0                                                                                         |
 | **状态**         | 已创建 Spec                                                                                     |
-| **关联 Spec**    | [story-order-import-data](../../../shared/specs/active/story-order-import-data/requirements.md) |
+| **关联 Spec**    | [story-order-import-data](../../../shared/specs/archived/v2.12/story-order-import-data/requirements.md) |
 | **关联 Dootask** | #36987                                                                                          |
 
 ---

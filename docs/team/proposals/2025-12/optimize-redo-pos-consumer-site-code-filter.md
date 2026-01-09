@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [task-bmp-redo-pos-consumer-site-code-filter](../../../shared/specs/active/task-bmp-redo-pos-consumer-site-code-filter/requirements.md)      |
+| **关联 Spec** | [task-bmp-redo-pos-consumer-site-code-filter](../../../shared/specs/archived/v2.12/task-bmp-redo-pos-consumer-site-code-filter/requirements.md)      |
 
 ---
 

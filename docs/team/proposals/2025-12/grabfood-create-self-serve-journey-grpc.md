@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-main-grabfood-create-self-serve-journey](../../shared/specs/active/story-main-grabfood-create-self-serve-journey/requirements.md) |
+| **关联 Spec** | [story-main-grabfood-create-self-serve-journey](../../shared/specs/archived/v2.12/story-main-grabfood-create-self-serve-journey/requirements.md) |
 
 ---
 

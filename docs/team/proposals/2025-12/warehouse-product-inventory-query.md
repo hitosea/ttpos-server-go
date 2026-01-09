@@ -13,7 +13,7 @@
 | **目标版本** | {版本号} |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-warehouse-product-inventory-query](../../../shared/specs/active/story-warehouse-product-inventory-query/requirements.md)      |
+| **关联 Spec** | [story-warehouse-product-inventory-query](../../../shared/specs/archived/v2.12/story-warehouse-product-inventory-query/requirements.md)      |
 
 ---
 

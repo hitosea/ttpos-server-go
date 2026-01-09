@@ -13,7 +13,7 @@
 | **目标版本** | v2.12.0 |
 | **状态**   | ✅ 已批准   |
 | **关联任务** | - |
-| **关联 Spec** | [task-bmp-payment-id-update-logic](../../shared/specs/active/task-bmp-payment-id-update-logic/requirements.md)      |
+| **关联 Spec** | [task-bmp-payment-id-update-logic](../../shared/specs/archived/v2.12/task-bmp-payment-id-update-logic/requirements.md)      |
 
 ---
 

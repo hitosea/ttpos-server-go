@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 已创建 Spec   |
 | **关联任务** | - |
-| **关联 Spec** | [story-new-admin-print-settings-custom-checkout-slip-copies](../../../shared/specs/active/story-new-admin-print-settings-custom-checkout-slip-copies/requirements.md)      |
+| **关联 Spec** | [story-new-admin-print-settings-custom-checkout-slip-copies](../../../shared/specs/archived/v2.12/story-new-admin-print-settings-custom-checkout-slip-copies/requirements.md)      |
 
 ---
 

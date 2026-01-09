@@ -24,19 +24,22 @@ type IProductPackageTakeoutQueryRepo interface {
 	GetProductPackageTakeoutIncludeSoftDelete(productPackageUuid uint64, takeoutType uint) (*model.ProductPackageTakeout, error) // 获取外卖商品（包括软删除的记录）
 	GetProductPackageTakeoutCount(opts ...DBOption) (int64, error)                                                               // 统计外卖商品数量
 
-	WithProductPackage(opts ...DBOption) DBOption                          // 预加载商品包
-	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption         // 预加载商品包多语言名称
-	WithMultiLanguageName(opts ...DBOption) DBOption                       // 预加载多语言名称
-	WithDescribeMultiLanguageName(opts ...DBOption) DBOption               // 预加载卖点多语言
-	WithProductCategory(opts ...DBOption) DBOption                         // 预加载外卖分类
-	WithProductSpecialCategory(opts ...DBOption) DBOption                  // 预加载外卖特色分类
-	WithImageFile(opts ...DBOption) DBOption                               // 预加载图片
+	WithProductPackage(opts ...DBOption) DBOption                  // 预加载商品包
+	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption // 预加载商品包多语言名称
+	WithMultiLanguageName(opts ...DBOption) DBOption               // 预加载多语言名称
+	WithDescribeMultiLanguageName(opts ...DBOption) DBOption       // 预加载卖点多语言
+	WithProductCategory(opts ...DBOption) DBOption                 // 预加载外卖分类
+	WithProductSpecialCategory(opts ...DBOption) DBOption          // 预加载外卖特色分类
+	WithImageFile(opts ...DBOption) DBOption                       // 预加载图片
+
+	WhereByUuid(uuid uint64) DBOption                                      // 根据UUID查询
 	WhereByProductPackageUuid(productPackageUuid uint64) DBOption          // 根据商品包UUID查询
 	WhereByProductPackageUuids(productPackageUuids []uint64) DBOption      // 根据商品包UUID列表查询
 	WithProductBomTakeouts(opts ...DBOption) DBOption                      // 预加载外卖规格价格列表
 	WithProductPackageAttributeTakeouts(opts ...DBOption) DBOption         // 预加载外卖属性价格列表
 	WithProductPackageGroupItemTakeouts(opts ...DBOption) DBOption         // 预加载外卖套餐子商品价格列表
 	WhereByTakeoutType(takeoutType uint) DBOption                          // 根据外卖类型查询
+	WhereByTakeoutTypes(takeoutTypes []uint) DBOption                      // 根据外卖类型列表查询
 	WhereBySource(source string) DBOption                                  // 根据来源平台查询
 	WhereBySourceProductId(sourceProductId string) DBOption                // 根据来源商品ID查询
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                      // 根据分类UUID查询
@@ -56,7 +59,7 @@ func (r *productPackageTakeoutRepoImpl) GetProductPackageTakeoutList(opts ...DBO
 	var list []*model.ProductPackageTakeout
 	db := r.db
 
-	db = db.Model(&model.ProductPackageTakeout{})
+	db = db.Model(&model.ProductPackageTakeout{}).Debug()
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -161,6 +164,13 @@ func (r *productPackageTakeoutRepoImpl) ForceDestroyProductPackageTakeout(opts .
 	return db.Delete(&model.ProductPackageTakeout{}).Error
 }
 
+// WhereByUuid 根据UUID查询
+func (r *productPackageTakeoutRepoImpl) WhereByUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
+}
+
 // WhereByProductPackageUuid 根据商品包UUID查询
 func (r *productPackageTakeoutRepoImpl) WhereByProductPackageUuid(productPackageUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -182,6 +192,13 @@ func (r *productPackageTakeoutRepoImpl) WhereByProductPackageUuids(productPackag
 func (r *productPackageTakeoutRepoImpl) WhereByTakeoutType(takeoutType uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("takeout_type = ?", takeoutType)
+	}
+}
+
+// WhereByTakeoutTypes 根据外卖类型列表查询
+func (r *productPackageTakeoutRepoImpl) WhereByTakeoutTypes(takeoutTypes []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("takeout_type IN (?)", takeoutTypes)
 	}
 }
 

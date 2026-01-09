@@ -2,13 +2,13 @@
 
 namespace app\common\model\settings;
 
-use think\facade\Cache;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\shop\BindRecord;
 use app\common\model\supplier\Printing;
 use app\common\enum\settings\SettingEnum;
 use app\common\model\supplier\PrintingItem;
+use app\common\model\settings\Setting as SettingModel;
 
 /**
  * 打印机模型
@@ -192,6 +192,11 @@ class Printer extends BaseModel
     {
         $printer = Setting::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
         $printerIds = array_column($printer['cashier_printer'] ?? [], 'printer_id');
+        // 添加USB设备
+        $printerUsbIds = array_column($printer['cashier_printer'] ?? [], 'printer_usb_id');
+        foreach ($printerUsbIds as $printerUsbId) {
+            $printerIds[] = $printerUsbId;
+        }
         $supplierPrinterIds = PrintingItem::column('printer_uuid');
         foreach ($supplierPrinterIds as $supplierPrinterId) {
             $printerIds[] = $supplierPrinterId;

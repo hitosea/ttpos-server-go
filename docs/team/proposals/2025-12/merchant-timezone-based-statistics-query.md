@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-shop-statistics-merchant-timezone-query](../../../shared/specs/active/story-shop-statistics-merchant-timezone-query/requirements.md)      |
+| **关联 Spec** | [story-shop-statistics-merchant-timezone-query](../../../shared/specs/archived/v2.12/story-shop-statistics-merchant-timezone-query/requirements.md)      |
 
 ---
 
@@ -177,7 +177,7 @@
 
 ### 相关文档
 
-- Bug 修复方案: `docs/shared/bugs/active/bug-251226-001-statistics-from-unixtime-timezone-statistics-error/solution.md`
+- Bug 修复方案: `docs/shared/bugs/archived/v2.12/bug-251226-001-statistics-from-unixtime-timezone-statistics-error/solution.md`
 - 时区工具类: `main/pkg/utils/time.go`
 - 统计请求 DTO: `main/app/dto/req/statistics.go`
 - 商户设置: `main/app/dto/resp/setting/store_setting.go`

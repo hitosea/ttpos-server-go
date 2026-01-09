@@ -34,7 +34,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 ->addColumn('partner_merchant_id', 'string', ['limit' => 100, 'default' => '', 'comment' => '合作伙伴商户ID (Grab: partnerMerchantID)'])
                 
                 // 订单状态
-                ->addColumn('order_state', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单'])
+                ->addColumn('order_state', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消'])
                 ->addColumn('is_abnormal', 'integer', ['limit' => 4, 'signed' => false, 'default' => 0, 'comment' => '是否异常: 0=正常,1=异常'])
                 ->addColumn('abnormal_detail', 'text', ['null' => true, 'comment' => '异常详情(JSON)'])
                 ->addColumn('stock_status', 'integer', ['limit' => 4, 'signed' => false, 'default' => 1, 'comment' => '库存状态: 1=充足,2=不足'])
@@ -130,7 +130,7 @@ class CreateTtposTakeoutOrderTable extends Migrator
                 
                 // 商品数量和价格
                 ->addColumn('quantity', 'integer', ['signed' => true, 'default' => 0, 'comment' => '数量'])
-                ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '单价(元,4位小数)'])
+                ->addColumn('price', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '单价(元,4位小数)-外卖平台价格'])
                 ->addColumn('tax', 'decimal', ['precision' => 20, 'scale' => 4, 'default' => '0.0000', 'comment' => '税费(元,4位小数)'])
                 ->addColumn('specifications', 'string', ['limit' => 500, 'default' => '', 'comment' => '规格说明'])
                 

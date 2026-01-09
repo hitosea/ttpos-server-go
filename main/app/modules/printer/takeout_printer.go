@@ -25,7 +25,7 @@ import (
  */
 func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 	order *takeoutModel.TakeoutOrder,
-	receiptType string, // "merchant" 或 "customer"
+	receiptType string, // printerConst.TakeoutReceiptTypeMerchant、TakeoutReceiptTypeCustomer 或 TakeoutReceiptTypeRefund
 	firstExecution int,
 ) (*resp.PrinterData, error) {
 	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
@@ -58,28 +58,29 @@ func (p *PrinterRepoImpl) PrintingPlatformTakeoutReceipt(
 		return nil, errors.New("未配置打印机, 请联系管理员")
 	}
 
-	// 确定模板类型（商家联或顾客联）
+	// 设置打印机宽度
+	p.SetPrinterWidth(settingPrinterInfo.PrinterWidth)
+
+	// 确定模板类型（商家联、顾客联或退单联）
 	templateType := printerConst.PrinterTemplateTakeoutMerchant
 	isMerchantReceipt := true // 默认是商家联
-	if receiptType == "customer" {
+	if receiptType == printerConst.TakeoutReceiptTypeCustomer {
 		templateType = printerConst.PrinterTemplateTakeoutCustomer
 		isMerchantReceipt = false
+	} else if receiptType == printerConst.TakeoutReceiptTypeRefund {
+		templateType = printerConst.PrinterTemplateTakeoutRefund
+		isMerchantReceipt = true // 退单联与商家联类似，显示完整信息
 	}
 
 	// 获取打印模板
-	tmpId := uint64(templateType)
-	_, tmpUuid, tmpDataStr := p.GetPrinterTemplate(tmpId)
-	if tmpUuid == 0 || tmpDataStr == "" {
-		printerSrv := service.NewPrinterSrv(p.dbm, p.cache)
-		defaultCustomize, err := printerSrv.GetOrCreateDefaultCustomize(p.ctx, tmpId)
-		if err != nil {
-			return nil, errors.WithMessage(err, "获取或创建默认定制数据失败")
-		}
-		tmpData, err := printerSrv.UsePrinterCustomize(p.ctx, defaultCustomize.Uuid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "使用打印机定制失败")
-		}
-		tmpDataStr = tmpData
+	printerSrv := service.NewPrinterSrv(p.dbm, p.cache)
+	templateName, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateName(uint64(templateType))
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取打印机模板名称失败")
+	}
+	tmpDataStr, err := printerSrv.GetTemplateJSONStr(p.ctx, templateName)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取打印机模板JSON字符串失败")
 	}
 
 	// 获取打印内容

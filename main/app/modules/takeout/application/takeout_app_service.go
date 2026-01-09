@@ -56,11 +56,8 @@ type ITakeoutAppService interface {
 	// GetBindingLink 获取绑定链接
 	GetBindingLink(ctx context.Context, platform string) (*response.BindingLinkResponse, error)
 
-	// CheckBindingStatus 检查绑定状态
+	// CheckBindingStatus 检查绑定状态 - grab
 	CheckBindingStatus(ctx context.Context, platform string) (*response.BindingStatusResponse, error)
-
-	// UpdateBindingStatus 更新绑定状态
-	UpdateBindingStatus(ctx context.Context, req request.UpdateBindingStatusRequest) error
 
 	// BindPlatform 绑定平台
 	BindPlatform(ctx context.Context, uuid uint64) error
@@ -87,12 +84,6 @@ type ITakeoutAppService interface {
 
 	// GetImportLogs 获取导入日志列表
 	GetImportLogs(ctx context.Context, req request.GetImportLogsRequest) (*response.ImportLogListResponse, error)
-
-	// UpdateMenuItem 更新菜单项（商品）
-	UpdateMenuItem(ctx context.Context, req request.UpdateMenuItemRequest) error
-
-	// UpdateMenuModifier 更新菜单修饰符
-	UpdateMenuModifier(ctx context.Context, req request.UpdateMenuModifierRequest) error
 
 	// SyncMenuChanges 同步菜单变更（灰度更新）
 	SyncMenuChanges(ctx context.Context, req request.ExportMenuRequest) (*response.MenuSyncResult, error)
@@ -163,12 +154,7 @@ func (s *takeoutAppService) GetTakeoutStatus(ctx context.Context, platform strin
 	// 从数据库获取
 	takeout, err := s.takeoutService.GetByPlatform(ctx, platform)
 	if err != nil {
-		// 如果记录不存在，自动创建一条默认记录（不开启，未绑定）
-		createdTakeout, createErr := s.takeoutService.CreatePlatformStatus(ctx, platform, false)
-		if createErr != nil {
-			return nil, fmt.Errorf("获取平台状态失败，且创建默认记录失败: %w", createErr)
-		}
-		takeout = createdTakeout
+		return nil, fmt.Errorf("获取平台状态失败: %w", err)
 	}
 
 	resp := &response.TakeoutStatusResponse{
@@ -286,16 +272,6 @@ func (s *takeoutAppService) CheckBindingStatus(ctx context.Context, platform str
 	return &response.BindingStatusResponse{
 		IsBound: isBound,
 	}, nil
-}
-
-// UpdateBindingStatus 更新绑定状态（包括 skip 字段）
-func (s *takeoutAppService) UpdateBindingStatus(ctx context.Context, req request.UpdateBindingStatusRequest) error {
-	// 获取平台状态
-	_, err := s.takeoutService.GetByPlatform(ctx, req.Platform)
-	if err != nil {
-		return fmt.Errorf("获取平台状态失败: %w", err)
-	}
-	return nil
 }
 
 // BindPlatform 绑定平台
@@ -566,85 +542,6 @@ func (s *takeoutAppService) GetImportLogs(ctx context.Context, req request.GetIm
 			Total:    total,
 		},
 	}, nil
-}
-
-// UpdateMenuItem 更新菜单项（商品）
-func (s *takeoutAppService) UpdateMenuItem(ctx context.Context, req request.UpdateMenuItemRequest) error {
-	// 验证参数
-	if req.Platform == "" {
-		return errors.New("平台名称不能为空")
-	}
-	if req.ItemId == "" {
-		return errors.New("商品ID不能为空")
-	}
-
-	// 获取 MerchantID（从 RPC 获取）
-	companyUuid := ctx.GetCompanyUuid()
-	_, _, merchantId, _, err := s.rpcService.CheckBindingStatusWithMerchantId(ctx.GetContext(), req.Platform, companyUuid)
-	if err != nil {
-		return fmt.Errorf("获取商户ID失败: %w", err)
-	}
-	if merchantId == "" {
-		return errors.New("未获取到商户ID，请检查平台绑定状态")
-	}
-
-	// 调用 RPC 更新菜单项
-	err = s.rpcService.UpdateMenuItem(
-		ctx.GetContext(),
-		merchantId,
-		req.ItemId,
-		req.Price,
-		req.AvailableStatus,
-		req.MaxStock,
-	)
-	if err != nil {
-		return fmt.Errorf("更新菜单项失败: %w", err)
-	}
-
-	return nil
-}
-
-// UpdateMenuModifier 更新菜单修饰符
-func (s *takeoutAppService) UpdateMenuModifier(ctx context.Context, req request.UpdateMenuModifierRequest) error {
-	// 验证参数
-	if req.Platform == "" {
-		return errors.New("平台名称不能为空")
-	}
-	if req.ModifierId == "" {
-		return errors.New("修饰符ID不能为空")
-	}
-	if req.ModifierName == "" {
-		return errors.New("修饰符名称不能为空")
-	}
-
-	// 获取 MerchantID（从 RPC 获取）
-	companyUuid := ctx.GetCompanyUuid()
-	_, _, merchantId, _, err := s.rpcService.CheckBindingStatusWithMerchantId(ctx.GetContext(), req.Platform, companyUuid)
-	if err != nil {
-		return fmt.Errorf("获取商户ID失败: %w", err)
-	}
-	if merchantId == "" {
-		return errors.New("未获取到商户ID，请检查平台绑定状态")
-	}
-
-	// 调用 RPC 更新菜单修饰符
-	err = s.rpcService.UpdateMenuModifier(
-		ctx.GetContext(),
-		merchantId,
-		req.ModifierId,
-		req.ModifierName,
-		req.Price,
-		req.AvailableStatus,
-	)
-	if err != nil {
-		return fmt.Errorf("更新菜单修饰符失败: %w", err)
-	}
-
-	logger.Logger.Info("更新菜单修饰符成功",
-		zap.String("platform", req.Platform),
-		zap.String("modifierId", req.ModifierId))
-
-	return nil
 }
 
 // SyncMenuChanges 同步菜单变更（灰度更新）
@@ -1028,9 +925,9 @@ func (s *takeoutAppService) updateModifiersOneByOne(
 	}()
 
 	// 频率控制配置
-	const requestInterval = 300 // 每个请求间隔 300ms，约 3 req/s
-	const maxRetries = 2        // 遇到 429 时的最大重试次数
-	const retryDelay = 300      // 重试基础延迟 300ms
+	const requestInterval = 350 // 每个请求间隔 300ms，约 3 req/s
+	const maxRetries = 3        // 遇到 429 时的最大重试次数
+	const retryDelay = 600      // 重试基础延迟 300ms
 
 	if len(modifiers) == 0 {
 		return

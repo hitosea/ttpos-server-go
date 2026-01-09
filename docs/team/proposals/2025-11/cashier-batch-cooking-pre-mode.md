@@ -12,7 +12,7 @@
 | **日期**      | 2025-11-20                                                                                                 |
 | **目标版本**  | v2.10.0                                                                                                    |
 | **状态**      | 已创建 Spec                                                                                                |
-| **关联 Spec** | [story-cashier-batch-cooking-pre-mode](../../../shared/specs/active/story-cashier-batch-cooking-pre-mode/) |
+| **关联 Spec** | [story-cashier-batch-cooking-pre-mode](../../../shared/specs/archived/v2.12/story-cashier-batch-cooking-pre-mode/) |
 | **关联任务**  | DooTask #36921                                                                                             |
 
 ---

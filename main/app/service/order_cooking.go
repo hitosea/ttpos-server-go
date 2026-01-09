@@ -496,7 +496,7 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 }
 
 // GetUnsentKitchen 未送厨商品列表
-func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
+func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) {
 	// 初始化返回结果
 	res := resp.UnsentKitchen{
 		Products:   resp.CartProductList{List: make([]resp.Product, 0)},
@@ -548,9 +548,12 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 	})
 
 	// 获取销售账单信息并计算未送厨商品总金额
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
-	if err != nil {
-		return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+	if saleBill == nil {
+		var err error
+		saleBill, err = repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
+		if err != nil {
+			return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+		}
 	}
 
 	for _, order := range saleBill.SaleOrders {
@@ -561,7 +564,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 }
 
 // GetSentKitchen 已送厨商品列表
-func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error) {
+func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, saleBill *model.SaleBill) (resp.SentKitchen, error) {
 	if shopCart == nil {
 		var err error
 		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid)
@@ -618,9 +621,12 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	})
 
 	// 获取销售账单并计算金额
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
-	if err != nil {
-		return resp.SentKitchen{}, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+	if saleBill == nil {
+		var err error
+		saleBill, err = repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
+		if err != nil {
+			return resp.SentKitchen{}, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
+		}
 	}
 
 	amount := resp.AmountInfo{ProductNum: productNum}

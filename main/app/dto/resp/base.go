@@ -148,6 +148,7 @@ type Company struct {
 	IsOpenDataManagement bool   `json:"is_open_data_management"` // 是否开启数据管理功能
 	IsOpenKiosk          bool   `json:"is_open_kiosk"`           // 是否开启自助点餐机功能
 	IsOpenGrabDelivery   bool   `json:"is_open_grab_delivery"`   // 是否开启Grab外卖功能
+	StoreCode            string `json:"store_code"`              // 店铺编码，shop端用于显示
 }
 
 type Permission struct {
@@ -298,14 +299,23 @@ func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 	return json.Marshal(ss)
 }
 
+// TakeoutStatusResp 外卖平台状态响应
+// 参考: main/app/modules/takeout/interfaces/response/TakeoutStatusResponse
+// 对应接口: /api/v1/shop/takeout/status/info
+type TakeoutStatusResp struct {
+	Platform string `json:"platform"` // 外卖平台 (grab/lineman等)
+	Enabled  bool   `json:"enabled"`  // 是否开启
+}
+
 type ShopBase struct {
-	Username     string        `json:"username"`      // 登录账号
-	RealName     string        `json:"real_name"`     // 姓名
-	ProfileUuid  uint64        `json:"profile_uuid"`  // 收银员UUID
-	Phone        string        `json:"phone"`         // 登录账号手机号
-	DeviceId     string        `json:"device_id"`     // 设备ID
-	DeviceRemark string        `json:"device_remark"` // 设备备注
-	Permissions  []*Permission `json:"permissions"`   // 页面权限
+	Username      string              `json:"username"`       // 登录账号
+	RealName      string              `json:"real_name"`      // 姓名
+	ProfileUuid   uint64              `json:"profile_uuid"`   // 收银员UUID
+	Phone         string              `json:"phone"`          // 登录账号手机号
+	DeviceId      string              `json:"device_id"`      // 设备ID
+	DeviceRemark  string              `json:"device_remark"`  // 设备备注
+	TakeoutStatus []TakeoutStatusResp `json:"takeout_status"` // 外卖平台状态列表
+	Permissions   []*Permission       `json:"permissions"`    // 页面权限
 
 	Buffet     setting.BuffetResp `json:"buffet"`      // 自助餐设置
 	CloudBasic setting.CloudBasic `json:"cloud"`       // 云端基础信息
@@ -330,6 +340,8 @@ type ShopBase struct {
 	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
 
 	HasDataPermission bool `json:"has_data_permission"` // 是否有数据管理权限
+
+	AllowedTransferTypes string `json:"allowed_transfer_types"` // 允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
 }
 
 type ShopProfile struct {

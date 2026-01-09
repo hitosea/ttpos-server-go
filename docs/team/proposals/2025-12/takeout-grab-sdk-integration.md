@@ -148,7 +148,7 @@
 
 - 现有实现: `ttpos-bmp/app/ttpos-takeout/internal/logic/grab/client.go`
 - 现有 DTO: `ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab/`
-- 关联 Spec: `docs/shared/specs/active/story-takeout-grab-integration/`
+- 关联 Spec: `docs/shared/specs/archived/v2.12/story-takeout-grab-integration/`
 
 ---
 
@@ -177,7 +177,7 @@
 
 **下一步行动**：
 
-- [x] 创建 Spec：[task-takeout-grab-sdk-integration](../../../shared/specs/active/task-takeout-grab-sdk-integration/requirements.md)
+- [x] 创建 Spec：[task-takeout-grab-sdk-integration](../../../shared/specs/archived/v2.12/task-takeout-grab-sdk-integration/requirements.md)
 - [ ] 分配负责人：
 - [ ] 目标 Sprint：
 

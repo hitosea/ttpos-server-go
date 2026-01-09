@@ -70,6 +70,10 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T], opts ...func(*DoOp
 					zap.String("type", "GET"),
 				)
 			}
+			// 记录命中统计
+			if g.config.HitStatsCallback != nil {
+				g.config.HitStatsCallback(key, true, "L1")
+			}
 			return val, nil
 		}
 	}
@@ -97,6 +101,10 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T], opts ...func(*DoOp
 				zap.String("level", "L2"),
 				zap.String("type", "GET"),
 			)
+			// 记录命中统计
+			if g.config.HitStatsCallback != nil {
+				g.config.HitStatsCallback(key, true, "L2")
+			}
 			return val, nil
 		}
 	}
@@ -106,6 +114,7 @@ func (g *cacheGroup[T]) Do(ctx context.Context, task Task[T], opts ...func(*DoOp
 		zap.String("key", key),
 		zap.String("type", "GET"),
 	)
+	// 注意：统计会在 executeTask 内部记录（Double Check 命中或最终未命中）
 	return g.executeTask(ctx, key, task, false) // 传入 skipCache=false，执行 Double Check
 }
 
@@ -123,6 +132,10 @@ func (g *cacheGroup[T]) executeTask(ctx context.Context, key string, task Task[T
 					zap.String("level", "L2"),
 					zap.String("type", "GET"),
 				)
+				// 记录命中统计（Double Check 命中）
+				if g.config.HitStatsCallback != nil {
+					g.config.HitStatsCallback(key, true, "L2")
+				}
 				return val, nil
 			}
 		}
@@ -142,8 +155,21 @@ func (g *cacheGroup[T]) executeTask(ctx context.Context, key string, task Task[T
 					g.l1.set(key, zero, g.config.NegativeTTL)
 				}
 			}
+			// 查询失败，记录为未命中
+			if !skipCache { // 主动跳过时,不算未命中
+				if g.config.HitStatsCallback != nil {
+					g.config.HitStatsCallback(key, false, "L2")
+				}
+			}
 			var zero T
 			return zero, err
+		}
+
+		// 查询成功，记录为未命中（因为是从数据库查询的）
+		if !skipCache { // 主动跳过时,不算未命中
+			if g.config.HitStatsCallback != nil {
+				g.config.HitStatsCallback(key, false, "L2")
+			}
 		}
 
 		// 填充缓存（使用阶梯式 TTL）

@@ -187,24 +187,11 @@ class AddSourceToProductFlavor extends Migrator
                 ]);
             }
             
-            if (!$table->hasColumn('product_attribute_group_uuid')) {
-                $table->addColumn('product_attribute_group_uuid', 'biginteger', [
-                    'signed' => false,
-                    'default' => 0, 
-                    'comment' => '属性组UUID（用于关联查询）', 
-                    'after' => 'attribute_group_uuid'
-                ]);
-            }
-            
             // 添加索引以优化查询性能
             if (!$table->hasIndexByName('idx_attr_source_id')) {
                 $table->addIndex(['source_id'], ['name' => 'idx_attr_source_id']);
             }
-            
-            // 添加联合索引用于查询是否已存在该平台的属性
-            if (!$table->hasIndexByName('idx_attr_group_source')) {
-                $table->addIndex(['product_attribute_group_uuid', 'source', 'source_id'], ['name' => 'idx_attr_group_source']);
-            }
+         
             
             $table->update();
         }

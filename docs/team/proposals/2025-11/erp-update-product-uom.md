@@ -13,7 +13,7 @@
 | **目标版本** | 待定                           |
 | **状态**     | 已创建 Spec                    |
 | **关联任务** | -                              |
-| **关联 Spec** | [task-erp-update-product-uom](../../shared/specs/active/task-erp-update-product-uom/requirements.md) |
+| **关联 Spec** | [task-erp-update-product-uom](../../shared/specs/archived/v2.12/task-erp-update-product-uom/requirements.md) |
 
 ---
 

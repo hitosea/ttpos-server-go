@@ -8,7 +8,7 @@ import (
 	"ttpos-server-go/app/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/modules/printer/pkg"
-	"ttpos-server-go/app/modules/printer/template_struct"
+	"ttpos-server-go/app/modules/printer/tyeps/structs"
 	takeoutModel "ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/language"
@@ -91,9 +91,9 @@ func (t *platformTakeoutImgTemplate) buildPrintData(
 	order *takeoutModel.TakeoutOrder,
 	is58mmPrinter bool,
 	isMerchantReceipt bool,
-) *template_struct.StatementOrderData {
+) *structs.StatementOrderData {
 	// 店铺信息
-	storeData := template_struct.StatementStoreData{
+	storeData := structs.StatementStoreData{
 		Name:             t.base.StoreSetting.Name,
 		Logo:             t.base.GetLogoAddr(),
 		Company:          t.base.StoreSetting.Company,
@@ -109,7 +109,7 @@ func (t *platformTakeoutImgTemplate) buildPrintData(
 	// 订单信息
 	orderData := t.buildOrderData(order, is58mmPrinter, isMerchantReceipt)
 
-	return &template_struct.StatementOrderData{
+	return &structs.StatementOrderData{
 		BrandName: config.Server.BrandName,
 		Store:     storeData,
 		Order:     orderData,
@@ -121,19 +121,21 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 	order *takeoutModel.TakeoutOrder,
 	is58mmPrinter bool,
 	isMerchantReceipt bool,
-) template_struct.StatementOrderInfoData {
-	orderData := template_struct.StatementOrderInfoData{
-		Platform:   order.Platform,
-		OrderNo:    order.PlatformOrderId,
-		SerialNo:   fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
-		OrderType:  order.OrderType,
-		CreateTime: t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
-		FinishTime: t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
-		PayTime:    t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
+) structs.StatementOrderInfoData {
+	orderData := structs.StatementOrderInfoData{
+		Platform:     order.Platform,
+		OrderNo:      order.PlatformOrderId,
+		SerialNo:     fmt.Sprintf("%s: %s", order.GetCapitalPlatform(), order.ShortOrderNumber),
+		OrderType:    order.OrderType,
+		CreateTime:   t.base.FormatUnixTimeDefault(order.OrderTime),     // 下单时间
+		FinishTime:   t.base.FormatUnixTimeDefault(order.CompletedTime), // 完成时间
+		PayTime:      t.base.FormatUnixTimeDefault(order.OrderTime),     // 支付时间
+		CancelTime:   t.base.FormatUnixTimeDefault(order.RejectedTime),  // 取消时间
+		RejectReason: order.RejectReason,                                // 取消原因
 	}
 
 	// 商品列表
-	products := make([]template_struct.StatementProductData, 0, len(order.TakeoutOrderItems))
+	products := make([]structs.StatementProductData, 0, len(order.TakeoutOrderItems))
 	productNum := 0.0
 
 	for _, item := range order.TakeoutOrderItems {
@@ -145,7 +147,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 			itemName = item.TtposItemName
 		}
 
-		product := template_struct.StatementProductData{
+		product := structs.StatementProductData{
 			Name:     language.JsonToLocaleResponse(itemName).GetLocale(t.base.Lang),
 			Price:    t.base.Amount(item.Price), // 使用 base.Amount 添加千分位
 			Num:      float64(item.Quantity),
@@ -155,7 +157,7 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 		}
 
 		// 修饰符信息
-		var subProducts []template_struct.StatementProductData // 子商品列表
+		var subProducts []structs.StatementProductData // 子商品列表
 		if len(item.TakeoutOrderItemModifiers) > 0 {
 			// 分类存储不同类型的修饰符
 			flavorNames := make([]string, 0) // 规格
@@ -179,12 +181,12 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 				// 根据修饰符类型分类
 				switch modifier.TtposModifierType {
 				case "commodity": // 商品类型，作为套餐子商品显示
-					subProduct := template_struct.StatementProductData{
+					subProduct := structs.StatementProductData{
 						Name:         modifierName,
-						Price:        t.base.Amount(modifier.Price / float64(modifier.Quantity)),
+						Price:        t.base.Amount(modifier.Price),
 						Num:          float64(modifier.Quantity),
 						PriceNum:     fmt.Sprintf("%d", modifier.Quantity),
-						Subtotal:     t.base.Amount(modifier.Price),
+						Subtotal:     t.base.Amount(modifier.Price * float64(modifier.Quantity)),
 						IsSubProduct: true, // 标记为子商品
 					}
 					// 商家联：始终使用 TTPOS 规格名称
@@ -219,6 +221,11 @@ func (t *platformTakeoutImgTemplate) buildOrderData(
 
 		// 先添加主商品
 		products = append(products, product)
+		// 添加套餐子商品
+		for _, subProduct := range subProducts {
+			products = append(products, subProduct)
+		}
+		// 商品数量
 		productNum += float64(item.Quantity)
 	}
 

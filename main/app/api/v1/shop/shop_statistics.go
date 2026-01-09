@@ -755,6 +755,98 @@ func (h *statisticsHandler) ExportUserAnalysis(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetCompanyList 获取门店列表
+// @Summary 获取门店列表
+// @Description 获取门店汇总统计可选择的门店列表（总店返回本店及下级所有子店，子店返回本店及已授权的其他门店）
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CompanySummaryListResp} "门店列表"
+// @Router /shop/statistics/company_list [get]
+func (h *statisticsHandler) GetCompanyList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	resp, err := h.businessSrv.GetCompanyList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
+// GetCompanyPaymentMethods 获取门店支付方式列表
+// @Summary 获取门店支付方式列表
+// @Description 获取有权限的所有门店的支付方式，汇总去重后返回
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CompanyPaymentMethodListResp} "支付方式列表"
+// @Router /shop/statistics/company/payment_methods [get]
+func (h *statisticsHandler) GetCompanyPaymentMethods(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	resp, err := h.businessSrv.GetCompanyPaymentMethods(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp)
+}
+
+// CountCompanyBusinessSummary 获取门店汇总统计
+// @Summary 获取门店汇总统计
+// @Description 新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.StatisticsCompanySummaryReq true "统计参数"
+// @Success 200 {object} dto.Response{data=resp.CompanyBusinessSummaryResp} "统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp"
+// @Success 201 {object} dto.Response{data=resp.CompanyPaymentMethodSummaryResp} "统计数据。indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp"
+// @Success 202 {object} dto.Response{data=resp.CompanyRefundSummaryResp} "统计数据。indicator_type=refund 返回 CompanyRefundSummaryResp"
+// @Router /shop/statistics/company/business/summary [get]
+func (h *statisticsHandler) CountCompanyBusinessSummary(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.StatisticsCompanySummaryReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+
+	businessSummary, err := h.businessSrv.CountCompanyBusinessSummary(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, businessSummary)
+}
+
+// ExportCompanyBusinessSummary 导出门店汇总统计
+// @Summary 导出门店汇总统计
+// @Description 新管理端-报表-门店汇总统计导出。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）
+// @Tags 商家端.报表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.StatisticsCompanySummaryReq true "统计参数"
+// @Success 200 {object} dto.Response "导出任务已创建"
+// @Router /shop/statistics/company/business/summary/export [get]
+func (h *statisticsHandler) ExportCompanyBusinessSummary(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var req req.StatisticsCompanySummaryReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+
+	err := h.businessSrv.ExportCompanyBusinessSummary(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -803,5 +895,9 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/channel_sales/export", wrapper.ExportChannelSales)                            // 导出渠道营业统计
 		privateApi.GET("/statistics/user_analysis", wrapper.UserAnalysis)                                         // 用户分析统计查询
 		privateApi.GET("/statistics/user_analysis/export", wrapper.ExportUserAnalysis)                            // 导出用户分析统计
+		privateApi.GET("/statistics/company_list", wrapper.GetCompanyList)                                        // 获取门店汇总统计可选择的门店列表
+		privateApi.GET("/statistics/company/payment_methods", wrapper.GetCompanyPaymentMethods)                   // 获取门店支付方式列表（汇总去重）
+		privateApi.GET("/statistics/company/business/summary", wrapper.CountCompanyBusinessSummary)               // 获取门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
+		privateApi.GET("/statistics/company/business/summary/export", wrapper.ExportCompanyBusinessSummary)       // 导出门店汇总统计（营业数据汇总、支付方式汇总、退款金额汇总）
 	}
 }

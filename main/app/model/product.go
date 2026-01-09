@@ -111,16 +111,15 @@ func (model *ProductAttributeGroup) IsEditable() bool {
 // ProductAttribute 商品属性表,定义商品的属性信息 ttpos_product_attribute
 type ProductAttribute struct {
 	BaseModel
-	Name                      string  `gorm:"default:'';column:name;comment:'名称'"`
-	Source                    string  `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
-	SourceId                  string  `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的属性ID;NOT NULL;index:idx_attr_source_id" json:"source_id"`
-	MultiLanguageNameUuid     uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	AttributeGroupUuid        uint64  `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
-	ProductAttributeGroupUuid uint64  `gorm:"column:product_attribute_group_uuid;type:bigint(20) unsigned;default:0;comment:'属性组UUID（用于关联查询）';NOT NULL" json:"product_attribute_group_uuid"`
-	Sort                      int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
-	Price                     float64 `gorm:"type:decimal(10,2);default:0.00;column:price;comment:'属性价格（外卖平台属性加价）';NOT NULL" json:"price"`
-	ErpnextAttributeValue     string  `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
-	HeadquarterUuid           uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
+	Name                  string  `gorm:"default:'';column:name;comment:'名称'"`
+	Source                string  `gorm:"column:source;type:varchar(50);default:'';comment:来源标记(grab/manual等);NOT NULL" json:"source"`
+	SourceId              string  `gorm:"column:source_id;type:varchar(191);default:'';comment:来源平台的属性ID;NOT NULL;index:idx_attr_source_id" json:"source_id"`
+	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	AttributeGroupUuid    uint64  `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
+	Sort                  int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	Price                 float64 `gorm:"type:decimal(10,2);default:0.00;column:price;comment:'属性价格（外卖平台属性加价）';NOT NULL" json:"price"`
+	ErpnextAttributeValue string  `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
+	HeadquarterUuid       uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 

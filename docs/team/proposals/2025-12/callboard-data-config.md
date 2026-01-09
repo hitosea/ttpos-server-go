@@ -13,7 +13,7 @@
 | **目标版本** | - |
 | **状态**   | 待评审   |
 | **关联任务** | - |
-| **关联 Spec** | [story-callboard-data-config](../../../shared/specs/active/story-callboard-data-config/requirements.md)      |
+| **关联 Spec** | [story-callboard-data-config](../../../shared/specs/archived/v2.12/story-callboard-data-config/requirements.md)      |
 
 ---
 

@@ -2962,8 +2962,11 @@ definitions:
       status:
         description: 商品类别状态 0-关闭 1-开启
         type: integer
-      takeout_product_count:
-        description: v2.11.0 被外卖商品选中的数量
+      takeout_grab_count:
+        description: v2.11.0 被Grab平台选中的数量
+        type: integer
+      takeout_lineman_count:
+        description: v2.11.0 被LINE MAN平台选中的数量
         type: integer
       uuid:
         description: 商品类别UUID
@@ -3784,6 +3787,9 @@ definitions:
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
+      order_delivery:
+        description: 外卖订单， 0=否、 1=是
+        type: integer
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -7414,6 +7420,9 @@ definitions:
       image_file_uuid:
         description: 外卖商品图片文件UUID
         type: integer
+      is_batch:
+        description: 是否批量创建 默认false
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -7481,6 +7490,9 @@ definitions:
       price:
         description: 外卖规格价格
         type: number
+      uuid:
+        description: 外卖规格UUID
+        type: integer
     required:
     - bom_uuid
     type: object
@@ -8267,6 +8279,43 @@ definitions:
     required:
     - list
     type: object
+  req.StatisticsCompanySummaryReq:
+    properties:
+      company_uuids:
+        description: 门店UUID列表（多选），为空时默认为所有门店
+        items:
+          type: integer
+        type: array
+      cycle:
+        description: '周期: 0=按日、1=按月'
+        type: integer
+      indicator_type:
+        description: 数据指标类型：business(营业数据汇总)、payment_method(支付方式汇总)、refund(退款金额汇总)
+        type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      payment_method_names:
+        description: 支付方式名称列表（仅支付方式汇总时使用，可选）
+        items:
+          type: string
+        type: array
+      query_end_date:
+        description: 结束日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日结束日期：YYYY-MM-DD 23:59:59
+        type: string
+      query_start_date:
+        description: 开始日期（格式：YYYY-MM-DD HH:mm:ss），为空时默认为今日开始日期：YYYY-MM-DD 00:00:00
+        type: string
+      report:
+        description: '报表类型: 0=明细表、1=汇总表'
+        type: integer
+    type: object
   req.StatisticsPaymentMethodReq:
     properties:
       cycle:
@@ -8275,6 +8324,9 @@ definitions:
       exclude_data_manage:
         description: 是否排除数据管理订单
         type: boolean
+      order_delivery:
+        description: 外卖订单， 0=否、 1=是
+        type: integer
       order_desk:
         description: 桌台订单， 0=否、 1=是
         type: integer
@@ -8294,8 +8346,13 @@ definitions:
         minimum: 1
         type: integer
       payment_method_list:
-        description: '支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割'
+        description: '支付方式UUID列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割（优先使用）'
         type: string
+      payment_method_names:
+        description: '支付方式名称列表: 空=全部（PaymentMethodList为空时使用）'
+        items:
+          type: string
+        type: array
       query_end_date:
         description: 查询结束日期时间（格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DD）
         type: string
@@ -8571,8 +8628,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8590,8 +8645,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8609,8 +8662,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8628,8 +8679,6 @@ definitions:
         description: 商品UUID列表,最多100个
         items:
           type: integer
-        maxItems: 100
-        minItems: 1
         type: array
     required:
     - platform
@@ -8877,6 +8926,9 @@ definitions:
     type: object
   req.UpdateBusinessSetting:
     properties:
+      allowed_transfer_types:
+        description: 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
+        type: string
       batch_cooking_mode:
         description: 分批模式 pre-前置模式 post-后置模式，默认为post
         type: string
@@ -9484,6 +9536,9 @@ definitions:
         type: string
       merchantId:
         description: 商户 ID
+        type: string
+      message:
+        description: 消息，取消原因
         type: string
       orderId:
         description: 平台订单 ID
@@ -10241,6 +10296,18 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
         description: 点餐-店内
+      dine_in_store:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 堂食
+      grab:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: Grab 外卖
+      lineman:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: LINE MAN 外卖
       meta:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesMeta'
@@ -10253,6 +10320,14 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
         description: 桌台
+      takeaway:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 外带
+      takeout:
+        allOf:
+        - $ref: '#/definitions/resp.ChannelSalesBlock'
+        description: 外卖
       takeout_delivery:
         allOf:
         - $ref: '#/definitions/resp.ChannelSalesBlock'
@@ -10329,12 +10404,76 @@ definitions:
       name:
         description: 商家名称
         type: string
+      store_code:
+        description: 店铺编码，shop端用于显示
+        type: string
       time_zone:
         description: 时区，形如 Asia/Shanghai
         type: string
       uuid:
         description: 商家UUID
         type: integer
+    type: object
+  resp.CompanyBusinessSummaryItem:
+    properties:
+      avg_customer_price:
+        description: 平均客单价（实付金额/用餐人数，保留2位小数）
+        type: number
+      company_name:
+        description: 门店名称
+        type: string
+      date:
+        description: 营业日（格式：YYYY-MM-DD）
+        type: string
+      desk_num:
+        description: 消费桌数
+        type: integer
+      desk_order_amount:
+        description: 桌台订单金额（保留2位小数）
+        type: number
+      instant_order_amount:
+        description: 点餐订单金额（保留2位小数）
+        type: number
+      meal_num:
+        description: 用餐人数
+        type: integer
+      order_amount:
+        description: 订单金额（含优惠前，保留2位小数）
+        type: number
+      order_amount_avg:
+        description: 订单金额单均（订单金额/订单数量，保留2位小数）
+        type: number
+      order_amount_meal_avg:
+        description: 订单金额人均（订单金额/用餐人数，保留2位小数）
+        type: number
+      order_num:
+        description: 订单数量
+        type: integer
+      pay_amount:
+        description: 实付金额（保留2位小数）
+        type: number
+      pay_amount_avg:
+        description: 实付金额单均（实付金额/订单数量，保留2位小数）
+        type: number
+      takeout_order_amount:
+        description: 外送订单金额（保留2位小数）
+        type: number
+    type: object
+  resp.CompanyBusinessSummaryResp:
+    properties:
+      list:
+        description: 明细列表或汇总列表
+        items:
+          $ref: '#/definitions/resp.CompanyBusinessSummaryItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+      summary_row:
+        allOf:
+        - $ref: '#/definitions/resp.CompanyBusinessSummaryItem'
+        description: 汇总行（明细表返回默认值，汇总表返回汇总数据）
     type: object
   resp.CompanyInfoResp:
     properties:
@@ -10358,6 +10497,104 @@ definitions:
       uuid:
         description: 门店UUID
         type: integer
+    type: object
+  resp.CompanyPaymentMethodItem:
+    properties:
+      payment_name:
+        description: 支付方式名称
+        type: string
+    type: object
+  resp.CompanyPaymentMethodListResp:
+    properties:
+      list:
+        description: 支付方式列表（已去重）
+        items:
+          $ref: '#/definitions/resp.CompanyPaymentMethodItem'
+        type: array
+    type: object
+  resp.CompanyPaymentMethodSummaryItem:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      date:
+        description: 营业日（格式：YYYY-MM-DD 或 YYYY-MM）
+        type: string
+      payment_amount:
+        description: 支付金额（保留2位小数）
+        type: number
+      payment_name:
+        description: 支付方式名称
+        type: string
+      payment_num:
+        description: 支付笔数
+        type: integer
+      payment_ratio:
+        description: 支付占比（保留2位小数，百分比）
+        type: number
+    type: object
+  resp.CompanyPaymentMethodSummaryResp:
+    properties:
+      list:
+        description: 明细列表或汇总列表
+        items:
+          $ref: '#/definitions/resp.CompanyPaymentMethodSummaryItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+      summary_row:
+        description: 汇总行（明细表返回空数组，汇总表返回按支付方式分组的汇总数据）
+        items:
+          $ref: '#/definitions/resp.CompanyPaymentMethodSummaryItem'
+        type: array
+    type: object
+  resp.CompanyRefundSummaryItem:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      date:
+        description: 营业日（格式：YYYY-MM-DD 或 YYYY-MM）
+        type: string
+      full_refund_amount:
+        description: 整单退款金额（保留2位小数）
+        type: number
+      full_refund_num:
+        description: 整单退款笔数
+        type: integer
+      partial_refund_amount:
+        description: 部分退款金额（保留2位小数）
+        type: number
+      partial_refund_num:
+        description: 部分退款笔数
+        type: integer
+      refund_amount:
+        description: 退款金额（保留2位小数）
+        type: number
+      refund_num:
+        description: 退款笔数
+        type: integer
+      refund_rate:
+        description: 退款率（保留2位小数，百分比）
+        type: number
+    type: object
+  resp.CompanyRefundSummaryResp:
+    properties:
+      list:
+        description: 明细列表或汇总列表
+        items:
+          $ref: '#/definitions/resp.CompanyRefundSummaryItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+      summary_row:
+        allOf:
+        - $ref: '#/definitions/resp.CompanyRefundSummaryItem'
+        description: 汇总行（明细表返回默认值，汇总表返回汇总数据）
     type: object
   resp.CompanyRoleInfo:
     properties:
@@ -10398,6 +10635,9 @@ definitions:
         items:
           type: string
         type: array
+      store_code:
+        description: 店铺编号
+        type: string
     type: object
   resp.CompanyStoreResp:
     properties:
@@ -10447,6 +10687,23 @@ definitions:
       uuid:
         description: 门店UUID
         type: integer
+    type: object
+  resp.CompanySummaryItem:
+    properties:
+      company_name:
+        description: 门店名称
+        type: string
+      company_uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.CompanySummaryListResp:
+    properties:
+      list:
+        description: 门店列表
+        items:
+          $ref: '#/definitions/resp.CompanySummaryItem'
+        type: array
     type: object
   resp.ConfigInfoResp:
     properties:
@@ -15749,6 +16006,9 @@ definitions:
     type: object
   resp.ShopBase:
     properties:
+      allowed_transfer_types:
+        description: 允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
+        type: string
       buffet:
         allOf:
         - $ref: '#/definitions/setting.BuffetResp'
@@ -15822,6 +16082,11 @@ definitions:
       server_version:
         description: 服务端版本
         type: string
+      takeout_status:
+        description: 外卖平台状态列表
+        items:
+          $ref: '#/definitions/resp.TakeoutStatusResp'
+        type: array
       update_time:
         description: 更新时间
         type: integer
@@ -16591,6 +16856,15 @@ definitions:
         description: 平台名称
         type: string
     type: object
+  resp.TakeoutStatusResp:
+    properties:
+      enabled:
+        description: 是否开启
+        type: boolean
+      platform:
+        description: 外卖平台 (grab/lineman等)
+        type: string
+    type: object
   resp.TransferOrderApprovalInfo:
     properties:
       approval_company_name:
@@ -17352,6 +17626,11 @@ definitions:
         items:
           $ref: '#/definitions/resp.UserAnalysisItem'
         type: array
+      takeout_method:
+        description: 外卖方式统计（Grab/LINE MAN）
+        items:
+          $ref: '#/definitions/resp.UserAnalysisItem'
+        type: array
     type: object
   resp.VerifyPasswordResp:
     properties:
@@ -17658,7 +17937,7 @@ definitions:
         type: string
       deducted_amount:
         description: 折扣金额(元)
-        type: integer
+        type: number
       uuid:
         type: integer
     type: object
@@ -17743,7 +18022,7 @@ definitions:
         description: 是否异常
         type: integer
       order_state:
-        description: '订单状态: 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单'
+        description: '订单状态: 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单, 60=已取消'
         type: integer
       platform:
         description: 平台名称
@@ -17807,7 +18086,7 @@ definitions:
         type: integer
       promo_amount:
         description: 促销金额
-        type: integer
+        type: number
       promo_code:
         description: 促销代码
         type: string
@@ -17897,6 +18176,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/response.TakeoutOrderReceiverResp'
         description: 收货人信息 (联系人信息)
+      rider_status:
+        description: 骑手状态 骑手待接单 - rider_pending, 骑手已接单 - rider_accepted
+        type: string
       short_order_number:
         description: 短订单号
         type: string
@@ -18069,6 +18351,9 @@ definitions:
     type: object
   setting.Business:
     properties:
+      allowed_transfer_types:
+        description: 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
+        type: string
       batch_cooking_mode:
         description: '分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"'
         type: string
@@ -18718,6 +19003,9 @@ definitions:
     type: object
   setting.ShopBusiness:
     properties:
+      allowed_transfer_types:
+        description: 调拨规则-允许的调拨类型 "in"-只允许调入 "out"-只允许调出 "in,out"-都允许
+        type: string
       batch_cooking_mode:
         description: '分批送厨模式: "pre" 前置 / "post" 后置，默认 "post"'
         type: string
@@ -28719,7 +29007,8 @@ paths:
         name: start_time
         type: integer
       - default: -1
-        description: '-1=全部, 0=待接单,1=已接单配餐中, 2=待骑手接单, 3=骑手配送中, 4=已完成, 5=已拒单 (默认: -1)'
+        description: '-1=全部, 0=待接单,10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 50=已拒单,
+          60=已取消 (默认: -1)'
         in: query
         name: status
         type: integer
@@ -29573,30 +29862,6 @@ paths:
       summary: 基本信息
       tags:
       - 自助点餐机.基础信息
-  /kiosk/call:
-    post:
-      consumes:
-      - application/json
-      description: 发起呼叫服务员
-      parameters:
-      - description: 呼叫请求
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.CallReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 发起呼叫
-      tags:
-      - 自助点餐机.呼叫
   /kiosk/login:
     post:
       consumes:
@@ -29646,6 +29911,30 @@ paths:
       summary: 退出登录
       tags:
       - 自助点餐机.认证
+  /kiosk/order/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消订单
+      parameters:
+      - description: 取消订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 取消订单
+      tags:
+      - 自助点餐机.订单
   /kiosk/order/cart/info:
     get:
       consumes:
@@ -29800,6 +30089,172 @@ paths:
       summary: 向购物车添加套餐
       tags:
       - 自助点餐机.订单
+  /kiosk/order/check:
+    get:
+      consumes:
+      - application/json
+      description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCheckRes'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 订单检查
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/pay/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付信息（创建支付订单，返回二维码和支付信息，可轮询此接口查询支付状态）
+      parameters:
+      - description: 销售账单UUID
+        format: int64
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        format: int64
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 支付方式UUID
+        format: int64
+        in: query
+        name: payment_method_uuid
+        required: true
+        type: integer
+      - description: 支付金额
+        format: float64
+        in: query
+        name: payment_amount
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentQrcodeInfoResp'
+              type: object
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取支付信息
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/pay/status:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付状态（查询订单的支付状态）
+      parameters:
+      - description: 销售账单UUID
+        format: int64
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        format: int64
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 支付方式UUID
+        format: int64
+        in: query
+        name: payment_method_uuid
+        required: true
+        type: integer
+      - description: 支付金额
+        format: float64
+        in: query
+        name: payment_amount
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentQrcodeInfoResp'
+              type: object
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取支付状态
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/payment/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取结账页面信息
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: string
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取结账页面信息
+      tags:
+      - 自助点餐机.订单
   /kiosk/order/product/package/detail:
     get:
       consumes:
@@ -29837,6 +30292,37 @@ paths:
       summary: 获取商品选购详情
       tags:
       - 自助点餐机.订单
+  /kiosk/order/takeout:
+    post:
+      consumes:
+      - application/json
+      description: 打包
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderTakeoutReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 打包
+      tags:
+      - 自助点餐机.订单
   /kiosk/product/category/list:
     get:
       consumes:
@@ -29854,32 +30340,6 @@ paths:
       security:
       - JwtToken: []
       summary: 获取产品类别列表
-      tags:
-      - 自助点餐机.产品
-  /kiosk/product/detail:
-    get:
-      consumes:
-      - application/json
-      description: 获取商品详细信息
-      parameters:
-      - description: 商品UUID
-        format: int64
-        in: query
-        name: uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/product_resp.ProductDetailResp'
-        "400":
-          description: 错误请求
-      security:
-      - JwtToken: []
-      summary: 获取商品详情
       tags:
       - 自助点餐机.产品
   /kiosk/product/list:
@@ -37975,6 +38435,121 @@ paths:
       summary: 导出渠道营业统计
       tags:
       - 商家端.报表
+  /shop/statistics/company/business/summary:
+    get:
+      consumes:
+      - application/json
+      description: 新管理端-报表-门店汇总统计。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsCompanySummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据。indicator_type=business 返回 CompanyBusinessSummaryResp
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyBusinessSummaryResp'
+              type: object
+        "201":
+          description: 统计数据。indicator_type=payment_method 返回 CompanyPaymentMethodSummaryResp
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyPaymentMethodSummaryResp'
+              type: object
+        "202":
+          description: 统计数据。indicator_type=refund 返回 CompanyRefundSummaryResp
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyRefundSummaryResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店汇总统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/company/business/summary/export:
+    get:
+      consumes:
+      - application/json
+      description: 新管理端-报表-门店汇总统计导出。支持营业数据汇总（indicator_type=business）、支付方式汇总（indicator_type=payment_method）和退款金额汇总（indicator_type=refund）
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StatisticsCompanySummaryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 导出任务已创建
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 导出门店汇总统计
+      tags:
+      - 商家端.报表
+  /shop/statistics/company/payment_methods:
+    get:
+      consumes:
+      - application/json
+      description: 获取有权限的所有门店的支付方式，汇总去重后返回
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 支付方式列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanyPaymentMethodListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店支付方式列表
+      tags:
+      - 商家端.报表
+  /shop/statistics/company_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取门店汇总统计可选择的门店列表（总店返回本店及下级所有子店，子店返回本店及已授权的其他门店）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 门店列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CompanySummaryListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取门店列表
+      tags:
+      - 商家端.报表
   /shop/statistics/export:
     get:
       consumes:
@@ -39596,7 +40171,7 @@ paths:
       description: 分页获取调拨单列表
       parameters:
       - collectionFormat: csv
-        description: '我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批'
+        description: '我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批 my_approver-我的上级审批'
         in: query
         items:
           type: string
