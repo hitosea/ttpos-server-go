@@ -97,7 +97,9 @@ func (s *statisticsUtilSrv) MergeTakeoutStatistics(saleData model.StatisticsSale
 			Add(decimal.NewFromFloat(takeoutData.TotalOrderAmount)).
 			Sub(decimal.NewFromFloat(takeoutData.TotalRefundAmount))
 		curTotalOrderNum := totalOrderNum - takeoutData.CancelOrderNum
-		avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(curTotalOrderNum))
+		if curTotalOrderNum > 0 {
+			avgOrderAmount = totalOrderAmount.Div(decimal.NewFromInt(curTotalOrderNum))
+		}
 	} else {
 		avgOrderAmount = decimal.NewFromFloat(saleData.AvgOrderAmount.Float64)
 	}

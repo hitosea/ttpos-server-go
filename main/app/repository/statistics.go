@@ -2379,15 +2379,15 @@ func (r *StatisticsRepo) CountRefundSummary(req CountRefundSummaryReq) (int64, [
 	// 1. 查询原始数据（不分组）
 	var rawData []refundSummaryRawData
 	rawQuery := `
-		SELECT 
+		SELECT
 			sb.finish_time,
 			sb.uuid AS sale_bill_uuid,
 			SUM(ro.refund_amount) AS refund_amount,
-			SUM(IF(ro.return_type = 2, ro.refund_amount, 0)) AS partial_refund_amount,
-			SUM(IF(ro.return_type = 1, ro.refund_amount, 0)) AS full_refund_amount,
-			COUNT(DISTINCT IF(ro.return_type = 2, ro.uuid, NULL)) AS partial_refund_num,
-			COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) AS full_refund_num,
-			COUNT(DISTINCT ro.uuid) AS refund_num
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, 0, SUM(IF(ro.return_type = 2, ro.refund_amount, 0))) AS partial_refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, SUM(ro.refund_amount), 0) AS full_refund_amount,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0,0, IF(COUNT(DISTINCT IF(ro.return_type = 2, ro.uuid, NULL)) > 0, 1, 0)) AS partial_refund_num,
+			IF(COUNT(DISTINCT IF(ro.return_type = 1, ro.uuid, NULL)) > 0, 1, 0) AS full_refund_num,
+			1 AS refund_num
 		FROM ttpos_return_order AS ro
 		LEFT JOIN ttpos_sale_order AS so ON ro.related_order_uuid = so.uuid AND so.delete_time = ?
 		LEFT JOIN ttpos_sale_bill AS sb ON so.sale_bill_uuid = sb.uuid AND sb.delete_time = ?
