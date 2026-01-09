@@ -11,7 +11,6 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 
 	dto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/lineman"
-	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 // MenuSyncClient Lineman 菜单同步 API 客户端
@@ -112,6 +111,7 @@ func (c *MenuSyncClient) SyncMenuWithRetry(
 
 // getAuthorizationHeader 获取 Authorization Header
 func (c *MenuSyncClient) getAuthorizationHeader(ctx context.Context) (string, error) {
-	// 调用 Lineman Service 获取 Authorization Header
-	return service.Lineman().GetAuthorizationHeader(ctx)
+	// 直接调用 OAuthTokenClient
+	client := NewOAuthTokenClient()
+	return client.GetAuthorizationHeader(ctx)
 }
