@@ -1,5 +1,5 @@
 // Package grab_order 提供 GrabFood 订单服务的业务逻辑
-package grab_order
+package grab
 
 import (
 	"context"
@@ -34,19 +34,12 @@ const (
 // sGrabOrder 订单服务
 type sGrabOrder struct{}
 
-func init() {
-	service.RegisterGrabOrder(New())
-}
 
-// New 创建订单服务实例
-func New() *sGrabOrder {
-	return &sGrabOrder{}
-}
 
 // HandleSubmitOrder 处理 Grab 提交订单 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
 // 使用 SDK grabfood.SubmitOrderRequest 替换自定义 DTO
-func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error {
+func (s *sGrab) HandleSubmitOrder(ctx context.Context, req *grabfood.SubmitOrderRequest) error {
 	// 保存订单
 	orderUUID, err := s.saveOrderFromSDK(ctx, req)
 	if err != nil {
@@ -75,7 +68,7 @@ func (s *sGrabOrder) HandleSubmitOrder(ctx context.Context, req *grabfood.Submit
 }
 
 // saveOrderFromSDK 保存订单到数据库 (使用 SDK Model)
-func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest) (string, error) {
+func (s *sGrab) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitOrderRequest) (string, error) {
 	orderUUID := guid.S()
 
 	// 查询 ShopUuid - 优先使用 partnerMerchantID
@@ -211,7 +204,7 @@ func (s *sGrabOrder) saveOrderFromSDK(ctx context.Context, req *grabfood.SubmitO
 // HandlePushOrderState 处理订单状态变更 Webhook
 // 签名验证已由中间件完成，此处只处理业务逻辑
 // 使用 SDK grabfood.OrderStateRequest
-func (s *sGrabOrder) HandlePushOrderState(ctx context.Context, req *grabfood.OrderStateRequest) error {
+func (s *sGrab) HandlePushOrderState(ctx context.Context, req *grabfood.OrderStateRequest) error {
 	// 1. 序列化用于保存原始数据
 	rawData, _ := gjson.EncodeString(req)
 
@@ -373,7 +366,7 @@ func getCustomerPhoneFromSDK(req *grabfood.SubmitOrderRequest) string {
 //
 // 返回：
 //   - err: 错误信息
-func (s *sGrabOrder) PrepareOrder(ctx context.Context, orderEntityInterface interface{}, toState string) error {
+func (s *sGrab) PrepareOrder(ctx context.Context, orderEntityInterface interface{}, toState string) error {
 	// 类型断言获取订单实体
 	orderEntity, ok := orderEntityInterface.(*entity.Order)
 	if !ok {
@@ -399,7 +392,7 @@ func (s *sGrabOrder) PrepareOrder(ctx context.Context, orderEntityInterface inte
 //
 // 返回：
 //   - err: 错误信息
-func (s *sGrabOrder) callGrabAcceptRejectAPI(ctx context.Context, orderEntity *entity.Order, toState string) error {
+func (s *sGrab) callGrabAcceptRejectAPI(ctx context.Context, orderEntity *entity.Order, toState string) error {
 	g.Log().Infof(ctx, "准备调用 GrabFood API: orderID=%s, toState=%s", orderEntity.ProviderOrderId, toState)
 
 	// 根据 toState 调用相应的 Grab 服务方法
@@ -436,7 +429,7 @@ func (s *sGrabOrder) callGrabAcceptRejectAPI(ctx context.Context, orderEntity *e
 //
 // 返回：
 //   - err: 错误信息
-func (s *sGrabOrder) MarkOrderReady(ctx context.Context, orderEntity *entity.Order) error {
+func (s *sGrab) MarkOrderReadyEntity(ctx context.Context, orderEntity *entity.Order) error {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return gerror.New("订单实体不能为空")
@@ -480,7 +473,7 @@ func (s *sGrabOrder) MarkOrderReady(ctx context.Context, orderEntity *entity.Ord
 // 返回：
 //   - res: 检查订单可取消性响应
 //   - err: 错误信息
-func (s *sGrabOrder) CheckOrderCancelable(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error) {
+func (s *sGrab) CheckOrderCancelableEntity(ctx context.Context, orderEntity *entity.Order) (*api.CheckOrderCancelableResp, error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")
@@ -531,7 +524,7 @@ func (s *sGrabOrder) CheckOrderCancelable(ctx context.Context, orderEntity *enti
 // 返回：
 //   - res: 取消订单响应
 //   - err: 错误信息
-func (s *sGrabOrder) CancelOrder(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
+func (s *sGrab) CancelOrderEntity(ctx context.Context, orderEntity *entity.Order, cancelCode string) (res *api.CancelOrderResp, err error) {
 	// 1. 参数验证
 	if orderEntity == nil {
 		return nil, gerror.New("订单实体不能为空")

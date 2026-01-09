@@ -1,4 +1,4 @@
-package grab_order
+package grab
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 
 // TestCancelOrder_参数验证失败_订单实体为空 测试参数验证：订单实体为空
 func TestCancelOrder_参数验证失败_订单实体为空(t *testing.T) {
-	s := New()
+	s := &sGrab{}
 	ctx := context.Background()
 
-	res, err := s.CancelOrder(ctx, nil, "1")
+	res, err := s.CancelOrderEntity(ctx, nil, "1")
 
 	assert.Error(t, err)
 	assert.Nil(t, res)
@@ -23,7 +23,7 @@ func TestCancelOrder_参数验证失败_订单实体为空(t *testing.T) {
 
 // TestCancelOrder_参数验证失败_订单渠道错误 测试参数验证：订单渠道错误
 func TestCancelOrder_参数验证失败_订单渠道错误(t *testing.T) {
-	s := New()
+	s := &sGrab{}
 	ctx := context.Background()
 
 	orderEntity := &entity.Order{
@@ -34,7 +34,7 @@ func TestCancelOrder_参数验证失败_订单渠道错误(t *testing.T) {
 		RawData:            `{"orderID":"G-123","merchantID":"M-001"}`,
 	}
 
-	res, err := s.CancelOrder(ctx, orderEntity, "1")
+	res, err := s.CancelOrderEntity(ctx, orderEntity, "1")
 
 	assert.Error(t, err)
 	assert.Nil(t, res)

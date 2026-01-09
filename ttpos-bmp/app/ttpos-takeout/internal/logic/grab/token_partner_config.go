@@ -1,5 +1,5 @@
 // Package grab_token 提供 Grab Partner Token 生成与验证服务
-package grab_token
+package grab
 
 import (
 	"context"

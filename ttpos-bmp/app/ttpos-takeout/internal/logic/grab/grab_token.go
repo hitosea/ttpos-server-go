@@ -1,9 +1,10 @@
 // Package grab_token 提供 Grab Partner Token 生成与验证服务
-package grab_token
+package grab
 
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -11,7 +12,6 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
-	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 const (
@@ -19,39 +19,39 @@ const (
 	defaultGrabScope       = "food.partner_api"
 )
 
-// sGrabToken Grab Token 服务
-type sGrabToken struct {
-	cfgLoader *PartnerConfigLoader
-	secretKey string
-	expiresIn int
-}
-
-func init() {
-	service.RegisterGrabToken(New())
-}
-
-// New 创建 GrabToken 服务实例
-func New() *sGrabToken {
-	return &sGrabToken{
-		expiresIn: defaultPartnerTokenTTL,
-	}
-}
+var (
+	tokenCfgLoader *PartnerConfigLoader
+	tokenSecretKey string
+	tokenExpiresIn = defaultPartnerTokenTTL
+	tokenMu        sync.RWMutex
+)
 
 // getConfigLoader 获取配置加载器（懒加载）
-func (s *sGrabToken) getConfigLoader() *PartnerConfigLoader {
-	if s.cfgLoader == nil {
-		s.cfgLoader = &PartnerConfigLoader{}
+func getTokenConfigLoader() *PartnerConfigLoader {
+	tokenMu.Lock()
+	defer tokenMu.Unlock()
+	if tokenCfgLoader == nil {
+		tokenCfgLoader = &PartnerConfigLoader{}
 	}
-	return s.cfgLoader
+	return tokenCfgLoader
 }
 
-// getSecretKey 获取密钥（懒加载）
-func (s *sGrabToken) getSecretKey(ctx context.Context) string {
-	if s.secretKey == "" {
-		cfg := MustConfig(ctx)
-		s.secretKey = cfg.SecretKey
+// getTokenSecretKey 获取密钥（懒加载）
+func getTokenSecretKey(ctx context.Context) string {
+	tokenMu.RLock()
+	if tokenSecretKey != "" {
+		defer tokenMu.RUnlock()
+		return tokenSecretKey
 	}
-	return s.secretKey
+	tokenMu.RUnlock()
+	
+	tokenMu.Lock()
+	defer tokenMu.Unlock()
+	if tokenSecretKey == "" {
+		cfg := MustConfig(ctx)
+		tokenSecretKey = cfg.SecretKey
+	}
+	return tokenSecretKey
 }
 
 // GeneratePartnerToken 根据 client_id / client_secret 生成访问 Token
@@ -66,7 +66,7 @@ func (s *sGrabToken) getSecretKey(ctx context.Context) string {
 //   - token: 生成的 JWT Token
 //   - expiresIn: Token 有效期（秒）
 //   - err: 错误信息
-func (s *sGrabToken) GeneratePartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (token string, expiresIn int, err error) {
+func (s *sGrab) GetPartnerToken(ctx context.Context, clientID string, clientSecret string, scope string) (token string, expiresIn int, err error) {
 	if clientID == "" {
 		return "", 0, gerror.New("client_id 不能为空")
 	}
@@ -76,7 +76,7 @@ func (s *sGrabToken) GeneratePartnerToken(ctx context.Context, clientID string, 
 
 	// 根据 client_id 获取配置
 	var partnerCfg *conf.GrabPartner
-	partnerCfg, err = s.getConfigLoader().GetByClientID(ctx, clientID)
+	partnerCfg, err = getTokenConfigLoader().GetByClientID(ctx, clientID)
 	if err != nil {
 		return "", 0, gerror.Wrap(err, "根据 client_id 获取配置失败")
 	}
@@ -92,7 +92,7 @@ func (s *sGrabToken) GeneratePartnerToken(ctx context.Context, clientID string, 
 	}
 
 	now := time.Now()
-	expireAt := now.Add(time.Duration(s.expiresIn) * time.Second)
+	expireAt := now.Add(time.Duration(tokenExpiresIn) * time.Second)
 	claims := grab.PartnerTokenClaims{
 		ClientID:    clientID,
 		Scope:       scope,
@@ -104,12 +104,12 @@ func (s *sGrabToken) GeneratePartnerToken(ctx context.Context, clientID string, 
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := jwtToken.SignedString([]byte(s.getSecretKey(ctx)))
+	signed, err := jwtToken.SignedString([]byte(getTokenSecretKey(context.Background())))
 	if err != nil {
 		return "", 0, gerror.Wrap(err, "签发 Token 失败")
 	}
 
-	return signed, s.expiresIn, nil
+	return signed, tokenExpiresIn, nil
 }
 
 // ParsePartnerToken 校验并解析 Partner Token
@@ -120,7 +120,7 @@ func (s *sGrabToken) GeneratePartnerToken(ctx context.Context, clientID string, 
 // 返回：
 //   - claims: Token 中的声明信息
 //   - err: 错误信息
-func (s *sGrabToken) ParsePartnerToken(ctx context.Context, tokenStr string) (*grab.PartnerTokenClaims, error) {
+func (s *sGrab) ParsePartnerToken(tokenStr string) (*grab.PartnerTokenClaims, error) {
 	// 清理 token 字符串
 	tokenStr = strings.TrimSpace(tokenStr)
 	if tokenStr == "" {
@@ -133,7 +133,7 @@ func (s *sGrabToken) ParsePartnerToken(ctx context.Context, tokenStr string) (*g
 		return nil, gerror.Newf("Token 格式错误: 期望 3 个部分，实际 %d 个部分", len(tokenParts))
 	}
 
-	secretKey := s.getSecretKey(ctx)
+	secretKey := getTokenSecretKey(context.Background())
 	token, err := jwt.ParseWithClaims(tokenStr, &grab.PartnerTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if t.Method != jwt.SigningMethodHS256 {
 			return nil, gerror.Newf("不支持的签名方法: %s", t.Method.Alg())
@@ -158,8 +158,8 @@ func (s *sGrabToken) ParsePartnerToken(ctx context.Context, tokenStr string) (*g
 // 返回：
 //   - partner: Partner 配置
 //   - err: 错误信息
-func (s *sGrabToken) GetPartnerConfig(ctx context.Context, code string) (*conf.GrabPartner, error) {
-	return s.getConfigLoader().GetByCode(ctx, code)
+func (s *sGrab) GetPartnerConfig(ctx context.Context, code string) (*conf.GrabPartner, error) {
+	return getTokenConfigLoader().GetByCode(ctx, code)
 }
 
 // GetPartnerConfigByClientID 通过 client_id 获取配置
@@ -170,6 +170,6 @@ func (s *sGrabToken) GetPartnerConfig(ctx context.Context, code string) (*conf.G
 // 返回：
 //   - partner: Partner 配置
 //   - err: 错误信息
-func (s *sGrabToken) GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.GrabPartner, error) {
-	return s.getConfigLoader().GetByClientID(ctx, clientID)
+func (s *sGrab) GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.GrabPartner, error) {
+	return getTokenConfigLoader().GetByClientID(ctx, clientID)
 }

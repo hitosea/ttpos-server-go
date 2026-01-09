@@ -1,4 +1,4 @@
-package grab_order
+package grab
 
 import (
 	"testing"

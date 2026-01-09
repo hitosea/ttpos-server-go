@@ -128,7 +128,7 @@ func (c *Controller) UpdateMenuItem(ctx context.Context, req *api.UpdateMenuItem
 	}
 
 	// 3. 调用 Service 层
-	if err := service.GrabMenu().UpdateMenuItem(ctx, updateReq); err != nil {
+	if err := service.Grab().UpdateMenuItem(ctx, updateReq); err != nil {
 		g.Log().Errorf(ctx, "[Menu] UpdateMenuItem failed: merchantID=%s, itemID=%s, error=%v",
 			req.MerchantId, req.ItemId, err)
 		return &takeout.ApiResponse{
@@ -217,7 +217,7 @@ func (c *Controller) UpdateMenuModifier(ctx context.Context, req *api.UpdateMenu
 	}
 
 	// 3. 调用 Service 层
-	if err := service.GrabMenu().UpdateMenuModifier(ctx, updateReq); err != nil {
+	if err := service.Grab().UpdateMenuModifier(ctx, updateReq); err != nil {
 		g.Log().Errorf(ctx, "[Menu] UpdateMenuModifier failed: merchantID=%s, modifierID=%s, error=%v",
 			req.MerchantId, req.ModifierId, err)
 		return &takeout.ApiResponse{
@@ -340,7 +340,7 @@ func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMe
 	}
 
 	// 3. 调用 Service 层
-	dtoResp, err := service.GrabMenu().BatchUpdateMenu(ctx, dtoReq)
+	dtoResp, err := service.Grab().BatchUpdateMenuItems(ctx, dtoReq)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Menu] BatchUpdateMenu failed: merchantID=%s, field=%s, count=%d, error=%v",
 			req.MerchantId, req.Field, len(req.MenuEntities), err)

@@ -27,10 +27,10 @@ type TakeoutOrderItemModifier struct {
 	TtposFlavorName           string `gorm:"column:ttpos_flavor_name;type:text" json:"ttpos_flavor_name"`               // TTPOS 规格名称（commodity类型使用）
 
 	// TTPOS 修饰符分类信息
-	TtposCategoryUuid       uint64 `gorm:"column:ttpos_category_uuid" json:"ttpos_category_uuid"`               // TTPOS分类UUID(关联 ttpos_product_category.uuid)
-	TtposCategoryName       string `gorm:"column:ttpos_category_name" json:"ttpos_category_name"`               // TTPOS分类名称
-	TtposParentCategoryUuid uint64 `gorm:"column:ttpos_parent_category_uuid" json:"ttpos_parent_category_uuid"` // TTPOS父分类UUID
-	TtposParentCategoryName string `gorm:"column:ttpos_parent_category_name" json:"ttpos_parent_category_name"` // TTPOS父分类名称
+	TtposCategoryUuid       uint64 `gorm:"column:ttpos_category_uuid" json:"ttpos_category_uuid"`                         // TTPOS分类UUID(关联 ttpos_product_category.uuid)
+	TtposCategoryName       string `gorm:"column:ttpos_category_name;type:text" json:"ttpos_category_name"`               // TTPOS分类名称（多语言JSON）
+	TtposParentCategoryUuid uint64 `gorm:"column:ttpos_parent_category_uuid" json:"ttpos_parent_category_uuid"`           // TTPOS父分类UUID
+	TtposParentCategoryName string `gorm:"column:ttpos_parent_category_name;type:text" json:"ttpos_parent_category_name"` // TTPOS父分类名称（多语言JSON）
 
 	// 数量和价格
 	Quantity   int     `gorm:"column:quantity" json:"quantity"`
