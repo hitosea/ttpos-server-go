@@ -67,32 +67,6 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetProductDetail 获取商品详情
-// @Summary 获取商品详情
-// @Description 获取商品详细信息
-// @Tags 自助点餐机.产品
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param uuid query uint64 true "商品UUID"
-// @Success 200 {object} product_resp.ProductDetailResp "成功"
-// @Failure 400 {object} nil "错误请求"
-// @Router /kiosk/product/detail [get]
-func (h *ProductHandler) GetProductDetail(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var productDetailReq req.ProductDetailReq
-	if err := c.ShouldBindQuery(&productDetailReq); err != nil {
-		helper.HandleValidationError(c, err, productDetailReq, nil)
-		return
-	}
-	res, err := h.productSrv.GetProductDetail(ctx, productDetailReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, res)
-}
-
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -121,6 +95,5 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	{
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取产品类别列表
 		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取商品列表
-		privateApi.GET("/product/detail", wrapper.GetProductDetail)              // 获取商品详情
 	}
 }

@@ -221,6 +221,201 @@ func (h *OrderHandler) DeleteProduct(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CancelOrder 取消订单
+// @Summary 取消订单
+// @Description 取消订单
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCancelReq true "取消订单参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/cancel [post]
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	var cancelReq req.OrderCancelReq
+	if err := c.ShouldBindJSON(&cancelReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("取消订单", zap.Any("params", cancelReq))
+	// 取消订单
+	err := h.orderSrv.CancelOrder(ctx, cancelReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// OrderCheck 订单检查
+// @Summary 订单检查
+// @Description 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
+// @Router /kiosk/order/check [get]
+func (h *OrderHandler) OrderCheck(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到kiosk订单检查接口请求")
+
+	params := req.InstantOrderCheckReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("kiosk订单检查", zap.Any("params", params))
+	// 订单检查
+	checkRes, err := h.orderSrv.OrderCheck(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("kiosk检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
+		return
+	}
+	ctx.Log().Debug("kiosk订单检查成功")
+	// 返回结果
+	helper.Success(c, resp.OrderCheckRes{})
+}
+
+// OrderTakeout 处理打包
+// @Summary 打包
+// @Description 打包
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderTakeoutReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/takeout [post]
+func (h *OrderHandler) OrderTakeout(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderTakeoutReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	ctx.Log().Debug("kiosk打包", zap.Any("params", params))
+	// 打包
+	res, err := h.orderSrv.OrderTakeout(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentInfo 获取结账页面信息
+// @Summary 获取结账页面信息
+// @Description 获取结账页面信息
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query string true "销售账单UUID"
+// @param sale_order_uuid query string true "销售订单UUID"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /kiosk/order/payment/info [get]
+func (h *OrderHandler) OrderPaymentInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到kiosk结账页面信息接口请求")
+
+	params := &req.InstantOrderPaymentInfoReq{}
+	if err := params.Parse(c); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Info("查询kiosk销售订单结账页面信息", zap.Any("params", params))
+	// 获取销售订单的付款信息
+	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, nil, params.SaleBillUuid, params.SaleOrderUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// PayOrderInfo 获取支付信息
+// @Summary 获取支付信息
+// @Description 获取支付信息（创建支付订单，返回二维码和支付信息，可轮询此接口查询支付状态）
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query uint64 true "销售账单UUID"
+// @param sale_order_uuid query uint64 true "销售订单UUID"
+// @param payment_method_uuid query uint64 true "支付方式UUID"
+// @param payment_amount query float64 true "支付金额"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/pay/info [get]
+func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取kiosk支付信息", zap.Any("params", params))
+	// 获取支付信息
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// PayOrderStatus 获取支付状态
+// @Summary 获取支付状态
+// @Description 获取支付状态（查询订单的支付状态）
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_bill_uuid query uint64 true "销售账单UUID"
+// @param sale_order_uuid query uint64 true "销售订单UUID"
+// @param payment_method_uuid query uint64 true "支付方式UUID"
+// @param payment_amount query float64 true "支付金额"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /kiosk/order/pay/status [get]
+func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取kiosk支付状态", zap.Any("params", params))
+	// 获取支付状态（复用 InstantOrderPaymentQrcode 方法，如果支付订单已存在会返回状态）
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -250,5 +445,11 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/cart/product/num", wrapper.UpdateProductNum)             // 修改购物车商品数量
 		privateApi.GET("/order/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 		privateApi.DELETE("/order/cart/product/delete", wrapper.DeleteProduct)           // 删除购物车商品
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)                            // 取消订单
+		privateApi.GET("/order/check", wrapper.OrderCheck)                               // 订单检查
+		privateApi.POST("/order/takeout", wrapper.OrderTakeout)                          // 打包
+		privateApi.GET("/order/payment/info", wrapper.OrderPaymentInfo)                  // 获取结账页面信息
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                          // 获取支付信息
+		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                      // 获取支付状态
 	}
 }

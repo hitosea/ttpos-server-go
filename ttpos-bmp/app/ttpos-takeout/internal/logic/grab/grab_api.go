@@ -529,7 +529,7 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (
 	if err = client.HandleSDKError(ctx, err, "CreateSelfServeJourney"); err != nil {
 		g.Log().Errorf(ctx, "[Grab] 创建自助激活链接失败: merchant=%s, error=%v", merchantID, err)
 		// 错误映射：根据错误类型返回不同的错误码
-		return "", "", s.mapGrabError(err)
+		return "", "", mapGrabError(err)
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -570,7 +570,7 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (
 // ============================================================================
 
 // mapGrabError 映射 Grab SDK 错误到业务错误
-func (s *sGrab) mapGrabError(err error) error {
+func mapGrabError(err error) error {
 	if err == nil {
 		return nil
 	}

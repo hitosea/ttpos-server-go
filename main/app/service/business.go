@@ -4463,11 +4463,13 @@ func (s *businessSrv) countCompanyPaymentMethodSummary(ctx context.Context, requ
 					QueryEndDate:      queryEndDate,
 					Cycle:             request.Cycle, // 使用请求参数中的周期设置
 					ExcludeDataManage: excludeDataManage,
+					OrderDelivery:     1,
 				}
 
 				// 处理支付方式筛选：使用支付方式名称（因为不同商家的同一支付方式UUID可能不同）
 				if len(request.PaymentMethodNames) > 0 {
 					statisticsReq.PaymentMethodNames = request.PaymentMethodNames
+					statisticsReq.OrderDelivery = 0
 				}
 
 				statisticsData := s.statisticsSrv.CountBusinessPaymentMethod(shopCtx, statisticsReq)

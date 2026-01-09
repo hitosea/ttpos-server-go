@@ -29862,30 +29862,6 @@ paths:
       summary: 基本信息
       tags:
       - 自助点餐机.基础信息
-  /kiosk/call:
-    post:
-      consumes:
-      - application/json
-      description: 发起呼叫服务员
-      parameters:
-      - description: 呼叫请求
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.CallReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 发起呼叫
-      tags:
-      - 自助点餐机.呼叫
   /kiosk/login:
     post:
       consumes:
@@ -29935,6 +29911,30 @@ paths:
       summary: 退出登录
       tags:
       - 自助点餐机.认证
+  /kiosk/order/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消订单
+      parameters:
+      - description: 取消订单参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 取消订单
+      tags:
+      - 自助点餐机.订单
   /kiosk/order/cart/info:
     get:
       consumes:
@@ -30089,6 +30089,172 @@ paths:
       summary: 向购物车添加套餐
       tags:
       - 自助点餐机.订单
+  /kiosk/order/check:
+    get:
+      consumes:
+      - application/json
+      description: 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+      parameters:
+      - description: 销售订单uuid
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 销售账单uuid
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCheckRes'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 订单检查
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/pay/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付信息（创建支付订单，返回二维码和支付信息，可轮询此接口查询支付状态）
+      parameters:
+      - description: 销售账单UUID
+        format: int64
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        format: int64
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 支付方式UUID
+        format: int64
+        in: query
+        name: payment_method_uuid
+        required: true
+        type: integer
+      - description: 支付金额
+        format: float64
+        in: query
+        name: payment_amount
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentQrcodeInfoResp'
+              type: object
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取支付信息
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/pay/status:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付状态（查询订单的支付状态）
+      parameters:
+      - description: 销售账单UUID
+        format: int64
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: integer
+      - description: 销售订单UUID
+        format: int64
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: integer
+      - description: 支付方式UUID
+        format: int64
+        in: query
+        name: payment_method_uuid
+        required: true
+        type: integer
+      - description: 支付金额
+        format: float64
+        in: query
+        name: payment_amount
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentQrcodeInfoResp'
+              type: object
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取支付状态
+      tags:
+      - 自助点餐机.订单
+  /kiosk/order/payment/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取结账页面信息
+      parameters:
+      - description: 销售账单UUID
+        in: query
+        name: sale_bill_uuid
+        required: true
+        type: string
+      - description: 销售订单UUID
+        in: query
+        name: sale_order_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取结账页面信息
+      tags:
+      - 自助点餐机.订单
   /kiosk/order/product/package/detail:
     get:
       consumes:
@@ -30126,6 +30292,37 @@ paths:
       summary: 获取商品选购详情
       tags:
       - 自助点餐机.订单
+  /kiosk/order/takeout:
+    post:
+      consumes:
+      - application/json
+      description: 打包
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderTakeoutReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 打包
+      tags:
+      - 自助点餐机.订单
   /kiosk/product/category/list:
     get:
       consumes:
@@ -30143,32 +30340,6 @@ paths:
       security:
       - JwtToken: []
       summary: 获取产品类别列表
-      tags:
-      - 自助点餐机.产品
-  /kiosk/product/detail:
-    get:
-      consumes:
-      - application/json
-      description: 获取商品详细信息
-      parameters:
-      - description: 商品UUID
-        format: int64
-        in: query
-        name: uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/product_resp.ProductDetailResp'
-        "400":
-          description: 错误请求
-      security:
-      - JwtToken: []
-      summary: 获取商品详情
       tags:
       - 自助点餐机.产品
   /kiosk/product/list:
