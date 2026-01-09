@@ -46,6 +46,7 @@ type IPrinterSrv interface {
 	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) (string, error)                                                                    // 使用打印机定制
 	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
 	GetOrCreateDefaultCustomize(ctx context.Context, templateId uint64) (model.PrinterCustomize, error)                                               // 根据模板ID获取或创建默认定制数据
+	GetTemplateJSONStr(ctx context.Context, templateName string) (string, error)                                                                      // 获取模板JSON字符串
 }
 
 const (
