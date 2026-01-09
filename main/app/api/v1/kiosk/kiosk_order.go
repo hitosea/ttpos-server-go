@@ -251,6 +251,43 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderCheck 订单检查
+// @Summary 订单检查
+// @Description 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
+// @Tags 自助点餐机.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param sale_order_uuid query integer true "销售订单uuid"
+// @param sale_bill_uuid query integer true "销售账单uuid"
+// @Success 200 {object} dto.Response{data=resp.OrderCheckRes}
+// @Router /kiosk/order/check [get]
+func (h *OrderHandler) OrderCheck(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到kiosk订单检查接口请求")
+
+	params := req.InstantOrderCheckReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Info("kiosk订单检查", zap.Any("params", params))
+	// 订单检查
+	checkRes, err := h.orderSrv.OrderCheck(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if checkRes != nil {
+		ctx.Log().Debug("kiosk检查不通过", zap.Any("res", checkRes))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
+		return
+	}
+	ctx.Log().Debug("kiosk订单检查成功")
+	// 返回结果
+	helper.Success(c, resp.OrderCheckRes{})
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -281,5 +318,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 		privateApi.DELETE("/order/cart/product/delete", wrapper.DeleteProduct)           // 删除购物车商品
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                            // 取消订单
+		privateApi.GET("/order/check", wrapper.OrderCheck)                               // 订单检查
 	}
 }
