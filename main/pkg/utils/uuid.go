@@ -7,7 +7,6 @@ import (
 
 	goid "github.com/ace-zhaoy/go-id"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 
 	"github.com/sony/sonyflake"
 )
