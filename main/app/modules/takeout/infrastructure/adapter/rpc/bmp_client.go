@@ -46,7 +46,7 @@ type TakeoutRPCClient interface {
 	//  ------------------------- Order Service -------------------------
 
 	// GetOrderInfo 获取订单信息
-	GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error)
+	GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (rawData map[string]interface{}, orderData map[string]interface{}, err error)
 
 	// PrepareOrder 准备订单（接受/拒绝）
 	PrepareOrder(ctx context.Context, takeoutOrderUuid string, toState string) error
@@ -326,7 +326,7 @@ func (c *BMPTakeoutClient) ActivateShop(ctx context.Context, providerName string
 }
 
 // GetOrderInfo 获取订单信息
-func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (orderData map[string]interface{}, err error) {
+func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (rawData map[string]interface{}, orderData map[string]interface{}, err error) {
 	req := &orderApi.GetOrderInfoReq{
 		ShopUuid:  shopUuid,
 		OrderUuid: orderUuid,
@@ -339,7 +339,7 @@ func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, or
 			zap.Error(err),
 			zap.String("shopUuid", shopUuid),
 			zap.String("orderUuid", orderUuid))
-		return nil, errors.WithMessage(err, "调用获取订单信息接口失败")
+		return nil, nil, errors.WithMessage(err, "调用获取订单信息接口失败")
 	}
 
 	if resp.Code != "0" {
@@ -348,7 +348,7 @@ func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, or
 			zap.String("message", resp.Message),
 			zap.String("shopUuid", shopUuid),
 			zap.String("orderUuid", orderUuid))
-		return nil, errors.New(resp.Message)
+		return nil, nil, errors.New(resp.Message)
 	}
 
 	data, err := resp.Data.UnmarshalNew()
@@ -357,22 +357,30 @@ func (c *BMPTakeoutClient) GetOrderInfo(ctx context.Context, shopUuid string, or
 			zap.Error(err),
 			zap.String("shopUuid", shopUuid),
 			zap.String("orderUuid", orderUuid))
-		return nil, errors.WithMessage(err, "获取订单信息数据解析失败")
+		return nil, nil, errors.WithMessage(err, "获取订单信息数据解析失败")
 	}
 
 	orderResp := data.(*orderApi.GetOrderInfoResp)
 
 	// 解析 raw_data JSON 字符串为 map
-	var rawData map[string]interface{}
 	if err := json.Unmarshal([]byte(orderResp.RawData), &rawData); err != nil {
 		logger.Logger.Error("解析订单原始数据失败",
 			zap.Error(err),
 			zap.String("shopUuid", shopUuid),
 			zap.String("orderUuid", orderUuid))
-		return nil, errors.WithMessage(err, "解析订单原始数据失败")
+		return nil, nil, errors.WithMessage(err, "解析订单原始数据失败")
 	}
 
-	return rawData, nil
+	// 解析 order_data JSON 字符串为 map
+	if err := json.Unmarshal([]byte(orderResp.OrderData), &orderData); err != nil {
+		logger.Logger.Error("序列化订单数据失败",
+			zap.Error(err),
+			zap.String("shopUuid", shopUuid),
+			zap.String("orderUuid", orderUuid))
+		return nil, nil, errors.WithMessage(err, "序列化订单数据失败")
+	}
+
+	return rawData, orderData, nil
 }
 
 // PrepareOrder 准备订单（接受/拒绝）
