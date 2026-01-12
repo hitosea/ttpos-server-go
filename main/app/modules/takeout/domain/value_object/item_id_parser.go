@@ -83,7 +83,7 @@ func ParsePlatformID(platform, platformID string) (*ParseResult, error) {
 	case TakeoutPlatformGrab:
 		return parseGrabID(platformID)
 
-	case TakeoutPlatformLineman, TakeoutPlatformShopeefood:
+	case TakeoutPlatformLineman:
 		// TODO: 其他平台的解析规则
 		return nil, errors.New("暂不支持该平台")
 

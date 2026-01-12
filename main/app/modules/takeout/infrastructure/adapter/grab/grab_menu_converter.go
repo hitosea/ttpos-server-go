@@ -126,7 +126,7 @@ func (c *GrabConverter) ValidateData(platformData interface{}) error {
 }
 
 // LoadMenuFromDatabase 从数据库加载菜单数据（辅助方法）
-func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid uint64, currencyUnit string, categoryIDs []uint64) (*grabfood.GetMenuNewResponse, error) {
+func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, platform string, companyUuid uint64, currencyUnit string, categoryIDs []uint64) (*grabfood.GetMenuNewResponse, error) {
 	menu := grabfood.NewGetMenuNewResponseWithDefaults()
 	// 设置 PartnerMerchantID
 	menu.SetPartnerMerchantID(strconv.FormatUint(companyUuid, 10))
@@ -168,7 +168,7 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 	})
 
 	// 从数据库加载实际的分类和商品数据
-	categories, err := c.menuRepo.GetTakeoutCategories(ctx, companyUuid, categoryIDs)
+	categories, err := c.menuRepo.GetTakeoutCategories(ctx, categoryIDs)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询外卖分类失败")
 	}
@@ -181,8 +181,8 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 		}
 
 		// 为该分类加载商品
-		if err := c.loadCategoryProducts(ctx, companyUuid, category, cat.Uuid); err != nil {
-			return nil, errors.WithMessage(err, fmt.Sprintf("加载分类商品失败: %s", cat.Name))
+		if err := c.loadCategoryProducts(ctx, platform, category, cat.Uuid); err != nil {
+			return nil, errors.WithMessage(err, fmt.Sprintf("加载分类商品失败: %s, platform: %s", cat.Name, platform))
 		}
 
 		// 分类下无商品则不添加
@@ -198,7 +198,7 @@ func (c *GrabConverter) LoadMenuFromDatabase(ctx context.Context, companyUuid ui
 }
 
 // convertTTPOSCategory 从 TTPOS model 转换分类
-func (c *GrabConverter) convertTTPOSCategory(ctx context.Context, cat any, sequence int) (*grabfood.MenuCategory, error) {
+func (c *GrabConverter) convertTTPOSCategory(_ context.Context, cat any, sequence int) (*grabfood.MenuCategory, error) {
 	// 类型断言
 	category, ok := cat.(*model.ProductCategory)
 	if !ok {
@@ -411,9 +411,9 @@ func (c *GrabConverter) filterSupportedLanguages(translations map[string]string,
 }
 
 // loadCategoryProducts 加载分类下的商品
-func (c *GrabConverter) loadCategoryProducts(ctx context.Context, companyUuid uint64, category *grabfood.MenuCategory, categoryUuid uint64) error {
+func (c *GrabConverter) loadCategoryProducts(ctx context.Context, platform string, category *grabfood.MenuCategory, categoryUuid uint64) error {
 	// 查询外卖商品
-	takeoutProducts, err := c.menuRepo.GetTakeoutProducts(ctx, companyUuid, categoryUuid)
+	takeoutProducts, err := c.menuRepo.GetTakeoutProducts(ctx, platform, categoryUuid)
 	if err != nil {
 		return errors.WithMessage(err, "查询外卖商品失败")
 	}

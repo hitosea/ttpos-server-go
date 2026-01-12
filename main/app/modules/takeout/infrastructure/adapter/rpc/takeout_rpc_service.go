@@ -233,6 +233,36 @@ func (s *TakeoutRPCService) UpdateMenuModifier(ctx context.Context, merchantId s
 	return nil
 }
 
+// ActivateShop 激活门店外卖渠道
+func (s *TakeoutRPCService) ActivateShop(ctx context.Context, providerName string, shopUuid uint64) error {
+	// 创建客户端
+	client, err := NewBMPTakeoutClient()
+	if err != nil {
+		logger.Logger.Error("创建 RPC 客户端失败",
+			zap.Error(err),
+			zap.String("providerName", providerName),
+			zap.Uint64("shopUuid", shopUuid))
+		return errors.WithMessage(err, "创建 RPC 客户端失败")
+	}
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			logger.Logger.Warn("关闭 RPC 客户端失败", zap.Error(closeErr))
+		}
+	}()
+
+	// 调用 RPC 接口
+	err = client.ActivateShop(ctx, providerName, shopUuid)
+	if err != nil {
+		logger.Logger.Error("激活门店外卖渠道失败",
+			zap.Error(err),
+			zap.String("providerName", providerName),
+			zap.Uint64("shopUuid", shopUuid))
+		return errors.WithMessage(err, "激活门店外卖渠道失败")
+	}
+
+	return nil
+}
+
 // GetOrderInfo 获取订单信息
 func (s *TakeoutRPCService) GetOrderInfo(ctx context.Context, shopUuid string, orderUuid string) (map[string]interface{}, error) {
 	// 创建客户端

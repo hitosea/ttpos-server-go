@@ -10,6 +10,7 @@ import (
 	inventoryApp "ttpos-server-go/app/modules/inventory/application"
 	"ttpos-server-go/app/modules/takeout/domain/model"
 	"ttpos-server-go/app/modules/takeout/domain/service"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/app/modules/takeout/infrastructure/adapter/grab"
 	rpcAdapter "ttpos-server-go/app/modules/takeout/infrastructure/adapter/rpc"
 	"ttpos-server-go/app/modules/takeout/infrastructure/persistence"
@@ -62,8 +63,8 @@ func NewTakeoutOrderAppService(
 	// 初始化平台转换器
 	converters := make(map[string]*grab.GrabConverter)
 	grabConverter := grab.NewGrabConverter(dbm, nil)
-	converters["grab"] = grabConverter
-	// 后续可添加其他平台：converters["lineman"] = lineman.NewLinemanConverter(dbm)
+	converters[value_object.TakeoutPlatformGrab] = grabConverter
+	converters[value_object.TakeoutPlatformLineman] = grabConverter
 
 	return &takeoutOrderAppService{
 		rpcService:   rpcService,

@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"strings"
 	grabApi "ttpos-bmp/app/ttpos-takeout/api/grab"
-	"ttpos-bmp/app/ttpos-takeout/api/menu"
 	menuApi "ttpos-bmp/app/ttpos-takeout/api/menu"
 	orderApi "ttpos-bmp/app/ttpos-takeout/api/order"
+	shopApi "ttpos-bmp/app/ttpos-takeout/api/shop"
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/google/uuid"
@@ -38,6 +39,9 @@ type TakeoutRPCClient interface {
 
 	// UpdateMenuModifier 更新菜单修饰符
 	UpdateMenuModifier(ctx context.Context, req *menuApi.UpdateMenuModifierReq) error
+
+	// ActivateShop 激活门店外卖渠道
+	ActivateShop(ctx context.Context, providerName string, shopUuid uint64) error
 
 	//  ------------------------- Order Service -------------------------
 
@@ -67,6 +71,7 @@ type BMPTakeoutClient struct {
 	grabClient  grabApi.GrabClient
 	menuClient  menuApi.MenuServiceClient
 	orderClient orderApi.OrderServiceClient
+	shopClient  shopApi.ShopClient
 }
 
 // NewBMPTakeoutClient 创建 BMP 外送 RPC 客户端
@@ -80,14 +85,16 @@ func NewBMPTakeoutClient() (TakeoutRPCClient, error) {
 
 	client := api.NewTakeoutServiceClient(conn)
 	grabClient := grabApi.NewGrabClient(conn)
-	menuClient := menu.NewMenuServiceClient(conn)
+	menuClient := menuApi.NewMenuServiceClient(conn)
 	orderClient := orderApi.NewOrderServiceClient(conn)
+	shopClient := shopApi.NewShopClient(conn)
 	return &BMPTakeoutClient{
 		conn:        conn,
 		client:      client,
 		grabClient:  grabClient,
 		menuClient:  menuClient,
 		orderClient: orderClient,
+		shopClient:  shopClient,
 	}, nil
 }
 
@@ -129,7 +136,7 @@ func (c *BMPTakeoutClient) GetShopProviderCfg(ctx context.Context, platform stri
 // GetGrabBindingLink 获取 Grab 绑定链接
 func (c *BMPTakeoutClient) GetGrabBindingLink(ctx context.Context, companyUuid uint64) (bindingLink string, err error) {
 	resp, err := c.grabClient.CreateSelfServeJourney(ctx, &grabApi.CreateSelfServeJourneyReq{
-		ProviderName: "grab",
+		ProviderName: value_object.TakeoutPlatformGrab,
 		ShopUuid:     strconv.FormatUint(companyUuid, 10),
 		RequestId:    uuid.New().String(),
 	})
@@ -160,8 +167,8 @@ func (c *BMPTakeoutClient) GetGrabBindingLink(ctx context.Context, companyUuid u
 
 // GetMenuSnapshot 获取 Grab 商品菜单
 func (c *BMPTakeoutClient) GetMenuSnapshot(ctx context.Context, companyUuid uint64) (menuData interface{}, err error) {
-	req := &menu.GetMenuSnapshotReq{
-		ProviderName: "grab",
+	req := &menuApi.GetMenuSnapshotReq{
+		ProviderName: value_object.TakeoutPlatformGrab,
 		ShopUuid:     strconv.FormatUint(companyUuid, 10),
 		RequestId:    uuid.New().String(),
 	}
@@ -189,7 +196,7 @@ func (c *BMPTakeoutClient) GetMenuSnapshot(ctx context.Context, companyUuid uint
 		return nil, errors.WithMessage(err, "获取 Grab 菜单数据解析失败")
 	}
 
-	return data.(*menu.GetMenuSnapshotResp).MenuData, nil
+	return data.(*menuApi.GetMenuSnapshotResp).MenuData, nil
 }
 
 // SaveGrabMenu 保存 Grab 菜单
@@ -213,7 +220,7 @@ func (c *BMPTakeoutClient) SaveMenuSnapshot(ctx context.Context, providerName st
 		menuDataStr = string(jsonBytes)
 	}
 
-	req := &menu.SaveMenuSnapshotReq{
+	req := &menuApi.SaveMenuSnapshotReq{
 		ProviderName: providerName,
 		ShopUuid:     shopUuid,
 		RequestId:    requestId,
@@ -283,6 +290,35 @@ func (c *BMPTakeoutClient) UpdateMenuModifier(ctx context.Context, req *menuApi.
 			zap.String("message", resp.Message),
 			zap.String("merchantId", req.MerchantId),
 			zap.String("modifierId", req.ModifierId))
+		return errors.New(resp.Message)
+	}
+
+	return nil
+}
+
+// ActivateShop 激活门店外卖渠道
+func (c *BMPTakeoutClient) ActivateShop(ctx context.Context, providerName string, shopUuid uint64) error {
+	req := &shopApi.ActivateShopReq{
+		ProviderName: providerName,
+		ShopUuid:     strconv.FormatUint(shopUuid, 10),
+		RequestId:    uuid.New().String(),
+	}
+
+	resp, err := c.shopClient.ActivateShop(ctx, req)
+	if err != nil {
+		logger.Logger.Error("调用 ActivateShop 接口失败",
+			zap.Error(err),
+			zap.String("providerName", providerName),
+			zap.Uint64("shopUuid", shopUuid))
+		return errors.WithMessage(err, "调用激活门店外卖渠道接口失败")
+	}
+
+	if resp.Code != "0" {
+		logger.Logger.Warn("ActivateShop 返回错误",
+			zap.String("code", resp.Code),
+			zap.String("message", resp.Message),
+			zap.String("providerName", providerName),
+			zap.Uint64("shopUuid", shopUuid))
 		return errors.New(resp.Message)
 	}
 
