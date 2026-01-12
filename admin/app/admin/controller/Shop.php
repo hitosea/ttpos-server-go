@@ -101,6 +101,7 @@ class Shop extends Controller
      * @Apidoc\Param("enable_data_management", type="int", require=false, default=0, desc="是否启用数据管理能力: 0不开启, 1开启")
      * @Apidoc\Param("enable_kiosk", type="int", require=false, default=0, desc="是否启用自助点餐机: 0不开启, 1开启")
      * @Apidoc\Param("enable_grab_delivery", type="int", require=false, default=0, desc="是否启用Grab外卖: 0不开启, 1开启")
+     * @Apidoc\Param("enable_lineman_delivery", type="int", require=false, default=0, desc="是否启用LINE MAN外卖: 0不开启, 1开启")
      */
     public function add(AppValidate $validate)
     {
@@ -182,6 +183,7 @@ class Shop extends Controller
      * @Apidoc\Param("enable_data_management", type="int", require=false, default=0, desc="是否启用数据管理能力: 0不开启, 1开启")
      * @Apidoc\Param("enable_kiosk", type="int", require=false, default=0, desc="是否启用自助点餐机: 0不开启, 1开启")
      * @Apidoc\Param("enable_grab_delivery", type="int", require=false, default=0, desc="是否启用Grab外卖: 0不开启, 1开启")
+     * @Apidoc\Param("enable_lineman_delivery", type="int", require=false, default=0, desc="是否启用LINE MAN外卖: 0不开启, 1开启")
      * @Apidoc\Returned("app_id",type="int", desc="id")
      */
     public function edit()

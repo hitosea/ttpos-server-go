@@ -8520,15 +8520,19 @@ func (s *productSrv) syncHeadquarterTakeoutProducts(
 		if strings.ToLower(takeout.Platform) == "grab" {
 			takeOutMap[constant.TakeoutTypeGrab] = true
 		}
-		// NOTE: 后面加LINEMAN后，需要在这里加判断
+		if strings.ToLower(takeout.Platform) == "lineman" {
+			takeOutMap[constant.TakeoutTypeLINEMAN] = true
+		}
 	}
 	takeoutTypes := make([]uint, 0)
 	// 云平台开启了Grab 并且 门店也开启了Grab
-	if companySetting.EnableGrabDelivery == 1 && takeOutMap[constant.TakeoutTypeGrab] {
+	if companySetting.IsOpenGrabDelivery() && takeOutMap[constant.TakeoutTypeGrab] {
 		takeoutTypes = append(takeoutTypes, constant.TakeoutTypeGrab)
 	}
-
-	// NOTE: 后面加LINEMAN后，需要在这里加判断
+	// 云平台开启了LINE MAN 并且 门店也开启了LINE MAN
+	if companySetting.IsOpenLINEMANDelivery() && takeOutMap[constant.TakeoutTypeLINEMAN] {
+		takeoutTypes = append(takeoutTypes, constant.TakeoutTypeLINEMAN)
+	}
 
 	if len(takeoutTypes) == 0 {
 		return nil

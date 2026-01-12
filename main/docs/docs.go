@@ -39013,6 +39013,10 @@ const docTemplate = `{
                 "uuid": {
                     "description": "物品UUID",
                     "type": "integer"
+                },
+                "valuation": {
+                    "description": "兼容旧版本客户端\n估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段",
+                    "type": "number"
                 }
             }
         },
@@ -52383,6 +52387,10 @@ const docTemplate = `{
                 },
                 "is_open_kiosk": {
                     "description": "是否开启自助点餐机功能",
+                    "type": "boolean"
+                },
+                "is_open_lineman_delivery": {
+                    "description": "是否开启LINE MAN外卖功能",
                     "type": "boolean"
                 },
                 "is_open_map": {

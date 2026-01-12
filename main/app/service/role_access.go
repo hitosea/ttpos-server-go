@@ -230,7 +230,7 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 			continue
 		}
 		// 新管理端-管理APP-云平台未开启LINE MAN外卖，权限列表无LINE MAN外卖设置
-		if slices.Contains([]uint64{2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001, 2859028879360000}, permission.Uuid) {
+		if slices.Contains([]uint64{2857159888896001, 2857180860416001, 2857201831936000, 2857222803456001}, permission.Uuid) && !companySetting.IsOpenLINEMANDelivery() {
 			continue
 		}
 
