@@ -30122,8 +30122,8 @@ paths:
       summary: 订单检查
       tags:
       - 自助点餐机.订单
-  /kiosk/order/pay/info:
-    get:
+  /kiosk/order/pay:
+    post:
       consumes:
       - application/json
       description: 获取支付信息（创建支付订单，返回二维码和支付信息，可轮询此接口查询支付状态）
