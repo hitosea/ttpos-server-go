@@ -65,6 +65,31 @@ func (h *BaseHandler) VerifyAdvancedPassword(c *gin.Context) {
 	}
 }
 
+// SaveSetting 保存设置
+// @Summary 保存设置
+// @Description 保存设置，目前仅支持修改机器备注
+// @Tags 自助点餐机.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.EditDeviceRemarkReq true "修改设置参数"
+// @Success 200 {object} dto.Response
+// @Router /kiosk/setting [post]
+func (h *BaseHandler) SaveSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.EditDeviceRemarkReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.HandleValidationError(c, err, settingReq, nil)
+		return
+	}
+	err := h.deviceSrv.UpdateRemark(ctx, settingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -87,5 +112,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	{
 		privateApi.GET("/base", wrapper.GetBase)                                     // 获取基本信息
 		privateApi.POST("/verify_advanced_password", wrapper.VerifyAdvancedPassword) // 验证高级密码
+		privateApi.POST("/setting", wrapper.SaveSetting)                             // 保存设置（机器备注）
 	}
 }

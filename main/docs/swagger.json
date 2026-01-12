@@ -19007,6 +19007,45 @@
                 }
             }
         },
+        "/kiosk/setting": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存设置，目前仅支持修改机器备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.设置"
+                ],
+                "summary": "保存设置",
+                "parameters": [
+                    {
+                        "description": "修改设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditDeviceRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/kiosk/store_switch": {
             "post": {
                 "security": [
@@ -19053,6 +19092,45 @@
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/kiosk/verify_advanced_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "验证高级密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "自助点餐机.基础信息"
+                ],
+                "summary": "验证高级密码",
+                "parameters": [
+                    {
+                        "description": "验证密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.VerifyPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -55164,6 +55242,10 @@
                         }
                     ]
                 },
+                "client_version": {
+                    "description": "客户端版本",
+                    "type": "string"
+                },
                 "company": {
                     "description": "商家信息",
                     "allOf": [
@@ -55202,6 +55284,10 @@
                             "$ref": "#/definitions/setting.KioskResp"
                         }
                     ]
+                },
+                "system_version": {
+                    "description": "服务端版本",
+                    "type": "string"
                 },
                 "update_time": {
                     "description": "更新时间",

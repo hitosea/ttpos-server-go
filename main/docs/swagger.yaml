@@ -12238,6 +12238,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Business'
         description: 门店业务设置
+      client_version:
+        description: 客户端版本
+        type: string
       company:
         allOf:
         - $ref: '#/definitions/resp.Company'
@@ -12261,6 +12264,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.KioskResp'
         description: 自助点餐机设置（包含语言列表、轮播广告）
+      system_version:
+        description: 服务端版本
+        type: string
       update_time:
         description: 更新时间
         type: integer
@@ -30404,6 +30410,30 @@ paths:
       summary: 刷新token
       tags:
       - 自助点餐机.认证
+  /kiosk/setting:
+    post:
+      consumes:
+      - application/json
+      description: 保存设置，目前仅支持修改机器备注
+      parameters:
+      - description: 修改设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditDeviceRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存设置
+      tags:
+      - 自助点餐机.设置
   /kiosk/store_switch:
     post:
       consumes:
@@ -30433,6 +30463,30 @@ paths:
       summary: 门店切换
       tags:
       - 自助点餐机.认证
+  /kiosk/verify_advanced_password:
+    post:
+      consumes:
+      - application/json
+      description: 验证高级密码
+      parameters:
+      - description: 验证密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.VerifyPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 验证高级密码
+      tags:
+      - 自助点餐机.基础信息
   /kitchen/base:
     get:
       consumes:
