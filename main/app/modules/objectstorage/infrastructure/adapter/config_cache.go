@@ -146,7 +146,6 @@ func IsObjectStorageCacheEnabled(companyUuid uint64) bool {
 	if config.Server.Mode == constant.ServerModeDebug {
 		return true
 	}
-	// return false // 暂时禁用缓存
 
 	if companyUuid == 0 {
 		return false
