@@ -27,7 +27,7 @@ func InitIdGenerator() {
 		serverID = 1
 	}
 	// 设置节点ID
-	idGenerator.SetNode(13, 4)
+	idGenerator.SetNode(serverID, 4)
 }
 
 // InitSonyFlakeId 初始化 sonyFlake 配置
