@@ -728,7 +728,107 @@ sequenceDiagram
 
 ---
 
+## LINE MAN 订单接口
+
+### PlaceOrder (订单创建 Webhook)
+
+**接口地址**: `POST /partners/:partnerId/stores/:storeId/orders`
+
+**功能描述**: 接收 LINE MAN 平台推送的新订单
+
+**请求参数**:
+
+**路径参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| partnerId | string | 是 | 合作伙伴唯一 ID |
+| storeId | string | 是 | 门店唯一 ID |
+
+**请求头**:
+
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体**:
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| orderId | string(20) | 是 | 订单唯一 ID，格式：LMF-yyMMdd-{generated number} |
+| orderShortCode | string(4) | 是 | 短订单 ID，为 orderId 的后四位 |
+| restaurantRevenue | double | 是 | 商户收入总额（已扣除合作伙伴补贴折扣） |
+| orderAcceptedTime | string | 是 | 订单接受时间，ISO 8601 格式 |
+| items | array | 是 | 订单商品列表 |
+| additionalItems | array | 是 | 订单附加项列表 |
+| memberId | string(255) | 否 | 绑定 LINE MAN 账号的会员 ID |
+| customerType | string(32) | 是 | 订单类型：DELIVERY（外送）或 PICKUP（自取） |
+
+**items 字段结构**:
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string(255) | 是 | 菜单项 ID |
+| quantity | int | 是 | 商品数量 |
+| unitPrice | double | 是 | 商品单价（THB），包含选项费用，已应用折扣 |
+| memo | string | 否 | 顾客备注 |
+| promotionId | string(255) | 否 | 促销活动 ID |
+| discount | double | 否 | 促销折扣金额（商户补贴） |
+| properties | array | 否 | 商品选项列表 |
+
+**响应示例**:
+
+**成功 (HTTP 200)**:
+
+```json
+{
+  "status": "ok",
+  "code": "200",
+  "message": "Order received successfully"
+}
+```
+
+**失败 (HTTP 400)**:
+
+```json
+{
+  "status": "fail",
+  "code": "400",
+  "message": "The request is malformed or missing mandatory information"
+}
+```
+
+**失败 (HTTP 409)**:
+
+```json
+{
+  "status": "fail",
+  "code": "409",
+  "message": "An order with the same Order ID has already been successfully submitted to the store"
+}
+```
+
+**字段映射关系**:
+
+参考：[Lineman API定义及TTPOS 映射](https://docs.google.com/spreadsheets/d/1CKRl7tRLtp6dCAcXQqWhPvS_0M378-vdKpucR6ZtNbg/edit?gid=182890165#gid=182890165)
+
+| LINE MAN 字段 | TTPOS 字段 | 对应 Grab 字段 |
+|--------------|-----------|--------------|
+| orderId | provider_order_id | orderID |
+| orderShortCode | short_order_number | shortOrderNumber |
+| restaurantRevenue | total_amount | price.eaterPayment |
+| items[].properties | modifiers | items[].modifiers |
+
+**相关文档**:
+
+- Spec 文档: `docs/shared/specs/active/story-takeout-lineman-place-order/requirements.md`
+- 设计文档: `docs/shared/specs/active/story-takeout-lineman-place-order/design.md`
+- LINE MAN API 文档: `docs/others/lineman/sources/PartnerIntegrationWorkflow.md`
+
+---
+
 ## 更新历史
 
+- v1.4.0 (2026-01-12): 新增 LINE MAN PlaceOrder Webhook 接口文档（v2.14.0 功能）
 - v1.3.0 (2025-12-24): 新增 gRPC 接口文档，添加 CheckOrderCancelable 和 CancelOrder 接口（分离预检查和取消逻辑，CheckOrderCancelableResp 包含 SDK 所有字段）
 - v1.0.0 (2025-12-13): 初始版本，支持基本的平台状态管理和菜单数据更新
