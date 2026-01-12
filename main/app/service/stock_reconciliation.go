@@ -119,6 +119,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 	for _, item := range list {
 		info := &resp.StockReconciliationInfo{}
 		if err := copier.Copy(info, item); err != nil {
+			logger.Logger.Error("转换盘点单信息失败", zap.Error(err))
 			continue
 		}
 		info.WarehouseLocaleName = item.Warehouse.MultiLanguageName.GetNames()
@@ -268,6 +269,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		}
 		itemInfo := &resp.StockReconciliationItemInfo{}
 		if err := copier.Copy(itemInfo, item); err != nil {
+			logger.Logger.Error("转换盘点单物品信息失败", zap.Error(err))
 			continue
 		}
 

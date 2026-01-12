@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -38,6 +39,22 @@ type IPurchaseOrderItemRepo interface {
 	GetTotalQuantityByPurchaseOrder(purchaseOrderUuid uint64) (float64, error)
 	GetTotalAmountByPurchaseOrder(purchaseOrderUuid uint64) (float64, error)
 	GetReceivedQuantityByPurchaseOrder(purchaseOrderUuid uint64) (float64, error)
+
+	// 品牌采购限购相关统计
+	// SumBrandPurchaseByTimeRange 统计指定时间范围内的品牌采购物品数量（按物品+单位+门店）
+	SumBrandPurchaseByTimeRange(
+		materialCode string,
+		unitCode string,
+		startTime, endTime int64,
+		excludeOrderUuid uint64,
+	) (float64, error)
+	// SumBrandPurchaseByMonth 统计指定月份的品牌采购物品数量（按物品+单位+门店）
+	SumBrandPurchaseByMonth(
+		materialCode string,
+		unitCode string,
+		month string,
+		excludeOrderUuid uint64,
+	) (float64, error)
 }
 
 // PurchaseOrderItemRepoImpl 采购订单明细Repository实现
@@ -210,6 +227,77 @@ func (r *PurchaseOrderItemRepoImpl) GetReceivedQuantityByPurchaseOrder(purchaseO
 		Select("COALESCE(SUM(received_quantity), 0)").
 		Scan(&receivedQuantity).Error
 	return receivedQuantity, err
+}
+
+// SumBrandPurchaseByTimeRange 统计指定时间范围内的品牌采购物品数量
+//
+// 参数:
+//   - companyUuid: 公司UUID
+//   - materialCode: 物品编码
+//   - unitCode: 单位编码
+//   - startTime: 开始时间（Unix 时间戳）
+//   - endTime: 结束时间（Unix 时间戳）
+//   - excludeOrderUuid: 排除的订单UUID（避免重复统计）
+//
+// 返回:
+//   - float64: 已使用数量
+//   - error: 错误信息
+func (r *PurchaseOrderItemRepoImpl) SumBrandPurchaseByTimeRange(
+	materialCode string,
+	unitCode string,
+	startTime, endTime int64,
+	excludeOrderUuid uint64,
+) (float64, error) {
+	var usedQty float64
+	err := r.db.Table("ttpos_purchase_order po").
+		Select("COALESCE(SUM(poi.num), 0) as used_qty").
+		Joins("JOIN ttpos_purchase_order_item poi ON po.uuid = poi.purchase_order_uuid").
+		Where("po.purchase_type = ?", 2). // 品牌采购 (constant.PurchaseTypeBrand)
+		Where("poi.material_code = ?", materialCode).
+		Where("poi.erpnext_uom = ?", unitCode).
+		Where("po.status != ?", constant.PurchaseOrderStatusDraft). // 排除草稿
+		Where("po.order_time > 0").                                 // order_time 必须有值
+		Where("po.uuid != ?", excludeOrderUuid).                    // 排除当前单据
+		Where("po.order_time >= ? AND po.order_time <= ?", startTime, endTime).
+		Where("po.delete_time = 0").
+		Scan(&usedQty).Error
+
+	return usedQty, err
+}
+
+// SumBrandPurchaseByMonth 统计指定月份的品牌采购物品数量
+//
+// 参数:
+//   - companyUuid: 公司UUID
+//   - materialCode: 物品编码
+//   - unitCode: 单位编码
+//   - month: 月份（格式：2026-01）
+//   - excludeOrderUuid: 排除的订单UUID（避免重复统计）
+//
+// 返回:
+//   - float64: 已使用数量
+//   - error: 错误信息
+func (r *PurchaseOrderItemRepoImpl) SumBrandPurchaseByMonth(
+	materialCode string,
+	unitCode string,
+	month string,
+	excludeOrderUuid uint64,
+) (float64, error) {
+	var usedQty float64
+	err := r.db.Table("ttpos_purchase_order po").
+		Select("COALESCE(SUM(poi.num), 0) as used_qty").
+		Joins("JOIN ttpos_purchase_order_item poi ON po.uuid = poi.purchase_order_uuid").
+		Where("po.purchase_type = ?", 2). // 品牌采购 (constant.PurchaseTypeBrand)
+		Where("poi.material_code = ?", materialCode).
+		Where("poi.erpnext_uom = ?", unitCode).
+		Where("po.status != ?", constant.PurchaseOrderStatusDraft). // 排除草稿
+		Where("po.order_time > 0").                                 // order_time 必须有值
+		Where("po.uuid != ?", excludeOrderUuid).                    // 排除当前单据
+		Where("FROM_UNIXTIME(po.order_time, '%Y-%m') = ?", month).
+		Where("po.delete_time = 0").
+		Scan(&usedQty).Error
+
+	return usedQty, err
 }
 
 // applyOptions 应用查询选项
