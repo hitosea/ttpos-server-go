@@ -12,18 +12,18 @@
 
 ## 📊 进度总览
 
-**总任务数**: 32  
+**总任务数**: 51  
 **已完成**: 0  
 **进行中**: -  
 **完成率**: 0%
 
-**预估工作量**: 4.0 天（SP = 4）
+**预估工作量**: 5.0 天（SP = 5）
 
 ---
 
 ## Phase 0: 全局配置初始化
 
-- [ ] 0.1 添加全局配置项
+- [x] 0.1 添加全局配置项
 
   - File: 通过 SQL 或 Seeder 添加到 `ttpos_config` 表
   - Purpose: 初始化品牌采购申请次数和单次数量上限配置
@@ -54,15 +54,23 @@
 
 ---
 
-- [ ] 1.1 创建数据库迁移文件（调整表结构）
+- [ ] 1.1 创建限购配置主表迁移文件
 
   - File: `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_purchase_quota_config_table.php`
-  - Purpose: 定义限购配置表结构（支持多门店维度）
+  - Purpose: 定义限购配置主表结构（支持多门店维度）
   - Requirements: Requirement 3.1, 3.2, 3.3, 3.4
   - Leverage: 现有迁移文件: `admin/database/migrations/`，参考模板: `docs/agent/templates/database-migration-template.md`
-  - Prompt: Role: Database Engineer | Task: 创建 ttpos_purchase_quota_config 表的迁移文件，遵循 requirements.md 中的数据库设计 | Context: 必须包含 apply_to_all_shops(默认1) 和 shop_uuids(TEXT类型) 字段，移除 uk_material 唯一索引，添加 uk_uuid 唯一索引，添加 idx_material, idx_status 和 idx_delete_time 普通索引 | Restrictions: 遵循 .cursor/rules/database.mdc，迁移前检查表是否存在 | Success: 迁移文件创建成功，字段定义正确，索引完整
+  - Prompt: Role: Database Engineer | Task: 创建 ttpos_purchase_quota_config 表的迁移文件，遵循 requirements.md 中的数据库设计 | Context: 必须包含 apply_to_all_shops(默认1) 字段，添加 uk_uuid 唯一索引，添加 idx_material, idx_status 和 idx_delete_time 普通索引 | Restrictions: 遵循 .cursor/rules/database.mdc，迁移前检查表是否存在 | Success: 迁移文件创建成功，字段定义正确，索引完整
 
-- [ ] 1.1a 创建门店配置表迁移文件
+- [ ] 1.1a 创建限购配置门店关联表迁移文件
+
+  - File: `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_purchase_quota_config_shop_table.php`
+  - Purpose: 定义限购配置与门店的多对多关联关系
+  - Requirements: Requirement 3.1, 3.4
+  - Leverage: 现有迁移文件: `admin/database/migrations/`
+  - Prompt: Role: Database Engineer | Task: 创建 ttpos_purchase_quota_config_shop 关联表的迁移文件 | Context: 必须包含 config_uuid, shop_uuid, create_time, delete_time 字段，添加 uk_config_shop 联合唯一索引，添加 idx_config, idx_shop, idx_delete_time 普通索引 | Restrictions: 遵循 .cursor/rules/database.mdc | Success: 迁移文件创建成功，字段定义正确，索引完整
+
+- [ ] 1.1b 创建门店配置表迁移文件
 
   - File: `admin/database/migrations/{YYYYMMDDHHMMSS}_create_ttpos_shop_purchase_config_table.php`
   - Purpose: 创建门店级采购配置表
@@ -79,13 +87,13 @@
   - Command: `cd admin && php think migrate:run`
   - Success: 迁移执行成功，表已创建，索引已创建
 
-- [ ] 1.3 创建 Go Model（更新字段）
+- [ ] 1.3 创建 Go Model（支持关联表）
 
   - File: `main/app/model/purchase_quota_config.go`
-  - Purpose: 定义限购配置 Go 数据模型，支持多门店维度
+  - Purpose: 定义限购配置主表和关联表的 Go 数据模型
   - Requirements: Requirement 3.1-3.6
-  - Leverage: 现有 Model: `main/app/model/`，迁移文件: Task 1.1
-  - Prompt: Role: Go Developer | Task: 创建 PurchaseQuotaConfig 结构体，映射到 ttpos_purchase_quota_config 表 | Context: 使用 gorm 标签，增加 ApplyToAllShops 和 ShopUuids 字段，实现 GetShopUuidList() 和 SetShopUuidList() 方法用于 JSON 序列化/反序列化 | Restrictions: 遵循 .cursor/rules/go-main.mdc，ShopUuids 使用 string 类型存储 JSON | Success: Model 创建成功，字段映射正确，JSON 处理方法实现正确
+  - Leverage: 现有 Model: `main/app/model/`，迁移文件: Task 1.1, 1.1a
+  - Prompt: Role: Go Developer | Task: 创建 PurchaseQuotaConfig 和 PurchaseQuotaConfigShop 两个结构体，映射到主表和关联表 | Context: 主表使用 gorm 标签，增加 ApplyToAllShops 字段，增加 Shops []PurchaseQuotaConfigShop 关联字段；实现 GetShopUuidList() 和 AppliesTo(shopUuid) 方法 | Restrictions: 遵循 .cursor/rules/go-main.mdc，关联字段使用 foreignKey 和 references 标签 | Success: Model 创建成功，字段映射正确，关联关系正确，方法实现正确
 
 - [ ] 1.3a 创建门店配置 Go Model
 
@@ -110,26 +118,26 @@
 - [ ] 2.1 创建 Repository 接口
 
   - File: `main/app/repository/i_purchase_quota_config_repo.go`
-  - Purpose: 定义限购配置数据访问接口
+  - Purpose: 定义限购配置数据访问接口（包含门店关联操作）
   - Requirements: Requirement 1.1, 2.1, 3.1
   - Leverage: 现有 Repository 接口: `main/app/repository/i_*_repo.go`
-  - Prompt: Role: Go Developer specializing in Repository Pattern | Task: 创建 IPurchaseQuotaConfigRepo 接口，定义 GetByMaterialUuid, GetList 方法，以及选项方法 WhereStatus, WhereMaterialUuid | Context: 使用选项模式(DBOption)，接口方法返回 (*model.PurchaseQuotaConfig, error) 或 ([]*model.PurchaseQuotaConfig, int64, error) | Restrictions: 遵循 .cursor/rules/go-main.mdc，Repository 不能持有 DBManager | Success: 接口定义完整，方法签名正确
+  - Prompt: Role: Go Developer specializing in Repository Pattern | Task: 创建 IPurchaseQuotaConfigRepo 接口，定义 GetByMaterialUuidAndShop（支持门店过滤）, GetList, Create, Update, Delete, BatchCreateShops（批量创建门店关联）, DeleteShops（删除门店关联）方法，以及选项方法 WhereStatus, WhereMaterialUuid, WhereUuid | Context: 使用选项模式(DBOption)，接口方法返回 (*model.PurchaseQuotaConfig, error) 或 ([]*model.PurchaseQuotaConfig, int64, error) | Restrictions: 遵循 .cursor/rules/go-main.mdc，Repository 不能持有 DBManager | Success: 接口定义完整，方法签名正确，包含门店关联操作
 
-- [ ] 2.2 实现 Repository（选项模式）
+- [ ] 2.2 实现 Repository（选项模式+事务处理）
 
   - File: `main/app/repository/purchase_quota_config_repo.go`
-  - Purpose: 实现限购配置数据访问逻辑
+  - Purpose: 实现限购配置数据访问逻辑（包含门店关联事务处理）
   - Requirements: Requirement 1.1, 2.1, 3.1
   - Leverage: 现有 Repository 实现: `main/app/repository/*_repo.go`，使用选项模式
-  - Prompt: Role: Go Developer with GORM expertise | Task: 实现 purchaseQuotaConfigRepoImpl，使用选项模式实现灵活查询 | Context: 只持有 db *gorm.DB，实现 GetByMaterialUuid（查询启用状态的配置）, GetList, WhereStatus, WhereMaterialUuid 方法 | Restrictions: 不能持有 DBManager，使用 GORM，软删除(delete_time=0)，查询时过滤 status=1 | Success: Repository 实现完整，选项模式正确，软删除正确，状态过滤正确
+  - Prompt: Role: Go Developer with GORM expertise | Task: 实现 purchaseQuotaConfigRepoImpl，使用选项模式实现灵活查询 | Context: 只持有 db *gorm.DB，实现 GetByMaterialUuidAndShop（使用 EXISTS 子查询判断门店关联）, GetList, Create, Update, Delete（事务：同时软删除主表和关联表）, BatchCreateShops, DeleteShops, WhereStatus, WhereMaterialUuid, WhereUuid 方法 | Restrictions: 不能持有 DBManager，使用 GORM，软删除(delete_time=0)，查询时过滤 status=1，Delete 和创建门店关联必须使用事务 | Success: Repository 实现完整，选项模式正确，软删除正确，状态过滤正确，事务处理正确
 
 - [ ] 2.3 编写 Repository 单元测试
 
   - File: `main/app/repository/purchase_quota_config_repo_test.go`
-  - Purpose: 确保 Repository 数据访问正确
+  - Purpose: 确保 Repository 数据访问正确（包含门店关联测试）
   - Requirements: Requirement 1.1, 2.1
   - Leverage: 现有测试: `main/app/repository/*_repo_test.go`
-  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 PurchaseQuotaConfigRepo 编写单元测试，覆盖率 ≥ 80% | Context: 测试 GetByMaterialUuid（存在/不存在）, GetList（空/非空）, 选项方法，测试软删除，测试状态过滤 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 80%，所有测试通过
+  - Prompt: Role: QA Engineer with Go testing expertise | Task: 为 PurchaseQuotaConfigRepo 编写单元测试，覆盖率 ≥ 80% | Context: 测试 GetByMaterialUuidAndShop（apply_to_all_shops=1/0 时门店过滤逻辑）, GetList（空/非空）, Create, Update, Delete（主表和关联表同时删除）, BatchCreateShops, DeleteShops, 选项方法，测试软删除，测试状态过滤 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 80%，所有测试通过，门店关联逻辑测试充分
 
 ---
 
@@ -232,29 +240,29 @@
 
 ## Phase 6: API 开发
 
-- [ ] 6.1 实现限购配置创建/更新 API
+- [ ] 6.1 实现限购配置创建/更新 API（支持门店关联）
 
   - File: `main/app/api/v1/shop/shop_purchase_quota.go`
-  - Purpose: 创建或更新物品限购配置
+  - Purpose: 创建或更新物品限购配置（使用关联表存储门店关系）
   - Requirements: Requirement 9.1
   - Leverage: 现有 API: `main/app/api/v1/shop/`，Task 2.1-2.2 的 Repository
-  - Prompt: Role: Go API Developer | Task: 实现 POST /api/v1/shop/purchase/quota/config 接口 | Context: 接收 material_uuid, unit_uuid, quota_limit, apply_to_all_shops, shop_uuids，校验参数，调用 Repository 创建或更新配置 | Restrictions: 遵循 .cursor/rules/api.mdc，使用统一响应格式 | Success: API 实现完成，参数校验完整，错误处理正确
+  - Prompt: Role: Go API Developer | Task: 实现 POST /api/v1/shop/purchase/quota/config 接口 | Context: 接收 material_uuid, unit_uuid, quota_limit, apply_to_all_shops, shop_uuids，校验参数（apply_to_all_shops=false时shop_uuids必填），使用事务：1)创建/更新主表 2)如果apply_to_all_shops=false则先DeleteShops再BatchCreateShops，如果=true则只DeleteShops | Restrictions: 遵循 .cursor/rules/api.mdc，使用统一响应格式，必须使用事务保证一致性 | Success: API 实现完成，参数校验完整，错误处理正确，事务处理正确
 
-- [ ] 6.2 实现限购配置查询 API
+- [ ] 6.2 实现限购配置查询 API（包含门店列表）
 
   - File: `main/app/api/v1/shop/shop_purchase_quota.go`
-  - Purpose: 查询指定物品的限购配置
+  - Purpose: 查询指定物品的限购配置（返回关联的门店列表）
   - Requirements: Requirement 9.2
   - Leverage: Task 2.1-2.2 的 Repository
-  - Prompt: Role: Go API Developer | Task: 实现 GET /api/v1/shop/purchase/quota/config/{material_uuid} 接口 | Context: 根据 material_uuid 查询配置，返回配置详情（包含应用的门店数量统计） | Restrictions: 遵循 .cursor/rules/api.mdc | Success: API 实现完成，数据返回正确
+  - Prompt: Role: Go API Developer | Task: 实现 GET /api/v1/shop/purchase/quota/config/{material_uuid} 接口 | Context: 根据 material_uuid 查询配置，预加载 Shops 关联，返回配置详情（包含 shop_uuids 数组和 shop_count 统计） | Restrictions: 遵循 .cursor/rules/api.mdc | Success: API 实现完成，数据返回正确，包含门店列表
 
-- [ ] 6.3 实现限购配置删除 API
+- [ ] 6.3 实现限购配置删除 API（同时删除关联）
 
   - File: `main/app/api/v1/shop/shop_purchase_quota.go`
-  - Purpose: 删除限购配置
+  - Purpose: 删除限购配置（同时删除门店关联）
   - Requirements: Requirement 9.3
   - Leverage: Task 2.1-2.2 的 Repository
-  - Prompt: Role: Go API Developer | Task: 实现 DELETE /api/v1/shop/purchase/quota/config/{uuid} 接口 | Context: 根据 uuid 软删除配置 | Restrictions: 遵循 .cursor/rules/api.mdc | Success: API 实现完成，删除操作正确
+  - Prompt: Role: Go API Developer | Task: 实现 DELETE /api/v1/shop/purchase/quota/config/{uuid} 接口 | Context: 根据 uuid 调用 Repository.Delete（内部使用事务同时软删除主表和关联表） | Restrictions: 遵循 .cursor/rules/api.mdc | Success: API 实现完成，删除操作正确，事务处理正确
 
 - [ ] 6.4 实现门店配置查询 API
 
@@ -275,10 +283,18 @@
 - [ ] 6.6 API 单元测试
 
   - File: `main/app/api/v1/shop/shop_purchase_quota_test.go`
-  - Purpose: 测试限购配置相关 API
+  - Purpose: 测试限购配置相关 API（包含门店关联测试）
   - Requirements: 所有 API 需求
   - Leverage: 现有 API 测试
-  - Prompt: Role: QA Engineer | Task: 为限购配置 API 编写单元测试 | Context: 测试创建配置、查询配置、更新配置、删除配置、参数校验、错误处理 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 70%，所有测试通过
+  - Prompt: Role: QA Engineer | Task: 为限购配置 API 编写单元测试 | Context: 测试创建配置（apply_to_all_shops=true/false）、查询配置（返回门店列表）、更新配置（门店关联更新）、删除配置（同时删除关联）、参数校验（shop_uuids 为空时的校验）、错误处理 | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 测试覆盖率 ≥ 70%，所有测试通过，门店关联逻辑测试充分
+
+- [ ] 6.7 创建 API 控制器注册路由
+
+  - File: `main/app/api/v1/shop/router.go` 或相关路由文件
+  - Purpose: 注册限购配置相关 API 路由
+  - Requirements: 所有 API 需求
+  - Leverage: 现有路由注册代码
+  - Prompt: Role: Go API Developer | Task: 在路由文件中注册限购配置相关路由 | Context: POST /shop/purchase/quota/config, GET /shop/purchase/quota/config/:material_uuid, DELETE /shop/purchase/quota/config/:uuid | Restrictions: 遵循 .cursor/rules/go-main.mdc | Success: 路由注册成功，接口可访问
 
 ---
 
@@ -311,10 +327,10 @@
 - [ ] 7.4 物品限购配置弹窗 - UI 实现
 
   - File: 前端代码（根据前端仓库路径）
-  - Purpose: 实现物品限购配置弹窗
+  - Purpose: 实现物品限购配置弹窗（支持门店选择）
   - Requirements: Requirement 8.2-8.7
   - Leverage: 现有弹窗组件
-  - Prompt: Role: Frontend Developer | Task: 实现限购配置弹窗 | Context: 包含"应用到全部店铺"开关（默认开启），门店选择器（多选，支持搜索），限购数量输入框（数字键盘），确定和取消按钮 | Restrictions: 遵循 .cursor/rules/vue.mdc，使用 Element Plus 组件 | Success: 弹窗显示正确，交互流畅
+  - Prompt: Role: Frontend Developer | Task: 实现限购配置弹窗 | Context: 包含"应用到全部店铺"开关（默认开启），门店选择器（多选，支持搜索，当开关关闭时显示），限购数量输入框（数字键盘），确定和取消按钮 | Restrictions: 遵循 .cursor/rules/vue.mdc，使用 Element Plus 组件，门店数据从关联表获取 | Success: 弹窗显示正确，交互流畅，门店选择正确
 
 - [ ] 7.5 物品限购配置 - API 集成
 
@@ -339,10 +355,10 @@
 - [ ] 8.1 集成测试
 
   - File: `test/integration/purchase_quota_test.go`（可选）
-  - Purpose: 测试端到端限购功能
+  - Purpose: 测试端到端限购功能（包含门店维度）
   - Requirements: 所有功能需求
   - Leverage: 现有集成测试
-  - Prompt: Role: QA Automation Engineer | Task: 实现端到端集成测试 | Context: 创建限购配置，提交品牌采购申请，验证限购校验，测试超限场景，测试驳回后释放 | Restrictions: 测试真实用户场景 | Success: 集成测试通过
+  - Prompt: Role: QA Automation Engineer | Task: 实现端到端集成测试 | Context: 1)创建限购配置（apply_to_all_shops=true/false） 2)提交品牌采购申请 3)验证限购校验（全部门店 vs 指定门店） 4)测试超限场景 5)测试驳回后释放 6)测试门店关联删除 | Restrictions: 测试真实用户场景 | Success: 集成测试通过，门店维度测试充分
 
 - [ ] 8.2 性能测试
 
@@ -373,7 +389,7 @@
 - [ ] 所有任务标记为 `[x]`
 - [ ] Go 代码通过 `go fmt` 和 `go vet`
 - [ ] 测试覆盖率达标
-  - Repository: ≥ 80%
+  - Repository: ≥ 80%（包含门店关联逻辑测试）
   - Service（限购校验）: ≥ 70%
 - [ ] 所有测试通过
 
@@ -382,10 +398,13 @@
 - [ ] requirements.md 中的所有需求已满足
 - [ ] design.md 中的设计已实现
 - [ ] 验收标准已达成
-  - ✅ 限购配置表已创建
+  - ✅ 限购配置主表已创建
+  - ✅ 门店关联表已创建
   - ✅ 提交时限购校验生效
   - ✅ 单位约束生效
   - ✅ 无配置物品正常放行
+  - ✅ 门店维度限购生效（apply_to_all_shops=1 全部门店，=0 指定门店）
+  - ✅ 删除配置时同步删除门店关联
 
 ### 文档同步
 
@@ -423,12 +442,29 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/story-shop-brand-pr
 
 1. **选择任务**: 选择下一个未完成任务
 2. **阅读需求**: 查看 requirements.md 中的关联需求
-3. **查看复用**: 检查 Leverage 中的可复用代码
-4. **使用 AI**: 复制 Prompt 模板，让 AI 生成代码
-5. **实现代码**: 按照规范实现功能
-6. **运行检查**: `go fmt`, `go vet`, `go test`
-7. **标记完成**: 将 `[ ]` 改为 `[x]`
-8. **提交代码**: Git commit（参考 `.cursor/rules/version.mdc`）
+3. **查看设计**: 查看 design.md 中的设计细节（特别注意关联表模式）
+4. **查看复用**: 检查 Leverage 中的可复用代码
+5. **使用 AI**: 复制 Prompt 模板，让 AI 生成代码
+6. **实现代码**: 按照规范实现功能（注意事务处理）
+7. **运行检查**: `go fmt`, `go vet`, `go test`
+8. **标记完成**: 将 `[ ]` 改为 `[x]`
+9. **提交代码**: Git commit（参考 `.cursor/rules/version.mdc`）
+
+### ⚠️ 关键注意事项
+
+1. **数据库设计变更**：从 JSON 字段改为关联表模式
+   - 主表：`ttpos_purchase_quota_config`（包含 apply_to_all_shops 字段）
+   - 关联表：`ttpos_purchase_quota_config_shop`（存储门店关联）
+   
+2. **事务处理要求**：
+   - 创建/更新配置时，需要同步处理关联表
+   - 删除配置时，必须同时软删除主表和关联表
+   - 使用 GORM 事务确保数据一致性
+
+3. **查询逻辑**：
+   - `apply_to_all_shops=1`：应用到全部门店，关联表无记录
+   - `apply_to_all_shops=0`：应用到指定门店，关联表有记录
+   - 使用 EXISTS 子查询判断门店是否在适用范围内
 
 ---
 
@@ -439,13 +475,14 @@ echo "scale=2; $(grep -c "^- \[x\]" docs/shared/specs/active/story-shop-brand-pr
 ```
 Role: Go Developer specializing in Repository Pattern with GORM expertise
 
-Task: 实现 PurchaseQuotaConfigRepo，提供限购配置数据访问
+Task: 实现 PurchaseQuotaConfigRepo，提供限购配置数据访问（支持关联表模式）
 
 Context:
 - Current file: main/app/repository/purchase_quota_config_repo.go
 - Interface file: main/app/repository/i_purchase_quota_config_repo.go
 - Leverage code: main/app/repository/*_repo.go (选项模式示例)
 - Requirements: Requirement 1.1, 2.1, 3.1 in requirements.md
+- Design: 使用关联表 ttpos_purchase_quota_config_shop 存储门店关联
 - Project specs: 遵循 .cursor/rules/go-main.mdc, .cursor/rules/database.mdc
 
 Restrictions:
@@ -454,11 +491,15 @@ Restrictions:
 - 使用选项模式(DBOption) 实现灵活查询
 - 软删除查询必须过滤 delete_time=0
 - 查询限购配置时必须过滤 status=1（启用状态）
+- GetByMaterialUuidAndShop 使用 EXISTS 子查询判断门店关联
+- Delete 方法必须使用事务同时软删除主表和关联表
 - 使用 errors.WithMessage 包装错误
 
 Success Criteria:
 - Repository 实现完整，选项模式正确
 - 软删除过滤正确，状态过滤正确
+- 门店关联查询逻辑正确（apply_to_all_shops=1 OR EXISTS）
+- 事务处理正确（Delete, BatchCreateShops）
 - 代码通过 go fmt 和 go vet
 - 单元测试覆盖率 ≥ 80%
 ```
