@@ -1820,6 +1820,7 @@ func (s *authSrv) GetCompanyList(ctx context.Context) []*resp.CompanyStaffResp {
 		// 从 saas 数据库查询 company
 		targetCompany, err := companyRepo.GetCompanyInfoByUuid(cs.CompanyUuid)
 		if err != nil || targetCompany == nil {
+			logger.Logger.Error("从 saas 数据库查询 company 信息失败", zap.Error(err))
 			continue
 		}
 		companySettingRepo := repository.NewCompanySettingRepo(shopDb)
