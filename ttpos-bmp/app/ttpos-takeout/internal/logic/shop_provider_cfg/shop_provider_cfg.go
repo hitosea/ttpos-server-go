@@ -98,23 +98,32 @@ func (s *sShopProviderCfg) GetShopProviderCfg(ctx context.Context, shopUUID uint
 		providerName = string(consts.ProviderGrab)
 	}
 
-	var cfg entity.ShopProviderCfg
-	err := dao.ShopProviderCfg.Ctx(ctx).
+	// 使用 One() 查询单条记录
+	record, err := dao.ShopProviderCfg.Ctx(ctx).
 		Where(dao.ShopProviderCfg.Columns().ShopUuid, shopUUID).
 		Where(dao.ShopProviderCfg.Columns().ProviderName, providerName).
 		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
-		Scan(&cfg)
+		One()
 
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] 查询失败: shop_uuid=%d, provider=%s, error: %v",
 			shopUUID, providerName, err)
+		return nil, err
+	}
+
+	// 检查记录是否存在
+	if record.IsEmpty() {
+		g.Log().Debugf(ctx, "[ShopProviderCfg] 未找到: shop_uuid=%d, provider=%s", shopUUID, providerName)
 		return nil, nil
 	}
 
-	// 检查是否找到记录
-	if cfg.Id == 0 {
-		g.Log().Debugf(ctx, "[ShopProviderCfg] 未找到: shop_uuid=%d, provider=%s", shopUUID, providerName)
-		return nil, nil
+	// 转换为实体
+	var cfg entity.ShopProviderCfg
+	err = record.Struct(&cfg)
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 数据转换失败: shop_uuid=%d, provider=%s, error: %v",
+			shopUUID, providerName, err)
+		return nil, err
 	}
 
 	return &cfg, nil
@@ -152,22 +161,32 @@ func (s *sShopProviderCfg) GetShopProviderCfgByMerchantID(ctx context.Context, m
 		providerName = string(consts.ProviderGrab)
 	}
 
-	var cfg entity.ShopProviderCfg
-	err := dao.ShopProviderCfg.Ctx(ctx).
+	// 使用 One() 查询单条记录
+	record, err := dao.ShopProviderCfg.Ctx(ctx).
 		Where(dao.ShopProviderCfg.Columns().ProviderMerchantId, merchantID).
 		Where(dao.ShopProviderCfg.Columns().ProviderName, providerName).
 		Where(dao.ShopProviderCfg.Columns().DeletedAt, 0).
-		Scan(&cfg)
+		One()
 
 	if err != nil {
 		g.Log().Errorf(ctx, "[ShopProviderCfg] 通过 MerchantID 查询失败: merchant_id=%s, provider=%s, error: %v",
 			merchantID, providerName, err)
+		return nil, err
+	}
+
+	// 检查记录是否存在
+	if record.IsEmpty() {
+		g.Log().Debugf(ctx, "[ShopProviderCfg] 通过 MerchantID 未找到: merchant_id=%s, provider=%s", merchantID, providerName)
 		return nil, nil
 	}
 
-	if cfg.Id == 0 {
-		g.Log().Debugf(ctx, "[ShopProviderCfg] 通过 MerchantID 未找到: merchant_id=%s, provider=%s", merchantID, providerName)
-		return nil, nil
+	// 转换为实体
+	var cfg entity.ShopProviderCfg
+	err = record.Struct(&cfg)
+	if err != nil {
+		g.Log().Errorf(ctx, "[ShopProviderCfg] 数据转换失败: merchant_id=%s, provider=%s, error: %v",
+			merchantID, providerName, err)
+		return nil, err
 	}
 
 	return &cfg, nil
