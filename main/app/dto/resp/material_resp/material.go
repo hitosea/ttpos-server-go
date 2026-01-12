@@ -80,6 +80,10 @@ type MaterialDetailResp struct {
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
 	OriginCountry          *CountryItem         `json:"origin_country"`            // 原产地国家信息（可选）
 	IsEditable             bool                 `json:"is_editable"`               // 是否可编辑
+
+	// 兼容旧版本客户端
+	// 估值率,字段名称为 valuation, 兼容旧版本客户端, 2.12.0 版本后不再使用 valuation_rate 字段
+	Valuation float64 `json:"valuation"` // 估值率
 }
 
 // MaterialStockDetailResp 物品库存详情响应
