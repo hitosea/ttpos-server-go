@@ -7123,6 +7123,10 @@
   "默认语言不能为空": "Default language cannot be empty",
   "默认语言必须在常用语言列表中": "Default language must be in the list of common languages",
   "默认选中字段必须为0（不默认选中）或1（默认选中）": "The default-selected field must be 0 (not selected by default) or 1 (selected by default)",
+  "今日申请次数已达上限（%s次），请明天再试": "Daily application limit reached (%s times), please try again tomorrow",
+  "物品 %s 只能使用 %s 单位进行采购": "Item %s can only be purchased in %s unit",
+  "本次申请 %s 数量已超限（已用 %s + 本次 %s > 限额 %s），请减少物品数量后重试": "The quantity of %s exceeds the limit (used %s + current %s > limit %s), please reduce the quantity and try again",
+  "本次申请 %s 数量已超限（最多 %v），请减少物品数量后重试": "The quantity for %s in this request exceeds the limit (max: %v). Please reduce the quantity and try again",
   "點餐-店內": "Order - Dine-in",
   "龘": "龘",
   "龙": "Dragon"
