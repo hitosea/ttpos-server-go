@@ -4,6 +4,10 @@ package grab
 import (
 	"context"
 	"fmt"
+	"strings"
+	"ttpos-bmp/app/ttpos-takeout/internal/dao"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
+	"ttpos-bmp/utility/uuid"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gcode"
@@ -105,4 +109,62 @@ func (s *sGrab) HandlePushGrabMenu(ctx context.Context, dto *grabDto.PushGrabMen
 		ReceivedAt:        gtime.Timestamp(),
 	}
 	return s.NotifyMenuUpdateEvent(ctx, event)
+}
+
+// HandleMenuSyncState 处理菜单同步状态回调
+// 使用 SDK grabfood.MenuSyncWebhookRequest
+func (s *sGrab) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncWebhookRequest) error {
+	requestID := req.GetRequestID()
+	status := req.GetStatus()
+
+	g.Log().Infof(ctx, "[Grab] 处理菜单同步状态: requestID=%s, merchantID=%s, status=%s",
+		requestID, req.GetMerchantID(), status)
+
+	// 通过 Grab MerchantID 查询 shopUUID
+	merchantID := req.GetMerchantID()
+	cfg, err := service.ShopProviderCfg().GetShopProviderCfgByMerchantID(ctx, merchantID, string(consts.ProviderGrab))
+	if err != nil {
+		g.Log().Warningf(ctx, "[Grab] 获取门店配置失败: merchantID=%s, error: %v", merchantID, err)
+		// 不中断流程，继续处理 MenuLog 插入
+	} else if cfg == nil || cfg.Id == 0 {
+		g.Log().Warningf(ctx, "[Grab] 未找到对应的门店配置: merchantID=%s", merchantID)
+		// 不中断流程，继续处理 MenuLog 插入
+	} else {
+		shopUUID := cfg.ShopUuid
+		// 更新 channel_menu_snapshot 的状态
+		_, err := dao.ChannelMenuSnapshot.Ctx(ctx).
+			Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, shopUUID).
+			Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
+			Data(g.Map{
+				dao.ChannelMenuSnapshot.Columns().SyncState: status,
+				dao.ChannelMenuSnapshot.Columns().UpdatedAt: gtime.Now().Unix(),
+			}).Update()
+		if err != nil {
+			g.Log().Errorf(ctx, "[Grab] 更新渠道菜单快照状态失败: shopUUID=%d, status=%s, error: %v", shopUUID, status, err)
+			// 不中断流程，继续处理 MenuLog 插入
+		} else {
+			g.Log().Infof(ctx, "[Grab] 渠道菜单快照状态已更新: shopUUID=%d, status=%s", shopUUID, status)
+		}
+	}
+
+	// 插入新的菜单日志记录（每次状态回调都插入新记录）
+	logUUID := uuid.MustGetID()
+	errMsg := ""
+	if status == grabDto.MenuSyncStatusFail && len(req.GetErrors()) > 0 {
+		errMsg = strings.Join(req.GetErrors(), "; ")
+	}
+
+	logDo := &do.MenuLog{
+		Uuid:         logUUID,
+		MerchantId:   req.GetMerchantID(),
+		ProviderName: string(consts.ProviderGrab),
+		Status:       status,
+		ErrorMsg:     errMsg,
+	}
+	_, err = dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
+	if err != nil {
+		g.Log().Errorf(ctx, "[Grab] 插入菜单日志失败: %v", err)
+	}
+	g.Log().Infof(ctx, "[Grab] 菜单同步状态已处理: requestId=%s, status=%s, logUUID=%v", requestID, status, logUUID)
+	return nil
 }

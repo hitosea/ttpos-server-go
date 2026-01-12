@@ -9,7 +9,6 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
 
-	"ttpos-bmp/app/ttpos-takeout/api/grab"
 	"ttpos-bmp/app/ttpos-takeout/api/shop"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
@@ -102,32 +101,23 @@ func (s *sShopActivate) activateLineman(ctx context.Context, shopUUID uint64, re
 //   - res: 激活结果，包含 self_serve_url
 //   - err: 操作过程中产生的错误（若有）
 func (s *sShopActivate) activateGrab(ctx context.Context, req *shop.ActivateShopReq) (*shop.ActivateShopResp, error) {
+	// shop_uuid 即为 Grab MerchantID
+	merchantID := req.ShopUuid
+
 	// 调用 Grab 自助激活服务
-	grabReq := &grab.CreateSelfServeJourneyReq{
-		ProviderName: req.ProviderName,
-		ShopUuid:     req.ShopUuid,
-		RequestId:    req.RequestId,
-	}
-	grabResp, err := service.Grab().CreateSelfServeJourneyWithReq(ctx, grabReq)
+	activationURL, requestID, err := service.Grab().CreateSelfServeJourney(ctx, merchantID)
 	if err != nil {
-		g.Log().Errorf(ctx, "[ShopActivate] Grab 渠道激活失败: shop_uuid=%s, error=%v", req.ShopUuid, err)
+		g.Log().Errorf(ctx, "[ShopActivate] Grab 渠道激活失败: merchant_id=%s, error=%v", merchantID, err)
 		return nil, gerror.Wrap(err, "Grab 渠道激活失败")
 	}
 
-	g.Log().Infof(ctx, "[ShopActivate] Grab 渠道激活成功: shop_uuid=%s, self_serve_url=%s", req.ShopUuid, grabResp.SelfServeUrl)
-
-	// 查询配置
-	shopUUID := gconv.Uint64(req.ShopUuid)
-	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab))
-	if err != nil {
-		return nil, gerror.Wrap(err, "查询 Grab 配置失败")
-	}
+	g.Log().Infof(ctx, "[ShopActivate] Grab 渠道激活成功: merchant_id=%s, self_serve_url=%s", merchantID, activationURL)
 
 	return &shop.ActivateShopResp{
-		ShopUuid:     cfg.ShopUuid,
-		ProviderName: cfg.ProviderName,
-		SelfServeUrl: grabResp.SelfServeUrl,
-		RequestId:    grabResp.RequestId,
-		UpdatedAt:    int64(cfg.UpdatedAt),
+		ShopUuid:     gconv.Uint64(req.ShopUuid),
+		ProviderName: req.ProviderName,
+		SelfServeUrl: activationURL,
+		RequestId:    requestID,
+		UpdatedAt:    0, // 激活时尚未创建配置记录
 	}, nil
 }
