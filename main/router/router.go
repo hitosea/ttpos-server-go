@@ -186,7 +186,6 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			kiosk.RegisterAuthHandlers(kioskGroup, dbm, cache)
 			kiosk.RegisterBaseHandlers(kioskGroup, dbm, cache)
-			kiosk.RegisterCallHandlers(kioskGroup, dbm, cache)
 			kiosk.RegisterProductHandlers(kioskGroup, dbm, cache)
 			kiosk.RegisterOrderHandlers(kioskGroup, dbm, cache)
 		}

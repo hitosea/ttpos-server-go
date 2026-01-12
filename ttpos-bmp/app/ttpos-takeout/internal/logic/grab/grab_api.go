@@ -5,13 +5,17 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	grabfood "github.com/grab/grabfood-api-sdk-go"
 
 	"ttpos-bmp/app/ttpos-takeout/internal/client/grab"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 // ============================================================================
@@ -481,9 +485,25 @@ func (s *sGrab) BatchUpdateMenu(ctx context.Context, merchantID string, req *gra
 // ============================================================================
 
 // CreateSelfServeJourney 创建自助激活链接
-// merchantID: Grab Merchant ID
+// merchantID: Grab Merchant ID (shop_uuid)
 // 返回: activation_url, request_id
 func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (string, string, error) {
+	// 1. 配置验证
+	conf := MustConfig(ctx)
+	if conf == nil {
+		return "", "", gerror.NewCode(gcode.CodeInternalError, "Grab 平台配置未加载，请检查配置文件 app.provider.grab.platform")
+	}
+	if conf.ClientID == "" {
+		return "", "", gerror.NewCode(gcode.CodeInternalError, "Grab 配置不完整：缺少 ClientID，请检查配置文件 app.provider.grab.platform.clientId")
+	}
+	if conf.ClientSecret == "" {
+		return "", "", gerror.NewCode(gcode.CodeInternalError, "Grab 配置不完整：缺少 ClientSecret，请检查配置文件 app.provider.grab.platform.clientSecret")
+	}
+	if conf.Environment == "" {
+		return "", "", gerror.NewCode(gcode.CodeInternalError, "Grab 配置不完整：缺少 Environment，请检查配置文件 app.provider.grab.platform.environment")
+	}
+
+	// 2. 调用 SDK API
 	client := grab.Default()
 	auth, err := client.GetAuthorizationHeader(ctx)
 	if err != nil {
@@ -507,7 +527,9 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (
 		Execute()
 
 	if err = client.HandleSDKError(ctx, err, "CreateSelfServeJourney"); err != nil {
-		return "", "", err
+		g.Log().Errorf(ctx, "[Grab] 创建自助激活链接失败: merchant=%s, error=%v", merchantID, err)
+		// 错误映射：根据错误类型返回不同的错误码
+		return "", "", mapGrabError(err)
 	}
 	if httpResp != nil {
 		defer httpResp.Body.Close()
@@ -530,6 +552,50 @@ func (s *sGrab) CreateSelfServeJourney(ctx context.Context, merchantID string) (
 		}
 	}
 
+	// 3. 旅程创建成功，落库 shop_provider_cfg（状态 SYNCING）
+	shopUUID := g.NewVar(merchantID).Uint64()
+	if shopUUID > 0 {
+		if upsertErr := service.ShopProviderCfg().UpsertShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab), "", consts.ProviderShopStatusSyncing); upsertErr != nil {
+			// 记录错误但不中断流程，旅程创建已成功
+			g.Log().Warningf(ctx, "[Grab] 创建自助激活链接时更新门店第三方配置失败: shop_uuid=%d, error=%v", shopUUID, upsertErr)
+		}
+	}
+
 	g.Log().Infof(ctx, "[Grab] 自助激活链接已创建: merchant=%s, requestId=%s", merchantID, requestID)
 	return activationURL, requestID, nil
+}
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+
+// mapGrabError 映射 Grab SDK 错误到业务错误
+func mapGrabError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	errStr := err.Error()
+	// 授权错误
+	if contains(errStr, "401") || contains(errStr, "unauthorized") || contains(errStr, "authentication") {
+		return gerror.NewCode(gcode.CodeNotAuthorized, fmt.Sprintf("Grab 授权失败: %v", err))
+	}
+
+	// 参数错误
+	if contains(errStr, "400") || contains(errStr, "bad request") || contains(errStr, "invalid") {
+		return gerror.NewCode(gcode.CodeInvalidParameter, fmt.Sprintf("Grab 参数错误: %v", err))
+	}
+
+	// 网络超时
+	if contains(errStr, "timeout") || contains(errStr, "deadline exceeded") {
+		return gerror.NewCode(gcode.CodeInternalError, fmt.Sprintf("Grab API 调用超时: %v", err))
+	}
+
+	// 其他错误
+	return gerror.Wrap(err, "Grab API 调用失败")
+}
+
+// contains 检查字符串是否包含子串（不区分大小写）
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

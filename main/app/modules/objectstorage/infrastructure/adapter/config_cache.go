@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"encoding/json"
-	"slices"
 	"time"
 
 	"ttpos-server-go/app/modules/objectstorage/domain/repository"
@@ -140,22 +139,24 @@ func queryConfigFromDB() (ObjectStorageCacheConfig, error) {
 // 返回：
 //   - true: 启用缓存，false: 禁用缓存
 func IsObjectStorageCacheEnabled(companyUuid uint64) bool {
-	if companyUuid == 0 {
-		return false
-	}
+	return false // 暂时禁用缓存
 
-	config := GetObjectStorageCacheConfig()
+	// if companyUuid == 0 {
+	// 	return false
+	// }
 
-	// 如果全局开关关闭，直接返回 false
-	if !config.Enabled {
-		return false
-	}
+	// config := GetObjectStorageCacheConfig()
 
-	// 如果白名单为空，则不启用缓存
-	if len(config.Whitelist) == 0 {
-		return false
-	}
+	// // 如果全局开关关闭，直接返回 false
+	// if !config.Enabled {
+	// 	return false
+	// }
 
-	// 检查当前门店是否在白名单内
-	return slices.Contains(config.Whitelist, companyUuid)
+	// // 如果白名单为空，则不启用缓存
+	// if len(config.Whitelist) == 0 {
+	// 	return false
+	// }
+
+	// // 检查当前门店是否在白名单内
+	// return slices.Contains(config.Whitelist, companyUuid)
 }

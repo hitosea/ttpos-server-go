@@ -298,7 +298,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 
 	// 查询外卖订单，按 platform 分组统计
 	takeoutOrderTable := prefix + "takeout_order"
-	// validOrderStates: 10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消
+	// validOrderStates: 10=已接单配餐中, 20=待骑手接单, 30=骑手配送中, 40=已完成, 60=已取消，且 accepted_time > 0
 	validOrderStates := []int{10, 20, 30, 40, 60}
 
 	query5 := queryDb5.Table(takeoutOrderTable+" AS to_order").
@@ -311,6 +311,7 @@ func (r *StatisticsRepo) CountUserAnalysis(startTime, endTime int64, language st
 			"COUNT(DISTINCT to_order.uuid) AS order_count").
 		Where("to_order.delete_time = ?", constant.NotDeleted).
 		Where("to_order.accepted_time >= ? AND to_order.accepted_time <= ?", startTime, endTime).
+		Where("to_order.accepted_time > 0").
 		Where("to_order.order_state IN (?)", validOrderStates).
 		Where("to_order.platform IN (?, ?)", "grab", "lineman") // 只统计 Grab 和 LINE MAN
 	err = query5.Group("to_order.platform, name").

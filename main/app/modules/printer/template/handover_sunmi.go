@@ -396,29 +396,31 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.AppendText("------------------------------------------------")
 		printer.LineFeed(2)
 		// 税收百分比对象列表
-		for _, percentage := range businessData.PercentageList {
-			printer.SetAlignment(pkg.AlignLeft)
-			printer.SetPrintModes(true, false, false)
-			if t.base.Lang == "ja" {
-				printer.AppendText(fmt.Sprintf("%s%s%s", t.base.Amount(percentage.TaxRate), "%", t.base.Translate("的对象")))
-			} else {
-				printer.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
+		if len(businessData.PercentageList) > 0 {
+			for _, percentage := range businessData.PercentageList {
+				printer.SetAlignment(pkg.AlignLeft)
+				printer.SetPrintModes(true, false, false)
+				if t.base.Lang == "ja" {
+					printer.AppendText(fmt.Sprintf("%s%s%s", t.base.Amount(percentage.TaxRate), "%", t.base.Translate("的对象")))
+				} else {
+					printer.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
+				}
+				printer.SetPrintModes(false, false, false)
+				printer.LineFeed(1)
+				printer.SetAlignment(pkg.AlignLeft)
+				printer.PrintInColumns(t.base.Translate("合计"), t.base.GetPriceAndUnit(percentage.TotalPrice))
+				printer.LineFeed(1)
+				printer.SetAlignment(pkg.AlignRight)
+				if t.base.Lang == "ja" {
+					printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消费税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+				} else {
+					printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+				}
+				printer.LineFeed(2)
 			}
-			printer.SetPrintModes(false, false, false)
-			printer.LineFeed(1)
-			printer.SetAlignment(pkg.AlignLeft)
-			printer.PrintInColumns(t.base.Translate("合计"), t.base.GetPriceAndUnit(percentage.TotalPrice))
-			printer.LineFeed(1)
-			printer.SetAlignment(pkg.AlignRight)
-			if t.base.Lang == "ja" {
-				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消费税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
-			} else {
-				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
-			}
+			printer.AppendText("------------------------------------------------")
 			printer.LineFeed(2)
 		}
-		printer.AppendText("------------------------------------------------")
-		printer.LineFeed(2)
 		// 合计
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, false, false)

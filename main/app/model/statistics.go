@@ -402,6 +402,7 @@ type ChannelSaleRepoResult struct {
 	TotalDeskNum       sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
 	TotalMealNum       sql.NullInt64   `gorm:"column:total_meal_num;comment:总用餐人数"`
 	OrderAmountMealAvg sql.NullFloat64 `gorm:"column:order_amount_meal_avg;comment:人均订单金额"`
+	TotalOrderAmount   sql.NullFloat64 `gorm:"column:total_order_amount;comment:总订单金额"`
 }
 
 // UserAnalysisItemRepo 用户分析统计项（Repository层）

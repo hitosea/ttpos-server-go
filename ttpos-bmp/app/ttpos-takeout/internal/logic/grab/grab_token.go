@@ -3,7 +3,6 @@ package grab
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -44,7 +43,7 @@ func getTokenSecretKey(ctx context.Context) string {
 		return tokenSecretKey
 	}
 	tokenMu.RUnlock()
-	
+
 	tokenMu.Lock()
 	defer tokenMu.Unlock()
 	if tokenSecretKey == "" {
@@ -110,66 +109,4 @@ func (s *sGrab) GetPartnerToken(ctx context.Context, clientID string, clientSecr
 	}
 
 	return signed, tokenExpiresIn, nil
-}
-
-// ParsePartnerToken 校验并解析 Partner Token
-// 参数：
-//   - ctx: 上下文
-//   - tokenStr: JWT Token 字符串
-//
-// 返回：
-//   - claims: Token 中的声明信息
-//   - err: 错误信息
-func (s *sGrab) ParsePartnerToken(tokenStr string) (*grab.PartnerTokenClaims, error) {
-	// 清理 token 字符串
-	tokenStr = strings.TrimSpace(tokenStr)
-	if tokenStr == "" {
-		return nil, gerror.New("Token 不能为空")
-	}
-
-	// 验证 JWT Token 格式：应该包含三个部分，用点号分隔
-	tokenParts := strings.Split(tokenStr, ".")
-	if len(tokenParts) != 3 {
-		return nil, gerror.Newf("Token 格式错误: 期望 3 个部分，实际 %d 个部分", len(tokenParts))
-	}
-
-	secretKey := getTokenSecretKey(context.Background())
-	token, err := jwt.ParseWithClaims(tokenStr, &grab.PartnerTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-		if t.Method != jwt.SigningMethodHS256 {
-			return nil, gerror.Newf("不支持的签名方法: %s", t.Method.Alg())
-		}
-		return []byte(secretKey), nil
-	})
-	if err != nil {
-		return nil, gerror.Wrap(err, "Token 解析失败")
-	}
-	claims, ok := token.Claims.(*grab.PartnerTokenClaims)
-	if !ok || !token.Valid {
-		return nil, gerror.New("Token 无效")
-	}
-	return claims, nil
-}
-
-// GetPartnerConfig 通过 partner code 获取配置
-// 参数：
-//   - ctx: 上下文
-//   - code: Partner 代码
-//
-// 返回：
-//   - partner: Partner 配置
-//   - err: 错误信息
-func (s *sGrab) GetPartnerConfig(ctx context.Context, code string) (*conf.GrabPartner, error) {
-	return getTokenConfigLoader().GetByCode(ctx, code)
-}
-
-// GetPartnerConfigByClientID 通过 client_id 获取配置
-// 参数：
-//   - ctx: 上下文
-//   - clientID: Client ID
-//
-// 返回：
-//   - partner: Partner 配置
-//   - err: 错误信息
-func (s *sGrab) GetPartnerConfigByClientID(ctx context.Context, clientID string) (*conf.GrabPartner, error) {
-	return getTokenConfigLoader().GetByClientID(ctx, clientID)
 }

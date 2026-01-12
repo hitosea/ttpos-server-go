@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
-	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
+	printerConst "ttpos-server-go/app/modules/printer/constant"
 	"ttpos-server-go/app/modules/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 
@@ -278,28 +278,30 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.AppendText("\n------------------------------------------------")
 		printer.LineFeed(1)
 		// 税收百分比对象列表
-		for _, percentage := range businessData.PercentageList {
-			printer.SetAlignment(pkg.AlignLeft)
-			printer.SetPrintModes(true, false, false)
-			if t.base.Lang == "ja" {
-				printer.AppendText(fmt.Sprintf("%s%s%s", t.base.Amount(percentage.TaxRate), "%", t.base.Translate("的对象")))
-			} else {
-				printer.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
+		if len(businessData.PercentageList) > 0 {
+			for _, percentage := range businessData.PercentageList {
+				printer.SetAlignment(pkg.AlignLeft)
+				printer.SetPrintModes(true, false, false)
+				if t.base.Lang == "ja" {
+					printer.AppendText(fmt.Sprintf("%s%s%s", t.base.Amount(percentage.TaxRate), "%", t.base.Translate("的对象")))
+				} else {
+					printer.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
+				}
+				printer.SetPrintModes(false, false, false)
+				printer.LineFeed(1)
+				printer.SetAlignment(pkg.AlignLeft)
+				printer.AppendText(t.base.PrintText(t.base.Translate("合计"), "", t.base.GetPriceAndUnit(percentage.TotalPrice), width))
+				printer.LineFeed(1)
+				printer.SetAlignment(pkg.AlignRight)
+				if t.base.Lang == "ja" {
+					printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消费税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+				} else {
+					printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+				}
+				printer.LineFeed(1)
 			}
-			printer.SetPrintModes(false, false, false)
-			printer.LineFeed(1)
-			printer.SetAlignment(pkg.AlignLeft)
-			printer.AppendText(t.base.PrintText(t.base.Translate("合计"), "", t.base.GetPriceAndUnit(percentage.TotalPrice), width))
-			printer.LineFeed(1)
-			printer.SetAlignment(pkg.AlignRight)
-			if t.base.Lang == "ja" {
-				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消费税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
-			} else {
-				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
-			}
-			printer.LineFeed(1)
+			printer.AppendText("------------------------------------------------")
 		}
-		printer.AppendText("------------------------------------------------")
 		// 合计
 		printer.SetAlignment(pkg.AlignCenter)
 		printer.SetPrintModes(true, false, false)
@@ -307,13 +309,13 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("所有订单数"), "", float64(businessData.TotalOrderNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("所有订单数"), "", fmt.Sprintf("%.0f", float64(businessData.TotalOrderNum)), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("取消订单数"), "", fmt.Sprintf("%.0f", float64(businessData.TotalCancelOrderNum)), width))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("桌数"), "", float64(businessData.TotalTableNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("桌数"), "", fmt.Sprintf("%.0f", float64(businessData.TotalTableNum)), width))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", float64(businessData.TotalPeopleNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("人数"), "", fmt.Sprintf("%.0f", float64(businessData.TotalPeopleNum)), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("最小/大订单金额"), "", fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.MinOrderPrice), t.base.GetPriceAndUnit(businessData.MaxOrderPrice)), width))
 		printer.LineFeed(1)

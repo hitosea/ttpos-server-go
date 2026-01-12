@@ -907,11 +907,14 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, pr
 	} else {
 		// 异步打印顾客联
 		utils.Go(func() {
-			printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
+			_, err := printer.NewPrinterRepo(ctx, printLang).PrintingPlatformTakeoutReceipt(
 				order,
 				printerConst.TakeoutReceiptTypeCustomer,
 				0,
 			)
+			if err != nil {
+				logger.Logger.Error("打印顾客联失败", zap.Error(err))
+			}
 		})
 
 		//打印商家联
@@ -921,6 +924,7 @@ func (s *takeoutSrv) PrintTakeoutOrder(ctx context.Context, orderUuid uint64, pr
 			firstExecution,
 		)
 		if err != nil {
+			logger.Logger.Error("打印商家联失败", zap.Error(err))
 			return nil, err
 		}
 		return receiptData, nil

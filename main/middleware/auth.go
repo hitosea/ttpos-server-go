@@ -62,7 +62,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		return
 	}
 
-	if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant, constant.SourceKitchen, constant.SourceTablet}, claims.Source) {
+	if !slices.Contains([]string{constant.SourceShop, constant.SourceCashier, constant.SourceAssistant, constant.SourceKitchen, constant.SourceTablet, constant.SourceKiosk}, claims.Source) {
 		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
 		c.Abort()
 		return

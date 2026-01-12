@@ -12,7 +12,6 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
-
 	"ttpos-bmp/utility/uuid"
 )
 
