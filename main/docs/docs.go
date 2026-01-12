@@ -18558,8 +18558,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/kiosk/order/pay/info": {
-            "get": {
+        "/kiosk/order/pay": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
