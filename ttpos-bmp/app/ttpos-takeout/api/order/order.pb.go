@@ -92,6 +92,7 @@ type GetOrderInfoResp struct {
 	OrderType     string                 `protobuf:"bytes,3,opt,name=order_type,json=orderType,proto3" json:"order_type,omitempty" dc:"订单类型"`                                    // 订单类型
 	RawData       string                 `protobuf:"bytes,4,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty" dc:"原始JSON数据"`                                      // 原始JSON数据
 	ProviderName  string                 `protobuf:"bytes,5,opt,name=provider_name,json=providerName,proto3" json:"provider_name,omitempty" dc:"渠道名称: grab, foodpanda, lineman"` // 渠道名称: grab, foodpanda, lineman
+	OrderData     string                 `protobuf:"bytes,6,opt,name=order_data,json=orderData,proto3" json:"order_data,omitempty" dc:"转换后的统一订单数据（TakeoutOrder JSON）"`           // 转换后的统一订单数据（TakeoutOrder JSON）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -157,6 +158,13 @@ func (x *GetOrderInfoResp) GetRawData() string {
 func (x *GetOrderInfoResp) GetProviderName() string {
 	if x != nil {
 		return x.ProviderName
+	}
+	return ""
+}
+
+func (x *GetOrderInfoResp) GetOrderData() string {
+	if x != nil {
+		return x.OrderData
 	}
 	return ""
 }
@@ -603,14 +611,16 @@ const file_order_order_proto_rawDesc = "" +
 	"\n" +
 	"order_uuid\x18\x02 \x01(\tR\torderUuid\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x03 \x01(\tR\trequestId\"\xb1\x01\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\"\xd0\x01\n" +
 	"\x10GetOrderInfoResp\x12\x1b\n" +
 	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12!\n" +
 	"\forder_status\x18\x02 \x01(\tR\vorderStatus\x12\x1d\n" +
 	"\n" +
 	"order_type\x18\x03 \x01(\tR\torderType\x12\x19\n" +
 	"\braw_data\x18\x04 \x01(\tR\arawData\x12#\n" +
-	"\rprovider_name\x18\x05 \x01(\tR\fproviderName\"y\n" +
+	"\rprovider_name\x18\x05 \x01(\tR\fproviderName\x12\x1d\n" +
+	"\n" +
+	"order_data\x18\x06 \x01(\tR\torderData\"y\n" +
 	"\x0fPrepareOrderReq\x12,\n" +
 	"\x12takeout_order_uuid\x18\x01 \x01(\tR\x10takeoutOrderUuid\x12\x19\n" +
 	"\bto_state\x18\x02 \x01(\tR\atoState\x12\x1d\n" +

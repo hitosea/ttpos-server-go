@@ -526,12 +526,13 @@ func FromLinemanPlaceOrder(req *linemanv1.PlaceOrderReq) (*message.TakeoutOrder,
 
 	order := &message.TakeoutOrder{
 		// 基础字段映射（参考用户要求）
-		OrderID:           req.OrderId,           // orderId -> OrderID
-		ShortOrderNumber:  req.OrderShortCode,    // orderShortCode -> ShortOrderNumber
-		MerchantID:        "",                    // MerchantID 为空
-		PartnerMerchantID: req.StoreId,           // storeId -> PartnerMerchantID (TTPOS 侧的店铺 ID)
-		PaymentType:       "CASH",                // Lineman 默认为 CASH
-		OrderTime:         req.OrderAcceptedTime, // orderAcceptedTime -> OrderTime
+		OrderID:           req.OrderId,            // orderId -> OrderID
+		ShortOrderNumber:  req.OrderShortCode,     // orderShortCode -> ShortOrderNumber
+		MerchantID:        "",                     // MerchantID 为空
+		PartnerMerchantID: req.StoreId,            // storeId -> PartnerMerchantID (TTPOS 侧的店铺 ID)
+		PaymentType:       "CASH",                 // Lineman 默认为 CASH
+		OrderTime:         req.OrderAcceptedTime,  // orderAcceptedTime -> OrderTime
+		SubmitTime:        &req.OrderAcceptedTime, //复用订单接受时间
 	}
 
 	// FeatureFlags.OrderType（从 Lineman customerType 转换）
