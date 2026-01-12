@@ -3,10 +3,12 @@ package grab
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
+	"ttpos-bmp/app/ttpos-takeout/utility"
 	"ttpos-bmp/utility/uuid"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
@@ -18,6 +20,7 @@ import (
 
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	grabDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/grab"
+	ttposDto "ttpos-bmp/app/ttpos-takeout/internal/model/dto/ttpos"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
@@ -45,10 +48,10 @@ func (s *sGrab) HandleGetMenu(ctx context.Context, merchantID string) (*grabfood
 		return nil, gerror.Wrap(err, "获取渠道菜单失败")
 	}
 
-	// 3. 如果本地快照为空，返回错误
+	// 3. 如果本地快照为空，回退调用 TTPOS 导出接口
 	if menuJSON == "" {
-		g.Log().Errorf(ctx, "[Grab] 本地菜单快照不存在: shopUUID=%d", shopUUID)
-		return nil, gerror.NewCode(gcode.CodeNotFound, "菜单不存在")
+		g.Log().Infof(ctx, "[Grab] 本地菜单快照不存在，回退调用 TTPOS 导出接口: shopUUID=%d", shopUUID)
+		return s.fetchMenuFromTTpos(ctx, shopUUID)
 	}
 
 	// 4. 解析本地快照 JSON 为 PushGrabMenuDTO (使用 SDK 类型)
@@ -67,27 +70,8 @@ func (s *sGrab) HandleGetMenu(ctx context.Context, merchantID string) (*grabfood
 
 	g.Log().Infof(ctx, "[Grab] 获取菜单成功（来自本地）: categories=%d", len(menuResp.Categories))
 
-	// 6. 查询 ShopProviderCfg 获取 Grab MerchantID
-	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab))
-	if err != nil {
-		g.Log().Errorf(ctx, "[Grab] 获取门店第三方配置失败: shopUUID=%d, error: %v", shopUUID, err)
-		return nil, gerror.Wrap(err, "获取门店第三方配置失败")
-	}
-	if cfg == nil {
-		g.Log().Errorf(ctx, "[Grab] 门店第三方配置不存在: shopUUID=%d, provider=%s", shopUUID, consts.ProviderGrab)
-		return nil, gerror.NewCode(gcode.CodeNotFound, "门店第三方配置不存在")
-	}
-
-	// 7. 设置 MerchantID 和 PartnerMerchantID
-	merchantIDStr := cfg.ProviderMerchantId
-	partnerMerchantIDStr := fmt.Sprintf("%d", shopUUID)
-	menuResp.MerchantID = &merchantIDStr
-	menuResp.PartnerMerchantID = &partnerMerchantIDStr
-
-	g.Log().Infof(ctx, "[Grab] 获取菜单成功: merchantID=%v, partnerMerchantID=%v, categories=%d",
-		menuResp.MerchantID, menuResp.PartnerMerchantID, len(menuResp.Categories))
-
-	return menuResp, nil
+	// 6. 设置 MerchantID 和 PartnerMerchantID
+	return s.setMenuResponseIdentifiers(ctx, shopUUID, menuResp)
 }
 
 // HandlePushGrabMenu 处理 Grab 菜单推送 Webhook
@@ -167,4 +151,75 @@ func (s *sGrab) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncW
 	}
 	g.Log().Infof(ctx, "[Grab] 菜单同步状态已处理: requestId=%s, status=%s, logUUID=%v", requestID, status, logUUID)
 	return nil
+}
+
+// fetchMenuFromTTpos 从 TTPOS 主模块获取菜单数据
+// 当本地菜单快照为空时，回退调用此方法
+func (s *sGrab) fetchMenuFromTTpos(ctx context.Context, shopUUID uint64) (*grabfood.GetMenuNewResponse, error) {
+	// 1. 使用 utility 工具获取带认证的客户端
+	client, err := utility.GetTtposClientWithAuth(ctx, fmt.Sprintf("%d", shopUUID))
+	if err != nil {
+		return nil, gerror.Wrap(err, "生成 TTPOS 认证头失败")
+	}
+
+	// 2. 构建请求体
+	reqBody := g.Map{
+		"platform":    string(consts.ProviderGrab),
+		"companyUuid": shopUUID,
+	}
+
+	// 3. 发起 HTTP 请求
+	resp, err := client.Post(ctx, "/api/v1/takeout/menu/export", reqBody)
+	if err != nil {
+		return nil, gerror.Wrap(err, "调用 TTPOS 导出接口失败")
+	}
+	defer resp.Close()
+
+	// 4. 检查 HTTP 状态码
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, gerror.Newf("TTPOS 导出接口返回错误状态码 %d: %s", resp.StatusCode, resp.ReadAllString())
+	}
+
+	// 5. 解析响应
+	var result ttposDto.GetMenuExportResp
+	if err := json.Unmarshal(resp.ReadAll(), &result); err != nil {
+		return nil, gerror.Wrap(err, "解析 TTPOS 导出接口响应失败")
+	}
+
+	// 6. 检查业务状态码（兼容 code=200 和 code=1 两种成功状态）
+	if result.Code != 200 && result.Code != 1 {
+		return nil, gerror.Newf("TTPOS 导出接口业务错误: code=%d, message=%s", result.Code, result.Message)
+	}
+
+	g.Log().Infof(ctx, "[Grab] 从 TTPOS 获取菜单成功（原始）: shopUUID=%d, categories=%d",
+		shopUUID, len(result.Data.MenuData.Categories))
+
+	// 7. 设置 MerchantID 和 PartnerMerchantID
+	return s.setMenuResponseIdentifiers(ctx, shopUUID, &result.Data.MenuData)
+}
+
+// setMenuResponseIdentifiers 为菜单响应设置 MerchantID 和 PartnerMerchantID
+// 通过查询 ShopProviderCfg 获取 Grab MerchantID，并设置到响应对象中
+func (s *sGrab) setMenuResponseIdentifiers(ctx context.Context, shopUUID uint64, menuResp *grabfood.GetMenuNewResponse) (*grabfood.GetMenuNewResponse, error) {
+	// 1. 查询 ShopProviderCfg 获取 Grab MerchantID
+	cfg, err := service.ShopProviderCfg().GetShopProviderCfg(ctx, shopUUID, string(consts.ProviderGrab))
+	if err != nil {
+		g.Log().Errorf(ctx, "[Grab] 获取门店第三方配置失败: shopUUID=%d, error: %v", shopUUID, err)
+		return nil, gerror.Wrap(err, "获取门店第三方配置失败")
+	}
+	if cfg == nil {
+		g.Log().Errorf(ctx, "[Grab] 门店第三方配置不存在: shopUUID=%d, provider=%s", shopUUID, consts.ProviderGrab)
+		return nil, gerror.NewCode(gcode.CodeNotFound, "门店第三方配置不存在")
+	}
+
+	// 2. 设置 MerchantID 和 PartnerMerchantID
+	merchantIDStr := cfg.ProviderMerchantId
+	partnerMerchantIDStr := fmt.Sprintf("%d", shopUUID)
+	menuResp.MerchantID = &merchantIDStr
+	menuResp.PartnerMerchantID = &partnerMerchantIDStr
+
+	g.Log().Infof(ctx, "[Grab] 菜单标识符已设置: merchantID=%v, partnerMerchantID=%v, categories=%d",
+		menuResp.MerchantID, menuResp.PartnerMerchantID, len(menuResp.Categories))
+
+	return menuResp, nil
 }
