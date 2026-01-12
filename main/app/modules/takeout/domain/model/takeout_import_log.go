@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"ttpos-server-go/app/modules/takeout/domain/value_object"
 )
 
 // TakeoutImportLog 外卖导入日志实体
@@ -105,4 +107,9 @@ func (l *TakeoutImportLog) IncrementFailure() {
 func (l *TakeoutImportLog) SetTotalCount(count int) {
 	l.TotalCount = count
 	l.UpdateTime = time.Now().Unix()
+}
+
+// GetPlatformName 获取平台名称
+func (l *TakeoutImportLog) GetPlatformName() string {
+	return value_object.GetPlatformName(l.Platform)
 }
