@@ -9,8 +9,6 @@ import (
 	"ttpos-server-go/app/modules/objectstorage/infrastructure/persistence"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
-
-	"github.com/redis/go-redis/v9"
 )
 
 // ProductListCacheController 商品列表缓存控制器
@@ -35,33 +33,6 @@ func NewProductListCacheController() *ProductListCacheController {
 func (c *ProductListCacheController) InvalidateProductListCache(ctx goCtx.Context) error {
 	cctx := ctx.(context.Context)
 	companyUuid := cctx.GetCompanyUuid()
-
-	// 获取 Redis 客户端
-	var client redis.UniversalClient
-	if clusterClient := c.cache.GetClusterClient(); clusterClient != nil {
-		client = clusterClient
-	} else if redisClient := c.cache.GetClient(); redisClient != nil {
-		client = redisClient
-	} else {
-		// 如果不是 Redis 缓存，无法使用模式匹配，直接返回
-		return nil
-	}
-
-	// 构建缓存键模式
-	// Key 格式：{system_prefix}:{company_uuid}:product_list:*
-	pattern := fmt.Sprintf("%s:%d:%s:*", persistence.SystemPrefix, companyUuid, persistence.ObjectTypeProductList)
-
-	// 扫描并删除所有匹配的键（L2 Redis 缓存）
-	backgroundCtx := goCtx.Background()
-	keys, err := cache.ScanRedisKeysDefault(backgroundCtx, client, pattern)
-	if err != nil {
-		return fmt.Errorf("扫描商品列表缓存键失败: %w", err)
-	}
-
-	if len(keys) > 0 {
-		// 删除 L2 Redis 缓存
-		c.cache.Del(keys...)
-	}
 
 	// 更新缓存版本时间戳（在二级缓存中记录对象的最新版本时间戳）
 	// Key 格式：{system_prefix}:{company_uuid}:cacheversion_{object_type}
