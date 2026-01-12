@@ -2,9 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"ttpos-server-go/pkg/logger"
 
 	goid "github.com/ace-zhaoy/go-id"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	"github.com/sony/sonyflake"
 )
@@ -25,6 +27,9 @@ func InitIdGenerator() {
 	if serverID < 1 || serverID > 15 {
 		// 不符合预期则使用默认值1
 		serverID = 1
+	}
+	if logger.Logger != nil {
+		logger.Logger.Info("serverID", zap.Uint32("serverID", serverID))
 	}
 	// 设置节点ID
 	idGenerator.SetNode(serverID, 4)
