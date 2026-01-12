@@ -168,16 +168,16 @@ func (c *OAuthTokenClient) FetchTokenFromAPI(ctx context.Context) (string, int, 
 	// 构造 OAuth Token URL
 	tokenURL := cfg.Endpoint + "/v1/oauth/token"
 
-	// 构造请求体
-	reqBody := lineman.LinemanOAuthTokenRequest{
-		ClientID:     cfg.ClientID,
-		ClientSecret: cfg.ClientSecret,
-		GrantType:    "client_credentials",
+	// 构造请求体（使用表单格式）
+	reqBody := g.Map{
+		"grant_type":    "client_credentials",
+		"client_id":     cfg.ClientID,
+		"client_secret": cfg.ClientSecret,
 	}
 
-	// 发送 POST 请求
+	// 发送 POST 请求（使用 application/x-www-form-urlencoded 格式）
 	client := g.Client().SetTimeout(cfg.Timeout)
-	resp, err := client.ContentJson().Post(ctx, tokenURL, reqBody)
+	resp, err := client.ContentType("application/x-www-form-urlencoded").Post(ctx, tokenURL, reqBody)
 	if err != nil {
 		return "", 0, gerror.Wrapf(err, "[LINE MAN] OAuth API 请求失败")
 	}

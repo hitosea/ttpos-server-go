@@ -385,3 +385,9 @@ func (c *Controller) BatchUpdateMenu(ctx context.Context, req *api.BatchUpdateMe
 		Data:    dataAny,
 	}, nil
 }
+
+// NotifyMenuUpdate 通知菜单更新（统一入口）
+// 根据 provider_name 路由到对应平台的菜单同步服务
+func (c *Controller) NotifyMenuUpdate(ctx context.Context, req *api.NotifyMenuUpdateReq) (*takeout.ApiResponse, error) {
+	return service.Menu().NotifyMenuUpdate(ctx, req)
+}

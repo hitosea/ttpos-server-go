@@ -114,6 +114,15 @@ message BatchUpdateMenuResp {
   repeated MenuEntityError errors = 3;       // 错误列表 (仅在 partial_success 或 fail 时返回)
 }
 
+// ============= 菜单更新通知 =============
+
+// 通知菜单更新请求
+message NotifyMenuUpdateReq {
+  string shop_uuid = 1;      // 店铺 UUID (必填)
+  string provider_name = 2;  // 平台名称: grab, lineman (必填)
+  string request_id = 3;     // 请求 ID (可选，用于追踪)
+}
+
 // 外卖菜单服务
 service MenuService {
     // 获取菜单快照
@@ -126,4 +135,7 @@ service MenuService {
     rpc UpdateMenuModifier (UpdateMenuModifierReq) returns (takeout.ApiResponse) {}
     // 批量更新菜单 (商品或修饰符)
     rpc BatchUpdateMenu (BatchUpdateMenuReq) returns (takeout.ApiResponse) {}
+    // 通知菜单更新（统一入口）
+    // 根据 provider_name 路由到对应平台的菜单同步服务
+    rpc NotifyMenuUpdate (NotifyMenuUpdateReq) returns (takeout.ApiResponse) {}
 }

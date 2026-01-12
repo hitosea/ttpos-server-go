@@ -953,6 +953,67 @@ func (x *BatchUpdateMenuResp) GetErrors() []*MenuEntityError {
 	return nil
 }
 
+// 通知菜单更新请求
+type NotifyMenuUpdateReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ShopUuid      string                 `protobuf:"bytes,1,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺 UUID (必填)"`                         // 店铺 UUID (必填)
+	ProviderName  string                 `protobuf:"bytes,2,opt,name=provider_name,json=providerName,proto3" json:"provider_name,omitempty" dc:"平台名称: grab, lineman (必填)"` // 平台名称: grab, lineman (必填)
+	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty" dc:"请求 ID (可选，用于追踪)"`                   // 请求 ID (可选，用于追踪)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NotifyMenuUpdateReq) Reset() {
+	*x = NotifyMenuUpdateReq{}
+	mi := &file_menu_menu_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NotifyMenuUpdateReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotifyMenuUpdateReq) ProtoMessage() {}
+
+func (x *NotifyMenuUpdateReq) ProtoReflect() protoreflect.Message {
+	mi := &file_menu_menu_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotifyMenuUpdateReq.ProtoReflect.Descriptor instead.
+func (*NotifyMenuUpdateReq) Descriptor() ([]byte, []int) {
+	return file_menu_menu_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *NotifyMenuUpdateReq) GetShopUuid() string {
+	if x != nil {
+		return x.ShopUuid
+	}
+	return ""
+}
+
+func (x *NotifyMenuUpdateReq) GetProviderName() string {
+	if x != nil {
+		return x.ProviderName
+	}
+	return ""
+}
+
+func (x *NotifyMenuUpdateReq) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
 var File_menu_menu_proto protoreflect.FileDescriptor
 
 const file_menu_menu_proto_rawDesc = "" +
@@ -1053,13 +1114,19 @@ const file_menu_menu_proto_rawDesc = "" +
 	"\vmerchant_id\x18\x01 \x01(\tR\n" +
 	"merchantId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12-\n" +
-	"\x06errors\x18\x03 \x03(\v2\x15.menu.MenuEntityErrorR\x06errors2\xec\x02\n" +
+	"\x06errors\x18\x03 \x03(\v2\x15.menu.MenuEntityErrorR\x06errors\"v\n" +
+	"\x13NotifyMenuUpdateReq\x12\x1b\n" +
+	"\tshop_uuid\x18\x01 \x01(\tR\bshopUuid\x12#\n" +
+	"\rprovider_name\x18\x02 \x01(\tR\fproviderName\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId2\xb3\x03\n" +
 	"\vMenuService\x12C\n" +
 	"\x0fGetMenuSnapshot\x12\x18.menu.GetMenuSnapshotReq\x1a\x14.takeout.ApiResponse\"\x00\x12E\n" +
 	"\x10SaveMenuSnapshot\x12\x19.menu.SaveMenuSnapshotReq\x1a\x14.takeout.ApiResponse\"\x00\x12A\n" +
 	"\x0eUpdateMenuItem\x12\x17.menu.UpdateMenuItemReq\x1a\x14.takeout.ApiResponse\"\x00\x12I\n" +
 	"\x12UpdateMenuModifier\x12\x1b.menu.UpdateMenuModifierReq\x1a\x14.takeout.ApiResponse\"\x00\x12C\n" +
-	"\x0fBatchUpdateMenu\x12\x18.menu.BatchUpdateMenuReq\x1a\x14.takeout.ApiResponse\"\x00B&Z$ttpos-bmp/app/ttpos-takeout/api/menub\x06proto3"
+	"\x0fBatchUpdateMenu\x12\x18.menu.BatchUpdateMenuReq\x1a\x14.takeout.ApiResponse\"\x00\x12E\n" +
+	"\x10NotifyMenuUpdate\x12\x19.menu.NotifyMenuUpdateReq\x1a\x14.takeout.ApiResponse\"\x00B&Z$ttpos-bmp/app/ttpos-takeout/api/menub\x06proto3"
 
 var (
 	file_menu_menu_proto_rawDescOnce sync.Once
@@ -1073,7 +1140,7 @@ func file_menu_menu_proto_rawDescGZIP() []byte {
 	return file_menu_menu_proto_rawDescData
 }
 
-var file_menu_menu_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_menu_menu_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_menu_menu_proto_goTypes = []any{
 	(*GetMenuSnapshotReq)(nil),     // 0: menu.GetMenuSnapshotReq
 	(*GetMenuSnapshotResp)(nil),    // 1: menu.GetMenuSnapshotResp
@@ -1089,7 +1156,8 @@ var file_menu_menu_proto_goTypes = []any{
 	(*BatchUpdateMenuReq)(nil),     // 11: menu.BatchUpdateMenuReq
 	(*MenuEntityError)(nil),        // 12: menu.MenuEntityError
 	(*BatchUpdateMenuResp)(nil),    // 13: menu.BatchUpdateMenuResp
-	(*takeout.ApiResponse)(nil),    // 14: takeout.ApiResponse
+	(*NotifyMenuUpdateReq)(nil),    // 14: menu.NotifyMenuUpdateReq
+	(*takeout.ApiResponse)(nil),    // 15: takeout.ApiResponse
 }
 var file_menu_menu_proto_depIdxs = []int32{
 	4,  // 0: menu.UpdateMenuItemReq.advanced_pricings:type_name -> menu.AdvancedPricing
@@ -1104,13 +1172,15 @@ var file_menu_menu_proto_depIdxs = []int32{
 	6,  // 9: menu.MenuService.UpdateMenuItem:input_type -> menu.UpdateMenuItemReq
 	8,  // 10: menu.MenuService.UpdateMenuModifier:input_type -> menu.UpdateMenuModifierReq
 	11, // 11: menu.MenuService.BatchUpdateMenu:input_type -> menu.BatchUpdateMenuReq
-	14, // 12: menu.MenuService.GetMenuSnapshot:output_type -> takeout.ApiResponse
-	14, // 13: menu.MenuService.SaveMenuSnapshot:output_type -> takeout.ApiResponse
-	14, // 14: menu.MenuService.UpdateMenuItem:output_type -> takeout.ApiResponse
-	14, // 15: menu.MenuService.UpdateMenuModifier:output_type -> takeout.ApiResponse
-	14, // 16: menu.MenuService.BatchUpdateMenu:output_type -> takeout.ApiResponse
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
+	14, // 12: menu.MenuService.NotifyMenuUpdate:input_type -> menu.NotifyMenuUpdateReq
+	15, // 13: menu.MenuService.GetMenuSnapshot:output_type -> takeout.ApiResponse
+	15, // 14: menu.MenuService.SaveMenuSnapshot:output_type -> takeout.ApiResponse
+	15, // 15: menu.MenuService.UpdateMenuItem:output_type -> takeout.ApiResponse
+	15, // 16: menu.MenuService.UpdateMenuModifier:output_type -> takeout.ApiResponse
+	15, // 17: menu.MenuService.BatchUpdateMenu:output_type -> takeout.ApiResponse
+	15, // 18: menu.MenuService.NotifyMenuUpdate:output_type -> takeout.ApiResponse
+	13, // [13:19] is the sub-list for method output_type
+	7,  // [7:13] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1130,7 +1200,7 @@ func file_menu_menu_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_menu_menu_proto_rawDesc), len(file_menu_menu_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

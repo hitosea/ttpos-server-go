@@ -32,8 +32,6 @@ const (
 // sGrabMenu 菜单服务
 type sGrabMenu struct{}
 
-
-
 // HandleGetMenu 处理 Grab 获取菜单请求 (Partner Endpoint)
 // 签名验证已由中间件完成
 func (s *sGrab) HandleGetMenu(ctx context.Context, partnerMerchantID string) (*grabfood.GetMenuNewResponse, error) {
@@ -194,55 +192,55 @@ func (s *sGrab) HandleMenuSyncState(ctx context.Context, req *grabfood.MenuSyncW
 }
 
 // SyncMenu 主动同步菜单到 Grab
-func (s *sGrab) SyncMenuInternal(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse, notifier grabDto.MenuNotifier) error {
-	// 1. 保存菜单快照
-	menuSnapshot, _ := json.Marshal(menu)
-	logUUID := uuid.MustGetID()
+// func (s *sGrab) SyncMenuInternal(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse, notifier grabDto.MenuNotifier) error {
+// 	// 1. 保存菜单快照
+// 	menuSnapshot, _ := json.Marshal(menu)
+// 	logUUID := uuid.MustGetID()
 
-	logDo := &do.MenuLog{
-		Uuid:         logUUID,
-		MerchantId:   merchantID,
-		ProviderName: string(consts.ProviderGrab),
-		SyncType:     "FULL",
-		Status:       grabDto.MenuSyncStatusQueued,
-		MenuSnapshot: string(menuSnapshot),
-		CreatedAt:    gtime.Now().Unix(),
-		UpdatedAt:    gtime.Now().Unix(),
-	}
+// 	logDo := &do.MenuLog{
+// 		Uuid:         logUUID,
+// 		MerchantId:   merchantID,
+// 		ProviderName: string(consts.ProviderGrab),
+// 		SyncType:     "FULL",
+// 		Status:       grabDto.MenuSyncStatusQueued,
+// 		MenuSnapshot: string(menuSnapshot),
+// 		CreatedAt:    gtime.Now().Unix(),
+// 		UpdatedAt:    gtime.Now().Unix(),
+// 	}
 
-	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
-	if err != nil {
-		return fmt.Errorf("保存菜单日志失败: %w", err)
-	}
+// 	_, err := dao.MenuLog.Ctx(ctx).Data(logDo).Insert()
+// 	if err != nil {
+// 		return fmt.Errorf("保存菜单日志失败: %w", err)
+// 	}
 
-	// 2. 更新菜单快照表
-	_, err = dao.ChannelMenuSnapshot.Ctx(ctx).
-		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, g.NewVar(merchantID).Uint64()).
-		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
-		Data(g.Map{
-			dao.ChannelMenuSnapshot.Columns().TtposMenuData: string(menuSnapshot),
-			dao.ChannelMenuSnapshot.Columns().UpdatedAt:     gtime.Now().Unix(),
-		}).Update()
-	if err != nil {
-		return fmt.Errorf("更新菜单快照失败: %w", err)
-	}
-	// 3. 调用 Grab API 通知菜单更新
-	requestID, err := notifier.NotifyMenuUpdate(ctx, *menu.MerchantID)
-	if err != nil {
-		// 更新日志状态为失败
-		_, _ = dao.MenuLog.Ctx(ctx).
-			Where(dao.MenuLog.Columns().Uuid, logUUID).
-			Data(g.Map{
-				dao.MenuLog.Columns().Status:    grabDto.MenuSyncStatusFail,
-				dao.MenuLog.Columns().ErrorMsg:  err.Error(),
-				dao.MenuLog.Columns().UpdatedAt: gtime.Now().Unix(),
-			}).Update()
-		return fmt.Errorf("通知 Grab 失败: %w", err)
-	}
+// 	// 2. 更新菜单快照表
+// 	_, err = dao.ChannelMenuSnapshot.Ctx(ctx).
+// 		Where(dao.ChannelMenuSnapshot.Columns().ShopUuid, g.NewVar(merchantID).Uint64()).
+// 		Where(dao.ChannelMenuSnapshot.Columns().ProviderName, string(consts.ProviderGrab)).
+// 		Data(g.Map{
+// 			dao.ChannelMenuSnapshot.Columns().TtposMenuData: string(menuSnapshot),
+// 			dao.ChannelMenuSnapshot.Columns().UpdatedAt:     gtime.Now().Unix(),
+// 		}).Update()
+// 	if err != nil {
+// 		return fmt.Errorf("更新菜单快照失败: %w", err)
+// 	}
+// 	// 3. 调用 Grab API 通知菜单更新
+// 	requestID, err := notifier.NotifyMenuUpdate(ctx, *menu.MerchantID)
+// 	if err != nil {
+// 		// 更新日志状态为失败
+// 		_, _ = dao.MenuLog.Ctx(ctx).
+// 			Where(dao.MenuLog.Columns().Uuid, logUUID).
+// 			Data(g.Map{
+// 				dao.MenuLog.Columns().Status:    grabDto.MenuSyncStatusFail,
+// 				dao.MenuLog.Columns().ErrorMsg:  err.Error(),
+// 				dao.MenuLog.Columns().UpdatedAt: gtime.Now().Unix(),
+// 			}).Update()
+// 		return fmt.Errorf("通知 Grab 失败: %w", err)
+// 	}
 
-	g.Log().Infof(ctx, "[Grab] 菜单同步已启动: merchant=%s, requestId=%s", merchantID, requestID)
-	return nil
-}
+// 	g.Log().Infof(ctx, "[Grab] 菜单同步已启动: merchant=%s, requestId=%s", merchantID, requestID)
+// 	return nil
+// }
 
 // SaveMenuSnapshot 保存菜单快照到数据库
 // 使用 shop_uuid + provider_name 作为唯一键，存在则更新，不存在则插入
@@ -590,13 +588,14 @@ func (s *sGrab) logBatchUpdate(ctx context.Context, merchantID, field string, co
 			logUUID, merchantID, field, count, success)
 	}
 }
+
 // HandleGetMenuInternal 处理 Grab 获取菜单请求 (Partner Endpoint)
 // 别名方法，用于满足接口定义
 func (s *sGrab) HandleGetMenuInternal(ctx context.Context, partnerMerchantID string) (*grabfood.GetMenuNewResponse, error) {
 	return s.HandleGetMenu(ctx, partnerMerchantID)
 }
 
-// SyncMenu 主动同步菜单到 Grab (包装方法)
-func (s *sGrab) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse) error {
-	return s.SyncMenuInternal(ctx, merchantID, menu, s)
-}
+// // SyncMenu 主动同步菜单到 Grab (包装方法)
+// func (s *sGrab) SyncMenu(ctx context.Context, merchantID string, menu *grabfood.GetMenuNewResponse) error {
+// 	return s.SyncMenuInternal(ctx, merchantID, menu, s)
+// }
